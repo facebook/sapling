@@ -23,6 +23,7 @@ use commit_graph::CommitGraph;
 use commit_graph::CommitGraphRef;
 use commit_graph::CommitGraphWriter;
 use context::CoreContext;
+use filestore::FilestoreConfig;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use metaconfig_types::RepoConfig;
@@ -72,6 +73,9 @@ pub struct Repo {
 
     #[facet]
     repo_blobstore: RepoBlobstore,
+
+    #[facet]
+    filestore_config: FilestoreConfig,
 
     #[facet]
     commit_graph: CommitGraph,

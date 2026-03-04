@@ -71,6 +71,7 @@ use commit_graph::CommitGraphWriterRef;
 use context::CoreContext;
 use derivation_queue_thrift::DerivationPriority;
 use filenodes_derivation::FilenodesOnlyPublic;
+use filestore::FilestoreConfigRef;
 use fsnodes::RootFsnodeId;
 use futures::FutureExt;
 use futures::StreamExt;
@@ -269,6 +270,7 @@ pub trait Repo = BookmarksRef
     + RepoBlobstoreArc
     + RepoDerivedDataRef
     + RepoIdentityRef
+    + FilestoreConfigRef
     + CommitGraphRef
     + CommitGraphWriterRef
     + Send
@@ -402,7 +404,7 @@ pub async fn do_batched_pushrebase(
 
     for request in requests {
         let bookmark_val = old_bookmark_value.unwrap_or(request.conflict_check_base);
-        if let Err(e) = check_pushrebase_conflicts(
+        let merged_file_overrides = match check_pushrebase_conflicts(
             ctx,
             repo,
             config,
@@ -414,9 +416,12 @@ pub async fn do_batched_pushrebase(
         )
         .await
         {
-            let _ = request.response_tx.send(Err(SharedError::from(e)));
-            continue;
-        }
+            Ok((_server_bcs_count, overrides)) => overrides,
+            Err(e) => {
+                let _ = request.response_tx.send(Err(SharedError::from(e)));
+                continue;
+            }
+        };
 
         let pushrebase_distance = match try_join(
             repo.commit_graph()
@@ -450,6 +455,7 @@ pub async fn do_batched_pushrebase(
             request.head,
             onto,
             &mut commit_hooks,
+            merged_file_overrides,
         )
         .await;
 
@@ -612,7 +618,8 @@ async fn check_filenodes_backfilled(
 }
 
 /// Checks for server-side conflicts against the client's pushed stack.
-/// Returns the number of server-side changesets (for pushrebase_distance tracking).
+/// Returns the number of server-side changesets and optionally merged file
+/// overrides if live merge resolution succeeds.
 async fn check_pushrebase_conflicts(
     ctx: &CoreContext,
     repo: &impl Repo,
@@ -622,7 +629,7 @@ async fn check_pushrebase_conflicts(
     descendant: ChangesetId,
     client_bcs: &[BonsaiChangeset],
     client_cf: &[MPath],
-) -> Result<usize, PushrebaseError> {
+) -> Result<(usize, Option<Vec<(NonRootMPath, FileChange)>>), PushrebaseError> {
     let server_bcs =
         fetch_bonsai_range_ancestor_not_included(ctx, repo, ancestor, descendant).await?;
     let server_bcs_len = server_bcs.len();
@@ -645,44 +652,82 @@ async fn check_pushrebase_conflicts(
     server_cf.extend(find_subtree_changes(&server_bcs)?);
 
     match intersect_changed_files(server_cf, client_cf.to_vec()) {
-        Ok(()) => {} // No conflicts, proceed
+        Ok(()) => Ok((server_bcs_len, None)),
         Err(PushrebaseError::Conflicts(conflicts)) => {
             let reponame = repo.repo_identity().name();
             STATS::conflict_rejections.add_value(1, (reponame.to_string(),));
             STATS::conflict_files_count.add_value(conflicts.len() as i64, (reponame.to_string(),));
 
-            let dry_run_enabled = justknobs::eval(
-                "scm/mononoke:pushrebase_dry_run_merge_resolution",
+            let merge_enabled = justknobs::eval(
+                "scm/mononoke:pushrebase_enable_merge_resolution",
                 None,
                 Some(reponame),
             )?;
-            if dry_run_enabled {
-                let max_merge_conflicts: usize = justknobs::get_as::<usize>(
-                    "scm/mononoke:pushrebase_max_merge_conflicts",
-                    Some(reponame),
-                )?;
-                let max_merge_file_size: u64 = justknobs::get_as::<u64>(
-                    "scm/mononoke:pushrebase_max_merge_file_size",
-                    Some(reponame),
-                )?;
-                dry_run_merge_resolution(
-                    ctx,
-                    repo,
-                    &conflicts,
-                    root,
-                    &server_bcs,
-                    client_bcs,
-                    max_merge_conflicts,
-                    max_merge_file_size,
-                )
-                .await;
-            }
-            return Err(PushrebaseError::Conflicts(conflicts));
-        }
-        Err(e) => return Err(e),
-    }
+            let max_merge_conflicts: usize = justknobs::get_as::<usize>(
+                "scm/mononoke:pushrebase_max_merge_conflicts",
+                Some(reponame),
+            )?;
+            let max_merge_file_size: u64 = justknobs::get_as::<u64>(
+                "scm/mononoke:pushrebase_max_merge_file_size",
+                Some(reponame),
+            )?;
 
-    Ok(server_bcs_len)
+            let merge_result = if merge_enabled {
+                Some(
+                    attempt_merge_resolution(
+                        ctx,
+                        repo,
+                        &conflicts,
+                        root,
+                        &server_bcs,
+                        client_bcs,
+                        max_merge_conflicts,
+                        max_merge_file_size,
+                    )
+                    .await,
+                )
+            } else {
+                None
+            };
+
+            match merge_result {
+                Some(Ok(merged_changes)) => {
+                    // Merge succeeded — return overrides and proceed with rebase
+                    Ok((server_bcs_len, Some(merged_changes)))
+                }
+                _ => {
+                    // Log merge failure reason if merge was attempted
+                    if let Some(Err(ref err)) = merge_result {
+                        ctx.scuba()
+                            .clone()
+                            .add("merge_resolution_outcome", format!("{}", err))
+                            .log_with_msg("Pushrebase merge resolution failed", None);
+                    }
+                    // Run dry-run merge if enabled (for logging/observability)
+                    let dry_run_enabled = justknobs::eval(
+                        "scm/mononoke:pushrebase_dry_run_merge_resolution",
+                        None,
+                        Some(reponame),
+                    )?;
+                    if dry_run_enabled {
+                        dry_run_merge_resolution(
+                            ctx,
+                            repo,
+                            &conflicts,
+                            root,
+                            &server_bcs,
+                            client_bcs,
+                            max_merge_conflicts,
+                            max_merge_file_size,
+                        )
+                        .await;
+                    }
+                    Err(PushrebaseError::Conflicts(conflicts))
+                }
+            }
+        }
+        Err(e) => Err(e),
+    }
 }
 
 async fn rebase_in_loop(
@@ -713,7 +758,7 @@ async fn rebase_in_loop(
         }))
         .await?;
 
-        let server_bcs_count = check_pushrebase_conflicts(
+        let (server_bcs_count, merged_file_overrides) = check_pushrebase_conflicts(
             ctx,
             repo,
             config,
@@ -735,6 +780,7 @@ async fn rebase_in_loop(
             old_bookmark_value,
             onto_bookmark,
             hooks,
+            merged_file_overrides,
         )
         .await?;
         // CRITICAL SECTION END: Right after writing new value of bookmark
@@ -789,6 +835,7 @@ async fn do_rebase(
     old_bookmark_value: Option<ChangesetId>,
     onto_bookmark: &BookmarkKey,
     mut hooks: Vec<Box<dyn PushrebaseCommitHook>>,
+    merged_file_overrides: Option<Vec<(NonRootMPath, FileChange)>>,
 ) -> Result<
     Option<(
         ChangesetId,
@@ -805,6 +852,7 @@ async fn do_rebase(
         head,
         old_bookmark_value.unwrap_or(root),
         &mut hooks,
+        merged_file_overrides,
     )
     .await?;
 
@@ -1174,7 +1222,6 @@ async fn fetch_fsnode_file(
 }
 
 /// Outcome of attempting a three-way merge on a single file.
-#[allow(dead_code)]
 enum FileMergeOutcome {
     /// Successfully merged content.
     Clean(Bytes),
@@ -1261,8 +1308,41 @@ async fn dry_run_merge_resolution(
 ) {
     // Only attempt on exact path matches (left == right), skip prefix conflicts
     let exact_conflicts: Vec<_> = conflicts.iter().filter(|c| c.left == c.right).collect();
+    let prefix_conflict_count = conflicts.len() - exact_conflicts.len();
 
     if exact_conflicts.is_empty() {
+        if prefix_conflict_count > 0 {
+            ctx.scuba()
+                .clone()
+                .add("merge_dry_run_outcome", "skipped_prefix_conflicts")
+                .add(
+                    "merge_dry_run_prefix_conflicts",
+                    prefix_conflict_count as i64,
+                )
+                .log_with_msg("Pushrebase dry-run merge resolution", None);
+        }
+        return;
+    }
+
+    // Mirror the live merge behavior: skip if too many conflicts
+    if exact_conflicts.len() > max_conflicts || prefix_conflict_count > 0 {
+        let outcome = if prefix_conflict_count > 0 {
+            "skipped_prefix_conflicts"
+        } else {
+            "skipped_too_many_conflicts"
+        };
+        ctx.scuba()
+            .clone()
+            .add("merge_dry_run_outcome", outcome)
+            .add(
+                "merge_dry_run_exact_conflicts",
+                exact_conflicts.len() as i64,
+            )
+            .add(
+                "merge_dry_run_prefix_conflicts",
+                prefix_conflict_count as i64,
+            )
+            .log_with_msg("Pushrebase dry-run merge resolution", None);
         return;
     }
 
@@ -1309,7 +1389,7 @@ async fn dry_run_merge_resolution(
         };
 
         // Get local (pushed) content from the client file change
-        let local_tc = match client_changes.get(&non_root_path) {
+        let local_fc = match client_changes.get(&non_root_path) {
             Some(FileChange::Change(tc)) => tc,
             _ => {
                 all_clean = false;
@@ -1318,8 +1398,15 @@ async fn dry_run_merge_resolution(
             }
         };
 
+        // Skip files that are too large
+        if local_fc.size() > max_file_size {
+            all_clean = false;
+            error_count += 1;
+            continue;
+        }
+
         // Get server (bookmark head) content from the server bonsai changesets
-        let other_tc = match server_changes.get(&non_root_path) {
+        let server_fc = match server_changes.get(&non_root_path) {
             Some(FileChange::Change(tc)) => tc,
             _ => {
                 all_clean = false;
@@ -1330,14 +1417,14 @@ async fn dry_run_merge_resolution(
 
         // Fail early if any file exceeds the size limit — we can't resolve
         // all conflicts if we have to skip a file, so the entire merge would fail.
-        if local_tc.size() > max_file_size || other_tc.size() > max_file_size {
+        if local_fc.size() > max_file_size || server_fc.size() > max_file_size {
             ctx.scuba()
                 .clone()
                 .add("merge_dry_run_outcome", "file_too_large")
                 .add("merge_dry_run_file", non_root_path.to_string())
                 .add(
                     "merge_dry_run_file_size",
-                    std::cmp::max(local_tc.size(), other_tc.size()) as i64,
+                    std::cmp::max(local_fc.size(), server_fc.size()) as i64,
                 )
                 .add("merge_dry_run_max_file_size", max_file_size as i64)
                 .log_with_msg("Pushrebase dry-run merge resolution", None);
@@ -1349,8 +1436,8 @@ async fn dry_run_merge_resolution(
             repo,
             root,
             &non_root_path,
-            local_tc.content_id(),
-            other_tc.content_id(),
+            local_fc.content_id(),
+            server_fc.content_id(),
             None,
         )
         .await
@@ -1384,6 +1471,208 @@ async fn dry_run_merge_resolution(
         .log_with_msg("Pushrebase dry-run merge resolution", None);
 }
 
+/// Error type for merge resolution failures.
+#[derive(Debug, Error)]
+enum MergeResolutionError {
+    /// At least one file has a true content-level conflict.
+    #[error("unresolvable conflict: {0}")]
+    UnresolvableConflict(String),
+    /// A file is missing in one or more versions, or has copy info, or type mismatch.
+    #[error("skipped: {0}")]
+    Skipped(String),
+    /// Too many conflicting files to attempt merge.
+    #[error("too many conflicting files")]
+    TooManyConflicts,
+    /// Internal error fetching file content.
+    #[error(transparent)]
+    InternalError(Error),
+}
+
+/// Attempt content-level merge resolution for conflicting files.
+///
+/// For each conflicting path, fetches file content from the common ancestor
+/// (root), the pushed changeset, and the bookmark head (from server bonsai
+/// changesets), then runs a 3-way merge. Returns a map of merged file changes
+/// to apply to the rebased changeset.
+///
+/// The server-side content is obtained directly from the bonsai changesets
+/// rather than deriving fsnodes, to avoid expensive derivation in the
+/// critical section of pushrebase.
+///
+/// Fails if any file has a true content-level conflict, or if any file
+/// cannot be merged (missing, binary, type change, copy info, too large).
+async fn attempt_merge_resolution(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    conflicts: &[PushrebaseConflict],
+    root: ChangesetId,
+    server_bcs: &[BonsaiChangeset],
+    client_bcs: &[BonsaiChangeset],
+    max_conflicts: usize,
+    max_file_size: u64,
+) -> Result<Vec<(NonRootMPath, FileChange)>, MergeResolutionError> {
+    // Only handle exact path matches (not prefix conflicts like dir vs dir/file)
+    let exact_conflicts: Vec<_> = conflicts.iter().filter(|c| c.left == c.right).collect();
+
+    // If there are prefix conflicts, we can't merge those
+    if exact_conflicts.len() != conflicts.len() {
+        return Err(MergeResolutionError::Skipped(
+            "prefix conflicts present".to_string(),
+        ));
+    }
+
+    if exact_conflicts.len() > max_conflicts {
+        return Err(MergeResolutionError::TooManyConflicts);
+    }
+
+    // Build a map of path -> FileChange from the client changesets
+    let client_changes: HashMap<&NonRootMPath, &FileChange> = client_bcs
+        .iter()
+        .flat_map(|bcs| bcs.file_changes_map().iter())
+        .collect();
+
+    // Build a map of path -> FileChange from the server changesets
+    // (latest-wins semantics since server_bcs is oldest-to-newest)
+    let server_changes: HashMap<&NonRootMPath, &FileChange> = server_bcs
+        .iter()
+        .flat_map(|bcs| bcs.file_changes_map().iter())
+        .collect();
+
+    let mut merged_file_changes = Vec::new();
+
+    for conflict in &exact_conflicts {
+        let path = &conflict.left;
+        let non_root_path = match path.clone().into_optional_non_root_path() {
+            Some(nrp) => nrp,
+            None => {
+                return Err(MergeResolutionError::Skipped(
+                    "root path conflict".to_string(),
+                ));
+            }
+        };
+
+        // Get the client file change for this path
+        let client_fc = match client_changes.get(&non_root_path) {
+            Some(FileChange::Change(tc)) => tc,
+            _ => {
+                return Err(MergeResolutionError::Skipped(format!(
+                    "file {} not a tracked change in pushed changeset",
+                    path,
+                )));
+            }
+        };
+
+        // Skip files with copy info
+        if client_fc.copy_from().is_some() {
+            return Err(MergeResolutionError::Skipped(format!(
+                "file {} has copy-from info",
+                path,
+            )));
+        }
+
+        // Skip files that are too large
+        if client_fc.size() > max_file_size {
+            return Err(MergeResolutionError::Skipped(format!(
+                "file {} is too large ({} bytes)",
+                path,
+                client_fc.size(),
+            )));
+        }
+
+        // Get server (bookmark head) content from the server bonsai changesets
+        let server_fc = match server_changes.get(&non_root_path) {
+            Some(FileChange::Change(tc)) => tc,
+            _ => {
+                return Err(MergeResolutionError::Skipped(format!(
+                    "file {} not a tracked change in bookmark head",
+                    path,
+                )));
+            }
+        };
+
+        // Also check server file size
+        if server_fc.size() > max_file_size {
+            return Err(MergeResolutionError::Skipped(format!(
+                "file {} is too large on server ({} bytes)",
+                path,
+                server_fc.size(),
+            )));
+        }
+
+        let local_file_type = client_fc.file_type();
+
+        // Validate server file type matches client file type
+        if server_fc.file_type() != local_file_type {
+            return Err(MergeResolutionError::Skipped(format!(
+                "file {} has type mismatch: client={:?}, server={:?}",
+                path,
+                local_file_type,
+                server_fc.file_type(),
+            )));
+        }
+
+        match try_merge_file(
+            ctx,
+            repo,
+            root,
+            &non_root_path,
+            client_fc.content_id(),
+            server_fc.content_id(),
+            Some(local_file_type),
+        )
+        .await
+        {
+            FileMergeOutcome::Clean(merged_bytes) => {
+                // Store the merged content
+                let size = merged_bytes.len() as u64;
+                let meta = filestore::store(
+                    repo.repo_blobstore(),
+                    *repo.filestore_config(),
+                    ctx,
+                    &filestore::StoreRequest::new(size),
+                    stream::once(future::ok(merged_bytes)),
+                )
+                .await
+                .map_err(MergeResolutionError::InternalError)?;
+
+                let file_change = FileChange::tracked(
+                    meta.content_id,
+                    local_file_type,
+                    meta.total_size,
+                    None, // no copy info for merged files
+                    GitLfs::FullContent,
+                );
+
+                merged_file_changes.push((non_root_path, file_change));
+            }
+            FileMergeOutcome::Conflict(description) => {
+                return Err(MergeResolutionError::UnresolvableConflict(description));
+            }
+            FileMergeOutcome::Skipped(reason) => {
+                return Err(MergeResolutionError::Skipped(reason));
+            }
+            FileMergeOutcome::Error(err) => {
+                return Err(MergeResolutionError::InternalError(err));
+            }
+        }
+    }
+
+    // Log success
+    ctx.scuba()
+        .clone()
+        .add("merge_resolution_outcome", "success")
+        .add("merge_resolution_files", merged_file_changes.len() as i64)
+        .log_with_msg("Pushrebase merge resolution succeeded", None);
+
+    info!(
+        "Pushrebase merge resolution succeeded for {} files in {}",
+        merged_file_changes.len(),
+        repo.repo_identity().name(),
+    );
+
+    Ok(merged_file_changes)
+}
+
 async fn get_bookmark_value(
     ctx: &CoreContext,
     repo: &impl BookmarksRef,
@@ -1405,6 +1694,7 @@ async fn create_rebased_changesets(
     head: ChangesetId,
     onto: ChangesetId,
     hooks: &mut [Box<dyn PushrebaseCommitHook>],
+    merged_file_overrides: Option<Vec<(NonRootMPath, FileChange)>>,
 ) -> Result<(ChangesetId, RebasedChangesets, Vec<BonsaiChangeset>), PushrebaseError> {
     let rebased_set = find_rebased_set(ctx, repo, root, head).await?;
 
@@ -1425,6 +1715,12 @@ async fn create_rebased_changesets(
     let mut rebased = Vec::new();
     for bcs_old in rebased_set {
         let id_old = bcs_old.get_changeset_id();
+        // Only apply merged file overrides to the head changeset
+        let overrides_for_this = if id_old == head {
+            merged_file_overrides.as_ref()
+        } else {
+            None
+        };
         let bcs_new = rebase_changeset(
             ctx,
             bcs_old,
@@ -1435,6 +1731,7 @@ async fn create_rebased_changesets(
             repo,
             &rebased_set_ids,
             hooks,
+            overrides_for_this,
         )
         .await?;
         let timestamp = Timestamp::from(*bcs_new.author_date());
@@ -1467,6 +1764,7 @@ async fn rebase_changeset(
     repo: &impl Repo,
     rebased_set: &HashSet<ChangesetId>,
     hooks: &mut [Box<dyn PushrebaseCommitHook>],
+    merged_file_overrides: Option<&Vec<(NonRootMPath, FileChange)>>,
 ) -> Result<BonsaiChangeset> {
     let orig_cs_id = bcs.get_changeset_id();
     let new_file_changes =
@@ -1530,6 +1828,15 @@ async fn rebase_changeset(
                     change.replace_source_changeset_id(*new_from_csid);
                 }
             }
+        }
+    }
+
+    // Apply merged file overrides from merge resolution.
+    // These replace the original file changes for conflicting paths with
+    // the merged content that incorporates both local and server-side edits.
+    if let Some(overrides) = merged_file_overrides {
+        for (path, fc) in overrides {
+            file_changes.insert(path.clone(), fc.clone());
         }
     }
 
@@ -1835,6 +2142,7 @@ mod tests {
     fn init_just_knobs_for_test() {
         override_just_knobs(JustKnobsInMemory::new(hashmap! {
             "scm/mononoke:pushrebase_dry_run_merge_resolution".to_string() => KnobVal::Bool(false),
+            "scm/mononoke:pushrebase_enable_merge_resolution".to_string() => KnobVal::Bool(false),
         }));
     }
 
@@ -4027,5 +4335,132 @@ mod tests {
                 panic!("pushrebase should have failed");
             }
         }
+    }
+
+    fn init_just_knobs_for_merge_test() {
+        override_just_knobs(JustKnobsInMemory::new(hashmap! {
+            "scm/mononoke:pushrebase_dry_run_merge_resolution".to_string() => KnobVal::Bool(false),
+            "scm/mononoke:pushrebase_enable_merge_resolution".to_string() => KnobVal::Bool(true),
+        }));
+    }
+
+    #[mononoke::fbinit_test]
+    async fn pushrebase_merge_resolution_clean(fb: FacebookInit) -> Result<(), Error> {
+        // Test: server and client modify different parts of the same file.
+        // With merge resolution enabled, pushrebase should succeed and
+        // the resulting file should contain both modifications.
+        let ctx = CoreContext::test_mock(fb);
+        let repo: PushrebaseTestRepo = test_repo_factory::build_empty(fb).await?;
+
+        // Create a base commit with a multi-line file
+        let base_content = "line1\nline2\nline3\nline4\nline5\n";
+        let base = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("file.txt", base_content)
+            .commit()
+            .await?;
+
+        // Server-side commit: modify the first line
+        let server_content = "modified_line1\nline2\nline3\nline4\nline5\n";
+        let server = CreateCommitContext::new(&ctx, &repo, vec![base])
+            .add_file("file.txt", server_content)
+            .commit()
+            .await?;
+
+        // Set bookmark to the server commit
+        let book = BookmarkKey::new("master")?;
+        let hg_server = repo.derive_hg_changeset(&ctx, server).await?;
+        set_bookmark(ctx.clone(), &repo, &book, &format!("{}", hg_server)).await?;
+
+        // Client-side commit (based on base, not server): modify the last line
+        let client_content = "line1\nline2\nline3\nline4\nmodified_line5\n";
+        let client = CreateCommitContext::new(&ctx, &repo, vec![base])
+            .add_file("file.txt", client_content)
+            .commit()
+            .await?;
+
+        let client_bcs = client.load(&ctx, repo.repo_blobstore()).await?;
+
+        // Enable merge resolution
+        init_just_knobs_for_merge_test();
+
+        let result = do_pushrebase_bonsai(
+            &ctx,
+            &repo,
+            &Default::default(),
+            &book,
+            &hashset![client_bcs],
+            &[],
+        )
+        .await?;
+
+        // Verify the merged content has both modifications
+        let result_hg = repo.derive_hg_changeset(&ctx, result.head).await?;
+        let expected_content = "modified_line1\nline2\nline3\nline4\nmodified_line5\n";
+        ensure_content(
+            &ctx,
+            result_hg,
+            &repo,
+            btreemap! {
+                "file.txt".to_string() => expected_content.to_string(),
+            },
+        )
+        .await?;
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn pushrebase_merge_resolution_conflict(fb: FacebookInit) -> Result<(), Error> {
+        // Test: server and client modify the SAME line of a file.
+        // Even with merge resolution enabled, pushrebase should fail
+        // because the merge has a true content-level conflict.
+        let ctx = CoreContext::test_mock(fb);
+        let repo: PushrebaseTestRepo = test_repo_factory::build_empty(fb).await?;
+
+        // Create a base commit with a multi-line file
+        let base_content = "line1\nline2\nline3\n";
+        let base = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("file.txt", base_content)
+            .commit()
+            .await?;
+
+        // Server-side commit: modify line 2
+        let server_content = "line1\nserver_modified\nline3\n";
+        let server = CreateCommitContext::new(&ctx, &repo, vec![base])
+            .add_file("file.txt", server_content)
+            .commit()
+            .await?;
+
+        // Set bookmark to the server commit
+        let book = BookmarkKey::new("master")?;
+        let hg_server = repo.derive_hg_changeset(&ctx, server).await?;
+        set_bookmark(ctx.clone(), &repo, &book, &format!("{}", hg_server)).await?;
+
+        // Client-side commit (based on base): also modify line 2 differently
+        let client_content = "line1\nclient_modified\nline3\n";
+        let client = CreateCommitContext::new(&ctx, &repo, vec![base])
+            .add_file("file.txt", client_content)
+            .commit()
+            .await?;
+
+        let client_bcs = client.load(&ctx, repo.repo_blobstore()).await?;
+
+        // Enable merge resolution
+        init_just_knobs_for_merge_test();
+
+        let result = do_pushrebase_bonsai(
+            &ctx,
+            &repo,
+            &Default::default(),
+            &book,
+            &hashset![client_bcs],
+            &[],
+        )
+        .await;
+
+        // Should fail with conflicts because of overlapping edits
+        should_have_conflicts(result);
+
+        Ok(())
     }
 }
