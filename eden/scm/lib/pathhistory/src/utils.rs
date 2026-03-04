@@ -18,7 +18,7 @@ pub(crate) fn pick_mid(left: u64, right: u64) -> Option<u64> {
     // Only keep the highest 2 bits of `delta`. Drop other bits
     // (set them to 0). This makes `right - delta` more stable
     // with different `left`s.
-    let delta = (right - left + 1) / 2;
+    let delta = (right - left).div_ceil(2);
     let mask = 0b11u64 << (62u32.saturating_sub(delta.leading_zeros()));
     let mid = right - (delta & mask);
     debug_assert!(mid > left);
