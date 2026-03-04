@@ -1123,9 +1123,20 @@ def sleep(args: List[str]):
 
 
 @command
-def pp(stdin: BinaryIO):
-    """pretty print a string"""
+def pp(stdin: BinaryIO, args: List[str]):
+    """pretty print a string
+
+    Options:
+      --sort  Sort arrays and object keys recursively
+    """
     import json
+
+    sort = False
+    for arg in args:
+        if arg == "--sort":
+            sort = True
+        else:
+            raise RuntimeError(f"pp: unknown argument: {arg}")
 
     data = stdin.read()
     # we can extend it to support other formats
@@ -1134,8 +1145,26 @@ def pp(stdin: BinaryIO):
     except Exception as e:
         raise RuntimeError(f"invalid JSON: {e}")
 
+    if sort:
+        obj = _sort_json(obj)
+
     s = json.dumps(obj, indent=2)
     return f"{s}\n"
+
+
+def _sort_json(obj):
+    """Recursively sort JSON arrays and object keys."""
+    import json
+
+    if isinstance(obj, list):
+        # Sort array elements by their JSON representation
+        sorted_items = [_sort_json(item) for item in obj]
+        return sorted(sorted_items, key=json.dumps)
+    elif isinstance(obj, dict):
+        # Sort object keys and recursively sort values
+        return {k: _sort_json(v) for k, v in sorted(obj.items())}
+    else:
+        return obj
 
 
 def _lookup_python(name):
