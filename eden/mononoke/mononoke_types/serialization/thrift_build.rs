@@ -6,6 +6,7 @@ use std::path::Path;
 use thrift_compiler::Config;
 use thrift_compiler::GenContext;
 const CRATEMAP: &str = "\
+eden/mononoke/mononoke_types/serialization/acl_manifest.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/blame.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/bonsai.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/bssm.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
@@ -44,6 +45,7 @@ fn main() {
         .types_crate("mononoke_types_serialization__types")
         .clients_crate("mononoke_types_serialization__clients")
         .run([
+            "acl_manifest.thrift",
             "blame.thrift",
             "bonsai.thrift",
             "bssm.thrift",

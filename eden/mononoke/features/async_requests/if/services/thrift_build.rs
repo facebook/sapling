@@ -9,6 +9,7 @@ const CRATEMAP: &str = "\
 eden/mononoke/derived_data/if/derived_data_type.thrift source_control->derived_data_type_if //eden/mononoke/derived_data/if:derived_data_type_if-rust
 eden/mononoke/features/async_requests/if/async_requests_types_thrift.thrift crate //eden/mononoke/features/async_requests/if:async_requests_types-thrift-rust
 eden/mononoke/megarepo_api/if/megarepo_configs.thrift source_control->megarepo_configs //eden/mononoke/megarepo_api/if:megarepo_configs-rust
+eden/mononoke/mononoke_types/serialization/acl_manifest.thrift mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/blame.thrift mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/bonsai.thrift mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/bssm.thrift mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust

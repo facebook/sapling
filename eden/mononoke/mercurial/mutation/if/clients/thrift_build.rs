@@ -8,6 +8,7 @@ use thrift_compiler::GenContext;
 const CRATEMAP: &str = "\
 eden/mononoke/mercurial/mutation/if/hg_mutation_entry.thrift crate //eden/mononoke/mercurial/mutation/if:hg_mutation_entry_thrift-rust
 eden/mononoke/mercurial/types/if/mercurial_thrift.thrift mercurial_thrift //eden/mononoke/mercurial/types/if:mercurial-thrift-rust
+eden/mononoke/mononoke_types/serialization/acl_manifest.thrift mercurial_thrift->mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/blame.thrift mercurial_thrift->mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/bonsai.thrift mercurial_thrift->mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/bssm.thrift mercurial_thrift->mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
