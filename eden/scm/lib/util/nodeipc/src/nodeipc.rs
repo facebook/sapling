@@ -270,7 +270,7 @@ impl<'a> fmt::Display for FmtString<'a> {
             write!(f, "<an empty string>")
         } else if len > 128 {
             write!(f, "<string with {len} bytes>")
-        } else if s.as_bytes().iter().any(|&b| b == 0) {
+        } else if s.as_bytes().contains(&0) {
             self.0.fmt(f)
         } else {
             write!(f, "<string {:?}>", s.as_bytes())
