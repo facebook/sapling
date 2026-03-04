@@ -748,27 +748,6 @@ def getbundlemanifestlog(orig, self):
 
     wrapmfl = mfl
 
-    class pendingmempack:
-        def __init__(self):
-            self._mutabledpack = None
-            self._mutablehpack = None
-
-        def getmutabledpack(self, read=False):
-            if self._mutabledpack is None and not read:
-                self._mutabledpack = memdatapack()
-            return self._mutabledpack
-
-        def getmutablehpack(self, read=False):
-            if self._mutablehpack is None and not read:
-                self._mutablehpack = memhistorypack()
-            return self._mutablehpack
-
-        def getmutablepack(self):
-            dpack = self.getmutabledpack()
-            hpack = self.getmutablehpack()
-
-            return dpack, hpack
-
     class bundlemanifestlog(wrapmfl.__class__):
         def add(
             self,
@@ -793,12 +772,10 @@ def getbundlemanifestlog(orig, self):
             pass
 
         def abortpending(self):
-            self._mutabelocalpacks = None
-            self._mutablesharedpacks = None
+            pass
 
     wrapmfl.__class__ = bundlemanifestlog
-    wrapmfl._mutablelocalpacks = pendingmempack()
-    wrapmfl._mutablesharedpacks = pendingmempack()
+
     return mfl
 
 
