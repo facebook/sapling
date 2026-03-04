@@ -106,63 +106,46 @@ Test symlinks
   [123]
 #endif
 
+  $ setconfig grep.biggrepclient=$TESTDIR/fake-biggrep-client.py grep.usebiggrep=True grep.biggrepcorpus=fake grep.biggreptier=biggrep.master
+
 Test with context
-  $ hg grep --config grep.biggrepclient=$TESTDIR/fake-biggrep-client.py \
-  > --config grep.usebiggrep=True --config grep.biggrepcorpus=fake \
-  > --color=off \
-  > -n foobar | sort
+  $ hg grep --color=off -n foobar | sort
   grepfile1:1:foobarbaz_bg
   grepfile2:1:foobarboo_bg
   subdir1/subfile1:1:foobar_subdir_bg
   subdir2/subfile2:1:foobar_dirsub_bg
 
 Test basic biggrep client in subdir1
-  $ hg grep --config grep.biggrepclient=$TESTDIR/fake-biggrep-client.py \
-  > --config grep.usebiggrep=True --config grep.biggrepcorpus=fake \
-  > --cwd subdir1 foobar | sort
+  $ hg grep --cwd subdir1 foobar | sort
   subfile1:foobar_subdir_bg
 
 Test basic biggrep client with subdir2 matcher
-  $ hg grep --config grep.biggrepclient=$TESTDIR/fake-biggrep-client.py \
-  > --config grep.usebiggrep=True --config grep.biggrepcorpus=fake \
-  > foobar subdir2 | sort
+  $ hg grep foobar subdir2 | sort
   subdir2/subfile2:foobar_dirsub_bg
 
 Test biggrep searching in a sibling subdirectory, using a relative path
   $ cd subdir1
-  $ hg grep --config grep.biggrepclient=$TESTDIR/fake-biggrep-client.py \
-  > --config grep.usebiggrep=True --config grep.biggrepcorpus=fake \
-  > foobar ../subdir2 -n | sort
+  $ hg grep foobar ../subdir2 -n | sort
   ../subdir2/subfile2:1:foobar_dirsub_bg
-  $ hg grep --config grep.biggrepclient=$TESTDIR/fake-biggrep-client.py \
-  > --config grep.usebiggrep=True --config grep.biggrepcorpus=fake \
-  > -n foobar | sort
+  $ hg grep -n foobar | sort
   subfile1:1:foobar_subdir_bg
-  $ hg grep --config grep.biggrepclient=$TESTDIR/fake-biggrep-client.py \
-  > --config grep.usebiggrep=True --config grep.biggrepcorpus=fake \
-  > -n foobar . | sort
+  $ hg grep -n foobar . | sort
   subfile1:1:foobar_subdir_bg
   $ cd ..
 
 Test escaping of dashes in biggrep expression:
-  $ hg grep --config grep.biggrepclient=$TESTDIR/fake-biggrep-client.py \
-  > --config grep.usebiggrep=True --config grep.biggrepcorpus=fake \
-  > -- -g | sort
+  $ hg grep -- -g | sort
   grepfile3:-g_bg
 
 Test biggrep command debug info
   $ cd subdir1
-  $ hg grep --config grep.biggrepclient=$TESTDIR/fake-biggrep-client.py \
-  > --config grep.usebiggrep=True --config grep.biggrepcorpus=fake \
-  > foobar -n --debug
+  $ hg grep foobar -n --debug
   biggrep command: ['*/fake-biggrep-client.py', 'biggrep.master', 'fake', 're2', '--stripdir', '-r', '--expression', 'foobar', '-f', '(grepdir/subdir1)'] (glob)
   subfile1:1:foobar_subdir_bg
   $ cd ..
 
 Test biggrep command error handling
-  $ hg grep --config grep.biggrepclient=$TESTDIR/broken-biggrep-client.py \
-  > --config grep.usebiggrep=True --config grep.biggrepcorpus=fake \
-  > foobar
+  $ hg grep --config grep.biggrepclient=$TESTDIR/broken-biggrep-client.py foobar
   abort: biggrep_client failed with exit code 2: broken biggrepclient
   (pass `--config grep.usebiggrep=False` to bypass biggrep)
   [255]

@@ -6,9 +6,16 @@
 
 # This is a terribly anemic fake implementation of the biggrep client
 import argparse
+import os
 import re
 import subprocess
+import sys
 
+# If BIGGREP_ARGS_FILE is set, save arguments to that file (but continue normal execution)
+args_file = os.environ.get("BIGGREP_ARGS_FILE")
+if args_file:
+    with open(args_file, "w") as f:
+        f.write(" ".join(sys.argv[1:]) + "\n")
 
 # The null commit
 NULL = "0" * 40

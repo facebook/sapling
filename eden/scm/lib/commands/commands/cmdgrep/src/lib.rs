@@ -5,7 +5,11 @@
  * GNU General Public License version 2.
  */
 
+#[cfg(feature = "fb")]
+mod biggrep;
+
 use std::io::Write;
+use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -181,7 +185,7 @@ pub fn run(ctx: ReqCtx<GrepOpts>, repo: &CoreRepo) -> Result<u8> {
             let wc = wc.read();
             let vfs = wc.vfs();
             (
-                vfs.root().to_path_buf(),
+                Some(vfs.root().to_path_buf()),
                 vfs.case_sensitive(),
                 std::env::current_dir()?,
                 if ctx.opts.sl_patterns.is_empty() {
@@ -195,7 +199,7 @@ pub fn run(ctx: ReqCtx<GrepOpts>, repo: &CoreRepo) -> Result<u8> {
             )
         }
         CoreRepo::Slapi(_slapi_repo) => (
-            PathBuf::new(),
+            None,
             true,
             PathBuf::new(),
             if ctx.opts.sl_patterns.is_empty() {
@@ -211,23 +215,42 @@ pub fn run(ctx: ReqCtx<GrepOpts>, repo: &CoreRepo) -> Result<u8> {
         ),
     };
 
-    let matcher = pathmatcher::cli_matcher(
+    // For cli_matcher, use empty path if repo_root is None
+    let cli_matcher_root = repo_root.as_deref().unwrap_or(Path::new(""));
+    let hinted_matcher = pathmatcher::cli_matcher(
         sl_patterns,
         &ctx.opts.walk_opts.include,
         &ctx.opts.walk_opts.exclude,
         pathmatcher::PatternKind::RelPath,
         case_sensitive,
-        &repo_root,
+        cli_matcher_root,
         &cwd,
         &mut ctx.io().input(),
     )?;
-    let mut matcher: DynMatcher = Arc::new(matcher);
+    let matcher: DynMatcher = Arc::new(hinted_matcher.clone());
 
     let (_, manifest) = repo.resolve_manifest(&ctx.core, rev, matcher.clone())?;
 
     // Check for sparse profile and intersect with existing matcher if set.
-    if let Some(sparse_matcher) = repo.sparse_matcher(&manifest)? {
-        matcher = Arc::new(IntersectMatcher::new(vec![matcher, sparse_matcher]));
+    let matcher = if let Some(sparse_matcher) = repo.sparse_matcher(&manifest)? {
+        Arc::new(IntersectMatcher::new(vec![matcher, sparse_matcher])) as DynMatcher
+    } else {
+        matcher
+    };
+
+    // Check if we should use biggrep (FB-only feature)
+    #[cfg(feature = "fb")]
+    if let Some(exit_code) = biggrep::try_biggrep(
+        &ctx,
+        repo,
+        pattern,
+        hinted_matcher.exact_files(),
+        &matcher,
+        &relativizer,
+        &cwd,
+        repo_root.as_deref(),
+    )? {
+        return Ok(exit_code);
     }
 
     let file_store = repo.file_store()?;

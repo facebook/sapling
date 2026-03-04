@@ -3799,9 +3799,8 @@ def grep(ui, repo, table, matcher, pattern, **opts):
     biggrepclient = ui.config(
         "grep",
         "biggrepclient",
-        "/usr/local/fbprojects/packages/biggrep.client/stable/biggrep_client",
     )
-    biggreptier = ui.config("grep", "biggreptier", "biggrep.master")
+    biggreptier = ui.config("grep", "biggreptier")
     biggrepcorpus = ui.config("grep", "biggrepcorpus")
 
     # If true, we'll use biggrepclient to perform the grep against some
@@ -3816,6 +3815,9 @@ def grep(ui, repo, table, matcher, pattern, **opts):
             and os.path.exists(biggrepclient)
         ):
             biggrep = True
+
+    if not biggrepclient or not biggreptier or not biggrepcorpus:
+        biggrep = False
 
     args = []
 
