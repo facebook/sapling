@@ -873,7 +873,23 @@ impl storemodel::KeyStore for TreeStore {
 
         // PERF: Ideally there is no need to clone path or data.
         let key = Key::new(path.to_owned(), id);
+
+        // Write parent info to the local history store
+        if let Some(ref historystore_local) = self.historystore_local {
+            let p1 = opts.parents.first().copied().unwrap_or(NULL_ID);
+            let p2 = opts.parents.get(1).copied().unwrap_or(NULL_ID);
+            let info = NodeInfo {
+                parents: [
+                    Key::new(key.path.clone(), p1),
+                    Key::new(key.path.clone(), p2),
+                ],
+                linknode: NULL_ID,
+            };
+            historystore_local.add(&key, &info)?;
+        }
+
         self.write_batch(std::iter::once((key, data, Default::default())))?;
+
         Ok(id)
     }
 
@@ -1045,25 +1061,29 @@ mod tests {
     use crate::indexedlogdatastore::IndexedLogHgIdDataStoreConfig;
     use crate::scmstore::tree::TreeStore;
 
-    #[test]
-    fn test_insert_data_read_before_write() {
-        let tempdir = TempDir::new().unwrap();
+    fn make_data_store(tempdir: &TempDir) -> Arc<IndexedLogHgIdDataStore> {
         let config = IndexedLogHgIdDataStoreConfig {
             max_log_count: None,
             max_bytes_per_log: None,
             max_bytes: None,
             btrfs_compression: false,
         };
-        let indexedlog = Arc::new(
+        Arc::new(
             IndexedLogHgIdDataStore::new(
                 &BTreeMap::<&str, &str>::new(),
-                &tempdir,
+                tempdir,
                 &config,
                 StoreType::Rotated,
                 SerializationFormat::Hg,
             )
             .unwrap(),
-        );
+        )
+    }
+
+    #[test]
+    fn test_insert_data_read_before_write() {
+        let tempdir = TempDir::new().unwrap();
+        let indexedlog = make_data_store(&tempdir);
 
         let mut store = TreeStore::empty();
         store.indexedlog_local = Some(indexedlog.clone());
@@ -1102,5 +1122,49 @@ mod tests {
 
         assert_eq!(id1, id3);
         assert_eq!(indexedlog.to_keys().len(), 2);
+    }
+
+    #[test]
+    fn test_insert_data_writes_parents_to_history_store() {
+        use types::HgId;
+
+        use crate::HgIdHistoryStore;
+        use crate::IndexedLogHgIdHistoryStore;
+
+        let data_dir = TempDir::new().unwrap();
+        let history_dir = TempDir::new().unwrap();
+
+        let indexedlog = make_data_store(&data_dir);
+        let historystore = Arc::new(
+            IndexedLogHgIdHistoryStore::new(
+                &history_dir,
+                &BTreeMap::<&str, &str>::new(),
+                StoreType::Rotated,
+            )
+            .unwrap(),
+        );
+
+        let mut store = TreeStore::empty();
+        store.indexedlog_local = Some(indexedlog);
+        store.historystore_local = Some(historystore.clone());
+
+        let path = RepoPathBuf::from_string("foo".to_string()).unwrap();
+        let data: &'static [u8] = b"tree data";
+        let p1 = HgId::from_hex(b"1111111111111111111111111111111111111111").unwrap();
+        let p2 = HgId::from_hex(b"2222222222222222222222222222222222222222").unwrap();
+
+        // Insert with parents.
+        let opts = InsertOpts {
+            kind: Kind::Tree,
+            parents: vec![p1, p2],
+            ..Default::default()
+        };
+        let id = store.insert_data(opts, &path, data.into()).unwrap();
+
+        // Verify parent info was written to the history store.
+        let key = types::Key::new(path.clone(), id);
+        let info = historystore.get_node_info(&key).unwrap().unwrap();
+        assert_eq!(info.parents[0].hgid, p1);
+        assert_eq!(info.parents[1].hgid, p2);
     }
 }
