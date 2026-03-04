@@ -49,7 +49,7 @@ impl Vertex {
     ///
     /// If `len(hex)` is an odd number, hex + '0' will be used.
     pub fn from_hex(hex: &[u8]) -> io::Result<Self> {
-        let mut bytes = vec![0u8; (hex.len() + 1) / 2];
+        let mut bytes = vec![0u8; hex.len().div_ceil(2)];
         for (i, byte) in hex.iter().enumerate() {
             let value = match byte {
                 b'0'..=b'9' => byte - b'0',
