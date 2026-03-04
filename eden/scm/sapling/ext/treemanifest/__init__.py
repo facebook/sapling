@@ -122,14 +122,6 @@ RECEIVEDNODE_RECORD = "receivednodes"
 BASENODESEARCHMAX = 25000
 
 
-def treeenabled(ui):
-    return (
-        ui.config("extensions", "treemanifest") not in (None, "!")
-        or "treemanifest" in extensions.DEFAULT_EXTENSIONS
-        or "treemanifest" in extensions.ALWAYS_ON_EXTENSIONS
-    )
-
-
 def usehttpfetching(repo):
     """Returns True if HTTP (EdenApi) fetching should be used."""
     if repo.ui.config("ui", "ssh") == "false":
@@ -292,23 +284,17 @@ def showmanifest(orig, **args):
 
 def getrepocaps(orig, repo, *args, **kwargs):
     caps = orig(repo, *args, **kwargs)
-    if treeenabled(repo.ui):
-        caps["treemanifest"] = ("True",)
-        caps["treeonly"] = ("True",)
+    caps["treemanifest"] = ("True",)
+    caps["treeonly"] = ("True",)
     return caps
 
 
 def _collectmanifest(orig, repo, striprev):
-    if treeenabled(repo.ui):
-        return []
-    return orig(repo, striprev)
+    return []
 
 
 def stripmanifest(orig, repo, striprev, tr, files):
-    if treeenabled(repo.ui):
-        repair.striptrees(repo, tr, striprev, files)
-        return
-    orig(repo, striprev, tr, files)
+    repair.striptrees(repo, tr, striprev, files)
 
 
 def _addtreecaps(caps):
@@ -340,7 +326,7 @@ def wraprepo(repo):
     class treerepository(repo.__class__):
         @perftrace.tracefunc("Prefetch Trees")
         def prefetchtrees(self, mfnodes, basemfnodes=None):
-            if not treeenabled(self.ui) or eagerepo.iseagerepo(self):
+            if eagerepo.iseagerepo(self):
                 return
             if self.storage_format() == "revlog":
                 return
@@ -752,19 +738,13 @@ class memtreemanifestctx:
 
 
 def getmanifestlog(orig, self):
-    if not treeenabled(self.ui):
-        return orig(self)
-
     mfl = treeonlymanifestlog(self.svfs, self)
     setuptreestores(self, mfl)
-
     return mfl
 
 
 def getbundlemanifestlog(orig, self):
     mfl = orig(self)
-    if not treeenabled(self.ui):
-        return mfl
 
     wrapmfl = mfl
 
@@ -829,9 +809,6 @@ def debuggetroottree(ui, repo, rootnode):
 
 
 def _unpackmanifestscg3(orig, self, repo, *args, **kwargs):
-    if not treeenabled(repo.ui):
-        return orig(self, repo, *args, **kwargs)
-
     self.manifestheader()
     for chunk in self.deltaiter():
         raise error.ProgrammingError(
@@ -843,9 +820,6 @@ def _unpackmanifestscg3(orig, self, repo, *args, **kwargs):
 
 
 def _unpackmanifestscg1(orig, self, repo, revmap, trp, numchanges):
-    if not treeenabled(repo.ui):
-        return orig(self, repo, revmap, trp, numchanges)
-
     self.manifestheader()
     for chunk in self.deltaiter():
         raise error.ProgrammingError(
@@ -953,7 +927,7 @@ def _registerbundle2parts():
     @perftrace.tracefunc("gettreepackpart2")
     def gettreepackpart2(pushop, bundler):
         """add parts containing trees being pushed"""
-        if "treepack" in pushop.stepsdone or not treeenabled(pushop.repo.ui):
+        if "treepack" in pushop.stepsdone:
             return
         pushop.stepsdone.add("treepack")
 
@@ -979,11 +953,7 @@ def _registerbundle2parts():
         **kwargs,
     ):
         """add parts containing trees being pulled"""
-        if (
-            "True" not in b2caps.get("treemanifest", [])
-            or not treeenabled(repo.ui)
-            or not kwargs.get("cg", True)
-        ):
+        if "True" not in b2caps.get("treemanifest", []) or not kwargs.get("cg", True):
             return
 
         outgoing = exchange._computeoutgoing(repo, heads, common)
@@ -1045,18 +1015,19 @@ def createtreepackpart(repo, outgoing, partname, sendtrees=shallowbundle.AllTree
 
 def pull(orig, ui, repo, *pats, **opts):
     result = orig(ui, repo, *pats, **opts)
-    if treeenabled(repo.ui):
-        try:
-            _postpullprefetch(ui, repo)
-        except Exception as ex:
-            # Errors are not fatal.
-            ui.warn(_("failed to prefetch trees after pull: %s\n") % ex)
-            ui.log_exception(
-                exception_type=type(ex).__name__,
-                exception_msg=str(ex),
-                fatal="false",
-                source="post_pull_prefetch",
-            )
+
+    try:
+        _postpullprefetch(ui, repo)
+    except Exception as ex:
+        # Errors are not fatal.
+        ui.warn(_("failed to prefetch trees after pull: %s\n") % ex)
+        ui.log_exception(
+            exception_type=type(ex).__name__,
+            exception_msg=str(ex),
+            fatal="false",
+            source="post_pull_prefetch",
+        )
+
     return result
 
 
@@ -1480,9 +1451,6 @@ def _debugbundle2part(orig, ui, part, all, **opts):
 
 def collectfiles(orig, repo, striprev):
     """find out the filelogs affected by the strip"""
-    if not treeenabled(repo.ui):
-        return orig(repo, striprev)
-
     files = set()
 
     for x in range(striprev, len(repo)):
@@ -1510,16 +1478,14 @@ def _addpartsfromopts(orig, ui, repo, bundler, source, outgoing, *args, **kwargs
 
     # Only add trees to bundles for tree enabled clients. Servers use revlogs
     # and therefore will use changegroup tree storage.
-    if treeenabled(repo.ui):
-        # Only add trees if we have them
-        sendtrees = shallowbundle.cansendtrees(
-            repo, outgoing.missing, b2caps=bundler.capabilities
+    sendtrees = shallowbundle.cansendtrees(
+        repo, outgoing.missing, b2caps=bundler.capabilities
+    )
+    if sendtrees != shallowbundle.NoTrees:
+        part = createtreepackpart(
+            repo, outgoing, TREEGROUP_PARTTYPE2, sendtrees=sendtrees
         )
-        if sendtrees != shallowbundle.NoTrees:
-            part = createtreepackpart(
-                repo, outgoing, TREEGROUP_PARTTYPE2, sendtrees=sendtrees
-            )
-            bundler.addpart(part)
+        bundler.addpart(part)
 
 
 def _handlebundle2part(orig, self, bundle, part):
@@ -1592,7 +1558,5 @@ class cachestoreserializer:
 
 
 def pullbundle2extraprepare(orig, pullop, kwargs):
-    repo = pullop.repo
-    if treeenabled(repo.ui):
-        bundlecaps = kwargs.get("bundlecaps", set())
-        bundlecaps.add("treeonly")
+    bundlecaps = kwargs.get("bundlecaps", set())
+    bundlecaps.add("treeonly")
