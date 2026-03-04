@@ -60,6 +60,8 @@ use crate::slapi_client::get_eden_api;
 use crate::slapi_client::get_eden_api_with_capabilities;
 use crate::slapi_client::get_optional_eden_api;
 use crate::trees::LocalTreeResolver;
+use crate::trees::SlapiTreeResolver;
+use crate::trees::UnionTreeResolver;
 
 #[derive(Clone)]
 pub struct Repo {
@@ -405,10 +407,24 @@ impl Repo {
 
     pub fn tree_resolver(&self) -> Result<Arc<dyn ReadTreeManifest + Send + Sync>> {
         let tr = self.tree_resolver.get_or_try_init(|| {
-            Ok::<_, anyhow::Error>(Arc::new(LocalTreeResolver::new(
+            let tree_store = self.tree_store()?;
+            let local: Arc<dyn ReadTreeManifest + Send + Sync> = Arc::new(LocalTreeResolver::new(
                 self.dag_commits()?,
-                self.tree_store()?,
-            )))
+                tree_store.clone(),
+            ));
+
+            // If SLAPI is available, also try resolving remotely to a tree. This works
+            // even if we haven't pulled the commit into our local commit graph.
+            let resolver: Arc<dyn ReadTreeManifest + Send + Sync> = match self.optional_eden_api() {
+                Ok(Some(eden_api)) => {
+                    let slapi: Arc<dyn ReadTreeManifest + Send + Sync> =
+                        Arc::new(SlapiTreeResolver::new(eden_api, tree_store));
+                    Arc::new(UnionTreeResolver::new(vec![local, slapi]))
+                }
+                _ => local,
+            };
+
+            Ok::<_, anyhow::Error>(resolver)
         })?;
         Ok(tr.clone())
     }
