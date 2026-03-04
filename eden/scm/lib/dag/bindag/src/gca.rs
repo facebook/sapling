@@ -61,7 +61,7 @@ pub fn gca(dag: &[impl AsRef<[usize]>], revs: &[usize]) -> Vec<usize> {
             if sv == allseen {
                 gca.push(v);
                 sv |= poison;
-                if revs.iter().any(|&r| r == v) {
+                if revs.contains(&v) {
                     break;
                 }
             }
