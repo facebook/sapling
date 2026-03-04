@@ -81,6 +81,7 @@ impl<R: MononokeRepo> RepoContext<R> {
             rebased_changesets,
             pushrebase_distance,
             log_id,
+            merge_resolved_paths,
         }) = outcome;
         redirector.ensure_backsynced(ctx, log_id).await?;
 
@@ -98,6 +99,7 @@ impl<R: MononokeRepo> RepoContext<R> {
             rebased_changesets,
             pushrebase_distance,
             log_id,
+            merge_resolved_paths,
         }))
     }
 

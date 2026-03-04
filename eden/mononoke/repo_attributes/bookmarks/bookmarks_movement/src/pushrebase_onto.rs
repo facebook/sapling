@@ -148,8 +148,19 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
                     .add("pushrebase_retry_num", outcome.retry_num.0)
                     .add("pushrebase_distance", outcome.pushrebase_distance.0)
                     .add("bookmark", self.bookmark.to_string())
-                    .add("changeset_id", format!("{}", outcome.head))
-                    .log_with_msg("Pushrebase finished", None);
+                    .add("changeset_id", format!("{}", outcome.head));
+                if let Some(ref paths) = outcome.merge_resolved_paths {
+                    scuba_logger.add("merge_resolved_count", paths.len()).add(
+                        "merge_resolved_paths",
+                        paths
+                            .iter()
+                            .take(10)
+                            .map(|p| p.to_string())
+                            .collect::<Vec<_>>()
+                            .join(","),
+                    );
+                }
+                scuba_logger.log_with_msg("Pushrebase finished", None);
 
                 postprocess_pushrebase_outcome(
                     ctx,

@@ -233,6 +233,10 @@ pub struct PushrebaseOutcome {
     pub rebased_changesets: Vec<PushrebaseChangesetPair>,
     pub pushrebase_distance: PushrebaseDistance,
     pub log_id: BookmarkUpdateLogId,
+    /// Paths that were resolved via server-side 3-way merge.
+    /// `None` means no merge resolution was performed (no conflicts, or feature disabled).
+    /// `Some(paths)` means these paths had conflicting edits that were auto-merged.
+    pub merge_resolved_paths: Option<Vec<NonRootMPath>>,
 }
 
 /// Result of indexing a pushrebase request
@@ -555,6 +559,7 @@ pub async fn do_batched_pushrebase(
                     rebased_changesets: stack_pairs,
                     pushrebase_distance: PushrebaseDistance(distance),
                     log_id,
+                    merge_resolved_paths: None,
                 }));
             }
             vec![]
@@ -771,6 +776,11 @@ async fn rebase_in_loop(
         .await?;
         pushrebase_distance = pushrebase_distance.add(server_bcs_count);
 
+        // Extract merged paths for observability before overrides are consumed
+        let merge_resolved_paths = merged_file_overrides
+            .as_ref()
+            .map(|overrides| overrides.iter().map(|(path, _)| path.clone()).collect());
+
         let rebase_outcome = do_rebase(
             ctx,
             repo,
@@ -806,6 +816,7 @@ async fn rebase_in_loop(
                 rebased_changesets,
                 pushrebase_distance,
                 log_id,
+                merge_resolved_paths,
             };
             return Ok(res);
         } else if should_log {
