@@ -184,14 +184,14 @@ class Nfsd3 final : public FsChannel {
    *   1. chmod goes all the way through the kernel to EdenFS. All "writes"
    *   seem to function this way.
    *   2. When the kernel sees the mtime in the post op attr in the response
-   *   from EdenFS has updated in the response to chmod, it will drop it's
+   *   from EdenFS has updated in the response to chmod, it will drop its
    *   caches for the children of the directory.
    *
    * 1. is implied by the NFS mode 2. isn't really guaranteed anywhere, but
    * this works well enough on Linux and macOS and we don't have many other
    * options.
    *
-   * We use to just do an open call here. This was insufficient because the
+   * We used to just do an open call here. This was insufficient because the
    * open and subsequent reads can be served purely from cache on macOS.
    * This was sufficient on Linux as all open calls go to EdenFS and CTO
    * (close-to-open) guarantees from NFS guarantees the caches must be flushed.

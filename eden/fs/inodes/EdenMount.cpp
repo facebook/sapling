@@ -1082,7 +1082,7 @@ folly::SemiFuture<folly::Unit> EdenMount::unmount(UnmountOptions options) {
         }
         // If a Future then callback returns a SemiFuture, that SemiFuture is
         // attached to the implied InlineExecutor.
-        // Therefore, the the following callback will be guaranteed to be fixup
+        // Therefore, the following callback will be guaranteed to fixup
         // the mountingUnmountingState, even if the returned SemiFuture is
         // dropped.
         // TODO: Is it safe to call FsChannel::unmount if the FuseChannel
@@ -1193,7 +1193,7 @@ bool EdenMount::shouldBeOrIsNfsChannel() const {
   XCHECK_GE(
       folly::to_underlying(state_.load(std::memory_order_acquire)),
       folly::to_underlying(State::INITIALIZING))
-      << "Though we guarantee that we won't modify shouldUseNFSMount_ after "
+      << "Though we guarantee that we won't modify shouldUseNFSMount_ "
          "after initialization begins. shouldUseNFSMount_ might be set any time "
          "before initialization starts and we provide no explicit synchronization "
          "on it, so it is not safe to access right now.";
@@ -1908,7 +1908,7 @@ ImmediateFuture<folly::Unit> EdenMount::chown(uid_t uid, gid_t gid) {
   });
 
   // Note that any files being created at this point are not
-  // guaranteed to have the requested uid/gid, but that racyness is
+  // guaranteed to have the requested uid/gid, but that raciness is
   // consistent with the behavior of chown
 
   // 4) Invalidate all inodes that the kernel holds a reference to

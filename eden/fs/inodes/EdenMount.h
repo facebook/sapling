@@ -517,7 +517,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * Wait for all inflight notifications to complete.
    *
    * On Windows, inflight notifications are processed asynchronously and thus
-   * the on-disk state of the the repository may differ from the inode state.
+   * the on-disk state of the repository may differ from the inode state.
    * This ensures that all pending notifications have completed.
    *
    * On macOS and Linux, this immediately return.
@@ -689,7 +689,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   /**
    * Get the TreeInode for the root of the mount.
    *
-   * This may race with the mount being tore down and the InodeMap being
+   * This may race with the mount being torn down and the InodeMap being
    * destroyed, it is therefore unsafe to call this unless guaranteed that
    * another reference was acquired under the EdenServer::mountPoints_ lock.
    *

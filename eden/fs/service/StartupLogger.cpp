@@ -244,7 +244,7 @@ DaemonStartupLogger::ChildHandler DaemonStartupLogger::spawnImpl(
   // We want to append arguments to the argv list, but we need to take
   // care for the case where the args look like:
   // ["some", "args", "--", "extra", "args"]
-  // In that case we want to insert before the the "--" in order to
+  // In that case we want to insert before the "--" in order to
   // preserve the semantic meaning of the command line.
   std::vector<std::string> args;
   std::vector<std::string> extraArgs;

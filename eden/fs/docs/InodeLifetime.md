@@ -103,7 +103,7 @@ for unloading.
 When loading an inode, we always hold the `InodeMap` lock to check if the inode
 in question is already loaded or if a load is in progress. Once the inode is
 loaded, we acquire its parent `TreeInode`'s `contents_` lock, then the
-`InodeMap` lock (in that order), so we can insert the inode into it's parent's
+`InodeMap` lock (in that order), so we can insert the inode into its parent's
 entry list and into the `InodeMap`'s list of loaded inodes.
 
 ### Updating Reference Counts

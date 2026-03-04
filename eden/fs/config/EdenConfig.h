@@ -704,7 +704,7 @@ class EdenConfig : private ConfigSettingManager {
   // [nfs]
 
   /**
-   * Controls whether Eden will run it's own rpcbind/portmapper server. On
+   * Controls whether Eden will run its own rpcbind/portmapper server. On
    * Linux there is one built into the kernel that is always running, and on
    * mac there is one built into the kernel you just have to poke into running.
    * There is not one built into Windows and no good (and discoverable by

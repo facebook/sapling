@@ -1189,7 +1189,7 @@ ImmediateFuture<folly::Unit> fileNotificationImpl(
 }
 
 /**
- * Matches EdenFS's view of a file/directory to it's state on disk. This is
+ * Matches EdenFS's view of a file/directory to its state on disk. This is
  * mostly used in response to notifications about file modifications from PrjFS.
  * But can also be used to correct EdenFS's view of a file.
  *

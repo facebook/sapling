@@ -785,7 +785,7 @@ class EdenServer : private TakeoverHandler {
   /**
    * The EventBase driving the main thread loop.
    *
-   * This is used to drive the the thrift server and can also be used for
+   * This is used to drive the thrift server and can also be used for
    * scheduling other asynchronous operations.
    *
    * This is set when the EdenServer is started and is never updated after

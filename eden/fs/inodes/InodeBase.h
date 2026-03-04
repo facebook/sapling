@@ -324,7 +324,7 @@ class InodeBase {
    * Get the channel reference count.
    *
    * This is intended only to be checked when an Inode is being unloaded,
-   * while holding both it's parent TreeInode's contents_ lock and the InodeMap
+   * while holding both its parent TreeInode's contents_ lock and the InodeMap
    * lock.
    *
    * The channel reference count is only incremented or decremented while
@@ -458,7 +458,7 @@ class InodeBase {
 
   /**
    * Acquire the content lock and update the inode metadata. This method is used
-   * to make the kernel refresh it's caches on NFS.
+   * to make the kernel refresh its caches on NFS.
    */
   virtual void forceMetadataUpdate() = 0;
 
@@ -549,7 +549,7 @@ class InodeBase {
    * This method should not be called on the root inode.  The caller is
    * responsible for checking that before calling getPathHelper().
    *
-   * Returns true if the the file exists at the given path, or false if the file
+   * Returns true if the file exists at the given path, or false if the file
    * has been unlinked.
    *
    * If stopOnUnlinked is true, it breaks immediately when it finds that the

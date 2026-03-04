@@ -148,7 +148,7 @@ TEST_F(ScmStatusCacheTest, evict_on_update) {
 
   auto v = std::make_shared<SeqStatusPair>(1, statusWithManyEntries);
 
-  // this should evict the the cache size to be maxItemCnt-1
+  // this should evict the cache size to be maxItemCnt-1
   cache->insert(keys.front(), 1, statusWithManyEntries);
   EXPECT_EQ(maxItemCnt - 1, cache->getObjectCount());
 }

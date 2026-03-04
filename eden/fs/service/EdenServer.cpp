@@ -2408,7 +2408,7 @@ folly::SemiFuture<Unit> EdenServer::createThriftServer() {
           edenConfig->thriftQueueTimeout.getValue()));
   server_->setAllowCheckUnimplementedExtraInterfaces(false);
 
-  // Setting this allows us to to only do stopListening() on the stop() call
+  // Setting this allows us to only do stopListening() on the stop() call
   // and delay thread-pool join (stop cpu workers + stop workers) until
   // server object destruction. This specifically matters in the takeover
   // shutdown code path.

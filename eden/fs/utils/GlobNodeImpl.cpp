@@ -152,7 +152,7 @@ StringPiece GlobNodeImpl::tokenize(StringPiece& pattern, bool* hasSpecials) {
     }
   }
 
-  // No slash found, so the the rest of the pattern is the token
+  // No slash found, so the rest of the pattern is the token
   StringPiece token = pattern;
   pattern = StringPiece();
   return token;

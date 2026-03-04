@@ -165,12 +165,12 @@
     },
     {
       "file": "fbcode/eden/fs/inodes/PrjfsDispatcherImpl.cpp",
-      "description": "this enqueues work to an executor. This executor is a serial executor. It's important that this is a serial executor, this is roughly how we ensure that we handle all callbacks before we handle thrift calls like checkout/filesChangedSince ...\n\nWe place work in the serial executor and wait for the executor to process it. When it gets processed we assume that all the notifications recieved before that point have been handled. \n\nThis approach is flawed, further work that is enqueued from this callback will be enqued after the \"fake\" work that we wait to process. So this is not a 100% correct scheme. ",
+      "description": "this enqueues work to an executor. This executor is a serial executor. It's important that this is a serial executor, this is roughly how we ensure that we handle all callbacks before we handle thrift calls like checkout/filesChangedSince ...\n\nWe place work in the serial executor and wait for the executor to process it. When it gets processed we assume that all the notifications received before that point have been handled. \n\nThis approach is flawed, further work that is enqueued from this callback will be enqued after the \"fake\" work that we wait to process. So this is not a 100% correct scheme. ",
       "line": 670
     },
     {
       "file": "fbcode/eden/fs/inodes/PrjfsDispatcherImpl.cpp",
-      "description": "notably we return immediatly, this keeps from blocking the thread which we handled the notification from PrjFS. ",
+      "description": "notably we return immediately, this keeps from blocking the thread which we handled the notification from PrjFS. ",
       "line": 704,
       "selection": {
         "start": {

@@ -230,7 +230,7 @@ faster than macOS these days.
 
 ### Cached State Implications: locally modified file storage
 
-The PrjFS keeps it's own source of truth for file contents. FUSE's caches of
+The PrjFS keeps its own source of truth for file contents. FUSE's caches of
 file contents are just that, caches. EdenFS is the source of truth and FUSE
 state is derived from that. However, PrjFS keeps a persistent copy of file
 contents which it treats as a source of truth. This means there is a much larger
@@ -299,13 +299,13 @@ true for file and directory removal.
 
 - internal link: https://internalfb.com/excalidraw/EX320542
 
-EdenFS use to do the naive thing to handle file modification notifications: try
+EdenFS used to do the naive thing to handle file modification notifications: try
 to directly apply the modification to the inode state. Like a file was removed,
 ok try to unlink that file from the inode hierarchy.
 
 In our examples above we can see where this could cause trouble.
 
-1. If EdenFS hears about a file's creation before it's parent directories, when
+1. If EdenFS hears about a file's creation before its parent directories, when
    EdenFS tries to add the new file to the parent directory inode, the directory
    inode won't exist. If EdenFS just said shrug (failed and ignored the
    confusing notification), the file would never get added to the inodes and it
@@ -350,7 +350,7 @@ match it's inode state to the state of disk around the modified file/directory.
 If during a checkout operation a file that was previously read changes, EdenFS
 needs to tell PrjFS that file has changed, so that PrjFS does not continue
 providing the old file contents to users. We call telling the OS that a file
-changed "invalidation". This is done via the the [PrjDeleteFile][PrjDeleteFile]
+changed "invalidation". This is done via the [PrjDeleteFile][PrjDeleteFile]
 API. For directories, as mentioned above PrjFS does consult EdenFS for most
 reads. However PrjFS only consults EdenFS for directories present in the current
 commit and never for user created directories. So EdenFS still needs to

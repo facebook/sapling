@@ -907,7 +907,7 @@ Future<SerializedInodeMap> InodeMap::shutdown(
   // Walk from the root of the tree down, finding all unreferenced inodes,
   // and immediately destroy them.
   //
-  // Hold the the mountpoint-wide rename lock in shared mode while doing the
+  // Hold the mountpoint-wide rename lock in shared mode while doing the
   // walk.  We want to make sure that we walk *all* children.  While doing the
   // walk we want to make sure that an Inode that hasn't been processed yet
   // cannot be moved from the unprocessed part of the tree into a processed

@@ -105,12 +105,12 @@
     },
     {
       "file": "fbcode/eden/fs/prjfs/PrjfsChannel.cpp",
-      "description": "the real work is done in a future that is run on another thread. We will come back to this detatch logic later, but first let's look at the future chain above that is doing the read. ",
+      "description": "the real work is done in a future that is run on another thread. We will come back to this detach logic later, but first let's look at the future chain above that is doing the read. ",
       "line": 813
     },
     {
       "file": "fbcode/eden/fs/prjfs/PrjfsChannel.cpp",
-      "description": "We read the file content from the dispatcher all at once. We will get into that later, there's a bit more I want to show you in the PrjFS layer before we go down the the dispatcher. ",
+      "description": "We read the file content from the dispatcher all at once. We will get into that later, there's a bit more I want to show you in the PrjFS layer before we go down to the dispatcher. ",
       "line": 742
     },
     {

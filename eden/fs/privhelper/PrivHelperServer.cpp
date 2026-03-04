@@ -80,7 +80,7 @@ void PrivHelperServer::initPartial(folly::File socket, uid_t uid, gid_t gid) {
   XCHECK_EQ(uid_, std::numeric_limits<uid_t>::max());
   XCHECK_EQ(gid_, std::numeric_limits<gid_t>::max());
 
-  // Set our thread name to to make it easier to distinguish
+  // Set our thread name to make it easier to distinguish
   // the privhelper process from the main EdenFS process.  Setting the thread
   // name for the main thread also changes the process name reported
   // /proc/PID/comm (and therefore by ps).
@@ -299,7 +299,7 @@ folly::File mountOSXFuse(
       ioctl(fuseDev.fd(), FUSEDEVIOCGETRANDOM, &args.random),
       "failed negotiation with ioctl FUSEDEVIOCGETRANDOM");
 
-  // We get to set some metadata for for mounted volume
+  // We get to set some metadata for the mounted volume
   checkThenPlaceInBuffer(
       args.fsname,
       fmt::format(

@@ -38,10 +38,10 @@ class StartupStatusSubscriber {
    * call any StartupStatusChannel methods from this callback!! You will
    * deadlock!!
    *
-   * Admitadly, with the current StartupStatusSubscriber implementation, publish
-   * will not be invoked more than once at a time. However, this is considered
-   * an implementation detail that might change, so it is safer ensure that
-   * publish can be called concurrently with itself.
+   * Admittedly, with the current StartupStatusSubscriber implementation,
+   * publish will not be invoked more than once at a time. However, this is
+   * considered an implementation detail that might change, so it is safer
+   * ensure that publish can be called concurrently with itself.
    */
   virtual void publish(std::string_view data) = 0;
 };

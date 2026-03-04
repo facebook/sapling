@@ -2347,7 +2347,7 @@ void TreeInode::TreeRenameLocks::acquireLocks(
     srcContentsLock_ = srcTree->contents_.wlock();
     srcContents_ = &srcContentsLock_->entries;
     destContents_ = &srcContentsLock_->entries;
-    // Look up the destination child entry, and lock it if is is a directory
+    // Look up the destination child entry, and lock it if it is a directory
     lockDestChild(destName);
   } else if (isAncestor(renameLock_, srcTree, destTree)) {
     // If srcTree is an ancestor of destTree, we must acquire the lock on
@@ -4017,7 +4017,7 @@ ImmediateFuture<InvalidationRequired> TreeInode::checkoutUpdateEntry(
             // really matter, if we invalidated fuse and then removing in eden
             // fails, its fine we did the extra invalidation. On NFS our
             // invalidation relies on data changing in EdenFS and the kernel
-            // noticing and clearing it's own caches. So we would really want
+            // noticing and clearing its own caches. So we would really want
             // tryRemoveChild to happen first. But thankfully
             // invalidateChannelEntryCache doesn't do anything on NFS anyways.
             // so it does not matter these are out of order.
@@ -4120,7 +4120,7 @@ ImmediateFuture<InvalidationRequired> TreeInode::checkoutUpdateEntry(
 #ifdef _WIN32
 namespace {
 /**
- * Test if the passed in InodeNumber is known by the the InodeMap.
+ * Test if the passed in InodeNumber is known by the InodeMap.
  */
 bool needDecFsRefcount(InodeMap& inodeMap, InodeNumber ino) {
   return inodeMap.isInodeLoadedOrRemembered(ino);
@@ -4381,7 +4381,7 @@ void TreeInode::saveOverlayPostCheckout(
     //
     // TODO: Currently we end up writing out overlay data for TreeInodes
     // pretty often during the checkout process.  Each time a child entry is
-    // processed we will likely end up rewriting data for it's parent
+    // processed we will likely end up rewriting data for its parent
     // TreeInode, and then once all children are processed we do another pass
     // through here in saveOverlayPostCheckout() and possibly write it out
     // again.

@@ -728,7 +728,7 @@ class InodeMap {
    * Construct an UnloadedInode and insert it onto the unloadedInodes_ map.
    *
    * Will throw a std::runtime_error if the passed in InodeNumber is already
-   * known by the the InodeMap.
+   * known by the InodeMap.
    *
    * The argument list will be directly passed in to the UnloadedInode
    * constructor.

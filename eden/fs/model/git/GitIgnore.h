@@ -134,7 +134,7 @@ class GitIgnore {
    * directories only.
    *
    * It is safe to call match() from multiple threads concurrently on the same
-   * GitIgnore object, provide no modifying operations are being done to the
+   * GitIgnore object, provided no modifying operations are being done to the
    * GitIgnore object at the same time.
    */
   MatchResult match(RelativePathPiece path, FileType fileType) const {

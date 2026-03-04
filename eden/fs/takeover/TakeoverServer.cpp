@@ -242,7 +242,7 @@ Future<Unit> TakeoverServer::ConnHandler::pingThenSendTakeoverData(
   // This ensures that the client is still connected and ready to receive data.
   // If the client disconnected while we were pausing our checkout mounts and
   // preparing the takeover, we want to resume our mounts rather than trying to
-  // transfer them to to the now-disconnected process.
+  // transfer them to the now-disconnected process.
   UnixSocket::Message msg;
   msg.data = TakeoverData::serializePing();
 

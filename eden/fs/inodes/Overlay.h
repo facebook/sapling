@@ -411,7 +411,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
 
   /**
    * This uint64_t holds two values, a single bit on the MSB that
-   * acts a boolean closed: True if the the Overlay has been closed with
+   * acts a boolean closed: True if the Overlay has been closed with
    * calling setClosed(). When this is true, reads and writes will throw an
    * error instead of applying an overlay change or read. On the rest of the
    * bits, the actual number of outstanding IO requests is held. This has been
