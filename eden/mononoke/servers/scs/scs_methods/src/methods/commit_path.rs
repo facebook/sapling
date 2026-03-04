@@ -589,6 +589,7 @@ impl SourceControlServiceImpl {
             after_timestamp,
             before_committer_timestamp,
             after_committer_timestamp,
+            params.author,
             params.format,
             &params.identity_schemes,
         )
