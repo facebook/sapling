@@ -441,6 +441,219 @@ impl fmt::Debug for TreeManifest {
     }
 }
 
+/// Trait for tracking parent trees during finalization.
+/// This abstracts the parent-matching logic so `finalize_trees` can work
+/// with Hg parent history or without any parents.
+trait ParentTreeTracker {
+    type ActiveParents;
+
+    /// Returns the initial set of active parents for the root.
+    fn initial_active(&self) -> Self::ActiveParents;
+
+    /// Check if a durable node with `hgid` is unchanged (present in a parent).
+    fn is_unchanged(&self, hgid: &HgId, parent_tree_nodes: &[HgId]) -> bool;
+
+    /// Return the distinct parent tree node HgIds for the current active set.
+    fn parent_tree_nodes(&self, active: &Self::ActiveParents) -> Result<Vec<HgId>>;
+
+    /// Advance parent cursors past the current directory entry.
+    fn advance(&mut self, active: &Self::ActiveParents) -> Result<()>;
+
+    /// Narrow the active parents down to those that have a subdirectory at `path`.
+    fn for_subdirectory(
+        &mut self,
+        active: &Self::ActiveParents,
+        path: &RepoPath,
+    ) -> Result<Self::ActiveParents>;
+}
+
+/// No parent tracking — used for content-addressed stores (Git) where a
+/// durable node's identity is fully determined by its content.
+struct NoParents;
+
+impl ParentTreeTracker for NoParents {
+    type ActiveParents = ();
+
+    fn initial_active(&self) -> () {}
+    fn is_unchanged(&self, _hgid: &HgId, _parent_tree_nodes: &[HgId]) -> bool {
+        // Durable nodes in content-addressed stores are always valid.
+        true
+    }
+    fn parent_tree_nodes(&self, _active: &()) -> Result<Vec<HgId>> {
+        Ok(Vec::new())
+    }
+    fn advance(&mut self, _active: &()) -> Result<()> {
+        Ok(())
+    }
+    fn for_subdirectory(&mut self, _active: &(), _path: &RepoPath) -> Result<()> {
+        Ok(())
+    }
+}
+
+/// Hg parent tracking — uses `DfsCursor`s to walk parent trees in lockstep
+/// with the working tree, identifying which directories are unchanged.
+struct HgParents<'a> {
+    cursors: Vec<DfsCursor<'a>>,
+}
+
+impl<'a> HgParents<'a> {
+    fn new(parent_trees: &[&'a TreeManifest]) -> Result<Self> {
+        let mut cursors: Vec<DfsCursor<'a>> =
+            parent_trees.iter().map(|v| v.root_cursor()).collect();
+        // The first node after step is the root directory. The walk logic
+        // expects cursors to be pointing to the underlying link.
+        for cursor in cursors.iter_mut() {
+            match cursor.step() {
+                Step::Success | Step::End => {}
+                Step::Err(err) => return Err(err),
+            }
+        }
+        Ok(Self { cursors })
+    }
+}
+
+impl<'a> ParentTreeTracker for HgParents<'a> {
+    /// Indices into `self.cursors` that are active for the current subtree.
+    type ActiveParents = Vec<usize>;
+
+    fn initial_active(&self) -> Vec<usize> {
+        (0..self.cursors.len()).collect()
+    }
+
+    fn is_unchanged(&self, hgid: &HgId, parent_tree_nodes: &[HgId]) -> bool {
+        parent_tree_nodes.contains(hgid)
+    }
+
+    fn parent_tree_nodes(&self, active: &Vec<usize>) -> Result<Vec<HgId>> {
+        let mut parent_nodes = Vec::with_capacity(active.len());
+        for id in active {
+            let cursor = &self.cursors[*id];
+            let hgid = match cursor.link().as_ref() {
+                Leaf(_) | Ephemeral(_) => unreachable!(),
+                Durable(entry) => entry.hgid,
+            };
+            if !parent_nodes.contains(&hgid) {
+                parent_nodes.push(hgid);
+            }
+        }
+        Ok(parent_nodes)
+    }
+
+    fn advance(&mut self, active: &Vec<usize>) -> Result<()> {
+        for id in active {
+            let cursor = &mut self.cursors[*id];
+            match cursor.step() {
+                Step::Success | Step::End => {}
+                Step::Err(err) => return Err(err),
+            }
+        }
+        Ok(())
+    }
+
+    fn for_subdirectory(&mut self, active: &Vec<usize>, path: &RepoPath) -> Result<Vec<usize>> {
+        let mut result = Vec::new();
+        for id in active.iter() {
+            let cursor = &mut self.cursors[*id];
+            while !cursor.finished() && cursor.path() < path {
+                cursor.skip_subtree();
+                match cursor.step() {
+                    Step::Success | Step::End => {}
+                    Step::Err(err) => return Err(err),
+                }
+            }
+            if !cursor.finished() && cursor.path() == path {
+                match cursor.link().as_ref() {
+                    Leaf(_) => {} // files and directories don't share history
+                    Durable(_) => result.push(*id),
+                    Ephemeral(_) => {
+                        panic!("Found ephemeral parent when finalizing manifest.")
+                    }
+                }
+            }
+        }
+        Ok(result)
+    }
+}
+
+fn compute_hgid(parent_tree_nodes: &[HgId], content: &[u8], format: SerializationFormat) -> HgId {
+    match format {
+        SerializationFormat::Hg => {
+            debug_assert!(parent_tree_nodes.len() <= 2);
+            let p1 = parent_tree_nodes.first().unwrap_or(HgId::null_id());
+            let p2 = parent_tree_nodes.get(1).unwrap_or(HgId::null_id());
+            hg_sha1_digest(content, p1, p2)
+        }
+        SerializationFormat::Git => git_sha1_digest(content, "tree"),
+    }
+}
+
+/// Recursive tree-walking logic shared by `finalize()`.
+/// Walks the tree, computing hgids for each directory node,
+/// and populates `converted_nodes` with the entries that need to be written.
+fn finalize_trees<P: ParentTreeTracker>(
+    store: &InnerStore,
+    path: &mut RepoPathBuf,
+    link: &mut Link,
+    format: SerializationFormat,
+    tracker: &mut P,
+    active: P::ActiveParents,
+    converted_nodes: &mut Vec<(RepoPathBuf, HgId, Bytes, HgId, HgId)>,
+) -> Result<(HgId, store::Flag)> {
+    let parent_tree_nodes = tracker.parent_tree_nodes(&active)?;
+    if let Durable(entry) = link.as_ref() {
+        if tracker.is_unchanged(&entry.hgid, &parent_tree_nodes) {
+            return Ok((entry.hgid, store::Flag::Directory));
+        }
+    }
+    tracker.advance(&active)?;
+    if let Leaf(file_metadata) = link.as_ref() {
+        return Ok((
+            file_metadata.hgid,
+            store::Flag::File(file_metadata.file_type.clone()),
+        ));
+    }
+    // TODO: This code is also used on durable nodes for the purpose of generating
+    // a list of entries to insert in the local store. For those cases we don't
+    // need to convert to Ephemeral instead only verify the hash.
+    let links = link.mut_ephemeral_links(store, path)?;
+    let mut elements = Vec::with_capacity(links.len());
+    for (component, child_link) in links.iter_mut() {
+        path.push(component.as_path_component());
+        let child_active = tracker.for_subdirectory(&active, path)?;
+        let (hgid, flag) = finalize_trees(
+            store,
+            path,
+            child_link,
+            format,
+            tracker,
+            child_active,
+            converted_nodes,
+        )?;
+        path.pop();
+        let element = store::Element::new(component.clone(), hgid, flag);
+        elements.push(element);
+    }
+    let entry = store::Entry::from_elements(elements, format);
+    let hgid = compute_hgid(&parent_tree_nodes, entry.as_ref(), format);
+
+    let cell = OnceCell::new();
+    // TODO: remove clone
+    cell.set(links.clone()).unwrap();
+
+    let durable_entry = DurableEntry { hgid, links: cell };
+    let inner = Arc::new(durable_entry);
+    *link = Link::new(Durable(inner));
+    let parent_hgid = |id| *parent_tree_nodes.get(id).unwrap_or(HgId::null_id());
+    converted_nodes.push((
+        path.clone(),
+        hgid,
+        entry.to_bytes(),
+        parent_hgid(0),
+        parent_hgid(1),
+    ));
+    Ok((hgid, store::Flag::Directory))
+}
+
 impl TreeManifest {
     /// Produces new trees to write in hg format (path, id, text, p1, p2).
     /// Does not write to the tree store directly.
@@ -448,160 +661,26 @@ impl TreeManifest {
         &mut self,
         parent_trees: Vec<&TreeManifest>,
     ) -> Result<impl Iterator<Item = (RepoPathBuf, HgId, Bytes, HgId, HgId)> + use<>> {
-        fn compute_hgid(
-            parent_tree_nodes: &[HgId],
-            content: &[u8],
-            format: SerializationFormat,
-        ) -> HgId {
-            match format {
-                SerializationFormat::Hg => {
-                    debug_assert!(parent_tree_nodes.len() <= 2);
-                    let p1 = parent_tree_nodes.first().unwrap_or(HgId::null_id());
-                    let p2 = parent_tree_nodes.get(1).unwrap_or(HgId::null_id());
-                    hg_sha1_digest(content, p1, p2)
-                }
-                SerializationFormat::Git => git_sha1_digest(content, "tree"),
-            }
-        }
-        struct Executor<'a> {
-            store: &'a InnerStore,
-            path: RepoPathBuf,
-            converted_nodes: Vec<(RepoPathBuf, HgId, Bytes, HgId, HgId)>,
-            parent_trees: Vec<DfsCursor<'a>>,
-        }
-        impl<'a> Executor<'a> {
-            fn new(
-                store: &'a InnerStore,
-                parent_trees: &[&'a TreeManifest],
-            ) -> Result<Executor<'a>> {
-                let mut executor = Executor {
-                    store,
-                    path: RepoPathBuf::new(),
-                    converted_nodes: Vec::new(),
-                    parent_trees: parent_trees.iter().map(|v| v.root_cursor()).collect(),
-                };
-                // The first node after step is the root directory. `work()` expects cursors to
-                // be pointing to the underlying link.
-                for cursor in executor.parent_trees.iter_mut() {
-                    match cursor.step() {
-                        Step::Success | Step::End => {}
-                        Step::Err(err) => return Err(err),
-                    }
-                }
-                Ok(executor)
-            }
-            fn active_parent_tree_nodes(&self, active_parents: &[usize]) -> Result<Vec<HgId>> {
-                let mut parent_nodes = Vec::with_capacity(active_parents.len());
-                for id in active_parents {
-                    let cursor = &self.parent_trees[*id];
-                    let hgid = match cursor.link().as_ref() {
-                        Leaf(_) | Ephemeral(_) => unreachable!(),
-                        Durable(entry) => entry.hgid,
-                    };
-                    if !parent_nodes.contains(&hgid) {
-                        parent_nodes.push(hgid);
-                    }
-                }
-                Ok(parent_nodes)
-            }
-            fn advance_parents(&mut self, active_parents: &[usize]) -> Result<()> {
-                for id in active_parents {
-                    let cursor = &mut self.parent_trees[*id];
-                    match cursor.step() {
-                        Step::Success | Step::End => {}
-                        Step::Err(err) => return Err(err),
-                    }
-                }
-                Ok(())
-            }
-            fn parent_trees_for_subdirectory(
-                &mut self,
-                active_parents: &[usize],
-            ) -> Result<Vec<usize>> {
-                let mut result = Vec::new();
-                for id in active_parents.iter() {
-                    let cursor = &mut self.parent_trees[*id];
-                    while !cursor.finished() && cursor.path() < self.path.as_repo_path() {
-                        cursor.skip_subtree();
-                        match cursor.step() {
-                            Step::Success | Step::End => {}
-                            Step::Err(err) => return Err(err),
-                        }
-                    }
-                    if !cursor.finished() && cursor.path() == self.path.as_repo_path() {
-                        match cursor.link().as_ref() {
-                            Leaf(_) => {} // files and directories don't share history
-                            Durable(_) => result.push(*id),
-                            Ephemeral(_) => {
-                                panic!("Found ephemeral parent when finalizing manifest.")
-                            }
-                        }
-                    }
-                }
-                Ok(result)
-            }
-            fn work(
-                &mut self,
-                link: &mut Link,
-                active_parents: Vec<usize>,
-            ) -> Result<(HgId, store::Flag)> {
-                let parent_tree_nodes = self.active_parent_tree_nodes(&active_parents)?;
-                if let Durable(entry) = link.as_ref() {
-                    if parent_tree_nodes.contains(&entry.hgid) {
-                        return Ok((entry.hgid, store::Flag::Directory));
-                    }
-                }
-                self.advance_parents(&active_parents)?;
-                if let Leaf(file_metadata) = link.as_ref() {
-                    return Ok((
-                        file_metadata.hgid,
-                        store::Flag::File(file_metadata.file_type.clone()),
-                    ));
-                }
-                // TODO: This code is also used on durable nodes for the purpose of generating
-                // a list of entries to insert in the local store. For those cases we don't
-                // need to convert to Ephemeral instead only verify the hash.
-                let links = link.mut_ephemeral_links(self.store, &self.path)?;
-                let format = self.store.format();
-                let mut elements = Vec::with_capacity(links.len());
-                for (component, link) in links.iter_mut() {
-                    self.path.push(component.as_path_component());
-                    let child_parents = self.parent_trees_for_subdirectory(&active_parents)?;
-                    let (hgid, flag) = self.work(link, child_parents)?;
-                    self.path.pop();
-                    let element = store::Element::new(component.clone(), hgid, flag);
-                    elements.push(element);
-                }
-                let entry = store::Entry::from_elements(elements, format);
-                let hgid = compute_hgid(&parent_tree_nodes, entry.as_ref(), format);
-
-                let cell = OnceCell::new();
-                // TODO: remove clone
-                cell.set(links.clone()).unwrap();
-
-                let durable_entry = DurableEntry { hgid, links: cell };
-                let inner = Arc::new(durable_entry);
-                *link = Link::new(Durable(inner));
-                let parent_hgid = |id| *parent_tree_nodes.get(id).unwrap_or(HgId::null_id());
-                self.converted_nodes.push((
-                    self.path.clone(),
-                    hgid,
-                    entry.to_bytes(),
-                    parent_hgid(0),
-                    parent_hgid(1),
-                ));
-                Ok((hgid, store::Flag::Directory))
-            }
-        }
-
         assert_eq!(
             self.store.format(),
             SerializationFormat::Hg,
             "finalize() can only be used for hg store, use flush() instead"
         );
-        let mut executor = Executor::new(&self.store, &parent_trees)?;
-        executor.work(&mut self.root, (0..parent_trees.len()).collect())?;
-        Ok(executor.converted_nodes.into_iter())
+        let mut tracker = HgParents::new(&parent_trees)?;
+        let active = tracker.initial_active();
+        let mut converted_nodes = Vec::new();
+        let mut path = RepoPathBuf::new();
+        let format = self.store.format();
+        finalize_trees(
+            &self.store,
+            &mut path,
+            &mut self.root,
+            format,
+            &mut tracker,
+            active,
+            &mut converted_nodes,
+        )?;
+        Ok(converted_nodes.into_iter())
     }
 
     /// Insert `other[other_path]` into `self[path]`. If `path` is already in `self`,
