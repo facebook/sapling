@@ -1678,20 +1678,18 @@ class committablectx(basectx):
         removed = sorted(removed)
         drop = sorted(drop)
         if added or drop:
-            if isgit:
-                mn = mctx.writegit()
-            else:
-                mn = (
-                    mctx.write(
-                        tr,
-                        linkrev,
-                        p1.manifestnode(),
-                        p2.manifestnode(),
-                        added,
-                        drop,
-                    )
-                    or p1.manifestnode()
-                )
+            p1node = nullid if isgit else p1.manifestnode()
+            p2node = nullid if isgit else p2.manifestnode()
+            mn = mctx.write(
+                tr,
+                linkrev,
+                p1node,
+                p2node,
+                added,
+                drop,
+            )
+            if not isgit:
+                mn = mn or p1.manifestnode()
         else:
             mn = p1.manifestnode()
         files = changed + removed

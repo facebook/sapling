@@ -441,17 +441,7 @@ class treemanifestlog:
         linkrev=None,
     ):
         """Writes the given tree into the manifestlog."""
-        assert not self._isgit, (
-            "do not use add() for git tree, use tree.flush() instead"
-        )
-        return self._addtopack(
-            ui,
-            newtree,
-            p1node,
-            p2node,
-            linknode,
-            linkrev=linkrev,
-        )
+        return _finalize(self, newtree, p1node, p2node)
 
     def _getmutablelocalpacks(self):
         """Returns a tuple containing a data pack and a history pack."""
@@ -472,17 +462,6 @@ class treemanifestlog:
         # this pack it could delta against.
         dpack.add(nname, nnode, revlog.nullid, ntext)
         hpack.add(nname, nnode, np1, np2, linknode, "")
-
-    def _addtopack(
-        self,
-        ui,
-        newtree,
-        p1node,
-        p2node,
-        linknode,
-        linkrev=None,
-    ):
-        return _finalize(self, newtree, p1node, p2node)
 
     def commitsharedpacks(self):
         """Persist the dirty trees written to the shared packs."""
@@ -679,27 +658,10 @@ class memtreemanifestctx:
     def read(self):
         return self._treemanifest
 
-    def writegit(self):
-        newtree = self._treemanifest
-        return newtree.flush()
-
     def write(self, tr, linkrev, p1, p2, added, removed):
         mfl = self._manifestlog
-        assert not mfl._isgit, "do not use write() for git tree, use writegit() instead"
-
         newtree = self._treemanifest
-
-        # linknode=None because the linkrev is provided
-        node = mfl.add(
-            mfl.ui,
-            newtree,
-            p1,
-            p2,
-            None,
-            tr=tr,
-            linkrev=linkrev,
-        )
-        return node
+        return _finalize(mfl, newtree, p1, p2)
 
 
 def getmanifestlog(orig, repo):
@@ -722,14 +684,7 @@ def getbundlemanifestlog(orig, self):
             tr=None,
             linkrev=None,
         ):
-            return self._addtopack(
-                ui,
-                newtree,
-                p1node,
-                p2node,
-                linknode,
-                linkrev=linkrev,
-            )
+            return _finalize(self, newtree, p1node, p2node)
 
         def commitpending(self):
             pass
