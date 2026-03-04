@@ -89,7 +89,8 @@ pub fn run(ctx: ReqCtx<DebugScmStoreOpts>, repo: &Repo) -> Result<u8> {
     let keys: Vec<Key> = if let Some(path) = ctx.opts.requests_file {
         block_on_stream(block_on(file_to_async_key_stream(path.into()))?).collect()
     } else {
-        let commit = repo.resolve_commit(&ctx.opts.rev.unwrap())?;
+        let rev = ctx.opts.rev.unwrap();
+        let commit = repo.resolve_commit(&rev)?.local()?;
         let manifest = repo.tree_resolver()?.get(&commit)?;
         ctx.opts
             .args

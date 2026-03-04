@@ -22,5 +22,6 @@ pub use commits_trait::DagCommits;
 pub use core_repo::CoreRepo;
 pub use manifest_tree::ReadTreeManifest;
 pub use repo::Repo;
+pub use repo::ResolveResult;
 pub use repo_minimal_info::RepoMinimalInfo;
 pub use slapi_repo::SlapiRepo;

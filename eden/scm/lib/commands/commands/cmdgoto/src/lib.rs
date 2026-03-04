@@ -184,7 +184,7 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &Repo, wc: &WorkingCopy) -> Result<u8> {
 
     let dest = dest.remove(0);
 
-    let target = match repo.resolve_commit(&dest) {
+    let target = match repo.resolve_commit(&dest).and_then(|r| r.local()) {
         Ok(target) => target,
         Err(err) => {
             tracing::debug!(target: "checkout_info", checkout_detail="resolve_commit");

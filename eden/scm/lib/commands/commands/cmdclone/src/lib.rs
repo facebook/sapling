@@ -780,10 +780,8 @@ fn get_update_target(
     }
 
     if !clone_opts.updaterev.is_empty() {
-        return Ok(Some((
-            repo.resolve_commit(&clone_opts.updaterev)?,
-            clone_opts.updaterev.clone(),
-        )));
+        let id = repo.resolve_commit(&clone_opts.updaterev)?.local()?;
+        return Ok(Some((id, clone_opts.updaterev.clone())));
     }
 
     let selective_bookmarks = get_selective_bookmarks(repo)?;

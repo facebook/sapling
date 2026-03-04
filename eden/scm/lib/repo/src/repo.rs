@@ -36,8 +36,8 @@ pub use repo_minimal_info::read_sharedpath;
 use repolock::RepoLocker;
 use revisionstore::scmstore;
 use revisionstore::trait_impls::ArcFileStore;
-use revsets::errors::RevsetLookupError;
 use revsets::utils as revset_utils;
+pub use revsets::utils::ResolveResult;
 use rewrite_macros::cached_field;
 use storemodel::FileStore;
 use storemodel::StoreInfo;
@@ -430,7 +430,7 @@ impl Repo {
     }
 
     #[tracing::instrument(skip(self), ret)]
-    pub fn resolve_commit(&self, change_id: &str) -> Result<HgId> {
+    pub fn resolve_commit(&self, change_id: &str) -> Result<ResolveResult> {
         let dag = self.dag_commits()?;
         let dag = dag.read();
         let metalog = self.metalog()?;
@@ -451,13 +451,7 @@ impl Repo {
     }
 
     pub fn resolve_commit_opt(&self, change_id: &str) -> Result<Option<HgId>> {
-        match self.resolve_commit(change_id) {
-            Ok(id) => Ok(Some(id)),
-            Err(err) => match err.downcast_ref::<RevsetLookupError>() {
-                Some(RevsetLookupError::RevsetNotFound(_)) => Ok(None),
-                _ => Err(err),
-            },
-        }
+        Ok(self.resolve_commit(change_id)?.any().ok())
     }
 
     pub fn invalidate_stores(&self) -> Result<()> {
@@ -568,7 +562,7 @@ impl Repo {
             anyhow::bail!("not compiled with 'wdir' support");
         }
 
-        let commit_id = self.resolve_commit(change_id)?;
+        let commit_id = self.resolve_commit(change_id)?.local()?;
         let tree_resolver = self.tree_resolver()?;
         Ok((commit_id, tree_resolver.get(&commit_id)?))
     }

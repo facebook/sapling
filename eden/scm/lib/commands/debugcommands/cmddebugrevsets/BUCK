@@ -21,6 +21,5 @@ rust_library(
         "//eden/scm/lib/cliparser:cliparser",
         "//eden/scm/lib/commands/cmdutil:cmdutil",
         "//eden/scm/lib/repo:repo",
-        "//eden/scm/lib/workingcopy:workingcopy",
     ],
 )

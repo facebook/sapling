@@ -13,6 +13,7 @@ use context::CoreContext;
 use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
 use pathmatcher::DynMatcher;
+use revsets::utils::ResolveResult;
 use storemodel::FileStore;
 use storemodel::TreeStore;
 use types::HgId;
@@ -82,7 +83,7 @@ impl CoreRepo {
     ///
     /// For `Repo`, this uses the working copy's treestate for resolving "." and similar.
     /// For `SlapiRepo`, this only supports remote lookups (hash prefixes and bookmarks).
-    pub fn resolve_commit(&self, change_id: &str) -> Result<HgId> {
+    pub fn resolve_commit(&self, change_id: &str) -> Result<ResolveResult> {
         match self {
             CoreRepo::Disk(repo) => repo.resolve_commit(change_id),
             CoreRepo::Slapi(repo) => repo.resolve_commit(change_id),

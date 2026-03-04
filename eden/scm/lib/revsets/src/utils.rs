@@ -25,6 +25,38 @@ use types::hgid::WDIR_REV;
 
 use crate::errors::RevsetLookupError;
 
+/// Result of resolving a single commit identifier.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ResolveResult {
+    /// The identifier could not be resolved.
+    NotFound(String),
+    /// The identifier was resolved and exists in the local dag.
+    Local(String, HgId),
+    /// The identifier was resolved via remote lookup, but the commit
+    /// is not yet in the local dag.
+    RemoteOnly(String, HgId),
+}
+
+impl ResolveResult {
+    /// Returns the HgId if resolved locally, or an error otherwise.
+    pub fn local(self) -> Result<HgId> {
+        match self {
+            ResolveResult::Local(_, id) => Ok(id),
+            ResolveResult::RemoteOnly(name, _) | ResolveResult::NotFound(name) => {
+                Err(RevsetLookupError::RevsetNotFound(name).into())
+            }
+        }
+    }
+
+    /// Returns the HgId if resolved (local or remote), or an error if not found.
+    pub fn any(self) -> Result<HgId> {
+        match self {
+            ResolveResult::Local(_, id) | ResolveResult::RemoteOnly(_, id) => Ok(id),
+            ResolveResult::NotFound(name) => Err(RevsetLookupError::RevsetNotFound(name).into()),
+        }
+    }
+}
+
 struct LookupArgs<'a> {
     change_id: &'a str,
     id_map: &'a dyn IdConvert,
@@ -43,7 +75,7 @@ pub fn resolve_single(
     metalog: &MetaLog,
     working_copy_p1: Option<HgId>,
     edenapi: Option<&dyn SaplingRemoteApi>,
-) -> Result<HgId> {
+) -> Result<ResolveResult> {
     let args = LookupArgs {
         config,
         change_id,
@@ -53,21 +85,23 @@ pub fn resolve_single(
         working_copy_p1,
         edenapi,
     };
-    let fns = [
+
+    // Try local-only resolution functions first.
+    let local_fns = [
         resolve_special,
         resolve_dot,
         resolve_revnum,
         resolve_bookmark,
-        resolve_hash_prefix,
     ];
 
-    for f in fns.iter() {
+    for f in local_fns.iter() {
         if let Some(r) = f(&args)? {
-            return Ok(r);
+            return Ok(ResolveResult::Local(change_id.to_string(), r));
         }
     }
 
-    Err(RevsetLookupError::RevsetNotFound(change_id.to_owned()).into())
+    // Hash prefix resolution can return local or remote-only results.
+    resolve_hash_prefix(&args)
 }
 
 fn resolve_special(args: &LookupArgs) -> Result<Option<HgId>> {
@@ -98,43 +132,73 @@ fn resolve_dot(args: &LookupArgs) -> Result<Option<HgId>> {
     Ok(args.working_copy_p1)
 }
 
-fn resolve_hash_prefix(args: &LookupArgs) -> Result<Option<HgId>> {
+fn resolve_hash_prefix(args: &LookupArgs) -> Result<ResolveResult> {
     let change_id = args.change_id;
 
     if !change_id
         .chars()
         .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())
     {
-        return Ok(None);
+        return Ok(ResolveResult::NotFound(change_id.to_string()));
     }
 
-    let hgid = match change_id.len() {
-        l if l > 40 => return Ok(None),
-        40 => HgId::from_hex(change_id.as_bytes())?,
+    match change_id.len() {
+        l if l > 40 => Ok(ResolveResult::NotFound(change_id.to_string())),
+        40 => {
+            let hgid = HgId::from_hex(change_id.as_bytes())?;
+            Ok(block_on(async {
+                if args
+                    .id_map
+                    .contains_vertex_name(&Vertex::copy_from(hgid.as_ref()))
+                    .await?
+                {
+                    anyhow::Ok(ResolveResult::Local(change_id.to_string(), hgid))
+                } else if let Some(api) = args.edenapi {
+                    let known = api
+                        .commit_known(vec![hgid])
+                        .await?
+                        .into_iter()
+                        .next()
+                        .map(|r| r.known)
+                        .transpose()?
+                        .unwrap_or(false);
+                    if known {
+                        Ok(ResolveResult::RemoteOnly(change_id.to_string(), hgid))
+                    } else {
+                        Ok(ResolveResult::NotFound(change_id.to_string()))
+                    }
+                } else {
+                    Ok(ResolveResult::NotFound(change_id.to_string()))
+                }
+            })?)
+        }
         _ => {
+            // Try local lookup first.
             if let Some(id) = local_hash_prefix_lookup(args)? {
-                // We found it locally - no need to do any more work.
-                return Ok(Some(id));
+                return Ok(ResolveResult::Local(change_id.to_string(), id));
             }
 
+            // Try remote lookup.
             match args
                 .edenapi
                 .and_then(|api| remote_hash_prefix_lookup(api, args.change_id).transpose())
             {
-                Some(id) => id?,
-                None => return Ok(None),
+                Some(Ok(id)) => {
+                    // Found remotely - check if it's also in the local dag.
+                    if block_on(async {
+                        args.id_map
+                            .contains_vertex_name(&Vertex::copy_from(id.as_ref()))
+                            .await
+                    })? {
+                        Ok(ResolveResult::Local(change_id.to_string(), id))
+                    } else {
+                        Ok(ResolveResult::RemoteOnly(change_id.to_string(), id))
+                    }
+                }
+                Some(Err(e)) => Err(e),
+                None => Ok(ResolveResult::NotFound(change_id.to_string())),
             }
         }
-    };
-
-    if block_on(async {
-        args.id_map
-            .contains_vertex_name(&Vertex::copy_from(hgid.as_ref()))
-            .await
-    })? {
-        Ok(Some(hgid))
-    } else {
-        Ok(None)
     }
 }
 

@@ -11,7 +11,6 @@ use clidispatch::ReqCtx;
 use cliparser::define_flags;
 use cmdutil::Result;
 use repo::repo::Repo;
-use workingcopy::workingcopy::WorkingCopy;
 
 define_flags! {
     pub struct DebugRevsetOpts {
@@ -20,8 +19,8 @@ define_flags! {
     }
 }
 
-pub fn run(ctx: ReqCtx<DebugRevsetOpts>, repo: &Repo, wc: &WorkingCopy) -> Result<u8> {
-    let resolved_revset = repo.resolve_commit(&ctx.opts.rev)?;
+pub fn run(ctx: ReqCtx<DebugRevsetOpts>, repo: &Repo) -> Result<u8> {
+    let resolved_revset = repo.resolve_commit(&ctx.opts.rev)?.local()?;
 
     write!(ctx.io().output(), "{}\n", resolved_revset.to_hex())?;
 
