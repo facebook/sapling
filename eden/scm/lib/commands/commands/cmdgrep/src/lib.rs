@@ -310,6 +310,9 @@ define_flags! {
         #[short('P')]
         perl_regexp: bool,
 
+        /// use external search indexes when available (ADVANCED)
+        external: bool = true,
+
         /// search the repository as it is at REV (ADVANCED)
         #[short('r')]
         #[argtype("REV")]
@@ -324,7 +327,7 @@ define_flags! {
 }
 
 pub fn run(ctx: ReqCtx<GrepOpts>, repo: &CoreRepo) -> Result<u8> {
-    if !repo.config().get_or("grep", "use-rust", || false)? {
+    if !repo.config().get_or("grep", "use-rust", || false)? && ctx.opts.external {
         abort_if!(
             ctx.opts.rev.is_some(),
             "--rev requires --config grep.use-rust=true"
@@ -433,21 +436,23 @@ pub fn run(ctx: ReqCtx<GrepOpts>, repo: &CoreRepo) -> Result<u8> {
 
     // Check if we should use biggrep (FB-only feature)
     #[cfg(feature = "fb")]
-    if let Some(exit_code) = biggrep::try_biggrep(
-        &ctx,
-        repo,
-        pattern,
-        hinted_matcher.exact_files(),
-        &matcher,
-        &relativizer,
-        &cwd,
-        repo_root.as_deref(),
-        json_out.as_mut(),
-    )? {
-        if let Some(json_out) = json_out {
-            json_out.finish()?;
+    if ctx.opts.external {
+        if let Some(exit_code) = biggrep::try_biggrep(
+            &ctx,
+            repo,
+            pattern,
+            hinted_matcher.exact_files(),
+            &matcher,
+            &relativizer,
+            &cwd,
+            repo_root.as_deref(),
+            json_out.as_mut(),
+        )? {
+            if let Some(json_out) = json_out {
+                json_out.finish()?;
+            }
+            return Ok(exit_code);
         }
-        return Ok(exit_code);
     }
 
     let file_store = repo.file_store()?;
