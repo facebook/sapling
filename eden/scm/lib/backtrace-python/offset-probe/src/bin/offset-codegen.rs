@@ -14,7 +14,6 @@ fn main() {
         None => (None, None),
     };
 
-    #[allow(clippy::print_literal)]
     println!(
         r#"/*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
