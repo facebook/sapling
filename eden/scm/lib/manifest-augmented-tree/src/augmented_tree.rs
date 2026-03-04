@@ -147,7 +147,7 @@ impl AugmentedTree {
                     size += 1;
                     if let Some(file_header_metadata) = &f.file_header_metadata {
                         let n = file_header_metadata.len();
-                        size += ((n + 2) / 3) * 4; // base64 encoding overhead
+                        size += n.div_ceil(3) * 4; // base64 encoding overhead
                     } else {
                         size += 1;
                     };
