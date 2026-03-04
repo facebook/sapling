@@ -657,3 +657,82 @@
   padding: 0 12px;
   align-self: flex-end;
 }
+
+/* Auto-merge status banner — shown when auto-merge is enabled */
+.merge-auto-merge-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  padding: 10px 12px;
+  background: color-mix(in srgb, #2563eb 8%, transparent);
+  border: 1px solid color-mix(in srgb, #2563eb 20%, transparent);
+  border-radius: 8px;
+  align-self: flex-end;
+}
+
+.merge-auto-merge-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  font-size: 13px;
+  color: #60a5fa;
+}
+
+.merge-auto-merge-badge .codicon {
+  font-size: 14px;
+}
+
+.merge-auto-merge-detail {
+  font-size: 11px;
+  color: var(--graphite-text-secondary);
+}
+
+.auto-merge-disable-btn {
+  background: transparent !important;
+  color: var(--graphite-text-secondary) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  font-size: 11px !important;
+  padding: 4px 12px !important;
+  border-radius: 4px !important;
+  transition: all 0.15s ease !important;
+}
+
+.auto-merge-disable-btn:hover:not(:disabled) {
+  color: var(--graphite-text-primary) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Auto-merge offer — shown when PR can't merge yet */
+.merge-auto-merge-offer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 12px;
+}
+
+.auto-merge-enable-btn {
+  background: transparent !important;
+  color: #60a5fa !important;
+  border: 1.5px solid #60a5fa !important;
+  font-weight: 500 !important;
+  font-size: 12px !important;
+  padding: 6px 16px !important;
+  border-radius: 6px !important;
+  transition: all 0.15s ease !important;
+}
+
+.auto-merge-enable-btn:hover:not(:disabled) {
+  background: rgba(96, 165, 250, 0.12) !important;
+  border-color: #93c5fd !important;
+}
+
+.auto-merge-enable-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.auto-merge-enable-btn .codicon {
+  font-size: 13px;
+}

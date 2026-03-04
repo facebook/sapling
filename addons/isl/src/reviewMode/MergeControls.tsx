@@ -248,6 +248,66 @@ export function MergeControls({prNumber}: MergeControlsProps) {
     }
   }, [prNodeId, isPublishing]);
 
+  const autoMergeEnabled = mergeState.autoMergeRequest != null;
+  const [isTogglingAutoMerge, setIsTogglingAutoMerge] = useState(false);
+
+  const handleEnableAutoMerge = useCallback(async () => {
+    if (isTogglingAutoMerge || !prNodeId) {
+      return;
+    }
+    setIsTogglingAutoMerge(true);
+    try {
+      serverAPI.postMessage({
+        type: 'enableAutoMerge',
+        pullRequestId: prNodeId,
+        mergeMethod: 'REBASE',
+      });
+      const response = await serverAPI.nextMessageMatching(
+        'enabledAutoMerge',
+        () => true,
+      );
+      if (response.result.error) {
+        showToast(t('Failed to enable auto-merge: $error', {replace: {$error: response.result.error.message}}), {durationMs: 8000});
+      } else {
+        showToast(t('Auto-merge enabled'), {durationMs: 3000});
+        // Re-fetch merge state to update autoMergeRequest
+        serverAPI.postMessage({type: 'fetchPRMergeState', prNumber});
+      }
+    } catch (error) {
+      showToast(t('Failed to enable auto-merge: $error', {replace: {$error: String(error)}}), {durationMs: 8000});
+    } finally {
+      setIsTogglingAutoMerge(false);
+    }
+  }, [prNodeId, prNumber, isTogglingAutoMerge]);
+
+  const handleDisableAutoMerge = useCallback(async () => {
+    if (isTogglingAutoMerge || !prNodeId) {
+      return;
+    }
+    setIsTogglingAutoMerge(true);
+    try {
+      serverAPI.postMessage({
+        type: 'disableAutoMerge',
+        pullRequestId: prNodeId,
+      });
+      const response = await serverAPI.nextMessageMatching(
+        'disabledAutoMerge',
+        () => true,
+      );
+      if (response.result.error) {
+        showToast(t('Failed to disable auto-merge: $error', {replace: {$error: response.result.error.message}}), {durationMs: 8000});
+      } else {
+        showToast(t('Auto-merge disabled'), {durationMs: 3000});
+        // Re-fetch merge state to update autoMergeRequest
+        serverAPI.postMessage({type: 'fetchPRMergeState', prNumber});
+      }
+    } catch (error) {
+      showToast(t('Failed to disable auto-merge: $error', {replace: {$error: String(error)}}), {durationMs: 8000});
+    } finally {
+      setIsTogglingAutoMerge(false);
+    }
+  }, [prNodeId, prNumber, isTogglingAutoMerge]);
+
   if (!pr || mergeState.loading) {
     return (
       <div className="merge-controls merge-controls-loading">
@@ -507,6 +567,51 @@ export function MergeControls({prNumber}: MergeControlsProps) {
           <CIStatusBadge signalSummary={pr?.signalSummary} ciChecks={mergeState.ciChecks} />
         </div>
       )}
+
+      {autoMergeEnabled ? (
+        <div className="merge-auto-merge-status">
+          <div className="merge-auto-merge-badge">
+            <Icon icon="rocket" />
+            <span><T>Auto-merge enabled</T></span>
+          </div>
+          <span className="merge-auto-merge-detail">
+            <T>Will merge automatically when all requirements are met</T>
+          </span>
+          <Tooltip title={t('Disable auto-merge')} placement="top">
+            <Button
+              className="auto-merge-disable-btn"
+              disabled={isTogglingAutoMerge}
+              onClick={handleDisableAutoMerge}>
+              {isTogglingAutoMerge ? (
+                <Icon icon="loading" />
+              ) : (
+                <T>Disable auto-merge</T>
+              )}
+            </Button>
+          </Tooltip>
+        </div>
+      ) : !canMerge && filteredReasons.length > 0 && prNodeId ? (
+        <div className="merge-auto-merge-offer">
+          <Tooltip title={t('Enable auto-merge to merge automatically when all checks pass and reviews are approved')} placement="top">
+            <Button
+              className="auto-merge-enable-btn"
+              disabled={isTogglingAutoMerge}
+              onClick={handleEnableAutoMerge}>
+              {isTogglingAutoMerge ? (
+                <>
+                  <Icon icon="loading" slot="start" />
+                  <T>Enabling...</T>
+                </>
+              ) : (
+                <>
+                  <Icon icon="rocket" slot="start" />
+                  <T>Enable auto-merge</T>
+                </>
+              )}
+            </Button>
+          </Tooltip>
+        </div>
+      ) : null}
     </div>
   );
 }
