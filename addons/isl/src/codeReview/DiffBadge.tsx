@@ -391,6 +391,10 @@ function DiffSignalSummary({diff}: {diff: DiffSummary}) {
       icon = <CircleExclamationIcon />;
       tooltip = t('Land is cancelled for this Diff. See Diff for more details.');
       break;
+    case 'land-on-hold':
+      icon = 'debug-pause';
+      tooltip = t('Land is on hold for this Diff. See Diff for more details.');
+      break;
     case 'deferred':
       icon = 'debug-pause';
       tooltip = t('Tests are deferred for this Diff. Click "Start Tests" to run them.');

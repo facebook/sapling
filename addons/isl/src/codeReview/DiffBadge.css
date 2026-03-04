@@ -59,6 +59,9 @@
 .diff-signal-land-cancelled {
   color: var(--signal-medium-bg);
 }
+.diff-signal-land-on-hold {
+  color: var(--signal-medium-bg);
+}
 .diff-signal-deferred {
   color: var(--signal-medium-bg);
 }

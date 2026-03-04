@@ -188,6 +188,7 @@ export type DiffSignalSummary =
   | 'warning'
   | 'no-signal'
   | 'land-cancelled'
+  | 'land-on-hold'
   | 'deferred';
 
 /**
