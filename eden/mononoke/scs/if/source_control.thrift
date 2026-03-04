@@ -1496,6 +1496,8 @@ struct CommitHistoryParams {
   /// Similar to the after_timestamp above, this filters on
   /// committer_date instead of author_date.
   10: optional i64 after_committer_timestamp;
+  /// Filter commits by author name (case-insensitive substring match).
+  11: optional string author;
 }
 
 /// Parameters for the `commit_linear_history` method.
@@ -1531,8 +1533,9 @@ struct CommitLinearHistoryParams {
   7: optional CommitId descendants_of;
   /// Exclude commit and all of its linear ancestor from results.
   8: optional CommitId exclude_changeset_and_ancestors;
+  /// Filter commits by author name (case-insensitive substring match).
+  9: optional string author;
 }
-
 const i64 COMMIT_LIST_DESCENDANT_BOOKMARKS_MAX_LIMIT = 10000;
 
 struct CommitListDescendantBookmarksParams {
@@ -1657,6 +1660,8 @@ struct CommitPathHistoryParams {
   /// Similar to the after_timestamp above, this filters on
   /// committer_date instead of author_date.
   12: optional i64 after_committer_timestamp;
+  /// Filter commits by author name (case-insensitive substring match).
+  13: optional string author;
 }
 
 struct CommitPathLastChangedParams {
