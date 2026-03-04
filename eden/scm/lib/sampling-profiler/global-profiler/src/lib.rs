@@ -83,7 +83,7 @@ pub fn setup_profiling(config: &dyn Config) -> Result<Option<AtExit>> {
             None => return Ok(None),
             Some(v) => v,
         };
-        let output: Option<String> = if prefix == "" {
+        let output: Option<String> = if prefix.is_empty() {
             let output = config.get_or_default::<String>("profiling", "output")?;
             Some(output)
         } else {
@@ -92,7 +92,7 @@ pub fn setup_profiling(config: &dyn Config) -> Result<Option<AtExit>> {
 
         let interval = config
             .get_or::<Duration>(section, &format!("{prefix}interval"), || {
-                let millis = if prefix == "" { 10 } else { 1000 };
+                let millis = if prefix.is_empty() { 10 } else { 1000 };
                 Duration::from_millis(millis)
             })?
             .clamp(Duration::from_millis(2), Duration::from_hours(24));
