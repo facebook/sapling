@@ -95,6 +95,23 @@ Test context break between separate match groups:
   multiline:match2
   multiline-line5
 
+Color seems to work on Windows, but not in the tests.
+#if no-windows
+
+Test color output (--color=always forces color even without tty):
+  $ hg grep --color=always apple path:apple
+  \x1b[0m\x1b[35mapple\x1b[0m:\x1b[0m\x1b[1m\x1b[31mapple\x1b[0m (esc)
+
+Test color output with line numbers:
+  $ hg grep --color=always -n banana path:banana
+  \x1b[0m\x1b[35mbanana\x1b[0m:\x1b[0m\x1b[32m1\x1b[0m:\x1b[0m\x1b[1m\x1b[31mbanana\x1b[0m (esc)
+
+Test color disabled explicitly:
+  $ hg grep --color=off apple path:apple
+  apple:apple
+
+#endif
+
 Test "." is the default file pattern (search cwd):
   $ mkdir subdir
   $ echo 'sub banana' > subdir/subfile

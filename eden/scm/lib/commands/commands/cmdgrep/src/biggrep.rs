@@ -207,7 +207,7 @@ pub fn try_biggrep(
 
     let files_with_matches = ctx.opts.files_with_matches;
     let include_line_number = ctx.opts.line_number;
-    let mut match_count = 0;
+    let mut match_count: u64 = 0;
 
     let mut out = ctx.io().output();
 
@@ -381,10 +381,7 @@ fn run_local_grep(
     matcher: DynMatcher,
     relativizer: &RepoPathRelativizer,
     rev: &str,
-) -> Result<usize> {
-    // Build the grepper
-    let mut grepper = Grepper::new(&ctx.opts, pattern, relativizer, ctx.io().output())?;
-
+) -> Result<u64> {
     // Get the file store for reading file contents
     let file_store = repo.file_store()?;
 
@@ -393,6 +390,49 @@ fn run_local_grep(
 
     // Walk and fetch the files
     let (file_rx, first_error) = filewalk::walk_and_fetch(&manifest, matcher, &file_store);
+
+    let use_color = ctx.should_color();
+
+    // Use the run_standard_grep_with_writer helper via a simpler approach
+    let match_count = if use_color {
+        let ansi_out = termcolor::Ansi::new(ctx.io().output());
+        run_local_grep_with_writer(
+            ctx,
+            relativizer,
+            file_rx,
+            &first_error,
+            pattern,
+            ansi_out,
+            true,
+        )?
+    } else {
+        let no_color_out = termcolor::NoColor::new(ctx.io().output());
+        run_local_grep_with_writer(
+            ctx,
+            relativizer,
+            file_rx,
+            &first_error,
+            pattern,
+            no_color_out,
+            false,
+        )?
+    };
+
+    first_error.wait()?;
+
+    Ok(match_count)
+}
+
+fn run_local_grep_with_writer<W: termcolor::WriteColor>(
+    ctx: &ReqCtx<GrepOpts>,
+    relativizer: &RepoPathRelativizer,
+    file_rx: flume::Receiver<filewalk::FileResult>,
+    first_error: &filewalk::FirstError,
+    pattern: &str,
+    out: W,
+    use_color: bool,
+) -> Result<u64> {
+    let mut grepper = Grepper::new(&ctx.opts, pattern, relativizer, out, use_color)?;
 
     for file_result in file_rx {
         if first_error.has_error() {
@@ -404,8 +444,6 @@ fn run_local_grep(
             break;
         }
     }
-
-    first_error.wait()?;
 
     Ok(grepper.match_count())
 }

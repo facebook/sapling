@@ -8,7 +8,7 @@
 #[cfg(feature = "fb")]
 mod biggrep;
 
-use std::io::Write;
+use std::io;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -23,219 +23,218 @@ use cmdutil::Result;
 use cmdutil::WalkOpts;
 use cmdutil::define_flags;
 use filewalk::walk_and_fetch;
+use grep::printer::ColorSpecs;
+use grep::printer::Standard;
+use grep::printer::StandardBuilder;
+use grep::printer::Summary;
+use grep::printer::SummaryBuilder;
+use grep::printer::SummaryKind;
 use grep::regex::RegexMatcher;
 use grep::regex::RegexMatcherBuilder;
 use grep::searcher::Searcher;
 use grep::searcher::SearcherBuilder;
-use grep::searcher::Sink;
-use grep::searcher::SinkContext;
-use grep::searcher::SinkMatch;
 use pathmatcher::DynMatcher;
 use pathmatcher::IntersectMatcher;
 use repo::CoreRepo;
+use termcolor::Ansi;
+use termcolor::NoColor;
+use termcolor::WriteColor;
 use types::RepoPathBuf;
 use types::path::RepoPathRelativizer;
 
-/// A grepper that searches file contents for matches.
-pub(crate) struct Grepper<'a, W: Write> {
+/// A grepper that searches file contents for matches using the Standard printer.
+pub(crate) struct Grepper<'a, W: WriteColor> {
     regex_matcher: RegexMatcher,
     searcher: Searcher,
     relativizer: &'a RepoPathRelativizer,
-    sink: GrepSink<W>,
+    printer: Standard<W>,
+    match_count: u64,
 }
 
-/// Sink for grep operations that handles output formatting.
-struct GrepSink<W: Write> {
-    path: String,
-    out: W,
-    match_count: usize,
-    file_matched: bool,
-    files_with_matches: bool,
-    print_line_number: bool,
+/// A grepper for files_with_matches (-l) mode using the Summary printer.
+pub(crate) struct SummaryGrepper<'a, W: WriteColor> {
+    regex_matcher: RegexMatcher,
+    searcher: Searcher,
+    relativizer: &'a RepoPathRelativizer,
+    printer: Summary<W>,
+    match_count: u64,
 }
 
-impl<'a, W: Write> Grepper<'a, W> {
+impl<'a, W: WriteColor> Grepper<'a, W> {
     /// Build a Grepper from GrepOpts, a pattern, relativizer, and output writer.
     pub(crate) fn new(
         opts: &GrepOpts,
         pattern: &str,
         relativizer: &'a RepoPathRelativizer,
         out: W,
+        use_color: bool,
     ) -> Result<Self> {
-        // Build the regex matcher with appropriate options
-        let mut matcher_builder = RegexMatcherBuilder::new();
+        let regex_matcher = build_regex_matcher(opts, pattern)?;
+        let searcher = build_searcher(opts)?;
 
-        // -i: ignore case when matching
-        if opts.ignore_case {
-            matcher_builder.case_insensitive(true);
+        // Build the standard printer
+        let mut builder = StandardBuilder::new();
+        if use_color {
+            builder.color_specs(ColorSpecs::default_with_color());
         }
 
-        // -w: match whole words only
-        if opts.word_regexp {
-            matcher_builder.word(true);
-        }
-
-        // -F: interpret pattern as fixed string
-        if opts.fixed_strings {
-            matcher_builder.fixed_strings(true);
-        }
-
-        let regex_matcher = match matcher_builder.build(pattern) {
-            Ok(m) => m,
-            Err(e) => abort!("invalid grep pattern '{}': {:?}", pattern, e),
-        };
-
-        // Build the searcher with appropriate options
-        let mut searcher_builder = SearcherBuilder::new();
-
-        // -n: print matching line numbers (enabled on searcher so sink receives correct line numbers)
-        if opts.line_number {
-            searcher_builder.line_number(true);
-        }
-
-        // -V: select non-matching lines (invert match)
-        if opts.invert_match {
-            searcher_builder.invert_match(true);
-        }
-
-        // -A: print NUM lines of trailing context
-        if let Some(after_context) = opts.after_context {
-            let after_context = match after_context.try_into() {
-                Ok(v) => v,
-                Err(err) => abort!("invalid --after-context value '{}': {}", after_context, err),
-            };
-            searcher_builder.after_context(after_context);
-        }
-
-        // -B: print NUM lines of leading context
-        if let Some(before_context) = opts.before_context {
-            let before_context = match before_context.try_into() {
-                Ok(v) => v,
-                Err(err) => abort!(
-                    "invalid --before-context value '{}': {}",
-                    before_context,
-                    err
-                ),
-            };
-            searcher_builder.before_context(before_context);
-        }
-
-        // -C: print NUM lines of output context (both before and after)
-        if let Some(context) = opts.context {
-            let context = match context.try_into() {
-                Ok(v) => v,
-                Err(err) => abort!("invalid --context value '{}': {}", context, err),
-            };
-            searcher_builder.before_context(context);
-            searcher_builder.after_context(context);
-        }
-
-        let searcher = searcher_builder.build();
+        let printer = builder.build(out);
 
         Ok(Self {
             regex_matcher,
             searcher,
             relativizer,
-            sink: GrepSink {
-                path: String::new(),
-                out,
-                match_count: 0,
-                file_matched: false,
-                files_with_matches: opts.files_with_matches,
-                print_line_number: opts.line_number,
-            },
+            printer,
+            match_count: 0,
         })
     }
 
     /// Grep a file's contents for matches.
-    pub(crate) fn grep_file(&mut self, path: &RepoPathBuf, data: &Blob) -> std::io::Result<()> {
-        self.sink.path = self.relativizer.relativize(path);
-        self.sink.file_matched = false;
+    pub(crate) fn grep_file(&mut self, path: &RepoPathBuf, data: &Blob) -> io::Result<()> {
+        let display_path = self.relativizer.relativize(path);
 
         data.each_chunk(|chunk| {
-            // For -l mode, stop searching this file once we have a match
-            if self.sink.files_with_matches && self.sink.file_matched {
-                return Ok(());
-            }
-
+            let mut sink = self
+                .printer
+                .sink_with_path(&self.regex_matcher, display_path.as_str());
             self.searcher
-                .search_slice(&self.regex_matcher, chunk, &mut self.sink)
-                .map_err(|e| std::io::Error::other(e.to_string()))?;
-
+                .search_slice(&self.regex_matcher, chunk, &mut sink)
+                .map_err(|e| io::Error::other(e.to_string()))?;
+            self.match_count += sink.match_count();
             Ok(())
         })
     }
 
     /// Get the total number of matches found.
-    pub(crate) fn match_count(&self) -> usize {
-        self.sink.match_count
+    pub(crate) fn match_count(&self) -> u64 {
+        self.match_count
     }
 }
 
-impl<W: Write> Sink for GrepSink<W> {
-    type Error = std::io::Error;
+impl<'a, W: WriteColor> SummaryGrepper<'a, W> {
+    /// Build a SummaryGrepper for files_with_matches mode.
+    pub(crate) fn new(
+        opts: &GrepOpts,
+        pattern: &str,
+        relativizer: &'a RepoPathRelativizer,
+        out: W,
+        use_color: bool,
+    ) -> Result<Self> {
+        let regex_matcher = build_regex_matcher(opts, pattern)?;
+        let searcher = build_searcher(opts)?;
 
-    fn matched(
-        &mut self,
-        _searcher: &Searcher,
-        mat: &SinkMatch<'_>,
-    ) -> std::result::Result<bool, Self::Error> {
-        self.match_count += 1;
-
-        // -l: print only filenames that match
-        if self.files_with_matches {
-            if !self.file_matched {
-                self.file_matched = true;
-                writeln!(self.out, "{}", self.path)?;
-            }
-            return Ok(true);
+        // Build the summary printer for PathWithMatch mode
+        let mut builder = SummaryBuilder::new();
+        builder.kind(SummaryKind::PathWithMatch);
+        if use_color {
+            builder.color_specs(ColorSpecs::default_with_color());
         }
 
-        let line = String::from_utf8_lossy(mat.bytes());
-        if self.print_line_number {
-            if let Some(line_num) = mat.line_number() {
-                write!(self.out, "{}:{}:{}", self.path, line_num, line)?;
-            } else {
-                write!(self.out, "{}:{}", self.path, line)?;
-            }
-        } else {
-            write!(self.out, "{}:{}", self.path, line)?;
-        }
-        Ok(true)
+        let printer = builder.build(out);
+
+        Ok(Self {
+            regex_matcher,
+            searcher,
+            relativizer,
+            printer,
+            match_count: 0,
+        })
     }
 
-    fn context(
-        &mut self,
-        _searcher: &Searcher,
-        context: &SinkContext<'_>,
-    ) -> std::result::Result<bool, Self::Error> {
-        // Don't print context for files_with_matches mode
-        if self.files_with_matches {
-            return Ok(true);
-        }
+    /// Grep a file's contents for matches.
+    pub(crate) fn grep_file(&mut self, path: &RepoPathBuf, data: &Blob) -> io::Result<()> {
+        let display_path = self.relativizer.relativize(path);
 
-        let line = String::from_utf8_lossy(context.bytes());
-        // Context lines use '-' separator instead of ':'
-        if self.print_line_number {
-            if let Some(line_num) = context.line_number() {
-                write!(self.out, "{}-{}-{}", self.path, line_num, line)?;
-            } else {
-                write!(self.out, "{}-{}", self.path, line)?;
+        data.each_chunk(|chunk| {
+            let mut sink = self
+                .printer
+                .sink_with_path(&self.regex_matcher, display_path.as_str());
+            self.searcher
+                .search_slice(&self.regex_matcher, chunk, &mut sink)
+                .map_err(|e| io::Error::other(e.to_string()))?;
+            if sink.has_match() {
+                self.match_count += 1;
             }
-        } else {
-            write!(self.out, "{}-{}", self.path, line)?;
-        }
-        Ok(true)
+            Ok(())
+        })
     }
 
-    fn context_break(&mut self, _searcher: &Searcher) -> std::result::Result<bool, Self::Error> {
-        // Don't print context break for files_with_matches mode
-        if self.files_with_matches {
-            return Ok(true);
-        }
-        writeln!(self.out, "--")?;
-        Ok(true)
+    /// Get the total number of files with matches.
+    pub(crate) fn match_count(&self) -> u64 {
+        self.match_count
     }
+}
+
+/// Build a regex matcher from grep options.
+fn build_regex_matcher(opts: &GrepOpts, pattern: &str) -> Result<RegexMatcher> {
+    let mut matcher_builder = RegexMatcherBuilder::new();
+
+    // -i: ignore case when matching
+    if opts.ignore_case {
+        matcher_builder.case_insensitive(true);
+    }
+
+    // -w: match whole words only
+    if opts.word_regexp {
+        matcher_builder.word(true);
+    }
+
+    // -F: interpret pattern as fixed string
+    if opts.fixed_strings {
+        matcher_builder.fixed_strings(true);
+    }
+
+    match matcher_builder.build(pattern) {
+        Ok(m) => Ok(m),
+        Err(e) => abort!("invalid grep pattern '{}': {:?}", pattern, e),
+    }
+}
+
+/// Build a searcher from grep options.
+fn build_searcher(opts: &GrepOpts) -> Result<Searcher> {
+    let mut searcher_builder = SearcherBuilder::new();
+
+    // Set line numbers based on -n flag (default is true in grep-searcher, so we must explicitly set)
+    searcher_builder.line_number(opts.line_number);
+
+    // -V: select non-matching lines (invert match)
+    if opts.invert_match {
+        searcher_builder.invert_match(true);
+    }
+
+    // -A: print NUM lines of trailing context
+    if let Some(after_context) = opts.after_context {
+        let after_context = match after_context.try_into() {
+            Ok(v) => v,
+            Err(err) => abort!("invalid --after-context value '{}': {}", after_context, err),
+        };
+        searcher_builder.after_context(after_context);
+    }
+
+    // -B: print NUM lines of leading context
+    if let Some(before_context) = opts.before_context {
+        let before_context = match before_context.try_into() {
+            Ok(v) => v,
+            Err(err) => abort!(
+                "invalid --before-context value '{}': {}",
+                before_context,
+                err
+            ),
+        };
+        searcher_builder.before_context(before_context);
+    }
+
+    // -C: print NUM lines of output context (both before and after)
+    if let Some(context) = opts.context {
+        let context = match context.try_into() {
+            Ok(v) => v,
+            Err(err) => abort!("invalid --context value '{}': {}", context, err),
+        };
+        searcher_builder.before_context(context);
+        searcher_builder.after_context(context);
+    }
+
+    Ok(searcher_builder.build())
 }
 
 define_flags! {
@@ -394,8 +393,80 @@ pub fn run(ctx: ReqCtx<GrepOpts>, repo: &CoreRepo) -> Result<u8> {
 
     let (file_rx, first_error) = walk_and_fetch(&manifest, matcher, &file_store);
 
-    // Build the grepper
-    let mut grepper = Grepper::new(&ctx.opts, pattern, &relativizer, ctx.io().output())?;
+    let use_color = ctx.should_color();
+
+    // Use the appropriate grepper based on mode
+    let match_count = if ctx.opts.files_with_matches {
+        run_summary_grep(
+            &ctx,
+            &relativizer,
+            file_rx,
+            &first_error,
+            pattern,
+            use_color,
+        )?
+    } else {
+        run_standard_grep(
+            &ctx,
+            &relativizer,
+            file_rx,
+            &first_error,
+            pattern,
+            use_color,
+        )?
+    };
+
+    first_error.wait()?;
+
+    Ok(if match_count > 0 { 0 } else { 1 })
+}
+
+/// Run grep with standard output (line-by-line matches).
+fn run_standard_grep(
+    ctx: &ReqCtx<GrepOpts>,
+    relativizer: &RepoPathRelativizer,
+    file_rx: flume::Receiver<filewalk::FileResult>,
+    first_error: &filewalk::FirstError,
+    pattern: &str,
+    use_color: bool,
+) -> Result<u64> {
+    let out = ctx.io().output();
+
+    if use_color {
+        let ansi_out = Ansi::new(out);
+        run_standard_grep_with_writer(
+            ctx,
+            relativizer,
+            file_rx,
+            first_error,
+            pattern,
+            ansi_out,
+            true,
+        )
+    } else {
+        let no_color_out = NoColor::new(out);
+        run_standard_grep_with_writer(
+            ctx,
+            relativizer,
+            file_rx,
+            first_error,
+            pattern,
+            no_color_out,
+            false,
+        )
+    }
+}
+
+fn run_standard_grep_with_writer<W: WriteColor>(
+    ctx: &ReqCtx<GrepOpts>,
+    relativizer: &RepoPathRelativizer,
+    file_rx: flume::Receiver<filewalk::FileResult>,
+    first_error: &filewalk::FirstError,
+    pattern: &str,
+    out: W,
+    use_color: bool,
+) -> Result<u64> {
+    let mut grepper = Grepper::new(&ctx.opts, pattern, relativizer, out, use_color)?;
 
     for file_result in file_rx {
         if first_error.has_error() {
@@ -408,9 +479,68 @@ pub fn run(ctx: ReqCtx<GrepOpts>, repo: &CoreRepo) -> Result<u8> {
         }
     }
 
-    first_error.wait()?;
+    Ok(grepper.match_count())
+}
 
-    Ok(if grepper.match_count() > 0 { 0 } else { 1 })
+/// Run grep with summary output (files_with_matches mode).
+fn run_summary_grep(
+    ctx: &ReqCtx<GrepOpts>,
+    relativizer: &RepoPathRelativizer,
+    file_rx: flume::Receiver<filewalk::FileResult>,
+    first_error: &filewalk::FirstError,
+    pattern: &str,
+    use_color: bool,
+) -> Result<u64> {
+    let out = ctx.io().output();
+
+    if use_color {
+        let ansi_out = Ansi::new(out);
+        run_summary_grep_with_writer(
+            ctx,
+            relativizer,
+            file_rx,
+            first_error,
+            pattern,
+            ansi_out,
+            true,
+        )
+    } else {
+        let no_color_out = NoColor::new(out);
+        run_summary_grep_with_writer(
+            ctx,
+            relativizer,
+            file_rx,
+            first_error,
+            pattern,
+            no_color_out,
+            false,
+        )
+    }
+}
+
+fn run_summary_grep_with_writer<W: WriteColor>(
+    ctx: &ReqCtx<GrepOpts>,
+    relativizer: &RepoPathRelativizer,
+    file_rx: flume::Receiver<filewalk::FileResult>,
+    first_error: &filewalk::FirstError,
+    pattern: &str,
+    out: W,
+    use_color: bool,
+) -> Result<u64> {
+    let mut grepper = SummaryGrepper::new(&ctx.opts, pattern, relativizer, out, use_color)?;
+
+    for file_result in file_rx {
+        if first_error.has_error() {
+            break;
+        }
+
+        if let Err(e) = grepper.grep_file(&file_result.path, &file_result.data) {
+            first_error.send_error(e.into());
+            break;
+        }
+    }
+
+    Ok(grepper.match_count())
 }
 
 pub fn aliases() -> &'static str {
