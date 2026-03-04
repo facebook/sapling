@@ -2386,7 +2386,7 @@ commit 3"#
     }
 
     fn to_xxd(data: &[u8]) -> String {
-        let mut result = String::with_capacity((data.len() + 15) / 16 * 67 + 1);
+        let mut result = String::with_capacity(data.len().div_ceil(16) * 67 + 1);
         result.push('\n');
         for (i, chunk) in data.chunks(16).enumerate() {
             result += &format!("{:08x}: ", i * 16);
