@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {DiffSummary} from '../types';
+import type {CICheckRun, DiffSummary} from '../types';
 
 import type {MergeableState, MergeStateStatus} from '../types';
 
@@ -20,6 +20,7 @@ import {useRunOperation} from '../operationsState';
 import {MergePROperation} from '../operations/MergePROperation';
 import {ClosePROperation} from '../operations/ClosePROperation';
 import {SyncPROperation} from '../operations/SyncPROperation';
+import {CIStatusBadge} from './CIStatusBadge';
 import {
   deriveMergeability,
   formatMergeBlockReasons,
@@ -73,12 +74,14 @@ export function MergeControls({prNumber}: MergeControlsProps) {
   const isStaleStack = currentStack?.hasStaleAbove ?? false;
   const mergedAbovePrNumber = currentStack?.mergedAbovePrNumber;
 
-  // Lazy-load merge state fields (mergeable, mergeStateStatus, viewerCanMergeAsAdmin)
-  // for this single PR. These are too expensive to fetch in bulk for all PRs.
+  // Lazy-load merge state fields (mergeable, mergeStateStatus, viewerCanMergeAsAdmin,
+  // ciChecks, autoMergeRequest) for this single PR. Too expensive to fetch in bulk.
   const [mergeState, setMergeState] = useState<{
     mergeable?: MergeableState;
     mergeStateStatus?: MergeStateStatus;
     viewerCanMergeAsAdmin?: boolean;
+    ciChecks?: CICheckRun[];
+    autoMergeRequest?: {enabledAt: string; mergeMethod: string} | null;
     loading: boolean;
   }>({loading: true});
 
@@ -141,6 +144,7 @@ export function MergeControls({prNumber}: MergeControlsProps) {
         mergeable,
         mergeStateStatus,
         state: isGitHubDiffSummary(pr) ? pr.state : undefined,
+        ciChecks: mergeState.ciChecks,
       })
     : {canMerge: false, reasons: ['Loading PR data...']};
 
@@ -495,6 +499,12 @@ export function MergeControls({prNumber}: MergeControlsProps) {
               {reason}
             </div>
           ))}
+        </div>
+      )}
+
+      {mergeState.ciChecks && mergeState.ciChecks.length > 0 && (
+        <div className="merge-ci-checks">
+          <CIStatusBadge signalSummary={pr?.signalSummary} ciChecks={mergeState.ciChecks} />
         </div>
       )}
     </div>

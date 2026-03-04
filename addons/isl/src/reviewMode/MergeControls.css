@@ -651,3 +651,9 @@
 .update-branch-btn .codicon {
   font-size: 14px;
 }
+
+/* CI checks section in merge controls */
+.merge-ci-checks {
+  padding: 0 12px;
+  align-self: flex-end;
+}

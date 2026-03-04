@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {DiffSignalSummary, MergeableState, MergeStateStatus} from '../types';
+import type {CICheckRun, DiffSignalSummary, MergeableState, MergeStateStatus} from '../types';
 import type {PullRequestReviewDecision} from 'isl-server/src/github/generated/graphql';
 
 import {atom} from 'jotai';
@@ -33,6 +33,7 @@ export type PRMergeabilityData = {
   mergeable?: MergeableState;
   mergeStateStatus?: MergeStateStatus;
   state?: string;
+  ciChecks?: CICheckRun[];
 };
 
 /**
@@ -51,10 +52,13 @@ export function deriveMergeability(pr: PRMergeabilityData): MergeabilityStatus {
     return {canMerge: false, reasons: ['PR is closed']};
   }
 
+  // Derive effective CI signal: use signalSummary if available, otherwise infer from ciChecks
+  const ciSignal = deriveEffectiveCISignal(pr.signalSummary, pr.ciChecks);
+
   // Check CI status (MRG-03)
-  if (pr.signalSummary === 'failed') {
+  if (ciSignal === 'failed') {
     reasons.push('CI checks are failing');
-  } else if (pr.signalSummary === 'running') {
+  } else if (ciSignal === 'running') {
     reasons.push('CI checks are still running');
   }
 
@@ -72,7 +76,24 @@ export function deriveMergeability(pr: PRMergeabilityData): MergeabilityStatus {
 
   // Check detailed merge state status
   if (pr.mergeStateStatus === 'BLOCKED') {
-    reasons.push('Blocked by branch protection rules');
+    // Provide more specific reasons when we can infer them
+    if (ciSignal === 'running') {
+      if (!reasons.some(r => r.includes('CI'))) {
+        reasons.push('Waiting for CI checks to complete');
+      }
+    } else if (ciSignal === 'failed') {
+      if (!reasons.some(r => r.includes('CI'))) {
+        reasons.push('CI checks are failing');
+      }
+    } else if (
+      pr.reviewDecision === 'REVIEW_REQUIRED' &&
+      !reasons.some(r => r.includes('Review') || r.includes('review'))
+    ) {
+      reasons.push('Waiting for required review approvals');
+    } else if (!reasons.some(r => r.includes('CI') || r.includes('review') || r.includes('Review'))) {
+      // Fallback — we can't determine the specific blocker
+      reasons.push('Blocked by branch protection rules');
+    }
   } else if (pr.mergeStateStatus === 'BEHIND') {
     reasons.push('Branch is behind base branch');
   } else if (pr.mergeStateStatus === 'DRAFT') {
@@ -93,6 +114,33 @@ export function deriveMergeability(pr: PRMergeabilityData): MergeabilityStatus {
 /**
  * Format merge reasons for display.
  */
+/**
+ * Derive effective CI signal from signalSummary or ciChecks.
+ * signalSummary from the bulk query can be missing/no-signal even when
+ * checks exist — fall back to deriving from individual check results.
+ */
+function deriveEffectiveCISignal(
+  signalSummary: DiffSignalSummary | undefined,
+  ciChecks: CICheckRun[] | undefined,
+): DiffSignalSummary | undefined {
+  if (signalSummary && signalSummary !== 'no-signal') {
+    return signalSummary;
+  }
+  if (!ciChecks || ciChecks.length === 0) {
+    return signalSummary;
+  }
+  if (ciChecks.some(c => c.status !== 'COMPLETED')) {
+    return 'running';
+  }
+  if (ciChecks.every(c => c.status === 'COMPLETED' && c.conclusion === 'SUCCESS')) {
+    return 'pass';
+  }
+  if (ciChecks.some(c => c.conclusion === 'FAILURE' || c.conclusion === 'CANCELLED' || c.conclusion === 'TIMED_OUT')) {
+    return 'failed';
+  }
+  return 'warning';
+}
+
 export function formatMergeBlockReasons(reasons: string[]): string {
   if (reasons.length === 0) {
     return 'Ready to merge';

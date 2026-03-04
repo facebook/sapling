@@ -25,7 +25,10 @@ export type CIStatusBadgeProps = {
 export function CIStatusBadge({signalSummary, ciChecks}: CIStatusBadgeProps) {
   const [expanded, setExpanded] = useState(false);
 
-  if (!signalSummary || signalSummary === 'no-signal') {
+  // Derive signal from ciChecks when signalSummary is missing
+  const effectiveSignal = deriveSignalSummary(signalSummary, ciChecks);
+
+  if (!effectiveSignal || effectiveSignal === 'no-signal') {
     return (
       <div className="ci-status-badge ci-status-no-signal">
         <Icon icon="question" />
@@ -34,7 +37,7 @@ export function CIStatusBadge({signalSummary, ciChecks}: CIStatusBadgeProps) {
     );
   }
 
-  const {icon, label, className} = getStatusDisplay(signalSummary);
+  const {icon, label, className} = getStatusDisplay(effectiveSignal);
   const hasDetails = ciChecks && ciChecks.length > 0;
 
   return (
@@ -179,4 +182,38 @@ function getCheckStatusDisplay(check: CICheckRun): {
         className: 'ci-check-unknown',
       };
   }
+}
+
+/**
+ * When signalSummary from CombinedPRQuery is missing or no-signal,
+ * derive it from the detailed ciChecks fetched by PRMergeState query.
+ */
+function deriveSignalSummary(
+  signalSummary: DiffSignalSummary | undefined,
+  ciChecks: CICheckRun[] | undefined,
+): DiffSignalSummary | undefined {
+  if (signalSummary && signalSummary !== 'no-signal') {
+    return signalSummary;
+  }
+  if (!ciChecks || ciChecks.length === 0) {
+    return signalSummary;
+  }
+  const hasRunning = ciChecks.some(c => c.status !== 'COMPLETED');
+  const hasFailed = ciChecks.some(
+    c => c.status === 'COMPLETED' && (c.conclusion === 'FAILURE' || c.conclusion === 'CANCELLED' || c.conclusion === 'TIMED_OUT'),
+  );
+  const allPassed = ciChecks.every(
+    c => c.status === 'COMPLETED' && c.conclusion === 'SUCCESS',
+  );
+
+  if (hasRunning) {
+    return 'running';
+  }
+  if (allPassed) {
+    return 'pass';
+  }
+  if (hasFailed) {
+    return 'failed';
+  }
+  return 'warning';
 }
