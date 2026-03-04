@@ -74,6 +74,7 @@ export type CombinedPRQueryData = {
   viewer: {login: string};
   open: {nodes?: Array<SearchNode> | null};
   closed: {nodes?: Array<SearchNode> | null};
+  rateLimit?: {remaining: number; resetAt: string; cost: number};
 };
 
 // Combined query fetches open + closed PRs in a single GraphQL request.
@@ -84,6 +85,11 @@ export const CombinedPRQuery = `
   query CombinedPRQuery($openQuery: String!, $closedQuery: String!, $numToFetch: Int!) {
     viewer {
       login
+    }
+    rateLimit {
+      remaining
+      resetAt
+      cost
     }
     open: search(query: $openQuery, type: ISSUE, first: $numToFetch) {
       nodes {

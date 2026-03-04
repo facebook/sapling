@@ -143,6 +143,15 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
         this.logger.info('fetching github PR summaries');
         const result = await this.fetchAllPRData();
 
+        if (result?.rateLimit != null) {
+          const {remaining, cost} = result.rateLimit;
+          if (remaining < 500) {
+            this.logger.warn(
+              `GitHub API rate limit low: ${remaining} remaining (cost: ${cost})`,
+            );
+          }
+        }
+
         const openNodes = result?.open?.nodes ?? [];
         const closedNodes = result?.closed?.nodes ?? [];
         if (openNodes.length === 0 && closedNodes.length === 0) {
