@@ -275,17 +275,7 @@ impl Manifest for TreeManifest {
 
     /// Write dirty trees using specified format to disk. Return the root tree id.
     fn persist(&mut self, opts: PersistOpts<'_, Self>) -> Result<HgId> {
-        for (path, id, text, p1, p2) in TreeManifest::persist(self, opts.parents)? {
-            let opts = InsertOpts {
-                kind: Kind::Tree,
-                parents: vec![p1, p2],
-                ..Default::default()
-            };
-            let got_id = self.store.insert_data(opts, &path, text.into())?;
-            if got_id != id {
-                bail!("HgId mismatch when inserting trees: {id} != {got_id}");
-            }
-        }
+        let _ = TreeManifest::persist(self, opts.parents)?;
 
         match self.root.as_ref() {
             Leaf(_) | Ephemeral(_) => bail!("invalid root tree after flushing"),
@@ -609,14 +599,11 @@ fn finalize_trees<P: ParentTreeTracker>(
     let durable_entry = DurableEntry { hgid, links: cell };
     let inner = Arc::new(durable_entry);
     *link = Link::new(Durable(inner));
-    let parent_hgid = |id| *parent_tree_nodes.get(id).unwrap_or(HgId::null_id());
-    converted_nodes.push((
-        path.clone(),
-        hgid,
-        entry.to_bytes(),
-        parent_hgid(0),
-        parent_hgid(1),
-    ));
+    let p1 = *parent_tree_nodes.first().unwrap_or(HgId::null_id());
+    let p2 = *parent_tree_nodes.get(1).unwrap_or(HgId::null_id());
+    let entry_bytes = entry.0.clone();
+    store.insert_entry(path, entry, parent_tree_nodes)?;
+    converted_nodes.push((path.clone(), hgid, entry_bytes, p1, p2));
     Ok((hgid, store::Flag::Directory))
 }
 

@@ -481,23 +481,16 @@ class basetreemanifestlog:
         newtreeiter = _finalize(self, newtree, p1node, p2node)
 
         if self._use_abstraction:
-            store = self.abstract_store()
             rootnode = None
-            for nname, nnode, ntext, _np1text, np1, np2 in newtreeiter:
-                # ntext is the raw text of either git or hg format
-                node = store.insert_data({"parents": (np1, np2)}, nname, ntext)
-                assert node == nnode, f"{node} == {nnode}"
+            for nname, nnode, _ntext, _np1text, _np1, _np2 in newtreeiter:
                 if rootnode is None and nname == "":
-                    rootnode = node
+                    rootnode = nnode
             return rootnode
 
         dpack, hpack = self._getmutablelocalpacks()
 
         node = None
-        for nname, nnode, ntext, _np1text, np1, np2 in newtreeiter:
-            self._addtreeentry(
-                dpack, hpack, nname, nnode, ntext, np1, np2, linknode, linkrev
-            )
+        for nname, nnode, _ntext, _np1text, _np1, _np2 in newtreeiter:
             if node is None and nname == "":
                 node = nnode
 

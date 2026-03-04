@@ -52,10 +52,16 @@ impl InnerStore {
         })
     }
 
-    pub(crate) fn insert_entry(&self, path: &RepoPath, entry: Entry) -> Result<HgId> {
+    pub(crate) fn insert_entry(
+        &self,
+        path: &RepoPath,
+        entry: Entry,
+        parents: Vec<HgId>,
+    ) -> Result<HgId> {
         tracing::debug_span!("tree::store::insert", path = path.as_str(),).in_scope(|| {
             let opts = crate::InsertOpts {
                 kind: crate::Kind::Tree,
+                parents,
                 ..Default::default()
             };
             let id = self.tree_store.insert_data(opts, path, entry.0.into())?;
