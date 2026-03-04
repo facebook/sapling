@@ -276,10 +276,7 @@ py_class!(pub class mergestate |py| {
         let data = self
             .ms(py)
             .borrow()
-            .subtree_merges()
-            .iter()
-            .cloned()
-            .collect();
+            .subtree_merges().to_vec();
         Ok(Serde(data))
     }
 
