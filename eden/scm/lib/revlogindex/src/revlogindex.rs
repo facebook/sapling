@@ -221,7 +221,7 @@ impl RevlogIndex {
                         return Ok(gca);
                     }
                     sv |= poison;
-                    if revs.iter().any(|&r| r == v) {
+                    if revs.contains(&v) {
                         break;
                     }
                 }
