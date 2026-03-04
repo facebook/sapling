@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
+use acl_manifest::RootAclManifestId;
 use anyhow::Error;
 use async_trait::async_trait;
 use basename_suffix_skeleton_manifest_v3::RootBssmV3DirectoryId;
@@ -430,6 +431,9 @@ fn manager_for_type(
         DerivableType::TestShardedManifests => Arc::new(SingleTypeManager::<
             RootTestShardedManifestDirectory,
         >::new(manager)),
+        DerivableType::AclManifests => {
+            Arc::new(SingleTypeManager::<RootAclManifestId>::new(manager))
+        }
     }
 }
 

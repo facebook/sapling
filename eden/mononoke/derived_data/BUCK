@@ -50,6 +50,7 @@ rust_library(
         "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:itertools",
+        ":acl_manifest",
         ":basename_suffix_skeleton_manifest_v3",
         ":blame",
         ":case_conflict_skeleton_manifest",
@@ -735,6 +736,22 @@ rust_library(
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/repo_attributes/bonsai_hg_mapping:bonsai_hg_mapping",
         "//eden/mononoke/repo_attributes/repo_blobstore:repo_blobstore",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
+    ],
+)
+
+rust_library(
+    name = "acl_manifest",
+    srcs = glob(["acl_manifest/*.rs"]),
+    autocargo = {"cargo_toml_dir": "acl_manifest"},
+    test_deps = [],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "//eden/mononoke/blobstore:blobstore",
+        "//eden/mononoke/derived_data:derived_data_manager",
+        "//eden/mononoke/derived_data/remote/if:derived_data_service_if-rust",
+        "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ],
 )
