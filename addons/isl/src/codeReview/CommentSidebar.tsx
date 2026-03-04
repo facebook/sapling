@@ -11,7 +11,7 @@ import type {DiffComment, DiffId} from '../types';
 
 import {Icon} from 'isl-components/Icon';
 import {useAtom, useAtomValue} from 'jotai';
-import {useEffect, useMemo, useState} from 'react';
+import {useEffect, useMemo, useRef, useState} from 'react';
 import {DiffType} from 'shared/patch/types';
 import {AvatarImg} from '../Avatar';
 import {T, t} from '../i18n';
@@ -107,8 +107,18 @@ export function CommentSidebar({
     refresh();
   }, [refresh]);
 
-  // Keep last known comments while refreshing to avoid flashing spinner
+  // Reset stale comments when switching PRs to prevent comment bleed
+  const prevDiffIdRef = useRef(diffId);
   const [lastComments, setLastComments] = useState<import('../types').DiffComment[]>([]);
+  useEffect(() => {
+    if (prevDiffIdRef.current !== diffId) {
+      prevDiffIdRef.current = diffId;
+      setLastComments([]);
+      refresh();
+    }
+  }, [diffId, refresh]);
+
+  // Keep last known comments while refreshing to avoid flashing spinner
   useEffect(() => {
     if (comments.state === 'hasData') {
       setLastComments(comments.data);
