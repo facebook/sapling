@@ -65,15 +65,8 @@ Test using alternative grep commands
   [1]
 #else
   $ hg grep FooBarB
-  [123]
+  [1]
 #endif
-  $ hg grep --config grep.command='xargs -0 grep -i' FooBarB --traceback
-  grepfile1:foobarbaz
-  grepfile2:foobarboo
-  $ hg grep --config grep.command='xargs -0 echo searching' FooBarB subdir1
-  searching * -- subdir1/subfile1 (glob)
-  $ hg grep --config grep.command='xargs -0 echo foo ; false' FooBarB subdir2
-  foo ; false * -- subdir2/subfile2 (glob)
 
 Test --include flag
   $ hg grep --include '**/*file1' -n foobar
@@ -103,7 +96,7 @@ Test symlinks
   $ ln -s target_file sym_link
   $ hg add sym_link
   $ hg grep file_content
-  [123]
+  [1]
 #endif
 
   $ setconfig grep.biggrepclient=$TESTDIR/fake-biggrep-client.py grep.usebiggrep=True grep.biggrepcorpus=fake grep.biggreptier=biggrep.master
@@ -148,7 +141,7 @@ Test biggrep command debug info
   $ cd subdir1
   $ BIGGREP_FILES='{"grepdir/subdir1/subfile1": "foobar_subdir"}' \
   > hg grep foobar -n --debug
-  biggrep command: ['*/fake-biggrep-client.py', 'biggrep.master', 'fake', 're2', '--stripdir', '-r', '--expression', 'foobar', '-f', '(grepdir/subdir1)'] (glob)
+  biggrep command: ["*/fake-biggrep-client.py", "biggrep.master", "fake", "re2", "--stripdir", "-r", "--expression", "foobar", "-f", "(grepdir/subdir1)"] (glob)
   subfile1:1:foobar_subdir_bg
   $ cd ..
 

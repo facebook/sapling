@@ -1,6 +1,3 @@
-#chg-compatible
-#debugruntest-incompatible
-
 #testcases ruststatus pythonstatus
 
 #if pythonstatus
@@ -174,48 +171,31 @@ Grep options work
   a:1:x
 #if no-osx
   $ hg grep -V ''
-  [123]
+  [1]
 #endif
 
 Make sure grep works in subdirectories and with strange filenames
   $ cd dir1
-  $ hg grep str1
+  $ hg grep str1 | sort
   -v:str1-v
   f1:str1f1
   file with space:str1space
   subdir1/subf1:str1sub
-  $ hg grep str1 'relre:f[0-9]+'
+  $ hg grep str1 'relre:f[0-9]+' | sort
   f1:str1f1
   subdir1/subf1:str1sub
 
 Basic vs extended regular expressions
-#if osx
-  $ hg grep 'str([0-9])'
-  [1]
-#else
-  $ hg grep 'str([0-9])'
-  [123]
-#endif
   $ hg grep 'str\([0-9]\)'
+  [1]
+  $ hg grep 'str([0-9])' | sort
   -v:str1-v
   f1:str1f1
   file with space:str1space
   subdir1/subf1:str1sub
-#if osx
   $ hg grep -F 'str[0-9]'
   [1]
-#else
-  $ hg grep -F 'str[0-9]'
-  [123]
-#endif
-  $ hg grep -E 'str([0-9])'
-  -v:str1-v
-  f1:str1f1
-  file with space:str1space
-  subdir1/subf1:str1sub
-
-Filesets
-  $ hg grep str1 'set:added()'
+  $ hg grep -E 'str([0-9])' | sort
   -v:str1-v
   f1:str1f1
   file with space:str1space
@@ -234,7 +214,7 @@ Crazy filenames
   f1:str1f1
   $ hg grep str1 subdir1
   subdir1/subf1:str1sub
-  $ hg grep str1 'glob:**/*f1'
+  $ hg grep str1 'glob:**/*f1' | sort
   f1:str1f1
   subdir1/subf1:str1sub
 

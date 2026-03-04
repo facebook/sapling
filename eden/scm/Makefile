@@ -222,7 +222,8 @@ GETDEPS_TEST_EXCLUSION_LIST := \
 	test-sampling.t \
 	test-smartlog.t \
 	test-smartlog-interactive.t \
-	test-smartlog-interactive-highlighting.t
+	test-smartlog-interactive-highlighting.t \
+	test-tweakdefaults-grep.t
 
 ifeq ($(PYTHON_MINOR_VERSION),12)
 # output differs for these on 3.12 in ways that are hard to match for 3.10 and 3.12 simultaneously

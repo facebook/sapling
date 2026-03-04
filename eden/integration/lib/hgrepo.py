@@ -311,6 +311,9 @@ class HgRepository(repobase.Repository):
         hgrc.setdefault("checkout", {})
         hgrc["checkout"]["use-rust"] = "true"
 
+        hgrc.setdefault("grep", {})
+        hgrc["grep"]["use-rust"] = "true"
+
         # It's safe to use EdenAPI push for testing purposes
         hgrc.add_section("push")
         hgrc["push"]["edenapi"] = "true"

@@ -13,6 +13,7 @@
 use std::collections::HashSet;
 use std::io::BufRead;
 use std::io::BufReader;
+use std::io::Read;
 use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
@@ -58,6 +59,8 @@ pub fn try_biggrep(
 
     // Check if biggrep is explicitly enabled/disabled
     let use_biggrep = config.get_opt::<bool>("grep", "usebiggrep")?;
+    // Track if biggrep was explicitly enabled (vs auto-detected) - affects error handling
+    let explicitly_enabled = use_biggrep == Some(true);
 
     // Get biggrep configuration
     let Some(biggrep_client) = config.get_opt::<PathBuf>("grep", "biggrepclient")? else {
@@ -154,12 +157,33 @@ pub fn try_biggrep(
         cmd.arg("-f").arg(pattern);
     }
 
+    // Output debug info if requested
+    if ctx.global_opts().debug {
+        let cmd_args: Vec<_> = std::iter::once(cmd.get_program().to_string_lossy().into_owned())
+            .chain(cmd.get_args().map(|a| a.to_string_lossy().into_owned()))
+            .collect();
+        ctx.logger()
+            .info(format!("biggrep command: {:?}", cmd_args));
+    }
+
     // Execute biggrep with streaming output
     cmd.stdout(Stdio::piped()).stderr(Stdio::piped());
 
-    let mut child = cmd.spawn()?;
+    let mut child = match cmd.spawn() {
+        Ok(child) => child,
+        Err(e) => {
+            if explicitly_enabled {
+                abort!(
+                    "biggrep_client failed to start: {}\n(pass `--config grep.usebiggrep=False` to bypass biggrep)",
+                    e
+                );
+            }
+            return Ok(None);
+        }
+    };
 
     let stdout = child.stdout.take().expect("stdout should be captured");
+    let stderr = child.stderr.take().expect("stderr should be captured");
     let reader = BufReader::new(stdout);
     let mut lines = reader.lines();
 
@@ -168,8 +192,17 @@ pub fn try_biggrep(
         Some(Ok(line)) if line.starts_with('#') => line,
         Some(Ok(_line)) => {
             // First line doesn't start with #, unexpected format
-            // Wait for child and fall back to local grep
-            let _ = child.wait();
+            let status = child.wait()?;
+            if explicitly_enabled {
+                // Read stderr for error message
+                let mut stderr_content = String::new();
+                let _ = BufReader::new(stderr).read_to_string(&mut stderr_content);
+                abort!(
+                    "biggrep_client failed with exit code {}: {}\n(pass `--config grep.usebiggrep=False` to bypass biggrep)",
+                    status.code().unwrap_or(-1),
+                    stderr_content.trim()
+                );
+            }
             return Ok(None);
         }
         Some(Err(e)) => {
@@ -177,8 +210,18 @@ pub fn try_biggrep(
             return Err(e.into());
         }
         None => {
-            // No output, fall back to local grep
-            let _ = child.wait();
+            // No output from biggrep
+            let status = child.wait()?;
+            if explicitly_enabled {
+                // Read stderr for error message
+                let mut stderr_content = String::new();
+                let _ = BufReader::new(stderr).read_to_string(&mut stderr_content);
+                abort!(
+                    "biggrep_client failed with exit code {}: {}\n(pass `--config grep.usebiggrep=False` to bypass biggrep)",
+                    status.code().unwrap_or(-1),
+                    stderr_content.trim()
+                );
+            }
             return Ok(None);
         }
     };

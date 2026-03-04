@@ -6,7 +6,6 @@
 
 # pyre-strict
 
-import sys
 from textwrap import dedent
 
 from eden.integration.lib import hgrepo
@@ -56,23 +55,11 @@ class GrepTest(EdenHgTestCase):
             self.hg("grep", "NOT IN THERE")
         self.assertEqual(b"", context.exception.stdout)
         self.assertEqual(b"", context.exception.stderr)
-        # the returncode is forwarded from xargs. xargs on linux exits with 123
-        # if the underlying command fails, xargs on mac exits with 1 :(.
-        if sys.platform == "darwin":
-            expected_returncode = 1
-        else:
-            expected_returncode = 123
-        self.assertEqual(expected_returncode, context.exception.returncode)
+        self.assertEqual(1, context.exception.returncode)
 
     def test_grep_that_does_not_match_anything_in_directory(self) -> None:
         with self.assertRaises(hgrepo.HgError) as context:
             self.hg("grep", "NOT IN THERE", "d1")
         self.assertEqual(b"", context.exception.stdout)
         self.assertEqual(b"", context.exception.stderr)
-        # the returncode is forwarded from xargs. xargs on linux exits with 123
-        # if the underlying command fails, xargs on mac exits with 1 :(.
-        if sys.platform == "darwin":
-            expected_returncode = 1
-        else:
-            expected_returncode = 123
-        self.assertEqual(expected_returncode, context.exception.returncode)
+        self.assertEqual(1, context.exception.returncode)
