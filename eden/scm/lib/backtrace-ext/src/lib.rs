@@ -96,7 +96,7 @@ pub fn get_supplemental_frame_resolver() -> Option<&'static &'static dyn Supplem
         None
     } else {
         // avoid dereference
-        Some(unsafe { std::mem::transmute(ptr) })
+        Some(unsafe { &*(ptr as *const &dyn SupplementalFrameResolver) })
     }
 }
 
