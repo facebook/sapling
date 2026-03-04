@@ -179,7 +179,7 @@ fn forward_signals(props: &ProcessProps) {
         libc::SIGCONT,
         libc::SIGTSTP,
     ] {
-        unsafe { libc::signal(sig, forward_signal_group as _) };
+        unsafe { libc::signal(sig, forward_signal_group as *const () as _) };
     }
 
     // The main process is expected to setup SIGUSR* handler.
