@@ -31,6 +31,7 @@ use types::testutil::*;
 use crate::FileMetadata;
 use crate::TreeManifest;
 use crate::TreeStore;
+use crate::link::LinkData::*;
 
 pub fn make_tree_manifest<'a>(
     store: Arc<TestStore>,
@@ -66,6 +67,8 @@ pub struct TestStoreInner {
     entries: HashMap<HgId, Bytes>,
     // Calls to get_content_iter().
     fetched: Vec<Vec<Key>>,
+    // Parents recorded via insert_data with InsertOpts.parents.
+    parents: HashMap<(RepoPathBuf, HgId), Vec<HgId>>,
     format: SerializationFormat,
     key_fetch_count: AtomicU64,
     insert_count: AtomicU64,
@@ -92,6 +95,14 @@ impl TestStore {
 
     pub fn insert_count(&self) -> u64 {
         self.inner.read().insert_count.load(Ordering::Relaxed)
+    }
+
+    pub fn get_parents(&self, path: &RepoPath, hgid: HgId) -> Option<Vec<HgId>> {
+        self.inner
+            .read()
+            .parents
+            .get(&(path.to_owned(), hgid))
+            .cloned()
     }
 }
 
@@ -127,7 +138,7 @@ impl KeyStore for TestStore {
         Ok(result.map(Blob::Bytes))
     }
 
-    fn insert_data(&self, opts: InsertOpts, _path: &RepoPath, data: Blob) -> anyhow::Result<HgId> {
+    fn insert_data(&self, opts: InsertOpts, path: &RepoPath, data: Blob) -> anyhow::Result<HgId> {
         let mut inner = self.inner.write();
         inner.insert_count.fetch_add(1, Ordering::Relaxed);
         let format = inner.format;
@@ -150,6 +161,9 @@ impl KeyStore for TestStore {
             },
         };
         inner.entries.insert(hgid, data_bytes);
+        if !opts.parents.is_empty() {
+            inner.parents.insert((path.to_owned(), hgid), opts.parents);
+        }
         Ok(hgid)
     }
 
@@ -171,5 +185,17 @@ impl TreeStore for TestStore {
 impl FileStore for TestStore {
     fn clone_file_store(&self) -> Box<dyn FileStore + 'static> {
         Box::new(self.clone())
+    }
+}
+
+/// Get the hgid for a path in a TreeManifest. Works for both files and directories.
+/// Panics if the path is not found or is ephemeral.
+pub fn get_hgid(tree: &TreeManifest, path: &RepoPath) -> HgId {
+    match tree.get_link(path).unwrap().unwrap().as_ref() {
+        Leaf(file_metadata) => file_metadata.hgid,
+        Durable(entry) => entry.hgid,
+        Ephemeral(_) => {
+            panic!("Asked for hgid on path {} but found ephemeral hgid.", path)
+        }
     }
 }

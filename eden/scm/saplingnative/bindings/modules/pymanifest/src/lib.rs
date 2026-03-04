@@ -629,7 +629,7 @@ py_class!(pub class treemanifest |py| {
         &self,
         p1tree: Option<&treemanifest> = None,
         p2tree: Option<&treemanifest> = None
-    ) -> PyResult<Vec<PyTuple>> {
+    ) -> PyResult<PyBytes> {
         let pending_delete = self.pending_delete(py).borrow();
         if !pending_delete.is_empty() {
             return Err(PyErr::new::<exc::RuntimeError, _>(
@@ -641,7 +641,6 @@ py_class!(pub class treemanifest |py| {
                 )
             ));
         }
-        let mut result = Vec::new();
         let mut tree = self.underlying(py).write();
         let mut parents = vec!();
         if let Some(m1) = p1tree {
@@ -651,25 +650,10 @@ py_class!(pub class treemanifest |py| {
             parents.push(m2.underlying(py).read());
         }
         let parent_refs: Vec<&TreeManifest> = parents.iter().map(|x| x.deref()).collect();
-        let entries = tree.persist(
-            &parent_refs
+        let hgid = tree.persist(
+            &parent_refs,
         ).map_pyerr(py)?;
-        for entry in entries {
-            let (repo_path, node, raw, p1node, p2node) = entry;
-            let tuple = PyTuple::new(
-                py,
-                &[
-                    PyPathBuf::from(repo_path).to_py_object(py).into_object(),
-                    node_to_pybytes(py, node).into_object(),
-                    PyBytes::new(py, &raw).into_object(),
-                    PyBytes::new(py, &[]).into_object(),
-                    node_to_pybytes(py, p1node).into_object(),
-                    node_to_pybytes(py, p2node).into_object(),
-                ],
-            );
-            result.push(tuple);
-        }
-        Ok(result)
+        Ok(node_to_pybytes(py, hgid))
     }
 
     /// flush() -> node.

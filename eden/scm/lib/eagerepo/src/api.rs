@@ -102,9 +102,7 @@ use mutationstore::MutationEntry;
 use nonblocking::non_blocking_result;
 use pathmatcher::AlwaysMatcher;
 use repourl::RepoUrl;
-use storemodel::InsertOpts;
 use storemodel::KeyStore;
-use storemodel::Kind;
 use storemodel::SerializationFormat;
 use storemodel::types::FetchContext;
 use tracing::debug;
@@ -1317,27 +1315,7 @@ impl SaplingRemoteApi for EagerRepo {
             let new_tree_id = match repo.store.format() {
                 SerializationFormat::Hg => {
                     let new_parents = vec![&dest_manifest];
-                    let mut manifest_id: Option<HgId> = None;
-                    for (path, hgid, raw, p1, p2) in new_manifest.persist(&new_parents)? {
-                        let insert_opts = InsertOpts {
-                            parents: vec![p1, p2],
-                            kind: Kind::Tree,
-                            ..Default::default()
-                        };
-                        repo.store.insert_data(insert_opts, &path, raw.into())?;
-                        if path.is_empty() {
-                            manifest_id = Some(hgid);
-                        }
-                    }
-                    match manifest_id {
-                        Some(manifest_id) => manifest_id,
-                        None => {
-                            return Err(anyhow!(
-                                "empty commit is not supported: {}",
-                                source_commit.to_hex()
-                            ));
-                        }
-                    }
+                    new_manifest.persist(&new_parents)?
                 }
                 SerializationFormat::Git => {
                     Manifest::persist(&mut new_manifest, PersistOpts { parents: &[] })?

@@ -670,6 +670,7 @@ mod test {
     use anyhow::anyhow;
     use manifest::FileMetadata;
     use manifest_tree::TreeManifest;
+    use manifest_tree::testutil;
     use manifest_tree::testutil::TestStore;
     use pathmatcher::TreeMatcher;
     use rand_chacha::ChaChaRng;
@@ -856,21 +857,11 @@ mod test {
             FileMetadata::new(exclude_hgid, types::FileType::Regular),
         )?;
 
-        // Finalize and store tree data, capturing tree hgids by path
-        let mut tree_hgids: HashMap<RepoPathBuf, HgId> = HashMap::new();
-        for (path, id, text, _p1, _p2) in mf.persist(&[])? {
-            store.insert_data(Default::default(), &path, text.into())?;
-            tree_hgids.insert(path, id);
-        }
-        let root_hgid = *tree_hgids
-            .get(&RepoPathBuf::new())
-            .expect("should have root hgid");
+        let root_hgid = mf.persist(&[])?;
         let dir_path: RepoPathBuf = "dir".to_string().try_into()?;
-        let dir_hgid = *tree_hgids.get(&dir_path).expect("should have dir hgid");
+        let dir_hgid = testutil::get_hgid(&mf, &dir_path);
         let excludeme_path: RepoPathBuf = "excludeme".to_string().try_into()?;
-        let excludeme_hgid = *tree_hgids
-            .get(&excludeme_path)
-            .expect("should have excludeme hgid");
+        let excludeme_hgid = testutil::get_hgid(&mf, &excludeme_path);
 
         // Create a fresh durable manifest from the root hgid to ensure fetches happen
         let mf = TreeManifest::durable(store.clone(), root_hgid);
@@ -1048,14 +1039,7 @@ mod test {
         )?;
 
         // Finalize and store tree data
-        let mut root_hgid = None;
-        for (path, id, text, _p1, _p2) in mf.persist(&[])? {
-            tree_store.insert_data(Default::default(), &path, text.into())?;
-            if path.is_empty() {
-                root_hgid = Some(id);
-            }
-        }
-        let root_hgid = root_hgid.expect("should have root hgid");
+        let root_hgid = mf.persist(&[])?;
 
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let stub_commit_id = HgId::random(&mut rng);
@@ -1176,19 +1160,11 @@ mod test {
             FileMetadata::new(bar_hgid, types::FileType::Regular),
         )?;
 
-        // Finalize and store tree data, capturing tree hgids by path
-        let mut tree_hgids: HashMap<RepoPathBuf, HgId> = HashMap::new();
-        for (path, id, text, _p1, _p2) in mf.persist(&[])? {
-            tree_store.insert_data(Default::default(), &path, text.into())?;
-            tree_hgids.insert(path, id);
-        }
-        let root_hgid = *tree_hgids
-            .get(&RepoPathBuf::new())
-            .expect("should have root hgid");
+        let root_hgid = mf.persist(&[])?;
         let dir1_path: RepoPathBuf = "dir1".to_string().try_into()?;
-        let dir1_hgid = *tree_hgids.get(&dir1_path).expect("should have dir1 hgid");
+        let dir1_hgid = testutil::get_hgid(&mf, &dir1_path);
         let dir2_path: RepoPathBuf = "dir2".to_string().try_into()?;
-        let dir2_hgid = *tree_hgids.get(&dir2_path).expect("should have dir2 hgid");
+        let dir2_hgid = testutil::get_hgid(&mf, &dir2_path);
 
         let mut detector = walkdetector::Detector::new();
         detector.set_walk_threshold(2);

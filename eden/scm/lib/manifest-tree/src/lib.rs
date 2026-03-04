@@ -21,8 +21,6 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use anyhow::bail;
-use format_util::git_sha1_digest;
-use format_util::hg_sha1_digest;
 use manifest::DiffEntry;
 use manifest::DirDiffEntry;
 use manifest::Directory;
@@ -531,21 +529,8 @@ impl<'a> ParentTreeTracker for HgParents<'a> {
     }
 }
 
-fn compute_hgid(parent_tree_nodes: &[HgId], content: &[u8], format: SerializationFormat) -> HgId {
-    match format {
-        SerializationFormat::Hg => {
-            debug_assert!(parent_tree_nodes.len() <= 2);
-            let p1 = parent_tree_nodes.first().unwrap_or(HgId::null_id());
-            let p2 = parent_tree_nodes.get(1).unwrap_or(HgId::null_id());
-            hg_sha1_digest(content, p1, p2)
-        }
-        SerializationFormat::Git => git_sha1_digest(content, "tree"),
-    }
-}
-
 /// Recursive tree-walking logic shared by `finalize()`.
-/// Walks the tree, computing hgids for each directory node,
-/// and populates `converted_nodes` with the entries that need to be written.
+/// Walks the tree, computing hgids for each directory node.
 fn finalize_trees<P: ParentTreeTracker>(
     store: &InnerStore,
     path: &mut RepoPathBuf,
@@ -553,7 +538,6 @@ fn finalize_trees<P: ParentTreeTracker>(
     format: SerializationFormat,
     tracker: &mut P,
     active: P::ActiveParents,
-    converted_nodes: &mut Vec<(RepoPathBuf, HgId, Bytes, HgId, HgId)>,
 ) -> Result<(HgId, store::Flag)> {
     let parent_tree_nodes = tracker.parent_tree_nodes(&active)?;
     if let Durable(entry) = link.as_ref() {
@@ -576,48 +560,34 @@ fn finalize_trees<P: ParentTreeTracker>(
     for (component, child_link) in links.iter_mut() {
         path.push(component.as_path_component());
         let child_active = tracker.for_subdirectory(&active, path)?;
-        let (hgid, flag) = finalize_trees(
-            store,
-            path,
-            child_link,
-            format,
-            tracker,
-            child_active,
-            converted_nodes,
-        )?;
+        let (hgid, flag) = finalize_trees(store, path, child_link, format, tracker, child_active)?;
         path.pop();
         let element = store::Element::new(component.clone(), hgid, flag);
         elements.push(element);
     }
     let entry = store::Entry::from_elements(elements, format);
-    let hgid = compute_hgid(&parent_tree_nodes, entry.as_ref(), format);
 
     let cell = OnceCell::new();
     // TODO: remove clone
     cell.set(links.clone()).unwrap();
 
+    let hgid = store.insert_entry(path, entry, parent_tree_nodes)?;
+
     let durable_entry = DurableEntry { hgid, links: cell };
     let inner = Arc::new(durable_entry);
     *link = Link::new(Durable(inner));
-    let p1 = *parent_tree_nodes.first().unwrap_or(HgId::null_id());
-    let p2 = *parent_tree_nodes.get(1).unwrap_or(HgId::null_id());
-    let entry_bytes = entry.0.clone();
-    store.insert_entry(path, entry, parent_tree_nodes)?;
-    converted_nodes.push((path.clone(), hgid, entry_bytes, p1, p2));
+
     Ok((hgid, store::Flag::Directory))
 }
 
 impl TreeManifest {
-    /// Produces new trees to write (path, id, text, p1, p2).
-    /// Does not write to the tree store directly.
-    pub fn persist(
-        &mut self,
-        parent_trees: &[&TreeManifest],
-    ) -> Result<impl Iterator<Item = (RepoPathBuf, HgId, Bytes, HgId, HgId)> + use<>> {
-        let mut converted_nodes = Vec::new();
+    /// Persist dirty trees to the store. Returns the root tree id.
+    /// For Hg format, parent trees are used to compute tree hgids and
+    /// parent info is written to the history store.
+    pub fn persist(&mut self, parent_trees: &[&TreeManifest]) -> Result<HgId> {
         let mut path = RepoPathBuf::new();
         let format = self.store.format();
-        match format {
+        let (hgid, _) = match format {
             SerializationFormat::Hg => {
                 let mut tracker = HgParents::new(&parent_trees)?;
                 let active = tracker.initial_active();
@@ -628,8 +598,7 @@ impl TreeManifest {
                     format,
                     &mut tracker,
                     active,
-                    &mut converted_nodes,
-                )?;
+                )?
             }
             SerializationFormat::Git => {
                 let mut tracker = NoParents;
@@ -640,11 +609,10 @@ impl TreeManifest {
                     format,
                     &mut tracker,
                     (),
-                    &mut converted_nodes,
-                )?;
+                )?
             }
-        }
-        Ok(converted_nodes.into_iter())
+        };
+        Ok(hgid)
     }
 
     /// Insert `other[other_path]` into `self[path]`. If `path` is already in `self`,
@@ -997,7 +965,6 @@ mod tests {
     use store::Element;
     use storemodel::InsertOpts;
     use storemodel::Kind;
-    use types::hgid::NULL_ID;
     use types::testutil::*;
 
     use self::testutil::*;
@@ -1345,26 +1312,8 @@ mod tests {
             .unwrap();
         tree.insert(repo_path_buf("a2/b2/c2"), make_meta("30"))
             .unwrap();
-        let tree_changed: Vec<_> = tree.persist(&[]).unwrap().collect();
-
-        assert_eq!(tree_changed.len(), 6);
-        assert_eq!(tree_changed[0].0, repo_path_buf("a1/b1/c1"));
-        assert_eq!(tree_changed[1].0, repo_path_buf("a1/b1"));
-        assert_eq!(tree_changed[2].0, repo_path_buf("a1"));
-        assert_eq!(tree_changed[3].0, repo_path_buf("a2/b2"));
-        assert_eq!(tree_changed[4].0, repo_path_buf("a2"));
-        assert_eq!(tree_changed[5].0, RepoPathBuf::new());
-
-        // we should write before we can update
-        // depends on the implementation but it is valid for finalize to query the store
-        // for the values returned in the previous finalize call
-
-        use minibytes::Bytes;
-        for (path, hgid, raw, _, _) in tree_changed.iter() {
-            store
-                .insert(path, *hgid, Bytes::copy_from_slice(&raw[..]))
-                .unwrap();
-        }
+        let root_id = tree.persist(&[]).unwrap();
+        assert_eq!(root_id, get_hgid(&tree, RepoPath::empty()));
 
         let mut update = tree.clone();
         update
@@ -1374,16 +1323,20 @@ mod tests {
         update
             .insert(repo_path_buf("a3/b1"), make_meta("50"))
             .unwrap();
-        let update_changed: Vec<_> = update.persist(&[&tree]).unwrap().collect();
-        assert_eq!(update_changed[0].0, repo_path_buf("a1"));
-        assert_eq!(update_changed[0].3, tree_changed[2].1);
-        assert_eq!(update_changed[0].4, NULL_ID);
-        assert_eq!(update_changed[1].0, repo_path_buf("a3"));
-        assert_eq!(update_changed[1].3, NULL_ID);
-        assert_eq!(update_changed[1].4, NULL_ID);
-        assert_eq!(update_changed[2].0, RepoPathBuf::new());
-        assert_eq!(update_changed[2].3, tree_changed[5].1);
-        assert_eq!(update_changed[2].4, NULL_ID);
+        let update_root = update.persist(&[&tree]).unwrap();
+        assert_eq!(update_root, get_hgid(&update, RepoPath::empty()));
+
+        // Verify parent info was recorded in the store.
+        let a1_id = get_hgid(&update, repo_path("a1"));
+        let a1_parents = store.get_parents(repo_path("a1"), a1_id).unwrap();
+        assert_eq!(a1_parents, vec![get_hgid(&tree, repo_path("a1"))]);
+
+        // a3 is new (not in tree), so no parent hgids.
+        let a3_id = get_hgid(&update, repo_path("a3"));
+        assert_eq!(store.get_parents(repo_path("a3"), a3_id), None);
+
+        let root_parents = store.get_parents(RepoPath::empty(), update_root).unwrap();
+        assert_eq!(root_parents, vec![root_id]);
     }
 
     #[test]
@@ -1395,12 +1348,12 @@ mod tests {
         p1.insert(repo_path_buf("a1/b2"), make_meta("20")).unwrap();
         p1.insert(repo_path_buf("a2/b2/c2"), make_meta("30"))
             .unwrap();
-        let _p1_changed = p1.persist(&[]).unwrap();
+        p1.persist(&[]).unwrap();
 
-        let mut p2 = TreeManifest::ephemeral(store);
+        let mut p2 = TreeManifest::ephemeral(store.clone());
         p2.insert(repo_path_buf("a1/b2"), make_meta("40")).unwrap();
         p2.insert(repo_path_buf("a3/b1"), make_meta("50")).unwrap();
-        let _p2_changed = p2.persist(&[]).unwrap();
+        p2.persist(&[]).unwrap();
 
         let mut tree = p1.clone();
         tree.insert(repo_path_buf("a1/b2"), make_meta("40"))
@@ -1409,22 +1362,30 @@ mod tests {
             .unwrap();
         tree.insert(repo_path_buf("a3/b1"), make_meta("50"))
             .unwrap();
-        let tree_changed: Vec<_> = tree.persist(&[&p1, &p2]).unwrap().collect();
-        assert_eq!(tree_changed[0].0, repo_path_buf("a1"));
-        assert_eq!(tree_changed[0].3, get_hgid(&p1, repo_path("a1")));
-        assert_eq!(tree_changed[0].4, get_hgid(&p2, repo_path("a1")));
+        let root_id = tree.persist(&[&p1, &p2]).unwrap();
 
-        assert_eq!(tree_changed[1].0, repo_path_buf("a2/b2"));
-        assert_eq!(tree_changed[1].3, get_hgid(&p1, repo_path("a2/b2")));
-        assert_eq!(tree_changed[1].4, NULL_ID);
-        assert_eq!(tree_changed[2].0, repo_path_buf("a2"));
-        assert_eq!(tree_changed[3].0, repo_path_buf("a3"));
-        assert_eq!(tree_changed[3].3, get_hgid(&p2, repo_path("a3")));
-        assert_eq!(tree_changed[3].4, NULL_ID);
-        assert_eq!(tree_changed[4].0, RepoPathBuf::new());
-
+        let a1_id = get_hgid(&tree, repo_path("a1"));
+        let a1_parents = store.get_parents(repo_path("a1"), a1_id).unwrap();
         assert_eq!(
-            vec![tree_changed[4].3, tree_changed[4].4],
+            a1_parents,
+            vec![
+                get_hgid(&p1, repo_path("a1")),
+                get_hgid(&p2, repo_path("a1"))
+            ]
+        );
+
+        let a2_b2_id = get_hgid(&tree, repo_path("a2/b2"));
+        let a2_b2_parents = store.get_parents(repo_path("a2/b2"), a2_b2_id).unwrap();
+        assert_eq!(a2_b2_parents, vec![get_hgid(&p1, repo_path("a2/b2"))]);
+
+        // a3 only exists in p2.
+        let a3_id = get_hgid(&tree, repo_path("a3"));
+        let a3_parents = store.get_parents(repo_path("a3"), a3_id).unwrap();
+        assert_eq!(a3_parents, vec![get_hgid(&p2, repo_path("a3"))]);
+
+        let root_parents = store.get_parents(RepoPath::empty(), root_id).unwrap();
+        assert_eq!(
+            root_parents,
             vec![
                 get_hgid(&p1, RepoPath::empty()),
                 get_hgid(&p2, RepoPath::empty()),
@@ -1437,27 +1398,31 @@ mod tests {
         let store = Arc::new(TestStore::new());
         let mut tree1 = TreeManifest::ephemeral(store.clone());
         tree1.insert(repo_path_buf("a1"), make_meta("10")).unwrap();
-        let tree1_changed: Vec<_> = tree1.persist(&[]).unwrap().collect();
-        assert_eq!(tree1_changed[0].0, RepoPathBuf::new());
-        assert_eq!(tree1_changed[0].3, NULL_ID);
+        let tree1_root = tree1.persist(&[]).unwrap();
+
+        // Initial commit has no parent info recorded (empty parents vec).
+        assert_eq!(store.get_parents(RepoPath::empty(), tree1_root), None);
 
         let mut tree2 = TreeManifest::ephemeral(store.clone());
         tree2
             .insert(repo_path_buf("a1/b1"), make_meta("20"))
             .unwrap();
-        let tree2_changed: Vec<_> = tree2.persist(&[&tree1]).unwrap().collect();
-        assert_eq!(tree2_changed[0].0, repo_path_buf("a1"));
-        assert_eq!(tree2_changed[0].3, NULL_ID);
-        assert_eq!(tree2_changed[1].0, RepoPathBuf::new());
-        assert_eq!(tree2_changed[1].3, tree1_changed[0].1);
-        assert_eq!(tree2_changed[1].4, NULL_ID);
+        let tree2_root = tree2.persist(&[&tree1]).unwrap();
 
-        let mut tree3 = TreeManifest::ephemeral(store);
+        // "a1" was a file in tree1, now a directory — no parent for "a1" dir.
+        let a1_id = get_hgid(&tree2, repo_path("a1"));
+        assert_eq!(store.get_parents(repo_path("a1"), a1_id), None);
+        // Root's parent should be tree1's root.
+        let root_parents = store.get_parents(RepoPath::empty(), tree2_root).unwrap();
+        assert_eq!(root_parents, vec![tree1_root]);
+
+        let mut tree3 = TreeManifest::ephemeral(store.clone());
         tree3.insert(repo_path_buf("a1"), make_meta("30")).unwrap();
-        let tree3_changed: Vec<_> = tree3.persist(&[&tree2]).unwrap().collect();
-        assert_eq!(tree3_changed[0].0, RepoPathBuf::new());
-        assert_eq!(tree3_changed[0].3, tree2_changed[1].1);
-        assert_eq!(tree3_changed[0].4, NULL_ID);
+        let tree3_root = tree3.persist(&[&tree2]).unwrap();
+
+        // Root's parent should be tree2's root.
+        let root_parents = store.get_parents(RepoPath::empty(), tree3_root).unwrap();
+        assert_eq!(root_parents, vec![tree2_root]);
     }
 
     #[test]
@@ -1473,7 +1438,7 @@ mod tests {
         tree1
             .insert(repo_path_buf("a2/b2/c2"), make_meta("30"))
             .unwrap();
-        let _tree1_changed = tree1.persist(&[]).unwrap();
+        tree1.persist(&[]).unwrap();
 
         let mut tree2 = tree1.clone();
         tree2
@@ -1485,11 +1450,10 @@ mod tests {
         tree2
             .insert(repo_path_buf("a3/b1"), make_meta("50"))
             .unwrap();
-        let tree_changed: Vec<_> = tree2.persist(&[&tree1]).unwrap().collect();
-        assert_eq!(
-            tree2.persist(&[&tree1]).unwrap().collect::<Vec<_>>(),
-            tree_changed,
-        );
+        let root1 = tree2.persist(&[&tree1]).unwrap();
+        // Persisting again should return the same root (deterministic).
+        let root2 = tree2.persist(&[&tree1]).unwrap();
+        assert_eq!(root1, root2);
     }
 
     #[test]
@@ -1514,7 +1478,7 @@ mod tests {
 
         let mut tree = TreeManifest::durable(store, hgid("2"));
 
-        let _changes: Vec<_> = tree.persist(&[&parent]).unwrap().collect();
+        let _root = tree.persist(&[&parent]).unwrap();
         // expecting the code to not panic
         // the panic would be caused by materializing link (foo, 10) which
         // doesn't have a store entry

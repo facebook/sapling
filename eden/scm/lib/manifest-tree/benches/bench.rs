@@ -10,7 +10,6 @@ use std::sync::Arc;
 use manifest::FileMetadata;
 use manifest::Manifest;
 use manifest_tree::TreeManifest;
-use manifest_tree::TreeStore;
 use manifest_tree::testutil::*;
 use minibench::bench;
 use minibench::elapsed;
@@ -48,19 +47,8 @@ pub fn generate_entries<G: quickcheck::Gen>(
     result
 }
 
-pub fn finalize(
-    store: &TestStore,
-    manifest: &mut TreeManifest,
-    parent_manifests: Vec<&TreeManifest>,
-) -> HgId {
-    let mut manifest_id = Default::default();
-    for (path, hgid, raw, _, _) in manifest.persist(parent_manifests).unwrap() {
-        store.insert(&path, hgid, raw).unwrap();
-        if path.is_empty() {
-            manifest_id = hgid;
-        }
-    }
-    manifest_id
+pub fn finalize(manifest: &mut TreeManifest, parent_manifests: Vec<&TreeManifest>) -> HgId {
+    manifest.persist(parent_manifests).unwrap()
 }
 
 // Run with: cargo bench --features for-tests
@@ -90,7 +78,7 @@ fn main() {
             }
         })
     });
-    let initial_manifest_id = finalize(&store, &mut initial_manifest, vec![]);
+    let initial_manifest_id = finalize(&mut initial_manifest, vec![]);
 
     // Iterate through the durable entries that are all loaded in memory
     bench("iterate_files_durable_in_memory", || {
@@ -131,9 +119,7 @@ fn main() {
             manifest.insert(path.to_owned(), *file_metadata).unwrap();
         }
         elapsed(|| {
-            for x in manifest.persist(vec![&initial_manifest]).unwrap() {
-                black_box(x);
-            }
+            black_box(manifest.persist(vec![&initial_manifest]).unwrap());
         })
     });
 

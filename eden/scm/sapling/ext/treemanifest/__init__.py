@@ -482,14 +482,7 @@ class treemanifestlog:
         linknode,
         linkrev=None,
     ):
-        newtreeiter = _finalize(self, newtree, p1node, p2node)
-
-        rootnode = None
-        for nname, nnode, _ntext, _np1text, _np1, _np2 in newtreeiter:
-            if nname == "":
-                rootnode = nnode
-
-        return rootnode
+        return _finalize(self, newtree, p1node, p2node)
 
     def commitsharedpacks(self):
         """Persist the dirty trees written to the shared packs."""
