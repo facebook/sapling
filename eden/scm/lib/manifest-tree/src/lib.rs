@@ -272,8 +272,8 @@ impl Manifest for TreeManifest {
     }
 
     /// Write dirty trees using specified format to disk. Return the root tree id.
-    fn flush(&mut self) -> Result<HgId> {
-        for (path, id, text, _p1, _p2) in self.finalize(Vec::new())? {
+    fn persist(&mut self) -> Result<HgId> {
+        for (path, id, text, _p1, _p2) in self.persist(Vec::new())? {
             let got_id = self
                 .store
                 .insert_entry(&path, store::Entry(text, self.store.format()))?;
@@ -618,7 +618,7 @@ fn finalize_trees<P: ParentTreeTracker>(
 impl TreeManifest {
     /// Produces new trees to write (path, id, text, p1, p2).
     /// Does not write to the tree store directly.
-    pub fn finalize(
+    pub fn persist(
         &mut self,
         parent_trees: Vec<&TreeManifest>,
     ) -> Result<impl Iterator<Item = (RepoPathBuf, HgId, Bytes, HgId, HgId)> + use<>> {
@@ -1325,7 +1325,7 @@ mod tests {
         tree.insert(repo_path_buf("a2/b2/c2"), make_meta("30"))
             .unwrap();
 
-        let hgid = tree.flush().unwrap();
+        let hgid = Manifest::persist(&mut tree).unwrap();
 
         let tree = TreeManifest::durable(store, hgid);
         assert_eq!(
@@ -1353,7 +1353,7 @@ mod tests {
             .unwrap();
         tree.insert(repo_path_buf("a2/b2/c2"), make_meta("30"))
             .unwrap();
-        let tree_changed: Vec<_> = tree.finalize(vec![]).unwrap().collect();
+        let tree_changed: Vec<_> = tree.persist(vec![]).unwrap().collect();
 
         assert_eq!(tree_changed.len(), 6);
         assert_eq!(tree_changed[0].0, repo_path_buf("a1/b1/c1"));
@@ -1382,7 +1382,7 @@ mod tests {
         update
             .insert(repo_path_buf("a3/b1"), make_meta("50"))
             .unwrap();
-        let update_changed: Vec<_> = update.finalize(vec![&tree]).unwrap().collect();
+        let update_changed: Vec<_> = update.persist(vec![&tree]).unwrap().collect();
         assert_eq!(update_changed[0].0, repo_path_buf("a1"));
         assert_eq!(update_changed[0].3, tree_changed[2].1);
         assert_eq!(update_changed[0].4, NULL_ID);
@@ -1403,12 +1403,12 @@ mod tests {
         p1.insert(repo_path_buf("a1/b2"), make_meta("20")).unwrap();
         p1.insert(repo_path_buf("a2/b2/c2"), make_meta("30"))
             .unwrap();
-        let _p1_changed = p1.finalize(vec![]).unwrap();
+        let _p1_changed = p1.persist(vec![]).unwrap();
 
         let mut p2 = TreeManifest::ephemeral(store);
         p2.insert(repo_path_buf("a1/b2"), make_meta("40")).unwrap();
         p2.insert(repo_path_buf("a3/b1"), make_meta("50")).unwrap();
-        let _p2_changed = p2.finalize(vec![]).unwrap();
+        let _p2_changed = p2.persist(vec![]).unwrap();
 
         let mut tree = p1.clone();
         tree.insert(repo_path_buf("a1/b2"), make_meta("40"))
@@ -1417,7 +1417,7 @@ mod tests {
             .unwrap();
         tree.insert(repo_path_buf("a3/b1"), make_meta("50"))
             .unwrap();
-        let tree_changed: Vec<_> = tree.finalize(vec![&p1, &p2]).unwrap().collect();
+        let tree_changed: Vec<_> = tree.persist(vec![&p1, &p2]).unwrap().collect();
         assert_eq!(tree_changed[0].0, repo_path_buf("a1"));
         assert_eq!(tree_changed[0].3, get_hgid(&p1, repo_path("a1")));
         assert_eq!(tree_changed[0].4, get_hgid(&p2, repo_path("a1")));
@@ -1445,7 +1445,7 @@ mod tests {
         let store = Arc::new(TestStore::new());
         let mut tree1 = TreeManifest::ephemeral(store.clone());
         tree1.insert(repo_path_buf("a1"), make_meta("10")).unwrap();
-        let tree1_changed: Vec<_> = tree1.finalize(vec![]).unwrap().collect();
+        let tree1_changed: Vec<_> = tree1.persist(vec![]).unwrap().collect();
         assert_eq!(tree1_changed[0].0, RepoPathBuf::new());
         assert_eq!(tree1_changed[0].3, NULL_ID);
 
@@ -1453,7 +1453,7 @@ mod tests {
         tree2
             .insert(repo_path_buf("a1/b1"), make_meta("20"))
             .unwrap();
-        let tree2_changed: Vec<_> = tree2.finalize(vec![&tree1]).unwrap().collect();
+        let tree2_changed: Vec<_> = tree2.persist(vec![&tree1]).unwrap().collect();
         assert_eq!(tree2_changed[0].0, repo_path_buf("a1"));
         assert_eq!(tree2_changed[0].3, NULL_ID);
         assert_eq!(tree2_changed[1].0, RepoPathBuf::new());
@@ -1462,7 +1462,7 @@ mod tests {
 
         let mut tree3 = TreeManifest::ephemeral(store);
         tree3.insert(repo_path_buf("a1"), make_meta("30")).unwrap();
-        let tree3_changed: Vec<_> = tree3.finalize(vec![&tree2]).unwrap().collect();
+        let tree3_changed: Vec<_> = tree3.persist(vec![&tree2]).unwrap().collect();
         assert_eq!(tree3_changed[0].0, RepoPathBuf::new());
         assert_eq!(tree3_changed[0].3, tree2_changed[1].1);
         assert_eq!(tree3_changed[0].4, NULL_ID);
@@ -1481,7 +1481,7 @@ mod tests {
         tree1
             .insert(repo_path_buf("a2/b2/c2"), make_meta("30"))
             .unwrap();
-        let _tree1_changed = tree1.finalize(vec![]).unwrap();
+        let _tree1_changed = tree1.persist(vec![]).unwrap();
 
         let mut tree2 = tree1.clone();
         tree2
@@ -1493,9 +1493,9 @@ mod tests {
         tree2
             .insert(repo_path_buf("a3/b1"), make_meta("50"))
             .unwrap();
-        let tree_changed: Vec<_> = tree2.finalize(vec![&tree1]).unwrap().collect();
+        let tree_changed: Vec<_> = tree2.persist(vec![&tree1]).unwrap().collect();
         assert_eq!(
-            tree2.finalize(vec![&tree1]).unwrap().collect::<Vec<_>>(),
+            tree2.persist(vec![&tree1]).unwrap().collect::<Vec<_>>(),
             tree_changed,
         );
     }
@@ -1522,7 +1522,7 @@ mod tests {
 
         let mut tree = TreeManifest::durable(store, hgid("2"));
 
-        let _changes: Vec<_> = tree.finalize(vec![&parent]).unwrap().collect();
+        let _changes: Vec<_> = tree.persist(vec![&parent]).unwrap().collect();
         // expecting the code to not panic
         // the panic would be caused by materializing link (foo, 10) which
         // doesn't have a store entry
@@ -1585,7 +1585,7 @@ mod tests {
         let mut tree = TreeManifest::ephemeral(store);
         tree.insert(repo_path_buf("a1/b1/c1/d1"), make_meta("10"))
             .unwrap();
-        let _hgid = tree.flush().unwrap();
+        let _hgid = Manifest::persist(&mut tree).unwrap();
 
         tree.insert(repo_path_buf("a1/b2"), make_meta("20"))
             .unwrap();
@@ -1798,7 +1798,7 @@ mod tests {
         tree.insert(repo_path_buf("a1/b1/c1"), c1_meta).unwrap();
         let b2_meta = make_meta("20");
         tree.insert(repo_path_buf("a1/b2"), b2_meta).unwrap();
-        let _hgid = tree.flush().unwrap();
+        let _hgid = Manifest::persist(&mut tree).unwrap();
         let c2_meta = make_meta("30");
         tree.insert(repo_path_buf("a2/b3/c2"), c2_meta).unwrap();
         let b4_meta = make_meta("40");
@@ -2089,14 +2089,14 @@ mod tests {
             .unwrap();
         assert!(tree.is_dirty());
 
-        let _ = tree.finalize(Vec::new()).unwrap();
+        let _ = tree.persist(Vec::new()).unwrap();
         assert!(!tree.is_dirty());
 
         tree.insert(repo_path_buf("foo/bar/file"), make_meta("11"))
             .unwrap();
         assert!(tree.is_dirty());
 
-        let _ = tree.finalize(Vec::new()).unwrap();
+        let _ = tree.persist(Vec::new()).unwrap();
         assert!(!tree.is_dirty());
 
         tree.register_diff_graft(repo_path("from"), repo_path("to"))

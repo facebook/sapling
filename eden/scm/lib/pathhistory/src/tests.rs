@@ -85,11 +85,11 @@ impl TestHistory {
         let mut last_commit_int = 0;
         let mut tree = TreeManifest::ephemeral(Arc::new(this.clone()));
         // Write empty tree.
-        let empty_tree_id = tree.flush().unwrap();
+        let empty_tree_id = Manifest::persist(&mut tree).unwrap();
         for (commit_int, path, content_int, file_type) in input {
             if commit_int > last_commit_int {
                 // Commit last_commit.
-                let tree_id = tree.flush().unwrap();
+                let tree_id = Manifest::persist(&mut tree).unwrap();
                 let mut inner = this.inner.lock().unwrap();
                 inner.commit_to_tree.insert(last_commit_int, tree_id);
                 last_commit_int = commit_int;
@@ -103,7 +103,7 @@ impl TestHistory {
             }
         }
 
-        let tree_id = tree.flush().unwrap();
+        let tree_id = Manifest::persist(&mut tree).unwrap();
         {
             let mut inner = this.inner.lock().unwrap();
             inner.commit_to_tree.insert(last_commit_int, tree_id);

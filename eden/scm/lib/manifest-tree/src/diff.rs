@@ -775,8 +775,8 @@ mod tests {
             )
         );
 
-        left.flush().unwrap();
-        right.flush().unwrap();
+        Manifest::persist(&mut left).unwrap();
+        Manifest::persist(&mut right).unwrap();
 
         assert_eq!(
             left.diff(&right, AlwaysMatcher::new())
@@ -890,8 +890,8 @@ mod tests {
             )
         );
 
-        left.flush().unwrap();
-        right.flush().unwrap();
+        Manifest::persist(&mut left).unwrap();
+        Manifest::persist(&mut right).unwrap();
 
         assert_eq!(
             left.diff(&right, AlwaysMatcher::new())

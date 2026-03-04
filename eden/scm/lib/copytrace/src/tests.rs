@@ -166,7 +166,7 @@ impl CopyTraceTestCase {
             }
         }
 
-        let tree_id = tree.flush().unwrap();
+        let tree_id = Manifest::persist(&mut tree).unwrap();
         commit_to_tree.insert(commit, tree_id);
     }
 }

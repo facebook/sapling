@@ -647,7 +647,7 @@ py_class!(pub class treemanifest |py| {
         if let Some(m2) = p2tree {
             parents.push(m2.underlying(py).read());
         }
-        let entries = tree.finalize(
+        let entries = tree.persist(
             parents.iter().map(|x| x.deref()).collect()
         ).map_pyerr(py)?;
         for entry in entries {
@@ -673,7 +673,7 @@ py_class!(pub class treemanifest |py| {
     /// Only works for git store. Use finalize() for hg store instead.
     def flush(&self) -> PyResult<PyBytes> {
         let mut tree = self.underlying(py).write();
-        let hgid = tree.flush().map_pyerr(py)?;
+        let hgid = Manifest::persist(&mut *tree).map_pyerr(py)?;
         Ok(PyBytes::new(py, hgid.as_ref()))
     }
 

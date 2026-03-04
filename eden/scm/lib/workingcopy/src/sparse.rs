@@ -503,7 +503,7 @@ inc
             unimplemented!()
         }
 
-        fn flush(&mut self) -> anyhow::Result<HgId> {
+        fn persist(&mut self) -> anyhow::Result<HgId> {
             unimplemented!()
         }
 

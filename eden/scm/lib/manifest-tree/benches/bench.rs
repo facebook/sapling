@@ -54,7 +54,7 @@ pub fn finalize(
     parent_manifests: Vec<&TreeManifest>,
 ) -> HgId {
     let mut manifest_id = Default::default();
-    for (path, hgid, raw, _, _) in manifest.finalize(parent_manifests).unwrap() {
+    for (path, hgid, raw, _, _) in manifest.persist(parent_manifests).unwrap() {
         store.insert(&path, hgid, raw).unwrap();
         if path.is_empty() {
             manifest_id = hgid;
@@ -131,7 +131,7 @@ fn main() {
             manifest.insert(path.to_owned(), *file_metadata).unwrap();
         }
         elapsed(|| {
-            for x in manifest.finalize(vec![&initial_manifest]).unwrap() {
+            for x in manifest.persist(vec![&initial_manifest]).unwrap() {
                 black_box(x);
             }
         })

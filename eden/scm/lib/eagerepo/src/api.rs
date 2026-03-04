@@ -1317,7 +1317,7 @@ impl SaplingRemoteApi for EagerRepo {
                 SerializationFormat::Hg => {
                     let new_parents = vec![&dest_manifest];
                     let mut manifest_id: Option<HgId> = None;
-                    for (path, hgid, raw, p1, p2) in new_manifest.finalize(new_parents)? {
+                    for (path, hgid, raw, p1, p2) in new_manifest.persist(new_parents)? {
                         let insert_opts = InsertOpts {
                             parents: vec![p1, p2],
                             kind: Kind::Tree,
@@ -1338,7 +1338,7 @@ impl SaplingRemoteApi for EagerRepo {
                         }
                     }
                 }
-                SerializationFormat::Git => new_manifest.flush()?,
+                SerializationFormat::Git => Manifest::persist(&mut new_manifest)?,
             };
 
             // generate new commit

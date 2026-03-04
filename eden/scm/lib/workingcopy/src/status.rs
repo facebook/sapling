@@ -337,7 +337,7 @@ mod tests {
             unimplemented!()
         }
 
-        fn flush(&mut self) -> Result<types::HgId> {
+        fn persist(&mut self) -> Result<types::HgId> {
             unimplemented!()
         }
 

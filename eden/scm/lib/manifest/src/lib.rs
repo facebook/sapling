@@ -70,7 +70,7 @@ pub trait Manifest {
 
     /// Persists the manifest so that it can be retrieved at a later time. Returns a note
     /// representing the identifier for saved manifest.
-    fn flush(&mut self) -> Result<HgId>;
+    fn persist(&mut self) -> Result<HgId>;
 
     /// Retrieve the FileMetadata associated with a path.
     /// Paths that were not set will return None.
