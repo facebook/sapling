@@ -225,6 +225,17 @@ fn repo_name_from_resolved_url(config: &dyn Config, url: &Url) -> Option<String>
                     }
                 }
             }
+            // For URLs with specific host (like git.*), the repo name is the full path.
+            if let Some(prefix) = config.get("remotefilelog", "reponame-host-prefixes") {
+                if let Some(host) = url.host_str()
+                    && host.starts_with(prefix.to_string().as_str())
+                {
+                    let reponame = url.path().trim_matches('/');
+                    if !reponame.is_empty() {
+                        return Some(reponame.to_string());
+                    }
+                }
+            }
             // Try the last segment in url path.
             if let Some(last_segment) = url
                 .path_segments()
