@@ -101,9 +101,9 @@ fn with_type_enabled(
 /// derive_from_predecessor can derive boundaries independently, allowing
 /// parallel slice processing.
 fn requires_serial_slice_processing(derived_data_type: DerivableType) -> bool {
-    !derived_data_type
+    derived_data_type
         .into_derivable_untopologically_variant()
-        .is_ok()
+        .is_err()
 }
 
 /// Compute derive_boundaries request - derives boundary changesets using predecessor derivation
