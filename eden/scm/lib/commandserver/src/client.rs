@@ -186,6 +186,6 @@ fn forward_signals(props: &ProcessProps) {
     // But child processes in the group is not ready, so we
     // only send SIGUSR* to the process, not the group.
     for sig in [libc::SIGUSR1, libc::SIGUSR2] {
-        unsafe { libc::signal(sig, forward_signal_process as _) };
+        unsafe { libc::signal(sig, forward_signal_process as *const () as _) };
     }
 }
