@@ -788,12 +788,45 @@ pub fn aliases() -> &'static str {
 }
 
 pub fn doc() -> &'static str {
-    r#"search for a pattern in tracked files in the working directory
+    r#"search for a pattern in tracked files
 
-    The default regexp style is POSIX basic regexps. If no FILE parameters are
-    passed in, the current directory and its subdirectories will be searched.
+    Search tracked files in the working directory for a regular expression
+    pattern. If no FILE patterns are given, searches the current directory
+    recursively.
 
-    For the old '@prog@ grep', which searches through history, see 'histgrep'."#
+    Use ``-r/--rev REV`` to search files at a specific revision instead of the
+    working directory. ``--rev`` defaults to "wdir", which includes uncommitted
+    changes to tracked files.
+
+    To operate without a local repo, specify ``-R/--repository`` as a Sapling
+    Remote API capable URL. The local on-disk cache will still be used to avoid
+    remote fetches.
+
+    .. container:: verbose
+
+      Examples:
+
+      - Search for "TODO" recursively in the current directory::
+
+          @prog@ grep TODO
+
+      - Search for a pattern in specific files, showing context on both sides::
+
+          @prog@ grep -C 3 "pub fn .* -> String" "glob:**/*.rs"
+
+      - Search at a specific revision::
+
+          @prog@ grep -r main "my_function" path:my/project
+
+      - Case-insensitive search under lib/, showing line numbers::
+
+          @prog@ grep -in "error" lib
+
+      - List files containing matches::
+
+          @prog@ grep -l "deprecated"
+
+    Returns 0 if a match is found, 1 if no match."#
 }
 
 pub fn synopsis() -> Option<&'static str> {
