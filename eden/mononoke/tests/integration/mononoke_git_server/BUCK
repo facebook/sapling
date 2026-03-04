@@ -10,11 +10,13 @@ oncall("scm_server_treehugger")
 OSS_EXCLUDED_TESTS = [
     "test-mononoke-git-server-flamegraph.t",
     "test-mononoke-git-server-multi-repo-land-push.t",
+    "test-mononoke-git-server-with-gclone.t",
 ]
 
 # Tests that require network access for inter-service communication
 NETWORK_EXCLUDED_TESTS = [
     "test-mononoke-git-server-multi-repo-land-push.t",
+    "test-mononoke-git-server-with-gclone.t",
 ]
 
 dott_test(
