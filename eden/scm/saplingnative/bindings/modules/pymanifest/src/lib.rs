@@ -34,6 +34,7 @@ use manifest::PersistOpts;
 use manifest_tree::TreeManifest;
 use manifest_tree::TreeStore;
 use manifest_tree::apply_diff_grafts;
+use manifest_tree::testutil::TestStore;
 use parking_lot::RwLock;
 use pathmatcher::AlwaysMatcher;
 use pathmatcher::ExactMatcher;
@@ -62,6 +63,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
             )
         ),
     )?;
+    m.add(py, "testtreemanifest", py_fn!(py, test_treemanifest()))?;
     m.add(
         py,
         "prefetch",
@@ -765,6 +767,16 @@ pub fn prefetch(
     py.allow_threads(|| manifest_tree::prefetch(store.into(), &nodes, matcher))
         .map_pyerr(py)?;
     Ok(PyNone)
+}
+
+fn test_treemanifest(py: Python) -> PyResult<treemanifest> {
+    let store = Arc::new(TestStore::new());
+    let manifest = TreeManifest::ephemeral(store);
+    treemanifest::create_instance(
+        py,
+        Arc::new(RwLock::new(manifest)),
+        RefCell::new(HashSet::new()),
+    )
 }
 
 fn insert(

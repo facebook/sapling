@@ -11,7 +11,6 @@ mod iter;
 mod link;
 mod namecmp;
 mod store;
-#[cfg(any(test, feature = "for-tests"))]
 pub mod testutil;
 mod trait_impls;
 
