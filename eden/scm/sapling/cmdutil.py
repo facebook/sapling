@@ -5455,7 +5455,7 @@ diffgraftopts = [
         "",
         "from-path",
         [],
-        _("re-map this path to correspondong --to-path (ADVANCED)"),
+        _("re-map this path to corresponding --to-path (ADVANCED)"),
         _("PATH"),
     ),
     (
