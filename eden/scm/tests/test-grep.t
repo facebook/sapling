@@ -112,6 +112,78 @@ Test color disabled explicitly:
 
 #endif
 
+Test JSON output (-T json):
+  $ hg grep -T json apple path:apple
+  [
+    {"path":"apple","text":"apple"}
+  ]
+
+Test JSON output with line numbers:
+  $ hg grep -T json -n banana path:fruits
+  [
+    {"path":"fruits","line_number":2,"text":"banana"}
+  ]
+
+Test JSON output with multiple matches:
+  $ hg grep -T json apple path:apple path:fruits | pp --sort
+  [
+    {
+      "path": "apple",
+      "text": "apple"
+    },
+    {
+      "path": "fruits",
+      "text": "apple"
+    }
+  ]
+
+Test JSON Lines output (-T jsonl):
+  $ hg grep -T jsonl apple path:apple
+  {"path":"apple","text":"apple"}
+
+Test JSON Lines output with line numbers:
+  $ hg grep -T jsonl -n banana path:fruits
+  {"path":"fruits","line_number":2,"text":"banana"}
+
+Test JSON Lines output with multiple matches:
+  $ hg grep -T jsonl apple path:apple path:fruits | sort
+  {"path":"apple","text":"apple"}
+  {"path":"fruits","text":"apple"}
+
+Test JSON output with -l (files with matches):
+  $ hg grep -T json -l apple path:apple path:fruits | pp --sort
+  [
+    {
+      "path": "apple"
+    },
+    {
+      "path": "fruits"
+    }
+  ]
+
+Test JSON Lines output with -l:
+  $ hg grep -T jsonl -l apple path:apple path:fruits | sort
+  {"path":"apple"}
+  {"path":"fruits"}
+
+Test JSON output with -V (invert match):
+  $ hg grep -T json -V apple path:fruits
+  [
+    {"path":"fruits","text":"banana"},
+    {"path":"fruits","text":"orange"}
+  ]
+
+Test unsupported flags with -T json:
+  $ hg grep -T json -A 1 apple
+  abort: -A/--after-context is not supported with -T json
+  [255]
+  $ hg grep -T json -B 1 apple
+  abort: -B/--before-context is not supported with -T json
+  [255]
+  $ hg grep -T json -C 1 apple
+  abort: -C/--context is not supported with -T json
+  [255]
+
 Test "." is the default file pattern (search cwd):
   $ mkdir subdir
   $ echo 'sub banana' > subdir/subfile

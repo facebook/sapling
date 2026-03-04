@@ -36,8 +36,11 @@ use types::RepoPath;
 use types::RepoPathBuf;
 use types::path::RepoPathRelativizer;
 
+use crate::GrepFileMatch;
+use crate::GrepMatch;
 use crate::GrepOpts;
 use crate::Grepper;
+use crate::JsonOutput;
 
 /// Check if biggrep should be used and run it if so.
 /// Returns Some(exit_code) if biggrep was used, None if we should fall back to local grep.
@@ -45,6 +48,7 @@ use crate::Grepper;
 /// Parameters:
 /// - `exact_files`: Exact file paths to scope biggrep search (from HintedMatcher)
 /// - `matcher`: Used for filtering results (includes sparse profile intersection)
+/// - `json_out`: If Some, output will be JSON format; if None, plain text output
 pub fn try_biggrep(
     ctx: &ReqCtx<GrepOpts>,
     repo: &CoreRepo,
@@ -54,6 +58,7 @@ pub fn try_biggrep(
     relativizer: &RepoPathRelativizer,
     cwd: &Path,
     repo_root: Option<&Path>,
+    mut json_out: Option<&mut JsonOutput>,
 ) -> Result<Option<u8>> {
     let config = repo.config();
 
@@ -137,7 +142,7 @@ pub fn try_biggrep(
     }
 
     // Enable color if appropriate.
-    if ctx.should_color() {
+    if ctx.should_color() && json_out.is_none() {
         cmd.arg("--color=on");
     }
 
@@ -250,6 +255,8 @@ pub fn try_biggrep(
 
     let files_with_matches = ctx.opts.files_with_matches;
     let include_line_number = ctx.opts.line_number;
+    let is_json_mode = json_out.is_some();
+
     let mut match_count: u64 = 0;
 
     let mut out = ctx.io().output();
@@ -294,8 +301,10 @@ pub fn try_biggrep(
                     let filename = &line[12..line.len() - 8];
                     (filename.to_string(), None, None, true)
                 } else {
-                    // Unparsable line, just output as-is
-                    writeln!(out, "{}", line)?;
+                    // Unparsable line, just output as-is (skip in JSON mode)
+                    if !is_json_mode {
+                        writeln!(out, "{}", line)?;
+                    }
                     continue;
                 }
             }
@@ -323,30 +332,49 @@ pub fn try_biggrep(
         // Relativize the path
         let rel_path = relativizer.relativize(&repo_path);
 
-        // Replace the plain filename with the relativized one in the output
-        // (preserving any ANSI escape sequences)
-        let display_filename = filename.replace(&plain_filename, &rel_path);
-
-        // Output the result
-        if files_with_matches {
-            writeln!(out, "{}", display_filename)?;
-        } else if is_binary {
-            writeln!(out, "Binary file {} matches", display_filename)?;
-        } else if include_line_number {
-            writeln!(
-                out,
-                "{}:{}:{}",
-                display_filename,
-                lineno.as_deref().unwrap_or(""),
-                context.as_deref().unwrap_or("")
-            )?;
+        if let Some(ref mut json_out) = json_out {
+            // JSON output
+            if files_with_matches {
+                json_out.write(&GrepFileMatch { path: &rel_path })?;
+            } else if !is_binary {
+                let line_number = if include_line_number {
+                    lineno.as_ref().and_then(|s| s.parse().ok())
+                } else {
+                    None
+                };
+                json_out.write(&GrepMatch {
+                    path: &rel_path,
+                    line_number,
+                    text: context.as_deref().unwrap_or_default(),
+                })?;
+            }
+            // Skip binary files in JSON mode
         } else {
-            writeln!(
-                out,
-                "{}:{}",
-                display_filename,
-                context.as_deref().unwrap_or("")
-            )?;
+            // Text output
+            // Replace the plain filename with the relativized one in the output
+            // (preserving any ANSI escape sequences)
+            let display_filename = filename.replace(&plain_filename, &rel_path);
+
+            if files_with_matches {
+                writeln!(out, "{}", display_filename)?;
+            } else if is_binary {
+                writeln!(out, "Binary file {} matches", display_filename)?;
+            } else if include_line_number {
+                writeln!(
+                    out,
+                    "{}:{}:{}",
+                    display_filename,
+                    lineno.as_deref().unwrap_or(""),
+                    context.as_deref().unwrap_or("")
+                )?;
+            } else {
+                writeln!(
+                    out,
+                    "{}:{}",
+                    display_filename,
+                    context.as_deref().unwrap_or("")
+                )?;
+            }
         }
     }
 
@@ -368,8 +396,27 @@ pub fn try_biggrep(
             Arc::new(ExactMatcher::new(files_to_grep.iter(), true)),
         ]));
 
-        let local_matches = run_local_grep(ctx, repo, pattern, matcher, relativizer, target_rev)?;
-        match_count += local_matches;
+        if let Some(ref mut json_out) = json_out {
+            let local_count = run_local_grep_json(
+                ctx,
+                repo,
+                pattern,
+                matcher,
+                relativizer,
+                target_rev,
+                json_out,
+            )?;
+            match_count += local_count;
+        } else {
+            let local_matches =
+                run_local_grep(ctx, repo, pattern, matcher, relativizer, target_rev)?;
+            match_count += local_matches;
+        }
+    }
+
+    // For JSON output, always return 0 (caller handles finish())
+    if is_json_mode {
+        return Ok(Some(0));
     }
 
     Ok(Some(if match_count > 0 { 0 } else { 1 }))
@@ -489,6 +536,41 @@ fn run_local_grep_with_writer<W: termcolor::WriteColor>(
     }
 
     Ok(grepper.match_count())
+}
+
+/// Run local grep on a set of files with JSON output.
+fn run_local_grep_json(
+    ctx: &ReqCtx<GrepOpts>,
+    repo: &CoreRepo,
+    pattern: &str,
+    matcher: DynMatcher,
+    relativizer: &RepoPathRelativizer,
+    rev: &str,
+    json_out: &mut JsonOutput,
+) -> Result<u64> {
+    use crate::grep_files_json;
+
+    // Get the file store for reading file contents
+    let file_store = repo.file_store()?;
+
+    // Get the manifest for fetching files
+    let (_, manifest) = repo.resolve_manifest(&ctx.core, rev, matcher.clone())?;
+
+    // Walk and fetch the files
+    let (file_rx, first_error) = filewalk::walk_and_fetch(&manifest, matcher, &file_store);
+
+    let match_count = grep_files_json(
+        &ctx.opts,
+        pattern,
+        file_rx,
+        &first_error,
+        relativizer,
+        json_out,
+    )?;
+
+    first_error.wait()?;
+
+    Ok(match_count)
 }
 
 /// Parse the corpus revision from the biggrep revision line.

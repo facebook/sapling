@@ -20,6 +20,8 @@ sapling-manifest = { version = "0.1.0", path = "../../../manifest" }
 sapling-pathmatcher = { version = "0.1.0", path = "../../../pathmatcher" }
 sapling-repo = { version = "0.1.0", path = "../../../repo" }
 sapling-types = { version = "0.1.0", path = "../../../types" }
+serde = { version = "1.0.219", features = ["derive", "rc"] }
+serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 termcolor = "1.0"
 
 [features]

@@ -35,6 +35,7 @@ GREEN = "\x1b[32m\x1b[K"
 parser = argparse.ArgumentParser()
 parser.add_argument("--stripdir", action="store_true")
 parser.add_argument("-r", action="store_true")
+parser.add_argument("-l", action="store_true", help="Print only filenames with matches")
 parser.add_argument("--color")
 parser.add_argument("--expression")
 parser.add_argument("-f")
@@ -70,18 +71,22 @@ def result_line(filename, line, col, context):
     if not re.search(args.expression.replace(r"\-", "-"), context):
         return
 
-    print(
-        magenta(filename)
-        + blue(":")
-        + green(str(line))
-        + blue(":")
-        + green(str(col))
-        + blue(":")
-        + context
-        # stick _bg on the end so we can tell that the result
-        # came from biggrep
-        + "_bg"
-    )
+    if args.l:
+        # In -l mode, print only the filename
+        print(magenta(filename))
+    else:
+        print(
+            magenta(filename)
+            + blue(":")
+            + green(str(line))
+            + blue(":")
+            + green(str(col))
+            + blue(":")
+            + context
+            # stick _bg on the end so we can tell that the result
+            # came from biggrep
+            + "_bg"
+        )
 
 
 # If BIGGREP_CORPUS_REV is set, use that as the corpus revision.

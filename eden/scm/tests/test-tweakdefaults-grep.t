@@ -150,3 +150,43 @@ Test biggrep command error handling
   abort: biggrep_client failed with exit code 2: broken biggrepclient
   (pass `--config grep.usebiggrep=False` to bypass biggrep)
   [255]
+
+Test biggrep with JSON output (-T json):
+  $ BIGGREP_FILES='{"grepdir/grepfile1": "foobarbaz"}' \
+  > hg grep --config grep.biggrepclient=$TESTDIR/fake-biggrep-client.py \
+  > --config grep.usebiggrep=True --config grep.biggrepcorpus=fake \
+  > -T json foobar grepfile1
+  [
+    {"path":"grepfile1","text":"foobarbaz_bg"}
+  ]
+
+Test biggrep with JSON output and line numbers:
+  $ BIGGREP_FILES='{"grepdir/grepfile1": "foobarbaz"}' \
+  > hg grep --config grep.biggrepclient=$TESTDIR/fake-biggrep-client.py \
+  > --config grep.usebiggrep=True --config grep.biggrepcorpus=fake \
+  > -T json -n foobar grepfile1
+  [
+    {"path":"grepfile1","line_number":1,"text":"foobarbaz_bg"}
+  ]
+
+Test biggrep with JSON Lines output (-T jsonl):
+  $ BIGGREP_FILES='{"grepdir/grepfile1": "foobarbaz", "grepdir/grepfile2": "foobarboo"}' \
+  > hg grep --config grep.biggrepclient=$TESTDIR/fake-biggrep-client.py \
+  > --config grep.usebiggrep=True --config grep.biggrepcorpus=fake \
+  > -T jsonl foobar grepfile1 grepfile2 | sort
+  {"path":"grepfile1","text":"foobarbaz_bg"}
+  {"path":"grepfile2","text":"foobarboo_bg"}
+
+Test biggrep with JSON output and -l (files with matches):
+  $ BIGGREP_FILES='{"grepdir/grepfile1": "foobarbaz", "grepdir/grepfile2": "foobarboo"}' \
+  > hg grep --config grep.biggrepclient=$TESTDIR/fake-biggrep-client.py \
+  > --config grep.usebiggrep=True --config grep.biggrepcorpus=fake \
+  > -T json -l foobar grepfile1 grepfile2 | pp --sort
+  [
+    {
+      "path": "grepfile1"
+    },
+    {
+      "path": "grepfile2"
+    }
+  ]

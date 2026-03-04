@@ -25,6 +25,8 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:flume",
         "fbsource//third-party/rust:grep",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:termcolor",
         "//eden/scm/lib/blob:blob",
         "//eden/scm/lib/clidispatch:clidispatch",

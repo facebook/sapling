@@ -9,6 +9,7 @@
 mod biggrep;
 
 use std::io;
+use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -19,6 +20,7 @@ use clidispatch::abort;
 use clidispatch::abort_if;
 use clidispatch::fallback;
 use cmdutil::ConfigExt;
+use cmdutil::FormatterOpts;
 use cmdutil::Result;
 use cmdutil::WalkOpts;
 use cmdutil::define_flags;
@@ -33,14 +35,32 @@ use grep::regex::RegexMatcher;
 use grep::regex::RegexMatcherBuilder;
 use grep::searcher::Searcher;
 use grep::searcher::SearcherBuilder;
+use grep::searcher::Sink;
+use grep::searcher::SinkMatch;
 use pathmatcher::DynMatcher;
 use pathmatcher::IntersectMatcher;
 use repo::CoreRepo;
+use serde::Serialize;
 use termcolor::Ansi;
 use termcolor::NoColor;
 use termcolor::WriteColor;
 use types::RepoPathBuf;
 use types::path::RepoPathRelativizer;
+
+/// A grep match entry for JSON output.
+#[derive(Serialize)]
+pub(crate) struct GrepMatch<'a> {
+    pub path: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub line_number: Option<u64>,
+    pub text: &'a str,
+}
+
+/// A file match entry for JSON output (used with -l flag).
+#[derive(Serialize)]
+pub(crate) struct GrepFileMatch<'a> {
+    pub path: &'a str,
+}
 
 /// A grepper that searches file contents for matches using the Standard printer.
 pub(crate) struct Grepper<'a, W: WriteColor> {
@@ -241,6 +261,8 @@ define_flags! {
     pub struct GrepOpts {
         walk_opts: WalkOpts,
 
+        formatter_opts: FormatterOpts,
+
         /// print NUM lines of trailing context
         #[short('A')]
         #[argtype("NUM")]
@@ -372,6 +394,43 @@ pub fn run(ctx: ReqCtx<GrepOpts>, repo: &CoreRepo) -> Result<u8> {
         matcher
     };
 
+    // Check for JSON templates early and validate unsupported flag combinations
+    let template = ctx.opts.formatter_opts.template.as_str();
+    let is_json_template = matches!(template, "json" | "jsonl");
+
+    if is_json_template {
+        abort_if!(
+            ctx.opts.after_context.is_some(),
+            "-A/--after-context is not supported with -T {}",
+            template
+        );
+        abort_if!(
+            ctx.opts.before_context.is_some(),
+            "-B/--before-context is not supported with -T {}",
+            template
+        );
+        abort_if!(
+            ctx.opts.context.is_some(),
+            "-C/--context is not supported with -T {}",
+            template
+        );
+    }
+
+    // Validate template before proceeding
+    if !matches!(template, "" | "json" | "jsonl") {
+        abort!("unknown template: {}", template);
+    }
+
+    // Create JsonOutput if needed (shared between biggrep and local grep)
+    let mut json_out = if is_json_template {
+        Some(JsonOutput::new(
+            Box::new(ctx.io().output()),
+            template == "jsonl",
+        ))
+    } else {
+        None
+    };
+
     // Check if we should use biggrep (FB-only feature)
     #[cfg(feature = "fb")]
     if let Some(exit_code) = biggrep::try_biggrep(
@@ -383,7 +442,11 @@ pub fn run(ctx: ReqCtx<GrepOpts>, repo: &CoreRepo) -> Result<u8> {
         &relativizer,
         &cwd,
         repo_root.as_deref(),
+        json_out.as_mut(),
     )? {
+        if let Some(json_out) = json_out {
+            json_out.finish()?;
+        }
         return Ok(exit_code);
     }
 
@@ -392,6 +455,21 @@ pub fn run(ctx: ReqCtx<GrepOpts>, repo: &CoreRepo) -> Result<u8> {
     ctx.maybe_start_pager(repo.config())?;
 
     let (file_rx, first_error) = walk_and_fetch(&manifest, matcher, &file_store);
+
+    // Handle JSON output modes
+    if let Some(mut json_out) = json_out {
+        grep_files_json(
+            &ctx.opts,
+            pattern,
+            file_rx,
+            &first_error,
+            &relativizer,
+            &mut json_out,
+        )?;
+        first_error.wait()?;
+        json_out.finish()?;
+        return Ok(0);
+    }
 
     let use_color = ctx.should_color();
 
@@ -541,6 +619,168 @@ fn run_summary_grep_with_writer<W: WriteColor>(
     }
 
     Ok(grepper.match_count())
+}
+
+/// A writer that outputs JSON in either array format or JSON Lines format.
+pub(crate) struct JsonOutput {
+    writer: Box<dyn Write>,
+    jsonl: bool,
+    first: bool,
+}
+
+impl JsonOutput {
+    pub fn new(writer: Box<dyn Write>, jsonl: bool) -> Self {
+        Self {
+            writer,
+            jsonl,
+            first: true,
+        }
+    }
+
+    pub fn write<T: Serialize>(&mut self, value: &T) -> io::Result<()> {
+        if self.jsonl {
+            serde_json::to_writer(&mut self.writer, value)
+                .map_err(|e| io::Error::other(e.to_string()))?;
+            writeln!(self.writer)?;
+        } else {
+            if self.first {
+                write!(self.writer, "[\n  ")?;
+                self.first = false;
+            } else {
+                write!(self.writer, ",\n  ")?;
+            }
+            serde_json::to_writer(&mut self.writer, value)
+                .map_err(|e| io::Error::other(e.to_string()))?;
+        }
+        Ok(())
+    }
+
+    pub fn finish(mut self) -> io::Result<()> {
+        if !self.jsonl {
+            if self.first {
+                // No items written
+                writeln!(self.writer, "[]")?;
+            } else {
+                writeln!(self.writer, "\n]")?;
+            }
+        }
+        Ok(())
+    }
+}
+
+/// Core grep loop that processes files and writes JSON output.
+/// Used by both regular grep and biggrep for local file searching.
+pub(crate) fn grep_files_json(
+    opts: &GrepOpts,
+    pattern: &str,
+    file_rx: flume::Receiver<filewalk::FileResult>,
+    first_error: &filewalk::FirstError,
+    relativizer: &RepoPathRelativizer,
+    json_out: &mut JsonOutput,
+) -> Result<u64> {
+    let regex_matcher = build_regex_matcher(opts, pattern)?;
+    let mut searcher = build_searcher(opts)?;
+    let include_line_number = opts.line_number;
+    let files_only = opts.files_with_matches;
+    let mut match_count: u64 = 0;
+
+    for file_result in file_rx {
+        if first_error.has_error() {
+            break;
+        }
+
+        let display_path = relativizer.relativize(&file_result.path);
+
+        if files_only {
+            // In files_only mode, just check if file has any match
+            let mut file_has_match = false;
+            if let Err(e) = file_result.data.each_chunk(|chunk| {
+                let mut sink = FileMatchSink {
+                    has_match: &mut file_has_match,
+                };
+                searcher
+                    .search_slice(&regex_matcher, chunk, &mut sink)
+                    .map_err(|e| io::Error::other(e.to_string()))?;
+                Ok(())
+            }) {
+                first_error.send_error(e.into());
+                break;
+            }
+            if file_has_match {
+                json_out.write(&GrepFileMatch {
+                    path: &display_path,
+                })?;
+                match_count += 1;
+            }
+        } else {
+            // Output matches directly as we find them
+            if let Err(e) = file_result.data.each_chunk(|chunk| {
+                let mut sink = JsonWriteSink {
+                    path: &display_path,
+                    include_line_number,
+                    json_out,
+                    match_count: &mut match_count,
+                };
+                searcher
+                    .search_slice(&regex_matcher, chunk, &mut sink)
+                    .map_err(|e| io::Error::other(e.to_string()))?;
+                Ok(())
+            }) {
+                first_error.send_error(e.into());
+                break;
+            }
+        }
+    }
+
+    Ok(match_count)
+}
+
+/// A sink that writes grep matches directly to JSON output.
+pub(crate) struct JsonWriteSink<'a> {
+    pub path: &'a str,
+    pub include_line_number: bool,
+    pub json_out: &'a mut JsonOutput,
+    pub match_count: &'a mut u64,
+}
+
+impl Sink for JsonWriteSink<'_> {
+    type Error = io::Error;
+
+    fn matched(&mut self, _searcher: &Searcher, mat: &SinkMatch<'_>) -> Result<bool, Self::Error> {
+        let line_number = if self.include_line_number {
+            mat.line_number()
+        } else {
+            None
+        };
+
+        // Get the matched text, trimming the trailing newline
+        let text = String::from_utf8_lossy(mat.bytes());
+        let text = text.trim_end_matches('\n');
+
+        self.json_out.write(&GrepMatch {
+            path: self.path,
+            line_number,
+            text,
+        })?;
+        *self.match_count += 1;
+
+        Ok(true)
+    }
+}
+
+/// A sink that just tracks whether any match was found.
+pub(crate) struct FileMatchSink<'a> {
+    pub has_match: &'a mut bool,
+}
+
+impl Sink for FileMatchSink<'_> {
+    type Error = io::Error;
+
+    fn matched(&mut self, _searcher: &Searcher, _mat: &SinkMatch<'_>) -> Result<bool, Self::Error> {
+        *self.has_match = true;
+        // Return false to stop searching after first match
+        Ok(false)
+    }
 }
 
 pub fn aliases() -> &'static str {
