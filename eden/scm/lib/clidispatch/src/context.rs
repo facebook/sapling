@@ -84,4 +84,8 @@ where
     pub fn config(&self) -> &Arc<dyn Config> {
         &self.core.config
     }
+
+    pub fn should_color(&self) -> bool {
+        termstyle::should_color(&self.core.config, &self.core.io.output())
+    }
 }

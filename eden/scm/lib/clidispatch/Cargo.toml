@@ -33,6 +33,7 @@ sapling-repo = { version = "0.1.0", path = "../repo", features = ["wdir"] }
 sapling-repourl = { version = "0.1.0", path = "../repo/url" }
 sapling-sampling = { version = "0.1.0", path = "../sampling" }
 sapling-termlogger = { version = "0.1.0", path = "../io/term/logger" }
+sapling-termstyle = { version = "0.1.0", path = "../io/term/style" }
 sapling-thrift-types = { version = "0.1.0", path = "../thrift-types", optional = true }
 sapling-types = { version = "0.1.0", path = "../types" }
 sapling-util = { version = "0.1.0", path = "../util" }
