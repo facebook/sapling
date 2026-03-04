@@ -76,3 +76,6 @@ ignore = [
   # Conflicts with jaxtyping array sizes: https://docs.kidger.site/jaxtyping/faq/#flake8-or-ruff-are-throwing-an-error
   "F722", # Syntax error in forward annotation. False warning when declaring array shape
 ]
+
+[tool.ty.environment]
+root = [".."]
