@@ -25,6 +25,7 @@ rust_library(
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tracing",
         "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/hg-metrics:hg-metrics",
         "//eden/scm/lib/progress/model:progress-model",
         "//eden/scm/lib/util:util",
         "//eden/scm/lib/util/sysutil:sysutil",

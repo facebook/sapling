@@ -337,7 +337,18 @@ fn lock(
 
     loop {
         match try_lock(dir, name, contents) {
-            Ok(h) => return Ok(h),
+            Ok(h) => {
+                let elapsed = start.elapsed();
+                if elapsed >= config.backoff {
+                    // If we actually waited, log how long we waited.
+                    hg_metrics::increment_counter(
+                        format!("lock_{name}"),
+                        elapsed.as_millis() as u64,
+                    );
+                }
+
+                return Ok(h);
+            }
             Err(err) => match err {
                 LockError::Contended(LockContendedError { ref contents, .. }) => {
                     // TODO: add user friendly debugging similar to Python locks.

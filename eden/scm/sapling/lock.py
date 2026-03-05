@@ -272,7 +272,10 @@ class lock:
             else:
                 spinner = util.nullcontextmanager()
             with spinner:
-                return self._dolock()
+                delay = self._dolock()
+                if self.ui and delay > 0:
+                    self.ui.metrics.inc(f"lock_{self.f}", int(1000 * delay))
+                return delay
 
     def _dolock(self):
         delay = 0
