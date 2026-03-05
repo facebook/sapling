@@ -11,6 +11,7 @@
 #include <folly/SharedMutex.h>
 #include <folly/Synchronized.h>
 #include <algorithm>
+#include <atomic>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -236,11 +237,6 @@ class Journal {
     size_t memoryLimit = kDefaultJournalMemoryLimit;
     size_t deltaMemoryUsage = 0;
 
-    // Set to false when a delta is added.
-    // Set to true when observeLatest() or accumulateRange() are called.
-    // If true before calling addDelta, subscribers are notified.
-    bool lastModificationHasBeenObserved = true;
-
     JournalDeltaPtr frontPtr() noexcept;
     void popFront();
     JournalDeltaPtr backPtr() noexcept;
@@ -262,6 +258,72 @@ class Journal {
         return rootUpdateDeltas.front().sequenceID;
       }
     }
+
+    /**
+     * Mark the journal as observed. Callable with at least a read lock
+     * (const method). Unblocks subscriber notifications on the next addDelta.
+     */
+    void markObserved() const {
+      lastModificationHasBeenObserved_.store(true);
+    }
+
+    /**
+     * Atomically clear the observed flag and return its previous value.
+     * Requires write lock (non-const method).
+     * Returns true if subscribers should be notified.
+     */
+    [[nodiscard]] bool clearObserved() {
+      return lastModificationHasBeenObserved_.exchange(false);
+    }
+
+    /**
+     * Update the high-water mark for files accumulated in a single
+     * accumulateRange call. Callable with at least a read lock (const method).
+     */
+    void updateMaxFilesAccumulated(size_t filesAccumulated) const {
+      auto current = maxFilesAccumulated_.load();
+      while (filesAccumulated > current &&
+             !maxFilesAccumulated_.compare_exchange_weak(
+                 current, filesAccumulated)) {
+      }
+    }
+
+    /**
+     * Returns the high-water mark for files accumulated.
+     */
+    size_t getMaxFilesAccumulated() const {
+      return maxFilesAccumulated_.load();
+    }
+
+    /**
+     * Resets the high-water mark. Requires write lock (non-const method).
+     */
+    void resetMaxFilesAccumulated() {
+      maxFilesAccumulated_.store(0);
+    }
+
+   private:
+    // Atomic flag for notification coalescing.
+    //
+    // Locking safety: this is std::atomic because markObserved() (which
+    // stores true) is called under rlock, allowing concurrent readers.
+    // The interesting cases:
+    //
+    //  - Multiple concurrent rlock holders call markObserved(): all
+    //    store true idempotently — no lost updates.
+    //  - markObserved() (rlock) vs clearObserved() (wlock): cannot run
+    //    concurrently — SharedMutex excludes readers while a writer
+    //    holds the lock.
+    //  - Two concurrent addDelta calls racing on clearObserved(): cannot
+    //    happen — clearObserved() runs under wlock, so only one writer
+    //    can exchange the flag at a time.
+    //
+    // Net result: the only concurrent access pattern is multiple
+    // store(true) calls, which is safe and idempotent.
+    mutable std::atomic<bool> lastModificationHasBeenObserved_{true};
+
+    // High-water mark for files accumulated. Updated via CAS under rlock.
+    mutable std::atomic<size_t> maxFilesAccumulated_{0};
   };
   folly::Synchronized<DeltaState, folly::SharedMutex> deltaState_;
 

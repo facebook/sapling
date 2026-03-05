@@ -221,9 +221,7 @@ bool Journal::addDeltaBeforeNotifying(T&& delta, DeltaState& deltaState) {
 
   deltaState.stats->earliestTimestamp = deltaState.frontPtr()->time;
 
-  bool shouldNotify = deltaState.lastModificationHasBeenObserved;
-  deltaState.lastModificationHasBeenObserved = false;
-  return shouldNotify;
+  return deltaState.clearObserved();
 }
 
 void Journal::notifySubscribers() const {
@@ -282,8 +280,8 @@ std::optional<JournalDeltaInfo> Journal::getLatestInfo(
 }
 
 std::optional<JournalDeltaInfo> Journal::observeLatest() {
-  auto deltaState = deltaState_.wlock();
-  deltaState->lastModificationHasBeenObserved = true;
+  auto deltaState = deltaState_.rlock();
+  deltaState->markObserved();
   return getLatestInfo(*deltaState);
 }
 
@@ -328,7 +326,13 @@ bool Journal::isSubscriberValid(uint64_t id) const {
 }
 
 std::optional<InternalJournalStats> Journal::getStats() {
-  return deltaState_.rlock()->stats;
+  auto deltaState = deltaState_.rlock();
+  if (!deltaState->stats) {
+    return std::nullopt;
+  }
+  auto stats = *deltaState->stats;
+  stats.maxFilesAccumulated = deltaState->getMaxFilesAccumulated();
+  return stats;
 }
 
 namespace {
@@ -390,6 +394,7 @@ void Journal::flush() {
     deltaState->fileChangeDeltas.clear();
     deltaState->rootUpdateDeltas.clear();
     deltaState->stats = std::nullopt;
+    deltaState->resetMaxFilesAccumulated();
     auto delta = RootUpdateJournalDelta();
     /* Tracking the root correctly when the journal is flushed is important
      * since Watchman uses the root to correctly determine what additional files
@@ -413,7 +418,7 @@ std::unique_ptr<JournalDeltaRange> Journal::accumulateRange(
   folly::stop_watch<std::chrono::milliseconds> watch;
 
   size_t filesAccumulated = 0;
-  auto deltaState = deltaState_.wlock();
+  auto deltaState = deltaState_.rlock();
   // If this is going to be truncated, handle it before iterating.
   if (!deltaState->empty() && deltaState->getFrontSequenceID() > from) {
     result = std::make_unique<JournalDeltaRange>();
@@ -493,8 +498,7 @@ std::unique_ptr<JournalDeltaRange> Journal::accumulateRange(
       edenStats_->addDuration(&JournalStats::accumulateRange, watch.elapsed());
     }
     if (deltaState->stats) {
-      deltaState->stats->maxFilesAccumulated =
-          std::max(deltaState->stats->maxFilesAccumulated, filesAccumulated);
+      deltaState->updateMaxFilesAccumulated(filesAccumulated);
     }
 
     std::reverse(
@@ -502,7 +506,7 @@ std::unique_ptr<JournalDeltaRange> Journal::accumulateRange(
     result->containsRootUpdate = result->snapshotTransitions.size() > 1;
   }
 
-  deltaState->lastModificationHasBeenObserved = true;
+  deltaState->markObserved();
   return result;
 }
 
@@ -512,7 +516,7 @@ bool Journal::forEachDelta(
     FileChangeCallback&& fileChangeCallback,
     RootUpdateCallback&& rootUpdateCallback) {
   XDCHECK(from > 0);
-  auto deltaState = deltaState_.wlock();
+  auto deltaState = deltaState_.rlock();
   // If this is going to be truncated, handle it before iterating.
   if (!deltaState->empty() && deltaState->getFrontSequenceID() > from) {
     return true;
@@ -524,7 +528,7 @@ bool Journal::forEachDelta(
         std::forward<FileChangeCallback>(fileChangeCallback),
         std::forward<RootUpdateCallback>(rootUpdateCallback));
   }
-  deltaState->lastModificationHasBeenObserved = true;
+  deltaState->markObserved();
   return false;
 }
 
