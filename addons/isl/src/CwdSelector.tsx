@@ -119,6 +119,14 @@ registerDisposable(
   import.meta.hot,
 );
 
+registerDisposable(
+  availableCwds,
+  serverAPI.onMessageOfType('changeActiveRepo', event => {
+    changeCwd(event.cwd);
+  }),
+  import.meta.hot,
+);
+
 const styles = stylex.create({
   container: {
     display: 'flex',

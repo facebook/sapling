@@ -502,6 +502,18 @@ function populateAndSetISLWebview<W extends vscode.WebviewPanel | vscode.Webview
   return {panel: panelOrView, readySignal};
 }
 
+/**
+ * Post a message to the ISL webview, if one is currently open.
+ * Returns true if the message was sent, false if no webview is open.
+ */
+export function postMessageToISLWebview(message: ServerToClientMessage): boolean {
+  if (islPanelOrViewResult == null) {
+    return false;
+  }
+  islPanelOrViewResult.panel.webview.postMessage(serializeToString(message));
+  return true;
+}
+
 export function fetchUIState(): Promise<{state: string} | undefined> {
   if (islPanelOrViewResult == null) {
     return Promise.resolve(undefined);

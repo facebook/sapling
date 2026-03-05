@@ -10,6 +10,8 @@ import type {VSCodeServerPlatform} from '../vscodePlatform';
 import type {VSCodeReposList} from '../VSCodeRepo';
 import type {SaplingExtensionApi, SaplingRepository} from './types';
 
+import {postMessageToISLWebview} from '../islWebviewPanel';
+
 export function makeExtensionApi(
   platform: VSCodeServerPlatform,
   ctx: RepositoryContext,
@@ -27,6 +29,9 @@ export function makeExtensionApi(
     },
     getRepositoryForPath(path: string): SaplingRepository | undefined {
       return reposList.repoForPath(path);
+    },
+    setActiveRepoForCwd(path: string): void {
+      postMessageToISLWebview({type: 'changeActiveRepo', cwd: path});
     },
   };
 }

@@ -37,6 +37,13 @@ export interface SaplingExtensionApi {
   ): vscode.Disposable;
 
   getRepositoryForPath(path: string): SaplingRepository | undefined;
+
+  /**
+   * Change the active repository displayed in the ISL webview.
+   * The `path` should be a directory path within a Sapling repository
+   * (e.g. a workspace folder path). If ISL is not currently open, this has no effect.
+   */
+  setActiveRepoForCwd(path: string): void;
 }
 
 export type SaplingRepositoryInfo = {

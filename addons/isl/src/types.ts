@@ -1281,6 +1281,10 @@ export type ServerToClientMessage =
       type: 'openSplitViewForCommit';
       commitHash: string;
       commits?: Array<PartiallySelectedDiffCommit>;
+    }
+  | {
+      type: 'changeActiveRepo';
+      cwd: string;
     };
 
 export type Disposable = {
