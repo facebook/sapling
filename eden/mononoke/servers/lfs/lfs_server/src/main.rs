@@ -160,6 +160,12 @@ struct LfsServerArgs {
     /// Whether to require the client-info header or not.
     #[clap(long, default_value = "false")]
     dont_require_client_info: bool,
+    /// Hosts for which to force http scheme in generated hrefs (comma-separated)
+    #[clap(long, value_delimiter = ',')]
+    force_http_for_host: Vec<String>,
+    /// Headers whose presence (with value "1") forces http scheme in generated hrefs (comma-separated)
+    #[clap(long, value_delimiter = ',')]
+    force_http_for_header: Vec<String>,
 }
 
 #[derive(Clone)]
@@ -242,6 +248,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let self_urls = args.self_urls;
     let upstream_url = args.upstream_url;
     let always_wait_for_upstream = args.always_wait_for_upstream;
+    let force_http_for_host = args.force_http_for_host;
+    let force_http_for_header = args.force_http_for_header;
     let log_middleware = if args.test_friendly_logging {
         LogMiddleware::test_friendly()
     } else {
@@ -294,7 +302,12 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 vec![protocol.to_owned() + &bound_addr]
             };
 
-            let server_uris = ServerUris::new(self_urls, upstream_url)?;
+            let server_uris = ServerUris::new(
+                self_urls,
+                upstream_url,
+                force_http_for_host,
+                force_http_for_header,
+            )?;
 
             let repos_config = repos.config.clone();
 

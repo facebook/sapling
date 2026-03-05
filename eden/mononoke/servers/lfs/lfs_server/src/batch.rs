@@ -931,12 +931,15 @@ mod test {
         let server = ServerUris::new(
             vec!["http://foo.com".to_string()],
             Some("http://bar.com".to_string()),
+            vec![],
+            vec![],
         )?;
         let uri_builder = UriBuilder {
             repository: "repo123".to_string(),
             server: Arc::new(server),
             host: "foo.com".to_string(),
             server_hostname: Arc::new(SERVER_HOSTNAME.to_string()),
+            force_http: false,
         };
 
         let res = batch_upload_response_objects(
