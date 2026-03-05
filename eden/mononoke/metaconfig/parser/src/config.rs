@@ -17,9 +17,11 @@ use anyhow::Result;
 use anyhow::anyhow;
 use cached_config::ConfigHandle;
 use cached_config::ConfigStore;
+use metaconfig_types::AclRegionConfig;
 use metaconfig_types::AsyncRequestsConfig;
 use metaconfig_types::BlobConfig;
 use metaconfig_types::CensoredScubaParams;
+use metaconfig_types::CommitIdentityScheme;
 use metaconfig_types::CommonConfig;
 use metaconfig_types::ObjectsCountMultiplier;
 use metaconfig_types::Redaction;
@@ -168,6 +170,21 @@ pub fn load_configs_from_raw(
     ))
 }
 
+/// Pre-resolved metadata for a repo configuration.
+///
+/// These fields come from different sources depending on the loading path:
+/// - In the monolithic path: extracted from `RawRepoDefinition`
+/// - In the per-repo split-loading path: defaults are used
+struct RepoMetadata {
+    repoid: RepositoryId,
+    enabled: bool,
+    hipster_acl: Option<String>,
+    readonly: RepoReadOnly,
+    default_commit_identity_scheme: CommitIdentityScheme,
+    enable_git_bundle_uri: bool,
+    acl_region_config: Option<AclRegionConfig>,
+}
+
 fn parse_with_repo_definition(
     repo_definition: RawRepoDefinition,
     named_repo_configs: &HashMap<String, RawRepoConfig>,
@@ -189,15 +206,31 @@ fn parse_with_repo_definition(
         enable_git_bundle_uri,
     } = repo_definition;
 
+    let repoid = RepositoryId::new(repoid.context("missing repoid from configuration")?);
+    let enabled = enabled.unwrap_or(true);
     let enable_git_bundle_uri = enable_git_bundle_uri.unwrap_or(false);
-
     let default_commit_identity_scheme = default_commit_identity_scheme
         .convert()?
         .unwrap_or_default();
+    let readonly = if readonly.unwrap_or_default() {
+        RepoReadOnly::ReadOnly("Set by config option".to_string())
+    } else {
+        RepoReadOnly::ReadWrite
+    };
+    let acl_region_config = acl_region_config
+        .map(|key| {
+            named_acl_region_configs.get(&key).cloned().ok_or_else(|| {
+                ConfigurationError::InvalidConfig(format!(
+                    "ACL region config \"{}\" not defined",
+                    key
+                ))
+            })
+        })
+        .transpose()?
+        .convert()?;
 
     let named_repo_config_name = repo_config
         .ok_or_else(|| ConfigurationError::InvalidConfig("No named_repo_config".to_string()))?;
-
     let named_repo_config = named_repo_configs
         .get(named_repo_config_name.as_str())
         .ok_or_else(|| {
@@ -208,6 +241,58 @@ fn parse_with_repo_definition(
         })?
         .clone();
 
+    build_repo_config(
+        named_repo_config,
+        RepoMetadata {
+            repoid,
+            enabled,
+            hipster_acl,
+            readonly,
+            default_commit_identity_scheme,
+            enable_git_bundle_uri,
+            acl_region_config,
+        },
+        named_storage_configs,
+    )
+}
+
+/// Parse a single RawRepoConfig into a RepoConfig for the per-repo split-loading path.
+///
+/// Unlike `parse_with_repo_definition` which gets repo metadata from `RawRepoDefinition`,
+/// this function takes `repo_id` directly (from the TierManifest) and uses sensible defaults
+/// for other metadata fields (enabled=true, readonly=false, etc.).
+///
+/// `named_storage_configs` typically comes from `TierManifest.storage`.
+pub fn parse_raw_repo_config(
+    raw_repo_config: RawRepoConfig,
+    repo_id: i32,
+    named_storage_configs: &HashMap<String, RawStorageConfig>,
+) -> Result<RepoConfig> {
+    build_repo_config(
+        raw_repo_config,
+        RepoMetadata {
+            repoid: RepositoryId::new(repo_id),
+            enabled: true,
+            hipster_acl: None,
+            readonly: RepoReadOnly::ReadWrite,
+            default_commit_identity_scheme: Default::default(),
+            enable_git_bundle_uri: false,
+            acl_region_config: None,
+        },
+        named_storage_configs,
+    )
+}
+
+/// Shared conversion logic: converts a `RawRepoConfig` plus pre-resolved
+/// metadata into a `RepoConfig`.
+///
+/// Both `parse_with_repo_definition` (monolithic loading path) and
+/// `parse_raw_repo_config` (per-repo split-loading path) delegate to this function.
+fn build_repo_config(
+    raw_repo_config: RawRepoConfig,
+    metadata: RepoMetadata,
+    named_storage_configs: &HashMap<String, RawStorageConfig>,
+) -> Result<RepoConfig> {
     let RawRepoConfig {
         storage_config,
         storage,
@@ -258,13 +343,9 @@ fn parse_with_repo_definition(
         restricted_paths_config,
         remote_diff_config,
         ..
-    } = named_repo_config;
+    } = raw_repo_config;
 
     let named_storage_config = storage_config;
-
-    let repoid = RepositoryId::new(repoid.context("missing repoid from configuration")?);
-
-    let enabled = enabled.unwrap_or(true);
 
     let hooks: Vec<_> = hooks.unwrap_or_default().convert()?;
 
@@ -305,12 +386,6 @@ fn parse_with_repo_definition(
         .transpose()?
         .unwrap_or(0);
 
-    let readonly = if readonly.unwrap_or_default() {
-        RepoReadOnly::ReadOnly("Set by config option".to_string())
-    } else {
-        RepoReadOnly::ReadWrite
-    };
-
     let redaction = if redaction.unwrap_or(true) {
         Redaction::Enabled
     } else {
@@ -348,18 +423,6 @@ fn parse_with_repo_definition(
 
     let repo_client_knobs = repo_client_knobs.convert()?.unwrap_or_default();
 
-    let acl_region_config = acl_region_config
-        .map(|key| {
-            named_acl_region_configs.get(&key).cloned().ok_or_else(|| {
-                ConfigurationError::InvalidConfig(format!(
-                    "ACL region config \"{}\" not defined",
-                    key
-                ))
-            })
-        })
-        .transpose()?
-        .convert()?;
-
     let cross_repo_commit_validation_config = cross_repo_commit_validation_config.convert()?;
 
     let sparse_profiles_config = sparse_profiles_config.convert()?;
@@ -394,10 +457,10 @@ fn parse_with_repo_definition(
         .transpose()?;
 
     Ok(RepoConfig {
-        enabled,
+        enabled: metadata.enabled,
         storage_config,
         generation_cache_size,
-        repoid,
+        repoid: metadata.repoid,
         scuba_table_hooks,
         scuba_local_path_hooks,
         cache_warmup,
@@ -408,13 +471,13 @@ fn parse_with_repo_definition(
         pushrebase,
         lfs,
         hash_validation_percentage,
-        readonly,
+        readonly: metadata.readonly,
         redaction,
         infinitepush,
         list_keys_patterns_max,
         filestore,
         hook_max_file_size,
-        hipster_acl,
+        hipster_acl: metadata.hipster_acl,
         source_control_service,
         source_control_service_monitoring,
         derived_data_config,
@@ -422,13 +485,13 @@ fn parse_with_repo_definition(
         repo_client_use_warm_bookmarks_cache,
         repo_client_knobs,
         phabricator_callsign,
-        acl_region_config,
+        acl_region_config: metadata.acl_region_config,
         walker_config,
         cross_repo_commit_validation_config,
         sparse_profiles_config,
         update_logging_config,
         commit_graph_config,
-        default_commit_identity_scheme,
+        default_commit_identity_scheme: metadata.default_commit_identity_scheme,
         deep_sharding_config,
         everstore_local_path,
         metadata_logger_config,
@@ -444,7 +507,7 @@ fn parse_with_repo_definition(
         modern_sync_config,
         log_repo_stats,
         metadata_cache_config,
-        enable_git_bundle_uri,
+        enable_git_bundle_uri: metadata.enable_git_bundle_uri,
         directory_branch_cluster_config,
         restricted_paths_config,
         remote_diff_config,
