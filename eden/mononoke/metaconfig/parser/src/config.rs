@@ -35,6 +35,7 @@ use repos::RawRepoConfigs;
 use repos::RawRepoDefinition;
 use repos::RawRestrictedPathsConfig;
 use repos::RawStorageConfig;
+use repos::TierManifest;
 
 use crate::convert::Convert;
 use crate::errors::ConfigurationError;
@@ -78,6 +79,28 @@ pub fn configerator_config_handle(
     } else {
         Ok(None)
     }
+}
+
+/// Creates a ConfigHandle for a TierManifest from a Configerator path.
+///
+/// Used in the per-repo config split-loading path where the manifest lists
+/// all repos in a tier along with their individual config paths.
+pub fn configerator_manifest_handle(
+    manifest_path: &str,
+    config_store: &ConfigStore,
+) -> Result<ConfigHandle<TierManifest>> {
+    config_store.get_config_handle::<TierManifest>(manifest_path.to_owned())
+}
+
+/// Creates a ConfigHandle for a single repo's RawRepoConfig from a Configerator path.
+///
+/// Used in the per-repo config split-loading path where each repo has its own
+/// config file referenced by the TierManifest.
+pub fn configerator_repo_config_handle(
+    config_path: &str,
+    config_store: &ConfigStore,
+) -> Result<ConfigHandle<RawRepoConfig>> {
+    config_store.get_config_handle::<RawRepoConfig>(config_path.to_owned())
 }
 
 /// Load configuration for repositories and storage.
@@ -2094,5 +2117,64 @@ mod test {
         } else {
             panic!("Multiplexed config is not a multiplexed blobstore");
         }
+    }
+
+    #[mononoke::test]
+    fn test_tier_manifest_and_repo_config_handles() {
+        use cached_config::ModificationTime;
+
+        let manifest_json = r#"{
+            "repos": [
+                {
+                    "repo_name": "test_repo",
+                    "repo_id": 42,
+                    "config_path": "scm/mononoke/repos/test_repo",
+                    "is_deep_sharded": false
+                }
+            ],
+            "common": {},
+            "storage": {}
+        }"#;
+
+        let repo_config_json = r#"{
+            "storage_config": "main_storage"
+        }"#;
+
+        let test_source = Arc::new(TestSource::new());
+        test_source.insert_config(
+            "scm/mononoke/manifests/tiers/test_tier",
+            manifest_json,
+            ModificationTime::UnixTimestamp(1),
+        );
+        test_source.insert_config(
+            "scm/mononoke/repos/test_repo",
+            repo_config_json,
+            ModificationTime::UnixTimestamp(1),
+        );
+
+        let config_store = ConfigStore::new(test_source, None, None);
+
+        // Verify manifest handle can be created and deserialized
+        let manifest_handle =
+            configerator_manifest_handle("scm/mononoke/manifests/tiers/test_tier", &config_store)
+                .expect("Failed to get manifest config handle");
+
+        let manifest = manifest_handle.get();
+        assert_eq!(manifest.repos.len(), 1);
+        assert_eq!(manifest.repos[0].repo_name, "test_repo");
+        assert_eq!(manifest.repos[0].repo_id, 42);
+        assert_eq!(
+            manifest.repos[0].config_path,
+            "scm/mononoke/repos/test_repo"
+        );
+        assert!(!manifest.repos[0].is_deep_sharded);
+
+        // Verify repo config handle can be created and deserialized
+        let repo_config_handle =
+            configerator_repo_config_handle("scm/mononoke/repos/test_repo", &config_store)
+                .expect("Failed to get repo config handle");
+
+        let repo_config = repo_config_handle.get();
+        assert_eq!(repo_config.storage_config, Some("main_storage".to_string()));
     }
 }
