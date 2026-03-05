@@ -13,6 +13,7 @@
 #include "eden/fs/privhelper/PrivHelperServer.h"
 
 #include <folly/Conv.h>
+#include <folly/File.h>
 #include <folly/FileUtil.h>
 #include <folly/String.h>
 #include <folly/logging/xlog.h>
@@ -347,8 +348,17 @@ void PrivHelperServer::sanityCheckMountPoint(
 
   // At this point, any stat errors are not due to a stale mount.
   struct stat st{};
-  auto fd = open(mountPoint.c_str(), O_RDONLY);
-  if (fd == -1 || fstat(fd, &st) < 0) {
+  folly::File file;
+  try {
+    file = folly::File(mountPoint.c_str(), O_RDONLY);
+  } catch (const std::system_error& e) {
+    throwf<std::domain_error>(
+        "User:{} cannot open {}: {}",
+        getuid(),
+        mountPoint,
+        folly::errnoStr(e.code().value()));
+  }
+  if (fstat(file.fd(), &st) < 0) {
     auto err = errno;
     throwf<std::domain_error>(
         "User:{} cannot stat {}: {}",
