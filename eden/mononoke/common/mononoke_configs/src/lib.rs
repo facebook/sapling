@@ -5,11 +5,15 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
+use std::sync::RwLock;
 use std::time::SystemTime;
 
+use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use arc_swap::ArcSwap;
 use async_trait::async_trait;
 use cached_config::ConfigHandle;
@@ -21,8 +25,12 @@ use metaconfig_parser::RepoConfigs;
 use metaconfig_parser::StorageConfigs;
 use metaconfig_parser::config::configerator_config_handle;
 use metaconfig_parser::config::load_configs_from_raw;
+use metaconfig_parser::configerator_manifest_handle;
+use metaconfig_parser::configerator_repo_config_handle;
 use metaconfig_types::ConfigInfo;
+use repos::RawRepoConfig;
 use repos::RawRepoConfigs;
+use repos::TierManifest;
 use serde::Serialize;
 use sha2::Digest;
 use sha2::Sha256;
@@ -54,6 +62,10 @@ pub struct MononokeConfigs {
     maybe_config_updater: Option<JoinHandle<()>>,
     maybe_liveness_updater: Option<JoinHandle<()>>,
     maybe_config_handle: Option<ConfigHandle<RawRepoConfigs>>,
+    // Per-repo split-loading fields
+    maybe_manifest_handle: Option<ConfigHandle<TierManifest>>,
+    repo_handles: Arc<RwLock<HashMap<String, ConfigHandle<RawRepoConfig>>>>,
+    config_store: Option<ConfigStore>,
 }
 
 impl MononokeConfigs {
@@ -63,6 +75,7 @@ impl MononokeConfigs {
     pub fn new(
         config_path: impl AsRef<Path>,
         config_store: &ConfigStore,
+        manifest_path: Option<&str>,
         runtime_handle: Handle,
     ) -> Result<Self> {
         let storage_configs = metaconfig_parser::load_storage_configs(&config_path, config_store)?;
@@ -102,6 +115,32 @@ impl MononokeConfigs {
                 config_watcher,
             ))
         });
+        let maybe_manifest_handle = manifest_path
+            .map(|path| configerator_manifest_handle(path, config_store))
+            .transpose()?;
+
+        let repo_handles = Arc::new(RwLock::new(HashMap::new()));
+
+        // If manifest is available, pre-load handles for non-deep-sharded repos.
+        // Collect all handles first, then insert in bulk under a single write lock.
+        if let Some(ref manifest_handle) = maybe_manifest_handle {
+            let manifest = manifest_handle.get();
+            let handles_to_add: Vec<_> = manifest
+                .repos
+                .iter()
+                .filter(|e| !e.is_deep_sharded)
+                .map(|entry| {
+                    let handle = configerator_repo_config_handle(&entry.config_path, config_store)?;
+                    Ok((entry.repo_name.clone(), handle))
+                })
+                .collect::<Result<Vec<_>>>()?;
+
+            repo_handles
+                .write()
+                .map_err(|e| anyhow!("repo_handles lock poisoned: {}", e))?
+                .extend(handles_to_add);
+        }
+
         Ok(Self {
             repo_configs,
             storage_configs,
@@ -110,6 +149,9 @@ impl MononokeConfigs {
             maybe_config_updater,
             maybe_config_handle,
             maybe_liveness_updater,
+            maybe_manifest_handle,
+            repo_handles,
+            config_store: Some(config_store.clone()),
         })
     }
 
@@ -154,6 +196,43 @@ impl MononokeConfigs {
         let mut update_receivers = Vec::from_iter(self.update_receivers.load().iter().cloned());
         update_receivers.push(update_receiver);
         self.update_receivers.store(Arc::new(update_receivers));
+    }
+
+    /// Create a per-repo ConfigHandle on-demand (called by ShardManager on_add_shard).
+    pub fn load_repo_config_handle(&self, repo_name: &str) -> Result<()> {
+        // Fast path: already loaded
+        if self
+            .repo_handles
+            .read()
+            .map_err(|e| anyhow!("repo_handles lock poisoned: {}", e))?
+            .contains_key(repo_name)
+        {
+            return Ok(());
+        }
+
+        let manifest = self
+            .maybe_manifest_handle
+            .as_ref()
+            .context("No manifest handle available")?
+            .get();
+
+        let entry = manifest
+            .repos
+            .iter()
+            .find(|e| e.repo_name == repo_name)
+            .ok_or_else(|| anyhow!("Repo {} not found in manifest", repo_name))?;
+
+        let config_store = self
+            .config_store
+            .as_ref()
+            .context("No config store available")?;
+
+        let handle = configerator_repo_config_handle(&entry.config_path, config_store)?;
+        self.repo_handles
+            .write()
+            .map_err(|e| anyhow!("repo_handles lock poisoned: {}", e))?
+            .insert(repo_name.to_owned(), handle);
+        Ok(())
     }
 }
 

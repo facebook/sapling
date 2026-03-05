@@ -102,6 +102,7 @@ impl ConfigArgs {
         Ok(Arc::new(MononokeConfigs::new(
             config_path,
             config_store,
+            None, // manifest_path - not yet wired, will be added when JustKnob gate lands
             handle,
         )?))
     }
