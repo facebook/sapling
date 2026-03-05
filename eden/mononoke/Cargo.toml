@@ -39,6 +39,7 @@ rootcause-backtrace = { git = "https://github.com/rootcause-rs/rootcause.git", r
 rustls-native-certs = { git = "https://github.com/rustls/rustls-native-certs", rev = "9734b4cc0bfa88224e0fc49867abafa1c56fa28d" }
 sqlx = { git = "https://github.com/launchbadge/sqlx", rev = "24317d5eab40fbc33caf1142946e2f39caad73ea" }
 stabby = { git = "https://github.com/nitinsingh-meta/stabby", rev = "304c895c34e502fc635b85df6d4f22f746747ed4" }
+tonic = { git = "https://github.com/hyperium/tonic", rev = "2820fe371f2e6242f8298216c07205448c3833f2" }
 vhost = { git = "https://github.com/rust-vmm/vhost/", rev = "93e2d9cf9151a5cbeef4fff1fdf26fdb989f060d" }
 vm-allocator = { git = "https://github.com/rust-vmm/vm-allocator", rev = "5fb545cc6e41fdc9f27d48d97ed26274a35bc6c6" }
 warp = { git = "https://github.com/jdthomas/warp.git", rev = "c794232d182abaa3add8184e7d661e084cc516c5" }
