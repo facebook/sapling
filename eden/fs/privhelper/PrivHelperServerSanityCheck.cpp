@@ -16,6 +16,7 @@
 #include <folly/FileUtil.h>
 #include <folly/String.h>
 #include <folly/logging/xlog.h>
+#include <sys/mount.h>
 #include <cerrno>
 #include <string>
 
@@ -23,9 +24,8 @@
 #include "eden/common/utils/FSDetect.h"
 #include "eden/common/utils/Throw.h"
 
-#ifdef __APPLE__
-#include <sys/mount.h>
-#else
+#ifdef __linux__
+#include <mntent.h>
 #include <sys/statfs.h>
 #endif
 
@@ -165,6 +165,63 @@ void sanityCheckFs(const std::string& mountPoint) {
 }
 } // namespace
 
+void PrivHelperServer::cleanupStaleBindMounts(const std::string& checkoutPath) {
+#ifdef __linux__
+  // Parse /proc/mounts to find stale redirection mounts under this checkout.
+  // These are mounts that EdenFS set up (e.g., buck-out) that were left behind
+  // when EdenFS crashed without properly unmounting.
+  FILE* mtab = setmntent("/proc/mounts", "r");
+  if (mtab == nullptr) {
+    XLOGF(WARN, "Failed to open /proc/mounts, skipping redirection cleanup");
+    return;
+  }
+  SCOPE_EXIT {
+    endmntent(mtab);
+  };
+
+  std::vector<std::string> staleMounts;
+  std::string checkoutPrefix = checkoutPath + "/";
+
+  struct mntent* entry;
+  while ((entry = getmntent(mtab)) != nullptr) {
+    std::string mountPoint = entry->mnt_dir;
+
+    if (!folly::StringPiece(mountPoint).startsWith(checkoutPrefix)) {
+      continue;
+    }
+
+    // This is a mount under our checkout (likely an EdenFS redirection)
+    XLOGF(
+        INFO,
+        "Found potential stale redirection mount under {}: {}",
+        checkoutPath,
+        mountPoint);
+    staleMounts.push_back(std::move(mountPoint));
+  }
+
+  // Unmount any stale mounts we found (in reverse order to handle nested
+  // mounts)
+  std::sort(staleMounts.begin(), staleMounts.end(), std::greater<>());
+  for (const auto& mount : staleMounts) {
+    XLOGF(INFO, "Attempting to unmount stale redirection mount: {}", mount);
+    // Use MNT_DETACH (lazy unmount) to avoid blocking if mount is busy
+    if (umount2(mount.c_str(), MNT_DETACH) == 0) {
+      XLOGF(INFO, "Successfully unmounted stale redirection mount: {}", mount);
+    } else {
+      auto err = errno;
+      XLOGF(
+          WARN,
+          "Failed to unmount stale redirection mount {}: {}",
+          mount,
+          folly::errnoStr(err));
+    }
+  }
+#else
+  // Redirection mount cleanup is only needed on Linux
+  (void)checkoutPath;
+#endif
+}
+
 void PrivHelperServer::unmountStaleMount(const std::string& mountPoint) {
   // Attempt to unmount the stale mount.
   // Error logging is done inside unmount.
@@ -273,6 +330,9 @@ void PrivHelperServer::sanityCheckMountPoint(
     XLOG(INFO, "Skipping sanity check for root user.");
     return;
   }
+
+  // Clean up any stale bind mounts under this checkout before proceeding
+  cleanupStaleBindMounts(mountPoint);
 
   detectAndUnmountStaleMount(mountPoint, isNFS, isHardMount);
 

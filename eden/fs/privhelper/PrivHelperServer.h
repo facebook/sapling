@@ -124,6 +124,10 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
 
   void unmountStaleMount(const std::string& mountPoint);
 
+  // Clean up stale redirection mounts under a checkout path that were left
+  // behind when EdenFS crashed without properly unmounting.
+  void cleanupStaleBindMounts(const std::string& checkoutPath);
+
   // Uses stat to determine if there's a stale mount point at the given path. If
   // there is, force unmounts it.
   void detectAndUnmountStaleMount(
