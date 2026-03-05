@@ -101,9 +101,6 @@ def extsetup(ui) -> None:
 
 
 def reposetup(ui, repo) -> None:
-    if not hasattr(repo, "dirstate"):
-        return
-
     dirstate, cached = localrepo.isfilecached(repo, "dirstate")
     if cached:
         _setupdirstate(repo, dirstate)
