@@ -1,0 +1,12 @@
+load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
+
+oncall("scm_server_infra")
+
+rust_library(
+    name = "client_memory",
+    srcs = glob(["src/**/*.rs"]),
+    test_deps = [
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
+    ],
+    deps = [],
+)

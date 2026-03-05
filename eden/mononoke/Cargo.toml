@@ -117,6 +117,7 @@ members = [
   "common/cas_client/client",
   "common/cas_client/scm_client",
   "common/cats",
+  "common/client_memory",
   "common/connection_security_checker",
   "common/copy_utils",
   "common/dedupmap",
