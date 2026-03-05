@@ -37,6 +37,7 @@ riscv-rt = { git = "https://github.com/jsgf/riscv.git", rev = "90cfc5f2404e39e08
 rootcause = { git = "https://github.com/rootcause-rs/rootcause.git", rev = "5010b020a57786de6f18bad027560d54b73875b0" }
 rootcause-backtrace = { git = "https://github.com/rootcause-rs/rootcause.git", rev = "5010b020a57786de6f18bad027560d54b73875b0" }
 rustls-native-certs = { git = "https://github.com/rustls/rustls-native-certs", rev = "9734b4cc0bfa88224e0fc49867abafa1c56fa28d" }
+spm_precompiled = { version = "0.1.4", git = "https://github.com/huggingface/spm_precompiled", rev = "6e3ffb3ef2504f38e66273002fca0661da4121cc" }
 sqlx = { git = "https://github.com/launchbadge/sqlx", rev = "24317d5eab40fbc33caf1142946e2f39caad73ea" }
 stabby = { git = "https://github.com/nitinsingh-meta/stabby", rev = "304c895c34e502fc635b85df6d4f22f746747ed4" }
 tonic = { git = "https://github.com/hyperium/tonic", rev = "322ed793ea14c6f8a53381234cc1d4a296021cad" }
