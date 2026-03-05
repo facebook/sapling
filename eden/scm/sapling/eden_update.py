@@ -172,13 +172,13 @@ def _abort_on_eden_conflict_error(repo, conflicts):
     for conflict in conflicts:
         if conflict["conflict_type"] == "ERROR":
             if propagate_error:
-                repo.ui.metrics.gauge("abort_on_eden_conflict_error", 1)
+                repo.ui.metrics.inc("abort_on_eden_conflict_error", 1)
                 path = conflict["path"]
                 raise error.Abort(
                     _("error updating %s: %s") % (path, conflict["message"])
                 )
             else:
-                repo.ui.metrics.gauge("ignore_eden_conflict_error", 1)
+                repo.ui.metrics.inc("ignore_eden_conflict_error", 1)
 
 
 def _is_abort_on_eden_conflict_error_enabled(repo) -> bool:
@@ -218,7 +218,7 @@ def _determine_actions_for_conflicts(repo, src, conflicts, wctx, destctx):
         conflict_type = conflict["conflict_type"]
         if conflict_type == "ERROR":
             if _is_abort_on_eden_conflict_error_enabled(repo):
-                repo.ui.metrics.gauge("abort_on_eden_conflict_error", 1)
+                repo.ui.metrics.inc("abort_on_eden_conflict_error", 1)
                 raise error.Abort(
                     _("error updating %s: %s") % (path, conflict["message"])
                 )

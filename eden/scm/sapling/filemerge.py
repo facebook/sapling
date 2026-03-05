@@ -372,7 +372,7 @@ def _iprompt(repo, mynode, orig, fcd, fco, fca, toolconf, labels=None):
 
     try:
         if fco.isabsent():
-            ui.metrics.gauge("filemerge_rename_otherdeleted", 1)
+            ui.metrics.inc("filemerge_rename_otherdeleted", 1)
             index = ui.promptchoice(_localchangedotherdeletedmsg % prompts, 2)
             choice = ["local", "other", "unresolved"][index]
         elif fcd.isabsent():
@@ -424,7 +424,7 @@ def _iprompt(repo, mynode, orig, fcd, fco, fca, toolconf, labels=None):
                             _(" ignored invalid rename destination: %s\n") % (destpath,)
                         )
 
-            ui.metrics.gauge("filemerge_prompt_localdeleted", 1)
+            ui.metrics.inc("filemerge_prompt_localdeleted", 1)
             prompts["hint"] = _hint_for_missing_file(repo, fcd, fco, fd)
             index = ui.promptchoice(_otherchangedlocaldeletedmsg % prompts, 2)
             choice = ["other", "local", "unresolved", "rename"][index]

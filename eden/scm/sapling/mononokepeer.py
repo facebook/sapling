@@ -143,7 +143,7 @@ class mononokepipe:
         else:
             self._reset_read_buf()
 
-        self._ui.metrics.gauge("mononoke_read_bytes", size)
+        self._ui.metrics.inc("mononoke_read_bytes", size)
         return buf[:size]
 
     def readline(self):
@@ -168,7 +168,7 @@ class mononokepipe:
         else:
             self._reset_read_buf()
 
-        self._ui.metrics.gauge("mononoke_read_bytes", len(r))
+        self._ui.metrics.inc("mononoke_read_bytes", len(r))
         return r
 
     def _reset_read_buf(self):
@@ -192,7 +192,7 @@ class mononokepipe:
         self._pipe.write(data)
         self._pipe.write(NETSTRING_ENDING)
 
-        self._ui.metrics.gauge(
+        self._ui.metrics.inc(
             "mononoke_write_bytes",
             len(netstringprefix) + len(iostream) + len(data) + len(NETSTRING_ENDING),
         )
@@ -475,7 +475,7 @@ class mononokepeer(stdiopeer.stdiopeer):
 
             self._pipeo = self._pipei = mononokepipe(self.ui, self.handle, decompress)
 
-        self.ui.metrics.gauge("mononoke_connections")
+        self.ui.metrics.inc("mononoke_connections")
 
         def badresponse(errortext):
             msg = _("no suitable response from mononoke")

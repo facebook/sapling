@@ -269,7 +269,7 @@ def mergecopies(repo, cdst, csrc, base):
             if dst not in mdst and src in base and src in csrc:
                 missingfiles.append((dst, src))
 
-    repo.ui.metrics.gauge("copytrace_missingfiles", len(missingfiles))
+    repo.ui.metrics.inc("copytrace_missingfiles", len(missingfiles))
     if missingfiles and _dagcopytraceenabled(repo.ui):
         srconly, same = [], []
         for dst_path, src_path in missingfiles:
@@ -297,7 +297,7 @@ def mergecopies(repo, cdst, csrc, base):
             if dst not in copies:
                 copies[dst] = src
 
-    repo.ui.metrics.gauge("copytrace_copies", len(copies))
+    repo.ui.metrics.inc("copytrace_copies", len(copies))
 
     # For the xdir merge case, report copies in cdst's "path space".
     # This is more convenient for merge.py.

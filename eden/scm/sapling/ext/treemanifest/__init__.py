@@ -978,9 +978,9 @@ def clientgettreepack(remote, rootdir, mfnodes, basemfnodes, directories, depth)
     opts["depth"] = str(depth)
 
     ui = remote.ui
-    ui.metrics.gauge("ssh_gettreepack_basemfnodes", len(basemfnodes))
-    ui.metrics.gauge("ssh_gettreepack_mfnodes", len(mfnodes))
-    ui.metrics.gauge("ssh_gettreepack_calls", 1)
+    ui.metrics.inc("ssh_gettreepack_basemfnodes", len(basemfnodes))
+    ui.metrics.inc("ssh_gettreepack_mfnodes", len(mfnodes))
+    ui.metrics.inc("ssh_gettreepack_calls", 1)
 
     f = remote._callcompressable("gettreepack", **opts)
     return bundle2.getunbundler(remote.ui, f)

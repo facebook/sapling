@@ -114,8 +114,8 @@ class getpackclient:
             ids = fileids[start_id : start_id + chunksize]
 
             with self._connect() as conn:
-                self.ui.metrics.gauge("ssh_getpack_revs", len(ids))
-                self.ui.metrics.gauge("ssh_getpack_calls", 1)
+                self.ui.metrics.inc("ssh_getpack_revs", len(ids))
+                self.ui.metrics.inc("ssh_getpack_calls", 1)
 
                 getpackversion = self.ui.configint("remotefilelog", "getpackversion")
 

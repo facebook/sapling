@@ -166,11 +166,11 @@ Test command_duration is logged when ctrl-c'd:
 Test ui.metrics.gauge API
   $ cat > $TESTTMP/a.py << EOF
   > def reposetup(ui, repo):
-  >     ui.metrics.gauge("test_foo_a", 1)
-  >     ui.metrics.gauge("test_foo_b", 2)
-  >     ui.metrics.gauge("test_foo_b", len(repo))
-  >     ui.metrics.gauge("test_bar")
-  >     ui.metrics.gauge("test_bar")
+  >     ui.metrics.inc("test_foo_a", 1)
+  >     ui.metrics.inc("test_foo_b", 2)
+  >     ui.metrics.inc("test_foo_b", len(repo))
+  >     ui.metrics.inc("test_bar")
+  >     ui.metrics.inc("test_bar")
   > EOF
   $ SCM_SAMPLING_FILEPATH=$TESTTMP/a.txt hg log -r null -T '.\n' --config extensions.gauge=$TESTTMP/a.py --config sampling.key.metrics=aaa
   .

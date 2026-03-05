@@ -58,7 +58,7 @@ class countingpipe:
     def write(self, data):
         assert isinstance(data, bytes)
         self._totalbytes += len(data)
-        self._ui.metrics.gauge("ssh_write_bytes", len(data))
+        self._ui.metrics.inc("ssh_write_bytes", len(data))
         return self._pipe.write(data)
 
     def read(self, size: int) -> bytes:
@@ -77,13 +77,13 @@ class countingpipe:
         r = b"".join(bufs)
 
         self._totalbytes += len(r)
-        self._ui.metrics.gauge("ssh_read_bytes", len(r))
+        self._ui.metrics.inc("ssh_read_bytes", len(r))
         return r
 
     def readline(self):
         r = self._pipe.readline()
         self._totalbytes += len(r)
-        self._ui.metrics.gauge("ssh_read_bytes", len(r))
+        self._ui.metrics.inc("ssh_read_bytes", len(r))
         return r
 
     def close(self):
@@ -222,7 +222,7 @@ class sshpeer(stdiopeer.stdiopeer):
         self._pipei = countingpipe(self.ui, pipei)
         self._pipeo = countingpipe(self.ui, pipeo)
 
-        self.ui.metrics.gauge("ssh_connections")
+        self.ui.metrics.inc("ssh_connections")
 
         def badresponse(errortext):
             msg = _("no suitable response from remote @prog@")

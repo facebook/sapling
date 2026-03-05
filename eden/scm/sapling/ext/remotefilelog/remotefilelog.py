@@ -579,7 +579,7 @@ class remotefileslog(filelog.fileslog):
         if type(self.filestore) is revisionstore.filescmstore:
             metrics = self.filestore.getmetrics()
             for metric, value in metrics:
-                ui.metrics.gauge(metric, value)
+                ui.metrics.inc(metric, value)
 
     TEN_MB = 10 * 1024**2
 

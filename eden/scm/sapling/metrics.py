@@ -15,7 +15,7 @@ class metrics:
     def __init__(self, ui):
         self.ui = ui
 
-    def gauge(self, key, value=1, entity=None):
+    def inc(self, key, value=1, entity=None):
         """If entity is None, log locally. Otherwise, send it to a global counter."""
         if entity is None:
             hgmetrics.incrementcounter(key, value)
