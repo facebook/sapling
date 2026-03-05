@@ -57,7 +57,7 @@ pub struct EdenFileSystem {
     config: Arc<dyn Config>,
 
     // For wait_for_potential_change
-    journal_position: Cell<(i64, i64)>,
+    journal_position: Cell<Option<(i64, i64)>>,
 
     derace_mode: DeraceMode,
 }
@@ -70,7 +70,7 @@ impl EdenFileSystem {
         dot_dir: &Path,
         store: Arc<dyn FileStore>,
     ) -> Result<Self> {
-        let journal_position = Cell::new(client.get_journal_position()?);
+        let journal_position = Cell::new(None);
         let treestate = create_treestate(dot_dir, vfs.case_sensitive())?;
         let treestate = Arc::new(Mutex::new(treestate));
 
@@ -443,13 +443,13 @@ impl FileSystem for EdenFileSystem {
         loop {
             let new_journal_position = self.client.get_journal_position()?;
             let old_journal_position = self.journal_position.get();
-            if old_journal_position != new_journal_position {
+            if old_journal_position != Some(new_journal_position) {
                 tracing::trace!(
                     "edenfs journal position changed: {:?} -> {:?}",
                     old_journal_position,
                     new_journal_position
                 );
-                self.journal_position.set(new_journal_position);
+                self.journal_position.set(Some(new_journal_position));
                 break;
             }
             std::thread::sleep(Duration::from_millis(interval_ms));
