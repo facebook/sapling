@@ -119,6 +119,7 @@ impl<Repo> MononokeReposManager<Repo> {
             mgr.repos.clone(),
             mgr.repo_factory.clone(),
             service_name,
+            mgr.configs.clone(),
         );
         mgr.configs
             .register_for_update(Arc::new(update_receiver) as Arc<dyn ConfigUpdateReceiver>);
@@ -267,6 +268,7 @@ pub struct MononokeConfigUpdateReceiver<Repo> {
     repos: Arc<MononokeRepos<Repo>>,
     repo_factory: Arc<RepoFactory>,
     service_name: Option<ShardedService>,
+    mononoke_configs: Arc<MononokeConfigs>,
 }
 
 /// Determines which repos should be loaded/reloaded based on config.
@@ -326,11 +328,13 @@ impl<Repo> MononokeConfigUpdateReceiver<Repo> {
         repos: Arc<MononokeRepos<Repo>>,
         repo_factory: Arc<RepoFactory>,
         service_name: Option<ShardedService>,
+        mononoke_configs: Arc<MononokeConfigs>,
     ) -> Self {
         Self {
             repos,
             repo_factory,
             service_name,
+            mononoke_configs,
         }
     }
 
@@ -396,6 +400,40 @@ where
             .await?;
         // Ensure that we only add or replace repos and NEVER remove them
         self.repos.reload(repos_input);
+        Ok(())
+    }
+
+    async fn apply_repo_update(&self, repo_name: &str, repo_config: &RepoConfig) -> Result<()> {
+        // Skip disabled or non-reloadable repos
+        if !repo_config.enabled {
+            return Ok(());
+        }
+
+        // Get the common config from the current repo_configs
+        let common_config = self.mononoke_configs.repo_configs().common.clone();
+
+        let repo_id = repo_config.repoid.id();
+        info!("Reloading single repo config: {}", repo_name);
+
+        let repo = retry(
+            |_| {
+                self.repo_factory.build(
+                    repo_name.to_string(),
+                    repo_config.clone(),
+                    common_config.clone(),
+                )
+            },
+            Duration::from_millis(100),
+        )
+        .binary_exponential_backoff()
+        .max_attempts(5)
+        .await
+        .with_context(|| format!("Failed to reload repo '{}'", repo_name))?
+        .0;
+
+        info!("Reloaded single repo: {}", repo_name);
+        self.repos
+            .reload(vec![(repo_id, repo_name.to_string(), repo)]);
         Ok(())
     }
 }

@@ -30,6 +30,7 @@ use metaconfig_parser::configerator_manifest_handle;
 use metaconfig_parser::configerator_repo_config_handle;
 use metaconfig_parser::parse_raw_repo_config;
 use metaconfig_types::ConfigInfo;
+use metaconfig_types::RepoConfig;
 use repos::RawRepoConfig;
 use repos::RawRepoConfigs;
 use repos::TierManifest;
@@ -558,6 +559,13 @@ pub trait ConfigUpdateReceiver: Send + Sync {
         repo_configs: Arc<RepoConfigs>,
         storage_configs: Arc<StorageConfigs>,
     ) -> Result<()>;
+
+    /// Called when a single repo's config changes in the per-repo split-loading path.
+    /// Default implementation is a no-op — existing receivers that only handle bulk
+    /// updates don't need to implement this.
+    async fn apply_repo_update(&self, _repo_name: &str, _repo_config: &RepoConfig) -> Result<()> {
+        Ok(())
+    }
 }
 
 fn serialize_to_value<T: Serialize, S: serde::Serializer>(
