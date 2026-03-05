@@ -27,6 +27,7 @@ use edenapi_types::BlameRequest;
 use edenapi_types::BlameResult;
 use edenapi_types::BonsaiChangesetContent;
 use edenapi_types::BookmarkEntry;
+use edenapi_types::BookmarkKind;
 use edenapi_types::BookmarkResult;
 use edenapi_types::CloudShareWorkspaceRequest;
 use edenapi_types::CloudShareWorkspaceResponse;
@@ -75,6 +76,8 @@ use edenapi_types::IdenticalChangesetContent;
 use edenapi_types::IndexableId;
 use edenapi_types::LandStackRequest;
 use edenapi_types::LandStackResponse;
+use edenapi_types::ListBookmarkPatternsRequest;
+use edenapi_types::ListBookmarkPatternsResponse;
 use edenapi_types::LookupRequest;
 use edenapi_types::LookupResponse;
 use edenapi_types::LookupResult;
@@ -173,6 +176,7 @@ pub mod paths {
     pub const ALTER_SNAPSHOT: &str = "snapshot/alter";
     pub const BLAME: &str = "blame";
     pub const BOOKMARKS2: &str = "bookmarks2";
+    pub const BOOKMARKS_LIST_PATTERNS: &str = "bookmarks/list_patterns";
     pub const CAPABILITIES: &str = "capabilities";
     pub const CLOUD_HISTORICAL_VERSIONS: &str = "cloud/historical_versions";
     pub const CLOUD_OTHER_REPO_WORKSPACES: &str = "cloud/other_repo_workspaces";
@@ -1597,6 +1601,37 @@ impl SaplingRemoteApi for Client {
             })
             .collect::<Result<Vec<BookmarkEntry>, _>>();
         return flattened_response;
+    }
+
+    async fn list_bookmark_patterns(
+        &self,
+        patterns: Vec<String>,
+        kinds: Vec<BookmarkKind>,
+    ) -> Result<Vec<BookmarkEntry>, SaplingRemoteApiError> {
+        tracing::info!("Requesting bookmarks for {} patterns", patterns.len());
+
+        let url = self.build_url(paths::BOOKMARKS_LIST_PATTERNS)?;
+        let request = ListBookmarkPatternsRequest { patterns, kinds };
+
+        self.log_request(&request, "list_bookmark_patterns");
+        let request_wire = request.to_wire();
+        let req = self
+            .configure_request(paths::BOOKMARKS_LIST_PATTERNS, self.inner.client.post(url))?
+            .cbor(&request_wire)
+            .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
+
+        let response = self
+            .fetch_vec_with_retry::<ListBookmarkPatternsResponse>(vec![req])
+            .await?;
+
+        response
+            .into_iter()
+            .map(|res| {
+                res.data.map_err(|err| {
+                    SaplingRemoteApiError::ServerError(SaplingRemoteApiServerError::new(err))
+                })
+            })
+            .collect::<Result<Vec<BookmarkEntry>, _>>()
     }
 
     async fn set_bookmark(

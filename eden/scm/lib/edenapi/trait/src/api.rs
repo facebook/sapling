@@ -17,6 +17,7 @@ use edenapi_types::AnyId;
 use edenapi_types::BlameResult;
 use edenapi_types::BonsaiChangesetContent;
 use edenapi_types::BookmarkEntry;
+use edenapi_types::BookmarkKind;
 use edenapi_types::CloudShareWorkspaceRequest;
 use edenapi_types::CloudShareWorkspaceResponse;
 use edenapi_types::CommitGraphEntry;
@@ -237,6 +238,18 @@ pub trait SaplingRemoteApi: Send + Sync + 'static {
         freshness: Option<Freshness>,
     ) -> Result<Vec<BookmarkEntry>, SaplingRemoteApiError> {
         let _ = (bookmarks, freshness);
+        Err(SaplingRemoteApiError::NotSupported)
+    }
+
+    /// List bookmarks matching patterns (replacement for wireproto listkeyspatterns).
+    /// Patterns can be exact bookmark names or prefix patterns ending with '*'.
+    /// `kinds` specifies which bookmark kinds to include; empty means PullDefaultPublishing only.
+    async fn list_bookmark_patterns(
+        &self,
+        patterns: Vec<String>,
+        kinds: Vec<BookmarkKind>,
+    ) -> Result<Vec<BookmarkEntry>, SaplingRemoteApiError> {
+        let _ = (patterns, kinds);
         Err(SaplingRemoteApiError::NotSupported)
     }
 

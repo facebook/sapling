@@ -31,6 +31,7 @@ use edenapi_types::AlterSnapshotRequest;
 use edenapi_types::AlterSnapshotResponse;
 use edenapi_types::AnyFileContentId;
 use edenapi_types::AnyId;
+use edenapi_types::BookmarkKind;
 use edenapi_types::CloudShareWorkspaceRequest;
 use edenapi_types::CloudShareWorkspaceResponse;
 use edenapi_types::CommitGraphEntry;
@@ -254,6 +255,27 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
         let response = py
             .allow_threads(|| {
                 block_unless_interrupted(self.bookmarks(bookmarks, freshness.map(|v| v.0)))
+            })
+            .map_pyerr(py)?
+            .map_pyerr(py)?;
+
+        let bookmarks = PyDict::new(py);
+        for entry in response {
+            bookmarks.set_item(py, entry.bookmark, entry.hgid.map(|id| id.to_hex()))?;
+        }
+        Ok(bookmarks)
+    }
+
+    #[tracing::instrument(skip_all)]
+    fn list_bookmark_patterns_py(
+        &self,
+        py: Python,
+        patterns: Vec<String>,
+        kinds: Vec<BookmarkKind>,
+    ) -> PyResult<PyDict> {
+        let response = py
+            .allow_threads(|| {
+                block_unless_interrupted(self.list_bookmark_patterns(patterns, kinds))
             })
             .map_pyerr(py)?
             .map_pyerr(py)?;

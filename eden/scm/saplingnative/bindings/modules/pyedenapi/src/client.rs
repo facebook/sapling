@@ -34,6 +34,7 @@ use edenapi_types::AlterSnapshotRequest;
 use edenapi_types::AlterSnapshotResponse;
 use edenapi_types::AnyFileContentId;
 use edenapi_types::BlameResult;
+use edenapi_types::BookmarkKind;
 use edenapi_types::BubbleUploadProperties;
 use edenapi_types::CacheableSnapshot;
 use edenapi_types::CloudShareWorkspaceRequest;
@@ -239,6 +240,21 @@ py_class!(pub class client |py| {
         freshness: Option<Serde<Freshness>> = None,
     ) -> PyResult<PyDict> {
         self.inner(py).as_ref().bookmarks_py(py, bookmarks, freshness)
+    }
+
+    /// listbookmarkpatterns([pattern], kinds=None) -> {name: node|None}
+    ///
+    /// List bookmarks matching patterns. Patterns can be exact names or
+    /// prefix patterns ending with '*' (e.g., "foo*" matches "foo", "foobar", etc.).
+    /// `kinds` is an optional list of strings specifying which bookmark kinds to
+    /// include: "Scratch", "Publishing", "PullDefaultPublishing".
+    /// When kinds is None or empty, only PullDefaultPublishing bookmarks are returned.
+    def listbookmarkpatterns(
+        &self,
+        patterns: Vec<String>,
+        kinds: Serde<Vec<BookmarkKind>> = Serde(Vec::new()),
+    ) -> PyResult<PyDict> {
+        self.inner(py).as_ref().list_bookmark_patterns_py(py, patterns, kinds.0)
     }
 
     /// setbookmark(bookmark, to, from, pushvars)

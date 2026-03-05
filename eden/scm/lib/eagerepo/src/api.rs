@@ -33,6 +33,7 @@ use edenapi::configmodel;
 use edenapi::types::AnyFileContentId;
 use edenapi::types::AnyId;
 use edenapi::types::BookmarkEntry;
+use edenapi::types::BookmarkKind;
 use edenapi::types::CommitGraphEntry;
 use edenapi::types::CommitGraphSegments;
 use edenapi::types::CommitGraphSegmentsEntry;
@@ -645,6 +646,38 @@ impl SaplingRemoteApi for EagerRepo {
                 hgid: opt_id,
             };
             values.push(entry);
+        }
+        Ok(values)
+    }
+
+    async fn list_bookmark_patterns(
+        &self,
+        patterns: Vec<String>,
+        _kinds: Vec<BookmarkKind>,
+    ) -> edenapi::Result<Vec<BookmarkEntry>> {
+        debug!("list_bookmark_patterns {}", debug_string_list(&patterns));
+        self.refresh_for_api();
+        let map = self.get_bookmarks_map().map_err(map_crate_err)?;
+        let mut values = Vec::new();
+        for pattern in &patterns {
+            if let Some(prefix) = pattern.strip_suffix('*') {
+                // Glob pattern: match all bookmarks with this prefix
+                for (name, id) in &map {
+                    if name.starts_with(prefix) {
+                        values.push(BookmarkEntry {
+                            bookmark: name.clone(),
+                            hgid: Some(*id),
+                        });
+                    }
+                }
+            } else {
+                // Exact match
+                let opt_id = map.get(pattern).cloned();
+                values.push(BookmarkEntry {
+                    bookmark: pattern.clone(),
+                    hgid: opt_id,
+                });
+            }
         }
         Ok(values)
     }
