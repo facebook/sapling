@@ -19,11 +19,3 @@ class metrics:
         """If entity is None, log locally. Otherwise, send it to a global counter."""
         if entity is None:
             hgmetrics.incrementcounter(key, value)
-
-
-def client(ui):
-    """Returns the appropriate metrics module"""
-    # @fb-only[end= ]: from . import fb
-
-    # @fb-only[end= ]: return fb.fbmetrics(ui)
-    return metrics(ui) # @oss-only
