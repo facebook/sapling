@@ -18,16 +18,16 @@ class EdenThriftClient:
     def __init__(self, repo):
         self._repo = repo
         self._ui = repo.ui
-        # EdenFsClient will recreate the unix domain socket connection per
-        # API call. No need to recreate the client every time.
-        self._client = repo._rsrepo.workingcopy().working_copy_client()
+
+    def _client(self):
+        return self._repo._rsrepo.workingcopy().working_copy_client()
 
     def setHgParents(self, p1, p2):
         if p2 == nullid:
             p2 = None
 
         p1tree = self._repo[p1].manifestnode()
-        self._client.set_parents(p1, p2, p1tree)
+        self._client().set_parents(p1, p2, p1tree)
 
     @util.timefunction("edenclientstatus", 0, "_ui")
     def getStatus(self, parent, list_ignored):  # noqa: C901
@@ -36,7 +36,7 @@ class EdenThriftClient:
         # before asking Eden about the status.
         self._repo.flushpendingtransaction()
 
-        return self._client.get_status(parent, list_ignored)
+        return self._client().get_status(parent, list_ignored)
 
     @util.timefunction("edenclientcheckout", 0, "_ui")
     def checkout(self, config, node, checkout_mode, need_flush=True, manifest=None):
@@ -46,4 +46,4 @@ class EdenThriftClient:
         if manifest is None:
             manifest = self._repo[node].manifestnode()
 
-        return self._client.checkout(config, node, manifest, checkout_mode)
+        return self._client().checkout(config, node, manifest, checkout_mode)
