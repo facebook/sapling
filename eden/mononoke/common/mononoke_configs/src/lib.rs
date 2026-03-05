@@ -6,6 +6,7 @@
  */
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -27,6 +28,7 @@ use metaconfig_parser::config::configerator_config_handle;
 use metaconfig_parser::config::load_configs_from_raw;
 use metaconfig_parser::configerator_manifest_handle;
 use metaconfig_parser::configerator_repo_config_handle;
+use metaconfig_parser::parse_raw_repo_config;
 use metaconfig_types::ConfigInfo;
 use repos::RawRepoConfig;
 use repos::RawRepoConfigs;
@@ -61,6 +63,7 @@ pub struct MononokeConfigs {
     config_info: Swappable<Option<ConfigInfo>>,
     maybe_config_updater: Option<JoinHandle<()>>,
     maybe_liveness_updater: Option<JoinHandle<()>>,
+    maybe_manifest_updater: Option<JoinHandle<()>>,
     maybe_config_handle: Option<ConfigHandle<RawRepoConfigs>>,
     // Per-repo split-loading fields
     maybe_manifest_handle: Option<ConfigHandle<TierManifest>>,
@@ -141,6 +144,26 @@ impl MononokeConfigs {
                 .extend(handles_to_add);
         }
 
+        let maybe_manifest_updater = if let Some(ref manifest_handle) = maybe_manifest_handle {
+            cloned!(
+                repo_handles,
+                repo_configs,
+                storage_configs,
+                update_receivers,
+                config_store,
+            );
+            Some(runtime_handle.spawn(watch_manifest_and_repos(
+                manifest_handle.clone(),
+                repo_handles,
+                config_store,
+                repo_configs,
+                storage_configs,
+                update_receivers,
+            )))
+        } else {
+            None
+        };
+
         Ok(Self {
             repo_configs,
             storage_configs,
@@ -149,6 +172,7 @@ impl MononokeConfigs {
             maybe_config_updater,
             maybe_config_handle,
             maybe_liveness_updater,
+            maybe_manifest_updater,
             maybe_manifest_handle,
             repo_handles,
             config_store: Some(config_store.clone()),
@@ -248,6 +272,10 @@ impl Drop for MononokeConfigs {
         if let Some(liveness_updater) = self.maybe_liveness_updater.as_ref() {
             liveness_updater.abort();
         }
+        // If the manifest updater process exists, abort it.
+        if let Some(manifest_updater) = self.maybe_manifest_updater.as_ref() {
+            manifest_updater.abort();
+        }
     }
 }
 
@@ -310,6 +338,207 @@ async fn watch_and_update(
             }
             Err(e) => {
                 error!("Failure in fetching latest config change. Error: {:?}", e);
+                STATS::refresh_failure_count.add_value(1);
+            }
+        }
+    }
+}
+
+/// Result of syncing repo handles with the manifest.
+struct RepoHandleSyncResult {
+    /// Repo names that were tracked before the sync.
+    previously_tracked: HashSet<String>,
+    /// Repo names currently in the manifest (non-deep-sharded only).
+    manifest_repos: HashSet<String>,
+}
+
+/// Syncs repo_handles with the manifest: adds handles for new repos, removes
+/// handles for repos no longer in the manifest.
+fn sync_repo_handles(
+    manifest: &TierManifest,
+    repo_handles: &RwLock<HashMap<String, ConfigHandle<RawRepoConfig>>>,
+    config_store: &ConfigStore,
+) -> Result<RepoHandleSyncResult> {
+    let current_repos: HashSet<String> = repo_handles
+        .read()
+        .map_err(|e| anyhow!("repo_handles lock poisoned: {}", e))?
+        .keys()
+        .cloned()
+        .collect();
+
+    let manifest_repos: HashSet<String> = manifest
+        .repos
+        .iter()
+        .filter(|e| !e.is_deep_sharded)
+        .map(|e| e.repo_name.clone())
+        .collect();
+
+    // Collect all new handles first, then insert in bulk under one lock
+    let new_handles: Vec<_> = manifest
+        .repos
+        .iter()
+        .filter(|entry| !entry.is_deep_sharded && !current_repos.contains(&entry.repo_name))
+        .filter_map(|entry| {
+            match configerator_repo_config_handle(&entry.config_path, config_store) {
+                Ok(handle) => {
+                    info!("Added config handle for new repo: {}", entry.repo_name);
+                    Some((entry.repo_name.clone(), handle))
+                }
+                Err(e) => {
+                    error!("Failed to load config for {}: {:?}", entry.repo_name, e);
+                    STATS::refresh_failure_count.add_value(1);
+                    None
+                }
+            }
+        })
+        .collect();
+
+    // Repos to remove
+    let to_remove: Vec<&String> = current_repos.difference(&manifest_repos).collect();
+
+    // Single write lock acquisition for both adds and removes
+    if !new_handles.is_empty() || !to_remove.is_empty() {
+        let mut handles = repo_handles
+            .write()
+            .map_err(|e| anyhow!("repo_handles lock poisoned: {}", e))?;
+        handles.extend(new_handles);
+        for repo_name in &to_remove {
+            handles.remove(*repo_name);
+            info!("Removed config handle for repo: {}", repo_name);
+        }
+    }
+
+    Ok(RepoHandleSyncResult {
+        previously_tracked: current_repos,
+        manifest_repos,
+    })
+}
+
+/// Re-parses all per-repo configs and merges them into the existing repo_configs.
+/// Legacy repos not managed by split-loading are preserved. Repos that were
+/// previously managed but are no longer in the manifest are removed.
+fn parse_and_merge_repo_configs(
+    manifest: &TierManifest,
+    repo_handles: &RwLock<HashMap<String, ConfigHandle<RawRepoConfig>>>,
+    current_configs: &RepoConfigs,
+    previously_tracked: &HashSet<String>,
+    manifest_repos: &HashSet<String>,
+) -> Result<RepoConfigs> {
+    let handles = repo_handles
+        .read()
+        .map_err(|e| anyhow!("repo_handles lock poisoned: {}", e))?
+        .clone();
+    let mut merged_repos = current_configs.repos.clone();
+
+    for entry in &manifest.repos {
+        if let Some(handle) = handles.get(&entry.repo_name) {
+            let raw_config = handle.get();
+            match parse_raw_repo_config(
+                Arc::unwrap_or_clone(raw_config),
+                entry.repo_id,
+                &manifest.storage,
+            ) {
+                Ok(repo_config) => {
+                    merged_repos.insert(entry.repo_name.clone(), repo_config);
+                }
+                Err(e) => {
+                    error!(
+                        "Failed to parse config for repo {}: {:?}",
+                        entry.repo_name, e
+                    );
+                    STATS::refresh_failure_count.add_value(1);
+                }
+            }
+        }
+    }
+
+    // Remove repos that were previously managed by split-loading
+    // but are no longer in the manifest
+    for repo_name in previously_tracked.difference(manifest_repos) {
+        merged_repos.remove(repo_name);
+    }
+
+    Ok(RepoConfigs {
+        repos: merged_repos,
+        common: current_configs.common.clone(),
+    })
+}
+
+/// Watches the TierManifest for structural changes (repos added/removed) and
+/// per-repo ConfigHandles for config value changes. On any change, re-parses
+/// affected repos and updates the `repo_configs` ArcSwap.
+///
+/// This is the split-loading equivalent of `watch_and_update`.
+async fn watch_manifest_and_repos(
+    manifest_handle: ConfigHandle<TierManifest>,
+    repo_handles: Arc<RwLock<HashMap<String, ConfigHandle<RawRepoConfig>>>>,
+    config_store: ConfigStore,
+    repo_configs: Swappable<RepoConfigs>,
+    storage_configs: Swappable<StorageConfigs>,
+    update_receivers: Swappable<Vec<Arc<dyn ConfigUpdateReceiver>>>,
+) {
+    let mut manifest_watcher = match manifest_handle.watcher() {
+        Ok(w) => w,
+        Err(e) => {
+            error!("Failed to create manifest watcher: {:?}", e);
+            return;
+        }
+    };
+
+    loop {
+        match manifest_watcher.wait_for_next().await {
+            Ok(new_manifest) => {
+                info!("TierManifest changed, syncing repo handles and configs");
+
+                let sync_result =
+                    match sync_repo_handles(&new_manifest, &repo_handles, &config_store) {
+                        Ok(result) => result,
+                        Err(e) => {
+                            error!("Failed to sync repo handles: {:?}", e);
+                            STATS::refresh_failure_count.add_value(1);
+                            continue;
+                        }
+                    };
+
+                let current = repo_configs.load();
+                let new_repo_configs = match parse_and_merge_repo_configs(
+                    &new_manifest,
+                    &repo_handles,
+                    &current,
+                    &sync_result.previously_tracked,
+                    &sync_result.manifest_repos,
+                ) {
+                    Ok(configs) => Arc::new(configs),
+                    Err(e) => {
+                        error!("Failed to parse and merge repo configs: {:?}", e);
+                        STATS::refresh_failure_count.add_value(1);
+                        continue;
+                    }
+                };
+                repo_configs.store(new_repo_configs.clone());
+
+                // Notify update receivers
+                let current_storage = storage_configs.load_full();
+                let receivers = update_receivers.load();
+                let update_tasks = receivers.iter().map(|receiver| {
+                    receiver.apply_update(new_repo_configs.clone(), current_storage.clone())
+                });
+                if let Err(e) = join_all(update_tasks)
+                    .await
+                    .into_iter()
+                    .collect::<Result<Vec<_>>>()
+                {
+                    error!(
+                        "Failure in sending config update to receivers. Error: {:?}",
+                        e
+                    );
+                    STATS::refresh_failure_count.add_value(1);
+                } else {
+                    info!("Successfully applied per-repo config update");
+                }
+            }
+            Err(e) => {
+                error!("Manifest watch error: {:?}", e);
                 STATS::refresh_failure_count.add_value(1);
             }
         }
