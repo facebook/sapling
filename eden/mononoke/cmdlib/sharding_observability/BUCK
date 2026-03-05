@@ -10,5 +10,6 @@ rust_library(
         "//common/rust/shed/stats:stats",
         "//common/rust/shed/weight_observer:weight_observer",
         "//eden/mononoke/cmdlib/sharding_ext:sharding_ext",
+        "//eden/mononoke/common/client_memory:client_memory",
     ],
 )

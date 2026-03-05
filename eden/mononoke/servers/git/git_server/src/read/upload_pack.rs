@@ -593,6 +593,12 @@ pub async fn fetch(
         async move {
             // Track this request for memory-based scaling
             let repo_name = request_context.repo.repo_identity().name().to_string();
+            let main_client_id = request_context
+                .ctx
+                .metadata()
+                .client_info()
+                .and_then(|ci| ci.request_info.as_ref())
+                .and_then(|ri| ri.main_id.clone());
             let weight_tracker: Option<Arc<WeightTracker>> = if justknobs::eval(
                 "scm/mononoke:git_server_enable_memory_tracking",
                 None,
@@ -603,6 +609,7 @@ pub async fn fetch(
                 Some(WeightTracker::new(
                     request_context.ctx.fb,
                     repo_name.clone(),
+                    main_client_id.as_deref(),
                 ))
             } else {
                 None

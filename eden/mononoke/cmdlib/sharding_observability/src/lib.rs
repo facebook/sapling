@@ -7,6 +7,9 @@
 
 use std::sync::Arc;
 
+pub use client_memory::ClientBucket;
+pub use client_memory::ClientMemoryRegistry;
+pub use client_memory::global_client_memory_registry;
 use fbinit::FacebookInit;
 use sharding_ext::encode_repo_name;
 use stats::prelude::*;
@@ -16,7 +19,6 @@ define_stats! {
     active_requests: dynamic_singleton_counter("{}.active_requests", (repo: String)),
     estimated_memory_bytes: dynamic_singleton_counter("{}.estimated_memory_bytes", (repo: String)),
 }
-
 /// Tracks request lifecycle and memory usage for git server requests.
 ///
 /// This struct handles both:
@@ -28,12 +30,14 @@ define_stats! {
 pub struct WeightTracker {
     fb: FacebookInit,
     repo_name: String,
+    client_bucket: ClientBucket,
 }
 
 impl std::fmt::Debug for WeightTracker {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("WeightTracker")
             .field("repo_name", &self.repo_name)
+            .field("client_bucket", &self.client_bucket)
             .finish()
     }
 }
@@ -45,12 +49,13 @@ impl WeightTracker {
     /// decremented when the returned Arc is dropped (all references released).
     /// The repo name is encoded (e.g., `/` -> `_SLASH_`) so that the FB303
     /// counter keys match ShardManager's `[DOMAINID]` placeholder format.
-    pub fn new(fb: FacebookInit, repo_name: String) -> Arc<Self> {
+    pub fn new(fb: FacebookInit, repo_name: String, main_client_id: Option<&str>) -> Arc<Self> {
         let encoded_name = encode_repo_name(&repo_name);
         STATS::active_requests.increment_value(fb, 1, (encoded_name.clone(),));
         Arc::new(Self {
             fb,
             repo_name: encoded_name,
+            client_bucket: main_client_id.into(),
         })
     }
 
@@ -79,18 +84,14 @@ impl Drop for WeightTracker {
 
 impl weight_observer::WeightObserver for WeightTracker {
     fn on_weight_added(&self, weight: usize) {
-        STATS::estimated_memory_bytes.increment_value(
-            self.fb,
-            weight as i64,
-            (self.repo_name.clone(),),
-        );
+        let w = weight as i64;
+        STATS::estimated_memory_bytes.increment_value(self.fb, w, (self.repo_name.clone(),));
+        global_client_memory_registry().add_weight(self.client_bucket, w);
     }
 
     fn on_weight_removed(&self, weight: usize) {
-        STATS::estimated_memory_bytes.increment_value(
-            self.fb,
-            -(weight as i64),
-            (self.repo_name.clone(),),
-        );
+        let w = weight as i64;
+        STATS::estimated_memory_bytes.increment_value(self.fb, -w, (self.repo_name.clone(),));
+        global_client_memory_registry().remove_weight(self.client_bucket, w);
     }
 }
