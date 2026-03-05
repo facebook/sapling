@@ -34,54 +34,73 @@ namespace facebook::eden {
 
 namespace {
 
-bool getSystemMountList(std::string& out) {
-#ifdef __APPLE__
+#ifdef __linux__
+/**
+ * Callback type for iterating over mount entries.
+ * Return true to continue iteration, false to stop early.
+ */
+using MountEntryCallback =
+    std::function<bool(const std::string& fsName, const std::string& mountDir)>;
+
+/**
+ * Iterates over the system mount table using setmntent/getmntent.
+ * Calls the provided callback for each mount entry.
+ * Returns false if we failed to open the mount table.
+ */
+bool forEachMountEntry(const MountEntryCallback& callback) {
+  FILE* mtab = setmntent("/proc/mounts", "r");
+  if (mtab == nullptr) {
+    XLOGF(WARN, "Failed to open /proc/mounts: {}", folly::errnoStr(errno));
+    return false;
+  }
+  SCOPE_EXIT {
+    endmntent(mtab);
+  };
+
+  struct mntent* entry;
+  while ((entry = getmntent(mtab)) != nullptr) {
+    if (!callback(entry->mnt_fsname, entry->mnt_dir)) {
+      break;
+    }
+  }
+  return true;
+}
+#endif
+
+/**
+ * Determines whether the given mountPoint is contained in the mount table
+ * and looks like it was previously mounted by EdenFS.
+ */
+bool isOldEdenMount(const std::string& mountPoint) {
+#ifdef __linux__
+  bool found = false;
+  bool success = forEachMountEntry(
+      [&mountPoint, &found](
+          const std::string& fsName, const std::string& mountDir) {
+        if (mountDir == mountPoint && is_edenfs_fs_type(fsName)) {
+          found = true;
+          return false;
+        }
+        return true;
+      });
+
+  if (success && found) {
+    return true;
+  }
+#else
   struct statfs* buf;
   int count = getmntinfo(&buf, MNT_WAIT);
   if (count == 0) {
     XLOGF(ERR, "getmntinfo failed: {}", folly::errnoStr(errno));
-    return false;
-  }
-  for (int i = 0; i < count; i++) {
-    out += fmt::format(
-        "{} {} {}\n",
-        buf[i].f_mntfromname,
-        buf[i].f_mntonname,
-        buf[i].f_fstypename);
-  }
-  return true;
-#else
-  if (folly::readFile("/proc/mounts", out)) {
-    return true;
   } else {
-    XLOGF(ERR, "failed to read /proc/mounts: {}", folly::errnoStr(errno));
-    return false;
-  }
-#endif
-}
-
-/* Determines whether the given mountPoint is contained in the mount table
- * and looks like it was previously mounted by EdenFS.
- */
-bool isOldEdenMount(const std::string& mountPoint) {
-  std::string mounts;
-  if (getSystemMountList(mounts)) {
-    // TODO(T201411922): Update to std::string_view once our macOS build uses
-    // C++20.
-    // https://en.cppreference.com/w/cpp/string/basic_string_view/starts_with
-    std::vector<folly::StringPiece> lines;
-    folly::split('\n', mounts, lines);
-
-    for (const auto& line : lines) {
-      // We expect EdenFS mounts to look like the following:
-      // edenfs: {mountPoint} fuse ...
-      if (is_edenfs_fs_mount(line, mountPoint)) {
+    for (int i = 0; i < count; i++) {
+      if (std::string(buf[i].f_mntonname) == mountPoint &&
+          is_edenfs_fs_type(buf[i].f_fstypename)) {
         return true;
       }
     }
   }
-  // We couldn't verify that the mount is an old, disconnected EdenFS mount.
-  // We assume it isn't to be safe.
+#endif
   XLOGF(DBG4, "Could not verify that {} is an old EdenFS mount.", mountPoint);
   return false;
 }
@@ -171,33 +190,26 @@ void PrivHelperServer::cleanupStaleBindMounts(const std::string& checkoutPath) {
   // Parse /proc/mounts to find stale redirection mounts under this checkout.
   // These are mounts that EdenFS set up (e.g., buck-out) that were left behind
   // when EdenFS crashed without properly unmounting.
-  FILE* mtab = setmntent("/proc/mounts", "r");
-  if (mtab == nullptr) {
-    XLOGF(WARN, "Failed to open /proc/mounts, skipping redirection cleanup");
-    return;
-  }
-  SCOPE_EXIT {
-    endmntent(mtab);
-  };
-
   std::vector<std::string> staleMounts;
   std::string checkoutPrefix = checkoutPath + "/";
 
-  struct mntent* entry;
-  while ((entry = getmntent(mtab)) != nullptr) {
-    std::string mountPoint = entry->mnt_dir;
+  bool success = forEachMountEntry(
+      [&checkoutPrefix, &checkoutPath, &staleMounts](
+          const std::string& /*fsName*/, const std::string& mountDir) {
+        if (folly::StringPiece(mountDir).startsWith(checkoutPrefix)) {
+          XLOGF(
+              INFO,
+              "Found potential stale redirection mount under {}: {}",
+              checkoutPath,
+              mountDir);
+          staleMounts.push_back(mountDir);
+        }
+        return true;
+      });
 
-    if (!folly::StringPiece(mountPoint).startsWith(checkoutPrefix)) {
-      continue;
-    }
-
-    // This is a mount under our checkout (likely an EdenFS redirection)
-    XLOGF(
-        INFO,
-        "Found potential stale redirection mount under {}: {}",
-        checkoutPath,
-        mountPoint);
-    staleMounts.push_back(std::move(mountPoint));
+  if (!success) {
+    XLOGF(WARN, "Skipping redirection cleanup due to mount table read failure");
+    return;
   }
 
   // Unmount any stale mounts we found (in reverse order to handle nested
