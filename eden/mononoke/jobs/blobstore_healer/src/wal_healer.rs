@@ -17,6 +17,7 @@ use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore_sync_queue::BlobstoreWal;
 use blobstore_sync_queue::BlobstoreWalEntry;
+use blobstore_sync_queue::ReadInfo;
 use chrono::Duration as ChronoDuration;
 use cloned::cloned;
 use context::CoreContext;
@@ -422,15 +423,13 @@ async fn enqueue_entries(
     );
     let new_entries = entries
         .into_iter()
-        .map(|entry| {
-            let BlobstoreWalEntry {
-                blobstore_key,
-                multiplex_id,
-                blob_size,
-                ..
-            } = entry;
-
-            BlobstoreWalEntry::new(blobstore_key, multiplex_id, Timestamp::now(), blob_size)
+        .map(|entry| BlobstoreWalEntry {
+            timestamp: Timestamp::now(),
+            read_info: ReadInfo {
+                id: None,
+                shard_id: None,
+            },
+            ..entry
         })
         .collect();
 
