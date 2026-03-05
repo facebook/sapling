@@ -35,8 +35,8 @@ class JournalUpdateTest : public ::testing::Test {
 
 TEST_F(JournalUpdateTest, moveFileRename) {
   auto& journal = mount_.getEdenMount()->getJournal();
-  ASSERT_TRUE(journal.getLatest());
-  auto testStart = journal.getLatest()->sequenceID;
+  ASSERT_TRUE(journal.observeLatest());
+  auto testStart = journal.observeLatest()->sequenceID;
 
   mount_.addFile("new_file.txt", "");
   mount_.move("new_file.txt", "new_file2.txt");
@@ -59,8 +59,8 @@ TEST_F(JournalUpdateTest, moveFileRename) {
 
 TEST_F(JournalUpdateTest, moveFileReplace) {
   auto& journal = mount_.getEdenMount()->getJournal();
-  ASSERT_TRUE(journal.getLatest());
-  auto testStart = journal.getLatest()->sequenceID;
+  ASSERT_TRUE(journal.observeLatest());
+  auto testStart = journal.observeLatest()->sequenceID;
 
   mount_.addFile("new_file.txt", "");
   mount_.move("new_file.txt", "existing_file.txt");

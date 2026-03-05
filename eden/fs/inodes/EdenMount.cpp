@@ -2069,7 +2069,7 @@ ImmediateFuture<Unit> EdenMount::diff(
 
   // only check/update the cache if config is enabled
   if (getEdenConfig()->hgEnableCachedResultForStatusRequest.getValue()) {
-    auto latestInfo = getJournal().getLatest();
+    auto latestInfo = getJournal().peekLatest();
     if (latestInfo.has_value()) {
       auto key = ScmStatusCache::makeKey(commitId, listIgnored);
       XLOGF(

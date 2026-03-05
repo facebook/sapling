@@ -252,7 +252,7 @@ TEST_F(ScmStatusCacheTest, check_sequence_range_validity) {
   journal->recordChanged("test.txt"_relpath, dtype_t::Regular);
 
   // Sanity check that the latest information matches.
-  auto latest = journal->getLatest();
+  auto latest = journal->peekLatest();
   ASSERT_TRUE(latest);
   EXPECT_EQ(2, latest->sequenceID);
 
@@ -264,7 +264,7 @@ TEST_F(ScmStatusCacheTest, check_sequence_range_validity) {
   journal->recordCreated("test1.txt"_relpath, dtype_t::Regular);
   journal->recordChanged("test1.txt"_relpath, dtype_t::Regular);
 
-  currentSeq = journal->getLatest()->sequenceID;
+  currentSeq = journal->peekLatest()->sequenceID;
   EXPECT_FALSE(cache->isSequenceValid(currentSeq, cachedSeq));
 
   // reset cached sequence id
@@ -275,12 +275,12 @@ TEST_F(ScmStatusCacheTest, check_sequence_range_validity) {
   journal->recordChanged(".hg/is"_relpath, dtype_t::Regular);
   journal->recordChanged(".hg/this"_relpath, dtype_t::Regular);
 
-  currentSeq = journal->getLatest()->sequenceID;
+  currentSeq = journal->peekLatest()->sequenceID;
   EXPECT_TRUE(cache->isSequenceValid(currentSeq, cachedSeq));
 
   // working directory changes
   journal->recordRootUpdate(id1);
-  currentSeq = journal->getLatest()->sequenceID;
+  currentSeq = journal->peekLatest()->sequenceID;
   EXPECT_FALSE(cache->isSequenceValid(currentSeq, cachedSeq));
 }
 

@@ -58,10 +58,11 @@ struct JournalDeltaTest : ::testing::Test {
       dtype_t dtype,
       JournalDelta::SequenceNumber after = 0) {
     journal.recordChanged(path, dtype);
-    if (journal.getLatest()->sequenceID >= after) {
+    if (journal.observeLatest()->sequenceID >= after) {
       expectedFileChangeNames.push_back(path);
       expectedFileChangeDtypes.push_back(dtype);
-      expectedFileChangeSequences.push_back(journal.getLatest()->sequenceID);
+      expectedFileChangeSequences.push_back(
+          journal.observeLatest()->sequenceID);
     }
   }
 
@@ -73,8 +74,8 @@ struct JournalDeltaTest : ::testing::Test {
     expectedRootUpdateRoots.clear();
     expectedRootUpdateSequences.clear();
 
-    expectedRootUpdateSequences.push_back(journal.getLatest()->sequenceID);
-    expectedRootUpdateRoots.push_back(journal.getLatest()->toRoot);
+    expectedRootUpdateSequences.push_back(journal.observeLatest()->sequenceID);
+    expectedRootUpdateRoots.push_back(journal.observeLatest()->toRoot);
   }
 
   void addRootUpdate(RootId to, JournalDelta::SequenceNumber after = 0) {
@@ -86,8 +87,9 @@ struct JournalDeltaTest : ::testing::Test {
       RootId to,
       JournalDelta::SequenceNumber after = 0) {
     journal.recordRootUpdate(from, std::move(to));
-    if (journal.getLatest()->sequenceID >= after) {
-      expectedRootUpdateSequences.push_back(journal.getLatest()->sequenceID);
+    if (journal.observeLatest()->sequenceID >= after) {
+      expectedRootUpdateSequences.push_back(
+          journal.observeLatest()->sequenceID);
       expectedRootUpdateRoots.push_back(from);
     }
   }
@@ -129,13 +131,13 @@ struct JournalDeltaTest : ::testing::Test {
     addFileChange("foo2"_relpath, dtype_t::Regular, after);
     addFileChange("foo1"_relpath, dtype_t::Regular, after);
     addFileChange("foo2"_relpath, dtype_t::Regular, after);
-    EXPECT_EQ(5u, journal.getLatest()->sequenceID);
+    EXPECT_EQ(5u, journal.observeLatest()->sequenceID);
     addFileChange("foo3"_relpath, dtype_t::Regular, after);
     addFileChange("foo4"_relpath, dtype_t::Regular, after);
-    EXPECT_EQ(7u, journal.getLatest()->sequenceID);
+    EXPECT_EQ(7u, journal.observeLatest()->sequenceID);
     addRootUpdate(root1, root2, after);
     addRootUpdate(root2, root1, after);
-    EXPECT_EQ(9u, journal.getLatest()->sequenceID);
+    EXPECT_EQ(9u, journal.observeLatest()->sequenceID);
   }
 };
 
@@ -143,14 +145,14 @@ struct JournalDeltaTest : ::testing::Test {
 
 TEST_F(JournalTest, accumulate_range_all_changes) {
   // Empty journals have no rang to accumulate over
-  EXPECT_FALSE(journal.getLatest());
+  EXPECT_FALSE(journal.observeLatest());
   EXPECT_EQ(nullptr, journal.accumulateRange());
 
   // Make an initial entry.
   journal.recordChanged("foo/bar"_relpath, dtype_t::Dir);
 
   // Sanity check that the latest information matches.
-  auto latest = journal.getLatest();
+  auto latest = journal.observeLatest();
   ASSERT_TRUE(latest);
   EXPECT_EQ(1, latest->sequenceID);
 
@@ -158,7 +160,7 @@ TEST_F(JournalTest, accumulate_range_all_changes) {
   journal.recordChanged("baz"_relpath, dtype_t::Dir);
 
   // Sanity check that the latest information matches.
-  latest = journal.getLatest();
+  latest = journal.observeLatest();
   ASSERT_TRUE(latest);
   EXPECT_EQ(2, latest->sequenceID);
 
@@ -186,14 +188,14 @@ TEST_F(JournalTest, accumulate_range_all_changes) {
 
 TEST_F(JournalTest, accumulate_range_mix_hg_changes) {
   // Empty journals have no rang to accumulate over
-  EXPECT_FALSE(journal.getLatest());
+  EXPECT_FALSE(journal.observeLatest());
   EXPECT_EQ(nullptr, journal.accumulateRange());
 
   // Make an initial entry.
   journal.recordChanged("foo/bar"_relpath, dtype_t::Dir);
 
   // Sanity check that the latest information matches.
-  auto latest = journal.getLatest();
+  auto latest = journal.observeLatest();
 
   // get accumulated data for the tip of journal
   auto summed = journal.accumulateRange(latest->sequenceID);
@@ -203,7 +205,7 @@ TEST_F(JournalTest, accumulate_range_mix_hg_changes) {
   journal.recordChanged(".hg/foo/bar"_relpath, dtype_t::Dir);
 
   // get accumulated data for the tip of journal
-  latest = journal.getLatest();
+  latest = journal.observeLatest();
   summed = journal.accumulateRange(latest->sequenceID);
   // It only contains .hg change
   EXPECT_TRUE(summed->containsHgOnlyChanges);
@@ -223,7 +225,7 @@ TEST_F(JournalTest, accumulateRangeRemoveCreateUpdate) {
   journal.recordChanged("test.txt"_relpath, dtype_t::Regular);
 
   // Sanity check that the latest information matches.
-  auto latest = journal.getLatest();
+  auto latest = journal.observeLatest();
   ASSERT_TRUE(latest);
   EXPECT_EQ(3, latest->sequenceID);
 
@@ -287,7 +289,7 @@ namespace {
 void checkRootMatches(
     const std::vector<RootId>& transitions,
     Journal& journal) {
-  auto latest = journal.getLatest();
+  auto latest = journal.observeLatest();
   ASSERT_TRUE(latest);
   EXPECT_EQ(transitions.front(), latest->fromRoot);
   EXPECT_EQ(transitions.back(), latest->toRoot);
@@ -314,7 +316,7 @@ TEST_F(JournalTest, accumulate_range_with_hash_updates) {
   RootId root1{"1111111111111111111111111111111111111111"};
   RootId root2{"2222222222222222222222222222222222222222"};
   // Empty journals have no range to accumulate over
-  EXPECT_FALSE(journal.getLatest());
+  EXPECT_FALSE(journal.observeLatest());
   EXPECT_EQ(nullptr, journal.accumulateRange());
 
   // Make an initial entry.
@@ -439,9 +441,9 @@ TEST_F(JournalTest, empty_journal_returns_none_for_stats) {
 TEST_F(JournalTest, basic_journal_stats) {
   // Journal with 1 entry
   journal.recordRemoved("test.txt"_relpath, dtype_t::Regular);
-  ASSERT_TRUE(journal.getLatest());
-  auto from1 = journal.getLatest()->time;
-  auto to1 = journal.getLatest()->time;
+  ASSERT_TRUE(journal.observeLatest());
+  auto from1 = journal.observeLatest()->time;
+  auto to1 = journal.observeLatest()->time;
   auto stats = journal.getStats();
   ASSERT_TRUE(stats.has_value());
   ASSERT_EQ(1, stats->entryCount);
@@ -451,8 +453,8 @@ TEST_F(JournalTest, basic_journal_stats) {
   // Journal with 2 entries
   journal.recordCreated("test.txt"_relpath, dtype_t::Regular);
   stats = journal.getStats();
-  ASSERT_TRUE(journal.getLatest());
-  auto to2 = journal.getLatest()->time;
+  ASSERT_TRUE(journal.observeLatest());
+  auto to2 = journal.observeLatest()->time;
   ASSERT_TRUE(stats.has_value());
   ASSERT_EQ(2, stats->entryCount);
   ASSERT_EQ(from1, stats->earliestTimestamp);
@@ -637,7 +639,7 @@ TEST_F(JournalTest, compaction) {
   auto stats = journal.getStats();
   ASSERT_TRUE(stats.has_value());
   ASSERT_EQ(1, stats->entryCount);
-  auto latest = journal.getLatest();
+  auto latest = journal.observeLatest();
   ASSERT_TRUE(latest);
   ASSERT_EQ(1, latest->sequenceID);
 
@@ -645,7 +647,7 @@ TEST_F(JournalTest, compaction) {
   stats = journal.getStats();
   ASSERT_TRUE(stats.has_value());
   ASSERT_EQ(2, stats->entryCount);
-  latest = journal.getLatest();
+  latest = journal.observeLatest();
   ASSERT_TRUE(latest);
   ASSERT_EQ(2, latest->sequenceID);
   auto summed = journal.accumulateRange(2);
@@ -660,7 +662,7 @@ TEST_F(JournalTest, compaction) {
   stats = journal.getStats();
   ASSERT_TRUE(stats.has_value());
   ASSERT_EQ(2, stats->entryCount);
-  latest = journal.getLatest();
+  latest = journal.observeLatest();
   ASSERT_TRUE(latest);
   ASSERT_EQ(3, latest->sequenceID);
   summed = journal.accumulateRange(2);
@@ -724,11 +726,11 @@ TEST_F(JournalTest, subscribers_are_notified_of_changes) {
   EXPECT_EQ(0u, calls);
   journal.recordChanged("foo"_relpath, dtype_t::Dir);
   EXPECT_EQ(1u, calls);
-  EXPECT_EQ(1u, journal.getLatest()->sequenceID);
+  EXPECT_EQ(1u, journal.observeLatest()->sequenceID);
 
   journal.recordChanged("foo"_relpath, dtype_t::Dir);
   EXPECT_EQ(2u, calls);
-  EXPECT_EQ(2u, journal.getLatest()->sequenceID);
+  EXPECT_EQ(2u, journal.observeLatest()->sequenceID);
 }
 
 TEST_F(
@@ -743,10 +745,10 @@ TEST_F(
   EXPECT_EQ(1u, calls);
   journal.recordChanged("foo"_relpath, dtype_t::Regular);
   EXPECT_EQ(1u, calls);
-  EXPECT_EQ(2u, journal.getLatest()->sequenceID);
+  EXPECT_EQ(2u, journal.observeLatest()->sequenceID);
   journal.recordChanged("foo"_relpath, dtype_t::Regular);
   EXPECT_EQ(2u, calls);
-  EXPECT_EQ(3u, journal.getLatest()->sequenceID);
+  EXPECT_EQ(3u, journal.observeLatest()->sequenceID);
 }
 
 TEST_F(JournalTest, all_subscribers_are_notified_after_any_observation) {
@@ -766,7 +768,7 @@ TEST_F(JournalTest, all_subscribers_are_notified_after_any_observation) {
   EXPECT_EQ(1u, calls1);
   EXPECT_EQ(1u, calls2);
 
-  EXPECT_EQ(2u, journal.getLatest()->sequenceID);
+  EXPECT_EQ(2u, journal.observeLatest()->sequenceID);
   journal.recordChanged("foo"_relpath, dtype_t::Regular);
 
   EXPECT_EQ(2u, calls1);
@@ -781,12 +783,12 @@ TEST_F(JournalTest, all_subscribers_are_notified_after_any_observation) {
 TEST_F(JournalDeltaTest, for_each_delta) {
   addFileChange("foo1"_relpath, dtype_t::Regular);
   addFileChange("foo2"_relpath, dtype_t::Symlink);
-  EXPECT_EQ(2u, journal.getLatest()->sequenceID);
+  EXPECT_EQ(2u, journal.observeLatest()->sequenceID);
   addFileChange("foo3"_relpath, dtype_t::Regular);
   addFileChange("foo4"_relpath, dtype_t::Symlink);
-  EXPECT_EQ(4u, journal.getLatest()->sequenceID);
+  EXPECT_EQ(4u, journal.observeLatest()->sequenceID);
   addRootUpdate(root1, root2);
-  EXPECT_EQ(5u, journal.getLatest()->sequenceID);
+  EXPECT_EQ(5u, journal.observeLatest()->sequenceID);
   addFileChange("foo6"_relpath, dtype_t::Regular);
   addFileChange("foo7"_relpath, dtype_t::Regular);
   addRootUpdate(root2, root1);
@@ -818,17 +820,17 @@ TEST_F(JournalDeltaTest, for_each_delta) {
  */
 TEST_F(JournalDeltaTest, for_each_delta_file_change_ends_above_from) {
   setupFlushedJournal();
-  EXPECT_EQ(5u, journal.getLatest()->sequenceID);
+  EXPECT_EQ(5u, journal.observeLatest()->sequenceID);
 
   // Create rootUpdates after from and before file changes
   addRootUpdate(root1, root2);
   addRootUpdate(root2, root1);
-  EXPECT_EQ(7u, journal.getLatest()->sequenceID);
+  EXPECT_EQ(7u, journal.observeLatest()->sequenceID);
 
   // Create file changes
   addFileChange("foo3"_relpath, dtype_t::Regular);
   addFileChange("foo4"_relpath, dtype_t::Symlink);
-  EXPECT_EQ(9u, journal.getLatest()->sequenceID);
+  EXPECT_EQ(9u, journal.observeLatest()->sequenceID);
 
   bool truncated = journal.forEachDelta(
       5u,
@@ -857,17 +859,17 @@ TEST_F(JournalDeltaTest, for_each_delta_file_change_ends_above_from) {
  */
 TEST_F(JournalDeltaTest, for_each_delta_hash_update_ends_above_from) {
   setupFlushedJournal();
-  EXPECT_EQ(5u, journal.getLatest()->sequenceID);
+  EXPECT_EQ(5u, journal.observeLatest()->sequenceID);
 
   // Create file changes after from and before rootUpdates
   addFileChange("foo3"_relpath, dtype_t::Regular);
   addFileChange("foo4"_relpath, dtype_t::Symlink);
-  EXPECT_EQ(7u, journal.getLatest()->sequenceID);
+  EXPECT_EQ(7u, journal.observeLatest()->sequenceID);
 
   // Create rootUpdates
   addRootUpdate(root1, root2);
   addRootUpdate(root2, root1);
-  EXPECT_EQ(9u, journal.getLatest()->sequenceID);
+  EXPECT_EQ(9u, journal.observeLatest()->sequenceID);
 
   bool truncated = journal.forEachDelta(
       5u,
@@ -1029,7 +1031,7 @@ TEST_F(JournalDeltaTest, for_each_delta_file_changes_only) {
   addFileChange("foo5"_relpath, dtype_t::Regular);
   addFileChange("foo6"_relpath, dtype_t::Symlink);
   addFileChange("foo7"_relpath, dtype_t::Socket);
-  EXPECT_EQ(7u, journal.getLatest()->sequenceID);
+  EXPECT_EQ(7u, journal.observeLatest()->sequenceID);
 
   bool truncated = journal.forEachDelta(
       1u,
@@ -1054,7 +1056,7 @@ TEST_F(JournalDeltaTest, for_each_delta_hash_update_only) {
   addRootUpdate(root1, root2);
   addRootUpdate(root2, root1);
   addRootUpdate(root1, root3);
-  EXPECT_EQ(4u, journal.getLatest()->sequenceID);
+  EXPECT_EQ(4u, journal.observeLatest()->sequenceID);
 
   bool truncated = journal.forEachDelta(
       1u,

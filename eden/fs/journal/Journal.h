@@ -8,6 +8,7 @@
 #pragma once
 
 #include <folly/Function.h>
+#include <folly/SharedMutex.h>
 #include <folly/Synchronized.h>
 #include <algorithm>
 #include <cstdint>
@@ -115,10 +116,18 @@ class Journal {
   // Functions for reading the current state of the journal:
 
   /**
-   * Returns a copy of the tip of the journal.
+   * Returns a copy of the tip of the journal and marks the journal as observed.
+   * This unblocks subscriber notifications on the next addDelta call.
    * Will return a nullopt if the journal is empty.
    */
-  std::optional<JournalDeltaInfo> getLatest();
+  std::optional<JournalDeltaInfo> observeLatest();
+
+  /**
+   * Returns a copy of the tip of the journal without marking the journal
+   * as observed. Use this when you only need the current position and
+   * don't want to unblock subscriber notifications.
+   */
+  std::optional<JournalDeltaInfo> peekLatest() const;
 
   /**
    * Returns an accumulation of all deltas with sequence number >= limitSequence
@@ -157,8 +166,8 @@ class Journal {
    * batch of mutations where it is not appropriate to do any heavy lifting.
    *
    * To minimize notification traffic, the Journal may coalesce redundant
-   * modifications between subscriber notifications and calls to getLatest or
-   * accumulateRange.
+   * modifications between subscriber notifications and calls to observeLatest
+   * or accumulateRange.
    *
    * The return value of registerSubscriber is an identifier than can be passed
    * to cancelSubscriber to later remove the registration.
@@ -228,7 +237,7 @@ class Journal {
     size_t deltaMemoryUsage = 0;
 
     // Set to false when a delta is added.
-    // Set to true when getLatest() or accumulateRange() are called.
+    // Set to true when observeLatest() or accumulateRange() are called.
     // If true before calling addDelta, subscribers are notified.
     bool lastModificationHasBeenObserved = true;
 
@@ -254,7 +263,7 @@ class Journal {
       }
     }
   };
-  folly::Synchronized<DeltaState, std::mutex> deltaState_;
+  folly::Synchronized<DeltaState, folly::SharedMutex> deltaState_;
 
   /**
    * Removes the oldest deltas until the memory usage of the journal is below
@@ -292,6 +301,9 @@ class Journal {
   void notifySubscribers() const;
 
   size_t estimateMemoryUsage(const DeltaState& deltaState) const;
+
+  static std::optional<JournalDeltaInfo> getLatestInfo(
+      const DeltaState& deltaState);
 
   /**
    * Runs from the latest delta to the delta with sequence ID (if 'lengthLimit'

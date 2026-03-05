@@ -280,7 +280,7 @@ TEST(EdenMount, resetParents) {
           ParentCommit::WorkingCopyParentAndCheckedOutRevision{
               RootId("1"), RootId("1")}),
       edenMount->getCheckoutConfig()->getParentCommit());
-  auto latestJournalEntry = edenMount->getJournal().getLatest();
+  auto latestJournalEntry = edenMount->getJournal().observeLatest();
   ASSERT_TRUE(latestJournalEntry);
   EXPECT_EQ(RootId("1"), latestJournalEntry->fromRoot);
   EXPECT_EQ(RootId("1"), latestJournalEntry->toRoot);
@@ -296,7 +296,7 @@ TEST(EdenMount, resetParents) {
           ParentCommit::WorkingCopyParentAndCheckedOutRevision{
               RootId("2"), RootId("1")}),
       edenMount->getCheckoutConfig()->getParentCommit());
-  latestJournalEntry = edenMount->getJournal().getLatest();
+  latestJournalEntry = edenMount->getJournal().observeLatest();
   ASSERT_TRUE(latestJournalEntry);
   EXPECT_EQ(RootId("1"), latestJournalEntry->fromRoot);
   EXPECT_EQ(RootId("2"), latestJournalEntry->toRoot);

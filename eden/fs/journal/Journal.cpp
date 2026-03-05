@@ -236,7 +236,7 @@ void Journal::notifySubscribers() const {
 void Journal::addDelta(FileChangeJournalDelta&& delta) {
   bool shouldNotify;
   {
-    auto deltaState = deltaState_.lock();
+    auto deltaState = deltaState_.wlock();
     shouldNotify = addDeltaBeforeNotifying(std::move(delta), *deltaState);
   }
   if (shouldNotify) {
@@ -247,7 +247,7 @@ void Journal::addDelta(FileChangeJournalDelta&& delta) {
 void Journal::addDelta(RootUpdateJournalDelta&& delta, RootId newRootId) {
   bool shouldNotify;
   {
-    auto deltaState = deltaState_.lock();
+    auto deltaState = deltaState_.wlock();
 
     // If the roots were not set to anything, default to copying
     // the value from the prior journal entry
@@ -262,25 +262,33 @@ void Journal::addDelta(RootUpdateJournalDelta&& delta, RootId newRootId) {
   }
 }
 
-std::optional<JournalDeltaInfo> Journal::getLatest() {
-  auto deltaState = deltaState_.lock();
-  deltaState->lastModificationHasBeenObserved = true;
-  if (deltaState->empty()) {
+std::optional<JournalDeltaInfo> Journal::getLatestInfo(
+    const DeltaState& deltaState) {
+  if (deltaState.empty()) {
     return std::nullopt;
-  } else {
-    if (deltaState->isFileChangeInBack()) {
-      const FileChangeJournalDelta& back = deltaState->fileChangeDeltas.back();
-      return JournalDeltaInfo{
-          deltaState->currentRoot,
-          deltaState->currentRoot,
-          back.sequenceID,
-          back.time};
-    } else {
-      const RootUpdateJournalDelta& back = deltaState->rootUpdateDeltas.back();
-      return JournalDeltaInfo{
-          back.fromRoot, deltaState->currentRoot, back.sequenceID, back.time};
-    }
   }
+  if (deltaState.isFileChangeInBack()) {
+    const FileChangeJournalDelta& back = deltaState.fileChangeDeltas.back();
+    return JournalDeltaInfo{
+        deltaState.currentRoot,
+        deltaState.currentRoot,
+        back.sequenceID,
+        back.time};
+  } else {
+    const RootUpdateJournalDelta& back = deltaState.rootUpdateDeltas.back();
+    return JournalDeltaInfo{
+        back.fromRoot, deltaState.currentRoot, back.sequenceID, back.time};
+  }
+}
+
+std::optional<JournalDeltaInfo> Journal::observeLatest() {
+  auto deltaState = deltaState_.wlock();
+  deltaState->lastModificationHasBeenObserved = true;
+  return getLatestInfo(*deltaState);
+}
+
+std::optional<JournalDeltaInfo> Journal::peekLatest() const {
+  return getLatestInfo(*deltaState_.rlock());
 }
 
 uint64_t Journal::registerSubscriber(SubscriberCallback&& callback) {
@@ -320,7 +328,7 @@ bool Journal::isSubscriberValid(uint64_t id) const {
 }
 
 std::optional<InternalJournalStats> Journal::getStats() {
-  return deltaState_.lock()->stats;
+  return deltaState_.rlock()->stats;
 }
 
 namespace {
@@ -338,17 +346,17 @@ folly::StringPiece eventCharacterizationFor(const PathChangeInfo& ci) {
 } // namespace
 
 void Journal::setMemoryLimit(size_t limit) {
-  auto deltaState = deltaState_.lock();
+  auto deltaState = deltaState_.wlock();
   deltaState->memoryLimit = limit;
 }
 
 size_t Journal::getMemoryLimit() const {
-  auto deltaState = deltaState_.lock();
+  auto deltaState = deltaState_.rlock();
   return deltaState->memoryLimit;
 }
 
 size_t Journal::estimateMemoryUsage() const {
-  return estimateMemoryUsage(*deltaState_.lock());
+  return estimateMemoryUsage(*deltaState_.rlock());
 }
 
 template <typename T>
@@ -376,7 +384,7 @@ size_t Journal::estimateMemoryUsage(const DeltaState& deltaState) const {
 void Journal::flush() {
   bool shouldNotify;
   {
-    auto deltaState = deltaState_.lock();
+    auto deltaState = deltaState_.wlock();
     ++deltaState->nextSequence;
     auto lastRoot = deltaState->currentRoot;
     deltaState->fileChangeDeltas.clear();
@@ -405,7 +413,7 @@ std::unique_ptr<JournalDeltaRange> Journal::accumulateRange(
   folly::stop_watch<std::chrono::milliseconds> watch;
 
   size_t filesAccumulated = 0;
-  auto deltaState = deltaState_.lock();
+  auto deltaState = deltaState_.wlock();
   // If this is going to be truncated, handle it before iterating.
   if (!deltaState->empty() && deltaState->getFrontSequenceID() > from) {
     result = std::make_unique<JournalDeltaRange>();
@@ -504,7 +512,7 @@ bool Journal::forEachDelta(
     FileChangeCallback&& fileChangeCallback,
     RootUpdateCallback&& rootUpdateCallback) {
   XDCHECK(from > 0);
-  auto deltaState = deltaState_.lock();
+  auto deltaState = deltaState_.wlock();
   // If this is going to be truncated, handle it before iterating.
   if (!deltaState->empty() && deltaState->getFrontSequenceID() > from) {
     return true;
@@ -526,7 +534,7 @@ std::vector<DebugJournalDelta> Journal::getDebugRawJournalInfo(
     long mountGeneration,
     RootIdCodec& rootIdCodec) const {
   auto result = std::vector<DebugJournalDelta>();
-  auto deltaState = deltaState_.lock();
+  auto deltaState = deltaState_.rlock();
   RootId currentRoot = deltaState->currentRoot;
   forEachDelta(
       *deltaState,

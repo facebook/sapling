@@ -1311,7 +1311,7 @@ void EdenServiceHandler::getCurrentJournalPosition(
     std::unique_ptr<std::string> mountPoint) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint);
   auto mountHandle = lookupMount(mountPoint);
-  auto latest = mountHandle.getEdenMount().getJournal().getLatest();
+  auto latest = mountHandle.getEdenMount().getJournal().observeLatest();
 
   out.mountGeneration() = mountHandle.getEdenMount().getMountGeneration();
   if (latest) {
@@ -2487,7 +2487,7 @@ void EdenServiceHandler::sync_changesSinceV2(
           includeVCSRoots,
           includeStateChanges));
 
-  auto latestJournalEntry = mountHandle.getJournal().getLatest();
+  auto latestJournalEntry = mountHandle.getJournal().observeLatest();
   std::optional<JournalDelta::SequenceNumber> toSequence;
   RootId toSnapshotId = RootId{};
   if (latestJournalEntry.has_value()) {
