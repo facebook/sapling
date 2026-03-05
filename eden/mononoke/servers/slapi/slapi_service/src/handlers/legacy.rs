@@ -17,6 +17,7 @@ use cloned::cloned;
 use context::CoreContext;
 use context::PerfCounterType;
 use edenapi_types::BookmarkEntry;
+use edenapi_types::BookmarkKind as EdenApiBookmarkKind;
 use edenapi_types::HgId;
 use edenapi_types::ListBookmarkPatternsRequest;
 use edenapi_types::ListBookmarkPatternsResponse;
@@ -198,7 +199,7 @@ impl SaplingRemoteApiHandler for ListBookmarkPatternsHandler {
         let max = repo.repo_ctx().config().list_keys_patterns_max;
 
         let results: Vec<Result<Vec<BookmarkEntry>, Error>> = stream::iter(request.patterns)
-            .map(|pattern| list_bookmarks_for_pattern(&repo, pattern, max))
+            .map(|pattern| list_bookmarks_for_pattern(&repo, pattern, max, &request.kinds))
             .buffered(100)
             .collect()
             .await;
@@ -232,14 +233,25 @@ async fn list_bookmarks_for_pattern<R: MononokeRepo>(
     repo: &HgRepoContext<R>,
     pattern: String,
     max: u64,
+    kinds: &[EdenApiBookmarkKind],
 ) -> Result<Vec<BookmarkEntry>, Error> {
+    // Default to PullDefaultPublishing only when kinds is empty.
+    let kinds: &[EdenApiBookmarkKind] = if kinds.is_empty() {
+        &[EdenApiBookmarkKind::PullDefaultPublishing]
+    } else {
+        kinds
+    };
+
+    // Derive include_scratch from kinds.
+    let include_scratch = kinds.contains(&EdenApiBookmarkKind::Scratch);
+
     if pattern.ends_with('*') {
         // Prefix match
         let prefix: &str = &pattern[..pattern.len() - 1];
 
         let bookmarks = repo
             .repo_ctx()
-            .list_bookmarks(true, Some(prefix), None, Some(max))
+            .list_bookmarks(include_scratch, Some(prefix), None, Some(max))
             .await?
             .try_collect::<Vec<(String, ChangesetId)>>()
             .await?;

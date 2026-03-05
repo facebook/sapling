@@ -15,6 +15,31 @@ use types::hgid::HgId;
 use crate::ServerError;
 use crate::land::PushVar;
 
+/// Which kind of bookmark to include in results.
+/// Mirrors the server-side `BookmarkKind` from `bookmarks_types`.
+#[auto_wire]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    PartialEq,
+    Eq,
+    Hash,
+    Serialize,
+    Deserialize
+)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub enum BookmarkKind {
+    #[id(1)]
+    Scratch,
+    #[id(2)]
+    Publishing,
+    #[id(3)]
+    #[default]
+    PullDefaultPublishing,
+}
+
 #[auto_wire]
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
@@ -99,6 +124,11 @@ pub struct ListBookmarkPatternsRequest {
     /// prefix matches; all others are treated as exact matches.
     #[id(0)]
     pub patterns: Vec<String>,
+
+    /// Which bookmark kinds to include in results.
+    /// Empty means PullDefaultPublishing only (the most common case).
+    #[id(1)]
+    pub kinds: Vec<BookmarkKind>,
 }
 
 /// Response for listing bookmarks matching patterns.
