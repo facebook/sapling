@@ -42,7 +42,7 @@ from . import (
 # Sync status file.  Contains whether the previous sync was successful or not.
 _syncstatusfile = "commitcloudsyncstatus"
 
-_maxomittedheadsoutput = 30
+_maxomittedheadsoutput = 5
 
 _maxomittedbookmarksoutput = 30
 
