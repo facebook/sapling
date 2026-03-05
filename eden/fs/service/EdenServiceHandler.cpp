@@ -1324,6 +1324,26 @@ void EdenServiceHandler::getCurrentJournalPosition(
   }
 }
 
+void EdenServiceHandler::peekCurrentJournalPosition(
+    PeekCurrentJournalPositionResponse& out,
+    std::unique_ptr<PeekCurrentJournalPositionRequest> params) {
+  const auto& mountId = params->mountId();
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountId);
+  auto mountHandle = lookupMount(*mountId);
+  auto latest = mountHandle.getEdenMount().getJournal().peekLatest();
+
+  auto& pos = out.position().ensure();
+  pos.mountGeneration() = mountHandle.getEdenMount().getMountGeneration();
+  if (latest) {
+    pos.sequenceNumber() = latest->sequenceID;
+    pos.snapshotHash() =
+        mountHandle.getObjectStore().renderRootId(latest->toRoot);
+  } else {
+    pos.sequenceNumber() = 0;
+    pos.snapshotHash() = mountHandle.getObjectStore().renderRootId(RootId{});
+  }
+}
+
 apache::thrift::ServerStream<JournalPosition>
 EdenServiceHandler::subscribeStreamTemporary(
     std::unique_ptr<std::string> mountPoint) {

@@ -215,6 +215,10 @@ class EdenServiceHandler
       JournalPosition& out,
       std::unique_ptr<std::string> mountPoint) override;
 
+  void peekCurrentJournalPosition(
+      PeekCurrentJournalPositionResponse& out,
+      std::unique_ptr<PeekCurrentJournalPositionRequest> params) override;
+
   void getFilesChangedSince(
       FileDelta& out,
       std::unique_ptr<std::string> mountPoint,

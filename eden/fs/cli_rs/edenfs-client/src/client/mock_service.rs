@@ -177,6 +177,11 @@ mock! {
             mount_point: &PathString,
         ) -> BoxFuture<'static, Result<JournalPosition, GetCurrentJournalPositionError>>;
 
+        fn peekCurrentJournalPosition(
+            &self,
+            params: &PeekCurrentJournalPositionRequest,
+        ) -> BoxFuture<'static, Result<PeekCurrentJournalPositionResponse, PeekCurrentJournalPositionError>>;
+
         fn getFilesChangedSince(
             &self,
             mount_point: &PathString,

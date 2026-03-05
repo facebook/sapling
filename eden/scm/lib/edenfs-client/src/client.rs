@@ -6,6 +6,7 @@
  */
 
 use std::collections::BTreeMap;
+use std::error::Error as _;
 use std::io;
 use std::path::Path;
 use std::path::PathBuf;
@@ -32,6 +33,8 @@ use thrift_types::edenfs::CheckoutProgressInfoRequest;
 use thrift_types::edenfs::CheckoutProgressInfoResponse;
 use thrift_types::edenfs::RootIdOptions;
 use thrift_types::edenfs_clients::EdenService;
+use thrift_types::fbthrift::ApplicationException;
+use thrift_types::fbthrift::ApplicationExceptionErrorCode;
 use thrift_types::fbthrift::binary_protocol::BinaryProtocol;
 use tokio_uds_compat::UnixStream;
 use tracing::error;
@@ -179,6 +182,43 @@ impl EdenFsClient {
             thrift_client.getCurrentJournalPosition(&self.root_vec()),
         ))?;
         let position = (position.mountGeneration, position.sequenceNumber);
+        tracing::debug!("journal position {:?}", position);
+        Ok(position)
+    }
+
+    /// Like get_journal_position but doesn't mark the journal as observed.
+    /// Falls back to get_journal_position if the server doesn't support this method.
+    #[tracing::instrument(skip(self))]
+    pub fn peek_journal_position(&self) -> anyhow::Result<(i64, i64)> {
+        let thrift_client = block_on(self.get_async_thrift_client())?;
+        let result = block_on(thrift_client.peekCurrentJournalPosition(
+            &edenfs::PeekCurrentJournalPositionRequest {
+                mountId: edenfs::MountId {
+                    mountPoint: self.root_vec(),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        ));
+
+        if let Err(err) = &result {
+            if let Some(app_ex) = err
+                .source()
+                .and_then(|s| s.downcast_ref::<ApplicationException>())
+            {
+                // TODO: remove fallback once peekCurrentJournalPosition is available everywhere
+                if app_ex.type_ == ApplicationExceptionErrorCode::UnknownMethod {
+                    tracing::debug!("peekCurrentJournalPosition not available, falling back");
+                    return self.get_journal_position();
+                }
+            }
+        }
+
+        let response = extract_error(result)?;
+        let position = (
+            response.position.mountGeneration,
+            response.position.sequenceNumber,
+        );
         tracing::debug!("journal position {:?}", position);
         Ok(position)
     }

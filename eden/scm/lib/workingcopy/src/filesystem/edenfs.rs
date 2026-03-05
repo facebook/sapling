@@ -441,7 +441,7 @@ impl FileSystem for EdenFileSystem {
             .get_or("workingcopy", "poll-interval-ms-edenfs", || 200)?
             .max(50);
         loop {
-            let new_journal_position = self.client.get_journal_position()?;
+            let new_journal_position = self.client.peek_journal_position()?;
             let old_journal_position = self.journal_position.get();
             if old_journal_position != Some(new_journal_position) {
                 tracing::trace!(
