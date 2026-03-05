@@ -47,6 +47,7 @@ define_stats! {
     restored_connection_to_shardmanager: timeseries(Rate, Sum),
     lost_connection_to_shardmanager: timeseries(Rate, Sum),
     shard_setup_failures: timeseries(Rate, Sum),
+    concurrent_shard_setups: singleton_counter(),
 }
 
 /// Enum representing the states in which the repo-add
@@ -93,6 +94,24 @@ impl RepoProcess {
         }
     }
 }
+
+struct ConcurrentSetupGuard {
+    fb: FacebookInit,
+}
+
+impl ConcurrentSetupGuard {
+    fn new(fb: FacebookInit) -> Self {
+        STATS::concurrent_shard_setups.increment_value(fb, 1);
+        Self { fb }
+    }
+}
+
+impl Drop for ConcurrentSetupGuard {
+    fn drop(&mut self) {
+        STATS::concurrent_shard_setups.increment_value(self.fb, -1);
+    }
+}
+
 /// Struct representing the setup of the underlying process
 /// over a specific repo and the shard associated with it.
 pub(crate) struct RepoSetupProcess {
@@ -104,6 +123,7 @@ pub(crate) struct RepoSetupProcess {
 impl RepoSetupProcess {
     /// Initiate the setup process with necessary signals to identify setup completion.
     fn new(
+        fb: FacebookInit,
         shard: smtypes::Shard,
         repo_shard: RepoShard,
         setup_job: Arc<dyn RepoShardedProcess>,
@@ -112,7 +132,12 @@ impl RepoSetupProcess {
         Self {
             setup_handle: runtime_handle.spawn({
                 let repo_shard = repo_shard.clone();
-                async move { setup_job.setup(&repo_shard).await }
+                async move {
+                    // Create guard that will decrement counter on drop
+                    let _guard = ConcurrentSetupGuard::new(fb);
+
+                    setup_job.setup(&repo_shard).await
+                }
             }),
             shard,
             repo_shard,
@@ -359,6 +384,8 @@ impl RepoCleanupProcess {
 }
 
 pub struct ShardedProcessHandler {
+    /// FacebookInit handle for stats reporting.
+    fb: FacebookInit,
     /// The name of the *Shard_Manager* job that was created for the current process.
     /// This value should be the same as the service_name value provided in the
     /// ShardManager spec.
@@ -384,6 +411,7 @@ pub struct ShardedProcessHandler {
 
 impl ShardedProcessHandler {
     pub fn new(
+        fb: FacebookInit,
         service_name: &'static str,
         runtime_handle: Handle,
         timeout_secs: u64,
@@ -391,6 +419,7 @@ impl ShardedProcessHandler {
         shard_healing: bool,
     ) -> Self {
         Self {
+            fb,
             service_name,
             runtime_handle,
             setup_job,
@@ -501,6 +530,7 @@ impl ShardedProcessHandler {
                 }
                 if !guarded_repo_map.contains_key(&new_repo) {
                     let setup_process = RepoSetupProcess::new(
+                        self.fb,
                         new_shard,
                         new_repo.clone(),
                         Arc::clone(&self.setup_job),
@@ -667,6 +697,7 @@ impl ShardedProcessHandler {
             else {
                 let details = format!("Initiating setup. Adding shard {} is in progress", &key);
                 let repo_setup_process = RepoSetupProcess::new(
+                    self.fb,
                     shard,
                     key.clone(),
                     Arc::clone(&self.setup_job),
@@ -1097,6 +1128,7 @@ impl ShardedProcessExecutor {
             .build()
             .map_err(|x| anyhow!("Error while building SM AppServerConfig: {}", x))?;
         let handler = Arc::new(ShardedProcessHandler::new(
+            fb,
             service_name,
             runtime_handle,
             timeout_secs,
