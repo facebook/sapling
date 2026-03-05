@@ -28,7 +28,6 @@ path = "benchmark_large_directory.rs"
 
 [dependencies]
 anyhow = "1.0.101"
-async-trait = "0.1.86"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../../repo_attributes/bookmarks" }
@@ -36,6 +35,7 @@ clap = { version = "4.5.42", features = ["derive", "env", "string", "unicode", "
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
 content_manifest_derivation = { version = "0.1.0", path = "../../derived_data/content_manifest_derivation" }
 context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context" }
+counting_blob = { version = "0.1.0", path = "../../blobstore/counting_blob" }
 criterion = { version = "0.5.1", features = ["async_tokio", "csv_output"] }
 delayblob = { version = "0.1.0", path = "../../blobstore/delayblob" }
 deleted_manifest = { version = "0.1.0", path = "../../derived_data/deleted_manifest" }

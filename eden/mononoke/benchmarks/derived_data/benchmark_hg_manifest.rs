@@ -156,7 +156,8 @@ async fn main(fb: FacebookInit) -> Result<()> {
         .timed()
         .await;
     result?;
-    let (gets, puts, _) = counters.snapshot();
+    let snap = counters.snapshot();
+    let (gets, puts) = (snap.gets, snap.puts);
 
     println!();
     println!(

@@ -263,7 +263,8 @@ async fn main(fb: FacebookInit) -> Result<()> {
         .await?;
 
     let derive_time = derive_start.elapsed();
-    let (total_gets, total_puts, _) = counters.snapshot();
+    let snap = counters.snapshot();
+    let (total_gets, total_puts) = (snap.gets, snap.puts);
 
     // Print results
     println!();

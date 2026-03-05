@@ -62,6 +62,7 @@ members = [
   "blobstore/blobstore_stats",
   "blobstore/cacheblob",
   "blobstore/chaosblob",
+  "blobstore/counting_blob",
   "blobstore/delayblob",
   "blobstore/ephemeral_blobstore",
   "blobstore/factory",
