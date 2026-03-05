@@ -50,10 +50,12 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
+use std::time::Instant;
 
 use byteorder::ByteOrder;
 use byteorder::LittleEndian;
 use byteorder::WriteBytesExt;
+use metrics::Counter;
 use minibytes::Bytes;
 use tracing::debug_span;
 use tracing::trace;
@@ -88,6 +90,8 @@ mod repair;
 #[cfg(test)]
 pub(crate) mod tests;
 mod wait;
+
+static LOG_WRITE_MS: Counter = Counter::new_counter("indexedlog.log.write_ms");
 
 pub use open_options::ChecksumType;
 pub use open_options::FlushFilterContext;
@@ -732,6 +736,7 @@ impl Log {
             }
 
             // Actually write the primary log. Once it's written, we can remove the in-memory buffer.
+            let start = Instant::now();
             primary_file
                 .write_all(&self.mem_buf)
                 .context(&primary_path, || {
@@ -743,6 +748,7 @@ impl Log {
                     .sync_all()
                     .context(&primary_path, "cannot fsync")?;
             }
+            LOG_WRITE_MS.add(start.elapsed().as_millis() as usize);
 
             meta.primary_len += self.mem_buf.len() as u64;
             self.mem_buf.clear();

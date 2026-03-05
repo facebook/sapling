@@ -84,11 +84,13 @@ use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering::AcqRel;
 use std::sync::atomic::Ordering::Acquire;
 use std::sync::atomic::Ordering::Relaxed;
+use std::time::Instant;
 
 use byteorder::ByteOrder;
 use byteorder::LittleEndian;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
+use metrics::Counter;
 use minibytes::Bytes;
 use tracing::debug_span;
 use twox_hash::XxHash;
@@ -106,6 +108,8 @@ use crate::utils;
 use crate::utils::mmap_bytes;
 use crate::utils::xxhash;
 use crate::utils::xxhash32;
+
+static INDEX_WRITE_MS: Counter = Counter::new_counter("indexedlog.index.write_ms");
 
 /// Structures and serialization
 
@@ -2752,6 +2756,7 @@ impl Index {
                 new_len = buf.len() as u64 + len;
 
                 test_only_fail_point!(self.fail_on_flush == 3);
+                let start = Instant::now();
                 lock.as_mut()
                     .seek(SeekFrom::Start(len))
                     .context(&path, "cannot seek")?;
@@ -2765,6 +2770,7 @@ impl Index {
                 if self.fsync || config::get_global_fsync() {
                     lock.as_mut().sync_all().context(&path, "cannot sync")?;
                 }
+                INDEX_WRITE_MS.add(start.elapsed().as_millis() as usize);
 
                 // Remap and update root since length has changed
                 test_only_fail_point!(self.fail_on_flush == 6);

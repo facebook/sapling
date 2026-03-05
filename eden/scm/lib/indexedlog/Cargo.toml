@@ -36,6 +36,7 @@ once_cell = "1.21"
 rand = { version = "0.9", features = ["small_rng"] }
 sapling-atomicfile = { version = "0.1.0", path = "../atomicfile" }
 sapling-configmodel = { version = "0.1.0", path = "../config/model", optional = true }
+sapling-metrics = { version = "0.1.0", path = "../metrics" }
 sapling-minibytes = { version = "0.1.0", path = "../minibytes" }
 sapling-vlqencoding = { version = "0.1.0", path = "../vlqencoding" }
 tempfile = "3.22"

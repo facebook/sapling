@@ -69,6 +69,7 @@ rust_library(
         "fbsource//third-party/rust:twox-hash",
         "//eden/scm/lib/atomicfile:atomicfile",
         "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/metrics:metrics",
         "//eden/scm/lib/minibytes:minibytes",
         "//eden/scm/lib/vlqencoding:vlqencoding",
     ] + select({

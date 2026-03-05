@@ -10,13 +10,18 @@ use std::fs::File;
 use std::io;
 use std::path::Path;
 use std::path::PathBuf;
+use std::time::Instant;
 
 use memmap2::MmapMut;
 use memmap2::MmapOptions;
+use metrics::Counter;
 
 use crate::change_detect::SharedChangeDetector;
 use crate::errors::IoResultExt;
 use crate::utils;
+
+static DIR_LOCK_WAIT_MS: Counter = Counter::new_counter("indexedlog.dir_lock.wait_ms");
+static FILE_LOCK_WAIT_MS: Counter = Counter::new_counter("indexedlog.file_lock.wait_ms");
 
 /// RAII style file locking.
 pub struct ScopedFileLock<'a> {
@@ -25,11 +30,16 @@ pub struct ScopedFileLock<'a> {
 
 impl<'a> ScopedFileLock<'a> {
     pub fn new(file: &'a mut File, exclusive: bool) -> io::Result<Self> {
+        let start = Instant::now();
+
         if exclusive {
             file.lock()?;
         } else {
             file.lock_shared()?;
         }
+
+        FILE_LOCK_WAIT_MS.add(start.elapsed().as_millis() as usize);
+
         Ok(ScopedFileLock { file })
     }
 }
@@ -209,6 +219,8 @@ impl Drop for ScopedDirLock {
 }
 
 fn lock_file(file: &File, exclusive: bool, non_blocking: bool) -> io::Result<()> {
+    let start = Instant::now();
+
     #[cfg(windows)]
     unsafe {
         use std::os::windows::io::AsRawHandle;
@@ -245,6 +257,9 @@ fn lock_file(file: &File, exclusive: bool, non_blocking: bool) -> io::Result<()>
         (false, false) => file.lock_shared()?,
         (false, true) => file.try_lock_shared()?,
     }
+
+    DIR_LOCK_WAIT_MS.add(start.elapsed().as_millis() as usize);
+
     Ok(())
 }
 
