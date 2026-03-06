@@ -92,6 +92,7 @@ async fn print_table(
 
     let mut titles = row![
         "time in queue",
+        "time ready",
         "retry count",
         "type",
         "priority",
@@ -122,19 +123,24 @@ async fn print_table(
                 DerivationPriority::LOW => "low",
                 _ => "unknown",
             };
+            let time_ready_str = match item.ready_timestamp() {
+                Some(ts) => format!("{}s{}ms", ts.since_seconds(), ts.since_millis() % 1000),
+                None => "-".to_string(),
+            };
             let mut row = row![
                 format!(
                     "{}s{}ms",
                     timestamp.since_seconds(),
                     timestamp.since_millis() % 1000
                 ),
+                time_ready_str,
                 item.retry_count(),
                 dd_type,
                 priority_str,
                 format!("{:?}", item.bubble_id()),
                 item.head_cs_id(),
                 item.root_cs_id(),
-                item.is_ready()
+                item.is_ready(),
             ];
             if args.client_info {
                 row.add_cell(cell![format!("{:?}", item.client_info())]);
