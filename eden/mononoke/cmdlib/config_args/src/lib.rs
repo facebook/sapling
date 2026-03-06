@@ -70,7 +70,7 @@ impl ConfigArgs {
             }
         } else {
             // Otherwise, we are prod if a prod tier is requested.
-            if self.prod || self.config_tier.is_some() {
+            if self.prod || self.git_config || self.config_tier.is_some() {
                 return ConfigMode::Production;
             }
         }
