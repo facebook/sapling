@@ -15,6 +15,7 @@ import {BookmarksManagerMenu} from './BookmarksManager';
 import {BugButton} from './BugButton';
 import {BulkActionsMenu} from './BulkActionsMenu';
 import serverAPI from './ClientToServerAPI';
+import {CommitTreeSearchFilterInput} from './CommitTreeSearchFilter';
 import {CwdSelector} from './CwdSelector';
 import {DownloadCommitsTooltipButton} from './DownloadCommitsMenu';
 import {FocusModeToggle} from './FocusMode';
@@ -52,6 +53,7 @@ export function TopBar() {
       </span>
       <span className="button-group">
         <FlexSpacer />
+        <CommitTreeSearchFilterInput />
         <DebugToolsButton />
         <FocusModeToggle />
         <BugButton />

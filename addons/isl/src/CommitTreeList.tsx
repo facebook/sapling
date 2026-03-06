@@ -15,11 +15,13 @@ import {ErrorNotice} from 'isl-components/ErrorNotice';
 import {ErrorShortMessages} from 'isl-server/src/constants';
 import {atom, useAtomValue} from 'jotai';
 import {Commit, InlineProgressSpan} from './Commit';
+import {commitTreeSearchFilter} from './CommitTreeSearchFilter';
 import {Center, LargeSpinner} from './ComponentUtils';
 import {FetchingAdditionalCommitsRow} from './FetchAdditionalCommitsButton';
 import {isHighlightedCommit} from './HighlightedCommits';
 import {RegularGlyph, RenderDag, YouAreHereGlyph} from './RenderDag';
 import {StackActions} from './StackActions';
+import {latestCommitMessageTitle} from './codeReview/CodeReviewInfo';
 import {YOU_ARE_HERE_VIRTUAL_COMMIT} from './dag/virtualCommit';
 import {T, t} from './i18n';
 import {atomFamilyWeak, localStorageBackedAtom} from './jotaiUtils';
@@ -70,6 +72,24 @@ const renderSubsetUnionSelection = atom(get => {
   if (hideIrrelevant) {
     const cwd = get(repoRelativeCwd);
     subset = dag.filter(commit => commit.isDot || !isIrrelevantToCwd(commit, cwd), subset);
+  }
+
+  const searchFilter = get(commitTreeSearchFilter).trim().toLowerCase();
+  if (searchFilter.length > 0) {
+    const matchesSearch = (commit: DagCommitInfo) => {
+      if (commit.isYouAreHere) {
+        return true;
+      }
+      const renderedTitle = get(latestCommitMessageTitle(commit.hash));
+      const searchable = [
+        renderedTitle,
+        commit.diffId ?? '',
+        ...commit.bookmarks,
+        ...commit.remoteBookmarks,
+      ];
+      return searchable.some(s => s.toLowerCase().includes(searchFilter));
+    };
+    return dag.filter(matchesSearch, subset.union(selection));
   }
 
   return subset.union(selection);
