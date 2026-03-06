@@ -527,13 +527,13 @@ impl<E: EdgeType> CommitGraphOps<E> {
         slice_size: u64,
     ) -> Result<BoxStream<'static, Result<Vec<ChangesetId>>>> {
         cloned!(self as graph, ctx);
-        let (segmented_slices, _boundary_changesets) = graph
+        let slices_with_boundaries = graph
             .segmented_slice_ancestors(&ctx, heads, common, slice_size)
             .await?;
         Ok(stream::iter(
-            segmented_slices
+            slices_with_boundaries
                 .into_iter()
-                .flat_map(|segmented_slice| segmented_slice.segments),
+                .flat_map(|s| s.slice.segments),
         )
         .then(move |segment| {
             cloned!(graph, ctx);

@@ -35,6 +35,7 @@ use commit_graph_types::segments::BoundaryChangesets;
 pub use commit_graph_types::segments::ChangesetSegment;
 use commit_graph_types::segments::SegmentDescription;
 use commit_graph_types::segments::SegmentedSliceDescription;
+pub use commit_graph_types::segments::SegmentedSliceWithBoundaries;
 use commit_graph_types::storage::CommitGraphStorage;
 use commit_graph_types::storage::Prefetch;
 use commit_graph_types::storage::PrefetchTarget;
@@ -851,7 +852,7 @@ impl<E: EdgeType> CommitGraphOps<E> {
     /// Slices ancestors of `heads` excluding ancestors of `common` into a sequence
     /// of topologically ordered segmented slices for processing.
     ///
-    /// Returns a tuple of the slices and the boundary changesets between the slices.
+    /// Returns a vector of slices, each containing its segments and boundary changesets.
     /// A boundary changeset is any changeset that is a parent of another changeset in
     /// another slice.
     ///
@@ -864,7 +865,7 @@ impl<E: EdgeType> CommitGraphOps<E> {
         heads: Vec<ChangesetId>,
         common: Vec<ChangesetId>,
         slice_size: u64,
-    ) -> Result<(Vec<SegmentedSliceDescription>, BoundaryChangesets)> {
+    ) -> Result<Vec<SegmentedSliceWithBoundaries>> {
         let segments = self
             .ancestors_difference_segments(ctx, heads, common)
             .await?;
@@ -879,18 +880,21 @@ impl<E: EdgeType> CommitGraphOps<E> {
         // part to the current slice and continue from the second part.
 
         let mut slices = vec![];
-        let mut boundary_changesets: BoundaryChangesets = Default::default();
 
         let mut current_segments = vec![];
         let mut current_slice_heads: BTreeMap<ChangesetId, u64> = Default::default();
         let mut current_slice_size = 0;
+        let mut current_slice_boundaries: BoundaryChangesets = Default::default();
 
         for mut segment in segments {
             loop {
                 // Current slice is full. Add it to the list of slices and create a new one.
                 if current_slice_size == slice_size {
-                    slices.push(SegmentedSliceDescription {
-                        segments: std::mem::take(&mut current_segments),
+                    slices.push(SegmentedSliceWithBoundaries {
+                        slice: SegmentedSliceDescription {
+                            segments: std::mem::take(&mut current_segments),
+                        },
+                        boundaries: std::mem::take(&mut current_slice_boundaries),
                     });
                     current_slice_heads.clear();
                     current_slice_size = 0;
@@ -910,7 +914,7 @@ impl<E: EdgeType> CommitGraphOps<E> {
                         match current_slice_heads.get(&location.head) {
                             Some(length) if location.distance < *length => {}
                             _ => {
-                                boundary_changesets.insert(parent.cs_id);
+                                current_slice_boundaries.insert(parent.cs_id);
                             }
                         }
                     }
@@ -955,7 +959,7 @@ impl<E: EdgeType> CommitGraphOps<E> {
 
                     // The split head is a parent of the upcoming slice so
                     // it's a boundary changeset.
-                    boundary_changesets.insert(split_head);
+                    current_slice_boundaries.insert(split_head);
 
                     // Continue loop using the second part of the segment.
                     segment = ChangesetSegment {
@@ -966,8 +970,11 @@ impl<E: EdgeType> CommitGraphOps<E> {
                     };
 
                     // Current slice is full. Add it to the list of slices and create a new one.
-                    slices.push(SegmentedSliceDescription {
-                        segments: std::mem::take(&mut current_segments),
+                    slices.push(SegmentedSliceWithBoundaries {
+                        slice: SegmentedSliceDescription {
+                            segments: std::mem::take(&mut current_segments),
+                        },
+                        boundaries: std::mem::take(&mut current_slice_boundaries),
                     });
                     current_slice_heads.clear();
                     current_slice_size = 0;
@@ -977,12 +984,15 @@ impl<E: EdgeType> CommitGraphOps<E> {
 
         // Make sure to add the last slice to the list of slices.
         if current_slice_size > 0 {
-            slices.push(SegmentedSliceDescription {
-                segments: current_segments,
+            slices.push(SegmentedSliceWithBoundaries {
+                slice: SegmentedSliceDescription {
+                    segments: current_segments,
+                },
+                boundaries: current_slice_boundaries,
             });
         }
 
-        Ok((slices, boundary_changesets))
+        Ok(slices)
     }
 
     /// Runs the given `process` closure on all of the given changesets in local topological

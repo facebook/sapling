@@ -120,3 +120,11 @@ pub struct SegmentDescription {
 }
 
 pub type BoundaryChangesets = BTreeSet<ChangesetId>;
+
+/// A segmented slice with its associated boundary changesets.
+/// Boundary changesets are parents of changesets in other slices.
+#[derive(Serialize, Deserialize, Eq, PartialEq, Hash, Debug)]
+pub struct SegmentedSliceWithBoundaries {
+    pub slice: SegmentedSliceDescription,
+    pub boundaries: BoundaryChangesets,
+}

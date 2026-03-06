@@ -627,11 +627,20 @@ pub async fn assert_segmented_slice_ancestors(
         .map(name_cs_id)
         .collect::<BoundaryChangesets>();
 
-    let (slices, boundary_changesets) = graph
+    let slices_with_boundaries = graph
         .segmented_slice_ancestors(ctx, heads, common, slice_size)
         .await?;
 
-    assert_eq!(slices, expected_slices);
+    // Extract slices and flatten boundaries for comparison
+    let slices: Vec<&SegmentedSliceDescription> =
+        slices_with_boundaries.iter().map(|s| &s.slice).collect();
+    let boundary_changesets: BoundaryChangesets = slices_with_boundaries
+        .iter()
+        .flat_map(|s| s.boundaries.iter())
+        .cloned()
+        .collect();
+
+    assert_eq!(slices, expected_slices.iter().collect::<Vec<_>>());
     assert_eq!(boundary_changesets, expected_boundary_changesets);
 
     Ok(())

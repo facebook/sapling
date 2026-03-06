@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeSet;
 use std::path::PathBuf;
 
 use anyhow::Context;
@@ -82,7 +83,7 @@ pub(super) async fn slice(
         frontier
     };
 
-    let (slices_stats, (slices, boundary_changesets)) = repo
+    let (slices_stats, slices_with_boundaries) = repo
         .commit_graph()
         .segmented_slice_ancestors(ctx, cs_ids, excluded_ancestors, args.slice_size)
         .try_timed()
@@ -91,6 +92,13 @@ pub(super) async fn slice(
         "calculated slices in {}ms",
         slices_stats.completion_time.as_millis(),
     );
+
+    let slices: Vec<_> = slices_with_boundaries.iter().map(|s| &s.slice).collect();
+    let boundary_changesets: BTreeSet<_> = slices_with_boundaries
+        .iter()
+        .flat_map(|s| s.boundaries.iter())
+        .cloned()
+        .collect();
 
     if let Some(output_json_file) = args.output_json_file {
         let mut file = File::create(output_json_file)
@@ -102,12 +110,13 @@ pub(super) async fn slice(
         file.flush().await?;
     } else {
         println!("Slices:");
-        for slice in slices {
+        for slice_with_boundaries in &slices_with_boundaries {
             println!(
                 "{}",
-                slice
+                slice_with_boundaries
+                    .slice
                     .segments
-                    .into_iter()
+                    .iter()
                     .map(|segment| format!("{}->{}", segment.head, segment.base))
                     .collect::<Vec<_>>()
                     .join(" ")

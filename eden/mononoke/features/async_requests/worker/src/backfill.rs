@@ -526,20 +526,30 @@ async fn process_repo_backfill(
     };
 
     // Compute segmented slices and boundary changesets
-    let (slices_stats, (slices, boundary_changesets)) = inner_repo
+    let (slices_stats, slices_with_boundaries) = inner_repo
         .commit_graph()
         .segmented_slice_ancestors(ctx, cs_ids, excluded_ancestors, slice_size)
         .try_timed()
         .await
         .map_err(AsyncRequestsError::internal)?;
+
+    // Extract unique boundary changesets from all slices
+    let boundary_changesets: Vec<ChangesetId> = slices_with_boundaries
+        .iter()
+        .flat_map(|s| s.boundaries.iter())
+        .cloned()
+        .collect::<std::collections::HashSet<_>>()
+        .into_iter()
+        .collect();
+
     info!(
         "Computed {} slices with {} boundary changesets in {}ms",
-        slices.len(),
+        slices_with_boundaries.len(),
         boundary_changesets.len(),
         slices_stats.completion_time.as_millis(),
     );
 
-    if slices.is_empty() && boundary_changesets.is_empty() {
+    if slices_with_boundaries.is_empty() && boundary_changesets.is_empty() {
         info!("Nothing to enqueue for repo {}", repo_id.id());
         return Ok(0);
     }
@@ -582,8 +592,9 @@ async fn process_repo_backfill(
     // Serial types: each slice depends on the previous (topological order).
     // Parallel types: all slices depend on the boundary request.
     let mut prev_slice_row_id: Option<RowId> = None;
-    for (i, slice) in slices.iter().enumerate() {
-        let segments: Vec<thrift::DeriveSliceSegment> = slice
+    for (i, slice_with_boundaries) in slices_with_boundaries.iter().enumerate() {
+        let segments: Vec<thrift::DeriveSliceSegment> = slice_with_boundaries
+            .slice
             .segments
             .iter()
             .map(|seg| thrift::DeriveSliceSegment {
@@ -620,9 +631,9 @@ async fn process_repo_backfill(
         info!(
             "Enqueued slice {}/{} (id={}, {} segments)",
             i + 1,
-            slices.len(),
+            slices_with_boundaries.len(),
             slice_row_id.0,
-            slice.segments.len(),
+            slice_with_boundaries.slice.segments.len(),
         );
 
         if serial_slices {
@@ -631,13 +642,13 @@ async fn process_repo_backfill(
     }
 
     let boundary_count = if boundary_row_id.is_some() { 1i64 } else { 0 };
-    let total = boundary_count + slices.len() as i64;
+    let total = boundary_count + slices_with_boundaries.len() as i64;
     info!(
         "Enqueued {} sub-requests for repo {} ({} boundary + {} slices)",
         total,
         repo_id.id(),
         boundary_count,
-        slices.len(),
+        slices_with_boundaries.len(),
     );
 
     Ok(total)
