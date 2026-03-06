@@ -121,12 +121,12 @@ impl VFS {
     }
 
     fn new_inner(root: PathBuf, overwrite_path_conflicts: bool) -> Result<Self> {
-        let auditor = PathAuditor::new(&root);
         let fs_type =
             fstype(&root).with_context(|| format!("can't construct a VFS for {:?}", root))?;
         let supports_symlinks = AtomicBool::new(!cfg!(windows));
         let supports_executables = supports_executables(&fs_type);
         let case_sensitive = case_sensitive(&root, &fs_type)?;
+        let auditor = PathAuditor::new(&root, case_sensitive);
 
         Ok(Self {
             inner: Arc::new(Inner {

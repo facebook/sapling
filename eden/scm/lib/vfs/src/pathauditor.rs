@@ -26,6 +26,7 @@ use types::RepoPathBuf;
 /// The cache is concurrent and is shared between cloned instances of PathAuditor
 pub struct PathAuditor {
     root: PathBuf,
+    fs_features: FsFeatures,
     audited: DashMap<RepoPathBuf, ()>,
 }
 
@@ -82,10 +83,18 @@ pub enum AuditError {
 }
 
 impl PathAuditor {
-    pub fn new(root: impl AsRef<Path>) -> Self {
+    pub fn new(root: impl AsRef<Path>, case_sensitive: bool) -> Self {
+        let mut fs_features = FsFeatures::current_platform();
+        if !case_sensitive {
+            fs_features |= FsFeatures::CASE_INSENSITIVE;
+        }
         let audited = Default::default();
         let root = root.as_ref().to_owned();
-        Self { root, audited }
+        Self {
+            root,
+            fs_features,
+            audited,
+        }
     }
 
     /// Slow path, query the filesystem for unsupported path. Namely, writing through a symlink
@@ -106,8 +115,7 @@ impl PathAuditor {
 
     /// Make sure that it is safe to write/remove `path` from the repo.
     pub fn audit(&self, path: &RepoPath) -> Result<PathBuf> {
-        const FS_FEATURES: FsFeatures = FsFeatures::current_platform();
-        audit_invalid_components(path.as_str(), FS_FEATURES)
+        audit_invalid_components(path.as_str(), self.fs_features)
             .with_context(|| format!("invalid component in \"{}\"", path))?;
 
         let mut needs_recording_index = usize::MAX;
@@ -208,7 +216,7 @@ mod tests {
     fn test_audit_valid() -> Result<()> {
         let root = TempDir::new()?;
 
-        let auditor = PathAuditor::new(&root);
+        let auditor = PathAuditor::new(&root, true);
 
         let repo_path = RepoPath::from_str("a/b")?;
         assert_eq!(
@@ -234,7 +242,7 @@ mod tests {
     fn test_audit_windows() -> Result<()> {
         let root = TempDir::new()?;
 
-        let auditor = PathAuditor::new(&root);
+        let auditor = PathAuditor::new(&root, true);
 
         let repo_path = RepoPath::from_str("..\\foobar")?;
         assert!(auditor.audit(repo_path).is_err());
@@ -256,7 +264,7 @@ mod tests {
         let root = TempDir::new()?;
         let other = TempDir::new()?;
 
-        let auditor = PathAuditor::new(&root);
+        let auditor = PathAuditor::new(&root, true);
 
         let link = root.as_ref().join("a");
         std::os::unix::fs::symlink(&other, &link)?;
@@ -278,7 +286,7 @@ mod tests {
         let path = root.as_ref().join("a");
         fs::create_dir_all(&path)?;
 
-        let auditor = PathAuditor::new(&root);
+        let auditor = PathAuditor::new(&root, true);
 
         // Populate the auditor cache.
         let repo_path = RepoPath::from_str("a/b")?;
