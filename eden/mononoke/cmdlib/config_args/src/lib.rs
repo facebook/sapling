@@ -48,14 +48,22 @@ fn configerator_config_path(tier: &str) -> String {
 }
 
 impl ConfigArgs {
+    /// Returns the tier name for configerator-backed configs, or `None` for
+    /// local-path configs.
+    fn tier_name(&self) -> Option<&str> {
+        if self.prod {
+            Some("prod")
+        } else if self.git_config {
+            Some("gitimport_content")
+        } else {
+            self.config_tier.as_deref()
+        }
+    }
+
     pub fn config_path(&self) -> String {
         if let Some(config_path) = &self.config_path {
             config_path.clone()
-        } else if self.prod {
-            configerator_config_path("prod")
-        } else if self.git_config {
-            configerator_config_path("gitimport_content")
-        } else if let Some(tier) = &self.config_tier {
+        } else if let Some(tier) = self.tier_name() {
             configerator_config_path(tier)
         } else {
             String::new()
@@ -99,12 +107,24 @@ impl ConfigArgs {
         config_store: &ConfigStore,
     ) -> Result<Arc<MononokeConfigs>> {
         let config_path = self.config_path();
+        let manifest_path = self.manifest_path()?;
         Ok(Arc::new(MononokeConfigs::new(
             config_path,
             config_store,
-            None, // manifest_path - not yet wired, will be added when JustKnob gate lands
+            manifest_path.as_deref(),
             handle,
         )?))
+    }
+
+    /// Derives the per-repo manifest path when split-loading is enabled.
+    /// Returns `None` when the JustKnob is off or when using non-configerator config.
+    fn manifest_path(&self) -> Result<Option<String>> {
+        if !justknobs::eval("scm/mononoke:use_split_config_loading", None, None)? {
+            return Ok(None);
+        }
+        Ok(self
+            .tier_name()
+            .map(|t| format!("scm/mononoke/repos/tiers/{}_manifest", t)))
     }
 }
 

@@ -93,7 +93,8 @@
     "scm/mononoke:scs_disable_mutable_blame": false,
     "scm/mononoke:scs_force_local_pushrebase": true,
     "scm/mononoke:git_block_indirect_unshallow_fetch": false,
-    "scm/metagit:mononoke_git_lfs": false
+    "scm/metagit:mononoke_git_lfs": false,
+    "scm/mononoke:use_split_config_loading": false
   },
   "ints": {
     "scm/mononoke_timeouts:repo_client_clone_timeout_secs": 14400,
