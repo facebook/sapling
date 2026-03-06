@@ -15,7 +15,17 @@ use sql::mysql_async::from_value_opt;
 use sql::mysql_async::prelude::ConvIr;
 use sql::mysql_async::prelude::FromValue;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, mysql::OptTryFromRowField)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    PartialEq,
+    Hash,
+    Ord,
+    PartialOrd,
+    mysql::OptTryFromRowField
+)]
 pub struct RowId(pub u64);
 
 impl From<RowId> for Value {

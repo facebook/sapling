@@ -2882,6 +2882,8 @@ struct DeriveBackfillParams {
   /// Whether to compute slices as if all commits were underived,
   /// regardless of their actual derivation status.
   7: bool reslice;
+  /// Number of separate boundary derivation requests to create for parallelization.
+  8: i32 num_boundary_requests;
 }
 
 /// Result for derive_backfill request
@@ -2914,6 +2916,9 @@ struct DeriveBackfillRepoParams {
   6: bool rederive;
   7: optional string config_name;
   8: bool reslice;
+  /// Number of separate boundary derivation requests to create for parallelization
+  /// (forwarded from DeriveBackfillParams).
+  9: i32 num_boundary_requests;
 }
 
 /// Result for derive_backfill_repo request

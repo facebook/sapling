@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::num::NonZeroU32;
 use std::num::NonZeroUsize;
 use std::sync::Arc;
@@ -358,6 +360,7 @@ pub(crate) async fn compute_derive_backfill_repo(
         params.rederive,
         params.reslice,
         params.boundaries_concurrency,
+        params.num_boundary_requests,
         params.config_name.as_deref(),
         &repo_id,
         &root_request_id,
@@ -399,6 +402,7 @@ pub(crate) async fn compute_derive_backfill(
             let config_name = params.config_name.clone();
             let slice_size = params.slice_size;
             let boundaries_concurrency = params.boundaries_concurrency;
+            let num_boundary_requests = params.num_boundary_requests;
             let rederive = params.rederive;
             let reslice = params.reslice;
             let entry_repo_id = entry.repo_id;
@@ -415,6 +419,7 @@ pub(crate) async fn compute_derive_backfill(
                     cs_ids,
                     slice_size,
                     boundaries_concurrency,
+                    num_boundary_requests,
                     rederive,
                     config_name,
                     reslice,
@@ -534,68 +539,97 @@ async fn compute_slices_and_boundaries(
 
 /// Enqueues boundary and slice derivation requests with proper dependencies.
 ///
-/// For parallel types: creates a single boundary derivation request, then
-/// creates slice requests that all depend on it.
-/// For serial types: creates slice requests chained sequentially.
+/// 1. For parallel types: Creates N boundary derivation requests (distributed across workers)
+/// 2. Creates slice derivation requests with proper dependencies:
+///    - Parallel types: Each slice depends on the boundary requests containing its boundaries
+///    - Serial types: Each slice depends on the previous slice (topological order)
 ///
-/// Returns the number of sub-requests enqueued.
+/// # Parallelization strategy
+/// - Parallel types can derive boundaries independently using predecessor derivation
+/// - Boundaries are split into multiple requests to allow concurrent processing
+/// - Each slice only waits for the specific boundary requests it needs
 async fn enqueue_boundary_and_slice_requests(
     ctx: &CoreContext,
     queue: &AsyncMethodRequestQueue,
     slices: Vec<SegmentedSliceWithBoundaries>,
     derived_data_type: DerivableType,
+    num_boundary_requests: i32,
     boundaries_concurrency: i32,
     repo_id: &RepositoryId,
     root_request_id: &RowId,
 ) -> Result<i64, AsyncRequestsError> {
     let serial_slices = requires_serial_slice_processing(derived_data_type);
+    let total_boundaries: usize = slices.iter().map(|s| s.boundaries.len()).sum();
 
-    // Extract unique boundary changesets from all slices
-    let boundary_changesets: Vec<ChangesetId> = slices
-        .iter()
-        .flat_map(|s| s.boundaries.iter())
-        .cloned()
-        .collect::<std::collections::HashSet<_>>()
+    // For parallel types, enqueue boundary derivation so slices can proceed
+    // independently. We build a mapping from so that we can set up the dependencies
+    // between slice requests and the boundary requests they need.
+    let boundary_to_request: HashMap<ChangesetId, RowId> = if !serial_slices && total_boundaries > 0
+    {
+        // Collect all unique boundaries
+        let boundaries_vec: Vec<ChangesetId> = slices
+            .iter()
+            .flat_map(|s| s.boundaries.iter())
+            .cloned()
+            .collect();
+        let num_requests = (num_boundary_requests as usize).min(boundaries_vec.len());
+        let chunk_size = boundaries_vec.len().div_ceil(num_requests);
+
+        let mapping = stream::iter(
+            boundaries_vec
+                .chunks(chunk_size)
+                .map(|chunk| chunk.to_vec()),
+        )
+        .then(|chunk| async move {
+            let boundary_cs_bytes: Vec<Vec<u8>> =
+                chunk.iter().map(|cs_id| cs_id.as_ref().to_vec()).collect();
+
+            let boundary_params = thrift::DeriveBoundariesParams {
+                repo_id: repo_id.id() as i64,
+                derived_data_type: derived_data_type.name().to_string(),
+                boundary_cs_ids: boundary_cs_bytes,
+                concurrency: boundaries_concurrency,
+                use_predecessor_derivation: true,
+                ..Default::default()
+            };
+
+            let boundary_token = queue
+                .enqueue_with_root(ctx, Some(repo_id), boundary_params, root_request_id)
+                .await
+                .map_err(AsyncRequestsError::internal)?;
+
+            // Map each boundary in this chunk to this request
+            let row_id = boundary_token.id();
+            Ok::<_, AsyncRequestsError>(
+                chunk
+                    .into_iter()
+                    .map(|boundary| (boundary, row_id))
+                    .collect::<Vec<_>>(),
+            )
+        })
+        .try_collect::<Vec<_>>()
+        .await?
         .into_iter()
+        .flatten()
         .collect();
 
-    // For parallel types, enqueue boundary derivation so slices can
-    // proceed independently. Serial types ignore boundaries.
-    let boundary_row_id = if !serial_slices && !boundary_changesets.is_empty() {
-        let boundary_cs_bytes: Vec<Vec<u8>> = boundary_changesets
-            .iter()
-            .map(|cs_id| cs_id.as_ref().to_vec())
-            .collect();
-
-        let boundary_params = thrift::DeriveBoundariesParams {
-            repo_id: repo_id.id() as i64,
-            derived_data_type: derived_data_type.name().to_string(),
-            boundary_cs_ids: boundary_cs_bytes,
-            concurrency: boundaries_concurrency,
-            use_predecessor_derivation: true,
-            ..Default::default()
-        };
-
-        let boundary_token = queue
-            .enqueue_with_root(ctx, Some(repo_id), boundary_params, root_request_id)
-            .await
-            .map_err(AsyncRequestsError::internal)?;
-        let id = boundary_token.id();
         info!(
-            "Enqueued boundary derivation request (id={}, {} changesets)",
-            id.0,
-            boundary_changesets.len(),
+            "Created {} boundary requests for {} total boundaries (avg {:.1} boundaries per request)",
+            num_requests,
+            boundaries_vec.len(),
+            boundaries_vec.len() as f64 / num_requests as f64,
         );
-        Some(id)
+
+        mapping
     } else {
-        None
+        HashMap::new()
     };
 
     // Enqueue slice derivation requests.
     // Serial types: each slice depends on the previous (topological order).
-    // Parallel types: all slices depend on the boundary request.
+    // Parallel types: each slice depends only on the boundary requests containing its boundaries.
     let mut prev_slice_row_id: Option<RowId> = None;
-    for (i, slice_with_boundaries) in slices.iter().enumerate() {
+    for slice_with_boundaries in slices.iter() {
         let segments: Vec<thrift::DeriveSliceSegment> = slice_with_boundaries
             .slice
             .segments
@@ -617,7 +651,15 @@ async fn enqueue_boundary_and_slice_requests(
         let depends_on: Vec<RowId> = if serial_slices {
             prev_slice_row_id.iter().cloned().collect()
         } else {
-            boundary_row_id.iter().cloned().collect()
+            // Get the boundary changesets required for this slice, and look up
+            // the request ids in the mapping we built above.
+            slice_with_boundaries
+                .boundaries
+                .iter()
+                .filter_map(|boundary| boundary_to_request.get(boundary).cloned())
+                .collect::<HashSet<_>>()
+                .into_iter()
+                .collect()
         };
 
         let slice_token = queue
@@ -630,21 +672,11 @@ async fn enqueue_boundary_and_slice_requests(
             )
             .await
             .map_err(AsyncRequestsError::internal)?;
-        let slice_row_id = slice_token.id();
-        info!(
-            "Enqueued slice {}/{} (id={}, {} segments)",
-            i + 1,
-            slices.len(),
-            slice_row_id.0,
-            slice_with_boundaries.slice.segments.len(),
-        );
-
-        if serial_slices {
-            prev_slice_row_id = Some(slice_row_id);
-        }
+        prev_slice_row_id = Some(slice_token.id());
     }
 
-    let boundary_count = if boundary_row_id.is_some() { 1i64 } else { 0 };
+    // Count unique boundary requests
+    let boundary_count = boundary_to_request.values().collect::<HashSet<_>>().len() as i64;
     let total = boundary_count + slices.len() as i64;
     info!(
         "Enqueued {} sub-requests for repo {} ({} boundary + {} slices)",
@@ -674,6 +706,7 @@ async fn process_repo_backfill(
     rederive: bool,
     reslice: bool,
     boundaries_concurrency: i32,
+    num_boundary_requests: i32,
     config_name: Option<&str>,
     repo_id: &RepositoryId,
     root_request_id: &RowId,
@@ -722,6 +755,7 @@ async fn process_repo_backfill(
         queue,
         slices,
         derived_data_type,
+        num_boundary_requests,
         boundaries_concurrency,
         repo_id,
         root_request_id,

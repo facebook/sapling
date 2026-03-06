@@ -37,6 +37,10 @@ pub(super) struct BackfillEnqueueArgs {
     #[clap(long, default_value_t = 10)]
     boundaries_concurrency: i32,
 
+    /// Number of separate boundary derivation requests to create for parallelization
+    #[clap(long, default_value_t = 10)]
+    num_boundary_requests: usize,
+
     /// Whether to rederive already-derived changesets
     #[clap(long)]
     pub(crate) rederive: bool,
@@ -124,6 +128,7 @@ pub(super) async fn backfill_enqueue(
         repo_entries: repo_entries.clone(),
         slice_size: args.slice_size as i64,
         boundaries_concurrency: args.boundaries_concurrency,
+        num_boundary_requests: args.num_boundary_requests as i32,
         rederive: args.rederive,
         reslice: args.reslice,
         config_name: config_name.map(|s| s.to_string()),
