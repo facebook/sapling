@@ -19,6 +19,7 @@ use async_requests::types::RowId;
 use async_requests::types::Token;
 use bulk_derivation::BulkDerivation;
 use commit_graph::CommitGraphRef;
+use commit_graph::SegmentedSliceWithBoundaries;
 use context::CoreContext;
 use derived_data_manager::DerivedDataManager;
 use futures::StreamExt;
@@ -443,49 +444,35 @@ pub(crate) async fn compute_derive_backfill(
     })
 }
 
-/// Process backfill for a single repo: filter underived changesets, compute
-/// slices, and enqueue boundary/slice sub-requests.
-/// Returns the number of sub-requests enqueued for this repo.
-async fn process_repo_backfill(
+/// Computes segmented slices and their boundaries for a backfill operation.
+///
+/// This function performs Phase 1 of the backfill process:
+/// 1. Filters out already-derived changesets (unless rederive/reslice is enabled)
+/// 2. Computes the derived frontier to exclude already-processed ancestors
+/// 3. Calls segmented_slice_ancestors to partition the commit graph into processable slices
+///
+/// Returns a vector of slices with their associated boundary changesets, or
+/// an empty vector if there's nothing to process.
+async fn compute_slices_and_boundaries(
     ctx: &CoreContext,
-    repo: &RepoContext<Repo>,
-    queue: &AsyncMethodRequestQueue,
+    inner_repo: &Repo,
+    manager: &DerivedDataManager,
     derived_data_type: DerivableType,
     cs_ids: Vec<ChangesetId>,
     slice_size: u64,
     rederive: bool,
     reslice: bool,
-    boundaries_concurrency: i32,
-    config_name: Option<&str>,
     repo_id: &RepositoryId,
-    root_request_id: &RowId,
-) -> Result<i64, AsyncRequestsError> {
-    let inner_repo = repo.repo();
-    let manager = if let Some(config_name) = config_name {
-        inner_repo
-            .repo_derived_data()
-            .manager_for_config(config_name)
-            .map_err(AsyncRequestsError::request)?
-    } else {
-        inner_repo.repo_derived_data().manager()
-    };
-    let manager = with_type_enabled(manager, derived_data_type);
-
-    info!(
-        "DeriveBackfill for repo {} type {:?}: {} changesets, slice_size {}",
-        repo_id.id(),
-        derived_data_type,
-        cs_ids.len(),
-        slice_size,
-    );
-
-    // rederive implies reslice: if re-deriving everything, slices must cover
-    // all ancestors too.
-    let skip_filtering = reslice || rederive;
+) -> Result<Vec<SegmentedSliceWithBoundaries>, AsyncRequestsError> {
+    // Determine whether to filter out already-derived changesets.
+    // We skip filtering if:
+    // 1. reslice=true: treat all commits as underived for slicing purposes
+    // 2. rederive=true: force rederivation of all commits
+    let should_filter_derived = !reslice && !rederive;
 
     // Filter to only underived changesets (unless skip_filtering is set)
     let mut cs_ids = cs_ids;
-    if !skip_filtering {
+    if should_filter_derived {
         cs_ids = manager
             .pending(ctx, &cs_ids, None, derived_data_type)
             .await
@@ -495,15 +482,14 @@ async fn process_repo_backfill(
                 "All changesets already derived for repo {}, nothing to enqueue",
                 repo_id.id()
             );
-            return Ok(0);
+            return Ok(vec![]);
         }
         info!("{} changesets still underived", cs_ids.len());
     }
 
     // Find the derived frontier
-    let excluded_ancestors = if skip_filtering {
-        vec![]
-    } else {
+    // We only compute the frontier when filtering derived changesets
+    let excluded_ancestors = if should_filter_derived {
         let (frontier_stats, frontier) = inner_repo
             .commit_graph()
             .ancestors_frontier_with(ctx, cs_ids.clone(), |cs_id| {
@@ -523,38 +509,55 @@ async fn process_repo_backfill(
             frontier_stats.completion_time.as_millis(),
         );
         frontier
+    } else {
+        vec![]
     };
 
     // Compute segmented slices and boundary changesets
-    let (slices_stats, slices_with_boundaries) = inner_repo
+    let (slices_stats, slices) = inner_repo
         .commit_graph()
         .segmented_slice_ancestors(ctx, cs_ids, excluded_ancestors, slice_size)
         .try_timed()
         .await
         .map_err(AsyncRequestsError::internal)?;
 
+    let total_boundaries: usize = slices.iter().map(|s| s.boundaries.len()).sum();
+    info!(
+        "Computed {} slices with {} boundary changesets in {}ms",
+        slices.len(),
+        total_boundaries,
+        slices_stats.completion_time.as_millis(),
+    );
+
+    Ok(slices)
+}
+
+/// Enqueues boundary and slice derivation requests with proper dependencies.
+///
+/// For parallel types: creates a single boundary derivation request, then
+/// creates slice requests that all depend on it.
+/// For serial types: creates slice requests chained sequentially.
+///
+/// Returns the number of sub-requests enqueued.
+async fn enqueue_boundary_and_slice_requests(
+    ctx: &CoreContext,
+    queue: &AsyncMethodRequestQueue,
+    slices: Vec<SegmentedSliceWithBoundaries>,
+    derived_data_type: DerivableType,
+    boundaries_concurrency: i32,
+    repo_id: &RepositoryId,
+    root_request_id: &RowId,
+) -> Result<i64, AsyncRequestsError> {
+    let serial_slices = requires_serial_slice_processing(derived_data_type);
+
     // Extract unique boundary changesets from all slices
-    let boundary_changesets: Vec<ChangesetId> = slices_with_boundaries
+    let boundary_changesets: Vec<ChangesetId> = slices
         .iter()
         .flat_map(|s| s.boundaries.iter())
         .cloned()
         .collect::<std::collections::HashSet<_>>()
         .into_iter()
         .collect();
-
-    info!(
-        "Computed {} slices with {} boundary changesets in {}ms",
-        slices_with_boundaries.len(),
-        boundary_changesets.len(),
-        slices_stats.completion_time.as_millis(),
-    );
-
-    if slices_with_boundaries.is_empty() && boundary_changesets.is_empty() {
-        info!("Nothing to enqueue for repo {}", repo_id.id());
-        return Ok(0);
-    }
-
-    let serial_slices = requires_serial_slice_processing(derived_data_type);
 
     // For parallel types, enqueue boundary derivation so slices can
     // proceed independently. Serial types ignore boundaries.
@@ -592,7 +595,7 @@ async fn process_repo_backfill(
     // Serial types: each slice depends on the previous (topological order).
     // Parallel types: all slices depend on the boundary request.
     let mut prev_slice_row_id: Option<RowId> = None;
-    for (i, slice_with_boundaries) in slices_with_boundaries.iter().enumerate() {
+    for (i, slice_with_boundaries) in slices.iter().enumerate() {
         let segments: Vec<thrift::DeriveSliceSegment> = slice_with_boundaries
             .slice
             .segments
@@ -631,7 +634,7 @@ async fn process_repo_backfill(
         info!(
             "Enqueued slice {}/{} (id={}, {} segments)",
             i + 1,
-            slices_with_boundaries.len(),
+            slices.len(),
             slice_row_id.0,
             slice_with_boundaries.slice.segments.len(),
         );
@@ -642,14 +645,86 @@ async fn process_repo_backfill(
     }
 
     let boundary_count = if boundary_row_id.is_some() { 1i64 } else { 0 };
-    let total = boundary_count + slices_with_boundaries.len() as i64;
+    let total = boundary_count + slices.len() as i64;
     info!(
         "Enqueued {} sub-requests for repo {} ({} boundary + {} slices)",
         total,
         repo_id.id(),
         boundary_count,
-        slices_with_boundaries.len(),
+        slices.len(),
     );
 
     Ok(total)
+}
+
+/// Process backfill for a single repo by computing slices and enqueueing sub-requests.
+///
+/// This is the main entry point for backfill processing, which coordinates two phases:
+/// 1. Compute slices and boundaries (via compute_slices_and_boundaries)
+/// 2. Enqueue boundary and slice requests with proper dependencies (via enqueue_boundary_and_slice_requests)
+///
+/// Returns the number of sub-requests enqueued for this repo.
+async fn process_repo_backfill(
+    ctx: &CoreContext,
+    repo: &RepoContext<Repo>,
+    queue: &AsyncMethodRequestQueue,
+    derived_data_type: DerivableType,
+    cs_ids: Vec<ChangesetId>,
+    slice_size: u64,
+    rederive: bool,
+    reslice: bool,
+    boundaries_concurrency: i32,
+    config_name: Option<&str>,
+    repo_id: &RepositoryId,
+    root_request_id: &RowId,
+) -> Result<i64, AsyncRequestsError> {
+    let inner_repo = repo.repo();
+    let manager = if let Some(config_name) = config_name {
+        inner_repo
+            .repo_derived_data()
+            .manager_for_config(config_name)
+            .map_err(AsyncRequestsError::request)?
+    } else {
+        inner_repo.repo_derived_data().manager()
+    };
+    let manager = with_type_enabled(manager, derived_data_type);
+
+    info!(
+        "DeriveBackfill for repo {} type {:?}: {} changesets, slice_size {}",
+        repo_id.id(),
+        derived_data_type,
+        cs_ids.len(),
+        slice_size,
+    );
+
+    // Phase 1: Compute slices and boundaries
+    let slices = compute_slices_and_boundaries(
+        ctx,
+        inner_repo,
+        &manager,
+        derived_data_type,
+        cs_ids,
+        slice_size,
+        rederive,
+        reslice,
+        repo_id,
+    )
+    .await?;
+
+    if slices.is_empty() {
+        info!("Nothing to enqueue for repo {}", repo_id.id());
+        return Ok(0);
+    }
+
+    // Phase 2: Enqueue boundary and slice requests with proper dependencies
+    enqueue_boundary_and_slice_requests(
+        ctx,
+        queue,
+        slices,
+        derived_data_type,
+        boundaries_concurrency,
+        repo_id,
+        root_request_id,
+    )
+    .await
 }
