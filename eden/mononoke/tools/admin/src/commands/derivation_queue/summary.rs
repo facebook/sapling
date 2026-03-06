@@ -93,6 +93,7 @@ async fn print_table(
     let mut titles = row![
         "time in queue",
         "time ready",
+        "time deriving",
         "retry count",
         "type",
         "priority",
@@ -127,6 +128,10 @@ async fn print_table(
                 Some(ts) => format!("{}s{}ms", ts.since_seconds(), ts.since_millis() % 1000),
                 None => "-".to_string(),
             };
+            let time_deriving_str = match item.deriving_timestamp() {
+                Some(ts) => format!("{}s{}ms", ts.since_seconds(), ts.since_millis() % 1000),
+                None => "-".to_string(),
+            };
             let mut row = row![
                 format!(
                     "{}s{}ms",
@@ -134,6 +139,7 @@ async fn print_table(
                     timestamp.since_millis() % 1000
                 ),
                 time_ready_str,
+                time_deriving_str,
                 item.retry_count(),
                 dd_type,
                 priority_str,

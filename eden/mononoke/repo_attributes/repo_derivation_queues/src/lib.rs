@@ -139,6 +139,7 @@ pub struct DerivationQueueSummaryItem {
     dag_item_info: DagItemInfo,
     is_ready: bool,
     ready_timestamp: Option<Timestamp>,
+    deriving_timestamp: Option<Timestamp>,
 }
 
 impl DerivationQueueSummaryItem {
@@ -147,12 +148,14 @@ impl DerivationQueueSummaryItem {
         dag_item_info: DagItemInfo,
         is_ready: bool,
         ready_timestamp: Option<Timestamp>,
+        deriving_timestamp: Option<Timestamp>,
     ) -> Self {
         Self {
             dag_item_id,
             dag_item_info,
             is_ready,
             ready_timestamp,
+            deriving_timestamp,
         }
     }
 
@@ -186,6 +189,10 @@ impl DerivationQueueSummaryItem {
 
     pub fn is_ready(&self) -> bool {
         self.is_ready
+    }
+
+    pub fn deriving_timestamp(&self) -> Option<Timestamp> {
+        self.deriving_timestamp
     }
 
     pub fn ready_timestamp(&self) -> Option<Timestamp> {
