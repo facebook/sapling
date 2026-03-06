@@ -4332,6 +4332,176 @@ mod tests {
         Ok(())
     }
 
+    /// Demonstrate the hook state contamination bug: a rebase failure in
+    /// one request corrupts hook state that flows into the bookmark
+    /// transaction for other requests.
+    ///
+    /// Setup: three requests [A, B, C] in one batch.  The shared commit
+    /// hook records an assignment for every changeset it sees (mimicking
+    /// globalrev), then fails on request B's changeset — *after* recording
+    /// the phantom assignment.  Because the loop continues to C,
+    /// `into_transaction_hook` fires with 3 recorded assignments but only
+    /// 2 entries in `all_rebased_changesets`.  A hook that uses the
+    /// recorded count for sequencing writes corrupt data to the
+    /// transaction.
+    #[mononoke::fbinit_test]
+    async fn batched_pushrebase_rebase_failure_prevents_corrupt_hook_data(
+        fb: FacebookInit,
+    ) -> Result<(), Error> {
+        #[derive(Clone)]
+        struct TrackingHook(RepositoryId);
+
+        /// Commit hook that records one assignment per changeset it sees,
+        /// then fails on the Nth call.  The assignment is recorded
+        /// *before* the error check — this is the state contamination.
+        struct TrackingCommitHook {
+            repo_id: RepositoryId,
+            assignments: usize,
+            fail_on_call: usize,
+        }
+
+        #[async_trait]
+        impl PushrebaseHook for TrackingHook {
+            async fn in_critical_section(
+                &self,
+                _ctx: &CoreContext,
+                _old_bookmark_value: Option<ChangesetId>,
+            ) -> Result<Box<dyn PushrebaseCommitHook>, Error> {
+                Ok(Box::new(TrackingCommitHook {
+                    repo_id: self.0,
+                    assignments: 0,
+                    // Requests are processed in order: A(call 1), B(call 2), C(call 3).
+                    // Fail on call 2 (request B) after recording its assignment.
+                    fail_on_call: 2,
+                }))
+            }
+        }
+
+        #[async_trait]
+        impl PushrebaseCommitHook for TrackingCommitHook {
+            fn post_rebase_changeset(
+                &mut self,
+                _bcs_old: ChangesetId,
+                _bcs_new: &mut BonsaiChangesetMut,
+            ) -> Result<(), Error> {
+                // Record the assignment FIRST (mirrors globalrev hook which
+                // calls set_on_changeset + insert + increment before returning).
+                self.assignments += 1;
+                if self.assignments == self.fail_on_call {
+                    return Err(anyhow::anyhow!("simulated rebase failure"));
+                }
+                Ok(())
+            }
+
+            async fn into_transaction_hook(
+                self: Box<Self>,
+                ctx: &CoreContext,
+                _changesets: &RebasedChangesets,
+            ) -> Result<Box<dyn PushrebaseTransactionHook>, Error> {
+                // Write the number of recorded assignments to a mutable
+                // counter.  If hook state was contaminated by the failed
+                // request, this value is WRONG — it includes a phantom
+                // assignment for a changeset that was never committed.
+                Ok(Box::new(WriteCountHook {
+                    repo_id: self.repo_id,
+                    count: self.assignments,
+                    ctx: ctx.clone(),
+                }))
+            }
+        }
+
+        struct WriteCountHook {
+            repo_id: RepositoryId,
+            count: usize,
+            ctx: CoreContext,
+        }
+
+        #[async_trait]
+        impl PushrebaseTransactionHook for WriteCountHook {
+            async fn populate_transaction(
+                &self,
+                _ctx: &CoreContext,
+                txn: Transaction,
+            ) -> Result<Transaction, BookmarkTransactionError> {
+                let ret = SqlMutableCounters::set_counter_on_txn(
+                    &self.ctx,
+                    self.repo_id,
+                    "hook_assignments",
+                    self.count as i64,
+                    None,
+                    txn,
+                )
+                .await?;
+                match ret {
+                    TransactionResult::Succeeded(txn) => Ok(txn),
+                    TransactionResult::Failed => Err(Error::msg("counter write failed").into()),
+                }
+            }
+        }
+
+        let ctx = CoreContext::test_mock(fb);
+        let factory = TestRepoFactory::new(fb)?;
+        let repo: PushrebaseTestRepo = factory.build().await?;
+        let (commits, _dag) = Linear::init_repo(fb, &repo).await?;
+
+        let root = commits["A"];
+        let bookmark = master_bookmark();
+        let config = PushrebaseFlags::default();
+
+        // Three non-conflicting stacks, each with one changeset.
+        let mut requests = Vec::new();
+        let mut receivers = Vec::new();
+        for name in ["fileA", "fileB", "fileC"] {
+            let bcs_id = CreateCommitContext::new(&ctx, &repo, vec![root])
+                .add_file(name, "content")
+                .commit()
+                .await?;
+            let bcs = bcs_id.load(&ctx, repo.repo_blobstore()).await?;
+            let idx =
+                index_pushrebase_request(&ctx, &repo, &config, &bookmark, &hashset![bcs]).await?;
+            let (tx, rx) = oneshot::channel();
+            requests.push(PushrebaseRequest {
+                changed_files: idx.changed_files,
+                changesets: idx.changesets,
+                head: idx.head,
+                root: idx.root,
+                conflict_check_base: idx.root,
+                retry_num: PushrebaseRetryNum(0),
+                hooks: vec![Box::new(TrackingHook(repo.repo_identity().id()))],
+                response_tx: tx,
+            });
+            receivers.push(rx);
+        }
+
+        let requeued = do_batched_pushrebase(&ctx, &repo, &config, &bookmark, requests).await;
+
+        // Request B (index 1) should have received the hook error.
+        let result_b = receivers.remove(1).await.unwrap();
+        assert!(result_b.is_err(), "Request B should have failed");
+
+        // The loop continues past B's failure, so nothing is requeued.
+        assert!(requeued.is_empty());
+
+        // BUG: The transaction hook fires with 3 recorded assignments
+        // (including the phantom from failed request B) but only 2
+        // changesets actually landed — this is data corruption.
+        assert_eq!(
+            repo.mutable_counters()
+                .get_counter(&ctx, "hook_assignments")
+                .await?,
+            Some(3),
+            "BUG: hook recorded 3 assignments (including phantom from B) for only 2 landed changesets",
+        );
+
+        // Requests A and C landed despite the corrupt hook state.
+        let result_a = receivers.remove(0).await.unwrap();
+        assert!(result_a.is_ok(), "Request A landed with corrupt hook data");
+        let result_c = receivers.remove(0).await.unwrap();
+        assert!(result_c.is_ok(), "Request C landed with corrupt hook data");
+
+        Ok(())
+    }
+
     fn should_have_conflicts(res: Result<PushrebaseOutcome, PushrebaseError>) {
         match res {
             Err(err) => match err {
