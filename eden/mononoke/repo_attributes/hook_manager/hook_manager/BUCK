@@ -44,6 +44,7 @@ rust_library(
         "//eden/mononoke/derived_data:fsnodes",
         "//eden/mononoke/derived_data:skeleton_manifest",
         "//eden/mononoke/derived_data:unodes",
+        "//eden/mononoke/derived_data/content_manifest_derivation:content_manifest_derivation",
         "//eden/mononoke/manifest:manifest",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_types:mononoke_types",
