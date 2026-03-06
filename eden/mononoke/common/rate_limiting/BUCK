@@ -21,6 +21,7 @@ rust_library(
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/stats:stats",
         "//configerator/structs/scm/mononoke/ratelimiting:rate_limiting_config-rust",
+        "//eden/mononoke/common/client_memory:client_memory",
         "//eden/mononoke/common/mononoke_macros:mononoke_macros",
         "//eden/mononoke/common/ods_counters:ods_counters",
         "//eden/mononoke/common/permission_checker:permission_checker",

@@ -17,6 +17,8 @@ use anyhow::Error;
 use anyhow::anyhow;
 use async_trait::async_trait;
 use cached_config::ConfigHandle;
+use client_memory::ClientBucket;
+use client_memory::global_client_memory_registry;
 use fbinit::FacebookInit;
 use mononoke_macros::mononoke;
 use ods_counters::CounterManager;
@@ -269,39 +271,68 @@ impl LoadShedLimit {
         }
 
         // Fetch the counter
-        let (metric_string, value) = match self.raw_config.load_shedding_metric.clone() {
-            LoadSheddingMetric::local_fb303_counter(metric) => {
-                let metric = metric.to_string();
-                (
-                    metric.clone(),
-                    STATS::load_shed_counter.get_value(fb, (metric,)),
-                )
-            }
-            LoadSheddingMetric::external_ods_counter(ExternalOdsCounter {
-                entity,
-                key,
-                reduce,
-                transform,
-            }) => {
-                let value = ods_counters
-                    .read()
-                    .expect("Poisoned lock")
-                    .get_counter_value(&entity, &key, reduce.as_deref(), transform.as_deref())
-                    .map(|v| v as i64);
-                (
-                    format!(
-                        "Ods key:{} entity:{} reduce:{:?} transform:{:?}",
-                        entity, key, reduce, transform
-                    ),
-                    value,
-                )
-            }
-            _ => ("".to_string(), None),
-        };
+        let (metric_string, value, force_targeted) =
+            match self.raw_config.load_shedding_metric.clone() {
+                LoadSheddingMetric::local_fb303_counter(metric) => {
+                    let metric = metric.to_string();
+                    (
+                        metric.clone(),
+                        STATS::load_shed_counter.get_value(fb, (metric,)),
+                        false,
+                    )
+                }
+                LoadSheddingMetric::external_ods_counter(ExternalOdsCounter {
+                    entity,
+                    key,
+                    reduce,
+                    transform,
+                }) => {
+                    let value = ods_counters
+                        .read()
+                        .expect("Poisoned lock")
+                        .get_counter_value(&entity, &key, reduce.as_deref(), transform.as_deref())
+                        .map(|v| v as i64);
+                    (
+                        format!(
+                            "Ods key:{} entity:{} reduce:{:?} transform:{:?}",
+                            entity, key, reduce, transform
+                        ),
+                        value,
+                        false,
+                    )
+                }
+                LoadSheddingMetric::top_client(top_client) => {
+                    let client_bucket: ClientBucket = main_id.into();
+                    let registry = global_client_memory_registry();
+                    let is_top = matches!(
+                        registry.top_consumer(),
+                        Some((top_bucket, _)) if client_bucket == top_bucket
+                    );
+                    let value = if is_top {
+                        STATS::load_shed_counter.get_value(fb, (top_client.metric.clone(),))
+                    } else {
+                        None
+                    };
+                    (
+                        format!(
+                            "top_client (bucket: {}, metric: {})",
+                            client_bucket.name(),
+                            top_client.metric
+                        ),
+                        value,
+                        true,
+                    )
+                }
+                _ => ("".to_string(), None, false),
+            };
 
         match value {
             Some(value) if value > self.raw_config.limit => {
-                let no_target = self.target.is_none();
+                let no_target = if force_targeted {
+                    false
+                } else {
+                    self.target.is_none()
+                };
                 log_or_enforce_status(
                     self.raw_config.clone(),
                     metric_string,
@@ -713,5 +744,240 @@ mod test {
                 None,
             ) == Some(main_client_id_rate_limit)
         );
+    }
+
+    #[cfg(fbcode_build)]
+    #[mononoke::fbinit_test]
+    fn test_top_client_load_shed_is_top_consumer_above_limit(fb: FacebookInit) {
+        use client_memory::global_client_memory_registry;
+        use rate_limiting_config::TopClient;
+
+        let metric_name = "test_memory_pct";
+
+        // Set up the fb303 counter to simulate 80% memory usage
+        STATS::load_shed_counter.set_value(fb, 80, (metric_name.to_string(),));
+
+        // Register quicksand as the top consumer
+        let registry = global_client_memory_registry();
+        registry.add_weight(ClientBucket::Quicksand, 1_000_000);
+
+        let limit = LoadShedLimit {
+            raw_config: rate_limiting_config::LoadShedLimit {
+                status: RateLimitStatus::Enforced,
+                target: None,
+                limit: 75,
+                load_shedding_metric: LoadSheddingMetric::top_client(TopClient {
+                    metric: metric_name.to_string(),
+                }),
+                ..Default::default()
+            },
+            target: None,
+        };
+
+        let mut scuba = MononokeScubaSampleBuilder::with_discard();
+        let ods_counters = OdsCounterManager::new(fb);
+
+        // Client IS the top consumer and metric (80) > limit (75) → Fail
+        let result = limit.should_load_shed(
+            fb,
+            None,
+            Some("SERVICE_IDENTITY:quicksand_builder"),
+            &mut scuba,
+            ods_counters.clone(),
+            None,
+        );
+        match result {
+            LoadShedResult::Fail(RateLimitReason::LoadShedMetric(
+                _,
+                value,
+                threshold,
+                no_target,
+            )) => {
+                assert_eq!(value, 80);
+                assert_eq!(threshold, 75);
+                // force_targeted = true → no_target must be false → 429
+                assert!(!no_target);
+            }
+            _ => panic!("Expected LoadShedResult::Fail for top consumer above limit"),
+        }
+
+        // Clean up
+        registry.remove_weight(ClientBucket::Quicksand, 1_000_000);
+    }
+
+    #[cfg(fbcode_build)]
+    #[mononoke::fbinit_test]
+    fn test_top_client_load_shed_is_top_consumer_below_limit(fb: FacebookInit) {
+        use client_memory::global_client_memory_registry;
+        use rate_limiting_config::TopClient;
+
+        let metric_name = "test_memory_pct_below";
+
+        // Set up the fb303 counter to simulate 60% memory usage (below limit)
+        STATS::load_shed_counter.set_value(fb, 60, (metric_name.to_string(),));
+
+        let registry = global_client_memory_registry();
+        registry.add_weight(ClientBucket::Quicksand, 1_000_000);
+
+        let limit = LoadShedLimit {
+            raw_config: rate_limiting_config::LoadShedLimit {
+                status: RateLimitStatus::Enforced,
+                target: None,
+                limit: 75,
+                load_shedding_metric: LoadSheddingMetric::top_client(TopClient {
+                    metric: metric_name.to_string(),
+                }),
+                ..Default::default()
+            },
+            target: None,
+        };
+
+        let mut scuba = MononokeScubaSampleBuilder::with_discard();
+        let ods_counters = OdsCounterManager::new(fb);
+
+        // Client IS the top consumer but metric (60) < limit (75) → Pass
+        let result = limit.should_load_shed(
+            fb,
+            None,
+            Some("SERVICE_IDENTITY:quicksand_builder"),
+            &mut scuba,
+            ods_counters,
+            None,
+        );
+        assert!(matches!(result, LoadShedResult::Pass));
+
+        registry.remove_weight(ClientBucket::Quicksand, 1_000_000);
+    }
+
+    #[cfg(fbcode_build)]
+    #[mononoke::fbinit_test]
+    fn test_top_client_load_shed_not_top_consumer(fb: FacebookInit) {
+        use client_memory::global_client_memory_registry;
+        use rate_limiting_config::TopClient;
+
+        let metric_name = "test_memory_pct_not_top";
+
+        // Set up the fb303 counter to simulate 80% memory usage
+        STATS::load_shed_counter.set_value(fb, 80, (metric_name.to_string(),));
+
+        // Register quicksand as top consumer, but the requesting client is "other"
+        let registry = global_client_memory_registry();
+        registry.add_weight(ClientBucket::Quicksand, 1_000_000);
+
+        let limit = LoadShedLimit {
+            raw_config: rate_limiting_config::LoadShedLimit {
+                status: RateLimitStatus::Enforced,
+                target: None,
+                limit: 75,
+                load_shedding_metric: LoadSheddingMetric::top_client(TopClient {
+                    metric: metric_name.to_string(),
+                }),
+                ..Default::default()
+            },
+            target: None,
+        };
+
+        let mut scuba = MononokeScubaSampleBuilder::with_discard();
+        let ods_counters = OdsCounterManager::new(fb);
+
+        // Client is NOT the top consumer → Pass (even though metric > limit)
+        let result = limit.should_load_shed(
+            fb,
+            None,
+            Some("SERVICE_IDENTITY:some_other_client"),
+            &mut scuba,
+            ods_counters,
+            None,
+        );
+        assert!(matches!(result, LoadShedResult::Pass));
+
+        registry.remove_weight(ClientBucket::Quicksand, 1_000_000);
+    }
+
+    #[cfg(fbcode_build)]
+    #[mononoke::fbinit_test]
+    fn test_top_client_load_shed_no_consumers(fb: FacebookInit) {
+        use rate_limiting_config::TopClient;
+
+        let metric_name = "test_memory_pct_no_consumers";
+
+        STATS::load_shed_counter.set_value(fb, 80, (metric_name.to_string(),));
+
+        let limit = LoadShedLimit {
+            raw_config: rate_limiting_config::LoadShedLimit {
+                status: RateLimitStatus::Enforced,
+                target: None,
+                limit: 75,
+                load_shedding_metric: LoadSheddingMetric::top_client(TopClient {
+                    metric: metric_name.to_string(),
+                }),
+                ..Default::default()
+            },
+            target: None,
+        };
+
+        let mut scuba = MononokeScubaSampleBuilder::with_discard();
+        let ods_counters = OdsCounterManager::new(fb);
+
+        // No consumers registered (or all at zero) → Pass
+        let result = limit.should_load_shed(
+            fb,
+            None,
+            Some("SERVICE_IDENTITY:quicksand_builder"),
+            &mut scuba,
+            ods_counters,
+            None,
+        );
+        assert!(matches!(result, LoadShedResult::Pass));
+    }
+
+    #[cfg(fbcode_build)]
+    #[mononoke::fbinit_test]
+    fn test_top_client_load_shed_tracked_mode(fb: FacebookInit) {
+        use client_memory::global_client_memory_registry;
+        use rate_limiting_config::TopClient;
+
+        let metric_name = "test_memory_pct_tracked";
+
+        STATS::load_shed_counter.set_value(fb, 80, (metric_name.to_string(),));
+
+        let registry = global_client_memory_registry();
+        registry.add_weight(ClientBucket::Quicksand, 1_000_000);
+
+        let limit = LoadShedLimit {
+            raw_config: rate_limiting_config::LoadShedLimit {
+                status: RateLimitStatus::Tracked,
+                target: None,
+                limit: 75,
+                load_shedding_metric: LoadSheddingMetric::top_client(TopClient {
+                    metric: metric_name.to_string(),
+                }),
+                ..Default::default()
+            },
+            target: None,
+        };
+
+        let mut scuba = MononokeScubaSampleBuilder::with_discard();
+        let ods_counters = OdsCounterManager::new(fb);
+
+        // Tracked mode → logs but passes (shadow mode)
+        let result = limit.should_load_shed(
+            fb,
+            None,
+            Some("SERVICE_IDENTITY:quicksand_builder"),
+            &mut scuba,
+            ods_counters,
+            None,
+        );
+        assert!(matches!(result, LoadShedResult::Pass));
+
+        // Verify that "Would have rate limited" was logged
+        let sample = scuba.get_sample();
+        assert_eq!(
+            sample.get("log_tag").unwrap().to_string(),
+            "Would have rate limited"
+        );
+
+        registry.remove_weight(ClientBucket::Quicksand, 1_000_000);
     }
 }
