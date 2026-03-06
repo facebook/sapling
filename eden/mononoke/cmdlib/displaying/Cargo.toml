@@ -11,6 +11,7 @@ license = "GPLv2+"
 anyhow = "1.0.101"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context" }
+either = "1.5"
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 hex = { version = "0.4.3", features = ["alloc"] }
 manifest = { version = "0.1.0", path = "../../manifest" }

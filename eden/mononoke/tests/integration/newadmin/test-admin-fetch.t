@@ -63,7 +63,7 @@ setup configuration
   B 35e7525ce3a48913275d7061dd9a867ffef1e34d regular
   C a2e456504a5e61f763f1a0b36a6c247c7541b2b3 regular
 
-  $ mononoke_admin fetch -R repo -B main -p "" -k fsnode
+  $ mononoke_admin fetch -R repo -B main -p "" -k content-manifest
   Summary:
   Children: 3 files (3), 0 dirs
   Descendants: 3 files (3)
@@ -72,7 +72,7 @@ setup configuration
   B 55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f regular
   C 896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d regular
 
-  $ mononoke_admin fetch -R repo -B main -p "A" -k fsnode
+  $ mononoke_admin fetch -R repo -B main -p "A" -k content-manifest
   File-Type: regular
   Size: 1
   Content-Id: eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9

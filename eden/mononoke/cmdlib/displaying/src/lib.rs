@@ -16,7 +16,7 @@ use anyhow::Result;
 pub use changeset::DisplayChangeset;
 pub use changeset::display_file_change;
 pub use content::display_content;
-pub use fsnode::display_fsnode_manifest;
+pub use fsnode::display_manifest;
 pub use mercurial::display_hg_manifest;
 
 /// Hexdump a block of data to the output stream.

@@ -21,10 +21,12 @@ use clap::Parser;
 use clap::ValueEnum;
 use cmdlib_displaying::DisplayChangeset;
 use cmdlib_displaying::display_content;
-use cmdlib_displaying::display_fsnode_manifest;
 use cmdlib_displaying::display_hg_manifest;
+use cmdlib_displaying::display_manifest;
+use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
 use derivation_queue_thrift::DerivationPriority;
+use either::Either;
 use ephemeral_blobstore::BubbleId;
 use ephemeral_blobstore::RepoEphemeralStore;
 use ephemeral_blobstore::RepoEphemeralStoreRef;
@@ -37,6 +39,7 @@ use mononoke_app::MononokeApp;
 use mononoke_app::args::ChangesetArgs;
 use mononoke_app::args::RepoArgs;
 use mononoke_types::ChangesetId;
+use mononoke_types::content_manifest::compat;
 use mononoke_types::path::MPath;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
@@ -99,7 +102,7 @@ pub struct Repo {
 #[derive(Debug, Copy, Clone, Eq, PartialEq, ValueEnum)]
 pub enum ManifestKind {
     Hg,
-    Fsnode,
+    ContentManifest,
     // TODO: Add unode manifest and skmf support
 }
 
@@ -157,7 +160,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
                     .ok_or_else(|| anyhow!("No Hg changeset for {}", changeset_id))?;
                 display_hg_entry(&ctx, &blobstore, hg_changeset_id, path).await?;
             }
-            ManifestKind::Fsnode => {
+            ManifestKind::ContentManifest => {
                 display_fsnode(&ctx, &repo, &blobstore, changeset_id, path).await?;
             }
         },
@@ -195,31 +198,57 @@ async fn display_fsnode(
     cs_id: ChangesetId,
     path: &str,
 ) -> Result<()> {
-    let root_fsnode_id = repo
-        .repo_derived_data()
-        .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
-        .await?;
-    let fsnode = if path.is_empty() {
-        Entry::Tree(root_fsnode_id.fsnode_id().clone())
+    let use_content_manifests = justknobs::eval(
+        "scm/mononoke:derived_data_use_content_manifests",
+        None,
+        None,
+    )?;
+
+    let root_manifest_id: compat::ContentManifestId = if use_content_manifests {
+        repo.repo_derived_data()
+            .derive::<RootContentManifestId>(ctx, cs_id, DerivationPriority::LOW)
+            .await?
+            .into_content_manifest_id()
+            .into()
+    } else {
+        repo.repo_derived_data()
+            .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
+            .await?
+            .into_fsnode_id()
+            .into()
+    };
+
+    let entry = if path.is_empty() {
+        Entry::Tree(root_manifest_id)
     } else {
         let mpath = MPath::new(path).with_context(|| format!("Invalid path: {}", path))?;
-        root_fsnode_id
-            .fsnode_id()
+        root_manifest_id
             .find_entry(ctx.clone(), blobstore.clone(), mpath)
             .await?
             .ok_or_else(|| anyhow!("Path does not exist: {}", path))?
     };
-    match fsnode {
-        Entry::Leaf(fsnode_file) => {
-            writeln!(std::io::stdout(), "File-Type: {}", fsnode_file.file_type())?;
-            display_content_info(ctx, blobstore, &fsnode_file.content_id().clone().into()).await?;
+    match entry {
+        Entry::Leaf(leaf) => {
+            let file: compat::ContentManifestFile = leaf.into();
+            writeln!(std::io::stdout(), "File-Type: {}", file.file_type())?;
+            display_content_info(ctx, blobstore, &file.content_id().into()).await?;
         }
         Entry::Tree(id) => {
-            let manifest = id
-                .load(ctx, blobstore)
-                .await
-                .context("Failed to load manifest")?;
-            display_fsnode_manifest(std::io::stdout(), &manifest)?;
+            let manifest = match id {
+                Either::Left(cm_id) => Either::Left(
+                    cm_id
+                        .load(ctx, blobstore)
+                        .await
+                        .context("Failed to load content manifest")?,
+                ),
+                Either::Right(fsnode_id) => Either::Right(
+                    fsnode_id
+                        .load(ctx, blobstore)
+                        .await
+                        .context("Failed to load manifest")?,
+                ),
+            };
+            display_manifest(std::io::stdout(), ctx, blobstore, manifest).await?;
         }
     }
     Ok(())

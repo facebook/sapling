@@ -8,45 +8,90 @@
 use std::io::Write;
 
 use anyhow::Result;
+use blobstore::KeyedBlobstore;
+use context::CoreContext;
+use either::Either;
+use futures::TryStreamExt;
+use manifest::Entry;
+use manifest::Manifest;
+use mononoke_types::content_manifest::ContentManifest;
+use mononoke_types::content_manifest::compat;
 use mononoke_types::fsnode::Fsnode;
-use mononoke_types::fsnode::FsnodeEntry;
 use unicode_truncate::Alignment;
 use unicode_truncate::UnicodeTruncateStr;
 use unicode_width::UnicodeWidthStr;
 
-/// Displays a fanode manifest, one entry per line.
-pub fn display_fsnode_manifest(mut w: impl Write, fsnode: &Fsnode) -> Result<()> {
-    writeln!(w, "Summary:",)?;
-    let summary = fsnode.summary();
-    writeln!(
-        w,
-        "Children: {} files ({}), {} dirs",
-        summary.child_files_count, summary.child_files_total_size, summary.child_dirs_count
-    )?;
-    writeln!(
-        w,
-        "Descendants: {} files ({})",
-        summary.descendant_files_count, summary.descendant_files_total_size
-    )?;
+/// Displays a manifest (either ContentManifest or Fsnode), with a summary
+/// header and one entry per line.
+pub async fn display_manifest<B: KeyedBlobstore>(
+    mut w: impl Write,
+    ctx: &CoreContext,
+    blobstore: &B,
+    manifest: Either<ContentManifest, Fsnode>,
+) -> Result<()> {
+    // Summary — each manifest type stores this differently.
+    match &manifest {
+        Either::Left(cm) => {
+            let rollup = cm.subentries.rollup_data();
+            writeln!(w, "Summary:")?;
+            writeln!(
+                w,
+                "Children: {} files ({}), {} dirs",
+                rollup.child_counts.files_count,
+                rollup.child_counts.files_total_size,
+                rollup.child_counts.dirs_count
+            )?;
+            writeln!(
+                w,
+                "Descendants: {} files ({}), {} dirs",
+                rollup.descendant_counts.files_count,
+                rollup.descendant_counts.files_total_size,
+                rollup.descendant_counts.dirs_count
+            )?;
+        }
+        Either::Right(fsnode) => {
+            let summary = fsnode.summary();
+            writeln!(w, "Summary:")?;
+            writeln!(
+                w,
+                "Children: {} files ({}), {} dirs",
+                summary.child_files_count, summary.child_files_total_size, summary.child_dirs_count
+            )?;
+            writeln!(
+                w,
+                "Descendants: {} files ({})",
+                summary.descendant_files_count, summary.descendant_files_total_size
+            )?;
+        }
+    }
 
-    writeln!(w, "Children list:",)?;
-    let entries = fsnode
-        .list()
-        .map(|(name, entry)| (String::from_utf8_lossy(name.as_ref()).into_owned(), entry))
-        .collect::<Vec<_>>();
+    // Children list — unified via the Manifest trait on Either.
+    writeln!(w, "Children list:")?;
+    let entries: Vec<_> = Manifest::list(&manifest, ctx, blobstore)
+        .await?
+        .map_ok(|(name, entry)| {
+            let name = String::from_utf8_lossy(name.as_ref()).into_owned();
+            let (id, ty) = match entry {
+                Entry::Leaf(leaf) => {
+                    let file: compat::ContentManifestFile = leaf.into();
+                    (file.content_id().to_string(), file.file_type().to_string())
+                }
+                Entry::Tree(tree_id) => (
+                    tree_id.either(|id| id.to_string(), |id| id.to_string()),
+                    "tree".to_string(),
+                ),
+            };
+            (name, id, ty)
+        })
+        .try_collect()
+        .await?;
+
     let max_width = entries
         .iter()
-        .map(|(name, _)| name.width())
+        .map(|(name, _, _)| name.width())
         .max()
         .unwrap_or(0);
-    for (name, entry) in entries {
-        let (ty, id) = match entry {
-            FsnodeEntry::File(fsnode_file) => (
-                fsnode_file.file_type().to_string(),
-                fsnode_file.content_id().to_string(),
-            ),
-            FsnodeEntry::Directory(fsnode_dir) => ("tree".to_string(), fsnode_dir.id().to_string()),
-        };
+    for (name, id, ty) in entries {
         writeln!(
             w,
             "{} {} {}",
