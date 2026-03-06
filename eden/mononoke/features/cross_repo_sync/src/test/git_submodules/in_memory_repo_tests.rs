@@ -14,6 +14,7 @@ use anyhow::Result;
 use blobstore::Loadable;
 use changesets_creation::save_changesets;
 use commit_transformation::git_submodules::InMemoryRepo;
+use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
 use derivation_queue_thrift::DerivationPriority;
 use fbinit::FacebookInit;
@@ -43,20 +44,43 @@ async fn test_original_blobstore_and_changesets_are_the_same_after_validation(
 
     let orig_repo_commit = *orig_repo_cs_map.get("B_B").unwrap();
 
-    // Derive Fsnodes for a commit in the InMemoryRepo
-    in_memory_repo
-        .repo_derived_data()
-        .derive::<RootFsnodeId>(&ctx, orig_repo_commit, DerivationPriority::LOW)
-        .await?;
+    let use_content_manifests = justknobs::eval(
+        "scm/mononoke:derived_data_use_content_manifests",
+        None,
+        None,
+    )?;
 
-    // Check that Fsnodes are not derived for that commit in the original repo
-    assert!(
-        orig_repo
+    if use_content_manifests {
+        // Derive ContentManifest for a commit in the InMemoryRepo
+        in_memory_repo
             .repo_derived_data()
-            .fetch_derived::<RootFsnodeId>(&ctx, orig_repo_commit)
-            .await?
-            .is_none()
-    );
+            .derive::<RootContentManifestId>(&ctx, orig_repo_commit, DerivationPriority::LOW)
+            .await?;
+
+        // Check that ContentManifest is not derived for that commit in the original repo
+        assert!(
+            orig_repo
+                .repo_derived_data()
+                .fetch_derived::<RootContentManifestId>(&ctx, orig_repo_commit)
+                .await?
+                .is_none()
+        );
+    } else {
+        // Derive Fsnodes for a commit in the InMemoryRepo
+        in_memory_repo
+            .repo_derived_data()
+            .derive::<RootFsnodeId>(&ctx, orig_repo_commit, DerivationPriority::LOW)
+            .await?;
+
+        // Check that Fsnodes are not derived for that commit in the original repo
+        assert!(
+            orig_repo
+                .repo_derived_data()
+                .fetch_derived::<RootFsnodeId>(&ctx, orig_repo_commit)
+                .await?
+                .is_none()
+        );
+    }
 
     // ------------------ Test fallback repo ------------------
 
