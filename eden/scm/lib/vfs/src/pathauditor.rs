@@ -298,4 +298,114 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_valid_paths() {
+        let all = FsFeatures::all();
+        let none = FsFeatures::empty();
+        assert!(audit_invalid_components("a/b/c", none).is_ok());
+        assert!(audit_invalid_components("a/b/c", all).is_ok());
+        assert!(audit_invalid_components("foo.bar/baz", none).is_ok());
+        assert!(audit_invalid_components("foo.bar/baz", all).is_ok());
+        assert!(audit_invalid_components("deeply/nested/path/to/file.txt", none).is_ok());
+    }
+
+    #[test]
+    fn test_empty_components() {
+        let f = FsFeatures::empty();
+        assert!(audit_invalid_components("", f).is_err(), "empty path");
+        assert!(audit_invalid_components("/a", f).is_err(), "leading /");
+        assert!(audit_invalid_components("a/", f).is_err(), "trailing /");
+        assert!(
+            audit_invalid_components("a//b", f).is_err(),
+            "consecutive /"
+        );
+    }
+
+    #[test]
+    fn test_hfs_invisible_chars() {
+        let hfs = FsFeatures::HFS_STRIP;
+
+        // HFS chars hiding dot-dirs
+        assert!(audit_invalid_components("a/.\u{200c}sl/b", hfs).is_err());
+        assert!(audit_invalid_components("a/.\u{200d}hg/b", hfs).is_err());
+        assert!(audit_invalid_components("a/.\u{200c}\u{200d}sl/b", hfs).is_err());
+
+        // HFS chars hiding "." and ".."
+        assert!(audit_invalid_components("a/.\u{feff}/b", hfs).is_err());
+        assert!(audit_invalid_components("a/.\u{feff}./b", hfs).is_err());
+
+        // Component that reduces to empty after stripping
+        assert!(audit_invalid_components("a/\u{200c}/b", hfs).is_err());
+
+        // HFS chars in a normal component are fine
+        assert!(audit_invalid_components("a/foo\u{200c}bar/b", hfs).is_ok());
+    }
+
+    #[test]
+    fn test_windows_backslash_separator() {
+        let bs = FsFeatures::BACKSLASH_SEP;
+
+        // Backslash splits components
+        assert!(audit_invalid_components("a\\.sl\\b", bs).is_err());
+        assert!(audit_invalid_components("a\\..\\b", bs).is_err());
+        assert!(audit_invalid_components("a\\.\\b", bs).is_err());
+
+        // Mixed separators
+        assert!(audit_invalid_components("a/.hg\\b", bs).is_err());
+
+        // Without BACKSLASH_SEP, backslash is literal (part of component name)
+        assert!(audit_invalid_components("a\\b", FsFeatures::empty()).is_ok());
+    }
+
+    #[test]
+    fn test_windows_case_insensitive() {
+        let ci = FsFeatures::CASE_INSENSITIVE;
+
+        // Case-insensitive dot-dir matching
+        assert!(audit_invalid_components("a/.SL/b", ci).is_err());
+        assert!(audit_invalid_components("a/.Hg/b", ci).is_err());
+        assert!(audit_invalid_components("a/.HG/b", ci).is_err());
+        assert!(audit_invalid_components("a/.Sl/b", ci).is_err());
+
+        // Without CASE_INSENSITIVE, uppercase variants are fine
+        assert!(audit_invalid_components("a/.SL/b", FsFeatures::empty()).is_ok());
+        assert!(audit_invalid_components("a/.HG/b", FsFeatures::empty()).is_ok());
+    }
+
+    #[test]
+    fn test_windows_shortnames() {
+        let wn = FsFeatures::WINDOWS_NAMES;
+
+        assert!(audit_invalid_components("sl~1", wn).is_err());
+        assert!(audit_invalid_components("hg~123", wn).is_err());
+
+        assert!(audit_invalid_components("SL~1", wn).is_err());
+
+        // No digits after ~ is fine
+        assert!(audit_invalid_components("sl~abc", wn).is_ok());
+        // Unknown prefix is fine
+        assert!(audit_invalid_components("foo~1", wn).is_ok());
+    }
+
+    #[test]
+    fn test_windows_trailing_dots() {
+        let wn = FsFeatures::WINDOWS_NAMES;
+
+        assert!(audit_invalid_components("file...", wn).is_err());
+        assert!(audit_invalid_components("dir./foo", wn).is_err());
+
+        // Without WINDOWS_NAMES, trailing dots are fine
+        assert!(audit_invalid_components("file...", FsFeatures::empty()).is_ok());
+        assert!(audit_invalid_components("dir./foo", FsFeatures::empty()).is_ok());
+    }
+
+    #[test]
+    fn test_hfs_plus_case_insensitive_combined() {
+        let f = FsFeatures::HFS_STRIP | FsFeatures::CASE_INSENSITIVE;
+
+        // HFS invisible char + case insensitivity
+        assert!(audit_invalid_components("a/.\u{200c}SL/b", f).is_err());
+        assert!(audit_invalid_components("a/.\u{feff}Hg/b", f).is_err());
+    }
 }
