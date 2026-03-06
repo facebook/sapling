@@ -30,14 +30,17 @@ pub struct PathAuditor {
     audited: DashMap<RepoPathBuf, ()>,
 }
 
-static WINDOWS_SHORTNAME_ALIASES: Lazy<Vec<&'static str>> =
-    Lazy::new(|| identity::all().iter().map(|i| i.cli_name()).collect());
+static WINDOWS_SHORTNAME_ALIASES: Lazy<Vec<&'static str>> = Lazy::new(|| {
+    identity::sniff_idents()
+        .map(|i| i.sniff_dot_dir.trim_start_matches('.'))
+        .collect()
+});
 
 static INVALID_COMPONENTS: Lazy<Vec<&'static str>> = Lazy::new(|| {
     let components: [&'static str; 2] = [".", ".."];
     components
         .into_iter()
-        .chain(identity::all().iter().map(|i| i.dot_dir()))
+        .chain(identity::sniff_idents().map(|i| i.sniff_dot_dir))
         .collect()
 });
 
@@ -420,10 +423,9 @@ mod tests {
     #[test]
     fn test_all_identity_dotdir() {
         let f = FsFeatures::empty();
-        // BUG: need to prevent .git writes too.
-        assert!(!audit_invalid_components("a/.git/b", f).is_err());
+        assert!(audit_invalid_components("a/.git/b", f).is_err());
 
         let f = FsFeatures::WINDOWS_NAMES;
-        assert!(!audit_invalid_components("a/GiT~1/b", f).is_err());
+        assert!(audit_invalid_components("a/GiT~1/b", f).is_err());
     }
 }
