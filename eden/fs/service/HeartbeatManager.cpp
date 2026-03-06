@@ -10,6 +10,7 @@
 #include <fcntl.h>
 #include <chrono>
 #include <filesystem>
+#include <fstream>
 #include <sstream>
 
 #include <folly/Conv.h>
@@ -48,6 +49,24 @@ time_t getBootTimeSysctl() {
     return -1;
   }
   return boottime.tv_sec;
+}
+#elif defined(__linux__)
+time_t getBootTimeProcStat() {
+  std::ifstream procStat("/proc/stat");
+  if (!procStat.is_open()) {
+    return -1;
+  }
+  std::string line;
+  while (std::getline(procStat, line)) {
+    if (line.starts_with("btime ")) {
+      try {
+        return folly::to<time_t>(line.substr(6));
+      } catch (const std::exception&) {
+        return -1;
+      }
+    }
+  }
+  return -1;
 }
 #endif
 
@@ -143,6 +162,8 @@ bool HeartbeatManager::checkForPreviousHeartbeat(
 
 #ifdef __APPLE__
         time_t bootTime = getBootTimeSysctl();
+#elif defined(__linux__)
+        time_t bootTime = getBootTimeProcStat();
 #else
         time_t bootTime = 0;
 #endif
