@@ -28,7 +28,7 @@ http = "1.4.0"
 http-body = "1.0.1"
 http-body-util = "0.1.0"
 hyper = { version = "1.8.1", features = ["client", "http1", "http2"] }
-hyper-util = "0.1.20"
+hyper-util = { version = "0.1.20", features = ["client-legacy", "http1", "http2", "server-auto", "service", "tokio"] }
 justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 metadata = { version = "0.1.0", path = "../metadata" }
