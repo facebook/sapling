@@ -256,6 +256,7 @@ buffer-commit-count=100000
 httpbookmarks=True
 httpmutation=True
 master-fastpath=True
+include-default-bookmarks=False
 
 [exchange]
 httpcommitlookup=True

@@ -4660,9 +4660,9 @@ def _newpull(ui, repo, source, **opts):
     selected = bookmarks.selectivepullbookmarknames(repo, remotename)
 
     if not bmarks:
-        # without -r or -B: Include selected -B to avoid pulling nothing.
-        # with -r without -B: Include selected -B to avoid wrong phases.
         bmarks += selected
+    elif ui.configbool("pull", "include-default-bookmarks"):
+        bmarks = list({*bmarks, *selected[:1]})
 
     # De-duplicate.
     bmarks = sorted(set(bmarks))
