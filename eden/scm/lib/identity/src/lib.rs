@@ -578,11 +578,31 @@ pub fn cli_name() -> &'static str {
     DEFAULT.read().cli_name()
 }
 
+/// Used by `PathAuditor` and `sniff_dir`.
+///
+/// For `PathAuditor` use-case, this struct intentionally only exposes one
+/// public field to avoid misleading methods (e.g. `dot_dir()` or `cli_name()`
+/// are misleading).
+pub struct SniffIdent {
+    pub sniff_dot_dir: &'static str,
+    ident: &'static Identity,
+}
+
+/// Returns all identities that involves sniffing.
+/// `PathAuditor` and `sniff_dir` must share this implementation.
+pub fn sniff_idents() -> impl Iterator<Item = SniffIdent> {
+    all().iter().chain(EXTRA_SNIFF_IDENTS).map(|i| SniffIdent {
+        sniff_dot_dir: i.repo.sniff_dot_dir(),
+        ident: i,
+    })
+}
+
 /// Sniff the given path for the existence of "{path}/.hg" or
 /// "{path}/.sl" directories, yielding the sniffed Identity, if any.
 /// Only permissions errors are propagated.
 pub fn sniff_dir(path: &Path) -> Result<Option<Identity>> {
-    'outer_loop: for id in all().iter().chain(EXTRA_SNIFF_IDENTS) {
+    'outer_loop: for sid in sniff_idents() {
+        let id = sid.ident;
         if let Some(cli_names) = id.repo.sniff_initial_cli_names {
             // Support bypassing the CLI name check via PLAINEXCEPT=sniff. This can be useful for ISL.
             let mut bypass_check = false;
@@ -595,7 +615,7 @@ pub fn sniff_dir(path: &Path) -> Result<Option<Identity>> {
                 continue;
             }
         }
-        let sniff_dot_dir = id.repo.sniff_dot_dir();
+        let sniff_dot_dir = sid.sniff_dot_dir;
         let test_path = path.join(sniff_dot_dir);
         tracing::trace!(path=%path.display(), "sniffing dir");
         match fs::metadata(&test_path) {
@@ -1113,6 +1133,16 @@ mod test {
         let t = |prefix_list| -> Vec<&str> { split_rcpath(&rcpath, prefix_list).collect() };
         assert_eq!(t(&["sys", ""]), ["111", "333", "555", "foo=666"]);
         assert_eq!(t(&["user"]), ["222", "444"]);
+    }
+
+    #[test]
+    fn test_sniff_dot_dirs() {
+        let sniff_dot_dirs: Vec<_> = sniff_idents().map(|i| i.sniff_dot_dir).collect();
+        assert!(sniff_dot_dirs.contains(&SL.repo.sniff_dot_dir()));
+        assert!(sniff_dot_dirs.contains(&SL_GIT.repo.sniff_dot_dir()));
+        if !cfg!(feature = "sl_oss") {
+            assert!(sniff_dot_dirs.contains(&HG.repo.sniff_dot_dir()));
+        }
     }
 
     fn write_required_files(dir: &Path, ident: Identity) {
