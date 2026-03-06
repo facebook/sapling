@@ -982,27 +982,29 @@ pub async fn fetch_response<'a>(
     progress_writer
         .send("Converting HAVE Git commits to Bonsais\n".to_string())
         .await?;
-    let translated_sha_bases = git_shas_to_bonsais(&ctx, repo, request.bases.iter())
-        .try_timed()
-        .await
-        .context("Error converting base Git commits to Bonsai during fetch")?
-        .log_future_stats(
-            perf_scuba.clone(),
-            "Converted HAVE Git commits to Bonsais",
-            "Read".to_string(),
-        );
+    let translated_sha_bases =
+        git_shas_to_bonsais(&ctx, repo, request.bases.iter(), request.refs_source)
+            .try_timed()
+            .await
+            .context("Error converting base Git commits to Bonsai during fetch")?
+            .log_future_stats(
+                perf_scuba.clone(),
+                "Converted HAVE Git commits to Bonsais",
+                "Read".to_string(),
+            );
     progress_writer
         .send("Converting WANT Git commits to Bonsais\n".to_string())
         .await?;
-    let translated_sha_heads = git_shas_to_bonsais(&ctx, repo, request.heads.iter())
-        .try_timed()
-        .await
-        .context("Error converting head Git commits to Bonsai during fetch")?
-        .log_future_stats(
-            perf_scuba.clone(),
-            "Converted WANT Git commits to Bonsais",
-            "Read".to_string(),
-        );
+    let translated_sha_heads =
+        git_shas_to_bonsais(&ctx, repo, request.heads.iter(), request.refs_source)
+            .try_timed()
+            .await
+            .context("Error converting head Git commits to Bonsai during fetch")?
+            .log_future_stats(
+                perf_scuba.clone(),
+                "Converted WANT Git commits to Bonsais",
+                "Read".to_string(),
+            );
     // Get the stream of commits between the bases and heads
     // NOTE: Another Git magic. The filter spec includes an option that the client can use to exclude commit-type objects. But, even if the client
     // uses that filter, we just ignore it and send all the commits anyway :)
@@ -1124,17 +1126,32 @@ pub async fn shallow_info(
 ) -> Result<ShallowInfoResponse> {
     let ctx = Arc::new(ctx);
     // Convert the requested head object ids to bonsais so that we can use Mononoke commit graph
-    let translated_sha_heads = git_shas_to_bonsais(&ctx, repo, request.heads.iter())
-        .await
-        .context("Error converting head Git commits to Bonsai during shallow-info")?;
+    let translated_sha_heads = git_shas_to_bonsais(
+        &ctx,
+        repo,
+        request.heads.iter(),
+        RefsSource::WarmBookmarksCache,
+    )
+    .await
+    .context("Error converting head Git commits to Bonsai during shallow-info")?;
     // Convert the requested shallow object ids to bonsais so that we can use Mononoke commit graph
-    let translated_shallow_commits = git_shas_to_bonsais(&ctx, repo, request.shallow.iter())
-        .await
-        .context("Error converting shallow Git commits to Bonsai during shallow-info")?;
+    let translated_shallow_commits = git_shas_to_bonsais(
+        &ctx,
+        repo,
+        request.shallow.iter(),
+        RefsSource::WarmBookmarksCache,
+    )
+    .await
+    .context("Error converting shallow Git commits to Bonsai during shallow-info")?;
     // Convert the provided have object ids to bonsais so that we can use Mononoke commit graph
-    let translated_sha_bases = git_shas_to_bonsais(&ctx, repo, request.bases.iter())
-        .await
-        .context("Error converting base Git commits to Bonsai during shallow-info")?;
+    let translated_sha_bases = git_shas_to_bonsais(
+        &ctx,
+        repo,
+        request.bases.iter(),
+        RefsSource::WarmBookmarksCache,
+    )
+    .await
+    .context("Error converting base Git commits to Bonsai during shallow-info")?;
     let shallow_commits = ordered_bonsai_git_mappings_by_bonsai(
         &ctx,
         repo,

@@ -12,6 +12,7 @@ use rustc_hash::FxHashSet;
 
 use crate::Repo;
 use crate::mapping::git_shas_to_bonsais;
+use crate::types::RefsSource;
 use crate::types::ShallowInfoRequest;
 
 /// Validates that a shallow fetch without deepen arguments is not trying to
@@ -31,12 +32,23 @@ pub async fn validate_shallow_fetch_without_deepen(
     repo: &impl Repo,
     request: &ShallowInfoRequest,
 ) -> Result<()> {
-    let want_bonsais = git_shas_to_bonsais(ctx, repo, request.heads.iter())
-        .await
-        .context("Failed to convert WANT commits to bonsais")?;
-    let shallow_bonsais = git_shas_to_bonsais(ctx, repo, request.shallow.iter())
-        .await
-        .context("Failed to convert SHALLOW commits to bonsais")?;
+    // Use WarmBookmarksCache for validation - staleness doesn't affect the validation logic
+    let want_bonsais = git_shas_to_bonsais(
+        ctx,
+        repo,
+        request.heads.iter(),
+        RefsSource::WarmBookmarksCache,
+    )
+    .await
+    .context("Failed to convert WANT commits to bonsais")?;
+    let shallow_bonsais = git_shas_to_bonsais(
+        ctx,
+        repo,
+        request.shallow.iter(),
+        RefsSource::WarmBookmarksCache,
+    )
+    .await
+    .context("Failed to convert SHALLOW commits to bonsais")?;
 
     // Compute ancestors_difference(WANTS, SHALLOW) and ancestors_difference(WANTS, []).
     // If they differ, some ancestors of WANTS are also ancestors of SHALLOW,
