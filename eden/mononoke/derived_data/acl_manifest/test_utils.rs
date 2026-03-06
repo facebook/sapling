@@ -133,12 +133,22 @@ pub(crate) async fn setup_and_derive(
     fb: FacebookInit,
     commits: Vec<Vec<Change<'_>>>,
 ) -> Result<DerivedManifests> {
-    setup_and_derive_inner(fb, commits).await
+    setup_and_derive_inner(fb, commits, false).await
+}
+
+/// Create a repo, create commits in sequence, derive AclManifest for each
+/// from scratch (untopologically — ignores parent manifests).
+pub(crate) async fn setup_and_derive_from_scratch(
+    fb: FacebookInit,
+    commits: Vec<Vec<Change<'_>>>,
+) -> Result<DerivedManifests> {
+    setup_and_derive_inner(fb, commits, true).await
 }
 
 async fn setup_and_derive_inner(
     fb: FacebookInit,
     commits: Vec<Vec<Change<'_>>>,
+    from_scratch: bool,
 ) -> Result<DerivedManifests> {
     let ctx = CoreContext::test_mock(fb);
     let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
@@ -162,7 +172,11 @@ async fn setup_and_derive_inner(
                         },
                     );
                     let cs_id = commit.commit().await?;
-                    let root_id = derive(ctx_ref, repo_ref, cs_id).await?;
+                    let root_id = if from_scratch {
+                        derive_untopologically(ctx_ref, repo_ref, cs_id).await?
+                    } else {
+                        derive(ctx_ref, repo_ref, cs_id).await?
+                    };
                     ids.push(root_id);
                     Ok((ids, Some(cs_id)))
                 },
@@ -187,6 +201,19 @@ pub(crate) async fn derive(
     Ok(repo
         .repo_derived_data()
         .derive::<RootAclManifestId>(ctx, cs_id, DerivationPriority::LOW)
+        .await?)
+}
+
+/// Derive AclManifest from scratch (untopologically — ignores parent manifests).
+pub(crate) async fn derive_untopologically(
+    ctx: &CoreContext,
+    repo: &TestRepo,
+    cs_id: ChangesetId,
+) -> Result<RootAclManifestId> {
+    Ok(repo
+        .repo_derived_data()
+        .manager()
+        .unsafe_derive_untopologically::<RootAclManifestId>(ctx, cs_id, None)
         .await?)
 }
 /// Recursively walk the manifest tree and build a sorted `Vec<ExpectedNode>`.

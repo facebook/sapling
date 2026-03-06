@@ -11,19 +11,24 @@ use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use async_trait::async_trait;
+use basename_suffix_skeleton_manifest_v3::RootBssmV3DirectoryId;
 use blobstore::BlobstoreGetData;
 use context::CoreContext;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivableType;
+use derived_data_manager::DerivableUntopologically;
 use derived_data_manager::DerivationContext;
 use derived_data_manager::dependencies;
 use derived_data_service_if as thrift;
+use fsnodes::RootFsnodeId;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
+use mononoke_types::DerivableUntopologicallyVariant;
 use mononoke_types::ThriftConvert;
 use mononoke_types::typed_hash::AclManifestId;
 
+use crate::derive::derive_from_scratch;
 use crate::derive::derive_single;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -122,5 +127,23 @@ impl BonsaiDerivable for RootAclManifestId {
         Ok(thrift::DerivedData::acl_manifest(
             thrift::DerivedDataAclManifest::root_acl_manifest_id(data.0.into_thrift()),
         ))
+    }
+}
+
+#[async_trait]
+impl DerivableUntopologically for RootAclManifestId {
+    const DERIVABLE_UNTOPOLOGICALLY_VARIANT: DerivableUntopologicallyVariant =
+        DerivableUntopologicallyVariant::AclManifests;
+
+    /// From scratch derivation depends on BSSMV3 to efficiently find all
+    /// the ACL files and on fsnodes to get the file content.
+    type PredecessorDependencies = dependencies![RootBssmV3DirectoryId, RootFsnodeId];
+
+    async fn unsafe_derive_untopologically(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        bonsai: BonsaiChangeset,
+    ) -> Result<Self> {
+        derive_from_scratch(ctx, derivation_ctx, bonsai).await
     }
 }

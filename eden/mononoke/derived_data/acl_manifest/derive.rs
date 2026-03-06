@@ -10,6 +10,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use anyhow::Result;
+use basename_suffix_skeleton_manifest_v3::RootBssmV3DirectoryId;
 use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use blobstore::Storable;
@@ -17,10 +18,12 @@ use cloned::cloned;
 use context::CoreContext;
 use derived_data_manager::DerivationContext;
 use filestore::fetch_concat;
+use fsnodes::RootFsnodeId;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use futures::stream;
 use itertools::Either;
+use itertools::EitherOrBoth;
 use manifest::Entry;
 use manifest::LeafInfo;
 use manifest::ManifestOps;
@@ -48,6 +51,7 @@ use mononoke_types::sharded_map_v2::ShardedMapV2Node;
 use mononoke_types::typed_hash::AclManifestEntryBlobId;
 use mononoke_types::typed_hash::AclManifestId;
 use restricted_paths_acl_file::parse_acl_file;
+use vec1::vec1;
 
 use crate::RootAclManifestId;
 
@@ -115,6 +119,83 @@ pub(crate) async fn derive_single(
         parent_ids,
         derive_changes,
         subtree_changes,
+        &acl_file_name,
+    )
+    .await?;
+
+    match result {
+        Some(id) => Ok(RootAclManifestId(id)),
+        None => empty_root_acl_manifest_id(ctx, blobstore).await,
+    }
+}
+
+/// Derive an AclManifest from scratch using BSSMV3 to find all `.slacl` files.
+///
+/// Used for backfilling via `DerivableUntopologically`. Finds all ACL files
+/// in the repo and feeds them as synthetic additions to `derive_manifest`
+/// with empty parents.
+pub(crate) async fn derive_from_scratch(
+    ctx: &CoreContext,
+    derivation_ctx: &DerivationContext,
+    bonsai: BonsaiChangeset,
+) -> Result<RootAclManifestId> {
+    let blobstore = derivation_ctx.blobstore();
+    let cs_id = bonsai.get_changeset_id();
+
+    let acl_file_name = derivation_ctx
+        .restricted_paths()
+        .config()
+        .acl_file_name()
+        .to_string();
+
+    // Derive dependencies.
+    let bssm_v3 = derivation_ctx
+        .fetch_dependency::<RootBssmV3DirectoryId>(ctx, cs_id)
+        .await?;
+    let root_fsnode_id = derivation_ctx
+        .fetch_dependency::<RootFsnodeId>(ctx, cs_id)
+        .await?;
+
+    // Find all ACL files via BSSMV3 and resolve their content IDs via Fsnodes.
+    let acl_paths: Vec<NonRootMPath> = bssm_v3
+        .find_files_filter_basenames(
+            ctx,
+            blobstore.clone(),
+            vec![MPath::ROOT],
+            EitherOrBoth::Left(vec1![acl_file_name.clone()]),
+            None,
+        )
+        .await?
+        .try_filter_map(|path| async move { Ok(NonRootMPath::try_from(path).ok()) })
+        .try_collect()
+        .await?;
+
+    // Resolve content IDs for each .slacl file via Fsnodes (in parallel).
+    let derive_changes: Vec<(NonRootMPath, Option<ContentId>)> = stream::iter(acl_paths)
+        .map(|path| {
+            cloned!(ctx, blobstore, root_fsnode_id);
+            async move {
+                let content_id = resolve_content_id_via_fsnode(
+                    &ctx,
+                    &blobstore,
+                    &root_fsnode_id,
+                    &MPath::from(path.clone()),
+                )
+                .await?;
+                Ok::<_, anyhow::Error>((path, Some(content_id)))
+            }
+        })
+        .buffer_unordered(100)
+        .try_collect()
+        .await?;
+
+    // Call derive_manifest with empty parents.
+    let result = inner_derive(
+        ctx,
+        blobstore,
+        vec![],
+        derive_changes,
+        vec![],
         &acl_file_name,
     )
     .await?;
@@ -444,6 +525,26 @@ async fn store_acl_entry_from_content_id(
         permission_request_group: acl_file.permission_request_group().map(|g| g.to_string()),
     };
     entry_blob.into_blob().store(ctx, blobstore).await
+}
+
+/// Resolve a file's ContentId via Fsnodes.
+/// Only used by derive_from_scratch for backfilling.
+async fn resolve_content_id_via_fsnode(
+    ctx: &CoreContext,
+    blobstore: &Arc<dyn KeyedBlobstore>,
+    root_fsnode_id: &RootFsnodeId,
+    acl_path: &MPath,
+) -> Result<ContentId> {
+    let entry = root_fsnode_id
+        .fsnode_id()
+        .find_entry(ctx.clone(), blobstore.clone(), acl_path.clone())
+        .await?
+        .ok_or_else(|| anyhow::anyhow!("ACL file not found in fsnodes: {:?}", acl_path))?;
+
+    match entry {
+        Entry::Leaf(f) => Ok(*f.content_id()),
+        Entry::Tree(_) => anyhow::bail!("expected file but found directory: {:?}", acl_path),
+    }
 }
 
 async fn empty_root_acl_manifest_id(

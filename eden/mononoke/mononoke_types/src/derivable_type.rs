@@ -68,6 +68,7 @@ pub enum DerivableType {
 /// be derived without having data derived for their parents.
 #[derive(Clone, Copy, Debug, EnumIter, Eq, PartialEq)]
 pub enum DerivableUntopologicallyVariant {
+    AclManifests,
     Ccsm,
     HgAugmentedManifests,
     GitDeltaManifestsV3,
@@ -197,6 +198,7 @@ impl DerivableType {
     }
     pub fn into_derivable_untopologically_variant(self) -> Result<DerivableUntopologicallyVariant> {
         match self {
+            DerivableType::AclManifests => Ok(DerivableUntopologicallyVariant::AclManifests),
             DerivableType::Ccsm => Ok(DerivableUntopologicallyVariant::Ccsm),
             DerivableType::HgAugmentedManifests => {
                 Ok(DerivableUntopologicallyVariant::HgAugmentedManifests)
@@ -224,6 +226,7 @@ impl DerivableType {
 impl DerivableUntopologicallyVariant {
     pub fn into_derivable_type(self) -> DerivableType {
         match self {
+            DerivableUntopologicallyVariant::AclManifests => DerivableType::AclManifests,
             DerivableUntopologicallyVariant::Ccsm => DerivableType::Ccsm,
             DerivableUntopologicallyVariant::HgAugmentedManifests => {
                 DerivableType::HgAugmentedManifests

@@ -648,6 +648,121 @@ async fn test_merge_conflicting_restriction(fb: FacebookInit) -> Result<()> {
 
     Ok(())
 }
+
+// ---------------------------------------------------------------------------
+// From-scratch derivation tests
+// ---------------------------------------------------------------------------
+
+/// Test that deriving from scratch with no .slacl files produces an empty manifest.
+#[mononoke::fbinit_test]
+async fn test_derive_empty_repo(fb: FacebookInit) -> Result<()> {
+    let result =
+        setup_and_derive_from_scratch(fb, vec![vec![Change::Add("dir/file.txt", b"content")]])
+            .await?;
+
+    assert_eq!(Vec::<ExpectedNode>::new(), result.last_tree().await?);
+
+    Ok(())
+}
+
+/// Test from-scratch: a single .slacl file at dir/.slacl makes "dir" a restriction root.
+#[mononoke::fbinit_test]
+async fn test_derive_single_restriction_root(fb: FacebookInit) -> Result<()> {
+    let result = setup_and_derive_from_scratch(
+        fb,
+        vec![vec![
+            Change::Add("dir/file.txt", b"content"),
+            Change::Add("dir/.slacl", SLACL_PROJECT1),
+        ]],
+    )
+    .await?;
+
+    assert_eq!(
+        vec![node(
+            "dir",
+            Some("REPO_REGION:repos/hg/fbsource/=project1"),
+            vec![]
+        )],
+        result.last_tree().await?,
+    );
+
+    // Also verify permission_request_group is None (default)
+    let tree = result.last_tree().await?;
+    assert_eq!(tree[0].permission_request_group, None);
+
+    Ok(())
+}
+
+/// Test from-scratch: nested .slacl files at foo/.slacl and foo/bar/.slacl
+#[mononoke::fbinit_test]
+async fn test_derive_nested_restrictions(fb: FacebookInit) -> Result<()> {
+    let result = setup_and_derive_from_scratch(
+        fb,
+        vec![vec![
+            Change::Add("foo/file.txt", b"content"),
+            Change::Add("foo/.slacl", SLACL_PROJECT1),
+            Change::Add("foo/bar/file.txt", b"content"),
+            Change::Add("foo/bar/.slacl", SLACL_PROJECT2),
+        ]],
+    )
+    .await?;
+
+    assert_eq!(
+        vec![node(
+            "foo",
+            Some("REPO_REGION:repos/hg/fbsource/=project1"),
+            vec![node(
+                "bar",
+                Some("REPO_REGION:repos/hg/fbsource/=project2"),
+                vec![]
+            )],
+        )],
+        result.last_tree().await?,
+    );
+
+    Ok(())
+}
+
+/// Test from-scratch: two independent .slacl files in separate branches of the tree.
+#[mononoke::fbinit_test]
+async fn test_derive_multiple_independent_roots(fb: FacebookInit) -> Result<()> {
+    let result = setup_and_derive_from_scratch(
+        fb,
+        vec![vec![
+            Change::Add("proj/private/file.txt", b"content"),
+            Change::Add("proj/private/.slacl", SLACL_PROJECT1),
+            Change::Add("team/secret/file.txt", b"content"),
+            Change::Add("team/secret/.slacl", SLACL_PROJECT2),
+        ]],
+    )
+    .await?;
+
+    assert_eq!(
+        vec![
+            node(
+                "proj",
+                None,
+                vec![node(
+                    "private",
+                    Some("REPO_REGION:repos/hg/fbsource/=project1"),
+                    vec![]
+                )],
+            ),
+            node(
+                "team",
+                None,
+                vec![node(
+                    "secret",
+                    Some("REPO_REGION:repos/hg/fbsource/=project2"),
+                    vec![]
+                )],
+            ),
+        ],
+        result.last_tree().await?,
+    );
+
+    Ok(())
+}
 // TODO(T248660053): add tests with subtree copies and merges.
 
 // TODO(T248660053): add tests to cover derivation complexity is O(restriction root changes * depth)

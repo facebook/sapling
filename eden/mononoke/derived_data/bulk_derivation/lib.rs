@@ -461,6 +461,9 @@ fn manager_for_derivable_untopologically_variant(
         DerivableUntopologicallyVariant::TestShardedManifests => Arc::new(SingleTypeManager::<
             RootTestShardedManifestDirectory,
         >::new(manager)),
+        DerivableUntopologicallyVariant::AclManifests => {
+            Arc::new(SingleTypeManager::<RootAclManifestId>::new(manager))
+        }
     }
 }
 
