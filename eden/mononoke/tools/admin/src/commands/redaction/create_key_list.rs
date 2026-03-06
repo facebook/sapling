@@ -23,6 +23,7 @@ use bookmarks::BookmarksRef;
 use clap::ArgGroup;
 use clap::Args;
 use commit_id::parse_commit_id;
+use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
 use derivation_queue_thrift::DerivationPriority;
 use fsnodes::RootFsnodeId;
@@ -35,6 +36,7 @@ use mononoke_app::args::RepoBlobstoreArgs;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
+use mononoke_types::content_manifest::compat;
 use mononoke_types::typed_hash::RedactionKeyListId;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedDataRef;
@@ -164,17 +166,33 @@ async fn content_keys_for_paths(
     cs_id: ChangesetId,
     paths: Vec<NonRootMPath>,
 ) -> Result<HashSet<String>> {
-    let root_fsnode_id = repo
-        .repo_derived_data()
-        .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
-        .await?;
-    let path_content_keys = root_fsnode_id
-        .fsnode_id()
+    let use_content_manifests = justknobs::eval(
+        "scm/mononoke:derived_data_use_content_manifests",
+        None,
+        None,
+    )?;
+
+    let root_manifest_id: compat::ContentManifestId = if use_content_manifests {
+        repo.repo_derived_data()
+            .derive::<RootContentManifestId>(ctx, cs_id, DerivationPriority::LOW)
+            .await?
+            .into_content_manifest_id()
+            .into()
+    } else {
+        repo.repo_derived_data()
+            .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
+            .await?
+            .into_fsnode_id()
+            .into()
+    };
+
+    let path_content_keys = root_manifest_id
         .find_entries(ctx.clone(), repo.repo_blobstore_arc(), paths.clone())
         .try_filter_map(|(path, entry)| async move {
             match (path.into_optional_non_root_path(), entry) {
-                (Some(path), Entry::Leaf(fsnode_file)) => {
-                    Ok(Some((path, fsnode_file.content_id().blobstore_key())))
+                (Some(path), Entry::Leaf(leaf)) => {
+                    let file: compat::ContentManifestFile = leaf.into();
+                    Ok(Some((path, file.content_id().blobstore_key())))
                 }
                 _ => Ok(None),
             }
