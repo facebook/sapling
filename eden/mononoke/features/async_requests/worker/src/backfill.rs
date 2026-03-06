@@ -48,6 +48,13 @@ const JK_BACKFILL_READ_QPS: &str = "scm/mononoke:derived_data_backfill_read_qps"
 /// JustKnob for read bytes/s throttling during backfill derivation
 const JK_BACKFILL_READ_BYTES_S: &str = "scm/mononoke:derived_data_backfill_read_bytes_s";
 
+/// JustKnob for number of segments to derive in parallel
+const JK_BACKFILL_SEGMENT_CONCURRENCY: &str =
+    "scm/mononoke:derived_data_backfill_segment_concurrency";
+/// JustKnob for chunk size when deriving slices of commits
+const JK_BACKFILL_SEGMENT_CHUNK_SIZE: &str =
+    "scm/mononoke:derived_data_backfill_segment_chunk_size";
+
 /// Get a DerivedDataManager with optional read/write throttling applied.
 /// If JustKnobs are not set or are zero, returns the manager unchanged.
 fn get_throttled_manager(manager: &DerivedDataManager) -> Result<DerivedDataManager> {
@@ -228,18 +235,9 @@ pub(crate) async fn compute_derive_slice(
     let derived_data_type =
         DerivableType::from_name(&params.derived_data_type).map_err(AsyncRequestsError::request)?;
 
-    // Collect all segment heads - deriving each head will derive everything
-    // down to the base (which should already be derived as a boundary).
-    let head_cs_ids: Vec<ChangesetId> = params
-        .segments
-        .iter()
-        .map(|seg| ChangesetId::from_bytes(&seg.head))
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(AsyncRequestsError::request)?;
-
     info!(
         "Deriving slice with {} segments for repo {} type {:?}",
-        head_cs_ids.len(),
+        params.segments.len(),
         params.repo_id,
         derived_data_type,
     );
@@ -248,22 +246,63 @@ pub(crate) async fn compute_derive_slice(
         .map_err(AsyncRequestsError::internal)?;
     let manager = with_type_enabled(&manager, derived_data_type);
 
-    manager
-        .derive_bulk_locally(
-            ctx,
-            &head_cs_ids,
-            None, // rederivation
-            &[derived_data_type],
-            None, // override_batch_size
-        )
-        .await
-        .map_err(|e| AsyncRequestsError::internal(anyhow::anyhow!("{}", e)))?;
+    let segment_concurrency = justknobs::get_as::<i64>(JK_BACKFILL_SEGMENT_CONCURRENCY, None)
+        .map_err(AsyncRequestsError::internal)? as usize;
+    let segment_chunk_size = justknobs::get_as::<i64>(JK_BACKFILL_SEGMENT_CHUNK_SIZE, None)
+        .map_err(AsyncRequestsError::internal)? as usize;
 
-    let count = head_cs_ids.len() as i64;
-    info!("Derived slice with {} segments", count);
+    // Derive each segment by explicitly enumerating all changesets from base
+    // to head, then deriving them in batches.
+    let commit_graph = repo.repo().commit_graph();
+    let derived_count = Arc::new(AtomicUsize::new(0));
+
+    // Parse segments upfront so we can iterate concurrently.
+    let segments: Vec<(ChangesetId, ChangesetId)> = params
+        .segments
+        .iter()
+        .map(|seg| {
+            let base = ChangesetId::from_bytes(&seg.base)?;
+            let head = ChangesetId::from_bytes(&seg.head)?;
+            anyhow::Ok((base, head))
+        })
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(AsyncRequestsError::request)?;
+
+    stream::iter(segments)
+        .map(Ok::<_, Error>)
+        .try_for_each_concurrent(Some(segment_concurrency), |(base, head)| {
+            let manager = manager.clone();
+            let ctx = ctx.clone();
+            let commit_graph = commit_graph.clone();
+            let derived_count = derived_count.clone();
+            async move {
+                let segment_cs_ids: Vec<ChangesetId> = commit_graph
+                    .range_stream(&ctx, base, head)
+                    .await?
+                    .collect()
+                    .await;
+
+                for chunk in segment_cs_ids.chunks(segment_chunk_size) {
+                    BulkDerivation::derive_exactly_underived_batch(
+                        &manager,
+                        &ctx,
+                        chunk,
+                        None,
+                        derived_data_type,
+                    )
+                    .await?;
+                }
+                derived_count.fetch_add(segment_cs_ids.len(), Ordering::SeqCst);
+                Ok::<_, Error>(())
+            }
+        })
+        .await
+        .map_err(AsyncRequestsError::internal)?;
+
+    let derived_count = derived_count.load(Ordering::SeqCst) as i64;
 
     Ok(thrift::DeriveSliceResponse {
-        derived_count: count,
+        derived_count,
         error_message: None,
         ..Default::default()
     })
