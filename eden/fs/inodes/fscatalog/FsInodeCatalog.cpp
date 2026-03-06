@@ -405,15 +405,15 @@ FsFileContentStore::createHeader(
   folly::io::Appender appender(&header, 0);
 
   appender.push(identifier);
-  appender.writeBE(version);
+  appender.writeBE<uint32_t>(version);
   // The overlay header used to store timestamps for inodes but that has since
   // been moved to the InodeMetadataTable. Write zeroes instead.
-  appender.writeBE<uint64_t>(0); // atime.tv_sec
-  appender.writeBE<uint64_t>(0); // atime.tv_nsec
-  appender.writeBE<uint64_t>(0); // ctime.tv_sec
-  appender.writeBE<uint64_t>(0); // ctime.tv_nsec
-  appender.writeBE<uint64_t>(0); // mtime.tv_sec
-  appender.writeBE<uint64_t>(0); // mtime.tv_nsec
+  appender.writeBE<uint64_t>(static_cast<uint64_t>(0)); // atime.tv_sec
+  appender.writeBE<uint64_t>(static_cast<uint64_t>(0)); // atime.tv_nsec
+  appender.writeBE<uint64_t>(static_cast<uint64_t>(0)); // ctime.tv_sec
+  appender.writeBE<uint64_t>(static_cast<uint64_t>(0)); // ctime.tv_nsec
+  appender.writeBE<uint64_t>(static_cast<uint64_t>(0)); // mtime.tv_sec
+  appender.writeBE<uint64_t>(static_cast<uint64_t>(0)); // mtime.tv_nsec
   auto paddingSize = kHeaderLength - header.length();
   appender.ensure(paddingSize);
   memset(appender.writableData(), 0, paddingSize);

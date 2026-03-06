@@ -259,15 +259,15 @@ void writeWorkingCopyParentAndCheckedOutRevisision(
   // 4-byte identifier: "eden"
   cursor.push(ByteRange{kSnapshotFileMagic});
   // 4-byte format version identifier
-  cursor.writeBE<uint32_t>(
-      kSnapshotFormatWorkingCopyParentAndCheckedOutRevisionVersion);
+  cursor.writeBE<uint32_t>(static_cast<uint32_t>(
+      kSnapshotFormatWorkingCopyParentAndCheckedOutRevisionVersion));
 
   // Working copy parent
-  cursor.writeBE<uint32_t>(workingCopyString.size());
+  cursor.writeBE<uint32_t>(static_cast<uint32_t>(workingCopyString.size()));
   cursor.push(folly::StringPiece{workingCopyString});
 
   // Checked out commit
-  cursor.writeBE<uint32_t>(checkedOutString.size());
+  cursor.writeBE<uint32_t>(static_cast<uint32_t>(checkedOutString.size()));
   cursor.push(folly::StringPiece{checkedOutString});
 
   writeFileAtomicWithRetry(path, ByteRange{buf->data(), buf->length()}).value();
@@ -306,17 +306,18 @@ void CheckoutConfig::setCheckoutInProgress(const RootId& from, const RootId& to)
   // 4-byte identifier: "eden"
   cursor.push(ByteRange{kSnapshotFileMagic});
   // 4-byte format version identifier
-  cursor.writeBE<uint32_t>(kSnapshotFormatCheckoutInProgressVersion);
+  cursor.writeBE<uint32_t>(
+      static_cast<uint32_t>(kSnapshotFormatCheckoutInProgressVersion));
 
   // PID of this process
-  cursor.writeBE<uint32_t>(getpid());
+  cursor.writeBE<uint32_t>(static_cast<uint32_t>(getpid()));
 
   // From:
-  cursor.writeBE<uint32_t>(fromString.size());
+  cursor.writeBE<uint32_t>(static_cast<uint32_t>(fromString.size()));
   cursor.push(folly::StringPiece{fromString});
 
   // To:
-  cursor.writeBE<uint32_t>(toString.size());
+  cursor.writeBE<uint32_t>(static_cast<uint32_t>(toString.size()));
   cursor.push(folly::StringPiece{toString});
 
   writeFileAtomicWithRetry(

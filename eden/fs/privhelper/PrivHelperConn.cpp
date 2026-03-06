@@ -58,7 +58,8 @@ UnixSocket::Message serializeRequestPacket(
   Appender appender(&msg.data, kDefaultBufferSize);
 
   appender.write<uint32_t>(PRIVHELPER_CURRENT_VERSION);
-  appender.write<uint32_t>(sizeof(PrivHelperConn::PrivHelperPacketMetadata));
+  appender.write<uint32_t>(
+      static_cast<uint32_t>(sizeof(PrivHelperConn::PrivHelperPacketMetadata)));
   appender.write<uint32_t>(xid);
   appender.write<uint32_t>(static_cast<uint32_t>(type));
   return msg;
@@ -92,7 +93,7 @@ std::optional<T> deserializeOption(Cursor& cursor) {
 }
 
 void serializeString(Appender& a, StringPiece str) {
-  a.write<uint32_t>(str.size());
+  a.write<uint32_t>(static_cast<uint32_t>(str.size()));
   a.push(ByteRange(str));
 }
 
@@ -102,7 +103,7 @@ std::string deserializeString(Cursor& cursor) {
 }
 
 void serializeBool(Appender& a, bool b) {
-  a.write<uint8_t>(b);
+  a.write<uint8_t>(static_cast<uint8_t>(b));
 }
 
 bool deserializeBool(Cursor& cursor) {
@@ -126,7 +127,7 @@ uint16_t deserializeUint16(Cursor& cursor) {
 }
 
 void serializeUint32(Appender& a, uint64_t val) {
-  a.write<uint32_t>(val);
+  a.write<uint32_t>(static_cast<uint32_t>(val));
 }
 
 uint32_t deserializeUint32(Cursor& cursor) {
@@ -284,7 +285,7 @@ void PrivHelperConn::serializeResponsePacket(
       PRIVHELPER_CURRENT_VERSION,
       sizeof(packet));
   cursor.write<uint32_t>(PRIVHELPER_CURRENT_VERSION);
-  cursor.write<uint32_t>(sizeof(packet.metadata));
+  cursor.write<uint32_t>(static_cast<uint32_t>(sizeof(packet.metadata)));
   cursor.write<uint32_t>(packet.metadata.transaction_id);
   cursor.write<uint32_t>(packet.metadata.msg_type);
 }
@@ -422,7 +423,7 @@ UnixSocket::Message PrivHelperConn::serializeTakeoverStartupRequest(
   Appender appender(&msg.data, kDefaultBufferSize);
 
   serializeString(appender, mountPoint);
-  appender.write<uint32_t>(bindMounts.size());
+  appender.write<uint32_t>(static_cast<uint32_t>(bindMounts.size()));
   for (const auto& path : bindMounts) {
     serializeString(appender, path);
   }
@@ -530,7 +531,7 @@ UnixSocket::Message PrivHelperConn::serializeSetUseEdenFsRequest(
     bool useEdenFs) {
   auto msg = serializeRequestPacket(xid, REQ_SET_USE_EDENFS);
   Appender appender(&msg.data, kDefaultBufferSize);
-  appender.write<uint64_t>(((useEdenFs) ? 1 : 0));
+  appender.write<uint64_t>(static_cast<uint64_t>(((useEdenFs) ? 1 : 0)));
 
   return msg;
 }
@@ -553,7 +554,7 @@ UnixSocket::Message PrivHelperConn::serializeStartFamRequest(
   auto msg = serializeRequestPacket(xid, REQ_START_FAM);
   Appender appender(&msg.data, kDefaultBufferSize);
 
-  appender.write<uint32_t>(paths.size());
+  appender.write<uint32_t>(static_cast<uint32_t>(paths.size()));
   for (const auto& path : paths) {
     serializeString(appender, path);
   }
@@ -712,7 +713,7 @@ void PrivHelperConn::serializeErrorResponse(
     folly::StringPiece message,
     int errnum,
     folly::StringPiece excType) {
-  appender.write<uint32_t>(errnum);
+  appender.write<uint32_t>(static_cast<uint32_t>(errnum));
   serializeString(appender, message);
   serializeString(appender, excType);
 }

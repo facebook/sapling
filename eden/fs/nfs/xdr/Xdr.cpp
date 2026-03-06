@@ -13,7 +13,7 @@ namespace {
 void addPadding(folly::io::QueueAppender& appender, size_t len) {
   auto paddingBytes = detail::roundUp(len) - len;
   for (size_t i = 0; i < paddingBytes; i++) {
-    appender.writeBE<uint8_t>(0);
+    appender.writeBE<uint8_t>(static_cast<uint8_t>(0));
   }
 }
 } // namespace

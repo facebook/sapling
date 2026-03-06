@@ -366,7 +366,7 @@ TEST(Hash20, sha1IOBuf) {
   Appender app(buf1.get(), 0);
   app.push(StringPiece("abcdefghijklmnopqrstuvwxyz1234567890"));
   app = Appender(buf3.get(), 0);
-  app.writeBE<uint32_t>(0x00112233);
+  app.writeBE<uint32_t>(static_cast<uint32_t>(0x00112233));
   app.push(StringPiece("0987654321zyxwvutsrqponmlkjihgfedcba"));
 
   // Chain them together

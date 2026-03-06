@@ -56,7 +56,7 @@ TEST(GitBlob, testDeserializeManaged) {
   auto buf = IOBuf::create(1024);
   folly::io::Appender appender(buf.get(), 0);
   appender.printf("blob %zu", contents.size());
-  appender.write<uint8_t>(0);
+  appender.write<uint8_t>(static_cast<uint8_t>(0));
   appender.push(StringPiece(contents));
   // Sanity check that we are the only user of the newly-created IOBuf
   EXPECT_FALSE(buf->isShared()) << "newly created IOBuf should not be shared";

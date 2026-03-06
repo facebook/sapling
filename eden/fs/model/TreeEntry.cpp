@@ -187,7 +187,7 @@ void TreeEntry::serialize(PathComponentPiece name, Appender& appender) const {
   // so adding a byte (with flipped bits) to distinguish between a possible
   // blake3 hash and the next entry type because we have access to the entire
   // serialized tree
-  appender.write(0xff, sizeof(uint8_t));
+  appender.write<int>(0xff, sizeof(uint8_t));
   appender.push(contentBlake3_.value_or(kZeroHash32).getBytes());
 }
 

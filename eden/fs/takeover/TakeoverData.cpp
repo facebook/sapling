@@ -381,7 +381,7 @@ bool TakeoverData::isPing(const IOBuf* buf) {
 folly::IOBuf TakeoverData::serializePing() {
   IOBuf buf(IOBuf::CREATE, kHeaderLength);
   folly::io::Appender app(&buf, 0);
-  app.writeBE<uint32_t>(MessageType::PING);
+  app.writeBE<uint32_t>(static_cast<uint32_t>(MessageType::PING));
   XLOGF(DBG8, "Serialized ping message");
   return buf;
 }
@@ -398,7 +398,7 @@ bool TakeoverData::isFirstChunk(const IOBuf* buf) {
 folly::IOBuf TakeoverData::serializeFirstChunk() {
   IOBuf buf(IOBuf::CREATE, kHeaderLength);
   folly::io::Appender app(&buf, 0);
-  app.writeBE<uint32_t>(MessageType::FIRST_CHUNK);
+  app.writeBE<uint32_t>(static_cast<uint32_t>(MessageType::FIRST_CHUNK));
   XLOGF(DBG8, "Serialized first chunk message");
   return buf;
 }
@@ -415,7 +415,7 @@ bool TakeoverData::isLastChunk(const IOBuf* buf) {
 folly::IOBuf TakeoverData::serializeLastChunk() {
   IOBuf buf(IOBuf::CREATE, kHeaderLength);
   folly::io::Appender app(&buf, 0);
-  app.writeBE<uint32_t>(MessageType::LAST_CHUNK);
+  app.writeBE<uint32_t>(static_cast<uint32_t>(MessageType::LAST_CHUNK));
   XLOGF(DBG8, "Serialized last chunk message");
   return buf;
 }
@@ -603,9 +603,9 @@ void TakeoverData::serializeHeader(
   if (versionToAdvertize == kTakeoverProtocolVersionFour) {
     versionToAdvertize = kTakeoverProtocolVersionThree;
   }
-  appender.writeBE<uint32_t>(versionToAdvertize);
+  appender.writeBE<uint32_t>(static_cast<uint32_t>(versionToAdvertize));
   if (protocolCapabilities & TakeoverCapabilities::INCLUDE_HEADER_SIZE) {
-    appender.writeBE<uint32_t>(sizeof(uint64_t));
+    appender.writeBE<uint32_t>(static_cast<uint32_t>(sizeof(uint64_t)));
   }
   if (protocolCapabilities & TakeoverCapabilities::CAPABILITY_MATCHING) {
     appender.writeBE<uint64_t>(protocolCapabilities);

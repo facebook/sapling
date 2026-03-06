@@ -169,14 +169,14 @@ TEST(GitTree, testBadDeserialize) {
   IOBuf buf(IOBuf::CREATE, 1024);
   auto a = Appender(&buf, 1024);
   a.push(StringPiece("tree 123"));
-  a.write<uint8_t>(0);
+  a.write<uint8_t>(static_cast<uint8_t>(0));
   EXPECT_ANY_THROW(deserializeGitTree(zero, &buf));
 
   // Truncated after an entry mode
   buf.clear();
   a = Appender(&buf, 1024);
   a.push(StringPiece("tree 6"));
-  a.write<uint8_t>(0);
+  a.write<uint8_t>(static_cast<uint8_t>(0));
   a.push(StringPiece("100644"));
   EXPECT_ANY_THROW(deserializeGitTree(zero, &buf));
 
@@ -184,7 +184,7 @@ TEST(GitTree, testBadDeserialize) {
   buf.clear();
   a = Appender(&buf, 1024);
   a.push(StringPiece("tree 22"));
-  a.write<uint8_t>(0);
+  a.write<uint8_t>(static_cast<uint8_t>(0));
   a.push(StringPiece("100644 apm-rest-api.md"));
   EXPECT_ANY_THROW(deserializeGitTree(zero, &buf));
 
@@ -192,18 +192,18 @@ TEST(GitTree, testBadDeserialize) {
   buf.clear();
   a = Appender(&buf, 1024);
   a.push(StringPiece("tree 23"));
-  a.write<uint8_t>(0);
+  a.write<uint8_t>(static_cast<uint8_t>(0));
   a.push(StringPiece("100644 apm-rest-api.md"));
-  a.write<uint8_t>(0);
+  a.write<uint8_t>(static_cast<uint8_t>(0));
   EXPECT_ANY_THROW(deserializeGitTree(zero, &buf));
 
   // Non-octal digit in the mode
   buf.clear();
   a = Appender(&buf, 1024);
   a.push(StringPiece("tree 43"));
-  a.write<uint8_t>(0);
+  a.write<uint8_t>(static_cast<uint8_t>(0));
   a.push(StringPiece("100694 apm-rest-api.md"));
-  a.write<uint8_t>(0);
+  a.write<uint8_t>(static_cast<uint8_t>(0));
   a.push(Hash20("a3c8e5c25e5523322f0ea490173dbdc1d844aefb").getBytes());
   EXPECT_ANY_THROW(deserializeGitTree(zero, &buf));
 
@@ -211,11 +211,11 @@ TEST(GitTree, testBadDeserialize) {
   buf.clear();
   a = Appender(&buf, 1024);
   a.push(StringPiece("tree 44"));
-  a.write<uint8_t>(0);
+  a.write<uint8_t>(static_cast<uint8_t>(0));
   a.push(StringPiece("100644 apm-rest-api.md"));
-  a.write<uint8_t>(0);
+  a.write<uint8_t>(static_cast<uint8_t>(0));
   a.push(Hash20("a3c8e5c25e5523322f0ea490173dbdc1d844aefb").getBytes());
-  a.write<uint8_t>(0);
+  a.write<uint8_t>(static_cast<uint8_t>(0));
   EXPECT_ANY_THROW(deserializeGitTree(zero, &buf));
 }
 
