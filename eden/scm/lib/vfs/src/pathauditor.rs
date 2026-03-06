@@ -416,4 +416,14 @@ mod tests {
         assert!(audit_invalid_components("a/.\u{200c}SL/b", f).is_err());
         assert!(audit_invalid_components("a/.\u{feff}Hg/b", f).is_err());
     }
+
+    #[test]
+    fn test_all_identity_dotdir() {
+        let f = FsFeatures::empty();
+        // BUG: need to prevent .git writes too.
+        assert!(!audit_invalid_components("a/.git/b", f).is_err());
+
+        let f = FsFeatures::WINDOWS_NAMES;
+        assert!(!audit_invalid_components("a/GiT~1/b", f).is_err());
+    }
 }
