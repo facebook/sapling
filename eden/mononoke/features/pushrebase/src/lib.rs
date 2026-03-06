@@ -406,7 +406,8 @@ pub async fn do_batched_pushrebase(
     let mut all_rebased_changesets: RebasedChangesets = Default::default();
     let mut all_rebased_bonsais: Vec<BonsaiChangeset> = Vec::new();
 
-    for request in requests {
+    let mut requests_iter = requests.into_iter();
+    while let Some(request) = requests_iter.next() {
         let bookmark_val = old_bookmark_value.unwrap_or(request.conflict_check_base);
         let merged_file_overrides = match check_pushrebase_conflicts(
             ctx,
@@ -476,7 +477,25 @@ pub async fn do_batched_pushrebase(
                 ));
             }
             Err(e) => {
+                // Fail only the broken request.
                 let _ = request.response_tx.send(Err(SharedError::from(e)));
+                // `create_rebased_changesets` may have partially mutated
+                // `commit_hooks` (e.g. globalrev assignments) before failing.
+                // The hooks are now in an inconsistent state, so we cannot
+                // continue processing the batch.  Requeue already-pending
+                // requests and remaining unprocessed requests so they get
+                // fresh hooks on their next pass through the batcher.
+                return pending
+                    .into_iter()
+                    .map(|(req, _, _, _)| req)
+                    .chain(requests_iter)
+                    .map(|mut req| {
+                        req.conflict_check_base =
+                            old_bookmark_value.unwrap_or(req.conflict_check_base);
+                        req.retry_num = PushrebaseRetryNum(req.retry_num.0 + 1);
+                        req
+                    })
+                    .collect();
             }
         }
     }
@@ -4332,18 +4351,21 @@ mod tests {
         Ok(())
     }
 
-    /// Demonstrate the hook state contamination bug: a rebase failure in
-    /// one request corrupts hook state that flows into the bookmark
-    /// transaction for other requests.
+    /// Verify that a rebase failure in one request cannot corrupt hook
+    /// state that flows into the bookmark transaction for other requests.
     ///
     /// Setup: three requests [A, B, C] in one batch.  The shared commit
     /// hook records an assignment for every changeset it sees (mimicking
     /// globalrev), then fails on request B's changeset — *after* recording
-    /// the phantom assignment.  Because the loop continues to C,
-    /// `into_transaction_hook` fires with 3 recorded assignments but only
-    /// 2 entries in `all_rebased_changesets`.  A hook that uses the
-    /// recorded count for sequencing writes corrupt data to the
-    /// transaction.
+    /// the phantom assignment.  With the bug, the loop would continue to
+    /// C, and `into_transaction_hook` would fire with 3 recorded
+    /// assignments but only 2 entries in `all_rebased_changesets`.  A hook
+    /// without its own count-check (or one that uses the recorded count
+    /// for sequencing) would write corrupt data to the transaction.
+    ///
+    /// The fix aborts the batch on the first `create_rebased_changesets`
+    /// failure, so `into_transaction_hook` is never reached and no data
+    /// is written.
     #[mononoke::fbinit_test]
     async fn batched_pushrebase_rebase_failure_prevents_corrupt_hook_data(
         fb: FacebookInit,
@@ -4479,25 +4501,20 @@ mod tests {
         let result_b = receivers.remove(1).await.unwrap();
         assert!(result_b.is_err(), "Request B should have failed");
 
-        // The loop continues past B's failure, so nothing is requeued.
-        assert!(requeued.is_empty());
+        // Requests A and C should be requeued — NOT resolved with
+        // corrupt hook data flowing into the transaction.
+        assert_eq!(requeued.len(), 2, "Requests A and C should be requeued");
 
-        // BUG: The transaction hook fires with 3 recorded assignments
-        // (including the phantom from failed request B) but only 2
-        // changesets actually landed — this is data corruption.
+        // The transaction hook must NOT have fired.  If it did, it would
+        // have written a count of 3 (including the phantom assignment
+        // from failed request B) — that's data corruption.
         assert_eq!(
             repo.mutable_counters()
                 .get_counter(&ctx, "hook_assignments")
                 .await?,
-            Some(3),
-            "BUG: hook recorded 3 assignments (including phantom from B) for only 2 landed changesets",
+            None,
+            "into_transaction_hook should not have been reached",
         );
-
-        // Requests A and C landed despite the corrupt hook state.
-        let result_a = receivers.remove(0).await.unwrap();
-        assert!(result_a.is_ok(), "Request A landed with corrupt hook data");
-        let result_c = receivers.remove(0).await.unwrap();
-        assert!(result_c.is_ok(), "Request C landed with corrupt hook data");
 
         Ok(())
     }
