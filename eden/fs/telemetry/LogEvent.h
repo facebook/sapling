@@ -658,18 +658,21 @@ struct SilentDaemonExit : public EdenFSEvent {
   uint64_t system_boot_timestamp = 0;
   std::optional<bool> is_memory_pressure_kill = std::nullopt;
   std::string is_memory_pressure_error_msg;
+  std::optional<uint64_t> daemon_downtime_s = std::nullopt;
 
   SilentDaemonExit(
       uint64_t last_daemon_heartbeat,
       uint8_t daemon_exit_signal,
       uint64_t system_boot_timestamp = 0,
       std::optional<bool> is_memory_pressure_kill = std::nullopt,
-      std::string is_memory_pressure_error_msg = "")
+      std::string is_memory_pressure_error_msg = "",
+      std::optional<uint64_t> daemon_downtime_s = std::nullopt)
       : last_daemon_heartbeat(last_daemon_heartbeat),
         daemon_exit_signal(daemon_exit_signal),
         system_boot_timestamp(system_boot_timestamp),
         is_memory_pressure_kill(is_memory_pressure_kill),
-        is_memory_pressure_error_msg(is_memory_pressure_error_msg) {}
+        is_memory_pressure_error_msg(is_memory_pressure_error_msg),
+        daemon_downtime_s(daemon_downtime_s) {}
 
   void populate(DynamicEvent& event) const override {
     event.addInt("last_daemon_heartbeat", last_daemon_heartbeat);
@@ -680,6 +683,9 @@ struct SilentDaemonExit : public EdenFSEvent {
     }
     if (!is_memory_pressure_error_msg.empty()) {
       event.addString("is_memory_pressure_error", is_memory_pressure_error_msg);
+    }
+    if (daemon_downtime_s.has_value()) {
+      event.addInt("daemon_downtime_s", daemon_downtime_s.value());
     }
   }
 

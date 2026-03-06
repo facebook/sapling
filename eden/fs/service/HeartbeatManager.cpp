@@ -207,13 +207,19 @@ bool HeartbeatManager::checkForPreviousHeartbeat(
               maybeMemoryPressure.has_value()
                   ? (maybeMemoryPressure.value() ? "true" : "false")
                   : "unknown");
+          std::optional<uint64_t> downtime = std::nullopt;
+          if (latestDaemonHeartbeat > 0) {
+            uint64_t now = static_cast<uint64_t>(std::time(nullptr));
+            downtime = now - latestDaemonHeartbeat;
+          }
           self->structuredLogger_->logEvent(
               SilentDaemonExit{
                   latestDaemonHeartbeat,
                   daemon_exit_signal,
                   static_cast<uint64_t>(bootTime),
                   maybeMemoryPressure,
-                  memoryPressureErrorStr});
+                  memoryPressureErrorStr,
+                  downtime});
         });
         folly::futures::detachOn(threadPool, std::move(future));
         // Remove any existing daemon exit signal file to clean up
