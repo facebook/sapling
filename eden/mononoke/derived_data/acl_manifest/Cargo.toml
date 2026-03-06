@@ -32,10 +32,12 @@ vec1 = { version = "1.12.1", features = ["serde"] }
 bonsai_hg_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../../repo_attributes/bookmarks" }
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
+counting_blob = { version = "0.1.0", path = "../../blobstore/counting_blob" }
 derivation_queue_thrift = { version = "0.1.0", path = "../../repo_attributes/repo_derivation_queues/if" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+memblob = { version = "0.1.0", path = "../../blobstore/memblob" }
 mononoke_macros = { version = "0.1.0", path = "../../common/mononoke_macros" }
 pretty_assertions = { version = "1.4.1", features = ["alloc"], default-features = false }
 repo_blobstore = { version = "0.1.0", path = "../../repo_attributes/repo_blobstore" }

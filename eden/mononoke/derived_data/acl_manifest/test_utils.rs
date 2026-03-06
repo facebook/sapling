@@ -55,6 +55,16 @@ pub(crate) const SLACL_PROJECT2: &[u8] =
 pub(crate) const SLACL_PROJECT1_WITH_GROUP: &[u8] =
     b"repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=project1\"\npermission_request_group = \"GROUP:my_amp_group\"\n";
 
+/// Generate unique SLACL content for index `i` to avoid content-address
+/// deduplication in tests that measure per-restriction-root blob costs.
+pub(crate) fn unique_slacl(i: usize) -> &'static [u8] {
+    Box::leak(
+        format!("repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=project_{i}\"\n")
+            .into_bytes()
+            .into_boxed_slice(),
+    )
+}
+
 // ---------------------------------------------------------------------------
 // Test framework types
 // ---------------------------------------------------------------------------
@@ -216,6 +226,26 @@ pub(crate) async fn derive_untopologically(
         .unsafe_derive_untopologically::<RootAclManifestId>(ctx, cs_id, None)
         .await?)
 }
+
+/// Pre-derive AclManifest's dependencies (BSSM V3 + Fsnodes) so that
+/// subsequent blobstore counter snapshots only measure AclManifest derivation.
+pub(crate) async fn derive_deps(
+    ctx: &CoreContext,
+    repo: &TestRepo,
+    cs_id: ChangesetId,
+) -> Result<()> {
+    use basename_suffix_skeleton_manifest_v3::RootBssmV3DirectoryId;
+    use fsnodes::RootFsnodeId;
+
+    repo.repo_derived_data()
+        .derive::<RootBssmV3DirectoryId>(ctx, cs_id, DerivationPriority::LOW)
+        .await?;
+    repo.repo_derived_data()
+        .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
+        .await?;
+    Ok(())
+}
+
 /// Recursively walk the manifest tree and build a sorted `Vec<ExpectedNode>`.
 pub(crate) async fn actual_tree(
     ctx: &CoreContext,
@@ -301,4 +331,38 @@ pub(crate) async fn load_entries(
         })
         .try_collect()
         .await
+}
+
+// ---------------------------------------------------------------------------
+// Counting blobstore — tracks gets/puts independently of CoreContext
+// ---------------------------------------------------------------------------
+
+use std::sync::Arc;
+
+use blobstore::Blobstore;
+pub(crate) use counting_blob::BlobstoreCounters;
+use counting_blob::CountingBlobstore;
+
+/// A test repo paired with shared blob counters.
+pub(crate) struct CountedTestRepo {
+    pub repo: TestRepo,
+    pub counters: Arc<BlobstoreCounters>,
+}
+
+/// Build a test repo whose blobstore counts gets/puts via shared atomics.
+/// These counters are independent of CoreContext perf counters and survive
+/// context resets inside the derivation manager.
+pub(crate) async fn build_counted_test_repo(fb: FacebookInit) -> Result<CountedTestRepo> {
+    use memblob::Memblob;
+
+    let counters = Arc::new(BlobstoreCounters::new());
+    let blobstore: Arc<dyn Blobstore> =
+        Arc::new(CountingBlobstore::new(Memblob::default(), counters.clone()));
+
+    let repo = test_repo_factory::TestRepoFactory::new(fb)?
+        .with_blobstore(blobstore)
+        .build()
+        .await?;
+
+    Ok(CountedTestRepo { repo, counters })
 }

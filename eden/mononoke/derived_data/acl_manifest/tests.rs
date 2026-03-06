@@ -12,8 +12,10 @@ use fbinit::FacebookInit;
 use mononoke_macros::mononoke;
 use pretty_assertions::assert_eq;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedDataRef;
 use tests_utils::CreateCommitContext;
 
+use crate::RootAclManifestId;
 use crate::test_utils::*;
 
 // ---------------------------------------------------------------------------
@@ -765,7 +767,312 @@ async fn test_derive_multiple_independent_roots(fb: FacebookInit) -> Result<()> 
 }
 // TODO(T248660053): add tests with subtree copies and merges.
 
-// TODO(T248660053): add tests to cover derivation complexity is O(restriction root changes * depth)
+// ---------------------------------------------------------------------------
+// Perf counter tests — derivation complexity
+// ---------------------------------------------------------------------------
+
+/// Test that incremental derivation is cheaper than from-scratch derivation
+/// by making the same kind of change and deriving it both ways.
+#[mononoke::fbinit_test]
+async fn test_derive_incremental_is_cheaper_than_from_scratch(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let counted = build_counted_test_repo(fb).await?;
+    let repo = &counted.repo;
+
+    // Setup: base commit with 5 restriction roots.
+    let base_changes: Vec<_> = (0..5)
+        .flat_map(|i| {
+            let dir = format!("dir_{i}");
+            let slacl = format!("{dir}/.slacl");
+            let file = format!("{dir}/file.txt");
+            vec![(slacl, unique_slacl(i)), (file, b"content" as &[u8])]
+        })
+        .collect();
+
+    let base_cs = base_changes
+        .iter()
+        .fold(CreateCommitContext::new_root(&ctx, repo), |b, (p, c)| {
+            b.add_file(p.as_str(), *c)
+        })
+        .commit()
+        .await?;
+    derive(&ctx, repo, base_cs).await?;
+
+    // Commit A (child of base): add 1 restriction root — will be derived FROM SCRATCH.
+    let commit_a = CreateCommitContext::new(&ctx, repo, vec![base_cs])
+        .add_file("new_a/.slacl", unique_slacl(100))
+        .add_file("new_a/file.txt", "content")
+        .commit()
+        .await?;
+
+    // Commit B (also child of base): add 1 restriction root — will be derived INCREMENTALLY.
+    let commit_b = CreateCommitContext::new(&ctx, repo, vec![base_cs])
+        .add_file("new_b/.slacl", unique_slacl(101))
+        .add_file("new_b/file.txt", "content")
+        .commit()
+        .await?;
+
+    // Derive A from scratch (untopologically — ignores parent manifest).
+    derive_deps(&ctx, repo, commit_a).await?;
+    let before_a = counted.counters.snapshot();
+    repo.repo_derived_data()
+        .manager()
+        .unsafe_derive_untopologically::<RootAclManifestId>(&ctx, commit_a, None)
+        .await?;
+    let cost_a = counted.counters.snapshot() - before_a;
+
+    // Derive B incrementally (normal derivation — uses parent manifest).
+    derive_deps(&ctx, repo, commit_b).await?;
+    let before_b = counted.counters.snapshot();
+    derive(&ctx, repo, commit_b).await?;
+    let cost_b = counted.counters.snapshot() - before_b;
+
+    assert!(
+        cost_b.puts < cost_a.puts,
+        "incremental ({} puts) should be cheaper than from-scratch ({} puts)",
+        cost_b.puts,
+        cost_a.puts,
+    );
+
+    // Blob operations should be deterministic — assert exact values to detect
+    // regressions in derivation logic.
+    assert_eq!(cost_b.puts, 4, "cost_b.puts doesn't match expectation");
+    assert_eq!(cost_a.puts, 14, "cost_a.puts doesn't match expectation");
+
+    assert_eq!(cost_b.gets, 12, "cost_b.gets doesn't match expectation");
+    assert_eq!(cost_a.gets, 25, "cost_a.gets doesn't match expectation");
+
+    Ok(())
+}
+
+/// Test that derivation cost scales with the number of ACL changes.
+/// Derives from-scratch manifests with N, 2N, 10N, and 100N restriction roots
+/// in separate repos, then asserts that cost increases monotonically and
+/// matches deterministic expected values.
+#[mononoke::fbinit_test]
+async fn test_derive_cost_scales_with_changes(fb: FacebookInit) -> Result<()> {
+    let n = 5_usize;
+    let multipliers: Vec<usize> = vec![1, 2, 10, 100];
+
+    // For each multiplier, create a fresh repo with (multiplier * N) restriction
+    // roots, derive from scratch, and record blob operation counts.
+    // Each .slacl file has unique content (via unique_slacl) to avoid
+    // content-address deduplication in the blobstore.
+    let costs: Vec<_> = futures::future::try_join_all(multipliers.iter().map(|&mult| {
+        let count = mult * n;
+        async move {
+            let ctx = CoreContext::test_mock(fb);
+            let counted = build_counted_test_repo(fb).await?;
+
+            let changes: Vec<_> = (0..count)
+                .flat_map(|i| {
+                    let dir = format!("dir_{i}");
+                    let slacl = format!("{dir}/.slacl");
+                    let file = format!("{dir}/file.txt");
+                    vec![(slacl, unique_slacl(i)), (file, b"content" as &[u8])]
+                })
+                .collect();
+
+            let cs = changes
+                .iter()
+                .fold(
+                    CreateCommitContext::new_root(&ctx, &counted.repo),
+                    |b, (p, c)| b.add_file(p.as_str(), *c),
+                )
+                .commit()
+                .await?;
+
+            let before = counted.counters.snapshot();
+            derive(&ctx, &counted.repo, cs).await?;
+            let cost = counted.counters.snapshot() - before;
+
+            Ok::<_, anyhow::Error>((mult, cost))
+        }
+    }))
+    .await?;
+
+    // Print costs for visibility (use `--print-passing-details` to see).
+    println!("=== Derivation cost scaling with number of restrictions (N={n}) ===");
+    costs.iter().for_each(|(mult, cost)| {
+        println!(
+            "  {mult:>3}N ({:>3} roots): puts={}, gets={}",
+            mult * n,
+            cost.puts,
+            cost.gets,
+        );
+    });
+
+    // Assert monotonically increasing: each scenario should cost more than the previous.
+    costs.windows(2).try_for_each(|pair| {
+        let (mult_a, cost_a) = &pair[0];
+        let (mult_b, cost_b) = &pair[1];
+        anyhow::ensure!(
+            cost_b.puts > cost_a.puts,
+            "{mult_b}N puts ({}) should be greater than {mult_a}N puts ({})",
+            cost_b.puts,
+            cost_a.puts,
+        );
+        Ok(())
+    })?;
+
+    // Blob operations should be deterministic — assert exact values to detect
+    // regressions in derivation logic.
+    let actual_puts: Vec<u64> = costs.iter().map(|(_, c)| c.puts).collect();
+    let actual_gets: Vec<u64> = costs.iter().map(|(_, c)| c.gets).collect();
+    assert_eq!(
+        actual_puts,
+        vec![12, 22, 102, 1002],
+        "blob puts by multiplier"
+    );
+    assert_eq!(actual_gets, vec![9, 14, 54, 504], "blob gets by multiplier");
+
+    Ok(())
+}
+
+/// Test that derivation cost scales with depth.
+/// N restriction roots at increasing depths should cost more as depth increases,
+/// because more waypoint ancestor nodes must be created.
+#[mononoke::fbinit_test]
+async fn test_derive_cost_scales_with_depth(fb: FacebookInit) -> Result<()> {
+    let n = 5_usize;
+    // Depth prefixes: each adds more ancestor directories.
+    // depth_mult=1: "a/dir_N", depth_mult=2: "a/b/c/d/dir_N", etc.
+    let depth_configs: Vec<(usize, &str)> = vec![
+        (1, "a"),
+        (2, "a/b/c/d"),
+        (10, "a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t"),
+    ];
+
+    // For each depth, create a fresh repo with N restriction roots at that
+    // depth, derive from scratch, and record blob operation counts.
+    let costs: Vec<_> = futures::future::try_join_all(depth_configs.iter().map(
+        |&(depth_mult, prefix)| async move {
+            let ctx = CoreContext::test_mock(fb);
+            let counted = build_counted_test_repo(fb).await?;
+
+            let changes: Vec<_> = (0..n)
+                .flat_map(|i| {
+                    let dir = format!("{prefix}/dir_{i}");
+                    let slacl = format!("{dir}/.slacl");
+                    let file = format!("{dir}/file.txt");
+                    vec![(slacl, unique_slacl(i)), (file, b"content" as &[u8])]
+                })
+                .collect();
+
+            let cs = changes
+                .iter()
+                .fold(
+                    CreateCommitContext::new_root(&ctx, &counted.repo),
+                    |b, (p, c)| b.add_file(p.as_str(), *c),
+                )
+                .commit()
+                .await?;
+
+            let before = counted.counters.snapshot();
+            derive(&ctx, &counted.repo, cs).await?;
+            let cost = counted.counters.snapshot() - before;
+
+            Ok::<_, anyhow::Error>((depth_mult, prefix, cost))
+        },
+    ))
+    .await?;
+
+    // Print costs for visibility (use `--print-passing-details` to see).
+    println!("=== Derivation cost scaling with depth (N={n}) ===");
+    costs.iter().for_each(|(depth_mult, prefix, cost)| {
+        println!(
+            "  {depth_mult:>2}D ({prefix}/dir_N): puts={}, gets={}",
+            cost.puts, cost.gets,
+        );
+    });
+
+    // Assert monotonically increasing puts: deeper paths cost more.
+    costs.windows(2).try_for_each(|pair| {
+        let (mult_a, _, cost_a) = &pair[0];
+        let (mult_b, _, cost_b) = &pair[1];
+        anyhow::ensure!(
+            cost_b.puts > cost_a.puts,
+            "depth {mult_b}D puts ({}) should be greater than depth {mult_a}D puts ({})",
+            cost_b.puts,
+            cost_a.puts,
+        );
+        Ok(())
+    })?;
+
+    // Blob operations should be deterministic — assert exact values.
+    let actual_puts: Vec<u64> = costs.iter().map(|(_, _, c)| c.puts).collect();
+    let actual_gets: Vec<u64> = costs.iter().map(|(_, _, c)| c.gets).collect();
+    assert_eq!(actual_puts, vec![13, 16, 32], "blob puts by depth");
+    assert_eq!(actual_gets, vec![9, 9, 9], "blob gets by depth");
+
+    Ok(())
+}
+
+/// Test that derivation cost is independent of non-ACL file changes.
+/// A commit with 3 ACL changes should cost the same whether it also
+/// touches 0 or 100 non-ACL files.
+#[mononoke::fbinit_test]
+async fn test_derive_cost_independent_of_non_acl_changes(fb: FacebookInit) -> Result<()> {
+    // Setup: 3 restriction roots (A, B, C) as the base.
+    let ctx = CoreContext::test_mock(fb);
+    let counted = build_counted_test_repo(fb).await?;
+    let repo = &counted.repo;
+
+    let base_cs = CreateCommitContext::new_root(&ctx, repo)
+        .add_file("a/.slacl", SLACL_PROJECT1)
+        .add_file("a/file.txt", "content")
+        .add_file("b/.slacl", SLACL_PROJECT1)
+        .add_file("b/file.txt", "content")
+        .add_file("c/.slacl", SLACL_PROJECT1)
+        .add_file("c/file.txt", "content")
+        .commit()
+        .await?;
+    derive(&ctx, repo, base_cs).await?;
+
+    // Branch A: 3 ACL changes only (add new, modify a, delete b).
+    let branch_a = CreateCommitContext::new(&ctx, repo, vec![base_cs])
+        .add_file("new/.slacl", SLACL_PROJECT2)
+        .add_file("new/file.txt", "content")
+        .add_file("a/.slacl", SLACL_PROJECT2)
+        .delete_file("b/.slacl")
+        .commit()
+        .await?;
+
+    let before_a = counted.counters.snapshot();
+    derive(&ctx, repo, branch_a).await?;
+    let cost_a = counted.counters.snapshot() - before_a;
+
+    // Branch B: same 3 ACL changes PLUS 100 non-ACL file changes.
+    let branch_b_builder = (0..100).fold(
+        CreateCommitContext::new(&ctx, repo, vec![base_cs])
+            .add_file("new/.slacl", SLACL_PROJECT2)
+            .add_file("new/file.txt", "content")
+            .add_file("a/.slacl", SLACL_PROJECT2)
+            .delete_file("b/.slacl"),
+        |builder, i| {
+            let path = format!("unrelated/file_{i}.txt");
+            builder.add_file(path.as_str(), "content")
+        },
+    );
+    let branch_b = branch_b_builder.commit().await?;
+
+    let before_b = counted.counters.snapshot();
+    derive(&ctx, repo, branch_b).await?;
+    let cost_b = counted.counters.snapshot() - before_b;
+
+    assert_eq!(
+        cost_a.puts, cost_b.puts,
+        "blob puts should be identical regardless of non-ACL changes: {} vs {}",
+        cost_a.puts, cost_b.puts,
+    );
+    assert_eq!(
+        cost_a.gets, cost_b.gets,
+        "blob gets should be identical regardless of non-ACL changes: {} vs {}",
+        cost_a.gets, cost_b.gets,
+    );
+
+    Ok(())
+}
 
 // ---------------------------------------------------------------------------
 // Additional test cases
@@ -827,9 +1134,9 @@ async fn test_derive_large_fan_out(fb: FacebookInit) -> Result<()> {
     let changes: Vec<Change<'_>> = (0..20)
         .flat_map(|i| {
             let dir = format!("dir_{:03}", i);
-            // Leak the strings so they live long enough as &str
-            let slacl_path: &'static str = Box::leak(format!("{dir}/.slacl").into_boxed_str());
-            let file_path: &'static str = Box::leak(format!("{dir}/file.txt").into_boxed_str());
+            // Box::leak needed: Change::Add borrows &str but format! is temporary
+            let slacl_path: &str = Box::leak(format!("{dir}/.slacl").into_boxed_str());
+            let file_path: &str = Box::leak(format!("{dir}/file.txt").into_boxed_str());
             vec![
                 Change::Add(slacl_path, SLACL_PROJECT1),
                 Change::Add(file_path, b"content"),
