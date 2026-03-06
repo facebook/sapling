@@ -12,6 +12,7 @@ use std::path::PathBuf;
 
 use anyhow::Context;
 use anyhow::Result;
+use bitflags::bitflags;
 use dashmap::DashMap;
 use once_cell::sync::Lazy;
 use types::RepoPath;
@@ -28,11 +29,6 @@ pub struct PathAuditor {
     audited: DashMap<RepoPathBuf, ()>,
 }
 
-#[cfg(not(windows))]
-const SEPARATORS: [char; 1] = ['/'];
-#[cfg(windows)]
-const SEPARATORS: [char; 2] = ['/', '\\'];
-
 static WINDOWS_SHORTNAME_ALIASES: Lazy<Vec<&'static str>> =
     Lazy::new(|| identity::all().iter().map(|i| i.cli_name()).collect());
 
@@ -43,6 +39,32 @@ static INVALID_COMPONENTS: Lazy<Vec<&'static str>> = Lazy::new(|| {
         .chain(identity::all().iter().map(|i| i.dot_dir()))
         .collect()
 });
+
+bitflags! {
+    #[derive(Copy, Clone)]
+    pub struct FsFeatures: u32 {
+        const CASE_INSENSITIVE = 1;
+        /// `\` can be a path separator.
+        const BACKSLASH_SEP = 2;
+        /// Windows short names. e.g. "SL~1" might mean ".sl". Implies CASE_INSENSITIVE.
+        const WINDOWS_NAMES = 5;
+        /// Certain characters are ignored by HFS+.
+        const HFS_STRIP = 8;
+
+        const UNIX = Self::HFS_STRIP.bits();
+        const WINDOWS = Self::CASE_INSENSITIVE.bits() | Self::BACKSLASH_SEP.bits() | Self::WINDOWS_NAMES.bits() | Self::HFS_STRIP.bits();
+    }
+}
+
+impl FsFeatures {
+    pub const fn current_platform() -> Self {
+        if cfg!(windows) {
+            Self::WINDOWS
+        } else {
+            Self::UNIX
+        }
+    }
+}
 
 // From encoding.py: These unicode characters are ignored by HFS+ (Apple Technote 1150,
 // "Unicode Subtleties"), so we need to ignore them in some places for sanity.
@@ -84,7 +106,8 @@ impl PathAuditor {
 
     /// Make sure that it is safe to write/remove `path` from the repo.
     pub fn audit(&self, path: &RepoPath) -> Result<PathBuf> {
-        audit_invalid_components(path.as_str())
+        const FS_FEATURES: FsFeatures = FsFeatures::current_platform();
+        audit_invalid_components(path.as_str(), FS_FEATURES)
             .with_context(|| format!("invalid component in \"{}\"", path))?;
 
         let mut needs_recording_index = usize::MAX;
@@ -123,8 +146,8 @@ impl PathAuditor {
 
 /// Checks that shortnames (e.g. `SL~1`) are not a component on Windows and that files don't end in
 /// a dot (e.g. `sigh....`)
-fn valid_windows_component(component: &str) -> bool {
-    if cfg!(not(windows)) {
+fn valid_windows_component(component: &str, fs_features: FsFeatures) -> bool {
+    if !fs_features.contains(FsFeatures::WINDOWS_NAMES) {
         return true;
     }
     if let Some((l, r)) = component.split_once('~') {
@@ -143,19 +166,29 @@ fn valid_windows_component(component: &str) -> bool {
 ///
 /// It also checks that no trailing dots are part of the component and checks that shortnames
 /// on Windows are valid.
-fn audit_invalid_components(path: &str) -> Result<(), AuditError> {
-    let path: Cow<str> = if cfg!(not(windows)) {
-        Cow::Borrowed(path)
-    } else {
+fn audit_invalid_components(path: &str, fs_features: FsFeatures) -> Result<(), AuditError> {
+    let path: Cow<str> = if fs_features.contains(FsFeatures::CASE_INSENSITIVE) {
         Cow::Owned(path.to_lowercase())
+    } else {
+        Cow::Borrowed(path)
     };
-    for s in path.split(SEPARATORS) {
-        let s = if s.contains(IGNORED_HFS_CHARS) {
+
+    let separators: &[char] = if fs_features.contains(FsFeatures::BACKSLASH_SEP) {
+        &['/', '\\'][..]
+    } else {
+        &['/'][..]
+    };
+
+    for s in path.split(separators) {
+        let s = if fs_features.contains(FsFeatures::HFS_STRIP) && s.contains(IGNORED_HFS_CHARS) {
             Cow::Owned(s.replace(IGNORED_HFS_CHARS, ""))
         } else {
             Cow::Borrowed(s)
         };
-        if s.is_empty() || INVALID_COMPONENTS.contains(&&*s) || !valid_windows_component(&s) {
+        if s.is_empty()
+            || INVALID_COMPONENTS.contains(&&*s)
+            || !valid_windows_component(&s, fs_features)
+        {
             return Err(AuditError::InvalidComponent(s.into_owned()));
         }
     }
@@ -188,10 +221,11 @@ mod tests {
 
     #[test]
     fn test_audit_invalid_components() -> Result<()> {
-        assert!(audit_invalid_components("a/../b").is_err());
-        assert!(audit_invalid_components("a/./b").is_err());
-        assert!(audit_invalid_components("a/.sl/b").is_err());
-        assert!(audit_invalid_components("a/.hg/b").is_err());
+        let f = FsFeatures::empty();
+        assert!(audit_invalid_components("a/../b", f).is_err());
+        assert!(audit_invalid_components("a/./b", f).is_err());
+        assert!(audit_invalid_components("a/.sl/b", f).is_err());
+        assert!(audit_invalid_components("a/.hg/b", f).is_err());
         Ok(())
     }
 

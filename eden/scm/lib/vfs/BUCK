@@ -21,6 +21,7 @@ rust_library(
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:bitflags",
         "fbsource//third-party/rust:dashmap-5",
         "fbsource//third-party/rust:flume",
         "fbsource//third-party/rust:fs-err",
