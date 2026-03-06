@@ -164,6 +164,10 @@
     "scm/mononoke:land_service_batch_max_requeue": 100,
     "scm/mononoke:pushrebase_max_merge_conflicts": 10,
     "scm/mononoke:pushrebase_max_merge_file_size": 10485760,
+    "scm/mononoke:derived_data_backfill_write_qps": 0,
+    "scm/mononoke:derived_data_backfill_write_bytes_s": 0,
+    "scm/mononoke:derived_data_backfill_read_qps": 0,
+    "scm/mononoke:derived_data_backfill_read_bytes_s": 0,
     "scm/mononoke:derived_data_backfill_segment_chunk_size": 20,
     "scm/mononoke:derived_data_backfill_segment_concurrency": 100
   }
