@@ -214,6 +214,7 @@ members = [
   "lib/util/udsipc",
   "lib/version",
   "lib/vfs",
+  "lib/vfs/benches",
   "lib/virtual-repo",
   "lib/virtual-repo/benches",
   "lib/virtual-repo/virtual-tree",
