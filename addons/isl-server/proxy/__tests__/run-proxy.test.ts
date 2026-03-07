@@ -91,6 +91,9 @@ describe('run-proxy', () => {
     command: 'sl',
     cwd: undefined,
     sessionId: undefined,
+    bind: 'localhost',
+    tlsCert: undefined,
+    tlsKey: undefined,
   };
 
   it('spawns a server', async () => {
@@ -282,6 +285,31 @@ describe('argument parsing', () => {
       expect.objectContaining({
         port: 3001,
         force: true,
+      }),
+    );
+  });
+
+  it('--bind all maps to `::`', () => {
+    expect(parseArgs(['--bind', 'all'])).toEqual(
+      expect.objectContaining({
+        bind: '::',
+      }),
+    );
+  });
+
+  it('--bind 0.0.0.0 is stored verbatim', () => {
+    expect(parseArgs(['--bind', '0.0.0.0'])).toEqual(
+      expect.objectContaining({
+        bind: '0.0.0.0',
+      }),
+    );
+  });
+
+  it('--cert and --key are parsed together', () => {
+    expect(parseArgs(['--cert', '/path/to/cert.crt', '--key', '/path/to/cert.key'])).toEqual(
+      expect.objectContaining({
+        tlsCert: '/path/to/cert.crt',
+        tlsKey: '/path/to/cert.key',
       }),
     );
   });

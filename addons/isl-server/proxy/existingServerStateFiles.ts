@@ -24,6 +24,12 @@ export type ExistingServerInfo = {
    * due to potential incompatibilities between the old running server javascript and the new client javascript.
    */
   slVersion: string;
+  /** Hostname/IP the server is bound to. Optional for backwards compat. */
+  bind?: string;
+  /** Path to TLS certificate file. Optional for backwards compat. */
+  tlsCert?: string;
+  /** Path to TLS key file. Optional for backwards compat. */
+  tlsKey?: string;
 };
 
 const cacheDir =

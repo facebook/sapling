@@ -46,6 +46,10 @@ optional arguments:
   --platform       Set which platform implementation to use by changing the resulting URL.
                    Used to embed Sapling Web into non-browser web environments like IDEs.
   --session id     Provide a specific ID for this session used in analytics.
+  --bind host      Hostname or IP to bind to (default: localhost).
+                   Use 'all' to bind to :: (IPv6 dual-stack, accepts both IPv4 and IPv6).
+  --cert path      Path to TLS certificate file. Must be used together with --key.
+  --key path       Path to TLS key file. Must be used together with --cert.
 `;
 
 type JsonOutput =
@@ -83,6 +87,9 @@ type Args = {
   command: string;
   cwd: string | undefined;
   sessionId: string | undefined;
+  bind: string;
+  tlsCert: string | undefined;
+  tlsKey: string | undefined;
 };
 
 // Rudimentary arg parser to avoid the need for a third-party dependency.
@@ -106,6 +113,9 @@ export function parseArgs(args: Array<string> = process.argv.slice(2)): Args {
   let slVersion = '(dev)';
   let platform: string | undefined = undefined;
   let sessionId: string | undefined = undefined;
+  let bind = 'localhost';
+  let tlsCert: string | undefined = undefined;
+  let tlsKey: string | undefined = undefined;
   let i = 0;
   function consumeArgValue(arg: string) {
     if (i >= len) {
@@ -182,6 +192,19 @@ export function parseArgs(args: Array<string> = process.argv.slice(2)): Args {
         }
         break;
       }
+      case '--bind': {
+        const value = consumeArgValue(arg);
+        bind = value === 'all' ? '::' : value;
+        break;
+      }
+      case '--cert': {
+        tlsCert = consumeArgValue(arg);
+        break;
+      }
+      case '--key': {
+        tlsKey = consumeArgValue(arg);
+        break;
+      }
       case '--help':
       case '-h': {
         help = true;
@@ -209,6 +232,10 @@ export function parseArgs(args: Array<string> = process.argv.slice(2)): Args {
     console.info('NOTE: setting --kill and --force is redundant');
   }
 
+  if ((tlsCert == null) !== (tlsKey == null)) {
+    errorAndExit('--cert and --key must be used together');
+  }
+
   return {
     help,
     foreground,
@@ -224,6 +251,9 @@ export function parseArgs(args: Array<string> = process.argv.slice(2)): Args {
     command,
     cwd,
     sessionId,
+    bind,
+    tlsCert,
+    tlsKey,
   };
 }
 
@@ -346,6 +376,9 @@ export async function runProxyMain(args: Args) {
     slVersion,
     command,
     sessionId,
+    bind,
+    tlsCert,
+    tlsKey,
   } = args;
   if (help) {
     errorAndExit(HELP_MESSAGE, 0);
@@ -435,8 +468,11 @@ export async function runProxyMain(args: Args) {
     if (sessionId) {
       urlArgs.sessionId = encodeURIComponent(sessionId);
     }
+    const protocol = tlsCert && tlsKey ? 'https' : 'http';
+    // '::' and '0.0.0.0' are wildcard addresses — use localhost in the URL.
+    const urlHost = bind === '::' || bind === '0.0.0.0' ? 'localhost' : bind;
     const platformPath = getPlatformIndexHtmlPath(platform);
-    const url = `http://localhost:${serverPort}/${platformPath}?${Object.entries(urlArgs)
+    const url = `${protocol}://${urlHost}:${serverPort}/${platformPath}?${Object.entries(urlArgs)
       .map(([key, value]) => `${key}=${value}`)
       .join('&')}`;
     return new URL(url);
@@ -453,6 +489,9 @@ export async function runProxyMain(args: Args) {
     logInfo: info,
     command,
     slVersion,
+    bind,
+    tlsCert,
+    tlsKey,
   });
 
   if (result.type === 'addressInUse' && !force) {
@@ -549,6 +588,9 @@ export async function runProxyMain(args: Args) {
         logFileLocation,
         command,
         slVersion,
+        bind,
+        tlsCert,
+        tlsKey,
       });
     } catch (error) {
       info(
@@ -653,7 +695,7 @@ function suggestDebugPortIssue(port: number): string {
 function maybeOpenURL(url: URL): void {
   const {href} = url;
   // Basic sanity checking: this does not eliminate all illegal inputs.
-  if (!href.startsWith('http://') || href.indexOf(' ') !== -1) {
+  if ((!href.startsWith('http://') && !href.startsWith('https://')) || href.indexOf(' ') !== -1) {
     throw Error(`illegal URL: \`href\``);
   }
 

@@ -8,6 +8,7 @@
 import type {ServerChallengeResponse} from './server';
 
 import * as http from 'node:http';
+import * as https from 'node:https';
 import {type ExistingServerInfo, readExistingServerFile} from './existingServerStateFiles';
 import {areTokensEqual} from './proxyUtils';
 
@@ -26,16 +27,26 @@ export async function checkIfServerIsAliveAndIsISL(
   existingServerInfo: ExistingServerInfo,
   silent = false,
 ): Promise<number | null> {
+  const useTls = !!(existingServerInfo.tlsCert && existingServerInfo.tlsKey);
+  const requestModule = useTls ? https : http;
+  // '::' and '0.0.0.0' are wildcard addresses — connect to localhost instead.
+  const connectHost =
+    existingServerInfo.bind === '::' || existingServerInfo.bind === '0.0.0.0'
+      ? 'localhost'
+      : (existingServerInfo.bind ?? 'localhost');
+
   let response: unknown;
   try {
     const result = await Promise.race<string>([
       new Promise<string>((res, rej) => {
-        const req = http.request(
+        const req = requestModule.request(
           {
-            hostname: 'localhost',
+            hostname: connectHost,
             port,
             path: `/challenge_authenticity?token=${existingServerInfo.sensitiveToken}`,
             method: 'GET',
+            // When checking liveness over TLS, we don't need to verify the certificate.
+            ...(useTls ? {rejectUnauthorized: false} : {}),
           },
           response => {
             response.on('data', d => {
