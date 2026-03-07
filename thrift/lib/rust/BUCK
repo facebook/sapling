@@ -9,7 +9,7 @@ load("@fbsource//tools/build_defs:fb_xplat_rust_library.bzl", "fb_xplat_rust_lib
 load("@fbsource//tools/build_defs:fbsource_utils.bzl", "is_xplat")
 load("@fbsource//tools/target_determinator/macros:ci.bzl", "ci")
 
-oncall("thrift")
+oncall("rust_thrift")
 
 # In order to avoid potentially bringing both fbcode//thrift/lib/rust:fbthrift
 # and fbsource//xplat/thrift/lib/rust:fbthrift into the same build, the
