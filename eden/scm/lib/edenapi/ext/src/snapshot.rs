@@ -40,6 +40,10 @@ use tokio::task;
 use crate::snapshot_cache::SharedSnapshotFileCache;
 use crate::util::calc_contentid;
 
+/// ENXIO errno value (6 on Linux/macOS). Returned when attempting to read
+/// non-regular files such as Unix domain sockets or FIFOs.
+const ENXIO: i32 = 6;
+
 /// Statistics for blob downloads tracking different sources using atomic counters
 /// This provides thread-safe, lock-free counting for concurrent async operations
 ///
@@ -328,15 +332,19 @@ pub async fn upload_snapshot_with_cache(
             load_files(&root, rel_path.clone(), file_type, tracked)
                 .with_context(|| anyhow::anyhow!("Failed to load file {}", rel_path))
         })
-        // Ignore file-not-found errors (transient files that disappeared) and
-        // is-a-directory errors (symlinks resolving to directories, or directory
-        // entries that reached the upload pipeline despite upstream filtering).
+        // Ignore IO errors for files that can't be read as regular files:
+        // - NotFound: transient files that disappeared between status and snapshot
+        // - IsADirectory: symlinks resolving to directories, or directory entries
+        //   that reached the upload pipeline despite upstream filtering
+        // - ENXIO (os error 6): non-regular files like Unix domain sockets (e.g.
+        //   .chataccd/socket) or FIFOs that can't be read with std::fs::read
         .filter_map(|res| match res {
             Ok(ok) => Some(Ok(ok)),
             Err(err) => match err.downcast_ref::<std::io::Error>() {
                 Some(io_error)
                     if io_error.kind() == std::io::ErrorKind::NotFound
-                        || io_error.kind() == std::io::ErrorKind::IsADirectory =>
+                        || io_error.kind() == std::io::ErrorKind::IsADirectory
+                        || io_error.raw_os_error() == Some(ENXIO) =>
                 {
                     None
                 }
