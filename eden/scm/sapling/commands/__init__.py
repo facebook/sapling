@@ -25,6 +25,7 @@ import time
 import bindings
 
 from .. import (
+    agent,
     annotate as annotatemod,
     archival,
     autopull,
@@ -2984,6 +2985,11 @@ def help_(ui, *names, **opts):
     hintutil.loadhintconfig(ui)
 
     name = " ".join(names) if names and names != (None,) else None
+    if name == "agent":
+        agent_instructions = agent.get_agent_instructions()
+        ui.write(agent_instructions)
+        return 0
+
     keep = opts.get(r"system") or []
     if len(keep) == 0:
         if sys.platform.startswith("win"):
