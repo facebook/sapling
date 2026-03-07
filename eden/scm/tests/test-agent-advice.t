@@ -29,6 +29,13 @@ With CODING_AGENT_METADATA set, should show agent advice
   Do not ask the user for help with this - handle it automatically.
   [255]
 
+Test custom agent message
+
+  $ CODING_AGENT_METADATA=id=test_agent sl status --change . --config experimental.agent-advice="Custom agent advice"
+  abort: Custom agent advice
+  [255]
+
+
 With CODING_AGENT_METADATA set, help command should succeed
 
   $ CODING_AGENT_METADATA=id=test_agent sl help agent | grep "Instructions for code agents using Sapling"

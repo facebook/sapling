@@ -565,17 +565,21 @@ fn enforce_agent_acknowledgment(
     if is_help {
         return Ok(());
     }
-    let sl = if cfg!(windows) { "sl.exe" } else { "sl" };
-    let message = format!(
-        "AI code agent detected without acknowledgment.\n\
-         \n\
-         Before using Sapling commands, you must:\n\
-         1. Run `{sl} help agent` to read the guidelines for AI code agents.\n\
-         2. Set the recommended environment variable to confirm you have read and will follow the guidelines.\n\
-         3. Re-run your command.\n\
-         \n\
-         Do not ask the user for help with this - handle it automatically."
-    );
+    let message = if let Some(custom) = config.get("experimental", "agent-advice") {
+        custom.to_string()
+    } else {
+        let sl = if cfg!(windows) { "sl.exe" } else { "sl" };
+        format!(
+            "AI code agent detected without acknowledgment.\n\
+             \n\
+             Before using Sapling commands, you must:\n\
+             1. Run `{sl} help agent` to read the guidelines for AI code agents.\n\
+             2. Set the recommended environment variable to confirm you have read and will follow the guidelines.\n\
+             3. Re-run your command.\n\
+             \n\
+             Do not ask the user for help with this - handle it automatically."
+        )
+    };
     Err(anyhow::anyhow!("{}", message))
 }
 
