@@ -1400,7 +1400,7 @@ ImmediateFuture<VirtualInode> EdenMount::getVirtualInode(
 }
 
 ImmediateFuture<folly::Unit> EdenMount::waitForPendingWrites() const {
-  if (getEdenConfig()->enableCoroutinesInGetFileContent.getValue()) {
+  if (getEdenConfig()->enableCoroutinesPhase1.getValue()) {
     // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
     return ImmediateFuture{folly::coro::co_invoke([this]() {
                              // @lint-ignore CLANGTIDY facebook-hte-Deprecated

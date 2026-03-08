@@ -1000,7 +1000,7 @@ class CoroutinesTestMixin:
 
     def get_coroutines_configs(self) -> List[str]:
         return [
-            "enable-get-file-content = true",
+            "enable-phase1 = true",
         ]
 
 

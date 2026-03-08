@@ -1058,7 +1058,7 @@ folly::coro::now_task<void> co_waitForPendingWrites(
 ImmediateFuture<folly::Unit> waitForPendingWrites(
     const EdenMount& mount,
     const SyncBehavior& sync) {
-  if (mount.getEdenConfig()->enableCoroutinesInGetFileContent.getValue()) {
+  if (mount.getEdenConfig()->enableCoroutinesPhase1.getValue()) {
     auto mountHandle = EdenMountHandle{
         std::const_pointer_cast<EdenMount>(mount.shared_from_this()),
         mount.getRootInode()};
@@ -5942,7 +5942,7 @@ EdenServiceHandler::semifuture_getFileContent(
     std::unique_ptr<GetFileContentRequest> request) {
   if (server_->getServerState()
           ->getEdenConfig()
-          ->enableCoroutinesInGetFileContent.getValue()) {
+          ->enableCoroutinesPhase1.getValue()) {
     // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
     return folly::coro::co_invoke(
                [this](auto&&... args) {

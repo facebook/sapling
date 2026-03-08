@@ -1617,10 +1617,10 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<bool> enableCoroutines{"coroutines:enabled", true, this};
 
   /**
-   * Controls whether EdenFS uses coroutines for getFileContent thrift endpoint.
+   * Enable phase 1 coroutine implementations.
    */
-  ConfigSetting<bool> enableCoroutinesInGetFileContent{
-      "coroutines:enable-get-file-content",
+  ConfigSetting<bool> enableCoroutinesPhase1{
+      "coroutines:enable-phase1",
       false,
       this};
 
