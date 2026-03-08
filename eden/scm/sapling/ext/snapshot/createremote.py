@@ -3,6 +3,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+import stat
 import time as mtime
 from dataclasses import dataclass
 from pathlib import Path
@@ -211,34 +212,36 @@ class workingcopy:
         matcher = scmutil.match(wctx, pats, opts)
         skipped_large_files = []
 
-        def filterlarge(f):
-            if maxuntrackedsize is None:
-                return True
-            else:
-                size = Path(repo.root, f).lstat().st_size
-                if size <= maxuntrackedsize:
-                    return True
-                else:
-                    skipped_large_files.append(f)
-                    if not repo.ui.plain():
-                        repo.ui.warn(
-                            _(
-                                "not snapshotting '{}' because it is {} bytes large, and max untracked size is {} bytes\n"
-                            ).format(f, size, maxuntrackedsize),
-                            component="snapshot",
-                        )
-                    return False
+        def filteruntracked(f):
+            """Filter out non-regular files and files exceeding size limit."""
+            try:
+                st = Path(repo.root, f).lstat()
+            except OSError:
+                return False
+            if not (stat.S_ISREG(st.st_mode) or stat.S_ISLNK(st.st_mode)):
+                return False
+            if maxuntrackedsize is not None and st.st_size > maxuntrackedsize:
+                skipped_large_files.append(f)
+                if not repo.ui.plain():
+                    repo.ui.warn(
+                        _(
+                            "not snapshotting '{}' because it is {} bytes large, and max untracked size is {} bytes\n"
+                        ).format(f, st.st_size, maxuntrackedsize),
+                        component="snapshot",
+                    )
+                return False
+            return True
 
         # Use single status call with matcher
         status = repo.status(match=matcher, unknown=True)
 
-        untracked = [f for f in status.unknown if filterlarge(f)]
+        untracked = [f for f in status.unknown if filteruntracked(f)]
         removed = []
 
         # Process removed files - check if they still exist (were hg rm'ed but recreated)
         for f in status.removed:
             if wctx[f].exists():
-                if filterlarge(f):
+                if filteruntracked(f):
                     untracked.append(f)
             else:
                 removed.append(f)
