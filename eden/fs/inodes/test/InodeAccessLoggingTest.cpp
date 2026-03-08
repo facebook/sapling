@@ -23,7 +23,7 @@
 using namespace facebook::eden;
 using namespace std::chrono_literals;
 
-class InodeAccessLoggingTest : public ::testing::Test {
+class InodeAccessLoggingTest : public ::testing::TestWithParam<bool> {
  protected:
   void SetUp() override {
     builder_.setFiles({
@@ -31,6 +31,10 @@ class InodeAccessLoggingTest : public ::testing::Test {
         {"toplevel.txt", "toplevel\n"},
     });
     mount_.initialize(builder_);
+
+    if (GetParam()) {
+      enableCoroutinesConfig(mount_);
+    }
   }
 
   void resetLogger() {
@@ -58,7 +62,7 @@ class InodeAccessLoggingTest : public ::testing::Test {
 };
 
 #ifndef _WIN32
-TEST_F(InodeAccessLoggingTest, statFileTopLevel) {
+TEST_P(InodeAccessLoggingTest, statFileTopLevel) {
   auto fileInode = mount_.getFileInode("toplevel.txt"_relpath);
   resetLogger();
 
@@ -67,7 +71,7 @@ TEST_F(InodeAccessLoggingTest, statFileTopLevel) {
   EXPECT_EQ(1, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, statFileNested) {
+TEST_P(InodeAccessLoggingTest, statFileNested) {
   auto fileInode = mount_.getFileInode("src/a/b/1.txt"_relpath);
   resetLogger();
 
@@ -76,7 +80,7 @@ TEST_F(InodeAccessLoggingTest, statFileNested) {
   EXPECT_EQ(1, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, writeFileTopLevel) {
+TEST_P(InodeAccessLoggingTest, writeFileTopLevel) {
   auto fileInode = mount_.getFileInode("toplevel.txt"_relpath);
   resetLogger();
 
@@ -85,7 +89,7 @@ TEST_F(InodeAccessLoggingTest, writeFileTopLevel) {
   EXPECT_EQ(1, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, writeFileNested) {
+TEST_P(InodeAccessLoggingTest, writeFileNested) {
   auto fileInode = mount_.getFileInode("src/a/b/1.txt"_relpath);
   resetLogger();
 
@@ -94,7 +98,7 @@ TEST_F(InodeAccessLoggingTest, writeFileNested) {
   EXPECT_EQ(1, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, setAttrFileTopLevel) {
+TEST_P(InodeAccessLoggingTest, setAttrFileTopLevel) {
   auto fileInode = mount_.getFileInode("toplevel.txt"_relpath);
   resetLogger();
 
@@ -113,7 +117,7 @@ TEST_F(InodeAccessLoggingTest, setAttrFileTopLevel) {
   EXPECT_EQ(1, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, setAttrFileNested) {
+TEST_P(InodeAccessLoggingTest, setAttrFileNested) {
   auto fileInode = mount_.getFileInode("src/a/b/1.txt"_relpath);
   resetLogger();
 
@@ -132,7 +136,7 @@ TEST_F(InodeAccessLoggingTest, setAttrFileNested) {
   EXPECT_EQ(1, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, getxattrFileTopLevel) {
+TEST_P(InodeAccessLoggingTest, getxattrFileTopLevel) {
   auto fileInode = mount_.getFileInode("toplevel.txt"_relpath);
   resetLogger();
 
@@ -148,7 +152,7 @@ TEST_F(InodeAccessLoggingTest, getxattrFileTopLevel) {
   EXPECT_EQ(1, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, getxattrFileNested) {
+TEST_P(InodeAccessLoggingTest, getxattrFileNested) {
   auto fileInode = mount_.getFileInode("src/a/b/1.txt"_relpath);
   resetLogger();
 
@@ -164,7 +168,7 @@ TEST_F(InodeAccessLoggingTest, getxattrFileNested) {
   EXPECT_EQ(1, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, ensureMaterializedFileTopLevel) {
+TEST_P(InodeAccessLoggingTest, ensureMaterializedFileTopLevel) {
   auto fileInode = mount_.getFileInode("toplevel.txt"_relpath);
   resetLogger();
 
@@ -174,7 +178,7 @@ TEST_F(InodeAccessLoggingTest, ensureMaterializedFileTopLevel) {
   EXPECT_EQ(1, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, ensureMaterializedFileNested) {
+TEST_P(InodeAccessLoggingTest, ensureMaterializedFileNested) {
   auto fileInode = mount_.getFileInode("src/a/b/1.txt"_relpath);
   resetLogger();
 
@@ -184,7 +188,7 @@ TEST_F(InodeAccessLoggingTest, ensureMaterializedFileNested) {
   EXPECT_EQ(1, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, ensureMaterializedSymlinkTopLevel) {
+TEST_P(InodeAccessLoggingTest, ensureMaterializedSymlinkTopLevel) {
   auto rootInode = mount_.getRootInode();
   auto linkInode = rootInode->symlink(
       PathComponentPiece{"symlink.txt"},
@@ -205,7 +209,7 @@ TEST_F(InodeAccessLoggingTest, ensureMaterializedSymlinkTopLevel) {
   EXPECT_EQ(2, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, ensureMaterializedSymlinkNested) {
+TEST_P(InodeAccessLoggingTest, ensureMaterializedSymlinkNested) {
   auto dirInode = mount_.getTreeInode("src/a/b"_relpath);
   auto linkInode = dirInode->symlink(
       PathComponentPiece{"symlink.txt"}, "1.txt", InvalidationRequired::No);
@@ -225,7 +229,7 @@ TEST_F(InodeAccessLoggingTest, ensureMaterializedSymlinkNested) {
   EXPECT_EQ(5, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, readLinkFileTopLevel) {
+TEST_P(InodeAccessLoggingTest, readLinkFileTopLevel) {
   auto rootInode = mount_.getRootInode();
   auto linkInode = rootInode->symlink(
       PathComponentPiece{"symlink.txt"},
@@ -238,7 +242,7 @@ TEST_F(InodeAccessLoggingTest, readLinkFileTopLevel) {
   EXPECT_EQ(1, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, readLinkFileNested) {
+TEST_P(InodeAccessLoggingTest, readLinkFileNested) {
   auto dirInode = mount_.getTreeInode("src/a/b"_relpath);
   auto linkInode = dirInode->symlink(
       PathComponentPiece{"symlink.txt"}, "1.txt", InvalidationRequired::No);
@@ -249,7 +253,7 @@ TEST_F(InodeAccessLoggingTest, readLinkFileNested) {
   EXPECT_EQ(1, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, readFileTopLevel) {
+TEST_P(InodeAccessLoggingTest, readFileTopLevel) {
   auto fileInode = mount_.getFileInode("toplevel.txt"_relpath);
   resetLogger();
 
@@ -258,7 +262,7 @@ TEST_F(InodeAccessLoggingTest, readFileTopLevel) {
   EXPECT_EQ(1, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, readFileNested) {
+TEST_P(InodeAccessLoggingTest, readFileNested) {
   auto fileInode = mount_.getFileInode("src/a/b/1.txt"_relpath);
   resetLogger();
 
@@ -268,7 +272,7 @@ TEST_F(InodeAccessLoggingTest, readFileNested) {
 }
 #endif
 
-TEST_F(InodeAccessLoggingTest, readAllFileTopLevel) {
+TEST_P(InodeAccessLoggingTest, readAllFileTopLevel) {
   auto fileInode = mount_.getFileInode("toplevel.txt"_relpath);
   resetLogger();
 
@@ -277,7 +281,7 @@ TEST_F(InodeAccessLoggingTest, readAllFileTopLevel) {
   EXPECT_EQ(1, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, readAllFileNested) {
+TEST_P(InodeAccessLoggingTest, readAllFileNested) {
   auto fileInode = mount_.getFileInode("src/a/b/1.txt"_relpath);
   resetLogger();
 
@@ -286,7 +290,7 @@ TEST_F(InodeAccessLoggingTest, readAllFileNested) {
   EXPECT_EQ(1, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, getSha1FileTopLevel) {
+TEST_P(InodeAccessLoggingTest, getSha1FileTopLevel) {
   auto fileInode = mount_.getFileInode("toplevel.txt"_relpath);
   resetLogger();
 
@@ -295,7 +299,7 @@ TEST_F(InodeAccessLoggingTest, getSha1FileTopLevel) {
   EXPECT_EQ(1, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, getSha1FileNested) {
+TEST_P(InodeAccessLoggingTest, getSha1FileNested) {
   auto fileInode = mount_.getFileInode("src/a/b/1.txt"_relpath);
   resetLogger();
 
@@ -304,7 +308,7 @@ TEST_F(InodeAccessLoggingTest, getSha1FileNested) {
   EXPECT_EQ(1, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, getBlake3FileTopLevel) {
+TEST_P(InodeAccessLoggingTest, getBlake3FileTopLevel) {
   auto fileInode = mount_.getFileInode("toplevel.txt"_relpath);
   resetLogger();
 
@@ -313,7 +317,7 @@ TEST_F(InodeAccessLoggingTest, getBlake3FileTopLevel) {
   EXPECT_EQ(1, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, getBlake3FileNested) {
+TEST_P(InodeAccessLoggingTest, getBlake3FileNested) {
   auto fileInode = mount_.getFileInode("src/a/b/1.txt"_relpath);
   resetLogger();
 
@@ -322,7 +326,7 @@ TEST_F(InodeAccessLoggingTest, getBlake3FileNested) {
   EXPECT_EQ(1, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, getBlobAuxDataFileTopLevel) {
+TEST_P(InodeAccessLoggingTest, getBlobAuxDataFileTopLevel) {
   auto fileInode = mount_.getFileInode("toplevel.txt"_relpath);
   resetLogger();
 
@@ -331,7 +335,7 @@ TEST_F(InodeAccessLoggingTest, getBlobAuxDataFileTopLevel) {
   EXPECT_EQ(1, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, getBlobAuxDataFileNested) {
+TEST_P(InodeAccessLoggingTest, getBlobAuxDataFileNested) {
   auto fileInode = mount_.getFileInode("src/a/b/1.txt"_relpath);
   resetLogger();
 
@@ -345,7 +349,7 @@ TEST_F(InodeAccessLoggingTest, getBlobAuxDataFileNested) {
 // other platforms as per OverlayFile::fallocate(), but also because it is
 // only registered in eden/fs/fuse/FuseChannel.cpp and not in
 // eden/fs/nfs/Nfsd3.cpp
-TEST_F(InodeAccessLoggingTest, fallocateFileTopLevel) {
+TEST_P(InodeAccessLoggingTest, fallocateFileTopLevel) {
   auto fileInode = mount_.getFileInode("toplevel.txt"_relpath);
   resetLogger();
 
@@ -354,7 +358,7 @@ TEST_F(InodeAccessLoggingTest, fallocateFileTopLevel) {
   EXPECT_EQ(1, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, fallocateFileNested) {
+TEST_P(InodeAccessLoggingTest, fallocateFileNested) {
   auto fileInode = mount_.getFileInode("src/a/b/1.txt"_relpath);
   resetLogger();
 
@@ -364,7 +368,7 @@ TEST_F(InodeAccessLoggingTest, fallocateFileNested) {
 }
 #endif
 
-TEST_F(InodeAccessLoggingTest, statDirTopLevel) {
+TEST_P(InodeAccessLoggingTest, statDirTopLevel) {
   auto dirInode = mount_.getTreeInode("src"_relpath);
   resetLogger();
 
@@ -373,7 +377,7 @@ TEST_F(InodeAccessLoggingTest, statDirTopLevel) {
   EXPECT_EQ(1, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, statDirNested) {
+TEST_P(InodeAccessLoggingTest, statDirNested) {
   auto dirInode = mount_.getTreeInode("src/a/b"_relpath);
   resetLogger();
 
@@ -382,7 +386,7 @@ TEST_F(InodeAccessLoggingTest, statDirNested) {
   EXPECT_EQ(1, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, getOrFindChildDirTopLevel) {
+TEST_P(InodeAccessLoggingTest, getOrFindChildDirTopLevel) {
   auto dirInode = mount_.getRootInode();
   resetLogger();
 
@@ -393,7 +397,7 @@ TEST_F(InodeAccessLoggingTest, getOrFindChildDirTopLevel) {
   EXPECT_EQ(0, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, getOrFindChildDirNested) {
+TEST_P(InodeAccessLoggingTest, getOrFindChildDirNested) {
   auto dirInode = mount_.getTreeInode("src/a"_relpath);
   resetLogger();
 
@@ -403,7 +407,7 @@ TEST_F(InodeAccessLoggingTest, getOrFindChildDirNested) {
   EXPECT_EQ(1, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, getOrFindChildFileNested) {
+TEST_P(InodeAccessLoggingTest, getOrFindChildFileNested) {
   auto dirInode = mount_.getTreeInode("src/a/b"_relpath);
   resetLogger();
 
@@ -414,7 +418,7 @@ TEST_F(InodeAccessLoggingTest, getOrFindChildFileNested) {
   EXPECT_EQ(1, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, getOrFindChildFileTopLevel) {
+TEST_P(InodeAccessLoggingTest, getOrFindChildFileTopLevel) {
   auto dirInode = mount_.getRootInode();
   resetLogger();
 
@@ -427,7 +431,7 @@ TEST_F(InodeAccessLoggingTest, getOrFindChildFileTopLevel) {
   EXPECT_EQ(0, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, getOrLoadChildDirTopLevel) {
+TEST_P(InodeAccessLoggingTest, getOrLoadChildDirTopLevel) {
   auto dirInode = mount_.getRootInode();
   resetLogger();
 
@@ -438,7 +442,7 @@ TEST_F(InodeAccessLoggingTest, getOrLoadChildDirTopLevel) {
   EXPECT_EQ(0, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, getOrLoadChildDirNested) {
+TEST_P(InodeAccessLoggingTest, getOrLoadChildDirNested) {
   auto dirInode = mount_.getTreeInode("src/a"_relpath);
   resetLogger();
 
@@ -448,7 +452,7 @@ TEST_F(InodeAccessLoggingTest, getOrLoadChildDirNested) {
   EXPECT_EQ(1, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, getOrLoadChildFileNested) {
+TEST_P(InodeAccessLoggingTest, getOrLoadChildFileNested) {
   auto dirInode = mount_.getTreeInode("src/a/b"_relpath);
   resetLogger();
 
@@ -458,7 +462,7 @@ TEST_F(InodeAccessLoggingTest, getOrLoadChildFileNested) {
   EXPECT_EQ(1, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, getOrLoadChildFileTopLevel) {
+TEST_P(InodeAccessLoggingTest, getOrLoadChildFileTopLevel) {
   auto dirInode = mount_.getRootInode();
   resetLogger();
 
@@ -470,7 +474,7 @@ TEST_F(InodeAccessLoggingTest, getOrLoadChildFileTopLevel) {
   EXPECT_EQ(0, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, getOrLoadChildTreeTopLevel) {
+TEST_P(InodeAccessLoggingTest, getOrLoadChildTreeTopLevel) {
   auto dirInode = mount_.getRootInode();
   resetLogger();
 
@@ -481,7 +485,7 @@ TEST_F(InodeAccessLoggingTest, getOrLoadChildTreeTopLevel) {
   EXPECT_EQ(0, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, getOrLoadChildTreeNested) {
+TEST_P(InodeAccessLoggingTest, getOrLoadChildTreeNested) {
   auto dirInode = mount_.getTreeInode("src/a"_relpath);
   resetLogger();
 
@@ -491,7 +495,7 @@ TEST_F(InodeAccessLoggingTest, getOrLoadChildTreeNested) {
   EXPECT_EQ(1, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, getChildRecursiveDirTopLevel) {
+TEST_P(InodeAccessLoggingTest, getChildRecursiveDirTopLevel) {
   auto rootInode = mount_.getRootInode();
   resetLogger();
 
@@ -503,7 +507,7 @@ TEST_F(InodeAccessLoggingTest, getChildRecursiveDirTopLevel) {
   EXPECT_EQ(0, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, getChildRecursiveFileTopLevel) {
+TEST_P(InodeAccessLoggingTest, getChildRecursiveFileTopLevel) {
   auto rootInode = mount_.getRootInode();
   resetLogger();
 
@@ -516,7 +520,7 @@ TEST_F(InodeAccessLoggingTest, getChildRecursiveFileTopLevel) {
   EXPECT_EQ(0, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, getChildRecursiveDirNested) {
+TEST_P(InodeAccessLoggingTest, getChildRecursiveDirNested) {
   auto rootInode = mount_.getRootInode();
   resetLogger();
 
@@ -530,7 +534,7 @@ TEST_F(InodeAccessLoggingTest, getChildRecursiveDirNested) {
   EXPECT_EQ(2, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, getChildRecursiveFileNested) {
+TEST_P(InodeAccessLoggingTest, getChildRecursiveFileNested) {
   auto rootInode = mount_.getRootInode();
   resetLogger();
 
@@ -545,7 +549,7 @@ TEST_F(InodeAccessLoggingTest, getChildRecursiveFileNested) {
   EXPECT_EQ(3, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, unlinkTopLevel) {
+TEST_P(InodeAccessLoggingTest, unlinkTopLevel) {
   auto dirInode = mount_.getRootInode();
   dirInode->mknod("made.txt"_pc, S_IFREG | 0644, 0, InvalidationRequired::No);
   resetLogger();
@@ -561,7 +565,7 @@ TEST_F(InodeAccessLoggingTest, unlinkTopLevel) {
   EXPECT_EQ(0, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, unlinkNested) {
+TEST_P(InodeAccessLoggingTest, unlinkNested) {
   auto dirInode = mount_.getTreeInode("src/a/b"_relpath);
   dirInode->mknod("made.txt"_pc, S_IFREG | 0644, 0, InvalidationRequired::No);
   resetLogger();
@@ -576,7 +580,7 @@ TEST_F(InodeAccessLoggingTest, unlinkNested) {
   EXPECT_EQ(1, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, rmdirTopLevel) {
+TEST_P(InodeAccessLoggingTest, rmdirTopLevel) {
   auto dirInode = mount_.getRootInode();
   dirInode->mkdir("made"_pc, 0, InvalidationRequired::No);
   resetLogger();
@@ -592,7 +596,7 @@ TEST_F(InodeAccessLoggingTest, rmdirTopLevel) {
   EXPECT_EQ(0, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, rmdirNested) {
+TEST_P(InodeAccessLoggingTest, rmdirNested) {
   auto dirInode = mount_.getTreeInode("src/a/b"_relpath);
   dirInode->mkdir("made"_pc, 0, InvalidationRequired::No);
   resetLogger();
@@ -607,7 +611,7 @@ TEST_F(InodeAccessLoggingTest, rmdirNested) {
   EXPECT_EQ(1, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, getChildrenTopLevelLoad) {
+TEST_P(InodeAccessLoggingTest, getChildrenTopLevelLoad) {
   auto dirInode = mount_.getRootInode();
   dirInode->mkdir("childdir1"_pc, 0, InvalidationRequired::No);
   dirInode->mkdir("childdir2"_pc, 0, InvalidationRequired::No);
@@ -628,7 +632,7 @@ TEST_F(InodeAccessLoggingTest, getChildrenTopLevelLoad) {
   EXPECT_EQ(0, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, getChildrenNestedLoad) {
+TEST_P(InodeAccessLoggingTest, getChildrenNestedLoad) {
   auto dirInode = mount_.getTreeInode("src/a/b"_relpath);
   dirInode->mkdir("childdir1"_pc, 0, InvalidationRequired::No);
   dirInode->mkdir("childdir2"_pc, 0, InvalidationRequired::No);
@@ -649,7 +653,7 @@ TEST_F(InodeAccessLoggingTest, getChildrenNestedLoad) {
   EXPECT_EQ(5, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, getChildrenTopLevelNoLoad) {
+TEST_P(InodeAccessLoggingTest, getChildrenTopLevelNoLoad) {
   auto dirInode = mount_.getRootInode();
   dirInode->mkdir("childdir1"_pc, 0, InvalidationRequired::No);
   dirInode->mkdir("childdir2"_pc, 0, InvalidationRequired::No);
@@ -670,7 +674,7 @@ TEST_F(InodeAccessLoggingTest, getChildrenTopLevelNoLoad) {
   EXPECT_EQ(0, getAccessCount());
 }
 
-TEST_F(InodeAccessLoggingTest, getChildrenNestedNoLoad) {
+TEST_P(InodeAccessLoggingTest, getChildrenNestedNoLoad) {
   auto dirInode = mount_.getTreeInode("src/a/b"_relpath);
   dirInode->mkdir("childdir1"_pc, 0, InvalidationRequired::No);
   dirInode->mkdir("childdir2"_pc, 0, InvalidationRequired::No);
@@ -689,3 +693,11 @@ TEST_F(InodeAccessLoggingTest, getChildrenNestedNoLoad) {
 
   EXPECT_EQ(5, getAccessCount());
 }
+
+INSTANTIATE_TEST_SUITE_P(
+    InodeAccessLoggingTestVariants,
+    InodeAccessLoggingTest,
+    ::testing::Bool(),
+    [](const ::testing::TestParamInfo<bool>& info) {
+      return info.param ? "Coroutines" : "Futures";
+    });

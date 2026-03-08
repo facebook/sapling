@@ -448,4 +448,10 @@ class TestMount {
 
   std::shared_ptr<ServerState> serverState_;
 };
+inline void enableCoroutinesConfig(TestMount& mount) {
+  mount.updateEdenConfig({
+      {"coroutines:enable-phase1", "true"},
+  });
+}
+
 } // namespace facebook::eden
