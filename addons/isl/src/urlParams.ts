@@ -40,7 +40,11 @@ export function computeInitialParams(isBrowserPlatform: boolean): Map<InitialPar
       } catch (error) {
         logger.log('Failed to save initial params to local storage', error);
       }
-      window.history.replaceState({}, document.title, window.location.pathname);
+      try {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } catch (error) {
+        logger.log('Failed to replace URL state (expected in webview environments)', error);
+      }
       logger.log('Saved initial params to local storage');
     }
   }
