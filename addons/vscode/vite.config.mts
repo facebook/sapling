@@ -37,29 +37,38 @@ if (isInternal) {
 console.log(isInternal ? 'Building internal version' : 'Building OSS version');
 
 // vite-plugin-stylex doesn't support renaming the output CSS file, so we have to do that ourselves.
+// Newer versions of @stylexjs/stylex (>=0.9) may merge CSS into the main bundle instead of
+// emitting a separate asset. In that case, create an empty placeholder so the webview doesn't 404.
 function moveStylexFilenamePlugin(): Plugin {
   return {
     name: 'move-stylex-filename',
     writeBundle(options, bundle) {
+      if (options.dir == null) {
+        this.error('Could not replace StyleX output, dir must be set');
+      }
+      const dir = options.dir as string;
+      const newName = 'res/stylex.css';
+      const newPath = path.resolve(dir, newName);
+      let found = false;
       for (const name in bundle) {
         const chunk = bundle[name];
-        // Check if this is the stylex output cssfile
+        // Check if this is the stylex output css file
         if (chunk.type === 'asset' && /assets[/\\]stylex\.[a-f0-9]+\.css/.test(chunk.fileName)) {
           // Rename the file, move it from "assets" to "res" where the rest of our assets are
-          const newName = 'res/stylex.css';
-          if (options.dir == null) {
-            this.error('Could not replace StyleX output, dir must be set');
-          }
-          const dir = options.dir as string;
           const oldPath = path.resolve(dir, chunk.fileName);
-          const newPath = path.resolve(dir, newName);
           this.info(`Replacing StyleX output file ${chunk.fileName} with ${newName}`);
           fs.renameSync(oldPath, newPath);
           // Update the bundle object
           chunk.fileName = newName;
           bundle[newName] = chunk;
           delete bundle[name];
+          found = true;
         }
+      }
+      if (!found && !existsSync(newPath)) {
+        this.info('StyleX did not emit a separate CSS asset; creating empty res/stylex.css');
+        fs.mkdirSync(path.dirname(newPath), {recursive: true});
+        fs.writeFileSync(newPath, '/* stylex: no separate asset emitted */\n');
       }
     },
   };
@@ -73,8 +82,8 @@ const replaceFiles = (
 ): PluginOption => {
   const projectRoot = process.cwd();
   replacements = replacements?.map(x => ({
-    file: path.join(projectRoot, x.file),
-    replacement: path.join(projectRoot, x.replacement),
+    file: path.join(projectRoot, x.file).replace(/\\/g, '/'),
+    replacement: path.join(projectRoot, x.replacement).replace(/\\/g, '/'),
   }));
 
   return {
