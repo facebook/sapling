@@ -19,8 +19,12 @@ use anyhow::format_err;
 use backsyncer::BacksyncLimit;
 use backsyncer::Repo;
 use backsyncer::backsync_latest;
+use backsyncer::format_counter;
 use backsyncer::open_backsyncer_dbs;
 use blobrepo_hg::BlobRepoHg;
+use bookmarks::BookmarkUpdateLogId;
+use bookmarks::BookmarkUpdateLogRef;
+use bookmarks::Freshness;
 use cloned::cloned;
 use cmdlib_cross_repo::create_single_direction_commit_syncer;
 use context::CoreContext;
@@ -252,33 +256,76 @@ async fn backsync_forever(
             .await?;
 
         if enabled {
-            let (delay_info, new_future) = backsync_latest(
-                ctx.clone(),
-                commit_sync_data.clone(),
-                target_repo_dbs.clone(),
-                BacksyncLimit::NoLimit,
-                Arc::clone(&cancellation_requested),
-                CommitSyncContext::Backsyncer,
-                false,
-                commit_only_backsync_future,
-            )
-            .await?;
+            let paused = justknobs::eval(
+                "scm/mononoke:cross_repo_pause_backsyncer",
+                None,
+                Some(&target_repo_name),
+            )?;
 
-            let delay = Delay {
-                delay_secs: delay_info.delay_secs,
-                remaining_entries: delay_info.remaining_entries,
-            };
-            log_delay(ctx, &delay, &source_repo_name, &target_repo_name);
-            commit_only_backsync_future = new_future;
+            if paused {
+                // Compute stats without doing any sync work
+                let large_repo_id = commit_sync_data.get_source_repo().repo_identity().id();
+                let counter_name = format_counter(&large_repo_id);
+                let counter: BookmarkUpdateLogId = target_repo_dbs
+                    .counters
+                    .get_counter(ctx, &counter_name)
+                    .await?
+                    .unwrap_or(0)
+                    .try_into()?;
 
-            if delay.remaining_entries == 0 {
-                debug!("no entries remained");
+                let remaining_entries = commit_sync_data
+                    .get_source_repo()
+                    .bookmark_update_log()
+                    .count_further_bookmark_log_entries(ctx.clone(), counter, None)
+                    .await?;
+
+                let delay_secs = commit_sync_data
+                    .get_source_repo()
+                    .bookmark_update_log()
+                    .read_next_bookmark_log_entries(ctx.clone(), counter, 1, Freshness::MostRecent)
+                    .try_next()
+                    .await?
+                    .map_or(0, |entry| entry.timestamp.since_seconds());
+
+                let delay = Delay {
+                    delay_secs,
+                    remaining_entries,
+                };
+                log_delay(ctx, &delay, &source_repo_name, &target_repo_name);
+                info!(
+                    "Backsyncer paused by JustKnob for {}, delay: {}s, remaining: {}",
+                    target_repo_name, delay_secs, remaining_entries,
+                );
                 tokio::time::sleep(Duration::new(1, 0)).await;
             } else {
-                debug!(
-                    "backsyncing {} remaining entries (delay: {}s)",
-                    delay.remaining_entries, delay.delay_secs
-                );
+                let (delay_info, new_future) = backsync_latest(
+                    ctx.clone(),
+                    commit_sync_data.clone(),
+                    target_repo_dbs.clone(),
+                    BacksyncLimit::NoLimit,
+                    Arc::clone(&cancellation_requested),
+                    CommitSyncContext::Backsyncer,
+                    false,
+                    commit_only_backsync_future,
+                )
+                .await?;
+
+                let delay = Delay {
+                    delay_secs: delay_info.delay_secs,
+                    remaining_entries: delay_info.remaining_entries,
+                };
+                log_delay(ctx, &delay, &source_repo_name, &target_repo_name);
+                commit_only_backsync_future = new_future;
+
+                if delay.remaining_entries == 0 {
+                    debug!("no entries remained");
+                    tokio::time::sleep(Duration::new(1, 0)).await;
+                } else {
+                    debug!(
+                        "backsyncing {} remaining entries (delay: {}s)",
+                        delay.remaining_entries, delay.delay_secs
+                    );
+                }
             }
         } else {
             debug!("push redirector is disabled");
