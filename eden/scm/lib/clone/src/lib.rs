@@ -151,6 +151,7 @@ pub fn eden_clone(
     working_copy: &Path,
     target: Option<HgId>,
     filters: Option<HashSet<Text>>,
+    enable_windows_symlinks: bool,
 ) -> Result<()> {
     let config = repo.config();
 
@@ -162,15 +163,6 @@ pub fn eden_clone(
         working_copy.as_os_str(),
     ]);
 
-    let enable_windows_symlinks = if let Ok(enabled_everywhere) =
-        config.get_or_default::<bool>("experimental", "windows-symlinks")
-    {
-        enabled_everywhere
-    } else {
-        config
-            .get_or_default::<Vec<String>>("experimental", "windows-symlinks")?
-            .contains(&"edenfs".to_owned())
-    };
     if enable_windows_symlinks {
         clone_command.args(["--enable-windows-symlinks".to_string()]);
     }

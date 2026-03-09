@@ -247,7 +247,7 @@ fn run_eden(
             destination.display(),
         )
     });
-    clone::eden_clone(&backing_repo, destination, target_rev, edenfs_filter)?;
+    clone::eden_clone(&backing_repo, destination, target_rev, edenfs_filter, true)?;
     Ok(())
 }
 
