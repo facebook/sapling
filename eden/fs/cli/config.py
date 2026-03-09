@@ -1644,7 +1644,7 @@ class EdenCheckout:
 
         enable_windows_symlinks = repository.get("enable-windows-symlinks")
         if not isinstance(enable_windows_symlinks, bool):
-            enable_windows_symlinks = False
+            enable_windows_symlinks = sys.platform == "win32"
 
         off_mount_repo_dir = repository.get("off-mount-repo-dir")
         if not isinstance(off_mount_repo_dir, bool):

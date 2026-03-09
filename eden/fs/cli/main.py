@@ -669,7 +669,10 @@ is case-sensitive. This is not recommended and is intended only for testing."""
         try:
             enable_windows_symlinks = (
                 args.enable_windows_symlinks
-                or instance.get_config_bool("experimental.windows-symlinks", False)
+                or instance.get_config_bool(
+                    "experimental.windows-symlinks",
+                    sys.platform == "win32",
+                )
             ) and can_enable_windows_symlinks()
             repo, repo_config = config_mod.get_repo_info(
                 instance,

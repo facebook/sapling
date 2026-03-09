@@ -399,7 +399,7 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<bool> thriftUseCheckoutExecutor{
       "thrift:use-checkout-executor",
-      false,
+      true,
       this};
 
   /**
@@ -1139,7 +1139,7 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<bool> hgEnableCachedResultForStatusRequest{
       "hg:enable-scm-status-cache",
-      false,
+      folly::kIsWindows ? false : true,
       this};
 
   /**
@@ -1523,14 +1523,10 @@ class EdenConfig : private ConfigSettingManager {
 
   /**
    * Controls whether EdenFS symlinks are enabled on Windows.
-   *
-   * Currently this is disabled because of a Windows bug. Directories with
-   * long symlinks become un-list-able.
-   * https://fb.workplace.com/groups/edenfswindows/permalink/1427359391513268/
    */
   ConfigSetting<bool> windowsSymlinksEnabled{
       "experimental:windows-symlinks",
-      false,
+      folly::kIsWindows,
       this};
 
   /**
@@ -1792,7 +1788,7 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<bool> enablePredictivePrefetchProfiles{
       "prefetch-profiles:predictive-prefetching-enabled",
-      false,
+      true,
       this};
 
   /**
