@@ -14,7 +14,7 @@ name = "webview_app"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.101"
+anyhow = "1.0.102"
 dirs = "6.0"
 serde = { version = "1.0.219", features = ["derive", "rc"] }
 serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }

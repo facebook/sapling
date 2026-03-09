@@ -13,7 +13,7 @@ license = "MIT"
 name = "commits"
 
 [dependencies]
-anyhow = "1.0.101"
+anyhow = "1.0.102"
 async-trait = "0.1.86"
 fs-err = { version = "3.3.0", features = ["tokio"] }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }

@@ -12,7 +12,7 @@ name = "aliasverify"
 path = "../../src/main.rs"
 
 [dependencies]
-anyhow = "1.0.101"
+anyhow = "1.0.102"
 async-trait = "0.1.86"
 blobstore = { version = "0.1.0", path = "../../../../blobstore" }
 bytes = { version = "1.11.1", features = ["serde"] }

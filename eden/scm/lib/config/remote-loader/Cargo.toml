@@ -13,7 +13,7 @@ license = "MIT"
 name = "remote_loader"
 
 [dependencies]
-anyhow = { version = "1.0.101", optional = true }
+anyhow = { version = "1.0.102", optional = true }
 base64 = { version = "0.22.1", features = ["alloc"], optional = true }
 filetime = { version = "0.2.27", optional = true }
 sapling-http-client = { version = "0.1.0", path = "../../http-client", optional = true }

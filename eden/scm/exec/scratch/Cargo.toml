@@ -7,7 +7,7 @@ authors = ["Source Control Oncall oncall+source_control@xmail.facebook.com"]
 edition = "2024"
 
 [dependencies]
-anyhow = "1.0.101"
+anyhow = "1.0.102"
 clap = { version = "4.5.42", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 dirs = "6.0"
 hex = { version = "0.4.3", features = ["alloc"] }

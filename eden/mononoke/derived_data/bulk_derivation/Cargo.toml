@@ -12,7 +12,7 @@ path = "lib.rs"
 
 [dependencies]
 acl_manifest = { version = "0.1.0", path = "../acl_manifest" }
-anyhow = "1.0.101"
+anyhow = "1.0.102"
 async-trait = "0.1.86"
 basename_suffix_skeleton_manifest_v3 = { version = "0.1.0", path = "../basename_suffix_skeleton_manifest_v3" }
 blame = { version = "0.1.0", path = "../blame" }

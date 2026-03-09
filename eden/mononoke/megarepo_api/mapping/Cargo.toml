@@ -8,7 +8,7 @@ edition = "2024"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.101"
+anyhow = "1.0.102"
 content_manifest_derivation = { version = "0.1.0", path = "../../derived_data/content_manifest_derivation" }
 context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context" }
 derivation_queue_thrift = { version = "0.1.0", path = "../../repo_attributes/repo_derivation_queues/if" }

@@ -13,7 +13,7 @@ license = "MIT"
 name = "hook"
 
 [dependencies]
-anyhow = "1.0.101"
+anyhow = "1.0.102"
 erased-serde = "0.4.9"
 sapling-clientinfo = { version = "0.1.0", path = "../clientinfo" }
 sapling-configmodel = { version = "0.1.0", path = "../config/model" }

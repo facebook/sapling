@@ -12,7 +12,7 @@ name = "check_git_wc"
 path = "../../src/main.rs"
 
 [dependencies]
-anyhow = "1.0.101"
+anyhow = "1.0.102"
 check_git_wc = { version = "0.1.0", path = "../../../../git/check_git_wc" }
 clap = { version = "4.5.42", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 context = { version = "0.1.0", path = "../../../../servers/slapi/slapi_server/context" }

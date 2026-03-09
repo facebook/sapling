@@ -25,7 +25,7 @@ license = "MIT"
 name = "commitcloudsubscriber"
 
 [dependencies]
-anyhow = "1.0.101"
+anyhow = "1.0.102"
 base64 = { version = "0.22.1", features = ["alloc"] }
 filetime = "0.2.27"
 hostcaps = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

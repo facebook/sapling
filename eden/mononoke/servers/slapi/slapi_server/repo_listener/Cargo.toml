@@ -8,7 +8,7 @@ edition = "2024"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.101"
+anyhow = "1.0.102"
 base64 = { version = "0.22.1", features = ["alloc"] }
 bookmarks = { version = "0.1.0", path = "../../../../repo_attributes/bookmarks" }
 bytes = { version = "1.11.1", features = ["serde"] }

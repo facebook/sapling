@@ -10,7 +10,7 @@ repository = "https://github.com/facebook/sapling"
 license = "GPL-2.0-only"
 
 [dependencies]
-anyhow = "1.0.101"
+anyhow = "1.0.102"
 blob = { version = "0.1.0", path = "../blob" }
 flume = "0.11.1"
 sapling-manifest = { version = "0.1.0", path = "../manifest" }

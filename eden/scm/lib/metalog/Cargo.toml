@@ -13,7 +13,7 @@ license = "MIT"
 name = "metalog"
 
 [dependencies]
-anyhow = "1.0.101"
+anyhow = "1.0.102"
 hex = { version = "0.4.3", features = ["alloc"] }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 sapling-hgtime = { version = "0.1.0", path = "../hgtime" }

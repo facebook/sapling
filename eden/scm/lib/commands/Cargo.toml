@@ -10,7 +10,7 @@ repository = "https://github.com/facebook/sapling"
 license = "GPL-2.0-only"
 
 [dependencies]
-anyhow = { version = "1.0.101", features = ["backtrace"] }
+anyhow = { version = "1.0.102", features = ["backtrace"] }
 cmdcat = { version = "0.1.0", path = "commands/cmdcat" }
 cmdclone = { version = "0.1.0", path = "commands/cmdclone" }
 cmdconfig = { version = "0.1.0", path = "commands/cmdconfig" }

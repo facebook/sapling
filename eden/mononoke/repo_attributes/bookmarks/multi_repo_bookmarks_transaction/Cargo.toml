@@ -8,7 +8,7 @@ edition = "2024"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.101"
+anyhow = "1.0.102"
 bookmarks = { version = "0.1.0", path = ".." }
 context = { version = "0.1.0", path = "../../../servers/slapi/slapi_server/context" }
 dbbookmarks = { version = "0.1.0", path = "../dbbookmarks" }

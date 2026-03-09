@@ -13,7 +13,7 @@ license = "MIT"
 name = "repostate"
 
 [dependencies]
-anyhow = "1.0.101"
+anyhow = "1.0.102"
 byteorder = "1.5"
 fs-err = { version = "3.3.0", features = ["tokio"] }
 sapling-identity = { version = "0.1.0", path = "../../identity" }

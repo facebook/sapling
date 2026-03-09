@@ -8,7 +8,7 @@ edition = "2024"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.101"
+anyhow = "1.0.102"
 libz-sys = "1.1.23"
 
 [dev-dependencies]

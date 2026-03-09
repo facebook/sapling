@@ -13,7 +13,7 @@ license = "MIT"
 name = "edenfs_client"
 
 [dependencies]
-anyhow = "1.0.101"
+anyhow = "1.0.102"
 fbthrift_socket = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fs-err = { version = "3.3.0", features = ["tokio"] }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }

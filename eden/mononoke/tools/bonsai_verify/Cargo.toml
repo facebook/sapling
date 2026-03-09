@@ -12,7 +12,7 @@ name = "bonsai_verify"
 test = false
 
 [dependencies]
-anyhow = "1.0.101"
+anyhow = "1.0.102"
 blobrepo_override = { version = "0.1.0", path = "../../blobrepo/override" }
 blobrepo_utils = { version = "0.1.0", path = "../../blobrepo_utils" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }

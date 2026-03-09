@@ -8,7 +8,7 @@ edition = "2024"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.101"
+anyhow = "1.0.102"
 aws-config = "1.8.14"
 aws-sdk-cloudwatchlogs = "1.71.0"
 clap = { version = "4.5.42", features = ["derive", "env", "string", "unicode", "wrap_help"] }

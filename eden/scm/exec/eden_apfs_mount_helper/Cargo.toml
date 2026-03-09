@@ -11,7 +11,7 @@ name = "eden_apfs"
 path = "src/eden_apfs/eden_apfs.rs"
 
 [dependencies]
-anyhow = "1.0.101"
+anyhow = "1.0.102"
 libc = "0.2.139"
 once_cell = "1.21"
 plist = "1.8.0"

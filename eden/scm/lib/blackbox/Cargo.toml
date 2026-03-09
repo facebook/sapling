@@ -17,7 +17,7 @@ name = "blackbox"
 harness = false
 
 [dependencies]
-anyhow = "1.0.101"
+anyhow = "1.0.102"
 byteorder = "1.5"
 libc = "0.2.139"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
