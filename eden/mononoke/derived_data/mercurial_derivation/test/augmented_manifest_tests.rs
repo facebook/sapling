@@ -16,7 +16,6 @@ use futures::stream::TryStreamExt;
 use manifest::Entry;
 use manifest::ManifestOps;
 use mercurial_derivation::DeriveHgChangeset;
-use mercurial_derivation::MappedHgChangesetId;
 use mercurial_derivation::RootHgAugmentedManifestId;
 use mercurial_derivation::derive_hg_augmented_manifest;
 use mercurial_types::HgAugmentedManifestId;
@@ -197,6 +196,14 @@ async fn test_augmented_manifest(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
+/// Test that RootHgAugmentedManifestId batch derivation works correctly
+/// across multiple batch segments. This exercises the scenario where
+/// derive_heads_with_visited splits a large set of commits into multiple
+/// calls to derive_exactly_batch.
+///
+/// RootHgAugmentedManifestId's derive_batch derives HgChangesets inline
+/// and stores their mappings to SQL. The second batch segment depends on
+/// HgChangeset mappings from the first batch being visible via SQL.
 #[mononoke::fbinit_test]
 async fn test_augmented_manifest_multi_batch(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
@@ -222,12 +229,8 @@ async fn test_augmented_manifest_multi_batch(fb: FacebookInit) -> Result<()> {
 
     let manager = repo.repo_derived_data().manager();
 
-    // Derive MappedHgChangesetId first since it's a dependency.
-    // This is what the framework does when Dependencies includes it.
-    manager
-        .derive_exactly_batch::<MappedHgChangesetId>(&ctx, csids.clone(), None)
-        .await?;
-
+    // MappedHgChangesetId is NOT a dependency — it gets derived inline
+    // within derive_batch and stored to SQL for cross-batch visibility.
     // Split into two batches and derive RootHgAugmentedManifestId.
     // First batch: commits 0..5
     let batch1 = csids[0..5].to_vec();
@@ -236,8 +239,8 @@ async fn test_augmented_manifest_multi_batch(fb: FacebookInit) -> Result<()> {
         .await?;
 
     // Second batch: commits 5..10 (parent of commit 5 is commit 4, which
-    // was in batch 1). This should work because MappedHgChangesetId
-    // mappings were persisted above.
+    // was in batch 1). This works because derive_batch stores
+    // MappedHgChangesetId mappings to SQL, making them visible here.
     let batch2 = csids[5..10].to_vec();
     manager
         .derive_exactly_batch::<RootHgAugmentedManifestId>(&ctx, batch2, None)
@@ -266,14 +269,18 @@ async fn test_augmented_manifest_multi_batch(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
+/// Test that RootHgAugmentedManifestId derivation via derive_heads works
+/// correctly when MappedHgChangesetId is not a declared dependency.
+/// derive_heads calls derive_exactly_batch, which calls our derive_batch
+/// override that inline-derives HgChangesets and stores their mappings
+/// after flushing blobs.
 #[mononoke::fbinit_test]
-async fn test_augmented_manifest_derive_single(fb: FacebookInit) -> Result<()> {
+async fn test_augmented_manifest_derive_heads(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let repo: Repo = test_repo_factory::build_empty(fb).await?;
 
     // Create a linear chain of 3 commits. derive_heads will process
-    // these via derive_exactly_batch -> default derive_batch ->
-    // sequential derive_single calls.
+    // these via derive_exactly_batch -> derive_batch.
     let root = CreateCommitContext::new_root(&ctx, &repo)
         .add_file("file", "root")
         .commit()
@@ -291,9 +298,8 @@ async fn test_augmented_manifest_derive_single(fb: FacebookInit) -> Result<()> {
 
     let manager = repo.repo_derived_data().manager();
 
-    // Do NOT pre-derive MappedHgChangesetId. derive_heads will handle
-    // dependency derivation if it's in Dependencies, and derive_single
-    // must handle inline derivation if it's not.
+    // Do NOT pre-derive MappedHgChangesetId. derive_batch handles
+    // inline derivation and mapping persistence.
     manager
         .derive_heads::<RootHgAugmentedManifestId>(ctx.clone(), vec![grandchild], None, None)
         .await?;

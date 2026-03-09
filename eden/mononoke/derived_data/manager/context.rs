@@ -342,7 +342,7 @@ impl DerivationContext {
     }
 
     /// Flush any pending writes for this derivation context.
-    pub(crate) async fn flush(&self, ctx: &CoreContext) -> Result<()> {
+    pub async fn flush(&self, ctx: &CoreContext) -> Result<()> {
         if let Some((_, blobstore)) = &self.blobstore_write_cache {
             blobstore.persist(ctx).await?;
         }

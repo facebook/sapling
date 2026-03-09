@@ -38,6 +38,7 @@ use manifest::ManifestOps;
 use manifest::PathOrPrefix;
 use mercurial_types::HgAugmentedManifestId;
 use mercurial_types::HgChangesetId;
+use mercurial_types::HgManifestId;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::DerivableUntopologicallyVariant;
@@ -444,11 +445,115 @@ pub fn format_key(derivation_ctx: &DerivationContext, cs_id: ChangesetId) -> Str
     format!("{}{}{}", root_prefix, key_prefix, cs_id)
 }
 
+/// Gets the HgManifestId for a commit, optionally deriving the HgChangeset inline.
+///
+/// Checks for the HgChangesetId in the following order:
+/// 1. The `known_hg_cs` map (batch-internal cache of already-derived changesets)
+/// 2. The persisted mapping (SQL via fetch_derived)
+/// 3. Derives inline if not found anywhere
+///
+/// Returns the manifest ID and optionally the inline-derived MappedHgChangesetId
+/// (so the caller can track it for subsequent commits in the same batch).
+async fn get_manifest_id(
+    ctx: &CoreContext,
+    derivation_ctx: &DerivationContext,
+    bonsai: &BonsaiChangeset,
+    known_hg_cs: Option<&HashMap<ChangesetId, MappedHgChangesetId>>,
+) -> Result<(HgManifestId, Option<MappedHgChangesetId>)> {
+    let csid = bonsai.get_changeset_id();
+    let blobstore = derivation_ctx.blobstore();
+
+    // Check batch-internal cache first.
+    if let Some(hg_cs) = known_hg_cs.and_then(|m| m.get(&csid)) {
+        let manifestid = hg_cs
+            .hg_changeset_id()
+            .load(ctx, blobstore)
+            .await?
+            .manifestid();
+        return Ok((manifestid, None));
+    }
+
+    // Check persisted mapping (SQL).
+    if let Some(hg_cs) = derivation_ctx
+        .fetch_derived::<MappedHgChangesetId>(ctx, csid)
+        .await?
+    {
+        let manifestid = hg_cs
+            .hg_changeset_id()
+            .load(ctx, blobstore)
+            .await?
+            .manifestid();
+        return Ok((manifestid, None));
+    }
+
+    // Not found — derive HgChangeset inline.
+    let parents: Vec<_> = bonsai.parents().collect();
+    let mut hg_parents = Vec::with_capacity(parents.len());
+    for parent in &parents {
+        if let Some(hg_cs) = known_hg_cs.and_then(|m| m.get(parent)) {
+            hg_parents.push(hg_cs.clone());
+        } else if let Some(hg_cs) = derivation_ctx
+            .fetch_derived::<MappedHgChangesetId>(ctx, *parent)
+            .await?
+        {
+            hg_parents.push(hg_cs);
+        }
+    }
+    anyhow::ensure!(
+        hg_parents.len() == parents.len(),
+        "Tried to derive MappedHgChangesetId for {}, but {} of {} parents were not ready",
+        csid,
+        parents.len() - hg_parents.len(),
+        parents.len()
+    );
+
+    let empty = HashMap::new();
+    let mapping = known_hg_cs.unwrap_or(&empty);
+    let subtree_change_sources =
+        get_subtree_change_sources(ctx, derivation_ctx, bonsai, mapping).await?;
+    let derivation_opts = get_hg_changeset_derivation_options(derivation_ctx);
+    let (derived, manifestid) = crate::derive_hg_changeset::derive_from_parents(
+        ctx,
+        derivation_ctx.blobstore(),
+        bonsai.clone(),
+        hg_parents,
+        subtree_change_sources,
+        &derivation_opts,
+        derivation_ctx.restricted_paths(),
+    )
+    .await?;
+    Ok((manifestid, Some(derived)))
+}
+
+/// Store a MappedHgChangesetId mapping to SQL (BonsaiHgMapping).
+///
+/// This is a direct SQL write (not through the blobstore write cache), so it's
+/// immediately persistent and visible to subsequent batch segments and other
+/// processes.
+async fn store_hg_cs_mapping(
+    ctx: &CoreContext,
+    derivation_ctx: &DerivationContext,
+    cs_id: ChangesetId,
+    hg_cs: &MappedHgChangesetId,
+) -> Result<()> {
+    derivation_ctx
+        .bonsai_hg_mapping()?
+        .add(
+            ctx,
+            BonsaiHgMappingEntry {
+                hg_cs_id: hg_cs.hg_changeset_id(),
+                bcs_id: cs_id,
+            },
+        )
+        .await?;
+    Ok(())
+}
+
 #[async_trait]
 impl BonsaiDerivable for RootHgAugmentedManifestId {
     const VARIANT: DerivableType = DerivableType::HgAugmentedManifests;
 
-    type Dependencies = dependencies![MappedHgChangesetId];
+    type Dependencies = dependencies![];
 
     async fn derive_single(
         ctx: &CoreContext,
@@ -459,22 +564,28 @@ impl BonsaiDerivable for RootHgAugmentedManifestId {
     ) -> Result<Self> {
         let blobstore = derivation_ctx.blobstore();
 
-        let hg_manifest_id_fut = async {
-            let hg_changeset_id = derivation_ctx
-                .fetch_dependency::<MappedHgChangesetId>(ctx, bonsai.get_changeset_id())
-                .await?
-                .hg_changeset_id();
-            Ok(hg_changeset_id.load(ctx, blobstore).await?.manifestid())
-        };
-
         let content_ids = bonsai
             .file_changes()
             .filter_map(|(_path, change)| change.simplify().map(|change| change.content_id()))
             .collect::<HashSet<_>>();
         let content_metadata_fut = prefetch_content_metadata(ctx, blobstore, content_ids);
 
-        let (hg_manifest_id, content_metadata) =
-            future::try_join(hg_manifest_id_fut, content_metadata_fut).await?;
+        let csid = bonsai.get_changeset_id();
+
+        let ((hg_manifest_id, derived_hg_cs), content_metadata) = future::try_join(
+            get_manifest_id(ctx, derivation_ctx, &bonsai, None),
+            content_metadata_fut,
+        )
+        .await?;
+
+        // If we inline-derived a HgChangeset, flush blobs to persistent
+        // storage first, then store the SQL mapping. This ordering is
+        // critical: concurrent readers must not see the mapping before
+        // the blob is available.
+        if let Some(hg_cs) = derived_hg_cs {
+            derivation_ctx.flush(ctx).await?;
+            store_hg_cs_mapping(ctx, derivation_ctx, csid, &hg_cs).await?;
+        }
 
         let parents = parents
             .into_iter()
@@ -492,6 +603,67 @@ impl BonsaiDerivable for RootHgAugmentedManifestId {
             .await?;
 
         Ok(Self(root_hg_aug_mfid))
+    }
+
+    async fn derive_batch(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        bonsais: Vec<BonsaiChangeset>,
+    ) -> Result<HashMap<ChangesetId, Self>> {
+        let blobstore = derivation_ctx.blobstore();
+        let mut res: HashMap<ChangesetId, Self> = HashMap::new();
+        let mut hg_cs_map: HashMap<ChangesetId, MappedHgChangesetId> = HashMap::new();
+
+        for bonsai in &bonsais {
+            let csid = bonsai.get_changeset_id();
+
+            let content_ids = bonsai
+                .file_changes()
+                .filter_map(|(_path, change)| change.simplify().map(|change| change.content_id()))
+                .collect::<HashSet<_>>();
+            let content_metadata_fut = prefetch_content_metadata(ctx, blobstore, content_ids);
+
+            let ((hg_manifest_id, derived_hg_cs), content_metadata) = future::try_join(
+                get_manifest_id(ctx, derivation_ctx, bonsai, Some(&hg_cs_map)),
+                content_metadata_fut,
+            )
+            .await?;
+
+            if let Some(hg_cs) = derived_hg_cs {
+                hg_cs_map.insert(csid, hg_cs);
+            }
+
+            let parents: Vec<_> = derivation_ctx
+                .fetch_unknown_parents::<Self>(ctx, Some(&res), bonsai)
+                .await?
+                .into_iter()
+                .map(|p| p.hg_augmented_manifest_id())
+                .collect();
+
+            let root = crate::derive_hg_augmented_manifest::derive_from_hg_manifest_and_parents(
+                ctx,
+                blobstore,
+                hg_manifest_id,
+                parents,
+                &content_metadata,
+                &derivation_ctx.restricted_paths(),
+            )
+            .await?;
+
+            res.insert(csid, Self(root));
+        }
+
+        // Flush all blob writes BEFORE storing SQL mappings.
+        // This ensures that HgChangeset blobs are in persistent storage
+        // before their SQL mappings become visible to other processes.
+        derivation_ctx.flush(ctx).await?;
+
+        // Now safe to store — blobs are in persistent storage.
+        for (csid, hg_cs) in &hg_cs_map {
+            store_hg_cs_mapping(ctx, derivation_ctx, *csid, hg_cs).await?;
+        }
+
+        Ok(res)
     }
 
     async fn store_mapping(
