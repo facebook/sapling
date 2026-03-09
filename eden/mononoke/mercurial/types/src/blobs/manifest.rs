@@ -19,6 +19,7 @@ use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
 use context::CoreContext;
+use futures::TryStreamExt;
 use futures::stream;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
@@ -27,9 +28,11 @@ use manifest::Entry;
 use manifest::Manifest;
 use mononoke_types::SortedVectorTrieMap;
 use sorted_vector_map::SortedVectorMap;
+use stats::prelude::*;
 
 use super::errors::MononokeHgBlobError;
 use crate::FileType;
+use crate::HgAugmentedManifestId;
 use crate::HgBlob;
 use crate::HgFileNodeId;
 use crate::HgManifestEnvelope;
@@ -37,8 +40,19 @@ use crate::HgManifestId;
 use crate::HgParents;
 use crate::MPathElement;
 use crate::Type;
+use crate::envelope::HgManifestEnvelopeMut;
 use crate::nodehash::HgNodeHash;
 use crate::nodehash::NULL_HASH;
+use crate::sharded_augmented_manifest::HgAugmentedManifestEnvelope;
+use crate::sharded_augmented_manifest::fetch_augmented_manifest_envelope_opt;
+
+define_stats! {
+    prefix = "mononoke.blobstore.hgmanifest_reconstruction";
+    attempted: timeseries(Rate, Sum),
+    succeeded: timeseries(Rate, Sum),
+    failed: timeseries(Rate, Sum),
+    miss: timeseries(Rate, Sum),
+}
 
 /// Maximum size of raw manifest contents that we will parse synchronously.
 /// Manifests that are larger than this size will be parsed on a blocking
@@ -131,6 +145,61 @@ pub async fn fetch_manifest_envelope<B: KeyedBlobstore>(
     })?)
 }
 
+/// Fetch an HgManifestEnvelope directly from the blobstore by key.
+async fn fetch_manifest_envelope_from_blobstore<B: KeyedBlobstore>(
+    ctx: &CoreContext,
+    blobstore: &B,
+    node_id: HgManifestId,
+) -> Result<Option<HgManifestEnvelope>> {
+    let blobstore_key = node_id.blobstore_key();
+    let bytes = blobstore
+        .get(ctx, &blobstore_key)
+        .await
+        .context("While fetching manifest envelope blob")?;
+    match bytes {
+        Some(blobstore_bytes) => {
+            let envelope =
+                HgManifestEnvelope::from_blob(blobstore_bytes.into()).with_context(|| {
+                    MononokeHgBlobError::ManifestDeserializeFailed(blobstore_key.clone())
+                })?;
+            if node_id.into_nodehash() != envelope.node_id() {
+                bail!(
+                    "Manifest ID mismatch (requested: {}, got: {})",
+                    node_id,
+                    envelope.node_id()
+                );
+            }
+            Ok(Some(envelope))
+        }
+        None => Ok(None),
+    }
+}
+
+/// Attempt to fetch and reconstruct an HgManifestEnvelope from the
+/// augmented manifest.  Returns `Ok(Some(...))` on success, `Ok(None)` if
+/// the augmented manifest doesn't exist, or `Err` on failure.
+async fn fetch_manifest_envelope_via_augmented<B: KeyedBlobstore>(
+    ctx: &CoreContext,
+    blobstore: &B,
+    node_id: HgManifestId,
+) -> Result<Option<HgManifestEnvelope>> {
+    STATS::attempted.add_value(1);
+    let aug_id = HgAugmentedManifestId::new(node_id.into_nodehash());
+    match fetch_augmented_manifest_envelope_opt(ctx, blobstore, aug_id).await? {
+        Some(aug_envelope) => {
+            let envelope = reconstruct_manifest_envelope(ctx, blobstore, aug_envelope)
+                .await
+                .context("Reconstructing HgManifest from augmented manifest")?;
+            STATS::succeeded.add_value(1);
+            Ok(Some(envelope))
+        }
+        None => {
+            STATS::miss.add_value(1);
+            Ok(None)
+        }
+    }
+}
+
 /// Like `fetch_manifest_envelope`, but returns None if the manifest wasn't found.
 pub async fn fetch_manifest_envelope_opt<B: KeyedBlobstore>(
     ctx: &CoreContext,
@@ -140,29 +209,42 @@ pub async fn fetch_manifest_envelope_opt<B: KeyedBlobstore>(
     if node_id == HgManifestId::new(NULL_HASH) {
         return Ok(None);
     }
-    let blobstore_key = node_id.blobstore_key();
-    let bytes = blobstore
-        .get(ctx, &blobstore_key)
-        .await
-        .context("While fetching manifest envelope blob")?;
-    (|| {
-        let blobstore_bytes = match bytes {
-            Some(bytes) => bytes,
-            None => return Ok(None),
-        };
-        let envelope = HgManifestEnvelope::from_blob(blobstore_bytes.into())?;
-        if node_id.into_nodehash() != envelope.node_id() {
-            bail!(
-                "Manifest ID mismatch (requested: {}, got: {})",
-                node_id,
-                envelope.node_id()
-            );
-        }
-        Ok(Some(envelope))
-    })()
-    .context(MononokeHgBlobError::ManifestDeserializeFailed(
-        blobstore_key,
-    ))
+
+    // Try direct blobstore read first.
+    if let Some(envelope) = fetch_manifest_envelope_from_blobstore(ctx, blobstore, node_id).await? {
+        return Ok(Some(envelope));
+    }
+
+    // Fallback: reconstruct from augmented manifest. This handles manifests
+    // derived with blob writes skipped (the augmented manifest is a superset).
+    // This layer is permanent, removing it requires backfilling all affected manifests.
+    fetch_manifest_envelope_via_augmented(ctx, blobstore, node_id).await
+}
+
+/// Reconstruct an HgManifestEnvelope from an augmented manifest envelope.
+/// The augmented manifest is a strict superset of HgManifest data.
+/// This layer is permanent — it can never be removed without backfilling
+/// all affected manifests.
+async fn reconstruct_manifest_envelope<B: KeyedBlobstore>(
+    ctx: &CoreContext,
+    blobstore: &B,
+    aug_envelope: HgAugmentedManifestEnvelope,
+) -> Result<HgManifestEnvelope> {
+    let aug_mf = aug_envelope.augmented_manifest;
+    let node_id = aug_mf.hg_node_id;
+    let p1 = aug_mf.p1;
+    let p2 = aug_mf.p2;
+    let computed_node_id = aug_mf.computed_node_id;
+    let entries: Vec<_> = aug_mf.into_subentries(ctx, blobstore).try_collect().await?;
+    let contents = crate::preloaded_augmented_manifest::serialize_manifest(&entries)?;
+    Ok(HgManifestEnvelopeMut {
+        node_id,
+        p1,
+        p2,
+        computed_node_id,
+        contents,
+    }
+    .freeze())
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
