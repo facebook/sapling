@@ -205,7 +205,7 @@ Counters get logged for native commands:
     test_counter=1
 
 Metrics can be printed if devel.print-metrics is set:
-  $ hg log -r null -T '.\n' --config extensions.gauge=$TESTTMP/a.py --config devel.print-metrics= --config devel.skip-metrics=scmstore,watchman
+  $ hg log -r null -T '.\n' --config extensions.gauge=$TESTTMP/a.py --config devel.print-metrics= --config devel.skip-metrics=scmstore,indexedlog,watchman
   .
   atexit handler executed
   test_bar: 2

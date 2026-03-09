@@ -18,6 +18,7 @@ use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 use std::sync::atomic::Ordering::SeqCst;
 
+use metrics::Counter;
 use minibytes::Bytes;
 use once_cell::sync::OnceCell;
 use tracing::debug;
@@ -42,7 +43,7 @@ use crate::repair::OpenOptionsRepair;
 use crate::repair::RepairMessage;
 use crate::utils;
 
-pub static ROTATE_COUNT: AtomicU64 = AtomicU64::new(0);
+static ROTATE_COUNT: Counter = Counter::new_counter("indexedlog.rotate");
 
 /// A collection of [`Log`]s that get rotated or deleted automatically when they
 /// exceed size or count limits.
@@ -714,7 +715,7 @@ impl RotateLog {
     /// callsite makes sure that [`Log`]s are consistent (ex. up-to-date,
     /// and do not have dirty entries in non-writable logs).
     fn rotate_internal(&mut self, lock: &ScopedDirLock) -> crate::Result<()> {
-        ROTATE_COUNT.fetch_add(1, Ordering::Relaxed);
+        ROTATE_COUNT.add(1);
 
         let dir_name = match &self.dir {
             Some(dir) => dir.to_string_lossy(),
