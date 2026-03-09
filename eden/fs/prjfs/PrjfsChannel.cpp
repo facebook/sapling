@@ -358,7 +358,7 @@ PrjfsChannelInner::PrjfsChannelInner(
       processAccessLog_(processAccessLog),
       config_(config),
       deletedPromise_(std::move(deletedPromise)),
-      traceDetailedArguments_(std::atomic<size_t>(0)),
+      traceDetailedArguments_(std::make_shared<std::atomic<size_t>>(0)),
       traceBus_(
           TraceBus<PrjfsTraceEvent>::create(
               "PrjfsTrace",
@@ -1109,17 +1109,13 @@ PrjfsChannelInner::getOutstandingRequests() {
 }
 
 TraceDetailedArgumentsHandle PrjfsChannelInner::traceDetailedArguments() {
-  // We could implement something fancier here that just copies the shared_ptr
-  // into a handle struct that increments upon taking ownership and decrements
-  // on destruction, but this code path is quite rare, so do the expedient
-  // thing.
-  auto handle =
-      std::shared_ptr<void>(nullptr, [&copy = traceDetailedArguments_](void*) {
-        copy.fetch_sub(1, std::memory_order_acq_rel);
-      });
-  traceDetailedArguments_.fetch_add(1, std::memory_order_acq_rel);
+  auto counter = traceDetailedArguments_;
+  auto handle = std::shared_ptr<void>(nullptr, [counter](void*) {
+    counter->fetch_sub(1, std::memory_order_acq_rel);
+  });
+  traceDetailedArguments_->fetch_add(1, std::memory_order_acq_rel);
   return handle;
-};
+}
 
 namespace {
 typedef ImmediateFuture<folly::Unit> (PrjfsChannelInner::*NotificationHandler)(

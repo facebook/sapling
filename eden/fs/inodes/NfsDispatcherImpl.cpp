@@ -84,7 +84,7 @@ ImmediateFuture<folly::Unit> NfsDispatcherImpl::updateLastUsedTime(
         inode->updateNfsLastUsedTime();
         return folly::unit;
       })
-      .thenError([&ino](folly::exception_wrapper&& ew) {
+      .thenError([ino](folly::exception_wrapper&& ew) {
         XLOGF(
             DBG9,
             "Cannot update the last access time for inode: {} error: {}",

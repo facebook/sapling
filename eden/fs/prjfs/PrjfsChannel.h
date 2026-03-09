@@ -412,7 +412,7 @@ class PrjfsChannelInner {
   }
 
   const std::atomic<size_t>& getTraceDetailedArguments() const {
-    return traceDetailedArguments_;
+    return *traceDetailedArguments_;
   }
 
   const EdenStatsPtr& getStats() const {
@@ -499,7 +499,7 @@ class PrjfsChannelInner {
   folly::Synchronized<TelemetryState> telemetryState_;
   std::vector<TraceSubscriptionHandle<PrjfsTraceEvent>>
       traceSubscriptionHandles_;
-  std::atomic<size_t> traceDetailedArguments_;
+  std::shared_ptr<std::atomic<size_t>> traceDetailedArguments_;
   // The TraceBus must be the last member because its subscribed functions may
   // close over `this` and can run until the TraceBus itself is deallocated.
   std::shared_ptr<TraceBus<PrjfsTraceEvent>> traceBus_;

@@ -537,14 +537,16 @@ FilteredBackingStore::getGlobFiles(
     const std::vector<std::string>& prefixes) {
   auto [parsedRootId, parsedFilterId] = parseFilterIdFromRootId(id);
   auto fut = backingStore_->getGlobFiles(parsedRootId, globs, prefixes);
-  return std::move(fut).thenValue([this, id, filterId = parsedFilterId](
+  return std::move(fut).thenValue([self = shared_from_this(),
+                                   id,
+                                   filterId = parsedFilterId](
                                       auto&& getGlobFilesResult) {
     std::vector<ImmediateFuture<std::pair<std::string, FilterCoverage>>>
         isFilteredFutures;
     isFilteredFutures.reserve(getGlobFilesResult.globFiles.size());
     for (std::string& path : getGlobFilesResult.globFiles) {
-      auto filterResult =
-          filter_->getFilterCoverageForPath(RelativePathPiece(path), filterId);
+      auto filterResult = self->filter_->getFilterCoverageForPath(
+          RelativePathPiece(path), filterId);
       auto filterFut =
           std::move(filterResult)
               .thenValue([path = std::move(path)](auto&& coverage) mutable {
