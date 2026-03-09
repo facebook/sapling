@@ -1166,19 +1166,21 @@ DirContents TreeInode::buildDirFromTree(
 
   auto startInode = overlay->allocateInodeNumbers(tree->size());
 
-  DirContents dir(caseSensitive);
-  // TODO: O(N^2)
+  folly::fbvector<std::pair<PathComponent, DirEntry>> entries;
+  entries.reserve(tree->size());
 
   uint64_t inodeOffset = 0;
   for (const auto& treeEntry : *tree) {
-    dir.emplace(
+    entries.emplace_back(
         treeEntry.first,
-        modeFromTreeEntryType(filteredEntryType(
-            treeEntry.second.getType(), windowsSymlinksEnabled)),
-        InodeNumber{startInode.get() + inodeOffset++},
-        treeEntry.second.getObjectId());
+        DirEntry{
+            modeFromTreeEntryType(filteredEntryType(
+                treeEntry.second.getType(), windowsSymlinksEnabled)),
+            InodeNumber{startInode.get() + inodeOffset++},
+            treeEntry.second.getObjectId()});
   }
-  return dir;
+
+  return DirContents{std::move(entries), caseSensitive};
 }
 
 FileInodePtr TreeInode::createImpl(

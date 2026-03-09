@@ -270,6 +270,11 @@ static_assert(CheckSize<DirEntry, 40>(), "DirEntry is five words");
 struct DirContents : PathMap<DirEntry> {
   explicit DirContents(CaseSensitivity caseSensitive)
       : PathMap(caseSensitive) {}
+
+  DirContents(
+      folly::fbvector<std::pair<PathComponent, DirEntry>>&& entries,
+      CaseSensitivity caseSensitive)
+      : PathMap(std::move(entries), caseSensitive) {}
 };
 
 } // namespace facebook::eden
