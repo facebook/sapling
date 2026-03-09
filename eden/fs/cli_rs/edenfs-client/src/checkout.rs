@@ -36,8 +36,6 @@ use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_error::ResultExt;
 use edenfs_utils::path_from_bytes;
-#[cfg(windows)]
-use edenfs_utils::strip_unc_prefix;
 use edenfs_utils::varint::decode_varint;
 use serde::Deserialize;
 use serde::Deserializer;
@@ -1314,18 +1312,22 @@ fn get_checkout_root_state(path: &Path) -> Result<(Option<PathBuf>, Option<PathB
 pub fn find_checkout(instance: &EdenFsInstance, path: &Path) -> Result<EdenFsCheckout> {
     // Resolve symlinks and get absolute path
     let path = path.canonicalize().from_err()?;
-    #[cfg(windows)]
-    let path = strip_unc_prefix(path);
 
     // Check if path is a mounted checkout
     let (checkout_root, checkout_state_dir) = match get_checkout_root_state(&path)? {
         (Some(checkout_root), Some(checkout_state_dir)) => (checkout_root, checkout_state_dir),
         _ => {
-            // Find `checkout_path` that `path` is a sub path of
+            // Find `checkout_path` that `path` is a sub path of.
+            // Canonicalize config paths too so both sides match
+            // (resolves UNC prefix and symlink differences).
             let all_checkouts = instance.get_configured_mounts_map()?;
-            if let Some((checkout_path, checkout_name)) = all_checkouts
-                .iter()
-                .find(|&(checkout_path, _)| path.starts_with(checkout_path))
+            if let Some((checkout_path, checkout_name)) =
+                all_checkouts.iter().find(|&(checkout_path, _)| {
+                    checkout_path
+                        .canonicalize()
+                        .map(|cp| path.starts_with(&cp))
+                        .unwrap_or_else(|_| path.starts_with(checkout_path))
+                })
             {
                 let checkout_state_dir = instance.config_directory(checkout_name);
                 (checkout_path.into(), checkout_state_dir)

@@ -103,8 +103,6 @@ use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_error::ResultExt;
 use edenfs_utils::get_executable;
-#[cfg(windows)]
-use edenfs_utils::strip_unc_prefix;
 use fbinit::expect_init;
 use hg_util::lock::PathLock;
 use tracing::Level;
@@ -658,15 +656,17 @@ impl EdenFsInstance {
     pub fn client_name(&self, path: &Path) -> Result<String> {
         // Resolve symlinks and get absolute path
         let path = path.canonicalize().from_err()?;
-        #[cfg(windows)]
-        let path = strip_unc_prefix(path);
 
-        // Find `checkout_path` that `path` is a sub path of
+        // Find `checkout_path` that `path` is a sub path of.
+        // Canonicalize config paths too so both sides match
+        // (resolves UNC prefix and symlink differences).
         let all_checkouts = self.get_configured_mounts_map()?;
-        if let Some(item) = all_checkouts
-            .iter()
-            .find(|&(checkout_path, _)| path.starts_with(checkout_path))
-        {
+        if let Some(item) = all_checkouts.iter().find(|&(checkout_path, _)| {
+            checkout_path
+                .canonicalize()
+                .map(|cp| path.starts_with(&cp))
+                .unwrap_or_else(|_| path.starts_with(checkout_path))
+        }) {
             let (_, checkout_name) = item;
             Ok(checkout_name.clone())
         } else {
@@ -861,5 +861,69 @@ impl EdenFsInstance {
 
         // Lock will be released when _lock is dropped
         Ok(())
+    }
+}
+
+#[cfg(all(test, windows))]
+mod tests {
+    use std::collections::BTreeMap;
+    use std::fs;
+    use std::path::PathBuf;
+
+    use tempfile::tempdir;
+
+    use crate::instance::EdenFsInstance;
+    use crate::use_case::UseCaseId;
+
+    /// Verify that client_name matches a checkout path stored in config.json
+    /// with a \\?\ UNC prefix against an input path without the prefix.
+    ///
+    /// On Windows, EdenFS registers mount paths in config.json with the \\?\
+    /// prefix (e.g. \\?\C:\Users\...). client_name canonicalizes both the
+    /// input path and config-side paths, so starts_with succeeds regardless
+    /// of UNC prefix or symlink differences.
+    #[fbinit::test]
+    fn test_client_name_matches_unc_prefix_path() {
+        let tmp = tempdir().unwrap();
+        let config_dir = tmp.path().join("eden");
+        fs::create_dir_all(&config_dir).unwrap();
+
+        // Create a real directory to use as the "checkout" so canonicalize works.
+        let checkout_dir = tmp.path().join("myrepo");
+        fs::create_dir_all(&checkout_dir).unwrap();
+
+        // Canonicalize to get the exact path that client_name will produce
+        // internally. Use that as the base for building the UNC-prefixed
+        // config entry.
+        let canonical = checkout_dir.canonicalize().unwrap();
+        let stripped = canonical
+            .to_string_lossy()
+            .strip_prefix(r"\\?\")
+            .map(PathBuf::from)
+            .unwrap_or(canonical.clone());
+        let unc_path = PathBuf::from(format!("\\\\?\\{}", stripped.display()));
+
+        // Write config.json with the UNC-prefixed path, mimicking what EdenFS does.
+        let mut map = BTreeMap::new();
+        map.insert(unc_path.to_string_lossy().to_string(), "myrepo".to_string());
+        let json = serde_json::to_string_pretty(&map).unwrap();
+        fs::write(config_dir.join("config.json"), json).unwrap();
+
+        let instance = EdenFsInstance::new(
+            UseCaseId::ExampleUseCase,
+            config_dir.clone(),
+            config_dir.clone(),
+            None,
+        );
+
+        // Pass the stripped (non-UNC) path. Without the fix this fails
+        // because starts_with("C:\...") against "\\?\C:\..." is false.
+        let result = instance.client_name(&stripped);
+        assert!(
+            result.is_ok(),
+            "client_name should match despite UNC prefix mismatch, got: {:?}",
+            result.err()
+        );
+        assert_eq!(result.unwrap(), "myrepo");
     }
 }
