@@ -39,6 +39,10 @@ DEFINE_bool(
     directSerialize,
     false,
     "Use direct serialization (skip intermediate std::map)");
+DEFINE_bool(
+    directFileWrites,
+    false,
+    "Write overlay files directly without temp+rename for non-materialized dirs");
 
 namespace {
 
@@ -92,15 +96,21 @@ void benchmarkOverlay(
   auto numThreads = FLAGS_threads;
 
   printf(
-      "Config: dirs=%" SCNu64 ", threads=%u, dirSize=%s, directSerialize=%s\n",
+      "Config: dirs=%" SCNu64
+      ", threads=%u, dirSize=%s, directSerialize=%s, directFileWrites=%s\n",
       N,
       numThreads,
       FLAGS_dirSize > 0 ? std::to_string(FLAGS_dirSize).c_str() : "random",
-      FLAGS_directSerialize ? "true" : "false");
+      FLAGS_directSerialize ? "true" : "false",
+      FLAGS_directFileWrites ? "true" : "false");
 
   auto edenConfig = EdenConfig::createTestEdenConfig();
   if (FLAGS_directSerialize) {
     edenConfig->overlayDirectSerialization.setValue(
+        true, ConfigSourceType::CommandLine);
+  }
+  if (FLAGS_directFileWrites) {
+    edenConfig->overlayDirectFileWrites.setValue(
         true, ConfigSourceType::CommandLine);
   }
 
@@ -137,9 +147,14 @@ void benchmarkOverlay(
       totalEntries);
 
   // --- Save benchmark ---
+  // 90% of directories are non-materialized (matching source control),
+  // 10% are materialized (user modifications). The direct-file-writes
+  // optimization only applies to non-materialized directories.
   std::vector<InodeNumber> savedInodes(N);
+  std::vector<bool> isMaterialized(N);
   for (uint64_t i = 0; i < N; ++i) {
     savedInodes[i] = overlay->allocateInodeNumber();
+    isMaterialized[i] = (i % 10 == 0);
   }
 
   printf("Saving...\n");
@@ -147,7 +162,7 @@ void benchmarkOverlay(
 
   if (numThreads <= 1) {
     for (uint64_t i = 0; i < N; ++i) {
-      overlay->saveOverlayDir(savedInodes[i], dirs[i]);
+      overlay->saveOverlayDir(savedInodes[i], dirs[i], isMaterialized[i]);
     }
   } else {
     std::vector<std::thread> threads;
@@ -158,7 +173,7 @@ void benchmarkOverlay(
       uint64_t end = std::min(start + chunkSize, N);
       threads.emplace_back([&, start, end]() {
         for (uint64_t i = start; i < end; ++i) {
-          overlay->saveOverlayDir(savedInodes[i], dirs[i]);
+          overlay->saveOverlayDir(savedInodes[i], dirs[i], isMaterialized[i]);
         }
       });
     }

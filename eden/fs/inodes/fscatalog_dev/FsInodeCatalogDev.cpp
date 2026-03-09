@@ -315,7 +315,8 @@ std::optional<overlay::OverlayDir> FsInodeCatalogDev::loadAndRemoveOverlayDir(
 
 void FsInodeCatalogDev::saveOverlayDir(
     InodeNumber inodeNumber,
-    overlay::OverlayDir&& odir) {
+    overlay::OverlayDir&& odir,
+    bool /*crashSafe*/) {
   // Ask thrift to serialize it.
   auto serializedData = CompactSerializer::serialize<std::string>(odir);
 

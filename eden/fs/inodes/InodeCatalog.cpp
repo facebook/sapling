@@ -12,12 +12,13 @@ namespace facebook::eden {
 void InodeCatalog::saveOverlayEntries(
     InodeNumber inodeNumber,
     size_t /*count*/,
-    OverlayEntrySource source) {
+    OverlayEntrySource source,
+    bool crashSafe) {
   overlay::OverlayDir odir;
   source([&](const std::string& name, const overlay::OverlayEntry& entry) {
     odir.entries()->emplace(name, entry);
   });
-  saveOverlayDir(inodeNumber, std::move(odir));
+  saveOverlayDir(inodeNumber, std::move(odir), crashSafe);
 }
 
 bool InodeCatalog::loadOverlayEntries(

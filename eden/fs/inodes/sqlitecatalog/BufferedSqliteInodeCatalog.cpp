@@ -289,7 +289,8 @@ BufferedSqliteInodeCatalog::loadAndRemoveOverlayDir(InodeNumber inodeNumber) {
 
 void BufferedSqliteInodeCatalog::saveOverlayDir(
     InodeNumber inodeNumber,
-    overlay::OverlayDir&& odir) {
+    overlay::OverlayDir&& odir,
+    bool /*crashSafe*/) {
   auto serializedOverlayDir =
       apache::thrift::CompactSerializer::serialize<std::string>(odir);
 

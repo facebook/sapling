@@ -123,11 +123,15 @@ class InodeCatalog {
       InodeNumber inodeNumber) = 0;
 
   /**
-   * Save a directory content to overlay with the given `InodeNumber`
+   * Save a directory content to overlay with the given `InodeNumber`.
+   * When crashSafe is true, uses temp-file + rename for atomicity.
+   * When false, writes directly to the final path for better performance
+   * (suitable when the data is recoverable from the backing store).
    */
   virtual void saveOverlayDir(
       InodeNumber inodeNumber,
-      overlay::OverlayDir&& odir) = 0;
+      overlay::OverlayDir&& odir,
+      bool crashSafe = true) = 0;
 
   using OverlayEntryVisitor = folly::FunctionRef<
       void(const std::string& name, const overlay::OverlayEntry& entry)>;
@@ -145,7 +149,8 @@ class InodeCatalog {
   virtual void saveOverlayEntries(
       InodeNumber inodeNumber,
       size_t count,
-      OverlayEntrySource source);
+      OverlayEntrySource source,
+      bool crashSafe = true);
 
   /**
    * Load a directory from overlay. The catalog calls the loader with the

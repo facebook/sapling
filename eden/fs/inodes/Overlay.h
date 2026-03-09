@@ -200,7 +200,18 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
     return windowsSymlinksEnabled_;
   }
 
-  void saveOverlayDir(InodeNumber inodeNumber, const DirContents& dir);
+  /**
+   * Save a directory to the overlay.
+   *
+   * When isMaterialized is false, the directory contents match source control
+   * and can be reconstructed from the backing store. In this case, the write
+   * may use a faster but less crash-safe code path (direct write without
+   * temp+rename) since data loss on crash is recoverable.
+   */
+  void saveOverlayDir(
+      InodeNumber inodeNumber,
+      const DirContents& dir,
+      bool isMaterialized = true);
 
   /*
    * Load content of the directory from overlay. If the directory does not
@@ -464,6 +475,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   bool windowsSymlinksEnabled_;
 
   bool useDirectSerialization_;
+  bool useDirectFileWrites_;
 };
 
 constexpr InodeCatalogType kDefaultInodeCatalogType =

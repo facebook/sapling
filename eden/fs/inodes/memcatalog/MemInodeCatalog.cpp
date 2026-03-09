@@ -71,7 +71,8 @@ std::optional<overlay::OverlayDir> MemInodeCatalog::loadAndRemoveOverlayDir(
 
 void MemInodeCatalog::saveOverlayDir(
     InodeNumber inodeNumber,
-    overlay::OverlayDir&& odir) {
+    overlay::OverlayDir&& odir,
+    bool /*crashSafe*/) {
   auto store = store_.wlock();
   store->insert_or_assign(inodeNumber, std::move(odir));
 }

@@ -329,6 +329,7 @@ class EdenTestCase(EdenTestCaseBase):
             "overlay": [
                 # I intend to enable this by default, so turn on for tests.
                 "direct-serialization = true",
+                "direct-file-writes = true",
             ],
         }
 

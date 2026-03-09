@@ -284,8 +284,10 @@ class FsInodeCatalogDev : public InodeCatalog {
    */
   bool initialized() const override;
 
-  void saveOverlayDir(InodeNumber inodeNumber, overlay::OverlayDir&& odir)
-      override;
+  void saveOverlayDir(
+      InodeNumber inodeNumber,
+      overlay::OverlayDir&& odir,
+      bool crashSafe = true) override;
 
   std::optional<overlay::OverlayDir> loadOverlayDir(
       InodeNumber inodeNumber) override;

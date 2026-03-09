@@ -51,7 +51,8 @@ std::optional<overlay::OverlayDir> SqliteInodeCatalog::loadAndRemoveOverlayDir(
 
 void SqliteInodeCatalog::saveOverlayDir(
     InodeNumber inodeNumber,
-    overlay::OverlayDir&& odir) {
+    overlay::OverlayDir&& odir,
+    bool /*crashSafe*/) {
   return store_.saveTree(inodeNumber, std::move(odir));
 }
 

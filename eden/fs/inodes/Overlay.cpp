@@ -238,7 +238,8 @@ Overlay::Overlay(
       structuredLogger_{logger},
       stats_{std::move(stats)},
       windowsSymlinksEnabled_(windowsSymlinksEnabled),
-      useDirectSerialization_(config.overlayDirectSerialization.getValue()) {}
+      useDirectSerialization_(config.overlayDirectSerialization.getValue()),
+      useDirectFileWrites_(config.overlayDirectFileWrites.getValue()) {}
 
 Overlay::~Overlay() {
   close();
@@ -634,17 +635,30 @@ overlay::OverlayDir Overlay::serializeOverlayDir(
   return odir;
 }
 
-void Overlay::saveOverlayDir(InodeNumber inodeNumber, const DirContents& dir) {
+void Overlay::saveOverlayDir(
+    InodeNumber inodeNumber,
+    const DirContents& dir,
+    bool isMaterialized) {
   DurationScope<EdenStats> statScope{stats_, &OverlayStats::saveOverlayDir};
+
+  // Set crashSafe=false If config flag is enabled and the directory is _not_
+  // materialized. Non-materialized directories match source control, so are not
+  // "precious" data. crashSafe=false causes the FsInodeCatalog to skip the temp
+  // file + rename, instead writing directly to the overlay file.
+  bool crashSafe = isMaterialized || !useDirectFileWrites_;
+
   try {
     if (useDirectSerialization_) {
       inodeCatalog_->saveOverlayEntries(
-          inodeNumber, dir.size(), [&](OverlayEntryVisitor visitor) {
+          inodeNumber,
+          dir.size(),
+          [&](OverlayEntryVisitor visitor) {
             visitDirEntries(inodeNumber, dir, visitor);
-          });
+          },
+          crashSafe);
     } else {
       inodeCatalog_->saveOverlayDir(
-          inodeNumber, serializeOverlayDir(inodeNumber, dir));
+          inodeNumber, serializeOverlayDir(inodeNumber, dir), crashSafe);
     }
     stats_->increment(&OverlayStats::saveOverlayDirSuccessful);
   } catch (const std::exception& e) {

@@ -232,8 +232,16 @@ class FsFileContentStore : public FileContentStore {
    */
   std::optional<std::string> loadRawOverlayDir(InodeNumber inodeNumber);
 
-  folly::File
-  createOverlayFileImpl(InodeNumber inodeNumber, iovec* iov, size_t iovCount);
+  /**
+   * When crashSafe is true, uses temp-file + rename to protect against
+   * partial writes on process crash. When false, writes directly to the
+   * final path for better performance.
+   */
+  folly::File createOverlayFileImpl(
+      InodeNumber inodeNumber,
+      iovec* iov,
+      size_t iovCount,
+      bool crashSafe = true);
 
   /** Path to ".eden/CLIENT/local" */
   const AbsolutePath localDir_;
@@ -293,13 +301,16 @@ class FsInodeCatalog : public InodeCatalog {
    */
   bool initialized() const override;
 
-  void saveOverlayDir(InodeNumber inodeNumber, overlay::OverlayDir&& odir)
-      override;
+  void saveOverlayDir(
+      InodeNumber inodeNumber,
+      overlay::OverlayDir&& odir,
+      bool crashSafe = true) override;
 
   void saveOverlayEntries(
       InodeNumber inodeNumber,
       size_t count,
-      OverlayEntrySource source) override;
+      OverlayEntrySource source,
+      bool crashSafe = true) override;
 
   bool loadOverlayEntries(InodeNumber inodeNumber, OverlayEntryLoader loader)
       override;

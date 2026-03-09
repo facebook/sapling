@@ -347,7 +347,8 @@ std::optional<overlay::OverlayDir> FsInodeCatalog::loadAndRemoveOverlayDir(
 
 void FsInodeCatalog::saveOverlayDir(
     InodeNumber inodeNumber,
-    overlay::OverlayDir&& odir) {
+    overlay::OverlayDir&& odir,
+    bool crashSafe) {
   // Ask thrift to serialize it.
   auto serializedData = CompactSerializer::serialize<std::string>(odir);
 
@@ -361,13 +362,15 @@ void FsInodeCatalog::saveOverlayDir(
   iov[0].iov_len = header.size();
   iov[1].iov_base = const_cast<char*>(serializedData.data());
   iov[1].iov_len = serializedData.size();
-  (void)core_->createOverlayFileImpl(inodeNumber, iov.data(), iov.size());
+  (void)core_->createOverlayFileImpl(
+      inodeNumber, iov.data(), iov.size(), crashSafe);
 }
 
 void FsInodeCatalog::saveOverlayEntries(
     InodeNumber inodeNumber,
     size_t count,
-    OverlayEntrySource source) {
+    OverlayEntrySource source,
+    bool crashSafe) {
   using apache::thrift::protocol::TType;
 
   folly::IOBufQueue queue(folly::IOBufQueue::cacheChainLength());
@@ -400,7 +403,8 @@ void FsInodeCatalog::saveOverlayEntries(
   iov[0].iov_base = header.data();
   iov[0].iov_len = header.size();
   serializedBuf->appendToIov(&iov);
-  (void)core_->createOverlayFileImpl(inodeNumber, iov.data(), iov.size());
+  (void)core_->createOverlayFileImpl(
+      inodeNumber, iov.data(), iov.size(), crashSafe);
 }
 
 bool FsInodeCatalog::loadOverlayEntries(
@@ -658,42 +662,43 @@ InodeTmpPath getFileTmpPath(InodeNumber inodeNumber) {
 folly::File FsFileContentStore::createOverlayFileImpl(
     InodeNumber inodeNumber,
     iovec* iov,
-    size_t iovCount) {
-  // We do not use mkstemp() to create the temporary file, since there is no
-  // mkstempat() equivalent that can create files relative to dirFile.  We
-  // simply create the file with a fixed suffix, and do not use O_EXCL.  This
-  // is not a security risk since only the current user should have permission
-  // to create files inside the overlay directory, so no one else can create
-  // symlinks inside the overlay directory.  We also open the temporary file
-  // using O_NOFOLLOW.
-  //
-  // We could potentially use O_TMPFILE followed by linkat() to commit the
-  // file.  However this may not be supported by all filesystems, and seems to
-  // provide minimal benefits for our use case.
+    size_t iovCount,
+    bool crashSafe) {
   auto path = getFilePath(inodeNumber);
 
-  auto tmpPath = getFileTmpPath(inodeNumber);
+  // For the root inode, always use the crash-safe path regardless of the
+  // caller's request. If root inode data is corrupt, Eden cannot remount.
+  bool useTmpFile = crashSafe || inodeNumber == kRootNodeId;
 
-  auto tmpFD = openat(
+  const char* openPath;
+  InodeTmpPath tmpPath{};
+  if (useTmpFile) {
+    tmpPath = getFileTmpPath(inodeNumber);
+    openPath = tmpPath.data();
+  } else {
+    openPath = path.c_str();
+  }
+
+  auto fd = openat(
       dirFile_.fd(),
-      tmpPath.data(),
+      openPath,
       O_CREAT | O_RDWR | O_CLOEXEC | O_NOFOLLOW | O_TRUNC,
       0600);
   folly::checkUnixError(
-      tmpFD,
+      fd,
       fmt::format(
-          "failed to create temporary overlay file for inode {} in {}",
+          "failed to create overlay file for inode {} in {}",
           inodeNumber,
           localDir_.view()));
-  folly::File file{tmpFD, /* ownsFd */ true};
-  bool success = false;
+  folly::File file{fd, /* ownsFd */ true};
+  bool success = !useTmpFile;
   SCOPE_EXIT {
     if (!success) {
       unlinkat(dirFile_.fd(), tmpPath.data(), 0);
     }
   };
 
-  auto sizeWritten = folly::writevFull(tmpFD, iov, iovCount);
+  auto sizeWritten = folly::writevFull(fd, iov, iovCount);
   folly::checkUnixError(
       sizeWritten,
       fmt::format(
@@ -701,42 +706,54 @@ folly::File FsFileContentStore::createOverlayFileImpl(
           inodeNumber,
           localDir_.view()));
 
-  // fdatasync() is required to ensure that we are really reliably and
-  // atomically writing out the new file.  Without calling fdatasync() the file
-  // contents may not be flushed to disk even though the rename has been
-  // written.
-  //
-  // However, fdatasync() has a significant performance overhead.  We've
-  // measured it at a nearly 300 microsecond cost, which can significantly
-  // impact performance of source control update operations when many inodes are
-  // affected.
-  //
-  // Per docs/InodeStorage.md, Eden does not claim to handle disk, kernel, or
-  // power failure, so we do not call fdatasync() in the common case.  However,
-  // the root inode is particularly important; if its data is corrupt Eden will
-  // not be able to remount the checkout.  Therefore we always call fdatasync()
-  // when writing out the root inode.
-  if (inodeNumber == kRootNodeId) {
-    auto syncReturnCode = folly::fdatasyncNoInt(tmpFD);
+  if (useTmpFile) {
+    // We do not use mkstemp() to create the temporary file, since there is no
+    // mkstempat() equivalent that can create files relative to dirFile.  We
+    // simply create the file with a fixed suffix, and do not use O_EXCL.  This
+    // is not a security risk since only the current user should have permission
+    // to create files inside the overlay directory, so no one else can create
+    // symlinks inside the overlay directory.  We also open the temporary file
+    // using O_NOFOLLOW.
+    //
+    // We could potentially use O_TMPFILE followed by linkat() to commit the
+    // file.  However this may not be supported by all filesystems, and seems to
+    // provide minimal benefits for our use case.
+
+    // fdatasync() is required to ensure that we are really reliably and
+    // atomically writing out the new file.  Without calling fdatasync() the
+    // file contents may not be flushed to disk even though the rename has
+    // been written.
+    //
+    // However, fdatasync() has a significant performance overhead.  We've
+    // measured it at a nearly 300 microsecond cost, which can significantly
+    // impact performance of source control update operations when many inodes
+    // are affected.
+    //
+    // Per docs/InodeStorage.md, Eden does not claim to handle disk, kernel,
+    // or power failure, so we do not call fdatasync() in the common case.
+    // However, the root inode is particularly important; if its data is
+    // corrupt Eden will not be able to remount the checkout.  Therefore we
+    // always call fdatasync() when writing out the root inode.
+    if (inodeNumber == kRootNodeId) {
+      auto syncReturnCode = folly::fdatasyncNoInt(fd);
+      folly::checkUnixError(
+          syncReturnCode,
+          fmt::format(
+              "error flushing data to overlay file for inode {} in {}",
+              inodeNumber,
+              localDir_.view()));
+    }
+
+    auto returnCode =
+        renameat(dirFile_.fd(), tmpPath.data(), dirFile_.fd(), path.c_str());
     folly::checkUnixError(
-        syncReturnCode,
+        returnCode,
         fmt::format(
-            "error flushing data to overlay file for inode {} in {}",
+            "error committing overlay file for inode {} in {}",
             inodeNumber,
             localDir_.view()));
+    success = true;
   }
-
-  auto returnCode =
-      renameat(dirFile_.fd(), tmpPath.data(), dirFile_.fd(), path.c_str());
-  folly::checkUnixError(
-      returnCode,
-      fmt::format(
-          "error committing overlay file for inode {} in {}",
-          inodeNumber,
-          localDir_.view()));
-  // We do not want to unlink the temporary file on exit now that we have
-  // successfully renamed it.
-  success = true;
 
   return file;
 }

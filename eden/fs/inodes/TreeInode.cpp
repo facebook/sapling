@@ -1132,14 +1132,16 @@ DirContents TreeInode::loadOverlayDir(InodeNumber inodeNumber) const {
   return getOverlay()->loadOverlayDir(inodeNumber);
 }
 
-void TreeInode::saveOverlayDir(const DirContents& contents) const {
-  return saveOverlayDir(getNodeId(), contents);
+void TreeInode::saveOverlayDir(const DirContents& contents, bool isMaterialized)
+    const {
+  return saveOverlayDir(getNodeId(), contents, isMaterialized);
 }
 
 void TreeInode::saveOverlayDir(
     InodeNumber inodeNumber,
-    const DirContents& contents) const {
-  return getOverlay()->saveOverlayDir(inodeNumber, contents);
+    const DirContents& contents,
+    bool isMaterialized) const {
+  return getOverlay()->saveOverlayDir(inodeNumber, contents, isMaterialized);
 }
 
 DirContents TreeInode::saveDirFromTree(
@@ -1159,7 +1161,7 @@ DirContents TreeInode::saveDirFromTree(
     // write overlay entries when reading directories.
   } else {
     // buildDirFromTree just allocated inode numbers; they should be saved.
-    overlay->saveOverlayDir(inodeNumber, dir);
+    overlay->saveOverlayDir(inodeNumber, dir, /*isMaterialized=*/false);
   }
 
   return dir;
@@ -4382,7 +4384,7 @@ void TreeInode::saveOverlayPostCheckout(
         isMaterialized);
 
     // Update the overlay to include the new entries, even if dematerialized.
-    saveOverlayDir(contents->entries);
+    saveOverlayDir(contents->entries, isMaterialized);
   }
 
   if (stateChanged) {

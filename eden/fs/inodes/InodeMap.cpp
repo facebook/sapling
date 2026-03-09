@@ -1210,7 +1210,8 @@ optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
           asTree->getLogPath());
       overlay->saveOverlayDir(
           asTree->getNodeId(),
-          asTree->getContents().unsafeGetUnlocked().entries);
+          asTree->getContents().unsafeGetUnlocked().entries,
+          /*isMaterialized=*/false);
     }
   }
 

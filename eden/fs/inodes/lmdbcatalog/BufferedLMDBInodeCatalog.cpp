@@ -276,7 +276,8 @@ BufferedLMDBInodeCatalog::loadAndRemoveOverlayDir(InodeNumber inodeNumber) {
 
 void BufferedLMDBInodeCatalog::saveOverlayDir(
     InodeNumber inodeNumber,
-    overlay::OverlayDir&& odir) {
+    overlay::OverlayDir&& odir,
+    bool /*crashSafe*/) {
   auto serializedOverlayDir =
       apache::thrift::CompactSerializer::serialize<std::string>(odir);
 

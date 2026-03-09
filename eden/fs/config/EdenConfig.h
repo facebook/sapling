@@ -1908,6 +1908,18 @@ class EdenConfig : private ConfigSettingManager {
       false,
       this};
 
+  /**
+   * When true, write non-materialized directories directly to their overlay
+   * file instead of creating a temporary file and renaming. This avoids
+   * filesystem metadata overhead (rename) at the cost of leaving a
+   * partially-written file on crash, which might be okay for non-materialized
+   * directories.
+   */
+  ConfigSetting<bool> overlayDirectFileWrites{
+      "overlay:direct-file-writes",
+      false,
+      this};
+
   // [clone]
 
   /**
