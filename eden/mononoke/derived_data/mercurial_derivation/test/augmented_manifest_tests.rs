@@ -11,6 +11,7 @@ use anyhow::Result;
 use blobstore::Loadable;
 use cacheblob::MemWritesKeyedBlobstore;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use fbinit::FacebookInit;
 use futures::stream::TryStreamExt;
 use manifest::Entry;
@@ -29,6 +30,82 @@ use tests_utils::CreateCommitContext;
 use tests_utils::drawdag::extend_from_dag_with_actions;
 
 use crate::Repo;
+
+/// Test that derive_single (non-batch) code path works correctly for
+/// RootHgAugmentedManifestId. Existing tests only exercise derive_batch
+/// via derive_exactly_batch and derive_heads.
+#[mononoke::fbinit_test]
+async fn test_augmented_manifest_derive_single(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+
+    let root = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("dir/file_a", "content_a")
+        .add_file("dir/file_b", "content_b")
+        .add_file("other/file_c", "content_c")
+        .commit()
+        .await?;
+
+    let manager = repo.repo_derived_data().manager();
+
+    // derive() with a single changeset calls derive_single, not derive_batch.
+    let aug = manager
+        .derive::<RootHgAugmentedManifestId>(&ctx, root, None, DerivationPriority::LOW)
+        .await?;
+
+    // Verify the augmented manifest matches the HgManifest.
+    let hg_cs_id = repo.derive_hg_changeset(&ctx, root).await?;
+    let hg_manifest_id = hg_cs_id
+        .load(&ctx, repo.repo_blobstore())
+        .await?
+        .manifestid();
+
+    compare_manifests(&ctx, &repo, hg_manifest_id, aug.hg_augmented_manifest_id()).await?;
+    Ok(())
+}
+
+/// Invariant test: after augmented manifest derivation (which inline-derives
+/// HgChangesets), all HgManifest blobs must be loadable via `Loadable`.
+#[mononoke::fbinit_test]
+async fn test_augmented_manifest_hg_blobs_loadable(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+
+    let root = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("dir_a/file", "1")
+        .add_file("dir_b/file", "2")
+        .commit()
+        .await?;
+    let child = CreateCommitContext::new(&ctx, &repo, vec![root])
+        .add_file("dir_a/file", "3")
+        .add_file("dir_c/file", "4")
+        .commit()
+        .await?;
+
+    let manager = repo.repo_derived_data().manager();
+    manager
+        .derive_exactly_batch::<RootHgAugmentedManifestId>(&ctx, vec![root, child], None)
+        .await?;
+
+    // Verify ALL HgManifest blobs are loadable (root + subdirectory manifests).
+    for cs_id in [root, child] {
+        let hg_cs_id = repo.derive_hg_changeset(&ctx, cs_id).await?;
+        let hg_mf_id = hg_cs_id
+            .load(&ctx, repo.repo_blobstore())
+            .await?
+            .manifestid();
+        // Load root manifest via Loadable
+        let _root_mf = hg_mf_id.load(&ctx, repo.repo_blobstore()).await?;
+        // Load all subtree manifests via list_all_entries
+        let entries: Vec<_> = hg_mf_id
+            .list_all_entries(ctx.clone(), repo.repo_blobstore().clone())
+            .try_collect()
+            .await?;
+        // Sanity: should have both files and directories
+        assert!(!entries.is_empty());
+    }
+    Ok(())
+}
 
 async fn get_manifests(
     ctx: &CoreContext,
