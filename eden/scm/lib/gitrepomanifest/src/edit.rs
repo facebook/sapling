@@ -77,7 +77,20 @@ fn resolve_target<'a, 'input>(
     root: &Node<'a, 'input>,
     target: &Target,
 ) -> Result<Node<'a, 'input>> {
-    unimplemented!()
+    let mut current = *root;
+    for (name, conditions) in &target.levels {
+        current = current
+            .children()
+            .find(|n| {
+                n.is_element()
+                    && n.tag_name().name() == name
+                    && conditions
+                        .iter()
+                        .all(|(k, v)| n.attribute(k.as_str()) == Some(v.as_str()))
+            })
+            .ok_or_else(|| anyhow::anyhow!("no <{}> matching {:?}", name, conditions))?;
+    }
+    Ok(current)
 }
 
 fn resolve_operation(src: &str, node: &Node, op: &Operation) -> Result<Replace> {
@@ -94,4 +107,52 @@ pub fn apply(data: &mut Vec<u8>, edits: &[Edit]) -> Result<()> {
         data.splice(r.range, r.data.into_bytes());
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const SAMPLE: &[u8] = br#"<?xml version="1.0"?>
+<manifest>
+  <remote name="origin" fetch="ssh://example.com"/>
+  <default revision="main" remote="origin"/>
+  <project name="a" path="src/a" revision="abc123" groups="dev"/>
+  <project name="b" path="src/b" revision="def456"/>
+  <project name="c" path="src/c" revision="123456">
+    <linkfile src="some/linksrc" dest="linkdest"/>
+    <annotation name="prebuilt" value="true"/>
+  </project>
+  <project name="d" path="src/d" revision="abcdef"></project>
+  <project name="e" path="src/e"/>
+</manifest>
+"#;
+
+    #[test]
+    fn test_match_target() {
+        let doc = get_tree(SAMPLE).unwrap();
+        let root = doc.root_element();
+        let target = Target {
+            levels: vec![
+                ("project".into(), vec![("path".into(), "src/c".into())]),
+                ("linkfile".into(), vec![("dest".into(), "linkdest".into())]),
+            ],
+        };
+        let node = resolve_target(&root, &target).unwrap();
+        assert_eq!(node.attribute("src"), Some("some/linksrc"));
+    }
+
+    #[test]
+    fn no_match_error() {
+        let doc = get_tree(SAMPLE).unwrap();
+        let root = doc.root_element();
+        let target = Target {
+            levels: vec![(
+                "project".into(),
+                vec![("path".into(), "nonexistent".into())],
+            )],
+        };
+        let err = resolve_target(&root, &target).unwrap_err();
+        assert!(err.to_string().contains("no <project>"));
+    }
 }
