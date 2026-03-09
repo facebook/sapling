@@ -163,6 +163,9 @@ impl Loggable for GitBookmarkInfo {
         ref_logger.set_pusher_identities(vec![]); // Maintaining parity with current Git logger
         ref_logger.set_server_hostname(self.server_hostname.clone());
         ref_logger.set_received_timestamp(self.timestamp as i64);
+        if let Some(cri) = ctx.client_request_info() {
+            ref_logger.set_client_correlator(cri.correlator.clone());
+        }
         ref_logger.log_async()?;
         Ok(())
     }
