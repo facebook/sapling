@@ -23,6 +23,7 @@
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/Overlay.h"
+#include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/journal/Journal.h"
 #include "eden/fs/prjfs/PrjfsChannel.h"
@@ -2240,6 +2241,102 @@ TEST(Checkout, concurrent_recreation_during_checkout) {
   checkFileChangeJournalEntries(expected_journal, mount);
 
   mount.getEdenMount()->getPrjfsChannel()->unmount({}).get();
+}
+
+#endif
+
+#ifndef _WIN32
+
+TEST(Checkout, overlayWritesDuringCheckout) {
+  // To trigger the N+1 overlay write problem, subdirectories must change
+  // materialization state during checkout. If they stay materialized,
+  // they don't trigger an overlay write for their parent.
+  //
+  // Setup: materialize each sub by modifying its file, then FORCE checkout
+  // to a commit with different file content. This causes children to change
+  // from materialized to unmaterialized, exposing the excessive overlay writes
+  // of the parent.
+  auto builder1 = FakeTreeBuilder();
+  builder1.setFile("parent/sub1/file1.txt", "original1\n");
+  builder1.setFile("parent/sub2/file2.txt", "original2\n");
+  builder1.setFile("parent/sub3/file3.txt", "original3\n");
+  builder1.setFile("parent/sub4/file4.txt", "original4\n");
+  builder1.setFile("parent/sub5/file5.txt", "original5\n");
+  TestMount testMount{builder1};
+
+  // Materialize each subdirectory by modifying its file
+  testMount.overwriteFile("parent/sub1/file1.txt", "local1\n");
+  testMount.overwriteFile("parent/sub2/file2.txt", "local2\n");
+  testMount.overwriteFile("parent/sub3/file3.txt", "local3\n");
+  testMount.overwriteFile("parent/sub4/file4.txt", "local4\n");
+  testMount.overwriteFile("parent/sub5/file5.txt", "local5\n");
+
+  // Prepare a second tree with different file content
+  auto builder2 = builder1.clone();
+  builder2.replaceFile("parent/sub1/file1.txt", "modified1\n");
+  builder2.replaceFile("parent/sub2/file2.txt", "modified2\n");
+  builder2.replaceFile("parent/sub3/file3.txt", "modified3\n");
+  builder2.replaceFile("parent/sub4/file4.txt", "modified4\n");
+  builder2.replaceFile("parent/sub5/file5.txt", "modified5\n");
+  builder2.finalize(testMount.getBackingStore(), true);
+  auto commit2 = testMount.getBackingStore()->putCommit(RootId{"2"}, builder2);
+  commit2->setReady();
+
+  // Record the overlay write count before checkout
+  auto& stats = testMount.getServerState()->getStats();
+  stats->flush();
+  auto data = facebook::fb303::ServiceData::get();
+  constexpr folly::StringPiece key =
+      "overlay.save_overlay_dir_successful.sum.60";
+  auto initialWrites = data->getCounter(key);
+
+  // FORCE checkout to overwrite local modifications so subs can dematerialize
+  auto executor = testMount.getServerExecutor().get();
+  auto checkoutResult = testMount.getEdenMount()
+                            ->checkout(
+                                testMount.getRootInode(),
+                                RootId{"2"},
+                                ObjectFetchContext::getNullContext(),
+                                __func__,
+                                CheckoutMode::FORCE)
+                            .semi()
+                            .via(executor);
+  testMount.drainServerExecutor();
+  ASSERT_TRUE(checkoutResult.isReady());
+  auto result = std::move(checkoutResult).get();
+
+  // Count the overlay writes that occurred during checkout.
+  stats->flush();
+  auto checkoutWrites = data->getCounter(key) - initialWrites;
+
+  // FIXME: excessive amount of overlay writes.
+  EXPECT_EQ(13, checkoutWrites)
+      << "Overlay writes during checkout: " << checkoutWrites;
+
+  // Verify files have new content
+  EXPECT_FILE_INODE(
+      testMount.getFileInode("parent/sub1/file1.txt"), "modified1\n", 0644);
+  EXPECT_FILE_INODE(
+      testMount.getFileInode("parent/sub2/file2.txt"), "modified2\n", 0644);
+  EXPECT_FILE_INODE(
+      testMount.getFileInode("parent/sub3/file3.txt"), "modified3\n", 0644);
+  EXPECT_FILE_INODE(
+      testMount.getFileInode("parent/sub4/file4.txt"), "modified4\n", 0644);
+  EXPECT_FILE_INODE(
+      testMount.getFileInode("parent/sub5/file5.txt"), "modified5\n", 0644);
+
+  // Remount and verify persistence, showing the overlay was written correctly.
+  testMount.remount();
+  EXPECT_FILE_INODE(
+      testMount.getFileInode("parent/sub1/file1.txt"), "modified1\n", 0644);
+  EXPECT_FILE_INODE(
+      testMount.getFileInode("parent/sub2/file2.txt"), "modified2\n", 0644);
+  EXPECT_FILE_INODE(
+      testMount.getFileInode("parent/sub3/file3.txt"), "modified3\n", 0644);
+  EXPECT_FILE_INODE(
+      testMount.getFileInode("parent/sub4/file4.txt"), "modified4\n", 0644);
+  EXPECT_FILE_INODE(
+      testMount.getFileInode("parent/sub5/file5.txt"), "modified5\n", 0644);
 }
 
 #endif
