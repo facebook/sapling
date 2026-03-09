@@ -146,7 +146,7 @@ impl SparseProfileMonitoring {
                         let matcher = self
                             .monitoring_profiles_only_matcher
                             .as_ref()
-                            .unwrap_or_else(|| &self.profiles_location_with_excludes_matcher);
+                            .unwrap_or(&self.profiles_location_with_excludes_matcher);
                         Ok(match matcher.matches(path.to_string().as_str()) {
                             // Since None in MPath is a root repo directory
                             // and we are returning list of profiles
