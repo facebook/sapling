@@ -9,6 +9,7 @@ use std::path::PathBuf;
 
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::bail;
 use roxmltree::Document;
 use roxmltree::Node;
 
@@ -26,10 +27,16 @@ pub fn parse_manifest(data: &[u8]) -> Result<Manifest> {
         match element.tag_name().name() {
             "project" => {
                 let (path, project) = parse_project(&element)?;
+                if manifest.projects.contains_key(&path) {
+                    bail!("duplicate project path: {}", path.display());
+                }
                 manifest.projects.insert(path, project);
             }
             "remote" => {
                 let (name, remote) = parse_remote(&element)?;
+                if manifest.remotes.contains_key(&name) {
+                    bail!("duplicate remote name: {}", name);
+                }
                 manifest.remotes.insert(name, remote);
             }
             "default" => manifest.default = Some(parse_default(&element)?),
@@ -175,5 +182,17 @@ mod tests {
         assert_eq!(pbar.annotations[0].name, "key");
         assert_eq!(pbar.annotations[0].value, "val");
         assert!(pbar.annotations[0].keep);
+    }
+
+    #[test]
+    fn duplicate_project_path() {
+        let data = br#"<?xml version="1.0"?>
+<manifest>
+  <project name="b" revision="abcabc"/>
+  <project name="a" path="b" revision="cbacba"/>
+</manifest>
+"#;
+        let err = parse_manifest(data).unwrap_err();
+        assert!(err.to_string().contains("duplicate project path: b"));
     }
 }
