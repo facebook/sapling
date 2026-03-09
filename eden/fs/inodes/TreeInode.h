@@ -399,7 +399,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    */
   void childMaterialized(
       const RenameLock& renameLock,
-      PathComponentPiece childName);
+      PathComponentPiece childName,
+      bool writeOverlay = true);
 
   /**
    * Update this directory when a child entry is dematerialized.
@@ -418,7 +419,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   void childDematerialized(
       const RenameLock& renameLock,
       PathComponentPiece childName,
-      ObjectId childScmId);
+      ObjectId childScmId,
+      bool writeOverlay = true);
 
   /**
    * Internal API only for use by InodeMap.

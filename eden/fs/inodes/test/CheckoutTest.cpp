@@ -2309,8 +2309,8 @@ TEST(Checkout, overlayWritesDuringCheckout) {
   stats->flush();
   auto checkoutWrites = data->getCounter(key) - initialWrites;
 
-  // FIXME: excessive amount of overlay writes.
-  EXPECT_EQ(13, checkoutWrites)
+  // This is the test - no excessive writes (7 total dirs, including root).
+  EXPECT_EQ(7, checkoutWrites)
       << "Overlay writes during checkout: " << checkoutWrites;
 
   // Verify files have new content

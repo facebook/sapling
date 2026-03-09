@@ -1605,6 +1605,18 @@ class EdenConfig : private ConfigSettingManager {
       false,
       this};
 
+  /**
+   * When true, checkout avoids O(n^2) overlay writes by skipping per-child
+   * overlay writes during childMaterialized/childDematerialized, instead
+   * writing each directory's overlay once in its own saveOverlayPostCheckout()
+   * call. Set to false to revert to the old behavior of writing overlay data
+   * on every child state change.
+   */
+  ConfigSetting<bool> skipCheckoutChildOverlayWrites{
+      "experimental:skip-checkout-child-overlay-writes",
+      true,
+      this};
+
   // [coroutines]
 
   /**

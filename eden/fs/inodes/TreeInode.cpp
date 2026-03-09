@@ -989,7 +989,8 @@ void TreeInode::materialize(const RenameLock* renameLock) {
  * to also materialize its parents. */
 void TreeInode::childMaterialized(
     const RenameLock& renameLock,
-    PathComponentPiece childName) {
+    PathComponentPiece childName,
+    bool writeOverlay) {
   auto startTime = std::chrono::system_clock::now();
   bool wasAlreadyMaterialized = false;
   {
@@ -1021,7 +1022,9 @@ void TreeInode::childMaterialized(
 
     childEntry.setMaterialized();
     contents->setMaterialized();
-    saveOverlayDir(contents->entries);
+    if (writeOverlay) {
+      saveOverlayDir(contents->entries);
+    }
   }
 
   // Materialize parent and publish materialization event only if newly
@@ -1031,7 +1034,8 @@ void TreeInode::childMaterialized(
     // and mark us materialized when it does so.
     auto location = getLocationInfo(renameLock);
     if (location.parent && !location.unlinked) {
-      location.parent->childMaterialized(renameLock, location.name);
+      location.parent->childMaterialized(
+          renameLock, location.name, writeOverlay);
     }
 
     getMount()->publishInodeTraceEvent(InodeTraceEvent(
@@ -1047,7 +1051,8 @@ void TreeInode::childMaterialized(
 void TreeInode::childDematerialized(
     const RenameLock& renameLock,
     PathComponentPiece childName,
-    ObjectId childScmId) {
+    ObjectId childScmId,
+    bool writeOverlay) {
   auto startTime = std::chrono::system_clock::now();
   bool wasAlreadyMaterialized = false;
   {
@@ -1093,7 +1098,9 @@ void TreeInode::childDematerialized(
     // saveOverlayPostCheckout() on this directory, and here we will check to
     // see if we can dematerialize ourself.
     contents->setMaterialized();
-    saveOverlayDir(contents->entries);
+    if (writeOverlay) {
+      saveOverlayDir(contents->entries);
+    }
   }
 
   // Materialize parent and publish materialization event only if newly
@@ -1104,7 +1111,8 @@ void TreeInode::childDematerialized(
     // and mark us materialized when it does so.
     auto location = getLocationInfo(renameLock);
     if (location.parent && !location.unlinked) {
-      location.parent->childMaterialized(renameLock, location.name);
+      location.parent->childMaterialized(
+          renameLock, location.name, writeOverlay);
     }
     getMount()->publishInodeTraceEvent(InodeTraceEvent(
         startTime,
@@ -4380,29 +4388,28 @@ void TreeInode::saveOverlayPostCheckout(
   if (stateChanged) {
     // If our state changed, tell our parent.
     //
-    // TODO: Currently we end up writing out overlay data for TreeInodes
-    // pretty often during the checkout process.  Each time a child entry is
-    // processed we will likely end up rewriting data for its parent
-    // TreeInode, and then once all children are processed we do another pass
-    // through here in saveOverlayPostCheckout() and possibly write it out
-    // again.
+    // When skipCheckoutChildOverlayWrites is true, we pass
+    // writeOverlay=false because each directory's overlay is written once by
+    // its own saveOverlayPostCheckout() call. The in-memory materialization
+    // state is still propagated up the tree so that each ancestor knows it's
+    // materialized, but the overlay writes are deferred until each ancestor's
+    // own saveOverlayPostCheckout() runs.
     //
-    // It would be nicer if we could only save the data for each TreeInode
-    // once.  The downside of this is that the on-disk overlay state would be
-    // potentially inconsistent until the checkout completes.  There may be
-    // periods of time where a parent directory says the child is materialized
-    // when the child has decided to be dematerialized.  This would cause
-    // problems when we tried to load the overlay data later.  If we update
-    // the code to be able to handle this somehow then maybe we could avoid
-    // doing all of the intermediate updates to the parent as we process each
-    // child entry.
+    // If we get an error during checkout (or eden crashes) we can be in an
+    // inconsistent state where the parent has updated in-memory state that has
+    // not been persisted to the overlay. I think this is okay since the user
+    // must continue the interrupted checkout, which will re-checkout the parent
+    // directory.
+    bool writeOverlay =
+        !getMount()->getEdenConfig()->skipCheckoutChildOverlayWrites.getValue();
     auto loc = getLocationInfo(ctx->renameLock());
     if (loc.parent && !loc.unlinked) {
       if (isMaterialized) {
-        loc.parent->childMaterialized(ctx->renameLock(), loc.name);
+        loc.parent->childMaterialized(
+            ctx->renameLock(), loc.name, writeOverlay);
       } else {
         loc.parent->childDematerialized(
-            ctx->renameLock(), loc.name, tree->getObjectId());
+            ctx->renameLock(), loc.name, tree->getObjectId(), writeOverlay);
       }
     }
   }

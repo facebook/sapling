@@ -18,7 +18,9 @@
 #include "eden/common/utils/CaseSensitivity.h"
 #include "eden/common/utils/FaultInjector.h"
 #include "eden/fs/fuse/FuseDirList.h"
+#include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
+#include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/nfs/NfsDirList.h"
@@ -916,6 +918,122 @@ TEST(TreeInode, buildDirFromTree) {
 
   // Verify mode bits are correct for regular files
   EXPECT_EQ(S_IFREG | 0644, contents->entries.at("a.txt"_pc).getInitialMode());
+}
+
+TEST(TreeInode, childMaterializedSkipsOverlayWrite) {
+  FakeTreeBuilder builder;
+  builder.setFiles({
+      {"dir/a.txt", "content_a"},
+      {"dir/b.txt", "content_b"},
+  });
+  TestMount mount{builder};
+
+  // Materialize "dir" by writing a file — this writes the overlay
+  mount.overwriteFile("dir/a.txt", "modified\n");
+
+  auto dir = mount.getTreeInode("dir"_relpath);
+  auto dirIno = dir->getNodeId();
+  auto* overlay = mount.getEdenMount()->getOverlay();
+
+  // dir is now materialized and overlay has its data.
+  // "a.txt" should be materialized, "b.txt" should not.
+  ASSERT_TRUE(dir->isMaterialized());
+  {
+    auto overlayDir = overlay->loadOverlayDir(dirIno);
+    EXPECT_TRUE(overlayDir.at("a.txt"_pc).isMaterialized());
+    EXPECT_FALSE(overlayDir.at("b.txt"_pc).isMaterialized());
+  }
+
+  // Call childMaterialized for "b.txt" with writeOverlay=false
+  auto renameLock = mount.getEdenMount()->acquireRenameLock();
+  dir->childMaterialized(renameLock, "b.txt"_pc, /*writeOverlay=*/false);
+
+  // In-memory: b.txt is now materialized
+  {
+    auto contents = dir->getContents().rlock();
+    EXPECT_TRUE(contents->entries.at("b.txt"_pc).isMaterialized());
+  }
+
+  // On-disk overlay was NOT updated — b.txt should still show as
+  // non-materialized in the persisted overlay data
+  {
+    auto overlayDir = overlay->loadOverlayDir(dirIno);
+    EXPECT_FALSE(overlayDir.at("b.txt"_pc).isMaterialized());
+  }
+}
+
+TEST(TreeInode, childMaterializedWritesOverlayByDefault) {
+  FakeTreeBuilder builder;
+  builder.setFiles({
+      {"dir/a.txt", "content_a"},
+      {"dir/b.txt", "content_b"},
+  });
+  TestMount mount{builder};
+
+  // Materialize "dir" by writing a file
+  mount.overwriteFile("dir/a.txt", "modified\n");
+
+  auto dir = mount.getTreeInode("dir"_relpath);
+  auto dirIno = dir->getNodeId();
+  auto* overlay = mount.getEdenMount()->getOverlay();
+
+  // Call childMaterialized for "b.txt" with default writeOverlay=true
+  auto renameLock = mount.getEdenMount()->acquireRenameLock();
+  dir->childMaterialized(renameLock, "b.txt"_pc);
+
+  // Both in-memory and overlay should show b.txt as materialized
+  {
+    auto contents = dir->getContents().rlock();
+    EXPECT_TRUE(contents->entries.at("b.txt"_pc).isMaterialized());
+  }
+  {
+    auto overlayDir = overlay->loadOverlayDir(dirIno);
+    EXPECT_TRUE(overlayDir.at("b.txt"_pc).isMaterialized());
+  }
+}
+
+TEST(TreeInode, childDematerializedSkipsOverlayWrite) {
+  FakeTreeBuilder builder;
+  builder.setFiles({
+      {"dir/a.txt", "content_a"},
+      {"dir/b.txt", "content_b"},
+  });
+  TestMount mount{builder};
+
+  // Materialize "dir" and "b.txt" by writing to b.txt
+  mount.overwriteFile("dir/b.txt", "modified\n");
+
+  auto dir = mount.getTreeInode("dir"_relpath);
+  auto dirIno = dir->getNodeId();
+  auto* overlay = mount.getEdenMount()->getOverlay();
+
+  // b.txt should be materialized in both memory and overlay
+  ASSERT_TRUE(dir->isMaterialized());
+  {
+    auto overlayDir = overlay->loadOverlayDir(dirIno);
+    EXPECT_TRUE(overlayDir.at("b.txt"_pc).isMaterialized());
+  }
+
+  // Call childDematerialized for "b.txt" with writeOverlay=false
+  auto renameLock = mount.getEdenMount()->acquireRenameLock();
+  dir->childDematerialized(
+      renameLock,
+      "b.txt"_pc,
+      ObjectId{"b_hash"},
+      /*writeOverlay=*/false);
+
+  // In-memory: b.txt should now be dematerialized
+  {
+    auto contents = dir->getContents().rlock();
+    EXPECT_FALSE(contents->entries.at("b.txt"_pc).isMaterialized());
+  }
+
+  // On-disk overlay was NOT updated — b.txt should still show as
+  // materialized in the persisted overlay data
+  {
+    auto overlayDir = overlay->loadOverlayDir(dirIno);
+    EXPECT_TRUE(overlayDir.at("b.txt"_pc).isMaterialized());
+  }
 }
 
 #endif // _WIN32
