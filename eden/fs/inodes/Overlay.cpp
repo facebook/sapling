@@ -499,29 +499,15 @@ InodeNumber Overlay::allocateInodeNumbers(uint64_t count) {
   return InodeNumber{previous};
 }
 
-DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
-  DurationScope<EdenStats> statScope{stats_, &OverlayStats::loadOverlayDir};
-  DirContents result(caseSensitive_);
-  IORequest req{this};
-  auto dirData = inodeCatalog_->loadOverlayDir(inodeNumber);
-  if (!dirData.has_value()) {
-    stats_->increment(&OverlayStats::loadOverlayDirFailure);
-    return result;
-  }
-  const auto& dir = dirData.value();
-
+bool Overlay::buildDirEntries(
+    OverlayEntrySource source,
+    folly::fbvector<std::pair<PathComponent, DirEntry>>& entries) {
   bool shouldRewriteOverlay = false;
 
-  for (auto& iter : *dir.entries()) {
-    const auto& name = iter.first;
-    const auto& value = iter.second;
-
-    // If AppleDouble files (._) need to be filtered, omit them from the
-    // returned DirContents and rewrite the overlay directory to remove them
-    // from the Overlay entirely.
+  source([&](const std::string& name, const overlay::OverlayEntry& value) {
     if (filterAppleDouble_ && string_view{name}.starts_with("._")) {
       shouldRewriteOverlay = true;
-      continue;
+      return;
     }
 
     InodeNumber ino;
@@ -534,12 +520,39 @@ DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
 
     if (value.hash() && !value.hash()->empty()) {
       auto hash = ObjectId{folly::ByteRange{folly::StringPiece{*value.hash()}}};
-      result.emplace(PathComponentPiece{name}, *value.mode(), ino, hash);
+      entries.emplace_back(
+          PathComponent{name},
+          DirEntry{static_cast<mode_t>(*value.mode()), ino, hash});
     } else {
-      // The inode is materialized
-      result.emplace(PathComponentPiece{name}, *value.mode(), ino);
+      entries.emplace_back(
+          PathComponent{name},
+          DirEntry{static_cast<mode_t>(*value.mode()), ino});
     }
+  });
+
+  return shouldRewriteOverlay;
+}
+
+DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
+  DurationScope<EdenStats> statScope{stats_, &OverlayStats::loadOverlayDir};
+  IORequest req{this};
+  auto dirData = inodeCatalog_->loadOverlayDir(inodeNumber);
+  if (!dirData.has_value()) {
+    stats_->increment(&OverlayStats::loadOverlayDirFailure);
+    return DirContents{caseSensitive_};
   }
+
+  folly::fbvector<std::pair<PathComponent, DirEntry>> entries;
+  entries.reserve(dirData->entries()->size());
+  bool shouldRewriteOverlay = buildDirEntries(
+      [&](OverlayEntryVisitor visitor) {
+        for (auto& [name, entry] : *dirData->entries()) {
+          visitor(name, entry);
+        }
+      },
+      entries);
+
+  DirContents result{std::move(entries), caseSensitive_};
 
   if (shouldRewriteOverlay) {
     saveOverlayDir(inodeNumber, result);
@@ -565,32 +578,41 @@ overlay::OverlayEntry Overlay::serializeOverlayEntry(const DirEntry& ent) {
   return entry;
 }
 
+void Overlay::visitDirEntries(
+    InodeNumber inodeNumber,
+    const DirContents& dir,
+    OverlayEntryVisitor visitor) {
+  auto nextInodeNumber = nextInodeNumber_.load(std::memory_order_relaxed);
+  XCHECK_LT(inodeNumber.get(), nextInodeNumber)
+      << "visitDirEntries called with unallocated inode number";
+
+  for (const auto& [entName, ent] : dir) {
+    XCHECK_NE(entName, "") << fmt::format(
+        "visitDirEntries called with entry with an empty path for directory with inodeNumber={}",
+        inodeNumber);
+    XCHECK_LT(ent.getInodeNumber().get(), nextInodeNumber)
+        << "visitDirEntries called with entry using unallocated inode number";
+
+    visitor(entName.asString(), serializeOverlayEntry(ent));
+  }
+}
+
 overlay::OverlayDir Overlay::serializeOverlayDir(
     InodeNumber inodeNumber,
     const DirContents& dir) {
   IORequest req{this};
-  auto nextInodeNumber = nextInodeNumber_.load(std::memory_order_relaxed);
-  XCHECK_LT(inodeNumber.get(), nextInodeNumber)
-      << "serializeOverlayDir called with unallocated inode number";
 
   // TODO: T20282158 clean up access of child inode information.
   //
   // Translate the data to the thrift equivalents
   overlay::OverlayDir odir;
 
-  for (auto& entIter : dir) {
-    const auto& entName = entIter.first;
-    const auto& ent = entIter.second;
-
-    XCHECK_NE(entName, "") << fmt::format(
-        "serializeOverlayDir called with entry with an empty path for directory with inodeNumber={}",
-        inodeNumber);
-    XCHECK_LT(ent.getInodeNumber().get(), nextInodeNumber)
-        << "serializeOverlayDir called with entry using unallocated inode number";
-
-    odir.entries()->emplace(
-        std::make_pair(entName.asString(), serializeOverlayEntry(ent)));
-  }
+  visitDirEntries(
+      inodeNumber,
+      dir,
+      [&](const std::string& name, const overlay::OverlayEntry& entry) {
+        odir.entries()->emplace(name, entry);
+      });
 
   return odir;
 }

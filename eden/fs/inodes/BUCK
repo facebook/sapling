@@ -242,6 +242,7 @@ cpp_library(
         "//folly:expected",
         "//folly:fbvector",
         "//folly:file",
+        "//folly:function",
         "//folly:map_util",
         "//folly:portability",
         "//folly:range",

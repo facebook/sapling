@@ -7,6 +7,7 @@
 
 #pragma once
 #include <folly/File.h>
+#include <folly/Function.h>
 #include <folly/Range.h>
 #include <folly/futures/Future.h>
 #include <folly/futures/Promise.h>
@@ -362,6 +363,30 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
 
   // Serialize EdenFS overlay data structure into Thrift data structure
   overlay::OverlayEntry serializeOverlayEntry(const DirEntry& entry);
+
+  using OverlayEntryVisitor = folly::FunctionRef<
+      void(const std::string& name, const overlay::OverlayEntry& entry)>;
+  using OverlayEntrySource =
+      folly::FunctionRef<void(OverlayEntryVisitor visitor)>;
+
+  /**
+   * Iterate DirContents, validate each entry, serialize to OverlayEntry,
+   * and pass to the visitor. This is the save-side counterpart to
+   * buildDirEntries.
+   */
+  void visitDirEntries(
+      InodeNumber inodeNumber,
+      const DirContents& dir,
+      OverlayEntryVisitor visitor);
+
+  /**
+   * Process overlay entries from the given source, handling inode allocation
+   * and AppleDouble filtering. Appends processed entries to the output vector.
+   * Returns true if the overlay should be rewritten.
+   */
+  bool buildDirEntries(
+      OverlayEntrySource source,
+      folly::fbvector<std::pair<PathComponent, DirEntry>>& entries);
 
   bool tryIncOutstandingIORequests();
   void decOutstandingIORequests();
