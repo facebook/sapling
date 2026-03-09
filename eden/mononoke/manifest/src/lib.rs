@@ -21,7 +21,6 @@ pub use crate::derive::LeafInfo;
 pub use crate::derive::TreeInfo;
 pub use crate::derive::TreeInfoSubentries;
 pub use crate::derive::derive_manifest;
-pub use crate::derive::derive_manifest_with_io_sender;
 pub use crate::derive::flatten_subentries;
 pub use crate::derive_batch::ManifestChanges;
 pub use crate::derive_batch::derive_manifests_for_simple_stack_of_commits;

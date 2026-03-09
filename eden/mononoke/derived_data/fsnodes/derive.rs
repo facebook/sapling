@@ -13,7 +13,6 @@ use std::sync::Arc;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use anyhow::format_err;
 use ascii::AsciiString;
 use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
@@ -23,8 +22,6 @@ use context::CoreContext;
 use derived_data::prefetch_content_metadata;
 use derived_data_manager::DerivationContext;
 use digest::Digest;
-use futures::channel::mpsc;
-use futures::future::BoxFuture;
 use futures::future::FutureExt;
 use futures::stream::FuturesOrdered;
 use futures::stream::FuturesUnordered;
@@ -34,7 +31,7 @@ use manifest::LeafInfo;
 use manifest::ManifestChanges;
 use manifest::ManifestParentReplacement;
 use manifest::TreeInfo;
-use manifest::derive_manifest_with_io_sender;
+use manifest::derive_manifest;
 use manifest::derive_manifests_for_simple_stack_of_commits;
 use manifest::flatten_subentries;
 use mononoke_types::BlobstoreKey;
@@ -98,27 +95,24 @@ pub(crate) async fn derive_fsnodes_stack(
         })
         .collect::<Vec<_>>();
 
-    let res =
-        derive_manifests_for_simple_stack_of_commits(
-            ctx.clone(),
-            blobstore.clone(),
-            parent,
-            manifest_changes,
-            {
+    let res = derive_manifests_for_simple_stack_of_commits(
+        ctx.clone(),
+        blobstore.clone(),
+        parent,
+        manifest_changes,
+        {
+            cloned!(blobstore, ctx, restricted_paths);
+            move |tree_info, _cs_id| {
                 cloned!(blobstore, ctx, restricted_paths);
-                move |tree_info, _cs_id| {
-                    cloned!(blobstore, ctx, restricted_paths);
-                    async move {
-                        create_fsnode(&ctx, &blobstore, &restricted_paths, None, tree_info).await
-                    }
-                }
-            },
-            move |leaf_info, _cs_id| {
-                cloned!(prefetched_content_metadata);
-                async move { check_fsnode_leaf(prefetched_content_metadata, leaf_info).await }
-            },
-        )
-        .await?;
+                async move { create_fsnode(&ctx, &blobstore, &restricted_paths, tree_info).await }
+            }
+        },
+        move |leaf_info, _cs_id| {
+            cloned!(prefetched_content_metadata);
+            async move { check_fsnode_leaf(prefetched_content_metadata, leaf_info).await }
+        },
+    )
+    .await?;
 
     Ok(res.into_iter().collect())
 }
@@ -149,7 +143,7 @@ pub(crate) async fn derive_fsnode(
 
     // We must box and store the derivation future, otherwise lifetime
     // analysis is unable to see that the blobstore lasts long enough.
-    let derive_fut = derive_manifest_with_io_sender(
+    let derive_fut = derive_manifest(
         ctx.clone(),
         blobstore.clone(),
         parents.clone(),
@@ -157,15 +151,12 @@ pub(crate) async fn derive_fsnode(
         subtree_changes,
         {
             cloned!(blobstore, ctx, restricted_paths);
-            move |tree_info, sender| {
+            move |tree_info| {
                 cloned!(blobstore, ctx, restricted_paths);
-                async move {
-                    create_fsnode(&ctx, &blobstore, &restricted_paths, Some(sender), tree_info)
-                        .await
-                }
+                async move { create_fsnode(&ctx, &blobstore, &restricted_paths, tree_info).await }
             }
         },
-        move |leaf_info, _sender| {
+        move |leaf_info| {
             cloned!(prefetched_content_metadata);
             async move { check_fsnode_leaf(prefetched_content_metadata, leaf_info).await }
         },
@@ -182,8 +173,7 @@ pub(crate) async fn derive_fsnode(
                 parents,
                 subentries: Default::default(),
             };
-            let (_, tree_id) =
-                create_fsnode(ctx, blobstore, &restricted_paths, None, tree_info).await?;
+            let (_, tree_id) = create_fsnode(ctx, blobstore, &restricted_paths, tree_info).await?;
             Ok(tree_id)
         }
     }
@@ -274,7 +264,6 @@ async fn create_fsnode(
     ctx: &CoreContext,
     blobstore: &Arc<dyn KeyedBlobstore>,
     restricted_paths: &Arc<RestrictedPaths>,
-    sender: Option<mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>>,
     tree_info: TreeInfo<
         FsnodeId,
         FsnodeFile,
@@ -350,12 +339,7 @@ async fn create_fsnode(
         async move { blobstore.put(&ctx, key, blob.into()).await }
     };
 
-    match sender {
-        Some(sender) => sender
-            .unbounded_send(f.boxed())
-            .map_err(|err| format_err!("failed to send fsnode future {}", err))?,
-        None => f.await?,
-    };
+    f.await?;
 
     let restricted_paths_enabled = justknobs::eval(
         "scm/mononoke:enabled_restricted_paths_access_logging",

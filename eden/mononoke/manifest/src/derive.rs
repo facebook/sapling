@@ -18,7 +18,6 @@ use anyhow::format_err;
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
-use futures::channel::mpsc;
 use futures::future;
 use futures::future::FutureExt;
 use futures::future::TryFutureExt;
@@ -320,72 +319,6 @@ where
         },
     )
     .map_ok(|result: Option<_>| result.and_then(|(_, _, entry)| entry.into_tree()))
-}
-
-type BoxFuture<T> = future::BoxFuture<'static, Result<T>>;
-
-/// A convenience wrapper around `derive_manifest` that allows for the tree and leaf creation
-/// closures to send IO work onto a channel that is then fed into a buffered stream. NOTE: don't
-/// send computationally expensive work as it will block the task.
-///
-/// The sender is commonly used to write blobs to the blobstore concurrently.
-///
-/// `derive_manifest_with_work_sender` guarantees that all work is completed before it returns, but
-/// it does not guarantee the order in which the work is completed.
-pub fn derive_manifest_with_io_sender<LeafChange, TreeId, Leaf, T, TFut, L, LFut, Ctx, Store>(
-    ctx: CoreContext,
-    store: Store,
-    parents: impl IntoIterator<Item = TreeId>,
-    changes: impl IntoIterator<Item = (NonRootMPath, Option<LeafChange>)>,
-    subtree_changes: impl IntoIterator<Item = ManifestParentReplacement<TreeId, Leaf>>,
-    create_tree_with_sender: T,
-    create_leaf_with_sender: L,
-) -> impl Future<Output = Result<Option<TreeId>>>
-where
-    LeafChange: Send + Clone + Eq + Hash + fmt::Debug + 'static,
-    Leaf: Send + Clone + Eq + Hash + fmt::Debug + 'static,
-    Store: Sync + Send + Clone + 'static,
-    TreeId: StoreLoadable<Store> + Clone + Eq + Hash + fmt::Debug + Send + Sync + 'static,
-    TreeId::Value: Manifest<Store, TreeId = TreeId, Leaf = Leaf> + Send + Sync,
-    T: Fn(
-            TreeInfo<TreeId, Leaf, Ctx, <TreeId::Value as Manifest<Store>>::TrieMapType>,
-            mpsc::UnboundedSender<BoxFuture<()>>,
-        ) -> TFut
-        + Send
-        + Sync
-        + 'static,
-    TFut: Future<Output = Result<(Ctx, TreeId)>> + Send + 'static,
-    L: Fn(LeafInfo<Leaf, LeafChange>, mpsc::UnboundedSender<BoxFuture<()>>) -> LFut
-        + Send
-        + Sync
-        + 'static,
-    LFut: Future<Output = Result<(Ctx, Leaf)>> + Send + 'static,
-    <TreeId::Value as Manifest<Store>>::TrieMapType:
-        TrieMapOps<Store, Entry<TreeId, Leaf>> + Send + 'static,
-    Ctx: Send + 'static,
-{
-    let (sender, receiver) = mpsc::unbounded();
-
-    let derive = derive_manifest_inner(
-        ctx,
-        store,
-        parents,
-        changes,
-        subtree_changes,
-        {
-            cloned!(sender);
-            move |tree_info| create_tree_with_sender(tree_info, sender.clone())
-        },
-        {
-            cloned!(sender);
-            move |leaf_info| create_leaf_with_sender(leaf_info, sender.clone())
-        },
-    );
-    let process = receiver
-        .buffer_unordered(1024)
-        .try_for_each(|_| future::ok(()));
-
-    future::try_join(derive, process).map_ok(|(res, ())| res)
 }
 
 // Change is isomorphic to Option, but it makes it easier to understand merge logic

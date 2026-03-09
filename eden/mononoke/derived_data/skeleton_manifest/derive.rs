@@ -13,15 +13,12 @@ use std::sync::Arc;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use anyhow::format_err;
 use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data_manager::DerivationContext;
-use futures::channel::mpsc;
-use futures::future::BoxFuture;
 use futures::future::FutureExt;
 use futures::stream::FuturesOrdered;
 use futures::stream::FuturesUnordered;
@@ -30,7 +27,7 @@ use manifest::Entry;
 use manifest::ManifestChanges;
 use manifest::ManifestParentReplacement;
 use manifest::TreeInfo;
-use manifest::derive_manifest_with_io_sender;
+use manifest::derive_manifest;
 use manifest::derive_manifests_for_simple_stack_of_commits;
 use manifest::flatten_subentries;
 use mononoke_types::BlobstoreKey;
@@ -79,7 +76,7 @@ pub(crate) async fn derive_skeleton_manifest_stack(
             cloned!(blobstore, ctx);
             move |tree_info, _cs_id| {
                 cloned!(blobstore, ctx);
-                async move { create_skeleton_manifest(&ctx, &blobstore, None, tree_info).await }
+                async move { create_skeleton_manifest(&ctx, &blobstore, tree_info).await }
             }
         },
         |_leaf_info, _cs_id| async { Ok((None, ())) },
@@ -100,25 +97,22 @@ pub(crate) async fn derive_skeleton_manifest_with_subtree_changes(
 
     // We must box and store the derivation future, otherwise lifetime
     // analysis is unable to see that the blobstore lasts long enough.
-    let derive_fut =
-        derive_manifest_with_io_sender(
-            ctx.clone(),
-            blobstore.clone(),
-            parents.clone(),
-            changes,
-            subtree_changes,
-            {
+    let derive_fut = derive_manifest(
+        ctx.clone(),
+        blobstore.clone(),
+        parents.clone(),
+        changes,
+        subtree_changes,
+        {
+            cloned!(blobstore, ctx);
+            move |tree_info| {
                 cloned!(blobstore, ctx);
-                move |tree_info, sender| {
-                    cloned!(blobstore, ctx);
-                    async move {
-                        create_skeleton_manifest(&ctx, &blobstore, Some(sender), tree_info).await
-                    }
-                }
-            },
-            |_leaf_info, _sender| async { Ok((None, ())) },
-        )
-        .boxed();
+                async move { create_skeleton_manifest(&ctx, &blobstore, tree_info).await }
+            }
+        },
+        |_leaf_info| async { Ok((None, ())) },
+    )
+    .boxed();
     let maybe_tree_id = derive_fut.await?;
 
     match maybe_tree_id {
@@ -130,7 +124,7 @@ pub(crate) async fn derive_skeleton_manifest_with_subtree_changes(
                 parents,
                 subentries: Default::default(),
             };
-            let (_, tree_id) = create_skeleton_manifest(ctx, blobstore, None, tree_info).await?;
+            let (_, tree_id) = create_skeleton_manifest(ctx, blobstore, tree_info).await?;
             Ok(tree_id)
         }
     }
@@ -231,7 +225,6 @@ async fn collect_skeleton_subentries(
 async fn create_skeleton_manifest(
     ctx: &CoreContext,
     blobstore: &Arc<dyn KeyedBlobstore>,
-    sender: Option<mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>>,
     tree_info: TreeInfo<
         SkeletonManifestId,
         (),
@@ -324,12 +317,7 @@ async fn create_skeleton_manifest(
             async move { blobstore.put(&ctx, key, blob.into()).await }
         };
 
-        match sender {
-            Some(sender) => sender
-                .unbounded_send(f.boxed())
-                .map_err(|err| format_err!("failed to send skeleton manifest future {}", err))?,
-            None => f.await?,
-        };
+        f.await?;
     }
     Ok((Some(summary), skeleton_manifest_id))
 }

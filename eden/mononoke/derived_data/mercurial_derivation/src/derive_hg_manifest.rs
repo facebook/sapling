@@ -17,10 +17,7 @@ use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use cloned::cloned;
 use context::CoreContext;
-use futures::channel::mpsc;
 use futures::future;
-use futures::future::BoxFuture;
-use futures::future::FutureExt;
 use futures::future::TryFutureExt;
 use futures::future::try_join_all;
 use manifest::Entry;
@@ -28,7 +25,7 @@ use manifest::LeafInfo;
 use manifest::ManifestChanges;
 use manifest::Traced;
 use manifest::TreeInfo;
-use manifest::derive_manifest_with_io_sender;
+use manifest::derive_manifest;
 use manifest::derive_manifests_for_simple_stack_of_commits;
 use manifest::flatten_subentries;
 use mercurial_types::HgFileNodeId;
@@ -80,7 +77,7 @@ pub async fn derive_simple_hg_manifest_stack_without_copy_info(
                         .into_iter()
                         .map(|p| Traced::assign(ParentIndex(0), p.into_untraced()))
                         .collect();
-                    create_hg_manifest(ctx.clone(), blobstore.clone(), None, tree_info, restricted_paths).await
+                    create_hg_manifest(ctx.clone(), blobstore.clone(), tree_info, restricted_paths).await
                 }
             }
         },
@@ -165,7 +162,7 @@ pub async fn derive_hg_manifest(
         None => Vec::new(),
     };
 
-    let tree_id = derive_manifest_with_io_sender(
+    let tree_id = derive_manifest(
         ctx.clone(),
         blobstore.clone(),
         parents.clone(),
@@ -173,11 +170,10 @@ pub async fn derive_hg_manifest(
         subtree_changes,
         {
             cloned!(ctx, blobstore, restricted_paths);
-            move |tree_info, sender| {
+            move |tree_info| {
                 create_hg_manifest(
                     ctx.clone(),
                     blobstore.clone(),
-                    Some(sender),
                     tree_info,
                     restricted_paths.clone(),
                 )
@@ -185,7 +181,7 @@ pub async fn derive_hg_manifest(
         },
         {
             cloned!(ctx, blobstore);
-            move |leaf_info, _sender| create_hg_file(ctx.clone(), blobstore.clone(), leaf_info)
+            move |leaf_info| create_hg_file(ctx.clone(), blobstore.clone(), leaf_info)
         },
     )
     .await?;
@@ -200,7 +196,7 @@ pub async fn derive_hg_manifest(
                 subentries: Default::default(),
             };
             let (_, traced_tree_id) =
-                create_hg_manifest(ctx, blobstore, None, tree_info, restricted_paths).await?;
+                create_hg_manifest(ctx, blobstore, tree_info, restricted_paths).await?;
             Ok(traced_tree_id.into_untraced())
         }
     }
@@ -211,7 +207,6 @@ pub async fn derive_hg_manifest(
 async fn create_hg_manifest(
     ctx: CoreContext,
     blobstore: Arc<dyn KeyedBlobstore>,
-    sender: Option<mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>>,
     tree_info: TreeInfo<
         Traced<ParentIndex, HgManifestId>,
         Traced<ParentIndex, (FileType, HgFileNodeId)>,
@@ -340,42 +335,17 @@ async fn create_hg_manifest(
             path.clone(),
         )?;
 
-        // Add to restricted paths database asynchronously
-        // We don't await this to avoid blocking manifest derivation
-        let restricted_paths_fut = {
-            cloned!(ctx, restricted_paths);
-            async move {
-                if let Err(e) = restricted_paths
-                    .manifest_id_store()
-                    .add_entry(&ctx, entry)
-                    .await
-                {
-                    // Log error but don't fail manifest derivation
-                    warn!("Failed to track restricted path: {e}");
-                }
-                Ok(())
-            }
-        };
-
-        // Send the future to be executed along with the manifest upload
-        if let Some(ref sender) = sender {
-            sender
-                .unbounded_send(restricted_paths_fut.boxed())
-                .map_err(|err| format_err!("failed to send restricted paths future {}", err))?;
-        } else {
-            // If no sender, execute immediately
-            let _ = restricted_paths_fut.await;
+        // Track restricted path - log error but don't fail manifest derivation
+        if let Err(e) = restricted_paths
+            .manifest_id_store()
+            .add_entry(&ctx, entry)
+            .await
+        {
+            warn!("Failed to track restricted path: {e}");
         }
     }
 
-    match sender {
-        Some(sender) => {
-            sender
-                .unbounded_send(upload_fut.boxed())
-                .map_err(|err| format_err!("failed to send hg manifest future {}", err))?;
-        }
-        None => upload_fut.await?,
-    }
+    upload_fut.await?;
     Ok(((), Traced::generate(mfid)))
 }
 

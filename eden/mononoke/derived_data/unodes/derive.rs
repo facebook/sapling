@@ -18,10 +18,7 @@ use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data_manager::DerivationContext;
-use futures::channel::mpsc;
 use futures::future;
-use futures::future::BoxFuture;
-use futures::future::FutureExt;
 use futures::future::TryFutureExt;
 use futures::future::try_join_all;
 use futures::stream::TryStreamExt;
@@ -33,7 +30,7 @@ use manifest::ManifestParentReplacement;
 use manifest::PathOrPrefix;
 use manifest::PathTree;
 use manifest::TreeInfo;
-use manifest::derive_manifest_with_io_sender;
+use manifest::derive_manifest;
 use manifest::derive_manifests_for_simple_stack_of_commits;
 use manifest::flatten_subentries;
 use mononoke_types::BlobstoreKey;
@@ -84,13 +81,13 @@ pub(crate) async fn derive_unode_manifest_stack(
         {
             cloned!(ctx, blobstore);
             move |tree_info, cs_id| {
-                create_unode_manifest(ctx.clone(), cs_id, blobstore.clone(), None, tree_info)
+                create_unode_manifest(ctx.clone(), cs_id, blobstore.clone(), tree_info)
             }
         },
         {
             cloned!(ctx, blobstore);
             move |leaf_info, cs_id| {
-                create_unode_file(ctx.clone(), cs_id, blobstore.clone(), None, leaf_info)
+                create_unode_file(ctx.clone(), cs_id, blobstore.clone(), leaf_info)
             }
         },
     )
@@ -251,7 +248,7 @@ pub(crate) async fn derive_unode_manifest_with_subtree_changes(
     }
     changes.append(&mut additional_changes);
 
-    let maybe_tree_id = derive_manifest_with_io_sender(
+    let maybe_tree_id = derive_manifest(
         ctx.clone(),
         blobstore.clone(),
         parents.clone(),
@@ -259,27 +256,11 @@ pub(crate) async fn derive_unode_manifest_with_subtree_changes(
         manifest_replacements,
         {
             cloned!(ctx, blobstore);
-            move |tree_info, sender| {
-                create_unode_manifest(
-                    ctx.clone(),
-                    cs_id,
-                    blobstore.clone(),
-                    Some(sender),
-                    tree_info,
-                )
-            }
+            move |tree_info| create_unode_manifest(ctx.clone(), cs_id, blobstore.clone(), tree_info)
         },
         {
             cloned!(ctx, blobstore);
-            move |leaf_info, sender| {
-                create_unode_file(
-                    ctx.clone(),
-                    cs_id,
-                    blobstore.clone(),
-                    Some(sender),
-                    leaf_info,
-                )
-            }
+            move |leaf_info| create_unode_file(ctx.clone(), cs_id, blobstore.clone(), leaf_info)
         },
     )
     .await?;
@@ -294,8 +275,7 @@ pub(crate) async fn derive_unode_manifest_with_subtree_changes(
                 subentries: Default::default(),
             };
             let ((), tree_id) =
-                create_unode_manifest(ctx.clone(), cs_id, blobstore.clone(), None, tree_info)
-                    .await?;
+                create_unode_manifest(ctx.clone(), cs_id, blobstore.clone(), tree_info).await?;
             Ok(tree_id)
         }
     }
@@ -321,7 +301,6 @@ async fn create_unode_manifest(
     ctx: CoreContext,
     linknode: ChangesetId,
     blobstore: Arc<dyn KeyedBlobstore>,
-    sender: Option<mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>>,
     tree_info: TreeInfo<
         ManifestUnodeId,
         FileUnodeId,
@@ -356,12 +335,7 @@ async fn create_unode_manifest(
     let blob = mf_unode.into_blob();
     let f = async move { blobstore.put(&ctx, key, blob.into()).await };
 
-    match sender {
-        Some(sender) => sender
-            .unbounded_send(f.boxed())
-            .map_err(|err| format_err!("failed to send manifest future {}", err))?,
-        None => f.await?,
-    };
+    f.await?;
     Ok(((), mf_unode_id))
 }
 
@@ -369,7 +343,6 @@ async fn create_unode_file(
     ctx: CoreContext,
     linknode: ChangesetId,
     blobstore: Arc<dyn KeyedBlobstore>,
-    sender: Option<mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>>,
     leaf_info: LeafInfo<FileUnodeId, (ContentId, FileType)>,
 ) -> Result<((), FileUnodeId), Error> {
     borrowed!(ctx, blobstore);
@@ -377,7 +350,6 @@ async fn create_unode_file(
     async fn save_unode(
         ctx: &CoreContext,
         blobstore: &Arc<dyn KeyedBlobstore>,
-        sender: Option<mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>>,
         parents: Vec<FileUnodeId>,
         content_id: ContentId,
         file_type: FileType,
@@ -405,17 +377,9 @@ async fn create_unode_file(
                     )
                     .await
             }
-            .boxed()
         };
 
-        match sender {
-            Some(sender) => {
-                sender
-                    .unbounded_send(f)
-                    .map_err(|err| format_err!("failed to send manifest future {}", err))?;
-            }
-            None => f.await?,
-        };
+        f.await?;
         Ok(file_unode_id)
     }
 
@@ -429,7 +393,6 @@ async fn create_unode_file(
         save_unode(
             ctx,
             blobstore,
-            sender,
             parents,
             content_id,
             file_type,
@@ -479,7 +442,6 @@ async fn create_unode_file(
                 save_unode(
                     ctx,
                     blobstore,
-                    sender,
                     parents,
                     content_id.clone(),
                     *file_type,

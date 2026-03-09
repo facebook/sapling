@@ -9,7 +9,6 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::Result;
-use anyhow::anyhow;
 use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use blobstore::Storable;
@@ -19,8 +18,6 @@ use derived_data_manager::DerivationContext;
 use either::Either;
 use futures::StreamExt;
 use futures::TryStreamExt;
-use futures::channel::mpsc;
-use futures::future::BoxFuture;
 use futures::future::FutureExt;
 use futures::stream;
 use manifest::Entry;
@@ -28,7 +25,7 @@ use manifest::LeafInfo;
 use manifest::ManifestOps;
 use manifest::ManifestParentReplacement;
 use manifest::TreeInfoSubentries;
-use manifest::derive_manifest_with_io_sender;
+use manifest::derive_manifest;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
@@ -146,7 +143,6 @@ async fn resolve_entry(
 async fn create_content_manifest_directory(
     ctx: CoreContext,
     blobstore: Arc<dyn KeyedBlobstore>,
-    sender: &mpsc::UnboundedSender<BoxFuture<'static, Result<()>>>,
     subentries: TreeInfoSubentries<
         ContentManifestId,
         ContentManifestFile,
@@ -181,15 +177,7 @@ async fn create_content_manifest_directory(
     let directory = ContentManifest { subentries };
     let blob = directory.into_blob();
     let id = *blob.id();
-    sender
-        .unbounded_send(
-            async move {
-                blob.store(&ctx, &blobstore).await?;
-                Ok(())
-            }
-            .boxed(),
-        )
-        .map_err(|e| anyhow!("failed to send manifest store future: {}", e))?;
+    blob.store(&ctx, &blobstore).await?;
 
     Ok((rollup, id))
 }
@@ -223,7 +211,7 @@ pub(crate) async fn derive_content_manifest(
     let changes = get_changes(&bonsai);
     let subtree_changes =
         get_content_manifest_subtree_changes(ctx, derivation_ctx, known, &bonsai).await?;
-    let derive_fut = derive_manifest_with_io_sender(
+    let derive_fut = derive_manifest(
         ctx.clone(),
         blobstore.clone(),
         parents.clone(),
@@ -231,15 +219,14 @@ pub(crate) async fn derive_content_manifest(
         subtree_changes,
         {
             cloned!(blobstore, ctx);
-            move |tree_info, sender| {
+            move |tree_info| {
                 cloned!(blobstore, ctx);
                 async move {
-                    create_content_manifest_directory(ctx, blobstore, &sender, tree_info.subentries)
-                        .await
+                    create_content_manifest_directory(ctx, blobstore, tree_info.subentries).await
                 }
             }
         },
-        |leaf_info, _sender| create_content_manifest_file(leaf_info),
+        create_content_manifest_file,
     )
     .boxed();
     let root = derive_fut.await?;
