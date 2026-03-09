@@ -5,6 +5,7 @@
 
 
 from sapling import commands, encoding, error, extensions, hg, util
+from sapling.bookmarks import ALL_BOOKMARK_KINDS
 from sapling.i18n import _
 from sapling.util import sortdict
 
@@ -43,13 +44,20 @@ def _bookmarks(orig, ui, repo, *names, **opts):
                 hint=_('use "@prog@ book" to get a list of your local bookmarks'),
             )
         else:
-            # prefix bookmark listing is not yet supported by Edenapi.
+            # Use SaplingRemoteAPI for bookmark listing.
+            # _http_bookmark_fetch only handles exact names;
+            # _http_bookmark_patterns_fetch supports prefix patterns with '*'.
             usehttp = repo.ui.configbool("infinitepush", "httpbookmarks") and not any(
                 n.endswith("*") for n in names
             )
 
-            if usehttp:
+            if usehttp and repo.nullableedenapi is not None:
                 fetchedbookmarks = _http_bookmark_fetch(repo, names)
+            elif (
+                repo.ui.configbool("commitcloud", "httplistbookmarkpatterns", True)
+                and repo.nullableedenapi is not None
+            ):
+                fetchedbookmarks = _http_bookmark_patterns_fetch(repo, names)
             else:
                 destpath = path.pushloc or path.loc
                 other = hg.peer(repo, opts, destpath)
@@ -105,6 +113,21 @@ def _showbookmarks(ui, remotebookmarks, **opts) -> None:
 
 def _http_bookmark_fetch(repo, names) -> sortdict:
     bookmarks = repo.edenapi.bookmarks(names)
+    return util.sortdict(((bm, n) for (bm, n) in bookmarks.items() if n is not None))
+
+
+def _http_bookmark_patterns_fetch(repo, patterns) -> sortdict:
+    """Fetch bookmarks matching patterns via SaplingRemoteAPI.
+
+    Patterns can be exact bookmark names or prefix patterns ending with '*'.
+    """
+    try:
+        bookmarks = repo.edenapi.listbookmarkpatterns(
+            list(patterns),
+            kinds=ALL_BOOKMARK_KINDS,
+        )
+    except error.HttpError as e:
+        raise error.Abort(str(e))
     return util.sortdict(((bm, n) for (bm, n) in bookmarks.items() if n is not None))
 
 

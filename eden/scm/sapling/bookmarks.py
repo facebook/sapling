@@ -43,6 +43,11 @@ activebookmarklabel = "bookmarks.active bookmarks.current"
 # namespace to use when recording an hg journal entry
 journalremotebookmarktype = "remotebookmark"
 
+# All bookmark kinds accepted by edenapi.listbookmarkpatterns(). Use this to
+# match the old listkeyspatterns wireproto behavior which returned all bookmarks
+# regardless of kind.
+ALL_BOOKMARK_KINDS = ["Scratch", "Publishing", "PullDefaultPublishing"]
+
 
 def _getbkfile(repo):
     """Hook so that extensions that mess with the store can hook bm storage.

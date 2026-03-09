@@ -207,9 +207,6 @@ push to Mononoke
   bundle2-input-part: "reply:pushkey" (params: 2 mandatory) supported
   bundle2-input-bundle: 1 parts total
   updating bookmark master_bookmark
-  preparing listkeys for "bookmarks" with pattern "['master_bookmark']"
-  sending listkeyspatterns command
-  received listkey for "bookmarks": 56 bytes
 
 Now pull what was just pushed
 

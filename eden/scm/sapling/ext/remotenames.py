@@ -97,7 +97,7 @@ def expush(orig, repo, remote, *args, **kwargs):
 
         remotename = repo.ui.paths.getname(remote.url())
         remotebookmarkskeys = selectivepullbookmarknames(repo, remotename)
-        remotebookmarks = _listremotebookmarks(remote, remotebookmarkskeys)
+        remotebookmarks = _listremotebookmarks(repo, remote, remotebookmarkskeys)
 
         # ATTENTION: This might get commits that are unknown to the local repo!
         # The correct approach is to get the remote names within "orig". But
@@ -136,8 +136,26 @@ def expushop(
         setattr(pushop, flag, kwargs.pop(flag, None))
 
 
-def _listremotebookmarks(remote, bookmarks):
-    remotebookmarks = remote.listkeyspatterns("bookmarks", bookmarks)
+def _listremotebookmarks(repo, remote, bookmarks):
+    """Fetch remote bookmarks, preferring SaplingRemoteAPI when available."""
+    if (
+        repo.ui.configbool("remotenames", "httplistbookmarks", True)
+        and repo.nullableedenapi is not None
+    ):
+        # Use SaplingRemoteAPI for bookmark lookup.
+        # remotenames.httplistbookmarksfreshness controls the freshness level
+        # for bookmark requests. "MostRecent" bypasses Mononoke's warm bookmark
+        # cache, which is useful in integration tests where the cache may be
+        # stale immediately after a push. Default is "MaybeStale".
+        freshness = repo.ui.config(
+            "remotenames", "httplistbookmarksfreshness", "MaybeStale"
+        )
+        fetchedbookmarks = repo.edenapi.bookmarks(list(bookmarks), freshness)
+        remotebookmarks = {
+            bm: n for (bm, n) in fetchedbookmarks.items() if n is not None
+        }
+    else:
+        remotebookmarks = remote.listkeyspatterns("bookmarks", bookmarks)
     result = {}
     for book in bookmarks:
         if book in remotebookmarks:
@@ -172,9 +190,9 @@ def _expull(orig, repo, remote, heads=None, force=False, **kwargs):
 
     if kwargs.get("bookmarks"):
         remotebookmarkslist.extend(kwargs["bookmarks"])
-        bookmarks = _listremotebookmarks(remote, remotebookmarkslist)
+        bookmarks = _listremotebookmarks(repo, remote, remotebookmarkslist)
     else:
-        bookmarks = _listremotebookmarks(remote, remotebookmarkslist)
+        bookmarks = _listremotebookmarks(repo, remote, remotebookmarkslist)
         if not heads:
             heads = []
         for node in bookmarks.values():
@@ -257,7 +275,7 @@ def exclone(orig, ui, *args, **opts):
 
     with repo.wlock(), repo.lock(), repo.transaction("exclone") as tr:
         remotebookmarkskeys = selectivepullbookmarknames(repo)
-        remotebookmarks = _listremotebookmarks(srcpeer, remotebookmarkskeys)
+        remotebookmarks = _listremotebookmarks(repo, srcpeer, remotebookmarkskeys)
         # Clone pulled with selectivepull disabled.  Hide all the commits
         # so we only get the ones we want.
         visibility.setvisibleheads(repo, [])
@@ -555,7 +573,7 @@ def expushdiscoverybookmarks(pushop):
     repo = pushop.repo
 
     if pushop.delete:
-        remotemarks = pushop.remote.listkeyspatterns("bookmarks", [pushop.delete])
+        remotemarks = _listremotebookmarks(repo, pushop.remote, [pushop.delete])
         if pushop.delete not in remotemarks:
             raise error.Abort(_("remote bookmark %s does not exist") % pushop.delete)
         pushop.outbookmarks.append((pushop.delete, remotemarks[pushop.delete], ""))
@@ -621,7 +639,7 @@ def expushdiscoverybookmarks(pushop):
 
     # allow new bookmark only if --create is specified
     old = ""
-    remotemarks = pushop.remote.listkeyspatterns("bookmarks", [bookmark])
+    remotemarks = _listremotebookmarks(repo, pushop.remote, [bookmark])
     if bookmark in remotemarks:
         old = remotemarks[bookmark]
     elif not pushop.create:

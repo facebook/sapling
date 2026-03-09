@@ -108,10 +108,7 @@ Exercise the limit (5 bookmarks should be allowed, this was our limit)
 Exercise the limit (6 bookmarks should fail)
   $ hg push -r . --to "more/3" --create >/dev/null 2>&1
   $ hg bookmarks --list-remote "*"
-  remote: Command failed
-  remote:   Error:
-  remote:     Bookmark query was truncated after 6 results, use a more specific prefix search.
-  abort: unexpected EOL, expected netstring digit
+  abort: Error fetching key None: SaplingRemoteAPI server returned an error with message: ServerError { message: "Bookmark query was truncated after 6 results, use a more specific prefix search.", code: 0 }
   [255]
 
 Narrowing down our query should fix it:

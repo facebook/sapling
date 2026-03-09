@@ -47,9 +47,6 @@ Create new commits
   searching for changes
   local heads: 1; remote heads: 1 (explicit: 0); initial common: 1
   1 total queries in 0.0000s
-  preparing listkeys for "bookmarks" with pattern "['master_bookmark']"
-  sending listkeyspatterns command
-  received listkey for "bookmarks": 56 bytes
   1 changesets found
   list of changesets:
   8e48c8a863b58f9eddc3b3d152801cb45a81dfd4
@@ -64,9 +61,6 @@ Create new commits
   bundle2-input-part: "reply:pushkey" (params: 2 mandatory) supported
   bundle2-input-bundle: 1 parts total
   updating bookmark master_bookmark
-  preparing listkeys for "bookmarks" with pattern "['master_bookmark']"
-  sending listkeyspatterns command
-  received listkey for "bookmarks": 56 bytes
 
 Clone the repository, and pull
 

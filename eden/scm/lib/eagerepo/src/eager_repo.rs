@@ -70,6 +70,7 @@ use zstore::Id20;
 
 const HG_PARENTS_LEN: usize = HgId::len() * 2;
 const HG_LEN: usize = HgId::len();
+const METALOG_DIR: &str = "metalog";
 
 /// Non-lazy, pure Rust, local repo implementation.
 ///
@@ -103,6 +104,7 @@ pub struct EagerRepo {
     pub(crate) store: EagerRepoStore,
     metalog: RwLock<MetaLog>,
     pub(crate) dir: PathBuf,
+    store_dir: PathBuf,
     pub(crate) mut_store: Mutex<MutationStore>,
     pub(crate) ext: OnceLock<Arc<dyn EagerRepoExtension>>,
 }
@@ -241,7 +243,7 @@ impl EagerRepo {
         let store_dir = hg_dir.join("store");
         let dag = Dag::open(store_dir.join("segments").join("v1"))?;
         let store = EagerRepoStore::open(&store_dir.join("hgcommits").join("v1"), format)?;
-        let metalog = MetaLog::open(store_dir.join("metalog"), None)?;
+        let metalog = MetaLog::open(store_dir.join(METALOG_DIR), None)?;
         let mut_store = MutationStore::open(store_dir.join("mutation"))?;
 
         let repo = Self {
@@ -249,6 +251,7 @@ impl EagerRepo {
             store,
             metalog: RwLock::new(metalog),
             dir: dir.to_path_buf(),
+            store_dir,
             mut_store: Mutex::new(mut_store),
             ext: Default::default(),
         };
@@ -261,7 +264,7 @@ impl EagerRepo {
         // "eagercompat" is a revlog repo secretly using an eager store under the hood.
         // It's requirements don't match our expectations, so return early. This is mainly
         // so we can access the EagerRepo SaplingRemoteApi trait implementation.
-        if has_eagercompat_requirement(&store_dir) {
+        if has_eagercompat_requirement(&repo.store_dir) {
             return Ok(repo);
         }
 
@@ -280,7 +283,7 @@ impl EagerRepo {
         if repo.store.ext_name() == Some("virtual-repo") {
             store_requires.push("invalid-hash");
         }
-        write_requires(&store_dir, &store_requires)?;
+        write_requires(&repo.store_dir, &store_requires)?;
 
         // Update metalog to prevent migrating from vfs.
         {
@@ -699,6 +702,14 @@ impl EagerRepo {
     /// Obtain a reference to the metalog.
     pub fn metalog(&self) -> RwLockReadGuard<'_, RawRwLock, MetaLog> {
         self.metalog.read()
+    }
+
+    /// Re-open the metalog from disk to pick up changes made by other
+    /// EagerRepo instances pointing at the same directory.
+    pub(crate) fn refresh_metalog(&self) -> Result<()> {
+        let new_metalog = MetaLog::open(self.store_dir.join(METALOG_DIR), None)?;
+        *self.metalog.write() = new_metalog;
+        Ok(())
     }
 
     /// Obtain an instance to the store.

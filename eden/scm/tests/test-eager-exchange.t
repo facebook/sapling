@@ -32,7 +32,6 @@ Push:
   searching for changes
   DEBUG eagerepo::api: commit_known 748104bd5058bf2c386d074d8dcf2704855380f6
   DEBUG eagerepo::api: bookmarks master
-  DEBUG sapling::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict()
   TRACE sapling::eagerpeer: adding   blob 005d992c5dcf32993668f7cede29d296c494a5d9
   TRACE sapling::eagerpeer: adding   blob f976da1d0df2256cde08db84261621d5e92f77be
   TRACE sapling::eagerpeer: adding   tree 4c28a8a0e46c55df521ea9d682b5b6b8a91031a2
@@ -50,7 +49,6 @@ Push:
   DEBUG sapling::eagerpeer: pushkey bookmarks 'master': '' => '178c10ffbc2f92d5407c14478ae9d9dea81f232e' (success)
   exporting bookmark master
   DEBUG eagerepo::api: bookmarks master
-  DEBUG sapling::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', '178c10ffbc2f92d5407c14478ae9d9dea81f232e')])
 
   $ hg push -r $B --allow-anon
   pushing to test:e1
@@ -64,7 +62,6 @@ Push:
   TRACE sapling::eagerpeer: adding commit 99dac869f01e09fe3d501fa645ea524af80d498f
   DEBUG sapling::eagerpeer: flushed
   DEBUG eagerepo::api: bookmarks master
-  DEBUG sapling::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', '178c10ffbc2f92d5407c14478ae9d9dea81f232e')])
 
   $ hg push -r $D --to master
   pushing rev 23d30dc6b703 to destination test:e1 bookmark master
@@ -72,7 +69,6 @@ Push:
   DEBUG eagerepo::api: commit_known 178c10ffbc2f92d5407c14478ae9d9dea81f232e, 23d30dc6b70380b2d939023947578ae0e0198999
   searching for changes
   DEBUG eagerepo::api: bookmarks master
-  DEBUG sapling::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', '178c10ffbc2f92d5407c14478ae9d9dea81f232e')])
   TRACE sapling::eagerpeer: adding   blob 4eec8cfdabce9565739489483b6ad93ef7657ea9
   TRACE sapling::eagerpeer: adding   tree 4a38281d93dab71e695b39f85bdfbac0ce78011d
   TRACE sapling::eagerpeer: adding commit 23d30dc6b70380b2d939023947578ae0e0198999
@@ -83,7 +79,6 @@ Push:
   DEBUG sapling::eagerpeer: pushkey bookmarks 'master': '178c10ffbc2f92d5407c14478ae9d9dea81f232e' => '23d30dc6b70380b2d939023947578ae0e0198999' (success)
   updating bookmark master
   DEBUG eagerepo::api: bookmarks master
-  DEBUG sapling::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', '23d30dc6b70380b2d939023947578ae0e0198999')])
 
 Pull (non-lazy):
 

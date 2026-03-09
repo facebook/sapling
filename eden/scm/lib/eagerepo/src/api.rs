@@ -12,6 +12,7 @@ use std::io::Write;
 use std::num::NonZeroU64;
 use std::sync::Arc;
 
+use anyhow::Result;
 use anyhow::anyhow;
 use blob::Blob;
 use configmodel::Config;
@@ -113,12 +114,16 @@ use tracing::trace;
 use crate::EagerRepo;
 
 impl EagerRepo {
-    /// Load file/tree store changes from disk.
+    /// Load file/tree store and bookmark changes from disk.
     ///
     /// This is intended to be used by SaplingRemoteApi impls so content fetched
-    /// via SaplingRemoteApi (during testing) is always fresh.
-    pub(crate) fn refresh_for_api(&self) {
+    /// via SaplingRemoteApi (during testing) is always fresh. It re-opens the
+    /// MetaLog to pick up bookmark changes made by other EagerRepo instances
+    /// (e.g. after a push operation via an eagerpeer).
+    pub(crate) fn refresh_for_api(&self) -> Result<()> {
         let _ = self.store.flush();
+        self.refresh_metalog()?;
+        Ok(())
     }
 }
 
@@ -156,7 +161,7 @@ impl SaplingRemoteApi for EagerRepo {
         keys: Vec<Key>,
     ) -> edenapi::Result<Response<FileResponse>> {
         debug!("files {}", debug_key_list(&keys));
-        self.refresh_for_api();
+        self.refresh_for_api()?;
         let mut values = Vec::with_capacity(keys.len());
         for key in keys {
             let id = key.hgid;
@@ -197,7 +202,7 @@ impl SaplingRemoteApi for EagerRepo {
         });
 
         debug!("files_attrs {}", debug_spec_list(&reqs));
-        self.refresh_for_api();
+        self.refresh_for_api()?;
         let mut values = Vec::with_capacity(reqs.len());
         for spec in reqs {
             let key = spec.key;
@@ -245,7 +250,7 @@ impl SaplingRemoteApi for EagerRepo {
         _length: Option<u32>,
     ) -> edenapi::Result<Response<HistoryEntry>> {
         debug!("history {}", debug_key_list(&keys));
-        self.refresh_for_api();
+        self.refresh_for_api()?;
         let mut values = Vec::new();
         let mut visited: HashSet<Key> = Default::default();
         let mut to_visit: Vec<Key> = keys;
@@ -314,7 +319,7 @@ impl SaplingRemoteApi for EagerRepo {
             })
         });
 
-        self.refresh_for_api();
+        self.refresh_for_api()?;
         let mut values = Vec::new();
         let attributes = attributes.unwrap_or_default();
         if attributes.augmented_trees {
@@ -428,7 +433,7 @@ impl SaplingRemoteApi for EagerRepo {
         hgids: Vec<HgId>,
     ) -> edenapi::Result<Response<CommitRevlogData>> {
         debug!("revlog_data {}", debug_hgid_list(&hgids));
-        self.refresh_for_api();
+        self.refresh_for_api()?;
         let mut values = Vec::new();
         for id in hgids {
             let data = self.get_sha1_blob_for_api(id, "commit_revlog_data")?;
@@ -452,7 +457,7 @@ impl SaplingRemoteApi for EagerRepo {
         &self,
         requests: Vec<CommitLocationToHashRequest>,
     ) -> edenapi::Result<Vec<CommitLocationToHashResponse>> {
-        self.refresh_for_api();
+        self.refresh_for_api()?;
         let path_names: Vec<(AncestorPath, Vec<Vertex>)> = {
             let paths: Vec<AncestorPath> = requests
                 .into_iter()
@@ -499,7 +504,7 @@ impl SaplingRemoteApi for EagerRepo {
         master_heads: Vec<HgId>,
         hgids: Vec<HgId>,
     ) -> edenapi::Result<Vec<CommitHashToLocationResponse>> {
-        self.refresh_for_api();
+        self.refresh_for_api()?;
         let path_names: Vec<(AncestorPath, Vec<Vertex>)> = {
             let heads: Vec<Vertex> = to_vec_vertex(&master_heads);
             let names: Vec<Vertex> = to_vec_vertex(&hgids);
@@ -540,7 +545,7 @@ impl SaplingRemoteApi for EagerRepo {
 
     async fn commit_known(&self, hgids: Vec<HgId>) -> edenapi::Result<Vec<CommitKnownResponse>> {
         debug!("commit_known {}", debug_hgid_list(&hgids));
-        self.refresh_for_api();
+        self.refresh_for_api()?;
         let mut values = Vec::new();
         for id in hgids {
             let known = self.get_sha1_blob(id).map_err(map_crate_err)?.is_some();
@@ -563,7 +568,7 @@ impl SaplingRemoteApi for EagerRepo {
             debug_hgid_list(&heads),
             debug_hgid_list(&common),
         );
-        self.refresh_for_api();
+        self.refresh_for_api()?;
         let heads = to_set(&heads);
         let common = to_set(&common);
         let graph = self
@@ -609,7 +614,7 @@ impl SaplingRemoteApi for EagerRepo {
             debug_hgid_list(&heads),
             debug_hgid_list(&common),
         );
-        self.refresh_for_api();
+        self.refresh_for_api()?;
         let heads = to_set(&heads);
         let common = to_set(&common);
         let graph = self
@@ -636,7 +641,7 @@ impl SaplingRemoteApi for EagerRepo {
         _freshness: Option<Freshness>,
     ) -> edenapi::Result<Vec<BookmarkEntry>> {
         debug!("bookmarks {}", debug_string_list(&bookmarks));
-        self.refresh_for_api();
+        self.refresh_for_api()?;
         let mut values = Vec::new();
         let map = self.get_bookmarks_map().map_err(map_crate_err)?;
         for name in bookmarks {
@@ -656,7 +661,7 @@ impl SaplingRemoteApi for EagerRepo {
         _kinds: Vec<BookmarkKind>,
     ) -> edenapi::Result<Vec<BookmarkEntry>> {
         debug!("list_bookmark_patterns {}", debug_string_list(&patterns));
-        self.refresh_for_api();
+        self.refresh_for_api()?;
         let map = self.get_bookmarks_map().map_err(map_crate_err)?;
         let mut values = Vec::new();
         for pattern in &patterns {
@@ -690,7 +695,7 @@ impl SaplingRemoteApi for EagerRepo {
         _pushvars: HashMap<String, String>,
     ) -> Result<SetBookmarkResponse, SaplingRemoteApiError> {
         debug!("bookmarks {:?} -> {:?}", from, to);
-        self.refresh_for_api();
+        self.refresh_for_api()?;
 
         let mut bms = self.get_bookmarks_map().map_err(map_crate_err)?;
 
@@ -752,7 +757,7 @@ impl SaplingRemoteApi for EagerRepo {
         &self,
         prefixes: Vec<String>,
     ) -> Result<Vec<CommitHashLookupResponse>, SaplingRemoteApiError> {
-        self.refresh_for_api();
+        self.refresh_for_api()?;
         let dag = self.dag().await;
         prefixes
             .into_iter()
@@ -785,7 +790,7 @@ impl SaplingRemoteApi for EagerRepo {
     ) -> Result<Vec<CommitMutationsResponse>, SaplingRemoteApiError> {
         commits.sort();
         debug!("commit_mutations {}", debug_hgid_list(&commits));
-        self.refresh_for_api();
+        self.refresh_for_api()?;
 
         let mut seen_commits = HashSet::new();
         let mut mutations = Vec::new();
@@ -828,7 +833,7 @@ impl SaplingRemoteApi for EagerRepo {
     ) -> Result<Response<UploadToken>, SaplingRemoteApiError> {
         debug!(?data, "process_files_upload");
 
-        self.refresh_for_api();
+        self.refresh_for_api()?;
 
         if bubble_id.is_some() || copy_from_bubble_id.is_some() {
             return Err(self.not_implemented_error(
@@ -867,7 +872,7 @@ impl SaplingRemoteApi for EagerRepo {
     ) -> Result<Response<UploadTokensResponse>, SaplingRemoteApiError> {
         debug!(?items, "upload_filenodes_batch");
 
-        self.refresh_for_api();
+        self.refresh_for_api()?;
 
         let mut res = Vec::with_capacity(items.len());
         for data in items {
@@ -924,7 +929,7 @@ impl SaplingRemoteApi for EagerRepo {
     ) -> Result<Response<UploadTreeResponse>, SaplingRemoteApiError> {
         debug!(?items, "upload_trees_batch");
 
-        self.refresh_for_api();
+        self.refresh_for_api()?;
 
         let mut res = Vec::with_capacity(items.len());
         for tree in items {
@@ -966,7 +971,7 @@ impl SaplingRemoteApi for EagerRepo {
         mutations: Vec<HgMutationEntryContent>,
     ) -> Result<Response<UploadTokensResponse>, SaplingRemoteApiError> {
         debug!(?changesets, ?mutations, "upload_changesets");
-        self.refresh_for_api();
+        self.refresh_for_api()?;
 
         ::fail::fail_point!("eagerepo::api::uploadchangesets", |mode| {
             match mode.as_deref() {
@@ -1063,7 +1068,7 @@ impl SaplingRemoteApi for EagerRepo {
     ) -> Result<Vec<LookupResponse>, SaplingRemoteApiError> {
         debug!(?items, "lookup_batch");
 
-        self.refresh_for_api();
+        self.refresh_for_api()?;
 
         if bubble_id.is_some() || copy_from_bubble_id.is_some() {
             return Err(self.not_implemented_error(

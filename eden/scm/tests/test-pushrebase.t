@@ -90,9 +90,6 @@ Stack of non-conflicting commits should be accepted
   sampling undecided commits (1 of 1)
   query 2; still undecided: 1, sample size is: 1
   2 total queries in *s (glob)
-  preparing listkeys for "bookmarks" with pattern "['main']"
-  sending listkeyspatterns command
-  received listkey for "bookmarks": 45 bytes
   validated revset for rebase
   2 changesets found
   list of changesets:
@@ -103,9 +100,6 @@ Stack of non-conflicting commits should be accepted
   adding manifests
   adding file changes
   updating bookmark main
-  preparing listkeys for "bookmarks" with pattern "['main']"
-  sending listkeyspatterns command
-  received listkey for "bookmarks": 45 bytes
   remote: pushing 2 changesets:
   remote:     46a2df24e272  b => xxx
   remote:     0e3997dc0733  b => baz

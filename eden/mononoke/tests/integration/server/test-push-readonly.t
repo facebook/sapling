@@ -58,9 +58,6 @@ create new commit in repo2 and check that push to a bookmark fails
   searching for changes
   local heads: 1; remote heads: 1 (explicit: 0); initial common: 1
   1 total queries in 0.0000s
-  preparing listkeys for "bookmarks" with pattern "['master_bookmark']"
-  sending listkeyspatterns command
-  received listkey for "bookmarks": 56 bytes
   1 changesets found
   list of changesets:
   4bdc9849589377925a3c7b0f1e72f4c4f7adfb87
@@ -102,7 +99,4 @@ Check that a push which doesn't move a bookmark is allowed
   sending listkeys command
   received listkey for "bookmarks": 57 bytes
   no changes found
-  preparing listkeys for "bookmarks" with pattern "['master_bookmark']"
-  sending listkeyspatterns command
-  received listkey for "bookmarks": 56 bytes
   [1]
