@@ -589,7 +589,7 @@ impl TreeManifest {
         let format = self.store.format();
         let (hgid, _) = match format {
             SerializationFormat::Hg => {
-                let mut tracker = HgParents::new(&parent_trees)?;
+                let mut tracker = HgParents::new(parent_trees)?;
                 let active = tracker.initial_active();
                 finalize_trees(
                     &self.store,
