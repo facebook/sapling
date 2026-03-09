@@ -16,13 +16,17 @@ use futures::stream::TryStreamExt;
 use manifest::Entry;
 use manifest::ManifestOps;
 use mercurial_derivation::DeriveHgChangeset;
+use mercurial_derivation::MappedHgChangesetId;
+use mercurial_derivation::RootHgAugmentedManifestId;
 use mercurial_derivation::derive_hg_augmented_manifest;
 use mercurial_types::HgAugmentedManifestId;
 use mercurial_types::HgManifestId;
 use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedDataRef;
 use restricted_paths::RestrictedPathsRef;
+use tests_utils::CreateCommitContext;
 use tests_utils::drawdag::extend_from_dag_with_actions;
 
 use crate::Repo;
@@ -189,6 +193,126 @@ async fn test_augmented_manifest(fb: FacebookInit) -> Result<()> {
     compare_manifests(&ctx, &repo, hg_c, aug_c).await?;
     compare_manifests(&ctx, &repo, hg_d, aug_d).await?;
     compare_manifests(&ctx, &repo, hg_e, aug_e).await?;
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_augmented_manifest_multi_batch(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+
+    // Create a linear chain of commits. We'll split them into two batch
+    // segments to simulate what derive_heads_with_visited does.
+    let mut csids = Vec::new();
+    let root = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("file", "content_0")
+        .commit()
+        .await?;
+    csids.push(root);
+
+    for i in 1..10 {
+        let parent = *csids.last().unwrap();
+        let cs = CreateCommitContext::new(&ctx, &repo, vec![parent])
+            .add_file("file", format!("content_{}", i))
+            .commit()
+            .await?;
+        csids.push(cs);
+    }
+
+    let manager = repo.repo_derived_data().manager();
+
+    // Derive MappedHgChangesetId first since it's a dependency.
+    // This is what the framework does when Dependencies includes it.
+    manager
+        .derive_exactly_batch::<MappedHgChangesetId>(&ctx, csids.clone(), None)
+        .await?;
+
+    // Split into two batches and derive RootHgAugmentedManifestId.
+    // First batch: commits 0..5
+    let batch1 = csids[0..5].to_vec();
+    manager
+        .derive_exactly_batch::<RootHgAugmentedManifestId>(&ctx, batch1, None)
+        .await?;
+
+    // Second batch: commits 5..10 (parent of commit 5 is commit 4, which
+    // was in batch 1). This should work because MappedHgChangesetId
+    // mappings were persisted above.
+    let batch2 = csids[5..10].to_vec();
+    manager
+        .derive_exactly_batch::<RootHgAugmentedManifestId>(&ctx, batch2, None)
+        .await?;
+
+    // Verify all derived augmented manifests match full derivation
+    let derived = manager
+        .fetch_derived_batch::<RootHgAugmentedManifestId>(&ctx, csids.clone(), None)
+        .await?;
+
+    for cs_id in &csids {
+        let aug_id = derived
+            .get(cs_id)
+            .unwrap_or_else(|| panic!("Missing RootHgAugmentedManifestId for {}", cs_id))
+            .hg_augmented_manifest_id();
+
+        let hg_cs_id = repo.derive_hg_changeset(&ctx, *cs_id).await?;
+        let hg_manifest_id = hg_cs_id
+            .load(&ctx, repo.repo_blobstore())
+            .await?
+            .manifestid();
+
+        compare_manifests(&ctx, &repo, hg_manifest_id, aug_id).await?;
+    }
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_augmented_manifest_derive_single(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+
+    // Create a linear chain of 3 commits. derive_heads will process
+    // these via derive_exactly_batch -> default derive_batch ->
+    // sequential derive_single calls.
+    let root = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("file", "root")
+        .commit()
+        .await?;
+
+    let child = CreateCommitContext::new(&ctx, &repo, vec![root])
+        .add_file("file", "child")
+        .commit()
+        .await?;
+
+    let grandchild = CreateCommitContext::new(&ctx, &repo, vec![child])
+        .add_file("file", "grandchild")
+        .commit()
+        .await?;
+
+    let manager = repo.repo_derived_data().manager();
+
+    // Do NOT pre-derive MappedHgChangesetId. derive_heads will handle
+    // dependency derivation if it's in Dependencies, and derive_single
+    // must handle inline derivation if it's not.
+    manager
+        .derive_heads::<RootHgAugmentedManifestId>(ctx.clone(), vec![grandchild], None, None)
+        .await?;
+
+    // Verify all augmented manifests were derived correctly.
+    for cs_id in [root, child, grandchild] {
+        let aug = manager
+            .fetch_derived::<RootHgAugmentedManifestId>(&ctx, cs_id, None)
+            .await?
+            .unwrap_or_else(|| panic!("Missing RootHgAugmentedManifestId for {}", cs_id));
+
+        let hg_cs_id = repo.derive_hg_changeset(&ctx, cs_id).await?;
+        let hg_manifest_id = hg_cs_id
+            .load(&ctx, repo.repo_blobstore())
+            .await?
+            .manifestid();
+
+        compare_manifests(&ctx, &repo, hg_manifest_id, aug.hg_augmented_manifest_id()).await?;
+    }
 
     Ok(())
 }
