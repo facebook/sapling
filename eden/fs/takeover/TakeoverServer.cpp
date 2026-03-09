@@ -47,17 +47,18 @@ namespace facebook::eden {
 class TakeoverServer::ConnHandler {
  public:
   ConnHandler(
-      TakeoverServer* server,
+      folly::EventBase* eventBase,
+      TakeoverHandler* takeoverHandler,
+      FaultInjector& faultInjector,
       folly::File socket,
       const std::set<int32_t>& supportedVersions,
       const uint64_t supportedCapabilities)
-      : server_{server},
+      : eventBase_{eventBase},
+        takeoverHandler_{takeoverHandler},
+        faultInjector_{faultInjector},
         supportedCapabilities_{supportedCapabilities},
         supportedVersions_{supportedVersions},
-        state_{
-            server->getEventBase(),
-            server->getEventBase(),
-            std::move(socket)} {}
+        state_{eventBase, eventBase, std::move(socket)} {}
 
   /**
    * start() begins processing data on this connection.
@@ -110,7 +111,9 @@ class TakeoverServer::ConnHandler {
       State& state,
       std::unique_ptr<folly::IOBuf> msgData);
 
-  TakeoverServer* const server_;
+  folly::EventBase* const eventBase_;
+  TakeoverHandler* const takeoverHandler_;
+  FaultInjector& faultInjector_;
   const uint64_t supportedCapabilities_;
   const std::set<int32_t>& supportedVersions_;
   EventBaseState<State> state_;
@@ -201,9 +204,9 @@ Future<Unit> TakeoverServer::ConnHandler::start() noexcept {
             (currentState.protocolCapabilities &
              TakeoverCapabilities::CHUNKED_MESSAGE);
 
-        return server_->getTakeoverHandler()->startTakeoverShutdown();
+        return takeoverHandler_->startTakeoverShutdown();
       })
-      .via(server_->eventBase_)
+      .via(eventBase_)
       .thenTry([this](folly::Try<TakeoverData>&& data) {
         if (!data.hasValue()) {
           return sendError(data.exception());
@@ -252,10 +255,9 @@ Future<Unit> TakeoverServer::ConnHandler::pingThenSendTakeoverData(
       .thenValue([this](auto&&) {
         // Wait for the ping reply. Here we just give it a few seconds to
         // respond.
-        return server_->faultInjector_.checkAsync("takeover", "ping_receive")
-            .semi();
+        return faultInjector_.checkAsync("takeover", "ping_receive").semi();
       })
-      .via(server_->eventBase_)
+      .via(eventBase_)
       .thenValue([this](auto&&) {
         auto timeout = std::chrono::seconds(FLAGS_pingReceiveTimeout);
         auto& currentState = state_.get();
@@ -285,7 +287,7 @@ Future<Unit> TakeoverServer::ConnHandler::sendTakeoverData(
   // Before sending the takeover data, we must close the server's
   // local and backing store. This is important for ensuring the RocksDB
   // lock is released so the client can take over.
-  server_->getTakeoverHandler()->closeStorage();
+  takeoverHandler_->closeStorage();
 
   auto& state = state_.get();
 
@@ -293,7 +295,7 @@ Future<Unit> TakeoverServer::ConnHandler::sendTakeoverData(
   try {
     // Possibly simulate a takeover error during data transfer
     // for testing purposes.
-    server_->faultInjector_.check("takeover", "error during send");
+    faultInjector_.check("takeover", "error during send");
     data.serialize(state.protocolCapabilities, msg);
     for (auto& file : msg.files) {
       XLOGF(DBG7, "sending fd for takeover: {}", file.fd());
@@ -330,7 +332,7 @@ Future<Unit> TakeoverServer::ConnHandler::sendTakeoverDataMessage(
     firstChunkFlagMsg.data = TakeoverData::serializeFirstChunk();
 
     return state.socket.send(std::move(firstChunkFlagMsg))
-        .thenValue([this, &msg, &state](auto&&) {
+        .thenValue([this, msg = std::move(msg), &state](auto&&) mutable {
           XLOGF(DBG7, "first chunk FLAG msg sent");
 
           // Create a new message with the first chunk
@@ -340,7 +342,7 @@ Future<Unit> TakeoverServer::ConnHandler::sendTakeoverDataMessage(
               *(msg.data.cloneOne()), std::move(msg.files)};
 
           return state.socket.send(std::move(firstChunkMsgWithFiles))
-              .thenValue([this, msg = std::move(msg), &state](auto&&) {
+              .thenValue([this, msg = std::move(msg), &state](auto&&) mutable {
                 return sendTakeoverDataMessageInChunks(
                     state, std::make_unique<folly::IOBuf>(msg.data));
               });
@@ -424,7 +426,12 @@ void TakeoverServer::connectionAccepted(
   std::unique_ptr<ConnHandler> handler;
   try {
     handler.reset(new ConnHandler{
-        this, std::move(socket), supportedVersions_, supportedCapabilities_});
+        eventBase_,
+        handler_,
+        faultInjector_,
+        std::move(socket),
+        supportedVersions_,
+        supportedCapabilities_});
   } catch (const std::exception& ex) {
     XLOGF(
         ERR,
