@@ -881,4 +881,41 @@ TEST(TreeInode, stat_on_directories_only_prefetches_subdirectories) {
   EXPECT_EQ(2, mount.getBackingStore()->getAuxDataLookups().size());
 }
 
+TEST(TreeInode, buildDirFromTree) {
+  // Set up a mount with a known directory structure
+  FakeTreeBuilder builder;
+  builder.setFiles({
+      {"dir/a.txt", "content_a"},
+      {"dir/b.txt", "content_b"},
+      {"dir/c.txt", "content_c"},
+  });
+  TestMount mount{builder};
+
+  // Load the directory inode — this exercises buildDirFromTree internally
+  auto dir = mount.getTreeInode("dir"_relpath);
+  auto contents = dir->getContents().rlock();
+
+  // Verify all entries are present
+  EXPECT_EQ(3, contents->entries.size());
+  EXPECT_NE(contents->entries.end(), contents->entries.find("a.txt"_pc));
+  EXPECT_NE(contents->entries.end(), contents->entries.find("b.txt"_pc));
+  EXPECT_NE(contents->entries.end(), contents->entries.find("c.txt"_pc));
+
+  // Verify entries are not materialized (they come from source control)
+  EXPECT_FALSE(contents->entries.at("a.txt"_pc).isMaterialized());
+  EXPECT_FALSE(contents->entries.at("b.txt"_pc).isMaterialized());
+  EXPECT_FALSE(contents->entries.at("c.txt"_pc).isMaterialized());
+
+  // Verify each entry has a unique inode number
+  auto inoA = contents->entries.at("a.txt"_pc).getInodeNumber();
+  auto inoB = contents->entries.at("b.txt"_pc).getInodeNumber();
+  auto inoC = contents->entries.at("c.txt"_pc).getInodeNumber();
+  EXPECT_NE(inoA, inoB);
+  EXPECT_NE(inoA, inoC);
+  EXPECT_NE(inoB, inoC);
+
+  // Verify mode bits are correct for regular files
+  EXPECT_EQ(S_IFREG | 0644, contents->entries.at("a.txt"_pc).getInitialMode());
+}
+
 #endif // _WIN32

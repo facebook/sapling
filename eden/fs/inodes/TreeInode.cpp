@@ -1164,19 +1164,18 @@ DirContents TreeInode::buildDirFromTree(
     bool windowsSymlinksEnabled) {
   XCHECK(tree);
 
-  // A future optimization is for this code to allocate all of the inode numbers
-  // at once and then dole them out, one per entry. It would reduce the number
-  // of atomic operations from N to 1, though if the atomic is issued with the
-  // other work this loop is doing it may not matter much.
+  auto startInode = overlay->allocateInodeNumbers(tree->size());
 
   DirContents dir(caseSensitive);
   // TODO: O(N^2)
+
+  uint64_t inodeOffset = 0;
   for (const auto& treeEntry : *tree) {
     dir.emplace(
         treeEntry.first,
         modeFromTreeEntryType(filteredEntryType(
             treeEntry.second.getType(), windowsSymlinksEnabled)),
-        overlay->allocateInodeNumber(),
+        InodeNumber{startInode.get() + inodeOffset++},
         treeEntry.second.getObjectId());
   }
   return dir;

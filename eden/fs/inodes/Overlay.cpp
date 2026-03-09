@@ -487,6 +487,18 @@ InodeNumber Overlay::allocateInodeNumber() {
   return InodeNumber{previous};
 }
 
+InodeNumber Overlay::allocateInodeNumbers(uint64_t count) {
+  static_assert(
+      sizeof(nextInodeNumber_) == sizeof(InodeNumber),
+      "expected nextInodeNumber_ and InodeNumber to have the same size");
+  static_assert(
+      sizeof(InodeNumber) >= 8, "expected InodeNumber to be at least 64 bits");
+
+  auto previous = nextInodeNumber_.fetch_add(count);
+  XDCHECK_NE(0u, previous) << "allocateInodeNumbers called before initialize";
+  return InodeNumber{previous};
+}
+
 DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
   DurationScope<EdenStats> statScope{stats_, &OverlayStats::loadOverlayDir};
   DirContents result(caseSensitive_);

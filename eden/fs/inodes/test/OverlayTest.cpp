@@ -567,6 +567,27 @@ TEST_P(RawOverlayTest, max_inode_number_is_1_if_overlay_is_empty) {
   EXPECT_EQ(2_ino, overlay->allocateInodeNumber());
 }
 
+TEST_P(RawOverlayTest, allocateInodeNumbers) {
+  // Allocate a range of 5 inode numbers starting from 2
+  auto start = overlay->allocateInodeNumbers(5);
+  EXPECT_EQ(2_ino, start);
+
+  // The next single allocation should be 7 (2 + 5)
+  EXPECT_EQ(7_ino, overlay->allocateInodeNumber());
+
+  // Allocate another range
+  auto start2 = overlay->allocateInodeNumbers(3);
+  EXPECT_EQ(8_ino, start2);
+
+  // Next single allocation should be 11 (8 + 3)
+  EXPECT_EQ(11_ino, overlay->allocateInodeNumber());
+
+  // Allocating 0 should not advance the counter
+  auto start3 = overlay->allocateInodeNumbers(0);
+  EXPECT_EQ(12_ino, start3);
+  EXPECT_EQ(12_ino, overlay->allocateInodeNumber());
+}
+
 TEST_P(RawOverlayTest, remembers_max_inode_number_of_tree_inodes) {
   auto ino2 = overlay->allocateInodeNumber();
   EXPECT_EQ(2_ino, ino2);

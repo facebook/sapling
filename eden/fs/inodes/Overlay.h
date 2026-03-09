@@ -170,11 +170,18 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
    *   TreeInode::create() or TreeInode::mkdir().  In this case
    *   inodeCreated() should be called immediately afterwards to register the
    *   new child Inode object.
-   *
-   * TODO: It would be easy to extend this function to allocate a range of
-   * inode values in one atomic operation.
    */
   InodeNumber allocateInodeNumber();
+
+  /**
+   * Allocate a contiguous range of inode numbers.
+   *
+   * Returns the first inode number in the range. The allocated range is
+   * [returned, returned + count). Uses a single atomic operation instead of
+   * count separate increments.
+   */
+  InodeNumber allocateInodeNumbers(uint64_t count);
+
 #ifndef _WIN32
 
   /**
