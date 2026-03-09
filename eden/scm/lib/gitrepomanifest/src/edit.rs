@@ -97,7 +97,7 @@ fn resolve_operation(src: &str, node: &Node, op: &Operation) -> Result<Replace> 
     match op {
         Operation::SetAttribute { attr, value } => resolve_set_attribute(src, node, attr, value),
         Operation::RemoveElement => Ok(resolve_remove_element(src, node)),
-        Operation::AddChild { tag, attrs } => unimplemented!(),
+        Operation::AddChild { tag, attrs } => resolve_add_child(src, node, tag, attrs),
     }
 }
 
@@ -170,6 +170,70 @@ fn element_full_line_range(src: &str, node: &Node) -> Range<usize> {
     } else {
         range.start..range.end
     }
+}
+
+fn resolve_add_child(
+    src: &str,
+    node: &Node,
+    tag: &str,
+    attrs: &[(AttrName, AttrVal)],
+) -> Result<Replace> {
+    let node_range = node.range();
+    let node_indent = leading_whitespace_at(src, node_range.start);
+    let child_indent = node_indent.to_owned() + "  ";
+
+    let attr_str = attrs
+        .iter()
+        .map(|(k, v)| format!("{}=\"{}\"", k, v))
+        .collect::<Vec<_>>()
+        .join(" ");
+    let child_elem = format!("<{} {}/>", tag, attr_str);
+
+    if is_self_closing(src, node) {
+        // Convert self-closing to open/close form and insert the child
+        let tag_end = opening_tag_end(src, node)?; // position of `/`
+        let node_name = node.tag_name().name();
+        Ok(Replace {
+            range: tag_end..node_range.end,
+            data: format!(
+                ">\n{}{}\n{}</{}>",
+                child_indent, child_elem, node_indent, node_name
+            ),
+        })
+    } else {
+        // Insert before the closing tag
+        let close_tag_start = src[node_range.start..node_range.end]
+            .rfind("</")
+            .map(|i| i + node_range.start)
+            .ok_or_else(|| anyhow::anyhow!("cannot find closing tag of an element"))?;
+        let last_newline = src[node_range.start..close_tag_start].rfind('\n');
+        match last_newline {
+            // When the opening tag and the closing tag are at different lines
+            Some(offset) => {
+                let close_line_start = node_range.start + offset + 1;
+                Ok(Replace {
+                    range: close_line_start..close_line_start,
+                    data: format!("{}{}\n", child_indent, child_elem),
+                })
+            }
+            // When the opening tag and the closing tag are at the same line
+            None => Ok(Replace {
+                range: close_tag_start..close_tag_start,
+                data: format!("\n{}{}\n{}", child_indent, child_elem, node_indent),
+            }),
+        }
+    }
+}
+
+fn is_self_closing(src: &str, node: &Node) -> bool {
+    src[node.range()].ends_with("/>")
+}
+
+fn leading_whitespace_at(src: &str, offset: usize) -> &str {
+    let line_start = src[..offset].rfind('\n').map_or(0, |i| i + 1);
+    let rest = &src[line_start..];
+    let ws_len = rest.len() - rest.trim_start().len();
+    &src[line_start..line_start + ws_len]
 }
 
 /// Apply semantic edits to `data` in place. Resolves edits to byte-range
@@ -326,5 +390,82 @@ mod tests {
   <project name="d" path="src/d" revision="abcdef"></project>"#
         ));
         assert!(!result.contains("src/c"));
+    }
+
+    #[test]
+    fn add_child_to_self_closing() {
+        let result = run(
+            SAMPLE,
+            vec![Edit {
+                target: Target {
+                    levels: vec![("project".into(), vec![("path".into(), "src/b".into())])],
+                },
+                op: Operation::AddChild {
+                    tag: "linkfile".into(),
+                    attrs: vec![
+                        ("src".into(), "another/linksrc".into()),
+                        ("dest".into(), "another/linkdest".into()),
+                    ],
+                },
+            }],
+        );
+        assert!(result.contains(
+            r#"
+  <project name="b" path="src/b" revision="def456">
+    <linkfile src="another/linksrc" dest="another/linkdest"/>
+  </project>"#
+        ));
+    }
+
+    #[test]
+    fn add_child_to_open_element() {
+        let result = run(
+            SAMPLE,
+            vec![Edit {
+                target: Target {
+                    levels: vec![("project".into(), vec![("name".into(), "c".into())])],
+                },
+                op: Operation::AddChild {
+                    tag: "linkfile".into(),
+                    attrs: vec![
+                        ("src".into(), "another/linksrc".into()),
+                        ("dest".into(), "another/linkdest".into()),
+                    ],
+                },
+            }],
+        );
+        assert!(result.contains(
+            r#"
+  <project name="c" path="src/c" revision="123456">
+    <linkfile src="some/linksrc" dest="linkdest"/>
+    <annotation name="prebuilt" value="true"/>
+    <linkfile src="another/linksrc" dest="another/linkdest"/>
+  </project>"#
+        ));
+    }
+
+    #[test]
+    fn add_child_to_empty_open_element() {
+        let result = run(
+            SAMPLE,
+            vec![Edit {
+                target: Target {
+                    levels: vec![("project".into(), vec![("name".into(), "d".into())])],
+                },
+                op: Operation::AddChild {
+                    tag: "linkfile".into(),
+                    attrs: vec![
+                        ("src".into(), "new/linksrc".into()),
+                        ("dest".into(), "new/linkdest".into()),
+                    ],
+                },
+            }],
+        );
+        assert!(result.contains(
+            r#"
+  <project name="d" path="src/d" revision="abcdef">
+    <linkfile src="new/linksrc" dest="new/linkdest"/>
+  </project>"#
+        ));
     }
 }
