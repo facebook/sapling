@@ -96,7 +96,7 @@ fn resolve_target<'a, 'input>(
 fn resolve_operation(src: &str, node: &Node, op: &Operation) -> Result<Replace> {
     match op {
         Operation::SetAttribute { attr, value } => resolve_set_attribute(src, node, attr, value),
-        Operation::RemoveElement => unimplemented!(),
+        Operation::RemoveElement => Ok(resolve_remove_element(src, node)),
         Operation::AddChild { tag, attrs } => unimplemented!(),
     }
 }
@@ -136,6 +136,39 @@ fn opening_tag_end(src: &str, node: &Node) -> Result<usize> {
         Ok(pos - 1)
     } else {
         Ok(pos)
+    }
+}
+
+fn resolve_remove_element(src: &str, node: &Node) -> Replace {
+    let range = element_full_line_range(src, node);
+    Replace {
+        range,
+        data: String::new(),
+    }
+}
+
+/// Get the full line range of an element including leading whitespace and
+/// trailing newline.
+fn element_full_line_range(src: &str, node: &Node) -> Range<usize> {
+    let range = node.range();
+
+    let line_start = src[..range.start].rfind('\n').map_or(0, |i| i + 1);
+    let line_end = src[range.end..]
+        .find('\n')
+        .map_or(range.end, |i| range.end + i + 1);
+
+    // Check if the element shares the same line with any other elements
+    let owns_line_start = src[line_start..range.start]
+        .bytes()
+        .all(|b| b == b' ' || b == b'\t');
+    let owns_line_end = src[range.end..line_end]
+        .bytes()
+        .all(|b| b == b' ' || b == b'\t' || b == b'\n');
+
+    if owns_line_start && owns_line_end {
+        line_start..line_end
+    } else {
+        range.start..range.end
     }
 }
 
@@ -255,5 +288,43 @@ mod tests {
             }],
         );
         assert!(result.contains(r#"  <project name="e" path="src/e" revision="eeeeee"/>"#));
+    }
+
+    #[test]
+    fn remove_element() {
+        let result = run(
+            SAMPLE,
+            vec![Edit {
+                target: Target {
+                    levels: vec![("project".into(), vec![("path".into(), "src/b".into())])],
+                },
+                op: Operation::RemoveElement,
+            }],
+        );
+        assert!(result.contains(
+            r#"
+  <project name="a" path="src/a" revision="abc123" groups="dev"/>
+  <project name="c" path="src/c" revision="123456">"#
+        ));
+        assert!(!result.contains("src/b"));
+    }
+
+    #[test]
+    fn remove_element_with_children() {
+        let result = run(
+            SAMPLE,
+            vec![Edit {
+                target: Target {
+                    levels: vec![("project".into(), vec![("name".into(), "c".into())])],
+                },
+                op: Operation::RemoveElement,
+            }],
+        );
+        assert!(result.contains(
+            r#"
+  <project name="b" path="src/b" revision="def456"/>
+  <project name="d" path="src/d" revision="abcdef"></project>"#
+        ));
+        assert!(!result.contains("src/c"));
     }
 }
