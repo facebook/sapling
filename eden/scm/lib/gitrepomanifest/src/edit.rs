@@ -468,4 +468,54 @@ mod tests {
   </project>"#
         ));
     }
+
+    #[test]
+    fn multiple_edits() {
+        let result = run(
+            SAMPLE,
+            vec![
+                // SetAttribute
+                Edit {
+                    target: Target {
+                        levels: vec![("project".into(), vec![("path".into(), "src/a".into())])],
+                    },
+                    op: Operation::SetAttribute {
+                        attr: "revision".into(),
+                        value: "aaaaaa".into(),
+                    },
+                },
+                // AddChild
+                Edit {
+                    target: Target {
+                        levels: vec![("project".into(), vec![("name".into(), "d".into())])],
+                    },
+                    op: Operation::AddChild {
+                        tag: "linkfile".into(),
+                        attrs: vec![
+                            ("src".into(), "new/linksrc".into()),
+                            ("dest".into(), "new/linkdest".into()),
+                        ],
+                    },
+                },
+                // RemoveElement
+                Edit {
+                    target: Target {
+                        levels: vec![("project".into(), vec![("path".into(), "src/b".into())])],
+                    },
+                    op: Operation::RemoveElement,
+                },
+            ],
+        );
+        assert!(result.contains(
+            r#"
+  <project name="a" path="src/a" revision="aaaaaa" groups="dev"/>
+  <project name="c" path="src/c" revision="123456">
+    <linkfile src="some/linksrc" dest="linkdest"/>
+    <annotation name="prebuilt" value="true"/>
+  </project>
+  <project name="d" path="src/d" revision="abcdef">
+    <linkfile src="new/linksrc" dest="new/linkdest"/>
+  </project>"#
+        ));
+    }
 }
