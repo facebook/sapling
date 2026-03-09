@@ -94,7 +94,49 @@ fn resolve_target<'a, 'input>(
 }
 
 fn resolve_operation(src: &str, node: &Node, op: &Operation) -> Result<Replace> {
-    unimplemented!()
+    match op {
+        Operation::SetAttribute { attr, value } => resolve_set_attribute(src, node, attr, value),
+        Operation::RemoveElement => unimplemented!(),
+        Operation::AddChild { tag, attrs } => unimplemented!(),
+    }
+}
+
+fn resolve_set_attribute(
+    src: &str,
+    node: &Node,
+    attr_name: &str,
+    attr_value: &str,
+) -> Result<Replace> {
+    assert!(node.is_element());
+    if let Some(attr) = node.attributes().find(|a| a.name() == attr_name) {
+        // Replace existing attribute value.
+        Ok(Replace {
+            range: attr.range_value(),
+            data: attr_value.to_string(),
+        })
+    } else {
+        // Attribute doesn't exist — insert before the `>` or `/>`.
+        let pos = opening_tag_end(src, node)?;
+        Ok(Replace {
+            range: pos..pos,
+            data: format!(" {}=\"{}\"", attr_name, attr_value),
+        })
+    }
+}
+
+/// Find the byte position of `>` or `/>` that closes the opening tag.
+/// Returns the position just before `/` (if self-closing) or `>`.
+fn opening_tag_end(src: &str, node: &Node) -> Result<usize> {
+    let range = node.range();
+    let tag_end_offset = src[range.start..range.end]
+        .find('>')
+        .ok_or_else(|| anyhow::anyhow!("cannot find tag end of an element"))?;
+    let pos = range.start + tag_end_offset;
+    if pos > 0 && src.as_bytes()[pos - 1] == b'/' {
+        Ok(pos - 1)
+    } else {
+        Ok(pos)
+    }
 }
 
 /// Apply semantic edits to `data` in place. Resolves edits to byte-range
@@ -128,6 +170,12 @@ mod tests {
 </manifest>
 "#;
 
+    fn run(data: &[u8], edits: Vec<Edit>) -> String {
+        let mut buf = data.to_vec();
+        apply(&mut buf, &edits).unwrap();
+        String::from_utf8(buf).unwrap()
+    }
+
     #[test]
     fn test_match_target() {
         let doc = get_tree(SAMPLE).unwrap();
@@ -154,5 +202,58 @@ mod tests {
         };
         let err = resolve_target(&root, &target).unwrap_err();
         assert!(err.to_string().contains("no <project>"));
+    }
+
+    #[test]
+    fn set_attribute_existing() {
+        let result = run(
+            SAMPLE,
+            vec![Edit {
+                target: Target {
+                    levels: vec![("project".into(), vec![("name".into(), "a".into())])],
+                },
+                op: Operation::SetAttribute {
+                    attr: "revision".into(),
+                    value: "aaaaaa".into(),
+                },
+            }],
+        );
+        assert!(
+            result.contains(r#"  <project name="a" path="src/a" revision="aaaaaa" groups="dev"/>"#)
+        );
+
+        let result = run(
+            SAMPLE,
+            vec![Edit {
+                target: Target {
+                    levels: vec![
+                        ("project".into(), vec![("path".into(), "src/c".into())]),
+                        ("linkfile".into(), vec![("dest".into(), "linkdest".into())]),
+                    ],
+                },
+                op: Operation::SetAttribute {
+                    attr: "src".into(),
+                    value: "new/linksrc".into(),
+                },
+            }],
+        );
+        assert!(result.contains(r#"    <linkfile src="new/linksrc" dest="linkdest"/>"#));
+    }
+
+    #[test]
+    fn set_attribute_adds_when_missing() {
+        let result = run(
+            SAMPLE,
+            vec![Edit {
+                target: Target {
+                    levels: vec![("project".into(), vec![("path".into(), "src/e".into())])],
+                },
+                op: Operation::SetAttribute {
+                    attr: "revision".into(),
+                    value: "eeeeee".into(),
+                },
+            }],
+        );
+        assert!(result.contains(r#"  <project name="e" path="src/e" revision="eeeeee"/>"#));
     }
 }
