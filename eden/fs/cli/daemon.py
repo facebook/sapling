@@ -414,7 +414,7 @@ def get_edenfs_environment(
 
     # Errors from Rust will be logged to the edenfs log.
     eden_env["SL_LOG"] = (
-        "clienttelemetry=info,error,walkdetector=info,backingstore::prefetch=info"
+        "clienttelemetry=info,error,walkdetector=info,backingstore::prefetch=info,indexedlog::rotate=info"
     )
 
     if sys.platform != "win32":

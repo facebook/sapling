@@ -22,6 +22,7 @@ use minibytes::Bytes;
 use once_cell::sync::OnceCell;
 use tracing::debug;
 use tracing::debug_span;
+use tracing::info;
 use tracing::trace;
 
 use crate::change_detect::SharedChangeDetector;
@@ -715,13 +716,19 @@ impl RotateLog {
     fn rotate_internal(&mut self, lock: &ScopedDirLock) -> crate::Result<()> {
         ROTATE_COUNT.fetch_add(1, Ordering::Relaxed);
 
+        let dir_name = match &self.dir {
+            Some(dir) => dir.to_string_lossy(),
+            None => "<none>".into(),
+        };
+
         // This is relative to the primary log, so clear it out when rotating.
         self.next_btrfs_size_check.take();
 
-        let span = debug_span!("RotateLog::rotate", latest = self.latest as u32);
-        if let Some(dir) = &self.dir {
-            span.record("dir", dir.to_string_lossy().as_ref());
-        }
+        let span = debug_span!(
+            "RotateLog::rotate",
+            dir = %dir_name,
+            latest = self.latest as u32
+        );
         let _guard = span.enter();
 
         // Create a new Log. Bump latest.
@@ -734,6 +741,12 @@ impl RotateLog {
         )?;
         if self.logs.len() >= self.open_options.max_log_count as usize {
             if let Some(log) = self.logs.pop().and_then(|mut l| l.take()) {
+                info!(
+                    %dir_name,
+                    len = log.meta.primary_len,
+                    "RotateLog dropping log"
+                );
+
                 if self.is_consistent_reads() {
                     self.pinned_logs.push(log);
                 }
