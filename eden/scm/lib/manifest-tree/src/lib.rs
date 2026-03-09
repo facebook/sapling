@@ -428,7 +428,7 @@ struct NoParents;
 impl ParentTreeTracker for NoParents {
     type ActiveParents = ();
 
-    fn initial_active(&self) -> () {}
+    fn initial_active(&self) {}
     fn is_unchanged(&self, _hgid: &HgId, _parent_tree_nodes: &[HgId]) -> bool {
         // Durable nodes in content-addressed stores are always valid.
         true
