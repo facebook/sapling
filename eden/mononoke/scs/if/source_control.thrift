@@ -1830,8 +1830,6 @@ struct RepoCreationRequest {
 struct CreateReposParams {
   /// Lists of repos to create
   1: list<RepoCreationRequest> repos;
-  /// Dry run:
-  2: bool dry_run;
 }
 
 struct CreateReposToken {

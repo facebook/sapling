@@ -14,9 +14,6 @@ use crate::ScscApp;
 #[derive(clap::Parser)]
 /// Create a bookmark
 pub(super) struct CommandArgs {
-    /// Dry run
-    #[clap(long, short = 'n')]
-    dry_run: bool,
     /// Hipster group to use for newly created ACL (if not specified, will not create new ACL)
     #[clap(long)]
     hipster_group: Option<String>,
@@ -42,7 +39,6 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         .collect();
     let params = thrift::CreateReposParams {
         repos,
-        dry_run: args.dry_run,
         ..Default::default()
     };
     let token = conn.create_repos(&params).await?;

@@ -327,7 +327,6 @@ async fn validate_and_process_custom_acl(
     custom_acl: &thrift::CustomAclParams,
     valid_oncall_names_cache: &mut HashSet<String>,
     valid_hipster_groups_cache: &mut HashSet<String>,
-    dry_run: bool,
 ) -> Result<(), scs_errors::ServiceError> {
     let acl_name = make_full_acl_name_from_repo_name(&repo_creation_request.repo_name);
 
@@ -367,7 +366,7 @@ async fn validate_and_process_custom_acl(
             &custom_acl.hipster_group,
         )
         .await?;
-    } else if !dry_run {
+    } else {
         create_repo_acl(
             ctx,
             &acl_name,
@@ -415,7 +414,6 @@ async fn update_repos_acls(
                 custom_acl,
                 &mut valid_oncall_names_cache,
                 &mut valid_hipster_groups_cache,
-                params.dry_run,
             )
             .await?;
         } else {
@@ -565,7 +563,6 @@ fn make_quick_repo_definition(
 
 async fn prepare_repo_configs_mutation_nowait(
     ctx: CoreContext,
-    _dry_run: bool,
     repos_ids_and_requests: Vec<(RepositoryId, thrift::RepoCreationRequest)>,
 ) -> Result<i64, scs_errors::ServiceError> {
     let configo_client = ConfigoClient::with_client(
@@ -714,9 +711,7 @@ async fn create_repos_in_mononoke(
 
     // We have reserved the repo ids. Now it's time to actually create the repos, safe in the
     // knowledge that no-one will compete with us
-    match prepare_repo_configs_mutation_nowait(ctx.clone(), params.dry_run, repo_ids_and_requests)
-        .await
-    {
+    match prepare_repo_configs_mutation_nowait(ctx.clone(), repo_ids_and_requests).await {
         Ok(mutation_id) => {
             retry(
                 |_| {
