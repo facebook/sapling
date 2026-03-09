@@ -41,6 +41,15 @@ impl Cache {
     pub fn len(&self) -> usize {
         self.live.len() + self.flushing.as_ref().map_or(0, |flushing| flushing.len())
     }
+
+    /// Remove all entries from the live buffer whose keys start with the
+    /// given prefix. Entries that are currently being flushed are not
+    /// affected. Returns the number of entries removed.
+    pub fn remove_by_prefix(&mut self, prefix: &str) -> usize {
+        let before = self.live.len();
+        self.live.retain(|key, _| !key.starts_with(prefix));
+        before - self.live.len()
+    }
 }
 
 /// A blobstore wrapper that reads from the underlying blobstore but writes to memory.
@@ -331,6 +340,15 @@ impl<T: KeyedBlobstore + Clone> MemWritesKeyedBlobstore<T> {
     pub fn set_no_access_to_inner(&self, no_access_to_inner: bool) {
         self.no_access_to_inner
             .store(no_access_to_inner, Ordering::Relaxed);
+    }
+
+    /// Remove all entries from the live write buffer whose keys start with
+    /// the given prefix. This prevents them from being flushed to the
+    /// underlying blobstore on the next `persist()`. Entries that are
+    /// currently being flushed are not affected. Returns the number of
+    /// entries removed.
+    pub fn remove_by_prefix(&self, prefix: &str) -> usize {
+        self.cache.with(|cache| cache.remove_by_prefix(prefix))
     }
 }
 
@@ -652,6 +670,182 @@ mod test {
         outer.persist(ctx).await?;
         assert_eq!(inner.get(ctx, key).await?, Some(value2.clone().into()));
         assert_eq!(inner.get(ctx, key2).await?, Some(value2.into()));
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_remove_by_prefix_basic(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        borrowed!(ctx);
+
+        let inner = Memblob::default();
+        let outer = MemWritesBlobstore::new(inner.clone());
+
+        outer
+            .put(ctx, "aaa/1".to_owned(), BlobstoreBytes::from_bytes("v1"))
+            .await?;
+        outer
+            .put(ctx, "aaa/2".to_owned(), BlobstoreBytes::from_bytes("v2"))
+            .await?;
+        outer
+            .put(ctx, "bbb/1".to_owned(), BlobstoreBytes::from_bytes("v3"))
+            .await?;
+
+        let removed = outer
+            .get_cache()
+            .with(|cache| cache.remove_by_prefix("aaa/"));
+        assert_eq!(removed, 2);
+
+        assert!(outer.get(ctx, "aaa/1").await?.is_none());
+        assert!(outer.get(ctx, "aaa/2").await?.is_none());
+        assert_eq!(
+            outer
+                .get(ctx, "bbb/1")
+                .await?
+                .expect("bbb/1 should still be present")
+                .into_raw_bytes(),
+            Bytes::from("v3"),
+        );
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_remove_by_prefix_no_match(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        borrowed!(ctx);
+
+        let inner = Memblob::default();
+        let outer = MemWritesBlobstore::new(inner.clone());
+
+        outer
+            .put(ctx, "aaa/1".to_owned(), BlobstoreBytes::from_bytes("v1"))
+            .await?;
+        outer
+            .put(ctx, "bbb/1".to_owned(), BlobstoreBytes::from_bytes("v2"))
+            .await?;
+
+        let removed = outer
+            .get_cache()
+            .with(|cache| cache.remove_by_prefix("zzz/"));
+        assert_eq!(removed, 0);
+
+        assert!(outer.get(ctx, "aaa/1").await?.is_some());
+        assert!(outer.get(ctx, "bbb/1").await?.is_some());
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_remove_by_prefix_then_persist(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        borrowed!(ctx);
+
+        let inner = Memblob::default();
+        let outer = MemWritesBlobstore::new(inner.clone());
+
+        outer
+            .put(ctx, "aaa/1".to_owned(), BlobstoreBytes::from_bytes("v1"))
+            .await?;
+        outer
+            .put(ctx, "aaa/2".to_owned(), BlobstoreBytes::from_bytes("v2"))
+            .await?;
+        outer
+            .put(ctx, "bbb/1".to_owned(), BlobstoreBytes::from_bytes("v3"))
+            .await?;
+
+        outer
+            .get_cache()
+            .with(|cache| cache.remove_by_prefix("aaa/"));
+        outer.persist(ctx).await?;
+
+        // Only bbb/1 should have been persisted to inner
+        assert!(inner.get(ctx, "aaa/1").await?.is_none());
+        assert!(inner.get(ctx, "aaa/2").await?.is_none());
+        assert_eq!(
+            inner
+                .get(ctx, "bbb/1")
+                .await?
+                .expect("bbb/1 should be in inner")
+                .into_raw_bytes(),
+            Bytes::from("v3"),
+        );
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_remove_by_prefix_during_flush(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        borrowed!(ctx);
+
+        let inner = Memblob::new(PutBehaviour::Overwrite);
+        let (allow_tx, allow_rx) = watch::channel(false);
+        let delay = Arc::new(GatedBlobstore::new(inner.clone(), allow_rx));
+        let outer = MemWritesBlobstore::new(delay);
+
+        // Put entries with two prefixes
+        outer
+            .put(ctx, "aaa/1".to_owned(), BlobstoreBytes::from_bytes("v1"))
+            .await?;
+        outer
+            .put(ctx, "bbb/1".to_owned(), BlobstoreBytes::from_bytes("v2"))
+            .await?;
+
+        // Start a persist that will block on the gate
+        let persist = mononoke::spawn_task({
+            cloned!(ctx, outer);
+            async move { outer.persist(&ctx).await }
+        });
+
+        // Wait until writes are in-flight (receiver count > 1 means a put
+        // has cloned the receiver and is waiting on the gate)
+        while allow_tx.receiver_count() <= 1 {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+
+        // Add new entries while flush is in progress
+        outer
+            .put(ctx, "aaa/2".to_owned(), BlobstoreBytes::from_bytes("v3"))
+            .await?;
+        outer
+            .put(ctx, "bbb/2".to_owned(), BlobstoreBytes::from_bytes("v4"))
+            .await?;
+
+        // Remove "aaa/" entries from the live buffer — this should NOT
+        // affect the flushing entries (aaa/1, bbb/1)
+        let removed = outer
+            .get_cache()
+            .with(|cache| cache.remove_by_prefix("aaa/"));
+        assert_eq!(removed, 1, "only aaa/2 is in the live buffer");
+
+        // Let the flush complete
+        allow_tx.send(true)?;
+        persist.await??;
+
+        // Flushing entries should have landed in inner (including aaa/1)
+        assert_eq!(
+            inner.get(ctx, "aaa/1").await?,
+            Some(BlobstoreBytes::from_bytes("v1").into()),
+        );
+        assert_eq!(
+            inner.get(ctx, "bbb/1").await?,
+            Some(BlobstoreBytes::from_bytes("v2").into()),
+        );
+
+        // aaa/2 was removed from live, so it shouldn't be in inner yet
+        assert!(inner.get(ctx, "aaa/2").await?.is_none());
+        // bbb/2 is still in the live buffer
+        assert!(outer.get(ctx, "bbb/2").await?.is_some());
+
+        // Persist again — only bbb/2 should land (aaa/2 was removed)
+        outer.persist(ctx).await?;
+        assert!(inner.get(ctx, "aaa/2").await?.is_none());
+        assert_eq!(
+            inner.get(ctx, "bbb/2").await?,
+            Some(BlobstoreBytes::from_bytes("v4").into()),
+        );
 
         Ok(())
     }

@@ -348,4 +348,16 @@ impl DerivationContext {
         }
         Ok(())
     }
+
+    /// Remove all entries from the write cache whose blobstore keys start
+    /// with the given prefix. This prevents them from being flushed to
+    /// persistent storage on the next `flush()`. The entries remain
+    /// readable until the next `flush()`. Returns the number of entries
+    /// removed, or 0 if write batching is not enabled.
+    pub fn remove_write_cache_by_prefix(&self, prefix: &str) -> usize {
+        match &self.blobstore_write_cache {
+            Some((_, blobstore)) => blobstore.remove_by_prefix(prefix),
+            None => 0,
+        }
+    }
 }
