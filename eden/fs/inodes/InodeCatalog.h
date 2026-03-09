@@ -9,6 +9,8 @@
 
 #include <optional>
 
+#include <folly/Function.h>
+
 #include "eden/common/utils/Bug.h"
 #include "eden/common/utils/ImmediateFuture.h"
 #include "eden/common/utils/PathFuncs.h"
@@ -126,6 +128,41 @@ class InodeCatalog {
   virtual void saveOverlayDir(
       InodeNumber inodeNumber,
       overlay::OverlayDir&& odir) = 0;
+
+  using OverlayEntryVisitor = folly::FunctionRef<
+      void(const std::string& name, const overlay::OverlayEntry& entry)>;
+  using OverlayEntrySource =
+      folly::FunctionRef<void(OverlayEntryVisitor visitor)>;
+
+  /**
+   * Save a directory to overlay by iterating over entries provided by the
+   * source callback. The count parameter gives the number of entries that
+   * will be emitted. This avoids constructing an intermediate OverlayDir.
+   *
+   * Default implementation builds an OverlayDir from the entries and
+   * delegates to saveOverlayDir().
+   */
+  virtual void saveOverlayEntries(
+      InodeNumber inodeNumber,
+      size_t count,
+      OverlayEntrySource source);
+
+  /**
+   * Load a directory from overlay. The catalog calls the loader with the
+   * entry count and an iterate function. The loader can pre-allocate storage
+   * based on count, then call iterate with a visitor to receive each entry.
+   * Returns false if no overlay exists for this inode.
+   *
+   * Default implementation calls loadOverlayDir() and iterates the result.
+   */
+  using OverlayEntryIterator =
+      folly::FunctionRef<void(OverlayEntryVisitor visitor)>;
+  using OverlayEntryLoader =
+      folly::FunctionRef<void(size_t count, OverlayEntryIterator iterate)>;
+
+  virtual bool loadOverlayEntries(
+      InodeNumber inodeNumber,
+      OverlayEntryLoader loader);
 
   /**
    * Remove the overlay directory record associated with the passed InodeNumber.

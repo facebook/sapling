@@ -43,6 +43,7 @@ cpp_library(
 
 cpp_library(
     name = "inode_catalog",
+    srcs = ["InodeCatalog.cpp"],
     headers = ["InodeCatalog.h"],
     exported_deps = [
         ":inode_number",
@@ -52,6 +53,7 @@ cpp_library(
         "//eden/fs/inodes/overlay:overlay_checker_util",
         "//eden/fs/inodes/overlay:serialization-cpp2-types",
         "//eden/fs/model:model",
+        "//folly:function",
     ],
 )
 
