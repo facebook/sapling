@@ -93,7 +93,7 @@ impl BonsaiDerivable for MappedHgChangesetId {
         let subtree_change_sources =
             get_subtree_change_sources(ctx, derivation_ctx, &bonsai, &HashMap::new()).await?;
         let derivation_opts = get_hg_changeset_derivation_options(derivation_ctx);
-        crate::derive_hg_changeset::derive_from_parents(
+        let (derived, _) = crate::derive_hg_changeset::derive_from_parents(
             ctx,
             derivation_ctx.blobstore(),
             bonsai,
@@ -102,7 +102,8 @@ impl BonsaiDerivable for MappedHgChangesetId {
             &derivation_opts,
             derivation_ctx.restricted_paths(),
         )
-        .await
+        .await?;
+        Ok(derived)
     }
 
     async fn derive_batch(
@@ -164,7 +165,7 @@ impl BonsaiDerivable for MappedHgChangesetId {
                     let subtree_change_sources =
                         get_subtree_change_sources(ctx, derivation_ctx, &bonsai, &res).await?;
                     let derivation_opts = get_hg_changeset_derivation_options(derivation_ctx);
-                    let derived = crate::derive_hg_changeset::derive_from_parents(
+                    let (derived, _) = crate::derive_hg_changeset::derive_from_parents(
                         ctx,
                         derivation_ctx.blobstore(),
                         bonsai,

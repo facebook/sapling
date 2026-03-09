@@ -336,7 +336,7 @@ pub(crate) async fn derive_from_parents(
     subtree_change_sources: HashMap<ChangesetId, HgChangesetId>,
     options: &HgChangesetDeriveOptions,
     restricted_paths: ArcRestrictedPaths,
-) -> Result<MappedHgChangesetId, Error> {
+) -> Result<(MappedHgChangesetId, HgManifestId), Error> {
     let parents = {
         borrowed!(ctx);
         try_join_all(
@@ -373,7 +373,7 @@ pub(crate) async fn derive_from_parents(
         options,
     )
     .await?;
-    Ok(MappedHgChangesetId::new(hg_cs_id))
+    Ok((MappedHgChangesetId::new(hg_cs_id), manifest_id))
 }
 
 pub async fn derive_simple_hg_changeset_stack_without_copy_info(
