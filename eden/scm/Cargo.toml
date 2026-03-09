@@ -116,6 +116,7 @@ members = [
   "lib/fsinfo",
   "lib/fsyncglob",
   "lib/gitcompat",
+  "lib/gitrepomanifest",
   "lib/gitstore",
   "lib/hg-http",
   "lib/hg-metrics",
