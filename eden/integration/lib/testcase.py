@@ -326,6 +326,10 @@ class EdenTestCase(EdenTestCaseBase):
             # Defaulting to 8 retry threads is excessive when the test
             # framework runs tests on each CPU core.
             "hg": ['num-retry-threads = "2"'],
+            "overlay": [
+                # I intend to enable this by default, so turn on for tests.
+                "direct-serialization = true",
+            ],
         }
 
         # Collect experimental configs from mixins

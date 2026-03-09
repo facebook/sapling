@@ -35,6 +35,10 @@ DEFINE_uint32(
     0,
     "Fixed number of entries per directory. "
     "0 means random (1-10000, exponential distribution favoring small dirs)");
+DEFINE_bool(
+    directSerialize,
+    false,
+    "Use direct serialization (skip intermediate std::map)");
 
 namespace {
 
@@ -88,10 +92,17 @@ void benchmarkOverlay(
   auto numThreads = FLAGS_threads;
 
   printf(
-      "Config: dirs=%" SCNu64 ", threads=%u, dirSize=%s\n",
+      "Config: dirs=%" SCNu64 ", threads=%u, dirSize=%s, directSerialize=%s\n",
       N,
       numThreads,
-      FLAGS_dirSize > 0 ? std::to_string(FLAGS_dirSize).c_str() : "random");
+      FLAGS_dirSize > 0 ? std::to_string(FLAGS_dirSize).c_str() : "random",
+      FLAGS_directSerialize ? "true" : "false");
+
+  auto edenConfig = EdenConfig::createTestEdenConfig();
+  if (FLAGS_directSerialize) {
+    edenConfig->overlayDirectSerialization.setValue(
+        true, ConfigSourceType::CommandLine);
+  }
 
   printf("Creating Overlay...\n");
 
@@ -103,12 +114,9 @@ void benchmarkOverlay(
       std::make_shared<NullStructuredLogger>(),
       makeRefPtr<EdenStats>(),
       true,
-      *EdenConfig::createTestEdenConfig());
+      *edenConfig);
 
-  overlay
-      ->initialize(
-          std::make_shared<ReloadableConfig>(
-              EdenConfig::createTestEdenConfig()))
+  overlay->initialize(std::make_shared<ReloadableConfig>(std::move(edenConfig)))
       .get();
 
   // Pre-build directories.

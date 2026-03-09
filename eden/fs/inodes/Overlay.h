@@ -462,6 +462,8 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   friend class IORequest;
 
   bool windowsSymlinksEnabled_;
+
+  bool useDirectSerialization_;
 };
 
 constexpr InodeCatalogType kDefaultInodeCatalogType =

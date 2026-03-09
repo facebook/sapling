@@ -237,7 +237,8 @@ Overlay::Overlay(
       caseSensitive_{caseSensitive},
       structuredLogger_{logger},
       stats_{std::move(stats)},
-      windowsSymlinksEnabled_(windowsSymlinksEnabled) {}
+      windowsSymlinksEnabled_(windowsSymlinksEnabled),
+      useDirectSerialization_(config.overlayDirectSerialization.getValue()) {}
 
 Overlay::~Overlay() {
   close();
@@ -536,21 +537,37 @@ bool Overlay::buildDirEntries(
 DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
   DurationScope<EdenStats> statScope{stats_, &OverlayStats::loadOverlayDir};
   IORequest req{this};
-  auto dirData = inodeCatalog_->loadOverlayDir(inodeNumber);
-  if (!dirData.has_value()) {
-    stats_->increment(&OverlayStats::loadOverlayDirFailure);
-    return DirContents{caseSensitive_};
-  }
-
   folly::fbvector<std::pair<PathComponent, DirEntry>> entries;
-  entries.reserve(dirData->entries()->size());
-  bool shouldRewriteOverlay = buildDirEntries(
-      [&](OverlayEntryVisitor visitor) {
-        for (auto& [name, entry] : *dirData->entries()) {
-          visitor(name, entry);
-        }
-      },
-      entries);
+  bool shouldRewriteOverlay = false;
+
+  if (useDirectSerialization_) {
+    bool found = inodeCatalog_->loadOverlayEntries(
+        inodeNumber,
+        [&](uint32_t count, InodeCatalog::OverlayEntryIterator iterate) {
+          entries.reserve(count);
+          shouldRewriteOverlay = buildDirEntries(iterate, entries);
+        });
+    if (!found) {
+      stats_->increment(&OverlayStats::loadOverlayDirFailure);
+      return DirContents{caseSensitive_};
+    }
+  } else {
+    auto dirData = inodeCatalog_->loadOverlayDir(inodeNumber);
+    if (!dirData.has_value()) {
+      stats_->increment(&OverlayStats::loadOverlayDirFailure);
+      return DirContents{caseSensitive_};
+    }
+
+    entries.reserve(dirData->entries()->size());
+
+    shouldRewriteOverlay = buildDirEntries(
+        [&](OverlayEntryVisitor visitor) {
+          for (auto& [name, entry] : *dirData->entries()) {
+            visitor(name, entry);
+          }
+        },
+        entries);
+  }
 
   DirContents result{std::move(entries), caseSensitive_};
 
@@ -620,8 +637,15 @@ overlay::OverlayDir Overlay::serializeOverlayDir(
 void Overlay::saveOverlayDir(InodeNumber inodeNumber, const DirContents& dir) {
   DurationScope<EdenStats> statScope{stats_, &OverlayStats::saveOverlayDir};
   try {
-    inodeCatalog_->saveOverlayDir(
-        inodeNumber, serializeOverlayDir(inodeNumber, dir));
+    if (useDirectSerialization_) {
+      inodeCatalog_->saveOverlayEntries(
+          inodeNumber, dir.size(), [&](OverlayEntryVisitor visitor) {
+            visitDirEntries(inodeNumber, dir, visitor);
+          });
+    } else {
+      inodeCatalog_->saveOverlayDir(
+          inodeNumber, serializeOverlayDir(inodeNumber, dir));
+    }
     stats_->increment(&OverlayStats::saveOverlayDirSuccessful);
   } catch (const std::exception& e) {
     XLOGF(ERR, "Failed to save overlay dir {} {}", inodeNumber, e.what());
