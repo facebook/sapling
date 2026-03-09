@@ -54,18 +54,17 @@ bitflags! {
         const WINDOWS_NAMES = 5;
         /// Certain characters are ignored by HFS+.
         const HFS_STRIP = 8;
-
-        const UNIX = Self::HFS_STRIP.bits();
-        const WINDOWS = Self::CASE_INSENSITIVE.bits() | Self::BACKSLASH_SEP.bits() | Self::WINDOWS_NAMES.bits() | Self::HFS_STRIP.bits();
     }
 }
 
 impl FsFeatures {
-    pub const fn current_platform() -> Self {
+    pub fn current_platform() -> Self {
         if cfg!(windows) {
-            Self::WINDOWS
+            Self::BACKSLASH_SEP | Self::WINDOWS_NAMES
+        } else if cfg!(target_os = "macos") {
+            Self::HFS_STRIP
         } else {
-            Self::UNIX
+            Self::empty()
         }
     }
 }

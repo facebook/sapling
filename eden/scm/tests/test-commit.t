@@ -666,7 +666,8 @@ verify pathauditor blocks evil filepaths
   $ hg co --clean tip
   abort: path contains illegal component: .h\xe2\x80\x8cg\\hgrc (esc)
   [255]
-#else
+#endif
+#if osx
   $ hg co --clean tip
   abort: error writing files:
    .h‌g/hgrc: invalid component in ".h‌g/hgrc": invalid path component ".hg"
