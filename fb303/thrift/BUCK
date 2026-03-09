@@ -31,7 +31,6 @@ thrift_library(
         "python",
         "go",
         "hs2",
-        "js",
         "py-deprecated-asyncio",
         "rust",
         "erlang",
@@ -48,7 +47,6 @@ thrift_library(
     py_base_module = "",
     thrift_cpp2_options = "frozen2,reflection",
     thrift_java_swift_options = ["deprecated_allow_leagcy_reflection_client"],
-    thrift_js_options = ["node"],
     thrift_rust_options = [
         "deprecated_default_enum_min_i32",
         "serde",
