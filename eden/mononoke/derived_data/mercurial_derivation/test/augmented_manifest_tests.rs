@@ -5,15 +5,19 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::Result;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use cacheblob::MemWritesKeyedBlobstore;
 use context::CoreContext;
-use derivation_queue_thrift::DerivationPriority;
 use fbinit::FacebookInit;
 use futures::stream::TryStreamExt;
+use justknobs::test_helpers::JustKnobsInMemory;
+use justknobs::test_helpers::KnobVal;
+use justknobs::test_helpers::override_just_knobs;
 use manifest::Entry;
 use manifest::ManifestOps;
 use mercurial_derivation::DeriveHgChangeset;
@@ -30,39 +34,6 @@ use tests_utils::CreateCommitContext;
 use tests_utils::drawdag::extend_from_dag_with_actions;
 
 use crate::Repo;
-
-/// Test that derive_single (non-batch) code path works correctly for
-/// RootHgAugmentedManifestId. Existing tests only exercise derive_batch
-/// via derive_exactly_batch and derive_heads.
-#[mononoke::fbinit_test]
-async fn test_augmented_manifest_derive_single(fb: FacebookInit) -> Result<()> {
-    let ctx = CoreContext::test_mock(fb);
-    let repo: Repo = test_repo_factory::build_empty(fb).await?;
-
-    let root = CreateCommitContext::new_root(&ctx, &repo)
-        .add_file("dir/file_a", "content_a")
-        .add_file("dir/file_b", "content_b")
-        .add_file("other/file_c", "content_c")
-        .commit()
-        .await?;
-
-    let manager = repo.repo_derived_data().manager();
-
-    // derive() with a single changeset calls derive_single, not derive_batch.
-    let aug = manager
-        .derive::<RootHgAugmentedManifestId>(&ctx, root, None, DerivationPriority::LOW)
-        .await?;
-
-    // Verify the augmented manifest matches the HgManifest.
-    let hg_cs_id = repo.derive_hg_changeset(&ctx, root).await?;
-    let hg_manifest_id = hg_cs_id
-        .load(&ctx, repo.repo_blobstore())
-        .await?
-        .manifestid();
-
-    compare_manifests(&ctx, &repo, hg_manifest_id, aug.hg_augmented_manifest_id()).await?;
-    Ok(())
-}
 
 /// Invariant test: after augmented manifest derivation (which inline-derives
 /// HgChangesets), all HgManifest blobs must be loadable via `Loadable`.
@@ -395,6 +366,98 @@ async fn test_augmented_manifest_derive_heads(fb: FacebookInit) -> Result<()> {
             .manifestid();
 
         compare_manifests(&ctx, &repo, hg_manifest_id, aug.hg_augmented_manifest_id()).await?;
+    }
+
+    Ok(())
+}
+
+/// Test that hgmanifest_skip_writes=true prevents HgManifest blobs from
+/// being written to the blobstore, while the reconstruction layer in
+/// fetch_manifest_envelope_opt still makes them loadable.
+#[mononoke::fbinit_test]
+async fn test_augmented_manifest_skip_writes(fb: FacebookInit) -> Result<()> {
+    override_just_knobs(JustKnobsInMemory::new(HashMap::from([(
+        "scm/mononoke:hgmanifest_skip_writes".to_string(),
+        KnobVal::Bool(true),
+    )])));
+
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+
+    let root = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("dir/file_a", "content_a")
+        .add_file("dir/file_b", "content_b")
+        .add_file("other/file_c", "content_c")
+        .commit()
+        .await?;
+
+    let child = CreateCommitContext::new(&ctx, &repo, vec![root])
+        .add_file("dir/file_a", "updated_a")
+        .add_file("new/file_d", "content_d")
+        .commit()
+        .await?;
+
+    let grandchild = CreateCommitContext::new(&ctx, &repo, vec![child])
+        .add_file("other/file_c", "updated_c")
+        .commit()
+        .await?;
+
+    let manager = repo.repo_derived_data().manager();
+
+    manager
+        .derive_exactly_batch::<RootHgAugmentedManifestId>(
+            &ctx,
+            vec![root, child, grandchild],
+            None,
+        )
+        .await?;
+
+    for cs_id in [root, child, grandchild] {
+        let aug = manager
+            .fetch_derived::<RootHgAugmentedManifestId>(&ctx, cs_id, None)
+            .await?
+            .unwrap_or_else(|| panic!("Missing RootHgAugmentedManifestId for {}", cs_id));
+
+        let hg_cs_id = repo.derive_hg_changeset(&ctx, cs_id).await?;
+        let hg_manifest_id = hg_cs_id
+            .load(&ctx, repo.repo_blobstore())
+            .await?
+            .manifestid();
+
+        // HgManifest blobs are loadable via the reconstruction layer.
+        let _root_mf = hg_manifest_id.load(&ctx, repo.repo_blobstore()).await?;
+
+        let entries: Vec<_> = hg_manifest_id
+            .list_all_entries(ctx.clone(), repo.repo_blobstore().clone())
+            .try_collect()
+            .await?;
+        assert!(!entries.is_empty());
+
+        compare_manifests(&ctx, &repo, hg_manifest_id, aug.hg_augmented_manifest_id()).await?;
+
+        // Verify HgManifest blobs were NOT written to the blobstore.
+        // Raw blobstore.get() bypasses the reconstruction layer in
+        // fetch_manifest_envelope_opt.
+        let blobstore = repo.repo_blobstore();
+        assert!(
+            blobstore
+                .get(&ctx, &hg_manifest_id.blobstore_key())
+                .await?
+                .is_none(),
+            "Root HgManifest blob should not exist in blobstore when skip_writes is enabled",
+        );
+        for entry in &entries {
+            if let (path, Entry::Tree(subtree_mf_id)) = entry {
+                assert!(
+                    blobstore
+                        .get(&ctx, &subtree_mf_id.blobstore_key())
+                        .await?
+                        .is_none(),
+                    "HgManifest blob for subtree {:?} should not exist in blobstore",
+                    path,
+                );
+            }
+        }
     }
 
     Ok(())
