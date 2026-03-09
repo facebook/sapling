@@ -472,13 +472,13 @@ class SuffixGlobRequestScope {
 
   SuffixGlobRequestScope(
       std::string globberLogString,
-      const std::shared_ptr<ServerState>& serverState,
+      std::shared_ptr<ServerState> serverState,
       bool isLocal,
       const ObjectFetchContextPtr& context)
       : globberLogString_{std::move(globberLogString)},
-        serverState_{serverState},
+        serverState_{std::move(serverState)},
         isLocal_{isLocal},
-        context_{context} {}
+        context_{context.copy()} {}
 
   ~SuffixGlobRequestScope() {
     // Logging completion time for the request
@@ -498,9 +498,9 @@ class SuffixGlobRequestScope {
 
  private:
   std::string globberLogString_;
-  const std::shared_ptr<ServerState>& serverState_;
+  std::shared_ptr<ServerState> serverState_;
   bool isLocal_;
-  const ObjectFetchContextPtr& context_;
+  ObjectFetchContextPtr context_;
   folly::stop_watch<std::chrono::microseconds> itcTimer_ = {};
 }; // namespace
 
@@ -514,14 +514,14 @@ class GlobFilesRequestScope {
   GlobFilesRequestScope& operator=(GlobFilesRequestScope&&) = delete;
 
   explicit GlobFilesRequestScope(
-      const std::shared_ptr<ServerState>& serverState,
+      std::shared_ptr<ServerState> serverState,
       bool isOffloadable,
       std::string logString,
       const ObjectFetchContextPtr& context)
-      : serverState_{serverState},
+      : serverState_{std::move(serverState)},
         isOffloadable_{isOffloadable},
         logString_{logString},
-        context_{context} {}
+        context_{context.copy()} {}
 
   ~GlobFilesRequestScope() {
     // Logging completion time for the request
@@ -578,10 +578,10 @@ class GlobFilesRequestScope {
  private:
   bool local = true;
   bool fallback = false;
-  const std::shared_ptr<ServerState>& serverState_;
+  std::shared_ptr<ServerState> serverState_;
   bool isOffloadable_;
   std::string logString_;
-  const ObjectFetchContextPtr& context_;
+  ObjectFetchContextPtr context_;
   folly::stop_watch<std::chrono::microseconds> itcTimer_ = {};
 }; // namespace
 #undef EDEN_MICRO
@@ -4295,7 +4295,8 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                           wantDtype = params->wantDtype().value(),
                           includeDotfiles = params->includeDotfiles().value(),
                           searchRoot,
-                          &context](auto&& globResults) mutable {
+                          context =
+                              context.copy()](auto&& globResults) mutable {
                 auto edenMount = mountHandle.getEdenMountPtr();
                 std::vector<ImmediateFuture<GlobEntry>> globEntryFuts;
                 for (auto& glob : globResults) {
@@ -4446,27 +4447,27 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                       return glob;
                     });
               })
-              .thenError(
-                  [mountHandle,
-                   globFilesRequestScope,
-                   serverState = server_->getServerState(),
-                   globs = std::move(*params->globs()),
-                   globber = std::move(globber),
-                   &context](const folly::exception_wrapper& ex) mutable {
-                    // Fallback to local if an error was encountered while using
-                    // the SaplingRemoteAPI method
-                    XLOGF(
-                        DBG3,
-                        "Encountered error when evaluating globFiles: {}",
-                        ex.what());
-                    XLOG(DBG3, "Using local globFiles");
-                    globFilesRequestScope->setFallback(true);
-                    return globber.glob(
-                        mountHandle.getEdenMountPtr(),
-                        serverState,
-                        std::move(globs),
-                        context);
-                  });
+              .thenError([mountHandle,
+                          globFilesRequestScope,
+                          serverState = server_->getServerState(),
+                          globs = std::move(*params->globs()),
+                          globber = std::move(globber),
+                          context = context.copy()](
+                             const folly::exception_wrapper& ex) mutable {
+                // Fallback to local if an error was encountered while using
+                // the SaplingRemoteAPI method
+                XLOGF(
+                    DBG3,
+                    "Encountered error when evaluating globFiles: {}",
+                    ex.what());
+                XLOG(DBG3, "Using local globFiles");
+                globFilesRequestScope->setFallback(true);
+                return globber.glob(
+                    mountHandle.getEdenMountPtr(),
+                    serverState,
+                    std::move(globs),
+                    context);
+              });
     } else {
       globFut =
           std::move(backgroundFuture)
@@ -4474,7 +4475,7 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                           serverState = server_->getServerState(),
                           globs = std::move(*params->globs()),
                           globber = std::move(globber),
-                          &context](auto&&) mutable {
+                          context = context.copy()](auto&&) mutable {
                 XLOG(DBG3, "No suffixes, or mixed suffixes and non-suffixes");
                 XLOG(DBG3, "Using local globFiles");
                 // TODO: Insert ODS log for globs here
@@ -4491,7 +4492,7 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                               serverState = server_->getServerState(),
                               globs = std::move(*params->globs()),
                               globber = std::move(globber),
-                              &context](auto&&) mutable {
+                              context = context.copy()](auto&&) mutable {
                     XLOG(DBG3, "Using local globFiles");
                     // TODO: Insert ODS log for globs here
                     return globber.glob(
@@ -5798,17 +5799,19 @@ EdenServiceHandler::semifuture_debugInvalidateNonMaterialized(
           .thenValue([mountHandle, sync = *params->sync()](auto&&) {
             return waitForPendingWrites(mountHandle.getEdenMount(), sync);
           })
-          .thenValue(
-              [mountHandle, path = *params->path(), &fetchContext](auto&&) {
-                return inodeFromUserPath(
-                           mountHandle.getEdenMount(), path, fetchContext)
-                    .asTreePtr();
-              })
-          .thenValue([this, mountHandle, cutoff, &fetchContext](
-                         TreeInodePtr inode) mutable {
-            return server_->garbageCollectWorkingCopy(
-                mountHandle.getEdenMount(), inode, cutoff, fetchContext);
+          .thenValue([mountHandle,
+                      path = *params->path(),
+                      fetchContext = fetchContext.copy()](auto&&) {
+            return inodeFromUserPath(
+                       mountHandle.getEdenMount(), path, fetchContext)
+                .asTreePtr();
           })
+          .thenValue(
+              [this, mountHandle, cutoff, fetchContext = fetchContext.copy()](
+                  TreeInodePtr inode) mutable {
+                return server_->garbageCollectWorkingCopy(
+                    mountHandle.getEdenMount(), inode, cutoff, fetchContext);
+              })
           .thenValue([](uint64_t numInvalidated) {
             auto ret = std::make_unique<DebugInvalidateResponse>();
             ret->numInvalidated() = numInvalidated;
