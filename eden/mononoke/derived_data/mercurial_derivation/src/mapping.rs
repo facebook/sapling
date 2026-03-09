@@ -301,8 +301,8 @@ fn get_hg_changeset_derivation_options(
 /// Whether to skip writing HG manifest blobs during augmented manifest derivation.
 /// When enabled, HG manifest blobs are dropped from the write cache before flush,
 /// relying on reconstruction from augmented manifests for subsequent reads.
-fn should_skip_hgmanifest_writes() -> Result<bool> {
-    justknobs::eval("scm/mononoke:hgmanifest_skip_writes", None, None)
+fn should_skip_hgmanifest_writes(repo_name: &str) -> Result<bool> {
+    justknobs::eval("scm/mononoke:hgmanifest_skip_writes", None, Some(repo_name))
 }
 
 async fn get_subtree_change_sources(
@@ -608,7 +608,7 @@ impl BonsaiDerivable for RootHgAugmentedManifestId {
         // from the write cache first — augmented manifests have already
         // been derived above and no longer need them.
         if let Some(hg_cs) = derived_hg_cs {
-            if should_skip_hgmanifest_writes()? {
+            if should_skip_hgmanifest_writes(derivation_ctx.repo_name())? {
                 derivation_ctx.remove_write_cache_by_prefix("hgmanifest.");
             }
             derivation_ctx.flush(ctx).await?;
@@ -666,7 +666,7 @@ impl BonsaiDerivable for RootHgAugmentedManifestId {
             res.insert(csid, Self(root));
         }
 
-        if should_skip_hgmanifest_writes()? {
+        if should_skip_hgmanifest_writes(derivation_ctx.repo_name())? {
             // Remove HgManifest blobs from the write cache before flushing.
             // The augmented manifest is a superset of HgManifest data, so these
             // blobs can be reconstructed from it later if needed (see the

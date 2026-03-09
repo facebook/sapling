@@ -99,6 +99,17 @@ impl DerivedDataManager {
         derivation_service_client: Option<Arc<dyn DerivationClient>>,
         restricted_paths: ArcRestrictedPaths,
     ) -> Self {
+        let derivation_context = DerivationContext::new(
+            bonsai_hg_mapping,
+            bonsai_git_mapping,
+            filenodes,
+            repo_name.clone(),
+            config_name,
+            config,
+            repo_blobstore.boxed(),
+            filestore_config,
+            restricted_paths,
+        );
         DerivedDataManager {
             inner: Arc::new(DerivedDataManagerInner {
                 repo_id,
@@ -110,16 +121,7 @@ impl DerivedDataManager {
                 scuba,
                 secondary: None,
                 derivation_service_client,
-                derivation_context: DerivationContext::new(
-                    bonsai_hg_mapping,
-                    bonsai_git_mapping,
-                    filenodes,
-                    config_name,
-                    config,
-                    repo_blobstore.boxed(),
-                    filestore_config,
-                    restricted_paths,
-                ),
+                derivation_context,
             }),
         }
     }

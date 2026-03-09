@@ -40,6 +40,7 @@ pub struct DerivationContext {
     config_name: String,
     config: DerivedDataTypesConfig,
     pub(crate) rederivation: Option<Arc<dyn Rederivation>>,
+    repo_name: String,
     pub(crate) blobstore: Arc<dyn KeyedBlobstore>,
     filestore_config: FilestoreConfig,
 
@@ -58,6 +59,7 @@ impl DerivationContext {
         bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
         bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
         filenodes: Arc<dyn Filenodes>,
+        repo_name: String,
         config_name: String,
         config: DerivedDataTypesConfig,
         blobstore: Arc<dyn KeyedBlobstore>,
@@ -70,6 +72,7 @@ impl DerivationContext {
             bonsai_hg_mapping: Some(bonsai_hg_mapping),
             bonsai_git_mapping: Some(bonsai_git_mapping),
             filenodes: Some(filenodes),
+            repo_name,
             config_name,
             config,
             rederivation,
@@ -294,6 +297,10 @@ impl DerivationContext {
 
     pub fn config_name(&self) -> String {
         self.config_name.clone()
+    }
+
+    pub fn repo_name(&self) -> &str {
+        &self.repo_name
     }
 
     pub fn restricted_paths(&self) -> ArcRestrictedPaths {
