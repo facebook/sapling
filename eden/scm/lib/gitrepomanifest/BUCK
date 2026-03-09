@@ -19,5 +19,7 @@ rust_library(
     test_deps = [
     ],
     deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:roxmltree",
     ],
 )

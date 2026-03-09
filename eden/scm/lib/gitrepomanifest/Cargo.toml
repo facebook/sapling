@@ -11,3 +11,7 @@ license = "MIT"
 
 [lib]
 name = "gitrepomanifest"
+
+[dependencies]
+anyhow = "1.0.101"
+roxmltree = "0.21.1"
