@@ -54,6 +54,7 @@ constexpr const char* kNextInodeNumberFile{"next-inode-number"};
  * This merely helps confirm that we are in fact reading an overlay info file
  */
 constexpr StringPiece kInfoHeaderMagic{"\xed\xe0\x00\x01"};
+constexpr StringPiece kShardedTmpDirName{"sharded_tmp"};
 
 /**
  * A version number for the overlay directory format.
@@ -134,6 +135,12 @@ bool FsFileContentStore::initialize(
       dirFd, "error opening overlay directory handle for ", localDir_.value());
   dirFile_ = File{dirFd, /* ownsFd */ true};
 
+  if (!overlayCreated) {
+    // Ensure sharded tmp directory and its subdirectories exist for existing
+    // overlays that were created before sharded tmp was introduced.
+    ensureShardedTmpDirectories(dirFile_.fd());
+  }
+
   return overlayCreated;
 }
 
@@ -146,6 +153,35 @@ std::optional<InodeNumber> FsInodeCatalog::initOverlay(
     return InodeNumber{kRootNodeId.get() + 1};
   }
   return core_->tryLoadNextInodeNumber();
+}
+
+void FsFileContentStore::ensureShardDirectories(int parentDirFd, mode_t mode) {
+  std::array<char, kShardDirPathLength + 1> subdirPath{};
+  subdirPath[kShardDirPathLength] = '\0';
+  MutableStringPiece subdirStringPiece{subdirPath.data(), kShardDirPathLength};
+  for (ShardID n = 0; n < kNumShards; ++n) {
+    formatSubdirShardPath(n, subdirStringPiece);
+    auto result = ::mkdirat(parentDirFd, subdirPath.data(), mode);
+    if (result != 0 && errno != EEXIST) {
+      folly::throwSystemError(
+          "error creating eden overlay shard directory ",
+          StringPiece{subdirPath.data()});
+    }
+  }
+}
+
+void FsFileContentStore::ensureShardedTmpDirectories(int overlayDirFd) {
+  auto result = ::mkdirat(overlayDirFd, kShardedTmpDirName.data(), 0700);
+  if (result != 0 && errno != EEXIST) {
+    folly::throwSystemError("failed to create overlay tmp directory");
+  }
+  auto tmpDirFd = openat(
+      overlayDirFd,
+      kShardedTmpDirName.data(),
+      O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+  folly::checkUnixError(tmpDirFd, "failed to open overlay tmp directory");
+  File tmpDir{tmpDirFd, /* ownsFd */ true};
+  ensureShardDirectories(tmpDir.fd(), 0700);
 }
 
 struct statfs FsFileContentStore::statFs() const {
@@ -271,23 +307,17 @@ void FsFileContentStore::initNewOverlay() {
 
   // We split the inode files across 256 subdirectories.
   // Populate these subdirectories now.
-  std::array<char, kShardDirPathLength + 1> subdirPath;
-  subdirPath[kShardDirPathLength] = '\0';
-  MutableStringPiece subdirStringPiece{subdirPath.data(), kShardDirPathLength};
-  for (ShardID n = 0; n < kNumShards; ++n) {
-    formatSubdirShardPath(n, subdirStringPiece);
-    result = ::mkdirat(localDirFile.fd(), subdirPath.data(), 0755);
-    if (result != 0 && errno != EEXIST) {
-      folly::throwSystemError(
-          "error creating eden overlay directory ",
-          StringPiece{subdirPath.data()});
-    }
-  }
+  ensureShardDirectories(localDirFile.fd(), 0755);
 
-  // Create the "tmp" directory
+  // Create the "tmp/" directory for backward compatibility with older Eden
+  // versions that use it for temporary files during overlay writes.
   folly::checkUnixError(
       ::mkdirat(localDirFile.fd(), "tmp", 0700),
       "failed to create overlay tmp directory");
+
+  // Create sharded tmp directories (sharded_tmp/00 through sharded_tmp/ff) to
+  // avoid lock_rename contention during concurrent overlay writes.
+  ensureShardedTmpDirectories(localDirFile.fd());
 
   // For now we just write a simple header, with a magic number to identify
   // this as an eden overlay file, and the version number of the overlay
@@ -593,20 +623,33 @@ std::variant<folly::File, InodeNumber> FsFileContentStore::openFileNoVerify(
 
 namespace {
 
-constexpr auto tmpPrefix = "tmp/"_sp;
+// Path format: sharded_tmp/<2-char-shard>/<inodeNumber>\0
+// = kShardedTmpDirName.size() + 1 + kShardDirPathLength + 1 +
+// kMaxDecimalInodeNumberLength + 1
 using InodeTmpPath = std::array<
     char,
-    tmpPrefix.size() + FsFileContentStore::kMaxDecimalInodeNumberLength + 1>;
+    kShardedTmpDirName.size() + 1 + FsFileContentStore::kShardDirPathLength +
+        1 + FsFileContentStore::kMaxDecimalInodeNumberLength + 1>;
 
 InodeTmpPath getFileTmpPath(InodeNumber inodeNumber) {
-  // It's substantially faster on XFS to create this temporary file in
-  // an empty directory and then move it into its destination rather
-  // than to create it directly in the subtree.
+  // Create the temporary file in a sharded subdirectory under sharded_tmp/.
+  // Using per-shard tmp directories (sharded_tmp/XX/) avoids cross-directory
+  // rename contention on the kernel's lock_rename mutex that occurs when all
+  // threads share a single tmp/ directory, while keeping the temp file in a
+  // separate directory from the final destination for clean separation.
   InodeTmpPath tmpPath;
-  memcpy(tmpPath.data(), tmpPrefix.data(), tmpPrefix.size());
+  memcpy(tmpPath.data(), kShardedTmpDirName.data(), kShardedTmpDirName.size());
+  auto pos = kShardedTmpDirName.size();
+  tmpPath[pos++] = '/';
+  FsFileContentStore::formatSubdirPath(
+      inodeNumber,
+      MutableStringPiece{
+          tmpPath.data() + pos, FsFileContentStore::kShardDirPathLength});
+  pos += FsFileContentStore::kShardDirPathLength;
+  tmpPath[pos++] = '/';
   auto index = folly::to_ascii_decimal(
-      tmpPath.data() + tmpPrefix.size(), tmpPath.end(), inodeNumber.get());
-  tmpPath[tmpPrefix.size() + index] = '\0';
+      tmpPath.data() + pos, tmpPath.end(), inodeNumber.get());
+  tmpPath[pos + index] = '\0';
   return tmpPath;
 }
 

@@ -181,6 +181,8 @@ class FsFileContentStore : public FileContentStore {
   friend class FsInodeCatalog;
 
   void initNewOverlay();
+  void ensureShardDirectories(int parentDirFd, mode_t mode);
+  void ensureShardedTmpDirectories(int overlayDirFd);
 
   /**
    * Return the next inode number from the kNextInodeNumberFile.  If the file
