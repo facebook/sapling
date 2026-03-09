@@ -46,7 +46,7 @@ Check the corpus dumped to disk agrees with the walk stats
   full/FsnodeMapping 96
   full/HgChangeset 287
   full/HgFileEnvelope 189
-  full/HgManifest 444
+  full/HgManifest 879
 
 Repeat but using the sample-offset to slice.  Offset zero will tend to be larger as root paths sample as zero. 2000+475+611=3086
   $ for i in {0..2}; do mkdir -p slice/$i; echo slice $i; mononoke_walker corpus -q -b master_bookmark -I deep -i default -i derived_fsnodes --output-dir=slice/$i --sample-rate=3 --sample-offset=$i 2>&1; done | grep -vE "(Bytes|Walked)/s"
@@ -71,7 +71,7 @@ See the breakdown
   slice/0/Fsnode 822
   slice/0/HgChangeset 103
   slice/0/HgFileEnvelope 63
-  slice/0/HgManifest 444
+  slice/0/HgManifest 879
   slice/1/AliasContentMapping 148
   slice/1/FileContent 4
   slice/1/FileContentMetadataV2 162
@@ -87,7 +87,7 @@ See the breakdown
 
 Check overall total
   $ find slice -type f -exec du --bytes -c {} + | tail -1 | cut -f1
-  3350
+  3785
 
 Check path regex can pick out just one path
   $ mononoke_walker corpus -q -b master_bookmark --output-dir=A --sample-path-regex='^A$' --sample-rate 1 -I deep -i default -i derived_fsnodes 2>&1 | grep -vE "(Bytes|Walked)/s"

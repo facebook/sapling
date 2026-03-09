@@ -29,6 +29,7 @@ use manifest::Manifest;
 use mononoke_types::SortedVectorTrieMap;
 use sorted_vector_map::SortedVectorMap;
 use stats::prelude::*;
+use tracing::warn;
 
 use super::errors::MononokeHgBlobError;
 use crate::FileType;
@@ -58,6 +59,14 @@ define_stats! {
 /// Manifests that are larger than this size will be parsed on a blocking
 /// thread.
 const MAX_SYNC_PARSE_SIZE: usize = 1_000_000;
+
+/// Whether to prefer reading HgManifest from augmented manifest reconstruction
+/// rather than direct blobstore reads.  When false (default), blobstore reads
+/// are tried first with reconstruction as fallback for missing blobs.  When
+/// true, reconstruction is attempted first with blobstore as fallback.
+fn should_read_from_augmented() -> Result<bool> {
+    justknobs::eval("scm/mononoke:hgmanifest_read_from_augmented", None, None)
+}
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct ManifestContent {
@@ -210,15 +219,33 @@ pub async fn fetch_manifest_envelope_opt<B: KeyedBlobstore>(
         return Ok(None);
     }
 
-    // Try direct blobstore read first.
-    if let Some(envelope) = fetch_manifest_envelope_from_blobstore(ctx, blobstore, node_id).await? {
-        return Ok(Some(envelope));
+    if should_read_from_augmented()? {
+        // Reconstruction-first: try augmented manifest reconstruction, fall
+        // back to blobstore on failure.
+        match fetch_manifest_envelope_via_augmented(ctx, blobstore, node_id).await {
+            Ok(Some(envelope)) => return Ok(Some(envelope)),
+            Ok(None) => {} // Augmented manifest doesn't exist; fall through.
+            Err(e) => {
+                STATS::failed.add_value(1);
+                warn!(
+                    "Augmented manifest reconstruction failed for {}: {:#}",
+                    node_id, e
+                );
+            }
+        }
+        // Fallback: read HG manifest blob directly from blobstore.
+        fetch_manifest_envelope_from_blobstore(ctx, blobstore, node_id).await
+    } else {
+        // Blobstore-first: try direct blob read, fall back to augmented
+        // manifest reconstruction on miss.
+        if let Some(envelope) =
+            fetch_manifest_envelope_from_blobstore(ctx, blobstore, node_id).await?
+        {
+            return Ok(Some(envelope));
+        }
+        // Fallback to augmented manifest reconstruction.
+        fetch_manifest_envelope_via_augmented(ctx, blobstore, node_id).await
     }
-
-    // Fallback: reconstruct from augmented manifest. This handles manifests
-    // derived with blob writes skipped (the augmented manifest is a superset).
-    // This layer is permanent, removing it requires backfilling all affected manifests.
-    fetch_manifest_envelope_via_augmented(ctx, blobstore, node_id).await
 }
 
 /// Reconstruct an HgManifestEnvelope from an augmented manifest envelope.

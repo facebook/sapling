@@ -46,6 +46,7 @@ use mercurial_types::blobs::HgBlobChangeset;
 use mercurial_types::blobs::HgBlobEnvelope;
 use mercurial_types::blobs::HgChangesetContent;
 use mercurial_types::blobs::fetch_manifest_envelope;
+use mercurial_types::nodehash::HgAugmentedManifestId;
 use mercurial_types::nodehash::HgFileNodeId;
 use mercurial_types::nodehash::HgManifestId;
 use mercurial_types::subtree::HgSubtreeChanges;
@@ -288,14 +289,18 @@ impl UploadEntries {
                 if mfid.into_nodehash() == NULL_HASH {
                     return Ok(());
                 }
-
-                let key = mfid.blobstore_key();
-                if !blobstore
-                    .is_present(ctx, &key)
-                    .await?
-                    .assume_not_found_if_unsure()
-                {
-                    return Err(BlobstoreError::NotFound(key).into());
+                // Check if manifest exists — either as an augmented manifest
+                // (reconstructible) or as a direct HgManifest blob.
+                let aug_id = HgAugmentedManifestId::new(mfid.into_nodehash());
+                let (aug_present, hg_present) = futures::future::join(
+                    blobstore.is_present(ctx, &aug_id.blobstore_key()),
+                    blobstore.is_present(ctx, &mfid.blobstore_key()),
+                )
+                .await;
+                let exists = aug_present?.assume_not_found_if_unsure()
+                    || hg_present?.assume_not_found_if_unsure();
+                if !exists {
+                    return Err(BlobstoreError::NotFound(mfid.blobstore_key()).into());
                 }
             }
             Entry::Leaf(fnid) => {

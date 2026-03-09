@@ -298,6 +298,13 @@ fn get_hg_changeset_derivation_options(
     }
 }
 
+/// Whether to skip writing HG manifest blobs during augmented manifest derivation.
+/// When enabled, HG manifest blobs are dropped from the write cache before flush,
+/// relying on reconstruction from augmented manifests for subsequent reads.
+fn should_skip_hgmanifest_writes() -> Result<bool> {
+    justknobs::eval("scm/mononoke:hgmanifest_skip_writes", None, None)
+}
+
 async fn get_subtree_change_sources(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
@@ -578,15 +585,9 @@ impl BonsaiDerivable for RootHgAugmentedManifestId {
         )
         .await?;
 
-        // If we inline-derived a HgChangeset, flush blobs to persistent
-        // storage first, then store the SQL mapping. This ordering is
-        // critical: concurrent readers must not see the mapping before
-        // the blob is available.
-        if let Some(hg_cs) = derived_hg_cs {
-            derivation_ctx.flush(ctx).await?;
-            store_hg_cs_mapping(ctx, derivation_ctx, csid, &hg_cs).await?;
-        }
-
+        // Derive augmented manifests before flushing. The HgManifest blobs
+        // are still in the MemWritesBlobstore write cache, so augmented
+        // manifest derivation can read them directly via .load().
         let parents = parents
             .into_iter()
             .map(|parent| parent.hg_augmented_manifest_id())
@@ -601,6 +602,18 @@ impl BonsaiDerivable for RootHgAugmentedManifestId {
                 &derivation_ctx.restricted_paths(),
             )
             .await?;
+
+        // If we inline-derived a HgChangeset, flush blobs to persistent
+        // storage. When skipping HgManifest writes, remove those blobs
+        // from the write cache first — augmented manifests have already
+        // been derived above and no longer need them.
+        if let Some(hg_cs) = derived_hg_cs {
+            if should_skip_hgmanifest_writes()? {
+                derivation_ctx.remove_write_cache_by_prefix("hgmanifest.");
+            }
+            derivation_ctx.flush(ctx).await?;
+            store_hg_cs_mapping(ctx, derivation_ctx, csid, &hg_cs).await?;
+        }
 
         Ok(Self(root_hg_aug_mfid))
     }
@@ -653,15 +666,32 @@ impl BonsaiDerivable for RootHgAugmentedManifestId {
             res.insert(csid, Self(root));
         }
 
+        if should_skip_hgmanifest_writes()? {
+            // Remove HgManifest blobs from the write cache before flushing.
+            // The augmented manifest is a superset of HgManifest data, so these
+            // blobs can be reconstructed from it later if needed (see the
+            // reconstruction layer in fetch_manifest_envelope_opt). Skipping
+            // these writes reduces PUTs by ~33% for augmented manifest derivation.
+            derivation_ctx.remove_write_cache_by_prefix("hgmanifest.");
+        }
+
         // Flush all blob writes BEFORE storing SQL mappings.
         // This ensures that HgChangeset blobs are in persistent storage
         // before their SQL mappings become visible to other processes.
         derivation_ctx.flush(ctx).await?;
 
         // Now safe to store — blobs are in persistent storage.
-        for (csid, hg_cs) in &hg_cs_map {
-            store_hg_cs_mapping(ctx, derivation_ctx, *csid, hg_cs).await?;
-        }
+        let entries: Vec<BonsaiHgMappingEntry> = hg_cs_map
+            .iter()
+            .map(|(csid, hg_cs)| BonsaiHgMappingEntry {
+                hg_cs_id: hg_cs.hg_changeset_id(),
+                bcs_id: *csid,
+            })
+            .collect();
+        derivation_ctx
+            .bonsai_hg_mapping()?
+            .bulk_add(ctx, &entries)
+            .await?;
 
         Ok(res)
     }
@@ -759,6 +789,7 @@ impl DerivableUntopologically for RootHgAugmentedManifestId {
 
 #[cfg(test)]
 mod test {
+    use blobstore::Loadable;
     use bonsai_hg_mapping::BonsaiHgMapping;
     use bookmarks::BookmarkKey;
     use bookmarks::Bookmarks;
@@ -782,8 +813,12 @@ mod test {
     use fixtures::UnsharedMergeUneven;
     use futures::Future;
     use futures::TryStreamExt;
+    use justknobs::test_helpers::JustKnobsInMemory;
+    use justknobs::test_helpers::KnobVal;
+    use justknobs::test_helpers::override_just_knobs;
     use mononoke_macros::mononoke;
     use repo_blobstore::RepoBlobstore;
+    use repo_blobstore::RepoBlobstoreRef;
     use repo_derived_data::RepoDerivedData;
     use repo_derived_data::RepoDerivedDataRef;
     use repo_identity::RepoIdentity;
@@ -871,6 +906,65 @@ mod test {
         for (cs_id, hg_cs_id) in commits_desc_to_anc.into_iter().rev() {
             println!("{} {} {:?}", cs_id, hg_cs_id, batch_derived.get(&cs_id));
             assert_eq!(batch_derived.get(&cs_id).map(|x| x.0), Some(hg_cs_id));
+        }
+
+        Ok(())
+    }
+
+    /// Like `verify_repo`, but derives `RootHgAugmentedManifestId` (which
+    /// internally derives HgChangesets).  When the skip-writes knob is
+    /// active, this exercises the write-skipping path and verifies that
+    /// HgManifest blobs can still be read through the reconstruction layer.
+    async fn verify_repo_aug<F, Fut>(fb: FacebookInit, repo_func: F) -> Result<()>
+    where
+        F: Fn() -> Fut,
+        Fut: Future<Output = TestRepo>,
+    {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: TestRepo = repo_func().await;
+        println!("Processing {} (augmented)", repo.repo_identity.name());
+        borrowed!(ctx, repo);
+
+        let commits_desc_to_anc =
+            all_commits_descendants_to_ancestors(ctx.clone(), repo.clone()).await?;
+
+        // Recreate repo from scratch and derive augmented manifests.
+        let repo = repo_func().await;
+        let csids = commits_desc_to_anc
+            .clone()
+            .into_iter()
+            .rev()
+            .map(|(cs_id, _)| cs_id)
+            .collect::<Vec<_>>();
+        let manager = repo.repo_derived_data().manager();
+
+        manager
+            .derive_exactly_batch::<RootHgAugmentedManifestId>(ctx, csids.clone(), None)
+            .await?;
+
+        // Verify HgChangesets (inline-derived by augmented manifest derivation)
+        // match the expected values and that manifests are readable through
+        // the reconstruction layer (HgManifest blobs were skipped).
+        let hg_cs_derived = manager
+            .fetch_derived_batch::<MappedHgChangesetId>(ctx, csids, None)
+            .await?;
+        for (cs_id, expected_hg_cs_id) in commits_desc_to_anc.into_iter().rev() {
+            let hg_cs = hg_cs_derived
+                .get(&cs_id)
+                .unwrap_or_else(|| panic!("HgChangeset not derived for {}", cs_id));
+            assert_eq!(
+                hg_cs.hg_changeset_id(),
+                expected_hg_cs_id,
+                "HgChangeset mismatch for {}",
+                cs_id,
+            );
+
+            // Load the manifest — goes through reconstruction when blobs
+            // were skipped.
+            let hg_changeset =
+                Loadable::load(&hg_cs.hg_changeset_id(), ctx, repo.repo_blobstore()).await?;
+            let _manifest =
+                Loadable::load(&hg_changeset.manifestid(), ctx, repo.repo_blobstore()).await?;
         }
 
         Ok(())
@@ -1025,6 +1119,25 @@ mod test {
         })
         .await?;
 
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_batch_derive_skip_hgmanifest_writes(fb: FacebookInit) -> Result<()> {
+        override_just_knobs(JustKnobsInMemory::new(HashMap::from([(
+            "scm/mononoke:hgmanifest_skip_writes".to_string(),
+            KnobVal::Bool(true),
+        )])));
+        verify_repo_aug(fb, || Linear::get_repo::<TestRepo>(fb)).await?;
+        verify_repo_aug(fb, || BranchEven::get_repo::<TestRepo>(fb)).await?;
+        verify_repo_aug(fb, || BranchUneven::get_repo::<TestRepo>(fb)).await?;
+        verify_repo_aug(fb, || BranchWide::get_repo::<TestRepo>(fb)).await?;
+        verify_repo_aug(fb, || ManyDiamonds::get_repo::<TestRepo>(fb)).await?;
+        verify_repo_aug(fb, || ManyFilesDirs::get_repo::<TestRepo>(fb)).await?;
+        verify_repo_aug(fb, || MergeEven::get_repo::<TestRepo>(fb)).await?;
+        verify_repo_aug(fb, || MergeUneven::get_repo::<TestRepo>(fb)).await?;
+        verify_repo_aug(fb, || UnsharedMergeEven::get_repo::<TestRepo>(fb)).await?;
+        verify_repo_aug(fb, || UnsharedMergeUneven::get_repo::<TestRepo>(fb)).await?;
         Ok(())
     }
 }
