@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#![allow(unexpected_cfgs)]
+
 // [cats]
 // entry_name.priority=20
 // entry_name.path=/var/boo/cat
@@ -143,17 +145,80 @@ impl<'a> CatsSection<'a> {
     }
 
     pub fn get_cats(&self) -> Result<Option<String>> {
-        if let Some(cats_group) = self.find_cats()? {
-            if let Some(path) = cats_group.path {
-                let f = std::fs::File::open(path)?;
-                let reader = std::io::BufReader::new(f);
+        match self.find_cats() {
+            Ok(Some(cats_group)) => {
+                // The "preminted" config group (Dev Docker Images) uses a
+                // multi-token file format. Use the preminted library to get
+                // merged tokens (verify_integrity + interngraph) instead of
+                // just the crypto_auth_tokens key from the JSON blob.
+                #[cfg(all(fbcode_build, target_os = "linux"))]
+                if cats_group.name == "preminted" {
+                    tracing::debug!("config group 'preminted'; using preminted CATs library");
+                    return Self::try_preminted_cats();
+                }
 
-                let cats: Cats = serde_json::from_reader(reader)?;
-                let cats_data = cats.crypto_auth_tokens;
-
-                return Ok(Some(cats_data));
+                if let Some(path) = cats_group.path {
+                    let f = std::fs::File::open(&path)?;
+                    let reader = std::io::BufReader::new(f);
+                    let cats: Cats = serde_json::from_reader(reader)?;
+                    return Ok(Some(cats.crypto_auth_tokens));
+                }
+            }
+            Ok(None) => {}
+            Err(e) => {
+                // If all configured groups are "preminted" (Dev Docker Images),
+                // a missing file is expected during container lease provisioning.
+                // For other groups (e.g. sandcastle), propagate the error.
+                if self.groups.iter().all(|g| g.name == "preminted") {
+                    tracing::debug!("pre-minted CATs file not yet available: {e}");
+                } else {
+                    return Err(e.into());
+                }
             }
         }
+
+        // Config-based CATs not available; try pre-minted as fallback.
+        Self::try_preminted_cats()
+    }
+
+    #[cfg(all(fbcode_build, target_os = "linux"))]
+    fn try_preminted_cats() -> Result<Option<String>> {
+        let wanted_keys: &[&str] = &[
+            platform_cats_lib::CAT_KEY_VERIFY_INTEGRITY,
+            platform_cats_lib::CAT_KEY_INTERNGRAPH,
+        ];
+
+        // Check if any pre-minted CATs exist on this machine.
+        let all_cats = platform_cats_lib::read_all_preminted_cats();
+        if all_cats.is_empty() {
+            return Ok(None);
+        }
+
+        // Pre-minted CATs exist — check if our required keys are present.
+        let missing: Vec<&str> = wanted_keys
+            .iter()
+            .filter(|k| !all_cats.contains_key(**k))
+            .copied()
+            .collect();
+
+        if !missing.is_empty() {
+            tracing::debug!(
+                ?missing,
+                "pre-minted CATs available; some requested keys absent (X.509 will be used for those)"
+            );
+        }
+
+        match platform_cats_lib::read_merged_preminted_cats_for(wanted_keys) {
+            Some(cats) => {
+                tracing::debug!("using pre-minted CATs for authentication");
+                Ok(Some(cats))
+            }
+            None => Ok(None),
+        }
+    }
+
+    #[cfg(not(all(fbcode_build, target_os = "linux")))]
+    fn try_preminted_cats() -> Result<Option<String>> {
         Ok(None)
     }
 }
