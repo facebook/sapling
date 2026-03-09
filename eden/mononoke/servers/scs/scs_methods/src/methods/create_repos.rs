@@ -29,6 +29,7 @@ use futures_retry::retry;
 use git_source_of_truth::GitSourceOfTruth;
 use git_source_of_truth::GitSourceOfTruthConfig;
 use git_source_of_truth::RepositoryName;
+use git_source_of_truth::Staleness;
 use infrasec_authorization::ACL;
 use infrasec_authorization::Identity;
 use infrasec_authorization::consts as auth_consts;
@@ -474,10 +475,47 @@ async fn reserve_repos_ids(
                 if error_trace.contains("UNIQUE constraint failed")
                     && error_trace.contains("git_repositories_source_of_truth.repo_name")
                 {
-                    Err(scs_errors::invalid_request(format!(
-                        "Repo name should be unique but isn't. Details: {error_trace}"
-                    ))
-                    .into())
+                    let mut details = Vec::new();
+                    for (_id, request) in &repo_ids_and_requests {
+                        let repo_name = RepositoryName(request.repo_name.clone());
+                        match git_source_of_truth_config
+                            .get_by_repo_name(&ctx, &repo_name, Staleness::MostRecent)
+                            .await
+                        {
+                            Ok(Some(entry)) => match entry.source_of_truth {
+                                GitSourceOfTruth::Reserved => {
+                                    details.push(format!(
+                                        "Repo '{}' (id={}) has a stale 'Reserved' entry from a prior failed creation attempt. \
+                                         It is safe to delete this row and retry.",
+                                        request.repo_name, entry.repo_id
+                                    ));
+                                }
+                                ref sot => {
+                                    details.push(format!(
+                                        "DANGER: Repo '{}' (id={}) already exists with source_of_truth={}. \
+                                         Do NOT force-create — this will cause split-brain! \
+                                         See SEV S617275 for context.",
+                                        request.repo_name, entry.repo_id, sot
+                                    ));
+                                }
+                            },
+                            Ok(None) => {
+                                details.push(format!(
+                                    "Repo '{}': UNIQUE constraint violated but no row found on lookup. \
+                                     Original error: {error_trace}",
+                                    request.repo_name
+                                ));
+                            }
+                            Err(lookup_err) => {
+                                details.push(format!(
+                                    "Repo '{}': UNIQUE constraint violated but lookup failed: {:#}. \
+                                     Original error: {error_trace}",
+                                    request.repo_name, lookup_err
+                                ));
+                            }
+                        }
+                    }
+                    Err(scs_errors::invalid_request(details.join("\n")).into())
                 } else {
                     Err(scs_errors::internal_error(format!(
                         "Failed to write row to git_repositories_source_of_truth. Details: {error_trace}"
