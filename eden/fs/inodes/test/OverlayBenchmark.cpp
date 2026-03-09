@@ -5,10 +5,13 @@
  * GNU General Public License version 2.
  */
 
+#include <folly/BenchmarkUtil.h>
 #include <folly/init/Init.h>
 #include <folly/stop_watch.h>
 #include <gflags/gflags.h>
 #include <cstdlib>
+#include <random>
+#include <thread>
 
 #include "eden/common/telemetry/NullStructuredLogger.h"
 #include "eden/fs/config/EdenConfig.h"
@@ -25,17 +28,71 @@ DEFINE_string(
     overlayType,
     kDefaultInodeCatalogType == InodeCatalogType::Sqlite ? "Sqlite" : "Legacy",
     "Type of overlay to be used. Defaults: Windows - Sqlite; Linux|macOS - Legacy");
+DEFINE_uint64(numDirs, 100000, "Number of directories to save/load");
+DEFINE_uint32(threads, 1, "Number of threads for parallel save/load");
+DEFINE_uint32(
+    dirSize,
+    0,
+    "Fixed number of entries per directory. "
+    "0 means random (1-10000, exponential distribution favoring small dirs)");
 
 namespace {
 
-void benchmarkOverlayTreeWrites(
+// Build a DirContents with the given number of entries.
+DirContents buildDirContents(
+    std::shared_ptr<Overlay>& overlay,
+    size_t numEntries,
+    std::default_random_engine& rng) {
+  std::uniform_int_distribution<> charDist(0, 35);
+  constexpr char chars[] = "0123456789abcdefghijklmnopqrstuvwxyz";
+
+  DirContents contents(kPathMapDefaultCaseSensitive);
+
+  for (size_t i = 0; i < numEntries; ++i) {
+    size_t nameLen = 10 + (i % 11);
+    std::string name(nameLen, 'x');
+    for (auto& c : name) {
+      c = chars[charDist(rng)];
+    }
+    name += fmt::format("_{}", i);
+
+    auto ino = overlay->allocateInodeNumber();
+    if (i % 3 == 0) {
+      // Materialized entry (no hash)
+      contents.emplace(PathComponentPiece{name}, S_IFREG | 0644, ino);
+    } else {
+      auto hashStr = fmt::format("{:040x}", i);
+      contents.emplace(
+          PathComponentPiece{name},
+          S_IFREG | 0644,
+          ino,
+          ObjectId{folly::ByteRange{folly::StringPiece{hashStr}}});
+    }
+  }
+
+  return contents;
+}
+
+// Returns a random directory size from 1 to 10000, biased toward smaller sizes
+// using an exponential distribution.
+size_t randomDirSize(std::default_random_engine& rng) {
+  std::exponential_distribution<> dist(0.06);
+  auto val = static_cast<size_t>(dist(rng)) + 1;
+  return std::min(val, size_t{10000});
+}
+
+void benchmarkOverlay(
     AbsolutePathPiece overlayPath,
     InodeCatalogType overlayType) {
-  // A large mount will contain 500,000 trees. If they're all loaded, they
-  // will all be written into the overlay. This benchmark simulates that
-  // workload and measures how long it takes.
-  //
-  // overlayPath is parameterized to measure on different filesystem types.
+  auto N = FLAGS_numDirs;
+  auto numThreads = FLAGS_threads;
+
+  printf(
+      "Config: dirs=%" SCNu64 ", threads=%u, dirSize=%s\n",
+      N,
+      numThreads,
+      FLAGS_dirSize > 0 ? std::to_string(FLAGS_dirSize).c_str() : "random");
+
   printf("Creating Overlay...\n");
 
   auto overlay = Overlay::create(
@@ -47,7 +104,6 @@ void benchmarkOverlayTreeWrites(
       makeRefPtr<EdenStats>(),
       true,
       *EdenConfig::createTestEdenConfig());
-  printf("Initializing Overlay...\n");
 
   overlay
       ->initialize(
@@ -55,61 +111,107 @@ void benchmarkOverlayTreeWrites(
               EdenConfig::createTestEdenConfig()))
       .get();
 
-  printf("Overlay initialized. Starting benchmark...\n");
+  // Pre-build directories.
+  printf("Building %zu directories...\n", size_t(N));
+  std::default_random_engine rng(12345);
+  std::vector<DirContents> dirs;
+  dirs.reserve(N);
+  size_t totalEntries = 0;
+  for (uint64_t i = 0; i < N; ++i) {
+    auto size = FLAGS_dirSize > 0 ? FLAGS_dirSize : randomDirSize(rng);
+    totalEntries += size;
+    dirs.push_back(buildDirContents(overlay, size, rng));
+  }
+  printf(
+      "Built %" SCNu64 " directories (avg %.1f entries, %zu total entries)\n",
+      N,
+      static_cast<double>(totalEntries) / N,
+      totalEntries);
 
-  ObjectId id1{folly::ByteRange{"abcdabcdabcdabcdabcd"_sp}};
-  ObjectId id2{folly::ByteRange{"01234012340123401234"_sp}};
-
-  DirContents contents(kPathMapDefaultCaseSensitive);
-  contents.emplace(
-      PathComponent{"one"},
-      S_IFREG | 0644,
-      overlay->allocateInodeNumber(),
-      id1);
-  contents.emplace(
-      PathComponent{"two"},
-      S_IFDIR | 0755,
-      overlay->allocateInodeNumber(),
-      id2);
-
-  uint64_t N = 500000;
-
-  folly::stop_watch<> timer;
-
-  for (uint64_t i = 1; i <= N; i++) {
-    auto ino = overlay->allocateInodeNumber();
-    overlay->saveOverlayDir(ino, contents);
+  // --- Save benchmark ---
+  std::vector<InodeNumber> savedInodes(N);
+  for (uint64_t i = 0; i < N; ++i) {
+    savedInodes[i] = overlay->allocateInodeNumber();
   }
 
-  auto elapsed = timer.elapsed();
+  printf("Saving...\n");
+  folly::stop_watch<> saveTimer;
 
-  printf(
-      "Total elapsed time for %" SCNu64 " entries: %.2f s\n",
-      N,
-      std::chrono::duration_cast<std::chrono::duration<double>>(elapsed)
-          .count());
+  if (numThreads <= 1) {
+    for (uint64_t i = 0; i < N; ++i) {
+      overlay->saveOverlayDir(savedInodes[i], dirs[i]);
+    }
+  } else {
+    std::vector<std::thread> threads;
+    threads.reserve(numThreads);
+    uint64_t chunkSize = (N + numThreads - 1) / numThreads;
+    for (uint32_t t = 0; t < numThreads; ++t) {
+      uint64_t start = t * chunkSize;
+      uint64_t end = std::min(start + chunkSize, N);
+      threads.emplace_back([&, start, end]() {
+        for (uint64_t i = start; i < end; ++i) {
+          overlay->saveOverlayDir(savedInodes[i], dirs[i]);
+        }
+      });
+    }
+    for (auto& thread : threads) {
+      thread.join();
+    }
+  }
 
-  // Normally, I prefer to use minimum, but the cost of writing into the
-  // overlay increases as the overlay grows, as xfs especially updates its
-  // btrees.
-  //
-  // That reason, plus the reason that we want a fixed N for comparable results
-  // is why this benchmark doesn't use folly Benchmark.
+  auto saveElapsed = saveTimer.elapsed();
   printf(
-      "Average time per call: %.2f us\n",
+      "Save: %.2f s total, %.2f us/dir\n",
+      std::chrono::duration_cast<std::chrono::duration<double>>(saveElapsed)
+          .count(),
       static_cast<double>(
           std::chrono::duration_cast<std::chrono::duration<double, std::micro>>(
-              elapsed / N)
+              saveElapsed / N)
+              .count()));
+
+  // --- Load benchmark ---
+  printf("Loading...\n");
+  folly::stop_watch<> loadTimer;
+
+  if (numThreads <= 1) {
+    for (uint64_t i = 0; i < N; ++i) {
+      auto result = overlay->loadOverlayDir(savedInodes[i]);
+      folly::doNotOptimizeAway(result);
+    }
+  } else {
+    std::vector<std::thread> threads;
+    threads.reserve(numThreads);
+    uint64_t chunkSize = (N + numThreads - 1) / numThreads;
+    for (uint32_t t = 0; t < numThreads; ++t) {
+      uint64_t start = t * chunkSize;
+      uint64_t end = std::min(start + chunkSize, N);
+      threads.emplace_back([&, start, end]() {
+        for (uint64_t i = start; i < end; ++i) {
+          auto result = overlay->loadOverlayDir(savedInodes[i]);
+          folly::doNotOptimizeAway(result);
+        }
+      });
+    }
+    for (auto& thread : threads) {
+      thread.join();
+    }
+  }
+
+  auto loadElapsed = loadTimer.elapsed();
+  printf(
+      "Load: %.2f s total, %.2f us/dir\n",
+      std::chrono::duration_cast<std::chrono::duration<double>>(loadElapsed)
+          .count(),
+      static_cast<double>(
+          std::chrono::duration_cast<std::chrono::duration<double, std::micro>>(
+              loadElapsed / N)
               .count()));
 
   folly::stop_watch<> closeTimer;
-
   overlay->close();
-
   auto closeElapsed = closeTimer.elapsed();
-
   printf(
-      "Total elapsed time to close Overlay: %.2f s\n",
+      "Close: %.2f s\n",
       std::chrono::duration_cast<std::chrono::duration<double>>(closeElapsed)
           .count());
 }
@@ -126,7 +228,7 @@ int main(int argc, char* argv[]) {
 
   auto overlayPath = normalizeBestEffort(FLAGS_overlayPath.c_str());
   auto overlayType = inodeCatalogTypeFromString(FLAGS_overlayType);
-  benchmarkOverlayTreeWrites(overlayPath, overlayType.value());
+  benchmarkOverlay(overlayPath, overlayType.value());
 
   return 0;
 }

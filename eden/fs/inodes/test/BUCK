@@ -554,6 +554,7 @@ cpp_benchmark(
         "//eden/fs/config:config",
         "//eden/fs/inodes:inodes",
         "//eden/fs/telemetry:stats",
+        "//folly:benchmark_util",
         "//folly:stop_watch",
         "//folly/init:init",
     ],
