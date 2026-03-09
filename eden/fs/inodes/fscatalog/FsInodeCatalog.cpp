@@ -21,6 +21,8 @@
 #include <folly/logging/xlog.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 
+#include <thrift/lib/cpp2/protocol/CompactProtocol.h>
+
 #include "eden/common/utils/FileUtils.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/Throw.h"
@@ -332,6 +334,128 @@ void FsInodeCatalog::saveOverlayDir(
   (void)core_->createOverlayFileImpl(inodeNumber, iov.data(), iov.size());
 }
 
+void FsInodeCatalog::saveOverlayEntries(
+    InodeNumber inodeNumber,
+    size_t count,
+    OverlayEntrySource source) {
+  using apache::thrift::protocol::TType;
+
+  folly::IOBufQueue queue(folly::IOBufQueue::cacheChainLength());
+  apache::thrift::CompactProtocolWriter writer;
+  writer.setOutput(&queue);
+
+  writer.writeStructBegin("OverlayDir");
+  writer.writeFieldBegin("entries", TType::T_MAP, 1);
+  writer.writeMapBegin(
+      TType::T_STRING, TType::T_STRUCT, static_cast<uint32_t>(count));
+
+  source([&](const std::string& name, const overlay::OverlayEntry& entry) {
+    writer.writeString(name);
+    entry.write(&writer);
+  });
+
+  writer.writeMapEnd();
+  writer.writeFieldEnd();
+  writer.writeFieldStop();
+  writer.writeStructEnd();
+
+  auto serializedBuf = queue.move();
+
+  auto header = FsFileContentStore::createHeader(
+      FsFileContentStore::kHeaderIdentifierDir,
+      FsFileContentStore::kHeaderVersion);
+
+  folly::fbvector<struct iovec> iov;
+  iov.resize(1);
+  iov[0].iov_base = header.data();
+  iov[0].iov_len = header.size();
+  serializedBuf->appendToIov(&iov);
+  (void)core_->createOverlayFileImpl(inodeNumber, iov.data(), iov.size());
+}
+
+bool FsInodeCatalog::loadOverlayEntries(
+    InodeNumber inodeNumber,
+    OverlayEntryLoader loader) {
+  using apache::thrift::protocol::TType;
+
+  auto rawData = core_->loadRawOverlayDir(inodeNumber);
+  if (!rawData) {
+    return false;
+  }
+
+  auto buf = folly::IOBuf::wrapBuffer(rawData->data(), rawData->size());
+  apache::thrift::CompactProtocolReader reader;
+  reader.setInput(buf.get());
+
+  std::string structName;
+  reader.readStructBegin(structName);
+
+  std::string fieldName;
+  TType fieldType;
+  int16_t fieldId;
+  reader.readFieldBegin(fieldName, fieldType, fieldId);
+
+  if (fieldType != TType::T_MAP || fieldId != 1) {
+    throw_<std::runtime_error>(
+        "corrupt overlay for inode ",
+        inodeNumber,
+        ": expected map field with id 1, got type=",
+        static_cast<int>(fieldType),
+        " id=",
+        fieldId);
+  }
+
+  TType keyType;
+  TType valueType;
+  uint32_t mapSize;
+  reader.readMapBegin(keyType, valueType, mapSize);
+
+  // Compact protocol omits key/value types for empty maps, so only validate
+  // types when there are entries.
+  if (mapSize > 0) {
+    if (keyType != TType::T_STRING || valueType != TType::T_STRUCT) {
+      throw_<std::runtime_error>(
+          "corrupt overlay for inode ",
+          inodeNumber,
+          ": expected map<string,struct>, got key=",
+          static_cast<int>(keyType),
+          " value=",
+          static_cast<int>(valueType));
+    }
+  }
+
+  // Each map entry is at least a few bytes (varint string length + struct
+  // stop field), so mapSize cannot plausibly exceed the raw data size.
+  if (mapSize > rawData->size()) {
+    throw_<std::runtime_error>(
+        "corrupt overlay for inode ",
+        inodeNumber,
+        ": map size ",
+        mapSize,
+        " exceeds data size ",
+        rawData->size());
+  }
+
+  loader(mapSize, [&](OverlayEntryVisitor visitor) {
+    std::string name;
+    for (uint32_t i = 0; i < mapSize; ++i) {
+      reader.readString(name);
+
+      overlay::OverlayEntry entry;
+      entry.read(&reader);
+
+      visitor(name, entry);
+    }
+
+    reader.readMapEnd();
+    reader.readFieldEnd();
+    reader.readFieldBegin(fieldName, fieldType, fieldId);
+    reader.readStructEnd();
+  });
+
+  return true;
+}
+
 InodePath FsFileContentStore::getFilePath(InodeNumber inodeNumber) {
   InodePath outPath;
   auto& outPathArray = outPath.rawData();
@@ -356,6 +480,15 @@ AbsolutePath FsFileContentStore::getAbsoluteFilePath(
 }
 
 std::optional<overlay::OverlayDir> FsFileContentStore::deserializeOverlayDir(
+    InodeNumber inodeNumber) {
+  auto raw = loadRawOverlayDir(inodeNumber);
+  if (!raw) {
+    return std::nullopt;
+  }
+  return CompactSerializer::deserialize<overlay::OverlayDir>(*raw);
+}
+
+std::optional<std::string> FsFileContentStore::loadRawOverlayDir(
     InodeNumber inodeNumber) {
   // Open the file.  Return std::nullopt if the file does not exist.
   auto path = FsFileContentStore::getFilePath(inodeNumber);
@@ -390,9 +523,10 @@ std::optional<overlay::OverlayDir> FsFileContentStore::deserializeOverlayDir(
   StringPiece contents{serializedData};
   FsFileContentStore::validateHeader(
       inodeNumber, contents, FsFileContentStore::kHeaderIdentifierDir);
-  contents.advance(FsFileContentStore::kHeaderLength);
 
-  return CompactSerializer::deserialize<overlay::OverlayDir>(contents);
+  // Return just the bytes after the header
+  serializedData.erase(0, FsFileContentStore::kHeaderLength);
+  return serializedData;
 }
 
 std::array<uint8_t, FsFileContentStore::kHeaderLength>

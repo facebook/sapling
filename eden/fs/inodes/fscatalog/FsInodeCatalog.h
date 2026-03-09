@@ -223,6 +223,13 @@ class FsFileContentStore : public FileContentStore {
   std::optional<overlay::OverlayDir> deserializeOverlayDir(
       InodeNumber inodeNumber);
 
+  /**
+   * Load the raw serialized compact protocol bytes for a directory,
+   * returning the bytes after the header. Returns std::nullopt if no
+   * overlay file exists for this inode.
+   */
+  std::optional<std::string> loadRawOverlayDir(InodeNumber inodeNumber);
+
   folly::File
   createOverlayFileImpl(InodeNumber inodeNumber, iovec* iov, size_t iovCount);
 
@@ -285,6 +292,14 @@ class FsInodeCatalog : public InodeCatalog {
   bool initialized() const override;
 
   void saveOverlayDir(InodeNumber inodeNumber, overlay::OverlayDir&& odir)
+      override;
+
+  void saveOverlayEntries(
+      InodeNumber inodeNumber,
+      size_t count,
+      OverlayEntrySource source) override;
+
+  bool loadOverlayEntries(InodeNumber inodeNumber, OverlayEntryLoader loader)
       override;
 
   std::optional<overlay::OverlayDir> loadOverlayDir(
