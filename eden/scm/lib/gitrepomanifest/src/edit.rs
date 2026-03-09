@@ -242,6 +242,14 @@ fn leading_whitespace_at(src: &str, offset: usize) -> &str {
 pub fn apply(data: &mut Vec<u8>, edits: &[Edit]) -> Result<()> {
     let mut repl = resolve(data, edits)?;
     repl.sort_by(|a, b| b.range.start.cmp(&a.range.start));
+
+    // Avoid silent corruptions
+    for i in 1..repl.len() {
+        if repl[i].range.end > repl[i - 1].range.start {
+            anyhow::bail!("Found overlaps in replacements")
+        }
+    }
+
     for r in repl {
         data.splice(r.range, r.data.into_bytes());
     }
