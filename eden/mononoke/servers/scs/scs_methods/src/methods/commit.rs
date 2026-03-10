@@ -1710,7 +1710,7 @@ impl SourceControlServiceImpl {
         params: thrift::CommitRestrictedPathsAccessParams,
     ) -> Result<thrift::CommitRestrictedPathsAccessResponse, scs_errors::ServiceError> {
         let (repo, changeset) = self.repo_changeset(ctx.clone(), &commit).await?;
-        if commit_restricted_paths::use_mock_api(repo.name()) {
+        if commit_restricted_paths::use_mock_api(repo.name())? {
             return Err(scs_errors::not_implemented(
                 "commit_restricted_paths_access is not mocked yet".to_string(),
             )
@@ -1742,7 +1742,7 @@ impl SourceControlServiceImpl {
         scs_errors::ServiceError,
     > {
         let (repo, changeset) = self.repo_changeset(ctx.clone(), &commit).await?;
-        if commit_restricted_paths::use_mock_api(repo.name()) {
+        if commit_restricted_paths::use_mock_api(repo.name())? {
             return Err(scs_errors::not_implemented(
                 "commit_find_restricted_paths is not mocked yet".to_string(),
             )
@@ -1768,7 +1768,7 @@ impl SourceControlServiceImpl {
         _params: thrift::CommitRestrictedPathsChangesParams,
     ) -> Result<thrift::CommitRestrictedPathsChangesResponse, scs_errors::ServiceError> {
         let (repo, changeset) = self.repo_changeset(ctx.clone(), &commit).await?;
-        if commit_restricted_paths::use_mock_api(repo.name()) {
+        if commit_restricted_paths::use_mock_api(repo.name())? {
             return Err(scs_errors::not_implemented(
                 "commit_restricted_paths_changes is not mocked yet".to_string(),
             )

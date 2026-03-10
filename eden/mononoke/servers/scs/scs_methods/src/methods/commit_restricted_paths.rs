@@ -156,37 +156,31 @@ pub(crate) async fn find_nested_restricted_roots(
 }
 
 /// Check if the mock API should be used for this repo.
-pub(crate) fn use_mock_api(repo_name: &str) -> bool {
+pub(crate) fn use_mock_api(repo_name: &str) -> Result<bool, scs_errors::ServiceError> {
     justknobs::eval(
         "scm/mononoke:scs_restricted_paths_use_mock_api",
         None,
         Some(repo_name),
     )
-    // Default to using the Mock API initially
-    .unwrap_or(true)
+    .map_err(|e| {
+        scs_errors::internal_error(format!(
+            "Failed to read JustKnob scm/mononoke:scs_restricted_paths_use_mock_api: {e}"
+        ))
+        .into()
+    })
 }
 
 pub(crate) fn compute_path_coverage(
     values: impl IntoIterator<Item = bool>,
 ) -> thrift::PathCoverage {
-    let mut has_true = false;
-    let mut has_false = false;
-
-    for value in values {
-        if value {
-            has_true = true;
-        } else {
-            has_false = true;
-        }
-        if has_true && has_false {
-            return thrift::PathCoverage::SOME;
-        }
-    }
+    let (has_true, has_false) = values.into_iter().fold((false, false), |(ht, hf), value| {
+        (ht || value, hf || !value)
+    });
 
     match (has_true, has_false) {
+        (true, true) => thrift::PathCoverage::SOME,
         (true, false) => thrift::PathCoverage::ALL,
-        (false, true) | (false, false) => thrift::PathCoverage::NONE,
-        _ => unreachable!(),
+        (false, _) => thrift::PathCoverage::NONE,
     }
 }
 
@@ -196,6 +190,7 @@ mod tests {
     use std::str::FromStr;
     use std::sync::Arc;
 
+    use anyhow::Context;
     use context::CoreContext;
     use fbinit::FacebookInit;
     use metaconfig_types::RestrictedPathsConfig;
@@ -227,13 +222,14 @@ mod tests {
         let path_acls_map: HashMap<NonRootMPath, MononokeIdentity> = path_acls
             .into_iter()
             .map(|(path, acl_str)| {
-                (
-                    NonRootMPath::new(path).expect("Failed to create NonRootMPath from test path"),
+                Ok((
+                    NonRootMPath::new(path)
+                        .context("Failed to create NonRootMPath from test path")?,
                     MononokeIdentity::from_str(acl_str)
-                        .expect("Failed to parse MononokeIdentity from ACL string"),
-                )
+                        .context("Failed to parse MononokeIdentity from ACL string")?,
+                ))
             })
-            .collect();
+            .collect::<Result<HashMap<_, _>>>()?;
 
         let config = RestrictedPathsConfig {
             path_acls: path_acls_map,
@@ -247,12 +243,13 @@ mod tests {
 
         let manifest_id_store = Arc::new(
             SqlRestrictedPathsManifestIdStoreBuilder::with_sqlite_in_memory()
-                .expect("Failed to create Sqlite connection")
+                .context("Failed to create Sqlite connection")?
                 .with_repo_id(repo_id),
         );
 
         // TODO(T248649079): test the ACL checks logic
-        let acl_provider = DummyAclProvider::new(fb).expect("Failed to create DummyAclProvider");
+        let acl_provider =
+            DummyAclProvider::new(fb).context("Failed to create DummyAclProvider")?;
         let scuba = MononokeScubaSampleBuilder::with_discard();
 
         let derived_data_config = default_test_repo_config().derived_data_config;
@@ -277,21 +274,21 @@ mod tests {
         let ctx = CoreContext::test_mock(fb);
 
         let repo: Repo = TestRepoFactory::new(fb)
-            .expect("Failed to create TestRepoFactory")
+            .context("Failed to create TestRepoFactory")?
             .with_restricted_paths(restricted_paths)
             .build()
             .await
-            .expect("Failed to build test repo");
+            .context("Failed to build test repo")?;
 
         let root_cs_id = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("file.txt", "content")
             .commit()
             .await
-            .expect("Failed to create root commit");
+            .context("Failed to create root commit")?;
 
         let repo_ctx = RepoContext::new_test(ctx.clone(), Arc::new(repo))
             .await
-            .expect("Failed to create test RepoContext");
+            .context("Failed to create test RepoContext")?;
 
         let cs_ctx = repo_ctx
             .changeset(root_cs_id)

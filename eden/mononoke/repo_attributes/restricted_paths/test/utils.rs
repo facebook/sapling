@@ -730,46 +730,38 @@ fn setup_test_acls_with_groups(
     repo_regions_config: Vec<(&str, Vec<&str>)>,
     groups_config: Vec<(&str, Vec<&str>)>,
 ) -> Result<Acls> {
-    let mut repo_regions = HashMap::new();
+    let repo_regions = repo_regions_config
+        .into_iter()
+        .map(|(region_name, usernames)| {
+            let users = usernames
+                .into_iter()
+                .map(|username| MononokeIdentity::from_str(&format!("USER:{}", username)))
+                .collect::<Result<MononokeIdentitySet, _>>()?;
+            Ok((
+                region_name.to_string(),
+                Arc::new(Acl {
+                    actions: hashmap! {
+                        "read".to_string() => users,
+                    },
+                }),
+            ))
+        })
+        .collect::<Result<HashMap<_, _>>>()?;
 
-    // Add each configured repo region
-    for (region_name, usernames) in repo_regions_config {
-        let mut users = MononokeIdentitySet::new();
-        for username in usernames {
-            users.insert(MononokeIdentity::from_str(&format!("USER:{}", username))?);
-        }
-
-        repo_regions.insert(
-            region_name.to_string(),
-            Arc::new(Acl {
-                actions: hashmap! {
-                    "read".to_string() => users,
-                },
-            }),
-        );
-    }
-
-    // Add each configured group
-    let mut groups = HashMap::new();
-    for (group_name, identities) in groups_config {
-        let mut members = MononokeIdentitySet::new();
-        for identity in identities {
-            members.insert(MononokeIdentity::from_str(identity)?);
-        }
-        groups.insert(group_name.to_string(), Arc::new(members));
-    }
+    let groups = groups_config
+        .into_iter()
+        .map(|(group_name, identities)| {
+            let members = identities
+                .into_iter()
+                .map(MononokeIdentity::from_str)
+                .collect::<Result<MononokeIdentitySet, _>>()?;
+            Ok((group_name.to_string(), Arc::new(members)))
+        })
+        .collect::<Result<HashMap<_, _>>>()?;
 
     let default_user = MononokeIdentity::from_str("USER:myusername0")?;
-    let default_read_users = {
-        let mut users = MononokeIdentitySet::new();
-        users.insert(default_user.clone());
-        users
-    };
-    let default_write_users = {
-        let mut users = MononokeIdentitySet::new();
-        users.insert(default_user);
-        users
-    };
+    let default_read_users = MononokeIdentitySet::from([default_user.clone()]);
+    let default_write_users = MononokeIdentitySet::from([default_user]);
 
     let repos = hashmap! {
         "default".to_string() => Arc::new(Acl {
@@ -836,7 +828,7 @@ async fn setup_test_repo(
 
     let manifest_id_store = Arc::new(
         SqlRestrictedPathsManifestIdStoreBuilder::with_sqlite_in_memory()
-            .expect("Failed to create Sqlite connection")
+            .context("Failed to create Sqlite connection")?
             .with_repo_id(repo_id),
     );
 
@@ -1019,10 +1011,10 @@ fn deserialize_scuba_log_file(
     Ok(log_samples)
 }
 
-pub(crate) fn cast_to_non_root_mpaths(paths: Vec<&str>) -> Vec<NonRootMPath> {
+pub(crate) fn cast_to_non_root_mpaths(paths: Vec<&str>) -> Result<Vec<NonRootMPath>> {
     paths
         .into_iter()
         .map(NonRootMPath::new)
         .collect::<Result<Vec<_>>>()
-        .expect("Failed to cast to NonRootMPath")
+        .context("Failed to cast to NonRootMPath")
 }
