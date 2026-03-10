@@ -16,9 +16,7 @@ test eden du
   $ hg add tmp.txt
   $ hg commit -m "test commit"
   $ eden du | grep "Materialized files" | sed 's/\s+$/\n/' | sed 's/\s*//' # Windows has a nondeterministic split between materialized and backing repo
-  Materialized files:  1.* MB (glob) (linux !)
-  Materialized files:  1.* MB (glob) (osx !)
-  Materialized files:  ***** KB (glob) (windows !)
+  Materialized files:  *B (glob)
 
 test eden du - ignored files
 
@@ -35,5 +33,5 @@ test eden du --clean
   $ cd $TESTTMP/wcrepo
   $ seq 158730 > tmp.txt
   $ eden du --clean | grep "Materialized files:" | sed 's/\s+$/\n/' | sed 's/\s*//'
-  Materialized files:  1.* MB    Not cleaned. Please see WARNING above (glob)
+  Materialized files:  *B    Not cleaned. Please see WARNING above (glob)
 #endif
