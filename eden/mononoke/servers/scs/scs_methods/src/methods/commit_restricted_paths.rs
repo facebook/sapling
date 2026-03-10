@@ -212,6 +212,7 @@ mod tests {
     use scuba_ext::MononokeScubaSampleBuilder;
     use sql_construct::SqlConstruct;
     use test_repo_factory::TestRepoFactory;
+    use test_repo_factory::default_test_repo_config;
     use tests_utils::CreateCommitContext;
 
     use super::*;
@@ -220,7 +221,7 @@ mod tests {
     async fn create_test_restricted_paths(
         fb: FacebookInit,
         path_acls: Vec<(&str, &str)>, // (path, "TYPE:acl_name")
-    ) -> ArcRestrictedPaths {
+    ) -> Result<ArcRestrictedPaths> {
         let repo_id = RepositoryId::new(0);
 
         let path_acls_map: HashMap<NonRootMPath, MononokeIdentity> = path_acls
@@ -254,13 +255,17 @@ mod tests {
         let acl_provider = DummyAclProvider::new(fb).expect("Failed to create DummyAclProvider");
         let scuba = MononokeScubaSampleBuilder::with_discard();
 
-        Arc::new(RestrictedPaths::new(
+        let derived_data_config = default_test_repo_config().derived_data_config;
+
+        Ok(Arc::new(RestrictedPaths::new(
             config,
             manifest_id_store,
             acl_provider,
             None,
             scuba,
-        ))
+            false, // use_acl_manifest
+            &derived_data_config,
+        )?))
     }
 
     /// Helper to create a ChangesetContext with restricted paths for testing.
@@ -268,7 +273,7 @@ mod tests {
         fb: FacebookInit,
         path_acls: Vec<(&str, &str)>,
     ) -> Result<ChangesetContext<Repo>> {
-        let restricted_paths = create_test_restricted_paths(fb, path_acls).await;
+        let restricted_paths = create_test_restricted_paths(fb, path_acls).await?;
         let ctx = CoreContext::test_mock(fb);
 
         let repo: Repo = TestRepoFactory::new(fb)

@@ -347,23 +347,27 @@ pub async fn derive_from_hg_manifest_and_parents(
                 };
                 let hg_augmented_manifest_id = envelope.store(ctx, blobstore).await?;
 
-                if restricted_paths_enabled
-                    && let Some(non_root_path) = path.clone().into_optional_non_root_path()
-                    && restricted_paths.is_restricted_path(&non_root_path)
-                {
-                    let entry = RestrictedPathManifestIdEntry::new(
-                        ManifestType::HgAugmented,
-                        hg_augmented_manifest_id.to_string().into(),
-                        RepoPath::DirectoryPath(non_root_path),
-                    )?;
+                if restricted_paths_enabled {
+                    if let Some(non_root_path) = path.clone().into_optional_non_root_path() {
+                        let is_restricted = restricted_paths
+                            .is_restricted_path(ctx, None, &non_root_path)
+                            .await?;
+                        if is_restricted {
+                            let entry = RestrictedPathManifestIdEntry::new(
+                                ManifestType::HgAugmented,
+                                hg_augmented_manifest_id.to_string().into(),
+                                RepoPath::DirectoryPath(non_root_path),
+                            )?;
 
-                    if let Err(e) = restricted_paths
-                        .manifest_id_store()
-                        .add_entry(ctx, entry)
-                        .await
-                    {
-                        // Log error but don't fail manifest derivation
-                        warn!("Failed to track restricted path at {path}: {e}");
+                            if let Err(e) = restricted_paths
+                                .manifest_id_store()
+                                .add_entry(ctx, entry)
+                                .await
+                            {
+                                // Log error but don't fail manifest derivation
+                                warn!("Failed to track restricted path at {path}: {e}");
+                            }
+                        }
                     }
                 }
                 Ok((

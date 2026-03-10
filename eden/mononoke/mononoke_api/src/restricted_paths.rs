@@ -64,6 +64,7 @@ mod tests {
     use scuba_ext::MononokeScubaSampleBuilder;
     use sql_construct::SqlConstruct;
     use test_repo_factory::TestRepoFactory;
+    use test_repo_factory::default_test_repo_config;
     use tests_utils::CreateCommitContext;
 
     use super::*;
@@ -75,7 +76,7 @@ mod tests {
     async fn create_test_restricted_paths(
         fb: FacebookInit,
         path_acls: Vec<(&str, &str)>,
-    ) -> Arc<RestrictedPaths> {
+    ) -> Result<Arc<RestrictedPaths>> {
         let repo_id = RepositoryId::new(0);
 
         let path_acls_map: HashMap<NonRootMPath, MononokeIdentity> = path_acls
@@ -108,13 +109,17 @@ mod tests {
         let acl_provider = DummyAclProvider::new(fb).expect("Failed to create DummyAclProvider");
         let scuba = MononokeScubaSampleBuilder::with_discard();
 
-        Arc::new(RestrictedPaths::new(
+        let derived_data_config = default_test_repo_config().derived_data_config;
+
+        Ok(Arc::new(RestrictedPaths::new(
             config,
             manifest_id_store,
             acl_provider,
             None,
             scuba,
-        ))
+            false, // use_acl_manifest
+            &derived_data_config,
+        )?))
     }
 
     /// Create a RepoContext and ChangesetContext with restricted paths configured.
@@ -122,7 +127,9 @@ mod tests {
         fb: FacebookInit,
         path_acls: Vec<(&str, &str)>,
     ) -> (RepoContext<Repo>, ChangesetContext<Repo>) {
-        let restricted_paths = create_test_restricted_paths(fb, path_acls).await;
+        let restricted_paths = create_test_restricted_paths(fb, path_acls)
+            .await
+            .expect("Failed to create test restricted paths");
         let ctx = CoreContext::test_mock(fb);
 
         let repo: Repo = TestRepoFactory::new(fb)
@@ -812,7 +819,7 @@ mod tests {
     #[mononoke::fbinit_test]
     async fn test_restricted_paths_changes_with_restricted_files(fb: FacebookInit) -> Result<()> {
         let restricted_paths =
-            create_test_restricted_paths(fb, vec![("restricted", "TIER:my-acl")]).await;
+            create_test_restricted_paths(fb, vec![("restricted", "TIER:my-acl")]).await?;
         let ctx = CoreContext::test_mock(fb);
 
         let repo: Repo = TestRepoFactory::new(fb)
@@ -852,7 +859,7 @@ mod tests {
     #[mononoke::fbinit_test]
     async fn test_restricted_paths_changes_no_restricted_files(fb: FacebookInit) -> Result<()> {
         let restricted_paths =
-            create_test_restricted_paths(fb, vec![("restricted", "TIER:my-acl")]).await;
+            create_test_restricted_paths(fb, vec![("restricted", "TIER:my-acl")]).await?;
         let ctx = CoreContext::test_mock(fb);
 
         let repo: Repo = TestRepoFactory::new(fb)
@@ -888,7 +895,7 @@ mod tests {
                 ("first/second", "TIER:second-acl"),
             ],
         )
-        .await;
+        .await?;
         let ctx = CoreContext::test_mock(fb);
 
         let repo: Repo = TestRepoFactory::new(fb)
@@ -955,7 +962,7 @@ mod tests {
             fb,
             vec![("alpha", "TIER:alpha-acl"), ("beta", "TIER:beta-acl")],
         )
-        .await;
+        .await?;
         let ctx = CoreContext::test_mock(fb);
 
         let repo: Repo = TestRepoFactory::new(fb)

@@ -95,6 +95,7 @@
     "scm/mononoke:git_block_indirect_unshallow_fetch": false,
     "scm/mononoke:hgmanifest_skip_writes": true,
     "scm/mononoke:hgmanifest_read_from_augmented": true,
+    "scm/mononoke:use_acl_manifest_for_restricted_paths": false,
     "scm/metagit:mononoke_git_lfs": false,
     "scm/mononoke:use_split_config_loading": false,
     "scm/mononoke:cross_repo_pause_backsyncer": false

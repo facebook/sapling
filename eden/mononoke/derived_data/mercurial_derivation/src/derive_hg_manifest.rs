@@ -325,23 +325,27 @@ async fn create_hg_manifest(
         Some("hg_manifest_write"),
     )?;
     // Track restricted paths by storing manifest IDs for directories that match restricted path prefixes
-    if restricted_paths_enabled
-        && let path @ RepoPath::DirectoryPath(non_root_path) = &path
-        && restricted_paths.is_restricted_path(non_root_path)
-    {
-        let entry = RestrictedPathManifestIdEntry::new(
-            ManifestType::Hg,
-            mfid.to_string().into(),
-            path.clone(),
-        )?;
+    if restricted_paths_enabled {
+        if let path @ RepoPath::DirectoryPath(non_root_path) = &path {
+            let is_restricted = restricted_paths
+                .is_restricted_path(&ctx, None, non_root_path)
+                .await?;
+            if is_restricted {
+                let entry = RestrictedPathManifestIdEntry::new(
+                    ManifestType::Hg,
+                    mfid.to_string().into(),
+                    path.clone(),
+                )?;
 
-        // Track restricted path - log error but don't fail manifest derivation
-        if let Err(e) = restricted_paths
-            .manifest_id_store()
-            .add_entry(&ctx, entry)
-            .await
-        {
-            warn!("Failed to track restricted path: {e}");
+                // Track restricted path - log error but don't fail manifest derivation
+                if let Err(e) = restricted_paths
+                    .manifest_id_store()
+                    .add_entry(&ctx, entry)
+                    .await
+                {
+                    warn!("Failed to track restricted path: {e}");
+                }
+            }
         }
     }
 

@@ -348,27 +348,31 @@ async fn create_fsnode(
     )?;
 
     let path = &tree_info.path;
-    if restricted_paths_enabled
-        && let Some(non_root_path) = path.clone().into_optional_non_root_path()
-        && restricted_paths.is_restricted_path(&non_root_path)
-    {
-        let entry = RestrictedPathManifestIdEntry::new(
-            ManifestType::Fsnode,
-            ManifestId::from(&fsnode_id.blake2().into_inner()),
-            RepoPath::DirectoryPath(non_root_path),
-        )?;
+    if restricted_paths_enabled {
+        if let Some(non_root_path) = path.clone().into_optional_non_root_path() {
+            let is_restricted = restricted_paths
+                .is_restricted_path(ctx, None, &non_root_path)
+                .await?;
+            if is_restricted {
+                let entry = RestrictedPathManifestIdEntry::new(
+                    ManifestType::Fsnode,
+                    ManifestId::from(&fsnode_id.blake2().into_inner()),
+                    RepoPath::DirectoryPath(non_root_path),
+                )?;
 
-        if let Err(e) = restricted_paths
-            .manifest_id_store()
-            .add_entry(ctx, entry)
-            .await
-        {
-            // Log error but don't fail manifest derivation
-            tracing::warn!(
-                path = %path,
-                error = %e,
-                "Failed to track restricted path"
-            );
+                if let Err(e) = restricted_paths
+                    .manifest_id_store()
+                    .add_entry(ctx, entry)
+                    .await
+                {
+                    // Log error but don't fail manifest derivation
+                    tracing::warn!(
+                        path = %path,
+                        error = %e,
+                        "Failed to track restricted path"
+                    );
+                }
+            }
         }
     }
 

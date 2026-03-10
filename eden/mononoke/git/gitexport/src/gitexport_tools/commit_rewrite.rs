@@ -51,6 +51,7 @@ use mononoke_api::RepoContext;
 use mononoke_macros::mononoke;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
+use mononoke_types::DerivableType;
 use mononoke_types::FileChange;
 use mononoke_types::NonRootMPath;
 use rand::distr::Alphanumeric;
@@ -548,6 +549,7 @@ async fn create_temp_repo(fb: FacebookInit, ctx: &CoreContext) -> Result<RepoCon
     let derived_data_types_config = DerivedDataTypesConfig {
         types: hashset! {
             ChangesetInfo::VARIANT,
+            DerivableType::AclManifests,
             MappedGitCommitId::VARIANT,
             RootGitDeltaManifestV2Id::VARIANT,
             RootUnodeManifestId::VARIANT,

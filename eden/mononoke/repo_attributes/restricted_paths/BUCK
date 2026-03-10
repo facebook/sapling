@@ -14,6 +14,7 @@ rust_library(
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/repo_factory:test_repo_factory",
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",

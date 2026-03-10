@@ -114,6 +114,7 @@ rust_library(
         "fbsource//third-party/rust:strum",
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/justknobs_stub:justknobs",
         "//common/rust/shed/sql:sql",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/blobstore:cacheblob",

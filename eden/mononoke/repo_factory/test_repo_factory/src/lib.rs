@@ -748,13 +748,22 @@ impl TestRepoFactory {
         // Create scuba builder with discard for tests
         let scuba_builder = MononokeScubaSampleBuilder::with_discard();
 
+        // Check JustKnobs to determine whether to use ACL manifest for restriction lookups
+        let use_acl_manifest = justknobs::eval(
+            "scm/mononoke:use_acl_manifest_for_restricted_paths",
+            None,
+            None,
+        )?;
+
         Ok(Arc::new(RestrictedPaths::new(
             restricted_paths_config,
             restricted_paths_manifest_id_store.clone(),
             acl_provider,
             Some(Arc::new(cache)),
             scuba_builder,
-        )))
+            use_acl_manifest,
+            &repo_config.derived_data_config,
+        )?))
     }
 
     /// Restricted paths root ids store

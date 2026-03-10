@@ -56,6 +56,7 @@ use strum::Display as EnumDisplay;
 use strum::EnumIter;
 use strum::IntoEnumIterator;
 use test_repo_factory::TestRepoFactory;
+use test_repo_factory::default_test_repo_config;
 use tests_utils::CreateCommitContext;
 
 pub const TEST_CLIENT_MAIN_ID: &str = "user:myusername0";
@@ -867,7 +868,9 @@ async fn setup_test_repo(
         acl_provider,
         Some(cache),
         scuba_builder,
-    ));
+        false, // use_acl_manifest
+        &default_test_repo_config().derived_data_config,
+    )?);
 
     // Create the test repo
     let mut factory = TestRepoFactory::new(ctx.fb)?;

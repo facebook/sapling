@@ -19,8 +19,11 @@ use std::sync::Arc;
 use anyhow::Context;
 use anyhow::Result;
 use context::CoreContext;
+use metaconfig_types::DerivedDataConfig;
 use metaconfig_types::RestrictedPathsConfig;
 use mononoke_macros::mononoke;
+use mononoke_types::ChangesetId;
+use mononoke_types::DerivableType;
 use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
 use permission_checker::AclProvider;
@@ -85,6 +88,11 @@ pub struct RestrictedPaths {
     manifest_id_cache: Option<Arc<RestrictedPathsManifestIdCache>>,
     /// Scuba sample builder for logging access to restricted paths
     scuba: MononokeScubaSampleBuilder,
+    /// Whether to use ACL manifest instead of config for restriction lookups.
+    /// When true, the async methods will attempt to use the ACL manifest derived
+    /// data to determine restrictions. When false (default), uses config-based
+    /// lookup.
+    use_acl_manifest: bool,
 }
 
 impl RestrictedPaths {
@@ -94,14 +102,24 @@ impl RestrictedPaths {
         acl_provider: Arc<dyn AclProvider>,
         manifest_id_cache: Option<Arc<RestrictedPathsManifestIdCache>>,
         scuba: MononokeScubaSampleBuilder,
-    ) -> Self {
-        Self {
+        use_acl_manifest: bool,
+        derived_data_config: &DerivedDataConfig,
+    ) -> Result<Self> {
+        if use_acl_manifest {
+            anyhow::ensure!(
+                derived_data_config.is_enabled(DerivableType::AclManifests),
+                "use_acl_manifest is true but AclManifest derivation is not enabled for this repo. \
+                 Enable AclManifests in the repo's derived data config."
+            );
+        }
+        Ok(Self {
             config,
             manifest_id_store,
             acl_provider,
             manifest_id_cache,
             scuba,
-        }
+            use_acl_manifest,
+        })
     }
 
     pub fn config(&self) -> &RestrictedPathsConfig {
@@ -116,53 +134,122 @@ impl RestrictedPaths {
         &self.acl_provider
     }
 
+    /// Returns whether ACL manifest should be used for restriction lookups.
+    pub fn use_acl_manifest(&self) -> bool {
+        self.use_acl_manifest
+    }
+
+    /// Exact path match against config.path_acls.
+    fn get_acl_for_path_from_config(&self, path: &NonRootMPath) -> Option<&MononokeIdentity> {
+        self.config
+            .path_acls
+            .iter()
+            .find(|(restricted_path_prefix, _)| *restricted_path_prefix == path)
+            .map(|(_, acl)| acl)
+    }
+
+    /// Prefix match against config.path_acls.
+    fn get_acl_for_path_prefix_from_config(
+        &self,
+        path: &NonRootMPath,
+    ) -> Option<&MononokeIdentity> {
+        // TODO(T239041722): use SortedVectorMap to ensure a specific order
+        self.config
+            .path_acls
+            .iter()
+            .find(|(restricted_path_prefix, _)| restricted_path_prefix.is_prefix_of(path))
+            .map(|(_, acl)| acl)
+    }
+
+    /// Check if a path is restricted according to config.
+    fn is_restricted_path_from_config(&self, path: &NonRootMPath) -> bool {
+        self.get_acl_for_path_from_config(path).is_some()
+    }
+
     /// If a path is considered restricted according to the configuration,
     /// returns its associated ACL.
     /// This will **NOT consider child directories** as restricted. e.g.
     /// If `foo` is under ACL X, calling this `foo/bar` will return None.
-    pub fn get_acl_for_path(&self, path: &NonRootMPath) -> Option<&MononokeIdentity> {
-        let config = &self.config;
-
-        // Check if the path starts with any of the configured restricted path prefixes
-        for (restricted_path_prefix, acl) in &config.path_acls {
-            if restricted_path_prefix == path {
-                return Some(acl);
-            }
+    ///
+    /// When `use_acl_manifest` is true, this will query the ACL manifest derived
+    /// data for the given changeset. When false, uses config-based lookup only.
+    ///
+    /// TODO(T248660053): Implement ACL manifest lookup when use_acl_manifest is true.
+    /// Currently falls back to config-based lookup regardless of the flag.
+    pub async fn get_acl_for_path(
+        &self,
+        _ctx: &CoreContext,
+        _cs_id: Option<ChangesetId>,
+        path: &NonRootMPath,
+    ) -> Result<Option<MononokeIdentity>> {
+        if !self.use_acl_manifest {
+            return Ok(self.get_acl_for_path_from_config(path).cloned());
         }
 
-        None
+        // TODO(T248660053): When use_acl_manifest is true, derive and query the ACL manifest
+        // For now, fall back to config-based lookup
+        Ok(self.get_acl_for_path_from_config(path).cloned())
     }
 
-    pub fn get_acls_for_paths(&self, paths: &[NonRootMPath]) -> Vec<&MononokeIdentity> {
-        paths
-            .iter()
-            .filter_map(|path| self.get_acl_for_path(path))
-            .collect()
+    pub async fn get_acls_for_paths(
+        &self,
+        ctx: &CoreContext,
+        cs_id: Option<ChangesetId>,
+        paths: &[NonRootMPath],
+    ) -> Result<Vec<MononokeIdentity>> {
+        let mut acls = Vec::new();
+        for path in paths {
+            if let Some(acl) = self.get_acl_for_path(ctx, cs_id, path).await? {
+                acls.push(acl);
+            }
+        }
+        Ok(acls)
     }
 
     /// If the **exact** path is considered restricted according to the
     /// configuration, returns its associated ACL.
     /// This will **consider child directories** as restricted. e.g.
     /// If `foo` is under ACL X, calling this `foo/bar` will return `X`.
-    pub fn get_acl_for_path_prefix(&self, path: &NonRootMPath) -> Option<&MononokeIdentity> {
-        let config = &self.config;
-
-        // TODO(T239041722): use SortedVectorMap to ensure a specific order
-
-        // Check if the path starts with any of the configured restricted path prefixes
-        for (restricted_path_prefix, acl) in &config.path_acls {
-            if restricted_path_prefix.is_prefix_of(path) {
-                return Some(acl);
-            }
+    ///
+    /// When `use_acl_manifest` is true, this will query the ACL manifest derived
+    /// data for the given changeset. When false, uses config-based lookup only.
+    ///
+    /// TODO(T248660053): Implement ACL manifest lookup when use_acl_manifest is true.
+    /// Currently falls back to config-based lookup regardless of the flag.
+    pub async fn get_acl_for_path_prefix(
+        &self,
+        _ctx: &CoreContext,
+        _cs_id: Option<ChangesetId>,
+        path: &NonRootMPath,
+    ) -> Result<Option<MononokeIdentity>> {
+        if !self.use_acl_manifest {
+            return Ok(self.get_acl_for_path_prefix_from_config(path).cloned());
         }
 
-        None
+        // TODO(T248660053): When use_acl_manifest is true, derive and query the ACL manifest
+        // For now, fall back to config-based lookup
+        Ok(self.get_acl_for_path_prefix_from_config(path).cloned())
     }
 
     /// Check if a path is considered restricted according to the configuration.
     /// This will not consider children as restricted, i.e. it's a strict comparison.
-    pub fn is_restricted_path(&self, path: &NonRootMPath) -> bool {
-        self.get_acl_for_path(path).is_some()
+    ///
+    /// When `use_acl_manifest` is true, this will query the ACL manifest derived
+    /// data for the given changeset. When false, uses config-based lookup only.
+    ///
+    /// TODO(T248660053): Implement ACL manifest lookup when use_acl_manifest is true.
+    /// Currently falls back to config-based lookup regardless of the flag.
+    pub async fn is_restricted_path(
+        &self,
+        ctx: &CoreContext,
+        cs_id: Option<ChangesetId>,
+        path: &NonRootMPath,
+    ) -> Result<bool> {
+        if !self.use_acl_manifest {
+            return Ok(self.is_restricted_path_from_config(path));
+        }
+
+        Ok(self.get_acl_for_path(ctx, cs_id, path).await?.is_some())
     }
 
     /// Check if any restricted paths are configured for this repository.
@@ -206,13 +293,14 @@ impl RestrictedPaths {
             return Ok(true);
         }
 
-        let acls = self.get_acls_for_paths(paths.as_slice());
+        let acls = self.get_acls_for_paths(ctx, None, paths.as_slice()).await?;
+        let acl_refs: Vec<&MononokeIdentity> = acls.iter().collect();
 
         log_access_to_restricted_path(
             ctx,
             self.manifest_id_store.repo_id(),
             paths,
-            acls,
+            acl_refs,
             crate::access_log::RestrictedPathAccessData::Manifest(manifest_id, manifest_type),
             self.acl_provider.clone(),
             self.config.tooling_allowlist_group.as_deref(),
@@ -544,6 +632,7 @@ mod tests {
     use mononoke_types::RepositoryId;
     use permission_checker::dummy::DummyAclProvider;
     use sql_construct::SqlConstruct;
+    use test_repo_factory::default_test_repo_config;
 
     use super::*;
     use crate::SqlRestrictedPathsManifestIdStoreBuilder;
@@ -567,12 +656,21 @@ mod tests {
             acl_provider,
             None,
             scuba,
-        );
+            false, // use_acl_manifest — these tests exercise config-based lookup only
+            &default_test_repo_config().derived_data_config,
+        )?;
 
         assert!(!repo_restricted_paths.has_restricted_paths());
 
+        let ctx = CoreContext::test_mock(fb);
+        let cs_id = ChangesetId::new(mononoke_types::hash::Blake2::from_byte_array([0u8; 32]));
         let test_path = NonRootMPath::new("test/path").unwrap();
-        assert!(repo_restricted_paths.get_acl_for_path(&test_path).is_none());
+        assert!(
+            repo_restricted_paths
+                .get_acl_for_path(&ctx, Some(cs_id), &test_path)
+                .await?
+                .is_none()
+        );
 
         Ok(())
     }
@@ -611,8 +709,15 @@ mod tests {
 
         let scuba = MononokeScubaSampleBuilder::with_discard();
 
-        let repo_restricted_paths =
-            RestrictedPaths::new(config, manifest_id_store, acl_provider, None, scuba);
+        let repo_restricted_paths = RestrictedPaths::new(
+            config,
+            manifest_id_store,
+            acl_provider,
+            None,
+            scuba,
+            false, // use_acl_manifest — these tests exercise config-based lookup only
+            &default_test_repo_config().derived_data_config,
+        )?;
 
         assert!(repo_restricted_paths.has_restricted_paths());
         Ok(())
@@ -650,25 +755,43 @@ mod tests {
 
         let scuba = MononokeScubaSampleBuilder::with_discard();
 
-        let repo_restricted_paths =
-            RestrictedPaths::new(config, manifest_id_store, acl_provider, None, scuba);
+        let repo_restricted_paths = RestrictedPaths::new(
+            config,
+            manifest_id_store,
+            acl_provider,
+            None,
+            scuba,
+            false, // use_acl_manifest — these tests exercise config-based lookup only
+            &default_test_repo_config().derived_data_config,
+        )?;
+
+        let ctx = CoreContext::test_mock(fb);
+        let cs_id = ChangesetId::new(mononoke_types::hash::Blake2::from_byte_array([0u8; 32]));
 
         // Test exact match
         let exact_path = NonRootMPath::new("restricted/dir").unwrap();
         assert_eq!(
-            repo_restricted_paths.get_acl_for_path(&exact_path),
-            Some(&restricted_acl)
+            repo_restricted_paths
+                .get_acl_for_path(&ctx, Some(cs_id), &exact_path)
+                .await?,
+            Some(restricted_acl.clone())
         );
 
         // Test subdirectory match
         let sub_path = NonRootMPath::new("restricted/dir/subdir/file.txt").unwrap();
-        assert!(repo_restricted_paths.get_acl_for_path(&sub_path).is_none());
+        assert!(
+            repo_restricted_paths
+                .get_acl_for_path(&ctx, Some(cs_id), &sub_path)
+                .await?
+                .is_none()
+        );
 
         // Test non-matching path
         let other_path = NonRootMPath::new("other/dir/file.txt").unwrap();
         assert!(
             repo_restricted_paths
-                .get_acl_for_path(&other_path)
+                .get_acl_for_path(&ctx, Some(cs_id), &other_path)
+                .await?
                 .is_none()
         );
 
@@ -676,7 +799,8 @@ mod tests {
         let partial_path = NonRootMPath::new("restricted/different").unwrap();
         assert!(
             repo_restricted_paths
-                .get_acl_for_path(&partial_path)
+                .get_acl_for_path(&ctx, Some(cs_id), &partial_path)
+                .await?
                 .is_none()
         );
 
@@ -684,7 +808,8 @@ mod tests {
         let partial_path = NonRootMPath::new("restricted/di").unwrap();
         assert!(
             repo_restricted_paths
-                .get_acl_for_path(&partial_path)
+                .get_acl_for_path(&ctx, Some(cs_id), &partial_path)
+                .await?
                 .is_none()
         );
         Ok(())

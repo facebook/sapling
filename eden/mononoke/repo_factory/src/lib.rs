@@ -1382,6 +1382,7 @@ impl RepoFactory {
     /// Restricted paths
     pub async fn restricted_paths(
         &self,
+        repo_identity: &ArcRepoIdentity,
         repo_config: &ArcRepoConfig,
         restricted_paths_manifest_id_store: &ArcRestrictedPathsManifestIdStore,
     ) -> Result<ArcRestrictedPaths> {
@@ -1416,13 +1417,22 @@ impl RepoFactory {
             MononokeScubaSampleBuilder::new(self.env.fb, restricted_paths::ACCESS_LOG_SCUBA_TABLE)?
         };
 
+        // Check JustKnobs to determine whether to use ACL manifest for restriction lookups
+        let use_acl_manifest = justknobs::eval(
+            "scm/mononoke:use_acl_manifest_for_restricted_paths",
+            None,
+            Some(repo_identity.name()),
+        )?;
+
         let restricted_paths = RestrictedPaths::new(
             repo_config.restricted_paths_config.clone(),
             restricted_paths_manifest_id_store.clone(),
             self.env.acl_provider.clone(),
             manifest_id_cache,
             scuba_builder,
-        );
+            use_acl_manifest,
+            &repo_config.derived_data_config,
+        )?;
 
         Ok(Arc::new(restricted_paths))
     }

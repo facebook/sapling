@@ -448,6 +448,7 @@ mod tests {
     use scuba_ext::MononokeScubaSampleBuilder;
     use sql_construct::SqlConstruct;
     use test_repo_factory::TestRepoFactory;
+    use test_repo_factory::default_test_repo_config;
     use tests_utils::CreateCommitContext;
 
     use super::*;
@@ -617,13 +618,17 @@ mod tests {
 
         let scuba = MononokeScubaSampleBuilder::with_discard();
 
+        let derived_data_config = default_test_repo_config().derived_data_config;
+
         let restricted_paths = Arc::new(RestrictedPaths::new(
             config,
             manifest_id_store,
             acl_provider,
             Some(cache),
             scuba,
-        ));
+            false, // use_acl_manifest
+            &derived_data_config,
+        )?);
 
         let repo: Repo = TestRepoFactory::new(ctx.fb)?
             .with_restricted_paths(restricted_paths)

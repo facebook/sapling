@@ -34,6 +34,7 @@ git_source_of_truth = { version = "0.1.0", path = "../../repo_attributes/git_sou
 git_symbolic_refs = { version = "0.1.0", path = "../../repo_attributes/git_symbolic_refs" }
 git_types = { version = "0.1.0", path = "../../git/git_types" }
 hook_manager = { version = "0.1.0", path = "../../repo_attributes/hook_manager/hook_manager" }
+justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 live_commit_sync_config = { version = "0.1.0", path = "../../features/commit_rewriting/live_commit_sync_config" }
 maplit = "1.0"
 megarepo_mapping = { version = "0.1.0", path = "../../megarepo_api/mapping" }
