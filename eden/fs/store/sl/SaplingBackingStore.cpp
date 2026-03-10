@@ -1613,33 +1613,39 @@ SaplingBackingStore::getRootTree(
   folly::stop_watch<std::chrono::milliseconds> watch;
   ObjectId commitId = hashFromRootId(rootId);
 
-  return folly::via(
-             serverThreadPool_,
-             [this, commitId] { return getManifestNode(commitId); })
+  return faultInjector_
+      .checkAsync("SaplingBackingStore::getRootTree", commitId.asHexString())
       .thenValue([this, commitId, watch, fetchContext = context.copy()](
-                     auto manifestNode) {
-        if (!manifestNode.has_value()) {
-          auto ew = folly::exception_wrapper{std::runtime_error{
-              "Manifest node could not be found for commitId"}};
-          return folly::makeFuture<BackingStore::GetRootTreeResult>(
-              std::move(ew));
-        }
-        XLOGF(
-            DBG3,
-            "commit {} has manifest node {}",
-            commitId,
-            manifestNode.value());
-
-        return importTreeManifestImpl(
-                   *std::move(manifestNode),
-                   fetchContext,
-                   ObjectFetchContext::ObjectType::RootTree)
-            .thenValue([this, watch](TreePtr rootTree) {
-              stats_->addDuration(
-                  &SaplingBackingStoreStats::getRootTree, watch.elapsed());
-              return BackingStore::GetRootTreeResult{
-                  rootTree, rootTree->getObjectId()};
-            });
+                     auto&&) mutable {
+        return folly::via(
+                   serverThreadPool_,
+                   [this, commitId] { return getManifestNode(commitId); })
+            .thenValue(
+                [this, commitId, watch, fetchContext = std::move(fetchContext)](
+                    auto manifestNode) {
+                  if (!manifestNode.has_value()) {
+                    return folly::makeFuture<BackingStore::GetRootTreeResult>(
+                        folly::exception_wrapper{std::runtime_error{
+                            "Manifest node could not be found for commitId"}});
+                  }
+                  XLOGF(
+                      DBG3,
+                      "commit {} has manifest node {}",
+                      commitId,
+                      manifestNode.value());
+                  return importTreeManifestImpl(
+                             *std::move(manifestNode),
+                             fetchContext,
+                             ObjectFetchContext::ObjectType::RootTree)
+                      .thenValue([this, watch](TreePtr rootTree) {
+                        stats_->addDuration(
+                            &SaplingBackingStoreStats::getRootTree,
+                            watch.elapsed());
+                        return BackingStore::GetRootTreeResult{
+                            rootTree, rootTree->getObjectId()};
+                      });
+                })
+            .semi();
       });
 }
 

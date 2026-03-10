@@ -96,8 +96,8 @@ struct SaplingBackingStoreWithFaultInjectorTest : SaplingBackingStoreTestBase {
   FaultInjector faultInjector{/*enabled=*/true};
   folly::InlineExecutor executor = folly::InlineExecutor::instance();
 
-  std::unique_ptr<SaplingBackingStore> queuedBackingStore =
-      std::make_unique<SaplingBackingStore>(
+  std::shared_ptr<SaplingBackingStore> queuedBackingStore =
+      std::make_shared<SaplingBackingStore>(
           repo.path(),
           repo.path(),
           kPathMapDefaultCaseSensitive,
@@ -596,4 +596,41 @@ TEST_F(SaplingBackingStoreNoFaultInjectorTest, testCompareRootsById) {
       queuedBackingStore->compareRootsById(rootId2, rootId1),
       ObjectComparison::Different);
 }
+
+TEST_F(
+    SaplingBackingStoreWithFaultInjectorTest,
+    getRootTreeFutureChainCanBePausedAndResumed) {
+  // This test verifies the bug: getRootTree captures raw `this` in its
+  // future chain, so the SaplingBackingStore is not kept alive by in-flight
+  // futures. The fix is to capture shared_from_this() instead.
+  auto weak = std::weak_ptr<SaplingBackingStore>(queuedBackingStore);
+
+  faultInjector.injectBlock("SaplingBackingStore::getRootTree", ".*");
+
+  auto future = queuedBackingStore->getRootTree(
+      commit1, ObjectFetchContext::getNullContext());
+
+  EXPECT_FALSE(future.isReady());
+
+  // Drop the test fixture's shared_ptr. Because the lambdas capture raw
+  // `this` (not shared_from_this()), no shared_ptr copy keeps the object
+  // alive — it is destroyed immediately, leaving the future chain with a
+  // dangling `this`.
+  queuedBackingStore.reset();
+
+  // FIXME: The object is dead while the future is still in-flight. With
+  // the fix (shared_from_this()), this becomes EXPECT_FALSE — the lambdas
+  // would hold shared_ptr copies keeping the object alive.
+  EXPECT_TRUE(weak.expired());
+
+  // Don't unblock — the continuation would access freed memory via the
+  // dangling `this`. The pending future and blocked fault are cleaned up
+  // when the test fixture is destroyed.
+  // TODO: Uncomment after fix
+  // faultInjector.unblock("SaplingBackingStore::getRootTree", ".*");
+
+  // After fix: The future should complete without crashing.
+  // std::move(future).getTry(kTestTimeout);
+}
+
 } // namespace facebook::eden

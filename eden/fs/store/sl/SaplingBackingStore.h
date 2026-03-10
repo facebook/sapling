@@ -342,6 +342,9 @@ class SaplingBackingStore final : public BackingStore {
   FRIEND_TEST(
       SaplingBackingStoreWithFaultInjectorIgnoreConfigTest,
       getTreeBatch);
+  FRIEND_TEST(
+      SaplingBackingStoreWithFaultInjectorTest,
+      getRootTreeFutureChainCanBePausedAndResumed);
   friend class EdenServiceHandler;
 
   // Forbidden copy constructor and assignment operator
