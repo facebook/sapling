@@ -104,7 +104,11 @@ class client:
         # Eden dirstate doesn't contain all files, and we don't ever wait for walks,
         # anyway, so avoid loading the dirstate.
         if "eden" not in repo.requirements:
-            self._approx_total_file_count = len(repo.dirstate._map)
+            try:
+                self._approx_total_file_count = len(repo.dirstate._map)
+            except:
+                # Can error in cases such as dotgit mode - ignore.
+                pass
 
     def settimeout(self, timeout):
         self._timeout = timeout

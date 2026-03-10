@@ -4,7 +4,7 @@
   $ setconfig diff.git=true ui.allowemptycommit=true
   $ setconfig workingcopy.rust-checkout=true
   $ setconfig experimental.git-index-fast-path=true
-  $ enable shelve morestatus
+  $ enable shelve morestatus hgevents
   $ setconfig morestatus.show=true
 
 Prepare git repo
