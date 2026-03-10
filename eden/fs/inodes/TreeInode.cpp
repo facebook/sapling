@@ -545,8 +545,10 @@ void TreeInode::loadUnlinkedChildInode(
           mode,
           std::nullopt,
           id ? &*id : nullptr);
-      promises = getInodeMap()->inodeLoadComplete(file.get());
+      // Take ownership before registering the inode, so ptrAcquireCount_ is
+      // already incremented when the inode becomes visible in loadedInodes_.
       inodePtr = InodePtr::takeOwnership(std::move(file));
+      promises = getInodeMap()->inodeLoadComplete(inodePtr.get());
     } else {
       auto overlayContents = getOverlay()->loadOverlayDir(number);
       if (!id) {
@@ -571,8 +573,10 @@ void TreeInode::loadUnlinkedChildInode(
           std::nullopt,
           std::move(overlayContents),
           id ? std::optional<ObjectId>{*id} : std::nullopt);
-      promises = getInodeMap()->inodeLoadComplete(tree.get());
+      // Take ownership before registering the inode, so ptrAcquireCount_ is
+      // already incremented when the inode becomes visible in loadedInodes_.
       inodePtr = InodePtr::takeOwnership(std::move(tree));
+      promises = getInodeMap()->inodeLoadComplete(inodePtr.get());
     }
 
     inodePtr->markUnlinkedAfterLoad();
