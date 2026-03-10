@@ -69,6 +69,15 @@ pub trait DerivationQueue {
         limit: usize,
     ) -> Result<DequeueResponse, InternalError>;
 
+    /// Atomically claim an item for derivation by creating a deriving node.
+    /// Returns Ok(true) if claimed successfully, Ok(false) if another worker
+    /// already claimed it.
+    async fn claim_derivation(
+        &self,
+        ctx: &CoreContext,
+        item: &DerivationDagItem,
+    ) -> Result<bool, InternalError>;
+
     async fn ack(&self, ctx: &CoreContext, item: &DerivationDagItem) -> Result<(), InternalError>;
 
     async fn nack(&self, ctx: &CoreContext, item: DerivationDagItem) -> Result<(), InternalError>;
