@@ -1,0 +1,39 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+/* Simple markdown styles for webview messages */
+.simple-markdown-link {
+  color: var(--vscode-textLink-foreground);
+  text-decoration: none;
+}
+
+.simple-markdown-link:hover {
+  text-decoration: underline;
+}
+
+.simple-markdown-inline-code {
+  background: var(--vscode-textCodeBlock-background, rgba(128, 128, 128, 0.2));
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-family: var(--monospace-fontFamily);
+  font-size: 0.9em;
+}
+
+.simple-markdown-codeblock {
+  background: var(--vscode-textCodeBlock-background, rgba(128, 128, 128, 0.2));
+  padding: 8px;
+  border-radius: 4px;
+  overflow-x: auto;
+  margin: 4px 0;
+}
+
+.simple-markdown-codeblock code {
+  font-family: var(--monospace-fontFamily);
+  font-size: 0.9em;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
