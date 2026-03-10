@@ -148,7 +148,11 @@ from eden.fs.cli.util import (
     is_apple_silicon,
     wait_for_instance_healthy,
 )
-from eden.thrift.legacy import EdenClient, EdenNotRunningError
+from eden.thrift.client import EdenNotRunningError
+from eden.thrift.legacy import (
+    EdenClient,
+    EdenNotRunningError as LegacyEdenNotRunningError,
+)
 from facebook.eden import EdenService
 from facebook.eden.ttypes import (
     ChangeOwnershipRequest,
@@ -1712,7 +1716,7 @@ def remove_legacyephemeral_checkouts(
     try:
         with instance.get_thrift_client_legacy() as client:
             mount_info = client.listMounts()
-    except EdenNotRunningError:
+    except (EdenNotRunningError, LegacyEdenNotRunningError):
         # Daemon not running, no mounts active
         pass
 
@@ -3055,7 +3059,7 @@ class StopCmd(Subcmd):
                     pid = check_health_using_lockfile(instance.state_dir).pid
                     if pid is None:
                         raise EdenNotRunningError(str(instance.state_dir)) from e
-        except EdenNotRunningError:
+        except (EdenNotRunningError, LegacyEdenNotRunningError):
             print_stderr("error: edenfs is not running")
             return SHUTDOWN_EXIT_CODE_NOT_RUNNING_ERROR
 
