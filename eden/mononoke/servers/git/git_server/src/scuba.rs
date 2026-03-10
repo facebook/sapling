@@ -212,7 +212,7 @@ impl MononokeGitScubaHandler {
         scuba.add_opt(MononokeGitScubaKey::ClientMainId, main_client_id);
         scuba.add_opt("user_agent", user_agent);
         scuba.add_opt("client_correlator", client_correlator);
-        scuba.add_opt("client_entrypoint", client_entrypoint);
+        scuba.add_opt("client_entry_point", client_entrypoint);
         scuba.add(
             MononokeGitScubaKey::ClientIdentities,
             identities.iter().map(|i| i.to_string()).collect::<Vec<_>>(),
