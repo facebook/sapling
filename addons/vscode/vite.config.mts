@@ -32,6 +32,7 @@ if (isInternal) {
   input.push(normalizeInputPath('inlineCommentWebview.html'));
   input.push(normalizeInputPath('DiffCommentPanelWebview.html'));
   input.push(normalizeInputPath('InlineCommentPanelWebview.html'));
+  input.push(normalizeInputPath('diffSignalWebview.html'));
 }
 
 console.log(isInternal ? 'Building internal version' : 'Building OSS version');
