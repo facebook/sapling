@@ -17,6 +17,7 @@ use anyhow::Result;
 use anyhow::bail;
 use clap::Args;
 use context::CoreContext;
+use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
 use requests_table::LongRunningRequestsQueue;
 use requests_table::RequestStatus;
@@ -24,8 +25,12 @@ use requests_table::RowId;
 use requests_table::SqlLongRunningRequestsQueue;
 
 use self::display::display_backfill_list;
+use self::display::display_multi_repo_summary;
+use self::display::display_repo_detail;
 use self::display::display_single_repo_detail;
 use self::types::BackfillDisplayData;
+use self::types::RepoDisplayData;
+use self::types::RepoStatus;
 
 #[derive(Args)]
 pub(super) struct BackfillStatusArgs {
@@ -215,20 +220,162 @@ async fn show_backfill_detail(
         let repo_id = unique_repos.iter().next().map(|r| r.id() as i64);
         display_single_repo_detail(&data, repo_id);
     } else {
-        // Multi-repo backfill: show condensed view (to be implemented in next commit)
-        println!("Multi-repo backfill view - to be implemented");
+        // Multi-repo backfill: show condensed view
+        let total_repos = unique_repos.len();
+
+        // Group repos by status
+        let mut repo_status_map: HashMap<i64, HashMap<RequestStatus, usize>> = HashMap::new();
+        for (repo_id_opt, req_status, count) in &stats_by_repo {
+            if let Some(repo_id) = repo_id_opt {
+                repo_status_map
+                    .entry(repo_id.id() as i64)
+                    .or_insert_with(HashMap::new)
+                    .insert(req_status.clone(), *count as usize);
+            }
+        }
+
+        let mut repos_by_status: HashMap<RepoStatus, Vec<i64>> = HashMap::new();
+        for (repo_id, statuses) in &repo_status_map {
+            let repo_status = RepoStatus::from_request_statuses(statuses);
+            repos_by_status
+                .entry(repo_status)
+                .or_insert_with(Vec::new)
+                .push(*repo_id);
+        }
+
+        let repos_by_status_counts = vec![
+            (
+                "Completed".to_string(),
+                repos_by_status
+                    .get(&RepoStatus::Completed)
+                    .map(|v| v.len())
+                    .unwrap_or(0),
+            ),
+            (
+                "In Progress".to_string(),
+                repos_by_status
+                    .get(&RepoStatus::InProgress)
+                    .map(|v| v.len())
+                    .unwrap_or(0),
+            ),
+            (
+                "Not Started".to_string(),
+                repos_by_status
+                    .get(&RepoStatus::NotStarted)
+                    .map(|v| v.len())
+                    .unwrap_or(0),
+            ),
+            (
+                "Failed".to_string(),
+                repos_by_status
+                    .get(&RepoStatus::Failed)
+                    .map(|v| v.len())
+                    .unwrap_or(0),
+            ),
+        ];
+
+        // Get failed repos with counts
+        let failed_repos: Vec<(i64, usize)> = repos_by_status
+            .get(&RepoStatus::Failed)
+            .map(|repos| {
+                repos
+                    .iter()
+                    .map(|repo_id| {
+                        let failed_count = repo_status_map
+                            .get(repo_id)
+                            .and_then(|s| s.get(&RequestStatus::Failed))
+                            .copied()
+                            .unwrap_or(0);
+                        (*repo_id, failed_count)
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        display_multi_repo_summary(&data, total_repos, &repos_by_status_counts, &failed_repos);
     }
 
     Ok(())
 }
 
 async fn show_repo_detail(
-    _ctx: &CoreContext,
-    _queue: &impl LongRunningRequestsQueue,
-    _row_id: &RowId,
-    _repo_id: i64,
+    ctx: &CoreContext,
+    queue: &impl LongRunningRequestsQueue,
+    row_id: &RowId,
+    repo_id: i64,
 ) -> Result<()> {
-    // To be implemented in the next commit
-    println!("Repo detail view - to be implemented");
+    // Verify the backfill exists
+    let root_entry = queue
+        .get_backfill_root_entry(ctx, row_id)
+        .await
+        .context("fetching backfill root entry")?;
+
+    let (request_id, _request_type, _status, _created_at, _args_key) = match root_entry {
+        Some(entry) => entry,
+        None => bail!(
+            "Invalid request ID: {} is not a backfill root request",
+            row_id.0
+        ),
+    };
+
+    // Get stats for this specific repo
+    let repo_id_i32 =
+        i32::try_from(repo_id).context("repo_id out of range for RepositoryId (i32)")?;
+    let repo_id_typed = RepositoryId::new(repo_id_i32);
+    let repo_stats = queue
+        .get_backfill_stats(ctx, row_id, Some(&repo_id_typed))
+        .await
+        .context("fetching repo stats")?;
+
+    if repo_stats.is_empty() {
+        bail!(
+            "No data found for repo {} in backfill {}",
+            repo_id,
+            request_id.0
+        );
+    }
+
+    // Count by status
+    let mut status_map: HashMap<RequestStatus, usize> = HashMap::new();
+    let mut total_requests = 0;
+    for (_req_type, req_status, count) in &repo_stats {
+        *status_map.entry(*req_status).or_insert(0) += *count as usize;
+        total_requests += *count as usize;
+    }
+
+    let mut status_counts: Vec<(RequestStatus, usize)> =
+        status_map.iter().map(|(s, c)| (*s, *c)).collect();
+    status_counts.sort_by(|a, b| b.1.cmp(&a.1));
+
+    // Group by request type
+    let mut type_map: HashMap<String, Vec<(RequestStatus, usize)>> = HashMap::new();
+    for (req_type, req_status, count) in &repo_stats {
+        type_map
+            .entry(req_type.0.clone())
+            .or_insert_with(Vec::new)
+            .push((*req_status, *count as usize));
+    }
+    let mut type_breakdown: Vec<(String, Vec<(RequestStatus, usize)>)> =
+        type_map.into_iter().collect();
+    type_breakdown.sort_by(|a, b| a.0.cmp(&b.0));
+
+    // Determine overall repo status
+    let repo_status = RepoStatus::from_request_statuses(&status_map);
+    let overall_status = match repo_status {
+        RepoStatus::Completed => "Completed",
+        RepoStatus::Failed => "Failed",
+        RepoStatus::InProgress => "In Progress",
+        RepoStatus::NotStarted => "Not Started",
+    };
+
+    display_repo_detail(&RepoDisplayData {
+        request_id,
+        repo_id,
+        overall_status: overall_status.to_string(),
+        total_requests,
+        status_counts,
+        type_breakdown,
+    });
+
     Ok(())
 }
