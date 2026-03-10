@@ -13,8 +13,8 @@ import * as stylex from '@stylexjs/stylex';
 import {Button} from 'isl-components/Button';
 import {Icon} from 'isl-components/Icon';
 import {Tooltip} from 'isl-components/Tooltip';
-import {useAtomValue} from 'jotai';
-import {Component, lazy, Suspense, useState} from 'react';
+import {useAtom, useAtomValue} from 'jotai';
+import {Component, lazy, Suspense, useEffect, useState} from 'react';
 import {useShowConfirmSubmitStack} from '../ConfirmSubmitStack';
 import {Internal} from '../Internal';
 import {Link} from '../Link';
@@ -23,7 +23,7 @@ import {useFeatureFlagSync} from '../featureFlags';
 import {T, t} from '../i18n';
 import {CircleExclamationIcon} from '../icons/CircleExclamationIcon';
 import {IconStack} from '../icons/IconStack';
-import {configBackedAtom, useAtomGet} from '../jotaiUtils';
+import {atomFamilyWeak, atomLoadableWithRefresh, configBackedAtom, useAtomGet} from '../jotaiUtils';
 import {PullRevOperation} from '../operations/PullRevOperation';
 import {useRunOperation} from '../operationsState';
 import platform from '../platform';
@@ -334,8 +334,40 @@ function DiffComments({diff, diffId}: {diff: DiffSummary; diffId: DiffId}) {
   );
 }
 
+const diffSignalCountFamily = atomFamilyWeak((diffId: DiffId) =>
+  atomLoadableWithRefresh(async () => {
+    const {fetchDiffSignalCount} = Internal;
+    if (Internal.featureFlags?.DiffSignalDetails == null || fetchDiffSignalCount == null) {
+      return null;
+    }
+    const count = await fetchDiffSignalCount(diffId);
+    return count;
+  }),
+);
+
 function DiffSignalSummary({diff, diffId}: {diff: DiffSummary; diffId?: DiffId}) {
   const signalDetailsEnabled = useFeatureFlagSync(Internal.featureFlags?.DiffSignalDetails);
+  const [countLoadable, refreshCount] = useAtom(diffSignalCountFamily(diffId ?? ''));
+
+  // Fetch signal count using the atom (only if feature is enabled and we have a diffId)
+  // We fetch for all signal states except 'no-signal' and 'deferred' since even 'pass'
+  // diffs can have INFO signals we want to count
+  const shouldFetchCount =
+    signalDetailsEnabled &&
+    diffId != null &&
+    diff.signalSummary != null &&
+    diff.signalSummary !== 'no-signal' &&
+    diff.signalSummary !== 'deferred';
+
+  // Trigger fetch on mount when conditions are met
+  useEffect(() => {
+    if (shouldFetchCount) {
+      refreshCount();
+    }
+  }, [shouldFetchCount, refreshCount]);
+
+  const signalCount =
+    shouldFetchCount && countLoadable.state === 'hasData' ? countLoadable.data : null;
 
   if (!diff.signalSummary) {
     return null;
@@ -355,7 +387,7 @@ function DiffSignalSummary({diff, diffId}: {diff: DiffSummary; diffId?: DiffId})
         </IconStack>
       );
       tooltip = t(
-        'Test Signals are still running for this Diff, with warnings so far. See Diff for more details.',
+        `Test Signals are still running for this Diff, with warnings so far. ${signalDetailsEnabled ? 'Click' : 'See Diff'} for more details.`,
       );
       break;
     case 'running-failed':
@@ -366,7 +398,7 @@ function DiffSignalSummary({diff, diffId}: {diff: DiffSummary; diffId?: DiffId})
         </IconStack>
       );
       tooltip = t(
-        'Test Signals are still running for this Diff, with failures so far. See Diff for more details.',
+        `Test Signals are still running for this Diff, with failures so far. ${signalDetailsEnabled ? 'Click' : 'See Diff'} for more details.`,
       );
       break;
     case 'pass':
@@ -376,7 +408,7 @@ function DiffSignalSummary({diff, diffId}: {diff: DiffSummary; diffId?: DiffId})
     case 'failed':
       icon = 'error';
       tooltip = t(
-        'An error was encountered during the test signals on this Diff. See Diff for more details.',
+        `An error was encountered during the test signals on this Diff. ${signalDetailsEnabled ? 'Click' : 'See Diff'} for more details.`,
       );
       break;
     case 'no-signal':
@@ -386,7 +418,7 @@ function DiffSignalSummary({diff, diffId}: {diff: DiffSummary; diffId?: DiffId})
     case 'warning':
       icon = <CircleExclamationIcon />;
       tooltip = t(
-        'Test Signals were not fully successful for this Diff. See Diff for more details.',
+        `Test Signals were not fully successful for this Diff. ${signalDetailsEnabled ? 'Click' : 'See Diff'} for more details.`,
       );
       break;
     case 'land-cancelled':
@@ -417,8 +449,13 @@ function DiffSignalSummary({diff, diffId}: {diff: DiffSummary; diffId?: DiffId})
           </Suspense>
         )}>
         <Button icon>
-          <span className={`diff-signals-button diff-signal-${diff.signalSummary}`}>
-            {renderedIcon}
+          <span className="diff-signals-button">
+            {signalCount != null && signalCount > 0 && (
+              <span className="diff-signals-count">{signalCount}</span>
+            )}
+            <span className={`diff-signals-icon diff-signal-${diff.signalSummary}`}>
+              {renderedIcon}
+            </span>
           </span>
         </Button>
       </Tooltip>

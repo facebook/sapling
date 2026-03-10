@@ -47,6 +47,9 @@
   display: flex;
   align-items: center;
 }
+.diff-signals-icon {
+  display: flex;
+}
 .diff-signal-pass {
   color: var(--signal-good-bg);
 }
@@ -70,4 +73,6 @@
   display: flex;
   align-items: center;
   gap: 2px;
+  font-size: 90%;
+  width: 100%;
 }
