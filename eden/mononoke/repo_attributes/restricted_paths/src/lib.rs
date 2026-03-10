@@ -37,6 +37,19 @@ use crate::access_log::is_member_of_groups;
 use crate::access_log::log_access_to_restricted_path;
 // Types re-exported from restricted_paths_common via `pub use restricted_paths_common::*`
 
+/// Core restriction information for a path.
+/// Does not include access check results — that is the API layer's concern
+/// (see `mononoke_api::PathAccessInfo`).
+#[derive(Clone, Debug, PartialEq)]
+pub struct PathRestrictionInfo {
+    /// The root path of this restriction (directory containing `.slacl`).
+    pub restriction_root: NonRootMPath,
+    /// The repo region ACL string, e.g. "REPO_REGION:repos/hg/fbsource/=project1".
+    pub repo_region_acl: String,
+    /// ACL for requesting access. Defaults to repo_region_acl if not configured.
+    pub request_acl: String,
+}
+
 #[derive(Debug)]
 pub enum RestrictedPathAccessType<'a> {
     Manifest(ManifestId),
