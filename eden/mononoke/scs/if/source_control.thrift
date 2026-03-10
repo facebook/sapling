@@ -2812,6 +2812,8 @@ struct DeriveBoundariesParams {
   3: list<binary> boundary_cs_ids;
   4: i32 concurrency;
   5: bool use_predecessor_derivation;
+  /// Optional config name to select an alternative derived data configuration.
+  6: optional string config_name;
 }
 
 /// Result for derive_boundaries request
@@ -2842,6 +2844,8 @@ struct DeriveSliceParams {
   1: i64 repo_id;
   2: string derived_data_type;
   3: list<DeriveSliceSegment> segments;
+  /// Optional config name to select an alternative derived data configuration.
+  4: optional string config_name;
 }
 
 /// Result for derive_slice request

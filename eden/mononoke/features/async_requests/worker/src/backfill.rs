@@ -36,6 +36,7 @@ use mononoke_types::DerivableType;
 use mononoke_types::RepositoryId;
 use repo_authorization::AuthorizationContext;
 use repo_blobstore::RepoBlobstore;
+use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataRef;
 use source_control as thrift;
 use throttledblob::ThrottleOptions;
@@ -106,6 +107,21 @@ fn with_type_enabled(
     manager.with_replaced_config(manager.config_name(), config)
 }
 
+/// Get the derived data manager for an optional config name.
+/// If `config_name` is provided, returns the manager for that specific configuration.
+/// Otherwise returns the default manager.
+fn resolve_manager<'a>(
+    repo_derived_data: &'a RepoDerivedData,
+    config_name: Option<&str>,
+) -> Result<&'a DerivedDataManager, AsyncRequestsError> {
+    match config_name {
+        Some(name) => repo_derived_data
+            .manager_for_config(name)
+            .map_err(AsyncRequestsError::request),
+        None => Ok(repo_derived_data.manager()),
+    }
+}
+
 /// Returns true if this derived data type requires slices to be chained
 /// serially (each slice depends on the previous). Types that support
 /// derive_from_predecessor can derive boundaries independently, allowing
@@ -152,15 +168,19 @@ pub(crate) async fn compute_derive_boundaries(
         .map_err(AsyncRequestsError::request)?;
 
     info!(
-        "Deriving {} boundary changesets for repo {} type {:?}",
+        "Deriving {} boundary changesets for repo {} type {:?} config_name {:?}",
         boundary_cs_ids.len(),
         params.repo_id,
         derived_data_type,
+        params.config_name,
     );
 
     let derived_count = Arc::new(AtomicUsize::new(0));
-    let manager = get_throttled_manager(repo.repo().repo_derived_data().manager())
-        .map_err(AsyncRequestsError::internal)?;
+    let base_manager = resolve_manager(
+        repo.repo().repo_derived_data(),
+        params.config_name.as_deref(),
+    )?;
+    let manager = get_throttled_manager(base_manager).map_err(AsyncRequestsError::internal)?;
     let manager = with_type_enabled(&manager, derived_data_type);
     let concurrency = params.concurrency.max(1) as usize;
     let use_predecessor = params.use_predecessor_derivation;
@@ -239,14 +259,18 @@ pub(crate) async fn compute_derive_slice(
         DerivableType::from_name(&params.derived_data_type).map_err(AsyncRequestsError::request)?;
 
     info!(
-        "Deriving slice with {} segments for repo {} type {:?}",
+        "Deriving slice with {} segments for repo {} type {:?} config_name {:?}",
         params.segments.len(),
         params.repo_id,
         derived_data_type,
+        params.config_name,
     );
 
-    let manager = get_throttled_manager(repo.repo().repo_derived_data().manager())
-        .map_err(AsyncRequestsError::internal)?;
+    let base_manager = resolve_manager(
+        repo.repo().repo_derived_data(),
+        params.config_name.as_deref(),
+    )?;
+    let manager = get_throttled_manager(base_manager).map_err(AsyncRequestsError::internal)?;
     let manager = with_type_enabled(&manager, derived_data_type);
 
     let segment_concurrency = justknobs::get_as::<i64>(JK_BACKFILL_SEGMENT_CONCURRENCY, None)
@@ -555,6 +579,7 @@ async fn enqueue_boundary_and_slice_requests(
     derived_data_type: DerivableType,
     num_boundary_requests: i32,
     boundaries_concurrency: i32,
+    config_name: Option<&str>,
     repo_id: &RepositoryId,
     root_request_id: &RowId,
 ) -> Result<i64, AsyncRequestsError> {
@@ -590,6 +615,7 @@ async fn enqueue_boundary_and_slice_requests(
                 boundary_cs_ids: boundary_cs_bytes,
                 concurrency: boundaries_concurrency,
                 use_predecessor_derivation: true,
+                config_name: config_name.map(|s| s.to_string()),
                 ..Default::default()
             };
 
@@ -645,6 +671,7 @@ async fn enqueue_boundary_and_slice_requests(
             repo_id: repo_id.id() as i64,
             derived_data_type: derived_data_type.name().to_string(),
             segments,
+            config_name: config_name.map(|s| s.to_string()),
             ..Default::default()
         };
 
@@ -712,14 +739,7 @@ async fn process_repo_backfill(
     root_request_id: &RowId,
 ) -> Result<i64, AsyncRequestsError> {
     let inner_repo = repo.repo();
-    let manager = if let Some(config_name) = config_name {
-        inner_repo
-            .repo_derived_data()
-            .manager_for_config(config_name)
-            .map_err(AsyncRequestsError::request)?
-    } else {
-        inner_repo.repo_derived_data().manager()
-    };
+    let manager = resolve_manager(inner_repo.repo_derived_data(), config_name)?;
     let manager = with_type_enabled(manager, derived_data_type);
 
     info!(
@@ -757,6 +777,7 @@ async fn process_repo_backfill(
         derived_data_type,
         num_boundary_requests,
         boundaries_concurrency,
+        config_name,
         repo_id,
         root_request_id,
     )
