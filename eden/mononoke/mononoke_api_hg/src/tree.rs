@@ -23,7 +23,7 @@ use mercurial_types::fetch_augmented_manifest_envelope_opt;
 use mercurial_types::fetch_manifest_envelope;
 use mercurial_types::fetch_manifest_envelope_opt;
 use mononoke_api::MononokeRepo;
-use mononoke_api::PathRestrictionInfo;
+use mononoke_api::PathAccessInfo;
 use mononoke_api::errors::MononokeError;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
@@ -312,14 +312,14 @@ impl<R: MononokeRepo> HgAugmentedTreeRestrictionContext<R> {
     /// which can traverse the AclManifest from the root path and aggregate all
     /// path restrictions, this primitive can only access the AclManifest from
     /// the given manifest ids. It doesn't have visibility into its parents,
-    /// so it will only return PathRestrictionInfo if the manifest belongs to
+    /// so it will only return PathAccessInfo if the manifest belongs to
     /// a restriction root.
     ///
     /// This is acceptable **under an important assumption**: in order to fetch
     /// any child manifest, the client must already have access to the parent
     /// manifest, which means they have permission to access the directory.
     // TODO(T248660146): update to use AclManifest instead of ManifestIdStore.
-    pub async fn restriction_info(&self) -> Result<Option<PathRestrictionInfo>, MononokeError> {
+    pub async fn restriction_info(&self) -> Result<Option<PathAccessInfo>, MononokeError> {
         let is_enabled = justknobs::eval(
             "scm/mononoke:enable_server_side_path_acls",
             None,
@@ -372,7 +372,7 @@ impl<R: MononokeRepo> HgAugmentedTreeRestrictionContext<R> {
         &self,
         restricted_paths: ArcRestrictedPaths,
         path: &NonRootMPath,
-    ) -> Result<Option<PathRestrictionInfo>, MononokeError> {
+    ) -> Result<Option<PathAccessInfo>, MononokeError> {
         // Find the most specific (deepest) restriction root covering this path.
         let most_specific = restricted_paths
             .config()
@@ -398,7 +398,7 @@ impl<R: MononokeRepo> HgAugmentedTreeRestrictionContext<R> {
         // TODO(T248658346): look up permission_request_group from .slacl file
         let request_acl = repo_region_acl.clone();
 
-        Ok(Some(PathRestrictionInfo {
+        Ok(Some(PathAccessInfo {
             restriction_root,
             repo_region_acl,
             has_access: Some(has_access),
@@ -705,7 +705,7 @@ mod tests {
         path_acls: Vec<(&str, &str)>,
         file_to_add: (&str, &str),
         target_manifest_path: &str,
-    ) -> anyhow::Result<Option<PathRestrictionInfo>> {
+    ) -> anyhow::Result<Option<PathAccessInfo>> {
         let ctx = create_test_ctx(fb).await;
         let repo = setup_restricted_repo(&ctx, path_acls).await?;
 
@@ -833,7 +833,7 @@ mod tests {
     /// Edge case: When two directories with identical content are both
     /// restriction roots, they share a single Hg manifest ID.
     /// In the long-term solution, this will only happen if they have the same
-    /// ACL file, which means they also share `PathRestrictionInfo`.
+    /// ACL file, which means they also share `PathAccessInfo`.
     #[mononoke::fbinit_test]
     async fn test_check_manifest_permission_same_manifest_multiple_paths(
         fb: FacebookInit,

@@ -9,7 +9,7 @@ use mononoke_types::NonRootMPath;
 
 /// Information about a restriction that applies to a path.
 #[derive(Clone, Debug, PartialEq)]
-pub struct PathRestrictionInfo {
+pub struct PathAccessInfo {
     /// The root path of the restriction that covers this path.
     /// For example, if `foo/bar/` is restricted and we query `foo/bar/baz.txt`,
     /// this would be `foo/bar/`.
@@ -37,7 +37,7 @@ pub struct RestrictedPathsChangesInfo {
 #[derive(Clone, Debug, PartialEq)]
 pub struct RestrictedChangeGroup {
     /// The restriction root and access info covering these changes.
-    pub restriction_info: PathRestrictionInfo,
+    pub restriction_info: PathAccessInfo,
     // TODO(T248660146): remove this field and `RestrictedChangeGroup` if there's
     // no need to use it for now.
     /// The changed paths under this restriction root.
@@ -166,7 +166,7 @@ mod tests {
             .restriction_info(true)
             .await?;
 
-        let expected = vec![PathRestrictionInfo {
+        let expected = vec![PathAccessInfo {
             restriction_root: NonRootMPath::new("restricted/dir")
                 .expect("Failed to create NonRootMPath"),
             repo_region_acl: "TIER:my-acl".to_string(),
@@ -193,7 +193,7 @@ mod tests {
             .restriction_info(true)
             .await?;
 
-        let expected = vec![PathRestrictionInfo {
+        let expected = vec![PathAccessInfo {
             restriction_root: NonRootMPath::new("restricted")
                 .expect("Failed to create NonRootMPath"),
             repo_region_acl: "TIER:my-acl".to_string(),
@@ -257,7 +257,7 @@ mod tests {
             .restriction_info(true)
             .await?;
 
-        let expected_first = vec![PathRestrictionInfo {
+        let expected_first = vec![PathAccessInfo {
             restriction_root: NonRootMPath::new("first").expect("Failed to create NonRootMPath"),
             repo_region_acl: "TIER:first-acl".to_string(),
             has_access: Some(true),
@@ -275,7 +275,7 @@ mod tests {
             .restriction_info(true)
             .await?;
 
-        let expected_second = vec![PathRestrictionInfo {
+        let expected_second = vec![PathAccessInfo {
             restriction_root: NonRootMPath::new("second").expect("Failed to create NonRootMPath"),
             repo_region_acl: "TIER:second-acl".to_string(),
             has_access: Some(true),
@@ -338,13 +338,13 @@ mod tests {
             .await?;
 
         let expected = vec![
-            PathRestrictionInfo {
+            PathAccessInfo {
                 restriction_root: NonRootMPath::new("foo").expect("Failed to create NonRootMPath"),
                 repo_region_acl: "TIER:outer-acl".to_string(),
                 has_access: Some(true),
                 request_acl: "TIER:outer-acl".to_string(),
             },
-            PathRestrictionInfo {
+            PathAccessInfo {
                 restriction_root: NonRootMPath::new("foo/bar")
                     .expect("Failed to create NonRootMPath"),
                 repo_region_acl: "TIER:inner-acl".to_string(),
@@ -534,13 +534,13 @@ mod tests {
             .await?;
 
         let expected = vec![
-            PathRestrictionInfo {
+            PathAccessInfo {
                 restriction_root: NonRootMPath::new("first/path").unwrap(),
                 repo_region_acl: "TIER:first-acl".to_string(),
                 has_access: None,
                 request_acl: "TIER:first-acl".to_string(),
             },
-            PathRestrictionInfo {
+            PathAccessInfo {
                 restriction_root: NonRootMPath::new("second/path").unwrap(),
                 repo_region_acl: "TIER:second-acl".to_string(),
                 has_access: None,
@@ -573,7 +573,7 @@ mod tests {
 
         // "first/path" is itself a restriction root, and is_prefix_of returns
         // true for equal paths, so it should be returned
-        let expected = vec![PathRestrictionInfo {
+        let expected = vec![PathAccessInfo {
             restriction_root: NonRootMPath::new("first/path").unwrap(),
             repo_region_acl: "TIER:first-acl".to_string(),
             has_access: None,
@@ -597,7 +597,7 @@ mod tests {
             .find_restricted_descendants()
             .await?;
 
-        let expected = vec![PathRestrictionInfo {
+        let expected = vec![PathAccessInfo {
             restriction_root: NonRootMPath::new("foo/bar/restricted").unwrap(),
             repo_region_acl: "TIER:my-acl".to_string(),
             has_access: None,
@@ -683,13 +683,13 @@ mod tests {
             .await?;
 
         let expected = vec![
-            PathRestrictionInfo {
+            PathAccessInfo {
                 restriction_root: NonRootMPath::new("foo").unwrap(),
                 repo_region_acl: "TIER:outer-acl".to_string(),
                 has_access: None,
                 request_acl: "TIER:outer-acl".to_string(),
             },
-            PathRestrictionInfo {
+            PathAccessInfo {
                 restriction_root: NonRootMPath::new("foo/bar").unwrap(),
                 repo_region_acl: "TIER:inner-acl".to_string(),
                 has_access: None,
@@ -725,13 +725,13 @@ mod tests {
         let descendants = cs_ctx.find_restricted_descendants(roots).await?;
 
         let expected = vec![
-            PathRestrictionInfo {
+            PathAccessInfo {
                 restriction_root: NonRootMPath::new("first/path").unwrap(),
                 repo_region_acl: "TIER:first-acl".to_string(),
                 has_access: None,
                 request_acl: "TIER:first-acl".to_string(),
             },
-            PathRestrictionInfo {
+            PathAccessInfo {
                 restriction_root: NonRootMPath::new("third/path").unwrap(),
                 repo_region_acl: "TIER:third-acl".to_string(),
                 has_access: None,
@@ -756,7 +756,7 @@ mod tests {
         let descendants = cs_ctx.find_restricted_descendants(roots).await?;
 
         // Should be deduplicated to just one entry
-        let expected = vec![PathRestrictionInfo {
+        let expected = vec![PathAccessInfo {
             restriction_root: NonRootMPath::new("shared/path").unwrap(),
             repo_region_acl: "TIER:my-acl".to_string(),
             has_access: None,
@@ -794,13 +794,13 @@ mod tests {
         let descendants = cs_ctx.find_restricted_descendants(roots).await?;
 
         let expected = vec![
-            PathRestrictionInfo {
+            PathAccessInfo {
                 restriction_root: NonRootMPath::new("foo").unwrap(),
                 repo_region_acl: "TIER:outer-acl".to_string(),
                 has_access: None,
                 request_acl: "TIER:outer-acl".to_string(),
             },
-            PathRestrictionInfo {
+            PathAccessInfo {
                 restriction_root: NonRootMPath::new("foo/bar").unwrap(),
                 repo_region_acl: "TIER:inner-acl".to_string(),
                 has_access: None,
@@ -842,7 +842,7 @@ mod tests {
 
         let expected = RestrictedPathsChangesInfo {
             restricted_changes: vec![RestrictedChangeGroup {
-                restriction_info: PathRestrictionInfo {
+                restriction_info: PathAccessInfo {
                     restriction_root: NonRootMPath::new("restricted").unwrap(),
                     repo_region_acl: "TIER:my-acl".to_string(),
                     has_access: None,
@@ -925,7 +925,7 @@ mod tests {
         let expected = RestrictedPathsChangesInfo {
             restricted_changes: vec![
                 RestrictedChangeGroup {
-                    restriction_info: PathRestrictionInfo {
+                    restriction_info: PathAccessInfo {
                         restriction_root: NonRootMPath::new("first").unwrap(),
                         repo_region_acl: "TIER:first-acl".to_string(),
                         has_access: None,
@@ -938,7 +938,7 @@ mod tests {
                     ],
                 },
                 RestrictedChangeGroup {
-                    restriction_info: PathRestrictionInfo {
+                    restriction_info: PathAccessInfo {
                         restriction_root: NonRootMPath::new("first/second").unwrap(),
                         repo_region_acl: "TIER:second-acl".to_string(),
                         has_access: None,
@@ -991,7 +991,7 @@ mod tests {
         let expected = RestrictedPathsChangesInfo {
             restricted_changes: vec![
                 RestrictedChangeGroup {
-                    restriction_info: PathRestrictionInfo {
+                    restriction_info: PathAccessInfo {
                         restriction_root: NonRootMPath::new("alpha").unwrap(),
                         repo_region_acl: "TIER:alpha-acl".to_string(),
                         has_access: None,
@@ -1003,7 +1003,7 @@ mod tests {
                     ],
                 },
                 RestrictedChangeGroup {
-                    restriction_info: PathRestrictionInfo {
+                    restriction_info: PathAccessInfo {
                         restriction_root: NonRootMPath::new("beta").unwrap(),
                         repo_region_acl: "TIER:beta-acl".to_string(),
                         has_access: None,

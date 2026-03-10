@@ -94,7 +94,7 @@ use crate::changeset_path::ChangesetPathRestrictionContext;
 use crate::changeset_path_diff::ChangesetPathDiffContext;
 use crate::errors::MononokeError;
 use crate::repo::RepoContext;
-use crate::restricted_paths::PathRestrictionInfo;
+use crate::restricted_paths::PathAccessInfo;
 use crate::restricted_paths::RestrictedChangeGroup;
 use crate::restricted_paths::RestrictedPathsChangesInfo;
 use crate::specifiers::ChangesetId;
@@ -1904,14 +1904,14 @@ impl<R: MononokeRepo> ChangesetContext<R> {
     /// A path under multiple nested roots will have multiple infos.
     /// Checks are performed concurrently.
     ///
-    /// When `check_permissions` is true, each `PathRestrictionInfo` will have
+    /// When `check_permissions` is true, each `PathAccessInfo` will have
     /// its `has_access` field populated with the result of an ACL check.
     /// When false, `has_access` will be `None`.
     pub async fn paths_restriction_info(
         &self,
         paths: Vec<NonRootMPath>,
         check_permissions: bool,
-    ) -> Result<Vec<(NonRootMPath, Vec<PathRestrictionInfo>)>, MononokeError> {
+    ) -> Result<Vec<(NonRootMPath, Vec<PathAccessInfo>)>, MononokeError> {
         stream::iter(paths)
             .map(|path| async move {
                 let restriction_ctx = self.path_restriction(path.clone()).await?;
@@ -1925,14 +1925,14 @@ impl<R: MononokeRepo> ChangesetContext<R> {
 
     /// Find restricted descendants under a set of root paths.
     ///
-    /// Returns PathRestrictionInfo for all restriction roots
+    /// Returns PathAccessInfo for all restriction roots
     /// that are descendants of any of the given root paths.
     /// Results are deduplicated by restriction_root.
     pub async fn find_restricted_descendants(
         &self,
         roots: Vec<MPath>,
-    ) -> Result<Vec<PathRestrictionInfo>, MononokeError> {
-        let all_descendants: Vec<Vec<PathRestrictionInfo>> = stream::iter(roots)
+    ) -> Result<Vec<PathAccessInfo>, MononokeError> {
+        let all_descendants: Vec<Vec<PathAccessInfo>> = stream::iter(roots)
             .map(|root| async move {
                 let restriction_ctx = self.path_restriction(root).await?;
                 restriction_ctx.find_restricted_descendants().await
@@ -1941,7 +1941,7 @@ impl<R: MononokeRepo> ChangesetContext<R> {
             .try_collect()
             .await?;
 
-        let mut merged: Vec<PathRestrictionInfo> = all_descendants.into_iter().flatten().collect();
+        let mut merged: Vec<PathAccessInfo> = all_descendants.into_iter().flatten().collect();
         // Deduplicate by restriction_root
         merged.sort_by(|a, b| a.restriction_root.cmp(&b.restriction_root));
         merged.dedup_by(|a, b| a.restriction_root == b.restriction_root);
@@ -1955,7 +1955,7 @@ impl<R: MononokeRepo> ChangesetContext<R> {
     // TODO(T248660146): update this primitive to use AclManifest instead of access logging config.
     // For draft commit safety (T255927050), the long-term implementation should
     // resolve ACLs using the closest public ancestor's ACL manifest.
-    /// When `check_permissions` is true, each `PathRestrictionInfo` will have
+    /// When `check_permissions` is true, each `PathAccessInfo` will have
     /// its `has_access` field populated with the result of an ACL check.
     /// When false, `has_access` will be `None`.
     pub async fn restricted_paths_changes(
@@ -1978,7 +1978,7 @@ impl<R: MononokeRepo> ChangesetContext<R> {
                 .fold(
                     std::collections::BTreeMap::<
                         NonRootMPath,
-                        (PathRestrictionInfo, Vec<NonRootMPath>),
+                        (PathAccessInfo, Vec<NonRootMPath>),
                     >::new(),
                     |mut acc, (path, info)| {
                         let root = info.restriction_root.clone();

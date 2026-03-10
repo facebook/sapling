@@ -65,7 +65,7 @@ use crate::changeset::ChangesetContext;
 use crate::errors::MononokeError;
 use crate::file::FileContext;
 use crate::repo::RepoContext;
-use crate::restricted_paths::PathRestrictionInfo;
+use crate::restricted_paths::PathAccessInfo;
 use crate::tree::TreeContext;
 
 pub struct HistoryEntry {
@@ -1015,13 +1015,13 @@ impl<R: MononokeRepo> ChangesetPathRestrictionContext<R> {
     /// returns info for each matching root.
     ///
     /// When `check_permissions` is true, the `has_access` field in each
-    /// `PathRestrictionInfo` will be populated with the result of an ACL check.
+    /// `PathAccessInfo` will be populated with the result of an ACL check.
     /// When false, `has_access` will be `None`.
     // TODO(T248660146): update this primitive to use AclManifest instead of access logging config.
     pub async fn restriction_info(
         &self,
         check_permissions: bool,
-    ) -> Result<Vec<PathRestrictionInfo>, MononokeError> {
+    ) -> Result<Vec<PathAccessInfo>, MononokeError> {
         let path = match NonRootMPath::try_from(self.path().clone()) {
             Ok(p) => p,
             // Root path cannot be restricted
@@ -1043,7 +1043,7 @@ impl<R: MononokeRepo> ChangesetPathRestrictionContext<R> {
             return Ok(vec![]);
         }
 
-        let results: Vec<PathRestrictionInfo> = stream::iter(matching_roots)
+        let results: Vec<PathAccessInfo> = stream::iter(matching_roots)
             .map(|(restriction_root, acl)| {
                 let restricted_paths = restricted_paths.clone();
                 async move {
@@ -1065,7 +1065,7 @@ impl<R: MononokeRepo> ChangesetPathRestrictionContext<R> {
                     // For now, use the repo_region_acl itself as the request target
                     let request_acl = repo_region_acl.clone();
 
-                    Ok::<_, MononokeError>(PathRestrictionInfo {
+                    Ok::<_, MononokeError>(PathAccessInfo {
                         restriction_root,
                         repo_region_acl,
                         has_access,
@@ -1086,14 +1086,12 @@ impl<R: MononokeRepo> ChangesetPathRestrictionContext<R> {
     /// Since the number of roots can grow, this method will not perform
     /// access checks. Callers should check access individually.
     // TODO(T248660146): update this primitive to use AclManifest instead of access logging config.
-    pub async fn find_restricted_descendants(
-        &self,
-    ) -> Result<Vec<PathRestrictionInfo>, MononokeError> {
+    pub async fn find_restricted_descendants(&self) -> Result<Vec<PathAccessInfo>, MononokeError> {
         let restricted_paths = self.changeset().repo_ctx().repo().restricted_paths_arc();
 
         let path = self.path();
 
-        let descendants: Vec<PathRestrictionInfo> = restricted_paths
+        let descendants: Vec<PathAccessInfo> = restricted_paths
             .config()
             .path_acls
             .iter()
@@ -1105,7 +1103,7 @@ impl<R: MononokeRepo> ChangesetPathRestrictionContext<R> {
             })
             .map(|(root, acl)| {
                 let repo_region_acl = acl.to_string();
-                PathRestrictionInfo {
+                PathAccessInfo {
                     restriction_root: root.clone(),
                     repo_region_acl: repo_region_acl.clone(),
                     // Access not checked in this method — caller can check individually
