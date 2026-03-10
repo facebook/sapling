@@ -184,6 +184,12 @@ folly::Future<pid_t> FakePrivHelper::getServerPid() {
   return -1;
 }
 
+folly::Future<NamespaceInfo> FakePrivHelper::getNamespaceInfo(
+    pid_t /* daemonPid */) {
+  return makeFuture<NamespaceInfo>(
+      runtime_error("FakePrivHelper::getNamespaceInfo() not implemented"));
+}
+
 folly::Future<pid_t> FakePrivHelper::startFam(
     const std::vector<std::string>& /* paths */,
     const std::string& /* tmpOutputPath */,

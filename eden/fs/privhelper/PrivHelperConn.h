@@ -185,8 +185,11 @@ class PrivHelperConn {
   static UnixSocket::Message serializeGetPidRequest(uint32_t xid);
   static pid_t parseGetPidResponse(const UnixSocket::Message& msg);
 
-  static UnixSocket::Message serializeGetNamespaceInfoRequest(uint32_t xid);
-  static uint64_t parseGetNamespaceInfoResponse(const UnixSocket::Message& msg);
+  static UnixSocket::Message serializeGetNamespaceInfoRequest(
+      uint32_t xid,
+      pid_t daemonPid);
+  static NamespaceInfo parseGetNamespaceInfoResponse(
+      const UnixSocket::Message& msg);
 
   static UnixSocket::Message serializeStartFamRequest(
       uint32_t xid,

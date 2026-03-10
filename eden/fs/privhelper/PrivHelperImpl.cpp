@@ -123,6 +123,7 @@ class PrivHelperClientImpl : public PrivHelper,
       std::chrono::nanoseconds duration) override;
   Future<folly::Unit> setUseEdenFs(bool useEdenFs) override;
   Future<pid_t> getServerPid() override;
+  Future<NamespaceInfo> getNamespaceInfo(pid_t daemonPid) override;
   Future<pid_t> startFam(
       const std::vector<std::string>& paths,
       const std::string& tmpOutputPath,
@@ -548,6 +549,17 @@ Future<pid_t> PrivHelperClientImpl::getServerPid() {
       });
 }
 
+Future<NamespaceInfo> PrivHelperClientImpl::getNamespaceInfo(pid_t daemonPid) {
+  auto xid = getNextXid();
+  auto request =
+      PrivHelperConn::serializeGetNamespaceInfoRequest(xid, daemonPid);
+
+  return sendAndRecv(xid, std::move(request))
+      .thenValue([](UnixSocket::Message&& response) {
+        return PrivHelperConn::parseGetNamespaceInfoResponse(response);
+      });
+}
+
 Future<pid_t> PrivHelperClientImpl::startFam(
     const std::vector<std::string>& paths,
     const std::string& tmpOutputPath,
@@ -901,6 +913,11 @@ class StubPrivHelper final : public PrivHelper {
     return -1;
   }
 
+  Future<NamespaceInfo> getNamespaceInfo(pid_t daemonPid) override {
+    (void)daemonPid;
+    NOT_IMPLEMENTED();
+  }
+
   folly::Future<pid_t> startFam(
       const std::vector<std::string>& paths,
       const std::string& tmpOutputPath,
@@ -919,7 +936,7 @@ class StubPrivHelper final : public PrivHelper {
 
   folly::Future<folly::Unit> setMemoryPriorityForProcess(
       pid_t pid,
-      int priority) {
+      int priority) override {
     (void)pid;
     (void)priority;
     NOT_IMPLEMENTED();

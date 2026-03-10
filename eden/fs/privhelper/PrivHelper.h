@@ -68,6 +68,15 @@ struct StopFileAccessMonitorResponse {
   bool shouldUpload;
 };
 
+struct NamespaceInfo {
+  pid_t privhelperPid; // privhelper's getpid()
+  uint64_t rootMountNsInode; // /proc/1/ns/mnt
+  uint64_t privhelperMountNsInode; // privhelper's /proc/self/ns/mnt
+  uint64_t privhelperPidNsInode; // privhelper's /proc/self/ns/pid
+  uint64_t daemonMountNsInode; // /proc/{daemon_pid}/ns/mnt
+  uint64_t daemonPidNsInode; // /proc/{daemon_pid}/ns/pid
+};
+
 /**
  * A helper class for performing operations that require elevated privileges.
  *
@@ -184,6 +193,14 @@ class PrivHelper {
   [[nodiscard]] virtual folly::Future<pid_t> getServerPid() = 0;
 
   /**
+   * Get namespace and PID info from the privhelper process. Returns the
+   * privhelper's PID, the inode numbers of the root, privhelper, and daemon
+   * mount and PID namespaces.
+   */
+  [[nodiscard]] virtual folly::Future<NamespaceInfo> getNamespaceInfo(
+      pid_t daemonPid) = 0;
+
+  /**
    * Start File Access Monitor(FAM).
    *
    * @param paths A list of paths to be monitored by FAM.
@@ -221,6 +238,7 @@ class PrivHelper {
   void setLogFileBlocking(folly::File logFile);
   void setDaemonTimeoutBlocking(std::chrono::nanoseconds duration);
   void setMemoryPriorityForProcessBlocking(pid_t pid, int targetPriority);
+  NamespaceInfo getNamespaceInfoBlocking(pid_t daemonPid);
 
   /*
    * Explicitly stop the privhelper process.

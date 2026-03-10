@@ -80,6 +80,7 @@ class FakePrivHelper final : public PrivHelper {
       std::chrono::nanoseconds duration) override;
   folly::Future<folly::Unit> setUseEdenFs(bool useEdenFs) override;
   folly::Future<pid_t> getServerPid() override;
+  folly::Future<NamespaceInfo> getNamespaceInfo(pid_t daemonPid) override;
   folly::Future<pid_t> startFam(
       const std::vector<std::string>& paths,
       const std::string& tmpOutputPath,

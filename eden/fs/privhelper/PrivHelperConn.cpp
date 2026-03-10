@@ -546,11 +546,15 @@ UnixSocket::Message PrivHelperConn::serializeGetPidRequest(uint32_t xid) {
 }
 
 UnixSocket::Message PrivHelperConn::serializeGetNamespaceInfoRequest(
-    uint32_t xid) {
-  return serializeRequestPacket(xid, REQ_GET_NAMESPACE_INFO);
+    uint32_t xid,
+    pid_t daemonPid) {
+  auto msg = serializeRequestPacket(xid, REQ_GET_NAMESPACE_INFO);
+  Appender appender(&msg.data, kDefaultBufferSize);
+  appender.writeBE<pid_t>(daemonPid);
+  return msg;
 }
 
-uint64_t PrivHelperConn::parseGetNamespaceInfoResponse(
+NamespaceInfo PrivHelperConn::parseGetNamespaceInfoResponse(
     const UnixSocket::Message& msg) {
   Cursor cursor(&msg.data);
   PrivHelperPacket packet = parsePacket(cursor);
@@ -564,15 +568,50 @@ uint64_t PrivHelperConn::parseGetNamespaceInfoResponse(
         REQ_GET_NAMESPACE_INFO,
         packet.header.version);
   }
-  uint64_t inode;
-  bool valid = cursor.tryReadBE<uint64_t>(inode);
+  NamespaceInfo info{};
+  bool valid = cursor.tryReadBE<pid_t>(info.privhelperPid);
+  if (!valid) {
+    throwf<std::runtime_error>(
+        "Failed to read privhelper pid from privhelper server for request {} for version v{}",
+        packet.metadata.transaction_id,
+        packet.header.version);
+  }
+  valid = cursor.tryReadBE<uint64_t>(info.rootMountNsInode);
   if (!valid) {
     throwf<std::runtime_error>(
         "Failed to read root mount ns inode from privhelper server for request {} for version v{}",
         packet.metadata.transaction_id,
         packet.header.version);
   }
-  return inode;
+  valid = cursor.tryReadBE<uint64_t>(info.privhelperMountNsInode);
+  if (!valid) {
+    throwf<std::runtime_error>(
+        "Failed to read privhelper mount ns inode from privhelper server for request {} for version v{}",
+        packet.metadata.transaction_id,
+        packet.header.version);
+  }
+  valid = cursor.tryReadBE<uint64_t>(info.privhelperPidNsInode);
+  if (!valid) {
+    throwf<std::runtime_error>(
+        "Failed to read privhelper pid ns inode from privhelper server for request {} for version v{}",
+        packet.metadata.transaction_id,
+        packet.header.version);
+  }
+  valid = cursor.tryReadBE<uint64_t>(info.daemonMountNsInode);
+  if (!valid) {
+    throwf<std::runtime_error>(
+        "Failed to read daemon mount ns inode from privhelper server for request {} for version v{}",
+        packet.metadata.transaction_id,
+        packet.header.version);
+  }
+  valid = cursor.tryReadBE<uint64_t>(info.daemonPidNsInode);
+  if (!valid) {
+    throwf<std::runtime_error>(
+        "Failed to read daemon pid ns inode from privhelper server for request {} for version v{}",
+        packet.metadata.transaction_id,
+        packet.header.version);
+  }
+  return info;
 }
 
 UnixSocket::Message PrivHelperConn::serializeStartFamRequest(

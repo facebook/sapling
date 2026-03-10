@@ -60,4 +60,18 @@ void PrivHelper::setMemoryPriorityForProcessBlocking(
   std::move(future).get();
 }
 
+NamespaceInfo PrivHelper::getNamespaceInfoBlocking(pid_t daemonPid) {
+  folly::EventBase evb;
+  attachEventBase(&evb);
+
+  auto future = getNamespaceInfo(daemonPid);
+  if (future.isReady()) {
+    return std::move(future).get();
+  }
+
+  future = std::move(future).ensure([&evb] { evb.terminateLoopSoon(); });
+  evb.loopForever();
+  return std::move(future).get();
+}
+
 } // namespace facebook::eden
