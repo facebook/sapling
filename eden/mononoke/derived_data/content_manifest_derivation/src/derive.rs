@@ -111,7 +111,7 @@ pub async fn get_content_manifest_subtree_changes(
         .await
 }
 
-async fn empty_directory(
+pub(crate) async fn empty_directory(
     ctx: &CoreContext,
     blobstore: &impl KeyedBlobstore,
 ) -> Result<ContentManifestId> {
@@ -122,7 +122,7 @@ async fn empty_directory(
 }
 
 /// Resolve a manifest entry, loading rollup data from blobstore if needed.
-async fn resolve_entry(
+pub(crate) async fn resolve_entry(
     ctx: &CoreContext,
     blobstore: &Arc<dyn KeyedBlobstore>,
     rollup_data: Option<ContentManifestRollupData>,
@@ -146,7 +146,7 @@ async fn resolve_entry(
     }
 }
 
-async fn create_content_manifest_directory(
+pub(crate) async fn create_content_manifest_directory(
     ctx: CoreContext,
     blobstore: Arc<dyn KeyedBlobstore>,
     path: &MPath,
@@ -219,7 +219,7 @@ async fn create_content_manifest_directory(
     Ok((rollup, id))
 }
 
-async fn create_content_manifest_file(
+pub(crate) async fn create_content_manifest_file(
     leaf_info: LeafInfo<ContentManifestFile, ContentManifestFile>,
 ) -> Result<(ContentManifestRollupData, ContentManifestFile)> {
     if let Some(file) = leaf_info.change {

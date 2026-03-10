@@ -8,9 +8,13 @@
 use thiserror::Error;
 
 mod derive;
+mod derive_from_predecessor;
 mod mapping;
 
 pub use crate::mapping::RootContentManifestId;
+
+#[cfg(test)]
+mod test_fixtures;
 
 #[derive(Debug, Error)]
 pub enum ContentManifestDerivationError {

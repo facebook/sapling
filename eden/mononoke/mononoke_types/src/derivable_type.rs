@@ -70,6 +70,7 @@ pub enum DerivableType {
 pub enum DerivableUntopologicallyVariant {
     AclManifests,
     Ccsm,
+    ContentManifests,
     HgAugmentedManifests,
     GitDeltaManifestsV3,
     InferredCopyFrom,
@@ -209,6 +210,9 @@ impl DerivableType {
             DerivableType::InferredCopyFrom => {
                 Ok(DerivableUntopologicallyVariant::InferredCopyFrom)
             }
+            DerivableType::ContentManifests => {
+                Ok(DerivableUntopologicallyVariant::ContentManifests)
+            }
             DerivableType::SkeletonManifestsV2 => {
                 Ok(DerivableUntopologicallyVariant::SkeletonManifestsV2)
             }
@@ -228,6 +232,7 @@ impl DerivableUntopologicallyVariant {
         match self {
             DerivableUntopologicallyVariant::AclManifests => DerivableType::AclManifests,
             DerivableUntopologicallyVariant::Ccsm => DerivableType::Ccsm,
+            DerivableUntopologicallyVariant::ContentManifests => DerivableType::ContentManifests,
             DerivableUntopologicallyVariant::HgAugmentedManifests => {
                 DerivableType::HgAugmentedManifests
             }

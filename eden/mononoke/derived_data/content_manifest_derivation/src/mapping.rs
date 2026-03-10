@@ -16,15 +16,19 @@ use bytes::Bytes;
 use context::CoreContext;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivableType;
+use derived_data_manager::DerivableUntopologically;
 use derived_data_manager::DerivationContext;
 use derived_data_manager::dependencies;
 use derived_data_service_if as thrift;
+use fsnodes::RootFsnodeId;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentManifestId;
+use mononoke_types::DerivableUntopologicallyVariant;
 
 use crate::derive::derive_content_manifest;
+use crate::derive_from_predecessor::derive_from_predecessor;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct RootContentManifestId(pub(crate) ContentManifestId);
@@ -135,5 +139,24 @@ impl BonsaiDerivable for RootContentManifestId {
                 data.into_content_manifest_id().into_thrift(),
             ),
         ))
+    }
+}
+
+#[async_trait]
+impl DerivableUntopologically for RootContentManifestId {
+    const DERIVABLE_UNTOPOLOGICALLY_VARIANT: DerivableUntopologicallyVariant =
+        DerivableUntopologicallyVariant::ContentManifests;
+    type PredecessorDependencies = dependencies![RootFsnodeId];
+
+    async fn unsafe_derive_untopologically(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        bonsai: BonsaiChangeset,
+    ) -> Result<Self> {
+        let csid = bonsai.get_changeset_id();
+        let fsnode = derivation_ctx
+            .fetch_dependency::<RootFsnodeId>(ctx, csid)
+            .await?;
+        derive_from_predecessor(ctx, derivation_ctx, fsnode).await
     }
 }
