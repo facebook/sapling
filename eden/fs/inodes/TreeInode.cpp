@@ -657,6 +657,7 @@ void TreeInode::inodeLoadComplete(
     PathComponentPiece childName,
     std::unique_ptr<InodeBase> childInode) {
   InodeMap::PromiseVector promises;
+  InodePtr inodePtr;
 
   {
     auto contents = contents_.wlock();
@@ -687,15 +688,19 @@ void TreeInode::inodeLoadComplete(
     // However, we must wait to fulfill pending promises until after
     // releasing our lock.
     promises = getInodeMap()->inodeLoadComplete(childInode.get());
+    // Take ownership of the inode while still holding the contents_ lock.
+    // This ensures the ptrAcquireCount_ is incremented before the lock is
+    // released, preventing a race where the background unloader could see
+    // ptrAcquireCount_ == 0 and unload this freshly-loaded inode.
+    inodePtr = InodePtr::takeOwnership(std::move(childInode));
   }
 
-  // Allow tests to inject faults between the lock release and
-  // takeOwnership to verify the unload race behavior.
+  // Allow tests to verify that unloading during this window is safe, since
+  // ptrAcquireCount_ was already incremented inside the lock above.
   getMount()->getServerState()->getFaultInjector().check(
       "inodeLoadComplete", childName.view());
 
   // Fulfill all of the pending promises after releasing our lock
-  auto inodePtr = InodePtr::takeOwnership(std::move(childInode));
   for (auto& promise : promises) {
     promise.setValue(inodePtr);
   }
