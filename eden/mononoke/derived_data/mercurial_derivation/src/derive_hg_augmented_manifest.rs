@@ -44,9 +44,9 @@ use mononoke_types::TrieMap;
 use mononoke_types::hash::Blake3;
 use mononoke_types::sharded_map_v2::LookupKind;
 use mononoke_types::sharded_map_v2::ShardedMapV2Node;
-use restricted_paths::ManifestType;
-use restricted_paths::RestrictedPathManifestIdEntry;
-use restricted_paths::RestrictedPaths;
+use restricted_paths_common::ManifestType;
+use restricted_paths_common::RestrictedPathManifestIdEntry;
+use restricted_paths_common::RestrictedPathsConfigBased;
 use tracing::warn;
 
 /// Derive an HgAugmentedManifestId from an HgManifestId and parents.
@@ -56,7 +56,7 @@ pub async fn derive_from_hg_manifest_and_parents(
     hg_manifest_id: HgManifestId,
     parents: Vec<HgAugmentedManifestId>,
     content_metadata_cache: &HashMap<ContentId, ContentMetadataV2>,
-    restricted_paths: &RestrictedPaths,
+    restricted_paths: &RestrictedPathsConfigBased,
 ) -> Result<HgAugmentedManifestId> {
     let restricted_paths_enabled = justknobs::eval(
         "scm/mononoke:enabled_restricted_paths_access_logging",
@@ -350,8 +350,7 @@ pub async fn derive_from_hg_manifest_and_parents(
                 if restricted_paths_enabled {
                     if let Some(non_root_path) = path.clone().into_optional_non_root_path() {
                         let is_restricted = restricted_paths
-                            .is_restricted_path(ctx, None, &non_root_path)
-                            .await?;
+                            .is_restricted_path(&non_root_path);
                         if is_restricted {
                             let entry = RestrictedPathManifestIdEntry::new(
                                 ManifestType::HgAugmented,

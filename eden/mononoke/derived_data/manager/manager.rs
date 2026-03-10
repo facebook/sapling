@@ -21,7 +21,7 @@ use metaconfig_types::RepoConfig;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use repo_blobstore::RepoBlobstore;
-use restricted_paths::ArcRestrictedPaths;
+use restricted_paths_common::config_based::ArcRestrictedPathsConfigBased;
 use scuba_ext::MononokeScubaSampleBuilder;
 
 use crate::DerivationContext;
@@ -97,7 +97,7 @@ impl DerivedDataManager {
         config_name: String,
         config: DerivedDataTypesConfig,
         derivation_service_client: Option<Arc<dyn DerivationClient>>,
-        restricted_paths: ArcRestrictedPaths,
+        restricted_paths: ArcRestrictedPathsConfigBased,
     ) -> Self {
         let derivation_context = DerivationContext::new(
             bonsai_hg_mapping,

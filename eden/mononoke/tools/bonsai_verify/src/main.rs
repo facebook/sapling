@@ -390,7 +390,7 @@ fn subcommmand_hg_manifest_verify(
                         get_manifest_from_bonsai(
                             ctx.clone(),
                             repo.repo_blobstore_arc(),
-                            repo.restricted_paths_arc(),
+                            repo.restricted_paths_arc().config_based(),
                             bonsai.clone(),
                             parents,
                             None,

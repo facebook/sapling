@@ -44,9 +44,9 @@ use mononoke_types::RepoPath;
 use mononoke_types::SortedVectorTrieMap;
 use mononoke_types::TrackedFileChange;
 use mononoke_types::path::MPath;
-use restricted_paths::ArcRestrictedPaths;
-use restricted_paths::ManifestType;
-use restricted_paths::RestrictedPathManifestIdEntry;
+use restricted_paths_common::ArcRestrictedPathsConfigBased;
+use restricted_paths_common::ManifestType;
+use restricted_paths_common::RestrictedPathManifestIdEntry;
 use sorted_vector_map::SortedVectorMap;
 use tracing::warn;
 
@@ -60,7 +60,7 @@ pub async fn derive_simple_hg_manifest_stack_without_copy_info(
     blobstore: Arc<dyn KeyedBlobstore>,
     manifest_changes: Vec<ManifestChanges<TrackedFileChange>>,
     parent: Option<HgManifestId>,
-    restricted_paths: ArcRestrictedPaths,
+    restricted_paths: ArcRestrictedPathsConfigBased,
 ) -> Result<HashMap<ChangesetId, HgManifestId>, Error> {
     let res = derive_manifests_for_simple_stack_of_commits(
         ctx.clone(),
@@ -141,7 +141,7 @@ pub async fn derive_simple_hg_manifest_stack_without_copy_info(
 pub async fn derive_hg_manifest(
     ctx: CoreContext,
     blobstore: Arc<dyn KeyedBlobstore>,
-    restricted_paths: ArcRestrictedPaths,
+    restricted_paths: ArcRestrictedPathsConfigBased,
     parents: impl IntoIterator<Item = HgManifestId>,
     changes: impl IntoIterator<Item = (NonRootMPath, Option<(FileType, HgFileNodeId)>)> + 'static,
     subtree_changes: Option<&HgSubtreeChanges>,
@@ -215,7 +215,7 @@ async fn create_hg_manifest(
             Entry<Traced<ParentIndex, HgManifestId>, Traced<ParentIndex, (FileType, HgFileNodeId)>>,
         >,
     >,
-    restricted_paths: ArcRestrictedPaths,
+    restricted_paths: ArcRestrictedPathsConfigBased,
 ) -> Result<((), Traced<ParentIndex, HgManifestId>), Error> {
     let TreeInfo {
         subentries,
@@ -327,9 +327,7 @@ async fn create_hg_manifest(
     // Track restricted paths by storing manifest IDs for directories that match restricted path prefixes
     if restricted_paths_enabled {
         if let path @ RepoPath::DirectoryPath(non_root_path) = &path {
-            let is_restricted = restricted_paths
-                .is_restricted_path(&ctx, None, non_root_path)
-                .await?;
+            let is_restricted = restricted_paths.is_restricted_path(non_root_path);
             if is_restricted {
                 let entry = RestrictedPathManifestIdEntry::new(
                     ManifestType::Hg,

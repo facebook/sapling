@@ -130,8 +130,10 @@ use repo_sparse_profiles::SqlSparseProfilesSizes;
 use repo_stats_logger::ArcRepoStatsLogger;
 use repo_stats_logger::RepoStatsLogger;
 use restricted_paths::ArcRestrictedPaths;
+use restricted_paths::ArcRestrictedPathsConfigBased;
 use restricted_paths::ArcRestrictedPathsManifestIdStore;
 use restricted_paths::RestrictedPaths;
+use restricted_paths::RestrictedPathsConfigBased;
 use restricted_paths::RestrictedPathsManifestIdCacheBuilder;
 use restricted_paths::SqlRestrictedPathsManifestIdStoreBuilder;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -655,7 +657,7 @@ impl TestRepoFactory {
         filenodes: &ArcFilenodes,
         repo_blobstore: &ArcRepoBlobstore,
         filestore_config: &ArcFilestoreConfig,
-        restricted_paths: &ArcRestrictedPaths,
+        restricted_paths_config_based: &ArcRestrictedPathsConfigBased,
     ) -> Result<ArcRepoDerivedData> {
         Ok(Arc::new(RepoDerivedData::new(
             repo_identity.id(),
@@ -670,7 +672,7 @@ impl TestRepoFactory {
             MononokeScubaSampleBuilder::with_discard(),
             repo_config.derived_data_config.clone(),
             None, // derivation_service_client = None
-            restricted_paths.clone(),
+            restricted_paths_config_based.clone(),
         )?))
     }
 
@@ -718,6 +720,38 @@ impl TestRepoFactory {
         Ok(Arc::new(MutableRenames::new_test(
             repo_identity.id(),
             sql_store,
+        )))
+    }
+
+    /// Build config-based restricted paths
+    pub async fn restricted_paths_config_based(
+        &self,
+        repo_config: &ArcRepoConfig,
+        restricted_paths_manifest_id_store: &ArcRestrictedPathsManifestIdStore,
+    ) -> Result<ArcRestrictedPathsConfigBased> {
+        // If a pre-built RestrictedPaths was provided via with_restricted_paths,
+        // use its config_based to ensure repo_derived_data gets the same config.
+        if let Some(restricted_paths) = &self.restricted_paths {
+            return Ok(restricted_paths.config_based());
+        }
+
+        let restricted_paths_config = repo_config.restricted_paths_config.clone();
+
+        // Build the manifest id cache with the specified refresh interval
+        let cache = RestrictedPathsManifestIdCacheBuilder::new(
+            self.ctx.clone(),
+            restricted_paths_manifest_id_store.clone(),
+        )
+        .with_refresh_interval(std::time::Duration::from_millis(
+            restricted_paths_config.cache_update_interval_ms,
+        ))
+        .build()
+        .await?;
+
+        Ok(Arc::new(RestrictedPathsConfigBased::new(
+            restricted_paths_config,
+            restricted_paths_manifest_id_store.clone(),
+            Some(Arc::new(cache)),
         )))
     }
 

@@ -133,6 +133,15 @@ impl RestrictedPaths {
         &self.manifest_id_store
     }
 
+    /// Returns a `RestrictedPathsConfigBased` constructed from this instance's config fields.
+    pub fn config_based(&self) -> ArcRestrictedPathsConfigBased {
+        Arc::new(RestrictedPathsConfigBased::new(
+            self.config.clone(),
+            self.manifest_id_store.clone(),
+            self.manifest_id_cache.clone(),
+        ))
+    }
+
     pub fn acl_provider(&self) -> &Arc<dyn AclProvider> {
         &self.acl_provider
     }

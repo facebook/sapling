@@ -804,7 +804,7 @@ async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
         let ms_hash = (get_manifest_from_bonsai(
             ctx.clone(),
             repo.repo_blobstore_arc(),
-            repo.restricted_paths_arc(),
+            repo.restricted_paths_arc().config_based(),
             make_bonsai_changeset(None, None, vec![]),
             vec![ms1, ms2],
             None,
@@ -823,7 +823,7 @@ async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
         let ms_hash = (get_manifest_from_bonsai(
             ctx.clone(),
             repo.repo_blobstore_arc(),
-            repo.restricted_paths_arc(),
+            repo.restricted_paths_arc().config_based(),
             make_bonsai_changeset(None, None, vec![("base", FileChange::Deletion)]),
             vec![ms1, ms2],
             None,
@@ -863,7 +863,7 @@ async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
         let ms_hash = (get_manifest_from_bonsai(
             ctx.clone(),
             repo.repo_blobstore_arc(),
-            repo.restricted_paths_arc(),
+            repo.restricted_paths_arc().config_based(),
             bcs,
             vec![ms1, ms2],
             None,

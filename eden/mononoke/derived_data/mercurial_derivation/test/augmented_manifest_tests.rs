@@ -101,6 +101,7 @@ async fn get_manifests(
     .await?;
     let full_aug = full_aug_id.load(ctx, &blobstore).await?;
 
+    let restricted_paths_config = repo.restricted_paths().config_based();
     // Now derive the manifest using the parents in the main blobstore.
     let aug_id = derive_hg_augmented_manifest::derive_from_hg_manifest_and_parents(
         ctx,
@@ -108,7 +109,7 @@ async fn get_manifests(
         hg_id,
         parents,
         &Default::default(),
-        repo.restricted_paths(),
+        &restricted_paths_config,
     )
     .await?;
     let aug = aug_id.load(ctx, repo.repo_blobstore()).await?;

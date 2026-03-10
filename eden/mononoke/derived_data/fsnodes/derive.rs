@@ -53,10 +53,10 @@ use mononoke_types::fsnode::FsnodeSummary;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
 use mononoke_types::path::MPath;
-use restricted_paths::ManifestId;
-use restricted_paths::ManifestType;
-use restricted_paths::RestrictedPathManifestIdEntry;
-use restricted_paths::RestrictedPaths;
+use restricted_paths_common::ManifestId;
+use restricted_paths_common::ManifestType;
+use restricted_paths_common::RestrictedPathManifestIdEntry;
+use restricted_paths_common::RestrictedPathsConfigBased;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::FsnodeDerivationError;
@@ -263,7 +263,7 @@ async fn collect_fsnode_subentries(
 async fn create_fsnode(
     ctx: &CoreContext,
     blobstore: &Arc<dyn KeyedBlobstore>,
-    restricted_paths: &Arc<RestrictedPaths>,
+    restricted_paths: &Arc<RestrictedPathsConfigBased>,
     tree_info: TreeInfo<
         FsnodeId,
         FsnodeFile,
@@ -350,9 +350,7 @@ async fn create_fsnode(
     let path = &tree_info.path;
     if restricted_paths_enabled {
         if let Some(non_root_path) = path.clone().into_optional_non_root_path() {
-            let is_restricted = restricted_paths
-                .is_restricted_path(ctx, None, &non_root_path)
-                .await?;
+            let is_restricted = restricted_paths.is_restricted_path(&non_root_path);
             if is_restricted {
                 let entry = RestrictedPathManifestIdEntry::new(
                     ManifestType::Fsnode,

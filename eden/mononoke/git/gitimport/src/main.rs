@@ -117,7 +117,7 @@ async fn derive_hg(
         let manifest = get_manifest_from_bonsai(
             ctx.clone(),
             repo.repo_blobstore_arc(),
-            repo.restricted_paths_arc(),
+            repo.restricted_paths_arc().config_based(),
             bcs.clone(),
             parent_manifests,
             None,

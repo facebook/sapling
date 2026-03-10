@@ -52,7 +52,7 @@ use mononoke_types::NonRootMPath;
 use mononoke_types::TrackedFileChange;
 use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataRef;
-use restricted_paths::ArcRestrictedPaths;
+use restricted_paths_common::ArcRestrictedPathsConfigBased;
 use stats::prelude::*;
 
 use crate::derive_hg_manifest::derive_hg_manifest;
@@ -204,7 +204,7 @@ async fn resolve_paths(
 pub async fn get_manifest_from_bonsai(
     ctx: CoreContext,
     blobstore: Arc<dyn KeyedBlobstore>,
-    restricted_paths: ArcRestrictedPaths,
+    restricted_paths: ArcRestrictedPathsConfigBased,
     bcs: BonsaiChangeset,
     parent_manifests: Vec<HgManifestId>,
     subtree_changes: Option<&HgSubtreeChanges>,
@@ -335,7 +335,7 @@ pub(crate) async fn derive_from_parents(
     parents: Vec<MappedHgChangesetId>,
     subtree_change_sources: HashMap<ChangesetId, HgChangesetId>,
     options: &HgChangesetDeriveOptions,
-    restricted_paths: ArcRestrictedPaths,
+    restricted_paths: ArcRestrictedPathsConfigBased,
 ) -> Result<(MappedHgChangesetId, HgManifestId), Error> {
     let parents = {
         borrowed!(ctx);
@@ -382,7 +382,7 @@ pub async fn derive_simple_hg_changeset_stack_without_copy_info(
     bonsais: Vec<BonsaiChangeset>,
     parent: Option<MappedHgChangesetId>,
     options: &HgChangesetDeriveOptions,
-    restricted_paths: ArcRestrictedPaths,
+    restricted_paths: ArcRestrictedPathsConfigBased,
 ) -> Result<HashMap<ChangesetId, MappedHgChangesetId>, Error> {
     let parent = match parent {
         Some(parent) => Some(parent.hg_changeset_id().load(ctx, blobstore).await?),

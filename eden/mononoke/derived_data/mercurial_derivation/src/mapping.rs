@@ -43,9 +43,9 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::DerivableUntopologicallyVariant;
 use mononoke_types::RepoPath;
-use restricted_paths::ArcRestrictedPaths;
-use restricted_paths::ManifestType;
-use restricted_paths::RestrictedPathManifestIdEntry;
+use restricted_paths_common::ArcRestrictedPathsConfigBased;
+use restricted_paths_common::ManifestType;
+use restricted_paths_common::RestrictedPathManifestIdEntry;
 use stats::prelude::*;
 use tracing::debug;
 use tracing::warn;
@@ -345,7 +345,7 @@ async fn get_subtree_change_sources(
 /// of them.  This is ok as derive_from_predecessor is only used for backfilling.
 async fn track_all_restricted_paths(
     ctx: &CoreContext,
-    restricted_paths: ArcRestrictedPaths,
+    restricted_paths: ArcRestrictedPathsConfigBased,
     hg_cs_id: HgChangesetId,
     root_hg_aug_mfid: HgAugmentedManifestId,
     blobstore: Arc<dyn KeyedBlobstore>,
