@@ -83,14 +83,13 @@ mod tests {
 
         let path_acls_map: HashMap<NonRootMPath, MononokeIdentity> = path_acls
             .into_iter()
-            .map(|(path, acl_str)| {
-                (
-                    NonRootMPath::new(path).expect("Failed to create NonRootMPath from test path"),
-                    MononokeIdentity::from_str(acl_str)
-                        .expect("Failed to parse MononokeIdentity from ACL string"),
-                )
+            .map(|(path, acl_str)| -> Result<_> {
+                Ok((
+                    NonRootMPath::new(path)?,
+                    MononokeIdentity::from_str(acl_str)?,
+                ))
             })
-            .collect();
+            .collect::<Result<_>>()?;
 
         let config = RestrictedPathsConfig {
             path_acls: path_acls_map,
@@ -103,20 +102,18 @@ mod tests {
         };
 
         let manifest_id_store = Arc::new(
-            SqlRestrictedPathsManifestIdStoreBuilder::with_sqlite_in_memory()
-                .expect("Failed to create Sqlite connection")
+            SqlRestrictedPathsManifestIdStoreBuilder::with_sqlite_in_memory()?
                 .with_repo_id(repo_id),
         );
 
-        let acl_provider = DummyAclProvider::new(fb).expect("Failed to create DummyAclProvider");
+        let acl_provider = DummyAclProvider::new(fb)?;
+        let scuba = MononokeScubaSampleBuilder::with_discard();
 
         let config_based = Arc::new(RestrictedPathsConfigBased::new(
             config,
-            manifest_id_store.clone(),
+            manifest_id_store,
             None,
         ));
-
-        let scuba = MononokeScubaSampleBuilder::with_discard();
 
         let derived_data_config = test_repo_factory::default_test_repo_config().derived_data_config;
 
@@ -133,31 +130,24 @@ mod tests {
     async fn create_test_changeset(
         fb: FacebookInit,
         path_acls: Vec<(&str, &str)>,
-    ) -> (RepoContext<Repo>, ChangesetContext<Repo>) {
-        let restricted_paths = create_test_restricted_paths(fb, path_acls)
-            .await
-            .expect("Failed to create test restricted paths");
+    ) -> Result<(RepoContext<Repo>, ChangesetContext<Repo>)> {
+        let restricted_paths = create_test_restricted_paths(fb, path_acls).await?;
         let ctx = CoreContext::test_mock(fb);
 
-        let repo: Repo = TestRepoFactory::new(fb)
-            .expect("Failed to create TestRepoFactory")
+        let repo: Repo = TestRepoFactory::new(fb)?
             .with_restricted_paths(restricted_paths)
             .build()
-            .await
-            .expect("Failed to build test repo");
+            .await?;
 
         let root_cs_id = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("file.txt", "content")
             .commit()
-            .await
-            .expect("Failed to create root commit");
+            .await?;
 
-        let repo_ctx = RepoContext::new_test(ctx.clone(), Arc::new(repo))
-            .await
-            .expect("Failed to create test RepoContext");
+        let repo_ctx = RepoContext::new_test(ctx.clone(), Arc::new(repo)).await?;
         let cs_ctx = ChangesetContext::new(repo_ctx.clone(), root_cs_id);
 
-        (repo_ctx, cs_ctx)
+        Ok((repo_ctx, cs_ctx))
     }
 
     // ---- restriction_info tests ----
@@ -165,17 +155,16 @@ mod tests {
     #[mononoke::fbinit_test]
     async fn test_restriction_info_exact_match(fb: FacebookInit) -> Result<()> {
         let (_repo_ctx, cs_ctx) =
-            create_test_changeset(fb, vec![("restricted/dir", "TIER:my-acl")]).await;
+            create_test_changeset(fb, vec![("restricted/dir", "TIER:my-acl")]).await?;
 
         let info = cs_ctx
-            .path_restriction(MPath::try_from("restricted/dir").expect("Failed to parse MPath"))
+            .path_restriction(MPath::try_from("restricted/dir")?)
             .await?
             .restriction_info(true)
             .await?;
 
         let expected = vec![PathAccessInfo {
-            restriction_root: NonRootMPath::new("restricted/dir")
-                .expect("Failed to create NonRootMPath"),
+            restriction_root: NonRootMPath::new("restricted/dir")?,
             repo_region_acl: "TIER:my-acl".to_string(),
             has_access: Some(true),
             request_acl: "TIER:my-acl".to_string(),
@@ -190,19 +179,16 @@ mod tests {
     #[mononoke::fbinit_test]
     async fn test_restriction_info_nested_path(fb: FacebookInit) -> Result<()> {
         let (_repo_ctx, cs_ctx) =
-            create_test_changeset(fb, vec![("restricted", "TIER:my-acl")]).await;
+            create_test_changeset(fb, vec![("restricted", "TIER:my-acl")]).await?;
 
         let info = cs_ctx
-            .path_restriction(
-                MPath::try_from("restricted/subdir/file.txt").expect("Failed to parse MPath"),
-            )
+            .path_restriction(MPath::try_from("restricted/subdir/file.txt")?)
             .await?
             .restriction_info(true)
             .await?;
 
         let expected = vec![PathAccessInfo {
-            restriction_root: NonRootMPath::new("restricted")
-                .expect("Failed to create NonRootMPath"),
+            restriction_root: NonRootMPath::new("restricted")?,
             repo_region_acl: "TIER:my-acl".to_string(),
             has_access: Some(true),
             request_acl: "TIER:my-acl".to_string(),
@@ -217,12 +203,10 @@ mod tests {
     #[mononoke::fbinit_test]
     async fn test_restriction_info_no_match(fb: FacebookInit) -> Result<()> {
         let (_repo_ctx, cs_ctx) =
-            create_test_changeset(fb, vec![("restricted/dir", "TIER:my-acl")]).await;
+            create_test_changeset(fb, vec![("restricted/dir", "TIER:my-acl")]).await?;
 
         let info = cs_ctx
-            .path_restriction(
-                MPath::try_from("other/path/file.txt").expect("Failed to parse MPath"),
-            )
+            .path_restriction(MPath::try_from("other/path/file.txt")?)
             .await?
             .restriction_info(true)
             .await?;
@@ -234,11 +218,12 @@ mod tests {
 
     #[mononoke::fbinit_test]
     async fn test_restriction_info_sibling_path(fb: FacebookInit) -> Result<()> {
-        let (_repo_ctx, cs_ctx) = create_test_changeset(fb, vec![("foo/bar", "TIER:my-acl")]).await;
+        let (_repo_ctx, cs_ctx) =
+            create_test_changeset(fb, vec![("foo/bar", "TIER:my-acl")]).await?;
 
         // foo/baz is a sibling of foo/bar, not under it
         let info = cs_ctx
-            .path_restriction(MPath::try_from("foo/baz/file.txt").expect("Failed to parse MPath"))
+            .path_restriction(MPath::try_from("foo/baz/file.txt")?)
             .await?
             .restriction_info(true)
             .await?;
@@ -254,18 +239,16 @@ mod tests {
             fb,
             vec![("first", "TIER:first-acl"), ("second", "TIER:second-acl")],
         )
-        .await;
+        .await?;
 
         let first_info = cs_ctx
-            .path_restriction(
-                MPath::try_from("first/nested/file.txt").expect("Failed to parse MPath"),
-            )
+            .path_restriction(MPath::try_from("first/nested/file.txt")?)
             .await?
             .restriction_info(true)
             .await?;
 
         let expected_first = vec![PathAccessInfo {
-            restriction_root: NonRootMPath::new("first").expect("Failed to create NonRootMPath"),
+            restriction_root: NonRootMPath::new("first")?,
             repo_region_acl: "TIER:first-acl".to_string(),
             has_access: Some(true),
             request_acl: "TIER:first-acl".to_string(),
@@ -275,15 +258,13 @@ mod tests {
         pretty_assertions::assert_eq!(actual_first, expected_first);
 
         let second_info = cs_ctx
-            .path_restriction(
-                MPath::try_from("second/nested/file.txt").expect("Failed to parse MPath"),
-            )
+            .path_restriction(MPath::try_from("second/nested/file.txt")?)
             .await?
             .restriction_info(true)
             .await?;
 
         let expected_second = vec![PathAccessInfo {
-            restriction_root: NonRootMPath::new("second").expect("Failed to create NonRootMPath"),
+            restriction_root: NonRootMPath::new("second")?,
             repo_region_acl: "TIER:second-acl".to_string(),
             has_access: Some(true),
             request_acl: "TIER:second-acl".to_string(),
@@ -298,7 +279,7 @@ mod tests {
     #[mononoke::fbinit_test]
     async fn test_restriction_info_root_path(fb: FacebookInit) -> Result<()> {
         let (_repo_ctx, cs_ctx) =
-            create_test_changeset(fb, vec![("restricted", "TIER:my-acl")]).await;
+            create_test_changeset(fb, vec![("restricted", "TIER:my-acl")]).await?;
 
         // Root path cannot be restricted
         let info = cs_ctx
@@ -314,10 +295,10 @@ mod tests {
 
     #[mononoke::fbinit_test]
     async fn test_restriction_info_no_restrictions_configured(fb: FacebookInit) -> Result<()> {
-        let (_repo_ctx, cs_ctx) = create_test_changeset(fb, vec![]).await;
+        let (_repo_ctx, cs_ctx) = create_test_changeset(fb, vec![]).await?;
 
         let info = cs_ctx
-            .path_restriction(MPath::try_from("any/path/file.txt").expect("Failed to parse MPath"))
+            .path_restriction(MPath::try_from("any/path/file.txt")?)
             .await?
             .restriction_info(true)
             .await?;
@@ -336,24 +317,23 @@ mod tests {
             fb,
             vec![("foo", "TIER:outer-acl"), ("foo/bar", "TIER:inner-acl")],
         )
-        .await;
+        .await?;
 
         let infos = cs_ctx
-            .path_restriction(MPath::try_from("foo/bar/file.txt").expect("Failed to parse MPath"))
+            .path_restriction(MPath::try_from("foo/bar/file.txt")?)
             .await?
             .restriction_info(true)
             .await?;
 
         let expected = vec![
             PathAccessInfo {
-                restriction_root: NonRootMPath::new("foo").expect("Failed to create NonRootMPath"),
+                restriction_root: NonRootMPath::new("foo")?,
                 repo_region_acl: "TIER:outer-acl".to_string(),
                 has_access: Some(true),
                 request_acl: "TIER:outer-acl".to_string(),
             },
             PathAccessInfo {
-                restriction_root: NonRootMPath::new("foo/bar")
-                    .expect("Failed to create NonRootMPath"),
+                restriction_root: NonRootMPath::new("foo/bar")?,
                 repo_region_acl: "TIER:inner-acl".to_string(),
                 has_access: Some(true),
                 request_acl: "TIER:inner-acl".to_string(),
@@ -378,7 +358,7 @@ mod tests {
                 ("third/nested", "TIER:third-acl"),
             ],
         )
-        .await;
+        .await?;
 
         let paths = vec![
             NonRootMPath::new("first/file1.txt")?,
@@ -428,7 +408,7 @@ mod tests {
     #[mononoke::fbinit_test]
     async fn test_batch_all_restricted(fb: FacebookInit) -> Result<()> {
         let (_repo_ctx, cs_ctx) =
-            create_test_changeset(fb, vec![("restricted", "TIER:my-acl")]).await;
+            create_test_changeset(fb, vec![("restricted", "TIER:my-acl")]).await?;
 
         let paths = vec![
             NonRootMPath::new("restricted/file1.txt")?,
@@ -474,7 +454,7 @@ mod tests {
     #[mononoke::fbinit_test]
     async fn test_batch_all_unrestricted(fb: FacebookInit) -> Result<()> {
         let (_repo_ctx, cs_ctx) =
-            create_test_changeset(fb, vec![("restricted", "TIER:my-acl")]).await;
+            create_test_changeset(fb, vec![("restricted", "TIER:my-acl")]).await?;
 
         let paths = vec![
             NonRootMPath::new("unrestricted/file1.txt")?,
@@ -510,7 +490,7 @@ mod tests {
 
     #[mononoke::fbinit_test]
     async fn test_find_descendants_no_restrictions(fb: FacebookInit) -> Result<()> {
-        let (_repo_ctx, cs_ctx) = create_test_changeset(fb, vec![]).await;
+        let (_repo_ctx, cs_ctx) = create_test_changeset(fb, vec![]).await?;
 
         let descendants = cs_ctx
             .path_restriction(MPath::ROOT)
@@ -532,7 +512,7 @@ mod tests {
                 ("second/path", "TIER:second-acl"),
             ],
         )
-        .await;
+        .await?;
 
         let descendants = cs_ctx
             .path_restriction(MPath::ROOT)
@@ -542,13 +522,13 @@ mod tests {
 
         let expected = vec![
             PathAccessInfo {
-                restriction_root: NonRootMPath::new("first/path").unwrap(),
+                restriction_root: NonRootMPath::new("first/path")?,
                 repo_region_acl: "TIER:first-acl".to_string(),
                 has_access: None,
                 request_acl: "TIER:first-acl".to_string(),
             },
             PathAccessInfo {
-                restriction_root: NonRootMPath::new("second/path").unwrap(),
+                restriction_root: NonRootMPath::new("second/path")?,
                 repo_region_acl: "TIER:second-acl".to_string(),
                 has_access: None,
                 request_acl: "TIER:second-acl".to_string(),
@@ -570,10 +550,10 @@ mod tests {
                 ("second/path", "TIER:second-acl"),
             ],
         )
-        .await;
+        .await?;
 
         let descendants = cs_ctx
-            .path_restriction(MPath::try_from("first/path").unwrap())
+            .path_restriction(MPath::try_from("first/path")?)
             .await?
             .find_restricted_descendants()
             .await?;
@@ -581,7 +561,7 @@ mod tests {
         // "first/path" is itself a restriction root, and is_prefix_of returns
         // true for equal paths, so it should be returned
         let expected = vec![PathAccessInfo {
-            restriction_root: NonRootMPath::new("first/path").unwrap(),
+            restriction_root: NonRootMPath::new("first/path")?,
             repo_region_acl: "TIER:first-acl".to_string(),
             has_access: None,
             request_acl: "TIER:first-acl".to_string(),
@@ -596,16 +576,16 @@ mod tests {
     #[mononoke::fbinit_test]
     async fn test_find_descendants_filter_parent_of_root(fb: FacebookInit) -> Result<()> {
         let (_repo_ctx, cs_ctx) =
-            create_test_changeset(fb, vec![("foo/bar/restricted", "TIER:my-acl")]).await;
+            create_test_changeset(fb, vec![("foo/bar/restricted", "TIER:my-acl")]).await?;
 
         let descendants = cs_ctx
-            .path_restriction(MPath::try_from("foo").unwrap())
+            .path_restriction(MPath::try_from("foo")?)
             .await?
             .find_restricted_descendants()
             .await?;
 
         let expected = vec![PathAccessInfo {
-            restriction_root: NonRootMPath::new("foo/bar/restricted").unwrap(),
+            restriction_root: NonRootMPath::new("foo/bar/restricted")?,
             repo_region_acl: "TIER:my-acl".to_string(),
             has_access: None,
             request_acl: "TIER:my-acl".to_string(),
@@ -621,12 +601,13 @@ mod tests {
     async fn test_find_descendants_filter_child_of_root_returns_empty(
         fb: FacebookInit,
     ) -> Result<()> {
-        let (_repo_ctx, cs_ctx) = create_test_changeset(fb, vec![("foo/bar", "TIER:my-acl")]).await;
+        let (_repo_ctx, cs_ctx) =
+            create_test_changeset(fb, vec![("foo/bar", "TIER:my-acl")]).await?;
 
         // Filter is a child of the root — should NOT match because we only
         // return roots that are under the filter
         let descendants = cs_ctx
-            .path_restriction(MPath::try_from("foo/bar/baz/deep").unwrap())
+            .path_restriction(MPath::try_from("foo/bar/baz/deep")?)
             .await?
             .find_restricted_descendants()
             .await?;
@@ -645,10 +626,10 @@ mod tests {
                 ("second/path", "TIER:second-acl"),
             ],
         )
-        .await;
+        .await?;
 
         let descendants = cs_ctx
-            .path_restriction(MPath::try_from("third/path").unwrap())
+            .path_restriction(MPath::try_from("third/path")?)
             .await?
             .find_restricted_descendants()
             .await?;
@@ -660,10 +641,11 @@ mod tests {
 
     #[mononoke::fbinit_test]
     async fn test_find_descendants_filter_sibling_no_match(fb: FacebookInit) -> Result<()> {
-        let (_repo_ctx, cs_ctx) = create_test_changeset(fb, vec![("foo/bar", "TIER:my-acl")]).await;
+        let (_repo_ctx, cs_ctx) =
+            create_test_changeset(fb, vec![("foo/bar", "TIER:my-acl")]).await?;
 
         let descendants = cs_ctx
-            .path_restriction(MPath::try_from("foo/baz").unwrap())
+            .path_restriction(MPath::try_from("foo/baz")?)
             .await?
             .find_restricted_descendants()
             .await?;
@@ -680,24 +662,24 @@ mod tests {
             fb,
             vec![("foo", "TIER:outer-acl"), ("foo/bar", "TIER:inner-acl")],
         )
-        .await;
+        .await?;
 
         // Querying from foo/ should return both the outer and inner roots
         let descendants = cs_ctx
-            .path_restriction(MPath::try_from("foo").unwrap())
+            .path_restriction(MPath::try_from("foo")?)
             .await?
             .find_restricted_descendants()
             .await?;
 
         let expected = vec![
             PathAccessInfo {
-                restriction_root: NonRootMPath::new("foo").unwrap(),
+                restriction_root: NonRootMPath::new("foo")?,
                 repo_region_acl: "TIER:outer-acl".to_string(),
                 has_access: None,
                 request_acl: "TIER:outer-acl".to_string(),
             },
             PathAccessInfo {
-                restriction_root: NonRootMPath::new("foo/bar").unwrap(),
+                restriction_root: NonRootMPath::new("foo/bar")?,
                 repo_region_acl: "TIER:inner-acl".to_string(),
                 has_access: None,
                 request_acl: "TIER:inner-acl".to_string(),
@@ -722,24 +704,24 @@ mod tests {
                 ("third/path", "TIER:third-acl"),
             ],
         )
-        .await;
+        .await?;
 
         let roots = vec![
-            MPath::try_from("first/path").unwrap(),
-            MPath::try_from("third/path").unwrap(),
+            MPath::try_from("first/path")?,
+            MPath::try_from("third/path")?,
         ];
 
         let descendants = cs_ctx.find_restricted_descendants(roots).await?;
 
         let expected = vec![
             PathAccessInfo {
-                restriction_root: NonRootMPath::new("first/path").unwrap(),
+                restriction_root: NonRootMPath::new("first/path")?,
                 repo_region_acl: "TIER:first-acl".to_string(),
                 has_access: None,
                 request_acl: "TIER:first-acl".to_string(),
             },
             PathAccessInfo {
-                restriction_root: NonRootMPath::new("third/path").unwrap(),
+                restriction_root: NonRootMPath::new("third/path")?,
                 repo_region_acl: "TIER:third-acl".to_string(),
                 has_access: None,
                 request_acl: "TIER:third-acl".to_string(),
@@ -755,16 +737,16 @@ mod tests {
     #[mononoke::fbinit_test]
     async fn test_batch_find_descendants_deduplicates(fb: FacebookInit) -> Result<()> {
         let (_repo_ctx, cs_ctx) =
-            create_test_changeset(fb, vec![("shared/path", "TIER:my-acl")]).await;
+            create_test_changeset(fb, vec![("shared/path", "TIER:my-acl")]).await?;
 
         // Both roots are parents of the same restriction root
-        let roots = vec![MPath::try_from("shared").unwrap(), MPath::ROOT];
+        let roots = vec![MPath::try_from("shared")?, MPath::ROOT];
 
         let descendants = cs_ctx.find_restricted_descendants(roots).await?;
 
         // Should be deduplicated to just one entry
         let expected = vec![PathAccessInfo {
-            restriction_root: NonRootMPath::new("shared/path").unwrap(),
+            restriction_root: NonRootMPath::new("shared/path")?,
             repo_region_acl: "TIER:my-acl".to_string(),
             has_access: None,
             request_acl: "TIER:my-acl".to_string(),
@@ -787,28 +769,25 @@ mod tests {
                 ("baz", "TIER:baz-acl"),
             ],
         )
-        .await;
+        .await?;
 
         // Nested query paths: foo/ is a parent of foo/bar/.
         // foo/ should find both foo/ and foo/bar/.
         // foo/bar/ should find just foo/bar/ (already found by foo/).
         // After dedup: foo/ and foo/bar/ (baz/ not matched by either query).
-        let roots = vec![
-            MPath::try_from("foo").unwrap(),
-            MPath::try_from("foo/bar").unwrap(),
-        ];
+        let roots = vec![MPath::try_from("foo")?, MPath::try_from("foo/bar")?];
 
         let descendants = cs_ctx.find_restricted_descendants(roots).await?;
 
         let expected = vec![
             PathAccessInfo {
-                restriction_root: NonRootMPath::new("foo").unwrap(),
+                restriction_root: NonRootMPath::new("foo")?,
                 repo_region_acl: "TIER:outer-acl".to_string(),
                 has_access: None,
                 request_acl: "TIER:outer-acl".to_string(),
             },
             PathAccessInfo {
-                restriction_root: NonRootMPath::new("foo/bar").unwrap(),
+                restriction_root: NonRootMPath::new("foo/bar")?,
                 repo_region_acl: "TIER:inner-acl".to_string(),
                 has_access: None,
                 request_acl: "TIER:inner-acl".to_string(),
@@ -829,12 +808,10 @@ mod tests {
             create_test_restricted_paths(fb, vec![("restricted", "TIER:my-acl")]).await?;
         let ctx = CoreContext::test_mock(fb);
 
-        let repo: Repo = TestRepoFactory::new(fb)
-            .unwrap()
+        let repo: Repo = TestRepoFactory::new(fb)?
             .with_restricted_paths(restricted_paths)
             .build()
-            .await
-            .unwrap();
+            .await?;
 
         let root_cs_id = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("restricted/file.txt", "secret")
@@ -850,12 +827,12 @@ mod tests {
         let expected = RestrictedPathsChangesInfo {
             restricted_changes: vec![RestrictedChangeGroup {
                 restriction_info: PathAccessInfo {
-                    restriction_root: NonRootMPath::new("restricted").unwrap(),
+                    restriction_root: NonRootMPath::new("restricted")?,
                     repo_region_acl: "TIER:my-acl".to_string(),
                     has_access: None,
                     request_acl: "TIER:my-acl".to_string(),
                 },
-                changed_paths: vec![NonRootMPath::new("restricted/file.txt").unwrap()],
+                changed_paths: vec![NonRootMPath::new("restricted/file.txt")?],
             }],
         };
         pretty_assertions::assert_eq!(changes, expected);
@@ -869,12 +846,10 @@ mod tests {
             create_test_restricted_paths(fb, vec![("restricted", "TIER:my-acl")]).await?;
         let ctx = CoreContext::test_mock(fb);
 
-        let repo: Repo = TestRepoFactory::new(fb)
-            .unwrap()
+        let repo: Repo = TestRepoFactory::new(fb)?
             .with_restricted_paths(restricted_paths)
             .build()
-            .await
-            .unwrap();
+            .await?;
 
         let root_cs_id = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("public/file.txt", "public")
@@ -905,12 +880,10 @@ mod tests {
         .await?;
         let ctx = CoreContext::test_mock(fb);
 
-        let repo: Repo = TestRepoFactory::new(fb)
-            .unwrap()
+        let repo: Repo = TestRepoFactory::new(fb)?
             .with_restricted_paths(restricted_paths)
             .build()
-            .await
-            .unwrap();
+            .await?;
 
         let root_cs_id = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("first/a.txt", "a")
@@ -933,25 +906,25 @@ mod tests {
             restricted_changes: vec![
                 RestrictedChangeGroup {
                     restriction_info: PathAccessInfo {
-                        restriction_root: NonRootMPath::new("first").unwrap(),
+                        restriction_root: NonRootMPath::new("first")?,
                         repo_region_acl: "TIER:first-acl".to_string(),
                         has_access: None,
                         request_acl: "TIER:first-acl".to_string(),
                     },
                     changed_paths: vec![
-                        NonRootMPath::new("first/a.txt").unwrap(),
-                        NonRootMPath::new("first/b.txt").unwrap(),
-                        NonRootMPath::new("first/second/c.txt").unwrap(),
+                        NonRootMPath::new("first/a.txt")?,
+                        NonRootMPath::new("first/b.txt")?,
+                        NonRootMPath::new("first/second/c.txt")?,
                     ],
                 },
                 RestrictedChangeGroup {
                     restriction_info: PathAccessInfo {
-                        restriction_root: NonRootMPath::new("first/second").unwrap(),
+                        restriction_root: NonRootMPath::new("first/second")?,
                         repo_region_acl: "TIER:second-acl".to_string(),
                         has_access: None,
                         request_acl: "TIER:second-acl".to_string(),
                     },
-                    changed_paths: vec![NonRootMPath::new("first/second/c.txt").unwrap()],
+                    changed_paths: vec![NonRootMPath::new("first/second/c.txt")?],
                 },
             ],
         };
@@ -972,12 +945,10 @@ mod tests {
         .await?;
         let ctx = CoreContext::test_mock(fb);
 
-        let repo: Repo = TestRepoFactory::new(fb)
-            .unwrap()
+        let repo: Repo = TestRepoFactory::new(fb)?
             .with_restricted_paths(restricted_paths)
             .build()
-            .await
-            .unwrap();
+            .await?;
 
         let root_cs_id = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("alpha/file1.txt", "a1")
@@ -999,24 +970,24 @@ mod tests {
             restricted_changes: vec![
                 RestrictedChangeGroup {
                     restriction_info: PathAccessInfo {
-                        restriction_root: NonRootMPath::new("alpha").unwrap(),
+                        restriction_root: NonRootMPath::new("alpha")?,
                         repo_region_acl: "TIER:alpha-acl".to_string(),
                         has_access: None,
                         request_acl: "TIER:alpha-acl".to_string(),
                     },
                     changed_paths: vec![
-                        NonRootMPath::new("alpha/file1.txt").unwrap(),
-                        NonRootMPath::new("alpha/file2.txt").unwrap(),
+                        NonRootMPath::new("alpha/file1.txt")?,
+                        NonRootMPath::new("alpha/file2.txt")?,
                     ],
                 },
                 RestrictedChangeGroup {
                     restriction_info: PathAccessInfo {
-                        restriction_root: NonRootMPath::new("beta").unwrap(),
+                        restriction_root: NonRootMPath::new("beta")?,
                         repo_region_acl: "TIER:beta-acl".to_string(),
                         has_access: None,
                         request_acl: "TIER:beta-acl".to_string(),
                     },
-                    changed_paths: vec![NonRootMPath::new("beta/file3.txt").unwrap()],
+                    changed_paths: vec![NonRootMPath::new("beta/file3.txt")?],
                 },
             ],
         };
