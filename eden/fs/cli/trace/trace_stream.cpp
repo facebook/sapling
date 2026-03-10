@@ -7,6 +7,7 @@
 
 #include <cpptoml.h>
 #include <fmt/core.h>
+#include <fmt/ostream.h>
 #include <folly/Portability.h>
 #include <folly/init/Init.h>
 #include <folly/io/async/AsyncSocket.h>
@@ -15,6 +16,7 @@
 #include <thrift/lib/cpp/util/EnumUtils.h>
 #include <thrift/lib/cpp2/async/RocketClientChannel.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
+#include <sstream>
 #include <unordered_set>
 
 #include "eden/common/utils/PathFuncs.h"
@@ -151,25 +153,29 @@ std::string formatFuseOpcode(const FuseCall& call) {
 std::string formatFuseCall(
     const FuseCall& call,
     const std::string& arguments = "",
-    const std::string& result = "") {
+    int64_t* result = nullptr) {
+  std::ostringstream ret{};
+
   auto* processNamePtr = apache::thrift::get_pointer(call.processName());
-  std::string processNameString = processNamePtr
-      ? fmt::format("{}({})", processNamePtr->c_str(), *call.pid())
-      : std::to_string(*call.pid());
 
-  std::string argString = arguments.empty()
-      ? fmt::format("{}", *call.nodeid())
-      : fmt::format("{}, {}", *call.nodeid(), arguments);
-  std::string resultString =
-      result.empty() ? result : fmt::format(" = {}", result);
+  fmt::print(ret, "{} from ", *call.unique());
+  if (processNamePtr) {
+    fmt::print(ret, "{}({})", processNamePtr->c_str(), *call.pid());
+  } else {
+    fmt::print(ret, "{}", *call.pid());
+  }
+  fmt::print(ret, ": {}", formatFuseOpcode(call));
 
-  return fmt::format(
-      "{} from {}: {}({}){}",
-      *call.unique(),
-      processNameString,
-      formatFuseOpcode(call),
-      argString,
-      resultString);
+  if (arguments.empty()) {
+    fmt::print(ret, "({})", *call.nodeid());
+  } else {
+    fmt::print(ret, "({}, {})", *call.nodeid(), arguments);
+  }
+
+  if (result) {
+    fmt::print(ret, " = {}", *result);
+  }
+  return ret.str();
 }
 
 std::string formatNfsCall(
@@ -185,16 +191,25 @@ std::string formatNfsCall(
 
 std::string formatPrjfsCall(
     const PrjfsCall& call,
-    std::string arguments = std::string{}) {
+    std::string arguments = std::string{},
+    int64_t* result = nullptr) {
+  std::ostringstream ret{};
+
   if (arguments.empty()) {
-    return fmt::format(
+    fmt::print(
+        ret,
         "{} from {}: {}",
         *call.commandId(),
         *call.pid(),
         apache::thrift::util::enumName(*call.callType(), "(unknown)"));
   } else {
-    return arguments;
+    ret.str(std::move(arguments));
   }
+
+  if (result) {
+    fmt::print(ret, " = {:#010x}", static_cast<uint32_t>(*result));
+  }
+  return ret.str();
 }
 
 void print_hg_event(
@@ -530,9 +545,7 @@ int trace_fs(
           formattedCall = formatFuseCall(
               *apache::thrift::get_pointer(evt.fuseRequest()),
               "" /* arguments */,
-              apache::thrift::get_pointer(evt.result())
-                  ? std::to_string(*apache::thrift::get_pointer(evt.result()))
-                  : "");
+              apache::thrift::get_pointer(evt.result()));
         } else if (nfsRequest) {
           formattedCall = formatNfsCall(
               *apache::thrift::get_pointer(evt.nfsRequest()),
@@ -540,7 +553,8 @@ int trace_fs(
         } else {
           formattedCall = formatPrjfsCall(
               *apache::thrift::get_pointer(evt.prjfsRequest()),
-              (*evt.arguments()));
+              (*evt.arguments()),
+              apache::thrift::get_pointer(evt.result()));
         }
         const auto it = activeRequests.find(unique);
         if (it != activeRequests.end()) {
