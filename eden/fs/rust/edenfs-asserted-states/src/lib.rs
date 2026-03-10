@@ -116,7 +116,9 @@ impl StreamingChangesClient {
     }
 
     // Takes a stream of ChangesSinceV2Result, and returns a stream of Changes.
-    // The Changes will be the file changes from the input stream as ChangesSinceV2Results split by ChangeEvents
+    // The Changes will be the file changes from the input stream as ChangesSinceV2Results split by ChangeEvents.
+    // Whenever such splitting occurs, all Changes originating from the same ChangesSinceV2Result are guaranteed
+    // to be ready in the output stream at the same time.
     pub async fn stream_changes_since_with_states_wrapper<'a>(
         &'a self,
         inner_stream: BoxStream<'a, Result<ChangesSinceV2Result>>,
@@ -130,6 +132,8 @@ impl StreamingChangesClient {
 
     // Takes a stream of ChangesSinceV2Result, and returns a stream of Changes.
     // The Changes will be the file changes from the input stream as ChangesSinceV2Results split by ChangeEvents
+    // Whenever such splitting occurs, all Changes originating from the same ChangesSinceV2Result are guaranteed
+    // to be ready in the output stream at the same time.
     async fn _stream_changes_since_with_states_wrapper<'a>(
         &'a self,
         inner_stream: BoxStream<'a, Result<ChangesSinceV2Result>>,
