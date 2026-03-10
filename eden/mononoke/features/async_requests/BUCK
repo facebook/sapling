@@ -78,6 +78,8 @@ rust_library(
         ":client",
         "//eden/mononoke/features/async_requests/worker:worker",
         "//eden/mononoke/features/async_requests/worker:worker-unittest",
+        "//eden/mononoke/tools/admin:admin",
+        "//eden/mononoke/tools/admin:admin-unittest",
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",

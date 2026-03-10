@@ -94,6 +94,7 @@ rust_binary(
         "//eden/mononoke/derived_data/mercurial_derivation:mercurial_derivation",
         "//eden/mononoke/features/async_requests:async_requests",
         "//eden/mononoke/features/async_requests:async_requests_client",
+        "//eden/mononoke/features/async_requests:requests_table",
         "//eden/mononoke/features/changesets_creation:changesets_creation",
         "//eden/mononoke/features/commit_rewriting/backsyncer:backsyncer",
         "//eden/mononoke/features/commit_rewriting/live_commit_sync_config:live_commit_sync_config",
