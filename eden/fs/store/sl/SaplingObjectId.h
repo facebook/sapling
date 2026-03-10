@@ -95,7 +95,7 @@ class SaplingObjectId {
   /**
    * Return a reference to the node (AKA hash) part of the SaplingObjectId.
    */
-  Hash20& node() const noexcept;
+  const Hash20& node() const noexcept;
 
   folly::ByteRange data() const {
     return folly::ByteRange{value_};
@@ -173,7 +173,7 @@ class SaplingObjectIdView {
 
   RelativePathPiece path() const noexcept;
 
-  Hash20& node() const noexcept;
+  const Hash20& node() const noexcept;
 
   folly::ByteRange data() const {
     return value_;

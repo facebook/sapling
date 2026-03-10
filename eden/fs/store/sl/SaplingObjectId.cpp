@@ -93,12 +93,12 @@ RelativePathPiece SaplingObjectId::path() const noexcept {
   }
 }
 
-Hash20& SaplingObjectId::node() const noexcept {
+const Hash20& SaplingObjectId::node() const noexcept {
   XDCHECK((validateSlOid(value_), true));
   if (value_.empty()) {
-    return const_cast<Hash20&>(kZeroHash);
+    return kZeroHash;
   } else {
-    return *reinterpret_cast<Hash20*>(const_cast<char*>(value_.data() + 1));
+    return *reinterpret_cast<const Hash20*>(value_.data() + 1);
   }
 }
 
@@ -166,11 +166,11 @@ RelativePathPiece SaplingObjectIdView::path() const noexcept {
   }
 }
 
-Hash20& SaplingObjectIdView::node() const noexcept {
+const Hash20& SaplingObjectIdView::node() const noexcept {
   if (value_.empty()) {
-    return const_cast<Hash20&>(kZeroHash);
+    return kZeroHash;
   } else {
-    return *reinterpret_cast<Hash20*>(const_cast<uint8_t*>(value_.data() + 1));
+    return *reinterpret_cast<const Hash20*>(value_.data() + 1);
   }
 }
 

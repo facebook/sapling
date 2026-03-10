@@ -133,10 +133,8 @@ SaplingBackingStore::SaplingBackingStore(
           config_->getEdenConfig()->HgTraceBusCapacity.getValue())},
       store_{
           sapling::sapling_backingstore_new(
-              rust::Slice<const char>{
-                  repository.view().data(),
-                  repository.view().size()},
-              rust::Slice<const char>{mount.view().data(), mount.view().size()},
+              rust::Str{repository.view().data(), repository.view().size()},
+              rust::Str{mount.view().data(), mount.view().size()},
               config_->getEdenConfig()->backingstoreWalkMode.getValue())
               .into_raw(),
           [](sapling::BackingStore* backingStore) {
@@ -204,10 +202,8 @@ SaplingBackingStore::SaplingBackingStore(
           config_->getEdenConfig()->HgTraceBusCapacity.getValue())},
       store_{
           sapling::sapling_backingstore_new(
-              rust::Slice<const char>{
-                  repository.view().data(),
-                  repository.view().size()},
-              rust::Slice<const char>{mount.view().data(), mount.view().size()},
+              rust::Str{repository.view().data(), repository.view().size()},
+              rust::Str{mount.view().data(), mount.view().size()},
               config_->getEdenConfig()->backingstoreWalkMode.getValue())
               .into_raw(),
           [](sapling::BackingStore* backingStore) {

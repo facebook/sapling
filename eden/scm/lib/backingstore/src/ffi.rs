@@ -8,15 +8,12 @@
 //! Provides the c-bindings for `crate::backingstore`.
 
 use std::collections::HashMap;
-use std::ffi::CStr;
-use std::os::raw::c_char;
 use std::pin::Pin;
 use std::sync::Arc;
 
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
-use cxx::CxxString;
 use cxx::SharedPtr;
 use cxx::UniquePtr;
 use edenapi::types::DirectoryMetadata;
@@ -256,13 +253,13 @@ pub(crate) mod ffi {
     extern "Rust" {
         type BackingStore;
 
-        pub unsafe fn sapling_backingstore_new(
-            repository: &[c_char],
-            mount: &[c_char],
-            walk_mode: &CxxString,
+        pub fn sapling_backingstore_new(
+            repository: &str,
+            mount: &str,
+            walk_mode: &str,
         ) -> Result<Box<BackingStore>>;
 
-        pub unsafe fn sapling_backingstore_get_name(store: &BackingStore) -> Result<String>;
+        pub fn sapling_backingstore_get_name(store: &BackingStore) -> Result<String>;
 
         pub fn sapling_backingstore_get_manifest(
             store: &BackingStore,
@@ -446,32 +443,27 @@ macro_rules! resolve_result {
     };
 }
 
-pub unsafe fn sapling_backingstore_new(
-    repository: &[c_char],
-    mount: &[c_char],
-    walk_mode: &CxxString,
+pub fn sapling_backingstore_new(
+    repository: &str,
+    mount: &str,
+    walk_mode: &str,
 ) -> Result<Box<BackingStore>> {
-    unsafe {
-        super::init::backingstore_global_init();
+    super::init::backingstore_global_init();
 
-        let repo = CStr::from_ptr(repository.as_ptr()).to_str()?;
-        let mount = CStr::from_ptr(mount.as_ptr()).to_str()?;
+    let mut extra_sapling_configs = Vec::new();
 
-        let mut extra_sapling_configs = Vec::new();
-
-        // Allow configuring walk mode optionally via eden config.
-        if let v @ ("off" | "monitor" | "prefetch") = walk_mode.to_str()? {
-            tracing::debug!("setting backingstore.walk-mode={v} via eden config");
-            extra_sapling_configs.push(format!("backingstore.walk-mode={v}"));
-        }
-
-        let store = BackingStore::new_with_config(repo, mount, &extra_sapling_configs)
-            .map_err(|err| anyhow!("{:?}", err))?;
-        Ok(Box::new(store))
+    // Allow configuring walk mode optionally via eden config.
+    if let v @ ("off" | "monitor" | "prefetch") = walk_mode {
+        tracing::debug!("setting backingstore.walk-mode={v} via eden config");
+        extra_sapling_configs.push(format!("backingstore.walk-mode={v}"));
     }
+
+    let store = BackingStore::new_with_config(repository, mount, &extra_sapling_configs)
+        .map_err(|err| anyhow!("{:?}", err))?;
+    Ok(Box::new(store))
 }
 
-pub unsafe fn sapling_backingstore_get_name(store: &BackingStore) -> Result<String> {
+pub fn sapling_backingstore_get_name(store: &BackingStore) -> Result<String> {
     store.name()
 }
 

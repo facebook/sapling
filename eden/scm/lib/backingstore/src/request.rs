@@ -5,8 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use std::slice;
-
 use types::Key;
 use types::Node;
 use types::RepoPathBuf;
@@ -18,11 +16,10 @@ const NODE_LENGTH: usize = 20;
 
 impl Request<'_> {
     pub fn key(&self) -> Key {
-        if self.oid.is_empty() {
+        if self.oid.len() < 1 + NODE_LENGTH {
             Key::default()
         } else {
-            let node: &[u8] =
-                unsafe { slice::from_raw_parts(&self.oid[1] as *const u8, NODE_LENGTH) };
+            let node = &self.oid[1..1 + NODE_LENGTH];
             Key::new(RepoPathBuf::new(), Node::from_slice(node).unwrap())
         }
     }
