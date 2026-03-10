@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#![recursion_limit = "256"]
+
 use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
@@ -218,4 +220,41 @@ pub trait LongRunningRequestsQueue: Send + Sync {
         ctx: &CoreContext,
         root_request_id: &RowId,
     ) -> Result<u64>;
+
+    /// Get aggregated statistics by request type and status for a backfill,
+    /// optionally filtered to a specific repo.
+    async fn get_backfill_stats(
+        &self,
+        ctx: &CoreContext,
+        root_request_id: &RowId,
+        repo_id: Option<&RepositoryId>,
+    ) -> Result<Vec<(RequestType, RequestStatus, i64)>>;
+
+    /// Get aggregated statistics by repo and status for a backfill.
+    async fn get_backfill_stats_by_repo(
+        &self,
+        ctx: &CoreContext,
+        root_request_id: &RowId,
+    ) -> Result<Vec<(Option<RepositoryId>, RequestStatus, i64)>>;
+
+    /// Get timing statistics for a backfill (completed count, avg duration, date range).
+    async fn get_backfill_timing_stats(
+        &self,
+        ctx: &CoreContext,
+        root_request_id: &RowId,
+    ) -> Result<(i64, Option<f64>, Option<Timestamp>, Option<Timestamp>)>;
+
+    /// List recent backfill jobs with repo counts.
+    async fn list_recent_backfills_with_repo_count(
+        &self,
+        ctx: &CoreContext,
+        min_created_at: &Timestamp,
+    ) -> Result<Vec<(RowId, Timestamp, RequestStatus, i64)>>;
+
+    /// Get the root backfill entry by ID.
+    async fn get_backfill_root_entry(
+        &self,
+        ctx: &CoreContext,
+        id: &RowId,
+    ) -> Result<Option<(RowId, RequestType, RequestStatus, Timestamp, BlobstoreKey)>>;
 }

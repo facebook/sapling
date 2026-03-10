@@ -618,6 +618,98 @@ mononoke_queries! {
          SET status = 'failed', failed_at = {failed_at}
          WHERE root_request_id = {root_request_id} AND status = 'new'"
     }
+
+    read GetBackfillStatsByStatus(root_request_id: RowId) -> (
+        RequestType,
+        RequestStatus,
+        i64,
+    ) {
+        "SELECT request_type, status, COUNT(*) as count
+         FROM long_running_request_queue
+         WHERE root_request_id = {root_request_id}
+         GROUP BY request_type, status"
+    }
+
+    read GetBackfillStatsByRepo(root_request_id: RowId) -> (
+        Option<RepositoryId>,
+        RequestStatus,
+        i64,
+    ) {
+        "SELECT repo_id, status, COUNT(*) as count
+         FROM long_running_request_queue
+         WHERE root_request_id = {root_request_id}
+           AND repo_id IS NOT NULL
+         GROUP BY repo_id, status"
+    }
+
+    read GetBackfillTimingStats(root_request_id: RowId) -> (
+        i64,
+        Option<f64>,
+        Option<Timestamp>,
+        Option<Timestamp>,
+    ) {
+        mysql("SELECT
+           COUNT(*) as total_completed,
+           AVG(TIMESTAMPDIFF(SECOND, COALESCE(started_processing_at, created_at), ready_at)) as avg_duration_seconds,
+           MIN(created_at) as min_created_at,
+           MAX(ready_at) as max_ready_at
+         FROM long_running_request_queue
+         WHERE root_request_id = {root_request_id}
+           AND status IN ('ready', 'polled')
+           AND ready_at IS NOT NULL")
+
+        sqlite("SELECT
+           COUNT(*) as total_completed,
+           AVG(ready_at - COALESCE(started_processing_at, created_at)) as avg_duration_seconds,
+           MIN(created_at) as min_created_at,
+           MAX(ready_at) as max_ready_at
+         FROM long_running_request_queue
+         WHERE root_request_id = {root_request_id}
+           AND status IN ('ready', 'polled')
+           AND ready_at IS NOT NULL")
+    }
+
+    read ListRecentBackfillsWithRepoCount(min_created_at: Timestamp) -> (
+        RowId,
+        Timestamp,
+        RequestStatus,
+        i64,
+    ) {
+        "SELECT root.id, root.created_at, root.status, COUNT(DISTINCT sub.repo_id) as repo_count
+         FROM long_running_request_queue root
+         LEFT JOIN long_running_request_queue sub ON sub.root_request_id = root.id
+         WHERE root.request_type = 'derive_backfill'
+           AND root.root_request_id IS NULL
+           AND root.created_at >= {min_created_at}
+         GROUP BY root.id, root.created_at, root.status
+         ORDER BY root.created_at DESC"
+    }
+
+    read GetBackfillRepoStats(root_request_id: RowId, repo_id: RepositoryId) -> (
+        RequestType,
+        RequestStatus,
+        i64,
+    ) {
+        "SELECT request_type, status, COUNT(*) as count
+         FROM long_running_request_queue
+         WHERE root_request_id = {root_request_id}
+           AND repo_id = {repo_id}
+         GROUP BY request_type, status"
+    }
+
+    read GetBackfillRootEntry(id: RowId) -> (
+        RowId,
+        RequestType,
+        RequestStatus,
+        Timestamp,
+        BlobstoreKey,
+    ) {
+        "SELECT id, request_type, status, created_at, args_blobstore_key
+         FROM long_running_request_queue
+         WHERE id = {id}
+           AND request_type = 'derive_backfill'
+           AND root_request_id IS NULL"
+    }
 }
 
 fn row_to_entry(
@@ -1292,6 +1384,95 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
         )
         .await?;
         Ok(res.affected_rows())
+    }
+
+    async fn get_backfill_stats(
+        &self,
+        ctx: &CoreContext,
+        root_request_id: &RowId,
+        repo_id: Option<&RepositoryId>,
+    ) -> Result<Vec<(RequestType, RequestStatus, i64)>> {
+        let rows = match repo_id {
+            Some(repo_id) => {
+                GetBackfillRepoStats::query(
+                    &self.connections.read_connection,
+                    ctx.sql_query_telemetry(),
+                    root_request_id,
+                    repo_id,
+                )
+                .await?
+            }
+            None => {
+                GetBackfillStatsByStatus::query(
+                    &self.connections.read_connection,
+                    ctx.sql_query_telemetry(),
+                    root_request_id,
+                )
+                .await?
+            }
+        };
+        Ok(rows)
+    }
+
+    async fn get_backfill_stats_by_repo(
+        &self,
+        ctx: &CoreContext,
+        root_request_id: &RowId,
+    ) -> Result<Vec<(Option<RepositoryId>, RequestStatus, i64)>> {
+        let rows = GetBackfillStatsByRepo::query(
+            &self.connections.read_connection,
+            ctx.sql_query_telemetry(),
+            root_request_id,
+        )
+        .await?;
+        Ok(rows)
+    }
+
+    async fn get_backfill_timing_stats(
+        &self,
+        ctx: &CoreContext,
+        root_request_id: &RowId,
+    ) -> Result<(i64, Option<f64>, Option<Timestamp>, Option<Timestamp>)> {
+        let rows = GetBackfillTimingStats::query(
+            &self.connections.read_connection,
+            ctx.sql_query_telemetry(),
+            root_request_id,
+        )
+        .await?;
+        rows.into_iter().next().ok_or_else(|| {
+            anyhow::anyhow!(
+                "No timing stats found for root_request_id {}",
+                root_request_id
+            )
+        })
+    }
+
+    async fn list_recent_backfills_with_repo_count(
+        &self,
+        ctx: &CoreContext,
+        min_created_at: &Timestamp,
+    ) -> Result<Vec<(RowId, Timestamp, RequestStatus, i64)>> {
+        let rows = ListRecentBackfillsWithRepoCount::query(
+            &self.connections.read_connection,
+            ctx.sql_query_telemetry(),
+            min_created_at,
+        )
+        .await?;
+        Ok(rows)
+    }
+
+    async fn get_backfill_root_entry(
+        &self,
+        ctx: &CoreContext,
+        id: &RowId,
+    ) -> Result<Option<(RowId, RequestType, RequestStatus, Timestamp, BlobstoreKey)>> {
+        let rows = GetBackfillRootEntry::query(
+            &self.connections.read_connection,
+            ctx.sql_query_telemetry(),
+            id,
+        )
+        .await?;
+        Ok(rows.into_iter().next())
     }
 }
 
