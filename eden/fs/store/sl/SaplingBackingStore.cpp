@@ -1612,16 +1612,17 @@ SaplingBackingStore::getRootTree(
     const ObjectFetchContextPtr& context) {
   folly::stop_watch<std::chrono::milliseconds> watch;
   ObjectId commitId = hashFromRootId(rootId);
+  auto self = shared_from_this();
 
   return faultInjector_
       .checkAsync("SaplingBackingStore::getRootTree", commitId.asHexString())
-      .thenValue([this, commitId, watch, fetchContext = context.copy()](
+      .thenValue([self, commitId, watch, fetchContext = context.copy()](
                      auto&&) mutable {
         return folly::via(
-                   serverThreadPool_,
-                   [this, commitId] { return getManifestNode(commitId); })
+                   self->serverThreadPool_,
+                   [self, commitId] { return self->getManifestNode(commitId); })
             .thenValue(
-                [this, commitId, watch, fetchContext = std::move(fetchContext)](
+                [self, commitId, watch, fetchContext = std::move(fetchContext)](
                     auto manifestNode) {
                   if (!manifestNode.has_value()) {
                     return folly::makeFuture<BackingStore::GetRootTreeResult>(
@@ -1633,12 +1634,13 @@ SaplingBackingStore::getRootTree(
                       "commit {} has manifest node {}",
                       commitId,
                       manifestNode.value());
-                  return importTreeManifestImpl(
-                             *std::move(manifestNode),
-                             fetchContext,
-                             ObjectFetchContext::ObjectType::RootTree)
-                      .thenValue([this, watch](TreePtr rootTree) {
-                        stats_->addDuration(
+                  return self
+                      ->importTreeManifestImpl(
+                          *std::move(manifestNode),
+                          fetchContext,
+                          ObjectFetchContext::ObjectType::RootTree)
+                      .thenValue([self, watch](TreePtr rootTree) {
+                        self->stats_->addDuration(
                             &SaplingBackingStoreStats::getRootTree,
                             watch.elapsed());
                         return BackingStore::GetRootTreeResult{
@@ -1832,15 +1834,15 @@ folly::SemiFuture<folly::Unit> SaplingBackingStore::prefetchBlobs(
     // executor. This can be a large batch, and we don't want to block
     // the caller.
     return makeNotReadyImmediateFuture()
-        .thenValue([this,
+        .thenValue([self = shared_from_this(),
                     slOids = std::move(slOids),
                     requests = std::move(requests),
                     context = context.copy()](auto&&) {
           auto importTracker =
-              RequestMetricsScope{&pendingImportPrefetchWatches_};
+              RequestMetricsScope{&self->pendingImportPrefetchWatches_};
 
           auto unique = generateUniqueID();
-          traceBus_->publish(
+          self->traceBus_->publish(
               HgImportTraceEvent::start(
                   unique,
                   HgImportTraceEvent::BLOB_BATCH,
@@ -1853,7 +1855,7 @@ folly::SemiFuture<folly::Unit> SaplingBackingStore::prefetchBlobs(
           XLOGF(DBG4, "Batch fetching {} blobs from Sapling", requests.size());
 
           size_t failureCount = 0;
-          nativeGetBlobBatch(
+          self->nativeGetBlobBatch(
               folly::range(requests),
               sapling::FetchMode::AllowRemote,
               // We aren't going through the queue, so we are certain
@@ -1872,7 +1874,7 @@ folly::SemiFuture<folly::Unit> SaplingBackingStore::prefetchBlobs(
                 }
               });
 
-          traceBus_->publish(
+          self->traceBus_->publish(
               HgImportTraceEvent::finish(
                   unique,
                   HgImportTraceEvent::BLOB_BATCH,
@@ -1882,12 +1884,12 @@ folly::SemiFuture<folly::Unit> SaplingBackingStore::prefetchBlobs(
                   context->getClientPid(),
                   context->getFetchedSource()));
 
-          stats_->increment(
+          self->stats_->increment(
               &SaplingBackingStoreStats::prefetchBlobFailure, failureCount);
-          stats_->increment(
+          self->stats_->increment(
               &SaplingBackingStoreStats::prefetchBlobSuccess,
               requests.size() - failureCount);
-          stats_->addDuration(
+          self->stats_->addDuration(
               &SaplingBackingStoreStats::prefetchBlob, watch.elapsed());
         })
         .unit()
@@ -2160,14 +2162,15 @@ ImmediateFuture<folly::Unit> SaplingBackingStore::importManifestForRoot(
              manifestId,
              context,
              ObjectFetchContext::ObjectType::ManifestForRoot)
-      .thenValue([this, commitId, manifestId, watch](TreePtr rootTree) {
+      .thenValue([self = shared_from_this(), commitId, manifestId, watch](
+                     TreePtr rootTree) {
         XLOGF(
             DBG3,
             "imported mercurial commit {} with manifest {} as tree {}",
             commitId,
             manifestId,
             rootTree->getObjectId());
-        stats_->addDuration(
+        self->stats_->addDuration(
             &SaplingBackingStoreStats::importManifestForRoot, watch.elapsed());
       });
 }

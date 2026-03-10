@@ -167,7 +167,9 @@ struct HgImportTraceEvent : TraceEventBase {
  * fulfilling these requests via different methods (reading from hgcache,
  * Mononoke, debugimporthelper, etc.).
  */
-class SaplingBackingStore final : public BackingStore {
+class SaplingBackingStore final
+    : public BackingStore,
+      public std::enable_shared_from_this<SaplingBackingStore> {
  public:
   using ImportRequestsList = std::vector<std::shared_ptr<SaplingImportRequest>>;
   using ImportRequestsMap = std::

@@ -220,9 +220,10 @@ ImmediateFuture<ObjectStore::GetRootTreeResult> ObjectStore::getRootTree(
             };
           })
       .thenError(
-          [this, rootId](const folly::exception_wrapper& ew)
+          [self = shared_from_this(),
+           rootId](const folly::exception_wrapper& ew)
               -> ImmediateFuture<ObjectStore::GetRootTreeResult> {
-            stats_->increment(&ObjectStoreStats::getRootTreeFailed);
+            self->stats_->increment(&ObjectStoreStats::getRootTreeFailed);
             XLOGF(DBG4, "unable to find root tree {}", rootId.value());
             return makeImmediateFuture<ObjectStore::GetRootTreeResult>(ew);
           })
