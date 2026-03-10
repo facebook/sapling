@@ -192,6 +192,29 @@ export type DiffSignalSummary =
   | 'deferred';
 
 /**
+ * Detailed information about a single CI signal result on a Diff.
+ * Signals may apply to the entire diff, or to a specific file and line range.
+ */
+export type DiffSignalDetail = {
+  /** Name of the signal (e.g. "sandcastle", "lint", "mypy") */
+  name: string;
+  /** Status of this individual signal */
+  status: 'pass' | 'fail' | 'warning' | 'running' | 'skip';
+  /** Severity level */
+  severity: 'error' | 'warning' | 'info';
+  /** Human-readable message/description */
+  message?: string;
+  /** URL to view more details about this signal */
+  url?: string;
+  /** File path if the signal applies to a specific file */
+  filepath?: string;
+  /** Start line number if the signal applies to a specific range */
+  startLine?: number;
+  /** End line number if the signal applies to a specific range */
+  endLine?: number;
+};
+
+/**
  * Information about a land request, specific to each Code Review Provider.
  */
 export type LandInfo = undefined | InternalTypes['PhabricatorLandInfo'];
