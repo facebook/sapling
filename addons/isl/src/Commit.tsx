@@ -300,6 +300,40 @@ export const Commit = memo(
               loggingLabel: submittable.length > 1 ? 'Submit Multiple Commits' : 'Submit Commit',
             });
           }
+          // Bulk publish for multi-selected unpublished/draft diffs
+          if (isMultiSelect && diffSummaries?.value != null) {
+            const publishActions: Array<() => void> = [];
+            for (const c of selectedInfos) {
+              if (c.diffId == null) {
+                continue;
+              }
+              const summary = diffSummaries.value.get(c.diffId);
+              if (summary == null) {
+                continue;
+              }
+              const actions = provider.getUpdateDiffActions(summary);
+              const publishAction = actions.find(a => a.label === 'Publish');
+              if (publishAction != null) {
+                publishActions.push(publishAction.onClick);
+              }
+            }
+            if (publishActions.length > 0) {
+              items.push({
+                label:
+                  publishActions.length > 1 ? (
+                    <T replace={{$count: publishActions.length}}>Publish $count Diffs</T>
+                  ) : (
+                    <T>Publish Diff</T>
+                  ),
+                onClick: () => {
+                  for (const action of publishActions) {
+                    action();
+                  }
+                },
+                loggingLabel: publishActions.length > 1 ? 'Publish Multiple Diffs' : 'Publish Diff',
+              });
+            }
+          }
         }
       }
       if (!isPublic && syncStatus != null && syncStatus !== SyncStatus.InSync) {
