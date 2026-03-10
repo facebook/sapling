@@ -135,11 +135,13 @@ std::string PrjfsRequestContext::formatTraceEventString(
   }
 
   return fmt::format(
-      "{} from {}({}): {}({}{}{})",
+      "{} from {}({}): {}({},{},{}{}{})",
       data.commandId,
       processPathToName(prjfsData.TriggeringProcessImageFileName),
       data.pid,
       apache::thrift::util::enumName(callType, "(unknown)"),
+      prjfsData.FileId,
+      prjfsData.DataStreamId,
       relativeFileName == nullptr ? RelativePath{}
                                   : RelativePath(relativeFileName),
       (destinationFileName && relativeFileName) ? "=>" : "",
