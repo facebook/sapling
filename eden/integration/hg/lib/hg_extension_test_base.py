@@ -116,8 +116,8 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
             configs = {}
         if (inode_catalog_type := self.inode_catalog_type) is not None:
             configs["overlay"] = [f'inode-catalog-type = "{inode_catalog_type}"']
-        if self.enable_status_cache:
-            configs["hg"] = ["enable-scm-status-cache = true"]
+        enabled = "true" if self.enable_status_cache else "false"
+        configs.setdefault("hg", []).append(f"enable-scm-status-cache = {enabled}")
         return configs
 
     def create_backing_repo(self) -> hgrepo.HgRepository:
