@@ -2278,7 +2278,7 @@ mod tests {
 
     async fn push_and_verify(
         ctx: &CoreContext,
-        repo: &(impl Repo + BonsaiHgMappingRef + FilestoreConfigRef),
+        repo: &(impl Repo + BonsaiHgMappingRef),
         parent: ChangesetId,
         bookmark: &BookmarkKey,
         content: BTreeMap<&str, Option<&str>>,
