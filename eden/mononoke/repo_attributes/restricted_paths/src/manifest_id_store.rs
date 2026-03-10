@@ -60,6 +60,7 @@ pub enum ManifestType {
     Hg,
     HgAugmented,
     Fsnode,
+    ContentManifest,
 }
 
 /// Entry representing a restricted path with its manifest type and id
@@ -329,6 +330,7 @@ impl From<ManifestType> for Value {
 const HG: &[u8] = b"Hg";
 const HG_AUGMENTED: &[u8] = b"HgAugmented";
 const FSNODE: &[u8] = b"Fsnode";
+const CONTENT_MANIFEST: &[u8] = b"ContentManifest";
 
 impl ConvIr<ManifestType> for ManifestType {
     fn new(v: Value) -> FromValueResult<Self> {
@@ -336,6 +338,7 @@ impl ConvIr<ManifestType> for ManifestType {
             Value::Bytes(ref b) if b == HG => Ok(ManifestType::Hg),
             Value::Bytes(ref b) if b == HG_AUGMENTED => Ok(ManifestType::HgAugmented),
             Value::Bytes(ref b) if b == FSNODE => Ok(ManifestType::Fsnode),
+            Value::Bytes(ref b) if b == CONTENT_MANIFEST => Ok(ManifestType::ContentManifest),
             v => Err(FromValueError(v)),
         }
     }

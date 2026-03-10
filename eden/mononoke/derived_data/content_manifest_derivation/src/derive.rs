@@ -30,7 +30,9 @@ use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentManifestId;
+use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
+use mononoke_types::RepoPath;
 use mononoke_types::TrieMap;
 use mononoke_types::content_manifest::ContentManifest;
 use mononoke_types::content_manifest::ContentManifestDirectory;
@@ -39,6 +41,10 @@ use mononoke_types::content_manifest::ContentManifestFile;
 use mononoke_types::content_manifest::ContentManifestRollupData;
 use mononoke_types::sharded_map_v2::LoadableShardedMapV2Node;
 use mononoke_types::sharded_map_v2::ShardedMapV2Node;
+use restricted_paths::ManifestId;
+use restricted_paths::ManifestType;
+use restricted_paths::RestrictedPathManifestIdEntry;
+use restricted_paths::RestrictedPaths;
 
 use crate::ContentManifestDerivationError;
 use crate::RootContentManifestId;
@@ -143,6 +149,8 @@ async fn resolve_entry(
 async fn create_content_manifest_directory(
     ctx: CoreContext,
     blobstore: Arc<dyn KeyedBlobstore>,
+    path: &MPath,
+    restricted_paths: &Arc<RestrictedPaths>,
     subentries: TreeInfoSubentries<
         ContentManifestId,
         ContentManifestFile,
@@ -179,6 +187,35 @@ async fn create_content_manifest_directory(
     let id = *blob.id();
     blob.store(&ctx, &blobstore).await?;
 
+    let restricted_paths_enabled = justknobs::eval(
+        "scm/mononoke:enabled_restricted_paths_access_logging",
+        None,
+        Some("content_manifest_write"),
+    )?;
+
+    if restricted_paths_enabled
+        && let Some(non_root_path) = path.clone().into_optional_non_root_path()
+        && restricted_paths.is_restricted_path(&non_root_path)
+    {
+        let entry = RestrictedPathManifestIdEntry::new(
+            ManifestType::ContentManifest,
+            ManifestId::from(&id.blake2().into_inner()),
+            RepoPath::DirectoryPath(non_root_path),
+        )?;
+
+        if let Err(e) = restricted_paths
+            .manifest_id_store()
+            .add_entry(&ctx, entry)
+            .await
+        {
+            tracing::warn!(
+                path = %path,
+                error = %e,
+                "Failed to track restricted path"
+            );
+        }
+    }
+
     Ok((rollup, id))
 }
 
@@ -208,6 +245,7 @@ pub(crate) async fn derive_content_manifest(
     known: Option<&HashMap<ChangesetId, RootContentManifestId>>,
 ) -> Result<ContentManifestId> {
     let blobstore = derivation_ctx.blobstore();
+    let restricted_paths = derivation_ctx.restricted_paths();
     let changes = get_changes(&bonsai);
     let subtree_changes =
         get_content_manifest_subtree_changes(ctx, derivation_ctx, known, &bonsai).await?;
@@ -218,11 +256,18 @@ pub(crate) async fn derive_content_manifest(
         changes,
         subtree_changes,
         {
-            cloned!(blobstore, ctx);
+            cloned!(blobstore, ctx, restricted_paths);
             move |tree_info| {
-                cloned!(blobstore, ctx);
+                cloned!(blobstore, ctx, restricted_paths);
                 async move {
-                    create_content_manifest_directory(ctx, blobstore, tree_info.subentries).await
+                    create_content_manifest_directory(
+                        ctx,
+                        blobstore,
+                        &tree_info.path,
+                        &restricted_paths,
+                        tree_info.subentries,
+                    )
+                    .await
                 }
             }
         },
