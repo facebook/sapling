@@ -1472,6 +1472,8 @@ UnixSocket::Message PrivHelperServer::processMessage(
       return processSetUseEdenFs(cursor, request);
     case PrivHelperConn::REQ_GET_PID:
       return processGetPid();
+    case PrivHelperConn::REQ_GET_NAMESPACE_INFO:
+      throw std::runtime_error("not implemented");
     case PrivHelperConn::REQ_START_FAM:
       return processStartFam(cursor);
     case PrivHelperConn::REQ_STOP_FAM:

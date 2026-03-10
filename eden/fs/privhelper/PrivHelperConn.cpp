@@ -545,6 +545,36 @@ UnixSocket::Message PrivHelperConn::serializeGetPidRequest(uint32_t xid) {
   return serializeRequestPacket(xid, REQ_GET_PID);
 }
 
+UnixSocket::Message PrivHelperConn::serializeGetNamespaceInfoRequest(
+    uint32_t xid) {
+  return serializeRequestPacket(xid, REQ_GET_NAMESPACE_INFO);
+}
+
+uint64_t PrivHelperConn::parseGetNamespaceInfoResponse(
+    const UnixSocket::Message& msg) {
+  Cursor cursor(&msg.data);
+  PrivHelperPacket packet = parsePacket(cursor);
+  if (packet.metadata.msg_type == RESP_ERROR) {
+    rethrowErrorResponse(cursor);
+  } else if (packet.metadata.msg_type != REQ_GET_NAMESPACE_INFO) {
+    throwf<std::runtime_error>(
+        "unexpected response type {} for request {} of type {} for version v{}",
+        packet.metadata.msg_type,
+        packet.metadata.transaction_id,
+        REQ_GET_NAMESPACE_INFO,
+        packet.header.version);
+  }
+  uint64_t inode;
+  bool valid = cursor.tryReadBE<uint64_t>(inode);
+  if (!valid) {
+    throwf<std::runtime_error>(
+        "Failed to read root mount ns inode from privhelper server for request {} for version v{}",
+        packet.metadata.transaction_id,
+        packet.header.version);
+  }
+  return inode;
+}
+
 UnixSocket::Message PrivHelperConn::serializeStartFamRequest(
     uint32_t xid,
     const std::vector<std::string>& paths,

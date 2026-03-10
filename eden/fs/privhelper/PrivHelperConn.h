@@ -54,6 +54,7 @@ class PrivHelperConn {
     REQ_START_FAM = 14,
     REQ_STOP_FAM = 15,
     REQ_SET_MEMORY_PRIORITY_FOR_PROCESS = 16,
+    REQ_GET_NAMESPACE_INFO = 17,
   };
 
   // This structure should never change. If fields need to be added to the
@@ -183,6 +184,9 @@ class PrivHelperConn {
 
   static UnixSocket::Message serializeGetPidRequest(uint32_t xid);
   static pid_t parseGetPidResponse(const UnixSocket::Message& msg);
+
+  static UnixSocket::Message serializeGetNamespaceInfoRequest(uint32_t xid);
+  static uint64_t parseGetNamespaceInfoResponse(const UnixSocket::Message& msg);
 
   static UnixSocket::Message serializeStartFamRequest(
       uint32_t xid,
@@ -329,6 +333,9 @@ struct formatter<facebook::eden::PrivHelperConn::MsgType>
         break;
       case facebook::eden::PrivHelperConn::REQ_SET_MEMORY_PRIORITY_FOR_PROCESS:
         name = "REQ_SET_MEMORY_PRIORITY_FOR_PROCESS";
+        break;
+      case facebook::eden::PrivHelperConn::REQ_GET_NAMESPACE_INFO:
+        name = "REQ_GET_NAMESPACE_INFO";
         break;
       default:
         name = "Unknown PrivHelperConn::MsgType";
