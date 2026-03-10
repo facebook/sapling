@@ -207,9 +207,7 @@ class DirectInvokeTest(testcase.IntegrationTestCase):
 
         expected_err = "error: unexpected trailing command line arguments\n"
         self.maxDiff = 5000
-        self.assertMultiLineEqual(
-            expected_err, out.stderr.decode("utf-8", errors="replace")
-        )
+        self.assertIn(expected_err, out.stderr.decode("utf-8", errors="replace"))
 
 
 class StartFakeEdenFSTestBase(ServiceTestCaseBase):
