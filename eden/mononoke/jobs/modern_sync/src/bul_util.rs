@@ -17,17 +17,9 @@ use bookmarks::Freshness;
 use cloned::cloned;
 use context::CoreContext;
 use futures::stream;
-use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use stats::define_stats;
-use stats::prelude::*;
 
 use crate::sync::ExecutionType;
-
-define_stats! {
-    prefix = "mononoke.modern_sync";
-    missing_bookmark_moves:  dynamic_timeseries("{}.missing_bookmark_moves", (repo: String); Sum),
-}
 
 pub(crate) fn read_bookmark_update_log(
     ctx: &CoreContext,
@@ -64,35 +56,6 @@ pub(crate) fn read_bookmark_update_log(
             }
         }
     })
-}
-
-#[allow(dead_code)] // Keeping for future use
-pub async fn get_one_entry(
-    ctx: &CoreContext,
-    bookmark_update_log: Arc<dyn BookmarkUpdateLog>,
-    entry_id: BookmarkUpdateLogId,
-) -> impl stream::Stream<Item = Result<BookmarkUpdateLogEntry, Error>> + use<> {
-    let entries: Vec<Result<BookmarkUpdateLogEntry, Error>> = bookmark_update_log
-        .read_next_bookmark_log_entries(ctx.clone(), entry_id, 1, Freshness::MaybeStale)
-        .collect()
-        .await;
-
-    stream::iter(entries)
-}
-
-#[allow(unused)]
-pub async fn update_remaining_moves(
-    current_id: BookmarkUpdateLogId,
-    repo_name: String,
-    ctx: CoreContext,
-    bookmark_update_log: Arc<dyn BookmarkUpdateLog>,
-) -> Result<()> {
-    let remaining_moves = bookmark_update_log
-        .count_further_bookmark_log_entries(ctx, current_id, None)
-        .await?;
-
-    STATS::missing_bookmark_moves.add_value(remaining_moves as i64, (repo_name.clone(),));
-    Ok(())
 }
 
 pub fn group_entries(entries: Vec<BookmarkUpdateLogEntry>) -> Vec<BookmarkUpdateLogEntry> {
