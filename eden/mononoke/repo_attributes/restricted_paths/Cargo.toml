@@ -13,24 +13,16 @@ path = "test/main.rs"
 
 [dependencies]
 anyhow = "1.0.102"
-async-trait = "0.1.86"
 context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context" }
-derivative = "2.2"
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
-hex = { version = "0.4.3", features = ["alloc"] }
 justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_macros = { version = "0.1.0", path = "../../common/mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-path_hash = { version = "0.1.0", path = "../../common/path_hash" }
 permission_checker = { version = "0.1.0", path = "../../common/permission_checker" }
+restricted_paths_common = { version = "0.1.0", path = "../restricted_paths_common" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
-smallvec = { version = "1.15", features = ["impl_bincode", "serde", "specialization", "union"] }
-sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
-sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
-strum = { version = "0.27.1", features = ["derive"] }
 thiserror = "2.0.18"
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
@@ -54,6 +46,8 @@ repo_blobstore = { version = "0.1.0", path = "../repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../repo_derived_data" }
 sapling-clientinfo = { version = "0.1.0", path = "../../../scm/lib/clientinfo" }
 serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
+sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
+strum = { version = "0.27.1", features = ["derive"] }
 tempfile = "3.26.0"
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }

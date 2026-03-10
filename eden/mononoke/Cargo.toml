@@ -393,6 +393,7 @@ members = [
   "repo_attributes/repo_sparse_profiles",
   "repo_attributes/restricted_paths",
   "repo_attributes/restricted_paths_acl_file",
+  "repo_attributes/restricted_paths_common",
   "repo_attributes/sql_query_config",
   "repo_authorization",
   "repo_client",

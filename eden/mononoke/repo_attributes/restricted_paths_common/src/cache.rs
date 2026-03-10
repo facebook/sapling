@@ -149,37 +149,36 @@ impl CacheUpdater {
         // Fetch all entries from the database
         let entries = self.manifest_id_store.get_all_entries(&self.ctx).await?;
 
-        // Build new cache structure
-        let mut new_cache: HashMap<ManifestType, HashMap<ManifestId, Vec<NonRootMPath>>> =
-            HashMap::new();
+        // Build new cache structure from entries using fold
+        let new_cache = entries.into_iter().try_fold(
+            HashMap::<ManifestType, HashMap<ManifestId, Vec<NonRootMPath>>>::new(),
+            |mut acc,
+             RestrictedPathManifestIdEntry {
+                 manifest_type,
+                 manifest_id,
+                 path,
+                 ..
+             }| {
+                let repo_path = RepoPath::dir(NonRootMPath::new(path.0)?)?;
 
-        for RestrictedPathManifestIdEntry {
-            manifest_type,
-            manifest_id,
-            path,
-            ..
-        } in entries
-        {
-            let repo_path = RepoPath::dir(NonRootMPath::new(path.0)?)?;
-
-            // Extract the NonRootMPath from the repo path
-            let path = match repo_path {
-                mononoke_types::RepoPath::DirectoryPath(non_root) => non_root,
-                _ => {
-                    continue;
+                // Extract the NonRootMPath from the repo path
+                if let mononoke_types::RepoPath::DirectoryPath(non_root) = repo_path {
+                    acc.entry(manifest_type)
+                        .or_default()
+                        .entry(manifest_id)
+                        .or_default()
+                        .push(non_root);
                 }
-            };
 
-            new_cache
-                .entry(manifest_type)
-                .or_insert_with(HashMap::new)
-                .entry(manifest_id)
-                .or_insert_with(Vec::new)
-                .push(path);
-        }
+                anyhow::Ok(acc)
+            },
+        )?;
 
         // Atomically update the cache
-        let mut cache = self.cache.write().unwrap();
+        let mut cache = self
+            .cache
+            .write()
+            .map_err(|e| anyhow::anyhow!("Failed to acquire cache write lock: {}", e))?;
         *cache = new_cache;
 
         Ok(())

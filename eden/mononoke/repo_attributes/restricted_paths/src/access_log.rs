@@ -22,8 +22,8 @@ use permission_checker::MononokeIdentity;
 use permission_checker::PermissionCheckerBuilder;
 use scuba_ext::MononokeScubaSampleBuilder;
 
-use crate::manifest_id_store::ManifestId;
-use crate::manifest_id_store::ManifestType;
+use crate::ManifestId;
+use crate::ManifestType;
 
 pub const ACCESS_LOG_SCUBA_TABLE: &str = "mononoke_restricted_paths_access_test";
 

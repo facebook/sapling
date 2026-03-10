@@ -11,8 +11,6 @@
 //! and to store the manifest ids of these paths from every revision.
 
 mod access_log;
-mod cache;
-mod manifest_id_store;
 
 use std::sync::Arc;
 
@@ -28,6 +26,7 @@ use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
 use permission_checker::AclProvider;
 use permission_checker::MononokeIdentity;
+pub use restricted_paths_common::*;
 use scuba_ext::MononokeScubaSampleBuilder;
 use thiserror::Error;
 use tokio::task;
@@ -36,16 +35,7 @@ pub use crate::access_log::ACCESS_LOG_SCUBA_TABLE;
 pub use crate::access_log::has_read_access_to_repo_region_acls;
 use crate::access_log::is_member_of_groups;
 use crate::access_log::log_access_to_restricted_path;
-pub use crate::cache::ManifestIdCache;
-pub use crate::cache::RestrictedPathsManifestIdCache;
-pub use crate::cache::RestrictedPathsManifestIdCacheBuilder;
-pub use crate::manifest_id_store::ArcRestrictedPathsManifestIdStore;
-pub use crate::manifest_id_store::ManifestId;
-pub use crate::manifest_id_store::ManifestType;
-pub use crate::manifest_id_store::RestrictedPathManifestIdEntry;
-pub use crate::manifest_id_store::RestrictedPathsManifestIdStore;
-pub use crate::manifest_id_store::SqlRestrictedPathsManifestIdStore;
-pub use crate::manifest_id_store::SqlRestrictedPathsManifestIdStoreBuilder;
+// Types re-exported from restricted_paths_common via `pub use restricted_paths_common::*`
 
 #[derive(Debug)]
 pub enum RestrictedPathAccessType<'a> {
