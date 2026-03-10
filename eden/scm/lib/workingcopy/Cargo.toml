@@ -58,7 +58,7 @@ whoami = "1.5"
 async-trait = "0.1.86"
 blob = { version = "0.1.0", path = "../blob" }
 sapling-io = { version = "0.1.0", path = "../io" }
-tempfile = "3.22"
+tempfile = "3.26.0"
 
 [features]
 eden = ["sapling-edenfs-client"]

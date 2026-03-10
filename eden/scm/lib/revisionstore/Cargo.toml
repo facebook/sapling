@@ -70,7 +70,7 @@ url = "2.5.8"
 maplit = "1.0"
 mockito = "1.7.2"
 rand_chacha = "0.3"
-tempfile = "3.22"
+tempfile = "3.26.0"
 
 [features]
 default = []

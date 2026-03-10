@@ -28,4 +28,4 @@ thiserror = "2.0.18"
 
 [dev-dependencies]
 anyhow = "1.0.102"
-tempfile = "3.22"
+tempfile = "3.26.0"

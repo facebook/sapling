@@ -15,5 +15,5 @@ name = "atomicfile"
 
 [dependencies]
 fs-err = { version = "3.3.0", features = ["tokio"] }
-tempfile = "3.22"
+tempfile = "3.26.0"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

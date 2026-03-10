@@ -15,7 +15,7 @@ context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context"
 mononoke_macros = { version = "0.1.0", path = "../../common/mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 percent-encoding = "2.1"
-tempfile = "3.22"
+tempfile = "3.26.0"
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 walkdir = "2.3"
 

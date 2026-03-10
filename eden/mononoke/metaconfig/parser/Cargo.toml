@@ -33,4 +33,4 @@ maplit = "1.0"
 mononoke_macros = { version = "0.1.0", path = "../../common/mononoke_macros" }
 mononoke_types-mocks = { version = "0.1.0", path = "../../mononoke_types/mocks" }
 pretty_assertions = { version = "1.4.1", features = ["alloc"], default-features = false }
-tempfile = "3.22"
+tempfile = "3.26.0"

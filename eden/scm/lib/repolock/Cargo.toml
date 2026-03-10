@@ -24,4 +24,4 @@ tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
 anyhow = "1.0.102"
-tempfile = "3.22"
+tempfile = "3.26.0"

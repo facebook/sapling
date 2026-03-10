@@ -48,7 +48,7 @@ repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity
 rustc-hash = "2.1.1"
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 sha1 = "0.10.5"
-tempfile = "3.22"
+tempfile = "3.26.0"
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 tokio-stream = { version = "0.1.18", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

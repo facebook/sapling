@@ -10,4 +10,4 @@ sapling-dev-logger = { version = "0.1.0", path = "../../dev-logger" }
 sapling-minibench = { version = "0.1.0", path = "../../minibench" }
 sapling-types = { version = "0.1.0", path = "../../types" }
 sapling-vfs = { version = "0.1.0", path = ".." }
-tempfile = "3.22"
+tempfile = "3.26.0"
