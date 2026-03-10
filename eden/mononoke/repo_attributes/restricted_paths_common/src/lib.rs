@@ -12,11 +12,16 @@
 //! without creating a dependency cycle.
 
 pub mod cache;
+pub mod config_based;
 pub mod manifest_id_store;
 
 pub use cache::ManifestIdCache;
 pub use cache::RestrictedPathsManifestIdCache;
 pub use cache::RestrictedPathsManifestIdCacheBuilder;
+pub use config_based::ArcRestrictedPathsConfigBased;
+pub use config_based::RestrictedPathsConfigBased;
+pub use config_based::RestrictedPathsConfigBasedArc;
+pub use config_based::RestrictedPathsConfigBasedRef;
 pub use manifest_id_store::ArcRestrictedPathsManifestIdStore;
 pub use manifest_id_store::ManifestId;
 pub use manifest_id_store::ManifestType;
