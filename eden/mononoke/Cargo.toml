@@ -19,6 +19,7 @@ k = { git = "https://github.com/prnthp-meta/k", rev = "f06b504c563a4763dbf2d4736
 libcras = { git = "https://github.com/google/crosvm", rev = "7d2e877a2a0a772c199fe8b6b51aec7c1b166467" }
 lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "fdbf843d174c6796d736b2b61dab0297670390f8" }
 minijail = { git = "https://chromium.googlesource.com/chromiumos/platform/minijail", rev = "fc020fd4672b3340ee706e192d043e12df8c8578" }
+modcholesky = { git = "https://github.com/argmin-rs/modcholesky", rev = "0ef5ed8f589ec77ff348d98747431aefa369f942" }
 murmur3 = { git = "https://github.com/stusmall/murmur3", rev = "f363bf6dd1d668988bf798c320823f8ceaedf5aa" }
 pcap = { git = "https://github.com/qrnch-jan/pcap", rev = "0c6ed076c84ef0c63198d384a24d66b737b24e4a" }
 perf-event = { version = "0.4", git = "https://github.com/Nero5023/perf-event.git", rev = "6dae86b6d4807acec081e6dc0a53167f57f8c0f4" }
