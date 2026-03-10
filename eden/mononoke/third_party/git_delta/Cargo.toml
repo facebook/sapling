@@ -9,7 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.102"
-libz-sys = "1.1.23"
+libz-sys = "1.1.24"
 
 [dev-dependencies]
 mononoke_macros = { version = "0.1.0", path = "../../common/mononoke_macros" }
