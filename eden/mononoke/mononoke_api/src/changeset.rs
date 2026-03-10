@@ -1943,8 +1943,8 @@ impl<R: MononokeRepo> ChangesetContext<R> {
 
         let mut merged: Vec<PathAccessInfo> = all_descendants.into_iter().flatten().collect();
         // Deduplicate by restriction_root
-        merged.sort_by(|a, b| a.restriction_root.cmp(&b.restriction_root));
-        merged.dedup_by(|a, b| a.restriction_root == b.restriction_root);
+        merged.sort_by(|a, b| a.restriction_root().cmp(b.restriction_root()));
+        merged.dedup_by(|a, b| a.restriction_root() == b.restriction_root());
         Ok(merged)
     }
 
@@ -1981,7 +1981,7 @@ impl<R: MononokeRepo> ChangesetContext<R> {
                         (PathAccessInfo, Vec<NonRootMPath>),
                     >::new(),
                     |mut acc, (path, info)| {
-                        let root = info.restriction_root.clone();
+                        let root = info.restriction_root().clone();
                         acc.entry(root)
                             .or_insert_with(|| (info, Vec::new()))
                             .1

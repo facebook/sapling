@@ -87,8 +87,8 @@ pub(crate) async fn restricted_paths_access_impl(
                     infos
                         .iter()
                         .map(|info| thrift::PathRestrictionRoot {
-                            path: info.restriction_root.to_string(),
-                            acls: vec![info.repo_region_acl.clone()],
+                            path: info.restriction_root().to_string(),
+                            acls: vec![info.repo_region_acl().to_string()],
                             ..Default::default()
                         })
                         .collect(),
@@ -146,8 +146,8 @@ pub(crate) async fn find_nested_restricted_roots(
     Ok((async_stream::stream! {
         for info in descendants {
             yield Ok(thrift::CommitFindRestrictedPathsStreamItem {
-                path: info.restriction_root.to_string(),
-                acls: vec![info.repo_region_acl],
+                path: info.restriction_root().to_string(),
+                acls: vec![info.repo_region_acl().to_string()],
                 ..Default::default()
             });
         }

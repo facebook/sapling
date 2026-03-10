@@ -399,10 +399,12 @@ impl<R: MononokeRepo> HgAugmentedTreeRestrictionContext<R> {
         let request_acl = repo_region_acl.clone();
 
         Ok(Some(PathAccessInfo {
-            restriction_root,
-            repo_region_acl,
+            restriction: restricted_paths::PathRestrictionInfo {
+                restriction_root,
+                repo_region_acl,
+                request_acl,
+            },
             has_access: Some(has_access),
-            request_acl,
         }))
     }
 }
@@ -758,8 +760,8 @@ mod tests {
 
         let info = result.expect("expected restriction info for restricted root manifest");
         assert_eq!(
-            info.restriction_root,
-            NonRootMPath::new("user_project/foo")?,
+            info.restriction_root(),
+            &NonRootMPath::new("user_project/foo")?,
             "restriction root should match the configured root"
         );
         assert_eq!(
@@ -767,7 +769,7 @@ mod tests {
             Some(true),
             "user should have access to myusername_project"
         );
-        assert_eq!(info.repo_region_acl, "REPO_REGION:myusername_project");
+        assert_eq!(info.repo_region_acl(), "REPO_REGION:myusername_project");
 
         Ok(())
     }
@@ -786,8 +788,8 @@ mod tests {
 
         let info = result.expect("expected restriction info for restricted root manifest");
         assert_eq!(
-            info.restriction_root,
-            NonRootMPath::new("restricted/dir")?,
+            info.restriction_root(),
+            &NonRootMPath::new("restricted/dir")?,
             "restriction root should match the configured root"
         );
         assert_eq!(
@@ -795,7 +797,7 @@ mod tests {
             Some(false),
             "user should not have access to restricted_acl"
         );
-        assert_eq!(info.repo_region_acl, "REPO_REGION:restricted_acl");
+        assert_eq!(info.repo_region_acl(), "REPO_REGION:restricted_acl");
 
         Ok(())
     }
@@ -821,8 +823,8 @@ mod tests {
 
         let info = result.expect("expected restriction info for nested restricted root");
         assert_eq!(
-            info.restriction_root,
-            NonRootMPath::new("foo/bar")?,
+            info.restriction_root(),
+            &NonRootMPath::new("foo/bar")?,
             "should return the most specific (deepest) restriction root"
         );
         assert_eq!(
@@ -830,7 +832,7 @@ mod tests {
             Some(false),
             "user should not have access to restricted_acl"
         );
-        assert_eq!(info.repo_region_acl, "REPO_REGION:restricted_acl");
+        assert_eq!(info.repo_region_acl(), "REPO_REGION:restricted_acl");
 
         Ok(())
     }
@@ -907,7 +909,7 @@ mod tests {
             Some(false),
             "user should not have access to restricted_acl"
         );
-        assert_eq!(info.repo_region_acl, "REPO_REGION:restricted_acl");
+        assert_eq!(info.repo_region_acl(), "REPO_REGION:restricted_acl");
 
         Ok(())
     }

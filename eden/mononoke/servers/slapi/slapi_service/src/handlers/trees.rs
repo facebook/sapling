@@ -475,7 +475,7 @@ impl SaplingRemoteApiHandler for CheckPermissionHandler {
 
                     let request_acl = restriction_info
                         .as_ref()
-                        .map(|info| info.request_acl.clone());
+                        .map(|info| info.request_acl().to_string());
 
                     Ok(CheckPermissionResponse {
                         manifest_id,

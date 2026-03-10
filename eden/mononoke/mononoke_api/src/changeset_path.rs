@@ -1066,10 +1066,12 @@ impl<R: MononokeRepo> ChangesetPathRestrictionContext<R> {
                     let request_acl = repo_region_acl.clone();
 
                     Ok::<_, MononokeError>(PathAccessInfo {
-                        restriction_root,
-                        repo_region_acl,
+                        restriction: restricted_paths::PathRestrictionInfo {
+                            restriction_root,
+                            repo_region_acl,
+                            request_acl,
+                        },
                         has_access,
-                        request_acl,
                     })
                 }
             })
@@ -1104,12 +1106,14 @@ impl<R: MononokeRepo> ChangesetPathRestrictionContext<R> {
             .map(|(root, acl)| {
                 let repo_region_acl = acl.to_string();
                 PathAccessInfo {
-                    restriction_root: root.clone(),
-                    repo_region_acl: repo_region_acl.clone(),
+                    restriction: restricted_paths::PathRestrictionInfo {
+                        restriction_root: root.clone(),
+                        repo_region_acl: repo_region_acl.clone(),
+                        // Default to repo_region_acl when not configured
+                        request_acl: repo_region_acl,
+                    },
                     // Access not checked in this method — caller can check individually
                     has_access: None,
-                    // Default to repo_region_acl when not configured
-                    request_acl: repo_region_acl,
                 }
             })
             .collect();

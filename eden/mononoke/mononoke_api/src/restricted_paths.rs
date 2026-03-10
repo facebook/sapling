@@ -6,24 +6,33 @@
  */
 
 use mononoke_types::NonRootMPath;
+use restricted_paths::PathRestrictionInfo;
 
-/// Information about a restriction that applies to a path.
+/// Access check result for a restricted path.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PathAccessInfo {
-    /// The root path of the restriction that covers this path.
-    /// For example, if `foo/bar/` is restricted and we query `foo/bar/baz.txt`,
-    /// this would be `foo/bar/`.
-    pub restriction_root: NonRootMPath,
+    /// Core restriction info from the restricted_paths crate.
+    pub restriction: PathRestrictionInfo,
 
-    /// The repo region ACL identity string that governs access to this restriction root.
-    pub repo_region_acl: String,
-
-    /// Whether the caller has access. None if access was not checked.
+    /// Whether the caller has access. None if not checked.
     pub has_access: Option<bool>,
+}
 
-    /// ACL to direct the user to for requesting access.
-    /// If no specific request ACL is configured, this defaults to the repo_region_acl.
-    pub request_acl: String,
+impl PathAccessInfo {
+    /// Convenience accessor for the restriction root.
+    pub fn restriction_root(&self) -> &NonRootMPath {
+        &self.restriction.restriction_root
+    }
+
+    /// Convenience accessor for the repo region ACL.
+    pub fn repo_region_acl(&self) -> &str {
+        &self.restriction.repo_region_acl
+    }
+
+    /// Convenience accessor for the request ACL.
+    pub fn request_acl(&self) -> &str {
+        &self.restriction.request_acl
+    }
 }
 
 /// Information about restricted path changes in a changeset.
@@ -59,6 +68,7 @@ mod tests {
     use mononoke_types::path::MPath;
     use permission_checker::MononokeIdentity;
     use permission_checker::dummy::DummyAclProvider;
+    use repo_derived_data::RepoDerivedDataArc;
     use restricted_paths::RestrictedPaths;
     use restricted_paths::RestrictedPathsConfigBased;
     use restricted_paths::SqlRestrictedPathsManifestIdStoreBuilder;
@@ -115,14 +125,16 @@ mod tests {
             None,
         ));
 
-        let derived_data_config = test_repo_factory::default_test_repo_config().derived_data_config;
+        // Build a minimal repo to get ArcRepoDerivedData
+        let test_repo: Repo = TestRepoFactory::new(fb)?.build().await?;
+        let repo_derived_data = test_repo.repo_derived_data_arc();
 
         Ok(Arc::new(RestrictedPaths::new(
             config_based,
             acl_provider,
             scuba,
-            false, // use_acl_manifest
-            &derived_data_config,
+            false, // use_acl_manifest — config-based tests; separate repo lacks commit graph
+            repo_derived_data.config(),
         )?))
     }
 
@@ -164,13 +176,15 @@ mod tests {
             .await?;
 
         let expected = vec![PathAccessInfo {
-            restriction_root: NonRootMPath::new("restricted/dir")?,
-            repo_region_acl: "TIER:my-acl".to_string(),
+            restriction: PathRestrictionInfo {
+                restriction_root: NonRootMPath::new("restricted/dir")?,
+                repo_region_acl: "TIER:my-acl".to_string(),
+                request_acl: "TIER:my-acl".to_string(),
+            },
             has_access: Some(true),
-            request_acl: "TIER:my-acl".to_string(),
         }];
         let mut actual = info;
-        actual.sort_by(|a, b| a.restriction_root.cmp(&b.restriction_root));
+        actual.sort_by(|a, b| a.restriction_root().cmp(b.restriction_root()));
         pretty_assertions::assert_eq!(actual, expected);
 
         Ok(())
@@ -188,13 +202,15 @@ mod tests {
             .await?;
 
         let expected = vec![PathAccessInfo {
-            restriction_root: NonRootMPath::new("restricted")?,
-            repo_region_acl: "TIER:my-acl".to_string(),
+            restriction: PathRestrictionInfo {
+                restriction_root: NonRootMPath::new("restricted")?,
+                repo_region_acl: "TIER:my-acl".to_string(),
+                request_acl: "TIER:my-acl".to_string(),
+            },
             has_access: Some(true),
-            request_acl: "TIER:my-acl".to_string(),
         }];
         let mut actual = info;
-        actual.sort_by(|a, b| a.restriction_root.cmp(&b.restriction_root));
+        actual.sort_by(|a, b| a.restriction_root().cmp(b.restriction_root()));
         pretty_assertions::assert_eq!(actual, expected);
 
         Ok(())
@@ -248,13 +264,15 @@ mod tests {
             .await?;
 
         let expected_first = vec![PathAccessInfo {
-            restriction_root: NonRootMPath::new("first")?,
-            repo_region_acl: "TIER:first-acl".to_string(),
+            restriction: PathRestrictionInfo {
+                restriction_root: NonRootMPath::new("first")?,
+                repo_region_acl: "TIER:first-acl".to_string(),
+                request_acl: "TIER:first-acl".to_string(),
+            },
             has_access: Some(true),
-            request_acl: "TIER:first-acl".to_string(),
         }];
         let mut actual_first = first_info;
-        actual_first.sort_by(|a, b| a.restriction_root.cmp(&b.restriction_root));
+        actual_first.sort_by(|a, b| a.restriction_root().cmp(b.restriction_root()));
         pretty_assertions::assert_eq!(actual_first, expected_first);
 
         let second_info = cs_ctx
@@ -264,13 +282,15 @@ mod tests {
             .await?;
 
         let expected_second = vec![PathAccessInfo {
-            restriction_root: NonRootMPath::new("second")?,
-            repo_region_acl: "TIER:second-acl".to_string(),
+            restriction: PathRestrictionInfo {
+                restriction_root: NonRootMPath::new("second")?,
+                repo_region_acl: "TIER:second-acl".to_string(),
+                request_acl: "TIER:second-acl".to_string(),
+            },
             has_access: Some(true),
-            request_acl: "TIER:second-acl".to_string(),
         }];
         let mut actual_second = second_info;
-        actual_second.sort_by(|a, b| a.restriction_root.cmp(&b.restriction_root));
+        actual_second.sort_by(|a, b| a.restriction_root().cmp(b.restriction_root()));
         pretty_assertions::assert_eq!(actual_second, expected_second);
 
         Ok(())
@@ -327,20 +347,24 @@ mod tests {
 
         let expected = vec![
             PathAccessInfo {
-                restriction_root: NonRootMPath::new("foo")?,
-                repo_region_acl: "TIER:outer-acl".to_string(),
+                restriction: PathRestrictionInfo {
+                    restriction_root: NonRootMPath::new("foo")?,
+                    repo_region_acl: "TIER:outer-acl".to_string(),
+                    request_acl: "TIER:outer-acl".to_string(),
+                },
                 has_access: Some(true),
-                request_acl: "TIER:outer-acl".to_string(),
             },
             PathAccessInfo {
-                restriction_root: NonRootMPath::new("foo/bar")?,
-                repo_region_acl: "TIER:inner-acl".to_string(),
+                restriction: PathRestrictionInfo {
+                    restriction_root: NonRootMPath::new("foo/bar")?,
+                    repo_region_acl: "TIER:inner-acl".to_string(),
+                    request_acl: "TIER:inner-acl".to_string(),
+                },
                 has_access: Some(true),
-                request_acl: "TIER:inner-acl".to_string(),
             },
         ];
         let mut actual = infos;
-        actual.sort_by(|a, b| a.restriction_root.cmp(&b.restriction_root));
+        actual.sort_by(|a, b| a.restriction_root().cmp(b.restriction_root()));
         pretty_assertions::assert_eq!(actual, expected);
 
         Ok(())
@@ -376,9 +400,12 @@ mod tests {
             .map(|(path, infos)| {
                 (
                     path.to_string(),
-                    infos
-                        .first()
-                        .map(|i| (i.restriction_root.to_string(), i.repo_region_acl.clone())),
+                    infos.first().map(|i| {
+                        (
+                            i.restriction_root().to_string(),
+                            i.repo_region_acl().to_string(),
+                        )
+                    }),
                 )
             })
             .collect();
@@ -423,9 +450,12 @@ mod tests {
             .map(|(path, infos)| {
                 (
                     path.to_string(),
-                    infos
-                        .first()
-                        .map(|i| (i.restriction_root.to_string(), i.repo_region_acl.clone())),
+                    infos.first().map(|i| {
+                        (
+                            i.restriction_root().to_string(),
+                            i.repo_region_acl().to_string(),
+                        )
+                    }),
                 )
             })
             .collect();
@@ -468,9 +498,12 @@ mod tests {
             .map(|(path, infos)| {
                 (
                     path.to_string(),
-                    infos
-                        .first()
-                        .map(|i| (i.restriction_root.to_string(), i.repo_region_acl.clone())),
+                    infos.first().map(|i| {
+                        (
+                            i.restriction_root().to_string(),
+                            i.repo_region_acl().to_string(),
+                        )
+                    }),
                 )
             })
             .collect();
@@ -522,20 +555,24 @@ mod tests {
 
         let expected = vec![
             PathAccessInfo {
-                restriction_root: NonRootMPath::new("first/path")?,
-                repo_region_acl: "TIER:first-acl".to_string(),
+                restriction: PathRestrictionInfo {
+                    restriction_root: NonRootMPath::new("first/path")?,
+                    repo_region_acl: "TIER:first-acl".to_string(),
+                    request_acl: "TIER:first-acl".to_string(),
+                },
                 has_access: None,
-                request_acl: "TIER:first-acl".to_string(),
             },
             PathAccessInfo {
-                restriction_root: NonRootMPath::new("second/path")?,
-                repo_region_acl: "TIER:second-acl".to_string(),
+                restriction: PathRestrictionInfo {
+                    restriction_root: NonRootMPath::new("second/path")?,
+                    repo_region_acl: "TIER:second-acl".to_string(),
+                    request_acl: "TIER:second-acl".to_string(),
+                },
                 has_access: None,
-                request_acl: "TIER:second-acl".to_string(),
             },
         ];
         let mut actual = descendants;
-        actual.sort_by(|a, b| a.restriction_root.cmp(&b.restriction_root));
+        actual.sort_by(|a, b| a.restriction_root().cmp(b.restriction_root()));
         pretty_assertions::assert_eq!(actual, expected);
 
         Ok(())
@@ -561,13 +598,15 @@ mod tests {
         // "first/path" is itself a restriction root, and is_prefix_of returns
         // true for equal paths, so it should be returned
         let expected = vec![PathAccessInfo {
-            restriction_root: NonRootMPath::new("first/path")?,
-            repo_region_acl: "TIER:first-acl".to_string(),
+            restriction: PathRestrictionInfo {
+                restriction_root: NonRootMPath::new("first/path")?,
+                repo_region_acl: "TIER:first-acl".to_string(),
+                request_acl: "TIER:first-acl".to_string(),
+            },
             has_access: None,
-            request_acl: "TIER:first-acl".to_string(),
         }];
         let mut actual = descendants;
-        actual.sort_by(|a, b| a.restriction_root.cmp(&b.restriction_root));
+        actual.sort_by(|a, b| a.restriction_root().cmp(b.restriction_root()));
         pretty_assertions::assert_eq!(actual, expected);
 
         Ok(())
@@ -585,13 +624,15 @@ mod tests {
             .await?;
 
         let expected = vec![PathAccessInfo {
-            restriction_root: NonRootMPath::new("foo/bar/restricted")?,
-            repo_region_acl: "TIER:my-acl".to_string(),
+            restriction: PathRestrictionInfo {
+                restriction_root: NonRootMPath::new("foo/bar/restricted")?,
+                repo_region_acl: "TIER:my-acl".to_string(),
+                request_acl: "TIER:my-acl".to_string(),
+            },
             has_access: None,
-            request_acl: "TIER:my-acl".to_string(),
         }];
         let mut actual = descendants;
-        actual.sort_by(|a, b| a.restriction_root.cmp(&b.restriction_root));
+        actual.sort_by(|a, b| a.restriction_root().cmp(b.restriction_root()));
         pretty_assertions::assert_eq!(actual, expected);
 
         Ok(())
@@ -673,20 +714,24 @@ mod tests {
 
         let expected = vec![
             PathAccessInfo {
-                restriction_root: NonRootMPath::new("foo")?,
-                repo_region_acl: "TIER:outer-acl".to_string(),
+                restriction: PathRestrictionInfo {
+                    restriction_root: NonRootMPath::new("foo")?,
+                    repo_region_acl: "TIER:outer-acl".to_string(),
+                    request_acl: "TIER:outer-acl".to_string(),
+                },
                 has_access: None,
-                request_acl: "TIER:outer-acl".to_string(),
             },
             PathAccessInfo {
-                restriction_root: NonRootMPath::new("foo/bar")?,
-                repo_region_acl: "TIER:inner-acl".to_string(),
+                restriction: PathRestrictionInfo {
+                    restriction_root: NonRootMPath::new("foo/bar")?,
+                    repo_region_acl: "TIER:inner-acl".to_string(),
+                    request_acl: "TIER:inner-acl".to_string(),
+                },
                 has_access: None,
-                request_acl: "TIER:inner-acl".to_string(),
             },
         ];
         let mut actual = descendants;
-        actual.sort_by(|a, b| a.restriction_root.cmp(&b.restriction_root));
+        actual.sort_by(|a, b| a.restriction_root().cmp(b.restriction_root()));
         pretty_assertions::assert_eq!(actual, expected);
 
         Ok(())
@@ -715,20 +760,24 @@ mod tests {
 
         let expected = vec![
             PathAccessInfo {
-                restriction_root: NonRootMPath::new("first/path")?,
-                repo_region_acl: "TIER:first-acl".to_string(),
+                restriction: PathRestrictionInfo {
+                    restriction_root: NonRootMPath::new("first/path")?,
+                    repo_region_acl: "TIER:first-acl".to_string(),
+                    request_acl: "TIER:first-acl".to_string(),
+                },
                 has_access: None,
-                request_acl: "TIER:first-acl".to_string(),
             },
             PathAccessInfo {
-                restriction_root: NonRootMPath::new("third/path")?,
-                repo_region_acl: "TIER:third-acl".to_string(),
+                restriction: PathRestrictionInfo {
+                    restriction_root: NonRootMPath::new("third/path")?,
+                    repo_region_acl: "TIER:third-acl".to_string(),
+                    request_acl: "TIER:third-acl".to_string(),
+                },
                 has_access: None,
-                request_acl: "TIER:third-acl".to_string(),
             },
         ];
         let mut actual = descendants;
-        actual.sort_by(|a, b| a.restriction_root.cmp(&b.restriction_root));
+        actual.sort_by(|a, b| a.restriction_root().cmp(b.restriction_root()));
         pretty_assertions::assert_eq!(actual, expected);
 
         Ok(())
@@ -746,13 +795,15 @@ mod tests {
 
         // Should be deduplicated to just one entry
         let expected = vec![PathAccessInfo {
-            restriction_root: NonRootMPath::new("shared/path")?,
-            repo_region_acl: "TIER:my-acl".to_string(),
+            restriction: PathRestrictionInfo {
+                restriction_root: NonRootMPath::new("shared/path")?,
+                repo_region_acl: "TIER:my-acl".to_string(),
+                request_acl: "TIER:my-acl".to_string(),
+            },
             has_access: None,
-            request_acl: "TIER:my-acl".to_string(),
         }];
         let mut actual = descendants;
-        actual.sort_by(|a, b| a.restriction_root.cmp(&b.restriction_root));
+        actual.sort_by(|a, b| a.restriction_root().cmp(b.restriction_root()));
         pretty_assertions::assert_eq!(actual, expected);
 
         Ok(())
@@ -781,20 +832,24 @@ mod tests {
 
         let expected = vec![
             PathAccessInfo {
-                restriction_root: NonRootMPath::new("foo")?,
-                repo_region_acl: "TIER:outer-acl".to_string(),
+                restriction: PathRestrictionInfo {
+                    restriction_root: NonRootMPath::new("foo")?,
+                    repo_region_acl: "TIER:outer-acl".to_string(),
+                    request_acl: "TIER:outer-acl".to_string(),
+                },
                 has_access: None,
-                request_acl: "TIER:outer-acl".to_string(),
             },
             PathAccessInfo {
-                restriction_root: NonRootMPath::new("foo/bar")?,
-                repo_region_acl: "TIER:inner-acl".to_string(),
+                restriction: PathRestrictionInfo {
+                    restriction_root: NonRootMPath::new("foo/bar")?,
+                    repo_region_acl: "TIER:inner-acl".to_string(),
+                    request_acl: "TIER:inner-acl".to_string(),
+                },
                 has_access: None,
-                request_acl: "TIER:inner-acl".to_string(),
             },
         ];
         let mut actual = descendants;
-        actual.sort_by(|a, b| a.restriction_root.cmp(&b.restriction_root));
+        actual.sort_by(|a, b| a.restriction_root().cmp(b.restriction_root()));
         pretty_assertions::assert_eq!(actual, expected);
 
         Ok(())
@@ -827,10 +882,12 @@ mod tests {
         let expected = RestrictedPathsChangesInfo {
             restricted_changes: vec![RestrictedChangeGroup {
                 restriction_info: PathAccessInfo {
-                    restriction_root: NonRootMPath::new("restricted")?,
-                    repo_region_acl: "TIER:my-acl".to_string(),
+                    restriction: PathRestrictionInfo {
+                        restriction_root: NonRootMPath::new("restricted")?,
+                        repo_region_acl: "TIER:my-acl".to_string(),
+                        request_acl: "TIER:my-acl".to_string(),
+                    },
                     has_access: None,
-                    request_acl: "TIER:my-acl".to_string(),
                 },
                 changed_paths: vec![NonRootMPath::new("restricted/file.txt")?],
             }],
@@ -906,10 +963,12 @@ mod tests {
             restricted_changes: vec![
                 RestrictedChangeGroup {
                     restriction_info: PathAccessInfo {
-                        restriction_root: NonRootMPath::new("first")?,
-                        repo_region_acl: "TIER:first-acl".to_string(),
+                        restriction: PathRestrictionInfo {
+                            restriction_root: NonRootMPath::new("first")?,
+                            repo_region_acl: "TIER:first-acl".to_string(),
+                            request_acl: "TIER:first-acl".to_string(),
+                        },
                         has_access: None,
-                        request_acl: "TIER:first-acl".to_string(),
                     },
                     changed_paths: vec![
                         NonRootMPath::new("first/a.txt")?,
@@ -919,10 +978,12 @@ mod tests {
                 },
                 RestrictedChangeGroup {
                     restriction_info: PathAccessInfo {
-                        restriction_root: NonRootMPath::new("first/second")?,
-                        repo_region_acl: "TIER:second-acl".to_string(),
+                        restriction: PathRestrictionInfo {
+                            restriction_root: NonRootMPath::new("first/second")?,
+                            repo_region_acl: "TIER:second-acl".to_string(),
+                            request_acl: "TIER:second-acl".to_string(),
+                        },
                         has_access: None,
-                        request_acl: "TIER:second-acl".to_string(),
                     },
                     changed_paths: vec![NonRootMPath::new("first/second/c.txt")?],
                 },
@@ -970,10 +1031,12 @@ mod tests {
             restricted_changes: vec![
                 RestrictedChangeGroup {
                     restriction_info: PathAccessInfo {
-                        restriction_root: NonRootMPath::new("alpha")?,
-                        repo_region_acl: "TIER:alpha-acl".to_string(),
+                        restriction: PathRestrictionInfo {
+                            restriction_root: NonRootMPath::new("alpha")?,
+                            repo_region_acl: "TIER:alpha-acl".to_string(),
+                            request_acl: "TIER:alpha-acl".to_string(),
+                        },
                         has_access: None,
-                        request_acl: "TIER:alpha-acl".to_string(),
                     },
                     changed_paths: vec![
                         NonRootMPath::new("alpha/file1.txt")?,
@@ -982,10 +1045,12 @@ mod tests {
                 },
                 RestrictedChangeGroup {
                     restriction_info: PathAccessInfo {
-                        restriction_root: NonRootMPath::new("beta")?,
-                        repo_region_acl: "TIER:beta-acl".to_string(),
+                        restriction: PathRestrictionInfo {
+                            restriction_root: NonRootMPath::new("beta")?,
+                            repo_region_acl: "TIER:beta-acl".to_string(),
+                            request_acl: "TIER:beta-acl".to_string(),
+                        },
                         has_access: None,
-                        request_acl: "TIER:beta-acl".to_string(),
                     },
                     changed_paths: vec![NonRootMPath::new("beta/file3.txt")?],
                 },
