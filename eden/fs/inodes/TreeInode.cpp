@@ -689,6 +689,11 @@ void TreeInode::inodeLoadComplete(
     promises = getInodeMap()->inodeLoadComplete(childInode.get());
   }
 
+  // Allow tests to inject faults between the lock release and
+  // takeOwnership to verify the unload race behavior.
+  getMount()->getServerState()->getFaultInjector().check(
+      "inodeLoadComplete", childName.view());
+
   // Fulfill all of the pending promises after releasing our lock
   auto inodePtr = InodePtr::takeOwnership(std::move(childInode));
   for (auto& promise : promises) {

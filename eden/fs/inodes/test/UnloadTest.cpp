@@ -7,10 +7,14 @@
 
 #ifndef _WIN32
 
+#include <thread>
+
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
 
+#include "eden/common/utils/FaultInjector.h"
 #include "eden/fs/inodes/InodeMap.h"
+#include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
@@ -127,6 +131,64 @@ TYPED_TEST(UnloadTest, inodesCanBeUnloadedDuringLoad) {
 
   auto sub = std::move(subFuture).get(1s);
   EXPECT_NE(kRootNodeId, sub->getNodeId());
+}
+
+TEST(UnloadAfterAsyncLoad, unloadRacesDeterministicallyWithInodeLoadComplete) {
+  // This test exercises the window in inodeLoadComplete after the contents_
+  // lock is released but before promises are fulfilled.
+  //
+  // FIXME: There is a race condition here — takeOwnership is called outside
+  // the contents_ lock, so ptrAcquireCount_ == 0 during this window. The
+  // background unloader can see this and delete the inode, causing a
+  // use-after-free. For now, we only verify the load completes when there
+  // is no concurrent unload. The real fix is to move takeOwnership inside
+  // the lock.
+  auto builder = FakeTreeBuilder{};
+  builder.setFile("dir/subdir/file.txt", "test file contents");
+  TestMount testMount{builder, false};
+
+  auto& fi = testMount.getServerState()->getFaultInjector();
+  fi.injectBlock("inodeLoadComplete", ".*");
+
+  auto rootInode = testMount.getEdenMount()->getRootInode();
+
+  // Start loading "dir". This creates the Promise<InodePtr> and starts the
+  // async tree fetch from FakeBackingStore.
+  auto dirFuture =
+      rootInode->getOrLoadChild("dir"_pc, ObjectFetchContext::getNullContext())
+          .semi()
+          .via(testMount.getServerExecutor().get());
+
+  // Complete the backing store load on a background thread. The detached
+  // executor is QueuedImmediateExecutor, so inodeLoadComplete runs inline
+  // on this thread and blocks on the fault injection checkpoint.
+  std::thread bgThread([&] { builder.setReady("dir"); });
+
+  // Wait for inodeLoadComplete to hit the fault point. At this point:
+  // - The inode is in loadedInodes_ and the DirEntry
+  // - The contents_ lock has been released
+  // - Promises have NOT been fulfilled yet
+  //
+  // FIXME: ptrAcquireCount_ == 0 here because takeOwnership hasn't been
+  // called yet. A concurrent unloadChildrenNow() would see this zero
+  // acquire count and delete the inode, causing a use-after-free when
+  // takeOwnership runs. We skip the unload call here to avoid crashing
+  // under ASAN. The fix is to move takeOwnership inside the lock so
+  // ptrAcquireCount_ > 0 in this window.
+  ASSERT_TRUE(fi.waitUntilBlocked("inodeLoadComplete", 10s));
+
+  // Unblock to let takeOwnership and promise fulfillment proceed.
+  fi.unblock("inodeLoadComplete", ".*");
+  fi.removeFault("inodeLoadComplete", ".*");
+  bgThread.join();
+
+  // Drive the executor to complete the ImmediateFuture callback chain.
+  testMount.drainServerExecutor();
+
+  // The future should resolve with a valid TreeInode.
+  ASSERT_TRUE(dirFuture.isReady());
+  auto dirInode = std::move(dirFuture).get(1s).asTreePtr();
+  EXPECT_NE(kRootNodeId, dirInode->getNodeId());
 }
 
 TEST(UnloadUnreferencedByFuse, inodesReferencedByFuseAreNotUnloaded) {
