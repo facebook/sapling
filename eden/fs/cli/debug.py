@@ -763,7 +763,7 @@ class BuildInfoCmd(Subcmd):
 def do_buildinfo(instance: EdenInstance, out: Optional[IO[bytes]] = None) -> None:
     if out is None:
         out = sys.stdout.buffer
-    build_info = instance.get_server_build_info_legacy()
+    build_info = instance.get_server_build_info()
     sorted_build_info = collections.OrderedDict(sorted(build_info.items()))
     for key, value in sorted_build_info.items():
         out.write(b"%s: %s\n" % (key.encode(), value.encode()))
