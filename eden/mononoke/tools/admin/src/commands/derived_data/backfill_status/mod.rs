@@ -8,11 +8,16 @@
 mod display;
 mod types;
 
+use anyhow::Context;
 use anyhow::Result;
 use clap::Args;
 use context::CoreContext;
+use mononoke_types::Timestamp;
 use requests_table::LongRunningRequestsQueue;
 use requests_table::RowId;
+use requests_table::SqlLongRunningRequestsQueue;
+
+use self::display::display_backfill_list;
 
 #[derive(Args)]
 pub(super) struct BackfillStatusArgs {
@@ -32,7 +37,7 @@ pub(super) struct BackfillStatusArgs {
 
 pub(super) async fn backfill_status(
     ctx: &CoreContext,
-    queue: impl LongRunningRequestsQueue,
+    queue: SqlLongRunningRequestsQueue,
     args: BackfillStatusArgs,
 ) -> Result<()> {
     match args.request_id {
@@ -60,11 +65,26 @@ pub(super) async fn backfill_status(
 }
 
 async fn list_backfills(
-    _ctx: &CoreContext,
-    _queue: &impl LongRunningRequestsQueue,
-    _lookback_days: i64,
+    ctx: &CoreContext,
+    queue: &impl LongRunningRequestsQueue,
+    lookback_days: i64,
 ) -> Result<()> {
-    println!("Backfill list view - to be implemented");
+    let now = Timestamp::now();
+    let lookback_seconds = lookback_days * 24 * 60 * 60;
+    let min_created_at = Timestamp::from_timestamp_secs(now.timestamp_seconds() - lookback_seconds);
+
+    let backfills = queue
+        .list_recent_backfills_with_repo_count(ctx, &min_created_at)
+        .await
+        .context("fetching recent backfills")?;
+
+    if backfills.is_empty() {
+        println!("No backfills found in the last {} days", lookback_days);
+        return Ok(());
+    }
+
+    display_backfill_list(backfills);
+
     Ok(())
 }
 
