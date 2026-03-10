@@ -17,7 +17,6 @@ use std::sync::Arc;
 use anyhow::Context;
 use anyhow::Result;
 use context::CoreContext;
-use metaconfig_types::DerivedDataConfig;
 use metaconfig_types::RestrictedPathsConfig;
 use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
@@ -35,7 +34,6 @@ pub use crate::access_log::ACCESS_LOG_SCUBA_TABLE;
 pub use crate::access_log::has_read_access_to_repo_region_acls;
 use crate::access_log::is_member_of_groups;
 use crate::access_log::log_access_to_restricted_path;
-// Types re-exported from restricted_paths_common via `pub use restricted_paths_common::*`
 
 /// Core restriction information for a path.
 /// Does not include access check results — that is the API layer's concern
@@ -79,34 +77,23 @@ impl<'a> std::fmt::Display for RestrictedPathAccessType<'a> {
 /// Repository restricted paths configuration.
 #[facet::facet]
 pub struct RestrictedPaths {
-    /// The restricted paths configuration for this repo, i.e. the restricted
-    /// paths and their associated ACLs.
-    config: RestrictedPathsConfig,
-    /// Storage for the manifest ids of the restricted paths.
-    manifest_id_store: ArcRestrictedPathsManifestIdStore,
+    /// Config-based restricted paths (shared with derived-data crates).
+    config_based: Arc<RestrictedPathsConfigBased>,
     /// ACL provider for authorization checks
     acl_provider: Arc<dyn AclProvider>,
-    /// Optional in-memory cache for manifest ID lookups, instead of direct DB
-    /// queries
-    manifest_id_cache: Option<Arc<RestrictedPathsManifestIdCache>>,
     /// Scuba sample builder for logging access to restricted paths
     scuba: MononokeScubaSampleBuilder,
     /// Whether to use ACL manifest instead of config for restriction lookups.
-    /// When true, the async methods will attempt to use the ACL manifest derived
-    /// data to determine restrictions. When false (default), uses config-based
-    /// lookup.
     use_acl_manifest: bool,
 }
 
 impl RestrictedPaths {
     pub fn new(
-        config: RestrictedPathsConfig,
-        manifest_id_store: Arc<dyn RestrictedPathsManifestIdStore>,
+        config_based: Arc<RestrictedPathsConfigBased>,
         acl_provider: Arc<dyn AclProvider>,
-        manifest_id_cache: Option<Arc<RestrictedPathsManifestIdCache>>,
         scuba: MononokeScubaSampleBuilder,
         use_acl_manifest: bool,
-        derived_data_config: &DerivedDataConfig,
+        derived_data_config: &metaconfig_types::DerivedDataConfig,
     ) -> Result<Self> {
         if use_acl_manifest {
             anyhow::ensure!(
@@ -116,30 +103,29 @@ impl RestrictedPaths {
             );
         }
         Ok(Self {
-            config,
-            manifest_id_store,
+            config_based,
             acl_provider,
-            manifest_id_cache,
             scuba,
             use_acl_manifest,
         })
     }
 
     pub fn config(&self) -> &RestrictedPathsConfig {
-        &self.config
+        self.config_based.config()
     }
 
     pub fn manifest_id_store(&self) -> &ArcRestrictedPathsManifestIdStore {
-        &self.manifest_id_store
+        self.config_based.manifest_id_store()
     }
 
-    /// Returns a `RestrictedPathsConfigBased` constructed from this instance's config fields.
-    pub fn config_based(&self) -> ArcRestrictedPathsConfigBased {
-        Arc::new(RestrictedPathsConfigBased::new(
-            self.config.clone(),
-            self.manifest_id_store.clone(),
-            self.manifest_id_cache.clone(),
-        ))
+    /// Returns whether any restricted paths are configured for this repository.
+    pub fn has_restricted_paths(&self) -> bool {
+        self.config_based.has_restricted_paths()
+    }
+
+    /// Returns the underlying config-based restricted paths.
+    pub fn config_based(&self) -> &Arc<RestrictedPathsConfigBased> {
+        &self.config_based
     }
 
     pub fn acl_provider(&self) -> &Arc<dyn AclProvider> {
@@ -151,31 +137,9 @@ impl RestrictedPaths {
         self.use_acl_manifest
     }
 
-    /// Exact path match against config.path_acls.
-    fn get_acl_for_path_from_config(&self, path: &NonRootMPath) -> Option<&MononokeIdentity> {
-        self.config
-            .path_acls
-            .iter()
-            .find(|(restricted_path_prefix, _)| *restricted_path_prefix == path)
-            .map(|(_, acl)| acl)
-    }
-
-    /// Prefix match against config.path_acls.
-    fn get_acl_for_path_prefix_from_config(
-        &self,
-        path: &NonRootMPath,
-    ) -> Option<&MononokeIdentity> {
-        // TODO(T239041722): use SortedVectorMap to ensure a specific order
-        self.config
-            .path_acls
-            .iter()
-            .find(|(restricted_path_prefix, _)| restricted_path_prefix.is_prefix_of(path))
-            .map(|(_, acl)| acl)
-    }
-
     /// Check if a path is restricted according to config.
     fn is_restricted_path_from_config(&self, path: &NonRootMPath) -> bool {
-        self.get_acl_for_path_from_config(path).is_some()
+        self.config_based.get_acl_for_path(path).is_some()
     }
 
     /// If a path is considered restricted according to the configuration,
@@ -195,12 +159,12 @@ impl RestrictedPaths {
         path: &NonRootMPath,
     ) -> Result<Option<MononokeIdentity>> {
         if !self.use_acl_manifest {
-            return Ok(self.get_acl_for_path_from_config(path).cloned());
+            return Ok(self.config_based.get_acl_for_path(path).cloned());
         }
 
         // TODO(T248660053): When use_acl_manifest is true, derive and query the ACL manifest
         // For now, fall back to config-based lookup
-        Ok(self.get_acl_for_path_from_config(path).cloned())
+        Ok(self.config_based.get_acl_for_path(path).cloned())
     }
 
     pub async fn get_acls_for_paths(
@@ -235,12 +199,12 @@ impl RestrictedPaths {
         path: &NonRootMPath,
     ) -> Result<Option<MononokeIdentity>> {
         if !self.use_acl_manifest {
-            return Ok(self.get_acl_for_path_prefix_from_config(path).cloned());
+            return Ok(self.config_based.get_acl_for_path_prefix(path).cloned());
         }
 
         // TODO(T248660053): When use_acl_manifest is true, derive and query the ACL manifest
         // For now, fall back to config-based lookup
-        Ok(self.get_acl_for_path_prefix_from_config(path).cloned())
+        Ok(self.config_based.get_acl_for_path_prefix(path).cloned())
     }
 
     /// Check if a path is considered restricted according to the configuration.
@@ -264,11 +228,6 @@ impl RestrictedPaths {
         Ok(self.get_acl_for_path(ctx, cs_id, path).await?.is_some())
     }
 
-    /// Check if any restricted paths are configured for this repository.
-    pub fn has_restricted_paths(&self) -> bool {
-        !self.config.path_acls.is_empty()
-    }
-
     /// Check if a manifest id belongs to a restricted path and log access it it.
     ///
     /// Returns true if caller is authorized to access it.
@@ -286,7 +245,7 @@ impl RestrictedPaths {
         }
 
         // Try to use cache first, fall back to DB query if cache is not available
-        let paths = if let Some(manifest_id_cache) = &self.manifest_id_cache {
+        let paths = if let Some(manifest_id_cache) = self.config_based.manifest_id_cache() {
             // Read from cache
             let cache_guard = manifest_id_cache.cache().read().unwrap();
             cache_guard
@@ -296,7 +255,8 @@ impl RestrictedPaths {
                 .unwrap_or_default()
         } else {
             // Fall back to DB query if cache is not available
-            self.manifest_id_store
+            self.config_based
+                .manifest_id_store()
                 .get_paths_by_manifest_id(ctx, &manifest_id, &manifest_type)
                 .await?
         };
@@ -310,12 +270,15 @@ impl RestrictedPaths {
 
         log_access_to_restricted_path(
             ctx,
-            self.manifest_id_store.repo_id(),
+            self.config_based.manifest_id_store().repo_id(),
             paths,
             acl_refs,
             crate::access_log::RestrictedPathAccessData::Manifest(manifest_id, manifest_type),
             self.acl_provider.clone(),
-            self.config.tooling_allowlist_group.as_deref(),
+            self.config_based
+                .config()
+                .tooling_allowlist_group
+                .as_deref(),
             self.scuba.clone(),
         )
         .await
@@ -339,7 +302,7 @@ impl RestrictedPaths {
         let mut restricted_path_roots = Vec::new();
         let mut matched_acls = Vec::new();
 
-        for (restricted_path_prefix, acl) in &self.config.path_acls {
+        for (restricted_path_prefix, acl) in &self.config_based.config().path_acls {
             if restricted_path_prefix.is_prefix_of(&path) {
                 restricted_path_roots.push(restricted_path_prefix.clone());
                 matched_acls.push(acl);
@@ -353,12 +316,15 @@ impl RestrictedPaths {
 
         log_access_to_restricted_path(
             ctx,
-            self.manifest_id_store.repo_id(),
+            self.config_based.manifest_id_store().repo_id(),
             restricted_path_roots,
             matched_acls,
             crate::access_log::RestrictedPathAccessData::FullPath { full_path: path },
             self.acl_provider.clone(),
-            self.config.tooling_allowlist_group.as_deref(),
+            self.config_based
+                .config()
+                .tooling_allowlist_group
+                .as_deref(),
             self.scuba.clone(),
         )
         .await
@@ -368,7 +334,11 @@ impl RestrictedPaths {
     /// conditions config.
     /// Returns true if enforcement should be applied.
     async fn should_enforce_restriction(&self, ctx: &CoreContext) -> Result<bool> {
-        let enforcement_acls = self.config.conditional_enforcement_acls.clone();
+        let enforcement_acls = self
+            .config_based
+            .config()
+            .conditional_enforcement_acls
+            .clone();
         if enforcement_acls.is_empty() {
             // Ensure we never enforce if there are no enforcement ACLs configured
             return Ok(false);
@@ -644,39 +614,48 @@ mod tests {
     use mononoke_types::RepositoryId;
     use permission_checker::dummy::DummyAclProvider;
     use sql_construct::SqlConstruct;
-    use test_repo_factory::default_test_repo_config;
 
     use super::*;
     use crate::SqlRestrictedPathsManifestIdStoreBuilder;
 
-    #[mononoke::fbinit_test]
-    async fn test_empty_config(fb: FacebookInit) -> Result<()> {
-        let repo_id = RepositoryId::new(0);
-
+    /// Build a config-based `RestrictedPaths` for tests.
+    async fn build_test_restricted_paths(
+        fb: FacebookInit,
+        config: metaconfig_types::RestrictedPathsConfig,
+    ) -> Result<RestrictedPaths> {
         let acl_provider = DummyAclProvider::new(fb)?;
+        let repo_id = RepositoryId::new(0);
         let manifest_id_store = Arc::new(
-            SqlRestrictedPathsManifestIdStoreBuilder::with_sqlite_in_memory()
-                .expect("Failed to create Sqlite connection")
+            SqlRestrictedPathsManifestIdStoreBuilder::with_sqlite_in_memory()?
                 .with_repo_id(repo_id),
         );
-
         let scuba = MononokeScubaSampleBuilder::with_discard();
-
-        let repo_restricted_paths = RestrictedPaths::new(
-            RestrictedPathsConfig::default(),
+        let config_based = Arc::new(RestrictedPathsConfigBased::new(
+            config,
             manifest_id_store,
-            acl_provider,
             None,
+        ));
+        let derived_data_config = test_repo_factory::default_test_repo_config().derived_data_config;
+
+        RestrictedPaths::new(
+            config_based,
+            acl_provider,
             scuba,
-            false, // use_acl_manifest — these tests exercise config-based lookup only
-            &default_test_repo_config().derived_data_config,
-        )?;
+            false, // use_acl_manifest
+            &derived_data_config,
+        )
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_empty_config(fb: FacebookInit) -> Result<()> {
+        let repo_restricted_paths =
+            build_test_restricted_paths(fb, RestrictedPathsConfig::default()).await?;
 
         assert!(!repo_restricted_paths.has_restricted_paths());
 
         let ctx = CoreContext::test_mock(fb);
         let cs_id = ChangesetId::new(mononoke_types::hash::Blake2::from_byte_array([0u8; 32]));
-        let test_path = NonRootMPath::new("test/path").unwrap();
+        let test_path = NonRootMPath::new("test/path")?;
         assert!(
             repo_restricted_paths
                 .get_acl_for_path(&ctx, Some(cs_id), &test_path)
@@ -689,47 +668,27 @@ mod tests {
 
     #[mononoke::fbinit_test]
     async fn test_with_config(fb: FacebookInit) -> Result<()> {
-        let repo_id = RepositoryId::new(0);
         let mut path_acls = HashMap::new();
-        let use_manifest_id_cache = true;
-        let cache_update_interval_ms = 100;
-
-        let acl_provider = DummyAclProvider::new(fb)?;
         path_acls.insert(
-            NonRootMPath::new("restricted/dir").unwrap(),
+            NonRootMPath::new("restricted/dir")?,
             MononokeIdentity::from_str("SERVICE_IDENTITY:restricted_acl")?,
         );
         path_acls.insert(
-            NonRootMPath::new("other/restricted").unwrap(),
+            NonRootMPath::new("other/restricted")?,
             MononokeIdentity::from_str("SERVICE_IDENTITY:other_acl")?,
         );
 
-        let manifest_id_store = Arc::new(
-            SqlRestrictedPathsManifestIdStoreBuilder::with_sqlite_in_memory()
-                .expect("Failed to create Sqlite connection")
-                .with_repo_id(repo_id),
-        );
         let config = RestrictedPathsConfig {
             path_acls,
-            use_manifest_id_cache,
-            cache_update_interval_ms,
+            use_manifest_id_cache: true,
+            cache_update_interval_ms: 100,
             soft_path_acls: Vec::new(),
             conditional_enforcement_acls: Vec::new(),
             tooling_allowlist_group: None,
             acl_file_name: RestrictedPathsConfig::default().acl_file_name,
         };
 
-        let scuba = MononokeScubaSampleBuilder::with_discard();
-
-        let repo_restricted_paths = RestrictedPaths::new(
-            config,
-            manifest_id_store,
-            acl_provider,
-            None,
-            scuba,
-            false, // use_acl_manifest — these tests exercise config-based lookup only
-            &default_test_repo_config().derived_data_config,
-        )?;
+        let repo_restricted_paths = build_test_restricted_paths(fb, config).await?;
 
         assert!(repo_restricted_paths.has_restricted_paths());
         Ok(())
@@ -737,45 +696,21 @@ mod tests {
 
     #[mononoke::fbinit_test]
     async fn test_path_matching(fb: FacebookInit) -> Result<()> {
-        let repo_id = RepositoryId::new(0);
         let mut path_acls = HashMap::new();
-        let use_manifest_id_cache = true;
-        let cache_update_interval_ms = 100;
-
-        let acl_provider = DummyAclProvider::new(fb)?;
         let restricted_acl = MononokeIdentity::from_str("SERVICE_IDENTITY:restricted_acl")?;
-        path_acls.insert(
-            NonRootMPath::new("restricted/dir").unwrap(),
-            restricted_acl.clone(),
-        );
-
-        let manifest_id_store = Arc::new(
-            SqlRestrictedPathsManifestIdStoreBuilder::with_sqlite_in_memory()
-                .expect("Failed to create Sqlite connection")
-                .with_repo_id(repo_id),
-        );
+        path_acls.insert(NonRootMPath::new("restricted/dir")?, restricted_acl.clone());
 
         let config = RestrictedPathsConfig {
             path_acls,
-            use_manifest_id_cache,
-            cache_update_interval_ms,
+            use_manifest_id_cache: true,
+            cache_update_interval_ms: 100,
             soft_path_acls: Vec::new(),
             conditional_enforcement_acls: Vec::new(),
             tooling_allowlist_group: None,
             acl_file_name: RestrictedPathsConfig::default().acl_file_name,
         };
 
-        let scuba = MononokeScubaSampleBuilder::with_discard();
-
-        let repo_restricted_paths = RestrictedPaths::new(
-            config,
-            manifest_id_store,
-            acl_provider,
-            None,
-            scuba,
-            false, // use_acl_manifest — these tests exercise config-based lookup only
-            &default_test_repo_config().derived_data_config,
-        )?;
+        let repo_restricted_paths = build_test_restricted_paths(fb, config).await?;
 
         let ctx = CoreContext::test_mock(fb);
         let cs_id = ChangesetId::new(mononoke_types::hash::Blake2::from_byte_array([0u8; 32]));

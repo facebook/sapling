@@ -60,11 +60,11 @@ mod tests {
     use permission_checker::MononokeIdentity;
     use permission_checker::dummy::DummyAclProvider;
     use restricted_paths::RestrictedPaths;
+    use restricted_paths::RestrictedPathsConfigBased;
     use restricted_paths::SqlRestrictedPathsManifestIdStoreBuilder;
     use scuba_ext::MononokeScubaSampleBuilder;
     use sql_construct::SqlConstruct;
     use test_repo_factory::TestRepoFactory;
-    use test_repo_factory::default_test_repo_config;
     use tests_utils::CreateCommitContext;
 
     use super::*;
@@ -77,6 +77,8 @@ mod tests {
         fb: FacebookInit,
         path_acls: Vec<(&str, &str)>,
     ) -> Result<Arc<RestrictedPaths>> {
+        let ctx = CoreContext::test_mock(fb);
+
         let repo_id = RepositoryId::new(0);
 
         let path_acls_map: HashMap<NonRootMPath, MononokeIdentity> = path_acls
@@ -107,17 +109,22 @@ mod tests {
         );
 
         let acl_provider = DummyAclProvider::new(fb).expect("Failed to create DummyAclProvider");
+
+        let config_based = Arc::new(RestrictedPathsConfigBased::new(
+            config,
+            manifest_id_store.clone(),
+            None,
+        ));
+
         let scuba = MononokeScubaSampleBuilder::with_discard();
 
-        let derived_data_config = default_test_repo_config().derived_data_config;
+        let derived_data_config = test_repo_factory::default_test_repo_config().derived_data_config;
 
         Ok(Arc::new(RestrictedPaths::new(
-            config,
-            manifest_id_store,
+            config_based,
             acl_provider,
-            None,
             scuba,
-            true, // use_acl_manifest
+            false, // use_acl_manifest
             &derived_data_config,
         )?))
     }

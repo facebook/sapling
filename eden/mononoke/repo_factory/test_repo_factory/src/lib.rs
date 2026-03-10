@@ -732,7 +732,7 @@ impl TestRepoFactory {
         // If a pre-built RestrictedPaths was provided via with_restricted_paths,
         // use its config_based to ensure repo_derived_data gets the same config.
         if let Some(restricted_paths) = &self.restricted_paths {
-            return Ok(restricted_paths.config_based());
+            return Ok(restricted_paths.config_based().clone());
         }
 
         let restricted_paths_config = repo_config.restricted_paths_config.clone();
@@ -756,26 +756,13 @@ impl TestRepoFactory {
     }
 
     /// Restricted paths
-    pub async fn restricted_paths(
+    pub fn restricted_paths(
         &self,
-        repo_config: &ArcRepoConfig,
-        restricted_paths_manifest_id_store: &ArcRestrictedPathsManifestIdStore,
+        restricted_paths_config_based: &ArcRestrictedPathsConfigBased,
     ) -> Result<ArcRestrictedPaths> {
         if let Some(restricted_paths) = &self.restricted_paths {
             return Ok(restricted_paths.clone());
         }
-        let restricted_paths_config = repo_config.restricted_paths_config.clone();
-
-        // Build the manifest id cache with the specified refresh interval
-        let cache = RestrictedPathsManifestIdCacheBuilder::new(
-            self.ctx.clone(),
-            restricted_paths_manifest_id_store.clone(),
-        )
-        .with_refresh_interval(std::time::Duration::from_millis(
-            restricted_paths_config.cache_update_interval_ms,
-        ))
-        .build()
-        .await?;
 
         let acl_provider = DummyAclProvider::new(self.fb)?;
 
@@ -790,13 +777,11 @@ impl TestRepoFactory {
         )?;
 
         Ok(Arc::new(RestrictedPaths::new(
-            restricted_paths_config,
-            restricted_paths_manifest_id_store.clone(),
+            restricted_paths_config_based.clone(),
             acl_provider,
-            Some(Arc::new(cache)),
             scuba_builder,
             use_acl_manifest,
-            &repo_config.derived_data_config,
+            &self.config.derived_data_config,
         )?))
     }
 

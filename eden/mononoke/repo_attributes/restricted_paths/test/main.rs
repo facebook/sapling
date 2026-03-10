@@ -6,22 +6,15 @@
  */
 
 use std::str::FromStr;
-use std::sync::Arc;
 
-use anyhow::Context;
 use anyhow::Result;
 use fbinit::FacebookInit;
-use metaconfig_types::DerivedDataConfig;
-use metaconfig_types::RestrictedPathsConfig;
 use mononoke_macros::mononoke;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepoPath;
 use mononoke_types::RepositoryId;
 use permission_checker::MononokeIdentity;
-use permission_checker::dummy::DummyAclProvider;
 use restricted_paths::*;
-use scuba_ext::MononokeScubaSampleBuilder;
-use sql_construct::SqlConstruct;
 
 mod utils;
 use utils::*;
@@ -1458,36 +1451,38 @@ async fn test_tooling_allowlist_acl_user_not_in_acl(fb: FacebookInit) -> Result<
 
 #[mononoke::fbinit_test]
 async fn test_use_acl_manifest_without_derivation_enabled_fails(fb: FacebookInit) -> Result<()> {
-    let repo_id = RepositoryId::new(0);
-    let acl_provider = DummyAclProvider::new(fb)?;
-    let manifest_id_store = Arc::new(
-        SqlRestrictedPathsManifestIdStoreBuilder::with_sqlite_in_memory()
-            .context("Failed to create Sqlite connection")?
-            .with_repo_id(repo_id),
-    );
-    let scuba = MononokeScubaSampleBuilder::with_discard();
+    use context::CoreContext;
+    use mononoke_api::Repo as TestRepo;
+    use mononoke_types::DerivableType;
+    use test_repo_factory::TestRepoFactory;
 
-    // DerivedDataConfig::default() has no enabled types, including AclManifests.
-    // Creating RestrictedPaths with use_acl_manifest=true should fail.
-    let result = RestrictedPaths::new(
-        RestrictedPathsConfig::default(),
-        manifest_id_store,
-        acl_provider,
-        None,
-        scuba,
-        true, // use_acl_manifest
-        &DerivedDataConfig::default(),
-    );
+    let ctx = CoreContext::test_mock(fb);
+
+    let mut factory = TestRepoFactory::new(ctx.fb)?;
+    factory.with_config_override(|repo_config| {
+        let dd_config = repo_config
+            .derived_data_config
+            .get_active_config_mut()
+            .expect("No enabled derived data types config");
+        dd_config.types.remove(&DerivableType::AclManifests);
+    });
+    // Build should fail because use_acl_manifest is true but AclManifests is not enabled
+    let result = factory.build::<TestRepo>().await;
 
     let err = result.err().ok_or_else(|| {
         anyhow::anyhow!(
             "Expected error when use_acl_manifest=true but AclManifest derivation is not enabled"
         )
     })?;
+
+    let chain_contains =
+        std::iter::successors(Some(&err as &dyn std::error::Error), |e| e.source()).any(|e| {
+            e.to_string()
+                .contains("AclManifest derivation is not enabled")
+        });
     assert!(
-        err.to_string()
-            .contains("AclManifest derivation is not enabled"),
-        "Error message should mention AclManifest derivation, got: {err}"
+        chain_contains,
+        "Error chain should mention AclManifest derivation, got: {err:?}"
     );
 
     Ok(())

@@ -10,6 +10,7 @@ rust_library(
         "src/**/*.rs",
     ]),
     test_deps = [
+        "//common/rust/shed/facet:facet",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//eden/mononoke/common/sql_construct:sql_construct",

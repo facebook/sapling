@@ -854,19 +854,24 @@ async fn setup_test_repo(
     // Create scuba builder that logs to the test file
     let scuba_builder = MononokeScubaSampleBuilder::with_discard().with_log_file(log_file_path)?;
 
-    let repo_restricted_paths = Arc::new(RestrictedPaths::new(
+    let config_based = Arc::new(RestrictedPathsConfigBased::new(
         config,
         manifest_id_store.clone(),
-        acl_provider,
         Some(cache),
+    ));
+
+    let derived_data_config = default_test_repo_config().derived_data_config;
+
+    let repo_restricted_paths = Arc::new(RestrictedPaths::new(
+        config_based,
+        acl_provider,
         scuba_builder,
         true, // use_acl_manifest
-        &default_test_repo_config().derived_data_config,
+        &derived_data_config,
     )?);
 
-    // Create the test repo
-    let mut factory = TestRepoFactory::new(ctx.fb)?;
-    let repo = factory
+    // Rebuild with the custom restricted_paths
+    let repo = TestRepoFactory::new(ctx.fb)?
         .with_restricted_paths(repo_restricted_paths)
         .build()
         .await?;

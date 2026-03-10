@@ -203,11 +203,11 @@ mod tests {
     use permission_checker::dummy::DummyAclProvider;
     use restricted_paths::ArcRestrictedPaths;
     use restricted_paths::RestrictedPaths;
+    use restricted_paths::RestrictedPathsConfigBased;
     use restricted_paths::SqlRestrictedPathsManifestIdStoreBuilder;
     use scuba_ext::MononokeScubaSampleBuilder;
     use sql_construct::SqlConstruct;
     use test_repo_factory::TestRepoFactory;
-    use test_repo_factory::default_test_repo_config;
     use tests_utils::CreateCommitContext;
 
     use super::*;
@@ -252,15 +252,19 @@ mod tests {
             DummyAclProvider::new(fb).context("Failed to create DummyAclProvider")?;
         let scuba = MononokeScubaSampleBuilder::with_discard();
 
-        let derived_data_config = default_test_repo_config().derived_data_config;
-
-        Ok(Arc::new(RestrictedPaths::new(
+        let config_based = Arc::new(RestrictedPathsConfigBased::new(
             config,
             manifest_id_store,
-            acl_provider,
             None,
+        ));
+
+        let derived_data_config = test_repo_factory::default_test_repo_config().derived_data_config;
+
+        Ok(Arc::new(RestrictedPaths::new(
+            config_based,
+            acl_provider,
             scuba,
-            true, // use_acl_manifest
+            false, // use_acl_manifest
             &derived_data_config,
         )?))
     }

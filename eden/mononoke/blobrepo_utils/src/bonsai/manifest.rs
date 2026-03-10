@@ -329,7 +329,7 @@ async fn apply_diff(
     let manifest_id = derive_hg_manifest(
         ctx,
         repo.repo_blobstore_arc(),
-        repo.restricted_paths_arc().config_based(),
+        repo.restricted_paths_arc().config_based().clone(),
         manifestids,
         changes,
         None,

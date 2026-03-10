@@ -443,6 +443,7 @@ mod tests {
     use permission_checker::MononokeIdentitySet;
     use pretty_assertions::assert_eq;
     use restricted_paths::RestrictedPaths;
+    use restricted_paths::RestrictedPathsConfigBased;
     use restricted_paths::RestrictedPathsManifestIdCacheBuilder;
     use restricted_paths::SqlRestrictedPathsManifestIdStoreBuilder;
     use scuba_ext::MononokeScubaSampleBuilder;
@@ -616,15 +617,19 @@ mod tests {
         let acl_path = temp_file.into_temp_path().keep()?;
         let acl_provider = InternalAclProvider::from_file(&acl_path)?;
 
+        let config_based = Arc::new(RestrictedPathsConfigBased::new(
+            config,
+            manifest_id_store.clone(),
+            Some(cache),
+        ));
+
         let scuba = MononokeScubaSampleBuilder::with_discard();
 
         let derived_data_config = default_test_repo_config().derived_data_config;
 
         let restricted_paths = Arc::new(RestrictedPaths::new(
-            config,
-            manifest_id_store,
+            config_based,
             acl_provider,
-            Some(cache),
             scuba,
             true, // use_acl_manifest
             &derived_data_config,

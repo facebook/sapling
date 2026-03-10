@@ -1416,34 +1416,12 @@ impl RepoFactory {
     }
 
     /// Restricted paths
-    pub async fn restricted_paths(
+    pub fn restricted_paths(
         &self,
         repo_identity: &ArcRepoIdentity,
         repo_config: &ArcRepoConfig,
-        restricted_paths_manifest_id_store: &ArcRestrictedPathsManifestIdStore,
+        restricted_paths_config_based: &ArcRestrictedPathsConfigBased,
     ) -> Result<ArcRestrictedPaths> {
-        let ctx = self.ctx().clone();
-        let restricted_paths_config = repo_config.restricted_paths_config.clone();
-
-        let manifest_id_cache = if !restricted_paths_config.is_empty()
-            && restricted_paths_config.use_manifest_id_cache
-        {
-            // Build the manifest id cache with the specified refresh interval
-            let cache = RestrictedPathsManifestIdCacheBuilder::new(
-                ctx.clone(),
-                restricted_paths_manifest_id_store.clone(),
-            )
-            .with_refresh_interval(std::time::Duration::from_millis(
-                restricted_paths_config.cache_update_interval_ms,
-            ))
-            .build()
-            .await?;
-
-            Some(Arc::new(cache))
-        } else {
-            None
-        };
-
         // Construct scuba builder for logging access to restricted paths.
         // Check for environment variable override for integration tests.
         let scuba_builder = if let Ok(scuba_file_path) = std::env::var("ACCESS_LOG_SCUBA_FILE_PATH")
@@ -1461,10 +1439,8 @@ impl RepoFactory {
         )?;
 
         let restricted_paths = RestrictedPaths::new(
-            repo_config.restricted_paths_config.clone(),
-            restricted_paths_manifest_id_store.clone(),
+            restricted_paths_config_based.clone(),
             self.env.acl_provider.clone(),
-            manifest_id_cache,
             scuba_builder,
             use_acl_manifest,
             &repo_config.derived_data_config,
