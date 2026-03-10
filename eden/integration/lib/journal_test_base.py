@@ -31,8 +31,9 @@ class JournalTestBase(testcase.EdenRepoTest):
 
     def edenfs_extra_config(self) -> Optional[Dict[str, List[str]]]:
         configs = super().edenfs_extra_config()
-        if configs:
-            configs["notify"] = ['max-num-changes = "100"']
+        if configs is None:
+            configs = {}
+        configs.setdefault("notify", []).append('max-num-changes = "100"')
         return configs
 
     def edenfs_logging_settings(self) -> Dict[str, str]:
