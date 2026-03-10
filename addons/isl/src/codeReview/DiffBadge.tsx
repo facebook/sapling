@@ -179,7 +179,7 @@ function DiffInfoInner({
     <div
       className={`diff-info ${provider.name}-diff-info`}
       data-testid={`${provider.name}-diff-info`}>
-      <DiffSignalSummary diff={info} />
+      <DiffSignalSummary diff={info} diffId={diffId} />
       <DiffBadge provider={provider} diff={info} url={info.url} syncStatus={syncStatus} />
       {provider.DiffLandButtonContent && (
         <provider.DiffLandButtonContent diff={info} commit={commit} />
@@ -334,7 +334,9 @@ function DiffComments({diff, diffId}: {diff: DiffSummary; diffId: DiffId}) {
   );
 }
 
-function DiffSignalSummary({diff}: {diff: DiffSummary}) {
+function DiffSignalSummary({diff, diffId}: {diff: DiffSummary; diffId?: DiffId}) {
+  const signalDetailsEnabled = useFeatureFlagSync(Internal.featureFlags?.DiffSignalDetails);
+
   if (!diff.signalSummary) {
     return null;
   }
@@ -400,9 +402,32 @@ function DiffSignalSummary({diff}: {diff: DiffSummary}) {
       tooltip = t('Tests are deferred for this Diff. Click "Start Tests" to run them.');
       break;
   }
+
+  const renderedIcon = typeof icon === 'string' ? <Icon icon={icon} /> : icon;
+
+  if (signalDetailsEnabled && diffId != null && Internal.DiffSignalDetailsComponent != null) {
+    const DiffSignalDetailsComponent = Internal.DiffSignalDetailsComponent;
+    return (
+      <Tooltip
+        trigger="click"
+        title={tooltip}
+        component={() => (
+          <Suspense fallback={<Icon icon="loading" />}>
+            <DiffSignalDetailsComponent diffId={diffId} />
+          </Suspense>
+        )}>
+        <Button icon>
+          <span className={`diff-signals-button diff-signal-${diff.signalSummary}`}>
+            {renderedIcon}
+          </span>
+        </Button>
+      </Tooltip>
+    );
+  }
+
   return (
     <div className={`diff-signal-summary diff-signal-${diff.signalSummary}`}>
-      <Tooltip title={tooltip}>{typeof icon === 'string' ? <Icon icon={icon} /> : icon}</Tooltip>
+      <Tooltip title={tooltip}>{renderedIcon}</Tooltip>
     </div>
   );
 }

@@ -65,3 +65,9 @@
 .diff-signal-deferred {
   color: var(--signal-medium-bg);
 }
+
+.diff-signals-button {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}

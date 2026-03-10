@@ -70,6 +70,7 @@ html .vscode-light {
   --signal-good-bg: #2da44e;
   --signal-medium-bg: #d5b14e;
   --signal-bad-bg: #cf222e;
+  --signal-info-bg: #007acc;
   --signal-fg: white;
 
   --checkbox-border: var(--vscode-contrastBorder, rgba(0, 0, 0, 0.2));
