@@ -1021,6 +1021,14 @@ class Submodule:
             ui.debug(" initializing submodule workingcopy at %s\n" % repopath)
             repo = setup_repository(self.parentrepo.baseui, repopath, submodule=self)
         else:
+            # Audit the submodule path before any filesystem operations to prevent
+            # symlink traversal attacks (e.g., a symlink in the working copy could
+            # redirect makedirs into .sl/, overwriting internal config).
+            self.parentrepo.wvfs.audit(self.path)
+            # The path auditor only checks parent components for symlinks, not the
+            # final path itself. Explicitly reject if the submodule path is a symlink.
+            if self.parentrepo.wvfs.islink(self.path):
+                raise error.Abort(_("submodule path '%s' is a symlink") % self.path)
             if self.parentrepo.wvfs.isfile(self.path):
                 ui.debug(" unlinking conflicted submodule file at %s\n" % self.path)
                 self.parentrepo.wvfs.unlink(self.path)
