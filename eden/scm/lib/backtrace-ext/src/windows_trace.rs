@@ -81,6 +81,8 @@ mod imp {
     use crate::ThreadHandle;
     use crate::get_supplemental_frame_resolver;
 
+    const MAX_FRAMES: usize = 4096;
+
     /// Capture a backtrace from another thread.
     ///
     /// Suspends the thread, walks its stack using `RtlVirtualUnwind`,
@@ -90,43 +92,42 @@ mod imp {
     /// Symbol resolution happens *after* the thread is resumed — only the
     /// fast, fixed-size `Frame` data is collected while suspended.
     pub fn trace_remote_thread(handle: &ThreadHandle) -> Vec<Frame> {
+        // Allocate before suspending. The suspended thread may hold the
+        // allocator lock, so any alloc/free while it is frozen deadlocks.
+        let mut ctx: Box<CONTEXT> = Box::new(unsafe { std::mem::zeroed() });
+        let mut frames = Vec::with_capacity(MAX_FRAMES);
+
+        // === Suspension window (no alloc/free allowed) ==================
         // Safety: ThreadHandle holds a valid, duplicated thread handle.
-        unsafe { trace_remote_thread_inner(handle.0) }
-    }
-
-    /// # Safety
-    /// `thread` must be a valid thread handle with THREAD_SUSPEND_RESUME
-    /// and THREAD_GET_CONTEXT access rights.
-    unsafe fn trace_remote_thread_inner(thread: HANDLE) -> Vec<Frame> {
-        if unsafe { SuspendThread(thread) } == DWORD::MAX {
-            return Vec::new();
+        unsafe {
+            if SuspendThread(handle.0) != DWORD::MAX {
+                walk_stack(handle.0, &mut ctx, &mut frames);
+                ResumeThread(handle.0);
+            }
         }
+        // === End suspension window ======================================
 
-        let frames = unsafe { walk_stack(thread) };
-
-        unsafe { ResumeThread(thread) };
+        // ctx and frames are freed here, after the target is resumed.
         frames
     }
 
     /// Walk the suspended thread's stack via RtlVirtualUnwind.
     ///
+    /// All buffers are pre-allocated by the caller so this function
+    /// performs zero heap allocations (or frees) while the target is frozen.
+    ///
     /// # Safety
     /// `thread` must be a valid, suspended thread handle.
-    unsafe fn walk_stack(thread: HANDLE) -> Vec<Frame> {
-        // CONTEXT must be 16-byte aligned on x86_64.
-        let mut ctx: Box<CONTEXT> = Box::new(unsafe { std::mem::zeroed() });
+    unsafe fn walk_stack(thread: HANDLE, ctx: &mut Box<CONTEXT>, frames: &mut Vec<Frame>) {
         ctx.ContextFlags = CONTEXT_FULL;
 
         if unsafe { GetThreadContext(thread, ctx.as_mut() as *mut CONTEXT) } == 0 {
-            return Vec::new();
+            return;
         }
 
         let resolver = get_supplemental_frame_resolver();
-        let mut frames = Vec::new();
 
-        const MAX_FRAMES: usize = 512;
-
-        for _ in 0..MAX_FRAMES {
+        for _ in 0..frames.capacity() {
             let ip = ctx.Rip as usize;
             if ip == 0 {
                 break;
@@ -181,8 +182,6 @@ mod imp {
                 )
             };
         }
-
-        frames
     }
 }
 
