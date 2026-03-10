@@ -289,6 +289,15 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * If true, EdenFS refuses to start when running in a non-root mount
+   * namespace.
+   */
+  ConfigSetting<bool> requireRootMountNamespace{
+      "core:require-root-mount-namespace",
+      false,
+      this};
+
+  /**
    * Timeout value for a clean shutdown on SIGTERM. If the timeout elapses, we
    * exit immediately. Set to zero to revert to the old behavior where we
    * unregister the signal handler unconditionally, causing the next signal to

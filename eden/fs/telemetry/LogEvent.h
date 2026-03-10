@@ -185,39 +185,69 @@ struct DaemonStart : public EdenFSEvent {
   double duration = 0.0;
   bool is_takeover = false;
   bool success = false;
-  std::optional<uint64_t> mount_namespace;
-  std::optional<uint64_t> pid_namespace;
-  std::optional<bool> is_root_mount_namespace;
+  std::optional<uint64_t> daemon_mount_namespace;
+  std::optional<uint64_t> daemon_pid_namespace;
+  std::optional<uint64_t> privhelper_mount_namespace;
+  std::optional<uint64_t> privhelper_pid_namespace;
+  std::optional<bool> is_daemon_in_root_mount_namespace;
+  std::optional<bool> is_privhelper_in_root_mount_namespace;
   std::optional<std::string> cgroup;
 
   DaemonStart(
       double duration,
       bool is_takeover,
       bool success,
-      std::optional<uint64_t> mount_namespace = std::nullopt,
-      std::optional<uint64_t> pid_namespace = std::nullopt,
-      std::optional<bool> is_root_mount_namespace = std::nullopt,
+      std::optional<uint64_t> daemon_mount_namespace = std::nullopt,
+      std::optional<uint64_t> daemon_pid_namespace = std::nullopt,
+      std::optional<uint64_t> privhelper_mount_namespace = std::nullopt,
+      std::optional<uint64_t> privhelper_pid_namespace = std::nullopt,
+      std::optional<bool> is_daemon_in_root_mount_namespace = std::nullopt,
+      std::optional<bool> is_privhelper_in_root_mount_namespace = std::nullopt,
       std::optional<std::string> cgroup = std::nullopt)
       : duration(duration),
         is_takeover(is_takeover),
         success(success),
-        mount_namespace(mount_namespace),
-        pid_namespace(pid_namespace),
-        is_root_mount_namespace(is_root_mount_namespace),
+        daemon_mount_namespace(daemon_mount_namespace),
+        daemon_pid_namespace(daemon_pid_namespace),
+        privhelper_mount_namespace(privhelper_mount_namespace),
+        privhelper_pid_namespace(privhelper_pid_namespace),
+        is_daemon_in_root_mount_namespace(is_daemon_in_root_mount_namespace),
+        is_privhelper_in_root_mount_namespace(
+            is_privhelper_in_root_mount_namespace),
         cgroup(std::move(cgroup)) {}
 
   void populate(DynamicEvent& event) const override {
     event.addDouble("duration", duration);
     event.addBool("is_takeover", is_takeover);
     event.addBool("success", success);
-    if (mount_namespace.has_value()) {
-      event.addInt("mount_namespace", static_cast<int64_t>(*mount_namespace));
+    if (daemon_mount_namespace.has_value()) {
+      event.addInt(
+          "daemon_mount_namespace",
+          static_cast<int64_t>(*daemon_mount_namespace));
     }
-    if (pid_namespace.has_value()) {
-      event.addInt("pid_namespace", static_cast<int64_t>(*pid_namespace));
+    if (daemon_pid_namespace.has_value()) {
+      event.addInt(
+          "daemon_pid_namespace", static_cast<int64_t>(*daemon_pid_namespace));
     }
-    if (is_root_mount_namespace.has_value()) {
-      event.addBool("is_root_mount_namespace", *is_root_mount_namespace);
+    if (privhelper_mount_namespace.has_value()) {
+      event.addInt(
+          "privhelper_mount_namespace",
+          static_cast<int64_t>(*privhelper_mount_namespace));
+    }
+    if (privhelper_pid_namespace.has_value()) {
+      event.addInt(
+          "privhelper_pid_namespace",
+          static_cast<int64_t>(*privhelper_pid_namespace));
+    }
+    if (is_daemon_in_root_mount_namespace.has_value()) {
+      event.addBool(
+          "is_daemon_in_root_mount_namespace",
+          *is_daemon_in_root_mount_namespace);
+    }
+    if (is_privhelper_in_root_mount_namespace.has_value()) {
+      event.addBool(
+          "is_privhelper_in_root_mount_namespace",
+          *is_privhelper_in_root_mount_namespace);
     }
     if (cgroup.has_value()) {
       event.addString("cgroup", *cgroup);

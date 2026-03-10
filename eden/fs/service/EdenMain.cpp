@@ -12,6 +12,7 @@
 
 #include <fb303/FollyLoggingHandler.h>
 #include <fb303/TFunctionStatHandler.h>
+#include <fmt/format.h>
 #include <folly/Conv.h>
 #include <folly/MapUtil.h>
 #include <folly/executors/FunctionScheduler.h>
@@ -101,6 +102,10 @@ std::optional<bool> checkIsRootMountNamespace() {
   }
   return std::nullopt;
 }
+
+// Helper macro to convert optional to string for logging
+#define OPT_TO_STRING(opt) \
+  ((opt).has_value() ? folly::to<std::string>(*(opt)) : "nullopt")
 
 std::optional<std::string> readCgroup() {
   std::string contents;
@@ -398,17 +403,14 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
     daemonPidNamespace = getNamespaceInode("/proc/self/ns/pid");
     isDaemonInRootMountNamespace = checkIsRootMountNamespace();
   }
-  (void)isPrivhelperInRootMountNamespace;
-  (void)privhelperPidNamespace;
 #else
   std::optional<uint64_t> daemonMountNamespace;
   std::optional<uint64_t> daemonPidNamespace;
   std::optional<std::string> cgroupInfo;
   std::optional<bool> isDaemonInRootMountNamespace;
   std::optional<bool> isPrivhelperInRootMountNamespace;
+  std::optional<uint64_t> privhelperMountNamespace;
   std::optional<uint64_t> privhelperPidNamespace;
-  (void)isPrivhelperInRootMountNamespace;
-  (void)privhelperPidNamespace;
 #endif
 
   std::vector<std::string> originalCommandLine{argv, argv + argc};
@@ -511,6 +513,39 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
           daemonPid, daemonMemoryPriority.value());
     }
 
+#ifdef __linux__
+    XLOGF(
+        DBG2,
+        "Namespace detection: daemon(mnt={}, pid={}), privhelper(mnt={}, pid={}), "
+        "rootMountNsInode={}, isDaemonInRootMountNamespace={}, "
+        "isPrivhelperInRootMountNamespace={}",
+        OPT_TO_STRING(daemonMountNamespace),
+        OPT_TO_STRING(daemonPidNamespace),
+        OPT_TO_STRING(privhelperMountNamespace),
+        OPT_TO_STRING(privhelperPidNamespace),
+        OPT_TO_STRING(rootMountNsInode),
+        OPT_TO_STRING(isDaemonInRootMountNamespace),
+        OPT_TO_STRING(isPrivhelperInRootMountNamespace));
+
+    if (edenConfig->requireRootMountNamespace.getValue()) {
+      // To avoid disruption, we assume that the daemon and privhelper are in
+      // the root mount namespace unless we can prove otherwise.
+      bool daemonInRootNs = isDaemonInRootMountNamespace.value_or(true);
+      bool privhelperInRootNs = isPrivhelperInRootMountNamespace.value_or(true);
+
+      if (!daemonInRootNs || !privhelperInRootNs) {
+        auto errorMsg = fmt::format(
+            "EdenFS cannot start: daemon in root mount namespace = {}, "
+            "privhelper in root mount namespace = {}.\n To allow this "
+            "behavior, set core.require-root-mount-namespace config to false",
+            daemonInRootNs,
+            privhelperInRootNs);
+        XLOG(ERR, errorMsg);
+        startupLogger->exitUnsuccessfully(kExitCodeError, errorMsg);
+      }
+    }
+#endif // __linux__
+
     server.emplace(
         std::move(originalCommandLine),
         std::move(identity),
@@ -538,7 +573,10 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
               false /*success*/,
               daemonMountNamespace,
               daemonPidNamespace,
+              privhelperMountNamespace,
+              privhelperPidNamespace,
               isDaemonInRootMountNamespace,
+              isPrivhelperInRootMountNamespace,
               cgroupInfo});
     }
     startupLogger->exitUnsuccessfully(
@@ -573,7 +611,10 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
            takeover = FLAGS_takeover,
            daemonMountNamespace,
            daemonPidNamespace,
+           privhelperMountNamespace,
+           privhelperPidNamespace,
            isDaemonInRootMountNamespace,
+           isPrivhelperInRootMountNamespace,
            cgroupInfo,
            &server] {
             // This value is slightly different from `startTimeInSeconds`
@@ -592,7 +633,10 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
                     true /*success*/,
                     daemonMountNamespace,
                     daemonPidNamespace,
+                    privhelperMountNamespace,
+                    privhelperPidNamespace,
                     isDaemonInRootMountNamespace,
+                    isPrivhelperInRootMountNamespace,
                     cgroupInfo});
 
 #ifndef _WIN32
