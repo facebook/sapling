@@ -626,7 +626,7 @@ mod tests {
             acl_provider,
             Some(cache),
             scuba,
-            false, // use_acl_manifest
+            true, // use_acl_manifest
             &derived_data_config,
         )?);
 

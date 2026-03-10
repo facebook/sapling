@@ -742,6 +742,7 @@ def setup_mononoke_repo_config(
             "test_manifests",
             "test_sharded_manifests",
             "inferred_copy_from",
+            "acl_manifests",
         ]
 
     if additional_derived_data := env.getenv("ADDITIONAL_DERIVED_DATA"):

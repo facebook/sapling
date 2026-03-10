@@ -31,7 +31,7 @@ check blobstore numbers, walk will do some more steps for mappings
   12
   $ BLOBCOUNT=$(ls $BLOBPREFIX.* | grep -v .alias. | wc -l)
   $ echo "$BLOBCOUNT"
-  126
+  130
 
 count-objects, all types, shallow edges
   $ mononoke_walker scrub -q -b master_bookmark -I shallow -i all 2>&1 | grep -vE "(Bytes|Walked)/s"

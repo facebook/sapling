@@ -6,6 +6,13 @@
 #require slow
 
   $ . "${TEST_FIXTURES}/library.sh"
+  $ merge_just_knobs <<EOF
+  > {
+  >   "bools": {
+  >     "scm/mononoke:use_acl_manifest_for_restricted_paths": false
+  >   }
+  > }
+  > EOF
 
 setup configuration
   $ ENABLED_DERIVED_DATA="unodes" OTHER_DERIVED_DATA="skeleton_manifests" setup_common_config

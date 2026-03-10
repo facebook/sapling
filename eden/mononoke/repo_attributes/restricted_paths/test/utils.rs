@@ -868,7 +868,7 @@ async fn setup_test_repo(
         acl_provider,
         Some(cache),
         scuba_builder,
-        false, // use_acl_manifest
+        true, // use_acl_manifest
         &default_test_repo_config().derived_data_config,
     )?);
 
