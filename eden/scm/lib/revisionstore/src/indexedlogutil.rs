@@ -373,8 +373,7 @@ impl StoreOpenOptions {
 
     /// Create a permanent `Store`.
     ///
-    /// Data added to the store will never be rotated out, and `fsync(2)` is used to guarantee
-    /// data consistency.
+    /// Data added to the store will never be rotated out.
     pub fn permanent(self, path: impl AsRef<Path>) -> Result<Store> {
         let sync_if_changed_on_disk = self.sync_if_changed_on_disk;
         let should_compress = self.should_compress(path.as_ref())?;
