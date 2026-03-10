@@ -1166,6 +1166,43 @@ UnixSocket::Message PrivHelperServer::processGetPid() {
   return response;
 }
 
+UnixSocket::Message PrivHelperServer::processGetNamespaceInfo(
+    folly::io::Cursor& cursor) {
+  XLOG(DBG3, "get namespace info");
+
+  pid_t daemonPid = cursor.readBE<pid_t>();
+
+  auto statIno = [](const char* path) -> ino_t {
+    struct stat st = {};
+    if (::stat(path, &st) != 0) {
+      throwf<std::runtime_error>(
+          "failed to stat {}: {}", path, folly::errnoStr(errno));
+    }
+    return st.st_ino;
+  };
+
+  auto rootIno = statIno("/proc/1/ns/mnt");
+  auto selfMountIno = statIno("/proc/self/ns/mnt");
+  auto selfPidIno = statIno("/proc/self/ns/pid");
+
+  auto daemonMountNsPath = fmt::format("/proc/{}/ns/mnt", daemonPid);
+  auto daemonMountIno = statIno(daemonMountNsPath.c_str());
+
+  auto daemonPidNsPath = fmt::format("/proc/{}/ns/pid", daemonPid);
+  auto daemonPidIno = statIno(daemonPidNsPath.c_str());
+
+  auto response = makeResponse();
+  response.data.unshare();
+  folly::io::Appender appender{&response.data, 0};
+  appender.writeBE<pid_t>(getpid());
+  appender.writeBE<uint64_t>(rootIno);
+  appender.writeBE<uint64_t>(selfMountIno);
+  appender.writeBE<uint64_t>(selfPidIno);
+  appender.writeBE<uint64_t>(daemonMountIno);
+  appender.writeBE<uint64_t>(daemonPidIno);
+  return response;
+}
+
 UnixSocket::Message PrivHelperServer::processStartFam(
     folly::io::Cursor& cursor) {
   std::vector<std::string> paths;
@@ -1473,7 +1510,7 @@ UnixSocket::Message PrivHelperServer::processMessage(
     case PrivHelperConn::REQ_GET_PID:
       return processGetPid();
     case PrivHelperConn::REQ_GET_NAMESPACE_INFO:
-      throw std::runtime_error("not implemented");
+      return processGetNamespaceInfo(cursor);
     case PrivHelperConn::REQ_START_FAM:
       return processStartFam(cursor);
     case PrivHelperConn::REQ_STOP_FAM:

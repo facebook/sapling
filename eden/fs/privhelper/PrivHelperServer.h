@@ -117,6 +117,7 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
       folly::io::Cursor& cursor,
       UnixSocket::Message& request);
   UnixSocket::Message processGetPid();
+  UnixSocket::Message processGetNamespaceInfo(folly::io::Cursor& cursor);
   UnixSocket::Message processStartFam(folly::io::Cursor& cursor);
   UnixSocket::Message processStopFam();
   UnixSocket::Message processSetMemoryPriorityForProcess(
