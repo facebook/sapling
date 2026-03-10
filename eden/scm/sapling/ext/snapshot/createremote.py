@@ -3,10 +3,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-import stat
 import time as mtime
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Optional
 
 from sapling import error, perftrace, util
@@ -214,22 +212,23 @@ class workingcopy:
 
         def filteruntracked(f):
             """Filter out non-regular files and files exceeding size limit."""
-            try:
-                st = Path(repo.root, f).lstat()
-            except OSError:
+            if not repo.wvfs.isfileorlink(f):
                 return False
-            if not (stat.S_ISREG(st.st_mode) or stat.S_ISLNK(st.st_mode)):
-                return False
-            if maxuntrackedsize is not None and st.st_size > maxuntrackedsize:
-                skipped_large_files.append(f)
-                if not repo.ui.plain():
-                    repo.ui.warn(
-                        _(
-                            "not snapshotting '{}' because it is {} bytes large, and max untracked size is {} bytes\n"
-                        ).format(f, st.st_size, maxuntrackedsize),
-                        component="snapshot",
-                    )
-                return False
+            if maxuntrackedsize is not None:
+                try:
+                    size = repo.wvfs.lstat(f).st_size
+                except OSError:
+                    return False
+                if size > maxuntrackedsize:
+                    skipped_large_files.append(f)
+                    if not repo.ui.plain():
+                        repo.ui.warn(
+                            _(
+                                "not snapshotting '{}' because it is {} bytes large, and max untracked size is {} bytes\n"
+                            ).format(f, size, maxuntrackedsize),
+                            component="snapshot",
+                        )
+                    return False
             return True
 
         # Use single status call with matcher
