@@ -13,6 +13,7 @@ rust_library(
         "//common/rust/shed/justknobs_stub:justknobs",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_api:mononoke_api",
+        "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/scs/if:source_control-rust",
     ],
 )
