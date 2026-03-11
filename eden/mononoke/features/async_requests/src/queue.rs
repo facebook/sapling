@@ -39,6 +39,7 @@ use stats::prelude::TimeseriesStatic;
 use crate::AsyncRequestsError;
 use crate::types::AsynchronousRequestParams;
 use crate::types::AsynchronousRequestResult;
+use crate::types::DeriveBackfill;
 use crate::types::DeriveBackfillRepo;
 use crate::types::DeriveBoundaries;
 use crate::types::DeriveSlice;
@@ -72,12 +73,12 @@ fn concurrency_key(request_type: &str) -> (&str, Vec<&str>) {
         DeriveBoundaries::NAME,
         DeriveSlice::NAME,
         DeriveBackfillRepo::NAME,
+        DeriveBackfill::NAME,
     ];
-    match request_type {
-        DeriveBoundaries::NAME | DeriveSlice::NAME | DeriveBackfillRepo::NAME => {
-            ("derive_backfill", DERIVE_BACKFILL.to_vec())
-        }
-        name => (name, vec![name]),
+    if DERIVE_BACKFILL.contains(&request_type) {
+        ("derive_backfill", DERIVE_BACKFILL.to_vec())
+    } else {
+        (request_type, vec![request_type])
     }
 }
 
