@@ -276,7 +276,7 @@
       "error_count": 0,
       "headers_duration_ms": *, (glob)
       "http_status": 2*, (glob)
-      "response_bytes_sent": 18,
+      "response_bytes_sent": *, (glob)
       "seq": 0,
       "stream_completed": *, (glob)
       "stream_completion_time_us": *, (glob)

@@ -14,7 +14,7 @@ name = "http_client"
 
 [dependencies]
 anyhow = "1.0.102"
-async-compression = { version = "0.4.9", features = ["brotli", "bzip2", "deflate", "futures-io", "gzip", "tokio", "zlib", "zstd", "zstdmt"] }
+async-compression = { version = "0.4.41", features = ["brotli", "bzip2", "deflate", "futures-io", "gzip", "tokio", "zlib", "zstd", "zstdmt"] }
 auto_impl = "1.3.0"
 curl = { version = "0.4.49", features = ["http2", "static-ssl"] }
 curl-sys = "0.4.85"
