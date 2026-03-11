@@ -458,6 +458,8 @@ def get_edenfs_environment(
         "SSH_AGENT_PID",
         "KRB5CCNAME",
         "ATLAS",
+        # Idenfitier of dev docker containers
+        "ATLAS_ENV_ID",
         "SANDCASTLE",
         "SANDCASTLE_ALIAS",
         "SANDCASTLE_INSTANCE_ID",
