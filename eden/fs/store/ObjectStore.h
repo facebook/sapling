@@ -18,6 +18,7 @@
 
 #include "eden/common/utils/CaseSensitivity.h"
 #include "eden/common/utils/RefPtr.h"
+#include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/BlobAuxData.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/RootId.h"
@@ -33,6 +34,7 @@ namespace facebook::eden {
 
 class Blob;
 class ReloadableConfig;
+class EdenConfig;
 class EdenStats;
 class ProcessInfoCache;
 class StructuredLogger;
@@ -357,6 +359,13 @@ class ObjectStore : public IObjectStore,
    */
   const std::shared_ptr<BackingStore>& getBackingStore() const {
     return backingStore_;
+  }
+
+  /**
+   * Get the EdenConfig used by this ObjectStore
+   */
+  folly::ReadMostlySharedPtr<const EdenConfig> getEdenConfig() const {
+    return edenConfig_->getEdenConfig();
   }
 
   /**
