@@ -1387,6 +1387,17 @@ class VirtualInodeLookupProcessor {
         context_{std::move(context)} {}
 
   ImmediateFuture<VirtualInode> next(VirtualInode inodeTreeEntry) {
+    if (objectStore_->getEdenConfig()->enableCoroutinesPhase1.getValue()) {
+      return ImmediateFuture{
+          // @lint-ignore CLANGTIDY
+          // facebook-folly-coro-return-captures-local-var
+          folly::coro::co_invoke([this,
+                                  entry = std::move(inodeTreeEntry)]() mutable {
+            // @lint-ignore CLANGTIDY facebook-hte-Deprecated
+            return co_next(std::move(entry)).as_unsafe();
+          }).semi()};
+    }
+
     if (iter_ == iterRange_.end()) {
       // Lookup terminated, return the existing entry
       return std::move(inodeTreeEntry);
@@ -1398,6 +1409,19 @@ class VirtualInodeLookupProcessor {
         .getOrFindChild(childName, path_, objectStore_, context_)
         .thenValue(
             [this](VirtualInode entry) { return next(std::move(entry)); });
+  }
+
+  folly::coro::now_task<VirtualInode> co_next(VirtualInode inodeTreeEntry) {
+    if (iter_ == iterRange_.end()) {
+      // Lookup terminated, return the existing entry
+      co_return std::move(inodeTreeEntry);
+    }
+    // There are path components left, recurse looking for the next child
+    auto childName = *iter_++;
+    auto entry = co_await inodeTreeEntry
+                     .getOrFindChild(childName, path_, objectStore_, context_)
+                     .semi();
+    co_return co_await co_next(std::move(entry));
   }
 
  private:
@@ -1416,7 +1440,8 @@ folly::coro::now_task<VirtualInode> EdenMount::co_getVirtualInode(
   auto rootInode = static_cast<InodePtr>(getRootInode());
   auto processor = std::make_unique<VirtualInodeLookupProcessor>(
       path, getObjectStore(), context.copy());
-  co_return co_await processor->next(VirtualInode(std::move(rootInode))).semi();
+  auto result = co_await processor->co_next(VirtualInode(std::move(rootInode)));
+  co_return result;
 }
 
 ImmediateFuture<VirtualInode> EdenMount::getVirtualInode(
