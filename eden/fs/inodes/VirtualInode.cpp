@@ -959,7 +959,7 @@ folly::coro::now_task<std::string> VirtualInode::co_getBlob(
       std::variant_size_v<detail::VariantVirtualInode> == 4,
       "New variant type added to VariantVirtualInode - update co_getBlob");
   if (auto* inode = std::get_if<InodePtr>(&variant_)) {
-    auto content = co_await inode->asFilePtr()->readAll(fetchContext).semi();
+    auto content = co_await inode->asFilePtr()->co_readAll(fetchContext);
     co_return std::move(content);
   } else if (
       auto* entry =

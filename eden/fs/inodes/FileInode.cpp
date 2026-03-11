@@ -10,6 +10,7 @@
 #include <fmt/format.h>
 #include <optional>
 
+#include <folly/coro/Invoke.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <folly/io/async/EventBase.h>
@@ -1027,6 +1028,23 @@ ImmediateFuture<folly::Unit> FileInode::fallocate(
 ImmediateFuture<string> FileInode::readAll(
     const ObjectFetchContextPtr& fetchContext,
     CacheHint cacheHint) {
+  auto config = getMount()->getEdenConfig();
+  if (config->enableCoroutinesPhase1.getValue()) {
+    return ImmediateFuture{
+        // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+        folly::coro::co_invoke(
+            [](auto&& self, auto&&... args) {
+              return self
+                  ->co_readAll(std::forward<decltype(args)>(args)...)
+                  // @lint-ignore CLANGTIDY facebook-hte-Deprecated
+                  .as_unsafe();
+            },
+            inodePtrFromThis(),
+            fetchContext.copy(),
+            cacheHint)
+            .semi()};
+  }
+
   // TODO: calling this on Windows with a non ProjFS filesystem is likely to
   // deadlock Eden. diff calls into this. So `hg status` on non ProjFS mounts
   // is likely to hang things.
@@ -1079,6 +1097,126 @@ ImmediateFuture<string> FileInode::readAll(
 
         return result;
       });
+}
+
+// Coroutine equivalent of readAll(). Mirrors the logic of runWhileDataLoaded
+// but expressed linearly — co_await replaces the recursive .thenValue()
+// callback that runWhileDataLoaded uses to re-check state after an async blob
+// load.
+folly::coro::now_task<std::string> FileInode::co_readAll(
+    const ObjectFetchContextPtr& fetchContext,
+    CacheHint cacheHint) {
+  auto self = inodePtrFromThis();
+
+  BlobCache::Interest interest;
+  switch (cacheHint) {
+    case CacheHint::NotNeededAgain:
+      interest = BlobCache::Interest::UnlikelyNeededAgain;
+      break;
+    case CacheHint::LikelyNeededAgain:
+      // readAll() with LikelyNeededAgain is primarily called for files read
+      // by Eden itself, like .gitignore, and for symlinks on kernels that don't
+      // cache readlink. At least keep the blob around while the inode is
+      // loaded.
+      interest = BlobCache::Interest::WantHandle;
+      break;
+    default:
+      EDEN_BUG() << "unexpected CacheHint value: "
+                 << static_cast<int>(cacheHint);
+  }
+
+  // Acquire lock, check state, load if needed.
+  std::shared_ptr<const Blob> blob;
+  {
+    auto state = LockedState{self};
+    switch (state->tag) {
+      case State::BLOB_NOT_LOADING:
+        blob = state.getCachedBlob(getMount(), interest);
+        if (blob) {
+          // Blob was in cache, read immediately.
+          logAccess(*fetchContext);
+          const auto& contentsBuf = blob->getContents();
+          folly::io::Cursor cursor(&contentsBuf);
+          auto result =
+              cursor.readFixedString(contentsBuf.computeChainDataLength());
+          updateAtimeLocked(*state);
+          co_return result;
+        }
+        blob =
+            co_await startLoadingData(std::move(state), interest, fetchContext)
+                .semi();
+        break;
+      case State::BLOB_LOADING: {
+        // Already loading, latch on to the in-progress load.
+        // Unlock before co_await: completeDataLoad() needs this lock to
+        // fulfill the promise.
+        auto future = state->blobLoadingPromise->getImmediateFuture();
+        state.unlock();
+        blob = co_await std::move(future).semi();
+        break;
+      }
+      case State::MATERIALIZED_IN_OVERLAY: {
+        // File is materialized, read from overlay.
+        logAccess(*fetchContext);
+#ifdef _WIN32
+        auto result = readFile(self->getMaterializedFilePath()).value();
+#else
+        auto result = self->getOverlayFileAccess(state)->readAllContents(*self);
+#endif
+        updateAtimeLocked(*state);
+        co_return result;
+      }
+      default:
+        EDEN_BUG() << "unexpected FileInode state in co_readAll(): "
+                   << state->tag;
+    }
+  }
+
+  // Re-acquire lock after loading completes.
+  auto state = LockedState{self};
+  XDCHECK(
+      state->tag == State::BLOB_NOT_LOADING ||
+      state->tag == State::MATERIALIZED_IN_OVERLAY)
+      << "unexpected FileInode state after loading: " << state->tag;
+  logAccess(*fetchContext);
+
+  std::string result;
+  switch (state->tag) {
+    case State::MATERIALIZED_IN_OVERLAY: {
+      // Concurrent materialization during load — read from overlay.
+#ifdef _WIN32
+      result = readFile(self->getMaterializedFilePath()).value();
+#else
+      result = self->getOverlayFileAccess(state)->readAllContents(*self);
+#endif
+      break;
+    }
+    case State::BLOB_NOT_LOADING: {
+      // A BrokenPromise from truncation would have transitioned to
+      // MATERIALIZED_IN_OVERLAY. If we have a null blob and are still in
+      // BLOB_NOT_LOADING, it means the background task was dropped
+      if (!blob) {
+        throw InodeError(
+            EIO,
+            self,
+            fmt::format(
+                "Blob loading for {} was cancelled",
+                state->nonMaterializedState.id));
+      }
+      const auto& contentsBuf = blob->getContents();
+      folly::io::Cursor cursor(&contentsBuf);
+      result = cursor.readFixedString(contentsBuf.computeChainDataLength());
+      break;
+    }
+    case State::BLOB_LOADING:
+      EDEN_BUG() << "unexpected BLOB_LOADING state after loading completed in "
+                    "co_readAll() call";
+    default:
+      EDEN_BUG() << "unexpected FileInode state after loading in co_readAll(): "
+                 << state->tag;
+  }
+  updateAtimeLocked(*state);
+  co_return result;
 }
 
 ImmediateFuture<std::tuple<BufVec, bool>> FileInode::read(

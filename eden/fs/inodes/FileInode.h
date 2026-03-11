@@ -8,6 +8,7 @@
 #pragma once
 
 #include <folly/Synchronized.h>
+#include <folly/coro/safe/NowTask.h>
 #include <folly/futures/SharedPromise.h>
 #include <chrono>
 #include <optional>
@@ -331,15 +332,24 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
       CacheHint cacheHint = CacheHint::LikelyNeededAgain);
 
   /**
+   * Read the entire file contents, and return them as a string.
+   *
+   * Note that this API generally should only be used for fairly small files.
+   */
+  [[nodiscard]] folly::coro::now_task<std::string> co_readAll(
+      const ObjectFetchContextPtr& fetchContext,
+      CacheHint cacheHint = CacheHint::LikelyNeededAgain);
+
+  /**
    * Read up to size bytes from the file at the specified offset.
    *
-   * Returns a tuple of a BufVec containing the data and a boolean indicating
-   * if the end-of-file was reached.  This may return fewer bytes than
-   * requested.  If the specified offset is at or past the end of the buffer an
-   * empty IOBuf will be returned.  Otherwise between 1 and size bytes will be
-   * returned.  If fewer than size bytes are returned this does *not* guarantee
-   * that the end of the file was reached, the boolean should be checked for
-   * this.
+   * Returns a tuple of a BufVec containing the data and a boolean
+   * indicating if the end-of-file was reached.  This may return fewer bytes
+   * than requested.  If the specified offset is at or past the end of the
+   * buffer an empty IOBuf will be returned.  Otherwise between 1 and size
+   * bytes will be returned.  If fewer than size bytes are returned this
+   * does *not* guarantee that the end of the file was reached, the boolean
+   * should be checked for this.
    *
    * May throw exceptions on error.
    */
