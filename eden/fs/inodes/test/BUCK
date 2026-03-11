@@ -122,6 +122,7 @@ cpp_unittest(
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
+        "//eden/common/utils:fault_injector",
         "//eden/fs/config:config",
         "//eden/fs/fuse:fuse",
         "//eden/fs/inodes:inodes",

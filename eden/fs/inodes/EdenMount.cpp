@@ -1408,13 +1408,16 @@ ImmediateFuture<folly::Unit> EdenMount::waitForPendingWrites() const {
                            }).semi()};
   }
 
-  // TODO: This is a race condition since channel_ can be destroyed
-  // concurrently. We need to change EdenMount to never unset channel_.
-  if (channel_) {
-    return channel_->waitForPendingWrites();
-  } else {
-    return folly::unit;
-  }
+  return serverState_->getFaultInjector()
+      .checkAsync("waitForPendingWrites", "")
+      .thenValue([this](auto&&) -> ImmediateFuture<folly::Unit> {
+        // TODO: This is a race condition since channel_ can be destroyed
+        // concurrently. We need to change EdenMount to never unset channel_.
+        if (channel_) {
+          return channel_->waitForPendingWrites();
+        }
+        return folly::unit;
+      });
 }
 
 folly::coro::now_task<folly::Unit> EdenMount::co_waitForPendingWrites() const {

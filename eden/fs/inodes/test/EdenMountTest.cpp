@@ -19,8 +19,10 @@
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
 #include <stdexcept>
+#include <thread>
 #include <utility>
 
+#include "eden/common/utils/FaultInjector.h"
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/inodes/InodeError.h"
@@ -1150,6 +1152,70 @@ TEST(EdenMountState, mountIsDestroyingWhileInodeIsReferencedDuringDestroy) {
   ASSERT_TRUE(mountDestroyDetector.mountIsAlive())
       << "Eden mount should be alive during EdenMount::destroy";
   EXPECT_EQ(mount.getState(), EdenMount::State::DESTROYING);
+}
+
+/**
+ * If channel_ is accessible during DESTROYING state,
+ * exposes a TOCTOU race in waitForPendingWrites().
+ */
+TEST(EdenMount, waitForPendingWritesDuringDestroy) {
+  auto testMount = TestMount{FakeTreeBuilder{}};
+  std::shared_ptr<EdenMount>& mount = testMount.getEdenMount();
+
+  auto mountDelegate = std::make_shared<MockMountDelegate>();
+  testMount.getPrivHelper()->registerMountDelegate(
+      mount->getPath(), mountDelegate);
+  auto fuse = std::make_shared<FakeFuse>();
+  mountDelegate->setMountFuseDevice(fuse->start());
+  mountDelegate->makeUnmountSucceed();
+
+  auto startChannelFuture = mount->startFsChannel(false);
+  fuse->sendInitRequest();
+  fuse->recvResponse();
+  std::move(startChannelFuture)
+      .within(kTimeout)
+      .getVia(testMount.getServerExecutor().get());
+
+  // Prevents delete-this so bgThread doesn't access freed EdenMount.
+  auto shutdownBlocker =
+      EdenMountShutdownBlocker::preventShutdownFromCompleting(*mount);
+
+  EdenMount* rawMount = mount.get();
+  auto& faultInjector = testMount.getServerState()->getFaultInjector();
+
+  faultInjector.injectBlock("waitForPendingWrites", ".*");
+
+  auto bgThread = std::thread([&] {
+    try {
+      rawMount->waitForPendingWrites().get(kTimeout);
+    } catch (...) {
+    }
+  });
+
+  ASSERT_TRUE(faultInjector.waitUntilBlocked("waitForPendingWrites", 10s));
+
+  fuse->close();
+  mount->getFsChannelCompletionFuture().within(kTimeout).getVia(
+      testMount.getServerExecutor().get());
+
+  auto& rootInode = testMount.getRootInode();
+  rootInode.reset();
+  mount.reset();
+
+  // After destroy, bgThread is still paused at the fault before channel_
+  // access. Check whether destroy() nulled channel_.
+  // Pre-fix: channel_ (unique_ptr) is NOT nulled by destroy().
+  // Post-fix (D95870053): destroy() stores nullptr in channel_.
+  bool channelNullAfterDestroy = (rawMount->getFsChannel() == nullptr);
+
+  faultInjector.removeFault("waitForPendingWrites", ".*");
+  faultInjector.unblock("waitForPendingWrites", ".*");
+
+  bgThread.join();
+  shutdownBlocker.allowShutdownToComplete();
+
+  // FIXME(D95870053): After fix, change to EXPECT_TRUE.
+  EXPECT_FALSE(channelNullAfterDestroy);
 }
 
 namespace {
