@@ -53,6 +53,11 @@ use repos::QuickRepoDefinition;
 use repos::QuickRepoDefinitionShardingConfig;
 use repos::QuickRepoDefinitionTShirtSize;
 use repos::RawCommitIdentityScheme;
+use repos::RepoSpec;
+use repos::ShardingRegions;
+use repos::TShirtSize;
+use sha2::Digest;
+use sha2::Sha256;
 use source_control as thrift;
 use thrift::RepoSizeBucket;
 use tracing::info;
@@ -64,6 +69,9 @@ const DIFF_AUTHOR: &str = "scm_server_infra";
 const REPO_DEFINITIONS_BASE_PATH: &str = "source/scm/mononoke/repos/definitions";
 const REPO_DEFINITION_THRIFT_TYPE: &str = "QuickRepoDefinition";
 const REPO_DEFINITION_THRIFT_PATH: &str = "source/scm/mononoke/repos/repos.thrift";
+const REPO_SPEC_BASE_PATH: &str = "source/scm/mononoke/repos/git";
+const REPO_SPEC_THRIFT_TYPE: &str = "RepoSpec";
+const REPO_SPEC_THRIFT_PATH: &str = "source/scm/mononoke/repos/repos.thrift";
 
 async fn ensure_acls_allow_repo_creation(
     ctx: CoreContext,
@@ -599,6 +607,70 @@ fn make_quick_repo_definition(
     })
 }
 
+fn to_repo_spec_tshirt_size(
+    size_bucket: RepoSizeBucket,
+) -> Result<TShirtSize, scs_errors::ServiceError> {
+    match size_bucket {
+        RepoSizeBucket::EXTRA_SMALL => Ok(TShirtSize::SMALL),
+        RepoSizeBucket::SMALL | RepoSizeBucket::MEDIUM => Ok(TShirtSize::MEDIUM),
+        RepoSizeBucket::LARGE => Ok(TShirtSize::LARGE),
+        RepoSizeBucket::EXTRA_LARGE => Ok(TShirtSize::HUGE),
+        _ => Err(scs_errors::internal_error(format!(
+            "Unsupported RepoSizeBucket: {size_bucket:?}"
+        ))
+        .into()),
+    }
+}
+
+/// Generates the file path for a RepoSpec file.
+/// Path format: source/scm/mononoke/repos/git/{hash_dir}/{hash_prefix}_{repo_name_escaped}.cconf
+/// where hash_dir is the first 2 hex chars and hash_prefix is the first 8 hex
+/// chars of SHA-256(repo_name).
+/// The hash_dir distributes files across 256 subdirectories to avoid
+/// configerator directory size limits. The hash_prefix in the filename
+/// prevents collisions between repos that differ only in '/' vs '_'
+/// (e.g., "org/repo" vs "org_repo" both escape to "org_repo" but have
+/// different hashes).
+fn make_repo_spec_file_path(repo_name: &str) -> String {
+    let hash = Sha256::digest(repo_name.as_bytes());
+    let hash_dir = format!("{:02x}", hash[0]);
+    let hash_prefix = format!(
+        "{:02x}{:02x}{:02x}{:02x}",
+        hash[0], hash[1], hash[2], hash[3]
+    );
+    format!(
+        "{}/{}/{}_{}.cconf",
+        REPO_SPEC_BASE_PATH,
+        hash_dir,
+        hash_prefix,
+        repo_name.replace('/', "_")
+    )
+}
+
+fn make_repo_spec(
+    (repo_id, request): &(RepositoryId, thrift::RepoCreationRequest),
+) -> Result<RepoSpec, scs_errors::ServiceError> {
+    Ok(RepoSpec {
+        repo_id: repo_id.id(),
+        repo_name: request.repo_name.clone(),
+        hipster_acl: make_full_acl_name_from_repo_name(&request.repo_name),
+        enabled: true,
+        readonly: false,
+        default_commit_identity_scheme: RawCommitIdentityScheme::GIT,
+        enable_git_bundle_uri: None,
+        tiers: vec![
+            "gitimport".to_string(),
+            "gitimport_content".to_string(),
+            "scs".to_string(),
+        ],
+        t_shirt_size: to_repo_spec_tshirt_size(request.size_bucket)?,
+        sharding_regions: ShardingRegions::BGM_ONLY_REGIONS,
+        repo_config: None,
+        tier_overrides: None,
+        ..Default::default()
+    })
+}
+
 async fn prepare_repo_configs_mutation_nowait(
     ctx: CoreContext,
     repos_ids_and_requests: Vec<(RepositoryId, thrift::RepoCreationRequest)>,
@@ -610,19 +682,32 @@ async fn prepare_repo_configs_mutation_nowait(
     );
     let mut txn = configo_client.managed_transaction();
 
-    // Create individual repo definition files
-    for (repo_id, request) in &repos_ids_and_requests {
-        let repo_definition = make_quick_repo_definition(&(repo_id.clone(), request.clone()))?;
-        let file_path = make_repo_definition_file_path(repo_id);
+    let use_repo_spec = justknobs::eval("scm/mononoke:create_repos_use_repo_spec", None, None)
+        .map_err(scs_errors::internal_error)?;
 
-        // Set the thrift object for this repo
-        txn.set_thrift_object(
-            repo_definition,
-            file_path,
-            REPO_DEFINITION_THRIFT_TYPE.to_string(),
-            REPO_DEFINITION_THRIFT_PATH.to_string(),
-            None, // No crypto project
-        );
+    // Create individual repo config files
+    for (repo_id, request) in &repos_ids_and_requests {
+        if use_repo_spec {
+            let repo_spec = make_repo_spec(&(*repo_id, request.clone()))?;
+            let file_path = make_repo_spec_file_path(&request.repo_name);
+            txn.set_thrift_object(
+                repo_spec,
+                file_path,
+                REPO_SPEC_THRIFT_TYPE.to_string(),
+                REPO_SPEC_THRIFT_PATH.to_string(),
+                None,
+            );
+        } else {
+            let repo_definition = make_quick_repo_definition(&(*repo_id, request.clone()))?;
+            let file_path = make_repo_definition_file_path(repo_id);
+            txn.set_thrift_object(
+                repo_definition,
+                file_path,
+                REPO_DEFINITION_THRIFT_TYPE.to_string(),
+                REPO_DEFINITION_THRIFT_PATH.to_string(),
+                None,
+            );
+        }
     }
 
     let summary = repos_ids_and_requests
@@ -1143,6 +1228,116 @@ mod tests {
         assert_eq!(
             path,
             "source/scm/mononoke/repos/definitions/repo_0/repo_5.cconf"
+        );
+    }
+
+    #[mononoke::test]
+    fn test_make_repo_spec_file_path_simple_name() {
+        let path = make_repo_spec_file_path("my-repo");
+        assert!(
+            path.starts_with("source/scm/mononoke/repos/git/"),
+            "Path should start with RepoSpec base path: {path}"
+        );
+        // Filename should include hash prefix and repo name
+        assert!(
+            path.contains("_my-repo.cconf"),
+            "Path should end with hash_repo-name.cconf: {path}"
+        );
+    }
+
+    #[mononoke::test]
+    fn test_make_repo_spec_file_path_slash_in_name() {
+        let path = make_repo_spec_file_path("org/project/repo");
+        assert!(
+            path.contains("_org_project_repo.cconf"),
+            "Slashes should be replaced with underscores: {path}"
+        );
+    }
+
+    #[mononoke::test]
+    fn test_make_repo_spec_file_path_no_collision_slash_vs_underscore() {
+        let path1 = make_repo_spec_file_path("org/repo");
+        let path2 = make_repo_spec_file_path("org_repo");
+        assert_ne!(
+            path1, path2,
+            "Repos differing only in '/' vs '_' must produce different paths"
+        );
+    }
+
+    #[mononoke::test]
+    fn test_make_repo_spec_file_path_deterministic() {
+        let path1 = make_repo_spec_file_path("test/repo");
+        let path2 = make_repo_spec_file_path("test/repo");
+        assert_eq!(path1, path2, "Hash-based path should be deterministic");
+    }
+
+    #[mononoke::test]
+    fn test_make_repo_spec_file_path_different_repos_may_differ() {
+        let path1 = make_repo_spec_file_path("repo-alpha");
+        let path2 = make_repo_spec_file_path("repo-beta");
+        assert_ne!(
+            path1, path2,
+            "Different repos should produce different paths"
+        );
+    }
+
+    #[mononoke::test]
+    fn test_to_repo_spec_tshirt_size_mapping() {
+        assert_eq!(
+            to_repo_spec_tshirt_size(RepoSizeBucket::EXTRA_SMALL).unwrap(),
+            TShirtSize::SMALL
+        );
+        assert_eq!(
+            to_repo_spec_tshirt_size(RepoSizeBucket::SMALL).unwrap(),
+            TShirtSize::MEDIUM
+        );
+        assert_eq!(
+            to_repo_spec_tshirt_size(RepoSizeBucket::MEDIUM).unwrap(),
+            TShirtSize::MEDIUM
+        );
+        assert_eq!(
+            to_repo_spec_tshirt_size(RepoSizeBucket::LARGE).unwrap(),
+            TShirtSize::LARGE
+        );
+        assert_eq!(
+            to_repo_spec_tshirt_size(RepoSizeBucket::EXTRA_LARGE).unwrap(),
+            TShirtSize::HUGE
+        );
+    }
+
+    #[mononoke::test]
+    fn test_make_repo_spec_produces_valid_spec() {
+        let repo_id = RepositoryId::new(12345);
+        let request = thrift::RepoCreationRequest {
+            repo_name: "org/my-repo".to_string(),
+            size_bucket: RepoSizeBucket::SMALL,
+            ..Default::default()
+        };
+
+        let spec = make_repo_spec(&(repo_id, request)).expect("make_repo_spec should succeed");
+
+        assert_eq!(spec.repo_id, 12345);
+        assert_eq!(spec.repo_name, "org/my-repo");
+        assert!(spec.enabled);
+        assert!(!spec.readonly);
+        assert_eq!(
+            spec.default_commit_identity_scheme,
+            RawCommitIdentityScheme::GIT
+        );
+        assert_eq!(spec.t_shirt_size, TShirtSize::MEDIUM);
+        assert_eq!(spec.sharding_regions, ShardingRegions::BGM_ONLY_REGIONS);
+        assert_eq!(spec.tiers, vec!["gitimport", "gitimport_content", "scs"]);
+        assert!(
+            spec.repo_config.is_none(),
+            "New repos should have no custom config"
+        );
+        assert!(
+            spec.tier_overrides.is_none(),
+            "New repos should have no tier overrides"
+        );
+        assert!(
+            !spec.hipster_acl.is_empty(),
+            "hipster_acl should be derived from repo name"
         );
     }
 }
