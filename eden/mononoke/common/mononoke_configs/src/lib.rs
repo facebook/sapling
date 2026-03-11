@@ -27,12 +27,12 @@ use metaconfig_parser::StorageConfigs;
 use metaconfig_parser::config::configerator_config_handle;
 use metaconfig_parser::config::load_configs_from_raw;
 use metaconfig_parser::configerator_manifest_handle;
-use metaconfig_parser::configerator_repo_config_handle;
-use metaconfig_parser::parse_raw_repo_config;
+use metaconfig_parser::configerator_repo_spec_handle;
+use metaconfig_parser::parse_repo_spec;
 use metaconfig_types::ConfigInfo;
 use metaconfig_types::RepoConfig;
-use repos::RawRepoConfig;
 use repos::RawRepoConfigs;
+use repos::RepoSpec;
 use repos::TierManifest;
 use serde::Serialize;
 use sha2::Digest;
@@ -46,6 +46,7 @@ use tracing::trace;
 use tracing::warn;
 
 const LIVENESS_INTERVAL: u64 = 300;
+const CONFIGERATOR_TIER_PREFIX: &str = "configerator://scm/mononoke/repos/tiers/";
 type Swappable<T> = Arc<ArcSwap<T>>;
 
 define_stats! {
@@ -68,8 +69,12 @@ pub struct MononokeConfigs {
     maybe_config_handle: Option<ConfigHandle<RawRepoConfigs>>,
     // Per-repo split-loading fields
     maybe_manifest_handle: Option<ConfigHandle<TierManifest>>,
-    repo_handles: Arc<RwLock<HashMap<String, ConfigHandle<RawRepoConfig>>>>,
+    repo_handles: Arc<RwLock<HashMap<String, ConfigHandle<RepoSpec>>>>,
     config_store: Option<ConfigStore>,
+    /// Tier name derived from the configerator config path.
+    /// Used for resolving tier_overrides in RepoSpec configs during split-loading.
+    #[allow(dead_code)] // Stored for potential future use in load_repo_config_handle
+    tier_name: Option<String>,
 }
 
 impl MononokeConfigs {
@@ -86,6 +91,16 @@ impl MononokeConfigs {
         let storage_configs = Arc::new(ArcSwap::from_pointee(storage_configs));
         let repo_configs = metaconfig_parser::load_repo_configs(&config_path, config_store)?;
         let repo_configs = Arc::new(ArcSwap::from_pointee(repo_configs));
+
+        // Derive tier name from the configerator config path.
+        // Configerator paths follow the pattern:
+        //   configerator://scm/mononoke/repos/tiers/{tier_name}
+        let tier_name = config_path
+            .as_ref()
+            .to_str()
+            .and_then(|p| p.strip_prefix(CONFIGERATOR_TIER_PREFIX))
+            .filter(|t| !t.is_empty())
+            .map(|t| t.to_owned());
         let update_receivers = Arc::new(ArcSwap::from_pointee(vec![]));
         let maybe_config_handle = configerator_config_handle(config_path.as_ref(), config_store)?;
         let config_info = if let Some(config_handle) = maybe_config_handle.as_ref() {
@@ -123,6 +138,14 @@ impl MononokeConfigs {
             .map(|path| configerator_manifest_handle(path, config_store))
             .transpose()?;
 
+        // Validate: split-loading (manifest) requires a tier name for resolving
+        // tier_overrides in RepoSpec configs.
+        if maybe_manifest_handle.is_some() && tier_name.is_none() {
+            anyhow::bail!(
+                "tier_name is required when split-loading is enabled (manifest_path is set)"
+            );
+        }
+
         let repo_handles = Arc::new(RwLock::new(HashMap::new()));
 
         // If manifest is available, pre-load handles for non-deep-sharded repos.
@@ -134,7 +157,7 @@ impl MononokeConfigs {
                 .iter()
                 .filter(|e| !e.is_deep_sharded)
                 .map(|entry| {
-                    let handle = configerator_repo_config_handle(&entry.config_path, config_store)?;
+                    let handle = configerator_repo_spec_handle(&entry.config_path, config_store)?;
                     Ok((entry.repo_name.clone(), handle))
                 })
                 .collect::<Result<Vec<_>>>()?;
@@ -153,10 +176,12 @@ impl MononokeConfigs {
                 update_receivers,
                 config_store,
             );
+            let tier = tier_name.clone();
             Some(runtime_handle.spawn(watch_manifest_and_repos(
                 manifest_handle.clone(),
                 repo_handles,
                 config_store,
+                tier,
                 repo_configs,
                 storage_configs,
                 update_receivers,
@@ -177,6 +202,7 @@ impl MononokeConfigs {
             maybe_manifest_handle,
             repo_handles,
             config_store: Some(config_store.clone()),
+            tier_name,
         })
     }
 
@@ -252,7 +278,7 @@ impl MononokeConfigs {
             .as_ref()
             .context("No config store available")?;
 
-        let handle = configerator_repo_config_handle(&entry.config_path, config_store)?;
+        let handle = configerator_repo_spec_handle(&entry.config_path, config_store)?;
         self.repo_handles
             .write()
             .map_err(|e| anyhow!("repo_handles lock poisoned: {}", e))?
@@ -357,7 +383,7 @@ struct RepoHandleSyncResult {
 /// handles for repos no longer in the manifest.
 fn sync_repo_handles(
     manifest: &TierManifest,
-    repo_handles: &RwLock<HashMap<String, ConfigHandle<RawRepoConfig>>>,
+    repo_handles: &RwLock<HashMap<String, ConfigHandle<RepoSpec>>>,
     config_store: &ConfigStore,
 ) -> Result<RepoHandleSyncResult> {
     let current_repos: HashSet<String> = repo_handles
@@ -379,8 +405,8 @@ fn sync_repo_handles(
         .repos
         .iter()
         .filter(|entry| !entry.is_deep_sharded && !current_repos.contains(&entry.repo_name))
-        .filter_map(|entry| {
-            match configerator_repo_config_handle(&entry.config_path, config_store) {
+        .filter_map(
+            |entry| match configerator_repo_spec_handle(&entry.config_path, config_store) {
                 Ok(handle) => {
                     info!("Added config handle for new repo: {}", entry.repo_name);
                     Some((entry.repo_name.clone(), handle))
@@ -390,8 +416,8 @@ fn sync_repo_handles(
                     STATS::refresh_failure_count.add_value(1);
                     None
                 }
-            }
-        })
+            },
+        )
         .collect();
 
     // Repos to remove
@@ -420,11 +446,16 @@ fn sync_repo_handles(
 /// previously managed but are no longer in the manifest are removed.
 fn parse_and_merge_repo_configs(
     manifest: &TierManifest,
-    repo_handles: &RwLock<HashMap<String, ConfigHandle<RawRepoConfig>>>,
+    repo_handles: &RwLock<HashMap<String, ConfigHandle<RepoSpec>>>,
+    tier_name: &str,
     current_configs: &RepoConfigs,
     previously_tracked: &HashSet<String>,
     manifest_repos: &HashSet<String>,
 ) -> Result<RepoConfigs> {
+    if tier_name.is_empty() {
+        anyhow::bail!("tier_name must not be empty for split-loading config resolution");
+    }
+
     let handles = repo_handles
         .read()
         .map_err(|e| anyhow!("repo_handles lock poisoned: {}", e))?
@@ -433,10 +464,10 @@ fn parse_and_merge_repo_configs(
 
     for entry in &manifest.repos {
         if let Some(handle) = handles.get(&entry.repo_name) {
-            let raw_config = handle.get();
-            match parse_raw_repo_config(
-                Arc::unwrap_or_clone(raw_config),
-                entry.repo_id,
+            let repo_spec = handle.get();
+            match parse_repo_spec(
+                Arc::unwrap_or_clone(repo_spec),
+                tier_name,
                 &manifest.storage,
             ) {
                 Ok(repo_config) => {
@@ -472,8 +503,9 @@ fn parse_and_merge_repo_configs(
 /// This is the split-loading equivalent of `watch_and_update`.
 async fn watch_manifest_and_repos(
     manifest_handle: ConfigHandle<TierManifest>,
-    repo_handles: Arc<RwLock<HashMap<String, ConfigHandle<RawRepoConfig>>>>,
+    repo_handles: Arc<RwLock<HashMap<String, ConfigHandle<RepoSpec>>>>,
     config_store: ConfigStore,
+    tier_name: Option<String>,
     repo_configs: Swappable<RepoConfigs>,
     storage_configs: Swappable<StorageConfigs>,
     update_receivers: Swappable<Vec<Arc<dyn ConfigUpdateReceiver>>>,
@@ -501,10 +533,19 @@ async fn watch_manifest_and_repos(
                         }
                     };
 
+                let tier = match tier_name.as_deref() {
+                    Some(t) => t,
+                    None => {
+                        error!("tier_name is required for split-loading but was not provided");
+                        STATS::refresh_failure_count.add_value(1);
+                        continue;
+                    }
+                };
                 let current = repo_configs.load();
                 let new_repo_configs = match parse_and_merge_repo_configs(
                     &new_manifest,
                     &repo_handles,
+                    tier,
                     &current,
                     &sync_result.previously_tracked,
                     &sync_result.manifest_repos,

@@ -37,6 +37,7 @@ use repos::RawRepoConfigs;
 use repos::RawRepoDefinition;
 use repos::RawRestrictedPathsConfig;
 use repos::RawStorageConfig;
+use repos::RepoSpec;
 use repos::TierManifest;
 
 use crate::convert::Convert;
@@ -277,6 +278,92 @@ pub fn parse_raw_repo_config(
             readonly: RepoReadOnly::ReadWrite,
             default_commit_identity_scheme: Default::default(),
             enable_git_bundle_uri: false,
+            acl_region_config: None,
+        },
+        named_storage_configs,
+    )
+}
+
+/// Creates a ConfigHandle for a repo's RepoSpec from a Configerator path.
+///
+/// Used in the direct RepoSpec consumption path where each repo has its own
+/// RepoSpec file and tier overrides are resolved at runtime.
+pub fn configerator_repo_spec_handle(
+    config_path: &str,
+    config_store: &ConfigStore,
+) -> Result<ConfigHandle<RepoSpec>> {
+    config_store.get_config_handle::<RepoSpec>(config_path.to_owned())
+}
+
+/// Merge a tier-specific override on top of a base RawRepoConfig.
+///
+/// For each field in the override, if it is set (not None/null), it replaces
+/// the corresponding field in the base. Unset fields in the override leave the
+/// base value unchanged.
+///
+/// Uses JSON-based merging to handle all fields generically, avoiding the need
+/// to enumerate all ~50 fields of RawRepoConfig. This matches the Python
+/// pipeline's merge semantics in repo_spec_processing.cinc.
+fn merge_raw_repo_config(
+    base: RawRepoConfig,
+    tier_override: &RawRepoConfig,
+) -> Result<RawRepoConfig> {
+    let mut base_json = serde_json::to_value(&base)?;
+    let override_json = serde_json::to_value(tier_override)?;
+
+    if let (serde_json::Value::Object(base_map), serde_json::Value::Object(override_map)) =
+        (&mut base_json, override_json)
+    {
+        for (key, value) in override_map {
+            if !value.is_null() {
+                base_map.insert(key, value);
+            }
+        }
+    }
+
+    serde_json::from_value(base_json).context("Failed to deserialize merged RawRepoConfig")
+}
+
+/// Parse a RepoSpec into a RepoConfig for a specific tier.
+///
+/// Resolves tier_overrides by merging the tier-specific partial config on top
+/// of the base repo_config. Uses the RepoSpec's identity fields (hipster_acl,
+/// enabled, readonly, etc.) instead of hardcoded defaults.
+///
+/// `named_storage_configs` typically comes from `TierManifest.storage`.
+pub fn parse_repo_spec(
+    repo_spec: RepoSpec,
+    tier_name: &str,
+    named_storage_configs: &HashMap<String, RawStorageConfig>,
+) -> Result<RepoConfig> {
+    let base_config = repo_spec.repo_config.unwrap_or_default();
+    let resolved_config = match repo_spec.tier_overrides {
+        Some(ref overrides) => match overrides.get(tier_name) {
+            Some(tier_override) => merge_raw_repo_config(base_config, tier_override)?,
+            None => base_config,
+        },
+        None => base_config,
+    };
+
+    let readonly = if repo_spec.readonly {
+        RepoReadOnly::ReadOnly("Set by config option".to_string())
+    } else {
+        RepoReadOnly::ReadWrite
+    };
+
+    let default_commit_identity_scheme = Some(repo_spec.default_commit_identity_scheme)
+        .convert()?
+        .unwrap_or_default();
+
+    build_repo_config(
+        resolved_config,
+        RepoMetadata {
+            repoid: RepositoryId::new(repo_spec.repo_id),
+            enabled: repo_spec.enabled,
+            hipster_acl: Some(repo_spec.hipster_acl).filter(|acl| !acl.is_empty()),
+            readonly,
+            default_commit_identity_scheme,
+            enable_git_bundle_uri: repo_spec.enable_git_bundle_uri.unwrap_or(false),
             acl_region_config: None,
         },
         named_storage_configs,
@@ -2239,5 +2326,255 @@ mod test {
 
         let repo_config = repo_config_handle.get();
         assert_eq!(repo_config.storage_config, Some("main_storage".to_string()));
+    }
+
+    /// Helper to construct a minimal valid RawStorageConfig for tests.
+    fn test_raw_storage_config() -> RawStorageConfig {
+        use repos::RawBlobstoreConfig;
+        use repos::RawBlobstoreDisabled;
+        use repos::RawDbLocal;
+        use repos::RawMetadataConfig;
+
+        RawStorageConfig {
+            metadata: RawMetadataConfig::local(RawDbLocal {
+                local_db_path: "/tmp/test_db".to_string(),
+            }),
+            blobstore: RawBlobstoreConfig::disabled(RawBlobstoreDisabled {}),
+            ephemeral_blobstore: None,
+            mutable_blobstore: RawBlobstoreConfig::disabled(RawBlobstoreDisabled {}),
+        }
+    }
+
+    #[mononoke::test]
+    fn test_merge_raw_repo_config_override_replaces_set_fields() {
+        // Base config has storage_config set
+        let base = RawRepoConfig {
+            storage_config: Some("base_storage".to_string()),
+            ..Default::default()
+        };
+
+        // Override sets a different storage_config and adds a phabricator_callsign
+        let tier_override = RawRepoConfig {
+            storage_config: Some("override_storage".to_string()),
+            phabricator_callsign: Some("TEST".to_string()),
+            ..Default::default()
+        };
+
+        let merged = merge_raw_repo_config(base, &tier_override).expect("merge should succeed");
+
+        assert_eq!(
+            merged.storage_config,
+            Some("override_storage".to_string()),
+            "Override should replace base storage_config"
+        );
+        assert_eq!(
+            merged.phabricator_callsign,
+            Some("TEST".to_string()),
+            "Override should add phabricator_callsign"
+        );
+    }
+
+    #[mononoke::test]
+    fn test_merge_raw_repo_config_null_fields_preserve_base() {
+        let base = RawRepoConfig {
+            storage_config: Some("base_storage".to_string()),
+            phabricator_callsign: Some("BASE_CALLSIGN".to_string()),
+            ..Default::default()
+        };
+
+        // Override only sets storage_config, leaves phabricator_callsign as None
+        let tier_override = RawRepoConfig {
+            storage_config: Some("override_storage".to_string()),
+            ..Default::default()
+        };
+
+        let merged = merge_raw_repo_config(base, &tier_override).expect("merge should succeed");
+
+        assert_eq!(
+            merged.storage_config,
+            Some("override_storage".to_string()),
+            "Override should replace storage_config"
+        );
+        assert_eq!(
+            merged.phabricator_callsign,
+            Some("BASE_CALLSIGN".to_string()),
+            "Null override field should preserve base value"
+        );
+    }
+
+    #[mononoke::test]
+    fn test_merge_raw_repo_config_empty_override() {
+        let base = RawRepoConfig {
+            storage_config: Some("base_storage".to_string()),
+            phabricator_callsign: Some("CALLSIGN".to_string()),
+            ..Default::default()
+        };
+
+        // Completely empty override should preserve all base fields
+        let tier_override = RawRepoConfig::default();
+
+        let merged = merge_raw_repo_config(base, &tier_override).expect("merge should succeed");
+
+        assert_eq!(merged.storage_config, Some("base_storage".to_string()));
+        assert_eq!(merged.phabricator_callsign, Some("CALLSIGN".to_string()));
+    }
+
+    #[mononoke::test]
+    fn test_parse_repo_spec_basic() {
+        use repos::RawCommitIdentityScheme;
+        use repos::RepoSpec;
+
+        let named_storage = hashmap! {
+            "test_storage".to_string() => test_raw_storage_config(),
+        };
+
+        let repo_spec = RepoSpec {
+            repo_id: 42,
+            repo_name: "test/repo".to_string(),
+            hipster_acl: "acl.test.repo".to_string(),
+            enabled: true,
+            readonly: false,
+            default_commit_identity_scheme: RawCommitIdentityScheme::GIT,
+            enable_git_bundle_uri: Some(true),
+            tiers: vec!["scs".to_string()],
+            repo_config: Some(RawRepoConfig {
+                storage_config: Some("test_storage".to_string()),
+                ..Default::default()
+            }),
+            tier_overrides: None,
+            ..Default::default()
+        };
+
+        let result =
+            parse_repo_spec(repo_spec, "scs", &named_storage).expect("parse should succeed");
+
+        assert_eq!(result.repoid, RepositoryId::new(42));
+        assert!(result.enabled);
+        assert_eq!(result.hipster_acl, Some("acl.test.repo".to_string()));
+        assert_eq!(result.readonly, RepoReadOnly::ReadWrite);
+        assert_eq!(
+            result.default_commit_identity_scheme,
+            CommitIdentityScheme::GIT
+        );
+    }
+
+    #[mononoke::test]
+    fn test_parse_repo_spec_with_tier_overrides() {
+        use repos::RawCommitIdentityScheme;
+        use repos::RepoSpec;
+
+        let named_storage = hashmap! {
+            "test_storage".to_string() => test_raw_storage_config(),
+        };
+
+        let repo_spec = RepoSpec {
+            repo_id: 100,
+            repo_name: "test/overridden".to_string(),
+            hipster_acl: "acl.test.overridden".to_string(),
+            enabled: true,
+            readonly: false,
+            default_commit_identity_scheme: RawCommitIdentityScheme::GIT,
+            enable_git_bundle_uri: None,
+            tiers: vec!["scs".to_string(), "gitimport".to_string()],
+            repo_config: Some(RawRepoConfig {
+                storage_config: Some("test_storage".to_string()),
+                phabricator_callsign: Some("BASE".to_string()),
+                ..Default::default()
+            }),
+            tier_overrides: Some(hashmap! {
+                "scs".to_string() => RawRepoConfig {
+                    phabricator_callsign: Some("SCS_OVERRIDE".to_string()),
+                    ..Default::default()
+                },
+            }),
+            ..Default::default()
+        };
+
+        // Parse for the "scs" tier — should get the overridden callsign
+        let scs_result = parse_repo_spec(repo_spec.clone(), "scs", &named_storage)
+            .expect("parse for scs should succeed");
+
+        // Parse for the "gitimport" tier — no override, should get base callsign
+        let gitimport_result = parse_repo_spec(repo_spec.clone(), "gitimport", &named_storage)
+            .expect("parse for gitimport should succeed");
+
+        // SCS tier should use the overridden callsign
+        assert_eq!(
+            scs_result.phabricator_callsign,
+            Some("SCS_OVERRIDE".to_string()),
+            "SCS tier should get the overridden callsign"
+        );
+
+        // Gitimport should preserve base callsign
+        assert_eq!(
+            gitimport_result.phabricator_callsign,
+            Some("BASE".to_string()),
+            "Gitimport tier should preserve base callsign"
+        );
+    }
+
+    #[mononoke::test]
+    fn test_parse_repo_spec_readonly() {
+        use repos::RawCommitIdentityScheme;
+        use repos::RepoSpec;
+
+        let named_storage = hashmap! {
+            "test_storage".to_string() => test_raw_storage_config(),
+        };
+
+        let repo_spec = RepoSpec {
+            repo_id: 200,
+            repo_name: "test/readonly".to_string(),
+            hipster_acl: "acl.test.readonly".to_string(),
+            enabled: false,
+            readonly: true,
+            default_commit_identity_scheme: RawCommitIdentityScheme::GIT,
+            tiers: vec!["scs".to_string()],
+            repo_config: Some(RawRepoConfig {
+                storage_config: Some("test_storage".to_string()),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        let result =
+            parse_repo_spec(repo_spec, "scs", &named_storage).expect("parse should succeed");
+
+        assert!(!result.enabled, "enabled should come from RepoSpec");
+        assert_eq!(
+            result.readonly,
+            RepoReadOnly::ReadOnly("Set by config option".to_string()),
+            "readonly=true should produce ReadOnly"
+        );
+    }
+
+    #[mononoke::test]
+    fn test_parse_repo_spec_no_repo_config() {
+        use repos::RawCommitIdentityScheme;
+        use repos::RepoSpec;
+
+        let named_storage = hashmap! {
+            "test_storage".to_string() => test_raw_storage_config(),
+        };
+
+        // RepoSpec with no repo_config (uses default RawRepoConfig)
+        let repo_spec = RepoSpec {
+            repo_id: 300,
+            repo_name: "test/default".to_string(),
+            hipster_acl: "acl.test.default".to_string(),
+            enabled: true,
+            readonly: false,
+            default_commit_identity_scheme: RawCommitIdentityScheme::GIT,
+            tiers: vec!["scs".to_string()],
+            repo_config: None,
+            ..Default::default()
+        };
+
+        // This should fail because default RawRepoConfig has no storage_config
+        let result = parse_repo_spec(repo_spec, "scs", &named_storage);
+        assert!(
+            result.is_err(),
+            "RepoSpec with no repo_config should fail (missing storage_config)"
+        );
     }
 }
