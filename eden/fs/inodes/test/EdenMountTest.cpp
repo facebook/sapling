@@ -556,6 +556,13 @@ class ChownTest : public ::testing::Test {
   }
 
   void TearDown() override {
+    // Close the FUSE channel and wait for preparePostFsChannelCompletion to
+    // complete before destroying the EdenMount. Otherwise, the detached future
+    // in preparePostFsChannelCompletion accesses a freed EdenMount.
+    fuse_->close();
+    edenMount_->getFsChannelCompletionFuture().within(kTimeout).getVia(
+        testMount_->getServerExecutor().get());
+    edenMount_.reset();
     testMount_.reset();
   }
 

@@ -764,6 +764,17 @@ TEST_P(RawOverlayTest, inode_numbers_not_reused_after_unclean_shutdown) {
   EXPECT_EQ(5_ino, overlay->getMaxInodeNumber());
 }
 
+TEST_P(RawOverlayTest, close_overlay_after_removing_overlay_dir) {
+  auto path = testDir_.path();
+  boost::filesystem::remove_all(path);
+
+  // Should not crash.
+  overlay->close();
+  overlay = nullptr;
+
+  boost::filesystem::create_directory(path);
+}
+
 TEST_P(RawOverlayTest, inode_numbers_after_takeover) {
   auto ino2 = overlay->allocateInodeNumber();
   EXPECT_EQ(2_ino, ino2);
