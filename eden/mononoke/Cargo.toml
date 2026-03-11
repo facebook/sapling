@@ -215,6 +215,7 @@ members = [
   "features/commit_cloud",
   "features/commit_cloud/helpers",
   "features/commit_cloud/types",
+  "features/commit_compare",
   "features/commit_rewriting/backsyncer",
   "features/commit_rewriting/backsyncer/features/commit_rewriting/backsyncer_cmd",
   "features/commit_rewriting/bookmark_renaming",

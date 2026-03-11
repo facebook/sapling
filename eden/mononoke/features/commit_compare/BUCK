@@ -1,0 +1,14 @@
+load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
+
+oncall("scm_server_infra")
+
+rust_library(
+    name = "commit_compare",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:futures",
+        "//eden/mononoke/mononoke_api:mononoke_api",
+        "//eden/mononoke/scs/if:source_control-rust",
+    ],
+)
