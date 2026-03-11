@@ -12,6 +12,7 @@
 #include <folly/SharedMutex.h>
 #include <folly/Synchronized.h>
 #include <folly/ThreadLocal.h>
+#include <folly/concurrency/memory/AtomicReadMostlyMainPtr.h>
 #include <folly/concurrency/memory/ReadMostlySharedPtr.h>
 #include <folly/coro/safe/NowTask.h>
 #include <folly/futures/Future.h>
@@ -1172,6 +1173,12 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   class JournalDiffCallback;
 
   /**
+   * Convert a FsChannelPtr (unique_ptr with FsChannelDeleter) to a
+   * shared_ptr and store it in channel_.
+   */
+  void setChannel(FsChannelPtr channel);
+
+  /**
    * Attempt to transition from expected -> newState.
    * If the current state is expected then the state is set to newState
    * and returns boolean.
@@ -1484,7 +1491,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   std::shared_ptr<TraceBus<InodeTraceEvent>> inodeTraceBus_;
   TraceSubscriptionHandle<InodeTraceEvent> inodeTraceHandle_;
 
-  FsChannelPtr channel_;
+  folly::AtomicReadMostlyMainPtr<FsChannel> channel_;
 
   /**
    * The clock.  This is also available as serverState_->getClock().

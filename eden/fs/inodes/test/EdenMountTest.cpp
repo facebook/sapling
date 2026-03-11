@@ -1202,10 +1202,6 @@ TEST(EdenMount, waitForPendingWritesDuringDestroy) {
   rootInode.reset();
   mount.reset();
 
-  // After destroy, bgThread is still paused at the fault before channel_
-  // access. Check whether destroy() nulled channel_.
-  // Pre-fix: channel_ (unique_ptr) is NOT nulled by destroy().
-  // Post-fix (D95870053): destroy() stores nullptr in channel_.
   bool channelNullAfterDestroy = (rawMount->getFsChannel() == nullptr);
 
   faultInjector.removeFault("waitForPendingWrites", ".*");
@@ -1214,8 +1210,7 @@ TEST(EdenMount, waitForPendingWritesDuringDestroy) {
   bgThread.join();
   shutdownBlocker.allowShutdownToComplete();
 
-  // FIXME(D95870053): After fix, change to EXPECT_TRUE.
-  EXPECT_FALSE(channelNullAfterDestroy);
+  EXPECT_TRUE(channelNullAfterDestroy);
 }
 
 namespace {

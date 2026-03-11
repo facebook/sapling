@@ -966,6 +966,9 @@ ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathsToObjectIds(
 
 void EdenMount::destroy() {
   auto oldState = state_.exchange(State::DESTROYING, std::memory_order_acq_rel);
+  // Clear channel_ so concurrent readers see null and bail out.
+  // Existing ReadMostlySharedPtr holders keep the channel alive.
+  channel_.store(std::shared_ptr<FsChannel>());
   XLOGF(DBG4, "attempting to destroy EdenMount {}", getPath());
   switch (oldState) {
     case State::UNINITIALIZED:
@@ -1071,12 +1074,15 @@ folly::SemiFuture<folly::Unit> EdenMount::unmount(UnmountOptions options) {
       mountingUnmountingState->fsChannelMountPromise->getFuture();
   mountingUnmountingState.unlock();
 
+  auto channelHolder =
+      std::make_shared<folly::ReadMostlySharedPtr<FsChannel>>();
   return std::move(mountFuture)
-      .thenTry([this, options](Try<Unit>&& mountResult) {
+      .thenTry([this, options, channelHolder](Try<Unit>&& mountResult) {
         if (mountResult.hasException()) {
           return folly::makeSemiFuture();
         }
-        if (!channel_) {
+        auto ch = channel_.load();
+        if (!ch) {
           throw std::runtime_error(
               "attempting to unmount() an EdenMount without an FsChannel");
         }
@@ -1089,18 +1095,25 @@ folly::SemiFuture<folly::Unit> EdenMount::unmount(UnmountOptions options) {
         // is in the process of starting? Or can we assume that
         // mountResult.hasException() above covers that case?
 
-        return channel_->unmount(options);
+        // Keep channel alive until the unmount future completes.
+        *channelHolder = std::move(ch);
+        return (*channelHolder)->unmount(options);
       })
-      .thenTry([this](Try<Unit>&& result) noexcept -> folly::Future<Unit> {
-        auto unmountState = mountingUnmountingState_.wlock();
-        XDCHECK(unmountState->fsChannelUnmountPromise.has_value());
-        folly::SharedPromise<folly::Unit>* unsafeUnmountPromise =
-            &*unmountState->fsChannelUnmountPromise;
-        unmountState.unlock();
+      .thenTry(
+          [this,
+           channelHolder](Try<Unit>&& result) noexcept -> folly::Future<Unit> {
+            // Release the channel reference now that unmount has completed.
+            channelHolder->reset();
 
-        unsafeUnmountPromise->setTry(Try<Unit>{result});
-        return folly::makeFuture<folly::Unit>(std::move(result));
-      });
+            auto unmountState = mountingUnmountingState_.wlock();
+            XDCHECK(unmountState->fsChannelUnmountPromise.has_value());
+            folly::SharedPromise<folly::Unit>* unsafeUnmountPromise =
+                &*unmountState->fsChannelUnmountPromise;
+            unmountState.unlock();
+
+            unsafeUnmountPromise->setTry(Try<Unit>{result});
+            return folly::makeFuture<folly::Unit>(std::move(result));
+          });
 }
 
 const shared_ptr<UnboundedQueueExecutor>& EdenMount::getServerThreadPool()
@@ -1141,16 +1154,16 @@ InodeMetadataTable* EdenMount::getInodeMetadataTable() const {
 #endif
 
 FsChannel* EdenMount::getFsChannel() const {
-  return channel_.get();
+  return channel_.load().get();
 }
 
 Nfsd3* FOLLY_NULLABLE EdenMount::getNfsdChannel() const {
-  return dynamic_cast<Nfsd3*>(channel_.get());
+  return dynamic_cast<Nfsd3*>(channel_.load().get());
 }
 
 FuseChannel* FOLLY_NULLABLE EdenMount::getFuseChannel() const {
 #ifndef _WIN32
-  return dynamic_cast<FuseChannel*>(channel_.get());
+  return dynamic_cast<FuseChannel*>(channel_.load().get());
 #else
   return nullptr;
 #endif
@@ -1158,14 +1171,23 @@ FuseChannel* FOLLY_NULLABLE EdenMount::getFuseChannel() const {
 
 PrjfsChannel* FOLLY_NULLABLE EdenMount::getPrjfsChannel() const {
 #ifdef _WIN32
-  return dynamic_cast<PrjfsChannel*>(channel_.get());
+  return dynamic_cast<PrjfsChannel*>(channel_.load().get());
 #else
   return nullptr;
 #endif
 }
 
+void EdenMount::setChannel(FsChannelPtr channel) {
+  if (channel) {
+    channel_.store(
+        std::shared_ptr<FsChannel>(channel.release(), FsChannelDeleter{}));
+  } else {
+    channel_.store(std::shared_ptr<FsChannel>());
+  }
+}
+
 void EdenMount::setTestFsChannel(FsChannelPtr channel) {
-  channel_ = std::move(channel);
+  setChannel(std::move(channel));
 }
 
 bool EdenMount::isNfsdChannel() const {
@@ -1220,11 +1242,12 @@ EdenMount::ReadLocation EdenMount::getReadLocationForMaterializedFiles() const {
 }
 
 ProcessAccessLog& EdenMount::getProcessAccessLog() const {
-  if (!channel_) {
+  auto ch = channel_.load();
+  if (!ch) {
     EDEN_BUG() << "cannot call getProcessAccessLog() before "
                   "EdenMount has started or unmounted";
   }
-  return channel_->getProcessAccessLog();
+  return ch->getProcessAccessLog();
 }
 
 const AbsolutePath& EdenMount::getPath() const {
@@ -1411,20 +1434,21 @@ ImmediateFuture<folly::Unit> EdenMount::waitForPendingWrites() const {
   return serverState_->getFaultInjector()
       .checkAsync("waitForPendingWrites", "")
       .thenValue([this](auto&&) -> ImmediateFuture<folly::Unit> {
-        // TODO: This is a race condition since channel_ can be destroyed
-        // concurrently. We need to change EdenMount to never unset channel_.
-        if (channel_) {
-          return channel_->waitForPendingWrites();
+        // Snapshot the channel pointer. The ReadMostlySharedPtr keeps the
+        // channel alive for the duration of the call, even if the mount
+        // is being torn down concurrently.
+        auto ch = channel_.load();
+        if (ch) {
+          return ch->waitForPendingWrites().ensure([ch] {});
         }
         return folly::unit;
       });
 }
 
 folly::coro::now_task<folly::Unit> EdenMount::co_waitForPendingWrites() const {
-  // TODO: This is a race condition since channel_ can be destroyed
-  // concurrently. We need to change EdenMount to never unset channel_.
-  if (channel_) {
-    co_await channel_->waitForPendingWrites().semi();
+  auto ch = channel_.load();
+  if (ch) {
+    co_await ch->waitForPendingWrites().semi();
   }
   co_return folly::unit;
 }
@@ -1872,12 +1896,9 @@ void EdenMount::forgetStaleInodes() {
 
 ImmediateFuture<folly::Unit> EdenMount::flushInvalidations() {
   XLOG(DBG4, "waiting for inode invalidations to complete");
-  // TODO: If it's possible for flushInvalidations() and unmount() to run
-  // concurrently, accessing the channel_ pointer here is racy. It's deallocated
-  // by unmount(). We need to either guarantee these functions can never run
-  // concurrently or use some sort of lock or atomic pointer.
-  if (auto* fsChannel = getFsChannel()) {
-    return fsChannel->completeInvalidations().thenValue([](folly::Unit) {
+  auto ch = channel_.load();
+  if (ch) {
+    return ch->completeInvalidations().thenValue([ch](folly::Unit) {
       XLOG(DBG4, "finished processing inode invalidations");
     });
   } else {
@@ -2470,13 +2491,13 @@ folly::Future<folly::Unit> EdenMount::fsChannelMount(bool readOnly) {
                       }
 
                       mountPromise->setValue();
-                      channel_ = std::move(channel_2);
+                      setChannel(std::move(channel_2));
                       return makeFuture(folly::unit);
                     });
 #else
                 (void)options;
                 mountPromise->setValue();
-                channel_ = std::move(channel);
+                setChannel(std::move(channel));
                 return folly::makeFutureWith([]() { NOT_IMPLEMENTED(); });
 #endif
               });
@@ -2511,7 +2532,7 @@ folly::Future<folly::Unit> EdenMount::fsChannelMount(bool readOnly) {
               // need to handle the case where mount was cancelled.
 
               mountPromise->setValue();
-              channel_ = std::move(channel).value();
+              setChannel(std::move(channel).value());
               return makeFuture(folly::unit);
             });
 #else
@@ -2556,8 +2577,8 @@ folly::Future<folly::Unit> EdenMount::fsChannelMount(bool readOnly) {
                   }
 
                   mountPromise->setValue();
-                  channel_ =
-                      makeFuseChannel(this, std::move(fuseDevice).value());
+                  setChannel(
+                      makeFuseChannel(this, std::move(fuseDevice).value()));
                   return folly::makeFuture(folly::unit);
                 });
 #endif
@@ -2596,11 +2617,12 @@ folly::Future<folly::Unit> EdenMount::startFsChannel(bool readOnly) {
            return fsChannelMount(readOnly);
          })
       .thenValue([this](auto&&) -> folly::Future<folly::Unit> {
-        if (!channel_) {
+        auto ch = channel_.load();
+        if (!ch) {
           return EDEN_BUG_FUTURE(folly::Unit)
               << "EdenMount::channel_ is not constructed";
         }
-        return channel_->initialize().thenValue(
+        return ch->initialize().thenValue(
             [this](FsChannel::StopFuture mountCompleteFuture) {
               fsChannelInitSuccessful(std::move(mountCompleteFuture));
             });
@@ -2682,7 +2704,7 @@ void EdenMount::takeoverFuse(FuseChannelData takeoverData) {
     auto channel = makeFuseChannel(this, std::move(takeoverData.fd));
     auto fuseCompleteFuture =
         channel->initializeFromTakeover(takeoverData.connInfo);
-    channel_ = std::move(channel);
+    setChannel(std::move(channel));
     fsChannelInitSuccessful(std::move(fuseCompleteFuture));
   } catch (const std::exception&) {
     transitionToFsChannelInitializationErrorState();
@@ -2705,7 +2727,7 @@ folly::Future<folly::Unit> EdenMount::takeoverNfs(NfsChannelData takeoverData) {
           auto& channel = mountInfo.nfsd;
 
           auto stopFuture = channel->getStopFuture();
-          this->channel_ = std::move(channel);
+          this->setChannel(std::move(channel));
           this->fsChannelInitSuccessful(std::move(stopFuture));
         })
         .thenError([this](auto&& err) {
