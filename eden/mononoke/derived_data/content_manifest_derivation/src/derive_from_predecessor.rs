@@ -28,7 +28,7 @@ use crate::derive::empty_directory;
 pub(crate) async fn inner_derive_from_predecessor(
     ctx: &CoreContext,
     blobstore: &Arc<dyn KeyedBlobstore>,
-    restricted_paths: &Arc<restricted_paths::RestrictedPaths>,
+    restricted_paths: &Arc<restricted_paths_common::RestrictedPathsConfigBased>,
     predecessor: mononoke_types::FsnodeId,
     chunk_size: usize,
 ) -> Result<Option<ContentManifestId>> {

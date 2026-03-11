@@ -41,10 +41,10 @@ use mononoke_types::content_manifest::ContentManifestFile;
 use mononoke_types::content_manifest::ContentManifestRollupData;
 use mononoke_types::sharded_map_v2::LoadableShardedMapV2Node;
 use mononoke_types::sharded_map_v2::ShardedMapV2Node;
-use restricted_paths::ManifestId;
-use restricted_paths::ManifestType;
-use restricted_paths::RestrictedPathManifestIdEntry;
-use restricted_paths::RestrictedPaths;
+use restricted_paths_common::ManifestId;
+use restricted_paths_common::ManifestType;
+use restricted_paths_common::RestrictedPathManifestIdEntry;
+use restricted_paths_common::RestrictedPathsConfigBased;
 
 use crate::ContentManifestDerivationError;
 use crate::RootContentManifestId;
@@ -150,7 +150,7 @@ pub(crate) async fn create_content_manifest_directory(
     ctx: CoreContext,
     blobstore: Arc<dyn KeyedBlobstore>,
     path: &MPath,
-    restricted_paths: &Arc<RestrictedPaths>,
+    restricted_paths: &Arc<RestrictedPathsConfigBased>,
     subentries: TreeInfoSubentries<
         ContentManifestId,
         ContentManifestFile,
@@ -193,26 +193,28 @@ pub(crate) async fn create_content_manifest_directory(
         Some("content_manifest_write"),
     )?;
 
-    if restricted_paths_enabled
-        && let Some(non_root_path) = path.clone().into_optional_non_root_path()
-        && restricted_paths.is_restricted_path(&non_root_path)
-    {
-        let entry = RestrictedPathManifestIdEntry::new(
-            ManifestType::ContentManifest,
-            ManifestId::from(&id.blake2().into_inner()),
-            RepoPath::DirectoryPath(non_root_path),
-        )?;
+    if restricted_paths_enabled {
+        if let Some(non_root_path) = path.clone().into_optional_non_root_path() {
+            let is_restricted = restricted_paths.is_restricted_path(&non_root_path);
+            if is_restricted {
+                let entry = RestrictedPathManifestIdEntry::new(
+                    ManifestType::ContentManifest,
+                    ManifestId::from(&id.blake2().into_inner()),
+                    RepoPath::DirectoryPath(non_root_path),
+                )?;
 
-        if let Err(e) = restricted_paths
-            .manifest_id_store()
-            .add_entry(&ctx, entry)
-            .await
-        {
-            tracing::warn!(
-                path = %path,
-                error = %e,
-                "Failed to track restricted path"
-            );
+                if let Err(e) = restricted_paths
+                    .manifest_id_store()
+                    .add_entry(&ctx, entry)
+                    .await
+                {
+                    tracing::warn!(
+                        path = %path,
+                        error = %e,
+                        "Failed to track restricted path"
+                    );
+                }
+            }
         }
     }
 
