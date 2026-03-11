@@ -1325,6 +1325,13 @@ Do you want to run `eden mount %s` instead?"""
         since = datetime.datetime.fromtimestamp(since_in_seconds)
         return now - since
 
+    def get_uptime(self) -> datetime.timedelta:
+        now = datetime.datetime.now()
+        with self.get_thrift_client(timeout=3) as client:
+            since_in_seconds = client.aliveSince()
+        since = datetime.datetime.fromtimestamp(since_in_seconds)
+        return now - since
+
     def do_uptime(self, pretty: bool, out: Optional[IO[bytes]] = None) -> None:
         if out is None:
             out = sys.stdout.buffer
