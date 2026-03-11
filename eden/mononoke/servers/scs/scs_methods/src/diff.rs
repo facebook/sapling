@@ -11,6 +11,7 @@ use context::CoreContext;
 use diff_service_client::DiffInput;
 use diff_service_client::DiffServiceClient;
 use diff_service_client::RepoDiffServiceClient;
+use diff_service_if_clients::errors::CommitCompareError;
 use diff_service_if_clients::errors::DiffHunksError;
 use diff_service_if_clients::errors::DiffUnifiedError;
 use diff_service_if_clients::errors::DiffUnifiedHeaderlessError;
@@ -31,6 +32,7 @@ use mononoke_api::UnifiedDiffMode;
 use mononoke_api::headerless_unified_diff;
 use mononoke_types::NonRootMPath;
 use scs_errors::ServiceError;
+use source_control as thrift;
 
 // Retry configuration for transient diff service errors
 const DIFF_SERVICE_RETRY_BASE_DELAY: Duration = Duration::from_secs(1);
@@ -80,13 +82,22 @@ impl DiffServiceError for MetadataDiffError {
     }
 }
 
+impl DiffServiceError for CommitCompareError {
+    fn request_error(&self) -> Option<&diff_service_if::RequestError> {
+        match self {
+            Self::ex(req_err) => Some(req_err),
+            _ => None,
+        }
+    }
+}
+
 /// Check if an error from the diff service is transient and should be retried.
 /// This checks for errors marked as transient by the diff service (e.g., repo not found
 /// during shard reallocation, repo initialization, etc.).
 ///
 /// This function works with any diff service error type (DiffUnifiedError,
-/// DiffUnifiedHeaderlessError, DiffHunksError, MetadataDiffError)
-/// since they all throw the same RequestError exception type.
+/// DiffUnifiedHeaderlessError, DiffHunksError, MetadataDiffError,
+/// CommitCompareError) since they all throw the same RequestError exception type.
 fn is_transient_diff_error<E: DiffServiceError>(e: &E) -> bool {
     if let Some(request_error) = e.request_error() {
         matches!(
@@ -253,6 +264,73 @@ impl<'a> DiffRouter<'a> {
         } else {
             Ok(path_context.metadata_diff(ctx, false).await?)
         }
+    }
+
+    /// Check if remote commit_compare should be used for this repo.
+    /// Uses a separate JK from file-level diffs for independent rollout.
+    pub fn should_use_remote_commit_compare(&self, repo_name: &str) -> bool {
+        // Gate 1: CLI flag must be enabled
+        if !self.diff_options.diff_remotely {
+            return false;
+        }
+
+        // Gate 2: Check JK - this is the kill switch in production
+        match justknobs::eval("scm/mononoke:remote_commit_compare", None, Some(repo_name)) {
+            Ok(true) => {
+                // JK explicitly enabled - allow remote commit_compare
+                true
+            }
+            Ok(false) => {
+                // JK explicitly disabled - this is the kill switch, always block
+                false
+            }
+            Err(_) => {
+                // JK not configured (e.g., in integration tests)
+                // Fall back to checking if remote_diff_config is present,
+                // which indicates explicit test configuration
+                self.remote_diff_config.is_some()
+            }
+        }
+    }
+
+    /// Forward a commit_compare request to the remote diff_service.
+    pub async fn remote_commit_compare(
+        &self,
+        ctx: &CoreContext,
+        repo_name: &str,
+        commit_id: thrift::CommitId,
+        params: thrift::CommitCompareParams,
+    ) -> Result<thrift::CommitCompareResponse, ServiceError> {
+        let client = self.create_diff_service_client(repo_name)?;
+        let repo_client = RepoDiffServiceClient::new(repo_name.to_string(), client);
+
+        let (response, _attempts) = retry(
+            |attempt| {
+                let repo_client = repo_client.clone();
+                let commit_id = commit_id.clone();
+                let params = params.clone();
+
+                async move {
+                    if attempt > 1 {
+                        tracing::info!(
+                            repo_name = %repo_name,
+                            attempt = attempt,
+                            "Retrying diff service commit_compare call"
+                        );
+                    }
+
+                    repo_client.commit_compare(ctx, commit_id, params).await
+                }
+            },
+            DIFF_SERVICE_RETRY_BASE_DELAY,
+        )
+        .exponential_backoff(DIFF_SERVICE_BACKOFF_MULTIPLIER)
+        .max_attempts(DIFF_SERVICE_MAX_RETRY_ATTEMPTS)
+        .retry_if(|_attempt, e| is_transient_diff_error(e))
+        .await
+        .map_err(convert_diff_service_error)?;
+
+        Ok(response)
     }
 
     async fn remote_headerless_diff(

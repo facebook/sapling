@@ -849,6 +849,21 @@ impl SourceControlServiceImpl {
         commit: thrift::CommitSpecifier,
         params: thrift::CommitCompareParams,
     ) -> Result<thrift::CommitCompareResponse, scs_errors::ServiceError> {
+        // Check if we should route to the remote diff_service
+        let repo_name = &commit.repo.name;
+        let remote_diff_config = self
+            .configs
+            .repo_configs()
+            .repos
+            .get(repo_name)
+            .and_then(|config| config.remote_diff_config.clone());
+        let diff_router = self.diff_router(remote_diff_config.as_ref());
+        if diff_router.should_use_remote_commit_compare(repo_name) {
+            return diff_router
+                .remote_commit_compare(&ctx, repo_name, commit.id.clone(), params)
+                .await;
+        }
+
         let (base_changeset, other_changeset) = match &params.other_commit_id {
             Some(id) => {
                 let (mut base_changeset, other_changeset) = self
