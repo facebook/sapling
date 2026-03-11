@@ -1343,7 +1343,7 @@ Do you want to run `eden mount %s` instead?"""
             out.write(running_details.encode())
             return
 
-        uptime = self.get_uptime_legacy()  # Check if uptime is negative?
+        uptime = self.get_uptime()  # Check if uptime is negative?
         days = uptime.days
         hours, remainder = divmod(uptime.seconds, 3600)
         minutes, seconds = divmod(remainder, 60)
