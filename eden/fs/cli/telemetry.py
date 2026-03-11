@@ -23,13 +23,10 @@ from typing import Dict, List, Optional, Set, Tuple, Type, Union
 from . import hostname, version
 
 try:
-    from eden.fs.cli.facebook.hostcaps import get_devserver_info, get_ondemand_info
+    from eden.fs.cli.facebook.hostcaps import get_fb_info
 except ImportError:
     # in OSS define a stub
-    def get_ondemand_info() -> Optional[Dict[str, str]]:
-        return None
-
-    def get_devserver_info() -> Optional[Dict[str, str]]:
+    def get_fb_info() -> Optional[Dict[str, str]]:
         return None
 
 
@@ -189,14 +186,9 @@ class TelemetryLogger(abc.ABC):
                     elif key == "invocation_id":
                         sample.add_string("agentic_fingerprint_invocation_id", value)
 
-        od_info = get_ondemand_info()
-        if od_info:
-            for key, value in od_info.items():
-                sample.add_string(key, value)
-
-        ds_info = get_devserver_info()
-        if ds_info:
-            for key, value in ds_info.items():
+        fb_info = get_fb_info()
+        if fb_info:
+            for key, value in fb_info.items():
                 sample.add_string(key, value)
 
         sample.add_fields(**kwargs)
