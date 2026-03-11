@@ -398,6 +398,11 @@ ImmediateFuture<folly::Unit> PrjfsChannelInner::waitForPendingNotifications() {
   return dispatcher_->waitForPendingNotifications();
 }
 
+folly::coro::now_task<folly::Unit>
+PrjfsChannelInner::co_waitForPendingNotifications() {
+  co_return co_await dispatcher_->co_waitForPendingNotifications();
+}
+
 HRESULT PrjfsChannelInner::startEnumeration(
     std::shared_ptr<PrjfsRequestContext> context,
     const PRJ_CALLBACK_DATA* callbackData,
@@ -1651,7 +1656,7 @@ folly::coro::now_task<folly::Unit> PrjfsChannel::co_waitForPendingWrites() {
         fmt::format(
             FMT_STRING("The mount at {} has been stopped"), mountPath_));
   }
-  co_await inner->waitForPendingNotifications().semi();
+  co_await inner->co_waitForPendingNotifications();
   co_return folly::unit;
 }
 

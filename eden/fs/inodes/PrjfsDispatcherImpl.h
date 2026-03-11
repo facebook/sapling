@@ -91,6 +91,8 @@ class PrjfsDispatcherImpl : public PrjfsDispatcher {
 
   ImmediateFuture<folly::Unit> waitForPendingNotifications() override;
 
+  folly::coro::now_task<folly::Unit> co_waitForPendingNotifications() override;
+
   ImmediateFuture<bool> isFinalSymlinkPathDirectory(
       RelativePath symlink,
       string_view targetStringView,

@@ -187,6 +187,8 @@ class PrjfsChannelInner {
 
   ImmediateFuture<folly::Unit> waitForPendingNotifications();
 
+  folly::coro::now_task<folly::Unit> co_waitForPendingNotifications();
+
   /**
    * Start a directory listing.
    *

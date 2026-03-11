@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <folly/coro/safe/NowTask.h>
 #include <folly/executors/SequencedExecutor.h>
 #include <folly/portability/Windows.h>
 
@@ -235,6 +236,12 @@ class PrjfsDispatcher {
    * Wait for all received notifications to complete.
    */
   virtual ImmediateFuture<folly::Unit> waitForPendingNotifications() = 0;
+
+  /**
+   * Wait for all received notifications to complete.
+   */
+  virtual folly::coro::now_task<folly::Unit>
+  co_waitForPendingNotifications() = 0;
 
  private:
   EdenStatsPtr stats_;

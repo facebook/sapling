@@ -1469,6 +1469,39 @@ PrjfsDispatcherImpl::waitForPendingNotifications() {
           });
 }
 
+folly::coro::now_task<folly::Unit>
+PrjfsDispatcherImpl::co_waitForPendingNotifications() {
+  // Since the executor is a SequencedExecutor, and the fileNotification
+  // function blocks in the executor, the body of the lambda will only be
+  // executed when all previously enqueued notifications have completed.
+  //
+  // Note that this synchronization only guarantees that writes from a the
+  // calling application thread have completed when the future complete. Writes
+  // made by a concurrent process or a different thread may still be in
+  // ProjectedFS queue and therefore may still be pending when the future
+  // complete. This is expected and therefore not a bug.
+  //
+  // We use folly::via to guarantee scheduling onto the notification executor's
+  // queue. This ensures the lambda runs after all previously enqueued
+  // notifications have completed. co_viaIfAsync cannot be used here because it
+  // may skip the reschedule if already on the executor, which would defeat the
+  // purpose of waiting for pending notifications.
+  folly::stop_watch<std::chrono::microseconds> timer{};
+  try {
+    co_await folly::via(
+        getNotificationExecutor(), [this, timer = std::move(timer)]() {
+          this->mount_->getStats()->addDuration(
+              &PrjfsStats::filesystemSync, timer.elapsed());
+          this->mount_->getStats()->increment(
+              &PrjfsStats::filesystemSyncSuccessful);
+        });
+  } catch (...) {
+    this->mount_->getStats()->increment(&PrjfsStats::filesystemSyncFailure);
+    throw;
+  }
+  co_return folly::unit;
+}
+
 } // namespace facebook::eden
 
 #endif
