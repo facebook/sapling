@@ -14,6 +14,7 @@
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
 #include <chrono>
+#include <thread>
 
 #include "eden/common/utils/StatTimes.h"
 #include "eden/fs/inodes/TreeInode.h"
@@ -515,15 +516,23 @@ INSTANTIATE_TEST_SUITE_P(
       return info.param ? "Coroutines" : "Futures";
     });
 
-TEST(FileInode, truncatingDuringLoad) {
-  FakeTreeBuilder builder;
-  builder.setFiles({{"notready.txt", "Contents not ready.\n"}});
+class FileInodeDuringLoadTest : public ::testing::TestWithParam<bool> {
+ protected:
+  void SetUp() override {
+    FakeTreeBuilder builder;
+    builder.setFiles({{"notready.txt", "Contents not ready.\n"}});
+    mount_.initialize(builder, /*startReady=*/false);
+
+    if (GetParam()) {
+      enableCoroutinesConfig(mount_);
+    }
+  }
 
   TestMount mount_;
-  mount_.initialize(builder, false);
+};
 
+TEST_P(FileInodeDuringLoadTest, truncatingDuringLoad) {
   auto inode = mount_.getFileInode("notready.txt");
-
   auto backingStore = mount_.getBackingStore();
   auto storedBlob = backingStore->getStoredBlob(*inode->getObjectId());
 
@@ -546,6 +555,41 @@ TEST(FileInode, truncatingDuringLoad) {
   // handles the state correctly.
   storedBlob->setReady();
 }
+
+TEST_P(FileInodeDuringLoadTest, concurrentReadAllDuringBlobLoading) {
+  auto contents = "Contents not ready.\n"_sp;
+  auto inode = mount_.getFileInode("notready.txt");
+  auto storedBlob =
+      mount_.getBackingStore()->getStoredBlob(*inode->getObjectId());
+
+  // Drive onto executor so coroutines actually start and suspend at co_await
+  // (coroutine path is lazy; futures path is eager but works either way).
+  auto readAllFuture1 = inode->readAll(ObjectFetchContext::getNullContext())
+                            .semi()
+                            .via(mount_.getServerExecutor().get());
+  mount_.drainServerExecutor();
+  EXPECT_FALSE(readAllFuture1.isReady());
+
+  auto readAllFuture2 = inode->readAll(ObjectFetchContext::getNullContext())
+                            .semi()
+                            .via(mount_.getServerExecutor().get());
+  mount_.drainServerExecutor();
+  EXPECT_FALSE(readAllFuture2.isReady());
+
+  storedBlob->setReady();
+  mount_.drainServerExecutor();
+
+  EXPECT_EQ(contents, std::move(readAllFuture1).get(0ms));
+  EXPECT_EQ(contents, std::move(readAllFuture2).get(0ms));
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    FileInodeDuringLoadTestVariants,
+    FileInodeDuringLoadTest,
+    ::testing::Bool(),
+    [](const ::testing::TestParamInfo<bool>& info) {
+      return info.param ? "Coroutines" : "Futures";
+    });
 
 TEST(FileInode, readDuringLoad) {
   // Build a tree to test against, but do not mark the state ready yet
