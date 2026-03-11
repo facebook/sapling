@@ -229,6 +229,9 @@ impl GitStore {
     /// Report `git fetch` errors as `NetworkError`.
     pub fn fetch_objs(&self, ids: &[HgId]) -> Result<()> {
         let mut missing_ids = ids.iter().filter(|id| {
+            if id.is_null() {
+                return false;
+            }
             let id = hgid_to_git_oid(**id);
             // For performance, disable refresh here.
             !self.odb.exists_ext(id, git2::OdbLookupFlags::NO_REFRESH)
