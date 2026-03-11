@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <folly/coro/safe/NowTask.h>
 #include "eden/common/utils/ImmediateFuture.h"
 #include "eden/fs/privhelper/PrivHelper.h"
 #include "eden/fs/utils/FsChannelTypes.h"
@@ -124,6 +125,9 @@ class FsChannel {
    * will complete when all pending write operations have been observed.
    */
   [[nodiscard]] virtual ImmediateFuture<folly::Unit> waitForPendingWrites() = 0;
+
+  [[nodiscard]] virtual folly::coro::now_task<folly::Unit>
+  co_waitForPendingWrites() = 0;
 
   /**
    * During checkout or other Thrift calls that modify the filesystem, those

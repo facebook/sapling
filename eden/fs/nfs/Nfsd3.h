@@ -217,6 +217,10 @@ class Nfsd3 final : public FsChannel {
     return folly::unit;
   }
 
+  folly::coro::now_task<folly::Unit> co_waitForPendingWrites() override {
+    co_return folly::unit;
+  }
+
   /*
    * Request that the kernel invalidate its cached data for the specified
    * paths+modes.

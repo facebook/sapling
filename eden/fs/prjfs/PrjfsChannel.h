@@ -557,6 +557,8 @@ class PrjfsChannel : public FsChannel {
    */
   ImmediateFuture<folly::Unit> waitForPendingWrites() override;
 
+  folly::coro::now_task<folly::Unit> co_waitForPendingWrites() override;
+
   /**
    * Background correctness checkers might notice that EdenFS has an incorrect
    * view of a file. This can be used to make Eden pickup any changes it missed

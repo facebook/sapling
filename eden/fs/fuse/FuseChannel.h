@@ -564,6 +564,10 @@ class FuseChannel final : public FsChannel {
     return folly::unit;
   }
 
+  folly::coro::now_task<folly::Unit> co_waitForPendingWrites() override {
+    co_return folly::unit;
+  }
+
   std::shared_ptr<Notifier> getNotifier() const {
     return notifier_;
   }

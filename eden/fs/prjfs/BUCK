@@ -33,6 +33,8 @@ cpp_library(
         "//eden/fs/telemetry:stats",
         "//eden/fs/utils:eden_error",
         "//eden/fs/utils:static_assert",
+        "//folly/coro:invoke",
+        "//folly/coro/safe:now_task",
         "//folly/executors:global_executor",
         "//folly/executors:serial_executor",
         "//folly/logging:logging",

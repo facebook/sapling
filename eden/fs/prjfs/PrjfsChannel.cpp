@@ -9,6 +9,8 @@
 
 #include "eden/fs/prjfs/PrjfsChannel.h"
 #include <fmt/format.h>
+#include <folly/coro/Invoke.h>
+#include <folly/coro/safe/NowTask.h>
 #include <folly/logging/xlog.h>
 
 #include "eden/common/telemetry/StructuredLogger.h"
@@ -1623,6 +1625,15 @@ folly::Future<FsChannel::StopFuture> PrjfsChannel::initialize() {
 }
 
 ImmediateFuture<folly::Unit> PrjfsChannel::waitForPendingWrites() {
+  auto config = config_->getEdenConfig();
+  if (config->enableCoroutinesPhase1.getValue()) {
+    // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+    return ImmediateFuture{folly::coro::co_invoke([this]() {
+                             // @lint-ignore CLANGTIDY facebook-hte-Deprecated
+                             return co_waitForPendingWrites().as_unsafe();
+                           }).semi()};
+  }
+
   auto inner = getInner();
   if (!inner) {
     return makeImmediateFuture<folly::Unit>(std::runtime_error(
@@ -1631,6 +1642,17 @@ ImmediateFuture<folly::Unit> PrjfsChannel::waitForPendingWrites() {
   }
   return inner->waitForPendingNotifications().ensure(
       [inner = std::move(inner)] {});
+}
+
+folly::coro::now_task<folly::Unit> PrjfsChannel::co_waitForPendingWrites() {
+  auto inner = getInner();
+  if (!inner) {
+    throw std::runtime_error(
+        fmt::format(
+            FMT_STRING("The mount at {} has been stopped"), mountPath_));
+  }
+  co_await inner->waitForPendingNotifications().semi();
+  co_return folly::unit;
 }
 
 ImmediateFuture<folly::Unit> PrjfsChannel::matchEdenViewOfFileToFS(

@@ -1448,7 +1448,7 @@ ImmediateFuture<folly::Unit> EdenMount::waitForPendingWrites() const {
 folly::coro::now_task<folly::Unit> EdenMount::co_waitForPendingWrites() const {
   auto ch = channel_.load();
   if (ch) {
-    co_await ch->waitForPendingWrites().semi();
+    co_await ch->co_waitForPendingWrites();
   }
   co_return folly::unit;
 }
