@@ -780,6 +780,10 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
       RelativePathPiece path,
       const ObjectFetchContextPtr& context) const;
 
+  folly::coro::now_task<VirtualInode> co_getVirtualInode(
+      RelativePathPiece path,
+      const ObjectFetchContextPtr& context) const;
+
   /**
    * Check out the specified commit.
    *

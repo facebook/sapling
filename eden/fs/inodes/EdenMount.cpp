@@ -1410,11 +1410,33 @@ class VirtualInodeLookupProcessor {
 
 } // namespace
 
-ImmediateFuture<VirtualInode> EdenMount::getVirtualInode(
+folly::coro::now_task<VirtualInode> EdenMount::co_getVirtualInode(
     RelativePathPiece path,
     const ObjectFetchContextPtr& context) const {
   auto rootInode = static_cast<InodePtr>(getRootInode());
+  auto processor = std::make_unique<VirtualInodeLookupProcessor>(
+      path, getObjectStore(), context.copy());
+  co_return co_await processor->next(VirtualInode(std::move(rootInode))).semi();
+}
 
+ImmediateFuture<VirtualInode> EdenMount::getVirtualInode(
+    RelativePathPiece path,
+    const ObjectFetchContextPtr& context) const {
+  if (getEdenConfig()->enableCoroutinesPhase1.getValue()) {
+    return ImmediateFuture{
+        // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+        folly::coro::co_invoke(
+            [this](auto&&... args) {
+              return co_getVirtualInode(std::forward<decltype(args)>(args)...)
+                  // @lint-ignore CLANGTIDY facebook-hte-Deprecated
+                  .as_unsafe();
+            },
+            path.copy(),
+            context.copy())
+            .semi()};
+  }
+
+  auto rootInode = static_cast<InodePtr>(getRootInode());
   auto processor = std::make_unique<VirtualInodeLookupProcessor>(
       path, getObjectStore(), context.copy());
   auto future = processor->next(VirtualInode(std::move(rootInode)));

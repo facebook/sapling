@@ -5915,7 +5915,7 @@ EdenServiceHandler::co_getFileContentImpl(
   ScmBlobOrError blobOrError;
   try {
     auto& edenMount = mountHandle.getEdenMount();
-    auto inode = co_await edenMount.getVirtualInode(path, fetchContext).semi();
+    auto inode = co_await edenMount.co_getVirtualInode(path, fetchContext);
     auto& objectStore = mountHandle.getObjectStorePtr();
     auto blob = co_await inode.getBlob(objectStore, fetchContext).semi();
     // Return error if the binary size exceeds 2GB limit.
