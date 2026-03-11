@@ -1318,7 +1318,7 @@ Do you want to run `eden mount %s` instead?"""
         with self.get_thrift_client(timeout=3) as client:
             return dict(client.getRegexExportedValues("^build_.*"))
 
-    def get_uptime(self) -> datetime.timedelta:
+    def get_uptime_legacy(self) -> datetime.timedelta:
         now = datetime.datetime.now()
         with self.get_thrift_client_legacy(timeout=3) as client:
             since_in_seconds = client.aliveSince()
@@ -1336,7 +1336,7 @@ Do you want to run `eden mount %s` instead?"""
             out.write(running_details.encode())
             return
 
-        uptime = self.get_uptime()  # Check if uptime is negative?
+        uptime = self.get_uptime_legacy()  # Check if uptime is negative?
         days = uptime.days
         hours, remainder = divmod(uptime.seconds, 3600)
         minutes, seconds = divmod(remainder, 60)
