@@ -948,4 +948,34 @@ ImmediateFuture<std::string> VirtualInode::getBlob(
       });
 }
 
+folly::coro::now_task<std::string> VirtualInode::co_getBlob(
+    const std::shared_ptr<ObjectStore>& objectStore,
+    const ObjectFetchContextPtr& fetchContext) const {
+  // std::get_if is used instead of match because coroutine lambda captures are
+  // stored in the lambda object, not the coroutine frame. If the coroutine
+  // suspends, match destroys the lambda temporaries, and resuming accesses
+  // dangling captures.
+  static_assert(
+      std::variant_size_v<detail::VariantVirtualInode> == 4,
+      "New variant type added to VariantVirtualInode - update co_getBlob");
+  if (auto* inode = std::get_if<InodePtr>(&variant_)) {
+    auto content = co_await inode->asFilePtr()->readAll(fetchContext).semi();
+    co_return std::move(content);
+  } else if (
+      auto* entry =
+          std::get_if<UnmaterializedUnloadedBlobDirEntry>(&variant_)) {
+    auto blob =
+        co_await objectStore->co_getBlob(entry->getObjectId(), fetchContext);
+    co_return blob->asString();
+  } else if (auto* treeEntry = std::get_if<TreeEntry>(&variant_)) {
+    auto blob = co_await objectStore->co_getBlob(
+        treeEntry->getObjectId(), fetchContext);
+    co_return blob->asString();
+  } else {
+    // TreePtr - directories cannot be read as blobs
+    co_yield folly::coro::co_error(
+        std::system_error(EISDIR, std::generic_category()));
+  }
+}
+
 } // namespace facebook::eden

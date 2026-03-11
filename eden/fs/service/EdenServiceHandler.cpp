@@ -5917,7 +5917,7 @@ EdenServiceHandler::co_getFileContentImpl(
     auto& edenMount = mountHandle.getEdenMount();
     auto inode = co_await edenMount.co_getVirtualInode(path, fetchContext);
     auto& objectStore = mountHandle.getObjectStorePtr();
-    auto blob = co_await inode.getBlob(objectStore, fetchContext).semi();
+    auto blob = co_await inode.co_getBlob(objectStore, fetchContext);
     // Return error if the binary size exceeds 2GB limit.
     // Enforced by CompactProtocolWriter in the Thrift
     // https://github.com/facebook/fbthrift/blob/main/thrift/lib/cpp2/protocol/CompactProtocol-inl.h

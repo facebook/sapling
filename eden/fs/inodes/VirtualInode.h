@@ -219,6 +219,10 @@ class VirtualInode {
       const std::shared_ptr<ObjectStore>& objectStore,
       const ObjectFetchContextPtr& fetchContext) const;
 
+  folly::coro::now_task<std::string> co_getBlob(
+      const std::shared_ptr<ObjectStore>& objectStore,
+      const ObjectFetchContextPtr& fetchContext) const;
+
  private:
   /**
    * Helper function for getChildrenAttributes
