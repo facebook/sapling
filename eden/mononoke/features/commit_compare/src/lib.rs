@@ -8,3 +8,4 @@
 pub mod commit_compare_path;
 pub mod conversions;
 pub mod identity;
+pub mod operations;
