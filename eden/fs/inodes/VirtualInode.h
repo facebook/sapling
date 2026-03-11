@@ -9,6 +9,8 @@
 
 #include <sys/stat.h>
 
+#include <folly/coro/safe/NowTask.h>
+
 #include "eden/common/utils/ImmediateFuture.h"
 #include "eden/common/utils/RefPtr.h"
 #include "eden/fs/inodes/InodePtr.h"
@@ -107,6 +109,19 @@ class VirtualInode {
    * object in the ObjectStore.
    */
   ImmediateFuture<VirtualInode> getOrFindChild(
+      PathComponentPiece childName,
+      RelativePathPiece path,
+      const std::shared_ptr<ObjectStore>& objectStore,
+      const ObjectFetchContextPtr& fetchContext) const;
+
+  /**
+   * Get the VirtualInode object for a child of this directory.
+   *
+   * Unlike TreeInode::getOrLoadChild, this method avoids loading the child's
+   * inode if it is not already loaded, instead falling back to looking up the
+   * object in the ObjectStore.
+   */
+  folly::coro::now_task<VirtualInode> co_getOrFindChild(
       PathComponentPiece childName,
       RelativePathPiece path,
       const std::shared_ptr<ObjectStore>& objectStore,

@@ -897,6 +897,32 @@ ImmediateFuture<VirtualInode> VirtualInode::getOrFindChild(
       [&](const TreeEntry&) { return notDirectory(); });
 }
 
+folly::coro::now_task<VirtualInode> VirtualInode::co_getOrFindChild(
+    PathComponentPiece childName,
+    RelativePathPiece path,
+    const std::shared_ptr<ObjectStore>& objectStore,
+    const ObjectFetchContextPtr& fetchContext) const {
+  if (!isDirectory()) {
+    co_yield folly::coro::co_error(PathError(ENOTDIR, path));
+  }
+
+  // Use std::get_if instead of match to avoid potential issues with
+  // coroutine lambdas and std::visit
+  if (auto* inode = std::get_if<InodePtr>(&variant_)) {
+    co_return co_await inode->asTreePtr()
+        ->getOrFindChild(childName, fetchContext, false)
+        .semi();
+  } else if (auto* tree = std::get_if<TreePtr>(&variant_)) {
+    co_return co_await getOrFindChildHelper(
+        *tree, childName, path, objectStore, fetchContext)
+        .semi();
+  } else {
+    // These represent files in VirtualInode, and can't be descended
+    co_yield folly::coro::co_error(PathError(
+        ENOTDIR, path, std::string_view{"variant is of unhandled type"}));
+  }
+}
+
 ImmediateFuture<std::string> VirtualInode::getBlob(
     const std::shared_ptr<ObjectStore>& objectStore,
     const ObjectFetchContextPtr& fetchContext) const {

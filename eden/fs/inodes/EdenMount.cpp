@@ -1418,9 +1418,8 @@ class VirtualInodeLookupProcessor {
     }
     // There are path components left, recurse looking for the next child
     auto childName = *iter_++;
-    auto entry = co_await inodeTreeEntry
-                     .getOrFindChild(childName, path_, objectStore_, context_)
-                     .semi();
+    auto entry = co_await inodeTreeEntry.co_getOrFindChild(
+        childName, path_, objectStore_, context_);
     co_return co_await co_next(std::move(entry));
   }
 
@@ -1440,8 +1439,7 @@ folly::coro::now_task<VirtualInode> EdenMount::co_getVirtualInode(
   auto rootInode = static_cast<InodePtr>(getRootInode());
   auto processor = std::make_unique<VirtualInodeLookupProcessor>(
       path, getObjectStore(), context.copy());
-  auto result = co_await processor->co_next(VirtualInode(std::move(rootInode)));
-  co_return result;
+  co_return co_await processor->co_next(VirtualInode(std::move(rootInode)));
 }
 
 ImmediateFuture<VirtualInode> EdenMount::getVirtualInode(
