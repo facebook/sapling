@@ -519,6 +519,9 @@ enum MetadataDiffFileContentType {
 
   /// File content includes NUL bytes, thus is likely to be binary
   BINARY = 3,
+
+  /// File is a Git LFS pointer (content is stored externally)
+  LFS_POINTER = 4,
 }
 
 enum FileGeneratedStatus {
