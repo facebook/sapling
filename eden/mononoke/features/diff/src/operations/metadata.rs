@@ -479,15 +479,21 @@ pub async fn metadata(
 #[cfg(test)]
 mod tests {
 
+    use blobstore::Loadable;
     use fbinit::FacebookInit;
     use mononoke_macros::mononoke;
+    use mononoke_types::FileType;
+    use mononoke_types::GitLfs;
+    use repo_blobstore::RepoBlobstoreRef;
     use test_repo_factory;
     use tests_utils::BasicTestRepo;
     use tests_utils::CreateCommitContext;
 
     use super::*;
     use crate::types::DiffInputChangesetPath;
+    use crate::types::DiffInputContent;
     use crate::types::DiffSingleInput;
+    use crate::types::LfsPointer as DiffLfsPointer;
 
     async fn init_test_repo(ctx: &CoreContext) -> Result<BasicTestRepo, DiffError> {
         let repo = test_repo_factory::build_empty(ctx.fb)
@@ -1170,6 +1176,272 @@ mod tests {
         assert!(metadata_diff.lines_count.is_none(), "Binary files should not have line counts");
         assert_eq!(metadata_diff.base_file_info.content_type, Some(DiffContentType::Binary));
         assert_eq!(metadata_diff.other_file_info.content_type, Some(DiffContentType::Binary));
+
+        Ok(())
+    }
+
+    async fn init_test_repo_with_lfs(ctx: &CoreContext) -> Result<BasicTestRepo, DiffError> {
+        let mut factory =
+            test_repo_factory::TestRepoFactory::new(ctx.fb).map_err(DiffError::internal)?;
+        factory.with_config_override(|config| {
+            config.git_configs.git_lfs_interpret_pointers = true;
+        });
+        let repo = factory.build().await.map_err(DiffError::internal)?;
+        Ok(repo)
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_metadata_lfs_changeset_path(fb: FacebookInit) -> Result<(), DiffError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = init_test_repo_with_lfs(&ctx).await?;
+
+        // Create commits with LFS-tracked binary content.
+        // With git_lfs_interpret_pointers enabled, the actual content is stored
+        // but the file change is marked as an LFS pointer.
+        let base_content = b"binary\x00lfs\x01content\x02base".as_slice();
+        let other_content = b"binary\x00lfs\x01content\x02other".as_slice();
+
+        let base_cs = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file_with_type_and_lfs(
+                "large_file.bin",
+                base_content,
+                FileType::Regular,
+                GitLfs::canonical_pointer(),
+            )
+            .commit()
+            .await?;
+
+        let other_cs = CreateCommitContext::new(&ctx, &repo, vec![base_cs])
+            .add_file_with_type_and_lfs(
+                "large_file.bin",
+                other_content,
+                FileType::Regular,
+                GitLfs::canonical_pointer(),
+            )
+            .commit()
+            .await?;
+
+        let base_input = DiffSingleInput::ChangesetPath(DiffInputChangesetPath {
+            changeset_id: base_cs,
+            path: create_non_root_path("large_file.bin")?,
+            replacement_path: None,
+        });
+        let other_input = DiffSingleInput::ChangesetPath(DiffInputChangesetPath {
+            changeset_id: other_cs,
+            path: create_non_root_path("large_file.bin")?,
+            replacement_path: None,
+        });
+
+        let metadata_diff =
+            metadata(&ctx, Some((base_input, &repo)), Some((other_input, &repo)), false).await?;
+
+        // Both sides should report LfsPointer content type instead of Binary
+        assert_eq!(
+            metadata_diff.base_file_info.content_type,
+            Some(DiffContentType::LfsPointer)
+        );
+        assert_eq!(
+            metadata_diff.other_file_info.content_type,
+            Some(DiffContentType::LfsPointer)
+        );
+
+        // LFS files should not have line counts (same as binary)
+        assert!(metadata_diff.lines_count.is_none());
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_metadata_lfs_file_creation(fb: FacebookInit) -> Result<(), DiffError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = init_test_repo_with_lfs(&ctx).await?;
+
+        // Create a base commit without the LFS file, then add it
+        let base_cs = CreateCommitContext::new_root(&ctx, &repo)
+            .commit()
+            .await?;
+
+        let other_cs = CreateCommitContext::new(&ctx, &repo, vec![base_cs])
+            .add_file_with_type_and_lfs(
+                "new_lfs_file.bin",
+                b"binary\x00lfs\x01new".as_slice(),
+                FileType::Regular,
+                GitLfs::canonical_pointer(),
+            )
+            .commit()
+            .await?;
+
+        let base_input = DiffSingleInput::ChangesetPath(DiffInputChangesetPath {
+            changeset_id: base_cs,
+            path: create_non_root_path("new_lfs_file.bin")?,
+            replacement_path: None,
+        });
+        let other_input = DiffSingleInput::ChangesetPath(DiffInputChangesetPath {
+            changeset_id: other_cs,
+            path: create_non_root_path("new_lfs_file.bin")?,
+            replacement_path: None,
+        });
+
+        let metadata_diff =
+            metadata(&ctx, Some((base_input, &repo)), Some((other_input, &repo)), false).await?;
+
+        // Base side doesn't exist
+        assert_eq!(metadata_diff.base_file_info.content_type, None);
+        assert_eq!(metadata_diff.base_file_info.file_type, None);
+
+        // Other side should be LfsPointer
+        assert_eq!(
+            metadata_diff.other_file_info.content_type,
+            Some(DiffContentType::LfsPointer)
+        );
+        assert_eq!(
+            metadata_diff.other_file_info.file_type,
+            Some(DiffFileType::Regular)
+        );
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_metadata_lfs_vs_non_lfs(fb: FacebookInit) -> Result<(), DiffError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = init_test_repo_with_lfs(&ctx).await?;
+
+        // Create a commit with both an LFS file and a normal text file
+        let cs = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file_with_type_and_lfs(
+                "lfs_file.bin",
+                b"binary\x00lfs\x01content".as_slice(),
+                FileType::Regular,
+                GitLfs::canonical_pointer(),
+            )
+            .add_file("normal_file.txt", "just plain text\n")
+            .commit()
+            .await?;
+
+        // Check LFS file is reported as LfsPointer
+        let lfs_input = DiffSingleInput::ChangesetPath(DiffInputChangesetPath {
+            changeset_id: cs,
+            path: create_non_root_path("lfs_file.bin")?,
+            replacement_path: None,
+        });
+
+        let lfs_metadata =
+            metadata(&ctx, None::<(DiffSingleInput, &BasicTestRepo)>, Some((lfs_input, &repo)), false).await?;
+        assert_eq!(
+            lfs_metadata.other_file_info.content_type,
+            Some(DiffContentType::LfsPointer)
+        );
+
+        // Check normal file is still reported as Text
+        let text_input = DiffSingleInput::ChangesetPath(DiffInputChangesetPath {
+            changeset_id: cs,
+            path: create_non_root_path("normal_file.txt")?,
+            replacement_path: None,
+        });
+
+        let text_metadata =
+            metadata(&ctx, None::<(DiffSingleInput, &BasicTestRepo)>, Some((text_input, &repo)), false).await?;
+        assert_eq!(
+            text_metadata.other_file_info.content_type,
+            Some(DiffContentType::Text)
+        );
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_metadata_lfs_content_input(fb: FacebookInit) -> Result<(), DiffError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = init_test_repo(&ctx).await?;
+
+        // Create a commit to get a valid ContentId in the blobstore
+        let cs = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("file.txt", "some text content\n")
+            .commit()
+            .await?;
+
+        // Get the content ID from the changeset
+        let changeset = cs
+            .load(&ctx, repo.repo_blobstore())
+            .await
+            .map_err(DiffError::internal)?;
+        let content_id = match changeset.file_changes_map().get(
+            &create_non_root_path("file.txt")?,
+        ) {
+            Some(mononoke_types::FileChange::Change(tracked)) => tracked.content_id(),
+            _ => panic!("Expected file change"),
+        };
+
+        // Test with Content input that has lfs_pointer set — should report LfsPointer
+        let lfs_input = DiffSingleInput::Content(DiffInputContent {
+            content_id,
+            path: Some(create_non_root_path("file.txt")?),
+            lfs_pointer: Some(DiffLfsPointer {
+                sha256: "abcdef1234567890".to_string(),
+                size: 1024,
+            }),
+        });
+
+        let metadata_diff =
+            metadata(&ctx, None::<(DiffSingleInput, &BasicTestRepo)>, Some((lfs_input, &repo)), false).await?;
+
+        assert_eq!(
+            metadata_diff.other_file_info.content_type,
+            Some(DiffContentType::LfsPointer)
+        );
+
+        // Test with Content input without lfs_pointer — should report Text
+        let text_input = DiffSingleInput::Content(DiffInputContent {
+            content_id,
+            path: Some(create_non_root_path("file.txt")?),
+            lfs_pointer: None,
+        });
+
+        let metadata_diff =
+            metadata(&ctx, None::<(DiffSingleInput, &BasicTestRepo)>, Some((text_input, &repo)), false).await?;
+
+        assert_eq!(
+            metadata_diff.other_file_info.content_type,
+            Some(DiffContentType::Text)
+        );
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_metadata_lfs_no_lfs_config(fb: FacebookInit) -> Result<(), DiffError> {
+        let ctx = CoreContext::test_mock(fb);
+        // Use a repo WITHOUT LFS enabled
+        let repo = init_test_repo(&ctx).await?;
+
+        // Create a commit with an LFS-marked file in a non-LFS repo.
+        // Without git_lfs_interpret_pointers, get_lfs_pointer() returns None
+        // so the content type falls through to normal analysis (Binary in this case).
+        let cs = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file_with_type_and_lfs(
+                "file.bin",
+                b"binary\x00content".as_slice(),
+                FileType::Regular,
+                GitLfs::canonical_pointer(),
+            )
+            .commit()
+            .await?;
+
+        let input = DiffSingleInput::ChangesetPath(DiffInputChangesetPath {
+            changeset_id: cs,
+            path: create_non_root_path("file.bin")?,
+            replacement_path: None,
+        });
+
+        let metadata_diff =
+            metadata(&ctx, None::<(DiffSingleInput, &BasicTestRepo)>, Some((input, &repo)), false).await?;
+
+        // Without LFS config, should fall through to Binary, not LfsPointer
+        assert_eq!(
+            metadata_diff.other_file_info.content_type,
+            Some(DiffContentType::Binary)
+        );
 
         Ok(())
     }
