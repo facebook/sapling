@@ -12,6 +12,7 @@ use std::hint::black_box;
 use minibench::bench;
 use minibench::elapsed;
 use types::RepoPathBuf;
+use vfs::FsFeatures;
 use vfs::PathAuditor;
 
 fn make_paths() -> Vec<(RepoPathBuf, bool)> {
@@ -44,7 +45,7 @@ fn main() {
     let paths = make_paths();
     for case_sensitive in [true, false] {
         bench(
-            format!("path audit (case sensitive={case_sensitive})"),
+            format!("path audit with fs (case sensitive={case_sensitive})"),
             || {
                 let dir = tempfile::tempdir().unwrap();
                 elapsed(|| {
@@ -57,6 +58,22 @@ fn main() {
                 })
             },
         );
+        bench(
+            format!("path audit without fs (case sensitive={case_sensitive})"),
+            || {
+                let mut fs_features = FsFeatures::empty();
+                if !case_sensitive {
+                    fs_features |= FsFeatures::CASE_INSENSITIVE;
+                }
+                elapsed(|| {
+                    for (path, expect_ok) in &paths {
+                        let result = vfs::audit_invalid_components(path.as_str(), fs_features);
+                        debug_assert_eq!(result.is_ok(), *expect_ok);
+                        let _ = black_box(result);
+                    }
+                })
+            },
+        )
     }
 }
 

@@ -181,7 +181,7 @@ fn valid_windows_component(component: &str, fs_features: FsFeatures) -> bool {
 ///
 /// It also checks that no trailing dots are part of the component and checks that shortnames
 /// on Windows are valid.
-fn audit_invalid_components(path: &str, fs_features: FsFeatures) -> Result<(), AuditError> {
+pub fn audit_invalid_components(path: &str, fs_features: FsFeatures) -> Result<(), AuditError> {
     let path: Cow<str> = if fs_features.contains(FsFeatures::CASE_INSENSITIVE) {
         Cow::Owned(path.to_lowercase())
     } else {
