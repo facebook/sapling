@@ -96,8 +96,8 @@ struct RepoIdentity {
     sniff_dot_dir_required_files: &'static [&'static str],
 
     /// Affects `sniff_root`. Lower number wins.
-    /// For example, `a/.sl` with priority 0 and `a/b/.git/sl` with priority 10,
-    /// `a/.sl` wins even if it's not the inner-most directory.
+    /// For example, `a/.git` with priority 0 and `a/b/.sl` with priority 10,
+    /// `a/.git` wins even if it's not the inner-most directory.
     sniff_root_priority: usize,
 
     /// If set, the initial cli_name must be part of this value for "sniff" to work.
@@ -397,7 +397,7 @@ const HG: Identity = Identity {
         config_repo_file: "hgrc",
         sniff_dot_dir: None,
         sniff_dot_dir_required_files: &["requires"],
-        sniff_root_priority: 0,
+        sniff_root_priority: 10,
         sniff_initial_cli_names: None,
         resolve_dot_dir_func: default_resolve_dot_dir_func,
     },
@@ -425,7 +425,7 @@ const SL: Identity = Identity {
         config_repo_file: "config",
         sniff_dot_dir: None,
         sniff_dot_dir_required_files: &["requires"],
-        sniff_root_priority: 0,
+        sniff_root_priority: 10,
         sniff_initial_cli_names: None,
         resolve_dot_dir_func: default_resolve_dot_dir_func,
     },
@@ -437,7 +437,9 @@ const SL_GIT: Identity = Identity {
         dot_dir: if cfg!(windows) { ".git\\sl" } else { ".git/sl" },
         sniff_dot_dir: Some(".git"),
         sniff_dot_dir_required_files: &[],
-        sniff_root_priority: 10, // lowest
+        // Highest priority: outer .git repo wins over inner .sl/.hg
+        // that may have been injected as file paths by git.
+        sniff_root_priority: 0,
         sniff_initial_cli_names: Some("sl"),
         resolve_dot_dir_func: dotgit::resolve_dot_dir_func,
         ..*SL.repo
@@ -1055,7 +1057,7 @@ mod test {
         let dir = tempfile::tempdir()?;
 
         // .test      (pri: 5)
-        // a/.sl      (pri: 0, highest)
+        // a/.sl      (pri: 10, lowest)
         // a/b/.test  (pri: 5)
         // a/b/c
 
@@ -1070,15 +1072,44 @@ mod test {
         fs::create_dir_all(dir_b.join(TEST.repo.sniff_dot_dir()))?;
         fs::create_dir_all(&dir_c)?;
 
+        // TEST (pri 5) wins over SL (pri 10) even though SL is inner.
         assert_eq!(sniff_root(dir)?.unwrap().1.repo, TEST.repo);
-        assert_eq!(sniff_root(&dir_c)?.unwrap().1.repo, SL.repo);
-        assert_eq!(sniff_root(&dir_b)?.unwrap().1.repo, SL.repo);
-        assert_eq!(sniff_root(&dir_a)?.unwrap().1.repo, SL.repo);
+        assert_eq!(sniff_root(&dir_c)?.unwrap().1.repo, TEST.repo);
+        assert_eq!(sniff_root(&dir_b)?.unwrap().1.repo, TEST.repo);
+        assert_eq!(sniff_root(&dir_a)?.unwrap().1.repo, TEST.repo);
 
         assert_eq!(sniff_dir(dir)?.unwrap().repo, TEST.repo);
         assert_eq!(sniff_dir(&dir_a)?.unwrap().repo, SL.repo);
         assert_eq!(sniff_dir(&dir_b)?.unwrap().repo, TEST.repo);
         assert!(sniff_dir(&dir_c)?.is_none());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_sniff_root_priority_sl_inside_git() -> Result<()> {
+        let dir = tempfile::tempdir()?;
+
+        // .test      (pri: 5)
+        // a/.git     (pri: 0, highest)
+        // a/b/.sl    (pri: 10, lowest)
+        // a/b/c
+
+        let dir = dir.path();
+        let dir_a = dir.join("a");
+        let dir_b = dir_a.join("b");
+        let dir_c = dir_b.join("c");
+
+        fs::create_dir_all(dir.join(TEST.repo.sniff_dot_dir()))?;
+        fs::create_dir_all(dir_a.join(SL_GIT.repo.sniff_dot_dir()))?;
+        write_required_files(&dir_a, SL_GIT);
+        fs::create_dir_all(dir_b.join(SL.repo.sniff_dot_dir()))?;
+        fs::create_dir_all(&dir_c)?;
+
+        // Must sniff as `.git` since `git checkout` can write `.sl` paths.
+        assert_eq!(sniff_root(&dir_c)?.unwrap().1.repo, SL_GIT.repo);
+        assert_eq!(sniff_root(&dir_b)?.unwrap().1.repo, SL_GIT.repo);
+        assert_eq!(sniff_root(&dir_a)?.unwrap().1.repo, SL_GIT.repo);
 
         Ok(())
     }
