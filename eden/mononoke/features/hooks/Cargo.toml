@@ -17,6 +17,7 @@ async-trait = "0.1.86"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bookmarks = { version = "0.1.0", path = "../../repo_attributes/bookmarks" }
 bytes = { version = "1.11.1", features = ["serde"] }
+chrono = { version = "0.4.44", features = ["clock", "serde", "std"], default-features = false }
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
 context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context" }
 derivation_queue_thrift = { version = "0.1.0", path = "../../repo_attributes/repo_derivation_queues/if" }
@@ -24,6 +25,7 @@ fancy-regex = "0.16.2"
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
+history_traversal = { version = "0.1.0", path = "../history_traversal" }
 hook_manager = { version = "0.1.0", path = "../../repo_attributes/hook_manager/hook_manager" }
 http = "1.4.0"
 http-body-util = "0.1.0"
