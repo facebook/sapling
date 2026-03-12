@@ -1,9 +1,5 @@
 load("@fbcode_macros//build_defs:python_testslide.bzl", "python_testslide")
 load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
-load(
-    "@fbcode_macros//build_defs:python_unittest_remote_gpu.bzl",
-    "python_unittest_remote_gpu",
-)
 load("@fbsource//tools/build_defs:testpilot_defs.bzl", "tpx_labels")
 load(":simple.bzl", "py_tests_and_libs")
 
@@ -121,21 +117,6 @@ python_testslide(
         ":simple",
         ":simple_base_module_mapped",
     ],
-)
-
-python_unittest_remote_gpu(
-    name = "re_gpu_test",
-    srcs = ["re_gpu_test.py"],
-    fail_if_no_gpu_used = False,  # legacy, do not use in new targets https://fburl.com/wiki/cg9kb3dk
-    deps = [],
-)
-
-python_unittest_remote_gpu(
-    name = "re_gpu_test_dynamic_listing",
-    srcs = ["re_gpu_test.py"],
-    fail_if_no_gpu_used = False,  # legacy, do not use in new targets https://fburl.com/wiki/cg9kb3dk
-    supports_static_listing = False,
-    deps = [],
 )
 
 python_unittest(
