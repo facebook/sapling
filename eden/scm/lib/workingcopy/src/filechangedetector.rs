@@ -248,7 +248,7 @@ fn compare_repo_bytes_to_disk(
                 }
             }
 
-            if let Some(vfs::AuditError::ThroughSymlink(_)) = e.downcast_ref::<vfs::AuditError>() {
+            if let Some(vfs::AuditError::ThroughSymlink(..)) = e.downcast_ref::<vfs::AuditError>() {
                 tracing::trace!(?path, "deleted (read through symlink)");
                 return Ok(ResolvedFileChangeResult::Yes(PendingChange::Deleted(path)));
             }

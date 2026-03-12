@@ -12,7 +12,7 @@ Make sure that Windows is unable to check out paths with `..\` in their path.
   From $TESTTMP/brokengitrepo
    * [new ref]         9ff0e959c6d6dec6f16d7ba9fcaa9ed407bf77d6 -> remote/master
   abort: error writing files:
-   ..\windowstroublemaker.txt: invalid component in "..\windowstroublemaker.txt": invalid path component ".."
+   ..\windowstroublemaker.txt: path contains illegal component '..': ..\windowstroublemaker.txt
   [255]
 
 #else

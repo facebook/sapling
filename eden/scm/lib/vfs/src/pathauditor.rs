@@ -10,7 +10,6 @@ use std::fs::symlink_metadata;
 use std::path::Path;
 use std::path::PathBuf;
 
-use anyhow::Context;
 use anyhow::Result;
 use bitflags::bitflags;
 use dashmap::DashMap;
@@ -78,10 +77,10 @@ const IGNORED_HFS_CHARS: [char; 16] = [
 
 #[derive(thiserror::Error, Debug)]
 pub enum AuditError {
-    #[error("can't read/write file through ancestor symlink \"{0}\"")]
-    ThroughSymlink(RepoPathBuf),
-    #[error("invalid path component \"{0}\"")]
-    InvalidComponent(String),
+    #[error("path '{0}' traverses symbolic link '{1}'")]
+    ThroughSymlink(RepoPathBuf, RepoPathBuf),
+    #[error("path contains illegal component '{0}': {1}")]
+    InvalidComponent(String, String),
 }
 
 impl PathAuditor {
@@ -102,13 +101,16 @@ impl PathAuditor {
     /// Slow path, query the filesystem for unsupported path. Namely, writing through a symlink
     /// outside of the repo is not supported.
     /// XXX: more checks
-    fn audit_fs(&self, path: &RepoPath) -> Result<(), AuditError> {
+    fn audit_fs(&self, path: &RepoPath, orig_path: &RepoPath) -> Result<(), AuditError> {
         let full_path = self.root.join(path.as_str());
 
         // XXX: Maybe filter by specific errors?
         if let Ok(metadata) = symlink_metadata(full_path) {
             if metadata.file_type().is_symlink() {
-                return Err(AuditError::ThroughSymlink(path.to_owned()));
+                return Err(AuditError::ThroughSymlink(
+                    orig_path.to_owned(),
+                    path.to_owned(),
+                ));
             }
         }
 
@@ -117,16 +119,14 @@ impl PathAuditor {
 
     /// Make sure that it is safe to write/remove `path` from the repo.
     pub fn audit(&self, path: &RepoPath) -> Result<PathBuf> {
-        audit_invalid_components(path.as_str(), self.fs_features)
-            .with_context(|| format!("invalid component in \"{}\"", path))?;
+        audit_invalid_components(path.as_str(), self.fs_features)?;
 
         let mut needs_recording_index = usize::MAX;
         for (i, parent) in path.reverse_parents().enumerate() {
             // First fast check w/ read lock
             if !self.audited.contains_key(parent) {
                 // If fast check failed, do the stat syscall.
-                self.audit_fs(parent)
-                    .with_context(|| format!("path \"{}\" failed audit", path))?;
+                self.audit_fs(parent, path)?;
 
                 // If it passes the audit, we can't record them as audited just yet, since a parent
                 // may still fail the audit. Later we'll loop through and record successful audits.
@@ -199,7 +199,10 @@ fn audit_invalid_components(path: &str, fs_features: FsFeatures) -> Result<(), A
             || INVALID_COMPONENTS.contains(&&*s)
             || !valid_windows_component(&s, fs_features)
         {
-            return Err(AuditError::InvalidComponent(s.into_owned()));
+            return Err(AuditError::InvalidComponent(
+                s.into_owned(),
+                path.into_owned(),
+            ));
         }
     }
     Ok(())
