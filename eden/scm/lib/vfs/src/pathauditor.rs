@@ -29,19 +29,71 @@ pub struct PathAuditor {
     audited: DashMap<RepoPathBuf, ()>,
 }
 
-static WINDOWS_SHORTNAME_ALIASES: Lazy<Vec<&'static str>> = Lazy::new(|| {
-    identity::sniff_idents()
+static WINDOWS_SHORTNAME_ALIASES: Lazy<WordSet> = Lazy::new(|| {
+    let words = identity::sniff_idents()
         .map(|i| i.sniff_dot_dir.trim_start_matches('.'))
-        .collect()
+        .collect();
+    WordSet::new(words)
 });
 
-static INVALID_COMPONENTS: Lazy<Vec<&'static str>> = Lazy::new(|| {
+static INVALID_COMPONENTS: Lazy<WordSet> = Lazy::new(|| {
     let components: [&'static str; 2] = [".", ".."];
-    components
+    let words = components
         .into_iter()
         .chain(identity::sniff_idents().map(|i| i.sniff_dot_dir))
-        .collect()
+        .collect();
+    WordSet::new(words)
 });
+
+/// A set of short words, for "contains" check.
+struct WordSet {
+    words_per_len: Vec<Vec<&'static str>>,
+}
+
+impl WordSet {
+    fn new(words: Vec<&'static str>) -> Self {
+        let max_len = words.iter().map(|w| w.len()).max().unwrap_or_default();
+        let mut words_per_len: Vec<Vec<&'static str>> = Vec::with_capacity(max_len + 1);
+        words_per_len.resize_with(max_len + 1, Default::default);
+        for word in words {
+            // Case-insensitive contains requires lowercase words.
+            assert_eq!(word, word.to_lowercase());
+            let words = &mut words_per_len[word.len()];
+            words.push(word);
+            // Case-insensitive contains uses u16 bits to track matches.
+            assert!(words.len() < 16);
+        }
+        Self { words_per_len }
+    }
+
+    fn contains(&self, s: &str, case_insensitive: bool) -> bool {
+        match self.words_per_len.get(s.len()) {
+            Some(words) if !words.is_empty() => {
+                if case_insensitive {
+                    // Scan `s` byte-by-byte to avoid allocation.
+                    let mut match_bits = u16::MAX;
+                    for (byte_pos, b) in s.bytes().enumerate() {
+                        let mut current_match_bits = 0u16;
+                        let b = b.to_ascii_lowercase();
+                        for (word_index, w) in words.iter().enumerate() {
+                            if Some(&b) == w.as_bytes().get(byte_pos) {
+                                current_match_bits |= 1u16 << word_index;
+                            }
+                        }
+                        match_bits &= current_match_bits;
+                        if match_bits == 0 {
+                            return false;
+                        }
+                    }
+                    match_bits != 0
+                } else {
+                    words.contains(&s)
+                }
+            }
+            None | Some(_) => false,
+        }
+    }
+}
 
 bitflags! {
     #[derive(Copy, Clone)]
@@ -166,7 +218,7 @@ fn valid_windows_component(component: &str, fs_features: FsFeatures) -> bool {
         return true;
     }
     if let Some((l, r)) = component.split_once('~') {
-        if r.chars().any(|c| c.is_numeric()) && WINDOWS_SHORTNAME_ALIASES.contains(&l) {
+        if r.chars().any(|c| c.is_numeric()) && WINDOWS_SHORTNAME_ALIASES.contains(&l, true) {
             return false;
         }
     }
@@ -204,13 +256,10 @@ pub fn is_path_component_invalid(component: &str, fs_features: FsFeatures) -> bo
     } else {
         Cow::Borrowed(s)
     };
-    let s: Cow<str> = if fs_features.contains(FsFeatures::CASE_INSENSITIVE) {
-        Cow::Owned(s.to_lowercase())
-    } else {
-        s
-    };
-
-    s.is_empty() || INVALID_COMPONENTS.contains(&&*s) || !valid_windows_component(&s, fs_features)
+    let case_insensitive = fs_features.contains(FsFeatures::CASE_INSENSITIVE);
+    s.is_empty()
+        || INVALID_COMPONENTS.contains(&s, case_insensitive)
+        || !valid_windows_component(&s, fs_features)
 }
 
 #[cfg(test)]
