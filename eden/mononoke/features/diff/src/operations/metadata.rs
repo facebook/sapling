@@ -60,6 +60,7 @@ enum ParsedFileContent {
     Text(TextFile),
     NonUtf8,
     Binary,
+    LfsPointer,
 }
 
 impl FileGeneratedSpan {
@@ -291,6 +292,7 @@ fn convert_content_type_to_diff(parsed_content: &ParsedFileContent) -> DiffConte
         ParsedFileContent::Text(_) => DiffContentType::Text,
         ParsedFileContent::NonUtf8 => DiffContentType::NonUtf8,
         ParsedFileContent::Binary => DiffContentType::Binary,
+        ParsedFileContent::LfsPointer => DiffContentType::LfsPointer,
     }
 }
 

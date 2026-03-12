@@ -203,6 +203,9 @@ impl IntoResponse<Option<thrift::MetadataDiffFileContentType>> for Option<FileCo
             Some(FileContentType::Text) => Some(thrift::MetadataDiffFileContentType::TEXT),
             Some(FileContentType::NonUtf8) => Some(thrift::MetadataDiffFileContentType::NON_UTF8),
             Some(FileContentType::Binary) => Some(thrift::MetadataDiffFileContentType::BINARY),
+            Some(FileContentType::LfsPointer) => {
+                Some(thrift::MetadataDiffFileContentType::LFS_POINTER)
+            }
         }
     }
 }

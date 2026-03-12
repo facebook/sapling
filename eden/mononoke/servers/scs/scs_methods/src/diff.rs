@@ -623,6 +623,9 @@ impl<'a> DiffRouter<'a> {
                         diff_service_if::DiffContentType::BINARY => {
                             Ok(mononoke_api::FileContentType::Binary)
                         }
+                        diff_service_if::DiffContentType::LFS_POINTER => {
+                            Ok(mononoke_api::FileContentType::LfsPointer)
+                        }
                         unknown => Err(scs_errors::internal_error(format!(
                             "Unknown content type from diff service: {:?}",
                             unknown

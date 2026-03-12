@@ -35,6 +35,7 @@ pub enum DiffContentType {
     Text,
     NonUtf8,
     Binary,
+    LfsPointer,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

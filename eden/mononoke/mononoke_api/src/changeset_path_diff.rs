@@ -115,6 +115,7 @@ pub enum FileContentType {
     Text,
     NonUtf8,
     Binary,
+    LfsPointer,
 }
 
 pub enum FileGeneratedStatus {
@@ -295,6 +296,7 @@ impl<R> ChangesetPathDiffContext<R> {
             diff::types::DiffContentType::Text => FileContentType::Text,
             diff::types::DiffContentType::NonUtf8 => FileContentType::NonUtf8,
             diff::types::DiffContentType::Binary => FileContentType::Binary,
+            diff::types::DiffContentType::LfsPointer => FileContentType::LfsPointer,
         }
     }
 
