@@ -861,9 +861,8 @@ folly::coro::now_task<VirtualInode> co_getOrFindChildHelper(
   // Always descend if the treeEntry is a Tree
   const auto* treeEntry = &it->second;
   if (treeEntry->isTree()) {
-    auto treeResult =
-        co_await objectStore->getTree(treeEntry->getObjectId(), fetchContext)
-            .semi();
+    auto treeResult = co_await objectStore->co_getTree(
+        treeEntry->getObjectId(), fetchContext);
     auto mode = modeFromTreeEntryType(treeEntry->getType());
     co_return VirtualInode{std::move(treeResult), mode};
   } else {

@@ -214,6 +214,10 @@ class ObjectStore : public IObjectStore,
       const ObjectId& id,
       const ObjectFetchContextPtr& context) const override;
 
+  folly::coro::now_task<std::shared_ptr<const Tree>> co_getTree(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context) const;
+
   /**
    * Get aux data about a tree.
    *

@@ -8,6 +8,7 @@
 #include "eden/fs/store/ObjectStore.h"
 
 #include <folly/Conv.h>
+#include <folly/coro/Invoke.h>
 #include <folly/futures/Future.h>
 #include <folly/io/IOBuf.h>
 
@@ -246,6 +247,19 @@ ObjectStore::getTreeEntryForObjectId(
 ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getTree(
     const ObjectId& id,
     const ObjectFetchContextPtr& fetchContext) const {
+  if (getEdenConfig()->enableCoroutinesPhase1.getValue()) {
+    return ImmediateFuture{
+        // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+        folly::coro::co_invoke(
+            [this](auto&&... args) {
+              return co_getTree(std::forward<decltype(args)>(args)...)
+                  // @lint-ignore CLANGTIDY facebook-hte-Deprecated
+                  .as_unsafe();
+            },
+            ObjectId{id},
+            fetchContext.copy())
+            .semi()};
+  }
   TaskTraceBlock block{"ObjectStore::getTree"};
   DurationScope<EdenStats> statScope{stats_, &ObjectStoreStats::getTree};
   folly::stop_watch<std::chrono::milliseconds> watch;
@@ -276,6 +290,41 @@ ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getTree(
         self->updateProcessFetch(*fetchContext);
         return tree;
       });
+}
+
+folly::coro::now_task<std::shared_ptr<const Tree>> ObjectStore::co_getTree(
+    const ObjectId& id,
+    const ObjectFetchContextPtr& fetchContext) const {
+  TaskTraceBlock block{"ObjectStore::getTree"};
+  DurationScope<EdenStats> statScope{stats_, &ObjectStoreStats::getTree};
+  folly::stop_watch<std::chrono::milliseconds> watch;
+  // TODO: We should consider checking if we have in flight BackingStore
+  // requests on this layer instead of only in the BackingStore. Consider the
+  // case in which thread A and thread B both request a Tree at the same time.
+  // Let's say thread A checks the LocalStore, then thread B checks the
+  // LocalStore, gets the file from the BackingStore (making a request to the
+  // server), then writes the Tree to the LocalStore. Now when thread A checks
+  // for in flight requests in the BackingStore, it will not see any since
+  // thread B has completely finished, so thread A will make a duplicate
+  // request. If we were to mark here that we got a request on this layer, then
+  // we could avoid that case.
+  if (auto maybeTree = treeCache_->get(id)) {
+    stats_->increment(&ObjectStoreStats::getTreeFromMemory);
+    fetchContext->didFetch(
+        ObjectFetchContext::Tree, id, ObjectFetchContext::FromMemoryCache);
+    updateProcessFetch(*fetchContext);
+    stats_->addDuration(
+        &ObjectStoreStats::getTreeMemoryDuration, watch.elapsed());
+    co_return changeCaseSensitivity(std::move(maybeTree), caseSensitive_);
+  }
+  deprioritizeWhenFetchHeavy(*fetchContext);
+  auto result = co_await getTreeImpl(id, fetchContext, watch);
+  TaskTraceBlock block2{"ObjectStore::getTree::thenValue"};
+  auto tree = changeCaseSensitivity(std::move(result.tree), caseSensitive_);
+  treeCache_->insert(tree->getObjectId(), tree);
+  fetchContext->didFetch(ObjectFetchContext::Tree, id, result.origin);
+  updateProcessFetch(*fetchContext);
+  co_return tree;
 }
 
 void ObjectStore::maybeCacheTreeAuxInMemCache(

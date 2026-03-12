@@ -114,6 +114,7 @@ cpp_library(
         "//eden/fs/utils:eden_error",
         "//folly:conv",
         "//folly:portability",
+        "//folly/coro:invoke",
         "//folly/io:iobuf",
     ],
     exported_deps = [
