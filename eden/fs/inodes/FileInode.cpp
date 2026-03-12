@@ -1565,10 +1565,9 @@ folly::coro::now_task<BlobPtr> FileInode::co_startLoadingData(
   {
     LoadingOngoing load{inodePtrFromThis()};
     try {
-      auto blobFuture = getMount()->getBlobAccess()->getBlob(
-          objectId, fetchContext, interest);
-      auto tryResult =
-          co_await folly::coro::co_awaitTry(std::move(blobFuture).semi());
+      auto tryResult = co_await folly::coro::co_awaitTry(
+          getMount()->getBlobAccess()->co_getBlob(
+              objectId, fetchContext, interest));
       auto self = std::move(load).extractInodePtr();
       self->completeDataLoad(std::move(tryResult));
     } catch (const std::exception&) {

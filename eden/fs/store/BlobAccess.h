@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <folly/coro/safe/NowTask.h>
 #include <memory>
 #include "eden/fs/store/BlobCache.h"
 #include "eden/fs/store/ObjectFetchContext.h"
@@ -56,6 +57,20 @@ class BlobAccess {
    * be dropped when the blob is no longer needed.
    */
   ImmediateFuture<BlobCache::GetResult> getBlob(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context,
+      BlobCache::Interest interest = BlobCache::Interest::LikelyNeededAgain);
+
+  /**
+   * Loads and returns the entire blob's contents.
+   *
+   * If the accessPolicy is NotNeededAgain, the associated blob will not be
+   * cached.
+   *
+   * Returns both the blob and an interest handle from the BlobCache that can
+   * be dropped when the blob is no longer needed.
+   */
+  folly::coro::now_task<BlobCache::GetResult> co_getBlob(
       const ObjectId& id,
       const ObjectFetchContextPtr& context,
       BlobCache::Interest interest = BlobCache::Interest::LikelyNeededAgain);

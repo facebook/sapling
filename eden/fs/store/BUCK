@@ -142,6 +142,7 @@ cpp_library(
         "//folly/container:evicting_cache_map",
         "//folly/container:f14_hash",
         "//folly/coro:task",
+        "//folly/coro/safe:now_task",
         "//folly/futures:core",
         "//folly/futures:shared_promise",
         "//folly/logging:logging",

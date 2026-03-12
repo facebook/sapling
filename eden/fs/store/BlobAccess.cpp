@@ -39,4 +39,17 @@ ImmediateFuture<BlobCache::GetResult> BlobAccess::getBlob(
       });
 }
 
+folly::coro::now_task<BlobCache::GetResult> BlobAccess::co_getBlob(
+    const ObjectId& id,
+    const ObjectFetchContextPtr& context,
+    BlobCache::Interest interest) {
+  auto result = blobCache_->get(id, interest);
+  if (result.object) {
+    co_return std::move(result);
+  }
+  auto blob = co_await objectStore_->getBlob(id, context).semi();
+  auto interestHandle = blobCache_->insert(id, blob, interest);
+  co_return BlobCache::GetResult{std::move(blob), std::move(interestHandle)};
+}
+
 } // namespace facebook::eden
