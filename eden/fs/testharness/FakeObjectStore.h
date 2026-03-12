@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <folly/coro/safe/NowTask.h>
 #include <unordered_map>
 
 #include "eden/fs/model/Blob.h"
@@ -45,6 +46,12 @@ class FakeObjectStore final : public IObjectStore {
       const ObjectId& id,
       const ObjectFetchContextPtr& context =
           ObjectFetchContext::getNullContext()) const override;
+
+  folly::coro::now_task<std::shared_ptr<const Blob>> co_getBlob(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context =
+          ObjectFetchContext::getNullContext()) const;
+
   ImmediateFuture<folly::Unit> prefetchBlobs(
       ObjectIdRange ids,
       const ObjectFetchContextPtr& context =

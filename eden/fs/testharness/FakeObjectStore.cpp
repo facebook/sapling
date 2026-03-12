@@ -80,6 +80,18 @@ ImmediateFuture<std::shared_ptr<const Blob>> FakeObjectStore::getBlob(
   return make_shared<const Blob>(iter->second);
 }
 
+folly::coro::now_task<std::shared_ptr<const Blob>> FakeObjectStore::co_getBlob(
+    const ObjectId& id,
+    const ObjectFetchContextPtr&) const {
+  ++accessCounts_[id];
+  auto iter = blobs_.find(id);
+  if (iter == blobs_.end()) {
+    co_yield folly::coro::co_error(
+        std::domain_error(fmt::format("blob {} not found", id)));
+  }
+  co_return std::make_shared<const Blob>(iter->second);
+}
+
 ImmediateFuture<folly::Unit> FakeObjectStore::prefetchBlobs(
     ObjectIdRange,
     const ObjectFetchContextPtr&) const {

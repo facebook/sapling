@@ -222,6 +222,7 @@ cpp_library(
         "//eden/fs/model:model",
         "//eden/fs/store:context",
         "//eden/fs/store:store",
+        "//folly/coro/safe:now_task",
     ],
 )
 
