@@ -591,6 +591,32 @@ INSTANTIATE_TEST_SUITE_P(
       return info.param ? "Coroutines" : "Futures";
     });
 
+TEST_P(FileInodeDuringLoadTest, droppedReadDuringLoad) {
+  auto contents = "Contents not ready.\n"_sp;
+  auto inode = mount_.getFileInode("notready.txt");
+  auto storedBlob =
+      mount_.getBackingStore()->getStoredBlob(*inode->getObjectId());
+
+  {
+    // Start a read and then drop the future while the blob load is in
+    // progress. In the coroutine path, this destroys the coroutine frame,
+    // which triggers LoadingOngoing's RAII destructor to call
+    // completeDataLoad(BrokenPromise), resetting the inode from BLOB_LOADING
+    // back to BLOB_NOT_LOADING. Without this, the inode would be stuck in
+    // BLOB_LOADING and all future reads would hang.
+    auto readAllFuture = inode->readAll(ObjectFetchContext::getNullContext());
+    EXPECT_FALSE(readAllFuture.isReady());
+  }
+
+  // Complete the backing store request.
+  storedBlob->setReady();
+
+  // A subsequent read must succeed. If the inode is stuck in BLOB_LOADING,
+  // this hangs instead.
+  EXPECT_EQ(
+      contents, inode->readAll(ObjectFetchContext::getNullContext()).get(0ms));
+}
+
 TEST(FileInode, readDuringLoad) {
   // Build a tree to test against, but do not mark the state ready yet
   FakeTreeBuilder builder;
