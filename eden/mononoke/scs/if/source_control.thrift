@@ -1319,6 +1319,30 @@ struct CommitIsAncestorOfParams {
 
 struct CommitIsPublicParams {}
 
+/// Parameters for the `commit_filter_ancestors` method.
+///
+/// Given a target commit (the potential descendant), this method checks
+/// which of the provided candidate commits are ancestors of the target.
+/// Returns only those candidates that ARE ancestors.
+struct CommitFilterAncestorsParams {
+  /// Candidate commits to check. Each is tested for being an ancestor
+  /// of the target commit specified in the CommitSpecifier.
+  1: list<CommitId> candidate_ancestor_ids;
+
+  /// Which identity schemes to include in the response for matching commits.
+  2: set<CommitIdentityScheme> identity_schemes;
+}
+
+/// Maximum number of candidates for commit_filter_ancestors.
+const i64 COMMIT_FILTER_ANCESTORS_MAX_CANDIDATES = 10000;
+
+/// Response for the `commit_filter_ancestors` method.
+struct CommitFilterAncestorsResponse {
+  /// The subset of candidate_ancestor_ids that ARE ancestors of the target
+  /// commit, with their identities mapped to the requested schemes.
+  1: list<map<CommitIdentityScheme, CommitId>> ancestors;
+}
+
 struct CommitCommonBaseWithParams {
   1: CommitId other_commit_id;
   2: set<CommitIdentityScheme> identity_schemes;
@@ -3331,6 +3355,19 @@ service SourceControlService extends fb303_core.BaseService {
   bool commit_is_ancestor_of(
     1: CommitSpecifier commit,
     2: CommitIsAncestorOfParams params,
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
+
+  /// Given a target commit, filter a list of candidate commits to only
+  /// those that are ancestors of the target. More efficient than calling
+  /// commit_is_ancestor_of repeatedly because the server can share
+  /// frontier traversal work across all candidates.
+  CommitFilterAncestorsResponse commit_filter_ancestors(
+    1: CommitSpecifier commit,
+    2: CommitFilterAncestorsParams params,
   ) throws (
     1: RequestError request_error,
     2: InternalError internal_error,
