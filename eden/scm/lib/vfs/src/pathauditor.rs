@@ -102,6 +102,11 @@ impl PathAuditor {
     /// outside of the repo is not supported.
     /// XXX: more checks
     fn audit_fs(&self, path: &RepoPath, orig_path: &RepoPath) -> Result<(), AuditError> {
+        // Do not audit the vfs root.
+        if path.is_empty() {
+            return Ok(());
+        }
+
         let full_path = self.root.join(path.as_str());
 
         // XXX: Maybe filter by specific errors?
