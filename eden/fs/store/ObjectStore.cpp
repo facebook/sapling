@@ -318,7 +318,7 @@ folly::coro::now_task<std::shared_ptr<const Tree>> ObjectStore::co_getTree(
     co_return changeCaseSensitivity(std::move(maybeTree), caseSensitive_);
   }
   deprioritizeWhenFetchHeavy(*fetchContext);
-  auto result = co_await getTreeImpl(id, fetchContext, watch);
+  auto result = co_await co_getTreeImpl(id, fetchContext, watch);
   TaskTraceBlock block2{"ObjectStore::getTree::thenValue"};
   auto tree = changeCaseSensitivity(std::move(result.tree), caseSensitive_);
   treeCache_->insert(tree->getObjectId(), tree);
@@ -343,6 +343,20 @@ folly::SemiFuture<BackingStore::GetTreeResult> ObjectStore::getTreeImpl(
     const ObjectId& id,
     const ObjectFetchContextPtr& context,
     folly::stop_watch<std::chrono::milliseconds> watch) const {
+  if (getEdenConfig()->enableCoroutinesPhase1.getValue()) {
+    return
+        // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+        folly::coro::co_invoke(
+            [this](auto&&... args) {
+              return co_getTreeImpl(std::forward<decltype(args)>(args)...)
+                  // @lint-ignore CLANGTIDY facebook-hte-Deprecated
+                  .as_unsafe();
+            },
+            ObjectId{id},
+            context.copy(),
+            watch)
+            .semi();
+  }
   return ImmediateFuture{backingStore_->getTree(id, context)}
       .thenValue([self = shared_from_this(), id, watch](
                      BackingStore::GetTreeResult result) {
@@ -360,6 +374,24 @@ folly::SemiFuture<BackingStore::GetTreeResult> ObjectStore::getTreeImpl(
             return makeImmediateFuture<BackingStore::GetTreeResult>(ew);
           })
       .semi();
+}
+
+folly::coro::now_task<BackingStore::GetTreeResult> ObjectStore::co_getTreeImpl(
+    const ObjectId& id,
+    const ObjectFetchContextPtr& context,
+    folly::stop_watch<std::chrono::milliseconds> watch) const {
+  try {
+    auto result = co_await backingStore_->getTree(id, context);
+    maybeCacheTreeAuxInMemCache(id, result);
+    stats_->increment(&ObjectStoreStats::getTreeFromBackingStore);
+    stats_->addDuration(
+        &ObjectStoreStats::getTreeBackingstoreDuration, watch.elapsed());
+    co_return result;
+  } catch (const std::exception&) {
+    stats_->increment(&ObjectStoreStats::getTreeFailed);
+    XLOGF(DBG4, "unable to find tree {}", id);
+    throw;
+  }
 }
 
 ImmediateFuture<std::optional<TreeAuxData>> ObjectStore::getTreeAuxData(
