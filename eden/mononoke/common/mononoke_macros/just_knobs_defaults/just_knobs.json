@@ -178,7 +178,6 @@
     "scm/mononoke:derived_data_backfill_read_qps": 0,
     "scm/mononoke:derived_data_backfill_read_bytes_s": 0,
     "scm/mononoke:derived_data_backfill_segment_chunk_size": 20,
-    "scm/mononoke:derived_data_backfill_segment_concurrency": 100,
     "scm/mononoke:diff_service_default_input_estimate_mb": 10
   }
 }
