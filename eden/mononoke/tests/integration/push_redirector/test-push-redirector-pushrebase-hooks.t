@@ -59,23 +59,28 @@ blocked by deny_files
 
 Pushing to the small repo triggers deny_files, even though deny_files is only configured on the large repo
 Note that the node is from the small repo, even though the hook is in the large repo
+To create a commit with `.git` in modified file path, use `debugdrawdag` to bypass the working copy path auditor.
 
   $ cd "$TESTTMP"/small-hg-client
   $ hg up -q master_bookmark
-  $ mkdir -p f/.git
-  $ echo 2 > f/.git/HEAD && hg addremove -q && hg ci -q -m .git
-  $ hg log -T"small_node: {node}\n" -r .
-  small_node: 6e6a22d48eb51db1e7b8af685d9c99c0d7f10f70
-  $ hg push -r . --to master_bookmark
-  pushing rev 6e6a22d48eb5 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  $ hg debugdrawdag --no-bookmarks << 'EOS'
+  > GIT  # GIT/f/.git/HEAD=2\n
+  > |
+  > master_bookmark
+  > EOS
+  $ hg log -T"small_node: {node}\n" -r 'desc(GIT)'
+  small_node: fecac23a93122914ac16a11bca8e6c4c1b17314c
+  $ hg push -r 'desc(GIT)' --to master_bookmark
+  pushing rev fecac23a9312 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 1 commit for upload
-  edenapi: queue 0 files for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
   edenapi: queue 3 trees for upload
   edenapi: uploaded 3 trees
   edenapi: uploaded 1 changeset
-  pushrebasing stack (ce81c7d38286, 6e6a22d48eb5] (1 commit) to remote bookmark master_bookmark
+  pushrebasing stack (ce81c7d38286, fecac23a9312] (1 commit) to remote bookmark master_bookmark
   abort: Server error: hooks failed:
-    deny_files for b5ac9b3203d4aef816083f98fd6f169d701c6ae41d08e49d9abc6b0ae5318bbe: Denied filename 'smallrepofolder/f/.git/HEAD' matched name pattern '/[.]git/'. Rename or remove this file and try again.
+    deny_files for 8bd0a7cd107ee1da0f08efe9493d8ad68dcc7c2f6a3362e2ca71fd602518aa07: Denied filename 'smallrepofolder/f/.git/HEAD' matched name pattern '/[.]git/'. Rename or remove this file and try again.
   [255]
 
 Let's check that disabling running pushredirected hooks work
@@ -88,8 +93,7 @@ Let's check that disabling running pushredirected hooks work
   > EOF
 
   $ force_update_configerator
-  $ hg push -r . --to master_bookmark
-  pushing rev 6e6a22d48eb5 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
-  pushrebasing stack (ce81c7d38286, 6e6a22d48eb5] (1 commit) to remote bookmark master_bookmark
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  updated remote bookmark master_bookmark to 6e6a22d48eb5
+  $ hg push -r 'desc(GIT)' --to master_bookmark
+  pushing rev fecac23a9312 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  pushrebasing stack (ce81c7d38286, fecac23a9312] (1 commit) to remote bookmark master_bookmark
+  updated remote bookmark master_bookmark to fecac23a9312

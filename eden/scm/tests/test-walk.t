@@ -220,10 +220,10 @@
   f  mammals/Procyonidae/raccoon     Procyonidae/raccoon
   f  mammals/skunk                   skunk
   $ hg debugwalk .hg
-  abort: path 'mammals/.hg' is inside nested repo 'mammals'
+  abort: path contains illegal component '.hg': mammals/.hg
   [255]
   $ hg debugwalk ../.hg
-  abort: path contains illegal component: .hg
+  abort: path contains illegal component '.hg': .hg
   [255]
   $ cd ..
 
@@ -283,19 +283,19 @@
   (hint: consider using --cwd to change working directory)
   [255]
   $ hg debugwalk .hg
-  abort: path contains illegal component: .hg
+  abort: path contains illegal component '.hg': .hg
   [255]
   $ hg debugwalk path:.hg
-  abort: path contains illegal component: .hg
+  abort: path contains illegal component '.hg': .hg
   [255]
   $ hg debugwalk beans/../.hg
-  abort: path contains illegal component: .hg
+  abort: path contains illegal component '.hg': .hg
   [255]
   $ hg debugwalk beans/../.hg/data
-  abort: path contains illegal component: .hg/data
+  abort: path contains illegal component '.hg': .hg/data
   [255]
   $ hg debugwalk beans/.hg
-  abort: path 'beans/.hg' is inside nested repo 'beans'
+  abort: path contains illegal component '.hg': beans/.hg
   [255]
 
 Test absolute paths:

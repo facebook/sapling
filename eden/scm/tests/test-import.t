@@ -562,7 +562,7 @@ Python utility:
   > rename to bar
   > EOS
   applying patch from stdin
-  abort: path contains illegal component: ../outside/foo
+  abort: Failed to validate "../outside/foo". Invalid component: "..".
   [255]
   $ cd ..
 

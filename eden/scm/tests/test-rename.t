@@ -605,7 +605,7 @@ overwriting with renames (issue1959)
 check illegal path components
 
   $ hg rename d1/d11/a1 .hg/foo
-  abort: path contains illegal component: .hg/foo
+  abort: path contains illegal component '.hg': .hg/foo
   [255]
   $ hg status -C
   $ hg rename d1/d11/a1 ../foo
@@ -616,7 +616,7 @@ check illegal path components
 
   $ mv d1/d11/a1 .hg/foo
   $ hg rename --mark d1/d11/a1 .hg/foo
-  abort: path contains illegal component: .hg/foo
+  abort: path contains illegal component '.hg': .hg/foo
   [255]
   $ hg status -C
   ! d1/d11/a1
@@ -625,7 +625,7 @@ check illegal path components
   $ rm .hg/foo
 
   $ hg rename d1/d11/a1 .hg
-  abort: path contains illegal component: .hg/a1
+  abort: path contains illegal component '.hg': .hg/a1
   [255]
   $ hg status -C
   $ hg rename d1/d11/a1 ..
@@ -636,7 +636,7 @@ check illegal path components
 
   $ mv d1/d11/a1 .hg
   $ hg rename --mark d1/d11/a1 .hg
-  abort: path contains illegal component: .hg/a1
+  abort: path contains illegal component '.hg': .hg/a1
   [255]
   $ hg status -C
   ! d1/d11/a1
@@ -645,7 +645,7 @@ check illegal path components
   $ rm .hg/a1
 
   $ (cd d1/d11; hg rename ../../d2/b ../../.hg/foo)
-  abort: path contains illegal component: .hg/foo
+  abort: path contains illegal component '.hg': .hg/foo
   [255]
   $ hg status -C
   $ (cd d1/d11; hg rename ../../d2/b ../../../foo)

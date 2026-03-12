@@ -7,7 +7,7 @@
 audit of .hg
 
   $ hg add .hg/00changelog.i
-  abort: path contains illegal component: .hg/00changelog.i
+  abort: path contains illegal component '.hg': .hg/00changelog.i
   [255]
 
 #if symlink
@@ -171,5 +171,5 @@ Works for .sl repos also
 
   $ HGIDENTITY=sl newrepo
   $ hg add .sl/00changelog.i
-  abort: path contains illegal component: .sl/00changelog.i
+  abort: path contains illegal component '.sl': .sl/00changelog.i
   [255]

@@ -289,11 +289,8 @@ Inaccessible destination
   $ hg init b
   $ cd b
   $ hg clone . ../a
-  abort: Permission denied (os error 13)
-  (current process runs with uid 42) (?)
-  (../a: mode 0o52, uid 42, gid 42) (?)
-  (..: mode 0o52, uid 42, gid 42) (?)
-  [255]
+  abort: Permission denied: ../a
+  ...
   $ cd ..
   $ chmod 700 a
   $ rm -r a b
