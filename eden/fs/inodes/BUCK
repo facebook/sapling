@@ -178,6 +178,7 @@ cpp_library(
         "//folly:string",
         "//folly:unit",
         "//folly/chrono:conv",
+        "//folly/coro:collect",
         "//folly/coro:invoke",
         "//folly/io:iobuf",
         "//folly/io/async:async_base",

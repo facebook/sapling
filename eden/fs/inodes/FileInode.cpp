@@ -10,6 +10,7 @@
 #include <fmt/format.h>
 #include <optional>
 
+#include <folly/coro/Collect.h>
 #include <folly/coro/Invoke.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
@@ -1142,9 +1143,8 @@ folly::coro::now_task<std::string> FileInode::co_readAll(
           updateAtimeLocked(*state);
           co_return result;
         }
-        blob =
-            co_await startLoadingData(std::move(state), interest, fetchContext)
-                .semi();
+        blob = co_await co_startLoadingData(
+            std::move(state), interest, fetchContext);
         break;
       case State::BLOB_LOADING: {
         // Already loading, latch on to the in-progress load.
@@ -1218,7 +1218,6 @@ folly::coro::now_task<std::string> FileInode::co_readAll(
   updateAtimeLocked(*state);
   co_return result;
 }
-
 ImmediateFuture<std::tuple<BufVec, bool>> FileInode::read(
     size_t size,
     FileOffset off,
@@ -1538,6 +1537,57 @@ ImmediateFuture<BlobPtr> FileInode::startLoadingData(
           })
           .deferError<folly::BrokenPromise>(
               [](auto&&) -> BlobPtr { return nullptr; })};
+}
+
+folly::coro::now_task<BlobPtr> FileInode::co_startLoadingData(
+    LockedState state,
+    BlobCache::Interest interest,
+    const ObjectFetchContextPtr& fetchContext) {
+  XDCHECK_EQ(state->tag, State::BLOB_NOT_LOADING);
+
+  auto blobLoadingPromise =
+      std::make_unique<FileInodeState::BlobLoadingPromise>();
+  // Everything from here through state.unlock() should be noexcept.
+  // Once we transition to BLOB_LOADING, other callers will latch onto
+  // blobLoadingPromise, so we must guarantee completeDataLoad is called.
+  state->blobLoadingPromise = std::move(blobLoadingPromise);
+  auto resultFuture = state->blobLoadingPromise->getRawSemiFuture();
+  state->tag = State::BLOB_LOADING;
+  auto objectId = state->nonMaterializedState.id;
+
+  // Unlock state_ while we wait on the blob data to load
+  state.unlock();
+
+  // Load the blob and fulfill the promise. LoadingOngoing RAII ensures that
+  // if the coroutine is cancelled, completeDataLoad(BrokenPromise) is called
+  // to reset the inode from BLOB_LOADING back to BLOB_NOT_LOADING, preventing
+  // other callers latched onto blobLoadingPromise from hanging.
+  {
+    LoadingOngoing load{inodePtrFromThis()};
+    try {
+      auto blobFuture = getMount()->getBlobAccess()->getBlob(
+          objectId, fetchContext, interest);
+      auto tryResult =
+          co_await folly::coro::co_awaitTry(std::move(blobFuture).semi());
+      auto self = std::move(load).extractInodePtr();
+      self->completeDataLoad(std::move(tryResult));
+    } catch (const std::exception&) {
+      XLOG(
+          FATAL,
+          "Failed to propagate failure in getBlob(), no choice but to die");
+      throw;
+    }
+  }
+
+  // resultFuture is now fulfilled by completeDataLoad above.
+  // On truncation, the promise is destroyed before completeDataLoad runs,
+  // so resultFuture throws BrokenPromise — return nullptr so the caller
+  // retries the load.
+  try {
+    co_return co_await std::move(resultFuture);
+  } catch (const folly::BrokenPromise&) {
+    co_return nullptr;
+  }
 }
 
 void FileInode::completeDataLoad(folly::Try<BlobCache::GetResult> tryResult) {

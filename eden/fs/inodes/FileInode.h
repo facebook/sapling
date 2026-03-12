@@ -466,6 +466,20 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
       const ObjectFetchContextPtr& fetchContext);
 
   /**
+   * Start loading the file data.
+   *
+   * state->tag must be NOT_LOADED when this is called.
+   *
+   * This should normally only be invoked by runWhileDataLoaded() or
+   * runWhileMaterialized().  Most other callers should use
+   * runWhileDataLoaded() or runWhileMaterialized() instead.
+   */
+  [[nodiscard]] folly::coro::now_task<BlobPtr> co_startLoadingData(
+      LockedState state,
+      BlobCache::Interest interest,
+      const ObjectFetchContextPtr& fetchContext);
+
+  /**
    * Complete the load of a blob.
    *
    * Called internally by startLoadingData when the load completes or the
