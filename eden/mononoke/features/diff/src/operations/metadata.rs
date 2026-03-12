@@ -30,6 +30,7 @@ use crate::types::MetadataDiff;
 use crate::types::MetadataFileInfo;
 use crate::types::MetadataLinesCount;
 use crate::utils::content::get_file_info_from_changeset_path;
+use crate::utils::content::get_lfs_pointer;
 use crate::utils::whitespace::strip_horizontal_whitespace;
 
 // This logic comes from `mononoke_api/src/changeset_path_diff.rs`
@@ -163,7 +164,11 @@ impl ParsedFileContent {
         ctx: &CoreContext,
         repo: &impl Repo,
         content_id: ContentId,
+        is_lfs: bool
     ) -> Result<Self, DiffError> {
+        if is_lfs {
+            return Ok(ParsedFileContent::LfsPointer);
+        }
         // Load content metadata from blobstore
         let metadata = crate::utils::content::get_content_metadata(ctx, repo, &content_id)
             .await?;
@@ -348,7 +353,18 @@ async fn get_file_details_from_input(
             let parsed_file_content = match (&content_id, &file_type) {
                 (_, Some(DiffFileType::GitSubmodule)) => None,
                 (Some(content_id), _) => {
-                    Some(ParsedFileContent::new(ctx, repo, *content_id).await?)
+                    // Check if this is an LFS pointer — if so, report LfsPointer content
+                    // type instead of analyzing the actual (potentially binary) content
+                    let is_lfs = get_lfs_pointer(
+                        ctx,
+                        repo,
+                        changeset_input.changeset_id,
+                        changeset_input.path,
+                        content_id,
+                    )
+                    .await?
+                    .is_some();
+                    Some(ParsedFileContent::new(ctx, repo, *content_id, is_lfs).await?)
                 },
                 (None, _) => None,
             };
@@ -356,7 +372,8 @@ async fn get_file_details_from_input(
             Ok((file_type, parsed_file_content))
         }
         DiffSingleInput::Content(content_input) => {
-            let parsed_file_content = Some(ParsedFileContent::new(ctx, repo, content_input.content_id).await?);
+            // If an LFS pointer was provided with this content input, report as LfsPointer
+            let parsed_file_content = Some(ParsedFileContent::new(ctx, repo, content_input.content_id, content_input.lfs_pointer.is_some()).await?);
 
             // For content-only inputs, we don't have file type information
             Ok((None, parsed_file_content))
