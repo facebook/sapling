@@ -297,6 +297,20 @@ pub(crate) async fn log_access_to_restricted_path(
     tooling_allowlist_group: Option<&str>,
     scuba: MononokeScubaSampleBuilder,
 ) -> Result<bool> {
+    // Always log requests that touch restricted paths (if enabled via JK)
+    #[cfg(fbcode_build)]
+    {
+        let override_sampling_enabled = justknobs::eval(
+            "scm/mononoke:restricted_paths_override_sampling",
+            None,
+            None,
+        )?;
+
+        if override_sampling_enabled {
+            ctx.set_override_sampling();
+        }
+    }
+
     // TODO(T239041722): store permission checkers in RestrictedPaths to improve
     // performance if needed.
     let has_path_acl_access =

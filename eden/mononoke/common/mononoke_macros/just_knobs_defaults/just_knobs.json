@@ -71,6 +71,7 @@
     "scm/mononoke:rendezvous_bonsai_tag_mapping": true,
     "scm/mononoke:scs_restricted_paths_use_mock_api": false,
     "scm/mononoke:restricted_paths_use_schematized_logger": false,
+    "scm/mononoke:restricted_paths_override_sampling": true,
     "scm/mononoke:enable_server_side_path_acls": true,
     "scm/mononoke:best_effort_shard_setup": false,
     "scm/mononoke:load_limiter_always_unblocked": true,

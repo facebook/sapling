@@ -843,6 +843,11 @@ fn log_result<T: AddScubaResponse>(
 
     ctx.perf_counters().insert_perf_counters(&mut scuba);
 
+    // Always log requests that touch restricted paths
+    if ctx.override_sampling() {
+        scuba.unsampled();
+    }
+
     scuba.add_future_stats(stats);
     scuba.add("status", status);
     if let Some(error) = error {
@@ -917,6 +922,11 @@ fn log_stream_chunk<T: AddScubaResponse>(
     STATS::total_chunk_overloaded.add_value(overloaded);
 
     ctx.perf_counters().insert_perf_counters(&mut scuba);
+
+    // Always log requests that touch restricted paths
+    if ctx.override_sampling() {
+        scuba.unsampled();
+    }
 
     scuba.add("stream_chunk_count", count);
     scuba.add("status", status);
@@ -1013,6 +1023,11 @@ fn log_stream_complete(
 
     ctx.perf_counters().insert_perf_counters(&mut scuba);
 
+    // Always log requests that touch restricted paths
+    if ctx.override_sampling() {
+        scuba.unsampled();
+    }
+
     // This function combines the stats from the initial phase generating the stream
     // object with stats from stream polling.
     //
@@ -1080,6 +1095,12 @@ fn log_cancelled(
     let mut scuba = ctx.scuba().clone();
     add_request_end_memory_stats(&mut scuba, method, start_mem_stats);
     ctx.perf_counters().insert_perf_counters(&mut scuba);
+
+    // Always log requests that touch restricted paths
+    if ctx.override_sampling() {
+        scuba.unsampled();
+    }
+
     scuba.add_future_stats(stats);
     scuba.add("status", "CANCELLED");
     scuba.log_with_msg("Request cancelled", None);

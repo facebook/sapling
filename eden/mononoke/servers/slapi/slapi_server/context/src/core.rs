@@ -140,6 +140,14 @@ impl CoreContext {
         self.logging.fork_perf_counters()
     }
 
+    pub fn override_sampling(&self) -> bool {
+        self.logging.override_sampling()
+    }
+
+    pub fn set_override_sampling(&self) {
+        self.logging.set_override_sampling();
+    }
+
     pub fn sql_query_telemetry(&self) -> SqlQueryTelemetry {
         let fb = self.fb.clone();
         let metadata = self.metadata();
