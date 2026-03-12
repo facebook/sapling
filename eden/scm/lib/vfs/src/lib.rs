@@ -18,6 +18,7 @@ pub use crate::pathauditor::AuditError;
 pub use crate::pathauditor::FsFeatures;
 pub use crate::pathauditor::PathAuditor;
 pub use crate::pathauditor::audit_invalid_components;
+pub use crate::pathauditor::is_path_component_invalid;
 pub use crate::vfs::UpdateFlag;
 pub use crate::vfs::VFS;
 pub use crate::vfs::case_sensitive;

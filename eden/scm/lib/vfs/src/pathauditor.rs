@@ -182,12 +182,6 @@ fn valid_windows_component(component: &str, fs_features: FsFeatures) -> bool {
 /// It also checks that no trailing dots are part of the component and checks that shortnames
 /// on Windows are valid.
 pub fn audit_invalid_components(path: &str, fs_features: FsFeatures) -> Result<(), AuditError> {
-    let path: Cow<str> = if fs_features.contains(FsFeatures::CASE_INSENSITIVE) {
-        Cow::Owned(path.to_lowercase())
-    } else {
-        Cow::Borrowed(path)
-    };
-
     let separators: &[char] = if fs_features.contains(FsFeatures::BACKSLASH_SEP) {
         &['/', '\\'][..]
     } else {
@@ -195,22 +189,28 @@ pub fn audit_invalid_components(path: &str, fs_features: FsFeatures) -> Result<(
     };
 
     for s in path.split(separators) {
-        let s = if fs_features.contains(FsFeatures::HFS_STRIP) && s.contains(IGNORED_HFS_CHARS) {
-            Cow::Owned(s.replace(IGNORED_HFS_CHARS, ""))
-        } else {
-            Cow::Borrowed(s)
-        };
-        if s.is_empty()
-            || INVALID_COMPONENTS.contains(&&*s)
-            || !valid_windows_component(&s, fs_features)
-        {
-            return Err(AuditError::InvalidComponent(
-                s.into_owned(),
-                path.into_owned(),
-            ));
+        if is_path_component_invalid(s, fs_features) {
+            return Err(AuditError::InvalidComponent(s.to_owned(), path.to_owned()));
         }
     }
     Ok(())
+}
+
+/// Check if a path component is invalid. Returns `true` if invalid.
+pub fn is_path_component_invalid(component: &str, fs_features: FsFeatures) -> bool {
+    let s = component;
+    let s = if fs_features.contains(FsFeatures::HFS_STRIP) && s.contains(IGNORED_HFS_CHARS) {
+        Cow::Owned(s.replace(IGNORED_HFS_CHARS, ""))
+    } else {
+        Cow::Borrowed(s)
+    };
+    let s: Cow<str> = if fs_features.contains(FsFeatures::CASE_INSENSITIVE) {
+        Cow::Owned(s.to_lowercase())
+    } else {
+        s
+    };
+
+    s.is_empty() || INVALID_COMPONENTS.contains(&&*s) || !valid_windows_component(&s, fs_features)
 }
 
 #[cfg(test)]
