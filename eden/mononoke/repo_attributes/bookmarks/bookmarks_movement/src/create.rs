@@ -230,7 +230,7 @@ impl<'op> CreateBookmarkOp<'op> {
             }
         };
         let info = BookmarkInfo {
-            bookmark_name: self.bookmark.clone(),
+            bookmark_name: self.bookmark,
             bookmark_kind: kind,
             operation: BookmarkOperation::Create(self.target),
             reason: self.reason,

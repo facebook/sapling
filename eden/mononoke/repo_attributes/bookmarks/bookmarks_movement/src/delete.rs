@@ -145,7 +145,7 @@ impl<'op> DeleteBookmarkOp<'op> {
             }
         }
         let info = BookmarkInfo {
-            bookmark_name: self.bookmark.clone(),
+            bookmark_name: self.bookmark,
             bookmark_kind: kind,
             operation: BookmarkOperation::Delete(self.old_target),
             reason: self.reason,

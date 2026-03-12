@@ -286,7 +286,7 @@ impl<'op> UpdateBookmarkOp<'op> {
             }
         };
         let info = BookmarkInfo {
-            bookmark_name: self.bookmark.clone(),
+            bookmark_name: self.bookmark,
             bookmark_kind: kind,
             operation: BookmarkOperation::Update(self.targets.old, self.targets.new),
             reason: self.reason,
