@@ -626,7 +626,7 @@ fn supports_executables(fs_type: &FsType) -> bool {
 }
 
 /// determines whether FS located at root is case sensitive
-fn case_sensitive(root: &Path, fs_type: &FsType) -> Result<bool> {
+pub fn case_sensitive(root: &Path, fs_type: &FsType) -> Result<bool> {
     // Logic in this function is consistent with util.fscasesensitive in Python
     // For some FS we know they are case (in)sensitive, so we just return based on fs type
     // For rest of the FS we see if lstat on the upper/lower case variant differs
