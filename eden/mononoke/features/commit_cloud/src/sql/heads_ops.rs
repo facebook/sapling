@@ -17,6 +17,7 @@ use crate::sql::common::UpdateWorkspaceNameArgs;
 use crate::sql::ops::Delete;
 use crate::sql::ops::Get;
 use crate::sql::ops::Insert;
+use crate::sql::ops::InsertMany;
 use crate::sql::ops::SqlCommitCloud;
 use crate::sql::ops::Update;
 
@@ -40,6 +41,12 @@ mononoke_queries! {
         none,
         mysql("INSERT INTO `heads` (`reponame`, `workspace`, `node`) VALUES ({reponame}, {workspace}, {commit})")
         sqlite("INSERT INTO `heads` (`reponame`, `workspace`, `commit`) VALUES ({reponame}, {workspace}, {commit})")
+    }
+
+    write BulkInsertHeads(values: (reponame: String, workspace: String, commit: CloudChangesetId)) {
+        none,
+        mysql("INSERT INTO `heads` (`reponame`, `workspace`, `node`) VALUES {values}")
+        sqlite("INSERT INTO `heads` (`reponame`, `workspace`, `commit`) VALUES {values}")
     }
 
     write UpdateWorkspaceName( reponame: String, workspace: String, new_workspace: String) {
@@ -124,6 +131,30 @@ impl Delete<WorkspaceHead> for SqlCommitCloud {
             args.removed_commits.as_slice(),
         )
         .await?;
+        Ok(txn)
+    }
+}
+
+#[async_trait]
+impl InsertMany<WorkspaceHead> for SqlCommitCloud {
+    async fn insert_many(
+        &self,
+        txn: Transaction,
+        _ctx: &CoreContext,
+        reponame: String,
+        workspace: String,
+        data: Vec<WorkspaceHead>,
+    ) -> anyhow::Result<Transaction> {
+        if data.is_empty() {
+            return Ok(txn);
+        }
+        let rows: Vec<(String, String, CloudChangesetId)> = data
+            .into_iter()
+            .map(|h| (reponame.clone(), workspace.clone(), h.commit))
+            .collect();
+        let rows_ref: Vec<(&String, &String, &CloudChangesetId)> =
+            rows.iter().map(|(r, w, c)| (r, w, c)).collect();
+        let (txn, _) = BulkInsertHeads::query_with_transaction(txn, rows_ref.as_slice()).await?;
         Ok(txn)
     }
 }

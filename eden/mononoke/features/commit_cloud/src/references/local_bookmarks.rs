@@ -18,6 +18,7 @@ use crate::CommitCloudContext;
 use crate::sql::local_bookmarks_ops::DeleteArgs;
 use crate::sql::ops::Delete;
 use crate::sql::ops::Insert;
+use crate::sql::ops::InsertMany;
 use crate::sql::ops::SqlCommitCloud;
 
 pub fn lbs_from_map(map: &HashMap<String, String>) -> anyhow::Result<Vec<WorkspaceLocalBookmark>> {
@@ -59,16 +60,34 @@ pub async fn update_bookmarks(
         )
         .await?;
     }
-    for (name, book) in updated_bookmarks {
-        txn = Insert::<WorkspaceLocalBookmark>::insert(
-            sql_commit_cloud,
-            txn,
-            ctx,
-            cc_ctx.reponame.clone(),
-            cc_ctx.workspace.clone(),
-            WorkspaceLocalBookmark::new(name, book)?,
-        )
-        .await?;
+    if !updated_bookmarks.is_empty() {
+        if justknobs::eval("scm/mononoke:commitcloud_bulk_inserts", None, None)? {
+            let bookmarks: Vec<WorkspaceLocalBookmark> = updated_bookmarks
+                .into_iter()
+                .map(|(name, commit)| WorkspaceLocalBookmark::new(name, commit))
+                .collect::<anyhow::Result<Vec<_>>>()?;
+            txn = InsertMany::<WorkspaceLocalBookmark>::insert_many(
+                sql_commit_cloud,
+                txn,
+                ctx,
+                cc_ctx.reponame.clone(),
+                cc_ctx.workspace.clone(),
+                bookmarks,
+            )
+            .await?;
+        } else {
+            for (name, book) in updated_bookmarks {
+                txn = Insert::<WorkspaceLocalBookmark>::insert(
+                    sql_commit_cloud,
+                    txn,
+                    ctx,
+                    cc_ctx.reponame.clone(),
+                    cc_ctx.workspace.clone(),
+                    WorkspaceLocalBookmark::new(name, book)?,
+                )
+                .await?;
+            }
+        }
     }
 
     Ok(txn)

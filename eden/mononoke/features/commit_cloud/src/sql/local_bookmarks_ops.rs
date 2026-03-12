@@ -19,6 +19,7 @@ use crate::sql::ops::Delete;
 use crate::sql::ops::Get;
 use crate::sql::ops::GetAsMap;
 use crate::sql::ops::Insert;
+use crate::sql::ops::InsertMany;
 use crate::sql::ops::SqlCommitCloud;
 use crate::sql::ops::Update;
 
@@ -40,6 +41,11 @@ mononoke_queries! {
         none,
         mysql("INSERT INTO `bookmarks` (`reponame`, `workspace`, `name`, `node`) VALUES ({reponame}, {workspace}, {name}, {commit})")
         sqlite("INSERT INTO `workspacebookmarks` (`reponame`, `workspace`, `name`, `commit`) VALUES ({reponame}, {workspace}, {name}, {commit})")
+    }
+    write BulkInsertLocalBookmarks(values: (reponame: String, workspace: String, name: String, commit: CloudChangesetId)) {
+        none,
+        mysql("INSERT INTO `bookmarks` (`reponame`, `workspace`, `name`, `node`) VALUES {values}")
+        sqlite("INSERT INTO `workspacebookmarks` (`reponame`, `workspace`, `name`, `commit`) VALUES {values}")
     }
     write UpdateWorkspaceName( reponame: String, workspace: String, new_workspace: String) {
         none,
@@ -157,6 +163,38 @@ impl Delete<WorkspaceLocalBookmark> for SqlCommitCloud {
             &args.removed_bookmarks,
         )
         .await?;
+        Ok(txn)
+    }
+}
+
+#[async_trait]
+impl InsertMany<WorkspaceLocalBookmark> for SqlCommitCloud {
+    async fn insert_many(
+        &self,
+        txn: Transaction,
+        _ctx: &CoreContext,
+        reponame: String,
+        workspace: String,
+        data: Vec<WorkspaceLocalBookmark>,
+    ) -> anyhow::Result<Transaction> {
+        if data.is_empty() {
+            return Ok(txn);
+        }
+        let rows: Vec<(String, String, String, CloudChangesetId)> = data
+            .into_iter()
+            .map(|b| {
+                (
+                    reponame.clone(),
+                    workspace.clone(),
+                    b.name().clone(),
+                    b.commit().clone(),
+                )
+            })
+            .collect();
+        let rows_ref: Vec<(&String, &String, &String, &CloudChangesetId)> =
+            rows.iter().map(|(r, w, n, c)| (r, w, n, c)).collect();
+        let (txn, _) =
+            BulkInsertLocalBookmarks::query_with_transaction(txn, rows_ref.as_slice()).await?;
         Ok(txn)
     }
 }

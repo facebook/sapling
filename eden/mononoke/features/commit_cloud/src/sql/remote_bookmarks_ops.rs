@@ -19,6 +19,7 @@ use crate::sql::ops::Delete;
 use crate::sql::ops::Get;
 use crate::sql::ops::GetAsMap;
 use crate::sql::ops::Insert;
+use crate::sql::ops::InsertMany;
 use crate::sql::ops::SqlCommitCloud;
 use crate::sql::ops::Update;
 
@@ -41,6 +42,11 @@ mononoke_queries! {
         none,
         mysql("INSERT INTO `remotebookmarks` (`reponame`, `workspace`, `remote`,`name`, `node` ) VALUES ({reponame}, {workspace}, {remote}, {name}, {commit})")
         sqlite("INSERT INTO `remotebookmarks` (`reponame`, `workspace`, `remote`,`name`, `commit` ) VALUES ({reponame}, {workspace}, {remote}, {name}, {commit})")
+    }
+    write BulkInsertRemoteBookmarks(values: (reponame: String, workspace: String, remote: String, name: String, commit: CloudChangesetId)) {
+        none,
+        mysql("INSERT INTO `remotebookmarks` (`reponame`, `workspace`, `remote`, `name`, `node`) VALUES {values}")
+        sqlite("INSERT INTO `remotebookmarks` (`reponame`, `workspace`, `remote`, `name`, `commit`) VALUES {values}")
     }
     write UpdateWorkspaceName( reponame: String, workspace: String, new_workspace: String) {
         none,
@@ -160,6 +166,41 @@ impl Delete<WorkspaceRemoteBookmark> for SqlCommitCloud {
             args.removed_bookmarks.as_slice(),
         )
         .await?;
+        Ok(txn)
+    }
+}
+
+#[async_trait]
+impl InsertMany<WorkspaceRemoteBookmark> for SqlCommitCloud {
+    async fn insert_many(
+        &self,
+        txn: Transaction,
+        _ctx: &CoreContext,
+        reponame: String,
+        workspace: String,
+        data: Vec<WorkspaceRemoteBookmark>,
+    ) -> anyhow::Result<Transaction> {
+        if data.is_empty() {
+            return Ok(txn);
+        }
+        let rows: Vec<(String, String, String, String, CloudChangesetId)> = data
+            .into_iter()
+            .map(|b| {
+                (
+                    reponame.clone(),
+                    workspace.clone(),
+                    b.remote().clone(),
+                    b.name().clone(),
+                    b.commit().clone(),
+                )
+            })
+            .collect();
+        let rows_ref: Vec<(&String, &String, &String, &String, &CloudChangesetId)> = rows
+            .iter()
+            .map(|(r, w, remote, n, c)| (r, w, remote, n, c))
+            .collect();
+        let (txn, _) =
+            BulkInsertRemoteBookmarks::query_with_transaction(txn, rows_ref.as_slice()).await?;
         Ok(txn)
     }
 }

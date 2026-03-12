@@ -17,6 +17,7 @@ use sql_ext::Transaction;
 use crate::CommitCloudContext;
 use crate::sql::ops::Delete;
 use crate::sql::ops::Insert;
+use crate::sql::ops::InsertMany;
 use crate::sql::ops::SqlCommitCloud;
 use crate::sql::remote_bookmarks_ops::DeleteArgs;
 
@@ -86,17 +87,32 @@ pub async fn update_remote_bookmarks(
         )
         .await?;
     }
-    for book in updated_remote_bookmarks.unwrap_or_default() {
+    let books = updated_remote_bookmarks.unwrap_or_default();
+    if !books.is_empty() {
         //TODO: Resolve remote bookmarks if no node available (e.g. master)
-        txn = Insert::<WorkspaceRemoteBookmark>::insert(
-            sql_commit_cloud,
-            txn,
-            ctx,
-            cc_ctx.reponame.clone(),
-            cc_ctx.workspace.clone(),
-            book,
-        )
-        .await?;
+        if justknobs::eval("scm/mononoke:commitcloud_bulk_inserts", None, None)? {
+            txn = InsertMany::<WorkspaceRemoteBookmark>::insert_many(
+                sql_commit_cloud,
+                txn,
+                ctx,
+                cc_ctx.reponame.clone(),
+                cc_ctx.workspace.clone(),
+                books,
+            )
+            .await?;
+        } else {
+            for book in books {
+                txn = Insert::<WorkspaceRemoteBookmark>::insert(
+                    sql_commit_cloud,
+                    txn,
+                    ctx,
+                    cc_ctx.reponame.clone(),
+                    cc_ctx.workspace.clone(),
+                    book,
+                )
+                .await?;
+            }
+        }
     }
 
     Ok(txn)
