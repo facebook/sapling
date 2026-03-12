@@ -14,10 +14,14 @@
 
 #![feature(trait_alias)]
 
+mod ancestor_filter;
 mod blame;
 mod common;
 mod log;
 
+pub use ancestor_filter::AncestorFilterOptions;
+pub use ancestor_filter::AncestorFilterRepo;
+pub use ancestor_filter::matching_ancestors_stream;
 use commit_graph::CommitGraphRef;
 pub use log::CsAndPath;
 pub use log::FastlogError;
