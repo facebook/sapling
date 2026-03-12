@@ -35,6 +35,8 @@ use pypathmatcher::extract_option_matcher;
 use pystatus::status as PyStatus;
 use pytreestate::treestate as PyTreeState;
 use storemodel::FileStore;
+use storemodel::types::RepoPath;
+use vfs::PathAuditor;
 use vfs::VFS;
 
 type ArcFileStore = Arc<dyn FileStore>;
@@ -48,6 +50,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add_class::<checkoutplan>(py)?;
     m.add_class::<mergeresult>(py)?;
     m.add_class::<manifestbuilder>(py)?;
+    m.add_class::<pathauditor>(py)?;
     m.add(
         py,
         "fixsymlinks",
@@ -61,7 +64,6 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 fn fix_symlinks(py: Python, paths: Vec<String>, root: PyPathBuf) -> PyResult<PyNone> {
     #[cfg(windows)]
     {
-        use storemodel::types::RepoPath;
         let vfs = VFS::new_destructive(root.to_path_buf()).map_pyerr(py)?;
         let paths: Vec<&RepoPath> = paths
             .iter()
@@ -270,6 +272,32 @@ py_class!(class mergeresult |py| {
 
     def conflict_paths(&self) -> PyResult<Vec<String>> {
         Ok(self.merge_result(py).conflicts().keys().map(|k|k.to_string()).collect())
+    }
+});
+
+py_class!(class pathauditor |py| {
+    data inner: PathAuditor;
+
+    def __new__(_cls, root: PyPathBuf) -> PyResult<Self> {
+        let root = root.to_path_buf();
+        let mut case_sensitive = false;
+        // Some caller might pass a non-existent `root` (e.g. .hg/store/cache)
+        // Just be defensive and treat it as case insensitive.
+        if let Ok(fstype) = ::vfs::fstype(&root) {
+            if let Ok(case_sensitive_detected) = ::vfs::case_sensitive(&root, &fstype) {
+                case_sensitive = case_sensitive_detected;
+            }
+        }
+        let auditor = PathAuditor::new(&root, case_sensitive);
+        Self::create_instance(py, auditor)
+    }
+
+    /// audit(path). Might raise.
+    def audit(&self, path: &str) -> PyResult<PyNone> {
+        let inner = self.inner(py);
+        let path = RepoPath::from_str(path).map_pyerr(py)?;
+        inner.audit(path).map_pyerr(py)?;
+        Ok(PyNone)
     }
 });
 
