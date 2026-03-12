@@ -47,7 +47,7 @@ folly::coro::now_task<BlobCache::GetResult> BlobAccess::co_getBlob(
   if (result.object) {
     co_return std::move(result);
   }
-  auto blob = co_await objectStore_->getBlob(id, context).semi();
+  auto blob = co_await objectStore_->co_getBlob(id, context);
   auto interestHandle = blobCache_->insert(id, blob, interest);
   co_return BlobCache::GetResult{std::move(blob), std::move(interestHandle)};
 }

@@ -444,7 +444,7 @@ ImmediateFuture<shared_ptr<const Blob>> ObjectStore::getBlob(
           });
 }
 
-folly::coro::Task<std::shared_ptr<const Blob>> ObjectStore::co_getBlob(
+folly::coro::now_task<std::shared_ptr<const Blob>> ObjectStore::co_getBlob(
     const ObjectId& id,
     const ObjectFetchContextPtr& fetchContext) const {
   DurationScope<EdenStats> statScope{stats_, &ObjectStoreStats::getBlob};
@@ -478,7 +478,7 @@ folly::SemiFuture<BackingStore::GetBlobResult> ObjectStore::getBlobImpl(
       .semi();
 }
 
-folly::coro::Task<BackingStore::GetBlobResult> ObjectStore::co_getBlobImpl(
+folly::coro::now_task<BackingStore::GetBlobResult> ObjectStore::co_getBlobImpl(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) const {
   try {

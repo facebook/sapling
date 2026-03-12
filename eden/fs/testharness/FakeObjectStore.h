@@ -50,7 +50,7 @@ class FakeObjectStore final : public IObjectStore {
   folly::coro::now_task<std::shared_ptr<const Blob>> co_getBlob(
       const ObjectId& id,
       const ObjectFetchContextPtr& context =
-          ObjectFetchContext::getNullContext()) const;
+          ObjectFetchContext::getNullContext()) const override;
 
   ImmediateFuture<folly::Unit> prefetchBlobs(
       ObjectIdRange ids,

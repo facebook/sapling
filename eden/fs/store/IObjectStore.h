@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <folly/coro/safe/NowTask.h>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -69,6 +70,10 @@ class IObjectStore {
   virtual ImmediateFuture<std::shared_ptr<const Blob>> getBlob(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) const = 0;
+  virtual folly::coro::now_task<std::shared_ptr<const Blob>> co_getBlob(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context =
+          ObjectFetchContext::getNullContext()) const = 0;
 
   /**
    * Prefetch all the blobs represented by the HashRange.
