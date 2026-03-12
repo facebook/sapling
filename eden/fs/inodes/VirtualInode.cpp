@@ -9,6 +9,7 @@
 
 #include "eden/common/utils/Match.h"
 #include "eden/common/utils/StatTimes.h"
+#include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/TreeInode.h"
@@ -17,6 +18,8 @@
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/utils/EdenError.h"
+
+#include <folly/coro/Invoke.h>
 
 namespace facebook::eden {
 
@@ -832,6 +835,43 @@ VirtualInode::getChildrenAttributes(
 }
 
 namespace {
+
+/**
+ * Coroutine helper for getOrFindChild when the current node is a Tree.
+ */
+folly::coro::now_task<VirtualInode> co_getOrFindChildHelper(
+    TreePtr tree,
+    PathComponentPiece childName,
+    RelativePathPiece path,
+    const std::shared_ptr<ObjectStore>& objectStore,
+    const ObjectFetchContextPtr& fetchContext) {
+  // Lookup the next child
+  const auto it = tree->find(childName);
+  if (it == tree->cend()) {
+    // Note that the path printed below is the requested path that is being
+    // walked, childName may appear anywhere in the path.
+    XLOGF(
+        DBG7,
+        "attempted to find non-existent TreeEntry \"{}\" in {}",
+        childName,
+        path);
+    co_yield folly::coro::co_error(
+        std::system_error(ENOENT, std::generic_category()));
+  }
+  // Always descend if the treeEntry is a Tree
+  const auto* treeEntry = &it->second;
+  if (treeEntry->isTree()) {
+    auto treeResult =
+        co_await objectStore->getTree(treeEntry->getObjectId(), fetchContext)
+            .semi();
+    auto mode = modeFromTreeEntryType(treeEntry->getType());
+    co_return VirtualInode{std::move(treeResult), mode};
+  } else {
+    // This is a file, return the TreeEntry for it
+    co_return VirtualInode{*treeEntry};
+  }
+}
+
 /**
  * Helper function for getOrFindChild when the current node is a Tree.
  */
@@ -841,6 +881,23 @@ ImmediateFuture<VirtualInode> getOrFindChildHelper(
     RelativePathPiece path,
     const std::shared_ptr<ObjectStore>& objectStore,
     const ObjectFetchContextPtr& fetchContext) {
+  if (objectStore->getEdenConfig()->enableCoroutinesPhase1.getValue()) {
+    return ImmediateFuture{
+        // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+        folly::coro::co_invoke(
+            [](auto&&... args) {
+              return co_getOrFindChildHelper(
+                         std::forward<decltype(args)>(args)...)
+                  // @lint-ignore CLANGTIDY facebook-hte-Deprecated
+                  .as_unsafe();
+            },
+            std::move(tree),
+            childName.copy(),
+            path.copy(),
+            std::shared_ptr<ObjectStore>(objectStore),
+            fetchContext.copy())
+            .semi()};
+  }
   // Lookup the next child
   const auto it = tree->find(childName);
   if (it == tree->cend()) {
@@ -868,6 +925,7 @@ ImmediateFuture<VirtualInode> getOrFindChildHelper(
     return VirtualInode{*treeEntry};
   }
 }
+
 } // namespace
 
 ImmediateFuture<VirtualInode> VirtualInode::getOrFindChild(
