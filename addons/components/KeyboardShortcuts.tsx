@@ -104,6 +104,7 @@ class CommandDispatcher<CommandName extends string> extends (
         const [mods, key] = cmdAttrs;
         if (key === event.keyCode && collapseModifiersToNumber(mods) === modValue) {
           this.dispatchEvent(new Event(command));
+          event.preventDefault();
           break;
         }
       }

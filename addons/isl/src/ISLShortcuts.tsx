@@ -41,6 +41,7 @@ export const [ISLCommandContext, useCommand, dispatchCommand, allCommands] = mak
   ToggleFocusMode: [Modifier.ALT, KeyCode.F],
   ToggleBookmarksManagerDropdown: [Modifier.ALT, KeyCode.M],
   RebaseOntoCurrentStackBase: [Modifier.ALT, KeyCode.R],
+  ToggleFilterDropdown: [Modifier.CMD, KeyCode.F],
 });
 
 export type ISLCommandName = Parameters<typeof useCommand>[0];
@@ -71,6 +72,7 @@ export const ISLShortcutLabels: Partial<Record<ISLCommandName, string>> = {
   ToggleFocusMode: t('Toggle Focus Mode'),
   ToggleBookmarksManagerDropdown: t('Toggle Bookmarks Manager Dropdown'),
   RebaseOntoCurrentStackBase: t('Rebase Selected Commits onto Current Stack Base'),
+  ToggleFilterDropdown: t('Filter Commits'),
 };
 
 export function useShowKeyboardShortcutsHelp(): () => unknown {
