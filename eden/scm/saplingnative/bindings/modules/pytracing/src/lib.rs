@@ -160,8 +160,10 @@ py_class!(class tracingdata |py| {
     /// `minduration` specifies the minimal duration threshold in micro seconds.
     /// The default value is 10000 (10 milliseconds).
     def ascii(&self, minduration: u64 = 10000) -> PyResult<String> {
-        let mut opts = tracing_collector::model::AsciiOptions::default();
-        opts.min_duration_to_hide = minduration;
+        let opts = tracing_collector::model::AsciiOptions {
+            min_duration_to_hide: minduration,
+            ..Default::default()
+        };
         Ok(self.data(py).lock().ascii(&opts))
     }
 

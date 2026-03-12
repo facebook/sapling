@@ -57,8 +57,10 @@ mod tests {
         }
 
         let render = |min_duration_to_hide, merge| -> String {
-            let mut opts = AsciiOptions::default();
-            opts.min_duration_to_hide = min_duration_to_hide;
+            let opts = AsciiOptions {
+                min_duration_to_hide,
+                ..Default::default()
+            };
             let mut tree = tree.clone();
             if merge {
                 tree.merge_children(&opts, &|n| n.extra);

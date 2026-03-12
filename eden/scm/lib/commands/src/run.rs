@@ -684,9 +684,11 @@ pub(crate) fn write_trace(io: &IO, path: &str, data: &TracingData) -> Result<()>
 
     match format {
         Format::Ascii => {
-            let mut ascii_opts = tracing_collector::model::AsciiOptions::default();
-            ascii_opts.min_duration_parent_percentage_to_show = 10;
-            ascii_opts.min_duration_to_hide = 100000;
+            let ascii_opts = tracing_collector::model::AsciiOptions {
+                min_duration_parent_percentage_to_show: 10,
+                min_duration_to_hide: 100000,
+                ..Default::default()
+            };
             out.write_all(data.ascii(&ascii_opts).as_bytes())?;
             out.flush()?;
         }
@@ -905,10 +907,11 @@ fn log_perftrace(io: &IO, config: &dyn Config, start_time: StartTime) -> Result<
 
     if let Some(threshold) = config.get_opt::<Duration>("tracing", "threshold")? {
         if *elapsed >= threshold {
-            let mut ascii_opts = tracing_collector::model::AsciiOptions::default();
-
             // Minimum resolution = 1% of duration.
-            ascii_opts.min_duration_to_hide = (elapsed.as_micros() / 100) as u64;
+            let ascii_opts = tracing_collector::model::AsciiOptions {
+                min_duration_to_hide: (elapsed.as_micros() / 100) as u64,
+                ..Default::default()
+            };
 
             let tracing_summary = pytracing::DATA.lock().ascii(&ascii_opts);
             if config.get_or_default("tracing", "stderr")? {
