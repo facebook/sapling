@@ -9,7 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
-pin-project = "1.1.10"
+pin-project = "1.1.11"
 
 [dev-dependencies]
 bytes = { version = "1.11.1", features = ["serde"] }

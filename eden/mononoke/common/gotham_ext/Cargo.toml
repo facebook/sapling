@@ -38,7 +38,7 @@ mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }
 openssl = "0.10.72"
 percent-encoding = "2.1"
 permission_checker = { version = "0.1.0", path = "../permission_checker" }
-pin-project = "1.1.10"
+pin-project = "1.1.11"
 quiet_stream = { version = "0.1.0", path = "../quiet_stream" }
 rate_limiting = { version = "0.1.0", path = "../rate_limiting" }
 sapling-clientinfo = { version = "0.1.0", path = "../../../scm/lib/clientinfo" }

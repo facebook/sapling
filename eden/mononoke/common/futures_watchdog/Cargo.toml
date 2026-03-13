@@ -9,5 +9,5 @@ license = "GPLv2+"
 
 [dependencies]
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
-pin-project = "1.1.10"
+pin-project = "1.1.11"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
