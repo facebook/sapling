@@ -428,9 +428,8 @@ folly::coro::now_task<VirtualInode> TreeInode::co_getOrFindChild(
 
 #ifndef _WIN32
   if (name == kDotEdenName && getNodeId() != kRootNodeId) {
-    auto inode = co_await getMount()
-                     ->getInodeSlow(".eden/this-dir"_relpath, context)
-                     .semi();
+    auto inode =
+        co_await getMount()->co_getInodeSlow(".eden/this-dir"_relpath, context);
     co_return VirtualInode{std::move(inode)};
   }
 #endif // !_WIN32
@@ -581,6 +580,16 @@ class LookupProcessor {
     }
   }
 
+  folly::coro::now_task<InodePtr> co_next(TreeInodePtr tree) {
+    auto name = *iter_++;
+    if (iter_ == iterRange_.end()) {
+      co_return co_await tree->getOrLoadChild(name, context_).semi();
+    } else {
+      auto childTree = co_await tree->getOrLoadChildTree(name, context_).semi();
+      co_return co_await co_next(std::move(childTree));
+    }
+  }
+
  private:
   RelativePath path_;
   RelativePath::base_type::component_iterator_range iterRange_;
@@ -592,6 +601,19 @@ class LookupProcessor {
 ImmediateFuture<InodePtr> TreeInode::getChildRecursive(
     RelativePathPiece path,
     const ObjectFetchContextPtr& context) {
+  if (getMount()->getEdenConfig()->enableCoroutinesPhase1.getValue()) {
+    return ImmediateFuture{
+        // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+        folly::coro::co_invoke(
+            [this](auto&&... args) {
+              return co_getChildRecursive(std::forward<decltype(args)>(args)...)
+                  // @lint-ignore CLANGTIDY facebook-hte-Deprecated
+                  .as_unsafe();
+            },
+            path.copy(),
+            context.copy())
+            .semi()};
+  }
   auto pathStr = path.view();
   if (pathStr.empty()) {
     return inodePtrFromThis();
@@ -603,6 +625,18 @@ ImmediateFuture<InodePtr> TreeInode::getChildRecursive(
   // and makes sure it only gets destroyed when the future is finally resolved.
   return std::move(future).ensure(
       [p = std::move(processor)]() mutable { p.reset(); });
+}
+
+folly::coro::now_task<InodePtr> TreeInode::co_getChildRecursive(
+    RelativePathPiece path,
+    const ObjectFetchContextPtr& context) {
+  auto pathStr = path.view();
+  if (pathStr.empty()) {
+    co_return inodePtrFromThis();
+  }
+
+  auto processor = std::make_unique<LookupProcessor>(path, context.copy());
+  co_return co_await processor->co_next(inodePtrFromThis());
 }
 
 InodeNumber TreeInode::getChildInodeNumber(PathComponentPiece name) {

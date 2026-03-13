@@ -1369,7 +1369,27 @@ InodeNumber EdenMount::getDotEdenInodeNumber() const {
 ImmediateFuture<InodePtr> EdenMount::getInodeSlow(
     RelativePathPiece path,
     const ObjectFetchContextPtr& context) const {
+  if (getEdenConfig()->enableCoroutinesPhase1.getValue()) {
+    return ImmediateFuture{
+        // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+        folly::coro::co_invoke(
+            [this](auto&&... args) {
+              return co_getInodeSlow(std::forward<decltype(args)>(args)...)
+                  // @lint-ignore CLANGTIDY facebook-hte-Deprecated
+                  .as_unsafe();
+            },
+            path.copy(),
+            context.copy())
+            .semi()};
+  }
   return inodeMap_->getRootInode()->getChildRecursive(path, context);
+}
+
+folly::coro::now_task<InodePtr> EdenMount::co_getInodeSlow(
+    RelativePathPiece path,
+    const ObjectFetchContextPtr& context) const {
+  co_return co_await inodeMap_->getRootInode()->co_getChildRecursive(
+      path, context);
 }
 
 namespace {

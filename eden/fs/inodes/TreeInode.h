@@ -195,6 +195,10 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       RelativePathPiece name,
       const ObjectFetchContextPtr& context);
 
+  folly::coro::now_task<InodePtr> co_getChildRecursive(
+      RelativePathPiece name,
+      const ObjectFetchContextPtr& context);
+
   InodeNumber getChildInodeNumber(PathComponentPiece name);
 
   [[nodiscard]] ImmediateFuture<folly::Unit> rename(

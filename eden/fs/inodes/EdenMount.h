@@ -761,6 +761,10 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
       RelativePathPiece path,
       const ObjectFetchContextPtr& context) const;
 
+  folly::coro::now_task<InodePtr> co_getInodeSlow(
+      RelativePathPiece path,
+      const ObjectFetchContextPtr& context) const;
+
   /**
    * Look up the Inode, Tree, or TreeEntry for the specified path.
    *
