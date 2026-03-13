@@ -52,6 +52,7 @@ cmdroot = { version = "0.1.0", path = "commands/cmdroot" }
 cmdstatus = { version = "0.1.0", path = "commands/cmdstatus" }
 cmdversion = { version = "0.1.0", path = "commands/cmdversion" }
 cmdwhereami = { version = "0.1.0", path = "commands/cmdwhereami" }
+cmdworktree = { version = "0.1.0", path = "commands/cmdworktree" }
 ctrlc = { version = "3.5.2", features = ["termination"] }
 flate2 = { version = "1.0.33", features = ["rust_backend"], default-features = false }
 hostname = "0.3"

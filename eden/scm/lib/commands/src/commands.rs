@@ -39,6 +39,7 @@ external_commands![
     cmdstatus,
     cmdversion,
     cmdwhereami,
+    cmdworktree,
     cmddebugargs,
     cmddebugconfigtree,
     cmddebugcurrentexe,

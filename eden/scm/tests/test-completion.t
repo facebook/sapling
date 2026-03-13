@@ -203,6 +203,7 @@ Show aliases with -v
   version
   web isl
   whereami
+  worktree
 
 Show an error if we use --options with an ambiguous abbreviation
   $ hg debugcomplete --options s
