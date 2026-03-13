@@ -144,6 +144,7 @@ SaplingImportRequestQueue::co_enqueue(
             return (*lhs) < (*rhs);
           });
     }
+    state.unlock();
     co_return co_await std::move(future);
   }
 
@@ -162,7 +163,9 @@ SaplingImportRequestQueue::co_enqueue(
 
   queueCV_.notify_one();
 
-  co_return co_await promise->getSemiFuture();
+  auto sf = promise->getSemiFuture();
+  state.unlock();
+  co_return co_await std::move(sf);
 }
 
 std::vector<std::shared_ptr<SaplingImportRequest>>
