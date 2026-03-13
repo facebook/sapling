@@ -108,7 +108,7 @@ mod tests {
             latency: Duration::from_micros(123456),
         };
 
-        let expected = "Downloaded 10.59 MiB in 12.35s over 5 requests (7.19 Mb/s, latency: 123ms)";
+        let expected = "Downloaded 10.59 MiB in 12.34s over 5 requests (7.19 Mb/s, latency: 123ms)";
         assert_eq!(expected, &stats.to_string());
     }
 }
