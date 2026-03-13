@@ -732,6 +732,11 @@ impl Log {
                 return Err(err);
             }
 
+            tracing::debug!(
+                mem_buf_len = self.mem_buf.len(),
+                "writing to primary log file"
+            );
+
             // Actually write the primary log. Once it's written, we can remove the in-memory buffer.
             let start = Instant::now();
             primary_file
