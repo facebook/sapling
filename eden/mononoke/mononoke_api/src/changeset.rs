@@ -1932,20 +1932,20 @@ impl<R: MononokeRepo> ChangesetContext<R> {
         &self,
         roots: Vec<MPath>,
     ) -> Result<Vec<PathAccessInfo>, MononokeError> {
-        let all_descendants: Vec<Vec<PathAccessInfo>> = stream::iter(roots)
-            .map(|root| async move {
-                let restriction_ctx = self.path_restriction(root).await?;
-                restriction_ctx.find_restricted_descendants().await
-            })
-            .buffer_unordered(100)
-            .try_collect()
+        let restricted_paths = self.repo_ctx().repo().restricted_paths_arc();
+        let cs_id = self.id();
+
+        let restriction_infos = restricted_paths
+            .find_restricted_descendants(self.ctx(), Some(cs_id), roots)
             .await?;
 
-        let mut merged: Vec<PathAccessInfo> = all_descendants.into_iter().flatten().collect();
-        // Deduplicate by restriction_root
-        merged.sort_by(|a, b| a.restriction_root().cmp(b.restriction_root()));
-        merged.dedup_by(|a, b| a.restriction_root() == b.restriction_root());
-        Ok(merged)
+        Ok(restriction_infos
+            .into_iter()
+            .map(|restriction| PathAccessInfo {
+                restriction,
+                has_access: None,
+            })
+            .collect())
     }
 
     /// Determine which changed files in this changeset touch restricted paths.

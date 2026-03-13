@@ -7,7 +7,9 @@
 
 use std::collections::HashMap;
 use std::fmt;
+use std::str::FromStr;
 
+use anyhow::Context;
 use anyhow::Error;
 use anyhow::anyhow;
 use async_trait::async_trait;
@@ -55,6 +57,7 @@ use mononoke_types::blame_v2::BlameV2;
 use mononoke_types::deleted_manifest_common::DeletedManifestCommon;
 use mononoke_types::fsnode::FsnodeFile;
 use mononoke_types::path::MPath;
+use permission_checker::MononokeIdentity;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use restricted_paths::RestrictedPathsArc;
@@ -1017,7 +1020,6 @@ impl<R: MononokeRepo> ChangesetPathRestrictionContext<R> {
     /// When `check_permissions` is true, the `has_access` field in each
     /// `PathAccessInfo` will be populated with the result of an ACL check.
     /// When false, `has_access` will be `None`.
-    // TODO(T248660146): update this primitive to use AclManifest instead of access logging config.
     pub async fn restriction_info(
         &self,
         check_permissions: bool,
@@ -1029,57 +1031,48 @@ impl<R: MononokeRepo> ChangesetPathRestrictionContext<R> {
         };
 
         let restricted_paths = self.changeset().repo_ctx().repo().restricted_paths_arc();
+        let cs_id = self.changeset().id();
 
-        // Find all restriction roots that match this path
-        let matching_roots: Vec<_> = restricted_paths
-            .config()
-            .path_acls
-            .iter()
-            .filter(|(root, _)| root.is_prefix_of(&path) || *root == &path)
-            .map(|(root, acl)| (root.clone(), acl.clone()))
-            .collect();
+        let restriction_infos = restricted_paths
+            .get_path_restriction_info(self.changeset().ctx(), Some(cs_id), &[path])
+            .await?;
 
-        if matching_roots.is_empty() {
+        if restriction_infos.is_empty() {
             return Ok(vec![]);
         }
 
-        let results: Vec<PathAccessInfo> = stream::iter(matching_roots)
-            .map(|(restriction_root, acl)| {
+        if !check_permissions {
+            return Ok(restriction_infos
+                .into_iter()
+                .map(|restriction| PathAccessInfo {
+                    restriction,
+                    has_access: None,
+                })
+                .collect());
+        }
+
+        // Check permissions concurrently for each restriction
+        stream::iter(restriction_infos)
+            .map(|restriction| {
                 let restricted_paths = restricted_paths.clone();
                 async move {
-                    let repo_region_acl = acl.to_string();
-
-                    let has_access = if check_permissions {
-                        let access = has_read_access_to_repo_region_acls(
-                            self.changeset().ctx(),
-                            restricted_paths.acl_provider(),
-                            &[&acl],
-                        )
-                        .await?;
-                        Some(access)
-                    } else {
-                        None
-                    };
-
-                    // TODO(T248658346): look up permission_request_group from .slacl file
-                    // For now, use the repo_region_acl itself as the request target
-                    let request_acl = repo_region_acl.clone();
-
+                    let acl = MononokeIdentity::from_str(&restriction.repo_region_acl)
+                        .context("Failed to parse repo_region_acl")?;
+                    let has_access = has_read_access_to_repo_region_acls(
+                        self.changeset().ctx(),
+                        restricted_paths.acl_provider(),
+                        &[&acl],
+                    )
+                    .await?;
                     Ok::<_, MononokeError>(PathAccessInfo {
-                        restriction: restricted_paths::PathRestrictionInfo {
-                            restriction_root,
-                            repo_region_acl,
-                            request_acl,
-                        },
-                        has_access,
+                        restriction,
+                        has_access: Some(has_access),
                     })
                 }
             })
             .buffer_unordered(100)
             .try_collect()
-            .await?;
-
-        Ok(results)
+            .await
     }
 
     /// Find all restricted paths that are descendants of this path.
@@ -1087,37 +1080,24 @@ impl<R: MononokeRepo> ChangesetPathRestrictionContext<R> {
     /// Returns restriction info for each restriction root under this path.
     /// Since the number of roots can grow, this method will not perform
     /// access checks. Callers should check access individually.
-    // TODO(T248660146): update this primitive to use AclManifest instead of access logging config.
     pub async fn find_restricted_descendants(&self) -> Result<Vec<PathAccessInfo>, MononokeError> {
         let restricted_paths = self.changeset().repo_ctx().repo().restricted_paths_arc();
+        let cs_id = self.changeset().id();
 
-        let path = self.path();
+        let restriction_infos = restricted_paths
+            .find_restricted_descendants(
+                self.changeset().ctx(),
+                Some(cs_id),
+                vec![self.path().clone()],
+            )
+            .await?;
 
-        let descendants: Vec<PathAccessInfo> = restricted_paths
-            .config()
-            .path_acls
-            .iter()
-            .filter(|(root, _acl)| {
-                // The restriction root is a descendant of our path.
-                // MPath::is_prefix_of returns false for root, so handle it explicitly:
-                // all paths are descendants of root.
-                path.is_root() || path.is_prefix_of(*root)
+        Ok(restriction_infos
+            .into_iter()
+            .map(|restriction| PathAccessInfo {
+                restriction,
+                has_access: None,
             })
-            .map(|(root, acl)| {
-                let repo_region_acl = acl.to_string();
-                PathAccessInfo {
-                    restriction: restricted_paths::PathRestrictionInfo {
-                        restriction_root: root.clone(),
-                        repo_region_acl: repo_region_acl.clone(),
-                        // Default to repo_region_acl when not configured
-                        request_acl: repo_region_acl,
-                    },
-                    // Access not checked in this method — caller can check individually
-                    has_access: None,
-                }
-            })
-            .collect();
-
-        Ok(descendants)
+            .collect())
     }
 }

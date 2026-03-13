@@ -80,6 +80,7 @@ mutable_blobstore = { version = "0.1.0", path = "../repo_attributes/mutable_blob
 mutable_counters = { version = "0.1.0", path = "../repo_attributes/mutable_counters" }
 mutable_renames = { version = "0.1.0", path = "../repo_attributes/mutable_renames" }
 packfile = { version = "0.1.0", path = "../git/packfile" }
+permission_checker = { version = "0.1.0", path = "../common/permission_checker" }
 phases = { version = "0.1.0", path = "../repo_attributes/phases" }
 protocol = { version = "0.1.0", path = "../git/protocol" }
 pushrebase = { version = "0.1.0", path = "../features/pushrebase" }
@@ -131,7 +132,6 @@ fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperiment
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }
 gix-object = "0.49.1"
 mononoke_macros = { version = "0.1.0", path = "../common/mononoke_macros" }
-permission_checker = { version = "0.1.0", path = "../common/permission_checker" }
 pretty_assertions = { version = "1.4.1", features = ["alloc"], default-features = false }
 sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
 test_repo_factory = { version = "0.1.0", path = "../repo_factory/test_repo_factory" }
