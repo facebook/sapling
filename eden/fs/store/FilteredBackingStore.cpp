@@ -370,96 +370,74 @@ FilteredBackingStore::co_filterImpl(
     RelativePathPiece treePath,
     folly::StringPiece filterId,
     FilteredObjectIdType treeType) {
-  // First we determine whether each child should be filtered.
-  auto isFilteredFutures =
-      std::vector<ImmediateFuture<std::pair<RelativePath, FilterCoverage>>>{};
+  // This PathMap will only contain tree entries that aren't filtered.
+  auto pathMap = PathMap<TreeEntry>{unfilteredTree->getCaseSensitivity()};
 
-  // The FilterID is passed through multiple futures. Let's create a copy and
-  // pass it around to avoid lifetime issues.
-  auto filter = filterId.toString();
+  // Determine whether each child should be filtered. Failure to determine
+  // whether a file is filtered would cause it to disappear from the source
+  // tree. Instead of leaving users in a weird state where some files are
+  // missing, we let the exception propagate to fail the entire getTree()
+  // request so the caller can decide to retry.
   for (const auto& [path, entry] : *unfilteredTree) {
     auto relPath = RelativePath{treePath + path};
 
+    FilterCoverage filterCoverage;
     // For normal (unfiltered) trees, we call into Mercurial to determine
     // whether each child is filtered or not.
     if (treeType == FilteredObjectIdType::OBJECT_TYPE_TREE) {
-      auto filteredRes = filter_->getFilterCoverageForPath(relPath, filter);
-      auto fut = std::move(filteredRes)
-                     .thenValue([relPath = std::move(relPath)](
-                                    FilterCoverage coverage) mutable {
-                       return std::pair(std::move(relPath), coverage);
-                     });
-      isFilteredFutures.emplace_back(std::move(fut));
+      filterCoverage =
+          co_await filter_->co_getFilterCoverageForPath(relPath, filterId);
     } else if (treeType == FilteredObjectIdType::OBJECT_TYPE_UNFILTERED_TREE) {
-      // For recursively unfiltered trees, we know that every child will also be
-      // recursively unfiltered. Therefore, we can avoid the cost of calling
-      // into Mercurial to check each child.
-      isFilteredFutures.emplace_back(
-          ImmediateFuture<std::pair<RelativePath, FilterCoverage>>{
-              {std::move(relPath), FilterCoverage::RECURSIVELY_UNFILTERED}});
+      // For recursively unfiltered trees, we know that every child will also
+      // be recursively unfiltered. Therefore, we can avoid the cost of
+      // calling into Mercurial to check each child.
+      filterCoverage = FilterCoverage::RECURSIVELY_UNFILTERED;
     } else {
       // OBJECT_TYPE_BLOB should never be passed to filterImpl
       throwf<std::invalid_argument>(
           "FilterImpl() received an unexpected tree type: {}",
           foidTypeToString(treeType));
     }
-  }
 
-  // CollectAllSafe is intentional -- failure to determine whether a file is
-  // filtered would cause it to disappear from the source tree. Instead of
-  // leaving users in a weird state where some files are missing, we'll fail
-  // the entire getTree() request and the caller can decide to retry.
-  auto filterCoverageVec =
-      co_await collectAllSafe(std::move(isFilteredFutures)).semi();
+    // Recursively filtered objects are simply omitted from the PathMap.
+    if (filterCoverage == FilterCoverage::RECURSIVELY_FILTERED) {
+      continue;
+    }
 
-  // This PathMap will only contain tree entries that aren't filtered
-  auto pathMap = PathMap<TreeEntry>{unfilteredTree->getCaseSensitivity()};
+    auto entryType = entry.getType();
+    ObjectId oid;
 
-  for (auto&& filterCoveragePair : filterCoverageVec) {
-    auto filterCoverage = filterCoveragePair.second;
-
-    // We need to re-add unfiltered entries to the path map.
-    if (filterCoverage != FilterCoverage::RECURSIVELY_FILTERED) {
-      auto relPath = std::move(filterCoveragePair.first);
-      auto entry = unfilteredTree->find(relPath.basename().piece());
-      auto entryType = entry->second.getType();
-      ObjectId oid;
-
-      // The entry type is a tree. Trees can either be unfiltered or
-      // recursively unfiltered. We handle these cases differently.
-      if (entryType == TreeEntryType::TREE) {
-        if (filterCoverage == FilterCoverage::UNFILTERED) {
-          // We can't guarantee all the trees descendents are
-          // filtered, so we need to create a normal tree FOID
-          auto foid = FilteredObjectId(
-              relPath.piece(), filter, entry->second.getObjectId());
-          oid = ObjectId{foid.getValue()};
-        } else {
-          // We can guarantee that all the descendents of this tree
-          // are unfiltered. We can special case this tree to avoid
-          // recursive filter lookups in the future.
-          auto foid = FilteredObjectId{
-              entry->second.getObjectId(),
-              FilteredObjectIdType::OBJECT_TYPE_UNFILTERED_TREE};
-          oid = ObjectId{foid.getValue()};
-        }
+    // The entry type is a tree. Trees can either be unfiltered or
+    // recursively unfiltered. We handle these cases differently.
+    if (entryType == TreeEntryType::TREE) {
+      if (filterCoverage == FilterCoverage::UNFILTERED) {
+        // We can't guarantee all the tree's descendants are
+        // filtered, so we need to create a normal tree FOID.
+        auto foid =
+            FilteredObjectId(relPath.piece(), filterId, entry.getObjectId());
+        oid = ObjectId{foid.getValue()};
       } else {
-        // Blobs are the same regardless of recursive/non-recursive
-        // FilterCoverage.
+        // We can guarantee that all the descendants of this tree
+        // are unfiltered. We can special case this tree to avoid
+        // recursive filter lookups in the future.
         auto foid = FilteredObjectId{
-            entry->second.getObjectId(),
-            FilteredObjectIdType::OBJECT_TYPE_BLOB};
+            entry.getObjectId(),
+            FilteredObjectIdType::OBJECT_TYPE_UNFILTERED_TREE};
         oid = ObjectId{foid.getValue()};
       }
-
-      // Regardless of FilteredObjectIdType, all unfiltered entries
-      // need to be placed into the unfiltered PathMap.
-      auto treeEntry = TreeEntry{std::move(oid), entryType};
-      auto pair = std::pair{relPath.basename().copy(), std::move(treeEntry)};
-      pathMap.insert(pair);
+    } else {
+      // Blobs are the same regardless of recursive/non-recursive
+      // FilterCoverage.
+      auto foid = FilteredObjectId{
+          entry.getObjectId(), FilteredObjectIdType::OBJECT_TYPE_BLOB};
+      oid = ObjectId{foid.getValue()};
     }
-    // Recursively filtered objects don't need to be handled. They are
-    // simply omitted from the PathMap.
+
+    // Regardless of FilteredObjectIdType, all unfiltered entries
+    // need to be placed into the unfiltered PathMap.
+    pathMap.insert(
+        std::pair{
+            relPath.basename().copy(), TreeEntry{std::move(oid), entryType}});
   }
 
   // The result is a PathMap containing only unfiltered or
