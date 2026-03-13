@@ -66,6 +66,302 @@ macro_rules! mononoke_queries {
             $( $rest )*
         }
     };
+
+    // >tuple_list read query with single expression. Redirect to full form.
+    (
+        $vi:vis read $name:ident (
+            $( $pname:ident: $ptype:ty ),* $(,)*
+            >tuple_list $tlname:ident: ($( $col:ident: $col_type:ty ),+)
+        ) -> ($( $rtype:ty ),* $(,)*) { $q:expr }
+        $( $rest:tt )*
+    ) => {
+        $crate::mononoke_queries! {
+            $vi read $name (
+                $( $pname: $ptype, )*
+                >tuple_list $tlname: ($( $col: $col_type ),+)
+            ) -> ($( $rtype ),*) { mysql($q) sqlite($q) }
+            $( $rest )*
+        }
+    };
+
+    // >tuple_list full read query. Bypasses sql::queries! to directly match
+    // on Connection variants, enabling WHERE (col1, col2) IN ((v1, v2), ...)
+    // queries that sql::queries! does not support.
+    (
+        $vi:vis read $name:ident (
+            $( $pname:ident: $ptype:ty ),* $(,)*
+            >tuple_list $tlname:ident: ($( $col:ident: $col_type:ty ),+)
+        ) -> ($( $rtype:ty ),* $(,)*) { mysql($mysql_q:expr) sqlite($sqlite_q:expr) }
+        $( $rest:tt )*
+    ) => {
+        #[allow(non_snake_case)]
+        $vi mod $name {
+            #[allow(unused_imports)]
+            use super::*;
+
+            #[allow(unused_imports)]
+            use $crate::_macro_internal::*;
+
+            #[allow(dead_code)]
+            pub async fn query(
+                connection: &Connection,
+                sql_query_tel: SqlQueryTelemetry,
+                $( $pname: &$ptype, )*
+                $tlname: &[( $( $col_type, )+ )],
+            ) -> Result<Vec<($( $rtype, )*)>> {
+                if $tlname.is_empty() {
+                    return Ok(Vec::new());
+                }
+                let res = _query_impl(
+                    connection,
+                    sql_query_tel,
+                    $( $pname, )*
+                    $tlname,
+                )
+                .await?;
+                Ok(res.0)
+            }
+
+            async fn _query_impl(
+                connection: &Connection,
+                sql_query_tel: SqlQueryTelemetry,
+                $( $pname: &$ptype, )*
+                $tlname: &[( $( $col_type, )+ )],
+            ) -> Result<(Vec<($( $rtype, )*)>, Option<QueryTelemetry>)> {
+                let query_name = stringify!($name);
+                let shard_name = connection.shard_name();
+                let repo_ids = $crate::extract_repo_ids_from_queries!($($pname: $ptype; )*);
+
+                let client_request_info = sql_query_tel.client_request_info()
+                    .map(|cri| serde_json::to_string(cri)).transpose()?;
+
+                let ((res, opt_tel, fut_stats), attempt) = query_with_retry_no_cache(
+                    |_attempt| {
+                        borrowed!(client_request_info);
+                        async move {
+                            let (fut_stats, (res, opt_tel)) = _execute_query(
+                                connection.sql_connection(),
+                                client_request_info.as_deref(),
+                                $( $pname, )*
+                                $tlname,
+                            )
+                            .try_timed()
+                            .await?;
+                            Ok((res, opt_tel, fut_stats))
+                        }
+                    },
+                    shard_name,
+                    query_name,
+                    &sql_query_tel,
+                    TelemetryGranularity::Query,
+                    &repo_ids,
+                ).await?;
+
+                log_query_telemetry(
+                    opt_tel.clone(),
+                    &sql_query_tel,
+                    TelemetryGranularity::Query,
+                    &repo_ids,
+                    query_name,
+                    shard_name.as_ref(),
+                    fut_stats,
+                    Some(attempt),
+                )?;
+
+                Ok((res, opt_tel))
+            }
+
+            async fn _execute_query(
+                connection: &_tl::InnerSqlConnection,
+                comment: Option<&str>,
+                $( $pname: &$ptype, )*
+                $tlname: &[( $( $col_type, )+ )],
+            ) -> Result<(Vec<($( $rtype, )*)>, Option<QueryTelemetry>)> {
+                match connection {
+                    _tl::InnerSqlConnection::Mysql(conn) => {
+                        let mut query = _build_mysql_query($( $pname, )* $tlname)?;
+                        if let Some(comment) = comment {
+                            query.insert_str(0, &format!("/* {} */", comment));
+                        }
+                        let (res, tel) = conn.read_query(query).await
+                            .map_err(_tl::anyhow::Error::from)?;
+
+                        #[cfg(fbcode_build)]
+                        { Ok((res, tel.map(_tl::InnerQueryTelemetry::MySQL))) }
+                        #[cfg(not(fbcode_build))]
+                        { Ok((res, tel)) }
+                    }
+                    _tl::InnerSqlConnection::OssMysql(conn) => {
+                        let query = _build_mysql_query($( $pname, )* $tlname)?;
+                        let mut con = _tl::OssConnection::get_conn_counted(
+                            conn.pool.clone(), &conn.stats,
+                        ).await?;
+                        let (mut res, _tel) = conn.read_query(&mut con, &query).await
+                            .map_err(_tl::anyhow::Error::from)?;
+                        use _tl::mysql_async::prelude::FromValue;
+                        let result = res
+                            .map(|row| _row_to_tuple(row))
+                            .await?
+                            .into_iter()
+                            .collect::<std::result::Result<Vec<($( $rtype, )*)>, _tl::anyhow::Error>>()?;
+                        Ok((result, None))
+                    }
+                    _tl::InnerSqlConnection::Sqlite(multithread_con) => {
+                        let res = _sqlite_query(multithread_con, $( $pname, )* $tlname).await?;
+                        let sqlite_tel = multithread_con
+                            .hlc_ts_lower_bound()
+                            .map(_tl::SqliteQueryTelemetry::new)
+                            .map(_tl::InnerQueryTelemetry::Sqlite);
+                        Ok((res, sqlite_tel))
+                    }
+                }
+            }
+
+            fn _build_mysql_query(
+                $( $pname: &$ptype, )*
+                $tlname: &[( $( $col_type, )+ )],
+            ) -> std::result::Result<String, _tl::anyhow::Error> {
+                use std::fmt::Write as _;
+                use _tl::mysql_async::prelude::ToValue;
+
+                // Pre-allocate: estimate ~30 bytes per tuple element.
+                let mut tuple_str = String::with_capacity($tlname.len() * 30 + 2);
+                write!(&mut tuple_str, "(")?;
+                let mut _first_tuple = true;
+                for ($( $col, )+) in $tlname {
+                    if _first_tuple { _first_tuple = false; } else { write!(&mut tuple_str, ", ")?; }
+                    write!(&mut tuple_str, "(")?;
+                    let mut _first_col = true;
+                    $(
+                        if _first_col { _first_col = false; } else { write!(&mut tuple_str, ", ")?; }
+                        write!(&mut tuple_str, "{}", ToValue::to_value($col).as_sql(false))?;
+                    )+
+                    write!(&mut tuple_str, ")")?;
+                }
+                write!(&mut tuple_str, ")")?;
+
+                Ok(format!(
+                    $mysql_q,
+                    $( $pname = ToValue::to_value(&$pname).as_sql(false), )*
+                    $tlname = tuple_str,
+                ))
+            }
+
+            fn _row_to_tuple(row: _tl::mysql_async::Row) -> std::result::Result<($( $rtype, )*), _tl::anyhow::Error> {
+                use _tl::mysql_async::prelude::FromValue;
+                #[allow(clippy::eval_order_dependence)]
+                let mut idx = 0;
+                let res = (
+                    $({
+                        let res: _tl::mysql_async::Value = row.get(idx)
+                            .ok_or_else(|| _tl::anyhow::anyhow!("Failed to get column at index {}", idx))?;
+                        idx += 1;
+                        <$rtype as FromValue>::from_value_opt(res)
+                            .map_err(|err| _tl::anyhow::anyhow!(
+                                "Failed to parse column {} as `{}`: {}", idx - 1, stringify!($rtype), err
+                            ))?
+                    },)*
+                );
+                let _ = idx;
+                Ok(res)
+            }
+
+            async fn _sqlite_query(
+                multithread_con: &_tl::SqliteMultithreaded,
+                $( $pname: &$ptype, )*
+                $tlname: &[( $( $col_type, )+ )],
+            ) -> std::result::Result<Vec<($( $rtype, )*)>, _tl::anyhow::Error> {
+                use std::fmt::Write as _;
+                use _tl::mysql_async::prelude::ToValue;
+                use _tl::mysql_async::prelude::FromValue;
+
+                // Build named params for scalar params and tuple list elements.
+                // Count: scalar params + (tuple_count * columns_per_tuple).
+                let _num_cols = {
+                    let mut _n = 0u32;
+                    $( let _ = stringify!($col); _n += 1; )+
+                    _n as usize
+                };
+                let mut params: Vec<(String, _tl::ValueWrapper)> =
+                    Vec::with_capacity($tlname.len() * _num_cols);
+                $(
+                    params.push((
+                        format!(":{}", stringify!($pname)),
+                        _tl::ValueWrapper(ToValue::to_value($pname)),
+                    ));
+                )*
+                for (i, ($( $col, )+)) in $tlname.iter().enumerate() {
+                    $(
+                        params.push((
+                            format!(":{}_{}_{}",  stringify!($tlname), i, stringify!($col)),
+                            _tl::ValueWrapper(ToValue::to_value($col)),
+                        ));
+                    )+
+                }
+
+                // Build the tuple list placeholder for SQLite.
+                // SQLite supports row values: WHERE (a, b) IN (VALUES (:p0, :p1), (:p2, :p3))
+                let mut tl_str = String::new();
+                write!(&mut tl_str, "(VALUES ")?;
+                for i in 0..$tlname.len() {
+                    if i > 0 { write!(&mut tl_str, ", ")?; }
+                    write!(&mut tl_str, "(")?;
+                    let mut _first = true;
+                    $(
+                        if _first { _first = false; } else { write!(&mut tl_str, ", ")?; }
+                        write!(&mut tl_str, ":{}_{}_{}",  stringify!($tlname), i, stringify!($col))?;
+                    )+
+                    write!(&mut tl_str, ")")?;
+                }
+                write!(&mut tl_str, ")")?;
+
+                let query = format!(
+                    $sqlite_q,
+                    $( $pname = format!(":{}", stringify!($pname)), )*
+                    $tlname = tl_str,
+                );
+
+                let con = multithread_con.acquire_sqlite_connection(
+                    _tl::SqliteQueryType::Read,
+                ).await?;
+
+                let mut ref_params: Vec<(&str, &dyn _tl::rusqlite::types::ToSql)> = Vec::new();
+                for idx in 0..params.len() {
+                    ref_params.push((&params[idx].0, &params[idx].1));
+                }
+
+                let mut stmt = con.prepare(&query)?;
+                let rows = stmt.query_map(
+                    &ref_params[..],
+                    |row| {
+                        #[allow(clippy::eval_order_dependence)]
+                        {
+                            let mut idx = 0;
+                            let res = (
+                                $({
+                                    let res: _tl::ValueWrapper = row.get(idx)?;
+                                    idx += 1;
+                                    <$rtype as FromValue>::from_value_opt(res.0)
+                                        .map_err(|err| _tl::rusqlite::Error::FromSqlConversionFailure(
+                                            idx - 1,
+                                            _tl::rusqlite::types::Type::Blob,
+                                            Box::new(err),
+                                        ))?
+                                },)*
+                            );
+                            let _ = idx;
+                            Ok(res)
+                        }
+                    }
+                )?.collect::<std::result::Result<Vec<_>, _>>()?;
+
+                Ok(rows)
+            }
+        }
+
+        $crate::mononoke_queries! { $( $rest )* }
+    };
+
     // Read query with a single expression and cache. Redirect to read query with same expression for mysql and sqlite.
     (
         $vi:vis cacheable read $name:ident (

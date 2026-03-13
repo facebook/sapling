@@ -86,6 +86,22 @@ pub mod _macro_internal {
     pub use crate::telemetry::log_query_error;
     pub use crate::telemetry::log_query_telemetry;
     pub use crate::telemetry::log_transaction_telemetry;
+
+    /// Re-exports for `>tuple_list` support in `mononoke_queries!`.
+    /// These types are needed to directly match on `sql::Connection`
+    /// variants without going through `sql::queries!`.
+    pub mod _tl {
+        pub use anyhow;
+        pub use sql::Connection as InnerSqlConnection;
+        pub use sql::ValueWrapper;
+        pub use sql::mysql_async;
+        pub use sql::rusqlite;
+        pub use sql::sql_common::QueryTelemetry as InnerQueryTelemetry;
+        pub use sql::sql_common::mysql::OssConnection;
+        pub use sql::sqlite::SqliteMultithreaded;
+        pub use sql::sqlite::SqliteQueryTelemetry;
+        pub use sql::sqlite::SqliteQueryType;
+    }
 }
 
 /// Wrapper over the SQL transaction that will keep track of telemetry from the

@@ -64,6 +64,36 @@ mononoke_queries! {
         none,
         "INSERT INTO mononoke_queries_test_v3 (x, a, b, c, d, e, repo_id) VALUES {values}"
     }
+
+    // >tuple_list queries for testing WHERE (col1, col2) IN ((v1, v2), ...)
+    write TupleListInsert(values: (repo_id: RepositoryId, x: i64)) {
+        none,
+        "INSERT INTO tuple_list_test (repo_id, x) VALUES {values}"
+    }
+
+    write TupleListDeleteAll() {
+        none,
+        "DELETE FROM tuple_list_test WHERE 1=1"
+    }
+
+    read TupleListQuery(
+        >tuple_list pairs: (repo_id: RepositoryId, x: i64)
+    ) -> (RepositoryId, i64) {
+        "SELECT repo_id, x FROM tuple_list_test WHERE (repo_id, x) IN {pairs}"
+    }
+
+    read TupleListQueryWithScalar(
+        min_x: i64,
+        >tuple_list pairs: (repo_id: RepositoryId, x: i64)
+    ) -> (RepositoryId, i64) {
+        "SELECT repo_id, x FROM tuple_list_test WHERE x > {min_x} AND (repo_id, x) IN {pairs}"
+    }
+
+    read TupleListQuerySingleCol(
+        >tuple_list pairs: (x: i64, repo_id: RepositoryId)
+    ) -> (i64, RepositoryId) {
+        "SELECT x, repo_id FROM tuple_list_test WHERE (x, repo_id) IN {pairs}"
+    }
 }
 
 #[cfg(fbcode_build)]
@@ -820,6 +850,130 @@ mod facebook {
             mock_transport_cons_read_log,
             "Mock transport ConsistentRead log doesn't match expectation"
         );
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_tuple_list_query(fb: FacebookInit) -> Result<()> {
+        let master_sql_connection: sql::Connection = setup_mysql_test_connection(
+            fb,
+            Some(
+                "CREATE TABLE IF NOT EXISTS tuple_list_test(
+                     id INT AUTO_INCREMENT PRIMARY KEY,
+                     repo_id INT UNSIGNED NOT NULL,
+                     x INT NOT NULL
+                 )",
+            ),
+            InstanceRequirement::Master,
+        )
+        .await?;
+
+        let connection = Connection {
+            inner: master_sql_connection,
+            shard_name: TEST_XDB_NAME.to_string(),
+        };
+
+        let sql_query_tel = SqlQueryTelemetry::new(fb, Metadata::default());
+
+        // Clean up any leftover data from previous test runs.
+        TupleListDeleteAll::query(&connection, sql_query_tel.clone()).await?;
+
+        // Insert test data: (repo_id=1, x=10), (repo_id=1, x=20), (repo_id=2, x=30), (repo_id=3, x=40)
+        TupleListInsert::query(
+            &connection,
+            sql_query_tel.clone(),
+            &[
+                (&RepositoryId::new(1), &10i64),
+                (&RepositoryId::new(1), &20i64),
+                (&RepositoryId::new(2), &30i64),
+                (&RepositoryId::new(3), &40i64),
+            ],
+        )
+        .await?;
+
+        // Test 1: Query matching two specific (repo_id, x) pairs
+        let results = TupleListQuery::query(
+            &connection,
+            sql_query_tel.clone(),
+            &[(RepositoryId::new(1), 10i64), (RepositoryId::new(2), 30i64)],
+        )
+        .await?;
+
+        assert_eq!(results.len(), 2, "Should match exactly 2 rows");
+        let result_set: HashSet<(i32, i64)> = results
+            .iter()
+            .map(|(repo_id, x)| (repo_id.id(), *x))
+            .collect();
+        assert!(
+            result_set.contains(&(1, 10)),
+            "Should contain (repo_id=1, x=10)"
+        );
+        assert!(
+            result_set.contains(&(2, 30)),
+            "Should contain (repo_id=2, x=30)"
+        );
+
+        // Test 2: Query with a pair that doesn't exist — no cross-product false positives
+        let results = TupleListQuery::query(
+            &connection,
+            sql_query_tel.clone(),
+            &[(RepositoryId::new(1), 30i64)], // repo_id=1 exists, x=30 exists, but not together
+        )
+        .await?;
+
+        assert_eq!(
+            results.len(),
+            0,
+            "Should not match any rows (no cross-product)"
+        );
+
+        // Test 3: Query all inserted pairs
+        let results = TupleListQuery::query(
+            &connection,
+            sql_query_tel.clone(),
+            &[
+                (RepositoryId::new(1), 10i64),
+                (RepositoryId::new(1), 20i64),
+                (RepositoryId::new(2), 30i64),
+                (RepositoryId::new(3), 40i64),
+            ],
+        )
+        .await?;
+
+        assert_eq!(results.len(), 4, "Should match all 4 rows");
+
+        // Test 4: TupleListQueryWithScalar — combine scalar param with tuple_list
+        let results = TupleListQueryWithScalar::query(
+            &connection,
+            sql_query_tel.clone(),
+            &15i64, // min_x > 15
+            &[
+                (RepositoryId::new(1), 10i64), // x=10 < 15, should be filtered out
+                (RepositoryId::new(1), 20i64), // x=20 > 15, should match
+                (RepositoryId::new(2), 30i64), // x=30 > 15, should match
+            ],
+        )
+        .await?;
+
+        assert_eq!(results.len(), 2, "Scalar filter should exclude x=10");
+        let result_set: HashSet<(i32, i64)> = results
+            .iter()
+            .map(|(repo_id, x)| (repo_id.id(), *x))
+            .collect();
+        assert!(
+            result_set.contains(&(1, 20)),
+            "Should contain (repo_id=1, x=20)"
+        );
+        assert!(
+            result_set.contains(&(2, 30)),
+            "Should contain (repo_id=2, x=30)"
+        );
+
+        // Test 5: Empty tuple_list should return empty results
+        let results = TupleListQuery::query(&connection, sql_query_tel.clone(), &[]).await?;
+
+        assert_eq!(results.len(), 0, "Empty tuple_list should return no rows");
 
         Ok(())
     }
