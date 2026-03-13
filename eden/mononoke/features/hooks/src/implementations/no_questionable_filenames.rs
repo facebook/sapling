@@ -93,7 +93,7 @@ impl FileHook for NoQuestionableFilenames {
             return Ok(HookExecution::Accepted);
         }
 
-        let path = format!("{}", path);
+        let path = path.to_string();
         if self.braces.is_match(&path) {
             match self.allowlist_for_braces {
                 Some(ref allow) if allow.is_match(&path) => {}

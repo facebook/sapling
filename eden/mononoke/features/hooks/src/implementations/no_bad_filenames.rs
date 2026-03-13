@@ -86,7 +86,7 @@ impl FileHook for NoBadFilenamesHook {
             return Ok(HookExecution::Accepted);
         }
 
-        let path = format!("{}", path);
+        let path = path.to_string();
         // Check if the path matches the illegal regex
         if self.config.illegal_regex.is_match(&path) {
             // Check if the path has been allowlisted

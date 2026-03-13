@@ -103,7 +103,7 @@ impl FileHook for LimitFilesize {
             return Ok(HookExecution::Accepted);
         }
 
-        let path = format!("{}", path);
+        let path = path.to_string();
         let change = match change {
             Some(c) => c,
             None => return Ok(HookExecution::Accepted),
