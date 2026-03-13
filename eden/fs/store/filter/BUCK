@@ -74,6 +74,7 @@ cpp_library(
         "//eden/scm/lib/edenfs_ffi:edenfs_ffi-wrapper",
         "//eden/scm/lib/edenfs_ffi:edenfs_ffi@header",  # @manual
         "//folly/container:f14_hash",
+        "//folly/coro/safe:now_task",
         "//folly/logging:logging",
     ],
 )

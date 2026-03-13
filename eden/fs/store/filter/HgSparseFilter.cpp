@@ -85,6 +85,53 @@ ImmediateFuture<FilterCoverage> HgSparseFilter::getFilterCoverageForPath(
               })};
 }
 
+folly::coro::now_task<FilterCoverage>
+HgSparseFilter::co_getFilterCoverageForPath(
+    RelativePathPiece path,
+    folly::StringPiece id) const {
+  // If filterId is "null", Mercurial is reporting that no filters are active
+  if (id == kNullFilterId) {
+    co_return FilterCoverage::RECURSIVELY_UNFILTERED;
+  }
+
+  // Check cache under rlock. F14NodeMap provides iterator/reference stability,
+  // so we can unlock before using the iterator.
+  {
+    auto profiles = profiles_->rlock();
+    auto profileIt = profiles->find(id);
+    profiles.unlock();
+    if (profileIt != profiles->end()) {
+      co_return determineFilterCoverage(profileIt->second, path.view());
+    }
+  }
+
+  // Make owned copies before awaiting future
+  auto ownedId = id.toString();
+  auto ownedPath = path.copy();
+
+  XLOGF(DBG8, "New filter id {}. Fetching from Mercurial.", ownedId);
+
+  rust::Slice<const uint8_t> filterId{
+      reinterpret_cast<const uint8_t*>(ownedId.data()), ownedId.size()};
+  auto pathToMount =
+      rust::Str{checkoutPath_.view().data(), checkoutPath_.view().size()};
+  auto [promise, rootFuture] =
+      folly::makePromiseContract<rust::Box<MercurialMatcher>>();
+  auto rootPromise = std::make_unique<MatcherPromise>(std::move(promise));
+  profile_from_filter_id(filterId, pathToMount, std::move(rootPromise));
+
+  // co_await without holding any lock
+  auto matcher = co_await std::move(rootFuture);
+
+  // Cache the result under wlock, then release before determineFilterCoverage.
+  // F14NodeMap provides iterator/reference stability across insertions.
+  auto profiles = profiles_->wlock();
+  auto [profileIt, _] =
+      profiles->try_emplace(std::move(ownedId), std::move(matcher));
+  profiles.unlock();
+  co_return determineFilterCoverage(profileIt->second, ownedPath.view());
+}
+
 bool HgSparseFilter::areFiltersIdentical(
     folly::StringPiece lhs,
     folly::StringPiece rhs) const {
