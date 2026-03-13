@@ -6,6 +6,9 @@
  */
 
 #include "eden/fs/store/filter/GlobFilter.h"
+
+#include <folly/coro/safe/NowTask.h>
+
 #include "eden/common/utils/ImmediateFuture.h"
 
 #include "eden/scm/lib/edenfs_ffi/src/lib.rs.h" // @manual
@@ -31,6 +34,25 @@ ImmediateFuture<FilterCoverage> GlobFilter::getFilterCoverageForPath(
             static_cast<uint8_t>(filterResult));
     }
   });
+}
+
+folly::coro::now_task<FilterCoverage> GlobFilter::co_getFilterCoverageForPath(
+    RelativePathPiece path,
+    folly::StringPiece) const {
+  auto filterResult =
+      (*matcher_)->matches_directory(rust::Str{path.asString()});
+  switch (filterResult) {
+    case FilterDirectoryMatch::RecursivelyUnfiltered:
+      co_return FilterCoverage::RECURSIVELY_UNFILTERED;
+    case FilterDirectoryMatch::RecursivelyFiltered:
+      co_return FilterCoverage::RECURSIVELY_FILTERED;
+    case FilterDirectoryMatch::Unfiltered:
+      co_return FilterCoverage::UNFILTERED;
+    default:
+      throwf<std::invalid_argument>(
+          "Rust returned an invalid filter FilterDirectoryMatch result: {}",
+          static_cast<uint8_t>(filterResult));
+  }
 }
 
 bool GlobFilter::areFiltersIdentical(

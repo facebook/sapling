@@ -46,6 +46,7 @@ cpp_library(
         "//eden/scm/lib/edenfs_ffi:edenfs_ffi",  # @manual
         "//eden/scm/lib/edenfs_ffi:edenfs_ffi-wrapper",  # @manual
         "//eden/scm/lib/edenfs_ffi:edenfs_ffi@header",  # @manual
+        "//folly/coro/safe:now_task",
     ],
 )
 

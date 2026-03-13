@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <folly/coro/safe/NowTask.h>
+
 #include "eden/common/utils/CaseSensitivity.h"
 #include "eden/fs/store/filter/Filter.h"
 #include "eden/fs/utils/EdenError.h"
@@ -60,6 +62,10 @@ class GlobFilter : public Filter {
   ImmediateFuture<FilterCoverage> getFilterCoverageForPath(
       RelativePathPiece path,
       folly::StringPiece filterId) const override;
+
+  folly::coro::now_task<FilterCoverage> co_getFilterCoverageForPath(
+      RelativePathPiece path,
+      folly::StringPiece filterId) const;
 
   /*
    * Returns whether two filters are identical. GlobFilters are bijective,
