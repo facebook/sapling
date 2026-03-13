@@ -29,6 +29,7 @@ cpp_library(
         "//eden/common/utils:immediate_future",
         "//eden/common/utils:path",
         "//folly:range",
+        "//folly/coro/safe:now_task",
     ],
 )
 

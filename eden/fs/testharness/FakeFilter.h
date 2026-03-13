@@ -58,7 +58,7 @@ class FakeSubstringFilter final : public Filter {
 
   folly::coro::now_task<FilterCoverage> co_getFilterCoverageForPath(
       RelativePathPiece path,
-      folly::StringPiece filterId) const {
+      folly::StringPiece filterId) const override {
     auto actualFilterId = stripVersionPrefix(filterId);
     auto filterIdPos = path.view().find(actualFilterId);
 
@@ -125,7 +125,7 @@ class FakePrefixFilter final : public Filter {
 
   folly::coro::now_task<FilterCoverage> co_getFilterCoverageForPath(
       RelativePathPiece path,
-      folly::StringPiece filterId) const {
+      folly::StringPiece filterId) const override {
     auto actualFilterId = stripVersionPrefix(filterId);
     auto filterIdSize = actualFilterId.size();
     auto pathSize = path.view().size();

@@ -8,6 +8,7 @@
 #pragma once
 
 #include <folly/Range.h>
+#include <folly/coro/safe/NowTask.h>
 
 #include "eden/common/utils/ImmediateFuture.h"
 #include "eden/common/utils/PathFuncs.h"
@@ -46,6 +47,10 @@ class Filter {
    * path is not filtered, but it may have children that are filtered.
    */
   virtual ImmediateFuture<FilterCoverage> getFilterCoverageForPath(
+      RelativePathPiece path,
+      folly::StringPiece filterId) const = 0;
+
+  virtual folly::coro::now_task<FilterCoverage> co_getFilterCoverageForPath(
       RelativePathPiece path,
       folly::StringPiece filterId) const = 0;
 

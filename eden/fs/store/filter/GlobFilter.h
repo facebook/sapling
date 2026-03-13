@@ -65,7 +65,7 @@ class GlobFilter : public Filter {
 
   folly::coro::now_task<FilterCoverage> co_getFilterCoverageForPath(
       RelativePathPiece path,
-      folly::StringPiece filterId) const;
+      folly::StringPiece filterId) const override;
 
   /*
    * Returns whether two filters are identical. GlobFilters are bijective,
