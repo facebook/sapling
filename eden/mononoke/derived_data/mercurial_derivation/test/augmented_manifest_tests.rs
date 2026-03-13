@@ -109,7 +109,7 @@ async fn get_manifests(
         hg_id,
         parents,
         &Default::default(),
-        &restricted_paths_config,
+        restricted_paths_config,
     )
     .await?;
     let aug = aug_id.load(ctx, repo.repo_blobstore()).await?;
