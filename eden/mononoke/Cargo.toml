@@ -10,6 +10,7 @@ bytemuck = { git = "https://github.com/jsgf/bytemuck", rev = "e7ba210910d49dee83
 bytemuck_derive = { git = "https://github.com/jsgf/bytemuck", rev = "e7ba210910d49dee833773b2a3e0f5e39805ba08" }
 c2pa = { git = "https://github.com/dhruvmongia/c2pa-rs", rev = "871a0f10d6a3a627229fc769de3d88f85024b64d" }
 cbindgen = { git = "https://github.com/mozilla/cbindgen.git", rev = "cf94b56ef35d91f8420e8f89fee70074d39d068d" }
+cc = { git = "https://github.com/rust-lang/cc-rs", rev = "96c77569138c0793a041133f0b9810d5fdfceb46" }
 cxx = { git = "https://github.com/facebookexperimental/cxx.git", rev = "870ebbecad0f6be394d4f9fb9bd62b551662651a" }
 cxx-build = { git = "https://github.com/facebookexperimental/cxx.git", rev = "870ebbecad0f6be394d4f9fb9bd62b551662651a" }
 displaydoc = { git = "https://github.com/yaahc/displaydoc", rev = "7dc6e324b1788a6b7fb9f3a1953c512923a3e9f0" }
