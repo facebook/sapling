@@ -200,6 +200,12 @@ class FilteredBackingStore
       folly::StringPiece filterId,
       FilteredObjectIdType treeType);
 
+  folly::coro::now_task<std::unique_ptr<PathMap<TreeEntry>>> co_filterImpl(
+      const TreePtr unfilteredTree,
+      RelativePathPiece treePath,
+      folly::StringPiece filterId,
+      FilteredObjectIdType treeType);
+
   /*
    * Determine whether a path is affected by a filter change from One -> Two or
    * vice versa.
