@@ -106,6 +106,22 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
           executeVSCodeCommand('sapling.open-file-diff', uri, message.comparison);
           break;
         }
+        case 'platform/revealInFileExplorer': {
+          if (repo != null) {
+            const path: AbsolutePath = pathModule.join(repo.info.repoRoot, message.path);
+            const uri = vscode.Uri.file(path);
+            vscode.commands.executeCommand('revealFileInOS', uri);
+          }
+          break;
+        }
+        case 'platform/revealInExplorerView': {
+          if (repo != null) {
+            const path: AbsolutePath = pathModule.join(repo.info.repoRoot, message.path);
+            const uri = vscode.Uri.file(path);
+            vscode.commands.executeCommand('revealInExplorer', uri);
+          }
+          break;
+        }
         case 'platform/openExternal': {
           vscode.env.openExternal(vscode.Uri.parse(message.url));
           break;

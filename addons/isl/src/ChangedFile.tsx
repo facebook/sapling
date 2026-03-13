@@ -91,6 +91,18 @@ export function File({
         onClick: () => platform.openContainingFolder?.(file.path),
       });
     }
+    if (platform.revealInFileExplorer != null) {
+      options.push({
+        label: t(isMac ? 'Reveal in Finder' : 'Reveal in File Explorer'),
+        onClick: () => platform.revealInFileExplorer?.(file.path),
+      });
+    }
+    if (platform.revealInExplorerView != null) {
+      options.push({
+        label: t('Reveal in Explorer View'),
+        onClick: () => platform.revealInExplorerView?.(file.path),
+      });
+    }
     if (comparison != null && platform.openDiff != null) {
       options.push({
         label: t('Open Diff View ($comparison)', {

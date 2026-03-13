@@ -745,6 +745,8 @@ export type PlatformSpecificClientToServerMessages =
       options?: {line?: OneIndexedLineNumber};
     }
   | {type: 'platform/openContainingFolder'; path: RepoRelativePath}
+  | {type: 'platform/revealInFileExplorer'; path: RepoRelativePath}
+  | {type: 'platform/revealInExplorerView'; path: RepoRelativePath}
   | {type: 'platform/openDiff'; path: RepoRelativePath; comparison: Comparison}
   | {type: 'platform/openExternal'; url: string}
   | {type: 'platform/changeTitle'; title: string}

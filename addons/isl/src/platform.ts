@@ -34,6 +34,8 @@ export interface Platform {
   openFiles(paths: ReadonlyArray<RepoRelativePath>, options?: {line?: OneIndexedLineNumber}): void;
   canCustomizeFileOpener: boolean;
   openContainingFolder?(path: RepoRelativePath): void;
+  revealInFileExplorer?(path: RepoRelativePath): void;
+  revealInExplorerView?(path: RepoRelativePath): void;
   openDiff?(path: RepoRelativePath, comparison: Comparison): void;
   openExternalLink(url: string): void;
   clipboardCopy(text: string, html?: string): void;
