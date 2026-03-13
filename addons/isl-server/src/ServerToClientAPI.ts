@@ -1282,6 +1282,44 @@ export default class ServerToClientAPI {
         Internal.unsubscribeToFullRepoBranch?.(ctx, repo, data.fullRepoBranch);
         break;
       }
+      case 'createFullRepoBranch': {
+        Internal.createFullRepoBranch?.(ctx, repo, data.input)
+          .then((result: InternalTypes['CreateFullRepoBranchResult']) => {
+            this.postMessage({
+              type: 'createdFullRepoBranch',
+              id: data.id,
+              result: {value: result},
+            });
+          })
+          .catch((error: Error) => {
+            logger?.error('Failed to create full repo branch', error);
+            this.postMessage({
+              type: 'createdFullRepoBranch',
+              id: data.id,
+              result: {error},
+            });
+          });
+        break;
+      }
+      case 'checkBranchNameExists': {
+        Internal.checkBranchNameExists?.(ctx, repo, data.branchName)
+          .then((result: {exists: boolean}) => {
+            this.postMessage({
+              type: 'checkedBranchNameExists',
+              id: data.id,
+              result: {value: result},
+            });
+          })
+          .catch((error: Error) => {
+            logger?.error('Failed to check branch name existence', error);
+            this.postMessage({
+              type: 'checkedBranchNameExists',
+              id: data.id,
+              result: {error},
+            });
+          });
+        break;
+      }
       default: {
         if (
           repo.codeReviewProvider?.handleClientToServerMessage?.(data, message =>

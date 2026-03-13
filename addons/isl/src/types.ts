@@ -1122,6 +1122,16 @@ export type ClientToServerMessage =
       type: 'unsubscribeToFullRepoBranch';
       id: string;
       fullRepoBranch: InternalTypes['FullRepoBranch'];
+    }
+  | {
+      type: 'createFullRepoBranch';
+      id: string;
+      input: InternalTypes['CreateFullRepoBranchInput'];
+    }
+  | {
+      type: 'checkBranchNameExists';
+      id: string;
+      branchName: string;
     };
 
 export type SubscriptionResultsData = {
@@ -1299,6 +1309,16 @@ export type ServerToClientMessage =
       type: 'fetchedFullRepoBranchMergeSubtreePaths';
       id: string;
       result: Result<Array<string>>;
+    }
+  | {
+      type: 'createdFullRepoBranch';
+      id: string;
+      result: Result<InternalTypes['CreateFullRepoBranchResult']>;
+    }
+  | {
+      type: 'checkedBranchNameExists';
+      id: string;
+      result: Result<{exists: boolean}>;
     }
   | {
       type: 'openSplitViewForCommit';
