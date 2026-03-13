@@ -531,9 +531,18 @@ TreeInode::getChildren(const ObjectFetchContextPtr& context, bool loadInodes) {
 ImmediateFuture<InodePtr> TreeInode::getOrLoadChild(
     PathComponentPiece name,
     const ObjectFetchContextPtr& context) {
+  // No co_invoke bridge: getOrLoadChild is called from FUSE/NFS handlers
+  // without a coroutine executor.
   return getOrFindChild(name, context, true).thenValue([](auto&& virtualInode) {
     return virtualInode.asInodePtr();
   });
+}
+
+folly::coro::now_task<InodePtr> TreeInode::co_getOrLoadChild(
+    PathComponentPiece name,
+    const ObjectFetchContextPtr& context) {
+  auto virtualInode = co_await co_getOrFindChild(name, context, true);
+  co_return virtualInode.asInodePtr();
 }
 
 ImmediateFuture<TreeInodePtr> TreeInode::getOrLoadChildTree(
@@ -583,7 +592,7 @@ class LookupProcessor {
   folly::coro::now_task<InodePtr> co_next(TreeInodePtr tree) {
     auto name = *iter_++;
     if (iter_ == iterRange_.end()) {
-      co_return co_await tree->getOrLoadChild(name, context_).semi();
+      co_return co_await tree->co_getOrLoadChild(name, context_);
     } else {
       auto childTree = co_await tree->getOrLoadChildTree(name, context_).semi();
       co_return co_await co_next(std::move(childTree));
