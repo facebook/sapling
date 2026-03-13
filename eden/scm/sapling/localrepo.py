@@ -830,7 +830,7 @@ class localrepository:
         if flush_rust:
             # We have have done a pure-Rust operation that wrote to caches.
             # Flush via the Rust repo.
-            self._rsrepo.invalidatestores()
+            self._rsrepo.flushstores()
 
         if "changelog" in self.__dict__ and self.changelog.isvertexlazy():
             # Errors are not fatal. We lost some caches downloaded from the

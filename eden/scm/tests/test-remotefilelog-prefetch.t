@@ -22,7 +22,6 @@ Prefetch (and also check we get counters):
   scmstore.file.api.hg_prefetch.calls: 1
   scmstore.file.api.hg_prefetch.keys: 1
   scmstore.file.api.hg_prefetch.singles: 1
-  scmstore.file.api.hg_refresh.calls: 2
   scmstore.file.flush: * (glob)
   scmstore.file.prefetch.aux.cache.time: * (glob) (?)
   scmstore.file.prefetch.edenapi.hits: 1

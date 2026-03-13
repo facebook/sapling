@@ -464,6 +464,16 @@ impl Repo {
         Ok(())
     }
 
+    pub fn flush_stores(&self) -> Result<()> {
+        if let Some(file_store) = self.file_store.get() {
+            file_store.flush()?;
+        }
+        if let Some(tree_store) = self.tree_store.get() {
+            tree_store.flush()?;
+        }
+        Ok(())
+    }
+
     /// Construct both file and tree store if they are backed by the same storage.
     /// Return None if they are not backed by the same storage.
     /// Return Some((file_store, tree_store)) if they are constructed.

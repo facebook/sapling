@@ -208,9 +208,9 @@ py_class!(pub class repo |py| {
         Ok(PyNone)
     }
 
-    def invalidatestores(&self) -> PyResult<PyNone> {
+    def flushstores(&self) -> PyResult<PyNone> {
         let repo_ref = self.inner(py).write();
-        repo_ref.invalidate_stores().map_pyerr(py)?;
+        repo_ref.flush_stores().map_pyerr(py)?;
         Ok(PyNone)
     }
 
