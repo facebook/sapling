@@ -123,6 +123,7 @@ pub enum TagType {
 }
 
 fn log_execution_stats(
+    ctx: &CoreContext,
     mut scuba: MononokeScubaSampleBuilder,
     stats: FutureStats,
     result: &mut Result<HookOutcome>,
@@ -131,6 +132,9 @@ fn log_execution_stats(
     let mut errorcode = 0;
     let mut failed_hooks = 0;
     let mut stderr = None;
+
+    scuba.add_common_server_data();
+    ctx.perf_counters().insert_perf_counters(&mut scuba);
 
     match result.as_mut() {
         Ok(outcome) => match outcome.get_execution() {
@@ -217,7 +221,7 @@ pub trait BookmarkHook: Send + Sync {
             })
             .timed()
             .await;
-        log_execution_stats(scuba, stats, &mut result, log_only);
+        log_execution_stats(ctx, scuba, stats, &mut result, log_only);
         result.map_err(|e| e.context(format!("while executing hook {}", hook_name)))
     }
 }
@@ -272,7 +276,7 @@ pub trait ChangesetHook: Send + Sync {
             .timed()
             .await;
         scuba.add("hash", changeset.get_changeset_id().to_string());
-        log_execution_stats(scuba, stats, &mut result, log_only);
+        log_execution_stats(ctx, scuba, stats, &mut result, log_only);
         result.map_err(|e| e.context(format!("while executing hook {}", hook_name)))
     }
 
@@ -360,7 +364,7 @@ pub trait FileHook: Send + Sync {
             })
             .timed()
             .await;
-        log_execution_stats(scuba, stats, &mut result, log_only);
+        log_execution_stats(ctx, scuba, stats, &mut result, log_only);
         result.map_err(|e| e.context(format!("while executing hook {}", hook_name)))
     }
 }
