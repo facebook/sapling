@@ -1216,6 +1216,30 @@ folly::SemiFuture<BackingStore::GetTreeResult> SaplingBackingStore::getTree(
       .semi();
 }
 
+folly::coro::now_task<BackingStore::GetTreeResult>
+SaplingBackingStore::co_getTree(
+    const ObjectId& id,
+    const ObjectFetchContextPtr& context) {
+  DurationScope<EdenStats> scope{stats_, &SaplingBackingStoreStats::getTree};
+
+  SlOidView slOid{id};
+
+  logBackingStoreFetch(
+      *context, folly::Range{&slOid, 1}, ObjectFetchContext::ObjectType::Tree);
+
+  if (auto tree = getTreeLocal(slOid, context)) {
+    XLOGF(DBG5, "imported tree {} from hgcache", slOid);
+    stats_->increment(&SaplingBackingStoreStats::fetchTreeSuccess);
+    if (dogfoodingHost()) {
+      stats_->increment(&SaplingBackingStoreStats::fetchTreeSuccessDogfooding);
+    }
+    stats_->increment(&SaplingBackingStoreStats::fetchTreeLocal);
+    co_return GetTreeResult{
+        std::move(tree), ObjectFetchContext::Origin::FromDiskCache};
+  }
+  co_return co_await co_getTreeEnqueue(slOid, context);
+}
+
 ImmediateFuture<BackingStore::GetTreeResult>
 SaplingBackingStore::getTreeEnqueue(
     const SlOid& slOid,
