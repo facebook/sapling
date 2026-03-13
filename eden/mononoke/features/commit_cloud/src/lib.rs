@@ -320,7 +320,6 @@ impl CommitCloud {
             .storage
             .insert(
                 txn,
-                &self.ctx,
                 cc_ctx.reponame.clone(),
                 cc_ctx.workspace.clone(),
                 args.clone(),
@@ -343,7 +342,6 @@ impl CommitCloud {
             .storage
             .insert(
                 txn,
-                &self.ctx,
                 cc_ctx.reponame.clone(),
                 cc_ctx.workspace.clone(),
                 history_entry,
@@ -360,7 +358,6 @@ impl CommitCloud {
             txn = Delete::<WorkspaceHistory>::delete(
                 &self.storage,
                 txn,
-                &self.ctx,
                 cc_ctx.reponame.clone(),
                 cc_ctx.workspace.clone(),
                 HistoryDeleteArgs {

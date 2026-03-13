@@ -20,7 +20,7 @@ use crate::sql::snapshots_ops::DeleteArgs;
 pub async fn update_snapshots(
     sql_commit_cloud: &SqlCommitCloud,
     mut txn: Transaction,
-    ctx: &CoreContext,
+    _ctx: &CoreContext,
     cc_ctx: &CommitCloudContext,
     new_snapshots: Vec<CloudChangesetId>,
     removed_snapshots: Vec<CloudChangesetId>,
@@ -31,7 +31,6 @@ pub async fn update_snapshots(
         txn = Delete::<WorkspaceSnapshot>::delete(
             sql_commit_cloud,
             txn,
-            ctx,
             cc_ctx.reponame.clone(),
             cc_ctx.workspace.clone(),
             delete_args,
@@ -47,7 +46,6 @@ pub async fn update_snapshots(
             txn = InsertMany::<WorkspaceSnapshot>::insert_many(
                 sql_commit_cloud,
                 txn,
-                ctx,
                 cc_ctx.reponame.clone(),
                 cc_ctx.workspace.clone(),
                 snapshots,
@@ -58,7 +56,6 @@ pub async fn update_snapshots(
                 txn = Insert::<WorkspaceSnapshot>::insert(
                     sql_commit_cloud,
                     txn,
-                    ctx,
                     cc_ctx.reponame.clone(),
                     cc_ctx.workspace.clone(),
                     WorkspaceSnapshot { commit: snapshot },

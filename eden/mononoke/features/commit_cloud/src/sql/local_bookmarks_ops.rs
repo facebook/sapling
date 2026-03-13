@@ -107,7 +107,6 @@ impl Insert<WorkspaceLocalBookmark> for SqlCommitCloud {
     async fn insert(
         &self,
         txn: Transaction,
-        _ctx: &CoreContext,
         reponame: String,
         workspace: String,
         data: WorkspaceLocalBookmark,
@@ -151,7 +150,6 @@ impl Delete<WorkspaceLocalBookmark> for SqlCommitCloud {
     async fn delete(
         &self,
         txn: Transaction,
-        _ctx: &CoreContext,
         reponame: String,
         workspace: String,
         args: Self::DeleteArgs,
@@ -172,7 +170,6 @@ impl InsertMany<WorkspaceLocalBookmark> for SqlCommitCloud {
     async fn insert_many(
         &self,
         txn: Transaction,
-        _ctx: &CoreContext,
         reponame: String,
         workspace: String,
         data: Vec<WorkspaceLocalBookmark>,

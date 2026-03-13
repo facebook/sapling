@@ -105,7 +105,6 @@ impl Insert<WorkspaceVersion> for SqlCommitCloud {
     async fn insert(
         &self,
         txn: Transaction,
-        _ctx: &CoreContext,
         reponame: String,
         workspace: String,
         data: WorkspaceVersion,

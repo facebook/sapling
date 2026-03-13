@@ -120,23 +120,11 @@ async fn test_local_bookmarks(fb: FacebookInit) -> anyhow::Result<()> {
         .start_transaction(ctx.sql_query_telemetry())
         .await?;
     txn = sql
-        .insert(
-            txn,
-            &ctx,
-            reponame.clone(),
-            workspace.clone(),
-            bookmark1.clone(),
-        )
+        .insert(txn, reponame.clone(), workspace.clone(), bookmark1.clone())
         .await?;
 
     txn = sql
-        .insert(
-            txn,
-            &ctx,
-            reponame.clone(),
-            workspace.clone(),
-            bookmark2.clone(),
-        )
+        .insert(txn, reponame.clone(), workspace.clone(), bookmark2.clone())
         .await?;
     txn.commit().await?;
 
@@ -165,7 +153,6 @@ async fn test_local_bookmarks(fb: FacebookInit) -> anyhow::Result<()> {
     txn = Delete::<WorkspaceLocalBookmark>::delete(
         &sql,
         txn,
-        &ctx,
         reponame.clone(),
         workspace.clone(),
         DeleteArgs { removed_bookmarks },

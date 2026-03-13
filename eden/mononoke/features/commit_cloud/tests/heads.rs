@@ -82,23 +82,11 @@ async fn test_heads(fb: FacebookInit) -> anyhow::Result<()> {
         .await?;
 
     txn = sql
-        .insert(
-            txn,
-            &ctx,
-            reponame.clone(),
-            workspace.clone(),
-            head1.clone(),
-        )
+        .insert(txn, reponame.clone(), workspace.clone(), head1.clone())
         .await?;
 
     txn = sql
-        .insert(
-            txn,
-            &ctx,
-            reponame.clone(),
-            workspace.clone(),
-            head2.clone(),
-        )
+        .insert(txn, reponame.clone(), workspace.clone(), head2.clone())
         .await?;
     txn.commit().await?;
 
@@ -113,7 +101,6 @@ async fn test_heads(fb: FacebookInit) -> anyhow::Result<()> {
     txn = Delete::<WorkspaceHead>::delete(
         &sql,
         txn,
-        &ctx,
         reponame.clone(),
         workspace.clone(),
         DeleteArgs { removed_commits },

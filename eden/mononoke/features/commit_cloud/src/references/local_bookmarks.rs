@@ -42,7 +42,7 @@ pub fn lbs_to_map(list: Vec<WorkspaceLocalBookmark>) -> HashMap<String, String> 
 pub async fn update_bookmarks(
     sql_commit_cloud: &SqlCommitCloud,
     mut txn: Transaction,
-    ctx: &CoreContext,
+    _ctx: &CoreContext,
     cc_ctx: &CommitCloudContext,
     updated_bookmarks: HashMap<String, CloudChangesetId>,
     removed_bookmarks: Vec<String>,
@@ -53,7 +53,6 @@ pub async fn update_bookmarks(
         txn = Delete::<WorkspaceLocalBookmark>::delete(
             sql_commit_cloud,
             txn,
-            ctx,
             cc_ctx.reponame.clone(),
             cc_ctx.workspace.clone(),
             delete_args,
@@ -69,7 +68,6 @@ pub async fn update_bookmarks(
             txn = InsertMany::<WorkspaceLocalBookmark>::insert_many(
                 sql_commit_cloud,
                 txn,
-                ctx,
                 cc_ctx.reponame.clone(),
                 cc_ctx.workspace.clone(),
                 bookmarks,
@@ -80,7 +78,6 @@ pub async fn update_bookmarks(
                 txn = Insert::<WorkspaceLocalBookmark>::insert(
                     sql_commit_cloud,
                     txn,
-                    ctx,
                     cc_ctx.reponame.clone(),
                     cc_ctx.workspace.clone(),
                     WorkspaceLocalBookmark::new(name, book)?,

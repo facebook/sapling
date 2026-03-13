@@ -39,7 +39,7 @@ pub fn heads_to_list(heads: &Vec<WorkspaceHead>) -> Vec<String> {
 pub async fn update_heads(
     sql_commit_cloud: &SqlCommitCloud,
     mut txn: Transaction,
-    ctx: &CoreContext,
+    _ctx: &CoreContext,
     cc_ctx: &CommitCloudContext,
     removed_heads: Vec<CloudChangesetId>,
     new_heads: Vec<CloudChangesetId>,
@@ -52,7 +52,6 @@ pub async fn update_heads(
         txn = Delete::<WorkspaceHead>::delete(
             sql_commit_cloud,
             txn,
-            ctx,
             cc_ctx.reponame.clone(),
             cc_ctx.workspace.clone(),
             delete_args,
@@ -68,7 +67,6 @@ pub async fn update_heads(
             txn = InsertMany::<WorkspaceHead>::insert_many(
                 sql_commit_cloud,
                 txn,
-                ctx,
                 cc_ctx.reponame.clone(),
                 cc_ctx.workspace.clone(),
                 heads,
@@ -79,7 +77,6 @@ pub async fn update_heads(
                 txn = Insert::<WorkspaceHead>::insert(
                     sql_commit_cloud,
                     txn,
-                    ctx,
                     cc_ctx.reponame.clone(),
                     cc_ctx.workspace.clone(),
                     WorkspaceHead { commit: head },

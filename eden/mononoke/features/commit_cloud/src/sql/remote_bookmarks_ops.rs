@@ -109,7 +109,6 @@ impl Insert<WorkspaceRemoteBookmark> for SqlCommitCloud {
     async fn insert(
         &self,
         txn: Transaction,
-        _ctx: &CoreContext,
         reponame: String,
         workspace: String,
         data: WorkspaceRemoteBookmark,
@@ -154,7 +153,6 @@ impl Delete<WorkspaceRemoteBookmark> for SqlCommitCloud {
     async fn delete(
         &self,
         txn: Transaction,
-        _ctx: &CoreContext,
         reponame: String,
         workspace: String,
         args: Self::DeleteArgs,
@@ -175,7 +173,6 @@ impl InsertMany<WorkspaceRemoteBookmark> for SqlCommitCloud {
     async fn insert_many(
         &self,
         txn: Transaction,
-        _ctx: &CoreContext,
         reponame: String,
         workspace: String,
         data: Vec<WorkspaceRemoteBookmark>,

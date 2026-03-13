@@ -59,7 +59,6 @@ pub trait Insert<T = Self> {
     async fn insert(
         &self,
         txn: Transaction,
-        _ctx: &CoreContext,
         reponame: String,
         workspace: String,
         data: T,
@@ -71,7 +70,6 @@ pub trait InsertMany<T = Self> {
     async fn insert_many(
         &self,
         txn: Transaction,
-        _ctx: &CoreContext,
         reponame: String,
         workspace: String,
         data: Vec<T>,
@@ -96,7 +94,6 @@ pub trait Delete<T = Self> {
     async fn delete(
         &self,
         txn: Transaction,
-        _ctx: &CoreContext,
         reponame: String,
         workspace: String,
         args: Self::DeleteArgs,

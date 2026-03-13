@@ -74,13 +74,7 @@ async fn test_history(fb: FacebookInit) -> anyhow::Result<()> {
 
     // Insert a history entry, retrieve it and cast it to Rust struct
     txn = sql
-        .insert(
-            txn,
-            &ctx,
-            reponame.clone(),
-            workspace.clone(),
-            args1.clone(),
-        )
+        .insert(txn, reponame.clone(), workspace.clone(), args1.clone())
         .await?;
     txn.commit().await?;
 
@@ -117,13 +111,7 @@ async fn test_history(fb: FacebookInit) -> anyhow::Result<()> {
         .start_transaction(ctx.sql_query_telemetry())
         .await?;
     txn = sql
-        .insert(
-            txn,
-            &ctx,
-            reponame.clone(),
-            workspace.clone(),
-            args2.clone(),
-        )
+        .insert(txn, reponame.clone(), workspace.clone(), args2.clone())
         .await?;
     txn.commit().await?;
 
@@ -136,7 +124,6 @@ async fn test_history(fb: FacebookInit) -> anyhow::Result<()> {
     txn = Delete::<WorkspaceHistory>::delete(
         &sql,
         txn,
-        &ctx,
         reponame.clone(),
         workspace.clone(),
         HistoryDeleteArgs {

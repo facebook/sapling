@@ -139,23 +139,11 @@ async fn test_remote_bookmarks(fb: FacebookInit) -> anyhow::Result<()> {
         .await?;
 
     txn = sql
-        .insert(
-            txn,
-            &ctx,
-            reponame.clone(),
-            workspace.clone(),
-            bookmark1.clone(),
-        )
+        .insert(txn, reponame.clone(), workspace.clone(), bookmark1.clone())
         .await?;
 
     txn = sql
-        .insert(
-            txn,
-            &ctx,
-            reponame.clone(),
-            workspace.clone(),
-            bookmark2.clone(),
-        )
+        .insert(txn, reponame.clone(), workspace.clone(), bookmark2.clone())
         .await?;
     txn.commit().await?;
 
@@ -181,7 +169,6 @@ async fn test_remote_bookmarks(fb: FacebookInit) -> anyhow::Result<()> {
     txn = Delete::<WorkspaceRemoteBookmark>::delete(
         &sql,
         txn,
-        &ctx,
         reponame.clone(),
         workspace.clone(),
         DeleteArgs { removed_bookmarks },

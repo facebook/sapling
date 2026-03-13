@@ -51,7 +51,7 @@ async fn test_checkout_locations(fb: FacebookInit) -> anyhow::Result<()> {
         .await?;
 
     txn = sql
-        .insert(txn, &ctx, reponame.clone(), workspace.clone(), args)
+        .insert(txn, reponame.clone(), workspace.clone(), args)
         .await?;
     txn.commit().await?;
 

@@ -52,16 +52,10 @@ async fn test_versions(fb: FacebookInit) -> anyhow::Result<()> {
         .start_transaction(ctx.sql_query_telemetry())
         .await?;
     txn = sql
-        .insert(txn, &ctx, reponame.clone(), workspace.clone(), args.clone())
+        .insert(txn, reponame.clone(), workspace.clone(), args.clone())
         .await?;
     txn = sql
-        .insert(
-            txn,
-            &ctx,
-            reponame2.clone(),
-            workspace.clone(),
-            args.clone(),
-        )
+        .insert(txn, reponame2.clone(), workspace.clone(), args.clone())
         .await?;
     txn.commit().await?;
 
@@ -96,13 +90,7 @@ async fn test_versions(fb: FacebookInit) -> anyhow::Result<()> {
         .start_transaction(ctx.sql_query_telemetry())
         .await?;
     txn = sql
-        .insert(
-            txn,
-            &ctx,
-            reponame.clone(),
-            workspace.clone(),
-            args2.clone(),
-        )
+        .insert(txn, reponame.clone(), workspace.clone(), args2.clone())
         .await?;
     txn.commit().await?;
     let res2: Vec<WorkspaceVersion> = sql.get(&ctx, reponame.clone(), workspace.clone()).await?;

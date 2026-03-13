@@ -81,7 +81,6 @@ impl Insert<WorkspaceHead> for SqlCommitCloud {
     async fn insert(
         &self,
         txn: Transaction,
-        _ctx: &CoreContext,
         reponame: String,
         workspace: String,
         data: WorkspaceHead,
@@ -119,7 +118,6 @@ impl Delete<WorkspaceHead> for SqlCommitCloud {
     async fn delete(
         &self,
         txn: Transaction,
-        _ctx: &CoreContext,
         reponame: String,
         workspace: String,
         args: Self::DeleteArgs,
@@ -140,7 +138,6 @@ impl InsertMany<WorkspaceHead> for SqlCommitCloud {
     async fn insert_many(
         &self,
         txn: Transaction,
-        _ctx: &CoreContext,
         reponame: String,
         workspace: String,
         data: Vec<WorkspaceHead>,

@@ -197,7 +197,6 @@ impl Delete<WorkspaceHistory> for SqlCommitCloud {
     async fn delete(
         &self,
         txn: Transaction,
-        _ctx: &CoreContext,
         reponame: String,
         workspace: String,
         args: Self::DeleteArgs,
@@ -220,7 +219,6 @@ impl Insert<WorkspaceHistory> for SqlCommitCloud {
     async fn insert(
         &self,
         txn: Transaction,
-        _ctx: &CoreContext,
         reponame: String,
         workspace: String,
         data: WorkspaceHistory,

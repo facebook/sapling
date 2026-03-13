@@ -52,23 +52,11 @@ async fn test_snapshots(fb: FacebookInit) -> anyhow::Result<()> {
         .await?;
 
     txn = sql
-        .insert(
-            txn,
-            &ctx,
-            reponame.clone(),
-            workspace.clone(),
-            snapshot1.clone(),
-        )
+        .insert(txn, reponame.clone(), workspace.clone(), snapshot1.clone())
         .await?;
 
     txn = sql
-        .insert(
-            txn,
-            &ctx,
-            reponame.clone(),
-            workspace.clone(),
-            snapshot2.clone(),
-        )
+        .insert(txn, reponame.clone(), workspace.clone(), snapshot2.clone())
         .await?;
     txn.commit().await?;
 
@@ -84,7 +72,6 @@ async fn test_snapshots(fb: FacebookInit) -> anyhow::Result<()> {
     txn = Delete::<WorkspaceSnapshot>::delete(
         &sql,
         txn,
-        &ctx,
         reponame.clone(),
         workspace.clone(),
         DeleteArgs { removed_snapshots },
