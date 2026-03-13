@@ -686,6 +686,12 @@ impl RotateLog {
     /// is in-memory.
     pub fn remove_old_logs(&mut self) -> crate::Result<()> {
         if let Some(dir) = &self.dir {
+            // Optimistic lock-free check: skip the exclusive lock if there
+            // are no old logs to clean up, which is the common case.
+            let latest = read_latest(dir)?;
+            if latest != self.latest || !self.maybe_has_old_logs() {
+                return Ok(());
+            }
             let lock = ScopedDirLock::new(dir)?;
             let latest = read_latest(dir)?;
             if latest == self.latest {
@@ -693,6 +699,35 @@ impl RotateLog {
             }
         }
         Ok(())
+    }
+
+    /// Check if there are log directories outside the valid range.
+    /// We don't take any locks, so this is a racey "best effort" check.
+    fn maybe_has_old_logs(&self) -> bool {
+        let dir = match &self.dir {
+            Some(dir) => dir,
+            None => return false,
+        };
+        let read_dir = match dir.read_dir() {
+            Ok(read_dir) => read_dir,
+            Err(_) => return false,
+        };
+        let latest = self.latest;
+        let earliest = latest.wrapping_sub(self.open_options.max_log_count - 1);
+        for entry in read_dir {
+            if let Ok(entry) = entry {
+                if let Some(name) = entry.file_name().to_str() {
+                    if let Ok(id) = name.parse::<u8>() {
+                        if (latest >= earliest && (id > latest || id < earliest))
+                            || (latest < earliest && (id > latest && id < earliest))
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        false
     }
 
     /// Returns `true` if `sync` will load more data on disk.
@@ -1354,6 +1389,30 @@ mod tests {
             let rotate = open(4);
             assert_eq!(read_all(&rotate), [[3], [4]]);
         }
+    }
+
+    #[test]
+    fn test_remove_old_logs_skips_exclusive_lock() {
+        let dir = tempdir().unwrap();
+        let dir = &dir;
+
+        // Create a RotateLog with no old logs to clean up.
+        let mut rotate = OpenOptions::new()
+            .create(true)
+            .max_bytes_per_log(100)
+            .max_log_count(3)
+            .open(dir)
+            .unwrap();
+        rotate.append(b"data").unwrap();
+        rotate.sync().unwrap();
+
+        // Hold the exclusive write lock. If remove_old_logs tries to
+        // take it, the test will deadlock (caught as a test timeout).
+        let _write_lock = ScopedDirLock::new(dir.as_ref()).unwrap();
+
+        // Should succeed without needing the exclusive lock since
+        // there are no old logs to remove.
+        rotate.remove_old_logs().unwrap();
     }
 
     fn test_wrapping_rotate(max_log_count: u8) {
