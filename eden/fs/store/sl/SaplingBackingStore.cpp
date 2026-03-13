@@ -1264,6 +1264,55 @@ SaplingBackingStore::getTreeEnqueue(
       });
 }
 
+folly::coro::now_task<BackingStore::GetTreeResult>
+SaplingBackingStore::co_getTreeEnqueue(
+    const SlOid& slOid,
+    const ObjectFetchContextPtr& context) {
+  XLOGF(DBG4, "making tree import request for {}", slOid);
+  auto requestContext = context.copy();
+  auto request =
+      SaplingImportRequest::makeTreeImportRequest(slOid, requestContext);
+  uint64_t unique = request->getUnique();
+
+  auto importTracker =
+      std::make_unique<RequestMetricsScope>(&pendingImportTreeWatches_);
+
+  traceBus_->publish(
+      HgImportTraceEvent::queue(
+          unique,
+          HgImportTraceEvent::TREE,
+          slOid,
+          context->getPriority().getClass(),
+          context->getCause(),
+          context->getClientPid()));
+  auto guard = folly::makeGuard([&] {
+    traceBus_->publish(
+        HgImportTraceEvent::finish(
+            unique,
+            HgImportTraceEvent::TREE,
+            slOid,
+            context->getPriority().getClass(),
+            context->getCause(),
+            context->getClientPid(),
+            context->getFetchedSource()));
+  });
+
+  folly::Try<TreePtr> result;
+  try {
+    auto tree = co_await queue_.co_enqueueTree(std::move(request));
+    result = folly::Try<TreePtr>{tree};
+
+    this->queue_.markImportAsFinished<TreePtr::element_type>(slOid, result);
+
+    co_return BackingStore::GetTreeResult{
+        std::move(tree), ObjectFetchContext::Origin::FromNetworkFetch};
+  } catch (const std::exception&) {
+    result.emplaceException(std::current_exception());
+    this->queue_.markImportAsFinished<TreePtr::element_type>(slOid, result);
+    throw;
+  }
+}
+
 TreePtr SaplingBackingStore::getTreeLocal(
     SlOidView slOid,
     const ObjectFetchContextPtr& context) {

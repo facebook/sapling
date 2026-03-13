@@ -93,6 +93,7 @@ cpp_library(
         "//folly:range",
         "//folly:synchronized",
         "//folly/coro:task",
+        "//folly/coro/safe:now_task",
         "//monitoring/obc:obc_lib",
     ],
     external_deps = [

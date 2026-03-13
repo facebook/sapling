@@ -11,6 +11,7 @@
 #include <folly/Range.h>
 #include <folly/Synchronized.h>
 #include <folly/coro/Task.h>
+#include <folly/coro/safe/NowTask.h>
 #include <gtest/gtest_prod.h>
 #include <sys/types.h>
 #include <atomic>
@@ -426,6 +427,10 @@ class SaplingBackingStore final
       const SlOid& slOid,
       const ObjectFetchContextPtr& context);
 
+  folly::coro::now_task<GetTreeResult> co_getTreeEnqueue(
+      const SlOid& slOid,
+      const ObjectFetchContextPtr& context);
+
   folly::SemiFuture<GetTreeAuxResult> getTreeAuxData(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;
@@ -496,13 +501,6 @@ class SaplingBackingStore final
       const ObjectFetchContextPtr& context,
       const SaplingImportRequest::FetchType fetch_type);
 
-  /**
-   * Create a blob fetch request and enqueue it to the SaplingImportRequestQueue
-   *
-   * For latency sensitive context, the caller is responsible for checking if
-   * the blob is present locally, as this function will always push the request
-   * at the end of the queue.
-   */
   folly::coro::Task<GetBlobResult> co_getBlobEnqueue(
       const SlOid& slOid,
       const ObjectFetchContextPtr& context,
