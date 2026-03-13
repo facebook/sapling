@@ -272,7 +272,7 @@ impl FileStore {
             let span = tracing::span!(
                 tracing::Level::DEBUG,
                 "file fetch",
-                id = rand::thread_rng().r#gen::<u16>()
+                id = rand::rng().random::<u16>()
             );
             let _enter = span.enter();
 

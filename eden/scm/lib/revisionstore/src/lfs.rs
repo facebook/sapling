@@ -74,7 +74,6 @@ use mincode::serialize;
 use mincode::serialize_into;
 use minibytes::Bytes;
 use rand::Rng;
-use rand::thread_rng;
 use redacted::is_redacted;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
@@ -1468,7 +1467,7 @@ impl LfsRemote {
                 if let Some(backoff_time) = backoff_time {
                     if backoff_time > 0.0 {
                         let sleep_time =
-                            Duration::from_secs_f32(thread_rng().gen_range(0.0..backoff_time));
+                            Duration::from_secs_f32(rand::rng().random_range(0.0..backoff_time));
                         tracing::debug!(
                             sleep_time = ?sleep_time,
                             retry_strategy = ?retry_strategy,
