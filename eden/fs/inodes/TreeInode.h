@@ -187,6 +187,9 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   ImmediateFuture<TreeInodePtr> getOrLoadChildTree(
       PathComponentPiece name,
       const ObjectFetchContextPtr& context);
+  folly::coro::now_task<TreeInodePtr> co_getOrLoadChildTree(
+      PathComponentPiece name,
+      const ObjectFetchContextPtr& context);
 
   /**
    * Recursively look up a child inode.
