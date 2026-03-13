@@ -932,6 +932,23 @@ ImmediateFuture<VirtualInode> VirtualInode::getOrFindChild(
     RelativePathPiece path,
     const std::shared_ptr<ObjectStore>& objectStore,
     const ObjectFetchContextPtr& fetchContext) const {
+  if (objectStore->getEdenConfig()->enableCoroutinesPhase1.getValue()) {
+    return ImmediateFuture{
+        // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+        folly::coro::co_invoke(
+            [](auto&& self, auto&&... args) {
+              return std::forward<decltype(self)>(self)
+                  .co_getOrFindChild(std::forward<decltype(args)>(args)...)
+                  // @lint-ignore CLANGTIDY facebook-hte-Deprecated
+                  .as_unsafe();
+            },
+            *this,
+            childName.copy(),
+            path.copy(),
+            std::shared_ptr<ObjectStore>(objectStore),
+            fetchContext.copy())
+            .semi()};
+  }
   if (!isDirectory()) {
     return makeImmediateFuture<VirtualInode>(PathError(ENOTDIR, path));
   }
@@ -966,13 +983,11 @@ folly::coro::now_task<VirtualInode> VirtualInode::co_getOrFindChild(
   // Use std::get_if instead of match to avoid potential issues with
   // coroutine lambdas and std::visit
   if (auto* inode = std::get_if<InodePtr>(&variant_)) {
-    co_return co_await inode->asTreePtr()
-        ->getOrFindChild(childName, fetchContext, false)
-        .semi();
+    co_return co_await inode->asTreePtr()->co_getOrFindChild(
+        childName, fetchContext, false);
   } else if (auto* tree = std::get_if<TreePtr>(&variant_)) {
-    co_return co_await getOrFindChildHelper(
-        *tree, childName, path, objectStore, fetchContext)
-        .semi();
+    co_return co_await co_getOrFindChildHelper(
+        *tree, childName, path, objectStore, fetchContext);
   } else {
     // These represent files in VirtualInode, and can't be descended
     co_yield folly::coro::co_error(PathError(

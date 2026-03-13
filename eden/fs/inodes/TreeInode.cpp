@@ -386,6 +386,100 @@ ImmediateFuture<VirtualInode> TreeInode::getOrFindChild(
       .ensure([b = std::move(block)]() mutable { b.close(); });
 }
 
+std::optional<VirtualInode> TreeInode::rlockCheckChild(
+    const TreeInodeState& contents,
+    PathComponentPiece name,
+    const ObjectFetchContextPtr& context,
+    bool loadInodes,
+    std::optional<TreeInode::PendingDirFetch>& dirFetch) {
+  auto iter = contents.entries.find(name);
+  if (iter == contents.entries.end()) {
+    XLOGF(
+        DBG7,
+        "attempted to load non-existent entry \"{}\" in {}",
+        name,
+        getLogPath());
+    throw InodeError(ENOENT, inodePtrFromThis(), name);
+  }
+
+  auto& entry = iter->second;
+  if (auto inodePtr = entry.getInodePtr()) {
+    logAccess(*context);
+    return VirtualInode{std::move(inodePtr)};
+  }
+
+  if (loadInodes || entry.isMaterialized()) {
+    return std::nullopt;
+  }
+
+  logAccess(*context);
+  if (entry.isDirectory()) {
+    dirFetch = PendingDirFetch{entry.getObjectId(), entry.getInitialMode()};
+    return std::nullopt;
+  }
+  return VirtualInode{UnmaterializedUnloadedBlobDirEntry(entry)};
+}
+
+folly::coro::now_task<VirtualInode> TreeInode::co_getOrFindChild(
+    PathComponentPiece name,
+    const ObjectFetchContextPtr& context,
+    bool loadInodes) {
+  TraceBlock block("co_getOrFindChild");
+
+#ifndef _WIN32
+  if (name == kDotEdenName && getNodeId() != kRootNodeId) {
+    auto inode = co_await getMount()
+                     ->getInodeSlow(".eden/this-dir"_relpath, context)
+                     .semi();
+    co_return VirtualInode{std::move(inode)};
+  }
+#endif // !_WIN32
+
+  std::optional<PendingDirFetch> dirFetch;
+  folly::SemiFuture<InodePtr> loadFuture =
+      folly::SemiFuture<InodePtr>::makeEmpty();
+
+  // First, acquire the rlock. If the check succeeds, acquiring a wlock is
+  // unnecessary.
+  {
+    auto contents = contents_.rlock();
+    auto result =
+        rlockCheckChild(*contents, name, context, loadInodes, dirFetch);
+    if (result.has_value()) {
+      co_return std::move(result.value());
+    }
+  }
+
+  if (!dirFetch.has_value()) {
+    auto contents = contents_.wlock();
+    // Check again - something may have raced between the locks.
+    auto result =
+        rlockCheckChild(*contents, name, context, loadInodes, dirFetch);
+    if (result.has_value()) {
+      co_return std::move(result.value());
+    }
+
+    if (!dirFetch.has_value()) {
+      auto loadResult = loadChild(contents, name, context);
+      // it's important the code between loadChild and loadChildCleanUp
+      // is no throw. We need to perform the loadChildCleanUp now
+      // regardless of exception.
+      loadFuture = std::move(loadResult.first);
+      contents.unlock();
+      loadChildCleanUp(name, std::move(loadResult.second));
+    }
+  }
+
+  // All locks released before suspension
+  if (dirFetch.has_value()) {
+    auto tree = co_await getObjectStore().co_getTree(dirFetch->treeId, context);
+    co_return VirtualInode(std::move(tree), dirFetch->mode);
+  }
+
+  auto inode = co_await std::move(loadFuture);
+  co_return VirtualInode{std::move(inode)};
+}
+
 std::vector<std::pair<PathComponent, ImmediateFuture<VirtualInode>>>
 TreeInode::getChildren(const ObjectFetchContextPtr& context, bool loadInodes) {
   // We could optimize this to take the rlock first and try to get all the

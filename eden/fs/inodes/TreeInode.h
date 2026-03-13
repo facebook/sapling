@@ -11,6 +11,7 @@
 #include <folly/File.h>
 #include <folly/Portability.h>
 #include <folly/Synchronized.h>
+#include <folly/coro/safe/NowTask.h>
 #include <optional>
 #include "eden/common/utils/FileOffset.h"
 #include "eden/common/utils/PathFuncs.h"
@@ -140,6 +141,14 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * Tree or a DirEntry/TreeEntry representing the entry.
    */
   ImmediateFuture<VirtualInode> getOrFindChild(
+      PathComponentPiece name,
+      const ObjectFetchContextPtr& context,
+      bool loadInodes);
+
+  /**
+   * Coroutine version of getOrFindChild.
+   */
+  folly::coro::now_task<VirtualInode> co_getOrFindChild(
       PathComponentPiece name,
       const ObjectFetchContextPtr& context,
       bool loadInodes);
@@ -957,6 +966,25 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       PathComponentPiece name,
       const ObjectFetchContextPtr& context,
       bool loadInodes);
+
+  /**
+   * Coroutine equivalent of rlockGetOrFindChild. Checks if a child entry can
+   * be resolved without loading an inode. Returns a VirtualInode for
+   * synchronous cases (loaded inode, unmaterialized file). Sets dirFetch for
+   * unmaterialized directories that need an async tree fetch after the lock
+   * is released. Returns nullopt if an inode load is needed (requires wlock).
+   */
+  struct PendingDirFetch {
+    ObjectId treeId;
+    mode_t mode{};
+  };
+
+  std::optional<VirtualInode> rlockCheckChild(
+      const TreeInodeState& contents,
+      PathComponentPiece name,
+      const ObjectFetchContextPtr& context,
+      bool loadInodes,
+      std::optional<PendingDirFetch>& dirFetch);
 
   // We need to do some cleanup outside of the lock. So we return some promises
   // and futures and things to fulfil after the lock is released.
