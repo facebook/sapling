@@ -354,6 +354,13 @@ fn populate_scuba(scuba: &mut MononokeScubaSampleBuilder, state: &mut State) {
             HttpScubaKey::FetchFromCASAttempted,
             fetch_from_cas_attempted,
         );
+
+        if let Some(client_hostname) = metadata.client_hostname() {
+            scuba.add("source_hostname", client_hostname.to_owned());
+        }
+        if let Some(revproxy_region) = metadata.revproxy_region().as_deref() {
+            scuba.add("source_region", revproxy_region);
+        }
     }
 
     if let Some(config_version) = ConfigInfo::try_borrow_from(state) {
