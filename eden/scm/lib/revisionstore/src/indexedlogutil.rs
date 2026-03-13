@@ -33,6 +33,8 @@ use parking_lot::RwLock;
 use parking_lot::RwLockReadGuard;
 use parking_lot::RwLockUpgradableReadGuard;
 use parking_lot::RwLockWriteGuard;
+use rand::Rng;
+use rand::rng;
 use tracing::debug;
 
 /// Simple wrapper around either an `IndexedLog` or a `RotateLog`. This abstracts whether a store
@@ -285,6 +287,7 @@ pub struct StoreOpenOptions {
     indexes: Vec<IndexDef>,
     create: bool,
     btrfs_compression: bool,
+    cleanup_old_logs_chance: f64,
 }
 
 impl StoreOpenOptions {
@@ -299,6 +302,9 @@ impl StoreOpenOptions {
                 .must_get("scmstore", "sync-logs-if-changed-on-disk")
                 .unwrap_or_default(),
             btrfs_compression: false,
+            cleanup_old_logs_chance: config
+                .must_get("scmstore", "cleanup-old-logs-chance")
+                .unwrap_or(0.01),
         }
     }
 
@@ -416,16 +422,21 @@ impl StoreOpenOptions {
     pub fn rotated(self, path: impl AsRef<Path>) -> Result<Store> {
         let sync_if_changed_on_disk = self.sync_if_changed_on_disk;
         let should_compress = self.should_compress(path.as_ref())?;
+        let cleanup_chance = self.cleanup_old_logs_chance;
         let opts = self
             .into_rotated_open_options()
             .btrfs_compression(!should_compress);
         let mut rotate_log = opts.open_with_repair(path.as_ref())?;
-        // Attempt to clean up old logs that might be left around. On Windows, other
-        // Mercurial processes that have the store opened might prevent their removal.
-        let res = rotate_log.remove_old_logs();
-        if let Err(err) = res {
-            debug!("Unable to remove old indexedlogutil logs: {:?}", err);
+
+        if rand::rng().random_bool(cleanup_chance) {
+            // Attempt to clean up old logs that might be left around. On Windows, other
+            // Mercurial processes that have the store opened might prevent their removal.
+            let res = rotate_log.remove_old_logs();
+            if let Err(err) = res {
+                debug!("Unable to remove old indexedlogutil logs: {:?}", err);
+            }
         }
+
         Ok(Store {
             inner: RwLock::new(Inner::Rotated(rotate_log)),
             auto_sync_count: AtomicU64::new(0),
