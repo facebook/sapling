@@ -560,6 +560,14 @@ impl TreeStore {
     #[allow(unused_must_use)]
     #[tracing::instrument(level = "debug", skip(self))]
     pub fn flush(&self) -> Result<()> {
+        self.flush_inner(true)
+    }
+
+    pub fn sync(&self) -> Result<()> {
+        self.flush_inner(false)
+    }
+
+    fn flush_inner(&self, skip_clean: bool) -> Result<()> {
         let mut result = Ok(());
         let mut handle_error = |error| {
             tracing::error!(%error);
@@ -567,32 +575,38 @@ impl TreeStore {
         };
 
         if let Some(ref indexedlog_local) = self.indexedlog_local {
-            indexedlog_local.flush_log().map_err(&mut handle_error);
+            if !skip_clean || indexedlog_local.is_dirty() {
+                indexedlog_local.flush_log().map_err(&mut handle_error).ok();
+            }
         }
 
         if let Some(ref indexedlog_cache) = self.indexedlog_cache {
-            indexedlog_cache.flush_log().map_err(&mut handle_error);
+            if !skip_clean || indexedlog_cache.is_dirty() {
+                indexedlog_cache.flush_log().map_err(&mut handle_error).ok();
+            }
         }
 
         if let Some(ref tree_aux_store) = self.tree_aux_store {
-            tree_aux_store.flush().map_err(&mut handle_error);
+            if !skip_clean || tree_aux_store.is_dirty() {
+                tree_aux_store.flush().map_err(&mut handle_error).ok();
+            }
         }
 
         if let Some(ref historystore_local) = self.historystore_local {
-            historystore_local.flush().map_err(&mut handle_error);
+            if !skip_clean || historystore_local.is_dirty() {
+                historystore_local.flush().map_err(&mut handle_error).ok();
+            }
         }
 
         if let Some(ref historystore_cache) = self.historystore_cache {
-            historystore_cache.flush().map_err(&mut handle_error);
+            if !skip_clean || historystore_cache.is_dirty() {
+                historystore_cache.flush().map_err(&mut handle_error).ok();
+            }
         }
 
         TREESTORE_FLUSH_COUNT.increment();
 
         result
-    }
-
-    pub fn sync(&self) -> Result<()> {
-        self.flush()
     }
 
     pub fn with_shared_only(&self) -> Self {

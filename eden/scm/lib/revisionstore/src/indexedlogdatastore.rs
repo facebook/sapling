@@ -333,6 +333,10 @@ impl IndexedLogHgIdDataStore {
         entry.write_to_log(&self.store)
     }
 
+    pub fn is_dirty(&self) -> bool {
+        self.store.is_dirty()
+    }
+
     /// Flush the underlying IndexedLog
     pub fn flush_log(&self) -> Result<()> {
         self.store.write().flush()?;

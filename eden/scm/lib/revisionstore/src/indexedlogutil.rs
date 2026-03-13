@@ -129,6 +129,10 @@ impl Store {
         Ok(())
     }
 
+    pub fn is_dirty(&self) -> bool {
+        self.inner.read().is_dirty()
+    }
+
     pub fn flush(&self) -> Result<()> {
         self.write().flush()
     }
@@ -236,6 +240,13 @@ impl Inner {
             }
         };
         Ok(())
+    }
+
+    pub fn is_dirty(&self) -> bool {
+        match self {
+            Self::Permanent(log) => log.is_dirty(),
+            Self::Rotated(log) => log.is_dirty(),
+        }
     }
 
     fn is_changed_on_disk(&self) -> bool {

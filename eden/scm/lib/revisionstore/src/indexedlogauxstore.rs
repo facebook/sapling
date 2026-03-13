@@ -227,6 +227,10 @@ impl AuxStore {
         )
     }
 
+    pub fn is_dirty(&self) -> bool {
+        self.0.is_dirty()
+    }
+
     pub fn flush(&self) -> Result<()> {
         self.0.flush()
     }

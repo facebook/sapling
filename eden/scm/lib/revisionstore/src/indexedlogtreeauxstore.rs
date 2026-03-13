@@ -136,6 +136,10 @@ impl TreeAuxStore {
         )
     }
 
+    pub fn is_dirty(&self) -> bool {
+        self.store.is_dirty()
+    }
+
     pub fn flush(&self) -> Result<()> {
         self.store.flush()?;
         Ok(())

@@ -936,6 +936,14 @@ impl RotateLog {
         logs.into_iter().rev().flat_map(|log| log.iter())
     }
 
+    /// Returns `true` if there are in-memory changes that haven't been flushed to disk.
+    pub fn is_dirty(&self) -> bool {
+        match self.logs[0].get() {
+            Some(log) => log.is_dirty(),
+            None => false,
+        }
+    }
+
     /// Iterate over all dirty entries.
     pub fn iter_dirty(&self) -> impl Iterator<Item = crate::Result<&[u8]>> {
         self.logs[0].get().unwrap().iter_dirty()

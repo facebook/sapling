@@ -1232,6 +1232,11 @@ impl Log {
         }
     }
 
+    /// Returns `true` if there are in-memory changes that haven't been flushed to disk.
+    pub fn is_dirty(&self) -> bool {
+        !self.mem_buf.is_empty()
+    }
+
     /// Applies the given index function to the entry data and returns the index keys.
     pub fn index_func<'a>(
         &self,

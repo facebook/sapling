@@ -242,6 +242,10 @@ impl IndexedLogHgIdHistoryStore {
         let log = self.log.read();
         log.contains(0, index_key)
     }
+
+    pub fn is_dirty(&self) -> bool {
+        self.log.is_dirty()
+    }
 }
 
 impl LocalStore for IndexedLogHgIdHistoryStore {

@@ -462,6 +462,10 @@ impl LfsIndexedLogBlobsStore {
         Ok(())
     }
 
+    pub fn is_dirty(&self) -> bool {
+        self.inner.is_dirty()
+    }
+
     pub fn flush(&self) -> Result<()> {
         self.inner.flush()
     }
@@ -588,6 +592,14 @@ impl LfsBlobsStore {
         }
 
         Ok(())
+    }
+
+    pub fn is_dirty(&self) -> bool {
+        match self {
+            LfsBlobsStore::IndexedLog(log) => log.is_dirty(),
+            LfsBlobsStore::Union(first, _) => first.is_dirty(),
+            _ => false,
+        }
     }
 
     pub fn flush(&self) -> Result<()> {
@@ -961,6 +973,10 @@ impl LfsStore {
 
     pub(crate) fn add_pointer(&self, pointer_entry: LfsPointersEntry) -> Result<()> {
         self.pointers.add(pointer_entry)
+    }
+
+    pub fn is_dirty(&self) -> bool {
+        self.blobs.is_dirty() || self.pointers.0.is_dirty()
     }
 
     pub fn flush(&self) -> Result<()> {
@@ -1921,6 +1937,10 @@ impl LfsClient {
         let mut c = self.clone();
         c.local = Some(self.shared.clone());
         c
+    }
+
+    pub(crate) fn is_dirty(&self) -> bool {
+        self.local.as_ref().is_some_and(|l| l.is_dirty()) || self.shared.is_dirty()
     }
 
     pub(crate) fn flush(&self) -> Result<()> {

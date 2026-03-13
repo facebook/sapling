@@ -465,6 +465,15 @@ impl FileStore {
     #[allow(unused_must_use)]
     #[tracing::instrument(level = "debug", skip(self))]
     pub fn flush(&self) -> Result<()> {
+        self.flush_inner(true)
+    }
+
+    pub fn sync(&self) -> Result<()> {
+        self.metrics.write().api.hg_refresh.call(0);
+        self.flush_inner(false)
+    }
+
+    fn flush_inner(&self, skip_clean: bool) -> Result<()> {
         let mut result = Ok(());
         let mut handle_error = |error| {
             tracing::error!(%error);
@@ -472,19 +481,27 @@ impl FileStore {
         };
 
         if let Some(ref indexedlog_local) = self.indexedlog_local {
-            indexedlog_local.flush_log().map_err(&mut handle_error);
+            if !skip_clean || indexedlog_local.is_dirty() {
+                indexedlog_local.flush_log().map_err(&mut handle_error).ok();
+            }
         }
 
         if let Some(ref indexedlog_cache) = self.indexedlog_cache {
-            indexedlog_cache.flush_log().map_err(&mut handle_error);
+            if !skip_clean || indexedlog_cache.is_dirty() {
+                indexedlog_cache.flush_log().map_err(&mut handle_error).ok();
+            }
         }
 
         if let Some(lfs_client) = &self.lfs_client {
-            lfs_client.flush().map_err(&mut handle_error);
+            if !skip_clean || lfs_client.is_dirty() {
+                lfs_client.flush().map_err(&mut handle_error).ok();
+            }
         }
 
         if let Some(ref aux_cache) = self.aux_cache {
-            aux_cache.flush().map_err(&mut handle_error);
+            if !skip_clean || aux_cache.is_dirty() {
+                aux_cache.flush().map_err(&mut handle_error).ok();
+            }
         }
 
         let metrics = std::mem::take(&mut *self.metrics.write());
@@ -495,11 +512,6 @@ impl FileStore {
         FILESTORE_FLUSH_COUNT.increment();
 
         result
-    }
-
-    pub fn sync(&self) -> Result<()> {
-        self.metrics.write().api.hg_refresh.call(0);
-        self.flush()
     }
 
     pub fn metrics(&self) -> Vec<(String, usize)> {
