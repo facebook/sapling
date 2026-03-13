@@ -198,7 +198,6 @@ macro_rules! mononoke_queries {
                         ).await?;
                         let (mut res, _tel) = conn.read_query(&mut con, &query).await
                             .map_err(_tl::anyhow::Error::from)?;
-                        use _tl::mysql_async::prelude::FromValue;
                         let result = res
                             .map(|row| _row_to_tuple(row))
                             .await?
@@ -249,7 +248,7 @@ macro_rules! mononoke_queries {
 
             fn _row_to_tuple(row: _tl::mysql_async::Row) -> std::result::Result<($( $rtype, )*), _tl::anyhow::Error> {
                 use _tl::mysql_async::prelude::FromValue;
-                #[allow(clippy::eval_order_dependence)]
+                #[allow(clippy::mixed_read_write_in_expression)]
                 let mut idx = 0;
                 let res = (
                     $({
@@ -334,7 +333,7 @@ macro_rules! mononoke_queries {
                 let rows = stmt.query_map(
                     &ref_params[..],
                     |row| {
-                        #[allow(clippy::eval_order_dependence)]
+                        #[allow(clippy::mixed_read_write_in_expression)]
                         {
                             let mut idx = 0;
                             let res = (
