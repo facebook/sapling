@@ -24,5 +24,6 @@ cpp_library(
         "//eden/fs/store:backing_store_interface",
         "//eden/fs/store:context",
         "//folly:range",
+        "//folly/coro/safe:now_task",
     ],
 )

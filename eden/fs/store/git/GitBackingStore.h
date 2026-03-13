@@ -8,6 +8,7 @@
 #pragma once
 
 #include <folly/Range.h>
+#include <folly/coro/safe/NowTask.h>
 
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/store/BackingStore.h"
@@ -65,6 +66,9 @@ class GitBackingStore final : public BijectiveBackingStore {
   folly::SemiFuture<BackingStore::GetTreeResult> getTree(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;
+  folly::coro::now_task<BackingStore::GetTreeResult> co_getTree(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context);
   folly::SemiFuture<BackingStore::GetTreeAuxResult> getTreeAuxData(
       const ObjectId& /*id*/,
       const ObjectFetchContextPtr& /*context*/) override;

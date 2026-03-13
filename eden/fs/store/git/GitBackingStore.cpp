@@ -215,6 +215,14 @@ TreePtr GitBackingStore::getTreeImpl(const ObjectId& id) {
   return std::make_shared<TreePtr::element_type>(std::move(entries), id);
 }
 
+folly::coro::now_task<BackingStore::GetTreeResult> GitBackingStore::co_getTree(
+    const ObjectId& id,
+    const ObjectFetchContextPtr& /*context*/) {
+  // TODO: Use a separate thread pool to do the git I/O
+  co_return BackingStore::GetTreeResult{
+      getTreeImpl(id), ObjectFetchContext::Origin::FromDiskCache};
+}
+
 SemiFuture<BackingStore::GetBlobResult> GitBackingStore::getBlob(
     const ObjectId& id,
     const ObjectFetchContextPtr& /*context*/) {
