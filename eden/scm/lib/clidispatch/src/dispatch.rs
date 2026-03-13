@@ -117,6 +117,12 @@ fn parse(definition: &CommandDefinition, args: &[String]) -> Result<ParseOutput,
 fn initialize_blackbox(optional_repo: &OptionalRepo) -> Result<()> {
     if let OptionalRepo::CoreRepo(CoreRepo::Disk(repo)) = optional_repo {
         let config = repo.config();
+
+        if !config.get_or("blackbox", "enable", || true)? {
+            tracing::debug!("blackbox disabled");
+            return Ok(());
+        }
+
         let max_size = config
             .get_or("blackbox", "maxsize", || {
                 configloader::convert::ByteCount::from(1u64 << 12)
