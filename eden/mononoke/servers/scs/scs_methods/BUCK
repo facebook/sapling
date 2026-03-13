@@ -13,6 +13,7 @@ rust_library(
     test_deps = [
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/repo_attributes/repo_derived_data:repo_derived_data",
         "//eden/mononoke/repo_attributes/restricted_paths:restricted_paths",
         "//eden/mononoke/repo_factory:test_repo_factory",
         "//eden/mononoke/servers/slapi/slapi_server/context:context",

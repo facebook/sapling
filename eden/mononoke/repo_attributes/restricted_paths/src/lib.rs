@@ -25,6 +25,7 @@ use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
 use permission_checker::AclProvider;
 use permission_checker::MononokeIdentity;
+use repo_derived_data::ArcRepoDerivedData;
 pub use restricted_paths_common::*;
 use scuba_ext::MononokeScubaSampleBuilder;
 use thiserror::Error;
@@ -85,6 +86,10 @@ pub struct RestrictedPaths {
     scuba: MononokeScubaSampleBuilder,
     /// Whether to use ACL manifest instead of config for restriction lookups.
     use_acl_manifest: bool,
+    /// Repo derived data for deriving ACL manifests.
+    /// Used by the manifest-based lookup methods added in a follow-up commit.
+    #[allow(dead_code)]
+    repo_derived_data: ArcRepoDerivedData,
 }
 
 impl RestrictedPaths {
@@ -93,11 +98,13 @@ impl RestrictedPaths {
         acl_provider: Arc<dyn AclProvider>,
         scuba: MononokeScubaSampleBuilder,
         use_acl_manifest: bool,
-        derived_data_config: &metaconfig_types::DerivedDataConfig,
+        repo_derived_data: ArcRepoDerivedData,
     ) -> Result<Self> {
         if use_acl_manifest {
             anyhow::ensure!(
-                derived_data_config.is_enabled(DerivableType::AclManifests),
+                repo_derived_data
+                    .config()
+                    .is_enabled(DerivableType::AclManifests),
                 "use_acl_manifest is true but AclManifest derivation is not enabled for this repo. \
                  Enable AclManifests in the repo's derived data config."
             );
@@ -107,6 +114,7 @@ impl RestrictedPaths {
             acl_provider,
             scuba,
             use_acl_manifest,
+            repo_derived_data,
         })
     }
 
@@ -613,10 +621,17 @@ mod tests {
     use mononoke_types::NonRootMPath;
     use mononoke_types::RepositoryId;
     use permission_checker::dummy::DummyAclProvider;
+    use repo_derived_data::RepoDerivedDataArc;
     use sql_construct::SqlConstruct;
 
     use super::*;
     use crate::SqlRestrictedPathsManifestIdStoreBuilder;
+
+    #[facet::container]
+    struct MinimalTestRepo(
+        repo_derived_data::RepoDerivedData,
+        restricted_paths_common::RestrictedPathsConfigBased,
+    );
 
     /// Build a config-based `RestrictedPaths` for tests.
     async fn build_test_restricted_paths(
@@ -624,6 +639,8 @@ mod tests {
         config: metaconfig_types::RestrictedPathsConfig,
     ) -> Result<RestrictedPaths> {
         let acl_provider = DummyAclProvider::new(fb)?;
+        let test_repo: MinimalTestRepo = test_repo_factory::build_empty(fb).await?;
+        let repo_derived_data = test_repo.repo_derived_data_arc();
         let repo_id = RepositoryId::new(0);
         let manifest_id_store = Arc::new(
             SqlRestrictedPathsManifestIdStoreBuilder::with_sqlite_in_memory()?
@@ -635,14 +652,13 @@ mod tests {
             manifest_id_store,
             None,
         ));
-        let derived_data_config = test_repo_factory::default_test_repo_config().derived_data_config;
 
         RestrictedPaths::new(
             config_based,
             acl_provider,
             scuba,
             false, // use_acl_manifest
-            &derived_data_config,
+            repo_derived_data,
         )
     }
 

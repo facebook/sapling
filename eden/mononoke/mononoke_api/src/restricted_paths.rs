@@ -87,8 +87,6 @@ mod tests {
         fb: FacebookInit,
         path_acls: Vec<(&str, &str)>,
     ) -> Result<Arc<RestrictedPaths>> {
-        let ctx = CoreContext::test_mock(fb);
-
         let repo_id = RepositoryId::new(0);
 
         let path_acls_map: HashMap<NonRootMPath, MononokeIdentity> = path_acls
@@ -134,7 +132,7 @@ mod tests {
             acl_provider,
             scuba,
             false, // use_acl_manifest — config-based tests; separate repo lacks commit graph
-            repo_derived_data.config(),
+            repo_derived_data,
         )?))
     }
 

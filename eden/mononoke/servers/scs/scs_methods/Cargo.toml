@@ -81,6 +81,7 @@ tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+repo_derived_data = { version = "0.1.0", path = "../../../repo_attributes/repo_derived_data" }
 restricted_paths = { version = "0.1.0", path = "../../../repo_attributes/restricted_paths" }
 sql_construct = { version = "0.1.0", path = "../../../common/sql_construct" }
 test_repo_factory = { version = "0.1.0", path = "../../../repo_factory/test_repo_factory" }

@@ -759,6 +759,7 @@ impl TestRepoFactory {
     pub fn restricted_paths(
         &self,
         restricted_paths_config_based: &ArcRestrictedPathsConfigBased,
+        repo_derived_data: &ArcRepoDerivedData,
     ) -> Result<ArcRestrictedPaths> {
         if let Some(restricted_paths) = &self.restricted_paths {
             return Ok(restricted_paths.clone());
@@ -781,7 +782,7 @@ impl TestRepoFactory {
             acl_provider,
             scuba_builder,
             use_acl_manifest,
-            &self.config.derived_data_config,
+            repo_derived_data.clone(),
         )?))
     }
 

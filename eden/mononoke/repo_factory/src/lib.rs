@@ -1419,8 +1419,8 @@ impl RepoFactory {
     pub fn restricted_paths(
         &self,
         repo_identity: &ArcRepoIdentity,
-        repo_config: &ArcRepoConfig,
         restricted_paths_config_based: &ArcRestrictedPathsConfigBased,
+        repo_derived_data: &ArcRepoDerivedData,
     ) -> Result<ArcRestrictedPaths> {
         // Construct scuba builder for logging access to restricted paths.
         // Check for environment variable override for integration tests.
@@ -1443,7 +1443,7 @@ impl RepoFactory {
             self.env.acl_provider.clone(),
             scuba_builder,
             use_acl_manifest,
-            &repo_config.derived_data_config,
+            repo_derived_data.clone(),
         )?;
 
         Ok(Arc::new(restricted_paths))

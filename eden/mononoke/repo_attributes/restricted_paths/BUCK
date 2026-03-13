@@ -28,6 +28,7 @@ rust_library(
         "//eden/mononoke/common/scuba_ext:scuba_ext",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/repo_attributes/repo_derived_data:repo_derived_data",
         "//eden/mononoke/repo_attributes/restricted_paths_common:restricted_paths_common",
         "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ] + ([] if rust_oss.is_oss_build() else [

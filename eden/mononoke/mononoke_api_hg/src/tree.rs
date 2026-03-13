@@ -444,6 +444,7 @@ mod tests {
     use permission_checker::MononokeIdentity;
     use permission_checker::MononokeIdentitySet;
     use pretty_assertions::assert_eq;
+    use repo_derived_data::RepoDerivedDataArc;
     use restricted_paths::RestrictedPaths;
     use restricted_paths::RestrictedPathsConfigBased;
     use restricted_paths::RestrictedPathsManifestIdCacheBuilder;
@@ -451,7 +452,6 @@ mod tests {
     use scuba_ext::MononokeScubaSampleBuilder;
     use sql_construct::SqlConstruct;
     use test_repo_factory::TestRepoFactory;
-    use test_repo_factory::default_test_repo_config;
     use tests_utils::CreateCommitContext;
 
     use super::*;
@@ -619,22 +619,23 @@ mod tests {
         let acl_path = temp_file.into_temp_path().keep()?;
         let acl_provider = InternalAclProvider::from_file(&acl_path)?;
 
-        let config_based = Arc::new(RestrictedPathsConfigBased::new(
-            config,
-            manifest_id_store.clone(),
-            Some(cache),
-        ));
-
         let scuba = MononokeScubaSampleBuilder::with_discard();
 
-        let derived_data_config = default_test_repo_config().derived_data_config;
+        // Build a repo first to get ArcRepoDerivedData
+        let repo: Repo = TestRepoFactory::new(ctx.fb)?.build().await?;
+        let repo_derived_data = repo.repo_derived_data_arc();
+        let config_based = Arc::new(RestrictedPathsConfigBased::new(
+            config,
+            manifest_id_store,
+            Some(cache),
+        ));
 
         let restricted_paths = Arc::new(RestrictedPaths::new(
             config_based,
             acl_provider,
             scuba,
             true, // use_acl_manifest
-            &derived_data_config,
+            repo_derived_data,
         )?);
 
         let repo: Repo = TestRepoFactory::new(ctx.fb)?

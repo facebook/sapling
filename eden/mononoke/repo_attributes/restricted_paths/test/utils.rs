@@ -47,6 +47,7 @@ use permission_checker::MononokeIdentity;
 use permission_checker::MononokeIdentitySet;
 use pretty_assertions::assert_eq;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedDataArc;
 use repo_derived_data::RepoDerivedDataRef;
 use restricted_paths::SqlRestrictedPathsManifestIdStoreBuilder;
 use restricted_paths::*;
@@ -56,7 +57,6 @@ use strum::Display as EnumDisplay;
 use strum::EnumIter;
 use strum::IntoEnumIterator;
 use test_repo_factory::TestRepoFactory;
-use test_repo_factory::default_test_repo_config;
 use tests_utils::CreateCommitContext;
 
 pub const TEST_CLIENT_MAIN_ID: &str = "user:myusername0";
@@ -860,14 +860,17 @@ async fn setup_test_repo(
         Some(cache),
     ));
 
-    let derived_data_config = default_test_repo_config().derived_data_config;
+    // Build a repo first to get ArcRepoDerivedData
+    let factory = TestRepoFactory::new(ctx.fb)?;
+    let repo: TestRepo = factory.build().await?;
+    let repo_derived_data = repo.repo_derived_data_arc();
 
     let repo_restricted_paths = Arc::new(RestrictedPaths::new(
         config_based,
         acl_provider,
         scuba_builder,
         true, // use_acl_manifest
-        &derived_data_config,
+        repo_derived_data,
     )?);
 
     // Rebuild with the custom restricted_paths

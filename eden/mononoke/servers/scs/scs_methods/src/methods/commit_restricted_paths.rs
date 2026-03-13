@@ -201,6 +201,7 @@ mod tests {
     use mononoke_types::RepositoryId;
     use permission_checker::MononokeIdentity;
     use permission_checker::dummy::DummyAclProvider;
+    use repo_derived_data::RepoDerivedDataArc;
     use restricted_paths::ArcRestrictedPaths;
     use restricted_paths::RestrictedPaths;
     use restricted_paths::RestrictedPathsConfigBased;
@@ -242,14 +243,12 @@ mod tests {
         };
 
         let manifest_id_store = Arc::new(
-            SqlRestrictedPathsManifestIdStoreBuilder::with_sqlite_in_memory()
-                .context("Failed to create Sqlite connection")?
+            SqlRestrictedPathsManifestIdStoreBuilder::with_sqlite_in_memory()?
                 .with_repo_id(repo_id),
         );
 
         // TODO(T248649079): test the ACL checks logic
-        let acl_provider =
-            DummyAclProvider::new(fb).context("Failed to create DummyAclProvider")?;
+        let acl_provider = DummyAclProvider::new(fb)?;
         let scuba = MononokeScubaSampleBuilder::with_discard();
 
         let config_based = Arc::new(RestrictedPathsConfigBased::new(
@@ -258,14 +257,15 @@ mod tests {
             None,
         ));
 
-        let derived_data_config = test_repo_factory::default_test_repo_config().derived_data_config;
+        let test_repo: Repo = TestRepoFactory::new(fb)?.build().await?;
+        let repo_derived_data = test_repo.repo_derived_data_arc();
 
         Ok(Arc::new(RestrictedPaths::new(
             config_based,
             acl_provider,
             scuba,
-            false, // use_acl_manifest
-            &derived_data_config,
+            false, // use_acl_manifest — config-based tests; separate repo lacks commit graph
+            repo_derived_data,
         )?))
     }
 
