@@ -643,8 +643,8 @@ impl Inner {
     }
 
     fn flush(&self) {
-        self.filestore.flush().ok();
-        self.treestore.flush().ok();
+        self.filestore.sync().ok();
+        self.treestore.sync().ok();
 
         // Sync pending counters to ODS/OBC.
         metrics::Registry::global().sync();
