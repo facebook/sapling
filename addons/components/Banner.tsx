@@ -38,7 +38,7 @@ export function Banner({
   return (
     <div className={`${stylexClassName} banner banner-${kind ?? 'default'}`} {...otherStylex}>
       <div className="banner-content">
-        {icon ?? null} {children}
+        {icon ?? null} <span>{children}</span>
       </div>
       {buttons && (
         <div className={'banner-buttons' + (alwaysShowButtons ? ' banner-buttons-visible' : '')}>
