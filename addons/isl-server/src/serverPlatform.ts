@@ -33,6 +33,7 @@ export interface ServerPlatform {
     message: PlatformSpecificClientToServerMessages,
     postMessage: (message: ServerToClientMessage) => void,
     onDispose: (disapose: () => unknown) => void,
+    onConnectionDispose?: (dispose: () => unknown) => void,
   ): void | Promise<void>;
 }
 

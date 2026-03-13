@@ -77,6 +77,8 @@ export default class ServerToClientAPI {
 
   /** Disposables that must be disposed whenever the current repo is changed */
   private repoDisposables: Array<Disposable> = [];
+  /** Disposables that persist across repo changes, disposed only when the connection closes */
+  private connectionDisposables: Array<Disposable> = [];
   private subscriptions = new Map<string, Disposable>();
   private activeRepoRef: RepositoryReference | undefined;
 
@@ -193,6 +195,9 @@ export default class ServerToClientAPI {
     this.incomingListener.dispose();
     this.disposeRepoDisposables();
 
+    this.connectionDisposables.forEach(d => d.dispose());
+    this.connectionDisposables = [];
+
     if (this.activeRepoRef !== undefined) {
       this.activeRepoRef.unref();
     }
@@ -245,6 +250,9 @@ export default class ServerToClientAPI {
             message => this.postMessage(message),
             (dispose: () => unknown) => {
               this.repoDisposables.push({dispose});
+            },
+            (dispose: () => unknown) => {
+              this.connectionDisposables.push({dispose});
             },
           );
           this.notifyListeners(data);
@@ -1335,6 +1343,9 @@ export default class ServerToClientAPI {
           message => this.postMessage(message),
           (dispose: () => unknown) => {
             this.repoDisposables.push({dispose});
+          },
+          (dispose: () => unknown) => {
+            this.connectionDisposables.push({dispose});
           },
         );
         break;

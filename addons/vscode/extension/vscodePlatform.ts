@@ -9,6 +9,7 @@ import type {ServerPlatform} from 'isl-server/src/serverPlatform';
 import type {RepositoryContext} from 'isl-server/src/serverTypes';
 import type {
   AbsolutePath,
+  CwdInfo,
   Diagnostic,
   DiagnosticSeverity,
   PlatformSpecificClientToServerMessages,
@@ -57,6 +58,7 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
     message: PlatformSpecificClientToServerMessages,
     postMessage: (message: ServerToClientMessage) => void,
     onDispose: (cb: () => unknown) => void,
+    onConnectionDispose: (cb: () => unknown) => void = onDispose,
   ) {
     try {
       switch (message.type) {
@@ -237,12 +239,14 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
         }
         case 'platform/subscribeToAvailableCwds': {
           const postAllAvailableCwds = async () => {
-            const options = await Promise.all(
-              (vscode.workspace.workspaceFolders ?? []).map(folder => {
-                const cwd = folder.uri.fsPath;
-                return Repository.getCwdInfo({...ctx, cwd});
-              }),
+            const results = await Promise.allSettled(
+              (vscode.workspace.workspaceFolders ?? []).map(folder =>
+                Repository.getCwdInfo({...ctx, cwd: folder.uri.fsPath}),
+              ),
             );
+            const options = results
+              .filter((r): r is PromiseFulfilledResult<CwdInfo> => r.status === 'fulfilled')
+              .map(r => r.value);
             postMessage({
               type: 'platform/availableCwds',
               options,
@@ -251,7 +255,7 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
 
           postAllAvailableCwds();
           const dispose = vscode.workspace.onDidChangeWorkspaceFolders(postAllAvailableCwds);
-          onDispose(() => dispose.dispose());
+          onConnectionDispose(() => dispose.dispose());
           break;
         }
         case 'platform/setVSCodeConfig': {
@@ -284,7 +288,7 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
             }
           });
           sendLatestValue();
-          onDispose(() => dispose.dispose());
+          onConnectionDispose(() => dispose.dispose());
           break;
         }
         case 'platform/executeVSCodeCommand': {
