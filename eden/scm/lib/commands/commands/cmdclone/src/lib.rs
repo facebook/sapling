@@ -142,6 +142,7 @@ fn log_clone_info(clone_type_str: &str, reponame: &str, ctx: &ReqCtx<CloneOpts>)
     }
 }
 
+#[cfg(feature = "eden")]
 fn run_eden(
     reponame: &str,
     destination: &Path,
@@ -469,7 +470,10 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>) -> Result<u8> {
     }
 
     if use_eden {
+        #[cfg(feature = "eden")]
         run_eden(reponame.as_str(), destination.as_path(), &ctx, config)?;
+        #[cfg(not(feature = "eden"))]
+        anyhow::bail!("eden is not enabled in this build")
     } else {
         run_non_eden(reponame.as_str(), destination.as_path(), &ctx, config)?;
     }

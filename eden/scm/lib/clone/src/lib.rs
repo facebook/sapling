@@ -113,6 +113,7 @@ pub enum EdenCloneError {
     MissingCommandConfig(),
 }
 
+#[cfg(feature = "eden")]
 #[tracing::instrument]
 fn run_eden_clone_command(clone_command: &mut Command) -> Result<()> {
     let output = clone_command.output().with_context(|| {
@@ -145,6 +146,7 @@ fn run_eden_clone_command(clone_command: &mut Command) -> Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "eden")]
 #[instrument(err)]
 pub fn eden_clone(
     repo: &Repo,

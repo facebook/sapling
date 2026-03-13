@@ -168,9 +168,13 @@ impl Repo {
 
         let locker = Arc::new(RepoLocker::new(&config, info.store_path.clone())?);
 
+        #[cfg(feature = "wdir")]
         let p1 = workingcopy::fast_path_wdir_parents(&info.path, info.ident)
             .ok()
             .map(|parents| parents.p1().copied().unwrap_or(NULL_ID));
+
+        #[cfg(not(feature = "wdir"))]
+        let p1 = None;
 
         Ok(Repo {
             info,
