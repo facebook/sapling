@@ -66,6 +66,13 @@ SemiFuture<BackingStore::GetBlobResult> EmptyBackingStore::getBlob(
       std::domain_error("empty backing store"));
 }
 
+folly::coro::now_task<BackingStore::GetTreeResult>
+EmptyBackingStore::co_getTree(
+    const ObjectId& /* id */,
+    const ObjectFetchContextPtr& /* context */) {
+  throw std::domain_error("empty backing store");
+}
+
 folly::coro::Task<BackingStore::GetBlobResult> EmptyBackingStore::co_getBlob(
     const ObjectId& /* id */,
     const ObjectFetchContextPtr& /* context */) {
