@@ -388,7 +388,7 @@ class SaplingBackingStore final
 
   folly::coro::now_task<GetTreeResult> co_getTree(
       const ObjectId& id,
-      const ObjectFetchContextPtr& context);
+      const ObjectFetchContextPtr& context) override;
 
   folly::Try<TreePtr> getTreeFromBackingStore(
       const RelativePath& path,

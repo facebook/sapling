@@ -224,7 +224,7 @@ class FakeBackingStore final : public BackingStore {
       const ObjectFetchContextPtr& context) override;
   folly::coro::now_task<GetTreeResult> co_getTree(
       const ObjectId& id,
-      const ObjectFetchContextPtr& context);
+      const ObjectFetchContextPtr& context) override;
   folly::SemiFuture<GetTreeAuxResult> getTreeAuxData(
       const ObjectId& /*id*/,
       const ObjectFetchContextPtr& /*context*/) override;

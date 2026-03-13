@@ -381,7 +381,7 @@ folly::coro::now_task<BackingStore::GetTreeResult> ObjectStore::co_getTreeImpl(
     const ObjectFetchContextPtr& context,
     folly::stop_watch<std::chrono::milliseconds> watch) const {
   try {
-    auto result = co_await backingStore_->getTree(id, context);
+    auto result = co_await backingStore_->co_getTree(id, context);
     maybeCacheTreeAuxInMemCache(id, result);
     stats_->increment(&ObjectStoreStats::getTreeFromBackingStore);
     stats_->addDuration(

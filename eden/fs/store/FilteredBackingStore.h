@@ -164,7 +164,7 @@ class FilteredBackingStore
 
   folly::coro::now_task<GetTreeResult> co_getTree(
       const ObjectId& id,
-      const ObjectFetchContextPtr& context);
+      const ObjectFetchContextPtr& context) override;
 
   folly::SemiFuture<GetTreeAuxResult> getTreeAuxData(
       const ObjectId& id,

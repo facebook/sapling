@@ -61,6 +61,7 @@ cpp_library(
         "//eden/fs/model:model-fwd",
         "//folly:range",
         "//folly/coro:task",
+        "//folly/coro/safe:now_task",
         "//folly/futures:core",
         "//folly/memory:not_null",
     ],

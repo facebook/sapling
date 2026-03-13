@@ -9,6 +9,7 @@
 
 #include <folly/Range.h>
 #include <folly/coro/Task.h>
+#include <folly/coro/safe/NowTask.h>
 #include <folly/futures/Future.h>
 #include <folly/memory/not_null.h>
 #include <memory>
@@ -249,6 +250,10 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
    * Return the tree and where it was found.
    */
   virtual folly::SemiFuture<GetTreeResult> getTree(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context) = 0;
+
+  virtual folly::coro::now_task<GetTreeResult> co_getTree(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) = 0;
 

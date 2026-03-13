@@ -469,13 +469,12 @@ FilteredBackingStore::co_getTree(
     const ObjectFetchContextPtr& context) {
   if (isSlOid(id)) {
     // Raw id from underlying backingstore, meaning unfiltered fast path.
-    // Uses getTree() until co_getTree virtual is added to BackingStore.
-    co_return co_await backingStore_->getTree(id, context);
+    co_return co_await backingStore_->co_getTree(id, context);
   }
 
   auto filteredId = FilteredObjectId::fromObjectId(id);
-  // Uses getTree() until co_getTree virtual is added to BackingStore.
-  auto result = co_await backingStore_->getTree(filteredId.object(), context);
+  auto result =
+      co_await backingStore_->co_getTree(filteredId.object(), context);
 
   auto treeType = filteredId.objectType();
   if (treeType == FilteredObjectIdType::OBJECT_TYPE_UNFILTERED_TREE &&
