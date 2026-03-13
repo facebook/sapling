@@ -38,6 +38,12 @@ ImmediateFuture<TreePtr> SaplingImportRequestQueue::enqueueTree(
   return enqueue<Tree, SaplingImportRequest::TreeImport>(std::move(request));
 }
 
+folly::coro::now_task<TreePtr> SaplingImportRequestQueue::co_enqueueTree(
+    std::shared_ptr<SaplingImportRequest> request) {
+  co_return co_await co_enqueue<Tree, SaplingImportRequest::TreeImport>(
+      std::move(request));
+}
+
 ImmediateFuture<BlobAuxDataPtr> SaplingImportRequestQueue::enqueueBlobAux(
     std::shared_ptr<SaplingImportRequest> request) {
   return enqueue<BlobAuxData, SaplingImportRequest::BlobAuxImport>(

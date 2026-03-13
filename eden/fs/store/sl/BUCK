@@ -37,6 +37,7 @@ cpp_library(
         "//folly:try",
         "//folly/container:f14_hash",
         "//folly/coro:task",
+        "//folly/coro/safe:now_task",
     ],
 )
 
