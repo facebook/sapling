@@ -29,7 +29,8 @@ export type TypeaheadKind =
   | 'meta-gk'
   | 'meta-jk'
   | 'meta-qe'
-  | 'meta-abprop';
+  | 'meta-abprop'
+  | 'meta-oncall';
 
 /**
  * Which fields of the message should display as editors instead of rendered values.
