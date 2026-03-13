@@ -839,6 +839,33 @@ function start_and_wait_for_land_service {
 }
 
 function multi_repo_land_service {
+  # Ensure the git_repositories_source_of_truth tables exist. These are normally
+  # created by gitimport but MLR tests may use testtool_drawdag instead.
+  # Schema from repo_attributes/git_source_of_truth/schemas/sqlite-git-repositories-source-of-truth.sql
+  sqlite3 "$TESTTMP/monsql/sqlite_dbs" <<'EOSQL'
+CREATE TABLE IF NOT EXISTS source_of_truth_type (
+  source_of_truth VARCHAR(20) PRIMARY KEY NOT NULL,
+  sequence INTEGER NOT NULL
+);
+INSERT OR REPLACE INTO source_of_truth_type (source_of_truth, sequence)
+  VALUES ('mononoke', 1), ('metagit', 2), ('locked', 3);
+CREATE TABLE IF NOT EXISTS git_repositories_source_of_truth (
+  id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+  repo_id INTEGER NOT NULL,
+  repo_name VARCHAR(255) NOT NULL,
+  source_of_truth VARCHAR(20) NOT NULL DEFAULT ('locked')
+    REFERENCES source_of_truth_type (source_of_truth),
+  mutation_id INTEGER DEFAULT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS repo_id_idx
+  ON git_repositories_source_of_truth (repo_id);
+CREATE UNIQUE INDEX IF NOT EXISTS repo_name_idx
+  ON git_repositories_source_of_truth (repo_name);
+CREATE INDEX IF NOT EXISTS source_of_truth_idx
+  ON git_repositories_source_of_truth (source_of_truth);
+CREATE INDEX IF NOT EXISTS mutation_id_idx
+  ON git_repositories_source_of_truth (mutation_id);
+EOSQL
   rm -f "$TESTTMP/multi_repo_land_service_addr.txt"
   GLOG_minloglevel=5 \
     THRIFT_TLS_SRV_CERT="$TEST_CERTDIR/localhost.crt" \
@@ -851,6 +878,7 @@ function multi_repo_land_service {
     --log-level DEBUG \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
     --bound-address-file "$TESTTMP/multi_repo_land_service_addr.txt" \
+    --scuba-log-file "$TESTTMP/multi_repo_land_service_scuba.json" \
     --tracing-test-format \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" >> "$TESTTMP/multi_repo_land_service.out" 2>&1 &
