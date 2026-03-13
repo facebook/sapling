@@ -172,7 +172,7 @@ impl<T: HgIdDataStore + ?Sized> HgIdDataStorePyExt for T {
     }
 
     fn refresh_py(&self, py: Python) -> PyResult<PyNone> {
-        self.refresh().map_pyerr(py)?;
+        self.sync().map_pyerr(py)?;
         Ok(PyNone)
     }
 }

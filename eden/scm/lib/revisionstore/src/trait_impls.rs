@@ -59,8 +59,8 @@ impl storemodel::KeyStore for ArcFileStore {
         FileStore::flush(&self.0)
     }
 
-    fn refresh(&self) -> Result<()> {
-        FileStore::refresh(&self.0)
+    fn sync(&self) -> Result<()> {
+        FileStore::sync(&self.0)
     }
 
     fn statistics(&self) -> Vec<(String, usize)> {

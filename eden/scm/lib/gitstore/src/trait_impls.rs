@@ -89,8 +89,8 @@ impl KeyStore for GitStore {
         SerializationFormat::Git
     }
 
-    fn refresh(&self) -> anyhow::Result<()> {
-        // We don't hold state in memory, so no need to refresh.
+    fn sync(&self) -> anyhow::Result<()> {
+        // We don't hold state in memory, so no need to sync.
         Ok(())
     }
 

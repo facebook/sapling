@@ -88,8 +88,8 @@ impl HgIdHistoryStore for MetadataStore {
         self.historystore.get_node_info(key)
     }
 
-    fn refresh(&self) -> Result<()> {
-        self.historystore.refresh()
+    fn sync(&self) -> Result<()> {
+        self.historystore.sync()
     }
 }
 

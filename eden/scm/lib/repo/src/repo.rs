@@ -456,10 +456,10 @@ impl Repo {
 
     pub fn invalidate_stores(&self) -> Result<()> {
         if let Some(file_store) = self.file_store.get() {
-            file_store.refresh()?;
+            file_store.sync()?;
         }
         if let Some(tree_store) = self.tree_store.get() {
-            tree_store.refresh()?;
+            tree_store.sync()?;
         }
         Ok(())
     }

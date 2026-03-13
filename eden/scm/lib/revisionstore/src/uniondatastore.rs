@@ -28,9 +28,9 @@ impl<T: HgIdDataStore> HgIdDataStore for UnionHgIdDataStore<T> {
         Ok(StoreResult::NotFound(key))
     }
 
-    fn refresh(&self) -> Result<()> {
+    fn sync(&self) -> Result<()> {
         for store in self {
-            store.refresh()?;
+            store.sync()?;
         }
         Ok(())
     }
@@ -86,7 +86,7 @@ mod tests {
             Ok(StoreResult::NotFound(key))
         }
 
-        fn refresh(&self) -> Result<()> {
+        fn sync(&self) -> Result<()> {
             Ok(())
         }
     }
@@ -102,7 +102,7 @@ mod tests {
             Err(BadHgIdDataStoreError.into())
         }
 
-        fn refresh(&self) -> Result<()> {
+        fn sync(&self) -> Result<()> {
             Ok(())
         }
     }

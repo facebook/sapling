@@ -497,7 +497,7 @@ impl FileStore {
         result
     }
 
-    pub fn refresh(&self) -> Result<()> {
+    pub fn sync(&self) -> Result<()> {
         self.metrics.write().api.hg_refresh.call(0);
         self.flush()
     }
@@ -654,8 +654,8 @@ impl HgIdDataStore for FileStore {
         )
     }
 
-    fn refresh(&self) -> Result<()> {
-        self.refresh()
+    fn sync(&self) -> Result<()> {
+        self.sync()
     }
 }
 

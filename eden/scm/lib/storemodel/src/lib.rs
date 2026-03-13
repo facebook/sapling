@@ -147,15 +147,14 @@ pub trait KeyStore: Send + Sync {
         anyhow::bail!("store {} is read-only", self.type_name())
     }
 
-    /// Write pending changes to disk.
-    /// For some implementations, this also includes `refresh()`.
+    /// Write pending in-memory data to disk. Unlike sync(), flush() should be a no-op if
+    /// there are no pending writes.
     fn flush(&self) -> anyhow::Result<()> {
         anyhow::bail!("store {} is read-only", self.type_name())
     }
 
-    /// Refresh the store so it might pick up new contents written by other processes.
-    /// For some implementations, this also includes `flush()`.
-    fn refresh(&self) -> anyhow::Result<()> {
+    /// Write pending in-memory data to disk and reload stores from disk.
+    fn sync(&self) -> anyhow::Result<()> {
         Ok(())
     }
 

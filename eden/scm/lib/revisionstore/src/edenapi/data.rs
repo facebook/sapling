@@ -165,7 +165,7 @@ impl HgIdDataStore for SaplingRemoteApiDataStore<File> {
         self.store.get(key)
     }
 
-    fn refresh(&self) -> Result<()> {
+    fn sync(&self) -> Result<()> {
         Ok(())
     }
 }
@@ -176,7 +176,7 @@ impl HgIdDataStore for SaplingRemoteApiDataStore<Tree> {
         self.store.get(key)
     }
 
-    fn refresh(&self) -> Result<()> {
+    fn sync(&self) -> Result<()> {
         Ok(())
     }
 }

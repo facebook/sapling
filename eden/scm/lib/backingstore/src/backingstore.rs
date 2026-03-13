@@ -381,14 +381,14 @@ impl BackingStore {
 
     /// Forces backing store to rescan pack files or local indexes
     #[instrument(level = "trace", skip(self))]
-    pub fn refresh(&self) {
+    pub fn sync(&self) {
         // We don't need maybe_reload() here. It doesn't make sense to
-        // potentially reload everything right before refreshing it again
+        // potentially reload everything right before syncing it again
         // (although it wouldn't hurt).
         let inner = self.inner.load();
 
-        inner.filestore.refresh().ok();
-        inner.treestore.refresh().ok();
+        inner.filestore.sync().ok();
+        inner.treestore.sync().ok();
     }
 
     #[instrument(level = "trace", skip(self))]

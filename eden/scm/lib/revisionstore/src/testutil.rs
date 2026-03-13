@@ -151,7 +151,7 @@ impl HgIdDataStore for FakeRemoteDataStore {
         }
     }
 
-    fn refresh(&self) -> Result<()> {
+    fn sync(&self) -> Result<()> {
         Ok(())
     }
 }
@@ -190,7 +190,7 @@ impl HgIdHistoryStore for FakeRemoteHistoryStore {
         }
     }
 
-    fn refresh(&self) -> Result<()> {
+    fn sync(&self) -> Result<()> {
         Ok(())
     }
 }

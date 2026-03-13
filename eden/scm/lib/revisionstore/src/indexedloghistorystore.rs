@@ -269,7 +269,7 @@ impl HgIdHistoryStore for IndexedLogHgIdHistoryStore {
         Ok(Some(entry.node_info()))
     }
 
-    fn refresh(&self) -> Result<()> {
+    fn sync(&self) -> Result<()> {
         Ok(())
     }
 }

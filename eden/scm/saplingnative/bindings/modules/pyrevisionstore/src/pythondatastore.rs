@@ -80,7 +80,7 @@ impl HgIdDataStore for PythonHgIdDataStore {
         Ok(StoreResult::Found(py_bytes.data(py).to_vec()))
     }
 
-    fn refresh(&self) -> Result<()> {
+    fn sync(&self) -> Result<()> {
         let gil = Python::acquire_gil();
         let py = gil.python();
         match self

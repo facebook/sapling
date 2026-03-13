@@ -440,7 +440,7 @@ impl HgIdDataStore for IndexedLogHgIdDataStore {
         Ok(StoreResult::Found(content.as_ref().to_vec()))
     }
 
-    fn refresh(&self) -> Result<()> {
+    fn sync(&self) -> Result<()> {
         self.flush_log()
     }
 }

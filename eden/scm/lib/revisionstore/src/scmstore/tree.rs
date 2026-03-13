@@ -591,7 +591,7 @@ impl TreeStore {
         result
     }
 
-    pub fn refresh(&self) -> Result<()> {
+    pub fn sync(&self) -> Result<()> {
         self.flush()
     }
 
@@ -652,8 +652,8 @@ impl HgIdDataStore for TreeStore {
         )
     }
 
-    fn refresh(&self) -> Result<()> {
-        self.refresh()
+    fn sync(&self) -> Result<()> {
+        self.sync()
     }
 }
 
@@ -745,8 +745,8 @@ impl HgIdHistoryStore for TreeStore {
         })
     }
 
-    fn refresh(&self) -> Result<()> {
-        self.refresh()
+    fn sync(&self) -> Result<()> {
+        self.sync()
     }
 }
 
@@ -847,8 +847,8 @@ impl storemodel::KeyStore for TreeStore {
         Ok(())
     }
 
-    fn refresh(&self) -> Result<()> {
-        TreeStore::refresh(self)
+    fn sync(&self) -> Result<()> {
+        TreeStore::sync(self)
     }
 
     fn format(&self) -> SerializationFormat {

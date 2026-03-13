@@ -79,7 +79,7 @@ impl HgIdHistoryStore for SaplingRemoteApiHistoryStore {
         self.store.get_node_info(key)
     }
 
-    fn refresh(&self) -> Result<()> {
+    fn sync(&self) -> Result<()> {
         Ok(())
     }
 }

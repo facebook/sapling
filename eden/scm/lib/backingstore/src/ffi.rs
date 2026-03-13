@@ -762,7 +762,7 @@ pub fn sapling_backingstore_set_parent_hint(store: &BackingStore, parent_id: &st
 
 pub fn sapling_backingstore_flush(store: &BackingStore) {
     store.flush();
-    store.refresh();
+    store.sync();
 }
 
 pub fn sapling_backingstore_get_glob_files(

@@ -94,9 +94,9 @@ py_class!(pub class KeyStore |py| {
         Ok(PyNone)
     }
 
-    def refresh(&self) -> PyResult<PyNone> {
+    def sync(&self) -> PyResult<PyNone> {
         let inner = self.inner(py);
-        py.allow_threads(|| inner.refresh()).map_pyerr(py)?;
+        py.allow_threads(|| inner.sync()).map_pyerr(py)?;
         Ok(PyNone)
     }
 

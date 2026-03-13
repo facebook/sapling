@@ -280,11 +280,11 @@ impl HgIdDataStore for mutabledeltastore {
         self.store(py).get(key)
     }
 
-    fn refresh(&self) -> Result<()> {
+    fn sync(&self) -> Result<()> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
-        self.store(py).refresh()
+        self.store(py).sync()
     }
 }
 
@@ -368,11 +368,11 @@ impl HgIdHistoryStore for mutablehistorystore {
         self.store(py).get_node_info(key)
     }
 
-    fn refresh(&self) -> Result<()> {
+    fn sync(&self) -> Result<()> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
-        self.store(py).refresh()
+        self.store(py).sync()
     }
 }
 

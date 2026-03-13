@@ -79,7 +79,7 @@ impl KeyStore for EagerRepoStore {
         Ok(())
     }
 
-    fn refresh(&self) -> anyhow::Result<()> {
+    fn sync(&self) -> anyhow::Result<()> {
         self.deref().flush()?;
         Ok(())
     }

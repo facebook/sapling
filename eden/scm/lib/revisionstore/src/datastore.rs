@@ -48,7 +48,7 @@ impl<T> From<StoreResult<T>> for Option<T> {
 
 pub trait HgIdDataStore: LocalStore + Send + Sync {
     fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>>;
-    fn refresh(&self) -> Result<()>;
+    fn sync(&self) -> Result<()>;
 }
 
 /// The `RemoteDataStore` trait indicates that data can fetched over the network. Care must be
@@ -115,8 +115,8 @@ impl<T: HgIdDataStore + ?Sized, U: Deref<Target = T> + Send + Sync> HgIdDataStor
     }
 
     /// Tell the underlying stores that there may be new data on disk.
-    fn refresh(&self) -> Result<()> {
-        T::refresh(self)
+    fn sync(&self) -> Result<()> {
+        T::sync(self)
     }
 }
 
