@@ -90,6 +90,7 @@ cpp_library(
         "//eden/fs/store/filter:filtered_object_id",
         "//eden/fs/store/filter:filters",
         "//folly/coro:task",
+        "//folly/coro/safe:now_task",
     ],
 )
 

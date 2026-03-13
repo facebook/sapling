@@ -463,6 +463,44 @@ folly::SemiFuture<BackingStore::GetTreeResult> FilteredBackingStore::getTree(
       });
 }
 
+folly::coro::now_task<BackingStore::GetTreeResult>
+FilteredBackingStore::co_getTree(
+    const ObjectId& id,
+    const ObjectFetchContextPtr& context) {
+  if (isSlOid(id)) {
+    // Raw id from underlying backingstore, meaning unfiltered fast path.
+    // Uses getTree() until co_getTree virtual is added to BackingStore.
+    co_return co_await backingStore_->getTree(id, context);
+  }
+
+  auto filteredId = FilteredObjectId::fromObjectId(id);
+  // Uses getTree() until co_getTree virtual is added to BackingStore.
+  auto result = co_await backingStore_->getTree(filteredId.object(), context);
+
+  auto treeType = filteredId.objectType();
+  if (treeType == FilteredObjectIdType::OBJECT_TYPE_UNFILTERED_TREE &&
+      isSaplingBackingStore_ && optimizeUnfilteredTrees_) {
+    // Tree is recursively unfiltered - activate fast path by not
+    // rewriting ids within the tree entries. We still copy the tree so we
+    // can modify its oid to match the requested oid.
+    result.tree = std::make_shared<Tree>(Tree{
+        ObjectId{filteredId.getValue()},
+        result.tree->entries(),
+        result.tree->getAuxData()});
+    co_return result;
+  }
+
+  auto filterRes = treeType == FilteredObjectIdType::OBJECT_TYPE_TREE
+      ? filterImpl(
+            result.tree, filteredId.path(), filteredId.filter(), treeType)
+      : filterImpl(result.tree, RelativePath{}, "", treeType);
+  auto pathMap = co_await std::move(filterRes).semi();
+  auto tree = std::make_shared<Tree>(
+      std::move(*pathMap), ObjectId{filteredId.getValue()});
+  pathMap.reset();
+  co_return GetTreeResult{std::move(tree), result.origin};
+}
+
 folly::SemiFuture<BackingStore::GetBlobAuxResult>
 FilteredBackingStore::getBlobAuxData(
     const ObjectId& id,
