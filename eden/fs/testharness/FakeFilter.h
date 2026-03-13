@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <folly/coro/safe/NowTask.h>
+
 #include "eden/fs/store/filter/Filter.h"
 
 namespace facebook::eden {
@@ -52,6 +54,22 @@ class FakeSubstringFilter final : public Filter {
 
     // it's not possible for us to check if any child of the path *could* be
     // filtered because the filter can match any portion of the path
+  }
+
+  folly::coro::now_task<FilterCoverage> co_getFilterCoverageForPath(
+      RelativePathPiece path,
+      folly::StringPiece filterId) const {
+    auto actualFilterId = stripVersionPrefix(filterId);
+    auto filterIdPos = path.view().find(actualFilterId);
+
+    // The filter is at the beginning of the given path
+    if (filterIdPos != std::string::npos) {
+      co_return FilterCoverage::RECURSIVELY_FILTERED;
+    }
+
+    // The filter isn't part of the path. However, a child of the path might be
+    // filtered. Therefore we report UNFILTERED
+    co_return FilterCoverage::UNFILTERED;
   }
 
   bool areFiltersIdentical(folly::StringPiece lhs, folly::StringPiece rhs)
@@ -103,6 +121,38 @@ class FakePrefixFilter final : public Filter {
     // doesn't apply.
     return ImmediateFuture<FilterCoverage>{
         FilterCoverage::RECURSIVELY_UNFILTERED};
+  }
+
+  folly::coro::now_task<FilterCoverage> co_getFilterCoverageForPath(
+      RelativePathPiece path,
+      folly::StringPiece filterId) const {
+    auto actualFilterId = stripVersionPrefix(filterId);
+    auto filterIdSize = actualFilterId.size();
+    auto pathSize = path.view().size();
+    // The filter doesn't apply to the given path because the filter is too
+    // long.
+    if (filterIdSize >= pathSize) {
+      if (path.view().find(actualFilterId) == 0) {
+        // The FilterID begins with the path and therefore children could be
+        // filtered
+        co_return FilterCoverage::UNFILTERED;
+      } else {
+        // The path is not a substring of the FilterID and therefore does not
+        // apply any of the given path's children
+        co_return FilterCoverage::RECURSIVELY_UNFILTERED;
+      }
+    }
+
+    auto filterIdPos = path.view().find(actualFilterId);
+
+    // The filter is at the beginning of the given path
+    if (filterIdPos == 0) {
+      co_return FilterCoverage::RECURSIVELY_FILTERED;
+    }
+
+    // The filter isn't in the path or is in the middle somewhere, therefore it
+    // doesn't apply.
+    co_return FilterCoverage::RECURSIVELY_UNFILTERED;
   }
 
   bool areFiltersIdentical(folly::StringPiece lhs, folly::StringPiece rhs)
