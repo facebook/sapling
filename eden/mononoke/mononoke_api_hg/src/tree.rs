@@ -342,6 +342,7 @@ impl<R: MononokeRepo> HgAugmentedTreeRestrictionContext<R> {
 
         // Look up which paths this manifest ID maps to
         let paths = restricted_paths
+            .config_based()
             .manifest_id_store()
             .get_paths_by_manifest_id(self.repo_ctx.ctx(), &manifest_id_bytes, &ManifestType::Hg)
             .await

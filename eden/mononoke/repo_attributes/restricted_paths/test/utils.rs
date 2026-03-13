@@ -686,6 +686,7 @@ impl RestrictedPathsTestData {
         // (i.e., when access is expected to succeed)
         let manifest_id_store_entries = scenario_repo
             .restricted_paths()
+            .config_based()
             .manifest_id_store()
             .get_all_entries(&self.ctx)
             .await?;

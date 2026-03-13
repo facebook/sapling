@@ -350,7 +350,7 @@ pub async fn derive_from_hg_manifest_and_parents(
                 if restricted_paths_enabled {
                     if let Some(non_root_path) = path.clone().into_optional_non_root_path() {
                         let is_restricted = restricted_paths
-                            .is_restricted_path(&non_root_path);
+                            .is_restriction_root(&non_root_path);
                         if is_restricted {
                             let entry = RestrictedPathManifestIdEntry::new(
                                 ManifestType::HgAugmented,

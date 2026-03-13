@@ -60,8 +60,9 @@ impl RestrictedPathsConfigBased {
         !self.config.path_acls.is_empty()
     }
 
-    /// Check if a path is restricted according to config (exact match).
-    pub fn is_restricted_path(&self, path: &NonRootMPath) -> bool {
+    /// Check if a path is itself a restriction root (exact match).
+    /// Returns false for paths that are merely under a restriction root.
+    pub fn is_restriction_root(&self, path: &NonRootMPath) -> bool {
         self.get_acl_for_path(path).is_some()
     }
 
