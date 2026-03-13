@@ -206,6 +206,7 @@ cpp_library(
         "//folly:exception_wrapper",
         "//folly:range",
         "//folly/coro:task",
+        "//folly/coro/safe:now_task",
     ],
 )
 

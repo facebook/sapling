@@ -146,17 +146,38 @@ SemiFuture<BackingStore::GetBlobResult> FakeBackingStore::getBlob(
       .semi();
 }
 
+folly::coro::now_task<BackingStore::GetTreeResult> FakeBackingStore::co_getTree(
+    const ObjectId& id,
+    const ObjectFetchContextPtr& /*context*/) {
+  folly::SemiFuture<TreePtr> future = folly::SemiFuture<TreePtr>::makeEmpty();
+  {
+    auto data = data_.wlock();
+    ++data->accessCounts[id];
+    auto it = data->trees.find(id);
+    if (it == data->trees.end()) {
+      throw std::domain_error(fmt::format("tree {} not found", id));
+    }
+    future = std::move(it->second->getFuture()).semi();
+  }
+  auto tree = co_await std::move(future);
+  co_return BackingStore::GetTreeResult{
+      std::move(tree), ObjectFetchContext::Origin::FromNetworkFetch};
+}
+
 folly::coro::Task<BackingStore::GetBlobResult> FakeBackingStore::co_getBlob(
     const ObjectId& id,
     const ObjectFetchContextPtr& /*context*/) {
-  auto data = data_.wlock();
-  ++data->accessCounts[id];
-  auto it = data->blobs.find(id);
-  if (it == data->blobs.end()) {
-    // Throw immediately, for the same reasons mentioned in getTree()
-    throw std::domain_error(fmt::format("blob {} not found", id));
+  folly::SemiFuture<BlobPtr> future = folly::SemiFuture<BlobPtr>::makeEmpty();
+  {
+    auto data = data_.wlock();
+    ++data->accessCounts[id];
+    auto it = data->blobs.find(id);
+    if (it == data->blobs.end()) {
+      throw std::domain_error(fmt::format("blob {} not found", id));
+    }
+    future = std::move(it->second->getFuture()).semi();
   }
-  auto blob = co_await std::move(it->second->getFuture()).semi();
+  auto blob = co_await std::move(future);
   co_return BackingStore::GetBlobResult{
       std::move(blob), ObjectFetchContext::Origin::FromNetworkFetch};
 }

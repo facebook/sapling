@@ -8,6 +8,7 @@
 #pragma once
 
 #include <folly/coro/Task.h>
+#include <folly/coro/safe/NowTask.h>
 #include <gtest/gtest_prod.h>
 #include <initializer_list>
 #include <memory>
@@ -221,6 +222,9 @@ class FakeBackingStore final : public BackingStore {
   folly::SemiFuture<GetTreeResult> getTree(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;
+  folly::coro::now_task<GetTreeResult> co_getTree(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context);
   folly::SemiFuture<GetTreeAuxResult> getTreeAuxData(
       const ObjectId& /*id*/,
       const ObjectFetchContextPtr& /*context*/) override;
