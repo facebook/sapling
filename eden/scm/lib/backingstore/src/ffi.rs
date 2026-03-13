@@ -12,10 +12,10 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 use anyhow::Error;
-use anyhow::Result;
 use anyhow::anyhow;
 use cxx::SharedPtr;
 use cxx::UniquePtr;
+use cxxerror::Result;
 use edenapi::types::DirectoryMetadata;
 use storemodel::FileAuxData as ScmStoreFileAuxData;
 use storemodel::FileType;
@@ -458,17 +458,16 @@ pub fn sapling_backingstore_new(
         extra_sapling_configs.push(format!("backingstore.walk-mode={v}"));
     }
 
-    let store = BackingStore::new_with_config(repository, mount, &extra_sapling_configs)
-        .map_err(|err| anyhow!("{:?}", err))?;
+    let store = BackingStore::new_with_config(repository, mount, &extra_sapling_configs)?;
     Ok(Box::new(store))
 }
 
 pub fn sapling_backingstore_get_name(store: &BackingStore) -> Result<String> {
-    store.name()
+    store.name().map_err(Into::into)
 }
 
 pub fn sapling_backingstore_get_manifest(store: &BackingStore, node: &[u8]) -> Result<[u8; 20]> {
-    store.get_manifest(node)
+    store.get_manifest(node).map_err(Into::into)
 }
 
 pub fn sapling_backingstore_get_tree(
@@ -495,10 +494,10 @@ pub fn sapling_backingstore_get_tree(
 fn add_tree_to_builder(
     mut builder: Pin<&mut ffi::TreeBuilder>,
     tree: Arc<dyn TreeEntry>,
-) -> Result<()> {
+) -> anyhow::Result<()> {
     // TODO: Make the aux data available in `TreeEntry::iter()` so we don't have to do this HashMap business.
     let aux_map: HashMap<HgId, ScmStoreFileAuxData> =
-        tree.file_aux_iter()?.collect::<Result<_>>()?;
+        tree.file_aux_iter()?.collect::<anyhow::Result<_>>()?;
 
     // Pre-allocate the per-entry storage.
     if let Some(hint) = tree.size_hint() {
@@ -738,7 +737,7 @@ pub fn sapling_backingstore_get_file_aux_batch(
         FetchContext::new_with_cause(FetchMode::from(fetch_mode), cause),
         keys,
         |idx, result| {
-            let result: Result<ScmStoreFileAuxData> =
+            let result: anyhow::Result<ScmStoreFileAuxData> =
                 result.and_then(|opt| opt.ok_or_else(|| Error::msg("no file aux data found")));
             let resolver = resolver.clone();
             let (error, aux) = match result {
@@ -753,7 +752,7 @@ pub fn sapling_backingstore_get_file_aux_batch(
 }
 
 pub fn sapling_dogfooding_host(store: &BackingStore) -> Result<bool> {
-    store.dogfooding_host()
+    store.dogfooding_host().map_err(Into::into)
 }
 
 pub fn sapling_backingstore_set_parent_hint(store: &BackingStore, parent_id: &str) {

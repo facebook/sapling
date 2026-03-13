@@ -16,6 +16,7 @@ use anyhow::anyhow;
 use configmodel::config::ConfigExt;
 use cxx::SharedPtr;
 use cxx::UniquePtr;
+use cxxerror::Result;
 use filters::filter::FilterGenerator;
 use metrics::Counter;
 use once_cell::sync::Lazy;
@@ -30,7 +31,6 @@ use workingcopy::sparse::fetch_sparse_profile_content;
 
 use crate::ffi::MatcherPromise;
 use crate::ffi::MatcherWrapper;
-use crate::ffi::set_matcher_error;
 use crate::ffi::set_matcher_promise_error;
 use crate::ffi::set_matcher_promise_result;
 use crate::ffi::set_matcher_result;
@@ -147,10 +147,7 @@ pub struct MercurialMatcher {
 
 impl MercurialMatcher {
     // Returns true if the given path and all of its children are unfiltered
-    fn matches_directory(
-        self: &MercurialMatcher,
-        path: &str,
-    ) -> Result<ffi::FilterDirectoryMatch, anyhow::Error> {
+    fn matches_directory(self: &MercurialMatcher, path: &str) -> Result<ffi::FilterDirectoryMatch> {
         let repo_path = RepoPath::from_str(path)?;
         // This is tricky -- a filter file defines which files should be *excluded* from the repo.
         // The filtered files are put in the [exclude] section of the file. So, if something is
@@ -159,9 +156,9 @@ impl MercurialMatcher {
         Ok(res.into())
     }
 
-    fn matches_file(self: &MercurialMatcher, path: &str) -> Result<bool, anyhow::Error> {
+    fn matches_file(self: &MercurialMatcher, path: &str) -> Result<bool> {
         let repo_path = RepoPath::from_str(path)?;
-        self.matcher.matches_file(repo_path)
+        Ok(self.matcher.matches_file(repo_path)?)
     }
 }
 
@@ -254,25 +251,18 @@ fn create_tree_matcher(
     globs: Vec<String>,
     case_sensitive: bool,
     matcher_wrapper: SharedPtr<MatcherWrapper>,
-) -> Result<(), anyhow::Error> {
+) -> Result<()> {
     let matcher = TreeMatcher::from_rules(globs.iter(), case_sensitive)?;
-    let mercurial_matcher = Ok(Box::new(MercurialMatcher {
+    let mercurial_matcher = Box::new(MercurialMatcher {
         matcher: Box::new(matcher),
-    }));
-    match mercurial_matcher {
-        Ok(m) => set_matcher_result(matcher_wrapper, m),
-        Err(e) => set_matcher_error(matcher_wrapper, e),
-    };
+    });
+    set_matcher_result(matcher_wrapper, mercurial_matcher);
     Ok(())
 }
 
 // Checks if two filterIds are identical by parsing and comparing their underlying Filter objects.
 // This handles the case where a Legacy filterId might be semantically equivalent to a V1 filterId.
-pub fn are_filter_ids_identical(
-    lhs: &[u8],
-    rhs: &[u8],
-    checkout_path: &str,
-) -> Result<bool, anyhow::Error> {
+pub fn are_filter_ids_identical(lhs: &[u8], rhs: &[u8], checkout_path: &str) -> Result<bool> {
     // Quick check: if the bytes are identical, the filters are identical
     if lhs == rhs {
         return Ok(true);
@@ -280,10 +270,7 @@ pub fn are_filter_ids_identical(
 
     let abs_repo_path = PathBuf::from(checkout_path);
     if identity::sniff_dir(&abs_repo_path).is_err() {
-        return Err(anyhow!(
-            "{} is not a valid hg repo",
-            abs_repo_path.display()
-        ));
+        return Err(anyhow!("{} is not a valid hg repo", abs_repo_path.display()).into());
     }
 
     let mut object_map = OBJECT_CACHE.lock();
@@ -292,7 +279,7 @@ pub fn are_filter_ids_identical(
     let cached_objects = object_map.get_mut(&abs_repo_path).context("loading repo")?;
     let filter_gen = &cached_objects.filter_gen;
 
-    filter_gen.are_filter_ids_identical(lhs, rhs)
+    Ok(filter_gen.are_filter_ids_identical(lhs, rhs)?)
 }
 
 // As mentioned below, we return the MercurialMatcher via a promise to circumvent some async
@@ -317,7 +304,7 @@ fn profile_contents_from_repo(
 fn _profile_contents_from_repo(
     id: &[u8],
     abs_repo_path: PathBuf,
-) -> Result<Box<MercurialMatcher>, anyhow::Error> {
+) -> anyhow::Result<Box<MercurialMatcher>> {
     let mut object_map = OBJECT_CACHE.lock();
     get_or_create_cached_objects(&abs_repo_path, &mut object_map)?;
 
@@ -402,18 +389,20 @@ pub fn profile_from_filter_id(
     id: &[u8],
     checkout_path: &str,
     promise: UniquePtr<MatcherPromise>,
-) -> Result<(), anyhow::Error> {
+) -> Result<()> {
     LOOKUPS.increment();
 
     // We need to verify the checkout exists. The passed in checkout_path
     // should correspond to a valid hg/sl repo that Mercurial is aware of.
     let abs_repo_path = PathBuf::from(checkout_path);
-    if identity::sniff_dir(&abs_repo_path).is_err() {
+    if let Err(e) = identity::sniff_dir(&abs_repo_path) {
         INVALID_REPO.increment();
         return Err(anyhow!(
-            "{} is not a valid hg repo",
-            abs_repo_path.display()
-        ));
+            "{} is not a valid hg repo: {:#}",
+            abs_repo_path.display(),
+            e
+        )
+        .into());
     }
 
     // If we've already loaded a filter from this repo before, we can skip Repo

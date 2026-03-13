@@ -14,6 +14,7 @@ rust_library(
         "fbsource//third-party/rust:cxx",
         "fbsource//third-party/rust:tokio",
         "//eden/fs/cli_rs/edenfs-client:edenfs-client",
+        "//eden/scm/lib/edenfs_ffi/cxxerror:cxxerror",
     ],
 )
 

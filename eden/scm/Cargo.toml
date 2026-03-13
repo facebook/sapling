@@ -109,6 +109,7 @@ members = [
   "lib/edenapi/types/proc_macros",
   "lib/edenfs-client",
   "lib/edenfs_ffi",
+  "lib/edenfs_ffi/cxxerror",
   "lib/encoding",
   "lib/exchange",
   "lib/filewalk",

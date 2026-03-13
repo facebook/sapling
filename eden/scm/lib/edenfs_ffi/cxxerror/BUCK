@@ -1,0 +1,12 @@
+load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
+
+oncall("source_control")
+
+rust_library(
+    name = "cxxerror",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+    ],
+)

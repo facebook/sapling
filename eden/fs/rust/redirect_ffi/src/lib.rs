@@ -7,8 +7,8 @@
 
 use std::path::PathBuf;
 
-use anyhow::Result;
 use anyhow::anyhow;
+use cxxerror::Result;
 use edenfs_client::instance::EdenFsInstance;
 use edenfs_client::redirect::Redirection;
 use edenfs_client::redirect::RedirectionState;
@@ -81,7 +81,7 @@ pub fn list_redirections(
     mount: String,
     config_dir: String,
     etc_eden_dir: String,
-) -> Result<Vec<ffi::RedirectionFFI>, anyhow::Error> {
+) -> Result<Vec<ffi::RedirectionFFI>> {
     // EdenFsInstance depends on having an initialized tokio runtime, but the
     // FFI layer does not guarantee this. As such, we create one here to
     // create and invoke methods on EdenFsInstance.
@@ -90,7 +90,7 @@ pub fn list_redirections(
         .enable_all()
         .build()?;
     // Execute code from within the new runtime
-    let handle = rt.spawn_blocking(|| {
+    let handle = rt.spawn_blocking(|| -> anyhow::Result<_> {
         let instance = EdenFsInstance::new(
             UseCaseId::RedirectFfi,
             config_dir.into(),
@@ -101,11 +101,11 @@ pub fn list_redirections(
         let redirs_ffi = redirs
             .values()
             .map(ffi::RedirectionFFI::try_from)
-            .collect::<Result<Vec<_>>>()?;
+            .collect::<anyhow::Result<Vec<_>>>()?;
         Ok(redirs_ffi)
     });
     // Block on future until it completes
-    rt.block_on(handle)?
+    Ok(rt.block_on(handle)??)
 }
 
 // ============================================================================
@@ -115,7 +115,7 @@ pub fn list_redirections(
 impl TryFrom<&Redirection> for ffi::RedirectionFFI {
     type Error = anyhow::Error;
 
-    fn try_from(redir: &Redirection) -> Result<Self, Self::Error> {
+    fn try_from(redir: &Redirection) -> std::result::Result<Self, Self::Error> {
         let redir_ffi = ffi::RedirectionFFI {
             repo_path: pathbuf_to_string(redir.repo_path.clone())?,
             redir_type: redir.redir_type.into(),
@@ -196,7 +196,7 @@ impl TryInto<Redirection> for ffi::RedirectionFFI {
 // Private util functions for specific conversions due to FFI type limits
 // ============================================================================
 
-fn pathbuf_to_string(pb: PathBuf) -> Result<String> {
+fn pathbuf_to_string(pb: PathBuf) -> anyhow::Result<String> {
     let res = pb.into_os_string().into_string().map_err(|os_str| {
         anyhow!(
             "PathBuf can't be converted to String due to invalid UTF-8: {}",
@@ -206,7 +206,7 @@ fn pathbuf_to_string(pb: PathBuf) -> Result<String> {
     Ok(res)
 }
 
-fn opt_pathbuf_to_string(opt_pb: &Option<PathBuf>) -> Result<String> {
+fn opt_pathbuf_to_string(opt_pb: &Option<PathBuf>) -> anyhow::Result<String> {
     let s = match opt_pb {
         Some(pb) => pathbuf_to_string(pb.into())?,
         None => "".into(),
