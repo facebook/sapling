@@ -205,7 +205,13 @@ export type TrackEventName =
   | 'StartDeferredTestsClicked'
   | 'StartDeferredTestsFailed'
   | 'StartDeferredTestsSuccess'
-  | 'SubtreeMergeOperation';
+  | 'SubtreeMergeOperation'
+  | 'DiffSignalDetailsFetched'
+  | 'InlineSignalDisplayed'
+  | 'InlineSignalExpanded'
+  | 'InlineSignalCollapsed'
+  | 'InlineSignalHidden'
+  | 'InlineSignalDevmateClicked';
 
 export type TrackErrorName =
   | 'BlameError'
