@@ -219,35 +219,39 @@ But file with owners inside is fine
   adding file changes
   updating bookmark master_bookmark
 
-Cannot commit .git stuff into the repo
-  $ hg up -C -q "min(all())"
-  $ mkdir -p dir/.git
-  $ echo > dir/.git/HEAD
-  $ hg -q addremove
-  $ hg ci -m 'git'
-  $ hg push -r . --to master_bookmark
-  pushing rev 1bc4b64267b9 to destination mono:repo bookmark master_bookmark
+Cannot commit .git stuff into the repo (use testtool_drawdag since Sapling client rejects .git paths)
+  $ testtool_drawdag -R repo --no-default-files --print-hg-hashes <<EOF
+  > D
+  > # modify: D "dir/.git/HEAD" "bad"
+  > EOF
+  D=5fea2b84c7ef7f06a502b34b459bf2bd5b81cb4f
+
+  $ hg pull -q -r $D
+  $ hg push -r $D --to master_bookmark
+  pushing rev 5fea2b84c7ef to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     block_files for 1bc4b64267b91310f557991f7667defebebf71be: Blocked filename 'dir/.git/HEAD' matched name pattern '/\.git/'. Rename or remove this file and try again.
+  remote:     block_files for 5fea2b84c7ef7f06a502b34b459bf2bd5b81cb4f: Blocked filename 'dir/.git/HEAD' matched name pattern '/\.git/'. Rename or remove this file and try again.
   abort: unexpected EOL, expected netstring digit
   [255]
 
 Cannot commit .git stuff into the repo root
-  $ hg up -C -q "min(all())"
-  $ mkdir .git
-  $ echo > .git/HEAD
-  $ hg -q addremove
-  $ hg ci -m 'git'
-  $ hg push -r . --to master_bookmark
-  pushing rev 5bec34e0a829 to destination mono:repo bookmark master_bookmark
+  $ testtool_drawdag -R repo --no-default-files --print-hg-hashes <<EOF
+  > E
+  > # modify: E ".git/HEAD" "bad"
+  > EOF
+  E=790507c0d885cdb408e4fa0e4274794f0d6024f5
+
+  $ hg pull -q -r $E
+  $ hg push -r $E --to master_bookmark
+  pushing rev 790507c0d885 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     block_files for 5bec34e0a82983a7897a7eac6e79e1bac2dee808: Blocked filename '.git/HEAD' matched name pattern '^\.git/'. Rename or remove this file and try again.
+  remote:     block_files for 790507c0d885cdb408e4fa0e4274794f0d6024f5: Blocked filename '.git/HEAD' matched name pattern '^\.git/'. Rename or remove this file and try again.
   abort: unexpected EOL, expected netstring digit
   [255]
 
