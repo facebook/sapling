@@ -41,7 +41,7 @@
   $ git fetch "$GIT_REPO_ORIGIN" +refs/*:refs/* --prune -u
   From $TESTTMP/origin/repo-git
    - [deleted]         (none)     -> origin/master_bookmark
-     (refs/remotes/origin/HEAD has become dangling)
+  *refs/remotes/origin/HEAD has become dangling* (glob)
   $ cd ..
 
 # Import it into Mononoke
@@ -73,7 +73,7 @@
   $ git fetch "$BUNDLE_PATH" +refs/*:refs/* --prune -u
   From $TESTTMP/repo_bundle.bundle
    - [deleted]         (none)     -> origin/master_bookmark
-     (refs/remotes/origin/HEAD has become dangling)
+  *refs/remotes/origin/HEAD has become dangling* (glob)
   $ cd ..
 
 # Start Mononoke

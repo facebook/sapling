@@ -53,7 +53,7 @@
   $ git fetch "$GIT_REPO_ORIGIN" +refs/*:refs/* --prune -u
   From $TESTTMP/origin/repo-git
    - [deleted]         (none)     -> origin/master_bookmark
-     (refs/remotes/origin/HEAD has become dangling)
+  *refs/remotes/origin/HEAD has become dangling* (glob)
   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/object_list
   $ cat $TESTTMP/object_list
   433eb172726bc7b6d60e8d68efb0f0ef4e67a667 blob file1

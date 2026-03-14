@@ -31,7 +31,7 @@
   $ git fetch "$GIT_REPO_ORIGIN" +refs/*:refs/* --prune -u
   From $TESTTMP/origin/repo-git
    - [deleted]         (none)     -> origin/master_bookmark
-     (refs/remotes/origin/HEAD has become dangling)
+  *refs/remotes/origin/HEAD has become dangling* (glob)
   $ git branch "a_ref_prefixed_by_remotes_origin"
   $ git update-ref refs/remotes/origin/a_ref_prefixed_by_remotes_origin a_ref_prefixed_by_remotes_origin
   $ git branch -d a_ref_prefixed_by_remotes_origin

@@ -44,7 +44,7 @@
   From $TESTTMP/origin/repo-git
    - [deleted]         (none)          -> origin/R1
    - [deleted]         (none)          -> origin/R2
-     (refs/remotes/origin/HEAD has become dangling)
+  *refs/remotes/origin/HEAD has become dangling* (glob)
    - [deleted]         (none)          -> origin/master_bookmark
    * [new branch]      R1              -> R1
    * [new branch]      master_bookmark -> master_bookmark
