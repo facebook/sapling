@@ -867,7 +867,8 @@ FuseChannel::FuseChannel(
     std::chrono::nanoseconds highFuseRequestsLogInterval,
     std::chrono::nanoseconds longRunningFSRequestThreshold,
     bool useWriteBackCache,
-    size_t fuseTraceBusCapacity)
+    size_t fuseTraceBusCapacity,
+    std::optional<uint32_t> fuseBdiReadAheadKb)
     : privHelper_{privHelper},
       bufferSize_(std::max(size_t(getpagesize()) + 0x1000, MIN_BUFSIZE)),
       threadPool_{std::move(threadPool)},
@@ -885,6 +886,7 @@ FuseChannel::FuseChannel(
       highFuseRequestsLogInterval_{highFuseRequestsLogInterval},
       longRunningFSRequestThreshold_{longRunningFSRequestThreshold},
       useWriteBackCache_{useWriteBackCache},
+      fuseBdiReadAheadKb_{fuseBdiReadAheadKb},
       fuseDevice_(std::move(fuseDevice)),
       processAccessLog_(std::move(processInfoCache)),
       traceDetailedArguments_(std::make_shared<std::atomic<size_t>>(0)),
@@ -966,10 +968,25 @@ Future<FuseChannel::StopFuture> FuseChannel::initialize() {
   });
 }
 
+void FuseChannel::maybeSetFuseReadAhead() {
+  if (fuseBdiReadAheadKb_.has_value()) {
+    privHelper_->setFuseReadAhead(mountPath_.view(), *fuseBdiReadAheadKb_)
+        .thenError([this](folly::exception_wrapper&& ew) {
+          XLOGF(
+              WARN,
+              "Failed to set FUSE read-ahead for {}: {}",
+              mountPath_,
+              ew.what());
+        });
+  }
+}
+
 FuseChannel::StopFuture FuseChannel::initializeFromTakeover(
     fuse_init_out connInfo) {
   connInfo_ = connInfo;
   dispatcher_->initConnection(connInfo);
+  maybeSetFuseReadAhead();
+
   XLOGF(
       DBG1,
       "Takeover using max_write={}, max_readahead={}, want={}",
@@ -1669,6 +1686,7 @@ void FuseChannel::readInitPacket() {
 #endif
 
   dispatcher_->initConnection(connInfo);
+  maybeSetFuseReadAhead();
 }
 
 void FuseChannel::processSession() {

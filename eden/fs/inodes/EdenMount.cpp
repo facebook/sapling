@@ -2417,9 +2417,8 @@ std::unique_ptr<FuseChannel, FsChannelDeleter> makeFuseChannel(
       edenConfig->highFsRequestsLogInterval.getValue(),
       edenConfig->longRunningFSRequestThreshold.getValue(),
       mount->getCheckoutConfig()->getUseWriteBackCache(),
-      mount->getServerState()
-          ->getEdenConfig()
-          ->FuseTraceBusCapacity.getValue());
+      mount->getServerState()->getEdenConfig()->FuseTraceBusCapacity.getValue(),
+      edenConfig->fuseBdiReadAheadKb.getValue());
 }
 } // namespace
 #endif

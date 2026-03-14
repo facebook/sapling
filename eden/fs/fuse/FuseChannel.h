@@ -293,6 +293,9 @@ class FuseChannel final : public FsChannel {
    * fuseTraceBusCapacity -
    *      The maximum number of FuseTraceEvents that can be buffered in the
    *      trace bus at any one time. This data feeds into `eden trace fs`.
+   * fuseBdiReadAheadKb -
+   *      If set, configures the FUSE BDI read-ahead after FUSE_INIT completes
+   *      by writing to /sys/class/bdi/{major}:{minor}/read_ahead_kb.
    */
   FuseChannel(
       PrivHelper* privHelper,
@@ -314,7 +317,8 @@ class FuseChannel final : public FsChannel {
       std::chrono::nanoseconds highFuseRequestsLogInterval,
       std::chrono::nanoseconds longRunningFSRequestThreshold,
       bool useWriteBackCache,
-      size_t fuseTraceBusCapacity);
+      size_t fuseTraceBusCapacity,
+      std::optional<uint32_t> fuseBdiReadAheadKb = std::nullopt);
 
   FuseChannel(const FuseChannel&) = delete;
   FuseChannel(FuseChannel&&) = delete;
@@ -822,6 +826,7 @@ class FuseChannel final : public FsChannel {
   void sendInvalidateInode(InodeNumber ino, int64_t off, int64_t len);
   void sendInvalidateEntry(InodeNumber parent, PathComponentPiece name);
   void readInitPacket();
+  void maybeSetFuseReadAhead();
   void startWorkerThreads();
 
   /**
@@ -903,6 +908,7 @@ class FuseChannel final : public FsChannel {
    */
   std::chrono::nanoseconds longRunningFSRequestThreshold_;
   bool useWriteBackCache_;
+  std::optional<uint32_t> fuseBdiReadAheadKb_;
 
   /*
    * connInfo_ is modified during the initialization process,
