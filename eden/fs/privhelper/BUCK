@@ -57,10 +57,14 @@ cpp_library(
 cpp_library(
     name = "server",
     srcs = [
+        "MountInfoTable.cpp",
         "PrivHelperServer.cpp",
         "PrivHelperServerSanityCheck.cpp",
     ],
-    headers = ["PrivHelperServer.h"],
+    headers = [
+        "MountInfoTable.h",
+        "PrivHelperServer.h",
+    ],
     deps = [
         ":nfs_rpc",
         "//eden/common/utils:errno_utils",
@@ -69,9 +73,9 @@ cpp_library(
         "//eden/common/utils:sysctl_util",
         "//eden/common/utils:throw",
         "//eden/fs/privhelper/priority:process_priority",
+        "//eden/fs/utils:statmount",
         "//folly:conv",
         "//folly:exception",
-        "//folly:expected",
         "//folly:file",
         "//folly:file_util",
         "//folly:network_address",
@@ -96,6 +100,7 @@ cpp_library(
         ":conn",
         "//eden/common/utils:io",
         "//eden/common/utils:process",
+        "//folly:expected",
     ],
     external_deps = [
         ("boost", None, "boost_algorithm"),
