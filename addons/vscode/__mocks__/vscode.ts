@@ -11,6 +11,27 @@ import type * as vscode from 'vscode';
 import {URI} from 'vscode-uri';
 export const Uri = URI;
 
+export const env = proxyMissingFieldsWithJestFn({
+  sessionId: 'test-session-id',
+});
+export const window = proxyMissingFieldsWithJestFn({});
+export const languages = proxyMissingFieldsWithJestFn({
+  getDiagnostics: jest.fn().mockReturnValue([]),
+});
+export const commands = proxyMissingFieldsWithJestFn({
+  executeCommand: jest.fn(),
+});
+export const DiagnosticSeverity = {
+  Error: 0,
+  Warning: 1,
+  Information: 2,
+  Hint: 3,
+};
+export const ConfigurationTarget = {
+  Global: 1,
+  Workspace: 2,
+  WorkspaceFolder: 3,
+};
 export const workspace = proxyMissingFieldsWithJestFn({
   workspaceFolders: undefined,
   getConfiguration: () => ({get: jest.fn()}),
