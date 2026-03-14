@@ -710,6 +710,17 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<std::string> fuseVfsType{"fuse:vfs-type", "fuse", this};
 
+  /**
+   * The read-ahead size in KB for FUSE mounts. This is written to
+   * /sys/class/bdi/{major}:{minor}/read_ahead_kb after mounting.
+   * If nullopt, the kernel default is used.
+   * This setting only applies to Linux FUSE mounts.
+   */
+  ConfigSetting<std::optional<uint32_t>> fuseBdiReadAheadKb{
+      "fuse:bdi-read-ahead-kb",
+      std::nullopt,
+      this};
+
   // [nfs]
 
   /**
