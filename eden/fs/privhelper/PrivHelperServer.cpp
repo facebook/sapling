@@ -1518,6 +1518,8 @@ UnixSocket::Message PrivHelperServer::processMessage(
       return processStopFam();
     case PrivHelperConn::REQ_SET_MEMORY_PRIORITY_FOR_PROCESS:
       return processSetMemoryPriorityForProcess(cursor);
+    case PrivHelperConn::REQ_SET_FUSE_READ_AHEAD:
+      throwf<std::runtime_error>("unexpected REQ_SET_FUSE_READ_AHEAD message");
     case PrivHelperConn::MSG_TYPE_NONE:
     case PrivHelperConn::RESP_ERROR:
       break;

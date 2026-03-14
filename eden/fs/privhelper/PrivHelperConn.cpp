@@ -764,6 +764,26 @@ void PrivHelperConn::parseSetMemoryPriorityForProcessRequest(
   checkAtEnd(cursor, "set memory priority for process request");
 }
 
+UnixSocket::Message PrivHelperConn::serializeSetFuseReadAheadRequest(
+    uint32_t xid,
+    StringPiece mountPath,
+    uint32_t readAheadKb) {
+  auto msg = serializeRequestPacket(xid, REQ_SET_FUSE_READ_AHEAD);
+  Appender appender(&msg.data, kDefaultBufferSize);
+  serializeString(appender, mountPath);
+  appender.write<uint32_t>(readAheadKb);
+  return msg;
+}
+
+void PrivHelperConn::parseSetFuseReadAheadRequest(
+    Cursor& cursor,
+    string& mountPath,
+    uint32_t& readAheadKb) {
+  mountPath = deserializeString(cursor);
+  readAheadKb = cursor.read<uint32_t>();
+  checkAtEnd(cursor, "set fuse read-ahead request");
+}
+
 void PrivHelperConn::serializeErrorResponse(
     Appender& appender,
     const std::exception& ex) {

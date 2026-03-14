@@ -55,6 +55,7 @@ class PrivHelperConn {
     REQ_STOP_FAM = 15,
     REQ_SET_MEMORY_PRIORITY_FOR_PROCESS = 16,
     REQ_GET_NAMESPACE_INFO = 17,
+    REQ_SET_FUSE_READ_AHEAD = 18,
   };
 
   // This structure should never change. If fields need to be added to the
@@ -229,6 +230,15 @@ class PrivHelperConn {
       pid_t& pid,
       int& targetPriority);
 
+  static UnixSocket::Message serializeSetFuseReadAheadRequest(
+      uint32_t xid,
+      folly::StringPiece mountPath,
+      uint32_t readAheadKb);
+  static void parseSetFuseReadAheadRequest(
+      folly::io::Cursor& cursor,
+      std::string& mountPath,
+      uint32_t& readAheadKb);
+
   /**
    * Parse a response that is expected to be empty.
    *
@@ -339,6 +349,9 @@ struct formatter<facebook::eden::PrivHelperConn::MsgType>
         break;
       case facebook::eden::PrivHelperConn::REQ_GET_NAMESPACE_INFO:
         name = "REQ_GET_NAMESPACE_INFO";
+        break;
+      case facebook::eden::PrivHelperConn::REQ_SET_FUSE_READ_AHEAD:
+        name = "REQ_SET_FUSE_READ_AHEAD";
         break;
       default:
         name = "Unknown PrivHelperConn::MsgType";
