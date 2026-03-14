@@ -338,6 +338,34 @@ pub fn exe_name(pid: u32) -> String {
     String::new()
 }
 
+/// Structured process information.
+#[derive(Default, Debug)]
+pub struct ProcInfo {
+    pub name: String,
+    pub pid: u32,
+}
+
+/// Walk the parent process tree up to `max_depth` levels, collecting
+/// executable names and pids. Returns empty results on error or if
+/// the chain is shorter than `max_depth`.
+pub fn process_ancestors(max_depth: usize) -> Vec<ProcInfo> {
+    let mut ancestors = Vec::new();
+    let mut pids = Vec::new();
+    let mut ppid = parent_pid(0);
+    // In theory, the OS should not report a cyclic process graph (ex. pid 1
+    // has parent pid = 1). Practically `parent_pids` takes snapshots
+    // every time on Windows (unnecessarily) and is subject to races. Be
+    // extra careful here so the loop wouldn't be infinite.
+    while ppid != 0 && pids.len() < max_depth && !pids.contains(&ppid) {
+        let name = exe_name(ppid);
+        let proc_info = ProcInfo { name, pid: ppid };
+        ancestors.push(proc_info);
+        pids.push(ppid);
+        ppid = parent_pid(ppid);
+    }
+    ancestors
+}
+
 /// Get a description of pid's ancestors, including pid itself.
 pub fn ancestors(mut pid: u32) -> String {
     if pid == 0 {

@@ -737,23 +737,16 @@ fn log_start(args: Vec<String>, now: StartTime) -> tracing::Span {
         blackbox::log(&blackbox::event::Event::Tags { names });
     }
 
-    let mut parent_names = Vec::new();
-    let mut parent_pids = Vec::new();
-    // On Windows, getting the ppid and exe name requires `CreateToolhelp32Snapshot`,
-    // which can take hundreds of milliseconds. So we skip doing that here.
-    if !inside_test && !cfg!(windows) {
-        let mut ppid = procinfo::parent_pid(0);
-        // In theory, the OS should not report a cyclic process graph (ex. pid 1
-        // has parent pid = 1). Practically `parent_pids` takes snapshots
-        // every time on Windows (unnecessarily) and is subject to races. Be
-        // extra careful here so the loop wouldn't be infinite.
-        while ppid != 0 && parent_pids.len() < 16 && !parent_pids.contains(&ppid) {
-            let name = procinfo::exe_name(ppid);
-            parent_names.push(name);
-            parent_pids.push(ppid);
-            ppid = procinfo::parent_pid(ppid);
-        }
-    }
+    // TODO: enable process_ancestors() on Windows once we confirm it is fast enough.
+    // Previously the Windows implementation of `procinfo::process_ancestors` was
+    // slow, so we disabled it.
+    let (parent_names, parent_pids) = if !inside_test && !cfg!(windows) {
+        let ancestors = procinfo::process_ancestors(16);
+        let (names, pids) = ancestors.into_iter().map(|p| (p.name, p.pid)).unzip();
+        (names, pids)
+    } else {
+        (Vec::new(), Vec::new())
+    };
 
     let span = tracing::info_span!("run");
 
