@@ -3136,10 +3136,10 @@ Check the speed report in hg debugnetwork --speed
                 0,
                 stdout="""
 debugnetwork: Latency: 646.2 us (average of 5 round-trips)
-debugnetwork: Speed: (round 1) downloaded 250 MB in 437.5 ms (4793.85 Mbit/s, 571.47 MiB/s)
-debugnetwork: Speed: (round 2) downloaded 250 MB in 446.1 ms (4700.91 Mbit/s, 560.39 MiB/s)
 debugnetwork: Speed: (round 1) uploaded 50.0 MB in 134.6 ms (3116.99 Mbit/s, 371.57 MiB/s)
 debugnetwork: Speed: (round 2) uploaded 50.0 MB in 132.3 ms (3170.47 Mbit/s, 377.95 MiB/s)
+debugnetwork: Speed: (round 1) downloaded 250 MB in 437.5 ms (4793.85 Mbit/s, 571.47 MiB/s)
+debugnetwork: Speed: (round 2) downloaded 250 MB in 446.1 ms (4700.91 Mbit/s, 560.39 MiB/s)
 """,
             ),
         ]
@@ -3161,10 +3161,10 @@ debugnetwork: Speed: (round 2) uploaded 50.0 MB in 132.3 ms (3170.47 Mbit/s, 377
                 0,
                 stdout="""
 debugnetwork: Latency: 646.2 ms (average of 5 round-trips)
-debugnetwork: Speed: (round 1) downloaded 250 MB in 437.5 ms (4793.85 Mbit/s, 571.47 MiB/s)
-debugnetwork: Speed: (round 2) downloaded 250 MB in 446.1 ms (4700.91 Mbit/s, 560.39 MiB/s)
 debugnetwork: Speed: (round 1) uploaded 50.0 MB in 134.6 ms (3116.99 Mbit/s, 371.57 MiB/s)
 debugnetwork: Speed: (round 2) uploaded 50.0 MB in 132.3 ms (3170.47 Mbit/s, 377.95 MiB/s)
+debugnetwork: Speed: (round 1) downloaded 250 MB in 437.5 ms (4793.85 Mbit/s, 571.47 MiB/s)
+debugnetwork: Speed: (round 2) downloaded 250 MB in 446.1 ms (4700.91 Mbit/s, 560.39 MiB/s)
 """,
             ),
         ]
@@ -3199,10 +3199,10 @@ Please check if anything is causing high ping on your network.{get_netinfo_link(
                 0,
                 stdout="""
 debugnetwork: Latency: 646.2 us (average of 5 round-trips)
-debugnetwork: Speed: (round 1) downloaded 250 MB in 437.5 ms (47.9385 Mbit/s, 57.147 MiB/s)
-debugnetwork: Speed: (round 2) downloaded 250 MB in 446.1 ms (47.0091 Mbit/s, 56.039 MiB/s)
 debugnetwork: Speed: (round 1) uploaded 50.0 MB in 134.6 ms (31.1699 Mbit/s, 37.157 MiB/s)
 debugnetwork: Speed: (round 2) uploaded 50.0 MB in 132.3 ms (31.7047 Mbit/s, 37.795 MiB/s)
+debugnetwork: Speed: (round 1) downloaded 250 MB in 437.5 ms (47.9385 Mbit/s, 57.147 MiB/s)
+debugnetwork: Speed: (round 2) downloaded 250 MB in 446.1 ms (47.0091 Mbit/s, 56.039 MiB/s)
 """,
             ),
         ]
@@ -3237,10 +3237,10 @@ Please check if anything is consuming an excess amount of bandwidth on your netw
                 0,
                 stdout="""
 debugnetwork: Latency: 646.2 us (average of 5 round-trips)
-debugnetwork: Speed: (round 1) downloaded 250 MB in 437.5 ms (52.9385 Mbit/s, 57.147 MiB/s)
-debugnetwork: Speed: (round 2) downloaded 250 MB in 446.1 ms (52.0091 Mbit/s, 56.039 MiB/s)
 debugnetwork: Speed: (round 1) uploaded 15.0 MB in 134.6 ms (9.1699 Mbit/s, 37.157 MiB/s)
 debugnetwork: Speed: (round 2) uploaded 15.0 MB in 132.3 ms (9.7047 Mbit/s, 37.795 MiB/s)
+debugnetwork: Speed: (round 1) downloaded 250 MB in 437.5 ms (52.9385 Mbit/s, 57.147 MiB/s)
+debugnetwork: Speed: (round 2) downloaded 250 MB in 446.1 ms (52.0091 Mbit/s, 56.039 MiB/s)
 """,
             ),
         ]
@@ -3275,10 +3275,10 @@ Please check if anything is consuming an excess amount of bandwidth on your netw
                 0,
                 stdout="""
 debugnetwork: Latency: 17.14 ms (average of 5 round-trips)
-debugnetwork: Speed: (round 1) downloaded 10.0 MB in 1.635 s (40.31 Mbit/s, 6.12 MiB/s)
-debugnetwork: Speed: (round 2) downloaded 10.0 MB in 1.439 s (42.31 Mbit/s, 6.95 MiB/s)
 debugnetwork: Speed: (round 1) uploaded 2.00 MB in 1.143 s (11.68 Mbit/s, 1.75 MiB/s)
 debugnetwork: Speed: (round 2) uploaded 2.00 MB in 609.6 ms (7.52 Mbit/s, 3.28 MiB/s)
+debugnetwork: Speed: (round 1) downloaded 10.0 MB in 1.635 s (40.31 Mbit/s, 6.12 MiB/s)
+debugnetwork: Speed: (round 2) downloaded 10.0 MB in 1.439 s (42.31 Mbit/s, 6.95 MiB/s)
 """,
             ),
         ]

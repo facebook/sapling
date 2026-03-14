@@ -216,7 +216,8 @@ class NetworkChecker:
                 return
 
             speed_regex = r"Speed: \(round \d\) (uploaded|downloaded) (.*) MB in (.*) (s|ms|us) \((.*) Mbit/s, (.*) MiB/s\)"
-            speed_outputs = []
+            download_speeds = []
+            upload_speeds = []
             for entry in speed_values[1:5]:
                 speed_str = re.search(speed_regex, entry)
                 if not speed_str:
@@ -224,11 +225,21 @@ class NetworkChecker:
                         NetworkSpeedProblem("Could not get speed statistics")
                     )
                     return
-                speed_outputs.append(float(speed_str.group(5)))
+                speed_mbit = float(speed_str.group(5))
+                if speed_str.group(1) == "downloaded":
+                    download_speeds.append(speed_mbit)
+                else:
+                    upload_speeds.append(speed_mbit)
+
+            if not download_speeds or not upload_speeds:
+                tracker.add_problem(
+                    NetworkSpeedProblem("Could not get speed statistics")
+                )
+                return
 
             # speed numbers taken from fixmywindows
-            avg_download_speed = (speed_outputs[0] + speed_outputs[1]) / 2.0
-            avg_upload_speed = (speed_outputs[2] + speed_outputs[3]) / 2.0
+            avg_download_speed = sum(download_speeds) / len(download_speeds)
+            avg_upload_speed = sum(upload_speeds) / len(upload_speeds)
             if (
                 avg_download_speed < MIN_DOWNLOAD_SPEED
                 or avg_upload_speed < MIN_UPLOAD_SPEED
