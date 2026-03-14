@@ -508,6 +508,47 @@ folly::File mountMacFuse(
 } // namespace
 #endif
 
+#ifndef __APPLE__
+namespace {
+/**
+ * Configure FUSE read-ahead by writing to
+ * /sys/class/bdi/{major}:{minor}/read_ahead_kb
+ */
+void configureFuseReadAhead(const char* mountPath, uint32_t readAheadKb) {
+  auto result = getMountInfoForPath(mountPath);
+  if (result.hasError()) {
+    XLOGF(
+        WARN,
+        "Cannot determine device for {}: {}; skipping BDI config",
+        mountPath,
+        folly::errnoStr(result.error()));
+    return;
+  }
+  if (!result.value().has_value()) {
+    XLOGF(WARN, "No mount found for {}, skipping BDI config", mountPath);
+    return;
+  }
+  const auto& info = result.value().value();
+
+  auto bdiPath = fmt::format(
+      "/sys/class/bdi/{}:{}/read_ahead_kb", info.devMajor, info.devMinor);
+
+  auto valueStr = fmt::format("{}", readAheadKb);
+  if (!folly::writeFile(valueStr, bdiPath.c_str())) {
+    throwSystemError(
+        fmt::format("Failed to write {} to {}", valueStr, bdiPath));
+  }
+
+  XLOGF(
+      DBG2,
+      "Configured FUSE read-ahead to {} KB for {}:{}",
+      readAheadKb,
+      info.devMajor,
+      info.devMinor);
+}
+} // namespace
+#endif
+
 folly::File PrivHelperServer::fuseMount(
     const char* mountPath,
     bool readOnly,
@@ -1308,6 +1349,21 @@ UnixSocket::Message PrivHelperServer::processSetMemoryPriorityForProcess(
   return makeResponse();
 }
 
+UnixSocket::Message PrivHelperServer::processSetFuseReadAhead(
+    folly::io::Cursor& cursor) {
+  std::string mountPath;
+  uint32_t readAheadKb;
+  PrivHelperConn::parseSetFuseReadAheadRequest(cursor, mountPath, readAheadKb);
+#ifndef __APPLE__
+  configureFuseReadAhead(mountPath.c_str(), readAheadKb);
+#else
+  (void)mountPath;
+  (void)readAheadKb;
+  XLOG(WARN, "FUSE BDI read-ahead configuration is not supported on macOS");
+#endif
+  return makeResponse();
+}
+
 void PrivHelperServer::setMemoryPriorityForProcess(pid_t pid, int priority) {
   auto processPriority = ProcessPriority{priority};
 
@@ -1519,7 +1575,7 @@ UnixSocket::Message PrivHelperServer::processMessage(
     case PrivHelperConn::REQ_SET_MEMORY_PRIORITY_FOR_PROCESS:
       return processSetMemoryPriorityForProcess(cursor);
     case PrivHelperConn::REQ_SET_FUSE_READ_AHEAD:
-      throwf<std::runtime_error>("unexpected REQ_SET_FUSE_READ_AHEAD message");
+      return processSetFuseReadAhead(cursor);
     case PrivHelperConn::MSG_TYPE_NONE:
     case PrivHelperConn::RESP_ERROR:
       break;

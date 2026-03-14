@@ -122,6 +122,7 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   UnixSocket::Message processStopFam();
   UnixSocket::Message processSetMemoryPriorityForProcess(
       folly::io::Cursor& cursor);
+  UnixSocket::Message processSetFuseReadAhead(folly::io::Cursor& cursor);
 
   void unmountStaleMount(const std::string& mountPoint);
 
