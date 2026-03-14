@@ -339,7 +339,7 @@ pub fn exe_name(pid: u32) -> String {
 }
 
 /// Structured process information.
-#[derive(Default, Debug)]
+#[derive(Default, Debug, serde::Serialize)]
 pub struct ProcInfo {
     pub name: String,
     pub pid: u32,

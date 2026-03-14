@@ -282,6 +282,7 @@ members = [
   "saplingnative/bindings/modules/pypathmatcher",
   "saplingnative/bindings/modules/pypprint",
   "saplingnative/bindings/modules/pyprocess",
+  "saplingnative/bindings/modules/pyprocinfo",
   "saplingnative/bindings/modules/pyprogress",
   "saplingnative/bindings/modules/pyrefencode",
   "saplingnative/bindings/modules/pyregex",

@@ -28,6 +28,7 @@ rust_library(
     }),
     deps = [
         "fbsource//third-party/rust:libc",
+        "fbsource//third-party/rust:serde",
     ] + select({
         "DEFAULT": [],
         "ovr_config//os:macos": [

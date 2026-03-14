@@ -65,6 +65,7 @@ rust_python_library(
         "//eden/scm/saplingnative/bindings/modules/pypathmatcher:pypathmatcher",
         "//eden/scm/saplingnative/bindings/modules/pypprint:pypprint",
         "//eden/scm/saplingnative/bindings/modules/pyprocess:pyprocess",
+        "//eden/scm/saplingnative/bindings/modules/pyprocinfo:pyprocinfo",
         "//eden/scm/saplingnative/bindings/modules/pyprogress:pyprogress",
         "//eden/scm/saplingnative/bindings/modules/pyrefencode:pyrefencode",
         "//eden/scm/saplingnative/bindings/modules/pyregex:pyregex",

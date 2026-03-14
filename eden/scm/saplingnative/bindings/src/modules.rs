@@ -87,6 +87,7 @@ pub(crate) fn populate_module(py: Python<'_>, module: &PyModule) -> PyResult<PyN
             pathmatcher,
             pprint,
             process,
+            procinfo,
             progress,
             refencode,
             regex,

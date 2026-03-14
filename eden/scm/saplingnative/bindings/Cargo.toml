@@ -58,6 +58,7 @@ pypathhistory = { version = "0.1.0", path = "modules/pypathhistory" }
 pypathmatcher = { version = "0.1.0", path = "modules/pypathmatcher" }
 pypprint = { version = "0.1.0", path = "modules/pypprint" }
 pyprocess = { version = "0.1.0", path = "modules/pyprocess" }
+pyprocinfo = { version = "0.1.0", path = "modules/pyprocinfo" }
 pyprogress = { version = "0.1.0", path = "modules/pyprogress" }
 pyrefencode = { version = "0.1.0", path = "modules/pyrefencode" }
 pyregex = { version = "0.1.0", path = "modules/pyregex" }
