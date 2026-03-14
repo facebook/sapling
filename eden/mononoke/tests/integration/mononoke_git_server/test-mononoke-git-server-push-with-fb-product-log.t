@@ -55,6 +55,6 @@
 # Wait for the warm bookmark cache to catch up with the latest changes
   $ wait_for_git_bookmark_move HEAD $master_commit
 
-# Verify the push validation errors got recorded in scuba
-  $ jq -S .normal "$SCUBA" | grep product | wc -l
-  42
+# Verify the product log header got recorded in scuba for request processed entries
+  $ jq -c 'select(.normal.log_tag == "MononokeGit Request Processed" and .normal.x_fb_product_log != null) | .normal.x_fb_product_log' "$SCUBA" | wc -l
+  5
