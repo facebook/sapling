@@ -33,7 +33,6 @@ use storemodel::FileStore;
 use storemodel::StoreInfo;
 use storemodel::TreeStore;
 use types::HgId;
-use workingcopy::sparse::build_matcher;
 
 use crate::scmstore::build_scm_file_store;
 use crate::scmstore::build_scm_tree_store;
@@ -187,6 +186,7 @@ impl SlapiRepo {
     /// Checks for a code-tenting sparse profile in the config and builds a matcher from
     /// it if present.
     pub fn sparse_matcher(&self, manifest: &TreeManifest) -> Result<Option<DynMatcher>> {
+        #[cfg(feature = "wdir")]
         match filters::util::filter_paths_from_config(self.config()) {
             // {""} is a special case that means "null filter" - match eveything.
             Some(paths) if !paths.iter().all(|p| p.is_empty()) => {
@@ -198,12 +198,21 @@ impl SlapiRepo {
                         .join(""),
                     "SlapiRepo".to_string(),
                 )?;
-                let (sparse_matcher, _) =
-                    build_matcher(&sparse_root, manifest, self.file_store()?, &HashMap::new())?;
+                let (sparse_matcher, _) = workingcopy::sparse::build_matcher(
+                    &sparse_root,
+                    manifest,
+                    self.file_store()?,
+                    &HashMap::new(),
+                )?;
 
                 Ok(Some(Arc::new(sparse_matcher)))
             }
             _ => Ok(None),
+        }
+        #[cfg(not(feature = "wdir"))]
+        {
+            let _ = manifest;
+            Ok(None)
         }
     }
 }

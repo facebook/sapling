@@ -25,6 +25,7 @@ rust_library(
                 "pycheckout/eden",
                 "pyworkingcopyclient/eden",
                 "pyworkingcopy/eden",
+                "cmdclone/eden",
                 "cmdgoto/eden",
                 "cmddebugwait/eden",
             ],
