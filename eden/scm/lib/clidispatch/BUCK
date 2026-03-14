@@ -36,6 +36,7 @@ rust_library(
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tracing",
         "//common/rust/shed/hostname:hostname",
+        "//eden/scm/lib/agentdetect:agentdetect",
         "//eden/scm/lib/blackbox:blackbox",
         "//eden/scm/lib/cliparser:cliparser",
         "//eden/scm/lib/config/loader:configloader",

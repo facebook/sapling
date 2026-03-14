@@ -15,6 +15,7 @@ rust_python_library(
         #     name = os.path.basename(os.path.dirname(path))
         #     cog.outl(f'"//eden/scm/saplingnative/bindings/modules/{name}:{name}",')
         # ]]]
+        "//eden/scm/saplingnative/bindings/modules/pyagentdetect:pyagentdetect",
         "//eden/scm/saplingnative/bindings/modules/pyatexit:pyatexit",
         "//eden/scm/saplingnative/bindings/modules/pyauth:pyauth",
         "//eden/scm/saplingnative/bindings/modules/pybacktrace:pybacktrace",

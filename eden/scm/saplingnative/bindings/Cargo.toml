@@ -8,6 +8,7 @@ edition = "2024"
 [dependencies]
 cpython = { version = "0.7.2", features = ["python3-sys"], default-features = false }
 paste = "1.0.14"
+pyagentdetect = { version = "0.1.0", path = "modules/pyagentdetect" }
 pyatexit = { version = "0.1.0", path = "modules/pyatexit" }
 pyauth = { version = "0.1.0", path = "modules/pyauth" }
 pybacktrace = { version = "0.1.0", path = "modules/pybacktrace" }
