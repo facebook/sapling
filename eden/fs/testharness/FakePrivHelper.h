@@ -90,6 +90,9 @@ class FakePrivHelper final : public PrivHelper {
   folly::Future<folly::Unit> setMemoryPriorityForProcess(
       pid_t pid,
       int priority) override;
+  folly::Future<folly::Unit> setFuseReadAhead(
+      folly::StringPiece mountPath,
+      uint32_t readAheadKb) override;
   int stop() override;
   int getRawClientFd() const override {
     return -1;

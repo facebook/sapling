@@ -132,6 +132,9 @@ class PrivHelperClientImpl : public PrivHelper,
   Future<StopFileAccessMonitorResponse> stopFam() override;
   Future<folly::Unit> setMemoryPriorityForProcess(pid_t pid, int priority)
       override;
+  Future<folly::Unit> setFuseReadAhead(
+      StringPiece mountPath,
+      uint32_t readAheadKb) override;
   int stop() override;
   int getRawClientFd() const override {
     auto state = state_.rlock();
@@ -619,6 +622,19 @@ Future<Unit> PrivHelperClientImpl::setMemoryPriorityForProcess(
       });
 }
 
+Future<Unit> PrivHelperClientImpl::setFuseReadAhead(
+    StringPiece mountPath,
+    uint32_t readAheadKb) {
+  auto xid = getNextXid();
+  auto request = PrivHelperConn::serializeSetFuseReadAheadRequest(
+      xid, mountPath, readAheadKb);
+  return sendAndRecv(xid, std::move(request))
+      .thenValue([](UnixSocket::Message&& response) {
+        PrivHelperConn::parseEmptyResponse(
+            PrivHelperConn::REQ_SET_FUSE_READ_AHEAD, response);
+      });
+}
+
 int PrivHelperClientImpl::stop() {
   const auto result = cleanup();
   if (result.hasError()) {
@@ -939,6 +955,14 @@ class StubPrivHelper final : public PrivHelper {
       int priority) override {
     (void)pid;
     (void)priority;
+    NOT_IMPLEMENTED();
+  }
+
+  folly::Future<folly::Unit> setFuseReadAhead(
+      folly::StringPiece mountPath,
+      uint32_t readAheadKb) override {
+    (void)mountPath;
+    (void)readAheadKb;
     NOT_IMPLEMENTED();
   }
 

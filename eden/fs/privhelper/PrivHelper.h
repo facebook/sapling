@@ -227,6 +227,17 @@ class PrivHelper {
       int targetPriority) = 0;
 
   /**
+   * Configure the FUSE BDI read-ahead for the given mount.
+   *
+   * This writes to /sys/class/bdi/{major}:{minor}/read_ahead_kb.
+   * Should be called after FUSE_INIT completes, since the kernel's
+   * fuse_finish_init() overwrites bdi->ra_pages during the handshake.
+   */
+  [[nodiscard]] virtual folly::Future<folly::Unit> setFuseReadAhead(
+      folly::StringPiece mountPath,
+      uint32_t readAheadKb) = 0;
+
+  /**
    * setLogFileBlocking() is a wrapper around setLogFile() that blocks until
    * the call has completed.
    *

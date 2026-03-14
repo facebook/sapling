@@ -155,6 +155,13 @@ Future<Unit> FakePrivHelper::setMemoryPriorityForProcess(
       "FakePrivHelper::setMemoryPriorityForProcess() not implemented"));
 }
 
+Future<Unit> FakePrivHelper::setFuseReadAhead(
+    folly::StringPiece /* mountPath */,
+    uint32_t /* readAheadKb */) {
+  return makeFuture<Unit>(
+      runtime_error("FakePrivHelper::setFuseReadAhead() not implemented"));
+}
+
 int FakePrivHelper::stop() {
   return 0;
 }
