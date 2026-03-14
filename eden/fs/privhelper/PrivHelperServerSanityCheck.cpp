@@ -24,9 +24,9 @@
 #include "eden/common/utils/ErrnoUtils.h"
 #include "eden/common/utils/FSDetect.h"
 #include "eden/common/utils/Throw.h"
+#include "eden/fs/privhelper/MountInfoTable.h"
 
 #ifdef __linux__
-#include <mntent.h>
 #include <sys/statfs.h>
 #endif
 
@@ -34,57 +34,23 @@ namespace facebook::eden {
 
 namespace {
 
-#ifdef __linux__
-/**
- * Callback type for iterating over mount entries.
- * Return true to continue iteration, false to stop early.
- */
-using MountEntryCallback =
-    std::function<bool(const std::string& fsName, const std::string& mountDir)>;
-
-/**
- * Iterates over the system mount table using setmntent/getmntent.
- * Calls the provided callback for each mount entry.
- * Returns false if we failed to open the mount table.
- */
-bool forEachMountEntry(const MountEntryCallback& callback) {
-  FILE* mtab = setmntent("/proc/mounts", "r");
-  if (mtab == nullptr) {
-    XLOGF(WARN, "Failed to open /proc/mounts: {}", folly::errnoStr(errno));
-    return false;
-  }
-  SCOPE_EXIT {
-    endmntent(mtab);
-  };
-
-  struct mntent* entry;
-  while ((entry = getmntent(mtab)) != nullptr) {
-    if (!callback(entry->mnt_fsname, entry->mnt_dir)) {
-      break;
-    }
-  }
-  return true;
-}
-#endif
-
 /**
  * Determines whether the given mountPoint is contained in the mount table
  * and looks like it was previously mounted by EdenFS.
  */
 bool isOldEdenMount(const std::string& mountPoint) {
 #ifdef __linux__
-  bool found = false;
-  bool success = forEachMountEntry(
-      [&mountPoint, &found](
-          const std::string& fsName, const std::string& mountDir) {
-        if (mountDir == mountPoint && is_edenfs_fs_type(fsName)) {
-          found = true;
-          return false;
-        }
-        return true;
-      });
-
-  if (success && found) {
+  auto result = getMountInfoForPath(mountPoint.c_str());
+  if (result.hasError()) {
+    XLOGF(
+        WARN,
+        "Failed to get mount info for {}: {}",
+        mountPoint,
+        folly::errnoStr(result.error()));
+    return false;
+  }
+  if (result.value().has_value() &&
+      is_edenfs_fs_type(result.value()->mountSource)) {
     return true;
   }
 #else
@@ -187,45 +153,46 @@ void sanityCheckFs(const std::string& mountPoint) {
 
 void PrivHelperServer::cleanupStaleBindMounts(const std::string& checkoutPath) {
 #ifdef __linux__
-  // Parse /proc/mounts to find stale redirection mounts under this checkout.
-  // These are mounts that EdenFS set up (e.g., buck-out) that were left behind
-  // when EdenFS crashed without properly unmounting.
-  std::vector<std::string> staleMounts;
-  std::string checkoutPrefix = checkoutPath + "/";
-
-  bool success = forEachMountEntry(
-      [&checkoutPrefix, &checkoutPath, &staleMounts](
-          const std::string& /*fsName*/, const std::string& mountDir) {
-        if (folly::StringPiece(mountDir).startsWith(checkoutPrefix)) {
-          XLOGF(
-              INFO,
-              "Found potential stale redirection mount under {}: {}",
-              checkoutPath,
-              mountDir);
-          staleMounts.push_back(mountDir);
-        }
-        return true;
-      });
-
-  if (!success) {
-    XLOGF(WARN, "Skipping redirection cleanup due to mount table read failure");
+  auto result = getMountsUnderPath(checkoutPath);
+  if (result.hasError()) {
+    XLOGF(
+        WARN,
+        "Failed to enumerate mounts under {}: {}; skipping redirection cleanup",
+        checkoutPath,
+        folly::errnoStr(result.error()));
+    return;
+  }
+  auto& staleMounts = result.value();
+  if (staleMounts.empty()) {
     return;
   }
 
-  // Unmount any stale mounts we found (in reverse order to handle nested
-  // mounts)
-  std::sort(staleMounts.begin(), staleMounts.end(), std::greater<>());
+  // Sort mount points in reverse order to handle nested mounts
+  std::sort(
+      staleMounts.begin(),
+      staleMounts.end(),
+      [](const MountInfo& a, const MountInfo& b) {
+        return a.mountPoint > b.mountPoint;
+      });
+
   for (const auto& mount : staleMounts) {
-    XLOGF(INFO, "Attempting to unmount stale redirection mount: {}", mount);
+    XLOGF(
+        INFO,
+        "Found potential stale redirection mount under {}: {}",
+        checkoutPath,
+        mount.mountPoint);
     // Use MNT_DETACH (lazy unmount) to avoid blocking if mount is busy
-    if (umount2(mount.c_str(), MNT_DETACH) == 0) {
-      XLOGF(INFO, "Successfully unmounted stale redirection mount: {}", mount);
+    if (umount2(mount.mountPoint.c_str(), MNT_DETACH) == 0) {
+      XLOGF(
+          INFO,
+          "Successfully unmounted stale redirection mount: {}",
+          mount.mountPoint);
     } else {
       auto err = errno;
       XLOGF(
           WARN,
           "Failed to unmount stale redirection mount {}: {}",
-          mount,
+          mount.mountPoint,
           folly::errnoStr(err));
     }
   }
