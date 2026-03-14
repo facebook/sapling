@@ -324,3 +324,8 @@ cpp_library(
         "fbsource//third-party/fmt:fmt",
     ],
 )
+
+cpp_library(
+    name = "statmount",
+    headers = ["Statmount.h"],
+)
