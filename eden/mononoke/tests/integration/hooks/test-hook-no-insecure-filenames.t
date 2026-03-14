@@ -52,18 +52,21 @@ Add a dir with a naughty .Git directory inside
   abort: unexpected EOL, expected netstring digit
   [255]
 
-Add a dir with a naughty .git directory inside
-  $ hg up -q "min(all())"
-  $ mkdir -p test/.git/
-  $ echo "bad" > test/.git/test.py
-  $ hg ci -Aqm failure
-  $ hg push -r . --to master_bookmark
-  pushing rev aaf08d8ead79 to destination mono:repo bookmark master_bookmark
+Add a dir with a naughty .git directory inside (use testtool_drawdag since Sapling client rejects .git paths)
+  $ testtool_drawdag -R repo --no-default-files --print-hg-hashes <<EOF
+  > A
+  > # modify: A "test/.git/test.py" "bad"
+  > EOF
+  A=3edd65e43da4647fdf27764f5f936ae00deb628f
+
+  $ hg pull -q -r $A
+  $ hg push -r $A --to master_bookmark
+  pushing rev 3edd65e43da4 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     no_insecure_filenames for aaf08d8ead79addcb96d5db66cb7d507994e378f: ABORT: Illegal insecure name: "test/.git/test.py"
+  remote:     no_insecure_filenames for 3edd65e43da4647fdf27764f5f936ae00deb628f: ABORT: Illegal insecure name: "test/.git/test.py"
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -168,7 +171,7 @@ Add a legitimate dir with xGit in its name
 Add a file with an ignorable unicode char in it
   $ hg up -q "min(all())"
   $ bad=$(printf "\xe2\x80\x8c")
-  $ mkdir test
+  $ mkdir -p test
   $ echo "bad" > "test/.git${bad}"
   $ hg ci -Aqm failure
   $ hg push -r . --to master_bookmark

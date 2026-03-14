@@ -64,46 +64,58 @@ blocked by deny_files
 
 Pushing to the small repo triggers deny_files, even though deny_files is only configured on the large repo.
 Note that the node is from the small repo, even though the hook is in the large repo
+(use testtool_drawdag since Sapling client rejects .git paths)
 
   $ cd "$TESTTMP"/small-hg-client
-  $ hg up -q test_bookmark
-  $ mkdir -p f/.git
-  $ echo 2 > f/.git/HEAD && hg addremove -q && hg ci -q -m .git
-  $ hg log -T"small_node: {node}\n" -r .
-  small_node: 6e6a22d48eb51db1e7b8af685d9c99c0d7f10f70
-  $ hg push -r . --to test_bookmark --force
-  pushing rev 6e6a22d48eb5 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark test_bookmark
-  edenapi: queue 1 commit for upload
-  edenapi: queue 0 files for upload
-  edenapi: queue 3 trees for upload
-  edenapi: uploaded 3 trees
-  edenapi: uploaded 1 changeset
-  moving remote bookmark test_bookmark from ce81c7d38286 to 6e6a22d48eb5
+  $ testtool_drawdag -R small-mon --print-hg-hashes <<EOF
+  > B
+  > |
+  > A
+  > # exists: A $SMALL_MASTER_BONSAI
+  > # modify: B "f/.git/HEAD" "2\n"
+  > # message: B ".git"
+  > # author: B test
+  > EOF
+  A=11f848659bfcf77abd04f947883badd8efa88d26
+  B=94b4d63cb3185098ded56065f2f9f3d9e61cf1fe
+
+  $ hg pull -q -r $B
+  $ hg log -T"small_node: {node}\n" -r $B
+  small_node: 94b4d63cb3185098ded56065f2f9f3d9e61cf1fe
+  $ hg push -r $B --to test_bookmark --force
+  pushing rev 94b4d63cb318 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark test_bookmark
+  moving remote bookmark test_bookmark from ce81c7d38286 to 94b4d63cb318
   abort: server error: hooks failed:
-    deny_files for b5ac9b3203d4aef816083f98fd6f169d701c6ae41d08e49d9abc6b0ae5318bbe: Denied filename 'smallrepofolder/f/.git/HEAD' matched name pattern '/[.]git/'. Rename or remove this file and try again.
+    deny_files for 45dacb440475146894aee9056c136bb72d64454729080e71d46b4dbee3afd233: Denied filename 'smallrepofolder/f/.git/HEAD' matched name pattern '/[.]git/'. Rename or remove this file and try again.
   [255]
 
 Create a commit in the large repo that triggers deny_files.  Since we haven't enabled the hook
 there, we are ok to create it.  Create a commit on top of that that is backsynced.
+(use testtool_drawdag since Sapling client rejects .git paths)
+
+  $ testtool_drawdag -R large-mon --print-hg-hashes <<EOF
+  > E
+  > |
+  > D
+  > |
+  > C
+  > # exists: C $LARGE_MASTER_BONSAI
+  > # modify: D "x/.git/HEAD" "2\n"
+  > # message: D ".git-large"
+  > # author: D test
+  > # modify: E "smallrepofolder/largerepofile" "3\n"
+  > # message: E "backsync"
+  > # author: E test
+  > # bookmark: E master_bookmark
+  > EOF
+  C=bfcfb674663c5438027bcde4a7ae5024c838f76a
+  D=8fd531f07276538a04d156d382db5b30611cdb4c
+  E=9af5392c08a0812660278cbb0242e2171327c6a3
 
   $ cd "$TESTTMP"/large-hg-client
-  $ hg up -q master_bookmark
-  $ mkdir -p x/.git
-  $ echo 2 > x/.git/HEAD && hg addremove -q && hg ci -q -m .git-large
-  $ hg log -T "large_node: {node}\n" -r .
-  large_node: d967862de4d54c47ba51e0259fb1f72d881efd73
-  $ echo 3 > smallrepofolder/largerepofile && hg addremove -q && hg ci -q -m backsync
-  $ hg push --to master_bookmark
-  pushing rev 148264a57519 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
-  edenapi: queue 2 commits for upload
-  edenapi: queue 1 file for upload
-  edenapi: uploaded 1 file
-  edenapi: queue 5 trees for upload
-  edenapi: uploaded 5 trees
-  edenapi: uploaded 2 changesets
-  pushrebasing stack (bfcfb674663c, 148264a57519] (2 commits) to remote bookmark master_bookmark
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  updated remote bookmark master_bookmark to 148264a57519
+  $ hg pull -q
+  $ hg log -T "large_node: {node}\n" -r $D
+  large_node: 8fd531f07276538a04d156d382db5b30611cdb4c
   $ backsync_large_to_small 2>&1 | grep "syncing bookmark"
   * syncing bookmark master_bookmark to * (glob)
   $ flush_mononoke_bookmarks
@@ -112,7 +124,7 @@ Commit has been backsynced
   $ cd "$TESTTMP"/small-hg-client
   $ hg pull -q
   $ log -r master_bookmark
-  o  backsync [public;rev=2;cd9bfa9f25eb] remote/master_bookmark
+  o  backsync [public;rev=2;37a9a8a030b3] remote/master_bookmark
   │
   ~
 
@@ -121,5 +133,5 @@ No hook runs because the hooks already ran for this changeset.
 
   $ hg up -q master_bookmark
   $ hg push -r . --to test_bookmark --pushvar NON_FAST_FORWARD=true
-  pushing rev cd9bfa9f25eb to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark test_bookmark
-  moving remote bookmark test_bookmark from ce81c7d38286 to cd9bfa9f25eb
+  pushing rev 37a9a8a030b3 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark test_bookmark
+  moving remote bookmark test_bookmark from ce81c7d38286 to 37a9a8a030b3
