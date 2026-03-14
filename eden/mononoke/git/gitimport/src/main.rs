@@ -249,7 +249,16 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .with_app_extension(MonitoringAppExtension {})
         .build::<GitimportArgs>()?;
 
-    app.run_with_monitoring_and_logging(async_main, "gitimport", AliveService)
+    let result = app.run_with_monitoring_and_logging(async_main, "gitimport", AliveService);
+
+    if result.is_ok() {
+        // Skip C++ singleton teardown which hangs for ~5 minutes due to
+        // circular shared_ptr references in folly/scribe/manifold singletons.
+        // All import work is complete at this point.
+        std::process::exit(0);
+    }
+
+    result
 }
 
 async fn async_main(app: MononokeApp) -> Result<(), Error> {
