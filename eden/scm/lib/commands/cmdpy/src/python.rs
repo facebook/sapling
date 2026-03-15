@@ -134,11 +134,33 @@ pub fn py_initialize(args: &[String], sapling_home: Option<&String>) {
 
         check_status!(ffi::Py_PreInitialize(&pre_config), None);
 
-        let mut config = ffi::PyConfig::default();
+        // python3-sys 0.7.2 is missing fields added in Python 3.13 (cpu_count,
+        // sys_path_0), making the Rust PyConfig struct ~12 bytes too small.
+        // PyConfig_InitPythonConfig writes the full C struct, so we need extra
+        // space to prevent a buffer overflow. The overflow_guard absorbs this.
+        //
+        // The missing cpu_count field also shifts the C offsets of all later
+        // fields (executable, prefix, module_search_paths, etc.) relative to
+        // the Rust struct. We avoid accessing any shifted field directly:
+        //   - executable: computed automatically by PyConfig_Read
+        //   - module_search_paths: only set for Python 3.10
+        //   - prefix: only set for static_libpython builds
+        // Fields we DO set (install_signal_handlers, site_import, parse_argv,
+        // user_site_directory, argv) all precede cpu_count and are unaffected.
+        #[repr(C, align(8))]
+        struct PyConfigStorage {
+            inner: ffi::PyConfig,
+            _overflow_guard: [u64; 8],
+        }
+        let mut storage = PyConfigStorage {
+            inner: ffi::PyConfig::default(),
+            _overflow_guard: [0u64; 8],
+        };
+        let config = &mut storage.inner;
 
         // Ideally we could use PyConfig_InitIsolatedConfig, but we rely on some
         // of the vanilla initialization logic to find the std lib, at least.
-        ffi::PyConfig_InitPythonConfig(&mut config);
+        ffi::PyConfig_InitPythonConfig(config);
 
         config.install_signal_handlers = 0;
         config.site_import = 0;
@@ -156,15 +178,15 @@ pub fn py_initialize(args: &[String], sapling_home: Option<&String>) {
             }
         }
 
-        check_status!(
-            ffi::PyConfig_SetString(&mut config, &mut config.executable, to_wide(&args[0])),
-            Some(config)
-        );
-
+        // Note: we intentionally skip setting config.executable here. On
+        // Python < 3.13 it was set to args[0] (current_exe), but PyConfig_Read
+        // computes it automatically. On Python >= 3.13, the field offset is
+        // wrong in python3-sys 0.7.2 due to the missing cpu_count field.
+        // argv is before cpu_count in the struct layout, so it's safe.
         for arg in args.iter() {
             check_status!(
                 ffi::PyWideStringList_Append(&mut config.argv, to_wide(arg)),
-                Some(config)
+                None
             );
         }
 
@@ -178,13 +200,19 @@ pub fn py_initialize(args: &[String], sapling_home: Option<&String>) {
             let exe_dir = exe_dir.to_str().expect("utf-8 exe dir");
             // "prefix" affects many other paths.
             // See https://docs.python.org/3/c-api/init_config.html#init-path-config
+            //
+            // WARNING: On Python 3.13+, config.prefix has the wrong Rust offset
+            // due to the missing cpu_count field in python3-sys 0.7.2. This code
+            // path (static_libpython) is not used on standard OSS builds, so this
+            // is acceptable for now. A proper fix requires vendoring python3-sys
+            // or migrating to PyO3.
             check_status!(
                 ffi::PyConfig_SetString(&mut config, &mut config.prefix, to_wide(exe_dir)),
-                Some(config)
+                None
             );
         }
 
-        check_status!(ffi::PyConfig_Read(&mut config), Some(config));
+        check_status!(ffi::PyConfig_Read(config), None);
 
         // "3.10.9 (v3.10.9:1dd9be6584, Dec  6 2022, 14:37:36) [Clang 13.0.0 (clang-1300.0.29.30)]"
         let version = CStr::from_ptr(ffi::Py_GetVersion());
@@ -206,7 +234,7 @@ pub fn py_initialize(args: &[String], sapling_home: Option<&String>) {
                 config.module_search_paths_set = 1;
                 check_status!(
                     ffi::PyWideStringList_Append(&mut config.module_search_paths, to_wide(home)),
-                    Some(config)
+                    None
                 );
             }
         }
@@ -217,9 +245,9 @@ pub fn py_initialize(args: &[String], sapling_home: Option<&String>) {
             ffi::PyImport_FrozenModules = EXTRA_FROZEN_MODULES.0.as_ptr() as _;
         }
 
-        check_status!(ffi::Py_InitializeFromConfig(&config), Some(config));
+        check_status!(ffi::Py_InitializeFromConfig(config), None);
 
-        ffi::PyConfig_Clear(&mut config);
+        ffi::PyConfig_Clear(config);
     }
 }
 
