@@ -16,7 +16,7 @@ jobs:
             arch: arm64
     runs-on: ${{ matrix.runs-on }}
     container:
-      image: ${{ format('ghcr.io/{0}/manylinux_2_34:latest', github.repository) }}
+      image: ${{ format('ghcr.io/{0}/manylinux_2_34:latest', github.event.repository.parent.full_name || github.repository) }}
     steps:
     - name: Checkout Code
       uses: actions/checkout@v6
