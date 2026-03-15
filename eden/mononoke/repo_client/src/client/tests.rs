@@ -155,13 +155,7 @@ async fn get_changed_manifests_stream_test_base_path(fb: FacebookInit) -> Result
         let mut expected: Vec<_> = fetched_mfs
             .clone()
             .into_iter()
-            .filter(|(_, curpath)| {
-                if path.is_root() {
-                    true
-                } else {
-                    path.is_prefix_of(curpath.as_ref())
-                }
-            })
+            .filter(|(_, curpath)| path.is_prefix_of(curpath.as_ref()))
             .collect();
         expected.sort();
         assert_eq!(actual, expected);

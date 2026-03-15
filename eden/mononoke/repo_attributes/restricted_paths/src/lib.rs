@@ -302,7 +302,7 @@ impl RestrictedPaths {
                 .filter(|(root, _)| {
                     roots
                         .iter()
-                        .any(|query_root| query_root.is_root() || query_root.is_prefix_of(*root))
+                        .any(|query_root| query_root.is_prefix_of(*root))
                 })
                 .map(|(root, acl)| {
                     let repo_region_acl = acl.to_string();

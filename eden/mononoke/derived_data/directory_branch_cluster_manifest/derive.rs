@@ -294,11 +294,7 @@ fn apply_changes_recursive<'a>(
 
         // Collect children from cluster changes that apply at this level or below
         for path in changes.keys() {
-            if current_path.is_root() {
-                if let Some((first, _)) = path.split_first() {
-                    child_elements.insert(first.clone());
-                }
-            } else if current_path.is_prefix_of(path) && path != &current_path {
+            if current_path.is_prefix_of(path) && path != &current_path {
                 let path_components: Vec<_> = path.into_iter().collect();
                 let current_components = current_path.num_components();
                 if path_components.len() > current_components {
