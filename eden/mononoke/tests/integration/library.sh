@@ -1105,7 +1105,7 @@ function git_client {
 function git_client_as {
   local name="$1"
   shift
-  git -c http.sslCAInfo="$TEST_CERTDIR/root-ca.crt" -c http.sslCert="$TEST_CERTDIR/$name.crt" -c http.sslKey="$TEST_CERTDIR/$name.key" "$@"
+  git -c http.sslCAInfo="$TEST_CERTDIR/root-ca.crt" -c http.sslCert="$TEST_CERTDIR/$name.crt" -c http.sslKey="$TEST_CERTDIR/$name.key" -c push.negotiate=false "$@"
 }
 
 function mononoke_git_service {
