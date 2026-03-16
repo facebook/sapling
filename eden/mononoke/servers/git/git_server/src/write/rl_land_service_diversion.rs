@@ -17,12 +17,6 @@
 //! The git server calls `submitLand` with a `DirectPushRequest` and then
 //! polls `getLandStatus` until the request reaches a terminal state.
 //!
-//! TODO: Add integration tests covering mixed ref pushes:
-//! - Push with branch creates, moves, and deletes in a single request
-//! - Push with both branches and tags (only branches should be diverted)
-//! - Push where all refs are non-divertable (deletes only, tags only)
-//! - Push where all refs are divertable (branch creates/moves only)
-//!
 //! This module is gated behind `#[cfg(fbcode_build)]` because the
 //! AospService Thrift client depends on fbcode-only infrastructure.
 
