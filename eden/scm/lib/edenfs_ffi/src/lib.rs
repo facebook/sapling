@@ -6,6 +6,7 @@
  */
 
 use std::collections::HashMap;
+use std::path::Path;
 use std::path::PathBuf;
 use std::thread;
 use std::time::Duration;
@@ -290,14 +291,21 @@ fn profile_contents_from_repo(
     abs_repo_path: PathBuf,
     promise: UniquePtr<MatcherPromise>,
 ) {
-    match _profile_contents_from_repo(id, abs_repo_path) {
-        Ok(res) => {
-            set_matcher_promise_result(promise, res);
-        }
-        Err(e) => {
-            set_matcher_promise_error(promise, format!("Failed to get filter: {:?}", e));
-        }
-    };
+    // Try once, and if it fails, evict the (potentially stale) cache entry
+    // and retry.
+    let result = _profile_contents_from_repo(id, abs_repo_path.clone()).or_else(|first_err| {
+        tracing::warn!(
+            "Filter lookup failed, evicting cache and retrying: {:?}",
+            first_err
+        );
+        invalidate_object_cache_for_repo(&abs_repo_path);
+        _profile_contents_from_repo(id, abs_repo_path)
+    });
+
+    match result {
+        Ok(res) => set_matcher_promise_result(promise, res),
+        Err(e) => set_matcher_promise_error(promise, format!("Failed to get filter: {:?}", e)),
+    }
 }
 
 // Fetches the content of a filter file and turns it into a MercurialMatcher
@@ -381,6 +389,16 @@ fn _profile_contents_from_repo(
     };
 
     Ok(Box::new(MercurialMatcher { matcher }))
+}
+
+fn invalidate_object_cache_for_repo(checkout_path: &Path) {
+    let mut object_map = OBJECT_CACHE.lock();
+    if object_map.remove(checkout_path).is_some() {
+        tracing::info!(
+            "Invalidated OBJECT_CACHE entry for {}",
+            checkout_path.display()
+        );
+    }
 }
 
 // CXX doesn't allow async functions to be exposed to C++. This function wraps the bulk of the

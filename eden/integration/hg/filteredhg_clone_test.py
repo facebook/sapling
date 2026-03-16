@@ -401,15 +401,11 @@ baz
 
         # Re-clone: the stale OBJECT_CACHE entry has a FilterGenerator whose
         # indexedlog handles point to the deleted .hg/filters/.
-        with self.assertRaises(subprocess.CalledProcessError) as ctx:
-            self.eden_clone_filteredhg_repo(
-                backing_store="filteredhg",
-                filter_paths=["filter_foo"],
-            )
-        self.assertIn(
-            "Failed to get filter",
-            ctx.exception.stderr,
+        clone_path2 = self.eden_clone_filteredhg_repo(
+            backing_store="filteredhg",
+            filter_paths=["filter_foo"],
         )
+        self.assert_paths_filtered_unfiltered(clone_path2, ["foo"], ["bar"])
 
 
 @hg_test
