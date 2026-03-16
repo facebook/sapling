@@ -88,10 +88,11 @@ rust_binary(
         "//eden/scm/lib/edenapi/types:edenapi_types",
         "//eden/scm/lib/repo/url:repourl",
     ] + ([] if rust_oss.is_oss_build() else [
+        "fbsource//third-party/rust:hex",
         "fbsource//third-party/rust:lazy_static",
-        "//eden/mononoke/clients/facebook/multi_repo_land_service_client:multi_repo_land_service_client",
+        "//eden/mononoke/common/facebook/thrift_client:thrift_client",
         "//eden/mononoke/facebook/ods3_schemas:MononokeGitRequest_ods3-rs_bindings",
-        "//eden/mononoke/scs/if:source_control-rust",
-        "//eden/mononoke/facebook/multi_repo_land_service/if:multi_repo_land_if-rust",
+        "//scm/grepo/if:aosp_service-rust-clients",
+        "//scm/grepo/if:aosp_service-rust-services",
     ]),
 )

@@ -272,20 +272,46 @@ async fn refs_update(
     _multi_repo_land_service_address: Option<String>,
 ) -> anyhow::Result<Vec<(RefUpdate, anyhow::Result<()>)>> {
     // Check if this push should be diverted to the RL Land Service.
-    // Repos matching the configured prefix are diverted when the JustKnob
-    // is enabled, allowing the RL Land Service to coordinate atomic cross-repo
-    // bookmark movements.
+    // Branch creates/moves are diverted; other refs (deletes, tags, etc.)
+    // are handled by the normal git server path below.
+    // NOTE: When diversion is active and the push contains both divertable and
+    // non-divertable refs, atomicity is not preserved across the two paths.
+    // In practice, diverted repos only have branch pushes, so this is acceptable.
     #[cfg(fbcode_build)]
     {
         if super::rl_land_service_diversion::should_divert_to_rl_land_service(&request_context)? {
-            return super::rl_land_service_diversion::divert_to_rl_land_service(
+            let mut diversion = super::rl_land_service_diversion::divert_to_rl_land_service(
                 ref_updates,
-                request_context,
-                git_bonsai_mapping_store,
-                object_store,
+                request_context.clone(),
+                git_bonsai_mapping_store.clone(),
+                object_store.clone(),
                 _multi_repo_land_service_address,
             )
-            .await;
+            .await?;
+
+            // Process remaining refs (deletes, tags, etc.) through the normal path.
+            if !diversion.remaining.is_empty() {
+                let remaining_results = if atomic_update {
+                    atomic_refs_update(
+                        diversion.remaining,
+                        request_context,
+                        git_bonsai_mapping_store,
+                        object_store,
+                    )
+                    .await?
+                } else {
+                    non_atomic_refs_update(
+                        diversion.remaining,
+                        request_context,
+                        git_bonsai_mapping_store,
+                        object_store,
+                    )
+                    .await?
+                };
+                diversion.diverted.extend(remaining_results);
+            }
+
+            return Ok(diversion.diverted);
         }
     }
 

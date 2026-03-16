@@ -37,6 +37,7 @@ gix-transport = "0.47.0"
 gotham = "0.8"
 gotham_derive = "0.8"
 gotham_ext = { version = "0.1.0", path = "../../../common/gotham_ext" }
+hex = { version = "0.4.3", features = ["alloc"] }
 http = "1.4.0"
 http-body-util = "0.1.0"
 import_direct = { version = "0.1.0", path = "../../../git/import_direct" }
@@ -75,7 +76,6 @@ serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw
 sharding_ext = { version = "0.1.0", path = "../../../cmdlib/sharding_ext" }
 sharding_observability = { version = "0.1.0", path = "../../../cmdlib/sharding_observability" }
 slapi_service = { version = "0.1.0", path = "../../slapi/slapi_service" }
-source_control = { version = "0.1.0", path = "../../../scs/if" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 strum = { version = "0.27.1", features = ["derive"] }
 thiserror = "2.0.18"
