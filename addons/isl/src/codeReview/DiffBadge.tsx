@@ -27,6 +27,7 @@ import {atomFamilyWeak, atomLoadableWithRefresh, configBackedAtom, useAtomGet} f
 import {PullRevOperation} from '../operations/PullRevOperation';
 import {useRunOperation} from '../operationsState';
 import platform from '../platform';
+import {inMergeConflicts} from '../serverAPIState';
 import {exactRevset} from '../types';
 import {codeReviewProvider, diffSummary} from './CodeReviewInfo';
 import './DiffBadge.css';
@@ -149,6 +150,7 @@ function DiffInfoInner({
   const diffInfoResult = useAtomValue(diffSummary(diffId));
   const syncStatus = useAtomGet(syncStatusAtom, commit.hash);
   const startTestsEnabled = useFeatureFlagSync(Internal.featureFlags?.StartTestsButton);
+  const isInMergeConflicts = useAtomValue(inMergeConflicts);
   if (diffInfoResult.error) {
     return <DiffLoadError number={provider.formatDiffNumber(diffId)} provider={provider} />;
   }
@@ -181,7 +183,7 @@ function DiffInfoInner({
       data-testid={`${provider.name}-diff-info`}>
       <DiffSignalSummary diff={info} diffId={diffId} />
       <DiffBadge provider={provider} diff={info} url={info.url} syncStatus={syncStatus} />
-      {provider.DiffLandButtonContent && (
+      {provider.DiffLandButtonContent && !isInMergeConflicts && (
         <provider.DiffLandButtonContent diff={info} commit={commit} />
       )}
       {/* Show Start Tests button when deferred (fb-only) */}
