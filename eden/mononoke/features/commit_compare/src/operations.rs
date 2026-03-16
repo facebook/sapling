@@ -32,11 +32,26 @@ use crate::identity::map_commit_identity;
 // Magic number used when we want to limit concurrency with buffered.
 const CONCURRENCY_LIMIT: usize = 100;
 
+/// Result of `commit_compare` including both the thrift response and
+/// the number of diff entries, which callers can use for admission
+/// control or observability.
+pub struct CommitCompareResult {
+    pub response: source_control_thrift::CommitCompareResponse,
+    pub diff_count: usize,
+}
+
+/// Returns the maximum number of paths allowed in an unordered commit_compare,
+/// read from JustKnobs (`scm/mononoke:commit_compare_unordered_max_paths`).
+pub fn unordered_max_paths() -> Result<usize> {
+    justknobs::get_as::<usize>("scm/mononoke:commit_compare_unordered_max_paths", None)
+}
+
 /// Core commit_compare logic, shared between SCS and diff_service.
 ///
 /// Takes resolved changesets and params, performs the diff, and returns
-/// the thrift response. The caller is responsible for resolving changesets
-/// from whatever input format they receive (CommitSpecifier, CommitId, etc.).
+/// the thrift response along with the number of diff entries.
+/// The caller is responsible for resolving changesets from whatever input
+/// format they receive (CommitSpecifier, CommitId, etc.).
 ///
 /// If `other_changeset` is `None`, the function will attempt to find the
 /// parent changeset using `find_commit_compare_parent`.
@@ -46,7 +61,7 @@ pub async fn commit_compare(
     mut base_changeset: ChangesetContext<Repo>,
     other_changeset: Option<ChangesetContext<Repo>>,
     params: &source_control_thrift::CommitCompareParams,
-) -> Result<source_control_thrift::CommitCompareResponse> {
+) -> Result<CommitCompareResult> {
     add_mutable_renames(&mut base_changeset, params).await?;
 
     let other_changeset = match other_changeset {
@@ -94,7 +109,7 @@ pub async fn commit_compare(
         ),
     };
 
-    let (diff_files, diff_trees) = match params.ordered_params {
+    let (diff_count, diff_files, diff_trees) = match params.ordered_params {
         None => {
             let diff = match other_changeset {
                 Some(ref other_changeset) => {
@@ -114,7 +129,19 @@ pub async fn commit_compare(
                         .await?
                 }
             };
-            stream::iter(diff)
+
+            let diff_count = diff.len();
+            let max_paths = unordered_max_paths()?;
+            if diff_count > max_paths {
+                return Err(MononokeError::InvalidRequest(format!(
+                    "commit_compare: unordered diff has {} entries, exceeding maximum {}. \
+                     Use ordered_params with pagination instead.",
+                    diff_count, max_paths,
+                ))
+                .into());
+            }
+
+            let (files, trees) = stream::iter(diff)
                 .map(|diff| CommitComparePath::from_path_diff(diff, &params.identity_schemes))
                 .buffered(CONCURRENCY_LIMIT)
                 .try_collect::<Vec<_>>()
@@ -123,7 +150,8 @@ pub async fn commit_compare(
                 .partition_map(|diff| match diff {
                     CommitComparePath::File(entry) => Either::Left(entry),
                     CommitComparePath::Tree(entry) => Either::Right(entry),
-                })
+                });
+            (diff_count, files, trees)
         }
         Some(ref ordered_params) => {
             let limit: usize = ordered_params.limit.try_into().map_err(|_| {
@@ -178,6 +206,8 @@ pub async fn commit_compare(
                 }
             };
 
+            let diff_count = diff.len();
+
             let diff_items: Vec<CommitComparePath> = stream::iter(diff)
                 .map(|diff| CommitComparePath::from_path_diff(diff, &params.identity_schemes))
                 .buffered(CONCURRENCY_LIMIT)
@@ -190,10 +220,11 @@ pub async fn commit_compare(
                 }
             }
 
-            diff_items.into_iter().partition_map(|diff| match diff {
+            let (files, trees) = diff_items.into_iter().partition_map(|diff| match diff {
                 CommitComparePath::File(entry) => Either::Left(entry),
                 CommitComparePath::Tree(entry) => Either::Right(entry),
-            })
+            });
+            (diff_count, files, trees)
         }
     };
 
@@ -210,11 +241,14 @@ pub async fn commit_compare(
         }
     };
 
-    Ok(source_control_thrift::CommitCompareResponse {
-        diff_files,
-        diff_trees,
-        other_commit_ids,
-        last_path,
-        ..Default::default()
+    Ok(CommitCompareResult {
+        response: source_control_thrift::CommitCompareResponse {
+            diff_files,
+            diff_trees,
+            other_commit_ids,
+            last_path,
+            ..Default::default()
+        },
+        diff_count,
     })
 }
