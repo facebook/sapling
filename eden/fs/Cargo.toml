@@ -26,6 +26,9 @@ perf-event = { version = "0.4", git = "https://github.com/Nero5023/perf-event.gi
 perf-event-open-sys = { version = "5.0", git = "https://github.com/Nero5023/perf-event.git", rev = "6dae86b6d4807acec081e6dc0a53167f57f8c0f4" }
 pest_consume_macros = { git = "https://github.com/fbsource/pest_consume", rev = "d71e4813aaf5514b8340d2970b3a717e1cf2ea45" }
 plexi-core = { version = "0.1.2", git = "https://github.com/markbt/plexi", rev = "9d459b7fb26101e5c9c2489c220cbae03d1d7afe" }
+postgres = { git = "https://github.com/neondatabase/rust-postgres.git", rev = "f3cf448febde5fd298071d54d568a9c875a7a62b" }
+postgres-protocol = { git = "https://github.com/neondatabase/rust-postgres.git", rev = "f3cf448febde5fd298071d54d568a9c875a7a62b" }
+postgres-types = { git = "https://github.com/neondatabase/rust-postgres.git", rev = "f3cf448febde5fd298071d54d568a9c875a7a62b" }
 prettytable-rs = { git = "https://github.com/asm89/prettytable-rs", rev = "d5e2a480c02b0c4be8d61f4f3a9039c841376433" }
 protobuf-build = { git = "https://github.com/fbsource/protobuf-build", rev = "ee1de946ce2fd7d06a7a4fab7141e02c49f0981f" }
 quickcheck = { git = "https://github.com/jakoschiko/quickcheck", rev = "6ecdf5bb4b0132ce66670b4d46453aa022ea892c" }
@@ -42,6 +45,7 @@ rustls-native-certs = { git = "https://github.com/rustls/rustls-native-certs", r
 spm_precompiled = { version = "0.1.4", git = "https://github.com/huggingface/spm_precompiled", rev = "6e3ffb3ef2504f38e66273002fca0661da4121cc" }
 sqlx = { git = "https://github.com/launchbadge/sqlx", rev = "24317d5eab40fbc33caf1142946e2f39caad73ea" }
 stabby = { git = "https://github.com/nitinsingh-meta/stabby", rev = "304c895c34e502fc635b85df6d4f22f746747ed4" }
+tokio-postgres = { git = "https://github.com/neondatabase/rust-postgres.git", rev = "f3cf448febde5fd298071d54d568a9c875a7a62b" }
 tonic = { git = "https://github.com/hyperium/tonic", rev = "322ed793ea14c6f8a53381234cc1d4a296021cad" }
 vhost = { git = "https://github.com/rust-vmm/vhost/", rev = "93e2d9cf9151a5cbeef4fff1fdf26fdb989f060d" }
 vm-allocator = { git = "https://github.com/rust-vmm/vm-allocator", rev = "5fb545cc6e41fdc9f27d48d97ed26274a35bc6c6" }
