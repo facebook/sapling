@@ -120,8 +120,10 @@ async fn process_changeset_with_base<'a>(
     new_cs_id: ChangesetId,
     old_cs_id: ChangesetId,
 ) -> Result<BoxStream<'a, Result<MetadataItem>>> {
-    let (new_root_fsnode, new_root_unode) = fsnode_and_unode(ctx, repo, new_cs_id).await?;
-    let (old_root_fsnode, old_root_unode) = fsnode_and_unode(ctx, repo, old_cs_id).await?;
+    let ((new_root_fsnode, new_root_unode), (old_root_fsnode, old_root_unode)) = try_join!(
+        fsnode_and_unode(ctx, repo, new_cs_id),
+        fsnode_and_unode(ctx, repo, old_cs_id),
+    )?;
     let new_manifest = CombinedId(
         *new_root_fsnode.fsnode_id(),
         *new_root_unode.manifest_unode_id(),
