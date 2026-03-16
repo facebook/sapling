@@ -34,3 +34,6 @@ sapling-types = { version = "0.1.0", path = "../../../types" }
 sapling-util = { version = "0.1.0", path = "../../../util" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 url = "2.5.8"
+
+[features]
+eden = ["sapling-clone/eden"]
