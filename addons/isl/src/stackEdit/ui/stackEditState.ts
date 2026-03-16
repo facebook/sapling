@@ -66,6 +66,7 @@ export type StackEditOpDescription =
     }
   | {name: 'import'}
   | {name: 'insertBlankCommit'}
+  | {name: 'removeEmptyCommit'}
   | {name: 'fileStack'; fileDesc: string}
   | {name: 'split'; path: string}
   | {name: 'splitWithAI'}
@@ -598,6 +599,7 @@ type StackEditMetrics = {
   splitMoveFile?: number;
   splitMoveLine?: number;
   splitInsertBlank?: number;
+  splitRemoveEmpty?: number;
   splitChangeRange?: number;
   splitFromSuggestion?: number;
   clickedAiSplit?: number;

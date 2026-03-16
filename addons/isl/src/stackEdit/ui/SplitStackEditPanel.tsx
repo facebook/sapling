@@ -114,6 +114,29 @@ export function SplitStackEditPanel() {
     stackEdit.push(newStack, {name: 'insertBlankCommit'}, splitRange);
   };
 
+  const removeEmptyCommit = (rev: CommitRev) => {
+    const mainRev = (startRev + rev) as CommitRev;
+    const newStack = stackEdit.commitStack.drop(mainRev);
+
+    bumpStackEditMetric('splitRemoveEmpty');
+
+    let {splitRange} = stackEdit;
+    const removedKey = stackEdit.commitStack.get(mainRev)?.key;
+    if (removedKey === splitRange.startKey) {
+      const newStart = newStack.get(mainRev);
+      if (newStart != null) {
+        splitRange = splitRange.set('startKey', newStart.key);
+      }
+    } else if (removedKey === splitRange.endKey) {
+      const newEnd = newStack.get(prev(mainRev));
+      if (newEnd != null) {
+        splitRange = splitRange.set('endKey', newEnd.key);
+      }
+    }
+
+    stackEdit.push(newStack, {name: 'removeEmptyCommit'}, splitRange);
+  };
+
   // One commit per column.
   const columns: JSX.Element[] = subStack
     .revs()
@@ -125,6 +148,7 @@ export function SplitStackEditPanel() {
         rev={rev}
         subStack={subStack}
         insertBlankCommit={insertBlankCommit}
+        removeEmptyCommit={removeEmptyCommit}
       />
     ));
 
@@ -143,6 +167,7 @@ type SplitColumnProps = {
   subStack: CommitStackState;
   rev: CommitRev;
   insertBlankCommit: (rev: CommitRev) => unknown;
+  removeEmptyCommit: (rev: CommitRev) => unknown;
 };
 
 function InsertBlankCommitButton({
@@ -209,7 +234,7 @@ function SwapCommitsButton({
 }
 
 function SplitColumn(props: SplitColumnProps) {
-  const {stackEdit, commitStack, subStack, rev, insertBlankCommit} = props;
+  const {stackEdit, commitStack, subStack, rev, insertBlankCommit, removeEmptyCommit} = props;
 
   const [collapsedFiles, setCollapsedFiles] = useState(new Set());
 
@@ -292,6 +317,8 @@ function SplitColumn(props: SplitColumnProps) {
 
   const editors = editables.concat(nonEditables);
 
+  const canRemove = editors.isEmpty() && rev < subStack.size - 1 && subStack.size > 2;
+
   const body = editors.isEmpty() ? (
     <EmptyState small>
       <Column>
@@ -299,6 +326,12 @@ function SplitColumn(props: SplitColumnProps) {
         <Subtle>
           <T>Use the left/right arrows to move files and lines of code and create new commits.</T>
         </Subtle>
+        {canRemove ? (
+          <Button onClick={() => removeEmptyCommit(rev)}>
+            <Icon icon="trash" slot="start" />
+            <T>Remove empty commit</T>
+          </Button>
+        ) : null}
       </Column>
     </EmptyState>
   ) : (
@@ -347,12 +380,10 @@ function SplitColumn(props: SplitColumnProps) {
 
   return (
     <>
-      {editors.isEmpty() ? null : (
-        <Column>
-          <InsertBlankCommitButton beforeRev={rev} onClick={() => insertBlankCommit(rev)} />
-          <SwapCommitsButton stackEdit={stackEdit} beforeRev={rev} />
-        </Column>
-      )}
+      <Column>
+        <InsertBlankCommitButton beforeRev={rev} onClick={() => insertBlankCommit(rev)} />
+        <SwapCommitsButton stackEdit={stackEdit} beforeRev={rev} />
+      </Column>
       <div className="split-commit-column">
         <div className="split-commit-header">
           <span className="split-commit-header-stack-number">

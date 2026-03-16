@@ -352,6 +352,8 @@ export function UndoDescription({op}: {op?: StackEditOpDescription}): React.Reac
     return <T replace={replace}>folding down $commit</T>;
   } else if (op.name === 'insertBlankCommit') {
     return <T>inserting a new blank commit</T>;
+  } else if (op.name === 'removeEmptyCommit') {
+    return <T>removing an empty commit</T>;
   } else if (op.name === 'drop') {
     const replace = {$commit: <CommitTitle commit={op.commit} />};
     return <T replace={replace}>dropping $commit</T>;
