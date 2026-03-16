@@ -541,6 +541,63 @@ impl<E: EdgeType> CommitGraphOps<E> {
         Ok(frontier.highest_generation_contains(ancestor, target_gen))
     }
 
+    /// Given a descendant commit and a list of candidate ancestor commits,
+    /// returns only those candidates that are actual ancestors of the
+    /// descendant. Uses progressive frontier lowering to share traversal
+    /// work across all candidates — more efficient than N individual
+    /// `is_ancestor` calls.
+    ///
+    /// Ancestry is inclusive: a commit is its own ancestor.
+    pub async fn filter_ancestors(
+        &self,
+        ctx: &CoreContext,
+        descendant: ChangesetId,
+        candidates: Vec<ChangesetId>,
+    ) -> Result<Vec<ChangesetId>> {
+        if candidates.is_empty() {
+            return Ok(vec![]);
+        }
+
+        // Fetch generations for descendant and all candidates in one batch.
+        // fetch_many_edges returns a map, so duplicate candidates are
+        // naturally deduplicated without an extra allocation.
+        let descendant_gen = self.changeset_generation(ctx, descendant).await?;
+        let all_edges = self
+            .storage
+            .fetch_many_edges(ctx, &candidates, Prefetch::None)
+            .await?;
+
+        // Sort candidates by generation descending (highest first)
+        // so we can progressively lower the frontier.
+        // Skip candidates with generation > descendant — they can't
+        // be ancestors.
+        let mut candidates_with_gen: Vec<(ChangesetId, Generation)> = candidates
+            .into_iter()
+            .filter_map(|cs_id| {
+                let generation = all_edges.get(&cs_id)?.node().generation::<E>();
+                if generation > descendant_gen {
+                    return None;
+                }
+                Some((cs_id, generation))
+            })
+            .collect();
+        candidates_with_gen.sort_by(|a, b| b.1.cmp(&a.1));
+
+        // Build frontier from descendant
+        let mut frontier = self.single_frontier(ctx, descendant).await?;
+        let mut results = Vec::new();
+
+        // Progressively lower frontier, checking each candidate
+        for (cs_id, generation) in candidates_with_gen {
+            self.lower_frontier(ctx, &mut frontier, generation).await?;
+            if frontier.highest_generation_contains(cs_id, generation) {
+                results.push(cs_id);
+            }
+        }
+
+        Ok(results)
+    }
+
     /// Returns a stream of all ancestors of any changeset in heads,
     /// excluding any ancestor of any changeset in common, in reverse
     /// topological order.
