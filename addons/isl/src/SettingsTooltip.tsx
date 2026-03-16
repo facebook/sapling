@@ -61,6 +61,8 @@ import {themeState, useThemeShortcut} from './theme';
 import './SettingsTooltip.css';
 import {enableSaplingDebugFlag, enableSaplingVerboseFlag} from './atoms/debugToolAtoms';
 
+export const showAuthoredDiffsConfig = configBackedAtom<boolean>('isl.show-authored-diffs', true);
+
 export function SettingsGearButton() {
   useThemeShortcut();
   useZoomShortcut();
@@ -91,6 +93,7 @@ function SettingsDropdown({
   const [repoInfo, setRepoInfo] = useAtom(repositoryInfo);
   const runOperation = useRunOperation();
   const [showDiffNumber, setShowDiffNumber] = useAtom(showDiffNumberConfig);
+  const [showAuthoredDiffs, setShowAuthoredDiffs] = useAtom(showAuthoredDiffsConfig);
   return (
     <DropdownFields title={<T>Settings</T>} icon="gear" data-testid="settings-dropdown">
       <Button
@@ -205,6 +208,15 @@ function SettingsDropdown({
           </Checkbox>
           <ConfirmSubmitStackSetting />
           <SubmitAsDraftCheckbox forceShow />
+          {repoInfo?.codeReviewSystem.type === 'phabricator' && (
+            <Checkbox
+              checked={showAuthoredDiffs}
+              onChange={checked => {
+                setShowAuthoredDiffs(checked);
+              }}>
+              <T>Fetch authored diffs from Phabricator</T>
+            </Checkbox>
+          )}
         </div>
       </Setting>
       {platform.canCustomizeFileOpener && (
