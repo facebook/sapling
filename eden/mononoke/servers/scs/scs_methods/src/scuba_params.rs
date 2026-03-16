@@ -336,6 +336,13 @@ impl AddScubaParams for thrift::CommitIsAncestorOfParams {
     }
 }
 
+impl AddScubaParams for thrift::CommitFilterAncestorsParams {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add("param_num_candidates", self.candidate_ancestor_ids.len());
+        self.identity_schemes.add_scuba_params(scuba);
+    }
+}
+
 impl AddScubaParams for thrift::CommitIsPublicParams {}
 
 impl AddScubaParams for thrift::CommitCommonBaseWithParams {

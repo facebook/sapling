@@ -130,6 +130,12 @@ impl AddScubaResponse for thrift::CommitInfo {}
 
 impl AddScubaResponse for thrift::CommitLookupResponse {}
 
+impl AddScubaResponse for thrift::CommitFilterAncestorsResponse {
+    fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add("response_num_ancestors", self.ancestors.len());
+    }
+}
+
 impl AddScubaResponse for thrift::CommitLookupPushrebaseHistoryResponse {}
 
 impl AddScubaResponse for thrift::CommitHistoryResponse {}

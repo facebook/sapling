@@ -777,6 +777,69 @@ impl SourceControlServiceImpl {
         Ok(is_ancestor_of)
     }
 
+    /// Filter a list of candidate commits to only those that are ancestors
+    /// of the target commit. Uses progressive frontier lowering for efficiency.
+    pub(crate) async fn commit_filter_ancestors(
+        &self,
+        ctx: CoreContext,
+        commit: thrift::CommitSpecifier,
+        params: thrift::CommitFilterAncestorsParams,
+    ) -> Result<thrift::CommitFilterAncestorsResponse, scs_errors::ServiceError> {
+        let num_candidates = params.candidate_ancestor_ids.len();
+        if num_candidates as i64 > thrift::consts::COMMIT_FILTER_ANCESTORS_MAX_CANDIDATES {
+            return Err(scs_errors::invalid_request(format!(
+                "too many candidates ({}), limit is {}",
+                num_candidates,
+                thrift::consts::COMMIT_FILTER_ANCESTORS_MAX_CANDIDATES,
+            ))
+            .into());
+        }
+
+        let (repo, changeset) = self.repo_changeset(ctx, &commit).await?;
+
+        // Resolve all candidate commit IDs to ChangesetIds concurrently
+        let candidate_cs_ids: Vec<ChangesetId> = stream::iter(params.candidate_ancestor_ids)
+            .map(|candidate_id| {
+                borrowed!(repo);
+                async move {
+                    let cs_ctx = repo
+                        .changeset(ChangesetSpecifier::from_request(&candidate_id)?)
+                        .await?
+                        .ok_or_else(|| {
+                            scs_errors::commit_not_found(format!("{:?}", candidate_id))
+                        })?;
+                    Ok::<_, scs_errors::ServiceError>(cs_ctx.id())
+                }
+            })
+            .buffered(CONCURRENCY_LIMIT)
+            .try_collect()
+            .await?;
+
+        // Use the batch filter_ancestors method on the commit graph
+        let ancestor_cs_ids = repo
+            .commit_graph()
+            .filter_ancestors(changeset.ctx(), changeset.id(), candidate_cs_ids)
+            .watched()
+            .await
+            .map_err(MononokeError::from)?;
+
+        // Map to requested identity schemes
+        let id_mapping =
+            map_commit_identities(&repo, ancestor_cs_ids.clone(), &params.identity_schemes)
+                .watched()
+                .await?;
+
+        let ancestors = ancestor_cs_ids
+            .into_iter()
+            .map(|cs_id| id_mapping.get(&cs_id).cloned().unwrap_or_default())
+            .collect();
+
+        Ok(thrift::CommitFilterAncestorsResponse {
+            ancestors,
+            ..Default::default()
+        })
+    }
+
     /// Returns `true` if this commit is public
     pub(crate) async fn commit_is_public(
         &self,

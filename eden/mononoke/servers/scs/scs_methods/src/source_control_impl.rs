@@ -1408,6 +1408,11 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             params: thrift::CommitIsAncestorOfParams,
         ) -> Result<bool, service::CommitIsAncestorOfExn>;
 
+        async fn commit_filter_ancestors(
+            commit: thrift::CommitSpecifier,
+            params: thrift::CommitFilterAncestorsParams,
+        ) -> Result<thrift::CommitFilterAncestorsResponse, service::CommitFilterAncestorsExn>;
+
         async fn commit_is_public(
             commit: thrift::CommitSpecifier,
             params: thrift::CommitIsPublicParams,
