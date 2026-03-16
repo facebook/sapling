@@ -19,6 +19,13 @@ jobs:
         registry: ghcr.io
         username: ${{ github.repository_owner }}
         password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Delete unused images
+      uses: actions/delete-package-versions@v5
+      with:
+        package-name: sapling/manylinux_2_34
+        package-type: container
+        min-versions-to-keep: 0
+        delete-only-untagged-versions: true
     - name: Build and Push Docker Image
       uses: docker/build-push-action@v6
       with:
@@ -28,10 +35,3 @@ jobs:
         platforms: linux/amd64,linux/arm64
         tags: ${{ format('ghcr.io/{0}/manylinux_2_34:latest', github.repository) }}
         provenance: false
-    - name: Delete unused images
-      uses: actions/delete-package-versions@v5
-      with:
-        package-name: sapling/manylinux_2_34
-        package-type: container
-        min-versions-to-keep: 0
-        delete-only-untagged-versions: true
