@@ -480,9 +480,13 @@ async fn reserve_repos_ids(
             Ok(_) => Ok(repo_ids_and_requests),
             Err(e) => {
                 let error_trace = format!("{e:#}");
-                if error_trace.contains("UNIQUE constraint failed")
-                    && error_trace.contains("git_repositories_source_of_truth.repo_name")
-                {
+                // Match both SQLite ("UNIQUE constraint failed") and MySQL
+                // ("Duplicate entry '...' for key 'repo_name_idx'") errors.
+                let is_duplicate = (error_trace.contains("UNIQUE constraint failed")
+                    && error_trace.contains("git_repositories_source_of_truth.repo_name"))
+                    || (error_trace.contains("Duplicate entry")
+                        && error_trace.contains("repo_name_idx"));
+                if is_duplicate {
                     let mut details = Vec::new();
                     for (_id, request) in &repo_ids_and_requests {
                         let repo_name = RepositoryName(request.repo_name.clone());
