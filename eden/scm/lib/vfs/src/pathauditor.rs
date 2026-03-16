@@ -218,7 +218,7 @@ fn valid_windows_component(component: &str, fs_features: FsFeatures) -> bool {
         return true;
     }
     if let Some((l, r)) = component.split_once('~') {
-        if r.chars().any(|c| c.is_numeric()) && WINDOWS_SHORTNAME_ALIASES.contains(&l, true) {
+        if r.chars().any(|c| c.is_numeric()) && WINDOWS_SHORTNAME_ALIASES.contains(l, true) {
             return false;
         }
     }
