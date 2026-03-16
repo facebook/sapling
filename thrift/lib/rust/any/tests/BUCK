@@ -4,7 +4,7 @@ load(
     "thrift_rust_unittest",
 )
 
-oncall("infra_cloud")
+oncall("rust_thrift")
 
 thrift_cxx_library(
     name = "cpp",

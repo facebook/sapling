@@ -5,7 +5,7 @@ load(
     "thrift_rust_unittest",
 )
 
-oncall("rust_foundation")
+oncall("rust_thrift")
 
 thrift_library(
     name = "test_if",

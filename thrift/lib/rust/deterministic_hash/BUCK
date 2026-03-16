@@ -1,6 +1,6 @@
 load("@fbsource//xplat/thrift:defs.bzl", "thrift_rust_library")
 
-oncall("rust_foundation")
+oncall("rust_thrift")
 
 thrift_rust_library(
     name = "fbthrift_deterministic_hash",

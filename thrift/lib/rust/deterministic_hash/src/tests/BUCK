@@ -1,7 +1,7 @@
 load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
 load("@fbsource//xplat/thrift:defs.bzl", "thrift_rust_unittest")
 
-oncall("rust_foundation")
+oncall("rust_thrift")
 
 thrift_library(
     name = "teststructs",

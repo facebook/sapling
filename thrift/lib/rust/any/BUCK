@@ -1,7 +1,7 @@
 load("@fbsource//tools/build_defs:fbsource_utils.bzl", "is_fbcode")
 load("@fbsource//xplat/thrift:defs.bzl", "thrift_rust_library")
 
-oncall("infra_cloud")
+oncall("rust_thrift")
 
 thrift_rust_library(
     name = "any",

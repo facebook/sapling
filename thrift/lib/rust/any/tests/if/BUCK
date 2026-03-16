@@ -1,6 +1,6 @@
 load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
 
-oncall("icsp_infrastructure_release")
+oncall("rust_thrift")
 
 thrift_library(
     name = "test_structs",
