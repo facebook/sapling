@@ -1,10 +1,10 @@
 ---
 oncalls: ['source_control']
-apply_to_regex: 'eden/(mononoke|scm)/.*\.(thrift|rs|py)$'
+apply_to_regex: 'eden/mononoke/(scs/if|megarepo_api/if|derived_data/if|blobstore/if)/.*\.thrift$'
 apply_to_content: 'struct |enum |service |optional|required|deprecated'
 ---
 
-# Wire Protocol Backward Compatibility
+# SCS Thrift Backward Compatibility
 
 **Severity: CRITICAL**
 
@@ -32,6 +32,7 @@ apply_to_content: 'struct |enum |service |optional|required|deprecated'
 - Changes to `.thrift` files in `test/` or `if_test/` directories
 - Adding `(deprecated)` annotations to existing fields
 - Internal-only Thrift definitions (not crossing server boundaries)
+- Changes to EdenAPI (HTTP-based, not Thrift)
 
 ## Examples
 
