@@ -731,3 +731,55 @@ TEST_F(
   EXPECT_EQ(oldFile1Id, file1->getNodeId());
   EXPECT_EQ(oldFile2Id, file2->getNodeId());
 }
+
+// TDD: demonstrates the inverted condition bug in createInodeLoadFailEvent.
+// When inode IS in unloadedInodes_, the function incorrectly returns nullopt
+// (no FAIL event published). Fix in next commit.
+TEST(InodeMap, createInodeLoadFailEventInvertedCondition) {
+  folly::UnboundedQueue<InodeTraceEvent, true, true, false> queue;
+  auto builder = FakeTreeBuilder();
+  builder.setFile("src/test.txt", "this is a test file");
+  TestMount testMount{builder, false};
+  const auto& edenMount = testMount.getEdenMount();
+  auto& trace_bus = edenMount->getInodeTraceBus();
+
+  auto handle = trace_bus.subscribeFunction(
+      fmt::format("loadFailEventTest-{}", edenMount->getPath().basename()),
+      [&](const InodeTraceEvent& event) {
+        if (event.eventType == InodeEventType::LOAD) {
+          queue.enqueue(event);
+        }
+      });
+
+  size_t iteration_count = 0;
+  while (queue.try_dequeue_for(loadTimeoutLimit).has_value() &&
+         iteration_count < maxWaitForLoads) {
+    ++iteration_count;
+    if (iteration_count >= maxWaitForLoads) {
+      throw std::runtime_error{
+          "EdenFS not settling after startup, too many loads"};
+    }
+  }
+
+  auto rootInode = edenMount->getRootInode();
+  auto srcFuture =
+      rootInode->getOrLoadChild("src"_pc, ObjectFetchContext::getNullContext())
+          .semi()
+          .via(testMount.getServerExecutor().get());
+  testMount.drainServerExecutor();
+  EXPECT_FALSE(srcFuture.isReady());
+
+  auto startEvent = queue.try_dequeue_for(loadTimeoutLimit);
+  ASSERT_TRUE(startEvent.has_value());
+  EXPECT_EQ(InodeEventProgress::START, startEvent->progress);
+
+  builder.triggerError("src", std::domain_error("injected error for testing"));
+  testMount.drainServerExecutor();
+  ASSERT_TRUE(srcFuture.isReady());
+  EXPECT_THROW(std::move(srcFuture).get(), std::domain_error);
+
+  // Inverted condition bug: no FAIL event published for valid inodes.
+  auto failEvent = queue.try_dequeue_for(loadTimeoutLimit);
+  EXPECT_FALSE(failEvent.has_value())
+      << "Bug: expected no FAIL event due to inverted condition, but got one";
+}
