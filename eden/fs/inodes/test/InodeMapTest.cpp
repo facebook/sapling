@@ -732,10 +732,9 @@ TEST_F(
   EXPECT_EQ(oldFile2Id, file2->getNodeId());
 }
 
-// TDD: demonstrates the inverted condition bug in createInodeLoadFailEvent.
-// When inode IS in unloadedInodes_, the function incorrectly returns nullopt
-// (no FAIL event published). Fix in next commit.
-TEST(InodeMap, createInodeLoadFailEventInvertedCondition) {
+// Verify createInodeLoadFailEvent publishes a FAIL event when a load fails
+// for an inode in unloadedInodes_.
+TEST(InodeMap, createInodeLoadFailEventPublishesFailEvent) {
   folly::UnboundedQueue<InodeTraceEvent, true, true, false> queue;
   auto builder = FakeTreeBuilder();
   builder.setFile("src/test.txt", "this is a test file");
@@ -778,8 +777,9 @@ TEST(InodeMap, createInodeLoadFailEventInvertedCondition) {
   ASSERT_TRUE(srcFuture.isReady());
   EXPECT_THROW(std::move(srcFuture).get(), std::domain_error);
 
-  // Inverted condition bug: no FAIL event published for valid inodes.
   auto failEvent = queue.try_dequeue_for(loadTimeoutLimit);
-  EXPECT_FALSE(failEvent.has_value())
-      << "Bug: expected no FAIL event due to inverted condition, but got one";
+  ASSERT_TRUE(failEvent.has_value()) << "Expected a LOAD FAIL event";
+  EXPECT_EQ(InodeEventProgress::FAIL, failEvent->progress);
+  EXPECT_EQ(InodeEventType::LOAD, failEvent->eventType);
+  EXPECT_EQ(startEvent->ino, failEvent->ino);
 }

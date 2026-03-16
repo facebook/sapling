@@ -570,7 +570,7 @@ std::optional<InodeTraceEvent> InodeMap::createInodeLoadFailEvent(
     InodeNumber number) {
   auto data = data_.rlock();
   auto it = data->unloadedInodes_.find(number);
-  if (it != data->unloadedInodes_.end()) {
+  if (it == data->unloadedInodes_.end()) {
     XLOGF(
         ERR,
         "failed to find unloaded inode data when finishing load of inode {}",
