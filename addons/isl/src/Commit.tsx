@@ -577,11 +577,7 @@ export const Commit = memo(
         }}
         data-testid={`commit-${commit.hash}`}>
         <div
-          className={
-            'commit-rows' +
-            (isSelected ? ' commit-row-selected' : '') +
-            (isActioning ? ' commit-row-actioning' : '')
-          }
+          className={'commit-rows' + (isActioning ? ' commit-row-actioning' : '')}
           data-testid={isSelected ? 'selected-commit' : undefined}>
           <DragToRebase
             className={
