@@ -4,7 +4,7 @@
 # GNU General Public License found in the LICENSE file in the root
 # directory of this source tree.
 
-Tests wether we can init a new repo and push/pull to Mononoke, specifically
+Tests whether we can init a new repo and push/pull to Mononoke, specifically
 without blobimport. That validates that we can provision new repositories
 without extra work.
   $ . "${TEST_FIXTURES}/library.sh"
