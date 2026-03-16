@@ -1835,6 +1835,9 @@ InodePtr TreeInode::tryRemoveUnloadedChild(
     return node;
   }
 
+  // erase() invalidates the iterator.
+  bool isDir = it->second.isDirectory();
+
   contents->entries.erase(it);
   if (InvalidationRequired::Yes == invalidate) {
     invalidateChannelEntryCache(*contents, inodeName, inodeNumber)
@@ -1843,7 +1846,7 @@ InodePtr TreeInode::tryRemoveUnloadedChild(
   }
 
   updateMtimeAndCtimeLocked(contents->entries, getNow());
-  if (it->second.isDirectory()) {
+  if (isDir) {
     getOverlay()->recursivelyRemoveOverlayDir(inodeNumber);
   } else {
     getOverlay()->removeOverlayFile(inodeNumber);
