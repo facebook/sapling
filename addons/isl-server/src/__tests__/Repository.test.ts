@@ -538,6 +538,9 @@ www/flib/intern/entity/diff/EntPhabricatorDiffSchema.php                        
   });
 
   describe('merge conflicts', () => {
+    jest.spyOn(fs.promises, 'realpath').mockImplementation(async (path, _opts) => {
+      return path as string;
+    });
     const repoInfo: ValidatedRepoInfo = {
       type: 'success',
       command: 'sl',
@@ -1099,6 +1102,7 @@ describe('fetchSubmoduleMap', () => {
     const fetchedSubmoduleMap = repo.getSubmoduleMap();
     expect(fetchedSubmoduleMap).not.toBeUndefined();
     expect(fetchedSubmoduleMap?.get(myRepoRoot)?.value).toEqual(submodules);
+    repo.dispose();
   });
 
   it('no submodules', async () => {
@@ -1115,6 +1119,7 @@ describe('fetchSubmoduleMap', () => {
     const fetchedSubmoduleMap = repo.getSubmoduleMap();
     expect(fetchedSubmoduleMap).not.toBeUndefined();
     expect(fetchedSubmoduleMap?.get(myRepoRoot)?.value).toBeUndefined();
+    repo.dispose();
   });
 
   it('nested', async () => {
@@ -1157,6 +1162,7 @@ describe('fetchSubmoduleMap', () => {
     expect(fetchedSubmoduleMap).not.toBeUndefined();
     expect(fetchedSubmoduleMap?.get(myRepoRoot)?.value).toEqual(submodulesOfMyRepo);
     expect(fetchedSubmoduleMap?.get(submoduleARoot)?.value).toEqual(submodulesOfA);
+    repo.dispose();
   });
 
   it('error', async () => {
@@ -1174,5 +1180,6 @@ describe('fetchSubmoduleMap', () => {
     expect(fetchedSubmoduleMap).not.toBeUndefined();
     expect(fetchedSubmoduleMap?.get(myRepoRoot)?.value).toBeUndefined();
     expect(fetchedSubmoduleMap?.get(myRepoRoot)?.error?.message).toMatch(msg);
+    repo.dispose();
   });
 });
