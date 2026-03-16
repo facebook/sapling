@@ -58,7 +58,4 @@ sparse=!
 
 [git]
 import-remote-refs=m/*
-
-[experimental]
-git-index-fast-path=false
 "#);

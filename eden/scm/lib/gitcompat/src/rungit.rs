@@ -165,7 +165,7 @@ impl RepoGit {
             root,
             parent: BareGit::from_git_dir_and_config(git_dir, config),
             index_fast_path: config
-                .get_or_default("experimental", "git-index-fast-path")
+                .get_or("experimental", "git-index-fast-path", || true)
                 .unwrap_or_default(),
         }
     }

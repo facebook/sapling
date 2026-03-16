@@ -1,7 +1,7 @@
 #require git no-eden
 
   $ . $TESTDIR/git.sh
-  $ setconfig diff.git=true ui.allowemptycommit=true experimental.git-index-fast-path=true
+  $ setconfig diff.git=true ui.allowemptycommit=true
 
 Prepare git repo
 
