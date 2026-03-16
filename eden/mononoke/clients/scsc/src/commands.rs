@@ -21,6 +21,7 @@ base_app::subcommands! {
     mod directory_branch_clusters;
     mod file_diff;
     mod export;
+    mod filter_ancestors;
     mod find_files;
     mod info;
     mod is_ancestor;

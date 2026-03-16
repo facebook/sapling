@@ -12,6 +12,7 @@ use scs_client_raw::thrift;
 use source_control_clients::errors::CommitCommonBaseWithError;
 use source_control_clients::errors::CommitCompareError;
 use source_control_clients::errors::CommitDirectoryBranchClustersError;
+use source_control_clients::errors::CommitFilterAncestorsError;
 use source_control_clients::errors::CommitFindFilesError;
 use source_control_clients::errors::CommitFindFilesStreamError;
 use source_control_clients::errors::CommitFindRestrictedPathsError;
@@ -85,6 +86,7 @@ macro_rules! impl_handle_selection_error {
 impl_handle_selection_error!(CommitCommonBaseWithError);
 impl_handle_selection_error!(CommitCompareError);
 impl_handle_selection_error!(CommitDirectoryBranchClustersError);
+impl_handle_selection_error!(CommitFilterAncestorsError);
 impl_handle_selection_error!(CommitFindFilesError);
 impl_handle_selection_error!(CommitFindFilesStreamError);
 impl_handle_selection_error!(CommitHistoryError);
