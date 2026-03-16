@@ -198,7 +198,9 @@ install-getdeps:
 # test-smartlog.t: output mismatch
 # test-smartlog-interactive.t: smartlog format is different causing output mismatch
 # test-smartlog-interactive-highlighting.t: smartlog format is different causing output mismatch
+# test-agent-advice.t: depends on Meta-internal agent instructions (fb/ module)
 GETDEPS_TEST_EXCLUSION_LIST := \
+  test-agent-advice.t \
   test-biggrep.t \
   test-casecollision.t \
 	test-cats.t \

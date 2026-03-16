@@ -798,7 +798,15 @@ def push(repo, dest, pushnode_to_pairs, force=False):
     if not refspecs:
         return 0
     with repo.lock(), repo.transaction("push"):
-        ret = rungit(repo, ["push", url, *refspecs])
+        configs = None
+        # file:// protocol doesn't support push negotiation. Disable it to
+        # avoid noisy warnings when push.negotiate is enabled globally.
+        if "://" not in url or url.startswith("file://"):
+            configs = ["push.negotiate=false"]
+        gitdir = readgitdir(repo)
+        ret = rungitnorepo(
+            repo.ui, ["push", url, *refspecs], gitdir=gitdir, configs=configs
+        )
         # update remotenames
         if ret == 0:
             name = refname.withremote(remote).remotename
