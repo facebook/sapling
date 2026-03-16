@@ -104,11 +104,15 @@ Create initial manifest.xml referencing all 5 repos with their initial git SHAs
 
 -- Start services --
 
-Enable the diversion JustKnob
+Enable the diversion JustKnobs
   $ merge_just_knobs <<EOF
   > {
   >   "bools": {
   >     "scm/mononoke:divert_aosp_push_to_rl_land_service": true
+  >   },
+  >   "ints": {
+  >     "scm/mononoke:rl_land_poll_interval_secs": 1,
+  >     "scm/mononoke:rl_land_timeout_secs": 30
   >   }
   > }
   > EOF
