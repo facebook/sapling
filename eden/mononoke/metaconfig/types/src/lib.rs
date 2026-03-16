@@ -164,6 +164,8 @@ pub struct CommonConfig {
     pub edenapi_dumper_scuba_table: Option<String>,
     /// Configuration for the async requests system.
     pub async_requests_config: AsyncRequestsConfig,
+    /// Repo name prefix for RL Land Service push diversion.
+    pub rl_land_service_repo_prefix: Option<String>,
 }
 
 /// Configuration for logging of censored blobstore accesses

@@ -573,20 +573,22 @@ def setup_mononoke_config(
     fs.chdir("mononoke-config")
     fs.mkdir("common")
     with fs.open("common/common.toml", "w") as f:
-        f.write(b"")
-    with fs.open("common/commitsyncmap.toml", "w") as f:
-        f.write(b"")
-
-    scuba_censored_logging_path = env.getenv("SCUBA_CENSORED_LOGGING_PATH")
-    if scuba_censored_logging_path:
-        with fs.open("common/common.toml", "w") as f:
+        # Write top-level config keys first, before any TOML table sections,
+        # to avoid the parser assigning keys to the wrong table.
+        scuba_censored_logging_path = env.getenv("SCUBA_CENSORED_LOGGING_PATH")
+        if scuba_censored_logging_path:
             f.write(
                 f'scuba_local_path_censored="{scuba_censored_logging_path}"\n'.encode()
             )
-
-    if not env.getenv("DISABLE_HTTP_CONTROL_API"):
-        with fs.open("common/common.toml", "a") as f:
+        if not env.getenv("DISABLE_HTTP_CONTROL_API"):
             f.write(b"enable_http_control_api=true\n")
+        # Write additional config after top-level keys. This may contain
+        # table sections (e.g., [[global_allowlist]]) or top-level keys.
+        additional = env.getenv("ADDITIONAL_MONONOKE_COMMON_CONFIG")
+        if additional:
+            f.write(f"{additional}\n".encode())
+    with fs.open("common/commitsyncmap.toml", "w") as f:
+        f.write(b"")
 
     with fs.open("common/common.toml", "a") as f:
         f.write(
@@ -623,11 +625,6 @@ identity_data = "{env.getenv("PROXY_ID_DATA")}"
 }
 """
             )
-
-    additional_mononoke_common_config = env.getenv("ADDITIONAL_MONONOKE_COMMON_CONFIG")
-    if additional_mononoke_common_config:
-        with fs.open("common/common.toml", "a") as f:
-            f.write(f"{additional_mononoke_common_config}\n".encode())
 
     with fs.open("common/storage.toml", "w") as f:
         f.write(b"# Start new config\n")

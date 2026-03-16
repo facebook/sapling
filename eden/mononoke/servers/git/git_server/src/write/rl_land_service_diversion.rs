@@ -7,11 +7,12 @@
 
 //! RL Land Service push diversion logic.
 //!
-//! When a push targets an AOSP repo (name starts with `aosp/`) and the
-//! JustKnob `scm/mononoke:divert_aosp_push_to_rl_land_service` is enabled,
-//! the Git server diverts the push to the RL Land Service instead of
-//! performing normal bookmark movement. The RL Land Service coordinates
-//! atomic cross-repo bookmark movements.
+//! When a push targets a repo whose name matches the JustKnob-configured
+//! prefix (`scm/mononoke:rl_land_service_repo_prefix`) and the JustKnob
+//! `scm/mononoke:divert_aosp_push_to_rl_land_service` is enabled, the Git
+//! server diverts the push to the RL Land Service instead of performing
+//! normal bookmark movement. The RL Land Service coordinates atomic
+//! cross-repo bookmark movements.
 //!
 //! This module is gated behind `#[cfg(fbcode_build)]` because the
 //! multi_repo_land Thrift client depends on fbcode-only infrastructure.
@@ -44,13 +45,22 @@ const RL_LAND_SERVICE_TIER: &str = "PLACEHOLDER_RL_LAND_SERVICE_TIER";
 
 /// Check whether this push should be diverted to the RL Land Service.
 ///
-/// AOSP repos (repos whose name starts with `aosp/`) are diverted when the
-/// JustKnob `scm/mononoke:divert_aosp_push_to_rl_land_service` is enabled.
+/// Repos whose name matches the `rl_land_service_repo_prefix` in
+/// CommonConfig are diverted when the JustKnob
+/// `scm/mononoke:divert_aosp_push_to_rl_land_service` is enabled.
 pub fn should_divert_to_rl_land_service(
     request_context: &RepositoryRequestContext,
 ) -> anyhow::Result<bool> {
+    let prefix = match &request_context
+        .repo_configs
+        .common
+        .rl_land_service_repo_prefix
+    {
+        Some(p) if !p.is_empty() => p.as_str(),
+        _ => return Ok(false),
+    };
     let repo_name = request_context.repo.repo_identity().name();
-    let divert = repo_name.starts_with("aosp/")
+    let divert = repo_name.starts_with(prefix)
         && justknobs::eval(
             "scm/mononoke:divert_aosp_push_to_rl_land_service",
             None,

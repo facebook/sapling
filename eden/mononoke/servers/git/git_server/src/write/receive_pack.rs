@@ -207,7 +207,7 @@ async fn push(
             ref_map,
         ));
 
-        // Get the RL land service address if configured (for AOSP push diversion)
+        // Get the RL land service address if configured (for push diversion)
         let multi_repo_land_service_address = git_ctx.multi_repo_land_service_address();
 
         let updated_refs = refs_update(
@@ -272,9 +272,9 @@ async fn refs_update(
     _multi_repo_land_service_address: Option<String>,
 ) -> anyhow::Result<Vec<(RefUpdate, anyhow::Result<()>)>> {
     // Check if this push should be diverted to the RL Land Service.
-    // AOSP repos (repos whose name starts with "aosp/") are diverted when the
-    // JustKnob is enabled, allowing the RL Land Service to coordinate atomic
-    // cross-repo bookmark movements.
+    // Repos matching the configured prefix are diverted when the JustKnob
+    // is enabled, allowing the RL Land Service to coordinate atomic cross-repo
+    // bookmark movements.
     #[cfg(fbcode_build)]
     {
         if super::rl_land_service_diversion::should_divert_to_rl_land_service(&request_context)? {

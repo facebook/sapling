@@ -13,6 +13,9 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
 
+Configure the RL Land Service repo prefix
+  $ export ADDITIONAL_MONONOKE_COMMON_CONFIG='rl_land_service_repo_prefix="aosp/"'
+
 -- Setup repos --
 
 Setup 3 regular code repos (names start with "aosp/" to trigger diversion)

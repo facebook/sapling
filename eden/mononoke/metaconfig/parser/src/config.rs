@@ -681,6 +681,8 @@ fn parse_common_config(
         None => AsyncRequestsConfig::default(),
     };
 
+    let rl_land_service_repo_prefix = common.rl_land_service_repo_prefix.filter(|p| !p.is_empty());
+
     Ok(CommonConfig {
         trusted_parties_hipster_tier,
         trusted_parties_allowlist,
@@ -693,6 +695,7 @@ fn parse_common_config(
         git_memory_upper_bound,
         edenapi_dumper_scuba_table,
         async_requests_config,
+        rl_land_service_repo_prefix,
     })
 }
 
@@ -1743,6 +1746,7 @@ mod test {
                     db_config: None,
                     blobstore: None
                 },
+                rl_land_service_repo_prefix: None,
             }
         );
         assert_eq!(
