@@ -150,9 +150,12 @@ impl HookManager {
         hook_name: &str,
         hook: Box<dyn BookmarkHook>,
         config: HookConfig,
+        bypass_checker: Option<ArcMembershipChecker>,
     ) {
-        self.hooks
-            .insert(hook_name.to_string(), Hook::from_bookmark(hook, config));
+        self.hooks.insert(
+            hook_name.to_string(),
+            Hook::from_bookmark(hook, config, bypass_checker),
+        );
     }
 
     pub fn register_changeset_hook(
@@ -160,9 +163,12 @@ impl HookManager {
         hook_name: &str,
         hook: Box<dyn ChangesetHook>,
         config: HookConfig,
+        bypass_checker: Option<ArcMembershipChecker>,
     ) {
-        self.hooks
-            .insert(hook_name.to_string(), Hook::from_changeset(hook, config));
+        self.hooks.insert(
+            hook_name.to_string(),
+            Hook::from_changeset(hook, config, bypass_checker),
+        );
     }
 
     pub fn register_file_hook(
@@ -170,9 +176,67 @@ impl HookManager {
         hook_name: &str,
         hook: Box<dyn FileHook>,
         config: HookConfig,
+        bypass_checker: Option<ArcMembershipChecker>,
     ) {
-        self.hooks
-            .insert(hook_name.to_string(), Hook::from_file(hook, config));
+        self.hooks.insert(
+            hook_name.to_string(),
+            Hook::from_file(hook, config, bypass_checker),
+        );
+    }
+
+    /// Check if a bypass is authorized given the permission group restriction.
+    /// Returns `Ok(None)` if no bypass was attempted, `Ok(Some(reason))` if
+    /// bypass is authorized, or `Err` if bypass was attempted but the user
+    /// is not a member of the required permission group.
+    async fn check_bypass_authorization(
+        &self,
+        hook: &Hook,
+        ctx: &CoreContext,
+        maybe_pushvars: Option<&HashMap<String, Bytes>>,
+        cs_msg: Option<&str>,
+    ) -> Result<Option<String>> {
+        let bypass = hook.get_config().bypass.as_ref();
+
+        // First check if there's a pushvar bypass
+        let bypass_reason = get_bypassed_by_pushvar_reason(bypass, maybe_pushvars)
+            .or_else(|| cs_msg.and_then(|msg| get_bypassed_by_commit_msg_reason(bypass, msg)));
+
+        let bypass_reason = match bypass_reason {
+            Some(reason) => reason,
+            None => return Ok(None),
+        };
+
+        // Check JustKnob — if disabled, allow bypass without group check
+        let jk_enabled = justknobs::eval(
+            "scm/mononoke:enable_hook_bypass_permission_groups",
+            None,
+            None,
+        )?;
+        if !jk_enabled {
+            return Ok(Some(bypass_reason));
+        }
+
+        // Bypass was triggered and JK is enabled — check permission group
+        let checker = match hook.get_bypass_permission_checker() {
+            Some(checker) => checker,
+            None => return Ok(Some(bypass_reason)),
+        };
+
+        // Check group membership
+        let identities = ctx.metadata().identities();
+        if checker.is_member(identities).await {
+            Ok(Some(bypass_reason))
+        } else {
+            let group_name = bypass
+                .and_then(|b| b.permission_group())
+                .unwrap_or("unknown");
+            Err(anyhow::anyhow!(
+                "Hook bypass not authorized: you are not a member of group '{}'. \
+                 Remove the bypass string/pushvar and let the hook execute normally, \
+                 or request access to the group.",
+                group_name,
+            ))
+        }
     }
 
     pub fn set_hooks_for_bookmark(&mut self, bookmark: BookmarkOrRegex, hooks: Vec<String>) {
@@ -299,12 +363,16 @@ impl HookManager {
             scuba.add("hook", hook_name.to_string());
             scuba.add("to", to.get_changeset_id().to_string());
 
-            if let Some(bypass_reason) =
-                get_bypassed_by_pushvar_reason(hook.get_config().bypass.as_ref(), maybe_pushvars)
+            match self
+                .check_bypass_authorization(hook, ctx, maybe_pushvars, None)
+                .await?
             {
-                scuba.add("bypass_reason", bypass_reason);
-                scuba.log();
-                continue;
+                Some(bypass_reason) => {
+                    scuba.add("bypass_reason", bypass_reason);
+                    scuba.log();
+                    continue;
+                }
+                None => {}
             }
 
             for future in hook.get_futures_for_bookmark_hooks(
@@ -352,7 +420,7 @@ impl HookManager {
             scuba.add("user", user);
         }
 
-        let (batched, individual) = hooks
+        let resolved_hooks = hooks
             .map(|hook_name| {
                 let hook = self
                     .hooks
@@ -360,19 +428,56 @@ impl HookManager {
                     .ok_or_else(|| HookManagerError::NoSuchHook(hook_name.to_string()))?;
                 Ok((hook_name, hook))
             })
-            // Collapse out if an error happened
-            .collect::<Result<Vec<_>>>()?
+            .collect::<Result<Vec<_>>>()?;
+
+        // Check bypass authorization for each hook (async due to group membership check).
+        // Hooks that are fully bypassed via pushvar are skipped entirely.
+        let mut authorized_hooks = Vec::new();
+        for (hook_name, hook) in resolved_hooks {
+            match self
+                .check_bypass_authorization(hook, ctx, maybe_pushvars, None)
+                .await?
+            {
+                Some(bypass_reason) => {
+                    for cs in changesets {
+                        log_bypassed_changeset(&scuba, cs, &bypass_reason);
+                    }
+                }
+                None => {
+                    authorized_hooks.push((hook_name, hook));
+                }
+            }
+        }
+
+        // For hooks that weren't fully bypassed via pushvar, check per-changeset
+        // commit message bypass with group authorization.
+        let mut hooks_with_changesets = Vec::new();
+        for (hook_name, hook) in authorized_hooks {
+            let mut filtered_changesets = Vec::new();
+            for cs in changesets {
+                match self
+                    .check_bypass_authorization(
+                        hook,
+                        ctx,
+                        None, // no pushvars — only check commit message
+                        Some(cs.message()),
+                    )
+                    .await?
+                {
+                    Some(bypass_reason) => {
+                        log_bypassed_changeset(&scuba, cs, &bypass_reason);
+                    }
+                    None => {
+                        filtered_changesets.push(cs);
+                    }
+                }
+            }
+            hooks_with_changesets.push((hook_name, hook, filtered_changesets));
+        }
+
+        let (batched, individual) = hooks_with_changesets
             .into_iter()
-            // Skip any hook that's entirely bypassed due to a pushvar
-            .filter(|(_hook_name, hook)| {
-                log_if_bypassed_by_pushvar(&scuba, hook, changesets, maybe_pushvars)
-            })
-            .map(|(hook_name, hook)| {
-                // Skip any changeset that explicitly bypasses this hook in its commit message
-                let changesets = changesets
-                    .iter()
-                    .filter(|cs| log_if_bypassed_by_commit_msg(&scuba, hook, cs))
-                    .collect::<Vec<_>>();
+            .map(|(hook_name, hook, changesets)| {
                 cloned!(mut scuba);
                 scuba.add("hook", hook_name.to_string());
                 hook.get_futures_for_changeset_or_file_hooks(
@@ -421,40 +526,6 @@ impl HookManager {
             .into_iter()
             .chain(batched_res.into_iter())
             .collect())
-    }
-}
-
-fn log_if_bypassed_by_commit_msg(
-    scuba: &MononokeScubaSampleBuilder,
-    hook: &Hook,
-    cs: &BonsaiChangeset,
-) -> bool {
-    if let Some(bypass_reason) =
-        get_bypassed_by_commit_msg_reason(hook.get_config().bypass.as_ref(), cs.message())
-    {
-        log_bypassed_changeset(scuba, cs, &bypass_reason);
-        false
-    } else {
-        true
-    }
-}
-
-fn log_if_bypassed_by_pushvar(
-    scuba: &MononokeScubaSampleBuilder,
-    hook: &Hook,
-    changesets: &[BonsaiChangeset],
-    maybe_pushvars: Option<&HashMap<String, Bytes>>,
-) -> bool {
-    if let Some(bypass_reason) =
-        get_bypassed_by_pushvar_reason(hook.get_config().bypass.as_ref(), maybe_pushvars)
-    {
-        // Log all bypassed hooks. No need to be async
-        for cs in changesets {
-            log_bypassed_changeset(scuba, cs, &bypass_reason);
-        }
-        false
-    } else {
-        true
     }
 }
 
@@ -524,9 +595,17 @@ impl<'a> HooksOutcome<'a> {
 }
 
 enum Hook {
-    Bookmark(Box<dyn BookmarkHook>, HookConfig),
-    Changeset(Box<dyn ChangesetHook>, HookConfig),
-    File(Box<dyn FileHook>, HookConfig),
+    Bookmark(
+        Box<dyn BookmarkHook>,
+        HookConfig,
+        Option<ArcMembershipChecker>,
+    ),
+    Changeset(
+        Box<dyn ChangesetHook>,
+        HookConfig,
+        Option<ArcMembershipChecker>,
+    ),
+    File(Box<dyn FileHook>, HookConfig, Option<ArcMembershipChecker>),
 }
 
 pub(crate) enum HookInstance<'a> {
@@ -627,23 +706,43 @@ impl<'a> HookInstance<'a> {
 }
 
 impl Hook {
-    pub fn from_bookmark(hook: Box<dyn BookmarkHook>, config: HookConfig) -> Self {
-        Self::Bookmark(hook, config)
+    pub fn from_bookmark(
+        hook: Box<dyn BookmarkHook>,
+        config: HookConfig,
+        bypass_checker: Option<ArcMembershipChecker>,
+    ) -> Self {
+        Self::Bookmark(hook, config, bypass_checker)
     }
 
-    pub fn from_changeset(hook: Box<dyn ChangesetHook>, config: HookConfig) -> Self {
-        Self::Changeset(hook, config)
+    pub fn from_changeset(
+        hook: Box<dyn ChangesetHook>,
+        config: HookConfig,
+        bypass_checker: Option<ArcMembershipChecker>,
+    ) -> Self {
+        Self::Changeset(hook, config, bypass_checker)
     }
 
-    pub fn from_file(hook: Box<dyn FileHook>, config: HookConfig) -> Self {
-        Self::File(hook, config)
+    pub fn from_file(
+        hook: Box<dyn FileHook>,
+        config: HookConfig,
+        bypass_checker: Option<ArcMembershipChecker>,
+    ) -> Self {
+        Self::File(hook, config, bypass_checker)
     }
 
     pub fn get_config(&self) -> &HookConfig {
         match self {
-            Self::Bookmark(_, config) => config,
-            Self::Changeset(_, config) => config,
-            Self::File(_, config) => config,
+            Self::Bookmark(_, config, _) => config,
+            Self::Changeset(_, config, _) => config,
+            Self::File(_, config, _) => config,
+        }
+    }
+
+    pub fn get_bypass_permission_checker(&self) -> Option<&ArcMembershipChecker> {
+        match self {
+            Self::Bookmark(_, _, checker)
+            | Self::Changeset(_, _, checker)
+            | Self::File(_, _, checker) => checker.as_ref(),
         }
     }
 
@@ -662,7 +761,7 @@ impl Hook {
         let mut futures = Vec::new();
 
         match self {
-            Self::Bookmark(hook, _) => futures.push(HookInstance::Bookmark(&**hook).run_hook(
+            Self::Bookmark(hook, _, _) => futures.push(HookInstance::Bookmark(&**hook).run_hook(
                 ctx,
                 repo,
                 bookmark,
@@ -693,7 +792,7 @@ impl Hook {
         log_only: bool,
     ) -> HooksOutcome<'cs> {
         match self {
-            Self::Changeset(hook, _) => HookInstance::Changeset(&**hook)
+            Self::Changeset(hook, _, _) => HookInstance::Changeset(&**hook)
                 .run_changeset_hook_on_many_changesets(
                     ctx,
                     repo,
@@ -705,7 +804,7 @@ impl Hook {
                     push_authored_by,
                     log_only,
                 ),
-            Self::File(hook, _) => HooksOutcome::Individual(
+            Self::File(hook, _, _) => HooksOutcome::Individual(
                 changesets
                     .iter()
                     .flat_map(|cs| {

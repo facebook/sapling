@@ -366,7 +366,7 @@ async fn run_changeset_hooks_with_mgr(
 ) {
     let mut hook_manager = setup_hook_manager(ctx.fb, repo, bookmarks, regexes).await;
     for (hook_name, hook) in hooks {
-        hook_manager.register_changeset_hook(&hook_name, hook, Default::default());
+        hook_manager.register_changeset_hook(&hook_name, hook, Default::default(), None);
     }
 
     let changeset = changeset.unwrap_or_else(default_changeset);

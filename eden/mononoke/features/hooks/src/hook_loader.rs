@@ -92,16 +92,40 @@ pub async fn load_hooks(
             }
         };
 
+        let bypass_checker = match hook
+            .config
+            .bypass
+            .as_ref()
+            .and_then(|b| b.permission_group().map(|s| s.to_string()))
+        {
+            Some(group_name) => {
+                let checker = acl_provider.group(&group_name).await.with_context(|| {
+                    format!(
+                        "Failed to load bypass permission group '{}' for hook '{}'",
+                        group_name, hook.name,
+                    )
+                })?;
+                Some(checker.into())
+            }
+            None => None,
+        };
+
         match rust_hook {
-            BookmarkHook(rust_hook) => {
-                hook_manager.register_bookmark_hook(&hook.name, rust_hook, hook.config)
-            }
+            BookmarkHook(rust_hook) => hook_manager.register_bookmark_hook(
+                &hook.name,
+                rust_hook,
+                hook.config,
+                bypass_checker,
+            ),
             FileHook(rust_hook) => {
-                hook_manager.register_file_hook(&hook.name, rust_hook, hook.config)
+                hook_manager.register_file_hook(&hook.name, rust_hook, hook.config, bypass_checker)
             }
-            ChangesetHook(rust_hook) => {
-                hook_manager.register_changeset_hook(&hook.name, rust_hook, hook.config)
-            }
+            ChangesetHook(rust_hook) => hook_manager.register_changeset_hook(
+                &hook.name,
+                rust_hook,
+                hook.config,
+                bypass_checker,
+            ),
         }
 
         hook_set.insert(hook.name.clone());

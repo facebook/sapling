@@ -18,6 +18,8 @@ use fbinit::FacebookInit;
 use maplit::hashmap;
 use maplit::hashset;
 use metaconfig_types::ComparableRegex;
+use metaconfig_types::HookBypass;
+use metaconfig_types::HookConfig;
 use metaconfig_types::HookManagerParams;
 use mononoke_macros::mononoke;
 use mononoke_types::BasicFileChange;
@@ -35,7 +37,9 @@ use mononoke_types_mocks::contentid::ONES_CTID;
 use mononoke_types_mocks::contentid::SIXES_CTID;
 use mononoke_types_mocks::contentid::THREES_CTID;
 use mononoke_types_mocks::contentid::TWOS_CTID;
+use permission_checker::AlwaysMember;
 use permission_checker::InternalAclProvider;
+use permission_checker::NeverMember;
 use repo_permission_checker::NeverAllowRepoPermissionChecker;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sorted_vector_map::sorted_vector_map;
@@ -319,7 +323,7 @@ async fn run_changeset_hooks(
 ) {
     let mut hook_manager = setup_hook_manager(ctx.fb, bookmarks, regexes).await;
     for (hook_name, hook) in hooks {
-        hook_manager.register_changeset_hook(&hook_name, hook, Default::default());
+        hook_manager.register_changeset_hook(&hook_name, hook, Default::default(), None);
     }
 
     let changeset = default_changeset();
@@ -352,7 +356,7 @@ async fn run_file_hooks(
     let cs = default_changeset();
     let mut hook_manager = setup_hook_manager(ctx.fb, bookmarks, regexes).await;
     for (hook_name, hook) in hooks {
-        hook_manager.register_file_hook(&hook_name, hook, Default::default());
+        hook_manager.register_file_hook(&hook_name, hook, Default::default(), None);
     }
     let res = hook_manager
         .run_changesets_hooks_for_bookmark(
@@ -653,4 +657,367 @@ async fn test_file_hook_is_symlink(fb: FacebookInit) {
         },
     };
     run_file_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected).await;
+}
+
+// =========================================================================
+// Bypass permission group tests
+// =========================================================================
+
+fn bypass_permission_groups_jk(enabled: bool) -> justknobs::test_helpers::JustKnobsInMemory {
+    justknobs::test_helpers::JustKnobsInMemory::new(
+        [(
+            "scm/mononoke:enable_hook_bypass_permission_groups".to_string(),
+            justknobs::test_helpers::KnobVal::Bool(enabled),
+        )]
+        .into(),
+    )
+}
+
+fn changeset_with_bypass_msg() -> BonsaiChangeset {
+    BonsaiChangesetMut {
+        author: "Test User <test@fb.com>".to_string(),
+        author_date: DateTime::from_timestamp(1584887580, 0).expect("Getting timestamp"),
+        message: "This commit has @bypass_hook in the message".to_string(),
+        file_changes: sorted_vector_map! {
+            to_mpath("dir1/file.txt") => FileChange::tracked(ONES_CTID, FileType::Regular, 10, None, GitLfs::FullContent),
+        },
+        ..Default::default()
+    }
+    .freeze()
+    .expect("Created changeset")
+}
+
+fn bypass_config_no_group() -> HookConfig {
+    HookConfig {
+        bypass: Some(HookBypass::new_with_commit_msg("@bypass_hook".to_string())),
+        ..Default::default()
+    }
+}
+
+fn bypass_config_with_group() -> HookConfig {
+    HookConfig {
+        bypass: Some(
+            HookBypass::new_with_commit_msg("@bypass_hook".to_string())
+                .with_permission_group(Some("test_bypass_group".to_string())),
+        ),
+        ..Default::default()
+    }
+}
+
+fn pushvar_bypass_config_with_group() -> HookConfig {
+    HookConfig {
+        bypass: Some(
+            HookBypass::new_with_pushvar("BYPASS".to_string(), "true".to_string())
+                .with_permission_group(Some("test_bypass_group".to_string())),
+        ),
+        ..Default::default()
+    }
+}
+
+/// No group configured + bypass string present -> bypassed (preserves today's behavior)
+#[mononoke::fbinit_test]
+async fn test_bypass_no_group_preserves_behavior(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
+    let mut hook_manager = setup_hook_manager(fb, hashmap! {}, hashmap! {}).await;
+    hook_manager.register_changeset_hook(
+        "hook1",
+        always_rejecting_changeset_hook(),
+        bypass_config_no_group(),
+        None,
+    );
+    hook_manager.set_hooks_for_bookmark(
+        BookmarkKey::new("bm1").unwrap().into(),
+        vec!["hook1".to_string()],
+    );
+
+    let cs = changeset_with_bypass_msg();
+    let res = hook_manager
+        .run_changesets_hooks_for_bookmark(
+            &ctx,
+            &[cs],
+            &BookmarkKey::new("bm1").unwrap(),
+            None,
+            CrossRepoPushSource::NativeToThisRepo,
+            PushAuthoredBy::User,
+        )
+        .await
+        .unwrap();
+    assert!(
+        res.is_empty(),
+        "Expected hook to be bypassed, got {} results",
+        res.len()
+    );
+}
+
+/// No group configured + no bypass string -> hook runs (preserves today's behavior)
+#[mononoke::fbinit_test]
+async fn test_bypass_no_group_no_string_runs_hook(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
+    let mut hook_manager = setup_hook_manager(fb, hashmap! {}, hashmap! {}).await;
+    hook_manager.register_changeset_hook(
+        "hook1",
+        always_rejecting_changeset_hook(),
+        bypass_config_no_group(),
+        None,
+    );
+    hook_manager.set_hooks_for_bookmark(
+        BookmarkKey::new("bm1").unwrap().into(),
+        vec!["hook1".to_string()],
+    );
+
+    let cs = default_changeset();
+    let res = hook_manager
+        .run_changesets_hooks_for_bookmark(
+            &ctx,
+            &[cs],
+            &BookmarkKey::new("bm1").unwrap(),
+            None,
+            CrossRepoPushSource::NativeToThisRepo,
+            PushAuthoredBy::User,
+        )
+        .await
+        .unwrap();
+    assert_eq!(res.len(), 1, "Expected hook to run");
+    assert!(
+        matches!(res[0].get_execution(), HookExecution::Rejected(_)),
+        "Expected rejection"
+    );
+}
+
+/// Group configured + bypass string + user in group -> bypassed
+#[mononoke::fbinit_test]
+async fn test_bypass_with_group_authorized_user(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
+    let mut hook_manager = setup_hook_manager(fb, hashmap! {}, hashmap! {}).await;
+    hook_manager.register_changeset_hook(
+        "hook1",
+        always_rejecting_changeset_hook(),
+        bypass_config_with_group(),
+        Some(AlwaysMember::new().into()),
+    );
+    hook_manager.set_hooks_for_bookmark(
+        BookmarkKey::new("bm1").unwrap().into(),
+        vec!["hook1".to_string()],
+    );
+
+    let cs = changeset_with_bypass_msg();
+    let res = justknobs::test_helpers::with_just_knobs_async(
+        bypass_permission_groups_jk(true),
+        Box::pin(hook_manager.run_changesets_hooks_for_bookmark(
+            &ctx,
+            &[cs],
+            &BookmarkKey::new("bm1").unwrap(),
+            None,
+            CrossRepoPushSource::NativeToThisRepo,
+            PushAuthoredBy::User,
+        )),
+    )
+    .await
+    .unwrap();
+    assert!(
+        res.is_empty(),
+        "Expected hook to be bypassed for authorized user"
+    );
+}
+
+/// Group configured + bypass string + user NOT in group -> rejected with error
+#[mononoke::fbinit_test]
+async fn test_bypass_with_group_unauthorized_user(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
+    let mut hook_manager = setup_hook_manager(fb, hashmap! {}, hashmap! {}).await;
+    hook_manager.register_changeset_hook(
+        "hook1",
+        always_rejecting_changeset_hook(),
+        bypass_config_with_group(),
+        Some(NeverMember::new().into()),
+    );
+    hook_manager.set_hooks_for_bookmark(
+        BookmarkKey::new("bm1").unwrap().into(),
+        vec!["hook1".to_string()],
+    );
+
+    let cs = changeset_with_bypass_msg();
+    let res = justknobs::test_helpers::with_just_knobs_async(
+        bypass_permission_groups_jk(true),
+        Box::pin(hook_manager.run_changesets_hooks_for_bookmark(
+            &ctx,
+            &[cs],
+            &BookmarkKey::new("bm1").unwrap(),
+            None,
+            CrossRepoPushSource::NativeToThisRepo,
+            PushAuthoredBy::User,
+        )),
+    )
+    .await;
+    assert!(
+        res.is_err(),
+        "Expected error when unauthorized user tries to bypass"
+    );
+    let err_msg = res.unwrap_err().to_string();
+    assert!(
+        err_msg.contains("not a member of group"),
+        "Expected group membership error, got: {}",
+        err_msg
+    );
+}
+
+/// Group configured + bypass string + user NOT in group + JK disabled -> bypassed
+/// (JK kills the feature, falling back to today's behavior)
+#[mononoke::fbinit_test]
+async fn test_bypass_with_group_jk_disabled(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
+    let mut hook_manager = setup_hook_manager(fb, hashmap! {}, hashmap! {}).await;
+    hook_manager.register_changeset_hook(
+        "hook1",
+        always_rejecting_changeset_hook(),
+        bypass_config_with_group(),
+        Some(NeverMember::new().into()),
+    );
+    hook_manager.set_hooks_for_bookmark(
+        BookmarkKey::new("bm1").unwrap().into(),
+        vec!["hook1".to_string()],
+    );
+
+    let cs = changeset_with_bypass_msg();
+    let res = justknobs::test_helpers::with_just_knobs_async(
+        bypass_permission_groups_jk(false),
+        Box::pin(hook_manager.run_changesets_hooks_for_bookmark(
+            &ctx,
+            &[cs],
+            &BookmarkKey::new("bm1").unwrap(),
+            None,
+            CrossRepoPushSource::NativeToThisRepo,
+            PushAuthoredBy::User,
+        )),
+    )
+    .await
+    .unwrap();
+    assert!(
+        res.is_empty(),
+        "Expected bypass to succeed when JK is disabled (today's behavior)"
+    );
+}
+
+/// Group configured + no bypass string -> hook runs normally
+#[mononoke::fbinit_test]
+async fn test_bypass_with_group_no_bypass_string(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
+    let mut hook_manager = setup_hook_manager(fb, hashmap! {}, hashmap! {}).await;
+    hook_manager.register_changeset_hook(
+        "hook1",
+        always_rejecting_changeset_hook(),
+        bypass_config_with_group(),
+        Some(NeverMember::new().into()),
+    );
+    hook_manager.set_hooks_for_bookmark(
+        BookmarkKey::new("bm1").unwrap().into(),
+        vec!["hook1".to_string()],
+    );
+
+    let cs = default_changeset();
+    let res = justknobs::test_helpers::with_just_knobs_async(
+        bypass_permission_groups_jk(true),
+        Box::pin(hook_manager.run_changesets_hooks_for_bookmark(
+            &ctx,
+            &[cs],
+            &BookmarkKey::new("bm1").unwrap(),
+            None,
+            CrossRepoPushSource::NativeToThisRepo,
+            PushAuthoredBy::User,
+        )),
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        res.len(),
+        1,
+        "Expected hook to run normally when no bypass attempted"
+    );
+    assert!(
+        matches!(res[0].get_execution(), HookExecution::Rejected(_)),
+        "Expected rejection from hook"
+    );
+}
+
+/// Group configured + pushvar bypass + user in group -> bypassed
+#[mononoke::fbinit_test]
+async fn test_pushvar_bypass_with_group_authorized(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
+    let mut hook_manager = setup_hook_manager(fb, hashmap! {}, hashmap! {}).await;
+    hook_manager.register_changeset_hook(
+        "hook1",
+        always_rejecting_changeset_hook(),
+        pushvar_bypass_config_with_group(),
+        Some(AlwaysMember::new().into()),
+    );
+    hook_manager.set_hooks_for_bookmark(
+        BookmarkKey::new("bm1").unwrap().into(),
+        vec!["hook1".to_string()],
+    );
+
+    let cs = default_changeset();
+    let pushvars = hashmap! {
+        "BYPASS".to_string() => bytes::Bytes::from("true"),
+    };
+    let res = justknobs::test_helpers::with_just_knobs_async(
+        bypass_permission_groups_jk(true),
+        Box::pin(hook_manager.run_changesets_hooks_for_bookmark(
+            &ctx,
+            &[cs],
+            &BookmarkKey::new("bm1").unwrap(),
+            Some(&pushvars),
+            CrossRepoPushSource::NativeToThisRepo,
+            PushAuthoredBy::User,
+        )),
+    )
+    .await
+    .unwrap();
+    assert!(
+        res.is_empty(),
+        "Expected hook to be bypassed via pushvar for authorized user"
+    );
+}
+
+/// Group configured + pushvar bypass + user NOT in group -> rejected
+#[mononoke::fbinit_test]
+async fn test_pushvar_bypass_with_group_unauthorized(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
+    let mut hook_manager = setup_hook_manager(fb, hashmap! {}, hashmap! {}).await;
+    hook_manager.register_changeset_hook(
+        "hook1",
+        always_rejecting_changeset_hook(),
+        pushvar_bypass_config_with_group(),
+        Some(NeverMember::new().into()),
+    );
+    hook_manager.set_hooks_for_bookmark(
+        BookmarkKey::new("bm1").unwrap().into(),
+        vec!["hook1".to_string()],
+    );
+
+    let cs = default_changeset();
+    let pushvars = hashmap! {
+        "BYPASS".to_string() => bytes::Bytes::from("true"),
+    };
+    let res = justknobs::test_helpers::with_just_knobs_async(
+        bypass_permission_groups_jk(true),
+        Box::pin(hook_manager.run_changesets_hooks_for_bookmark(
+            &ctx,
+            &[cs],
+            &BookmarkKey::new("bm1").unwrap(),
+            Some(&pushvars),
+            CrossRepoPushSource::NativeToThisRepo,
+            PushAuthoredBy::User,
+        )),
+    )
+    .await;
+    assert!(
+        res.is_err(),
+        "Expected error when unauthorized user tries pushvar bypass"
+    );
+    let err_msg = res.unwrap_err().to_string();
+    assert!(
+        err_msg.contains("not a member of group"),
+        "Expected group membership error, got: {}",
+        err_msg
+    );
 }
