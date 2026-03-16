@@ -27,7 +27,7 @@ import {atomFamilyWeak, atomLoadableWithRefresh, configBackedAtom, useAtomGet} f
 import {PullRevOperation} from '../operations/PullRevOperation';
 import {useRunOperation} from '../operationsState';
 import platform from '../platform';
-import {inMergeConflicts} from '../serverAPIState';
+import {inMergeConflicts, repositoryInfo} from '../serverAPIState';
 import {exactRevset} from '../types';
 import {codeReviewProvider, diffSummary} from './CodeReviewInfo';
 import './DiffBadge.css';
@@ -181,7 +181,7 @@ function DiffInfoInner({
     <div
       className={`diff-info ${provider.name}-diff-info`}
       data-testid={`${provider.name}-diff-info`}>
-      <DiffSignalSummary diff={info} diffId={diffId} />
+      <DiffSignalSummary commit={commit} diff={info} diffId={diffId} />
       <DiffBadge provider={provider} diff={info} url={info.url} syncStatus={syncStatus} />
       {provider.DiffLandButtonContent && !isInMergeConflicts && (
         <provider.DiffLandButtonContent diff={info} commit={commit} />
@@ -347,9 +347,18 @@ const diffSignalCountFamily = atomFamilyWeak((diffId: DiffId) =>
   }),
 );
 
-function DiffSignalSummary({diff, diffId}: {diff: DiffSummary; diffId?: DiffId}) {
+function DiffSignalSummary({
+  commit,
+  diff,
+  diffId,
+}: {
+  commit: CommitInfo;
+  diff: DiffSummary;
+  diffId?: DiffId;
+}) {
   const signalDetailsEnabled = useFeatureFlagSync(Internal.featureFlags?.DiffSignalDetails);
   const [countLoadable, refreshCount] = useAtom(diffSignalCountFamily(diffId ?? ''));
+  const repo = useAtomValue(repositoryInfo);
 
   // Fetch signal count using the atom (only if feature is enabled and we have a diffId)
   // We fetch for all signal states except 'no-signal' and 'deferred' since even 'pass'
@@ -441,13 +450,20 @@ function DiffSignalSummary({diff, diffId}: {diff: DiffSummary; diffId?: DiffId})
 
   if (signalDetailsEnabled && diffId != null && Internal.DiffSignalDetailsComponent != null) {
     const DiffSignalDetailsComponent = Internal.DiffSignalDetailsComponent;
+    // Get diffVersionNumber from diff if available (for phabricator diffs)
+    const diffVersionNumber = Internal.getDiffVersionNumber?.(diff, commit.hash);
     return (
       <Tooltip
         trigger="click"
         title={tooltip}
         component={() => (
           <Suspense fallback={<Icon icon="loading" />}>
-            <DiffSignalDetailsComponent diffId={diffId} />
+            <DiffSignalDetailsComponent
+              commit={commit}
+              diffId={diffId}
+              diffVersionNumber={diffVersionNumber}
+              repoPath={repo?.repoRoot}
+            />
           </Suspense>
         )}>
         <Button icon>
