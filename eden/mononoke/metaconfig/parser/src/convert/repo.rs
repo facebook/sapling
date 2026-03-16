@@ -185,6 +185,8 @@ impl Convert for RawHookConfig {
             })
             .transpose()?;
 
+        let permission_group = self.bypass_permission_group;
+
         let bypass = match (bypass_commit_message, bypass_pushvar) {
             (Some(msg), None) => Some(HookBypass::new_with_commit_msg(msg)),
             (None, Some((name, value))) => Some(HookBypass::new_with_pushvar(name, value)),
@@ -193,6 +195,7 @@ impl Convert for RawHookConfig {
             )),
             (None, None) => None,
         };
+        let bypass = bypass.map(|b| b.with_permission_group(permission_group));
 
         let config = HookConfig {
             bypass,

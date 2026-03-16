@@ -746,6 +746,9 @@ pub struct HookBypass {
     commit_message_bypass: Option<String>,
     /// Bypass that checks that a string is in the commit message
     pushvar_name_and_value: Option<(String, String)>,
+    /// AMP group restricting who can use bypass. When set, only group members
+    /// can bypass this hook.
+    permission_group: Option<String>,
 }
 
 impl HookBypass {
@@ -754,6 +757,7 @@ impl HookBypass {
         Self {
             commit_message_bypass: Some(msg),
             pushvar_name_and_value: None,
+            permission_group: None,
         }
     }
 
@@ -762,6 +766,7 @@ impl HookBypass {
         Self {
             commit_message_bypass: None,
             pushvar_name_and_value: Some((name, value)),
+            permission_group: None,
         }
     }
 
@@ -774,6 +779,7 @@ impl HookBypass {
         Self {
             commit_message_bypass: Some(msg),
             pushvar_name_and_value: Some((pushvar_name, pushvar_value)),
+            permission_group: None,
         }
     }
 
@@ -787,6 +793,17 @@ impl HookBypass {
         self.pushvar_name_and_value
             .as_ref()
             .map(|name_and_value| (&name_and_value.0, &name_and_value.1))
+    }
+
+    /// Set the permission group (builder pattern)
+    pub fn with_permission_group(mut self, group: Option<String>) -> Self {
+        self.permission_group = group;
+        self
+    }
+
+    /// Get the permission group
+    pub fn permission_group(&self) -> Option<&str> {
+        self.permission_group.as_deref()
     }
 }
 
