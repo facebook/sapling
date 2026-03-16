@@ -108,7 +108,7 @@ py_class!(pub class config |py| {
                 let pypath = if path.as_os_str().is_empty() {
                     PyPathBuf::from(String::from("<builtin>"))
                 } else {
-                    let path = util::path::strip_unc_prefix(&path);
+                    let path = util::path::strip_unc_prefix(path);
                     path.try_into().unwrap()
                 };
                 (pypath, range.start, range.end, line)

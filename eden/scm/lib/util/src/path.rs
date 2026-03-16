@@ -141,9 +141,13 @@ pub fn symlink_dir(src: &Path, dst: &Path) -> io::Result<()> {
     symlink_file(src, dst)
 }
 
-/// Removes the UNC prefix `\\?\` on Windows. Does nothing on unices.
-pub fn strip_unc_prefix(path: &Path) -> &Path {
-    path.strip_prefix(r"\\?\").unwrap_or(path)
+/// Removes the extended-length path prefix `\\?\` on Windows.
+/// Returns the path unchanged on non-Windows or if no prefix is present.
+pub fn strip_unc_prefix(path: PathBuf) -> PathBuf {
+    path.to_string_lossy()
+        .strip_prefix(r"\\?\")
+        .map(PathBuf::from)
+        .unwrap_or(path)
 }
 
 /// Return the absolute and normalized path without accessing the filesystem.
@@ -1183,22 +1187,19 @@ mod tests {
     #[test]
     fn test_strip_unc_prefix_with_prefix() {
         let path = PathBuf::from(r"\\?\C:\open\test1");
-        // TODO: fix this test, the below line is not correct
-        assert_eq!(strip_unc_prefix(&path), PathBuf::from(r"\\?\C:\open\test1"));
-        // TODO: the below test is correct
-        // assert_eq!(strip_unc_prefix(&path), PathBuf::from(r"C:\open\test1"));
+        assert_eq!(strip_unc_prefix(path), PathBuf::from(r"C:\open\test1"));
     }
 
     #[test]
     fn test_strip_unc_prefix_without_prefix() {
         let path = PathBuf::from(r"C:\open\test1");
-        assert_eq!(strip_unc_prefix(&path), PathBuf::from(r"C:\open\test1"));
+        assert_eq!(strip_unc_prefix(path), PathBuf::from(r"C:\open\test1"));
     }
 
     #[test]
     fn test_strip_unc_prefix_unix_path() {
         let path = PathBuf::from("/home/user/repo");
-        assert_eq!(strip_unc_prefix(&path), PathBuf::from("/home/user/repo"));
+        assert_eq!(strip_unc_prefix(path), PathBuf::from("/home/user/repo"));
     }
 
     #[test]
@@ -1206,9 +1207,6 @@ mod tests {
         // UNC network paths (\\server\share) should NOT be stripped —
         // only the extended-length prefix \\?\ should be removed.
         let path = PathBuf::from(r"\\server\share\dir");
-        assert_eq!(
-            strip_unc_prefix(&path),
-            PathBuf::from(r"\\server\share\dir")
-        );
+        assert_eq!(strip_unc_prefix(path), PathBuf::from(r"\\server\share\dir"));
     }
 }

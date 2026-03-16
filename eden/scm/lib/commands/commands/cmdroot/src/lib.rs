@@ -30,7 +30,7 @@ pub fn run(ctx: ReqCtx<RootOpts>, repo: &Repo) -> Result<u8> {
 
     ctx.io().write(format!(
         "{}\n",
-        util::path::strip_unc_prefix(path).display()
+        util::path::strip_unc_prefix(path.to_path_buf()).display()
     ))?;
     Ok(0)
 }
