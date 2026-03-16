@@ -1,6 +1,6 @@
 ---
 oncalls: ['source_control']
-apply_to_regex: 'eden/(mononoke|scm)/.*\.rs$'
+apply_to_regex: 'eden/(scm|fs)/.*\.rs$'
 apply_to_content: 'sort|dedup|DirEntry|inode|tree_entry|manifest|case.insensitive|case_insensitive'
 ---
 

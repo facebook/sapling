@@ -1,6 +1,6 @@
 ---
 oncalls: ['source_control']
-apply_to_regex: 'eden/(mononoke|scm)/.*\.rs$'
+apply_to_regex: 'eden/mononoke/.*\.rs$'
 apply_to_content: 'return Err|bail!|anyhow!|reject|Reject|InvalidRequest|BadRequest'
 ---
 

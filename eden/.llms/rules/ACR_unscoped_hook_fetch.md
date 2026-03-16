@@ -1,6 +1,6 @@
 ---
 oncalls: ['source_control']
-apply_to_regex: 'eden/(mononoke|scm)/.*\.(rs|py|sh)$'
+apply_to_regex: 'eden/(scm|fs)/.*\.(rs|py|sh)$'
 apply_to_content: 'merge.driver|hook|prefetch|sl diff|hg diff|sl cat|hg cat'
 ---
 
