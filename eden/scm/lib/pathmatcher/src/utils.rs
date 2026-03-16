@@ -89,10 +89,9 @@ pub fn expand_curly_brackets(pat: &str) -> Vec<String> {
                     let next_id = dag.len();
                     dag.push(StrNode::default());
                     let last_id = bracket_stack.pop().unwrap();
-                    for id in last_id + 1..next_id {
-                        let is_head = dag[id].1.is_empty();
-                        if is_head {
-                            dag[id].1.push(next_id);
+                    for item in dag.iter_mut().take(next_id).skip(last_id + 1) {
+                        if item.1.is_empty() {
+                            item.1.push(next_id);
                         }
                     }
                     need_write = false;
