@@ -274,12 +274,13 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
         return [...sorted];
       }
       const hashes = arrayFromHashes(set === undefined ? this.all() : set);
-      return hashes.sort((a, b) => {
-        const aIdx = index.get(a);
-        const bIdx = index.get(b);
-        if (aIdx == null || bIdx == null) {
-          throw new Error(`Commit ${a} or ${b} is not in the dag.`);
-        }
+      // Filter out hashes not present in the dag to avoid errors when the set
+      // contains commits that are not in the dag (e.g. during drag-and-drop
+      // rebase previews where commits may reference hashes not yet in the dag).
+      const presentHashes = hashes.filter(h => index.has(h));
+      return presentHashes.sort((a, b) => {
+        const aIdx = index.get(a) as number;
+        const bIdx = index.get(b) as number;
         return aIdx - bIdx;
       });
     }
