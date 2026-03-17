@@ -73,6 +73,28 @@ PY_VERSION = "%s%s" % sys.version_info[:2]
 # rust-cpython uses this to collect Python information
 os.environ["PYTHON_SYS_EXECUTABLE"] = sys.executable
 
+if os.name == "nt":
+    # Ensure `pythonXY.dll` is in PATH. Otherwise, build.rs scripts (e.g. backtrace-python)
+    # might fail with exit code: 0xc0000135, STATUS_DLL_NOT_FOUND.
+    path_env = os.getenv("PATH") or ""
+    # Windows python.exe example paths:
+    # C:\Users\quark\AppData\Local\Microsoft\WindowsApps\python.exe
+    #   Windows store python, in PATH by default, parent dir has no pythonXY.dll
+    # C:\Users\quark\AppData\Local\Python\bin\python.exe
+    #   python(w), pip, and others, not in PATH by default, parent dir has no pythonXY.dll
+    # C:\Users\quark\AppData\Local\Python\pythoncore-3.12-64\python.exe
+    #   sys.executable, not in PATH by default, parent dir has pythonXY.dll
+    dll_name = f"python{PY_VERSION}.dll"
+    candidates = [
+        os.path.dirname(sys.executable),
+        sys.base_prefix,
+        sys.prefix,
+    ]
+    for p in candidates:
+        if os.path.exists(os.path.join(p, dll_name)):
+            os.environ["PATH"] = os.pathsep.join(filter(None, [p, path_env]))
+            break
+
 
 def filter(f, it):
     return list(__builtins__.filter(f, it))
