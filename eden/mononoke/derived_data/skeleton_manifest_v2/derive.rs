@@ -186,14 +186,18 @@ pub(crate) async fn derive_single(
 ) -> Result<RootSkeletonManifestV2Id> {
     let blobstore = derivation_ctx.blobstore();
     let changes = get_file_changes(&bonsai);
-    let subtree_changes =
-        get_skeleton_manifest_subtree_changes(ctx, derivation_ctx, known, &bonsai).await?;
-
-    let parents = stream::iter(parents)
-        .map(|parent| async move { parent.0.load(ctx, blobstore).await })
-        .buffered(100)
-        .try_collect::<Vec<_>>()
-        .await?;
+    let (subtree_changes, parents) = futures::try_join!(
+        get_skeleton_manifest_subtree_changes(ctx, derivation_ctx, known, &bonsai),
+        async {
+            anyhow::Ok(
+                stream::iter(parents)
+                    .map(|parent| async move { parent.0.load(ctx, blobstore).await })
+                    .buffered(100)
+                    .try_collect::<Vec<_>>()
+                    .await?,
+            )
+        },
+    )?;
 
     let root_manifest = inner_derive(ctx, blobstore, parents, changes, subtree_changes).await?;
 
