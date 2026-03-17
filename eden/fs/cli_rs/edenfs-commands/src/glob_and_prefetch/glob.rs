@@ -33,7 +33,10 @@ pub struct GlobCmd {
     #[clap(long, help = "Display additional data")]
     verbose: bool,
 
-    #[clap(long, help = "Display the origin hash of the matching files.")]
+    #[clap(
+        long,
+        help = "Display the origin hash of the matching files. Only populated when multiple --revision flags are specified."
+    )]
     list_origin_hash: bool,
 
     #[clap(long, help = "Display the dtype of the matching files.")]
@@ -52,10 +55,13 @@ impl GlobCmd {
                     .with_context(|| "Failed to serialize result to JSON.")?
             );
         } else {
-            if result.matching_files.len() != result.origin_hashes.len()
-                || (self.dtype && result.matching_files.len() != result.dtypes.len())
-            {
-                println!("Error globbing files: mismatched results")
+            // originHashes may be empty when there are 0 or 1 revisions.
+            let has_origin_hashes = !result.origin_hashes.is_empty();
+            if has_origin_hashes && result.matching_files.len() != result.origin_hashes.len() {
+                anyhow::bail!("Error globbing files: mismatched results");
+            }
+            if self.dtype && result.matching_files.len() != result.dtypes.len() {
+                anyhow::bail!("Error globbing files: mismatched results");
             }
 
             for i in 0..result.matching_files.len() {
@@ -65,7 +71,7 @@ impl GlobCmd {
                         .to_string_lossy()
                         .to_string()
                 );
-                if self.list_origin_hash {
+                if self.list_origin_hash && has_origin_hashes {
                     print!("@{}", hex::encode(&result.origin_hashes[i]));
                 }
                 if self.dtype {

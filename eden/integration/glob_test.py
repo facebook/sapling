@@ -288,16 +288,15 @@ class GlobTestCasesBase:
         )
 
     async def test_simple_matching_commit(self) -> None:
+        # With 0 or 1 revisions, originHashes is not populated.
         await self.assert_glob(
             ["hello"],
             expected_matches=[b"hello"],
-            expected_commits=[bytes.fromhex(self.commit1)],
         )
 
         await self.assert_glob(
             ["hello"],
             expected_matches=[b"hello"],
-            expected_commits=[bytes.fromhex(self.commit0)],
             commits=[bytes.fromhex(self.commit0)],
         )
 
@@ -336,6 +335,7 @@ class GlobTestCasesBase:
         )
 
     async def test_search_root_with_specified_commits(self) -> None:
+        # With a single commit, originHashes is not populated.
         await self.assert_glob(
             ["**/*.java"],
             expected_matches=[
@@ -343,12 +343,6 @@ class GlobTestCasesBase:
                 b"example/foo/Foo.java",
                 b"example/foo/bar/Bar.java",
                 b"example/foo/bar/baz/Baz.java",
-            ],
-            expected_commits=[
-                bytes.fromhex(self.commit1),
-                bytes.fromhex(self.commit1),
-                bytes.fromhex(self.commit1),
-                bytes.fromhex(self.commit1),
             ],
             commits=[bytes.fromhex(self.commit1)],
             search_root=b"java/com",

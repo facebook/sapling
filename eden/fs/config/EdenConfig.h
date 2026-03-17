@@ -1620,6 +1620,16 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * When true, skip populating originHashes in glob results when there are
+   * 0 or 1 revisions. In that case every entry has the same origin, so the
+   * per-file origin hash carries no information and is wasted work.
+   */
+  ConfigSetting<bool> globSkipRedundantOriginHashes{
+      "experimental:glob-skip-redundant-origin-hashes",
+      true,
+      this};
+
+  /**
    * When true, EdenFS will convert the backing store to a FilteredBackingStore
    * with the "null" filter when it restarts. The real filter info will be
    * written to a special file under .hg folder and will be applied next time

@@ -163,7 +163,7 @@ class GlobCmd(Subcmd):
         )
         parser.add_argument(
             "--list-origin-hash",
-            help="Display the origin hash of the matching files.",
+            help="Display the origin hash of the matching files. Only populated when multiple --revision flags are specified.",
             default=False,
             action="store_true",
         )
@@ -212,30 +212,24 @@ class GlobCmd(Subcmd):
                     )
                 )
             else:
-                # Name and origin hashes should be the same size.
-                # If dtype is set then it should also be the same size, otherwise 0
-                if len(result.matchingFiles) != len(result.originHashes):
+                # originHashes may be empty when there are 0 or 1 revisions.
+                # When populated, it should match matchingFiles in length.
+                has_origin_hashes = len(result.originHashes) > 0
+                if has_origin_hashes and len(result.matchingFiles) != len(
+                    result.originHashes
+                ):
                     _println("Error globbing files: mismatched results")
                     return 1
                 if args.dtype:
                     if len(result.dtypes) != len(result.matchingFiles):
                         _println("Error globbing files: mismatched results")
                         return 1
-                    entries = zip(
-                        result.matchingFiles, result.dtypes, result.originHashes
-                    )
-                else:
-                    entries = zip(
-                        result.matchingFiles,
-                        [None] * len(result.matchingFiles),
-                        result.originHashes,
-                    )
-                for name, dtype, ohash in entries:
+                for i, name in enumerate(result.matchingFiles):
                     baseString = os.fsdecode(name)
-                    if args.list_origin_hash:
-                        baseString += f"@{ohash.hex()}"
+                    if args.list_origin_hash and has_origin_hashes:
+                        baseString += f"@{result.originHashes[i].hex()}"
                     if args.dtype:
-                        baseString += f" {parseDtype(dtype)}"
+                        baseString += f" {parseDtype(result.dtypes[i])}"
                     _println(os.fsdecode(baseString))
                 if args.verbose:
                     _println(

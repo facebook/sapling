@@ -331,12 +331,20 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
                fileBlobsToPrefetch,
                suppressFileList = suppressFileList_,
                listOnlyFiles = listOnlyFiles_,
+               numRevisions = rootIds_.size(),
                fetchContext = fetchContext.copy(),
                windowsSymlinksEnabled = windowsSymlinksEnabled,
                config = serverState->getEdenConfig()](
                   std::vector<GlobResult>&& results) mutable
                   -> ImmediateFuture<std::unique_ptr<Glob>> {
                 auto out = std::make_unique<Glob>();
+
+                // When there are 0 or 1 revisions, every entry has the
+                // same origin hash. Skip the per-file renderRootId() call
+                // and the resulting list, as no caller can use it to
+                // distinguish between revisions.
+                bool populateOriginHashes = numRevisions > 1 ||
+                    !config->globSkipRedundantOriginHashes.getValue();
 
                 if (!suppressFileList) {
                   // already deduplicated at this point, no need to de-dup
@@ -354,9 +362,11 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
                             static_cast<OsDtype>(dtype));
                       }
 
-                      out->originHashes()->emplace_back(
-                          edenMount->getObjectStore()->renderRootId(
-                              *entry.originId));
+                      if (populateOriginHashes) {
+                        out->originHashes()->emplace_back(
+                            edenMount->getObjectStore()->renderRootId(
+                                *entry.originId));
+                      }
                     }
                   }
                 }
