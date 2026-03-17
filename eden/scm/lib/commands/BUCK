@@ -28,6 +28,7 @@ rust_library(
                 "cmdclone/eden",
                 "cmdgoto/eden",
                 "cmddebugwait/eden",
+                "cmdworktree",
             ],
             "fb": [
                 "cmdpy/fb",

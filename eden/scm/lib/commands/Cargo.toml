@@ -52,7 +52,7 @@ cmdroot = { version = "0.1.0", path = "commands/cmdroot" }
 cmdstatus = { version = "0.1.0", path = "commands/cmdstatus" }
 cmdversion = { version = "0.1.0", path = "commands/cmdversion" }
 cmdwhereami = { version = "0.1.0", path = "commands/cmdwhereami" }
-cmdworktree = { version = "0.1.0", path = "commands/cmdworktree" }
+cmdworktree = { version = "0.1.0", path = "commands/cmdworktree", optional = true }
 ctrlc = { version = "3.5.2", features = ["termination"] }
 flate2 = { version = "1.0.33", features = ["rust_backend"], default-features = false }
 hostname = "0.3"
@@ -98,6 +98,6 @@ zstd = { version = "0.13.3", features = ["experimental", "zstdmt"] }
 
 [features]
 default = []
-eden = ["cmdclone/eden", "cmddebugwait/eden", "cmdgoto/eden", "pycheckout/eden", "pyworkingcopy/eden", "pyworkingcopyclient/eden", "sapling-clidispatch/eden"]
+eden = ["cmdclone/eden", "cmddebugwait/eden", "cmdgoto/eden", "cmdworktree", "pycheckout/eden", "pyworkingcopy/eden", "pyworkingcopyclient/eden", "sapling-clidispatch/eden"]
 fb = ["cmddebugdumpinternalconfig/fb", "cmddebugrefreshconfig/fb", "cmdpy/fb", "cmdversion/fb", "sapling-configloader/fb", "sapling-identity/fb"]
 sl_oss = ["sapling-configloader/sl_oss"]
