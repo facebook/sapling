@@ -75,8 +75,9 @@ pub struct LimitDirectorySizeConfig {
     #[serde(default, with = "serde_regex")]
     ignore_path_regexes: Vec<Regex>,
 
-    /// Path-based overrides.  The limits can be increased if paths match
-    /// specific values.
+    /// Path-based overrides.  When a path matches, the override value
+    /// replaces the base limit.  Multiple overrides must not match the
+    /// same path (an error is returned if they do).
     #[serde(default)]
     path_overrides: Vec<LimitDirectorySizeOverride>,
 
@@ -106,12 +107,11 @@ pub struct LimitDirectorySizeConfig {
 
 #[derive(Deserialize, Clone, Debug)]
 pub struct LimitDirectorySizeOverride {
-    /// This override will increase the size limit if any path matches.
+    /// This override applies when the path matches.
     #[serde(with = "serde_regex")]
     path_regex: Regex,
 
-    /// This override will increase the size limit to at least this value
-    /// (other overrides may increase it further).
+    /// Override the size limit to this value when the path matches.
     #[serde(default)]
     directory_size_limit: Option<u64>,
 }
@@ -200,7 +200,7 @@ impl ChangesetHook for LimitDirectorySizeHook {
                 continue;
             }
 
-            let limit = self
+            let matching_overrides: Vec<(&Regex, u64)> = self
                 .config
                 .path_overrides
                 .iter()
@@ -208,9 +208,26 @@ impl ChangesetHook for LimitDirectorySizeHook {
                     path_override
                         .directory_size_limit
                         .filter(|_| path_override.path_regex.is_match(&path))
+                        .map(|limit| (&path_override.path_regex, limit))
                 })
-                .chain(self.config.directory_size_limit)
-                .max();
+                .collect();
+
+            let limit = match matching_overrides.len() {
+                0 => self.config.directory_size_limit,
+                1 => Some(matching_overrides[0].1),
+                _ => {
+                    let details: Vec<String> = matching_overrides
+                        .iter()
+                        .map(|(regex, limit)| format!("'{}' (limit={})", regex, limit))
+                        .collect();
+                    anyhow::bail!(
+                        "limit_directory_size hook: directory '{}' matches multiple \
+                         path_overrides: {}. Each directory should match at most one override.",
+                        path,
+                        details.join(", "),
+                    );
+                }
+            };
 
             if let Some(limit) = limit {
                 if source_size > limit {
@@ -537,7 +554,7 @@ mod test {
             .await?;
         assert_eq!(hook_execution, HookExecution::Accepted);
 
-        // Override limit.
+        // Override raises limit.
         let mut config = make_test_config();
         config.directory_size_limit = Some(3);
         config.path_overrides = vec![LimitDirectorySizeOverride {
@@ -567,6 +584,82 @@ mod test {
             )
             .await?;
         assert_eq!(hook_execution, HookExecution::Accepted);
+
+        // Override lowers limit.
+        // Base=10, override dir1 to 3 -> dir1 with 5 entries rejected.
+        let mut config = make_test_config();
+        config.directory_size_limit = Some(10);
+        config.path_overrides = vec![LimitDirectorySizeOverride {
+            path_regex: Regex::new("^dir1$")?,
+            directory_size_limit: Some(3),
+        }];
+        let hook = LimitDirectorySizeHook::with_config(config)?;
+        let hook_execution = hook
+            .run(
+                ctx,
+                &hook_repo,
+                &bookmark,
+                &load_commit("C").await?,
+                CrossRepoPushSource::NativeToThisRepo,
+                PushAuthoredBy::User,
+            )
+            .await?;
+        assert_rejected(hook_execution, "Directory too large: 5 > 3.");
+
+        // Override doesn't affect non-matching paths.
+        // Base=10, override "^other" to 3 -> dir1 with 5 entries accepted.
+        let mut config = make_test_config();
+        config.directory_size_limit = Some(10);
+        config.path_overrides = vec![LimitDirectorySizeOverride {
+            path_regex: Regex::new("^other")?,
+            directory_size_limit: Some(3),
+        }];
+        let hook = LimitDirectorySizeHook::with_config(config)?;
+        let hook_execution = hook
+            .run(
+                ctx,
+                &hook_repo,
+                &bookmark,
+                &load_commit("C").await?,
+                CrossRepoPushSource::NativeToThisRepo,
+                PushAuthoredBy::User,
+            )
+            .await?;
+        assert_eq!(hook_execution, HookExecution::Accepted);
+
+        // Multiple overlapping overrides error.
+        let mut config = make_test_config();
+        config.directory_size_limit = Some(10);
+        config.path_overrides = vec![
+            LimitDirectorySizeOverride {
+                path_regex: Regex::new("^dir1$")?,
+                directory_size_limit: Some(8),
+            },
+            LimitDirectorySizeOverride {
+                path_regex: Regex::new("^dir1$")?,
+                directory_size_limit: Some(4),
+            },
+        ];
+        let hook = LimitDirectorySizeHook::with_config(config)?;
+        let result = hook
+            .run(
+                ctx,
+                &hook_repo,
+                &bookmark,
+                &load_commit("C").await?,
+                CrossRepoPushSource::NativeToThisRepo,
+                PushAuthoredBy::User,
+            )
+            .await;
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(
+            err.contains("limit_directory_size hook")
+                && err.contains("dir1")
+                && err.contains("matches multiple path_overrides"),
+            "unexpected error: {}",
+            err,
+        );
 
         Ok(())
     }
