@@ -209,13 +209,18 @@ function SettingsDropdown({
           <ConfirmSubmitStackSetting />
           <SubmitAsDraftCheckbox forceShow />
           {repoInfo?.codeReviewSystem.type === 'phabricator' && (
-            <Checkbox
-              checked={showAuthoredDiffs}
-              onChange={checked => {
-                setShowAuthoredDiffs(checked);
-              }}>
-              <T>Fetch authored diffs from Phabricator</T>
-            </Checkbox>
+            <Tooltip
+              title={t(
+                'When enabled, ISL also fetches diff information for diffs you authored but where the latest version was submitted by someone else (e.g., via AI tools, or commandeering).',
+              )}>
+              <Checkbox
+                checked={showAuthoredDiffs}
+                onChange={checked => {
+                  setShowAuthoredDiffs(checked);
+                }}>
+                <T>Fetch authored diffs from Phabricator</T>
+              </Checkbox>
+            </Tooltip>
           )}
         </div>
       </Setting>
