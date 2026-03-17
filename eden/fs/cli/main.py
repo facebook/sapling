@@ -148,23 +148,19 @@ from eden.fs.cli.util import (
     is_apple_silicon,
     wait_for_instance_healthy,
 )
+from eden.fs.service.eden.thrift_types import (
+    ChangeOwnershipRequest,
+    MountInfo,
+    MountState,
+    SendNotificationRequest,
+)
 from eden.thrift.client import EdenNotRunningError
 from eden.thrift.legacy import (
     EdenClient,
     EdenNotRunningError as LegacyEdenNotRunningError,
 )
 from facebook.eden import EdenService
-from facebook.eden.ttypes import (
-    ChangeOwnershipRequest,
-    GetCurrentSnapshotInfoRequest,
-    GetScmStatusParams,
-    MountId,
-    MountInfo,
-    MountState,
-    RootIdOptions,
-    SendNotificationRequest,
-)
-from fb303_core.ttypes import fb303_status
+from fb303_core.thrift_types import fb303_status
 
 from . import (
     config as config_mod,
@@ -1185,7 +1181,8 @@ class HealthReportCmd(Subcmd):
                             title=error_code.summary(),
                             description=error_code.remediation(),
                         )
-                        client.sendNotification(request)
+                        # pyre-ignore[6]: Legacy client expects py-deprecated types
+                        client.sendNotification(request._to_py_deprecated())
                 except thrift.transport.TTransport.TTransportException as e:
                     # Ignore TTransportException if it is a UNKNOWN_METHOD error, this can
                     # happen if the running version predates this endpoint
@@ -1523,8 +1520,15 @@ class ChownCmd(Subcmd):
         with instance.get_thrift_client_legacy() as client:
             print("Chowning EdenFS repository...", end="", flush=True)
             try:
-                request = ChangeOwnershipRequest(mountPoint=args.path, uid=uid, gid=gid)
-                client.changeOwnership(request)
+                request = ChangeOwnershipRequest(
+                    mountPoint=args.path.encode()
+                    if isinstance(args.path, str)
+                    else args.path,
+                    uid=uid,
+                    gid=gid,
+                )
+                # pyre-ignore[6]: Legacy client expects py-deprecated types
+                client.changeOwnership(request._to_py_deprecated())
             except thrift.Thrift.TApplicationException as exc:
                 if exc.type == thrift.Thrift.TApplicationException.UNKNOWN_METHOD:
                     client.chown(args.path, uid, gid)
@@ -1715,7 +1719,9 @@ def remove_legacyephemeral_checkouts(
     mount_info: List[MountInfo] = []
     try:
         with instance.get_thrift_client_legacy() as client:
-            mount_info = client.listMounts()
+            # Convert legacy MountInfo to modern MountInfo
+            legacy_mount_info = client.listMounts()
+            mount_info = [m._to_python() for m in legacy_mount_info]
     except (EdenNotRunningError, LegacyEdenNotRunningError):
         # Daemon not running, no mounts active
         pass
@@ -2404,7 +2410,8 @@ class StartCmd(Subcmd):
                         title="EdenFS ready for use",
                         description=f"EdenFS started with pid: {edenfs_pid}",
                     )
-                client.sendNotification(request)
+                # pyre-ignore[6]: Legacy client expects py-deprecated types
+                client.sendNotification(request._to_py_deprecated())
         except (
             thrift.transport.TTransport.TTransportException,
             EdenNotRunningError,

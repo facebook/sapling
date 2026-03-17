@@ -91,6 +91,7 @@ python_library(
         "//eden/fs/py/eden/thrift:legacy",
         "//eden/fs/service:thrift-py-deprecated",
         "//fb303/thrift:fb303_core-py-deprecated",
+        "//fb303/thrift:fb303_core-python-types",
         "//thrift/lib/py:server_base",
     ],
 )
