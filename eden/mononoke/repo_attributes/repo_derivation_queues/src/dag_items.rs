@@ -36,6 +36,8 @@ pub struct DagItemId {
     pub config_name: String,
     pub derived_data_type: DerivableType,
     pub root_cs_id: ChangesetId,
+    #[serde(default)]
+    pub stage_id: Option<String>,
 }
 
 impl DagItemId {
@@ -44,17 +46,25 @@ impl DagItemId {
         config_name: String,
         derived_data_type: DerivableType,
         root_cs_id: ChangesetId,
+        stage_id: Option<String>,
     ) -> Self {
         Self {
             repo_id,
             config_name,
             derived_data_type,
             root_cs_id,
+            stage_id,
         }
     }
 
     pub fn suffix(&self) -> String {
-        format!("{}_{}", self.derived_data_type, self.root_cs_id)
+        match &self.stage_id {
+            Some(stage_id) => format!(
+                "{}_{}:{}",
+                self.derived_data_type, self.root_cs_id, stage_id
+            ),
+            None => format!("{}_{}", self.derived_data_type, self.root_cs_id),
+        }
     }
 
     pub fn config_name(&self) -> &str {
@@ -70,7 +80,18 @@ impl DagItemId {
     }
 
     pub fn from_suffix(suffix: &str, repo_id: RepositoryId, config_name: String) -> Result<Self> {
-        let (data_type_str, cs_id_str) = suffix
+        // Suffix format is either:
+        //   <derived_data_type>_<cs_id>           (no stage_id)
+        //   <derived_data_type>_<cs_id>:<stage_id> (with stage_id)
+        //
+        // Split on ':' first to separate optional stage_id, then parse
+        // the base suffix as before.
+        let (base_suffix, stage_id) = match suffix.split_once(':') {
+            Some((base, stage)) => (base, Some(stage.to_string())),
+            None => (suffix, None),
+        };
+
+        let (data_type_str, cs_id_str) = base_suffix
             .rsplit_once('_')
             .ok_or_else(|| anyhow!("Invalid DagItemId suffix format: {}", suffix))?;
 
@@ -85,6 +106,7 @@ impl DagItemId {
             config_name,
             derived_data_type,
             root_cs_id,
+            stage_id,
         })
     }
 }
@@ -219,12 +241,14 @@ impl DerivationDagItem {
         deps: Vec<DagItemId>,
         client_info: Option<&ClientInfo>,
         priority: derivation_queue_thrift::DerivationPriority,
+        stage_id: Option<String>,
     ) -> Result<DerivationDagItem, InternalError> {
         let dag_item_id = DagItemId {
             repo_id,
             config_name,
             derived_data_type,
             root_cs_id,
+            stage_id,
         };
         let dag_item_info = DagItemInfo::new(head_cs_id, bubble_id, client_info, priority);
         if deps.contains(&dag_item_id) {
@@ -259,6 +283,10 @@ impl DerivationDagItem {
 
     pub fn root_cs_id(&self) -> ChangesetId {
         self.dag_item_id.root_cs_id
+    }
+
+    pub fn stage_id(&self) -> Option<&str> {
+        self.dag_item_id.stage_id.as_deref()
     }
 
     pub fn head_cs_id(&self) -> ChangesetId {

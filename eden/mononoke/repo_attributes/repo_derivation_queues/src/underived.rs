@@ -126,6 +126,7 @@ pub async fn build_underived_batched_graph<'a>(
                     deps.unique().collect(),
                     ctx.metadata().client_info(),
                     priority,
+                    None,
                 )?;
 
                 let max_failed_attempts = justknobs::get_as::<u64>("scm/mononoke:build_underived_batched_graph_max_failed_attempts", None)?;
@@ -228,6 +229,7 @@ pub async fn build_underived_batched_graph<'a>(
                                                 vec![],
                                                 item.client_info(),
                                                 priority,
+                                                None,
                                             )?
                                         )
                                     }
@@ -304,6 +306,7 @@ async fn deduplicate(
             vec![existing.id().clone()],
             ctx.metadata().client_info(),
             rejected.info().priority(),
+            None,
         )?;
         return Ok(Some(item));
     }
