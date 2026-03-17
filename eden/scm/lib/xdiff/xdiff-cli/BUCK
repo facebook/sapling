@@ -1,0 +1,15 @@
+load("@fbsource//tools/build_defs:rust_binary.bzl", "rust_binary")
+
+oncall("sapling")
+
+rust_binary(
+    name = "xdiff-cli",
+    srcs = [
+        "src/main.rs",
+    ],
+    crate_root = "src/main.rs",
+    deps = [
+        "fbsource//third-party/rust:structopt",
+        "//eden/scm/lib/xdiff:xdiff",
+    ],
+)

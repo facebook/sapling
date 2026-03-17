@@ -231,6 +231,7 @@ members = [
   "lib/worktree",
   "lib/xdiff",
   "lib/xdiff-sys",
+  "lib/xdiff/xdiff-cli",
   "lib/zstdelta",
   "lib/zstore",
   "saplingnative/bindings",

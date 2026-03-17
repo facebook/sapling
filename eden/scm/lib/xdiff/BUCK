@@ -1,12 +1,12 @@
+load("@fbcode_macros//build_defs:native_rules.bzl", "alias")
 load("@fbsource//tools/build_defs:cram_test.bzl", "cram_test")
-load("@fbsource//tools/build_defs:rust_binary.bzl", "rust_binary")
 load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
 
 oncall("sapling")
 
 rust_library(
     name = "xdiff",
-    srcs = glob(["src/**/*.rs"]),
+    srcs = glob(["src/*.rs"]),
     autocargo = {"cargo_toml_config": {
         "lib": {"name": "xdiff"},
         "package": {
@@ -24,13 +24,9 @@ rust_library(
 )
 
 # example binary that uses 'xdiff' library to implement `diff` command
-rust_binary(
+alias(
     name = "diff",
-    srcs = ["src/bin/diff.rs"],
-    deps = [
-        "fbsource//third-party/rust:structopt",
-        "//eden/scm/lib/xdiff:xdiff",
-    ],
+    actual = "//eden/scm/lib/xdiff/xdiff-cli:xdiff-cli",
 )
 
 # cram tests that use the example binary to test the library
