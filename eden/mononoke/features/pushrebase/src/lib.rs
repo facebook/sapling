@@ -707,8 +707,12 @@ async fn check_pushrebase_conflicts(
                 "scm/mononoke:pushrebase_max_merge_file_size",
                 Some(reponame),
             )?;
-
             let merge_result = if merge_enabled {
+                let derive_fsnodes: bool = justknobs::eval(
+                    "scm/mononoke:pushrebase_merge_resolution_derive_fsnodes",
+                    None,
+                    Some(reponame),
+                )?;
                 Some(
                     attempt_merge_resolution(
                         ctx,
@@ -719,6 +723,7 @@ async fn check_pushrebase_conflicts(
                         client_bcs,
                         max_merge_conflicts,
                         max_merge_file_size,
+                        derive_fsnodes,
                     )
                     .await,
                 )
@@ -746,6 +751,11 @@ async fn check_pushrebase_conflicts(
                         Some(reponame),
                     )?;
                     if dry_run_enabled {
+                        let derive_fsnodes: bool = justknobs::eval(
+                            "scm/mononoke:pushrebase_merge_resolution_derive_fsnodes",
+                            None,
+                            Some(reponame),
+                        )?;
                         dry_run_merge_resolution(
                             ctx,
                             repo,
@@ -755,6 +765,7 @@ async fn check_pushrebase_conflicts(
                             client_bcs,
                             max_merge_conflicts,
                             max_merge_file_size,
+                            derive_fsnodes,
                         )
                         .await;
                     }
@@ -1348,7 +1359,24 @@ async fn dry_run_merge_resolution(
     client_bcs: &[BonsaiChangeset],
     max_conflicts: usize,
     max_file_size: u64,
+    derive_fsnodes: bool,
 ) {
+    // If derive_fsnodes is false, check if fsnodes are already derived.
+    // If not, skip dry-run to avoid expensive derivation.
+    if !derive_fsnodes {
+        let root_fsnode = repo
+            .repo_derived_data()
+            .fetch_derived::<RootFsnodeId>(ctx, root)
+            .await;
+        if !matches!(root_fsnode, Ok(Some(_))) {
+            ctx.scuba()
+                .clone()
+                .add("merge_dry_run_outcome", "skipped_fsnodes_not_derived")
+                .log_with_msg("Pushrebase dry-run merge resolution", None);
+            return;
+        }
+    }
+
     // Only attempt on exact path matches (left == right), skip prefix conflicts
     let exact_conflicts: Vec<_> = conflicts.iter().filter(|c| c.left == c.right).collect();
     let prefix_conflict_count = conflicts.len() - exact_conflicts.len();
@@ -1538,6 +1566,7 @@ async fn attempt_merge_resolution(
     client_bcs: &[BonsaiChangeset],
     max_conflicts: usize,
     max_file_size: u64,
+    derive_fsnodes: bool,
 ) -> Result<Vec<(NonRootMPath, FileChange)>, MergeResolutionError> {
     // Only handle exact path matches (not prefix conflicts like dir vs dir/file)
     let exact_conflicts: Vec<_> = conflicts.iter().filter(|c| c.left == c.right).collect();
@@ -1551,6 +1580,22 @@ async fn attempt_merge_resolution(
 
     if exact_conflicts.len() > max_conflicts {
         return Err(MergeResolutionError::TooManyConflicts);
+    }
+
+    // If derive_fsnodes is false, check if fsnodes are already derived.
+    // If not, skip merge resolution to avoid expensive derivation in the
+    // pushrebase critical section.
+    if !derive_fsnodes {
+        let root_fsnode = repo
+            .repo_derived_data()
+            .fetch_derived::<RootFsnodeId>(ctx, root)
+            .await
+            .map_err(|e| MergeResolutionError::InternalError(e.into()))?;
+        if root_fsnode.is_none() {
+            return Err(MergeResolutionError::Skipped(
+                "fsnodes not derived for base commit".to_string(),
+            ));
+        }
     }
 
     // Build a map of path -> FileChange from the client changesets
@@ -2126,7 +2171,6 @@ mod tests {
     use commit_graph::CommitGraphWriter;
     use fbinit::FacebookInit;
     use filestore::FilestoreConfig;
-    use filestore::FilestoreConfigRef;
     use fixtures::Linear;
     use fixtures::ManyFilesDirs;
     use fixtures::MergeEven;
@@ -2171,6 +2215,7 @@ mod tests {
         override_just_knobs(JustKnobsInMemory::new(hashmap! {
             "scm/mononoke:pushrebase_dry_run_merge_resolution".to_string() => KnobVal::Bool(false),
             "scm/mononoke:pushrebase_enable_merge_resolution".to_string() => KnobVal::Bool(false),
+            "scm/mononoke:pushrebase_merge_resolution_derive_fsnodes".to_string() => KnobVal::Bool(true),
         }));
     }
 
@@ -4268,6 +4313,7 @@ mod tests {
 
     #[mononoke::fbinit_test]
     async fn batched_pushrebase_one_conflict(fb: FacebookInit) -> Result<(), Error> {
+        init_just_knobs_for_test();
         let ctx = CoreContext::test_mock(fb);
         let (repo, commits, _dag): (PushrebaseTestRepo, _, _) = Linear::get_repo_and_dag(fb).await;
 
@@ -4537,6 +4583,7 @@ mod tests {
         override_just_knobs(JustKnobsInMemory::new(hashmap! {
             "scm/mononoke:pushrebase_dry_run_merge_resolution".to_string() => KnobVal::Bool(false),
             "scm/mononoke:pushrebase_enable_merge_resolution".to_string() => KnobVal::Bool(true),
+            "scm/mononoke:pushrebase_merge_resolution_derive_fsnodes".to_string() => KnobVal::Bool(true),
         }));
     }
 

@@ -18,7 +18,8 @@ Explicitly disable merge resolution (this is also the default)
   $ merge_just_knobs <<EOF
   > {
   >   "bools": {
-  >     "scm/mononoke:pushrebase_enable_merge_resolution": false
+  >     "scm/mononoke:pushrebase_enable_merge_resolution": false,
+  >     "scm/mononoke:pushrebase_merge_resolution_derive_fsnodes": true
   >   },
   >   "ints": {
   >     "scm/mononoke:pushrebase_max_merge_conflicts": 10,
