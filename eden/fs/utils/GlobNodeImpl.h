@@ -152,6 +152,7 @@ class GlobNodeImpl {
     std::vector<RelativePath> subDirNames;
     std::vector<ImmediateFuture<folly::Unit>> futures;
     std::vector<ObjectId> localFileBlobsToPrefetch;
+    std::vector<GlobResult> localGlobResults;
     {
       const auto& contents = root.lockContents();
       for (auto& entry : root.iterate(contents)) {
@@ -161,10 +162,17 @@ class GlobNodeImpl {
           if (node->alwaysMatch_ ||
               node->matcher_.match(candidateName.view())) {
             if (globResult) {
-              globResult->wlock()->emplace_back(
-                  rootPath + candidateName,
-                  entry.second.getDtype(),
-                  originRootId);
+              if (prefetchOptimizations_) {
+                localGlobResults.emplace_back(
+                    rootPath + candidateName,
+                    entry.second.getDtype(),
+                    originRootId);
+              } else {
+                globResult->wlock()->emplace_back(
+                    rootPath + candidateName,
+                    entry.second.getDtype(),
+                    originRootId);
+              }
             }
             if (fileBlobsToPrefetch &&
                 root.entryShouldPrefetch(&entry.second)) {
@@ -227,6 +235,14 @@ class GlobNodeImpl {
           }
         }
       }
+    }
+
+    if (globResult && !localGlobResults.empty()) {
+      auto locked = globResult->wlock();
+      locked->insert(
+          locked->end(),
+          std::make_move_iterator(localGlobResults.begin()),
+          std::make_move_iterator(localGlobResults.end()));
     }
 
     if (fileBlobsToPrefetch && !localFileBlobsToPrefetch.empty()) {
@@ -293,6 +309,7 @@ class GlobNodeImpl {
     std::vector<std::pair<PathComponentPiece, GlobNodeImpl*>> recurse;
     std::vector<ImmediateFuture<folly::Unit>> futures;
     std::vector<ObjectId> localFileBlobsToPrefetch;
+    std::vector<GlobResult> localGlobResults;
 
     if (!recursiveChildren_.empty()) {
       futures.emplace_back(
@@ -355,8 +372,13 @@ class GlobNodeImpl {
 
             if (node->isLeaf_) {
               if (globResult) {
-                globResult->wlock()->emplace_back(
-                    rootPath + name, entry->second.getDtype(), originRootId);
+                if (prefetchOptimizations_) {
+                  localGlobResults.emplace_back(
+                      rootPath + name, entry->second.getDtype(), originRootId);
+                } else {
+                  globResult->wlock()->emplace_back(
+                      rootPath + name, entry->second.getDtype(), originRootId);
+                }
               }
 
               if (fileBlobsToPrefetch &&
@@ -381,8 +403,13 @@ class GlobNodeImpl {
             if (node->alwaysMatch_ || node->matcher_.match(name.view())) {
               if (node->isLeaf_) {
                 if (globResult) {
-                  globResult->wlock()->emplace_back(
-                      rootPath + name, entry.second.getDtype(), originRootId);
+                  if (prefetchOptimizations_) {
+                    localGlobResults.emplace_back(
+                        rootPath + name, entry.second.getDtype(), originRootId);
+                  } else {
+                    globResult->wlock()->emplace_back(
+                        rootPath + name, entry.second.getDtype(), originRootId);
+                  }
                 }
                 if (fileBlobsToPrefetch &&
                     root.entryShouldPrefetch(&entry.second)) {
@@ -402,6 +429,14 @@ class GlobNodeImpl {
           }
         }
       }
+    }
+
+    if (globResult && !localGlobResults.empty()) {
+      auto locked = globResult->wlock();
+      locked->insert(
+          locked->end(),
+          std::make_move_iterator(localGlobResults.begin()),
+          std::make_move_iterator(localGlobResults.end()));
     }
 
     if (fileBlobsToPrefetch && !localFileBlobsToPrefetch.empty()) {
