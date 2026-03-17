@@ -25,6 +25,16 @@ pub(crate) struct Hooks {
     fail: Vec<hook::Hooks>,
 }
 
+impl std::fmt::Debug for Hooks {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Hooks")
+            .field("pre", &self.pre)
+            .field("post", &self.post)
+            .field("fail", &self.fail)
+            .finish()
+    }
+}
+
 impl Hooks {
     // Initialize pre, post, and fail hooks for this command.
     // May raise FallbackToPython error if Python hooks are configured.

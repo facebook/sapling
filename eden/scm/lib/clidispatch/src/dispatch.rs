@@ -463,6 +463,7 @@ impl Dispatcher {
             let hooks = crate::hooks::Hooks::new(self.config(), io, handler)?;
 
             tracing::debug!("command handled by a Rust function");
+            tracing::debug!(?hooks, "hooks for the current command");
 
             // Convert to repoless before running the "pre" hook. For repoless commands,
             // we don't want to run hooks from root of incidentally containing repo.

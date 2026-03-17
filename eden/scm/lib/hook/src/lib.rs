@@ -49,6 +49,16 @@ pub struct Hooks {
     verbose: bool,
 }
 
+impl std::fmt::Debug for Hooks {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Hooks")
+            .field("hook_type", &self.hook_type)
+            .field("hooks", &self.hooks)
+            .field("verbose", &self.verbose)
+            .finish()
+    }
+}
+
 pub struct PythonHookSig;
 
 impl<'a> factory::FunctionSignature<'a> for PythonHookSig {
