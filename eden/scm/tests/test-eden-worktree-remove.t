@@ -42,11 +42,13 @@ test worktree remove - list after remove shows fewer entries
     linked  $TESTTMP/linked2   feature-x
   * main    $TESTTMP/myrepo
 
+test worktree remove --all
+
+  $ hg worktree remove --all -y
+  removed $TESTTMP/linked1
+  removed $TESTTMP/linked2
+
 test worktree remove - group dissolved after all linked removed
 
-  $ hg worktree remove $TESTTMP/linked1 -y
-  removed $TESTTMP/linked1
-  $ hg worktree remove $TESTTMP/linked2 -y
-  removed $TESTTMP/linked2
   $ hg worktree list
   this worktree is not part of a group

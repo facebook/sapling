@@ -35,6 +35,9 @@ define_flags! {
         #[argtype("TEXT")]
         label: String,
 
+        /// remove all linked worktrees (for 'remove')
+        all: bool,
+
         /// remove the label instead of setting it (for 'label')
         remove: bool,
 
@@ -77,7 +80,7 @@ pub fn doc() -> &'static str {
 
       list [-Tjson]                           List all worktrees in the group
       add PATH [--label TEXT]                 Create a new linked worktree
-      remove PATH [-y]                        Remove a linked worktree
+      remove PATH [--all] [-y]                Remove linked worktree(s)
       label [PATH] TEXT [--remove]            Set or remove a worktree label
 
     Currently only EdenFS-backed repositories are supported."#
@@ -389,6 +392,10 @@ fn run_remove(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo) -> Result<u8> {
     let logger = ctx.logger();
     let (shared_store_path, group_id) = require_group(repo)?;
 
+    if ctx.opts.all {
+        return run_remove_all(ctx, repo, &shared_store_path, &group_id);
+    }
+
     let target_str = match ctx.opts.args.get(1) {
         Some(value) => value,
         None => abort!("usage: sl worktree remove PATH"),
@@ -427,6 +434,64 @@ fn run_remove(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo) -> Result<u8> {
     })?;
 
     logger.info(format!("removed {}", target.display()));
+    Ok(0)
+}
+
+/// Remove all linked worktrees in the group.
+///
+/// NOTE: If removal fails partway through (e.g., `eden rm` fails for one
+/// worktree), some worktrees may have been deleted from disk but remain in
+/// the registry as stale entries. The next `worktree list` will auto-clean
+/// these stale entries since it checks for path existence.
+fn run_remove_all(
+    ctx: &ReqCtx<WorktreeOpts>,
+    repo: &Repo,
+    shared_store_path: &Path,
+    group_id: &str,
+) -> Result<u8> {
+    let logger = ctx.logger();
+    // Hold the registry lock across confirmation and removal so concurrent
+    // `worktree remove --all` calls cannot race. If this becomes too expensive,
+    // we can pre-validate and reserve entries before prompting.
+    let removed_paths = with_registry_lock(shared_store_path, |registry| {
+        let grp = match registry.groups.get_mut(group_id) {
+            Some(group) => group,
+            None => abort!("group '{}' not found in registry", group_id),
+        };
+        let linked_paths: Vec<PathBuf> = grp
+            .worktrees
+            .keys()
+            .filter(|p| **p != grp.main)
+            .cloned()
+            .collect();
+
+        if linked_paths.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        // Check that we're not inside any of the worktrees being removed.
+        for path in &linked_paths {
+            check_not_inside(path)?;
+        }
+
+        let path_refs: Vec<&Path> = linked_paths.iter().map(|p| p.as_path()).collect();
+        confirm_remove(ctx, &path_refs)?;
+
+        for path in &linked_paths {
+            edenfs_client::run_eden_remove(repo.config().as_ref(), path)?;
+            grp.worktrees.remove(path);
+        }
+
+        dissolve_group(registry, group_id);
+        Ok(linked_paths)
+    })?;
+    if removed_paths.is_empty() {
+        logger.info("no linked worktrees to remove");
+        return Ok(0);
+    }
+    for path in &removed_paths {
+        logger.info(format!("removed {}", path.display()));
+    }
     Ok(0)
 }
 
