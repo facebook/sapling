@@ -27,6 +27,7 @@ mod limit_path_length;
 pub(crate) mod limit_submodule_edits;
 mod limit_subtree_op_size;
 pub(crate) mod limit_tag_updates;
+mod limit_users_directory_size;
 pub(crate) mod missing_lfsconfig;
 pub(crate) mod no_bad_filenames;
 mod no_executable_binaries;
