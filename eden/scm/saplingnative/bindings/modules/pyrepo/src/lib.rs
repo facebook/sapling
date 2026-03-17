@@ -294,6 +294,15 @@ py_class!(pub class repo |py| {
     def volatile_state(&self) -> PyResult<PyDict> {
         Ok(self.volatile_state_obj(py).clone_ref(py))
     }
+
+    def add_commit(
+        &self,
+        commit: Serde<rsrepo::NewCommit>,
+    ) -> PyResult<Serde<HgId>> {
+        let repo_ref = self.inner(py).write();
+        let node = repo_ref.add_commit(commit.0).map_pyerr(py)?;
+        Ok(Serde(node))
+    }
 });
 
 impl repo {
