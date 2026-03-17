@@ -8,6 +8,7 @@
 use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::sync::Arc;
+use std::time::Duration;
 
 use acl_manifest::RootAclManifestId;
 use anyhow::Error;
@@ -47,6 +48,7 @@ use mercurial_derivation::RootHgAugmentedManifestId;
 use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::DerivableUntopologicallyVariant;
+use mononoke_types::PipelineDerivableVariant;
 use skeleton_manifest::RootSkeletonManifestId;
 use skeleton_manifest_v2::RootSkeletonManifestV2Id;
 use test_manifest::RootTestManifestDirectory;
@@ -468,6 +470,16 @@ fn manager_for_derivable_untopologically_variant(
             Arc::new(SingleTypeManager::<RootAclManifestId>::new(manager))
         }
     }
+}
+
+pub async fn derive_stage_batch(
+    _ddm: &DerivedDataManager,
+    _ctx: &CoreContext,
+    _csids: Vec<ChangesetId>,
+    _stage_id: &str,
+    variant: PipelineDerivableVariant,
+) -> Result<Duration, DerivationError> {
+    match variant {}
 }
 
 #[async_trait]
