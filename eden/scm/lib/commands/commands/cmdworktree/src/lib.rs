@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::io::BufRead;
+use std::path::Path;
 use std::path::PathBuf;
 
 use clidispatch::ReqCtx;
@@ -114,6 +116,73 @@ impl Formattable for ListOutputEntry {
         writeln!(writer)?;
         Ok(())
     }
+}
+
+// --- Utility Functions ---
+
+fn require_group(repo: &Repo) -> Result<(PathBuf, String)> {
+    let shared_store_path = repo.store_path();
+    let registry = worktree::load_registry(shared_store_path)?;
+    let current = util::path::strip_unc_prefix(fs::canonicalize(repo.path())?);
+    match registry.find_group_for_path(&current) {
+        Some(id) => Ok((shared_store_path.to_path_buf(), id)),
+        None => abort!("this worktree is not part of a group"),
+    }
+}
+
+fn check_not_inside(target: &Path) -> Result<()> {
+    if let Ok(cwd) = std::env::current_dir() {
+        let cwd = fs::canonicalize(&cwd)
+            .map(util::path::strip_unc_prefix)
+            .unwrap_or(cwd);
+        if cwd.starts_with(target) {
+            abort!(
+                "cannot remove '{}': your current working directory is inside it",
+                target.display()
+            );
+        }
+    }
+    Ok(())
+}
+
+/// Prompt the user to confirm a destructive remove operation.
+///
+/// Skips the prompt (returns Ok) when the global `-y`/`--noninteractive`
+/// flag is set.
+///
+/// Returns `Err` (abort) if the user declines or when stdin is non-interactive.
+fn confirm_remove(ctx: &ReqCtx<WorktreeOpts>, paths: &[&Path]) -> Result<()> {
+    if ctx.global_opts().noninteractive {
+        return Ok(());
+    }
+
+    let is_interactive = ctx.io().with_input(|input| input.is_tty());
+    if !is_interactive {
+        abort!("running non-interactively, use -y instead");
+    }
+
+    if paths.len() == 1 {
+        ctx.io()
+            .write(format!("will remove {}\n", paths[0].display()))?;
+    } else {
+        ctx.io()
+            .write(format!("will remove {} worktrees:\n", paths.len()))?;
+        for p in paths {
+            ctx.io().write(format!("  {}\n", p.display()))?;
+        }
+    }
+    ctx.io().write("proceed? [y/N] ")?;
+    ctx.io().flush()?;
+
+    let mut input = ctx.io().input();
+    let mut line = String::new();
+    let mut reader = std::io::BufReader::new(&mut input);
+    reader.read_line(&mut line)?;
+    let answer = line.trim();
+    if !(answer.eq_ignore_ascii_case("y") || answer.eq_ignore_ascii_case("yes")) {
+        abort!("aborted by user");
+    }
+    Ok(())
 }
 
 // --- Subcommands ---
@@ -316,8 +385,49 @@ fn run_add(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo) -> Result<u8> {
     Ok(0)
 }
 
-fn run_remove(_ctx: &ReqCtx<WorktreeOpts>, _repo: &Repo) -> Result<u8> {
-    abort!("worktree remove not yet implemented");
+fn run_remove(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo) -> Result<u8> {
+    let logger = ctx.logger();
+    let (shared_store_path, group_id) = require_group(repo)?;
+
+    let target_str = match ctx.opts.args.get(1) {
+        Some(value) => value,
+        None => abort!("usage: sl worktree remove PATH"),
+    };
+    let target =
+        util::path::strip_unc_prefix(util::path::canonical_path_allow_missing(target_str)?);
+
+    check_not_inside(&target)?;
+
+    // Hold the registry lock across confirmation and removal so concurrent
+    // `worktree remove` calls cannot race. If this becomes too expensive,
+    // we can pre-validate and reserve entries before prompting.
+    with_registry_lock(&shared_store_path, |registry| {
+        let grp = match registry.groups.get_mut(&group_id) {
+            Some(group) => group,
+            None => abort!("group '{}' not found in registry", group_id),
+        };
+        if !grp.worktrees.contains_key(&target) {
+            abort!(
+                "'{}' is not in this worktree group, use `eden rm` instead",
+                target.display()
+            );
+        }
+        if target == grp.main {
+            abort!("cannot remove a main worktree with linked worktrees");
+        }
+
+        confirm_remove(ctx, &[&target])?;
+        edenfs_client::run_eden_remove(repo.config().as_ref(), &target)?;
+        grp.worktrees.remove(&target);
+        let linked_count = grp.worktrees.keys().filter(|p| **p != grp.main).count();
+        if linked_count == 0 {
+            dissolve_group(registry, &group_id);
+        }
+        Ok(())
+    })?;
+
+    logger.info(format!("removed {}", target.display()));
+    Ok(0)
 }
 
 fn run_label(_ctx: &ReqCtx<WorktreeOpts>, _repo: &Repo) -> Result<u8> {
@@ -427,5 +537,39 @@ mod tests {
             .format_plain(&FormatOptions::default(), &mut w)
             .unwrap();
         assert_eq!(mock_output(&w), "* linked  /repos/linked   dev\n");
+    }
+
+    // --- check_not_inside tests ---
+
+    #[test]
+    fn test_check_not_inside_outside() {
+        // CWD is not inside /tmp/some_nonexistent_path, so this should succeed.
+        let target = PathBuf::from("/tmp/some_nonexistent_path_for_test");
+        assert!(check_not_inside(&target).is_ok());
+    }
+
+    #[test]
+    fn test_starts_with_component_boundary() {
+        let target = PathBuf::from("/foo/bar");
+        let similar_path = PathBuf::from("/foo/bar2");
+        let actual_child = PathBuf::from("/foo/bar/child");
+
+        assert!(!similar_path.starts_with(&target));
+        assert!(actual_child.starts_with(&target));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn test_canonicalized_cwd_starts_with_canonical_target() {
+        let root = std::env::temp_dir().join(format!("cmdworktree-{}", Uuid::new_v4()));
+        let child = root.join("child");
+        std::fs::create_dir_all(&child).unwrap();
+
+        let canonical_target = util::path::canonical_path_allow_missing(&root).unwrap();
+        let canonical_child = fs::canonicalize(&child).unwrap();
+
+        assert!(canonical_child.starts_with(&canonical_target));
+
+        std::fs::remove_dir_all(&root).unwrap();
     }
 }
