@@ -239,3 +239,9 @@ When reviewing ISL changes, flag these issues:
 - **Synchronous I/O** in server code — all file and process operations should be async
 - **Inline styles or raw CSS** instead of StyleX
 - **Raw HTML elements** instead of `components/` primitives (Button, Tooltip, etc.)
+
+---
+
+## Diff Conventions
+
+- **Diff titles** for ISL changes must start with the `[isl]` prefix. For example: `[isl] Fix optimistic state for rebase operations`.
