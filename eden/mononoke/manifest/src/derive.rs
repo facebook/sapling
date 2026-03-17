@@ -6,6 +6,7 @@
  */
 
 use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt;
 use std::future::Future;
@@ -114,7 +115,7 @@ pub struct LeafInfo<Leaf, LeafChange> {
 ///   trees merged with new leaves and trees (and should produce a new tree).
 /// - To make this work, `create_tree` must return the same kind of `TreeId` as the ones that exist in
 ///   the tree currently, and `create_leaf` must return the same kind of `Leaf`.
-pub fn derive_manifest<LeafChange, TreeId, Leaf, T, TFut, L, LFut, Ctx, Store>(
+pub async fn derive_manifest<LeafChange, TreeId, Leaf, T, TFut, L, LFut, Ctx, Store>(
     ctx: CoreContext,
     store: Store,
     parents: impl IntoIterator<Item = TreeId>,
@@ -122,7 +123,56 @@ pub fn derive_manifest<LeafChange, TreeId, Leaf, T, TFut, L, LFut, Ctx, Store>(
     subtree_changes: impl IntoIterator<Item = ManifestParentReplacement<TreeId, Leaf>>,
     create_tree: T,
     create_leaf: L,
-) -> impl Future<Output = Result<Option<TreeId>>>
+) -> Result<Option<TreeId>>
+where
+    Store: Sync + Send + Clone + 'static,
+    LeafChange: Send + Clone + Eq + Hash + fmt::Debug + 'static,
+    Leaf: Send + Clone + Eq + Hash + fmt::Debug + 'static,
+    TreeId: StoreLoadable<Store> + Clone + Eq + Hash + fmt::Debug + Send + Sync + 'static,
+    TreeId::Value: Manifest<Store, TreeId = TreeId, Leaf = Leaf> + Send + Sync,
+    T: Fn(TreeInfo<TreeId, Leaf, Ctx, <TreeId::Value as Manifest<Store>>::TrieMapType>) -> TFut
+        + Send
+        + Sync
+        + 'static,
+    TFut: Future<Output = Result<(Ctx, TreeId)>> + Send + 'static,
+    L: Fn(LeafInfo<Leaf, LeafChange>) -> LFut + Send + Sync + 'static,
+    LFut: Future<Output = Result<(Ctx, Leaf)>> + Send + 'static,
+    <TreeId::Value as Manifest<Store>>::TrieMapType:
+        TrieMapOps<Store, Entry<TreeId, Leaf>> + Send + Sync + 'static,
+    Ctx: Send + 'static,
+{
+    derive_manifest_with_known_entries(
+        ctx,
+        store,
+        parents.into_iter().map(Entry::Tree),
+        changes,
+        subtree_changes,
+        HashMap::new(),
+        MPath::ROOT,
+        create_tree,
+        create_leaf,
+    )
+    .await
+    .map(|opt| opt.and_then(|entry| entry.into_tree()))
+}
+
+/// Like `derive_manifest`, but with an additional `known_entries` parameter.
+///
+/// When the bounded traversal reaches a path present in `known_entries`, it
+/// uses the precomputed entry directly instead of recursing into the
+/// subtree. This enables derivation pipeline where dependency stages have
+/// already computed subtree manifests.
+pub fn derive_manifest_with_known_entries<LeafChange, TreeId, Leaf, T, TFut, L, LFut, Ctx, Store>(
+    ctx: CoreContext,
+    store: Store,
+    parents: impl IntoIterator<Item = Entry<TreeId, Leaf>>,
+    changes: impl IntoIterator<Item = (NonRootMPath, Option<LeafChange>)>,
+    subtree_changes: impl IntoIterator<Item = ManifestParentReplacement<TreeId, Leaf>>,
+    known_entries: HashMap<MPath, Option<Entry<TreeId, Leaf>>>,
+    prefix: MPath,
+    create_tree: T,
+    create_leaf: L,
+) -> impl Future<Output = Result<Option<Entry<TreeId, Leaf>>>>
 where
     Store: Sync + Send + Clone + 'static,
     LeafChange: Send + Clone + Eq + Hash + fmt::Debug + 'static,
@@ -146,6 +196,8 @@ where
         parents,
         changes,
         subtree_changes,
+        known_entries,
+        prefix,
         create_tree,
         create_leaf,
     )
@@ -195,15 +247,17 @@ where
 ///   - Mix of leaves/trees: all leaves are removed, recurse into the trees.
 /// 4. Current path have `Some(leaf)` change associated with it.
 ///   - _: all the trees are removed in favour of this leaf.
-pub fn derive_manifest_inner<LeafChange, TreeId, Leaf, T, TFut, L, LFut, Ctx, Store>(
+pub async fn derive_manifest_inner<LeafChange, TreeId, Leaf, T, TFut, L, LFut, Ctx, Store>(
     ctx: CoreContext,
     store: Store,
-    parents: impl IntoIterator<Item = TreeId>,
+    parents: impl IntoIterator<Item = Entry<TreeId, Leaf>>,
     changes: impl IntoIterator<Item = (NonRootMPath, Option<LeafChange>)>,
     subtree_changes: impl IntoIterator<Item = ManifestParentReplacement<TreeId, Leaf>>,
+    known_entries: HashMap<MPath, Option<Entry<TreeId, Leaf>>>,
+    prefix: MPath,
     create_tree: T,
     create_leaf: L,
-) -> impl Future<Output = Result<Option<TreeId>>>
+) -> Result<Option<Entry<TreeId, Leaf>>>
 where
     Store: Sync + Send + Clone + 'static,
     LeafChange: Send + Clone + Eq + Hash + fmt::Debug + 'static,
@@ -221,22 +275,39 @@ where
         TrieMapOps<Store, Entry<TreeId, Leaf>> + Send + 'static,
     Ctx: Send + 'static,
 {
+    // Implicit delete: a file added at a strict prefix of `prefix` replaces the subtree.
+    let changes: Vec<_> = changes.into_iter().collect();
+    let implicit_delete = changes.iter().any(|(mpath, change)| {
+        change.is_some() && mpath.is_prefix_of(&prefix) && !prefix.is_prefix_of(mpath)
+    });
+    if implicit_delete {
+        return Ok(None);
+    }
+
     bounded_traversal::bounded_traversal(
         256,
         MergeNode {
             name: None,
-            path: MPath::ROOT,
             changes: PathTree::from_iter(
-                changes
-                    .into_iter()
-                    .map(|(path, change)| (path, Some(Change::from(change)))),
+                // Strip prefix to get relative paths. remove_prefix_component
+                // returns None for paths not under the prefix, filtering them out.
+                changes.into_iter().filter_map(|(mpath, change)| {
+                    mpath
+                        .remove_prefix_component(&prefix)
+                        .map(|stripped| (stripped, Some(Change::from(change))))
+                }),
             ),
-            parents: parents.into_iter().map(Entry::Tree).collect(),
+            parents: parents.into_iter().collect(),
             parent_replacements: PathTree::from_iter(
                 subtree_changes
                     .into_iter()
                     .map(|r| (r.path, Some(r.replacements))),
             ),
+            // Strip prefix from known_entries keys.
+            known_entries: PathTree::from_iter(known_entries.into_iter().map(
+                |(path, maybe_entry)| (path.remove_prefix_component(&prefix), Some(maybe_entry)),
+            )),
+            path: prefix,
         },
         // unfold, all merge logic happens in this unfold function
         move |merge_node: MergeNode<_, Leaf, LeafChange>| {
@@ -318,7 +389,8 @@ where
             }
         },
     )
-    .map_ok(|result: Option<_>| result.and_then(|(_, _, entry)| entry.into_tree()))
+    .map_ok(|result: Option<_>| result.map(|(_, _, entry)| entry))
+    .await
 }
 
 // Change is isomorphic to Option, but it makes it easier to understand merge logic
@@ -361,6 +433,7 @@ struct MergeNode<TreeId, Leaf, LeafChange> {
     changes: PathTree<Option<Change<LeafChange>>>, // changes associated with current subtree
     parents: Vec<Entry<TreeId, Leaf>>, // unmerged parents of current node
     parent_replacements: PathTree<Option<Vec<Entry<TreeId, Leaf>>>>,
+    known_entries: PathTree<Option<Option<Entry<TreeId, Leaf>>>>, // precomputed subtree entries
 }
 
 async fn merge<TreeId, Leaf, LeafChange, Store>(
@@ -392,7 +465,21 @@ where
                 value: parent_replacements_value,
                 subentries: parent_replacements_subentries,
             },
+        known_entries:
+            PathTree {
+                value: known_entry_value,
+                subentries: known_entries_subentries,
+            },
     } = node;
+
+    // If we have a precomputed entry for this path, short-circuit the
+    // traversal and reuse it directly.
+    if let Some(maybe_entry) = known_entry_value {
+        return Ok(match maybe_entry {
+            Some(entry) => (MergeResult::Reuse { name, entry }, Vec::new()),
+            None => (MergeResult::Delete, Vec::new()),
+        });
+    }
 
     if let Some(new_parents) = parent_replacements_value {
         parents = new_parents;
@@ -550,6 +637,7 @@ where
         subentries,
         parent_manifests_trie_maps,
         parent_replacements_subentries,
+        known_entries_subentries,
     )
     .await?;
 
@@ -570,6 +658,7 @@ struct MergeSubentriesNode<'a, TreeId, Leaf, LeafChange, TrieMapType> {
     changes: PrefixTree<PathTree<Option<Change<LeafChange>>>>,
     parents: Vec<TrieMapType>,
     parent_replacements: PrefixTree<PathTree<Option<Vec<Entry<TreeId, Leaf>>>>>,
+    known_entries: PrefixTree<PathTree<Option<Option<Entry<TreeId, Leaf>>>>>,
 }
 
 struct MergeSubentriesResult<TreeId, Leaf, LeafChange, TrieMapType> {
@@ -584,6 +673,7 @@ async fn merge_subentries<TreeId, Leaf, LeafChange, TrieMapType, Store>(
     changes: PrefixTree<PathTree<Option<Change<LeafChange>>>>,
     parents: Vec<TrieMapType>,
     parent_replacements: PrefixTree<PathTree<Option<Vec<Entry<TreeId, Leaf>>>>>,
+    known_entries: PrefixTree<PathTree<Option<Option<Entry<TreeId, Leaf>>>>>,
 ) -> Result<MergeSubentriesResult<TreeId, Leaf, LeafChange, TrieMapType>>
 where
     TrieMapType: TrieMapOps<Store, Entry<TreeId, Leaf>> + Send,
@@ -600,6 +690,7 @@ where
             changes,
             parents,
             parent_replacements,
+            known_entries,
         },
         move |MergeSubentriesNode::<_, _, _, _> {
                   path,
@@ -607,6 +698,7 @@ where
                   changes,
                   parents,
                   parent_replacements,
+                  known_entries,
               }| {
             async move {
                 // If there are no changes and only one parent then we can reuse the parent's map.
@@ -647,6 +739,7 @@ where
                         changes: current_change,
                         parents: Default::default(),
                         parent_replacements: Default::default(),
+                        known_entries: Default::default(),
                     })
                 }
 
@@ -663,6 +756,7 @@ where
                             changes: Default::default(),
                             parents: Default::default(),
                             parent_replacements: Default::default(),
+                            known_entries: Default::default(),
                         })
                         .changes = changes;
                 }
@@ -680,6 +774,7 @@ where
                                 changes: Default::default(),
                                 parents: Default::default(),
                                 parent_replacements: Default::default(),
+                                known_entries: Default::default(),
                             })
                             .parents
                             .push(current_entry.clone());
@@ -698,6 +793,7 @@ where
                                 changes: Default::default(),
                                 parents: Default::default(),
                                 parent_replacements: Default::default(),
+                                known_entries: Default::default(),
                             })
                             .parents
                             .push(trie_map);
@@ -717,6 +813,7 @@ where
                             changes: Default::default(),
                             parents: Default::default(),
                             parent_replacements: Default::default(),
+                            known_entries: Default::default(),
                         })
                         .parent_replacements = current_parent_replacements;
                 }
@@ -734,8 +831,44 @@ where
                             changes: Default::default(),
                             parents: Default::default(),
                             parent_replacements: Default::default(),
+                            known_entries: Default::default(),
                         })
                         .parent_replacements = parent_replacements;
+                }
+
+                let (current_known_entries, child_known_entries) = known_entries.expand();
+
+                if let Some(current_known_entries) = current_known_entries {
+                    let name = MPathElement::new_from_slice(&prefix)?;
+
+                    current_merge_node
+                        .get_or_insert_with(|| MergeNode {
+                            path: path.join_element(Some(&name)),
+                            name: Some(name),
+                            changes: Default::default(),
+                            parents: Default::default(),
+                            parent_replacements: Default::default(),
+                            known_entries: Default::default(),
+                        })
+                        .known_entries = current_known_entries;
+                }
+
+                for (next_byte, known_entries) in child_known_entries {
+                    child_merge_subentries_nodes
+                        .entry(next_byte)
+                        .or_insert_with(|| MergeSubentriesNode {
+                            path,
+                            prefix: prefix
+                                .iter()
+                                .copied()
+                                .chain(std::iter::once(next_byte))
+                                .collect(),
+                            changes: Default::default(),
+                            parents: Default::default(),
+                            parent_replacements: Default::default(),
+                            known_entries: Default::default(),
+                        })
+                        .known_entries = known_entries;
                 }
 
                 Ok((

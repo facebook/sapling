@@ -6,6 +6,7 @@
  */
 
 use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::Hash;
 use std::hash::Hasher;
@@ -43,7 +44,7 @@ pub(crate) use crate::OrderedManifest;
 pub(crate) use crate::TreeInfo;
 pub(crate) use crate::derive_batch::ManifestChanges;
 pub(crate) use crate::derive_batch::derive_manifests_for_simple_stack_of_commits;
-pub(crate) use crate::derive_manifest;
+pub(crate) use crate::derive_manifest_with_known_entries;
 pub(crate) use crate::flatten_subentries;
 pub(crate) use crate::types::Weight;
 
@@ -241,54 +242,16 @@ pub(crate) async fn derive_test_manifest(
     parents: Vec<TestManifestId>,
     changes_str: BTreeMap<&str, Option<&str>>,
 ) -> Result<Option<TestManifestId>> {
-    let changes = {
-        let mut changes = Vec::new();
-        for (path, change) in changes_str {
-            let path = NonRootMPath::new(path)?;
-            changes.push((path, change.map(|leaf| TestLeaf(leaf.to_string()))));
-        }
-        changes
-    };
-    derive_manifest(
-        ctx.clone(),
-        blobstore.clone(),
-        parents,
-        changes,
-        None,
-        {
-            cloned!(ctx, blobstore);
-            move |TreeInfo { subentries, .. }| {
-                cloned!(ctx, blobstore);
-                async move {
-                    let id = TestManifest(
-                        flatten_subentries(&ctx, &(), subentries)
-                            .await?
-                            .map(|(path, (_ctx, entry))| (path, entry))
-                            .collect(),
-                    )
-                    .store(&ctx, &blobstore)
-                    .await?;
-                    Ok(((), id))
-                }
-            }
-        },
-        {
-            cloned!(ctx, blobstore);
-            move |leaf_info| {
-                cloned!(ctx, blobstore);
-                async move {
-                    match leaf_info.change {
-                        None => Err(Error::msg("leaf only conflict")),
-                        Some(change) => {
-                            let id = change.store(&ctx, &blobstore).await?;
-                            Ok(((), (FileType::Regular, id)))
-                        }
-                    }
-                }
-            }
-        },
+    derive_test_manifest_with_known_entries(
+        ctx,
+        blobstore,
+        parents.into_iter().map(Entry::Tree).collect(),
+        changes_str,
+        HashMap::new(),
+        MPath::ROOT,
     )
     .await
+    .map(|opt| opt.and_then(|entry| entry.into_tree()))
 }
 
 pub(crate) async fn derive_stack_of_test_manifests(
@@ -396,5 +359,65 @@ pub(crate) async fn list_test_manifest<'a, B: KeyedBlobstore>(
         acc.insert(path, leaf);
         future::ok::<_, LoadableError>(acc)
     })
+    .await
+}
+
+pub(crate) async fn derive_test_manifest_with_known_entries(
+    ctx: &CoreContext,
+    blobstore: &Arc<dyn KeyedBlobstore>,
+    parents: Vec<Entry<TestManifestId, (FileType, TestLeafId)>>,
+    changes_str: BTreeMap<&str, Option<&str>>,
+    known_entries: HashMap<MPath, Option<Entry<TestManifestId, (FileType, TestLeafId)>>>,
+    prefix: MPath,
+) -> Result<Option<Entry<TestManifestId, (FileType, TestLeafId)>>> {
+    let changes = {
+        let mut changes = Vec::new();
+        for (path, change) in changes_str {
+            let path = NonRootMPath::new(path)?;
+            changes.push((path, change.map(|leaf| TestLeaf(leaf.to_string()))));
+        }
+        changes
+    };
+    derive_manifest_with_known_entries(
+        ctx.clone(),
+        blobstore.clone(),
+        parents,
+        changes,
+        None,
+        known_entries,
+        prefix,
+        {
+            cloned!(ctx, blobstore);
+            move |TreeInfo { subentries, .. }| {
+                cloned!(ctx, blobstore);
+                async move {
+                    let id = TestManifest(
+                        flatten_subentries(&ctx, &(), subentries)
+                            .await?
+                            .map(|(path, (_ctx, entry))| (path, entry))
+                            .collect(),
+                    )
+                    .store(&ctx, &blobstore)
+                    .await?;
+                    Ok(((), id))
+                }
+            }
+        },
+        {
+            cloned!(ctx, blobstore);
+            move |leaf_info| {
+                cloned!(ctx, blobstore);
+                async move {
+                    match leaf_info.change {
+                        None => Err(Error::msg("leaf only conflict")),
+                        Some(change) => {
+                            let id = change.store(&ctx, &blobstore).await?;
+                            Ok(((), (FileType::Regular, id)))
+                        }
+                    }
+                }
+            }
+        },
+    )
     .await
 }

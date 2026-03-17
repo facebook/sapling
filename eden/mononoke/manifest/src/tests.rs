@@ -6,10 +6,12 @@
  */
 
 use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::Result;
 use blobstore::KeyedBlobstore;
+use blobstore::Loadable;
 use borrowed::borrowed;
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -18,6 +20,7 @@ use maplit::btreemap;
 use memblob::KeyedMemblob;
 use mononoke_macros::mononoke;
 use mononoke_types::FileType;
+use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
 use mononoke_types::path::MPath;
 use mononoke_types_mocks::changesetid::ONES_CSID;
@@ -27,6 +30,7 @@ use pretty_assertions::assert_eq;
 
 pub(crate) use crate::Diff;
 pub(crate) use crate::Entry;
+pub(crate) use crate::Manifest;
 pub(crate) use crate::ManifestOps;
 pub(crate) use crate::ManifestOrderedOps;
 pub(crate) use crate::PathOrPrefix;
@@ -38,6 +42,7 @@ use self::test_manifest::TestLeafId;
 use self::test_manifest::TestManifestId;
 use self::test_manifest::derive_stack_of_test_manifests;
 use self::test_manifest::derive_test_manifest;
+use self::test_manifest::derive_test_manifest_with_known_entries;
 use self::test_manifest::list_test_manifest;
 
 fn files_reference(files: BTreeMap<&str, &str>) -> Result<BTreeMap<NonRootMPath, String>> {
@@ -1174,6 +1179,452 @@ async fn test_find_intersection_of_diffs(fb: FacebookInit) -> Result<()> {
             "dir/changed_file",
         ])?,
     );
+
+    Ok(())
+}
+
+/// Look up an entry at a given single-element path in a manifest.
+async fn lookup_entry(
+    ctx: &CoreContext,
+    blobstore: &Arc<dyn KeyedBlobstore>,
+    mf_id: TestManifestId,
+    name: &str,
+) -> Result<Entry<TestManifestId, (FileType, TestLeafId)>> {
+    let root = mf_id.load(ctx, blobstore).await?;
+    let entry = root
+        .lookup(
+            ctx,
+            blobstore,
+            &MPathElement::new_from_slice(name.as_bytes())?,
+        )
+        .await?;
+    Ok(entry.expect("entry should exist"))
+}
+
+#[mononoke::fbinit_test]
+async fn test_derive_manifest_with_known_entries(fb: FacebookInit) -> Result<()> {
+    let blobstore: Arc<dyn KeyedBlobstore> = Arc::new(KeyedMemblob::default());
+    let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx, blobstore);
+
+    let derive = {
+        move |parents, changes| async move {
+            derive_test_manifest(ctx, blobstore, parents, changes)
+                .await
+                .map(|mf| mf.expect("expect non empty manifest"))
+        }
+    };
+
+    let files = move |manifest_id| list_test_manifest(ctx, blobstore, manifest_id);
+
+    // 1. known_entries produces same result as normal derivation
+    //
+    // Derive a manifest normally, then derive it again but providing one
+    // subtree via known_entries. The results should be identical.
+    {
+        let parent_mf = derive(
+            vec![],
+            btreemap! {
+                "/dir/a" => Some("a"),
+                "/dir/b" => Some("b"),
+                "/other/c" => Some("c"),
+            },
+        )
+        .await?;
+
+        // Derive normally: add a file under "other/", "dir/" is unchanged from parent.
+        let normal_result = derive(
+            vec![parent_mf],
+            btreemap! {
+                "/other/d" => Some("d"),
+            },
+        )
+        .await?;
+
+        // Extract the "dir/" subtree from the parent (it's unchanged, so this
+        // is exactly what normal derivation would produce for "dir/").
+        let dir_entry = lookup_entry(ctx, blobstore, parent_mf, "dir").await?;
+
+        let mut known = HashMap::new();
+        known.insert(MPath::new("dir")?, Some(dir_entry));
+
+        let known_result = derive_test_manifest_with_known_entries(
+            ctx,
+            blobstore,
+            vec![Entry::Tree(parent_mf)],
+            btreemap! {
+                "/other/d" => Some("d"),
+            },
+            known,
+            MPath::ROOT,
+        )
+        .await?
+        .and_then(|entry| entry.into_tree())
+        .expect("expect non empty manifest");
+
+        assert_eq!(files(normal_result).await?, files(known_result).await?);
+    }
+
+    // 2. Multiple known_entries
+    //
+    // Same idea but with two subtrees provided via known_entries.
+    {
+        let parent_mf = derive(
+            vec![],
+            btreemap! {
+                "/aa/x" => Some("ax"),
+                "/bb/y" => Some("by"),
+                "/cc/z" => Some("cz"),
+            },
+        )
+        .await?;
+
+        let normal_result = derive(
+            vec![parent_mf],
+            btreemap! {
+                "/cc/w" => Some("cw"),
+            },
+        )
+        .await?;
+
+        let entry_aa = lookup_entry(ctx, blobstore, parent_mf, "aa").await?;
+        let entry_bb = lookup_entry(ctx, blobstore, parent_mf, "bb").await?;
+
+        let mut known = HashMap::new();
+        known.insert(MPath::new("aa")?, Some(entry_aa));
+        known.insert(MPath::new("bb")?, Some(entry_bb));
+
+        let known_result = derive_test_manifest_with_known_entries(
+            ctx,
+            blobstore,
+            vec![Entry::Tree(parent_mf)],
+            btreemap! {
+                "/cc/w" => Some("cw"),
+            },
+            known,
+            MPath::ROOT,
+        )
+        .await?
+        .and_then(|entry| entry.into_tree())
+        .expect("expect non empty manifest");
+
+        assert_eq!(files(normal_result).await?, files(known_result).await?);
+    }
+
+    // 3. known_entries with deletion (None value)
+    //
+    // When a subtree is deleted, providing None in known_entries should
+    // produce the same result as normal derivation that deletes those files.
+    {
+        let parent_mf = derive(
+            vec![],
+            btreemap! {
+                "/removed/a" => Some("a"),
+                "/removed/b" => Some("b"),
+                "/kept/c" => Some("c"),
+            },
+        )
+        .await?;
+
+        // Derive normally: delete all files under "removed/".
+        let normal_result = derive(
+            vec![parent_mf],
+            btreemap! {
+                "/removed/a" => None,
+                "/removed/b" => None,
+            },
+        )
+        .await?;
+
+        // Derive with known_entries: signal that "removed/" is deleted.
+        // A change under "removed/" is needed to force the traversal to
+        // recurse there, where the known subtree short-circuits.
+        let mut known = HashMap::new();
+        known.insert(MPath::new("removed")?, None);
+
+        let known_result = derive_test_manifest_with_known_entries(
+            ctx,
+            blobstore,
+            vec![Entry::Tree(parent_mf)],
+            btreemap! {
+                "/removed/a" => None,
+                "/removed/b" => None,
+            },
+            known,
+            MPath::ROOT,
+        )
+        .await?
+        .and_then(|entry| entry.into_tree())
+        .expect("expect non empty manifest");
+
+        assert_eq!(files(normal_result).await?, files(known_result).await?);
+    }
+
+    // 4. known_entries with a leaf entry
+    //
+    // When a path has a file (leaf) instead of a directory, known_entries
+    // should accept Entry::Leaf and produce the same result as normal derivation.
+    {
+        let parent_mf = derive(
+            vec![],
+            btreemap! {
+                "/file" => Some("content"),
+                "/other/a" => Some("a"),
+            },
+        )
+        .await?;
+
+        // Derive normally: change a different file, "file" is unchanged from parent.
+        let normal_result = derive(
+            vec![parent_mf],
+            btreemap! {
+                "/other/b" => Some("b"),
+            },
+        )
+        .await?;
+
+        // Look up the "file" leaf entry from the parent manifest.
+        let file_entry = lookup_entry(ctx, blobstore, parent_mf, "file").await?;
+
+        let mut known = HashMap::new();
+        known.insert(MPath::new("file")?, Some(file_entry));
+
+        let known_result = derive_test_manifest_with_known_entries(
+            ctx,
+            blobstore,
+            vec![Entry::Tree(parent_mf)],
+            btreemap! {
+                "/other/b" => Some("b"),
+            },
+            known,
+            MPath::ROOT,
+        )
+        .await?
+        .and_then(|entry| entry.into_tree())
+        .expect("expect non empty manifest");
+
+        assert_eq!(files(normal_result).await?, files(known_result).await?);
+    }
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_derive_manifest_with_prefix(fb: FacebookInit) -> Result<()> {
+    let blobstore: Arc<dyn KeyedBlobstore> = Arc::new(KeyedMemblob::default());
+    let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx, blobstore);
+
+    let derive = {
+        move |parents, changes| async move {
+            derive_test_manifest(ctx, blobstore, parents, changes)
+                .await
+                .map(|mf| mf.expect("expect non empty manifest"))
+        }
+    };
+
+    let files = move |manifest_id| list_test_manifest(ctx, blobstore, manifest_id);
+
+    // 1. Prefix filters changes to a subtree
+    //
+    // Derive with prefix "dir" — only changes under "dir/" should be included,
+    // producing the same subtree as normal derivation's "dir/" entry.
+    {
+        let normal_mf = derive(
+            vec![],
+            btreemap! {
+                "/dir/a" => Some("a"),
+                "/dir/b" => Some("b"),
+                "/other/c" => Some("c"),
+            },
+        )
+        .await?;
+
+        let dir_entry = lookup_entry(ctx, blobstore, normal_mf, "dir").await?;
+        let expected_id = dir_entry.into_tree().expect("dir should be a tree");
+
+        // Derive with prefix "dir" — "other/c" should be filtered out.
+        let prefix_result = derive_test_manifest_with_known_entries(
+            ctx,
+            blobstore,
+            vec![],
+            btreemap! {
+                "/dir/a" => Some("a"),
+                "/dir/b" => Some("b"),
+                "/other/c" => Some("c"),
+            },
+            HashMap::new(),
+            MPath::new("dir")?,
+        )
+        .await?
+        .and_then(|entry| entry.into_tree())
+        .expect("expect non empty manifest");
+
+        assert_eq!(files(expected_id).await?, files(prefix_result).await?);
+    }
+
+    // 2. Prefix with known_entries (derivation pipeline pattern)
+    //
+    // Derive dir1/ and dir2/ subtrees separately, then assemble root with
+    // known_entries. Uses prefix for subtree stages, ROOT for root stage.
+    {
+        let parent_mf = derive(
+            vec![],
+            btreemap! {
+                "/dir1/a" => Some("a"),
+                "/dir2/b" => Some("b"),
+            },
+        )
+        .await?;
+
+        // Normal derivation of the full tree.
+        let normal_result = derive(
+            vec![parent_mf],
+            btreemap! {
+                "/dir1/c" => Some("c"),
+                "/dir2/d" => Some("d"),
+            },
+        )
+        .await?;
+
+        let all_changes = btreemap! {
+            "/dir1/c" => Some("c"),
+            "/dir2/d" => Some("d"),
+        };
+
+        // Stage dir1: derive with prefix "dir1", passing all changes.
+        let dir1_parent = lookup_entry(ctx, blobstore, parent_mf, "dir1").await?;
+        let dir1_entry = derive_test_manifest_with_known_entries(
+            ctx,
+            blobstore,
+            vec![dir1_parent],
+            all_changes.clone(),
+            HashMap::new(),
+            MPath::new("dir1")?,
+        )
+        .await?
+        .expect("dir1 should produce an entry");
+
+        // Stage dir2: derive with prefix "dir2", passing all changes.
+        let dir2_parent = lookup_entry(ctx, blobstore, parent_mf, "dir2").await?;
+        let dir2_entry = derive_test_manifest_with_known_entries(
+            ctx,
+            blobstore,
+            vec![dir2_parent],
+            all_changes.clone(),
+            HashMap::new(),
+            MPath::new("dir2")?,
+        )
+        .await?
+        .expect("dir2 should produce an entry");
+
+        // Root stage: assemble with known_entries, prefix ROOT.
+        let mut known = HashMap::new();
+        known.insert(MPath::new("dir1")?, Some(dir1_entry));
+        known.insert(MPath::new("dir2")?, Some(dir2_entry));
+
+        let pipeline_result = derive_test_manifest_with_known_entries(
+            ctx,
+            blobstore,
+            vec![Entry::Tree(parent_mf)],
+            all_changes,
+            known,
+            MPath::ROOT,
+        )
+        .await?
+        .and_then(|entry| entry.into_tree())
+        .expect("expect non empty manifest");
+
+        assert_eq!(files(normal_result).await?, files(pipeline_result).await?);
+    }
+
+    // 3. Prefix with implicit delete
+    //
+    // When a file is added at a strict prefix of the stage path,
+    // the entire subtree is implicitly deleted (returns None).
+    {
+        let parent_mf = derive(
+            vec![],
+            btreemap! {
+                "/dir/sub/a" => Some("a"),
+            },
+        )
+        .await?;
+
+        let dir_parent = lookup_entry(ctx, blobstore, parent_mf, "dir").await?;
+
+        // Adding a file at "dir" (which is a strict prefix of "dir/sub")
+        // should cause the "dir/sub" stage to return None.
+        let result = derive_test_manifest_with_known_entries(
+            ctx,
+            blobstore,
+            vec![dir_parent],
+            btreemap! {
+                "/dir" => Some("now_a_file"),
+            },
+            HashMap::new(),
+            MPath::new("dir/sub")?,
+        )
+        .await?;
+
+        assert!(result.is_none(), "implicit delete should return None");
+    }
+
+    // 4. Nested prefix (derivation pipeline with deep nesting)
+    //
+    // Derive dir/sub/ first, then dir/ with known_entries for sub/.
+    {
+        let normal_mf = derive(
+            vec![],
+            btreemap! {
+                "/dir/sub/a" => Some("a"),
+                "/dir/sub/b" => Some("b"),
+                "/dir/c" => Some("c"),
+            },
+        )
+        .await?;
+
+        let all_changes = btreemap! {
+            "/dir/sub/a" => Some("a"),
+            "/dir/sub/b" => Some("b"),
+            "/dir/c" => Some("c"),
+        };
+
+        // Stage dir/sub: derive with prefix "dir/sub".
+        let sub_entry = derive_test_manifest_with_known_entries(
+            ctx,
+            blobstore,
+            vec![],
+            all_changes.clone(),
+            HashMap::new(),
+            MPath::new("dir/sub")?,
+        )
+        .await?
+        .expect("dir/sub should produce an entry");
+
+        // Stage dir: derive with prefix "dir", known_entries for "dir/sub".
+        let mut known = HashMap::new();
+        known.insert(MPath::new("dir/sub")?, Some(sub_entry));
+
+        let dir_entry = derive_test_manifest_with_known_entries(
+            ctx,
+            blobstore,
+            vec![],
+            all_changes,
+            known,
+            MPath::new("dir")?,
+        )
+        .await?
+        .and_then(|entry| entry.into_tree())
+        .expect("dir should produce a tree");
+
+        let expected_dir_entry = lookup_entry(ctx, blobstore, normal_mf, "dir").await?;
+        let expected_dir_id = expected_dir_entry
+            .into_tree()
+            .expect("dir should be a tree");
+
+        assert_eq!(files(expected_dir_id).await?, files(dir_entry).await?);
+    }
 
     Ok(())
 }
