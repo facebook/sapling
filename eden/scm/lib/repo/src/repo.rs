@@ -504,6 +504,14 @@ impl Repo {
             }
         }
     }
+
+    pub fn add_commit(&self, new_commit: commits_trait::NewCommit) -> Result<HgId> {
+        let dag = self.dag_commits()?;
+        async_runtime::try_block_unless_interrupted(commits::add_new_commit(
+            &mut **dag.write(),
+            new_commit,
+        ))
+    }
 }
 
 fn mirror_requirement_to_config(info: &RepoMinimalInfo, config: &mut ConfigSet) {
