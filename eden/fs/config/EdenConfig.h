@@ -721,6 +721,14 @@ class EdenConfig : private ConfigSettingManager {
       std::nullopt,
       this};
 
+  /**
+   * The maximum number of pages per FUSE read request. Default kernel value
+   * is 32 pages (128KB with 4KB pages). Setting FUSE_MAX_PAGES flag in
+   * FUSE_INIT allows configuring this up to 256 pages (1MB with 4KB pages).
+   * Set to 0 to use the kernel default (32).
+   */
+  ConfigSetting<uint32_t> fuseMaxPages{"fuse:max-pages", 0, this};
+
   // [nfs]
 
   /**
