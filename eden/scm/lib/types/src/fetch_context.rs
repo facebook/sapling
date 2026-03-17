@@ -29,21 +29,25 @@ pub struct FetchContext {
 
 impl FetchContext {
     pub fn new(mode: FetchMode) -> Self {
-        Self::new_with_cause(mode, FetchCause::Unspecified)
+        Self::new_with_mode_and_cause(mode, FetchCause::Unspecified)
     }
 
     pub fn sapling_default() -> Self {
-        Self::new_with_cause(FetchMode::AllowRemote, FetchCause::SaplingUnknown)
+        Self::new_with_mode_and_cause(FetchMode::AllowRemote, FetchCause::SaplingUnknown)
     }
 
     pub fn sapling_prefetch() -> Self {
-        Self::new_with_cause(
+        Self::new_with_mode_and_cause(
             FetchMode::AllowRemote | FetchMode::IGNORE_RESULT,
             FetchCause::SaplingPrefetch,
         )
     }
 
-    pub fn new_with_cause(mode: FetchMode, cause: FetchCause) -> Self {
+    pub fn new_with_cause(cause: FetchCause) -> Self {
+        Self::new_with_mode_and_cause(FetchMode::AllowRemote, cause)
+    }
+
+    pub fn new_with_mode_and_cause(mode: FetchMode, cause: FetchCause) -> Self {
         Self {
             mode,
             cause,
@@ -89,6 +93,6 @@ impl FetchContext {
 
 impl Default for FetchContext {
     fn default() -> Self {
-        Self::new(FetchMode::AllowRemote)
+        Self::sapling_default()
     }
 }

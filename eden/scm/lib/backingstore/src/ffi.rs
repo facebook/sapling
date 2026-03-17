@@ -478,7 +478,7 @@ pub fn sapling_backingstore_get_tree(
 ) -> ffi::GetTreeResult {
     // the cause is not propagated for this API
     let res = store.get_tree(
-        FetchContext::new_with_cause(FetchMode::from(fetch_mode), FetchCause::EdenUnknown),
+        FetchContext::new_with_mode_and_cause(FetchMode::from(fetch_mode), FetchCause::EdenUnknown),
         node,
     );
     let error = resolve_result!(
@@ -558,7 +558,7 @@ pub fn sapling_backingstore_get_tree_batch(
     let fetch_mode = FetchMode::from(fetch_mode);
 
     store.get_tree_batch(
-        FetchContext::new_with_cause(fetch_mode, cause),
+        FetchContext::new_with_mode_and_cause(fetch_mode, cause),
         keys,
         |idx, result| {
             let req = &requests[idx];
@@ -615,7 +615,7 @@ pub fn sapling_backingstore_get_tree_aux(
 ) -> ffi::GetTreeAuxResult {
     // the cause is not propagated for this API
     let res = store.get_tree_aux(
-        FetchContext::new_with_cause(FetchMode::from(fetch_mode), FetchCause::EdenUnknown),
+        FetchContext::new_with_mode_and_cause(FetchMode::from(fetch_mode), FetchCause::EdenUnknown),
         node,
     );
     let (data, error) = resolve_result!(res, transform_some: |aux: DirectoryMetadata| SharedPtr::new(aux.into()), replace_none: SharedPtr::null());
@@ -632,7 +632,7 @@ pub fn sapling_backingstore_get_tree_aux_batch(
     let cause = select_cause(requests.iter().map(|req| req.cause)).0;
 
     store.get_tree_aux_batch(
-        FetchContext::new_with_cause(FetchMode::from(fetch_mode), cause),
+        FetchContext::new_with_mode_and_cause(FetchMode::from(fetch_mode), cause),
         keys,
         |idx, result| {
             let result = result.and_then(|opt| opt.ok_or_else(|| Error::msg("no aux data found")));
@@ -655,7 +655,7 @@ pub fn sapling_backingstore_get_blob(
 ) -> ffi::GetBlobResult {
     // the cause is not propagated for this API
     let res = store.get_blob(
-        FetchContext::new_with_cause(FetchMode::from(fetch_mode), FetchCause::EdenUnknown),
+        FetchContext::new_with_mode_and_cause(FetchMode::from(fetch_mode), FetchCause::EdenUnknown),
         node,
     );
     let (data, error) = resolve_result!(res, transform_some: |blob: blob::Blob| blob.into_iobuf().into(), replace_none: UniquePtr::null());
@@ -680,7 +680,7 @@ pub fn sapling_backingstore_get_blob_batch(
     }
 
     store.get_blob_batch(
-        FetchContext::new_with_cause(fetch_mode, cause),
+        FetchContext::new_with_mode_and_cause(fetch_mode, cause),
         keys,
         |idx, result| {
             let resolver = resolver.clone();
@@ -716,7 +716,7 @@ pub fn sapling_backingstore_get_file_aux(
 ) -> ffi::GetFileAuxResult {
     // the cause is not propagated for this API
     let res = store.get_file_aux(
-        FetchContext::new_with_cause(FetchMode::from(fetch_mode), FetchCause::EdenUnknown),
+        FetchContext::new_with_mode_and_cause(FetchMode::from(fetch_mode), FetchCause::EdenUnknown),
         node,
     );
 
@@ -734,7 +734,7 @@ pub fn sapling_backingstore_get_file_aux_batch(
     let cause = select_cause(requests.iter().map(|req| req.cause)).0;
 
     store.get_file_aux_batch(
-        FetchContext::new_with_cause(FetchMode::from(fetch_mode), cause),
+        FetchContext::new_with_mode_and_cause(FetchMode::from(fetch_mode), cause),
         keys,
         |idx, result| {
             let result: anyhow::Result<ScmStoreFileAuxData> =

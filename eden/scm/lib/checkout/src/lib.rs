@@ -50,6 +50,7 @@ use treestate::dirstate;
 use treestate::filestate::FileStateV2;
 use treestate::filestate::StateFlags;
 use treestate::treestate::TreeState;
+use types::FetchCause;
 use types::FetchContext;
 use types::HgId;
 use types::Key;
@@ -269,7 +270,10 @@ impl CheckoutPlan {
             .iter()
             .map(|(p, u)| Key::new(p.clone(), u.content_hgid.clone()))
             .collect();
-        let fetch_data_iter = store.get_content_iter(FetchContext::default(), keys)?;
+        let fetch_data_iter = store.get_content_iter(
+            FetchContext::new_with_cause(FetchCause::SaplingCheckout),
+            keys,
+        )?;
 
         const WORK_QUEUE_SIZE: usize = 10_000;
 
@@ -414,7 +418,10 @@ impl CheckoutPlan {
         });
         let keys: Vec<_> = keys.collect();
         let (mut count, mut size) = (0, 0);
-        let iter = store.get_content_iter(FetchContext::default(), keys)?;
+        let iter = store.get_content_iter(
+            FetchContext::new_with_cause(FetchCause::SaplingCheckout),
+            keys,
+        )?;
         for result in iter {
             let (_key, data) = result?;
             count += 1;
@@ -543,7 +550,10 @@ impl CheckoutPlan {
         }
 
         let mut paths = Vec::new();
-        for entry in store.get_content_iter(FetchContext::default(), check_content)? {
+        for entry in store.get_content_iter(
+            FetchContext::new_with_cause(FetchCause::SaplingCheckout),
+            check_content,
+        )? {
             let (key, data) = entry?;
             if let Some(path) = Self::check_content(vfs, key, data.into_bytes()) {
                 paths.push(path);

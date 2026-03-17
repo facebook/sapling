@@ -23,6 +23,16 @@ pub enum FetchCause {
     SaplingPrefetch,
     // Unknown orginination from Sapling
     SaplingUnknown,
+    // The fetch originated from a Sapling checkout operation
+    SaplingCheckout,
+    // The fetch originated from a Sapling copytrace operation
+    SaplingCopytrace,
+    // The fetch originated from a Sapling status operation
+    SaplingStatus,
+    // The fetch originated from a Sapling sparse profile fetch
+    SaplingSparse,
+    // The fetch originated from a Sapling log/pathhistory operation
+    SaplingLog,
     // Unknown originiation, usually from Sapling (the default)
     Unspecified,
 }
@@ -38,6 +48,11 @@ impl FetchCause {
             FetchCause::EdenWalkPrefetch => "eden-walk-prefetch",
             FetchCause::SaplingPrefetch => "sl-prefetch",
             FetchCause::SaplingUnknown => "sl-unknown",
+            FetchCause::SaplingCheckout => "sl-checkout",
+            FetchCause::SaplingCopytrace => "sl-copytrace",
+            FetchCause::SaplingStatus => "sl-status",
+            FetchCause::SaplingSparse => "sl-sparse",
+            FetchCause::SaplingLog => "sl-log",
             FetchCause::Unspecified => "unspecified",
         }
     }
@@ -53,6 +68,11 @@ impl FetchCause {
             FetchCause::EdenFs => false,
             FetchCause::EdenMixed => false,
             FetchCause::SaplingUnknown => false,
+            FetchCause::SaplingCheckout => false,
+            FetchCause::SaplingCopytrace => false,
+            FetchCause::SaplingStatus => false,
+            FetchCause::SaplingSparse => false,
+            FetchCause::SaplingLog => false,
             FetchCause::Unspecified => false,
         }
     }
@@ -71,6 +91,11 @@ impl std::str::FromStr for FetchCause {
             "eden-walk-prefetch" => Ok(FetchCause::EdenWalkPrefetch),
             "sl-prefetch" => Ok(FetchCause::SaplingPrefetch),
             "sl-unknown" => Ok(FetchCause::SaplingUnknown),
+            "sl-checkout" => Ok(FetchCause::SaplingCheckout),
+            "sl-copytrace" => Ok(FetchCause::SaplingCopytrace),
+            "sl-status" => Ok(FetchCause::SaplingStatus),
+            "sl-sparse" => Ok(FetchCause::SaplingSparse),
+            "sl-log" => Ok(FetchCause::SaplingLog),
             "unspecified" => Ok(FetchCause::Unspecified),
             _ => Err(anyhow::anyhow!("Invalid FetchCause string")),
         }
@@ -93,6 +118,11 @@ mod tests {
             FetchCause::EdenWalkPrefetch,
             FetchCause::SaplingPrefetch,
             FetchCause::SaplingUnknown,
+            FetchCause::SaplingCheckout,
+            FetchCause::SaplingCopytrace,
+            FetchCause::SaplingStatus,
+            FetchCause::SaplingSparse,
+            FetchCause::SaplingLog,
             FetchCause::Unspecified,
         ];
 

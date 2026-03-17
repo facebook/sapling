@@ -481,7 +481,7 @@ fn prefetch(
             }
 
             // Use IGNORE_RESULT optimization since we don't care about the data.
-            let fctx = FetchContext::new_with_cause(
+            let fctx = FetchContext::new_with_mode_and_cause(
                 FetchMode::AllowRemote | FetchMode::IGNORE_RESULT,
                 FetchCause::EdenWalkPrefetch,
             );

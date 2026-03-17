@@ -617,7 +617,7 @@ impl FileStore {
         self.metrics.write().api.hg_prefetch.call(keys.len());
 
         self.fetch(
-            FetchContext::new_with_cause(
+            FetchContext::new_with_mode_and_cause(
                 FetchMode::AllowRemote | FetchMode::IGNORE_RESULT,
                 FetchCause::SaplingPrefetch,
             ),

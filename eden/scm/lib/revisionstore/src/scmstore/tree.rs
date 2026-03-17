@@ -818,7 +818,8 @@ impl storemodel::KeyStore for TreeStore {
             }
 
             // Don't need to check local anymore, so remove from fetch mode.
-            fctx = FetchContext::new_with_cause(fctx.mode() - FetchMode::LOCAL, fctx.cause());
+            fctx =
+                FetchContext::new_with_mode_and_cause(fctx.mode() - FetchMode::LOCAL, fctx.cause());
         }
 
         let key = Key::new(path.to_owned(), node);
