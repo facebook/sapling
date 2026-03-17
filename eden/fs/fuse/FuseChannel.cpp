@@ -868,7 +868,8 @@ FuseChannel::FuseChannel(
     std::chrono::nanoseconds longRunningFSRequestThreshold,
     bool useWriteBackCache,
     size_t fuseTraceBusCapacity,
-    std::optional<uint32_t> fuseBdiReadAheadKb)
+    std::optional<uint32_t> fuseBdiReadAheadKb,
+    uint32_t fuseMaxPages)
     : privHelper_{privHelper},
       bufferSize_(std::max(size_t(getpagesize()) + 0x1000, MIN_BUFSIZE)),
       threadPool_{std::move(threadPool)},
@@ -887,6 +888,7 @@ FuseChannel::FuseChannel(
       longRunningFSRequestThreshold_{longRunningFSRequestThreshold},
       useWriteBackCache_{useWriteBackCache},
       fuseBdiReadAheadKb_{fuseBdiReadAheadKb},
+      fuseMaxPages_{fuseMaxPages},
       fuseDevice_(std::move(fuseDevice)),
       processAccessLog_(std::move(processInfoCache)),
       traceDetailedArguments_(std::make_shared<std::atomic<size_t>>(0)),
@@ -896,14 +898,15 @@ FuseChannel::FuseChannel(
               fuseTraceBusCapacity)) {
   XLOGF(
       INFO,
-      "Creating FuseChannel: mountPath={}, numThreads={}, caseSensitive={}, requireUtf8={}, maximumBackgroundRequests={}, maximumInFlightRequests={}, useWriteBackCache={}",
+      "Creating FuseChannel: mountPath={}, numThreads={}, caseSensitive={}, requireUtf8={}, maximumBackgroundRequests={}, maximumInFlightRequests={}, useWriteBackCache={}, fuseMaxPages={}",
       mountPath,
       numThreads,
       caseSensitive,
       requireUtf8Path,
       maximumBackgroundRequests,
       maximumInFlightRequests,
-      useWriteBackCache);
+      useWriteBackCache,
+      fuseMaxPages_);
   XCHECK_GE(numThreads_, 1ul);
   installSignalHandler();
 

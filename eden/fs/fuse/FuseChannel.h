@@ -296,6 +296,9 @@ class FuseChannel final : public FsChannel {
    * fuseBdiReadAheadKb -
    *      If set, configures the FUSE BDI read-ahead after FUSE_INIT completes
    *      by writing to /sys/class/bdi/{major}:{minor}/read_ahead_kb.
+   * fuseMaxPages -
+   *      The maximum number of pages per FUSE read request. Set to 0 to use
+   *      the kernel default (32). Maximum 256 (1MB).
    */
   FuseChannel(
       PrivHelper* privHelper,
@@ -318,7 +321,8 @@ class FuseChannel final : public FsChannel {
       std::chrono::nanoseconds longRunningFSRequestThreshold,
       bool useWriteBackCache,
       size_t fuseTraceBusCapacity,
-      std::optional<uint32_t> fuseBdiReadAheadKb = std::nullopt);
+      std::optional<uint32_t> fuseBdiReadAheadKb = std::nullopt,
+      uint32_t fuseMaxPages = 0);
 
   FuseChannel(const FuseChannel&) = delete;
   FuseChannel(FuseChannel&&) = delete;
@@ -909,6 +913,7 @@ class FuseChannel final : public FsChannel {
   std::chrono::nanoseconds longRunningFSRequestThreshold_;
   bool useWriteBackCache_;
   std::optional<uint32_t> fuseBdiReadAheadKb_;
+  uint32_t fuseMaxPages_{0};
 
   /*
    * connInfo_ is modified during the initialization process,
