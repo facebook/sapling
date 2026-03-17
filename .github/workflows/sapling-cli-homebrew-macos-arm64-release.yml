@@ -7,7 +7,7 @@ on:
     - test-release-*
 jobs:
   build:
-    runs-on: macos-13-xlarge
+    runs-on: macos-15-xlarge
     steps:
     - name: Checkout Code
       uses: actions/checkout@v6
@@ -31,12 +31,12 @@ jobs:
     - name: Create Sapling bottle
       run: HOMEBREW_NO_INSTALL_FROM_API=1 brew bottle sapling
     - name: Rename bottle to some platform specific name
-      run: mv sapling*ventura.bottle*.tar.gz sapling-${{ env.SAPLING_VERSION }}.arm64_ventura.bottle.tar.gz
+      run: mv sapling*sequoia.bottle*.tar.gz sapling-${{ env.SAPLING_VERSION }}.arm64_sequoia.bottle.tar.gz
     - name: Upload Artifact
       uses: actions/upload-artifact@v6
       with:
         name: macos-homebrew-arm64-bottle
-        path: sapling*ventura.bottle*.tar.gz
+        path: sapling*sequoia.bottle*.tar.gz
   publish:
     runs-on: ubuntu-latest
     needs: build
@@ -58,4 +58,4 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       shell: bash
-      run: bash ci/retry.sh gh release upload --clobber $(ci/tag-name.sh) sapling*ventura.bottle*.tar.gz
+      run: bash ci/retry.sh gh release upload --clobber $(ci/tag-name.sh) sapling*sequoia.bottle*.tar.gz
