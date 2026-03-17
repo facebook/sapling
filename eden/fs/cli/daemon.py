@@ -37,6 +37,8 @@ from .util import is_apple_silicon, poll_until, print_stderr, ShutdownError
 # generally undesirable if we can avoid it.
 DEFAULT_SIGKILL_TIMEOUT = 30.0
 
+EDENFS_UNIT_NAME_TEMPLATE = "edenfs@{escaped_state_dir}.service"
+
 
 def _sanitize_unit_name(eden_dir: str) -> str:
     """Build a systemd unit name from the eden state directory path.
@@ -295,6 +297,27 @@ def _start_edenfs_service(
     return exit_code
 
 
+def _get_systemd_unit(instance: EdenInstance) -> str:
+    """Compute the systemd unit name for this instance.
+
+    Uses systemd-escape to produce the canonical path encoding for the state
+    directory.  Raises if systemd-escape is not available or fails.
+    """
+    config_dir = str(instance.state_dir)
+    try:
+        escaped = subprocess.check_output(
+            ["systemd-escape", "--path", config_dir],
+            text=True,
+        ).strip()
+    except FileNotFoundError:
+        raise RuntimeError(
+            "systemd-escape is not installed; cannot construct systemd unit name"
+        )
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError(f"systemd-escape failed for {config_dir}: {e}") from e
+    return EDENFS_UNIT_NAME_TEMPLATE.format(escaped_state_dir=escaped)
+
+
 def is_systemd_enabled(instance: EdenInstance) -> bool:
     """Check whether this EdenFS instance should use systemd for lifecycle management."""
     return sys.platform == "linux" and instance.get_config_bool(
@@ -465,7 +488,7 @@ def get_edenfs_environment(
         "SSH_AGENT_PID",
         "KRB5CCNAME",
         "ATLAS",
-        # Idenfitier of dev docker containers
+        # Identifier of dev docker containers
         "ATLAS_ENV_ID",
         "SANDCASTLE",
         "SANDCASTLE_ALIAS",
