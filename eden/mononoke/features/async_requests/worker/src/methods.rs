@@ -23,6 +23,7 @@ use async_requests::types::AsynchronousRequestParams;
 use async_requests::types::AsynchronousRequestResult;
 use async_requests::types::IntoConfigFormat;
 use async_requests::types::RowId;
+use async_requests::types::ThriftAsynchronousRequestResult;
 use context::CoreContext;
 use ephemeral_blobstore::BubbleId;
 use ephemeral_blobstore::RepoEphemeralStore;
@@ -322,37 +323,49 @@ pub(crate) async fn megarepo_async_request_compute<R: MononokeRepo>(
                 .into())
         }
         async_requests_types_thrift::AsynchronousRequestParams::derive_boundaries_params(params) => {
-            Ok(crate::backfill::compute_derive_boundaries(ctx, mononoke, params)
-                .watched()
-                .with_max_poll(METHOD_MAX_POLL_TIME_MS)
-                .with_label("derive_boundaries")
-                .await
-                .into())
+            Ok(AsynchronousRequestResult::from_thrift(
+                ThriftAsynchronousRequestResult::derive_boundaries_result(
+                    crate::backfill::compute_derive_boundaries(ctx, mononoke, params)
+                        .watched()
+                        .with_max_poll(METHOD_MAX_POLL_TIME_MS)
+                        .with_label("derive_boundaries")
+                        .await?
+                )
+            ))
         }
         async_requests_types_thrift::AsynchronousRequestParams::derive_slice_params(params) => {
-            Ok(crate::backfill::compute_derive_slice(ctx, mononoke, params)
-                .watched()
-                .with_max_poll(METHOD_MAX_POLL_TIME_MS)
-                .with_label("derive_slice")
-                .await
-                .into())
+            Ok(AsynchronousRequestResult::from_thrift(
+                ThriftAsynchronousRequestResult::derive_slice_result(
+                    crate::backfill::compute_derive_slice(ctx, mononoke, params)
+                        .watched()
+                        .with_max_poll(METHOD_MAX_POLL_TIME_MS)
+                        .with_label("derive_slice")
+                        .await?
+                )
+            ))
         }
         async_requests_types_thrift::AsynchronousRequestParams::derive_backfill_params(params) => {
-            Ok(crate::backfill::compute_derive_backfill(ctx, mononoke, queue, params, request_row_id.clone())
-                .watched()
-                .with_max_poll(METHOD_MAX_POLL_TIME_MS)
-                .with_label("derive_backfill")
-                .await
-                .into())
+            Ok(AsynchronousRequestResult::from_thrift(
+                ThriftAsynchronousRequestResult::derive_backfill_result(
+                    crate::backfill::compute_derive_backfill(ctx, mononoke, queue, params, request_row_id.clone())
+                        .watched()
+                        .with_max_poll(METHOD_MAX_POLL_TIME_MS)
+                        .with_label("derive_backfill")
+                        .await?
+                )
+            ))
         }
         async_requests_types_thrift::AsynchronousRequestParams::derive_backfill_repo_params(params) => {
             let effective_root = root_request_id.unwrap_or_else(|| request_row_id.clone());
-            Ok(crate::backfill::compute_derive_backfill_repo(ctx, mononoke, queue, params, effective_root)
-                .watched()
-                .with_max_poll(METHOD_MAX_POLL_TIME_MS)
-                .with_label("derive_backfill_repo")
-                .await
-                .into())
+            Ok(AsynchronousRequestResult::from_thrift(
+                ThriftAsynchronousRequestResult::derive_backfill_repo_result(
+                    crate::backfill::compute_derive_backfill_repo(ctx, mononoke, queue, params, effective_root)
+                        .watched()
+                        .with_max_poll(METHOD_MAX_POLL_TIME_MS)
+                        .with_label("derive_backfill_repo")
+                        .await?
+                )
+            ))
         }
         async_requests_types_thrift::AsynchronousRequestParams::UnknownField(union_tag) => {
              bail!(
