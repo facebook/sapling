@@ -105,6 +105,7 @@ pub fn init_working_copy(
     Ok(())
 }
 
+#[cfg(feature = "eden")]
 #[derive(Debug, thiserror::Error)]
 pub enum EdenCloneError {
     #[error("Failed cloning eden checkout\n Stdout: '{0}'\n Stderr: '{1}'")]
@@ -206,6 +207,7 @@ pub fn eden_clone(
 /// On Windows, this reads the `[repository] enable-windows-symlinks` value from
 /// the checkout's EdenFS client config so it can be passed to `eden clone`.
 /// Returns `false` on non-Windows platforms.
+#[cfg(feature = "eden")]
 pub fn read_enable_windows_symlinks(source_client_dir: &Path) -> Result<bool> {
     #[cfg(windows)]
     {
@@ -247,6 +249,7 @@ pub fn read_enable_windows_symlinks(source_client_dir: &Path) -> Result<bool> {
 /// NOTE: If `eden redirect fixup` proves unreliable, an alternative approach
 /// would be to call `eden redirect add` for each redirection individually
 /// instead of writing config.toml and running `eden redirect fixup`.
+#[cfg(feature = "eden")]
 pub fn copy_eden_user_config(
     config: &dyn Config,
     source_client_dir: &Path,
