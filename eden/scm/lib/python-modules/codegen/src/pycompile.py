@@ -6,32 +6,17 @@
 """
 Compile pure Python modules recursively.
 
-Input (env):
-- ROOT_MODULES: Space-separated root module names.
-- SYS_PATH0: Path to be inserted to sys.path[0].
-  Usually it's the directory that contains the modules to compile.
-
-Output (to stdout):
-The first two line is the Python version major (1st line), minor (2nd line).
-Then, for each module, print 5 lines:
-- Module name (foo.bar).
-- File path in HEX, (/path/to/foo/bar.py).
-- Source code in HEX, one line.
-- Compiled bytecode in HEX, one line.
-- True if it's stdlib.
-- Empty line.
-
-Using HEX because:
-- Python's binary data serialization from stdlib (marsh, pickle) are tricky to
-  be consumed by Rust.
-- HEX is simple for this use-case.
+Main entry point is `compile_modules`, called from Rust.
 
 Sending back to Rust, instead of generating the `.rs` file directly because
 Python source code is a lot of data (20MB), and the "desired" compression
 algorithm zstd is not yet in Python stdlib.
 """
 
-import binascii
+# NOTE: In static libpython.a's build.rs use-case, there is no way to specify -Wl,--export-dynamic
+# for the build.rs executable. Importing non-builtin native modules will error out, like:
+# ImportError: /opt/python/cp312-cp312/lib/python3.12/lib-dynload/binascii.cpython-312-x86_64-linux-gnu.so: undefined symbol: PyExc_ValueError
+# Avoid such native modules here.
 import glob
 import importlib.util
 import marshal
@@ -164,10 +149,6 @@ def find_modules(modules):
                 result.append((root_module_name, spec.origin, source, code))
 
     return result
-
-
-def hex(s: bytes) -> str:
-    return binascii.hexlify(s).decode()
 
 
 def default_root_modules() -> "list[str]":
