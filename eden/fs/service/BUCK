@@ -40,6 +40,7 @@ cpp_library(
         "//folly:conv",
         "//folly:map_util",
         "//folly:stop_watch",
+        "//folly:string",
         "//folly/executors:function_scheduler",
         "//folly/init:init",
         "//folly/logging:init",
@@ -50,6 +51,7 @@ cpp_library(
     ] + select({
         "DEFAULT": [],
         "ovr_config//os:linux": [
+            "third-party//systemd:systemd",
             "//eden/fs/store/git:git",
         ],
     }),

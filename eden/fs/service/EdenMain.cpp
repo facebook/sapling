@@ -15,6 +15,7 @@
 #include <fmt/format.h>
 #include <folly/Conv.h>
 #include <folly/MapUtil.h>
+#include <folly/String.h>
 #include <folly/executors/FunctionScheduler.h>
 #include <folly/init/Init.h>
 #include <folly/logging/Init.h>
@@ -27,8 +28,10 @@
 #include <sys/sysctl.h>
 #include <sys/time.h>
 #endif
-#ifdef __linux__
 #include <sys/stat.h>
+#if defined(__linux__) && __has_include(<systemd/sd-daemon.h>)
+#include <systemd/sd-daemon.h> // @manual, autodeps cannot do linux-only dep
+#define EDEN_HAVE_SYSTEMD 1
 #endif
 #include <thrift/lib/cpp2/Flags.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
@@ -584,27 +587,38 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
   }
 
   std::move(prepareFuture)
-      .thenTry(
-          [startupLogger,
-           structuredLogger = server->getServerState()->getStructuredLogger(),
-           daemonStart](folly::Try<folly::Unit>&& result) {
-            // If an error occurred this means that we failed to mount all of
-            // the mount points.
-            //
-            // Mount errors are fine. We have still started and will
-            // continue running, so we can report successful startup.
-            if (result.hasException()) {
-              // Log an overall error message here.
-              // We will have already logged more detailed messages for each
-              // mount failure when it occurred.
-              startupLogger->warn(
-                  "did not successfully remount all repositories: ",
-                  result.exception().what());
-            }
-            auto startTimeInSeconds =
-                std::chrono::duration<double>{daemonStart.elapsed()}.count();
-            startupLogger->success(startTimeInSeconds);
-          })
+      .thenTry([startupLogger,
+                structuredLogger =
+                    server->getServerState()->getStructuredLogger(),
+                daemonStart](folly::Try<folly::Unit>&& result) {
+        // If an error occurred this means that we failed to mount all of
+        // the mount points.
+        //
+        // Mount errors are fine. We have still started and will
+        // continue running, so we can report successful startup.
+        if (result.hasException()) {
+          // Log an overall error message here.
+          // We will have already logged more detailed messages for each
+          // mount failure when it occurred.
+          startupLogger->warn(
+              "did not successfully remount all repositories: ",
+              result.exception().what());
+        }
+        auto startTimeInSeconds =
+            std::chrono::duration<double>{daemonStart.elapsed()}.count();
+#ifdef EDEN_HAVE_SYSTEMD
+        auto sdNotifyMsg = fmt::format("MAINPID={}\nREADY=1", getpid());
+        auto sdNotifyResult = sd_notify(0, sdNotifyMsg.c_str());
+        if (sdNotifyResult > 0) {
+          XLOGF(INFO, "notified systemd: MAINPID={}", getpid());
+        } else if (sdNotifyResult == 0) {
+          XLOG(INFO, "sd_notify: NOTIFY_SOCKET not set");
+        } else {
+          XLOGF(ERR, "sd_notify failed: {}", folly::errnoStr(-sdNotifyResult));
+        }
+#endif
+        startupLogger->success(startTimeInSeconds);
+      })
       .ensure(
           [daemonStart,
            structuredLogger = server->getServerState()->getStructuredLogger(),
