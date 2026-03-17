@@ -12,6 +12,7 @@ use thiserror::Error;
 mod batch;
 mod derive;
 mod mapping;
+mod pipeline;
 
 pub use mapping::RootFsnodeId;
 pub use mapping::format_key;

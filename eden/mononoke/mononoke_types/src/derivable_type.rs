@@ -81,7 +81,9 @@ pub enum DerivableUntopologicallyVariant {
 /// Enum which consolidates all derived data types that support
 /// multi-stage derivation via the PipelineDerivable trait.
 #[derive(Clone, Copy, Debug, EnumIter, Eq, PartialEq)]
-pub enum PipelineDerivableVariant {}
+pub enum PipelineDerivableVariant {
+    Fsnodes,
+}
 
 impl DerivableType {
     pub fn from_name(s: &str) -> Result<Self> {
@@ -231,14 +233,18 @@ impl DerivableType {
         }
     }
     pub fn into_pipeline_derivable_variant(self) -> Result<PipelineDerivableVariant> {
-        bail!("{} does not support derivation pipeline", self.name())
+        match self {
+            DerivableType::Fsnodes => Ok(PipelineDerivableVariant::Fsnodes),
+            _ => bail!("{} does not support derivation pipeline", self.name()),
+        }
     }
 }
 
 impl PipelineDerivableVariant {
-    #[allow(unreachable_code)]
     pub fn into_derivable_type(self) -> DerivableType {
-        match self {}
+        match self {
+            PipelineDerivableVariant::Fsnodes => DerivableType::Fsnodes,
+        }
     }
 }
 
@@ -297,7 +303,6 @@ mod tests {
     }
 
     #[mononoke::test]
-    #[allow(unreachable_code)]
     fn pipeline_derivable_variant_into_derivable_type_is_bidirectional() {
         for variant in PipelineDerivableVariant::iter() {
             assert_eq!(

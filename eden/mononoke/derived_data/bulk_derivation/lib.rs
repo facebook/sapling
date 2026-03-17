@@ -473,13 +473,18 @@ fn manager_for_derivable_untopologically_variant(
 }
 
 pub async fn derive_stage_batch(
-    _ddm: &DerivedDataManager,
-    _ctx: &CoreContext,
-    _csids: Vec<ChangesetId>,
-    _stage_id: &str,
+    ddm: &DerivedDataManager,
+    ctx: &CoreContext,
+    csids: Vec<ChangesetId>,
+    stage_id: &str,
     variant: PipelineDerivableVariant,
 ) -> Result<Duration, DerivationError> {
-    match variant {}
+    match variant {
+        PipelineDerivableVariant::Fsnodes => {
+            ddm.derive_stage_batch::<RootFsnodeId>(ctx, csids, stage_id)
+                .await
+        }
+    }
 }
 
 #[async_trait]

@@ -76,3 +76,11 @@ struct Fsnode {
 // The following were automatically generated and may benefit from renaming.
 @rust.Type{name = "sorted_vector_map::SortedVectorMap"}
 typedef map<path.MPathElement, FsnodeEntry> map_MPathElement_FsnodeEntry_7103
+
+struct FsnodeStageOutputEmpty {}
+
+union FsnodeStageOutput {
+  1: id.FsnodeId fsnode_id;
+  2: FsnodeStageOutputEmpty empty;
+  3: FsnodeFile fsnode_file;
+}
