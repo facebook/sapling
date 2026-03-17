@@ -2187,7 +2187,7 @@ Reset latest to 2"#
 
             let mut rotate = OpenOptions::new()
                 .create(true)
-                .max_bytes_per_log(50)
+                .max_bytes_per_log(500)
                 .max_log_count(2)
                 .index("first-byte", |_| vec![IndexOutput::Reference(0..1)])
                 .btrfs_compression(true)
@@ -2195,7 +2195,7 @@ Reset latest to 2"#
                 .unwrap();
 
             // No rotation - log is compressed well.
-            let aaa = vec![b'a'; 100];
+            let aaa = vec![b'a'; 1000];
             rotate.append(&aaa).unwrap();
             assert_eq!(rotate.sync().unwrap(), 0);
             assert_eq!(lookup(&rotate, b"a"), vec![&aaa]);
@@ -2203,10 +2203,10 @@ Reset latest to 2"#
             // Sanity check we compressed well.
             let btrfs_size = rotate.writable_log().btrfs_size().unwrap();
             assert!(btrfs_size > 0);
-            assert!(btrfs_size < 50);
+            assert!(btrfs_size < 500);
 
             // Rotate triggered.
-            let mut random_bytes = vec![0u8; 100];
+            let mut random_bytes = vec![0u8; 1000];
             rand::rng().fill_bytes(&mut random_bytes);
             random_bytes[0] = b'b';
             rotate.append(&random_bytes).unwrap();
@@ -2215,7 +2215,7 @@ Reset latest to 2"#
             assert_eq!(lookup(&rotate, b"b"), vec![&random_bytes]);
 
             let rotated_btrfs_size = rotate.logs[1].get_mut().unwrap().btrfs_size().unwrap();
-            assert!(rotated_btrfs_size >= 50);
+            assert!(rotated_btrfs_size >= 500);
         }
     }
 
