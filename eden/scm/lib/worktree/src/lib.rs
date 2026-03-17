@@ -127,6 +127,10 @@ pub fn save_registry(shared_store_path: &Path, registry: &Registry) -> Result<()
     Ok(())
 }
 
+pub fn dissolve_group(registry: &mut Registry, group_id: &str) {
+    registry.groups.remove(group_id);
+}
+
 pub fn with_registry_lock<T>(
     shared_store_path: &Path,
     f: impl FnOnce(&mut Registry) -> Result<T>,
@@ -365,5 +369,37 @@ mod tests {
         let loaded = load_registry(dir.path()).unwrap();
         assert_eq!(loaded.groups.len(), 1);
         assert!(loaded.groups.contains_key("lock-group"));
+    }
+
+    #[test]
+    fn test_dissolve_group() {
+        let mut registry = Registry::new();
+        let main_path = PathBuf::from("/tmp/main_repo");
+        let mut group = Group::new(main_path.clone());
+        let linked_path = PathBuf::from("/tmp/linked_wt");
+        group.worktrees.insert(
+            linked_path,
+            WorktreeEntry {
+                added: "2025-01-01T00:00:00Z".to_string(),
+                label: None,
+            },
+        );
+        registry.groups.insert("grp1".to_string(), group);
+
+        dissolve_group(&mut registry, "grp1");
+
+        assert!(!registry.groups.contains_key("grp1"));
+    }
+
+    #[test]
+    fn test_dissolve_group_nonexistent() {
+        // Dissolving a group that doesn't exist should not panic.
+        let mut registry = Registry::new();
+        let main_path = PathBuf::from("/nonexistent/main");
+        let group = Group::new(main_path);
+        registry.groups.insert("grp2".to_string(), group);
+
+        dissolve_group(&mut registry, "grp2");
+        assert!(!registry.groups.contains_key("grp2"));
     }
 }

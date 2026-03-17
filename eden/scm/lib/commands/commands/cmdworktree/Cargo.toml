@@ -10,6 +10,7 @@ repository = "https://github.com/facebook/sapling"
 license = "GPL-2.0-only"
 
 [dependencies]
+anyhow = "1.0.102"
 chrono = { version = "0.4.44", features = ["clock", "serde", "std"], default-features = false }
 cmdutil = { version = "0.1.0", path = "../../cmdutil" }
 fs-err = { version = "3.3.0", features = ["tokio"] }
@@ -17,8 +18,10 @@ sapling-clidispatch = { version = "0.1.0", path = "../../../clidispatch" }
 sapling-clone = { version = "0.1.0", path = "../../../clone" }
 sapling-edenfs-client = { version = "0.1.0", path = "../../../edenfs-client" }
 sapling-filters = { version = "0.1.0", path = "../../../filters" }
+sapling-formatter = { version = "0.1.0", path = "../../../formatter" }
 sapling-repo = { version = "0.1.0", path = "../../../repo" }
 sapling-util = { version = "0.1.0", path = "../../../util" }
 sapling-workingcopy = { version = "0.1.0", path = "../../../workingcopy" }
 sapling-worktree-registry = { version = "0.1.0", path = "../../../worktree" }
+serde = { version = "1.0.219", features = ["derive", "rc"] }
 uuid = { version = "1.21.0", features = ["rng-getrandom", "serde", "v4", "v5", "v6", "v7", "v8"] }
