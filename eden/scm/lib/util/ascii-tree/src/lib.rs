@@ -12,7 +12,7 @@
 //! Refer to tests for some examples.
 
 mod ascii_options;
-pub(crate) mod row;
+pub mod row;
 mod tree;
 mod tree_span;
 

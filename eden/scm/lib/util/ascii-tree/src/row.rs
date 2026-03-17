@@ -18,6 +18,7 @@ pub struct Rows {
     pub column_max_widths: Vec<usize>,
 }
 
+#[derive(Clone, Copy)]
 pub enum Alignment {
     Left,
     Right,

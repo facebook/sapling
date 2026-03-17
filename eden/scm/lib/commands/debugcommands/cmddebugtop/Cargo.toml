@@ -12,7 +12,7 @@ license = "GPL-2.0-only"
 [dependencies]
 chrono = { version = "0.4.44", features = ["clock", "serde", "std"], default-features = false }
 cmdutil = { version = "0.1.0", path = "../../cmdutil" }
-comfy-table = "7.2.2"
+sapling-ascii-tree = { version = "0.1.0", path = "../../../util/ascii-tree" }
 sapling-clidispatch = { version = "0.1.0", path = "../../../clidispatch" }
 sapling-cliparser = { version = "0.1.0", path = "../../../cliparser" }
 sapling-debugtop = { version = "0.1.0", path = "../../../debugtop" }
