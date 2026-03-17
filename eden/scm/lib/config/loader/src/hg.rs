@@ -522,7 +522,8 @@ impl ConfigSetHgExt for ConfigSet {
                         let mut command = Command::new(&config_regen_command[0]);
                         command
                             .args(&config_regen_command[1..])
-                            .env("HG_INTERNALCONFIG_IS_REFRESHING", "1");
+                            .env("HG_INTERNALCONFIG_IS_REFRESHING", "1")
+                            .env_remove("SCM_SAMPLING_FILEPATH");
 
                         if let Some(info) = info {
                             command.current_dir(&info.dot_hg_path);
