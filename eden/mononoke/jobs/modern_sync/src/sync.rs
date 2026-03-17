@@ -666,15 +666,18 @@ pub async fn process_one_changeset(
 
     let now = std::time::Instant::now();
 
-    let cs_info = repo
-        .repo_derived_data()
-        .derive::<ChangesetInfo>(ctx, cs_id.clone(), DerivationPriority::LOW)
-        .await?;
-
-    let hg_cs_id = repo.derive_hg_changeset(ctx, *cs_id).await?;
+    let (cs_info, hg_cs_id, bs_cs) = futures::try_join!(
+        async {
+            anyhow::Ok(
+                repo.repo_derived_data()
+                    .derive::<ChangesetInfo>(ctx, cs_id.clone(), DerivationPriority::LOW)
+                    .await?,
+            )
+        },
+        async { anyhow::Ok(repo.derive_hg_changeset(ctx, *cs_id).await?) },
+        async { anyhow::Ok(cs_id.load(ctx, repo.repo_blobstore()).await?) },
+    )?;
     let hg_cs = hg_cs_id.load(ctx, repo.repo_blobstore()).await?;
-
-    let bs_cs = cs_id.load(ctx, repo.repo_blobstore()).await?;
     let commit_time = bs_cs.author_date().timestamp_secs();
     let cids: Vec<_> = bs_cs
         .file_changes()
