@@ -1005,7 +1005,7 @@ class HgStatusAndDiffMismatch(PathsProblem):
     def __init__(self, files: List[Path]) -> None:
         super().__init__(
             self.omitPathsDescription(
-                files, " is present as modified in `hg status` but not in `hg diff`"
+                files, " is present as modified in `sl status` but not in `sl diff`"
             ),
             severity=ProblemSeverity.ERROR,
         )

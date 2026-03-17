@@ -355,8 +355,8 @@ class AbandonedTransactionChecker(HgChecker):
 class EdenFsInterruptedCheckout(Problem):
     def __init__(self, checkout: EdenCheckout, ex: InProgressCheckoutError) -> None:
         remediation = f"""\
-Please run `hg go {ex.to_commit}` to resume the checkout.
-If there are conflicts, run `hg go --clean {ex.to_commit}` to discard changes, or `hg go --merge {ex.to_commit}` to merge.
+Please run `sl go {ex.to_commit}` to resume the checkout.
+If there are conflicts, run `sl go --clean {ex.to_commit}` to discard changes, or `sl go --merge {ex.to_commit}` to merge.
 """
         super().__init__(
             f"EdenFS was killed or crashed while updating from {ex.from_commit} to {ex.to_commit}.",

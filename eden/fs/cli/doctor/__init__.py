@@ -1109,12 +1109,12 @@ def check_running_mount(
             # Exit here but don't reraise since we're already reporting a problem.
             return
         except Exception as ex:
-            raise RuntimeError("Failed to check Mercurial status") from ex
+            raise RuntimeError("Failed to check Sapling status") from ex
 
         try:
             check_filesystems.check_hg_status_match_hg_diff(tracker, instance, checkout)
         except Exception as ex:
-            raise RuntimeError("Failed to compare `hg status` with `hg diff`") from ex
+            raise RuntimeError("Failed to compare `sl status` with `sl diff`") from ex
 
 
 class CheckoutNotConfigured(Problem):
@@ -1198,7 +1198,7 @@ This can happen if your machine was hard-rebooted.
             # retry the mount for this case.
 
         self._out.write(
-            "\nMount failed. Running `hg doctor` in the backing repo and then "
+            "\nMount failed. Running `sl doctor` in the backing repo and then "
             "will retry the mount.\n",
             flush=True,
         )
@@ -1410,7 +1410,7 @@ class SlowHgImportProblem(Problem):
             description=f"Slow file download taking up to {format_approx_duration(max_fetch_duration)} observed",
             remediation="""\
 Try:
-- Running `hg debugnetwork`.
+- Running `sl debugnetwork`.
 - Checking your network connection's performance.
 - Running `eden top` to check whether downloads are making progress.""",
             severity=ProblemSeverity.ADVICE,

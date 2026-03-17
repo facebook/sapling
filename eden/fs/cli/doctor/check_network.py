@@ -31,8 +31,8 @@ MIN_UPLOAD_SPEED = 10.0
 class NetworkSpeedProblem(Problem):
     def __init__(self, output: str) -> None:
         super().__init__(
-            f"Failed to verify speed of connection to eden services: {output}",
-            remediation="Check the speed report in hg debugnetwork --speed",
+            f"Failed to verify speed of connection to eden services:{output}",
+            remediation="Check the speed report in sl debugnetwork --speed",
         )
 
 
@@ -134,7 +134,7 @@ class NetworkChecker:
             tracker.add_problem(
                 ConnectivityProblem(
                     fmtProblemMessage(
-                        "command 'hg debugnetworkdoctor' reported an error:", ex
+                        "command 'sl debugnetworkdoctor' reported an error:", ex
                     )
                 )
             )
@@ -142,7 +142,7 @@ class NetworkChecker:
         except subprocess.TimeoutExpired as ex:
             tracker.add_problem(
                 ConnectivityProblem(
-                    fmtProblemMessage("command 'hg debugnetworkdoctor' timed out:", ex)
+                    fmtProblemMessage("command 'sl debugnetworkdoctor' timed out:", ex)
                 )
             )
             return
@@ -159,7 +159,7 @@ class NetworkChecker:
                 tracker.add_problem(
                     ConnectivityProblem(
                         fmtProblemMessage(
-                            "command 'hg debugnetwork --connection' reported an error:",
+                            "command 'sl debugnetwork --connection' reported an error:",
                             ex,
                         )
                     )
@@ -169,7 +169,7 @@ class NetworkChecker:
                 tracker.add_problem(
                     ConnectivityProblem(
                         fmtProblemMessage(
-                            "command 'hg debugnetwork --connection' timed out:", ex
+                            "command 'sl debugnetwork --connection' timed out:", ex
                         )
                     )
                 )
@@ -189,7 +189,7 @@ class NetworkChecker:
                 tracker.add_problem(
                     ConnectivityProblem(
                         fmtProblemMessage(
-                            f"command 'hg debugnetwork --speed' exceeded timeout of {NETWORK_TIMEOUT}s.\n"
+                            f"command 'sl debugnetwork --speed' exceeded timeout of {NETWORK_TIMEOUT}s.\n"
                             "Your network might be too slow, please check the stdout for more details.\n"
                             f"There should be 2 rounds of download and upload speed tests.",
                             ex,

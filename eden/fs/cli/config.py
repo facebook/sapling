@@ -2218,7 +2218,7 @@ def load_toml_config(path: Path) -> TomlConfigDict:
         if line_num != -1:
             line = get_line_by_number(data, line_num)
             if line is not None:
-                hint += f"Detected here (line {line_num}): \n\n{line}\n"
+                hint += f"Detected here (line {line_num}):\n\n{line}\n"
 
         raise FileError(f"toml config file {str(path)} not valid: {str(e)}{hint}")
     except Exception as e:

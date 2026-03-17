@@ -2237,7 +2237,7 @@ Starting background invalidation of not recently used files and directories in {
             r"""<yellow>- Found problem:<reset>
 Slow file download taking up to 15 minutes observed
 Try:
-- Running `hg debugnetwork`\.
+- Running `sl debugnetwork`\.
 - Checking your network connection's performance\.
 - Running `eden top` to check whether downloads are making progress\.
 
@@ -2301,7 +2301,7 @@ Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if yo
         self.assertEqual(len(tracker.problems), 1)
         self.assertEqual(
             tracker.problems[0].description(),
-            f"{Path('foo/bar')} is present as modified in `hg status` but not in `hg diff`",
+            f"{Path('foo/bar')} is present as modified in `sl status` but not in `sl diff`",
         )
 
     def test_ignored_problems_config(self) -> None:
@@ -2513,7 +2513,7 @@ Remounting {checkout.path}...<green>fixed<reset>
 <yellow>- Found problem:<reset>
 {checkout.path} is not currently mounted
 Remounting {checkout.path}...
-Mount failed. Running `hg doctor` in the backing repo and then will retry the mount.
+Mount failed. Running `sl doctor` in the backing repo and then will retry the mount.
 <green>fixed<reset>
 
 """,
@@ -2729,7 +2729,7 @@ Reinitialize checkout config.......<green>fixed<reset>
             out.getvalue(),
             f"""\
 <yellow>- Found problem:<reset>
-Eden's checkout state for {checkout.path} has been corrupted: toml config file {checkout.state_dir / "config.toml"} not valid: Found invalid character in key name: 'c'. Try quoting the key name. (line 1 column 11 char 10)Detected here (line 1): 
+Eden's checkout state for {checkout.path} has been corrupted: toml config file {checkout.state_dir / "config.toml"} not valid: Found invalid character in key name: 'c'. Try quoting the key name. (line 1 column 11 char 10)Detected here (line 1):
 
 corrupted config
 
@@ -2958,7 +2958,7 @@ To reclone the corrupted repo, run: `fbclone $REPO --reclone --eden`"""
             out.getvalue(),
             """\
 <yellow>- Found problem:<reset>
-Encountered an error checking connection to Source Control Servers: command 'hg debugnetworkdoctor' reported an error:
+Encountered an error checking connection to Source Control Servers: command 'sl debugnetworkdoctor' reported an error:
 Stdout:
 stdout
 Stderr:
@@ -2992,7 +2992,7 @@ Please check your network connection. If you are connected to the VPN, please tr
             out.getvalue(),
             """\
 <yellow>- Found problem:<reset>
-Encountered an error checking connection to Source Control Servers: command 'hg debugnetwork --connection' reported an error:
+Encountered an error checking connection to Source Control Servers: command 'sl debugnetwork --connection' reported an error:
 Stdout:
 stdout
 Stderr:
@@ -3027,13 +3027,13 @@ Please check your network connection. If you are connected to the VPN, please tr
             out.getvalue(),
             """\
 <yellow>- Found problem:<reset>
-Failed to verify speed of connection to eden services: 
+Failed to verify speed of connection to eden services:
 Stdout:
 stdout
 Stderr:
 stderror
 
-Check the speed report in hg debugnetwork --speed
+Check the speed report in sl debugnetwork --speed
 
 """,
         )
@@ -3077,7 +3077,7 @@ Check the speed report in hg debugnetwork --speed
                 out.getvalue(),
                 f"""\
 <yellow>- Found problem:<reset>
-Encountered an error checking connection to Source Control Servers: command 'hg {method}' {suffix}
+Encountered an error checking connection to Source Control Servers: command 'sl {method}' {suffix}
 Stdout:
 stdout
 Stderr:
@@ -3112,13 +3112,13 @@ Please check your network connection. If you are connected to the VPN, please tr
             out.getvalue(),
             """\
 <yellow>- Found problem:<reset>
-Failed to verify speed of connection to eden services: 
+Failed to verify speed of connection to eden services:
 Stdout:
 stdout
 Stderr:
 stderror
 
-Check the speed report in hg debugnetwork --speed
+Check the speed report in sl debugnetwork --speed
 
 """,
         )

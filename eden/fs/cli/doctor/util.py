@@ -126,13 +126,13 @@ normal directory not with `eden rm`), and finally running fbclone as normal."""
     if exitcode != 0:
         raise Exception(
             f"""\
-`hg doctor` in the backing repository {backing_repo}
+`sl doctor` in the backing repository {backing_repo}
 failed with exit code {exitcode}. This indicates
 {recommended_remediation}
 
-`hg doctor` stdout:
+`sl doctor` stdout:
 {formatted_out}
-`hg doctor` stderr:
+`sl doctor` stderr:
 {formatted_err}
 """
         )
@@ -142,14 +142,14 @@ failed with exit code {exitcode}. This indicates
     # fixing the issue. So we will just forward this to the user.
     if formatted_err:
         return f"""\
-`hg doctor` attempted to fix something in the backing repo
+`sl doctor` attempted to fix something in the backing repo
 {backing_repo}.
 It may or may not have succeeded. If it does not seem to have fixed things, then
 may be corrupted beyond repair and {recommended_remediation}
 
-`hg doctor` stdout:
+`sl doctor` stdout:
 {formatted_out}
-`hg doctor` stderr:
+`sl doctor` stderr:
 {formatted_err}
 
 """
