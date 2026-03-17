@@ -98,10 +98,10 @@ rust_library(
         # see update_modules.sh
         # [[[cog
         # import cog, glob, os
-        # for path in sorted(glob.glob('commands/cmd*/TARGETS')):
+        # for path in sorted(glob.glob('commands/cmd*/BUCK')):
         #     name = os.path.basename(os.path.dirname(path))
         #     cog.outl(f'"//eden/scm/lib/commands/commands/{name}:{name}",')
-        # for path in sorted(glob.glob('debugcommands/cmd*/TARGETS')):
+        # for path in sorted(glob.glob('debugcommands/cmd*/BUCK')):
         #     name = os.path.basename(os.path.dirname(path))
         #     cog.outl(f'"//eden/scm/lib/commands/debugcommands/{name}:{name}",')
         # ]]]
@@ -123,8 +123,8 @@ rust_library(
         "//eden/scm/lib/commands/debugcommands/cmddebugdumpinternalconfig:cmddebugdumpinternalconfig",
         "//eden/scm/lib/commands/debugcommands/cmddebugfilterid:cmddebugfilterid",
         "//eden/scm/lib/commands/debugcommands/cmddebugfsync:cmddebugfsync",
-        "//eden/scm/lib/commands/debugcommands/cmddebughash:cmddebughash",
         "//eden/scm/lib/commands/debugcommands/cmddebuggitmodules:cmddebuggitmodules",
+        "//eden/scm/lib/commands/debugcommands/cmddebughash:cmddebughash",
         "//eden/scm/lib/commands/debugcommands/cmddebughttp:cmddebughttp",
         "//eden/scm/lib/commands/debugcommands/cmddebuglfsreceive:cmddebuglfsreceive",
         "//eden/scm/lib/commands/debugcommands/cmddebuglfssend:cmddebuglfssend",

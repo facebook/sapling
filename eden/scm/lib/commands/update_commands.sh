@@ -5,4 +5,4 @@
 # GNU General Public License version 2.
 
 # use 'python3 -m pip install cogapp' to install cog
-python3 -m cogapp -r TARGETS src/commands.rs
+python3 -m cogapp -r BUCK src/commands.rs

@@ -26,7 +26,7 @@ external_commands![
     // see update_commands.sh
     // [[[cog
     // import cog, glob, os
-    // for path in sorted(glob.glob('commands/cmd*/TARGETS')) + sorted(glob.glob('debugcommands/cmd*/TARGETS')):
+    // for path in sorted(glob.glob('commands/cmd*/BUCK')) + sorted(glob.glob('debugcommands/cmd*/BUCK')):
     //     name = os.path.basename(os.path.dirname(path))
     //     cog.outl(f'{name},')
     // ]]]
@@ -48,8 +48,8 @@ external_commands![
     cmddebugdumpinternalconfig,
     cmddebugfilterid,
     cmddebugfsync,
-    cmddebughash,
     cmddebuggitmodules,
+    cmddebughash,
     cmddebughttp,
     cmddebuglfsreceive,
     cmddebuglfssend,
