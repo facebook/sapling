@@ -2984,12 +2984,12 @@ def help_(ui, *names, **opts):
     # explicitly call related functions.
     hintutil.loadhintconfig(ui)
 
-    name = " ".join(names) if names and names != (None,) else None
-    if name == "agent":
-        agent_instructions = agent.get_agent_instructions()
+    if names and names[0] == "agent":
+        agent_instructions = agent.get_agent_instructions(ui, names)
         ui.write(agent_instructions)
         return 0
 
+    name = " ".join(names) if names and names != (None,) else None
     keep = opts.get(r"system") or []
     if len(keep) == 0:
         if sys.platform.startswith("win"):
