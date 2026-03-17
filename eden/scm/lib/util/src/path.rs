@@ -28,6 +28,39 @@ use fs_err as fs;
 use crate::errors::IOContext;
 use crate::file::get_umask;
 
+/// Resolve a path to its canonical form, handling non-existent paths.
+///
+/// If the full path exists, behaves like `std::fs::canonicalize` (resolves
+/// all symlinks). If the path does not exist, canonicalizes the closest
+/// existing ancestor and appends the remaining (non-existent) components.
+///
+/// This is useful when you need a canonical absolute path for a target that
+/// hasn't been created yet (e.g., a destination directory for a clone). The
+/// standard `std::fs::canonicalize` fails on non-existent paths, but callers
+/// often still need symlinks in the existing prefix resolved for consistency.
+pub fn canonical_path_allow_missing(path: impl AsRef<Path>) -> io::Result<PathBuf> {
+    let path = absolute(path)?;
+    if let Ok(p) = fs::canonicalize(&path) {
+        return Ok(p);
+    }
+    let mut existing = path.clone();
+    let mut tail = Vec::new();
+    while !existing.exists() {
+        match existing.file_name() {
+            Some(name) => {
+                tail.push(name.to_os_string());
+                existing.pop();
+            }
+            None => return Ok(path),
+        }
+    }
+    let mut result = fs::canonicalize(&existing)?;
+    for component in tail.into_iter().rev() {
+        result.push(component);
+    }
+    Ok(result)
+}
+
 /// Pick a random file name `path.$RAND.atomic` as `real_path`. Write `data` to
 /// it.  Then modify the symlink `path` to point to `real_path`.  Attempt to
 /// delete files that are no longer referred.
@@ -1208,5 +1241,38 @@ mod tests {
         // only the extended-length prefix \\?\ should be removed.
         let path = PathBuf::from(r"\\server\share\dir");
         assert_eq!(strip_unc_prefix(path), PathBuf::from(r"\\server\share\dir"));
+    }
+
+    // --- canonical_path_allow_missing tests ---
+
+    #[test]
+    fn test_canonical_path_allow_missing_existing() {
+        let dir = tempfile::tempdir().unwrap();
+        let expected = std::fs::canonicalize(dir.path()).unwrap();
+        let result = canonical_path_allow_missing(dir.path()).unwrap();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_canonical_path_allow_missing_nonexistent_tail() {
+        let dir = tempfile::tempdir().unwrap();
+        let canonical_dir = std::fs::canonicalize(dir.path()).unwrap();
+        let non_existent = dir.path().join("does_not_exist");
+        let result = canonical_path_allow_missing(&non_existent).unwrap();
+        assert_eq!(result, canonical_dir.join("does_not_exist"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_canonical_path_allow_missing_symlink() {
+        let dir = tempfile::tempdir().unwrap();
+        let real_dir = dir.path().join("real");
+        std::fs::create_dir(&real_dir).unwrap();
+        let link = dir.path().join("link");
+        std::os::unix::fs::symlink(&real_dir, &link).unwrap();
+
+        let result = canonical_path_allow_missing(&link).unwrap();
+        let expected = std::fs::canonicalize(&real_dir).unwrap();
+        assert_eq!(result, expected);
     }
 }

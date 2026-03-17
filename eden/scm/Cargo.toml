@@ -228,6 +228,7 @@ members = [
   "lib/webview-app",
   "lib/workingcopy",
   "lib/workingcopy/repostate",
+  "lib/worktree",
   "lib/xdiff",
   "lib/xdiff-sys",
   "lib/zstdelta",

@@ -88,7 +88,7 @@ class EdenFsManager:
             f.write(
                 f"""
 template = "{template_dir}"
-overrides = "{{}}"
+overrides = {{}}
 """
             )
 

@@ -201,6 +201,150 @@ pub fn eden_clone(
     run_eden_clone_command(&mut clone_command).context("error performing eden clone")
 }
 
+/// Read the enable-windows-symlinks setting from an EdenFS checkout's config.toml.
+///
+/// On Windows, this reads the `[repository] enable-windows-symlinks` value from
+/// the checkout's EdenFS client config so it can be passed to `eden clone`.
+/// Returns `false` on non-Windows platforms.
+pub fn read_enable_windows_symlinks(source_client_dir: &Path) -> Result<bool> {
+    #[cfg(windows)]
+    {
+        let source_config_path = source_client_dir.join("config.toml");
+        let source_content = fs::read_to_string(&source_config_path)
+            .with_context(|| format!("failed to read {}", source_config_path.display()))?;
+        let source_table: toml::Table = source_content
+            .parse()
+            .with_context(|| format!("failed to parse {}", source_config_path.display()))?;
+        Ok(source_table
+            .get("repository")
+            .and_then(|v| v.as_table())
+            .and_then(|repo| repo.get("enable-windows-symlinks"))
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false))
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = source_client_dir;
+        Ok(false)
+    }
+}
+
+/// Copy user-specific EdenFS config from a source checkout to a new one.
+///
+/// Copies the following sections from the source's config.toml into the
+/// destination's config.toml:
+///   - [redirections]: user-specific redirections.
+///     Repo-level redirections from .eden-redirections are already
+///     applied by the clone and don't need copying.
+///   - [profiles]: active prefetch profiles (e.g. "edenfs").
+///   - [predictive-prefetch]: predictive prefetch settings.
+///
+/// enable-windows-symlinks is handled separately by passing
+/// --enable-windows-symlinks to `eden clone`.
+///
+/// After writing, runs `eden redirect fixup` to apply redirections.
+///
+/// NOTE: If `eden redirect fixup` proves unreliable, an alternative approach
+/// would be to call `eden redirect add` for each redirection individually
+/// instead of writing config.toml and running `eden redirect fixup`.
+pub fn copy_eden_user_config(
+    config: &dyn Config,
+    source_client_dir: &Path,
+    dest_mount: &Path,
+) -> Result<()> {
+    let source_config_path = source_client_dir.join("config.toml");
+    let source_content = fs::read_to_string(&source_config_path)
+        .with_context(|| format!("failed to read {}", source_config_path.display()))?;
+    let source_table: toml::Table = source_content
+        .parse()
+        .with_context(|| format!("failed to parse {}", source_config_path.display()))?;
+
+    let source_redirections = source_table.get("redirections").and_then(|v| v.as_table());
+    let source_profiles = source_table.get("profiles").and_then(|v| v.as_table());
+    let source_predictive = source_table
+        .get("predictive-prefetch")
+        .and_then(|v| v.as_table());
+
+    let has_redirections = source_redirections.is_some_and(|t| !t.is_empty());
+    let has_profiles = source_profiles.is_some_and(|t| !t.is_empty());
+    let has_predictive = source_predictive.is_some_and(|t| !t.is_empty());
+
+    if !has_redirections && !has_profiles && !has_predictive {
+        return Ok(());
+    }
+
+    // Resolve the new worktree's client directory.
+    // Use edenfs_client::get_client_dir which handles platform differences:
+    // - Unix: reads .eden/client symlink
+    // - Windows: parses .eden/config TOML for Config.client
+    let dest_client_dir = edenfs_client::get_client_dir(dest_mount)?;
+    let dest_config_path = dest_client_dir.join("config.toml");
+
+    let dest_content = fs::read_to_string(&dest_config_path)
+        .with_context(|| format!("failed to read {}", dest_config_path.display()))?;
+    let mut dest_table: toml::Table = dest_content
+        .parse()
+        .with_context(|| format!("failed to parse {}", dest_config_path.display()))?;
+
+    if let Some(redirections) = source_redirections {
+        dest_table.insert(
+            "redirections".to_string(),
+            toml::Value::Table(redirections.clone()),
+        );
+    }
+    if let Some(profiles) = source_profiles {
+        dest_table.insert("profiles".to_string(), toml::Value::Table(profiles.clone()));
+    }
+    if let Some(predictive) = source_predictive {
+        dest_table.insert(
+            "predictive-prefetch".to_string(),
+            toml::Value::Table(predictive.clone()),
+        );
+    }
+
+    let new_content = toml::to_string(&dest_table).context("failed to serialize config.toml")?;
+    atomic_write(&dest_config_path, |f| f.write_all(new_content.as_bytes()))?;
+
+    // Apply redirections by running `eden redirect fixup`
+    if has_redirections {
+        let mut cmd = edenfs_client::build_eden_command(config)?;
+        cmd.args(["redirect", "fixup", "--mount"]);
+        cmd.arg(dest_mount);
+        let output = cmd.output().with_context(|| {
+            format!(
+                "failed to run eden redirect fixup for {}",
+                dest_mount.display()
+            )
+        })?;
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            bail!(
+                "eden redirect fixup failed for {}: {}",
+                dest_mount.display(),
+                stderr.trim()
+            );
+        }
+    }
+
+    Ok(())
+}
+
+/// Copy the sparse/filter config from a source checkout to a new one.
+///
+/// If the source checkout has a `sparse` file in its dot directory,
+/// copies it to the destination so the new checkout has the same
+/// active filters.
+pub fn copy_sparse_config(source_dot_dir: &Path, dest_dot_dir: &Path) -> Result<()> {
+    let sparse_path = source_dot_dir.join("sparse");
+    if sparse_path.exists() {
+        let dest_sparse = dest_dot_dir.join("sparse");
+        fs::copy(&sparse_path, &dest_sparse).with_context(|| {
+            format!("failed to copy sparse config to {}", dest_sparse.display())
+        })?;
+    }
+    Ok(())
+}
+
 /// Get the tag to use for streaming clone from config.
 ///
 /// This is shared between wireproto and SLAPI streaming clone implementations.

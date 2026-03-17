@@ -18,3 +18,4 @@ pub use crate::types::ConflictType;
 pub use crate::types::EdenError;
 pub use crate::types::FileStatus;
 pub use crate::utils::build_eden_command;
+pub use crate::utils::get_client_dir;
