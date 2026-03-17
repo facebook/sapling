@@ -116,6 +116,13 @@ cpp_library(
 )
 
 cpp_library(
+    name = "error_info",
+    headers = [
+        "EdenComponent.h",
+    ],
+)
+
+cpp_library(
     name = "structured_logger",
     srcs = [
         "EdenStructuredLogger.cpp",
