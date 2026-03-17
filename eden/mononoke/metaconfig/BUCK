@@ -7,11 +7,15 @@ rust_library(
     srcs = glob(["types/src/**/*.rs"]),
     autocargo = {"cargo_toml_dir": "types"},
     named_deps = {"bincode": "fbsource//third-party/rust:bincode-2"},
+    test_deps = [
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
+    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:ascii",
         "fbsource//third-party/rust:clap",
         "fbsource//third-party/rust:derive_more",
+        "fbsource//third-party/rust:itertools",
         "fbsource//third-party/rust:lazy_static",
         "fbsource//third-party/rust:mysql_common",
         "fbsource//third-party/rust:parking_lot",

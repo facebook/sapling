@@ -24,6 +24,9 @@ use metaconfig_types::CommitGraphConfig;
 use metaconfig_types::CommitIdentityScheme;
 use metaconfig_types::ComparableRegex;
 use metaconfig_types::CrossRepoCommitValidation;
+use metaconfig_types::DerivationPipelineStageConfig;
+use metaconfig_types::DerivationPipelineStageTypeConfig;
+use metaconfig_types::DerivationPipelineTypeConfig;
 use metaconfig_types::DerivedDataConfig;
 use metaconfig_types::DerivedDataTypesConfig;
 use metaconfig_types::DirectoryBranchClusterConfig;
@@ -45,6 +48,7 @@ use metaconfig_types::InfinitepushNamespace;
 use metaconfig_types::InfinitepushParams;
 use metaconfig_types::LfsParams;
 use metaconfig_types::LoggingDestination;
+use metaconfig_types::ManifestDerivationPipelineConfig;
 use metaconfig_types::MetadataCacheConfig;
 use metaconfig_types::MetadataCacheUpdateMode;
 use metaconfig_types::MetadataLoggerConfig;
@@ -90,6 +94,9 @@ use repos::RawCommitCloudConfig;
 use repos::RawCommitGraphConfig;
 use repos::RawCommitIdentityScheme;
 use repos::RawCrossRepoCommitValidationConfig;
+use repos::RawDerivationPipelineStageConfig;
+use repos::RawDerivationPipelineStageTypeConfig;
+use repos::RawDerivationPipelineTypeConfig;
 use repos::RawDerivedDataBlockedChangesetDerivation;
 use repos::RawDerivedDataBlockedDerivation;
 use repos::RawDerivedDataConfig;
@@ -109,6 +116,7 @@ use repos::RawInfinitepushParams;
 use repos::RawLfsParams;
 use repos::RawLoggingDestination;
 use repos::RawLoggingDestinationScribe;
+use repos::RawManifestDerivationPipelineConfig;
 use repos::RawMetadataCacheConfig;
 use repos::RawMetadataCacheUpdateMode;
 use repos::RawMetadataLoggerConfig;
@@ -652,6 +660,15 @@ impl Convert for RawDerivedDataConfig {
                 .into_iter()
                 .map(|s| DerivableType::from_name(&s))
                 .collect::<Result<_, _>>()?,
+            derivation_pipeline_config: self
+                .derivation_pipeline
+                .unwrap_or_default()
+                .into_iter()
+                .map(|(type_name, raw_config)| {
+                    let derivable_type = DerivableType::from_name(&type_name)?;
+                    Ok((derivable_type, raw_config.convert()?))
+                })
+                .collect::<Result<_, anyhow::Error>>()?,
         })
     }
 }
@@ -719,6 +736,72 @@ impl Convert for RawRemoteDiffConfig {
                 anyhow::bail!("Unknown variant of RawRemoteDiffConfig: {}", e)
             }
         }
+    }
+}
+
+impl Convert for RawManifestDerivationPipelineConfig {
+    type Output = ManifestDerivationPipelineConfig;
+
+    fn convert(self) -> Result<Self::Output> {
+        let path = MPath::new(self.path.as_bytes()).with_context(|| {
+            format!(
+                "Invalid path for manifest derivation pipeline config: {}",
+                self.path
+            )
+        })?;
+        Ok(ManifestDerivationPipelineConfig { path })
+    }
+}
+
+impl Convert for RawDerivationPipelineStageTypeConfig {
+    type Output = DerivationPipelineStageTypeConfig;
+
+    fn convert(self) -> Result<Self::Output> {
+        match self {
+            Self::manifest(config) => Ok(DerivationPipelineStageTypeConfig::Manifest(
+                config.convert()?,
+            )),
+            Self::UnknownField(id) => {
+                bail!(
+                    "Unknown derivation pipeline stage type config variant: {}",
+                    id
+                )
+            }
+        }
+    }
+}
+
+impl Convert for RawDerivationPipelineStageConfig {
+    type Output = DerivationPipelineStageConfig;
+
+    fn convert(self) -> Result<Self::Output> {
+        Ok(DerivationPipelineStageConfig {
+            dependencies: self.dependencies,
+            terminal: self.terminal,
+            type_config: self.type_config.convert()?,
+        })
+    }
+}
+
+impl Convert for RawDerivationPipelineTypeConfig {
+    type Output = DerivationPipelineTypeConfig;
+
+    fn convert(self) -> Result<Self::Output> {
+        let bookmarks = self
+            .bookmarks
+            .into_iter()
+            .map(BookmarkKey::new)
+            .collect::<Result<Vec<_>>>()?;
+        let stages = self
+            .stages
+            .into_iter()
+            .map(|(id, raw_config)| Ok((id, raw_config.convert()?)))
+            .collect::<Result<HashMap<_, _>>>()?;
+        let config = DerivationPipelineTypeConfig { bookmarks, stages };
+        config
+            .validate()
+            .context("Invalid derivation pipeline config")?;
+        Ok(config)
     }
 }
 
