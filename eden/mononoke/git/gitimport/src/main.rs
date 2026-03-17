@@ -255,7 +255,11 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         // Skip C++ singleton teardown which hangs for ~5 minutes due to
         // circular shared_ptr references in folly/scribe/manifold singletons.
         // All import work is complete at this point.
-        std::process::exit(0);
+        //
+        // Must use libc::_exit instead of std::process::exit because the latter
+        // calls C exit() which still runs atexit handlers — and folly registers
+        // singleton teardown via atexit, which is the exact code path that hangs.
+        unsafe { libc::_exit(0) };
     }
 
     result

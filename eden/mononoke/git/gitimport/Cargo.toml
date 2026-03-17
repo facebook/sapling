@@ -28,6 +28,7 @@ git_symbolic_refs = { version = "0.1.0", path = "../../repo_attributes/git_symbo
 gix-hash = "0.18.0"
 import_direct = { version = "0.1.0", path = "../import_direct" }
 import_tools = { version = "0.1.0", path = "../import_tools" }
+libc = "0.2.139"
 linked-hash-map = { version = "0.5", features = ["serde_impl"] }
 mercurial_derivation = { version = "0.1.0", path = "../../derived_data/mercurial_derivation" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
