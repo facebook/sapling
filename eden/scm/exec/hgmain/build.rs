@@ -32,7 +32,9 @@ fn main() {
             // Use `no-pie` be compatible with such `libpython.a`. The downside is that the built
             // binary is not PIE (Position Independent Executable) and ASLR (Address Space Layout
             // Randomization) cannot be used.
-            println!("cargo:rustc-link-arg=-no-pie");
+            //
+            // UPDATE: With D96870929, libpython.a is built with -fPIC.
+            // println!("cargo:rustc-link-arg=-no-pie");
 
             // Python modules (.so) want symbols like `PyFloat_Type`.
             // Use `--export-dynamic` to resolve issues like:
