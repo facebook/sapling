@@ -6,9 +6,10 @@
  */
 
 macro_rules! external_commands {
-    [ $( $name:ident, )* ] => {
+    [ $( $(#[$meta:meta])* $name:ident, )* ] => {
         pub(crate) fn extend_crate_command_table(table: &mut ::clidispatch::command::CommandTable) {
             $(
+            $(#[$meta])*
             {
                 use ::$name as m;
                 let command_aliases = m::aliases();
