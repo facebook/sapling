@@ -78,6 +78,11 @@ pub enum DerivableUntopologicallyVariant {
     TestShardedManifests,
 }
 
+/// Enum which consolidates all derived data types that support
+/// multi-stage derivation via the PipelineDerivable trait.
+#[derive(Clone, Copy, Debug, EnumIter, Eq, PartialEq)]
+pub enum PipelineDerivableVariant {}
+
 impl DerivableType {
     pub fn from_name(s: &str) -> Result<Self> {
         // We need the duplication here to make it a `const fn` so it can be used in
@@ -225,6 +230,16 @@ impl DerivableType {
             ),
         }
     }
+    pub fn into_pipeline_derivable_variant(self) -> Result<PipelineDerivableVariant> {
+        bail!("{} does not support derivation pipeline", self.name())
+    }
+}
+
+impl PipelineDerivableVariant {
+    #[allow(unreachable_code)]
+    pub fn into_derivable_type(self) -> DerivableType {
+        match self {}
+    }
 }
 
 impl DerivableUntopologicallyVariant {
@@ -257,6 +272,7 @@ mod tests {
 
     use super::DerivableType;
     use super::DerivableUntopologicallyVariant;
+    use super::PipelineDerivableVariant;
 
     #[mononoke::test]
     fn thrift_derived_data_type_conversion_must_be_bidirectional() {
@@ -276,6 +292,22 @@ mod tests {
                 DerivableType::from_name(variant.name()).expect(
                     "Failed to convert back to DerivableType from its string representation with DerivableType::name"
                 )
+            );
+        }
+    }
+
+    #[mononoke::test]
+    #[allow(unreachable_code)]
+    fn pipeline_derivable_variant_into_derivable_type_is_bidirectional() {
+        for variant in PipelineDerivableVariant::iter() {
+            assert_eq!(
+                variant,
+                variant
+                    .into_derivable_type()
+                    .into_pipeline_derivable_variant()
+                    .expect(
+                        "Failed to convert back to PipelineDerivableVariant from DerivableType"
+                    )
             );
         }
     }

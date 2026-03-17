@@ -19,9 +19,11 @@ use context::CoreContext;
 use filenodes::Filenodes;
 use filestore::FilestoreConfig;
 use futures::future::try_join_all;
+use metaconfig_types::DerivationPipelineTypeConfig;
 use metaconfig_types::DerivedDataTypesConfig;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
+use mononoke_types::DerivableType;
 use restricted_paths_common::config_based::ArcRestrictedPathsConfigBased;
 
 use crate::derivable::BonsaiDerivable;
@@ -52,6 +54,7 @@ pub struct DerivationContext {
         Arc<MemWritesKeyedBlobstore<Arc<dyn KeyedBlobstore>>>,
     )>,
     restricted_paths: ArcRestrictedPathsConfigBased,
+    derivation_pipeline_config: HashMap<DerivableType, DerivationPipelineTypeConfig>,
 }
 
 impl DerivationContext {
@@ -65,6 +68,7 @@ impl DerivationContext {
         blobstore: Arc<dyn KeyedBlobstore>,
         filestore_config: FilestoreConfig,
         restricted_paths: ArcRestrictedPathsConfigBased,
+        derivation_pipeline_config: HashMap<DerivableType, DerivationPipelineTypeConfig>,
     ) -> Self {
         // Start with None. Use with_rederivation later if needed
         let rederivation = None;
@@ -80,6 +84,7 @@ impl DerivationContext {
             filestore_config,
             blobstore_write_cache: None,
             restricted_paths,
+            derivation_pipeline_config,
         }
     }
 
@@ -310,6 +315,13 @@ impl DerivationContext {
     /// The config that should be used for derivation.
     pub fn config(&self) -> &DerivedDataTypesConfig {
         &self.config
+    }
+
+    /// Derivation pipeline configuration per derived data type.
+    pub fn derivation_pipeline_config(
+        &self,
+    ) -> &HashMap<DerivableType, DerivationPipelineTypeConfig> {
+        &self.derivation_pipeline_config
     }
 
     /// Mapping key prefix for a particular derived data type.

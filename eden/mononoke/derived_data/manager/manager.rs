@@ -109,6 +109,10 @@ impl DerivedDataManager {
             repo_blobstore.boxed(),
             filestore_config,
             restricted_paths,
+            repo_config
+                .derived_data_config
+                .derivation_pipeline_config
+                .clone(),
         );
         DerivedDataManager {
             inner: Arc::new(DerivedDataManagerInner {

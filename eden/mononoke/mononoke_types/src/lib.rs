@@ -77,6 +77,7 @@ pub use datetime::DateTime;
 pub use datetime::Timestamp;
 pub use derivable_type::DerivableType;
 pub use derivable_type::DerivableUntopologicallyVariant;
+pub use derivable_type::PipelineDerivableVariant;
 pub use file_change::BasicFileChange;
 pub use file_change::FileChange;
 pub use file_change::FileType;

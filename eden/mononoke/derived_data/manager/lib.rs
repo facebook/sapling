@@ -17,6 +17,7 @@ pub use mononoke_types::DerivableType;
 pub use self::context::DerivationContext;
 pub use self::derivable::BonsaiDerivable;
 pub use self::derivable::DerivableUntopologically;
+pub use self::derivable::PipelineDerivable;
 pub use self::error::DerivationError;
 pub use self::error::SharedDerivationError;
 pub use self::manager::DerivedDataManager;
