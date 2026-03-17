@@ -42,6 +42,21 @@ test worktree remove - list after remove shows fewer entries
     linked  $TESTTMP/linked2   feature-x
   * main    $TESTTMP/myrepo
 
+test worktree remove - with --keep
+
+  $ hg worktree add $TESTTMP/keep_me
+  created linked worktree at $TESTTMP/keep_me
+  $ hg worktree remove $TESTTMP/keep_me --keep -y
+  unlinked $TESTTMP/keep_me
+  $ test -d $TESTTMP/keep_me
+  $ hg worktree list
+    linked  $TESTTMP/linked1
+    linked  $TESTTMP/linked2   feature-x
+  * main    $TESTTMP/myrepo
+
+clean up kept checkout
+  $ EDENFSCTL_ONLY_RUST=true eden rm -y $TESTTMP/keep_me > /dev/null 2>&1
+
 test worktree remove --all
 
   $ hg worktree remove --all -y

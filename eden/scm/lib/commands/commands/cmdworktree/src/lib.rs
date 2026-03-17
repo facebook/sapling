@@ -35,6 +35,9 @@ define_flags! {
         #[argtype("TEXT")]
         label: String,
 
+        /// only unlink from group, keep the checkout on disk (for 'remove')
+        keep: bool,
+
         /// remove all linked worktrees (for 'remove')
         all: bool,
 
@@ -80,7 +83,7 @@ pub fn doc() -> &'static str {
 
       list [-Tjson]                           List all worktrees in the group
       add PATH [--label TEXT]                 Create a new linked worktree
-      remove PATH [--all] [-y]                Remove linked worktree(s)
+      remove PATH [--all] [--keep] [-y]       Remove linked worktree(s)
       label [PATH] TEXT [--remove]            Set or remove a worktree label
 
     Currently only EdenFS-backed repositories are supported."#
@@ -164,12 +167,13 @@ fn confirm_remove(ctx: &ReqCtx<WorktreeOpts>, paths: &[&Path]) -> Result<()> {
         abort!("running non-interactively, use -y instead");
     }
 
+    let action = if ctx.opts.keep { "unlink" } else { "remove" };
     if paths.len() == 1 {
         ctx.io()
-            .write(format!("will remove {}\n", paths[0].display()))?;
+            .write(format!("will {} {}\n", action, paths[0].display()))?;
     } else {
         ctx.io()
-            .write(format!("will remove {} worktrees:\n", paths.len()))?;
+            .write(format!("will {} {} worktrees:\n", action, paths.len()))?;
         for p in paths {
             ctx.io().write(format!("  {}\n", p.display()))?;
         }
@@ -424,7 +428,12 @@ fn run_remove(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo) -> Result<u8> {
         }
 
         confirm_remove(ctx, &[&target])?;
-        edenfs_client::run_eden_remove(repo.config().as_ref(), &target)?;
+
+        if ctx.opts.keep {
+            // Keep the checkout on disk, just unlink from the group.
+        } else {
+            edenfs_client::run_eden_remove(repo.config().as_ref(), &target)?;
+        }
         grp.worktrees.remove(&target);
         let linked_count = grp.worktrees.keys().filter(|p| **p != grp.main).count();
         if linked_count == 0 {
@@ -433,7 +442,8 @@ fn run_remove(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo) -> Result<u8> {
         Ok(())
     })?;
 
-    logger.info(format!("removed {}", target.display()));
+    let action = if ctx.opts.keep { "unlinked" } else { "removed" };
+    logger.info(format!("{} {}", action, target.display()));
     Ok(0)
 }
 
@@ -478,7 +488,9 @@ fn run_remove_all(
         confirm_remove(ctx, &path_refs)?;
 
         for path in &linked_paths {
-            edenfs_client::run_eden_remove(repo.config().as_ref(), path)?;
+            if !ctx.opts.keep {
+                edenfs_client::run_eden_remove(repo.config().as_ref(), path)?;
+            }
             grp.worktrees.remove(path);
         }
 
@@ -489,8 +501,9 @@ fn run_remove_all(
         logger.info("no linked worktrees to remove");
         return Ok(0);
     }
+    let action = if ctx.opts.keep { "unlinked" } else { "removed" };
     for path in &removed_paths {
-        logger.info(format!("removed {}", path.display()));
+        logger.info(format!("{} {}", action, path.display()));
     }
     Ok(0)
 }
