@@ -36,6 +36,15 @@ pub use crate::dag_items::derivation_priority_to_str;
 pub use crate::errors::InternalError;
 pub use crate::underived::build_underived_batched_graph;
 
+/// Lightweight item returned from dequeue — just the ID and priority.
+/// The full DerivationDagItem is constructed during claim_derivation
+/// after fetching data from Zeus.
+#[derive(Clone, Debug)]
+pub struct DequeuedItem {
+    pub dag_item_id: DagItemId,
+    pub priority: DerivationPriority,
+}
+
 #[facet::facet]
 pub struct RepoDerivationQueues {
     configs_to_queues: HashMap<String, Arc<dyn DerivationQueue + Send + Sync>>,
@@ -70,13 +79,14 @@ pub trait DerivationQueue {
     ) -> Result<DequeueResponse, InternalError>;
 
     /// Atomically claim an item for derivation by creating a deriving node.
-    /// Returns Ok(true) if claimed successfully, Ok(false) if another worker
-    /// already claimed it.
+    /// Returns Ok(Some(dag_item)) if claimed successfully with the full item
+    /// data fetched from Zeus, Ok(None) if another worker already claimed it
+    /// or the item was evicted due to exceeding retry count.
     async fn claim_derivation(
         &self,
         ctx: &CoreContext,
-        item: &DerivationDagItem,
-    ) -> Result<bool, InternalError>;
+        item: &DequeuedItem,
+    ) -> Result<Option<DerivationDagItem>, InternalError>;
 
     async fn ack(&self, ctx: &CoreContext, item: &DerivationDagItem) -> Result<(), InternalError>;
 
@@ -132,7 +142,7 @@ pub enum DequeueResponse {
         ready_queue_watch:
             Box<dyn futures::future::Future<Output = anyhow::Result<()>> + Unpin + Send + Sync>,
     },
-    Items(BoxStream<'static, Result<DerivationDagItem, InternalError>>),
+    Items(BoxStream<'static, Result<DequeuedItem, InternalError>>),
 }
 
 pub struct DerivationQueueSummary<'a> {
