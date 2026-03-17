@@ -46,6 +46,7 @@ use permission_checker::AclProvider;
 use permission_checker::DefaultAclProvider;
 use permission_checker::InternalAclProvider;
 use rendezvous::RendezVousArgs;
+use repo_derivation_queues::DerivationQueueArgs;
 use sql_ext::facebook::MysqlOptions;
 use sql_ext::facebook::PoolConfig;
 use sql_ext::facebook::ReadConnectionType;
@@ -129,6 +130,9 @@ pub struct EnvironmentArgs {
 
     #[clap(flatten, next_help_heading = "COMMIT GRAPH OPTIONS")]
     commit_graph_args: CommitGraphArgs,
+
+    #[clap(flatten, next_help_heading = "DERIVATION QUEUE OPTIONS")]
+    derivation_queue_args: DerivationQueueArgs,
 }
 
 impl MononokeAppBuilder {
@@ -318,6 +322,7 @@ impl MononokeAppBuilder {
             just_knobs_args,
             gflags_args,
             commit_graph_args,
+            derivation_queue_args,
         } = env_args;
 
         gflags_args.propagate(self.fb)?;
@@ -409,6 +414,7 @@ impl MononokeAppBuilder {
             filter_repos: None,
             commit_graph_options,
             client_entry_point_for_service: self.client_entry_point_for_service,
+            derivation_queue_namespace: derivation_queue_args.derivation_queue_namespace,
         })
     }
 }

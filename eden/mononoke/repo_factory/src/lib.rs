@@ -1481,8 +1481,9 @@ impl RepoFactory {
             })?;
             let zelos_client = self.zelos_client(zelos_config).await?;
 
+            let namespace = self.env.derivation_queue_namespace.clone();
             anyhow::Ok(Arc::new(
-                zelos_derivation_queues(repo_derived_data.clone(), zelos_client).await?,
+                zelos_derivation_queues(repo_derived_data.clone(), zelos_client, namespace).await?,
             ))
         }
     }

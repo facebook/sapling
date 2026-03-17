@@ -166,4 +166,5 @@ pub struct MononokeEnvironment {
     pub filter_repos: Option<Arc<dyn Fn(&str) -> bool + Send + Sync + 'static>>,
     pub commit_graph_options: CommitGraphOptions,
     pub client_entry_point_for_service: ClientEntryPoint,
+    pub derivation_queue_namespace: String,
 }

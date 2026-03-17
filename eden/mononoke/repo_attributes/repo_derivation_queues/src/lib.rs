@@ -14,6 +14,7 @@ use std::iter::Iterator;
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use clap::Args;
 use clientinfo::ClientInfo;
 use context::CoreContext;
 pub use derivation_queue_thrift::DerivationPriority;
@@ -28,6 +29,13 @@ use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
 use serde::Deserialize;
 use serde::Serialize;
+
+#[derive(Args, Debug, Clone)]
+pub struct DerivationQueueArgs {
+    /// Namespace for the derivation queue
+    #[clap(long, default_value = "/mononoke_derivation")]
+    pub derivation_queue_namespace: String,
+}
 
 pub use crate::dag_items::DagItemId;
 pub use crate::dag_items::DagItemInfo;

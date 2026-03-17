@@ -66,6 +66,7 @@ rust_library(
         "//eden/mononoke/repo_attributes/commit_graph/commit_graph_types:commit_graph_types",
         "//eden/mononoke/repo_factory:repo_factory",
         "//eden/mononoke/servers/slapi/slapi_server/context:context",
+        "//eden/mononoke/repo_attributes/repo_derivation_queues:repo_derivation_queues",
         "//eden/scm/lib/clientinfo:clientinfo",
     ] + ([] if rust_oss.is_oss_build() else [
         "//eden/mononoke/facebook/ods3_schemas:MononokeAppStats_ods3-rs_bindings",
