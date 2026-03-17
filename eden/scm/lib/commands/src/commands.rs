@@ -25,9 +25,20 @@ macro_rules! external_commands {
 external_commands![
     // see update_commands.sh
     // [[[cog
-    // import cog, glob, os
+    // import cog, glob, os, tomllib
+    // with open('Cargo.toml', 'rb') as f:
+    //     cargo = tomllib.load(f)
+    // # Turn {'feature-foo': ['cmd-foo']} to {'cmd-foo': 'feature-foo'}
+    // crate_to_feature = {}
+    // for feature_name, feature_deps in cargo.get('features', {}).items():
+    //     for feature_dep in feature_deps:
+    //          if '/' not in feature_dep:
+    //              crate_to_feature[feature_dep] = feature_name
     // for path in sorted(glob.glob('commands/cmd*/BUCK')) + sorted(glob.glob('debugcommands/cmd*/BUCK')):
     //     name = os.path.basename(os.path.dirname(path))
+    //     feature_name = crate_to_feature.get(name)
+    //     if feature_name:
+    //          cog.outl(f'#[cfg(feature = "{feature_name}")]')
     //     cog.outl(f'{name},')
     // ]]]
     cmdcat,
