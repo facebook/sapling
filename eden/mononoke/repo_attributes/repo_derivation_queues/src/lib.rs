@@ -229,4 +229,8 @@ impl DerivationQueueSummaryItem {
     pub fn priority(&self) -> DerivationPriority {
         self.dag_item_info.priority()
     }
+
+    pub fn stage_id(&self) -> Option<&str> {
+        self.dag_item_id.stage_id.as_deref()
+    }
 }

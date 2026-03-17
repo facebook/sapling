@@ -141,7 +141,10 @@ async fn print_table(
                 time_ready_str,
                 time_deriving_str,
                 item.retry_count(),
-                dd_type,
+                match item.stage_id() {
+                    Some(stage_id) => format!("{} (stage: {})", dd_type, stage_id),
+                    None => format!("{}", dd_type),
+                },
                 priority_str,
                 format!("{:?}", item.bubble_id()),
                 item.head_cs_id(),
