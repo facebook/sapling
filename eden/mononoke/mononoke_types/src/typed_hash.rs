@@ -293,6 +293,7 @@ macro_rules! impl_typed_hash_no_context {
 
 
             #[cfg(test)]
+            #[allow(dead_code)]
             pub(crate) fn from_byte_array(arr: [u8; 32]) -> Self {
                 Self::new($crate::private::Blake2::from_byte_array(arr))
             }
@@ -569,7 +570,36 @@ macro_rules! impl_typed_hash {
             }
         }
 
-    }
+    };
+    // Variant that skips the Loadable impl so it can be provided manually
+    {
+        hash_type => $typed: ident,
+        thrift_hash_type => $thrift_hash_type: path,
+        value_type => $value_type: ty,
+        context_type => $typed_context: ident,
+        context_key => $key: expr,
+        no_loadable => true,
+    } => {
+        $crate::impl_typed_hash_no_context! {
+            hash_type => $typed,
+            thrift_type => $thrift_hash_type,
+            blobstore_key => $key,
+        }
+
+        $crate::impl_typed_context! {
+            hash_type => $typed,
+            context_type => $typed_context,
+            context_key => $key,
+        }
+
+        impl MononokeId for $typed {
+            #[inline]
+            fn sampling_fingerprint(&self) -> u64 {
+                self.0.sampling_fingerprint()
+            }
+        }
+
+    };
 }
 
 macro_rules! impl_edenapi_hash_convert {
@@ -750,6 +780,47 @@ impl_typed_hash! {
     value_type => Fsnode,
     context_type => FsnodeIdContext,
     context_key => "fsnode",
+    no_loadable => true,
+}
+
+// FsnodeId gets a manual Loadable impl that deserializes on a blocking thread.
+// Fsnode blobs for large directories can take 120-160ms to deserialize, which
+// blocks the tokio reactor and causes APP_QUEUE_TIMEOUT.
+#[async_trait]
+impl Loadable for FsnodeId {
+    type Value = Fsnode;
+
+    async fn load<'a, B: KeyedBlobstore>(
+        &'a self,
+        ctx: &'a CoreContext,
+        blobstore: &'a B,
+    ) -> Result<Self::Value, LoadableError> {
+        let id = *self;
+        let blobstore_key = id.blobstore_key();
+        let bytes = blobstore
+            .get(ctx, &blobstore_key)
+            .await?
+            .ok_or_else(|| LoadableError::Missing(blobstore_key.clone()))?;
+
+        let now = std::time::Instant::now();
+        let blob: Blob<FsnodeId> = Blob::new(id, bytes.into_raw_bytes());
+        let len = blob.len();
+        let ret = tokio::task::spawn_blocking(move || {
+            <Fsnode as BlobstoreValue>::from_blob(blob).map_err(LoadableError::Error)
+        })
+        .await
+        .map_err(|e| LoadableError::Error(anyhow::anyhow!("spawn_blocking join error: {e}")))?;
+        let diff = now.elapsed().as_millis();
+        if diff > SLOW_DESERIAZLIZATION_THRESHOLD_MS {
+            tracing::warn!(
+                "Slow load of {} ({} bytes) took {:?}",
+                blobstore_key,
+                len,
+                now.elapsed()
+            );
+        }
+        ret
+    }
 }
 
 impl_typed_hash! {
