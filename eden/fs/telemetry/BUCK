@@ -117,6 +117,9 @@ cpp_library(
 
 cpp_library(
     name = "error_info",
+    srcs = [
+        "EdenComponent.cpp",
+    ],
     headers = [
         "EdenComponent.h",
     ],
