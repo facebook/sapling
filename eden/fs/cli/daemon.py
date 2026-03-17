@@ -295,6 +295,13 @@ def _start_edenfs_service(
     return exit_code
 
 
+def is_systemd_enabled(instance: EdenInstance) -> bool:
+    """Check whether this EdenFS instance should use systemd for lifecycle management."""
+    return sys.platform == "linux" and instance.get_config_bool(
+        "experimental.systemd-managed-lifecycle", default=False
+    )
+
+
 def get_edenfsctl_cmd() -> str:
     env = os.environ.get("EDENFS_CLI_PATH", None)
     if env:
