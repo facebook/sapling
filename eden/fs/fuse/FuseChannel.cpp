@@ -871,7 +871,16 @@ FuseChannel::FuseChannel(
     std::optional<uint32_t> fuseBdiReadAheadKb,
     uint32_t fuseMaxPages)
     : privHelper_{privHelper},
-      bufferSize_(std::max(size_t(getpagesize()) + 0x1000, MIN_BUFSIZE)),
+      // Pre-allocate based on configured max_pages so the buffer can handle
+      // the larger requests we'll negotiate during FUSE_INIT. This is
+      // optimistic: if the kernel doesn't support FUSE_MAX_PAGES, the buffer
+      // will be larger than necessary but still correct.
+      bufferSize_(
+          std::max(
+              MIN_BUFSIZE,
+              fuseMaxPages > 0
+                  ? size_t(fuseMaxPages) * size_t(getpagesize()) + 0x1000
+                  : size_t(getpagesize()) + 0x1000)),
       threadPool_{std::move(threadPool)},
       numThreads_(numThreads),
       dispatcher_(std::move(dispatcher)),
@@ -1600,6 +1609,15 @@ void FuseChannel::readInitPacket() {
   want |= FUSE_PARALLEL_DIROPS;
 #endif
 
+#ifdef FUSE_MAX_PAGES
+  if (fuseMaxPages_ > 0) {
+    // Allow the kernel to send larger read requests (up to max_pages *
+    // PAGE_SIZE). Default max_pages=32 caps reads at 128KB. Setting this flag
+    // lets us configure max_pages in the FUSE_INIT response.
+    want |= FUSE_MAX_PAGES;
+  }
+#endif
+
 #ifdef FUSE_WRITEBACK_CACHE
   if (useWriteBackCache_) {
     // Writes go to the cache then write back to the underlying fs.
@@ -1630,9 +1648,24 @@ void FuseChannel::readInitPacket() {
   // Only return the capabilities the kernel supports.
   want &= capable;
 
+#ifdef FUSE_MAX_PAGES
+  // Set max_pages only if the kernel actually supports FUSE_MAX_PAGES
+  // (the flag survived the want &= capable check above).
+  if (fuseMaxPages_ > 0 && (want & FUSE_MAX_PAGES)) {
+    connInfo.max_pages =
+        static_cast<uint16_t>(std::min(fuseMaxPages_, uint32_t(256)));
+  }
+#endif
+
+#ifdef FUSE_MAX_PAGES
+  const auto logMaxPages = connInfo.max_pages;
+#else
+  const auto logMaxPages = 0;
+#endif
+
   XLOGF(
       DBG1,
-      "Speaking fuse protocol kernel={}.{} local={}.{} on mount \"{}\", max_write={}, max_readahead={}, capable={}, want={}",
+      "Speaking fuse protocol kernel={}.{} local={}.{} on mount \"{}\", max_write={}, max_readahead={}, max_pages={}, capable={}, want={}",
       init.init.major,
       init.init.minor,
       FUSE_KERNEL_VERSION,
@@ -1640,6 +1673,7 @@ void FuseChannel::readInitPacket() {
       mountPath_,
       connInfo.max_write,
       connInfo.max_readahead,
+      logMaxPages,
       capsFlagsToLabel(capable),
       capsFlagsToLabel(want));
 

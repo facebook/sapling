@@ -67,7 +67,8 @@ fuse_entry_out genRandomLookupResponse(uint64_t nodeid) {
 class FuseChannelTest : public ::testing::Test {
  protected:
   std::unique_ptr<FuseChannel, FsChannelDeleter> createChannel(
-      size_t numThreads = 2) {
+      size_t numThreads = 2,
+      uint32_t fuseMaxPages = 0) {
     auto testDispatcher = std::make_unique<TestDispatcher>(stats_.copy());
     dispatcher_ = testDispatcher.get();
     return makeFuseChannel(
@@ -90,7 +91,9 @@ class FuseChannelTest : public ::testing::Test {
         /*highFuseRequestsLogInterval=*/std::chrono::minutes{10},
         /*longRunningFSRequestThreshold=*/std::chrono::minutes{5},
         /*useWriteBackCache=*/false,
-        /*fuseTraceBusCapacity*/ kTraceBusCapacity);
+        /*fuseTraceBusCapacity*/ kTraceBusCapacity,
+        /*fuseBdiReadAheadKb=*/std::nullopt,
+        /*fuseMaxPages=*/fuseMaxPages);
   }
 
   FuseChannel::StopFuture performInit(
@@ -410,4 +413,110 @@ TEST_F(FuseChannelTest, formatting_unknown) {
   // change the type back so the destructor doesn't throw
   entry.type = FuseChannel::InvalidationType::DIR_ENTRY;
 }
+
+#ifdef FUSE_MAX_PAGES
+TEST_F(FuseChannelTest, testMaxPagesNegotiation) {
+  constexpr uint32_t configuredMaxPages = 128;
+  auto channel =
+      createChannel(/*numThreads=*/2, /*fuseMaxPages=*/configuredMaxPages);
+
+  // The kernel must advertise FUSE_MAX_PAGES capability for EdenFS to set it
+  auto completeFuture = performInit(
+      channel.get(),
+      FUSE_KERNEL_VERSION,
+      FUSE_KERNEL_MINOR_VERSION,
+      /*maxReadahead=*/0,
+      /*flags=*/FUSE_MAX_PAGES);
+
+  channel->takeoverStop();
+
+  auto stopData = std::move(completeFuture).get(kTimeout);
+  auto* fuseStopData = dynamic_cast<FuseChannel::StopData*>(stopData.get());
+  EXPECT_EQ(fuseStopData->reason, FuseChannel::StopReason::TAKEOVER);
+  EXPECT_TRUE(fuseStopData->fuseDevice);
+
+  // Verify FUSE_MAX_PAGES flag is set in the response
+  EXPECT_TRUE(fuseStopData->fuseSettings.flags & FUSE_MAX_PAGES)
+      << "FUSE_MAX_PAGES flag should be set when fuseMaxPages is configured";
+
+  // Verify max_pages matches the configured value
+  EXPECT_EQ(configuredMaxPages, fuseStopData->fuseSettings.max_pages);
+}
+
+TEST_F(FuseChannelTest, testMaxPagesDefaultDisabled) {
+  // Default fuseMaxPages=0 should NOT set FUSE_MAX_PAGES flag
+  auto channel = createChannel(/*numThreads=*/2, /*fuseMaxPages=*/0);
+
+  // Even if the kernel advertises FUSE_MAX_PAGES, EdenFS should not set it
+  // when fuseMaxPages is 0 (use kernel default)
+  auto completeFuture = performInit(
+      channel.get(),
+      FUSE_KERNEL_VERSION,
+      FUSE_KERNEL_MINOR_VERSION,
+      /*maxReadahead=*/0,
+      /*flags=*/FUSE_MAX_PAGES);
+
+  channel->takeoverStop();
+
+  auto stopData = std::move(completeFuture).get(kTimeout);
+  auto* fuseStopData = dynamic_cast<FuseChannel::StopData*>(stopData.get());
+  EXPECT_EQ(fuseStopData->reason, FuseChannel::StopReason::TAKEOVER);
+  EXPECT_TRUE(fuseStopData->fuseDevice);
+
+  // Verify FUSE_MAX_PAGES flag is NOT set in the response
+  EXPECT_FALSE(fuseStopData->fuseSettings.flags & FUSE_MAX_PAGES)
+      << "FUSE_MAX_PAGES flag should not be set when fuseMaxPages is 0";
+
+  // max_pages should be 0 (kernel will use its default of 32)
+  EXPECT_EQ(0, fuseStopData->fuseSettings.max_pages);
+}
+
+TEST_F(FuseChannelTest, testMaxPagesClampedAt256) {
+  // Values above 256 should be capped at 256 (kernel maximum)
+  auto channel = createChannel(/*numThreads=*/2, /*fuseMaxPages=*/512);
+
+  auto completeFuture = performInit(
+      channel.get(),
+      FUSE_KERNEL_VERSION,
+      FUSE_KERNEL_MINOR_VERSION,
+      /*maxReadahead=*/0,
+      /*flags=*/FUSE_MAX_PAGES);
+
+  channel->takeoverStop();
+
+  auto stopData = std::move(completeFuture).get(kTimeout);
+  auto* fuseStopData = dynamic_cast<FuseChannel::StopData*>(stopData.get());
+  EXPECT_EQ(fuseStopData->reason, FuseChannel::StopReason::TAKEOVER);
+  EXPECT_TRUE(fuseStopData->fuseDevice);
+
+  EXPECT_TRUE(fuseStopData->fuseSettings.flags & FUSE_MAX_PAGES);
+  EXPECT_EQ(256, fuseStopData->fuseSettings.max_pages);
+}
+
+TEST_F(FuseChannelTest, testMaxPagesKernelDoesNotSupport) {
+  // EdenFS wants max_pages but kernel doesn't advertise FUSE_MAX_PAGES
+  auto channel = createChannel(/*numThreads=*/2, /*fuseMaxPages=*/128);
+
+  // Send init with flags that do NOT include FUSE_MAX_PAGES
+  auto completeFuture = performInit(
+      channel.get(),
+      FUSE_KERNEL_VERSION,
+      FUSE_KERNEL_MINOR_VERSION,
+      /*maxReadahead=*/0,
+      /*flags=*/0);
+
+  channel->takeoverStop();
+
+  auto stopData = std::move(completeFuture).get(kTimeout);
+  auto* fuseStopData = dynamic_cast<FuseChannel::StopData*>(stopData.get());
+  EXPECT_EQ(fuseStopData->reason, FuseChannel::StopReason::TAKEOVER);
+  EXPECT_TRUE(fuseStopData->fuseDevice);
+
+  // Kernel didn't advertise FUSE_MAX_PAGES, so EdenFS must not set it
+  EXPECT_FALSE(fuseStopData->fuseSettings.flags & FUSE_MAX_PAGES)
+      << "FUSE_MAX_PAGES should not be set when kernel doesn't support it";
+  EXPECT_EQ(0, fuseStopData->fuseSettings.max_pages);
+}
+#endif
+
 } // namespace facebook::eden
