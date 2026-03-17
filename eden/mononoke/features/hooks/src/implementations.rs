@@ -121,6 +121,9 @@ pub async fn make_changeset_hook(
         "limit_directory_size" => Some(b(limit_directory_size::LimitDirectorySizeHook::new(
             &params.config,
         )?)),
+        "limit_users_directory_size" => Some(b(
+            limit_users_directory_size::LimitUsersDirectorySizeHook::new(&params.config)?,
+        )),
         "require_commit_message_pattern" => Some(b(
             require_commit_message_pattern::RequireCommitMessagePatternHook::new(&params.config)?,
         )),
