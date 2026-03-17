@@ -6,11 +6,16 @@
 
 # pyre-strict
 
+import json
 import os
 import sys
-from typing import Optional
+from pathlib import Path
+from typing import Dict, List, Optional
 
-from eden.fs.cli.util import is_apple_silicon
+from eden.fs.cli.util import is_apple_silicon, write_file_atomically
+
+
+SYSTEMD_ARGS_FILENAME = ".edenfs_start_args"
 
 
 class DaemonBinaryNotFound(Exception):
@@ -75,3 +80,17 @@ def _find_default_daemon_binary() -> Optional[str]:
         return candidate
 
     return None
+
+
+def write_systemd_args_file(
+    state_dir: Path, cmd: List[str], eden_env: Dict[str, str]
+) -> Path:
+    """Write the daemon command and environment to a JSON file.
+
+    This file is read by the 'eden daemonctl' subcommand which is invoked
+    by systemd's ExecStart/ExecReload.
+    """
+    args_file = state_dir / SYSTEMD_ARGS_FILENAME
+    data = {"cmd": cmd, "env": eden_env}
+    write_file_atomically(args_file, json.dumps(data).encode())
+    return args_file
