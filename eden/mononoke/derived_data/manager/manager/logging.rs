@@ -51,6 +51,10 @@ impl DerivedDataManager {
 }
 
 impl<Derivable: BonsaiDerivable> DerivedDataScuba<Derivable> {
+    pub(super) fn add_stage_id(&mut self, stage_id: &str) {
+        self.scuba.add("stage_id", stage_id.to_string());
+    }
+
     /// Description of this operation to log (derived data type and affected
     /// changesets).
     fn description(&self) -> String {

@@ -34,6 +34,8 @@ use futures::future::BoxFuture;
 use futures::future::FutureExt;
 use futures::future::Shared;
 use futures::future::TryFutureExt;
+use futures::future::try_join;
+use futures::future::try_join_all;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
@@ -51,6 +53,7 @@ use crate::context::DerivationContext;
 use crate::derivable::BonsaiDerivable;
 use crate::derivable::DerivableUntopologically;
 use crate::derivable::DerivationDependencies;
+use crate::derivable::PipelineDerivable;
 use crate::error::DerivationError;
 use crate::error::SharedDerivationError;
 
@@ -912,6 +915,221 @@ impl DerivedDataManager {
             Ok(batch_duration + secondary_derivation.await?)
         }
         .instrument(tracing::info_span!("derive", repo = %self.repo_name(), ddt = %Derivable::NAME))
+        .await
+    }
+
+    /// Derive data for a specific stage of a batch of changesets.
+    ///
+    /// This method orchestrates derivation pipeline, where a derived data type
+    /// is computed in multiple stages (e.g., subtrees of a manifest) that can
+    /// run independently across machines.
+    ///
+    /// The provided batch of changesets must be in topological order.
+    /// Parent stage outputs are fetched for parents outside the batch;
+    /// the trait implementation handles ordering within the batch.
+    ///
+    /// NOTE: This method does not currently support types that have derived
+    /// data dependencies (i.e., types whose `Derivable::Dependencies::iter()`
+    /// returns a non-empty iterator).
+    pub async fn derive_stage_batch<Derivable>(
+        &self,
+        ctx: &CoreContext,
+        csids: Vec<ChangesetId>,
+        stage_id: &str,
+    ) -> Result<Duration, DerivationError>
+    where
+        Derivable: PipelineDerivable,
+    {
+        async {
+            self.check_enabled::<Derivable>()?;
+
+            if Derivable::Dependencies::iter().next().is_some() {
+                return Err(anyhow!(
+                    "derive_stage_batch does not support types with derived data dependencies, but {} has dependencies",
+                    Derivable::NAME,
+                ).into());
+            }
+
+            let mut derivation_ctx = self.derivation_context(None);
+            derivation_ctx.enable_write_batching();
+
+            let stage_config = derivation_ctx
+                .derivation_pipeline_config()
+                .get(&Derivable::VARIANT)
+                .and_then(|type_config| type_config.stages.get(stage_id))
+                .ok_or_else(|| {
+                    DerivationError::from(anyhow!(
+                        "derivation pipeline config not found for type {} stage {}",
+                        Derivable::VARIANT,
+                        stage_id,
+                    ))
+                })?;
+            let derivation_ctx_ref = &derivation_ctx;
+
+            // Load all bonsais for this batch.
+            let bonsais = stream::iter(csids.iter().copied().map(async |csid| {
+                let bonsai = csid.load(ctx, derivation_ctx_ref.blobstore()).await?;
+                Ok::<_, Error>(bonsai)
+            }))
+            .buffered(100)
+            .try_collect::<Vec<_>>()
+            .await?;
+
+            // Collect parent csids that are outside the batch.
+            let batch_set: HashSet<ChangesetId> = csids.iter().copied().collect();
+            let mut external_parent_csids: Vec<ChangesetId> = vec![];
+            for bonsai in bonsais.iter() {
+                for parent in bonsai.parents() {
+                    if !batch_set.contains(&parent) {
+                        external_parent_csids.push(parent);
+                    }
+                }
+            }
+            external_parent_csids.sort();
+            external_parent_csids.dedup();
+
+            // Kick off all fetches concurrently: parents + each dependency stage.
+            let parent_fetch = Derivable::fetch_stage_outputs(
+                ctx,
+                derivation_ctx_ref,
+                stage_id,
+                external_parent_csids.clone(),
+            );
+
+            let dep_fetches = stage_config.dependencies.iter().map(async |dep_stage_id| {
+                let outputs = Derivable::fetch_stage_outputs(
+                    ctx,
+                    derivation_ctx_ref,
+                    dep_stage_id,
+                    csids.clone(),
+                )
+                .await?;
+                Ok::<_, Error>((dep_stage_id.clone(), outputs))
+            });
+
+            let (fetched_parents, dep_results) =
+                try_join(parent_fetch, try_join_all(dep_fetches)).await?;
+
+            // Resolve parent stage outputs. For parents missing a stage
+            // output (transitionary period where the stage config changed),
+            // fetch the full derived value and extract the stage output.
+            // The caller must ensure that either the stage output or the
+            // full derived value exists for every external parent.
+            let fallback: HashMap<ChangesetId, Derivable::StageOutput> =
+                stream::iter(
+                    external_parent_csids
+                        .into_iter()
+                        .filter(|csid| !fetched_parents.contains_key(csid))
+                        .map(async |parent_csid| {
+                            let derived = derivation_ctx_ref
+                                .fetch_dependency::<Derivable>(ctx, parent_csid)
+                                .await?;
+                            let stage_output = Derivable::extract_stage_output_from_derived(
+                                ctx,
+                                derivation_ctx_ref,
+                                &derived,
+                                stage_config,
+                            )
+                            .await?;
+                            Ok::<_, Error>((parent_csid, stage_output))
+                        }),
+                )
+                .buffered(100)
+                .try_collect()
+                .await?;
+            let parents: HashMap<ChangesetId, Derivable::StageOutput> =
+                fetched_parents.into_iter().chain(fallback).collect();
+
+            // Build dependency outputs map from the concurrent fetch results.
+            let mut dependency_outputs: HashMap<
+                ChangesetId,
+                HashMap<String, Derivable::StageOutput>,
+            > = Default::default();
+            for (dep_stage_id, dep_outputs) in dep_results {
+                for &csid in &csids {
+                    let output = dep_outputs
+                        .get(&csid)
+                        .ok_or_else(|| {
+                            DerivationError::from(anyhow!(
+                                "missing dependency stage output for stage '{}', changeset {}",
+                                dep_stage_id,
+                                csid,
+                            ))
+                        })?;
+                    dependency_outputs
+                        .entry(csid)
+                        .or_default()
+                        .insert(dep_stage_id.clone(), output.clone());
+                }
+            }
+
+            let ctx = ctx.clone_and_reset();
+            let ctx = self.set_derivation_session_class(ctx)?;
+            borrowed!(ctx);
+
+            let mut derived_data_scuba = self.derived_data_scuba::<Derivable>();
+            derived_data_scuba.add_changesets(&bonsais);
+            derived_data_scuba.add_stage_id(stage_id);
+            derived_data_scuba.log_batch_derivation_start(ctx);
+            derived_data_scuba.add_metadata(ctx.metadata());
+
+            let (overall_stats, result) = async {
+                let derivation_ctx_ref = &derivation_ctx;
+                let (batch_duration, derived) = {
+                    let (stats, derived) = Derivable::derive_stage_batch(
+                        ctx,
+                        derivation_ctx_ref,
+                        bonsais,
+                        stage_config,
+                        parents,
+                        dependency_outputs,
+                    )
+                    .try_timed()
+                    .await
+                    .with_context(|| {
+                        format!(
+                            "failed to derive {} stage '{}' batch",
+                            Derivable::NAME,
+                            stage_id,
+                        )
+                    })?;
+                    (stats.completion_time, derived)
+                };
+
+                // Flush blobstore before persisting outputs.
+                derivation_ctx.flush(ctx).await?;
+
+                // Store stage outputs with a fresh write-batching context.
+                let mut store_ctx = self.derivation_context(None);
+                store_ctx.enable_write_batching();
+
+                Derivable::store_stage_outputs(ctx, &store_ctx, stage_id, derived.clone())
+                    .await
+                    .with_context(|| {
+                        format!(
+                            "failed to store {} stage '{}' outputs",
+                            Derivable::NAME,
+                            stage_id,
+                        )
+                    })?;
+
+                store_ctx.flush(ctx).await?;
+
+                Ok(batch_duration)
+            }
+            .timed()
+            .await;
+
+            derived_data_scuba.log_batch_derivation_end(ctx, &overall_stats, result.as_ref().err());
+
+            Ok(result?)
+        }
+        .instrument(tracing::info_span!(
+            "derive_stage",
+            repo = %self.repo_name(),
+            ddt = %Derivable::NAME,
+            stage = %stage_id,
+        ))
         .await
     }
 
