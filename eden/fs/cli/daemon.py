@@ -328,6 +328,18 @@ def is_systemd_enabled(instance: EdenInstance) -> bool:
     )
 
 
+def _is_systemd_unit_active(unit: str) -> bool:
+    """Check whether the systemd unit for this instance is currently active."""
+    try:
+        result = subprocess.run(
+            ["systemctl", "--user", "is-active", "--quiet", unit],
+            check=False,
+        )
+        return result.returncode == 0
+    except OSError:
+        return False
+
+
 def _systemctl_start_or_reload(
     instance: EdenInstance,
     cmd: List[str],
