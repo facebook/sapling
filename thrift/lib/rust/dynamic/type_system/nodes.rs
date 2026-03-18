@@ -20,6 +20,7 @@ use std::sync::Arc;
 
 use record::SerializableRecord;
 
+use crate::error::InvalidTypeError;
 use crate::type_ref::TypeRef;
 
 /// Structured annotations keyed by annotation URI.
@@ -289,6 +290,85 @@ impl OpaqueAliasNode {
     }
 }
 
+/// Builds id→index and name→index lookup maps, rejecting duplicates.
+#[allow(dead_code)] // Called by the builder in the next commit.
+pub(crate) fn build_field_indexes(
+    uri: &str,
+    fields: &[FieldDefinition],
+) -> Result<(HashMap<i16, u16>, HashMap<String, u16>), InvalidTypeError> {
+    if fields.len() > u16::MAX as usize {
+        return Err(InvalidTypeError::TooManyFields(
+            fields.len(),
+            uri.to_string(),
+        ));
+    }
+
+    let mut by_id = HashMap::with_capacity(fields.len());
+    let mut by_name = HashMap::with_capacity(fields.len());
+
+    for (idx, field) in fields.iter().enumerate() {
+        let idx = idx as u16;
+        if by_id.insert(field.identity.id, idx).is_some() {
+            return Err(InvalidTypeError::DuplicateFieldId(
+                field.identity.id,
+                uri.to_string(),
+            ));
+        }
+        if by_name.insert(field.identity.name.clone(), idx).is_some() {
+            return Err(InvalidTypeError::DuplicateFieldName(
+                field.identity.name.clone(),
+                uri.to_string(),
+            ));
+        }
+    }
+
+    Ok((by_id, by_name))
+}
+
+/// Validates that all fields in a union are optional.
+#[allow(dead_code)] // Called by the builder in the next commit.
+pub(crate) fn validate_union_fields(
+    uri: &str,
+    fields: &[FieldDefinition],
+) -> Result<(), InvalidTypeError> {
+    for field in fields {
+        if field.presence != PresenceQualifier::OPTIONAL {
+            return Err(InvalidTypeError::NonOptionalUnionField(
+                field.identity.id,
+                uri.to_string(),
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// Rejects duplicate enum values or names within a single enum.
+#[allow(dead_code)] // Called by the builder in the next commit.
+pub(crate) fn validate_enum_values(
+    uri: &str,
+    values: &[EnumValue],
+) -> Result<(), InvalidTypeError> {
+    let mut seen_values = HashMap::with_capacity(values.len());
+    let mut seen_names = HashMap::with_capacity(values.len());
+
+    for v in values {
+        if seen_values.insert(v.value, &v.name).is_some() {
+            return Err(InvalidTypeError::DuplicateEnumValue(
+                v.value,
+                uri.to_string(),
+            ));
+        }
+        if seen_names.insert(&v.name, v.value).is_some() {
+            return Err(InvalidTypeError::DuplicateEnumName(
+                v.name.clone(),
+                uri.to_string(),
+            ));
+        }
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -339,7 +419,7 @@ mod tests {
     fn fast_field_handle_max_valid_index() {
         let h = FastFieldHandle::new(FastFieldHandle::MAX_INDEX);
         assert!(h.is_valid());
-        assert_eq!(h.index(), FastFieldHandle::MAX_INDEX);
+        assert_eq!(h.index(), FastFieldHandle::MAX_INDEX as u16);
     }
 
     #[test]
@@ -359,11 +439,12 @@ mod tests {
             make_field(1, "x", PresenceQualifier::UNQUALIFIED),
             make_field(2, "y", PresenceQualifier::OPTIONAL),
         ];
+        let (by_id, by_name) = build_field_indexes("test::S", &fields).unwrap();
         let node = StructNode {
             uri: "test::S".to_string(),
-            field_index_by_id: HashMap::from([(1, 0), (2, 1)]),
-            field_index_by_name: HashMap::from([("x".to_string(), 0), ("y".to_string(), 1)]),
             fields,
+            field_index_by_id: by_id,
+            field_index_by_name: by_name,
             is_sealed: false,
             annotations: BTreeMap::new(),
         };
@@ -383,5 +464,123 @@ mod tests {
         assert_eq!(v.name(), "FOO");
         assert_eq!(v.value(), 42);
         assert!(v.annotations().is_empty());
+    }
+
+    #[test]
+    fn build_field_indexes_empty() {
+        let (by_id, by_name) = build_field_indexes("test::Empty", &[]).unwrap();
+        assert!(by_id.is_empty());
+        assert!(by_name.is_empty());
+    }
+
+    #[test]
+    fn build_field_indexes_success() {
+        let fields = vec![
+            make_field(1, "foo", PresenceQualifier::UNQUALIFIED),
+            make_field(2, "bar", PresenceQualifier::OPTIONAL),
+        ];
+        let (by_id, by_name) = build_field_indexes("test::S", &fields).unwrap();
+        assert_eq!(by_id[&1], 0);
+        assert_eq!(by_id[&2], 1);
+        assert_eq!(by_name["foo"], 0);
+        assert_eq!(by_name["bar"], 1);
+    }
+
+    #[test]
+    fn build_field_indexes_duplicate_id() {
+        let fields = vec![
+            make_field(1, "foo", PresenceQualifier::UNQUALIFIED),
+            make_field(1, "bar", PresenceQualifier::UNQUALIFIED),
+        ];
+        let err = build_field_indexes("test::S", &fields).unwrap_err();
+        assert!(
+            matches!(err, InvalidTypeError::DuplicateFieldId(1, ref uri) if uri == "test::S"),
+            "expected DuplicateFieldId, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn build_field_indexes_duplicate_name() {
+        let fields = vec![
+            make_field(1, "foo", PresenceQualifier::UNQUALIFIED),
+            make_field(2, "foo", PresenceQualifier::UNQUALIFIED),
+        ];
+        let err = build_field_indexes("test::S", &fields).unwrap_err();
+        assert!(
+            matches!(err, InvalidTypeError::DuplicateFieldName(ref n, ref uri) if n == "foo" && uri == "test::S"),
+            "expected DuplicateFieldName, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn validate_union_fields_all_optional() {
+        let fields = vec![
+            make_field(1, "a", PresenceQualifier::OPTIONAL),
+            make_field(2, "b", PresenceQualifier::OPTIONAL),
+        ];
+        assert!(validate_union_fields("test::U", &fields).is_ok());
+    }
+
+    #[test]
+    fn validate_union_fields_empty() {
+        assert!(validate_union_fields("test::U", &[]).is_ok());
+    }
+
+    #[test]
+    fn validate_union_fields_rejects_unqualified() {
+        let fields = vec![make_field(1, "a", PresenceQualifier::UNQUALIFIED)];
+        let err = validate_union_fields("test::U", &fields).unwrap_err();
+        assert!(
+            matches!(err, InvalidTypeError::NonOptionalUnionField(1, ref uri) if uri == "test::U"),
+            "expected NonOptionalUnionField, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn validate_union_fields_rejects_terse() {
+        let fields = vec![make_field(1, "a", PresenceQualifier::TERSE)];
+        let err = validate_union_fields("test::U", &fields).unwrap_err();
+        assert!(matches!(err, InvalidTypeError::NonOptionalUnionField(1, _)));
+    }
+
+    #[test]
+    fn validate_enum_values_empty() {
+        assert!(validate_enum_values("test::E", &[]).is_ok());
+    }
+
+    #[test]
+    fn validate_enum_values_success() {
+        let values = vec![make_enum_value("A", 0), make_enum_value("B", 1)];
+        assert!(validate_enum_values("test::E", &values).is_ok());
+    }
+
+    #[test]
+    fn validate_enum_values_duplicate_value() {
+        let values = vec![make_enum_value("A", 0), make_enum_value("B", 0)];
+        let err = validate_enum_values("test::E", &values).unwrap_err();
+        assert!(
+            matches!(err, InvalidTypeError::DuplicateEnumValue(0, ref uri) if uri == "test::E"),
+            "expected DuplicateEnumValue, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn validate_enum_values_duplicate_name() {
+        let values = vec![make_enum_value("A", 0), make_enum_value("A", 1)];
+        let err = validate_enum_values("test::E", &values).unwrap_err();
+        assert!(
+            matches!(err, InvalidTypeError::DuplicateEnumName(ref n, ref uri) if n == "A" && uri == "test::E"),
+            "expected DuplicateEnumName, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn validate_enum_values_duplicate_both_reports_value_first() {
+        let values = vec![make_enum_value("A", 0), make_enum_value("A", 0)];
+        let err = validate_enum_values("test::E", &values).unwrap_err();
+        assert!(
+            matches!(err, InvalidTypeError::DuplicateEnumValue(0, _)),
+            "value duplicate should be detected before name duplicate, got {err:?}"
+        );
     }
 }
