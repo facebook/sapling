@@ -308,6 +308,15 @@ function commit_metadata_scraper {
     "$@"
 }
 
+function lfs_config_editor {
+  GLOG_minloglevel=5 "$LFS_CONFIG_EDITOR" \
+    "${CACHE_ARGS[@]}" \
+    "${COMMON_ARGS[@]}" \
+    --mononoke-config-path "$TESTTMP"/mononoke-config \
+    --tracing-test-format \
+    "$@"
+}
+
 function wait_for_json_record_count {
   # We ask jq to count records for us, so that we're a little more robust ot
   # newlines and such.
