@@ -85,6 +85,7 @@ rust_library(
         "//eden/mononoke/scs/if:source_control-rust-clients",
         "//eden/mononoke/servers/slapi/slapi_server/context:context",
         "//eden/scm/lib/clientinfo:clientinfo",
+        "//gatekeeper/rust:gk",
         "//infrasec/authorization/if:if-aclchecker-rust",
         "//infrasec/authorization/if:if-aclchecker-rust-clients",
         "//infrasec/authorization/if:if-aclchecker-rust-srclients",
