@@ -138,6 +138,26 @@ impl MononokeConfigs {
             .map(|path| configerator_manifest_handle(path, config_store))
             .transpose()?;
 
+        // Only log split-loading status for configerator-backed configs (where
+        // tier_name is set). File-backed configs used in tests always have
+        // tier_name=None and manifest_path=None, so logging would be noise.
+        if tier_name.is_some() {
+            if let Some(manifest_path) = manifest_path {
+                info!(
+                    "Split-loading enabled: config_path={}, manifest_path={}, tier_name={:?}",
+                    config_path.as_ref().to_string_lossy(),
+                    manifest_path,
+                    tier_name.as_deref().unwrap_or("<none>"),
+                );
+            } else {
+                info!(
+                    "Split-loading disabled: config_path={}, tier_name={:?}",
+                    config_path.as_ref().to_string_lossy(),
+                    tier_name.as_deref().unwrap_or("<none>"),
+                );
+            }
+        }
+
         // Validate: split-loading (manifest) requires a tier name for resolving
         // tier_overrides in RepoSpec configs.
         if maybe_manifest_handle.is_some() && tier_name.is_none() {
@@ -161,6 +181,13 @@ impl MononokeConfigs {
                     Ok((entry.repo_name.clone(), handle))
                 })
                 .collect::<Result<Vec<_>>>()?;
+
+            info!(
+                "Split-loading: pre-loaded {} repo handles from manifest ({} total repos, {} deep-sharded skipped)",
+                handles_to_add.len(),
+                manifest.repos.len(),
+                manifest.repos.iter().filter(|e| e.is_deep_sharded).count(),
+            );
 
             repo_handles
                 .write()

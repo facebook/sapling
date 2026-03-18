@@ -122,9 +122,16 @@ impl ConfigArgs {
         if !justknobs::eval("scm/mononoke:use_split_config_loading", None, None)? {
             return Ok(None);
         }
-        Ok(self
-            .tier_name()
-            .map(|t| format!("scm/mononoke/repos/tiers/{}_manifest", t)))
+        // Try --config_tier / --prod / --git_config first, then fall back to
+        // extracting the tier name from --mononoke-config-path if it matches
+        // the configerator prefix (e.g. "configerator://scm/mononoke/repos/tiers/scs" -> "scs").
+        let tier = self.tier_name().or_else(|| {
+            self.config_path
+                .as_deref()
+                .and_then(|p| p.strip_prefix(PRODUCTION_PREFIX))
+                .filter(|t| !t.is_empty())
+        });
+        Ok(tier.map(|t| format!("scm/mononoke/repos/tiers/{}_manifest", t)))
     }
 }
 
