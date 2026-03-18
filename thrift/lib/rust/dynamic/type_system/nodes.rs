@@ -291,7 +291,6 @@ impl OpaqueAliasNode {
 }
 
 /// Builds id→index and name→index lookup maps, rejecting duplicates.
-#[allow(dead_code)] // Called by the builder in the next commit.
 pub(crate) fn build_field_indexes(
     uri: &str,
     fields: &[FieldDefinition],
@@ -326,7 +325,6 @@ pub(crate) fn build_field_indexes(
 }
 
 /// Validates that all fields in a union are optional.
-#[allow(dead_code)] // Called by the builder in the next commit.
 pub(crate) fn validate_union_fields(
     uri: &str,
     fields: &[FieldDefinition],
@@ -343,7 +341,6 @@ pub(crate) fn validate_union_fields(
 }
 
 /// Rejects duplicate enum values or names within a single enum.
-#[allow(dead_code)] // Called by the builder in the next commit.
 pub(crate) fn validate_enum_values(
     uri: &str,
     values: &[EnumValue],

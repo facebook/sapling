@@ -13,5 +13,6 @@ thrift_rust_library(
         "fbsource//third-party/rust:thiserror",
         "//thrift/lib/thrift:record-rust",
         "//thrift/lib/thrift:type_id-rust",
+        "//thrift/lib/thrift:type_system-rust",
     ],
 )

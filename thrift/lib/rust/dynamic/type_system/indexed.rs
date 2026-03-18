@@ -28,7 +28,6 @@ use crate::type_ref::DefinitionRef;
 use crate::type_ref::TypeRef;
 
 /// Internal storage for definition nodes.
-#[allow(dead_code)] // Constructed by the builder in the next commit.
 pub(crate) enum DefinitionNode {
     Struct(Arc<StructNode>),
     Union(Arc<UnionNode>),
@@ -74,7 +73,6 @@ pub struct IndexedTypeSystem {
 }
 
 impl IndexedTypeSystem {
-    #[allow(dead_code)] // Called by the builder in the next commit.
     pub(crate) fn new(definitions: HashMap<String, DefinitionNode>) -> Self {
         Self { definitions }
     }
@@ -94,5 +92,25 @@ impl TypeSystem for IndexedTypeSystem {
             .get(uri)
             .map(|n| n.to_type_ref())
             .ok_or_else(|| InvalidTypeError::UnknownUri(uri.to_string()))
+    }
+
+    fn to_serializable(&self) -> type_system::SerializableTypeSystem {
+        let mut types = std::collections::BTreeMap::new();
+        for (uri, def_node) in &self.definitions {
+            types.insert(
+                uri.clone(),
+                type_system::SerializableTypeDefinitionEntry {
+                    definition: crate::builder::serialize_definition_ref(
+                        &def_node.to_definition_ref(),
+                    ),
+                    sourceInfo: None,
+                    ..Default::default()
+                },
+            );
+        }
+        type_system::SerializableTypeSystem {
+            types,
+            ..Default::default()
+        }
     }
 }

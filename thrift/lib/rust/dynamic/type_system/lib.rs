@@ -21,15 +21,19 @@
 //! Designed for construction from (and round-tripping to)
 //! [`SerializableTypeSystem`].
 
+use std::collections::BTreeMap;
 use std::collections::HashSet;
 use std::sync::Arc;
 
+pub mod builder;
 pub mod containers;
 pub mod error;
 pub mod indexed;
 pub mod nodes;
 pub mod type_ref;
 
+pub use builder::from_serializable;
+pub use builder::to_serializable;
 pub use containers::ListType;
 pub use containers::MapType;
 pub use containers::SetType;
@@ -131,6 +135,31 @@ pub trait TypeSystem {
                 uri: String::new(),
                 detail: format!("unknown TypeId variant (field {id})"),
             }),
+        }
+    }
+
+    /// Convert this type system to its serializable representation.
+    ///
+    /// The default implementation uses [`known_uris`](Self::known_uris) and
+    /// [`get`](Self::get) to iterate all definitions. Concrete implementations
+    /// may override for efficiency.
+    fn to_serializable(&self) -> type_system::SerializableTypeSystem {
+        let mut types = BTreeMap::new();
+        for uri in self.known_uris() {
+            if let Some(def_ref) = self.get(uri) {
+                types.insert(
+                    uri.to_string(),
+                    type_system::SerializableTypeDefinitionEntry {
+                        definition: builder::serialize_definition_ref(&def_ref),
+                        sourceInfo: None,
+                        ..Default::default()
+                    },
+                );
+            }
+        }
+        type_system::SerializableTypeSystem {
+            types,
+            ..Default::default()
         }
     }
 }
