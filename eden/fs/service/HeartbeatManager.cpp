@@ -184,19 +184,19 @@ bool HeartbeatManager::checkForPreviousHeartbeat(
                                                           logMemoryPressure](
                                                              auto&&) {
           std::optional<bool> maybeMemoryPressure = std::nullopt;
-          std::string memoryPressureErrorStr;
+          std::string systemLogCheckErrorStr;
           if (logMemoryPressure) {
             auto isMemoryPressure =
                 self->isMemoryPressureInSystemLog(latestDaemonHeartbeat);
             if (!isMemoryPressure.hasException()) {
               maybeMemoryPressure = isMemoryPressure.value();
             } else {
-              memoryPressureErrorStr =
+              systemLogCheckErrorStr =
                   isMemoryPressure.exception().what().toStdString();
               XLOGF(
                   WARN,
                   "Failed to check memory pressure in system log: {}",
-                  memoryPressureErrorStr);
+                  systemLogCheckErrorStr);
             }
           }
           XLOGF(
@@ -218,7 +218,7 @@ bool HeartbeatManager::checkForPreviousHeartbeat(
                   daemon_exit_signal,
                   static_cast<uint64_t>(bootTime),
                   maybeMemoryPressure,
-                  memoryPressureErrorStr,
+                  systemLogCheckErrorStr,
                   downtime});
         });
         folly::futures::detachOn(threadPool, std::move(future));
