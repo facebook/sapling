@@ -37,6 +37,7 @@ rust_library(
         "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ] + ([] if rust_oss.is_oss_build() else [
         "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/clientinfo:clientinfo",
         # fbcode-only dep for schematized logger (CommonServerData/CommonMetadata from scuba_ext)
         "//dsi/logger/configs/MononokeRestrictedPathsAccessLoggerConfig:mononoke_restricted_paths_access_rust_logger",
     ]),

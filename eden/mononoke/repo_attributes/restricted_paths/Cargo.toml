@@ -27,6 +27,7 @@ mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 permission_checker = { version = "0.1.0", path = "../../common/permission_checker" }
 repo_derived_data = { version = "0.1.0", path = "../repo_derived_data" }
 restricted_paths_common = { version = "0.1.0", path = "../restricted_paths_common" }
+sapling-clientinfo = { version = "0.1.0", path = "../../../scm/lib/clientinfo" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 thiserror = "2.0.18"
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
@@ -45,7 +46,6 @@ mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
 mononoke_api_hg = { version = "0.1.0", path = "../../mononoke_api_hg" }
 pretty_assertions = { version = "1.4.1", features = ["alloc"], default-features = false }
 repo_blobstore = { version = "0.1.0", path = "../repo_blobstore" }
-sapling-clientinfo = { version = "0.1.0", path = "../../../scm/lib/clientinfo" }
 serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 strum = { version = "0.27.1", features = ["derive"] }

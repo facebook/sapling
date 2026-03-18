@@ -297,20 +297,6 @@ pub(crate) async fn log_access_to_restricted_path(
     tooling_allowlist_group: Option<&str>,
     scuba: MononokeScubaSampleBuilder,
 ) -> Result<bool> {
-    // Always log requests that touch restricted paths (if enabled via JK)
-    #[cfg(fbcode_build)]
-    {
-        let override_sampling_enabled = justknobs::eval(
-            "scm/mononoke:restricted_paths_override_sampling",
-            None,
-            None,
-        )?;
-
-        if override_sampling_enabled {
-            ctx.set_override_sampling();
-        }
-    }
-
     // TODO(T239041722): store permission checkers in RestrictedPaths to improve
     // performance if needed.
     let has_path_acl_access =
@@ -325,6 +311,21 @@ pub(crate) async fn log_access_to_restricted_path(
 
     // Caller has authorization if they have access via path ACLs OR via tooling allowlist
     let has_authorization = has_path_acl_access || is_allowlisted_tooling;
+
+    // Override sampling for unauthorized SCSC accesses to restricted paths
+    #[cfg(fbcode_build)]
+    {
+        use clientinfo::ClientEntryPoint;
+
+        let is_scsc = ctx
+            .metadata()
+            .client_request_info()
+            .is_some_and(|cri| cri.entry_point == ClientEntryPoint::ScsClient);
+
+        if is_scsc && !has_authorization {
+            ctx.set_override_sampling();
+        }
+    }
 
     // Log to schematized logger (logs to both Scuba and Hive) if enabled via JK
     // Only available in fbcode builds
