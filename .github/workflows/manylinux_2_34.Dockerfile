@@ -6,6 +6,37 @@ ENV PYTHON_SYS_EXECUTABLE=/opt/python/cp312-cp312/bin/python3.12
 ENV PATH=/root/.nvm/versions/node/v22.16.0/bin:/opt/python/cp312-cp312/bin:/opt/node-v22.16.0-linux-x64/bin:/root/.cargo/bin:$PATH
 
 
+# Build dependencies.
+# - clang-devel: used by bindgen, used by zstd-sys
+# - perl: openssl build dependency (static openssl, and openssl-src Rust crate)
+RUN dnf install -y clang-devel perl
+
+
+# Rebuild OpenSSL as a static library so CPython's _ssl.so does not depend
+# on a specific system libssl.so.3 / libcrypto.so.3 version at runtime.
+# The stock manylinux image builds OpenSSL as shared libs, which means the
+# _ssl.so extension carries versioned symbol requirements (e.g. OPENSSL_3.3.0)
+# that most distros cannot satisfy.
+RUN <<'SSLEOF'
+set -ex
+
+# Remove any stock shared OpenSSL so build-cpython.sh picks up ours.
+rm -rf /opt/_internal/openssl-*
+
+# Build OpenSSL as static-only with -fPIC.
+cd /tmp
+OPENSSL_VERSION=3.5.5
+curl -LO "https://github.com/openssl/openssl/releases/download/openssl-${OPENSSL_VERSION}/openssl-${OPENSSL_VERSION}.tar.gz"
+tar xf "openssl-${OPENSSL_VERSION}.tar.gz"
+cd "openssl-${OPENSSL_VERSION}"
+./config --prefix=/opt/_internal/openssl-3.5 --libdir=lib no-shared no-afalgeng -fPIC
+make -j"$(nproc)"
+make install_sw
+cd ..
+rm -rf "openssl-${OPENSSL_VERSION}" "openssl-${OPENSSL_VERSION}.tar.gz"
+SSLEOF
+
+
 # Rebuild CPython 3.12 with -fPIC for static libpython.a linking.
 # The stock manylinux libpython.a is built without -fPIC, which is annoying
 # to work with rust (e.g. D75250624, and there is no easy/clean way to set
@@ -32,6 +63,7 @@ for var in ['MANYLINUX_CFLAGS', 'MANYLINUX_CXXFLAGS']:
 patch('/opt/_internal/build_scripts/build-cpython.sh', [
     ('fetch_source \"Python-\${CPYTHON_VERSION}.tar.xz.sigstore\"', ': # fetch_source sigstore'),
     ('cosign  verify-blob', ': # cosign  verify-blob'),
+    (r'make > /dev/null', r'make -j$(nproc) > /dev/null'),
 ])
 "
 PYEOF
@@ -59,12 +91,6 @@ RUN yarn config set yarn-offline-mirror "/root/npm-packages-offline-cache"
 # Rust compiler.
 # - Latest stable Rust from rustup. The dnf Rust is 2-month+ older.
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile minimal
-
-# Rust related build dependencies.
-# - clang-devel: used by bindgen, used by zstd-sys
-# - openssl-devel: used by curl-sys (non-static openssl)
-# - perl: openssl build dependency (static openssl)
-RUN dnf install -y clang-devel perl
 
 
 # Populate the Yarn offline mirror in a "fork".
