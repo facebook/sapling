@@ -630,7 +630,12 @@ impl WarmBookmarksCache {
         let notify_sync_start = Arc::new(Notify::new());
         let notify_sync_complete = Arc::new(Notify::new());
 
-        tracing::info!(repo = %repo_identity.name(), "Starting warm bookmark cache updater");
+        let warmer_names = warmers.iter().map(|w| w.name.as_str()).join(", ");
+        tracing::info!(
+            repo = %repo_identity.name(),
+            warmers = %warmer_names,
+            "Starting warm bookmark cache updater"
+        );
         let sub = bookmarks
             .create_subscription(ctx, Freshness::MaybeStale)
             .await

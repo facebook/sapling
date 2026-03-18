@@ -15,7 +15,6 @@ use phases::ArcPhases;
 use repo_derivation_queues::DerivationPriority;
 use repo_derived_data::ArcRepoDerivedData;
 use tracing::Instrument;
-use tracing::info;
 
 use super::IsWarmFn;
 use super::Warmer;
@@ -30,7 +29,6 @@ pub fn create_derived_data_warmer<Derivable>(
 where
     Derivable: BonsaiDerivable,
 {
-    info!("Warming {}", Derivable::NAME);
     let warmer: Box<WarmerFn> = Box::new({
         cloned!(repo_derived_data);
         move |ctx: &CoreContext, cs_id: ChangesetId| {
@@ -70,7 +68,6 @@ where
 }
 
 pub fn create_public_phase_warmer(_ctx: &CoreContext, phases: ArcPhases) -> Warmer {
-    info!("Warming public phases");
     let warmer: Box<WarmerFn> = Box::new({
         cloned!(phases);
         move |ctx: &CoreContext, cs_id: ChangesetId| {
