@@ -1433,7 +1433,10 @@ async fn dry_run_merge_resolution(
     let mut all_clean = true;
     let mut resolved_count: i64 = 0;
     let mut conflict_count: i64 = 0;
+    let mut skipped_count: i64 = 0;
     let mut error_count: i64 = 0;
+    let mut skip_reasons: Vec<String> = Vec::new();
+    let mut error_reasons: Vec<String> = Vec::new();
 
     for conflict in &exact_conflicts {
         let path = &conflict.left;
@@ -1449,24 +1452,25 @@ async fn dry_run_merge_resolution(
             Some(FileChange::Change(tc)) => tc,
             _ => {
                 all_clean = false;
-                error_count += 1;
+                skipped_count += 1;
+                skip_reasons.push(format!(
+                    "{}: not a tracked change in pushed changeset",
+                    non_root_path,
+                ));
                 continue;
             }
         };
-
-        // Skip files that are too large
-        if local_fc.size() > max_file_size {
-            all_clean = false;
-            error_count += 1;
-            continue;
-        }
 
         // Get server (bookmark head) content from the server bonsai changesets
         let server_fc = match server_changes.get(&non_root_path) {
             Some(FileChange::Change(tc)) => tc,
             _ => {
                 all_clean = false;
-                error_count += 1;
+                skipped_count += 1;
+                skip_reasons.push(format!(
+                    "{}: not a tracked change in bookmark head",
+                    non_root_path,
+                ));
                 continue;
             }
         };
@@ -1503,28 +1507,45 @@ async fn dry_run_merge_resolution(
                 all_clean = false;
                 conflict_count += 1;
             }
-            FileMergeOutcome::Skipped(_) | FileMergeOutcome::Error(_) => {
+            FileMergeOutcome::Skipped(reason) => {
+                all_clean = false;
+                skipped_count += 1;
+                skip_reasons.push(reason);
+            }
+            FileMergeOutcome::Error(err) => {
                 all_clean = false;
                 error_count += 1;
+                error_reasons.push(format!("{:#}", err));
             }
         }
     }
 
-    let outcome = if all_clean && error_count == 0 {
+    let outcome = if all_clean && skipped_count == 0 && error_count == 0 {
         "all_clean"
     } else if conflict_count > 0 {
         "some_conflicts"
+    } else if skipped_count > 0 {
+        "skipped"
     } else {
         "error"
     };
 
-    ctx.scuba()
-        .clone()
+    let mut scuba = ctx.scuba().clone();
+    scuba
         .add("merge_dry_run_outcome", outcome)
         .add("merge_dry_run_resolved", resolved_count)
         .add("merge_dry_run_conflicts", conflict_count)
-        .add("merge_dry_run_errors", error_count)
-        .log_with_msg("Pushrebase dry-run merge resolution", None);
+        .add("merge_dry_run_skipped", skipped_count)
+        .add("merge_dry_run_errors", error_count);
+
+    if !skip_reasons.is_empty() {
+        scuba.add("merge_dry_run_skip_reasons", skip_reasons.join(", "));
+    }
+    if !error_reasons.is_empty() {
+        scuba.add("merge_dry_run_error_reasons", error_reasons.join(", "));
+    }
+
+    scuba.log_with_msg("Pushrebase dry-run merge resolution", None);
 }
 
 /// Error type for merge resolution failures.
