@@ -6,11 +6,13 @@
  */
 
 import type React from 'react';
+import type {Comparison} from 'shared/Comparison';
 import type {ISLCommandName} from './ISLShortcuts';
 
 import {isMac} from 'isl-components/OperatingSystem';
 import {atom} from 'jotai';
 import {useCallback} from 'react';
+import {ComparisonType} from 'shared/Comparison';
 import {commitMode} from './CommitInfoView/CommitInfoState';
 import {useCommand} from './ISLShortcuts';
 import {useSelectAllCommitsShortcut} from './SelectAllCommits';
@@ -88,6 +90,35 @@ export const selectedCommitInfos = atom(get => {
     const info = dag.get(h);
     return info === undefined ? [] : [info];
   });
+});
+
+/**
+ * If the selected commits form a continuous ancestry chain (single root, single head,
+ * no gaps), returns a CommitRange comparison. Otherwise returns null.
+ * This is a derived atom so it auto-memoizes and only recomputes when deps change.
+ */
+export const selectedCommitsRangeComparison = atom<Comparison | null>(get => {
+  const selected = get(selectedCommitInfos);
+  if (selected.length < 2) {
+    return null;
+  }
+  const dag = get(dagWithPreviews);
+  const selectedSet = dag.present(new Set(selected.map(c => c.hash)));
+  const roots = dag.roots(selectedSet);
+  const heads = dag.heads(selectedSet);
+  if (roots.size === 1 && heads.size === 1) {
+    const rangeSet = dag.range(roots, heads);
+    if (rangeSet.size === selectedSet.size && rangeSet.subtract(selectedSet).size === 0) {
+      const rootHash = [...roots][0];
+      const headHash = [...heads][0];
+      return {
+        type: ComparisonType.CommitRange as const,
+        hashFrom: rootHash,
+        hashTo: headHash,
+      };
+    }
+  }
+  return null;
 });
 
 export function useCommitSelection(hash: string): {

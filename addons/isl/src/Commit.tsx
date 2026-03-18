@@ -83,6 +83,7 @@ import {
   actioningCommit,
   selectedCommitInfos,
   selectedCommits,
+  selectedCommitsRangeComparison,
   useCommitCallbacks,
 } from './selection';
 import {inMergeConflicts, mergeConflicts} from './serverAPIState';
@@ -266,32 +267,14 @@ export const Commit = memo(
           loggingLabel: 'View Changes in Commit',
         });
 
-        const selectedInfos = readAtom(selectedCommitInfos);
-        const dag = readAtom(dagWithPreviews);
-        const isMultiSelect =
-          selectedInfos.length > 1 && selectedInfos.some(c => c.hash === commit.hash);
+        const commitRangeComparison = readAtom(selectedCommitsRangeComparison);
 
-        if (isMultiSelect) {
-          const selectedSet = dag.present(new Set(selectedInfos.map(c => c.hash)));
-          const roots = dag.roots(selectedSet);
-          const heads = dag.heads(selectedSet);
-          if (roots.size === 1 && heads.size === 1) {
-            const rangeSet = dag.range(roots, heads);
-            if (rangeSet.size === selectedSet.size && rangeSet.subtract(selectedSet).size === 0) {
-              const rootHash = [...roots][0];
-              const headHash = [...heads][0];
-              items.push({
-                label: <T>View Changes Across Selected Commits</T>,
-                onClick: () =>
-                  showComparison({
-                    type: ComparisonType.CommitRange,
-                    hashFrom: rootHash,
-                    hashTo: headHash,
-                  }),
-                loggingLabel: 'View Changes Across Selected Commits',
-              });
-            }
-          }
+        if (commitRangeComparison != null) {
+          items.push({
+            label: <T>View Changes Across Selected Commits</T>,
+            onClick: () => showComparison(commitRangeComparison),
+            loggingLabel: 'View Changes Across Selected Commits',
+          });
         }
 
         const provider = readAtom(codeReviewProvider);

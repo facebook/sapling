@@ -237,4 +237,48 @@ describe('open-file-diff', () => {
       {viewColumn: undefined},
     );
   });
+
+  it('commit range, regular file', async () => {
+    const comparison: Comparison = {
+      type: ComparisonType.CommitRange,
+      hashFrom: 'abc111',
+      hashTo: 'def222',
+    };
+    await openDiffView(fileUri, comparison);
+
+    const expectedLeftRev = 'abc111^';
+    const expectedLeftUri = encodeSaplingDiffUri(fileUri, expectedLeftRev);
+    const expectedRightRev = 'def222';
+    const expectedRightUri = encodeSaplingDiffUri(fileUri, expectedRightRev);
+
+    expect(mockExecuteVSCodeCommand).toHaveBeenCalledWith(
+      'vscode.diff',
+      expectedLeftUri,
+      expectedRightUri,
+      'file (abc111 to def222)',
+      {viewColumn: undefined},
+    );
+  });
+
+  it('commit range, submodule', async () => {
+    const comparison: Comparison = {
+      type: ComparisonType.CommitRange,
+      hashFrom: 'abc111',
+      hashTo: 'def222',
+    };
+    await openDiffView(submoduleUri, comparison);
+
+    const expectedLeftRev = 'abc111^';
+    const expectedLeftUri = encodeSaplingDiffUri(submoduleUri, expectedLeftRev);
+    const expectedRightRev = 'def222';
+    const expectedRightUri = encodeSaplingDiffUri(submoduleUri, expectedRightRev);
+
+    expect(mockExecuteVSCodeCommand).toHaveBeenCalledWith(
+      'vscode.diff',
+      expectedLeftUri,
+      expectedRightUri,
+      'submodule (abc111 to def222)',
+      {viewColumn: undefined},
+    );
+  });
 });

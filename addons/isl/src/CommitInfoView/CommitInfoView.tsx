@@ -69,7 +69,7 @@ import {useUncommittedSelection} from '../partialSelection';
 import platform from '../platform';
 import {CommitPreview, dagWithPreviews, uncommittedChangesWithPreviews} from '../previews';
 import {repoRelativeCwd, useIsIrrelevantToCwd} from '../repositoryData';
-import {selectedCommits} from '../selection';
+import {selectedCommits, selectedCommitsRangeComparison} from '../selection';
 import {authorString, commitByHash, latestHeadCommit, repositoryInfo} from '../serverAPIState';
 import {SplitButton} from '../stackEdit/ui/SplitButton';
 import {SubmitSelectionButton} from '../SubmitSelectionButton';
@@ -136,26 +136,7 @@ export function CommitInfoSidebar() {
 
 export function MultiCommitInfo({selectedCommits}: {selectedCommits: Array<CommitInfo>}) {
   const commitsWithDiffs = selectedCommits.filter(commit => commit.diffId != null);
-  const dag = useAtomValue(dagWithPreviews);
-
-  const commitRangeComparison = useMemo(() => {
-    const selectedSet = dag.present(new Set(selectedCommits.map(c => c.hash)));
-    const roots = dag.roots(selectedSet);
-    const heads = dag.heads(selectedSet);
-    if (roots.size === 1 && heads.size === 1) {
-      const rangeSet = dag.range(roots, heads);
-      if (rangeSet.size === selectedSet.size && rangeSet.subtract(selectedSet).size === 0) {
-        const rootHash = [...roots][0];
-        const headHash = [...heads][0];
-        return {
-          type: ComparisonType.CommitRange as const,
-          hashFrom: rootHash,
-          hashTo: headHash,
-        };
-      }
-    }
-    return null;
-  }, [dag, selectedCommits]);
+  const commitRangeComparison = useAtomValue(selectedCommitsRangeComparison);
 
   return (
     <div className="commit-info-view-multi-commit" data-testid="commit-info-view">
