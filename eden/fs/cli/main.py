@@ -2451,6 +2451,36 @@ class StartCmd(Subcmd):
             raise Exception("execve should never return")
 
 
+@subcmd(
+    "systemd-start",
+    "Start the EdenFS daemon from an arguments file (invoked by systemd)",
+)
+class SystemdStartCmd(Subcmd):
+    """Internal subcommand invoked by systemd ExecStart/ExecReload.
+
+    Reads the daemon command and environment from a JSON args file
+    written by _systemctl_start_or_reload(), then spawns the daemon.
+    This command is not intended to be run directly by users.
+    """
+
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "--args-file",
+            required=True,
+            help="Path to JSON file containing daemon command and environment",
+        )
+
+    def run(self, args: argparse.Namespace) -> int:
+        if "INVOCATION_ID" not in os.environ:
+            print(
+                "error: this command is only meant to be invoked by systemd. "
+                "Use 'eden start' or 'eden restart' instead.",
+                file=sys.stderr,
+            )
+            return 1
+        return daemon_util.start_daemon_from_args_file(args.args_file)
+
+
 def unmount_redirections_for_path(
     repo_path: str, complain_about_failing_to_unmount_redirs: bool
 ) -> None:

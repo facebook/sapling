@@ -89,7 +89,7 @@ def write_systemd_args_file(
 ) -> Path:
     """Write the daemon command and environment to a JSON file.
 
-    This file is read by the 'eden daemonctl' subcommand which is invoked
+    This file is read by the 'eden systemd-start' subcommand which is invoked
     by systemd's ExecStart/ExecReload.
     """
     args_file = state_dir / SYSTEMD_ARGS_FILENAME
@@ -101,7 +101,7 @@ def write_systemd_args_file(
 def start_daemon_from_args_file(args_file: str) -> int:
     """Read the daemon command and environment from an args file, then spawn the daemon.
 
-    This is called by the `eden daemonctl` subcommand. When invoked via systemd
+    This is called by the `eden systemd-start` subcommand. When invoked via systemd
     (ExecStart/ExecReload), it inherits ``NOTIFY_SOCKET`` from the current environment
     so the daemon can report readiness.
     """
