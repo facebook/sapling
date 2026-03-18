@@ -173,19 +173,30 @@ impl PlainCommitInfo {
         } = commit_info;
         let repo_id = repo.repo_identity().id().id();
         let repo_name = repo.repo_identity().name().to_string();
-        let parents = repo
-            .commit_graph()
-            .changeset_parents(ctx, changeset_id)
-            .await?
-            .to_vec();
-        let generation = repo
-            .commit_graph()
-            .changeset_generation(ctx, changeset_id)
-            .await?;
-        let globalrev = repo
-            .bonsai_globalrev_mapping()
-            .get_globalrev_from_bonsai(ctx, changeset_id)
-            .await?;
+        let (parents, generation, globalrev) = futures::try_join!(
+            async {
+                anyhow::Ok(
+                    repo.commit_graph()
+                        .changeset_parents(ctx, changeset_id)
+                        .await?
+                        .to_vec(),
+                )
+            },
+            async {
+                anyhow::Ok(
+                    repo.commit_graph()
+                        .changeset_generation(ctx, changeset_id)
+                        .await?,
+                )
+            },
+            async {
+                anyhow::Ok(
+                    repo.bonsai_globalrev_mapping()
+                        .get_globalrev_from_bonsai(ctx, changeset_id)
+                        .await?,
+                )
+            },
+        )?;
         let user_unix_name = ctx.metadata().unix_name().map(|un| un.to_string());
         let user_identities = ctx.metadata().identities().clone();
         let source_hostname = ctx.metadata().client_hostname().map(|hn| hn.to_string());
