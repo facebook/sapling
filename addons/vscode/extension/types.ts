@@ -16,7 +16,8 @@ export type EnabledSCMApiFeature =
   | 'sidebar'
   | 'comments'
   | 'newInlineComments'
-  | 'aiFirstPassCodeReview';
+  | 'aiFirstPassCodeReview'
+  | 'diffSignalDetails';
 
 export enum ActionTriggerType {
   ISL2InlineComment = 'ISL2InlineComment', // provided from the Sapling ISL Inline Comment
