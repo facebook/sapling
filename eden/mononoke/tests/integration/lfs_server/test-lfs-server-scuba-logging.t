@@ -222,7 +222,7 @@
       "client_hostname": "localhost",
       "client_ip": "$LOCALIP",
       "client_main_id": "*", (glob)
-      "fetch_cause": "unspecified",
+      "fetch_cause": "sl-unknown",
       "fetch_from_cas_attempted": "false",
       "http_host": "*", (glob)
       "http_method": "POST",
@@ -295,7 +295,7 @@
       "client_hostname": "localhost",
       "client_ip": "$LOCALIP",
       "client_main_id": "*", (glob)
-      "fetch_cause": "unspecified",
+      "fetch_cause": "sl-unknown",
       "fetch_from_cas_attempted": "false",
       "http_host": "*", (glob)
       "http_method": "GET",
