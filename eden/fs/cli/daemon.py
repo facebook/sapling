@@ -266,6 +266,9 @@ def _start_edenfs_service(
     # prepare_edenfs_privileges for more info.
     cmd, eden_env = prepare_edenfs_privileges(daemon_binary, cmd, eden_env, privhelper)
 
+    if is_systemd_enabled(instance):
+        return _systemctl_start_or_reload(instance, cmd, eden_env, takeover)
+
     if (
         sys.platform == "linux"
         and instance.get_config_bool(
@@ -323,6 +326,31 @@ def is_systemd_enabled(instance: EdenInstance) -> bool:
     return sys.platform == "linux" and instance.get_config_bool(
         "experimental.systemd-managed-lifecycle", default=False
     )
+
+
+def _systemctl_start_or_reload(
+    instance: EdenInstance,
+    cmd: List[str],
+    eden_env: Dict[str, str],
+    takeover: bool,
+) -> int:
+    """Start or reload the edenfs systemd service.
+
+    Writes the daemon command and environment to an args file, then calls
+    systemctl start (fresh start) or systemctl reload (takeover).
+    """
+    daemon_util.write_systemd_args_file(instance.state_dir, cmd, eden_env)
+    unit = _get_systemd_unit(instance)
+    action = "reload" if takeover else "start"
+    rc = subprocess.call(["systemctl", "--user", action, unit])
+
+    # Display the daemon's startup output captured by systemd (StandardOutput=file:).
+    startup_log = instance.state_dir / daemon_util.SYSTEMD_STARTUP_LOG_FILENAME
+    try:
+        sys.stderr.write(startup_log.read_text())
+    except OSError:
+        pass
+    return rc
 
 
 def get_edenfsctl_cmd() -> str:
