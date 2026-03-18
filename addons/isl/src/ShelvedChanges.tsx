@@ -14,6 +14,7 @@ import {Subtle} from 'isl-components/Subtle';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useAtom} from 'jotai';
 import {useEffect} from 'react';
+import type {Comparison} from 'shared/Comparison';
 import {ComparisonType} from 'shared/Comparison';
 import serverAPI from './ClientToServerAPI';
 import {OpenComparisonViewButton} from './ComparisonView/OpenComparisonViewButton';
@@ -100,7 +101,7 @@ function ShelvedChangesList({dismiss}: {dismiss: () => void}) {
       ) : (
         <div className="shelved-changes-list">
           {shelvedChanges.data.map(change => {
-            const comparison = {
+            const comparison: Comparison = {
               type: ComparisonType.Committed,
               hash: change.hash,
             };

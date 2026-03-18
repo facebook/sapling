@@ -11,6 +11,7 @@ export enum ComparisonType {
   StackChanges = 'Stack',
   Committed = 'Commit',
   SinceLastCodeReviewSubmit = 'SinceLastCodeReviewSubmit',
+  CommitRange = 'CommitRange',
 }
 
 export type Comparison =
@@ -25,6 +26,11 @@ export type Comparison =
        */
       type: ComparisonType.SinceLastCodeReviewSubmit;
       hash: string;
+    }
+  | {
+      type: ComparisonType.CommitRange;
+      hashFrom: string;
+      hashTo: string;
     }
   | {
       type:
@@ -51,6 +57,8 @@ export function comparisonIsAgainstHead(comparison: Comparison): boolean {
       return false;
     case ComparisonType.Committed:
       return false;
+    case ComparisonType.CommitRange:
+      return false;
   }
 }
 
@@ -64,6 +72,8 @@ export function comparisonStringKey(comparison: Comparison): string {
     case ComparisonType.SinceLastCodeReviewSubmit:
     case ComparisonType.Committed:
       return `${comparison.type}:${comparison.hash}`;
+    case ComparisonType.CommitRange:
+      return `${comparison.type}:${comparison.hashFrom}:${comparison.hashTo}`;
   }
 }
 
@@ -80,6 +90,8 @@ export function revsetArgsForComparison(comparison: Comparison): Array<string> {
       return ['--rev', comparison.hash, '--since-last-submit'];
     case ComparisonType.Committed:
       return ['--change', comparison.hash];
+    case ComparisonType.CommitRange:
+      return ['--rev', `${comparison.hashFrom}^::${comparison.hashTo}`];
   }
 }
 
@@ -96,6 +108,8 @@ export function revsetForComparison(comparison: Comparison): string {
       return comparison.hash;
     case ComparisonType.SinceLastCodeReviewSubmit:
       return comparison.hash;
+    case ComparisonType.CommitRange:
+      return comparison.hashTo;
   }
 }
 
@@ -112,6 +126,8 @@ export function beforeRevsetForComparison(comparison: Comparison): string {
       return comparison.hash + '^'; // before this commit
     case ComparisonType.SinceLastCodeReviewSubmit:
       return comparison.hash + '^';
+    case ComparisonType.CommitRange:
+      return comparison.hashFrom + '^';
   }
 }
 
@@ -128,6 +144,8 @@ export function currRevsetForComparison(comparison: Comparison): string {
       return comparison.hash;
     case ComparisonType.SinceLastCodeReviewSubmit:
       return comparison.hash;
+    case ComparisonType.CommitRange:
+      return comparison.hashTo;
   }
 }
 
@@ -147,5 +165,7 @@ export function labelForComparison(comparison: Comparison): string {
       return `In ${comparison.hash.slice(0, 12)}`;
     case ComparisonType.SinceLastCodeReviewSubmit:
       return `Since last submit of ${comparison.hash.slice(0, 12)}`;
+    case ComparisonType.CommitRange:
+      return `${comparison.hashFrom.slice(0, 12)} to ${comparison.hashTo.slice(0, 12)}`;
   }
 }

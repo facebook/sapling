@@ -53,5 +53,7 @@ function buttonLabelForComparison(comparison: Comparison): string {
       return t('View Changes in $hash', {replace: {$hash: short(comparison.hash)}});
     case ComparisonType.SinceLastCodeReviewSubmit:
       return t('Compare $hash with remote', {replace: {$hash: short(comparison.hash)}});
+    case ComparisonType.CommitRange:
+      return t('View Changes Across Selected Commits');
   }
 }

@@ -195,7 +195,11 @@ function getLeftUri(uri: vscode.Uri, comparison: Comparison): vscode.Uri {
  */
 async function getRightUri(uri: vscode.Uri, comparison: Comparison): Promise<vscode.Uri> {
   const rightRev = currRevsetForComparison(comparison);
-  if (comparison.type === ComparisonType.Committed || isSubmodule(uri.fsPath)) {
+  if (
+    comparison.type === ComparisonType.Committed ||
+    comparison.type === ComparisonType.CommitRange ||
+    isSubmodule(uri.fsPath)
+  ) {
     return encodeSaplingDiffUri(uri, rightRev);
   }
   return (await fileExists(uri)) ? uri : encodeDeletedFileUri(uri);
