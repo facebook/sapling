@@ -1521,9 +1521,7 @@ class ChownCmd(Subcmd):
             print("Chowning EdenFS repository...", end="", flush=True)
             try:
                 request = ChangeOwnershipRequest(
-                    mountPoint=args.path.encode()
-                    if isinstance(args.path, str)
-                    else args.path,
+                    mountPoint=args.path.encode(),
                     uid=uid,
                     gid=gid,
                 )
