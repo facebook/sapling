@@ -42,8 +42,7 @@ use crate::service::GitMappingsStore;
 use crate::service::GitObjectStore;
 
 /// The SMC tier name for the RL Land Service.
-/// TODO(rajshar): T256068466 Replace with the actual production tier name once known.
-const RL_LAND_SERVICE_TIER: &str = "PLACEHOLDER_RL_LAND_SERVICE_TIER";
+const RL_LAND_SERVICE_TIER: &str = "scm.grepo.aosp-service.prod";
 
 /// Check whether this push should be diverted to the RL Land Service.
 ///
