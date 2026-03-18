@@ -141,10 +141,14 @@ pub trait LongRunningRequestsQueue: Send + Sync {
     ) -> Result<Vec<LongRunningRequestEntry>>;
 
     /// Retrieve stats on the queue, optionally filtered by repo_id.
+    /// If `exclude_backfill` is true, derived data backfill request types
+    /// (derive_boundaries, derive_slice, derive_backfill, derive_backfill_repo)
+    /// are excluded from the stats.
     async fn get_queue_stats(
         &self,
         ctx: &CoreContext,
         repo_ids: Option<&[RepositoryId]>,
+        exclude_backfill: bool,
     ) -> Result<QueueStats>;
 
     /// Query how many times the request has been retried.

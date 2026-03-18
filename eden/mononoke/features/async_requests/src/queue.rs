@@ -692,8 +692,14 @@ impl AsyncMethodRequestQueue {
             .await
     }
 
-    pub async fn get_queue_stats(&self, ctx: &CoreContext) -> Result<QueueStats, Error> {
-        self.table.get_queue_stats(ctx, self.repos.as_deref()).await
+    pub async fn get_queue_stats(
+        &self,
+        ctx: &CoreContext,
+        exclude_backfill: bool,
+    ) -> Result<QueueStats, Error> {
+        self.table
+            .get_queue_stats(ctx, self.repos.as_deref(), exclude_backfill)
+            .await
     }
 }
 

@@ -528,6 +528,87 @@ mononoke_queries! {
         "
     }
 
+    // Variants excluding derived data backfill request types
+    read GetQueueLengthForReposExcludingBackfill(>list repo_ids: RepositoryId) -> (
+        RequestStatus, u64
+    ) {
+        "SELECT status, count(*) FROM long_running_request_queue
+        WHERE repo_id IN {repo_ids}
+        AND request_type NOT IN ('derive_boundaries', 'derive_slice', 'derive_backfill', 'derive_backfill_repo')
+        GROUP BY status"
+    }
+
+    read GetQueueLengthByRepoForReposExcludingBackfill(>list repo_ids: RepositoryId) -> (
+        Option<RepositoryId>, RequestStatus, u64
+    ) {
+        "SELECT repo_id, status, count(*) FROM long_running_request_queue
+        WHERE repo_id IN {repo_ids}
+        AND request_type NOT IN ('derive_boundaries', 'derive_slice', 'derive_backfill', 'derive_backfill_repo')
+        GROUP BY repo_id, status"
+    }
+
+    read GetQueueLengthForAllReposExcludingBackfill() -> (
+        RequestStatus, u64
+    ) {
+        "SELECT status, count(*) FROM long_running_request_queue
+        WHERE request_type NOT IN ('derive_boundaries', 'derive_slice', 'derive_backfill', 'derive_backfill_repo')
+        GROUP BY status"
+    }
+
+    read GetQueueLengthByRepoForAllReposExcludingBackfill() -> (
+        Option<RepositoryId>, RequestStatus, u64
+    ) {
+        "SELECT repo_id, status, count(*) FROM long_running_request_queue
+        WHERE request_type NOT IN ('derive_boundaries', 'derive_slice', 'derive_backfill', 'derive_backfill_repo')
+        GROUP BY repo_id, status"
+    }
+
+    read GetQueueAgeForReposExcludingBackfill(>list repo_ids: RepositoryId) -> (
+        RequestStatus, u64, Option<u64>, Option<u64>
+    ) {
+        "SELECT status, min(created_at), min(inprogress_last_updated_at), min(ready_at)
+        FROM long_running_request_queue
+        WHERE repo_id IN {repo_ids}
+        AND status NOT IN ('polled', 'failed')
+        AND request_type NOT IN ('derive_boundaries', 'derive_slice', 'derive_backfill', 'derive_backfill_repo')
+        GROUP BY status
+        "
+    }
+
+    read GetQueueAgeByRepoForReposExcludingBackfill(>list repo_ids: RepositoryId) -> (
+        Option<RepositoryId>, RequestStatus, u64, Option<u64>, Option<u64>
+    ) {
+        "SELECT repo_id, status, min(created_at), min(inprogress_last_updated_at), min(ready_at)
+        FROM long_running_request_queue
+        WHERE repo_id IN {repo_ids}
+        AND status NOT IN ('polled', 'failed')
+        AND request_type NOT IN ('derive_boundaries', 'derive_slice', 'derive_backfill', 'derive_backfill_repo')
+        GROUP BY repo_id, status
+        "
+    }
+
+    read GetQueueAgeForAllReposExcludingBackfill() -> (
+        RequestStatus, u64, Option<u64>, Option<u64>
+    ) {
+        "SELECT status, min(created_at), min(inprogress_last_updated_at), min(ready_at)
+        FROM long_running_request_queue
+        WHERE status NOT IN ('polled', 'failed')
+        AND request_type NOT IN ('derive_boundaries', 'derive_slice', 'derive_backfill', 'derive_backfill_repo')
+        GROUP BY status
+        "
+    }
+
+    read GetQueueAgeByRepoForAllReposExcludingBackfill() -> (
+        Option<RepositoryId>, RequestStatus, u64, Option<u64>, Option<u64>
+    ) {
+        "SELECT repo_id, status, min(created_at), min(inprogress_last_updated_at), min(ready_at)
+        FROM long_running_request_queue
+        WHERE status NOT IN ('polled', 'failed')
+        AND request_type NOT IN ('derive_boundaries', 'derive_slice', 'derive_backfill', 'derive_backfill_repo')
+        GROUP BY repo_id, status
+        "
+    }
+
     write AddDependency(
         request_id: RowId,
         depends_on_request_id: RowId,
@@ -1089,26 +1170,35 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
         &self,
         ctx: &CoreContext,
         repo_ids: Option<&[RepositoryId]>,
+        exclude_backfill: bool,
     ) -> Result<QueueStats> {
         Ok(QueueStats {
             queue_length_by_status: get_queue_length(
                 ctx,
                 &self.connections.read_connection,
                 repo_ids,
+                exclude_backfill,
             )
             .await?,
-            queue_age_by_status: get_queue_age(ctx, &self.connections.read_connection, repo_ids)
-                .await?,
+            queue_age_by_status: get_queue_age(
+                ctx,
+                &self.connections.read_connection,
+                repo_ids,
+                exclude_backfill,
+            )
+            .await?,
             queue_length_by_repo_and_status: get_queue_length_by_repo(
                 ctx,
                 &self.connections.read_connection,
                 repo_ids,
+                exclude_backfill,
             )
             .await?,
             queue_age_by_repo_and_status: get_queue_age_by_repo(
                 ctx,
                 &self.connections.read_connection,
                 repo_ids,
+                exclude_backfill,
             )
             .await?,
         })
@@ -1480,10 +1570,20 @@ async fn get_queue_length(
     ctx: &CoreContext,
     conn: &Connection,
     repo_ids: Option<&[RepositoryId]>,
+    exclude_backfill: bool,
 ) -> Result<Vec<(RequestStatus, u64)>> {
-    Ok(match repo_ids {
-        Some(repos) => GetQueueLengthForRepos::query(conn, ctx.sql_query_telemetry(), repos).await,
-        None => GetQueueLengthForAllRepos::query(conn, ctx.sql_query_telemetry()).await,
+    Ok(match (repo_ids, exclude_backfill) {
+        (Some(repos), false) => {
+            GetQueueLengthForRepos::query(conn, ctx.sql_query_telemetry(), repos).await
+        }
+        (None, false) => GetQueueLengthForAllRepos::query(conn, ctx.sql_query_telemetry()).await,
+        (Some(repos), true) => {
+            GetQueueLengthForReposExcludingBackfill::query(conn, ctx.sql_query_telemetry(), repos)
+                .await
+        }
+        (None, true) => {
+            GetQueueLengthForAllReposExcludingBackfill::query(conn, ctx.sql_query_telemetry()).await
+        }
     }
     .context("fetching queue length stats")?
     .into_iter()
@@ -1494,12 +1594,27 @@ async fn get_queue_length_by_repo(
     ctx: &CoreContext,
     conn: &Connection,
     repo_ids: Option<&[RepositoryId]>,
+    exclude_backfill: bool,
 ) -> Result<Vec<(QueueStatsEntry, u64)>> {
-    Ok(match repo_ids {
-        Some(repos) => {
+    Ok(match (repo_ids, exclude_backfill) {
+        (Some(repos), false) => {
             GetQueueLengthByRepoForRepos::query(conn, ctx.sql_query_telemetry(), repos).await
         }
-        None => GetQueueLengthByRepoForAllRepos::query(conn, ctx.sql_query_telemetry()).await,
+        (None, false) => {
+            GetQueueLengthByRepoForAllRepos::query(conn, ctx.sql_query_telemetry()).await
+        }
+        (Some(repos), true) => {
+            GetQueueLengthByRepoForReposExcludingBackfill::query(
+                conn,
+                ctx.sql_query_telemetry(),
+                repos,
+            )
+            .await
+        }
+        (None, true) => {
+            GetQueueLengthByRepoForAllReposExcludingBackfill::query(conn, ctx.sql_query_telemetry())
+                .await
+        }
     }
     .context("fetching queue length stats")?
     .into_iter()
@@ -1510,10 +1625,20 @@ async fn get_queue_age(
     ctx: &CoreContext,
     conn: &Connection,
     repo_ids: Option<&[RepositoryId]>,
+    exclude_backfill: bool,
 ) -> Result<Vec<(RequestStatus, Timestamp)>> {
-    Ok(match repo_ids {
-        Some(repos) => GetQueueAgeForRepos::query(conn, ctx.sql_query_telemetry(), repos).await,
-        None => GetQueueAgeForAllRepos::query(conn, ctx.sql_query_telemetry()).await,
+    Ok(match (repo_ids, exclude_backfill) {
+        (Some(repos), false) => {
+            GetQueueAgeForRepos::query(conn, ctx.sql_query_telemetry(), repos).await
+        }
+        (None, false) => GetQueueAgeForAllRepos::query(conn, ctx.sql_query_telemetry()).await,
+        (Some(repos), true) => {
+            GetQueueAgeForReposExcludingBackfill::query(conn, ctx.sql_query_telemetry(), repos)
+                .await
+        }
+        (None, true) => {
+            GetQueueAgeForAllReposExcludingBackfill::query(conn, ctx.sql_query_telemetry()).await
+        }
     }
     .context("fetching queue age stats")?
     .into_iter()
@@ -1535,12 +1660,25 @@ async fn get_queue_age_by_repo(
     ctx: &CoreContext,
     conn: &Connection,
     repo_ids: Option<&[RepositoryId]>,
+    exclude_backfill: bool,
 ) -> Result<Vec<(QueueStatsEntry, Timestamp)>> {
-    Ok(match repo_ids {
-        Some(repos) => {
+    Ok(match (repo_ids, exclude_backfill) {
+        (Some(repos), false) => {
             GetQueueAgeByRepoForRepos::query(conn, ctx.sql_query_telemetry(), repos).await
         }
-        None => GetQueueAgeByRepoForAllRepos::query(conn, ctx.sql_query_telemetry()).await,
+        (None, false) => GetQueueAgeByRepoForAllRepos::query(conn, ctx.sql_query_telemetry()).await,
+        (Some(repos), true) => {
+            GetQueueAgeByRepoForReposExcludingBackfill::query(
+                conn,
+                ctx.sql_query_telemetry(),
+                repos,
+            )
+            .await
+        }
+        (None, true) => {
+            GetQueueAgeByRepoForAllReposExcludingBackfill::query(conn, ctx.sql_query_telemetry())
+                .await
+        }
     }
     .context("fetching queue age stats")?
     .into_iter()
@@ -1883,7 +2021,7 @@ mod test {
             )
             .await?;
 
-        let stats = queue.get_queue_stats(&ctx, Some(&[repo_id])).await?;
+        let stats = queue.get_queue_stats(&ctx, Some(&[repo_id]), false).await?;
         assert_eq!(stats.queue_length_by_status.len(), 1);
         let entry = &stats.queue_length_by_status[0];
         assert_eq!(entry.0, RequestStatus::New);
@@ -1903,7 +2041,7 @@ mod test {
 
         tokio::time::sleep(Duration::from_secs(3)).await;
 
-        let stats = queue.get_queue_stats(&ctx, Some(&[repo_id])).await?;
+        let stats = queue.get_queue_stats(&ctx, Some(&[repo_id]), false).await?;
         assert_eq!(stats.queue_length_by_status.len(), 1);
         let entry = &stats.queue_length_by_status[0];
         assert_eq!(entry.0, RequestStatus::InProgress);

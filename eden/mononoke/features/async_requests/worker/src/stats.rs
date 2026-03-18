@@ -43,7 +43,7 @@ pub(crate) async fn stats_loop(
     queue: &AsyncMethodRequestQueue,
 ) {
     loop {
-        let res = queue.get_queue_stats(ctx).await;
+        let res = queue.get_queue_stats(ctx, true).await;
         let now = Timestamp::now();
         match res {
             Ok(res) => {
