@@ -6,7 +6,6 @@
  */
 
 /// Macro rules to delegate trait implementations
-
 #[macro_export]
 macro_rules! delegate {
     {IdConvert { impl $($impl:tt)* } => self.$($t:tt)*} => {
