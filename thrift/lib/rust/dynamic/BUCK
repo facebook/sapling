@@ -1,0 +1,17 @@
+load("@fbsource//tools/build_defs:fbsource_utils.bzl", "is_fbcode")
+load("@fbsource//xplat/thrift:defs.bzl", "thrift_rust_library")
+
+oncall("thrift_dynamic")
+
+thrift_rust_library(
+    name = "thrift_type_system",
+    srcs = glob(["type_system/**/*.rs"]),
+    allow_oss_build = False,
+    crate_root = "type_system/lib.rs",
+    unittests = is_fbcode(),
+    deps = [
+        "fbsource//third-party/rust:thiserror",
+        "//thrift/lib/thrift:record-rust",
+        "//thrift/lib/thrift:type_id-rust",
+    ],
+)
