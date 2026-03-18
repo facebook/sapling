@@ -14,6 +14,37 @@ cpp_library(
     ],
 )
 
+rpm.builder(
+    name = "fb-eden",
+    # We are setting up conveyor+slowroll after which we can much lower this
+    # limit. A higher limit is required for now to avoid weekly breakages as in
+    # S209761.
+    autoclean_keep_versions = 200,
+    buck_opts = rpm.buck_opts(
+        config = {
+            # split-dwarf is required for reduce binary size
+            "fbcode.split-dwarf": "true",
+        },
+    ),
+    configurations = [
+        rpm.configuration(
+            arch = "x86_64",
+            os = "linux",
+        ),
+        rpm.configuration(
+            arch = "aarch64",
+            os = "linux",
+        ),
+        rpm.configuration(
+            arch = "noarch",
+            os = "mac",
+            repo = "darwin/any",
+        ),
+    ],
+    features = make_rpm_features(),
+    summary = "Source control aware virtual filesystem",
+)
+
 # TODO(T75318904): clean up the old packages once conveyor+slowroll is in
 #                  place.
 rpm.builder(
@@ -47,6 +78,33 @@ rpm.builder(
     summary = "Source control aware virtual filesystem",
 )
 
+nupkg.builder(
+    name = "fb-eden-windows",
+    compatible_with = [
+        "ovr_config//os:windows",
+    ],
+    oncall = "scm_client_infra",
+    shims = [
+        {
+            nupkg.shim.source: "fbcode//eden/fs/cli_rs/edenfsctl:edenfsctl",
+            nupkg.shim.name: "eden",
+        },
+    ],
+    summary = "Source control aware virtual filesystem",
+    deps = [
+        "fbcode//eden/fs/cli:edenfsctl",
+        "fbcode//eden/fs/cli/trace:trace_stream",
+        "fbcode//eden/fs/cli_rs/edenfsctl:edenfsctl",
+        "fbcode//eden/fs/config/facebook:edenfs_config_manager",
+        "fbcode//eden/fs/facebook:eden-fb303-collector",
+        "fbcode//eden/fs/service:edenfs",
+        "fbcode//eden/fs/service:edenfs[pdb]",
+        # TODO: Figure out symbol package "//arvr/tools/translator:symbol_ents"
+        # TODO: Set up install script to copy files to the appropriate locations
+    ],
+)
+
+# TODO: Remove this once we have conveyor+slowroll in place.
 nupkg.builder(
     name = "fb-eden-test-windows",
     compatible_with = [
