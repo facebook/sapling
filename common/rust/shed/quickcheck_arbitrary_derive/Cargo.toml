@@ -22,5 +22,5 @@ path = "examples/example.rs"
 [dependencies]
 proc-macro2 = { version = "1.0.106", features = ["span-locations"] }
 quickcheck = "1.0"
-quote = "1.0.44"
+quote = "1.0.45"
 syn = { version = "2.0.117", features = ["extra-traits", "fold", "full", "visit", "visit-mut"] }

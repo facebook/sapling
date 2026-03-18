@@ -21,4 +21,4 @@ name = "tests"
 path = "tests/main.rs"
 
 [dependencies]
-quote = "1.0.44"
+quote = "1.0.45"
