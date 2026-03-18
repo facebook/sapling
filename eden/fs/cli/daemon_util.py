@@ -8,6 +8,7 @@
 
 import json
 import os
+import subprocess
 import sys
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -16,6 +17,7 @@ from eden.fs.cli.util import is_apple_silicon, write_file_atomically
 
 
 SYSTEMD_ARGS_FILENAME = ".edenfs_start_args"
+SYSTEMD_STARTUP_LOG_FILENAME = ".edenfs_startup.log"
 
 
 class DaemonBinaryNotFound(Exception):
@@ -94,3 +96,65 @@ def write_systemd_args_file(
     data = {"cmd": cmd, "env": eden_env}
     write_file_atomically(args_file, json.dumps(data).encode())
     return args_file
+
+
+def start_daemon_from_args_file(args_file: str) -> int:
+    """Read the daemon command and environment from an args file, then spawn the daemon.
+
+    This is called by the `eden daemonctl` subcommand. When invoked via systemd
+    (ExecStart/ExecReload), it inherits ``NOTIFY_SOCKET`` from the current environment
+    so the daemon can report readiness.
+    """
+    try:
+        with open(args_file) as f:
+            data = json.load(f)
+    except FileNotFoundError:
+        print(
+            f"error: args file {args_file} does not exist. "
+            "Run 'eden start' to generate it.",
+            file=sys.stderr,
+        )
+        return 1
+    except json.JSONDecodeError as e:
+        print(
+            f"error: args file {args_file} contains invalid JSON: {e}. "
+            "Run 'eden start' to regenerate it.",
+            file=sys.stderr,
+        )
+        return 1
+
+    try:
+        cmd: List[str] = data["cmd"]
+        eden_env: Dict[str, str] = data["env"]
+    except KeyError as e:
+        print(
+            f"error: args file {args_file} is missing required key {e}. "
+            "Run 'eden start' to regenerate it.",
+            file=sys.stderr,
+        )
+        return 1
+
+    # Inherit NOTIFY_SOCKET from the current environment. systemd sets this
+    # for ExecStart/ExecReload processes in Type=notify services so the daemon
+    # can signal readiness and report its main PID.
+    notify_socket = os.environ.get("NOTIFY_SOCKET")
+    if not notify_socket:
+        print(
+            "error: NOTIFY_SOCKET is not set. "
+            "This command must be run by systemd as part of a Type=notify service.",
+            file=sys.stderr,
+        )
+        return 1
+    eden_env["NOTIFY_SOCKET"] = notify_socket
+
+    # stdout/stderr are redirected by the systemd unit file
+    # (StandardOutput=file:/%I/.edenfs_startup.log) so the CLI can read
+    # the startup output after systemctl start returns.
+    try:
+        return subprocess.call(cmd, stdin=subprocess.DEVNULL, env=eden_env)
+    except OSError as e:
+        print(
+            f"error: failed to execute {cmd[0]}: {e}",
+            file=sys.stderr,
+        )
+        return 1
