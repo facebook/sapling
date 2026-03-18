@@ -3098,13 +3098,17 @@ class StopCmd(Subcmd):
             print_stderr("error: edenfs is not running")
             return SHUTDOWN_EXIT_CODE_NOT_RUNNING_ERROR
 
-        if args.timeout == 0:
+        return self._await_shutdown(instance, pid, args.timeout)
+
+    def _await_shutdown(self, instance: EdenInstance, pid: int, timeout: float) -> int:
+        """Wait for edenfs to shut down and return the appropriate exit code."""
+        if timeout == 0:
             print_stderr("Sent async shutdown request to edenfs.")
             return SHUTDOWN_EXIT_CODE_REQUESTED_SHUTDOWN
 
         try:
             if daemon.wait_for_shutdown(
-                pid, config_dir=instance.state_dir, timeout=args.timeout
+                pid, config_dir=instance.state_dir, timeout=timeout
             ):
                 print_stderr("edenfs exited cleanly.")
                 return SHUTDOWN_EXIT_CODE_NORMAL
