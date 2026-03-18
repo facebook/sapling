@@ -197,7 +197,7 @@ pub trait BookmarkHook: Send + Sync {
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
         hook_name: &str,
-        scuba: MononokeScubaSampleBuilder,
+        mut scuba: MononokeScubaSampleBuilder,
         log_only: bool,
     ) -> Result<HookOutcome, Error> {
         let (stats, mut result) = self
@@ -221,6 +221,8 @@ pub trait BookmarkHook: Send + Sync {
             })
             .timed()
             .await;
+        scuba.add("changeset_id", to.get_changeset_id().to_string());
+        scuba.add("type", "bookmark");
         log_execution_stats(ctx, scuba, stats, &mut result, log_only);
         result.map_err(|e| e.context(format!("while executing hook {}", hook_name)))
     }
@@ -275,7 +277,10 @@ pub trait ChangesetHook: Send + Sync {
             })
             .timed()
             .await;
+        // TODO: delete the hash column later
         scuba.add("hash", changeset.get_changeset_id().to_string());
+        scuba.add("changeset_id", changeset.get_changeset_id().to_string());
+        scuba.add("type", "changeset");
         log_execution_stats(ctx, scuba, stats, &mut result, log_only);
         result.map_err(|e| e.context(format!("while executing hook {}", hook_name)))
     }
@@ -340,7 +345,7 @@ pub trait FileHook: Send + Sync {
         push_authored_by: PushAuthoredBy,
         cs_id: ChangesetId,
         hook_name: &str,
-        scuba: MononokeScubaSampleBuilder,
+        mut scuba: MononokeScubaSampleBuilder,
         log_only: bool,
     ) -> Result<HookOutcome, Error> {
         let (stats, mut result) = self
@@ -364,6 +369,8 @@ pub trait FileHook: Send + Sync {
             })
             .timed()
             .await;
+        scuba.add("changeset_id", cs_id.to_string());
+        scuba.add("type", "file");
         log_execution_stats(ctx, scuba, stats, &mut result, log_only);
         result.map_err(|e| e.context(format!("while executing hook {}", hook_name)))
     }
