@@ -78,6 +78,12 @@ impl IndexedTypeSystem {
     }
 }
 
+impl type_system_digest::TypeSystemDigest for IndexedTypeSystem {
+    fn hash_into(&self, hasher: &mut type_system_digest::hasher::Hasher) {
+        type_system_digest::TypeSystemDigest::hash_into(&self.to_serializable(), hasher);
+    }
+}
+
 impl TypeSystem for IndexedTypeSystem {
     fn get(&self, uri: &str) -> Option<DefinitionRef> {
         self.definitions.get(uri).map(|n| n.to_definition_ref())

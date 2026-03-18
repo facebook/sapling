@@ -60,7 +60,7 @@ pub use type_ref::TypeRef;
 /// - URI-based lookup of user-defined types, e.g. structs, unions, ...
 /// - [`TypeId`](type_id::TypeId) resolution, mapping from a description of a type to its properties
 /// - It supports ad-hoc construction of types within the `TypeSystem`, e.g. `list_of`, `map_of`, ...
-pub trait TypeSystem {
+pub trait TypeSystem: type_system_digest::TypeSystemDigest {
     /// Look up a definition by URI.
     fn get(&self, uri: &str) -> Option<DefinitionRef>;
 

@@ -11,6 +11,22 @@ thrift_rust_library(
     unittests = is_fbcode(),
     deps = [
         "fbsource//third-party/rust:thiserror",
+        "//thrift/lib/rust/dynamic:type_system_digest",
+        "//thrift/lib/thrift:record-rust",
+        "//thrift/lib/thrift:type_id-rust",
+        "//thrift/lib/thrift:type_system-rust",
+    ],
+)
+
+thrift_rust_library(
+    name = "type_system_digest",
+    srcs = glob(["type_system_digest/**/*.rs"]),
+    allow_oss_build = False,
+    autocargo = {"cargo_toml_dir": "type_system_digest"},
+    crate_root = "type_system_digest/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:ring",
+        "//thrift/lib/thrift:id-rust",
         "//thrift/lib/thrift:record-rust",
         "//thrift/lib/thrift:type_id-rust",
         "//thrift/lib/thrift:type_system-rust",
