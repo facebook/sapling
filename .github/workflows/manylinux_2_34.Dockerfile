@@ -29,8 +29,19 @@ OPENSSL_VERSION=3.5.5
 curl -LO "https://github.com/openssl/openssl/releases/download/openssl-${OPENSSL_VERSION}/openssl-${OPENSSL_VERSION}.tar.gz"
 tar xf "openssl-${OPENSSL_VERSION}.tar.gz"
 cd "openssl-${OPENSSL_VERSION}"
-./config --prefix=/opt/_internal/openssl-3.5 --libdir=lib no-shared no-afalgeng -fPIC
-make -j"$(nproc)"
+./config --prefix=/opt/_internal/openssl-3.5 --libdir=lib -fPIC \
+  no-shared no-module no-tests no-apps no-docs \
+  no-comp no-zlib no-legacy no-engine \
+  no-afalgeng no-capieng no-padlockeng \
+  no-ssl3 no-md2 no-rc5 no-weak-ssl-ciphers \
+  no-camellia no-idea no-seed no-quic no-ui-console \
+  no-aria no-bf no-cast no-des no-rc2 no-rc4 \
+  no-md4 no-mdc2 no-rmd160 no-whirlpool no-siphash \
+  no-sm2 no-sm3 no-sm4 no-gost no-siv no-ocb \
+  no-cms no-cmp no-ct no-ocsp no-ts no-srp no-psk \
+  no-dtls no-sctp no-srtp no-dgram \
+  no-argon2 no-scrypt no-ec2m no-dso
+make -j2
 make install_sw
 cd ..
 rm -rf "openssl-${OPENSSL_VERSION}" "openssl-${OPENSSL_VERSION}.tar.gz"
@@ -63,7 +74,7 @@ for var in ['MANYLINUX_CFLAGS', 'MANYLINUX_CXXFLAGS']:
 patch('/opt/_internal/build_scripts/build-cpython.sh', [
     ('fetch_source \"Python-\${CPYTHON_VERSION}.tar.xz.sigstore\"', ': # fetch_source sigstore'),
     ('cosign  verify-blob', ': # cosign  verify-blob'),
-    (r'make > /dev/null', r'make -j$(nproc) > /dev/null'),
+    (r'make > /dev/null', r'make -j2 > /dev/null'),
 ])
 "
 PYEOF
