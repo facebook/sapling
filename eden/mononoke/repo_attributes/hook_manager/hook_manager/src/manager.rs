@@ -41,10 +41,14 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use tracing::debug;
 
 use crate::BookmarkHook;
+use crate::BookmarkHookExecutionId;
 use crate::ChangesetHook;
+use crate::ChangesetHookExecutionId;
 use crate::CrossRepoPushSource;
 use crate::FileHook;
+use crate::HookExecution;
 use crate::HookOutcome;
+use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
 use crate::errors::HookManagerError;
@@ -66,6 +70,16 @@ pub struct HookManager {
     scuba: MononokeScubaSampleBuilder,
     all_hooks_bypassed: bool,
     scuba_bypassed_commits: MononokeScubaSampleBuilder,
+}
+
+enum BypassAuthorizationResult {
+    /// No bypass was attempted — run the hook normally.
+    NoBypass,
+    /// Bypass was attempted and authorized — skip the hook.
+    Bypassed(String),
+    /// Bypass was attempted but the user is not in the required group.
+    /// Contains the group name for the rejection message.
+    Unauthorized(String),
 }
 
 impl HookManager {
@@ -185,16 +199,13 @@ impl HookManager {
     }
 
     /// Check if a bypass is authorized given the permission group restriction.
-    /// Returns `Ok(None)` if no bypass was attempted, `Ok(Some(reason))` if
-    /// bypass is authorized, or `Err` if bypass was attempted but the user
-    /// is not a member of the required permission group.
     async fn check_bypass_authorization(
         &self,
         hook: &Hook,
         ctx: &CoreContext,
         maybe_pushvars: Option<&HashMap<String, Bytes>>,
         cs_msg: Option<&str>,
-    ) -> Result<Option<String>> {
+    ) -> Result<BypassAuthorizationResult> {
         let bypass = hook.get_config().bypass.as_ref();
 
         // First check if there's a pushvar bypass
@@ -203,7 +214,7 @@ impl HookManager {
 
         let bypass_reason = match bypass_reason {
             Some(reason) => reason,
-            None => return Ok(None),
+            None => return Ok(BypassAuthorizationResult::NoBypass),
         };
 
         // Check JustKnob — if disabled, allow bypass without group check
@@ -213,28 +224,25 @@ impl HookManager {
             None,
         )?;
         if !jk_enabled {
-            return Ok(Some(bypass_reason));
+            return Ok(BypassAuthorizationResult::Bypassed(bypass_reason));
         }
 
         // Bypass was triggered and JK is enabled — check permission group
         let checker = match hook.get_bypass_permission_checker() {
             Some(checker) => checker,
-            None => return Ok(Some(bypass_reason)),
+            None => return Ok(BypassAuthorizationResult::Bypassed(bypass_reason)),
         };
 
         // Check group membership
         let identities = ctx.metadata().identities();
         if checker.is_member(identities).await {
-            Ok(Some(bypass_reason))
+            Ok(BypassAuthorizationResult::Bypassed(bypass_reason))
         } else {
             let group_name = bypass
                 .and_then(|b| b.permission_group())
                 .unwrap_or("unknown");
-            Err(anyhow::anyhow!(
-                "Hook bypass not authorized: you are not a member of group '{}'. \
-                 Remove the bypass string/pushvar and let the hook execute normally, \
-                 or request access to the group.",
-                group_name,
+            Ok(BypassAuthorizationResult::Unauthorized(
+                group_name.to_string(),
             ))
         }
     }
@@ -367,12 +375,32 @@ impl HookManager {
                 .check_bypass_authorization(hook, ctx, maybe_pushvars, None)
                 .await?
             {
-                Some(bypass_reason) => {
+                BypassAuthorizationResult::Bypassed(bypass_reason) => {
                     scuba.add("bypass_reason", bypass_reason);
                     scuba.log();
                     continue;
                 }
-                None => {}
+                BypassAuthorizationResult::Unauthorized(group_name) => {
+                    let rejection = HookOutcome::BookmarkHook(
+                        BookmarkHookExecutionId {
+                            cs_id: to.get_changeset_id(),
+                            bookmark_name: bookmark.to_string(),
+                            hook_name: hook_name.to_string(),
+                        },
+                        HookExecution::Rejected(HookRejectionInfo::new_long(
+                            "Hook bypass not authorized",
+                            format!(
+                                "You are not a member of group '{}'. \
+                                 Remove the bypass string/pushvar and let the hook \
+                                 execute normally, or request access to the group.",
+                                group_name,
+                            ),
+                        )),
+                    );
+                    futs.push(futures::future::ok(rejection).boxed());
+                    continue;
+                }
+                BypassAuthorizationResult::NoBypass => {}
             }
 
             for future in hook.get_futures_for_bookmark_hooks(
@@ -386,7 +414,7 @@ impl HookManager {
                 push_authored_by,
                 hook.get_config().log_only,
             ) {
-                futs.push(future);
+                futs.push(future.boxed());
             }
         }
         futs.try_collect().await
@@ -432,18 +460,39 @@ impl HookManager {
 
         // Check bypass authorization for each hook (async due to group membership check).
         // Hooks that are fully bypassed via pushvar are skipped entirely.
+        // Unauthorized bypass attempts produce immediate rejections.
         let mut authorized_hooks = Vec::new();
+        let mut unauthorized_outcomes = Vec::new();
         for (hook_name, hook) in resolved_hooks {
             match self
                 .check_bypass_authorization(hook, ctx, maybe_pushvars, None)
                 .await?
             {
-                Some(bypass_reason) => {
+                BypassAuthorizationResult::Bypassed(bypass_reason) => {
                     for cs in changesets {
                         log_bypassed_changeset(&scuba, cs, &bypass_reason);
                     }
                 }
-                None => {
+                BypassAuthorizationResult::Unauthorized(group_name) => {
+                    for cs in changesets {
+                        unauthorized_outcomes.push(HookOutcome::ChangesetHook(
+                            ChangesetHookExecutionId {
+                                cs_id: cs.get_changeset_id(),
+                                hook_name: hook_name.to_string(),
+                            },
+                            HookExecution::Rejected(HookRejectionInfo::new_long(
+                                "Hook bypass not authorized",
+                                format!(
+                                    "You are not a member of group '{}'. \
+                                     Remove the bypass string/pushvar and let the hook \
+                                     execute normally, or request access to the group.",
+                                    group_name,
+                                ),
+                            )),
+                        ));
+                    }
+                }
+                BypassAuthorizationResult::NoBypass => {
                     authorized_hooks.push((hook_name, hook));
                 }
             }
@@ -464,10 +513,27 @@ impl HookManager {
                     )
                     .await?
                 {
-                    Some(bypass_reason) => {
+                    BypassAuthorizationResult::Bypassed(bypass_reason) => {
                         log_bypassed_changeset(&scuba, cs, &bypass_reason);
                     }
-                    None => {
+                    BypassAuthorizationResult::Unauthorized(group_name) => {
+                        unauthorized_outcomes.push(HookOutcome::ChangesetHook(
+                            ChangesetHookExecutionId {
+                                cs_id: cs.get_changeset_id(),
+                                hook_name: hook_name.to_string(),
+                            },
+                            HookExecution::Rejected(HookRejectionInfo::new_long(
+                                "Hook bypass not authorized",
+                                format!(
+                                    "You are not a member of group '{}'. \
+                                     Remove the bypass string/pushvar and let the hook \
+                                     execute normally, or request access to the group.",
+                                    group_name,
+                                ),
+                            )),
+                        ));
+                    }
+                    BypassAuthorizationResult::NoBypass => {
                         filtered_changesets.push(cs);
                     }
                 }
@@ -522,9 +588,10 @@ impl HookManager {
                 .try_collect::<Vec<_>>();
 
         let (individual_res, batched_res) = futures::try_join!(individual_fut, batched_fut)?;
-        Ok(individual_res
+        Ok(unauthorized_outcomes
             .into_iter()
-            .chain(batched_res.into_iter())
+            .chain(individual_res)
+            .chain(batched_res)
             .collect())
     }
 }

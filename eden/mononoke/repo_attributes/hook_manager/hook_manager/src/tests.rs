@@ -820,7 +820,7 @@ async fn test_bypass_with_group_authorized_user(fb: FacebookInit) {
     );
 }
 
-/// Group configured + bypass string + user NOT in group -> rejected with error
+/// Group configured + bypass string + user NOT in group -> bypass ignored, hook runs normally
 #[mononoke::fbinit_test]
 async fn test_bypass_with_group_unauthorized_user(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
@@ -848,16 +848,17 @@ async fn test_bypass_with_group_unauthorized_user(fb: FacebookInit) {
             PushAuthoredBy::User,
         )),
     )
-    .await;
-    assert!(
-        res.is_err(),
-        "Expected error when unauthorized user tries to bypass"
+    .await
+    .unwrap();
+    // Bypass is silently ignored — hook runs normally and rejects
+    assert_eq!(
+        res.len(),
+        1,
+        "Expected hook to run (bypass ignored for unauthorized user)"
     );
-    let err_msg = res.unwrap_err().to_string();
     assert!(
-        err_msg.contains("not a member of group"),
-        "Expected group membership error, got: {}",
-        err_msg
+        matches!(res[0].get_execution(), HookExecution::Rejected(_)),
+        "Expected rejection from hook since bypass was not authorized"
     );
 }
 
@@ -978,7 +979,7 @@ async fn test_pushvar_bypass_with_group_authorized(fb: FacebookInit) {
     );
 }
 
-/// Group configured + pushvar bypass + user NOT in group -> rejected
+/// Group configured + pushvar bypass + user NOT in group -> bypass ignored, hook runs
 #[mononoke::fbinit_test]
 async fn test_pushvar_bypass_with_group_unauthorized(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
@@ -1009,15 +1010,16 @@ async fn test_pushvar_bypass_with_group_unauthorized(fb: FacebookInit) {
             PushAuthoredBy::User,
         )),
     )
-    .await;
-    assert!(
-        res.is_err(),
-        "Expected error when unauthorized user tries pushvar bypass"
+    .await
+    .unwrap();
+    // Bypass is silently ignored — hook runs normally and rejects
+    assert_eq!(
+        res.len(),
+        1,
+        "Expected hook to run (pushvar bypass ignored for unauthorized user)"
     );
-    let err_msg = res.unwrap_err().to_string();
     assert!(
-        err_msg.contains("not a member of group"),
-        "Expected group membership error, got: {}",
-        err_msg
+        matches!(res[0].get_execution(), HookExecution::Rejected(_)),
+        "Expected rejection from hook since bypass was not authorized"
     );
 }
