@@ -123,6 +123,7 @@ cpp_library(
     headers = [
         "EdenComponent.h",
         "EdenErrorInfo.h",
+        "ErrorArg.h",
     ],
 )
 
