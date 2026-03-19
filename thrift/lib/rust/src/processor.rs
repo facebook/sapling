@@ -110,6 +110,16 @@ where
     {
         // Default no-op for servers that don't support streaming metrics
     }
+
+    /// Store the qualified method name for streaming metrics.
+    /// The method name is used by the C++ streaming infrastructure to create
+    /// per-method counters (e.g., thrift.stream.{method}.on_next).
+    ///
+    /// This should be called by the generated processor before calling
+    /// send_stream_reply, send_sink_reply, or send_bidirectional_reply.
+    fn set_stream_method_name(&self, _method_name: &str) {
+        // Default no-op for servers that don't support streaming metrics
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
