@@ -259,7 +259,7 @@
       "blame",
       "an"
     ],
-    "doc": "show per-line commit information for given files\n\n    Show file contents where each line is annotated with information\n    about the commit that last changed that line.\n\n    This command is useful for discovering when a change was made and\n    by whom.\n\n    If you include ``--file``, ``--user``, or ``--date``, the revision number is\n    suppressed unless you also include ``--number``.\n\n    Without the ``-a/--text`` option, annotate will skip binary files.\n    With ``-a``, binary files will be annotated anyway.\n\n    Returns 0 on success.\n    ",
+    "doc": "show per-line commit information for given files\n\n    Show file contents where each line is annotated with information\n    about the commit that last changed that line.\n\n    This command is useful for discovering when a change was made and\n    by whom.\n\n    If you include ``--file``, ``--user``, or ``--date``, the revision number is\n    suppressed unless you also include ``--number``.\n\n    Without the ``-a/--text`` option, annotate will skip binary files.\n    With ``-a``, binary files will be annotated anyway.\n\n    Cross\u2011repo commits introduced through subtree import appear with a \u201c~\u201d suffix\n    in the output.\n\n    Returns 0 on success.\n    ",
     "args": [
       {
         "shortname": "r",
@@ -550,12 +550,12 @@
     "aliases": [
       "cat"
     ],
-    "doc": "output the current or given revision of files\n\n    Print the specified files as they were at the given revision. If\n    no revision is given, the parent of the working directory is used.\n\n    Output may be to a file, in which case the name of the file is\n    given using a format string. The formatting rules as follows:\n\n    :``%%``: literal \"%\" character\n    :``%s``: basename of file being printed\n    :``%d``: dirname of file being printed, or '.' if in repository root\n    :``%p``: root-relative path name of file being printed\n    :``%H``: changeset hash (40 hexadecimal digits)\n    :``%R``: changeset revision number\n    :``%h``: short-form changeset hash (12 hexadecimal digits)\n    :``%r``: zero-padded changeset revision number\n    :``%b``: basename of the exporting repository\n\n    Returns 0 on success.\n    ",
+    "doc": "output file content at a particular revision\n\n    Output the specified files' content at the specified revision. If\n    no revision is given, the parent of the working directory is used.\n\n    Use ``--output`` to write files or directories to disk using the following\n    formatting rules:\n\n    :``%%``: literal \"%\" character\n    :``%s``: basename of file being printed\n    :``%d``: dirname of file being printed, or '.' if in repository root\n    :``%p``: root-relative path name of file being printed\n    :``%H``: commit hash (40 hexadecimal digits)\n    :``%h``: short commit hash (12 hexadecimal digits)\n    :``%b``: basename of the repository\n\n    .. container:: verbose\n\n      Examples:\n\n      - Recursively export directory foo/bar to disk::\n\n          @prog@ cat -r fbc6b8c381 --output \"/tmp/export/%p\" path:foo/bar\n\n      - Output all Rust files' content under foo/bar to stdout::\n\n          @prog@ cat -r fbc6b8c381 \"glob:foo/bar/**/*.rs\"\n\n      - Output the content of something/important.txt at bookmark main to /tmp/file::\n\n          @prog@ cat -r main --output /tmp/file something/important.txt\n\n    To operate without a local repo, specify ``-R/--repository`` as a Sapling\n    Remote API capable URL. The local on-disk cache will still be used to avoid\n    remote fetches.\n\n    See :prog:`help patterns` for more information on specifying file patterns.\n\n    Returns 0 if there were no errors and at least one file was output.\n    ",
     "args": [
       {
         "shortname": "o",
         "fullname": "output",
-        "default": "",
+        "default": null,
         "description": "print output to file with formatted name"
       },
       {
@@ -563,12 +563,6 @@
         "fullname": "rev",
         "default": "",
         "description": "print the given revision"
-      },
-      {
-        "shortname": "",
-        "fullname": "decode",
-        "default": null,
-        "description": "apply any matching decode filter (DEPRECATED)"
       },
       {
         "shortname": "I",
@@ -857,7 +851,7 @@
       "config",
       "conf"
     ],
-    "doc": "show config settings\n\n    With no arguments, print names and values of all config items.\n\n    With one argument of the form ``section.name``, print just the value\n    of that config item.\n\n    With multiple arguments, print names and values of all config\n    items with matching section names.\n\n    With ``--user``, edit the user-level config file. With ``--system``,\n    edit the system-wide config file. With ``--local``, edit the\n    repository-level config file. If there are no arguments, spawn\n    an editor to edit the config file. If there are arguments in\n    ``section.name=value`` or ``section.name value`` format, the appropriate\n    config file will be updated directly without spawning an editor.\n\n    With ``--delete``, the specified config items are deleted from the config\n    file.\n\n    With ``--debug``, the source (filename and line number) is printed\n    for each config item.\n\n    See :prog:`help config` for more information about config files.\n\n    Returns 0 on success, 1 if NAME does not exist.\n\n    ",
+    "doc": "show config settings\n\n    With no arguments, print names and values of all config items.\n\n    With one argument of the form ``section.name``, print just the value\n    of that config item.\n\n    With multiple arguments, print names and values of all config\n    items with matching section names.\n\n    With ``--user``, edit the user-level config file. With ``--system``,\n    edit the system-wide config file. With ``--local``, edit the\n    repository-level config file. If there are no arguments, spawn\n    an editor to edit the config file. If there are arguments in\n    ``section.name=value`` or ``section.name value`` format, the appropriate\n    config file will be updated directly without spawning an editor.\n\n    With ``--delete``, the specified config items are deleted from the config\n    file.\n\n    With ``--debug``, the source (filename and line number) is printed\n    for each config item.\n\n    See :prog:`help config` for more information about config files.\n\n    Returns 0 on success. When using a plain formatter, 1 is returned if NAME\n    does not exist. Otherwise, 0 is returned even if NAME does not exist.\n\n    ",
     "args": [
       {
         "shortname": "e",
@@ -1030,7 +1024,7 @@
         "shortname": "",
         "fullname": "from-path",
         "default": [],
-        "description": "re-map this path to correspondong --to-path (ADVANCED)"
+        "description": "re-map this path to corresponding --to-path (ADVANCED)"
       },
       {
         "shortname": "",
@@ -1226,7 +1220,7 @@
     "aliases": [
       "graft"
     ],
-    "doc": "copy commits from a different location\n\n    Use @Product@'s merge logic to copy individual commits from other\n    locations without making merge commits. This is sometimes known as\n    'backporting' or 'cherry-picking'. By default, graft will also\n    copy user and description from the source commits. If you want to\n    keep the date of the source commits, you can add below config to your\n    configuration file::\n\n      [tweakdefaults]\n      graftkeepdate = True\n\n    Source commits will be skipped if they are ancestors of the\n    current commit, have already been grafted, or are merges.\n\n    If ``--log`` is specified, commit messages will have a comment appended\n    of the form::\n\n      (grafted from COMMITHASH)\n\n    If ``--force`` is specified, commits will be grafted even if they\n    are already ancestors of, or have been grafted to, the destination.\n    This is useful when the commits have since been backed out.\n\n    If a graft results in conflicts, the graft process is interrupted\n    so that the current merge can be manually resolved. Once all\n    conflicts are resolved, the graft process can be continued with\n    the ``-c/--continue`` option.\n\n    ``--from-path`` and ``--to-path`` allow copying commits between\n    directories. Files in the grafted commit(s) outside of\n    ``--from-path`` are ignored. See :prog:`help directorybranching` for\n    more information.\n\n    .. note::\n\n       The ``-c/--continue`` operation does not remember options from\n       the original invocation, except for ``--force``.\n\n    .. container:: verbose\n\n      Examples:\n\n      - copy a single change to the stable branch and edit its description::\n\n          @prog@ goto stable\n          @prog@ graft --edit ba7e89595\n\n      - graft a range of changesets with one exception, updating dates::\n\n          @prog@ graft -D \"0e13e529c::224010e02 and not 85c0535a4\"\n\n      - continue a graft after resolving conflicts::\n\n          @prog@ graft -c\n\n      - abort an interrupted graft::\n\n          @prog@ graft --abort\n\n      - show the source of a grafted changeset::\n\n          @prog@ log --debug -r .\n\n    See :prog:`help revisions` for more about specifying revisions.\n\n    Returns 0 on success.\n    ",
+    "doc": "copy commits from a different location\n\n    Use @Product@'s merge logic to copy individual commits from other\n    locations without making merge commits. This is sometimes known as\n    'backporting' or 'cherry-picking'. By default, graft will also\n    copy user and description from the source commits.\n\n    .. container:: verbose\n\n      If you want to keep the date of the source commits, you can add below config to your\n      configuration file::\n\n        [tweakdefaults]\n        graftkeepdate = True\n\n      Source commits will be skipped if they are ancestors of the\n      current commit, have already been grafted, or are merges.\n\n      If ``--log`` is specified, commit messages will have a comment appended\n      of the form::\n\n        (grafted from COMMITHASH)\n\n      If ``--force`` is specified, commits will be grafted even if they\n      are already ancestors of, or have been grafted to, the destination.\n      This is useful when the commits have since been backed out.\n\n      If a graft results in conflicts, the graft process is interrupted\n      so that the current merge can be manually resolved. Once all\n      conflicts are resolved, the graft process can be continued with\n      the ``-c/--continue`` option.\n\n      .. note::\n\n         The ``-c/--continue`` operation does not remember options from\n         the original invocation, except for ``--force``.\n\n      Examples:\n\n      - copy a single change to the stable branch and edit its description::\n\n          @prog@ goto stable\n          @prog@ graft --edit ba7e89595\n\n      - graft a range of changesets with one exception, updating dates::\n\n          @prog@ graft -D \"0e13e529c::224010e02 and not 85c0535a4\"\n\n      - continue a graft after resolving conflicts::\n\n          @prog@ graft -c\n\n      - abort an interrupted graft::\n\n          @prog@ graft --abort\n\n      - show the source of a grafted changeset::\n\n          @prog@ log --debug -r .\n\n      See :prog:`help revisions` for more about specifying revisions.\n\n    Returns 0 on success.\n    ",
     "args": [
       {
         "shortname": "r",
@@ -1275,6 +1269,18 @@
         "fullname": "currentuser",
         "default": false,
         "description": "record the current user as committer"
+      },
+      {
+        "shortname": "m",
+        "fullname": "message",
+        "default": "",
+        "description": "use text as commit message"
+      },
+      {
+        "shortname": "l",
+        "fullname": "logfile",
+        "default": "",
+        "description": "read commit message from file"
       },
       {
         "shortname": "d",
@@ -1848,6 +1854,12 @@
             "fullname": "draft",
             "default": false,
             "description": "mark new pull requests as draft"
+          },
+          {
+            "shortname": "o",
+            "fullname": "open",
+            "default": false,
+            "description": "open pull requests in browser after creation"
           }
         ],
         "subcommands": null

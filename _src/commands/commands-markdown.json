@@ -259,7 +259,7 @@
       "blame",
       "an"
     ],
-    "doc": "\n**show per-line commit information for given files**\n\nShow file contents where each line is annotated with information\nabout the commit that last changed that line.\n\nThis command is useful for discovering when a change was made and\nby whom.\n\nIf you include `--file`, `--user`, or `--date`, the revision number is\nsuppressed unless you also include `--number`.\n\nWithout the `-a/--text` option, annotate will skip binary files.\nWith `-a`, binary files will be annotated anyway.\n\nReturns 0 on success.\n",
+    "doc": "\n**show per-line commit information for given files**\n\nShow file contents where each line is annotated with information\nabout the commit that last changed that line.\n\nThis command is useful for discovering when a change was made and\nby whom.\n\nIf you include `--file`, `--user`, or `--date`, the revision number is\nsuppressed unless you also include `--number`.\n\nWithout the `-a/--text` option, annotate will skip binary files.\nWith `-a`, binary files will be annotated anyway.\n\nCross\u2011repo commits introduced through subtree import appear with a \u201c~\u201d suffix\nin the output.\n\nReturns 0 on success.\n",
     "args": [
       {
         "shortname": "r",
@@ -550,12 +550,12 @@
     "aliases": [
       "cat"
     ],
-    "doc": "\n**output the current or given revision of files**\n\nPrint the specified files as they were at the given revision. If\nno revision is given, the parent of the working directory is used.\n\nOutput may be to a file, in which case the name of the file is\ngiven using a format string. The formatting rules as follows:\n\n`%%`\nliteral \"%\" character\n\n`%s`\nbasename of file being printed\n\n`%d`\ndirname of file being printed, or '.' if in repository root\n\n`%p`\nroot-relative path name of file being printed\n\n`%H`\nchangeset hash (40 hexadecimal digits)\n\n`%R`\nchangeset revision number\n\n`%h`\nshort-form changeset hash (12 hexadecimal digits)\n\n`%r`\nzero-padded changeset revision number\n\n`%b`\nbasename of the exporting repository\n\nReturns 0 on success.\n",
+    "doc": "\n**output file content at a particular revision**\n\nOutput the specified files&#x27; content at the specified revision. If\nno revision is given, the parent of the working directory is used.\n\nUse `--output` to write files or directories to disk using the following\nformatting rules:\n\n`%%`\nliteral \"%\" character\n\n`%s`\nbasename of file being printed\n\n`%d`\ndirname of file being printed, or '.' if in repository root\n\n`%p`\nroot-relative path name of file being printed\n\n`%H`\ncommit hash (40 hexadecimal digits)\n\n`%h`\nshort commit hash (12 hexadecimal digits)\n\n`%b`\nbasename of the repository\n\nExamples:\n\n- Recursively export directory foo/bar to disk:\n\n```\nsl cat -r fbc6b8c381 --output \"/tmp/export/%p\" path:foo/bar\n```\n\n- Output all Rust files' content under foo/bar to stdout:\n\n```\nsl cat -r fbc6b8c381 \"glob:foo/bar/**/*.rs\"\n```\n\n- Output the content of something/important.txt at bookmark main to /tmp/file:\n\n```\nsl cat -r main --output /tmp/file something/important.txt\n```\n\nTo operate without a local repo, specify `-R/--repository` as a Sapling\nRemote API capable URL. The local on-disk cache will still be used to avoid\nremote fetches.\n\nSee `sl help patterns` for more information on specifying file patterns.\n\nReturns 0 if there were no errors and at least one file was output.\n",
     "args": [
       {
         "shortname": "o",
         "fullname": "output",
-        "default": "",
+        "default": null,
         "description": "print output to file with formatted name"
       },
       {
@@ -563,12 +563,6 @@
         "fullname": "rev",
         "default": "",
         "description": "print the given revision"
-      },
-      {
-        "shortname": "",
-        "fullname": "decode",
-        "default": null,
-        "description": "apply any matching decode filter (DEPRECATED)"
       },
       {
         "shortname": "I",
@@ -857,7 +851,7 @@
       "config",
       "conf"
     ],
-    "doc": "\n**show config settings**\n\nWith no arguments, print names and values of all config items.\n\nWith one argument of the form `section.name`, print just the value\nof that config item.\n\nWith multiple arguments, print names and values of all config\nitems with matching section names.\n\nWith `--user`, edit the user-level config file. With `--system`,\nedit the system-wide config file. With `--local`, edit the\nrepository-level config file. If there are no arguments, spawn\nan editor to edit the config file. If there are arguments in\n`section.name=value` or `section.name value` format, the appropriate\nconfig file will be updated directly without spawning an editor.\n\nWith `--delete`, the specified config items are deleted from the config\nfile.\n\nWith `--debug`, the source (filename and line number) is printed\nfor each config item.\n\nSee `sl help config` for more information about config files.\n\nReturns 0 on success, 1 if NAME does not exist.\n",
+    "doc": "\n**show config settings**\n\nWith no arguments, print names and values of all config items.\n\nWith one argument of the form `section.name`, print just the value\nof that config item.\n\nWith multiple arguments, print names and values of all config\nitems with matching section names.\n\nWith `--user`, edit the user-level config file. With `--system`,\nedit the system-wide config file. With `--local`, edit the\nrepository-level config file. If there are no arguments, spawn\nan editor to edit the config file. If there are arguments in\n`section.name=value` or `section.name value` format, the appropriate\nconfig file will be updated directly without spawning an editor.\n\nWith `--delete`, the specified config items are deleted from the config\nfile.\n\nWith `--debug`, the source (filename and line number) is printed\nfor each config item.\n\nSee `sl help config` for more information about config files.\n\nReturns 0 on success. When using a plain formatter, 1 is returned if NAME\ndoes not exist. Otherwise, 0 is returned even if NAME does not exist.\n",
     "args": [
       {
         "shortname": "e",
@@ -1030,7 +1024,7 @@
         "shortname": "",
         "fullname": "from-path",
         "default": [],
-        "description": "re-map this path to correspondong --to-path (ADVANCED)"
+        "description": "re-map this path to corresponding --to-path (ADVANCED)"
       },
       {
         "shortname": "",
@@ -1226,7 +1220,7 @@
     "aliases": [
       "graft"
     ],
-    "doc": "\n**copy commits from a different location**\n\nUse Sapling&#x27;s merge logic to copy individual commits from other\nlocations without making merge commits. This is sometimes known as\n&#x27;backporting&#x27; or &#x27;cherry-picking&#x27;. By default, graft will also\ncopy user and description from the source commits. If you want to\nkeep the date of the source commits, you can add below config to your\nconfiguration file:\n\n```\n[tweakdefaults]\ngraftkeepdate = True\n```\n\nSource commits will be skipped if they are ancestors of the\ncurrent commit, have already been grafted, or are merges.\n\nIf `--log` is specified, commit messages will have a comment appended\nof the form:\n\n```\n(grafted from COMMITHASH)\n```\n\nIf `--force` is specified, commits will be grafted even if they\nare already ancestors of, or have been grafted to, the destination.\nThis is useful when the commits have since been backed out.\n\nIf a graft results in conflicts, the graft process is interrupted\nso that the current merge can be manually resolved. Once all\nconflicts are resolved, the graft process can be continued with\nthe `-c/--continue` option.\n\n`--from-path` and `--to-path` allow copying commits between\ndirectories. Files in the grafted commit(s) outside of\n`--from-path` are ignored. See `sl help directorybranching` for\nmore information.\n\nThe `-c/--continue` operation does not remember options from\nthe original invocation, except for `--force`.\n\nExamples:\n\n- copy a single change to the stable branch and edit its description:\n\n```\nsl goto stable\nsl graft --edit ba7e89595\n```\n\n- graft a range of changesets with one exception, updating dates:\n\n```\nsl graft -D \"0e13e529c::224010e02 and not 85c0535a4\"\n```\n\n- continue a graft after resolving conflicts:\n\n```\nsl graft -c\n```\n\n- abort an interrupted graft:\n\n```\nsl graft --abort\n```\n\n- show the source of a grafted changeset:\n\n```\nsl log --debug -r .\n```\n\nSee `sl help revisions` for more about specifying revisions.\n\nReturns 0 on success.\n",
+    "doc": "\n**copy commits from a different location**\n\nUse Sapling&#x27;s merge logic to copy individual commits from other\nlocations without making merge commits. This is sometimes known as\n&#x27;backporting&#x27; or &#x27;cherry-picking&#x27;. By default, graft will also\ncopy user and description from the source commits.\n\nIf you want to keep the date of the source commits, you can add below config to your\nconfiguration file:\n\n```\n[tweakdefaults]\ngraftkeepdate = True\n```\n\nSource commits will be skipped if they are ancestors of the\ncurrent commit, have already been grafted, or are merges.\n\nIf `--log` is specified, commit messages will have a comment appended\nof the form:\n\n```\n(grafted from COMMITHASH)\n```\n\nIf `--force` is specified, commits will be grafted even if they\nare already ancestors of, or have been grafted to, the destination.\nThis is useful when the commits have since been backed out.\n\nIf a graft results in conflicts, the graft process is interrupted\nso that the current merge can be manually resolved. Once all\nconflicts are resolved, the graft process can be continued with\nthe `-c/--continue` option.\n\nThe `-c/--continue` operation does not remember options from\nthe original invocation, except for `--force`.\n\nExamples:\n\n- copy a single change to the stable branch and edit its description:\n\n```\nsl goto stable\nsl graft --edit ba7e89595\n```\n\n- graft a range of changesets with one exception, updating dates:\n\n```\nsl graft -D \"0e13e529c::224010e02 and not 85c0535a4\"\n```\n\n- continue a graft after resolving conflicts:\n\n```\nsl graft -c\n```\n\n- abort an interrupted graft:\n\n```\nsl graft --abort\n```\n\n- show the source of a grafted changeset:\n\n```\nsl log --debug -r .\n```\n\nSee `sl help revisions` for more about specifying revisions.\n\nReturns 0 on success.\n",
     "args": [
       {
         "shortname": "r",
@@ -1275,6 +1269,18 @@
         "fullname": "currentuser",
         "default": false,
         "description": "record the current user as committer"
+      },
+      {
+        "shortname": "m",
+        "fullname": "message",
+        "default": "",
+        "description": "use text as commit message"
+      },
+      {
+        "shortname": "l",
+        "fullname": "logfile",
+        "default": "",
+        "description": "read commit message from file"
       },
       {
         "shortname": "d",
@@ -1848,6 +1854,12 @@
             "fullname": "draft",
             "default": false,
             "description": "mark new pull requests as draft"
+          },
+          {
+            "shortname": "o",
+            "fullname": "open",
+            "default": false,
+            "description": "open pull requests in browser after creation"
           }
         ],
         "subcommands": null

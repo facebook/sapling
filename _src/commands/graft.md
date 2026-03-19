@@ -4,7 +4,7 @@ sidebar_position: 17
 
 ## graft
 <!--
-  @generated SignedSource<<2916ee1e69673f2f5c65cc2de31078a1>>
+  @generated SignedSource<<a40279eeda7f2336e8d59db2706a6728>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -14,8 +14,9 @@ sidebar_position: 17
 Use Sapling&#x27;s merge logic to copy individual commits from other
 locations without making merge commits. This is sometimes known as
 &#x27;backporting&#x27; or &#x27;cherry-picking&#x27;. By default, graft will also
-copy user and description from the source commits. If you want to
-keep the date of the source commits, you can add below config to your
+copy user and description from the source commits.
+
+If you want to keep the date of the source commits, you can add below config to your
 configuration file:
 
 ```
@@ -41,11 +42,6 @@ If a graft results in conflicts, the graft process is interrupted
 so that the current merge can be manually resolved. Once all
 conflicts are resolved, the graft process can be continued with
 the `-c/--continue` option.
-
-`--from-path` and `--to-path` allow copying commits between
-directories. Files in the grafted commit(s) outside of
-`--from-path` are ignored. See `sl help directorybranching` for
-more information.
 
 The `-c/--continue` operation does not remember options from
 the original invocation, except for `--force`.
@@ -98,6 +94,8 @@ Returns 0 on success.
 | `-f`| `--force`| `false`| force graft|
 | `-D`| `--currentdate`| `false`| record the current date as commit date|
 | `-U`| `--currentuser`| `false`| record the current user as committer|
+| `-m`| `--message`| | use text as commit message|
+| `-l`| `--logfile`| | read commit message from file|
 | `-d`| `--date`| | record the specified date as commit date|
 | `-u`| `--user`| | record the specified user as committer|
 | `-t`| `--tool`| | specify merge tool|

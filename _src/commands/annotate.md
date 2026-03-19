@@ -4,7 +4,7 @@ sidebar_position: 4
 
 ## annotate | blame | an
 <!--
-  @generated SignedSource<<aa3c51f6a0f8fe090098ef6dcccb41af>>
+  @generated SignedSource<<2c29f2c6a39cd5765b63ce055800aded>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -22,6 +22,9 @@ suppressed unless you also include `--number`.
 
 Without the `-a/--text` option, annotate will skip binary files.
 With `-a`, binary files will be annotated anyway.
+
+Cross‑repo commits introduced through subtree import appear with a “~” suffix
+in the output.
 
 Returns 0 on success.
 
