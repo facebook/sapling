@@ -104,11 +104,12 @@ impl MononokeConfigs {
         let update_receivers = Arc::new(ArcSwap::from_pointee(vec![]));
         let maybe_config_handle = configerator_config_handle(config_path.as_ref(), config_store)?;
         let config_info = if let Some(config_handle) = maybe_config_handle.as_ref() {
-            if let Ok(new_config_info) = build_config_info(config_handle.get()) {
-                Some(new_config_info)
-            } else {
-                warn!("Could not compute new config_info");
-                None
+            match build_config_info(config_handle.get()) {
+                Ok(new_config_info) => Some(new_config_info),
+                Err(e) => {
+                    warn!("Could not compute new config_info: {:?}", e);
+                    None
+                }
             }
         } else {
             None
@@ -355,11 +356,14 @@ async fn watch_and_update(
                 let original_raw_repo_configs = raw_repo_configs.clone();
                 match load_configs_from_raw(Arc::unwrap_or_clone(raw_repo_configs)) {
                     Ok((new_repo_configs, new_storage_configs)) => {
-                        if let Ok(new_config_info) = build_config_info(original_raw_repo_configs) {
-                            let new_config_info = Arc::new(Some(new_config_info));
-                            config_info.store(new_config_info);
-                        } else {
-                            warn!("Could not compute new config_info");
+                        match build_config_info(original_raw_repo_configs) {
+                            Ok(new_config_info) => {
+                                let new_config_info = Arc::new(Some(new_config_info));
+                                config_info.store(new_config_info);
+                            }
+                            Err(e) => {
+                                warn!("Could not compute new config_info: {:?}", e);
+                            }
                         }
                         let new_repo_configs = Arc::new(new_repo_configs);
                         let new_storage_configs = Arc::new(new_storage_configs);
