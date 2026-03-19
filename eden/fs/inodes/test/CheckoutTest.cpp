@@ -2341,6 +2341,77 @@ TEST(Checkout, overlayWritesDuringCheckout) {
 
 #endif
 
+/*
+ * Test checkout behavior when an ignored, untracked symlink (pointing to a
+ * directory) has the same name as a tracked directory in the destination
+ * commit.
+ *
+ * The scenario:
+ * 1. Commit 1 has a .gitignore that ignores "src/link"
+ * 2. The user creates "src/link" as a symlink pointing to a directory
+ *    (ignored, untracked)
+ * 3. Commit 2 adds "src/link/" as a tracked directory (containing files)
+ * 4. Checkout from commit 1 to commit 2
+ *
+ * Current behavior: EdenFS reports MODIFIED_MODIFIED because a local
+ * FileInode (symlink) exists where the destination tree has a directory.
+ * Sapling then fails with "file metadata for <path> not found at source
+ * commit" because the symlink was never tracked.
+ *
+ * Expected behavior: The ignored symlink should be silently replaced by the
+ * tracked directory, matching git's behavior of overwriting ignored files.
+ */
+#ifndef _WIN32
+TEST(Checkout, ignoredSymlinkReplacedByDirectoryInDestination) {
+  // Commit 1: has a .gitignore ignoring "src/link"
+  auto builder1 = FakeTreeBuilder();
+  builder1.setFile("src/main.c", "// Some code.\n");
+  builder1.setFile("src/.gitignore", "link\n");
+  TestMount testMount{RootId{"1"}, builder1};
+
+  // Commit 2: adds "src/link/" as a tracked directory with a file inside.
+  // The symlink name is NOT tracked in commit 1, only as a directory in
+  // commit 2.
+  auto builder2 = builder1.clone();
+  builder2.setFile("src/link/file.md", "# Content\n");
+  builder2.finalize(testMount.getBackingStore(), true);
+  auto commit2 = testMount.getBackingStore()->putCommit("2", builder2);
+  commit2->setReady();
+
+  // Create the ignored symlink locally, pointing to a real directory
+  testMount.mkdir("target_dir");
+  testMount.addFile("target_dir/file.txt", "stuff\n");
+  testMount.addSymlink("src/link", "target_dir");
+
+  auto executor = testMount.getServerExecutor().get();
+  auto checkoutResult = testMount.getEdenMount()
+                            ->checkout(
+                                testMount.getRootInode(),
+                                RootId{"2"},
+                                ObjectFetchContext::getNullContext(),
+                                __func__)
+                            .semi()
+                            .via(executor);
+  testMount.drainServerExecutor();
+  ASSERT_TRUE(checkoutResult.isReady());
+  auto result = std::move(checkoutResult).get();
+
+  // BUG: EdenFS reports MODIFIED_MODIFIED because it sees a local FileInode
+  // (symlink) where the destination tree expects a directory. It doesn't
+  // consider that the symlink was ignored and should be silently overwritten.
+  //
+  // Sapling then fails trying to handle this conflict because the symlink
+  // was never tracked in the source commit.
+  //
+  // Once fixed, this should be:
+  //   EXPECT_EQ(0, result.conflicts.size());
+  EXPECT_THAT(
+      result.conflicts,
+      UnorderedElementsAre(makeConflict(
+          ConflictType::MODIFIED_MODIFIED, "src/link", "", Dtype::LINK)));
+}
+#endif
+
 } // namespace
 
 // TODO:
