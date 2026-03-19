@@ -741,6 +741,7 @@ async fn check_pushrebase_conflicts(
                     if let Some(Err(ref err)) = merge_result {
                         ctx.scuba()
                             .clone()
+                            .add("repo_name", reponame)
                             .add("merge_resolution_outcome", format!("{}", err))
                             .log_with_msg("Pushrebase merge resolution failed", None);
                     }
@@ -1361,6 +1362,8 @@ async fn dry_run_merge_resolution(
     max_file_size: u64,
     derive_fsnodes: bool,
 ) {
+    let repo_name = repo.repo_identity().name();
+
     // If derive_fsnodes is false, check if fsnodes are already derived.
     // If not, skip dry-run to avoid expensive derivation.
     if !derive_fsnodes {
@@ -1371,6 +1374,7 @@ async fn dry_run_merge_resolution(
         if !matches!(root_fsnode, Ok(Some(_))) {
             ctx.scuba()
                 .clone()
+                .add("repo_name", repo_name)
                 .add("merge_dry_run_outcome", "skipped_fsnodes_not_derived")
                 .log_with_msg("Pushrebase dry-run merge resolution", None);
             return;
@@ -1385,6 +1389,7 @@ async fn dry_run_merge_resolution(
     if prefix_conflict_count > 0 {
         ctx.scuba()
             .clone()
+            .add("repo_name", repo_name)
             .add("merge_dry_run_outcome", "skipped_prefix_conflicts")
             .add(
                 "merge_dry_run_prefix_conflicts",
@@ -1407,6 +1412,7 @@ async fn dry_run_merge_resolution(
     if exact_conflicts.len() > max_conflicts {
         ctx.scuba()
             .clone()
+            .add("repo_name", repo_name)
             .add("merge_dry_run_outcome", "too_many_conflicts")
             .add(
                 "merge_dry_run_total_conflicts",
@@ -1480,6 +1486,7 @@ async fn dry_run_merge_resolution(
         if local_fc.size() > max_file_size || server_fc.size() > max_file_size {
             ctx.scuba()
                 .clone()
+                .add("repo_name", repo_name)
                 .add("merge_dry_run_outcome", "file_too_large")
                 .add("merge_dry_run_file", non_root_path.to_string())
                 .add(
@@ -1532,6 +1539,7 @@ async fn dry_run_merge_resolution(
 
     let mut scuba = ctx.scuba().clone();
     scuba
+        .add("repo_name", repo_name)
         .add("merge_dry_run_outcome", outcome)
         .add("merge_dry_run_resolved", resolved_count)
         .add("merge_dry_run_conflicts", conflict_count)
@@ -1754,6 +1762,7 @@ async fn attempt_merge_resolution(
     // Log success
     ctx.scuba()
         .clone()
+        .add("repo_name", repo.repo_identity().name())
         .add("merge_resolution_outcome", "success")
         .add("merge_resolution_files", merged_file_changes.len() as i64)
         .log_with_msg("Pushrebase merge resolution succeeded", None);
