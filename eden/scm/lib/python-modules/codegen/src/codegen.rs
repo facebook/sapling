@@ -37,12 +37,21 @@ use cpython::Python;
 ///   It typically respects the `PYTHON_SYS_EXECUTABLE` env var.
 /// - `sys_path` will be inserted to Python's `sys.path[0:0]`.
 ///   If None, then pycompile.py reads $SYS_ARG0.
-pub fn generate_code(sys_path: Option<&Path>) -> PyResult<String> {
+pub fn generate_code(sys_path: Option<&Path>) -> Result<String, ()> {
+    let gil = Python::acquire_gil();
+    let py = gil.python();
+    match generate_code_py(py, sys_path) {
+        Ok(v) => Ok(v),
+        Err(e) => {
+            e.print(py);
+            Err(())
+        }
+    }
+}
+fn generate_code_py(py: Python, sys_path: Option<&Path>) -> PyResult<String> {
     let is_cargo = is_cargo();
 
     // Prepare the module.
-    let gil = Python::acquire_gil();
-    let py = gil.python();
     let module = PyModule::new(py, "sapling_codegen")?;
     let globals = module.dict(py);
     py.run(PYCOMPILE_SCRIPT, Some(&globals), None)?;
