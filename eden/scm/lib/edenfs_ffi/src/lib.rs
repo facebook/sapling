@@ -199,9 +199,6 @@ mod ffi {
 
         #[namespace = "facebook::eden"]
         fn set_matcher_result(wrapper: SharedPtr<MatcherWrapper>, value: Box<MercurialMatcher>);
-
-        #[namespace = "facebook::eden"]
-        fn set_matcher_error(wrapper: SharedPtr<MatcherWrapper>, error: String);
     }
 
     #[namespace = "facebook::eden"]
