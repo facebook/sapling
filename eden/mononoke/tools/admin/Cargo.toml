@@ -134,7 +134,7 @@ strum = { version = "0.27.1", features = ["derive"] }
 synced_commit_mapping = { version = "0.1.0", path = "../../features/commit_rewriting/synced_commit_mapping" }
 thiserror = "2.0.18"
 time_measuring = { version = "0.1.0", path = "../../common/time_measuring" }
-tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.50.0", features = ["full", "test-util", "tracing"] }
 tokio-stream = { version = "0.1.18", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
 tokio-util = { version = "0.7.18", features = ["full"] }
 topo_sort = { version = "0.1.0", path = "../../common/topo_sort" }

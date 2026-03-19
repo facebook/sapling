@@ -54,7 +54,7 @@ sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-s
 strum = { version = "0.27.1", features = ["derive"] }
 thiserror = "2.0.18"
 thrift_convert = { version = "0.1.0", path = "../common/thrift_convert" }
-tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.50.0", features = ["full", "test-util", "tracing"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 vec_map = "0.8"
 

@@ -30,7 +30,7 @@ restricted_paths_common = { version = "0.1.0", path = "../restricted_paths_commo
 sapling-clientinfo = { version = "0.1.0", path = "../../../scm/lib/clientinfo" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 thiserror = "2.0.18"
-tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.50.0", features = ["full", "test-util", "tracing"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]

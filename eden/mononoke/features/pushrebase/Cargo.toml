@@ -36,7 +36,7 @@ shared_error = { version = "0.1.0", git = "https://github.com/facebookexperiment
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 thiserror = "2.0.18"
 three_way_merge = { version = "0.1.0", path = "../../common/three_way_merge" }
-tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.50.0", features = ["full", "test-util", "tracing"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]

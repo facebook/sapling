@@ -79,7 +79,7 @@ slapi_service = { version = "0.1.0", path = "../../slapi/slapi_service" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 strum = { version = "0.27.1", features = ["derive"] }
 thiserror = "2.0.18"
-tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.50.0", features = ["full", "test-util", "tracing"] }
 tokio-stream = { version = "0.1.18", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
 topo_sort = { version = "0.1.0", path = "../../../common/topo_sort" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

@@ -16,5 +16,5 @@ justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mockall = "0.13.1"
 permission_checker = { version = "0.1.0", path = "../../common/permission_checker" }
-tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.50.0", features = ["full", "test-util", "tracing"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
