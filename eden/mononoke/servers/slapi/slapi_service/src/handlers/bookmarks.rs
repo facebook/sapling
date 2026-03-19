@@ -140,20 +140,27 @@ async fn set_bookmark<R: MononokeRepo>(
         (Some(to_hgid), Some(from_hgid)) => {
             // Move bookmark
             let to = HgChangesetId::new(HgNodeHash::from(to_hgid));
-            let to = repo
-                .changeset(to)
-                .await
-                .context("failed to resolve 'to' hgid")?
-                .ok_or(ErrorKind::HgIdNotFound(to_hgid))?
-                .id();
-
             let from = HgChangesetId::new(HgNodeHash::from(from_hgid));
-            let from = repo
-                .changeset(from)
-                .await
-                .context("failed to resolve 'from' hgid")?
-                .ok_or(ErrorKind::HgIdNotFound(from_hgid))?
-                .id();
+            let (to, from) = futures::try_join!(
+                async {
+                    anyhow::Ok(
+                        repo.changeset(to)
+                            .await
+                            .context("failed to resolve 'to' hgid")?
+                            .ok_or(ErrorKind::HgIdNotFound(to_hgid))?
+                            .id(),
+                    )
+                },
+                async {
+                    anyhow::Ok(
+                        repo.changeset(from)
+                            .await
+                            .context("failed to resolve 'from' hgid")?
+                            .ok_or(ErrorKind::HgIdNotFound(from_hgid))?
+                            .id(),
+                    )
+                },
+            )?;
 
             repo.move_bookmark(
                 &BookmarkKey::new(&bookmark)?,
