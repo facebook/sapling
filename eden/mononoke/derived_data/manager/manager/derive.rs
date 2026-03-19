@@ -1133,6 +1133,22 @@ impl DerivedDataManager {
         .await
     }
 
+    /// Check if a specific derivation pipeline stage has been derived for a changeset.
+    pub async fn is_stage_derived<Derivable>(
+        &self,
+        ctx: &CoreContext,
+        csid: ChangesetId,
+        stage_id: &str,
+    ) -> Result<bool, DerivationError>
+    where
+        Derivable: PipelineDerivable,
+    {
+        let derivation_ctx = self.derivation_context(None);
+        let outputs =
+            Derivable::fetch_stage_outputs(ctx, &derivation_ctx, stage_id, vec![csid]).await?;
+        Ok(outputs.contains_key(&csid))
+    }
+
     /// Fetch derived data for a changeset if it has previously been derived.
     pub async fn fetch_derived<Derivable>(
         &self,
