@@ -134,6 +134,7 @@ fn log_execution_stats(
     let mut stderr = None;
 
     scuba.add_common_server_data();
+    scuba.add_metadata(ctx.metadata());
     ctx.perf_counters().insert_perf_counters(&mut scuba);
 
     match result.as_mut() {
