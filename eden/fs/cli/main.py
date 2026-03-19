@@ -3100,6 +3100,31 @@ class StopCmd(Subcmd):
 
         return self._await_shutdown(instance, pid, args.timeout)
 
+    def _systemd_stop(
+        self, instance: EdenInstance, args: argparse.Namespace, unit: str
+    ) -> int:
+        """Stop edenfs via systemctl for systemd-managed instances."""
+        pid = check_health_using_lockfile(instance.state_dir).pid
+        if pid is None:
+            print_stderr("error: edenfs is not running")
+            return SHUTDOWN_EXIT_CODE_NOT_RUNNING_ERROR
+
+        # Stop aux processes if thrift is available
+        try:
+            with instance.get_thrift_client_legacy(
+                timeout=self.__thrift_timeout(args)
+            ) as client:
+                stop_aux_processes(client)
+        except Exception as e:
+            print_stderr(f"warning: failed to stop aux processes: {e}")
+
+        print(f"Stopping edenfs daemon (pid {pid}) via systemd...")
+        rc = subprocess.call(["systemctl", "--user", "stop", "--no-block", unit])
+        if rc != 0:
+            print_stderr(f"warning: systemctl stop failed with exit code {rc}")
+
+        return self._await_shutdown(instance, pid, args.timeout)
+
     def _await_shutdown(self, instance: EdenInstance, pid: int, timeout: float) -> int:
         """Wait for edenfs to shut down and return the appropriate exit code."""
         if timeout == 0:
