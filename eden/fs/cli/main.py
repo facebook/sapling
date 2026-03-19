@@ -3073,6 +3073,18 @@ class StopCmd(Subcmd):
             return self._stop(instance, args)
 
     def _stop(self, instance: EdenInstance, args: argparse.Namespace) -> int:
+        if sys.platform == "linux":
+            try:
+                unit = daemon._get_systemd_unit(instance)
+                if daemon._is_systemd_unit_active(unit):
+                    # as long as the service is managed by systemd, we should use
+                    # systemctl to stop it otherwise it will be restarted by systemd
+                    return self._systemd_stop(instance, args, unit)
+            except Exception as ex:
+                print_stderr(
+                    f"warning: systemd detection failed, using legacy stop: {ex}"
+                )
+
         pid = None
         try:
             try:
