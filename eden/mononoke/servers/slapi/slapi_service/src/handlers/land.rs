@@ -97,20 +97,27 @@ async fn land_stack<R: MononokeRepo>(
     let repo = repo.repo_ctx();
 
     let head = HgChangesetId::new(HgNodeHash::from(head_hgid));
-    let head = repo
-        .changeset(head)
-        .await
-        .context("failed to resolve head")?
-        .ok_or(ErrorKind::HgIdNotFound(head_hgid))?
-        .id();
-
     let base = HgChangesetId::new(HgNodeHash::from(base_hgid));
-    let base = repo
-        .changeset(base)
-        .await
-        .context("failed to resolve base")?
-        .ok_or(ErrorKind::HgIdNotFound(base_hgid))?
-        .id();
+    let (head, base) = futures::try_join!(
+        async {
+            anyhow::Ok(
+                repo.changeset(head)
+                    .await
+                    .context("failed to resolve head")?
+                    .ok_or(ErrorKind::HgIdNotFound(head_hgid))?
+                    .id(),
+            )
+        },
+        async {
+            anyhow::Ok(
+                repo.changeset(base)
+                    .await
+                    .context("failed to resolve base")?
+                    .ok_or(ErrorKind::HgIdNotFound(base_hgid))?
+                    .id(),
+            )
+        },
+    )?;
 
     let force_local_pushrebase = justknobs::eval(
         "scm/mononoke:edenapi_force_local_pushrebase",
