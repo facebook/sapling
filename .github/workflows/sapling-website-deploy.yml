@@ -7,7 +7,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     permissions:
       contents: write
     concurrency:
@@ -32,12 +32,17 @@ jobs:
       # - For a release, it should depend on the binaries being published and
       #   run afterwards with the new version.
       # - For a pull request, `sl` built from the code that is out for review.
-      - name: Download latest Sapling release
+      - name: Download and install sapling
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ${{ format('gh release download --pattern \*.Ubuntu22.04.deb --repo {0}', github.repository) }}
-      - name: Install Sapling
-        run: sudo apt install -y ./*.Ubuntu22.04.deb
+        run: |
+          mkdir -p ~/.local/share/sl
+          cd ~/.local/share/sl
+          ${{ format('gh release download --pattern \*linux-x64.tar.xz --repo {0}', github.repository) }}
+          tar xf *.tar.xz
+          realpath . >> "$GITHUB_PATH"
+      - name: Test sl version
+        run: sl version
       - name: Write out release data
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
