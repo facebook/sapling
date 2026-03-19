@@ -378,7 +378,10 @@ def _systemctl_start_or_reload(
     """
     daemon_util.write_systemd_args_file(instance.state_dir, cmd, eden_env)
     unit = _get_systemd_unit(instance)
-    action = "reload" if takeover else "start"
+    if takeover and _is_systemd_unit_active(unit):
+        action = "reload"
+    else:
+        action = "start"
     rc = subprocess.call(["systemctl", "--user", action, unit])
 
     # Display the daemon's startup output captured by systemd (StandardOutput=file:).
