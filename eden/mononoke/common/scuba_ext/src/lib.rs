@@ -198,6 +198,11 @@ impl MononokeScubaSampleBuilder {
                 consistent_hashing: Some(client_info.correlator.as_str()),
             },
             ExperimentJKData {
+                jk_name: "scm/mononoke:remote_commit_compare",
+                switch_values: vec!["instagram-server", "www", "fbcode"],
+                consistent_hashing: Some(client_info.correlator.as_str()),
+            },
+            ExperimentJKData {
                 jk_name: "scm/mononoke:retry_query_from_replica_with_consistency_check",
                 switch_values: vec![
                     "newfilenodes::reader",
