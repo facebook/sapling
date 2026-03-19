@@ -126,6 +126,7 @@ def wait_for_shutdown(
     config_dir: Path,
     timeout: float,
     kill_timeout: float = DEFAULT_SIGKILL_TIMEOUT,
+    instance: Optional["EdenInstance"] = None,
 ) -> bool:
     """Wait for a process to exit.
 
@@ -148,12 +149,15 @@ def wait_for_shutdown(
         "within {} seconds. Attempting SIGKILL.",
         timeout,
     )
-    sigkill_process(pid, config_dir, timeout=kill_timeout)
+    sigkill_process(pid, config_dir, timeout=kill_timeout, instance=instance)
     return False
 
 
 def sigkill_process(
-    pid: int, config_dir: Path, timeout: float = DEFAULT_SIGKILL_TIMEOUT
+    pid: int,
+    config_dir: Path,
+    timeout: float = DEFAULT_SIGKILL_TIMEOUT,
+    instance: Optional["EdenInstance"] = None,
 ) -> None:
     """Send SIGKILL to a process, and wait for it to exit.
 
