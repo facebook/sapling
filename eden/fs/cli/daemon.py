@@ -153,6 +153,20 @@ def wait_for_shutdown(
     return False
 
 
+def _send_sigkill(
+    pid: int,
+    instance: Optional["EdenInstance"] = None,
+) -> None:
+    """Send SIGKILL to edenfs."""
+    proc_utils: proc_utils_mod.ProcUtils = proc_utils_mod.new()
+    try:
+        proc_utils.kill_process(pid)
+    except PermissionError as ex:
+        raise ShutdownError(
+            f"Received a permission error when attempting to kill edenfs: {ex}"
+        )
+
+
 def sigkill_process(
     pid: int,
     config_dir: Path,
@@ -185,13 +199,7 @@ def sigkill_process(
         except Exception as e:
             print_stderr(f"Failed to delete heartbeat file {heartbeat_file}: {e}")
 
-    proc_utils: proc_utils_mod.ProcUtils = proc_utils_mod.new()
-    try:
-        proc_utils.kill_process(pid)
-    except PermissionError as ex:
-        raise ShutdownError(
-            f"Received a permission error when attempting to kill edenfs: {ex}"
-        )
+    _send_sigkill(pid, instance)
 
     if timeout <= 0:
         return
