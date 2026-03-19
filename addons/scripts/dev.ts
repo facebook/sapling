@@ -8,6 +8,7 @@
 import type {EjecaChildProcess} from 'shared/ejeca';
 
 import chalk from 'chalk';
+import {spawn} from 'node:child_process';
 import path from 'path';
 import {ejeca} from 'shared/ejeca';
 import {defer} from 'shared/utils';
@@ -17,7 +18,7 @@ function usage() {
   process.stdout.write(`
 ${chalk.bold('yarn dev')} - Combined server + client builds for ISL.
 
-${chalk.bold('Usage:')} yarn dev [browser|vscode]
+${chalk.bold('Usage:')} yarn dev [browser|vscode|tui]
   --production     Build in production mode
   --launch [CWD]   Launch browser or VS Code in CWD
 
@@ -41,11 +42,16 @@ ${chalk.bold('Examples:')}
     )}
   VSCODE_CMD=code-insiders yarn dev vscode --launch .
     ${chalk.gray('Build & launch VS Code Insiders instead of VS Code')}
+
+  yarn dev tui
+    ${chalk.gray('Build TUI in development mode, watch for changes')}
+  yarn dev tui --launch ~/my-repo
+    ${chalk.gray('Build TUI and launch it in ~/my-repo')}
 `);
 }
 
 type Args = {
-  kind: 'browser' | 'vscode';
+  kind: 'browser' | 'vscode' | 'tui';
   isProduction: boolean;
   /** If provided, launch server/vscode with this as the cwd */
   launchDir?: string;
@@ -56,8 +62,8 @@ function parseArgs(): Args {
     usage();
     process.exit(0);
   }
-  const kind = args[0] as 'browser' | 'vscode';
-  if (!['browser', 'vscode'].includes(kind)) {
+  const kind = args[0] as 'browser' | 'vscode' | 'tui';
+  if (!['browser', 'vscode', 'tui'].includes(kind)) {
     process.stdout.write(
       kind ? chalk.red('Unknown kind:', kind) : chalk.red('Missing kind') + '\n',
     );
@@ -296,87 +302,151 @@ async function main() {
   const serverReady = defer();
   const configs: Array<MultiRunnerConfig> = [];
 
-  // Build Client/Webview
-  configs.push({
-    cwd: kind === 'vscode' ? 'vscode' : 'isl',
-    cmd: 'yarn',
-    args:
-      kind === 'vscode'
-        ? isProduction
-          ? ['build-webview']
-          : ['watch-webview']
-        : isProduction
-          ? ['build']
-          : ['start'],
-    customStatus: isProduction
-      ? undefined
-      : (chunk: string, status?: string) => {
-          if (chunk.includes('ready in')) {
-            clientReady.resolve(null);
-            return (
-              chalk.green(kind === 'vscode' ? 'Webview Ready' : 'Client Ready') +
-              ' watching for changes...'
-            );
+  if (kind === 'tui') {
+    if (launchDir != null) {
+      // TUI with --launch: build first, then exec TUI with inherited stdio (TTY).
+      // The TUI is an interactive terminal app that needs direct access to stdin/stdout.
+      // MultiRunner pipes stdout, which strips the TTY, so we build via MultiRunner
+      // for progress output, then kill it and spawn the TUI with stdio: 'inherit'.
+      const tuiReady = defer();
+      configs.push({
+        cwd: 'isl-tui-experimental',
+        cmd: 'yarn',
+        args: ['build'],
+        customStatus: (chunk: string, status?: string) => {
+          if (chunk.includes('created ') || chunk.includes('built in')) {
+            tuiReady.resolve(null);
+            return chalk.green('TUI Ready');
           }
           return status;
         },
-  });
+      });
 
-  // Build server/extension
-  configs.push({
-    cwd: kind === 'vscode' ? 'vscode' : 'isl-server',
-    cmd: 'yarn',
-    args:
-      kind === 'vscode'
-        ? isProduction
-          ? ['build-extension']
-          : ['watch-extension']
-        : isProduction
-          ? ['build']
-          : ['watch'],
-    customStatus: isProduction
-      ? undefined
-      : (chunk: string, status?: string) => {
-          if (chunk.includes('created ')) {
-            serverReady.resolve(null);
-            return (
-              chalk.green(kind === 'vscode' ? 'Extension Ready' : 'Server Ready') +
-              ' watching for changes...'
-            );
-          }
-          return status;
-        },
-  });
+      const runner = new MultiRunner(configs);
 
-  // Launch browser / VS Code
-  if (launchDir != null) {
-    const waitFor = Promise.all([clientReady.promise, serverReady.promise]);
-    configs.push(
-      kind === 'vscode'
-        ? {
-            cwd: 'vscode',
-            cmd: process.env.VSCODE_CMD || Internal.codeCommand || 'code',
-            args: [
-              `--extensionDevelopmentPath=${path.resolve('./vscode')}`,
-              launchDir,
-              ...(Internal.vscodeArgs ?? []),
-            ],
-            waitFor,
-          }
-        : {
-            cwd: 'isl-server',
-            cmd: 'yarn',
-            args: ['serve', '--dev', '--foreground', '--stdout', '--force', '--cwd', launchDir],
-            waitFor,
-            customStatus: (_chunk: string, _status?: string) => {
-              return chalk.white(
-                `Press ${chalk.bold.white('R')} to restart server, ${chalk.bold.white(
-                  'Q',
-                )} to quit`,
-              );
-            },
+      const cleanupAndExit = () => {
+        runner.killAll();
+        process.exit(0);
+      };
+      process.on('SIGINT', cleanupAndExit);
+      process.on('SIGTERM', cleanupAndExit);
+      process.on('exit', cleanupAndExit);
+
+      await runner.spawnAll();
+
+      // Build finished — kill the runner and hand the terminal to the TUI
+      runner.killAll();
+
+      const tui = spawn('node', ['--enable-source-maps', 'dist/cli.js', '--cwd', launchDir], {
+        cwd: 'isl-tui-experimental',
+        stdio: 'inherit',
+      });
+      tui.on('exit', code => process.exit(code ?? 0));
+
+      // Wait indefinitely so the process stays alive until the TUI exits
+      await new Promise(() => {});
+      return;
+    }
+
+    // TUI without --launch: watch-only (no TUI launch)
+    const tuiReady = defer();
+    configs.push({
+      cwd: 'isl-tui-experimental',
+      cmd: 'yarn',
+      args: isProduction ? ['build'] : ['watch'],
+      customStatus: isProduction
+        ? undefined
+        : (chunk: string, status?: string) => {
+            if (chunk.includes('created ') || chunk.includes('built in')) {
+              tuiReady.resolve(null);
+              return chalk.green('TUI Ready') + ' watching for changes...';
+            }
+            return status;
           },
-    );
+    });
+  } else {
+    // Build Client/Webview
+    configs.push({
+      cwd: kind === 'vscode' ? 'vscode' : 'isl',
+      cmd: 'yarn',
+      args:
+        kind === 'vscode'
+          ? isProduction
+            ? ['build-webview']
+            : ['watch-webview']
+          : isProduction
+            ? ['build']
+            : ['start'],
+      customStatus: isProduction
+        ? undefined
+        : (chunk: string, status?: string) => {
+            if (chunk.includes('ready in')) {
+              clientReady.resolve(null);
+              return (
+                chalk.green(kind === 'vscode' ? 'Webview Ready' : 'Client Ready') +
+                ' watching for changes...'
+              );
+            }
+            return status;
+          },
+    });
+
+    // Build server/extension
+    configs.push({
+      cwd: kind === 'vscode' ? 'vscode' : 'isl-server',
+      cmd: 'yarn',
+      args:
+        kind === 'vscode'
+          ? isProduction
+            ? ['build-extension']
+            : ['watch-extension']
+          : isProduction
+            ? ['build']
+            : ['watch'],
+      customStatus: isProduction
+        ? undefined
+        : (chunk: string, status?: string) => {
+            if (chunk.includes('created ')) {
+              serverReady.resolve(null);
+              return (
+                chalk.green(kind === 'vscode' ? 'Extension Ready' : 'Server Ready') +
+                ' watching for changes...'
+              );
+            }
+            return status;
+          },
+    });
+
+    // Launch browser / VS Code
+    if (launchDir != null) {
+      const waitFor = Promise.all([clientReady.promise, serverReady.promise]);
+      configs.push(
+        kind === 'vscode'
+          ? {
+              cwd: 'vscode',
+              cmd: process.env.VSCODE_CMD || Internal.codeCommand || 'code',
+              args: [
+                `--extensionDevelopmentPath=${path.resolve('./vscode')}`,
+                launchDir,
+                ...(Internal.vscodeArgs ?? []),
+              ],
+              waitFor,
+            }
+          : {
+              cwd: 'isl-server',
+              cmd: 'yarn',
+              args: ['serve', '--dev', '--foreground', '--stdout', '--force', '--cwd', launchDir],
+              waitFor,
+              customStatus: (_chunk: string, _status?: string) => {
+                return chalk.white(
+                  `Press ${chalk.bold.white('R')} to restart server, ${chalk.bold.white(
+                    'Q',
+                  )} to quit`,
+                );
+              },
+            },
+      );
+    }
   }
 
   const runner = new MultiRunner(configs);

@@ -5,6 +5,7 @@
     "shared",
     "isl",
     "isl-server",
+    "facebook/isl-tui-experimental",
     "textmate",
     "vscode"
   ],

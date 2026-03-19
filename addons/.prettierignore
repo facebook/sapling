@@ -5,6 +5,7 @@
 /isl/public/generated
 /isl-server/coverage/
 /isl-server/dist/
+/facebook/isl-tui-experimental/dist/
 /isl-server/src/__generated__/
 /isl-server/src/facebook/phabricator/generated/
 /isl-server/src/facebook/fullRepoBranch/generated/
