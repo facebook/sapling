@@ -6,6 +6,7 @@
 
 # pyre-strict
 
+import datetime
 import os
 import re
 import stat
@@ -365,6 +366,42 @@ def _is_systemd_unit_active(unit: str) -> bool:
         return False
 
 
+def _rotate_startup_log(log_path: Path, keep: int = 5) -> None:
+    """Rotate the startup log, keeping the last `keep` copies.
+
+    Renames the current log to include its last-modified timestamp, then
+    removes the oldest copies beyond `keep`.
+    """
+    try:
+        if not log_path.exists():
+            return
+        mtime = log_path.stat().st_mtime
+        ts = datetime.datetime.fromtimestamp(mtime).strftime("%Y%m%d_%H%M%S")
+        rotated = log_path.with_name(f"{log_path.name}.{ts}")
+        log_path.rename(rotated)
+    except OSError as e:
+        print_stderr(f"warning: failed to rotate startup log: {e}")
+        # If we can't rotate, just truncate.
+        try:
+            log_path.write_text("")
+        except OSError as e2:
+            print_stderr(f"warning: failed to truncate startup log: {e2}")
+        return
+
+    # Prune old rotated logs beyond the retention limit.
+    try:
+        prefix = f"{log_path.name}."
+        rotated_logs = sorted(
+            (p for p in log_path.parent.iterdir() if p.name.startswith(prefix)),
+            key=lambda p: p.name,
+            reverse=True,
+        )
+        for old in rotated_logs[keep:]:
+            old.unlink(missing_ok=True)
+    except OSError as e:
+        print_stderr(f"warning: failed to prune old startup logs: {e}")
+
+
 def _systemctl_start_or_reload(
     instance: EdenInstance,
     cmd: List[str],
@@ -382,14 +419,21 @@ def _systemctl_start_or_reload(
         action = "reload"
     else:
         action = "start"
+
+    # Rotate old startup logs before launching so we only capture output
+    # from this invocation.  systemd uses StandardOutput=file: which appends,
+    # so stale content would otherwise leak into the CLI output.
+    # TODO: make the retention count configurable
+    startup_log = instance.state_dir / daemon_util.SYSTEMD_STARTUP_LOG_FILENAME
+    _rotate_startup_log(startup_log, keep=5)
+
     rc = subprocess.call(["systemctl", "--user", action, unit])
 
     # Display the daemon's startup output captured by systemd (StandardOutput=file:).
-    startup_log = instance.state_dir / daemon_util.SYSTEMD_STARTUP_LOG_FILENAME
     try:
         sys.stderr.write(startup_log.read_text())
-    except OSError:
-        pass
+    except OSError as e:
+        print_stderr(f"warning: failed to read startup log: {e}")
     return rc
 
 
