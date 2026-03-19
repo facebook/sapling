@@ -20,8 +20,12 @@ function findAssetWithFilenameSubstr(searchString: string) {
 
 export const latestReleaseVersion = latestReleaseAssets.name;
 
-export const macArmAsset = findAssetWithFilenameSubstr('arm64_ventura.bottle.tar.gz');
+export const macArmAsset = findAssetWithFilenameSubstr('.bottle.tar.gz');
 
-export const ubuntu22 = findAssetWithFilenameSubstr('Ubuntu22.04.deb');
+export const linuxX64Asset = findAssetWithFilenameSubstr('linux-x64.tar.xz');
 
-export const windowsAsset = findAssetWithFilenameSubstr('sapling_windows');
+// Prefix for constructing linux asset url with a variable arch (x64 or arm64).
+// e.g. url: `${linuxAssetUrlPrefix}${ARCH}.tar.xz`
+export const linuxAssetUrlPrefix = linuxX64Asset.url.replace(/x64\.tar\.xz$/, '');
+
+export const windowsAsset = findAssetWithFilenameSubstr('windows-x64.zip');
