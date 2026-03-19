@@ -7,6 +7,7 @@
 
 #![allow(non_camel_case_types)]
 
+use cats::CatTokenType;
 use cats::CatsSection;
 use cpython::*;
 use cpython_ext::PyNone;
@@ -19,12 +20,13 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 
     m.add(
         py,
-        "findcats",
+        "find_cats_by_type",
         py_fn!(
             py,
-            findcats(
+            find_cats_by_type(
                 cfg: config,
                 section_name: &str,
+                token_type: &str,
                 raise_if_missing: bool = true
             )
         ),
@@ -32,12 +34,13 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 
     m.add(
         py,
-        "getcats",
+        "get_cats_by_type",
         py_fn!(
             py,
-            getcats(
+            get_cats_by_type(
                 cfg: config,
                 section_name: &str,
+                token_type: &str,
                 raise_if_missing: bool = true
             )
         ),
@@ -46,16 +49,22 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     Ok(m)
 }
 
-fn findcats(
+fn parse_token_type(py: Python, token_type: &str) -> PyResult<CatTokenType> {
+    CatTokenType::from_type_str(token_type).map_pyerr(py)
+}
+
+fn find_cats_by_type(
     py: Python,
     cfg: config,
     section_name: &str,
+    token_type: &str,
     raise_if_missing: bool,
 ) -> PyResult<PyObject> {
     let cfg = &cfg.get_cfg(py);
+    let token_type = parse_token_type(py, token_type)?;
 
     CatsSection::from_config(cfg, section_name)
-        .find_cats()
+        .find_cats_by_type(token_type)
         .or_else(|e| if raise_if_missing { Err(e) } else { Ok(None) })
         .map_pyerr(py)?
         .map_or_else(
@@ -71,21 +80,29 @@ fn findcats(
                     dict.set_item(py, "priority", group.priority)?;
                 }
 
+                let type_str = match group.token_type {
+                    CatTokenType::Forwarded => "forwarded",
+                    CatTokenType::Auth => "auth",
+                };
+                dict.set_item(py, "type", type_str)?;
+
                 Ok((&group.name, dict).to_py_object(py).into_object())
             },
         )
 }
 
-fn getcats(
+fn get_cats_by_type(
     py: Python,
     cfg: config,
     section_name: &str,
+    token_type: &str,
     raise_if_missing: bool,
 ) -> PyResult<PyObject> {
     let cfg = &cfg.get_cfg(py);
+    let token_type = parse_token_type(py, token_type)?;
 
     CatsSection::from_config(cfg, section_name)
-        .get_cats()
+        .get_cats_by_type(token_type)
         .or_else(|e| if raise_if_missing { Err(e) } else { Ok(None) })
         .map_pyerr(py)?
         .map_or_else(

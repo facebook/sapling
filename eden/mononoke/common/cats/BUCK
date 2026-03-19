@@ -12,5 +12,6 @@ rust_library(
         "//crypto/cat/rust:cryptocat",
         "//eden/mononoke/common/permission_checker:permission_checker",
         "//eden/mononoke/metaconfig:metaconfig_types",
+        "//eden/scm/lib/cats/constants:cats_constants",
     ],
 )

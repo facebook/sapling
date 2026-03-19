@@ -12,6 +12,7 @@ use anyhow::Result;
 use anyhow::bail;
 use base64::Engine;
 use bytes::Bytes;
+use cats_constants::X_AUTH_CATS_HEADER;
 use fbinit::FacebookInit;
 use gotham::helpers::http::Body;
 use gotham::state::FromState;
@@ -37,7 +38,7 @@ const SLOW_REQUEST_THRESHOLD_MS: i64 = 10000;
 lazy_static! {
     static ref FILTERED_HEADERS: HashSet<&'static str> = {
         let mut m = HashSet::new();
-        m.insert("x-auth-cats");
+        m.insert(X_AUTH_CATS_HEADER);
         m
     };
 }

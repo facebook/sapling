@@ -10,8 +10,10 @@
 // [cats]
 // entry_name.priority=20
 // entry_name.path=/var/boo/cat
+// entry_name.type=forwarded  # If not present, "forwarded" is the default.
 // different_entry_name.priority=5
 // different_entry_name.more_custom_data=/some/other
+// different_entry_name.type=auth
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -37,11 +39,35 @@ struct Cats {
     crypto_auth_tokens: String,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum CatTokenType {
+    Forwarded,
+    Auth,
+}
+
+impl CatTokenType {
+    pub fn from_type_str(s: &str) -> Result<Self> {
+        match s {
+            "forwarded" => Ok(Self::Forwarded),
+            "auth" => Ok(Self::Auth),
+            other => anyhow::bail!("unknown CAT token type: {}", other),
+        }
+    }
+
+    pub fn header_name(&self) -> &'static str {
+        match self {
+            Self::Forwarded => cats_constants::X_FORWARDED_CATS_HEADER,
+            Self::Auth => cats_constants::X_AUTH_CATS_HEADER,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CatGroup {
     pub name: String,
     pub priority: i32,
     pub path: Option<PathBuf>,
+    pub token_type: CatTokenType,
 }
 
 impl CatGroup {
@@ -59,10 +85,17 @@ impl CatGroup {
             .transpose()?
             .unwrap_or_default();
 
+        let token_type = settings
+            .remove("type")
+            .map(|s| CatTokenType::from_type_str(&s))
+            .transpose()?
+            .unwrap_or(CatTokenType::Forwarded);
+
         Ok(Self {
             name,
             priority,
             path,
+            token_type,
         })
     }
 }
@@ -103,12 +136,15 @@ impl<'a> CatsSection<'a> {
         Self { groups, config }
     }
 
-    /// Find existing cats with highest priority.
-    pub fn find_cats(&self) -> Result<Option<CatGroup>, MissingCATs> {
+    /// Find existing cats with highest priority, filtered by token type.
+    pub fn find_cats_by_type(
+        &self,
+        token_type: CatTokenType,
+    ) -> Result<Option<CatGroup>, MissingCATs> {
         let mut best: Option<&CatGroup> = None;
         let mut missing = Vec::new();
 
-        for group in &self.groups {
+        for group in self.groups.iter().filter(|g| g.token_type == token_type) {
             // If there is an existing candidate, check whether the current
             // cats entry is a more specific match.
             if let Some(best) = best {
@@ -144,8 +180,8 @@ impl<'a> CatsSection<'a> {
         }
     }
 
-    pub fn get_cats(&self) -> Result<Option<String>> {
-        match self.find_cats() {
+    pub fn get_cats_by_type(&self, token_type: CatTokenType) -> Result<Option<String>> {
+        match self.find_cats_by_type(token_type) {
             Ok(Some(cats_group)) => {
                 // The "preminted" config group (Dev Docker Images) uses a
                 // multi-token file format. Use the preminted library to get

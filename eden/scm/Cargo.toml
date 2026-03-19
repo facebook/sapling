@@ -22,6 +22,7 @@ members = [
   "lib/blackbox/serde_alt",
   "lib/blob",
   "lib/cats",
+  "lib/cats/constants",
   "lib/checkout",
   "lib/clidispatch",
   "lib/clientinfo",

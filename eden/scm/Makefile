@@ -176,6 +176,7 @@ install-getdeps:
 
 # Exclusions for OSS getdeps cli tests.  Newline separated
 # test-casecollision.t: flaky on github CI, intermittent FATAL: exception not rethrown
+# test-auth-cats.t: internal crypto auth token test
 # test-cats.t: internal crpyto token test
 # test-check-execute.t: fails on CI, passes locally on ubuntu-22.04
 # test-clone-per-repo-config.t: fails in oss, looks like depends on fb hgrc.dynamic
@@ -201,6 +202,7 @@ install-getdeps:
 # test-agent-advice.t: depends on Meta-internal agent instructions (fb/ module)
 GETDEPS_TEST_EXCLUSION_LIST := \
   test-agent-advice.t \
+  test-auth-cats.t \
   test-biggrep.t \
   test-casecollision.t \
 	test-cats.t \

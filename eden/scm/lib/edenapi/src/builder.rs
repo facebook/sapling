@@ -201,9 +201,14 @@ impl HttpClientBuilder {
             format!("{}/{}", source, version::VERSION),
         );
 
-        let cats = CatsSection::from_config(&config, "cats").get_cats();
-        if let Ok(Some(cats)) = cats {
-            headers.insert("x-forwarded-cats".to_string(), cats.clone());
+        let cats_section = CatsSection::from_config(&config, "cats");
+
+        if let Ok(Some(cats)) = cats_section.get_cats_by_type(cats::CatTokenType::Forwarded) {
+            headers.insert(cats_constants::X_FORWARDED_CATS_HEADER.to_string(), cats);
+        }
+
+        if let Ok(Some(auth_cats)) = cats_section.get_cats_by_type(cats::CatTokenType::Auth) {
+            headers.insert(cats_constants::X_AUTH_CATS_HEADER.to_string(), auth_cats);
         }
 
         // edenapi.maxrequests is old name supported for transition to new name - can delete in future
@@ -613,4 +618,77 @@ impl TryFrom<HttpClientBuilder> for Config {
 fn parse_headers(headers: impl AsRef<str>) -> Result<HashMap<String, String>, Error> {
     serde_json::from_str(headers.as_ref())
         .context(format!("Not a valid JSON object: {:?}", headers.as_ref()))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeMap;
+
+    use super::*;
+
+    fn make_config(entries: Vec<(&str, &str)>) -> BTreeMap<String, String> {
+        let mut base: Vec<(&str, &str)> = vec![
+            ("edenapi.url", "https://example.com/edenapi"),
+            ("remotefilelog.reponame", "testrepo"),
+        ];
+        base.extend(entries);
+        base.into_iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect()
+    }
+
+    #[test]
+    fn test_auth_cats_header_from_file() {
+        let dir = std::env::temp_dir().join("test_auth_cats_header_from_file");
+        std::fs::create_dir_all(&dir).unwrap();
+        let cats_file = dir.join("cats_token");
+        std::fs::write(
+            &cats_file,
+            r#"{"crypto_auth_tokens":"my-secret-cat-token"}"#,
+        )
+        .unwrap();
+
+        let config = make_config(vec![
+            ("cats.authentry.path", cats_file.to_str().unwrap()),
+            ("cats.authentry.type", "auth"),
+        ]);
+
+        let builder = HttpClientBuilder::from_config(&config).unwrap();
+        assert_eq!(
+            builder
+                .headers
+                .get(cats_constants::X_AUTH_CATS_HEADER)
+                .map(|s| s.as_str()),
+            Some("my-secret-cat-token"),
+        );
+
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_auth_cats_missing_file_no_header() {
+        let config = make_config(vec![
+            ("cats.authentry.path", "/nonexistent/path/to/cats_token"),
+            ("cats.authentry.type", "auth"),
+        ]);
+
+        let builder = HttpClientBuilder::from_config(&config).unwrap();
+        assert!(
+            !builder
+                .headers
+                .contains_key(cats_constants::X_AUTH_CATS_HEADER)
+        );
+    }
+
+    #[test]
+    fn test_auth_cats_no_config_no_header() {
+        let config = make_config(vec![]);
+
+        let builder = HttpClientBuilder::from_config(&config).unwrap();
+        assert!(
+            !builder
+                .headers
+                .contains_key(cats_constants::X_AUTH_CATS_HEADER)
+        );
+    }
 }

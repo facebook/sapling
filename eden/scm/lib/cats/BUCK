@@ -24,6 +24,7 @@ rust_library(
         "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/cats/constants:cats_constants",
         "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/util:util",
     ] + select({

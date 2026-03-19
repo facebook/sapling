@@ -6,12 +6,11 @@
  */
 
 use anyhow::Error;
+use cats_constants::X_AUTH_CATS_HEADER;
 use fbinit::FacebookInit;
 use http::HeaderMap;
 use metaconfig_types::Identity;
 use permission_checker::MononokeIdentitySet;
-
-pub const HEADER_CRYPTO_AUTH_TOKENS: &str = "x-auth-cats";
 
 #[cfg(not(fbcode_build))]
 pub fn try_get_cats_idents(
@@ -28,7 +27,7 @@ pub fn try_get_cats_idents(
     headers: &HeaderMap,
     verifier_identity: &Identity,
 ) -> Result<Option<MononokeIdentitySet>, Error> {
-    let cats = match headers.get(HEADER_CRYPTO_AUTH_TOKENS) {
+    let cats = match headers.get(X_AUTH_CATS_HEADER) {
         Some(cats) => cats,
         None => return Ok(None),
     };

@@ -41,6 +41,7 @@ permission_checker = { version = "0.1.0", path = "../permission_checker" }
 pin-project = "1.1.11"
 quiet_stream = { version = "0.1.0", path = "../quiet_stream" }
 rate_limiting = { version = "0.1.0", path = "../rate_limiting" }
+sapling-cats-constants = { version = "0.1.0", path = "../../../scm/lib/cats/constants" }
 sapling-clientinfo = { version = "0.1.0", path = "../../../scm/lib/clientinfo" }
 scopeguard = "1.2.0"
 scuba_ext = { version = "0.1.0", path = "../scuba_ext" }

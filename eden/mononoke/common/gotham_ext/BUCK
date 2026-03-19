@@ -53,6 +53,7 @@ rust_library(
         "//eden/mononoke/common/yield_stream:yield_stream",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/servers/slapi/slapi_server/context:context",
+        "//eden/scm/lib/cats/constants:cats_constants",
         "//eden/scm/lib/clientinfo:clientinfo",
     ],
 )

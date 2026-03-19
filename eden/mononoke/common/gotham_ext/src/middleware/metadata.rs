@@ -9,6 +9,7 @@ use std::net::IpAddr;
 use std::net::SocketAddr;
 
 use cats::try_get_cats_idents;
+use cats_constants::X_FORWARDED_CATS_HEADER;
 use clientinfo::CLIENT_INFO_HEADER;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
@@ -39,7 +40,6 @@ const ENCODED_CLIENT_IDENTITY: &str = "x-fb-validated-client-encoded-identity";
 const CLIENT_IP: &str = "tfb-orig-client-ip";
 const CLIENT_PORT: &str = "tfb-orig-client-port";
 const HEADER_REVPROXY_REGION: &str = "x-fb-revproxy-region";
-const HEADER_FORWARDED_CATS: &str = "x-forwarded-cats";
 const FETCH_CAUSE_HEADER: &str = "X-Fetch-Cause";
 const FETCH_FROM_CAS_ATTEMPTED_HEADER: &str = "X-Fetch-From-CAS-Attempted";
 
@@ -156,7 +156,7 @@ impl Middleware for MetadataMiddleware {
                 metadata.add_revproxy_region(revproxy_region);
             }
             if let Some(vi_cats) = headers
-                .get(HEADER_FORWARDED_CATS)
+                .get(X_FORWARDED_CATS_HEADER)
                 .and_then(|x| x.to_str().ok())
                 .map(|x| x.to_string())
             {

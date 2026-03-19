@@ -15,6 +15,7 @@ name = "cats"
 [dependencies]
 anyhow = "1.0.102"
 indexmap = { version = "2.13.0", features = ["arbitrary", "rayon", "serde"] }
+sapling-cats-constants = { version = "0.1.0", path = "constants" }
 sapling-configmodel = { version = "0.1.0", path = "../config/model" }
 sapling-util = { version = "0.1.0", path = "../util" }
 serde = { version = "1.0.219", features = ["derive", "rc"] }

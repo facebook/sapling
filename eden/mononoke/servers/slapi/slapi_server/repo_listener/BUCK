@@ -63,6 +63,7 @@ rust_library(
         "//eden/mononoke/servers/slapi/slapi_server/qps:qps",
         "//eden/mononoke/servers/slapi/slapi_service:slapi_service",
         "//eden/mononoke/servers/sshrelay:sshrelay",
+        "//eden/scm/lib/cats/constants:cats_constants",
         "//eden/scm/lib/clientinfo:clientinfo",
     ],
 )

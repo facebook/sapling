@@ -246,11 +246,21 @@ class mononokepeer(stdiopeer.stdiopeer):
         self._proxyhandler = url.proxyhandler(ui)
 
         try:
-            self._cats = cats.getcats(ui._uiconfig._rcfg, "cats", raise_if_missing=True)
+            self._cats = cats.get_cats_by_type(
+                ui._uiconfig._rcfg, "cats", "forwarded", raise_if_missing=True
+            )
         except Exception as e:
             ui.log("features", feature="missing-cats")
             ui.debug("CATs missing: %s. Identities won't be propagated.\n" % e)
             self._cats = None
+
+        try:
+            self._auth_cats = cats.get_cats_by_type(
+                ui._uiconfig._rcfg, "cats", "auth", raise_if_missing=False
+            )
+        except Exception as e:
+            ui.debug("auth CATs missing: %s\n" % e)
+            self._auth_cats = None
 
         if self._auth_proxy_http:
             u = util.url(self._auth_proxy_http, parsequery=False, parsefragment=False)
@@ -377,6 +387,9 @@ class mononokepeer(stdiopeer.stdiopeer):
 
                 if self._cats:
                     headers["x-forwarded-cats"] = self._cats
+
+                if self._auth_cats:
+                    headers["x-auth-cats"] = self._auth_cats
 
                 if self._compression:
                     headers["X-Client-Compression"] = "zstd=stdin"

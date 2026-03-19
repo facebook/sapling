@@ -549,6 +549,7 @@ mod h2m {
     use std::net::IpAddr;
 
     use cats::try_get_cats_idents;
+    use cats_constants::X_FORWARDED_CATS_HEADER;
     use percent_encoding::percent_decode;
     use permission_checker::MononokeIdentity;
 
@@ -557,13 +558,11 @@ mod h2m {
     const HEADER_ENCODED_CLIENT_IDENTITY: &str = "x-fb-validated-client-encoded-identity";
     const HEADER_CLIENT_IP: &str = "tfb-orig-client-ip";
     const HEADER_CLIENT_PORT: &str = "tfb-orig-client-port";
-    const HEADER_FORWARDED_CATS: &str = "x-forwarded-cats";
-
     fn metadata_populate_trusted(
         metadata: &mut Metadata,
         headers: &HeaderMap<HeaderValue>,
     ) -> Result<()> {
-        if let Some(cats) = headers.get(HEADER_FORWARDED_CATS) {
+        if let Some(cats) = headers.get(X_FORWARDED_CATS_HEADER) {
             metadata
                 .add_raw_encoded_cats(cats.to_str().context("Invalid encoded cats")?.to_string());
         }
