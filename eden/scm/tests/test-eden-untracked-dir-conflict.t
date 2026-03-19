@@ -40,16 +40,19 @@ Verify they are ignored:
   $ hg status
   ? unignored
 
-Checkout to commit B where the untracked files have all become directories:
+Checkout to commit B where the untracked files have all become directories.
+The ignored files should be silently replaced, but the unignored file should
+cause a conflict:
 
-#if rustcheckout
   $ hg go -q $B
-  abort: file metadata for * not found at destination commit (glob)
+  abort: unignored: local file conflicts with a directory in the destination commit
   [255]
-#endif
 
-#if pythoncheckout
+Remove the unignored file and retry:
+  $ rm unignored
   $ hg go -q $B
-  abort: *: not found in manifest! (glob)
-  [255]
-#endif
+  $ hg st
+  $ cat ignored/link/file
+  content
+  $ cat ignored/regular/file
+  content

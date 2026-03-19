@@ -235,7 +235,25 @@ def _determine_actions_for_conflicts(repo, src, conflicts, wctx, destctx):
             action = (path, None, path, False, src.node())
             prompt = "prompt changed/deleted"
         elif conflict_type == "UNTRACKED_ADDED":
-            if repo.dirstate[path] == "?" and (
+            if destctx.hasdir(path):
+                # The conflict path is a directory in the destination (e.g.
+                # an untracked file/symlink being replaced by a tracked
+                # directory). EdenFS handles directory creation itself.
+                if repo.dirstate[path] == "?" and repo.dirstate._ignore(path):
+                    # Remove the ignored file so EdenFS can create the
+                    # directory during the NORMAL checkout.
+                    util.unlink(repo.wjoin(path))
+                    continue
+                else:
+                    # Non-ignored untracked file conflicts with a directory.
+                    raise error.Abort(
+                        _(
+                            "%s: local file conflicts with a directory "
+                            "in the destination commit"
+                        )
+                        % path
+                    )
+            elif repo.dirstate[path] == "?" and (
                 repo.dirstate._ignore(path)
                 or not mergemod._checkunknownfile(repo, wctx, destctx, path)
             ):

@@ -358,12 +358,11 @@ Bail on dir/path conflict with added file:
   $ hg go -q $A
   $ touch dir
   $ hg add dir
-TODO(sggutier): In this case EdenFS and non-EdenFS behavior differ, fix this later
   $ hg go $B
   abort: 1 conflicting file changes: (no-eden !)
    dir (no-eden !)
   (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them) (no-eden !)
-  abort: file metadata for dir not found at destination commit (eden !)
+  abort: dir: local file conflicts with a directory in the destination commit (eden !)
   [255]
 
 Bail on untracked file conflict only if contents differ:
@@ -392,12 +391,11 @@ Bail on untracked file path conflict:
   > EOS
   $ hg go -q $A
   $ echo foo > foo
-TODO(sggutier): In this case EdenFS and non-EdenFS behavior differ, fix this later
   $ hg go $B
   abort: 1 conflicting file changes: (no-eden !)
    foo (no-eden !)
   (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them) (no-eden !)
-  abort: file metadata for foo not found at destination commit (eden !)
+  abort: foo: local file conflicts with a directory in the destination commit (eden !)
   [255]
   $ rm foo
   $ mkdir -p foo/bar
