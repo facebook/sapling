@@ -302,18 +302,10 @@ ImmediateFuture<bool> CheckoutAction::hasConflict() {
 
   auto localIsFile = inode_.asFilePtrOrNull() != nullptr;
   if (localIsFile) {
-    auto remoteIsFile = !newScmEntry_->second.isTree();
-    if (remoteIsFile) {
-      // This entry is a file that did not exist in the old source control tree,
-      // but it exists as a tracked file in the new tree.
-      ctx_->addConflict(ConflictType::UNTRACKED_ADDED, inode_.get());
-      return true;
-    } else {
-      // This entry is a file that did not exist in the old source control tree,
-      // but it exists as a tracked directory in the new tree.
-      ctx_->addConflict(ConflictType::MODIFIED_MODIFIED, inode_.get());
-      return true;
-    }
+    // This entry is a file that did not exist in the old source control tree,
+    // but it exists as a tracked file or directory in the new tree.
+    ctx_->addConflict(ConflictType::UNTRACKED_ADDED, inode_.get());
+    return true;
   } else {
     // This entry is a directory that did not exist in the old source control
     // tree. We must traverse the directory for UNTRACKED_ADDED and

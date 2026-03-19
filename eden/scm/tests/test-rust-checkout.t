@@ -363,7 +363,7 @@ TODO(sggutier): In this case EdenFS and non-EdenFS behavior differ, fix this lat
   abort: 1 conflicting file changes: (no-eden !)
    dir (no-eden !)
   (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them) (no-eden !)
-  abort: file metadata for dir not found at source commit (eden !)
+  abort: file metadata for dir not found at destination commit (eden !)
   [255]
 
 Bail on untracked file conflict only if contents differ:
@@ -397,7 +397,7 @@ TODO(sggutier): In this case EdenFS and non-EdenFS behavior differ, fix this lat
   abort: 1 conflicting file changes: (no-eden !)
    foo (no-eden !)
   (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them) (no-eden !)
-  abort: file metadata for foo not found at source commit (eden !)
+  abort: file metadata for foo not found at destination commit (eden !)
   [255]
   $ rm foo
   $ mkdir -p foo/bar

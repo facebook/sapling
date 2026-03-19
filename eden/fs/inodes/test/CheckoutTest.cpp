@@ -2396,19 +2396,12 @@ TEST(Checkout, ignoredSymlinkReplacedByDirectoryInDestination) {
   ASSERT_TRUE(checkoutResult.isReady());
   auto result = std::move(checkoutResult).get();
 
-  // BUG: EdenFS reports MODIFIED_MODIFIED because it sees a local FileInode
-  // (symlink) where the destination tree expects a directory. It doesn't
-  // consider that the symlink was ignored and should be silently overwritten.
-  //
-  // Sapling then fails trying to handle this conflict because the symlink
-  // was never tracked in the source commit.
-  //
-  // Once fixed, this should be:
-  //   EXPECT_EQ(0, result.conflicts.size());
+  // The symlink is untracked (not in the old tree), so the conflict type
+  // should be UNTRACKED_ADDED, not MODIFIED_MODIFIED.
   EXPECT_THAT(
       result.conflicts,
       UnorderedElementsAre(makeConflict(
-          ConflictType::MODIFIED_MODIFIED, "src/link", "", Dtype::LINK)));
+          ConflictType::UNTRACKED_ADDED, "src/link", "", Dtype::LINK)));
 }
 #endif
 
