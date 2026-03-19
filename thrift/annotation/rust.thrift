@@ -441,3 +441,36 @@ struct Derive {
 struct ServiceExn {
   1: bool anyhow_to_application_exn;
 }
+
+/**
+ * Controls the underlying integer type of a Rust enum (newtype struct).
+ *
+ * By default, Thrift enums in Rust use `i32` as the underlying type. This
+ * annotation allows choosing a smaller or unsigned type for memory optimization.
+ * The wire format remains i32 regardless of the underlying type.
+ *
+ * Example:
+ *
+ * ```
+ * @rust.EnumType{type = rust.EnumUnderlyingType.I8}
+ * enum SmallEnum {
+ *   A = 0,
+ *   B = 1,
+ * }
+ * ```
+ *
+ * will result in `pub struct SmallEnum(pub i8)` instead of the default
+ * `pub struct SmallEnum(pub i32)`.
+ */
+enum EnumUnderlyingType {
+  I8 = 0,
+  U8 = 1,
+  I16 = 2,
+  U16 = 3,
+  U32 = 4,
+}
+
+@scope.Enum
+struct EnumType {
+  1: EnumUnderlyingType type;
+}
