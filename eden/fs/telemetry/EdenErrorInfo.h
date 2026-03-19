@@ -18,6 +18,19 @@ namespace facebook::eden {
 class EdenErrorInfoBuilder;
 class ErrorArg;
 
+struct SourceInfo {
+  const char* file;
+  int line;
+  const char* func;
+
+  static SourceInfo current(
+      const char* f = __builtin_FILE(),
+      int l = __builtin_LINE(),
+      const char* fn = __builtin_FUNCTION()) {
+    return {f, l, fn};
+  }
+};
+
 class EdenErrorInfo {
  public:
   EdenComponent component;
@@ -34,29 +47,48 @@ class EdenErrorInfo {
   // Return an EdenErrorInfoBuilder for optional chaining (withMountPoint, etc.)
   // before calling create() to produce the final EdenErrorInfo.
 
-  static EdenErrorInfoBuilder
-  fuse(const ErrorArg& error, uint64_t inode, std::string mountPoint);
+  static EdenErrorInfoBuilder fuse(
+      const ErrorArg& error,
+      uint64_t inode,
+      std::string mountPoint,
+      SourceInfo loc = SourceInfo::current());
 
-  static EdenErrorInfoBuilder
-  nfs(const ErrorArg& error, uint64_t inode, std::string mountPoint);
+  static EdenErrorInfoBuilder nfs(
+      const ErrorArg& error,
+      uint64_t inode,
+      std::string mountPoint,
+      SourceInfo loc = SourceInfo::current());
 
-  static EdenErrorInfoBuilder overlay(const ErrorArg& error, uint64_t inode);
+  static EdenErrorInfoBuilder overlay(
+      const ErrorArg& error,
+      uint64_t inode,
+      SourceInfo loc = SourceInfo::current());
 
   static EdenErrorInfoBuilder thrift(
       const ErrorArg& error,
-      std::string clientCommandName);
+      std::string clientCommandName,
+      SourceInfo loc = SourceInfo::current());
 
   static EdenErrorInfoBuilder prjfs(
       const ErrorArg& error,
-      std::string mountPoint);
+      std::string mountPoint,
+      SourceInfo loc = SourceInfo::current());
 
-  static EdenErrorInfoBuilder backingStore(const ErrorArg& error);
+  static EdenErrorInfoBuilder backingStore(
+      const ErrorArg& error,
+      SourceInfo loc = SourceInfo::current());
 
-  static EdenErrorInfoBuilder objectStore(const ErrorArg& error);
+  static EdenErrorInfoBuilder objectStore(
+      const ErrorArg& error,
+      SourceInfo loc = SourceInfo::current());
 
-  static EdenErrorInfoBuilder takeover(const ErrorArg& error);
+  static EdenErrorInfoBuilder takeover(
+      const ErrorArg& error,
+      SourceInfo loc = SourceInfo::current());
 
-  static EdenErrorInfoBuilder privhelper(const ErrorArg& error);
+  static EdenErrorInfoBuilder privhelper(
+      const ErrorArg& error,
+      SourceInfo loc = SourceInfo::current());
 };
 
 } // namespace facebook::eden
