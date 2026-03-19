@@ -157,7 +157,20 @@ def _send_sigkill(
     pid: int,
     instance: Optional["EdenInstance"] = None,
 ) -> None:
-    """Send SIGKILL to edenfs."""
+    """Send SIGKILL to edenfs via systemctl or direct signal."""
+    if instance is not None and sys.platform == "linux":
+        try:
+            unit = _get_systemd_unit(instance)
+            if _is_systemd_unit_active(unit):
+                subprocess.call(["systemctl", "--user", "kill", "--signal=KILL", unit])
+                subprocess.call(["systemctl", "--user", "stop", unit])
+                return
+        except (RuntimeError, OSError) as ex:
+            print_stderr(
+                f"Failed to kill edenfs via systemctl, falling back to "
+                f"direct signal: {ex}"
+            )
+
     proc_utils: proc_utils_mod.ProcUtils = proc_utils_mod.new()
     try:
         proc_utils.kill_process(pid)
