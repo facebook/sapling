@@ -31,7 +31,8 @@ export type PlatformName =
   | 'webview'
   | 'chromelike_app'
   | 'visualStudio'
-  | 'obsidian';
+  | 'obsidian'
+  | 'tui';
 
 export type AbsolutePath = string;
 /**
