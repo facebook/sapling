@@ -983,7 +983,7 @@ mononoke_queries! {
         "
     }
 
-    read SelectChangesetsIdsBounds(repo_id: RepositoryId) -> (u64, u64) {
+    read SelectChangesetsIdsBounds(repo_id: RepositoryId) -> (Option<u64>, Option<u64>) {
         "SELECT min(id), max(id)
          FROM commit_graph_edges
          WHERE repo_id = {repo_id}"
@@ -1627,7 +1627,10 @@ impl SqlCommitGraphStorage {
             &self.repo_identity.id(),
         )
         .await?;
-        Ok(rows.first().map(|(lo, hi)| *lo..*hi + 1))
+        Ok(rows.first().and_then(|(lo, hi)| match (lo, hi) {
+            (Some(lo), Some(hi)) => Some(*lo..*hi + 1),
+            _ => None,
+        }))
     }
 
     /// Fetch the oldest `limit` changesets from all changesets that have auto-increment ids

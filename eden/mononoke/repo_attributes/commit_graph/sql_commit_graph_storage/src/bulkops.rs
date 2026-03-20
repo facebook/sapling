@@ -558,6 +558,34 @@ mod tests {
     }
 
     #[mononoke::fbinit_test]
+    async fn test_repo_bounds_empty_repo(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let storage = Arc::new(
+            SqlCommitGraphStorageBuilder::with_sqlite_in_memory()
+                .unwrap()
+                .build(RendezVousOptions::for_test(), test_repo_identity()),
+        );
+
+        // Don't add any commits — the repo is empty.
+        let bulk_fetcher = CommitGraphBulkFetcher::new(storage.clone());
+
+        // Before the fix, this would panic during SQL row deserialization
+        // because min(id)/max(id) return NULL for an empty table, and the
+        // query return type was (u64, u64) which can't represent NULL.
+        let result = bulk_fetcher.repo_bounds(&ctx, false).await;
+        assert!(
+            result.is_err(),
+            "repo_bounds on an empty repo should return an error, not panic"
+        );
+        assert!(
+            format!("{:#}", result.unwrap_err()).contains("empty repo"),
+            "error message should mention empty repo"
+        );
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
     async fn test_stream_topological(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let sql_storage = Arc::new(
