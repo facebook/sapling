@@ -24,4 +24,4 @@ sapling-util = { version = "0.1.0", path = "../../../util" }
 sapling-workingcopy = { version = "0.1.0", path = "../../../workingcopy" }
 sapling-worktree-registry = { version = "0.1.0", path = "../../../worktree" }
 serde = { version = "1.0.219", features = ["derive", "rc"] }
-uuid = { version = "1.21.0", features = ["rng-getrandom", "serde", "v4", "v5", "v6", "v7", "v8"] }
+uuid = { version = "1.22.0", features = ["rng-getrandom", "serde", "v4", "v5", "v6", "v7", "v8"] }
