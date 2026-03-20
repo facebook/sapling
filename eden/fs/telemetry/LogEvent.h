@@ -424,7 +424,6 @@ struct FinishedMount : public EdenFSEvent {
   bool success = false;
   bool clean = false;
   int64_t inode_catalog_type = -1;
-  bool is_windows_symlink_enabled = false;
 
   FinishedMount(
       std::string backing_store_type,
@@ -435,8 +434,7 @@ struct FinishedMount : public EdenFSEvent {
       double duration,
       bool success,
       bool clean,
-      int64_t inode_catalog_type,
-      bool is_windows_symlink_enabled)
+      int64_t inode_catalog_type)
       : backing_store_type(std::move(backing_store_type)),
         repo_type(std::move(repo_type)),
         repo_source(std::move(repo_source)),
@@ -445,8 +443,7 @@ struct FinishedMount : public EdenFSEvent {
         duration(duration),
         success(success),
         clean(clean),
-        inode_catalog_type(inode_catalog_type),
-        is_windows_symlink_enabled(is_windows_symlink_enabled) {}
+        inode_catalog_type(inode_catalog_type) {}
 
   void populate(DynamicEvent& event) const override {
     event.addString("backing_store_type", backing_store_type);
@@ -458,7 +455,6 @@ struct FinishedMount : public EdenFSEvent {
     event.addBool("success", success);
     event.addBool("clean", clean);
     event.addInt("overlay_type", inode_catalog_type);
-    event.addBool("is_windows_symlink_enabled", is_windows_symlink_enabled);
   }
 
   const char* getType() const override {
