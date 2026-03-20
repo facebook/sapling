@@ -124,6 +124,7 @@ cpp_library(
     headers = [
         "EdenComponent.h",
         "EdenErrorInfo.h",
+        "EdenErrorInfoBuilder.h",
         "ErrorArg.h",
     ],
     deps = [
