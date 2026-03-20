@@ -289,6 +289,15 @@ impl EdenFsInstance {
         self.client.clone()
     }
 
+    /// Returns the path to the EdenFS state directory.
+    ///
+    /// # Returns
+    ///
+    /// Returns a &Path which points to edenfs state directory.
+    pub fn get_config_dir(&self) -> &Path {
+        &self.config_dir
+    }
+
     /// Returns the path to the EdenFS socket file.
     ///
     /// # Returns
