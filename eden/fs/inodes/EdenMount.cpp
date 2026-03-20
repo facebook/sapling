@@ -2057,7 +2057,6 @@ std::unique_ptr<DiffContext> EdenMount::createDiffContext(
       fetchContext,
       listIgnored,
       getCheckoutConfig()->getCaseSensitive(),
-      getCheckoutConfig()->getEnableWindowsSymlinks(),
       getObjectStore(),
       serverState_->getTopLevelIgnores(),
       getEdenConfig()->throwOnCancel.getValue());

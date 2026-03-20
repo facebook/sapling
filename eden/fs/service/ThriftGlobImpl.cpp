@@ -163,8 +163,6 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
     std::shared_ptr<ServerState> serverState,
     std::vector<std::string> globs,
     const ObjectFetchContextPtr& fetchContext) {
-  bool windowsSymlinksEnabled =
-      edenMount->getCheckoutConfig()->getEnableWindowsSymlinks();
   bool prefetchOptimizations =
       serverState->getEdenConfig()->prefetchOptimizations.getValue();
   bool dedupePrefetchFiles =
@@ -333,7 +331,6 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
                listOnlyFiles = listOnlyFiles_,
                numRevisions = rootIds_.size(),
                fetchContext = fetchContext.copy(),
-               windowsSymlinksEnabled = windowsSymlinksEnabled,
                config = serverState->getEdenConfig()](
                   std::vector<GlobResult>&& results) mutable
                   -> ImmediateFuture<std::unique_ptr<Glob>> {
@@ -353,13 +350,8 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
                       out->matchingFiles()->emplace_back(entry.name.asString());
 
                       if (wantDtype) {
-                        auto dtype = entry.dtype;
-                        if (folly::kIsWindows && dtype == dtype_t::Symlink &&
-                            !windowsSymlinksEnabled) {
-                          dtype = dtype_t::Regular;
-                        }
                         out->dtypes()->emplace_back(
-                            static_cast<OsDtype>(dtype));
+                            static_cast<OsDtype>(entry.dtype));
                       }
 
                       if (populateOriginHashes) {

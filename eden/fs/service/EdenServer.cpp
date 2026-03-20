@@ -1889,7 +1889,6 @@ ImmediateFuture<std::shared_ptr<EdenMount>> EdenServer::mount(
       serverState_->getProcessInfoCache(),
       serverState_->getStructuredLogger(),
       serverState_->getReloadableConfig(),
-      initialConfig->getEnableWindowsSymlinks(),
       initialConfig->getCaseSensitive());
   auto journal = std::make_unique<Journal>(getStats().copy());
 

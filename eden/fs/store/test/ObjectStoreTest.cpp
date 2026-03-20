@@ -53,7 +53,6 @@ struct ObjectStoreTest : public ::testing::TestWithParam<CaseSensitivity> {
         std::make_shared<ProcessInfoCache>(),
         std::make_shared<NullStructuredLogger>(),
         std::make_shared<ReloadableConfig>(EdenConfig::createTestEdenConfig()),
-        true,
         GetParam());
 
     auto configWithBlake3Key = EdenConfig::createTestEdenConfig();
@@ -68,7 +67,6 @@ struct ObjectStoreTest : public ::testing::TestWithParam<CaseSensitivity> {
         std::make_shared<ProcessInfoCache>(),
         std::make_shared<NullStructuredLogger>(),
         std::make_shared<ReloadableConfig>(configWithBlake3Key),
-        true,
         GetParam());
 
     auto configWithTreeAuxPrefetching = EdenConfig::createTestEdenConfig();
@@ -81,7 +79,6 @@ struct ObjectStoreTest : public ::testing::TestWithParam<CaseSensitivity> {
         std::make_shared<ProcessInfoCache>(),
         std::make_shared<NullStructuredLogger>(),
         std::make_shared<ReloadableConfig>(configWithTreeAuxPrefetching),
-        true,
         GetParam());
 
     readyBlobId = putReadyBlob("readyblob");
@@ -458,7 +455,6 @@ TEST_P(ObjectStoreTest, get_tree_with_different_sensitivities) {
       std::make_shared<ProcessInfoCache>(),
       std::make_shared<NullStructuredLogger>(),
       std::make_shared<ReloadableConfig>(EdenConfig::createTestEdenConfig()),
-      true,
       getOppositeCaseSensitivity());
 
   auto blobOne = putReadyBlob("foo content");

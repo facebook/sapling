@@ -70,9 +70,7 @@ void processRemovedSide(
     const Tree::value_type& scmEntry) {
   auto entryPath = currentPath + scmEntry.first;
   context->callback->removedPath(
-      entryPath,
-      filteredEntryDtype(
-          scmEntry.second.getDtype(), context->getWindowsSymlinksEnabled()));
+      entryPath, filteredEntryDtype(scmEntry.second.getDtype(), true));
   if (!scmEntry.second.isTree()) {
     return;
   }
@@ -94,11 +92,8 @@ void processAddedSide(
     RelativePathPiece currentPath,
     const Tree::value_type& wdEntry) {
   auto entryPath = currentPath + wdEntry.first;
-  bool windowsSymlinksEnabled = context->getWindowsSymlinksEnabled();
-
   context->callback->addedPath(
-      entryPath,
-      filteredEntryDtype(wdEntry.second.getDtype(), windowsSymlinksEnabled));
+      entryPath, filteredEntryDtype(wdEntry.second.getDtype(), true));
 
   if (wdEntry.second.isTree()) {
     auto childFuture =
@@ -119,8 +114,6 @@ void processBothPresent(
   auto entryPath = currentPath + scmEntry.first;
   bool isTreeSCM = scmEntry.second.isTree();
   bool isTreeWD = wdEntry.second.isTree();
-  bool windowsSymlinksEnabled = context->getWindowsSymlinksEnabled();
-
   if (isTreeSCM) {
     if (isTreeWD) {
       // tree-to-tree diff
@@ -140,9 +133,7 @@ void processBothPresent(
       // tree-to-file
       // Add a ADDED entry for this path and a removal of the directory
       context->callback->addedPath(
-          entryPath,
-          filteredEntryDtype(
-              wdEntry.second.getDtype(), windowsSymlinksEnabled));
+          entryPath, filteredEntryDtype(wdEntry.second.getDtype(), true));
 
       // Report everything in scmTree as REMOVED
       context->callback->removedPath(entryPath, scmEntry.second.getDtype());
@@ -155,9 +146,7 @@ void processBothPresent(
       // file-to-tree
       // Add a REMOVED entry for this path
       context->callback->removedPath(
-          entryPath,
-          filteredEntryDtype(
-              scmEntry.second.getDtype(), windowsSymlinksEnabled));
+          entryPath, filteredEntryDtype(scmEntry.second.getDtype(), true));
 
       // Report everything in wdEntry as ADDED
       context->callback->addedPath(entryPath, wdEntry.second.getDtype());
@@ -174,14 +163,10 @@ void processBothPresent(
       //
       // On Windows: Filter executable type for comparison.
       if (!compareTreeEntryType(
-              filteredEntryType(
-                  scmEntry.second.getType(), windowsSymlinksEnabled),
-              filteredEntryType(
-                  wdEntry.second.getType(), windowsSymlinksEnabled))) {
+              filteredEntryType(scmEntry.second.getType(), true),
+              filteredEntryType(wdEntry.second.getType(), true))) {
         context->callback->modifiedPath(
-            entryPath,
-            filteredEntryDtype(
-                wdEntry.second.getDtype(), windowsSymlinksEnabled));
+            entryPath, filteredEntryDtype(wdEntry.second.getDtype(), true));
       } else {
         auto compareEntryContents =
             context->store
@@ -192,8 +177,7 @@ void processBothPresent(
                 .thenValue([entryPath = entryPath.copy(),
                             context,
                             dtype = filteredEntryDtype(
-                                scmEntry.second.getDtype(),
-                                windowsSymlinksEnabled)](bool equal) {
+                                scmEntry.second.getDtype(), true)](bool equal) {
                   if (!equal) {
                     context->callback->modifiedPath(entryPath, dtype);
                   }

@@ -690,8 +690,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   static DirContents buildDirFromTree(
       const Tree* tree,
       Overlay* overlay,
-      CaseSensitivity caseSensitive,
-      bool windowsSymlinksEnabled);
+      CaseSensitivity caseSensitive);
 
   void updateAtime();
 

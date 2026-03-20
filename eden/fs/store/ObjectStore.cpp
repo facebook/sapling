@@ -50,7 +50,6 @@ std::shared_ptr<ObjectStore> ObjectStore::create(
     std::shared_ptr<ProcessInfoCache> processInfoCache,
     std::shared_ptr<StructuredLogger> structuredLogger,
     std::shared_ptr<ReloadableConfig> edenConfig,
-    bool windowsSymlinksEnabled,
     CaseSensitivity caseSensitive) {
   return std::shared_ptr<ObjectStore>{new ObjectStore{
       std::move(backingStore),
@@ -59,7 +58,6 @@ std::shared_ptr<ObjectStore> ObjectStore::create(
       processInfoCache,
       structuredLogger,
       edenConfig,
-      windowsSymlinksEnabled,
       caseSensitive}};
 }
 
@@ -70,7 +68,6 @@ ObjectStore::ObjectStore(
     std::shared_ptr<ProcessInfoCache> processInfoCache,
     std::shared_ptr<StructuredLogger> structuredLogger,
     std::shared_ptr<ReloadableConfig> edenConfig,
-    bool windowsSymlinksEnabled,
     CaseSensitivity caseSensitive)
     : blobAuxDataCache_{
           edenConfig->getEdenConfig()->metadataCacheShards.getValue(),
@@ -85,8 +82,7 @@ ObjectStore::ObjectStore(
       processInfoCache_(processInfoCache),
       structuredLogger_(structuredLogger),
       edenConfig_(edenConfig),
-      caseSensitive_{caseSensitive},
-      windowsSymlinksEnabled_{windowsSymlinksEnabled} {
+      caseSensitive_{caseSensitive} {
   XCHECK(backingStore_);
   XCHECK(stats_);
 }

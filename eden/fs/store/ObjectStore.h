@@ -119,7 +119,6 @@ class ObjectStore : public IObjectStore,
       std::shared_ptr<ProcessInfoCache> processInfoCache,
       std::shared_ptr<StructuredLogger> structuredLogger,
       std::shared_ptr<ReloadableConfig> edenConfig,
-      bool windowsSymlinksEnabled,
       CaseSensitivity caseSensitive);
   ~ObjectStore() override;
 
@@ -410,10 +409,6 @@ class ObjectStore : public IObjectStore,
     pidFetchCounts_->clear();
   }
 
-  bool getWindowsSymlinksEnabled() const {
-    return windowsSymlinksEnabled_;
-  }
-
  private:
   FRIEND_TEST(ObjectStoreTest, caching_policies_anything);
   FRIEND_TEST(ObjectStoreTest, caching_policies_no_caching);
@@ -429,7 +424,6 @@ class ObjectStore : public IObjectStore,
       std::shared_ptr<ProcessInfoCache> processInfoCache,
       std::shared_ptr<StructuredLogger> structuredLogger,
       std::shared_ptr<ReloadableConfig> edenConfig,
-      bool windowsSymlinksEnabled,
       CaseSensitivity caseSensitive);
   // Forbidden copy constructor and assignment operator
   ObjectStore(ObjectStore const&) = delete;
@@ -530,9 +524,6 @@ class ObjectStore : public IObjectStore,
   // Is this ObjectStore case sensitive? This only matters for methods returning
   // Tree.
   CaseSensitivity caseSensitive_;
-
-  // Whether symlinks are enabled on Windows or not
-  bool windowsSymlinksEnabled_;
 };
 
 } // namespace facebook::eden

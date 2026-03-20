@@ -143,10 +143,6 @@ class CheckoutContext {
     return fetchContext_.as<ObjectFetchContext>();
   }
 
-  bool getWindowsSymlinksEnabled() const {
-    return windowsSymlinksEnabled_;
-  }
-
   void increaseCheckoutCounter(int64_t inc) const;
 
   /**
@@ -182,7 +178,5 @@ class CheckoutContext {
   // if some data load operations complete asynchronously on other threads.
   // Therefore access to the conflicts list must be synchronized.
   folly::Synchronized<std::vector<CheckoutConflict>> conflicts_;
-
-  bool windowsSymlinksEnabled_;
 };
 } // namespace facebook::eden

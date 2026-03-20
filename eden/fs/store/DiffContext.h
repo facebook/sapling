@@ -42,7 +42,6 @@ class DiffContext {
       const ObjectFetchContextPtr& fetchContext,
       bool listIgnored,
       CaseSensitivity caseSensitive,
-      bool windowsSymlinksEnabled,
       std::shared_ptr<ObjectStore> os,
       std::unique_ptr<TopLevelIgnores> topLevelIgnores,
       bool throwOnCancel = false);
@@ -84,11 +83,6 @@ class DiffContext {
     return caseSensitive_;
   }
 
-  // Whether symlinks are enabled on Windows or not
-  bool getWindowsSymlinksEnabled() const {
-    return windowsSymlinksEnabled_;
-  }
-
   /**
    * Create a span for timing instrumentation if a time tracer is set.
    * Returns nullopt if no time tracer is set.
@@ -110,8 +104,6 @@ class DiffContext {
 
   // Controls the case sensitivity of the diff operation.
   CaseSensitivity caseSensitive_;
-
-  bool windowsSymlinksEnabled_;
 
   // Whether to throw an exception when the operation is canceled.
   bool throwOnCancel_;

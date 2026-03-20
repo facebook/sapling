@@ -2196,7 +2196,6 @@ ImmediateFuture<folly::Unit> diffBetweenRoots(
       fetchContext,
       true,
       checkoutConfig.getCaseSensitive(),
-      checkoutConfig.getEnableWindowsSymlinks(),
       objectStore,
       nullptr);
   auto fut = diffRoots(diffContext.get(), fromRoot, toRoot);
@@ -3074,9 +3073,6 @@ EdenServiceHandler::streamSelectedChangesSince(
         server_->getServerState()->getProcessInfoCache(),
         server_->getServerState()->getStructuredLogger(),
         server_->getServerState()->getReloadableConfig(),
-        mountHandle.getEdenMount()
-            .getCheckoutConfig()
-            ->getEnableWindowsSymlinks(),
         caseSensitivity);
     auto callback =
         std::make_shared<StreamingDiffCallback>(sharedPublisherLock);
@@ -3264,17 +3260,11 @@ EdenServiceHandler::semifuture_getEntryInformation(
                  .thenValue([mountHandle,
                              paths = std::move(paths),
                              fetchContext = fetchContext.copy()](auto&&) {
-                   bool windowsSymlinksEnabled =
-                       mountHandle.getEdenMount()
-                           .getCheckoutConfig()
-                           ->getEnableWindowsSymlinks();
                    return applyToVirtualInode(
                        mountHandle.getRootInode(),
                        *paths,
-                       [windowsSymlinksEnabled](
-                           const VirtualInode& inode, RelativePath) {
-                         return filteredEntryDtype(
-                             inode.getDtype(), windowsSymlinksEnabled);
+                       [](const VirtualInode& inode, RelativePath) {
+                         return filteredEntryDtype(inode.getDtype(), true);
                        },
                        mountHandle.getObjectStorePtr(),
                        fetchContext);

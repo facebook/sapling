@@ -90,7 +90,6 @@ class DiffTest {
         ObjectFetchContext::getNullContext(),
         listIgnored,
         caseSensitive,
-        true,
         mount_.getEdenMount()->getObjectStore(),
         std::make_unique<TopLevelIgnores>(
             systemWideIgnoreFileContents, userIgnoreFileContents)};
@@ -2097,7 +2096,6 @@ TEST(DiffTest, multiTreeDiff) {
       ObjectFetchContext::getNullContext(),
       false, // listIgnored
       kPathMapDefaultCaseSensitive,
-      true,
       testMount.getEdenMount()->getObjectStore(),
       std::make_unique<TopLevelIgnores>("", "")};
 

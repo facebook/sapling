@@ -79,7 +79,6 @@ class DiffTest : public ::testing::Test {
         std::make_shared<ProcessInfoCache>(),
         std::make_shared<NullStructuredLogger>(),
         edenConfig,
-        true,
         kPathMapDefaultCaseSensitive);
   }
 
@@ -94,7 +93,6 @@ class DiffTest : public ::testing::Test {
         ObjectFetchContext::getNullContext(),
         listIgnored,
         caseSensitive,
-        true,
         store_,
         std::move(topLevelIgnores));
   }

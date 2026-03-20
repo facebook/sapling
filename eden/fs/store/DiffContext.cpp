@@ -19,7 +19,6 @@ DiffContext::DiffContext(
     const ObjectFetchContextPtr& fetchContext,
     bool listIgnored,
     CaseSensitivity caseSensitive,
-    bool windowsSymlinksEnabled,
     std::shared_ptr<ObjectStore> os,
     std::unique_ptr<TopLevelIgnores> topLevelIgnores,
     bool throwOnCancel)
@@ -35,7 +34,6 @@ DiffContext::DiffContext(
           fetchContext->getRequestInfo())},
       fetchContext_{statsContext_.copy()},
       caseSensitive_{caseSensitive},
-      windowsSymlinksEnabled_{windowsSymlinksEnabled},
       throwOnCancel_{throwOnCancel} {
   // Propagate certain fields from the caller's fetch context. This is basically
   // so important fields from checkout's context are propagated to the diff

@@ -84,8 +84,7 @@ ImmediateFuture<Hash32> VirtualInode::getBlake3(
     const ObjectFetchContextPtr& fetchContext) const {
   // Ensure this is a regular file.
   // We intentionally want to refuse to compute the blake3 of symlinks
-  switch (filteredEntryDtype(
-      getDtype(), objectStore->getWindowsSymlinksEnabled())) {
+  switch (filteredEntryDtype(getDtype(), true)) {
     case dtype_t::Dir:
       return makeImmediateFuture<Hash32>(PathError(EISDIR, path));
     case dtype_t::Symlink:
@@ -129,8 +128,7 @@ ImmediateFuture<std::optional<Hash32>> VirtualInode::getDigestHash(
     const ObjectFetchContextPtr& fetchContext) const {
   // Ensure this is a regular file or directory.
   // We intentionally want to refuse to compute the digestHash of symlinks
-  switch (filteredEntryDtype(
-      getDtype(), objectStore->getWindowsSymlinksEnabled())) {
+  switch (filteredEntryDtype(getDtype(), true)) {
     case dtype_t::Symlink:
       return makeImmediateFuture<std::optional<Hash32>>(
           PathError(EINVAL, path, std::string_view{"file is a symlink"}));
@@ -175,8 +173,7 @@ ImmediateFuture<Hash20> VirtualInode::getSHA1(
     const ObjectFetchContextPtr& fetchContext) const {
   // Ensure this is a regular file.
   // We intentionally want to refuse to compute the SHA1 of symlinks
-  switch (filteredEntryDtype(
-      getDtype(), objectStore->getWindowsSymlinksEnabled())) {
+  switch (filteredEntryDtype(getDtype(), true)) {
     case dtype_t::Dir:
       return makeImmediateFuture<Hash20>(PathError(EISDIR, path));
     case dtype_t::Symlink:
@@ -216,8 +213,7 @@ ImmediateFuture<Hash20> VirtualInode::getSHA1(
 
 ImmediateFuture<std::optional<TreeEntryType>> VirtualInode::getTreeEntryType(
     RelativePathPiece path,
-    const ObjectFetchContextPtr& fetchContext,
-    bool windowsSymlinksEnabled) const {
+    const ObjectFetchContextPtr& fetchContext) const {
   using R = ImmediateFuture<std::optional<TreeEntryType>>;
   return match(
       variant_,
@@ -243,7 +239,7 @@ ImmediateFuture<std::optional<TreeEntryType>> VirtualInode::getTreeEntryType(
       },
       [&](const TreePtr&) -> R { return TreeEntryType::TREE; },
       [&](const TreeEntry& entry) -> R {
-        return filteredEntryType(entry.getType(), windowsSymlinksEnabled);
+        return filteredEntryType(entry.getType(), true);
       });
 }
 
@@ -512,10 +508,9 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
     const std::shared_ptr<ObjectStore>& objectStore,
     timespec lastCheckoutTime,
     const ObjectFetchContextPtr& fetchContext) const {
-  bool windowsSymlinksEnabled = objectStore->getWindowsSymlinksEnabled();
   // For non regular files we return errors for hashes and sizes.
   // We intentionally want to refuse to compute the SHA1 of symlinks.
-  auto dtype = filteredEntryDtype(getDtype(), windowsSymlinksEnabled);
+  auto dtype = filteredEntryDtype(getDtype(), true);
   switch (dtype) {
     case dtype_t::Regular:
       break;
@@ -560,8 +555,7 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
   auto entryTypeFuture =
       ImmediateFuture<std::optional<TreeEntryType>>::makeEmpty();
   if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE)) {
-    entryTypeFuture =
-        getTreeEntryType(path, fetchContext, windowsSymlinksEnabled);
+    entryTypeFuture = getTreeEntryType(path, fetchContext);
   }
 
   auto blobAuxdataFuture = ImmediateFuture<BlobAuxData>::makeEmpty();
@@ -684,8 +678,7 @@ ImmediateFuture<struct stat> VirtualInode::stat(
           return st;
         } else if constexpr (std::is_same_v<T, TreeEntry>) {
           objectId = arg.getObjectId();
-          mode = modeFromTreeEntryType(filteredEntryType(
-              arg.getType(), objectStore->getWindowsSymlinksEnabled()));
+          mode = modeFromTreeEntryType(filteredEntryType(arg.getType(), true));
           // fallthrough
         } else {
           static_assert(always_false_v<T>, "non-exhaustive visitor!");

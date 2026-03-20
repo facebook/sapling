@@ -35,9 +35,7 @@ CheckoutContext::CheckoutContext(
           ObjectFetchContext::Cause::Thrift,
           thriftMethodName,
           requestInfo)},
-      checkoutProgress_{std::move(checkoutProgress)},
-      windowsSymlinksEnabled_{
-          mount_->getCheckoutConfig()->getEnableWindowsSymlinks()} {
+      checkoutProgress_{std::move(checkoutProgress)} {
   if (mount_->getEdenConfig()->thriftCheckoutTimeTracing.getValue()) {
     fetchContext_->setTimeTracer(std::make_shared<MiniTracer>());
   }
