@@ -30,7 +30,6 @@ namespace facebook::eden {
 
 namespace {
 
-/** Compute a fuse_entry_out */
 fuse_entry_out computeEntryParam(const FuseDispatcher::Attr& attr) {
   XDCHECK(attr.st.st_ino) << "We should never return a 0 inode to FUSE";
   fuse_entry_out entry = {};
@@ -60,16 +59,28 @@ FuseDispatcherImpl::FuseDispatcherImpl(EdenMount* mount)
       mount_(mount),
       inodeMap_(mount_->getInodeMap()) {}
 
+uint64_t FuseDispatcherImpl::computeTtl() const {
+  auto config = mount_->getEdenConfig();
+  if (!config->enablePressureBasedGc.getValue()) {
+    return std::numeric_limits<int32_t>::max();
+  }
+  auto policy = mount_->getInodePressurePolicy();
+  auto inodeCount = inodeMap_->getTotalInodeCountFast();
+  return static_cast<uint64_t>(policy->getFuseTtl(inodeCount).count());
+}
+
 ImmediateFuture<FuseDispatcher::Attr> FuseDispatcherImpl::getattr(
     InodeNumber ino,
     const ObjectFetchContextPtr& context) {
+  auto ttl = computeTtl();
   return inodeMap_->lookupInode(ino)
       .thenValue([context = context.copy()](const InodePtr& inode) {
         inode->updateLastFsRequestTime();
         return inode->stat(context);
       })
-      .thenValue(
-          [](const struct stat& st) { return FuseDispatcher::Attr{st}; });
+      .thenValue([ttl](const struct stat& st) {
+        return FuseDispatcher::Attr{st, ttl};
+      });
 }
 
 ImmediateFuture<uint64_t> FuseDispatcherImpl::opendir(
@@ -103,14 +114,15 @@ ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::lookup(
                   context = context.copy()](const TreeInodePtr& tree) {
         return tree->getOrLoadChild(name, context);
       })
-      .thenValue([context = context.copy()](const InodePtr& inode) {
+      .thenValue([this, context = context.copy()](const InodePtr& inode) {
         inode->updateLastFsRequestTime();
+        auto ttl = computeTtl();
         return makeImmediateFutureWith([&]() { return inode->stat(context); })
-            .thenTry([inode](folly::Try<struct stat> maybeStat) {
+            .thenTry([inode, ttl](folly::Try<struct stat> maybeStat) {
               if (maybeStat.hasValue()) {
                 inode->incFsRefcount();
                 return computeEntryParam(
-                    FuseDispatcher::Attr{maybeStat.value()});
+                    FuseDispatcher::Attr{maybeStat.value(), ttl});
               } else {
                 // The most common case for stat() failing is if this file is
                 // materialized but the data for it in the overlay is missing
@@ -239,13 +251,14 @@ ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::create(
   // (and thus can be zero)
   mode = S_IFREG | (07777 & mode);
   return inodeMap_->lookupTreeInode(parent).thenValue(
-      [mode, childName = PathComponent{name}, context = context.copy()](
+      [this, mode, childName = PathComponent{name}, context = context.copy()](
           const TreeInodePtr& inode) {
         auto child = inode->mknod(childName, mode, 0, InvalidationRequired::No);
+        auto ttl = computeTtl();
         return child->stat(context).thenValue(
-            [child](struct stat st) -> fuse_entry_out {
+            [child, ttl](struct stat st) -> fuse_entry_out {
               child->incFsRefcount();
-              return computeEntryParam(FuseDispatcher::Attr{st});
+              return computeEntryParam(FuseDispatcher::Attr{st, ttl});
             });
       });
 }
@@ -351,14 +364,18 @@ ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::mknod(
     dev_t rdev,
     const ObjectFetchContextPtr& context) {
   return inodeMap_->lookupTreeInode(parent).thenValue(
-      [childName = PathComponent{name}, mode, rdev, context = context.copy()](
-          const TreeInodePtr& inode) {
+      [this,
+       childName = PathComponent{name},
+       mode,
+       rdev,
+       context = context.copy()](const TreeInodePtr& inode) {
         auto child =
             inode->mknod(childName, mode, rdev, InvalidationRequired::No);
+        auto ttl = computeTtl();
         return child->stat(context).thenValue(
-            [child](struct stat st) -> fuse_entry_out {
+            [child, ttl](struct stat st) -> fuse_entry_out {
               child->incFsRefcount();
-              return computeEntryParam(FuseDispatcher::Attr{st});
+              return computeEntryParam(FuseDispatcher::Attr{st, ttl});
             });
       });
 }
@@ -369,12 +386,13 @@ ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::mkdir(
     mode_t mode,
     const ObjectFetchContextPtr& context) {
   return inodeMap_->lookupTreeInode(parent).thenValue(
-      [childName = PathComponent{name}, mode, context = context.copy()](
+      [this, childName = PathComponent{name}, mode, context = context.copy()](
           const TreeInodePtr& inode) {
         auto child = inode->mkdir(childName, mode, InvalidationRequired::No);
-        return child->stat(context).thenValue([child](struct stat st) {
+        auto ttl = computeTtl();
+        return child->stat(context).thenValue([child, ttl](struct stat st) {
           child->incFsRefcount();
-          return computeEntryParam(FuseDispatcher::Attr{st});
+          return computeEntryParam(FuseDispatcher::Attr{st, ttl});
         });
       });
 }
@@ -409,15 +427,17 @@ ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::symlink(
     StringPiece link,
     const ObjectFetchContextPtr& context) {
   return inodeMap_->lookupTreeInode(parent).thenValue(
-      [linkContents = link.str(),
+      [this,
+       linkContents = link.str(),
        childName = PathComponent{name},
        context = context.copy()](const TreeInodePtr& inode) {
         auto symlinkInode =
             inode->symlink(childName, linkContents, InvalidationRequired::No);
         symlinkInode->incFsRefcount();
+        auto ttl = computeTtl();
         return symlinkInode->stat(context).thenValue(
-            [symlinkInode](struct stat st) {
-              return computeEntryParam(FuseDispatcher::Attr{st});
+            [symlinkInode, ttl](struct stat st) {
+              return computeEntryParam(FuseDispatcher::Attr{st, ttl});
             });
       });
 }

@@ -9,9 +9,12 @@
 
 #include "eden/fs/fuse/FuseDispatcher.h"
 
+#include <limits>
+
 #include <folly/test/TestUtils.h>
 #include <folly/testing/TestUtil.h>
 #include <gtest/gtest.h>
+#include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Blob.h"
@@ -196,6 +199,80 @@ TEST(RawEdenDispatcherTest, getattr_updates_last_used_time) {
       .get(0ms);
   auto timeAfter = inode->getLastFsRequestTime();
   EXPECT_GT(timeAfter.toTimespec().tv_sec, timeBefore.toTimespec().tv_sec);
+}
+
+TEST(RawEdenDispatcherTest, lookup_returns_infinite_ttl_without_pressure_gc) {
+  FakeTreeBuilder builder;
+  builder.setFile("hello", "world");
+  TestMount mount{builder};
+
+  auto entry =
+      mount.getDispatcher()
+          ->lookup(
+              0, kRootNodeId, "hello"_pc, ObjectFetchContext::getNullContext())
+          .get(0ms);
+  // Without pressure-based GC, TTL should be the default infinite value
+  EXPECT_EQ(
+      static_cast<uint64_t>(std::numeric_limits<int32_t>::max()),
+      entry.entry_valid);
+  EXPECT_EQ(
+      static_cast<uint64_t>(std::numeric_limits<int32_t>::max()),
+      entry.attr_valid);
+}
+
+TEST(RawEdenDispatcherTest, lookup_returns_dynamic_ttl_with_pressure_gc) {
+  FakeTreeBuilder builder;
+  builder.setFile("hello", "world");
+  TestMount mount{builder};
+
+  // Enable pressure-based GC with known settings
+  mount.updateEdenConfig({
+      {"experimental:enable-pressure-based-gc", "true"},
+      {"mount:gc-pressure-min-inodes", "10"},
+      {"mount:gc-pressure-max-inodes", "10000"},
+      {"mount:fuse-ttl-max-seconds", "3600"},
+      {"mount:fuse-ttl-min-seconds", "1"},
+  });
+  mount.getEdenMount()->updateInodePressurePolicy();
+
+  auto entry =
+      mount.getDispatcher()
+          ->lookup(
+              0, kRootNodeId, "hello"_pc, ObjectFetchContext::getNullContext())
+          .get(0ms);
+  // With very few inodes (below min of 10), TTL should be max value of 3600
+  EXPECT_EQ(3600u, entry.entry_valid);
+  EXPECT_EQ(3600u, entry.attr_valid);
+}
+
+TEST(RawEdenDispatcherTest, getattr_returns_dynamic_ttl_with_pressure_gc) {
+  FakeTreeBuilder builder;
+  builder.setFile("hello", "world");
+  TestMount mount{builder};
+
+  mount.updateEdenConfig({
+      {"experimental:enable-pressure-based-gc", "true"},
+      {"mount:gc-pressure-min-inodes", "10"},
+      {"mount:gc-pressure-max-inodes", "10000"},
+      {"mount:fuse-ttl-max-seconds", "3600"},
+      {"mount:fuse-ttl-min-seconds", "1"},
+  });
+  mount.getEdenMount()->updateInodePressurePolicy();
+
+  // First lookup to get the inode number
+  auto entry =
+      mount.getDispatcher()
+          ->lookup(
+              0, kRootNodeId, "hello"_pc, ObjectFetchContext::getNullContext())
+          .get(0ms);
+
+  // Now getattr on that inode
+  auto attr =
+      mount.getDispatcher()
+          ->getattr(
+              InodeNumber{entry.nodeid}, ObjectFetchContext::getNullContext())
+          .get(0ms);
+  EXPECT_EQ(3600u, attr.timeout_seconds);
 }
 
 TEST(RawEdenDispatcherTest, lookup_returns_valid_inode_for_bad_file) {

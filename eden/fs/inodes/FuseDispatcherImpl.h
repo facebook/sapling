@@ -126,6 +126,13 @@ class FuseDispatcherImpl : public FuseDispatcher {
   ImmediateFuture<std::vector<std::string>> listxattr(InodeNumber ino) override;
 
  private:
+  /**
+   * Compute the FUSE cache TTL based on current inode pressure.
+   * Returns dynamic TTL when pressure-based GC is enabled, or the
+   * legacy infinite TTL otherwise.
+   */
+  uint64_t computeTtl() const;
+
   // The EdenMount associated with this dispatcher.
   EdenMount* const mount_;
 
