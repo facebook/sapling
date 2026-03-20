@@ -187,6 +187,58 @@ TEST(UnloadAfterAsyncLoad, unloadRacesDeterministicallyWithInodeLoadComplete) {
   EXPECT_NE(kRootNodeId, dirInode->getNodeId());
 }
 
+TEST(
+    UnloadLastAccessedBefore,
+    unloadsInodesByLastFsRequestTimeNotMetadataAtime) {
+  FakeTreeBuilder builder;
+  builder.setFile("old.txt", "old contents");
+  builder.setFile("new.txt", "new contents");
+  TestMount testMount{builder};
+
+  const auto* edenMount = testMount.getEdenMount().get();
+  auto inodeMap = edenMount->getInodeMap();
+
+  // Load both files and give them FUSE references so they stay loaded
+  auto oldInode = testMount.getInode("old.txt"_relpath);
+  auto newInode = testMount.getInode("new.txt"_relpath);
+  auto oldIno = oldInode->getNodeId();
+  auto newIno = newInode->getNodeId();
+  oldInode->incFsRefcount();
+  newInode->incFsRefcount();
+
+  // Advance the clock and touch only "new.txt" via updateLastFsRequestTime.
+  // Both inodes start with lastFsRequestTime from mount creation.
+  // After this, new.txt's lastFsRequestTime is 120s later than old.txt's.
+  testMount.getClock().advance(120s);
+  newInode->updateLastFsRequestTime();
+
+  // Use a cutoff between old and new lastFsRequestTime values.
+  auto cutoff = oldInode->getLastFsRequestTime().toTimespec();
+  cutoff.tv_sec += 60;
+
+  // Release InodePtrs (FUSE refcount keeps them alive in InodeMap)
+  oldInode.reset();
+  newInode.reset();
+
+  // Drop FUSE references so inodes are eligible for unloading
+  inodeMap->decFsRefcount(oldIno, 1);
+  inodeMap->decFsRefcount(newIno, 1);
+
+  auto countsBefore = inodeMap->getInodeCounts();
+
+  auto rootInode = edenMount->getRootInode();
+  auto unloaded = rootInode->unloadChildrenLastAccessedBefore(cutoff);
+
+  // old.txt (lastFsRequestTime < cutoff) should be unloaded.
+  // new.txt (lastFsRequestTime > cutoff) should remain loaded.
+  EXPECT_GE(unloaded, 1);
+  auto countsAfter = inodeMap->getInodeCounts();
+  EXPECT_LT(countsAfter.fileCount, countsBefore.fileCount);
+
+  // new.txt should still be loadable (still in loaded inodes)
+  EXPECT_TRUE(inodeMap->lookupInode(newIno).get());
+}
+
 TEST(UnloadUnreferencedByFuse, inodesReferencedByFuseAreNotUnloaded) {
   FakeTreeBuilder builder;
   builder.mkdir("src");

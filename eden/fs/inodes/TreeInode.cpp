@@ -5161,15 +5161,8 @@ size_t TreeInode::unloadChildrenLastAccessedBefore(const timespec& cutoff) {
   // links.
   std::unordered_set<InodeNumber> toUnload;
 
-  // Is atime the right thing to check here?  If a read is served from
-  // the kernel's cache, the cached atime is updated, but FUSE does not
-  // tell us.  That said, if we update atime whenever FUSE forwards a
-  // read request on to Eden, then atime ought to be a suitable proxy
-  // for whether it's a good idea to unload the inode or not.
-  //
-  // https://sourceforge.net/p/fuse/mailman/message/34448996/
   auto shouldUnload = [&](const auto& inode) {
-    return inode->getMetadata().timestamps.atime < cutoff;
+    return inode->getLastFsRequestTime().toTimespec() < cutoff;
   };
 
   for (const auto& inode : fileChildren) {
