@@ -31,7 +31,7 @@ import {dagWithPreviews} from './previews';
 import {latestDag} from './serverAPIState';
 import {latestSuccessorUnlessExplicitlyObsolete} from './successionUtils';
 import {exactRevset, type CommitInfo, type Hash} from './types';
-import {firstOfIterable, registerCleanup} from './utils';
+import {registerCleanup} from './utils';
 
 /**
  * The name of the key to toggle individual selection.
@@ -351,31 +351,22 @@ export function useArrowKeysToChangeSelection() {
 
 export function useBackspaceToHideSelected(): void {
   const cb = useCallback(() => {
-    // Though you can select multiple commits, our preview system doesn't handle that very well.
-    // Just preview hiding the most recently selected commit.
-    // Another sensible behavior would be to inspect the tree of commits selected
-    // and find if there's a single common ancestor to hide. That won't work in all cases though.
-    const mostRecent = readAtom(previouslySelectedCommit);
-    let hashToHide = mostRecent;
-    if (hashToHide == null) {
-      const selection = readAtom(selectedCommits);
-      if (selection != null) {
-        hashToHide = firstOfIterable(selection.values());
-      }
-    }
-    if (hashToHide == null) {
+    const selection = readAtom(selectedCommits);
+    if (selection == null || selection.size === 0) {
       return;
     }
 
-    const commitToHide = readAtom(latestDag).get(hashToHide);
-    if (commitToHide == null) {
+    const dag = readAtom(latestDag);
+    const sources = [...selection].flatMap(hash => {
+      const info = dag.get(hash);
+      return info == null ? [] : [latestSuccessorUnlessExplicitlyObsolete(info)];
+    });
+
+    if (sources.length === 0) {
       return;
     }
 
-    writeAtom(
-      operationBeingPreviewed,
-      new HideOperation(latestSuccessorUnlessExplicitlyObsolete(commitToHide)),
-    );
+    writeAtom(operationBeingPreviewed, new HideOperation(sources));
   }, []);
 
   useCommand('HideSelectedCommits', cb);

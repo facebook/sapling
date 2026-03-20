@@ -11,40 +11,53 @@ import type {ExactRevset, OptimisticRevset, SucceedableRevset} from '../types';
 import {CommitPreview} from '../previews';
 import {Operation} from './Operation';
 
+type RevsetSource = SucceedableRevset | ExactRevset | OptimisticRevset;
+
 export class HideOperation extends Operation {
-  constructor(private source: SucceedableRevset | ExactRevset | OptimisticRevset) {
+  private sources: Array<RevsetSource>;
+
+  constructor(source: RevsetSource | Array<RevsetSource>) {
     super('HideOperation');
+    this.sources = Array.isArray(source) ? source : [source];
   }
 
   static opName = 'Hide';
 
   getArgs() {
-    return ['hide', '--rev', this.source];
+    return ['hide', ...this.sources.map(source => ['--rev', source] as const).flat()];
   }
 
-  private hash() {
-    return this.source.type === 'optimistic-revset' ? this.source.fake : this.source.revset;
+  private hashes(): string[] {
+    return this.sources.map(source =>
+      source.type === 'optimistic-revset' ? source.fake : source.revset,
+    );
   }
 
   previewDag(dag: Dag): Dag {
-    const hash = this.hash();
-    const toHide = dag.descendants(hash);
+    const hashes = this.hashes();
+    const hashSet = new Set(hashes);
+    const toHide = dag.descendants(hashes);
     return dag.replaceWith(toHide, (h, c) => {
-      const previewType = h === hash ? CommitPreview.HIDDEN_ROOT : CommitPreview.HIDDEN_DESCENDANT;
+      const previewType = hashSet.has(h)
+        ? CommitPreview.HIDDEN_ROOT
+        : CommitPreview.HIDDEN_DESCENDANT;
       return c?.merge({previewType});
     });
   }
 
   optimisticDag(dag: Dag): Dag {
-    const hash = this.hash();
-    const toHide = dag.descendants(hash);
-    const toCleanup = dag.parents(hash);
+    const hashes = this.hashes();
+    const toHide = dag.descendants(hashes);
+    const toCleanup = dag.parents(hashes);
     // If the head is being hidden, we need to move the head to the parent.
-    const newHead = [];
+    const newHead: string[] = [];
     if (toHide.toHashes().some(h => dag.get(h)?.isDot == true)) {
-      const parent = dag.get(hash)?.parents?.at(0);
-      if (parent && dag.has(parent)) {
-        newHead.push(parent);
+      for (const hash of hashes) {
+        const parent = dag.get(hash)?.parents?.at(0);
+        if (parent && dag.has(parent) && !toHide.contains(parent)) {
+          newHead.push(parent);
+          break;
+        }
       }
     }
     return dag

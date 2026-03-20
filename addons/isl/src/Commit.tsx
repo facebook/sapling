@@ -427,15 +427,32 @@ export const Commit = memo(
           },
           loggingLabel: 'Create Bookmark',
         });
-        items.push({
-          label: hasChildren ? <T>Hide Commit and Descendants</T> : <T>Hide Commit</T>,
-          onClick: () =>
-            writeAtom(
-              operationBeingPreviewed,
-              new HideOperation(latestSuccessorUnlessExplicitlyObsolete(commit)),
-            ),
-          loggingLabel: 'Hide Commit',
-        });
+        const hideSelectedInfos = readAtom(selectedCommitInfos);
+        const isHideMultiSelect =
+          hideSelectedInfos.length > 1 && hideSelectedInfos.some(c => c.hash === commit.hash);
+        if (isHideMultiSelect) {
+          items.push({
+            label: <T replace={{$count: hideSelectedInfos.length}}>Hide $count Commits</T>,
+            onClick: () =>
+              writeAtom(
+                operationBeingPreviewed,
+                new HideOperation(
+                  hideSelectedInfos.map(c => latestSuccessorUnlessExplicitlyObsolete(c)),
+                ),
+              ),
+            loggingLabel: 'Hide Selected Commits',
+          });
+        } else {
+          items.push({
+            label: hasChildren ? <T>Hide Commit and Descendants</T> : <T>Hide Commit</T>,
+            onClick: () =>
+              writeAtom(
+                operationBeingPreviewed,
+                new HideOperation(latestSuccessorUnlessExplicitlyObsolete(commit)),
+              ),
+            loggingLabel: 'Hide Commit',
+          });
+        }
       }
       if (!actionsPrevented && !commit.isDot) {
         items.push({
