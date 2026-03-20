@@ -56,20 +56,22 @@ pub struct Subscription {
 /// The workflow is simple:
 /// * fire `hg cloud sync` on start in every repo
 /// * read and start current set of subscriptions and
-///     fire `hg cloud sync` on notifications
+///   fire `hg cloud sync` on notifications
 /// * fire `hg cloud sync` when connection recovers
 /// * also provide actions (callbacks) to a few TcpReceiver commands
-///     the commands are:
-///         "start_subscriptions"
-///         "restart_subscriptions"
-///         "cancel_subscriptions"
-///             if a command comes, gracefully cancel all previous subscriptions
-///             and restart if requested
 ///
-/// main use case:
-///   * if a client (hg) add itself as a new subscriber (hg cloud join),
-///     it is also client's responsibility to send "restart_subscriptions" command
-///     same for unsubscribing (hg cloud leave)
+/// The commands are:
+/// * "start_subscriptions"
+/// * "restart_subscriptions"
+/// * "cancel_subscriptions"
+///
+/// If a command comes, gracefully cancel all previous subscriptions
+/// and restart if requested
+///
+/// Main use case:
+/// * if a client (hg) add itself as a new subscriber (hg cloud join),
+///   it is also client's responsibility to send "restart_subscriptions" command
+///   same for unsubscribing (hg cloud leave)
 ///
 /// The serve function starts the service
 pub struct WorkspaceSubscriberService {

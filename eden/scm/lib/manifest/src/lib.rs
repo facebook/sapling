@@ -68,7 +68,7 @@ pub trait Manifest {
     /// * List::NotFound when the path is not present in the manifest
     /// * List::File when the path points to a file
     /// * List::Directory when the path points to a directory
-    ///    wraps the names of the files and directories in this directory
+    ///   wraps the names of the files and directories in this directory
     // TODO: add default implementation
     fn list(&self, path: &RepoPath) -> Result<List>;
 

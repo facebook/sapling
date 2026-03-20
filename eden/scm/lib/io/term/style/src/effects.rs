@@ -26,17 +26,17 @@ use termwiz::surface::Change;
 ///
 /// Style spec format:
 ///    - effect: a concrete text modifier (e.g. "green" or "bold").
-///              Various color formats are supported depending on color level:
-///                 4-bit: green, red_background, etc.
-///                 8-bit: color123, color100_background, etc
-///                 24-bit: #FFF, #A1B2C3, DarkOrange2 (and more - see termwiz)
+///      Various color formats are supported depending on color level:
+///        - 4-bit: green, red_background, etc.
+///        - 8-bit: color123, color100_background, etc
+///        - 24-bit: #FFF, #A1B2C3, DarkOrange2 (and more - see termwiz)
 ///    - style: effect(+effect)*
-///             A list of effects separated by "+". Effects are only applied
-///             if all effects in the list are valid.
+///      A list of effects separated by "+". Effects are only applied
+///      if all effects in the list are valid.
 ///    - spec: style(:style)*
-///            Priority order list of styles. First valid style wins.
+///      Priority order list of styles. First valid style wins.
 ///    - specs: spec( spec)*
-///             Space separated list of specs. All specs are applied in order.
+///      Space separated list of specs. All specs are applied in order.
 ///
 /// Examples:
 ///

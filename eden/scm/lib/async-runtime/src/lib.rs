@@ -101,12 +101,16 @@ where
 ///     - the stream will take 2 futures from the underlying iterator and poll on them; when the
 ///       first one returns it enquees the result in our buffer and polls the third future in the
 ///       underlying stream. Assuming that f(x) produces r(x) we could write:
-///        stream: #f1, *f2, *f3, f4, f5
-///        buffer: r1
+///       ```text
+///       stream: #f1, *f2, *f3, f4, f5
+///       buffer: r1
+///       ```
 ///     - let's assume that the blocking thread will not consume the buffer and the next future
 ///       finishes; the result then fills the buffer and f4 will get polled:
-///        stream: #f1, #f2, *f3, *f4, f5
-///        buffer: r1, r2
+///       ```text
+///       stream: #f1, #f2, *f3, *f4, f5
+///       buffer: r1, r2
+///       ```
 ///     - adding the result of the third future to the buffer will have to wait until the blocking
 ///       thread consumes the returned iterator; only after that will the stream proceed with
 ///       polling the fifth future in the stream
