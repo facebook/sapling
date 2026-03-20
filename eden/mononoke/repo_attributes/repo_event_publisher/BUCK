@@ -19,7 +19,7 @@ rust_library(
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/stats:stats",
         "//common/rust/shed/justknobs_stub:justknobs",
-        "//common/rust/scribe/api:scribe_api",
+        "//common/rust/scribe/consumer:scribe_api_consumer",
         "//common/rust/shed/cloned:cloned",
         "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:dashmap-5",
