@@ -282,6 +282,16 @@ cpp_unittest(
 )
 
 cpp_unittest(
+    name = "inode_pressure_policy",
+    srcs = ["InodePressurePolicyTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "fbsource//third-party/googletest:gtest",
+        "//eden/fs/inodes:inodes",
+    ],
+)
+
+cpp_unittest(
     name = "inode_timestamps",
     srcs = ["InodeTimestampsTest.cpp"],
     supports_static_listing = False,
@@ -546,6 +556,16 @@ cpp_binary(
     ],
     external_deps = [
         "gflags",
+    ],
+)
+
+cpp_benchmark(
+    name = "inode_pressure_policy_benchmark",
+    srcs = ["InodePressurePolicyBenchmark.cpp"],
+    deps = [
+        "//eden/fs/inodes:inodes",
+        "//folly:benchmark",
+        "//folly/init:init",
     ],
 )
 
