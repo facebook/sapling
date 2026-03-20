@@ -1646,8 +1646,10 @@ class EdenCheckout:
                 re_use_case = str(recas.get("use-case"))
 
         enable_windows_symlinks = repository.get("enable-windows-symlinks")
-        if not isinstance(enable_windows_symlinks, bool):
-            enable_windows_symlinks = sys.platform == "win32"
+        if sys.platform == "win32":
+            enable_windows_symlinks = True
+        elif not isinstance(enable_windows_symlinks, bool):
+            enable_windows_symlinks = False
 
         off_mount_repo_dir = repository.get("off-mount-repo-dir")
         if not isinstance(off_mount_repo_dir, bool):
@@ -2269,7 +2271,9 @@ def get_repo_info(
         overlay_type,
         backing_store_type=backing_store_type,
         re_use_case=re_use_case,
-        enable_windows_symlinks=enable_windows_symlinks,
+        enable_windows_symlinks=(
+            True if sys.platform == "win32" else enable_windows_symlinks
+        ),
         off_mount_repo_dir=off_mount_repo_dir,
     )
 

@@ -1896,7 +1896,12 @@ Fixing files present on disk but not known to EdenFS in {Path(mount)}...<green>f
             problemDescriptions = {
                 problem.description() for problem in tracker.problems
             }
-            self.assertEqual(problemDescriptions, set())
+            self.assertEqual(
+                problemDescriptions,
+                {
+                    f"{Path('a/c')} has an unexpected file type: known to EdenFS as a file, but is a symlink on disk",
+                },
+            )
 
         @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.debugInodeStatus")
         def test_materialized_symlink_as_file(self, mock_debugInodeStatus) -> None:
@@ -1904,7 +1909,7 @@ Fixing files present on disk but not known to EdenFS in {Path(mount)}...<green>f
             checkout = instance.create_test_mount("path1")
             checkoutconfig = checkout.get_config()
             # Enable symlinks on Windows
-            checkoutconfig._replace(enable_windows_symlinks=True)
+            checkoutconfig = checkoutconfig._replace(enable_windows_symlinks=True)
             checkout.save_config(checkoutconfig)
             mount = checkout.path
             os.makedirs(mount / "a")
@@ -2033,7 +2038,9 @@ Fixing files present on disk but not known to EdenFS in {Path(mount)}...<green>f
             self.assertEqual(
                 problemDescriptions,
                 {
-                    f"{Path('a/d')} has an unexpected file type: known to EdenFS as a directory, but is a file on disk",
+                    f"""\
+{Path("a/c")} has an unexpected file type: known to EdenFS as a file, but is a symlink on disk
+{Path("a/d")} has an unexpected file type: known to EdenFS as a directory, but is a symlink on disk"""
                 },
             )
 

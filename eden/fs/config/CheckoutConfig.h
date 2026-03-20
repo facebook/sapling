@@ -216,13 +216,10 @@ class CheckoutConfig {
   }
 #endif
 
-  /** Whether symlinks are enabled or not */
+  /** Whether symlinks are enabled or not. Return true as all the mounts on
+   * Windows are symlink enabled now */
   bool getEnableWindowsSymlinks() const {
-#ifdef _WIN32
-    return enableWindowsSymlinks_;
-#else
     return true;
-#endif
   }
 
  private:

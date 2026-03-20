@@ -8,6 +8,7 @@
 
 
 import os
+import sys
 from pathlib import Path
 
 from eden.fs.cli.config import CheckoutConfig, EdenCheckout, EdenInstance
@@ -54,7 +55,7 @@ class LegacyEphemeralCleanupTest(testcase.EdenRepoTest):
             enable_sqlite_overlay=False,
             use_write_back_cache=False,
             re_use_case="buck2-default",
-            enable_windows_symlinks=False,
+            enable_windows_symlinks=sys.platform == "win32",
             inode_catalog_type="legacyephemeral",
             off_mount_repo_dir=False,
         )
