@@ -313,11 +313,7 @@ ImmediateFuture<bool> processChildren(
 
   // TODO: Should FIND_FIRST_EX_ON_DISK_ENTRIES_ONLY be used?
   auto children = getPrjfsOnDiskChildrenState(
-      root,
-      path,
-      true,
-      fsckRenamedFiles,
-      /* queryOnDiskEntriesOnly= */ false);
+      root, path, fsckRenamedFiles, /* queryOnDiskEntriesOnly= */ false);
 
   for (const auto& [name, overlayEntry] : insensitiveOverlayDir) {
     auto& childState = children[name];

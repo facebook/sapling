@@ -92,17 +92,15 @@ void populateDiskState(
     RelativePathPiece path,
     FsckFileState& state,
     const WIN32_FIND_DATAW& findFileData,
-    bool windowsSymlinksEnabled,
     bool fsckRenamedFiles) {
   dtype_t dtype =
       dtypeFromAttrs(findFileData.dwFileAttributes, findFileData.dwReserved0);
   if (dtype != dtype_t::Dir && dtype != dtype_t::Regular) {
     state.onDisk = true;
     // On Windows, EdenFS consider most special files (sockets, etc)
-    // to be regular (but not symlinks)
-    state.diskDtype = windowsSymlinksEnabled && dtype == dtype_t::Symlink
-        ? dtype_t::Symlink
-        : dtype_t::Regular;
+    // to be regular (but not symlinks).
+    state.diskDtype =
+        dtype == dtype_t::Symlink ? dtype_t::Symlink : dtype_t::Regular;
     state.populatedOrFullOrTomb = true;
     return;
   }
@@ -184,7 +182,6 @@ void populateDiskState(
 PathMap<FsckFileState> getPrjfsOnDiskChildrenState(
     AbsolutePathPiece root,
     RelativePathPiece path,
-    bool windowsSymlinksEnabled,
     bool fsckRenamedFiles,
     bool queryOnDiskEntriesOnly) {
   PathMap<FsckFileState> children{CaseSensitivity::Insensitive};
@@ -220,12 +217,7 @@ PathMap<FsckFileState> getPrjfsOnDiskChildrenState(
     PathComponent name{findFileData.cFileName};
     auto& childState = children[name];
     populateDiskState(
-        root,
-        path + name,
-        childState,
-        findFileData,
-        windowsSymlinksEnabled,
-        fsckRenamedFiles);
+        root, path + name, childState, findFileData, fsckRenamedFiles);
   } while (FindNextFileW(h, &findFileData) != 0);
 
   auto error = GetLastError();

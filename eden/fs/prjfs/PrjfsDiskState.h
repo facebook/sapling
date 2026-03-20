@@ -73,7 +73,6 @@ struct FsckFileState {
 PathMap<FsckFileState> getPrjfsOnDiskChildrenState(
     AbsolutePathPiece root,
     RelativePathPiece path,
-    bool windowsSymlinksEnabled,
     bool fsckRenamedFiles,
     bool queryOnDiskEntriesOnly);
 
