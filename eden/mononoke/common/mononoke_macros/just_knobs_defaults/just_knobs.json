@@ -101,7 +101,8 @@
     "scm/mononoke:use_acl_manifest_for_restricted_paths": true,
     "scm/metagit:mononoke_git_lfs": false,
     "scm/mononoke:use_split_config_loading": false,
-    "scm/mononoke:cross_repo_pause_backsyncer": false
+    "scm/mononoke:cross_repo_pause_backsyncer": false,
+    "scm/mononoke:lock_users_directory": false
   },
   "ints": {
     "scm/mononoke_timeouts:repo_client_clone_timeout_secs": 14400,
