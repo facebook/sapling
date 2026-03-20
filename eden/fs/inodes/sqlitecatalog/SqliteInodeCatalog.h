@@ -102,7 +102,6 @@ class SqliteInodeCatalog : public InodeCatalog {
   InodeNumber scanLocalChanges(
       std::shared_ptr<ReloadableConfig> config,
       AbsolutePathPiece mountPath,
-      bool windowsSymlinksEnabled,
       InodeCatalog::LookupCallback& callback) override;
 
   void maintenance() override {

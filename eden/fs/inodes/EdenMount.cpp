@@ -282,7 +282,6 @@ EdenMount::EdenMount(
           getInodeCatalogOptions(inodeCatalogOptions),
           serverState_->getStructuredLogger(),
           std::move(stats),
-          checkoutConfig_->getEnableWindowsSymlinks(),
           *serverState_->getEdenConfig())},
 #ifndef _WIN32
       overlayFileAccess_{

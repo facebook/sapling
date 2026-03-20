@@ -85,7 +85,6 @@ TEST(PlainLMDBOverlayTest, new_overlay_is_clean) {
       INODE_CATALOG_DEFAULT,
       std::make_shared<NullStructuredLogger>(),
       makeRefPtr<EdenStats>(),
-      true,
       *EdenConfig::createTestEdenConfig());
   overlay
       ->initialize(
@@ -104,7 +103,6 @@ TEST(PlainLMDBOverlayTest, new_overlay_is_clean_buffered) {
       INODE_CATALOG_BUFFERED,
       std::make_shared<NullStructuredLogger>(),
       makeRefPtr<EdenStats>(),
-      true,
       *EdenConfig::createTestEdenConfig());
   overlay
       ->initialize(
@@ -124,7 +122,6 @@ TEST(PlainLMDBOverlayTest, reopened_overlay_is_clean) {
         INODE_CATALOG_DEFAULT,
         std::make_shared<NullStructuredLogger>(),
         makeRefPtr<EdenStats>(),
-        true,
         *EdenConfig::createTestEdenConfig());
     overlay
         ->initialize(
@@ -139,7 +136,6 @@ TEST(PlainLMDBOverlayTest, reopened_overlay_is_clean) {
       INODE_CATALOG_DEFAULT,
       std::make_shared<NullStructuredLogger>(),
       makeRefPtr<EdenStats>(),
-      true,
       *EdenConfig::createTestEdenConfig());
   overlay
       ->initialize(
@@ -159,7 +155,6 @@ TEST(PlainLMDBOverlayTest, reopened_overlay_is_clean_buffered) {
         INODE_CATALOG_BUFFERED,
         std::make_shared<NullStructuredLogger>(),
         makeRefPtr<EdenStats>(),
-        true,
         *EdenConfig::createTestEdenConfig());
     overlay
         ->initialize(
@@ -174,7 +169,6 @@ TEST(PlainLMDBOverlayTest, reopened_overlay_is_clean_buffered) {
       INODE_CATALOG_BUFFERED,
       std::make_shared<NullStructuredLogger>(),
       makeRefPtr<EdenStats>(),
-      true,
       *EdenConfig::createTestEdenConfig());
   overlay
       ->initialize(
@@ -195,7 +189,6 @@ TEST(PlainLMDBOverlayTest, close_overlay_with_no_capacity_buffered) {
       INODE_CATALOG_BUFFERED,
       std::make_shared<NullStructuredLogger>(),
       makeRefPtr<EdenStats>(),
-      true,
       *config);
   overlay
       ->initialize(
@@ -217,7 +210,6 @@ TEST(PlainLMDBOverlayTest, small_capacity_write_multiple_directories_buffered) {
       INODE_CATALOG_BUFFERED,
       std::make_shared<NullStructuredLogger>(),
       makeRefPtr<EdenStats>(),
-      true,
       *config);
   overlay
       ->initialize(
@@ -270,7 +262,6 @@ class RawLMDBOverlayTest
         overlayOptions(),
         std::make_shared<NullStructuredLogger>(),
         makeRefPtr<EdenStats>(),
-        true,
         *EdenConfig::createTestEdenConfig());
     overlay
         ->initialize(
@@ -451,7 +442,6 @@ class DebugDumpLMDBOverlayInodesTest
         overlayOptions(),
         std::make_shared<NullStructuredLogger>(),
         makeRefPtr<EdenStats>(),
-        true,
         *EdenConfig::createTestEdenConfig());
     overlay
         ->initialize(

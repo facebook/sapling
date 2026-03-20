@@ -174,7 +174,6 @@ std::shared_ptr<Overlay> Overlay::create(
     InodeCatalogOptions inodeCatalogOptions,
     std::shared_ptr<StructuredLogger> logger,
     EdenStatsPtr stats,
-    bool windowsSymlinksEnabled,
     const EdenConfig& config) {
   // This allows us to access the private constructor.
   struct MakeSharedEnabler : public Overlay {
@@ -185,7 +184,6 @@ std::shared_ptr<Overlay> Overlay::create(
         InodeCatalogOptions inodeCatalogOptions,
         std::shared_ptr<StructuredLogger> logger,
         EdenStatsPtr stats,
-        bool windowsSymlinksEnabled,
         const EdenConfig& config)
         : Overlay(
               localDir,
@@ -194,7 +192,6 @@ std::shared_ptr<Overlay> Overlay::create(
               inodeCatalogOptions,
               logger,
               std::move(stats),
-              windowsSymlinksEnabled,
               config) {}
   };
   return std::make_shared<MakeSharedEnabler>(
@@ -204,7 +201,6 @@ std::shared_ptr<Overlay> Overlay::create(
       inodeCatalogOptions,
       logger,
       std::move(stats),
-      windowsSymlinksEnabled,
       config);
 }
 
@@ -215,7 +211,6 @@ Overlay::Overlay(
     InodeCatalogOptions inodeCatalogOptions,
     std::shared_ptr<StructuredLogger> logger,
     EdenStatsPtr stats,
-    bool windowsSymlinksEnabled,
     const EdenConfig& config)
     : fileContentStore_{makeFileContentStore(
           localDir,
@@ -237,7 +232,6 @@ Overlay::Overlay(
       caseSensitive_{caseSensitive},
       structuredLogger_{logger},
       stats_{std::move(stats)},
-      windowsSymlinksEnabled_(windowsSymlinksEnabled),
       useDirectSerialization_(config.overlayDirectSerialization.getValue()),
       useDirectFileWrites_(config.overlayDirectFileWrites.getValue()) {}
 
@@ -448,7 +442,7 @@ void Overlay::initOverlay(
   if (folly::kIsWindows && mountPath.has_value()) {
     folly::stop_watch<> fsckRuntime;
     optNextInodeNumber = inodeCatalog_->scanLocalChanges(
-        std::move(config), *mountPath, windowsSymlinksEnabled_, lookupCallback);
+        std::move(config), *mountPath, lookupCallback);
     auto fsckRuntimeInSeconds =
         std::chrono::duration<double>{fsckRuntime.elapsed()}.count();
     structuredLogger_->logEvent(

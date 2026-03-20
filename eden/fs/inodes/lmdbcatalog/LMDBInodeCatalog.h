@@ -80,7 +80,6 @@ class LMDBInodeCatalog : public InodeCatalog {
   InodeNumber scanLocalChanges(
       std::shared_ptr<ReloadableConfig> config,
       AbsolutePathPiece mountPath,
-      bool windowsSymlinksEnabled,
       InodeCatalog::LookupCallback& callback) override;
 
   std::optional<fsck::InodeInfo> loadInodeInfo(InodeNumber number) override;

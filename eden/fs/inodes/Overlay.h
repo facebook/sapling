@@ -92,7 +92,6 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
       InodeCatalogOptions inodeCatalogOptions,
       std::shared_ptr<StructuredLogger> logger,
       EdenStatsPtr stats,
-      bool windowsSymlinksEnabled,
       const EdenConfig& config);
 
   ~Overlay();
@@ -195,10 +194,6 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   }
 
 #endif // !_WIN32
-
-  bool getWindowsSymlinksEnabled() const {
-    return windowsSymlinksEnabled_;
-  }
 
   /**
    * Save a directory to the overlay.
@@ -332,7 +327,6 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
       InodeCatalogOptions inodeCatalogOptions,
       std::shared_ptr<StructuredLogger> logger,
       EdenStatsPtr stats,
-      bool windowsSymlinksEnabled_,
       const EdenConfig& config);
 
   /**
@@ -471,8 +465,6 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   EdenStatsPtr stats_;
 
   friend class IORequest;
-
-  bool windowsSymlinksEnabled_;
 
   bool useDirectSerialization_;
   bool useDirectFileWrites_;

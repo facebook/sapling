@@ -193,16 +193,10 @@ std::optional<fsck::InodeInfo> MemInodeCatalog::loadInodeInfo(
 InodeNumber MemInodeCatalog::scanLocalChanges(
     [[maybe_unused]] std::shared_ptr<ReloadableConfig> config,
     [[maybe_unused]] AbsolutePathPiece mountPath,
-    [[maybe_unused]] bool windowsSymlinksEnabled,
     [[maybe_unused]] InodeCatalog::LookupCallback& callback) {
 #ifdef _WIN32
   windowsFsckScanLocalChanges(
-      config,
-      *this,
-      InodeCatalogType::InMemory,
-      mountPath,
-      windowsSymlinksEnabled,
-      callback);
+      config, *this, InodeCatalogType::InMemory, mountPath, callback);
 #endif
   return InodeNumber{nextInode_.load()};
 }

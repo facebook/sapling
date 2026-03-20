@@ -50,7 +50,6 @@ class OverlayFileTest : public ::testing::Test {
         INODE_CATALOG_DEFAULT,
         std::make_shared<NullStructuredLogger>(),
         makeRefPtr<EdenStats>(),
-        true,
         *EdenConfig::createTestEdenConfig());
     fsOverlay
         ->initialize(
@@ -65,7 +64,6 @@ class OverlayFileTest : public ::testing::Test {
         INODE_CATALOG_DEFAULT,
         std::make_shared<NullStructuredLogger>(),
         makeRefPtr<EdenStats>(),
-        true,
         *EdenConfig::createTestEdenConfig());
     lmdbOverlay
         ->initialize(

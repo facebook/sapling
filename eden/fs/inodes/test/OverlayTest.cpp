@@ -73,7 +73,6 @@ TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
       kInodeCatalogOptions,
       std::make_shared<NullStructuredLogger>(),
       makeRefPtr<EdenStats>(),
-      true,
       *EdenConfig::createTestEdenConfig());
   overlay
       ->initialize(
@@ -262,7 +261,6 @@ TEST(PlainOverlayTest, new_overlay_is_clean) {
       kInodeCatalogOptions,
       std::make_shared<NullStructuredLogger>(),
       makeRefPtr<EdenStats>(),
-      true,
       *EdenConfig::createTestEdenConfig());
   overlay
       ->initialize(
@@ -282,7 +280,6 @@ TEST(PlainOverlayTest, reopened_overlay_is_clean) {
         kInodeCatalogOptions,
         std::make_shared<NullStructuredLogger>(),
         makeRefPtr<EdenStats>(),
-        true,
         *EdenConfig::createTestEdenConfig());
     overlay
         ->initialize(
@@ -298,7 +295,6 @@ TEST(PlainOverlayTest, reopened_overlay_is_clean) {
       kInodeCatalogOptions,
       std::make_shared<NullStructuredLogger>(),
       makeRefPtr<EdenStats>(),
-      true,
       *EdenConfig::createTestEdenConfig());
   overlay
       ->initialize(
@@ -320,7 +316,6 @@ TEST(PlainOverlayTest, unclean_overlay_is_dirty) {
         kInodeCatalogOptions,
         std::make_shared<NullStructuredLogger>(),
         makeRefPtr<EdenStats>(),
-        true,
         *EdenConfig::createTestEdenConfig());
     overlay
         ->initialize(
@@ -340,7 +335,6 @@ TEST(PlainOverlayTest, unclean_overlay_is_dirty) {
       kInodeCatalogOptions,
       std::make_shared<NullStructuredLogger>(),
       makeRefPtr<EdenStats>(),
-      true,
       *EdenConfig::createTestEdenConfig());
   overlay
       ->initialize(
@@ -389,7 +383,6 @@ class RawOverlayTest : public ::testing::TestWithParam<OverlayRestartMode> {
         kInodeCatalogOptions,
         std::make_shared<NullStructuredLogger>(),
         makeRefPtr<EdenStats>(),
-        true,
         *EdenConfig::createTestEdenConfig());
     overlay
         ->initialize(
@@ -838,7 +831,6 @@ class DebugDumpOverlayInodesTest : public ::testing::Test {
             kInodeCatalogOptions,
             std::make_shared<NullStructuredLogger>(),
             makeRefPtr<EdenStats>(),
-            true,
             *EdenConfig::createTestEdenConfig())} {
     overlay
         ->initialize(

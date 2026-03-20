@@ -56,7 +56,6 @@ void windowsFsckScanLocalChanges(
     InodeCatalog& overlay,
     InodeCatalogType inodeCatalogType,
     AbsolutePathPiece mountPath,
-    bool windowsSymlinksEnabled,
     InodeCatalog::LookupCallback& callback);
 
 } // namespace facebook::eden

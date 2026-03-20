@@ -86,7 +86,6 @@ TEST(PlainSqliteInodeCatalogTest, new_overlay_is_clean) {
       kDefaultInodeCatalogOptions,
       std::make_shared<NullStructuredLogger>(),
       makeRefPtr<EdenStats>(),
-      true,
       *EdenConfig::createTestEdenConfig());
   overlay
       ->initialize(
@@ -105,7 +104,6 @@ TEST(PlainSqliteInodeCatalogTest, new_overlay_is_clean_buffered) {
       INODE_CATALOG_BUFFERED,
       std::make_shared<NullStructuredLogger>(),
       makeRefPtr<EdenStats>(),
-      true,
       *EdenConfig::createTestEdenConfig());
   overlay
       ->initialize(
@@ -125,7 +123,6 @@ TEST(PlainSqliteInodeCatalogTest, reopened_overlay_is_clean) {
         kDefaultInodeCatalogOptions,
         std::make_shared<NullStructuredLogger>(),
         makeRefPtr<EdenStats>(),
-        true,
         *EdenConfig::createTestEdenConfig());
     overlay
         ->initialize(
@@ -140,7 +137,6 @@ TEST(PlainSqliteInodeCatalogTest, reopened_overlay_is_clean) {
       kDefaultInodeCatalogOptions,
       std::make_shared<NullStructuredLogger>(),
       makeRefPtr<EdenStats>(),
-      true,
       *EdenConfig::createTestEdenConfig());
   overlay
       ->initialize(
@@ -160,7 +156,6 @@ TEST(PlainSqliteInodeCatalogTest, reopened_overlay_is_clean_buffered) {
         INODE_CATALOG_BUFFERED,
         std::make_shared<NullStructuredLogger>(),
         makeRefPtr<EdenStats>(),
-        true,
         *EdenConfig::createTestEdenConfig());
     overlay
         ->initialize(
@@ -175,7 +170,6 @@ TEST(PlainSqliteInodeCatalogTest, reopened_overlay_is_clean_buffered) {
       INODE_CATALOG_BUFFERED,
       std::make_shared<NullStructuredLogger>(),
       makeRefPtr<EdenStats>(),
-      true,
       *EdenConfig::createTestEdenConfig());
   overlay
       ->initialize(
@@ -196,7 +190,6 @@ TEST(PlainSqliteInodeCatalogTest, close_overlay_with_no_capacity_buffered) {
       INODE_CATALOG_BUFFERED,
       std::make_shared<NullStructuredLogger>(),
       makeRefPtr<EdenStats>(),
-      true,
       *config);
   overlay
       ->initialize(
@@ -220,7 +213,6 @@ TEST(
       INODE_CATALOG_BUFFERED,
       std::make_shared<NullStructuredLogger>(),
       makeRefPtr<EdenStats>(),
-      true,
       *config);
   overlay
       ->initialize(
@@ -274,7 +266,6 @@ class RawSqliteInodeCatalogTest
         overlayOptions(),
         std::make_shared<NullStructuredLogger>(),
         makeRefPtr<EdenStats>(),
-        true,
         *EdenConfig::createTestEdenConfig());
     overlay
         ->initialize(
@@ -455,7 +446,6 @@ class DebugDumpSqliteInodeCatalogInodesTest
         overlayOptions(),
         std::make_shared<NullStructuredLogger>(),
         makeRefPtr<EdenStats>(),
-        true,
         *EdenConfig::createTestEdenConfig());
     overlay
         ->initialize(

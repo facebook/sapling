@@ -123,7 +123,6 @@ void benchmarkOverlay(
       kDefaultInodeCatalogOptions,
       std::make_shared<NullStructuredLogger>(),
       makeRefPtr<EdenStats>(),
-      true,
       *edenConfig);
 
   overlay->initialize(std::make_shared<ReloadableConfig>(std::move(edenConfig)))

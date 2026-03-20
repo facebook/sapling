@@ -64,7 +64,6 @@ int main(int argc, char** argv) {
   inodeCatalog.scanLocalChanges(
       std::make_shared<ReloadableConfig>(EdenConfig::createTestEdenConfig()),
       mountPath,
-      true,
       lookup);
   XLOG(INFO, "scanning end");
 
