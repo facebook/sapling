@@ -2700,7 +2700,8 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectWorkingCopy(
     EdenMount& mount,
     TreeInodePtr inode,
     std::chrono::system_clock::time_point cutoff,
-    const ObjectFetchContextPtr& context) {
+    const ObjectFetchContextPtr& context,
+    bool pressureBased) {
   folly::stop_watch<> workingCopyRuntime;
 
   auto lease = mount.tryStartWorkingCopyGC(inode);
@@ -2718,7 +2719,8 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectWorkingCopy(
       inodeCountsBeforeGC.treeCount + inodeCountsBeforeGC.unloadedInodeCount;
   XLOGF(
       DBG1,
-      "Starting GC for: {} total number of inodes {}",
+      "Starting {} GC for: {} total number of inodes {}",
+      pressureBased ? "pressure-based" : "config-based",
       mountPath,
       totalNumberOfInodesBeforeGC);
   // Use the member cancellation source for this operation
@@ -2736,8 +2738,8 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectWorkingCopy(
                 structuredLogger = structuredLogger_,
                 mountPath,
                 inodeMap = mount.getInodeMap(),
-                totalNumberOfInodesBeforeGC](
-                   folly::Try<uint64_t> invalidatedTry) {
+                totalNumberOfInodesBeforeGC,
+                pressureBased](folly::Try<uint64_t> invalidatedTry) {
         auto runtime =
             std::chrono::duration<double>{workingCopyRuntime.elapsed()};
 
@@ -2759,9 +2761,13 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectWorkingCopy(
                      totalNumberOfInodesAfterGC))});
         XLOGF(
             DBG1,
-            "GC for: {}, completed in: {} seconds, total number of inodes after GC: {}",
+            "{} GC for: {}, completed in: {} seconds, "
+            "invalidated: {}, inodes before: {}, inodes after: {}",
+            pressureBased ? "Pressure-based" : "Config-based",
             mountPath,
             runtime.count(),
+            numInvalidated,
+            totalNumberOfInodesBeforeGC,
             totalNumberOfInodesAfterGC);
 
         return invalidatedTry.value();
@@ -2776,28 +2782,49 @@ void EdenServer::garbageCollectAllMounts() {
   auto shorterCutoffConfig =
       std::chrono::duration_cast<std::chrono::system_clock::duration>(
           config->aggressiveGcCutoff.getValue());
+  auto pressureBasedGc = config->enablePressureBasedGc.getValue();
   std::chrono::system_clock::time_point cutoff;
 
   auto mountPoints = getMountPoints();
   for (auto& mountHandle : mountPoints) {
-    auto inodeCountsBeforeGc =
-        mountHandle.getEdenMount().getInodeMap()->getInodeCounts();
-    auto totalNumberOfInodesBeforeGc = inodeCountsBeforeGc.fileCount +
-        inodeCountsBeforeGc.treeCount + inodeCountsBeforeGc.unloadedInodeCount;
-    auto aggressiveGcThreshold = config->aggressiveGcThreshold.getValue();
-    // If aggressiveGcThreshold is set to 0, we will not run GC with shorter
-    // cutoff.
-    if (aggressiveGcThreshold > 0 &&
-        totalNumberOfInodesBeforeGc > aggressiveGcThreshold) {
-      // If the number of inodes is above the threshold, we want to run
-      // GC with shorter cutoff.
-      cutoff = std::chrono::system_clock::now() - shorterCutoffConfig;
+    if (pressureBasedGc) {
+      // Use the pressure-based policy to compute a dynamic cutoff based on
+      // the current inode count for this mount.
+      auto& mount = mountHandle.getEdenMount();
+      auto policy = mount.getInodePressurePolicy();
+      auto inodeCount = mount.getInodeMap()->getTotalInodeCountFast();
+      auto gcCutoffDuration = policy->getGcCutoff(inodeCount);
+
+      if constexpr (folly::kIsWindows) {
+        // On Windows, PrjFS GC uses on-disk atime which is only updated
+        // ~hourly. A cutoff shorter than 1 hour would incorrectly treat
+        // recently-used files as stale.
+        gcCutoffDuration =
+            std::max(gcCutoffDuration, std::chrono::seconds{3600});
+      }
+
+      cutoff = std::chrono::system_clock::now() - gcCutoffDuration;
     } else {
-      cutoff = std::chrono::system_clock::now() - cutoffConfig;
+      auto inodeCountsBeforeGc =
+          mountHandle.getEdenMount().getInodeMap()->getInodeCounts();
+      auto totalNumberOfInodesBeforeGc = inodeCountsBeforeGc.fileCount +
+          inodeCountsBeforeGc.treeCount +
+          inodeCountsBeforeGc.unloadedInodeCount;
+      auto aggressiveGcThreshold = config->aggressiveGcThreshold.getValue();
+      // If aggressiveGcThreshold is set to 0, we will not run GC with shorter
+      // cutoff.
+      if (aggressiveGcThreshold > 0 &&
+          totalNumberOfInodesBeforeGc > aggressiveGcThreshold) {
+        // If the number of inodes is above the threshold, we want to run
+        // GC with shorter cutoff.
+        cutoff = std::chrono::system_clock::now() - shorterCutoffConfig;
+      } else {
+        cutoff = std::chrono::system_clock::now() - cutoffConfig;
+      }
     }
     folly::via(
         getServerState()->getThreadPool().get(),
-        [this, mountHandle, cutoff]() mutable {
+        [this, mountHandle, cutoff, pressureBasedGc]() mutable {
           static auto context =
               ObjectFetchContext::getNullContextWithCauseDetail(
                   "EdenServer::garbageCollectAllMounts");
@@ -2805,7 +2832,8 @@ void EdenServer::garbageCollectAllMounts() {
                      mountHandle.getEdenMount(),
                      mountHandle.getRootInode(),
                      cutoff,
-                     context)
+                     context,
+                     pressureBasedGc)
               .semi();
         })
         .ensure([mountHandle] {});

@@ -334,7 +334,8 @@ class EdenServer : private TakeoverHandler {
       EdenMount& mount,
       TreeInodePtr rootInode,
       std::chrono::system_clock::time_point cutoff,
-      const ObjectFetchContextPtr& context);
+      const ObjectFetchContextPtr& context,
+      bool pressureBased = false);
 
   /**
    * Stop all garbage collection tasks and wait for any running GC to finish.
