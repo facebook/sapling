@@ -3087,6 +3087,11 @@ void EdenServer::reloadConfig() {
       [this, config = std::move(config)] {
         updatePeriodicTaskIntervals(*config);
       });
+
+  // Rebuild cached InodePressurePolicy for each mount.
+  for (auto& handle : getMountPoints()) {
+    handle.getEdenMount().updateInodePressurePolicy();
+  }
 }
 
 void EdenServer::checkLockValidity() {

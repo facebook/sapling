@@ -304,6 +304,7 @@ EdenMount::EdenMount(
           serverState_->getStats().copy(),
           journal_)} {
   subscribeInodeActivityBuffer();
+  updateInodePressurePolicy();
 }
 
 InodeCatalogType EdenMount::getInodeCatalogType(
@@ -1129,6 +1130,36 @@ const shared_ptr<UnboundedQueueExecutor>& EdenMount::getInvalidationThreadPool()
 
 folly::ReadMostlySharedPtr<const EdenConfig> EdenMount::getEdenConfig() const {
   return serverState_->getReloadableConfig()->getEdenConfig();
+}
+
+void EdenMount::updateInodePressurePolicy() {
+  auto config = getEdenConfig();
+  auto minInodes = config->gcPressureMinInodes.getValue();
+  auto maxInodes = config->gcPressureMaxInodes.getValue();
+  auto fuseTtlMax = config->fuseTtlMaxSeconds.getValue();
+  auto fuseTtlMin = config->fuseTtlMinSeconds.getValue();
+  auto gcCutoffMax = config->gcCutoffMaxSeconds.getValue();
+  auto gcCutoffMin = config->gcCutoffMinSeconds.getValue();
+
+  cachedPressurePolicy_ = std::make_shared<const InodePressurePolicy>(
+      minInodes,
+      maxInodes,
+      std::chrono::seconds{fuseTtlMax},
+      std::chrono::seconds{fuseTtlMin},
+      std::chrono::seconds{gcCutoffMax},
+      std::chrono::seconds{gcCutoffMin});
+
+  XLOGF(
+      DBG2,
+      "Updated InodePressurePolicy for {}: "
+      "inodes=[{}, {}], fuseTtl=[{}s, {}s], gcCutoff=[{}s, {}s]",
+      getPath(),
+      minInodes,
+      maxInodes,
+      fuseTtlMin,
+      fuseTtlMax,
+      gcCutoffMin,
+      gcCutoffMax);
 }
 
 std::optional<int64_t> EdenMount::getCheckoutProgress() const {

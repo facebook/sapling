@@ -37,6 +37,7 @@
 #include "eden/fs/inodes/CacheHint.h"
 #include "eden/fs/inodes/FsChannel.h"
 #include "eden/fs/inodes/InodeNumber.h"
+#include "eden/fs/inodes/InodePressurePolicy.h"
 #include "eden/fs/inodes/InodePtrFwd.h"
 #include "eden/fs/inodes/InodeTimestamps.h"
 #include "eden/fs/inodes/Overlay.h"
@@ -643,6 +644,21 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   }
 
   folly::ReadMostlySharedPtr<const EdenConfig> getEdenConfig() const;
+
+  /**
+   * Get the current InodePressurePolicy. Lock-free read.
+   * The policy is rebuilt by updateInodePressurePolicy(), called
+   * from the periodic config reload task.
+   */
+  folly::ReadMostlySharedPtr<const InodePressurePolicy> getInodePressurePolicy()
+      const {
+    return cachedPressurePolicy_.load();
+  }
+
+  /**
+   * Rebuild the InodePressurePolicy from the current EdenConfig.
+   */
+  void updateInodePressurePolicy();
 
   const CheckoutConfig* getCheckoutConfig() const {
     return checkoutConfig_.get();
@@ -1498,6 +1514,12 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   std::shared_ptr<Clock> clock_;
 
   mutable folly::Synchronized<std::shared_ptr<ScmStatusCache>> scmStatusCache_;
+
+  /**
+   * Cached InodePressurePolicy, rebuilt by updateInodePressurePolicy().
+   */
+  folly::AtomicReadMostlyMainPtr<const InodePressurePolicy>
+      cachedPressurePolicy_;
 };
 
 /**
