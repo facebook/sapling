@@ -121,30 +121,10 @@ TEST(TreeEntry, testEntryAttributesEqual) {
 }
 
 TEST(TreeEntry, filteredEntryType) {
-  if (folly::kIsWindows) {
-    // On windows, symlinks should be preserved if windowsSymlinksEnabled is
-    // true, and converted to regular files if windowsSymlinksEnabled is false
-    EXPECT_EQ(
-        TreeEntryType::SYMLINK,
-        filteredEntryType(TreeEntryType::SYMLINK, true));
-    EXPECT_EQ(
-        TreeEntryType::REGULAR_FILE,
-        filteredEntryType(TreeEntryType::SYMLINK, false));
-  } else {
-    // On non-windows, symlinks should be preserved regardless of
-    // windowsSymlinksEnabled
-    EXPECT_EQ(
-        TreeEntryType::SYMLINK,
-        filteredEntryType(TreeEntryType::SYMLINK, true));
-    EXPECT_EQ(
-        TreeEntryType::SYMLINK,
-        filteredEntryType(TreeEntryType::SYMLINK, false));
-  }
-
-  // Other than symlinks, the type should be preserved regardless of
-  // windowsSymlinksEnabled
+  // filteredEntryType is a no-op. All the types should be preserved.
   for (auto type :
-       {TreeEntryType::TREE,
+       {TreeEntryType::SYMLINK,
+        TreeEntryType::TREE,
         TreeEntryType::REGULAR_FILE,
         TreeEntryType::EXECUTABLE_FILE}) {
     EXPECT_EQ(type, filteredEntryType(type, true));

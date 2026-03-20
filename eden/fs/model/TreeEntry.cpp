@@ -85,12 +85,7 @@ mode_t modeFromTreeEntryType(TreeEntryType ft) {
 }
 
 TreeEntryType filteredEntryType(TreeEntryType ft, bool windowsSymlinksEnabled) {
-  if (folly::kIsWindows) {
-    if (ft != TreeEntryType::SYMLINK) {
-      return ft;
-    }
-    return windowsSymlinksEnabled ? ft : TreeEntryType::REGULAR_FILE;
-  }
+  (void)windowsSymlinksEnabled;
   return ft;
 }
 
@@ -114,12 +109,7 @@ bool compareTreeEntryType(
 }
 
 dtype_t filteredEntryDtype(dtype_t mode, bool windowsSymlinksEnabled) {
-  if (folly::kIsWindows) {
-    if (mode != dtype_t::Symlink) {
-      return mode;
-    }
-    return windowsSymlinksEnabled ? mode : dtype_t::Regular;
-  }
+  (void)windowsSymlinksEnabled;
   return mode;
 }
 

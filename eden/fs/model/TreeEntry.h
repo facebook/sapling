@@ -74,13 +74,8 @@ mode_t modeFromTreeEntryType(TreeEntryType ft);
 std::optional<TreeEntryType> treeEntryTypeFromMode(mode_t mode);
 
 /**
- * Returns a filtered TreeEntryType based on platform and options.
- *
- * On Windows:
- *   - If windowsSymlinksEnabled is true and ft is SYMLINK, returns SYMLINK
- *   - Otherwise, returns the input type (ft)
- * On non-Windows platforms:
- *   - Returns the input type (ft) unchanged
+ * It used to return a filtered TreeEntryType based on platform.
+ * Now it is a no-op, and returns the input type (ft) unchanged.
  */
 TreeEntryType filteredEntryType(TreeEntryType ft, bool windowsSymlinksEnabled);
 
