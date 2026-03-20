@@ -26,7 +26,7 @@ rust_library(
         "fbsource//third-party/rust:mime",
         "fbsource//third-party/rust:parking_lot",
         "fbsource//third-party/rust:regex",
-        "fbsource//third-party/rust:reqwest-0-11",
+        "fbsource//third-party/rust:reqwest",
         "fbsource//third-party/rust:serde",
         "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:thiserror",

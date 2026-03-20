@@ -71,7 +71,7 @@ rust_library(
     cxx_bridge = "src/ffi.rs",
     features = ["scuba"],
     test_deps = [
-        "fbsource//third-party/rust:http-0-2",
+        "fbsource//third-party/rust:http",
         "fbsource//third-party/rust:rand_chacha",
         "fbsource//third-party/rust:url",
     ],

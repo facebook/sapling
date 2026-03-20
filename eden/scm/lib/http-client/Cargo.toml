@@ -20,7 +20,7 @@ curl = { version = "0.4.49", features = ["http2", "static-ssl"] }
 curl-sys = "0.4.85"
 flume = "0.11.1"
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
-http = "0.2.12"
+http = "1.4.0"
 lru-cache = "0.1.2"
 maplit = "1.0"
 once_cell = "1.21"

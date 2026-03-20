@@ -46,7 +46,7 @@ tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 tracing-subscriber = { version = "0.3.20", features = ["chrono", "env-filter", "json", "local-time", "parking_lot", "registry"] }
 
 [dev-dependencies]
-http = "0.2.12"
+http = "1.4.0"
 rand_chacha = "0.3"
 url = "2.5.8"
 

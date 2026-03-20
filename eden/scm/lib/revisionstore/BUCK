@@ -49,7 +49,7 @@ rust_library(
         "fbsource//third-party/rust:fn-error-context",
         "fbsource//third-party/rust:fs-err",
         "fbsource//third-party/rust:futures",
-        "fbsource//third-party/rust:http-0-2",
+        "fbsource//third-party/rust:http",
         "fbsource//third-party/rust:once_cell",
         "fbsource//third-party/rust:parking_lot",
         "fbsource//third-party/rust:paste",
