@@ -125,9 +125,9 @@ folly::Future<folly::Unit> InodeBase::access(int /*mask*/) {
 }
 #endif
 
-void InodeBase::updateNfsLastUsedTime() {
+void InodeBase::updateLastFsRequestTime() {
   auto now = getNow();
-  nfsLastUsedTime_.exchange(now, std::memory_order_relaxed);
+  lastFsRequestTime_.exchange(now, std::memory_order_relaxed);
 }
 
 bool InodeBase::isUnlinked() const {

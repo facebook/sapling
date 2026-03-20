@@ -399,11 +399,11 @@ class InodeBase {
   }
 
   /**
-   * This is used only by NFS Garbage Collection (GC) to determine if an inode
-   * is unused for the cutoff time and can be deleted
+   * Used by Garbage Collection (GC) to determine if an inode
+   * is unused for the cutoff time and can be collected.
    */
-  EdenTimestamp getNfsLastUsedTime() const {
-    return nfsLastUsedTime_.load(std::memory_order_relaxed);
+  EdenTimestamp getLastFsRequestTime() const {
+    return lastFsRequestTime_.load(std::memory_order_relaxed);
   }
 
   struct LocationInfo {
@@ -605,10 +605,10 @@ class InodeBase {
   }
 
   /**
-   * Updates the NFS last time used for this inode. The value is only updated
+   * Updates the last fs request time for this inode. The value is only updated
    * for this inode, it is not propagated to its parents.
    */
-  void updateNfsLastUsedTime();
+  void updateLastFsRequestTime();
 
  private:
   ParentInodeInfo getParentInfo() const;
@@ -740,9 +740,9 @@ class InodeBase {
   folly::Synchronized<LocationInfo> location_;
 
   /**
-   * The last time this inode was used with any NFS command.
-   * This is used only by NFS Garbage Collection (GC) to determine if an inode
-   * is unused for the cutoff time and can be deleted.
+   * The last time the kernel made a request involving this inode.
+   * Used by Garbage Collection (GC) to determine if an inode
+   * is unused for the cutoff time and can be collected.
    *
    * Note1: This field is distinct from atime and is not persisted to disk via
    * InodeTable.
@@ -750,7 +750,7 @@ class InodeBase {
    * Note2: This field get updated for the inode itself and not propagate to its
    * parent.
    */
-  std::atomic<EdenTimestamp> nfsLastUsedTime_{getNow()};
+  std::atomic<EdenTimestamp> lastFsRequestTime_{getNow()};
 
   template <typename InodeState>
   friend class InodeBaseMetadata;

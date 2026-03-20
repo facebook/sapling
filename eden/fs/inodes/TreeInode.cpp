@@ -4286,10 +4286,10 @@ folly::Try<folly::Unit> TreeInode::nfsInvalidateCacheEntryForGC(
                 if (inodeMap->isInodeLoadedOrRemembered(ino)) {
                   XLOGF(
                       DBG9,
-                      "GC invalidated inode {} with last used time: {}",
+                      "GC invalidated inode {} with last fs request time: {}",
                       ino,
                       entry.second.getInode()
-                          ->getNfsLastUsedTime()
+                          ->getLastFsRequestTime()
                           .toTimespec()
                           .tv_sec);
                   inodeMap->clearFsRefcount(ino);
@@ -4873,32 +4873,33 @@ TreeInode::invalidateChildrenNotMaterializedNFS(
           }
           if (!contents->isMaterialized()) {
             // if cutoff is max, we should invalidate everything, so we don't
-            // need to check the last used time
+            // need to check the last fs request time
             bool shouldInvalidate =
                 (cutoff == std::chrono::system_clock::time_point::max());
             if (!shouldInvalidate) {
-              auto lastUsedTime = std::chrono::system_clock::from_time_t(
-                  self->getNfsLastUsedTime().toTimespec().tv_sec);
-              // As we didn't update parent last used time when children are
-              // updated in NFS Dispatcher, we need to check the children's last
-              // used time here.
+              auto lastFsRequestTime = std::chrono::system_clock::from_time_t(
+                  self->getLastFsRequestTime().toTimespec().tv_sec);
+              // As we didn't update parent's last fs request time when children
+              // are accessed via the fs channel dispatcher, we need to check
+              // the children's last fs request time here.
               for (auto& entry : contents->entries) {
                 auto* entryInode = entry.second.getInode();
                 if (!entryInode) {
                   continue;
                 }
-                auto childLastUsedTime = std::chrono::system_clock::from_time_t(
-                    entryInode->getNfsLastUsedTime().toTimespec().tv_sec);
-                if (lastUsedTime < childLastUsedTime) {
-                  lastUsedTime = childLastUsedTime;
+                auto childLastFsRequestTime =
+                    std::chrono::system_clock::from_time_t(
+                        entryInode->getLastFsRequestTime().toTimespec().tv_sec);
+                if (lastFsRequestTime < childLastFsRequestTime) {
+                  lastFsRequestTime = childLastFsRequestTime;
                 }
               }
-              shouldInvalidate = (lastUsedTime < cutoff);
+              shouldInvalidate = (lastFsRequestTime < cutoff);
               XLOGF(
                   DBG9,
-                  "For path: {}, last used time: {}, cutoff: {}, shouldInvalidate by GC is {}",
+                  "For path: {}, last fs request time: {}, cutoff: {}, shouldInvalidate by GC is {}",
                   self->getPath().value().asString(),
-                  self->getNfsLastUsedTime().toTimespec().tv_sec,
+                  self->getLastFsRequestTime().toTimespec().tv_sec,
                   cutoff.time_since_epoch().count(),
                   shouldInvalidate);
             }

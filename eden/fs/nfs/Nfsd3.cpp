@@ -2079,8 +2079,10 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
       .thenValue([this, inodeNumber = std::move(inodeNumber)](auto&&) {
         if (inodeNumber.has_value()) {
           XLOGF(
-              DBG9, "Update last used time for inode: {}", inodeNumber.value());
-          return dispatcher_->updateLastUsedTime(inodeNumber.value());
+              DBG9,
+              "Update last fs request time for inode: {}",
+              inodeNumber.value());
+          return dispatcher_->updateLastFsRequestTime(inodeNumber.value());
         }
         return ImmediateFuture<folly::Unit>(folly::unit);
       })
