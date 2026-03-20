@@ -225,7 +225,6 @@ class CheckoutConfig(typing.NamedTuple):
     enable_sqlite_overlay: bool
     use_write_back_cache: bool
     re_use_case: str
-    enable_windows_symlinks: bool
     inode_catalog_type: Optional[str]
     off_mount_repo_dir: bool
 
@@ -596,9 +595,6 @@ class EdenInstance(AbstractEdenInstance):
 
         if checkout_config.inode_catalog_type is not None:
             ret["inode_catalog_type"] = checkout_config.inode_catalog_type
-
-        if sys.platform == "win32":
-            ret["symlinks_enabled"] = checkout_config.enable_windows_symlinks
 
         if snapshot is not None:
             ret["checked_out_revision"] = snapshot.last_checkout_hash
@@ -1473,7 +1469,6 @@ class EdenCheckout:
                 "require-utf8-path": checkout_config.require_utf8_path,
                 "enable-sqlite-overlay": checkout_config.enable_sqlite_overlay,
                 "use-write-back-cache": checkout_config.use_write_back_cache,
-                "enable-windows-symlinks": checkout_config.enable_windows_symlinks,
                 "inode-catalog-type": checkout_config.inode_catalog_type,
                 "off-mount-repo-dir": checkout_config.off_mount_repo_dir,
             },
@@ -1645,12 +1640,6 @@ class EdenCheckout:
             if recas.get("use-case") is not None:
                 re_use_case = str(recas.get("use-case"))
 
-        enable_windows_symlinks = repository.get("enable-windows-symlinks")
-        if sys.platform == "win32":
-            enable_windows_symlinks = True
-        elif not isinstance(enable_windows_symlinks, bool):
-            enable_windows_symlinks = False
-
         off_mount_repo_dir = repository.get("off-mount-repo-dir")
         if not isinstance(off_mount_repo_dir, bool):
             off_mount_repo_dir = False
@@ -1700,7 +1689,6 @@ class EdenCheckout:
             enable_sqlite_overlay=enable_sqlite_overlay,
             use_write_back_cache=use_write_back_cache,
             re_use_case=re_use_case,
-            enable_windows_symlinks=enable_windows_symlinks,
             inode_catalog_type=inode_catalog_type,
             off_mount_repo_dir=off_mount_repo_dir,
         )
@@ -2342,7 +2330,6 @@ def create_checkout_config(
         enable_sqlite_overlay=enable_sqlite_overlay,
         use_write_back_cache=False,
         re_use_case=re_use_case or "buck2-default",
-        enable_windows_symlinks=enable_windows_symlinks,
         inode_catalog_type=overlay_type,
         off_mount_repo_dir=off_mount_repo_dir,
     )

@@ -1907,10 +1907,6 @@ Fixing files present on disk but not known to EdenFS in {Path(mount)}...<green>f
         def test_materialized_symlink_as_file(self, mock_debugInodeStatus) -> None:
             instance = FakeEdenInstance(self.make_temporary_directory())
             checkout = instance.create_test_mount("path1")
-            checkoutconfig = checkout.get_config()
-            # Enable symlinks on Windows
-            checkoutconfig = checkoutconfig._replace(enable_windows_symlinks=True)
-            checkout.save_config(checkoutconfig)
             mount = checkout.path
             os.makedirs(mount / "a")
             with open(mount / "a" / "b", "wb") as f:

@@ -665,7 +665,6 @@ def check_materialized_are_accessible(
             return
 
     case_sensitive = checkout.get_config().case_sensitive
-    windows_symlinks_enabled = checkout.get_config().enable_windows_symlinks
     for materialized_dir in materialized:
         materialized_name = os.fsdecode(materialized_dir.path)
         path = Path(materialized_name)
@@ -716,10 +715,7 @@ def check_materialized_are_accessible(
                     continue
 
                 if sys.platform == "win32":
-                    if stat.S_ISLNK(dirent_mode):
-                        if not windows_symlinks_enabled:
-                            dirent_mode = stat.S_IFREG
-                    elif stat.S_ISDIR(dirent_mode):
+                    if stat.S_ISDIR(dirent_mode):
                         # Python considers junctions as directory.
                         import ctypes
 
@@ -732,11 +728,7 @@ def check_materialized_are_accessible(
                             == FILE_ATTRIBUTE_REPARSE_POINT
                         )
                         if is_reparse:
-                            dirent_mode = (
-                                stat.S_IFLNK
-                                if windows_symlinks_enabled
-                                else stat.S_IFREG
-                            )
+                            dirent_mode = stat.S_IFLNK
                         else:
                             dirent_mode = stat.S_IFDIR
 

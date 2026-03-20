@@ -10,6 +10,7 @@ import binascii
 import json
 import os
 import subprocess
+import sys
 import typing
 from pathlib import Path
 from typing import BinaryIO, Dict, List, Optional, Tuple
@@ -245,7 +246,7 @@ def get_requires_data(checkout: EdenCheckout) -> str:
     requires.discard("windowssymlinks")
     requires.discard("edensparse")
 
-    if checkout.get_config().enable_windows_symlinks:
+    if sys.platform == "win32":
         requires.add("windowssymlinks")
 
     if checkout.get_config().scm_type == "filteredhg":
