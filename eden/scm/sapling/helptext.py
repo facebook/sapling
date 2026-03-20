@@ -3880,6 +3880,20 @@ The following predicates are supported:
 
 .. predicatesmarker
 
+Performance
+===========
+
+In large repositories, certain predicates scan all commits and can be
+extremely slow. Avoid these patterns:
+
+- ``desc(pattern)`` and ``keyword(string)`` scan every commit message.
+- ``all()`` selects every commit in the repository.
+- ``file(pattern)`` without a revision range scans the entire history.
+- ``user(pattern)`` scans all commits.
+
+Instead, scope queries to a small set of commits (e.g. ``draft()``,
+an explicit range like ``X::Y``).
+
 Aliases
 ========
 

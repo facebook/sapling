@@ -651,6 +651,10 @@ Test command without options
       the changed files of a revision from its first parent.
   
       Note:
+         "-A/--all", "-c/--clean" can be extremely slow in large repositories
+         because they scan all tracked files.
+  
+      Note:
          'hg status' might appear to disagree with 'hg diff' if permissions have
          changed or a merge has occurred, because the standard diff format does
          not report permission changes and 'hg diff' only reports changes

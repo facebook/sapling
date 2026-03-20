@@ -306,6 +306,11 @@ pub fn doc() -> &'static str {
 
     .. note::
 
+       ``-A/--all``, ``-c/--clean`` can be extremely slow in large repositories
+       because they scan all tracked files.
+
+    .. note::
+
        :prog:`status` might appear to disagree with :prog:`diff` if permissions
        have changed or a merge has occurred, because the standard diff
        format does not report permission changes and :prog:`diff` only

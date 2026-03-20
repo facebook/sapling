@@ -2431,6 +2431,11 @@ def files(ui, repo, *pats, **opts):
     If no files are given to match, this command prints the names
     of all files under @Product@ control.
 
+    .. note::
+
+       Running without file arguments can be slow in large repositories.
+       Always provide a path or pattern to limit the output.
+
     .. container:: verbose
 
       Examples:
@@ -3817,6 +3822,11 @@ def locate(ui, repo, *pats, **opts):
     directory. To search just the current directory and its
     subdirectories, use "--include .".
 
+    .. note::
+
+       `locate` can be slow in large repositories. Consider using :prog:`files`
+       with a path filter instead.
+
     If no patterns are given to match, this command prints the names
     of all files under @Product@ control in the working directory.
 
@@ -4169,6 +4179,11 @@ def manifest(ui, repo, node=None, rev=None, **opts):
     Print a list of version controlled files for the given revision.
     If no revision is given, the first parent of the working directory
     is used, or the null revision if no revision is checked out.
+
+    .. note::
+
+       This command lists all files and can be slow in large repositories.
+       Consider using :prog:`files` with a path filter instead.
 
     With -v, print file permissions, symlink and executable bits.
     With --debug, print file revision hashes.
