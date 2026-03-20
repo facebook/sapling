@@ -1985,7 +1985,7 @@ class FakePrjfsChannel final : public PrjfsChannel {
             mount->getServerState()->getFaultInjector(),
             mount->getServerState()->getProcessInfoCache(),
             mount->getCheckoutConfig()->getRepoGuid(),
-            mount->getCheckoutConfig()->getEnableWindowsSymlinks(),
+            true,
             nullptr,
             mount->getInvalidationThreadPool()),
         actions_{std::move(actions)} {}

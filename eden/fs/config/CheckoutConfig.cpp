@@ -49,7 +49,6 @@ constexpr folly::StringPiece kReCas{"recas"};
 constexpr folly::StringPiece kReUseCase{"use-case"};
 #ifdef _WIN32
 constexpr folly::StringPiece kRepoGuid{"guid"};
-constexpr folly::StringPiece kEnableWindowsSymlinks{"enable-windows-symlinks"};
 #endif
 
 // Files of interest in the client directory.
@@ -439,11 +438,6 @@ std::unique_ptr<CheckoutConfig> CheckoutConfig::loadFromClientDirectory(
 #ifdef _WIN32
   auto guid = repository->get_as<std::string>(kRepoGuid.str());
   config->repoGuid_ = guid ? Guid{*guid} : Guid::generate();
-
-  auto windowsSymlinksEnabled =
-      repository->get_as<bool>(kEnableWindowsSymlinks.str());
-  config->enableWindowsSymlinks_ =
-      windowsSymlinksEnabled ? *windowsSymlinksEnabled : false;
 #endif
 
   return config;

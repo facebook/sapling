@@ -1995,8 +1995,7 @@ ImmediateFuture<std::shared_ptr<EdenMount>> EdenServer::mount(
                       inodeCatalogType.has_value()
                           ? static_cast<int64_t>(inodeCatalogType.value())
                           : 0,
-                      edenMount->getCheckoutConfig()
-                          ->getEnableWindowsSymlinks()});
+                      true});
               return makeFuture(std::move(t));
             });
       });

@@ -69,8 +69,7 @@ PrjfsDispatcherImpl::PrjfsDispatcherImpl(EdenMount* mount)
     : PrjfsDispatcher(mount->getStats().copy()),
       mount_{mount},
       dotEdenConfig_{makeDotEdenConfig(*mount)},
-      symlinksEnabled_{
-          mount_->getCheckoutConfig()->getEnableWindowsSymlinks()} {}
+      symlinksEnabled_{true} {}
 
 EdenTimestamp PrjfsDispatcherImpl::getLastCheckoutTime() const {
   return mount_->getLastCheckoutTime();
@@ -90,8 +89,6 @@ ImmediateFuture<std::vector<PrjfsDirEntry>> PrjfsDispatcherImpl::opendir(
                         path,
                         isRoot,
                         objectStore = mount_->getObjectStore(),
-                        symlinksSupported = mount_->getCheckoutConfig()
-                                                ->getEnableWindowsSymlinks(),
                         context = context.copy()](
                            std::variant<std::shared_ptr<const Tree>, TreeEntry>
                                treeOrTreeEntry) mutable {
@@ -109,8 +106,7 @@ ImmediateFuture<std::vector<PrjfsDirEntry>> PrjfsDispatcherImpl::opendir(
                       ImmediateFuture<uint64_t>(0ull));
                 } else {
                   auto optSymlinkTargetFut =
-                      (symlinksSupported &&
-                       treeEntry.second.getDtype() == dtype_t::Symlink)
+                      treeEntry.second.getDtype() == dtype_t::Symlink
                       ? std::make_optional(
                             objectStore
                                 ->getBlob(
@@ -790,15 +786,11 @@ ImmediateFuture<OnDiskState> getOnDiskState(
     return recheckDiskState(
         mount, path, receivedAt, retry, OnDiskStateTypes::MaterializedFile);
   } else if (fileType == boost::filesystem::symlink_file) {
-    if (mount.getCheckoutConfig()->getEnableWindowsSymlinks()) {
-      auto symlinkTarget = boost::filesystem::read_symlink(boostPath, ec);
-      if (ec.value() == 0) {
-        return OnDiskState(
-            OnDiskStateTypes::MaterializedSymlink, symlinkTarget);
-      }
-      return getOnDiskState(mount, path, receivedAt, retry + 1);
+    auto symlinkTarget = boost::filesystem::read_symlink(boostPath, ec);
+    if (ec.value() == 0) {
+      return OnDiskState(OnDiskStateTypes::MaterializedSymlink, symlinkTarget);
     }
-    return OnDiskState(OnDiskStateTypes::MaterializedFile);
+    return getOnDiskState(mount, path, receivedAt, retry + 1);
   } else if (fileType == boost::filesystem::reparse_file) {
     // Boost reports anything that is a reparse point which is not a symlink a
     // reparse_file. In particular, socket are reported as such.
