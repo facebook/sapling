@@ -74,12 +74,6 @@ mode_t modeFromTreeEntryType(TreeEntryType ft);
 std::optional<TreeEntryType> treeEntryTypeFromMode(mode_t mode);
 
 /**
- * It used to return a filtered TreeEntryType based on platform.
- * Now it is a no-op, and returns the input type (ft) unchanged.
- */
-TreeEntryType filteredEntryType(TreeEntryType ft, bool windowsSymlinksEnabled);
-
-/**
  * Compares two optional TreeEntryType values for equality, with special
  * handling for Windows:
  * - On Windows, EXECUTABLE_FILE and REGULAR_FILE are considered equivalent for
@@ -92,8 +86,6 @@ TreeEntryType filteredEntryType(TreeEntryType ft, bool windowsSymlinksEnabled);
 bool compareTreeEntryType(
     std::optional<TreeEntryType> lhs,
     std::optional<TreeEntryType> rhs);
-
-dtype_t filteredEntryDtype(dtype_t mode, bool windowsSymlinksEnabled);
 
 class TreeEntry {
  public:

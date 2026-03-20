@@ -119,8 +119,7 @@ void populateOverlayState(
     FsckFileState& state,
     const overlay::OverlayEntry& overlayEntry) {
   state.inOverlay = true;
-  state.overlayDtype =
-      filteredEntryDtype(mode_to_dtype(*overlayEntry.mode()), true);
+  state.overlayDtype = mode_to_dtype(*overlayEntry.mode());
   if (overlayEntry.hash().has_value() && !overlayEntry.hash().value().empty()) {
     auto objId = ObjectId(*overlayEntry.hash());
     state.overlayId = std::move(objId);
@@ -132,7 +131,7 @@ void populateOverlayState(
 
 void populateScmState(FsckFileState& state, const TreeEntry& treeEntry) {
   state.scmId = treeEntry.getObjectId();
-  state.scmDtype = filteredEntryDtype(treeEntry.getDtype(), true);
+  state.scmDtype = treeEntry.getDtype();
   state.inScm = true;
 }
 

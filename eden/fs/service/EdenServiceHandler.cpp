@@ -3264,7 +3264,7 @@ EdenServiceHandler::semifuture_getEntryInformation(
                        mountHandle.getRootInode(),
                        *paths,
                        [](const VirtualInode& inode, RelativePath) {
-                         return filteredEntryDtype(inode.getDtype(), true);
+                         return inode.getDtype();
                        },
                        mountHandle.getObjectStorePtr(),
                        fetchContext);

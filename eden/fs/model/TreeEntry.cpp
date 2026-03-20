@@ -84,11 +84,6 @@ mode_t modeFromTreeEntryType(TreeEntryType ft) {
   XLOGF(FATAL, "illegal file type {}", enumValue(ft));
 }
 
-TreeEntryType filteredEntryType(TreeEntryType ft, bool windowsSymlinksEnabled) {
-  (void)windowsSymlinksEnabled;
-  return ft;
-}
-
 bool compareTreeEntryType(
     std::optional<TreeEntryType> lhs,
     std::optional<TreeEntryType> rhs) {
@@ -106,11 +101,6 @@ bool compareTreeEntryType(
   }
   return ignoreWindowsExecutableTypeForComparison(lhs.value()) ==
       ignoreWindowsExecutableTypeForComparison(rhs.value());
-}
-
-dtype_t filteredEntryDtype(dtype_t mode, bool windowsSymlinksEnabled) {
-  (void)windowsSymlinksEnabled;
-  return mode;
 }
 
 std::optional<TreeEntryType> treeEntryTypeFromMode(mode_t mode) {

@@ -120,17 +120,6 @@ TEST(TreeEntry, testEntryAttributesEqual) {
   EXPECT_EQ(real1Attributes, real1Attributes);
 }
 
-TEST(TreeEntry, filteredEntryType) {
-  // filteredEntryType is a no-op. All the types should be preserved.
-  for (auto type :
-       {TreeEntryType::SYMLINK,
-        TreeEntryType::TREE,
-        TreeEntryType::REGULAR_FILE,
-        TreeEntryType::EXECUTABLE_FILE}) {
-    EXPECT_EQ(type, filteredEntryType(type, true));
-    EXPECT_EQ(type, filteredEntryType(type, false));
-  }
-}
 TEST(TreeEntry, compareTreeEntryType) {
   // Test that identical types compare as equal
   EXPECT_TRUE(compareTreeEntryType(

@@ -84,7 +84,7 @@ ImmediateFuture<Hash32> VirtualInode::getBlake3(
     const ObjectFetchContextPtr& fetchContext) const {
   // Ensure this is a regular file.
   // We intentionally want to refuse to compute the blake3 of symlinks
-  switch (filteredEntryDtype(getDtype(), true)) {
+  switch (getDtype()) {
     case dtype_t::Dir:
       return makeImmediateFuture<Hash32>(PathError(EISDIR, path));
     case dtype_t::Symlink:
@@ -128,7 +128,7 @@ ImmediateFuture<std::optional<Hash32>> VirtualInode::getDigestHash(
     const ObjectFetchContextPtr& fetchContext) const {
   // Ensure this is a regular file or directory.
   // We intentionally want to refuse to compute the digestHash of symlinks
-  switch (filteredEntryDtype(getDtype(), true)) {
+  switch (getDtype()) {
     case dtype_t::Symlink:
       return makeImmediateFuture<std::optional<Hash32>>(
           PathError(EINVAL, path, std::string_view{"file is a symlink"}));
@@ -173,7 +173,7 @@ ImmediateFuture<Hash20> VirtualInode::getSHA1(
     const ObjectFetchContextPtr& fetchContext) const {
   // Ensure this is a regular file.
   // We intentionally want to refuse to compute the SHA1 of symlinks
-  switch (filteredEntryDtype(getDtype(), true)) {
+  switch (getDtype()) {
     case dtype_t::Dir:
       return makeImmediateFuture<Hash20>(PathError(EISDIR, path));
     case dtype_t::Symlink:
@@ -238,9 +238,7 @@ ImmediateFuture<std::optional<TreeEntryType>> VirtualInode::getTreeEntryType(
         });
       },
       [&](const TreePtr&) -> R { return TreeEntryType::TREE; },
-      [&](const TreeEntry& entry) -> R {
-        return filteredEntryType(entry.getType(), true);
-      });
+      [&](const TreeEntry& entry) -> R { return entry.getType(); });
 }
 
 ImmediateFuture<BlobAuxData> VirtualInode::getBlobAuxData(
@@ -510,7 +508,7 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
     const ObjectFetchContextPtr& fetchContext) const {
   // For non regular files we return errors for hashes and sizes.
   // We intentionally want to refuse to compute the SHA1 of symlinks.
-  auto dtype = filteredEntryDtype(getDtype(), true);
+  auto dtype = getDtype();
   switch (dtype) {
     case dtype_t::Regular:
       break;
@@ -678,7 +676,7 @@ ImmediateFuture<struct stat> VirtualInode::stat(
           return st;
         } else if constexpr (std::is_same_v<T, TreeEntry>) {
           objectId = arg.getObjectId();
-          mode = modeFromTreeEntryType(filteredEntryType(arg.getType(), true));
+          mode = modeFromTreeEntryType(arg.getType());
           // fallthrough
         } else {
           static_assert(always_false_v<T>, "non-exhaustive visitor!");

@@ -69,8 +69,7 @@ void processRemovedSide(
     RelativePathPiece currentPath,
     const Tree::value_type& scmEntry) {
   auto entryPath = currentPath + scmEntry.first;
-  context->callback->removedPath(
-      entryPath, filteredEntryDtype(scmEntry.second.getDtype(), true));
+  context->callback->removedPath(entryPath, scmEntry.second.getDtype());
   if (!scmEntry.second.isTree()) {
     return;
   }
@@ -92,8 +91,7 @@ void processAddedSide(
     RelativePathPiece currentPath,
     const Tree::value_type& wdEntry) {
   auto entryPath = currentPath + wdEntry.first;
-  context->callback->addedPath(
-      entryPath, filteredEntryDtype(wdEntry.second.getDtype(), true));
+  context->callback->addedPath(entryPath, wdEntry.second.getDtype());
 
   if (wdEntry.second.isTree()) {
     auto childFuture =
@@ -132,8 +130,7 @@ void processBothPresent(
     } else {
       // tree-to-file
       // Add a ADDED entry for this path and a removal of the directory
-      context->callback->addedPath(
-          entryPath, filteredEntryDtype(wdEntry.second.getDtype(), true));
+      context->callback->addedPath(entryPath, wdEntry.second.getDtype());
 
       // Report everything in scmTree as REMOVED
       context->callback->removedPath(entryPath, scmEntry.second.getDtype());
@@ -145,8 +142,7 @@ void processBothPresent(
     if (isTreeWD) {
       // file-to-tree
       // Add a REMOVED entry for this path
-      context->callback->removedPath(
-          entryPath, filteredEntryDtype(scmEntry.second.getDtype(), true));
+      context->callback->removedPath(entryPath, scmEntry.second.getDtype());
 
       // Report everything in wdEntry as ADDED
       context->callback->addedPath(entryPath, wdEntry.second.getDtype());
@@ -163,10 +159,8 @@ void processBothPresent(
       //
       // On Windows: Filter executable type for comparison.
       if (!compareTreeEntryType(
-              filteredEntryType(scmEntry.second.getType(), true),
-              filteredEntryType(wdEntry.second.getType(), true))) {
-        context->callback->modifiedPath(
-            entryPath, filteredEntryDtype(wdEntry.second.getDtype(), true));
+              scmEntry.second.getType(), wdEntry.second.getType())) {
+        context->callback->modifiedPath(entryPath, wdEntry.second.getDtype());
       } else {
         auto compareEntryContents =
             context->store
@@ -176,8 +170,7 @@ void processBothPresent(
                     context->getFetchContext())
                 .thenValue([entryPath = entryPath.copy(),
                             context,
-                            dtype = filteredEntryDtype(
-                                scmEntry.second.getDtype(), true)](bool equal) {
+                            dtype = scmEntry.second.getDtype()](bool equal) {
                   if (!equal) {
                     context->callback->modifiedPath(entryPath, dtype);
                   }

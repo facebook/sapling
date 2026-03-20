@@ -1344,8 +1344,7 @@ DirContents TreeInode::buildDirFromTree(
     entries.emplace_back(
         treeEntry.first,
         DirEntry{
-            modeFromTreeEntryType(
-                filteredEntryType(treeEntry.second.getType(), true)),
+            modeFromTreeEntryType(treeEntry.second.getType()),
             InodeNumber{startInode.get() + inodeOffset++},
             treeEntry.second.getObjectId()});
   }
@@ -3007,12 +3006,10 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
 
       if (!entryIgnored) {
         XLOGF(DBG8, "diff: untracked file: {}", entryPath);
-        context->callback->addedPath(
-            entryPath, filteredEntryDtype(inodeEntry->getDtype(), true));
+        context->callback->addedPath(entryPath, inodeEntry->getDtype());
       } else if (context->listIgnored) {
         XLOGF(DBG9, "diff: ignored file: {}", entryPath);
-        context->callback->ignoredPath(
-            entryPath, filteredEntryDtype(inodeEntry->getDtype(), true));
+        context->callback->ignoredPath(entryPath, inodeEntry->getDtype());
       } else {
         // Don't bother reporting this ignored file since
         // listIgnored is false.
@@ -3063,8 +3060,7 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
     auto processRemoved = [&](const Tree::value_type& scmEntry) {
       XLOGF(DBG5, "diff: removed file: {}", currentPath + scmEntry.first);
       context->callback->removedPath(
-          currentPath + scmEntry.first,
-          filteredEntryDtype(scmEntry.second.getDtype(), true));
+          currentPath + scmEntry.first, scmEntry.second.getDtype());
       if (scmEntry.second.isTree()) {
         deferredEntries.emplace_back(
             DeferredDiffEntry::createRemovedScmEntry(
@@ -3149,7 +3145,7 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
               // On Windows, ignore executable type for comparison
               compareTreeEntryType(
                   treeEntryTypeFromMode(inodeEntry->getInitialMode()),
-                  filteredEntryType(scmEntry.getType(), true)) &&
+                  scmEntry.getType()) &&
               getObjectStore().areObjectsKnownIdentical(
                   inodeEntry->getObjectId(), scmEntry.getObjectId())) {
             exactMatch = true;
@@ -3182,16 +3178,13 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
           if (entryIgnored) {
             if (context->listIgnored) {
               XLOGF(DBG6, "diff: directory --> ignored file: {}", entryPath);
-              context->callback->ignoredPath(
-                  entryPath, filteredEntryDtype(inodeEntry->getDtype(), true));
+              context->callback->ignoredPath(entryPath, inodeEntry->getDtype());
             }
           } else {
             XLOGF(DBG6, "diff: directory --> untracked file: {}", entryPath);
-            context->callback->addedPath(
-                entryPath, filteredEntryDtype(inodeEntry->getDtype(), true));
+            context->callback->addedPath(entryPath, inodeEntry->getDtype());
           }
-          context->callback->removedPath(
-              entryPath, filteredEntryDtype(scmEntry.getDtype(), true));
+          context->callback->removedPath(entryPath, scmEntry.getDtype());
           deferredEntries.emplace_back(
               DeferredDiffEntry::createRemovedScmEntry(
                   context, entryPath, scmEntry.getObjectId()));
@@ -3213,12 +3206,11 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
           // On Windows: ignore executable type for comparison.
           if (!compareTreeEntryType(
                   treeEntryTypeFromMode(inodeEntry->getInitialMode()),
-                  filteredEntryType(scmEntry.getType(), true))) {
+                  scmEntry.getType())) {
             // The mode is definitely modified
             XLOGF(
                 DBG5, "diff: file modified due to mode change: {}", entryPath);
-            context->callback->modifiedPath(
-                entryPath, filteredEntryDtype(inodeEntry->getDtype(), true));
+            context->callback->modifiedPath(entryPath, inodeEntry->getDtype());
           } else {
             // TODO: Hopefully at some point we will track file sizes in the
             // parent TreeInode::Entry and the TreeEntry.  Once we have file
@@ -3230,7 +3222,7 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
                     entryPath,
                     scmEntry,
                     inodeEntry->getObjectId(),
-                    filteredEntryDtype(inodeEntry->getDtype(), true)));
+                    inodeEntry->getDtype()));
           }
         }
       }
@@ -3736,8 +3728,7 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
       //
       // On Windows: Filter executable type for comparison.
       compareTreeEntryType(
-          filteredEntryType(oldScmEntry->second.getType(), true),
-          filteredEntryType(newScmEntry->second.getType(), true)) &&
+          oldScmEntry->second.getType(), newScmEntry->second.getType()) &&
       getObjectStore().areObjectsKnownIdentical(
           oldScmEntry->second.getObjectId(),
           newScmEntry->second.getObjectId())) {
@@ -3800,8 +3791,7 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
           entry.getObjectId(), newScmEntry->second.getObjectId())) {
     // On Windows: Filter executable type for comparison.
     if (compareTreeEntryType(
-            filteredEntryType(oldScmEntry->second.getType(), true),
-            filteredEntryType(newScmEntry->second.getType(), true))) {
+            oldScmEntry->second.getType(), newScmEntry->second.getType())) {
       // The inode already matches the checkout destination. So do nothing.
       return nullptr;
     }
@@ -3895,8 +3885,7 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
   if (newScmEntry) {
     contents.emplace(
         newScmEntry->first,
-        modeFromTreeEntryType(
-            filteredEntryType(newScmEntry->second.getType(), true)),
+        modeFromTreeEntryType(newScmEntry->second.getType()),
         getOverlay()->allocateInodeNumber(),
         newScmEntry->second.getObjectId());
   }
@@ -3975,8 +3964,7 @@ std::shared_ptr<CheckoutAction> TreeInode::processAbsentCheckoutEntry(
     if (success.hasValue()) {
       auto [it, inserted] = contents.emplace(
           newScmEntry->first,
-          modeFromTreeEntryType(
-              filteredEntryType(newScmEntry->second.getType(), true)),
+          modeFromTreeEntryType(newScmEntry->second.getType()),
           getOverlay()->allocateInodeNumber(),
           newScmEntry->second.getObjectId());
       XDCHECK(inserted);
@@ -4096,8 +4084,7 @@ ImmediateFuture<InvalidationRequired> TreeInode::checkoutUpdateEntry(
       if (newScmEntry) {
         auto [_it, inserted] = contents->entries.emplace(
             newScmEntry->first,
-            modeFromTreeEntryType(
-                filteredEntryType(newScmEntry->second.getType(), true)),
+            modeFromTreeEntryType(newScmEntry->second.getType()),
             getOverlay()->allocateInodeNumber(),
             newScmEntry->second.getObjectId());
         XDCHECK(inserted);
@@ -4238,8 +4225,7 @@ ImmediateFuture<InvalidationRequired> TreeInode::checkoutUpdateEntry(
               auto contents = parentInode->contents_.wlock();
               auto ret = contents->entries.emplace(
                   newScmEntry->first,
-                  modeFromTreeEntryType(
-                      filteredEntryType(newScmEntry->second.getType(), true)),
+                  modeFromTreeEntryType(newScmEntry->second.getType()),
                   parentInode->getOverlay()->allocateInodeNumber(),
                   newScmEntry->second.getObjectId());
               inserted = ret.second;

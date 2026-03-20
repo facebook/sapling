@@ -271,7 +271,7 @@ ImmediateFuture<bool> CheckoutAction::hasConflict() {
         ->isSameAs(
             oldScmEntry_.value().second.getObjectId(),
             oldBlobSha1_.value(),
-            filteredEntryType(oldScmEntry_.value().second.getType(), true),
+            oldScmEntry_.value().second.getType(),
             ctx_->getFetchContext())
         .thenValue([self = shared_from_this()](bool isSame) {
           if (isSame) {
