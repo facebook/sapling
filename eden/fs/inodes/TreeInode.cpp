@@ -4801,10 +4801,20 @@ TreeInode::handleChildrenNotAccessedRecently(
         cutoff, context, cancellationToken);
   }
 #ifndef _WIN32
-  // FUSE decrease the FS ref count by itself. Therefore we don't need to
-  // decrease FS ref count manually. On FUSE, we don't invalidate any inode as
-  // the first step of GC. However, we can unload not recently used inodes to
-  // save eden resident memory
+  {
+    auto config = getMount()->getEdenConfig();
+    if (config->enablePressureBasedGc.getValue()) {
+      // Pressure-based GC: actively invalidate old FUSE dcache entries.
+      // This triggers FORGET from the kernel, which decrements fsRefcount
+      // and allows subsequent unloading.
+      return invalidateChildrenNotAccessedRecentlyFuse(
+          cutoff, context, cancellationToken);
+    }
+  }
+  // Legacy FUSE path: passively unload inodes that are no longer referenced.
+  // FUSE decreases the FS ref count by itself. On FUSE, we don't invalidate
+  // any inode as the first step of GC. However, we can unload not recently
+  // used inodes to save eden resident memory.
   auto unloaded = unloadChildrenLastAccessedBefore(folly::to<timespec>(cutoff));
   if (unloaded) {
     XLOGF(
@@ -4818,6 +4828,82 @@ TreeInode::handleChildrenNotAccessedRecently(
   // number of invalidations on Linux is zero
   return ImmediateFuture<uint64_t>{0ULL};
 }
+
+#ifndef _WIN32
+ImmediateFuture<uint64_t> TreeInode::invalidateChildrenNotAccessedRecentlyFuse(
+    std::chrono::system_clock::time_point cutoff,
+    const ObjectFetchContextPtr& context,
+    const folly::CancellationToken& cancellationToken) {
+  if (shouldCancelGC(cancellationToken, getMount())) {
+    return ImmediateFuture<uint64_t>{0ULL};
+  }
+
+  // First, recursively process child tree inodes (bottom-up invalidation).
+  return processTreeChildren(
+             this,
+             getInodeMap(),
+             context,
+             cancellationToken,
+             [cutoff, context = context.copy(), cancellationToken](
+                 TreeInodePtr tree) {
+               return tree->invalidateChildrenNotAccessedRecentlyFuse(
+                   cutoff, context, cancellationToken);
+             })
+      .thenValue([self = inodePtrFromThis(), cutoff, cancellationToken](
+                     const std::vector<uint64_t>& childInvalidations) {
+        if (shouldCancelGC(cancellationToken)) {
+          return uint64_t{0};
+        }
+
+        uint64_t numInvalidated = 0;
+        for (auto count : childInvalidations) {
+          numInvalidated += count;
+        }
+
+        auto* fuseChannel = self->getMount()->getFuseChannel();
+        if (!fuseChannel) {
+          return numInvalidated;
+        }
+
+        // Now invalidate our own children that haven't been accessed recently.
+        // We need to hold the contents lock to iterate entries, and call
+        // invalidateEntry for each stale child.
+        auto contents = self->contents_.rlock();
+        for (const auto& entry : contents->entries) {
+          auto* entryInode = entry.second.getInode();
+          if (!entryInode) {
+            continue;
+          }
+
+          if (shouldCancelGC(cancellationToken)) {
+            break;
+          }
+
+          auto lastFsRequestTime = std::chrono::system_clock::from_time_t(
+              entryInode->getLastFsRequestTime().toTimespec().tv_sec);
+          if (lastFsRequestTime < cutoff) {
+            // Send FUSE_NOTIFY_INVAL_ENTRY. This causes the kernel to drop
+            // its dcache entry and asynchronously send FORGET, which
+            // decrements fsRefcount. The inode can then be unloaded by a
+            // subsequent unloadChildrenUnreferencedByFs pass.
+            fuseChannel->invalidateEntry(
+                self->getNodeId(), entry.first.piece());
+            numInvalidated++;
+          }
+        }
+
+        if (numInvalidated > 0) {
+          XLOGF(
+              DBG9,
+              "FUSE GC invalidated {} entries under {}",
+              numInvalidated,
+              self->getLogPath());
+        }
+
+        return numInvalidated;
+      });
+}
+#endif
 
 ImmediateFuture<std::pair<
     uint64_t /* numInvalidated */,
@@ -5161,6 +5247,9 @@ size_t TreeInode::unloadChildrenLastAccessedBefore(const timespec& cutoff) {
   // links.
   std::unordered_set<InodeNumber> toUnload;
 
+  // Use lastFsRequestTime_ which is updated on every FUSE/NFS access.
+  // This avoids acquiring the inode's state lock (which getMetadata() does)
+  // and provides a more accurate signal than atime for GC decisions.
   auto shouldUnload = [&](const auto& inode) {
     return inode->getLastFsRequestTime().toTimespec() < cutoff;
   };

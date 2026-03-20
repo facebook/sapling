@@ -641,6 +641,25 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       const ObjectFetchContextPtr& context,
       folly::CancellationToken cancellationToken = {});
 
+#ifndef _WIN32
+  /**
+   * Active FUSE invalidation for pressure-based GC.
+   *
+   * Walks the inode tree bottom-up, sending FUSE_NOTIFY_INVAL_ENTRY for
+   * inodes whose lastFsRequestTime_ is older than cutoff. This causes the
+   * kernel to send FORGET for those inodes, decrementing fsRefcount so
+   * they can be unloaded.
+   *
+   * Both materialized and non-materialized inodes are invalidated —
+   * invalidateEntry only drops the dcache entry, overlay data is preserved.
+   */
+  ImmediateFuture<uint64_t /* numInvalidated */>
+  invalidateChildrenNotAccessedRecentlyFuse(
+      std::chrono::system_clock::time_point cutoff,
+      const ObjectFetchContextPtr& context,
+      const folly::CancellationToken& cancellationToken = {});
+#endif
+
   /**
    * Materialize this directory in the overlay.
    *

@@ -216,6 +216,16 @@ python_integration_test(
 )
 
 python_integration_test(
+    name = "pressure_gc",
+    srcs = ["pressure_gc_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_integration_test(
     name = "legacyephemeral_cleanup",
     srcs = ["legacyephemeral_cleanup_test.py"],
     compatible_with = [
