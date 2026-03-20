@@ -119,11 +119,15 @@ cpp_library(
     name = "error_info",
     srcs = [
         "EdenComponent.cpp",
+        "ErrorArg.cpp",
     ],
     headers = [
         "EdenComponent.h",
         "EdenErrorInfo.h",
         "ErrorArg.h",
+    ],
+    deps = [
+        "//folly:demangle",
     ],
 )
 
