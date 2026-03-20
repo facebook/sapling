@@ -166,11 +166,11 @@ void TreeEntry::serialize(PathComponentPiece name, Appender& appender) const {
   appender.write<uint8_t>(static_cast<uint8_t>(type_));
   auto id = id_.getBytes();
   XCHECK_LE(id.size(), std::numeric_limits<uint16_t>::max());
-  appender.write<uint16_t>(folly::to_narrow(id.size()));
+  appender.write<uint16_t>(static_cast<uint16_t>(id.size()));
   appender.push(id);
   auto nameStringPiece = name.view();
   XCHECK_LE(nameStringPiece.size(), std::numeric_limits<uint16_t>::max());
-  appender.write<uint16_t>(folly::to_narrow(nameStringPiece.size()));
+  appender.write<uint16_t>(static_cast<uint16_t>(nameStringPiece.size()));
   appender.push(folly::StringPiece{nameStringPiece});
   if (size_) {
     appender.write<uint64_t>(*size_);
