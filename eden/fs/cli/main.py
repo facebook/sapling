@@ -196,14 +196,8 @@ from .doctor.problem import ProblemSeverity
 if sys.platform == "win32":
     from .file_handler_tools import WinFileHandlerReleaser
 from .prompt import prompt_confirmation
-from .stats_print import format_size
 from .subcmd import Subcmd
-from .util import (
-    can_enable_windows_symlinks,
-    get_environment_suitable_for_subprocess,
-    print_stderr,
-    ShutdownError,
-)
+from .util import print_stderr, ShutdownError
 
 try:
     from .facebook.util import (
@@ -542,8 +536,9 @@ class CloneCmd(Subcmd):
         parser.add_argument(
             "--enable-windows-symlinks",
             action="store_true",
-            help="Enable symlink support for the cloned mount",
+            help="Symlink is enabled on all Windows mounts. This argument is a no-op that is kept for lagacy compatibility",
         )
+
         parser.add_argument(
             "--filter-paths",
             "--filter-path",
@@ -678,13 +673,6 @@ is case-sensitive. This is not recommended and is intended only for testing."""
 
         # Find the repository information
         try:
-            enable_windows_symlinks = (
-                args.enable_windows_symlinks
-                or instance.get_config_bool(
-                    "experimental.windows-symlinks",
-                    sys.platform == "win32",
-                )
-            ) and can_enable_windows_symlinks()
             repo, repo_config = config_mod.get_repo_info(
                 instance,
                 args.repo,
@@ -694,7 +682,6 @@ is case-sensitive. This is not recommended and is intended only for testing."""
                 overlay_type=args.overlay_type,
                 backing_store_type=args.backing_store,
                 re_use_case=args.re_use_case,
-                enable_windows_symlinks=enable_windows_symlinks,
                 off_mount_repo_dir=instance.get_config_bool(
                     "clone.off-mount-repo-dir",
                     # Enable by default in tests.

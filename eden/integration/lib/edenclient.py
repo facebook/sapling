@@ -760,7 +760,6 @@ class EdenFS:
         path: Union[str, os.PathLike],
         allow_empty: bool = False,
         case_sensitive: Optional[bool] = None,
-        enable_windows_symlinks: bool = False,
         backing_store: Optional[str] = None,
         filter_paths: Optional[List[str]] = None,
     ) -> None:
@@ -774,8 +773,6 @@ class EdenFS:
             params.append("--case-sensitive")
         elif case_sensitive is False:  # Can also be None
             params.append("--case-insensitive")
-        if enable_windows_symlinks:
-            params.append("--enable-windows-symlinks")
         if backing_store is not None:
             params.append("--backing-store")
             params.append(backing_store)

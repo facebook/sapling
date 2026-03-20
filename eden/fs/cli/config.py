@@ -2226,7 +2226,6 @@ def get_repo_info(
     overlay_type: Optional[str],
     backing_store_type: Optional[str] = None,
     re_use_case: Optional[str] = None,
-    enable_windows_symlinks: bool = False,
     off_mount_repo_dir: bool = False,
 ) -> Tuple[util.Repo, CheckoutConfig]:
     # Check to see if repo_arg points to an existing EdenFS mount
@@ -2259,9 +2258,6 @@ def get_repo_info(
         overlay_type,
         backing_store_type=backing_store_type,
         re_use_case=re_use_case,
-        enable_windows_symlinks=(
-            True if sys.platform == "win32" else enable_windows_symlinks
-        ),
         off_mount_repo_dir=off_mount_repo_dir,
     )
 
@@ -2276,7 +2272,6 @@ def create_checkout_config(
     overlay_type: Optional[str],
     backing_store_type: Optional[str] = None,
     re_use_case: Optional[str] = None,
-    enable_windows_symlinks: bool = False,
     off_mount_repo_dir: bool = False,
 ) -> CheckoutConfig:
     mount_protocol = util.get_protocol(nfs)

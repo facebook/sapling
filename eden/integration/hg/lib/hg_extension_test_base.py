@@ -99,7 +99,6 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
             self.backing_repo.path,
             self.mount,
             allow_empty=True,
-            enable_windows_symlinks=self.enable_windows_symlinks,
             backing_store=self.backing_store_type,
         )
 

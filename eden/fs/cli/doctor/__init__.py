@@ -819,9 +819,6 @@ class EdenCheckoutConfigCorruption(FixableProblem):
             nfs=self.is_nfs_default(),
             case_sensitive=sys.platform == "linux",
             overlay_type=None,
-            enable_windows_symlinks=self._checkout_info.instance.get_config_bool(
-                "experimental.windows-symlinks", sys.platform == "win32"
-            ),
             off_mount_repo_dir=self._checkout_info.instance.get_config_bool(
                 "clone.off-mount-repo-dir", False
             ),

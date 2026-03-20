@@ -154,7 +154,6 @@ pub fn eden_clone(
     working_copy: &Path,
     target: Option<HgId>,
     filters: Option<HashSet<Text>>,
-    enable_windows_symlinks: bool,
 ) -> Result<()> {
     let config = repo.config();
 
@@ -165,10 +164,6 @@ pub fn eden_clone(
         repo.shared_path().as_os_str(),
         working_copy.as_os_str(),
     ]);
-
-    if enable_windows_symlinks {
-        clone_command.args(["--enable-windows-symlinks".to_string()]);
-    }
 
     if let Some(rev) = target {
         clone_command.args(["-r", &rev.to_hex()]);
@@ -202,35 +197,6 @@ pub fn eden_clone(
     run_eden_clone_command(&mut clone_command).context("error performing eden clone")
 }
 
-/// Read the enable-windows-symlinks setting from an EdenFS checkout's config.toml.
-///
-/// On Windows, this reads the `[repository] enable-windows-symlinks` value from
-/// the checkout's EdenFS client config so it can be passed to `eden clone`.
-/// Returns `false` on non-Windows platforms.
-#[cfg(feature = "eden")]
-pub fn read_enable_windows_symlinks(source_client_dir: &Path) -> Result<bool> {
-    #[cfg(windows)]
-    {
-        let source_config_path = source_client_dir.join("config.toml");
-        let source_content = fs::read_to_string(&source_config_path)
-            .with_context(|| format!("failed to read {}", source_config_path.display()))?;
-        let source_table: toml::Table = source_content
-            .parse()
-            .with_context(|| format!("failed to parse {}", source_config_path.display()))?;
-        Ok(source_table
-            .get("repository")
-            .and_then(|v| v.as_table())
-            .and_then(|repo| repo.get("enable-windows-symlinks"))
-            .and_then(|v| v.as_bool())
-            .unwrap_or(false))
-    }
-    #[cfg(not(windows))]
-    {
-        let _ = source_client_dir;
-        Ok(false)
-    }
-}
-
 /// Copy user-specific EdenFS config from a source checkout to a new one.
 ///
 /// Copies the following sections from the source's config.toml into the
@@ -240,9 +206,6 @@ pub fn read_enable_windows_symlinks(source_client_dir: &Path) -> Result<bool> {
 ///     applied by the clone and don't need copying.
 ///   - [profiles]: active prefetch profiles (e.g. "edenfs").
 ///   - [predictive-prefetch]: predictive prefetch settings.
-///
-/// enable-windows-symlinks is handled separately by passing
-/// --enable-windows-symlinks to `eden clone`.
 ///
 /// After writing, runs `eden redirect fixup` to apply redirections.
 ///

@@ -326,8 +326,6 @@ fn run_add(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo) -> Result<u8> {
         .map(util::path::strip_unc_prefix)
         .unwrap_or_else(|_| repo.path().to_path_buf());
 
-    let enable_windows_symlinks = clone::read_enable_windows_symlinks(&source_client_dir)?;
-
     // Hold the registry lock across the clone and registry update so that
     // concurrent `worktree add` calls are serialized. The dest.exists()
     // check is repeated here while holding the lock to guard against races
@@ -350,9 +348,7 @@ fn run_add(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo) -> Result<u8> {
         // If holding the registry lock for the duration of the clone is too
         // expensive, consider reserving the path in the registry (or a per-path
         // lock) before cloning, then finalizing the entry afterward.
-        if let Err(err) =
-            clone::eden_clone(repo, &dest, target, clone_filters, enable_windows_symlinks)
-        {
+        if let Err(err) = clone::eden_clone(repo, &dest, target, clone_filters) {
             ctx.logger().warn(format!(
                 "worktree add may have left a partial checkout; try running `eden rm {}` to recover",
                 dest.display()

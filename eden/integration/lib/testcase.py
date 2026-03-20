@@ -687,7 +687,6 @@ class EdenRepoTest(EdenTestCase):
             self.repo.path,
             self.mount,
             case_sensitive=self.is_case_sensitive,
-            enable_windows_symlinks=self.enable_windows_symlinks,
             backing_store=self.backing_store_type,
         )
         self.eden_repo = self.create_eden_repo()
