@@ -366,6 +366,18 @@ def _is_systemd_unit_active(unit: str) -> bool:
         return False
 
 
+def print_systemd_status_full(instance: "EdenInstance") -> None:
+    """Print full systemctl status output for this instance's systemd unit."""
+    try:
+        unit = _get_systemd_unit(instance)
+        subprocess.call(
+            ["systemctl", "--user", "status", "--no-pager", unit],
+        )
+    except (RuntimeError, OSError) as e:
+        print_stderr(f"warning: failed to get status of edenfs service unit: {e}")
+        return
+
+
 def _rotate_startup_log(log_path: Path, keep: int = 5) -> None:
     """Rotate the startup log, keeping the last `keep` copies.
 
