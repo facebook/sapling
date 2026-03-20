@@ -21,6 +21,12 @@ lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "fdbf843d17
 minijail = { git = "https://chromium.googlesource.com/chromiumos/platform/minijail", rev = "fc020fd4672b3340ee706e192d043e12df8c8578" }
 modcholesky = { git = "https://github.com/argmin-rs/modcholesky", rev = "0ef5ed8f589ec77ff348d98747431aefa369f942" }
 murmur3 = { git = "https://github.com/stusmall/murmur3", rev = "f363bf6dd1d668988bf798c320823f8ceaedf5aa" }
+opentelemetry = { git = "https://github.com/open-telemetry/opentelemetry-rust", rev = "30bb49533c56d41e79c82961a55e77002bc7d3d5" }
+opentelemetry-http = { git = "https://github.com/open-telemetry/opentelemetry-rust", rev = "30bb49533c56d41e79c82961a55e77002bc7d3d5" }
+opentelemetry-otlp = { git = "https://github.com/open-telemetry/opentelemetry-rust", rev = "30bb49533c56d41e79c82961a55e77002bc7d3d5" }
+opentelemetry-proto = { git = "https://github.com/open-telemetry/opentelemetry-rust", rev = "30bb49533c56d41e79c82961a55e77002bc7d3d5" }
+opentelemetry-stdout = { git = "https://github.com/open-telemetry/opentelemetry-rust", rev = "30bb49533c56d41e79c82961a55e77002bc7d3d5" }
+opentelemetry_sdk = { git = "https://github.com/open-telemetry/opentelemetry-rust", rev = "30bb49533c56d41e79c82961a55e77002bc7d3d5" }
 pcap = { git = "https://github.com/qrnch-jan/pcap", rev = "0c6ed076c84ef0c63198d384a24d66b737b24e4a" }
 perf-event = { version = "0.4", git = "https://github.com/Nero5023/perf-event.git", rev = "6dae86b6d4807acec081e6dc0a53167f57f8c0f4" }
 perf-event-open-sys = { version = "5.0", git = "https://github.com/Nero5023/perf-event.git", rev = "6dae86b6d4807acec081e6dc0a53167f57f8c0f4" }
@@ -34,7 +40,6 @@ protobuf-build = { git = "https://github.com/fbsource/protobuf-build", rev = "ee
 quickcheck = { git = "https://github.com/jakoschiko/quickcheck", rev = "6ecdf5bb4b0132ce66670b4d46453aa022ea892c" }
 quickcheck_async = { git = "https://github.com/markbt/quickcheck_async", rev = "76b13525ca93e0725e757f841fc6ccab8bae1913" }
 ratatui = { git = "https://github.com/fbsource/ratatui", rev = "e49703b568262fceffcb8b95456a47926ebabf33" }
-reqwest-retry = { git = "https://github.com/fbsource/reqwest-middleware", rev = "25c01d6f018d0c70e475551ca95609aff6ae32be" }
 rinja = { git = "https://github.com/fbsource/askama", rev = "2fc6173c98034c148f46330fc39a006cf0b09efe" }
 riscv = { git = "https://github.com/jsgf/riscv.git", rev = "90cfc5f2404e39e085e12845944d5bbbc869c290" }
 riscv-pac = { git = "https://github.com/jsgf/riscv.git", rev = "90cfc5f2404e39e085e12845944d5bbbc869c290" }
