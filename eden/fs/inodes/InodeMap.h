@@ -424,6 +424,14 @@ class InodeMap {
   InodeCounts getInodeCounts() const;
 
   /**
+   * Get the total number of inodes (loaded + unloaded) without acquiring the
+   * data_ lock. This is suitable for hot paths like computing FUSE TTLs.
+   */
+  size_t getTotalInodeCountFast() const {
+    return totalInodeCount_.load(std::memory_order_relaxed);
+  }
+
+  /**
    * Returns whether lazy inode persistence is enabled.
    *
    * Lazy inode persistence means we delay persisting inodes to the overlay
@@ -717,6 +725,19 @@ class InodeMap {
       const folly::Synchronized<Members>::LockedPtr& data,
       InodeBase* inode);
 
+  void eraseLoadedInode(
+      const folly::Synchronized<Members>::LockedPtr& data,
+      InodeBase* inode);
+
+  UnloadedInode& insertUnloadedInode(
+      const folly::Synchronized<Members>::LockedPtr& data,
+      InodeNumber ino,
+      UnloadedInode&& unloadedInode);
+
+  void eraseUnloadedInode(
+      const folly::Synchronized<Members>::LockedPtr& data,
+      std::unordered_map<InodeNumber, UnloadedInode>::iterator iter);
+
   /**
    * Verify the InodeMap precondition and initialize the root_ member.
    */
@@ -781,6 +802,14 @@ class InodeMap {
    * the InodeMap while holding their own lock.)
    */
   folly::Synchronized<Members> data_;
+
+  /**
+   * Total number of inodes tracked by this InodeMap (loaded + unloaded).
+   * Maintained outside data_ to allow lock-free reads on hot paths.
+   * Updated by insertLoadedInode/eraseLoadedInode and
+   * insertUnloadedInode/eraseUnloadedInode.
+   */
+  std::atomic<size_t> totalInodeCount_{0};
 
   /**
    * The number of inodes that we have unloaded with our periodic

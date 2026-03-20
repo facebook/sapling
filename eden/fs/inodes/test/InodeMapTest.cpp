@@ -783,3 +783,49 @@ TEST(InodeMap, createInodeLoadFailEventPublishesFailEvent) {
   EXPECT_EQ(InodeEventType::LOAD, failEvent->eventType);
   EXPECT_EQ(startEvent->ino, failEvent->ino);
 }
+
+TEST(InodeMap, totalInodeCountFastMatchesInodeCounts) {
+  FakeTreeBuilder builder;
+  builder.setFile("src/a.cpp", "a");
+  builder.setFile("src/b.cpp", "b");
+  builder.setFile("doc/readme.md", "hi");
+  TestMount testMount{builder};
+
+  auto* edenMount = testMount.getEdenMount().get();
+  auto* inodeMap = edenMount->getInodeMap();
+
+  auto getTotalFromCounts = [&]() {
+    auto counts = inodeMap->getInodeCounts();
+    return counts.fileCount + counts.treeCount + counts.unloadedInodeCount;
+  };
+
+  // After loading inodes, fast count should match the detailed counts.
+  auto srcA = testMount.getInode("src/a.cpp"_relpath);
+  auto srcB = testMount.getInode("src/b.cpp"_relpath);
+  auto doc = testMount.getInode("doc/readme.md"_relpath);
+
+  EXPECT_EQ(getTotalFromCounts(), inodeMap->getTotalInodeCountFast());
+
+  // Simulate FUSE references then unload — inodes become "unloaded" but
+  // the total count should still be consistent.
+  srcA->incFsRefcount();
+  srcB->incFsRefcount();
+  srcA.reset();
+  srcB.reset();
+  doc.reset();
+
+  edenMount->getRootInode()->unloadChildrenNow();
+
+  EXPECT_EQ(getTotalFromCounts(), inodeMap->getTotalInodeCountFast());
+
+  // Decrement FS refcount to fully forget inodes — total count should
+  // decrease.
+  auto countBeforeForget = inodeMap->getTotalInodeCountFast();
+  auto srcAIno = testMount.getInode("src/a.cpp"_relpath)->getNodeId();
+  testMount.getInode("src/a.cpp"_relpath).reset();
+  edenMount->getRootInode()->unloadChildrenNow();
+  inodeMap->decFsRefcount(srcAIno, 1);
+
+  EXPECT_EQ(getTotalFromCounts(), inodeMap->getTotalInodeCountFast());
+  EXPECT_LT(inodeMap->getTotalInodeCountFast(), countBeforeForget);
+}

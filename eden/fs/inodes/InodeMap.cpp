@@ -140,6 +140,40 @@ inline void InodeMap::insertLoadedInode(
   } else {
     ++data->numFileInodes_;
   }
+  totalInodeCount_.fetch_add(1, std::memory_order_relaxed);
+}
+
+inline void InodeMap::eraseLoadedInode(
+    const folly::Synchronized<Members>::LockedPtr& data,
+    InodeBase* inode) {
+  auto numErased = data->loadedInodes_.erase(inode->getNodeId());
+  XCHECK_EQ(numErased, 1u) << "inconsistent loaded inodes data: "
+                           << inode->getLogPath();
+  if (inode->getType() == dtype_t::Dir) {
+    --data->numTreeInodes_;
+  } else {
+    --data->numFileInodes_;
+  }
+  totalInodeCount_.fetch_sub(1, std::memory_order_relaxed);
+}
+
+inline InodeMap::UnloadedInode& InodeMap::insertUnloadedInode(
+    const folly::Synchronized<Members>::LockedPtr& data,
+    InodeNumber ino,
+    UnloadedInode&& unloadedInode) {
+  auto ret = data->unloadedInodes_.emplace(ino, std::move(unloadedInode));
+  XCHECK(ret.second) << fmt::format(
+      "failed to emplace inode number {}; is it already present in the InodeMap?",
+      ino);
+  totalInodeCount_.fetch_add(1, std::memory_order_relaxed);
+  return ret.first->second;
+}
+
+inline void InodeMap::eraseUnloadedInode(
+    const folly::Synchronized<Members>::LockedPtr& data,
+    std::unordered_map<InodeNumber, UnloadedInode>::iterator iter) {
+  data->unloadedInodes_.erase(iter);
+  totalInodeCount_.fetch_sub(1, std::memory_order_relaxed);
 }
 
 void InodeMap::initializeRoot(
@@ -167,15 +201,8 @@ void InodeMap::initializeUnloadedInode(
     InodeNumber parentIno,
     InodeNumber ino,
     Args&&... args) {
-  auto unloadedEntry = UnloadedInode(parentIno, std::forward<Args>(args)...);
-  auto result = data->unloadedInodes_.emplace(ino, std::move(unloadedEntry));
-  if (!result.second) {
-    auto message = fmt::format(
-        "failed to emplace inode number {}; is it already present in the InodeMap?",
-        ino);
-    XLOG(ERR, message);
-    throw std::runtime_error(message);
-  }
+  insertUnloadedInode(
+      data, ino, UnloadedInode(parentIno, std::forward<Args>(args)...));
 }
 
 void InodeMap::initializeFromTakeover(
@@ -508,7 +535,7 @@ InodeMap::PromiseVector InodeMap::inodeLoadComplete(InodeBase* inode) {
           InodeEventType::LOAD,
           InodeEventProgress::END,
           it->second.name);
-      data->unloadedInodes_.erase(it);
+      eraseUnloadedInode(data, it);
     }
     mount_->publishInodeTraceEvent(std::move(endLoadEvent.value()));
     stats_->increment(
@@ -754,7 +781,7 @@ InodePtr InodeMap::decFsRefcountHelper(
         number,
         unloadedEntry.parent,
         unloadedEntry.name);
-    data->unloadedInodes_.erase(unloadedIter);
+    eraseUnloadedInode(data, unloadedIter);
   }
   return nullptr;
 }
@@ -1012,10 +1039,7 @@ void InodeMap::shutdownComplete(
   // reference count again when the pointer is destroyed. Note: we don't add
   // the root to unloadedInodes here as it has been freed and we don't want to
   // serialize the freed root during graceful shutdown for takeover.
-  auto numErased = data->loadedInodes_.erase(kRootNodeId);
-  XCHECK_EQ(numErased, 1u) << fmt::format(
-      "inconsistent loaded inodes data: {}", kRootNodeId);
-  --data->numTreeInodes_;
+  eraseLoadedInode(data, root_.get());
   delete root_.get();
   root_.resetNoDecRef();
 
@@ -1145,19 +1169,11 @@ void InodeMap::unloadInode(
     // Insert the unloaded entry
     XLOGF(
         DBG7, "inserting unloaded map entry for inode {}", inode->getNodeId());
-    auto ret = data->unloadedInodes_.emplace(
-        inode->getNodeId(), std::move(unloadedEntry.value()));
-    XCHECK(ret.second);
+    insertUnloadedInode(
+        data, inode->getNodeId(), std::move(unloadedEntry.value()));
   }
 
-  auto numErased = data->loadedInodes_.erase(inode->getNodeId());
-  XCHECK_EQ(numErased, 1u) << "inconsistent loaded inodes data: "
-                           << inode->getLogPath();
-  if (inode->getType() == dtype_t::Dir) {
-    --data->numTreeInodes_;
-  } else {
-    --data->numFileInodes_;
-  }
+  eraseLoadedInode(data, inode);
 }
 
 optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
@@ -1316,10 +1332,8 @@ bool InodeMap::startLoadingChildIfNotLoading(
       // example, isUnlinked, id, and numFsReferences are set to default
       // values
       auto newUnloadedData = UnloadedInode(parentNumber, name, mode);
-      auto ret =
-          data->unloadedInodes_.emplace(childInode, std::move(newUnloadedData));
-      XDCHECK(ret.second);
-      unloadedData = &ret.first->second;
+      unloadedData =
+          &insertUnloadedInode(data, childInode, std::move(newUnloadedData));
     } else {
       unloadedData = &iter->second;
     }
