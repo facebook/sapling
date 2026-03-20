@@ -393,16 +393,27 @@ class StatusCmd(Subcmd):
             help="Wait up to TIMEOUT seconds for the daemon to respond "
             "(default=%(default)s).",
         )
+        parser.add_argument(
+            "--debug",
+            action="store_true",
+            help="Show full systemctl status output when the daemon is managed by systemd",
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
         health_info = instance.check_health(timeout=args.timeout)
         if health_info.is_healthy():
             print("edenfs running normally (pid {})".format(health_info.pid))
-            return 0
+            exit_code = 0
+        else:
+            print("edenfs not healthy: {}".format(health_info.detail))
+            exit_code = 1
 
-        print("edenfs not healthy: {}".format(health_info.detail))
-        return 1
+        if daemon.is_systemd_enabled(instance) and args.debug:
+            print()
+            daemon.print_systemd_status_full(instance)
+
+        return exit_code
 
 
 @subcmd("list", "List available checkouts")
