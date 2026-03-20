@@ -562,6 +562,59 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Inode count below which no GC pressure is applied.
+   * Below this count, max TTL and max GC cutoff are used.
+   */
+  ConfigSetting<uint64_t> gcPressureMinInodes{
+      "mount:gc-pressure-min-inodes",
+      10000,
+      this};
+
+  /**
+   * Inode count at/above which maximum GC pressure is applied.
+   * At or above this count, min TTL and min GC cutoff are used.
+   */
+  ConfigSetting<uint64_t> gcPressureMaxInodes{
+      "mount:gc-pressure-max-inodes",
+      2000000,
+      this};
+
+  /**
+   * Maximum FUSE entry/attribute cache TTL (seconds), used when inode
+   * count is below gc-pressure-min-inodes.
+   */
+  ConfigSetting<uint64_t> fuseTtlMaxSeconds{
+      "mount:fuse-ttl-max-seconds",
+      3600,
+      this};
+
+  /**
+   * Minimum FUSE entry/attribute cache TTL (seconds), used when inode
+   * count is at/above gc-pressure-max-inodes.
+   */
+  ConfigSetting<uint64_t> fuseTtlMinSeconds{
+      "mount:fuse-ttl-min-seconds",
+      1,
+      this};
+
+  /**
+   * Maximum GC cutoff duration (seconds), used at lowest pressure.
+   * Inodes not accessed within this duration are candidates for GC.
+   */
+  ConfigSetting<uint64_t> gcCutoffMaxSeconds{
+      "mount:gc-cutoff-max-seconds",
+      21600,
+      this};
+
+  /**
+   * Minimum GC cutoff duration (seconds), used at highest pressure.
+   */
+  ConfigSetting<uint64_t> gcCutoffMinSeconds{
+      "mount:gc-cutoff-min-seconds",
+      60,
+      this};
+
+  /**
    * Specifies which directory children will be prefetched upon readdir.
    */
   ConfigSetting<ReaddirPrefetch> readdirPrefetch{
@@ -1658,6 +1711,16 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<bool> skipCheckoutChildOverlayWrites{
       "experimental:skip-checkout-child-overlay-writes",
       true,
+      this};
+
+  /**
+   * Master gate for pressure-based inode GC on FUSE.
+   * When enabled, FUSE TTLs and GC cutoffs are dynamically computed based
+   * on total inode count.
+   */
+  ConfigSetting<bool> enablePressureBasedGc{
+      "experimental:enable-pressure-based-gc",
+      false,
       this};
 
   // [coroutines]
