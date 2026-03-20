@@ -12,6 +12,8 @@
 #include <folly/test/TestUtils.h>
 #include <folly/testing/TestUtil.h>
 #include <gtest/gtest.h>
+#include "eden/fs/inodes/InodeMap.h"
+#include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
@@ -140,6 +142,60 @@ TEST(RawEdenDispatcherTest, lookup_returns_valid_inode_for_good_file) {
   EXPECT_NE(0u, entry.nodeid);
   EXPECT_NE(0, entry.attr.ino);
   EXPECT_EQ(entry.nodeid, entry.attr.ino);
+}
+
+TEST(RawEdenDispatcherTest, lookup_updates_last_used_time) {
+  FakeTreeBuilder builder;
+  builder.setFile("hello", "world");
+  TestMount mount{builder};
+
+  // Lookup to load the inode and get its number
+  auto entry =
+      mount.getDispatcher()
+          ->lookup(
+              0, kRootNodeId, "hello"_pc, ObjectFetchContext::getNullContext())
+          .get(0ms);
+  auto ino = InodeNumber{entry.nodeid};
+  auto inode = mount.getEdenMount()->getInodeMap()->lookupInode(ino).get(0ms);
+  auto timeAfterLookup = inode->getLastFsRequestTime();
+
+  // Advance the clock
+  mount.getClock().advance(60s);
+
+  // Another lookup should update lastFsRequestTime
+  mount.getDispatcher()
+      ->lookup(0, kRootNodeId, "hello"_pc, ObjectFetchContext::getNullContext())
+      .get(0ms);
+  auto timeAfterSecondLookup = inode->getLastFsRequestTime();
+  EXPECT_GT(
+      timeAfterSecondLookup.toTimespec().tv_sec,
+      timeAfterLookup.toTimespec().tv_sec);
+}
+
+TEST(RawEdenDispatcherTest, getattr_updates_last_used_time) {
+  FakeTreeBuilder builder;
+  builder.setFile("hello", "world");
+  TestMount mount{builder};
+
+  // Lookup to load the inode
+  auto entry =
+      mount.getDispatcher()
+          ->lookup(
+              0, kRootNodeId, "hello"_pc, ObjectFetchContext::getNullContext())
+          .get(0ms);
+  auto ino = InodeNumber{entry.nodeid};
+  auto inode = mount.getEdenMount()->getInodeMap()->lookupInode(ino).get(0ms);
+
+  // Advance the clock
+  mount.getClock().advance(60s);
+
+  // getattr should update lastFsRequestTime
+  auto timeBefore = inode->getLastFsRequestTime();
+  mount.getDispatcher()
+      ->getattr(ino, ObjectFetchContext::getNullContext())
+      .get(0ms);
+  auto timeAfter = inode->getLastFsRequestTime();
+  EXPECT_GT(timeAfter.toTimespec().tv_sec, timeBefore.toTimespec().tv_sec);
 }
 
 TEST(RawEdenDispatcherTest, lookup_returns_valid_inode_for_bad_file) {

@@ -101,6 +101,7 @@ cpp_unittest(
     deps = [
         "fbsource//third-party/googletest:gtest",
         "//eden/fs/fuse:fuse",
+        "//eden/fs/inodes:inodes",
         "//eden/fs/model:model",
         "//eden/fs/store:context",
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",

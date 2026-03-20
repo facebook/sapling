@@ -65,6 +65,7 @@ ImmediateFuture<FuseDispatcher::Attr> FuseDispatcherImpl::getattr(
     const ObjectFetchContextPtr& context) {
   return inodeMap_->lookupInode(ino)
       .thenValue([context = context.copy()](const InodePtr& inode) {
+        inode->updateLastFsRequestTime();
         return inode->stat(context);
       })
       .thenValue(
@@ -103,6 +104,7 @@ ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::lookup(
         return tree->getOrLoadChild(name, context);
       })
       .thenValue([context = context.copy()](const InodePtr& inode) {
+        inode->updateLastFsRequestTime();
         return makeImmediateFutureWith([&]() { return inode->stat(context); })
             .thenTry([inode](folly::Try<struct stat> maybeStat) {
               if (maybeStat.hasValue()) {
@@ -255,6 +257,7 @@ ImmediateFuture<BufVec> FuseDispatcherImpl::read(
     const ObjectFetchContextPtr& context) {
   return inodeMap_->lookupFileInode(ino).thenValue(
       [context = context.copy(), size, off](FileInodePtr&& inode) {
+        inode->updateLastFsRequestTime();
         return inode->read(size, off, context)
             .thenValue([](std::tuple<BufVec, bool>&& readRes) {
               return std::get<BufVec>(std::move(readRes));
@@ -317,6 +320,7 @@ ImmediateFuture<std::string> FuseDispatcherImpl::readlink(
   return inodeMap_->lookupFileInode(ino).thenValue(
       [kernelCachesReadlink,
        context = context.copy()](const FileInodePtr& inode) {
+        inode->updateLastFsRequestTime();
         // Only release the symlink blob after it's loaded if we can assume the
         // FUSE will cache the result in the kernel's page cache.
         return inode->readlink(
@@ -335,6 +339,7 @@ ImmediateFuture<FuseDirList> FuseDispatcherImpl::readdir(
   return inodeMap_->lookupTreeInode(ino).thenValue(
       [dirList = std::move(dirList), offset, context = context.copy()](
           TreeInodePtr inode) mutable {
+        inode->updateLastFsRequestTime();
         return inode->fuseReaddir(std::move(dirList), offset, context);
       });
 }
@@ -461,13 +466,16 @@ ImmediateFuture<string> FuseDispatcherImpl::getxattr(
     const ObjectFetchContextPtr& context) {
   return inodeMap_->lookupInode(ino).thenValue(
       [attrName = name.str(), context = context.copy()](const InodePtr& inode) {
+        inode->updateLastFsRequestTime();
         return inode->getxattr(attrName, context);
       });
 }
 
 ImmediateFuture<vector<string>> FuseDispatcherImpl::listxattr(InodeNumber ino) {
-  return inodeMap_->lookupInode(ino).thenValue(
-      [](const InodePtr& inode) { return inode->listxattr(); });
+  return inodeMap_->lookupInode(ino).thenValue([](const InodePtr& inode) {
+    inode->updateLastFsRequestTime();
+    return inode->listxattr();
+  });
 }
 
 ImmediateFuture<struct fuse_kstatfs> FuseDispatcherImpl::statfs(
