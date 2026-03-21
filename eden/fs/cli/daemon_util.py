@@ -25,6 +25,12 @@ class DaemonBinaryNotFound(Exception):
         super().__init__("unable to find edenfs executable")
 
 
+class SystemdStartDaemonError(Exception):
+    """Raised when start_daemon_from_args_file cannot launch the daemon."""
+
+    pass
+
+
 def find_daemon_binary(explicit_daemon_binary: Optional[str]) -> str:
     if explicit_daemon_binary is not None:
         return explicit_daemon_binary
@@ -108,43 +114,34 @@ def start_daemon_from_args_file(args_file: str) -> int:
     try:
         with open(args_file) as f:
             data = json.load(f)
-    except FileNotFoundError:
-        print(
-            f"error: args file {args_file} does not exist. "
-            "Run 'eden start' to generate it.",
-            file=sys.stderr,
-        )
-        return 1
+    except FileNotFoundError as e:
+        raise SystemdStartDaemonError(
+            f"args file {args_file} does not exist. Run 'eden start' to generate it."
+        ) from e
     except json.JSONDecodeError as e:
-        print(
-            f"error: args file {args_file} contains invalid JSON: {e}. "
-            "Run 'eden start' to regenerate it.",
-            file=sys.stderr,
-        )
-        return 1
+        raise SystemdStartDaemonError(
+            f"args file {args_file} contains invalid JSON: {e}. "
+            "Run 'eden start' to regenerate it."
+        ) from e
 
     try:
         cmd: List[str] = data["cmd"]
         eden_env: Dict[str, str] = data["env"]
     except KeyError as e:
-        print(
-            f"error: args file {args_file} is missing required key {e}. "
-            "Run 'eden start' to regenerate it.",
-            file=sys.stderr,
-        )
-        return 1
+        raise SystemdStartDaemonError(
+            f"args file {args_file} is missing required key {e}. "
+            "Run 'eden start' to regenerate it."
+        ) from e
 
     # Inherit NOTIFY_SOCKET from the current environment. systemd sets this
     # for ExecStart/ExecReload processes in Type=notify services so the daemon
     # can signal readiness and report its main PID.
     notify_socket = os.environ.get("NOTIFY_SOCKET")
     if not notify_socket:
-        print(
-            "error: NOTIFY_SOCKET is not set. "
-            "This command must be run by systemd as part of a Type=notify service.",
-            file=sys.stderr,
+        raise SystemdStartDaemonError(
+            "NOTIFY_SOCKET is not set. "
+            "This command must be run by systemd as part of a Type=notify service."
         )
-        return 1
     eden_env["NOTIFY_SOCKET"] = notify_socket
 
     # stdout/stderr are redirected by the systemd unit file
@@ -153,8 +150,4 @@ def start_daemon_from_args_file(args_file: str) -> int:
     try:
         return subprocess.call(cmd, stdin=subprocess.DEVNULL, env=eden_env)
     except OSError as e:
-        print(
-            f"error: failed to execute {cmd[0]}: {e}",
-            file=sys.stderr,
-        )
-        return 1
+        raise SystemdStartDaemonError(f"failed to execute {cmd[0]}: {e}") from e

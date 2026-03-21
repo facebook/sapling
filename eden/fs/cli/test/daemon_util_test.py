@@ -10,7 +10,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from eden.fs.cli.daemon_util import start_daemon_from_args_file
+from eden.fs.cli.daemon_util import start_daemon_from_args_file, SystemdStartDaemonError
 
 
 class StartDaemonFromArgsFileTest(unittest.TestCase):
@@ -22,32 +22,32 @@ class StartDaemonFromArgsFileTest(unittest.TestCase):
         return f.name
 
     def test_file_not_found(self) -> None:
-        rc = start_daemon_from_args_file("/nonexistent/path/args.json")
-        self.assertEqual(rc, 1)
+        with self.assertRaises(SystemdStartDaemonError):
+            start_daemon_from_args_file("/nonexistent/path/args.json")
 
     def test_invalid_json(self) -> None:
         f = tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False)
         f.write("not valid json{{{")
         f.close()
         self.addCleanup(os.unlink, f.name)
-        rc = start_daemon_from_args_file(f.name)
-        self.assertEqual(rc, 1)
+        with self.assertRaises(SystemdStartDaemonError):
+            start_daemon_from_args_file(f.name)
 
     def test_missing_cmd_key(self) -> None:
         path = self._write_args_file({"env": {"FOO": "bar"}})
-        rc = start_daemon_from_args_file(path)
-        self.assertEqual(rc, 1)
+        with self.assertRaises(SystemdStartDaemonError):
+            start_daemon_from_args_file(path)
 
     def test_missing_env_key(self) -> None:
         path = self._write_args_file({"cmd": ["/bin/true"]})
-        rc = start_daemon_from_args_file(path)
-        self.assertEqual(rc, 1)
+        with self.assertRaises(SystemdStartDaemonError):
+            start_daemon_from_args_file(path)
 
     def test_missing_notify_socket(self) -> None:
         path = self._write_args_file({"cmd": ["/bin/true"], "env": {}})
         with patch.dict(os.environ, {}, clear=True):
-            rc = start_daemon_from_args_file(path)
-        self.assertEqual(rc, 1)
+            with self.assertRaises(SystemdStartDaemonError):
+                start_daemon_from_args_file(path)
 
     @patch("eden.fs.cli.daemon_util.subprocess.call", return_value=0)
     def test_happy_path(self, mock_call: unittest.mock.MagicMock) -> None:
@@ -75,5 +75,5 @@ class StartDaemonFromArgsFileTest(unittest.TestCase):
             {"cmd": ["/usr/bin/edenfs", "--configDir", "/tmp"], "env": {}}
         )
         with patch.dict(os.environ, {"NOTIFY_SOCKET": "/run/user/1000/notify"}):
-            rc = start_daemon_from_args_file(path)
-        self.assertEqual(rc, 1)
+            with self.assertRaises(SystemdStartDaemonError):
+                start_daemon_from_args_file(path)

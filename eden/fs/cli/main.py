@@ -28,7 +28,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple, Type
+from typing import Dict, List, Optional, Set, Tuple, Type, Union
 
 # Must import util before any module that imports thrift (like check_filesystems)
 # to set up Windows DLL directories for native module loading.
@@ -2485,13 +2485,31 @@ class SystemdStartCmd(Subcmd):
 
     def run(self, args: argparse.Namespace) -> int:
         if "INVOCATION_ID" not in os.environ:
-            print(
+            print_stderr(
                 "error: this command is only meant to be invoked by systemd. "
-                "Use 'eden start' or 'eden restart' instead.",
-                file=sys.stderr,
+                "Use 'eden start' or 'eden restart' instead."
             )
             return 1
-        return daemon_util.start_daemon_from_args_file(args.args_file)
+        exit_code = 1
+        exception = None
+        try:
+            exit_code = daemon_util.start_daemon_from_args_file(args.args_file)
+        except daemon_util.SystemdStartDaemonError as e:
+            print_stderr(f"failed to start daemon from args file: {e}")
+            exception = str(e)
+        finally:
+            try:
+                instance = get_eden_instance(args)
+                sample_kwargs: dict[str, Union[bool, int, str]] = {
+                    "success": exit_code == 0,
+                    "exit_code": exit_code,
+                }
+                if exception is not None:
+                    sample_kwargs["exception"] = exception
+                instance.log_sample("systemd_start", **sample_kwargs)
+            except Exception:
+                pass
+        return exit_code
 
 
 def unmount_redirections_for_path(
