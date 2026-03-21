@@ -55,7 +55,7 @@ cmdwhereami = { version = "0.1.0", path = "commands/cmdwhereami" }
 cmdworktree = { version = "0.1.0", path = "commands/cmdworktree", optional = true }
 ctrlc = { version = "3.5.2", features = ["termination"] }
 flate2 = { version = "1.0.33", features = ["rust_backend"], default-features = false }
-hostname = "0.3"
+hostname = "0.4"
 libc = "0.2.139"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 pycheckout = { version = "0.1.0", path = "../../saplingnative/bindings/modules/pycheckout" }
