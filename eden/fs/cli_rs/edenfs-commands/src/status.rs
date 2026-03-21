@@ -7,6 +7,8 @@
 
 //! edenfsctl status
 
+#[cfg(target_os = "linux")]
+use std::process::Command;
 use std::time::Duration;
 
 use anyhow::Result;
@@ -38,6 +40,12 @@ pub struct StatusCmd {
 successfully start."
     )]
     wait: bool,
+
+    #[clap(
+        long,
+        help = "Show full systemctl status output when the daemon is managed by systemd"
+    )]
+    debug: bool,
 }
 
 enum EdenFsRunningStatus {
@@ -168,6 +176,28 @@ impl StatusCmd {
     }
 }
 
+/// Print full `systemctl --user status` output.
+#[cfg(target_os = "linux")]
+fn print_systemd_status_full(instance: &EdenFsInstance) {
+    let unit = match edenfs_client::daemon::get_systemd_unit(instance) {
+        Ok(u) => u,
+        Err(e) => {
+            event!(Level::DEBUG, ?e, "Failed to get systemd unit name");
+            return;
+        }
+    };
+
+    if let Err(e) = Command::new("systemctl")
+        .args(["--user", "status", "--no-pager", &unit])
+        .status()
+    {
+        eprintln!(
+            "warning: failed to get status of edenfs service unit: {}",
+            e
+        );
+    }
+}
+
 #[async_trait]
 impl crate::Subcommand for StatusCmd {
     async fn run(&self) -> Result<ExitCode> {
@@ -175,7 +205,7 @@ impl crate::Subcommand for StatusCmd {
         let status = self.get_status(instance).await;
         event!(Level::TRACE, ?status, "get_health");
         let display_result = self.interpret_status(instance, status);
-        match display_result {
+        let exit_code = match display_result {
             #[cfg(fbcode_build)]
             Ok(EdenFsRunningStatus::Starting) if self.wait => {
                 // get_status will have already printed out all the start up
@@ -185,11 +215,20 @@ impl crate::Subcommand for StatusCmd {
                 let final_status = self.get_status_simple(instance).await;
                 let final_display_result = self.interpret_status(instance, final_status);
                 if let Ok(EdenFsRunningStatus::Running(_)) = final_display_result {
-                    return Ok(0);
+                    0
+                } else {
+                    self.display_simple(final_display_result)
                 }
-                Ok(self.display_simple(final_display_result))
             }
-            _ => Ok(self.display_simple(display_result)),
+            _ => self.display_simple(display_result),
+        };
+
+        #[cfg(target_os = "linux")]
+        if self.debug {
+            println!();
+            print_systemd_status_full(instance);
         }
+
+        Ok(exit_code)
     }
 }
