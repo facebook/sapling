@@ -13,7 +13,7 @@ import subprocess
 import sys
 from pathlib import Path
 from textwrap import dedent
-from typing import Optional, Sequence, Set
+from typing import Dict, List, Optional, Sequence, Set
 
 from eden.fs.service.eden.thrift_types import FaultDefinition
 from eden.integration.lib.hgrepo import HgRepository
@@ -349,6 +349,60 @@ class CloneTest(testcase.EdenRepoTest):
         self.eden.clone(self.repo.path, empty_dir, case_sensitive=False)
 
         self.assertFalse(self.eden.is_case_sensitive(empty_dir))
+
+
+@testcase.eden_repo_test
+class CloneBlockedAtMaxClonesTest(testcase.EdenRepoTest):
+    """Test that clone is blocked when at the max-clones limit."""
+
+    def populate_repo(self) -> None:
+        self.repo.write_file("hello", "hola\n")
+        self.repo.commit("Initial commit.")
+
+    def edenfs_extra_config(self) -> Optional[Dict[str, List[str]]]:
+        result = super().edenfs_extra_config() or {}
+        # setup_eden_test already created one checkout, so setting
+        # max-clones = 1 means we are at the limit.
+        result.setdefault("clone", []).append('max-clones = "1"')
+        return result
+
+    def test_clone_blocked_when_at_limit(self) -> None:
+        tmp = self.make_temporary_directory()
+        with self.assertRaises(subprocess.CalledProcessError) as context:
+            self.eden.clone(self.repo.path, tmp)
+
+        self.assertIn(
+            "error: maximum number of Eden clones (1) reached",
+            context.exception.stderr,
+        )
+        self.assertIn(
+            "Remove existing clones with `eden rm`",
+            context.exception.stderr,
+        )
+
+
+@testcase.eden_repo_test
+class CloneAllowedUnderMaxClonesTest(testcase.EdenRepoTest):
+    """Test that clone succeeds when under the max-clones limit."""
+
+    def populate_repo(self) -> None:
+        self.repo.write_file("hello", "hola\n")
+        self.repo.commit("Initial commit.")
+
+    def edenfs_extra_config(self) -> Optional[Dict[str, List[str]]]:
+        result = super().edenfs_extra_config() or {}
+        # setup_eden_test created one checkout; setting max-clones = 2
+        # should allow one more clone.
+        result.setdefault("clone", []).append('max-clones = "2"')
+        return result
+
+    def test_clone_allowed_when_under_limit(self) -> None:
+        tmp = self.make_temporary_directory()
+        self.eden.clone(self.repo.path, tmp)
+        self.assertTrue(
+            os.path.isfile(os.path.join(tmp, "hello")),
+            msg="clone should succeed when under the max-clones limit",
+        )
 
 
 class CloneFakeEdenFSTestBase(ServiceTestCaseBase):

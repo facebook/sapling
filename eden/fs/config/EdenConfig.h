@@ -2052,6 +2052,13 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<size_t> cloneMountTimeout{"clone:mount-timeout", 20, this};
 
+  /**
+   * Maximum number of Eden checkouts allowed on this host. When the count of
+   * existing checkouts reaches this limit, `eden clone` will fail with a clear
+   * error message. A value of 0 (the default) means unlimited.
+   */
+  ConfigSetting<uint32_t> maxClones{"clone:max-clones", 0, this};
+
   // [fsck]
 
   /**

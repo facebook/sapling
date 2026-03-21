@@ -600,6 +600,21 @@ class CloneCmd(Subcmd):
         args.path = os.path.realpath(args.path)
         args.nfs = args.nfs or is_nfs_default()
 
+        # We've observed that a large number of clones can cause
+        # OOMs at startup. Optionally configure a limit for
+        # environments with limited memory. A value of 0 (the
+        # default) means unlimited.
+        max_clones = instance.get_config_int("clone.max-clones", 0)
+        if max_clones > 0:
+            current_clone_count = len(instance.get_checkouts())
+            if current_clone_count >= max_clones:
+                print_stderr(
+                    f"error: maximum number of Eden clones ({max_clones}) reached. "
+                    f"You currently have {current_clone_count} clone(s). "
+                    f"Remove existing clones with `eden rm` before creating a new one."
+                )
+                return 1
+
         # Check if requested path is inside an existing checkout or backing_repo of existing checkout
         instance = EdenInstance(args.config_dir, args.etc_eden_dir, args.home_dir)
         problem_type, existing_checkout = config_mod.detect_checkout_path_problem(
