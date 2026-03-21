@@ -403,7 +403,7 @@ class StatusCmd(Subcmd):
             print("edenfs not healthy: {}".format(health_info.detail))
             exit_code = 1
 
-        if daemon.is_systemd_enabled(instance) and args.debug:
+        if sys.platform == "linux" and args.debug:
             print()
             daemon.print_systemd_status_full(instance)
 
