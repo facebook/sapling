@@ -15,6 +15,7 @@ pub mod config;
 pub mod counter_names;
 pub mod counters;
 pub mod current_snapshot;
+pub mod daemon;
 pub mod daemon_info;
 pub mod file_access_monitor;
 pub mod fsutil;
