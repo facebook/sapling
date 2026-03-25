@@ -44,7 +44,7 @@ import {
 import type {CombinedPRQueryData, CombinedPRQueryVariables} from './CombinedPRQuery';
 import {CombinedPRQuery} from './CombinedPRQuery';
 import {parseStackInfo, type StackEntry} from './parseStackInfo';
-import queryGraphQL from './queryGraphQL';
+import queryGraphQL, {type QueryGraphQLOptions} from './queryGraphQL';
 import {publishPullRequest} from './publishPullRequest';
 import {submitPullRequestReview} from './submitPullRequestReview';
 
@@ -101,6 +101,8 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
   private diffSummaries = new TypedEventEmitter<'data', DiffSummariesData>();
   /** Time range in days for filtering PRs. undefined means "all time". */
   private timeRangeDays: number | undefined = 7;
+  /** Abort controller for the current in-flight diff summaries fetch. */
+  private diffSummariesAbort: AbortController | undefined;
 
   setTimeRange(days: number | undefined): void {
     this.timeRangeDays = days;
@@ -122,7 +124,7 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
     };
   }
 
-  private async fetchAllPRData(): Promise<CombinedPRQueryData | undefined> {
+  private async fetchAllPRData(signal?: AbortSignal): Promise<CombinedPRQueryData | undefined> {
     const repoFilter = `repo:${this.codeReviewSystem.owner}/${this.codeReviewSystem.repo}`;
     const openQuery = `${repoFilter} is:pr is:open sort:updated-desc`;
     let closedQuery = `${repoFilter} is:pr -is:open sort:updated-desc`;
@@ -134,14 +136,23 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
     }
 
     const variables: CombinedPRQueryVariables = {openQuery, closedQuery, numToFetch: 100};
-    return this.query<CombinedPRQueryData, CombinedPRQueryVariables>(CombinedPRQuery, variables);
+    return this.query<CombinedPRQueryData, CombinedPRQueryVariables>(
+      CombinedPRQuery,
+      variables,
+      {signal},
+    );
   }
 
   triggerDiffSummariesFetch = debounce(
     async () => {
+      // Abort any previous in-flight fetch so we don't pile up concurrent requests
+      this.diffSummariesAbort?.abort();
+      const controller = new AbortController();
+      this.diffSummariesAbort = controller;
+
       try {
         this.logger.info('fetching github PR summaries');
-        const result = await this.fetchAllPRData();
+        const result = await this.fetchAllPRData(controller.signal);
 
         const openNodes = result?.open?.nodes ?? [];
         const closedNodes = result?.closed?.nodes ?? [];
@@ -205,6 +216,11 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
         this.logger.info(`fetched ${map.size} github PR summaries`);
         this.diffSummaries.emit('data', {summaries: map, currentUser});
       } catch (error) {
+        // Don't surface aborted requests as errors — they're intentional
+        if (controller.signal.aborted) {
+          this.logger.info('diff summaries fetch was superseded by a newer request');
+          return;
+        }
         this.logger.info('error fetching github PR summaries: ', error);
         this.diffSummaries.emit('error', error as Error);
       }
@@ -470,13 +486,15 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
     }
   }
 
-  private query<D, V>(query: string, variables: V, timeoutMs?: number): Promise<D | undefined> {
-    return queryGraphQL<D, V>(
-      query,
-      variables,
-      this.codeReviewSystem.hostname,
-      timeoutMs ?? DEFAULT_GH_FETCH_TIMEOUT,
-    );
+  private query<D, V>(
+    query: string,
+    variables: V,
+    options?: {timeoutMs?: number; signal?: AbortSignal},
+  ): Promise<D | undefined> {
+    return queryGraphQL<D, V>(query, variables, this.codeReviewSystem.hostname, {
+      timeoutMs: options?.timeoutMs ?? DEFAULT_GH_FETCH_TIMEOUT,
+      signal: options?.signal,
+    });
   }
 
   handleClientToServerMessage(
@@ -754,6 +772,7 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
   }
 
   public dispose() {
+    this.diffSummariesAbort?.abort();
     this.diffSummaries.removeAllListeners();
     this.triggerDiffSummariesFetch.dispose();
   }
