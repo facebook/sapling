@@ -9,7 +9,6 @@ import type {LabelFragment} from './generated/graphql';
 import type {PullsPullRequest} from './github/pullsTypes';
 import type {PaginationParams} from './github/types';
 
-import ActorAvatar from './ActorAvatar';
 import CenteredSpinner from './CenteredSpinner';
 import CommentCount from './CommentCount';
 import Pagination from './Pagination';
@@ -19,9 +18,11 @@ import RepoLabelsInput from './RepoLabelsInput';
 import {CURSOR_POINTER} from './constants';
 import {PullRequestState} from './generated/graphql';
 import {gitHubPullRequestsAtom} from './jotai/atoms';
+import {gitHubUsernameAtom} from './jotai';
 import {formatISODate} from './utils';
 import {ActionMenu, Box, IssueLabelToken, PageLayout, SubNav, Text} from '@primer/react';
 import {useAtomValue} from 'jotai';
+import {loadable} from 'jotai/utils';
 import {Fragment, Suspense, useCallback, useMemo, useState} from 'react';
 import {notEmpty} from 'shared/utils';
 
@@ -159,42 +160,60 @@ type PullsListProps = {
 };
 
 function PullsList({onClickLabelToken, pullRequests}: PullsListProps): React.ReactElement {
+  const loadableUsernameAtom = useMemo(() => loadable(gitHubUsernameAtom), []);
+  const usernameLoadable = useAtomValue(loadableUsernameAtom);
+  const username = usernameLoadable.state === 'hasData' ? usernameLoadable.data : null;
+
   return (
-    <Box display="grid" gridTemplateColumns="35px 60px 1fr 100px 60px 145px" fontSize={1}>
-      {pullRequests.map(({author, comments, labels, number, reviewDecision, title, updatedAt}) => (
-        <Fragment key={number}>
-          <Cell>
-            <ActorAvatar login={author?.login} url={author?.avatarUrl} size={24} />
-          </Cell>
-          <Cell>
-            <PullRequestLink number={number}>
-              <Text>#{number}</Text>
-            </PullRequestLink>
-          </Cell>
-          <Cell>
-            <Box display="flex" flexWrap="wrap" alignItems="center" gridGap={1}>
+    <Box display="grid" gridTemplateColumns="4px 120px 60px 1fr 180px 60px 40px 145px" fontSize={1}>
+      {pullRequests.map(({author, comments, isReadByViewer, labels, latestReviews, number, reviewDecision, title, updatedAt}) => {
+        const viewerReviewed = username != null &&
+          (latestReviews?.nodes ?? []).some(review => review?.author?.login === username);
+        const isUnread = isReadByViewer === false;
+
+        return (
+          <Fragment key={number}>
+            <Box
+              borderRadius={1}
+              bg={isUnread ? 'accent.fg' : 'transparent'}
+              marginY={1}
+            />
+            <Cell>
+              <Text sx={{overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{author?.login ?? ''}</Text>
+            </Cell>
+            <Cell>
               <PullRequestLink number={number}>
-                <Text>{title}</Text>
+                <Text>#{number}</Text>
               </PullRequestLink>
-              {(labels?.nodes ?? []).filter(notEmpty).map(({id, name, color}) => (
-                <IssueLabelToken
-                  key={id}
-                  text={name}
-                  fillColor={`#${color}`}
-                  onClick={() => onClickLabelToken({id, name, color})}
-                />
-              ))}
-            </Box>
-          </Cell>
-          <Cell>{formatISODate(updatedAt, false)}</Cell>
-          <Cell>
-            <CommentCount count={comments.totalCount} />
-          </Cell>
-          <Cell>
-            <PullRequestReviewDecisionLabel reviewDecision={reviewDecision} />
-          </Cell>
-        </Fragment>
-      ))}
+            </Cell>
+            <Cell>
+              <Box display="flex" flexWrap="wrap" alignItems="center" gridGap={1}>
+                <PullRequestLink number={number}>
+                  <Text>{title}</Text>
+                </PullRequestLink>
+                {(labels?.nodes ?? []).filter(notEmpty).map(({id, name, color}) => (
+                  <IssueLabelToken
+                    key={id}
+                    text={name}
+                    fillColor={`#${color}`}
+                    onClick={() => onClickLabelToken({id, name, color})}
+                  />
+                ))}
+              </Box>
+            </Cell>
+            <Cell>{formatISODate(updatedAt)}</Cell>
+            <Cell>
+              <CommentCount count={comments.totalCount} />
+            </Cell>
+            <Cell>
+              {username != null && (viewerReviewed ? '✅' : '⬜')}
+            </Cell>
+            <Cell>
+              <PullRequestReviewDecisionLabel reviewDecision={reviewDecision} />
+            </Cell>
+          </Fragment>
+        );
+      })}
     </Box>
   );
 }

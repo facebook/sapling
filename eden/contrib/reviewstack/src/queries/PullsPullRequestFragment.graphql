@@ -8,10 +8,18 @@ fragment PullsPullRequestFragment on PullRequest {
   comments {
     totalCount
   }
+  isReadByViewer
   reviewDecision
   labels(first: 20, orderBy: {field: NAME, direction: ASC}) {
     nodes {
       ...LabelFragment
+    }
+  }
+  latestReviews(first: 20) {
+    nodes {
+      author {
+        login
+      }
     }
   }
 }
