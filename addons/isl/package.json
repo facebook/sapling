@@ -23,7 +23,7 @@
     "shared": "0.1.0",
     "typescript": "5.5.4",
     "unplugin": "^2.3.11",
-    "vite": "^8.0.0",
+    "vite": "^8.0.5",
     "vite-tsconfig-paths": "^6.1.1",
     "vscode-oniguruma": "^1.6.1",
     "vscode-textmate": "^6.0.0"

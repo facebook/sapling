@@ -349,7 +349,7 @@
     "tsx": "^4.16.2",
     "typescript": "5.5.4",
     "unplugin": "^2.3.11",
-    "vite": "^8.0.0",
+    "vite": "^8.0.5",
     "vscode-uri": "^3.0.6"
   },
   "optionalDependencies": {
