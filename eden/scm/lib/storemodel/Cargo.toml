@@ -18,7 +18,7 @@ async-trait = "0.1.86"
 blob = { version = "0.1.0", path = "../blob" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 once_cell = "1.21.4"
-parking_lot = { version = "0.12.1", features = ["send_guard"] }
+parking_lot = { version = "0.12.3", features = ["send_guard"] }
 sapling-configmodel = { version = "0.1.0", path = "../config/model" }
 sapling-edenapi_trait = { version = "0.1.0", path = "../edenapi/trait" }
 sapling-edenapi_types = { version = "0.1.0", path = "../edenapi/types" }

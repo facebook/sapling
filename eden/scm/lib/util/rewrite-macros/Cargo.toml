@@ -23,6 +23,6 @@ sapling-tree-pattern-match = { version = "0.1.0", path = "tree-pattern-match" }
 
 [dev-dependencies]
 once_cell = "1.21.4"
-parking_lot = { version = "0.12.1", features = ["send_guard"] }
+parking_lot = { version = "0.12.3", features = ["send_guard"] }
 tempfile = "3.27.0"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

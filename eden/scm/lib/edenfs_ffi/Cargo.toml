@@ -18,7 +18,7 @@ anyhow = "1.0.102"
 cxx = "1.0.119"
 cxxerror = { version = "0.1.0", path = "cxxerror" }
 once_cell = "1.21.4"
-parking_lot = { version = "0.12.1", features = ["send_guard"] }
+parking_lot = { version = "0.12.3", features = ["send_guard"] }
 sapling-async-runtime = { version = "0.1.0", path = "../async-runtime" }
 sapling-configmodel = { version = "0.1.0", path = "../config/model" }
 sapling-filters = { version = "0.1.0", path = "../filters" }

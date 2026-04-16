@@ -14,7 +14,7 @@ name = "id20store"
 
 [dependencies]
 anyhow = "1.0.102"
-parking_lot = { version = "0.12.1", features = ["send_guard"] }
+parking_lot = { version = "0.12.3", features = ["send_guard"] }
 sapling-atomicfile = { version = "0.1.0", path = "../../atomicfile" }
 sapling-factory = { version = "0.1.0", path = "../../util/factory" }
 sapling-format-util = { version = "0.1.0", path = "../../util/format-util" }

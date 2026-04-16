@@ -13,7 +13,7 @@ anyhow = "1.0.102"
 cpython = { version = "0.7.2", features = ["python3-sys"], default-features = false }
 libc = "0.2.183"
 once_cell = "1.21.4"
-parking_lot = { version = "0.12.1", features = ["send_guard"] }
+parking_lot = { version = "0.12.3", features = ["send_guard"] }
 python3-sys = "0.7.2"
 sapling-backtrace-ext = { version = "0.1.0", path = "../backtrace-ext" }
 sapling-types = { version = "0.1.0", path = "../types" }

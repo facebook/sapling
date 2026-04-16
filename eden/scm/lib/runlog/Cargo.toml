@@ -15,7 +15,7 @@ name = "runlog"
 [dependencies]
 anyhow = "1.0.102"
 chrono = { version = "0.4.44", features = ["clock", "serde", "std"], default-features = false }
-parking_lot = { version = "0.12.1", features = ["send_guard"] }
+parking_lot = { version = "0.12.3", features = ["send_guard"] }
 rand = "0.10"
 sapling-configmodel = { version = "0.1.0", path = "../config/model" }
 sapling-hg-http = { version = "0.1.0", path = "../hg-http" }
