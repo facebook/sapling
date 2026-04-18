@@ -19,4 +19,4 @@ anyhow = "1.0.102"
 clap = { version = "4.6.0", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 dunce = "1.0.5"
 serde = { version = "1.0.219", features = ["derive", "rc"] }
-which = "4.2.4"
+which = "8.0.2"
