@@ -53,7 +53,7 @@ mockall = "0.13.1"
 rand = "0.10"
 serde_test = "1.0.167"
 tempfile = "3.22"
-tokio = { version = "1.50.0", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.52.1", features = ["full", "test-util", "tracing"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 psutil = "3.2.2"
