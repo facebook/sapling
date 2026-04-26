@@ -297,6 +297,21 @@ mod tests {
     }
 
     #[test]
+    fn basic_disconnected() {
+        assert_eq!(
+            render(&test_fixtures::BASIC_DISCONNECTED),
+            r#"
+            o  C
+            |
+            |
+            o  B
+            
+            
+            o  A"#
+        );
+    }
+
+    #[test]
     fn branches_and_merges() {
         assert_eq!(
             render(&test_fixtures::BRANCHES_AND_MERGES),

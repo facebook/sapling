@@ -518,6 +518,9 @@ where
                 } else if i == column {
                     link_line[i] |= LinkLine::CHILD
                         | p.to_link_line(LinkLine::VERT_PARENT, LinkLine::VERT_ANCESTOR);
+                    if p.id().is_some() {
+                        need_link_line = true;
+                    }
                 } else {
                     link_line[i] |=
                         p.to_link_line(LinkLine::LEFT_FORK_PARENT, LinkLine::LEFT_FORK_ANCESTOR);

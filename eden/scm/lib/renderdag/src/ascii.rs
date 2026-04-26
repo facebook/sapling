@@ -241,6 +241,35 @@ mod tests {
     }
 
     #[test]
+    fn basic_disconnected() {
+        assert_eq!(
+            render(&test_fixtures::BASIC_DISCONNECTED),
+            r#"
+            o  C
+            |
+            o  B
+            
+            o  A"#
+        );
+    }
+
+    #[test]
+    fn basic_disconnected_min_row_height_1() {
+        let mut renderer = GraphRowRenderer::new()
+            .output()
+            .with_min_row_height(1)
+            .build_ascii();
+        assert_eq!(
+            render_string(&test_fixtures::BASIC_DISCONNECTED, &mut renderer),
+            r#"
+            o  C
+            |
+            o  B
+            o  A"#
+        );
+    }
+
+    #[test]
     fn branches_and_merges() {
         assert_eq!(
             render(&test_fixtures::BRANCHES_AND_MERGES),
