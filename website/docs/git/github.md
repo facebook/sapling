@@ -11,6 +11,18 @@ When using Sapling with GitHub, we **strongly** recommend the following:
 
 In order for Sapling to work with GitHub pull requests on your behalf, you must provide it with a [Personal Access Token (PAT)](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token). While the GitHub CLI is not the only way to obtain a PAT, it is certainly one of the most convenient.
 
+:::note
+
+The default scopes requested by `gh auth login` (`repo`, `read:org`, `gist`) do **not** include `workflow`. If your pull requests touch files under `.github/workflows/`, GitHub refuses to create or update those files through an OAuth token without the `workflow` scope, and `sl pr submit` will abort with an `UNAUTHORIZED-WRITE` error. Add the scope ahead of time with:
+
+```
+gh auth refresh -s workflow
+```
+
+See [`UNAUTHORIZED-WRITE` when a pull request changes a workflow file](#unauthorized-write-when-a-pull-request-changes-a-workflow-file) for details.
+
+:::
+
 While we ultimately plan to remove the requirement of installing the GitHub CLI to use Sapling with GitHub (though the PAT will still be necessary), you will still need some mechanism to cache your GitHub credentials in Git to enjoy the best experience with Sapling. For example, a graphical interface like [Interactive Smartlog](/docs/addons/isl.md) would be unpleasant to use if it prompted your for a password every time it needed to talk to GitHub. To avoid this, [GitHub recommends two solutions for caching your GitHub credentials](https://docs.github.com/en/get-started/getting-started-with-git/caching-your-github-credentials-in-git), the GitHub CLI being the primary choice.
 
 While GitHub [gives you the option](https://docs.github.com/en/get-started/getting-started-with-git/about-remote-repositories) of cloning a repo with either HTTPS or SSH URLs, HTTPS is generally considered easier to use because HTTPS default port 443 is far less likely to be blocked by a firewall than SSH default port 22.
@@ -152,3 +164,34 @@ Then you likely need to run [`gh auth setup-git [--hostname HOST]`](https://cli.
 ```
 
 See [gh issue #3796](https://github.com/cli/cli/issues/3796) for details
+
+### `UNAUTHORIZED-WRITE` when a pull request changes a workflow file
+
+If `sl pr submit` creates the pull request but then aborts with an error like:
+
+```
+pushing 1 to ssh://git@github.com/<owner>/<repo>.git
+created new pull request: https://github.com/<owner>/<repo>/pull/<n>
+updated body for https://github.com/<owner>/<repo>/pull/<n>
+abort: unexpected error when trying to merge <hash> into sapling-pr-archive-<user>: {
+ "data": { "mergeBranch": null },
+ "errors": [
+  {
+   "type": "UNAUTHORIZED-WRITE",
+   "path": ["mergeBranch"],
+   "message": "Failed to merge: \"refusing to allow an OAuth App to create or update workflow `.github/workflows/<file>.yml` without `workflow` scope\""
+  }
+ ]
+}
+```
+
+then your GitHub OAuth token is missing the `workflow` scope, which GitHub requires before any OAuth-authenticated API call may create or modify files under `.github/workflows/`. The default scopes requested by `gh auth login` (`repo`, `read:org`, `gist`) are not sufficient. Refresh your token to add the scope and retry:
+
+```
+gh auth refresh -s workflow
+sl pr submit
+```
+
+The pull request itself may already exist by the time the error appears. `sl pr submit` first pushes your commits over SSH (which does not go through OAuth scope checks), creates and updates the pull request, and only then updates the internal `sapling-pr-archive-<user>` branch via GitHub's GraphQL `mergeBranch` mutation — and that final step is where the missing `workflow` scope is detected. Re-running `sl pr submit` after refreshing the token reconciles the archive branch.
+
+The same root cause affects `sl push` over HTTPS (see [issue #787](https://github.com/facebook/sapling/issues/787)): a workflow-touching commit is rejected at push time with `refusing to allow an OAuth App to create or update workflow ... without 'workflow' scope`. The fix is the same — `gh auth refresh -s workflow`.
