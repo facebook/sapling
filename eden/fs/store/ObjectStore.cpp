@@ -453,10 +453,7 @@ ObjectStore::co_getTreeAuxDataImpl(
     const ObjectFetchContextPtr& context,
     folly::stop_watch<std::chrono::milliseconds> watch) const {
   try {
-    // Backing store returns ImmediateFuture — bridge via .semi()
-    auto result =
-        co_await ImmediateFuture{backingStore_->getTreeAuxData(id, context)}
-            .semi();
+    auto result = co_await backingStore_->co_getTreeAuxData(id, context);
     if (result.treeAux) {
       stats_->increment(&ObjectStoreStats::getTreeAuxDataFromBackingStore);
       stats_->addDuration(

@@ -273,6 +273,10 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
       const ObjectId& id,
       const ObjectFetchContextPtr& context) = 0;
 
+  virtual folly::coro::now_task<GetTreeAuxResult> co_getTreeAuxData(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context) = 0;
+
   /**
    * Fetch a blob from the backing store.
    *

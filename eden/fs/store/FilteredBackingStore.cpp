@@ -540,14 +540,14 @@ FilteredBackingStore::co_getTreeAuxData(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) {
   if (isSlOid(id)) {
-    co_return co_await backingStore_->getTreeAuxData(id, context);
+    co_return co_await backingStore_->co_getTreeAuxData(id, context);
   }
   // TODO(cuev): This is wrong. This is only correct for the case where the
   // user doesn't care about the filter-ness of the tree. We should figure out
   // what the optimal behavior of this function is (i.e. if it should respect
   // filters or not).
   auto filteredId = FilteredObjectId::fromObjectId(id);
-  co_return co_await backingStore_->getTreeAuxData(
+  co_return co_await backingStore_->co_getTreeAuxData(
       filteredId.object(), context);
 }
 
