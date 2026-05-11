@@ -631,7 +631,7 @@ mod h2m {
                     .parse::<u16>()
                     .context("Invalid client port")?;
 
-                identities.extend(cats_identities.unwrap_or_default().into_iter());
+                identities.extend(cats_identities.unwrap_or_default());
 
                 let mut metadata = Metadata::new(
                     Some(&generate_session_id().to_string()),
