@@ -398,6 +398,7 @@ cpp_library(
         "//folly:string",
         "//folly/chrono:conv",
         "//folly/coro:collect",
+        "//folly/coro:current_executor",
         "//folly/coro:invoke",
         "//folly/executors:cpu_thread_pool_executor",
         "//folly/executors/thread_factory:named_thread_factory",

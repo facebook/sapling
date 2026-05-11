@@ -21,7 +21,9 @@
 #include <folly/String.h>
 #include <folly/chrono/Conv.h>
 #include <folly/coro/Collect.h>
+#include <folly/coro/CurrentExecutor.h>
 #include <folly/coro/Invoke.h>
+#include <folly/coro/Task.h>
 #include <folly/coro/safe/NowTask.h>
 #include <folly/executors/SerialExecutor.h>
 #include <folly/futures/Future.h>
@@ -3724,10 +3726,70 @@ DirListAttributeDataOrError serializeEntryAttributes(
   return result;
 }
 
+folly::coro::now_task<DirListAttributeDataOrError> co_getAllEntryAttributes(
+    EntryAttributeFlags requestedAttributes,
+    const EdenMount& edenMount,
+    std::string path,
+    const ObjectFetchContextPtr& fetchContext) {
+  // Capture lastCheckoutTime before any co_await so synthetic tree mtimes
+  // are stable across concurrent checkout.
+  auto lastCheckoutTime = edenMount.getLastCheckoutTime().toTimespec();
+
+  auto viTry = co_await folly::coro::co_awaitTry(
+      edenMount.co_getVirtualInode(RelativePathPiece{path}, fetchContext));
+  if (viTry.hasException()) {
+    DirListAttributeDataOrError result;
+    result.error() = newEdenError(viTry.exception());
+    co_return result;
+  }
+  auto& virtualInode = viTry.value();
+
+  if (!virtualInode.isDirectory()) {
+    DirListAttributeDataOrError result;
+    result.error() = newEdenError(
+        EINVAL,
+        EdenErrorType::ARGUMENT_ERROR,
+        fmt::format("{}: path must be a directory", path));
+    co_return result;
+  }
+
+  auto entriesTry =
+      co_await folly::coro::co_awaitTry(virtualInode.co_getChildrenAttributes(
+          requestedAttributes,
+          RelativePath{path},
+          edenMount.getObjectStore(),
+          lastCheckoutTime,
+          fetchContext));
+  if (entriesTry.hasException()) {
+    DirListAttributeDataOrError result;
+    result.error() = newEdenError(entriesTry.exception());
+    co_return result;
+  }
+
+  co_return serializeEntryAttributes(
+      *edenMount.getObjectStore(),
+      folly::Try<
+          std::vector<std::pair<PathComponent, folly::Try<EntryAttributes>>>>{
+          std::move(entriesTry.value())},
+      requestedAttributes);
+}
+
 } // namespace
 
 folly::SemiFuture<std::unique_ptr<ReaddirResult>>
 EdenServiceHandler::semifuture_readdir(std::unique_ptr<ReaddirParams> params) {
+  if (server_->getServerState()
+          ->getEdenConfig()
+          ->enableCoroutinesPhase4.getValue()) {
+    // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+    return folly::coro::co_invoke(
+               [self = shared_from_this()](std::unique_ptr<ReaddirParams> p)
+                   -> folly::coro::Task<std::unique_ptr<ReaddirResult>> {
+                 co_return co_await self->co_readdirImpl(std::move(p));
+               },
+               std::move(params))
+        .semi();
+  }
   auto mountHandle = lookupMount(params->mountPoint());
   auto paths = *params->directoryPaths();
   // Get requested attributes for each path
@@ -3787,6 +3849,48 @@ EdenServiceHandler::semifuture_readdir(std::unique_ptr<ReaddirParams> params) {
                      })
                  .ensure([mountHandle] {}))
       .semi();
+}
+
+folly::coro::now_task<std::unique_ptr<ReaddirResult>>
+EdenServiceHandler::co_readdirImpl(std::unique_ptr<ReaddirParams> params) {
+  auto mountHandle = lookupMount(params->mountPoint());
+  auto paths = *params->directoryPaths();
+  auto helper = INSTRUMENT_THRIFT_CALL(
+      DBG3,
+      *params->mountPoint(),
+      getSyncTimeout(*params->sync()),
+      toLogArg(paths));
+  auto& fetchContext = helper->getFetchContext();
+  auto requestedAttributes =
+      EntryAttributeFlags::raw(*params->requestedAttributes());
+
+  co_await co_waitForPendingWrites(mountHandle.getEdenMount(), *params->sync());
+
+  std::vector<folly::coro::Task<DirListAttributeDataOrError>> tasks;
+  tasks.reserve(paths.size());
+  for (auto& path : paths) {
+    tasks.emplace_back(
+        // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+        folly::coro::co_invoke(
+            [](EntryAttributeFlags reqAttrs,
+               EdenMountHandle handle,
+               std::string p,
+               ObjectFetchContextPtr ctx)
+                -> folly::coro::Task<DirListAttributeDataOrError> {
+              co_return co_await co_getAllEntryAttributes(
+                  reqAttrs, handle.getEdenMount(), std::move(p), ctx);
+            },
+            requestedAttributes,
+            mountHandle,
+            std::move(path),
+            fetchContext.copy()));
+  }
+
+  auto results = co_await folly::coro::collectAllRange(std::move(tasks));
+
+  auto res = std::make_unique<ReaddirResult>();
+  res->dirLists() = std::move(results);
+  co_return res;
 }
 
 ImmediateFuture<std::vector<folly::Try<EntryAttributes>>>

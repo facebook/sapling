@@ -573,6 +573,9 @@ class EdenServiceHandler
       apache::thrift::RequestParams params,
       std::unique_ptr<GetFileContentRequest> request) override;
 
+  folly::coro::now_task<std::unique_ptr<ReaddirResult>> co_readdirImpl(
+      std::unique_ptr<ReaddirParams> params);
+
   folly::coro::Task<std::unique_ptr<::facebook::eden::CancelRequestsResponse>>
   co_cancelRequests(
       apache::thrift::RequestParams params,
