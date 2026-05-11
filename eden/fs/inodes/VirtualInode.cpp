@@ -514,6 +514,87 @@ void populateStatAttributes(
         : folly::Try<mode_t>{statTry.value().st_mode};
   }
 }
+
+/**
+ * Coroutine version of getEntryAttributesForNonFile.
+ */
+folly::coro::now_task<EntryAttributes> co_getEntryAttributesForNonFile(
+    const VirtualInode& vi,
+    EntryAttributeFlags requestedAttributes,
+    RelativePathPiece path,
+    const std::shared_ptr<ObjectStore>& objectStore,
+    timespec lastCheckoutTime,
+    const ObjectFetchContextPtr& fetchContext,
+    std::optional<TreeEntryType> entryType,
+    int errorCode,
+    std::string_view additionalErrorContext) {
+  auto attributes = EntryAttributes{};
+
+  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE)) {
+    attributes.type = folly::Try<std::optional<TreeEntryType>>{entryType};
+  }
+
+  auto isMat = false;
+  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_OBJECT_ID)) {
+    attributes.objectId = folly::Try<std::optional<ObjectId>>{vi.getObjectId()};
+    isMat = !attributes.objectId.value().value().has_value();
+  } else {
+    isMat = vi.isMaterialized();
+  }
+
+  populateInvalidNonFileAttributes(
+      attributes,
+      requestedAttributes,
+      errorCode,
+      path,
+      entryType,
+      additionalErrorContext);
+
+  std::optional<folly::Try<struct stat>> statTry;
+  std::optional<folly::Try<std::optional<TreeAuxData>>> treeAuxTry;
+  std::vector<folly::coro::Task<void>> tasks;
+
+  if (shouldRequestStatForEntry(requestedAttributes)) {
+    tasks.emplace_back(
+        // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+        folly::coro::co_invoke(
+            [&vi,
+             &statTry,
+             &lastCheckoutTime,
+             objectStore = objectStore,
+             fetchContext = fetchContext.copy()]() -> folly::coro::Task<void> {
+              statTry = co_await co_awaitTry(
+                  vi.co_stat(lastCheckoutTime, objectStore, fetchContext));
+            }));
+  }
+
+  if (shouldRequestTreeAuxDataForEntry(entryType, requestedAttributes, isMat)) {
+    tasks.emplace_back(
+        // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+        folly::coro::co_invoke(
+            [&vi,
+             &treeAuxTry,
+             objectStore = objectStore,
+             fetchContext = fetchContext.copy()]() -> folly::coro::Task<void> {
+              treeAuxTry = co_await co_awaitTry(
+                  vi.co_getTreeAuxData(objectStore, fetchContext));
+            }));
+  }
+
+  if (!tasks.empty()) {
+    co_await folly::coro::collectAllRange(std::move(tasks));
+  }
+
+  if (statTry.has_value()) {
+    populateStatAttributes(attributes, requestedAttributes, *statTry);
+  }
+
+  if (treeAuxTry.has_value()) {
+    populateTreeAuxAttributes(attributes, requestedAttributes, *treeAuxTry);
+  }
+
+  co_return attributes;
+}
 } // namespace
 
 ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
@@ -750,6 +831,128 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
 
             return attributes;
           });
+}
+
+folly::coro::now_task<EntryAttributes> VirtualInode::co_getEntryAttributes(
+    EntryAttributeFlags requestedAttributes,
+    RelativePathPiece path,
+    const std::shared_ptr<ObjectStore>& objectStore,
+    timespec lastCheckoutTime,
+    const ObjectFetchContextPtr& fetchContext) const {
+  auto dtype = getDtype();
+  switch (dtype) {
+    case dtype_t::Regular:
+      break;
+    case dtype_t::Dir:
+      co_return co_await co_getEntryAttributesForNonFile(
+          *this,
+          requestedAttributes,
+          path,
+          objectStore,
+          lastCheckoutTime,
+          fetchContext,
+          TreeEntryType::TREE,
+          EISDIR,
+          {});
+    case dtype_t::Symlink:
+      co_return co_await co_getEntryAttributesForNonFile(
+          *this,
+          requestedAttributes,
+          path,
+          objectStore,
+          lastCheckoutTime,
+          fetchContext,
+          TreeEntryType::SYMLINK,
+          EINVAL,
+          "file is a symlink");
+    default:
+      co_return co_await co_getEntryAttributesForNonFile(
+          *this,
+          requestedAttributes,
+          path,
+          objectStore,
+          lastCheckoutTime,
+          fetchContext,
+          std::nullopt,
+          EINVAL,
+          fmt::format(
+              "file is a non-source-control type: {}",
+              folly::to_underlying(dtype)));
+  }
+
+  auto attributes = EntryAttributes{};
+
+  std::optional<folly::Try<std::optional<TreeEntryType>>> entryTypeTry;
+  std::optional<folly::Try<BlobAuxData>> blobAuxTry;
+  std::optional<folly::Try<struct stat>> statTry;
+
+  std::vector<folly::coro::Task<void>> tasks;
+
+  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE)) {
+    tasks.emplace_back(
+        // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+        folly::coro::co_invoke(
+            [this, &entryTypeTry, path, fetchContext = fetchContext.copy()]()
+                -> folly::coro::Task<void> {
+              entryTypeTry =
+                  co_await co_awaitTry(co_getTreeEntryType(path, fetchContext));
+            }));
+  }
+
+  if (shouldRequestBlobAuxDataForEntry(requestedAttributes)) {
+    tasks.emplace_back(
+        // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+        folly::coro::co_invoke(
+            [this,
+             &blobAuxTry,
+             path,
+             objectStore = objectStore,
+             fetchContext = fetchContext.copy(),
+             blake3Required = requestedAttributes.containsAnyOf(
+                 ENTRY_ATTRIBUTE_BLAKE3 |
+                 ENTRY_ATTRIBUTE_DIGEST_HASH)]() -> folly::coro::Task<void> {
+              blobAuxTry = co_await folly::coro::co_awaitTry(
+                  getBlobAuxData(
+                      path, objectStore, fetchContext, blake3Required)
+                      .semi());
+            }));
+  }
+
+  if (shouldRequestStatForEntry(requestedAttributes)) {
+    tasks.emplace_back(
+        // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+        folly::coro::co_invoke(
+            [this,
+             &statTry,
+             &lastCheckoutTime,
+             objectStore = objectStore,
+             fetchContext = fetchContext.copy()]() -> folly::coro::Task<void> {
+              statTry = co_await co_awaitTry(
+                  co_stat(lastCheckoutTime, objectStore, fetchContext));
+            }));
+  }
+
+  if (!tasks.empty()) {
+    co_await folly::coro::collectAllRange(std::move(tasks));
+  }
+
+  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE)) {
+    attributes.type = std::move(entryTypeTry);
+  }
+
+  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_OBJECT_ID)) {
+    attributes.objectId = folly::Try<std::optional<ObjectId>>{getObjectId()};
+  }
+
+  if (blobAuxTry.has_value()) {
+    populateBlobAuxAttributes(attributes, requestedAttributes, *blobAuxTry);
+  }
+
+  if (statTry.has_value()) {
+    populateStatAttributes(attributes, requestedAttributes, *statTry);
+  }
+
+  co_return attributes;
 }
 
 // Returns a subset of `struct stat` required by

@@ -188,6 +188,13 @@ class VirtualInode {
       timespec lastCheckoutTime,
       const ObjectFetchContextPtr& fetchContext) const;
 
+  folly::coro::now_task<EntryAttributes> co_getEntryAttributes(
+      EntryAttributeFlags requestedAttributes,
+      RelativePathPiece path,
+      const std::shared_ptr<ObjectStore>& objectStore,
+      timespec lastCheckoutTime,
+      const ObjectFetchContextPtr& fetchContext) const;
+
   /**
    * Emulate stat in a way that works for source control.
    *
