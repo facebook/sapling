@@ -393,7 +393,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
       const ObjectFetchContextPtr& context) override;
 
   folly::coro::now_task<struct stat> co_stat(
-      const ObjectFetchContextPtr& context);
+      const ObjectFetchContextPtr& context) override;
 
  private:
   using State = FileInodeState;

@@ -330,7 +330,7 @@ VirtualInode::co_getTreeEntryType(
     co_return treeEntryTypeFromMode((*inode)->getInitialMode());
 #else
     (void)path;
-    auto st = co_await (*inode)->stat(fetchContext).semi();
+    auto st = co_await (*inode)->co_stat(fetchContext);
     co_return treeEntryTypeFromMode(st.st_mode);
 #endif
   } else if (
@@ -389,21 +389,18 @@ VirtualInode::co_getTreeAuxData(
       std::variant_size_v<detail::VariantVirtualInode> == 4,
       "New variant type added to VariantVirtualInode - update co_getTreeAuxData");
   if (auto* inode = std::get_if<InodePtr>(&variant_)) {
-    co_return co_await inode->asTreePtr()->getTreeAuxData(fetchContext).semi();
+    co_return co_await inode->asTreePtr()->co_getTreeAuxData(fetchContext);
   } else if (auto* tree = std::get_if<TreePtr>(&variant_)) {
-    co_return co_await objectStore
-        ->getTreeAuxData((*tree)->getObjectId(), fetchContext)
-        .semi();
+    co_return co_await objectStore->co_getTreeAuxData(
+        (*tree)->getObjectId(), fetchContext);
   } else if (
       auto* entry =
           std::get_if<UnmaterializedUnloadedBlobDirEntry>(&variant_)) {
-    co_return co_await objectStore
-        ->getTreeAuxData(entry->getObjectId(), fetchContext)
-        .semi();
+    co_return co_await objectStore->co_getTreeAuxData(
+        entry->getObjectId(), fetchContext);
   } else if (auto* treeEntry = std::get_if<TreeEntry>(&variant_)) {
-    co_return co_await objectStore
-        ->getTreeAuxData(treeEntry->getObjectId(), fetchContext)
-        .semi();
+    co_return co_await objectStore->co_getTreeAuxData(
+        treeEntry->getObjectId(), fetchContext);
   }
   co_yield folly::coro::co_error(
       std::runtime_error("VirtualInode: unexpected variant type"));
@@ -1045,7 +1042,7 @@ folly::coro::now_task<struct stat> VirtualInode::co_stat(
       std::variant_size_v<detail::VariantVirtualInode> == 4,
       "New variant type added to VariantVirtualInode - update co_stat");
   if (auto* inode = std::get_if<InodePtr>(&variant_)) {
-    co_return co_await (*inode)->stat(fetchContext).semi();
+    co_return co_await (*inode)->co_stat(fetchContext);
   } else if (auto* tree = std::get_if<TreePtr>(&variant_)) {
     (void)tree;
     struct stat st = {};

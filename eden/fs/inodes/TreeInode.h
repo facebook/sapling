@@ -128,6 +128,9 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   ImmediateFuture<struct stat> stat(
       const ObjectFetchContextPtr& context) override;
 
+  folly::coro::now_task<struct stat> co_stat(
+      const ObjectFetchContextPtr& context) override;
+
   ImmediateFuture<struct stat> setattr(
       const DesiredMetadata& desired,
       const ObjectFetchContextPtr& fetchContext) override;

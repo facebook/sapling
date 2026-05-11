@@ -8,6 +8,7 @@
 #pragma once
 
 #include <folly/Synchronized.h>
+#include <folly/coro/safe/NowTask.h>
 #include <folly/futures/Future.h>
 #include <atomic>
 #include <memory>
@@ -160,6 +161,9 @@ class InodeBase {
 
   // See EdenDispatcher::getattr
   virtual ImmediateFuture<struct stat> stat(
+      const ObjectFetchContextPtr& context) = 0;
+
+  virtual folly::coro::now_task<struct stat> co_stat(
       const ObjectFetchContextPtr& context) = 0;
 
   // See Dispatcher::setattr

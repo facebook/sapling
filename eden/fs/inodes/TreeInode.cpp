@@ -371,6 +371,21 @@ ImmediateFuture<struct stat> TreeInode::stat(
   return statWithCurrentRestrictionState();
 }
 
+folly::coro::now_task<struct stat> TreeInode::co_stat(
+    const ObjectFetchContextPtr& context) {
+  // Hold an InodePtr to ourselves across the co_await for symmetry with
+  // TreeInode::stat()'s [self = inodePtrFromThis()] capture and to keep
+  // this TreeInode alive while recheckPermissionIfExpired runs.
+  auto self = inodePtrFromThis();
+  logAccess(*context);
+  notifyParentOfStat(/*isFile=*/false, *context);
+
+  if (FOLLY_UNLIKELY(isRestricted())) {
+    co_await recheckPermissionIfExpired(context).semi();
+  }
+  co_return statWithCurrentRestrictionState();
+}
+
 std::vector<PathComponent> TreeInode::getChildNames() const {
   auto contents = lockContentsRead();
   std::vector<PathComponent> names;
