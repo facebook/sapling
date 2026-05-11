@@ -251,6 +251,15 @@ class VirtualInode {
       timespec lastCheckoutTime,
       const ObjectFetchContextPtr& fetchContext);
 
+  folly::coro::now_task<
+      std::vector<std::pair<PathComponent, folly::Try<EntryAttributes>>>>
+  co_getChildrenAttributes(
+      EntryAttributeFlags requestedAttributes,
+      RelativePath path,
+      const std::shared_ptr<ObjectStore>& objectStore,
+      timespec lastCheckoutTime,
+      const ObjectFetchContextPtr& fetchContext);
+
   ImmediateFuture<std::string> getBlob(
       const std::shared_ptr<ObjectStore>& objectStore,
       const ObjectFetchContextPtr& fetchContext) const;

@@ -1229,6 +1229,60 @@ VirtualInode::getChildrenAttributes(
           });
 }
 
+folly::coro::now_task<
+    std::vector<std::pair<PathComponent, folly::Try<EntryAttributes>>>>
+VirtualInode::co_getChildrenAttributes(
+    EntryAttributeFlags requestedAttributes,
+    RelativePath path,
+    const std::shared_ptr<ObjectStore>& objectStore,
+    timespec lastCheckoutTime,
+    const ObjectFetchContextPtr& fetchContext) {
+  auto children = this->getChildren(path.piece(), objectStore, fetchContext);
+  if (children.hasException()) {
+    co_yield folly::coro::co_error(std::move(children.exception()));
+  }
+
+  std::vector<PathComponent> names;
+  std::vector<folly::coro::Task<EntryAttributes>> tasks;
+  names.reserve(children.value().size());
+  tasks.reserve(children.value().size());
+
+  for (auto& [name, virtualInodeFuture] : children.value()) {
+    names.push_back(name);
+    tasks.emplace_back(
+        // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+        folly::coro::co_invoke(
+            [](ImmediateFuture<VirtualInode> fut,
+               EntryAttributeFlags reqAttrs,
+               RelativePath subPath,
+               std::shared_ptr<ObjectStore> store,
+               timespec checkoutTime,
+               ObjectFetchContextPtr ctx)
+                -> folly::coro::Task<EntryAttributes> {
+              auto virtualInode = co_await std::move(fut).semi();
+              co_return co_await virtualInode.co_getEntryAttributes(
+                  reqAttrs, subPath, store, checkoutTime, ctx);
+            },
+            std::move(virtualInodeFuture),
+            requestedAttributes,
+            path + name,
+            objectStore,
+            lastCheckoutTime,
+            fetchContext.copy()));
+  }
+
+  auto tries = co_await folly::coro::collectAllTryRange(std::move(tasks));
+
+  std::vector<std::pair<PathComponent, folly::Try<EntryAttributes>>> result;
+  result.reserve(tries.size());
+  XDCHECK_EQ(tries.size(), names.size())
+      << "Missing/too many attributes for the names.";
+  for (size_t i = 0; i < tries.size(); ++i) {
+    result.emplace_back(std::move(names[i]), std::move(tries[i]));
+  }
+  co_return result;
+}
+
 namespace {
 
 /**
