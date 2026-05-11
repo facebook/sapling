@@ -10,7 +10,6 @@
 //! State for a single source control Repo
 
 mod client;
-mod errors;
 mod repo;
 
 pub use client::RepoClient;

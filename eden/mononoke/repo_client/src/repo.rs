@@ -32,7 +32,6 @@ use repo_identity::RepoIdentity;
 use repo_lock::RepoLock;
 use repo_permission_checker::RepoPermissionChecker;
 use sql_query_config::SqlQueryConfig;
-use streaming_clone::StreamingClone;
 
 #[facet::container]
 #[derive(Clone)]
@@ -57,7 +56,6 @@ pub struct RepoClientRepo(
     dyn CommitGraphWriter,
     dyn Filenodes,
     SqlQueryConfig,
-    StreamingClone,
     dyn BookmarksCache,
     dyn HgMutationStore,
     dyn GitSourceOfTruthConfig,

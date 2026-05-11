@@ -32,7 +32,6 @@ rust_library(
         "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:tracing",
         ":getbundle_response",
-        ":streaming_clone",
         ":unbundle",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/facet:facet",
