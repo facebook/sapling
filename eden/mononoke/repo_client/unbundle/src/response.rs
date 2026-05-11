@@ -161,8 +161,8 @@ impl UnbundleResponse {
                 create_getbundle_response(ctx, repo, common, &heads, PhasesPart::Yes, lfs_params)
                     .await?;
 
-            cg_part_builder.extend(bookmark_reply_part.into_iter());
-            cg_part_builder.extend(obsmarkers_part.into_iter());
+            cg_part_builder.extend(bookmark_reply_part);
+            cg_part_builder.extend(obsmarkers_part);
             let chunks = create_bundle_stream_new(cg_part_builder)
                 .try_collect::<Vec<_>>()
                 .await?;
