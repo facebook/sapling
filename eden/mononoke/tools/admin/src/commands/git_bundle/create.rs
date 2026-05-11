@@ -178,7 +178,7 @@ pub async fn create_from_mononoke_repo(
     let response = generate_pack_item_stream(ctx.clone(), &repo, request)
         .await
         .context("Error in generating pack item stream")?;
-    let prereqs = stream::iter(create_args.have_heads.into_iter())
+    let prereqs = stream::iter(create_args.have_heads)
         .map(|bonsai| {
             borrowed!(ctx, repo);
             async move {
