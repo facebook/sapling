@@ -334,6 +334,10 @@ class ObjectStore : public IObjectStore,
       const ObjectId& id,
       const ObjectFetchContextPtr& context) const;
 
+  folly::coro::now_task<uint64_t> co_getBlobSize(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context) const;
+
   /**
    * Returns the SHA-1 hash of the contents of the blob with the given ID.
    */

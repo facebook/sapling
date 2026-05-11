@@ -931,6 +931,13 @@ ImmediateFuture<uint64_t> ObjectStore::getBlobSize(
   });
 }
 
+folly::coro::now_task<uint64_t> ObjectStore::co_getBlobSize(
+    const ObjectId& id,
+    const ObjectFetchContextPtr& context) const {
+  auto auxData = co_await co_getBlobAuxData(id, context);
+  co_return auxData.size;
+}
+
 ImmediateFuture<Hash20> ObjectStore::getBlobSha1(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) const {
