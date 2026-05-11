@@ -7,6 +7,7 @@
 
 #include <folly/Exception.h>
 #include <folly/Random.h>
+#include <folly/coro/GtestHelpers.h>
 #include <folly/executors/ManualExecutor.h>
 #include <folly/test/TestUtils.h>
 #include <gmock/gmock.h>
@@ -1181,6 +1182,24 @@ TEST_P(VirtualInodeTestBase, getBlob) {
   }
   VERIFY_TREE(flags);
   files.reset();
+}
+
+CO_TEST(VirtualInodeTest, co_statDoesNotChangeState) {
+  TestFileDatabase files;
+  auto flags = VERIFY_DEFAULT;
+  auto mount = TestMount{MakeTestTreeBuilder(files)};
+  // Use verifyTreeState directly: VERIFY_TREE depends on GetParam().
+  verifyTreeState(__FILE__, __LINE__, mount, files, flags);
+  auto edenMount = mount.getEdenMount();
+  auto objectStore = edenMount->getObjectStore();
+  auto lastCheckoutTime = edenMount->getLastCheckoutTime().toTimespec();
+
+  for (const auto& info : files.getOriginalItems()) {
+    auto virtualInode = mount.getVirtualInode(info->path);
+    co_await virtualInode.co_stat(
+        lastCheckoutTime, objectStore, ObjectFetchContext::getNullContext());
+  }
+  verifyTreeState(__FILE__, __LINE__, mount, files, flags);
 }
 
 INSTANTIATE_TEST_SUITE_P(
