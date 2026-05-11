@@ -46,21 +46,15 @@ use futures::future;
 use futures::future::BoxFuture;
 use futures::future::FutureExt;
 use futures::future::TryFutureExt;
-use futures::stream;
 use futures::stream::BoxStream;
 use futures::stream::FuturesUnordered;
-use futures::stream::Stream;
-use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures_01_ext::FutureExt as OldFutureExt;
 use futures_ext::FbFutureExt;
-use futures_ext::FbStreamExt;
 use futures_ext::FbTryFutureExt;
-use futures_ext::stream::FbTryStreamExt;
 use futures_old::Future as OldFuture;
 use futures_old::future as future_old;
 use futures_stats::TimedFutureExt;
-use futures_stats::TimedStreamExt;
 use getbundle_response::SessionLfsParams;
 use hgproto::HgCommandRes;
 use hgproto::HgCommands;
@@ -86,9 +80,6 @@ use repo_identity::RepoIdentityRef;
 use serde::Deserialize;
 use serde_json::json;
 use stats::prelude::*;
-use streaming_clone::RevlogStreamingChunks;
-use streaming_clone::StreamingCloneArc;
-use time_ext::DurationExt;
 use tracing::debug;
 use tracing::info;
 use unbundle::BundleResolverError;
@@ -125,24 +116,12 @@ mod ops {
     pub static LISTKEYS: &str = "listkeys";
     pub static LISTKEYSPATTERNS: &str = "listkeyspatterns";
     pub static KNOWN: &str = "known";
-
-    pub static STREAMOUTSHALLOW: &str = "stream_out_shallow";
 }
 
 #[derive(Clone, Copy, Debug)]
 struct SamplingRate(NonZeroU64);
 
 const UNSAMPLED: SamplingRate = SamplingRate(nonzero!(1u64));
-
-fn clone_timeout() -> Duration {
-    const FALLBACK_TIMEOUT_SECS: u64 = 4 * 60 * 60;
-
-    let timeout: u64 =
-        justknobs::get_as::<u64>("scm/mononoke_timeouts:repo_client_clone_timeout_secs", None)
-            .unwrap_or(FALLBACK_TIMEOUT_SECS);
-
-    Duration::from_secs(timeout)
-}
 
 fn default_timeout() -> Duration {
     const FALLBACK_TIMEOUT_SECS: u64 = 15 * 60;
@@ -165,9 +144,6 @@ fn wireprotocaps() -> Vec<String> {
         "unbundlereplay".to_string(),
         "remotefilelog".to_string(),
         "pushkey".to_string(),
-        "stream-preferred".to_string(),
-        "stream_option".to_string(),
-        "streamreqs=generaldelta,lz4revlog,revlogv1".to_string(),
     ]
 }
 
@@ -257,20 +233,6 @@ impl<R: Repo> RepoClient<R> {
     where
         F: Future<Output = Result<I, E>> + Send + 'static,
         H: FnOnce(CoreContext, CommandLogger) -> F,
-    {
-        let (ctx, command_logger) = self.start_command(command, sampling_rate);
-        Box::pin(handler(ctx, command_logger))
-    }
-
-    fn command_stream<S, I, E, H>(
-        &self,
-        command: &str,
-        sampling_rate: SamplingRate,
-        handler: H,
-    ) -> BoxStream<'static, Result<I, E>>
-    where
-        S: Stream<Item = Result<I, E>> + Send + 'static,
-        H: FnOnce(CoreContext, CommandLogger) -> S,
     {
         let (ctx, command_logger) = self.start_command(command, sampling_rate);
         Box::pin(handler(ctx, command_logger))
@@ -1001,127 +963,6 @@ impl<R: Repo> HgCommands for RepoClient<R> {
                 command_logger.without_wireproto().finalize_command(&stats);
                 res
             })
-        })
-    }
-
-    // @wireprotocommand('stream_out_shallow')
-    fn stream_out_shallow(&self, tag: Option<String>) -> BoxStream<'static, Result<Bytes, Error>> {
-        self.command_stream(ops::STREAMOUTSHALLOW, UNSAMPLED, |ctx, command_logger| {
-            let streaming_clone = self.repo.streaming_clone_arc();
-
-            let stream = {
-                cloned!(ctx);
-                async move {
-                    let changelog = streaming_clone
-                        .fetch_changelog(ctx.clone(), tag.as_deref())
-                        .await?;
-
-                    let data_blobs = changelog
-                        .data_blobs
-                        .into_iter()
-                        .map(|fut| {
-                            cloned!(ctx);
-                            async move {
-                                let (stats, res) = fut.timed().await;
-                                ctx.perf_counters().add_to_counter(
-                                    PerfCounterType::SumManifoldPollTime,
-                                    stats.poll_time.as_nanos_unchecked() as i64,
-                                );
-                                if let Ok(bytes) = res.as_ref() {
-                                    ctx.perf_counters().add_to_counter(
-                                        PerfCounterType::BytesSent,
-                                        bytes.len() as i64,
-                                    )
-                                }
-                                res
-                            }
-                            .boxed()
-                        })
-                        .collect();
-
-                    let index_blobs = changelog
-                        .index_blobs
-                        .into_iter()
-                        .map(|fut| {
-                            cloned!(ctx);
-                            async move {
-                                let (stats, res) = fut.timed().await;
-                                ctx.perf_counters().add_to_counter(
-                                    PerfCounterType::SumManifoldPollTime,
-                                    stats.poll_time.as_nanos_unchecked() as i64,
-                                );
-                                if let Ok(bytes) = res.as_ref() {
-                                    ctx.perf_counters().add_to_counter(
-                                        PerfCounterType::BytesSent,
-                                        bytes.len() as i64,
-                                    )
-                                }
-                                res
-                            }
-                            .boxed()
-                        })
-                        .collect();
-
-                    let changelog = RevlogStreamingChunks {
-                        data_size: changelog.data_size,
-                        index_size: changelog.index_size,
-                        data_blobs,
-                        index_blobs,
-                    };
-
-                    debug!(
-                        "streaming changelog {} index bytes, {} data bytes",
-                        changelog.index_size, changelog.data_size
-                    );
-
-                    let mut response_header = Vec::new();
-                    // Send OK response.
-                    response_header.push(Bytes::from_static(b"0\n"));
-                    // send header.
-                    let total_size = changelog.index_size + changelog.data_size;
-                    let file_count = 2;
-                    let header = format!("{} {}\n", file_count, total_size);
-                    response_header.push(header.into_bytes().into());
-                    let response = stream::iter(response_header.into_iter().map(Ok));
-
-                    fn build_file_stream(
-                        name: &str,
-                        size: usize,
-                        data: Vec<BoxFuture<'static, Result<Bytes, Error>>>,
-                    ) -> impl Stream<Item = Result<Bytes, Error>> + Send + use<>
-                    {
-                        let header = format!("{}\0{}\n", name, size);
-
-                        stream::once(future::ready(Ok(header.into_bytes().into())))
-                            .chain(stream::iter(data).buffered(100))
-                    }
-
-                    let res = response
-                        .chain(build_file_stream(
-                            "00changelog.i",
-                            changelog.index_size,
-                            changelog.index_blobs,
-                        ))
-                        .chain(build_file_stream(
-                            "00changelog.d",
-                            changelog.data_size,
-                            changelog.data_blobs,
-                        ));
-
-                    Ok(res)
-                }
-            }
-            .try_flatten_stream();
-
-            stream
-                .whole_stream_timeout(clone_timeout())
-                .yield_periodically()
-                .flatten_err()
-                .timed(|stats| {
-                    if stats.completed {
-                        command_logger.finalize_command(&stats);
-                    }
-                })
         })
     }
 }

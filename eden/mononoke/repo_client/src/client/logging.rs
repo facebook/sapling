@@ -65,10 +65,6 @@ impl CommandLogger {
         self.inner
     }
 
-    pub fn finalize_command<'a>(self, stats: impl Into<CommandStats<'a>>) {
-        self.inner.log_command_processed(stats.into());
-    }
-
     pub fn add_scuba_extra(&mut self, k: impl Into<String>, v: impl Into<ScubaValue>) {
         self.inner.add_scuba_extra(k, v);
     }
