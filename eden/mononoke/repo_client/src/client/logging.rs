@@ -12,16 +12,8 @@ use context::CoreContext;
 use context::PerfCounters;
 use futures_stats::FutureStats;
 use futures_stats::StreamStats;
-use hgproto::GettreepackArgs;
-use iterhelpers::chunk_by_accumulation;
-use mercurial_types::HgManifestId;
-use mononoke_types::path::MPath;
 use scuba_ext::MononokeScubaSampleBuilder;
 use scuba_ext::ScubaValue;
-use scuba_ext::ScubaVerbosityLevel;
-
-const COLUMN_SIZE_LIMIT: usize = 500_1000;
-const FULL_ARGS_LOG_TAG: &str = "Full Command Args";
 
 #[derive(Copy, Clone)]
 pub enum CommandStats<'a> {
@@ -125,90 +117,5 @@ impl ScubaOnlyCommandLogger {
         }
 
         scuba.log_with_msg("Command processed", None);
-    }
-}
-
-fn debug_format_directory<T: AsRef<[u8]>>(directory: &T) -> String {
-    String::from_utf8_lossy(&hgproto::batch::escape(directory)).to_string()
-}
-
-pub fn debug_format_manifest(node: &HgManifestId) -> String {
-    format!("{}", node)
-}
-
-pub fn debug_format_path(path: &MPath) -> String {
-    if path.is_root() {
-        String::new()
-    } else {
-        format!("{}", path)
-    }
-}
-
-fn greater_than_column_size(a: usize) -> bool {
-    a > COLUMN_SIZE_LIMIT
-}
-
-pub fn log_gettreepack_params_verbose(ctx: &CoreContext, args: &GettreepackArgs) {
-    if !ctx
-        .scuba()
-        .should_log_with_level(ScubaVerbosityLevel::Verbose)
-    {
-        return;
-    }
-
-    let mut sample = ctx.scuba().clone();
-    sample.add("gettreepack_rootdir", debug_format_path(&args.rootdir));
-
-    if let Some(depth) = args.depth {
-        sample.add("gettreepack_depth", depth);
-    }
-    let msg = "gettreepack rootdir and depth".to_string();
-    sample.log_with_msg_verbose(FULL_ARGS_LOG_TAG, msg);
-
-    let mfnode_chunks = chunk_by_accumulation(
-        args.mfnodes.iter().map(debug_format_manifest),
-        0,
-        |acc, s| acc + s.len(),
-        greater_than_column_size,
-    );
-
-    let msg = "gettreepack mfnodes".to_string();
-    for (i, mfnode_chunk) in mfnode_chunks.into_iter().enumerate() {
-        ctx.scuba()
-            .clone()
-            .add("gettreepack_mfnode_chunk_idx", i)
-            .add("gettreepack_mfnode_chunk", mfnode_chunk)
-            .log_with_msg_verbose(FULL_ARGS_LOG_TAG, msg.clone());
-    }
-
-    let basemfnode_chunks = chunk_by_accumulation(
-        args.basemfnodes.iter().map(debug_format_manifest),
-        0,
-        |acc, s| acc + s.len(),
-        greater_than_column_size,
-    );
-
-    let msg = "gettreepack basemfnodes".to_string();
-    for (i, basemfnode_chunk) in basemfnode_chunks.into_iter().enumerate() {
-        ctx.scuba()
-            .clone()
-            .add("gettreepack_basemfnode_chunk_idx", i)
-            .add("gettreepack_basemfnode_chunk", basemfnode_chunk)
-            .log_with_msg_verbose(FULL_ARGS_LOG_TAG, msg.clone());
-    }
-
-    let directory_chunks = chunk_by_accumulation(
-        args.directories.iter().map(debug_format_directory),
-        0,
-        |acc, s| acc + s.len(),
-        greater_than_column_size,
-    );
-    let msg = "gettreepack directories".to_string();
-    for (i, directory_chunk) in directory_chunks.into_iter().enumerate() {
-        ctx.scuba()
-            .clone()
-            .add("gettreepack_directory_chunk_idx", i)
-            .add("gettreepack_directory_chunk", directory_chunk)
-            .log_with_msg_verbose(FULL_ARGS_LOG_TAG, msg.clone());
     }
 }

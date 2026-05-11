@@ -41,9 +41,7 @@ use context::PerfCounterType;
 use context::PerfCounters;
 use context::SessionContainer;
 use cross_repo_sync::SubmoduleDeps;
-use filenodes::FilenodeResult;
 use futures::compat::Future01CompatExt;
-use futures::compat::Stream01CompatExt;
 use futures::future;
 use futures::future::BoxFuture;
 use futures::future::FutureExt;
@@ -54,65 +52,37 @@ use futures::stream::FuturesUnordered;
 use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use futures_01_ext::BoxFuture as OldBoxFuture;
-use futures_01_ext::BoxStream as OldBoxStream;
 use futures_01_ext::FutureExt as OldFutureExt;
-use futures_01_ext::StreamExt as OldStreamExt;
-use futures_01_ext::try_boxstream;
 use futures_ext::FbFutureExt;
 use futures_ext::FbStreamExt;
 use futures_ext::FbTryFutureExt;
 use futures_ext::stream::FbTryStreamExt;
 use futures_old::Future as OldFuture;
-use futures_old::Stream as OldStream;
 use futures_old::future as future_old;
-use futures_old::stream as stream_old;
 use futures_stats::TimedFutureExt;
 use futures_stats::TimedStreamExt;
 use getbundle_response::SessionLfsParams;
-use hgproto::GettreepackArgs;
 use hgproto::HgCommandRes;
 use hgproto::HgCommands;
 use hook_manager::manager::HookManagerArc;
 use hostname::get_hostname;
-use itertools::Itertools;
-use lazy_static::lazy_static;
-use manifest::Diff;
-use manifest::Entry;
-use manifest::ManifestOps;
 use maplit::hashmap;
 use mercurial_bundles::Bundle2Item;
-use mercurial_bundles::create_bundle_stream_new;
-use mercurial_bundles::parts;
 use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgChangesetIdPrefix;
 use mercurial_types::HgChangesetIdsResolvedFromPrefix;
-use mercurial_types::HgFileNodeId;
-use mercurial_types::HgManifestId;
-use mercurial_types::HgNodeHash;
-use mercurial_types::HgParents;
-use mercurial_types::NULL_CSID;
-use mercurial_types::NULL_HASH;
-use mercurial_types::NonRootMPath;
-use mercurial_types::RepoPath;
-use mercurial_types::calculate_hg_node_id;
-use mercurial_types::fetch_manifest_envelope;
 use mercurial_types::percent_encode;
 use metaconfig_types::RepoClientKnobs;
 use metaconfig_types::RepoConfigRef;
 use mononoke_types::ChangesetId;
 use mononoke_types::hash::GitSha1;
-use mononoke_types::path::MPath;
 use nonzero_ext::nonzero;
 use phases::PhasesArc;
-use rate_limiting::Metric;
-use rate_limiting::Scope;
 use repo_authorization::AuthorizationContext;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_cross_repo::RepoCrossRepoRef;
 use repo_identity::RepoIdentityRef;
-use scuba_ext::MononokeScubaSampleBuilder;
 use serde::Deserialize;
 use serde_json::json;
 use stats::prelude::*;
@@ -129,28 +99,16 @@ use unbundle::run_hooks;
 use unbundle::run_post_resolve_action;
 
 use crate::Repo;
-use crate::errors::ErrorKind;
 
 mod logging;
 mod session_bookmarks_cache;
 mod tests;
 
 use logging::CommandLogger;
-use logging::debug_format_manifest;
-use logging::debug_format_path;
-use logging::log_gettreepack_params_verbose;
 use session_bookmarks_cache::SessionBookmarkCache;
 
 define_stats! {
     prefix = "mononoke.repo_client";
-    gettreepack_ms:
-        histogram(2, 0, 200, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
-    total_tree_count: timeseries(Rate, Sum),
-    quicksand_tree_count: timeseries(Rate, Sum),
-    total_tree_size: timeseries(Rate, Sum),
-    quicksand_tree_size: timeseries(Rate, Sum),
-    null_linknode_gettreepack: timeseries(Rate, Sum),
-
     push_success: dynamic_timeseries("push_success.{}", (reponame: String); Rate, Sum),
     push_hook_failure: dynamic_timeseries("push_hook_failure.{}.{}", (reponame: String, hook_failure: String); Rate, Sum),
     push_conflicts: dynamic_timeseries("push_conflicts.{}", (reponame: String); Rate, Sum),
@@ -167,7 +125,6 @@ mod ops {
     pub static LISTKEYS: &str = "listkeys";
     pub static LISTKEYSPATTERNS: &str = "listkeyspatterns";
     pub static KNOWN: &str = "known";
-    pub static GETTREEPACK: &str = "gettreepack";
 
     pub static STREAMOUTSHALLOW: &str = "stream_out_shallow";
 }
@@ -175,49 +132,7 @@ mod ops {
 #[derive(Clone, Copy, Debug)]
 struct SamplingRate(NonZeroU64);
 
-const GETTREEPACK_FEW_MFNODES_SAMPLING_RATE: SamplingRate = SamplingRate(nonzero!(100u64));
 const UNSAMPLED: SamplingRate = SamplingRate(nonzero!(1u64));
-
-fn gettreepack_scuba_sampling_rate(params: &GettreepackArgs) -> SamplingRate {
-    if params.mfnodes.len() == 1 {
-        GETTREEPACK_FEW_MFNODES_SAMPLING_RATE
-    } else {
-        UNSAMPLED
-    }
-}
-
-fn debug_format_manifests<'a>(nodes: impl IntoIterator<Item = &'a HgManifestId>) -> String {
-    nodes.into_iter().map(debug_format_manifest).join(" ")
-}
-
-fn debug_format_directories<'a, T: AsRef<[u8]> + 'a>(
-    directories: impl IntoIterator<Item = &'a T>,
-) -> String {
-    let encoded_directories = directories
-        .into_iter()
-        .map(hgproto::batch::escape)
-        .collect::<Vec<_>>();
-
-    let len = encoded_directories
-        .iter()
-        .map(|v| v.len())
-        .fold(0, |sum, len| sum + len + 1);
-
-    let mut out = Vec::with_capacity(len);
-
-    for vec in encoded_directories {
-        out.extend(vec);
-        out.extend(b",");
-    }
-
-    // NOTE: This normally shouldn't happen, but this is just a debug function, so if it does we
-    // just ignore it.
-    String::from_utf8_lossy(out.as_ref()).to_string()
-}
-
-lazy_static! {
-    static ref SLOW_REQUEST_THRESHOLD: Duration = Duration::from_secs(1);
-}
 
 fn clone_timeout() -> Duration {
     const FALLBACK_TIMEOUT_SECS: u64 = 4 * 60 * 60;
@@ -248,14 +163,11 @@ fn wireprotocaps() -> Vec<String> {
         "known".to_string(),
         "unbundle=HG10GZ,HG10BZ,HG10UN".to_string(),
         "unbundlereplay".to_string(),
-        "gettreepack".to_string(),
         "remotefilelog".to_string(),
         "pushkey".to_string(),
         "stream-preferred".to_string(),
         "stream_option".to_string(),
         "streamreqs=generaldelta,lz4revlog,revlogv1".to_string(),
-        "treeonly".to_string(),
-        "designatednodes".to_string(),
     ]
 }
 
@@ -419,44 +331,6 @@ impl<R: Repo> RepoClient<R> {
         }
     }
 
-    fn gettreepack_untimed(
-        &self,
-        ctx: CoreContext,
-        params: GettreepackArgs,
-    ) -> BoxStream<'static, Result<Bytes, Error>> {
-        let changed_entries = gettreepack_entries(ctx.clone(), &self.repo, params)
-            .filter({
-                let mut used_hashes = HashSet::new();
-                move |(hg_mf_id, _)| {
-                    hg_mf_id.clone().into_nodehash() != NULL_HASH
-                        && used_hashes.insert(hg_mf_id.clone())
-                }
-            })
-            .map({
-                cloned!(ctx, self.repo);
-                move |(hg_mf_id, path)| {
-                    ctx.perf_counters()
-                        .increment_counter(PerfCounterType::GettreepackNumTreepacks);
-
-                    ctx.session()
-                        .bump_load(Metric::TotalManifests, Scope::Regional, 1.0);
-                    STATS::total_tree_count.add_value(1);
-                    if ctx.session().is_quicksand() {
-                        STATS::quicksand_tree_count.add_value(1);
-                    }
-                    fetch_treepack_part_input(ctx.clone(), &repo, hg_mf_id, path, true)
-                        .compat()
-                        .boxed()
-                }
-            });
-
-        let part =
-            parts::treepack_part(changed_entries.compat().boxed(), parts::StoreInHgCache::Yes);
-        async move { Ok(create_bundle_stream_new(vec![part?])) }
-            .try_flatten_stream()
-            .boxed()
-    }
-
     fn lfs_params(&self) -> SessionLfsParams {
         if self.force_lfs.load(Ordering::Relaxed) {
             SessionLfsParams {
@@ -600,32 +474,6 @@ impl<R: Repo> RepoClient<R> {
             })
         })
     }
-}
-
-fn throttle_stream<F, S, V>(
-    session: &SessionContainer,
-    metric: Metric,
-    request_name: &'static str,
-    func: F,
-    mut scuba: MononokeScubaSampleBuilder,
-) -> impl Stream<Item = Result<V, Error>> + use<F, S, V>
-where
-    F: FnOnce() -> S + Send + 'static,
-    S: Stream<Item = Result<V, Error>> + Send + 'static,
-{
-    let session = session.clone();
-    async move {
-        session
-            .check_rate_limit(metric, &mut scuba)
-            .await
-            .map_err(|reason| ErrorKind::RequestThrottled {
-                request_name: request_name.into(),
-                reason,
-            })?;
-
-        anyhow::Ok(func())
-    }
-    .try_flatten_stream()
 }
 
 impl<R: Repo> HgCommands for RepoClient<R> {
@@ -1156,89 +1004,6 @@ impl<R: Repo> HgCommands for RepoClient<R> {
         })
     }
 
-    // @wireprotocommand('gettreepack', 'rootdir mfnodes basemfnodes directories')
-    fn gettreepack(&self, params: GettreepackArgs) -> BoxStream<'static, Result<Bytes, Error>> {
-        let sampling_rate = gettreepack_scuba_sampling_rate(&params);
-        self.command_stream(
-            ops::GETTREEPACK,
-            sampling_rate,
-            |ctx, mut command_logger| {
-                let mut args = serde_json::Map::new();
-                args.insert(
-                    "rootdir".to_string(),
-                    debug_format_path(&params.rootdir).into(),
-                );
-                args.insert(
-                    "mfnodes".to_string(),
-                    debug_format_manifests(&params.mfnodes).into(),
-                );
-                args.insert(
-                    "basemfnodes".to_string(),
-                    debug_format_manifests(&params.basemfnodes).into(),
-                );
-                args.insert(
-                    "directories".to_string(),
-                    debug_format_directories(&params.directories).into(),
-                );
-                if let Some(depth) = params.depth {
-                    args.insert("depth".to_string(), depth.to_string().into());
-                }
-
-                let args = json!(vec![args]);
-
-                ctx.scuba()
-                    .clone()
-                    .add("gettreepack_mfnodes", params.mfnodes.len())
-                    .add("gettreepack_directories", params.directories.len())
-                    .log_with_msg("Gettreepack Params", None);
-
-                log_gettreepack_params_verbose(&ctx, &params);
-
-                let s = self
-                    .gettreepack_untimed(ctx.clone(), params)
-                    .whole_stream_timeout(default_timeout())
-                    .yield_periodically()
-                    .flatten_err()
-                    .inspect_ok({
-                        cloned!(ctx);
-                        move |bytes| {
-                            ctx.perf_counters().add_to_counter(
-                                PerfCounterType::GettreepackResponseSize,
-                                bytes.len() as i64,
-                            );
-                            STATS::total_tree_size.add_value(bytes.len() as i64);
-                            if ctx.session().is_quicksand() {
-                                STATS::quicksand_tree_size.add_value(bytes.len() as i64);
-                            }
-                        }
-                    })
-                    .timed({
-                        move |stats| {
-                            if stats.completed {
-                                if let Some(completion_time) = stats.completion_time {
-                                    if completion_time > *SLOW_REQUEST_THRESHOLD {
-                                        command_logger
-                                            .add_trimmed_scuba_extra("command_args", &args);
-                                    }
-                                    STATS::gettreepack_ms
-                                        .add_value(completion_time.as_millis_unchecked() as i64);
-                                }
-                                command_logger.finalize_command(&stats);
-                            }
-                        }
-                    });
-
-                throttle_stream(
-                    &self.session,
-                    Metric::TotalManifests,
-                    ops::GETTREEPACK,
-                    move || s,
-                    ctx.scuba().clone(),
-                )
-            },
-        )
-    }
-
     // @wireprotocommand('stream_out_shallow')
     fn stream_out_shallow(&self, tag: Option<String>) -> BoxStream<'static, Result<Bytes, Error>> {
         self.command_stream(ops::STREAMOUTSHALLOW, UNSAMPLED, |ctx, command_logger| {
@@ -1358,264 +1123,6 @@ impl<R: Repo> HgCommands for RepoClient<R> {
                     }
                 })
         })
-    }
-}
-
-pub fn gettreepack_entries(
-    ctx: CoreContext,
-    repo: &impl Repo,
-    params: GettreepackArgs,
-) -> OldBoxStream<(HgManifestId, MPath), Error> {
-    let GettreepackArgs {
-        rootdir,
-        mfnodes,
-        basemfnodes,
-        depth: fetchdepth,
-        directories,
-    } = params;
-
-    if fetchdepth == Some(1) && !directories.is_empty() {
-        if directories.len() != mfnodes.len() {
-            let e = format_err!(
-                "invalid directories count ({}, expected {})",
-                directories.len(),
-                mfnodes.len()
-            );
-            return stream_old::once(Err(e)).boxify();
-        }
-
-        if !rootdir.is_root() {
-            let e = Error::msg("rootdir must be empty");
-            return stream_old::once(Err(e)).boxify();
-        }
-
-        if !basemfnodes.is_empty() {
-            let e = Error::msg("basemfnodes must be empty");
-            return stream_old::once(Err(e)).boxify();
-        }
-
-        let entries = mfnodes
-            .into_iter()
-            .zip(directories)
-            .map(|(node, path)| Ok((node, MPath::new(path.as_ref())?)))
-            .collect::<Result<Vec<_>, Error>>();
-
-        let entries = try_boxstream!(entries);
-
-        ctx.perf_counters().set_counter(
-            PerfCounterType::GettreepackDesignatedNodes,
-            entries.len() as i64,
-        );
-
-        return stream_old::iter_ok::<_, Error>(entries).boxify();
-    }
-
-    if !directories.is_empty() {
-        // This param is not used by core hg, don't worry about implementing it now
-        return stream_old::once(Err(Error::msg("directories param is not supported"))).boxify();
-    }
-
-    // 65536 matches the default TREE_DEPTH_MAX value from Mercurial
-    let fetchdepth = fetchdepth.unwrap_or(2 << 16);
-
-    let mut basemfnode = basemfnodes.iter().next().cloned();
-
-    cloned!(repo);
-    stream_old::iter_ok::<_, Error>(
-        mfnodes
-            .into_iter()
-            .filter(move |node| !basemfnodes.contains(node))
-            .map(move |mfnode| {
-                let cur_basemfnode = basemfnode.unwrap_or(HgManifestId::new(NULL_HASH));
-                // `basemfnode`s are used to reduce the data we send the client by having us prune
-                // manifests the client already has. If the client claims to have no manifests,
-                // then give it a full set for the first manifest it requested, then give it diffs
-                // against the manifest we now know it has (the one we're sending), to reduce
-                // the data we send.
-                if basemfnode.is_none() {
-                    basemfnode = Some(mfnode);
-                }
-
-                get_changed_manifests_stream(
-                    ctx.clone(),
-                    &repo,
-                    mfnode,
-                    cur_basemfnode,
-                    rootdir.clone(),
-                    fetchdepth,
-                )
-            }),
-    )
-    .flatten()
-    .boxify()
-}
-
-fn get_changed_manifests_stream(
-    ctx: CoreContext,
-    repo: &impl Repo,
-    mfid: HgManifestId,
-    basemfid: HgManifestId,
-    rootpath: MPath,
-    max_depth: usize,
-) -> OldBoxStream<(HgManifestId, MPath), Error> {
-    if max_depth == 1 {
-        return stream_old::iter_ok(vec![(mfid, rootpath)]).boxify();
-    }
-
-    basemfid
-        .filtered_diff(
-            ctx,
-            repo.repo_blobstore().clone(),
-            mfid,
-            repo.repo_blobstore().clone(),
-            |output_diff| {
-                let (path, entry) = match output_diff {
-                    Diff::Added(path, entry) | Diff::Changed(path, _, entry) => (path, entry),
-                    Diff::Removed(..) => {
-                        return None;
-                    }
-                };
-                match entry {
-                    Entry::Tree(hg_mf_id) => Some((path, hg_mf_id)),
-                    Entry::Leaf(_) => None,
-                }
-            },
-            move |tree_diff| match tree_diff {
-                Diff::Added(path, ..) | Diff::Changed(path, ..) => {
-                    path.num_components() <= max_depth
-                }
-                Diff::Removed(..) => false,
-            },
-            Default::default(),
-        )
-        .compat()
-        .map(move |(path_no_root_path, hg_mf_id)| {
-            let mut path = rootpath.clone();
-            path.extend(NonRootMPath::into_iter_opt(path_no_root_path.into()));
-            (hg_mf_id, path)
-        })
-        .boxify()
-}
-
-pub fn fetch_treepack_part_input(
-    ctx: CoreContext,
-    repo: &impl Repo,
-    hg_mf_id: HgManifestId,
-    path: MPath,
-    validate_content: bool,
-) -> OldBoxFuture<parts::TreepackPartInput, Error> {
-    let repo_path = match path.into_optional_non_root_path() {
-        Some(path) => RepoPath::DirectoryPath(path),
-        None => RepoPath::RootPath,
-    };
-
-    let envelope_fut = {
-        cloned!(ctx, repo);
-        async move { fetch_manifest_envelope(&ctx, repo.repo_blobstore(), hg_mf_id).await }
-    }
-    .boxed()
-    .compat();
-
-    let filenode_fut = {
-        cloned!(repo, ctx, repo_path);
-        async move {
-            repo.get_filenode_opt(ctx, &repo_path, HgFileNodeId::new(hg_mf_id.into_nodehash()))
-                .await
-        }
-    }
-    .boxed()
-    .compat()
-    .map(|filenode_res| {
-        match filenode_res {
-            FilenodeResult::Present(maybe_filenode) => maybe_filenode,
-            // Filenodes are disabled - that means we can't fetch
-            // linknode so we'll return NULL to clients.
-            FilenodeResult::Disabled => None,
-        }
-    });
-
-    filenode_fut
-        .join(envelope_fut)
-        .map({
-            cloned!(ctx);
-            move |(maybe_filenode, envelope)| {
-                let content = envelope.contents().clone();
-                match maybe_filenode {
-                    Some(filenode) => {
-                        let p1 = filenode.p1.map(|p| p.into_nodehash());
-                        let p2 = filenode.p2.map(|p| p.into_nodehash());
-                        let parents = HgParents::new(p1, p2);
-                        let linknode = filenode.linknode;
-                        (parents, linknode, content)
-                    }
-                    // Filenodes might not be present. For example we don't have filenodes for
-                    // infinitepush commits. In that case fetch parents from manifest, but we can't
-                    // fetch the linknode, so set it to NULL_CSID. Client can handle null linknode,
-                    // though it can cause slowness sometimes.
-                    None => {
-                        ctx.perf_counters()
-                            .increment_counter(PerfCounterType::NullLinknode);
-                        STATS::null_linknode_gettreepack.add_value(1);
-                        let (p1, p2) = envelope.parents();
-                        let parents = HgParents::new(p1, p2);
-
-                        (parents, NULL_CSID, content)
-                    }
-                }
-            }
-        })
-        .and_then(move |(parents, linknode, content)| {
-            if validate_content {
-                validate_manifest_content(
-                    ctx,
-                    hg_mf_id.into_nodehash(),
-                    &content,
-                    &repo_path,
-                    &parents,
-                )?;
-            }
-
-            let fullpath = repo_path.into_mpath().into();
-            let (p1, p2) = parents.get_nodes();
-            Ok(parts::TreepackPartInput {
-                node: hg_mf_id.into_nodehash(),
-                p1,
-                p2,
-                content,
-                fullpath,
-                linknode: linknode.into_nodehash(),
-            })
-        })
-        .boxify()
-}
-
-fn validate_manifest_content(
-    ctx: CoreContext,
-    actual: HgNodeHash,
-    content: &[u8],
-    path: &RepoPath,
-    parents: &HgParents,
-) -> Result<(), Error> {
-    let expected = calculate_hg_node_id(content, parents);
-
-    // Do not do verification for a root node because it might be broken
-    // because of migration to tree manifest.
-    if path.is_root() || actual == expected {
-        Ok(())
-    } else {
-        let error_msg = format!(
-            "gettreepack: {} expected: {} actual: {}",
-            path, expected, actual
-        );
-        ctx.scuba()
-            .clone()
-            .log_with_msg("Data corruption", Some(error_msg));
-        Err(ErrorKind::DataCorruption {
-            path: path.clone(),
-            expected,
-            actual,
-        }
-        .into())
     }
 }
 

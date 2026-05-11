@@ -7,162 +7,15 @@
 
 #![cfg(test)]
 
-use blobstore::Loadable;
 use fbinit::FacebookInit;
-use fixtures::ManyFilesDirs;
-use fixtures::TestRepoFixture;
-use futures::compat::Future01CompatExt;
 use mercurial_derivation::DeriveHgChangeset;
 use mononoke_macros::mononoke;
 use mononoke_types_mocks::changesetid::ONES_CSID;
-use repo_blobstore::RepoBlobstoreRef;
 use serde_json::json;
 use tests_utils::CreateCommitContext;
 
 use super::*;
 use crate::repo::RepoClientRepo;
-
-#[mononoke::fbinit_test]
-async fn get_changed_manifests_stream_test(fb: FacebookInit) -> Result<(), Error> {
-    let ctx = CoreContext::test_mock(fb);
-    let repo: RepoClientRepo = ManyFilesDirs::get_repo(fb).await;
-
-    // Commit that has only dir2 directory
-    let root_mf_id = HgChangesetId::from_str("051946ed218061e925fb120dac02634f9ad40ae2")?
-        .load(&ctx, &repo.repo_blobstore().clone())
-        .await?
-        .manifestid();
-
-    let fetched_mfs = fetch_mfs(
-        &ctx,
-        &repo,
-        root_mf_id,
-        HgManifestId::new(NULL_HASH),
-        MPath::ROOT,
-        65536,
-    )
-    .await?;
-
-    let mut res = fetched_mfs
-        .into_iter()
-        .map(|(_, path)| path)
-        .collect::<Vec<_>>();
-    res.sort();
-    let mut expected = vec![MPath::ROOT, MPath::new("dir2")?];
-    expected.sort();
-    assert_eq!(res, expected);
-
-    // Now commit that added a few files and directories
-
-    let root_mf_id = HgChangesetId::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4")?
-        .load(&ctx, &repo.repo_blobstore().clone())
-        .await?
-        .manifestid();
-
-    let base_root_mf_id = HgChangesetId::from_str("2f866e7e549760934e31bf0420a873f65100ad63")?
-        .load(&ctx, &repo.repo_blobstore().clone())
-        .await?
-        .manifestid();
-
-    let fetched_mfs =
-        fetch_mfs(&ctx, &repo, root_mf_id, base_root_mf_id, MPath::ROOT, 65536).await?;
-
-    let mut res = fetched_mfs
-        .into_iter()
-        .map(|(_, path)| path)
-        .collect::<Vec<_>>();
-    res.sort();
-    let mut expected = vec![
-        MPath::ROOT,
-        MPath::new("dir1")?,
-        MPath::new("dir1/subdir1")?,
-        MPath::new("dir1/subdir1/subsubdir1")?,
-        MPath::new("dir1/subdir1/subsubdir2")?,
-    ];
-    expected.sort();
-    assert_eq!(res, expected);
-
-    Ok(())
-}
-
-#[mononoke::fbinit_test]
-async fn get_changed_manifests_stream_test_depth(fb: FacebookInit) -> Result<(), Error> {
-    let ctx = CoreContext::test_mock(fb);
-    let repo: RepoClientRepo = ManyFilesDirs::get_repo(fb).await;
-
-    let root_mf_id = HgChangesetId::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4")?
-        .load(&ctx, &repo.repo_blobstore().clone())
-        .await?
-        .manifestid();
-
-    let base_mf_id = HgManifestId::new(NULL_HASH);
-    let fetched_mfs = fetch_mfs(&ctx, &repo, root_mf_id, base_mf_id, MPath::ROOT, 65536).await?;
-
-    let paths = fetched_mfs
-        .into_iter()
-        .map(|(_, path)| path)
-        .collect::<Vec<_>>();
-
-    let max_depth = paths
-        .iter()
-        .map(|path| path.num_components())
-        .max()
-        .unwrap();
-
-    for depth in 0..max_depth + 1 {
-        println!("depth: {}", depth);
-        let fetched_mfs =
-            fetch_mfs(&ctx, &repo, root_mf_id, base_mf_id, MPath::ROOT, depth).await?;
-        let mut actual = fetched_mfs
-            .into_iter()
-            .map(|(_, path)| path)
-            .collect::<Vec<_>>();
-        actual.sort();
-        let iter = paths.clone().into_iter();
-        // We have a weird hard-coded behaviour for depth=1 that we are preserving for now
-        let mut expected: Vec<_> = if depth == 1 {
-            let expected: Vec<_> = iter.filter(|path| path.is_root()).collect();
-            assert_eq!(expected.len(), 1);
-            expected
-        } else {
-            iter.filter(|path| path.num_components() <= depth).collect()
-        };
-        expected.sort();
-        assert_eq!(actual, expected);
-    }
-
-    Ok(())
-}
-
-#[mononoke::fbinit_test]
-async fn get_changed_manifests_stream_test_base_path(fb: FacebookInit) -> Result<(), Error> {
-    let ctx = CoreContext::test_mock(fb);
-    let repo: RepoClientRepo = ManyFilesDirs::get_repo(fb).await;
-
-    let root_mf_id = HgChangesetId::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4")?
-        .load(&ctx, &repo.repo_blobstore().clone())
-        .await?
-        .manifestid();
-
-    let base_mf_id = HgManifestId::new(NULL_HASH);
-    let fetched_mfs = fetch_mfs(&ctx, &repo, root_mf_id, base_mf_id, MPath::ROOT, 65536).await?;
-
-    for (hash, path) in &fetched_mfs {
-        println!("base path: {:?}", path);
-        let mut actual = fetch_mfs(&ctx, &repo, *hash, base_mf_id, path.clone(), 65536).await?;
-        actual.sort();
-
-        let mut expected: Vec<_> = fetched_mfs
-            .clone()
-            .into_iter()
-            .filter(|(_, curpath)| path.is_prefix_of(curpath.as_ref()))
-            .collect();
-        expected.sort();
-        assert_eq!(actual, expected);
-    }
-
-    Ok(())
-}
 
 #[mononoke::fbinit_test]
 async fn test_maybe_validate_pushed_bonsais(fb: FacebookInit) -> Result<(), Error> {
@@ -247,40 +100,6 @@ async fn test_maybe_validate_pushed_bonsais(fb: FacebookInit) -> Result<(), Erro
         .is_err()
     );
     Ok(())
-}
-
-async fn fetch_mfs(
-    ctx: &CoreContext,
-    repo: &RepoClientRepo,
-    root_mf_id: HgManifestId,
-    base_root_mf_id: HgManifestId,
-    base_path: MPath,
-    depth: usize,
-) -> Result<Vec<(HgManifestId, MPath)>, Error> {
-    let fetched_mfs = get_changed_manifests_stream(
-        ctx.clone(),
-        repo,
-        root_mf_id,
-        base_root_mf_id,
-        base_path,
-        depth,
-    )
-    .collect()
-    .compat()
-    .await?;
-
-    // Make sure that Manifest ids are present in the repo
-    for (hash, _) in &fetched_mfs {
-        hash.load(ctx, repo.repo_blobstore()).await?;
-    }
-    Ok(fetched_mfs)
-}
-
-#[mononoke::test]
-fn test_debug_format_directories() {
-    assert_eq!(&debug_format_directories(vec![&"foo"]), "foo,");
-    assert_eq!(&debug_format_directories(vec![&"foo,bar"]), "foo:obar,");
-    assert_eq!(&debug_format_directories(vec![&"foo", &"bar"]), "foo,bar,");
 }
 
 #[mononoke::test]
