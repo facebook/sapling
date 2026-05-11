@@ -343,7 +343,7 @@ pub fn try_biggrep(
                 }
                 BigGrepLine::BinaryMatch { repo_path } => {
                     let rel_path = relativizer.relativized(repo_path.as_repo_path());
-                    out.write_binary_match(&rel_path)?;
+                    out.write_binary_match(rel_path)?;
                     match_count += 1;
                 }
                 BigGrepLine::Raw => {
