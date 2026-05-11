@@ -8,6 +8,7 @@
 use std::collections::HashMap;
 use std::fmt;
 
+use acl_regions::AclRegionsRef;
 use anyhow::Error;
 use anyhow::anyhow;
 use async_trait::async_trait;
@@ -54,8 +55,12 @@ use mononoke_types::blame_v2::BlameV2;
 use mononoke_types::content_manifest::compat;
 use mononoke_types::deleted_manifest_common::DeletedManifestCommon;
 use mononoke_types::path::MPath;
+use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedDataArc;
+use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
+use repo_permission_checker::RepoPermissionCheckerRef;
 use restricted_paths::RestrictedPathsArc;
 
 use crate::MononokeRepo;
@@ -171,7 +176,21 @@ impl<R> ChangesetPathContentContext<R> {
     }
 }
 
-impl<R: MononokeRepo> ChangesetPathContentContext<R> {
+impl<R> ChangesetPathContentContext<R>
+where
+    R: RepoPermissionCheckerRef
+        + AclRegionsRef
+        + RepoIdentityRef
+        + RestrictedPathsArc
+        + RepoBlobstoreArc
+        + RepoBlobstoreRef
+        + RepoDerivedDataArc
+        + RepoDerivedDataRef
+        + Clone
+        + Send
+        + Sync
+        + 'static,
+{
     pub(crate) async fn new(
         changeset: ChangesetContext<R>,
         path: impl Into<MPath>,

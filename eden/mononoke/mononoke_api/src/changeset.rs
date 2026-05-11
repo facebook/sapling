@@ -14,6 +14,7 @@ use std::future::Future;
 use std::ops::Bound;
 use std::sync::Arc;
 
+use acl_regions::AclRegionsRef;
 use anyhow::anyhow;
 use basename_suffix_skeleton_manifest_v3::RootBssmV3DirectoryId;
 use blobstore::Loadable;
@@ -42,6 +43,7 @@ use derivation_queue_thrift::DerivationPriority;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivableType;
 use directory_branch_cluster_manifest::RootDirectoryBranchClusterManifestId;
+use ephemeral_blobstore::RepoEphemeralStoreRef;
 use fsnodes::RootFsnodeId;
 use futures::future::try_join;
 use futures::stream;
@@ -82,6 +84,7 @@ use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataArc;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
+use repo_permission_checker::RepoPermissionCheckerRef;
 use restricted_paths::RestrictedPathsArc;
 use restricted_paths::check_path_restriction_infos;
 use skeleton_manifest::RootSkeletonManifestId;
@@ -101,6 +104,7 @@ use crate::changeset_path::ChangesetPathRestrictionContext;
 use crate::changeset_path_diff::ChangesetPathDiffContext;
 use crate::errors::MononokeError;
 use crate::repo::RepoContext;
+use crate::repo::RepoWithBubble;
 use crate::restricted_paths::PathAccessInfo;
 use crate::restricted_paths::RestrictedChangeGroup;
 use crate::restricted_paths::RestrictedPathsChangesInfo;
@@ -1210,7 +1214,32 @@ impl<R: MononokeRepo> ChangesetContext<R> {
     > {
         Ok(self.deleted_paths_impl(self.root_deleted_manifest_v2_id().await?, paths))
     }
+}
 
+impl<R> ChangesetContext<R>
+where
+    R: RepoPermissionCheckerRef
+        + AclRegionsRef
+        + RepoIdentityRef
+        + RestrictedPathsArc
+        + RepoBlobstoreRef
+        + RepoBlobstoreArc
+        + RepoDerivedDataRef
+        + RepoDerivedDataArc
+        + RepoEphemeralStoreRef
+        + RepoWithBubble
+        + CommitGraphRef
+        + CommitGraphArc
+        + BonsaiHgMappingRef
+        + BonsaiGitMappingRef
+        + BonsaiGlobalrevMappingRef
+        + BonsaiSvnrevMappingRef
+        + MutableRenamesArc
+        + Clone
+        + Send
+        + Sync
+        + 'static,
+{
     pub async fn diff_unordered(
         &self,
         other: &ChangesetContext<R>,
@@ -2063,7 +2092,9 @@ impl<R: MononokeRepo> ChangesetContext<R> {
             .watched()
             .await
     }
+}
 
+impl<R: MononokeRepo> ChangesetContext<R> {
     pub async fn run_hooks(
         &self,
         bookmark: impl AsRef<str>,

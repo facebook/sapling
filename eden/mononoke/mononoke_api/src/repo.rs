@@ -458,7 +458,7 @@ impl<R> RepoContextBuilder<R> {
     }
 }
 
-impl<R: MononokeRepo> RepoContextBuilder<R> {
+impl<R> RepoContextBuilder<R> {
     pub async fn new(
         ctx: CoreContext,
         repo: Arc<R>,
@@ -472,7 +472,9 @@ impl<R: MononokeRepo> RepoContextBuilder<R> {
             repos,
         })
     }
+}
 
+impl<R: RepoEphemeralStoreRef> RepoContextBuilder<R> {
     pub async fn with_bubble<F, Fut>(mut self, bubble_fetcher: F) -> Result<Self, MononokeError>
     where
         F: FnOnce(RepoEphemeralStore) -> Fut,
@@ -481,7 +483,19 @@ impl<R: MononokeRepo> RepoContextBuilder<R> {
         self.bubble_id = bubble_fetcher(self.repo.repo_ephemeral_store().clone()).await?;
         Ok(self)
     }
+}
 
+impl<R> RepoContextBuilder<R>
+where
+    R: RepoPermissionCheckerRef
+        + RepoIdentityRef
+        + RepoEphemeralStoreRef
+        + RepoWithBubble
+        + Clone
+        + Send
+        + Sync
+        + 'static,
+{
     pub async fn build(self) -> Result<RepoContext<R>, MononokeError> {
         let authz = Arc::new(
             self.authz
@@ -1147,7 +1161,17 @@ impl<R: Clone> RepoContext<R> {
     }
 }
 
-impl<R: MononokeRepo> RepoContext<R> {
+impl<R> RepoContext<R>
+where
+    R: RepoPermissionCheckerRef
+        + RepoIdentityRef
+        + RepoEphemeralStoreRef
+        + RepoWithBubble
+        + Clone
+        + Send
+        + Sync
+        + 'static,
+{
     pub async fn new(
         ctx: CoreContext,
         authz: Arc<AuthorizationContext>,
@@ -1191,7 +1215,9 @@ impl<R: MononokeRepo> RepoContext<R> {
         let authz = Arc::new(AuthorizationContext::new_bypass_access_control());
         RepoContext::new(ctx, authz, repo, None, Arc::new(MononokeRepos::new())).await
     }
+}
 
+impl<R: MononokeRepo> RepoContext<R> {
     /// The push redirector for this repo, if one is configured.
     ///
     /// Resolved lazily on first use and cached for the lifetime of the
@@ -1211,7 +1237,25 @@ impl<R: MononokeRepo> RepoContext<R> {
             })
             .await
     }
+}
 
+impl<R> RepoContext<R>
+where
+    R: RepoIdentityRef
+        + RepoBlobstoreRef
+        + RepoEphemeralStoreRef
+        + RepoWithBubble
+        + CommitGraphRef
+        + CommitGraphArc
+        + BonsaiHgMappingRef
+        + BonsaiGitMappingRef
+        + BonsaiGlobalrevMappingRef
+        + BonsaiSvnrevMappingRef
+        + Clone
+        + Send
+        + Sync
+        + 'static,
+{
     /// Load bubble from id
     pub async fn open_bubble(&self, bubble_id: BubbleId) -> Result<Bubble, MononokeError> {
         Ok(self
@@ -1301,32 +1345,6 @@ impl<R: MononokeRepo> RepoContext<R> {
         Ok(id)
     }
 
-    /// Resolve a bookmark to a changeset.
-    pub async fn resolve_bookmark(
-        &self,
-        bookmark: &BookmarkKey,
-        freshness: BookmarkFreshness,
-    ) -> Result<Option<ChangesetContext<R>>, MononokeError> {
-        let mut cs_id = match freshness {
-            BookmarkFreshness::MaybeStale => {
-                self.warm_bookmarks_cache().get(&self.ctx, bookmark).await?
-            }
-            BookmarkFreshness::MostRecent => None,
-        };
-
-        // If the bookmark wasn't found in the warm bookmarks cache, it might
-        // be a scratch bookmark, so always do the look-up.
-        if cs_id.is_none() {
-            cs_id = self
-                .repo()
-                .bookmarks()
-                .get(self.ctx.clone(), bookmark, freshness)
-                .await?
-        }
-
-        Ok(cs_id.map(|cs_id| ChangesetContext::new(self.clone(), cs_id)))
-    }
-
     /// Resolve a changeset id by its prefix
     pub async fn resolve_changeset_id_prefix(
         &self,
@@ -1375,6 +1393,34 @@ impl<R: MononokeRepo> RepoContext<R> {
             .await?
             .map(|cs_id| ChangesetContext::new(self.clone(), cs_id));
         Ok(changeset)
+    }
+}
+
+impl<R: MononokeRepo> RepoContext<R> {
+    /// Resolve a bookmark to a changeset.
+    pub async fn resolve_bookmark(
+        &self,
+        bookmark: &BookmarkKey,
+        freshness: BookmarkFreshness,
+    ) -> Result<Option<ChangesetContext<R>>, MononokeError> {
+        let mut cs_id = match freshness {
+            BookmarkFreshness::MaybeStale => {
+                self.warm_bookmarks_cache().get(&self.ctx, bookmark).await?
+            }
+            BookmarkFreshness::MostRecent => None,
+        };
+
+        // If the bookmark wasn't found in the warm bookmarks cache, it might
+        // be a scratch bookmark, so always do the look-up.
+        if cs_id.is_none() {
+            cs_id = self
+                .repo()
+                .bookmarks()
+                .get(self.ctx.clone(), bookmark, freshness)
+                .await?
+        }
+
+        Ok(cs_id.map(|cs_id| ChangesetContext::new(self.clone(), cs_id)))
     }
 
     /// Get Mercurial ID for multiple changesets
