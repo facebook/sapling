@@ -159,7 +159,7 @@ pub(crate) async fn create_content_manifest_directory(
     >,
 ) -> Result<(ContentManifestRollupData, ContentManifestId)> {
     // Resolve entries, loading rollup data from blobstore for reused entries
-    let subentries: Vec<_> = stream::iter(subentries.into_iter())
+    let subentries: Vec<_> = stream::iter(subentries)
         .map(|(prefix, entry_or_map)| {
             cloned!(ctx, blobstore);
             async move {
