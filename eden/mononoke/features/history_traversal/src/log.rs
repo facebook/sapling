@@ -499,7 +499,7 @@ async fn process_deletion_nodes(
     let mut deleted_to_last_mapping: Vec<_> = deleted_linknodes
         .iter()
         .map(|(cs_id, _)| cs_id)
-        .zip(last_linknodes.into_iter())
+        .zip(last_linknodes)
         .collect();
     deleted_to_last_mapping.sort_by_key(|(deleted_linknode, _)| *deleted_linknode);
     deleted_to_last_mapping
@@ -753,7 +753,7 @@ pub(crate) async fn _find_possible_mutable_ancestors(
         .get_cs_ids_with_rename(ctx, path.clone())
         .await?;
     let mut possible_mutable_ancestors: Vec<(Generation, ChangesetId)> =
-        stream::iter(mutable_csids.into_iter())
+        stream::iter(mutable_csids)
             .then({
                 move |mutated_at| async move {
                     // We also want to grab generation here, because we're going to sort
