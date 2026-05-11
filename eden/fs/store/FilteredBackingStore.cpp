@@ -535,6 +535,22 @@ FilteredBackingStore::co_getTree(
   co_return GetTreeResult{std::move(tree), result.origin};
 }
 
+folly::coro::now_task<BackingStore::GetTreeAuxResult>
+FilteredBackingStore::co_getTreeAuxData(
+    const ObjectId& id,
+    const ObjectFetchContextPtr& context) {
+  if (isSlOid(id)) {
+    co_return co_await backingStore_->getTreeAuxData(id, context);
+  }
+  // TODO(cuev): This is wrong. This is only correct for the case where the
+  // user doesn't care about the filter-ness of the tree. We should figure out
+  // what the optimal behavior of this function is (i.e. if it should respect
+  // filters or not).
+  auto filteredId = FilteredObjectId::fromObjectId(id);
+  co_return co_await backingStore_->getTreeAuxData(
+      filteredId.object(), context);
+}
+
 folly::SemiFuture<BackingStore::GetBlobAuxResult>
 FilteredBackingStore::getBlobAuxData(
     const ObjectId& id,
