@@ -122,12 +122,18 @@ jobs:
     - name: Fetch lz4
       if: ${{ steps.paths.outputs.lz4_SOURCE }}
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests lz4
+    - name: Fetch openssl
+      if: ${{ steps.paths.outputs.openssl_SOURCE }}
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests openssl
     - name: Fetch snappy
       if: ${{ steps.paths.outputs.snappy_SOURCE }}
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests snappy
     - name: Fetch xz
       if: ${{ steps.paths.outputs.xz_SOURCE }}
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests xz
+    - name: Fetch liboqs
+      if: ${{ steps.paths.outputs.liboqs_SOURCE }}
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests liboqs
     - name: Fetch zlib
       if: ${{ steps.paths.outputs.zlib_SOURCE }}
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests zlib
@@ -137,24 +143,6 @@ jobs:
     - name: Fetch folly
       if: ${{ steps.paths.outputs.folly_SOURCE }}
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests folly
-    - name: Fetch nmap
-      if: ${{ steps.paths.outputs.nmap_SOURCE }}
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests nmap
-    - name: Fetch libffi
-      if: ${{ steps.paths.outputs.libffi_SOURCE }}
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests libffi
-    - name: Fetch ncurses
-      if: ${{ steps.paths.outputs.ncurses_SOURCE }}
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests ncurses
-    - name: Fetch python
-      if: ${{ steps.paths.outputs.python_SOURCE }}
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests python
-    - name: Fetch openssl
-      if: ${{ steps.paths.outputs.openssl_SOURCE }}
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests openssl
-    - name: Fetch liboqs
-      if: ${{ steps.paths.outputs.liboqs_SOURCE }}
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests liboqs
     - name: Fetch fizz
       if: ${{ steps.paths.outputs.fizz_SOURCE }}
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests fizz
@@ -173,6 +161,18 @@ jobs:
     - name: Fetch rust-shed
       if: ${{ steps.paths.outputs.rust-shed_SOURCE }}
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests rust-shed
+    - name: Fetch nmap
+      if: ${{ steps.paths.outputs.nmap_SOURCE }}
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests nmap
+    - name: Fetch libffi
+      if: ${{ steps.paths.outputs.libffi_SOURCE }}
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests libffi
+    - name: Fetch ncurses
+      if: ${{ steps.paths.outputs.ncurses_SOURCE }}
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests ncurses
+    - name: Fetch python
+      if: ${{ steps.paths.outputs.python_SOURCE }}
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests python
     - name: Restore git-lfs from cache
       id: restore_git-lfs
       if: ${{ steps.paths.outputs.git-lfs_SOURCE }}
@@ -637,6 +637,22 @@ jobs:
       with:
        path: ${{ steps.paths.outputs.lz4_INSTALL }}
        key: ${{ steps.paths.outputs.lz4_CACHE_KEY }}-install
+    - name: Restore openssl from cache
+      id: restore_openssl
+      if: ${{ steps.paths.outputs.openssl_SOURCE }}
+      uses: actions/cache/restore@v4
+      with:
+       path: ${{ steps.paths.outputs.openssl_INSTALL }}
+       key: ${{ steps.paths.outputs.openssl_CACHE_KEY }}-install
+    - name: Build openssl
+      if: ${{ steps.paths.outputs.openssl_SOURCE && ! steps.restore_openssl.outputs.cache-hit }}
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --build-type RelWithDebInfo --no-tests openssl --extra-cmake-defines '{"CMAKE_CXX_COMPILER_LAUNCHER":"sccache"}'
+    - name: Save openssl to cache
+      uses: actions/cache/save@v4
+      if: ${{ steps.paths.outputs.openssl_SOURCE && ! steps.restore_openssl.outputs.cache-hit }}
+      with:
+       path: ${{ steps.paths.outputs.openssl_INSTALL }}
+       key: ${{ steps.paths.outputs.openssl_CACHE_KEY }}-install
     - name: Restore snappy from cache
       id: restore_snappy
       if: ${{ steps.paths.outputs.snappy_SOURCE }}
@@ -669,6 +685,22 @@ jobs:
       with:
        path: ${{ steps.paths.outputs.xz_INSTALL }}
        key: ${{ steps.paths.outputs.xz_CACHE_KEY }}-install
+    - name: Restore liboqs from cache
+      id: restore_liboqs
+      if: ${{ steps.paths.outputs.liboqs_SOURCE }}
+      uses: actions/cache/restore@v4
+      with:
+       path: ${{ steps.paths.outputs.liboqs_INSTALL }}
+       key: ${{ steps.paths.outputs.liboqs_CACHE_KEY }}-install
+    - name: Build liboqs
+      if: ${{ steps.paths.outputs.liboqs_SOURCE && ! steps.restore_liboqs.outputs.cache-hit }}
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --build-type RelWithDebInfo --no-tests liboqs --extra-cmake-defines '{"CMAKE_CXX_COMPILER_LAUNCHER":"sccache"}'
+    - name: Save liboqs to cache
+      uses: actions/cache/save@v4
+      if: ${{ steps.paths.outputs.liboqs_SOURCE && ! steps.restore_liboqs.outputs.cache-hit }}
+      with:
+       path: ${{ steps.paths.outputs.liboqs_INSTALL }}
+       key: ${{ steps.paths.outputs.liboqs_CACHE_KEY }}-install
     - name: Restore zlib from cache
       id: restore_zlib
       if: ${{ steps.paths.outputs.zlib_SOURCE }}
@@ -717,102 +749,6 @@ jobs:
       with:
        path: ${{ steps.paths.outputs.folly_INSTALL }}
        key: ${{ steps.paths.outputs.folly_CACHE_KEY }}-install
-    - name: Restore nmap from cache
-      id: restore_nmap
-      if: ${{ steps.paths.outputs.nmap_SOURCE }}
-      uses: actions/cache/restore@v4
-      with:
-       path: ${{ steps.paths.outputs.nmap_INSTALL }}
-       key: ${{ steps.paths.outputs.nmap_CACHE_KEY }}-install
-    - name: Build nmap
-      if: ${{ steps.paths.outputs.nmap_SOURCE && ! steps.restore_nmap.outputs.cache-hit }}
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --build-type RelWithDebInfo --no-tests nmap --extra-cmake-defines '{"CMAKE_CXX_COMPILER_LAUNCHER":"sccache"}'
-    - name: Save nmap to cache
-      uses: actions/cache/save@v4
-      if: ${{ steps.paths.outputs.nmap_SOURCE && ! steps.restore_nmap.outputs.cache-hit }}
-      with:
-       path: ${{ steps.paths.outputs.nmap_INSTALL }}
-       key: ${{ steps.paths.outputs.nmap_CACHE_KEY }}-install
-    - name: Restore libffi from cache
-      id: restore_libffi
-      if: ${{ steps.paths.outputs.libffi_SOURCE }}
-      uses: actions/cache/restore@v4
-      with:
-       path: ${{ steps.paths.outputs.libffi_INSTALL }}
-       key: ${{ steps.paths.outputs.libffi_CACHE_KEY }}-install
-    - name: Build libffi
-      if: ${{ steps.paths.outputs.libffi_SOURCE && ! steps.restore_libffi.outputs.cache-hit }}
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --build-type RelWithDebInfo --no-tests libffi --extra-cmake-defines '{"CMAKE_CXX_COMPILER_LAUNCHER":"sccache"}'
-    - name: Save libffi to cache
-      uses: actions/cache/save@v4
-      if: ${{ steps.paths.outputs.libffi_SOURCE && ! steps.restore_libffi.outputs.cache-hit }}
-      with:
-       path: ${{ steps.paths.outputs.libffi_INSTALL }}
-       key: ${{ steps.paths.outputs.libffi_CACHE_KEY }}-install
-    - name: Restore ncurses from cache
-      id: restore_ncurses
-      if: ${{ steps.paths.outputs.ncurses_SOURCE }}
-      uses: actions/cache/restore@v4
-      with:
-       path: ${{ steps.paths.outputs.ncurses_INSTALL }}
-       key: ${{ steps.paths.outputs.ncurses_CACHE_KEY }}-install
-    - name: Build ncurses
-      if: ${{ steps.paths.outputs.ncurses_SOURCE && ! steps.restore_ncurses.outputs.cache-hit }}
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --build-type RelWithDebInfo --no-tests ncurses --extra-cmake-defines '{"CMAKE_CXX_COMPILER_LAUNCHER":"sccache"}'
-    - name: Save ncurses to cache
-      uses: actions/cache/save@v4
-      if: ${{ steps.paths.outputs.ncurses_SOURCE && ! steps.restore_ncurses.outputs.cache-hit }}
-      with:
-       path: ${{ steps.paths.outputs.ncurses_INSTALL }}
-       key: ${{ steps.paths.outputs.ncurses_CACHE_KEY }}-install
-    - name: Restore python from cache
-      id: restore_python
-      if: ${{ steps.paths.outputs.python_SOURCE }}
-      uses: actions/cache/restore@v4
-      with:
-       path: ${{ steps.paths.outputs.python_INSTALL }}
-       key: ${{ steps.paths.outputs.python_CACHE_KEY }}-install
-    - name: Build python
-      if: ${{ steps.paths.outputs.python_SOURCE && ! steps.restore_python.outputs.cache-hit }}
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --build-type RelWithDebInfo --no-tests python --extra-cmake-defines '{"CMAKE_CXX_COMPILER_LAUNCHER":"sccache"}'
-    - name: Save python to cache
-      uses: actions/cache/save@v4
-      if: ${{ steps.paths.outputs.python_SOURCE && ! steps.restore_python.outputs.cache-hit }}
-      with:
-       path: ${{ steps.paths.outputs.python_INSTALL }}
-       key: ${{ steps.paths.outputs.python_CACHE_KEY }}-install
-    - name: Restore openssl from cache
-      id: restore_openssl
-      if: ${{ steps.paths.outputs.openssl_SOURCE }}
-      uses: actions/cache/restore@v4
-      with:
-       path: ${{ steps.paths.outputs.openssl_INSTALL }}
-       key: ${{ steps.paths.outputs.openssl_CACHE_KEY }}-install
-    - name: Build openssl
-      if: ${{ steps.paths.outputs.openssl_SOURCE && ! steps.restore_openssl.outputs.cache-hit }}
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --build-type RelWithDebInfo --no-tests openssl --extra-cmake-defines '{"CMAKE_CXX_COMPILER_LAUNCHER":"sccache"}'
-    - name: Save openssl to cache
-      uses: actions/cache/save@v4
-      if: ${{ steps.paths.outputs.openssl_SOURCE && ! steps.restore_openssl.outputs.cache-hit }}
-      with:
-       path: ${{ steps.paths.outputs.openssl_INSTALL }}
-       key: ${{ steps.paths.outputs.openssl_CACHE_KEY }}-install
-    - name: Restore liboqs from cache
-      id: restore_liboqs
-      if: ${{ steps.paths.outputs.liboqs_SOURCE }}
-      uses: actions/cache/restore@v4
-      with:
-       path: ${{ steps.paths.outputs.liboqs_INSTALL }}
-       key: ${{ steps.paths.outputs.liboqs_CACHE_KEY }}-install
-    - name: Build liboqs
-      if: ${{ steps.paths.outputs.liboqs_SOURCE && ! steps.restore_liboqs.outputs.cache-hit }}
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --build-type RelWithDebInfo --no-tests liboqs --extra-cmake-defines '{"CMAKE_CXX_COMPILER_LAUNCHER":"sccache"}'
-    - name: Save liboqs to cache
-      uses: actions/cache/save@v4
-      if: ${{ steps.paths.outputs.liboqs_SOURCE && ! steps.restore_liboqs.outputs.cache-hit }}
-      with:
-       path: ${{ steps.paths.outputs.liboqs_INSTALL }}
-       key: ${{ steps.paths.outputs.liboqs_CACHE_KEY }}-install
     - name: Restore fizz from cache
       id: restore_fizz
       if: ${{ steps.paths.outputs.fizz_SOURCE }}
@@ -911,6 +847,70 @@ jobs:
        key: ${{ steps.paths.outputs.rust-shed_CACHE_KEY }}-install
     - name: Build mononoke
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --build-type RelWithDebInfo --src-dir=. --no-tests mononoke --extra-cmake-defines '{"CMAKE_CXX_COMPILER_LAUNCHER":"sccache"}'
+    - name: Restore nmap from cache
+      id: restore_nmap
+      if: ${{ steps.paths.outputs.nmap_SOURCE }}
+      uses: actions/cache/restore@v4
+      with:
+       path: ${{ steps.paths.outputs.nmap_INSTALL }}
+       key: ${{ steps.paths.outputs.nmap_CACHE_KEY }}-install
+    - name: Build nmap
+      if: ${{ steps.paths.outputs.nmap_SOURCE && ! steps.restore_nmap.outputs.cache-hit }}
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --build-type RelWithDebInfo --no-tests nmap --extra-cmake-defines '{"CMAKE_CXX_COMPILER_LAUNCHER":"sccache"}'
+    - name: Save nmap to cache
+      uses: actions/cache/save@v4
+      if: ${{ steps.paths.outputs.nmap_SOURCE && ! steps.restore_nmap.outputs.cache-hit }}
+      with:
+       path: ${{ steps.paths.outputs.nmap_INSTALL }}
+       key: ${{ steps.paths.outputs.nmap_CACHE_KEY }}-install
+    - name: Restore libffi from cache
+      id: restore_libffi
+      if: ${{ steps.paths.outputs.libffi_SOURCE }}
+      uses: actions/cache/restore@v4
+      with:
+       path: ${{ steps.paths.outputs.libffi_INSTALL }}
+       key: ${{ steps.paths.outputs.libffi_CACHE_KEY }}-install
+    - name: Build libffi
+      if: ${{ steps.paths.outputs.libffi_SOURCE && ! steps.restore_libffi.outputs.cache-hit }}
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --build-type RelWithDebInfo --no-tests libffi --extra-cmake-defines '{"CMAKE_CXX_COMPILER_LAUNCHER":"sccache"}'
+    - name: Save libffi to cache
+      uses: actions/cache/save@v4
+      if: ${{ steps.paths.outputs.libffi_SOURCE && ! steps.restore_libffi.outputs.cache-hit }}
+      with:
+       path: ${{ steps.paths.outputs.libffi_INSTALL }}
+       key: ${{ steps.paths.outputs.libffi_CACHE_KEY }}-install
+    - name: Restore ncurses from cache
+      id: restore_ncurses
+      if: ${{ steps.paths.outputs.ncurses_SOURCE }}
+      uses: actions/cache/restore@v4
+      with:
+       path: ${{ steps.paths.outputs.ncurses_INSTALL }}
+       key: ${{ steps.paths.outputs.ncurses_CACHE_KEY }}-install
+    - name: Build ncurses
+      if: ${{ steps.paths.outputs.ncurses_SOURCE && ! steps.restore_ncurses.outputs.cache-hit }}
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --build-type RelWithDebInfo --no-tests ncurses --extra-cmake-defines '{"CMAKE_CXX_COMPILER_LAUNCHER":"sccache"}'
+    - name: Save ncurses to cache
+      uses: actions/cache/save@v4
+      if: ${{ steps.paths.outputs.ncurses_SOURCE && ! steps.restore_ncurses.outputs.cache-hit }}
+      with:
+       path: ${{ steps.paths.outputs.ncurses_INSTALL }}
+       key: ${{ steps.paths.outputs.ncurses_CACHE_KEY }}-install
+    - name: Restore python from cache
+      id: restore_python
+      if: ${{ steps.paths.outputs.python_SOURCE }}
+      uses: actions/cache/restore@v4
+      with:
+       path: ${{ steps.paths.outputs.python_INSTALL }}
+       key: ${{ steps.paths.outputs.python_CACHE_KEY }}-install
+    - name: Build python
+      if: ${{ steps.paths.outputs.python_SOURCE && ! steps.restore_python.outputs.cache-hit }}
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --build-type RelWithDebInfo --no-tests python --extra-cmake-defines '{"CMAKE_CXX_COMPILER_LAUNCHER":"sccache"}'
+    - name: Save python to cache
+      uses: actions/cache/save@v4
+      if: ${{ steps.paths.outputs.python_SOURCE && ! steps.restore_python.outputs.cache-hit }}
+      with:
+       path: ${{ steps.paths.outputs.python_INSTALL }}
+       key: ${{ steps.paths.outputs.python_CACHE_KEY }}-install
     - name: Build sapling
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --build-type RelWithDebInfo --src-dir=. --no-tests sapling --extra-cmake-defines '{"CMAKE_CXX_COMPILER_LAUNCHER":"sccache"}'
     - name: Build mononoke_integration
