@@ -2426,7 +2426,7 @@ where
             };
             let missing_ids: Vec<Id> = missing_indexes.iter().map(|i| ids[*i]).collect();
             let resolved = self.resolve_ids_remotely(&missing_ids).await?;
-            for (i, name) in missing_indexes.into_iter().zip(resolved.into_iter()) {
+            for (i, name) in missing_indexes.into_iter().zip(resolved) {
                 list[i] = Ok(name);
             }
         }
@@ -2463,7 +2463,7 @@ where
                 let missing_names: Vec<Vertex> =
                     missing_indexes.iter().map(|i| names[*i].clone()).collect();
                 let resolved = self.resolve_vertexes_remotely(&missing_names).await?;
-                for (i, id) in missing_indexes.into_iter().zip(resolved.into_iter()) {
+                for (i, id) in missing_indexes.into_iter().zip(resolved) {
                     if let Some(id) = id {
                         list[i] = Ok(id);
                     }
