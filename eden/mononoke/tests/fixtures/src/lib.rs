@@ -862,8 +862,8 @@ impl TestRepoFixture for ManyDiamonds {
             .await
             .unwrap();
             last_bcs_id = commits[&format!("D{diamond:02}")];
-            all_commits.extend(commits.into_iter());
-            dag.extend(whole_dag.into_iter());
+            all_commits.extend(commits);
+            dag.extend(whole_dag);
             whole_dag = dag;
         }
 
