@@ -44,6 +44,9 @@ struct DaemonError : public TypelessEvent {
     if (info.mountPoint.has_value()) {
       event.addString("mount_point", *info.mountPoint);
     }
+    if (info.mountStatus.has_value()) {
+      event.addString("mount_status", *info.mountStatus);
+    }
   }
 };
 

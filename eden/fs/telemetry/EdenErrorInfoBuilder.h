@@ -26,6 +26,7 @@ class EdenErrorInfoBuilder {
   EdenErrorInfoBuilder& withClientCommandName(std::string name);
   EdenErrorInfoBuilder& withErrorCode(int64_t code);
   EdenErrorInfoBuilder& withErrorName(std::string name);
+  EdenErrorInfoBuilder& withMountStatus(std::string status);
   EdenErrorInfo create();
   DaemonError createEvent();
 
@@ -48,6 +49,7 @@ class EdenErrorInfoBuilder {
   std::optional<uint64_t> inode_;
   std::optional<std::string> filePath_;
   std::optional<std::string> mountPoint_;
+  std::optional<std::string> mountStatus_;
 };
 
 } // namespace facebook::eden

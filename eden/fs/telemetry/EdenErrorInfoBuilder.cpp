@@ -46,6 +46,12 @@ EdenErrorInfoBuilder& EdenErrorInfoBuilder::withErrorName(std::string name) {
   return *this;
 }
 
+EdenErrorInfoBuilder& EdenErrorInfoBuilder::withMountStatus(
+    std::string status) {
+  mountStatus_ = std::move(status);
+  return *this;
+}
+
 EdenErrorInfo EdenErrorInfoBuilder::create() {
   EdenErrorInfo info;
   info.component = component_;
@@ -72,6 +78,7 @@ EdenErrorInfo EdenErrorInfoBuilder::create() {
   info.inode = inode_;
   info.filePath = std::move(filePath_);
   info.mountPoint = std::move(mountPoint_);
+  info.mountStatus = std::move(mountStatus_);
   return info;
 }
 

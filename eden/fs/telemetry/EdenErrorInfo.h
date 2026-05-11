@@ -43,6 +43,7 @@ class EdenErrorInfo {
   std::optional<uint64_t> inode;
   std::optional<std::string> filePath;
   std::optional<std::string> mountPoint;
+  std::optional<std::string> mountStatus;
 
   // Per-component factory methods.
   // Return an EdenErrorInfoBuilder for optional chaining (withMountPoint, etc.)
