@@ -36,7 +36,7 @@ impl PrefixTrieWithRules {
     pub fn add_rule(&mut self, rule: Arc<AclRegionRule>) {
         for (region_index, region) in rule.regions.iter().enumerate() {
             for path in &region.path_prefixes {
-                self.add_rule_on_path(path.into_iter(), RegionIndex(region_index), rule.clone());
+                self.add_rule_on_path(&*path, RegionIndex(region_index), rule.clone());
             }
         }
     }
