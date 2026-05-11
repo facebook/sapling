@@ -28,7 +28,6 @@ rust_library(
         "fbsource//third-party/rust:tokio-util",
         "//eden/mononoke/mercurial:mercurial_bundles",
         "//eden/mononoke/mercurial:mercurial_types",
-        "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/servers/slapi/slapi_server/qps:qps",
     ],
 )

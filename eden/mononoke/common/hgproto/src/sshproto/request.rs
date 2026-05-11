@@ -19,8 +19,6 @@ use bytes::Bytes;
 use bytes::BytesMut;
 use hex::FromHex;
 use mercurial_types::HgChangesetId;
-use mercurial_types::HgManifestId;
-use mononoke_types::path::MPath;
 use nom::AsChar as _;
 use nom::Err;
 use nom::IResult;
@@ -52,7 +50,6 @@ use crate::errors;
 pub enum Error {
     Custom(u32),
     BadUtf8,
-    BadPath,
     Nom(ErrorKind),
 }
 
@@ -141,13 +138,6 @@ fn boolean(input: &[u8]) -> IResult<&[u8], bool, Error> {
     map_res(alt((complete(take_while1(u8::is_dec_digit)), rest)), |s| {
         let s = str::from_utf8(s)?;
         anyhow::Ok(u32::from_str(s)? != 0)
-    })
-    .parse(input)
-}
-
-fn batch_param_comma_separated(input: &[u8]) -> IResult<&[u8], Bytes, Error> {
-    map_res(terminated(take_while(notcomma), take(1usize)), |k| {
-        batch::unescape(k).map(Bytes::from)
     })
     .parse(input)
 }
@@ -249,23 +239,9 @@ fn nodehash(input: &[u8]) -> IResult<&[u8], HgChangesetId, Error> {
     .parse(input)
 }
 
-// A manifestid is simply 40 hex digits.
-fn manifestid(input: &[u8]) -> IResult<&[u8], HgManifestId, Error> {
-    map_res(
-        map_res(take(40usize), str::from_utf8),
-        HgManifestId::from_str,
-    )
-    .parse(input)
-}
-
 // A space-separated list of changeset IDs
 fn hashlist(input: &[u8]) -> IResult<&[u8], Vec<HgChangesetId>, Error> {
     separated_list_complete(" ", nodehash).parse(input)
-}
-
-// A space-separated list of manifest IDs
-fn manifestlist(input: &[u8]) -> IResult<&[u8], Vec<HgManifestId>, Error> {
-    separated_list_complete(" ", manifestid).parse(input)
 }
 
 // A space-separated list of strings
@@ -332,32 +308,6 @@ where
     }
 }
 
-/// Given a hash of parameters, look up a parameter by name, and if it exists,
-/// apply a parser to its value. If it doesn't, return None.
-fn parseval_option<'a, F, T>(
-    params: &'a HashMap<Vec<u8>, Vec<u8>>,
-    key: &str,
-    mut parser: F,
-) -> Result<Option<T>>
-where
-    F: Parser<&'a [u8], Output = T, Error = Error>,
-{
-    match params.get(key.as_bytes()) {
-        None => Ok(None),
-        Some(v) => match parser.parse(v.as_ref()) {
-            Ok((unparsed, v)) => match unparsed {
-                [] => Ok(Some(v)),
-                [..] => bail!(
-                    "Unconsumed characters remain after parsing param: {:?}",
-                    unparsed
-                ),
-            },
-            Err(Err::Incomplete(err)) => bail!("param parse incomplete: {:?}", err),
-            Err(Err::Error(err) | Err::Failure(err)) => bail!("param parse failed: {:?}", err),
-        },
-    }
-}
-
 /// Parse a command, given some input, a command name (used as a tag), a param parser
 /// function (which generalizes over batched and non-batched parameter syntaxes),
 /// number of args (since each command has a fixed number of expected parameters,
@@ -397,14 +347,6 @@ fn utf8_string_complete(input: &[u8]) -> IResult<&[u8], String, Error> {
     match String::from_utf8(Vec::from(input)) {
         Ok(s) => Ok((b"", s)),
         Err(_) => Err(Err::Error(Error::BadUtf8)),
-    }
-}
-
-/// Parse an MPath; assumes that input is complete.
-fn path_complete(input: &[u8]) -> IResult<&[u8], MPath, Error> {
-    match MPath::new(input) {
-        Ok(path) => Ok((b"", path)),
-        Err(_) => Err(Err::Error(Error::BadPath)),
     }
 }
 
@@ -971,14 +913,6 @@ mod test_parse {
 
     fn hash_twos() -> HgChangesetId {
         HgChangesetId::new("2222222222222222222222222222222222222222".parse().unwrap())
-    }
-
-    fn hash_ones_manifest() -> HgManifestId {
-        HgManifestId::new("1111111111111111111111111111111111111111".parse().unwrap())
-    }
-
-    fn hash_twos_manifest() -> HgManifestId {
-        HgManifestId::new("2222222222222222222222222222222222222222".parse().unwrap())
     }
 
     /// Common code for testing parsing:
