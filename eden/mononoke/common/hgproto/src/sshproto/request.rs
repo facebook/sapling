@@ -40,11 +40,9 @@ use nom::combinator::rest;
 use nom::error::ErrorKind;
 use nom::error::FromExternalError;
 use nom::error::ParseError;
-use nom::multi::many0;
 use nom::multi::separated_list0;
 use nom::sequence::terminated;
 
-use crate::GettreepackArgs;
 use crate::Request;
 use crate::SingleRequest;
 use crate::batch;
@@ -152,11 +150,6 @@ fn batch_param_comma_separated(input: &[u8]) -> IResult<&[u8], Bytes, Error> {
         batch::unescape(k).map(Bytes::from)
     })
     .parse(input)
-}
-
-// List of comma-separated values, each of which is encoded using batch param encoding.
-fn gettreepack_directories(input: &[u8]) -> IResult<&[u8], Vec<Bytes>, Error> {
-    many0(complete(batch_param_comma_separated)).parse(input)
 }
 
 // A "*" parameter is a meta-parameter - its argument is a count of
@@ -558,18 +551,6 @@ fn parse_with_params(
             heads => stringlist,
             replaydata => utf8_string_complete,
             respondlightly => boolean,
-        }),
-        parse_command("gettreepack", parse_params, 1, |kv| {
-            Ok(Gettreepack(GettreepackArgs {
-                rootdir: parseval(&kv, "rootdir", path_complete)?,
-                mfnodes: parseval(&kv, "mfnodes", manifestlist)?,
-                basemfnodes: parseval(&kv, "basemfnodes", manifestlist)?.into_iter().collect(),
-                directories: parseval(&kv, "directories", gettreepack_directories)?,
-                depth: parseval_option(&kv, "depth", map_res(
-                    map_res(alt((complete(take_while1(u8::is_dec_digit)), rest)), str::from_utf8),
-                    usize::from_str
-                ))?,
-            }))
         }),
         parse_command("stream_out_shallow", parse_params, 1, |kv| {
             Ok(StreamOutShallow {
@@ -984,10 +965,8 @@ mod test {
 mod test_parse {
     use std::fmt::Debug;
 
-    use maplit::btreeset;
     use maplit::hashmap;
     use mononoke_macros::mononoke;
-    use mononoke_types::path::MPath;
 
     use super::*;
 
@@ -1199,98 +1178,6 @@ mod test_parse {
             Request::Single(SingleRequest::Lookup {
                 key: "5c79".to_string(),
             }),
-        );
-    }
-
-    #[mononoke::test]
-    fn test_parse_gettreepack() {
-        let inp = "gettreepack\n\
-                   * 4\n\
-                   rootdir 0\n\
-                   mfnodes 40\n\
-                   1111111111111111111111111111111111111111\
-                   basemfnodes 40\n\
-                   1111111111111111111111111111111111111111\
-                   directories 0\n";
-
-        test_parse(
-            inp,
-            Request::Single(SingleRequest::Gettreepack(GettreepackArgs {
-                rootdir: MPath::ROOT,
-                mfnodes: vec![hash_ones_manifest()],
-                basemfnodes: btreeset![hash_ones_manifest()],
-                directories: vec![],
-                depth: None,
-            })),
-        );
-
-        let inp = "gettreepack\n\
-             * 5\n\
-             depth 1\n\
-             1\
-             rootdir 5\n\
-             ololo\
-             mfnodes 81\n\
-             1111111111111111111111111111111111111111 2222222222222222222222222222222222222222\
-             basemfnodes 81\n\
-             2222222222222222222222222222222222222222 1111111111111111111111111111111111111111\
-             directories 1\n\
-             ,";
-
-        test_parse(
-            inp,
-            Request::Single(SingleRequest::Gettreepack(GettreepackArgs {
-                rootdir: MPath::new("ololo").unwrap(),
-                mfnodes: vec![hash_ones_manifest(), hash_twos_manifest()],
-                basemfnodes: btreeset![hash_twos_manifest(), hash_ones_manifest()],
-                directories: vec![Bytes::from("".as_bytes())],
-                depth: Some(1),
-            })),
-        );
-
-        let inp = "gettreepack\n\
-             * 5\n\
-             depth 1\n\
-             1\
-             rootdir 5\n\
-             ololo\
-             mfnodes 81\n\
-             1111111111111111111111111111111111111111 2222222222222222222222222222222222222222\
-             basemfnodes 81\n\
-             2222222222222222222222222222222222222222 1111111111111111111111111111111111111111\
-             directories 6\n\
-             :o,:s,";
-
-        test_parse(
-            inp,
-            Request::Single(SingleRequest::Gettreepack(GettreepackArgs {
-                rootdir: MPath::new("ololo").unwrap(),
-                mfnodes: vec![hash_ones_manifest(), hash_twos_manifest()],
-                basemfnodes: btreeset![hash_twos_manifest(), hash_ones_manifest()],
-                directories: vec![Bytes::from(",".as_bytes()), Bytes::from(";".as_bytes())],
-                depth: Some(1),
-            })),
-        );
-
-        let inp = "gettreepack\n\
-                   * 4\n\
-                   rootdir 0\n\
-                   mfnodes 40\n\
-                   1111111111111111111111111111111111111111\
-                   basemfnodes 40\n\
-                   1111111111111111111111111111111111111111\
-                   directories 5\n\
-                   ,foo,";
-
-        test_parse(
-            inp,
-            Request::Single(SingleRequest::Gettreepack(GettreepackArgs {
-                rootdir: MPath::ROOT,
-                mfnodes: vec![hash_ones_manifest()],
-                basemfnodes: btreeset![hash_ones_manifest()],
-                directories: vec![Bytes::from(b"".as_ref()), Bytes::from(b"foo".as_ref())],
-                depth: None,
-            })),
         );
     }
 

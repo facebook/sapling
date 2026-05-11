@@ -42,7 +42,6 @@ use tokio::io::AsyncBufRead;
 use tokio::io::AsyncBufReadExt;
 use tokio_util::io::StreamReader;
 
-use crate::GettreepackArgs;
 use crate::SingleRequest;
 use crate::SingleResponse;
 use crate::dechunker::Dechunker;
@@ -172,13 +171,6 @@ impl<H: HgCommands + Send + Sync + 'static> HgCommandHandler<H> {
                 replaydata,
                 respondlightly,
             } => self.handle_unbundle(instream, heads, Some(respondlightly), Some(replaydata)),
-            SingleRequest::Gettreepack(args) => (
-                hgcmds
-                    .gettreepack(args)
-                    .map_ok(SingleResponse::Gettreepack)
-                    .boxed(),
-                ok(instream).boxed(),
-            ),
             SingleRequest::StreamOutShallow { tag } => (
                 hgcmds
                     .stream_out_shallow(tag)
@@ -393,11 +385,6 @@ pub trait HgCommands {
         _replaydata: Option<String>,
     ) -> HgCommandRes<Bytes> {
         unimplemented("unbundle")
-    }
-
-    // @wireprotocommand('gettreepack', 'rootdir mfnodes basemfnodes directories')
-    fn gettreepack(&self, _params: GettreepackArgs) -> BoxStream<'static, Result<Bytes, Error>> {
-        once(async { Err(ErrorKind::Unimplemented("gettreepack".into()).into()) }).boxed()
     }
 
     // @wireprotocommand('stream_out_shallow', '*')

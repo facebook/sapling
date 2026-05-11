@@ -12,7 +12,6 @@
 //! protocols, and a Tokio Service framework for them via a trait.
 
 use std::collections::BTreeMap;
-use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt::Debug;
@@ -20,7 +19,6 @@ use std::sync::Mutex;
 
 use bytes::Bytes;
 use mercurial_types::HgChangesetId;
-use mercurial_types::HgManifestId;
 
 pub mod batch;
 mod commands;
@@ -80,7 +78,6 @@ pub enum SingleRequest {
         replaydata: String,
         respondlightly: bool,
     },
-    Gettreepack(GettreepackArgs),
     StreamOutShallow {
         tag: Option<String>,
     },
@@ -100,28 +97,10 @@ impl SingleRequest {
             SingleRequest::Known { .. } => "known",
             SingleRequest::Unbundle { .. } => "unbundle",
             SingleRequest::UnbundleReplay { .. } => "unbundlereplay",
-            SingleRequest::Gettreepack(_) => "gettreepack",
             SingleRequest::StreamOutShallow { .. } => "stream_out_shallow",
             SingleRequest::ListKeysPatterns { .. } => "listkeyspatterns",
         }
     }
-}
-
-/// The arguments that `gettreepack` accepts, in a separate struct for
-/// the convenience of callers.
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub struct GettreepackArgs {
-    /// The directory of the tree to send (including its subdirectories).
-    pub rootdir: MPath,
-    /// The manifest nodes of the specified root directory to send.
-    pub mfnodes: Vec<HgManifestId>,
-    /// The manifest nodes of the rootdir that are already on the client.
-    pub basemfnodes: BTreeSet<HgManifestId>,
-    /// The fullpath (not relative path) of directories underneath
-    /// the rootdir that should be sent.
-    pub directories: Vec<Bytes>,
-    /// The depth from the root that should be sent.
-    pub depth: Option<usize>,
 }
 
 #[derive(Debug)]
@@ -144,7 +123,6 @@ pub enum SingleResponse {
     Known(Vec<bool>),
     ReadyForStream,
     Unbundle(Bytes),
-    Gettreepack(Bytes),
     StreamOutShallow(Bytes),
 }
 
@@ -154,7 +132,7 @@ impl SingleResponse {
         use SingleResponse::*;
 
         match self {
-            &ReadyForStream | &Unbundle(_) | &Gettreepack(_) | &StreamOutShallow(_) => true,
+            &ReadyForStream | &Unbundle(_) | &StreamOutShallow(_) => true,
             _ => false,
         }
     }
@@ -164,4 +142,3 @@ pub use commands::HgCommandRes;
 pub use commands::HgCommands;
 pub use errors::ErrorKind;
 pub use handler::HgProtoHandler;
-use mononoke_types::path::MPath;
