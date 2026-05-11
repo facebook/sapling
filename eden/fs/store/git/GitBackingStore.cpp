@@ -227,6 +227,15 @@ TreePtr GitBackingStore::getTreeImpl(const ObjectId& id) {
   return std::make_shared<TreePtr::element_type>(std::move(entries), id);
 }
 
+folly::coro::now_task<BackingStore::GetTreeAuxResult>
+GitBackingStore::co_getTreeAuxData(
+    const ObjectId& /*id*/,
+    const ObjectFetchContextPtr& /*context*/) {
+  co_yield folly::coro::co_error(
+      std::domain_error(
+          "getTreeAuxData is not implemented for GitBackingStores"));
+}
+
 folly::coro::now_task<BackingStore::GetTreeResult> GitBackingStore::co_getTree(
     const ObjectId& id,
     const ObjectFetchContextPtr& /*context*/) {

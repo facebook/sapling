@@ -75,6 +75,9 @@ class GitBackingStore final : public BijectiveBackingStore {
   folly::SemiFuture<BackingStore::GetTreeAuxResult> getTreeAuxData(
       const ObjectId& /*id*/,
       const ObjectFetchContextPtr& /*context*/) override;
+  folly::coro::now_task<BackingStore::GetTreeAuxResult> co_getTreeAuxData(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context);
   folly::SemiFuture<BackingStore::GetBlobResult> getBlob(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;
