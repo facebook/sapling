@@ -42,6 +42,8 @@ class ErrorLogger : public EdenStructuredLogger {
    */
   void logEvent(EdenErrorInfoBuilder builder);
 
+  bool isEnabled() const;
+
  private:
   std::shared_ptr<ReloadableConfig> config_;
 };

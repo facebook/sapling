@@ -92,6 +92,8 @@
 #include "eden/fs/store/TreeLookupProcessor.h"
 #include "eden/fs/store/filter/GlobFilter.h"
 #include "eden/fs/store/sl/SaplingBackingStore.h"
+#include "eden/fs/telemetry/EdenErrorInfoBuilder.h"
+#include "eden/fs/telemetry/ErrorLogger.h"
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/telemetry/TaskTrace.h"
 #include "eden/fs/utils/Clock.h"
@@ -6377,6 +6379,20 @@ void EdenServiceHandler::debugOutstandingPrjfsCalls(
 #else
   NOT_IMPLEMENTED();
 #endif // _WIN32
+}
+
+bool EdenServiceHandler::debugLogError() {
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG2);
+  auto* logger = server_->getServerState()->getErrorLogger();
+  if (!logger || !logger->isEnabled()) {
+    return false;
+  }
+  try {
+    throw std::runtime_error("debugLogError: test error for e2e validation");
+  } catch (const std::exception& ex) {
+    logger->logEvent(EdenErrorInfo::thrift(ex, "debugLogError"));
+  }
+  return true;
 }
 
 void EdenServiceHandler::debugOutstandingThriftRequests(

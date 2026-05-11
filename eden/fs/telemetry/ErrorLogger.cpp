@@ -22,6 +22,10 @@ ErrorLogger::ErrorLogger(
     : EdenStructuredLogger(std::move(scribeLogger), std::move(sessionInfo)),
       config_(std::move(config)) {}
 
+bool ErrorLogger::isEnabled() const {
+  return config_->getEdenConfig()->enableErrorLogging.getValue();
+}
+
 void ErrorLogger::logEvent(EdenErrorInfoBuilder builder) {
   auto edenConfig = config_->getEdenConfig();
   if (!edenConfig->enableErrorLogging.getValue()) {

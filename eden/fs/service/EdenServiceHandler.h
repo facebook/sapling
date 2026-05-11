@@ -413,6 +413,8 @@ class EdenServiceHandler
   void debugOutstandingThriftRequests(
       std::vector<ThriftRequestMetadata>& outstandingCalls) override;
 
+  bool debugLogError() override;
+
   void debugOutstandingHgEvents(
       std::vector<HgEvent>& outstandingEvents,
       std::unique_ptr<std::string> mountPoint) override;
