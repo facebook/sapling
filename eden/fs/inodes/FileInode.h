@@ -392,6 +392,9 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
   ImmediateFuture<struct stat> stat(
       const ObjectFetchContextPtr& context) override;
 
+  folly::coro::now_task<struct stat> co_stat(
+      const ObjectFetchContextPtr& context);
+
  private:
   using State = FileInodeState;
   class LockedState;

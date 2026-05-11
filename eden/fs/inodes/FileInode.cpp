@@ -1010,6 +1010,51 @@ ImmediateFuture<struct stat> FileInode::stat(
   }
 }
 
+folly::coro::now_task<struct stat> FileInode::co_stat(
+    const ObjectFetchContextPtr& context) {
+  // Keep this FileInode alive across the co_await.
+  [[maybe_unused]] auto self = inodePtrFromThis();
+  notifyParentOfStat(/*isFile=*/true, *context);
+  logAccess(*context);
+
+  auto st = getMount()->initStatData();
+  st.st_nlink = 1;
+  st.st_ino = getNodeId().get();
+
+  auto state = LockedState{this};
+
+#ifndef _WIN32
+  getMetadataLocked(*state).applyToStat(st);
+#endif
+
+  if (state->isMaterialized()) {
+    st.st_size = state->materializedState.getSize(*this);
+    updateBlockCount(st);
+    co_return st;
+  }
+
+  if (state->nonMaterializedState.size != FileInodeState::kUnknownSize) {
+    st.st_size = state->nonMaterializedState.size;
+    updateBlockCount(st);
+    co_return st;
+  }
+
+  // Async fetch needed — extract id and unlock before co_await.
+  auto objectId = state->nonMaterializedState.id;
+  state.unlock();
+
+  // Mirror FileInode::stat()'s use of getBlobSize() (the lighter fast path
+  // that avoids fetching SHA1/Blake3 when only size is needed).
+  auto size = co_await getObjectStore().co_getBlobSize(objectId, context);
+
+  if (auto lockedState = LockedState{this}; !lockedState->isMaterialized()) {
+    lockedState->nonMaterializedState.size = size;
+  }
+  st.st_size = size;
+  updateBlockCount(st);
+  co_return st;
+}
+
 void FileInode::updateBlockCount([[maybe_unused]] struct stat& st) {
   // win32 does not have stat::st_blocks
 #ifndef _WIN32
