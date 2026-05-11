@@ -192,9 +192,7 @@ where
         Ok(to_hg_bookmark_stream(
             self.repo.inner_repo(),
             ctx,
-            futures::stream::iter(result.into_iter())
-                .map(Ok)
-                .chain(new_bookmarks),
+            futures::stream::iter(result).map(Ok).chain(new_bookmarks),
         ))
     }
 
