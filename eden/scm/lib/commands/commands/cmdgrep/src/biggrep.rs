@@ -326,7 +326,7 @@ pub fn try_biggrep(
                 } => {
                     let rel_path = relativizer.relativized(repo_path.as_repo_path());
                     if files_with_matches {
-                        out.write_file_match(&rel_path)?;
+                        out.write_file_match(rel_path)?;
                     } else {
                         let line_number = if include_line_number {
                             lineno.and_then(|s| s.parse().ok())
@@ -334,7 +334,7 @@ pub fn try_biggrep(
                             None
                         };
                         out.write_plain_match_line(
-                            &rel_path,
+                            rel_path,
                             line_number,
                             context.unwrap_or_default().as_bytes(),
                         )?;
