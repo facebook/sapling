@@ -201,6 +201,11 @@ class VirtualInode {
       const std::shared_ptr<ObjectStore>& objectStore,
       const ObjectFetchContextPtr& fetchContext) const;
 
+  folly::coro::now_task<struct stat> co_stat(
+      const struct timespec& lastCheckoutTime,
+      const std::shared_ptr<ObjectStore>& objectStore,
+      const ObjectFetchContextPtr& fetchContext) const;
+
   /**
    * Retrieves VirtualInode for each of the children of this
    * directory.

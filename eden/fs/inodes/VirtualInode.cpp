@@ -834,6 +834,61 @@ ImmediateFuture<struct stat> VirtualInode::stat(
       variant_);
 }
 
+folly::coro::now_task<struct stat> VirtualInode::co_stat(
+    const struct timespec& lastCheckoutTime,
+    const std::shared_ptr<ObjectStore>& objectStore,
+    const ObjectFetchContextPtr& fetchContext) const {
+  static_assert(
+      std::variant_size_v<detail::VariantVirtualInode> == 4,
+      "New variant type added to VariantVirtualInode - update co_stat");
+  if (auto* inode = std::get_if<InodePtr>(&variant_)) {
+    co_return co_await (*inode)->stat(fetchContext).semi();
+  } else if (auto* tree = std::get_if<TreePtr>(&variant_)) {
+    (void)tree;
+    struct stat st = {};
+    st.st_mode = static_cast<decltype(st.st_mode)>(treeMode_);
+    stMtime(st, lastCheckoutTime);
+#ifdef _WIN32
+    st.st_mode = static_cast<decltype(st.st_mode)>(0);
+    {
+      struct timespec ts0{};
+      stMtime(st, ts0);
+    }
+#endif
+    st.st_size = 0U;
+    co_return st;
+  } else {
+    // UnmaterializedUnloadedBlobDirEntry or TreeEntry
+    ObjectId objectId;
+    mode_t mode;
+    if (auto* entry =
+            std::get_if<UnmaterializedUnloadedBlobDirEntry>(&variant_)) {
+      objectId = entry->getObjectId();
+      mode = entry->getInitialMode();
+    } else if (auto* treeEntry = std::get_if<TreeEntry>(&variant_)) {
+      objectId = treeEntry->getObjectId();
+      mode = modeFromTreeEntryType(treeEntry->getType());
+    } else {
+      co_yield folly::coro::co_error(
+          std::runtime_error("VirtualInode: unexpected variant type"));
+    }
+    auto auxData =
+        co_await objectStore->co_getBlobAuxData(objectId, fetchContext);
+    struct stat st = {};
+    st.st_mode = static_cast<decltype(st.st_mode)>(mode);
+    stMtime(st, lastCheckoutTime);
+#ifdef _WIN32
+    st.st_mode = static_cast<decltype(st.st_mode)>(0);
+    {
+      struct timespec ts0{};
+      stMtime(st, ts0);
+    }
+#endif
+    st.st_size = static_cast<decltype(st.st_size)>(auxData.size);
+    co_return st;
+  }
+}
+
 namespace {
 /**
  * Helper function for getChildren when the current node is a Tree.
