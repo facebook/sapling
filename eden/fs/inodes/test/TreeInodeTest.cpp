@@ -58,6 +58,15 @@ Tree::value_type makeTreeEntry(folly::StringPiece name) {
 }
 } // namespace
 
+class TreeInodeTestBase : public ::testing::TestWithParam<bool> {
+ protected:
+  void maybeEnableCoroutines(TestMount& mount) {
+    if (GetParam()) {
+      enableCoroutinesConfig(mount);
+    }
+  }
+};
+
 TEST(TreeInode, findEntryDifferencesWithSameEntriesReturnsNone) {
   DirContents dir(CaseSensitivity::Sensitive);
   dir.emplace("one"_pc, makeDirEntry());
@@ -110,13 +119,14 @@ TEST(TreeInode, findEntryDifferencesWithOneAddition) {
 }
 
 #ifndef _WIN32
-TEST(TreeInode, fuseReaddirReturnsSelfAndParentBeforeEntries) {
+TEST_P(TreeInodeTestBase, fuseReaddirReturnsSelfAndParentBeforeEntries) {
   // libfuse's documentation says returning . and .. is optional, but the FUSE
   // kernel module does not synthesize them, so not returning . and .. would be
   // a visible behavior change relative to a native filesystem.
   FakeTreeBuilder builder;
   builder.setFiles({{"file", ""}});
   TestMount mount{builder};
+  maybeEnableCoroutines(mount);
 
   auto root = mount.getEdenMount()->getRootInode();
   auto result =
@@ -131,13 +141,14 @@ TEST(TreeInode, fuseReaddirReturnsSelfAndParentBeforeEntries) {
   EXPECT_EQ(".eden", result[3].name);
 }
 
-TEST(TreeInode, fuseReaddirOffsetsAreNonzero) {
+TEST_P(TreeInodeTestBase, fuseReaddirOffsetsAreNonzero) {
   // fuseReaddir's offset parameter means "start here". 0 means start from the
   // beginning. To start after a particular entry, the offset given must be that
   // entry's offset. Therefore, no entries should have offset 0.
   FakeTreeBuilder builder;
   builder.setFiles({{"file", ""}});
   TestMount mount{builder};
+  maybeEnableCoroutines(mount);
 
   auto root = mount.getEdenMount()->getRootInode();
   auto result =
@@ -150,10 +161,11 @@ TEST(TreeInode, fuseReaddirOffsetsAreNonzero) {
   }
 }
 
-TEST(TreeInode, fuseReaddirRespectsOffset) {
+TEST_P(TreeInodeTestBase, fuseReaddirRespectsOffset) {
   FakeTreeBuilder builder;
   builder.setFiles({{"file", ""}});
   TestMount mount{builder};
+  maybeEnableCoroutines(mount);
 
   auto root = mount.getEdenMount()->getRootInode();
 
@@ -202,8 +214,9 @@ TEST(TreeInode, fuseReaddirRespectsOffset) {
   EXPECT_EQ(0, resultE.size());
 }
 
-TEST(TreeInode, fuseReaddirIgnoresWildOffsets) {
+TEST_P(TreeInodeTestBase, fuseReaddirIgnoresWildOffsets) {
   TestMount mount{FakeTreeBuilder{}};
+  maybeEnableCoroutines(mount);
 
   auto root = mount.getEdenMount()->getRootInode();
 
@@ -215,10 +228,11 @@ TEST(TreeInode, fuseReaddirIgnoresWildOffsets) {
   EXPECT_EQ(0, result.size());
 }
 
-TEST(TreeInode, nfsReaddirEofIsCorrect) {
+TEST_P(TreeInodeTestBase, nfsReaddirEofIsCorrect) {
   FakeTreeBuilder builder;
   builder.setFiles({{"foo", ""}, {"bar", ""}, {"baz", ""}});
   TestMount mount{builder};
+  maybeEnableCoroutines(mount);
 
   auto root = mount.getEdenMount()->getRootInode();
 
@@ -261,7 +275,8 @@ constexpr size_t kDirListNameSize = 25;
 constexpr unsigned kModificationCountPerIteration = 4;
 
 void runConcurrentModificationAndReaddirIteration(
-    const std::vector<std::string>& names) {
+    const std::vector<std::string>& names,
+    bool useCoroutines) {
   std::unordered_set<std::string> modified;
 
   struct Collision : std::exception {};
@@ -293,6 +308,9 @@ void runConcurrentModificationAndReaddirIteration(
     builder.setFile(name, name);
   }
   TestMount mount{builder};
+  if (useCoroutines) {
+    enableCoroutinesConfig(mount);
+  }
   auto root = mount.getEdenMount()->getRootInode();
 
   FileOffset lastOffset = 0;
@@ -365,7 +383,7 @@ void runConcurrentModificationAndReaddirIteration(
 }
 } // namespace
 
-TEST(TreeInode, fuzzConcurrentModificationAndReaddir) {
+TEST_P(TreeInodeTestBase, fuzzConcurrentModificationAndReaddir) {
   std::vector<std::string> names;
   for (char c = 'a'; c <= 'z'; ++c) {
     names.emplace_back(kDirListNameSize, c);
@@ -378,17 +396,18 @@ TEST(TreeInode, fuzzConcurrentModificationAndReaddir) {
   unsigned iterations = 0;
   while (std::chrono::steady_clock::now() < end ||
          iterations < minimumIterations) {
-    runConcurrentModificationAndReaddirIteration(names);
+    runConcurrentModificationAndReaddirIteration(names, GetParam());
     ++iterations;
   }
   std::cout << "Ran " << iterations << " iterations" << std::endl;
 }
 #endif
 
-TEST(TreeInode, create) {
+TEST_P(TreeInodeTestBase, create) {
   FakeTreeBuilder builder;
   builder.setFile("somedir/foo.txt", "test\n");
   TestMount mount{builder};
+  maybeEnableCoroutines(mount);
 
   // Test creating a new file
   auto somedir = mount.getTreeInode("somedir"_relpath);
@@ -402,10 +421,11 @@ TEST(TreeInode, create) {
 #endif
 }
 
-TEST(TreeInode, createExists) {
+TEST_P(TreeInodeTestBase, createExists) {
   FakeTreeBuilder builder;
   builder.setFile("somedir/foo.txt", "test\n");
   TestMount mount{builder};
+  maybeEnableCoroutines(mount);
 
   // Test creating a new file
   auto somedir = mount.getTreeInode("somedir"_relpath);
@@ -421,10 +441,11 @@ TEST(TreeInode, createExists) {
 
 #ifndef _WIN32
 
-TEST(TreeInode, createOverlayWriteError) {
+TEST_P(TreeInodeTestBase, createOverlayWriteError) {
   FakeTreeBuilder builder;
   builder.setFile("somedir/foo.txt", "test\n");
   TestMount mount{builder};
+  maybeEnableCoroutines(mount);
   mount.getServerState()->getFaultInjector().injectError(
       "createInodeSaveOverlay",
       "newfile.txt",
@@ -440,13 +461,14 @@ TEST(TreeInode, createOverlayWriteError) {
 
 #endif
 
-TEST(TreeInode, removeRecursively) {
+TEST_P(TreeInodeTestBase, removeRecursively) {
   FakeTreeBuilder builder;
   builder.setFile("somedir/foo.txt", "foo\n");
   builder.setFile("somedir/bar.txt", "bar\n");
   builder.setFile("somedir/baz.txt", "baz\n");
   builder.setFile("somedir/otherdir/foo.txt", "test\n");
   TestMount mount{builder};
+  maybeEnableCoroutines(mount);
 
   auto root = mount.getEdenMount()->getRootInode();
   root->removeRecursively(
@@ -458,7 +480,7 @@ TEST(TreeInode, removeRecursively) {
   EXPECT_THROW_ERRNO(mount.getTreeInode("somedir"_relpath), ENOENT);
 }
 
-TEST(TreeInode, removeRecursivelyNotReady) {
+TEST_P(TreeInodeTestBase, removeRecursivelyNotReady) {
   FakeTreeBuilder builder;
   builder.setFile("somedir/foo.txt", "foo\n");
   builder.setFile("somedir/bar.txt", "bar\n");
@@ -466,6 +488,7 @@ TEST(TreeInode, removeRecursivelyNotReady) {
   builder.setFile("somedir/otherdir/foo.txt", "test\n");
   TestMount mount;
   mount.initialize(builder, false);
+  maybeEnableCoroutines(mount);
 
   auto root = mount.getEdenMount()->getRootInode();
   auto fut = root->getOrLoadChildTree(
@@ -486,10 +509,11 @@ TEST(TreeInode, removeRecursivelyNotReady) {
 
 #ifndef _WIN32
 
-TEST(TreeInode, setattr) {
+TEST_P(TreeInodeTestBase, setattr) {
   FakeTreeBuilder builder;
   builder.setFile("somedir/foo.txt", "test\n");
   TestMount mount{builder};
+  maybeEnableCoroutines(mount);
   auto somedir = mount.getTreeInode("somedir"_relpath);
 
   EXPECT_FALSE(somedir->isMaterialized());
@@ -519,12 +543,13 @@ TEST(TreeInode, setattr) {
   EXPECT_TRUE(somedir->isMaterialized());
 }
 
-TEST(TreeInode, addNewMaterializationsToInodeTraceBus) {
+TEST_P(TreeInodeTestBase, addNewMaterializationsToInodeTraceBus) {
   folly::UnboundedQueue<InodeTraceEvent, true, true, false> queue;
   FakeTreeBuilder builder;
   builder.setFiles(
       {{"somedir/sub/foo.txt", "test\n"}, {"dir2/bar.txt", "test 2\n"}});
   TestMount mount{builder};
+  maybeEnableCoroutines(mount);
   auto& trace_bus = mount.getEdenMount()->getInodeTraceBus();
 
   auto somedir = mount.getTreeInode("somedir"_relpath);
@@ -614,10 +639,11 @@ void collectResults(
   }
 }
 
-TEST(TreeInode, getOrFindChildrenSimple) {
+TEST_P(TreeInodeTestBase, getOrFindChildrenSimple) {
   FakeTreeBuilder builder;
   builder.setFile("somedir/foo.txt", "test\n");
   TestMount mount{builder};
+  maybeEnableCoroutines(mount);
   auto somedir = mount.getTreeInode("somedir"_relpath);
 
   auto result =
@@ -627,11 +653,12 @@ TEST(TreeInode, getOrFindChildrenSimple) {
   collectResults(mount, std::move(result));
 }
 
-TEST(TreeInode, getOrFindChildrenLoadInodes) {
+TEST_P(TreeInodeTestBase, getOrFindChildrenLoadInodes) {
   FakeTreeBuilder builder;
   builder.setFile("somedir/bar.txt", "test\n");
   builder.setFile("somedir/foo.txt", "test\n");
   TestMount mount{builder};
+  maybeEnableCoroutines(mount);
   auto somedir = mount.getTreeInode("somedir"_relpath);
 
   somedir->unloadChildrenNow();
@@ -644,10 +671,11 @@ TEST(TreeInode, getOrFindChildrenLoadInodes) {
   collectResults(mount, std::move(result));
 }
 
-TEST(TreeInode, getOrFindChildrenMaterializedLoadedChild) {
+TEST_P(TreeInodeTestBase, getOrFindChildrenMaterializedLoadedChild) {
   FakeTreeBuilder builder;
   builder.setFile("somedir/foo.txt", "test\n");
   TestMount mount{builder};
+  maybeEnableCoroutines(mount);
   auto somedir = mount.getTreeInode("somedir"_relpath);
   somedir->mknod("newfile.txt"_pc, S_IFREG | 0740, 0, InvalidationRequired::No);
   EXPECT_TRUE(somedir->isMaterialized());
@@ -661,11 +689,12 @@ TEST(TreeInode, getOrFindChildrenMaterializedLoadedChild) {
   collectResults(mount, std::move(result));
 }
 
-TEST(TreeInode, getOrFindChildrenMaterializedUnloadedChild) {
+TEST_P(TreeInodeTestBase, getOrFindChildrenMaterializedUnloadedChild) {
   FakeTreeBuilder builder;
   builder.setFile("somedir/foo.txt", "test\n");
   builder.setFile("somedir/zoo.txt", "test\n");
   TestMount mount{builder};
+  maybeEnableCoroutines(mount);
   auto somedir = mount.getTreeInode("somedir"_relpath);
   {
     somedir->mknod(
@@ -683,10 +712,11 @@ TEST(TreeInode, getOrFindChildrenMaterializedUnloadedChild) {
   collectResults(mount, std::move(result));
 }
 
-TEST(TreeInode, getOrFindChildrenRemovedChild) {
+TEST_P(TreeInodeTestBase, getOrFindChildrenRemovedChild) {
   FakeTreeBuilder builder;
   builder.setFile("somedir/foo.txt", "test\n");
   TestMount mount{builder};
+  maybeEnableCoroutines(mount);
   auto somedir = mount.getTreeInode("somedir"_relpath);
   somedir->mknod("newfile.txt"_pc, S_IFREG | 0740, 0, InvalidationRequired::No);
 
@@ -710,11 +740,14 @@ TEST(TreeInode, getOrFindChildrenRemovedChild) {
   collectResults(mount, std::move(result));
 }
 
-TEST(TreeInode, if_readdir_prefetching_is_disabled_aux_data_is_not_fetched) {
+TEST_P(
+    TreeInodeTestBase,
+    if_readdir_prefetching_is_disabled_aux_data_is_not_fetched) {
   FakeTreeBuilder builder;
   builder.setFile("foo/bar.txt", "bar");
   builder.setFile("foo/baz.txt", "baz");
   TestMount mount{builder};
+  maybeEnableCoroutines(mount);
   mount.updateEdenConfig({
       {"mount:readdir-prefetch", "none"},
   });
@@ -741,11 +774,12 @@ TEST(TreeInode, if_readdir_prefetching_is_disabled_aux_data_is_not_fetched) {
   EXPECT_EQ(1, mount.getBackingStore()->getAuxDataLookups().size());
 }
 
-TEST(TreeInode, readdir_does_not_prefetch) {
+TEST_P(TreeInodeTestBase, readdir_does_not_prefetch) {
   FakeTreeBuilder builder;
   builder.setFile("foo/bar.txt", "bar");
   builder.setFile("foo/baz.txt", "baz");
   TestMount mount{builder};
+  maybeEnableCoroutines(mount);
   mount.updateEdenConfig({
       {"mount:readdir-prefetch", "both"},
   });
@@ -768,7 +802,7 @@ TEST(TreeInode, readdir_does_not_prefetch) {
   EXPECT_EQ(0, auxData.size());
 }
 
-TEST(TreeInode, stat_on_child_does_not_prefetch_parent) {
+TEST_P(TreeInodeTestBase, stat_on_child_does_not_prefetch_parent) {
   FakeTreeBuilder builder;
   auto barObjectId = ObjectId::sha1("bar");
   builder.setFile(
@@ -778,6 +812,7 @@ TEST(TreeInode, stat_on_child_does_not_prefetch_parent) {
       /*objectId=*/barObjectId);
   builder.setFile("foo/baz.txt", "baz");
   TestMount mount{builder};
+  maybeEnableCoroutines(mount);
   mount.updateEdenConfig({
       {"mount:readdir-prefetch", "both"},
   });
@@ -809,11 +844,14 @@ TEST(TreeInode, stat_on_child_does_not_prefetch_parent) {
   EXPECT_TRUE(waitedStatFuture.isReady());
 }
 
-TEST(TreeInode, readdir_followed_by_stat_on_child_prefetches_parents_children) {
+TEST_P(
+    TreeInodeTestBase,
+    readdir_followed_by_stat_on_child_prefetches_parents_children) {
   FakeTreeBuilder builder;
   builder.setFile("foo/bar.txt", "bar");
   builder.setFile("foo/baz.txt", "baz");
   TestMount mount{builder};
+  maybeEnableCoroutines(mount);
   mount.updateEdenConfig({
       {"mount:readdir-prefetch", "both"},
   });
@@ -840,13 +878,14 @@ TEST(TreeInode, readdir_followed_by_stat_on_child_prefetches_parents_children) {
   EXPECT_EQ(2, mount.getBackingStore()->getAuxDataLookups().size());
 }
 
-TEST(TreeInode, stat_on_directories_only_prefetches_subdirectories) {
+TEST_P(TreeInodeTestBase, stat_on_directories_only_prefetches_subdirectories) {
   FakeTreeBuilder builder;
   builder.setFile("foo/bar/internal.txt", "internal");
   builder.setFile("foo/baz.txt", "baz");
   builder.setFile("foo/qux/another.txt", "another");
   builder.setFile("foo/dingo.txt", "dingo");
   TestMount mount{builder};
+  maybeEnableCoroutines(mount);
   mount.updateEdenConfig({
       {"mount:readdir-prefetch", "both"},
   });
@@ -883,7 +922,7 @@ TEST(TreeInode, stat_on_directories_only_prefetches_subdirectories) {
   EXPECT_EQ(2, mount.getBackingStore()->getAuxDataLookups().size());
 }
 
-TEST(TreeInode, buildDirFromTree) {
+TEST_P(TreeInodeTestBase, buildDirFromTree) {
   // Set up a mount with a known directory structure
   FakeTreeBuilder builder;
   builder.setFiles({
@@ -892,6 +931,7 @@ TEST(TreeInode, buildDirFromTree) {
       {"dir/c.txt", "content_c"},
   });
   TestMount mount{builder};
+  maybeEnableCoroutines(mount);
 
   // Load the directory inode — this exercises buildDirFromTree internally
   auto dir = mount.getTreeInode("dir"_relpath);
@@ -920,12 +960,13 @@ TEST(TreeInode, buildDirFromTree) {
   EXPECT_EQ(S_IFREG | 0644, contents->entries.at("a.txt"_pc).getInitialMode());
 }
 
-TEST(TreeInode, buildDirFromTreePropagatesIsRestricted) {
+TEST_P(TreeInodeTestBase, buildDirFromTreePropagatesIsRestricted) {
   FakeTreeBuilder builder;
   builder.setFile("restricted_dir/file.txt", "content");
   builder.setDirIsRestricted("restricted_dir");
   builder.setFile("normal_dir/file.txt", "content");
   TestMount testMount{builder};
+  maybeEnableCoroutines(testMount);
 
   auto rootInode = testMount.getEdenMount()->getRootInode();
   auto contents = rootInode->lockContentsRead();
@@ -962,13 +1003,14 @@ TEST(DirEntry, isRestrictedBitField) {
   mutableEntry.setRestricted(false);
   EXPECT_FALSE(mutableEntry.isRestricted());
 }
-TEST(TreeInode, childMaterializedSkipsOverlayWrite) {
+TEST_P(TreeInodeTestBase, childMaterializedSkipsOverlayWrite) {
   FakeTreeBuilder builder;
   builder.setFiles({
       {"dir/a.txt", "content_a"},
       {"dir/b.txt", "content_b"},
   });
   TestMount mount{builder};
+  maybeEnableCoroutines(mount);
 
   // Materialize "dir" by writing a file — this writes the overlay
   mount.overwriteFile("dir/a.txt", "modified\n");
@@ -1004,13 +1046,14 @@ TEST(TreeInode, childMaterializedSkipsOverlayWrite) {
   }
 }
 
-TEST(TreeInode, childMaterializedWritesOverlayByDefault) {
+TEST_P(TreeInodeTestBase, childMaterializedWritesOverlayByDefault) {
   FakeTreeBuilder builder;
   builder.setFiles({
       {"dir/a.txt", "content_a"},
       {"dir/b.txt", "content_b"},
   });
   TestMount mount{builder};
+  maybeEnableCoroutines(mount);
 
   // Materialize "dir" by writing a file
   mount.overwriteFile("dir/a.txt", "modified\n");
@@ -1034,13 +1077,14 @@ TEST(TreeInode, childMaterializedWritesOverlayByDefault) {
   }
 }
 
-TEST(TreeInode, childDematerializedSkipsOverlayWrite) {
+TEST_P(TreeInodeTestBase, childDematerializedSkipsOverlayWrite) {
   FakeTreeBuilder builder;
   builder.setFiles({
       {"dir/a.txt", "content_a"},
       {"dir/b.txt", "content_b"},
   });
   TestMount mount{builder};
+  maybeEnableCoroutines(mount);
 
   // Materialize "dir" and "b.txt" by writing to b.txt
   mount.overwriteFile("dir/b.txt", "modified\n");
@@ -1080,12 +1124,13 @@ TEST(TreeInode, childDematerializedSkipsOverlayWrite) {
 
 #endif // _WIN32
 
-TEST(TreeInode, checkoutPropagatesIsRestricted) {
+TEST_P(TreeInodeTestBase, checkoutPropagatesIsRestricted) {
   // Start with a tree that has no ACL directories.
   FakeTreeBuilder builder1;
   builder1.setFile("src/main.c", "int main() { return 0; }\n");
   builder1.setFile("normal_dir/file.txt", "content");
   TestMount testMount{builder1};
+  maybeEnableCoroutines(testMount);
 
   // Create a second commit that adds an ACL directory.
   auto builder2 = builder1.clone();
@@ -1119,13 +1164,14 @@ TEST(TreeInode, checkoutPropagatesIsRestricted) {
   EXPECT_TRUE(aclIter->second.isRestricted());
 }
 
-TEST(TreeInode, checkoutRemovesRestrictionWhenAclRemoved) {
+TEST_P(TreeInodeTestBase, checkoutRemovesRestrictionWhenAclRemoved) {
   // Start with a tree that has an ACL directory.
   FakeTreeBuilder builder1;
   builder1.setFile("src/main.c", "int main() { return 0; }\n");
   builder1.setFile("acl_dir/file.txt", "acl content");
   builder1.setDirIsRestricted("acl_dir");
   TestMount testMount{builder1};
+  maybeEnableCoroutines(testMount);
 
   // Create a second commit where acl_dir exists but without isRestricted.
   // Build from scratch rather than cloning since clone preserves isRestricted.
@@ -1160,12 +1206,13 @@ TEST(TreeInode, checkoutRemovesRestrictionWhenAclRemoved) {
   EXPECT_FALSE(aclIter->second.isRestricted());
 }
 
-TEST(TreeInode, checkoutAddsRestrictionWhenAclAdded) {
+TEST_P(TreeInodeTestBase, checkoutAddsRestrictionWhenAclAdded) {
   // Start with a tree where acl_dir does not have isRestricted.
   FakeTreeBuilder builder1;
   builder1.setFile("src/main.c", "int main() { return 0; }\n");
   builder1.setFile("acl_dir/file.txt", "acl content");
   TestMount testMount{builder1};
+  maybeEnableCoroutines(testMount);
 
   // Create a second commit where acl_dir has isRestricted set AND content
   // changes. The checkout code intentionally does not compare isRestricted
@@ -1217,12 +1264,15 @@ CheckoutConflict makeConflict(
 }
 } // namespace
 
-TEST(TreeInode, checkoutAddsRestrictionConflictsWithDirtyUnrestrictedDir) {
+TEST_P(
+    TreeInodeTestBase,
+    checkoutAddsRestrictionConflictsWithDirtyUnrestrictedDir) {
   // Start with a tree where acl_dir does not have isRestricted.
   FakeTreeBuilder builder1;
   builder1.setFile("src/main.c", "int main() { return 0; }\n");
   builder1.setFile("acl_dir/file.txt", "acl content");
   TestMount testMount{builder1};
+  maybeEnableCoroutines(testMount);
 
   // Materialize acl_dir by writing to a file inside it. This makes
   // acl_dir's subtree "dirty" from the checkout pre-check's perspective.
@@ -1269,12 +1319,15 @@ TEST(TreeInode, checkoutAddsRestrictionConflictsWithDirtyUnrestrictedDir) {
   EXPECT_FALSE(aclIter->second.isRestricted());
 }
 
-TEST(TreeInode, checkoutForceAddsRestrictionOverDirtyUnrestrictedDir) {
+TEST_P(
+    TreeInodeTestBase,
+    checkoutForceAddsRestrictionOverDirtyUnrestrictedDir) {
   // Same dirty setup as the non-force test.
   FakeTreeBuilder builder1;
   builder1.setFile("src/main.c", "int main() { return 0; }\n");
   builder1.setFile("acl_dir/file.txt", "acl content");
   TestMount testMount{builder1};
+  maybeEnableCoroutines(testMount);
 
   testMount.overwriteFile("acl_dir/file.txt", "local modification");
 
@@ -1315,3 +1368,11 @@ TEST(TreeInode, checkoutForceAddsRestrictionOverDirtyUnrestrictedDir) {
   EXPECT_TRUE(aclIter->second.isDirectory());
   EXPECT_TRUE(aclIter->second.isRestricted());
 }
+
+INSTANTIATE_TEST_SUITE_P(
+    TreeInodeTestVariants,
+    TreeInodeTestBase,
+    ::testing::Bool(),
+    [](const ::testing::TestParamInfo<bool>& info) {
+      return info.param ? "Coroutines" : "Futures";
+    });
