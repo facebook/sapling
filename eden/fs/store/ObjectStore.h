@@ -234,6 +234,10 @@ class ObjectStore : public IObjectStore,
       const ObjectId& id,
       const ObjectFetchContextPtr& context) const;
 
+  folly::coro::now_task<std::optional<TreeAuxData>> co_getTreeAuxData(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context) const;
+
   /**
    * Get aux data about a Tree from EdenFS's in memory TreeAuxData cache.
    *
@@ -474,6 +478,11 @@ class ObjectStore : public IObjectStore,
       const BackingStore::GetTreeResult& treeResult) const;
 
   folly::SemiFuture<BackingStore::GetTreeAuxResult> getTreeAuxDataImpl(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context,
+      folly::stop_watch<std::chrono::milliseconds> watch) const;
+
+  folly::coro::now_task<BackingStore::GetTreeAuxResult> co_getTreeAuxDataImpl(
       const ObjectId& id,
       const ObjectFetchContextPtr& context,
       folly::stop_watch<std::chrono::milliseconds> watch) const;

@@ -365,6 +365,18 @@ folly::coro::now_task<BackingStore::GetTreeResult> ObjectStore::getTreeImpl(
 ImmediateFuture<std::optional<TreeAuxData>> ObjectStore::getTreeAuxData(
     const ObjectId& id,
     const ObjectFetchContextPtr& fetchContext) const {
+  if (getEdenConfig()->enableCoroutinesPhase4.getValue()) {
+    return ImmediateFuture{
+        // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+        folly::coro::co_invoke(
+            [self = shared_from_this()](ObjectId oid, ObjectFetchContextPtr ctx)
+                -> folly::coro::Task<std::optional<TreeAuxData>> {
+              co_return co_await self->co_getTreeAuxData(oid, ctx);
+            },
+            ObjectId{id},
+            fetchContext.copy())
+            .semi()};
+  }
   DurationScope<EdenStats> statScope{stats_, &ObjectStoreStats::getTreeAuxData};
   folly::stop_watch<std::chrono::milliseconds> watch;
 
@@ -433,6 +445,64 @@ ObjectStore::getTreeAuxDataImpl(
             return makeImmediateFuture<BackingStore::GetTreeAuxResult>(ew);
           })
       .semi();
+}
+
+folly::coro::now_task<BackingStore::GetTreeAuxResult>
+ObjectStore::co_getTreeAuxDataImpl(
+    const ObjectId& id,
+    const ObjectFetchContextPtr& context,
+    folly::stop_watch<std::chrono::milliseconds> watch) const {
+  try {
+    // Backing store returns ImmediateFuture — bridge via .semi()
+    auto result =
+        co_await ImmediateFuture{backingStore_->getTreeAuxData(id, context)}
+            .semi();
+    if (result.treeAux) {
+      stats_->increment(&ObjectStoreStats::getTreeAuxDataFromBackingStore);
+      stats_->addDuration(
+          &ObjectStoreStats::getTreeAuxDataBackingstoreDuration,
+          watch.elapsed());
+      co_return result;
+    }
+    stats_->increment(&ObjectStoreStats::getTreeAuxDataFailed);
+    co_return BackingStore::GetTreeAuxResult{
+        nullptr, ObjectFetchContext::Origin::NotFetched};
+  } catch (const std::exception&) {
+    stats_->increment(&ObjectStoreStats::getTreeAuxDataFailed);
+    XLOGF(DBG4, "unable to find aux data for {}", id);
+    throw;
+  }
+}
+
+folly::coro::now_task<std::optional<TreeAuxData>>
+ObjectStore::co_getTreeAuxData(
+    const ObjectId& id,
+    const ObjectFetchContextPtr& fetchContext) const {
+  DurationScope<EdenStats> statScope{stats_, &ObjectStoreStats::getTreeAuxData};
+  folly::stop_watch<std::chrono::milliseconds> watch;
+
+  auto inMemoryCacheTreeAuxData =
+      getTreeAuxDataFromInMemoryCache(id, fetchContext);
+  if (inMemoryCacheTreeAuxData) {
+    stats_->increment(&ObjectStoreStats::getTreeAuxDataFromMemory);
+    stats_->addDuration(
+        &ObjectStoreStats::getTreeAuxDataMemoryDuration, watch.elapsed());
+    co_return std::move(inMemoryCacheTreeAuxData).value();
+  }
+
+  deprioritizeWhenFetchHeavy(*fetchContext);
+
+  auto result = co_await co_getTreeAuxDataImpl(id, fetchContext, watch);
+  if (!result.treeAux) {
+    stats_->increment(&ObjectStoreStats::getTreeAuxDataFailed);
+    XLOGF(DBG4, "unable to find aux data for {}", id);
+    co_return std::nullopt;
+  }
+  auto auxData = std::move(result.treeAux);
+  treeAuxDataCache_.store(id, *auxData);
+  fetchContext->didFetch(ObjectFetchContext::TreeAuxData, id, result.origin);
+  updateProcessFetch(*fetchContext);
+  co_return *auxData;
 }
 
 ImmediateFuture<std::optional<Hash32>> ObjectStore::getTreeDigestHash(
