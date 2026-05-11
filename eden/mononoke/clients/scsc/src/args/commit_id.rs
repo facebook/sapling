@@ -302,7 +302,7 @@ pub(crate) async fn resolve_commit_ids(
                             try_resolve_globalrev(conn, repo, commit_id).boxed(),
                             try_resolve_svnrev(conn, repo, commit_id).boxed(),
                         ];
-                        let candidates: Vec<_> = try_join_all(resolvers.into_iter())
+                        let candidates: Vec<_> = try_join_all(resolvers)
                             .await?
                             .into_iter()
                             .flatten()
@@ -341,7 +341,7 @@ pub(crate) async fn resolve_commit_id(
     repo: &thrift::RepoSpecifier,
     commit_id: &CommitId,
 ) -> Result<thrift::CommitId, Error> {
-    let commit_ids = resolve_commit_ids(conn, repo, Some(commit_id).into_iter()).await?;
+    let commit_ids = resolve_commit_ids(conn, repo, Some(commit_id)).await?;
     Ok(commit_ids.into_iter().next().expect("commit id expected"))
 }
 
