@@ -450,7 +450,7 @@ impl SqlBonsaiHgMapping {
 
         let (by_hg_rows, by_bcs_rows) = future::try_join(by_hg, by_bcs).await?;
 
-        match by_hg_rows.into_iter().chain(by_bcs_rows.into_iter()).next() {
+        match by_hg_rows.into_iter().chain(by_bcs_rows).next() {
             Some(entry) if entry == (hg_cs_id, bcs_id) => Ok(()),
             Some((hg_cs_id, bcs_id)) => Err(ErrorKind::ConflictingEntries(
                 BonsaiHgMappingEntry { hg_cs_id, bcs_id },
