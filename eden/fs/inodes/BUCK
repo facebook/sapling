@@ -184,6 +184,7 @@ cpp_library(
         "//folly:string",
         "//folly:unit",
         "//folly/chrono:conv",
+        "//folly/coro:current_executor",
         "//folly/io:iobuf",
         "//folly/io/async:async_base",
         "//folly/portability:openssl",

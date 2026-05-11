@@ -116,6 +116,10 @@ class VirtualInode {
       RelativePathPiece path,
       const ObjectFetchContextPtr& fetchContext) const;
 
+  folly::coro::now_task<std::optional<TreeEntryType>> co_getTreeEntryType(
+      RelativePathPiece path,
+      const ObjectFetchContextPtr& fetchContext) const;
+
   /**
    * Get the VirtualInode object for a child of this directory.
    *

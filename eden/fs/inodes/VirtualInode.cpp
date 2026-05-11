@@ -19,6 +19,8 @@
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/utils/EdenError.h"
 
+#include <folly/coro/Collect.h>
+#include <folly/coro/CurrentExecutor.h>
 #include <folly/coro/Invoke.h>
 
 namespace facebook::eden {
@@ -309,6 +311,39 @@ ImmediateFuture<std::optional<TreeEntryType>> VirtualInode::getTreeEntryType(
       },
       [&](const TreePtr&) -> R { return TreeEntryType::TREE; },
       [&](const TreeEntry& entry) -> R { return entry.getType(); });
+}
+
+folly::coro::now_task<std::optional<TreeEntryType>>
+VirtualInode::co_getTreeEntryType(
+    RelativePathPiece path,
+    const ObjectFetchContextPtr& fetchContext) const {
+  // std::get_if is used instead of match because coroutine lambda captures are
+  // stored in the lambda object, not the coroutine frame. If the coroutine
+  // suspends, match destroys the lambda temporaries, and resuming accesses
+  // dangling captures.
+  static_assert(
+      std::variant_size_v<detail::VariantVirtualInode> == 4,
+      "New variant type added to VariantVirtualInode - update co_getTreeEntryType");
+  if (auto* inode = std::get_if<InodePtr>(&variant_)) {
+#ifdef _WIN32
+    (void)fetchContext;
+    co_return treeEntryTypeFromMode((*inode)->getInitialMode());
+#else
+    (void)path;
+    auto st = co_await (*inode)->stat(fetchContext).semi();
+    co_return treeEntryTypeFromMode(st.st_mode);
+#endif
+  } else if (
+      auto* entry =
+          std::get_if<UnmaterializedUnloadedBlobDirEntry>(&variant_)) {
+    co_return treeEntryTypeFromMode(entry->getInitialMode());
+  } else if (std::holds_alternative<TreePtr>(variant_)) {
+    co_return TreeEntryType::TREE;
+  } else if (auto* treeEntry = std::get_if<TreeEntry>(&variant_)) {
+    co_return treeEntry->getType();
+  }
+  co_yield folly::coro::co_error(
+      std::runtime_error("VirtualInode: unexpected variant type"));
 }
 
 ImmediateFuture<BlobAuxData> VirtualInode::getBlobAuxData(
