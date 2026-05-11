@@ -22,7 +22,6 @@ use futures::StreamExt;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
 use futures::future;
-use futures::future::BoxFuture;
 use futures::stream;
 use futures_stats::TimedFutureExt;
 use mercurial_mutation::HgMutationEntry;
@@ -31,10 +30,8 @@ use mercurial_types::HgBlobNode;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
 use mercurial_types::NULL_HASH;
-use mercurial_types::RepoPath;
 use mercurial_types::RevFlags;
 use mononoke_types::DateTime;
-use mononoke_types::path::MPath;
 use phases::Phase;
 
 use super::changegroup::CgDeltaChunk;
@@ -46,8 +43,6 @@ use super::chunk::Chunk;
 use super::infinitepush::infinitepush_mutation_packer;
 use super::obsmarkers::MetadataEntry;
 use super::obsmarkers::packer::obsmarkers_packer_stream;
-use super::wirepack;
-use super::wirepack::packer::pack_wirepack;
 use crate::errors::ErrorKind;
 use crate::part_encode::PartEncodeBuilder;
 use crate::part_header::PartHeaderType;
@@ -197,105 +192,6 @@ pub fn common_heads_part(heads: Vec<HgChangesetId>) -> Result<PartEncodeBuilder>
 
     let mut builder = PartEncodeBuilder::mandatory(PartHeaderType::B2xCommonHeads)?;
     builder.set_data_fixed(Chunk::new(w)?);
-
-    Ok(builder)
-}
-
-pub struct TreepackPartInput {
-    pub node: HgNodeHash,
-    pub p1: Option<HgNodeHash>,
-    pub p2: Option<HgNodeHash>,
-    pub content: Bytes,
-    pub fullpath: MPath,
-    pub linknode: HgNodeHash,
-}
-
-// Controls whether client should store trees in hg cache (which means
-// they might be deleted and refetched from the server) or they should be stored
-// in .hg directory (which means client should never delete them).
-// Normally this should only be used for hydrated commit cloud commits, and
-// with hg server deprecation it won't be necessary anymore.
-#[derive(Clone, Copy)]
-pub enum StoreInHgCache {
-    Yes,
-    No,
-}
-
-pub fn treepack_part<S>(entries: S, hg_cache_policy: StoreInHgCache) -> Result<PartEncodeBuilder>
-where
-    S: Stream<Item = Result<BoxFuture<'static, Result<TreepackPartInput, Error>>, Error>>
-        + Send
-        + 'static,
-{
-    treepack_part_impl(entries, PartHeaderType::B2xTreegroup2, hg_cache_policy)
-}
-
-fn treepack_part_impl<S>(
-    entries: S,
-    header_type: PartHeaderType,
-    hg_cache_policy: StoreInHgCache,
-) -> Result<PartEncodeBuilder>
-where
-    S: Stream<Item = Result<BoxFuture<'static, Result<TreepackPartInput, Error>>, Error>>
-        + Send
-        + 'static,
-{
-    let mut builder = PartEncodeBuilder::mandatory(header_type)?;
-    builder.add_mparam("version", "1")?;
-    match hg_cache_policy {
-        StoreInHgCache::Yes => {
-            builder.add_mparam("cache", "True")?;
-        }
-        StoreInHgCache::No => {
-            builder.add_mparam("cache", "False")?;
-        }
-    };
-
-    builder.add_mparam("category", "manifests")?;
-
-    let buffer_size =
-        justknobs::get_as::<usize>("scm/mononoke:repo_client_gettreepack_buffer_size", None)?;
-
-    let wirepack_parts = entries
-        .try_buffered(buffer_size)
-        .map_ok(|input| {
-            let path = match input.fullpath.into_optional_non_root_path() {
-                Some(path) => RepoPath::DirectoryPath(path),
-                None => RepoPath::RootPath,
-            };
-
-            let history_meta = wirepack::Part::HistoryMeta {
-                path: path.clone(),
-                entry_count: 1,
-            };
-
-            let history = wirepack::Part::History(wirepack::HistoryEntry {
-                node: input.node.clone(),
-                p1: input.p1.into(),
-                p2: input.p2.into(),
-                linknode: input.linknode,
-                // No copies/renames for trees
-                copy_from: None,
-            });
-
-            let data_meta = wirepack::Part::DataMeta {
-                path,
-                entry_count: 1,
-            };
-
-            let data = wirepack::Part::Data(wirepack::DataEntry {
-                node: input.node,
-                delta_base: NULL_HASH,
-                delta: Delta::new_fulltext(input.content.to_vec()),
-                metadata: None,
-            });
-
-            stream::iter(vec![history_meta, history, data_meta, data]).map(anyhow::Ok)
-        })
-        .try_flatten()
-        .chain(stream::once(future::ok(wirepack::Part::End)));
-
-    builder.set_data_generated(pack_wirepack(wirepack_parts, wirepack::Kind::Tree));
 
     Ok(builder)
 }
