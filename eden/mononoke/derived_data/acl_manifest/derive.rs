@@ -297,7 +297,7 @@ async fn create_acl_manifest(
     // Convert subentries, loading child manifests for boundary-reuse entries.
     let acl_subentries: TrieMap<
         Either<AclManifestEntry, LoadableShardedMapV2Node<AclManifestEntry>>,
-    > = stream::iter(subentries.into_iter())
+    > = stream::iter(subentries)
         .then(|(prefix, entry_or_map)| {
             cloned!(ctx, blobstore);
             async move {
