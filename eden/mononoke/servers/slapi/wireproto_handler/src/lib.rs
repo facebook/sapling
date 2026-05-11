@@ -11,7 +11,6 @@ use bookmarks::ArcBookmarkUpdateLog;
 use bookmarks::ArcBookmarks;
 use facet::facet;
 use metaconfig_types::CommonCommitSyncConfig;
-use metaconfig_types::RepoClientKnobs;
 use mutable_counters::ArcMutableCounters;
 use scuba_ext::MononokeScubaSampleBuilder;
 use synced_commit_mapping::SyncedCommitMapping;
@@ -48,5 +47,4 @@ pub struct TargetRepoDbs {
 pub struct RepoHandlerBase {
     pub scuba: MononokeScubaSampleBuilder,
     pub maybe_push_redirector_base: Option<Arc<PushRedirectorBase>>,
-    pub repo_client_knobs: RepoClientKnobs,
 }

@@ -68,7 +68,6 @@ use metaconfig_types::PushrebaseParams;
 use metaconfig_types::PushrebaseRemoteMode;
 use metaconfig_types::RemoteDerivationConfig;
 use metaconfig_types::RemoteDiffConfig;
-use metaconfig_types::RepoClientKnobs;
 use metaconfig_types::RestrictedPathsConfig;
 use metaconfig_types::ServiceWriteRestrictions;
 use metaconfig_types::ShardedService;
@@ -136,7 +135,6 @@ use repos::RawPushrebaseRemoteMode;
 use repos::RawPushrebaseRemoteModeRemote;
 use repos::RawRemoteDerivationConfig;
 use repos::RawRemoteDiffConfig;
-use repos::RawRepoClientKnobs;
 use repos::RawRestrictedPathsConfig;
 use repos::RawServiceWriteRestrictions;
 use repos::RawShardedService;
@@ -912,16 +910,6 @@ impl Convert for RawDerivationPipelineTypeConfig {
             .validate()
             .context("Invalid derivation pipeline config")?;
         Ok(config)
-    }
-}
-
-impl Convert for RawRepoClientKnobs {
-    type Output = RepoClientKnobs;
-
-    fn convert(self) -> Result<Self::Output> {
-        Ok(RepoClientKnobs {
-            allow_short_getpack_history: self.allow_short_getpack_history,
-        })
     }
 }
 

@@ -67,7 +67,6 @@ use mercurial_types::HgChangesetId;
 use mercurial_types::HgChangesetIdPrefix;
 use mercurial_types::HgChangesetIdsResolvedFromPrefix;
 use mercurial_types::percent_encode;
-use metaconfig_types::RepoClientKnobs;
 use metaconfig_types::RepoConfigRef;
 use mononoke_types::ChangesetId;
 use mononoke_types::hash::GitSha1;
@@ -205,7 +204,6 @@ impl<R: Repo> RepoClient<R> {
         session: SessionContainer,
         logging: LoggingContainer,
         maybe_push_redirector_args: Option<PushRedirectorArgs<R>>,
-        _knobs: RepoClientKnobs,
     ) -> Self {
         let session_bookmarks_cache = Arc::new(SessionBookmarkCache::new(repo.clone()));
 

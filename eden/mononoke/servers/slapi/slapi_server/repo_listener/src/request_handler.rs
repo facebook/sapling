@@ -88,7 +88,6 @@ pub async fn request_handler(
         mut scuba,
         repo,
         maybe_push_redirector_args,
-        repo_client_knobs,
     } = handler;
 
     // Upgrade log to include server drain
@@ -157,13 +156,7 @@ pub async fn request_handler(
     let mut logging = LoggingContainer::new(fb, scuba.clone());
     logging.with_scribe(scribe);
 
-    let repo_client = RepoClient::new(
-        repo,
-        session.clone(),
-        logging,
-        maybe_push_redirector_args,
-        repo_client_knobs,
-    );
+    let repo_client = RepoClient::new(repo, session.clone(), logging, maybe_push_redirector_args);
     let request_perf_counters = repo_client.request_perf_counters();
 
     // Construct a hg protocol handler

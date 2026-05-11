@@ -8,7 +8,6 @@
 use std::sync::Arc;
 
 use anyhow::anyhow;
-use metaconfig_types::RepoClientKnobs;
 use mononoke_api::Mononoke;
 use mononoke_api::Repo;
 use repo_client::PushRedirectorArgs;
@@ -21,7 +20,6 @@ pub struct RepoHandler {
     pub scuba: MononokeScubaSampleBuilder,
     pub repo: Arc<Repo>,
     pub maybe_push_redirector_args: Option<PushRedirectorArgs<Repo>>,
-    pub repo_client_knobs: RepoClientKnobs,
 }
 
 pub fn repo_handler(mononoke: Arc<Mononoke<Repo>>, repo_name: &str) -> anyhow::Result<RepoHandler> {
@@ -50,7 +48,6 @@ pub fn repo_handler(mononoke: Arc<Mononoke<Repo>>, repo_name: &str) -> anyhow::R
 
     Ok(RepoHandler {
         scuba: base.scuba.clone(),
-        repo_client_knobs: base.repo_client_knobs.clone(),
         repo: source_repo,
         maybe_push_redirector_args,
     })

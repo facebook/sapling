@@ -863,7 +863,7 @@ impl TestRepoFactory {
     /// Test repo-handler-base
     pub fn repo_handler_base(
         &self,
-        repo_config: &ArcRepoConfig,
+        _repo_config: &ArcRepoConfig,
         repo_cross_repo: &ArcRepoCrossRepo,
         repo_identity: &ArcRepoIdentity,
         bookmarks: &ArcBookmarks,
@@ -871,7 +871,6 @@ impl TestRepoFactory {
         mutable_counters: &ArcMutableCounters,
     ) -> Result<ArcRepoHandlerBase> {
         let scuba = self.ctx.scuba().clone();
-        let repo_client_knobs = repo_config.repo_client_knobs.clone();
 
         let common_commit_sync_config = repo_cross_repo
             .live_commit_sync_config()
@@ -894,7 +893,6 @@ impl TestRepoFactory {
             });
         Ok(Arc::new(RepoHandlerBase {
             scuba,
-            repo_client_knobs,
             maybe_push_redirector_base,
         }))
     }

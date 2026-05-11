@@ -400,7 +400,6 @@ fn build_repo_config(
         scuba_local_path_hooks,
         enforce_lfs_acl_check,
         repo_client_use_warm_bookmarks_cache,
-        repo_client_knobs,
         phabricator_callsign,
         walker_config,
         cross_repo_commit_validation_config,
@@ -506,8 +505,6 @@ fn build_repo_config(
     let repo_client_use_warm_bookmarks_cache =
         repo_client_use_warm_bookmarks_cache.unwrap_or(false);
 
-    let repo_client_knobs = repo_client_knobs.convert()?.unwrap_or_default();
-
     let cross_repo_commit_validation_config = cross_repo_commit_validation_config.convert()?;
 
     let sparse_profiles_config = sparse_profiles_config.convert()?;
@@ -572,7 +569,6 @@ fn build_repo_config(
         derived_data_config,
         enforce_lfs_acl_check,
         repo_client_use_warm_bookmarks_cache,
-        repo_client_knobs,
         phabricator_callsign,
         acl_region_config: metadata.acl_region_config,
         walker_config,
@@ -802,7 +798,6 @@ mod test {
     use metaconfig_types::PushrebaseRemoteMode;
     use metaconfig_types::RemoteDatabaseConfig;
     use metaconfig_types::RemoteMetadataDatabaseConfig;
-    use metaconfig_types::RepoClientKnobs;
     use metaconfig_types::RestrictedPathsConfig;
     use metaconfig_types::ShardableRemoteDatabaseConfig;
     use metaconfig_types::ShardedDatabaseConfig;
@@ -1579,9 +1574,6 @@ mod test {
                 },
                 enforce_lfs_acl_check: false,
                 repo_client_use_warm_bookmarks_cache: true,
-                repo_client_knobs: RepoClientKnobs {
-                    allow_short_getpack_history: true,
-                },
                 phabricator_callsign: Some("FBS".to_string()),
                 acl_region_config: Some(AclRegionConfig {
                     allow_rules: vec![AclRegionRule {
@@ -1730,7 +1722,6 @@ mod test {
                 derived_data_config: DerivedDataConfig::default(),
                 enforce_lfs_acl_check: false,
                 repo_client_use_warm_bookmarks_cache: false,
-                repo_client_knobs: RepoClientKnobs::default(),
                 phabricator_callsign: Some("WWW".to_string()),
                 acl_region_config: None,
                 walker_config: None,

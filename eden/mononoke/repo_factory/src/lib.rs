@@ -1931,12 +1931,11 @@ impl RepoFactory {
 
     pub async fn repo_handler_base(
         &self,
-        repo_config: &ArcRepoConfig,
+        _repo_config: &ArcRepoConfig,
         push_redirector_mode: &ArcPushRedirectorMode,
     ) -> Result<ArcRepoHandlerBase> {
         let ctx = self.ctx();
         let scuba = ctx.scuba().clone();
-        let repo_client_knobs = repo_config.repo_client_knobs.clone();
         let maybe_push_redirector_base = match **push_redirector_mode {
             Enabled(ref push_redirector_base) => Some(Arc::clone(push_redirector_base)),
             PushRedirectorMode::Disabled => None,
@@ -1944,7 +1943,6 @@ impl RepoFactory {
         Ok(Arc::new(RepoHandlerBase {
             scuba,
             maybe_push_redirector_base,
-            repo_client_knobs,
         }))
     }
 

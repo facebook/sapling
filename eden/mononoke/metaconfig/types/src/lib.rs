@@ -235,8 +235,6 @@ pub struct RepoConfig {
     pub enforce_lfs_acl_check: bool,
     /// Whether to use warm bookmark cache while serving data hg wireprotocol
     pub repo_client_use_warm_bookmarks_cache: bool,
-    /// Configuration for repo_client module
-    pub repo_client_knobs: RepoClientKnobs,
     /// Callsign to check phabricator commits
     pub phabricator_callsign: Option<String>,
     /// ACL region configuration
@@ -368,13 +366,6 @@ pub enum CommitIdentityScheme {
     BONSAI,
     /// Hashes are of unknown scheme.
     UNKNOWN,
-}
-
-/// Configuration for repo_client module
-#[derive(Eq, Copy, Clone, Default, Debug, PartialEq)]
-pub struct RepoClientKnobs {
-    /// Return shorter file history in getpack call
-    pub allow_short_getpack_history: bool,
 }
 
 /// Config for derived data
