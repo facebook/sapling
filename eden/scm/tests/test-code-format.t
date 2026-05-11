@@ -16,8 +16,10 @@ Create a fake formatter that prepends "===formatted===" to each file (idempotent
 
 Setup repo:
   $ newclientrepo
+  $ enable absorb
   $ setconfig hooks.pre-commit.sl_code_format=python:sapling.agent.fb.code_format.main
   $ setconfig hooks.pre-amend.sl_code_format=python:sapling.agent.fb.code_format.main
+  $ setconfig hooks.pre-absorb.sl_code_format=python:sapling.agent.fb.code_format.main
   $ setconfig fix.code-format-mode=on
   $ setconfig fix.code-format-command="sl debugpython $TESTTMP/formatter.py"
 
@@ -50,6 +52,16 @@ Test formatting on amend with new file:
   $ cat b.txt
   ===formatted===
   world
+
+Test formatting on absorb (modifications get absorbed into owning commit):
+  $ echo "extra" >> b.txt
+  $ sl absorb -aq
+  running code formatter: '*' (glob)
+  code formatter completed successfully in * secs (glob)
+  $ cat b.txt
+  ===formatted===
+  world
+  extra
 
 Test disabled via config:
   $ setconfig 'fix.code-format-mode=off'
