@@ -247,6 +247,10 @@ class VirtualInode {
       const std::shared_ptr<ObjectStore>& objectStore,
       const ObjectFetchContextPtr& fetchContext) const;
 
+  folly::coro::now_task<std::optional<TreeAuxData>> co_getTreeAuxData(
+      const std::shared_ptr<ObjectStore>& objectStore,
+      const ObjectFetchContextPtr& fetchContext) const;
+
  private:
   /**
    * Helper function for getChildrenAttributes

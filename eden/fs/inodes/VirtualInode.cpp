@@ -381,6 +381,34 @@ ImmediateFuture<std::optional<TreeAuxData>> VirtualInode::getTreeAuxData(
       });
 }
 
+folly::coro::now_task<std::optional<TreeAuxData>>
+VirtualInode::co_getTreeAuxData(
+    const std::shared_ptr<ObjectStore>& objectStore,
+    const ObjectFetchContextPtr& fetchContext) const {
+  static_assert(
+      std::variant_size_v<detail::VariantVirtualInode> == 4,
+      "New variant type added to VariantVirtualInode - update co_getTreeAuxData");
+  if (auto* inode = std::get_if<InodePtr>(&variant_)) {
+    co_return co_await inode->asTreePtr()->getTreeAuxData(fetchContext).semi();
+  } else if (auto* tree = std::get_if<TreePtr>(&variant_)) {
+    co_return co_await objectStore
+        ->getTreeAuxData((*tree)->getObjectId(), fetchContext)
+        .semi();
+  } else if (
+      auto* entry =
+          std::get_if<UnmaterializedUnloadedBlobDirEntry>(&variant_)) {
+    co_return co_await objectStore
+        ->getTreeAuxData(entry->getObjectId(), fetchContext)
+        .semi();
+  } else if (auto* treeEntry = std::get_if<TreeEntry>(&variant_)) {
+    co_return co_await objectStore
+        ->getTreeAuxData(treeEntry->getObjectId(), fetchContext)
+        .semi();
+  }
+  co_yield folly::coro::co_error(
+      std::runtime_error("VirtualInode: unexpected variant type"));
+}
+
 namespace {
 bool shouldRequestTreeAuxDataForEntry(
     const std::optional<TreeEntryType>& entryType,
