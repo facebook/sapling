@@ -1257,6 +1257,96 @@ CO_TEST(VirtualInodeTest, co_statDoesNotChangeState) {
   verifyTreeState(__FILE__, __LINE__, mount, files, flags);
 }
 
+CO_TEST(VirtualInodeTest, co_getEntryAttributesDoesNotChangeState) {
+  TestFileDatabase files;
+  auto flags = VERIFY_DEFAULT ^ VERIFY_SHA1 ^ VERIFY_BLAKE3;
+  auto mount = TestMount{MakeTestTreeBuilder(files)};
+  // Use verifyTreeState directly: VERIFY_TREE depends on GetParam().
+  verifyTreeState(
+      __FILE__, __LINE__, mount, files, flags, /*useCoroutines=*/true);
+  auto edenMount = mount.getEdenMount();
+  auto objectStore = edenMount->getObjectStore();
+  auto lastCheckoutTime = edenMount->getLastCheckoutTime().toTimespec();
+
+  for (const auto& info : files.getOriginalItems()) {
+    auto virtualInode = mount.getVirtualInode(info->path);
+    co_await virtualInode.co_getEntryAttributes(
+        ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE | ENTRY_ATTRIBUTE_SIZE,
+        info->path,
+        objectStore,
+        lastCheckoutTime,
+        ObjectFetchContext::getNullContext());
+  }
+  verifyTreeState(
+      __FILE__, __LINE__, mount, files, flags, /*useCoroutines=*/true);
+}
+
+CO_TEST(VirtualInodeTest, co_getChildrenAttributesCoroutine) {
+  TestFileDatabase files;
+  auto flags = VERIFY_DEFAULT ^ VERIFY_SHA1 ^ VERIFY_BLAKE3;
+  auto mount = TestMount{MakeTestTreeBuilder(files)};
+  // Use verifyTreeState directly: VERIFY_TREE depends on GetParam().
+  verifyTreeState(
+      __FILE__, __LINE__, mount, files, flags, /*useCoroutines=*/true);
+  auto edenMount = mount.getEdenMount();
+  auto objectStore = edenMount->getObjectStore();
+  auto lastCheckoutTime = edenMount->getLastCheckoutTime().toTimespec();
+
+  for (const auto& info : files.getOriginalItems()) {
+    if (!info->isDirectory()) {
+      continue;
+    }
+    auto virtualInode = mount.getVirtualInode(info->path);
+    auto results = co_await virtualInode.co_getChildrenAttributes(
+        ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE | ENTRY_ATTRIBUTE_SIZE,
+        RelativePath{info->path},
+        objectStore,
+        lastCheckoutTime,
+        ObjectFetchContext::getNullContext());
+    EXPECT_GT(results.size(), 0);
+  }
+  verifyTreeState(
+      __FILE__, __LINE__, mount, files, flags, /*useCoroutines=*/true);
+}
+
+// Verify per-child error isolation: one failing child must not abort the
+// whole fan-out.
+CO_TEST(VirtualInodeTest, co_getChildrenAttributesPropagatesPerChildErrors) {
+  TestFileDatabase files;
+  FakeTreeBuilder builder;
+  files.build(builder);
+  auto mount = TestMount{builder};
+
+  builder.triggerError(
+      "root_dirA/child1_fileA1", std::domain_error("fake error for testing"));
+
+  auto virtualInode = mount.getVirtualInode("root_dirA");
+  auto edenMount = mount.getEdenMount();
+  auto objectStore = edenMount->getObjectStore();
+  auto lastCheckoutTime = edenMount->getLastCheckoutTime().toTimespec();
+
+  auto results = co_await virtualInode.co_getChildrenAttributes(
+      ENTRY_ATTRIBUTE_SIZE | ENTRY_ATTRIBUTE_SHA1 |
+          ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE | ENTRY_ATTRIBUTE_DIGEST_SIZE,
+      RelativePath{"root_dirA"},
+      objectStore,
+      lastCheckoutTime,
+      ObjectFetchContext::getNullContext());
+
+  // Fan-out must not short-circuit on a single failure.
+  EXPECT_GT(results.size(), 1u);
+
+  bool sawSibling = false;
+  for (auto& [name, tryAttrs] : results) {
+    if (name == "child1_fileA2"_pc) {
+      sawSibling = true;
+      EXPECT_TRUE(tryAttrs.hasValue())
+          << "ready sibling must still produce a value";
+    }
+  }
+  EXPECT_TRUE(sawSibling);
+}
+
 INSTANTIATE_TEST_SUITE_P(
     VirtualInodeTestVariants,
     VirtualInodeTestBase,
