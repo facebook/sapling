@@ -1756,6 +1756,27 @@ ImmediateFuture<std::optional<TreeAuxData>> TreeInode::getTreeAuxData(
   return ImmediateFuture<std::optional<TreeAuxData>>{std::nullopt};
 }
 
+folly::coro::now_task<std::optional<TreeAuxData>> TreeInode::co_getTreeAuxData(
+    const ObjectFetchContextPtr& fetchContext) {
+  // Mirrors getTreeAuxData() — restricted directories must not expose
+  // aux data, and materialized trees do not have backing-store aux data
+  // available.
+  if (FOLLY_UNLIKELY(isRestricted())) {
+    co_return std::nullopt;
+  }
+  logAccess(*fetchContext);
+  ObjectId treeId;
+  {
+    auto state = lockContentsRead();
+    if (state->isMaterialized()) {
+      co_return std::nullopt;
+    }
+    // If a tree is not materialized, it should have aux data.
+    treeId = state->treeId.value();
+  }
+  co_return co_await getObjectStore().co_getTreeAuxData(treeId, fetchContext);
+}
+
 FileInodePtr TreeInode::symlink(
     PathComponentPiece name,
     folly::StringPiece symlinkTarget,

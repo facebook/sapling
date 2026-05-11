@@ -314,6 +314,9 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   ImmediateFuture<std::optional<TreeAuxData>> getTreeAuxData(
       const ObjectFetchContextPtr& fetchContext);
 
+  folly::coro::now_task<std::optional<TreeAuxData>> co_getTreeAuxData(
+      const ObjectFetchContextPtr& fetchContext);
+
   FileInodePtr symlink(
       PathComponentPiece name,
       folly::StringPiece contents,
