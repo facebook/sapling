@@ -931,8 +931,7 @@ async fn run_one(
         }
     };
 
-    let always_emit_edge_types =
-        HashSet::from_iter(vec![EdgeType::HgFileNodeToLinkedHgChangeset].into_iter());
+    let always_emit_edge_types = HashSet::from_iter(vec![EdgeType::HgFileNodeToLinkedHgChangeset]);
 
     let mut required_node_data_types = hashset![NodeType::PhaseMapping];
     let mut keep_edge_paths = false;
