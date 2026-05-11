@@ -160,6 +160,14 @@ SemiFuture<BackingStore::GetTreeAuxResult> FakeBackingStore::getTreeAuxData(
       std::domain_error("GetTreeAuxData not implemented for FakeBackingStore"));
 }
 
+folly::coro::now_task<BackingStore::GetTreeAuxResult>
+FakeBackingStore::co_getTreeAuxData(
+    const ObjectId& /*id*/,
+    const ObjectFetchContextPtr& /*context*/) {
+  co_yield folly::coro::co_error(
+      std::domain_error("GetTreeAuxData not implemented for FakeBackingStore"));
+}
+
 SemiFuture<BackingStore::GetBlobResult> FakeBackingStore::getBlob(
     const ObjectId& id,
     const ObjectFetchContextPtr& /*context*/) {
