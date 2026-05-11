@@ -61,6 +61,9 @@ class EmptyBackingStore final : public BijectiveBackingStore {
   folly::SemiFuture<GetTreeAuxResult> getTreeAuxData(
       const ObjectId& /*id*/,
       const ObjectFetchContextPtr& /*context*/) override;
+  folly::coro::now_task<GetTreeAuxResult> co_getTreeAuxData(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context);
   folly::SemiFuture<GetBlobResult> getBlob(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;
