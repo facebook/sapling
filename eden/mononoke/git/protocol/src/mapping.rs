@@ -430,7 +430,7 @@ pub(crate) async fn include_symrefs(
     };
 
     // Add the symref -> commit mapping to the refs_to_include map
-    refs_to_include.extend(symref_commit_mapping.into_iter());
+    refs_to_include.extend(symref_commit_mapping);
     Ok(())
 }
 
