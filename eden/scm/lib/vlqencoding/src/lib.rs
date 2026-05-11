@@ -315,7 +315,7 @@ mod tests {
     fn test_round_trip_manual() {
         for i in (0..64)
             .flat_map(|b| vec![1u64 << b, (1 << b) + 1, (1 << b) - 1].into_iter())
-            .chain(vec![0xb3a73ce2ff2, 0xab54a98ceb1f0ad2].into_iter())
+            .chain(vec![0xb3a73ce2ff2, 0xab54a98ceb1f0ad2])
             .flat_map(|i| vec![i, !i].into_iter())
         {
             assert!(check_round_trip!(i as i8));
