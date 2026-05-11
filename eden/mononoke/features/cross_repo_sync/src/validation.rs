@@ -1183,7 +1183,7 @@ async fn verify_dir<'a>(
             },
         )
         .await?;
-        outs.extend(out.into_iter());
+        outs.extend(out);
     }
 
     Ok(outs)
