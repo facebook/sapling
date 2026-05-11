@@ -1119,6 +1119,36 @@ SaplingBackingStore::getTreeAuxData(
       .semi();
 }
 
+folly::coro::now_task<BackingStore::GetTreeAuxResult>
+SaplingBackingStore::co_getTreeAuxData(
+    const ObjectId& id,
+    const ObjectFetchContextPtr& context) {
+  // Move the DurationScope into a folly::makeGuard so the duration is
+  // recorded when the guard goes out of scope at the end of this coroutine
+  // frame (success OR exception). This is the direct coroutine port of the
+  // futures path's `.ensure([scope = std::move(scope)] {})`.
+  auto scopeGuard = folly::makeGuard(
+      [scope = DurationScope<EdenStats>{
+           stats_, &SaplingBackingStoreStats::getTreeAuxData}]() mutable {});
+
+  SlOidView slOid{id};
+
+  logBackingStoreFetch(
+      *context,
+      folly::Range{&slOid, 1},
+      ObjectFetchContext::ObjectType::TreeAuxData);
+
+  auto auxData = getLocalTreeAuxData(slOid);
+  if (auxData.hasValue() && auxData.value()) {
+    stats_->increment(&SaplingBackingStoreStats::fetchTreeAuxDataSuccess);
+    stats_->increment(&SaplingBackingStoreStats::fetchTreeAuxDataLocal);
+    co_return GetTreeAuxResult{
+        std::move(auxData.value()), ObjectFetchContext::Origin::FromDiskCache};
+  }
+
+  co_return co_await getTreeAuxDataEnqueue(slOid, context).semi();
+}
+
 ImmediateFuture<BackingStore::GetTreeAuxResult>
 SaplingBackingStore::getTreeAuxDataEnqueue(
     const SlOid& slOid,
