@@ -321,7 +321,7 @@ pub async fn upload_snapshot_with_cache(
     } = files;
     let (need_upload, mut upload_data): (Vec<_>, Vec<_>) = modified
         .into_iter()
-        .chain(added.into_iter())
+        .chain(added)
         .map(|(p, t)| (p, t, Tracked))
         .chain(
             // TODO(yancouto): Don't upload untracked files if they're too big.
