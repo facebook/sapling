@@ -293,7 +293,7 @@ pub async fn resolve_commit_id(
     repo: &(impl Repo + BookmarksRef),
     commit_id: &CommitId,
 ) -> Result<ChangesetId> {
-    let commit_ids = resolve_commit_ids(ctx, repo, Some(commit_id).into_iter()).await?;
+    let commit_ids = resolve_commit_ids(ctx, repo, Some(commit_id)).await?;
     Ok(commit_ids.into_iter().next().expect("commit id expected"))
 }
 
