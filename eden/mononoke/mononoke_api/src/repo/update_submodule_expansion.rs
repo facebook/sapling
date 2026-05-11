@@ -122,7 +122,7 @@ impl<R: MononokeRepo> RepoContext<R> {
         // The small repo commit will not necessarily be synced to the large repo
         // on top of the base changeset id provided, so rebase it and get a new
         // changeset that will be returned to the user.
-        let mb_rebased_large_repo_cs_ctx = stream::iter(mb_large_repo_cs_ctx.into_iter())
+        let mb_rebased_large_repo_cs_ctx = stream::iter(mb_large_repo_cs_ctx)
             .then(|cs_ctx| async move {
                 self.unsafe_rebase_large_repo_changeset(cs_ctx, base_changeset_id)
                     .await

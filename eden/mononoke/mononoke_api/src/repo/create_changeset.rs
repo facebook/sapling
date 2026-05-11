@@ -1361,45 +1361,42 @@ impl<R: MononokeRepo> RepoContext<R> {
             }
 
             if checks.noop_file_changes == CreateChangesetCheckMode::Fix {
-                file_changes_stack = stream::iter(
-                    file_changes_stack
-                        .into_iter()
-                        .zip(stack_changes_stack.into_iter()),
-                )
-                .map(Ok)
-                .map_ok(async |(file_changes, stack_changes)| {
-                    Ok::<_, MononokeError>(
-                        remove_noop_file_changes(&stack_parent_ctxs, stack_changes, file_changes)
-                            .try_timed()
-                            .await?
+                file_changes_stack =
+                    stream::iter(file_changes_stack.into_iter().zip(stack_changes_stack))
+                        .map(Ok)
+                        .map_ok(async |(file_changes, stack_changes)| {
+                            Ok::<_, MononokeError>(
+                                remove_noop_file_changes(
+                                    &stack_parent_ctxs,
+                                    stack_changes,
+                                    file_changes,
+                                )
+                                .try_timed()
+                                .await?
+                                .log_future_stats(
+                                    self.ctx().scuba().clone(),
+                                    "Removing no no-op file changes",
+                                    None,
+                                ),
+                            )
+                        })
+                        .try_buffered(10)
+                        .try_collect::<Vec<_>>()
+                        .await?;
+            } else {
+                stream::iter(file_changes_stack.iter().zip(stack_changes_stack))
+                    .map(Ok)
+                    .try_for_each_concurrent(10, async |(file_changes, stack_changes)| {
+                        verify_no_noop_file_changes(&stack_parent_ctxs, stack_changes, file_changes)
+                            .timed()
+                            .await
                             .log_future_stats(
                                 self.ctx().scuba().clone(),
-                                "Removing no no-op file changes",
+                                "Verify no no-op file changes",
                                 None,
-                            ),
-                    )
-                })
-                .try_buffered(10)
-                .try_collect::<Vec<_>>()
-                .await?;
-            } else {
-                stream::iter(
-                    file_changes_stack
-                        .iter()
-                        .zip(stack_changes_stack.into_iter()),
-                )
-                .map(Ok)
-                .try_for_each_concurrent(10, async |(file_changes, stack_changes)| {
-                    verify_no_noop_file_changes(&stack_parent_ctxs, stack_changes, file_changes)
-                        .timed()
-                        .await
-                        .log_future_stats(
-                            self.ctx().scuba().clone(),
-                            "Verify no no-op file changes",
-                            None,
-                        )
-                })
-                .await?;
+                            )
+                    })
+                    .await?;
             }
         };
 
@@ -1450,7 +1447,7 @@ impl<R: MononokeRepo> RepoContext<R> {
         let mut new_changesets = Vec::new();
         let mut new_changeset_ids = Vec::new();
         let mut parents = stack_parents;
-        for (info, file_changes) in info_stack.into_iter().zip(file_changes_stack.into_iter()) {
+        for (info, file_changes) in info_stack.into_iter().zip(file_changes_stack) {
             if checks.empty_changeset != CreateChangesetCheckMode::Skip
                 && justknobs::eval(
                     "scm/mononoke:create_changeset_stack_empty_changeset_check",

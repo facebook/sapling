@@ -173,7 +173,7 @@ impl<R: MononokeRepo> RepoContext<R> {
 
         let cl_ids_mapping = if let Some(max_age_days) = max_age_days {
             let cutoff = Utc::now().timestamp() - i64::from(max_age_days) * 86400;
-            let dated: Vec<_> = stream::iter(cl_ids_mapping.into_iter())
+            let dated: Vec<_> = stream::iter(cl_ids_mapping)
                 .map(|(cloud_id, cs_id)| async move {
                     let cs_ctx = self
                         .changeset(ChangesetSpecifier::Bonsai(cs_id))
@@ -315,7 +315,7 @@ impl<R: MononokeRepo> RepoContext<R> {
                 .collect::<Result<HashMap<ChangesetId, Vec<CloudChangesetId>>, _>>()?;
             let parents_by_changeset = Arc::new(parents_by_changeset);
 
-            let changesets = stream::iter(changesets.into_iter())
+            let changesets = stream::iter(changesets)
                 .map(|changeset| {
                     let rbs = Arc::clone(&rbs);
                     let lbs = Arc::clone(&lbs);

@@ -134,7 +134,7 @@ impl<R: BonsaiHgMappingRef + CommitGraphRef> RepoContext<R> {
             .ancestors_difference_segments(self.ctx(), bonsai_heads, bonsai_common)
             .await?;
 
-        Ok(stream::iter(segments.into_iter())
+        Ok(stream::iter(segments)
             .chunks(25)
             .map(move |segments| async move {
                 let mut ids = HashSet::with_capacity(segments.len() * 4);
@@ -179,7 +179,7 @@ impl<R: BonsaiGitMappingRef + CommitGraphRef> RepoContext<R> {
             .ancestors_difference_segments(self.ctx(), bonsai_heads, bonsai_common)
             .await?;
 
-        Ok(stream::iter(segments.into_iter())
+        Ok(stream::iter(segments)
             .chunks(25)
             .map(move |segments| async move {
                 let mut ids = HashSet::with_capacity(segments.len() * 4);
