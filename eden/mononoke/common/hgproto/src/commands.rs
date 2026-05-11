@@ -30,7 +30,6 @@ use futures::future::ok;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use futures::stream::once;
 use mercurial_bundles::Bundle2Item;
 use mercurial_bundles::bundle2;
 use mercurial_bundles::bundle2::Bundle2Stream;
@@ -171,13 +170,6 @@ impl<H: HgCommands + Send + Sync + 'static> HgCommandHandler<H> {
                 replaydata,
                 respondlightly,
             } => self.handle_unbundle(instream, heads, Some(respondlightly), Some(replaydata)),
-            SingleRequest::StreamOutShallow { tag } => (
-                hgcmds
-                    .stream_out_shallow(tag)
-                    .map_ok(SingleResponse::StreamOutShallow)
-                    .boxed(),
-                ok(instream).boxed(),
-            ),
         }
     }
 
@@ -385,11 +377,6 @@ pub trait HgCommands {
         _replaydata: Option<String>,
     ) -> HgCommandRes<Bytes> {
         unimplemented("unbundle")
-    }
-
-    // @wireprotocommand('stream_out_shallow', '*')
-    fn stream_out_shallow(&self, _tag: Option<String>) -> BoxStream<'static, Result<Bytes, Error>> {
-        once(async { Err(ErrorKind::Unimplemented("stream_out_shallow".into()).into()) }).boxed()
     }
 }
 

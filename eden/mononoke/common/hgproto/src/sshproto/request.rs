@@ -552,11 +552,6 @@ fn parse_with_params(
             replaydata => utf8_string_complete,
             respondlightly => boolean,
         }),
-        parse_command("stream_out_shallow", parse_params, 1, |kv| {
-            Ok(StreamOutShallow {
-                tag: parseval_option(&kv, "tag", utf8_string_complete)?
-            })
-        }),
 
     )).parse(input)
 }
@@ -1264,19 +1259,6 @@ mod test_parse {
                     nodes: vec![hash_ones(), hash_twos()],
                 },
             ]),
-        );
-    }
-
-    #[mononoke::test]
-    fn test_parse_stream_out_shallow() {
-        let inp = "stream_out_shallow\n\
-                   * 1\n\
-                   noflatmanifest 4\n\
-                   True";
-
-        test_parse(
-            inp,
-            Request::Single(SingleRequest::StreamOutShallow { tag: None }),
         );
     }
 

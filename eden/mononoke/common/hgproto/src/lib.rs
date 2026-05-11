@@ -78,9 +78,6 @@ pub enum SingleRequest {
         replaydata: String,
         respondlightly: bool,
     },
-    StreamOutShallow {
-        tag: Option<String>,
-    },
 }
 
 impl SingleRequest {
@@ -97,7 +94,6 @@ impl SingleRequest {
             SingleRequest::Known { .. } => "known",
             SingleRequest::Unbundle { .. } => "unbundle",
             SingleRequest::UnbundleReplay { .. } => "unbundlereplay",
-            SingleRequest::StreamOutShallow { .. } => "stream_out_shallow",
             SingleRequest::ListKeysPatterns { .. } => "listkeyspatterns",
         }
     }
@@ -123,7 +119,6 @@ pub enum SingleResponse {
     Known(Vec<bool>),
     ReadyForStream,
     Unbundle(Bytes),
-    StreamOutShallow(Bytes),
 }
 
 impl SingleResponse {
@@ -132,7 +127,7 @@ impl SingleResponse {
         use SingleResponse::*;
 
         match self {
-            &ReadyForStream | &Unbundle(_) | &StreamOutShallow(_) => true,
+            &ReadyForStream | &Unbundle(_) => true,
             _ => false,
         }
     }
