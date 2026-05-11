@@ -149,7 +149,7 @@ fn execute_action(vfs: &VFS, action: Work) -> Result<ActionResult> {
             for action in batch {
                 let res = execute_action(vfs, action)?;
                 bytes_written += res.bytes_written;
-                remove_errors.extend(res.remove_errors.into_iter());
+                remove_errors.extend(res.remove_errors);
             }
         }
     }
