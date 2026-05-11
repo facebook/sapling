@@ -159,7 +159,8 @@ impl<R: MononokeRepo> RepoContext<R> {
             .try_collect()
             .await?;
 
-        let outcome = if let Some(redirector) = self.push_redirector.as_ref() {
+        let push_redirector = self.push_redirector().await?;
+        let outcome = if let Some(redirector) = push_redirector.as_ref() {
             // run hooks on small repo
             bookmarks_movement::run_changeset_hooks(
                 ctx,

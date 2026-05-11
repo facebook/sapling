@@ -99,6 +99,7 @@ use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures::try_join;
+use futures_lazy_shared::LazyShared;
 use futures_watchdog::WatchdogExt;
 use git_ref_content_mapping::GitRefContentMapping;
 use git_source_of_truth::GitSourceOfTruthConfig;
@@ -362,7 +363,12 @@ pub struct RepoContext<R> {
     ctx: CoreContext,
     authz: Arc<AuthorizationContext>,
     repo: Arc<R>,
-    push_redirector: Option<Arc<PushRedirector<R>>>,
+    /// Lazily resolved push redirector. Only relevant on the write path
+    /// (pushrebase, bookmark moves) and for reporting in `RepoInfo`. Resolving
+    /// it eagerly would force every `RepoContext` consumer to satisfy
+    /// `RepoCrossRepoRef + RepoHandlerBaseRef` bounds, so we defer it to first
+    /// use via `push_redirector()`.
+    push_redirector: LazyShared<Result<Option<Arc<PushRedirector<R>>>, MononokeError>>,
     repos: Arc<MononokeRepos<R>>,
     /// Identity type that granted repo-level read access (from ACL check).
     repo_acl_deciding_identity_type: Option<String>,
@@ -384,7 +390,6 @@ pub struct RepoContextBuilder<R> {
     ctx: CoreContext,
     authz: Option<AuthorizationContext>,
     repo: Arc<R>,
-    push_redirector: Option<Arc<PushRedirector<R>>>,
     bubble_id: Option<BubbleId>,
     repos: Arc<MononokeRepos<R>>,
 }
@@ -459,15 +464,10 @@ impl<R: MononokeRepo> RepoContextBuilder<R> {
         repo: Arc<R>,
         repos: Arc<MononokeRepos<R>>,
     ) -> Result<Self, MononokeError> {
-        let push_redirector = maybe_push_redirector(&ctx, &repo, repos.as_ref())
-            .await?
-            .map(Arc::new);
-
         Ok(RepoContextBuilder {
             ctx,
             authz: None,
             repo,
-            push_redirector,
             bubble_id: None,
             repos,
         })
@@ -488,15 +488,7 @@ impl<R: MononokeRepo> RepoContextBuilder<R> {
                 .clone()
                 .unwrap_or_else(|| AuthorizationContext::new(&self.ctx)),
         );
-        RepoContext::new(
-            self.ctx,
-            authz,
-            self.repo,
-            self.bubble_id,
-            self.push_redirector,
-            self.repos,
-        )
-        .await
+        RepoContext::new(self.ctx, authz, self.repo, self.bubble_id, self.repos).await
     }
 }
 
@@ -804,13 +796,6 @@ impl<R> RepoContext<R> {
 
     pub fn repo_arc(&self) -> Arc<R> {
         self.repo.clone()
-    }
-
-    pub fn push_redirector(&self) -> Option<&PushRedirector<R>> {
-        match &self.push_redirector {
-            Some(prd) => Some(prd.as_ref()),
-            None => None,
-        }
     }
 
     /// The identity type that granted repo-level read access.
@@ -1168,7 +1153,6 @@ impl<R: MononokeRepo> RepoContext<R> {
         authz: Arc<AuthorizationContext>,
         repo: Arc<R>,
         bubble_id: Option<BubbleId>,
-        push_redirector: Option<Arc<PushRedirector<R>>>,
         repos: Arc<MononokeRepos<R>>,
     ) -> Result<Self, MononokeError> {
         let ctx = ctx.with_mutated_scuba(|mut scuba| {
@@ -1196,7 +1180,7 @@ impl<R: MononokeRepo> RepoContext<R> {
             ctx,
             authz,
             repo,
-            push_redirector,
+            push_redirector: LazyShared::new_empty(),
             repos,
             repo_acl_deciding_identity_type,
             path_acl_deciding_identity_types: Arc::new(Mutex::new(Vec::new())),
@@ -1205,7 +1189,27 @@ impl<R: MononokeRepo> RepoContext<R> {
 
     pub async fn new_test(ctx: CoreContext, repo: Arc<R>) -> Result<Self, MononokeError> {
         let authz = Arc::new(AuthorizationContext::new_bypass_access_control());
-        RepoContext::new(ctx, authz, repo, None, None, Arc::new(MononokeRepos::new())).await
+        RepoContext::new(ctx, authz, repo, None, Arc::new(MononokeRepos::new())).await
+    }
+
+    /// The push redirector for this repo, if one is configured.
+    ///
+    /// Resolved lazily on first use and cached for the lifetime of the
+    /// `RepoContext`. Returns `None` if this repo isn't configured for push
+    /// redirection.
+    pub async fn push_redirector(&self) -> Result<Option<Arc<PushRedirector<R>>>, MononokeError> {
+        self.push_redirector
+            .get_or_init(|| {
+                let ctx = self.ctx.clone();
+                let repo = self.repo.clone();
+                let repos = self.repos.clone();
+                async move {
+                    Ok(maybe_push_redirector(&ctx, &repo, repos.as_ref())
+                        .await?
+                        .map(Arc::new))
+                }
+            })
+            .await
     }
 
     /// Load bubble from id
@@ -1963,8 +1967,8 @@ impl<R: MononokeRepo> RepoContext<R> {
             self.ctx().clone(),
             self,
             cs_to_blocations
-                .iter()
-                .filter_map(|(_, result)| match result {
+                .values()
+                .filter_map(|result| match result {
                     Ok(l) => Some(l.descendant),
                     _ => None,
                 })

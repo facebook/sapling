@@ -76,16 +76,22 @@ impl SourceControlServiceImpl {
             CommitIdentityScheme::BONSAI => thrift::CommitIdentityScheme::BONSAI,
             CommitIdentityScheme::UNKNOWN => thrift::CommitIdentityScheme::UNKNOWN,
         };
+        // Repo might not be found due to deep sharding. However all push_redirected repos are shallow sharded, so this should be safe because
+        // 1. If the repo is push-redirected, we are forced to have it on every server cause we can't predict where the request might land
+        // 2. If the repo is not push-redirected, then the answer here would anyway be none
         let push_redirected_to = match self
             .repo_impl(ctx, &repo, authz, |_| async { Ok(None) })
             .await
         {
-            Ok(repo) => repo
+            Ok(repo) => match repo
                 .push_redirector()
-                .map(|prd| prd.repo.repo_identity().name().to_string()),
-            // Repo might not be found due to deep sharding. However all push_redirected repos are shallow sharded, so this should be safe because
-            // 1. If the repo is push-redirected, we are forced to have it on every server cause we can't predict where the request might land
-            // 2. If the repo is not push-redirected, then the answer here would anyway be none
+                .await
+                .map_err(scs_errors::ServiceError::from)
+            {
+                Ok(prd) => prd.map(|prd| prd.repo.repo_identity().name().to_string()),
+                Err(e) if e.repo_not_found() => None,
+                Err(e) => return Err(e),
+            },
             Err(e) if e.repo_not_found() => None,
             // However, if there is any other form of error, let's surface that to the user
             Err(e) => return Err(e),

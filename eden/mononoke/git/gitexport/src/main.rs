@@ -233,7 +233,6 @@ async fn async_main_impl(
         auth_ctx.into(),
         repo,
         None,
-        None,
         Arc::new(MononokeRepos::new()),
     )
     .await?;

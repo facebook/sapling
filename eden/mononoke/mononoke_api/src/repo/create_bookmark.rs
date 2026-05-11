@@ -45,7 +45,8 @@ impl<R: MononokeRepo> RepoContext<R> {
                     .with_pushvars(pushvars);
             op.log_new_public_commits_to_scribe()
         }
-        let create_op = if let Some(redirector) = self.push_redirector.as_ref() {
+        let push_redirector = self.push_redirector().await?;
+        let create_op = if let Some(redirector) = push_redirector.as_ref() {
             let large_bookmark = redirector.small_to_large_bookmark(bookmark).await?;
             if &large_bookmark == bookmark {
                 return Err(MononokeError::InvalidRequest(format!(
@@ -84,7 +85,8 @@ impl<R: MononokeRepo> RepoContext<R> {
         pushvars: Option<&HashMap<String, Bytes>>,
     ) -> Result<(), MononokeError> {
         let create_op = self.create_bookmark_op(bookmark, target, pushvars).await?;
-        if let Some(redirector) = self.push_redirector.as_ref() {
+        let push_redirector = self.push_redirector().await?;
+        if let Some(redirector) = push_redirector.as_ref() {
             let ctx = self.ctx();
             let log_id = create_op
                 .run(
@@ -118,7 +120,7 @@ impl<R: MononokeRepo> RepoContext<R> {
         txn: Option<Box<dyn BookmarkTransaction>>,
         txn_hooks: Vec<BookmarkTransactionHook>,
     ) -> Result<BookmarkInfoTransaction, MononokeError> {
-        if self.push_redirector.is_some() {
+        if self.push_redirector().await?.is_some() {
             return Err(invalid_push_redirected_request(
                 "create_bookmark_with_transaction",
             ));

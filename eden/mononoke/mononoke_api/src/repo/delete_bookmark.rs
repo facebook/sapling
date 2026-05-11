@@ -62,7 +62,8 @@ impl<R: MononokeRepo> RepoContext<R> {
             )
             .with_pushvars(pushvars)
         }
-        let delete_op = if let Some(redirector) = self.push_redirector.as_ref() {
+        let push_redirector = self.push_redirector().await?;
+        let delete_op = if let Some(redirector) = push_redirector.as_ref() {
             let large_bookmark = redirector.small_to_large_bookmark(bookmark).await?;
             if &large_bookmark == bookmark {
                 return Err(MononokeError::InvalidRequest(format!(
@@ -91,7 +92,8 @@ impl<R: MononokeRepo> RepoContext<R> {
         let delete_op = self
             .delete_bookmark_op(bookmark, old_target, pushvars)
             .await?;
-        if let Some(redirector) = self.push_redirector.as_ref() {
+        let push_redirector = self.push_redirector().await?;
+        if let Some(redirector) = push_redirector.as_ref() {
             let ctx = self.ctx();
             let log_id = delete_op
                 .run(self.ctx(), self.authorization_context(), &redirector.repo)
@@ -114,7 +116,7 @@ impl<R: MononokeRepo> RepoContext<R> {
         pushvars: Option<&HashMap<String, Bytes>>,
         txn: Option<Box<dyn BookmarkTransaction>>,
     ) -> Result<BookmarkInfoTransaction, MononokeError> {
-        if self.push_redirector.is_some() {
+        if self.push_redirector().await?.is_some() {
             return Err(invalid_push_redirected_request(
                 "delete_bookmark_with_transaction",
             ));
