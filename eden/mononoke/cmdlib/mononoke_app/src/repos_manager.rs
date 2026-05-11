@@ -271,7 +271,7 @@ impl<Repo> MononokeReposManager<Repo> {
     }
 }
 
-impl<R: MononokeRepo> MononokeReposManager<R> {
+impl<R> MononokeReposManager<R> {
     pub fn make_mononoke_api(&self) -> Result<Mononoke<R>> {
         let configs = self.configs.load_all_repo_configs()?;
 

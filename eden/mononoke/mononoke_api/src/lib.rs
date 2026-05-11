@@ -173,7 +173,7 @@ impl<R: RepoIdentityRef> Mononoke<R> {
     }
 }
 
-impl<R: MononokeRepo> Mononoke<R> {
+impl<R> Mononoke<R> {
     /// Start a request on a repository by name.
     // Method is async and fallible as in the future this may involve
     // instantiating the repo lazily.
@@ -205,7 +205,9 @@ impl<R: MononokeRepo> Mononoke<R> {
             )),
         }
     }
+}
 
+impl<R: MononokeRepo> Mononoke<R> {
     /// Report configured monitoring stats
     pub async fn report_monitoring_stats(&self, ctx: &CoreContext) -> Result<(), MononokeError> {
         for repo in self.repos.iter() {
