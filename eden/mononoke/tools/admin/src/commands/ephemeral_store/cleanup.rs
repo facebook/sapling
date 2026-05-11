@@ -65,7 +65,7 @@ pub async fn clean_bubbles(
         );
     }
     if !args.dryrun {
-        stream::iter(expired_bubbles.into_iter())
+        stream::iter(expired_bubbles)
             .map(Ok)
             .map_ok(|id| {
                 cloned!(ctx, repo);
