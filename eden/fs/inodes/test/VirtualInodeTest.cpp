@@ -8,6 +8,7 @@
 #include <folly/Exception.h>
 #include <folly/Random.h>
 #include <folly/coro/GtestHelpers.h>
+#include <folly/coro/Invoke.h>
 #include <folly/executors/ManualExecutor.h>
 #include <folly/test/TestUtils.h>
 #include <gmock/gmock.h>
@@ -426,7 +427,8 @@ void verifyTreeState(
     int line,
     TestMount& mount,
     TestFileDatabase& files,
-    int verify_flags = VERIFY_DEFAULT) {
+    int verify_flags = VERIFY_DEFAULT,
+    bool useCoroutines = false) {
   (void)filename;
   (void)line;
 
@@ -499,13 +501,27 @@ void verifyTreeState(
       // SHA1s are only computed for files
       if ((verify_flags & VERIFY_SHA1) &&
           virtualInode.getDtype() == dtype_t::Regular) {
-        auto sha1Fut = virtualInode
-                           .getSHA1(
-                               expected.path,
-                               mount.getEdenMount()->getObjectStore(),
-                               ObjectFetchContext::getNullContext())
-                           .semi()
-                           .via(mount.getServerExecutor().get());
+        auto sha1Fut = useCoroutines
+            ? // @lint-ignore CLANGTIDY
+              // facebook-folly-coro-return-captures-local-var
+            folly::coro::co_invoke([&]() -> folly::coro::Task<Hash20> {
+              auto attrs = co_await virtualInode.co_getEntryAttributes(
+                  ENTRY_ATTRIBUTE_SHA1,
+                  expected.path,
+                  mount.getEdenMount()->getObjectStore(),
+                  mount.getEdenMount()->getLastCheckoutTime().toTimespec(),
+                  ObjectFetchContext::getNullContext());
+              co_return attrs.sha1.value().value();
+            })
+                .semi()
+                .via(mount.getServerExecutor().get())
+            : virtualInode
+                  .getSHA1(
+                      expected.path,
+                      mount.getEdenMount()->getObjectStore(),
+                      ObjectFetchContext::getNullContext())
+                  .semi()
+                  .via(mount.getServerExecutor().get());
         mount.drainServerExecutor();
         auto sha1 = std::move(sha1Fut).get(0ms);
         EXPECT_EQ(sha1, expected.getSHA1()) << dbgMsg << " expected.contents=\""
@@ -515,13 +531,27 @@ void verifyTreeState(
       // Blake3 is only computed for files
       if ((verify_flags & VERIFY_BLAKE3) &&
           virtualInode.getDtype() == dtype_t::Regular) {
-        auto blake3Fut = virtualInode
-                             .getBlake3(
-                                 expected.path,
-                                 mount.getEdenMount()->getObjectStore(),
-                                 ObjectFetchContext::getNullContext())
-                             .semi()
-                             .via(mount.getServerExecutor().get());
+        auto blake3Fut = useCoroutines
+            ? // @lint-ignore CLANGTIDY
+              // facebook-folly-coro-return-captures-local-var
+            folly::coro::co_invoke([&]() -> folly::coro::Task<Hash32> {
+              auto attrs = co_await virtualInode.co_getEntryAttributes(
+                  ENTRY_ATTRIBUTE_BLAKE3,
+                  expected.path,
+                  mount.getEdenMount()->getObjectStore(),
+                  mount.getEdenMount()->getLastCheckoutTime().toTimespec(),
+                  ObjectFetchContext::getNullContext());
+              co_return attrs.blake3.value().value();
+            })
+                .semi()
+                .via(mount.getServerExecutor().get())
+            : virtualInode
+                  .getBlake3(
+                      expected.path,
+                      mount.getEdenMount()->getObjectStore(),
+                      ObjectFetchContext::getNullContext())
+                  .semi()
+                  .via(mount.getServerExecutor().get());
         mount.drainServerExecutor();
         auto blake3 = std::move(blake3Fut).get(0ms);
         EXPECT_EQ(blake3, expected.getBlake3(blake3Key))
@@ -531,18 +561,32 @@ void verifyTreeState(
 
       if ((verify_flags & VERIFY_BLOB_AUX_DATA) &&
           virtualInode.getDtype() == dtype_t::Regular) {
-        auto auxDataFut =
-            virtualInode
-                .getEntryAttributes(
-                    ENTRY_ATTRIBUTE_SIZE | ENTRY_ATTRIBUTE_SHA1 |
-                        ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE |
-                        ENTRY_ATTRIBUTE_BLAKE3 | ENTRY_ATTRIBUTE_DIGEST_SIZE,
-                    expected.path,
-                    mount.getEdenMount()->getObjectStore(),
-                    mount.getEdenMount()->getLastCheckoutTime().toTimespec(),
-                    ObjectFetchContext::getNullContext())
+        auto auxDataFut = useCoroutines
+            ? // @lint-ignore CLANGTIDY
+              // facebook-folly-coro-return-captures-local-var
+            folly::coro::co_invoke([&]() -> folly::coro::Task<EntryAttributes> {
+              co_return co_await virtualInode.co_getEntryAttributes(
+                  ENTRY_ATTRIBUTE_SIZE | ENTRY_ATTRIBUTE_SHA1 |
+                      ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE |
+                      ENTRY_ATTRIBUTE_BLAKE3 | ENTRY_ATTRIBUTE_DIGEST_SIZE,
+                  expected.path,
+                  mount.getEdenMount()->getObjectStore(),
+                  mount.getEdenMount()->getLastCheckoutTime().toTimespec(),
+                  ObjectFetchContext::getNullContext());
+            })
                 .semi()
-                .via(mount.getServerExecutor().get());
+                .via(mount.getServerExecutor().get())
+            : virtualInode
+                  .getEntryAttributes(
+                      ENTRY_ATTRIBUTE_SIZE | ENTRY_ATTRIBUTE_SHA1 |
+                          ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE |
+                          ENTRY_ATTRIBUTE_BLAKE3 | ENTRY_ATTRIBUTE_DIGEST_SIZE,
+                      expected.path,
+                      mount.getEdenMount()->getObjectStore(),
+                      mount.getEdenMount()->getLastCheckoutTime().toTimespec(),
+                      ObjectFetchContext::getNullContext())
+                  .semi()
+                  .via(mount.getServerExecutor().get());
         mount.drainServerExecutor();
         auto auxData = std::move(auxDataFut).get(0ms);
         EXPECT_EQ(auxData.sha1.value().value(), expected.getSHA1()) << dbgMsg;
@@ -565,13 +609,24 @@ void verifyTreeState(
         // TODO: choose random?
         auto lastCheckoutTime =
             mount.getEdenMount()->getLastCheckoutTime().toTimespec();
-        auto stFut = virtualInode
-                         .stat(
-                             lastCheckoutTime,
-                             mount.getEdenMount()->getObjectStore(),
-                             ObjectFetchContext::getNullContext())
-                         .semi()
-                         .via(mount.getServerExecutor().get());
+        auto stFut = useCoroutines
+            ? // @lint-ignore CLANGTIDY
+              // facebook-folly-coro-return-captures-local-var
+            folly::coro::co_invoke([&]() -> folly::coro::Task<struct stat> {
+              co_return co_await virtualInode.co_stat(
+                  lastCheckoutTime,
+                  mount.getEdenMount()->getObjectStore(),
+                  ObjectFetchContext::getNullContext());
+            })
+                .semi()
+                .via(mount.getServerExecutor().get())
+            : virtualInode
+                  .stat(
+                      lastCheckoutTime,
+                      mount.getEdenMount()->getObjectStore(),
+                      ObjectFetchContext::getNullContext())
+                  .semi()
+                  .via(mount.getServerExecutor().get());
         mount.drainServerExecutor();
         auto st = std::move(stFut).get(0ms);
 
@@ -603,9 +658,9 @@ void verifyTreeState(
 }
 
 #define VERIFY_TREE(flags) \
-  verifyTreeState(__FILE__, __LINE__, mount, files, flags)
+  verifyTreeState(__FILE__, __LINE__, mount, files, flags, GetParam())
 #define VERIFY_TREE_DEFAULT() \
-  verifyTreeState(__FILE__, __LINE__, mount, files, VERIFY_DEFAULT)
+  verifyTreeState(__FILE__, __LINE__, mount, files, VERIFY_DEFAULT, GetParam())
 
 // TODO: flesh this out, including deleted stuff, etc
 #define EXPECT_INODE_OR(_virtualInode, _info)             \

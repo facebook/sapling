@@ -505,6 +505,7 @@ cpp_unittest(
         "//folly:exception",
         "//folly:random",
         "//folly/coro:gtest_helpers",
+        "//folly/coro:invoke",
         "//folly/executors:manual_executor",
         "//folly/test:test_utils",
     ],
