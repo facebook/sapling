@@ -492,7 +492,7 @@ pub fn create_directory_source_to_target_multi_mover(
     Ok(Arc::new(move |path: &MPath| -> Result<Vec<MPath>, Error> {
         for (override_prefix_src, dsts) in &overrides {
             let override_prefix_src = MPath::new(override_prefix_src.clone())?;
-            if override_prefix_src.is_prefix_of(path.into_iter()) {
+            if override_prefix_src.is_prefix_of(&*path) {
                 let suffix: Vec<_> = path
                     .into_iter()
                     .skip(override_prefix_src.num_components())
