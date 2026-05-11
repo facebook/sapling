@@ -397,7 +397,7 @@ async fn resolve_subtree_changes(
                 ),
             ))
         }
-        let subtree_changes = SortedVectorMap::from_iter(subtree_changes.into_iter());
+        let subtree_changes = SortedVectorMap::from_iter(subtree_changes);
         Ok((manifest_replacements, subtree_changes))
     } else {
         Ok((Vec::new(), SortedVectorMap::new()))

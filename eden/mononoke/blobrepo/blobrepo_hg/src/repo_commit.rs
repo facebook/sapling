@@ -272,7 +272,7 @@ impl UploadEntries {
 
         {
             let mut inner = self.inner.lock().expect("Lock poisoned");
-            inner.parents.extend(parents.into_iter());
+            inner.parents.extend(parents);
         }
 
         Ok(())
