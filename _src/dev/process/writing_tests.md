@@ -123,10 +123,10 @@ to be converted to `_`. For instance,
 
 ```
 # Runs test-rust-checkout.t with Watchman enabled
-$ buck2 test '@fbcode//mode/opt' :hg_watchman_run_tests -- test_rust_checkout_t
+$ buck2 test '@fbcode//mode/opt' :sl_watchman_run_tests -- test_rust_checkout_t
 
 # Runs test-rust-checkout.t with EdenFS enabled
-$ buck2 test '@fbcode//mode/opt' :hg_edenfs_run_tests -- test_rust_checkout_t
+$ buck2 test '@fbcode//mode/opt' :sl_edenfs_run_tests -- test_rust_checkout_t
 ```
 
 On EdenFS tests the EdenFS CLI is available through the `eden` command; it's

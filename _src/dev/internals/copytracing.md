@@ -1,4 +1,4 @@
-# Bisect-Based Copy Tracing
+# Bisect-based copy tracing
 
 *Copy tracing* is a technique used to efficiently account for file copies and
 renames when comparing histories. It is used for `diff` commands and merge-related
@@ -83,7 +83,7 @@ Bisect-based copy tracing is built to achieve the following desired properties:
 - **Abstracted**: Support both Sapling and Git backend repositories.
 - **Efficiency**: Provides fast content similarity checks for cases where renames
   are not recorded in Sapling or when working with Git repositories.
-- **User-Friendly**: Informative message when renames cannot be found, such as
+- **User-friendly**: Informative message when renames cannot be found, such as
   delete/modified conflicts.
 
 ## How?
@@ -118,7 +118,7 @@ where N is the line count (`O(N^2)` is the worst case for the Myers diff algorit
 Our approach, `xdiff::edit_cost`, imposes a `max cost` limit, reducing the
 complexity to `O(N)`.
 
-### User-Friendly
+### User-friendly
 When renames cannot be found, for example, file `a.txt` was renamed to `a.md`
 and then deleted on the destination branch, the new copy tracing can identify
 both the commit that renamed the file and also the commit that eventually

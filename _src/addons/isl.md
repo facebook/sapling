@@ -4,7 +4,7 @@ sidebar_position: 10
 
 import {Video, Command, SLCommand, ThemedImage} from '@site/elements'
 
-# Interactive Smartlog (ISL)
+# Interactive smartlog (ISL)
 
 Interactive Smartlog (ISL) is a web-based, graphical interface for working with your Sapling smartlog. It is available as part of Sapling Web, which you can launch from the command line as follows:
 

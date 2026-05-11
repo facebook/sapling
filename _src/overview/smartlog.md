@@ -64,7 +64,7 @@ o  <span class="sl-public">a75ab860a</span>  Jul 15 at 07:59<br />
 ~<br />
 </pre>
 
-### Super Smartlog
+### Super smartlog
 
 Sapling can also fetch information about the repository from external sources, such as checking GitHub to know if a pull request has passed automated tests and been reviewed. Since this extra information requires waiting a few seconds for network requests, we have a separate <SLCommand name="ssl" /> alias for this:
 

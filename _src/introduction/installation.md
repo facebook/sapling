@@ -82,12 +82,31 @@ Note the following tools must be installed to leverage Sapling's full feature se
 - [Git for Windows](https://git-scm.com/download/win) is required to use Sapling with Git repositories
 - [Node.js](https://nodejs.org/en/download/) (v16 or later) is required to use <SLCommand name="web" />
 
-Note that the name of the Sapling CLI `sl.exe` conflicts with the `sl` shell built-in in PowerShell (`sl` is an alias for `Set-Location`, which is equivalent to `cd`). If you want to use `sl` to run `sl.exe` in PowerShell, you must reassign the alias. Again, you must run the following as Administrator:
+Note that the name of the Sapling CLI `sl.exe` conflicts with the `sl` shell built-in in PowerShell (`sl` is an alias for `Set-Location`, which is equivalent to `cd`). If you want to use `sl` to run `sl.exe` in PowerShell, you need to remove or override this alias.
+
+**Option 1: Remove the built-in alias** (recommended, works on all PowerShell versions):
+
+```
+Remove-Item Alias:sl -Force
+```
+
+**Option 2: Reassign the alias** (must be run as Administrator):
 
 <CodeBlock>
 Set-Alias -Name sl -Value 'C:\Program Files\Sapling\sl.exe' -Force -Option Constant,ReadOnly,AllScope
-sl --version
 </CodeBlock>
+
+To make the change persist across PowerShell sessions, add the command to your [PowerShell profile](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_profiles). You can open it with:
+
+```
+notepad $PROFILE
+```
+
+Verify `sl` resolves correctly:
+
+```
+sl --version
+```
 
 ### Linux
 

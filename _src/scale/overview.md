@@ -35,7 +35,7 @@ failures, we back up all commits as they are created to our "commit cloud".
 Unlike other systems, the developer doesn't have to expressly push their
 commits for them to be shareable and durable.
 
-## Note about "Distributed"
+## Note about "distributed"
 
 Sapling started from Mercurial as a distributed source control system, it then
 transitioned to a client-server architecture to solve the challenges.

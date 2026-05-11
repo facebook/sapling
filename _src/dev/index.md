@@ -1,4 +1,4 @@
-# Sapling Developer Guide
+# Sapling developer guide
 
 This is a Work-In-Progress! Content below might be rewritten entirely.
 
