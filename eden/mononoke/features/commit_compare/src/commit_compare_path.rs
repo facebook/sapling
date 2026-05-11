@@ -14,7 +14,6 @@ use mononoke_api::ChangesetContext;
 use mononoke_api::ChangesetPathDiffContext;
 use mononoke_api::ChangesetSpecifier;
 use mononoke_api::MononokeError;
-use mononoke_api::Repo;
 use mononoke_api::RepoContext;
 use mononoke_types::path::MPath;
 use source_control as source_control_thrift;
@@ -49,8 +48,8 @@ impl CommitComparePath {
         }
     }
 
-    pub async fn from_path_diff(
-        path_diff: ChangesetPathDiffContext<Repo>,
+    pub async fn from_path_diff<R: crate::Repo>(
+        path_diff: ChangesetPathDiffContext<R>,
         schemes: &BTreeSet<source_control_thrift::CommitIdentityScheme>,
     ) -> Result<Self> {
         if path_diff.is_file() {
@@ -108,8 +107,8 @@ impl CommitComparePath {
 }
 
 /// Helper for commit_compare to add mutable rename information if appropriate.
-pub async fn add_mutable_renames(
-    base_changeset: &mut ChangesetContext<Repo>,
+pub async fn add_mutable_renames<R: crate::Repo>(
+    base_changeset: &mut ChangesetContext<R>,
     params: &source_control_thrift::CommitCompareParams,
 ) -> Result<()> {
     if params.follow_mutable_file_history.unwrap_or(false) {
@@ -129,11 +128,11 @@ pub async fn add_mutable_renames(
 
 /// Given a base changeset, find the "other" changeset from parent information
 /// including mutable history if appropriate.
-pub async fn find_commit_compare_parent(
-    repo: &RepoContext<Repo>,
-    base_changeset: &mut ChangesetContext<Repo>,
+pub async fn find_commit_compare_parent<R: crate::Repo>(
+    repo: &RepoContext<R>,
+    base_changeset: &mut ChangesetContext<R>,
     params: &source_control_thrift::CommitCompareParams,
-) -> Result<Option<ChangesetContext<Repo>>> {
+) -> Result<Option<ChangesetContext<R>>> {
     let commit_parents = base_changeset.parents().await?;
     let mut other_changeset_id = commit_parents.first().copied();
 

@@ -20,7 +20,6 @@ use mononoke_api::ChangesetContext;
 use mononoke_api::ChangesetDiffItem;
 use mononoke_api::ChangesetFileOrdering;
 use mononoke_api::MononokeError;
-use mononoke_api::Repo;
 use mononoke_api::RepoContext;
 use mononoke_types::path::MPath;
 use source_control as source_control_thrift;
@@ -56,11 +55,11 @@ pub fn unordered_max_paths() -> Result<usize> {
 ///
 /// If `other_changeset` is `None`, the function will attempt to find the
 /// parent changeset using `find_commit_compare_parent`.
-pub async fn commit_compare(
+pub async fn commit_compare<R: crate::Repo>(
     ctx: &CoreContext,
-    repo: &RepoContext<Repo>,
-    mut base_changeset: ChangesetContext<Repo>,
-    other_changeset: Option<ChangesetContext<Repo>>,
+    repo: &RepoContext<R>,
+    mut base_changeset: ChangesetContext<R>,
+    other_changeset: Option<ChangesetContext<R>>,
     params: &source_control_thrift::CommitCompareParams,
 ) -> Result<CommitCompareResult> {
     add_mutable_renames(&mut base_changeset, params).await?;

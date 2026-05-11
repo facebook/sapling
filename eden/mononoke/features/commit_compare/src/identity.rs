@@ -15,14 +15,13 @@ use maplit::btreeset;
 use metaconfig_types::CommitIdentityScheme;
 use mononoke_api::ChangesetContext;
 use mononoke_api::MononokeError;
-use mononoke_api::Repo;
 use mononoke_api::RepoContext;
 use source_control as source_control_thrift;
 
 /// If identity schemes were not provided, get the repo's default identity scheme
 /// and use it. This matches the SCS behavior.
-fn fall_back_to_default_identity_scheme<'a>(
-    repo_ctx: &RepoContext<Repo>,
+fn fall_back_to_default_identity_scheme<'a, R: crate::Repo>(
+    repo_ctx: &RepoContext<R>,
     schemes: &'a BTreeSet<source_control_thrift::CommitIdentityScheme>,
 ) -> Result<Cow<'a, BTreeSet<source_control_thrift::CommitIdentityScheme>>, MononokeError> {
     if !schemes.is_empty() {
@@ -45,8 +44,8 @@ fn fall_back_to_default_identity_scheme<'a>(
 
 /// Generate a mapping for a commit's identity into the requested identity
 /// schemes. Uses concurrent resolution via try_join_all, matching SCS behavior.
-pub async fn map_commit_identity(
-    changeset_ctx: &ChangesetContext<Repo>,
+pub async fn map_commit_identity<R: crate::Repo>(
+    changeset_ctx: &ChangesetContext<R>,
     schemes: &BTreeSet<source_control_thrift::CommitIdentityScheme>,
 ) -> Result<
     BTreeMap<source_control_thrift::CommitIdentityScheme, source_control_thrift::CommitId>,

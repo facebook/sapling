@@ -11,7 +11,6 @@ use either::Either;
 use futures::try_join;
 use mononoke_api::ChangesetPathContentContext;
 use mononoke_api::CopyInfo;
-use mononoke_api::Repo;
 use source_control as source_control_thrift;
 
 /// Convert a mononoke_api FileType to the thrift EntryType.
@@ -55,8 +54,8 @@ pub fn convert_copy_info(copy_info: CopyInfo) -> source_control_thrift::CopyInfo
 }
 
 /// Convert a ChangesetPathContentContext to a thrift FilePathInfo.
-pub async fn to_file_path_info(
-    ctx: Option<&ChangesetPathContentContext<Repo>>,
+pub async fn to_file_path_info<R: crate::Repo>(
+    ctx: Option<&ChangesetPathContentContext<R>>,
 ) -> Result<Option<source_control_thrift::FilePathInfo>> {
     match ctx {
         None => Ok(None),
@@ -88,8 +87,8 @@ pub async fn to_file_path_info(
 }
 
 /// Convert a ChangesetPathContentContext to a thrift TreePathInfo.
-pub async fn to_tree_path_info(
-    ctx: Option<&ChangesetPathContentContext<Repo>>,
+pub async fn to_tree_path_info<R: crate::Repo>(
+    ctx: Option<&ChangesetPathContentContext<R>>,
 ) -> Result<Option<source_control_thrift::TreePathInfo>> {
     match ctx {
         None => Ok(None),
