@@ -613,10 +613,20 @@ void verifyTreeState(
   } while (0)
 } // namespace
 
-TEST(VirtualInodeTest, findDoesNotChangeState) {
+class VirtualInodeTestBase : public ::testing::TestWithParam<bool> {
+ protected:
+  void maybeEnableCoroutines(TestMount& mount) {
+    if (GetParam()) {
+      enableCoroutinesConfig(mount);
+    }
+  }
+};
+
+TEST_P(VirtualInodeTestBase, findDoesNotChangeState) {
   TestFileDatabase files;
   auto flags = VERIFY_DEFAULT ^ VERIFY_SHA1 ^ VERIFY_BLAKE3;
   auto mount = TestMount{MakeTestTreeBuilder(files)};
+  maybeEnableCoroutines(mount);
   VERIFY_TREE(flags);
 
   for (const auto& info : files.getOriginalItems()) {
@@ -646,20 +656,22 @@ void testRootDirAChildren(TestMount& mount) {
   }
 }
 
-TEST(VirtualInodeTest, getChildrenSimple) {
+TEST_P(VirtualInodeTestBase, getChildrenSimple) {
   TestFileDatabase files;
   auto flags = VERIFY_DEFAULT ^ VERIFY_SHA1 ^ VERIFY_BLAKE3;
   auto mount = TestMount{MakeTestTreeBuilder(files)};
+  maybeEnableCoroutines(mount);
   VERIFY_TREE(flags);
 
   testRootDirAChildren(mount);
   VERIFY_TREE_DEFAULT();
 }
 
-TEST(VirtualInodeTest, getLoaded) {
+TEST_P(VirtualInodeTestBase, getLoaded) {
   TestFileDatabase files;
   auto flags = VERIFY_DEFAULT ^ VERIFY_SHA1 ^ VERIFY_BLAKE3;
   auto mount = TestMount{MakeTestTreeBuilder(files)};
+  maybeEnableCoroutines(mount);
   VERIFY_TREE(flags);
   // load inode
   mount.getInode(RelativePathPiece{"root_dirA"});
@@ -668,10 +680,11 @@ TEST(VirtualInodeTest, getLoaded) {
   VERIFY_TREE_DEFAULT();
 }
 
-TEST(VirtualInodeTest, getChildrenMaterialized) {
+TEST_P(VirtualInodeTestBase, getChildrenMaterialized) {
   TestFileDatabase files;
   auto flags = VERIFY_DEFAULT ^ VERIFY_SHA1 ^ VERIFY_BLAKE3;
   auto mount = TestMount{MakeTestTreeBuilder(files)};
+  maybeEnableCoroutines(mount);
   VERIFY_TREE(flags);
   // materialize inode
   std::string path = "root_dirA/child1_fileA1";
@@ -683,10 +696,11 @@ TEST(VirtualInodeTest, getChildrenMaterialized) {
   VERIFY_TREE_DEFAULT();
 }
 
-TEST(VirtualInodeTest, getChildrenMaterializedUnloaded) {
+TEST_P(VirtualInodeTestBase, getChildrenMaterializedUnloaded) {
   TestFileDatabase files;
   auto flags = VERIFY_DEFAULT ^ VERIFY_SHA1 ^ VERIFY_BLAKE3;
   auto mount = TestMount{MakeTestTreeBuilder(files)};
+  maybeEnableCoroutines(mount);
   VERIFY_TREE(flags);
   // materialize inode
   std::string path = "root_dirA/child1_fileA1";
@@ -703,10 +717,11 @@ TEST(VirtualInodeTest, getChildrenMaterializedUnloaded) {
   testRootDirAChildren(mount);
 }
 
-TEST(VirtualInodeTest, getChildrenDoesNotChangeState) {
+TEST_P(VirtualInodeTestBase, getChildrenDoesNotChangeState) {
   TestFileDatabase files;
   auto flags = VERIFY_DEFAULT ^ VERIFY_SHA1 ^ VERIFY_BLAKE3;
   auto mount = TestMount{MakeTestTreeBuilder(files)};
+  maybeEnableCoroutines(mount);
   VERIFY_TREE(flags);
 
   for (const auto& info : files.getOriginalItems()) {
@@ -723,10 +738,11 @@ TEST(VirtualInodeTest, getChildrenDoesNotChangeState) {
   VERIFY_TREE(flags);
 }
 
-TEST(VirtualInodeTest, getChildrenAttributes) {
+TEST_P(VirtualInodeTestBase, getChildrenAttributes) {
   TestFileDatabase files;
   auto flags = VERIFY_DEFAULT ^ VERIFY_SHA1 ^ VERIFY_BLAKE3;
   auto mount = TestMount{MakeTestTreeBuilder(files)};
+  maybeEnableCoroutines(mount);
   VERIFY_TREE(flags);
   std::vector<EntryAttributeFlags> attribute_requests{
       ENTRY_ATTRIBUTE_SIZE | ENTRY_ATTRIBUTE_SHA1 |
@@ -778,10 +794,11 @@ TEST(VirtualInodeTest, getChildrenAttributes) {
   VERIFY_TREE(flags);
 }
 
-TEST(VirtualInodeTest, statDoesNotChangeState) {
+TEST_P(VirtualInodeTestBase, statDoesNotChangeState) {
   TestFileDatabase files;
   auto flags = VERIFY_DEFAULT | VERIFY_STAT;
   auto mount = TestMount{MakeTestTreeBuilder(files)};
+  maybeEnableCoroutines(mount);
   VERIFY_TREE(flags);
 
   for (const auto& info : files.getOriginalItems()) {
@@ -792,9 +809,10 @@ TEST(VirtualInodeTest, statDoesNotChangeState) {
   VERIFY_TREE(flags);
 }
 
-TEST(VirtualInodeTest, fileOpsOnCorrectObjectsOnly) {
+TEST_P(VirtualInodeTestBase, fileOpsOnCorrectObjectsOnly) {
   TestFileDatabase files;
   auto mount = TestMount{MakeTestTreeBuilder(files)};
+  maybeEnableCoroutines(mount);
 
   VERIFY_TREE(VERIFY_INITIAL);
   for (const auto& info_ : files.getOriginalItems()) {
@@ -907,9 +925,10 @@ TEST(VirtualInodeTest, fileOpsOnCorrectObjectsOnly) {
   }
 }
 
-TEST(VirtualInodeTest, getEntryAttributesDoesNotChangeState) {
+TEST_P(VirtualInodeTestBase, getEntryAttributesDoesNotChangeState) {
   TestFileDatabase files;
   auto mount = TestMount{MakeTestTreeBuilder(files)};
+  maybeEnableCoroutines(mount);
 
   for (const auto& info : files.getOriginalItems()) {
     VERIFY_TREE(VERIFY_DEFAULT ^ VERIFY_SHA1 ^ VERIFY_BLAKE3);
@@ -919,11 +938,12 @@ TEST(VirtualInodeTest, getEntryAttributesDoesNotChangeState) {
   VERIFY_TREE(VERIFY_DEFAULT ^ VERIFY_SHA1 ^ VERIFY_BLAKE3);
 }
 
-TEST(VirtualInodeTest, getEntryAttributesAttributeError) {
+TEST_P(VirtualInodeTestBase, getEntryAttributesAttributeError) {
   TestFileDatabase files;
   FakeTreeBuilder builder;
   files.build(builder);
   auto mount = TestMount{builder, false};
+  maybeEnableCoroutines(mount);
 
   builder.setReady("root_dirA");
   builder.setReady("root_dirA/child1_fileA2");
@@ -948,9 +968,10 @@ TEST(VirtualInodeTest, getEntryAttributesAttributeError) {
   EXPECT_FALSE(attributes.type.value().hasException());
 }
 
-TEST(VirtualInodeTest, sha1DoesNotChangeState) {
+TEST_P(VirtualInodeTestBase, sha1DoesNotChangeState) {
   TestFileDatabase files;
   auto mount = TestMount{MakeTestTreeBuilder(files)};
+  maybeEnableCoroutines(mount);
 
   const std::vector<int> verify_flag_sets{
       VERIFY_DEFAULT ^ VERIFY_SHA1 ^ VERIFY_BLAKE3,
@@ -987,10 +1008,11 @@ TEST(VirtualInodeTest, sha1DoesNotChangeState) {
   }
 }
 
-TEST(VirtualInodeTest, unlinkMaterializesParents) {
+TEST_P(VirtualInodeTestBase, unlinkMaterializesParents) {
   TestFileDatabase files;
   auto builder = MakeTestTreeBuilder(files);
   auto mount = TestMount(builder, true);
+  maybeEnableCoroutines(mount);
 
   VERIFY_TREE(VERIFY_INITIAL);
 
@@ -1005,7 +1027,7 @@ TEST(VirtualInodeTest, unlinkMaterializesParents) {
 }
 
 // Materialization is different on Windows vs other platforms...
-TEST(VirtualInodeTest, materializationPropagation) {
+TEST_P(VirtualInodeTestBase, materializationPropagation) {
   // One by one, start with something fresh, load the one, and check the state
   TestFileDatabase files;
   for (const auto& info_ : files.getOriginalItems()) {
@@ -1016,6 +1038,7 @@ TEST(VirtualInodeTest, materializationPropagation) {
 
     auto builder = MakeTestTreeBuilder(files);
     auto mount = TestMount(builder, true);
+    maybeEnableCoroutines(mount);
     auto edenMount = mount.getEdenMount();
     VERIFY_TREE(VERIFY_INITIAL);
 
@@ -1037,6 +1060,7 @@ TEST(VirtualInodeTest, materializationPropagation) {
   for (size_t iteration = 0; iteration < 20; ++iteration) {
     auto builder = MakeTestTreeBuilder(files);
     auto mount = TestMount(builder, true);
+    maybeEnableCoroutines(mount);
     auto edenMount = mount.getEdenMount();
 
     // TestFileDatabase files;
@@ -1062,13 +1086,14 @@ TEST(VirtualInodeTest, materializationPropagation) {
   }
 }
 
-TEST(VirtualInodeTest, loadPropagation) {
+TEST_P(VirtualInodeTestBase, loadPropagation) {
   const size_t C = 10;
 
   // One by one, start with something fresh, load the one, and check the state
   TestFileDatabase files;
   auto builder = MakeTestTreeBuilder(files);
   auto mount = TestMount(builder, true);
+  maybeEnableCoroutines(mount);
   auto edenMount = mount.getEdenMount();
   for (const auto& info_ : files.getOriginalItems()) {
     auto& info = *info_;
@@ -1106,12 +1131,13 @@ TEST(VirtualInodeTest, loadPropagation) {
   VERIFY_TREE(VERIFY_INITIAL);
 }
 
-TEST(VirtualInodeTest, getBlob) {
+TEST_P(VirtualInodeTestBase, getBlob) {
   auto flags = VERIFY_DEFAULT ^ VERIFY_SHA1 ^ VERIFY_BLAKE3;
 
   TestFileDatabase files;
   auto builder = MakeTestTreeBuilder(files);
   auto mount = TestMount(builder, true);
+  maybeEnableCoroutines(mount);
   auto edenMount = mount.getEdenMount();
   VERIFY_TREE(flags);
 
@@ -1156,3 +1182,11 @@ TEST(VirtualInodeTest, getBlob) {
   VERIFY_TREE(flags);
   files.reset();
 }
+
+INSTANTIATE_TEST_SUITE_P(
+    VirtualInodeTestVariants,
+    VirtualInodeTestBase,
+    ::testing::Bool(),
+    [](const ::testing::TestParamInfo<bool>& info) {
+      return info.param ? "Coroutines" : "Futures";
+    });
