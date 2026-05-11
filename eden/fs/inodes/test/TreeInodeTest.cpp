@@ -7,8 +7,11 @@
 
 #include "eden/fs/inodes/TreeInode.h"
 
+#include "eden/fs/model/TreeAuxData.h"
+
 #include <folly/Exception.h>
 #include <folly/Random.h>
+#include <folly/coro/GtestHelpers.h>
 #include <folly/executors/ManualExecutor.h>
 #include <folly/test/TestUtils.h>
 #include <gmock/gmock.h>
@@ -1367,6 +1370,34 @@ TEST_P(
   ASSERT_NE(aclIter, contents->entries.end());
   EXPECT_TRUE(aclIter->second.isDirectory());
   EXPECT_TRUE(aclIter->second.isRestricted());
+}
+
+CO_TEST(TreeInodeTest, co_statOnFileInode) {
+  FakeTreeBuilder builder;
+  builder.setFiles({{"dir/file.txt", "contents"}});
+  TestMount mount{builder};
+  // No maybeEnableCoroutines: direct co_stat call.
+
+  auto fileInode = mount.getFileInode("dir/file.txt"_relpath);
+  auto st = co_await fileInode->co_stat(ObjectFetchContext::getNullContext());
+  EXPECT_GT(st.st_size, 0);
+}
+
+CO_TEST(TreeInodeTest, co_getTreeAuxDataOnTreeInode) {
+  FakeTreeBuilder builder;
+  builder.setFiles({{"dir/file.txt", "contents"}});
+  TestMount mount{builder};
+  // No maybeEnableCoroutines: direct co_getTreeAuxData call.
+
+  auto dirInode = mount.getTreeInode("dir"_relpath);
+  // FakeBackingStore does not implement getTreeAuxData, so the underlying
+  // backing-store call throws std::domain_error. The futures path
+  // (getTreeAuxData) propagates this exception; the coroutine path mirrors
+  // that behavior.
+  auto result = co_await folly::coro::co_awaitTry(
+      dirInode->co_getTreeAuxData(ObjectFetchContext::getNullContext()));
+  EXPECT_TRUE(result.hasException());
+  EXPECT_TRUE(result.hasException<std::domain_error>());
 }
 
 INSTANTIATE_TEST_SUITE_P(
