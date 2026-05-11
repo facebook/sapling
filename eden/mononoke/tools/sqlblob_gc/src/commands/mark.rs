@@ -93,7 +93,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             .clone()
             .map(|shard| Ok(handle_initial_generation(&ctx, &sqlblob, shard)))
             .collect();
-        stream::iter(set_initial_generation_futures.into_iter())
+        stream::iter(set_initial_generation_futures)
             .try_for_each_concurrent(max_parallelism, |fut| fut)
             .await?;
         info!("Completed initial generation set");
