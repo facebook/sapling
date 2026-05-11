@@ -1847,6 +1847,15 @@ class EdenConfig : private ConfigSettingManager {
       false,
       this};
 
+  /**
+   * Controls whether EdenFS uses phase 4 coroutine implementations
+   * (readdir and VirtualInode attribute fetching coroutine paths).
+   */
+  ConfigSetting<bool> enableCoroutinesPhase4{
+      "coroutines:enable-phase4",
+      false,
+      this};
+
   // [blobcache]
 
   /**
