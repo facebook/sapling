@@ -819,8 +819,8 @@ async fn derive_manifest<Root: RootDeletedManifestIdCommon>(
     .await?;
     let parents = bcs
         .parents()
-        .zip(parent_mf_ids.into_iter())
-        .zip(parent_unodes.into_iter())
+        .zip(parent_mf_ids)
+        .zip(parent_unodes)
         .map(|((parent, parent_dm), parent_unode)| (parent, parent_dm, parent_unode))
         .collect();
     let f = DeletedManifestDeriver::<Root::Manifest>::derive(

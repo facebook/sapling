@@ -163,8 +163,7 @@ async fn get_changes_bonsai(
                 })
                 .try_buffered(100)
                 .try_collect::<Vec<_>>()
-                .await?
-                .into_iter(),
+                .await?,
         ))
     } else {
         Ok(PathTree::from_iter(
@@ -740,8 +739,8 @@ impl<Root: RootDeletedManifestIdCommon> RootDeletedManifestDeriver<Root> {
         let (current_unode, parent_unodes) = get_unodes(ctx, derivation_ctx, &bonsai).await?;
         let parents = bonsai
             .parents()
-            .zip(parent_manifests.into_iter())
-            .zip(parent_unodes.into_iter())
+            .zip(parent_manifests)
+            .zip(parent_unodes)
             .map(|((bcs_id, parent_dm), parent_unode)| {
                 (bcs_id, parent_dm.id().clone(), parent_unode)
             })
