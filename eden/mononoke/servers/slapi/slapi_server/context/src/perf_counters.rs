@@ -84,9 +84,6 @@ define_perf_counters! {
         GetpackNumPossibleLFSFiles,
         GetpackPossibleLFSFilesSumSize,
         FilenodesTooBigHistory,
-        GettreepackDesignatedNodes,
-        GettreepackNumTreepacks,
-        GettreepackResponseSize,
         HgMutationStoreNumAdded,
         HgMutationStoreNumFetched,
         MemcacheHits,
@@ -138,7 +135,6 @@ impl PerfCounterType {
             | CachelibMisses
             | GetpackNumPossibleLFSFiles
             | GetpackPossibleLFSFilesSumSize
-            | GettreepackDesignatedNodes
             | MemcacheHits
             | MemcacheMisses
             | SqlReadsMaster
@@ -180,9 +176,6 @@ impl PerfCounterType {
             | GetpackNumPossibleLFSFiles
             | GetpackPossibleLFSFilesSumSize
             | FilenodesTooBigHistory
-            | GettreepackDesignatedNodes
-            | GettreepackNumTreepacks
-            | GettreepackResponseSize
             | HgMutationStoreNumAdded
             | HgMutationStoreNumFetched
             | MemcacheHits
