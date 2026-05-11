@@ -1243,7 +1243,7 @@ impl SaplingRemoteApiHandler for CommitTranslateId {
 
         // Convert bonsai ids to that of "to" repo, if necessary.
         if from_repo.repoid() != to_repo.repoid() {
-            input_to_bonsai = stream::iter(input_to_bonsai.into_iter())
+            input_to_bonsai = stream::iter(input_to_bonsai)
                 .then(|(id, bs)| {
                     let from_repo = from_repo.clone();
                     let to_repo = to_repo.clone();

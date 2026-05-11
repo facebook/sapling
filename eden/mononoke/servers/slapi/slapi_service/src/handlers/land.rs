@@ -187,7 +187,7 @@ async fn land_stack<R: MononokeRepo>(
         })
         .collect();
 
-    let old_to_new_hgids = old_hgids?.into_iter().zip(new_hgids?.into_iter()).collect();
+    let old_to_new_hgids = old_hgids?.into_iter().zip(new_hgids?).collect();
 
     Ok(LandStackData {
         new_head: new_head_hgid,
