@@ -635,7 +635,7 @@ impl AsyncMethodRequestQueue {
         } else {
             Ok(results
                 .inspect_err(|err| println!("Error: {:?}, skipping", err))
-                .then(|entry| async { stream::iter(entry.into_iter()) })
+                .then(|entry| async { stream::iter(entry) })
                 .flatten()
                 .collect::<Vec<(
                     RequestId,
