@@ -566,7 +566,7 @@ pub async fn process_bookmark_update_log_entry(
                     existing_changesets
                 );
 
-                stream::iter(missing_changesets.into_iter())
+                stream::iter(missing_changesets)
                     .map(|cs_id| {
                         cloned!(ctx, repo, bookmark_name);
 
