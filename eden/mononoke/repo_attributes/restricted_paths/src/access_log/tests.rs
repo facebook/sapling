@@ -24,6 +24,7 @@ use serde_json::json;
 
 use super::RestrictedPathAccessData;
 use super::log_source_results_to_scuba;
+use super::restriction_check_result_for_source_results;
 use crate::ManifestId;
 use crate::ManifestType;
 use crate::restriction_check::AuthorizationCheckResult;
@@ -68,6 +69,13 @@ impl<T: SourceRestrictionCheck> ShadowComparisonFieldFixture<T> {
             scuba,
             log_path,
         })
+    }
+
+    fn with_acl_manifest_mode(self, acl_manifest_mode: AclManifestMode) -> Self {
+        Self {
+            acl_manifest_mode,
+            ..self
+        }
     }
 
     fn log_with(
@@ -414,6 +422,83 @@ async fn test_shadow_config_errors_are_returned(fb: FacebookInit) -> Result<()> 
     assert_eq!(
         detail["acl_manifest"]["error"],
         json!("acl manifest lookup failed")
+    );
+    Ok(())
+}
+
+// What it tests: Both-mode source logging uses the union of successful sources
+// for top-level aggregate fields.
+// Expected: an AclManifest denial is visible in authorization, ACL, and
+// restricted-path fields even when config is unrestricted.
+#[mononoke::fbinit_test]
+async fn test_both_aggregate_fields_union_source_results(fb: FacebookInit) -> Result<()> {
+    let samples = ShadowComparisonFieldFixture::new(
+        fb,
+        unrestricted_result(),
+        Some(restricted_path_result(
+            false,
+            false,
+            "acl_manifest_acl",
+            "acl_manifest/restricted",
+        )?),
+        full_path_access_data()?,
+    )?
+    .with_acl_manifest_mode(AclManifestMode::Both)
+    .log_with(log_source_results_to_scuba)?;
+
+    assert_eq!(samples.len(), 1);
+    let sample = &samples[0];
+    assert_eq!(
+        sample_field(sample, "acl_manifest_mode"),
+        Some("both".to_string())
+    );
+    assert_eq!(
+        sample_field(sample, "has_authorization"),
+        Some("false".to_string())
+    );
+    assert_eq!(
+        sample_field(sample, "has_acl_access"),
+        Some("false".to_string())
+    );
+    assert_eq!(
+        sample_array(sample, "restricted_paths"),
+        vec!["acl_manifest/restricted".to_string()]
+    );
+    assert_eq!(
+        sample_array(sample, "acls"),
+        vec!["REPO_REGION:acl_manifest_acl".to_string()]
+    );
+    assert_eq!(
+        sample_array(sample, "considered_restricted_by"),
+        vec!["acl_manifest".to_string()]
+    );
+    assert_eq!(
+        sample_field(sample, "shadow_mismatch"),
+        Some("true".to_string())
+    );
+    Ok(())
+}
+
+// What it tests: Both-mode source-comparison callers return the union of
+// successful source results, matching the aggregate logging semantics.
+// Expected: an AclManifest-only restriction is denied instead of returning the
+// unrestricted config result.
+#[mononoke::fbinit_test]
+async fn test_both_check_result_unions_acl_manifest_only_restriction(
+    _fb: FacebookInit,
+) -> Result<()> {
+    let acl_manifest_result =
+        restricted_path_result(false, false, "acl_manifest_acl", "acl_manifest/restricted")?;
+    let result = restriction_check_result_for_source_results(
+        AclManifestMode::Both,
+        &unrestricted_result(),
+        Some(&acl_manifest_result),
+    )?;
+
+    assert!(!result.has_authorization);
+    assert_eq!(
+        result.restriction_roots,
+        vec![NonRootMPath::new("acl_manifest/restricted")?]
     );
     Ok(())
 }

@@ -8,6 +8,7 @@
 //! Restriction check helpers that turn restriction lookup results into
 //! authorization results.
 
+use std::collections::BTreeSet;
 use std::future::Future;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -346,6 +347,44 @@ impl SourceRestrictionSummary {
             .iter()
             .filter_map(SourceRestrictionCheck::restriction_root)
             .cloned()
+            .collect();
+
+        Self {
+            authorization: AuthorizationCheckResult::new(
+                has_acl_access,
+                is_allowlisted_tooling,
+                is_rollout_allowlisted,
+            ),
+            repo_region_acls,
+            restriction_roots,
+        }
+    }
+
+    pub(crate) fn from_check_union<'a, T>(checks: impl IntoIterator<Item = &'a T>) -> Self
+    where
+        T: SourceRestrictionCheck + 'a,
+    {
+        let checks = checks.into_iter().collect::<Vec<_>>();
+        let has_acl_access = checks
+            .iter()
+            .all(|check| check.authorization().has_acl_access());
+        let is_allowlisted_tooling = checks
+            .iter()
+            .any(|check| check.authorization().is_allowlisted_tooling());
+        let is_rollout_allowlisted = checks
+            .iter()
+            .any(|check| check.authorization().is_rollout_allowlisted());
+        let repo_region_acls = checks
+            .iter()
+            .map(|check| check.repo_region_identity().to_string())
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .collect();
+        let restriction_roots = checks
+            .iter()
+            .filter_map(|check| check.restriction_root().cloned())
+            .collect::<BTreeSet<_>>()
+            .into_iter()
             .collect();
 
         Self {

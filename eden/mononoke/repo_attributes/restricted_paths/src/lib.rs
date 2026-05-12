@@ -251,12 +251,17 @@ impl RestrictedPaths {
         manifest_type: ManifestType,
         cs_id: Option<ChangesetId>,
     ) -> Result<RestrictionCheckResult> {
-        if self.config().acl_manifest_mode == AclManifestMode::Shadow {
+        let acl_manifest_mode = self.config().acl_manifest_mode;
+        if matches!(
+            acl_manifest_mode,
+            AclManifestMode::Shadow | AclManifestMode::Both
+        ) {
             return access_log::log_source_comparison_access_by_manifest_if_restricted(
                 self,
                 ctx,
                 manifest_id,
                 manifest_type,
+                acl_manifest_mode,
             )
             .await;
         }
@@ -319,9 +324,17 @@ impl RestrictedPaths {
         path: NonRootMPath,
         cs_id: Option<ChangesetId>,
     ) -> Result<RestrictionCheckResult> {
-        if self.config().acl_manifest_mode == AclManifestMode::Shadow {
+        let acl_manifest_mode = self.config().acl_manifest_mode;
+        if matches!(
+            acl_manifest_mode,
+            AclManifestMode::Shadow | AclManifestMode::Both
+        ) {
             return access_log::log_source_comparison_access_by_path_if_restricted(
-                self, ctx, path, cs_id,
+                self,
+                ctx,
+                path,
+                cs_id,
+                acl_manifest_mode,
             )
             .await;
         }
@@ -712,19 +725,40 @@ fn missing_authoritative_source_error(
     )
 }
 
-fn selected_source_handles<'a, T: SourceRestrictionCheck>(
-    fetch_config: bool,
-    fetch_acl_manifest: bool,
-    handles: &'a SourceHandles<T>,
-) -> Option<Vec<&'a SharedFetchHandle<T>>> {
-    let mut selected = Vec::new();
-    if fetch_config {
-        selected.push(handles.config.as_ref()?);
+struct SelectedSourceHandles<'a, T: SourceRestrictionCheck> {
+    handles: Vec<&'a SharedFetchHandle<T>>,
+    missing_source: bool,
+}
+
+impl<T: SourceRestrictionCheck> SourceHandles<T> {
+    fn selected_for(
+        &self,
+        fetch_config: bool,
+        fetch_acl_manifest: bool,
+    ) -> SelectedSourceHandles<'_, T> {
+        let mut handles = Vec::new();
+        let mut missing_source = false;
+
+        if fetch_config {
+            if let Some(handle) = self.config.as_ref() {
+                handles.push(handle);
+            } else {
+                missing_source = true;
+            }
+        }
+        if fetch_acl_manifest {
+            if let Some(handle) = self.acl_manifest.as_ref() {
+                handles.push(handle);
+            } else {
+                missing_source = true;
+            }
+        }
+
+        SelectedSourceHandles {
+            handles,
+            missing_source,
+        }
     }
-    if fetch_acl_manifest {
-        selected.push(handles.acl_manifest.as_ref()?);
-    }
-    Some(selected)
 }
 
 /// Normalize the repo-configured rollout mode to the mode this access can use.
@@ -745,6 +779,9 @@ fn effective_acl_manifest_mode(
 ) -> AclManifestMode {
     match acl_manifest_mode {
         AclManifestMode::Shadow => AclManifestMode::Shadow,
+        // TODO(T248658346): ensure access through all other manifest types is
+        // deprecated
+        AclManifestMode::Both if acl_manifest_supported => AclManifestMode::Both,
         AclManifestMode::Authoritative if acl_manifest_supported => AclManifestMode::Authoritative,
         _ => AclManifestMode::Disabled,
     }
@@ -761,20 +798,26 @@ fn fetch_config_for_enforcement(effective_mode: AclManifestMode) -> bool {
 
 /// Whether AclManifest should be fetched as an authoritative enforcement source.
 fn fetch_acl_manifest_for_enforcement(effective_mode: AclManifestMode) -> bool {
-    effective_mode == AclManifestMode::Authoritative
+    matches!(
+        effective_mode,
+        AclManifestMode::Both | AclManifestMode::Authoritative
+    )
 }
 
 /// Whether AclManifest should be fetched for access-log telemetry.
 fn fetch_acl_manifest_for_logging(effective_mode: AclManifestMode) -> bool {
     matches!(
         effective_mode,
-        AclManifestMode::Shadow | AclManifestMode::Authoritative
+        AclManifestMode::Shadow | AclManifestMode::Both | AclManifestMode::Authoritative
     )
 }
 
 /// Whether logging needs both sources to produce source-comparison fields.
 fn compares_sources_for_logging(effective_mode: AclManifestMode) -> bool {
-    effective_mode == AclManifestMode::Shadow
+    matches!(
+        effective_mode,
+        AclManifestMode::Shadow | AclManifestMode::Both
+    )
 }
 
 async fn enforce_with_source_handles<'a, T>(
@@ -797,12 +840,15 @@ where
         }
     };
 
-    let authoritative = selected_source_handles(fetch_config, fetch_acl_manifest, handles)
-        .ok_or(missing_source_error)?;
-    let source_denials = futures::future::join_all(authoritative.into_iter().map(|handle| {
-        restriction_check::source_denies_access(handle, &candidates, &pre_filter_variant)
-    }))
-    .await;
+    let selected_sources = handles.selected_for(fetch_config, fetch_acl_manifest);
+    let mut source_denials =
+        futures::future::join_all(selected_sources.handles.into_iter().map(|handle| {
+            restriction_check::source_denies_access(handle, &candidates, &pre_filter_variant)
+        }))
+        .await;
+    if selected_sources.missing_source {
+        source_denials.push(Err(missing_source_error));
+    }
 
     restriction_check::authoritative_sources_deny_access(source_denials)
 }

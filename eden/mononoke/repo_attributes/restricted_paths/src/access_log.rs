@@ -165,6 +165,7 @@ pub(crate) async fn log_source_comparison_access_by_manifest_if_restricted(
     ctx: &CoreContext,
     manifest_id: ManifestId,
     manifest_type: ManifestType,
+    acl_manifest_mode: AclManifestMode,
 ) -> Result<RestrictionCheckResult> {
     let config_result = restriction_check::check_manifest_restriction_from_source(
         ctx,
@@ -199,19 +200,17 @@ pub(crate) async fn log_source_comparison_access_by_manifest_if_restricted(
         restricted_paths.config_based.manifest_id_store().repo_id(),
         &config_result,
         acl_manifest_result.as_ref(),
-        AclManifestMode::Shadow,
+        acl_manifest_mode,
         RestrictedPathAccessData::Manifest(manifest_id, manifest_type),
         restricted_paths.scuba.clone(),
     );
 
-    let config = match config_result {
-        Ok(config) => {
-            log_result?;
-            config
-        }
-        Err(err) => return Err(anyhow::Error::from(err)),
-    };
-    Ok(SourceRestrictionSummary::from_checks(config.as_ref()).into_restriction_check_result())
+    log_result?;
+    restriction_check_result_for_source_results(
+        acl_manifest_mode,
+        &config_result,
+        acl_manifest_result.as_ref(),
+    )
 }
 
 pub(crate) async fn log_source_comparison_access_by_path_if_restricted(
@@ -219,6 +218,7 @@ pub(crate) async fn log_source_comparison_access_by_path_if_restricted(
     ctx: &CoreContext,
     path: NonRootMPath,
     cs_id: Option<ChangesetId>,
+    acl_manifest_mode: AclManifestMode,
 ) -> Result<RestrictionCheckResult> {
     let config_result = restriction_check::check_path_restriction_from_source(
         ctx,
@@ -250,19 +250,36 @@ pub(crate) async fn log_source_comparison_access_by_path_if_restricted(
         restricted_paths.config_based.manifest_id_store().repo_id(),
         &config_result,
         acl_manifest_result.as_ref(),
-        AclManifestMode::Shadow,
+        acl_manifest_mode,
         RestrictedPathAccessData::FullPath { full_path: path },
         restricted_paths.scuba.clone(),
     );
 
-    let config = match config_result {
-        Ok(config) => {
-            log_result?;
-            config
-        }
-        Err(err) => return Err(anyhow::Error::from(err)),
+    log_result?;
+    restriction_check_result_for_source_results(
+        acl_manifest_mode,
+        &config_result,
+        acl_manifest_result.as_ref(),
+    )
+}
+
+fn restriction_check_result_for_source_results<T: SourceRestrictionCheck>(
+    acl_manifest_mode: AclManifestMode,
+    config_result: &SourceRestrictionResult<T>,
+    acl_manifest_result: Option<&SourceRestrictionResult<T>>,
+) -> Result<RestrictionCheckResult> {
+    let summary = if acl_manifest_mode == AclManifestMode::Both {
+        SourceRestrictionSummary::from_check_union(
+            successful_source_checks(Some(config_result))
+                .chain(successful_source_checks(acl_manifest_result)),
+        )
+    } else {
+        let config = config_result
+            .as_ref()
+            .map_err(|err| anyhow::anyhow!("{:#}", err))?;
+        SourceRestrictionSummary::from_checks(config.as_ref())
     };
-    Ok(SourceRestrictionSummary::from_checks(config.as_ref()).into_restriction_check_result())
+    Ok(summary.into_restriction_check_result())
 }
 
 pub(crate) fn spawn_log_source_results<T>(
@@ -299,7 +316,8 @@ pub(crate) fn spawn_log_source_results<T>(
 /// Log compact source-comparison results to Scuba.
 ///
 /// This emits one row when a source-comparison lookup either finds a
-/// restriction or fails. Aggregate fields use the config result, while source
+/// restriction or fails. Shadow aggregate fields use the config result; Both
+/// aggregate fields use the union of successful source results. Source
 /// disagreement is summarized with compact mismatch fields. If every available
 /// source completed unrestricted, no row is written.
 pub(crate) fn log_source_results_to_scuba<T: SourceRestrictionCheck>(
@@ -323,9 +341,15 @@ pub(crate) fn log_source_results_to_scuba<T: SourceRestrictionCheck>(
         return Ok(());
     };
 
-    let restriction_acls = match config_source.as_ref() {
-        Some(source) => source
-            .summary
+    let aggregate_summary = aggregate_summary_for_source_results(
+        acl_manifest_mode,
+        config_result,
+        acl_manifest_result,
+        config_source.as_ref(),
+        acl_manifest_source.as_ref(),
+    );
+    let restriction_acls = match aggregate_summary.as_ref() {
+        Some(summary) => summary
             .repo_region_acls()
             .iter()
             .map(|acl| {
@@ -341,9 +365,9 @@ pub(crate) fn log_source_results_to_scuba<T: SourceRestrictionCheck>(
         RestrictedPathLogData {
             repo_id,
             access_data,
-            aggregate: config_source.as_ref().map(|source| {
-                let summary = &source.summary;
-                RestrictedPathAggregateLogData {
+            aggregate: aggregate_summary
+                .as_ref()
+                .map(|summary| RestrictedPathAggregateLogData {
                     restricted_paths: Some(summary.restriction_roots()),
                     authorization: LoggedAuthorization {
                         has_authorization: summary.has_authorization(),
@@ -352,8 +376,7 @@ pub(crate) fn log_source_results_to_scuba<T: SourceRestrictionCheck>(
                         has_acl_access: summary.has_acl_access(),
                     },
                     acls: restriction_acls.iter().collect(),
-                }
-            }),
+                }),
             considered_restricted_by: considered_restricted_by_for_source_results(
                 config_source.as_ref(),
                 acl_manifest_source.as_ref(),
@@ -395,7 +418,10 @@ where
         },
     );
 
-    if acl_manifest_mode == AclManifestMode::Shadow {
+    if matches!(
+        acl_manifest_mode,
+        AclManifestMode::Shadow | AclManifestMode::Both
+    ) {
         let config_result = config_result.ok_or_else(|| {
             anyhow::anyhow!("missing config source for source-comparison logging")
         })?;
@@ -442,6 +468,35 @@ fn legacy_logging_result<T: SourceRestrictionCheck>(
         .map(|(source_name, result)| result.map(|checks| (source_name, checks)))
         .transpose()
         .map_err(anyhow::Error::from)
+}
+
+fn aggregate_summary_for_source_results<T: SourceRestrictionCheck>(
+    acl_manifest_mode: AclManifestMode,
+    config_result: &SourceRestrictionResult<T>,
+    acl_manifest_result: Option<&SourceRestrictionResult<T>>,
+    config_source: Option<&SuccessfulSourceData>,
+    acl_manifest_source: Option<&SuccessfulSourceData>,
+) -> Option<SourceRestrictionSummary> {
+    if acl_manifest_mode != AclManifestMode::Both {
+        return config_source.map(|source| source.summary.clone());
+    }
+
+    let any_source_succeeded = config_source.is_some() || acl_manifest_source.is_some();
+    any_source_succeeded.then(|| {
+        SourceRestrictionSummary::from_check_union(
+            successful_source_checks(Some(config_result))
+                .chain(successful_source_checks(acl_manifest_result)),
+        )
+    })
+}
+
+fn successful_source_checks<T: SourceRestrictionCheck>(
+    result: Option<&SourceRestrictionResult<T>>,
+) -> impl Iterator<Item = &T> {
+    result
+        .into_iter()
+        .filter_map(|result| result.as_ref().ok())
+        .flat_map(|checks| checks.as_ref().iter())
 }
 
 /// Build the source-comparison fields for rows that need Shadow telemetry.

@@ -759,24 +759,22 @@ async fn test_both_mode_agreement_allows(fb: FacebookInit) -> Result<()> {
     let allowed_acl = MononokeIdentity::from_str("REPO_REGION:myusername_project")?;
     let restricted_root = NonRootMPath::new("user_project/foo")?;
 
-    RestrictedPathsTestDataBuilder::new()
+    let result = RestrictedPathsTestDataBuilder::new()
         .with_acl_manifest_mode(AclManifestMode::Both)
         .with_config_restricted_paths(vec![(restricted_root.clone(), allowed_acl.clone())])
         .with_acl_manifest_restricted_paths(vec![(restricted_root, allowed_acl)])
         .with_file_path_changes(vec![("user_project/foo/file", None)])
-        .with_enforcement_scenarios(vec![(
-            vec![
-                EnforcementConditionSetBuilder::new()
-                    .with_always_enabled(true)
-                    .build(),
-            ],
-            false,
-        )])
         .build(fb)
         .await?
-        .run_restricted_paths_test()
+        .observe_path_enforcement_after_commit(
+            NonRootMPath::new("user_project/foo/file")?,
+            &[EnforcementConditionSetBuilder::new()
+                .with_always_enabled(true)
+                .build()],
+        )
         .await?;
 
+    assert!(!result);
     Ok(())
 }
 
@@ -789,24 +787,22 @@ async fn test_both_mode_acl_manifest_deny_overrides_config_allow(fb: FacebookIni
     let denied_acl = MononokeIdentity::from_str("REPO_REGION:restricted_acl")?;
     let restricted_root = NonRootMPath::new("restricted/dir")?;
 
-    RestrictedPathsTestDataBuilder::new()
+    let result = RestrictedPathsTestDataBuilder::new()
         .with_acl_manifest_mode(AclManifestMode::Both)
         .with_config_restricted_paths(vec![(restricted_root.clone(), allowed_acl)])
         .with_acl_manifest_restricted_paths(vec![(restricted_root, denied_acl.clone())])
         .with_file_path_changes(vec![("restricted/dir/file", None)])
-        .with_enforcement_scenarios(vec![(
-            vec![
-                EnforcementConditionSetBuilder::new()
-                    .with_restriction_acls([denied_acl])
-                    .build(),
-            ],
-            false,
-        )])
         .build(fb)
         .await?
-        .run_restricted_paths_test()
+        .observe_path_enforcement_after_commit(
+            NonRootMPath::new("restricted/dir/file")?,
+            &[EnforcementConditionSetBuilder::new()
+                .with_restriction_acls([denied_acl])
+                .build()],
+        )
         .await?;
 
+    assert!(result);
     Ok(())
 }
 
@@ -819,16 +815,22 @@ async fn test_both_mode_config_deny_overrides_acl_manifest_allow(fb: FacebookIni
     let allowed_acl = MononokeIdentity::from_str("REPO_REGION:myusername_project")?;
     let restricted_root = NonRootMPath::new("restricted/dir")?;
 
-    RestrictedPathsTestDataBuilder::new()
+    let result = RestrictedPathsTestDataBuilder::new()
         .with_acl_manifest_mode(AclManifestMode::Both)
-        .with_config_restricted_paths(vec![(restricted_root.clone(), denied_acl)])
+        .with_config_restricted_paths(vec![(restricted_root.clone(), denied_acl.clone())])
         .with_acl_manifest_restricted_paths(vec![(restricted_root, allowed_acl)])
         .with_file_path_changes(vec![("restricted/dir/file", None)])
         .build(fb)
         .await?
-        .observe_restricted_paths_scenario(&[])
+        .observe_path_enforcement_after_commit(
+            NonRootMPath::new("restricted/dir/file")?,
+            &[EnforcementConditionSetBuilder::new()
+                .with_restriction_acls([denied_acl])
+                .build()],
+        )
         .await?;
 
+    assert!(result);
     Ok(())
 }
 
@@ -865,7 +867,7 @@ async fn test_both_mode_deny_overrides_sibling_error(fb: FacebookInit) -> Result
 #[mononoke::fbinit_test]
 async fn test_both_mode_allow_plus_sibling_error_surfaces_error(fb: FacebookInit) -> Result<()> {
     let allowed_acl = MononokeIdentity::from_str("REPO_REGION:myusername_project")?;
-    let _result = RestrictedPathsTestDataBuilder::new()
+    let result = RestrictedPathsTestDataBuilder::new()
         .with_acl_manifest_mode(AclManifestMode::Both)
         .with_config_restricted_paths(vec![(
             NonRootMPath::new("restricted/dir")?,
@@ -881,6 +883,7 @@ async fn test_both_mode_allow_plus_sibling_error_surfaces_error(fb: FacebookInit
         )
         .await;
 
+    assert!(result.is_err());
     Ok(())
 }
 
