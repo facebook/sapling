@@ -15,6 +15,7 @@
 
 # Use revlog changelog for streaming clone
   $ setconfig clone.use-rust=true clone.use-commit-graph=false
+  $ setconfig experimental.use-slapi-streaming-clone=true
 
 setup configuration
   $ BLOB_TYPE="blob_files" default_setup_drawdag
@@ -49,37 +50,6 @@ Verify the changelog files match the source
 
 Verify the repository is functional - dump the whole commit graph
   $ cd repo-slapi-streamclone
-  $ hg log -G -T '{node|short} {desc}\n'
-  @  * C (glob)
-  │
-  o  * B (glob)
-  │
-  o  * A (glob)
-  
-
-
-
-Test clone using wireproto path (use-slapi-streaming-clone=false)
-  $ cd "$TESTTMP"
-  $ hg clone mono:repo repo-wireproto-streamclone --config experimental.use-slapi-streaming-clone=false
-  Cloning repo into $TESTTMP/repo-wireproto-streamclone
-  fetching changelog
-  2 files to transfer, * bytes of data (glob)
-  transferred * bytes in * seconds (*) (glob)
-  fetching selected remote bookmarks
-  Checking out 'master_bookmark'
-  3 files updated
-
-Verify the wireproto clone changelog files match the source
-  $ diff repo-wireproto-streamclone/.hg/store/00changelog.i repo/.hg/store/00changelog.i
-  $ diff repo-wireproto-streamclone/.hg/store/00changelog.d repo/.hg/store/00changelog.d
-
-Compare both clones - SLAPI and wireproto should produce identical results
-  $ diff repo-slapi-streamclone/.hg/store/00changelog.i repo-wireproto-streamclone/.hg/store/00changelog.i
-  $ diff repo-slapi-streamclone/.hg/store/00changelog.d repo-wireproto-streamclone/.hg/store/00changelog.d
-
-Verify the wireproto clone is functional
-  $ cd repo-wireproto-streamclone
   $ hg log -G -T '{node|short} {desc}\n'
   @  * C (glob)
   │
@@ -125,46 +95,6 @@ Clone without tag using SLAPI - should get 0 bytes (no default tag chunks)
 Verify both clones have identical changelog files as source
   $ diff repo-slapi-tag/.hg/store/00changelog.i repo/.hg/store/00changelog.i
   $ diff repo-slapi-tag/.hg/store/00changelog.d repo/.hg/store/00changelog.d
-
-Test clone with tag using wireproto (resembles test-streaming-clone-tag.t)
-Clone with tag using wireproto - should use streaming clone with the tag
-  $ hg clone mono:repo repo-wireproto-tag --config experimental.use-slapi-streaming-clone=false --config stream_out_shallow.tag=my_tag
-  Cloning repo into $TESTTMP/repo-wireproto-tag
-  fetching changelog
-  2 files to transfer, * bytes of data (glob)
-  transferred * bytes in * seconds (*) (glob)
-  fetching selected remote bookmarks
-  Checking out 'master_bookmark'
-  3 files updated
-
-Clone without tag using wireproto - should get 0 bytes (no default tag chunks)
-  $ hg clone mono:repo repo-wireproto-notag --config experimental.use-slapi-streaming-clone=false
-  Cloning repo into $TESTTMP/repo-wireproto-notag
-  fetching changelog
-  2 files to transfer, 0 bytes of data
-  transferred 0 bytes in * seconds (*) (glob)
-  fetching selected remote bookmarks
-  Checking out 'master_bookmark'
-  3 files updated
-
-Verify wireproto tag clone has identical changelog files as source
-  $ diff repo-wireproto-tag/.hg/store/00changelog.i repo/.hg/store/00changelog.i
-  $ diff repo-wireproto-tag/.hg/store/00changelog.d repo/.hg/store/00changelog.d
-
-Compare SLAPI and wireproto tag clones - should produce identical results
-  $ diff repo-slapi-tag/.hg/store/00changelog.i repo-wireproto-tag/.hg/store/00changelog.i
-  $ diff repo-slapi-tag/.hg/store/00changelog.d repo-wireproto-tag/.hg/store/00changelog.d
-
-Verify wireproto tag clone is functional
-  $ cd repo-wireproto-tag
-  $ hg log -G -T '{node|short} {desc}\n'
-  @  * C (glob)
-  │
-  o  * B (glob)
-  │
-  o  * A (glob)
-  
-  $ cd "$TESTTMP"
 
 Test with multiple chunks
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "delete from streaming_changelog_chunks where repo_id = 0;"

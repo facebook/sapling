@@ -10,6 +10,7 @@
 
 # This is the "modern" way to trigger a streaming clone (only streams changelog - not files).
   $ setconfig clone.use-rust=true clone.use-commit-graph=false
+  $ setconfig experimental.use-slapi-streaming-clone=true
 
 setup configuration
   $ BLOB_TYPE="blob_files" default_setup_drawdag
@@ -40,8 +41,8 @@ Try creating again, this should fail
   $ hg clone mono:repo repo-streamclone
   Cloning repo into $TESTTMP/repo-streamclone
   fetching changelog
-  2 files to transfer, 363 bytes of data
-  transferred 363 bytes in * seconds (*) (glob)
+  streaming changelog via SLAPI
+  transferred * in * seconds (*) (glob)
   fetching selected remote bookmarks
   Checking out 'master_bookmark'
   3 files updated
@@ -63,8 +64,8 @@ Try creating again, this should fail
   $ hg clone mono:repo repo-streamclone
   Cloning repo into $TESTTMP/repo-streamclone
   fetching changelog
-  2 files to transfer, 363 bytes of data
-  transferred 363 bytes in 0.0 seconds (354 KB/sec)
+  streaming changelog via SLAPI
+  transferred * in * seconds (*) (glob)
   fetching selected remote bookmarks
   Checking out 'master_bookmark'
   3 files updated
@@ -114,8 +115,8 @@ Push a few new commits and update streaming clone
   $ hg clone mono:repo repo-streamclone-2
   Cloning repo into $TESTTMP/repo-streamclone-2
   fetching changelog
-  2 files to transfer, 363 bytes of data
-  transferred 363 bytes in * seconds (* KB/sec) (glob)
+  streaming changelog via SLAPI
+  transferred * in * seconds (*) (glob)
   fetching selected remote bookmarks
   Checking out 'master_bookmark'
   4 files updated
@@ -140,8 +141,8 @@ Clone it again to make sure saved streaming chunks are valid
   $ hg clone mono:repo repo-streamclone-3
   Cloning repo into $TESTTMP/repo-streamclone-3
   fetching changelog
-  2 files to transfer, 737 bytes of data
-  transferred 737 bytes in 0.0 seconds (* KB/sec) (glob)
+  streaming changelog via SLAPI
+  transferred * in * seconds (*) (glob)
   fetching selected remote bookmarks
   Checking out 'master_bookmark'
   4 files updated

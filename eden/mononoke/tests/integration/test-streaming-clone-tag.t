@@ -10,6 +10,7 @@
 
 # This is the "modern" way to trigger a streaming clone (only streams changelog - not files).
   $ setconfig clone.use-rust=true clone.use-commit-graph=false
+  $ setconfig experimental.use-slapi-streaming-clone=true
 
 setup configuration
   $ BLOB_TYPE="blob_files" default_setup_drawdag
@@ -33,8 +34,8 @@ Clone - check that no bytes were transferred from streaming clone because no tag
   $ hg clone mono:repo repo-streamclone
   Cloning repo into $TESTTMP/repo-streamclone
   fetching changelog
-  2 files to transfer, 0 bytes of data
-  transferred 0 bytes in * seconds (*) (glob)
+  streaming changelog via SLAPI
+  transferred * in * seconds (*) (glob)
   fetching selected remote bookmarks
   Checking out 'master_bookmark'
   3 files updated
@@ -48,8 +49,8 @@ Now clone with tag, make sure that streaming clone was used
   $ hg clone mono:repo repo-streamclone-tag --config stream_out_shallow.tag="$TAG"
   Cloning repo into $TESTTMP/repo-streamclone-tag
   fetching changelog
-  2 files to transfer, 363 bytes of data
-  transferred 363 bytes in * seconds (*) (glob)
+  streaming changelog via SLAPI
+  transferred * in * seconds (*) (glob)
   fetching selected remote bookmarks
   Checking out 'master_bookmark'
   3 files updated
