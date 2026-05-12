@@ -527,6 +527,14 @@ mod tests {
         ctx: &CoreContext,
         path_acls: Vec<(&str, &str)>,
     ) -> anyhow::Result<Repo> {
+        setup_restricted_repo_with_mode(ctx, path_acls, AclManifestMode::Both).await
+    }
+
+    async fn setup_restricted_repo_with_mode(
+        ctx: &CoreContext,
+        path_acls: Vec<(&str, &str)>,
+        acl_manifest_mode: AclManifestMode,
+    ) -> anyhow::Result<Repo> {
         let repo_id = RepositoryId::new(0);
 
         let path_acls_map: HashMap<NonRootMPath, MononokeIdentity> = path_acls
@@ -549,7 +557,7 @@ mod tests {
             path_acls: path_acls_map,
             use_manifest_id_cache: true,
             cache_update_interval_ms: 5,
-            acl_manifest_mode: AclManifestMode::Both,
+            acl_manifest_mode,
             ..Default::default()
         };
 
@@ -704,6 +712,142 @@ mod tests {
             .restriction_check()
             .await
             .map_err(Into::into)
+    }
+
+    async fn get_both_mode_restriction_check_for_manifest(
+        fb: FacebookInit,
+        config_path_acls: Vec<(&str, &str)>,
+        acl_manifest_path_acls: Vec<(&str, &str)>,
+        file_to_add: (&str, &str),
+        target_manifest_path: &str,
+    ) -> anyhow::Result<Vec<ManifestRestrictionCheckResult>> {
+        let ctx = create_test_ctx(fb).await;
+        let repo =
+            setup_restricted_repo_with_mode(&ctx, config_path_acls, AclManifestMode::Both).await?;
+
+        let mut commit_ctx =
+            CreateCommitContext::new_root(&ctx, &repo).add_file(file_to_add.0, file_to_add.1);
+        for (root, acl) in acl_manifest_path_acls {
+            let slacl_path = format!("{root}/.slacl");
+            let slacl_content = format!("repo_region_acl = \"{acl}\"\n");
+            commit_ctx = commit_ctx.add_file(slacl_path.as_str(), slacl_content);
+        }
+        let bcs_id = commit_ctx.commit().await?;
+
+        let hg_cs_id = repo.derive_hg_changeset(&ctx, bcs_id).await?;
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
+        let hg_cs = hg_cs_id.load(&ctx, repo.repo_blobstore()).await?;
+        let root_mfid = hg_cs.manifestid();
+
+        let blobstore = Arc::new(repo.repo_blobstore().clone());
+        let target_path = MPath::try_from(target_manifest_path)?;
+        let target_mfid = root_mfid
+            .list_tree_entries(ctx.clone(), blobstore)
+            .try_collect::<Vec<_>>()
+            .await?
+            .into_iter()
+            .find(|(path, _)| *path == target_path)
+            .map(|(_, mfid)| mfid)
+            .ok_or_else(|| anyhow::anyhow!("manifest for {} not found", target_manifest_path))?;
+
+        let repo_ctx = RepoContext::new_test(ctx, Arc::new(repo)).await?;
+        let hg = repo_ctx.hg();
+
+        let restriction_ctx =
+            HgAugmentedTreeRestrictionContext::new(hg, target_mfid.into()).await?;
+        restriction_ctx
+            .restriction_check()
+            .await
+            .map_err(Into::into)
+    }
+
+    // What it tests: Hg manifest restriction metadata should include
+    // AclManifest-only restrictions in Both mode after manifest metadata uses
+    // the AclManifest source.
+    // Expected: AclManifest-only manifest restrictions are returned.
+    #[mononoke::fbinit_test]
+    async fn test_check_manifest_permission_both_mode_acl_manifest_only_root(
+        fb: FacebookInit,
+    ) -> anyhow::Result<()> {
+        let result = get_both_mode_restriction_check_for_manifest(
+            fb,
+            vec![],
+            vec![("acl_manifest_only", "REPO_REGION:restricted_acl")],
+            ("acl_manifest_only/file.txt", "secret"),
+            "acl_manifest_only",
+        )
+        .await?;
+
+        // TODO(T248658346): assert that the AclManifest-only manifest
+        // restriction is returned. The Hg primitive currently uses config-backed
+        // manifest lookup.
+        assert!(result.is_empty());
+
+        Ok(())
+    }
+
+    // What it tests: Hg manifest restriction metadata should still include
+    // config-only restrictions in Both mode.
+    // Expected: config-backed manifest restrictions are returned.
+    #[mononoke::fbinit_test]
+    async fn test_check_manifest_permission_both_mode_config_only_root(
+        fb: FacebookInit,
+    ) -> anyhow::Result<()> {
+        let result = get_both_mode_restriction_check_for_manifest(
+            fb,
+            vec![("config_only", "REPO_REGION:restricted_acl")],
+            vec![],
+            ("config_only/file.txt", "secret"),
+            "config_only",
+        )
+        .await?;
+
+        let check = result.first().ok_or_else(|| {
+            anyhow::anyhow!("expected config-only restriction info for Both mode")
+        })?;
+        let info = check.restriction_info();
+        assert_eq!(
+            info.restriction_root.as_ref(),
+            Some(&NonRootMPath::new("config_only")?)
+        );
+        assert_eq!(info.repo_region_acl, "REPO_REGION:restricted_acl");
+
+        Ok(())
+    }
+
+    // What it tests: Both mode should preserve same-root disagreements between
+    // config and AclManifest manifest metadata.
+    // Expected: both source results are returned, with config carrying the
+    // restriction root and AclManifest carrying only the ACL.
+    #[mononoke::fbinit_test]
+    async fn test_check_manifest_permission_both_mode_same_root_disagreement(
+        fb: FacebookInit,
+    ) -> anyhow::Result<()> {
+        let result = get_both_mode_restriction_check_for_manifest(
+            fb,
+            vec![("shared", "REPO_REGION:config_acl")],
+            vec![("shared", "REPO_REGION:acl_manifest_acl")],
+            ("shared/file.txt", "secret"),
+            "shared",
+        )
+        .await?;
+
+        // TODO(T248658346): assert that both config and AclManifest metadata
+        // results are returned. Manifest metadata currently returns only the
+        // config-backed result.
+        assert_eq!(result.len(), 1);
+        let check = result.first().ok_or_else(|| {
+            anyhow::anyhow!("expected config-backed restriction info for Both mode")
+        })?;
+        let info = check.restriction_info();
+        assert_eq!(
+            info.restriction_root.as_ref(),
+            Some(&NonRootMPath::new("shared")?)
+        );
+        assert_eq!(info.repo_region_acl, "REPO_REGION:config_acl");
+
+        Ok(())
     }
 
     #[mononoke::fbinit_test]

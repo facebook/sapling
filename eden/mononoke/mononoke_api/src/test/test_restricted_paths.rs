@@ -12,6 +12,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use context::CoreContext;
 use fbinit::FacebookInit;
+use metaconfig_types::AclManifestMode;
 use metaconfig_types::RestrictedPathsConfig;
 use mononoke_macros::mononoke;
 use mononoke_types::NonRootMPath;
@@ -388,6 +389,106 @@ async fn test_batch_all_unrestricted(fb: FacebookInit) -> Result<()> {
     ];
 
     pretty_assertions::assert_eq!(actual, expected);
+
+    Ok(())
+}
+
+// What it tests: Both-mode path metadata should include config-only
+// restrictions after metadata results are unioned across sources.
+// Expected: config-only restrictions are returned.
+#[mononoke::fbinit_test]
+async fn test_batch_restriction_info_both_mode_config_only_root(fb: FacebookInit) -> Result<()> {
+    let (_repo_ctx, cs_ctx) = create_both_mode_test_changeset(
+        fb,
+        vec![("config_only", "TIER:config-acl")],
+        vec![],
+        vec!["config_only/file.txt"],
+    )
+    .await?;
+
+    let results = cs_ctx
+        .paths_restriction_info(vec![NonRootMPath::new("config_only/file.txt")?], false)
+        .await?;
+
+    let infos = results
+        .first()
+        .map(|(_, infos)| infos.as_slice())
+        .unwrap_or_default();
+    // TODO(T248658346): assert that the config-only restriction is returned.
+    // Both path metadata currently uses only the AclManifest source.
+    assert!(infos.is_empty());
+
+    Ok(())
+}
+
+// What it tests: Both-mode path metadata should include AclManifest-only
+// restrictions.
+// Expected: AclManifest-only restrictions are returned.
+#[mononoke::fbinit_test]
+async fn test_batch_restriction_info_both_mode_acl_manifest_only_root(
+    fb: FacebookInit,
+) -> Result<()> {
+    let (_repo_ctx, cs_ctx) = create_both_mode_test_changeset(
+        fb,
+        vec![],
+        vec![("acl_manifest_only", "REPO_REGION:acl_manifest_acl")],
+        vec!["acl_manifest_only/file.txt"],
+    )
+    .await?;
+
+    let results = cs_ctx
+        .paths_restriction_info(
+            vec![NonRootMPath::new("acl_manifest_only/file.txt")?],
+            false,
+        )
+        .await?;
+
+    let infos = results
+        .first()
+        .map(|(_, infos)| infos.as_slice())
+        .unwrap_or_default();
+    let info = infos
+        .first()
+        .ok_or_else(|| anyhow::anyhow!("expected AclManifest-only restriction"))?;
+    assert_eq!(
+        info.restriction_root(),
+        &NonRootMPath::new("acl_manifest_only")?
+    );
+    assert_eq!(info.repo_region_acl(), "REPO_REGION:acl_manifest_acl");
+
+    Ok(())
+}
+
+// What it tests: Both-mode path metadata should prefer config on
+// same-root disagreement.
+// Expected: the config ACL is returned for the shared root.
+#[mononoke::fbinit_test]
+async fn test_batch_restriction_info_both_mode_same_root_prefers_config(
+    fb: FacebookInit,
+) -> Result<()> {
+    let (_repo_ctx, cs_ctx) = create_both_mode_test_changeset(
+        fb,
+        vec![("shared", "REPO_REGION:config_acl")],
+        vec![("shared", "REPO_REGION:acl_manifest_acl")],
+        vec!["shared/file.txt"],
+    )
+    .await?;
+
+    let results = cs_ctx
+        .paths_restriction_info(vec![NonRootMPath::new("shared/file.txt")?], false)
+        .await?;
+
+    let infos = results
+        .first()
+        .map(|(_, infos)| infos.as_slice())
+        .unwrap_or_default();
+    let info = infos
+        .first()
+        .ok_or_else(|| anyhow::anyhow!("expected same-root restriction"))?;
+    assert_eq!(info.restriction_root(), &NonRootMPath::new("shared")?);
+    // TODO(T248658346): assert that config wins for same-root disagreement.
+    // Both path metadata currently uses only the AclManifest source.
+    assert_eq!(info.repo_region_acl(), "REPO_REGION:acl_manifest_acl");
 
     Ok(())
 }
@@ -960,22 +1061,22 @@ async fn create_test_restricted_paths(
     fb: FacebookInit,
     path_acls: Vec<(&str, &str)>,
 ) -> Result<Arc<RestrictedPaths>> {
-    let repo_id = RepositoryId::new(0);
+    create_test_restricted_paths_with_mode(fb, path_acls, AclManifestMode::Disabled).await
+}
 
-    let path_acls_map: HashMap<NonRootMPath, MononokeIdentity> = path_acls
-        .into_iter()
-        .map(|(path, acl_str)| -> Result<_> {
-            Ok((
-                NonRootMPath::new(path)?,
-                MononokeIdentity::from_str(acl_str)?,
-            ))
-        })
-        .collect::<Result<_>>()?;
+async fn create_test_restricted_paths_with_mode(
+    fb: FacebookInit,
+    path_acls: Vec<(&str, &str)>,
+    acl_manifest_mode: AclManifestMode,
+) -> Result<Arc<RestrictedPaths>> {
+    let repo_id = RepositoryId::new(0);
+    let path_acls_map = build_path_acls_map(path_acls)?;
 
     let config = RestrictedPathsConfig {
         path_acls: path_acls_map,
         use_manifest_id_cache: false,
         cache_update_interval_ms: 100,
+        acl_manifest_mode,
         ..Default::default()
     };
 
@@ -1002,6 +1103,77 @@ async fn create_test_restricted_paths(
         scuba,
         repo_derived_data,
     )?))
+}
+
+async fn create_both_mode_test_changeset(
+    fb: FacebookInit,
+    config_path_acls: Vec<(&str, &str)>,
+    acl_manifest_path_acls: Vec<(&str, &str)>,
+    file_paths: Vec<&str>,
+) -> Result<(RepoContext<Repo>, ChangesetContext<Repo>)> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo_id = RepositoryId::new(0);
+    let config = RestrictedPathsConfig {
+        path_acls: build_path_acls_map(config_path_acls)?,
+        use_manifest_id_cache: false,
+        cache_update_interval_ms: 100,
+        acl_manifest_mode: AclManifestMode::Both,
+        ..Default::default()
+    };
+    let manifest_id_store = Arc::new(
+        SqlRestrictedPathsManifestIdStoreBuilder::with_sqlite_in_memory()?.with_repo_id(repo_id),
+    );
+    let acl_provider = DummyAclProvider::new(fb)?;
+    let scuba = MononokeScubaSampleBuilder::with_discard();
+    let config_based = Arc::new(RestrictedPathsConfigBased::new(
+        config,
+        manifest_id_store,
+        None,
+    ));
+
+    let mut factory = TestRepoFactory::new(fb)?;
+    let repo: Repo = factory.build().await?;
+    let repo_derived_data = repo.repo_derived_data_arc();
+    let restricted_paths = Arc::new(RestrictedPaths::new(
+        config_based,
+        acl_provider,
+        scuba,
+        repo_derived_data,
+    )?);
+    let repo: Repo = factory
+        .with_restricted_paths(restricted_paths)
+        .build()
+        .await?;
+
+    let mut commit_ctx = CreateCommitContext::new_root(&ctx, &repo);
+    for file_path in file_paths {
+        commit_ctx = commit_ctx.add_file(file_path, "content");
+    }
+    for (root, acl) in acl_manifest_path_acls {
+        let slacl_path = format!("{root}/.slacl");
+        let slacl_content = format!("repo_region_acl = \"{acl}\"\n");
+        commit_ctx = commit_ctx.add_file(slacl_path.as_str(), slacl_content);
+    }
+    let root_cs_id = commit_ctx.commit().await?;
+
+    let repo_ctx = RepoContext::new_test(ctx.clone(), Arc::new(repo)).await?;
+    let cs_ctx = ChangesetContext::new(repo_ctx.clone(), root_cs_id);
+
+    Ok((repo_ctx, cs_ctx))
+}
+
+fn build_path_acls_map(
+    path_acls: Vec<(&str, &str)>,
+) -> Result<HashMap<NonRootMPath, MononokeIdentity>> {
+    path_acls
+        .into_iter()
+        .map(|(path, acl_str)| -> Result<_> {
+            Ok((
+                NonRootMPath::new(path)?,
+                MononokeIdentity::from_str(acl_str)?,
+            ))
+        })
+        .collect()
 }
 
 /// Create a RepoContext and ChangesetContext with restricted paths configured.
