@@ -198,8 +198,8 @@ impl<E: EdgeType> CommitGraphOps<E> {
                     .await?;
 
                 let parents: Vec<_> = all_edges
-                    .iter()
-                    .flat_map(|(_cs_id, edges)| edges.edges().parents::<E>().map(|node| node.cs_id))
+                    .values()
+                    .flat_map(|edges| edges.edges().parents::<E>().map(|node| node.cs_id))
                     .collect();
 
                 let parent_edges = self
@@ -635,10 +635,8 @@ impl<E: EdgeType> CommitGraphOps<E> {
                         .await?;
 
                     let parents: Vec<_> = all_edges
-                        .iter()
-                        .flat_map(|(_cs_id, edges)| {
-                            edges.edges().parents::<E>().map(|node| node.cs_id)
-                        })
+                        .values()
+                        .flat_map(|edges| edges.edges().parents::<E>().map(|node| node.cs_id))
                         .collect();
 
                     let parent_edges = graph
