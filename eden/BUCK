@@ -29,6 +29,9 @@ fbpkg.builder(
     buck_opts = fbpkg.buck_opts(
         mode = "opt",
     ),
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
 
     # This is doing (almost) the same as the historical EdenFS packaging config
     # (https://fburl.com/code/lmpy7mvj).

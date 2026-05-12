@@ -9,6 +9,10 @@ rust_binary(
         "src/*.rs",
         "src/facebook/*.rs",
     ]),
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
     features = [
         "fb",
     ],

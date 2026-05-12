@@ -143,6 +143,12 @@ buck_genrule(
         cp $SRCS $OUT &&
         chmod 04755 $OUT
     """,
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
+    exec_compatible_with = [
+        "ovr_config//os:linux",
+    ],
 )
 
 # The privhelper is installed setuid root. Since it is a privileged
