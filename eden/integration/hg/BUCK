@@ -369,7 +369,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "status",
     srcs = ["status_test.py"],
     env = artifacts["env"],
