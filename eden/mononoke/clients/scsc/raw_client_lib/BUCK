@@ -7,6 +7,17 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     allow_oss_build = False,
     autocargo = {"ignore_rule": True},
+    # Not a public library.
+    # Use fbcode/scm/scmquery/client/src/lib.rs instead
+    visibility = [
+        "//eden/...",
+        "//scm/...",
+        # Allow only existing use cases
+        "//devai/config/loader_rs/...",
+        "//devai/devmate_client/...",
+        "//atlas/lib/rust/capabilities/...",
+        "//vscode_native/...",
+    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:maplit",
