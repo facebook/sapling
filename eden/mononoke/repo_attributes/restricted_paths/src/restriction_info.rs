@@ -7,6 +7,7 @@
 
 //! Low-level restriction lookup primitives.
 
+use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 
 use acl_manifest::RootAclManifestId;
@@ -23,6 +24,7 @@ use manifest::PathOrPrefix;
 use mercurial_types::HgAugmentedManifestEnvelope;
 use mercurial_types::HgAugmentedManifestId;
 use mercurial_types::fetch_augmented_manifest_envelope_opt;
+use metaconfig_types::AclManifestMode;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
@@ -219,20 +221,33 @@ pub(crate) async fn get_path_restriction_root_info(
     cs_id: Option<ChangesetId>,
     paths: &[NonRootMPath],
 ) -> Result<Vec<PathRestrictionInfo>> {
-    if restricted_paths
-        .config()
-        .acl_manifest_mode
-        .uses_manifest_id_store_for_path_lookup()
-    {
-        return Ok(get_path_restriction_root_info_from_config(
-            restricted_paths,
-            paths,
-        ));
+    match restricted_paths.config().acl_manifest_mode {
+        AclManifestMode::Disabled | AclManifestMode::Shadow => Ok(
+            get_path_restriction_root_info_from_config(restricted_paths, paths),
+        ),
+        AclManifestMode::Both => {
+            let config = get_path_restriction_root_info_from_config(restricted_paths, paths);
+            let cs_id = cs_id
+                .context("ChangesetId is required for ACL manifest-based restriction lookup")?;
+            let acl_manifest = get_path_restriction_root_info_from_acl_manifest(
+                restricted_paths,
+                ctx,
+                cs_id,
+                paths,
+            )
+            .await?;
+            Ok(union_path_restriction_info_with_config_precedence(
+                config,
+                acl_manifest,
+            ))
+        }
+        AclManifestMode::Authoritative => {
+            let cs_id = cs_id
+                .context("ChangesetId is required for ACL manifest-based restriction lookup")?;
+            get_path_restriction_root_info_from_acl_manifest(restricted_paths, ctx, cs_id, paths)
+                .await
+        }
     }
-
-    let cs_id =
-        cs_id.context("ChangesetId is required for ACL manifest-based restriction lookup")?;
-    get_path_restriction_root_info_from_acl_manifest(restricted_paths, ctx, cs_id, paths).await
 }
 
 /// Get restriction info for one or more paths, considering ancestor restrictions.
@@ -242,20 +257,28 @@ pub(crate) async fn get_path_restriction_info(
     cs_id: Option<ChangesetId>,
     paths: &[NonRootMPath],
 ) -> Result<Vec<PathRestrictionInfo>> {
-    if restricted_paths
-        .config()
-        .acl_manifest_mode
-        .uses_manifest_id_store_for_path_lookup()
-    {
-        return Ok(get_path_restriction_info_from_config(
-            restricted_paths,
-            paths,
-        ));
+    match restricted_paths.config().acl_manifest_mode {
+        AclManifestMode::Disabled | AclManifestMode::Shadow => Ok(
+            get_path_restriction_info_from_config(restricted_paths, paths),
+        ),
+        AclManifestMode::Both => {
+            let config = get_path_restriction_info_from_config(restricted_paths, paths);
+            let cs_id = cs_id
+                .context("ChangesetId is required for ACL manifest-based restriction lookup")?;
+            let acl_manifest =
+                get_path_restriction_info_from_acl_manifest(restricted_paths, ctx, cs_id, paths)
+                    .await?;
+            Ok(union_path_restriction_info_with_config_precedence(
+                config,
+                acl_manifest,
+            ))
+        }
+        AclManifestMode::Authoritative => {
+            let cs_id = cs_id
+                .context("ChangesetId is required for ACL manifest-based restriction lookup")?;
+            get_path_restriction_info_from_acl_manifest(restricted_paths, ctx, cs_id, paths).await
+        }
     }
-
-    let cs_id =
-        cs_id.context("ChangesetId is required for ACL manifest-based restriction lookup")?;
-    get_path_restriction_info_from_acl_manifest(restricted_paths, ctx, cs_id, paths).await
 }
 
 /// Check if a path is itself a restriction root.
@@ -289,20 +312,91 @@ pub(crate) async fn find_restricted_descendants(
     cs_id: Option<ChangesetId>,
     roots: Vec<MPath>,
 ) -> Result<Vec<PathRestrictionInfo>> {
-    if restricted_paths
-        .config()
-        .acl_manifest_mode
-        .uses_manifest_id_store_for_path_lookup()
-    {
-        return Ok(find_restricted_descendants_from_config(
-            restricted_paths,
-            &roots,
-        ));
+    match restricted_paths.config().acl_manifest_mode {
+        AclManifestMode::Disabled | AclManifestMode::Shadow => Ok(
+            find_restricted_descendants_from_config(restricted_paths, &roots),
+        ),
+        AclManifestMode::Both => {
+            let config = find_restricted_descendants_from_config(restricted_paths, &roots);
+            let cs_id = cs_id
+                .context("ChangesetId is required for ACL manifest-based restriction lookup")?;
+            let acl_manifest =
+                find_restricted_descendants_from_acl_manifest(restricted_paths, ctx, cs_id, roots)
+                    .await?;
+            Ok(union_path_restriction_info_with_config_precedence(
+                config,
+                acl_manifest,
+            ))
+        }
+        AclManifestMode::Authoritative => {
+            let cs_id = cs_id
+                .context("ChangesetId is required for ACL manifest-based restriction lookup")?;
+            find_restricted_descendants_from_acl_manifest(restricted_paths, ctx, cs_id, roots).await
+        }
     }
+}
 
-    let cs_id =
-        cs_id.context("ChangesetId is required for ACL manifest-based restriction lookup")?;
-    find_restricted_descendants_from_acl_manifest(restricted_paths, ctx, cs_id, roots).await
+/// Lookup restriction info for a manifest access using the configured mode.
+pub(crate) async fn get_manifest_restriction_info(
+    restricted_paths: &RestrictedPaths,
+    ctx: &CoreContext,
+    manifest_id: &ManifestId,
+    manifest_type: &ManifestType,
+) -> Result<Vec<ManifestRestrictionInfo>> {
+    let mode = restricted_paths.config().acl_manifest_mode;
+    let acl_manifest_supported = matches!(manifest_type, ManifestType::HgAugmented);
+    match (mode, acl_manifest_supported) {
+        (AclManifestMode::Disabled, _) | (AclManifestMode::Shadow, _) => {
+            get_manifest_restriction_info_from_config(
+                restricted_paths,
+                ctx,
+                manifest_id,
+                manifest_type,
+            )
+            .await
+        }
+        (AclManifestMode::Authoritative, true) => {
+            get_manifest_restriction_info_from_acl_manifest(
+                restricted_paths,
+                ctx,
+                manifest_id,
+                manifest_type,
+            )
+            .await
+        }
+        (AclManifestMode::Authoritative, false) => {
+            unsupported_acl_manifest_type_error(manifest_type)
+        }
+        (AclManifestMode::Both, true) => {
+            let (config, acl_manifest) = tokio::try_join!(
+                get_manifest_restriction_info_from_config(
+                    restricted_paths,
+                    ctx,
+                    manifest_id,
+                    manifest_type,
+                ),
+                get_manifest_restriction_info_from_acl_manifest(
+                    restricted_paths,
+                    ctx,
+                    manifest_id,
+                    manifest_type,
+                ),
+            )?;
+            Ok(union_manifest_restriction_info_with_config_precedence(
+                config,
+                acl_manifest,
+            ))
+        }
+        (AclManifestMode::Both, false) => {
+            get_manifest_restriction_info_from_config(
+                restricted_paths,
+                ctx,
+                manifest_id,
+                manifest_type,
+            )
+            .await
+        }
+    }
 }
 
 /// Lookup restriction info for a manifest access through the config-backed source.
@@ -368,6 +462,65 @@ pub(crate) async fn get_manifest_restriction_info_from_acl_manifest(
         ]),
         AclManifestDirectoryRestriction::Unrestricted => Ok(vec![]),
     }
+}
+
+fn union_path_restriction_info_with_config_precedence(
+    config: Vec<PathRestrictionInfo>,
+    acl_manifest: Vec<PathRestrictionInfo>,
+) -> Vec<PathRestrictionInfo> {
+    // Metadata Both mode reports the union of both sources. For duplicate
+    // roots, config wins to preserve the existing metadata contract; Both
+    // enforcement still denies if either source denies.
+    acl_manifest
+        .into_iter()
+        .map(|info| (info.restriction_root.clone(), info))
+        .chain(
+            config
+                .into_iter()
+                .map(|info| (info.restriction_root.clone(), info)),
+        )
+        .collect::<BTreeMap<_, _>>()
+        .into_values()
+        .collect()
+}
+
+fn union_manifest_restriction_info_with_config_precedence(
+    config: Vec<ManifestRestrictionInfo>,
+    acl_manifest: Vec<ManifestRestrictionInfo>,
+) -> Vec<ManifestRestrictionInfo> {
+    let (rootless_acl_manifest, rooted_acl_manifest): (Vec<_>, Vec<_>) = acl_manifest
+        .into_iter()
+        .partition(|info| info.restriction_root.is_none());
+    let (rootless_config, rooted_config): (Vec<_>, Vec<_>) = config
+        .into_iter()
+        .partition(|info| info.restriction_root.is_none());
+
+    // Rootless manifest metadata cannot be safely deduplicated because there is
+    // no restriction-root key to compare. Preserve those entries and only apply
+    // config precedence when both sources report a known root.
+    let rooted = rooted_acl_manifest
+        .into_iter()
+        .map(|info| (info.restriction_root.clone(), info))
+        .chain(
+            rooted_config
+                .into_iter()
+                .map(|info| (info.restriction_root.clone(), info)),
+        )
+        .collect::<BTreeMap<_, _>>()
+        .into_values();
+
+    rootless_acl_manifest
+        .into_iter()
+        .chain(rootless_config)
+        .chain(rooted)
+        .collect()
+}
+
+fn unsupported_acl_manifest_type_error<T>(manifest_type: &ManifestType) -> Result<T> {
+    anyhow::bail!(
+        "AclManifest manifest restriction lookup only supports HgAugmented manifests, got {}",
+        manifest_type
+    )
 }
 
 fn get_config_path_restriction_info_for_path(
@@ -583,9 +736,7 @@ async fn load_acl_manifest_directory_id_from_manifest(
     manifest_type: &ManifestType,
 ) -> Result<Option<AclManifestId>> {
     let ManifestType::HgAugmented = manifest_type else {
-        // TODO(T248660053): remove this after deprecating access through other
-        // manifest types.
-        return Ok(None);
+        return unsupported_acl_manifest_type_error(manifest_type);
     };
 
     let hg_augmented_manifest_id =

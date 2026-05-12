@@ -310,15 +310,6 @@ impl<R: MononokeRepo> HgAugmentedTreeRestrictionContext<R> {
     /// Returns the restriction info for this specific manifest, or an empty
     /// vector if the manifest is not at a restricted path.
     ///
-    /// # NOTE: Temporary implementation
-    /// Uses the ManifestIdStore to map manifest IDs to paths, then checks the
-    /// path-based restriction config for the most specific matching root.
-    ///
-    /// # Long-term implementation
-    /// Will use AclManifests — the HgAugmentedManifest's `acl_manifest_directory_id`
-    /// pointer to look up ACL info directly, without needing the ManifestIdStore
-    /// path resolution step.
-    ///
     /// Unlike `ChangesetPathRestrictionContext::restriction_info`,
     /// which can traverse the AclManifest from the root path and aggregate all
     /// path restrictions, this primitive can only access the AclManifest from
@@ -329,7 +320,6 @@ impl<R: MononokeRepo> HgAugmentedTreeRestrictionContext<R> {
     /// This is acceptable **under an important assumption**: in order to fetch
     /// any child manifest, the client must already have access to the parent
     /// manifest, which means they have permission to access the directory.
-    // TODO(T248660146): update to use AclManifest instead of ManifestIdStore.
     pub async fn restriction_check(
         &self,
     ) -> Result<Vec<ManifestRestrictionCheckResult>, MononokeError> {
@@ -356,7 +346,7 @@ impl<R: MononokeRepo> HgAugmentedTreeRestrictionContext<R> {
             .get_manifest_restriction_check(
                 self.repo_ctx.ctx(),
                 &manifest_id_bytes,
-                &ManifestType::Hg,
+                &ManifestType::HgAugmented,
             )
             .await
             .map_err(MononokeError::from)
@@ -365,11 +355,14 @@ impl<R: MononokeRepo> HgAugmentedTreeRestrictionContext<R> {
 
 #[cfg(test)]
 mod tests {
+    use std::borrow::Cow;
     use std::collections::BTreeSet;
     use std::collections::HashMap;
     use std::str::FromStr;
     use std::sync::Arc;
 
+    use acl_manifest::RootAclManifestId;
+    use anyhow::Context;
     use blobstore::Loadable;
     use clientinfo::ClientEntryPoint;
     use clientinfo::ClientInfo;
@@ -379,10 +372,11 @@ mod tests {
     use fbinit::FacebookInit;
     use fixtures::Linear;
     use fixtures::TestRepoFixture;
-    use futures::TryStreamExt;
-    use manifest::ManifestOps;
     use maplit::hashmap;
     use mercurial_derivation::DeriveHgChangeset;
+    use mercurial_derivation::MappedHgChangesetId;
+    use mercurial_derivation::RootHgAugmentedManifestId;
+    use mercurial_types::HgAugmentedManifestEnvelope;
     use mercurial_types::NULL_HASH;
     use metaconfig_types::AclManifestMode;
     use metaconfig_types::RestrictedPathsConfig;
@@ -391,6 +385,7 @@ mod tests {
     use mononoke_api::repo::RepoContext;
     use mononoke_api::specifiers::HgChangesetId;
     use mononoke_macros::mononoke;
+    use mononoke_types::ChangesetId;
     use mononoke_types::NonRootMPath;
     use mononoke_types::RepositoryId;
     use mononoke_types::path::MPath;
@@ -401,9 +396,9 @@ mod tests {
     use permission_checker::MononokeIdentitySet;
     use pretty_assertions::assert_eq;
     use repo_derived_data::RepoDerivedDataArc;
+    use repo_derived_data::RepoDerivedDataRef;
     use restricted_paths::RestrictedPaths;
     use restricted_paths::RestrictedPathsConfigBased;
-    use restricted_paths::RestrictedPathsManifestIdCacheBuilder;
     use restricted_paths::SqlRestrictedPathsManifestIdStoreBuilder;
     use scuba_ext::MononokeScubaSampleBuilder;
     use sql_construct::SqlConstruct;
@@ -555,20 +550,11 @@ mod tests {
 
         let config = RestrictedPathsConfig {
             path_acls: path_acls_map,
-            use_manifest_id_cache: true,
+            use_manifest_id_cache: false,
             cache_update_interval_ms: 5,
             acl_manifest_mode,
             ..Default::default()
         };
-
-        let cache = Arc::new(
-            RestrictedPathsManifestIdCacheBuilder::new(ctx.clone(), manifest_id_store.clone())
-                .with_refresh_interval(std::time::Duration::from_millis(
-                    config.cache_update_interval_ms,
-                ))
-                .build()
-                .await?,
-        );
 
         // Write ACLs to temp file for InternalAclProvider
         let acls = create_test_acls()?;
@@ -583,13 +569,15 @@ mod tests {
 
         let scuba = MononokeScubaSampleBuilder::with_discard();
 
-        // Build a repo first to get ArcRepoDerivedData
-        let repo: Repo = TestRepoFactory::new(ctx.fb)?.build().await?;
+        // Build a repo first to get ArcRepoDerivedData. Reuse the same
+        // factory below so the final test repo shares the same blobstore.
+        let mut repo_factory = TestRepoFactory::new(ctx.fb)?;
+        let repo: Repo = repo_factory.build().await?;
         let repo_derived_data = repo.repo_derived_data_arc();
         let config_based = Arc::new(RestrictedPathsConfigBased::new(
             config,
             manifest_id_store,
-            Some(cache),
+            None,
         ));
 
         let restricted_paths = Arc::new(RestrictedPaths::new(
@@ -599,7 +587,7 @@ mod tests {
             repo_derived_data,
         )?);
 
-        let repo: Repo = TestRepoFactory::new(ctx.fb)?
+        let repo: Repo = repo_factory
             .with_restricted_paths(restricted_paths)
             .build()
             .await?;
@@ -649,18 +637,16 @@ mod tests {
             .commit()
             .await?;
 
-        // Derive Hg manifest (populates ManifestIdStore, but only for restricted paths)
-        let hg_cs_id = repo.derive_hg_changeset(&ctx, bcs_id).await?;
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-
-        let hg_cs = hg_cs_id.load(&ctx, repo.repo_blobstore()).await?;
-        let root_mfid = hg_cs.manifestid();
+        // Derive Hg manifest to populate ManifestIdStore, then load the
+        // augmented manifest ID used by restriction_check().
+        let _hg_cs_id = repo.derive_hg_changeset(&ctx, bcs_id).await?;
+        let (root_mfid, _) = derive_and_load_hg_augmented_manifest(&ctx, &repo, bcs_id).await?;
 
         let repo_ctx = RepoContext::new_test(ctx, Arc::new(repo)).await?;
         let hg = repo_ctx.hg();
 
         // Root manifest is unrestricted, so not in the ManifestIdStore
-        let restriction_ctx = HgAugmentedTreeRestrictionContext::new(hg, root_mfid.into()).await?;
+        let restriction_ctx = HgAugmentedTreeRestrictionContext::new(hg, root_mfid).await?;
         let result = restriction_ctx.restriction_check().await?;
         assert!(
             result.is_empty(),
@@ -679,35 +665,29 @@ mod tests {
         target_manifest_path: &str,
     ) -> anyhow::Result<Vec<ManifestRestrictionCheckResult>> {
         let ctx = create_test_ctx(fb).await;
-        let repo = setup_restricted_repo(&ctx, path_acls).await?;
+        let repo = setup_restricted_repo(&ctx, path_acls.clone()).await?;
 
-        let bcs_id = CreateCommitContext::new_root(&ctx, &repo)
-            .add_file(file_to_add.0, file_to_add.1)
-            .commit()
-            .await?;
+        let mut commit_ctx =
+            CreateCommitContext::new_root(&ctx, &repo).add_file(file_to_add.0, file_to_add.1);
+        for (root, acl) in path_acls {
+            let slacl_path = format!("{root}/.slacl");
+            let slacl_content = format!("repo_region_acl = \"{acl}\"\n");
+            commit_ctx = commit_ctx.add_file(slacl_path.as_str(), slacl_content);
+        }
+        let bcs_id = commit_ctx.commit().await?;
 
-        let hg_cs_id = repo.derive_hg_changeset(&ctx, bcs_id).await?;
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        let _hg_cs_id = repo.derive_hg_changeset(&ctx, bcs_id).await?;
+        let (_, root_envelope) = derive_and_load_hg_augmented_manifest(&ctx, &repo, bcs_id).await?;
 
-        let hg_cs = hg_cs_id.load(&ctx, repo.repo_blobstore()).await?;
-        let root_mfid = hg_cs.manifestid();
-
-        let blobstore = Arc::new(repo.repo_blobstore().clone());
         let target_path = MPath::try_from(target_manifest_path)?;
-        let target_mfid = root_mfid
-            .list_tree_entries(ctx.clone(), blobstore)
-            .try_collect::<Vec<_>>()
-            .await?
-            .into_iter()
-            .find(|(path, _)| *path == target_path)
-            .map(|(_, mfid)| mfid)
-            .ok_or_else(|| anyhow::anyhow!("manifest for {} not found", target_manifest_path))?;
+        let target_mfid =
+            load_hg_augmented_manifest_id_at_path(&ctx, &repo, &root_envelope, &target_path)
+                .await?;
 
         let repo_ctx = RepoContext::new_test(ctx, Arc::new(repo)).await?;
         let hg = repo_ctx.hg();
 
-        let restriction_ctx =
-            HgAugmentedTreeRestrictionContext::new(hg, target_mfid.into()).await?;
+        let restriction_ctx = HgAugmentedTreeRestrictionContext::new(hg, target_mfid).await?;
         restriction_ctx
             .restriction_check()
             .await
@@ -734,28 +714,18 @@ mod tests {
         }
         let bcs_id = commit_ctx.commit().await?;
 
-        let hg_cs_id = repo.derive_hg_changeset(&ctx, bcs_id).await?;
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        let _hg_cs_id = repo.derive_hg_changeset(&ctx, bcs_id).await?;
+        let (_, root_envelope) = derive_and_load_hg_augmented_manifest(&ctx, &repo, bcs_id).await?;
 
-        let hg_cs = hg_cs_id.load(&ctx, repo.repo_blobstore()).await?;
-        let root_mfid = hg_cs.manifestid();
-
-        let blobstore = Arc::new(repo.repo_blobstore().clone());
         let target_path = MPath::try_from(target_manifest_path)?;
-        let target_mfid = root_mfid
-            .list_tree_entries(ctx.clone(), blobstore)
-            .try_collect::<Vec<_>>()
-            .await?
-            .into_iter()
-            .find(|(path, _)| *path == target_path)
-            .map(|(_, mfid)| mfid)
-            .ok_or_else(|| anyhow::anyhow!("manifest for {} not found", target_manifest_path))?;
+        let target_mfid =
+            load_hg_augmented_manifest_id_at_path(&ctx, &repo, &root_envelope, &target_path)
+                .await?;
 
         let repo_ctx = RepoContext::new_test(ctx, Arc::new(repo)).await?;
         let hg = repo_ctx.hg();
 
-        let restriction_ctx =
-            HgAugmentedTreeRestrictionContext::new(hg, target_mfid.into()).await?;
+        let restriction_ctx = HgAugmentedTreeRestrictionContext::new(hg, target_mfid).await?;
         restriction_ctx
             .restriction_check()
             .await
@@ -779,10 +749,17 @@ mod tests {
         )
         .await?;
 
-        // TODO(T248658346): assert that the AclManifest-only manifest
-        // restriction is returned. The Hg primitive currently uses config-backed
-        // manifest lookup.
-        assert!(result.is_empty());
+        let check = result.first().ok_or_else(|| {
+            anyhow::anyhow!("expected AclManifest-only restriction info for Both mode")
+        })?;
+        let info = check.restriction_info();
+        assert_eq!(info.restriction_root, None);
+        assert_eq!(info.repo_region_acl, "REPO_REGION:restricted_acl");
+        assert_eq!(
+            check.has_authorization(),
+            false,
+            "user should not have access to restricted_acl"
+        );
 
         Ok(())
     }
@@ -833,19 +810,28 @@ mod tests {
         )
         .await?;
 
-        // TODO(T248658346): assert that both config and AclManifest metadata
-        // results are returned. Manifest metadata currently returns only the
-        // config-backed result.
-        assert_eq!(result.len(), 1);
-        let check = result.first().ok_or_else(|| {
-            anyhow::anyhow!("expected config-backed restriction info for Both mode")
-        })?;
-        let info = check.restriction_info();
+        let mut roots_and_acls = result
+            .iter()
+            .map(|check| {
+                let info = check.restriction_info();
+                (
+                    info.restriction_root.as_ref().map(ToString::to_string),
+                    info.repo_region_acl.clone(),
+                )
+            })
+            .collect::<Vec<_>>();
+        roots_and_acls.sort();
+
         assert_eq!(
-            info.restriction_root.as_ref(),
-            Some(&NonRootMPath::new("shared")?)
+            roots_and_acls,
+            vec![
+                (None, "REPO_REGION:acl_manifest_acl".to_string()),
+                (
+                    Some("shared".to_string()),
+                    "REPO_REGION:config_acl".to_string()
+                ),
+            ]
         );
-        assert_eq!(info.repo_region_acl, "REPO_REGION:config_acl");
 
         Ok(())
     }
@@ -867,9 +853,8 @@ mod tests {
         })?;
         let info = check.restriction_info();
         assert_eq!(
-            info.restriction_root.as_ref(),
-            Some(&NonRootMPath::new("user_project/foo")?),
-            "restriction root should match the configured root"
+            info.restriction_root, None,
+            "AclManifest-backed manifest metadata does not include the path root"
         );
         assert_eq!(
             check.has_authorization(),
@@ -898,9 +883,8 @@ mod tests {
         })?;
         let info = check.restriction_info();
         assert_eq!(
-            info.restriction_root.as_ref(),
-            Some(&NonRootMPath::new("restricted/dir")?),
-            "restriction root should match the configured root"
+            info.restriction_root, None,
+            "AclManifest-backed manifest metadata does not include the path root"
         );
         assert_eq!(
             check.has_authorization(),
@@ -913,9 +897,9 @@ mod tests {
     }
 
     /// When nested restriction roots exist (e.g. `foo/` and `foo/bar/`),
-    /// querying the manifest at the inner root should return the most specific
-    /// root's info — matching how AclManifests will work (each directory has
-    /// exactly one ACL).
+    /// querying the manifest at the inner root should return the inner root's
+    /// ACL — matching AclManifest behavior where each directory has exactly
+    /// one ACL.
     #[mononoke::fbinit_test]
     async fn test_check_manifest_permission_nested_roots(fb: FacebookInit) -> anyhow::Result<()> {
         // Query the manifest at foo/bar, which is covered by both roots.
@@ -936,9 +920,8 @@ mod tests {
         })?;
         let info = check.restriction_info();
         assert_eq!(
-            info.restriction_root.as_ref(),
-            Some(&NonRootMPath::new("foo/bar")?),
-            "should return the most specific (deepest) restriction root"
+            info.restriction_root, None,
+            "AclManifest-backed manifest metadata does not include the path root"
         );
         assert_eq!(
             check.has_authorization(),
@@ -968,40 +951,32 @@ mod tests {
         )
         .await?;
 
-        // Create two directories with identical content. Identical content
-        // produces the same Hg manifest ID, so the ManifestIdStore will map
-        // that single ID to both paths.
+        // Create two directories with identical content and identical ACL files.
+        // Identical content produces the same Hg augmented manifest ID.
         let bcs_id = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("dir_a/file.txt", "same content")
+            .add_file(
+                "dir_a/.slacl",
+                "repo_region_acl = \"REPO_REGION:restricted_acl\"\n",
+            )
             .add_file("dir_b/file.txt", "same content")
+            .add_file(
+                "dir_b/.slacl",
+                "repo_region_acl = \"REPO_REGION:restricted_acl\"\n",
+            )
             .commit()
             .await?;
 
-        let hg_cs_id = repo.derive_hg_changeset(&ctx, bcs_id).await?;
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-
-        let hg_cs = hg_cs_id.load(&ctx, repo.repo_blobstore()).await?;
-        let root_mfid = hg_cs.manifestid();
-
-        let blobstore = Arc::new(repo.repo_blobstore().clone());
-        let entries: Vec<_> = root_mfid
-            .list_tree_entries(ctx.clone(), blobstore)
-            .try_collect()
-            .await?;
+        let _hg_cs_id = repo.derive_hg_changeset(&ctx, bcs_id).await?;
+        let (_, root_envelope) = derive_and_load_hg_augmented_manifest(&ctx, &repo, bcs_id).await?;
 
         let dir_a = MPath::try_from("dir_a")?;
-        let dir_a_mfid = entries
-            .iter()
-            .find(|(path, _)| *path == dir_a)
-            .map(|(_, mfid)| *mfid)
-            .ok_or_else(|| anyhow::anyhow!("manifest for dir_a not found"))?;
+        let dir_a_mfid =
+            load_hg_augmented_manifest_id_at_path(&ctx, &repo, &root_envelope, &dir_a).await?;
 
         let dir_b = MPath::try_from("dir_b")?;
-        let dir_b_mfid = entries
-            .iter()
-            .find(|(path, _)| *path == dir_b)
-            .map(|(_, mfid)| *mfid)
-            .ok_or_else(|| anyhow::anyhow!("manifest for dir_b not found"))?;
+        let dir_b_mfid =
+            load_hg_augmented_manifest_id_at_path(&ctx, &repo, &root_envelope, &dir_b).await?;
 
         // Verify they share the same manifest ID (identical content)
         assert_eq!(
@@ -1012,9 +987,9 @@ mod tests {
         let repo_ctx = RepoContext::new_test(ctx, Arc::new(repo)).await?;
         let hg = repo_ctx.hg();
 
-        // Query the shared manifest ID. The store maps it to both dir_a and dir_b.
-        // restriction_check should return info for one of them.
-        let restriction_ctx = HgAugmentedTreeRestrictionContext::new(hg, dir_a_mfid.into()).await?;
+        // Query the shared manifest ID. The AclManifest metadata for both roots
+        // is identical, so the check should return that shared ACL.
+        let restriction_ctx = HgAugmentedTreeRestrictionContext::new(hg, dir_a_mfid).await?;
         let result = restriction_ctx.restriction_check().await?;
 
         let check = result.first().ok_or_else(|| {
@@ -1029,6 +1004,71 @@ mod tests {
         assert_eq!(info.repo_region_acl, "REPO_REGION:restricted_acl");
 
         Ok(())
+    }
+
+    async fn derive_and_load_hg_augmented_manifest(
+        ctx: &CoreContext,
+        repo: &Repo,
+        bcs_id: ChangesetId,
+    ) -> anyhow::Result<(HgAugmentedManifestId, HgAugmentedManifestEnvelope)> {
+        let manager = repo.repo_derived_data().manager();
+        manager
+            .derive_exactly_batch::<MappedHgChangesetId>(ctx, vec![bcs_id], None)
+            .await?;
+        manager
+            .derive_exactly_batch::<RootAclManifestId>(ctx, vec![bcs_id], None)
+            .await?;
+        manager
+            .derive_exactly_batch::<RootHgAugmentedManifestId>(ctx, vec![bcs_id], None)
+            .await?;
+
+        let root_hg_augmented_manifest_id = manager
+            .fetch_derived::<RootHgAugmentedManifestId>(ctx, bcs_id, None)
+            .await?
+            .with_context(|| format!("Missing RootHgAugmentedManifestId for {}", bcs_id))?
+            .hg_augmented_manifest_id();
+        let root_envelope = root_hg_augmented_manifest_id
+            .clone()
+            .load(ctx, repo.repo_blobstore())
+            .await?;
+        Ok((root_hg_augmented_manifest_id, root_envelope))
+    }
+
+    async fn load_hg_augmented_manifest_id_at_path(
+        ctx: &CoreContext,
+        repo: &Repo,
+        root_envelope: &HgAugmentedManifestEnvelope,
+        path: &MPath,
+    ) -> anyhow::Result<HgAugmentedManifestId> {
+        let elements: Vec<_> = path.into_iter().collect();
+        anyhow::ensure!(!elements.is_empty(), "path must have at least one segment");
+
+        let mut current_envelope = Cow::Borrowed(root_envelope);
+        for (index, element) in elements.iter().enumerate() {
+            let entry = current_envelope
+                .augmented_manifest
+                .subentries
+                .lookup(ctx, repo.repo_blobstore(), element.as_ref())
+                .await?
+                .with_context(|| format!("{} should exist at depth {}", element, index))?;
+            match entry {
+                HgAugmentedManifestEntry::DirectoryNode(directory) => {
+                    let hg_augmented_manifest_id = HgAugmentedManifestId::new(directory.treenode);
+                    if index == elements.len() - 1 {
+                        return Ok(hg_augmented_manifest_id);
+                    }
+                    current_envelope = Cow::Owned(
+                        hg_augmented_manifest_id
+                            .load(ctx, repo.repo_blobstore())
+                            .await?,
+                    );
+                }
+                HgAugmentedManifestEntry::FileNode(_) => {
+                    anyhow::bail!("{} should be a directory node", element);
+                }
+            }
+        }
+        unreachable!("non-empty path traversal returns from the final element")
     }
 
     #[mononoke::fbinit_test]
@@ -1050,31 +1090,20 @@ mod tests {
             .commit()
             .await?;
 
-        let hg_cs_id = repo.derive_hg_changeset(&ctx, bcs_id).await?;
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-
-        let hg_cs = hg_cs_id.load(&ctx, repo.repo_blobstore()).await?;
-        let root_mfid = hg_cs.manifestid();
-
-        let blobstore = Arc::new(repo.repo_blobstore().clone());
-        let restricted_mfid = {
-            let target_path = MPath::try_from("restricted/dir")?;
-            let entries: Vec<_> = root_mfid
-                .list_tree_entries(ctx.clone(), blobstore)
-                .try_collect()
-                .await?;
-            entries
-                .into_iter()
-                .find(|(path, _)| *path == target_path)
-                .map(|(_, mfid)| mfid)
-                .ok_or_else(|| anyhow::anyhow!("manifest for restricted/dir not found"))?
-        };
+        let _hg_cs_id = repo.derive_hg_changeset(&ctx, bcs_id).await?;
+        let (_, root_envelope) = derive_and_load_hg_augmented_manifest(&ctx, &repo, bcs_id).await?;
+        let restricted_mfid = load_hg_augmented_manifest_id_at_path(
+            &ctx,
+            &repo,
+            &root_envelope,
+            &MPath::try_from("restricted/dir")?,
+        )
+        .await?;
 
         let repo_ctx = RepoContext::new_test(ctx, Arc::new(repo)).await?;
         let hg = repo_ctx.hg();
 
-        let restriction_ctx =
-            HgAugmentedTreeRestrictionContext::new(hg, restricted_mfid.into()).await?;
+        let restriction_ctx = HgAugmentedTreeRestrictionContext::new(hg, restricted_mfid).await?;
         // Override JK to disable the check_permission endpoint
         let result = with_just_knobs_async(
             JustKnobsInMemory::new(hashmap! {

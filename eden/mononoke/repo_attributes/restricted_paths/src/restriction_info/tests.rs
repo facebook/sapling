@@ -46,6 +46,7 @@ use super::find_restricted_descendants_from_acl_manifest;
 use super::get_manifest_restriction_info_from_acl_manifest;
 use super::get_path_restriction_info_from_acl_manifest;
 use super::get_path_restriction_root_info_from_acl_manifest;
+use super::union_manifest_restriction_info_with_config_precedence;
 use crate::ManifestId;
 use crate::ManifestType;
 use crate::RestrictedPaths;
@@ -76,6 +77,38 @@ struct ManifestLookupFixture {
     restricted_paths: RestrictedPaths,
     manifest_id: ManifestId,
     manifest_type: ManifestType,
+}
+
+mod manifest_metadata_union {
+    use super::*;
+
+    #[mononoke::test]
+    fn test_preserves_rootless_acl_manifest_entries() -> Result<()> {
+        let first = manifest_restriction_info(None, "REPO_REGION:first")?;
+        let second = manifest_restriction_info(None, "REPO_REGION:second")?;
+
+        let results = union_manifest_restriction_info_with_config_precedence(
+            vec![],
+            vec![first.clone(), second.clone()],
+        );
+
+        assert_eq!(results, vec![first, second]);
+        Ok(())
+    }
+
+    #[mononoke::test]
+    fn test_config_wins_for_duplicate_known_root() -> Result<()> {
+        let config = manifest_restriction_info(Some("shared"), "REPO_REGION:config")?;
+        let acl_manifest = manifest_restriction_info(Some("shared"), "REPO_REGION:acl_manifest")?;
+
+        let results = union_manifest_restriction_info_with_config_precedence(
+            vec![config.clone()],
+            vec![acl_manifest],
+        );
+
+        assert_eq!(results, vec![config]);
+        Ok(())
+    }
 }
 
 mod acl_manifest_path_lookup {
@@ -254,7 +287,7 @@ mod hg_augmented_manifest_lookup {
     }
 
     #[mononoke::fbinit_test]
-    async fn test_hg_augmented_manifest_lookup_skips_unsupported_manifest_type(
+    async fn test_hg_augmented_manifest_lookup_errors_for_unsupported_manifest_type(
         fb: FacebookInit,
     ) -> Result<()> {
         let fixture = hg_augmented_manifest_lookup_fixture(
@@ -270,9 +303,15 @@ mod hg_augmented_manifest_lookup {
             &fixture.manifest_id,
             &fixture.manifest_type,
         )
-        .await?;
-
-        assert_eq!(results, vec![]);
+        .await;
+        let err = results
+            .err()
+            .context("expected unsupported manifest type to error")?;
+        assert!(
+            err.to_string()
+                .contains("AclManifest manifest restriction lookup only supports HgAugmented"),
+            "unexpected error: {err:#}"
+        );
         Ok(())
     }
 }
@@ -435,4 +474,15 @@ fn slacl_with_request_acl(repo_region_acl: &str, request_acl: &str) -> Vec<u8> {
         "repo_region_acl = \"{repo_region_acl}\"\npermission_request_group = \"{request_acl}\"\n"
     )
     .into_bytes()
+}
+
+fn manifest_restriction_info(
+    restriction_root: Option<&str>,
+    repo_region_acl: &str,
+) -> Result<ManifestRestrictionInfo> {
+    Ok(ManifestRestrictionInfo {
+        restriction_root: restriction_root.map(NonRootMPath::new).transpose()?,
+        repo_region_acl: repo_region_acl.to_string(),
+        request_acl: repo_region_acl.to_string(),
+    })
 }

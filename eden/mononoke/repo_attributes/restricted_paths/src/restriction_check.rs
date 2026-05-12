@@ -632,6 +632,23 @@ pub(crate) async fn get_manifest_restriction_check(
     check_manifest_restriction_infos(ctx, restricted_paths, restriction_info).await
 }
 
+/// Check manifest restrictions using the repository's configured lookup behavior.
+pub(crate) async fn get_manifest_restriction_check_for_current_behavior(
+    restricted_paths: &RestrictedPaths,
+    ctx: &CoreContext,
+    manifest_id: &ManifestId,
+    manifest_type: &ManifestType,
+) -> Result<Vec<ManifestRestrictionCheckResult>> {
+    let restriction_info = restriction_info::get_manifest_restriction_info(
+        restricted_paths,
+        ctx,
+        manifest_id,
+        manifest_type,
+    )
+    .await?;
+    check_manifest_restriction_infos(ctx, restricted_paths, restriction_info).await
+}
+
 /// Apply the request-local portion of `enforcement_condition_sets`.
 ///
 /// This is intentionally split from restriction ACL matching: request metadata

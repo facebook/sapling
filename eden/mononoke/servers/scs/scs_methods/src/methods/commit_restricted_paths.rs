@@ -509,11 +509,16 @@ mod tests {
             .await
             .map_err(|err| anyhow::anyhow!("{err:?}"))?;
 
-        // TODO(T248658346): assert that the config-only path is reported as
-        // restricted. Both path metadata currently uses only the AclManifest
-        // source.
-        assert_eq!(response.are_restricted, thrift::PathCoverage::NONE);
-        assert!(response.restriction_roots.is_empty());
+        assert_eq!(response.are_restricted, thrift::PathCoverage::ALL);
+        let roots = response
+            .restriction_roots
+            .get("config_only/file.txt")
+            .ok_or_else(|| anyhow::anyhow!("expected restriction root for config-only path"))?;
+        let root = roots
+            .first()
+            .ok_or_else(|| anyhow::anyhow!("expected one config-only restriction root"))?;
+        assert_eq!(root.path, "config_only");
+        assert_eq!(root.acls, vec!["TIER:config-acl"]);
 
         Ok(())
     }
@@ -1002,10 +1007,10 @@ mod tests {
 
         let result = collect_nested_roots(&cs_ctx, BTreeSet::new()).await?;
 
-        // TODO(T248658346): assert that config-only nested roots are returned.
-        // Both nested-root metadata currently does not union config and
-        // AclManifest yet.
-        assert!(result.is_empty());
+        assert_eq!(
+            result,
+            vec![("config_only".to_string(), "TIER:config-acl".to_string())]
+        );
 
         Ok(())
     }

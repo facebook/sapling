@@ -193,12 +193,11 @@ impl RestrictedPaths {
         manifest_id: &ManifestId,
         manifest_type: &ManifestType,
     ) -> Result<Vec<ManifestRestrictionCheckResult>> {
-        restriction_check::get_manifest_restriction_check(
+        restriction_check::get_manifest_restriction_check_for_current_behavior(
             self,
             ctx,
             manifest_id,
             manifest_type,
-            restriction_check::ManifestRestrictionSource::Config,
         )
         .await
     }

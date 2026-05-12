@@ -42,10 +42,10 @@ tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 unbundle = { version = "0.1.0", path = "../repo_client/unbundle" }
 
 [dev-dependencies]
+acl_manifest = { version = "0.1.0", path = "../derived_data/acl_manifest" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }
-manifest = { version = "0.1.0", path = "../manifest" }
 maplit = "1.0"
 metadata = { version = "0.1.0", path = "../common/metadata" }
 mononoke_macros = { version = "0.1.0", path = "../common/mononoke_macros" }
@@ -59,4 +59,3 @@ sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
 tempfile = "3.27.0"
 test_repo_factory = { version = "0.1.0", path = "../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../tests/utils" }
-tokio = { version = "1.52.1", features = ["full", "test-util", "tracing"] }

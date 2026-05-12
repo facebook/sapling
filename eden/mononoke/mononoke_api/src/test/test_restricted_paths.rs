@@ -414,9 +414,11 @@ async fn test_batch_restriction_info_both_mode_config_only_root(fb: FacebookInit
         .first()
         .map(|(_, infos)| infos.as_slice())
         .unwrap_or_default();
-    // TODO(T248658346): assert that the config-only restriction is returned.
-    // Both path metadata currently uses only the AclManifest source.
-    assert!(infos.is_empty());
+    let info = infos
+        .first()
+        .ok_or_else(|| anyhow::anyhow!("expected config-only restriction"))?;
+    assert_eq!(info.restriction_root(), &NonRootMPath::new("config_only")?);
+    assert_eq!(info.repo_region_acl(), "TIER:config-acl");
 
     Ok(())
 }
@@ -486,9 +488,7 @@ async fn test_batch_restriction_info_both_mode_same_root_prefers_config(
         .first()
         .ok_or_else(|| anyhow::anyhow!("expected same-root restriction"))?;
     assert_eq!(info.restriction_root(), &NonRootMPath::new("shared")?);
-    // TODO(T248658346): assert that config wins for same-root disagreement.
-    // Both path metadata currently uses only the AclManifest source.
-    assert_eq!(info.repo_region_acl(), "REPO_REGION:acl_manifest_acl");
+    assert_eq!(info.repo_region_acl(), "REPO_REGION:config_acl");
 
     Ok(())
 }
