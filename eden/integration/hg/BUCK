@@ -1,4 +1,5 @@
 load("@fbcode//eden:defs.bzl", "get_integration_test_env_and_deps")
+load("@fbcode_macros//build_defs:python_integration_test.bzl", "python_integration_test")
 load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
 
 oncall("scm_client_infra")
@@ -406,7 +407,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "update",
     srcs = ["update_test.py"],
     env = artifacts["env"],
