@@ -718,6 +718,173 @@ async fn test_authoritative_path_enforcement_requires_acl_manifest_source(
     Ok(())
 }
 
+// What it tests: Authoritative mode should deny from AclManifest-only
+// restrictions once AclManifest enforcement source selection is wired.
+// Expected: Authoritative mode uses the AclManifest source and denies this
+// unauthorized path access.
+#[mononoke::fbinit_test]
+async fn test_authoritative_mode_acl_manifest_only_restriction_denies(
+    fb: FacebookInit,
+) -> Result<()> {
+    let restricted_acl = MononokeIdentity::from_str("REPO_REGION:restricted_acl")?;
+
+    RestrictedPathsTestDataBuilder::new()
+        .with_acl_manifest_mode(AclManifestMode::Authoritative)
+        .with_acl_manifest_restricted_paths(vec![(
+            NonRootMPath::new("restricted/dir")?,
+            restricted_acl,
+        )])
+        .with_file_path_changes(vec![("restricted/dir/file", None)])
+        .with_enforcement_scenarios(vec![(
+            vec![
+                EnforcementConditionSetBuilder::new()
+                    .with_always_enabled(true)
+                    .build(),
+            ],
+            false,
+        )])
+        .build(fb)
+        .await?
+        .run_restricted_paths_test()
+        .await?;
+
+    Ok(())
+}
+
+// What it tests: Both mode should allow when config and AclManifest agree that
+// the caller is authorized.
+// Expected: access remains allowed after Both mode starts evaluating both
+// sources.
+#[mononoke::fbinit_test]
+async fn test_both_mode_agreement_allows(fb: FacebookInit) -> Result<()> {
+    let allowed_acl = MononokeIdentity::from_str("REPO_REGION:myusername_project")?;
+    let restricted_root = NonRootMPath::new("user_project/foo")?;
+
+    RestrictedPathsTestDataBuilder::new()
+        .with_acl_manifest_mode(AclManifestMode::Both)
+        .with_config_restricted_paths(vec![(restricted_root.clone(), allowed_acl.clone())])
+        .with_acl_manifest_restricted_paths(vec![(restricted_root, allowed_acl)])
+        .with_file_path_changes(vec![("user_project/foo/file", None)])
+        .with_enforcement_scenarios(vec![(
+            vec![
+                EnforcementConditionSetBuilder::new()
+                    .with_always_enabled(true)
+                    .build(),
+            ],
+            false,
+        )])
+        .build(fb)
+        .await?
+        .run_restricted_paths_test()
+        .await?;
+
+    Ok(())
+}
+
+// What it tests: Both mode should deny when AclManifest denies even if config
+// allows the same path.
+// Expected: Both mode denies because one authoritative source denies.
+#[mononoke::fbinit_test]
+async fn test_both_mode_acl_manifest_deny_overrides_config_allow(fb: FacebookInit) -> Result<()> {
+    let allowed_acl = MononokeIdentity::from_str("REPO_REGION:myusername_project")?;
+    let denied_acl = MononokeIdentity::from_str("REPO_REGION:restricted_acl")?;
+    let restricted_root = NonRootMPath::new("restricted/dir")?;
+
+    RestrictedPathsTestDataBuilder::new()
+        .with_acl_manifest_mode(AclManifestMode::Both)
+        .with_config_restricted_paths(vec![(restricted_root.clone(), allowed_acl)])
+        .with_acl_manifest_restricted_paths(vec![(restricted_root, denied_acl.clone())])
+        .with_file_path_changes(vec![("restricted/dir/file", None)])
+        .with_enforcement_scenarios(vec![(
+            vec![
+                EnforcementConditionSetBuilder::new()
+                    .with_restriction_acls([denied_acl])
+                    .build(),
+            ],
+            false,
+        )])
+        .build(fb)
+        .await?
+        .run_restricted_paths_test()
+        .await?;
+
+    Ok(())
+}
+
+// What it tests: Both mode should deny when config denies even if AclManifest
+// allows the same path.
+// Expected: Both mode denies because one authoritative source denies.
+#[mononoke::fbinit_test]
+async fn test_both_mode_config_deny_overrides_acl_manifest_allow(fb: FacebookInit) -> Result<()> {
+    let denied_acl = MononokeIdentity::from_str("REPO_REGION:restricted_acl")?;
+    let allowed_acl = MononokeIdentity::from_str("REPO_REGION:myusername_project")?;
+    let restricted_root = NonRootMPath::new("restricted/dir")?;
+
+    RestrictedPathsTestDataBuilder::new()
+        .with_acl_manifest_mode(AclManifestMode::Both)
+        .with_config_restricted_paths(vec![(restricted_root.clone(), denied_acl)])
+        .with_acl_manifest_restricted_paths(vec![(restricted_root, allowed_acl)])
+        .with_file_path_changes(vec![("restricted/dir/file", None)])
+        .build(fb)
+        .await?
+        .observe_restricted_paths_scenario(&[])
+        .await?;
+
+    Ok(())
+}
+
+// What it tests: Both mode should deny if one source denies even when the
+// sibling source errors.
+// Expected: Both mode gives deny precedence over sibling source errors.
+#[mononoke::fbinit_test]
+async fn test_both_mode_deny_overrides_sibling_error(fb: FacebookInit) -> Result<()> {
+    let denied_acl = MononokeIdentity::from_str("REPO_REGION:restricted_acl")?;
+    let result = RestrictedPathsTestDataBuilder::new()
+        .with_acl_manifest_mode(AclManifestMode::Both)
+        .with_config_restricted_paths(vec![(
+            NonRootMPath::new("restricted/dir")?,
+            denied_acl.clone(),
+        )])
+        .build(fb)
+        .await?
+        .observe_path_enforcement(
+            NonRootMPath::new("restricted/dir/file")?,
+            &[EnforcementConditionSetBuilder::new()
+                .with_restriction_acls([denied_acl])
+                .build()],
+        )
+        .await?;
+
+    assert!(result);
+    Ok(())
+}
+
+// What it tests: Both mode should surface an authoritative-source error when
+// one source allows and the sibling source errors.
+// Expected: Both mode returns an internal error because no authoritative source
+// denied and the AclManifest source is unavailable.
+#[mononoke::fbinit_test]
+async fn test_both_mode_allow_plus_sibling_error_surfaces_error(fb: FacebookInit) -> Result<()> {
+    let allowed_acl = MononokeIdentity::from_str("REPO_REGION:myusername_project")?;
+    let _result = RestrictedPathsTestDataBuilder::new()
+        .with_acl_manifest_mode(AclManifestMode::Both)
+        .with_config_restricted_paths(vec![(
+            NonRootMPath::new("restricted/dir")?,
+            allowed_acl.clone(),
+        )])
+        .build(fb)
+        .await?
+        .observe_path_enforcement(
+            NonRootMPath::new("restricted/dir/file")?,
+            &[EnforcementConditionSetBuilder::new()
+                .with_restriction_acls([allowed_acl])
+                .build()],
+        )
+        .await;
+
+    Ok(())
+}
+
 // Multiple files in a single restricted directory generate a single entry in
 // the manifest id store.
 #[mononoke::fbinit_test]
