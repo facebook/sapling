@@ -189,12 +189,12 @@ impl MononokeScubaSampleBuilder {
             },
             ExperimentJKData {
                 jk_name: "scm/mononoke:remote_diff",
-                switch_values: vec!["instagram-server", "www", "fbcode"],
+                switch_values: vec!["instagram-server", "www", "fbsource"],
                 consistent_hashing: Some(client_info.correlator.as_str()),
             },
             ExperimentJKData {
                 jk_name: "scm/mononoke:remote_commit_compare",
-                switch_values: vec!["instagram-server", "www", "fbcode"],
+                switch_values: vec!["instagram-server", "www", "fbsource"],
                 consistent_hashing: Some(client_info.correlator.as_str()),
             },
             ExperimentJKData {
