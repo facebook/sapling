@@ -21,6 +21,7 @@ buck_filegroup(
         "cross_repo/library-git-submodules-helpers.sh",
         "cross_repo/library-git-submodules-repos-setup.sh",
         "dbrtest_runner.py",
+        "facebook/restricted_paths/library-restricted-paths-setup.sh",
         "fixtures/repo_with_newline_author_commit.tar.xz",
         "gitexport_library.sh",
         "library.sh",
