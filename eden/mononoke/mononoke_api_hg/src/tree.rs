@@ -323,18 +323,6 @@ impl<R: MononokeRepo> HgAugmentedTreeRestrictionContext<R> {
     pub async fn restriction_check(
         &self,
     ) -> Result<Vec<ManifestRestrictionCheckResult>, MononokeError> {
-        let is_enabled = justknobs::eval(
-            "scm/mononoke:enable_server_side_path_acls",
-            None,
-            Some("HgAugmentedTreeRestrictionContext::restriction_check"),
-        )?;
-
-        if !is_enabled {
-            return Err(MononokeError::NotAvailable(
-                "HgAugmentedTreeRestrictionContext::restriction_check is not enabled".to_string(),
-            ));
-        }
-
         let restricted_paths = self.repo_ctx.repo().restricted_paths_arc();
 
         if !restricted_paths.may_have_restricted_paths() {
@@ -1069,56 +1057,5 @@ mod tests {
             }
         }
         unreachable!("non-empty path traversal returns from the final element")
-    }
-
-    #[mononoke::fbinit_test]
-    async fn test_check_manifest_permission_justknob_disabled(
-        fb: FacebookInit,
-    ) -> anyhow::Result<()> {
-        use futures::FutureExt;
-        use justknobs::test_helpers::JustKnobsInMemory;
-        use justknobs::test_helpers::KnobVal;
-        use justknobs::test_helpers::with_just_knobs_async;
-
-        let ctx = create_test_ctx(fb).await;
-        let repo =
-            setup_restricted_repo(&ctx, vec![("restricted/dir", "REPO_REGION:restricted_acl")])
-                .await?;
-
-        let bcs_id = CreateCommitContext::new_root(&ctx, &repo)
-            .add_file("restricted/dir/a", "content")
-            .commit()
-            .await?;
-
-        let _hg_cs_id = repo.derive_hg_changeset(&ctx, bcs_id).await?;
-        let (_, root_envelope) = derive_and_load_hg_augmented_manifest(&ctx, &repo, bcs_id).await?;
-        let restricted_mfid = load_hg_augmented_manifest_id_at_path(
-            &ctx,
-            &repo,
-            &root_envelope,
-            &MPath::try_from("restricted/dir")?,
-        )
-        .await?;
-
-        let repo_ctx = RepoContext::new_test(ctx, Arc::new(repo)).await?;
-        let hg = repo_ctx.hg();
-
-        let restriction_ctx = HgAugmentedTreeRestrictionContext::new(hg, restricted_mfid).await?;
-        // Override JK to disable the check_permission endpoint
-        let result = with_just_knobs_async(
-            JustKnobsInMemory::new(hashmap! {
-                "scm/mononoke:enable_server_side_path_acls".to_string() => KnobVal::Bool(false),
-            }),
-            async move { restriction_ctx.restriction_check().await }.boxed(),
-        )
-        .await;
-
-        assert!(
-            matches!(result, Err(MononokeError::NotAvailable(_))),
-            "expected NotAvailable error when JK is disabled, got: {:?}",
-            result
-        );
-
-        Ok(())
     }
 }

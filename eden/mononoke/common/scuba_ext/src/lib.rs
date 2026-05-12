@@ -208,7 +208,7 @@ impl MononokeScubaSampleBuilder {
             },
             ExperimentJKData {
                 jk_name: "scm/mononoke:enabled_restricted_paths_access_logging",
-                switch_values: path_acls_switches.clone(),
+                switch_values: path_acls_switches,
                 consistent_hashing: Some(client_info.correlator.as_str()),
             },
             ExperimentJKData {
@@ -219,11 +219,6 @@ impl MononokeScubaSampleBuilder {
             ExperimentJKData {
                 jk_name: "scm/mononoke:rendezvous_bonsai_tag_mapping",
                 switch_values: vec![],
-                consistent_hashing: Some(client_info.correlator.as_str()),
-            },
-            ExperimentJKData {
-                jk_name: "scm/mononoke:enable_server_side_path_acls",
-                switch_values: path_acls_switches,
                 consistent_hashing: Some(client_info.correlator.as_str()),
             },
         ];
