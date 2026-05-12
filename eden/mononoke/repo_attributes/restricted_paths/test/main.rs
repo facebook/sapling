@@ -699,7 +699,7 @@ async fn test_authoritative_path_enforcement_requires_acl_manifest_source(
     fb: FacebookInit,
 ) -> Result<()> {
     let restricted_acl = MononokeIdentity::from_str("REPO_REGION:restricted_acl")?;
-    let _result = RestrictedPathsTestDataBuilder::new()
+    let result = RestrictedPathsTestDataBuilder::new()
         .with_acl_manifest_mode(AclManifestMode::Authoritative)
         .with_acl_manifest_restricted_paths(vec![(
             NonRootMPath::new("restricted/dir")?,
@@ -715,6 +715,7 @@ async fn test_authoritative_path_enforcement_requires_acl_manifest_source(
         )
         .await;
 
+    assert!(result.is_err());
     Ok(())
 }
 
@@ -728,26 +729,24 @@ async fn test_authoritative_mode_acl_manifest_only_restriction_denies(
 ) -> Result<()> {
     let restricted_acl = MononokeIdentity::from_str("REPO_REGION:restricted_acl")?;
 
-    RestrictedPathsTestDataBuilder::new()
+    let result = RestrictedPathsTestDataBuilder::new()
         .with_acl_manifest_mode(AclManifestMode::Authoritative)
         .with_acl_manifest_restricted_paths(vec![(
             NonRootMPath::new("restricted/dir")?,
-            restricted_acl,
+            restricted_acl.clone(),
         )])
         .with_file_path_changes(vec![("restricted/dir/file", None)])
-        .with_enforcement_scenarios(vec![(
-            vec![
-                EnforcementConditionSetBuilder::new()
-                    .with_always_enabled(true)
-                    .build(),
-            ],
-            false,
-        )])
         .build(fb)
         .await?
-        .run_restricted_paths_test()
+        .observe_path_enforcement_after_commit(
+            NonRootMPath::new("restricted/dir/file")?,
+            &[EnforcementConditionSetBuilder::new()
+                .with_always_enabled(true)
+                .build()],
+        )
         .await?;
 
+    assert!(result);
     Ok(())
 }
 

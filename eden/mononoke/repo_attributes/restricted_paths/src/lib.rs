@@ -741,10 +741,11 @@ fn selected_source_handles<'a, T: SourceRestrictionCheck>(
 /// availability fallback logic.
 fn effective_acl_manifest_mode(
     acl_manifest_mode: AclManifestMode,
-    _acl_manifest_supported: bool,
+    acl_manifest_supported: bool,
 ) -> AclManifestMode {
     match acl_manifest_mode {
         AclManifestMode::Shadow => AclManifestMode::Shadow,
+        AclManifestMode::Authoritative if acl_manifest_supported => AclManifestMode::Authoritative,
         _ => AclManifestMode::Disabled,
     }
 }
@@ -754,18 +755,21 @@ fn effective_acl_manifest_mode(
 /// These mode predicates intentionally keep source selection as a small table:
 /// follow-up diffs can change one predicate when enabling a rollout mode
 /// without rewriting the shared fetch orchestration.
-fn fetch_config_for_enforcement(_effective_mode: AclManifestMode) -> bool {
-    true
+fn fetch_config_for_enforcement(effective_mode: AclManifestMode) -> bool {
+    effective_mode != AclManifestMode::Authoritative
 }
 
 /// Whether AclManifest should be fetched as an authoritative enforcement source.
-fn fetch_acl_manifest_for_enforcement(_effective_mode: AclManifestMode) -> bool {
-    false
+fn fetch_acl_manifest_for_enforcement(effective_mode: AclManifestMode) -> bool {
+    effective_mode == AclManifestMode::Authoritative
 }
 
 /// Whether AclManifest should be fetched for access-log telemetry.
 fn fetch_acl_manifest_for_logging(effective_mode: AclManifestMode) -> bool {
-    effective_mode == AclManifestMode::Shadow
+    matches!(
+        effective_mode,
+        AclManifestMode::Shadow | AclManifestMode::Authoritative
+    )
 }
 
 /// Whether logging needs both sources to produce source-comparison fields.

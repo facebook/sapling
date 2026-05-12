@@ -410,17 +410,38 @@ where
         );
     }
 
-    let Some(config_result) = config_result.transpose()? else {
+    let Some((source_name, result)) =
+        legacy_logging_result(acl_manifest_mode, config_result, acl_manifest_result)?
+    else {
         return Ok(());
     };
     log_source_result_to_legacy_scuba(
         ctx,
         restricted_paths.config_based.manifest_id_store().repo_id(),
-        config_result.as_ref(),
+        result.as_ref(),
         access_data,
         restricted_paths.scuba.clone(),
+        vec![source_name.to_string()],
     )?;
     Ok(())
+}
+
+fn legacy_logging_result<T: SourceRestrictionCheck>(
+    acl_manifest_mode: AclManifestMode,
+    config_result: Option<SourceRestrictionResult<T>>,
+    acl_manifest_result: Option<SourceRestrictionResult<T>>,
+) -> Result<Option<(&'static str, SourceRestrictionChecks<T>)>> {
+    let selected = match acl_manifest_mode {
+        AclManifestMode::Authoritative => {
+            acl_manifest_result.map(|result| ("acl_manifest", result))
+        }
+        _ => config_result.map(|result| ("manifest_db", result)),
+    };
+
+    selected
+        .map(|(source_name, result)| result.map(|checks| (source_name, checks)))
+        .transpose()
+        .map_err(anyhow::Error::from)
 }
 
 /// Build the source-comparison fields for rows that need Shadow telemetry.
@@ -668,6 +689,7 @@ fn log_source_result_to_legacy_scuba(
     result: &[impl SourceRestrictionCheck],
     access_data: RestrictedPathAccessData,
     scuba: MononokeScubaSampleBuilder,
+    considered_restricted_by: Vec<String>,
 ) -> Result<RestrictionCheckResult> {
     let summary = SourceRestrictionSummary::from_checks(result);
     let check_result = summary.clone().into_restriction_check_result();
@@ -700,7 +722,7 @@ fn log_source_result_to_legacy_scuba(
                 },
                 acls: restriction_acl_refs,
             }),
-            considered_restricted_by: vec!["manifest_db".to_string()],
+            considered_restricted_by,
             source_comparison: None,
         },
         scuba,
