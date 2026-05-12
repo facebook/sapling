@@ -34,6 +34,8 @@ pub struct SavedState {
     pub manifold_bucket: String,
     pub manifold_path: String,
     pub cas_digest: Option<String>,
+    #[serde(default)]
+    pub project_metadata: Option<String>,
 }
 
 // In repoless queries, we do not have access to the full repository,
@@ -48,6 +50,8 @@ pub struct RepolessSavedState {
     pub manifold_path: String,
     pub synced_commit_id: Option<String>,
     pub cas_digest: Option<String>,
+    #[serde(default)]
+    pub project_metadata: Option<String>,
 }
 
 pub struct SavedStateClient {
@@ -88,6 +92,7 @@ impl SavedStateClient {
                 manifold_path: saved_state.manifold_path,
                 synced_commit_id: Some(sync_commit).filter(|s| !s.is_empty()),
                 cas_digest: saved_state.cas_digest,
+                project_metadata: saved_state.project_metadata,
             })
     }
 
@@ -132,12 +137,14 @@ impl SavedStateClient {
         // NOTE: always use the saved state hash, even if it's not in the repo.
         let manifold_path =
             self.get_manifold_path(&saved_state_info.hash, &saved_state_info.project_metadata);
+        let project_metadata = Some(saved_state_info.project_metadata).filter(|s| !s.is_empty());
         Ok((
             SavedState {
                 commit_id,
                 manifold_bucket: saved_state_info.manifold_bucket,
                 manifold_path,
                 cas_digest: Some(saved_state_info.cas_digest).filter(|s| !s.is_empty()),
+                project_metadata,
             },
             saved_state_info.synced_hash,
         ))
