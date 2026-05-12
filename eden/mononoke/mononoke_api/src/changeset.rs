@@ -961,7 +961,7 @@ impl<R: CommitGraphArc + Clone + Send + Sync + 'static> ChangesetContext<R> {
 ///
 /// Unordered: append `supplement` to `manifest_vec` (no ordering guarantee
 /// across the join).
-pub(crate) fn insert_sorted_results<R: MononokeRepo>(
+pub(crate) fn insert_sorted_results<R>(
     manifest_vec: &mut Vec<ChangesetPathDiffContext<R>>,
     supplement: Vec<ChangesetPathDiffContext<R>>,
     is_ordered: bool,
@@ -1221,6 +1221,7 @@ where
     R: RepoPermissionCheckerRef
         + AclRegionsRef
         + RepoIdentityRef
+        + RepoConfigRef
         + RestrictedPathsArc
         + RepoBlobstoreRef
         + RepoBlobstoreArc
@@ -1440,7 +1441,10 @@ where
         diff_items: BTreeSet<ChangesetDiffItem>,
         ordering: ChangesetFileOrdering,
         limit: Option<usize>,
-    ) -> Result<Vec<ChangesetPathDiffContext<R>>, MononokeError> {
+    ) -> Result<Vec<ChangesetPathDiffContext<R>>, MononokeError>
+    where
+        R: RepoConfigRef,
+    {
         // Helper to that checks if a path is within the given path restrictions
         fn within_restrictions(path: &MPath, path_restrictions: &Option<Vec<MPath>>) -> bool {
             path_restrictions.as_ref().is_none_or(|i| {
