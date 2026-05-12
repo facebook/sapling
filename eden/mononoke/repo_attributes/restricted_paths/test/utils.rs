@@ -575,17 +575,7 @@ impl RestrictedPathsTestData {
     ) -> Result<RestrictedPathsScenarioResult> {
         let scenario = self.setup_scenario_repo(enforcement_condition_sets).await?;
 
-        let mut commit_ctx = CreateCommitContext::new_root(&self.ctx, &scenario.repo);
-        for (path, content) in &self.file_path_changes {
-            let file_content = content.as_deref().unwrap_or(path.as_str());
-            commit_ctx = commit_ctx.add_file(path.as_str(), file_content.to_string());
-        }
-        for (root, acl) in &self.acl_manifest_restricted_paths {
-            let slacl_path = format!("{}/.slacl", root);
-            let slacl_content = format!("repo_region_acl = \"{}\"\n", acl);
-            commit_ctx = commit_ctx.add_file(slacl_path.as_str(), slacl_content);
-        }
-        let bcs_id = commit_ctx.commit().await?;
+        let bcs_id = self.create_configured_changeset(&scenario.repo).await?;
         scenario.repo.derive_hg_changeset(&self.ctx, bcs_id).await?;
         scenario
             .repo
@@ -633,6 +623,34 @@ impl RestrictedPathsTestData {
         Ok(was_denied)
     }
 
+    /// Creates the configured test commit, then calls path-based restricted
+    /// paths enforcement with that commit's changeset id.
+    pub async fn observe_path_enforcement_after_commit(
+        &self,
+        path: NonRootMPath,
+        enforcement_condition_sets: &[EnforcementConditionSet],
+    ) -> Result<bool> {
+        let scenario = self.setup_scenario_repo(enforcement_condition_sets).await?;
+        let bcs_id = self.create_configured_changeset(&scenario.repo).await?;
+
+        let mpath = MPath::from(path);
+        let result = spawn_enforce_restricted_path_access(
+            &self.ctx,
+            scenario.repo.restricted_paths_arc().clone(),
+            &mpath,
+            "restricted_paths_test",
+            Some(bcs_id),
+        )
+        .await;
+        let was_denied = match result {
+            Ok(()) => false,
+            Err(RestrictedPathsError::AuthorizationError(_)) => true,
+            Err(RestrictedPathsError::InternalError(err)) => return Err(err),
+        };
+
+        Ok(was_denied)
+    }
+
     /// Run restricted paths testing for a single scenario.
     /// Creates a repo with the given enforcement condition sets and runs all access operations.
     /// If expect_enforcement is true, expects an AuthorizationError from the access operations.
@@ -651,24 +669,8 @@ impl RestrictedPathsTestData {
             log_path,
         } = self.setup_scenario_repo(enforcement_condition_sets).await?;
 
-        // Create commits and derive data.
-        // .slacl files are added alongside user files so ACL manifest
-        // derivation detects restrictions. The test runner filters .slacl
-        // out of tree traversal and path-based access so they don't
-        // generate spurious access logs.
-        let mut commit_ctx = CreateCommitContext::new_root(&self.ctx, &scenario_repo);
-        for (path, content) in &self.file_path_changes {
-            let file_content = content.as_deref().unwrap_or(path.as_str());
-            commit_ctx = commit_ctx.add_file(path.as_str(), file_content.to_string());
-        }
-        for (root, acl) in &self.acl_manifest_restricted_paths {
-            let slacl_path = format!("{}/.slacl", root);
-            let slacl_content = format!("repo_region_acl = \"{}\"\n", acl);
-            commit_ctx = commit_ctx.add_file(slacl_path.as_str(), slacl_content);
-        }
-
         let blobstore = Arc::new(scenario_repo.repo_blobstore().clone());
-        let bcs_id = commit_ctx.commit().await?;
+        let bcs_id = self.create_configured_changeset(&scenario_repo).await?;
 
         // Get the hg changeset id for the commit, to trigger hg manifest derivation
         let hg_cs_id = scenario_repo.derive_hg_changeset(&self.ctx, bcs_id).await?;
@@ -988,6 +990,20 @@ impl RestrictedPathsTestData {
         .await?;
 
         Ok(RestrictedPathsScenario { repo, log_path })
+    }
+
+    async fn create_configured_changeset(&self, repo: &TestRepo) -> Result<ChangesetId> {
+        let mut commit_ctx = CreateCommitContext::new_root(&self.ctx, repo);
+        for (path, content) in &self.file_path_changes {
+            let file_content = content.as_deref().unwrap_or(path.as_str());
+            commit_ctx = commit_ctx.add_file(path.as_str(), file_content.to_string());
+        }
+        for (root, acl) in &self.acl_manifest_restricted_paths {
+            let slacl_path = format!("{}/.slacl", root);
+            let slacl_content = format!("repo_region_acl = \"{}\"\n", acl);
+            commit_ctx = commit_ctx.add_file(slacl_path.as_str(), slacl_content);
+        }
+        commit_ctx.commit().await
     }
 
     fn scenario_acls(&self) -> Result<Acls> {
