@@ -674,7 +674,7 @@ async fn test_enforcement_does_not_depend_on_logging_jk(fb: FacebookInit) -> Res
             false,
         )]),
         async move {
-            let _result = test_data
+            let result = test_data
                 .observe_path_enforcement(
                     NonRootMPath::new("restricted/dir/file")?,
                     &[EnforcementConditionSetBuilder::new()
@@ -682,6 +682,7 @@ async fn test_enforcement_does_not_depend_on_logging_jk(fb: FacebookInit) -> Res
                         .build()],
                 )
                 .await?;
+            assert!(result);
             Ok(())
         }
         .boxed(),

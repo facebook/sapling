@@ -17,6 +17,7 @@ use futures::StreamExt;
 use futures::TryStreamExt;
 use futures::stream;
 use metaconfig_types::AclManifestMode;
+use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
@@ -34,6 +35,7 @@ use crate::restriction_check;
 use crate::restriction_check::ManifestRestrictionSource;
 use crate::restriction_check::PathRestrictionSource;
 use crate::restriction_check::RestrictionCheckResult;
+use crate::restriction_check::SharedFetchHandle;
 use crate::restriction_check::SourceRestrictionCheck;
 use crate::restriction_check::SourceRestrictionChecks;
 use crate::restriction_check::SourceRestrictionError;
@@ -263,6 +265,37 @@ pub(crate) async fn log_source_comparison_access_by_path_if_restricted(
     Ok(SourceRestrictionSummary::from_checks(config.as_ref()).into_restriction_check_result())
 }
 
+pub(crate) fn spawn_log_source_results<T>(
+    ctx: &CoreContext,
+    restricted_paths: Arc<RestrictedPaths>,
+    access_data: RestrictedPathAccessData,
+    acl_manifest_mode: AclManifestMode,
+    config_handle: Option<SharedFetchHandle<T>>,
+    acl_manifest_handle: Option<SharedFetchHandle<T>>,
+) where
+    T: SourceRestrictionCheck + Send + Sync + 'static,
+{
+    if config_handle.is_none() && acl_manifest_handle.is_none() {
+        return;
+    }
+
+    let ctx = ctx.clone();
+    mononoke::spawn_task(async move {
+        if let Err(err) = log_source_results(
+            &ctx,
+            &restricted_paths,
+            access_data,
+            acl_manifest_mode,
+            config_handle,
+            acl_manifest_handle,
+        )
+        .await
+        {
+            tracing::error!("Failed to log restricted source results: {:#}", err);
+        }
+    });
+}
+
 /// Log compact source-comparison results to Scuba.
 ///
 /// This emits one row when a source-comparison lookup either finds a
@@ -334,6 +367,60 @@ pub(crate) fn log_source_results_to_scuba<T: SourceRestrictionCheck>(
         .as_ref()
         .map(|_| ())
         .map_err(|err| anyhow::anyhow!("{:#}", err))
+}
+
+async fn log_source_results<T>(
+    ctx: &CoreContext,
+    restricted_paths: &RestrictedPaths,
+    access_data: RestrictedPathAccessData,
+    acl_manifest_mode: AclManifestMode,
+    config_handle: Option<SharedFetchHandle<T>>,
+    acl_manifest_handle: Option<SharedFetchHandle<T>>,
+) -> Result<()>
+where
+    T: SourceRestrictionCheck + Send + Sync + 'static,
+{
+    let (config_result, acl_manifest_result) = futures::join!(
+        async {
+            match config_handle.as_ref() {
+                Some(handle) => Some(handle.await_result().await),
+                None => None,
+            }
+        },
+        async {
+            match acl_manifest_handle.as_ref() {
+                Some(handle) => Some(handle.await_result().await),
+                None => None,
+            }
+        },
+    );
+
+    if acl_manifest_mode == AclManifestMode::Shadow {
+        let config_result = config_result.ok_or_else(|| {
+            anyhow::anyhow!("missing config source for source-comparison logging")
+        })?;
+        return log_source_results_to_scuba(
+            ctx,
+            restricted_paths.config_based.manifest_id_store().repo_id(),
+            &config_result,
+            acl_manifest_result.as_ref(),
+            acl_manifest_mode,
+            access_data,
+            restricted_paths.scuba.clone(),
+        );
+    }
+
+    let Some(config_result) = config_result.transpose()? else {
+        return Ok(());
+    };
+    log_source_result_to_legacy_scuba(
+        ctx,
+        restricted_paths.config_based.manifest_id_store().repo_id(),
+        config_result.as_ref(),
+        access_data,
+        restricted_paths.scuba.clone(),
+    )?;
+    Ok(())
 }
 
 /// Build the source-comparison fields for rows that need Shadow telemetry.
@@ -573,6 +660,53 @@ struct SourceComparisonData {
     has_authorization: bool,
     restriction_acls: Vec<String>,
     restriction_paths: Option<Vec<String>>,
+}
+
+fn log_source_result_to_legacy_scuba(
+    ctx: &CoreContext,
+    repo_id: RepositoryId,
+    result: &[impl SourceRestrictionCheck],
+    access_data: RestrictedPathAccessData,
+    scuba: MononokeScubaSampleBuilder,
+) -> Result<RestrictionCheckResult> {
+    let summary = SourceRestrictionSummary::from_checks(result);
+    let check_result = summary.clone().into_restriction_check_result();
+    if result.is_empty() {
+        return Ok(check_result);
+    }
+
+    let restriction_acls = summary
+        .repo_region_acls()
+        .iter()
+        .map(|acl| {
+            MononokeIdentity::from_str(acl)
+                .with_context(|| format!("Failed to parse repo_region_acl {acl}"))
+        })
+        .collect::<Result<Vec<_>>>()?;
+    let restriction_acl_refs = restriction_acls.iter().collect::<Vec<_>>();
+
+    log_checked_access_to_restricted_path(
+        ctx,
+        RestrictedPathLogData {
+            repo_id,
+            access_data,
+            aggregate: Some(RestrictedPathAggregateLogData {
+                restricted_paths: Some(summary.restriction_roots()),
+                authorization: LoggedAuthorization {
+                    has_authorization: summary.has_authorization(),
+                    is_allowlisted_tooling: summary.is_allowlisted_tooling(),
+                    is_rollout_allowlisted: summary.is_rollout_allowlisted(),
+                    has_acl_access: summary.has_acl_access(),
+                },
+                acls: restriction_acl_refs,
+            }),
+            considered_restricted_by: vec!["manifest_db".to_string()],
+            source_comparison: None,
+        },
+        scuba,
+    )?;
+
+    Ok(check_result)
 }
 
 fn acl_manifest_mode_as_scuba_value(acl_manifest_mode: AclManifestMode) -> &'static str {

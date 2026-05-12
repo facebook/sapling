@@ -33,6 +33,7 @@ rust_library(
         "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tracing",
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/justknobs_stub:justknobs",
         "//eden/mononoke/blobstore:blobstore",
@@ -49,7 +50,6 @@ rust_library(
         "//eden/mononoke/repo_attributes/restricted_paths_common:restricted_paths_common",
         "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ] + ([] if rust_oss.is_oss_build() else [
-        "fbsource//third-party/rust:tracing",
         "//eden/scm/lib/clientinfo:clientinfo",
         # fbcode-only dep for schematized logger (CommonServerData/CommonMetadata from scuba_ext)
         "//dsi/logger/configs/MononokeRestrictedPathsAccessLoggerConfig:mononoke_restricted_paths_access_rust_logger",

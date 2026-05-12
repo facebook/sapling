@@ -432,10 +432,10 @@ impl<T: SourceRestrictionCheck + Send + Sync + 'static> SharedFetchHandle<T> {
         Self { inner }
     }
 
-    #[cfg_attr(
-        not(test),
-        expect(dead_code, reason = "called by source planning in a follow-up diff")
-    )]
+    pub(crate) fn from_result(result: Result<Vec<T>>) -> Self {
+        Self::from_future(futures::future::ready(result))
+    }
+
     pub(crate) async fn await_result(&self) -> SourceRestrictionResult<T> {
         self.inner.clone().await
     }
@@ -458,6 +458,13 @@ pub(crate) enum PreFilterResult<'a> {
         candidates: Vec<&'a EnforcementConditionSet>,
     },
 }
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum PreFilterVariant {
+    Definite,
+    NeedsFetch,
+}
+
 /// Evaluate ACL and allowlist authorization for a restricted-path access.
 pub(crate) async fn check_authorization(
     ctx: &CoreContext,
@@ -656,6 +663,54 @@ pub(crate) fn condition_sets_match_restriction_acls(
     })
 }
 
+/// Evaluate whether one authoritative source denies this access.
+pub(crate) async fn source_denies_access<'a, T>(
+    handle: &SharedFetchHandle<T>,
+    candidates: &[&'a EnforcementConditionSet],
+    pre_filter_variant: &PreFilterVariant,
+) -> Result<bool>
+where
+    T: SourceRestrictionCheck + Send + Sync + 'static,
+{
+    let result = handle.await_result().await?;
+    let any_match = match pre_filter_variant {
+        PreFilterVariant::Definite => true,
+        PreFilterVariant::NeedsFetch => {
+            let restriction_acls = result
+                .as_ref()
+                .iter()
+                .map(SourceRestrictionCheck::repo_region_identity)
+                .collect::<Vec<_>>();
+            condition_sets_match_restriction_acls(candidates, &restriction_acls)
+        }
+    };
+
+    Ok(any_match
+        && result
+            .as_ref()
+            .iter()
+            .any(|check| !check.authorization().has_authorization()))
+}
+
+/// Combine authoritative source denials using deny-precedence semantics.
+///
+/// A deny wins over sibling errors so `Both` mode can stay fail-closed once it
+/// is enabled, while the first remaining error is surfaced if no source denied.
+pub(crate) fn authoritative_sources_deny_access(source_denials: Vec<Result<bool>>) -> Result<bool> {
+    if source_denials
+        .iter()
+        .any(|source_denial| matches!(source_denial, Ok(true)))
+    {
+        return Ok(true);
+    }
+
+    for source_denial in source_denials {
+        source_denial?;
+    }
+
+    Ok(false)
+}
+
 /// Check a path against one selected restriction source.
 ///
 /// Normal callers should use `get_path_restriction_check`, which follows the
@@ -686,7 +741,6 @@ pub(crate) async fn check_path_restriction_from_source(
     }
 }
 
-#[expect(dead_code, reason = "wired into source planning in a follow-up diff")]
 pub(crate) fn spawn_path_restriction_check(
     ctx: &CoreContext,
     restricted_paths: Arc<RestrictedPaths>,
@@ -716,7 +770,6 @@ pub(crate) async fn check_manifest_restriction_from_source(
         .await
 }
 
-#[expect(dead_code, reason = "wired into source planning in a follow-up diff")]
 pub(crate) fn spawn_manifest_restriction_check(
     ctx: &CoreContext,
     restricted_paths: Arc<RestrictedPaths>,

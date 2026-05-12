@@ -23,7 +23,6 @@ use anyhow::Result;
 use context::CoreContext;
 use metaconfig_types::AclManifestMode;
 use metaconfig_types::RestrictedPathsConfig;
-use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::DerivableType;
 use mononoke_types::MPath;
@@ -33,7 +32,6 @@ use repo_derived_data::ArcRepoDerivedData;
 pub use restricted_paths_common::*;
 use scuba_ext::MononokeScubaSampleBuilder;
 use thiserror::Error;
-use tokio::task;
 
 pub use crate::access_log::ACCESS_LOG_SCUBA_TABLE;
 use crate::access_log::log_access_to_restricted_path;
@@ -41,6 +39,8 @@ pub use crate::restriction_check::ManifestRestrictionCheckResult;
 pub use crate::restriction_check::PathRestrictionCheckResult;
 use crate::restriction_check::PreFilterResult;
 pub use crate::restriction_check::RestrictionCheckResult;
+use crate::restriction_check::SharedFetchHandle;
+use crate::restriction_check::SourceRestrictionCheck;
 pub use crate::restriction_check::check_path_restriction_infos;
 pub use crate::restriction_info::ManifestRestrictionInfo;
 pub use crate::restriction_info::PathRestrictionInfo;
@@ -366,97 +366,15 @@ impl RestrictedPaths {
         )
         .await
     }
-
-    fn restriction_acls_for_roots(
-        &self,
-        restriction_roots: &[NonRootMPath],
-    ) -> Vec<&permission_checker::MononokeIdentity> {
-        restriction_roots
-            .iter()
-            .filter_map(|root| self.config().path_acls.get(root))
-            .collect()
-    }
-}
-
-fn should_enforce_check_result(
-    restricted_paths: &RestrictedPaths,
-    check_result: &RestrictionCheckResult,
-    pre_filter_result: &PreFilterResult<'_>,
-) -> bool {
-    match pre_filter_result {
-        PreFilterResult::NoMatch => false,
-        PreFilterResult::DefiniteMatch { candidates } => !candidates.is_empty(),
-        PreFilterResult::NeedsFetch { candidates } => {
-            let restriction_acls =
-                restricted_paths.restriction_acls_for_roots(&check_result.restriction_roots);
-            restriction_check::condition_sets_match_restriction_acls(candidates, &restriction_acls)
-        }
-    }
-}
-
-/// Helper function to spawn an async task that logs access to restricted paths.
-///
-/// This function checks if restricted paths access logging is enabled via justknobs,
-/// and if so, spawns an async task to log the access. The logging is done asynchronously
-/// to avoid blocking the request.
-///
-/// Only spawns a task when scuba logging is actually enabled (not a discard builder).
-/// This avoids unnecessary task spawning overhead when logging is disabled.
-///
-/// # Arguments
-/// * `ctx` - The core context for the operation
-/// * `restricted_paths` - Arc to the RestrictedPaths configuration
-/// * `path` - The path being accessed (as an MPath)
-/// * `switch_value` - The justknobs switch value to use for feature gating
-///
-/// # Returns
-/// Ok(()) if the justknobs check succeeds, Err otherwise
-pub fn spawn_log_restricted_path_access(
-    ctx: &CoreContext,
-    restricted_paths: Arc<RestrictedPaths>,
-    path: &mononoke_types::MPath,
-    switch_value: &str,
-    cs_id: Option<ChangesetId>,
-) -> Result<Option<task::JoinHandle<Result<RestrictionCheckResult>>>> {
-    // Early return if logging is disabled - avoid all overhead
-    if !justknobs::eval(
-        "scm/mononoke:enabled_restricted_paths_access_logging",
-        None,
-        Some(switch_value),
-    )? {
-        return Ok(None);
-    }
-
-    // Early return if no source can report restricted paths.
-    if !restricted_paths.may_have_restricted_paths() {
-        return Ok(None);
-    }
-
-    // Only spawn task if we're actually going to log something
-    if let Ok(non_root_mpath) = NonRootMPath::try_from(path.clone()) {
-        let ctx_clone = ctx.clone();
-
-        // Log asynchronously to avoid blocking the request
-        let spawned_task = mononoke::spawn_task(async move {
-            restricted_paths
-                .log_access_by_path_if_restricted(&ctx_clone, non_root_mpath, cs_id)
-                .await
-        });
-
-        // But return the task handle so callers can wait on the access check result
-        // if needed.
-        return Ok(Some(spawned_task));
-    }
-
-    Ok(None)
 }
 
 /// Spawn enforcement check for restricted path access.
 ///
 /// This function:
-/// 1. Calls `spawn_log_restricted_path_access` for logging (fire-and-forget)
-/// 2. Checks whether enforcement is enabled for a matching condition set
-/// 3. If match AND user lacks authorization, returns `RestrictedPathsError::AuthorizationError`
+/// 1. Spawns any source fetches needed by logging or enforcement
+/// 2. Spawns logging as a fire-and-forget task when logging is enabled
+/// 3. Checks whether enforcement is enabled for a matching condition set
+/// 4. If match AND user lacks authorization, returns `RestrictedPathsError::AuthorizationError`
 ///
 /// # Returns
 /// * `Ok(())` if access is allowed or enforcement is disabled
@@ -468,76 +386,75 @@ pub async fn spawn_enforce_restricted_path_access<'a, 'b>(
     switch_value: &'b str,
     cs_id: Option<ChangesetId>,
 ) -> Result<(), RestrictedPathsError<'a>> {
+    let non_root_mpath = match NonRootMPath::try_from(path.clone()) {
+        Ok(path) => path,
+        Err(_) => return Ok(()),
+    };
+    let config = restricted_paths.config();
+    let effective_mode = effective_acl_manifest_mode(config.acl_manifest_mode, true);
+    let config_path_may_restrict = config
+        .path_acls
+        .keys()
+        .any(|prefix| prefix.is_prefix_of(&non_root_mpath));
+    let access_data = access_log::RestrictedPathAccessData::FullPath {
+        full_path: non_root_mpath.clone(),
+    };
+
     spawn_enforce_restricted_access(
         ctx,
         restricted_paths.clone(),
-        || spawn_log_restricted_path_access(ctx, restricted_paths, path, switch_value, cs_id),
+        switch_value,
+        effective_mode,
+        config_path_may_restrict,
+        cs_id.is_some(),
+        "path",
+        access_data,
+        move |fetches| SourceHandles {
+            config: fetches.fetch_config().then(|| {
+                if !config_path_may_restrict {
+                    return SharedFetchHandle::from_result(Ok(
+                        Vec::<PathRestrictionCheckResult>::new(),
+                    ));
+                }
+                let ctx = ctx.clone();
+                let restricted_paths = restricted_paths.clone();
+                let path = non_root_mpath.clone();
+                SharedFetchHandle::from_future(async move {
+                    restriction_check::check_path_restriction_from_source(
+                        &ctx,
+                        &restricted_paths,
+                        path,
+                        restriction_check::PathRestrictionSource::Config,
+                    )
+                    .await
+                })
+            }),
+            acl_manifest: fetches
+                .fetch_acl_manifest()
+                .then(|| {
+                    cs_id.map(|cs_id| {
+                        restriction_check::spawn_path_restriction_check(
+                            ctx,
+                            restricted_paths.clone(),
+                            non_root_mpath.clone(),
+                            restriction_check::PathRestrictionSource::AclManifest(cs_id),
+                        )
+                    })
+                })
+                .flatten(),
+        },
         || RestrictedPathsError::AuthorizationError(RestrictedPathAccessType::Path(path)),
     )
     .await
 }
 
-/// Helper function to spawn an async task that logs access to restricted paths by manifest ID.
-///
-/// This function checks if restricted paths access logging is enabled via justknobs,
-/// and if so, spawns an async task to log the access. The logging is done asynchronously
-/// to avoid blocking the request.
-///
-/// Only spawns a task when scuba logging is actually enabled (not a discard builder).
-/// This avoids unnecessary task spawning overhead when logging is disabled.
-///
-/// # Arguments
-/// * `ctx` - The core context for the operation
-/// * `restricted_paths` - Arc to the RestrictedPaths configuration
-/// * `manifest_id` - The manifest ID being accessed
-/// * `manifest_type` - The type of manifest (e.g., Fsnode, HgManifest)
-/// * `switch_value` - The justknobs switch value to use for feature gating
-///
-/// # Returns
-/// Ok(()) if the justknobs check succeeds, Err otherwise
-fn spawn_log_restricted_manifest_access(
-    ctx: &CoreContext,
-    restricted_paths: Arc<RestrictedPaths>,
-    manifest_id: ManifestId,
-    manifest_type: ManifestType,
-    switch_value: &str,
-    cs_id: Option<ChangesetId>,
-) -> Result<Option<task::JoinHandle<Result<RestrictionCheckResult>>>> {
-    // Early return if logging is disabled - avoid all overhead
-    if !justknobs::eval(
-        "scm/mononoke:enabled_restricted_paths_access_logging",
-        None,
-        Some(switch_value),
-    )? {
-        return Ok(None);
-    }
-
-    // Early return if config is empty - no restricted paths to check
-    if restricted_paths.config().is_empty() {
-        return Ok(None);
-    }
-
-    // Only spawn task if we're actually going to log something
-    let ctx_clone = ctx.clone();
-
-    // Log asynchronously to avoid blocking the request
-    let spawned_task = mononoke::spawn_task(async move {
-        restricted_paths
-            .log_access_by_manifest_if_restricted(&ctx_clone, manifest_id, manifest_type, cs_id)
-            .await
-    });
-
-    // But return the task handle so callers can wait on the access check result
-    // if needed.
-    Ok(Some(spawned_task))
-}
-
 /// Spawn enforcement check for restricted manifest access.
 ///
 /// This function:
-/// 1. Calls `spawn_log_restricted_manifest_access` for logging (fire-and-forget)
-/// 2. Checks whether enforcement is enabled for a matching condition set
-/// 3. If match AND user lacks authorization, returns `RestrictedPathsError::AuthorizationError`
+/// 1. Spawns any source fetches needed by logging or enforcement
+/// 2. Spawns logging as a fire-and-forget task when logging is enabled
+/// 3. Checks whether enforcement is enabled for a matching condition set
+/// 4. If match AND user lacks authorization, returns `RestrictedPathsError::AuthorizationError`
 ///
 /// # Returns
 /// * `Ok(())` if access is allowed or enforcement is disabled
@@ -548,22 +465,64 @@ pub async fn spawn_enforce_restricted_manifest_access<'a>(
     manifest_id: ManifestId,
     manifest_type: ManifestType,
     switch_value: &'a str,
-    cs_id: Option<ChangesetId>,
+    _cs_id: Option<ChangesetId>,
 ) -> Result<(), RestrictedPathsError<'a>> {
-    let manifest_id_for_log = manifest_id.clone();
-    let manifest_type_for_log = manifest_type.clone();
+    let config = restricted_paths.config();
+    let acl_manifest_available = manifest_type == ManifestType::HgAugmented;
+    let effective_mode =
+        effective_acl_manifest_mode(config.acl_manifest_mode, acl_manifest_available);
+    // TODO(T248658346): decouple config from manifest_id store. We should continue enforcing if the config doesn't have the path, but the manifest_id store has entries for the manifest.
+    let config_manifest_may_restrict = !config.is_empty();
+    let access_data =
+        access_log::RestrictedPathAccessData::Manifest(manifest_id.clone(), manifest_type.clone());
+    let manifest_id_for_fetches = manifest_id.clone();
+    let manifest_type_for_fetches = manifest_type.clone();
+
     spawn_enforce_restricted_access(
         ctx,
         restricted_paths.clone(),
-        || {
-            spawn_log_restricted_manifest_access(
-                ctx,
-                restricted_paths,
-                manifest_id_for_log,
-                manifest_type_for_log,
-                switch_value,
-                cs_id,
-            )
+        switch_value,
+        effective_mode,
+        config_manifest_may_restrict,
+        acl_manifest_available,
+        "manifest",
+        access_data,
+        move |fetches| SourceHandles {
+            config: fetches.fetch_config().then(|| {
+                if !config_manifest_may_restrict {
+                    return SharedFetchHandle::from_result(Ok(
+                        Vec::<ManifestRestrictionCheckResult>::new(),
+                    ));
+                }
+                let ctx = ctx.clone();
+                let restricted_paths = restricted_paths.clone();
+                let manifest_id = manifest_id_for_fetches.clone();
+                let manifest_type = manifest_type_for_fetches.clone();
+                SharedFetchHandle::from_future(async move {
+                    restriction_check::check_manifest_restriction_from_source(
+                        &ctx,
+                        &restricted_paths,
+                        manifest_id,
+                        manifest_type,
+                        restriction_check::ManifestRestrictionSource::Config,
+                    )
+                    .await
+                })
+            }),
+            acl_manifest: fetches
+                .fetch_acl_manifest()
+                .then(|| {
+                    acl_manifest_available.then(|| {
+                        restriction_check::spawn_manifest_restriction_check(
+                            ctx,
+                            restricted_paths.clone(),
+                            manifest_id_for_fetches.clone(),
+                            manifest_type_for_fetches.clone(),
+                            restriction_check::ManifestRestrictionSource::AclManifest,
+                        )
+                    })
+                })
+                .flatten(),
         },
         || {
             RestrictedPathsError::AuthorizationError(RestrictedPathAccessType::Manifest(
@@ -574,53 +533,274 @@ pub async fn spawn_enforce_restricted_manifest_access<'a>(
     .await
 }
 
+const ACCESS_LOGGING_JK: &str = "scm/mononoke:enabled_restricted_paths_access_logging";
+
+struct SourceHandles<T: SourceRestrictionCheck> {
+    config: Option<SharedFetchHandle<T>>,
+    acl_manifest: Option<SharedFetchHandle<T>>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct SourceFetchOptions {
+    logging_enabled: bool,
+    enforcement_enabled: bool,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct SourceFetches {
+    logging_config: bool,
+    logging_acl_manifest: bool,
+    enforcement_config: bool,
+    enforcement_acl_manifest: bool,
+}
+
+impl SourceFetches {
+    fn fetch_config(self) -> bool {
+        self.logging_config || self.enforcement_config
+    }
+
+    fn fetch_acl_manifest(self) -> bool {
+        self.logging_acl_manifest || self.enforcement_acl_manifest
+    }
+}
+
 /// Shared path/manifest enforcement orchestration.
 ///
-/// Path and manifest access differ only in how they start the logging lookup
-/// and how they report an authorization error. This helper keeps the common
-/// control flow in one place: start logging, apply request-local enforcement
-/// filters, await the logging result only when enforcement may apply, and
-/// translate a matched unauthorized result into the caller-specific error.
-async fn spawn_enforce_restricted_access<'a>(
+/// The public entrypoints decide how to build source handles for their access
+/// type. This helper owns the common flow: evaluate cheap request-local
+/// enforcement filters first, choose the sources needed by logging and
+/// enforcement, spawn fire-and-forget logging from cloned shared handles, and
+/// finally await only the authoritative handles needed to deny the request.
+async fn spawn_enforce_restricted_access<'a, T>(
     ctx: &CoreContext,
     restricted_paths: Arc<RestrictedPaths>,
-    spawn_logging: impl FnOnce() -> Result<Option<task::JoinHandle<Result<RestrictionCheckResult>>>>,
+    switch_value: &str,
+    effective_mode: AclManifestMode,
+    config_source_may_restrict: bool,
+    acl_manifest_available: bool,
+    access_type: &'static str,
+    access_data: access_log::RestrictedPathAccessData,
+    build_handles: impl FnOnce(SourceFetches) -> SourceHandles<T>,
     authorization_error: impl FnOnce() -> RestrictedPathsError<'a>,
-) -> Result<(), RestrictedPathsError<'a>> {
-    // Always log first, but get the task handle so we can get the access check
-    // result if needed.
-    let has_auth_task = spawn_logging()?;
-
+) -> Result<(), RestrictedPathsError<'a>>
+where
+    T: SourceRestrictionCheck + Send + Sync + 'static,
+{
     let config = restricted_paths.config();
-    if !config.enforcement_enabled || config.enforcement_condition_sets.is_empty() {
+    let enforcement_enabled =
+        config.enforcement_enabled && !config.enforcement_condition_sets.is_empty();
+    let source_options = fetch_options_for_access(switch_value, enforcement_enabled)?;
+    if !source_options.logging_enabled && !source_options.enforcement_enabled {
         return Ok(());
     }
 
-    let pre_filter_result =
-        restriction_check::pre_filter_condition_sets(ctx, &config.enforcement_condition_sets);
-    if matches!(pre_filter_result, PreFilterResult::NoMatch) {
-        return Ok(());
-    }
-
-    // Conditional enforcement matched - check authorization
-    let check_result = if let Some(has_auth_handle) = has_auth_task {
-        has_auth_handle.await.map_err(anyhow::Error::from)??
+    let pre_filter_result = if enforcement_enabled {
+        restriction_check::pre_filter_condition_sets(ctx, &config.enforcement_condition_sets)
     } else {
-        // Either logging was disabled or there were no restricted paths
-        // Access logging is a pre-requisite for enforcement!
-        RestrictionCheckResult {
-            has_authorization: true,
-            restriction_roots: vec![],
+        PreFilterResult::NoMatch
+    };
+    let fetches = source_fetches_for_access(
+        source_options,
+        &pre_filter_result,
+        effective_mode,
+        config_source_may_restrict,
+        acl_manifest_available,
+    );
+    let handles = build_handles(fetches);
+
+    access_log::spawn_log_source_results(
+        ctx,
+        restricted_paths.clone(),
+        access_data,
+        effective_mode,
+        fetches
+            .logging_config
+            .then(|| handles.config.clone())
+            .flatten(),
+        fetches
+            .logging_acl_manifest
+            .then(|| handles.acl_manifest.clone())
+            .flatten(),
+    );
+
+    if !source_options.enforcement_enabled {
+        return Ok(());
+    }
+
+    let should_deny = enforce_with_source_handles(
+        fetches.enforcement_config,
+        fetches.enforcement_acl_manifest,
+        &handles,
+        pre_filter_result,
+        missing_authoritative_source_error(
+            access_type,
+            effective_mode,
+            fetches.enforcement_config,
+            fetches.enforcement_acl_manifest,
+        ),
+    )
+    .await?;
+
+    if should_deny {
+        Err(authorization_error())
+    } else {
+        Ok(())
+    }
+}
+
+/// Read per-request feature switches that affect source fetching.
+///
+/// `enforcement_enabled` is passed in after config-level enforcement checks so
+/// source selection can treat disabled enforcement like a request that did not
+/// match any enforcement condition set.
+fn fetch_options_for_access(
+    switch_value: &str,
+    enforcement_enabled: bool,
+) -> Result<SourceFetchOptions> {
+    Ok(SourceFetchOptions {
+        logging_enabled: justknobs::eval(ACCESS_LOGGING_JK, None, Some(switch_value))?,
+        enforcement_enabled,
+    })
+}
+
+/// Decide which restriction sources must be fetched for this access.
+///
+/// Logging and enforcement choose sources independently: comparison logging can
+/// need both config and AclManifest even when enforcement only needs the
+/// authoritative source. Centralizing the source table keeps path and manifest
+/// callsites from duplicating those mode rules.
+fn source_fetches_for_access(
+    source_options: SourceFetchOptions,
+    pre_filter_result: &PreFilterResult<'_>,
+    effective_mode: AclManifestMode,
+    config_source_may_restrict: bool,
+    acl_manifest_available: bool,
+) -> SourceFetches {
+    let enforcement_fetch_enabled = !matches!(pre_filter_result, PreFilterResult::NoMatch)
+        && source_options.enforcement_enabled;
+    let enforcement_config =
+        enforcement_fetch_enabled && fetch_config_for_enforcement(effective_mode);
+    let enforcement_acl_manifest =
+        enforcement_fetch_enabled && fetch_acl_manifest_for_enforcement(effective_mode);
+    let logging_acl_manifest = source_options.logging_enabled
+        && fetch_acl_manifest_for_logging(effective_mode)
+        && acl_manifest_available;
+    let logging_config = source_options.logging_enabled
+        && effective_mode != AclManifestMode::Authoritative
+        && (config_source_may_restrict
+            || (compares_sources_for_logging(effective_mode) && logging_acl_manifest));
+
+    SourceFetches {
+        logging_config,
+        logging_acl_manifest,
+        enforcement_config,
+        enforcement_acl_manifest,
+    }
+}
+
+fn missing_authoritative_source_error(
+    access_type: &str,
+    acl_manifest_mode: metaconfig_types::AclManifestMode,
+    needs_config: bool,
+    needs_acl_manifest: bool,
+) -> anyhow::Error {
+    anyhow::anyhow!(
+        "authoritative {access_type} source for acl_manifest_mode={:?} unavailable (needs_config={}, needs_acl_manifest={})",
+        acl_manifest_mode,
+        needs_config,
+        needs_acl_manifest,
+    )
+}
+
+fn selected_source_handles<'a, T: SourceRestrictionCheck>(
+    fetch_config: bool,
+    fetch_acl_manifest: bool,
+    handles: &'a SourceHandles<T>,
+) -> Option<Vec<&'a SharedFetchHandle<T>>> {
+    let mut selected = Vec::new();
+    if fetch_config {
+        selected.push(handles.config.as_ref()?);
+    }
+    if fetch_acl_manifest {
+        selected.push(handles.acl_manifest.as_ref()?);
+    }
+    Some(selected)
+}
+
+/// Normalize the repo-configured rollout mode to the mode this access can use.
+///
+/// `AclManifestMode` is configured at the repo level, but AclManifest is not
+/// always an available source for an individual access: path checks need a
+/// changeset id, and manifest checks need a manifest type backed by
+/// AclManifest data. This helper is the single boundary where callsites combine
+/// configured mode with source availability before source selection.
+///
+/// In this diff only Shadow comparison can use AclManifest, so non-Shadow modes
+/// collapse to Disabled. Follow-up diffs extend the match arms for Both and
+/// Authoritative without forcing each path/manifest callsite to duplicate the
+/// availability fallback logic.
+fn effective_acl_manifest_mode(
+    acl_manifest_mode: AclManifestMode,
+    _acl_manifest_supported: bool,
+) -> AclManifestMode {
+    match acl_manifest_mode {
+        AclManifestMode::Shadow => AclManifestMode::Shadow,
+        _ => AclManifestMode::Disabled,
+    }
+}
+
+/// Whether config should be fetched as an authoritative enforcement source.
+///
+/// These mode predicates intentionally keep source selection as a small table:
+/// follow-up diffs can change one predicate when enabling a rollout mode
+/// without rewriting the shared fetch orchestration.
+fn fetch_config_for_enforcement(_effective_mode: AclManifestMode) -> bool {
+    true
+}
+
+/// Whether AclManifest should be fetched as an authoritative enforcement source.
+fn fetch_acl_manifest_for_enforcement(_effective_mode: AclManifestMode) -> bool {
+    false
+}
+
+/// Whether AclManifest should be fetched for access-log telemetry.
+fn fetch_acl_manifest_for_logging(effective_mode: AclManifestMode) -> bool {
+    effective_mode == AclManifestMode::Shadow
+}
+
+/// Whether logging needs both sources to produce source-comparison fields.
+fn compares_sources_for_logging(effective_mode: AclManifestMode) -> bool {
+    effective_mode == AclManifestMode::Shadow
+}
+
+async fn enforce_with_source_handles<'a, T>(
+    fetch_config: bool,
+    fetch_acl_manifest: bool,
+    handles: &SourceHandles<T>,
+    pre_filter_result: PreFilterResult<'a>,
+    missing_source_error: anyhow::Error,
+) -> Result<bool>
+where
+    T: SourceRestrictionCheck + Send + Sync + 'static,
+{
+    let (candidates, pre_filter_variant) = match pre_filter_result {
+        PreFilterResult::NoMatch => return Ok(false),
+        PreFilterResult::DefiniteMatch { candidates } => {
+            (candidates, restriction_check::PreFilterVariant::Definite)
+        }
+        PreFilterResult::NeedsFetch { candidates } => {
+            (candidates, restriction_check::PreFilterVariant::NeedsFetch)
         }
     };
 
-    if should_enforce_check_result(&restricted_paths, &check_result, &pre_filter_result)
-        && !check_result.has_authorization
-    {
-        return Err(authorization_error());
-    }
+    let authoritative = selected_source_handles(fetch_config, fetch_acl_manifest, handles)
+        .ok_or(missing_source_error)?;
+    let source_denials = futures::future::join_all(authoritative.into_iter().map(|handle| {
+        restriction_check::source_denies_access(handle, &candidates, &pre_filter_variant)
+    }))
+    .await;
 
-    Ok(())
+    restriction_check::authoritative_sources_deny_access(source_denials)
 }
 
 #[cfg(test)]
