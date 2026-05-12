@@ -77,8 +77,8 @@ pub(crate) async fn derive_fsnodes_stack(
         .iter()
         .flat_map(|(_cs_id, per_commit_file_changes)| {
             per_commit_file_changes
-                .iter()
-                .filter_map(|(_mpath, content_id_and_file_type)| {
+                .values()
+                .filter_map(|content_id_and_file_type| {
                     content_id_and_file_type.map(|(content_id, _file_type)| content_id)
                 })
         })
