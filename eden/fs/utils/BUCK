@@ -216,18 +216,6 @@ cpp_library(
 )
 
 cpp_library(
-    name = "dir_type",
-    srcs = [
-        "DirType.cpp",
-    ],
-    deps = [
-        "//eden/common/utils:utils",
-        "//eden/fs/service:thrift-cpp2-types",
-        "//folly:utility",
-    ],
-)
-
-cpp_library(
     name = "chrono",
     srcs = [
         "ChronoParse.cpp",
