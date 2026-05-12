@@ -28,10 +28,7 @@ export default function VSCodeSettings() {
   return (
     <Setting title={<T>VS Code Settings</T>}>
       <Column alignStart>
-        <Tooltip
-          title={t(
-            'Whether to always open a separate panel to view comparisons, or to open the comparison inside an existing ISL window.',
-          )}>
+        <Tooltip title={t('How comparisons should be displayed when viewing diffs and changes.')}>
           <div className="dropdown-container setting-inline-dropdown">
             <label>
               <T>Comparison Panel Mode</T>

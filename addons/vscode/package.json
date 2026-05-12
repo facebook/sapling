@@ -78,7 +78,7 @@
             "%settings.comparisonPanelMode.enumDescriptions.always-separate-panel%"
           ],
           "description": "%settings.comparisonPanelMode.description%",
-          "default": "Auto"
+          "default": "Always Separate Panel"
         },
         "sapling.isl.openBeside": {
           "type": "boolean",

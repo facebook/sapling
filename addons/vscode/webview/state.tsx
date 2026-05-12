@@ -16,7 +16,9 @@ export enum ComparisonPanelMode {
   AlwaysOpenPanel = 'Always Separate Panel',
 }
 
-export const comparisonPanelMode = atom<undefined | ComparisonPanelMode>(ComparisonPanelMode.Auto);
+export const comparisonPanelMode = atom<undefined | ComparisonPanelMode>(
+  ComparisonPanelMode.AlwaysOpenPanel,
+);
 serverAPI.postMessage({
   type: 'platform/subscribeToVSCodeConfig',
   config: 'sapling.comparisonPanelMode',
@@ -44,5 +46,5 @@ export const setComparisonPanelMode = (mode: ComparisonPanelMode) => {
 };
 
 export const getComparisonPanelMode = () => {
-  return readAtom(comparisonPanelMode) ?? 'Auto';
+  return readAtom(comparisonPanelMode) ?? ComparisonPanelMode.AlwaysOpenPanel;
 };

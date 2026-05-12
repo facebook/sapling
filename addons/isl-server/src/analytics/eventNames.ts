@@ -133,6 +133,7 @@ export type TrackEventName =
   | 'RenameWorktreeOperation'
   | 'RunCommand'
   | 'StatusCommand'
+  | 'StatusForComparisonCommand'
   | 'SawStableLocation'
   | 'LogCommand'
   | 'LookupCommitsCommand'

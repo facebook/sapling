@@ -176,6 +176,7 @@ export default class ServerToClientAPI {
       this.activeRepoRef.unref();
     }
     this.logger.info(`Setting active repo cwd to ${newCwd}`);
+    this.connection.onChangeCwd?.(newCwd);
     // Set as loading right away while we determine the new cwd's repo
     // This ensures new messages coming in will be queued and handled only with the new repository
     this.currentState = {type: 'loading'};

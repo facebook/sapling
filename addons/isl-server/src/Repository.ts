@@ -1702,6 +1702,28 @@ export class Repository {
     return output.stdout;
   }
 
+  /**
+   * Get the list of changed files for a given comparison.
+   * Uses `sl status` with the appropriate revset arguments.
+   */
+  public async getFilesChangedForComparison(
+    ctx: RepositoryContext,
+    comparison: Comparison,
+  ): Promise<Array<ChangedFile>> {
+    const output = await this.runCommand(
+      ['status', ...revsetArgsForComparison(comparison), '-Tjson', '--copies'],
+      'StatusForComparisonCommand',
+      ctx,
+    );
+    if (!output.stdout.trim()) {
+      return [];
+    }
+    return (JSON.parse(output.stdout) as Array<ChangedFile>).map(change => ({
+      ...change,
+      path: removeLeadingPathSep(change.path),
+    }));
+  }
+
   public runCommand(
     args: Array<string>,
     /** Which event name to track for this command. If undefined, generic 'RunCommand' is used. */

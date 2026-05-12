@@ -52,6 +52,12 @@ export interface ClientConnection {
   appMode: AppMode;
 
   /**
+   * Optional callback invoked whenever the active cwd is set or changed,
+   * so the host can track cwd without re-deserializing every webview message.
+   */
+  onChangeCwd?: (cwd: string) => void;
+
+  /**
    * A deferred promise that resolves when the client signals it's ready
    */
   readySignal?: Deferred<void>;

@@ -302,7 +302,12 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
           break;
         }
         case 'platform/executeVSCodeCommand': {
-          vscode.commands.executeCommand(message.command, ...message.args);
+          if (message.command === 'sapling.open-comparison-view' && repo != null) {
+            // Inject repo root so the multi-diff editor opens for the correct repository
+            vscode.commands.executeCommand(message.command, ...message.args, repo.info.repoRoot);
+          } else {
+            vscode.commands.executeCommand(message.command, ...message.args);
+          }
           break;
         }
         case 'platform/resolveAllCommentsWithAI': {

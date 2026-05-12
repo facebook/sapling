@@ -22,6 +22,7 @@ interface ISLWebviewResult<W extends WebviewPanel | WebviewView> {
 }
 
 import {onClientConnection} from 'isl-server/src';
+import {repositoryCache} from 'isl-server/src/RepositoryCache';
 import {deserializeFromString, serializeToString} from 'isl/src/serialize';
 import type {PartiallySelectedDiffCommit} from 'isl/src/stackEdit/diffSplitTypes';
 import {ComparisonType, isComparison, labelForComparison} from 'shared/Comparison';
@@ -32,6 +33,7 @@ import {executeVSCodeCommand} from './commands';
 import {getCLICommand, PERSISTED_STORAGE_KEY_PREFIX, shouldOpenBeside} from './config';
 import {assignWebviewHtml, getWebviewOptions} from './htmlForWebview';
 import {locale, t} from './i18n';
+import {hasMultiDiffEditorSupport, openMultiDiffEditor} from './multiDiffEditor';
 import {extensionVersion} from './utils';
 
 /**
@@ -93,6 +95,9 @@ function expandLineRange(
 let islPanelOrViewResult: ISLWebviewResult<vscode.WebviewPanel | vscode.WebviewView> | undefined =
   undefined;
 let hasOpenedISLWebviewBeforeState = false;
+
+/** Most recently selected cwd across all ISL webviews. */
+let mostRecentISLCwd: string | undefined = undefined;
 
 const islViewType = 'sapling.isl';
 const comparisonViewType = 'sapling.comparison';
@@ -211,6 +216,63 @@ function replaceExistingOrphanedISLWindows(
       // Regardless of if we opened a new ISL, reap the old one. It wouldn't work if you clicked on it.
       vscode.window.tabGroups.close(orphanedTabs);
     }
+  }
+}
+
+/**
+ * Opens the native VS Code multi-diff editor for a comparison using Sapling's
+ * own file status fetching and content providers. Returns true if successful,
+ * false if it falls back to the webview comparison.
+ */
+async function openNativeMultiDiffEditor(
+  comparison: Comparison,
+  repoRoot?: string,
+): Promise<boolean> {
+  if (!(await hasMultiDiffEditorSupport())) {
+    return false;
+  }
+
+  // Resolve repo: explicit repoRoot -> active editor file -> ISL's selected cwd -> workspace folders.
+  let repo;
+  if (repoRoot) {
+    repo = repositoryCache.cachedRepositoryForPath(repoRoot);
+  }
+  if (!repo) {
+    const activeUri = vscode.window.activeTextEditor?.document.uri;
+    if (activeUri && activeUri.scheme === 'file') {
+      repo = repositoryCache.cachedRepositoryForPath(activeUri.fsPath);
+    }
+  }
+  if (!repo && mostRecentISLCwd) {
+    repo = repositoryCache.cachedRepositoryForPath(mostRecentISLCwd);
+  }
+  if (!repo) {
+    for (const folder of vscode.workspace.workspaceFolders ?? []) {
+      repo = repositoryCache.cachedRepositoryForPath(folder.uri.fsPath);
+      if (repo) {
+        break;
+      }
+    }
+  }
+  if (!repo) {
+    return false;
+  }
+
+  try {
+    const files = await repo.getFilesChangedForComparison(
+      repo.initialConnectionContext,
+      comparison,
+    );
+    if (files.length === 0) {
+      vscode.window.showInformationMessage(t('No changed files to display'));
+      return true; // Handled, just nothing to show
+    }
+
+    await openMultiDiffEditor(repo.info.repoRoot, comparison, files);
+    return true;
+  } catch (err) {
+    // If multi-diff editor fails, fall back to webview
+    return false;
   }
 }
 
@@ -335,22 +397,36 @@ export function registerISLCommands(
         executeVSCodeCommand('workbench.action.closeSidebar');
       }
     }),
-    vscode.commands.registerCommand('sapling.open-comparison-view-uncommitted', () => {
-      createComparisonWebviewCommand({type: ComparisonType.UncommittedChanges});
+    vscode.commands.registerCommand('sapling.open-comparison-view-uncommitted', async () => {
+      const comparison: Comparison = {type: ComparisonType.UncommittedChanges};
+      if (!(await openNativeMultiDiffEditor(comparison))) {
+        createComparisonWebviewCommand(comparison);
+      }
     }),
-    vscode.commands.registerCommand('sapling.open-comparison-view-head', () => {
-      createComparisonWebviewCommand({type: ComparisonType.HeadChanges});
+    vscode.commands.registerCommand('sapling.open-comparison-view-head', async () => {
+      const comparison: Comparison = {type: ComparisonType.HeadChanges};
+      if (!(await openNativeMultiDiffEditor(comparison))) {
+        createComparisonWebviewCommand(comparison);
+      }
     }),
-    vscode.commands.registerCommand('sapling.open-comparison-view-stack', () => {
-      createComparisonWebviewCommand({type: ComparisonType.StackChanges});
+    vscode.commands.registerCommand('sapling.open-comparison-view-stack', async () => {
+      const comparison: Comparison = {type: ComparisonType.StackChanges};
+      if (!(await openNativeMultiDiffEditor(comparison))) {
+        createComparisonWebviewCommand(comparison);
+      }
     }),
     /** Command that opens the provided Comparison argument. Intended to be used programmatically. */
-    vscode.commands.registerCommand('sapling.open-comparison-view', (comparison: unknown) => {
-      if (!isComparison(comparison)) {
-        return;
-      }
-      createComparisonWebviewCommand(comparison);
-    }),
+    vscode.commands.registerCommand(
+      'sapling.open-comparison-view',
+      async (comparison: unknown, repoRoot?: string) => {
+        if (!isComparison(comparison)) {
+          return;
+        }
+        if (!(await openNativeMultiDiffEditor(comparison, repoRoot))) {
+          createComparisonWebviewCommand(comparison);
+        }
+      },
+    ),
     registerDeserializer(context, platform, logger),
     vscode.window.registerWebviewViewProvider(islViewType, webviewViewProvider, {
       webviewOptions: {
@@ -477,6 +553,9 @@ function populateAndSetISLWebview<W extends vscode.WebviewPanel | vscode.Webview
   });
   const updatedPlatform = {...platform, panelOrView} as VSCodeServerPlatform as ServerPlatform;
 
+  const initialCwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd();
+  mostRecentISLCwd = initialCwd;
+
   const disposeConnection = onClientConnection({
     postMessage(message: string) {
       return panelOrView.webview.postMessage(message) as Promise<boolean>;
@@ -487,7 +566,10 @@ function populateAndSetISLWebview<W extends vscode.WebviewPanel | vscode.Webview
         handler(m, isBinary);
       });
     },
-    cwd: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd(), // TODO
+    cwd: initialCwd,
+    onChangeCwd: cwd => {
+      mostRecentISLCwd = cwd;
+    },
     platform: updatedPlatform,
     appMode: mode,
     logger,
