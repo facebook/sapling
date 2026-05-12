@@ -88,7 +88,6 @@ function autoCloseBasedOnWindowWidth() {
 const resizeFn = () => {
   autoCloseBasedOnWindowWidth();
 };
-window.addEventListener('resize', resizeFn);
 
 // check startup window size
 window.addEventListener('load', resizeFn);
@@ -96,7 +95,6 @@ window.addEventListener('load', resizeFn);
 registerCleanup(
   islDrawerState,
   () => {
-    window.removeEventListener('resize', resizeFn);
     window.removeEventListener('load', resizeFn);
   },
   import.meta.hot,
