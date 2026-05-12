@@ -78,6 +78,7 @@ struct RestrictedPathLogData<'a> {
     access_data: RestrictedPathAccessData,
     aggregate: Option<RestrictedPathAggregateLogData<'a>>,
     considered_restricted_by: Vec<String>,
+    acl_manifest_mode: Option<AclManifestMode>,
     source_comparison: Option<SourceComparisonLogContext>,
 }
 
@@ -381,6 +382,7 @@ pub(crate) fn log_source_results_to_scuba<T: SourceRestrictionCheck>(
                 config_source.as_ref(),
                 acl_manifest_source.as_ref(),
             ),
+            acl_manifest_mode: None,
             source_comparison: Some(source_comparison),
         },
         scuba,
@@ -446,6 +448,7 @@ where
         restricted_paths.config_based.manifest_id_store().repo_id(),
         result.as_ref(),
         access_data,
+        acl_manifest_mode,
         restricted_paths.scuba.clone(),
         vec![source_name.to_string()],
     )?;
@@ -743,6 +746,7 @@ fn log_source_result_to_legacy_scuba(
     repo_id: RepositoryId,
     result: &[impl SourceRestrictionCheck],
     access_data: RestrictedPathAccessData,
+    acl_manifest_mode: AclManifestMode,
     scuba: MononokeScubaSampleBuilder,
     considered_restricted_by: Vec<String>,
 ) -> Result<RestrictionCheckResult> {
@@ -778,6 +782,7 @@ fn log_source_result_to_legacy_scuba(
                 acls: restriction_acl_refs,
             }),
             considered_restricted_by,
+            acl_manifest_mode: Some(acl_manifest_mode),
             source_comparison: None,
         },
         scuba,
@@ -997,6 +1002,7 @@ pub(crate) async fn log_access_to_restricted_path(
     restricted_paths: Vec<NonRootMPath>,
     acls: Vec<&MononokeIdentity>,
     access_data: RestrictedPathAccessData,
+    acl_manifest_mode: AclManifestMode,
     acl_provider: Arc<dyn AclProvider>,
     tooling_allowlist_group: Option<&str>,
     rollout_allowlist_group: Option<&str>,
@@ -1032,6 +1038,7 @@ pub(crate) async fn log_access_to_restricted_path(
                 acls,
             }),
             considered_restricted_by,
+            acl_manifest_mode: Some(acl_manifest_mode),
             source_comparison: None,
         },
         scuba,
@@ -1156,6 +1163,12 @@ fn log_access_to_scuba(
         "considered_restricted_by",
         log_data.considered_restricted_by,
     );
+    if let Some(acl_manifest_mode) = log_data.acl_manifest_mode {
+        scuba.add(
+            "acl_manifest_mode",
+            acl_manifest_mode_as_scuba_value(acl_manifest_mode),
+        );
+    }
     if let Some(source_comparison) = log_data.source_comparison {
         source_comparison.add_to_scuba(&mut scuba);
     }

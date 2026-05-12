@@ -214,7 +214,7 @@ impl ScubaAccessLogSampleBuilder {
             has_acl_access: None,
             acls: Vec::new(),
             considered_restricted_by: vec!["manifest_db".to_string()],
-            acl_manifest_mode: None,
+            acl_manifest_mode: Some("disabled".to_string()),
             config_error: None,
             acl_manifest_error: None,
             shadow_mismatch: None,
