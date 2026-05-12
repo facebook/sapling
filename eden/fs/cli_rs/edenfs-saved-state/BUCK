@@ -5,6 +5,9 @@ oncall("scm_client_infra")
 rust_library(
     name = "edenfs-saved-state",
     srcs = glob(["src/**/*.rs"]),
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
     test_deps = [
         "//common/rust/shed/fbinit:fbinit-tokio",
     ],
