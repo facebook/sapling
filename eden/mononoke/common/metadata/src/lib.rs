@@ -143,7 +143,7 @@ impl Metadata {
                 if !client_request_info.has_main_id() {
                     client_request_info.set_main_id(
                         self.identities
-                            .main_client_identity(x.fb.sandcastle_alias(), x.fb.atlas_env_id()),
+                            .main_client_identity(x.fb.sandcastle_alias()),
                     )
                 }
             })
