@@ -7,18 +7,29 @@
 
 #include "eden/fs/service/EdenServer.h"
 
+#ifndef _WIN32
+#include <poll.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#endif
+
 #include <csignal>
+#include <cstring>
 #include <future>
 #include <memory>
 #include <system_error>
 #include <thread>
 
 #include <folly/CancellationToken.h>
+#include <folly/ScopeGuard.h>
+#include <folly/io/IOBufQueue.h>
 #include <gflags/gflags.h>
 #include <gtest/gtest.h>
 
 #include "eden/common/utils/FaultInjector.h"
 #include "eden/fs/inodes/ServerState.h"
+#include "eden/fs/nfs/MountdRpc.h"
+#include "eden/fs/nfs/NfsServer.h"
 #include "eden/fs/service/EdenServiceHandler.h"
 #include "eden/fs/service/EdenStateDir.h"
 #include "eden/fs/takeover/TakeoverClient.h"
@@ -83,6 +94,118 @@ std::future<TakeoverData> takeoverViaThread(
             shouldThrowDuringTakeover);
       });
 }
+
+void driveTakeoverSendFailureToCleanup(
+    TestServer& testServer,
+    EdenServer& server) {
+  // The old daemon intentionally writes takeover data to a client that has
+  // already disconnected. Ignore SIGPIPE so the broken send is reported as a
+  // socket exception instead of killing the test process.
+  signal(SIGPIPE, SIG_IGN);
+
+  ScopedServerThread serverThread{server};
+
+  // Wait until the thrift server is fully initialized before attempting
+  // takeover, otherwise the test races startup instead of the handoff path.
+  testServer.waitUntilReady();
+
+  auto& faultInjector = server.getServerState()->getFaultInjector();
+  // Pause the old daemon after it sends the readiness ping. This lets the new
+  // process reply and then disconnect before the takeover payload is sent.
+  faultInjector.injectBlock("takeover", "ping_receive");
+
+  auto socketPath = EdenStateDir{server.getEdenDir()}.getTakeoverSocketPath();
+  auto clientFuture = takeoverViaThread(
+      socketPath,
+      /*shouldThrowDuringTakeover=*/true);
+
+  // Drive the server event loop until the takeover path reaches the injected
+  // stall, which means mounts have already been stopped for handoff.
+  bool takeoverBlocked = false;
+  std::thread blockedWaiter([&] {
+    takeoverBlocked = faultInjector.waitUntilBlocked("takeover", 5s);
+    server.getMainEventBase()->runInEventBaseThread(
+        [evb = server.getMainEventBase()] { evb->terminateLoopSoon(); });
+  });
+  server.getMainEventBase()->loop();
+  blockedWaiter.join();
+
+  ASSERT_TRUE(takeoverBlocked);
+
+  // The new process now exits before takeover data transfer begins.
+  bool clientSawException = false;
+  try {
+    (void)clientFuture.get();
+  } catch (const std::exception&) {
+    clientSawException = true;
+  }
+  ASSERT_TRUE(clientSawException);
+
+  // Let the old daemon continue into the send path, then wait for the serve
+  // loop to exit before calling performCleanup().
+  faultInjector.removeFault("takeover", "ping_receive");
+  faultInjector.unblock("takeover", "ping_receive");
+
+  ASSERT_TRUE(serverThread.waitForExit(5s));
+  serverThread.join();
+  ASSERT_NO_THROW(serverThread.throwIfServeFailed());
+}
+
+std::unique_ptr<folly::IOBuf> buildMountdNullRpcRequest(uint32_t xid) {
+  folly::IOBufQueue queue{folly::IOBufQueue::cacheChainLength()};
+  folly::io::QueueAppender ser(&queue, 256);
+
+  XdrTrait<uint32_t>::serialize(ser, 0); // fragment header placeholder
+  rpc_msg_call call{
+      xid,
+      msg_type::CALL,
+      call_body{
+          kRPCVersion,
+          kMountdProgNumber,
+          kMountdProgVersion,
+          static_cast<uint32_t>(mountProcs::null),
+          opaque_auth{auth_flavor::AUTH_NONE, {}},
+          opaque_auth{auth_flavor::AUTH_NONE, {}},
+      },
+  };
+  XdrTrait<rpc_msg_call>::serialize(ser, call);
+
+  auto len = static_cast<uint32_t>(queue.chainLength() - sizeof(uint32_t));
+  auto buf = queue.move();
+  const uint32_t fragmentHeader = htonl(len | 0x80000000);
+  std::memcpy(buf->writableData(), &fragmentHeader, sizeof(fragmentHeader));
+  return buf;
+}
+
+int connectSocket(const folly::SocketAddress& addr) {
+  sockaddr_storage socketAddress{};
+  auto len = addr.getAddress(&socketAddress);
+
+  int fd = socket(addr.getFamily(), SOCK_STREAM, 0);
+  if (fd == -1) {
+    throw std::system_error(
+        errno,
+        std::generic_category(),
+        "failed to create mountd client socket");
+  }
+
+  if (connect(fd, reinterpret_cast<const sockaddr*>(&socketAddress), len) !=
+      0) {
+    auto savedErrno = errno;
+    close(fd);
+    throw std::system_error(
+        savedErrno, std::generic_category(), "failed to connect to mountd");
+  }
+
+  return fd;
+}
+
+bool pollForReply(int clientFd, int timeoutMs) {
+  struct pollfd pfd{};
+  pfd.fd = clientFd;
+  pfd.events = POLLIN;
+  return poll(&pfd, 1, timeoutMs) > 0 && (pfd.revents & POLLIN);
+}
 #endif
 
 } // namespace
@@ -144,59 +267,48 @@ TEST_F(EdenServerTest, StopIsIdempotent) {
 
 #ifndef _WIN32
 TEST_F(EdenServerTest, TakeoverSendFailureRecoversDuringCleanup) {
-  // The old daemon intentionally writes takeover data to a client that has
-  // already disconnected. Ignore SIGPIPE so the broken send is reported as a
-  // socket exception instead of killing the test process.
-  signal(SIGPIPE, SIG_IGN);
-
   auto& server = testServer().getServer();
-  ScopedServerThread serverThread{server};
-
-  // Wait until the thrift server is fully initialized before attempting
-  // takeover, otherwise the test races startup instead of the handoff path.
-  testServer().waitUntilReady();
-
-  auto& faultInjector = server.getServerState()->getFaultInjector();
-  // Pause the old daemon after it sends the readiness ping. This lets the new
-  // process reply and then disconnect before the takeover payload is sent.
-  faultInjector.injectBlock("takeover", "ping_receive");
-
-  auto socketPath = EdenStateDir{server.getEdenDir()}.getTakeoverSocketPath();
-  auto clientFuture = takeoverViaThread(
-      socketPath,
-      /*shouldThrowDuringTakeover=*/true);
-
-  // Drive the server event loop until the takeover path reaches the injected
-  // stall, which means mounts have already been stopped for handoff.
-  bool takeoverBlocked = false;
-  std::thread blockedWaiter([&] {
-    takeoverBlocked = faultInjector.waitUntilBlocked("takeover", 5s);
-    server.getMainEventBase()->runInEventBaseThread(
-        [evb = server.getMainEventBase()] { evb->terminateLoopSoon(); });
-  });
-  server.getMainEventBase()->loop();
-  blockedWaiter.join();
-
-  ASSERT_TRUE(takeoverBlocked);
-
-  // The new process now exits before takeover data transfer begins.
-  bool clientSawException = false;
-  try {
-    (void)clientFuture.get();
-  } catch (const std::exception&) {
-    clientSawException = true;
-  }
-  ASSERT_TRUE(clientSawException);
-
-  // Let the old daemon continue into the send path, then wait for the serve
-  // loop to exit before calling performCleanup().
-  faultInjector.removeFault("takeover", "ping_receive");
-  faultInjector.unblock("takeover", "ping_receive");
-
-  ASSERT_TRUE(serverThread.waitForExit(5s));
-  serverThread.join();
-  ASSERT_NO_THROW(serverThread.throwIfServeFailed());
+  ASSERT_NO_FATAL_FAILURE(
+      driveTakeoverSendFailureToCleanup(testServer(), server));
   EXPECT_FALSE(server.performCleanup());
+}
+
+TEST_F(EdenServerTest, TakeoverSendFailureRecoveryReinitializesMountd) {
+  TestServer::Options nfsOptions;
+  nfsOptions.enableNfsServer = true;
+  TestServer nfsTestServer{nfsOptions};
+  auto& server = nfsTestServer.getServer();
+
+  ASSERT_NO_FATAL_FAILURE(
+      driveTakeoverSendFailureToCleanup(nfsTestServer, server));
+  ASSERT_FALSE(server.performCleanup());
+
+  std::thread recoveryEventBaseThread(
+      [&server] { server.getMainEventBase()->loop(); });
+  auto stopRecoveryLoop = folly::makeGuard([&] {
+    server.getMainEventBase()->runInEventBaseThread(
+        [&server] { server.getMainEventBase()->terminateLoopSoon(); });
+    if (recoveryEventBaseThread.joinable()) {
+      recoveryEventBaseThread.join();
+    }
+  });
+
+  auto nfsServer = server.getServerState()->getNfsServer();
+  ASSERT_TRUE(nfsServer);
+  auto request = buildMountdNullRpcRequest(42);
+  const auto requestBytes = request->coalesce();
+  const int mountdFd = connectSocket(nfsServer->getMountdAddr());
+  auto closeMountdFd = folly::makeGuard([mountdFd] { close(mountdFd); });
+
+  ASSERT_EQ(
+      static_cast<ssize_t>(requestBytes.size()),
+      write(mountdFd, requestBytes.data(), requestBytes.size()));
+  const auto hasReply = pollForReply(mountdFd, 1000);
+
+  // FIXME: recovery keeps mountd's server socket but does not resume
+  // accepting on it yet. Flip this to EXPECT_TRUE() once the NFS-only fix
+  // re-arms mountd during takeover recovery.
+  EXPECT_FALSE(hasReply);
 }
 #endif
 

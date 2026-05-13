@@ -41,9 +41,11 @@ EmptyBackingStoreFactory gEmptyBackingStoreFactory;
 
 } // namespace
 
-TestServer::TestServer() : tmpDir_(makeTempDir()) {
+TestServer::TestServer() : TestServer(Options{}) {}
+
+TestServer::TestServer(const Options& options) : tmpDir_(makeTempDir()) {
   auto startupSubscriberChannel = std::make_shared<StartupStatusChannel>();
-  server_ = createServer(getTmpDir(), startupSubscriberChannel);
+  server_ = createServer(getTmpDir(), startupSubscriberChannel, options);
   prepareResult_ = server_->prepare(
       make_shared<ForegroundStartupLogger>(
           std::move(startupSubscriberChannel)));
@@ -63,7 +65,8 @@ void TestServer::waitUntilReady() {
 
 unique_ptr<EdenServer> TestServer::createServer(
     AbsolutePathPiece tmpDir,
-    std::shared_ptr<StartupStatusChannel> startupSubscriberChannel) {
+    std::shared_ptr<StartupStatusChannel> startupSubscriberChannel,
+    const Options& options) {
   auto edenDir = tmpDir + "eden"_pc;
   ensureDirectoryExists(edenDir);
 
@@ -87,6 +90,8 @@ unique_ptr<EdenServer> TestServer::createServer(
           std::make_shared<NullConfigSource>(ConfigSourceType::UserConfig)});
   auto privHelper = make_unique<FakePrivHelper>();
   config->edenDir.setValue(edenDir, ConfigSourceType::CommandLine);
+  config->enableNfsServer.setValue(
+      options.enableNfsServer, ConfigSourceType::CommandLine);
 #ifdef _WIN32
   config->enableEdenMenu.setValue(false, ConfigSourceType::SystemConfig);
 #endif // _WIN32

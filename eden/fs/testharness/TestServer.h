@@ -26,7 +26,12 @@ class EdenServer;
  */
 class TestServer {
  public:
+  struct Options {
+    bool enableNfsServer{false};
+  };
+
   TestServer();
+  explicit TestServer(const Options& options);
   ~TestServer();
 
   AbsolutePath getTmpDir() const;
@@ -39,7 +44,8 @@ class TestServer {
  private:
   static std::unique_ptr<EdenServer> createServer(
       AbsolutePathPiece tmpDir,
-      std::shared_ptr<StartupStatusChannel> startStatusChannel);
+      std::shared_ptr<StartupStatusChannel> startStatusChannel,
+      const Options& options);
 
   folly::test::TemporaryDirectory tmpDir_;
   folly::Future<folly::Unit> prepareResult_;

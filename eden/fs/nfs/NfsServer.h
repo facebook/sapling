@@ -58,6 +58,7 @@ class NfsServer {
    */
   void initialize(folly::SocketAddress addr, bool registerMountdWithRpcbind);
   void initialize(folly::File socket);
+  folly::SocketAddress getMountdAddr() const;
 
   /**
    * Return value of registerMount.
