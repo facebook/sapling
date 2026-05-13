@@ -939,6 +939,31 @@ async fn check_pushrebase_conflicts(
                             .add("merge_resolution_outcome", format!("{}", err))
                             .log_with_msg("Pushrebase merge resolution failed", None);
                     }
+                    // Run dry-run merge if enabled (for logging/observability)
+                    let dry_run_enabled = justknobs::eval(
+                        "scm/mononoke:pushrebase_dry_run_merge_resolution",
+                        None,
+                        Some(reponame),
+                    )?;
+                    if dry_run_enabled {
+                        let derive_fsnodes: bool = justknobs::eval(
+                            "scm/mononoke:pushrebase_merge_resolution_derive_fsnodes",
+                            None,
+                            Some(reponame),
+                        )?;
+                        dry_run_merge_check(
+                            ctx,
+                            repo,
+                            &conflicts,
+                            root,
+                            &server_bcs,
+                            client_bcs,
+                            max_merge_conflicts,
+                            max_merge_file_size,
+                            derive_fsnodes,
+                        )
+                        .await;
+                    }
                     Err(PushrebaseError::Conflicts(conflicts))
                 }
             }
@@ -2302,8 +2327,68 @@ enum FileMergeOutcome {
     Clean(Bytes),
     /// True content conflict.
     Conflict(String),
+    /// Cannot attempt merge (file missing, type mismatch, etc.).
+    Skipped(String),
     /// Internal error during fetch.
     Error(anyhow::Error),
+}
+
+/// Attempt a 3-way merge on a single file at `path`.
+///
+/// Fetches the base (root) version from the manifest (content_manifest or
+/// fsnode, depending on the JustKnobs gate). The other (server-side) content
+/// is passed directly as `other_content_id` to avoid expensive manifest
+/// derivation in the critical section — callers obtain it from the bonsai
+/// changesets instead.
+///
+/// If `expected_file_type` is `Some`, validates that the base file type
+/// matches (strict mode for actual merge resolution). If `None`, skips type
+/// checking (used by dry-run).
+async fn try_merge_file(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    root: ChangesetId,
+    path: &NonRootMPath,
+    local_content_id: ContentId,
+    other_content_id: ContentId,
+    expected_file_type: Option<FileType>,
+) -> FileMergeOutcome {
+    // Fetch base manifest entry (only derivation needed — root is pre-derived)
+    let base_file = match fetch_manifest_file(ctx, repo, root, path).await {
+        Ok(Some(f)) => f,
+        Ok(None) => {
+            return FileMergeOutcome::Skipped(format!("file {} not found in base", path));
+        }
+        Err(e) => return FileMergeOutcome::Error(e),
+    };
+
+    // Validate file types if expected type is provided
+    if let Some(local_type) = expected_file_type {
+        let base_type = base_file.file_type();
+        if base_type != local_type {
+            return FileMergeOutcome::Skipped(format!(
+                "file {} has type mismatch: base={:?}, local={:?}",
+                path, base_type, local_type,
+            ));
+        }
+    }
+
+    // Fetch all three file contents concurrently
+    let (base_bytes, local_bytes, other_bytes) = futures::join!(
+        filestore::fetch_concat(repo.repo_blobstore(), ctx, base_file.content_id()),
+        filestore::fetch_concat(repo.repo_blobstore(), ctx, local_content_id),
+        filestore::fetch_concat(repo.repo_blobstore(), ctx, other_content_id),
+    );
+
+    match (base_bytes, local_bytes, other_bytes) {
+        (Ok(base), Ok(local), Ok(other)) => match merge_text(&base, &local, &other) {
+            MergeResult::Clean(merged) => FileMergeOutcome::Clean(Bytes::from(merged)),
+            MergeResult::Conflict(desc) => {
+                FileMergeOutcome::Conflict(format!("file {}: {}", path, desc))
+            }
+        },
+        (Err(e), _, _) | (_, Err(e), _) | (_, _, Err(e)) => FileMergeOutcome::Error(e),
+    }
 }
 
 /// 3-way merge using three ContentIds directly (no fsnode lookup).
@@ -2333,6 +2418,219 @@ async fn merge_file_by_content_ids(
         },
         (Err(e), _, _) | (_, Err(e), _) | (_, _, Err(e)) => FileMergeOutcome::Error(e),
     }
+}
+
+/// Dry-run check for merge-resolvable conflicts, logging outcomes
+/// to Scuba without changing pushrebase behavior.
+///
+/// This fetches file content for each conflicting path from the common
+/// ancestor, pushed changeset, and bookmark head, then runs merge_text
+/// to determine if the conflict would be resolvable. No actual merge
+/// result is used — this is purely for observability.
+async fn dry_run_merge_check(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    conflicts: &[PushrebaseConflict],
+    root: ChangesetId,
+    server_bcs: &[BonsaiChangeset],
+    client_bcs: &[BonsaiChangeset],
+    max_conflicts: usize,
+    max_file_size: u64,
+    derive_fsnodes: bool,
+) {
+    let repo_name = repo.repo_identity().name();
+
+    // If derive_fsnodes is false, check if fsnodes are already derived.
+    // If not, skip dry-run to avoid expensive derivation.
+    if !derive_fsnodes {
+        let root_fsnode = repo
+            .repo_derived_data()
+            .fetch_derived::<RootFsnodeId>(ctx, root)
+            .await;
+        if !matches!(root_fsnode, Ok(Some(_))) {
+            ctx.scuba()
+                .clone()
+                .add("repo_name", repo_name)
+                .add("merge_dry_run_outcome", "skipped_fsnodes_not_derived")
+                .log_with_msg("Pushrebase dry-run merge resolution", None);
+            return;
+        }
+    }
+
+    // Only attempt on exact path matches (left == right), skip prefix conflicts
+    let exact_conflicts: Vec<_> = conflicts.iter().filter(|c| c.left == c.right).collect();
+    let prefix_conflict_count = conflicts.len() - exact_conflicts.len();
+
+    // Skip if there are any prefix conflicts (e.g. dir vs dir/file from subtree copies)
+    if prefix_conflict_count > 0 {
+        ctx.scuba()
+            .clone()
+            .add("repo_name", repo_name)
+            .add("merge_dry_run_outcome", "skipped_prefix_conflicts")
+            .add(
+                "merge_dry_run_prefix_conflicts",
+                prefix_conflict_count as i64,
+            )
+            .add(
+                "merge_dry_run_exact_conflicts",
+                exact_conflicts.len() as i64,
+            )
+            .log_with_msg("Pushrebase dry-run merge resolution", None);
+        return;
+    }
+
+    if exact_conflicts.is_empty() {
+        return;
+    }
+
+    // Fail early if there are more conflicts than the limit — processing only a
+    // subset would give a misleading signal about merge-resolvability.
+    if exact_conflicts.len() > max_conflicts {
+        ctx.scuba()
+            .clone()
+            .add("repo_name", repo_name)
+            .add("merge_dry_run_outcome", "too_many_conflicts")
+            .add(
+                "merge_dry_run_total_conflicts",
+                exact_conflicts.len() as i64,
+            )
+            .add("merge_dry_run_max_conflicts", max_conflicts as i64)
+            .log_with_msg("Pushrebase dry-run merge resolution", None);
+        return;
+    }
+
+    // Build a map of path -> FileChange from the client changesets
+    let client_changes: HashMap<&NonRootMPath, &FileChange> = client_bcs
+        .iter()
+        .flat_map(|bcs| bcs.file_changes_map().iter())
+        .collect();
+
+    // Build a map of path -> FileChange from the server changesets
+    // (latest-wins semantics since server_bcs is oldest-to-newest)
+    let server_changes: HashMap<&NonRootMPath, &FileChange> = server_bcs
+        .iter()
+        .flat_map(|bcs| bcs.file_changes_map().iter())
+        .collect();
+
+    let mut all_clean = true;
+    let mut resolved_count: i64 = 0;
+    let mut conflict_count: i64 = 0;
+    let mut skipped_count: i64 = 0;
+    let mut error_count: i64 = 0;
+    let mut skip_reasons: Vec<String> = Vec::new();
+    let mut error_reasons: Vec<String> = Vec::new();
+
+    for conflict in &exact_conflicts {
+        let path = &conflict.left;
+
+        // Get the NonRootMPath version for file lookups
+        let non_root_path = match path.clone().into_optional_non_root_path() {
+            Some(nrp) => nrp,
+            None => continue,
+        };
+
+        // Get local (pushed) content from the client file change
+        let local_fc = match client_changes.get(&non_root_path) {
+            Some(FileChange::Change(tc)) => tc,
+            _ => {
+                all_clean = false;
+                skipped_count += 1;
+                skip_reasons.push(format!(
+                    "{}: not a tracked change in pushed changeset",
+                    non_root_path,
+                ));
+                continue;
+            }
+        };
+
+        // Get server (bookmark head) content from the server bonsai changesets
+        let server_fc = match server_changes.get(&non_root_path) {
+            Some(FileChange::Change(tc)) => tc,
+            _ => {
+                all_clean = false;
+                skipped_count += 1;
+                skip_reasons.push(format!(
+                    "{}: not a tracked change in bookmark head",
+                    non_root_path,
+                ));
+                continue;
+            }
+        };
+
+        // Fail early if any file exceeds the size limit — we can't resolve
+        // all conflicts if we have to skip a file, so the entire merge would fail.
+        if local_fc.size() > max_file_size || server_fc.size() > max_file_size {
+            ctx.scuba()
+                .clone()
+                .add("repo_name", repo_name)
+                .add("merge_dry_run_outcome", "file_too_large")
+                .add("merge_dry_run_file", non_root_path.to_string())
+                .add(
+                    "merge_dry_run_file_size",
+                    std::cmp::max(local_fc.size(), server_fc.size()) as i64,
+                )
+                .add("merge_dry_run_max_file_size", max_file_size as i64)
+                .log_with_msg("Pushrebase dry-run merge resolution", None);
+            return;
+        }
+
+        match try_merge_file(
+            ctx,
+            repo,
+            root,
+            &non_root_path,
+            local_fc.content_id(),
+            server_fc.content_id(),
+            None,
+        )
+        .await
+        {
+            FileMergeOutcome::Clean(_) => resolved_count += 1,
+            FileMergeOutcome::Conflict(description) => {
+                all_clean = false;
+                conflict_count += 1;
+                skip_reasons.push(description);
+            }
+            FileMergeOutcome::Skipped(reason) => {
+                all_clean = false;
+                skipped_count += 1;
+                skip_reasons.push(reason);
+            }
+            FileMergeOutcome::Error(err) => {
+                all_clean = false;
+                error_count += 1;
+                error_reasons.push(format!("{:#}", err));
+            }
+        }
+    }
+
+    let outcome = if all_clean && skipped_count == 0 && error_count == 0 {
+        "all_clean"
+    } else if conflict_count > 0 {
+        "some_conflicts"
+    } else if skipped_count > 0 {
+        "skipped"
+    } else {
+        "error"
+    };
+
+    let mut scuba = ctx.scuba().clone();
+    scuba
+        .add("repo_name", repo_name)
+        .add("merge_dry_run_outcome", outcome)
+        .add("merge_dry_run_resolved", resolved_count)
+        .add("merge_dry_run_conflicts", conflict_count)
+        .add("merge_dry_run_skipped", skipped_count)
+        .add("merge_dry_run_errors", error_count);
+
+    if !skip_reasons.is_empty() {
+        scuba.add("merge_dry_run_skip_reasons", skip_reasons.join(", "));
+    }
+    if !error_reasons.is_empty() {
+        scuba.add("merge_dry_run_error_reasons", error_reasons.join(", "));
+    }
+
+    scuba.log_with_msg("Pushrebase dry-run merge resolution", None);
 }
 
 /// Error type for merge resolution failures.
@@ -2750,8 +3048,7 @@ async fn create_rebased_changesets(
                         right: MPath::from(path.clone()),
                     }]));
                 }
-                FileMergeOutcome::Error(err) => {
-                    warn!("Cascading merge error on {}: {:#}", path, err);
+                FileMergeOutcome::Skipped(_) | FileMergeOutcome::Error(_) => {
                     return Err(PushrebaseError::Conflicts(vec![PushrebaseConflict {
                         left: MPath::from(path.clone()),
                         right: MPath::from(path.clone()),
@@ -3246,6 +3543,7 @@ mod tests {
 
     fn init_just_knobs_for_test() {
         override_just_knobs(JustKnobsInMemory::new(hashmap! {
+            "scm/mononoke:pushrebase_dry_run_merge_resolution".to_string() => KnobVal::Bool(false),
             "scm/mononoke:pushrebase_enable_merge_resolution".to_string() => KnobVal::Bool(false),
             "scm/mononoke:pushrebase_merge_resolution_derive_fsnodes".to_string() => KnobVal::Bool(true),
             "scm/mononoke:per_bookmark_locking".to_string() => KnobVal::Bool(false),
@@ -5622,6 +5920,7 @@ mod tests {
 
     fn init_just_knobs_for_merge_test() {
         override_just_knobs(JustKnobsInMemory::new(hashmap! {
+            "scm/mononoke:pushrebase_dry_run_merge_resolution".to_string() => KnobVal::Bool(false),
             "scm/mononoke:pushrebase_enable_merge_resolution".to_string() => KnobVal::Bool(true),
             "scm/mononoke:pushrebase_merge_resolution_derive_fsnodes".to_string() => KnobVal::Bool(true),
         }));
@@ -6779,6 +7078,7 @@ line 5.1
 
     fn init_just_knobs_for_noop_rejection_test(reject: bool) {
         override_just_knobs(JustKnobsInMemory::new(hashmap! {
+            "scm/mononoke:pushrebase_dry_run_merge_resolution".to_string() => KnobVal::Bool(false),
             "scm/mononoke:pushrebase_enable_merge_resolution".to_string() => KnobVal::Bool(true),
             "scm/mononoke:pushrebase_merge_resolution_derive_fsnodes".to_string() => KnobVal::Bool(true),
             "scm/mononoke:pushrebase_reject_noop_merge_commits".to_string() => KnobVal::Bool(reject),
@@ -7208,6 +7508,7 @@ line 5.1
 
     fn init_just_knobs_for_pessimistic_test() {
         override_just_knobs(JustKnobsInMemory::new(hashmap! {
+            "scm/mononoke:pushrebase_dry_run_merge_resolution".to_string() => KnobVal::Bool(false),
             "scm/mononoke:pushrebase_enable_merge_resolution".to_string() => KnobVal::Bool(false),
             "scm/mononoke:pushrebase_merge_resolution_derive_fsnodes".to_string() => KnobVal::Bool(true),
             "scm/mononoke:per_bookmark_locking".to_string() => KnobVal::Bool(true),
