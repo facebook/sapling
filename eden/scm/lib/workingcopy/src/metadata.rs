@@ -63,6 +63,16 @@ impl Metadata {
         vfs.supports_executables() && self.flags.intersects(MetadataFlags::IS_EXEC)
     }
 
+    pub fn to_update_flag(&self, vfs: &VFS) -> vfs::UpdateFlag {
+        if self.is_symlink(vfs) {
+            vfs::UpdateFlag::Symlink
+        } else if self.is_executable(vfs) {
+            vfs::UpdateFlag::Executable
+        } else {
+            vfs::UpdateFlag::Regular
+        }
+    }
+
     pub fn is_file(&self, vfs: &VFS) -> bool {
         if vfs.supports_symlinks() {
             self.flags.intersects(MetadataFlags::IS_REGULAR)
