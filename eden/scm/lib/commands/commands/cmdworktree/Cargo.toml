@@ -23,6 +23,7 @@ sapling-filters = { version = "0.1.0", path = "../../../filters" }
 sapling-formatter = { version = "0.1.0", path = "../../../formatter" }
 sapling-hook = { version = "0.1.0", path = "../../../hook" }
 sapling-identity = { version = "0.1.0", path = "../../../identity" }
+sapling-pathmatcher = { version = "0.1.0", path = "../../../pathmatcher" }
 sapling-repo = { version = "0.1.0", path = "../../../repo" }
 sapling-spawn-ext = { version = "0.1.0", path = "../../../spawn-ext" }
 sapling-status = { version = "0.1.0", path = "../../../status" }

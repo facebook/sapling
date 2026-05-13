@@ -11,6 +11,7 @@ use std::fmt::Write as _;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
+use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::bail;
@@ -81,7 +82,7 @@ fn sapling_snapshot_checkout(sl_bin: &OsString, dest: &PathBuf, id: &str) -> any
     Ok(())
 }
 
-pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, _wc: &WorkingCopy) -> Result<u8> {
+pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> Result<u8> {
     let logger = ctx.logger();
 
     let require_generated: bool = repo
@@ -156,13 +157,17 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, _wc: &WorkingCopy) ->
         ])),
     )?;
 
+    let use_direct_copy: bool = repo
+        .config()
+        .get_or("worktree", "snapshot-direct-copy", || false)?;
+
     let sl_bin = current_sl_binary();
 
     // Spawn snapshot creation on a background thread so it runs concurrently
     // with eden clone below. Snapshot create uploads dirty state from the
     // source repo (network I/O) while eden clone sets up the new mount
     // (daemon I/O). Neither depends on the other.
-    let snapshot_handle = if ctx.opts.snapshot {
+    let snapshot_handle = if ctx.opts.snapshot && !use_direct_copy {
         let repo_path = repo.path().to_path_buf();
         let sl_bin = sl_bin.clone();
         logger.info("creating snapshot of current working copy...");
@@ -175,14 +180,34 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, _wc: &WorkingCopy) ->
 
     // Lock the source checkout path only while snapshotting the source state that
     // needs to be copied into the new worktree.
-    let (target, source_sparse_config, source_user_config) =
+    let (target, source_sparse_config, source_user_config, source_status) =
         with_worktree_path_op_lock(&shared_store_path, &canonical_repo_path, || {
             let source_client_dir = edenfs_client::get_client_dir(repo.path())?;
             let parents = workingcopy::fast_path_wdir_parents(repo.path(), repo.ident())?;
             let target = parents.p1().copied();
             let source_sparse_config = clone::snapshot_sparse_config(repo.dot_hg_path())?;
             let source_user_config = clone::snapshot_eden_user_config(&source_client_dir)?;
-            Ok((target, source_sparse_config, source_user_config))
+            // Neither direct copy nor the legacy snapshot path preserves
+            // p2 or merge state.
+            if ctx.opts.snapshot && parents.p2().is_some() {
+                logger.warn(
+                    "working copy has two parents (merge in progress); \
+                     snapshot will not preserve merge state",
+                );
+            }
+            let source_status = if ctx.opts.snapshot && use_direct_copy {
+                logger.info("computing working copy status...");
+                let matcher = Arc::new(pathmatcher::AlwaysMatcher::new());
+                Some(wc.status(&ctx.core, matcher, false)?)
+            } else {
+                None
+            };
+            Ok((
+                target,
+                source_sparse_config,
+                source_user_config,
+                source_status,
+            ))
         })?;
 
     // Lock the destination path while creating and initializing that checkout.
@@ -241,7 +266,7 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, _wc: &WorkingCopy) ->
 
     let mut exit_code: u8 = 0;
 
-    // Wait for snapshot creation to finish.
+    // Wait for snapshot creation to finish (legacy path).
     let snapshot_id = snapshot_handle.and_then(|h| {
         match h
             .join()
@@ -262,7 +287,15 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, _wc: &WorkingCopy) ->
 
     logger.info(format!("created linked worktree at {}", dest.display()));
 
-    // If we took a snapshot, restore it in the new worktree.
+    // Apply working copy state: direct copy OR legacy snapshot, never both.
+    if let Some(source_status) = source_status {
+        if let Err(e) = snapshot(ctx, repo, source_status, &dest) {
+            logger.warn(format!("{:#}", e));
+            exit_code = 1;
+        }
+    }
+
+    // Restore snapshot via legacy shell-out path.
     if let Some(ref id) = snapshot_id {
         logger.info(format!("restoring snapshot {} into worktree...", id));
         if let Err(e) = sapling_snapshot_checkout(&sl_bin, &dest, id) {
@@ -424,7 +457,6 @@ const DEFAULT_CONCURRENCY: usize = 16;
 const VFS_BATCH_SIZE: usize = 128;
 const WORK_QUEUE_SIZE: usize = 10_000;
 
-#[expect(dead_code, reason = "wired up in a later commit in this stack")]
 fn snapshot(
     ctx: &ReqCtx<WorktreeOpts>,
     repo: &Repo,
