@@ -14,7 +14,7 @@ name = "nodeipc"
 
 [dependencies]
 anyhow = "1.0.102"
-filedescriptor = "0.7"
+filedescriptor = "0.8"
 libc = "0.2.186"
 paste = "1.0.14"
 sapling-nodeipc_derive = { version = "0.1.0", path = "derive" }
