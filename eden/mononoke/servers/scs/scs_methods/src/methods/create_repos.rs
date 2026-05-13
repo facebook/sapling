@@ -1406,7 +1406,10 @@ mod tests {
         );
         assert_eq!(spec.t_shirt_size, TShirtSize::MEDIUM);
         assert_eq!(spec.sharding_regions, ShardingRegions::BGM_ONLY_REGIONS);
-        assert_eq!(spec.tiers, vec!["gitimport", "gitimport_content", "scs"]);
+        assert_eq!(
+            spec.tiers,
+            vec!["gitimport", "gitimport_content", "scs", "backfill_worker"]
+        );
         assert!(
             spec.repo_config.is_none(),
             "New repos should have no custom config"
@@ -1503,6 +1506,7 @@ mod tests {
                 "gitimport",
                 "gitimport_content",
                 "scs",
+                "backfill_worker",
                 "aosp_multi_repo_land",
             ],
             "aosp/* repos must include aosp_multi_repo_land tier"
@@ -1519,6 +1523,7 @@ mod tests {
                 "gitimport",
                 "gitimport_content",
                 "scs",
+                "backfill_worker",
                 "aosp_multi_repo_land",
             ],
             "repos containing aosp/ as a substring must include aosp_multi_repo_land tier"
@@ -1529,24 +1534,24 @@ mod tests {
     fn test_tier_list_for_repo_spec_non_aosp_excluded_from_multi_repo_land() {
         assert_eq!(
             tier_list_for_repo_spec("manus/foo"),
-            vec!["gitimport", "gitimport_content", "scs"],
+            vec!["gitimport", "gitimport_content", "scs", "backfill_worker"],
             "non-aosp repos must NOT include aosp_multi_repo_land tier"
         );
         assert_eq!(
             tier_list_for_repo_spec("simple-repo"),
-            vec!["gitimport", "gitimport_content", "scs"],
+            vec!["gitimport", "gitimport_content", "scs", "backfill_worker"],
             "simple repos must NOT include aosp_multi_repo_land tier"
         );
         // Boundary: a repo literally named "aosp" (no slash) does NOT contain `aosp/`.
         assert_eq!(
             tier_list_for_repo_spec("aosp"),
-            vec!["gitimport", "gitimport_content", "scs"],
+            vec!["gitimport", "gitimport_content", "scs", "backfill_worker"],
             "literal name 'aosp' (no trailing /) must NOT match the aosp/ substring"
         );
         // Boundary: confusingly-named prefix that shares "aosp" but isn't `aosp/`.
         assert_eq!(
             tier_list_for_repo_spec("aosp_extras/foo"),
-            vec!["gitimport", "gitimport_content", "scs"],
+            vec!["gitimport", "gitimport_content", "scs", "backfill_worker"],
             "aosp_extras/* must NOT match the aosp/ substring"
         );
     }
@@ -1587,6 +1592,7 @@ mod tests {
                 "gitimport".to_string(),
                 "gitimport_content".to_string(),
                 "scs".to_string(),
+                "backfill_worker".to_string(),
                 "aosp_multi_repo_land".to_string(),
             ],
             "AOSP repos must be added to aosp_multi_repo_land tier so multi_repo_land_service can serve them"
@@ -1611,6 +1617,7 @@ mod tests {
                 "gitimport".to_string(),
                 "gitimport_content".to_string(),
                 "scs".to_string(),
+                "backfill_worker".to_string(),
                 "aosp_multi_repo_land".to_string(),
             ],
             "QRD for AOSP repos must include aosp_multi_repo_land tier"

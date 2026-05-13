@@ -45,6 +45,14 @@ pub fn make_repo_spec_file_path(repo_name: &str) -> String {
 }
 
 /// Returns the tier list for a new RepoSpec-based repo, as static string slices.
+/// Every repo is on `gitimport`, `gitimport_content`, `scs`, and
+/// `backfill_worker` — the last because mononoke_backfill_worker
+/// (`fbcode/eden/mononoke/backfill_worker`) accepts ALL repos via
+/// `QueueRepoFilter::Except(vec![])` and loads them on-demand when a backfill
+/// request arrives. Without this entry the per-repo manifest path doesn't
+/// surface the repo, the on-demand load fails, and the worker silently drops
+/// backfills for it (the legacy QRD path used to populate this transitively
+/// via the scs tier composer; the RepoSpec path requires explicit listing).
 /// Repos whose name contains the `aosp/` substring are additionally placed in
 /// the `aosp_multi_repo_land` tier so multi_repo_land_service can serve them.
 /// This catches both top-level AOSP repos like `aosp/platform/...` and nested
@@ -55,10 +63,11 @@ pub fn tier_list_for_repo_spec(repo_name: &str) -> Vec<&'static str> {
             "gitimport",
             "gitimport_content",
             "scs",
+            "backfill_worker",
             "aosp_multi_repo_land",
         ]
     } else {
-        vec!["gitimport", "gitimport_content", "scs"]
+        vec!["gitimport", "gitimport_content", "scs", "backfill_worker"]
     }
 }
 
@@ -196,6 +205,7 @@ mod tests {
                 "gitimport",
                 "gitimport_content",
                 "scs",
+                "backfill_worker",
                 "aosp_multi_repo_land"
             ]
         );
@@ -204,7 +214,10 @@ mod tests {
     #[mononoke::test]
     fn tier_list_non_aosp_excludes_multi_repo_land() {
         let tiers = tier_list_for_repo_spec("manus/next-agent-webapp");
-        assert_eq!(tiers, vec!["gitimport", "gitimport_content", "scs"]);
+        assert_eq!(
+            tiers,
+            vec!["gitimport", "gitimport_content", "scs", "backfill_worker"]
+        );
     }
 
     #[mononoke::test]
@@ -214,6 +227,24 @@ mod tests {
             tiers.contains(&"aosp_multi_repo_land"),
             "repos with aosp/ as a substring (e.g. oculus/aosp/vendor/oculus) must be on the aosp_multi_repo_land tier"
         );
+    }
+
+    #[mononoke::test]
+    fn tier_list_always_includes_backfill_worker() {
+        // Both aosp and non-aosp repos must surface in backfill_worker_manifest
+        // — see the doc comment on tier_list_for_repo_spec for why omission
+        // here silently breaks on-demand backfill loads.
+        for repo_name in [
+            "manus/next-agent-webapp",
+            "aosp/platform/external/lldb-utils",
+            "oculus/aosp/vendor/oculus",
+            "fbsource/edenfs",
+        ] {
+            assert!(
+                tier_list_for_repo_spec(repo_name).contains(&"backfill_worker"),
+                "tier list for {repo_name} must include backfill_worker"
+            );
+        }
     }
 
     #[mononoke::test]
