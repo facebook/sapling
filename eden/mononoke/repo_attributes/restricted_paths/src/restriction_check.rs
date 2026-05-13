@@ -8,6 +8,7 @@
 //! Restriction check helpers that turn restriction lookup results into
 //! authorization results.
 
+use std::cmp::Ordering;
 use std::collections::BTreeSet;
 use std::future::Future;
 use std::str::FromStr;
@@ -732,12 +733,18 @@ pub(crate) fn condition_sets_match_restriction_acls(
     })
 }
 
-/// Evaluate whether one authoritative source denies this access.
-pub(crate) async fn source_denies_access<'a, T>(
+/// Evaluate one authoritative source for a denial permission request group.
+///
+/// Returns `Ok(Some(_))` when the source matches the active enforcement
+/// condition sets and at least one matching restriction denies the caller.
+/// Returns `Ok(None)` when the source does not match the condition sets, or
+/// when every matching restriction authorizes the caller. Returns `Err(_)`
+/// when fetching or evaluating the source fails.
+pub(crate) async fn source_denial_permission_request_group<'a, T>(
     handle: &SharedFetchHandle<T>,
     candidates: &[&'a EnforcementConditionSet],
     pre_filter_variant: &PreFilterVariant,
-) -> Result<bool>
+) -> Result<Option<PermissionRequestGroup>>
 where
     T: SourceRestrictionCheck + Send + Sync + 'static,
 {
@@ -754,30 +761,66 @@ where
         }
     };
 
-    Ok(any_match
-        && result
-            .as_ref()
-            .iter()
-            .any(|check| !check.authorization().has_authorization()))
+    if !any_match {
+        return Ok(None);
+    }
+
+    Ok(result
+        .as_ref()
+        .iter()
+        .filter(|check| !check.authorization().has_authorization())
+        // Multiple denied checks can be returned by one source. Pick a stable
+        // permission request group so error messages do not depend on source
+        // result ordering.
+        .min_by(|left, right| compare_denied_checks(*left, *right))
+        .map(|check| check.permission_request_group().clone()))
 }
 
-/// Combine authoritative source denials using deny-precedence semantics.
+/// Combine authoritative source denial permission request groups.
 ///
-/// A deny wins over sibling errors so `Both` mode can stay fail-closed once it
-/// is enabled, while the first remaining error is surfaced if no source denied.
-pub(crate) fn authoritative_sources_deny_access(source_denials: Vec<Result<bool>>) -> Result<bool> {
-    if source_denials
-        .iter()
-        .any(|source_denial| matches!(source_denial, Ok(true)))
-    {
-        return Ok(true);
-    }
+/// Returns `Ok(Some(_))` when any selected source denies access, even if a
+/// sibling source failed. Returns `Ok(None)` when all selected sources
+/// authorize or do not match the enforcement condition sets. Returns the first
+/// source error only when no source denies.
+pub(crate) fn authoritative_sources_denial_permission_request_group(
+    source_denials: Vec<Result<Option<PermissionRequestGroup>>>,
+) -> Result<Option<PermissionRequestGroup>> {
+    let mut first_error = None;
 
     for source_denial in source_denials {
-        source_denial?;
+        match source_denial {
+            Ok(Some(permission_request_group)) => return Ok(Some(permission_request_group)),
+            Ok(None) => {}
+            Err(err) if first_error.is_none() => {
+                first_error = Some(err);
+            }
+            Err(_) => {}
+        }
     }
 
-    Ok(false)
+    if let Some(err) = first_error {
+        Err(err)
+    } else {
+        Ok(None)
+    }
+}
+
+/// Order denied checks to make single-ACL error reporting deterministic.
+///
+/// Restriction roots are the most stable user-facing ordering key when they
+/// are available. Rootless manifest checks sort after rooted checks, and the
+/// permission request group breaks ties.
+fn compare_denied_checks<T: SourceRestrictionCheck>(left: &T, right: &T) -> Ordering {
+    match (left.restriction_root(), right.restriction_root()) {
+        (Some(left_root), Some(right_root)) => left_root.cmp(right_root),
+        (Some(_), None) => Ordering::Less,
+        (None, Some(_)) => Ordering::Greater,
+        (None, None) => Ordering::Equal,
+    }
+    .then_with(|| {
+        left.permission_request_group()
+            .cmp(right.permission_request_group())
+    })
 }
 
 /// Check a path against one selected restriction source.

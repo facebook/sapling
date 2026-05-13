@@ -52,11 +52,38 @@ pub enum RestrictedPathAccess {
     Path(MPath),
 }
 
+#[derive(Clone, Debug, Error)]
+#[error("Access denied: unauthorized access to restricted path: {access}")]
+pub struct RestrictedPathsAuthorizationError {
+    access: RestrictedPathAccess,
+    permission_request_group: PermissionRequestGroup,
+}
+
+impl RestrictedPathsAuthorizationError {
+    pub fn new(
+        access: RestrictedPathAccess,
+        permission_request_group: PermissionRequestGroup,
+    ) -> Self {
+        Self {
+            access,
+            permission_request_group,
+        }
+    }
+
+    pub fn permission_request_group(&self) -> &PermissionRequestGroup {
+        &self.permission_request_group
+    }
+
+    pub fn is_manifest_access(&self) -> bool {
+        matches!(&self.access, RestrictedPathAccess::Manifest(_))
+    }
+}
+
 /// Error type for restricted paths enforcement.
 #[derive(Debug, Error)]
 pub enum RestrictedPathsError {
-    #[error("Access denied: unauthorized access to restricted path: {0}")]
-    AuthorizationError(RestrictedPathAccess),
+    #[error(transparent)]
+    AuthorizationError(RestrictedPathsAuthorizationError),
     #[error("Internal error: {0}")]
     InternalError(#[from] anyhow::Error),
 }
@@ -458,7 +485,12 @@ pub async fn spawn_enforce_restricted_path_access<'a, 'b>(
                 })
                 .flatten(),
         },
-        || RestrictedPathsError::AuthorizationError(RestrictedPathAccess::Path((*path).clone())),
+        move |permission_request_group| {
+            RestrictedPathsError::AuthorizationError(RestrictedPathsAuthorizationError::new(
+                RestrictedPathAccess::Path((*path).clone()),
+                permission_request_group,
+            ))
+        },
     )
     .await
 }
@@ -539,7 +571,12 @@ pub async fn spawn_enforce_restricted_manifest_access<'a>(
                 })
                 .flatten(),
         },
-        || RestrictedPathsError::AuthorizationError(RestrictedPathAccess::Manifest(manifest_id)),
+        move |permission_request_group| {
+            RestrictedPathsError::AuthorizationError(RestrictedPathsAuthorizationError::new(
+                RestrictedPathAccess::Manifest(manifest_id),
+                permission_request_group,
+            ))
+        },
     )
     .await
 }
@@ -592,7 +629,7 @@ async fn spawn_enforce_restricted_access<T>(
     access_type: &'static str,
     access_data: access_log::RestrictedPathAccessData,
     build_handles: impl FnOnce(SourceFetches) -> SourceHandles<T>,
-    authorization_error: impl FnOnce() -> RestrictedPathsError,
+    authorization_error: impl FnOnce(PermissionRequestGroup) -> RestrictedPathsError,
 ) -> Result<(), RestrictedPathsError>
 where
     T: SourceRestrictionCheck + Send + Sync + 'static,
@@ -638,7 +675,7 @@ where
         return Ok(());
     }
 
-    let should_deny = enforce_with_source_handles(
+    let denial_permission_request_group = enforce_with_source_handles(
         fetches.enforcement_config,
         fetches.enforcement_acl_manifest,
         &handles,
@@ -652,8 +689,8 @@ where
     )
     .await?;
 
-    if should_deny {
-        Err(authorization_error())
+    if let Some(permission_request_group) = denial_permission_request_group {
+        Err(authorization_error(permission_request_group))
     } else {
         Ok(())
     }
@@ -824,12 +861,12 @@ async fn enforce_with_source_handles<'a, T>(
     handles: &SourceHandles<T>,
     pre_filter_result: PreFilterResult<'a>,
     missing_source_error: anyhow::Error,
-) -> Result<bool>
+) -> Result<Option<PermissionRequestGroup>>
 where
     T: SourceRestrictionCheck + Send + Sync + 'static,
 {
     let (candidates, pre_filter_variant) = match pre_filter_result {
-        PreFilterResult::NoMatch => return Ok(false),
+        PreFilterResult::NoMatch => return Ok(None),
         PreFilterResult::DefiniteMatch { candidates } => {
             (candidates, restriction_check::PreFilterVariant::Definite)
         }
@@ -841,14 +878,18 @@ where
     let selected_sources = handles.selected_for(fetch_config, fetch_acl_manifest);
     let mut source_denials =
         futures::future::join_all(selected_sources.handles.into_iter().map(|handle| {
-            restriction_check::source_denies_access(handle, &candidates, &pre_filter_variant)
+            restriction_check::source_denial_permission_request_group(
+                handle,
+                &candidates,
+                &pre_filter_variant,
+            )
         }))
         .await;
     if selected_sources.missing_source {
         source_denials.push(Err(missing_source_error));
     }
 
-    restriction_check::authoritative_sources_deny_access(source_denials)
+    restriction_check::authoritative_sources_denial_permission_request_group(source_denials)
 }
 
 #[cfg(test)]

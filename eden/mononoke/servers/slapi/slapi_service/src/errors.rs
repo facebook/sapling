@@ -107,6 +107,7 @@ impl MononokeErrorExt for MononokeError {
             NonFastForwardMove { .. } => HttpError::e400,
             PushrebaseConflicts(_) => HttpError::e400,
             AuthorizationError(_) => HttpError::e403,
+            RestrictedPathsAuthorizationError(_) => HttpError::e403,
             InternalError(_) => HttpError::e500,
             MergeConflicts { .. } => HttpError::e400,
             LargeRepoNotFound(_) => HttpError::e400,

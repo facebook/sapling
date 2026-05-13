@@ -714,8 +714,8 @@ impl RestrictedPathsTestData {
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
         // Type representing all the ways to access the restricted paths covered
-        // in this test, so we can ensure that all of them generate AuthorizationErrors
-        // when expected.
+        // in this test, so we can ensure that all of them generate
+        // RestrictedPathsAuthorizationErrors when expected.
         #[derive(EnumIter, EnumDisplay, Debug, Eq, PartialEq, Hash, Clone, Copy)]
         enum AccessMethod {
             HgManifestId,
@@ -728,7 +728,7 @@ impl RestrictedPathsTestData {
         }
 
         // Run all the access operations that will trigger enforcement checks.
-        // We collect AuthorizationErrors tagged by operation instead of
+        // We collect RestrictedPathsAuthorizationErrors tagged by operation instead of
         // short-circuiting, so that all operations execute and produce their
         // log entries even when enforcement is enabled. Non-authorization
         // errors are propagated immediately to fail the test.
@@ -745,7 +745,7 @@ impl RestrictedPathsTestData {
                     // Access HgManifest
                     match hg_manifest_id.context(hg_repo_ctx.clone()).await {
                         Ok(_) => {}
-                        Err(e @ MononokeError::AuthorizationError(_)) => {
+                        Err(e @ MononokeError::RestrictedPathsAuthorizationError(_)) => {
                             errs.push((AccessMethod::HgManifestId, e))
                         }
                         Err(e) => return Err(e),
@@ -757,7 +757,7 @@ impl RestrictedPathsTestData {
                         Ok(None) => {
                             return Err(anyhow!("No HgAugmentedManifest for path {path:?}").into());
                         }
-                        Err(e @ MononokeError::AuthorizationError(_)) => {
+                        Err(e @ MononokeError::RestrictedPathsAuthorizationError(_)) => {
                             errs.push((AccessMethod::HgAugmentedManifestId, e))
                         }
                         Err(e) => return Err(e),
@@ -765,7 +765,7 @@ impl RestrictedPathsTestData {
                     // Access path
                     match cs_ctx.path(path).await {
                         Ok(_) => {}
-                        Err(e @ MononokeError::AuthorizationError(_)) => {
+                        Err(e @ MononokeError::RestrictedPathsAuthorizationError(_)) => {
                             errs.push((AccessMethod::Path, e))
                         }
                         Err(e) => return Err(e),
@@ -792,7 +792,7 @@ impl RestrictedPathsTestData {
                     // Access Fsnode by loading it from blobstore
                     match repo_ctx.tree(fsnode_id.into()).await {
                         Ok(_) => Ok(None),
-                        Err(e @ MononokeError::AuthorizationError(_)) => {
+                        Err(e @ MononokeError::RestrictedPathsAuthorizationError(_)) => {
                             Ok(Some((AccessMethod::Fsnode, e)))
                         }
                         Err(e) => Err(e),
@@ -819,7 +819,7 @@ impl RestrictedPathsTestData {
             .and_then(async |(_path, content_manifest_id)| {
                 match repo_ctx.tree(content_manifest_id.into()).await {
                     Ok(_) => Ok(None),
-                    Err(e @ MononokeError::AuthorizationError(_)) => {
+                    Err(e @ MononokeError::RestrictedPathsAuthorizationError(_)) => {
                         Ok(Some((AccessMethod::ContentManifest, e)))
                     }
                     Err(e) => Err(e),
@@ -850,14 +850,14 @@ impl RestrictedPathsTestData {
                 for result in results {
                     match result {
                         Ok(_) => {}
-                        Err(e @ MononokeError::AuthorizationError(_)) => {
+                        Err(e @ MononokeError::RestrictedPathsAuthorizationError(_)) => {
                             auth_errors.push((AccessMethod::PathsWithContent, e))
                         }
                         Err(e) => return Err(e.into()),
                     }
                 }
             }
-            Err(e @ MononokeError::AuthorizationError(_)) => {
+            Err(e @ MononokeError::RestrictedPathsAuthorizationError(_)) => {
                 auth_errors.push((AccessMethod::PathsWithContent, e))
             }
             Err(e) => return Err(e.into()),
@@ -882,14 +882,14 @@ impl RestrictedPathsTestData {
                 for result in results {
                     match result {
                         Ok(()) => {}
-                        Err(e @ MononokeError::AuthorizationError(_)) => {
+                        Err(e @ MononokeError::RestrictedPathsAuthorizationError(_)) => {
                             auth_errors.push((AccessMethod::PathsWithHistory, e))
                         }
                         Err(e) => return Err(e.into()),
                     }
                 }
             }
-            Err(e @ MononokeError::AuthorizationError(_)) => {
+            Err(e @ MononokeError::RestrictedPathsAuthorizationError(_)) => {
                 auth_errors.push((AccessMethod::PathsWithHistory, e))
             }
             Err(e) => return Err(e.into()),
@@ -903,12 +903,12 @@ impl RestrictedPathsTestData {
             }
 
             for op in AccessMethod::iter() {
-                // Ensure that all access methods returned AuthorizationErrors
+                // Ensure that all access methods returned RestrictedPathsAuthorizationErrors.
                 let auth_errors = grouped.remove(&op).unwrap_or_default();
 
                 assert!(
                     !auth_errors.is_empty(),
-                    "Scenario {}: expected AuthorizationError for operation '{}' but got none.",
+                    "Scenario {}: expected RestrictedPathsAuthorizationError for operation '{}' but got none.",
                     scenario_idx,
                     op,
                 )
