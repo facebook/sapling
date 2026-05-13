@@ -252,9 +252,16 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &Repo, wc: &WorkingCopy) -> Result<u8>
             }
             Err(err) => {
                 if !status.contains(file) {
+                    let err = err
+                        .downcast_ref::<std::io::Error>()
+                        .and_then(|err| {
+                            util::path_error_details(err).map(|details| details.original_io_error)
+                        })
+                        .map_or_else(|| err.to_string(), ToString::to_string);
                     lgr.warn(format!(
-                        "{}: {err}",
-                        relativizer.relativized(file.as_repo_path())
+                        "{}: {}",
+                        relativizer.relativized(file.as_repo_path()),
+                        err,
                     ));
                 }
             }
