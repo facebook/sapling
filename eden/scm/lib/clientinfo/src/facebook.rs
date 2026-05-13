@@ -35,6 +35,8 @@ pub struct FbClientInfo {
     atlas: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     atlas_env_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    faas_job_name: Option<String>,
 }
 
 impl FbClientInfo {
@@ -69,6 +71,10 @@ impl FbClientInfo {
     pub fn atlas_env_id(&self) -> Option<&str> {
         self.atlas_env_id.as_deref()
     }
+
+    pub fn faas_job_name(&self) -> Option<&str> {
+        self.faas_job_name.as_deref()
+    }
 }
 
 fn get_tw_job_handle() -> Option<String> {
@@ -91,5 +97,6 @@ pub fn get_fb_client_info() -> FbClientInfo {
         sandcastle_vcs: var("SANDCASTLE_VCS").ok(),
         atlas: var("ATLAS").ok().and_then(|s| s.parse().ok()),
         atlas_env_id: var("ATLAS_ENV_ID").ok(),
+        faas_job_name: var("FAAS_JOB_NAME").ok(),
     }
 }
