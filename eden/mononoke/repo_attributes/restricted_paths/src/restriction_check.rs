@@ -272,6 +272,8 @@ impl std::error::Error for SourceRestrictionError {
 pub(crate) trait SourceRestrictionCheck: Clone {
     /// Caller authorization result for this source result.
     fn authorization(&self) -> &AuthorizationCheckResult;
+    /// Request ACL to show users for this restriction.
+    fn request_acl(&self) -> &str;
     /// Parsed repo-region ACL associated with this restriction.
     fn repo_region_identity(&self) -> &MononokeIdentity;
     /// Restriction root when the source can report one.
@@ -283,6 +285,10 @@ pub(crate) trait SourceRestrictionCheck: Clone {
 impl SourceRestrictionCheck for PathRestrictionCheckResult {
     fn authorization(&self) -> &AuthorizationCheckResult {
         &self.authorization
+    }
+
+    fn request_acl(&self) -> &str {
+        &self.restriction_info().request_acl
     }
 
     fn repo_region_identity(&self) -> &MononokeIdentity {
@@ -301,6 +307,10 @@ impl SourceRestrictionCheck for PathRestrictionCheckResult {
 impl SourceRestrictionCheck for ManifestRestrictionCheckResult {
     fn authorization(&self) -> &AuthorizationCheckResult {
         &self.authorization
+    }
+
+    fn request_acl(&self) -> &str {
+        &self.restriction_info().request_acl
     }
 
     fn repo_region_identity(&self) -> &MononokeIdentity {
