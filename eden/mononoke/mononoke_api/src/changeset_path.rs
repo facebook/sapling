@@ -25,7 +25,6 @@ use deleted_manifest::RootDeletedManifestIdCommon;
 use derivation_queue_thrift::DerivationPriority;
 use filestore::FetchKey;
 use futures::future::TryFutureExt;
-use futures::future::try_join_all;
 use futures::stream;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
@@ -702,81 +701,91 @@ impl<R: MononokeRepo> ChangesetPathHistoryContext<R> {
                 if self.until_timestamp.is_some() || self.until_committer_timestamp.is_some() {
                     let until_timestamp = self.until_timestamp;
                     let until_committer_timestamp = self.until_committer_timestamp;
-                    cs_ids = try_join_all(cs_ids.into_iter().map(|(cs_id, path)| async move {
-                        let info = if cs_info_enabled {
-                            repo.repo_derived_data()
-                                .derive::<ChangesetInfo>(ctx, cs_id, DerivationPriority::LOW)
-                                .watched()
-                                .await
-                        } else {
-                            let bonsai = cs_id.load(ctx, repo.repo_blobstore()).watched().await?;
-                            Ok(ChangesetInfo::new(cs_id, bonsai))
-                        }?;
+                    cs_ids = stream::iter(cs_ids)
+                        .map(|(cs_id, path)| async move {
+                            let info = if cs_info_enabled {
+                                repo.repo_derived_data()
+                                    .derive::<ChangesetInfo>(ctx, cs_id, DerivationPriority::LOW)
+                                    .watched()
+                                    .await
+                            } else {
+                                let bonsai =
+                                    cs_id.load(ctx, repo.repo_blobstore()).watched().await?;
+                                Ok(ChangesetInfo::new(cs_id, bonsai))
+                            }?;
 
-                        if let Some(until_ts) = until_timestamp {
-                            let timestamp = info.author_date().as_chrono().timestamp();
-                            if timestamp < until_ts {
-                                return anyhow::Ok(None);
+                            if let Some(until_ts) = until_timestamp {
+                                let timestamp = info.author_date().as_chrono().timestamp();
+                                if timestamp < until_ts {
+                                    return anyhow::Ok(None);
+                                }
                             }
-                        }
-                        if let Some(until_committer_ts) = until_committer_timestamp {
-                            // Get committer_date if available, otherwise fall back to author_date
-                            let timestamp = match info.committer_date() {
-                                Some(committer_date) => committer_date.as_chrono().timestamp(),
-                                None => info.author_date().as_chrono().timestamp(),
-                            };
-                            if timestamp < until_committer_ts {
-                                return anyhow::Ok(None);
+                            if let Some(until_committer_ts) = until_committer_timestamp {
+                                // Get committer_date if available, otherwise fall back to author_date
+                                let timestamp = match info.committer_date() {
+                                    Some(committer_date) => committer_date.as_chrono().timestamp(),
+                                    None => info.author_date().as_chrono().timestamp(),
+                                };
+                                if timestamp < until_committer_ts {
+                                    return anyhow::Ok(None);
+                                }
                             }
-                        }
-                        Ok(Some((cs_id, path)))
-                    }))
-                    .watched()
-                    .await?
-                    .into_iter()
-                    .filter_map(std::convert::identity)
-                    .collect();
+                            anyhow::Ok(Some((cs_id, path)))
+                        })
+                        .buffer_unordered(100)
+                        .try_collect::<Vec<_>>()
+                        .watched()
+                        .await?
+                        .into_iter()
+                        .filter_map(std::convert::identity)
+                        .collect();
                 }
 
                 if let Some(descendants_of) = self.descendants_of {
-                    cs_ids = try_join_all(cs_ids.into_iter().map(|(cs_id, path)| async move {
-                        if repo
-                            .commit_graph()
-                            .is_ancestor(ctx, descendants_of, cs_id)
-                            .watched()
-                            .await?
-                        {
-                            anyhow::Ok(Some((cs_id, path)))
-                        } else {
-                            anyhow::Ok(None)
-                        }
-                    }))
-                    .watched()
-                    .await?
-                    .into_iter()
-                    .filter_map(std::convert::identity)
-                    .collect();
+                    cs_ids = stream::iter(cs_ids)
+                        .map(|(cs_id, path)| async move {
+                            if repo
+                                .commit_graph()
+                                .is_ancestor(ctx, descendants_of, cs_id)
+                                .watched()
+                                .await?
+                            {
+                                anyhow::Ok(Some((cs_id, path)))
+                            } else {
+                                anyhow::Ok(None)
+                            }
+                        })
+                        .buffer_unordered(100)
+                        .try_collect::<Vec<_>>()
+                        .watched()
+                        .await?
+                        .into_iter()
+                        .filter_map(std::convert::identity)
+                        .collect();
                 }
 
                 if let Some(exclude_changeset_and_ancestors) = self.exclude_changeset_and_ancestors
                 {
-                    cs_ids = try_join_all(cs_ids.into_iter().map(|(cs_id, path)| async move {
-                        if repo
-                            .commit_graph()
-                            .is_ancestor(ctx, cs_id, exclude_changeset_and_ancestors)
-                            .watched()
-                            .await?
-                        {
-                            Ok::<_, MononokeError>(None)
-                        } else {
-                            Ok::<_, MononokeError>(Some((cs_id, path)))
-                        }
-                    }))
-                    .watched()
-                    .await?
-                    .into_iter()
-                    .filter_map(std::convert::identity)
-                    .collect();
+                    cs_ids = stream::iter(cs_ids)
+                        .map(|(cs_id, path)| async move {
+                            if repo
+                                .commit_graph()
+                                .is_ancestor(ctx, cs_id, exclude_changeset_and_ancestors)
+                                .watched()
+                                .await?
+                            {
+                                Ok::<_, MononokeError>(None)
+                            } else {
+                                Ok::<_, MononokeError>(Some((cs_id, path)))
+                            }
+                        })
+                        .buffer_unordered(100)
+                        .try_collect::<Vec<_>>()
+                        .watched()
+                        .await?
+                        .into_iter()
+                        .filter_map(std::convert::identity)
+                        .collect();
                 }
                 Ok(cs_ids)
             }
