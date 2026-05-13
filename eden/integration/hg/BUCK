@@ -275,7 +275,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "restricted_tree",
     srcs = ["restricted_tree_test.py"],
     compatible_with = [
