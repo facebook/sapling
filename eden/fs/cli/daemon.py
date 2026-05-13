@@ -475,6 +475,21 @@ def _rotate_startup_log(log_path: Path, keep: int = 5) -> None:
         print_stderr(f"warning: failed to prune old startup logs: {e}")
 
 
+def _extract_daemon_error(startup_log_content: str) -> Optional[str]:
+    """Return the error portion of the daemon's startup log.
+
+    Lines before the "Starting edenfs" marker are XLOG noise emitted before
+    redirectOutput() and are not useful for diagnostics.  Returns None if the
+    marker is absent or there is no content after it.
+    """
+    lines = startup_log_content.split("\n")
+    for i, line in enumerate(lines):
+        if line.startswith("Starting edenfs"):
+            filtered = "\n".join(lines[i + 1 :]).strip()
+            return filtered if filtered else None
+    return None
+
+
 def _systemctl_start_or_reload(
     instance: EdenInstance,
     cmd: List[str],
@@ -513,13 +528,14 @@ def _systemctl_start_or_reload(
     # Display the daemon's startup output captured by systemd (StandardOutput=file:).
     # Only read if created after we invoked systemctl, to avoid showing stale content
     # from a previous run if log rotation failed.
+    startup_log_content: Optional[str] = None
     try:
         if startup_log.exists() and startup_log.stat().st_mtime >= start_time:
-            sys.stderr.write(startup_log.read_text())
+            startup_log_content = startup_log.read_text()
+            sys.stderr.write(startup_log_content)
     except OSError as e:
         print_stderr(f"warning: failed to read startup log: {e}")
-    if rc != 0 and result.stderr:
-        print_stderr(result.stderr)
+
     sample_kwargs: Dict[str, Union[bool, int, str]] = {
         "action": action,
         "success": rc == 0,
@@ -527,6 +543,16 @@ def _systemctl_start_or_reload(
     }
     if result.stderr:
         sample_kwargs["error"] = result.stderr
+    if rc != 0:
+        if result.stderr:
+            print_stderr(result.stderr)
+        # Always check the startup log for daemon errors independently of
+        # systemctl stderr — systemctl's generic "Job failed" message doesn't
+        # contain the actual daemon error (e.g. "error starting EdenFS: ...").
+        if startup_log_content:
+            daemon_error = _extract_daemon_error(startup_log_content)
+            if daemon_error:
+                sample_kwargs["daemon_startup_log"] = daemon_error
     instance.log_sample("systemctl_action", **sample_kwargs)
     return rc
 
