@@ -10,7 +10,7 @@
 #include <cstdlib>
 
 #ifdef __APPLE__
-#include <dlfcn.h>
+#include "folly/debugging/exception_tracer/ExceptionTracerLib.h"
 #endif
 #ifdef _WIN32
 #include <windows.h>
@@ -51,21 +51,17 @@ __attribute__((__noreturn__)) void __wrap___cxa_throw(
 } // extern "C"
 
 #elif defined(__APPLE__)
-// macOS: Override __cxa_throw, delegate to original via dlsym(RTLD_NEXT).
+// macOS: Register with folly's exception tracer callback system
 
-using CxaThrowFn = void (*)(void*, void*, void (*)(void*));
-
-extern "C" __attribute__((__noreturn__)) void
-__cxa_throw(void* thrownException, void* type, void (*destructor)(void*)) {
+static void throwCallback(void*, std::type_info*, void (**)(void*)) noexcept {
   onThrow();
-  static auto orig =
-      reinterpret_cast<CxaThrowFn>(dlsym(RTLD_NEXT, "__cxa_throw"));
-  if (!orig) {
-    std::abort();
-  }
-  orig(thrownException, type, destructor);
-  __builtin_unreachable();
 }
+
+static struct RegisterThrowCallback {
+  RegisterThrowCallback() {
+    folly::exception_tracer::registerCxaThrowCallback(throwCallback);
+  }
+} registrar;
 
 #elif defined(_WIN32)
 // Windows: Vectored Exception Handler catches C++ exceptions (SEH 0xE06D7363).
