@@ -425,6 +425,64 @@ const VFS_BATCH_SIZE: usize = 128;
 const WORK_QUEUE_SIZE: usize = 10_000;
 
 #[expect(dead_code, reason = "wired up in a later commit in this stack")]
+fn snapshot(
+    ctx: &ReqCtx<WorktreeOpts>,
+    repo: &Repo,
+    status: status::Status,
+    dest: &Path,
+) -> anyhow::Result<()> {
+    let logger = ctx.logger();
+
+    if !status.dirty() && status.unknown().next().is_none() {
+        logger.info("working copy is clean, nothing to copy");
+        return Ok(());
+    }
+
+    let src_vfs = vfs::VFS::new(repo.path().to_path_buf())?;
+    let dst_vfs = vfs::VFS::new_destructive(dest.to_path_buf())?;
+
+    let copy_paths: Vec<&types::RepoPathBuf> = status
+        .modified()
+        .chain(status.added())
+        .chain(status.unknown())
+        .collect();
+    let remove_paths: Vec<&types::RepoPathBuf> = status.removed().chain(status.deleted()).collect();
+
+    let total = copy_paths.len() + remove_paths.len();
+    let (work_tx, result_rx) = prepare_batch_workers(&dst_vfs, total);
+
+    logger.info("applying working copy changes to new worktree...");
+
+    let read_errors = stream_snapshot_work_items(&src_vfs, work_tx, &copy_paths, &remove_paths)?;
+
+    let mut write_errors: Vec<(types::RepoPathBuf, anyhow::Error)> = Vec::new();
+    while let Ok(result) = result_rx.recv() {
+        if let Err((work, err)) = result {
+            let path = work
+                .map(|w| w.path().to_owned())
+                .unwrap_or_else(types::RepoPathBuf::new);
+            write_errors.push((path, err));
+        }
+    }
+
+    for (path, err) in &read_errors {
+        logger.warn(format!("failed to read {}: {:#}", path, err));
+    }
+    for (path, err) in &write_errors {
+        logger.warn(format!("failed to apply {}: {:#}", path, err));
+    }
+
+    let error_count = read_errors.len() + write_errors.len();
+    if error_count > 0 {
+        bail!("{} file(s) failed during direct copy", error_count);
+    }
+
+    update_dest_treestate(dest, &status).context("failed to update treestate after file copy")?;
+
+    logger.info("working copy changes applied to new worktree");
+    Ok(())
+}
+
 fn prepare_batch_workers(
     dst_vfs: &vfs::VFS,
     total: usize,
@@ -444,7 +502,6 @@ fn prepare_batch_workers(
 ///
 /// Returns `Ok(read_errors)` listing files that failed to read from source.
 /// Returns `Err` only if a send to the batch channel fails (workers died).
-#[expect(dead_code, reason = "wired up in a later commit in this stack")]
 fn stream_snapshot_work_items(
     src_vfs: &vfs::VFS,
     work_tx: flume::Sender<vfs::Work>,
@@ -482,7 +539,6 @@ fn stream_snapshot_work_items(
     Ok(read_errors)
 }
 
-#[expect(dead_code, reason = "wired up in a later commit in this stack")]
 /// Update destination treestate so `sl status` in the dest matches the source.
 ///
 /// Only `added` and `removed` files need treestate entries. Modified, untracked,
