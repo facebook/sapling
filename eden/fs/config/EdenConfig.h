@@ -2388,7 +2388,7 @@ class EdenConfig : private ConfigSettingManager {
 
   ConfigSetting<size_t> xplatLoggerQueueLimitBytes{
       "xplat-logger:queue-limit-bytes",
-      64 * 1024,
+      128 * 1024,
       this};
 
   ConfigSetting<size_t> xplatLoggerMaxBatchSize{
@@ -2398,7 +2398,17 @@ class EdenConfig : private ConfigSettingManager {
 
   ConfigSetting<size_t> xplatLoggerMaxConsecutiveFailures{
       "xplat-logger:max-consecutive-failures",
-      3,
+      10,
+      this};
+
+  ConfigSetting<std::chrono::nanoseconds> xplatLoggerInitialBackoff{
+      "xplat-logger:initial-backoff",
+      std::chrono::milliseconds(100),
+      this};
+
+  ConfigSetting<std::chrono::nanoseconds> xplatLoggerMaxBackoff{
+      "xplat-logger:max-backoff",
+      std::chrono::seconds(5),
       this};
 
   ConfigSetting<std::chrono::nanoseconds> xplatLoggerFlushTimeout{
