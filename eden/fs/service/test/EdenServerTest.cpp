@@ -143,7 +143,7 @@ TEST_F(EdenServerTest, StopIsIdempotent) {
 }
 
 #ifndef _WIN32
-TEST_F(EdenServerTest, TakeoverSendFailureThrowsDuringCleanup) {
+TEST_F(EdenServerTest, TakeoverSendFailureRecoversDuringCleanup) {
   // The old daemon intentionally writes takeover data to a client that has
   // already disconnected. Ignore SIGPIPE so the broken send is reported as a
   // socket exception instead of killing the test process.
@@ -188,20 +188,15 @@ TEST_F(EdenServerTest, TakeoverSendFailureThrowsDuringCleanup) {
   }
   ASSERT_TRUE(clientSawException);
 
-  // Let the old daemon continue into the send path. Today this still bubbles
-  // the socket send failure up through cleanup instead of recovering.
+  // Let the old daemon continue into the send path, then wait for the serve
+  // loop to exit before calling performCleanup().
   faultInjector.removeFault("takeover", "ping_receive");
   faultInjector.unblock("takeover", "ping_receive");
 
-  // performCleanup() is only valid after the thrift serve loop has exited, so
-  // wait for the background server thread to finish before invoking it.
   ASSERT_TRUE(serverThread.waitForExit(5s));
   serverThread.join();
   ASSERT_NO_THROW(serverThread.throwIfServeFailed());
-
-  // FIXME: cleanup should recover from takeover send failures instead of
-  // rethrowing the send error and taking the fatal cleanup path.
-  EXPECT_THROW(server.performCleanup(), std::system_error);
+  EXPECT_FALSE(server.performCleanup());
 }
 #endif
 

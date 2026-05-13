@@ -719,6 +719,8 @@ TEST(Takeover, sendFailureReturnsTakeoverDataForRecovery) {
                           /*shouldThrowDuringTakeover=*/true)
                           .ensure([&] { evb.terminateLoopSoon(); });
   loopWithTimeout(&evb);
+  // The client-side failure should have completed before we inspect it.
+  ASSERT_TRUE(clientFuture.isReady());
 
   EXPECT_THROW_RE(
       std::move(clientFuture).get(),
@@ -727,24 +729,44 @@ TEST(Takeover, sendFailureReturnsTakeoverDataForRecovery) {
 
   // Wait until the server is blocked at the injected pause before letting it
   // continue into the send path.
-  EXPECT_TRUE(faultInjector.waitUntilBlocked("takeover", 1s));
+  ASSERT_TRUE(faultInjector.waitUntilBlocked("takeover", 1s));
 
   faultInjector.removeFault("takeover", "ping_receive");
   faultInjector.unblock("takeover", "ping_receive");
 
   // Now the old daemon attempts to send takeover data to a client that has
-  // already gone away.
+  // already gone away.  takeoverComplete should return the original
+  // TakeoverData for recovery rather than surfacing the send error.
   auto serverResultFuture = std::move(serverSendFuture).via(&evb).ensure([&] {
     evb.terminateLoopSoon();
   });
   loopWithTimeout(&evb);
+  // The event loop should only exit once the server has resolved
+  // takeoverComplete with its recovery result.
+  ASSERT_TRUE(serverResultFuture.isReady());
 
   auto serverResult = std::move(serverResultFuture).getTry();
+  ASSERT_TRUE(serverResult.hasValue());
+  ASSERT_TRUE(serverResult->has_value());
 
-  // FIXME: send failures after mount shutdown should return TakeoverData so the
-  // old daemon can recover. Today takeoverComplete surfaces the send failure
-  // exception instead, which leads the old daemon down the fatal cleanup path.
-  EXPECT_TRUE(serverResult.hasException());
+  auto recoveryData = std::move(serverResult).value().value();
+  // Check that the old daemon got back the metadata it needs to rebuild the
+  // mount and that the serialized mount list itself is intact.
+  ASSERT_TRUE(recoveryData.mountdServerSocket.has_value());
+  ASSERT_EQ(recoveryData.mountPoints.size(), 1);
+  EXPECT_EQ(recoveryData.mountPoints[0].mountPath, mountPath);
+  EXPECT_EQ(recoveryData.mountPoints[0].stateDirectory, clientPath);
+
+  // The recovery payload must also preserve the original FDs rather than
+  // leaving them moved into the failed send attempt.
+  checkExpectedFile(recoveryData.lockFile.fd(), lockFilePath);
+  checkExpectedFile(recoveryData.thriftSocket.fd(), thriftSocketPath);
+  checkExpectedFile(recoveryData.mountdServerSocket->fd(), mountdSocketPath);
+
+  auto* fuseData =
+      std::get_if<FuseChannelData>(&recoveryData.mountPoints[0].channelInfo);
+  ASSERT_NE(fuseData, nullptr);
+  checkExpectedFile(fuseData->fd.fd(), fusePath);
 }
 
 TEST(Takeover, computeCompatibleVersion) {

@@ -11,6 +11,7 @@
 
 #include <chrono>
 
+#include <folly/Exception.h>
 #include <folly/Range.h>
 #include <folly/SocketAddress.h>
 #include <folly/futures/Future.h>
@@ -39,6 +40,79 @@ DEFINE_int32(
     "Timeout for receiving ready ping from new process in seconds");
 
 namespace facebook::eden {
+
+namespace {
+
+struct TakeoverRecoveryFiles {
+  folly::File lockFile;
+  folly::File thriftSocket;
+  std::optional<folly::File> mountdServerSocket;
+  std::vector<folly::File> mountPointSockets;
+};
+
+folly::File duplicateRecoveryFile(
+    const folly::File& file,
+    const char* description) {
+  auto dupFd = ::dup(file.fd());
+  folly::checkUnixError(
+      dupFd, "error duplicating ", description, " during takeover recovery");
+  return folly::File{dupFd, /* ownsFd */ true};
+}
+
+TakeoverRecoveryFiles duplicateTakeoverRecoveryFiles(const TakeoverData& data) {
+  TakeoverRecoveryFiles recoveryFiles{
+      duplicateRecoveryFile(data.lockFile, "takeover lock fd"),
+      duplicateRecoveryFile(data.thriftSocket, "takeover thrift socket fd"),
+      std::nullopt,
+      {}};
+
+  if (data.mountdServerSocket.has_value()) {
+    recoveryFiles.mountdServerSocket = duplicateRecoveryFile(
+        *data.mountdServerSocket, "takeover mountd socket fd");
+  }
+
+  recoveryFiles.mountPointSockets.reserve(data.mountPoints.size());
+  for (const auto& mountPoint : data.mountPoints) {
+    if (auto fuseData = std::get_if<FuseChannelData>(&mountPoint.channelInfo)) {
+      recoveryFiles.mountPointSockets.emplace_back(duplicateRecoveryFile(
+          fuseData->fd, "takeover mount point fuse socket fd"));
+    } else if (
+        auto nfsData = std::get_if<NfsChannelData>(&mountPoint.channelInfo)) {
+      recoveryFiles.mountPointSockets.emplace_back(duplicateRecoveryFile(
+          nfsData->nfsdSocketFd, "takeover mount point nfs socket fd"));
+    } else {
+      throw std::runtime_error("Unexpected Channel Type");
+    }
+  }
+
+  return recoveryFiles;
+}
+
+void restoreTakeoverRecoveryFiles(
+    TakeoverData& data,
+    TakeoverRecoveryFiles&& recoveryFiles) {
+  data.lockFile = std::move(recoveryFiles.lockFile);
+  data.thriftSocket = std::move(recoveryFiles.thriftSocket);
+  data.mountdServerSocket = std::move(recoveryFiles.mountdServerSocket);
+
+  XCHECK_EQ(data.mountPoints.size(), recoveryFiles.mountPointSockets.size());
+  auto recoverySocket = recoveryFiles.mountPointSockets.begin();
+  for (auto& mountPoint : data.mountPoints) {
+    XCHECK(recoverySocket != recoveryFiles.mountPointSockets.end());
+    if (auto fuseData = std::get_if<FuseChannelData>(&mountPoint.channelInfo)) {
+      fuseData->fd = std::move(*recoverySocket);
+    } else if (
+        auto nfsData = std::get_if<NfsChannelData>(&mountPoint.channelInfo)) {
+      nfsData->nfsdSocketFd = std::move(*recoverySocket);
+    } else {
+      throw std::runtime_error("Unexpected Channel Type");
+    }
+    ++recoverySocket;
+  }
+  XCHECK(recoverySocket == recoveryFiles.mountPointSockets.end());
+}
+
+} // namespace
 
 /**
  * ConnHandler handles a single connection received on the TakeoverServer
@@ -296,17 +370,25 @@ Future<Unit> TakeoverServer::ConnHandler::sendTakeoverData(
   state.socket.setSendTimeout(std::chrono::seconds{5});
 
   UnixSocket::Message msg;
+  std::optional<TakeoverRecoveryFiles> recoveryFiles;
   try {
     // Possibly simulate a takeover error during data transfer
     // for testing purposes.
     faultInjector_.check("takeover", "error during send");
+    // serialize() moves the takeover FDs into msg.files. Keep dup()ed copies so
+    // the old daemon can still recover if the handoff fails mid-transfer.
+    recoveryFiles.emplace(duplicateTakeoverRecoveryFiles(data));
     data.serialize(state.protocolCapabilities, msg);
     for (auto& file : msg.files) {
       XLOGF(DBG7, "sending fd for takeover: {}", file.fd());
     }
   } catch (...) {
     auto ew = folly::exception_wrapper{std::current_exception()};
-    data.takeoverComplete.setException(ew);
+    if (recoveryFiles) {
+      restoreTakeoverRecoveryFiles(data, std::move(*recoveryFiles));
+    }
+    auto takeoverPromise = std::move(data.takeoverComplete);
+    takeoverPromise.setValue(std::move(data));
     return state.socket.send(
         TakeoverData::serializeError(state.protocolCapabilities, ew));
   }
@@ -317,13 +399,20 @@ Future<Unit> TakeoverServer::ConnHandler::sendTakeoverData(
       msg.data.computeChainDataLength());
 
   return sendTakeoverDataMessage(state, std::move(msg))
-      .thenTry([promise = std::move(data.takeoverComplete)](
+      .thenTry([takeoverData = std::move(data),
+                recoveryFiles = std::move(recoveryFiles).value()](
                    folly::Try<Unit>&& sendResult) mutable {
+        auto takeoverPromise = std::move(takeoverData.takeoverComplete);
         if (sendResult.hasException()) {
-          promise.setException(sendResult.exception());
+          XLOGF(
+              ERR,
+              "takeover send failed, recovering: {}",
+              sendResult.exception().what());
+          restoreTakeoverRecoveryFiles(takeoverData, std::move(recoveryFiles));
+          takeoverPromise.setValue(std::move(takeoverData));
         } else {
           // Set an uninitialized optional here to avoid an attempted recovery
-          promise.setValue(std::nullopt);
+          takeoverPromise.setValue(std::nullopt);
         }
       });
 }

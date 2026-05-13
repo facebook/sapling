@@ -32,6 +32,7 @@ cpp_library(
         "//eden/common/utils:bug",
         "//eden/common/utils:throw",
         "//eden/fs/utils:event_base_state",
+        "//folly:exception",
         "//folly:likely",
         "//folly:network_address",
         "//folly:range",
