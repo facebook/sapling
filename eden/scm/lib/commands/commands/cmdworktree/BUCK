@@ -19,6 +19,7 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:chrono",
+        "fbsource//third-party/rust:flume",
         "fbsource//third-party/rust:fs-err",
         "fbsource//third-party/rust:serde",
         "//eden/scm/lib/clidispatch:clidispatch",
@@ -35,6 +36,7 @@ rust_library(
         "//eden/scm/lib/status:status",
         "//eden/scm/lib/treestate:treestate",
         "//eden/scm/lib/util:util",
+        "//eden/scm/lib/vfs:vfs",
         "//eden/scm/lib/workingcopy:workingcopy",
         "//eden/scm/lib/worktree:worktree",
     ],

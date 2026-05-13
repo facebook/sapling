@@ -420,6 +420,26 @@ fn display_path_bytes(bytes: &[u8]) -> String {
     escaped
 }
 
+const DEFAULT_CONCURRENCY: usize = 16;
+const VFS_BATCH_SIZE: usize = 128;
+const WORK_QUEUE_SIZE: usize = 10_000;
+
+#[expect(dead_code, reason = "wired up in a later commit in this stack")]
+fn prepare_batch_workers(
+    dst_vfs: &vfs::VFS,
+    total: usize,
+) -> (
+    flume::Sender<vfs::Work>,
+    flume::Receiver<Result<vfs::Work, (Option<vfs::Work>, anyhow::Error)>>,
+) {
+    let workers = match std::thread::available_parallelism() {
+        Ok(v) => v.get().min(DEFAULT_CONCURRENCY).min(total / VFS_BATCH_SIZE),
+        Err(_) => 1,
+    }
+    .max(1);
+    dst_vfs.batch(workers, WORK_QUEUE_SIZE)
+}
+
 #[expect(dead_code, reason = "wired up in a later commit in this stack")]
 /// Update destination treestate so `sl status` in the dest matches the source.
 ///
