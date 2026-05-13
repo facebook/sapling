@@ -22,8 +22,8 @@ use crate::errors::IOContext;
 
 static MAX_IO_RETRIES: Lazy<u32> = Lazy::new(|| {
     std::env::var("SL_IO_RETRIES")
-        .unwrap_or("3".to_string())
-        .parse::<u32>()
+        .ok()
+        .and_then(|s| s.parse::<u32>().ok())
         .unwrap_or(3)
 });
 
