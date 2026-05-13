@@ -411,6 +411,12 @@ class RpcServer final : public std::enable_shared_from_this<RpcServer>,
   void initializeServerSocket(folly::File socket);
 
   /**
+   * Resume accepting on an existing server socket after takeoverStop() paused
+   * the accept callback.
+   */
+  void resumeAccepting();
+
+  /**
    * Stop reading new requests, wait for pending requests, and detach and return
    * the connected socket for handoff to a new process.
    *

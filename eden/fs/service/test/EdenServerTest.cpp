@@ -304,11 +304,13 @@ TEST_F(EdenServerTest, TakeoverSendFailureRecoveryReinitializesMountd) {
       static_cast<ssize_t>(requestBytes.size()),
       write(mountdFd, requestBytes.data(), requestBytes.size()));
   const auto hasReply = pollForReply(mountdFd, 1000);
+  EXPECT_TRUE(hasReply)
+      << "mountd should accept null RPCs after takeover recovery";
 
-  // FIXME: recovery keeps mountd's server socket but does not resume
-  // accepting on it yet. Flip this to EXPECT_TRUE() once the NFS-only fix
-  // re-arms mountd during takeover recovery.
-  EXPECT_FALSE(hasReply);
+  if (hasReply) {
+    uint8_t reply[256];
+    EXPECT_GT(read(mountdFd, reply, sizeof(reply)), 0);
+  }
 }
 #endif
 

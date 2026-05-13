@@ -1298,6 +1298,12 @@ ImmediateFuture<Unit> EdenServer::recoverImpl(TakeoverData&& takeoverData) {
   }
   server_->useExistingSocket(takeoverData.thriftSocket.release());
 
+  if (auto nfsServer = serverState_->getNfsServer();
+      nfsServer && takeoverData.mountdServerSocket.has_value()) {
+    XLOG(DBG7, "Resuming mountd accepts after takeover recovery");
+    nfsServer->resumeMountdAccepting();
+  }
+
   // Remount our mounts from our prepared takeoverData
   std::vector<ImmediateFuture<Unit>> mountFutures;
   mountFutures = prepareMountsTakeover(

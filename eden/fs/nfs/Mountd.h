@@ -57,6 +57,7 @@ class Mountd {
    */
   void initialize(folly::SocketAddress addr, bool registerWithRpcbind);
   void initialize(folly::File socket);
+  void resumeAccepting();
 
   uint32_t getProgramNumber();
 

@@ -262,6 +262,10 @@ void Mountd::initialize(folly::File socket) {
   server_->initializeServerSocket(std::move(socket));
 }
 
+void Mountd::resumeAccepting() {
+  server_->resumeAccepting();
+}
+
 uint32_t Mountd::getProgramNumber() {
   return kMountdProgNumber;
 }

@@ -787,6 +787,20 @@ void RpcServer::initializeServerSocket(folly::File socket) {
   serverSocket_->startAccepting();
 }
 
+void RpcServer::resumeAccepting() {
+  evb_->checkIsInEventBaseThread();
+
+  auto& state = state_.get();
+  if (!state.acceptStopped) {
+    return;
+  }
+
+  state.acceptStopped = false;
+
+  serverSocket_->addAcceptCallback(this, nullptr);
+  serverSocket_->startAccepting();
+}
+
 void RpcServer::unregisterRpcHandler(RpcConnectionHandler* handlerToErase) {
   auto& state = state_.get();
   auto& handlers = state.connectionHandlers;

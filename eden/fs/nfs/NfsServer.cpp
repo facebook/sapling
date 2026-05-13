@@ -71,6 +71,10 @@ void NfsServer::initialize(folly::File socket) {
   // transfer that socket to be able to register it.
 }
 
+void NfsServer::resumeMountdAccepting() {
+  mountd_.resumeAccepting();
+}
+
 folly::SocketAddress NfsServer::getMountdAddr() const {
   return mountd_.getAddr();
 }
