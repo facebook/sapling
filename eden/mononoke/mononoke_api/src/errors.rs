@@ -233,7 +233,7 @@ impl From<JoinError> for MononokeError {
     }
 }
 
-impl From<RestrictedPathsError<'_>> for MononokeError {
+impl From<RestrictedPathsError> for MononokeError {
     fn from(e: RestrictedPathsError) -> Self {
         match e {
             RestrictedPathsError::AuthorizationError(_) => {

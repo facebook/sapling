@@ -45,22 +45,22 @@ pub use crate::restriction_check::check_path_restriction_infos;
 pub use crate::restriction_info::ManifestRestrictionInfo;
 pub use crate::restriction_info::PathRestrictionInfo;
 
-#[derive(Debug)]
-pub enum RestrictedPathAccessType<'a> {
+#[derive(Clone, Debug)]
+pub enum RestrictedPathAccess {
     Manifest(ManifestId),
-    Path(&'a MPath),
+    Path(MPath),
 }
 
 /// Error type for restricted paths enforcement.
 #[derive(Debug, Error)]
-pub enum RestrictedPathsError<'a> {
+pub enum RestrictedPathsError {
     #[error("Access denied: unauthorized access to restricted path: {0}")]
-    AuthorizationError(RestrictedPathAccessType<'a>),
+    AuthorizationError(RestrictedPathAccess),
     #[error("Internal error: {0}")]
     InternalError(#[from] anyhow::Error),
 }
 
-impl<'a> std::fmt::Display for RestrictedPathAccessType<'a> {
+impl std::fmt::Display for RestrictedPathAccess {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Manifest(manifest_id) => {
@@ -399,7 +399,7 @@ pub async fn spawn_enforce_restricted_path_access<'a, 'b>(
     path: &'a MPath,
     switch_value: &'b str,
     cs_id: Option<ChangesetId>,
-) -> Result<(), RestrictedPathsError<'a>> {
+) -> Result<(), RestrictedPathsError> {
     let non_root_mpath = match NonRootMPath::try_from(path.clone()) {
         Ok(path) => path,
         Err(_) => return Ok(()),
@@ -457,7 +457,7 @@ pub async fn spawn_enforce_restricted_path_access<'a, 'b>(
                 })
                 .flatten(),
         },
-        || RestrictedPathsError::AuthorizationError(RestrictedPathAccessType::Path(path)),
+        || RestrictedPathsError::AuthorizationError(RestrictedPathAccess::Path((*path).clone())),
     )
     .await
 }
@@ -480,7 +480,7 @@ pub async fn spawn_enforce_restricted_manifest_access<'a>(
     manifest_type: ManifestType,
     switch_value: &'a str,
     _cs_id: Option<ChangesetId>,
-) -> Result<(), RestrictedPathsError<'a>> {
+) -> Result<(), RestrictedPathsError> {
     let config = restricted_paths.config();
     let acl_manifest_available = manifest_type == ManifestType::HgAugmented;
     let effective_mode =
@@ -538,11 +538,7 @@ pub async fn spawn_enforce_restricted_manifest_access<'a>(
                 })
                 .flatten(),
         },
-        || {
-            RestrictedPathsError::AuthorizationError(RestrictedPathAccessType::Manifest(
-                manifest_id,
-            ))
-        },
+        || RestrictedPathsError::AuthorizationError(RestrictedPathAccess::Manifest(manifest_id)),
     )
     .await
 }
@@ -585,7 +581,7 @@ impl SourceFetches {
 /// enforcement filters first, choose the sources needed by logging and
 /// enforcement, spawn fire-and-forget logging from cloned shared handles, and
 /// finally await only the authoritative handles needed to deny the request.
-async fn spawn_enforce_restricted_access<'a, T>(
+async fn spawn_enforce_restricted_access<T>(
     ctx: &CoreContext,
     restricted_paths: Arc<RestrictedPaths>,
     switch_value: &str,
@@ -595,8 +591,8 @@ async fn spawn_enforce_restricted_access<'a, T>(
     access_type: &'static str,
     access_data: access_log::RestrictedPathAccessData,
     build_handles: impl FnOnce(SourceFetches) -> SourceHandles<T>,
-    authorization_error: impl FnOnce() -> RestrictedPathsError<'a>,
-) -> Result<(), RestrictedPathsError<'a>>
+    authorization_error: impl FnOnce() -> RestrictedPathsError,
+) -> Result<(), RestrictedPathsError>
 where
     T: SourceRestrictionCheck + Send + Sync + 'static,
 {
