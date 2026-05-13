@@ -103,6 +103,30 @@ def debugancestor(ui, repo, *args) -> None:
     ui.write("%d:%s\n" % (r.rev(a), hex(a)))
 
 
+@command("debugrevdistance", [], _("REV1 REV2"))
+def debugrevdistance(ui, repo, rev1, rev2) -> None:
+    """calculate the distance between two revisions
+
+    Prints the number of commits in the symmetric difference between REV1
+    and REV2 — that is, commits reachable from one but not the other.
+
+    This is useful to check whether a revision range is safe to diff or
+    log over without triggering a slow full-repo scan.
+    """
+    ctx1 = scmutil.revsingle(repo, rev1)
+    ctx2 = scmutil.revsingle(repo, rev2)
+    distance = len(
+        repo.revs(
+            "(%n %% %n) + (%n %% %n)",
+            ctx1.node(),
+            ctx2.node(),
+            ctx2.node(),
+            ctx1.node(),
+        )
+    )
+    ui.write(_("%d\n") % distance)
+
+
 def _flattenresponse(response: Sized, sort: bool = False):
     """convert response from pyedenapi to Python basic type for pprint.
 
