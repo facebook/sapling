@@ -440,6 +440,48 @@ fn prepare_batch_workers(
     dst_vfs.batch(workers, WORK_QUEUE_SIZE)
 }
 
+/// Stream file reads from src into VFS batch workers for writing to dest.
+///
+/// Returns `Ok(read_errors)` listing files that failed to read from source.
+/// Returns `Err` only if a send to the batch channel fails (workers died).
+#[expect(dead_code, reason = "wired up in a later commit in this stack")]
+fn stream_snapshot_work_items(
+    src_vfs: &vfs::VFS,
+    work_tx: flume::Sender<vfs::Work>,
+    copy_paths: &[&types::RepoPathBuf],
+    remove_paths: &[&types::RepoPathBuf],
+) -> anyhow::Result<Vec<(types::RepoPathBuf, anyhow::Error)>> {
+    for path in remove_paths {
+        if work_tx.send(vfs::Work::Remove((*path).to_owned())).is_err() {
+            anyhow::bail!("batch workers stopped unexpectedly");
+        }
+    }
+
+    let mut read_errors: Vec<(types::RepoPathBuf, anyhow::Error)> = Vec::new();
+
+    for path in copy_paths {
+        match src_vfs.read_with_metadata(path) {
+            Ok((data, metadata)) => {
+                let flag = workingcopy::metadata::Metadata::from(metadata).to_update_flag(src_vfs);
+                if work_tx
+                    .send(vfs::Work::Write(
+                        (*path).to_owned(),
+                        data.into(),
+                        flag,
+                        None,
+                    ))
+                    .is_err()
+                {
+                    anyhow::bail!("batch workers stopped unexpectedly");
+                }
+            }
+            Err(e) => read_errors.push(((*path).to_owned(), e)),
+        }
+    }
+
+    Ok(read_errors)
+}
+
 #[expect(dead_code, reason = "wired up in a later commit in this stack")]
 /// Update destination treestate so `sl status` in the dest matches the source.
 ///

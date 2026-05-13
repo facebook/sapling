@@ -35,6 +35,7 @@ rust_library(
         "//eden/scm/lib/spawn-ext:spawn-ext",
         "//eden/scm/lib/status:status",
         "//eden/scm/lib/treestate:treestate",
+        "//eden/scm/lib/types:types",
         "//eden/scm/lib/util:util",
         "//eden/scm/lib/vfs:vfs",
         "//eden/scm/lib/workingcopy:workingcopy",
