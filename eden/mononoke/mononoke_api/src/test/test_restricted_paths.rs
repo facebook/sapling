@@ -42,7 +42,7 @@ use crate::restricted_paths::RestrictedPathsChangesInfo;
 #[mononoke::fbinit_test]
 async fn test_restriction_info_exact_match(fb: FacebookInit) -> Result<()> {
     let (_repo_ctx, cs_ctx) =
-        create_test_changeset(fb, vec![("restricted/dir", "TIER:my-acl")]).await?;
+        create_test_changeset(fb, vec![("restricted/dir", "GROUP:my-acl")]).await?;
 
     let info = cs_ctx
         .path_restriction(MPath::try_from("restricted/dir")?)
@@ -53,8 +53,8 @@ async fn test_restriction_info_exact_match(fb: FacebookInit) -> Result<()> {
     let expected = vec![PathAccessInfo {
         restriction: PathRestrictionInfo {
             restriction_root: NonRootMPath::new("restricted/dir")?,
-            repo_region_acl: "TIER:my-acl".to_string(),
-            permission_request_group: MononokeIdentity::from_str("TIER:my-acl")?,
+            repo_region_acl: "GROUP:my-acl".to_string(),
+            permission_request_group: MononokeIdentity::from_str("GROUP:my-acl")?,
         },
         has_access: Some(true),
     }];
@@ -68,7 +68,7 @@ async fn test_restriction_info_exact_match(fb: FacebookInit) -> Result<()> {
 #[mononoke::fbinit_test]
 async fn test_restriction_info_nested_path(fb: FacebookInit) -> Result<()> {
     let (_repo_ctx, cs_ctx) =
-        create_test_changeset(fb, vec![("restricted", "TIER:my-acl")]).await?;
+        create_test_changeset(fb, vec![("restricted", "GROUP:my-acl")]).await?;
 
     let info = cs_ctx
         .path_restriction(MPath::try_from("restricted/subdir/file.txt")?)
@@ -79,8 +79,8 @@ async fn test_restriction_info_nested_path(fb: FacebookInit) -> Result<()> {
     let expected = vec![PathAccessInfo {
         restriction: PathRestrictionInfo {
             restriction_root: NonRootMPath::new("restricted")?,
-            repo_region_acl: "TIER:my-acl".to_string(),
-            permission_request_group: MononokeIdentity::from_str("TIER:my-acl")?,
+            repo_region_acl: "GROUP:my-acl".to_string(),
+            permission_request_group: MononokeIdentity::from_str("GROUP:my-acl")?,
         },
         has_access: Some(true),
     }];
@@ -94,7 +94,7 @@ async fn test_restriction_info_nested_path(fb: FacebookInit) -> Result<()> {
 #[mononoke::fbinit_test]
 async fn test_restriction_info_no_match(fb: FacebookInit) -> Result<()> {
     let (_repo_ctx, cs_ctx) =
-        create_test_changeset(fb, vec![("restricted/dir", "TIER:my-acl")]).await?;
+        create_test_changeset(fb, vec![("restricted/dir", "GROUP:my-acl")]).await?;
 
     let info = cs_ctx
         .path_restriction(MPath::try_from("other/path/file.txt")?)
@@ -109,7 +109,7 @@ async fn test_restriction_info_no_match(fb: FacebookInit) -> Result<()> {
 
 #[mononoke::fbinit_test]
 async fn test_restriction_info_sibling_path(fb: FacebookInit) -> Result<()> {
-    let (_repo_ctx, cs_ctx) = create_test_changeset(fb, vec![("foo/bar", "TIER:my-acl")]).await?;
+    let (_repo_ctx, cs_ctx) = create_test_changeset(fb, vec![("foo/bar", "GROUP:my-acl")]).await?;
 
     // foo/baz is a sibling of foo/bar, not under it
     let info = cs_ctx
@@ -127,7 +127,7 @@ async fn test_restriction_info_sibling_path(fb: FacebookInit) -> Result<()> {
 async fn test_restriction_info_multiple_restrictions(fb: FacebookInit) -> Result<()> {
     let (_repo_ctx, cs_ctx) = create_test_changeset(
         fb,
-        vec![("first", "TIER:first-acl"), ("second", "TIER:second-acl")],
+        vec![("first", "GROUP:first-acl"), ("second", "GROUP:second-acl")],
     )
     .await?;
 
@@ -140,8 +140,8 @@ async fn test_restriction_info_multiple_restrictions(fb: FacebookInit) -> Result
     let expected_first = vec![PathAccessInfo {
         restriction: PathRestrictionInfo {
             restriction_root: NonRootMPath::new("first")?,
-            repo_region_acl: "TIER:first-acl".to_string(),
-            permission_request_group: MononokeIdentity::from_str("TIER:first-acl")?,
+            repo_region_acl: "GROUP:first-acl".to_string(),
+            permission_request_group: MononokeIdentity::from_str("GROUP:first-acl")?,
         },
         has_access: Some(true),
     }];
@@ -158,8 +158,8 @@ async fn test_restriction_info_multiple_restrictions(fb: FacebookInit) -> Result
     let expected_second = vec![PathAccessInfo {
         restriction: PathRestrictionInfo {
             restriction_root: NonRootMPath::new("second")?,
-            repo_region_acl: "TIER:second-acl".to_string(),
-            permission_request_group: MononokeIdentity::from_str("TIER:second-acl")?,
+            repo_region_acl: "GROUP:second-acl".to_string(),
+            permission_request_group: MononokeIdentity::from_str("GROUP:second-acl")?,
         },
         has_access: Some(true),
     }];
@@ -173,7 +173,7 @@ async fn test_restriction_info_multiple_restrictions(fb: FacebookInit) -> Result
 #[mononoke::fbinit_test]
 async fn test_restriction_info_root_path(fb: FacebookInit) -> Result<()> {
     let (_repo_ctx, cs_ctx) =
-        create_test_changeset(fb, vec![("restricted", "TIER:my-acl")]).await?;
+        create_test_changeset(fb, vec![("restricted", "GROUP:my-acl")]).await?;
 
     // Root path cannot be restricted
     let info = cs_ctx
@@ -209,7 +209,7 @@ async fn test_restriction_info_nested_roots(fb: FacebookInit) -> Result<()> {
     // should return both roots. See comment in D93601751.
     let (_repo_ctx, cs_ctx) = create_test_changeset(
         fb,
-        vec![("foo", "TIER:outer-acl"), ("foo/bar", "TIER:inner-acl")],
+        vec![("foo", "GROUP:outer-acl"), ("foo/bar", "GROUP:inner-acl")],
     )
     .await?;
 
@@ -223,16 +223,16 @@ async fn test_restriction_info_nested_roots(fb: FacebookInit) -> Result<()> {
         PathAccessInfo {
             restriction: PathRestrictionInfo {
                 restriction_root: NonRootMPath::new("foo")?,
-                repo_region_acl: "TIER:outer-acl".to_string(),
-                permission_request_group: MononokeIdentity::from_str("TIER:outer-acl")?,
+                repo_region_acl: "GROUP:outer-acl".to_string(),
+                permission_request_group: MononokeIdentity::from_str("GROUP:outer-acl")?,
             },
             has_access: Some(true),
         },
         PathAccessInfo {
             restriction: PathRestrictionInfo {
                 restriction_root: NonRootMPath::new("foo/bar")?,
-                repo_region_acl: "TIER:inner-acl".to_string(),
-                permission_request_group: MononokeIdentity::from_str("TIER:inner-acl")?,
+                repo_region_acl: "GROUP:inner-acl".to_string(),
+                permission_request_group: MononokeIdentity::from_str("GROUP:inner-acl")?,
             },
             has_access: Some(true),
         },
@@ -251,9 +251,9 @@ async fn test_batch_restriction_info_mixed_paths(fb: FacebookInit) -> Result<()>
     let (_repo_ctx, cs_ctx) = create_test_changeset(
         fb,
         vec![
-            ("first", "TIER:first-acl"),
-            ("second", "TIER:second-acl"),
-            ("third/nested", "TIER:third-acl"),
+            ("first", "GROUP:first-acl"),
+            ("second", "GROUP:second-acl"),
+            ("third/nested", "GROUP:third-acl"),
         ],
     )
     .await?;
@@ -288,15 +288,15 @@ async fn test_batch_restriction_info_mixed_paths(fb: FacebookInit) -> Result<()>
     let expected: Vec<(String, Option<(String, String)>)> = vec![
         (
             "first/file1.txt".to_string(),
-            Some(("first".to_string(), "TIER:first-acl".to_string())),
+            Some(("first".to_string(), "GROUP:first-acl".to_string())),
         ),
         (
             "second/subdir/file2.txt".to_string(),
-            Some(("second".to_string(), "TIER:second-acl".to_string())),
+            Some(("second".to_string(), "GROUP:second-acl".to_string())),
         ),
         (
             "third/nested/deep/file3.txt".to_string(),
-            Some(("third/nested".to_string(), "TIER:third-acl".to_string())),
+            Some(("third/nested".to_string(), "GROUP:third-acl".to_string())),
         ),
         ("unrestricted/file4.txt".to_string(), None),
     ];
@@ -309,7 +309,7 @@ async fn test_batch_restriction_info_mixed_paths(fb: FacebookInit) -> Result<()>
 #[mononoke::fbinit_test]
 async fn test_batch_all_restricted(fb: FacebookInit) -> Result<()> {
     let (_repo_ctx, cs_ctx) =
-        create_test_changeset(fb, vec![("restricted", "TIER:my-acl")]).await?;
+        create_test_changeset(fb, vec![("restricted", "GROUP:my-acl")]).await?;
 
     let paths = vec![
         NonRootMPath::new("restricted/file1.txt")?,
@@ -338,15 +338,15 @@ async fn test_batch_all_restricted(fb: FacebookInit) -> Result<()> {
     let expected: Vec<(String, Option<(String, String)>)> = vec![
         (
             "restricted/file1.txt".to_string(),
-            Some(("restricted".to_string(), "TIER:my-acl".to_string())),
+            Some(("restricted".to_string(), "GROUP:my-acl".to_string())),
         ),
         (
             "restricted/file2.txt".to_string(),
-            Some(("restricted".to_string(), "TIER:my-acl".to_string())),
+            Some(("restricted".to_string(), "GROUP:my-acl".to_string())),
         ),
         (
             "restricted/subdir/file3.txt".to_string(),
-            Some(("restricted".to_string(), "TIER:my-acl".to_string())),
+            Some(("restricted".to_string(), "GROUP:my-acl".to_string())),
         ),
     ];
 
@@ -358,7 +358,7 @@ async fn test_batch_all_restricted(fb: FacebookInit) -> Result<()> {
 #[mononoke::fbinit_test]
 async fn test_batch_all_unrestricted(fb: FacebookInit) -> Result<()> {
     let (_repo_ctx, cs_ctx) =
-        create_test_changeset(fb, vec![("restricted", "TIER:my-acl")]).await?;
+        create_test_changeset(fb, vec![("restricted", "GROUP:my-acl")]).await?;
 
     let paths = vec![
         NonRootMPath::new("unrestricted/file1.txt")?,
@@ -400,7 +400,7 @@ async fn test_batch_all_unrestricted(fb: FacebookInit) -> Result<()> {
 async fn test_batch_restriction_info_both_mode_config_only_root(fb: FacebookInit) -> Result<()> {
     let (_repo_ctx, cs_ctx) = create_both_mode_test_changeset(
         fb,
-        vec![("config_only", "TIER:config-acl")],
+        vec![("config_only", "GROUP:config-acl")],
         vec![],
         vec!["config_only/file.txt"],
     )
@@ -418,7 +418,7 @@ async fn test_batch_restriction_info_both_mode_config_only_root(fb: FacebookInit
         .first()
         .ok_or_else(|| anyhow::anyhow!("expected config-only restriction"))?;
     assert_eq!(info.restriction_root(), &NonRootMPath::new("config_only")?);
-    assert_eq!(info.repo_region_acl(), "TIER:config-acl");
+    assert_eq!(info.repo_region_acl(), "GROUP:config-acl");
 
     Ok(())
 }
@@ -515,8 +515,8 @@ async fn test_find_descendants_root_returns_all(fb: FacebookInit) -> Result<()> 
     let (_repo_ctx, cs_ctx) = create_test_changeset(
         fb,
         vec![
-            ("first/path", "TIER:first-acl"),
-            ("second/path", "TIER:second-acl"),
+            ("first/path", "GROUP:first-acl"),
+            ("second/path", "GROUP:second-acl"),
         ],
     )
     .await?;
@@ -531,16 +531,16 @@ async fn test_find_descendants_root_returns_all(fb: FacebookInit) -> Result<()> 
         PathAccessInfo {
             restriction: PathRestrictionInfo {
                 restriction_root: NonRootMPath::new("first/path")?,
-                repo_region_acl: "TIER:first-acl".to_string(),
-                permission_request_group: MononokeIdentity::from_str("TIER:first-acl")?,
+                repo_region_acl: "GROUP:first-acl".to_string(),
+                permission_request_group: MononokeIdentity::from_str("GROUP:first-acl")?,
             },
             has_access: None,
         },
         PathAccessInfo {
             restriction: PathRestrictionInfo {
                 restriction_root: NonRootMPath::new("second/path")?,
-                repo_region_acl: "TIER:second-acl".to_string(),
-                permission_request_group: MononokeIdentity::from_str("TIER:second-acl")?,
+                repo_region_acl: "GROUP:second-acl".to_string(),
+                permission_request_group: MononokeIdentity::from_str("GROUP:second-acl")?,
             },
             has_access: None,
         },
@@ -555,7 +555,7 @@ async fn test_find_descendants_root_returns_all(fb: FacebookInit) -> Result<()> 
 #[mononoke::fbinit_test]
 async fn test_find_descendants_check_permissions_populates_access(fb: FacebookInit) -> Result<()> {
     let (_repo_ctx, cs_ctx) =
-        create_test_changeset(fb, vec![("restricted/path", "TIER:restricted-acl")]).await?;
+        create_test_changeset(fb, vec![("restricted/path", "GROUP:restricted-acl")]).await?;
 
     let descendants = cs_ctx
         .path_restriction(MPath::ROOT)
@@ -566,8 +566,8 @@ async fn test_find_descendants_check_permissions_populates_access(fb: FacebookIn
     let expected = vec![PathAccessInfo {
         restriction: PathRestrictionInfo {
             restriction_root: NonRootMPath::new("restricted/path")?,
-            repo_region_acl: "TIER:restricted-acl".to_string(),
-            permission_request_group: MononokeIdentity::from_str("TIER:restricted-acl")?,
+            repo_region_acl: "GROUP:restricted-acl".to_string(),
+            permission_request_group: MononokeIdentity::from_str("GROUP:restricted-acl")?,
         },
         has_access: Some(true),
     }];
@@ -583,8 +583,8 @@ async fn test_find_descendants_filter_exact_match(fb: FacebookInit) -> Result<()
     let (_repo_ctx, cs_ctx) = create_test_changeset(
         fb,
         vec![
-            ("first/path", "TIER:first-acl"),
-            ("second/path", "TIER:second-acl"),
+            ("first/path", "GROUP:first-acl"),
+            ("second/path", "GROUP:second-acl"),
         ],
     )
     .await?;
@@ -600,8 +600,8 @@ async fn test_find_descendants_filter_exact_match(fb: FacebookInit) -> Result<()
     let expected = vec![PathAccessInfo {
         restriction: PathRestrictionInfo {
             restriction_root: NonRootMPath::new("first/path")?,
-            repo_region_acl: "TIER:first-acl".to_string(),
-            permission_request_group: MononokeIdentity::from_str("TIER:first-acl")?,
+            repo_region_acl: "GROUP:first-acl".to_string(),
+            permission_request_group: MononokeIdentity::from_str("GROUP:first-acl")?,
         },
         has_access: None,
     }];
@@ -615,7 +615,7 @@ async fn test_find_descendants_filter_exact_match(fb: FacebookInit) -> Result<()
 #[mononoke::fbinit_test]
 async fn test_find_descendants_filter_parent_of_root(fb: FacebookInit) -> Result<()> {
     let (_repo_ctx, cs_ctx) =
-        create_test_changeset(fb, vec![("foo/bar/restricted", "TIER:my-acl")]).await?;
+        create_test_changeset(fb, vec![("foo/bar/restricted", "GROUP:my-acl")]).await?;
 
     let descendants = cs_ctx
         .path_restriction(MPath::try_from("foo")?)
@@ -626,8 +626,8 @@ async fn test_find_descendants_filter_parent_of_root(fb: FacebookInit) -> Result
     let expected = vec![PathAccessInfo {
         restriction: PathRestrictionInfo {
             restriction_root: NonRootMPath::new("foo/bar/restricted")?,
-            repo_region_acl: "TIER:my-acl".to_string(),
-            permission_request_group: MononokeIdentity::from_str("TIER:my-acl")?,
+            repo_region_acl: "GROUP:my-acl".to_string(),
+            permission_request_group: MononokeIdentity::from_str("GROUP:my-acl")?,
         },
         has_access: None,
     }];
@@ -640,7 +640,7 @@ async fn test_find_descendants_filter_parent_of_root(fb: FacebookInit) -> Result
 
 #[mononoke::fbinit_test]
 async fn test_find_descendants_filter_child_of_root_returns_empty(fb: FacebookInit) -> Result<()> {
-    let (_repo_ctx, cs_ctx) = create_test_changeset(fb, vec![("foo/bar", "TIER:my-acl")]).await?;
+    let (_repo_ctx, cs_ctx) = create_test_changeset(fb, vec![("foo/bar", "GROUP:my-acl")]).await?;
 
     // Filter is a child of the root — should NOT match because we only
     // return roots that are under the filter
@@ -660,8 +660,8 @@ async fn test_find_descendants_filter_no_match(fb: FacebookInit) -> Result<()> {
     let (_repo_ctx, cs_ctx) = create_test_changeset(
         fb,
         vec![
-            ("first/path", "TIER:first-acl"),
-            ("second/path", "TIER:second-acl"),
+            ("first/path", "GROUP:first-acl"),
+            ("second/path", "GROUP:second-acl"),
         ],
     )
     .await?;
@@ -679,7 +679,7 @@ async fn test_find_descendants_filter_no_match(fb: FacebookInit) -> Result<()> {
 
 #[mononoke::fbinit_test]
 async fn test_find_descendants_filter_sibling_no_match(fb: FacebookInit) -> Result<()> {
-    let (_repo_ctx, cs_ctx) = create_test_changeset(fb, vec![("foo/bar", "TIER:my-acl")]).await?;
+    let (_repo_ctx, cs_ctx) = create_test_changeset(fb, vec![("foo/bar", "GROUP:my-acl")]).await?;
 
     let descendants = cs_ctx
         .path_restriction(MPath::try_from("foo/baz")?)
@@ -697,7 +697,7 @@ async fn test_find_descendants_nested_roots(fb: FacebookInit) -> Result<()> {
     // Nested restriction roots: foo/ and foo/bar/
     let (_repo_ctx, cs_ctx) = create_test_changeset(
         fb,
-        vec![("foo", "TIER:outer-acl"), ("foo/bar", "TIER:inner-acl")],
+        vec![("foo", "GROUP:outer-acl"), ("foo/bar", "GROUP:inner-acl")],
     )
     .await?;
 
@@ -712,16 +712,16 @@ async fn test_find_descendants_nested_roots(fb: FacebookInit) -> Result<()> {
         PathAccessInfo {
             restriction: PathRestrictionInfo {
                 restriction_root: NonRootMPath::new("foo")?,
-                repo_region_acl: "TIER:outer-acl".to_string(),
-                permission_request_group: MononokeIdentity::from_str("TIER:outer-acl")?,
+                repo_region_acl: "GROUP:outer-acl".to_string(),
+                permission_request_group: MononokeIdentity::from_str("GROUP:outer-acl")?,
             },
             has_access: None,
         },
         PathAccessInfo {
             restriction: PathRestrictionInfo {
                 restriction_root: NonRootMPath::new("foo/bar")?,
-                repo_region_acl: "TIER:inner-acl".to_string(),
-                permission_request_group: MononokeIdentity::from_str("TIER:inner-acl")?,
+                repo_region_acl: "GROUP:inner-acl".to_string(),
+                permission_request_group: MononokeIdentity::from_str("GROUP:inner-acl")?,
             },
             has_access: None,
         },
@@ -740,9 +740,9 @@ async fn test_batch_find_descendants_multiple_roots(fb: FacebookInit) -> Result<
     let (_repo_ctx, cs_ctx) = create_test_changeset(
         fb,
         vec![
-            ("first/path", "TIER:first-acl"),
-            ("second/path", "TIER:second-acl"),
-            ("third/path", "TIER:third-acl"),
+            ("first/path", "GROUP:first-acl"),
+            ("second/path", "GROUP:second-acl"),
+            ("third/path", "GROUP:third-acl"),
         ],
     )
     .await?;
@@ -758,16 +758,16 @@ async fn test_batch_find_descendants_multiple_roots(fb: FacebookInit) -> Result<
         PathAccessInfo {
             restriction: PathRestrictionInfo {
                 restriction_root: NonRootMPath::new("first/path")?,
-                repo_region_acl: "TIER:first-acl".to_string(),
-                permission_request_group: MononokeIdentity::from_str("TIER:first-acl")?,
+                repo_region_acl: "GROUP:first-acl".to_string(),
+                permission_request_group: MononokeIdentity::from_str("GROUP:first-acl")?,
             },
             has_access: None,
         },
         PathAccessInfo {
             restriction: PathRestrictionInfo {
                 restriction_root: NonRootMPath::new("third/path")?,
-                repo_region_acl: "TIER:third-acl".to_string(),
-                permission_request_group: MononokeIdentity::from_str("TIER:third-acl")?,
+                repo_region_acl: "GROUP:third-acl".to_string(),
+                permission_request_group: MononokeIdentity::from_str("GROUP:third-acl")?,
             },
             has_access: None,
         },
@@ -782,7 +782,7 @@ async fn test_batch_find_descendants_multiple_roots(fb: FacebookInit) -> Result<
 #[mononoke::fbinit_test]
 async fn test_batch_find_descendants_deduplicates(fb: FacebookInit) -> Result<()> {
     let (_repo_ctx, cs_ctx) =
-        create_test_changeset(fb, vec![("shared/path", "TIER:my-acl")]).await?;
+        create_test_changeset(fb, vec![("shared/path", "GROUP:my-acl")]).await?;
 
     // Both roots are parents of the same restriction root
     let roots = vec![MPath::try_from("shared")?, MPath::ROOT];
@@ -793,8 +793,8 @@ async fn test_batch_find_descendants_deduplicates(fb: FacebookInit) -> Result<()
     let expected = vec![PathAccessInfo {
         restriction: PathRestrictionInfo {
             restriction_root: NonRootMPath::new("shared/path")?,
-            repo_region_acl: "TIER:my-acl".to_string(),
-            permission_request_group: MononokeIdentity::from_str("TIER:my-acl")?,
+            repo_region_acl: "GROUP:my-acl".to_string(),
+            permission_request_group: MononokeIdentity::from_str("GROUP:my-acl")?,
         },
         has_access: None,
     }];
@@ -811,9 +811,9 @@ async fn test_batch_find_descendants_nested_roots_and_queries(fb: FacebookInit) 
     let (_repo_ctx, cs_ctx) = create_test_changeset(
         fb,
         vec![
-            ("foo", "TIER:outer-acl"),
-            ("foo/bar", "TIER:inner-acl"),
-            ("baz", "TIER:baz-acl"),
+            ("foo", "GROUP:outer-acl"),
+            ("foo/bar", "GROUP:inner-acl"),
+            ("baz", "GROUP:baz-acl"),
         ],
     )
     .await?;
@@ -830,16 +830,16 @@ async fn test_batch_find_descendants_nested_roots_and_queries(fb: FacebookInit) 
         PathAccessInfo {
             restriction: PathRestrictionInfo {
                 restriction_root: NonRootMPath::new("foo")?,
-                repo_region_acl: "TIER:outer-acl".to_string(),
-                permission_request_group: MononokeIdentity::from_str("TIER:outer-acl")?,
+                repo_region_acl: "GROUP:outer-acl".to_string(),
+                permission_request_group: MononokeIdentity::from_str("GROUP:outer-acl")?,
             },
             has_access: None,
         },
         PathAccessInfo {
             restriction: PathRestrictionInfo {
                 restriction_root: NonRootMPath::new("foo/bar")?,
-                repo_region_acl: "TIER:inner-acl".to_string(),
-                permission_request_group: MononokeIdentity::from_str("TIER:inner-acl")?,
+                repo_region_acl: "GROUP:inner-acl".to_string(),
+                permission_request_group: MononokeIdentity::from_str("GROUP:inner-acl")?,
             },
             has_access: None,
         },
@@ -856,7 +856,7 @@ async fn test_batch_find_descendants_nested_roots_and_queries(fb: FacebookInit) 
 #[mononoke::fbinit_test]
 async fn test_restricted_paths_changes_with_restricted_files(fb: FacebookInit) -> Result<()> {
     let restricted_paths =
-        create_test_restricted_paths(fb, vec![("restricted", "TIER:my-acl")]).await?;
+        create_test_restricted_paths(fb, vec![("restricted", "GROUP:my-acl")]).await?;
     let ctx = CoreContext::test_mock(fb);
 
     let repo: Repo = TestRepoFactory::new(fb)?
@@ -880,8 +880,8 @@ async fn test_restricted_paths_changes_with_restricted_files(fb: FacebookInit) -
             restriction_info: PathAccessInfo {
                 restriction: PathRestrictionInfo {
                     restriction_root: NonRootMPath::new("restricted")?,
-                    repo_region_acl: "TIER:my-acl".to_string(),
-                    permission_request_group: MononokeIdentity::from_str("TIER:my-acl")?,
+                    repo_region_acl: "GROUP:my-acl".to_string(),
+                    permission_request_group: MononokeIdentity::from_str("GROUP:my-acl")?,
                 },
                 has_access: None,
             },
@@ -896,7 +896,7 @@ async fn test_restricted_paths_changes_with_restricted_files(fb: FacebookInit) -
 #[mononoke::fbinit_test]
 async fn test_restricted_paths_changes_no_restricted_files(fb: FacebookInit) -> Result<()> {
     let restricted_paths =
-        create_test_restricted_paths(fb, vec![("restricted", "TIER:my-acl")]).await?;
+        create_test_restricted_paths(fb, vec![("restricted", "GROUP:my-acl")]).await?;
     let ctx = CoreContext::test_mock(fb);
 
     let repo: Repo = TestRepoFactory::new(fb)?
@@ -926,8 +926,8 @@ async fn test_restricted_paths_changes_nested_roots(fb: FacebookInit) -> Result<
     let restricted_paths = create_test_restricted_paths(
         fb,
         vec![
-            ("first", "TIER:first-acl"),
-            ("first/second", "TIER:second-acl"),
+            ("first", "GROUP:first-acl"),
+            ("first/second", "GROUP:second-acl"),
         ],
     )
     .await?;
@@ -961,8 +961,8 @@ async fn test_restricted_paths_changes_nested_roots(fb: FacebookInit) -> Result<
                 restriction_info: PathAccessInfo {
                     restriction: PathRestrictionInfo {
                         restriction_root: NonRootMPath::new("first")?,
-                        repo_region_acl: "TIER:first-acl".to_string(),
-                        permission_request_group: MononokeIdentity::from_str("TIER:first-acl")?,
+                        repo_region_acl: "GROUP:first-acl".to_string(),
+                        permission_request_group: MononokeIdentity::from_str("GROUP:first-acl")?,
                     },
                     has_access: None,
                 },
@@ -976,8 +976,8 @@ async fn test_restricted_paths_changes_nested_roots(fb: FacebookInit) -> Result<
                 restriction_info: PathAccessInfo {
                     restriction: PathRestrictionInfo {
                         restriction_root: NonRootMPath::new("first/second")?,
-                        repo_region_acl: "TIER:second-acl".to_string(),
-                        permission_request_group: MononokeIdentity::from_str("TIER:second-acl")?,
+                        repo_region_acl: "GROUP:second-acl".to_string(),
+                        permission_request_group: MononokeIdentity::from_str("GROUP:second-acl")?,
                     },
                     has_access: None,
                 },
@@ -995,7 +995,7 @@ async fn test_restricted_paths_changes_multiple_unrelated_roots(fb: FacebookInit
     // Two independent restriction roots with no nesting relationship
     let restricted_paths = create_test_restricted_paths(
         fb,
-        vec![("alpha", "TIER:alpha-acl"), ("beta", "TIER:beta-acl")],
+        vec![("alpha", "GROUP:alpha-acl"), ("beta", "GROUP:beta-acl")],
     )
     .await?;
     let ctx = CoreContext::test_mock(fb);
@@ -1027,8 +1027,8 @@ async fn test_restricted_paths_changes_multiple_unrelated_roots(fb: FacebookInit
                 restriction_info: PathAccessInfo {
                     restriction: PathRestrictionInfo {
                         restriction_root: NonRootMPath::new("alpha")?,
-                        repo_region_acl: "TIER:alpha-acl".to_string(),
-                        permission_request_group: MononokeIdentity::from_str("TIER:alpha-acl")?,
+                        repo_region_acl: "GROUP:alpha-acl".to_string(),
+                        permission_request_group: MononokeIdentity::from_str("GROUP:alpha-acl")?,
                     },
                     has_access: None,
                 },
@@ -1041,8 +1041,8 @@ async fn test_restricted_paths_changes_multiple_unrelated_roots(fb: FacebookInit
                 restriction_info: PathAccessInfo {
                     restriction: PathRestrictionInfo {
                         restriction_root: NonRootMPath::new("beta")?,
-                        repo_region_acl: "TIER:beta-acl".to_string(),
-                        permission_request_group: MononokeIdentity::from_str("TIER:beta-acl")?,
+                        repo_region_acl: "GROUP:beta-acl".to_string(),
+                        permission_request_group: MononokeIdentity::from_str("GROUP:beta-acl")?,
                     },
                     has_access: None,
                 },
