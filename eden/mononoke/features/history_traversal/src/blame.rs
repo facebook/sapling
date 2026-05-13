@@ -6,19 +6,24 @@
  */
 
 use std::collections::HashSet;
+use std::sync::Arc;
 use std::vec;
 
-use anyhow::Context;
 use anyhow::Error;
 use anyhow::anyhow;
 use async_recursion::async_recursion;
 use blame::BlameError;
+use blame::DEFAULT_BLAME_FILESIZE_LIMIT;
 use blame::fetch_blame_v2;
+use blame::fetch_blame_v3;
 use blame::fetch_content_for_blame;
+use blame::fetch_content_for_blame_by_content_id;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use bytes::Bytes;
 use context::CoreContext;
 use derivation_queue_thrift::DerivationPriority;
+use either::Either;
 use fastlog::FastlogParent;
 use fastlog::fetch_fastlog_batch_by_unode_id;
 use fastlog::fetch_flattened;
@@ -27,6 +32,7 @@ use futures::stream;
 use futures::stream::TryStreamExt;
 use futures::try_join;
 use futures_stats::TimedFutureExt;
+use history_manifest::RootHistoryManifestDirectoryId;
 use inferred_copy_from::RootInferredCopyFromId;
 use manifest::Entry;
 use manifest::ManifestOps;
@@ -40,11 +46,109 @@ use mononoke_types::blame_v2::BlameParentId;
 use mononoke_types::blame_v2::BlameV2;
 use mononoke_types::inferred_copy_from::InferredCopyFromEntry;
 use mononoke_types::path::MPath;
+use mononoke_types::typed_hash::HistoryManifestFileId;
 use scuba_ext::FutureStatsScubaExt;
 use unodes::RootUnodeManifestId;
 
 use crate::Repo;
 use crate::common::find_possible_mutable_ancestors;
+
+/// Either a FileUnodeId (V2) or HistoryManifestFileId (V3), used internally
+/// to carry the file identity through blame computation so that
+/// `blame_with_content` can load the file content from the right source.
+type BlameFileId = Either<FileUnodeId, HistoryManifestFileId>;
+
+fn should_use_blame_v3(repo: &impl Repo) -> Result<bool, BlameError> {
+    justknobs::eval(
+        "scm/mononoke:use_blame_v3",
+        None,
+        Some(repo.repo_identity().name()),
+    )
+    .map_err(BlameError::Error)
+}
+
+/// Load file content given a BlameFileId (either unode or history manifest).
+async fn load_content_for_blame(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    file_id: &BlameFileId,
+) -> Result<Bytes, BlameError> {
+    match file_id {
+        Either::Left(unode_id) => fetch_content_for_blame(ctx, repo, *unode_id)
+            .await?
+            .into_bytes()
+            .map_err(BlameError::from),
+        Either::Right(hm_file_id) => {
+            let blobstore: Arc<dyn KeyedBlobstore> = repo.repo_blobstore_arc();
+            let hm_file = hm_file_id
+                .load(ctx, &blobstore)
+                .await
+                .map_err(|e| BlameError::Error(e.into()))?;
+            let filesize_limit = repo
+                .repo_derived_data()
+                .manager()
+                .config()
+                .blame_filesize_limit
+                .unwrap_or(DEFAULT_BLAME_FILESIZE_LIMIT);
+            fetch_content_for_blame_by_content_id(
+                ctx,
+                &blobstore,
+                hm_file.content_id,
+                filesize_limit,
+            )
+            .await
+            .map_err(BlameError::Error)?
+            .into_bytes()
+            .map_err(BlameError::from)
+        }
+    }
+}
+
+/// Get the file identity for a path at a changeset, using either unodes or
+/// history manifest depending on the JK.
+async fn get_file_id(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    csid: ChangesetId,
+    path: &NonRootMPath,
+) -> Result<BlameFileId, BlameError> {
+    if should_use_blame_v3(repo)? {
+        let root = repo
+            .repo_derived_data()
+            .derive::<RootHistoryManifestDirectoryId>(ctx, csid, DerivationPriority::LOW)
+            .await?;
+        let hm_file_id = root
+            .into_history_manifest_directory_id()
+            .find_entry(ctx.clone(), repo.repo_blobstore_arc(), path.clone().into())
+            .await?
+            .ok_or_else(|| BlameError::NoSuchPath(path.clone()))?
+            .into_leaf()
+            .ok_or_else(|| BlameError::IsDirectory(path.clone().into()))?;
+        Ok(Either::Right(hm_file_id))
+    } else {
+        let unode_id = get_unode_entry(ctx, repo, csid, path)
+            .await?
+            .into_leaf()
+            .ok_or_else(|| BlameError::IsDirectory(path.clone().into()))?;
+        Ok(Either::Left(unode_id))
+    }
+}
+
+/// Fetch immutable blame (no mutable renames, no inferred copy-from).
+async fn fetch_base_blame(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    csid: ChangesetId,
+    path: &NonRootMPath,
+) -> Result<(BlameV2, BlameFileId), BlameError> {
+    if should_use_blame_v3(repo)? {
+        let (blame, hm_file_id) = fetch_blame_v3(ctx, repo, csid, path.clone()).await?;
+        Ok((blame, Either::Right(hm_file_id)))
+    } else {
+        let (blame, unode_id) = fetch_blame_v2(ctx, repo, csid, path.clone()).await?;
+        Ok((blame, Either::Left(unode_id)))
+    }
+}
 
 #[async_recursion]
 async fn fetch_mutable_blame(
@@ -53,7 +157,7 @@ async fn fetch_mutable_blame(
     my_csid: ChangesetId,
     path: &NonRootMPath,
     seen: &mut HashSet<ChangesetId>,
-) -> Result<(BlameV2, FileUnodeId), BlameError> {
+) -> Result<(BlameV2, BlameFileId), BlameError> {
     let mutable_renames = repo.mutable_renames();
 
     if !seen.insert(my_csid) {
@@ -87,20 +191,8 @@ async fn fetch_mutable_blame(
         let (src_blame, src_content) =
             blame_with_content(ctx, repo, src_csid, rename.src_path(), true).await?;
 
-        let blobstore = repo.repo_blobstore_arc();
-        let unode = repo
-            .repo_derived_data()
-            .derive::<RootUnodeManifestId>(ctx, my_csid, DerivationPriority::LOW)
-            .await?
-            .manifest_unode_id()
-            .find_entry(ctx.clone(), blobstore, path.clone().into())
-            .await?
-            .context("Unode missing")?
-            .into_leaf()
-            .ok_or_else(|| BlameError::IsDirectory(path.clone().into()))?;
-        let my_content = fetch_content_for_blame(ctx, repo, unode)
-            .await?
-            .into_bytes()?;
+        let file_id = get_file_id(ctx, repo, my_csid, path).await?;
+        let my_content = load_content_for_blame(ctx, repo, &file_id).await?;
 
         // And reblame directly against the parent mutable renames gave us.
         let blame_parent = BlameParent::new(
@@ -110,7 +202,7 @@ async fn fetch_mutable_blame(
             src_blame,
         );
         let blame = BlameV2::new(my_csid, path.clone(), my_content, vec![blame_parent])?;
-        return Ok((blame, unode));
+        return Ok((blame, file_id));
     }
 
     // Second case. We don't have a mutable rename attached, so we're going to look
@@ -141,7 +233,7 @@ async fn fetch_mutable_blame(
         find_possible_mutable_ancestors(ctx, repo, my_csid, path.into()).await?;
 
     // Fetch the immutable blame, which we're going to mutate
-    let (mut blame, unode) = fetch_immutable_blame(ctx, repo, my_csid, path).await?;
+    let (mut blame, file_id) = fetch_immutable_blame(ctx, repo, my_csid, path).await?;
 
     // We now have a stack of possible mutable ancestors, sorted so that the highest generation
     // is last. We now pop the last entry from the stack (highest generation) and apply mutation
@@ -187,7 +279,7 @@ async fn fetch_mutable_blame(
                 .await?;
     }
 
-    Ok((blame, unode))
+    Ok((blame, file_id))
 }
 
 /// This is organic blame, blended with any inferred_copy_from data if the repo has it enabled
@@ -198,7 +290,7 @@ async fn fetch_inferred_blame(
     csid: ChangesetId,
     path: &NonRootMPath,
     seen: &mut HashSet<ChangesetId>,
-) -> Result<(BlameV2, FileUnodeId), BlameError> {
+) -> Result<(BlameV2, BlameFileId), BlameError> {
     if !seen.insert(csid) {
         return Err(anyhow!("Infinite loop in inferred blame").into());
     }
@@ -214,20 +306,14 @@ async fn fetch_inferred_blame(
             .ok_or_else(|| BlameError::IsDirectory(entry.from_path.clone()))?;
 
         // Fetch the base blame from the inferred_copy_from source
-        let (src_blame, src_file_unode_id) =
+        let (src_blame, src_file_id) =
             fetch_inferred_blame(ctx, repo, entry.from_csid, &src_non_root_mpath, seen).await?;
-        let src_content = fetch_content_for_blame(ctx, repo, src_file_unode_id)
-            .await?
-            .into_bytes()?;
+        let src_content = load_content_for_blame(ctx, repo, &src_file_id).await?;
 
         // Reblame against the source blame
-        let file_unode_id = get_unode_entry(ctx, repo, csid, path)
-            .await?
-            .into_leaf()
-            .ok_or_else(|| BlameError::IsDirectory(path.clone().into()))?;
-        let content = fetch_content_for_blame(ctx, repo, file_unode_id)
-            .await?
-            .into_bytes()?;
+        let file_id = get_file_id(ctx, repo, csid, path).await?;
+        let content = load_content_for_blame(ctx, repo, &file_id).await?;
+
         let blame_parent = BlameParent::new(
             BlameParentId::ReplacementParent(entry.from_csid),
             src_non_root_mpath,
@@ -236,7 +322,7 @@ async fn fetch_inferred_blame(
         );
         let blame = BlameV2::new(csid, path.clone(), content, vec![blame_parent])?;
 
-        return Ok((blame, file_unode_id));
+        return Ok((blame, file_id));
     }
 
     // Otherwise, check its ancestors where path was first introduced
@@ -244,20 +330,20 @@ async fn fetch_inferred_blame(
     let ancestor_csid = match ancestors.first() {
         None => {
             // No inferred_copy_from on path, we are done
-            return fetch_blame_v2(ctx, repo, csid, path.clone()).await;
+            return fetch_base_blame(ctx, repo, csid, path).await;
         }
         Some(ancestor_csid) => ancestor_csid.clone(),
     };
 
     // Path has inferred_copy_from at ancestors, blend current blame with ancestors' blame
-    let (mut blame, file_unode_id) = fetch_blame_v2(ctx, repo, csid, path.clone()).await?;
+    let (mut blame, file_id) = fetch_base_blame(ctx, repo, csid, path).await?;
     let ((ancestor_inferred_blame, _), (ancestor_original_blame, _)) = try_join!(
         fetch_inferred_blame(ctx, repo, ancestor_csid, path, seen),
-        fetch_blame_v2(ctx, repo, ancestor_csid, path.clone())
+        fetch_base_blame(ctx, repo, ancestor_csid, path)
     )?;
     blame.apply_mutable_change(&ancestor_original_blame, &ancestor_inferred_blame)?;
 
-    return Ok((blame, file_unode_id));
+    Ok((blame, file_id))
 }
 
 /// Given changeset and path, find all ancestors where the path was the
@@ -385,24 +471,24 @@ async fn fetch_immutable_blame(
     repo: &impl Repo,
     csid: ChangesetId,
     path: &NonRootMPath,
-) -> Result<(BlameV2, FileUnodeId), BlameError> {
+) -> Result<(BlameV2, BlameFileId), BlameError> {
     if can_use_inferred_copy_from(repo) {
         fetch_inferred_blame(ctx, repo, csid, path, &mut HashSet::new())
             .timed()
             .await
             .log_future_stats(ctx.scuba().clone(), "Computed inferred blame", None)
     } else {
-        fetch_blame_v2(ctx, repo, csid, path.clone()).await
+        fetch_base_blame(ctx, repo, csid, path).await
     }
 }
 
-pub async fn blame(
+async fn blame_internal(
     ctx: &CoreContext,
     repo: &impl Repo,
     csid: ChangesetId,
     path: &MPath,
     follow_mutable_file_history: bool,
-) -> Result<(BlameV2, FileUnodeId), BlameError> {
+) -> Result<(BlameV2, BlameFileId), BlameError> {
     let path = path
         .clone()
         .into_optional_non_root_path()
@@ -417,6 +503,17 @@ pub async fn blame(
     }
 }
 
+pub async fn blame(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    csid: ChangesetId,
+    path: &MPath,
+    follow_mutable_file_history: bool,
+) -> Result<BlameV2, BlameError> {
+    let (blame, _) = blame_internal(ctx, repo, csid, path, follow_mutable_file_history).await?;
+    Ok(blame)
+}
+
 /// Blame metadata for this path, and the content that was blamed.  If the file
 /// content is too large or binary data is detected then
 /// the fetch may be rejected.
@@ -427,9 +524,8 @@ pub async fn blame_with_content(
     path: &MPath,
     follow_mutable_file_history: bool,
 ) -> Result<(BlameV2, Bytes), BlameError> {
-    let (blame, file_unode_id) = blame(ctx, repo, csid, path, follow_mutable_file_history).await?;
-    let content = fetch_content_for_blame(ctx, repo, file_unode_id)
-        .await?
-        .into_bytes()?;
+    let (blame, file_id) =
+        blame_internal(ctx, repo, csid, path, follow_mutable_file_history).await?;
+    let content = load_content_for_blame(ctx, repo, &file_id).await?;
     Ok((blame, content))
 }

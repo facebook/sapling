@@ -760,6 +760,7 @@ def setup_mononoke_repo_config(
             "inferred_copy_from",
             "acl_manifests",
             "content_manifests",
+            "history_manifests",
         ]
 
     if additional_derived_data := env.getenv("ADDITIONAL_DERIVED_DATA"):
@@ -1023,6 +1024,7 @@ git_delta_manifest_v3_config.max_inlined_delta_size = 20
 git_delta_manifest_v3_config.delta_chunk_size = 1000
 git_delta_manifest_v3_config.entry_chunk_size = 1000
 xdb_mapping_shard_ids.history_manifests = 0
+xdb_mapping_shard_ids.blame_v3 = 0
 """
     )
 

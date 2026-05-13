@@ -26,6 +26,7 @@ use derivation_queue_thrift::DerivationPriority;
 use derived_data::SharedDerivationError;
 pub use fetch::FetchOutcome;
 pub use fetch::fetch_content_for_blame;
+pub use fetch::fetch_content_for_blame_by_content_id;
 use manifest::ManifestOps;
 pub use mapping_v2::RootBlameV2;
 pub use mapping_v2::format_key;

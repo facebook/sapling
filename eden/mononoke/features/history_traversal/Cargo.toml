@@ -20,10 +20,12 @@ context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context"
 deleted_manifest = { version = "0.1.0", path = "../../derived_data/deleted_manifest" }
 derivation_queue_thrift = { version = "0.1.0", path = "../../repo_attributes/repo_derivation_queues/if" }
 derived_data = { version = "0.1.0", path = "../../derived_data" }
+either = "1.5"
 fastlog = { version = "0.1.0", path = "../../derived_data/fastlog" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 futures-util = { version = "0.3.30", features = ["compat"] }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+history_manifest = { version = "0.1.0", path = "../../derived_data/history_manifest" }
 inferred_copy_from = { version = "0.1.0", path = "../../derived_data/inferred_copy_from" }
 itertools = "0.14.0"
 justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

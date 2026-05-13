@@ -15,7 +15,7 @@ setup configuration
 Check that sqlblob has some data big enough to form a chunk
   $ for s in 0 1; do sqlite3 -readonly "$TESTTMP/blobstore/blobs/shard_${s}.sqlite" "SELECT COUNT(1) FROM chunk" ; done
   3
-  5
+  6
 
 Check that chunk_generations populated from put and they have length
   $ for s in 0 1; do sqlite3 -readonly "$TESTTMP/blobstore/blobs/shard_${s}.sqlite" "SELECT * FROM chunk_generation ORDER BY id" | sed "s/^/$s /"; done
@@ -26,14 +26,15 @@ Check that chunk_generations populated from put and they have length
   1 771d08e57a60be5757e98b9c8cabaaed5e02034e38507df4a650254a8545c4d4|2|199
   1 9061e5b04e9a083f3bab0582265b214951060e1d2372377cf16f0d1b43d61343|2|208
   1 e7e77bea18f290767854dcacbaad963afd80656dbcb1c00dd7e36375e0408eaa|2|274
+  1 f1183f46ffc43ce1662e551dd09ab870e7051d25c9b6cfdaa0d0d2a5d8b5e8fb|2|224
   1 f50e7c0f6932bdffdf0265beb40720a074b6168cc3ae28c372637d78114f86ae|2|194
 
 Run sqlblob_gc generation size report
   $ mononoke_sqlblob_gc --storage-config-name=blobstore --shard-count=2 generation-size
   Generation | Size
   -----------------
-           2 | 2.1 KiB
-  Total size: 2.1 KiB
+           2 | 2.3 KiB
+  Total size: 2.3 KiB
 
 Run sqlblob_gc generation size report again, just to check mark has not broken it
 Run sqlblob_gc mark
@@ -51,11 +52,11 @@ Run sqlblob_gc generation size report again, just to check mark has not broken i
   $ mononoke_sqlblob_gc --storage-config-name=blobstore --shard-count=2 --scuba-log-file scuba.json generation-size
   Generation | Size
   -----------------
-           2 | 2.1 KiB
-  Total size: 2.1 KiB
+           2 | 2.3 KiB
+  Total size: 2.3 KiB
 
 Check the sizes are logged
   $ jq -r '.int | [ .shard, .generation, .size, .chunk_id_count, .storage_total_footprint ] | @csv' < scuba.json | sort
-  ,,,,2160
+  ,,,,2384
   0,2,887,3,
-  1,2,1273,5,
+  1,2,1497,6,

@@ -635,7 +635,7 @@ impl<R: MononokeRepo> ChangesetPathHistoryContext<R> {
         let ctx = self.changeset.ctx();
         let repo = self.changeset.repo_ctx().repo();
         let csid = self.changeset.id();
-        let (blame, _) =
+        let blame =
             history_traversal::blame(ctx, repo, csid, &self.path, follow_mutable_file_history)
                 .await?;
         Ok(blame)

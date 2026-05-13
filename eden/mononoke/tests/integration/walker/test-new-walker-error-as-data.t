@@ -29,10 +29,10 @@ Base case, check can walk fine
 
 Delete a gitsha1 alias so that we get errors
   $ ls $TESTTMP/blobstore/blobs/* | wc -l
-  148
+  154
   $ rm $TESTTMP/blobstore/blobs/*.alias.gitsha1.96d80cd6c4e7158dbebd0849f4fb7ce513e5828c*
   $ ls $TESTTMP/blobstore/blobs/* | wc -l
-  147
+  153
 
 Check we get an error due to the missing aliases
   $ mononoke_walker scrub -I deep -q -b master_bookmark 2>&1 | grep -vE "(Bytes|Walked)/s"
