@@ -176,7 +176,7 @@ impl PathAuditor {
 
     /// Make sure that it is safe to write/remove `path` from the repo.
     pub fn audit(&self, path: &RepoPath) -> Result<PathBuf> {
-        audit_invalid_components(path.as_str(), self.fs_features)?;
+        self.audit_components(path)?;
 
         let mut needs_recording_index = usize::MAX;
         for (i, parent) in path.reverse_parents().enumerate() {
@@ -208,6 +208,13 @@ impl PathAuditor {
         let mut filepath = self.root.to_owned();
         filepath.push(path.as_str());
         Ok(filepath)
+    }
+
+    /// Validate repository path components without reading the filesystem.
+    /// This does not check if any path component is a symlink.
+    pub fn audit_components(&self, path: &RepoPath) -> Result<()> {
+        audit_invalid_components(path.as_str(), self.fs_features)?;
+        Ok(())
     }
 }
 
