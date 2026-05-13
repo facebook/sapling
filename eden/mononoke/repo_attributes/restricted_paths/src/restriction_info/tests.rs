@@ -139,7 +139,7 @@ mod acl_manifest_path_lookup {
             vec![PathRestrictionInfo {
                 restriction_root: NonRootMPath::new(restriction_root)?,
                 repo_region_acl: repo_region_acl.to_string(),
-                request_acl: repo_region_acl.to_string(),
+                permission_request_group: repo_region_acl.parse()?,
             }],
         );
         Ok(())
@@ -171,7 +171,7 @@ mod acl_manifest_path_lookup {
             vec![PathRestrictionInfo {
                 restriction_root: NonRootMPath::new(restriction_root)?,
                 repo_region_acl: repo_region_acl.to_string(),
-                request_acl: repo_region_acl.to_string(),
+                permission_request_group: repo_region_acl.parse()?,
             }],
         );
         Ok(())
@@ -208,12 +208,12 @@ mod acl_manifest_path_lookup {
                 PathRestrictionInfo {
                     restriction_root: NonRootMPath::new(first_restriction_root)?,
                     repo_region_acl: first_repo_region_acl.to_string(),
-                    request_acl: first_repo_region_acl.to_string(),
+                    permission_request_group: first_repo_region_acl.parse()?,
                 },
                 PathRestrictionInfo {
                     restriction_root: NonRootMPath::new(second_restriction_root)?,
                     repo_region_acl: second_repo_region_acl.to_string(),
-                    request_acl: second_repo_region_acl.to_string(),
+                    permission_request_group: second_repo_region_acl.parse()?,
                 },
             ],
         );
@@ -230,13 +230,13 @@ mod hg_augmented_manifest_lookup {
     ) -> Result<()> {
         let restriction_root = "manifest_restricted";
         let repo_region_acl = "REPO_REGION:repos/hg/fbsource/=manifest_restricted";
-        let request_acl = "GROUP:manifest_restricted_requests";
+        let permission_request_group = "GROUP:manifest_restricted_requests";
         let fixture = hg_augmented_manifest_lookup_fixture(
             fb,
             vec![
                 (
                     "manifest_restricted/.slacl",
-                    slacl_with_request_acl(repo_region_acl, request_acl),
+                    slacl_with_permission_request_group(repo_region_acl, permission_request_group),
                 ),
                 ("manifest_restricted/file.txt", b"content".to_vec()),
             ],
@@ -257,7 +257,7 @@ mod hg_augmented_manifest_lookup {
             vec![ManifestRestrictionInfo {
                 restriction_root: None,
                 repo_region_acl: repo_region_acl.to_string(),
-                request_acl: request_acl.to_string(),
+                permission_request_group: permission_request_group.parse()?,
             }],
         );
         Ok(())
@@ -469,9 +469,12 @@ fn slacl(repo_region_acl: &str) -> Vec<u8> {
     format!("repo_region_acl = \"{repo_region_acl}\"\n").into_bytes()
 }
 
-fn slacl_with_request_acl(repo_region_acl: &str, request_acl: &str) -> Vec<u8> {
+fn slacl_with_permission_request_group(
+    repo_region_acl: &str,
+    permission_request_group: &str,
+) -> Vec<u8> {
     format!(
-        "repo_region_acl = \"{repo_region_acl}\"\npermission_request_group = \"{request_acl}\"\n"
+        "repo_region_acl = \"{repo_region_acl}\"\npermission_request_group = \"{permission_request_group}\"\n"
     )
     .into_bytes()
 }
@@ -483,6 +486,6 @@ fn manifest_restriction_info(
     Ok(ManifestRestrictionInfo {
         restriction_root: restriction_root.map(NonRootMPath::new).transpose()?,
         repo_region_acl: repo_region_acl.to_string(),
-        request_acl: repo_region_acl.to_string(),
+        permission_request_group: repo_region_acl.parse()?,
     })
 }

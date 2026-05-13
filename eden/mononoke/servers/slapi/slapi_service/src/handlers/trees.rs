@@ -473,16 +473,21 @@ impl SaplingRemoteApiHandler for CheckManifestPermissionHandler {
                         .all(|check| check.has_authorization());
 
                     // TODO(T248658346): change the Eden API response to return
-                    // all request ACLs instead of only the first one.
-                    let request_acl = restriction_checks
+                    // all permission request groups instead of only the first one.
+                    let permission_request_group = restriction_checks
                         .iter()
                         .find(|check| !check.has_authorization())
-                        .map(|check| check.restriction_info().request_acl.to_string());
+                        .map(|check| {
+                            check
+                                .restriction_info()
+                                .permission_request_group
+                                .to_string()
+                        });
 
                     Ok(CheckManifestPermissionResponse {
                         manifest_id,
                         has_access,
-                        request_acl,
+                        request_acl: permission_request_group,
                     })
                 }
             })
@@ -530,9 +535,9 @@ impl SaplingRemoteApiHandler for CheckPathPermissionHandler {
                         .iter()
                         .all(|info| info.has_access.unwrap_or(false));
 
-                    let request_acls = restriction_infos
+                    let permission_request_groups = restriction_infos
                         .iter()
-                        .map(|info| info.request_acl().to_string())
+                        .map(|info| info.permission_request_group().to_string())
                         .collect();
 
                     let repo_region_acls = restriction_infos
@@ -543,7 +548,7 @@ impl SaplingRemoteApiHandler for CheckPathPermissionHandler {
                     Ok(CheckPathPermissionResponse {
                         path,
                         has_access,
-                        request_acls,
+                        request_acls: permission_request_groups,
                         repo_region_acls,
                     })
                 }

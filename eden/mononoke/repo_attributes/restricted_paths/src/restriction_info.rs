@@ -37,6 +37,7 @@ use permission_checker::MononokeIdentity;
 
 use crate::ManifestId;
 use crate::ManifestType;
+use crate::PermissionRequestGroup;
 use crate::RestrictedPaths;
 
 #[cfg(test)]
@@ -51,8 +52,8 @@ pub struct PathRestrictionInfo {
     pub restriction_root: NonRootMPath,
     /// The repo region ACL string, e.g. "REPO_REGION:repos/hg/fbsource/=project1".
     pub repo_region_acl: String,
-    /// ACL for requesting access. Defaults to repo_region_acl if not configured.
-    pub request_acl: String,
+    /// Permission request group to show users. Defaults to repo_region_acl if not configured.
+    pub permission_request_group: PermissionRequestGroup,
 }
 
 /// Core restriction information for a manifest access.
@@ -62,8 +63,8 @@ pub struct ManifestRestrictionInfo {
     pub restriction_root: Option<NonRootMPath>,
     /// The repo region ACL string, e.g. "REPO_REGION:repos/hg/fbsource/=project1".
     pub repo_region_acl: String,
-    /// ACL for requesting access. Defaults to repo_region_acl if not configured.
-    pub request_acl: String,
+    /// Permission request group to show users. Defaults to repo_region_acl if not configured.
+    pub permission_request_group: PermissionRequestGroup,
 }
 
 /// Get config-backed restriction info for paths that are themselves restriction roots.
@@ -423,7 +424,7 @@ pub(crate) async fn get_manifest_restriction_info_from_config(
                     let repo_region_acl = acl.to_string();
                     ManifestRestrictionInfo {
                         restriction_root: Some(path),
-                        request_acl: repo_region_acl.clone(),
+                        permission_request_group: acl.clone(),
                         repo_region_acl,
                     }
                 })
@@ -675,17 +676,19 @@ async fn load_acl_entry_blob_fields(
     ctx: &CoreContext,
     blobstore: &impl blobstore::KeyedBlobstore,
     restriction: &AclManifestRestriction,
-) -> Result<(String, String)> {
+) -> Result<(String, PermissionRequestGroup)> {
     let entry_blob: AclManifestEntryBlob = restriction
         .entry_blob_id
         .load(ctx, blobstore)
         .await
         .context("Failed to load AclManifestEntryBlob")?;
     let repo_region_acl = entry_blob.repo_region_acl;
-    let request_acl = entry_blob
+    let permission_request_group = entry_blob
         .permission_request_group
-        .unwrap_or_else(|| repo_region_acl.clone());
-    Ok((repo_region_acl, request_acl))
+        .unwrap_or_else(|| repo_region_acl.clone())
+        .parse()
+        .with_context(|| "Failed to parse permission request group")?;
+    Ok((repo_region_acl, permission_request_group))
 }
 
 async fn load_manifest_restriction_info(
@@ -693,12 +696,12 @@ async fn load_manifest_restriction_info(
     blobstore: &impl blobstore::KeyedBlobstore,
     restriction: &AclManifestRestriction,
 ) -> Result<ManifestRestrictionInfo> {
-    let (repo_region_acl, request_acl) =
+    let (repo_region_acl, permission_request_group) =
         load_acl_entry_blob_fields(ctx, blobstore, restriction).await?;
     Ok(ManifestRestrictionInfo {
         restriction_root: None,
         repo_region_acl,
-        request_acl,
+        permission_request_group,
     })
 }
 
@@ -708,12 +711,12 @@ async fn load_path_restriction_info(
     restriction: &AclManifestRestriction,
     restriction_root: NonRootMPath,
 ) -> Result<PathRestrictionInfo> {
-    let (repo_region_acl, request_acl) =
+    let (repo_region_acl, permission_request_group) =
         load_acl_entry_blob_fields(ctx, blobstore, restriction).await?;
     Ok(PathRestrictionInfo {
         restriction_root,
         repo_region_acl,
-        request_acl,
+        permission_request_group,
     })
 }
 
@@ -724,7 +727,7 @@ fn build_config_path_restriction_info(
     let repo_region_acl = acl.to_string();
     PathRestrictionInfo {
         restriction_root,
-        request_acl: repo_region_acl.clone(),
+        permission_request_group: acl.clone(),
         repo_region_acl,
     }
 }

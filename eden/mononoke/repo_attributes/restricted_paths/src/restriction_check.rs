@@ -42,6 +42,9 @@ use crate::restriction_info::PathRestrictionInfo;
 #[cfg(test)]
 mod tests;
 
+/// Identity users should request for access to a restricted path.
+pub type PermissionRequestGroup = MononokeIdentity;
+
 /// Source to use for path-side restriction checks.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) enum PathRestrictionSource {
@@ -272,8 +275,8 @@ impl std::error::Error for SourceRestrictionError {
 pub(crate) trait SourceRestrictionCheck: Clone {
     /// Caller authorization result for this source result.
     fn authorization(&self) -> &AuthorizationCheckResult;
-    /// Request ACL to show users for this restriction.
-    fn request_acl(&self) -> &str;
+    /// Permission request group to show users for this restriction.
+    fn permission_request_group(&self) -> &PermissionRequestGroup;
     /// Parsed repo-region ACL associated with this restriction.
     fn repo_region_identity(&self) -> &MononokeIdentity;
     /// Restriction root when the source can report one.
@@ -287,8 +290,8 @@ impl SourceRestrictionCheck for PathRestrictionCheckResult {
         &self.authorization
     }
 
-    fn request_acl(&self) -> &str {
-        &self.restriction_info().request_acl
+    fn permission_request_group(&self) -> &PermissionRequestGroup {
+        &self.restriction_info().permission_request_group
     }
 
     fn repo_region_identity(&self) -> &MononokeIdentity {
@@ -309,8 +312,8 @@ impl SourceRestrictionCheck for ManifestRestrictionCheckResult {
         &self.authorization
     }
 
-    fn request_acl(&self) -> &str {
-        &self.restriction_info().request_acl
+    fn permission_request_group(&self) -> &PermissionRequestGroup {
+        &self.restriction_info().permission_request_group
     }
 
     fn repo_region_identity(&self) -> &MononokeIdentity {
@@ -903,7 +906,7 @@ pub async fn check_config_path_restriction_infos(
             (
                 PathRestrictionInfo {
                     restriction_root: restriction_root.clone(),
-                    request_acl: repo_region_acl.clone(),
+                    permission_request_group: acl.clone(),
                     repo_region_acl,
                 },
                 acl.clone(),

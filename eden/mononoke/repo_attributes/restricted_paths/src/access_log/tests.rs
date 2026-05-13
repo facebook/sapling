@@ -561,7 +561,7 @@ fn restricted_path_result(
             PathRestrictionInfo {
                 restriction_root: NonRootMPath::new(restriction_path)?,
                 repo_region_acl: repo_region_acl.clone(),
-                request_acl: repo_region_acl,
+                permission_request_group: repo_region_identity.clone(),
             },
             authorization_result(has_authorization, has_acl_access),
             repo_region_identity,
@@ -582,7 +582,7 @@ fn restricted_manifest_result(
             ManifestRestrictionInfo {
                 restriction_root: restriction_path.map(NonRootMPath::new).transpose()?,
                 repo_region_acl: repo_region_acl.clone(),
-                request_acl: repo_region_acl,
+                permission_request_group: repo_region_identity.clone(),
             },
             authorization_result(has_authorization, has_acl_access),
             repo_region_identity,

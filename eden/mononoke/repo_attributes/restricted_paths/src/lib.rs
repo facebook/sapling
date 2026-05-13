@@ -37,6 +37,7 @@ pub use crate::access_log::ACCESS_LOG_SCUBA_TABLE;
 use crate::access_log::log_access_to_restricted_path;
 pub use crate::restriction_check::ManifestRestrictionCheckResult;
 pub use crate::restriction_check::PathRestrictionCheckResult;
+pub use crate::restriction_check::PermissionRequestGroup;
 use crate::restriction_check::PreFilterResult;
 pub use crate::restriction_check::RestrictionCheckResult;
 use crate::restriction_check::SharedFetchHandle;

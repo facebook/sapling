@@ -58,13 +58,14 @@ async fn test_shared_fetch_handle_awaits_one_spawned_fetch() -> Result<()> {
 }
 
 fn path_restriction_check() -> Result<PathRestrictionCheckResult> {
+    let acl = permission_checker::MononokeIdentity::from_str("REPO_REGION:test_acl")?;
     Ok(PathRestrictionCheckResult::new(
         PathRestrictionInfo {
             restriction_root: NonRootMPath::new("restricted")?,
-            repo_region_acl: "REPO_REGION:test_acl".to_string(),
-            request_acl: "REPO_REGION:test_acl".to_string(),
+            repo_region_acl: acl.to_string(),
+            permission_request_group: acl.clone(),
         },
         AuthorizationCheckResult::new(true, false, false),
-        permission_checker::MononokeIdentity::from_str("REPO_REGION:test_acl")?,
+        acl,
     ))
 }

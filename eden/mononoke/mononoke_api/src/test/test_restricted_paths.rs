@@ -54,7 +54,7 @@ async fn test_restriction_info_exact_match(fb: FacebookInit) -> Result<()> {
         restriction: PathRestrictionInfo {
             restriction_root: NonRootMPath::new("restricted/dir")?,
             repo_region_acl: "TIER:my-acl".to_string(),
-            request_acl: "TIER:my-acl".to_string(),
+            permission_request_group: MononokeIdentity::from_str("TIER:my-acl")?,
         },
         has_access: Some(true),
     }];
@@ -80,7 +80,7 @@ async fn test_restriction_info_nested_path(fb: FacebookInit) -> Result<()> {
         restriction: PathRestrictionInfo {
             restriction_root: NonRootMPath::new("restricted")?,
             repo_region_acl: "TIER:my-acl".to_string(),
-            request_acl: "TIER:my-acl".to_string(),
+            permission_request_group: MononokeIdentity::from_str("TIER:my-acl")?,
         },
         has_access: Some(true),
     }];
@@ -141,7 +141,7 @@ async fn test_restriction_info_multiple_restrictions(fb: FacebookInit) -> Result
         restriction: PathRestrictionInfo {
             restriction_root: NonRootMPath::new("first")?,
             repo_region_acl: "TIER:first-acl".to_string(),
-            request_acl: "TIER:first-acl".to_string(),
+            permission_request_group: MononokeIdentity::from_str("TIER:first-acl")?,
         },
         has_access: Some(true),
     }];
@@ -159,7 +159,7 @@ async fn test_restriction_info_multiple_restrictions(fb: FacebookInit) -> Result
         restriction: PathRestrictionInfo {
             restriction_root: NonRootMPath::new("second")?,
             repo_region_acl: "TIER:second-acl".to_string(),
-            request_acl: "TIER:second-acl".to_string(),
+            permission_request_group: MononokeIdentity::from_str("TIER:second-acl")?,
         },
         has_access: Some(true),
     }];
@@ -224,7 +224,7 @@ async fn test_restriction_info_nested_roots(fb: FacebookInit) -> Result<()> {
             restriction: PathRestrictionInfo {
                 restriction_root: NonRootMPath::new("foo")?,
                 repo_region_acl: "TIER:outer-acl".to_string(),
-                request_acl: "TIER:outer-acl".to_string(),
+                permission_request_group: MononokeIdentity::from_str("TIER:outer-acl")?,
             },
             has_access: Some(true),
         },
@@ -232,7 +232,7 @@ async fn test_restriction_info_nested_roots(fb: FacebookInit) -> Result<()> {
             restriction: PathRestrictionInfo {
                 restriction_root: NonRootMPath::new("foo/bar")?,
                 repo_region_acl: "TIER:inner-acl".to_string(),
-                request_acl: "TIER:inner-acl".to_string(),
+                permission_request_group: MononokeIdentity::from_str("TIER:inner-acl")?,
             },
             has_access: Some(true),
         },
@@ -532,7 +532,7 @@ async fn test_find_descendants_root_returns_all(fb: FacebookInit) -> Result<()> 
             restriction: PathRestrictionInfo {
                 restriction_root: NonRootMPath::new("first/path")?,
                 repo_region_acl: "TIER:first-acl".to_string(),
-                request_acl: "TIER:first-acl".to_string(),
+                permission_request_group: MononokeIdentity::from_str("TIER:first-acl")?,
             },
             has_access: None,
         },
@@ -540,7 +540,7 @@ async fn test_find_descendants_root_returns_all(fb: FacebookInit) -> Result<()> 
             restriction: PathRestrictionInfo {
                 restriction_root: NonRootMPath::new("second/path")?,
                 repo_region_acl: "TIER:second-acl".to_string(),
-                request_acl: "TIER:second-acl".to_string(),
+                permission_request_group: MononokeIdentity::from_str("TIER:second-acl")?,
             },
             has_access: None,
         },
@@ -567,7 +567,7 @@ async fn test_find_descendants_check_permissions_populates_access(fb: FacebookIn
         restriction: PathRestrictionInfo {
             restriction_root: NonRootMPath::new("restricted/path")?,
             repo_region_acl: "TIER:restricted-acl".to_string(),
-            request_acl: "TIER:restricted-acl".to_string(),
+            permission_request_group: MononokeIdentity::from_str("TIER:restricted-acl")?,
         },
         has_access: Some(true),
     }];
@@ -601,7 +601,7 @@ async fn test_find_descendants_filter_exact_match(fb: FacebookInit) -> Result<()
         restriction: PathRestrictionInfo {
             restriction_root: NonRootMPath::new("first/path")?,
             repo_region_acl: "TIER:first-acl".to_string(),
-            request_acl: "TIER:first-acl".to_string(),
+            permission_request_group: MononokeIdentity::from_str("TIER:first-acl")?,
         },
         has_access: None,
     }];
@@ -627,7 +627,7 @@ async fn test_find_descendants_filter_parent_of_root(fb: FacebookInit) -> Result
         restriction: PathRestrictionInfo {
             restriction_root: NonRootMPath::new("foo/bar/restricted")?,
             repo_region_acl: "TIER:my-acl".to_string(),
-            request_acl: "TIER:my-acl".to_string(),
+            permission_request_group: MononokeIdentity::from_str("TIER:my-acl")?,
         },
         has_access: None,
     }];
@@ -713,7 +713,7 @@ async fn test_find_descendants_nested_roots(fb: FacebookInit) -> Result<()> {
             restriction: PathRestrictionInfo {
                 restriction_root: NonRootMPath::new("foo")?,
                 repo_region_acl: "TIER:outer-acl".to_string(),
-                request_acl: "TIER:outer-acl".to_string(),
+                permission_request_group: MononokeIdentity::from_str("TIER:outer-acl")?,
             },
             has_access: None,
         },
@@ -721,7 +721,7 @@ async fn test_find_descendants_nested_roots(fb: FacebookInit) -> Result<()> {
             restriction: PathRestrictionInfo {
                 restriction_root: NonRootMPath::new("foo/bar")?,
                 repo_region_acl: "TIER:inner-acl".to_string(),
-                request_acl: "TIER:inner-acl".to_string(),
+                permission_request_group: MononokeIdentity::from_str("TIER:inner-acl")?,
             },
             has_access: None,
         },
@@ -759,7 +759,7 @@ async fn test_batch_find_descendants_multiple_roots(fb: FacebookInit) -> Result<
             restriction: PathRestrictionInfo {
                 restriction_root: NonRootMPath::new("first/path")?,
                 repo_region_acl: "TIER:first-acl".to_string(),
-                request_acl: "TIER:first-acl".to_string(),
+                permission_request_group: MononokeIdentity::from_str("TIER:first-acl")?,
             },
             has_access: None,
         },
@@ -767,7 +767,7 @@ async fn test_batch_find_descendants_multiple_roots(fb: FacebookInit) -> Result<
             restriction: PathRestrictionInfo {
                 restriction_root: NonRootMPath::new("third/path")?,
                 repo_region_acl: "TIER:third-acl".to_string(),
-                request_acl: "TIER:third-acl".to_string(),
+                permission_request_group: MononokeIdentity::from_str("TIER:third-acl")?,
             },
             has_access: None,
         },
@@ -794,7 +794,7 @@ async fn test_batch_find_descendants_deduplicates(fb: FacebookInit) -> Result<()
         restriction: PathRestrictionInfo {
             restriction_root: NonRootMPath::new("shared/path")?,
             repo_region_acl: "TIER:my-acl".to_string(),
-            request_acl: "TIER:my-acl".to_string(),
+            permission_request_group: MononokeIdentity::from_str("TIER:my-acl")?,
         },
         has_access: None,
     }];
@@ -831,7 +831,7 @@ async fn test_batch_find_descendants_nested_roots_and_queries(fb: FacebookInit) 
             restriction: PathRestrictionInfo {
                 restriction_root: NonRootMPath::new("foo")?,
                 repo_region_acl: "TIER:outer-acl".to_string(),
-                request_acl: "TIER:outer-acl".to_string(),
+                permission_request_group: MononokeIdentity::from_str("TIER:outer-acl")?,
             },
             has_access: None,
         },
@@ -839,7 +839,7 @@ async fn test_batch_find_descendants_nested_roots_and_queries(fb: FacebookInit) 
             restriction: PathRestrictionInfo {
                 restriction_root: NonRootMPath::new("foo/bar")?,
                 repo_region_acl: "TIER:inner-acl".to_string(),
-                request_acl: "TIER:inner-acl".to_string(),
+                permission_request_group: MononokeIdentity::from_str("TIER:inner-acl")?,
             },
             has_access: None,
         },
@@ -881,7 +881,7 @@ async fn test_restricted_paths_changes_with_restricted_files(fb: FacebookInit) -
                 restriction: PathRestrictionInfo {
                     restriction_root: NonRootMPath::new("restricted")?,
                     repo_region_acl: "TIER:my-acl".to_string(),
-                    request_acl: "TIER:my-acl".to_string(),
+                    permission_request_group: MononokeIdentity::from_str("TIER:my-acl")?,
                 },
                 has_access: None,
             },
@@ -962,7 +962,7 @@ async fn test_restricted_paths_changes_nested_roots(fb: FacebookInit) -> Result<
                     restriction: PathRestrictionInfo {
                         restriction_root: NonRootMPath::new("first")?,
                         repo_region_acl: "TIER:first-acl".to_string(),
-                        request_acl: "TIER:first-acl".to_string(),
+                        permission_request_group: MononokeIdentity::from_str("TIER:first-acl")?,
                     },
                     has_access: None,
                 },
@@ -977,7 +977,7 @@ async fn test_restricted_paths_changes_nested_roots(fb: FacebookInit) -> Result<
                     restriction: PathRestrictionInfo {
                         restriction_root: NonRootMPath::new("first/second")?,
                         repo_region_acl: "TIER:second-acl".to_string(),
-                        request_acl: "TIER:second-acl".to_string(),
+                        permission_request_group: MononokeIdentity::from_str("TIER:second-acl")?,
                     },
                     has_access: None,
                 },
@@ -1028,7 +1028,7 @@ async fn test_restricted_paths_changes_multiple_unrelated_roots(fb: FacebookInit
                     restriction: PathRestrictionInfo {
                         restriction_root: NonRootMPath::new("alpha")?,
                         repo_region_acl: "TIER:alpha-acl".to_string(),
-                        request_acl: "TIER:alpha-acl".to_string(),
+                        permission_request_group: MononokeIdentity::from_str("TIER:alpha-acl")?,
                     },
                     has_access: None,
                 },
@@ -1042,7 +1042,7 @@ async fn test_restricted_paths_changes_multiple_unrelated_roots(fb: FacebookInit
                     restriction: PathRestrictionInfo {
                         restriction_root: NonRootMPath::new("beta")?,
                         repo_region_acl: "TIER:beta-acl".to_string(),
-                        request_acl: "TIER:beta-acl".to_string(),
+                        permission_request_group: MononokeIdentity::from_str("TIER:beta-acl")?,
                     },
                     has_access: None,
                 },

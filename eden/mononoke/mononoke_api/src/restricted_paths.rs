@@ -7,6 +7,7 @@
 
 use mononoke_types::NonRootMPath;
 use restricted_paths::PathRestrictionInfo;
+use restricted_paths::PermissionRequestGroup;
 
 /// Access check result for a restricted path.
 #[derive(Clone, Debug, PartialEq)]
@@ -29,9 +30,9 @@ impl PathAccessInfo {
         &self.restriction.repo_region_acl
     }
 
-    /// Convenience accessor for the request ACL.
-    pub fn request_acl(&self) -> &str {
-        &self.restriction.request_acl
+    /// Convenience accessor for the permission request group.
+    pub fn permission_request_group(&self) -> &PermissionRequestGroup {
+        &self.restriction.permission_request_group
     }
 }
 
