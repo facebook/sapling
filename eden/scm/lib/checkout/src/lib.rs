@@ -635,6 +635,26 @@ impl CheckoutStats {
     }
 }
 
+fn display_path_prefixed_error(error: &Error) -> String {
+    let mut message = String::new();
+
+    for cause in error.chain() {
+        if !message.is_empty() {
+            message.push_str(": ");
+        }
+
+        match cause
+            .downcast_ref::<std::io::Error>()
+            .and_then(|err| util::path_error_details(err).map(|details| details.original_io_error))
+        {
+            Some(original) => message.push_str(&original.to_string()),
+            None => message.push_str(&cause.to_string()),
+        }
+    }
+
+    message
+}
+
 impl fmt::Display for CheckoutStats {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut printed_something = false;
@@ -648,7 +668,7 @@ impl fmt::Display for CheckoutStats {
                 truncated_error_list(
                     self.write_failed
                         .iter()
-                        .map(|(path, err)| format!("{path}: {err:#}")),
+                        .map(|(path, err)| format!("{path}: {}", display_path_prefixed_error(err))),
                     5
                 )
                 .join("\n "),
@@ -667,7 +687,7 @@ impl fmt::Display for CheckoutStats {
                 truncated_error_list(
                     self.set_exec_failed
                         .iter()
-                        .map(|(path, err)| format!("{path}: {err:#}")),
+                        .map(|(path, err)| format!("{path}: {}", display_path_prefixed_error(err))),
                     5
                 )
                 .join("\n "),
@@ -686,7 +706,7 @@ impl fmt::Display for CheckoutStats {
                 truncated_error_list(
                     self.remove_failed
                         .iter()
-                        .map(|(path, err)| format!("{path}: {err:#}")),
+                        .map(|(path, err)| format!("{path}: {}", display_path_prefixed_error(err))),
                     5
                 )
                 .join("\n "),
