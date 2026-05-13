@@ -330,7 +330,7 @@ pub async fn mark_reachable_as_public(
         };
 
         lookups += 1;
-        if lookups % 1000 == 0 {
+        if lookups.is_multiple_of(1000) {
             tracing::info!(
                 repo_id = %phases.repo_id,
                 lookups,
