@@ -102,13 +102,13 @@ fn is_retryable(err: &io::Error) -> bool {
             || err.kind() == io::ErrorKind::StaleNetworkFileHandle)
 }
 
-fn with_retry<'a, F, T>(io_operation: &mut F, path: &'a Path) -> io::Result<T>
+pub(crate) fn retry_io<F, T>(mut io_operation: F) -> io::Result<T>
 where
-    F: FnMut(&'a Path) -> io::Result<T>,
+    F: FnMut() -> io::Result<T>,
 {
     let mut attempts: u32 = 0;
     loop {
-        match io_operation(path) {
+        match io_operation() {
             Ok(v) => {
                 if attempts > 0 {
                     FILE_UTIL_RETRY_SUCCESS.increment();
@@ -127,6 +127,13 @@ where
             Err(err) => return Err(err),
         }
     }
+}
+
+fn with_retry<'a, F, T>(io_operation: &mut F, path: &'a Path) -> io::Result<T>
+where
+    F: FnMut(&'a Path) -> io::Result<T>,
+{
+    retry_io(|| io_operation(path))
 }
 
 pub fn exists(path: impl AsRef<Path>) -> io::Result<Option<std::fs::Metadata>> {
