@@ -36,6 +36,7 @@ use std::borrow::Borrow;
 use std::cmp::Ordering;
 use std::ffi::OsStr;
 use std::fmt;
+use std::io;
 use std::ops::Deref;
 use std::path::MAIN_SEPARATOR_STR;
 use std::path::Path;
@@ -48,6 +49,7 @@ use serde::Serializer;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use thiserror::Error;
+use util::no_follow::CheckedRelPath;
 
 /// An owned version of a `RepoPath`.
 #[derive(Clone, Debug, Default, Eq, PartialEq, Hash)]
@@ -632,6 +634,32 @@ impl TryFrom<PathBuf> for RepoPathBuf {
                 ParseError::InvalidUnicode(os_str.to_string_lossy().to_string())
             })?,
         )
+    }
+}
+
+impl<'a> TryFrom<&'a RepoPath> for CheckedRelPath<'a> {
+    type Error = io::Error;
+
+    fn try_from(path: &'a RepoPath) -> io::Result<Self> {
+        if path.is_empty() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "path must name a file or directory: RepoPath(\"\")",
+            ));
+        }
+
+        Ok(CheckedRelPath::from_verified_relative(Path::new(
+            path.as_str(),
+        )))
+    }
+}
+
+impl<'a> TryFrom<&'a RepoPathBuf> for CheckedRelPath<'a> {
+    type Error = io::Error;
+
+    fn try_from(path: &'a RepoPathBuf) -> io::Result<Self> {
+        let path: &RepoPath = path.as_ref();
+        path.try_into()
     }
 }
 
@@ -1277,6 +1305,18 @@ mod tests {
             format!("{:?}", RepoPath::from_str("slice").unwrap()),
             "RepoPath(\"slice\")"
         );
+    }
+
+    #[test]
+    fn test_repo_path_to_checked_rel_path() {
+        let path = RepoPath::from_str("foo/bar").unwrap();
+        let _checked: CheckedRelPath<'_> = path.try_into().unwrap();
+
+        let path_buf = RepoPathBuf::from_string("foo/bar".to_string()).unwrap();
+        let _checked: CheckedRelPath<'_> = (&path_buf).try_into().unwrap();
+
+        let empty_result: io::Result<CheckedRelPath<'_>> = RepoPath::empty().try_into();
+        assert!(empty_result.is_err());
     }
 
     #[test]
