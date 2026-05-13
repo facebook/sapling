@@ -28,6 +28,17 @@ FILE_SHARE_DELETE = 0x00000004
 FILE_SHARE_READ = 0x00000001
 FILE_SHARE_WRITE = 0x00000002
 
+# Hg may report the same Windows sharing violation with different context:
+#   pre-D104479395: abort: The process cannot access the file because it is being used by another process. (os error 32)
+#   post-D104479395: abort: failed to open file `mint`: The process cannot access the file because it is being used by another process. (os error 32)
+# Match either the canonical Windows message or the numeric error code, since
+# later diffs may stop including the numeric code in Python error formatting.
+WINDOWS_SHARING_VIOLATION_RE = (
+    r"(?s).*abort:.*"
+    r"(?:The process cannot access the file because it is being used by another process"
+    r"|os error 32).*"
+)
+
 
 @testcase.eden_repo_test
 class LockTest(testcase.EdenRepoTest):
@@ -105,8 +116,8 @@ class LockTest(testcase.EdenRepoTest):
         )
 
         self.check_read_blocked()
-        self.check_commit_edit_blocked()
-        self.check_commit_remove_blocked()
+        self.check_commit_edit_blocked(WINDOWS_SHARING_VIOLATION_RE)
+        self.check_commit_remove_blocked(WINDOWS_SHARING_VIOLATION_RE)
 
         # Handle is closed when it is deleted
         del handle
@@ -121,12 +132,12 @@ class LockTest(testcase.EdenRepoTest):
 
         # Check that reading is allowed
         self.check_read_allowed(self.UPDATED_FILE_CONTENTS)
-        self.check_commit_edit_blocked(".*abort: error writing files.*")
+        self.check_commit_edit_blocked(WINDOWS_SHARING_VIOLATION_RE)
 
         # BUG ZONE
         # TODO: This should be blocked, but it isn't
         try:
-            self.check_commit_remove_blocked(".*abort: error writing files.*")
+            self.check_commit_remove_blocked(WINDOWS_SHARING_VIOLATION_RE)
         except AssertionError as e:
             self.assertEqual(
                 e.args[0],
@@ -161,12 +172,8 @@ class LockTest(testcase.EdenRepoTest):
         )
 
         self.check_read_blocked()
-        self.check_commit_edit_blocked(
-            ".*abort: The process cannot access the file because it is being used by another process.*"
-        )
-        self.check_commit_remove_blocked(
-            ".*abort: The process cannot access the file because it is being used by another process.*"
-        )
+        self.check_commit_edit_blocked(WINDOWS_SHARING_VIOLATION_RE)
+        self.check_commit_remove_blocked(WINDOWS_SHARING_VIOLATION_RE)
 
         # Handle is closed when it is deleted
         del handle
@@ -180,12 +187,8 @@ class LockTest(testcase.EdenRepoTest):
         )
 
         self.check_read_blocked()
-        self.check_commit_edit_blocked(
-            ".*abort: The process cannot access the file because it is being used by another process.*"
-        )
-        self.check_commit_remove_blocked(
-            ".*abort: The process cannot access the file because it is being used by another process.*"
-        )
+        self.check_commit_edit_blocked(WINDOWS_SHARING_VIOLATION_RE)
+        self.check_commit_remove_blocked(WINDOWS_SHARING_VIOLATION_RE)
 
         # Handle is closed when it is deleted
         del handle
@@ -202,9 +205,7 @@ class LockTest(testcase.EdenRepoTest):
         self.check_commit_edit_allowed()
         # Same bug as in _test_share_read
         try:
-            self.check_commit_remove_blocked(
-                ".*abort: The process cannot access the file because it is being used by another process.*"
-            )
+            self.check_commit_remove_blocked(WINDOWS_SHARING_VIOLATION_RE)
         except AssertionError:
             pass
         self.assertEqual(self.repo.get_head_hash(), self.remove_file_commit)
@@ -234,9 +235,7 @@ class LockTest(testcase.EdenRepoTest):
         # checkout passes and file is changed to the correct value
         # despite not having write access
         try:
-            self.check_commit_edit_blocked(
-                ".*abort: The process cannot access the file because it is being used by another process.*"
-            )
+            self.check_commit_edit_blocked(WINDOWS_SHARING_VIOLATION_RE)
         except AssertionError:
             pass
         self.assertEqual(self.repo.get_head_hash(), self.add_file_commit)
@@ -261,12 +260,8 @@ class LockTest(testcase.EdenRepoTest):
         )
 
         self.check_read_blocked()
-        self.check_commit_edit_blocked(
-            ".*abort: The process cannot access the file because it is being used by another process.*"
-        )
-        self.check_commit_remove_blocked(
-            ".*abort: The process cannot access the file because it is being used by another process.*"
-        )
+        self.check_commit_edit_blocked(WINDOWS_SHARING_VIOLATION_RE)
+        self.check_commit_remove_blocked(WINDOWS_SHARING_VIOLATION_RE)
 
         # Handle is closed when it is deleted
         del handle
