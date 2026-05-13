@@ -6,8 +6,11 @@ load(
 )
 load("@fbcode//registry:defs.bzl", "rpm")
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbcode_macros//build_defs:fbcode_configured_alias.bzl", "fbcode_configured_alias")
 load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
 load("@fbcode_macros//build_defs:rust_universal_binary.bzl", "rust_universal_binary")
+load("@fbsource//tools/build_defs:default_platform_defs.bzl", "get_host_target_platform")
+load("@fbsource//tools/build_defs:rust_binary.bzl", "rust_binary")
 
 oncall("scm_client_infra")
 
@@ -20,7 +23,58 @@ cpp_library(
 )
 
 # Universal (x86_64 + arm64) binary targets for macOS packaging.
-# rust_universal_binary works for both Rust and C++ executables.
+# rust_universal_binary works for both Rust and C++ executables. Python PARs
+# are packaged behind a universal native shim with separate arm64/x86_64 PARs.
+
+rust_binary(
+    name = "mac_python_par_shim",
+    srcs = ["facebook/packaging/mac_python_par_shim.rs"],
+    compatible_with = ["ovr_config//os:macos"],
+    crate = "mac_python_par_shim",
+    crate_root = "facebook/packaging/mac_python_par_shim.rs",
+    unittests = False,
+)
+
+rust_universal_binary(
+    name = "mac_python_par_shim_universal",
+    source = ":mac_python_par_shim",
+)
+
+fbcode_configured_alias(
+    name = "edenfsctl_real_macos_arm64",
+    actual = "//eden/fs/cli:edenfsctl",
+    compatible_with = ["ovr_config//os:macos"],
+    default_target_platform = get_host_target_platform(use_minimal_xcode = True),
+    platform = "ovr_config//platform/macos:arm64-fbsource-minimal",
+    visibility = [],
+)
+
+fbcode_configured_alias(
+    name = "edenfsctl_real_macos_x86_64",
+    actual = "//eden/fs/cli:edenfsctl",
+    compatible_with = ["ovr_config//os:macos"],
+    default_target_platform = get_host_target_platform(use_minimal_xcode = True),
+    platform = "ovr_config//platform/macos:x86_64-fbsource-minimal",
+    visibility = [],
+)
+
+fbcode_configured_alias(
+    name = "edenfs_config_manager_macos_arm64",
+    actual = "//eden/fs/config/facebook:edenfs_config_manager",
+    compatible_with = ["ovr_config//os:macos"],
+    default_target_platform = get_host_target_platform(use_minimal_xcode = True),
+    platform = "ovr_config//platform/macos:arm64-fbsource-minimal",
+    visibility = [],
+)
+
+fbcode_configured_alias(
+    name = "edenfs_config_manager_macos_x86_64",
+    actual = "//eden/fs/config/facebook:edenfs_config_manager",
+    compatible_with = ["ovr_config//os:macos"],
+    default_target_platform = get_host_target_platform(use_minimal_xcode = True),
+    platform = "ovr_config//platform/macos:x86_64-fbsource-minimal",
+    visibility = [],
+)
 
 rust_universal_binary(
     name = "edenfs_universal",
@@ -35,6 +89,24 @@ rust_universal_binary(
 rust_universal_binary(
     name = "eden-fb303-collector_universal",
     source = "//eden/fs/facebook:eden-fb303-collector",
+)
+
+fbcode_configured_alias(
+    name = "edenfs_restarter_macos_arm64",
+    actual = "//eden/fs/facebook:edenfs_restarter",
+    compatible_with = ["ovr_config//os:macos"],
+    default_target_platform = get_host_target_platform(use_minimal_xcode = True),
+    platform = "ovr_config//platform/macos:arm64-fbsource-minimal",
+    visibility = [],
+)
+
+fbcode_configured_alias(
+    name = "edenfs_restarter_macos_x86_64",
+    actual = "//eden/fs/facebook:edenfs_restarter",
+    compatible_with = ["ovr_config//os:macos"],
+    default_target_platform = get_host_target_platform(use_minimal_xcode = True),
+    platform = "ovr_config//platform/macos:x86_64-fbsource-minimal",
+    visibility = [],
 )
 
 rust_universal_binary(
