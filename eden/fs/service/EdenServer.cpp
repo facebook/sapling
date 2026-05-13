@@ -88,6 +88,7 @@
 #include "eden/fs/store/TreeCache.h"
 #include "eden/fs/store/sl/SaplingBackingStore.h"
 #include "eden/fs/takeover/TakeoverData.h"
+#include "eden/fs/telemetry/EdenErrorInfoBuilder.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/EdenStructuredLogger.h"
 #include "eden/fs/telemetry/ErrorLogger.h"
@@ -983,6 +984,7 @@ folly::SemiFuture<Unit> EdenServer::unmountAll() {
 Future<TakeoverData> EdenServer::stopMountsForTakeover(
     folly::Promise<std::optional<TakeoverData>>&& takeoverPromise) {
   std::vector<Future<optional<TakeoverData::MountInfo>>> futures;
+  std::vector<AbsolutePath> mountPaths;
   {
     const auto mountPoints = mountPoints_->wlock();
     for (auto& [mountPath, info] : *mountPoints) {
@@ -1036,9 +1038,17 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover(
         auto ew = folly::exception_wrapper{std::current_exception()};
         XLOGF(
             ERR, "Error while stopping \"{}\" for takeover: {}", mountPath, ew);
+        ew.with_exception([&](const std::exception& ex) {
+          serverState_->logErrorEvent(
+              EdenErrorInfo::takeover(ex)
+                  .withMountPoint(std::string(mountPath.view()))
+                  .withMountStatus(
+                      fmt::format("{}", info.edenMount->getState())));
+        });
         futures.push_back(
             makeFuture<optional<TakeoverData::MountInfo>>(std::move(ew)));
       }
+      mountPaths.emplace_back(mountPath);
     }
   }
   // Use collectAll() rather than collect() to wait for all of the unmounts
@@ -1047,23 +1057,30 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover(
   // unsafe and deadlock prone. See eden/fs/docs/Futures.md for more details.
   return folly::collectAll(futures)
       .via(&folly::InlineExecutor::instance())
-      .thenValue([takeoverPromise = std::move(takeoverPromise)](
+      .thenValue([takeoverPromise = std::move(takeoverPromise),
+                  mountPaths = std::move(mountPaths),
+                  serverState = serverState_](
                      std::vector<folly::Try<optional<TakeoverData::MountInfo>>>
                          results) mutable {
         TakeoverData data;
         data.takeoverComplete = std::move(takeoverPromise);
         data.mountPoints.reserve(results.size());
-        for (auto& result : results) {
+        for (size_t i = 0; i < results.size(); ++i) {
+          auto& result = results[i];
+          const auto& path = mountPaths[i];
           // If something went wrong shutting down a mount point,
           // log the error but continue trying to perform graceful takeover
           // of the other mount points.
           if (!result.hasValue()) {
-            // TODO: Log this type of error either in the new process or the old
-            // process.
             XLOGF(
                 ERR,
-                "error stopping mount during takeover shutdown: {}",
+                "error stopping \"{}\" during takeover shutdown: {}",
+                path,
                 result.exception().what());
+            result.exception().with_exception([&](const std::exception& ex) {
+              serverState->logErrorEvent(
+                  EdenErrorInfo::takeover(ex).withMountPoint(path.asString()));
+            });
             continue;
           }
 
@@ -1072,9 +1089,7 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover(
           // in the middle of stopping it for takeover.  Just skip this mount
           // in this case.
           if (!result.value().has_value()) {
-            // TODO: Log this type of error either in the new process or the old
-            // process.
-            XLOG(WARN, "mount point was unmounted during takeover shutdown");
+            XLOGF(WARN, "\"{}\" was unmounted during takeover shutdown", path);
             continue;
           }
 
