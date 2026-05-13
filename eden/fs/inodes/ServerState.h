@@ -25,6 +25,7 @@ namespace facebook::eden {
 
 class Clock;
 class EdenConfig;
+class EdenErrorInfoBuilder;
 class EdenStats;
 class ErrorLogger;
 class FaultInjector;
@@ -182,6 +183,8 @@ class ServerState {
   }
 
   ErrorLogger* getErrorLogger() const;
+
+  void logErrorEvent(EdenErrorInfoBuilder builder);
 
   /**
    * Returns a ScribeLogger that can be used to send log events to external

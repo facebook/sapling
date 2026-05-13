@@ -19,6 +19,7 @@
 #include "eden/fs/inodes/InodeAccessLogger.h"
 #include "eden/fs/model/git/TopLevelIgnores.h"
 #include "eden/fs/nfs/NfsServer.h"
+#include "eden/fs/telemetry/EdenErrorInfoBuilder.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/ErrorLogger.h"
 #include "eden/fs/telemetry/FileAccessStructuredLogger.h"
@@ -135,6 +136,12 @@ ServerState::~ServerState() = default;
 
 ErrorLogger* ServerState::getErrorLogger() const {
   return dynamic_cast<ErrorLogger*>(errorStructuredLogger_.get());
+}
+
+void ServerState::logErrorEvent(EdenErrorInfoBuilder builder) {
+  if (auto* logger = getErrorLogger()) {
+    logger->logEvent(std::move(builder));
+  }
 }
 
 folly::ReadMostlySharedPtr<const EdenConfig> ServerState::getEdenConfig() {
