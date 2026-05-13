@@ -28,6 +28,7 @@ rust_library(
     }),
     deps = [
         "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:bitflags",
         "fbsource//third-party/rust:dirs",
         "fbsource//third-party/rust:fn-error-context",
         "fbsource//third-party/rust:fs-err",
@@ -53,6 +54,7 @@ rust_library(
             "fbsource//third-party/rust:tempfile",
         ],
         "ovr_config//os:windows": [
+            "fbsource//third-party/rust:ntapi",
             "fbsource//third-party/rust:widestring",
             "fbsource//third-party/rust:winapi",
         ],

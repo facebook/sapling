@@ -17,7 +17,12 @@
 pub mod errors;
 pub mod file;
 pub mod lock;
+#[cfg(any(unix, windows))]
+pub mod no_follow;
 pub mod path;
+mod path_error;
 pub mod utf8;
 
 pub use fs_err;
+pub use path_error::PathErrorDetails;
+pub use path_error::path_error_details;
