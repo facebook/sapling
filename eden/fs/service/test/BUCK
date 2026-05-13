@@ -114,8 +114,14 @@ cpp_unittest(
     labels = ["autodeps2_generated"],
     deps = [
         "fbsource//third-party/googletest:gtest",
+        "//eden/common/utils:fault_injector",
+        "//eden/fs/inodes:inodes",
         "//eden/fs/service:server",
+        "//eden/fs/takeover:takeover",
         "//eden/fs/testharness:test_server",
         "//folly:cancellation_token",
+    ],
+    external_deps = [
+        "gflags",
     ],
 )

@@ -284,10 +284,12 @@ cpp_library(
         "//eden/fs/store:backing_store_interface",
         "//eden/fs/telemetry:activity_recorder",
         "//eden/fs/telemetry:scribe_logger",
+        "//folly/io/async:async_base",
     ],
     exported_deps = [
         "//eden/common/utils:path",
         "//eden/fs/service:startup_status_subscriber",
+        "//folly/futures:core",
         "//folly/testing:test_util",
     ],
     external_deps = [

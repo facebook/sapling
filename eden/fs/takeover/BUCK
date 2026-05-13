@@ -18,6 +18,9 @@ thrift_library(
     thrift_srcs = {
         "takeover.thrift": [],
     },
+    deps = [
+        "//thrift/annotation:thrift",
+    ],
 )
 
 cpp_library(

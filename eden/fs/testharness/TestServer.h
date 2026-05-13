@@ -9,6 +9,7 @@
 
 #include <memory>
 
+#include <folly/futures/Future.h>
 #include <folly/testing/TestUtil.h>
 
 #include "eden/common/utils/PathFuncs.h"
@@ -29,6 +30,7 @@ class TestServer {
   ~TestServer();
 
   AbsolutePath getTmpDir() const;
+  void waitUntilReady();
 
   EdenServer& getServer() {
     return *server_;
@@ -40,6 +42,7 @@ class TestServer {
       std::shared_ptr<StartupStatusChannel> startStatusChannel);
 
   folly::test::TemporaryDirectory tmpDir_;
+  folly::Future<folly::Unit> prepareResult_;
   std::unique_ptr<EdenServer> server_;
 };
 
