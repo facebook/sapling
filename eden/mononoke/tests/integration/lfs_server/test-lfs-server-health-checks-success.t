@@ -59,7 +59,6 @@
       "CachelibMisses": 0,
       "GetpackNumPossibleLFSFiles": 0,
       "GetpackPossibleLFSFilesSumSize": 0,
-      "GettreepackDesignatedNodes": 0,
       "MemcacheHits": 0,
       "MemcacheMisses": 0,
       "SqlReadsMaster": 0,
