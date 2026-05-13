@@ -18,6 +18,7 @@ use edenapi_types::CheckPathPermissionRequest;
 use edenapi_types::CheckPathPermissionResponse;
 use edenapi_types::FileAuxData;
 use edenapi_types::SaplingRemoteApiServerError;
+use edenapi_types::SaplingRemoteApiServerErrorKind;
 use edenapi_types::TreeAttributes;
 use edenapi_types::TreeAuxData;
 use edenapi_types::TreeChildEntry;
@@ -51,6 +52,7 @@ use mercurial_types::HgManifestId;
 use mercurial_types::HgNodeHash;
 use mononoke_api::MononokeRepo;
 use mononoke_api::Repo;
+use mononoke_api::errors::MononokeError;
 use mononoke_api_hg::HgAugmentedTreeRestrictionContext;
 use mononoke_api_hg::HgDataContext;
 use mononoke_api_hg::HgDataId;
@@ -135,7 +137,7 @@ fn fetch_all_trees<R: MononokeRepo>(
             .map(|r| r.map_err(|e| SaplingRemoteApiServerError::with_key(key, e)))
             .left_future(),
         SlapiCommitIdentityScheme::Hg => fetch_tree(repo.clone(), key.clone(), request.attributes)
-            .map(|r| r.map_err(|e| SaplingRemoteApiServerError::with_key(key, e)))
+            .map(|r| r.map_err(|e| tree_fetch_error_to_slapi_error(key, e)))
             .right_future(),
     });
 
@@ -146,6 +148,31 @@ fn fetch_all_trees<R: MononokeRepo>(
                 .bump_load(Metric::TotalManifests, Scope::Regional, 1.0);
             STATS::manifests_served.add_value(1);
         })
+}
+
+fn tree_fetch_error_to_slapi_error(key: Key, err: Error) -> SaplingRemoteApiServerError {
+    let permission_request_group =
+        err.chain()
+            .find_map(|cause| match cause.downcast_ref::<MononokeError>() {
+                Some(MononokeError::RestrictedPathsAuthorizationError(err))
+                    if err.is_manifest_access() =>
+                {
+                    Some(err.permission_request_group().to_string())
+                }
+                _ => None,
+            });
+
+    if let Some(permission_request_group) = permission_request_group {
+        SaplingRemoteApiServerError {
+            err: SaplingRemoteApiServerErrorKind::PermissionDenied {
+                tree_id: key.hgid,
+                request_acl: permission_request_group,
+            },
+            key: Some(key),
+        }
+    } else {
+        SaplingRemoteApiServerError::with_key(key, err)
+    }
 }
 
 // Sapling wants to use trees the same way for Hg and Git, so shaping somehow
@@ -555,5 +582,77 @@ impl SaplingRemoteApiHandler for CheckPathPermissionHandler {
             })
             .buffer_unordered(20)
             .boxed())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use anyhow::Result;
+    use mononoke_macros::mononoke;
+    use restricted_paths::ManifestId;
+    use restricted_paths::PermissionRequestGroup;
+    use restricted_paths::RestrictedPathAccess;
+    use restricted_paths::RestrictedPathsAuthorizationError;
+    use types::HgId;
+
+    use super::*;
+
+    #[mononoke::test]
+    fn test_tree_fetch_error_to_slapi_error_preserves_manifest_permission_denied() -> Result<()> {
+        let key = test_key()?;
+        let err = restricted_paths_error(
+            RestrictedPathAccess::Manifest(ManifestId::from(
+                "1111111111111111111111111111111111111111",
+            )),
+            "REPO_REGION:test_acl",
+        )?;
+
+        let slapi_error = tree_fetch_error_to_slapi_error(key.clone(), err);
+        match slapi_error.err {
+            SaplingRemoteApiServerErrorKind::PermissionDenied {
+                tree_id,
+                request_acl: permission_request_group,
+            } => {
+                assert_eq!(tree_id, key.hgid);
+                assert_eq!(permission_request_group, "REPO_REGION:test_acl");
+            }
+            err => anyhow::bail!("expected PermissionDenied, got {err:?}"),
+        }
+        assert_eq!(slapi_error.key, Some(key));
+        Ok(())
+    }
+
+    #[mononoke::test]
+    fn test_tree_fetch_error_to_slapi_error_ignores_path_permission_denied() -> Result<()> {
+        let key = test_key()?;
+        let err = restricted_paths_error(
+            RestrictedPathAccess::Path(MPath::new("restricted")?),
+            "REPO_REGION:test_acl",
+        )?;
+
+        let slapi_error = tree_fetch_error_to_slapi_error(key.clone(), err);
+        if let SaplingRemoteApiServerErrorKind::PermissionDenied { .. } = slapi_error.err {
+            anyhow::bail!("path access denial should not be converted to tree PermissionDenied");
+        }
+        assert_eq!(slapi_error.key, Some(key));
+        Ok(())
+    }
+
+    fn restricted_paths_error(
+        access: RestrictedPathAccess,
+        permission_request_group: &str,
+    ) -> Result<Error> {
+        let permission_request_group: PermissionRequestGroup = permission_request_group.parse()?;
+        Ok(Error::new(MononokeError::RestrictedPathsAuthorizationError(
+            RestrictedPathsAuthorizationError::new(access, permission_request_group),
+        ))
+        .context("failed to fetch tree"))
+    }
+
+    fn test_key() -> Result<Key> {
+        Ok(Key {
+            hgid: HgId::null_id().clone(),
+            path: RepoPathBuf::from_string("restricted".to_string())?,
+        })
     }
 }
