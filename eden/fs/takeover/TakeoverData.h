@@ -369,6 +369,13 @@ class TakeoverData {
    */
   std::optional<folly::File> mountdServerSocket;
 
+  /**
+   * Tracks whether mountd accepts were paused while preparing takeover data.
+   * This is used only for local takeover recovery and is not serialized to the
+   * taking-over process.
+   */
+  bool mountdAcceptsPaused{false};
+
   std::vector<FileDescriptorType> generalFDOrder;
 
   // allows manipulating the result of generateGeneralFdOrder in tests.

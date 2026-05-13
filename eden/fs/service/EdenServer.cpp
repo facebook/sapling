@@ -1299,7 +1299,7 @@ ImmediateFuture<Unit> EdenServer::recoverImpl(TakeoverData&& takeoverData) {
   server_->useExistingSocket(takeoverData.thriftSocket.release());
 
   if (auto nfsServer = serverState_->getNfsServer();
-      nfsServer && takeoverData.mountdServerSocket.has_value()) {
+      nfsServer && takeoverData.mountdAcceptsPaused) {
     XLOG(DBG7, "Resuming mountd accepts after takeover recovery");
     nfsServer->resumeMountdAccepting();
   }
@@ -1375,6 +1375,16 @@ std::chrono::seconds getTakeoverTimeoutSeconds(const EdenConfig& config) {
   return std::chrono::duration_cast<std::chrono::seconds>(
       config.takeoverReceiveTimeout.getValue());
 }
+
+#ifndef _WIN32
+Future<TakeoverData> recoverPreparedTakeoverFromError(
+    folly::exception_wrapper ew,
+    TakeoverData&& takeover) {
+  auto takeoverPromise = std::move(takeover.takeoverComplete);
+  takeoverPromise.setValue(std::move(takeover));
+  return makeFuture<TakeoverData>(std::move(ew));
+}
+#endif
 } // namespace
 
 Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
@@ -2708,42 +2718,63 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
         }
         return stopMountsForTakeover(std::move(takeoverPromise));
       })
-      .thenValue([this, socket = std::move(thriftSocket)](
-                     TakeoverData&& takeover) mutable {
-        takeover.lockFile = edenDir_.extractLock();
+      .thenTry(
+          [this, socket = std::move(thriftSocket)](
+              folly::Try<TakeoverData>&& result) mutable
+              -> folly::Future<TakeoverData> {
+            if (result.hasException()) {
+              return makeFuture<TakeoverData>(result.exception());
+            }
 
-        takeover.thriftSocket = std::move(socket);
-        return via(getMainEventBase())
-            .thenValue(
-                [this](
-                    auto&&) -> folly::SemiFuture<std::optional<folly::File>> {
-                  if (auto& takeoverServer =
-                          this->getServerState()->getNfsServer()) {
-                    return takeoverServer->takeoverStop().deferValue(
-                        [](folly::File file) {
-                          return std::make_optional<folly::File>(
-                              std::move(file));
-                        });
-                  } else {
-                    return std::nullopt;
-                  }
-                })
-            .thenValue([this, takeover = std::move(takeover)](
-                           std::optional<folly::File>&& mountdSocket) mutable {
-              if (mountdSocket.has_value()) {
-                XLOGF(
-                    DBG7,
-                    "Got mountd Socket for takeover {}",
-                    mountdSocket.value().fd());
-              }
-              takeover.mountdServerSocket = std::move(mountdSocket);
-              // Allow tests to inject a failure after the takeover data is
-              // fully prepared but before it is handed back to TakeoverServer.
-              serverState_->getFaultInjector().check(
-                  "takeover", "post_prepare_data");
-              return std::move(takeover);
-            });
-      })
+            auto takeover = std::move(result).value();
+            takeover.lockFile = edenDir_.extractLock();
+            takeover.thriftSocket = std::move(socket);
+            return via(getMainEventBase())
+                .thenValue(
+                    [this](auto&&)
+                        -> folly::SemiFuture<std::optional<folly::File>> {
+                      if (auto& takeoverServer =
+                              this->getServerState()->getNfsServer()) {
+                        return takeoverServer->takeoverStop().deferValue(
+                            [](folly::File file) {
+                              return std::make_optional<folly::File>(
+                                  std::move(file));
+                            });
+                      } else {
+                        return std::nullopt;
+                      }
+                    })
+                .thenTry(
+                    [this, takeover = std::move(takeover)](
+                        folly::Try<std::optional<folly::File>>&&
+                            mountdSocket) mutable
+                        -> folly::Future<TakeoverData> {
+                      takeover.mountdAcceptsPaused =
+                          this->getServerState()->getNfsServer() != nullptr;
+                      if (mountdSocket.hasException()) {
+                        return recoverPreparedTakeoverFromError(
+                            mountdSocket.exception(), std::move(takeover));
+                      }
+
+                      if (mountdSocket->has_value()) {
+                        XLOGF(
+                            DBG7,
+                            "Got mountd Socket for takeover {}",
+                            mountdSocket->value().fd());
+                      }
+                      takeover.mountdServerSocket =
+                          std::move(mountdSocket).value();
+
+                      auto postPrepareResult =
+                          serverState_->getFaultInjector().checkTry(
+                              "takeover", "post_prepare_data");
+                      if (postPrepareResult.hasException()) {
+                        return recoverPreparedTakeoverFromError(
+                            postPrepareResult.exception(), std::move(takeover));
+                      }
+                      return makeFuture<TakeoverData>(std::move(takeover));
+                    });
+          })
       .thenTry([this,
                 takeoverSendWatch](folly::Try<TakeoverData>&& result) mutable {
         auto& stats = serverState_->getStats();

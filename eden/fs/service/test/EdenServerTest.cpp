@@ -390,7 +390,7 @@ TEST_F(EdenServerTest, RepeatedTakeoverFailuresDoNotBreakShutdownFuture) {
   {
     // Then trigger a second takeover failure after the server has already
     // recovered once. This exercises the path where TakeoverData has already
-    // been prepared and a later failure can still poison shutdown cleanup.
+    // been prepared and must not leave takeoverComplete as a broken promise.
     ScopedServerThread serverThread{server};
     ASSERT_TRUE(driveMainEventBaseUntil(server, [&] {
       return server.getStatus() == EdenServer::RunState::RUNNING;
@@ -422,10 +422,22 @@ TEST_F(EdenServerTest, RepeatedTakeoverFailuresDoNotBreakShutdownFuture) {
     ASSERT_TRUE(serverThread.waitForExit(5s));
     serverThread.join();
     ASSERT_NO_THROW(serverThread.throwIfServeFailed());
+    EXPECT_FALSE(server.performCleanup());
+  }
 
-    // FIXME: cleanup should recover from a later post-prepare failure instead
-    // of surfacing a BrokenPromise and preventing the daemon from continuing.
-    EXPECT_THROW(server.performCleanup(), std::exception);
+  {
+    // Finally verify the daemon is still healthy enough to restart cleanly
+    // after both failed takeover attempts.
+    ScopedServerThread serverThread{server};
+    ASSERT_TRUE(driveMainEventBaseUntil(server, [&] {
+      return server.getStatus() == EdenServer::RunState::RUNNING;
+    }));
+
+    server.stop();
+    ASSERT_TRUE(serverThread.waitForExit(5s));
+    serverThread.join();
+    ASSERT_NO_THROW(serverThread.throwIfServeFailed());
+    EXPECT_TRUE(server.performCleanup());
   }
 }
 #endif
