@@ -184,12 +184,12 @@ impl MononokeGitScubaHandler {
         }
         scuba.add(MononokeGitScubaKey::ErrorCount, info.error_count());
 
-        let stream_hung = info
+        let stream_aborted = info
             .stream_stats
             .as_ref()
             .is_some_and(|stats| !stats.completed);
-        let log_tag = if stream_hung {
-            "MononokeGit Request Hung"
+        let log_tag = if stream_aborted {
+            "MononokeGit Request Aborted"
         } else {
             "MononokeGit Request Processed"
         };
