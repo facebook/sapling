@@ -122,6 +122,7 @@ cpp_unittest(
         "//eden/fs/takeover:takeover",
         "//eden/fs/testharness:test_server",
         "//folly:cancellation_token",
+        "//folly:exception_wrapper",
         "//folly:scope_guard",
         "//folly/io:iobuf",
     ],

@@ -2728,7 +2728,7 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
                     return std::nullopt;
                   }
                 })
-            .thenValue([takeover = std::move(takeover)](
+            .thenValue([this, takeover = std::move(takeover)](
                            std::optional<folly::File>&& mountdSocket) mutable {
               if (mountdSocket.has_value()) {
                 XLOGF(
@@ -2737,6 +2737,10 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
                     mountdSocket.value().fd());
               }
               takeover.mountdServerSocket = std::move(mountdSocket);
+              // Allow tests to inject a failure after the takeover data is
+              // fully prepared but before it is handed back to TakeoverServer.
+              serverState_->getFaultInjector().check(
+                  "takeover", "post_prepare_data");
               return std::move(takeover);
             });
       })

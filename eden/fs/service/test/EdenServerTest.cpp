@@ -13,14 +13,17 @@
 #include <unistd.h>
 #endif
 
+#include <chrono>
 #include <csignal>
 #include <cstring>
+#include <functional>
 #include <future>
 #include <memory>
 #include <system_error>
 #include <thread>
 
 #include <folly/CancellationToken.h>
+#include <folly/ExceptionWrapper.h>
 #include <folly/ScopeGuard.h>
 #include <folly/io/IOBufQueue.h>
 #include <gflags/gflags.h>
@@ -97,7 +100,8 @@ std::future<TakeoverData> takeoverViaThread(
 
 void driveTakeoverSendFailureToCleanup(
     TestServer& testServer,
-    EdenServer& server) {
+    EdenServer& server,
+    size_t blockCount = 0) {
   // The old daemon intentionally writes takeover data to a client that has
   // already disconnected. Ignore SIGPIPE so the broken send is reported as a
   // socket exception instead of killing the test process.
@@ -112,7 +116,7 @@ void driveTakeoverSendFailureToCleanup(
   auto& faultInjector = server.getServerState()->getFaultInjector();
   // Pause the old daemon after it sends the readiness ping. This lets the new
   // process reply and then disconnect before the takeover payload is sent.
-  faultInjector.injectBlock("takeover", "ping_receive");
+  faultInjector.injectBlock("takeover", "ping_receive", blockCount);
 
   auto socketPath = EdenStateDir{server.getEdenDir()}.getTakeoverSocketPath();
   auto clientFuture = takeoverViaThread(
@@ -205,6 +209,62 @@ bool pollForReply(int clientFd, int timeoutMs) {
   pfd.fd = clientFd;
   pfd.events = POLLIN;
   return poll(&pfd, 1, timeoutMs) > 0 && (pfd.revents & POLLIN);
+}
+
+template <typename Predicate>
+bool driveMainEventBaseUntil(
+    EdenServer& server,
+    Predicate&& predicate,
+    std::chrono::milliseconds timeout = std::chrono::seconds{5}) {
+  auto* evb = server.getMainEventBase();
+  struct PollState : std::enable_shared_from_this<PollState> {
+    PollState(
+        folly::EventBase* evb,
+        std::function<bool()> predicate,
+        std::chrono::steady_clock::time_point deadline,
+        std::chrono::milliseconds pollInterval)
+        : evb{evb},
+          predicate{std::move(predicate)},
+          deadline{deadline},
+          pollInterval{pollInterval} {}
+
+    void check() {
+      if (finished) {
+        return;
+      }
+      if (predicate()) {
+        reachedCondition = true;
+        evb->terminateLoopSoon();
+        return;
+      }
+      if (std::chrono::steady_clock::now() >= deadline) {
+        evb->terminateLoopSoon();
+        return;
+      }
+      auto state = this->shared_from_this();
+      evb->runAfterDelay(
+          [state] { state->check(); },
+          static_cast<uint32_t>(pollInterval.count()));
+    }
+
+    folly::EventBase* evb;
+    std::function<bool()> predicate;
+    std::chrono::steady_clock::time_point deadline;
+    std::chrono::milliseconds pollInterval;
+    bool finished{false};
+    bool reachedCondition{false};
+  };
+
+  constexpr auto kPollInterval = 10ms;
+  auto state = std::make_shared<PollState>(
+      evb,
+      std::forward<Predicate>(predicate),
+      std::chrono::steady_clock::now() + timeout,
+      kPollInterval);
+  evb->runInEventBaseThread([state] { state->check(); });
+  evb->loop();
+  state->finished = true;
+  return state->reachedCondition;
 }
 #endif
 
@@ -310,6 +370,62 @@ TEST_F(EdenServerTest, TakeoverSendFailureRecoveryReinitializesMountd) {
   if (hasReply) {
     uint8_t reply[256];
     EXPECT_GT(read(mountdFd, reply, sizeof(reply)), 0);
+  }
+}
+
+TEST_F(EdenServerTest, RepeatedTakeoverFailuresDoNotBreakShutdownFuture) {
+  auto& server = testServer().getServer();
+  auto& faultInjector = server.getServerState()->getFaultInjector();
+  auto socketPath = EdenStateDir{server.getEdenDir()}.getTakeoverSocketPath();
+
+  {
+    // First reproduce the original handoff failure: the new process replies to
+    // the readiness ping and then disconnects before takeover data transfer
+    // completes. The daemon should recover and continue serving.
+    ASSERT_NO_FATAL_FAILURE(
+        driveTakeoverSendFailureToCleanup(testServer(), server, 1));
+    EXPECT_FALSE(server.performCleanup());
+  }
+
+  {
+    // Then trigger a second takeover failure after the server has already
+    // recovered once. This exercises the path where TakeoverData has already
+    // been prepared and a later failure can still poison shutdown cleanup.
+    ScopedServerThread serverThread{server};
+    ASSERT_TRUE(driveMainEventBaseUntil(server, [&] {
+      return server.getStatus() == EdenServer::RunState::RUNNING;
+    }));
+
+    faultInjector.injectError(
+        "takeover",
+        "post_prepare_data",
+        folly::make_exception_wrapper<std::runtime_error>(
+            "simulated takeover failure after data preparation"),
+        1);
+
+    auto clientFuture = takeoverViaThread(
+        socketPath,
+        /*shouldThrowDuringTakeover=*/false);
+
+    ASSERT_TRUE(driveMainEventBaseUntil(server, [&] {
+      return clientFuture.wait_for(0ms) == std::future_status::ready;
+    }));
+
+    bool clientSawException = false;
+    try {
+      (void)clientFuture.get();
+    } catch (const std::exception&) {
+      clientSawException = true;
+    }
+    ASSERT_TRUE(clientSawException);
+
+    ASSERT_TRUE(serverThread.waitForExit(5s));
+    serverThread.join();
+    ASSERT_NO_THROW(serverThread.throwIfServeFailed());
+
+    // FIXME: cleanup should recover from a later post-prepare failure instead
+    // of surfacing a BrokenPromise and preventing the daemon from continuing.
+    EXPECT_THROW(server.performCleanup(), std::exception);
   }
 }
 #endif
