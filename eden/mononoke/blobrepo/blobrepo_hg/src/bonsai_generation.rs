@@ -197,7 +197,7 @@ async fn get_copy_info(
                 .ok_or(ErrorKind::UnexpectedRootPath)?;
 
             let parents_bonsai_and_mfs =
-                stream::iter(bonsai_parents.into_iter().zip(parent_manifests.into_iter()));
+                stream::iter(bonsai_parents.into_iter().zip(parent_manifests));
 
             let get_bonsai_cs_copied_from =
                 |(bonsai_parent, parent_mf): (ChangesetId, HgManifestId)| {
