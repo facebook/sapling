@@ -1333,17 +1333,10 @@ impl SourceControlServiceImpl {
         // clients pass i32::MAX as a sentinel for "unlimited"; this gives them
         // a glide path to migrate without breakage. Shared knob across history
         // methods (commit_history, commit_path_history).
-        let client_main_id = ctx
-            .metadata()
-            .client_info()
-            .and_then(|ci| ci.request_info.as_ref())
-            .and_then(|cri| cri.main_id.as_deref());
-        let enforce_limit = justknobs::eval(
-            "scm/mononoke:scs_history_enforce_limit",
-            None,
-            client_main_id,
-        )
-        .map_err(scs_errors::internal_error)?;
+        let client_id = ctx.metadata().upstream_client_id();
+        let enforce_limit =
+            justknobs::eval("scm/mononoke:scs_history_enforce_limit", None, client_id)
+                .map_err(scs_errors::internal_error)?;
         let limit_max = if enforce_limit {
             source_control::COMMIT_HISTORY_MAX_LIMIT
         } else {
