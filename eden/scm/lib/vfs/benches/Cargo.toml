@@ -6,7 +6,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-ctor = "0.6.3"
+ctor = "0.7.0"
 sapling-dev-logger = { version = "0.1.0", path = "../../dev-logger" }
 sapling-minibench = { version = "0.1.0", path = "../../minibench" }
 sapling-types = { version = "0.1.0", path = "../../types" }
