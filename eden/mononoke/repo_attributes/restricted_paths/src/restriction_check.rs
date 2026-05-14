@@ -46,6 +46,11 @@ mod tests;
 /// Identity users should request for access to a restricted path.
 pub type PermissionRequestGroup = MononokeIdentity;
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct AccessEnforcementOutcome {
+    pub(crate) denial_permission_request_group: Option<PermissionRequestGroup>,
+}
+
 /// Source to use for path-side restriction checks.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) enum PathRestrictionSource {
@@ -733,18 +738,17 @@ pub(crate) fn condition_sets_match_restriction_acls(
     })
 }
 
-/// Evaluate one authoritative source for a denial permission request group.
+/// Evaluate one authoritative source for an enforcement outcome.
 ///
-/// Returns `Ok(Some(_))` when the source matches the active enforcement
-/// condition sets and at least one matching restriction denies the caller.
-/// Returns `Ok(None)` when the source does not match the condition sets, or
-/// when every matching restriction authorizes the caller. Returns `Err(_)`
-/// when fetching or evaluating the source fails.
-pub(crate) async fn source_denial_permission_request_group<'a, T>(
+/// A denial permission request group is present only when the source matches
+/// the active enforcement condition sets and at least one matching restriction
+/// denies the caller. Returns `Err(_)` when fetching or evaluating the source
+/// fails.
+pub(crate) async fn source_enforcement_outcome<'a, T>(
     handle: &SharedFetchHandle<T>,
     candidates: &[&'a EnforcementConditionSet],
     pre_filter_variant: &PreFilterVariant,
-) -> Result<Option<PermissionRequestGroup>>
+) -> Result<AccessEnforcementOutcome>
 where
     T: SourceRestrictionCheck + Send + Sync + 'static,
 {
@@ -762,10 +766,12 @@ where
     };
 
     if !any_match {
-        return Ok(None);
+        return Ok(AccessEnforcementOutcome {
+            denial_permission_request_group: None,
+        });
     }
 
-    Ok(result
+    let denial_permission_request_group = result
         .as_ref()
         .iter()
         .filter(|check| !check.authorization().has_authorization())
@@ -773,24 +779,29 @@ where
         // permission request group so error messages do not depend on source
         // result ordering.
         .min_by(|left, right| compare_denied_checks(*left, *right))
-        .map(|check| check.permission_request_group().clone()))
+        .map(|check| check.permission_request_group().clone());
+
+    Ok(AccessEnforcementOutcome {
+        denial_permission_request_group,
+    })
 }
 
-/// Combine authoritative source denial permission request groups.
+/// Combine authoritative source enforcement outcomes.
 ///
-/// Returns `Ok(Some(_))` when any selected source denies access, even if a
-/// sibling source failed. Returns `Ok(None)` when all selected sources
-/// authorize or do not match the enforcement condition sets. Returns the first
-/// source error only when no source denies.
-pub(crate) fn authoritative_sources_denial_permission_request_group(
-    source_denials: Vec<Result<Option<PermissionRequestGroup>>>,
-) -> Result<Option<PermissionRequestGroup>> {
+/// Returns a denial when any source denies access, even if a sibling source
+/// failed. Returns the first source error only when no source denies.
+pub(crate) fn authoritative_sources_enforcement_outcome(
+    source_outcomes: Vec<Result<AccessEnforcementOutcome>>,
+) -> Result<AccessEnforcementOutcome> {
     let mut first_error = None;
 
-    for source_denial in source_denials {
-        match source_denial {
-            Ok(Some(permission_request_group)) => return Ok(Some(permission_request_group)),
-            Ok(None) => {}
+    for source_outcome in source_outcomes {
+        match source_outcome {
+            Ok(outcome) => {
+                if outcome.denial_permission_request_group.is_some() {
+                    return Ok(outcome);
+                }
+            }
             Err(err) if first_error.is_none() => {
                 first_error = Some(err);
             }
@@ -801,7 +812,9 @@ pub(crate) fn authoritative_sources_denial_permission_request_group(
     if let Some(err) = first_error {
         Err(err)
     } else {
-        Ok(None)
+        Ok(AccessEnforcementOutcome {
+            denial_permission_request_group: None,
+        })
     }
 }
 

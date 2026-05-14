@@ -675,7 +675,7 @@ where
         return Ok(());
     }
 
-    let denial_permission_request_group = enforce_with_source_handles(
+    let enforcement_outcome = enforce_with_source_handles(
         fetches.enforcement_config,
         fetches.enforcement_acl_manifest,
         &handles,
@@ -689,7 +689,7 @@ where
     )
     .await?;
 
-    if let Some(permission_request_group) = denial_permission_request_group {
+    if let Some(permission_request_group) = enforcement_outcome.denial_permission_request_group {
         Err(authorization_error(permission_request_group))
     } else {
         Ok(())
@@ -861,12 +861,16 @@ async fn enforce_with_source_handles<'a, T>(
     handles: &SourceHandles<T>,
     pre_filter_result: PreFilterResult<'a>,
     missing_source_error: anyhow::Error,
-) -> Result<Option<PermissionRequestGroup>>
+) -> Result<restriction_check::AccessEnforcementOutcome>
 where
     T: SourceRestrictionCheck + Send + Sync + 'static,
 {
     let (candidates, pre_filter_variant) = match pre_filter_result {
-        PreFilterResult::NoMatch => return Ok(None),
+        PreFilterResult::NoMatch => {
+            return Ok(restriction_check::AccessEnforcementOutcome {
+                denial_permission_request_group: None,
+            });
+        }
         PreFilterResult::DefiniteMatch { candidates } => {
             (candidates, restriction_check::PreFilterVariant::Definite)
         }
@@ -876,20 +880,16 @@ where
     };
 
     let selected_sources = handles.selected_for(fetch_config, fetch_acl_manifest);
-    let mut source_denials =
+    let mut source_outcomes =
         futures::future::join_all(selected_sources.handles.into_iter().map(|handle| {
-            restriction_check::source_denial_permission_request_group(
-                handle,
-                &candidates,
-                &pre_filter_variant,
-            )
+            restriction_check::source_enforcement_outcome(handle, &candidates, &pre_filter_variant)
         }))
         .await;
     if selected_sources.missing_source {
-        source_denials.push(Err(missing_source_error));
+        source_outcomes.push(Err(missing_source_error));
     }
 
-    restriction_check::authoritative_sources_denial_permission_request_group(source_denials)
+    restriction_check::authoritative_sources_enforcement_outcome(source_outcomes)
 }
 
 #[cfg(test)]

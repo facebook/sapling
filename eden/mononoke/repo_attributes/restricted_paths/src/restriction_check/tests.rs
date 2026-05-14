@@ -63,21 +63,18 @@ async fn test_shared_fetch_handle_awaits_one_spawned_fetch() -> Result<()> {
 // Expected: the permission request group for the lexicographically first known
 // restriction root is returned.
 #[tokio::test]
-async fn test_source_denial_permission_request_group_is_deterministic() -> Result<()> {
+async fn test_source_enforcement_outcome_denial_permission_request_group_is_deterministic()
+-> Result<()> {
     let handle = SharedFetchHandle::from_result(Ok(vec![
         path_restriction_check_with("restricted/z", "REPO_REGION:z_acl", false)?,
         path_restriction_check_with("restricted/a", "REPO_REGION:a_acl", false)?,
     ]));
 
-    let denial_permission_request_group = super::source_denial_permission_request_group(
-        &handle,
-        &[],
-        &super::PreFilterVariant::Definite,
-    )
-    .await?;
+    let outcome =
+        super::source_enforcement_outcome(&handle, &[], &super::PreFilterVariant::Definite).await?;
 
     assert_eq!(
-        denial_permission_request_group,
+        outcome.denial_permission_request_group,
         Some(MononokeIdentity::from_str("REPO_REGION:a_acl")?)
     );
     Ok(())
@@ -88,17 +85,23 @@ async fn test_source_denial_permission_request_group_is_deterministic() -> Resul
 // Expected: any denial wins over sibling source errors, while a no-deny error
 // is propagated.
 #[tokio::test]
-async fn test_authoritative_source_denial_permission_request_group_preserves_error_semantics()
--> Result<()> {
+async fn test_authoritative_source_enforcement_outcome_preserves_error_semantics() -> Result<()> {
     let permission_request_group = MononokeIdentity::from_str("REPO_REGION:deny_acl")?;
-    let denied = super::authoritative_sources_denial_permission_request_group(vec![
+    let denied = super::authoritative_sources_enforcement_outcome(vec![
         Err(anyhow::anyhow!("source failed")),
-        Ok(Some(permission_request_group.clone())),
+        Ok(super::AccessEnforcementOutcome {
+            denial_permission_request_group: Some(permission_request_group.clone()),
+        }),
     ])?;
-    assert_eq!(denied, Some(permission_request_group));
+    assert_eq!(
+        denied.denial_permission_request_group,
+        Some(permission_request_group)
+    );
 
-    let no_denial = super::authoritative_sources_denial_permission_request_group(vec![
-        Ok(None),
+    let no_denial = super::authoritative_sources_enforcement_outcome(vec![
+        Ok(super::AccessEnforcementOutcome {
+            denial_permission_request_group: None,
+        }),
         Err(anyhow::anyhow!("source failed")),
     ]);
     assert!(no_denial.is_err());
