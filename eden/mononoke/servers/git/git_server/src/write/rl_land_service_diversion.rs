@@ -98,6 +98,34 @@ pub fn should_divert_to_rl_land_service(
     Ok(divert)
 }
 
+/// Build a `DiffChange` from a single `RefUpdate`.
+///
+/// Populates the new `old_git_hash` field from `ref_update.from` for
+/// non-create updates, so aosp_service can switch from `set_bookmark` to
+/// `move_bookmark` and restore CAS-rebase semantics. For branch creates
+/// (`from` is the null OID), `old_git_hash` is `None` and aosp_service
+/// keeps the `set_bookmark` form.
+fn build_diff_change(repo_name: &str, ref_update: &RefUpdate) -> DiffChange {
+    let branch = ref_update
+        .ref_name
+        .strip_prefix("refs/heads/")
+        .unwrap_or(ref_update.ref_name.as_str())
+        .to_string();
+    let old_git_hash = if ref_update.from.is_null() {
+        None
+    } else {
+        Some(hex::encode(ref_update.from.as_slice()))
+    };
+    DiffChange {
+        project: repo_name.to_string(),
+        branch,
+        git_hash: hex::encode(ref_update.to.as_slice()),
+        original_diff_id: None,
+        old_git_hash,
+        ..Default::default()
+    }
+}
+
 /// Whether an emergency push was requested and authorized.
 pub enum EmergencyPushStatus {
     /// The x-git-emergency-push pushvar was not set.
@@ -174,18 +202,7 @@ pub async fn fire_and_forget_submit_land(
             if !ref_update.ref_name.starts_with("refs/heads/") || ref_update.to.is_null() {
                 return None;
             }
-            let branch = ref_update
-                .ref_name
-                .strip_prefix("refs/heads/")
-                .unwrap_or(ref_update.ref_name.as_str())
-                .to_string();
-            Some(DiffChange {
-                project: repo_name.clone(),
-                branch,
-                git_hash: hex::encode(ref_update.to.as_slice()),
-                original_diff_id: None,
-                ..Default::default()
-            })
+            Some(build_diff_change(&repo_name, ref_update))
         })
         .collect();
 
@@ -322,21 +339,7 @@ pub async fn divert_to_rl_land_service(
     // Convert diverted ref updates to DiffChange items.
     let changes: Vec<DiffChange> = diverted_refs
         .iter()
-        .map(|ref_update| {
-            let branch = ref_update
-                .ref_name
-                .strip_prefix("refs/heads/")
-                .unwrap_or(ref_update.ref_name.as_str())
-                .to_string();
-
-            DiffChange {
-                project: repo_name.clone(),
-                branch,
-                git_hash: hex::encode(ref_update.to.as_slice()),
-                original_diff_id: None,
-                ..Default::default()
-            }
-        })
+        .map(|ref_update| build_diff_change(&repo_name, ref_update))
         .collect();
 
     let request = SubmitLandRequest {
@@ -488,5 +491,69 @@ pub async fn divert_to_rl_land_service(
                 });
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use gix_hash::Kind;
+    use gix_hash::ObjectId;
+    use mononoke_macros::mononoke;
+
+    use super::*;
+    use crate::command::RefType;
+
+    fn ref_update(ref_name: &str, from: ObjectId, to: ObjectId) -> RefUpdate {
+        RefUpdate {
+            ref_name: ref_name.to_string(),
+            ref_type: RefType::Standard,
+            from,
+            to,
+        }
+    }
+
+    /// Non-create move: `from` SHA must be hex-encoded into `old_git_hash`
+    /// so aosp_service can switch to `move_bookmark` and restore CAS-rebase.
+    #[mononoke::test]
+    fn build_diff_change_populates_old_git_hash_for_move() {
+        let from = ObjectId::from_hex(b"1111111111111111111111111111111111111111").unwrap();
+        let to = ObjectId::from_hex(b"2222222222222222222222222222222222222222").unwrap();
+        let dc = build_diff_change("aosp/test", &ref_update("refs/heads/main", from, to));
+
+        assert_eq!(dc.project, "aosp/test");
+        assert_eq!(dc.branch, "main");
+        assert_eq!(dc.git_hash, "2222222222222222222222222222222222222222");
+        assert_eq!(
+            dc.old_git_hash.as_deref(),
+            Some("1111111111111111111111111111111111111111"),
+            "old_git_hash must be populated from RefUpdate.from for non-creates"
+        );
+    }
+
+    /// Branch create: `from` is the null OID; `old_git_hash` must be `None`
+    /// so aosp_service keeps the `set_bookmark` form.
+    #[mononoke::test]
+    fn build_diff_change_omits_old_git_hash_for_create() {
+        let from = ObjectId::null(Kind::Sha1);
+        let to = ObjectId::from_hex(b"3333333333333333333333333333333333333333").unwrap();
+        let dc = build_diff_change("aosp/test", &ref_update("refs/heads/feature", from, to));
+
+        assert!(
+            dc.old_git_hash.is_none(),
+            "old_git_hash must be None on branch create (null from-OID)"
+        );
+        assert_eq!(dc.git_hash, "3333333333333333333333333333333333333333");
+    }
+
+    /// Refs without the `refs/heads/` prefix should retain the full ref
+    /// name as the branch — caller is responsible for filtering before
+    /// passing in. Verifies the strip-prefix-or-fall-back contract.
+    #[mononoke::test]
+    fn build_diff_change_keeps_full_ref_name_when_no_heads_prefix() {
+        let from = ObjectId::from_hex(b"4444444444444444444444444444444444444444").unwrap();
+        let to = ObjectId::from_hex(b"5555555555555555555555555555555555555555").unwrap();
+        let dc = build_diff_change("aosp/test", &ref_update("refs/tags/v1", from, to));
+
+        assert_eq!(dc.branch, "refs/tags/v1");
     }
 }
