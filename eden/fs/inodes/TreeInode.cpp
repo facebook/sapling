@@ -4979,7 +4979,8 @@ folly::Try<folly::Unit> TreeInode::nfsInvalidateCacheEntryForGC(
             } else {
               XLOG(WARN, "InodeMap is killed before GC completes");
             }
-          });
+          },
+          NfsInvalidationSource::Gc);
     }
   }
   return folly::Try<folly::Unit>{folly::unit};

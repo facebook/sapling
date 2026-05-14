@@ -2027,7 +2027,7 @@ ImmediateFuture<folly::Unit> EdenMount::chown(uid_t uid, gid_t gid) {
             }
           }
 
-          nfsChannel->invalidateInodes(std::move(pathsAndModes));
+          nfsChannel->invalidateInodes(pathsAndModes);
           return nfsChannel->completeInvalidations();
         });
   }
