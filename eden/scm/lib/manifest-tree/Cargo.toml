@@ -41,7 +41,7 @@ thiserror = "2.0.18"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
-ctor = "0.13.1"
+ctor = "1.0.5"
 quickcheck = "1.0"
 rand = "0.10.1"
 rand_chacha = "0.10"
