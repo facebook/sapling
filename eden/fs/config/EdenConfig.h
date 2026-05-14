@@ -1513,11 +1513,18 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * Whether to enable XplatLogger for file access telemetry.
-   * Only used in the CLI, including here to get rid of warnings.
+   * Whether to enable XplatLogger for edenfs_file_accesses telemetry
    */
   ConfigSetting<bool> enableXplatLoggerFileAccess{
       "telemetry:enable-xplatlogger-fileaccess",
+      false,
+      this};
+
+  /**
+   * Whether to enable XplatLogger for edenfs_events telemetry.
+   */
+  ConfigSetting<bool> enableXplatLoggerEvents{
+      "telemetry:enable-xplatlogger-events",
       false,
       this};
 

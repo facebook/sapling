@@ -757,6 +757,10 @@ void EdenServer::registerXplatTransforms() {
       std::string{xplat_keys::kFileAccessCategory},
       "GeneratedEdenfsFileAccessesLoggerConfig",
       fileAccessTransform);
+  xplatLogger_->registerTransform(
+      std::string{xplat_keys::kEventsCategory},
+      "GeneratedEdenfsEventsLoggerConfig",
+      edenfsEventsTransform);
 }
 #endif
 
