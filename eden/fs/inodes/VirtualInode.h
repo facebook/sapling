@@ -146,7 +146,13 @@ class VirtualInode {
       const std::shared_ptr<ObjectStore>& objectStore,
       const ObjectFetchContextPtr& fetchContext) const;
 
+  // DEPRECATED: Use co_getSHA1 instead.
   ImmediateFuture<Hash20> getSHA1(
+      RelativePathPiece path,
+      const std::shared_ptr<ObjectStore>& objectStore,
+      const ObjectFetchContextPtr& fetchContext) const;
+
+  folly::coro::now_task<Hash20> co_getSHA1(
       RelativePathPiece path,
       const std::shared_ptr<ObjectStore>& objectStore,
       const ObjectFetchContextPtr& fetchContext) const;

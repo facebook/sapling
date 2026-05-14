@@ -1363,9 +1363,8 @@ EdenServiceHandler::co_getSHA1Impl(
       [mountHandle, fetchContext = fetchContext.copy()](
           VirtualInode inode,
           RelativePath path) -> folly::coro::now_task<Hash20> {
-        co_return co_await inode
-            .getSHA1(path, mountHandle.getObjectStorePtr(), fetchContext)
-            .semi();
+        co_return co_await inode.co_getSHA1(
+            path, mountHandle.getObjectStorePtr(), fetchContext);
       },
       objectStore,
       fetchContext);

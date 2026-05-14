@@ -283,6 +283,45 @@ ImmediateFuture<Hash20> VirtualInode::getSHA1(
       });
 }
 
+folly::coro::now_task<Hash20> VirtualInode::co_getSHA1(
+    RelativePathPiece path,
+    const std::shared_ptr<ObjectStore>& objectStore,
+    const ObjectFetchContextPtr& fetchContext) const {
+  const auto dtype = getDtype();
+  if (dtype == dtype_t::Dir) {
+    co_yield folly::coro::co_error(PathError(EISDIR, path));
+  } else if (dtype == dtype_t::Symlink) {
+    co_yield folly::coro::co_error(
+        PathError(EINVAL, path, std::string_view{"file is a symlink"}));
+  } else if (dtype != dtype_t::Regular) {
+    co_yield folly::coro::co_error(PathError(
+        EINVAL, path, std::string_view{"variant is of unhandled type"}));
+  }
+
+  static_assert(
+      std::variant_size_v<detail::VariantVirtualInode> == 4,
+      "New variant type added to VariantVirtualInode - update co_getSHA1");
+  if (auto* inode = std::get_if<InodePtr>(&variant_)) {
+    co_return co_await inode->asFilePtr()->getSha1(fetchContext).semi();
+  } else if (
+      auto* entry =
+          std::get_if<UnmaterializedUnloadedBlobDirEntry>(&variant_)) {
+    co_return co_await objectStore
+        ->getBlobSha1(entry->getObjectId(), fetchContext)
+        .semi();
+  } else if (auto* treeEntry = std::get_if<TreeEntry>(&variant_)) {
+    const auto& hash = treeEntry->getContentSha1();
+    if (hash.has_value()) {
+      co_return hash.value();
+    }
+    co_return co_await objectStore
+        ->getBlobSha1(treeEntry->getObjectId(), fetchContext)
+        .semi();
+  } else {
+    co_yield folly::coro::co_error(PathError(EISDIR, path));
+  }
+}
+
 ImmediateFuture<std::optional<TreeEntryType>> VirtualInode::getTreeEntryType(
     RelativePathPiece path,
     const ObjectFetchContextPtr& fetchContext) const {
