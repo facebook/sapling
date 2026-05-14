@@ -8,7 +8,7 @@
 use anyhow::Context;
 use bytes::Bytes;
 use gix_packetline::PacketLineRef;
-use gix_packetline::StreamingPeekableIter;
+use gix_packetline::blocking_io::StreamingPeekableIter;
 use gix_transport::bstr::BString;
 use gix_transport::bstr::ByteSlice;
 

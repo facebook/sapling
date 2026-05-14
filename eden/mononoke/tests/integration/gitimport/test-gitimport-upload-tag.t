@@ -34,11 +34,7 @@
       target_kind: Commit,
       name: "tag1",
       tagger: Some(
-          SignatureRef {
-              name: "mononoke",
-              email: "mononoke@mononoke",
-              time: "946684800 +0000",
-          },
+          "mononoke <mononoke@mononoke> 946684800 +0000",
       ),
       message: "Tag\n",
       pgp_signature: None,
@@ -52,11 +48,7 @@
       target_kind: Commit,
       name: "tag2",
       tagger: Some(
-          SignatureRef {
-              name: "mononoke",
-              email: "mononoke@mononoke",
-              time: "946684800 +0000",
-          },
+          "mononoke <mononoke@mononoke> 946684800 +0000",
       ),
       message: "Another Tag\n",
       pgp_signature: None,

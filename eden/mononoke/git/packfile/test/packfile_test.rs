@@ -131,7 +131,7 @@ fn validate_packfile_item_encoding() -> anyhow::Result<()> {
     decoder.write_all(encoded_bytes.as_ref())?;
     decoded_bytes = decoder.finish()?;
     // Validate the decoded bytes represent a valid Git object
-    ObjectRef::from_loose(decoded_bytes.as_ref())
+    ObjectRef::from_loose(decoded_bytes.as_ref(), gix_hash::Kind::Sha1)
         .expect("Expected successful Git object creation from decoded bytes");
     Ok(())
 }

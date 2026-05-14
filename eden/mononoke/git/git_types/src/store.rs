@@ -52,7 +52,7 @@ where
     };
     // Check if the bytes actually correspond to a valid Git object
     let blobstore_bytes = BlobstoreBytes::from_bytes(bytes.clone());
-    gix_object::ObjectRef::from_loose(bytes.as_ref()).map_err(|e| {
+    gix_object::ObjectRef::from_loose(bytes.as_ref(), gix_hash::Kind::Sha1).map_err(|e| {
         GitError::InvalidContent(
             git_hash.to_hex().to_string(),
             anyhow::anyhow!(e.to_string()).into(),

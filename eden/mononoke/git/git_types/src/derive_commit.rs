@@ -299,7 +299,7 @@ mod test {
             .with_parsed_as_commit(|commit| {
                 // In this case, the original commit was created from a Bonsai, so we are
                 // shielded from non-roundtripping behaviours coming from original uses of Git
-                commit.to_owned().into_owned()
+                commit.to_owned().into_owned().unwrap()
             })
             .ok_or_else(|| anyhow::anyhow!("Expected {git_hash} to be a commit, but it isn't"))?;
         // Validate that the parents match

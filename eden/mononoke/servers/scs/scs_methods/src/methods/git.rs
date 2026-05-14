@@ -331,10 +331,10 @@ impl SourceControlServiceImpl {
 
                         let (tagger, message, creation_epoch) = tag_object
                             .with_parsed_as_tag(|tag| {
-                                let tagger_name = tag.tagger.as_ref().map(|t| t.name.to_string());
+                                let tagger = tag.tagger().ok().flatten();
+                                let tagger_name = tagger.as_ref().map(|t| t.name.to_string());
                                 let message = tag.message.to_string();
-                                let time = tag
-                                    .tagger
+                                let time = tagger
                                     .as_ref()
                                     .and_then(|t| t.time().ok().map(|gix_time| gix_time.seconds))
                                     .unwrap_or(0);
@@ -377,7 +377,11 @@ impl SourceControlServiceImpl {
                         let (message, creation_epoch) = commit_object
                             .with_parsed_as_commit(|commit| {
                                 let message = commit.message.to_string();
-                                let time = commit.author.time().ok().map(|t| t.seconds).unwrap_or(0);
+                                let time = commit
+                                    .author()
+                                    .ok()
+                                    .and_then(|author| author.time().ok())
+                                    .map_or(0, |t| t.seconds);
                                 (message, time as i32)
                             })
                             .ok_or_else(|| {

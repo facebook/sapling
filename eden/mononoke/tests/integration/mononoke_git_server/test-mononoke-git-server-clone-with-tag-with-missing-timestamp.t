@@ -73,21 +73,8 @@ Go back to the master_bookmark branch
   $ mononoke_git_service
 # Clone the Git repo from Mononoke
   $ quiet git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
-  Cloning into 'repo'...
-  remote: Client correlator: * (glob)
-  remote: Converting HAVE Git commits to Bonsais        
-  remote: Converting WANT Git commits to Bonsais        
-  remote: Collecting Bonsai commits to send to client        
-  remote: Counting number of objects to be sent in packfile        
-  remote: Generating trees and blobs stream        
-  remote: Generating commits stream        
-  remote: Generating tags stream        
-  remote: Sending packfile stream        
-  fatal: bad object 2e1bada5af3034c3daa2835ddbec6dfd10cdfe17
-  fatal: remote did not send all necessary objects
-  [128]
 
 # Verify that we get the same Git repo back that we started with
-#  $ cd $REPONAME
-#  $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/new_object_list
-#  $ diff -w $TESTTMP/new_object_list $TESTTMP/object_list  
+  $ cd $REPONAME
+  $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/new_object_list
+  $ diff -w $TESTTMP/new_object_list $TESTTMP/object_list

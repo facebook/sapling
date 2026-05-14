@@ -13,7 +13,7 @@ use anyhow::bail;
 use bytes::Bytes;
 use gix_hash::ObjectId;
 use gix_packetline::PacketLineRef;
-use gix_packetline::StreamingPeekableIter;
+use gix_packetline::blocking_io::StreamingPeekableIter;
 
 use super::PUSH_MARKER;
 use super::fetch::parse_oid;

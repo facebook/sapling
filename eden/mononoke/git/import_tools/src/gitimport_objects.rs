@@ -350,16 +350,13 @@ impl TagMetadata {
             .get_object(&oid)
             .await?
             .with_parsed_as_tag(|tag| {
-                let author_date = tag
-                    .tagger
-                    .and_then(|tagger| {
-                        if let Ok(time) = tagger.time() {
-                            Some(DateTime::from_gix(time))
-                        } else {
-                            None
-                        }
-                    })
-                    .transpose()?;
+                let author_date = if let Ok(Some(tagger)) = tag.tagger()
+                    && let Ok(time) = tagger.time()
+                {
+                    Some(DateTime::from_gix(time)?)
+                } else {
+                    None
+                };
                 // This maintains a pre-existing bug where we used to double-take. I don't want to
                 // fix it in the middle of this diff and potentially hit unexpected side-effects.
                 // The old code looked like this:
@@ -515,10 +512,12 @@ impl ExtractedCommit {
         object
             .with_parsed_as_commit(|commit| {
                 let tree_oid = commit.tree();
-                let author_date = DateTime::from_gix(commit.author.time()?)?;
-                let committer_date = DateTime::from_gix(commit.committer.time()?)?;
-                let author = format_signature(commit.author);
-                let committer = format_signature(commit.committer);
+                let author = commit.author().unwrap_or_default();
+                let author_date = DateTime::from_gix(author.time()?)?;
+                let committer = commit.committer().unwrap_or_default();
+                let committer_date = DateTime::from_gix(committer.time()?)?;
+                let author = format_signature(author);
+                let committer = format_signature(committer);
                 let message =
                     decode_message(commit.message, &commit.encoding.map(|e| e.to_owned()))?;
                 let parents = commit.parents().collect();

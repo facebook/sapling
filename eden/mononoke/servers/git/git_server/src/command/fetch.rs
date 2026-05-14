@@ -11,7 +11,7 @@ use anyhow::bail;
 use gix_hash::ObjectId;
 use gix_object::Kind;
 use gix_packetline::PacketLineRef;
-use gix_packetline::StreamingPeekableIter;
+use gix_packetline::blocking_io::StreamingPeekableIter;
 use gix_transport::bstr::ByteSlice;
 use protocol::types::ChainBreakingMode;
 use protocol::types::FetchFilter;
@@ -399,8 +399,8 @@ mod tests {
     use std::io::Write;
 
     use anyhow::Result;
-    use gix_packetline::Writer;
-    use gix_packetline::encode::flush_to_write;
+    use gix_packetline::blocking_io::Writer;
+    use gix_packetline::blocking_io::encode::flush_to_write;
     use mononoke_macros::mononoke;
 
     use super::*;

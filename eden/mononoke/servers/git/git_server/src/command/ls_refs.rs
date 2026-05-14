@@ -9,7 +9,7 @@ use std::collections::HashSet;
 
 use anyhow::Context;
 use gix_packetline::PacketLineRef;
-use gix_packetline::StreamingPeekableIter;
+use gix_packetline::blocking_io::StreamingPeekableIter;
 use gix_transport::bstr::ByteSlice;
 use protocol::types::LsRefsRequest;
 use protocol::types::RefsSource;

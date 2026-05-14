@@ -51,16 +51,8 @@
   CommitRef {
       tree: "cb2ef838eb24e4667fee3a8b89c930234ae6e4bb",
       parents: [],
-      author: SignatureRef {
-          name: "mononoke",
-          email: "mononoke@mononoke",
-          time: "1355258400 +0800",
-      },
-      committer: SignatureRef {
-          name: "mononoke",
-          email: "mononoke@mononoke",
-          time: "946684800 +0000",
-      },
+      author: "mononoke <mononoke@mononoke> 1355258400 +0800",
+      committer: "mononoke <mononoke@mononoke> 946684800 +0000",
       encoding: None,
       message: "Commit with offset date time\n",
       extra_headers: [],

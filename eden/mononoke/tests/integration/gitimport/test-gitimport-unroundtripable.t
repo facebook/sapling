@@ -30,16 +30,8 @@
   CommitRef {
       tree: "cb2ef838eb24e4667fee3a8b89c930234ae6e4bb",
       parents: [],
-      author: SignatureRef {
-          name: "mononoke",
-          email: "mononoke@mononoke",
-          time: "946684800 +0000",
-      },
-      committer: SignatureRef {
-          name: "mononoke",
-          email: "mononoke@mononoke",
-          time: "946684800 +0000",
-      },
+      author: "mononoke <mononoke@mononoke> 946684800 +0000",
+      committer: "mononoke <mononoke@mononoke> 946684800 +0000",
       encoding: Some(
           "ISO-8859-1",
       ),

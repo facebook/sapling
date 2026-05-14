@@ -86,7 +86,7 @@ impl ObjectContent {
             ObjectContentInnerTryBuilder {
                 raw,
                 parsed_builder: |raw| {
-                    ObjectRef::from_loose(raw).map_err(|e| {
+                    ObjectRef::from_loose(raw, gix_hash::Kind::Sha1).map_err(|e| {
                         let mut hasher = Sha1::new();
                         hasher.update(raw);
                         let hash = hasher.finalize();

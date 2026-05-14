@@ -383,7 +383,9 @@ mod test {
             let gix_time = original_date_time.into_gix();
             assert_eq!(
                 human_readable.to_string(),
-                gix_time.format(gix_date::time::format::ISO8601_STRICT)
+                gix_time
+                    .format(gix_date::time::format::ISO8601_STRICT)
+                    .unwrap(),
             );
             let roundtripped_date_time = DateTime::from_gix(gix_time).unwrap();
             assert_eq!(original_date_time, roundtripped_date_time);

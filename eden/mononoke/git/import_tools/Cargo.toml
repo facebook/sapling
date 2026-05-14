@@ -30,9 +30,9 @@ futures_retry = { version = "0.1.0", git = "https://github.com/facebookexperimen
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 git_symbolic_refs = { version = "0.1.0", path = "../../repo_attributes/git_symbolic_refs" }
 git_types = { version = "0.1.0", path = "../git_types" }
-gix-actor = "0.35.1"
-gix-hash = "0.18.0"
-gix-object = "0.49"
+gix-actor = "0.41.0"
+gix-hash = "0.25.0"
+gix-object = "0.60.0"
 http = "1.4.0"
 http-body-util = "0.1.0"
 hyper-openssl = { version = "0.10", features = ["client-legacy", "tokio"] }
