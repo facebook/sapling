@@ -130,6 +130,7 @@
     "scm/mononoke:derivation_pipeline_tailer_enqueue_max_retries": 5,
     "scm/mononoke:derivation_pipeline_config_tailer_max_sleep_secs": 1,
     "scm/mononoke:bookmark_creation_delay_ms": 500,
+    "scm/mononoke:multi_repo_bookmark_max_retry_attempts": 5,
     "scm/mononoke:retry_query_from_replica_with_consistency_check_max_attempts": 10,
     "scm/mononoke:retry_query_from_replica_with_consistency_check_jitter": 50,
     "scm/mononoke:retry_query_from_replica_with_consistency_check_interval_ms": 200,

@@ -7,6 +7,7 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::future::Future;
 
 use anyhow::Context;
 use anyhow::Result;
@@ -34,6 +35,17 @@ use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
 use sql_ext::Connection;
 use sql_ext::Transaction as SqlTransaction;
+use stats::prelude::*;
+
+define_stats! {
+    prefix = "mononoke.multi_repo_land.commit";
+    success: timeseries(Rate, Sum),
+    cas_failure: timeseries(Rate, Sum),
+    retry: timeseries(Rate, Sum),
+    retryable_error_exhausted: timeseries(Rate, Sum),
+    other_error: timeseries(Rate, Sum),
+    attempt_count: timeseries(Rate, Average, Sum),
+}
 
 /// A bookmark operation to be executed atomically in a multi-repo transaction.
 enum BookmarkOp {
@@ -360,59 +372,137 @@ impl MultiRepoBookmarksTransaction {
         })
     }
 
-    /// Commit all accumulated operations in a single SQL transaction.
-    ///
-    /// Returns Success if all CAS operations pass, or CasFailure if any
-    /// CAS check fails (entire transaction is rolled back).
+    /// Commit all ops atomically. Retries `RetryableError` up to
+    /// `scm/mononoke:multi_repo_bookmark_max_retry_attempts`.
     pub async fn commit(self) -> Result<MultiRepoBookmarksTransactionResult> {
         if self.ops.is_empty() {
             return Ok(MultiRepoBookmarksTransactionResult::Success);
         }
 
-        let use_new_path = justknobs::eval("scm/mononoke:per_bookmark_locking", None, None)
-            .context("Failed to read per_bookmark_locking JustKnob for multi-repo transaction")?;
+        let max_attempts: u64 =
+            justknobs::get_as::<u64>("scm/mononoke:multi_repo_bookmark_max_retry_attempts", None)?
+                .max(1);
 
-        let repo_ids: HashSet<_> = self.ops.iter().map(|op| op.repo_id()).collect();
+        let Self {
+            ctx,
+            write_connection,
+            ops,
+            ..
+        } = self;
 
-        let txn = self
-            .write_connection
-            .start_transaction(self.ctx.sql_query_telemetry())
-            .await?;
+        retry_commit_loop(&ctx, max_attempts, || {
+            attempt_commit(&ctx, &write_connection, &ops)
+        })
+        .await
+    }
+}
 
-        // Acquire locks and allocate IDs
-        let (mut txn, mut log) = if use_new_path {
-            let txn = acquire_multi_repo_bookmark_locks(&self.ops, txn).await?;
-            let total_entries = self.ops.len();
-            let (txn, ids) = allocate_multi_log_ids(txn, total_entries).await?;
-            (txn, TransactionLog::from_pre_allocated(ids))
-        } else {
-            let (txn, next_log_ids) = find_next_log_ids(txn, &repo_ids).await?;
-            (txn, TransactionLog::new(next_log_ids))
-        };
+/// Run a single SQL transaction attempt for the multi-repo commit.
+///
+/// Returns `Ok(Success)` on success, `Err(LogicError)` if any CAS check
+/// failed (entire transaction rolled back), `Err(RetryableError(_))` for
+/// transient SQL errors that the caller should retry, and
+/// `Err(Other(_))` for non-retryable infrastructure errors.
+async fn attempt_commit(
+    ctx: &CoreContext,
+    write_connection: &Connection,
+    ops: &[BookmarkOp],
+) -> Result<MultiRepoBookmarksTransactionResult, BookmarkTransactionError> {
+    let use_new_path = justknobs::eval("scm/mononoke:per_bookmark_locking", None, None)
+        .context("Failed to read per_bookmark_locking JustKnob for multi-repo transaction")
+        .map_err(BookmarkTransactionError::Other)?;
 
-        // Execute all operations in one SQL transaction
-        let result: Result<_, BookmarkTransactionError> = async {
-            for op in &self.ops {
-                txn = op.execute(txn, &mut log).await?;
-            }
-            Ok(txn)
-        }
-        .await;
+    let repo_ids: HashSet<_> = ops.iter().map(|op| op.repo_id()).collect();
 
-        match result {
-            Ok(txn) => {
-                let txn = log
-                    .write(txn)
-                    .await
-                    .map_err(BookmarkTransactionError::RetryableError)?;
-                txn.commit().await?;
-                Ok(MultiRepoBookmarksTransactionResult::Success)
+    let txn = write_connection
+        .start_transaction(ctx.sql_query_telemetry())
+        .await
+        .map_err(BookmarkTransactionError::Other)?;
+
+    // Acquire locks and allocate IDs. Helper failures here are classified as
+    // Other (not RetryableError) to preserve the pre-retry behavior — these
+    // paths surface as fatal, identical to the original `?` propagation.
+    let (mut txn, mut log) = if use_new_path {
+        let txn = acquire_multi_repo_bookmark_locks(ops, txn)
+            .await
+            .map_err(BookmarkTransactionError::Other)?;
+        let total_entries = ops.len();
+        let (txn, ids) = allocate_multi_log_ids(txn, total_entries)
+            .await
+            .map_err(BookmarkTransactionError::Other)?;
+        (txn, TransactionLog::from_pre_allocated(ids))
+    } else {
+        let (txn, next_log_ids) = find_next_log_ids(txn, &repo_ids)
+            .await
+            .map_err(BookmarkTransactionError::Other)?;
+        (txn, TransactionLog::new(next_log_ids))
+    };
+
+    for op in ops {
+        txn = op.execute(txn, &mut log).await?;
+    }
+
+    let txn = log
+        .write(txn)
+        .await
+        .map_err(BookmarkTransactionError::RetryableError)?;
+    txn.commit()
+        .await
+        .map_err(BookmarkTransactionError::Other)?;
+    Ok(MultiRepoBookmarksTransactionResult::Success)
+}
+
+/// Execute `do_attempt` with retry-on-transient-error semantics.
+///
+/// Generic over the attempt closure so unit tests can drive the retry
+/// machinery directly without needing a SQL fault-injection hook.
+async fn retry_commit_loop<F, Fut>(
+    ctx: &CoreContext,
+    max_attempts: u64,
+    mut do_attempt: F,
+) -> Result<MultiRepoBookmarksTransactionResult>
+where
+    F: FnMut() -> Fut,
+    Fut: Future<Output = Result<MultiRepoBookmarksTransactionResult, BookmarkTransactionError>>,
+{
+    let mut attempt = 0u64;
+    loop {
+        attempt += 1;
+        match do_attempt().await {
+            Ok(result) => {
+                STATS::attempt_count.add_value(attempt as i64);
+                STATS::success.add_value(1);
+                return Ok(result);
             }
             Err(BookmarkTransactionError::LogicError) => {
-                Ok(MultiRepoBookmarksTransactionResult::CasFailure)
+                STATS::attempt_count.add_value(attempt as i64);
+                STATS::cas_failure.add_value(1);
+                return Ok(MultiRepoBookmarksTransactionResult::CasFailure);
             }
-            Err(BookmarkTransactionError::RetryableError(err)) => Err(err),
-            Err(BookmarkTransactionError::Other(err)) => Err(err),
+            Err(BookmarkTransactionError::RetryableError(err)) if attempt < max_attempts => {
+                STATS::retry.add_value(1);
+                ctx.scuba()
+                    .clone()
+                    .add("log_tag", "multi_repo_commit_retryable_error")
+                    .add("attempt", attempt as i64)
+                    .add("error", format!("{:#}", err))
+                    .unsampled()
+                    .log();
+                continue;
+            }
+            Err(BookmarkTransactionError::RetryableError(err)) => {
+                STATS::attempt_count.add_value(attempt as i64);
+                STATS::retryable_error_exhausted.add_value(1);
+                return Err(err.context(format!(
+                    "Multi-repo bookmark transaction exhausted {} retry attempts",
+                    max_attempts
+                )));
+            }
+            Err(BookmarkTransactionError::Other(err)) => {
+                STATS::attempt_count.add_value(attempt as i64);
+                STATS::other_error.add_value(1);
+                return Err(err);
+            }
         }
     }
 }
@@ -1038,5 +1128,103 @@ mod tests {
             .boxed(),
         )
         .await
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_retry_on_retryable_error(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let attempts = std::cell::Cell::new(0u64);
+
+        let result = retry_commit_loop(&ctx, 5, || {
+            attempts.set(attempts.get() + 1);
+            let attempt = attempts.get();
+            async move {
+                if attempt == 1 {
+                    Err(BookmarkTransactionError::RetryableError(anyhow!(
+                        "simulated transient failure"
+                    )))
+                } else {
+                    Ok(MultiRepoBookmarksTransactionResult::Success)
+                }
+            }
+        })
+        .await?;
+
+        assert!(result.is_success());
+        assert_eq!(attempts.get(), 2, "should succeed on second attempt");
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_retryable_error_exhausted(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let attempts = std::cell::Cell::new(0u64);
+
+        let result = retry_commit_loop(&ctx, 3, || {
+            attempts.set(attempts.get() + 1);
+            async move {
+                Err::<MultiRepoBookmarksTransactionResult, _>(
+                    BookmarkTransactionError::RetryableError(anyhow!(
+                        "simulated permanent transient failure"
+                    )),
+                )
+            }
+        })
+        .await;
+
+        let err = match result {
+            Ok(_) => panic!("expected Err after exhausting retries"),
+            Err(e) => e,
+        };
+        assert_eq!(
+            attempts.get(),
+            3,
+            "should attempt exactly max_attempts times"
+        );
+        let err_msg = format!("{:#}", err);
+        assert!(
+            err_msg.contains("exhausted 3 retry attempts"),
+            "error should describe exhaustion: {}",
+            err_msg
+        );
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_other_error_not_retried(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let attempts = std::cell::Cell::new(0u64);
+
+        let result = retry_commit_loop(&ctx, 5, || {
+            attempts.set(attempts.get() + 1);
+            async move {
+                Err::<MultiRepoBookmarksTransactionResult, _>(BookmarkTransactionError::Other(
+                    anyhow!("non-retryable infrastructure failure"),
+                ))
+            }
+        })
+        .await;
+
+        assert!(result.is_err(), "Other error must propagate");
+        assert_eq!(attempts.get(), 1, "Other error must not retry");
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_logic_error_translates_to_cas_failure(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let attempts = std::cell::Cell::new(0u64);
+
+        let result = retry_commit_loop(&ctx, 5, || {
+            attempts.set(attempts.get() + 1);
+            async move {
+                Err::<MultiRepoBookmarksTransactionResult, _>(BookmarkTransactionError::LogicError)
+            }
+        })
+        .await?;
+
+        assert!(!result.is_success(), "LogicError should map to CasFailure");
+        assert_eq!(attempts.get(), 1, "LogicError must not retry");
+        Ok(())
     }
 }
