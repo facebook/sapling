@@ -206,6 +206,15 @@ The list of all the EdenStats Counter/Duration are as follows:
   Duration nfsFsinfo{"nfs.fsinfo_us"}
   Duration nfsPathconf{"nfs.pathconf_us"}
   Duration nfsCommit{"nfs.commit_us"}
+
+  Counter nfsInvalidationGcAttempt{"nfs.invalidation.gc.attempt"}
+  Counter nfsInvalidationGcSuccess{"nfs.invalidation.gc.success"}
+  Counter nfsInvalidationGcFailure{"nfs.invalidation.gc.failure"}
+  Counter nfsInvalidationGcEnoent{"nfs.invalidation.gc.enoent"}
+
+  Counter nfsInvalidationGcClearFsRefcountAttempt{"nfs.invalidation.gc.clear_fs_refcount.attempt"}
+  Counter nfsInvalidationGcClearFsRefcountCleared{"nfs.invalidation.gc.clear_fs_refcount.cleared"}
+  Counter nfsInvalidationGcClearFsRefcountSkipped{"nfs.invalidation.gc.clear_fs_refcount.skipped_not_loaded_or_remembered"}
   ```
 
 - PrjfsStats

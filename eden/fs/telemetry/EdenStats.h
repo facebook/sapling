@@ -359,6 +359,19 @@ struct NfsStats : StatsGroup<NfsStats> {
   Counter nfsBackpressureJukebox{"nfs.backpressure_jukebox"};
   Counter nfsInflightAtRequest{"nfs.inflight_at_request"};
 
+  // NFS GC invalidation counters
+  Counter nfsInvalidationGcAttempt{"nfs.invalidation.gc.attempt"};
+  Counter nfsInvalidationGcSuccess{"nfs.invalidation.gc.success"};
+  Counter nfsInvalidationGcFailure{"nfs.invalidation.gc.failure"};
+  Counter nfsInvalidationGcEnoent{"nfs.invalidation.gc.enoent"};
+
+  Counter nfsInvalidationGcClearFsRefcountAttempt{
+      "nfs.invalidation.gc.clear_fs_refcount.attempt"};
+  Counter nfsInvalidationGcClearFsRefcountCleared{
+      "nfs.invalidation.gc.clear_fs_refcount.cleared"};
+  Counter nfsInvalidationGcClearFsRefcountSkipped{
+      "nfs.invalidation.gc.clear_fs_refcount.skipped_not_loaded_or_remembered"};
+
   // Phase timing (aggregate across all NFS procedures)
   Duration nfsPhaseAccept{"nfs.phase_accept_us"};
   Duration nfsPhaseQueueWait{"nfs.phase_queue_wait_us"};
