@@ -1343,11 +1343,73 @@ EdenServiceHandler::semifuture_getSHA1Impl(
       .semi();
 }
 
+folly::coro::now_task<std::unique_ptr<std::vector<SHA1Result>>>
+EdenServiceHandler::co_getSHA1Impl(
+    std::unique_ptr<std::string> mountPoint,
+    std::unique_ptr<std::vector<std::string>> paths,
+    std::unique_ptr<SyncBehavior> sync) {
+  TraceBlock block("getSHA1");
+  auto helper = INSTRUMENT_THRIFT_CALL(
+      DBG3, *mountPoint, getSyncTimeout(*sync), toLogArg(*paths));
+  auto& fetchContext = helper->getFetchContext();
+  auto mountHandle = lookupMount(mountPoint);
+  auto objectStore = mountHandle.getObjectStorePtr();
+
+  co_await co_waitForPendingWrites(mountHandle.getEdenMount(), *sync);
+
+  auto results = co_await co_applyToVirtualInode(
+      mountHandle.getRootInode(),
+      *paths,
+      [mountHandle, fetchContext = fetchContext.copy()](
+          VirtualInode inode,
+          RelativePath path) -> folly::coro::now_task<Hash20> {
+        co_return co_await inode
+            .getSHA1(path, mountHandle.getObjectStorePtr(), fetchContext)
+            .semi();
+      },
+      objectStore,
+      fetchContext);
+
+  auto out = std::make_unique<std::vector<SHA1Result>>();
+  out->reserve(results.size());
+
+  for (auto& result : results) {
+    auto& sha1Result = out->emplace_back();
+    if (result.hasValue()) {
+      sha1Result.sha1() = thriftHash20(result.value());
+    } else {
+      sha1Result.error() = newEdenError(result.exception());
+    }
+  }
+
+  co_return out;
+}
+
 folly::SemiFuture<std::unique_ptr<std::vector<SHA1Result>>>
 EdenServiceHandler::semifuture_getSHA1(
     std::unique_ptr<string> mountPoint,
     std::unique_ptr<vector<string>> paths,
     std::unique_ptr<SyncBehavior> sync) {
+  if (server_->getServerState()
+          ->getEdenConfig()
+          ->enableCoroutinesPhase6.getValue()) {
+    auto result = ImmediateFuture{
+        // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+        folly::coro::co_invoke(
+            [self = shared_from_this()](
+                std::unique_ptr<std::string> mountPoint,
+                std::unique_ptr<std::vector<std::string>> paths,
+                std::unique_ptr<SyncBehavior> sync)
+                -> folly::coro::Task<std::unique_ptr<std::vector<SHA1Result>>> {
+              co_return co_await self->co_getSHA1Impl(
+                  std::move(mountPoint), std::move(paths), std::move(sync));
+            },
+            std::move(mountPoint),
+            std::move(paths),
+            std::move(sync))
+            .semi()};
+    return std::move(result).semi();
+  }
   return semifuture_getSHA1Impl(
       std::move(mountPoint), std::move(paths), std::move(sync));
 }

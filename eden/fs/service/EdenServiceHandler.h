@@ -206,6 +206,12 @@ class EdenServiceHandler
       std::unique_ptr<std::vector<std::string>> paths,
       std::unique_ptr<SyncBehavior> sync);
 
+  folly::coro::now_task<std::unique_ptr<std::vector<SHA1Result>>>
+  co_getSHA1Impl(
+      std::unique_ptr<std::string> mountPoint,
+      std::unique_ptr<std::vector<std::string>> paths,
+      std::unique_ptr<SyncBehavior> sync);
+
   folly::SemiFuture<std::unique_ptr<std::vector<Blake3Result>>>
   semifuture_getBlake3(
       std::unique_ptr<std::string> mountPoint,

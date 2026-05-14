@@ -280,6 +280,12 @@ auto applyToVirtualInode(
  *
  * Both inode resolution and func application are parallelized: resolution
  * via the loader's tree-shaped plan, func via collectAllRange.
+ *
+ * CONTRACT: The result of invoking func is immediately co_awaited within the
+ * same expression via co_awaitTry. This is critical when func returns
+ * now_task<T>: now_task requires immediate awaiting to guarantee reference
+ * safety for captured references. Do not store, move, or defer the result of
+ * func.
  */
 template <typename Func>
 folly::coro::now_task<std::vector<folly::Try<VirtualInodeResult<Func>>>>
