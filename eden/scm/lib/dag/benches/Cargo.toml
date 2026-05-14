@@ -7,7 +7,7 @@ edition = "2024"
 license = "GPL-2.0-only"
 
 [dependencies]
-ctor = "0.7.0"
+ctor = "0.8.0"
 sapling-bindag = { version = "0.1.0", path = "../bindag" }
 sapling-dag = { version = "0.1.0", path = ".." }
 sapling-dev-logger = { version = "0.1.0", path = "../../dev-logger" }
