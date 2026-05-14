@@ -2457,10 +2457,11 @@ folly::SemiFuture<folly::Unit> Nfsd3::unmount(UnmountOptions /* options */) {
 void Nfsd3::invalidate(
     AbsolutePath path,
     mode_t mode,
-    std::function<void()> onSuccess) {
+    folly::Function<void()> onSuccess,
+    [[maybe_unused]] std::optional<NfsInvalidationSource> source) {
   invalidationExecutor_->add([path = std::move(path),
                               mode,
-                              onSuccess = std::move(onSuccess)]() {
+                              onSuccess = std::move(onSuccess)]() mutable {
     XLOGF(DBG9, "Invalidating: {} mode: {}", path.c_str(), mode);
     if (chmod(path.c_str(), mode) == 0) {
       XLOGF(DBG9, "Finished invalidating: {}", path.c_str());

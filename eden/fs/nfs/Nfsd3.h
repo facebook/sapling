@@ -10,12 +10,15 @@
 // Implementation of the NFSv3 protocol as described in:
 // https://tools.ietf.org/html/rfc1813
 
+#include <optional>
+
 #include "eden/common/telemetry/TraceBus.h"
 #include "eden/common/utils/CaseSensitivity.h"
 #include "eden/fs/inodes/FsChannel.h"
 #include "eden/fs/nfs/NfsDispatcher.h"
 #include "eden/fs/nfs/rpc/RpcServer.h"
 #include "eden/fs/utils/ProcessAccessLog.h"
+#include "folly/Function.h"
 
 namespace folly {
 class Executor;
@@ -30,6 +33,10 @@ class FsEventLogger;
 class StructuredLogger;
 
 using TraceDetailedArgumentsHandle = std::shared_ptr<void>;
+
+enum class NfsInvalidationSource : uint8_t {
+  Gc,
+};
 
 struct NfsArgsDetails {
   /* implicit */ NfsArgsDetails(
@@ -210,7 +217,8 @@ class Nfsd3 final : public FsChannel {
   void invalidate(
       AbsolutePath path,
       mode_t mode,
-      std::function<void()> onSuccess = nullptr);
+      folly::Function<void()> onSuccess = nullptr,
+      std::optional<NfsInvalidationSource> source = std::nullopt);
 
   bool takeoverStop() override;
 

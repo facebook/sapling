@@ -70,6 +70,7 @@ cpp_library(
         "//eden/fs/inodes:request_context",
         "//eden/fs/nfs/rpc:server",
         "//eden/fs/utils:process_access_log",
+        "//folly:function",
     ],
 )
 
