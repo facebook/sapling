@@ -16,4 +16,5 @@ extern "C" uint8_t fb_get_env();
 extern "C" bool fb_is_prod();
 extern "C" bool fb_is_corp();
 extern "C" bool fb_is_lab();
+extern "C" bool fb_is_cloud();
 extern "C" bool fb_has_servicerouter();

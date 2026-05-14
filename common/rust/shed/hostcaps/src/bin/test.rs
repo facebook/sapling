@@ -11,7 +11,9 @@
 fn main() {
     println!(
         "This host is {}",
-        if hostcaps::is_prod() {
+        if hostcaps::is_cloud() {
+            "cloud"
+        } else if hostcaps::is_prod() {
             "prod"
         } else if hostcaps::is_corp() {
             "corp"

@@ -17,6 +17,8 @@ pub use facebook::Env;
 #[cfg(fbcode_build)]
 pub use facebook::get_env;
 #[cfg(fbcode_build)]
+pub use facebook::is_cloud;
+#[cfg(fbcode_build)]
 pub use facebook::is_corp;
 #[cfg(fbcode_build)]
 pub use facebook::is_lab;
@@ -26,6 +28,7 @@ pub use facebook::is_prod;
 pub static IN_PROD: LazyLock<bool> = LazyLock::new(is_prod);
 pub static IN_CORP: LazyLock<bool> = LazyLock::new(is_corp);
 pub static IN_LAB: LazyLock<bool> = LazyLock::new(is_lab);
+pub static IN_CLOUD: LazyLock<bool> = LazyLock::new(is_cloud);
 
 #[cfg(not(fbcode_build))]
 pub fn get_env() -> u8 {
@@ -47,6 +50,11 @@ pub fn is_lab() -> bool {
     false
 }
 
+#[cfg(not(fbcode_build))]
+pub fn is_cloud() -> bool {
+    false
+}
+
 #[unsafe(no_mangle)]
 pub extern "C" fn fb_get_env() -> u8 {
     get_env() as u8
@@ -65,6 +73,11 @@ pub extern "C" fn fb_is_corp() -> bool {
 #[unsafe(no_mangle)]
 pub extern "C" fn fb_is_lab() -> bool {
     *IN_LAB
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn fb_is_cloud() -> bool {
+    *IN_CLOUD
 }
 
 #[unsafe(no_mangle)]
