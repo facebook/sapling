@@ -20,6 +20,7 @@
 #include "eden/fs/model/git/TopLevelIgnores.h"
 #include "eden/fs/nfs/NfsServer.h"
 #include "eden/fs/telemetry/EdenErrorInfoBuilder.h"
+#include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/ErrorLogger.h"
 #include "eden/fs/telemetry/FileAccessStructuredLogger.h"
@@ -74,6 +75,11 @@ ServerState::ServerState(
       clock_{std::move(clock)},
       processInfoCache_{std::move(processInfoCache)},
       structuredLogger_{std::move(structuredLogger)},
+      edenFsEventsLogger_{std::make_shared<EdenFsEventsLogger>(
+          structuredLogger_,
+          xplatLogger,
+          reloadableConfig,
+          edenStats_.copy())},
       notificationsStructuredLogger_{std::move(notificationsStructuredLogger)},
       errorStructuredLogger_{std::move(errorStructuredLogger)},
       scribeLogger_{std::move(scribeLogger)},

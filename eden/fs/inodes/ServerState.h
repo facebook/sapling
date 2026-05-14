@@ -25,6 +25,7 @@ namespace facebook::eden {
 
 class Clock;
 class EdenConfig;
+class EdenFsEventsLogger;
 class EdenErrorInfoBuilder;
 class EdenStats;
 class ErrorLogger;
@@ -173,6 +174,10 @@ class ServerState {
     return structuredLogger_;
   }
 
+  const std::shared_ptr<EdenFsEventsLogger>& getEdenFsEventsLogger() const {
+    return edenFsEventsLogger_;
+  }
+
   const std::shared_ptr<StructuredLogger>& getNotificationsStructuredLogger()
       const {
     return notificationsStructuredLogger_;
@@ -233,6 +238,7 @@ class ServerState {
   std::shared_ptr<Clock> clock_;
   std::shared_ptr<ProcessInfoCache> processInfoCache_;
   std::shared_ptr<StructuredLogger> structuredLogger_;
+  std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger_;
   std::shared_ptr<StructuredLogger> notificationsStructuredLogger_;
   std::shared_ptr<StructuredLogger> errorStructuredLogger_;
   std::shared_ptr<IScribeLogger> scribeLogger_;

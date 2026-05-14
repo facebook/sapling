@@ -168,6 +168,7 @@ cpp_library(
         "//eden/fs/telemetry:file_access_structured_logger",
         "//eden/fs/telemetry:fs_event_logger",
         "//eden/fs/telemetry:log_info",
+        "//eden/fs/telemetry:structured_logger",
         "//eden/fs/telemetry:task_trace",
         "//eden/fs/telemetry:xplat_keys",
         "//eden/fs/telemetry/facebook:xplat_logger",
