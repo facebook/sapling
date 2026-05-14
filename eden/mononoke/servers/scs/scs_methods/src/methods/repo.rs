@@ -15,6 +15,8 @@ use chrono::FixedOffset;
 use context::CoreContext;
 use derived_data_manager::DerivableType;
 use futures::future::try_join_all;
+use futures::stream;
+use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures::try_join;
 use futures_watchdog::WatchdogExt;
@@ -46,6 +48,9 @@ use crate::from_request::convert_pushvars;
 use crate::into_response::AsyncIntoResponseWith;
 use crate::source_control_impl::SourceControlServiceImpl;
 use crate::specifiers::SpecifierExt;
+
+// Cap concurrent in-flight requests when resolving stacks of thousands of commits.
+const CONCURRENCY_LIMIT: usize = 100;
 
 mod create_commit;
 mod land_stack;
@@ -377,24 +382,18 @@ impl SourceControlServiceImpl {
 
         // resolve draft changesets & public changesets
         let (draft_commits, public_parents, leftover_heads) = try_join!(
-            try_join_all(
-                stack
-                    .draft
-                    .into_iter()
-                    .map(|cs_id| repo.changeset(ChangesetSpecifier::Bonsai(cs_id))),
-            ),
-            try_join_all(
-                stack
-                    .public
-                    .into_iter()
-                    .map(|cs_id| repo.changeset(ChangesetSpecifier::Bonsai(cs_id))),
-            ),
-            try_join_all(
-                stack
-                    .leftover_heads
-                    .into_iter()
-                    .map(|cs_id| repo.changeset(ChangesetSpecifier::Bonsai(cs_id))),
-            ),
+            stream::iter(stack.draft)
+                .map(|cs_id| repo.changeset(ChangesetSpecifier::Bonsai(cs_id)))
+                .buffer_unordered(CONCURRENCY_LIMIT)
+                .try_collect::<Vec<_>>(),
+            stream::iter(stack.public)
+                .map(|cs_id| repo.changeset(ChangesetSpecifier::Bonsai(cs_id)))
+                .buffer_unordered(CONCURRENCY_LIMIT)
+                .try_collect::<Vec<_>>(),
+            stream::iter(stack.leftover_heads)
+                .map(|cs_id| repo.changeset(ChangesetSpecifier::Bonsai(cs_id)))
+                .buffer_unordered(CONCURRENCY_LIMIT)
+                .try_collect::<Vec<_>>(),
         )?;
 
         if draft_commits.len() <= params.heads.len() && !leftover_heads.is_empty() {
@@ -408,18 +407,17 @@ impl SourceControlServiceImpl {
             leftover_heads.into_iter().collect::<Option<Vec<_>>>(),
         ) {
             (Some(draft_commits), Some(public_parents), Some(leftover_heads)) => {
+                let schemes = &params.identity_schemes;
                 let (mut draft_commits, public_parents, leftover_heads) = try_join!(
-                    try_join_all(
-                        draft_commits
-                            .into_iter()
-                            .map(|cs| cs.into_response_with(&params.identity_schemes)),
-                    ),
-                    try_join_all(
-                        public_parents
-                            .into_iter()
-                            .map(|cs| cs.into_response_with(&params.identity_schemes)),
-                    ),
-                    leftover_heads.into_response_with(&params.identity_schemes),
+                    stream::iter(draft_commits)
+                        .map(|cs| cs.into_response_with(schemes))
+                        .buffer_unordered(CONCURRENCY_LIMIT)
+                        .try_collect::<Vec<_>>(),
+                    stream::iter(public_parents)
+                        .map(|cs| cs.into_response_with(schemes))
+                        .buffer_unordered(CONCURRENCY_LIMIT)
+                        .try_collect::<Vec<_>>(),
+                    leftover_heads.into_response_with(schemes),
                 )?;
 
                 // Need to return the draft commits in topological order to meet the API definition
