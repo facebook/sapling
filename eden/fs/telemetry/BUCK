@@ -210,14 +210,24 @@ cpp_library(
 cpp_library(
     name = "structured_logger",
     srcs = [
+        "EdenFsEventsLogger.cpp",
         "EdenStructuredLogger.cpp",
     ],
     headers = [
+        "EdenFsEventsLogger.h",
         "EdenStructuredLogger.h",
+    ],
+    deps = [
+        ":stats",
+        ":xplat_keys",
+        "//eden/common/telemetry:structured_logger_factory",
+        "//eden/fs/config:config",
     ],
     exported_deps = [
         "//eden/common/telemetry:log_info",
         "//eden/common/telemetry:scribe_logger",
         "//eden/common/telemetry:structured_logger",
+        "//eden/common/utils:ref_ptr",
+        "//eden/fs/telemetry/facebook:xplat_logger",  # @manual
     ],
 )

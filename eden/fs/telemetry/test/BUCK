@@ -151,3 +151,22 @@ cpp_unittest(
         "//folly/json:dynamic",
     ],
 )
+
+cpp_unittest(
+    name = "eden_fs_events_logger_test",
+    srcs = [
+        "EdenFsEventsLoggerTest.cpp",
+    ],
+    supports_static_listing = False,
+    deps = [
+        "fbsource//third-party/googletest:gtest",
+        "//eden/common/telemetry:log_info",
+        "//eden/common/telemetry:structured_logger",
+        "//eden/fs/config:config",
+        "//eden/fs/telemetry:stats",
+        "//eden/fs/telemetry:structured_logger",
+        "//eden/fs/telemetry:xplat_keys",
+        "//eden/fs/telemetry/facebook:eden_telemetry_identity",
+        "//eden/fs/telemetry/facebook:xplat_logger",
+    ],
+)
