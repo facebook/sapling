@@ -195,6 +195,18 @@ cpp_binary(
 )
 
 cpp_binary(
+    name = "get_sha1",
+    srcs = ["get_sha1.cpp"],
+    deps = [
+        "//eden/common/utils:path",
+        "//eden/common/utils/benchharness:benchharness",
+        "//eden/fs/benchmarks:bench_utils",
+        "//eden/fs/service:thrift-cpp2-services",
+        "//folly/io/async:event_base_thread",
+    ],
+)
+
+cpp_binary(
     name = "get_blob",
     srcs = ["get_blob.cpp"],
     deps = [
