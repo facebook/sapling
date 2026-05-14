@@ -935,6 +935,11 @@ folly::coro::now_task<uint64_t> ObjectStore::co_getBlobSize(
   co_return auxData.size;
 }
 
+// DEPRECATED: use co_getBlobSha1 directly. Kept only because
+// FileInode::getSha1, VirtualInode::getSHA1, CheckoutAction::loadAction,
+// FileInode::isSameAs, FileInode::startMaterializingData, and
+// ObjectStore::areBlobsEqual still consume ImmediateFuture chains;
+// delete once those paths are migrated to coroutines.
 ImmediateFuture<Hash20> ObjectStore::getBlobSha1(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) const {
@@ -974,6 +979,13 @@ ImmediateFuture<Hash32> ObjectStore::getBlobBlake3(
             EDEN_BUG() << fmt::format(
                 "Blake3 hash is not defined for id={}", id);
           });
+}
+
+folly::coro::now_task<Hash20> ObjectStore::co_getBlobSha1(
+    const ObjectId& id,
+    const ObjectFetchContextPtr& context) const {
+  auto auxData = co_await co_getBlobAuxData(id, context);
+  co_return auxData.sha1;
 }
 
 folly::coro::now_task<Hash32> ObjectStore::co_getBlobBlake3(

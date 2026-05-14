@@ -7,6 +7,7 @@
 
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
+#include <re2/re2.h>
 
 #include <fb303/ServiceData.h>
 #include <folly/coro/GtestHelpers.h>
@@ -142,7 +143,7 @@ struct ObjectStoreTest : public ::testing::TestWithParam<CaseSensitivity> {
       std::pair<RootId, std::string> suffixQuery,
       std::vector<std::string> globPtr) {
     StoredGlob* storedGlob =
-        fakeBackingStore->putGlob(suffixQuery, std::move(globPtr));
+        fakeBackingStore->putGlob(std::move(suffixQuery), std::move(globPtr));
     storedGlob->setReady();
   }
 
@@ -557,6 +558,38 @@ CO_TEST_P(ObjectStoreTest, co_test_process_access_counts) {
   co_await objectStore->co_getBlob(readyBlobId, pidContext1);
   EXPECT_EQ(2, objectStore->getPidFetches().rlock()->at(pid0));
   EXPECT_EQ(1, objectStore->getPidFetches().rlock()->at(pid1));
+}
+
+CO_TEST_P(ObjectStoreTest, co_getBlobSha1) {
+  auto data = "A"_sp;
+  ObjectId id = putReadyBlob(data);
+
+  Hash20 expectedSha1 = Hash20::sha1(data);
+  Hash20 sha1 = co_await objectStore->co_getBlobSha1(id, context);
+  EXPECT_EQ(expectedSha1.toString(), sha1.toString());
+}
+
+CO_TEST_P(ObjectStoreTest, co_getBlobSha1NotFound) {
+  ObjectId id;
+
+  bool caught = false;
+  try {
+    co_await objectStore->co_getBlobSha1(id, context);
+  } catch (const std::domain_error& e) {
+    caught = true;
+    EXPECT_TRUE(RE2::PartialMatch(e.what(), "blob .* not found"));
+  }
+  EXPECT_TRUE(caught);
+}
+
+CO_TEST_P(
+    ObjectStoreTest,
+    co_get_size_and_sha1_and_blake3_only_imports_blob_once) {
+  co_await objectStore->co_getBlobAuxData(readyBlobId, context);
+  co_await objectStore->co_getBlobSha1(readyBlobId, context);
+  co_await objectStore->co_getBlobBlake3(readyBlobId, context);
+
+  EXPECT_EQ(1, fakeBackingStore->getAccessCount(readyBlobId));
 }
 
 INSTANTIATE_TEST_SUITE_P(

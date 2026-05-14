@@ -1347,6 +1347,26 @@ CO_TEST(VirtualInodeTest, co_getChildrenAttributesPropagatesPerChildErrors) {
   EXPECT_TRUE(sawSibling);
 }
 
+TEST(VirtualInodeTest, verifyTreeWithSHA1Coroutines) {
+  TestFileDatabase files;
+  auto flags = VERIFY_DEFAULT ^ VERIFY_BLAKE3;
+  auto mount = TestMount{MakeTestTreeBuilder(files)};
+  // Use verifyTreeState with useCoroutines=true to test co_getSHA1 through
+  // co_getEntryAttributes
+  verifyTreeState(
+      __FILE__, __LINE__, mount, files, flags, /*useCoroutines=*/true);
+}
+
+TEST(VirtualInodeTest, verifyTreeWithBlake3Coroutines) {
+  TestFileDatabase files;
+  auto flags = VERIFY_DEFAULT ^ VERIFY_SHA1;
+  auto mount = TestMount{MakeTestTreeBuilder(files)};
+  // Use verifyTreeState with useCoroutines=true to test co_getBlake3 through
+  // co_getEntryAttributes
+  verifyTreeState(
+      __FILE__, __LINE__, mount, files, flags, /*useCoroutines=*/true);
+}
+
 INSTANTIATE_TEST_SUITE_P(
     VirtualInodeTestVariants,
     VirtualInodeTestBase,

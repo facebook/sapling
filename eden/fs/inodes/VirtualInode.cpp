@@ -306,17 +306,15 @@ folly::coro::now_task<Hash20> VirtualInode::co_getSHA1(
   } else if (
       auto* entry =
           std::get_if<UnmaterializedUnloadedBlobDirEntry>(&variant_)) {
-    co_return co_await objectStore
-        ->getBlobSha1(entry->getObjectId(), fetchContext)
-        .semi();
+    co_return co_await objectStore->co_getBlobSha1(
+        entry->getObjectId(), fetchContext);
   } else if (auto* treeEntry = std::get_if<TreeEntry>(&variant_)) {
     const auto& hash = treeEntry->getContentSha1();
     if (hash.has_value()) {
       co_return hash.value();
     }
-    co_return co_await objectStore
-        ->getBlobSha1(treeEntry->getObjectId(), fetchContext)
-        .semi();
+    co_return co_await objectStore->co_getBlobSha1(
+        treeEntry->getObjectId(), fetchContext);
   } else {
     co_yield folly::coro::co_error(PathError(EISDIR, path));
   }
