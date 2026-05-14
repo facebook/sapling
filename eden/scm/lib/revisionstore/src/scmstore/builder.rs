@@ -34,6 +34,7 @@ use crate::lfs::LfsStore;
 use crate::scmstore::FileStore;
 use crate::scmstore::TreeStore;
 use crate::scmstore::activitylogger::ActivityLogger;
+use crate::scmstore::fetch::MaxFetchCount;
 use crate::scmstore::file::FileStoreMetrics;
 use crate::scmstore::tree::RestrictedTreeMode;
 use crate::scmstore::tree::TreeMetadataMode;
@@ -57,6 +58,8 @@ pub struct FileStoreBuilder<'a> {
 
     edenapi: Option<Arc<SaplingRemoteApiFileStore>>,
     format: Option<SerializationFormat>,
+
+    max_fetch_count: MaxFetchCount,
 }
 
 impl<'a> FileStoreBuilder<'a> {
@@ -70,7 +73,13 @@ impl<'a> FileStoreBuilder<'a> {
             indexedlog_cache: None,
             edenapi: None,
             format: None,
+            max_fetch_count: MaxFetchCount::default(),
         }
+    }
+
+    pub fn max_fetch_count(mut self, max_fetch_count: MaxFetchCount) -> Self {
+        self.max_fetch_count = max_fetch_count;
+        self
     }
 
     pub fn local_path(mut self, path: impl AsRef<Path>) -> Self {
@@ -340,6 +349,7 @@ impl<'a> FileStoreBuilder<'a> {
 
             activity_logger,
             metrics: FileStoreMetrics::new(),
+            max_fetch_count: self.max_fetch_count,
 
             aux_cache,
 
@@ -373,6 +383,7 @@ pub struct TreeStoreBuilder<'a> {
     format: Option<SerializationFormat>,
     permission_denied_paths:
         Option<Arc<Mutex<std::collections::VecDeque<types::errors::PermissionDenied>>>>,
+    max_fetch_count: MaxFetchCount,
 }
 
 impl<'a> TreeStoreBuilder<'a> {
@@ -389,7 +400,13 @@ impl<'a> TreeStoreBuilder<'a> {
             filestore: None,
             format: None,
             permission_denied_paths: None,
+            max_fetch_count: MaxFetchCount::default(),
         }
+    }
+
+    pub fn max_fetch_count(mut self, max_fetch_count: MaxFetchCount) -> Self {
+        self.max_fetch_count = max_fetch_count;
+        self
     }
 
     pub fn permission_denied_paths(
@@ -701,6 +718,7 @@ impl<'a> TreeStoreBuilder<'a> {
             verify_hash,
             restricted_tree_mode,
             permission_denied_paths: self.permission_denied_paths,
+            max_fetch_count: self.max_fetch_count,
         })
     }
 }

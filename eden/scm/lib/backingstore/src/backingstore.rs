@@ -174,6 +174,16 @@ impl BackingStore {
             );
         }
 
+        // EdenFS is a long-lived daemon, not a per-command CLI, so the
+        // AI-coding-agent fetch guard's per-process counter doesn't apply
+        // here.
+        config.set(
+            "agent",
+            "enable-fetch-guard",
+            Some("false"),
+            &"backingstore".into(),
+        );
+
         #[cfg(feature = "scuba")]
         edenfs_telemetry::tracing_logger::set_logged_targets(
             config

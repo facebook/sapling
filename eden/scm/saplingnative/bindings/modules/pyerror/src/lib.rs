@@ -17,6 +17,7 @@ py_exception!(error, HttpError);
 py_exception!(error, IndexedLogError);
 py_exception!(error, InvalidRepoPath);
 py_exception!(error, LockContendedError);
+py_exception!(error, MaxFetchCountError);
 py_exception!(error, MetaLogError);
 py_exception!(error, NeedSlowPathError);
 py_exception!(error, NonUTF8Path);
@@ -46,6 +47,11 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
         py,
         "LockContendedError",
         py.get_type::<LockContendedError>(),
+    )?;
+    m.add(
+        py,
+        "MaxFetchCountError",
+        py.get_type::<MaxFetchCountError>(),
     )?;
     m.add(py, "MetaLogError", py.get_type::<MetaLogError>())?;
     m.add(py, "NeedSlowPathError", py.get_type::<NeedSlowPathError>())?;
@@ -181,10 +187,10 @@ fn register_error_handlers() {
             Some(PyErr::new::<CertificateError, _>(py, format!("{}", e)))
         } else if let Some(e) = e.downcast_ref::<revisionstore::scmstore::KeyFetchError>() {
             use revisionstore::scmstore::KeyFetchError::*;
-            if let Other(e) = e {
-                specific_error_handler(py, e)
-            } else {
-                Some(PyErr::new::<FetchError, _>(py, format!("{}", e)))
+            match e {
+                MaxFetchCountExceeded(msg) => Some(PyErr::new::<MaxFetchCountError, _>(py, msg)),
+                Other(e) => specific_error_handler(py, e),
+                _ => Some(PyErr::new::<FetchError, _>(py, format!("{}", e))),
             }
         } else if let Some(e) = e.downcast_ref::<types::errors::NetworkError>() {
             // If we don't handle inner error specifically, default to

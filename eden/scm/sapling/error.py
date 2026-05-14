@@ -28,6 +28,7 @@ HttpError = bindings.error.HttpError
 IndexedLogError = bindings.error.IndexedLogError
 InvalidRepoPath = bindings.error.InvalidRepoPath
 LockContendedError = bindings.error.LockContendedError
+MaxFetchCountError = bindings.error.MaxFetchCountError
 MetaLogError = bindings.error.MetaLogError
 NeedSlowPathError = bindings.error.NeedSlowPathError
 NonUTF8PathError = bindings.error.NonUTF8Path

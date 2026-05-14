@@ -70,6 +70,7 @@ use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
 use crate::indexedlogtreeauxstore::TreeAuxStore;
 use crate::scmstore::fetch::FetchResults;
 use crate::scmstore::fetch::KeyFetchError;
+use crate::scmstore::fetch::MaxFetchCount;
 use crate::scmstore::file::FileStore;
 use crate::scmstore::metrics::StoreLocation;
 use crate::scmstore::tree::types::LazyTree;
@@ -170,6 +171,12 @@ pub struct TreeStore {
 
     pub(crate) permission_denied_paths:
         Option<Arc<parking_lot::Mutex<VecDeque<::types::errors::PermissionDenied>>>>,
+
+    // Bounds the number of items this store can deliver across the lifetime of
+    // the process. When exceeded, every subsequent item becomes an error,
+    // catching all callers and code paths (including serial fetches). Set via
+    // `TreeStoreBuilder::max_fetch_count`; absent means the guard is disabled.
+    pub(crate) max_fetch_count: MaxFetchCount,
 }
 
 impl Drop for TreeStore {
@@ -339,6 +346,7 @@ impl TreeStore {
             indexedlog_cache.clone(),
             aux_cache,
             tree_aux_store.clone(),
+            self.max_fetch_count.clone(),
         );
 
         if tracing::enabled!(target: "tree_fetches", tracing::Level::TRACE) {
@@ -633,6 +641,7 @@ impl TreeStore {
             verify_hash: true,
             restricted_tree_mode: RestrictedTreeMode::Disabled,
             permission_denied_paths: Default::default(),
+            max_fetch_count: Default::default(),
         }
     }
 
@@ -713,6 +722,7 @@ impl TreeStore {
             verify_hash: self.verify_hash,
             restricted_tree_mode: self.restricted_tree_mode,
             permission_denied_paths: self.permission_denied_paths.clone(),
+            max_fetch_count: self.max_fetch_count.clone(),
         }
     }
 

@@ -102,7 +102,14 @@ impl FetchState {
         file_cache: Option<Arc<IndexedLogHgIdDataStore>>,
     ) -> Self {
         FetchState {
-            common: CommonFetchState::new(keys, attrs, found_tx, fctx.clone(), bar),
+            common: CommonFetchState::new(
+                keys,
+                attrs,
+                found_tx,
+                fctx.clone(),
+                bar,
+                file_store.max_fetch_count.clone(),
+            ),
             errors: FetchErrors::new(),
             metrics: if fctx.cause().is_prefetch() {
                 &metrics::FILE_STORE_PREFETCH_METRICS

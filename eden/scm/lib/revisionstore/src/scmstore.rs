@@ -8,6 +8,7 @@
 pub use self::builder::FileStoreBuilder;
 pub use self::builder::TreeStoreBuilder;
 pub use self::fetch::KeyFetchError;
+pub use self::fetch::MaxFetchCount;
 pub use self::file::FileAttributes;
 pub use self::file::FileAuxData;
 pub use self::file::FileStore;

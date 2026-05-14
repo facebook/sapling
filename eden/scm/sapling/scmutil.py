@@ -297,6 +297,7 @@ def callcatch(ui, req, func):
     except (
         error.ConfigError,
         error.InvalidRepoPath,
+        error.MaxFetchCountError,
         error.NonUTF8PathError,
         error.PathMatcherError,
         error.RepoInitError,

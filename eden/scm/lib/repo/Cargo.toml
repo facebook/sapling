@@ -18,6 +18,7 @@ fail = { version = "0.5.1", features = ["failpoints"] }
 fs-err = { version = "3.3.0", features = ["tokio"] }
 once_cell = "1.21.4"
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }
+sapling-agentdetect = { version = "0.1.0", path = "../agentdetect" }
 sapling-async-runtime = { version = "0.1.0", path = "../async-runtime" }
 sapling-commits = { version = "0.1.0", path = "../commits" }
 sapling-commits-trait = { version = "0.1.0", path = "../commits/trait" }
@@ -31,6 +32,7 @@ sapling-factory = { version = "0.1.0", path = "../util/factory" }
 sapling-filters = { version = "0.1.0", path = "../filters" }
 sapling-format-util = { version = "0.1.0", path = "../util/format-util" }
 sapling-grepocompat = { version = "0.1.0", path = "../grepocompat" }
+sapling-hgplain = { version = "0.1.0", path = "../util/hgplain" }
 sapling-identity = { version = "0.1.0", path = "../identity" }
 sapling-manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
 sapling-metalog = { version = "0.1.0", path = "../metalog" }

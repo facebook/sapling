@@ -36,6 +36,7 @@ use crate::indexedlogtreeauxstore::TreeAuxStore;
 use crate::scmstore::KeyFetchError;
 use crate::scmstore::fetch::CommonFetchState;
 use crate::scmstore::fetch::FetchErrors;
+use crate::scmstore::fetch::MaxFetchCount;
 use crate::scmstore::tree::types::AuxData;
 use crate::scmstore::tree::types::LazyTree;
 
@@ -83,10 +84,11 @@ impl FetchState {
         tree_cache: Option<Arc<IndexedLogHgIdDataStore>>,
         file_aux_cache: Option<Arc<AuxStore>>,
         tree_aux_cache: Option<Arc<TreeAuxStore>>,
+        max_fetch_count: MaxFetchCount,
     ) -> Self {
         let cause = fctx.cause();
         FetchState {
-            common: CommonFetchState::new(keys, attrs, found_tx, fctx, bar),
+            common: CommonFetchState::new(keys, attrs, found_tx, fctx, bar, max_fetch_count),
             errors: FetchErrors::new(),
             metrics: if cause.is_prefetch() {
                 &TREE_STORE_PREFETCH_METRICS

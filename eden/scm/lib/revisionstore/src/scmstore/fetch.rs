@@ -8,6 +8,8 @@
 use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;
+use std::sync::atomic::AtomicU64;
+use std::sync::atomic::Ordering;
 
 use anyhow::Error;
 use anyhow::Result;
@@ -21,6 +23,50 @@ use types::errors::KeyedError;
 use crate::scmstore::attrs::StoreAttrs;
 use crate::scmstore::value::StoreValue;
 
+/// Per-store counter that bounds the number of items a store can deliver across
+/// the lifetime of the process. Once the limit is exceeded, every subsequent
+/// item delivered through `CommonFetchState` is converted to an error so the
+/// operation aborts, no matter which code path or caller drove the fetch.
+///
+/// The default (`limit == 0`) disables the guard.
+#[derive(Clone, Default)]
+pub struct MaxFetchCount {
+    inner: Arc<MaxFetchCountInner>,
+}
+
+#[derive(Default)]
+struct MaxFetchCountInner {
+    // 0 disables the guard.
+    limit: u64,
+    err_msg: String,
+    count: AtomicU64,
+}
+
+impl MaxFetchCount {
+    pub fn new(limit: u64, err_msg: String) -> Self {
+        Self {
+            inner: Arc::new(MaxFetchCountInner {
+                limit,
+                err_msg,
+                count: AtomicU64::new(0),
+            }),
+        }
+    }
+
+    /// Increment the counter; returns `Err(message)` once the limit is
+    /// exceeded so callers must handle the abort case. Returns `Ok(())` if no
+    /// limit is set or while still under the limit.
+    pub fn try_increment(&self) -> Result<(), String> {
+        if self.inner.limit == 0 {
+            return Ok(());
+        }
+        if self.inner.count.fetch_add(1, Ordering::Relaxed) + 1 > self.inner.limit {
+            return Err(self.inner.err_msg.clone());
+        }
+        Ok(())
+    }
+}
+
 pub(crate) struct CommonFetchState<T: StoreValue> {
     /// Requested keys for which at least some attributes haven't been found.
     pub pending: HashMap<Key, T>,
@@ -33,6 +79,8 @@ pub(crate) struct CommonFetchState<T: StoreValue> {
     pub fctx: FetchContext,
 
     bar: Arc<ProgressBar>,
+
+    max_fetch_count: MaxFetchCount,
 }
 
 impl<T: StoreValue + std::fmt::Debug> CommonFetchState<T> {
@@ -42,6 +90,7 @@ impl<T: StoreValue + std::fmt::Debug> CommonFetchState<T> {
         found_tx: Sender<Result<(Key, T), KeyFetchError>>,
         fctx: FetchContext,
         bar: Arc<ProgressBar>,
+        max_fetch_count: MaxFetchCount,
     ) -> Self {
         Self {
             pending: keys.into_iter().map(|key| (key, T::default())).collect(),
@@ -49,7 +98,25 @@ impl<T: StoreValue + std::fmt::Debug> CommonFetchState<T> {
             found_tx,
             fctx,
             bar,
+            max_fetch_count,
         }
+    }
+
+    fn send_found(&self, key: Key, value: T) {
+        Self::send_found_impl(&self.max_fetch_count, &self.found_tx, key, value);
+    }
+
+    fn send_found_impl(
+        max_fetch_count: &MaxFetchCount,
+        found_tx: &Sender<Result<(Key, T), KeyFetchError>>,
+        key: Key,
+        value: T,
+    ) {
+        let result = match max_fetch_count.try_increment() {
+            Ok(()) => Ok((key, value)),
+            Err(message) => Err(KeyFetchError::MaxFetchCountExceeded(message)),
+        };
+        let _ = found_tx.send(result);
     }
 
     pub(crate) fn all_keys(&self) -> Vec<Key> {
@@ -83,9 +150,13 @@ impl<T: StoreValue + std::fmt::Debug> CommonFetchState<T> {
         with_computable: bool,
         mut cb: impl FnMut(&Key) -> Option<T>,
     ) {
+        let request_attrs = self.request_attrs;
+        let ignore_result = self.fctx.mode().ignore_result();
+        let max_fetch_count = &self.max_fetch_count;
+        let found_tx = &self.found_tx;
         self.pending.retain(|key, available| {
             let actionable = Self::actionable_attrs(
-                self.request_attrs,
+                request_attrs,
                 available.attrs(),
                 fetchable,
                 with_computable,
@@ -96,10 +167,10 @@ impl<T: StoreValue + std::fmt::Debug> CommonFetchState<T> {
                     let new = value | std::mem::take(available);
 
                     // Check if the newly fetched attributes fulfill all what was originally requested.
-                    if new.attrs().has(self.request_attrs) {
-                        if !self.fctx.mode().ignore_result() {
-                            let new = new.mask(self.request_attrs);
-                            let _ = self.found_tx.send(Ok((key.clone(), new)));
+                    if new.attrs().has(request_attrs) {
+                        if !ignore_result {
+                            let new = new.mask(request_attrs);
+                            Self::send_found_impl(max_fetch_count, found_tx, key.clone(), new);
                         }
 
                         // This item has been fulfilled - don't retain it.
@@ -127,7 +198,7 @@ impl<T: StoreValue + std::fmt::Debug> CommonFetchState<T> {
 
                 if !self.fctx.mode().ignore_result() {
                     let new = new.mask(self.request_attrs);
-                    let _ = self.found_tx.send(Ok((key, new)));
+                    self.send_found(key, new);
                 }
                 self.bar.increase_position(1);
 
@@ -221,6 +292,9 @@ pub enum KeyFetchError {
     NotFoundLocally(Key),
     // Unexpected error, including key not found in remote store.
     KeyedError(KeyedError),
+    // Per-store fetch budget exceeded; carries the configured abort message.
+    // A leaf error (no source) so the printed chain doesn't duplicate it.
+    MaxFetchCountExceeded(String),
     Other(Error),
 }
 
@@ -228,9 +302,10 @@ pub enum KeyFetchError {
 impl std::error::Error for KeyFetchError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            Self::Other(err) => Some(err.as_ref()),
             Self::KeyedError(err) => Some(err),
+            Self::Other(err) => Some(err.as_ref()),
             Self::NotFoundLocally(_) => None,
+            Self::MaxFetchCountExceeded(_) => None,
         }
     }
 }
@@ -238,13 +313,14 @@ impl std::error::Error for KeyFetchError {
 impl fmt::Display for KeyFetchError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Other(err) => err.fmt(f),
             Self::KeyedError(KeyedError(key, err)) => {
                 write!(f, "key fetch failed {}: {:?}", key, err)
             }
+            Self::MaxFetchCountExceeded(msg) => f.write_str(msg),
             Self::NotFoundLocally(key) => {
                 write!(f, "key not in local store and not contacting remote: {key}")
             }
+            Self::Other(err) => err.fmt(f),
         }
     }
 }
@@ -309,6 +385,9 @@ impl<T> FetchResults<T> {
                     KeyFetchError::NotFoundLocally(ref key) => {
                         missing.insert(key.clone(), err.into());
                     }
+                    err @ KeyFetchError::MaxFetchCountExceeded(_) => {
+                        errors.push(err.into());
+                    }
                     KeyFetchError::Other(err) => {
                         errors.push(err);
                     }
@@ -332,6 +411,9 @@ impl<T> FetchResults<T> {
                     }
                     KeyFetchError::NotFoundLocally(key) => {
                         missing.push(key);
+                    }
+                    err @ KeyFetchError::MaxFetchCountExceeded(_) => {
+                        return Err(err.into());
                     }
                     KeyFetchError::Other(err) => {
                         return Err(err);
@@ -399,5 +481,33 @@ mod tests {
                 KeyFetchError::Other(NetworkError::wrap(anyhow!("foo"))).into();
             assert!(types::errors::is_network_error(&err));
         }
+    }
+
+    #[test]
+    fn test_max_fetch_count() {
+        // Limit of 0 (default) disables the guard.
+        let counter = MaxFetchCount::default();
+        for _ in 0..10 {
+            assert!(counter.try_increment().is_ok());
+        }
+
+        // With a limit of 3, the first 3 calls succeed and every subsequent
+        // call returns the configured abort message.
+        let counter = MaxFetchCount::new(3, "over the limit".to_string());
+        assert!(counter.try_increment().is_ok());
+        assert!(counter.try_increment().is_ok());
+        assert!(counter.try_increment().is_ok());
+        for _ in 0..3 {
+            assert_eq!(counter.try_increment().unwrap_err(), "over the limit",);
+        }
+    }
+
+    #[test]
+    fn test_max_fetch_count_exceeded_chain_is_a_leaf() {
+        // KeyFetchError::MaxFetchCountExceeded must have no `source()` so the
+        // top-level Display message is not duplicated under "Caused by:".
+        let err = KeyFetchError::MaxFetchCountExceeded("over the limit".to_string());
+        assert_eq!(format!("{err}"), "over the limit");
+        assert!(std::error::Error::source(&err).is_none());
     }
 }

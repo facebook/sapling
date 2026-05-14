@@ -60,6 +60,7 @@ use crate::lfs::LfsClient;
 use crate::lfs::LfsPointersEntry;
 use crate::scmstore::activitylogger::ActivityLogger;
 use crate::scmstore::fetch::FetchResults;
+use crate::scmstore::fetch::MaxFetchCount;
 use crate::scmstore::metrics::StoreLocation;
 use crate::scmstore::util::try_local_content;
 
@@ -110,6 +111,12 @@ pub struct FileStore {
 
     // Temporary escape hatch to disable streaming of LFS data to caches.
     pub(crate) lfs_buffer_in_memory: bool,
+
+    // Bounds the number of items this store can deliver across the lifetime of
+    // the process. When exceeded, every subsequent item becomes an error,
+    // catching all callers and code paths (including serial fetches). Set via
+    // `FileStoreBuilder::max_fetch_count`; absent means the guard is disabled.
+    pub(crate) max_fetch_count: MaxFetchCount,
 }
 
 impl Drop for FileStore {
@@ -551,6 +558,8 @@ impl FileStore {
             unbounded_queue: false,
 
             lfs_buffer_in_memory: false,
+
+            max_fetch_count: Default::default(),
         }
     }
 
@@ -600,6 +609,8 @@ impl FileStore {
             unbounded_queue: self.unbounded_queue,
 
             lfs_buffer_in_memory: self.lfs_buffer_in_memory,
+
+            max_fetch_count: self.max_fetch_count.clone(),
         }
     }
 
