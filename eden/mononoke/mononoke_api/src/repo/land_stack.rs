@@ -24,6 +24,7 @@ use futures::stream::TryStreamExt;
 use hook_manager::CrossRepoPushSource;
 use hook_manager::PushAuthoredBy;
 use hook_manager::manager::HookManagerRef;
+use metaconfig_types::MergeResolutionOverride;
 use mononoke_types::ChangesetId;
 use pushrebase_client::normal_pushrebase;
 use repo_blobstore::RepoBlobstoreRef;
@@ -190,7 +191,7 @@ impl<R: MononokeRepo> RepoContext<R> {
                 self.authorization_context(),
                 true, // log_new_public_commits_to_scribe
                 force_local_pushrebase,
-                None, // merge_resolution_override
+                MergeResolutionOverride::UseJk,
             )
             .await?;
             // Convert response back, finishing the land on the small repo
@@ -210,7 +211,7 @@ impl<R: MononokeRepo> RepoContext<R> {
                 self.authorization_context(),
                 true, // log_new_public_commits_to_scribe
                 force_local_pushrebase,
-                None, // merge_resolution_override
+                MergeResolutionOverride::UseJk,
             )
             .await?
         };

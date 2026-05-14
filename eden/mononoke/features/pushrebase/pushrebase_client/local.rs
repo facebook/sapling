@@ -16,6 +16,7 @@ use bytes::Bytes;
 use context::CoreContext;
 use hooks::CrossRepoPushSource;
 use hooks::HookManager;
+use metaconfig_types::MergeResolutionOverride;
 use mononoke_types::BonsaiChangeset;
 use pushrebase::PushrebaseOutcome;
 use repo_authorization::AuthorizationContext;
@@ -39,7 +40,7 @@ impl<'a, R: Repo> PushrebaseClient for LocalPushrebaseClient<'a, R> {
         cross_repo_push_source: CrossRepoPushSource,
         bookmark_restrictions: BookmarkKindRestrictions,
         log_new_public_commits_to_scribe: bool,
-        merge_resolution_override: Option<bool>,
+        merge_resolution_override: MergeResolutionOverride,
     ) -> Result<PushrebaseOutcome, BookmarkMovementError> {
         let mut op = PushrebaseOntoBookmarkOp::new(bookmark, changesets)
             .with_pushvars(pushvars)

@@ -21,6 +21,7 @@ use bytes::Bytes;
 use context::CoreContext;
 use hooks::HookManager;
 use mercurial_mutation::HgMutationStoreRef;
+use metaconfig_types::MergeResolutionOverride;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use pushrebase::PushrebaseError;
@@ -292,7 +293,7 @@ async fn run_pushrebase(
                 &authz,
                 false, // We will log new commits locally
                 force_local_pushrebase,
-                None, // merge_resolution_override
+                MergeResolutionOverride::UseJk,
             )
             .await;
             let (pushrebased_rev, pushrebased_changesets) = match outcome {

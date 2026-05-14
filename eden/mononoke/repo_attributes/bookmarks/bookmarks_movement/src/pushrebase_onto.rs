@@ -16,6 +16,7 @@ use context::CoreContext;
 use futures_stats::TimedFutureExt;
 use hooks::CrossRepoPushSource;
 use hooks::HookManager;
+use metaconfig_types::MergeResolutionOverride;
 use mononoke_types::BonsaiChangeset;
 use pushrebase_hook::PushrebaseHook;
 use pushrebase_hooks::get_pushrebase_hooks;
@@ -44,7 +45,7 @@ pub struct PushrebaseOntoBookmarkOp<'op> {
     cross_repo_push_source: CrossRepoPushSource,
     pushvars: Option<&'op HashMap<String, Bytes>>,
     log_new_public_commits_to_scribe: bool,
-    merge_resolution_override: Option<bool>,
+    merge_resolution_override: MergeResolutionOverride,
 }
 
 impl<'op> PushrebaseOntoBookmarkOp<'op> {
@@ -59,7 +60,7 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
             cross_repo_push_source: CrossRepoPushSource::NativeToThisRepo,
             pushvars: None,
             log_new_public_commits_to_scribe: false,
-            merge_resolution_override: None,
+            merge_resolution_override: MergeResolutionOverride::UseJk,
         }
     }
 
@@ -97,8 +98,11 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
     }
 
     /// Per-request override for `pushrebase_enable_merge_resolution`.
-    /// `None` defers to the JustKnob; `Some(_)` wins.
-    pub fn with_merge_resolution_override(mut self, override_value: Option<bool>) -> Self {
+    /// `UseJk` defers to the JustKnob; `ForceOn`/`ForceOff` wins.
+    pub fn with_merge_resolution_override(
+        mut self,
+        override_value: MergeResolutionOverride,
+    ) -> Self {
         self.merge_resolution_override = override_value;
         self
     }

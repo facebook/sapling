@@ -96,6 +96,7 @@ use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::NonRootMPath;
+use metaconfig_types::MergeResolutionOverride;
 use metaconfig_types::PushrebaseFlags;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
@@ -866,10 +867,11 @@ async fn check_pushrebase_conflicts(
             STATS::conflict_rejections.add_value(1, (reponame.to_string(),));
             STATS::conflict_files_count.add_value(conflicts.len() as i64, (reponame.to_string(),));
 
-            // Per-request override wins; absence defers to the JK.
+            // Per-request override wins; UseJk defers to the JK.
             let merge_enabled = match config.merge_resolution_override {
-                Some(enabled) => enabled,
-                None => justknobs::eval(
+                MergeResolutionOverride::ForceOn => true,
+                MergeResolutionOverride::ForceOff => false,
+                MergeResolutionOverride::UseJk => justknobs::eval(
                     "scm/mononoke:pushrebase_enable_merge_resolution",
                     None,
                     Some(reponame),
@@ -7691,7 +7693,7 @@ line 5.1
         init_just_knobs_for_merge_test();
 
         let config = PushrebaseFlags {
-            merge_resolution_override: Some(false),
+            merge_resolution_override: MergeResolutionOverride::ForceOff,
             ..Default::default()
         };
 
@@ -7715,7 +7717,7 @@ line 5.1
         }));
 
         let config = PushrebaseFlags {
-            merge_resolution_override: Some(true),
+            merge_resolution_override: MergeResolutionOverride::ForceOn,
             ..Default::default()
         };
 
@@ -7751,7 +7753,7 @@ line 5.1
         }));
 
         let config = PushrebaseFlags {
-            merge_resolution_override: None,
+            merge_resolution_override: MergeResolutionOverride::UseJk,
             ..Default::default()
         };
 

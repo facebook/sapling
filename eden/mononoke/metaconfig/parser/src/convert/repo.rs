@@ -56,6 +56,7 @@ use metaconfig_types::InfinitepushParams;
 use metaconfig_types::LfsParams;
 use metaconfig_types::LoggingDestination;
 use metaconfig_types::ManifestDerivationPipelineConfig;
+use metaconfig_types::MergeResolutionOverride;
 use metaconfig_types::MetadataCacheConfig;
 use metaconfig_types::MetadataCacheUpdateMode;
 use metaconfig_types::MetadataLoggerConfig;
@@ -400,7 +401,7 @@ impl Convert for RawPushrebaseParams {
                     .into_iter()
                     .map(BookmarkKey::new)
                     .collect::<Result<Vec<_>>>()?,
-                merge_resolution_override: None, // request-scoped, not loaded from config
+                merge_resolution_override: MergeResolutionOverride::UseJk, // request-scoped, not loaded from config
             },
             block_merges: self.block_merges.unwrap_or(default.block_merges),
             emit_obsmarkers: self.emit_obsmarkers.unwrap_or(default.emit_obsmarkers),

@@ -786,6 +786,7 @@ mod test {
     use metaconfig_types::LfsParams;
     use metaconfig_types::LocalDatabaseConfig;
     use metaconfig_types::LoggingDestination;
+    use metaconfig_types::MergeResolutionOverride;
     use metaconfig_types::MetadataCacheConfig;
     use metaconfig_types::MetadataCacheUpdateMode;
     use metaconfig_types::MetadataDatabaseConfig;
@@ -1493,7 +1494,7 @@ mod test {
                         monitoring_bookmark: None,
                         merge_resolution_excluded_path_prefixes: Default::default(),
                         pessimistic_locking_bookmarks: Vec::new(),
-                        merge_resolution_override: None,
+                        merge_resolution_override: MergeResolutionOverride::UseJk,
                     },
                     block_merges: false,
                     emit_obsmarkers: false,

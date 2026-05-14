@@ -1078,10 +1078,26 @@ pub struct PushrebaseFlags {
     /// Only effective when the pushrebase_pessimistic_locking JustKnob is enabled.
     pub pessimistic_locking_bookmarks: Vec<BookmarkKey>,
     /// Per-request override for `pushrebase_enable_merge_resolution`.
-    /// `None` defers to the JustKnob; `Some(_)` wins. Request-scoped,
+    /// `UseJk` defers to the JustKnob; `ForceOn`/`ForceOff` wins. Request-scoped,
     /// never loaded from configerator — set on a cloned `PushrebaseFlags`
     /// before the pushrebase call (mirrors `rewritedates`).
-    pub merge_resolution_override: Option<bool>,
+    pub merge_resolution_override: MergeResolutionOverride,
+}
+
+/// Per-request override for the `pushrebase_enable_merge_resolution` JustKnob.
+///
+/// `UseJk` (the default) consults the JK as before. `ForceOn`/`ForceOff`
+/// wins over the JK and is used by the QE rollout to assign requests to
+/// a treatment or control arm independent of the global flag.
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Default)]
+pub enum MergeResolutionOverride {
+    /// Defer to the `pushrebase_enable_merge_resolution` JustKnob (default).
+    #[default]
+    UseJk,
+    /// Force merge resolution ON for this request, regardless of the JK.
+    ForceOn,
+    /// Force merge resolution OFF for this request, regardless of the JK.
+    ForceOff,
 }
 
 impl Default for PushrebaseFlags {
@@ -1096,7 +1112,7 @@ impl Default for PushrebaseFlags {
             monitoring_bookmark: None,
             merge_resolution_excluded_path_prefixes: PrefixTrie::new(),
             pessimistic_locking_bookmarks: Vec::new(),
-            merge_resolution_override: None,
+            merge_resolution_override: MergeResolutionOverride::UseJk,
         }
     }
 }
