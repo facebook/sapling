@@ -2508,6 +2508,15 @@ class SystemdStartCmd(Subcmd):
                 "Use 'eden start' or 'eden restart' instead."
             )
             return 1
+
+        args_file_age: Optional[int] = None
+        try:
+            import time
+
+            args_file_age = int(time.time() - os.path.getmtime(args.args_file))
+        except OSError:
+            pass
+
         exit_code = 1
         exception = None
         try:
@@ -2518,12 +2527,14 @@ class SystemdStartCmd(Subcmd):
         finally:
             try:
                 instance = get_eden_instance(args)
-                sample_kwargs: dict[str, Union[bool, int, str]] = {
+                sample_kwargs: dict[str, Union[bool, int, str, float]] = {
                     "success": exit_code == 0,
                     "exit_code": exit_code,
                 }
                 if exception is not None:
                     sample_kwargs["exception"] = exception
+                if args_file_age is not None:
+                    sample_kwargs["args_file_age_s"] = args_file_age
                 instance.log_sample("systemd_start", **sample_kwargs)
             except Exception:
                 pass
