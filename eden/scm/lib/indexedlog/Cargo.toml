@@ -44,7 +44,7 @@ tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 twox-hash = "1.6.1"
 
 [dev-dependencies]
-ctor = "0.12.0"
+ctor = "0.13.1"
 quickcheck = "1.0"
 rand_chacha = "0.10"
 sapling-dev-logger = { version = "0.1.0", path = "../dev-logger" }

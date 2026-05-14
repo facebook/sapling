@@ -101,7 +101,7 @@ pub fn traced(filter: &str, func: impl FnOnce()) -> Vec<String> {
 #[macro_export]
 macro_rules! init {
     () => {
-        #[dev_logger::ctor]
+        #[dev_logger::ctor(unsafe)]
         fn dev_logger_init_ctor() {
             dev_logger::init();
         }
