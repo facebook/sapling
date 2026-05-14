@@ -1830,6 +1830,14 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Controls whether EdenFS uses getSHA1 coroutine implementations
+   */
+  ConfigSetting<bool> enableCoroutinesPhase6{
+      "coroutines:enable-phase6",
+      false,
+      this};
+
+  /**
    * Controls whether EdenFS uses phase 8 coroutine implementations
    * (getEntryInformation).
    */
