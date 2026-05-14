@@ -78,6 +78,7 @@ struct RestrictedPathLogData<'a> {
     access_data: RestrictedPathAccessData,
     aggregate: Option<RestrictedPathAggregateLogData<'a>>,
     considered_restricted_by: Vec<String>,
+    access_enforcement_enabled: Option<bool>,
     acl_manifest_mode: Option<AclManifestMode>,
     source_comparison: Option<SourceComparisonLogContext>,
 }
@@ -283,11 +284,12 @@ fn restriction_check_result_for_source_results<T: SourceRestrictionCheck>(
     Ok(summary.into_restriction_check_result())
 }
 
-pub(crate) fn spawn_log_source_results<T>(
+pub(crate) fn spawn_log_source_results_with_enforcement<T>(
     ctx: &CoreContext,
     restricted_paths: Arc<RestrictedPaths>,
     access_data: RestrictedPathAccessData,
     acl_manifest_mode: AclManifestMode,
+    access_enforcement_enabled: Option<bool>,
     config_handle: Option<SharedFetchHandle<T>>,
     acl_manifest_handle: Option<SharedFetchHandle<T>>,
 ) where
@@ -304,6 +306,7 @@ pub(crate) fn spawn_log_source_results<T>(
             &restricted_paths,
             access_data,
             acl_manifest_mode,
+            access_enforcement_enabled,
             config_handle,
             acl_manifest_handle,
         )
@@ -327,6 +330,28 @@ pub(crate) fn log_source_results_to_scuba<T: SourceRestrictionCheck>(
     config_result: &SourceRestrictionResult<T>,
     acl_manifest_result: Option<&SourceRestrictionResult<T>>,
     acl_manifest_mode: AclManifestMode,
+    access_data: RestrictedPathAccessData,
+    scuba: MononokeScubaSampleBuilder,
+) -> Result<()> {
+    log_source_results_to_scuba_with_enforcement(
+        ctx,
+        repo_id,
+        config_result,
+        acl_manifest_result,
+        acl_manifest_mode,
+        None,
+        access_data,
+        scuba,
+    )
+}
+
+pub(crate) fn log_source_results_to_scuba_with_enforcement<T: SourceRestrictionCheck>(
+    ctx: &CoreContext,
+    repo_id: RepositoryId,
+    config_result: &SourceRestrictionResult<T>,
+    acl_manifest_result: Option<&SourceRestrictionResult<T>>,
+    acl_manifest_mode: AclManifestMode,
+    access_enforcement_enabled: Option<bool>,
     access_data: RestrictedPathAccessData,
     scuba: MononokeScubaSampleBuilder,
 ) -> Result<()> {
@@ -382,6 +407,7 @@ pub(crate) fn log_source_results_to_scuba<T: SourceRestrictionCheck>(
                 config_source.as_ref(),
                 acl_manifest_source.as_ref(),
             ),
+            access_enforcement_enabled,
             acl_manifest_mode: None,
             source_comparison: Some(source_comparison),
         },
@@ -399,6 +425,7 @@ async fn log_source_results<T>(
     restricted_paths: &RestrictedPaths,
     access_data: RestrictedPathAccessData,
     acl_manifest_mode: AclManifestMode,
+    access_enforcement_enabled: Option<bool>,
     config_handle: Option<SharedFetchHandle<T>>,
     acl_manifest_handle: Option<SharedFetchHandle<T>>,
 ) -> Result<()>
@@ -427,12 +454,13 @@ where
         let config_result = config_result.ok_or_else(|| {
             anyhow::anyhow!("missing config source for source-comparison logging")
         })?;
-        return log_source_results_to_scuba(
+        return log_source_results_to_scuba_with_enforcement(
             ctx,
             restricted_paths.config_based.manifest_id_store().repo_id(),
             &config_result,
             acl_manifest_result.as_ref(),
             acl_manifest_mode,
+            access_enforcement_enabled,
             access_data,
             restricted_paths.scuba.clone(),
         );
@@ -451,6 +479,7 @@ where
         acl_manifest_mode,
         restricted_paths.scuba.clone(),
         vec![source_name.to_string()],
+        access_enforcement_enabled,
     )?;
     Ok(())
 }
@@ -749,6 +778,7 @@ fn log_source_result_to_legacy_scuba(
     acl_manifest_mode: AclManifestMode,
     scuba: MononokeScubaSampleBuilder,
     considered_restricted_by: Vec<String>,
+    access_enforcement_enabled: Option<bool>,
 ) -> Result<RestrictionCheckResult> {
     let summary = SourceRestrictionSummary::from_checks(result);
     let check_result = summary.clone().into_restriction_check_result();
@@ -782,6 +812,7 @@ fn log_source_result_to_legacy_scuba(
                 acls: restriction_acl_refs,
             }),
             considered_restricted_by,
+            access_enforcement_enabled,
             acl_manifest_mode: Some(acl_manifest_mode),
             source_comparison: None,
         },
@@ -1038,6 +1069,7 @@ pub(crate) async fn log_access_to_restricted_path(
                 acls,
             }),
             considered_restricted_by,
+            access_enforcement_enabled: None,
             acl_manifest_mode: Some(acl_manifest_mode),
             source_comparison: None,
         },
@@ -1171,6 +1203,9 @@ fn log_access_to_scuba(
     }
     if let Some(source_comparison) = log_data.source_comparison {
         source_comparison.add_to_scuba(&mut scuba);
+    }
+    if let Some(access_enforcement_enabled) = log_data.access_enforcement_enabled {
+        scuba.add("access_enforcement_enabled", access_enforcement_enabled);
     }
 
     scuba.log();

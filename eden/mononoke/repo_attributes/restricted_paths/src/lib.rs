@@ -656,22 +656,22 @@ where
     );
     let handles = build_handles(fetches);
 
-    access_log::spawn_log_source_results(
-        ctx,
-        restricted_paths.clone(),
-        access_data,
-        effective_mode,
-        fetches
-            .logging_config
-            .then(|| handles.config.clone())
-            .flatten(),
-        fetches
-            .logging_acl_manifest
-            .then(|| handles.acl_manifest.clone())
-            .flatten(),
-    );
-
     if !source_options.enforcement_enabled {
+        access_log::spawn_log_source_results_with_enforcement(
+            ctx,
+            restricted_paths.clone(),
+            access_data,
+            effective_mode,
+            None,
+            fetches
+                .logging_config
+                .then(|| handles.config.clone())
+                .flatten(),
+            fetches
+                .logging_acl_manifest
+                .then(|| handles.acl_manifest.clone())
+                .flatten(),
+        );
         return Ok(());
     }
 
@@ -687,7 +687,28 @@ where
             fetches.enforcement_acl_manifest,
         ),
     )
-    .await?;
+    .await;
+
+    access_log::spawn_log_source_results_with_enforcement(
+        ctx,
+        restricted_paths.clone(),
+        access_data,
+        effective_mode,
+        enforcement_outcome
+            .as_ref()
+            .ok()
+            .map(|outcome| outcome.access_enforcement_enabled),
+        fetches
+            .logging_config
+            .then(|| handles.config.clone())
+            .flatten(),
+        fetches
+            .logging_acl_manifest
+            .then(|| handles.acl_manifest.clone())
+            .flatten(),
+    );
+
+    let enforcement_outcome = enforcement_outcome?;
 
     if let Some(permission_request_group) = enforcement_outcome.denial_permission_request_group {
         Err(authorization_error(permission_request_group))
@@ -868,6 +889,7 @@ where
     let (candidates, pre_filter_variant) = match pre_filter_result {
         PreFilterResult::NoMatch => {
             return Ok(restriction_check::AccessEnforcementOutcome {
+                access_enforcement_enabled: false,
                 denial_permission_request_group: None,
             });
         }

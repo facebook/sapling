@@ -90,6 +90,7 @@ async fn test_authoritative_source_enforcement_outcome_preserves_error_semantics
     let denied = super::authoritative_sources_enforcement_outcome(vec![
         Err(anyhow::anyhow!("source failed")),
         Ok(super::AccessEnforcementOutcome {
+            access_enforcement_enabled: true,
             denial_permission_request_group: Some(permission_request_group.clone()),
         }),
     ])?;
@@ -100,6 +101,7 @@ async fn test_authoritative_source_enforcement_outcome_preserves_error_semantics
 
     let no_denial = super::authoritative_sources_enforcement_outcome(vec![
         Ok(super::AccessEnforcementOutcome {
+            access_enforcement_enabled: false,
             denial_permission_request_group: None,
         }),
         Err(anyhow::anyhow!("source failed")),

@@ -48,6 +48,7 @@ pub type PermissionRequestGroup = MononokeIdentity;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct AccessEnforcementOutcome {
+    pub(crate) access_enforcement_enabled: bool,
     pub(crate) denial_permission_request_group: Option<PermissionRequestGroup>,
 }
 
@@ -738,12 +739,14 @@ pub(crate) fn condition_sets_match_restriction_acls(
     })
 }
 
-/// Evaluate one authoritative source for an enforcement outcome.
+/// Evaluate one authoritative source for enforcement outcome.
 ///
-/// A denial permission request group is present only when the source matches
-/// the active enforcement condition sets and at least one matching restriction
-/// denies the caller. Returns `Err(_)` when fetching or evaluating the source
-/// fails.
+/// Returns `access_enforcement_enabled = true` when the source matches the
+/// active enforcement condition sets. A denial permission request group is
+/// present only when a matching restriction denies the caller. Returns
+/// `access_enforcement_enabled = false` when the fetched source does not match
+/// restriction-ACL-scoped condition sets. Returns `Err(_)` when fetching or
+/// evaluating the source fails.
 pub(crate) async fn source_enforcement_outcome<'a, T>(
     handle: &SharedFetchHandle<T>,
     candidates: &[&'a EnforcementConditionSet],
@@ -767,6 +770,7 @@ where
 
     if !any_match {
         return Ok(AccessEnforcementOutcome {
+            access_enforcement_enabled: false,
             denial_permission_request_group: None,
         });
     }
@@ -782,6 +786,7 @@ where
         .map(|check| check.permission_request_group().clone());
 
     Ok(AccessEnforcementOutcome {
+        access_enforcement_enabled: true,
         denial_permission_request_group,
     })
 }
@@ -794,13 +799,19 @@ pub(crate) fn authoritative_sources_enforcement_outcome(
     source_outcomes: Vec<Result<AccessEnforcementOutcome>>,
 ) -> Result<AccessEnforcementOutcome> {
     let mut first_error = None;
+    let mut access_enforcement_enabled = false;
 
     for source_outcome in source_outcomes {
         match source_outcome {
             Ok(outcome) => {
-                if outcome.denial_permission_request_group.is_some() {
-                    return Ok(outcome);
+                if let Some(permission_request_group) = outcome.denial_permission_request_group {
+                    debug_assert!(outcome.access_enforcement_enabled);
+                    return Ok(AccessEnforcementOutcome {
+                        access_enforcement_enabled: true,
+                        denial_permission_request_group: Some(permission_request_group),
+                    });
                 }
+                access_enforcement_enabled |= outcome.access_enforcement_enabled;
             }
             Err(err) if first_error.is_none() => {
                 first_error = Some(err);
@@ -813,6 +824,7 @@ pub(crate) fn authoritative_sources_enforcement_outcome(
         Err(err)
     } else {
         Ok(AccessEnforcementOutcome {
+            access_enforcement_enabled,
             denial_permission_request_group: None,
         })
     }

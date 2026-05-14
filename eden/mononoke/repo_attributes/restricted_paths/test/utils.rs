@@ -100,6 +100,7 @@ pub struct RestrictedPathsTestData {
     tooling_allowlist_group: Option<String>,
 }
 
+#[derive(Clone)]
 pub struct RestrictedPathsTestDataBuilder {
     config_restricted_paths: Vec<(NonRootMPath, MononokeIdentity)>,
     acl_manifest_restricted_paths: Vec<(NonRootMPath, MononokeIdentity)>,
@@ -133,6 +134,7 @@ pub struct ScubaAccessLogSample {
     has_acl_access: bool,
     acls: Vec<MononokeIdentity>,
     considered_restricted_by: Vec<String>,
+    access_enforcement_enabled: Option<bool>,
     acl_manifest_mode: Option<String>,
     config_error: Option<String>,
     acl_manifest_error: Option<String>,
@@ -176,6 +178,10 @@ impl ScubaAccessLogSample {
     pub fn considered_restricted_by(&self) -> &[String] {
         &self.considered_restricted_by
     }
+
+    pub fn access_enforcement_enabled(&self) -> Option<bool> {
+        self.access_enforcement_enabled
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -192,6 +198,7 @@ pub struct ScubaAccessLogSampleBuilder {
     has_acl_access: Option<bool>,
     acls: Vec<MononokeIdentity>,
     considered_restricted_by: Vec<String>,
+    access_enforcement_enabled: Option<bool>,
     acl_manifest_mode: Option<String>,
     config_error: Option<String>,
     acl_manifest_error: Option<String>,
@@ -214,6 +221,7 @@ impl ScubaAccessLogSampleBuilder {
             has_acl_access: None,
             acls: Vec::new(),
             considered_restricted_by: vec!["manifest_db".to_string()],
+            access_enforcement_enabled: None,
             acl_manifest_mode: Some("disabled".to_string()),
             config_error: None,
             acl_manifest_error: None,
@@ -286,6 +294,11 @@ impl ScubaAccessLogSampleBuilder {
         self
     }
 
+    pub fn with_access_enforcement_enabled(mut self, access_enforcement_enabled: bool) -> Self {
+        self.access_enforcement_enabled = Some(access_enforcement_enabled);
+        self
+    }
+
     pub fn build(self) -> Result<ScubaAccessLogSample> {
         let repo_id = self.repo_id.ok_or_else(|| anyhow!("repo_id is required"))?;
         let client_main_id = self
@@ -311,6 +324,7 @@ impl ScubaAccessLogSampleBuilder {
             has_acl_access,
             acls: self.acls,
             considered_restricted_by: self.considered_restricted_by,
+            access_enforcement_enabled: self.access_enforcement_enabled,
             acl_manifest_mode: self.acl_manifest_mode,
             config_error: self.config_error,
             acl_manifest_error: self.acl_manifest_error,
@@ -334,7 +348,7 @@ impl RestrictedPathsTestDataBuilder {
             file_path_changes: vec![],
             expected_manifest_entries: None,
             expected_scuba_logs: None,
-            enforcement_scenarios: Vec::new(),
+            enforcement_scenarios: vec![],
         }
     }
 
@@ -445,6 +459,10 @@ impl RestrictedPathsTestDataBuilder {
         self
     }
 
+    #[expect(
+        dead_code,
+        reason = "scenario-matrix tests use this helper when expected rows do not vary by scenario"
+    )]
     pub fn with_enforcement_scenarios(
         mut self,
         scenarios: Vec<(Vec<EnforcementConditionSet>, bool)>,
@@ -531,6 +549,21 @@ impl RestrictedPathsTestData {
             self.run_restricted_paths_test_inner(scenario_idx + 1, conditions, *expect_enforcement)
                 .await?;
         }
+
+        Ok(())
+    }
+
+    /// Runs exactly one restricted paths scenario.
+    ///
+    /// Use this when the same fixture needs scenario-specific expected logs,
+    /// such as Scuba rows that differ by `access_enforcement_enabled`.
+    pub async fn run_restricted_paths_test_scenario(
+        &self,
+        enforcement_condition_sets: &[EnforcementConditionSet],
+        expect_enforcement: bool,
+    ) -> Result<()> {
+        self.run_restricted_paths_test_inner(0, enforcement_condition_sets, expect_enforcement)
+            .await?;
 
         Ok(())
     }
@@ -1379,6 +1412,8 @@ fn deserialize_scuba_log_file(
                             })
                             .unwrap_or_default();
 
+                    let access_enforcement_enabled =
+                        optional_bool_field(&flattened_log, "access_enforcement_enabled")?;
                     let acl_manifest_mode =
                         optional_string_field(&flattened_log, "acl_manifest_mode");
                     let config_error = optional_string_field(&flattened_log, "config_error");
@@ -1401,6 +1436,7 @@ fn deserialize_scuba_log_file(
                         client_main_id,
                         acls,
                         considered_restricted_by,
+                        access_enforcement_enabled,
                         acl_manifest_mode,
                         config_error,
                         acl_manifest_error,
@@ -1419,11 +1455,14 @@ fn optional_string_field(flattened_log: &serde_json::Value, key: &str) -> Option
 }
 
 fn optional_bool_field(flattened_log: &serde_json::Value, key: &str) -> Result<Option<bool>> {
-    flattened_log[key]
-        .as_str()
-        .map(|value| value.parse::<bool>())
-        .transpose()
-        .with_context(|| format!("failed to parse {key} as bool"))
+    match &flattened_log[key] {
+        serde_json::Value::Bool(value) => Ok(Some(*value)),
+        value => value
+            .as_str()
+            .map(|value| value.parse::<bool>())
+            .transpose()
+            .with_context(|| format!("failed to parse {key} as bool")),
+    }
 }
 
 pub(crate) fn cast_to_non_root_mpaths(paths: Vec<&str>) -> Result<Vec<NonRootMPath>> {

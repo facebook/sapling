@@ -14,6 +14,7 @@ use justknobs::test_helpers::JustKnobsInMemory;
 use justknobs::test_helpers::KnobVal;
 use justknobs::test_helpers::with_just_knobs_async;
 use metaconfig_types::AclManifestMode;
+use metaconfig_types::EnforcementConditionSet;
 use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
@@ -160,7 +161,8 @@ async fn test_change_to_restricted_with_access_is_logged(fb: FacebookInit) -> Re
                 .map(String::from)
                 .collect::<Vec<_>>(),
         )
-        .with_client_main_id(TEST_CLIENT_MAIN_ID.to_string());
+        .with_client_main_id(TEST_CLIENT_MAIN_ID.to_string())
+        .with_access_enforcement_enabled(true);
 
     let expected_fsnode_id =
         ManifestId::from("d2f5938d41237c86b1b81ffad71cd54c0aba164651bf10af6662ca92d6945676");
@@ -290,19 +292,16 @@ async fn test_change_to_restricted_with_access_is_logged(fb: FacebookInit) -> Re
                 .with_acls(vec![project_acl.clone()])
                 .build()?,
         ])
-        .with_enforcement_scenarios(vec![(
-            vec![
-                EnforcementConditionSetBuilder::new()
-                    .with_restriction_acls([project_acl.clone()])
-                    .build(),
-            ],
+        .build(fb)
+        .await?
+        .run_restricted_paths_test_scenario(
+            &[EnforcementConditionSetBuilder::new()
+                .with_restriction_acls([project_acl.clone()])
+                .build()],
             // Enforcement is enabled, but user has access to the restricted
             // path, so no AuthorizationError is thrown.
             false,
-        )])
-        .build(fb)
-        .await?
-        .run_restricted_paths_test()
+        )
         .await?;
 
     Ok(())
@@ -332,10 +331,8 @@ async fn test_single_dir_single_restricted_change(fb: FacebookInit) -> Result<()
     let expected_content_manifest_id =
         ManifestId::from("9f452248a768ac52e6e32863c5fd983fa76e9d2952ba9fb449dac7044ec46c7c");
 
-    RestrictedPathsTestDataBuilder::new()
-        .with_restricted_paths(restricted_paths)
-        .with_file_path_changes(vec![("restricted/dir/a", None)])
-        .expecting_manifest_id_store_entries(vec![
+    let expected_manifest_entries = || -> Result<Vec<RestrictedPathManifestIdEntry>> {
+        Ok(vec![
             RestrictedPathManifestIdEntry::new(
                 ManifestType::Hg,
                 expected_manifest_id.clone(),
@@ -357,128 +354,154 @@ async fn test_single_dir_single_restricted_change(fb: FacebookInit) -> Result<()
                 RepoPath::dir("restricted/dir")?,
             )?,
         ])
-        .expecting_scuba_access_logs(vec![
-            // HgManifest access log
-            base_sample
-                .clone()
-                .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"])?)
-                .with_manifest_id(expected_manifest_id.clone())
-                .with_manifest_type(ManifestType::Hg)
-                .with_has_authorization(false)
-                .with_acls(vec![restricted_acl.clone()])
-                .build()?,
-            // HgAugmentedManifest access log
-            base_sample
-                .clone()
-                .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"])?)
-                .with_manifest_id(expected_manifest_id.clone())
-                .with_manifest_type(ManifestType::HgAugmented)
-                .with_has_authorization(false)
-                .with_acls(vec![restricted_acl.clone()])
-                .build()?,
-            // Path access log
-            base_sample
-                .clone()
-                .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"])?)
-                .with_full_path(NonRootMPath::new("restricted/dir")?)
-                .with_has_authorization(false)
-                .with_acls(vec![restricted_acl.clone()])
-                .build()?,
-            // Fsnode access log
-            base_sample
-                .clone()
-                .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"])?)
-                .with_manifest_id(expected_fsnode_id.clone())
-                .with_manifest_type(ManifestType::Fsnode)
-                .with_has_authorization(false)
-                .with_acls(vec![restricted_acl.clone()])
-                .build()?,
-            // ContentManifest access log
-            base_sample
-                .clone()
-                .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"])?)
-                .with_manifest_id(expected_content_manifest_id.clone())
-                .with_manifest_type(ManifestType::ContentManifest)
-                .with_has_authorization(false)
-                .with_acls(vec![restricted_acl.clone()])
-                .build()?,
-            // .slacl path access (paths_with_content)
-            base_sample
-                .clone()
-                .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"])?)
-                .with_full_path(NonRootMPath::new("restricted/dir/.slacl")?)
-                .with_has_authorization(false)
-                .with_acls(vec![restricted_acl.clone()])
-                .build()?,
-            // .slacl path access (paths_with_history)
-            base_sample
-                .clone()
-                .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"])?)
-                .with_full_path(NonRootMPath::new("restricted/dir/.slacl")?)
-                .with_has_authorization(false)
-                .with_acls(vec![restricted_acl.clone()])
-                .build()?,
-            // Path fsnode access log
-            base_sample
-                .clone()
-                .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"])?)
-                .with_full_path(NonRootMPath::new("restricted/dir/a")?)
-                .with_has_authorization(false)
-                .with_acls(vec![restricted_acl.clone()])
-                .build()?,
-            base_sample
-                .clone()
-                .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"])?)
-                .with_full_path(NonRootMPath::new("restricted/dir/a")?)
-                .with_has_authorization(false)
-                .with_acls(vec![restricted_acl.clone()])
-                .build()?,
-        ])
-        .with_enforcement_scenarios(vec![
-            // No condition sets = no enforcement (logging only)
-            (vec![], false),
-            // Non-matching restriction ACL = no enforcement
-            (
-                vec![
-                    EnforcementConditionSetBuilder::new()
-                        .with_restriction_acls([MononokeIdentity::new(
-                            "REPO_REGION",
-                            "nonexistent_acl",
-                        )])
-                        .build(),
-                ],
-                false,
-            ),
-            // Matching restriction ACL = enforcement triggered
-            (
-                vec![
-                    EnforcementConditionSetBuilder::new()
-                        .with_restriction_acls([restricted_acl.clone()])
-                        .build(),
-                ],
-                true,
-            ),
-            // Multiple condition sets are OR'd together: if any set matches,
-            // enforcement is triggered.
-            (
-                vec![
-                    EnforcementConditionSetBuilder::new()
-                        .with_restriction_acls([MononokeIdentity::new(
-                            "REPO_REGION",
-                            "nonexistent_acl",
-                        )])
-                        .build(),
-                    EnforcementConditionSetBuilder::new()
-                        .with_restriction_acls([restricted_acl.clone()])
-                        .build(),
-                ],
-                true,
-            ),
-        ])
-        .build(fb)
-        .await?
-        .run_restricted_paths_test()
-        .await?;
+    };
+
+    let expected_scuba_logs =
+        |access_enforcement_enabled: Option<bool>| -> Result<Vec<ScubaAccessLogSample>> {
+            let base_sample = match access_enforcement_enabled {
+                Some(access_enforcement_enabled) => base_sample
+                    .clone()
+                    .with_access_enforcement_enabled(access_enforcement_enabled),
+                None => base_sample.clone(),
+            };
+
+            Ok(vec![
+                // HgManifest access log
+                base_sample
+                    .clone()
+                    .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"])?)
+                    .with_manifest_id(expected_manifest_id.clone())
+                    .with_manifest_type(ManifestType::Hg)
+                    .with_has_authorization(false)
+                    .with_acls(vec![restricted_acl.clone()])
+                    .build()?,
+                // HgAugmentedManifest access log
+                base_sample
+                    .clone()
+                    .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"])?)
+                    .with_manifest_id(expected_manifest_id.clone())
+                    .with_manifest_type(ManifestType::HgAugmented)
+                    .with_has_authorization(false)
+                    .with_acls(vec![restricted_acl.clone()])
+                    .build()?,
+                // Path access log
+                base_sample
+                    .clone()
+                    .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"])?)
+                    .with_full_path(NonRootMPath::new("restricted/dir")?)
+                    .with_has_authorization(false)
+                    .with_acls(vec![restricted_acl.clone()])
+                    .build()?,
+                // Fsnode access log
+                base_sample
+                    .clone()
+                    .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"])?)
+                    .with_manifest_id(expected_fsnode_id.clone())
+                    .with_manifest_type(ManifestType::Fsnode)
+                    .with_has_authorization(false)
+                    .with_acls(vec![restricted_acl.clone()])
+                    .build()?,
+                // ContentManifest access log
+                base_sample
+                    .clone()
+                    .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"])?)
+                    .with_manifest_id(expected_content_manifest_id.clone())
+                    .with_manifest_type(ManifestType::ContentManifest)
+                    .with_has_authorization(false)
+                    .with_acls(vec![restricted_acl.clone()])
+                    .build()?,
+                // .slacl path access (paths_with_content)
+                base_sample
+                    .clone()
+                    .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"])?)
+                    .with_full_path(NonRootMPath::new("restricted/dir/.slacl")?)
+                    .with_has_authorization(false)
+                    .with_acls(vec![restricted_acl.clone()])
+                    .build()?,
+                // .slacl path access (paths_with_history)
+                base_sample
+                    .clone()
+                    .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"])?)
+                    .with_full_path(NonRootMPath::new("restricted/dir/.slacl")?)
+                    .with_has_authorization(false)
+                    .with_acls(vec![restricted_acl.clone()])
+                    .build()?,
+                // Path fsnode access log
+                base_sample
+                    .clone()
+                    .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"])?)
+                    .with_full_path(NonRootMPath::new("restricted/dir/a")?)
+                    .with_has_authorization(false)
+                    .with_acls(vec![restricted_acl.clone()])
+                    .build()?,
+                base_sample
+                    .clone()
+                    .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"])?)
+                    .with_full_path(NonRootMPath::new("restricted/dir/a")?)
+                    .with_has_authorization(false)
+                    .with_acls(vec![restricted_acl.clone()])
+                    .build()?,
+            ])
+        };
+
+    let enforcement_scenarios = vec![
+        // No condition sets = no enforcement (logging only)
+        (vec![], false, None),
+        // Non-matching restriction ACL = no enforcement
+        (
+            vec![
+                EnforcementConditionSetBuilder::new()
+                    .with_restriction_acls([MononokeIdentity::new(
+                        "REPO_REGION",
+                        "nonexistent_acl",
+                    )])
+                    .build(),
+            ],
+            false,
+            Some(false),
+        ),
+        // Matching restriction ACL = enforcement triggered
+        (
+            vec![
+                EnforcementConditionSetBuilder::new()
+                    .with_restriction_acls([restricted_acl.clone()])
+                    .build(),
+            ],
+            true,
+            Some(true),
+        ),
+        // Multiple condition sets are OR'd together: if any set matches,
+        // enforcement is triggered.
+        (
+            vec![
+                EnforcementConditionSetBuilder::new()
+                    .with_restriction_acls([MononokeIdentity::new(
+                        "REPO_REGION",
+                        "nonexistent_acl",
+                    )])
+                    .build(),
+                EnforcementConditionSetBuilder::new()
+                    .with_restriction_acls([restricted_acl.clone()])
+                    .build(),
+            ],
+            true,
+            Some(true),
+        ),
+    ];
+
+    for (enforcement_condition_sets, expect_enforcement, access_enforcement_enabled) in
+        enforcement_scenarios
+    {
+        RestrictedPathsTestDataBuilder::new()
+            .with_restricted_paths(restricted_paths.clone())
+            .with_file_path_changes(vec![("restricted/dir/a", None)])
+            .expecting_manifest_id_store_entries(expected_manifest_entries()?)
+            .expecting_scuba_access_logs(expected_scuba_logs(access_enforcement_enabled)?)
+            .build(fb)
+            .await?
+            .run_restricted_paths_test_scenario(&enforcement_condition_sets, expect_enforcement)
+            .await?;
+    }
 
     Ok(())
 }
@@ -2548,6 +2571,7 @@ async fn test_shadow_path_dispatch_logs_comparison_errors(fb: FacebookInit) -> R
                 && log.acl_manifest_error().is_some()
                 && log.shadow_mismatch() == Some(true)
                 && log.shadow_mismatch_detail().is_some()
+                && log.access_enforcement_enabled().is_none()
                 && log.considered_restricted_by() == ["manifest_db".to_string()]
         }),
         "expected Shadow path logging to capture AclManifest comparison errors: {:#?}",
