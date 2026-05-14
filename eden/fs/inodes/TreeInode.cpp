@@ -59,6 +59,7 @@
 #include "eden/fs/store/DiffCallback.h"
 #include "eden/fs/store/DiffContext.h"
 #include "eden/fs/store/ObjectStore.h"
+#include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/NotImplemented.h"
@@ -4954,16 +4955,21 @@ folly::Try<folly::Unit> TreeInode::nfsInvalidateCacheEntryForGC(
     if (path.has_value()) {
       // The contents lock is held by invalidateChildrenNotMaterialized
       auto mode = getMetadataLocked(state.entries).mode;
+      auto stats = getMount()->getStats().copy();
       nfsdChannel->invalidate(
           getMount()->getPath() + *path,
           mode,
-          [inodeMapWeak = getInodeMapWeak(), &state]() {
+          [inodeMapWeak = getInodeMapWeak(),
+           stats = std::move(stats),
+           &state]() {
             // Code to run after successful invalidation
             if (auto inodeMap = inodeMapWeak.lock()) {
               // The directory got invalidated, now we can dereference all of
               // its contents
               for (auto& entry : state.entries) {
                 auto ino = entry.second.getInodeNumber();
+                stats->increment(
+                    &NfsStats::nfsInvalidationGcClearFsRefcountAttempt);
                 if (inodeMap->isInodeLoadedOrRemembered(ino)) {
                   XLOGF(
                       DBG9,
@@ -4974,6 +4980,11 @@ folly::Try<folly::Unit> TreeInode::nfsInvalidateCacheEntryForGC(
                           .toTimespec()
                           .tv_sec);
                   inodeMap->clearFsRefcount(ino);
+                  stats->increment(
+                      &NfsStats::nfsInvalidationGcClearFsRefcountCleared);
+                } else {
+                  stats->increment(
+                      &NfsStats::nfsInvalidationGcClearFsRefcountSkipped);
                 }
               }
             } else {
