@@ -40,6 +40,16 @@ namespace facebook::eden {
 namespace {
 static_assert(CheckSize<NfsTraceEvent, 40>());
 
+void incrementNfsGcInvalidationCounter(
+    const EdenStatsPtr& stats,
+    std::optional<NfsInvalidationSource> source,
+    NfsStats::CounterPtr counter) {
+  if (source != NfsInvalidationSource::Gc) {
+    return;
+  }
+  stats->increment(counter);
+}
+
 class Nfsd3ServerProcessor final : public RpcServerProcessor {
  public:
   explicit Nfsd3ServerProcessor(
@@ -2354,6 +2364,7 @@ Nfsd3::Nfsd3(
     bool fastPathRPCs)
     : privHelper_{privHelper},
       mountPath_{std::move(mountPath)},
+      stats_{dispatcher->getStats().copy()},
       server_([&]() {
         auto proc = std::make_shared<Nfsd3ServerProcessor>(
             std::move(dispatcher),
@@ -2458,20 +2469,31 @@ void Nfsd3::invalidate(
     AbsolutePath path,
     mode_t mode,
     folly::Function<void()> onSuccess,
-    [[maybe_unused]] std::optional<NfsInvalidationSource> source) {
+    std::optional<NfsInvalidationSource> source) {
+  auto stats = stats_.copy();
+  incrementNfsGcInvalidationCounter(
+      stats, source, &NfsStats::nfsInvalidationGcAttempt);
   invalidationExecutor_->add([path = std::move(path),
                               mode,
-                              onSuccess = std::move(onSuccess)]() mutable {
+                              onSuccess = std::move(onSuccess),
+                              source,
+                              stats = std::move(stats)]() mutable {
     XLOGF(DBG9, "Invalidating: {} mode: {}", path.c_str(), mode);
     if (chmod(path.c_str(), mode) == 0) {
+      incrementNfsGcInvalidationCounter(
+          stats, source, &NfsStats::nfsInvalidationGcSuccess);
       XLOGF(DBG9, "Finished invalidating: {}", path.c_str());
       if (onSuccess) {
         onSuccess();
       }
     } else if (errno == ENOENT) {
+      incrementNfsGcInvalidationCounter(
+          stats, source, &NfsStats::nfsInvalidationGcEnoent);
       // ENOENT is expected after removing files.
       XLOGF(DBG9, "Finished invalidating (no longer exists): {}", path.c_str());
     } else {
+      incrementNfsGcInvalidationCounter(
+          stats, source, &NfsStats::nfsInvalidationGcFailure);
       XLOGF(
           DFATAL,
           "Error invalidating path {} to mode {} using chmod: {}",

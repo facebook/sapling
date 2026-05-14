@@ -317,6 +317,7 @@ class Nfsd3 final : public FsChannel {
   std::vector<TraceSubscriptionHandle<NfsTraceEvent>> traceSubscriptionHandles_;
 
   folly::Promise<FsStopDataPtr> stopPromise_;
+  EdenStatsPtr stats_;
   std::shared_ptr<RpcServer> server_;
   ProcessAccessLog processAccessLog_;
   // It is critical that this is a SerialExecutor. invalidation for parent
