@@ -9,6 +9,7 @@ rust_binary(
     ]),
     crate_root = "src/main.rs",
     deps = [
+        "fbsource//third-party/rust:ctor",
         "fbsource//third-party/rust:tempfile",
         "//eden/scm/lib/dag:dag",
         "//eden/scm/lib/dev-logger:dev-logger",

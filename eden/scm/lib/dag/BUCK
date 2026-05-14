@@ -43,6 +43,7 @@ rust_library(
         "render",
     ],
     test_deps = [
+        "fbsource//third-party/rust:ctor",
         "fbsource//third-party/rust:once_cell",
         "fbsource//third-party/rust:quickcheck",
         "fbsource//third-party/rust:tempfile",
