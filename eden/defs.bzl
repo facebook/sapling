@@ -15,10 +15,7 @@ def get_daemon_versions():
         daemon and the second member is the suffix to use for other templated
         build target names.
     """
-    return [
-        ("//eden/fs/service:edenfs%s" % suffix, suffix)
-        for suffix in ["", get_oss_suffix()]
-    ]
+    return [("//eden/fs/service:edenfs%s" % suffix, suffix) for suffix in ["", get_oss_suffix()]]
 
 def get_dev_env_to_target(suffix = ""):
     """

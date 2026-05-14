@@ -21,10 +21,8 @@ def excluded_t_tests():
             "infinitepush_scratchbookmark_commands_t",
             "network_doctor_t",
             "remotenames_fastheaddiscovery_hidden_commits_t",
-
             # see comment in core.tests.blacklist
             "help_t",
-
             # non-debugruntest tests do not work under buck for the most part,
             # as sandcastle has an even older version of /bin/bash and other commands
             # and .bat file shenanigans
@@ -45,7 +43,6 @@ def excluded_t_tests():
             "rust_clone_t",
             "share_t",
             "sparse_hgrc_profile_t",
-
             # times out
             "commitcloud_sync_t",
             "fb_ext_copytrace_t",
@@ -66,7 +63,6 @@ def excluded_watchman_t_tests():
             # debugruntest issues (see comment in excluded_t_tests)
             "pushrebase_withmerges_t",
             "treestate_fresh_instance_t",
-
             # these tests also fail with run-tests.py
             "casefolding_t",
             "check_code_t",
@@ -136,15 +132,7 @@ SRCS = dict(
 
 # Generartes a test target
 # Do not use excluded and included at the same time
-def run_tests_target(
-        name = None,
-        watchman = False,
-        eden = False,
-        mononoke = False,
-        env_overrides = dict(),
-        excluded = None,
-        included = None,
-        **kwargs):
+def run_tests_target(name = None, watchman = False, eden = False, mononoke = False, env_overrides = dict(), excluded = None, included = None, **kwargs):
     if not name:
         extras = ""
         if eden:
@@ -196,7 +184,7 @@ def run_tests_target(
         env = ENV,
         resources = resources,
         supports_static_listing = False,
-        **kwargs
+        **kwargs,
     )
     buck_command_alias(
         name = name + "_cli",
@@ -249,5 +237,5 @@ def generate_trinity_smoketests(included, **kwargs):
                     watchman = True,
                     env_overrides = sl_d[sl] | eden_d[eden] | mononoke_d[mononoke],
                     included = included,
-                    **kwargs
+                    **kwargs,
                 )

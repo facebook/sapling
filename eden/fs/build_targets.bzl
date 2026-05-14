@@ -123,14 +123,16 @@ def make_rpm_features():
         mac_override = MAC_TARGET_OVERRIDES.get(target)
         if mac_override:
             mac_src, mac_mode = mac_override
-            features.append(select({
-                "DEFAULT": default_feature,
-                "ovr_config//os:macos": _rpm_install(
-                    src = "fbcode" + mac_src,
-                    dst = install_path,
-                    mode = mac_mode or TARGET_MODES.get(target),
-                ),
-            }))
+            features.append(
+                select({
+                    "DEFAULT": default_feature,
+                    "ovr_config//os:macos": _rpm_install(
+                        src = "fbcode" + mac_src,
+                        dst = install_path,
+                        mode = mac_mode or TARGET_MODES.get(target),
+                    ),
+                })
+            )
         else:
             features.append(default_feature)
         if install_path in SYMLINKS:

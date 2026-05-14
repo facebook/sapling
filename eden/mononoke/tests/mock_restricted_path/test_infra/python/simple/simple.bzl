@@ -1,10 +1,7 @@
 load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
 load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
 
-def py_tests_and_libs(
-        name,
-        srcs,
-        test_srcs):
+def py_tests_and_libs(name, srcs, test_srcs):
     par_styles = [
         "zip",
         "live",

@@ -1,4 +1,4 @@
-""" build mode definitions for eden """
+"""build mode definitions for eden"""
 
 load("@fbcode_macros//build_defs:create_build_mode.bzl", "create_unified_build_mode")
 
@@ -35,15 +35,18 @@ _extra_gcc_flags = [
 ]
 
 _os_preprocessor_flags = [
-    ("windows", [
-        # Note: as of 2023, libevent undefines WIN32_LEAN_AND_MEAN after
-        # including <windows.h>. This can be confusing, but it should be
-        # okay. If libevent includes <windows.h>, then later includes of
-        # windows.h should not pull in Winsock 1.
-        "-DWIN32_LEAN_AND_MEAN",
-        "-DNOMINMAX",
-        "-DSTRICT",
-    ]),
+    (
+        "windows",
+        [
+            # Note: as of 2023, libevent undefines WIN32_LEAN_AND_MEAN after
+            # including <windows.h>. This can be confusing, but it should be
+            # okay. If libevent includes <windows.h>, then later includes of
+            # windows.h should not pull in Winsock 1.
+            "-DWIN32_LEAN_AND_MEAN",
+            "-DNOMINMAX",
+            "-DSTRICT",
+        ],
+    ),
 ]
 
 _mode = create_unified_build_mode(
@@ -54,5 +57,5 @@ _mode = create_unified_build_mode(
 )
 
 def get_modes():
-    """ Return modes for this hierarchy """
+    """Return modes for this hierarchy"""
     return _mode

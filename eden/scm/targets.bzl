@@ -102,7 +102,8 @@ def sl_binary(name, extra_deps = [], extra_features = [], **kwargs):
         features = [
             "fb",
             "with_chg",
-        ] + extra_features,
+        ]
+        + extra_features,
         link_style = "static",
         linker_flags = select({
             "DEFAULT": [],
@@ -119,7 +120,9 @@ def sl_binary(name, extra_deps = [], extra_features = [], **kwargs):
             "//eden/scm/lib/config/loader:configloader",
             "//eden/scm/lib/commands:commands",
             "//eden/scm/lib/util/atexit:atexit",
-        ] + extra_deps + select({
+        ]
+        + extra_deps
+        + select({
             "DEFAULT": [],
             "ovr_config//os:linux": [
                 "fbsource//third-party/rust:dirs",
@@ -145,7 +148,7 @@ def sl_binary(name, extra_deps = [], extra_features = [], **kwargs):
                 "fbsource//third-party/rust:winapi",
             ],
         }),
-        **kwargs
+        **kwargs,
     )
 
     # Try to override target depth so //eden/scm/tests:sl_run_tests and other
