@@ -240,6 +240,45 @@ pub fn with_worktree_path_op_lock<T>(
     f()
 }
 
+// --- Worktree-name marker ---
+
+/// Filename of the per-worktree name marker, written into the worktree's dot
+/// directory (e.g., `.sl/worktreename`).
+///
+/// Read by external tools (notably `eden/scm/contrib/scm-prompt.sh`) to display
+/// the worktree's name in the shell prompt without consulting the registry.
+const WORKTREE_NAME_FILE: &str = "worktreename";
+
+/// Compute what the worktree name marker should contain: the label if non-empty,
+/// otherwise the basename of the worktree path.
+fn worktree_name_marker_content(worktree_path: &Path, label: Option<&str>) -> String {
+    label
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| {
+            worktree_path
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_default()
+        })
+}
+
+/// Write the worktree-name marker file at `<worktree_dot_dir>/worktreename`.
+///
+/// `worktree_path` is the canonical path of the worktree's working copy root
+/// (used for the basename fallback when `label` is `None` or empty).
+pub fn write_worktree_name_marker(
+    worktree_path: &Path,
+    worktree_dot_dir: &Path,
+    label: Option<&str>,
+) -> Result<()> {
+    let content = worktree_name_marker_content(worktree_path, label);
+    let path = worktree_dot_dir.join(WORKTREE_NAME_FILE);
+    fs::write(&path, &content)
+        .with_context(|| format!("failed to write worktree-name marker at {}", path.display()))?;
+    Ok(())
+}
+
 // --- Validation ---
 
 /// Verify that `dest` is not inside an existing source control checkout.

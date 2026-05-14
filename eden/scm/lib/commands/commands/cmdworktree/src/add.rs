@@ -31,6 +31,7 @@ use worktree::group_id_for_main_path;
 use worktree::load_registry;
 use worktree::with_registry_lock;
 use worktree::with_worktree_path_op_lock;
+use worktree::write_worktree_name_marker;
 
 use crate::WorktreeOpts;
 
@@ -260,6 +261,24 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> 
                 },
             },
         );
+
+        // Mirror the registry label into the worktree dotdir so external
+        // tools (e.g. `scm-prompt.sh`) can show the worktree's name in the
+        // prompt without consulting the registry. Done under the same
+        // registry lock as the insert so the two stay in sync. Best-effort:
+        // the registry is the source of truth, so a marker-write failure
+        // (permissions, disk full) only costs prompt accuracy.
+        if let Err(e) = write_worktree_name_marker(
+            &dest,
+            &dest.join(repo.ident().dot_dir()),
+            (!ctx.opts.label.is_empty()).then_some(ctx.opts.label.as_str()),
+        ) {
+            logger.warn(format!(
+                "failed to write worktree-name marker for {}: {:#}",
+                dest.display(),
+                e
+            ));
+        }
 
         Ok(())
     })?;

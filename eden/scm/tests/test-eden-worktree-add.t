@@ -61,6 +61,16 @@ test worktree add - linked checkout is on the same commit as main checkout
   $ echo "main: $main_hash, linked: $linked_hash"
   main: *, linked: * (glob)
 
+test worktree add - writes .sl/worktreename marker (basename when no --label)
+
+  $ cat $TESTTMP/linked1/.sl/worktreename
+  linked1 (no-eol)
+
+test worktree add - marker reflects --label when provided
+
+  $ cat $TESTTMP/linked2/.sl/worktreename
+  feature-x (no-eol)
+
 test worktree add - edensparse filters are copied to linked checkout
 
   $ enable edensparse

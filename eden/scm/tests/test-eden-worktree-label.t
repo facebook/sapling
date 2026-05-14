@@ -29,6 +29,15 @@ test worktree label - --label flag
   $ sl worktree label $TESTTMP/label_wt2 --label "wt2-label"
   label set for $TESTTMP/label_wt2
 
+test worktree label - .sl/worktreename marker reflects each label
+
+  $ cat $TESTTMP/myrepo/.sl/worktreename
+  main-label (no-eol)
+  $ cat $TESTTMP/label_wt1/.sl/worktreename
+  wt1-label (no-eol)
+  $ cat $TESTTMP/label_wt2/.sl/worktreename
+  wt2-label (no-eol)
+
 test worktree label - verify in list output
 
   $ sl worktree list
@@ -57,10 +66,33 @@ test worktree label - --remove (removes from current)
     linked  $TESTTMP/label_wt2   wt2-label
   * main    $TESTTMP/myrepo
 
+test worktree label - --remove falls back marker to worktree basename
+
+  $ cat $TESTTMP/myrepo/.sl/worktreename
+  myrepo (no-eol)
+
 test worktree label - PATH --remove
 
   $ sl worktree label $TESTTMP/label_wt1 --remove
   label removed for $TESTTMP/label_wt1
+  $ cat $TESTTMP/label_wt1/.sl/worktreename
+  label_wt1 (no-eol)
+
+test worktree label - marker-write failure does not abort the command
+
+Replace the marker file with a directory so `fs::write` fails with EISDIR.
+The registry update should still land and the command should exit 0.
+
+  $ rm $TESTTMP/label_wt1/.sl/worktreename
+  $ mkdir $TESTTMP/label_wt1/.sl/worktreename
+  $ sl worktree label $TESTTMP/label_wt1 --label "best-effort-label"
+  failed to write worktree-name marker for $TESTTMP/label_wt1: * (glob)
+  label set for $TESTTMP/label_wt1
+  $ sl worktree list
+    linked  $TESTTMP/label_wt1   best-effort-label
+    linked  $TESTTMP/label_wt2   wt2-label
+  * main    $TESTTMP/myrepo
+  $ rmdir $TESTTMP/label_wt1/.sl/worktreename
 
 test worktree label - no args error
 

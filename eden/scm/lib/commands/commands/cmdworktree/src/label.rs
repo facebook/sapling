@@ -14,6 +14,7 @@ use fs_err as fs;
 use repo::repo::Repo;
 use workingcopy::workingcopy::WorkingCopy;
 use worktree::with_registry_lock;
+use worktree::write_worktree_name_marker;
 
 use crate::WorktreeOpts;
 use crate::require_group;
@@ -23,6 +24,11 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, _wc: &WorkingCopy) ->
     let current_group = require_group(repo)?;
     let (target, new_label) = parse_label_args(ctx, repo)?;
 
+    let label = if ctx.opts.remove {
+        None
+    } else {
+        Some(new_label)
+    };
     with_registry_lock(&current_group.shared_store_path, |registry| {
         let grp = match registry.groups.get_mut(&current_group.group_id) {
             Some(group) => group,
@@ -32,10 +38,25 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, _wc: &WorkingCopy) ->
             Some(entry) => entry,
             None => abort!("'{}' is not in this worktree group", target.display()),
         };
-        if ctx.opts.remove {
-            entry.label = None;
-        } else {
-            entry.label = Some(new_label);
+
+        entry.label = label;
+
+        // Mirror the registry change to the per-worktree marker file so
+        // external tools (e.g. `scm-prompt.sh`) reflect the new label without
+        // needing to read the registry. Done under the same registry lock so
+        // the two stay in sync. Best-effort: the registry is the source of
+        // truth, so a marker-write failure (permissions, disk full) only
+        // costs prompt accuracy. With `--remove`, falls back to basename.
+        if let Err(e) = write_worktree_name_marker(
+            &target,
+            &target.join(repo.ident().dot_dir()),
+            entry.label.as_deref(),
+        ) {
+            logger.warn(format!(
+                "failed to write worktree-name marker for {}: {:#}",
+                target.display(),
+                e
+            ));
         }
         Ok(())
     })?;
