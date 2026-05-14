@@ -1291,7 +1291,7 @@ EdenServiceHandler::semifuture_getDigestHash(
 }
 
 folly::SemiFuture<std::unique_ptr<std::vector<SHA1Result>>>
-EdenServiceHandler::semifuture_getSHA1(
+EdenServiceHandler::semifuture_getSHA1Impl(
     std::unique_ptr<string> mountPoint,
     std::unique_ptr<vector<string>> paths,
     std::unique_ptr<SyncBehavior> sync) {
@@ -1341,6 +1341,15 @@ EdenServiceHandler::semifuture_getSHA1(
                    return out;
                  }))
       .semi();
+}
+
+folly::SemiFuture<std::unique_ptr<std::vector<SHA1Result>>>
+EdenServiceHandler::semifuture_getSHA1(
+    std::unique_ptr<string> mountPoint,
+    std::unique_ptr<vector<string>> paths,
+    std::unique_ptr<SyncBehavior> sync) {
+  return semifuture_getSHA1Impl(
+      std::move(mountPoint), std::move(paths), std::move(sync));
 }
 
 folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_addBindMount(
