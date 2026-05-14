@@ -164,6 +164,7 @@ cpp_unittest(
         "//eden/fs/testharness:test_mount",
         "//eden/fs/testharness:test_util",
         "//folly:range",
+        "//folly/coro:gtest_helpers",
         "//folly/test:test_utils",
     ],
 )

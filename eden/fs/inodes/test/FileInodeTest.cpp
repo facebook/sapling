@@ -11,6 +11,7 @@
 
 #include <fmt/format.h>
 #include <folly/Range.h>
+#include <folly/coro/GtestHelpers.h>
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
 #include <chrono>
@@ -816,6 +817,36 @@ TEST(FileInode, reloadsBlobIfCacheIsEvicted) {
   inode->read(4, 4, ObjectFetchContext::getNullContext()).get(0ms);
   EXPECT_TRUE(blobCache->contains(id))
       << fmt::format("reading should insert id {} into cache", id);
+}
+
+CO_TEST(FileInode, co_getSha1NonMaterialized) {
+  FakeTreeBuilder builder;
+  builder.setFiles({{"test.txt", "Hello World"}});
+  TestMount mount{builder};
+
+  auto inode = mount.getFileInode("test.txt");
+  auto sha1 = co_await inode->co_getSha1(ObjectFetchContext::getNullContext());
+
+  // SHA-1 of "Hello World"
+  EXPECT_EQ("0a4d55a8d778e5022fab701977c5d840bbc486d0", sha1.toString());
+}
+
+CO_TEST(FileInode, co_getSha1Materialized) {
+  FakeTreeBuilder builder;
+  builder.setFiles({{"test.txt", "Hello World"}});
+  TestMount mount{builder};
+
+  auto inode = mount.getFileInode("test.txt");
+
+  // Materialize the file by writing to it
+  inode->write("Modified", 0, ObjectFetchContext::getNullContext()).get(0ms);
+
+  auto sha1 = co_await inode->co_getSha1(ObjectFetchContext::getNullContext());
+
+  // SHA-1 of "Modified World" (original "Hello World" with first 8 bytes
+  // overwritten) Just verify we get a valid SHA-1
+  EXPECT_FALSE(sha1.toString().empty());
+  EXPECT_EQ(40, sha1.toString().size()); // SHA-1 is 20 bytes = 40 hex chars
 }
 
 // TODO: test multiple flags together

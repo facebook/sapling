@@ -874,6 +874,10 @@ AbsolutePath FileInode::getMaterializedFilePath() {
 
 #endif
 
+// DEPRECATED: use co_getSha1 directly. Kept only because
+// VirtualInode::getSHA1, FileInode::isSameAsSlow, FileInode::isSameAs,
+// and FileInode::getxattr still consume ImmediateFuture chains;
+// delete once those paths are migrated to coroutines.
 ImmediateFuture<Hash20> FileInode::getSha1(
     const ObjectFetchContextPtr& fetchContext) {
   auto state = LockedState{this};
@@ -912,6 +916,23 @@ ImmediateFuture<Hash32> FileInode::getBlake3(
         return state->materializedState.getBlake3(
             *this, getMount()->getEdenConfig()->blake3Key.getValue());
       });
+  }
+
+  XLOGF(FATAL, "FileInode in illegal state: {}", state->tag);
+}
+
+folly::coro::now_task<Hash20> FileInode::co_getSha1(
+    const ObjectFetchContextPtr& fetchContext) {
+  auto state = LockedState{this};
+
+  logAccess(*fetchContext);
+  if (state->tag == State::BLOB_NOT_LOADING ||
+      state->tag == State::BLOB_LOADING) {
+    auto id = state->nonMaterializedState.id;
+    state.unlock();
+    co_return co_await getObjectStore().co_getBlobSha1(id, fetchContext);
+  } else if (state->tag == State::MATERIALIZED_IN_OVERLAY) {
+    co_return state->materializedState.getSha1(*this);
   }
 
   XLOGF(FATAL, "FileInode in illegal state: {}", state->tag);

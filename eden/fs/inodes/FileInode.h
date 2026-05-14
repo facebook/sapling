@@ -243,6 +243,9 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
 
   ImmediateFuture<Hash32> getBlake3(const ObjectFetchContextPtr& fetchContext);
 
+  folly::coro::now_task<Hash20> co_getSha1(
+      const ObjectFetchContextPtr& fetchContext);
+
   folly::coro::now_task<Hash32> co_getBlake3(
       const ObjectFetchContextPtr& fetchContext);
 
