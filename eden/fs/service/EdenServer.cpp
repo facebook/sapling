@@ -89,6 +89,7 @@
 #include "eden/fs/store/sl/SaplingBackingStore.h"
 #include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/telemetry/EdenErrorInfoBuilder.h"
+#include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/EdenStructuredLogger.h"
 #include "eden/fs/telemetry/ErrorLogger.h"
@@ -173,7 +174,7 @@ using namespace facebook::eden;
 
 std::shared_ptr<Notifier> getPlatformNotifier(
     std::shared_ptr<ReloadableConfig> config,
-    std::shared_ptr<StructuredLogger> logger,
+    std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger,
     std::string version) {
 #if defined(_WIN32)
   /*
@@ -190,19 +191,22 @@ std::shared_ptr<Notifier> getPlatformNotifier(
      */
     try {
       auto notifier = std::make_shared<WindowsNotifier>(
-          config, logger, version, std::chrono::steady_clock::now());
+          config,
+          edenFsEventsLogger,
+          version,
+          std::chrono::steady_clock::now());
       notifier->initialize();
       return notifier;
     } catch (const std::exception& ex) {
       auto reason = folly::exceptionStr(ex);
       XLOGF(WARN, "Couldn't start E-Menu: {}", reason);
-      logger->logEvent(EMenuStartupFailure{reason.toStdString()});
+      edenFsEventsLogger->logEvent(EMenuStartupFailure{reason.toStdString()});
     }
   }
   return std::make_shared<NullNotifier>(config);
 #else
   (void)version;
-  (void)logger;
+  (void)edenFsEventsLogger;
   return std::make_shared<CommandNotifier>(config);
 #endif // _WIN32
 }
@@ -564,14 +568,21 @@ EdenServer::EdenServer(
           sessionInfo,
           config_,
           edenStats.copy())},
-      heartbeatManager_{
-          std::make_shared<HeartbeatManager>(edenDir_, structuredLogger_)},
 #ifdef EDEN_HAVE_LOGGER
       xplatLogger_{std::make_unique<XplatLogger>(
           EdenTelemetryIdentity::fromSessionInfo(sessionInfo),
           edenStats.copy(),
           config_)},
 #endif
+      edenFsEventsLogger_{std::make_shared<EdenFsEventsLogger>(
+          structuredLogger_,
+#ifdef EDEN_HAVE_LOGGER
+          xplatLogger_.get(),
+#else
+          nullptr,
+#endif
+          config_,
+          edenStats.copy())},
       serverState_{make_shared<ServerState>(
           std::move(userInfo),
           std::move(edenStats),
@@ -591,7 +602,7 @@ EdenServer::EdenServer(
           config_,
           *edenConfig,
           mainEventBase_,
-          getPlatformNotifier(config_, structuredLogger_, version),
+          getPlatformNotifier(config_, edenFsEventsLogger_, version),
           FLAGS_enable_fault_injection,
           nullptr, // inodeAccessLogger — use default
 #ifdef EDEN_HAVE_LOGGER
@@ -603,6 +614,9 @@ EdenServer::EdenServer(
           nullptr
 #endif
               )},
+      heartbeatManager_{std::make_shared<HeartbeatManager>(
+          edenDir_,
+          serverState_->getStructuredLogger())},
       blobCache_{BlobCache::create(
           serverState_->getReloadableConfig(),
           serverState_->getStats().copy())},
@@ -1704,7 +1718,7 @@ bool EdenServer::performCleanup() {
   SCOPE_EXIT {
     auto shutdownTimeInSeconds =
         std::chrono::duration<double>{shutdown.elapsed()}.count();
-    serverState_->getStructuredLogger()->logEvent(
+    serverState_->getEdenFsEventsLogger()->logEvent(
         DaemonStop{shutdownTimeInSeconds, takeover, shutdownSuccess});
   };
 
@@ -2107,7 +2121,7 @@ ImmediateFuture<std::shared_ptr<EdenMount>> EdenServer::mount(
               auto* fsChannel = edenMount->getFsChannel();
               auto inodeCatalogType =
                   edenMount->getCheckoutConfig()->getInodeCatalogType();
-              serverState_->getStructuredLogger()->logEvent(
+              serverState_->getEdenFsEventsLogger()->logEvent(
                   FinishedMount{
                       std::string{toBackingStoreString(
                           edenMount->getCheckoutConfig()
@@ -2904,7 +2918,7 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectWorkingCopy(
         inode->unloadChildrenUnreferencedByFs();
       })
       .thenTry([workingCopyRuntime,
-                structuredLogger = structuredLogger_,
+                edenFsEventsLogger = serverState_->getEdenFsEventsLogger(),
                 mountPath,
                 inodeMap = mount.getInodeMap(),
                 totalNumberOfInodesBeforeGC,
@@ -2920,7 +2934,7 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectWorkingCopy(
             inodeCountsAfterGC.treeCount +
             inodeCountsAfterGC.unloadedInodeCount;
 
-        structuredLogger->logEvent(
+        edenFsEventsLogger->logEvent(
             WorkingCopyGc{
                 runtime.count(),
                 numInvalidated,
@@ -3105,18 +3119,18 @@ void EdenServer::accidentalUnmountRecovery() {
           getServerState()->getThreadPool().get(),
           [this,
            initialConfig = std::move(initialConfig),
-           structuredLogger = structuredLogger_,
+           edenFsEventsLogger = serverState_->getEdenFsEventsLogger(),
            mountPath,
            repoName = client.second.asString()]() mutable {
             return mount(std::move(initialConfig), /*readOnly=*/false)
                 .thenTry([mountPath,
-                          structuredLogger,
+                          edenFsEventsLogger,
                           repoName = std::move(repoName)](
                              folly::Try<std::shared_ptr<EdenMount>>&& result) {
                   bool success = result.hasValue();
                   std::string exceptionMessage =
                       success ? "" : result.exception().what().toStdString();
-                  structuredLogger->logEvent(
+                  edenFsEventsLogger->logEvent(
                       AccidentalUnmountRecovery{
                           exceptionMessage, success, repoName});
                   if (success) {
@@ -3257,7 +3271,7 @@ void EdenServer::detectNfsCrawl() {
                     "NFS crawl detection found process with open files in mount point: {}\n  {}",
                     mount.getPath(),
                     output);
-                serverState->getStructuredLogger()->logEvent(
+                serverState->getEdenFsEventsLogger()->logEvent(
                     NfsCrawlDetected{
                         readCount,
                         readThreshold,

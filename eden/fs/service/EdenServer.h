@@ -67,6 +67,7 @@ class BlobCache;
 class CheckoutConfig;
 class Dirstate;
 class EdenConfig;
+class EdenFsEventsLogger;
 class EdenMount;
 class EdenServiceHandler;
 class ErrorLogger;
@@ -825,11 +826,6 @@ class EdenServer : private TakeoverHandler {
    */
   std::shared_ptr<StructuredLogger> errorStructuredLogger_;
 
-  /**
-   * HeartbeatManager to handle all heartbeat-related operations
-   */
-  std::shared_ptr<HeartbeatManager> heartbeatManager_;
-
 #ifdef EDEN_HAVE_LOGGER
   /**
    * Cross-platform structured logger for file access events.
@@ -840,9 +836,21 @@ class EdenServer : private TakeoverHandler {
 #endif
 
   /**
+   * Events logger for telemetry, shared with WindowsNotifier.
+   * Declared before serverState_ so it can be passed to getPlatformNotifier.
+   */
+  std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger_;
+
+  /**
    * Common state shared by all of the EdenMount objects.
    */
   const std::shared_ptr<ServerState> serverState_;
+
+  /**
+   * HeartbeatManager to handle all heartbeat-related operations.
+   * Declared after serverState_ so it can receive the EdenFsEventsLogger.
+   */
+  std::shared_ptr<HeartbeatManager> heartbeatManager_;
 
   // TODO: We should not be sharing in-memory BlobCache and TreeCache across
   // multiple BackingStores. The IDs inhabit different spaces.

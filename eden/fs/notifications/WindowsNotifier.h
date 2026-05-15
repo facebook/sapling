@@ -7,6 +7,8 @@
 
 #pragma once
 
+#ifdef _WIN32
+
 #include <folly/Synchronized.h>
 
 #include "eden/common/utils/Guid.h"
@@ -20,8 +22,8 @@ constexpr size_t WIN32_MAX_TITLE_LEN = 63;
 constexpr size_t WIN32_MAX_BODY_LEN = 255;
 constexpr size_t kNotificationsEnabledBit = 0;
 
+class EdenFsEventsLogger;
 class ReloadableConfig;
-class StructuredLogger;
 struct InodePopulationReport;
 
 struct WindowDeleter {
@@ -45,7 +47,7 @@ class WindowsNotifier : public Notifier {
  public:
   explicit WindowsNotifier(
       std::shared_ptr<ReloadableConfig> edenConfig,
-      std::shared_ptr<StructuredLogger> logger,
+      std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger,
       std::string_view version,
       std::chrono::time_point<std::chrono::steady_clock> startTime);
   ~WindowsNotifier();
@@ -162,7 +164,9 @@ class WindowsNotifier : public Notifier {
   uint8_t notificationStatus_;
   // Set by IDM_SIGNAL_CHECKOUT checkout signal.
   size_t lastNumActive_;
-  std::shared_ptr<StructuredLogger> structuredLogger_;
+  std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger_;
 };
 
 } // namespace facebook::eden
+
+#endif // _WIN32

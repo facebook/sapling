@@ -22,11 +22,11 @@
 #include <folly/futures/Future.h>
 #include <folly/portability/Windows.h>
 
-#include "eden/common/telemetry/StructuredLogger.h"
 #include "eden/common/utils/SpawnedProcess.h"
 #include "eden/common/utils/StringConv.h"
 #include "eden/common/utils/SystemError.h"
 #include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/LogEvent.h"
 
 namespace facebook::eden {
@@ -609,11 +609,11 @@ void cacheIconImages() {
 
 WindowsNotifier::WindowsNotifier(
     std::shared_ptr<ReloadableConfig> edenConfig,
-    std::shared_ptr<StructuredLogger> logger,
+    std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger,
     std::string_view version,
     std::chrono::time_point<std::chrono::steady_clock> startTime)
     : Notifier(std::move(edenConfig)),
-      structuredLogger_{std::move(logger)},
+      edenFsEventsLogger_{std::move(edenFsEventsLogger)},
       guid_{
           version == "(dev build)" ? std::nullopt
                                    : std::optional<Guid>(EMenuGuid)},
@@ -683,8 +683,8 @@ void WindowsNotifier::updateIconColor(std::optional<size_t> numActive) {
 
 template <typename Event>
 void WindowsNotifier::logEvent(const Event& event) {
-  if (structuredLogger_) {
-    structuredLogger_->logEvent(event);
+  if (edenFsEventsLogger_) {
+    edenFsEventsLogger_->logEvent(event);
   }
 }
 
