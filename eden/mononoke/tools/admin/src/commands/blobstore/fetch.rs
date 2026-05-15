@@ -38,6 +38,7 @@ use mononoke_types::ContentChunk;
 use mononoke_types::ContentMetadataV2;
 use mononoke_types::FileContents;
 use mononoke_types::ThriftConvert;
+use mononoke_types::acl_manifest::AclManifest;
 use mononoke_types::basename_suffix_skeleton_manifest_v3::BssmV3Directory;
 use mononoke_types::basename_suffix_skeleton_manifest_v3::BssmV3Entry;
 use mononoke_types::blame_v2::BlameV2;
@@ -88,6 +89,7 @@ pub struct BlobstoreFetchArgs {
 pub enum DecodeAs {
     Hex,
     Auto,
+    AclManifest,
     Changeset,
     Content,
     ContentChunk,
@@ -186,6 +188,7 @@ impl DecodeAs {
                 ("contentmf.", DecodeAs::ContentManifest),
                 ("icf.map2node.", DecodeAs::InferredCopyFromMapNode),
                 ("icf.", DecodeAs::InferredCopyFrom),
+                ("aclmf.", DecodeAs::AclManifest),
             ] {
                 if key[index..].starts_with(prefix) {
                     return Some(auto_decode_as);
@@ -364,6 +367,9 @@ async fn decode(
         DecodeAs::PreloadedCommitGraph => Decoded::try_debug(
             preloaded_commit_graph_storage::deserialize_preloaded_edges(data.into_raw_bytes()),
         ),
+        DecodeAs::AclManifest => {
+            Decoded::try_debug(AclManifest::from_bytes(&data.into_raw_bytes()))
+        }
     }
 }
 
