@@ -256,3 +256,43 @@ and OS X
 #endif
 
   $ cd ..
+
+Adding a file that matches a gitignore rule warns the user:
+
+  $ newrepo ignored
+  $ echo 'ignored.txt' > .gitignore
+  $ echo 'ignored_dir/' >> .gitignore
+  $ sl ci -m init -A .gitignore
+  $ echo content > ignored.txt
+  $ mkdir ignored_dir
+  $ echo content > ignored_dir/a
+  $ echo content > tracked.txt
+
+Warning is emitted for explicitly added ignored file:
+
+  $ sl add ignored.txt
+  the following files are ignored, but still added because they are explicitly specified:
+    ignored.txt
+  (use 'sl debugignore <file>' to check why they are ignored)
+  $ sl forget ignored.txt
+
+Mixed add: warning lists only the ignored file:
+
+  $ sl add ignored.txt ignored_dir/a tracked.txt
+  the following files are ignored, but still added because they are explicitly specified:
+    ignored.txt
+    ignored_dir/a
+  (use 'sl debugignore <file>' to check why they are ignored)
+  $ sl status
+  A ignored.txt
+  A ignored_dir/a
+  A tracked.txt
+
+The warning is silenced by -q:
+
+  $ sl forget ignored.txt ignored_dir/a tracked.txt
+  $ sl add -q ignored.txt ignored_dir/a tracked.txt
+  $ sl status
+  A ignored.txt
+  A ignored_dir/a
+  A tracked.txt

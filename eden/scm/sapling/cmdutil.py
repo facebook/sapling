@@ -3663,6 +3663,7 @@ def add(ui, repo, match, prefix, explicitonly, **opts):
     # On case sensitive filesystems this serves no purpose.
     norm_to_exact = {normpath(f): f for f in files if match.exact(f)}
 
+    ignored_added = []
     for f in sorted(files):
         fn = normpath(f)
         if fn in norm_to_exact and f != norm_to_exact[fn]:
@@ -3687,6 +3688,20 @@ def add(ui, repo, match, prefix, explicitonly, **opts):
             names.append(f)
             if ui.verbose or not exact:
                 ui.status(_("adding %s\n") % match.rel(f))
+            if ignored(f) and f not in pctx:
+                ignored_added.append(match.rel(f))
+
+    if ignored_added:
+        ui.status(
+            _(
+                "the following files are ignored, but still added because they are explicitly specified:\n"
+            )
+        )
+        for p in ignored_added:
+            ui.status("  %s\n" % p)
+        ui.status(
+            _("(use '@prog@ debugignore <file>' to check why they are ignored)\n")
+        )
 
     if not opts.get(r"dry_run"):
         rejected = wctx.add(names, prefix)

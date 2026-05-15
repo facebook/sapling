@@ -272,6 +272,9 @@ Ignored but tracked files show up in sl status
 
   $ sl status ignored
   $ sl add ignored
+  the following files are ignored, but still added because they are explicitly specified:
+    ignored
+  (use 'sl debugignore <file>' to check why they are ignored)
   $ sl status
   M modified
   A added

@@ -163,6 +163,9 @@ merge.checkignored
   $ echo This is file localignored3 > localignored
   $ echo This is file remoteignored3 > remoteignored
   $ sl add .gitignore localignored remoteignored
+  the following files are ignored, but still added because they are explicitly specified:
+    remoteignored
+  (use 'sl debugignore <file>' to check why they are ignored)
   $ sl commit -m "commit #3"
 
   $ sl up 49035e18a8e652edd5309f18b1589e09bb4c2193

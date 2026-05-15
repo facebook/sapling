@@ -189,6 +189,9 @@ test conflicting untracked ignored file
   $ sl ci -m 'add .gitignore'
   $ echo ignored > ignored
   $ sl add ignored
+  the following files are ignored, but still added because they are explicitly specified:
+    ignored
+  (use 'sl debugignore <file>' to check why they are ignored)
   $ sl ci -m 'add ignored file'
 
   $ sl up -q 'desc("add .gitignore")'

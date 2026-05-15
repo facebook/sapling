@@ -144,6 +144,9 @@ Verify status only shows included files
 Adding an excluded file should fail
 
   $ sl add hide3
+  the following files are ignored, but still added because they are explicitly specified:
+    hide3
+  (use 'sl debugignore <file>' to check why they are ignored)
   abort: cannot add 'hide3' - it is outside the sparse checkout
   (include file with `sl sparse include <pattern>` or use `sl add -s <file>` to include file directory while adding)
   [255]
@@ -319,6 +322,9 @@ Test that add -s adds dirs to sparse profile
   $ touch add/foo
   $ touch add/bar
   $ sl add add/foo
+  the following files are ignored, but still added because they are explicitly specified:
+    add/foo
+  (use 'sl debugignore <file>' to check why they are ignored)
   abort: cannot add 'add/foo' - it is outside the sparse checkout
   (include file with `sl sparse include <pattern>` or use `sl add -s <file>` to include file directory while adding)
   [255]

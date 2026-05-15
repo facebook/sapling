@@ -130,6 +130,9 @@ Test files properties
   $ fileset 'binary() and ignored()'
   bin
   $ sl add bin
+  the following files are ignored, but still added because they are explicitly specified:
+    bin
+  (use 'sl debugignore <file>' to check why they are ignored)
   $ fileset 'binary()'
   bin
 
