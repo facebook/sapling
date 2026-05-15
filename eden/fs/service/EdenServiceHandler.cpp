@@ -3506,8 +3506,81 @@ EdenServiceHandler::semifuture_getFileInformation(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<std::vector<std::string>> paths,
     std::unique_ptr<SyncBehavior> sync) {
+  if (server_->getServerState()
+          ->getEdenConfig()
+          ->enableCoroutinesPhase9.getValue()) {
+    // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+    return folly::coro::co_invoke(
+               [self = shared_from_this()](
+                   std::unique_ptr<std::string> mountPoint,
+                   std::unique_ptr<std::vector<std::string>> paths,
+                   std::unique_ptr<SyncBehavior> sync)
+                   -> folly::coro::Task<
+                       std::unique_ptr<std::vector<FileInformationOrError>>> {
+                 co_return co_await self->co_getFileInformationImpl(
+                     std::move(mountPoint), std::move(paths), std::move(sync));
+               },
+               std::move(mountPoint),
+               std::move(paths),
+               std::move(sync))
+        .semi();
+  }
   return semifuture_getFileInformationImpl(
       std::move(mountPoint), std::move(paths), std::move(sync));
+}
+
+folly::coro::now_task<std::unique_ptr<std::vector<FileInformationOrError>>>
+EdenServiceHandler::co_getFileInformationImpl(
+    std::unique_ptr<std::string> mountPoint,
+    std::unique_ptr<std::vector<std::string>> paths,
+    std::unique_ptr<SyncBehavior> sync) {
+  XLOG(DBG6, "Using coroutine path for getFileInformation");
+  auto helper = INSTRUMENT_THRIFT_CALL(
+      DBG3, *mountPoint, getSyncTimeout(*sync), toLogArg(*paths));
+  auto& fetchContext = helper->getFetchContext();
+  auto mountHandle = lookupMount(mountPoint);
+  auto objectStore = mountHandle.getObjectStorePtr();
+  auto lastCheckoutTime =
+      mountHandle.getEdenMount().getLastCheckoutTime().toTimespec();
+
+  co_await co_waitForPendingWrites(mountHandle.getEdenMount(), *sync);
+
+  auto results = co_await co_applyToVirtualInode(
+      mountHandle.getRootInode(),
+      *paths,
+      [lastCheckoutTime, objectStore, fetchContext = fetchContext.copy()](
+          VirtualInode inode,
+          RelativePath) -> folly::coro::now_task<FileInformationOrError> {
+        auto st =
+            co_await inode.co_stat(lastCheckoutTime, objectStore, fetchContext);
+        FileInformation info;
+        info.size() = st.st_size;
+        auto ts = stMtime(st);
+        info.mtime()->seconds() = ts.tv_sec;
+        info.mtime()->nanoSeconds() = ts.tv_nsec;
+        info.mode() = st.st_mode;
+
+        FileInformationOrError result;
+        result.info() = info;
+        co_return result;
+      },
+      objectStore,
+      fetchContext);
+
+  auto out = std::make_unique<std::vector<FileInformationOrError>>();
+  out->reserve(results.size());
+
+  for (auto& item : results) {
+    if (item.hasException()) {
+      FileInformationOrError result;
+      result.error() = newEdenError(item.exception());
+      out->emplace_back(std::move(result));
+    } else {
+      out->emplace_back(item.value());
+    }
+  }
+
+  co_return out;
 }
 
 folly::SemiFuture<std::unique_ptr<std::vector<FileInformationOrError>>>

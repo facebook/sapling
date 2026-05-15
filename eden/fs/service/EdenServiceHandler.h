@@ -293,6 +293,12 @@ class EdenServiceHandler
       std::unique_ptr<std::vector<std::string>> paths,
       std::unique_ptr<SyncBehavior> sync);
 
+  folly::coro::now_task<std::unique_ptr<std::vector<FileInformationOrError>>>
+  co_getFileInformationImpl(
+      std::unique_ptr<std::string> mountPoint,
+      std::unique_ptr<std::vector<std::string>> paths,
+      std::unique_ptr<SyncBehavior> sync);
+
   folly::SemiFuture<std::unique_ptr<GetAttributesFromFilesResultV2>>
   semifuture_getAttributesFromFilesV2(
       std::unique_ptr<GetAttributesFromFilesParams> params) override;
