@@ -53,25 +53,58 @@ pub struct HgPreloadedAugmentedManifest {
 //
 // Source: mercurial/parsers.c:parse_manifest()
 
+/// Append the legacy hg-manifest line for one entry to `buf`:
+///
+/// ```text
+/// <name>\0<filenode-hex><tag>\n
+/// ```
+///
+/// This is the primitive used by both the bulk `serialize_manifest` (which
+/// serialises a full directory in one go into a single buffer) and the
+/// streaming hg-node-id computation in `derive_hg_augmented_manifest`, which
+/// feeds per-entry chunks into `calculate_hg_node_id_stream` to avoid
+/// materialising the whole directory in memory.
+pub fn serialize_manifest_entry_into(
+    buf: &mut Vec<u8>,
+    name: &MPathElement,
+    subentry: &HgAugmentedManifestMetadata,
+) -> Result<()> {
+    let (tag, hash) = match subentry {
+        HgAugmentedManifestEntry::DirectoryNode(directory) => {
+            (HgManifestType::Tree.manifest_suffix()?, directory.treenode)
+        }
+        HgAugmentedManifestEntry::FileNode(file) => {
+            let tag = HgManifestType::File(file.file_type).manifest_suffix()?;
+            (tag, file.filenode)
+        }
+    };
+    buf.extend(name.as_ref());
+    buf.push(b'\0');
+    buf.extend(hash.to_hex().as_bytes());
+    buf.extend(tag);
+    buf.push(b'\n');
+    Ok(())
+}
+
+/// Bytes-returning wrapper around `serialize_manifest_entry_into` for stream
+/// consumers that need a per-entry chunk (e.g. to feed into
+/// `calculate_hg_node_id_stream` one item at a time).
+pub fn serialize_manifest_entry(
+    name: &MPathElement,
+    subentry: &HgAugmentedManifestMetadata,
+) -> Result<Bytes> {
+    // Tight upper bound: <name>\0<40-hex node hash><tag (≤1 byte)>\n.
+    let mut buf = Vec::with_capacity(name.as_ref().len() + 43);
+    serialize_manifest_entry_into(&mut buf, name, subentry)?;
+    Ok(buf.into())
+}
+
 pub fn serialize_manifest(
     sharded_augmented_manifest: &[(MPathElement, HgAugmentedManifestMetadata)],
 ) -> Result<Bytes> {
     let mut contents = Vec::new();
     for (name, subentry) in sharded_augmented_manifest {
-        contents.extend(name.as_ref());
-        let (tag, hash) = match subentry {
-            HgAugmentedManifestEntry::DirectoryNode(directory) => {
-                (HgManifestType::Tree.manifest_suffix()?, directory.treenode)
-            }
-            HgAugmentedManifestEntry::FileNode(file) => {
-                let tag = HgManifestType::File(file.file_type).manifest_suffix()?;
-                (tag, file.filenode)
-            }
-        };
-        contents.push(b'\0');
-        contents.extend(hash.to_hex().as_bytes());
-        contents.extend(tag);
-        contents.push(b'\n')
+        serialize_manifest_entry_into(&mut contents, name, subentry)?;
     }
     Ok(contents.into())
 }

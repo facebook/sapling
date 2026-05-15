@@ -53,7 +53,7 @@ use tracing::warn;
 use crate::derive_hg_changeset::store_file_change;
 
 #[derive(Copy, Clone, Debug, Hash, Eq, PartialEq)]
-struct ParentIndex(usize);
+pub(crate) struct ParentIndex(pub(crate) usize);
 
 pub async fn derive_simple_hg_manifest_stack_without_copy_info(
     ctx: CoreContext,
@@ -436,17 +436,21 @@ async fn resolve_conflict(
 
 /// Extract hg-relevant parents from a set of Traced entries. This means we ignore any parents
 /// except for p1 and p2.
-fn hg_parents<T: Copy>(parents: &[Traced<ParentIndex, T>]) -> (Option<T>, Option<T>) {
+///
+/// The bound is `Clone` rather than `Copy` so callers can instantiate `T` with non-`Copy`
+/// leaf types. `Copy` callers pay nothing extra: `<T as Clone>::clone` for a `Copy` type
+/// lowers to a memcpy.
+pub(crate) fn hg_parents<T: Clone>(parents: &[Traced<ParentIndex, T>]) -> (Option<T>, Option<T>) {
     let mut parents = parents.iter().filter_map(|t| match t.id() {
         Some(ParentIndex(0)) | Some(ParentIndex(1)) => Some(t.untraced()),
         Some(_) | None => None,
     });
 
-    (parents.next().copied(), parents.next().copied())
+    (parents.next().cloned(), parents.next().cloned())
 }
 
 /// Take an iterator, if it has just one value, return it. Otherwise, return None.
-fn unique_or_nothing<T: PartialEq>(iter: impl Iterator<Item = T>) -> Option<T> {
+pub(crate) fn unique_or_nothing<T: PartialEq>(iter: impl Iterator<Item = T>) -> Option<T> {
     let mut ret = None;
 
     for e in iter {
