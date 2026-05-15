@@ -560,9 +560,9 @@ class CloneCmd(Subcmd):
             action="store_true",
             default=False,
             help=(
-                "Skip resolving the commit hash via hg/git. Use when --rev is "
-                "already a full 40-character hex commit hash. This avoids a "
-                "subprocess call that potentially returns the same hash."
+                "Skip resolving the commit hash via hg/git. Use only when --rev is "
+                "already a full 40-character hex commit hash AND the commit is "
+                "already present in the local changelog of the backing repo."
             ),
         )
 
