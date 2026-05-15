@@ -36,4 +36,27 @@ class InodePath {
   std::array<char, kMaxPathLength> path_;
 };
 
+/**
+ * A fixed-size path for WAL (Write-Ahead Log) files in the overlay.
+ * Paths are relative to the overlay local directory: "XX/<inode>.wal".
+ * Same shard layout as InodePath, with a ".wal" suffix.
+ */
+class WalPath {
+ public:
+  explicit WalPath() noexcept;
+
+  /**
+   * The maximum path length: InodePath max + 4 bytes for ".wal" suffix.
+   */
+  static constexpr size_t kMaxPathLength = InodePath::kMaxPathLength + 4;
+
+  const char* c_str() const noexcept;
+  /* implicit */ operator RelativePathPiece() const noexcept;
+
+  std::array<char, kMaxPathLength>& rawData() noexcept;
+
+ private:
+  std::array<char, kMaxPathLength> path_;
+};
+
 } // namespace facebook::eden

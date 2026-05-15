@@ -25,6 +25,20 @@ std::array<char, InodePath::kMaxPathLength>& InodePath::rawData() noexcept {
   return path_;
 }
 
+WalPath::WalPath() noexcept : path_{'\0'} {}
+
+const char* WalPath::c_str() const noexcept {
+  return path_.data();
+}
+
+WalPath::operator RelativePathPiece() const noexcept {
+  return RelativePathPiece{folly::StringPiece{c_str()}};
+}
+
+std::array<char, WalPath::kMaxPathLength>& WalPath::rawData() noexcept {
+  return path_;
+}
+
 } // namespace facebook::eden
 
 #endif
