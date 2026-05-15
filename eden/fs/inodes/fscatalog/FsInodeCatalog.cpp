@@ -13,6 +13,9 @@
 
 #include <boost/filesystem.hpp>
 
+#include <dirent.h>
+
+#include <folly/Conv.h>
 #include <folly/Exception.h>
 #include <folly/File.h>
 #include <folly/FileUtil.h>
@@ -742,6 +745,124 @@ void FsFileContentStore::removeWal(InodeNumber parent) {
         err, fmt::format("error removing WAL file for inode {}", parent));
   }
 }
+
+std::vector<InodeNumber> FsFileContentStore::scanForWalFiles() const {
+  // Suffix is constexpr so the off-by-one is in one place.
+  static constexpr StringPiece kWalSuffix{".wal"};
+  std::vector<InodeNumber> result;
+  std::array<char, kShardDirPathLength + 1> subdirPath{};
+  subdirPath[kShardDirPathLength] = '\0';
+  MutableStringPiece subdirPiece{subdirPath.data(), kShardDirPathLength};
+
+  for (ShardID n = 0; n < kNumShards; ++n) {
+    formatSubdirShardPath(n, subdirPiece);
+
+    // O_NOFOLLOW hardens against shard symlinks. This is still best-effort:
+    // log shard access failures and keep scanning other shards.
+    int shardFd = openat(
+        dirFile_.fd(),
+        subdirPath.data(),
+        O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
+    if (shardFd == -1) {
+      XLOGF(
+          WARN,
+          "scanForWalFiles: failed to open shard {}: {}",
+          subdirPath.data(),
+          folly::errnoStr(errno));
+      continue;
+    }
+
+    DIR* dir = fdopendir(shardFd);
+    if (!dir) {
+      XLOGF(
+          WARN,
+          "scanForWalFiles: fdopendir failed on shard {}: {}",
+          subdirPath.data(),
+          folly::errnoStr(errno));
+      ::close(shardFd);
+      continue;
+    }
+    SCOPE_EXIT {
+      closedir(dir);
+    };
+
+    // readdir reports end-of-stream and errors as nullptr. Check errno after
+    // the loop so mid-shard failures are at least visible in logs.
+    struct dirent* entry;
+    while (true) {
+      errno = 0;
+      entry = readdir(dir);
+      if (entry == nullptr) {
+        break;
+      }
+      StringPiece name{entry->d_name};
+      if (name == "." || name == "..") {
+        continue;
+      }
+      if (!name.endsWith(kWalSuffix)) {
+        continue;
+      }
+      // Accept DT_UNKNOWN (some network FSes / older kernels don't
+      // populate d_type); reject other non-regular types.
+      if (entry->d_type != DT_REG && entry->d_type != DT_UNKNOWN) {
+        XLOGF(
+            WARN,
+            "scanForWalFiles: ignoring non-regular WAL entry {} in shard {}",
+            entry->d_name,
+            subdirPath.data());
+        continue;
+      }
+      auto inodeStr = name.subpiece(0, name.size() - kWalSuffix.size());
+      auto parsed = folly::tryTo<uint64_t>(inodeStr);
+      if (parsed.hasError()) {
+        XLOGF(
+            WARN, "Ignoring WAL file with unparsable name: {}", entry->d_name);
+        continue;
+      }
+      auto inodeNum = parsed.value();
+      // InodeNumber{0} fails the InodeNumber invariant (debug abort), so
+      // a stray "0.wal" would crash startup. Reject and warn.
+      if (inodeNum == 0) {
+        XLOGF(
+            WARN,
+            "Ignoring WAL file with zero inode: {} in shard {}",
+            entry->d_name,
+            subdirPath.data());
+        continue;
+      }
+      // Reject leading-zero duplicates: "5.wal" and "05.wal" parse to
+      // the same inode and we'd return (and replay) it twice.
+      if (inodeStr.size() > 1 && inodeStr[0] == '0') {
+        XLOGF(
+            WARN,
+            "Ignoring WAL file with leading-zero name: {}",
+            entry->d_name);
+        continue;
+      }
+      // Wrong-shard placement: getWalPath() addresses by (inode & 0xff),
+      // so subsequent replayWal/removeWal would never find this file.
+      if ((inodeNum & 0xff) != n) {
+        XLOGF(
+            WARN,
+            "Ignoring WAL file in wrong shard: {} found in shard {} (expected shard {:02x})",
+            entry->d_name,
+            subdirPath.data(),
+            inodeNum & 0xff);
+        continue;
+      }
+      result.emplace_back(inodeNum);
+    }
+    if (errno != 0) {
+      XLOGF(
+          WARN,
+          "scanForWalFiles: readdir failed in shard {}: {}",
+          subdirPath.data(),
+          folly::errnoStr(errno));
+    }
+  }
+  return result;
+}
+
 std::optional<overlay::OverlayDir> FsFileContentStore::deserializeOverlayDir(
     InodeNumber inodeNumber) {
   auto raw = loadRawOverlayDir(inodeNumber);

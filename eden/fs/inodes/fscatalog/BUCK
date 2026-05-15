@@ -22,6 +22,7 @@ cpp_library(
         "//eden/common/utils:throw",
         "//eden/fs/service:thrift-cpp2-types",
         "//eden/fs/utils:eden_error",
+        "//folly:conv",
         "//folly:exception",
         "//folly:file_util",
         "//folly/io:iobuf",

@@ -206,6 +206,28 @@ class FsFileContentStore : public FileContentStore {
    */
   void removeWal(InodeNumber parent);
 
+  /**
+   * Enumerate every directory inode that has a WAL file on disk. Scans
+   * the existing 256 shard directories for files with ".wal" suffix.
+   *
+   * Concurrency: caller is responsible for excluding concurrent WAL
+   * writers and removers. Intended to run during overlay load or fsck
+   * before any mounts are live; not safe to call concurrently with
+   * appendWalEntry / removeWal on the same parent.
+   *
+   * Filtering: only regular files whose name is the parent inode number
+   * rendered as base-10 with no leading zeros, suffixed by ".wal" (e.g.
+   * "12345.wal"), placed in the canonical shard (low byte of inode ==
+   * shard index) are returned. Symlinks, directories, zero-inode names,
+   * leading-zero duplicates, and wrong-shard placement are logged at
+   * WARN and skipped. Shard enumeration errors are also logged and the
+   * scan continues, so callers may receive a partial best-effort result.
+   *
+   * The returned vector is unsorted and may include entries for WAL
+   * files that get removed between the scan and the caller's use.
+   */
+  std::vector<InodeNumber> scanForWalFiles() const;
+
   static constexpr folly::StringPiece kMetadataFile{"metadata.table"};
 
   /**

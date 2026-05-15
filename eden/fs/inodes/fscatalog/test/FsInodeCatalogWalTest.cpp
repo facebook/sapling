@@ -299,7 +299,6 @@ TEST_F(FsInodeCatalogWalTest, hasWal_togglesWithAppendAndRemove) {
   store_->removeWal(parent);
   EXPECT_FALSE(store_->hasWal(parent));
 }
-
 TEST_F(FsInodeCatalogWalTest, hasWal_falseForSymlinkAtWalPath) {
   // hasWal uses fstatat + S_ISREG, so a stray symlink planted at the WAL
   // path must report false rather than be followed (or accepted as a WAL).
@@ -316,4 +315,123 @@ TEST_F(FsInodeCatalogWalTest, hasWal_falseForSymlinkAtWalPath) {
 
   EXPECT_FALSE(store_->hasWal(parent));
 }
+
+TEST_F(FsInodeCatalogWalTest, scanForWalFiles_emptyStore) {
+  EXPECT_TRUE(store_->scanForWalFiles().empty());
+}
+
+TEST_F(FsInodeCatalogWalTest, scanForWalFiles_returnsInodesAcrossShards) {
+  // Pick three inode numbers whose low byte differs so they land in
+  // distinct shard directories.
+  const InodeNumber a{0x101};
+  const InodeNumber b{0x202};
+  const InodeNumber c{0x303};
+  for (auto ino : {a, b, c}) {
+    store_->appendWalEntry(
+        ino,
+        FsFileContentStore::WalOpType::REMOVE,
+        PathComponentPiece{"x"},
+        nullptr);
+  }
+
+  auto found = store_->scanForWalFiles();
+  std::sort(found.begin(), found.end(), [](auto x, auto y) {
+    return x.get() < y.get();
+  });
+  ASSERT_EQ(3u, found.size());
+  EXPECT_EQ(a, found[0]);
+  EXPECT_EQ(b, found[1]);
+  EXPECT_EQ(c, found[2]);
+}
+
+TEST_F(FsInodeCatalogWalTest, scanForWalFiles_ignoresUnparsableNames) {
+  // Make sure at least one shard directory exists by writing a real WAL.
+  const InodeNumber real{0xab};
+  store_->appendWalEntry(
+      real,
+      FsFileContentStore::WalOpType::REMOVE,
+      PathComponentPiece{"x"},
+      nullptr);
+
+  auto root = canonicalPath(testDir_.path().string());
+  auto stray = root + RelativePathPiece{"ab/notanumber.wal"};
+  ASSERT_TRUE(folly::writeFile(folly::StringPiece{""}, stray.c_str()));
+
+  auto found = store_->scanForWalFiles();
+  ASSERT_EQ(1u, found.size());
+  EXPECT_EQ(real, found[0]);
+}
+
+TEST_F(FsInodeCatalogWalTest, scanForWalFiles_coexistsWithOverlayFiles) {
+  // The shard dir holds the overlay file (no .wal suffix) at "<inode>" and
+  // the WAL file at "<inode>.wal". scanForWalFiles must only enumerate the
+  // latter.
+  const InodeNumber ino{0xcd};
+  store_->appendWalEntry(
+      ino,
+      FsFileContentStore::WalOpType::REMOVE,
+      PathComponentPiece{"x"},
+      nullptr);
+
+  auto root = canonicalPath(testDir_.path().string());
+  auto overlayStub = root + RelativePathPiece{"cd/205"};
+  ASSERT_TRUE(folly::writeFile(folly::StringPiece{""}, overlayStub.c_str()));
+
+  auto found = store_->scanForWalFiles();
+  ASSERT_EQ(1u, found.size());
+  EXPECT_EQ(ino, found[0]);
+}
+
+TEST_F(FsInodeCatalogWalTest, scanForWalFiles_skipsZeroInode) {
+  // A stray "00/0.wal" would crash startup if returned: InodeNumber{0}
+  // trips an internal assert. The scanner must reject and warn-skip
+  // instead.
+  auto root = canonicalPath(testDir_.path().string());
+  auto bogus = root + RelativePathPiece{"00/0.wal"};
+  ASSERT_TRUE(folly::writeFile(folly::StringPiece{""}, bogus.c_str()));
+
+  auto found = store_->scanForWalFiles();
+  EXPECT_TRUE(found.empty());
+}
+
+TEST_F(FsInodeCatalogWalTest, scanForWalFiles_skipsLeadingZeroNames) {
+  // The catalog's writers always use minimal-width decimal, so "05.wal"
+  // can only be junk. Returning it would also yield duplicate inode 5
+  // alongside any real "5.wal".
+  auto root = canonicalPath(testDir_.path().string());
+  auto junk = root + RelativePathPiece{"05/05.wal"};
+  ASSERT_TRUE(folly::writeFile(folly::StringPiece{""}, junk.c_str()));
+
+  auto found = store_->scanForWalFiles();
+  EXPECT_TRUE(found.empty());
+}
+
+TEST_F(FsInodeCatalogWalTest, scanForWalFiles_skipsWrongShardPlacement) {
+  // Inode 0x171 hashes to shard 0x71, not 0x00. A WAL file dropped in
+  // the wrong shard would be invisible to subsequent replayWal /
+  // removeWal calls (those use getWalPath which reconstructs the shard
+  // from inode & 0xff). Treat as corruption: skip.
+  auto root = canonicalPath(testDir_.path().string());
+  auto wrong = root + RelativePathPiece{"00/369.wal"}; // 369 == 0x171
+  ASSERT_TRUE(folly::writeFile(folly::StringPiece{""}, wrong.c_str()));
+
+  auto found = store_->scanForWalFiles();
+  EXPECT_TRUE(found.empty());
+}
+
+TEST_F(FsInodeCatalogWalTest, scanForWalFiles_skipsNonRegularEntries) {
+  // A directory or symlink named "<inode>.wal" is corruption. The
+  // scanner must drop it so callers don't try to read it as a WAL.
+  auto root = canonicalPath(testDir_.path().string());
+
+  // Directory shaped like a WAL.
+  auto bogusDir = root + RelativePathPiece{"00/512.wal"}; // 512 == 0x200
+  ASSERT_EQ(0, ::mkdir(bogusDir.c_str(), 0700))
+      << "mkdir failed: " << folly::errnoStr(errno);
+  // 512 hashes to shard 0x00, so wrong-shard isn't filtering this out.
+
+  auto found = store_->scanForWalFiles();
+  EXPECT_TRUE(found.empty());
+}
+
 #endif
