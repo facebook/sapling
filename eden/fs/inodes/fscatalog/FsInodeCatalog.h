@@ -30,6 +30,7 @@ namespace overlay {
 class OverlayDir;
 }
 class InodePath;
+class WalPath;
 
 /**
  * Class to manage the on disk data.
@@ -156,6 +157,12 @@ class FsFileContentStore : public FileContentStore {
       folly::MutableStringPiece subdirPath);
 
   std::optional<fsck::InodeInfo> loadInodeInfo(InodeNumber number);
+
+  /**
+   * Get the path to the WAL file for the given inode, relative to localDir.
+   * Same "XX/<inode>" layout as getFilePath, with ".wal" suffix appended.
+   */
+  static WalPath getWalPath(InodeNumber inodeNumber);
 
   static constexpr folly::StringPiece kMetadataFile{"metadata.table"};
 

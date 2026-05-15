@@ -537,6 +537,23 @@ AbsolutePath FsFileContentStore::getAbsoluteFilePath(
   return localDir_ + RelativePathPiece(inodePath.c_str());
 }
 
+WalPath FsFileContentStore::getWalPath(InodeNumber inodeNumber) {
+  // The .wal file lives in the overlay alongside its corresponding
+  // directory listing file: "XX/<inode>" holds the serialized OverlayDir,
+  // "XX/<inode>.wal" holds the pending write-ahead-log entries for that
+  // same directory.
+  auto inodePath = getFilePath(inodeNumber);
+  WalPath walPath;
+  auto& walData = walPath.rawData();
+  auto inodeStr = inodePath.c_str();
+  auto len = strlen(inodeStr);
+  XCHECK_LT(len + 4, walData.size()) << "WAL path exceeds maximum length";
+  memcpy(walData.data(), inodeStr, len);
+  memcpy(walData.data() + len, ".wal", 4);
+  walData[len + 4] = '\0';
+  return walPath;
+}
+
 std::optional<overlay::OverlayDir> FsFileContentStore::deserializeOverlayDir(
     InodeNumber inodeNumber) {
   auto raw = loadRawOverlayDir(inodeNumber);
