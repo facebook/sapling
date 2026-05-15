@@ -10,6 +10,10 @@
 #include "eden/common/telemetry/StructuredLogger.h"
 #include "eden/fs/telemetry/LogEvent.h"
 
+#ifndef _WIN32
+#include <sysexits.h>
+#endif
+
 #include <folly/Exception.h>
 #include <folly/Expected.h>
 #include <folly/File.h>
@@ -864,20 +868,32 @@ startOrConnectToPrivHelper(const UserInfo& userInfo, int argc, char** argv) {
   PrivHelperConn::createConnPair(clientConn, serverConn);
   auto control = opts.inheritDescriptor(
       FileDescriptor(serverConn.release(), FileDescriptor::FDType::Socket));
-  SpawnedProcess proc(
-      {
-          "edenfs_privhelper",
-          // pass down identity information.
-          folly::to<std::string>("--privhelper_uid=", userInfo.getUid()),
-          folly::to<std::string>("--privhelper_gid=", userInfo.getGid()),
-          // pass down the control pipe
-          folly::to<std::string>("--privhelper_fd=", control),
-      },
-      std::move(opts));
+  try {
+    SpawnedProcess proc(
+        {
+            "edenfs_privhelper",
+            // pass down identity information.
+            folly::to<std::string>("--privhelper_uid=", userInfo.getUid()),
+            folly::to<std::string>("--privhelper_gid=", userInfo.getGid()),
+            // pass down the control pipe
+            folly::to<std::string>("--privhelper_fd=", control),
+        },
+        std::move(opts));
 
-  XLOGF(DBG1, "Spawned mount helper process: pid={}", proc.pid());
-  return make_unique<PrivHelperClientImpl>(
-      std::move(clientConn), std::move(proc));
+    XLOGF(DBG1, "Spawned mount helper process: pid={}", proc.pid());
+    return make_unique<PrivHelperClientImpl>(
+        std::move(clientConn), std::move(proc));
+  } catch (const std::system_error& ex) {
+    if (ex.code().value() == EPERM) {
+      XLOG(
+          ERR,
+          "error starting EdenFS: could not start privhelper process. "
+          "This can happen when EdenFS is started in an environment "
+          "that does not allow to launch privileged processes.");
+      _exit(EX_NOPERM);
+    }
+    throw;
+  }
 }
 
 unique_ptr<PrivHelper> createTestPrivHelper(File conn) {
