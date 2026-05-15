@@ -11,6 +11,7 @@ license = "GPLv2+"
 anyhow = "1.0.102"
 async-trait = "0.1.86"
 cache_warmup = { version = "0.1.0", path = "../../../features/cache_warmup" }
+cats = { version = "0.1.0", path = "../../../common/cats" }
 clap = { version = "4.6.0", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cmdlib_logging = { version = "0.1.0", path = "../../../cmdlib/log" }

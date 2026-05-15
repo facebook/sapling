@@ -34,9 +34,11 @@ rust_binary(
         "//eden/mononoke/servers/slapi/slapi_server/repo_listener:repo_listener",
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/scm/lib/clientinfo:clientinfo",
+        "fbsource//third-party/rust:tokio",
+        "//eden/mononoke/common/cats:cats",
     ] + ([] if rust_oss.is_oss_build() else [
         "//eden/mononoke/features/pushrebase:pushrebase_client",
-    ])) + ["fbsource//third-party/rust:tokio"],
+    ])),
 )
 
 tokio_dependency_test(

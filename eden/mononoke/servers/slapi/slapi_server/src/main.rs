@@ -100,6 +100,14 @@ struct MononokeServerArgs {
     /// shadow traffic, preventing forwarding loops.
     #[clap(long, default_value_t = false)]
     shadow_tier: bool,
+    /// Switch cryptocat into test mode so CATs minted by `mononoke-testtool
+    /// cat-mint` verify locally against an in-process test keychain — no
+    /// TokenService traffic, real MAC math against test keys.
+    ///
+    /// MUST NOT be set on production tiers. Intended only for integration
+    /// tests that need to exercise positive CAT auth paths.
+    #[clap(long, default_value_t = false, hide = true)]
+    dangerously_skipping_cat_verification_for_tests: bool,
 }
 
 /// Struct representing the Mononoke server process when sharding by repo.
@@ -235,6 +243,10 @@ fn main(fb: FacebookInit) -> Result<()> {
         .with_app_extension(RepoFilterAppExtension {})
         .build::<MononokeServerArgs>()?;
     let args: MononokeServerArgs = app.args()?;
+
+    if args.dangerously_skipping_cat_verification_for_tests {
+        cats::enable_test_mode();
+    }
 
     let runtime = app.runtime().clone();
 

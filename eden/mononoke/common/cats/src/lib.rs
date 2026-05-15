@@ -5,10 +5,27 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+
 use fbinit::FacebookInit;
 use http::HeaderMap;
 use metaconfig_types::Identity;
 use permission_checker::MononokeIdentitySet;
+
+static TEST_MODE: AtomicBool = AtomicBool::new(false);
+
+/// Enable test mode for CAT verification. Adds `EnvironmentType::TEST` to the
+/// set of environments accepted by `try_get_cats_idents`, and flips cryptocat
+/// itself into test mode so tokens minted by an in-process test keychain
+/// (which stamp `EnvironmentType::TEST`) verify locally.
+///
+/// Must only be called from test binaries / integration test entry points.
+pub fn enable_test_mode() {
+    TEST_MODE.store(true, Ordering::Relaxed);
+    #[cfg(fbcode_build)]
+    cryptocat::enable_test_mode();
+}
 
 pub fn try_get_cats_idents(
     fb: FacebookInit,
@@ -37,6 +54,7 @@ mod catmod {
     use cats_constants::X_AUTH_CATS_HEADER;
     use login_objects_thrift::EnvironmentType;
     use tracing::debug;
+    use tracing::trace;
     use tracing::warn;
 
     use super::*;
@@ -57,12 +75,13 @@ mod catmod {
         headers: &HeaderMap,
         verifier_identity: &Identity,
     ) -> Option<MononokeIdentitySet> {
-        try_get_cats_idents_impl_with_envs(
-            fb,
-            headers,
-            verifier_identity,
-            vec![EnvironmentType::PROD, EnvironmentType::CORP],
-        )
+        let mut envs = vec![EnvironmentType::PROD, EnvironmentType::CORP];
+        if TEST_MODE.load(Ordering::Relaxed) {
+            envs.push(EnvironmentType::TEST);
+        }
+        let idents = try_get_cats_idents_impl_with_envs(fb, headers, verifier_identity, envs);
+        trace!("CAT extraction: extracted identities: {idents:?}");
+        idents
     }
 
     fn try_get_cats_idents_impl_with_envs(
@@ -100,6 +119,7 @@ mod catmod {
             }
         };
         let s_cats = cats.to_str()?;
+        trace!("CAT extraction: serialized CAT list: {s_cats}");
         let cat_list = cryptocat::deserialize_crypto_auth_tokens(s_cats)?;
         debug!(
             "CAT extraction: received {} token(s) in {} header",
@@ -122,8 +142,9 @@ mod catmod {
         };
 
         debug!(
-            "CAT extraction: bulk-verifying {} token(s) via authenticated_identity path",
+            "CAT extraction: bulk-verifying {} token(s) via authenticated_identity path, against {:?} verifier",
             cat_list.tokens.len(),
+            svc_scm_ident,
         );
         match cryptocat::verify_and_extract_authenticated_identities(
             fb,
@@ -132,16 +153,23 @@ mod catmod {
             None,
             allowed_environments,
         ) {
-            Ok(idents) => idents
-                .into_iter()
-                .map(|auth_id| {
-                    debug!(
-                        "CAT extraction: extracted identity {}:{}",
-                        auth_id.identity.id_type, auth_id.identity.id_data,
-                    );
-                    permission_checker::MononokeIdentity::Authenticated(auth_id)
-                })
-                .collect(),
+            Ok(idents) => {
+                let ext_idents: MononokeIdentitySet = idents
+                    .into_iter()
+                    .map(|auth_id| {
+                        debug!(
+                            "CAT extraction: extracted identity {}:{}",
+                            auth_id.identity.id_type, auth_id.identity.id_data,
+                        );
+                        permission_checker::MononokeIdentity::Authenticated(auth_id)
+                    })
+                    .collect();
+                debug!(
+                    "CAT extraction: bulk-verified {} token(s)",
+                    ext_idents.len(),
+                );
+                ext_idents
+            }
             Err(e) => {
                 warn!(
                     "CAT extraction: bulk verify failed: {}. Returning empty set.",

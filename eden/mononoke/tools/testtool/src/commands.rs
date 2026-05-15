@@ -6,6 +6,7 @@
  */
 
 mononoke_app::subcommands! {
+    mod cat_mint;
     mod create_bonsai;
     mod drawdag;
     mod modify_bookmark;
