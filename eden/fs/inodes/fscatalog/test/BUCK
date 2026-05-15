@@ -16,6 +16,7 @@ cpp_unittest(
         "fbsource//third-party/googletest:gtest",
         "//eden/common/testharness:temp_file",
         "//eden/common/utils:file_utils",
+        "//eden/common/utils:path",
         "//eden/fs/inodes:inodes",
         "//eden/fs/inodes/fscatalog:fsinodecatalog",
         "//eden/fs/inodes/overlay:overlay_checker",

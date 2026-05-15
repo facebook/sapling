@@ -164,6 +164,39 @@ class FsFileContentStore : public FileContentStore {
    */
   static WalPath getWalPath(InodeNumber inodeNumber);
 
+  /**
+   * WAL (Write-Ahead Log) operation types for deferred directory writes.
+   * Instead of rewriting the entire directory on every addChild/removeChild,
+   * we append a small delta to a WAL file. The WAL is replayed on load and
+   * compacted inline when the entry count exceeds a threshold.
+   */
+  enum class WalOpType : uint8_t {
+    ADD = 1,
+    REMOVE = 2,
+    MATERIALIZE = 3,
+  };
+
+  /**
+   * Append a WAL entry for the given directory inode. Writes the entryLen
+   * prefix plus the payload in a single write() call. For ADD, entry must
+   * be non-null and contains the child's overlay data. For REMOVE and
+   * MATERIALIZE, entry must be nullptr — passing a non-null entry is a
+   * caller bug and is XCHECK'd.
+   *
+   * Concurrency: the caller must serialize all calls for a given parent
+   * inode (the Overlay layer holds the parent TreeInode's contents lock,
+   * which provides this). The function is NOT internally synchronized;
+   * concurrent calls for the same parent would interleave the
+   * lseek + writeFull + ftruncate short-write recovery sequence and could
+   * drop a successful neighbor's write. Calls for different parents are
+   * safe — each opens its own fd against a distinct WAL file.
+   */
+  void appendWalEntry(
+      InodeNumber parent,
+      WalOpType op,
+      PathComponentPiece childName,
+      const overlay::OverlayEntry* entry);
+
   static constexpr folly::StringPiece kMetadataFile{"metadata.table"};
 
   /**

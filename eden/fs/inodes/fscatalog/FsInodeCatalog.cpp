@@ -9,6 +9,8 @@
 
 #include "eden/fs/inodes/fscatalog/FsInodeCatalog.h"
 
+#include <bit>
+
 #include <boost/filesystem.hpp>
 
 #include <folly/Exception.h>
@@ -552,6 +554,161 @@ WalPath FsFileContentStore::getWalPath(InodeNumber inodeNumber) {
   memcpy(walData.data() + len, ".wal", 4);
   walData[len + 4] = '\0';
   return walPath;
+}
+
+void FsFileContentStore::appendWalEntry(
+    InodeNumber parent,
+    WalOpType op,
+    PathComponentPiece childName,
+    const overlay::OverlayEntry* entry) {
+  // Wire format (little-endian native on all platforms EdenFS ships to):
+  //   [uint32_t entryLen]
+  //   [uint8_t op]
+  //   [uint16_t nameLen]
+  //   [name bytes]
+  // For ADD, the payload additionally contains:
+  //   [int32_t mode][int64_t inodeNumber][uint8_t hashLen][hash bytes]
+  // entryLen covers everything after the entryLen field itself, and is
+  // used during replay to detect torn writes.
+  static_assert(
+      std::endian::native == std::endian::little,
+      "WAL wire format is native little-endian; a big-endian target needs "
+      "explicit byte-swapping in both appendWalEntry and loadWalDelta.");
+
+  // Precondition: entry must be non-null iff op == ADD. Catches caller
+  // bugs where a stale entry pointer is passed for REMOVE/MATERIALIZE
+  // (silently ignored otherwise) or a missing entry for ADD.
+  switch (op) {
+    case WalOpType::ADD:
+      XCHECK(entry != nullptr) << "ADD WAL entry requires an OverlayEntry";
+      break;
+    case WalOpType::REMOVE:
+    case WalOpType::MATERIALIZE:
+      XCHECK(entry == nullptr)
+          << "REMOVE/MATERIALIZE WAL entry must not carry an OverlayEntry";
+      break;
+  }
+
+  auto nameStr = childName.view();
+  XCHECK_LE(
+      nameStr.size(),
+      static_cast<size_t>(std::numeric_limits<uint16_t>::max()));
+  auto nameLen = static_cast<uint16_t>(nameStr.size());
+
+  // Compute hashLen once and reuse for both the size calculation and the
+  // payload write below.
+  uint8_t hashLen = 0;
+  if (op == WalOpType::ADD && entry->hash().has_value() &&
+      !entry->hash()->empty()) {
+    // Wire-format hashLen is uint8_t; XCHECK rather than truncating
+    // the cast so a future >255-byte hash type fails loudly.
+    XCHECK_LE(
+        entry->hash()->size(),
+        static_cast<size_t>(std::numeric_limits<uint8_t>::max()));
+    hashLen = static_cast<uint8_t>(entry->hash()->size());
+  }
+
+  size_t payloadSize = sizeof(uint8_t) + sizeof(uint16_t) + nameLen;
+  if (op == WalOpType::ADD) {
+    payloadSize +=
+        sizeof(int32_t) + sizeof(int64_t) + sizeof(uint8_t) + hashLen;
+  }
+
+  size_t totalSize = sizeof(uint32_t) + payloadSize;
+  // 1024-byte inline cap covers NAME_MAX (255) entries; non-FUSE paths
+  // can produce larger names (uint16_t nameLen) and heap-fall-back.
+  folly::small_vector<uint8_t, 1024> buf(totalSize);
+  size_t offset = 0;
+
+  auto entryLen = static_cast<uint32_t>(payloadSize);
+  memcpy(buf.data() + offset, &entryLen, sizeof(uint32_t));
+  offset += sizeof(uint32_t);
+
+  auto opByte = static_cast<uint8_t>(op);
+  memcpy(buf.data() + offset, &opByte, sizeof(uint8_t));
+  offset += sizeof(uint8_t);
+
+  memcpy(buf.data() + offset, &nameLen, sizeof(uint16_t));
+  offset += sizeof(uint16_t);
+
+  memcpy(buf.data() + offset, nameStr.data(), nameLen);
+  offset += nameLen;
+
+  if (op == WalOpType::ADD) {
+    auto mode = static_cast<int32_t>(*entry->mode());
+    memcpy(buf.data() + offset, &mode, sizeof(int32_t));
+    offset += sizeof(int32_t);
+
+    auto inodeNum = static_cast<int64_t>(*entry->inodeNumber());
+    memcpy(buf.data() + offset, &inodeNum, sizeof(int64_t));
+    offset += sizeof(int64_t);
+
+    memcpy(buf.data() + offset, &hashLen, sizeof(uint8_t));
+    offset += sizeof(uint8_t);
+
+    if (hashLen > 0) {
+      memcpy(
+          buf.data() + offset,
+          apache::thrift::can_throw(entry->hash())->data(),
+          hashLen);
+      offset += hashLen;
+    }
+  }
+
+  XCHECK_EQ(offset, totalSize);
+
+  auto walPath = getWalPath(parent);
+  int fd = openat(
+      dirFile_.fd(),
+      walPath.c_str(),
+      O_APPEND | O_CREAT | O_WRONLY | O_CLOEXEC | O_NOFOLLOW,
+      0600);
+  folly::checkUnixError(
+      fd, fmt::format("error opening WAL file for inode {}", parent));
+  SCOPE_EXIT {
+    ::close(fd);
+  };
+
+  // Record the pre-write file size so we can truncate the torn tail if
+  // the kernel returns a short write below. lseek(SEEK_END) on an
+  // O_APPEND fd returns the current size without affecting where the
+  // next write lands (the kernel always positions O_APPEND writes at
+  // end-of-file atomically). Cheap: kernel-only, no disk I/O.
+  //
+  // The lseek + writeFull + ftruncate sequence is NOT atomic across
+  // syscalls; it relies on the per-parent serialization documented on
+  // appendWalEntry's declaration.
+  off_t sizeBefore = ::lseek(fd, 0, SEEK_END);
+  folly::checkUnixError(
+      sizeBefore, fmt::format("error stat'ing WAL file for inode {}", parent));
+
+  // No fsync after the write. EdenFS does not promise power-loss
+  // durability for overlay state — saveOverlayDir takes the same stance
+  // (only the overlay root inode is fsync'd, see writeThriftStructToFile
+  // below). Adding fsync to every WAL append would dominate the fast-
+  // path cost and erase the latency win over a full directory rewrite.
+  auto written = folly::writeFull(fd, buf.data(), totalSize);
+  folly::checkUnixError(
+      written, fmt::format("error writing WAL entry for inode {}", parent));
+  if (FOLLY_UNLIKELY(static_cast<size_t>(written) != totalSize)) {
+    // Short write (e.g. ENOSPC, signal interrupt). Truncate the torn tail
+    // so subsequent O_APPEND writes land on a valid prefix instead of
+    // burying the tear mid-file. Capture errno before ftruncate clobbers it.
+    int writeErrno = errno;
+    int truncErrno = 0;
+    if (::ftruncate(fd, sizeBefore) != 0) {
+      truncErrno = errno;
+    }
+    folly::throwSystemErrorExplicit(
+        writeErrno != 0 ? writeErrno : EIO,
+        fmt::format(
+            "short WAL write for inode {} ({} of {} bytes; "
+            "ftruncate-recovery errno={})",
+            parent,
+            written,
+            totalSize,
+            truncErrno));
+  }
 }
 
 std::optional<overlay::OverlayDir> FsFileContentStore::deserializeOverlayDir(
