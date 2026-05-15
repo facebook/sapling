@@ -20,7 +20,7 @@
 
 namespace facebook::eden {
 
-class StructuredLogger;
+class EdenFsEventsLogger;
 
 BufferedLMDBInodeCatalog::BufferedLMDBInodeCatalog(
     LMDBFileContentStore* core,

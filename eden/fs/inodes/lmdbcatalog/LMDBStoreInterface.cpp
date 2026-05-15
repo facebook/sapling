@@ -11,7 +11,6 @@
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 #include <array>
 #include <iterator>
-#include "eden/common/telemetry/StructuredLogger.h"
 #include "eden/common/utils/DirType.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
@@ -40,7 +39,7 @@ std::unique_ptr<LMDBDatabase> removeAndRecreateDb(AbsolutePathPiece path) {
 
 std::unique_ptr<LMDBDatabase> openAndVerifyDb(
     AbsolutePathPiece path,
-    std::shared_ptr<StructuredLogger> /*logger*/) {
+    std::shared_ptr<EdenFsEventsLogger> /*logger*/) {
   try {
     return std::make_unique<LMDBDatabase>(path);
   } catch (const std::exception& ex) {
@@ -55,7 +54,7 @@ std::unique_ptr<LMDBDatabase> openAndVerifyDb(
 
 LMDBStoreInterface::LMDBStoreInterface(
     AbsolutePathPiece path,
-    std::shared_ptr<StructuredLogger> logger) {
+    std::shared_ptr<EdenFsEventsLogger> logger) {
   ensureDirectoryExists(path);
 
   db_ = openAndVerifyDb(path, std::move(logger));

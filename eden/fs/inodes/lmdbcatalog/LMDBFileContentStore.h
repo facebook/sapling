@@ -31,7 +31,7 @@ namespace overlay {
 class OverlayDir;
 }
 struct InodeNumber;
-class StructuredLogger;
+class EdenFsEventsLogger;
 
 /**
  * Class to manage the on disk data.
@@ -40,7 +40,7 @@ class LMDBFileContentStore : public FileContentStore {
  public:
   explicit LMDBFileContentStore(
       AbsolutePathPiece path,
-      std::shared_ptr<StructuredLogger> logger);
+      std::shared_ptr<EdenFsEventsLogger> logger);
 
   explicit LMDBFileContentStore(std::unique_ptr<LMDBDatabase> store)
       : store_(std::move(store)) {}

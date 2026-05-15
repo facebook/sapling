@@ -55,7 +55,7 @@ std::unique_ptr<InodeCatalog> makeInodeCatalog(
     InodeCatalogOptions inodeCatalogOptions,
     const EdenConfig& config,
     FileContentStore* fileContentStore,
-    const std::shared_ptr<StructuredLogger>& logger) {
+    const std::shared_ptr<EdenFsEventsLogger>& logger) {
   if (inodeCatalogType == InodeCatalogType::Sqlite) {
     // Controlled via EdenConfig::unsafeInMemoryOverlay
     if (inodeCatalogOptions.containsAllOf(INODE_CATALOG_UNSAFE_IN_MEMORY)) {
@@ -145,7 +145,7 @@ std::unique_ptr<InodeCatalog> makeInodeCatalog(
 
 std::unique_ptr<FileContentStore> makeFileContentStore(
     AbsolutePathPiece localDir,
-    const std::shared_ptr<StructuredLogger>& logger,
+    const std::shared_ptr<EdenFsEventsLogger>& logger,
     InodeCatalogType inodeCatalogType) {
 #ifdef _WIN32
   (void)localDir;
@@ -216,7 +216,7 @@ Overlay::Overlay(
     const EdenConfig& config)
     : fileContentStore_{makeFileContentStore(
           localDir,
-          logger->getStructuredLogger(),
+          logger,
           inodeCatalogType)},
       inodeCatalog_{makeInodeCatalog(
           localDir,
@@ -224,7 +224,7 @@ Overlay::Overlay(
           inodeCatalogOptions,
           config,
           fileContentStore_ ? fileContentStore_.get() : nullptr,
-          logger->getStructuredLogger())},
+          logger)},
       inodeCatalogType_{inodeCatalogType},
       inodeCatalogOptions_(inodeCatalogOptions),
       supportsSemanticOperations_{inodeCatalog_->supportsSemanticOperations()},

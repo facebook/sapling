@@ -37,11 +37,11 @@ constexpr uint32_t kOverlayVersion = 1;
 constexpr size_t kInfoHeaderSize =
     kInfoHeaderMagic.size() + sizeof(kOverlayVersion);
 
-class StructuredLogger;
+class EdenFsEventsLogger;
 
 LMDBFileContentStore::LMDBFileContentStore(
     AbsolutePathPiece path,
-    std::shared_ptr<StructuredLogger> logger)
+    std::shared_ptr<EdenFsEventsLogger> logger)
     : path_{path}, store_{path, std::move(logger)} {}
 
 bool LMDBFileContentStore::initialize(

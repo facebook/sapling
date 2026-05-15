@@ -9,7 +9,6 @@
 #include <gflags/gflags.h>
 #include <cstdlib>
 
-#include "eden/common/telemetry/NullStructuredLogger.h"
 #include "eden/common/utils/CaseSensitivity.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/DirEntry.h"

@@ -26,13 +26,13 @@ namespace overlay {
 class OverlayDir;
 }
 struct InodeNumber;
-class StructuredLogger;
+class EdenFsEventsLogger;
 
 class SqliteInodeCatalog : public InodeCatalog {
  public:
   explicit SqliteInodeCatalog(
       AbsolutePathPiece path,
-      std::shared_ptr<StructuredLogger> logger,
+      std::shared_ptr<EdenFsEventsLogger> logger,
       SqliteTreeStore::SynchronousMode mode =
           SqliteTreeStore::SynchronousMode::Normal);
 

@@ -11,12 +11,12 @@
 #include <folly/stop_watch.h>
 #include <array>
 #include <iterator>
-#include "eden/common/telemetry/StructuredLogger.h"
 #include "eden/common/utils/DirType.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
 #include "eden/fs/sqlite/PersistentSqliteStatement.h"
 #include "eden/fs/sqlite/SqliteStatement.h"
+#include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/LogEvent.h"
 
 namespace facebook::eden {
@@ -173,7 +173,7 @@ std::unique_ptr<SqliteDatabase> removeAndRecreateDb(AbsolutePathPiece path) {
 
 std::unique_ptr<SqliteDatabase> openAndVerifyDb(
     AbsolutePathPiece path,
-    std::shared_ptr<StructuredLogger> logger) {
+    std::shared_ptr<EdenFsEventsLogger> logger) {
   try {
     auto db = std::make_unique<SqliteDatabase>(path);
 
@@ -222,7 +222,7 @@ std::unique_ptr<SqliteDatabase> openAndVerifyDb(
 
 SqliteTreeStore::SqliteTreeStore(
     AbsolutePathPiece path,
-    std::shared_ptr<StructuredLogger> logger,
+    std::shared_ptr<EdenFsEventsLogger> logger,
     SqliteTreeStore::SynchronousMode synchronous_mode) {
   ensureDirectoryExists(path);
 

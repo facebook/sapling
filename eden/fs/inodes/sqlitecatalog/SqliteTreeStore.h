@@ -24,7 +24,7 @@ class OverlayEntry;
 } // namespace overlay
 class SqliteStatement;
 struct InodeNumber;
-class StructuredLogger;
+class EdenFsEventsLogger;
 
 class SqliteTreeStoreNonEmptyError : public std::exception {
  public:
@@ -54,7 +54,7 @@ class SqliteTreeStore {
 
   explicit SqliteTreeStore(
       AbsolutePathPiece dir,
-      std::shared_ptr<StructuredLogger> logger,
+      std::shared_ptr<EdenFsEventsLogger> logger,
       SqliteTreeStore::SynchronousMode mode =
           SqliteTreeStore::SynchronousMode::Normal);
 

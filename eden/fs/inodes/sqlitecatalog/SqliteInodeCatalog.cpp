@@ -17,11 +17,11 @@
 
 namespace facebook::eden {
 
-class StructuredLogger;
+class EdenFsEventsLogger;
 
 SqliteInodeCatalog::SqliteInodeCatalog(
     AbsolutePathPiece path,
-    std::shared_ptr<StructuredLogger> logger,
+    std::shared_ptr<EdenFsEventsLogger> logger,
     SqliteTreeStore::SynchronousMode mode)
     : store_{path, std::move(logger), mode} {}
 

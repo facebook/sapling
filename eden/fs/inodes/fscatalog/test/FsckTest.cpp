@@ -14,12 +14,12 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "eden/common/telemetry/NullStructuredLogger.h"
 #include "eden/common/testharness/TempFile.h"
 #include "eden/common/utils/FileUtils.h"
 #include "eden/fs/inodes/fscatalog/FsInodeCatalog.h"
 #include "eden/fs/inodes/overlay/OverlayChecker.h"
 #include "eden/fs/inodes/sqlitecatalog/SqliteInodeCatalog.h"
+#include "eden/fs/inodes/test/OverlayTestUtil.h"
 #include "eden/fs/model/ObjectId.h"
 #include "eden/fs/testharness/TestUtil.h"
 
@@ -218,7 +218,7 @@ TestOverlay::TestOverlay(InodeCatalogType type)
       testConfig_{EdenConfig::createTestEdenConfig()} {
   if (type != InodeCatalogType::Legacy) {
     inodeCatalog_ = std::make_unique<SqliteInodeCatalog>(
-        tmpDirPath_ + "overlay"_pc, std::make_shared<NullStructuredLogger>());
+        tmpDirPath_ + "overlay"_pc, makeTestEdenFsEventsLogger());
   } else {
     inodeCatalog_ = std::make_unique<FsInodeCatalog>(&fcs_);
   }
@@ -227,7 +227,7 @@ TestOverlay::TestOverlay(InodeCatalogType type)
 void TestOverlay::recreateSqliteInodeCatalog() {
   if (type_ != InodeCatalogType::Legacy) {
     inodeCatalog_ = std::make_unique<SqliteInodeCatalog>(
-        tmpDirPath_ + "overlay"_pc, std::make_shared<NullStructuredLogger>());
+        tmpDirPath_ + "overlay"_pc, makeTestEdenFsEventsLogger());
   }
 }
 

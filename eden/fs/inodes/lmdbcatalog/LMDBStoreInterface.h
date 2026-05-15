@@ -23,7 +23,7 @@ class OverlayDir;
 class OverlayEntry;
 } // namespace overlay
 struct InodeNumber;
-class StructuredLogger;
+class EdenFsEventsLogger;
 
 class LMDBStoreInterfaceNonEmptyError : public std::exception {
  public:
@@ -48,7 +48,7 @@ class LMDBStoreInterface {
  public:
   explicit LMDBStoreInterface(
       AbsolutePathPiece dir,
-      std::shared_ptr<StructuredLogger> logger);
+      std::shared_ptr<EdenFsEventsLogger> logger);
 
   explicit LMDBStoreInterface(std::unique_ptr<LMDBDatabase> db);
 
