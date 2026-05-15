@@ -1854,6 +1854,15 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Controls whether EdenFS uses phase 9 coroutine implementations
+   * (getFileInformation).
+   */
+  ConfigSetting<bool> enableCoroutinesPhase9{
+      "coroutines:enable-phase9",
+      false,
+      this};
+
+  /**
    * Controls whether EdenFS uses phase 3 coroutine implementations
    * (glob, predictiveGlob, and related code paths).
    */
