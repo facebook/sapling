@@ -44,7 +44,7 @@ use mononoke_app::args::RepoFilterAppExtension;
 use mononoke_app::args::ShutdownTimeoutArgs;
 use mononoke_app::args::WarmBookmarksCacheExtension;
 use mysql_client::ConnectionOptions;
-use mysql_client::ConnectionPoolOptionsBuilder;
+use mysql_client::ConnectionPoolOptions;
 use panichandler::Fate;
 use scs_methods::source_control_impl::SourceControlServiceImpl;
 use service_framework_load_monitor_module::LoadMonitorModule;
@@ -225,10 +225,7 @@ impl RepoShardedProcessExecutor for ScsServerProcessExecutor {
 async fn create_git_source_of_truth_config(
     fb: FacebookInit,
 ) -> Result<Arc<dyn GitSourceOfTruthConfig>, Error> {
-    let pool_options = ConnectionPoolOptionsBuilder::default()
-        .build()
-        .map_err(Error::msg)?;
-
+    let pool_options = ConnectionPoolOptions::default();
     let conn_options = ConnectionOptions::default();
     let destination = Destination::Prod;
     let xdb_factory = XdbFactory::new(fb, destination, pool_options, conn_options)?;
