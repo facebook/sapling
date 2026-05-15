@@ -26,20 +26,25 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use manifest::Entry;
 use manifest::ManifestComparison;
+use manifest::ManifestOps;
 use manifest::derive_manifest_from_predecessor;
 use mercurial_types::HgAugmentedManifestEntry;
 use mercurial_types::HgAugmentedManifestEnvelope;
 use mercurial_types::HgAugmentedManifestId;
+use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::ShardedHgAugmentedManifest;
 use mercurial_types::sharded_augmented_manifest::HgAugmentedDirectoryNode;
 use mercurial_types::sharded_augmented_manifest::HgAugmentedFileLeafNode;
+use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::ContentMetadataV2;
 use mononoke_types::MPath;
 use mononoke_types::MPathElement;
 use mononoke_types::MPathElementPrefix;
+use mononoke_types::NonRootMPath;
 use mononoke_types::RepoPath;
+use mononoke_types::TrackedFileChange;
 use mononoke_types::TrieMap;
 use mononoke_types::acl_manifest::AclManifest;
 use mononoke_types::acl_manifest::AclManifestEntry;
@@ -457,6 +462,75 @@ pub fn normalize_acl_root(
     } else {
         Ok(Some(id))
     }
+}
+
+/// Pre-resolve copy-from source filenodes from parent augmented manifests.
+///
+/// For each file change with copy_from metadata, looks up the source path
+/// in the appropriate parent augmented manifest to get the filenode hash.
+/// Returns a map from (copy_path, copy_csid) to the resolved HgFileNodeId.
+pub async fn resolve_copy_from_filenodes<Store>(
+    ctx: &CoreContext,
+    blobstore: &Store,
+    file_changes: &[(NonRootMPath, Option<TrackedFileChange>)],
+    parents: &[Option<(ChangesetId, HgAugmentedManifestId)>; 2],
+) -> Result<HashMap<(NonRootMPath, ChangesetId), HgFileNodeId>>
+where
+    Store: KeyedBlobstore + Clone + 'static,
+{
+    // Group copy-from paths by parent index. Mercurial filenodes only encode
+    // (p1, p2); copy-from sources pointing at step-parents in octopus merges
+    // are skipped to match the existing HgManifest-based path. The originating
+    // ChangesetId is implicit in the slot (== parents[idx].0).
+    let mut paths_by_parent: [Vec<NonRootMPath>; 2] = [Vec::new(), Vec::new()];
+
+    for (_, change) in file_changes {
+        let Some(change) = change.as_ref() else {
+            continue;
+        };
+        let Some((copy_path, copy_csid)) = change.copy_from() else {
+            continue;
+        };
+        if let Some(idx) = parents
+            .iter()
+            .position(|p| p.as_ref().is_some_and(|(c, _)| c == copy_csid))
+        {
+            paths_by_parent[idx].push(copy_path.clone());
+        }
+    }
+
+    stream::iter(paths_by_parent.into_iter().zip(parents.iter()))
+        .map(|(paths, parent)| async move {
+            let Some((cs_id, parent_aug_manifest_id)) = parent else {
+                return Ok::<HashMap<_, _>, anyhow::Error>(HashMap::new());
+            };
+            if paths.is_empty() {
+                return Ok(HashMap::new());
+            }
+            parent_aug_manifest_id
+                .find_entries(
+                    ctx.clone(),
+                    blobstore.clone(),
+                    paths
+                        .into_iter()
+                        .map(|p| manifest::PathOrPrefix::Path(p.into())),
+                )
+                .try_filter_map(|(path, entry)| async move {
+                    match entry {
+                        Entry::Leaf(leaf) => {
+                            let non_root = NonRootMPath::try_from(path)
+                                .map_err(|_| anyhow!("Expected non-root path in manifest"))?;
+                            Ok(Some(((non_root, *cs_id), HgFileNodeId::new(leaf.filenode))))
+                        }
+                        Entry::Tree(_) => Ok(None),
+                    }
+                })
+                .try_collect::<HashMap<_, _>>()
+                .await
+        })
+        .buffer_unordered(2)
+        .try_concat()
+        .await
 }
 
 pub async fn derive_from_full_hg_manifest(

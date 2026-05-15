@@ -28,6 +28,8 @@ use mercurial_types::HgAugmentedManifestId;
 use mercurial_types::HgManifestId;
 use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
+use mononoke_types::FileChange;
+use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use restricted_paths::RestrictedPathsRef;
@@ -517,6 +519,189 @@ async fn test_augmented_manifest_parity_with_slacl(fb: FacebookInit) -> Result<(
         .await?;
 
     let (_, _aug_child) = get_manifests(&ctx, &repo, child, vec![aug_root]).await?;
+
+    Ok(())
+}
+
+/// Test that resolve_copy_from_filenodes correctly resolves copy-from
+/// source filenodes from parent augmented manifests.
+#[mononoke::fbinit_test]
+async fn test_resolve_copy_from_filenodes(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+
+    // Create a root commit with a file
+    let root = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("original_file", "content")
+        .commit()
+        .await?;
+
+    // Create a child that copies the file
+    let child = CreateCommitContext::new(&ctx, &repo, vec![root])
+        .add_file_with_copy_info("copied_file", "content", (root, "original_file"))
+        .commit()
+        .await?;
+
+    // Derive HgChangesets and augmented manifests for the root (parent)
+    let manager = repo.repo_derived_data().manager();
+
+    // HgChangesets must be derived first (dependency of RootHgAugmentedManifestId).
+    manager
+        .derive_exactly_batch::<MappedHgChangesetId>(&ctx, vec![root], None)
+        .await?;
+    manager
+        .derive_exactly_batch::<RootAclManifestId>(&ctx, vec![root], None)
+        .await?;
+
+    manager
+        .derive_exactly_batch::<RootHgAugmentedManifestId>(&ctx, vec![root], None)
+        .await?;
+
+    let root_aug = manager
+        .fetch_derived::<RootHgAugmentedManifestId>(&ctx, root, None)
+        .await?
+        .expect("Missing augmented manifest for root")
+        .hg_augmented_manifest_id();
+
+    // Build file_changes for the child commit
+    let child_bonsai: mononoke_types::BonsaiChangeset =
+        child.load(&ctx, repo.repo_blobstore()).await?;
+    let file_changes: Vec<_> = child_bonsai
+        .file_changes()
+        .map(|(path, fc)| {
+            let tc = match fc {
+                FileChange::Change(tc) => Some(tc.clone()),
+                FileChange::Deletion
+                | FileChange::UntrackedChange(_)
+                | FileChange::UntrackedDeletion => None,
+            };
+            (path.clone(), tc)
+        })
+        .collect();
+
+    // Resolve copy-from filenodes
+    let result = derive_hg_augmented_manifest::resolve_copy_from_filenodes(
+        &ctx,
+        repo.repo_blobstore(),
+        &file_changes,
+        &[Some((root, root_aug)), None],
+    )
+    .await?;
+
+    // Should have resolved the copy-from for "copied_file" -> "original_file"
+    let original_path = NonRootMPath::new("original_file")?;
+    assert!(
+        result.contains_key(&(original_path.clone(), root)),
+        "Should resolve copy-from for original_file in parent {}",
+        root,
+    );
+
+    // Verify the resolved filenode matches the actual filenode in the parent HgManifest
+    let hg_cs_id = repo.derive_hg_changeset(&ctx, root).await?;
+    let hg_manifest_id = hg_cs_id
+        .load(&ctx, repo.repo_blobstore())
+        .await?
+        .manifestid();
+
+    let expected_entries: Vec<_> = hg_manifest_id
+        .find_entries(
+            ctx.clone(),
+            repo.repo_blobstore().clone(),
+            vec![manifest::PathOrPrefix::Path(original_path.clone().into())],
+        )
+        .try_collect()
+        .await?;
+
+    let expected_filenode = match &expected_entries[0].1 {
+        Entry::Leaf((_, filenode)) => *filenode,
+        _ => panic!("Expected a leaf entry"),
+    };
+
+    assert_eq!(
+        result[&(original_path, root)],
+        expected_filenode,
+        "Resolved filenode should match HgManifest filenode"
+    );
+
+    Ok(())
+}
+
+/// Test that resolve_copy_from_filenodes skips (rather than errors) when
+/// the copy-from source path doesn't exist in the parent manifest.
+/// This matches the behavior of the HgManifest-based derivation path in
+/// derive_hg_changeset.rs.
+#[mononoke::fbinit_test]
+async fn test_resolve_copy_from_filenodes_missing_source(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+
+    // Create root with file.txt
+    let root = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("file.txt", "content")
+        .commit()
+        .await?;
+
+    // Delete file.txt in the child
+    let child = CreateCommitContext::new(&ctx, &repo, vec![root])
+        .delete_file("file.txt")
+        .commit()
+        .await?;
+
+    // Create a grandchild that claims to copy from file.txt at the child
+    // (where file.txt no longer exists)
+    let grandchild = CreateCommitContext::new(&ctx, &repo, vec![child])
+        .add_file_with_copy_info("new_file", "content", (child, "file.txt"))
+        .commit()
+        .await?;
+
+    let manager = repo.repo_derived_data().manager();
+
+    manager
+        .derive_exactly_batch::<MappedHgChangesetId>(&ctx, vec![root, child], None)
+        .await?;
+    manager
+        .derive_exactly_batch::<RootAclManifestId>(&ctx, vec![root, child], None)
+        .await?;
+    manager
+        .derive_exactly_batch::<RootHgAugmentedManifestId>(&ctx, vec![root, child], None)
+        .await?;
+
+    let child_aug = manager
+        .fetch_derived::<RootHgAugmentedManifestId>(&ctx, child, None)
+        .await?
+        .expect("Missing augmented manifest for child")
+        .hg_augmented_manifest_id();
+
+    let grandchild_bonsai: mononoke_types::BonsaiChangeset =
+        grandchild.load(&ctx, repo.repo_blobstore()).await?;
+    let file_changes: Vec<_> = grandchild_bonsai
+        .file_changes()
+        .map(|(path, fc)| {
+            let tc = match fc {
+                FileChange::Change(tc) => Some(tc.clone()),
+                FileChange::Deletion
+                | FileChange::UntrackedChange(_)
+                | FileChange::UntrackedDeletion => None,
+            };
+            (path.clone(), tc)
+        })
+        .collect();
+
+    let result = derive_hg_augmented_manifest::resolve_copy_from_filenodes(
+        &ctx,
+        repo.repo_blobstore(),
+        &file_changes,
+        &[Some((child, child_aug)), None],
+    )
+    .await?;
+
+    // The copy-from entry should be absent (skipped) since file.txt
+    // doesn't exist in the child's manifest.
+    let missing_path = NonRootMPath::new("file.txt")?;
+    assert!(
+        !result.contains_key(&(missing_path, child)),
+        "Should skip copy-from when source path is missing from parent manifest"
+    );
 
     Ok(())
 }
