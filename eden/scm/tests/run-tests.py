@@ -1620,10 +1620,10 @@ class Test(unittest.TestCase):
         env["FB_SCM_DIAGS_NO_SCUBA"] = "1"
 
         keys_to_del = (
-            "HG HGPROF CDPATH GREP_OPTIONS http_proxy no_proxy "
+            "HG HGPROF CDPATH GREP_OPTIONS http_proxy https_proxy no_proxy "
             + "HGPLAIN HGPLAINEXCEPT SL_AUTOMATION SL_AUTOMATION_EXCEPT "
             + "EDITOR VISUAL PAGER "
-            + "NO_PROXY CHGDEBUG RUST_BACKTRACE RUST_LIB_BACKTRACE "
+            + "HTTP_PROXY HTTPS_PROXY NO_PROXY CHGDEBUG RUST_BACKTRACE RUST_LIB_BACKTRACE "
             + " EDENSCM_TRACE_LEVEL EDENSCM_TRACE_OUTPUT"
             + " EDENSCM_TRACE_PY TRACING_DATA_FAKE_CLOCK"
             + " EDENSCM_LOG LOG FAILPOINTS"
