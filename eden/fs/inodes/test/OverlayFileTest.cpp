@@ -22,7 +22,6 @@
 #include <algorithm>
 #include <chrono>
 
-#include "eden/common/telemetry/NullStructuredLogger.h"
 #include "eden/common/testharness/TempFile.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/TreeInode.h"
@@ -32,16 +31,6 @@
 
 using namespace facebook::eden;
 using folly::literals::string_piece_literals::operator""_sp;
-
-namespace {
-std::shared_ptr<EdenFsEventsLogger> makeTestEventsLogger() {
-  return std::make_shared<EdenFsEventsLogger>(
-      std::make_shared<NullStructuredLogger>(),
-      nullptr,
-      nullptr,
-      makeRefPtr<EdenStats>());
-}
-} // namespace
 
 class OverlayFileTest : public ::testing::Test {
  public:
@@ -59,7 +48,7 @@ class OverlayFileTest : public ::testing::Test {
         kPathMapDefaultCaseSensitive,
         facebook::eden::InodeCatalogType::Legacy,
         INODE_CATALOG_DEFAULT,
-        makeTestEventsLogger(),
+        makeTestEdenFsEventsLogger(),
         makeRefPtr<EdenStats>(),
         *EdenConfig::createTestEdenConfig());
     fsOverlay
@@ -73,7 +62,7 @@ class OverlayFileTest : public ::testing::Test {
         kPathMapDefaultCaseSensitive,
         facebook::eden::InodeCatalogType::LMDB,
         INODE_CATALOG_DEFAULT,
-        makeTestEventsLogger(),
+        makeTestEdenFsEventsLogger(),
         makeRefPtr<EdenStats>(),
         *EdenConfig::createTestEdenConfig());
     lmdbOverlay

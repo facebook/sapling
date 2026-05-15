@@ -25,7 +25,6 @@ cpp_unittest(
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
-        "//eden/common/telemetry:structured_logger",
         "//eden/common/testharness:temp_file",
         "//eden/fs/config:config",
         "//eden/fs/inodes:inode_number",

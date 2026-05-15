@@ -8,12 +8,17 @@
 #pragma once
 
 #include <iomanip>
+#include <memory>
 #include <sstream>
 
+#include "eden/common/telemetry/NullStructuredLogger.h"
 #include "eden/common/utils/PathFuncs.h"
+#include "eden/common/utils/RefPtr.h"
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/Overlay.h"
+#include "eden/fs/telemetry/EdenFsEventsLogger.h"
+#include "eden/fs/telemetry/EdenStats.h"
 
 namespace facebook::eden {
 
@@ -29,6 +34,18 @@ inline std::string debugDumpOverlayInodes(
   std::ostringstream out;
   debugDumpOverlayInodes(overlay, rootInode, "/", out);
   return out.str();
+}
+
+/**
+ * Create a test EdenFsEventsLogger for use in unit tests.
+ * Uses NullStructuredLogger and null xplatLogger/reloadableConfig.
+ */
+inline std::shared_ptr<EdenFsEventsLogger> makeTestEdenFsEventsLogger() {
+  return std::make_shared<EdenFsEventsLogger>(
+      std::make_shared<NullStructuredLogger>(),
+      /*xplatLogger=*/nullptr,
+      /*reloadableConfig=*/nullptr,
+      makeRefPtr<EdenStats>());
 }
 
 } // namespace facebook::eden

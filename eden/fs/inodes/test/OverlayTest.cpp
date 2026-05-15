@@ -26,7 +26,6 @@
 #include <algorithm>
 #include <thread>
 
-#include "eden/common/telemetry/NullStructuredLogger.h"
 #include "eden/common/testharness/TempFile.h"
 #include "eden/common/utils/SpawnedProcess.h"
 #include "eden/fs/inodes/EdenMount.h"
@@ -46,16 +45,6 @@
 using namespace folly::string_piece_literals;
 
 namespace facebook::eden {
-
-namespace {
-std::shared_ptr<EdenFsEventsLogger> makeTestEdenFsEventsLogger() {
-  return std::make_shared<EdenFsEventsLogger>(
-      std::make_shared<NullStructuredLogger>(),
-      nullptr,
-      nullptr,
-      makeRefPtr<EdenStats>());
-}
-} // namespace
 
 constexpr InodeCatalogType kInodeCatalogType = InodeCatalogType::Legacy;
 constexpr InodeCatalogOptions kInodeCatalogOptions = INODE_CATALOG_DEFAULT;
@@ -1053,6 +1042,7 @@ TEST_F(DebugDumpOverlayInodesTest, directories_are_dumped_depth_first) {
 }
 
 namespace {
+
 // Create an overlay with some data, then simulate dirty shutdown by deleting
 // next-inode-number so fsck runs on next initialize.
 void createDirtyOverlay(const AbsolutePath& dir) {

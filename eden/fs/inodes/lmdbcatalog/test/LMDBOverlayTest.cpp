@@ -12,7 +12,6 @@
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
 
-#include "eden/common/telemetry/NullStructuredLogger.h"
 #include "eden/common/testharness/TempFile.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
@@ -25,16 +24,6 @@
 #include "eden/fs/testharness/TestMount.h"
 
 namespace facebook::eden {
-
-namespace {
-std::shared_ptr<EdenFsEventsLogger> makeTestEdenFsEventsLogger() {
-  return std::make_shared<EdenFsEventsLogger>(
-      std::make_shared<NullStructuredLogger>(),
-      nullptr,
-      nullptr,
-      makeRefPtr<EdenStats>());
-}
-} // namespace
 
 class LMDBOverlayTest : public ::testing::TestWithParam<InodeCatalogOptions> {
  protected:

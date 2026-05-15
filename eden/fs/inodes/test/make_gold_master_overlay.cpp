@@ -15,21 +15,12 @@
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/OverlayFile.h"
+#include "eden/fs/inodes/test/OverlayTestUtil.h"
 #include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/EdenStats.h"
 
 using namespace facebook::eden;
 using namespace folly::string_piece_literals;
-
-namespace {
-std::shared_ptr<EdenFsEventsLogger> makeTestEventsLogger() {
-  return std::make_shared<EdenFsEventsLogger>(
-      std::make_shared<NullStructuredLogger>(),
-      nullptr,
-      nullptr,
-      makeRefPtr<EdenStats>());
-}
-} // namespace
 
 DEFINE_string(
     overlayPath,
@@ -58,7 +49,7 @@ void createGoldMasterOverlay(AbsolutePath overlayPath) {
       CaseSensitivity::Sensitive,
       InodeCatalogType::Legacy,
       kDefaultInodeCatalogOptions,
-      makeTestEventsLogger(),
+      makeTestEdenFsEventsLogger(),
       makeRefPtr<EdenStats>(),
       *EdenConfig::createTestEdenConfig());
 

@@ -334,9 +334,13 @@ cpp_library(
     srcs = ["OverlayTestUtil.cpp"],
     headers = ["OverlayTestUtil.h"],
     exported_deps = [
+        "//eden/common/telemetry:structured_logger",
         "//eden/common/utils:path",
+        "//eden/common/utils:ref_ptr",
         "//eden/fs/inodes:inode_number",
         "//eden/fs/inodes:inodes",
+        "//eden/fs/telemetry:stats",
+        "//eden/fs/telemetry:structured_logger",
     ],
 )
 
@@ -350,7 +354,6 @@ cpp_unittest(
     deps = [
         "fbsource//third-party/googletest:gtest",
         ":overlay_test_util",
-        "//eden/common/telemetry:structured_logger",
         "//eden/common/testharness:temp_file",
         "//eden/common/utils:process",
         "//eden/fs/inodes:inodes",
@@ -384,7 +387,6 @@ cpp_unittest(
         "fbsource//third-party/fmt:fmt",
         "fbsource//third-party/googletest:gtest",
         ":overlay_test_util",
-        "//eden/common/telemetry:structured_logger",
         "//eden/common/testharness:temp_file",
         "//eden/fs/inodes:inodes",
         "//eden/fs/inodes/fscatalog:fsinodecatalog",
@@ -577,6 +579,7 @@ cpp_binary(
         "ovr_config//os:macos",
     ],
     deps = [
+        ":overlay_test_util",
         "//eden/common/telemetry:structured_logger",
         "//eden/common/utils:case_sensitivity",
         "//eden/fs/config:config",
@@ -604,7 +607,7 @@ cpp_benchmark(
     name = "overlay_benchmark",
     srcs = ["OverlayBenchmark.cpp"],
     deps = [
-        "//eden/common/telemetry:structured_logger",
+        ":overlay_test_util",
         "//eden/fs/config:config",
         "//eden/fs/inodes:inodes",
         "//eden/fs/telemetry:stats",
@@ -622,7 +625,7 @@ cpp_benchmark(
     name = "overlay_dir_serializer_benchmark",
     srcs = ["OverlayDirSerializerBenchmark.cpp"],
     deps = [
-        "//eden/common/telemetry:structured_logger",
+        ":overlay_test_util",
         "//eden/fs/config:config",
         "//eden/fs/inodes:inode_catalog",
         "//eden/fs/inodes:inodes",
