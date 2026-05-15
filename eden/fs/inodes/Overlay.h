@@ -318,6 +318,11 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
     return inodeCatalogType_;
   }
 
+  /**
+   * Build a Thrift `overlay::OverlayDir` from in-memory `DirContents`.
+   */
+  [[deprecated(
+      "Prefer direct serialization via InodeCatalog::saveOverlayEntries")]]
   overlay::OverlayDir serializeOverlayDir(
       InodeNumber inodeNumber,
       const DirContents& dir);
@@ -511,7 +516,6 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
 
   friend class IORequest;
 
-  bool useDirectSerialization_;
   bool useDirectFileWrites_;
 };
 

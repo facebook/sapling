@@ -97,19 +97,13 @@ void benchmarkOverlay(
   auto numThreads = FLAGS_threads;
 
   printf(
-      "Config: dirs=%" SCNu64
-      ", threads=%u, dirSize=%s, directSerialize=%s, directFileWrites=%s\n",
+      "Config: dirs=%" SCNu64 ", threads=%u, dirSize=%s, directFileWrites=%s\n",
       N,
       numThreads,
       FLAGS_dirSize > 0 ? std::to_string(FLAGS_dirSize).c_str() : "random",
-      FLAGS_directSerialize ? "true" : "false",
       FLAGS_directFileWrites ? "true" : "false");
 
   auto edenConfig = EdenConfig::createTestEdenConfig();
-  if (FLAGS_directSerialize) {
-    edenConfig->overlayDirectSerialization.setValue(
-        true, ConfigSourceType::CommandLine);
-  }
   if (FLAGS_directFileWrites) {
     edenConfig->overlayDirectFileWrites.setValue(
         true, ConfigSourceType::CommandLine);

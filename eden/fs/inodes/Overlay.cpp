@@ -234,7 +234,6 @@ Overlay::Overlay(
       caseSensitive_{caseSensitive},
       edenFsEventsLogger_{std::move(logger)},
       stats_{std::move(stats)},
-      useDirectSerialization_(config.overlayDirectSerialization.getValue()),
       useDirectFileWrites_(config.overlayDirectFileWrites.getValue()) {}
 
 Overlay::~Overlay() {
@@ -568,33 +567,15 @@ DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
   folly::fbvector<std::pair<PathComponent, DirEntry>> entries;
   bool shouldRewriteOverlay = false;
 
-  if (useDirectSerialization_) {
-    bool found = inodeCatalog_->loadOverlayEntries(
-        inodeNumber,
-        [&](uint32_t count, InodeCatalog::OverlayEntryIterator iterate) {
-          entries.reserve(count);
-          shouldRewriteOverlay = buildDirEntries(iterate, entries);
-        });
-    if (!found) {
-      stats_->increment(&OverlayStats::loadOverlayDirFailure);
-      return DirContents{caseSensitive_};
-    }
-  } else {
-    auto dirData = inodeCatalog_->loadOverlayDir(inodeNumber);
-    if (!dirData.has_value()) {
-      stats_->increment(&OverlayStats::loadOverlayDirFailure);
-      return DirContents{caseSensitive_};
-    }
-
-    entries.reserve(dirData->entries()->size());
-
-    shouldRewriteOverlay = buildDirEntries(
-        [&](OverlayEntryVisitor visitor) {
-          for (auto& [name, entry] : *dirData->entries()) {
-            visitor(name, entry);
-          }
-        },
-        entries);
+  bool found = inodeCatalog_->loadOverlayEntries(
+      inodeNumber,
+      [&](uint32_t count, InodeCatalog::OverlayEntryIterator iterate) {
+        entries.reserve(count);
+        shouldRewriteOverlay = buildDirEntries(iterate, entries);
+      });
+  if (!found) {
+    stats_->increment(&OverlayStats::loadOverlayDirFailure);
+    return DirContents{caseSensitive_};
   }
 
   DirContents result{std::move(entries), caseSensitive_};
@@ -668,6 +649,7 @@ void Overlay::saveOverlayDir(
     const DirContents& dir,
     bool isMaterialized) {
   DurationScope<EdenStats> statScope{stats_, &OverlayStats::saveOverlayDir};
+  IORequest req{this};
 
   // Set crashSafe=false If config flag is enabled and the directory is _not_
   // materialized. Non-materialized directories match source control, so are not
@@ -676,18 +658,13 @@ void Overlay::saveOverlayDir(
   bool crashSafe = isMaterialized || !useDirectFileWrites_;
 
   try {
-    if (useDirectSerialization_) {
-      inodeCatalog_->saveOverlayEntries(
-          inodeNumber,
-          dir.size(),
-          [&](OverlayEntryVisitor visitor) {
-            visitDirEntries(inodeNumber, dir, visitor);
-          },
-          crashSafe);
-    } else {
-      inodeCatalog_->saveOverlayDir(
-          inodeNumber, serializeOverlayDir(inodeNumber, dir), crashSafe);
-    }
+    inodeCatalog_->saveOverlayEntries(
+        inodeNumber,
+        dir.size(),
+        [&](OverlayEntryVisitor visitor) {
+          visitDirEntries(inodeNumber, dir, visitor);
+        },
+        crashSafe);
     stats_->increment(&OverlayStats::saveOverlayDirSuccessful);
   } catch (const std::exception& e) {
     XLOGF(ERR, "Failed to save overlay dir {} {}", inodeNumber, e.what());

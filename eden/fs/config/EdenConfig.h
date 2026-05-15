@@ -2147,16 +2147,6 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * When true, serialize/deserialize overlay directories directly to/from
-   * compact protocol bytes, skipping the intermediate std::map construction.
-   * Only applies to filesystem-based overlay (Legacy type).
-   */
-  ConfigSetting<bool> overlayDirectSerialization{
-      "overlay:direct-serialization",
-      false,
-      this};
-
-  /**
    * When true, write non-materialized directories directly to their overlay
    * file instead of creating a temporary file and renaming. This avoids
    * filesystem metadata overhead (rename) at the cost of leaving a
