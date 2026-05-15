@@ -705,3 +705,101 @@ async fn test_resolve_copy_from_filenodes_missing_source(fb: FacebookInit) -> Re
 
     Ok(())
 }
+
+/// Verify the streaming `compute_hg_node_id` produces the same hash as the
+/// materialising `serialize_manifest` + `calculate_hg_node_id` reference path.
+///
+/// This is the correctness contract that lets the new direct-derivation path
+/// avoid `try_collect`-ing every entry into memory before hashing — a pattern
+/// that has caused OOMs on huge directories like `fbcode/third-party`.
+#[mononoke::fbinit_test]
+async fn test_compute_hg_node_id_matches_materialised(fb: FacebookInit) -> Result<()> {
+    use futures::stream::TryStreamExt;
+    use mercurial_types::HgAugmentedManifestEntry;
+    use mercurial_types::HgParents;
+    use mercurial_types::calculate_hg_node_id;
+    use mercurial_types::preloaded_augmented_manifest::serialize_manifest;
+    use mononoke_types::MPathElement;
+    use repo_blobstore::RepoBlobstoreRef;
+
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+
+    // Build a real commit so we get a real, populated augmented-manifest envelope.
+    let cs_id = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("alpha", "a")
+        .add_file("beta", "b")
+        .add_file("subdir/file1", "c")
+        .add_file("subdir/file2", "d")
+        .add_file("zeta", "e")
+        .commit()
+        .await?;
+
+    let manager = repo.repo_derived_data().manager();
+    manager
+        .derive_exactly_batch::<MappedHgChangesetId>(&ctx, vec![cs_id], None)
+        .await?;
+    manager
+        .derive_exactly_batch::<RootAclManifestId>(&ctx, vec![cs_id], None)
+        .await?;
+    manager
+        .derive_exactly_batch::<RootHgAugmentedManifestId>(&ctx, vec![cs_id], None)
+        .await?;
+    let aug_root = manager
+        .fetch_derived::<RootHgAugmentedManifestId>(&ctx, cs_id, None)
+        .await?
+        .expect("derived just above");
+    let aug_id = aug_root.hg_augmented_manifest_id();
+    let envelope = aug_id.load(&ctx, repo.repo_blobstore()).await?;
+
+    let subentries = envelope.augmented_manifest.subentries.clone();
+    let parents = HgParents::new(
+        envelope.augmented_manifest.p1,
+        envelope.augmented_manifest.p2,
+    );
+
+    // Streaming path under test.
+    let streaming = derive_hg_augmented_manifest::compute_hg_node_id(
+        subentries.clone(),
+        &ctx,
+        repo.repo_blobstore(),
+        &parents,
+    )
+    .await?;
+
+    // Reference: collect all entries into a Vec, serialise the directory in
+    // one go, then hash the assembled bytes via the non-streaming variant.
+    let collected: Vec<(MPathElement, HgAugmentedManifestEntry)> = subentries
+        .into_entries(&ctx, repo.repo_blobstore())
+        .and_then(|(path, entry)| async move { Ok((MPathElement::from_smallvec(path)?, entry)) })
+        .try_collect()
+        .await?;
+    let materialised = serialize_manifest(&collected)?;
+    let reference = calculate_hg_node_id(materialised.as_ref(), &parents);
+
+    assert_eq!(
+        streaming, reference,
+        "streaming compute_hg_node_id must match materialised serialize_manifest + calculate_hg_node_id"
+    );
+    // And both must equal the canonical hg_node_id stored in the envelope.
+    assert_eq!(
+        streaming, envelope.augmented_manifest.hg_node_id,
+        "streaming compute_hg_node_id must match the canonical hg_node_id stored on the envelope"
+    );
+
+    // Cross-check: must also match the hg_node_id that the existing HgManifest
+    // derivation path produces for the same commit. This is the contract that
+    // lets the new direct-derivation path be a drop-in for HgManifest derivation.
+    let hg_cs_id = repo.derive_hg_changeset(&ctx, cs_id).await?;
+    let hg_manifest_id = hg_cs_id
+        .load(&ctx, repo.repo_blobstore())
+        .await?
+        .manifestid();
+    assert_eq!(
+        streaming,
+        hg_manifest_id.into_nodehash(),
+        "streaming compute_hg_node_id must match HgManifest derivation"
+    );
+
+    Ok(())
+}

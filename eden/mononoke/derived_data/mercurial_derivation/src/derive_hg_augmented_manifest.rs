@@ -33,7 +33,11 @@ use mercurial_types::HgAugmentedManifestEnvelope;
 use mercurial_types::HgAugmentedManifestId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
+use mercurial_types::HgNodeHash;
+use mercurial_types::HgParents;
 use mercurial_types::ShardedHgAugmentedManifest;
+use mercurial_types::calculate_hg_node_id_stream;
+use mercurial_types::preloaded_augmented_manifest::serialize_manifest_entry;
 use mercurial_types::sharded_augmented_manifest::HgAugmentedDirectoryNode;
 use mercurial_types::sharded_augmented_manifest::HgAugmentedFileLeafNode;
 use mononoke_types::ChangesetId;
@@ -531,6 +535,30 @@ where
         .buffer_unordered(2)
         .try_concat()
         .await
+}
+
+/// Compute the Mercurial node id for an augmented-manifest directory by
+/// streaming the entries through `calculate_hg_node_id_stream`.
+///
+/// This intentionally avoids materialising the full directory in memory: each
+/// entry is serialised to its hg-manifest line and fed straight into the sha1
+/// state. Peak memory is O(1) per directory regardless of how many entries
+/// the directory has, which matters a lot for huge directories like
+/// `fbcode/third-party` where the previous `try_collect`-based path could OOM
+/// or stampede the blobstore.
+pub async fn compute_hg_node_id(
+    node: ShardedMapV2Node<HgAugmentedManifestEntry>,
+    ctx: &CoreContext,
+    blobstore: &impl KeyedBlobstore,
+    parents: &HgParents,
+) -> Result<HgNodeHash> {
+    let lines = node
+        .into_entries(ctx, blobstore)
+        .and_then(|(path, entry)| async move {
+            let path = MPathElement::from_smallvec(path)?;
+            serialize_manifest_entry(&path, &entry)
+        });
+    calculate_hg_node_id_stream(lines, parents).await
 }
 
 pub async fn derive_from_full_hg_manifest(
