@@ -881,6 +881,7 @@ mod schematized_logger {
         has_authorization: bool,
         is_allowlisted_tooling: bool,
         is_rollout_allowlisted: bool,
+        access_enforcement_enabled: Option<bool>,
         acls: &[&MononokeIdentity],
     ) -> Result<()> {
         let mut logger = MononokeRestrictedPathsAccessLogger::new(ctx.fb);
@@ -904,6 +905,9 @@ mod schematized_logger {
         logger.set_has_authorization(has_authorization.to_string());
         logger.set_is_allowlisted_tooling(is_allowlisted_tooling.to_string());
         logger.set_is_rollout_allowlisted(is_rollout_allowlisted.to_string());
+        if let Some(value) = access_enforcement_enabled {
+            logger.set_access_enforcement_enabled(value);
+        }
         logger.set_acls(acls.iter().map(|acl| acl.to_string()).collect::<Vec<_>>());
 
         // Set access data variant fields
@@ -1123,6 +1127,7 @@ fn log_checked_access_to_restricted_path(
                 aggregate.authorization.has_authorization,
                 aggregate.authorization.is_allowlisted_tooling,
                 aggregate.authorization.is_rollout_allowlisted,
+                log_data.access_enforcement_enabled,
                 &aggregate.acls,
             ) {
                 tracing::error!("Failed to log to schematized logger: {:?}", e);
