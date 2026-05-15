@@ -3215,7 +3215,7 @@ EdenServiceHandler::streamSelectedChangesSince(
         server_->getTreeCache(),
         server_->getServerState()->getStats().copy(),
         server_->getServerState()->getProcessInfoCache(),
-        server_->getServerState()->getStructuredLogger(),
+        server_->getServerState()->getEdenFsEventsLogger(),
         server_->getServerState()->getReloadableConfig(),
         caseSensitivity);
     auto callback =

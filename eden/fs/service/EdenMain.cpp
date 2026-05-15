@@ -193,9 +193,9 @@ std::shared_ptr<SaplingBackingStore> createSaplingBackingStore(
       params.serverState->getThreadPool().get(),
       reloadableConfig,
       std::move(runtimeOptions),
-      params.serverState->getStructuredLogger(),
+      params.serverState->getEdenFsEventsLogger(),
       std::make_unique<BackingStoreLogger>(
-          params.serverState->getStructuredLogger(),
+          params.serverState->getEdenFsEventsLogger(),
           params.serverState->getProcessInfoCache()),
       &params.serverState->getFaultInjector());
 }

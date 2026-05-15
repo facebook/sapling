@@ -16,13 +16,13 @@
 namespace facebook::eden {
 
 class UnboundedQueueExecutor;
-class StructuredLogger;
+class EdenFsEventsLogger;
 class ProcessInfoCache;
 
 class BackingStoreLogger {
  public:
   BackingStoreLogger(
-      std::shared_ptr<StructuredLogger> logger,
+      std::shared_ptr<EdenFsEventsLogger> logger,
       std::shared_ptr<ProcessInfoCache> processInfoCache);
 
   // for unit tests so that a no-op logger can be passed into the backing store
@@ -34,7 +34,7 @@ class BackingStoreLogger {
       ObjectFetchContext::ObjectType fetchedType);
 
  private:
-  std::shared_ptr<StructuredLogger> logger_;
+  std::shared_ptr<EdenFsEventsLogger> logger_;
   std::shared_ptr<ProcessInfoCache> processInfoCache_;
 
   // for unit tests so that a no-op logger can be passed into the backing store

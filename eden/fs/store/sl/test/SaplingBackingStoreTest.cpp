@@ -26,6 +26,7 @@
 #include "eden/fs/store/BackingStoreLogger.h"
 #include "eden/fs/store/sl/SaplingBackingStore.h"
 #include "eden/fs/store/sl/SaplingBackingStoreOptions.h"
+#include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/testharness/HgRepo.h"
 #include "eden/fs/testharness/TestConfigSource.h"
@@ -70,6 +71,16 @@ std::vector<PathComponent> getTreeNames(
   return names;
 }
 
+std::shared_ptr<EdenFsEventsLogger> makeTestEdenFsEventsLogger(
+    const std::shared_ptr<ReloadableConfig>& edenConfig,
+    const EdenStatsPtr& stats) {
+  return std::make_shared<EdenFsEventsLogger>(
+      std::make_shared<NullStructuredLogger>(),
+      /*xplatLogger=*/nullptr,
+      edenConfig,
+      stats.copy());
+}
+
 struct SaplingBackingStoreTestBase : TestRepo, ::testing::Test {
   std::shared_ptr<EdenConfig> testEdenConfig =
       EdenConfig::createTestEdenConfig();
@@ -91,7 +102,7 @@ struct SaplingBackingStoreNoFaultInjectorTest : SaplingBackingStoreTestBase {
           &executor,
           edenConfig,
           std::make_unique<SaplingBackingStoreOptions>(),
-          std::make_shared<NullStructuredLogger>(),
+          makeTestEdenFsEventsLogger(edenConfig, stats),
           std::make_unique<BackingStoreLogger>(),
           &faultInjector);
 };
@@ -113,7 +124,7 @@ struct SaplingBackingStoreWithFaultInjectorTest : SaplingBackingStoreTestBase {
           &executor,
           edenConfig,
           std::make_unique<SaplingBackingStoreOptions>(),
-          std::make_shared<NullStructuredLogger>(),
+          makeTestEdenFsEventsLogger(edenConfig, stats),
           std::make_unique<BackingStoreLogger>(),
           &faultInjector);
 };
@@ -134,7 +145,7 @@ struct SaplingBackingStoreWithFaultInjectorIgnoreConfigTest
           &executor,
           edenConfig,
           std::make_unique<SaplingBackingStoreOptions>(),
-          std::make_shared<NullStructuredLogger>(),
+          makeTestEdenFsEventsLogger(edenConfig, stats),
           std::make_unique<BackingStoreLogger>(),
           &faultInjector);
 };

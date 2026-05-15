@@ -51,7 +51,6 @@ cpp_library(
         ":sapling_object_id",
         "//common/fb303/cpp:thread_pool_executor_counters",  # @manual
         "//common/network:hostname",
-        "//eden/common/telemetry:structured_logger",
         "//eden/common/utils:bug",
         "//eden/common/utils:case_sensitivity",
         "//eden/common/utils:enum",
@@ -63,6 +62,7 @@ cpp_library(
         "//eden/fs/service:thrift_util",
         "//eden/fs/telemetry:log_info",
         "//eden/fs/telemetry:stats",
+        "//eden/fs/telemetry:structured_logger",
         "//eden/fs/utils:static_assert",
         "//folly:executor",
         "//folly:string",

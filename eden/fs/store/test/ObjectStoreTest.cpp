@@ -21,6 +21,7 @@
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/TreeCache.h"
+#include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/LoggingFetchContext.h"
@@ -35,6 +36,14 @@ namespace {
 constexpr size_t kTreeCacheMaximumSize = 1000; // bytes
 constexpr size_t kTreeCacheMinimumEntries = 0;
 constexpr folly::StringPiece kBlake3Key = "19700101-1111111111111111111111#";
+
+std::shared_ptr<EdenFsEventsLogger> makeTestEdenFsEventsLogger() {
+  return std::make_shared<EdenFsEventsLogger>(
+      std::make_shared<NullStructuredLogger>(),
+      /*xplatLogger=*/nullptr,
+      /*reloadableConfig=*/nullptr,
+      makeRefPtr<EdenStats>());
+}
 
 struct ObjectStoreTest : public ::testing::TestWithParam<CaseSensitivity> {
   void SetUp() override {
@@ -53,7 +62,7 @@ struct ObjectStoreTest : public ::testing::TestWithParam<CaseSensitivity> {
         treeCache,
         stats.copy(),
         std::make_shared<ProcessInfoCache>(),
-        std::make_shared<NullStructuredLogger>(),
+        makeTestEdenFsEventsLogger(),
         std::make_shared<ReloadableConfig>(EdenConfig::createTestEdenConfig()),
         GetParam());
 
@@ -67,7 +76,7 @@ struct ObjectStoreTest : public ::testing::TestWithParam<CaseSensitivity> {
         treeCache,
         stats.copy(),
         std::make_shared<ProcessInfoCache>(),
-        std::make_shared<NullStructuredLogger>(),
+        makeTestEdenFsEventsLogger(),
         std::make_shared<ReloadableConfig>(configWithBlake3Key),
         GetParam());
 
@@ -79,7 +88,7 @@ struct ObjectStoreTest : public ::testing::TestWithParam<CaseSensitivity> {
         treeCache,
         stats.copy(),
         std::make_shared<ProcessInfoCache>(),
-        std::make_shared<NullStructuredLogger>(),
+        makeTestEdenFsEventsLogger(),
         std::make_shared<ReloadableConfig>(configWithTreeAuxPrefetching),
         GetParam());
 
@@ -455,7 +464,7 @@ TEST_P(ObjectStoreTest, get_tree_with_different_sensitivities) {
       treeCache,
       stats.copy(),
       std::make_shared<ProcessInfoCache>(),
-      std::make_shared<NullStructuredLogger>(),
+      makeTestEdenFsEventsLogger(),
       std::make_shared<ReloadableConfig>(EdenConfig::createTestEdenConfig()),
       getOppositeCaseSensitivity());
 
@@ -614,7 +623,7 @@ struct ObjectStoreCheckPermissionTest : public ::testing::Test {
         treeCache,
         stats.copy(),
         std::make_shared<ProcessInfoCache>(),
-        std::make_shared<NullStructuredLogger>(),
+        makeTestEdenFsEventsLogger(),
         edenConfig,
         CaseSensitivity::Sensitive);
   }

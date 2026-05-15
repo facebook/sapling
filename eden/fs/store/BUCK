@@ -108,12 +108,12 @@ cpp_library(
         exclude = CONTEXT_HEADERS + BACKING_STORE_INF + FILTERED_BACKING_STORE_HEADERS + BACKING_STORE_TYPE_INF,
     ),
     deps = [
-        "//eden/common/telemetry:structured_logger",
         "//eden/common/utils:bug",
         "//eden/common/utils:process_info_cache",
         "//eden/common/utils:throw",
         "//eden/fs/model/git:gitignore",
         "//eden/fs/telemetry:log_info",
+        "//eden/fs/telemetry:structured_logger",
         "//eden/fs/telemetry:task_trace",
         "//eden/fs/utils:eden_error",
         "//folly:conv",

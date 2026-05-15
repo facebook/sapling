@@ -9,16 +9,16 @@
 
 #include <folly/Conv.h>
 
-#include "eden/common/telemetry/StructuredLogger.h"
 #include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/common/utils/UnboundedQueueExecutor.h"
 #include "eden/fs/store/ObjectFetchContext.h"
+#include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/LogEvent.h"
 
 namespace facebook::eden {
 
 BackingStoreLogger::BackingStoreLogger(
-    std::shared_ptr<StructuredLogger> logger,
+    std::shared_ptr<EdenFsEventsLogger> logger,
     std::shared_ptr<ProcessInfoCache> processInfoCache)
     : logger_{std::move(logger)},
       processInfoCache_{std::move(processInfoCache)},

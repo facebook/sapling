@@ -29,7 +29,6 @@
 #include <gflags/gflags.h>
 
 #include "eden/common/telemetry/RequestMetricsScope.h"
-#include "eden/common/telemetry/StructuredLogger.h"
 #include "eden/common/utils/Bug.h"
 #include "eden/common/utils/CaseSensitivity.h"
 #include "eden/common/utils/EnumValue.h"
@@ -46,6 +45,7 @@
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/sl/SaplingImportRequest.h"
 #include "eden/fs/store/sl/SaplingObjectId.h"
+#include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/utils/StaticAssert.h"
@@ -117,14 +117,14 @@ SaplingBackingStore::SaplingBackingStore(
     UnboundedQueueExecutor* serverThreadPool,
     std::shared_ptr<ReloadableConfig> config,
     std::unique_ptr<SaplingBackingStoreOptions> runtimeOptions,
-    std::shared_ptr<StructuredLogger> structuredLogger,
+    std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger,
     std::unique_ptr<BackingStoreLogger> logger,
     FaultInjector* FOLLY_NONNULL faultInjector)
     : stats_(stats.copy()),
       config_(config),
       serverThreadPool_(serverThreadPool),
       queue_(std::move(config)),
-      structuredLogger_{std::move(structuredLogger)},
+      edenFsEventsLogger_{std::move(edenFsEventsLogger)},
       logger_(std::move(logger)),
       faultInjector_{*faultInjector},
       runtimeOptions_(computeRuntimeOptions(std::move(runtimeOptions))),
@@ -186,14 +186,14 @@ SaplingBackingStore::SaplingBackingStore(
     folly::Executor* executor,
     std::shared_ptr<ReloadableConfig> config,
     std::unique_ptr<SaplingBackingStoreOptions> runtimeOptions,
-    std::shared_ptr<StructuredLogger> structuredLogger,
+    std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger,
     std::unique_ptr<BackingStoreLogger> logger,
     FaultInjector* FOLLY_NONNULL faultInjector)
     : stats_(std::move(stats)),
       config_(config),
       serverThreadPool_(executor),
       queue_(std::move(config)),
-      structuredLogger_{std::move(structuredLogger)},
+      edenFsEventsLogger_{std::move(edenFsEventsLogger)},
       logger_(std::move(logger)),
       faultInjector_{*faultInjector},
       runtimeOptions_(std::move(runtimeOptions)),
@@ -402,8 +402,8 @@ void SaplingBackingStore::getBlobBatch(
               requests.size(),
               content.exception().what().toStdString());
 
-          if (structuredLogger_) {
-            structuredLogger_->logEvent(
+          if (edenFsEventsLogger_) {
+            edenFsEventsLogger_->logEvent(
                 FetchMiss{
                     repoName_,
                     FetchMiss::Blob,
@@ -844,8 +844,8 @@ void SaplingBackingStore::getTreeAuxDataBatch(
         }
 
         if (auxTry.hasException()) {
-          if (structuredLogger_) {
-            structuredLogger_->logEvent(
+          if (edenFsEventsLogger_) {
+            edenFsEventsLogger_->logEvent(
                 FetchMiss{
                     repoName_,
                     FetchMiss::TreeAuxData,
@@ -930,15 +930,16 @@ void SaplingBackingStore::getBlobAuxDataBatch(
         }
 
         if (auxTry.hasException()) {
-          if (structuredLogger_ &&
-              fetch_mode != sapling::FetchMode::RemoteOnly) {
-            structuredLogger_->logEvent(
-                FetchMiss{
-                    repoName_,
-                    FetchMiss::BlobAuxData,
-                    auxTry.exception().what().toStdString(),
-                    false, // isRetry
-                    dogfoodingHost()});
+          if (fetch_mode != sapling::FetchMode::RemoteOnly) {
+            if (edenFsEventsLogger_) {
+              edenFsEventsLogger_->logEvent(
+                  FetchMiss{
+                      repoName_,
+                      FetchMiss::BlobAuxData,
+                      auxTry.exception().what().toStdString(),
+                      false, // isRetry
+                      dogfoodingHost()});
+            }
           }
 
           return;

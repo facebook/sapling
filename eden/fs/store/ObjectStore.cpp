@@ -14,7 +14,6 @@
 
 #include <stdexcept>
 
-#include "eden/common/telemetry/StructuredLogger.h"
 #include "eden/common/utils/Bug.h"
 #include "eden/common/utils/ImmediateFuture.h"
 #include "eden/common/utils/ProcessInfoCache.h"
@@ -27,6 +26,7 @@
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/TreeCache.h"
+#include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/telemetry/TaskTrace.h"
@@ -48,7 +48,7 @@ std::shared_ptr<ObjectStore> ObjectStore::create(
     shared_ptr<TreeCache> treeCache,
     EdenStatsPtr stats,
     std::shared_ptr<ProcessInfoCache> processInfoCache,
-    std::shared_ptr<StructuredLogger> structuredLogger,
+    std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger,
     std::shared_ptr<ReloadableConfig> edenConfig,
     CaseSensitivity caseSensitive) {
   return std::shared_ptr<ObjectStore>{new ObjectStore{
@@ -56,7 +56,7 @@ std::shared_ptr<ObjectStore> ObjectStore::create(
       std::move(treeCache),
       std::move(stats),
       processInfoCache,
-      structuredLogger,
+      edenFsEventsLogger,
       edenConfig,
       caseSensitive}};
 }
@@ -66,7 +66,7 @@ ObjectStore::ObjectStore(
     shared_ptr<TreeCache> treeCache,
     EdenStatsPtr stats,
     std::shared_ptr<ProcessInfoCache> processInfoCache,
-    std::shared_ptr<StructuredLogger> structuredLogger,
+    std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger,
     std::shared_ptr<ReloadableConfig> edenConfig,
     CaseSensitivity caseSensitive)
     : blobAuxDataCache_{
@@ -80,7 +80,7 @@ ObjectStore::ObjectStore(
       stats_{std::move(stats)},
       pidFetchCounts_{std::make_unique<PidFetchCounts>()},
       processInfoCache_(processInfoCache),
-      structuredLogger_(structuredLogger),
+      edenFsEventsLogger_(edenFsEventsLogger),
       edenConfig_(edenConfig),
       caseSensitive_{caseSensitive} {
   XCHECK(backingStore_);
@@ -104,6 +104,9 @@ void ObjectStore::updateProcessFetch(
 
 void ObjectStore::sendFetchHeavyEvent(ProcessId pid, uint64_t fetch_count)
     const {
+  if (!processInfoCache_ || !edenFsEventsLogger_) {
+    return;
+  }
   auto processName = processInfoCache_->getProcessName(pid.get());
   if (processName) {
     std::replace(processName->begin(), processName->end(), '\0', ' ');
@@ -122,7 +125,7 @@ void ObjectStore::sendFetchHeavyEvent(ProcessId pid, uint64_t fetch_count)
           : std::nullopt;
     }();
 
-    structuredLogger_->logEvent(
+    edenFsEventsLogger_->logEvent(
         FetchHeavy{processName.value(), pid, fetch_count, loadedInodes});
   } else {
     XLOGF(WARN, "Heavy fetches ({}) from pid {})", fetch_count, pid);

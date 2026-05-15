@@ -14,6 +14,7 @@
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/TreeCache.h"
+#include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/LoggingFetchContext.h"
@@ -54,7 +55,11 @@ struct BlobAccessTest : ::testing::Test {
         treeCache,
         makeRefPtr<EdenStats>(),
         std::make_shared<ProcessInfoCache>(),
-        std::make_shared<NullStructuredLogger>(),
+        std::make_shared<EdenFsEventsLogger>(
+            std::make_shared<NullStructuredLogger>(),
+            nullptr,
+            nullptr,
+            makeRefPtr<EdenStats>()),
         edenConfig,
         kPathMapDefaultCaseSensitive);
 

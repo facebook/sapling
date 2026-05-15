@@ -7,7 +7,7 @@
 
 #include "eden/fs/privhelper/PrivHelperImpl.h"
 
-#include "eden/common/telemetry/StructuredLogger.h"
+#include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/LogEvent.h"
 
 #ifndef _WIN32
@@ -142,8 +142,9 @@ class PrivHelperClientImpl : public PrivHelper,
   Future<folly::Unit> setFuseReadAhead(
       StringPiece mountPath,
       uint32_t readAheadKb) override;
-  void setStructuredLogger(std::shared_ptr<StructuredLogger> logger) override {
-    structuredLogger_ = std::move(logger);
+  void setEdenFsEventsLogger(
+      std::shared_ptr<EdenFsEventsLogger> logger) override {
+    edenFsEventsLogger_ = std::move(logger);
   }
   int stop() override;
   int getRawClientFd() const override {
@@ -390,9 +391,9 @@ class PrivHelperClientImpl : public PrivHelper,
   std::atomic<uint32_t> nextXid_{1};
   folly::Synchronized<ThreadSafeData> state_;
   pid_t pid_;
-  // Must be set (via setStructuredLogger) before attachEventBase() is called.
+  // Must be set (via setEdenFsEventsLogger) before attachEventBase() is called.
   // Read from EventBase thread thereafter; do not modify after attach.
-  std::shared_ptr<StructuredLogger> structuredLogger_;
+  std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger_;
 
   // sendPending_, and pendingRequests_ are only accessed from the
   // EventBase thread.
@@ -412,7 +413,7 @@ class PrivHelperClientImpl : public PrivHelper,
  * parseEmptyResponse to return a Cursor positioned after the header.
  */
 void logSanityCheckResult(
-    const std::shared_ptr<StructuredLogger>& logger,
+    const std::shared_ptr<EdenFsEventsLogger>& logger,
     const UnixSocket::Message& response,
     const std::string& mountPath) {
   try {
@@ -451,7 +452,7 @@ Future<File> PrivHelperClientImpl::fuseMount(
   return sendAndRecv(xid, std::move(request))
       .thenValue(
           [mountPathStr = std::move(mountPathStr),
-           logger = structuredLogger_](UnixSocket::Message&& response)
+           logger = edenFsEventsLogger_](UnixSocket::Message&& response)
               -> folly::Future<UnixSocket::Message> {
             PrivHelperConn::parseEmptyResponse(
                 PrivHelperConn::REQ_MOUNT_FUSE, response);
@@ -479,7 +480,8 @@ Future<Unit> PrivHelperClientImpl::nfsMount(
 
   return sendAndRecv(xid, std::move(request))
       .thenValue(
-          [mountPathStr = std::move(mountPathStr), logger = structuredLogger_](
+          [mountPathStr = std::move(mountPathStr),
+           logger = edenFsEventsLogger_](
               UnixSocket::Message&& response) mutable -> Future<Unit> {
             PrivHelperConn::parseEmptyResponse(
                 PrivHelperConn::REQ_MOUNT_NFS, response);
@@ -560,12 +562,13 @@ Future<Unit> PrivHelperClientImpl::takeoverStartup(
       xid, mountPath, bindMounts);
 
   return sendAndRecv(xid, std::move(request))
-      .thenValue([mountPathStr = std::move(mountPathStr),
-                  logger = structuredLogger_](UnixSocket::Message&& response) {
-        PrivHelperConn::parseEmptyResponse(
-            PrivHelperConn::REQ_TAKEOVER_STARTUP, response);
-        logSanityCheckResult(logger, response, mountPathStr);
-      });
+      .thenValue(
+          [mountPathStr = std::move(mountPathStr),
+           logger = edenFsEventsLogger_](UnixSocket::Message&& response) {
+            PrivHelperConn::parseEmptyResponse(
+                PrivHelperConn::REQ_TAKEOVER_STARTUP, response);
+            logSanityCheckResult(logger, response, mountPathStr);
+          });
 }
 
 Future<Unit> PrivHelperClientImpl::setLogFile(folly::File logFile) {

@@ -38,7 +38,7 @@ class ReloadableConfig;
 class EdenConfig;
 class EdenStats;
 class ProcessInfoCache;
-class StructuredLogger;
+class EdenFsEventsLogger;
 class TreeCache;
 enum class ObjectComparison : uint8_t;
 
@@ -118,7 +118,7 @@ class ObjectStore : public IObjectStore,
       std::shared_ptr<TreeCache> treeCache,
       EdenStatsPtr stats,
       std::shared_ptr<ProcessInfoCache> processInfoCache,
-      std::shared_ptr<StructuredLogger> structuredLogger,
+      std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger,
       std::shared_ptr<ReloadableConfig> edenConfig,
       CaseSensitivity caseSensitive);
   ~ObjectStore() override;
@@ -132,7 +132,7 @@ class ObjectStore : public IObjectStore,
 
   /**
    * send a FetchHeavy log event to Scuba. If either processInfoCache_
-   * or structuredLogger_ is nullptr, this function does nothing.
+   * or edenFsEventsLogger_ is nullptr, this function does nothing.
    */
   void sendFetchHeavyEvent(ProcessId pid, uint64_t fetch_count) const;
 
@@ -468,7 +468,7 @@ class ObjectStore : public IObjectStore,
       std::shared_ptr<TreeCache> treeCache,
       EdenStatsPtr stats,
       std::shared_ptr<ProcessInfoCache> processInfoCache,
-      std::shared_ptr<StructuredLogger> structuredLogger,
+      std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger,
       std::shared_ptr<ReloadableConfig> edenConfig,
       CaseSensitivity caseSensitive);
   // Forbidden copy constructor and assignment operator
@@ -570,12 +570,12 @@ class ObjectStore : public IObjectStore,
    * from the beginning of the eden daemon progress */
   std::unique_ptr<PidFetchCounts> pidFetchCounts_;
 
-  /* process name cache and structured logger used for
+  /* process name cache and events logger used for
    * sending fetch heavy events, set to nullptr if not
    * initialized by create()
    */
   std::shared_ptr<ProcessInfoCache> processInfoCache_;
-  std::shared_ptr<StructuredLogger> structuredLogger_;
+  std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger_;
   std::shared_ptr<ReloadableConfig> edenConfig_;
 
   // Is this ObjectStore case sensitive? This only matters for methods returning

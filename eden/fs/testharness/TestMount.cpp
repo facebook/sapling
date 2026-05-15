@@ -268,7 +268,7 @@ void TestMount::createMount(
       treeCache_,
       stats_.copy(),
       std::make_shared<ProcessInfoCache>(),
-      std::make_shared<NullStructuredLogger>(),
+      serverState_->getEdenFsEventsLogger(),
       serverState_->getReloadableConfig(),
       config_->getCaseSensitive());
   auto journal = std::make_unique<Journal>(stats_.copy());
@@ -378,7 +378,7 @@ void TestMount::remount() {
       treeCache_,
       stats_.copy(),
       std::make_shared<ProcessInfoCache>(),
-      std::make_shared<NullStructuredLogger>(),
+      serverState_->getEdenFsEventsLogger(),
       std::make_shared<ReloadableConfig>(edenConfig_),
       config->getCaseSensitive());
 
@@ -419,7 +419,7 @@ void TestMount::remountGracefully() {
       treeCache_,
       stats_.copy(),
       std::make_shared<ProcessInfoCache>(),
-      std::make_shared<NullStructuredLogger>(),
+      serverState_->getEdenFsEventsLogger(),
       std::make_shared<ReloadableConfig>(edenConfig_),
       config->getCaseSensitive());
 

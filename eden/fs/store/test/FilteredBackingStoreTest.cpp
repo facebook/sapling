@@ -29,6 +29,8 @@
 #include "eden/fs/store/filter/HgSparseFilter.h"
 #include "eden/fs/store/sl/SaplingBackingStore.h"
 #include "eden/fs/store/sl/SaplingBackingStoreOptions.h"
+#include "eden/fs/telemetry/EdenFsEventsLogger.h"
+#include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/testharness/FakeFilter.h"
 #include "eden/fs/testharness/HgRepo.h"
 #include "eden/fs/testharness/TestUtil.h"
@@ -159,7 +161,11 @@ struct SaplingFilteredBackingStoreTest : FilteredBackingStoreTestBase {
           &executor_,
           edenConfig,
           std::move(runtimeOptions),
-          std::make_shared<NullStructuredLogger>(),
+          std::make_shared<EdenFsEventsLogger>(
+              std::make_shared<NullStructuredLogger>(),
+              /*xplatLogger=*/nullptr,
+              edenConfig,
+              stats.copy()),
           std::make_unique<BackingStoreLogger>(),
           &faultInjector)};
 };

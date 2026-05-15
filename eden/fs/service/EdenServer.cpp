@@ -1444,7 +1444,7 @@ Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
   }
   auto thriftRunningFuture = createThriftServer();
   // Start the PrivHelper client, using our main event base to drive its I/O
-  serverState_->getPrivHelper()->setStructuredLogger(structuredLogger_);
+  serverState_->getPrivHelper()->setEdenFsEventsLogger(edenFsEventsLogger_);
   serverState_->getPrivHelper()->attachEventBase(mainEventBase_);
 
   startPeriodicTasks();
@@ -2026,7 +2026,7 @@ ImmediateFuture<std::shared_ptr<EdenMount>> EdenServer::mount(
       treeCache_,
       getStats().copy(),
       serverState_->getProcessInfoCache(),
-      serverState_->getStructuredLogger(),
+      serverState_->getEdenFsEventsLogger(),
       serverState_->getReloadableConfig(),
       initialConfig->getCaseSensitive());
   auto journal = std::make_unique<Journal>(getStats().copy());
