@@ -43,7 +43,7 @@ use mononoke_app::args::HooksAppExtension;
 use mononoke_app::args::RepoFilterAppExtension;
 use mononoke_app::args::ShutdownTimeoutArgs;
 use mononoke_app::args::WarmBookmarksCacheExtension;
-use mysql_client::ConnectionOptionsBuilder;
+use mysql_client::ConnectionOptions;
 use mysql_client::ConnectionPoolOptionsBuilder;
 use panichandler::Fate;
 use scs_methods::source_control_impl::SourceControlServiceImpl;
@@ -229,9 +229,7 @@ async fn create_git_source_of_truth_config(
         .build()
         .map_err(Error::msg)?;
 
-    let conn_options = ConnectionOptionsBuilder::default()
-        .build()
-        .map_err(Error::msg)?;
+    let conn_options = ConnectionOptions::default();
     let destination = Destination::Prod;
     let xdb_factory = XdbFactory::new(fb, destination, pool_options, conn_options)?;
     let mononoke_production_xdb = xdb_factory
