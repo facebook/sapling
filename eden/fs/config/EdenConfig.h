@@ -2158,6 +2158,12 @@ class EdenConfig : private ConfigSettingManager {
       false,
       this};
 
+  /**
+   * Determines if EdenFS should use Write-Ahead Logging (WAL) for overlay
+   * directory writes. Only applies to Legacy and LegacyDev catalog types.
+   */
+  ConfigSetting<bool> overlayUseWal{"overlay:use-wal", false, this};
+
   // [clone]
 
   /**
