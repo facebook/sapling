@@ -711,6 +711,37 @@ void FsFileContentStore::appendWalEntry(
   }
 }
 
+bool FsFileContentStore::hasWal(InodeNumber parent) {
+  auto walPath = getWalPath(parent);
+  // fstatat + S_ISREG so a symlink planted in the shard dir does not
+  // pose as a WAL (faccessat ignores AT_SYMLINK_NOFOLLOW on Linux glibc).
+  // Mirror loadRawOverlayDir: ENOENT means absent, anything else throws —
+  // returning false on EIO/EACCES would silently skip replay and let the
+  // caller overwrite the on-disk WAL.
+  struct stat st{};
+  if (::fstatat(dirFile_.fd(), walPath.c_str(), &st, AT_SYMLINK_NOFOLLOW) ==
+      0) {
+    return S_ISREG(st.st_mode);
+  }
+  int err = errno;
+  if (err == ENOENT) {
+    return false;
+  }
+  folly::throwSystemErrorExplicit(
+      err, fmt::format("error stat'ing WAL file for inode {}", parent));
+}
+
+void FsFileContentStore::removeWal(InodeNumber parent) {
+  auto walPath = getWalPath(parent);
+  if (::unlinkat(dirFile_.fd(), walPath.c_str(), 0) != 0) {
+    int err = errno;
+    if (err == ENOENT) {
+      return;
+    }
+    folly::throwSystemErrorExplicit(
+        err, fmt::format("error removing WAL file for inode {}", parent));
+  }
+}
 std::optional<overlay::OverlayDir> FsFileContentStore::deserializeOverlayDir(
     InodeNumber inodeNumber) {
   auto raw = loadRawOverlayDir(inodeNumber);

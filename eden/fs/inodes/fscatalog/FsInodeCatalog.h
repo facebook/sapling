@@ -197,6 +197,15 @@ class FsFileContentStore : public FileContentStore {
       PathComponentPiece childName,
       const overlay::OverlayEntry* entry);
 
+  /** Returns true iff a WAL file exists for the given directory inode. */
+  bool hasWal(InodeNumber parent);
+
+  /**
+   * Remove the WAL file for a directory inode. Missing files are not an
+   * error; any other failure throws.
+   */
+  void removeWal(InodeNumber parent);
+
   static constexpr folly::StringPiece kMetadataFile{"metadata.table"};
 
   /**

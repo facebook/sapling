@@ -257,4 +257,63 @@ TEST_F(FsInodeCatalogWalTest, appendWalEntry_createsWalFileWithMode0600) {
   EXPECT_EQ(0600, st.st_mode & 0777);
 }
 
+TEST_F(FsInodeCatalogWalTest, hasWal_falseWhenMissing) {
+  EXPECT_FALSE(store_->hasWal(InodeNumber{200}));
+}
+
+TEST_F(FsInodeCatalogWalTest, hasWal_trueAfterAppend) {
+  const InodeNumber parent{201};
+  store_->appendWalEntry(
+      parent,
+      FsFileContentStore::WalOpType::REMOVE,
+      PathComponentPiece{"x"},
+      nullptr);
+  EXPECT_TRUE(store_->hasWal(parent));
+}
+
+TEST_F(FsInodeCatalogWalTest, removeWal_missingFileIsNotAnError) {
+  EXPECT_NO_THROW(store_->removeWal(InodeNumber{202}));
+}
+
+TEST_F(FsInodeCatalogWalTest, removeWal_removesAfterAppend) {
+  const InodeNumber parent{203};
+  store_->appendWalEntry(
+      parent,
+      FsFileContentStore::WalOpType::REMOVE,
+      PathComponentPiece{"x"},
+      nullptr);
+  ASSERT_TRUE(store_->hasWal(parent));
+  store_->removeWal(parent);
+  EXPECT_FALSE(store_->hasWal(parent));
+}
+
+TEST_F(FsInodeCatalogWalTest, hasWal_togglesWithAppendAndRemove) {
+  const InodeNumber parent{204};
+  EXPECT_FALSE(store_->hasWal(parent));
+  store_->appendWalEntry(
+      parent,
+      FsFileContentStore::WalOpType::REMOVE,
+      PathComponentPiece{"x"},
+      nullptr);
+  EXPECT_TRUE(store_->hasWal(parent));
+  store_->removeWal(parent);
+  EXPECT_FALSE(store_->hasWal(parent));
+}
+
+TEST_F(FsInodeCatalogWalTest, hasWal_falseForSymlinkAtWalPath) {
+  // hasWal uses fstatat + S_ISREG, so a stray symlink planted at the WAL
+  // path must report false rather than be followed (or accepted as a WAL).
+  const InodeNumber parent{205};
+  ASSERT_FALSE(store_->hasWal(parent));
+
+  // Plant a dangling symlink where the WAL would live. The shard
+  // directory already exists (created by ensureShardDirectories at mount
+  // setup), so symlinkat into it succeeds.
+  auto walPath = FsFileContentStore::getWalPath(parent);
+  auto fullPath =
+      canonicalPath(testDir_.path().string()) + RelativePathPiece{walPath};
+  ASSERT_EQ(0, ::symlink("/nonexistent-wal-target", fullPath.c_str()));
+
+  EXPECT_FALSE(store_->hasWal(parent));
+}
 #endif
