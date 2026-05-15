@@ -5565,11 +5565,12 @@ def serve(ui, repo, **opts):
         ("", "stat", None, _("output diffstat-style summary of changes")),
         ("g", "git", None, _("use git extended diff format")),
         ("U", "unified", 3, _("number of lines of diff context to show")),
+        ("r", "rev", [], _("show the specified revision")),
     ]
     + diffwsopts
     + templateopts
     + walkopts,
-    _("[OPTION]... [REV [FILE]...]"),
+    _("[OPTION]... [-r REV | REV] [FILE]..."),
     inferrepo=True,
     cmdtype=readonly,
 )
@@ -5579,13 +5580,24 @@ def show(ui, repo, *args, **opts):
     Show the commit message and contents for the specified commit. If no commit
     is specified, shows the current commit.
 
+    The revision can be given positionally or via ``-r/--rev``:
+
+    - ``@prog@ show REV [FILE]...`` — first positional is the revision, the rest
+      are files.
+    - ``@prog@ show -r REV [FILE]...`` — all positionals are files.
+
+    A bare ``@prog@ show FILE`` does not work, because ``FILE`` is parsed as a
+    revision.
+
     :prog:`show` behaves similarly to :prog:`log -vp -r REV [OPTION]... [FILE]...`, or
     if called without a ``REV``, :prog:`log -vp -r . [OPTION]...` Use
     :prog:`log` for more powerful operations than supported by :prog:`show`.
 
     """
     ui.pager("show")
-    if len(args) == 0:
+    if opts.get("rev"):
+        pats = args
+    elif len(args) == 0:
         opts["rev"] = ["."]
         pats = []
     else:

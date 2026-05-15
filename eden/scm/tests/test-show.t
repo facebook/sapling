@@ -422,12 +422,21 @@ Check sl show '' fails to parse the revision
 Confirm that --help works (it didn't when we used an alias)
 
   $ sl show --help
-  sl show [OPTION]... [REV [FILE]...]
+  sl show [OPTION]... [-r REV | REV] [FILE]...
   
   show commit in detail
   
       Show the commit message and contents for the specified commit. If no
       commit is specified, shows the current commit.
+  
+      The revision can be given positionally or via "-r/--rev":
+  
+      - "sl show REV [FILE]..." — first positional is the revision, the rest are
+        files.
+      - "sl show -r REV [FILE]..." — all positionals are files.
+  
+      A bare "sl show FILE" does not work, because "FILE" is parsed as a
+      revision.
   
       'sl show' behaves similarly to 'sl log -vp -r REV [OPTION]... [FILE]...',
       or if called without a "REV", 'sl log -vp -r . [OPTION]...' Use 'sl log'
@@ -441,6 +450,7 @@ Confirm that --help works (it didn't when we used an alias)
       --stat                output diffstat-style summary of changes
    -g --git                 use git extended diff format
    -U --unified VALUE       number of lines of diff context to show (default: 3)
+   -r --rev VALUE [+]       show the specified revision
    -w --ignore-all-space    ignore white space when comparing lines
    -b --ignore-space-change ignore changes in the amount of white space
    -B --ignore-blank-lines  ignore changes whose lines are all blank
@@ -451,12 +461,21 @@ Confirm that --help works (it didn't when we used an alias)
   
   (some details hidden, use --verbose to show complete help)
   $ sl show --help --verbose
-  sl show [OPTION]... [REV [FILE]...]
+  sl show [OPTION]... [-r REV | REV] [FILE]...
   
   show commit in detail
   
       Show the commit message and contents for the specified commit. If no
       commit is specified, shows the current commit.
+  
+      The revision can be given positionally or via "-r/--rev":
+  
+      - "sl show REV [FILE]..." — first positional is the revision, the rest are
+        files.
+      - "sl show -r REV [FILE]..." — all positionals are files.
+  
+      A bare "sl show FILE" does not work, because "FILE" is parsed as a
+      revision.
   
       'sl show' behaves similarly to 'sl log -vp -r REV [OPTION]... [FILE]...',
       or if called without a "REV", 'sl log -vp -r . [OPTION]...' Use 'sl log'
@@ -470,6 +489,7 @@ Confirm that --help works (it didn't when we used an alias)
       --stat                output diffstat-style summary of changes
    -g --git                 use git extended diff format
    -U --unified VALUE       number of lines of diff context to show (default: 3)
+   -r --rev VALUE [+]       show the specified revision
    -w --ignore-all-space    ignore white space when comparing lines
    -b --ignore-space-change ignore changes in the amount of white space
    -B --ignore-blank-lines  ignore changes whose lines are all blank
@@ -510,3 +530,68 @@ Confirm that --help works (it didn't when we used an alias)
                               (default: auto)
       --reason VALUE [+]      why this runs, usually set by automation
                               (ADVANCED)
+
+Test -r/--rev option:
+
+  $ newclientrepo
+  $ echo a > a
+  $ sl commit -qAm "commit a"
+  $ echo b > b
+  $ sl commit -qAm "commit b"
+
+Test --rev with single revision:
+  $ sl show --rev . --stat -T '{desc}\n'
+  commit b
+   b |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+
+Test -r with single revision:
+  $ sl show -r . --stat -T '{desc}\n'
+  commit b
+   b |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+
+Test --rev with multiple revisions:
+  $ sl show --rev . --rev .^ --stat -T '{desc}\n'
+  commit b
+   b |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+  
+  commit a
+   a |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+
+Test -r with multiple revisions:
+  $ sl show -r . -r .^ --stat -T '{desc}\n'
+  commit b
+   b |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+  
+  commit a
+   a |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+
+Test that positional argument still works:
+  $ sl show . --stat -T '{desc}\n'
+  commit b
+   b |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+
+Test -r with FILE filter:
+  $ sl show -r . b --stat -T '{desc}\n'
+  commit b
+   b |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+
+Test -r with FILE filter that does not match:
+  $ sl show -r . a --stat -T '{desc}\n'
+
+Test -r with multiple FILE filters:
+  $ sl show -r .^ -r . a b --stat -T '{desc}\n'
+  commit a
+   a |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+  
+  commit b
+   b |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
