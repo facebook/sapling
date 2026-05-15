@@ -20,7 +20,6 @@ cpp_library(
         ":startup_status_subscriber",
         "//common/init:light",
         "//eden/common/telemetry:log_info",
-        "//eden/common/telemetry:structured_logger",
         "//eden/common/utils:bug",
         "//eden/common/utils:user_info",
         "//eden/fs:config",

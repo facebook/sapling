@@ -36,6 +36,7 @@
 #include "eden/fs/inodes/fscatalog/InodePath.h"
 #include "eden/fs/model/TestOps.h"
 #include "eden/fs/service/PrettyPrinters.h"
+#include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
@@ -45,6 +46,16 @@
 using namespace folly::string_piece_literals;
 
 namespace facebook::eden {
+
+namespace {
+std::shared_ptr<EdenFsEventsLogger> makeTestEdenFsEventsLogger() {
+  return std::make_shared<EdenFsEventsLogger>(
+      std::make_shared<NullStructuredLogger>(),
+      nullptr,
+      nullptr,
+      makeRefPtr<EdenStats>());
+}
+} // namespace
 
 constexpr InodeCatalogType kInodeCatalogType = InodeCatalogType::Legacy;
 constexpr InodeCatalogOptions kInodeCatalogOptions = INODE_CATALOG_DEFAULT;
@@ -74,7 +85,7 @@ TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
       kPathMapDefaultCaseSensitive,
       kInodeCatalogType,
       kInodeCatalogOptions,
-      std::make_shared<NullStructuredLogger>(),
+      makeTestEdenFsEventsLogger(),
       makeRefPtr<EdenStats>(),
       *EdenConfig::createTestEdenConfig());
   overlay
@@ -287,7 +298,7 @@ TEST(PlainOverlayTest, new_overlay_is_clean) {
       kPathMapDefaultCaseSensitive,
       kInodeCatalogType,
       kInodeCatalogOptions,
-      std::make_shared<NullStructuredLogger>(),
+      makeTestEdenFsEventsLogger(),
       makeRefPtr<EdenStats>(),
       *EdenConfig::createTestEdenConfig());
   overlay
@@ -306,7 +317,7 @@ TEST(PlainOverlayTest, reopened_overlay_is_clean) {
         kPathMapDefaultCaseSensitive,
         kInodeCatalogType,
         kInodeCatalogOptions,
-        std::make_shared<NullStructuredLogger>(),
+        makeTestEdenFsEventsLogger(),
         makeRefPtr<EdenStats>(),
         *EdenConfig::createTestEdenConfig());
     overlay
@@ -321,7 +332,7 @@ TEST(PlainOverlayTest, reopened_overlay_is_clean) {
       kPathMapDefaultCaseSensitive,
       kInodeCatalogType,
       kInodeCatalogOptions,
-      std::make_shared<NullStructuredLogger>(),
+      makeTestEdenFsEventsLogger(),
       makeRefPtr<EdenStats>(),
       *EdenConfig::createTestEdenConfig());
   overlay
@@ -342,7 +353,7 @@ TEST(PlainOverlayTest, unclean_overlay_is_dirty) {
         kPathMapDefaultCaseSensitive,
         kInodeCatalogType,
         kInodeCatalogOptions,
-        std::make_shared<NullStructuredLogger>(),
+        makeTestEdenFsEventsLogger(),
         makeRefPtr<EdenStats>(),
         *EdenConfig::createTestEdenConfig());
     overlay
@@ -361,7 +372,7 @@ TEST(PlainOverlayTest, unclean_overlay_is_dirty) {
       kPathMapDefaultCaseSensitive,
       kInodeCatalogType,
       kInodeCatalogOptions,
-      std::make_shared<NullStructuredLogger>(),
+      makeTestEdenFsEventsLogger(),
       makeRefPtr<EdenStats>(),
       *EdenConfig::createTestEdenConfig());
   overlay
@@ -409,7 +420,7 @@ class RawOverlayTest : public ::testing::TestWithParam<OverlayRestartMode> {
         kPathMapDefaultCaseSensitive,
         kInodeCatalogType,
         kInodeCatalogOptions,
-        std::make_shared<NullStructuredLogger>(),
+        makeTestEdenFsEventsLogger(),
         makeRefPtr<EdenStats>(),
         *EdenConfig::createTestEdenConfig());
     overlay
@@ -857,7 +868,7 @@ class DebugDumpOverlayInodesTest : public ::testing::Test {
             kPathMapDefaultCaseSensitive,
             kInodeCatalogType,
             kInodeCatalogOptions,
-            std::make_shared<NullStructuredLogger>(),
+            makeTestEdenFsEventsLogger(),
             makeRefPtr<EdenStats>(),
             *EdenConfig::createTestEdenConfig())} {
     overlay
@@ -1052,7 +1063,7 @@ void createDirtyOverlay(const AbsolutePath& dir) {
       kPathMapDefaultCaseSensitive,
       kInodeCatalogType,
       kInodeCatalogOptions,
-      std::make_shared<NullStructuredLogger>(),
+      makeTestEdenFsEventsLogger(),
       makeRefPtr<EdenStats>(),
       *EdenConfig::createTestEdenConfig());
   ov->initialize(config).get();
@@ -1080,7 +1091,7 @@ std::shared_ptr<Overlay> createTestOverlay(const AbsolutePath& dir) {
       kPathMapDefaultCaseSensitive,
       kInodeCatalogType,
       kInodeCatalogOptions,
-      std::make_shared<NullStructuredLogger>(),
+      makeTestEdenFsEventsLogger(),
       makeRefPtr<EdenStats>(),
       *EdenConfig::createTestEdenConfig());
 }

@@ -41,7 +41,6 @@
 #include <filesystem>
 
 #include "eden/common/telemetry/SessionInfo.h"
-#include "eden/common/telemetry/StructuredLogger.h"
 #include "eden/common/utils/Bug.h"
 #include "eden/common/utils/UserInfo.h"
 #include "eden/fs/config/CheckoutConfig.h"
@@ -588,10 +587,7 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
   }
 
   std::move(prepareFuture)
-      .thenTry([startupLogger,
-                structuredLogger =
-                    server->getServerState()->getStructuredLogger(),
-                daemonStart](folly::Try<folly::Unit>&& result) {
+      .thenTry([startupLogger, daemonStart](folly::Try<folly::Unit>&& result) {
         // If an error occurred this means that we failed to mount all of
         // the mount points.
         //

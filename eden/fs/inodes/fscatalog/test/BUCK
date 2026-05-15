@@ -24,6 +24,7 @@ cpp_unittest(
         "//eden/fs/inodes/sqlitecatalog:sqliteinodecatalog",
         "//eden/fs/model:model",
         "//eden/fs/telemetry:stats",
+        "//eden/fs/telemetry:structured_logger",
         "//eden/fs/testharness:test_mount",
         "//eden/fs/testharness:test_util",
         "//folly:conv",

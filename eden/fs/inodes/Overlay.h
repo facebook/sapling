@@ -18,7 +18,6 @@
 #include <optional>
 #include <thread>
 
-#include "eden/common/telemetry/StructuredLogger.h"
 #include "eden/common/utils/CaseSensitivity.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/RefPtr.h"
@@ -28,6 +27,7 @@
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/OverlayChecker.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
+#include "eden/fs/telemetry/EdenFsEventsLogger.h"
 
 #ifndef _WIN32
 #include "eden/fs/inodes/fscatalog/EphemeralFsInodeCatalog.h"
@@ -91,7 +91,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
       CaseSensitivity caseSensitive,
       InodeCatalogType inodeCatalogType,
       InodeCatalogOptions inodeCatalogOptions,
-      std::shared_ptr<StructuredLogger> logger,
+      std::shared_ptr<EdenFsEventsLogger> logger,
       EdenStatsPtr stats,
       const EdenConfig& config);
 
@@ -353,7 +353,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
       CaseSensitivity caseSensitive,
       InodeCatalogType inodeCatalogType,
       InodeCatalogOptions inodeCatalogOptions,
-      std::shared_ptr<StructuredLogger> logger,
+      std::shared_ptr<EdenFsEventsLogger> logger,
       EdenStatsPtr stats,
       const EdenConfig& config);
 
@@ -499,7 +499,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   folly::Baton<> lastOutstandingRequestIsComplete_;
   CaseSensitivity caseSensitive_;
 
-  std::shared_ptr<StructuredLogger> structuredLogger_;
+  std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger_;
   EdenStatsPtr stats_;
 
   // Borrowed from EdenServer. Valid for Overlay's lifetime because

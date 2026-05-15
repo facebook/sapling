@@ -18,10 +18,21 @@
 #include "eden/fs/config/InodeCatalogType.h"
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/Overlay.h"
+#include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/EdenStats.h"
 
 using namespace facebook::eden;
 using namespace folly::string_piece_literals;
+
+namespace {
+std::shared_ptr<EdenFsEventsLogger> makeTestEdenFsEventsLogger() {
+  return std::make_shared<EdenFsEventsLogger>(
+      std::make_shared<NullStructuredLogger>(),
+      nullptr,
+      nullptr,
+      makeRefPtr<EdenStats>());
+}
+} // namespace
 
 DEFINE_string(overlayPath, "", "Directory where the test overlay is created");
 DEFINE_string(
@@ -121,7 +132,7 @@ void benchmarkOverlay(
       kPathMapDefaultCaseSensitive,
       overlayType,
       kDefaultInodeCatalogOptions,
-      std::make_shared<NullStructuredLogger>(),
+      makeTestEdenFsEventsLogger(),
       makeRefPtr<EdenStats>(),
       *edenConfig);
 

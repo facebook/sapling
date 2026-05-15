@@ -24,12 +24,23 @@
 #include "eden/common/telemetry/NullStructuredLogger.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/testharness/TestMount.h"
 
 using namespace folly::string_piece_literals;
 
 namespace facebook::eden {
+
+namespace {
+std::shared_ptr<EdenFsEventsLogger> makeTestEventsLogger() {
+  return std::make_shared<EdenFsEventsLogger>(
+      std::make_shared<NullStructuredLogger>(),
+      nullptr,
+      nullptr,
+      makeRefPtr<EdenStats>());
+}
+} // namespace
 
 class EphemeralFsOverlayTest : public ::testing::Test {
  protected:
@@ -48,7 +59,7 @@ class EphemeralFsOverlayTest : public ::testing::Test {
         kPathMapDefaultCaseSensitive,
         InodeCatalogType::LegacyEphemeral,
         INODE_CATALOG_DEFAULT,
-        std::make_shared<NullStructuredLogger>(),
+        makeTestEventsLogger(),
         makeRefPtr<EdenStats>(),
         *edenConfig);
     overlay

@@ -19,11 +19,22 @@
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
+#include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestMount.h"
 
 namespace facebook::eden {
+
+namespace {
+std::shared_ptr<EdenFsEventsLogger> makeTestEdenFsEventsLogger() {
+  return std::make_shared<EdenFsEventsLogger>(
+      std::make_shared<NullStructuredLogger>(),
+      nullptr,
+      nullptr,
+      makeRefPtr<EdenStats>());
+}
+} // namespace
 
 class LMDBOverlayTest : public ::testing::TestWithParam<InodeCatalogOptions> {
  protected:
@@ -83,7 +94,7 @@ TEST(PlainLMDBOverlayTest, new_overlay_is_clean) {
       kPathMapDefaultCaseSensitive,
       InodeCatalogType::LMDB,
       INODE_CATALOG_DEFAULT,
-      std::make_shared<NullStructuredLogger>(),
+      makeTestEdenFsEventsLogger(),
       makeRefPtr<EdenStats>(),
       *EdenConfig::createTestEdenConfig());
   overlay
@@ -101,7 +112,7 @@ TEST(PlainLMDBOverlayTest, new_overlay_is_clean_buffered) {
       kPathMapDefaultCaseSensitive,
       InodeCatalogType::LMDB,
       INODE_CATALOG_BUFFERED,
-      std::make_shared<NullStructuredLogger>(),
+      makeTestEdenFsEventsLogger(),
       makeRefPtr<EdenStats>(),
       *EdenConfig::createTestEdenConfig());
   overlay
@@ -120,7 +131,7 @@ TEST(PlainLMDBOverlayTest, reopened_overlay_is_clean) {
         kPathMapDefaultCaseSensitive,
         InodeCatalogType::LMDB,
         INODE_CATALOG_DEFAULT,
-        std::make_shared<NullStructuredLogger>(),
+        makeTestEdenFsEventsLogger(),
         makeRefPtr<EdenStats>(),
         *EdenConfig::createTestEdenConfig());
     overlay
@@ -134,7 +145,7 @@ TEST(PlainLMDBOverlayTest, reopened_overlay_is_clean) {
       kPathMapDefaultCaseSensitive,
       InodeCatalogType::LMDB,
       INODE_CATALOG_DEFAULT,
-      std::make_shared<NullStructuredLogger>(),
+      makeTestEdenFsEventsLogger(),
       makeRefPtr<EdenStats>(),
       *EdenConfig::createTestEdenConfig());
   overlay
@@ -153,7 +164,7 @@ TEST(PlainLMDBOverlayTest, reopened_overlay_is_clean_buffered) {
         kPathMapDefaultCaseSensitive,
         InodeCatalogType::LMDB,
         INODE_CATALOG_BUFFERED,
-        std::make_shared<NullStructuredLogger>(),
+        makeTestEdenFsEventsLogger(),
         makeRefPtr<EdenStats>(),
         *EdenConfig::createTestEdenConfig());
     overlay
@@ -167,7 +178,7 @@ TEST(PlainLMDBOverlayTest, reopened_overlay_is_clean_buffered) {
       kPathMapDefaultCaseSensitive,
       InodeCatalogType::LMDB,
       INODE_CATALOG_BUFFERED,
-      std::make_shared<NullStructuredLogger>(),
+      makeTestEdenFsEventsLogger(),
       makeRefPtr<EdenStats>(),
       *EdenConfig::createTestEdenConfig());
   overlay
@@ -187,7 +198,7 @@ TEST(PlainLMDBOverlayTest, close_overlay_with_no_capacity_buffered) {
       kPathMapDefaultCaseSensitive,
       InodeCatalogType::LMDB,
       INODE_CATALOG_BUFFERED,
-      std::make_shared<NullStructuredLogger>(),
+      makeTestEdenFsEventsLogger(),
       makeRefPtr<EdenStats>(),
       *config);
   overlay
@@ -208,7 +219,7 @@ TEST(PlainLMDBOverlayTest, small_capacity_write_multiple_directories_buffered) {
       kPathMapDefaultCaseSensitive,
       InodeCatalogType::LMDB,
       INODE_CATALOG_BUFFERED,
-      std::make_shared<NullStructuredLogger>(),
+      makeTestEdenFsEventsLogger(),
       makeRefPtr<EdenStats>(),
       *config);
   overlay
@@ -260,7 +271,7 @@ class RawLMDBOverlayTest
         kPathMapDefaultCaseSensitive,
         InodeCatalogType::LMDB,
         overlayOptions(),
-        std::make_shared<NullStructuredLogger>(),
+        makeTestEdenFsEventsLogger(),
         makeRefPtr<EdenStats>(),
         *EdenConfig::createTestEdenConfig());
     overlay
@@ -440,7 +451,7 @@ class DebugDumpLMDBOverlayInodesTest
         kPathMapDefaultCaseSensitive,
         InodeCatalogType::LMDB,
         overlayOptions(),
-        std::make_shared<NullStructuredLogger>(),
+        makeTestEdenFsEventsLogger(),
         makeRefPtr<EdenStats>(),
         *EdenConfig::createTestEdenConfig());
     overlay

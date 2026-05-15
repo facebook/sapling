@@ -33,6 +33,7 @@
 #include "eden/fs/inodes/sqlitecatalog/BufferedSqliteInodeCatalog.h"
 #include "eden/fs/inodes/sqlitecatalog/SqliteInodeCatalog.h"
 #include "eden/fs/sqlite/SqliteDatabase.h"
+#include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/LogEvent.h"
 
@@ -173,7 +174,7 @@ std::shared_ptr<Overlay> Overlay::create(
     CaseSensitivity caseSensitive,
     InodeCatalogType inodeCatalogType,
     InodeCatalogOptions inodeCatalogOptions,
-    std::shared_ptr<StructuredLogger> logger,
+    std::shared_ptr<EdenFsEventsLogger> logger,
     EdenStatsPtr stats,
     const EdenConfig& config) {
   // This allows us to access the private constructor.
@@ -183,7 +184,7 @@ std::shared_ptr<Overlay> Overlay::create(
         CaseSensitivity caseSensitive,
         InodeCatalogType inodeCatalogType,
         InodeCatalogOptions inodeCatalogOptions,
-        std::shared_ptr<StructuredLogger> logger,
+        std::shared_ptr<EdenFsEventsLogger> logger,
         EdenStatsPtr stats,
         const EdenConfig& config)
         : Overlay(
@@ -210,12 +211,12 @@ Overlay::Overlay(
     CaseSensitivity caseSensitive,
     InodeCatalogType inodeCatalogType,
     InodeCatalogOptions inodeCatalogOptions,
-    std::shared_ptr<StructuredLogger> logger,
+    std::shared_ptr<EdenFsEventsLogger> logger,
     EdenStatsPtr stats,
     const EdenConfig& config)
     : fileContentStore_{makeFileContentStore(
           localDir,
-          logger,
+          logger->getStructuredLogger(),
           inodeCatalogType)},
       inodeCatalog_{makeInodeCatalog(
           localDir,
@@ -223,7 +224,7 @@ Overlay::Overlay(
           inodeCatalogOptions,
           config,
           fileContentStore_ ? fileContentStore_.get() : nullptr,
-          logger)},
+          logger->getStructuredLogger())},
       inodeCatalogType_{inodeCatalogType},
       inodeCatalogOptions_(inodeCatalogOptions),
       supportsSemanticOperations_{inodeCatalog_->supportsSemanticOperations()},
@@ -231,7 +232,7 @@ Overlay::Overlay(
           folly::kIsApple && !config.allowAppleDouble.getValue()},
       localDir_{localDir},
       caseSensitive_{caseSensitive},
-      structuredLogger_{logger},
+      edenFsEventsLogger_{std::move(logger)},
       stats_{std::move(stats)},
       useDirectSerialization_(config.overlayDirectSerialization.getValue()),
       useDirectFileWrites_(config.overlayDirectFileWrites.getValue()) {}
@@ -439,10 +440,10 @@ void Overlay::initOverlay(
       // If totalErrors - fixedErrors is nonzero, then we failed to
       // fix all of the problems.
       auto success = !(result->totalErrors - result->fixedErrors);
-      structuredLogger_->logEvent(
+      edenFsEventsLogger_->logEvent(
           Fsck{fsckRuntimeInSeconds, success, true /*attempted_repair*/});
     } else {
-      structuredLogger_->logEvent(
+      edenFsEventsLogger_->logEvent(
           Fsck{
               fsckRuntimeInSeconds,
               true /*success*/,
@@ -471,7 +472,7 @@ void Overlay::initOverlay(
         std::move(config), *mountPath, lookupCallback);
     auto fsckRuntimeInSeconds =
         std::chrono::duration<double>{fsckRuntime.elapsed()}.count();
-    structuredLogger_->logEvent(
+    edenFsEventsLogger_->logEvent(
         Fsck{
             fsckRuntimeInSeconds,
             true /*success*/,
