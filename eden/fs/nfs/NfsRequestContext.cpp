@@ -32,9 +32,9 @@ NfsRequestContext::NfsRequestContext(
     uint32_t xid,
     std::string_view causeDetail,
     ProcessAccessLog& processAccessLog,
-    std::shared_ptr<StructuredLogger> logger,
+    std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger,
     std::chrono::nanoseconds longRunningFsRequestThreshold)
-    : RequestContext{processAccessLog, std::move(logger), longRunningFsRequestThreshold, makeRefPtr<NfsObjectFetchContext>(causeDetail)},
+    : RequestContext{processAccessLog, std::move(edenFsEventsLogger), longRunningFsRequestThreshold, makeRefPtr<NfsObjectFetchContext>(causeDetail)},
       xid_{xid} {}
 
 } // namespace facebook::eden

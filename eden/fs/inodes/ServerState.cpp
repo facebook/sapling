@@ -91,7 +91,7 @@ ServerState::ServerState(
                     mainEventBase,
                     fsChannelThreadPool_,
                     initialConfig.runInternalRpcbind.getValue(),
-                    structuredLogger_,
+                    edenFsEventsLogger_,
                     initialConfig.maxFsChannelInflightRequests.getValue(),
                     initialConfig.highFsRequestsLogInterval.getValue(),
                     initialConfig.longRunningFSRequestThreshold.getValue())

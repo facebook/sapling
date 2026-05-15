@@ -8,6 +8,7 @@
 #pragma once
 
 #include "eden/fs/inodes/RequestContext.h"
+#include "eden/fs/telemetry/EdenFsEventsLogger.h"
 
 namespace facebook::eden {
 
@@ -25,7 +26,7 @@ class NfsRequestContext : public RequestContext {
       uint32_t xid,
       std::string_view causeDetail,
       ProcessAccessLog& processAccessLog,
-      std::shared_ptr<StructuredLogger> logger,
+      std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger,
       std::chrono::nanoseconds longRunningFsRequestThreshold);
 
   NfsRequestContext(const NfsRequestContext&) = delete;

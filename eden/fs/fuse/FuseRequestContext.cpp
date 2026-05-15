@@ -14,6 +14,7 @@
 #include "eden/common/telemetry/RequestMetricsScope.h"
 #include "eden/common/utils/SystemError.h"
 #include "eden/fs/notifications/Notifier.h"
+#include "eden/fs/telemetry/EdenFsEventsLogger.h"
 
 using namespace folly;
 
@@ -24,7 +25,7 @@ FuseRequestContext::FuseRequestContext(
     const fuse_in_header& fuseHeader)
     : RequestContext(
           channel->getProcessAccessLog(),
-          channel->getStructuredLogger(),
+          channel->getEdenFsEventsLogger(),
           channel->getLongRunningFSRequestThreshold(),
           makeRefPtr<FuseObjectFetchContext>(
               ProcessId{fuseHeader.pid},

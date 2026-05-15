@@ -10,6 +10,8 @@
 #include <fmt/core.h>
 #include <thrift/lib/cpp/util/EnumUtils.h>
 
+#include "eden/fs/telemetry/EdenFsEventsLogger.h"
+
 namespace facebook::eden {
 
 PrjfsRequestContext::PrjfsRequestContext(
@@ -19,7 +21,7 @@ PrjfsRequestContext::PrjfsRequestContext(
     LPCWSTR destinationFileName)
     : RequestContext(
           channel->getProcessAccessLog(),
-          channel->getStructuredLogger(),
+          channel->getEdenFsEventsLogger(),
           channel->getLongRunningFSRequestThreshold(),
           makeRefPtr<PrjfsObjectFetchContext>(
               ProcessId{prjfsData.TriggeringProcessId})),

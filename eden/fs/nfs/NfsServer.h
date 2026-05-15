@@ -20,6 +20,7 @@ class Executor;
 
 namespace facebook::eden {
 
+class EdenFsEventsLogger;
 class FsEventLogger;
 class Notifier;
 class NfsDispatcher;
@@ -46,7 +47,7 @@ class NfsServer {
       folly::EventBase* evb,
       std::shared_ptr<folly::Executor> threadPool,
       bool shouldRunOurOwnRpcbindServer,
-      const std::shared_ptr<StructuredLogger>& structuredLogger,
+      const std::shared_ptr<EdenFsEventsLogger>& edenFsEventsLogger,
       size_t maximumInFlightRequests,
       std::chrono::nanoseconds highNfsRequestsLogInterval,
       std::chrono::nanoseconds longRunningFSRequestThreshold);
@@ -85,7 +86,7 @@ class NfsServer {
       const folly::Logger* straceLogger,
       std::shared_ptr<ProcessInfoCache> processInfoCache,
       std::shared_ptr<FsEventLogger> fsEventLogger,
-      const std::shared_ptr<StructuredLogger>& structuredLogger,
+      const std::shared_ptr<EdenFsEventsLogger>& edenFsEventsLogger,
       folly::Duration requestTimeout,
       std::shared_ptr<Notifier> notifier,
       CaseSensitivity caseSensitive,

@@ -48,11 +48,11 @@ struct Unit;
 
 namespace facebook::eden {
 
+class EdenFsEventsLogger;
 class Notifier;
 class FsEventLogger;
 class FuseRequestContext;
 class PrivHelper;
-class StructuredLogger;
 
 #ifndef _WIN32
 
@@ -313,7 +313,7 @@ class FuseChannel final : public FsChannel {
       const folly::Logger* straceLogger,
       std::shared_ptr<ProcessInfoCache> processInfoCache,
       std::shared_ptr<FsEventLogger> fsEventLogger,
-      const std::shared_ptr<StructuredLogger>& structuredLogger,
+      const std::shared_ptr<EdenFsEventsLogger>& edenFsEventsLogger,
       folly::Duration requestTimeout,
       std::shared_ptr<Notifier> notifier,
       CaseSensitivity caseSensitive,
@@ -564,8 +564,8 @@ class FuseChannel final : public FsChannel {
     return processAccessLog_;
   }
 
-  std::shared_ptr<StructuredLogger> getStructuredLogger() const {
-    return structuredLogger_;
+  std::shared_ptr<EdenFsEventsLogger> getEdenFsEventsLogger() const {
+    return edenFsEventsLogger_;
   }
 
   std::chrono::nanoseconds getLongRunningFSRequestThreshold() const {
@@ -891,7 +891,7 @@ class FuseChannel final : public FsChannel {
   const size_t numThreads_;
   std::unique_ptr<FuseDispatcher> dispatcher_;
   const folly::Logger* const straceLogger_;
-  const std::shared_ptr<StructuredLogger> structuredLogger_;
+  const std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger_;
   const AbsolutePath mountPath_;
   const folly::Duration requestTimeout_;
   std::shared_ptr<Notifier> const notifier_;

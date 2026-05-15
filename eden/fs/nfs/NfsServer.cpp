@@ -9,6 +9,7 @@
 
 #include "eden/fs/nfs/Nfsd3.h"
 #include "eden/fs/nfs/portmap/Rpcbindd.h"
+#include "eden/fs/telemetry/EdenFsEventsLogger.h"
 
 namespace facebook::eden {
 
@@ -17,7 +18,7 @@ NfsServer::NfsServer(
     folly::EventBase* evb,
     std::shared_ptr<folly::Executor> threadPool,
     bool shouldRunOurOwnRpcbindServer,
-    const std::shared_ptr<StructuredLogger>& structuredLogger,
+    const std::shared_ptr<EdenFsEventsLogger>& edenFsEventsLogger,
     size_t maximumInFlightRequests,
     std::chrono::nanoseconds highNfsRequestsLogInterval,
     std::chrono::nanoseconds longRunningFSRequestThreshold)
@@ -28,14 +29,14 @@ NfsServer::NfsServer(
           shouldRunOurOwnRpcbindServer ? std::make_shared<Rpcbindd>(
                                              evb_,
                                              threadPool_,
-                                             structuredLogger,
+                                             edenFsEventsLogger,
                                              maximumInFlightRequests,
                                              highNfsRequestsLogInterval)
                                        : nullptr),
       mountd_(
           evb_,
           threadPool_,
-          structuredLogger,
+          edenFsEventsLogger,
           maximumInFlightRequests,
           highNfsRequestsLogInterval),
       maximumInFlightRequests_(maximumInFlightRequests),
@@ -86,7 +87,7 @@ NfsServer::NfsMountInfo NfsServer::registerMount(
     const folly::Logger* straceLogger,
     std::shared_ptr<ProcessInfoCache> processInfoCache,
     std::shared_ptr<FsEventLogger> fsEventLogger,
-    const std::shared_ptr<StructuredLogger>& structuredLogger,
+    const std::shared_ptr<EdenFsEventsLogger>& edenFsEventsLogger,
     folly::Duration requestTimeout,
     std::shared_ptr<Notifier> notifier,
     CaseSensitivity caseSensitive,
@@ -102,7 +103,7 @@ NfsServer::NfsMountInfo NfsServer::registerMount(
       straceLogger,
       std::move(processInfoCache),
       std::move(fsEventLogger),
-      structuredLogger,
+      edenFsEventsLogger,
       requestTimeout,
       std::move(notifier),
       caseSensitive,

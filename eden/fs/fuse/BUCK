@@ -7,7 +7,6 @@ cpp_library(
     srcs = glob(["*.cpp"]),
     headers = glob(["*.h"]),
     deps = [
-        "//eden/common/telemetry:structured_logger",
         "//eden/common/utils:bug",
         "//eden/common/utils:synchronized",
         "//eden/common/utils:system_error",
@@ -15,6 +14,7 @@ cpp_library(
         "//eden/fs/privhelper:interface",
         "//eden/fs/telemetry:fs_event_logger",
         "//eden/fs/telemetry:log_info",
+        "//eden/fs/telemetry:structured_logger",
         "//eden/fs/utils:static_assert",
         "//eden/fs/utils:thread",
         "//folly:exception",

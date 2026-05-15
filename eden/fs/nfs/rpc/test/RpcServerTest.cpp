@@ -20,7 +20,6 @@
 #include <folly/io/IOBufQueue.h>
 #include <gtest/gtest.h>
 
-#include "eden/common/telemetry/NullStructuredLogger.h"
 #include "eden/fs/nfs/NfsdRpc.h"
 #include "eden/fs/nfs/rpc/Rpc.h"
 #include "eden/fs/utils/RequestPermitVendor.h"
@@ -80,7 +79,7 @@ struct RpcServerTest : ::testing::Test {
         std::move(proc),
         &evb,
         std::move(executor),
-        std::make_shared<NullStructuredLogger>(),
+        nullptr,
         /*maximumInFlightRequests=*/1000,
         /*highNfsRequestsLogInterval=*/std::chrono::minutes{10});
   }

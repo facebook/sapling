@@ -212,7 +212,7 @@ ImmediateFuture<folly::Unit> RpcbinddServerProcessor::dispatchRpc(
 Rpcbindd::Rpcbindd(
     folly::EventBase* evb,
     std::shared_ptr<folly::Executor> threadPool,
-    const std::shared_ptr<StructuredLogger>& structuredLogger,
+    const std::shared_ptr<EdenFsEventsLogger>& edenFsEventsLogger,
     size_t maximumInFlightRequests,
     std::chrono::nanoseconds highNfsRequestsLogInterval)
     : proc_(std::make_shared<RpcbinddServerProcessor>()),
@@ -221,7 +221,7 @@ Rpcbindd::Rpcbindd(
               proc_,
               evb,
               std::move(threadPool),
-              structuredLogger,
+              edenFsEventsLogger,
               maximumInFlightRequests,
               highNfsRequestsLogInterval)) {}
 

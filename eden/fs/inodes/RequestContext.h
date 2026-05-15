@@ -12,9 +12,9 @@
 #include <utility>
 
 #include "eden/common/telemetry/RequestMetricsScope.h"
-#include "eden/common/telemetry/StructuredLogger.h"
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/ObjectFetchContext.h"
+#include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/utils/ProcessAccessLog.h"
 
@@ -94,12 +94,12 @@ class RequestContext {
  public:
   explicit RequestContext(
       ProcessAccessLog& pal,
-      std::shared_ptr<StructuredLogger> logger,
+      std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger,
       std::chrono::nanoseconds longRunningFsRequestThreshold,
       FsObjectFetchContextPtr fsObjectFetchContext) noexcept
       : longRunningFsRequestThreshold_{longRunningFsRequestThreshold},
         pal_{pal},
-        logger_{std::move(logger)},
+        edenFsEventsLogger_{std::move(edenFsEventsLogger)},
         fsObjectFetchContext_{std::move(fsObjectFetchContext)} {}
   virtual ~RequestContext() noexcept;
 
@@ -160,7 +160,7 @@ class RequestContext {
   std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>
       requestWatchList_;
   ProcessAccessLog& pal_;
-  std::shared_ptr<StructuredLogger> logger_;
+  std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger_;
 
   const FsObjectFetchContextPtr fsObjectFetchContext_;
 };

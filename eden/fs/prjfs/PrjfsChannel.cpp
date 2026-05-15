@@ -13,7 +13,6 @@
 #include <folly/coro/safe/NowTask.h>
 #include <folly/logging/xlog.h>
 
-#include "eden/common/telemetry/StructuredLogger.h"
 #include "eden/common/utils/Bug.h"
 #include "eden/common/utils/FaultInjector.h"
 #include "eden/common/utils/Guid.h"
@@ -25,6 +24,7 @@
 #include "eden/fs/notifications/Notifier.h"
 #include "eden/fs/prjfs/PrjfsDispatcher.h"
 #include "eden/fs/prjfs/PrjfsRequestContext.h"
+#include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/utils/NotImplemented.h"
@@ -340,7 +340,7 @@ void detachAndCompleteCallback(
 PrjfsChannelInner::PrjfsChannelInner(
     std::unique_ptr<PrjfsDispatcher> dispatcher,
     const folly::Logger* straceLogger,
-    const std::shared_ptr<StructuredLogger>& structuredLogger,
+    const std::shared_ptr<EdenFsEventsLogger>& edenFsEventsLogger,
     FaultInjector& faultInjector,
     ProcessAccessLog& processAccessLog,
     std::shared_ptr<ReloadableConfig>& config,
@@ -350,7 +350,7 @@ PrjfsChannelInner::PrjfsChannelInner(
     const std::shared_ptr<folly::Executor>& invalidationThreadPool)
     : dispatcher_(std::move(dispatcher)),
       straceLogger_(straceLogger),
-      structuredLogger_(structuredLogger),
+      edenFsEventsLogger_(edenFsEventsLogger),
       faultInjector_(faultInjector),
       invalidationThreadPool_(invalidationThreadPool),
       lastTornReadLog_(
@@ -879,7 +879,7 @@ HRESULT PrjfsChannelInner::getFileData(
                     byteOffset = byteOffset,
                     length = length,
                     path,
-                    structuredLogger = structuredLogger_,
+                    edenFsEventsLogger = edenFsEventsLogger_,
                     clientProcessName = std::move(clientProcessName),
                     lastTornReadLog = lastTornReadLog_,
                     config = config_,
@@ -915,7 +915,7 @@ HRESULT PrjfsChannelInner::getFileData(
                   path,
                   content.length(),
                   client);
-              structuredLogger->logEvent(
+              edenFsEventsLogger->logEvent(
                   PrjFSCheckoutReadRace{std::move(client)});
             }
 
@@ -1510,7 +1510,7 @@ PrjfsChannel::PrjfsChannel(
     std::unique_ptr<PrjfsDispatcher> dispatcher,
     std::shared_ptr<ReloadableConfig> config,
     const folly::Logger* straceLogger,
-    const std::shared_ptr<StructuredLogger>& structuredLogger,
+    const std::shared_ptr<EdenFsEventsLogger>& edenFsEventsLogger,
     FaultInjector& faultInjector,
     std::shared_ptr<ProcessInfoCache> processInfoCache,
     Guid guid,
@@ -1529,7 +1529,7 @@ PrjfsChannel::PrjfsChannel(
       std::make_shared<PrjfsChannelInner>(
           std::move(dispatcher),
           straceLogger,
-          structuredLogger,
+          edenFsEventsLogger,
           faultInjector,
           processAccessLog_,
           config_,

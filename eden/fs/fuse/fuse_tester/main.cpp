@@ -16,7 +16,6 @@
 #include <sysexits.h>
 #include <csignal>
 
-#include "eden/common/telemetry/NullStructuredLogger.h"
 #include "eden/common/utils/CaseSensitivity.h"
 #include "eden/common/utils/EnumValue.h"
 #include "eden/common/utils/PathFuncs.h"
@@ -142,7 +141,7 @@ int main(int argc, char** argv) {
       &straceLogger,
       std::make_shared<ProcessInfoCache>(),
       /*fsEventLogger=*/nullptr,
-      /*structuredLogger=*/std::make_shared<NullStructuredLogger>(),
+      /*edenFsEventsLogger=*/nullptr,
       std::chrono::seconds(60),
       /*notifications=*/nullptr,
       CaseSensitivity::Sensitive,

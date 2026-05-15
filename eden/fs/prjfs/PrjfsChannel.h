@@ -36,7 +36,7 @@ class Notifier;
 class ReloadableConfig;
 class PrjfsChannelInner;
 class PrjfsRequestContext;
-class StructuredLogger;
+class EdenFsEventsLogger;
 class FaultInjector;
 
 using EdenStatsPtr = RefPtr<EdenStats>;
@@ -170,7 +170,7 @@ class PrjfsChannelInner {
   PrjfsChannelInner(
       std::unique_ptr<PrjfsDispatcher> dispatcher,
       const folly::Logger* straceLogger,
-      const std::shared_ptr<StructuredLogger>& structuredLogger,
+      const std::shared_ptr<EdenFsEventsLogger>& edenFsEventsLogger,
       FaultInjector& faultInjector,
       ProcessAccessLog& processAccessLog,
       std::shared_ptr<ReloadableConfig>& config,
@@ -369,8 +369,8 @@ class PrjfsChannelInner {
     return processAccessLog_;
   }
 
-  std::shared_ptr<StructuredLogger> getStructuredLogger() const {
-    return structuredLogger_;
+  std::shared_ptr<EdenFsEventsLogger> getEdenFsEventsLogger() const {
+    return edenFsEventsLogger_;
   }
 
   std::chrono::nanoseconds getLongRunningFSRequestThreshold() const {
@@ -465,8 +465,7 @@ class PrjfsChannelInner {
   std::unique_ptr<PrjfsDispatcher> dispatcher_;
   const folly::Logger* const straceLogger_{nullptr};
 
-  // scuba logger
-  const std::shared_ptr<StructuredLogger> structuredLogger_;
+  const std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger_;
 
   FaultInjector& faultInjector_;
 
@@ -528,7 +527,7 @@ class PrjfsChannel : public FsChannel {
       std::unique_ptr<PrjfsDispatcher> dispatcher,
       std::shared_ptr<ReloadableConfig> config,
       const folly::Logger* straceLogger,
-      const std::shared_ptr<StructuredLogger>& structuredLogger,
+      const std::shared_ptr<EdenFsEventsLogger>& edenFsEventsLogger,
       FaultInjector& faultInjector,
       std::shared_ptr<ProcessInfoCache> processInfoCache,
       Guid guid,

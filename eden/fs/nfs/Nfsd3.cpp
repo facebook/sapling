@@ -17,7 +17,6 @@
 #include <folly/portability/Stdlib.h>
 
 #include "eden/common/telemetry/RequestMetricsScope.h"
-#include "eden/common/telemetry/StructuredLogger.h"
 #include "eden/common/utils/IDGen.h"
 #include "eden/common/utils/SystemError.h"
 #include "eden/common/utils/Throw.h"
@@ -26,6 +25,7 @@
 #include "eden/fs/nfs/NfsdRpc.h"
 #include "eden/fs/privhelper/PrivHelper.h"
 #include "eden/fs/store/ObjectFetchContext.h"
+#include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/FsEventLogger.h"
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/utils/Clock.h"
@@ -55,7 +55,7 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
   explicit Nfsd3ServerProcessor(
       std::unique_ptr<NfsDispatcher> dispatcher,
       const folly::Logger* straceLogger,
-      const std::shared_ptr<StructuredLogger>& structuredLogger,
+      const std::shared_ptr<EdenFsEventsLogger>& edenFsEventsLogger,
       CaseSensitivity caseSensitive,
       uint32_t iosize,
       folly::Promise<FsStopDataPtr>& stopPromise,
@@ -66,7 +66,7 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
       bool fastPathRPCs)
       : dispatcher_(std::move(dispatcher)),
         straceLogger_(straceLogger),
-        structuredLogger_(structuredLogger),
+        edenFsEventsLogger_(edenFsEventsLogger),
         caseSensitive_(caseSensitive),
         iosize_(iosize),
         stopPromise_{stopPromise},
@@ -206,7 +206,7 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
   // logger, the events are not logged anywhere outside of the machine this
   // EdenFS instance runs on.
   const folly::Logger* straceLogger_;
-  const std::shared_ptr<StructuredLogger> structuredLogger_;
+  const std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger_;
   CaseSensitivity caseSensitive_;
   uint32_t iosize_;
   // This promise is owned by the nfs3d. The nfs3d owns an RPC server that owns
@@ -223,7 +223,7 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
   std::shared_ptr<TraceBus<NfsTraceEvent>>& traceBus_;
   /**
    * The duration that must elapse before we consider a NFS request to be
-   * "long running" and therefore log it with StructuredLogger. This value
+   * "long running" and therefore log it with EdenFsEventsLogger. This value
    * is configured with EdenConfig::longRunningFSRequestThreshold.
    */
   std::chrono::nanoseconds longRunningFSRequestThreshold_;
@@ -692,7 +692,7 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::read(
                           length,
                           tryStat.value().st_size));
 
-                  this->structuredLogger_->logEvent(
+                  this->edenFsEventsLogger_->logEvent(
                       MetadataSizeMismatch{"NFS", "read"});
                 }
 
@@ -2054,7 +2054,7 @@ void Nfsd3ServerProcessor::onRequestComplete(const RpcRequestTimeline& t) {
       auto procName = t.procNumber < kNfs3dHandlers.size()
           ? kNfs3dHandlers[t.procNumber].name
           : "unknown";
-      structuredLogger_->logEvent(
+      edenFsEventsLogger_->logEvent(
           LongRunningFSRequest{
               durationNs(total),
               procName,
@@ -2280,7 +2280,7 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
       xid,
       handlerEntry.name,
       processAccessLog_,
-      structuredLogger_,
+      edenFsEventsLogger_,
       longRunningFSRequestThreshold_);
   context->startRequest(
       dispatcher_->getStats().copy(), handlerEntry.duration, nullRequestWatch);
@@ -2338,7 +2338,7 @@ void Nfsd3ServerProcessor::clientConnected() {
   auto numberOfClients =
       numberOfClients_.fetch_add(1, std::memory_order_acq_rel);
   if (numberOfClients > 1) {
-    structuredLogger_->logEvent(TooManyNfsClients{});
+    edenFsEventsLogger_->logEvent(TooManyNfsClients{});
   }
 }
 } // namespace
@@ -2352,7 +2352,7 @@ Nfsd3::Nfsd3(
     const folly::Logger* straceLogger,
     std::shared_ptr<ProcessInfoCache> processInfoCache,
     std::shared_ptr<FsEventLogger> fsEventLogger,
-    const std::shared_ptr<StructuredLogger>& structuredLogger,
+    const std::shared_ptr<EdenFsEventsLogger>& edenFsEventsLogger,
     folly::Duration /*requestTimeout*/,
     std::shared_ptr<Notifier> /*notifier*/,
     CaseSensitivity caseSensitive,
@@ -2369,7 +2369,7 @@ Nfsd3::Nfsd3(
         auto proc = std::make_shared<Nfsd3ServerProcessor>(
             std::move(dispatcher),
             straceLogger,
-            structuredLogger,
+            edenFsEventsLogger,
             caseSensitive,
             iosize,
             stopPromise_,
@@ -2383,7 +2383,7 @@ Nfsd3::Nfsd3(
             std::move(proc),
             evb,
             std::move(threadPool),
-            structuredLogger,
+            edenFsEventsLogger,
             maximumInFlightRequests,
             highNfsRequestsLogInterval);
       }()),

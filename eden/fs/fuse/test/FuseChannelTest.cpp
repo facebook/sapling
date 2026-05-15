@@ -12,7 +12,6 @@
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
 
-#include "eden/common/telemetry/NullStructuredLogger.h"
 #include "eden/common/utils/CaseSensitivity.h"
 #include "eden/common/utils/EnumValue.h"
 #include "eden/common/utils/ProcessInfoCache.h"
@@ -81,7 +80,7 @@ class FuseChannelTest : public ::testing::Test {
         &straceLogger,
         std::make_shared<ProcessInfoCache>(),
         /*fsEventLogger=*/nullptr,
-        /*structuredLogger=*/std::make_shared<NullStructuredLogger>(),
+        /*edenFsEventsLogger=*/nullptr,
         std::chrono::seconds(60),
         /*notifications=*/nullptr,
         CaseSensitivity::Sensitive,

@@ -14,9 +14,9 @@
 #include <folly/io/IOBufQueue.h>
 #include <folly/io/async/AsyncSocket.h>
 
-#include "eden/common/telemetry/StructuredLogger.h"
 #include "eden/common/utils/Throw.h"
 #include "eden/fs/nfs/rpc/Rpc.h"
+#include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/utils/FsChannelTypes.h"
 
@@ -119,14 +119,14 @@ RpcConnectionHandler::RpcConnectionHandler(
     std::shared_ptr<RpcServerProcessor> proc,
     AsyncSocket::UniquePtr&& socket,
     std::shared_ptr<folly::Executor> threadPool,
-    const std::shared_ptr<StructuredLogger>& structuredLogger,
+    const std::shared_ptr<EdenFsEventsLogger>& edenFsEventsLogger,
     std::weak_ptr<RpcServer> owningServer,
     size_t maximumInFlightRequests,
     std::chrono::nanoseconds highNfsRequestsLogInterval)
     : proc_(proc),
       sock_(std::move(socket)),
       threadPool_(std::move(threadPool)),
-      errorLogger_(structuredLogger),
+      errorLogger_(edenFsEventsLogger),
       state_(sock_->getEventBase()),
       owningServer_(std::move(owningServer)),
       maximumInFlightRequests_(maximumInFlightRequests),
@@ -379,7 +379,9 @@ void RpcConnectionHandler::tryConsumeReadBuffer() noexcept {
     }
 
     if (should_log) {
-      errorLogger_->logEvent(ManyLiveFsChannelRequests{});
+      if (errorLogger_) {
+        errorLogger_->logEvent(ManyLiveFsChannelRequests{});
+      }
     }
 
     timeline.dispatched = std::chrono::steady_clock::now();
@@ -466,10 +468,12 @@ void RpcConnectionHandler::recordParsingError(
 
   XLOG(ERR, message);
 
-  errorLogger_->logEvent(
-      NfsParsingError{
-          folly::to<std::string>("FS", " - ", err.getProcedureContext()),
-          message});
+  if (errorLogger_) {
+    errorLogger_->logEvent(
+        NfsParsingError{
+            folly::to<std::string>("FS", " - ", err.getProcedureContext()),
+            message});
+  }
 }
 
 void RpcConnectionHandler::replyServerError(
@@ -665,7 +669,7 @@ void RpcServer::connectionAccepted(
           proc_,
           std::move(socket),
           threadPool_,
-          structuredLogger_,
+          edenFsEventsLogger_,
           weak_from_this(),
           maximumInFlightRequests_,
           highNfsRequestsLogInterval_));
@@ -712,7 +716,7 @@ std::shared_ptr<RpcServer> RpcServer::create(
     std::shared_ptr<RpcServerProcessor> proc,
     folly::EventBase* evb,
     std::shared_ptr<folly::Executor> threadPool,
-    const std::shared_ptr<StructuredLogger>& structuredLogger,
+    const std::shared_ptr<EdenFsEventsLogger>& edenFsEventsLogger,
     size_t maximumInFlightRequests,
     std::chrono::nanoseconds highNfsRequestsLogInterval) {
   return std::shared_ptr<RpcServer>{
@@ -720,7 +724,7 @@ std::shared_ptr<RpcServer> RpcServer::create(
           std::move(proc),
           evb,
           std::move(threadPool),
-          structuredLogger,
+          edenFsEventsLogger,
           maximumInFlightRequests,
           highNfsRequestsLogInterval},
       [](RpcServer* p) { p->destroy(); }};
@@ -730,12 +734,12 @@ RpcServer::RpcServer(
     std::shared_ptr<RpcServerProcessor> proc,
     folly::EventBase* evb,
     std::shared_ptr<folly::Executor> threadPool,
-    const std::shared_ptr<StructuredLogger>& structuredLogger,
+    const std::shared_ptr<EdenFsEventsLogger>& edenFsEventsLogger,
     size_t maximumInFlightRequests,
     std::chrono::nanoseconds highNfsRequestsLogInterval)
     : evb_(evb),
       threadPool_(threadPool),
-      structuredLogger_(structuredLogger),
+      edenFsEventsLogger_(edenFsEventsLogger),
       serverSocket_(new AsyncServerSocket(evb_)),
       proc_(std::move(proc)),
       state_{evb},
@@ -770,7 +774,7 @@ void RpcServer::initializeConnectedSocket(folly::File socket) {
           AsyncSocket::newSocket(
               evb_, folly::NetworkSocket::fromFd(socket.release())),
           threadPool_,
-          structuredLogger_,
+          edenFsEventsLogger_,
           weak_from_this(),
           maximumInFlightRequests_,
           highNfsRequestsLogInterval_));

@@ -33,10 +33,10 @@ cpp_library(
         "//folly/logging:logging",
     ],
     exported_deps = [
-        "//eden/common/telemetry:structured_logger",
         "//eden/common/telemetry:telemetry",
         "//eden/fs/store:context",
         "//eden/fs/telemetry:stats",
+        "//eden/fs/telemetry:structured_logger",
         "//eden/fs/utils:process_access_log",
         "//folly/futures:core",
     ],

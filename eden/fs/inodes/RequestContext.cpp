@@ -11,6 +11,7 @@
 
 #include "eden/common/telemetry/RequestMetricsScope.h"
 #include "eden/common/utils/SystemError.h"
+#include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/LogEvent.h"
 
 using namespace std::chrono;
@@ -23,8 +24,10 @@ void RequestContext::reportLongRunningRequest(
       duration > longRunningFsRequestThreshold_) {
     auto detail = fsObjectFetchContext_->getCauseDetail().value_or("unknown");
     XLOGF(WARN, "Request {} took {}ns", detail, duration.count());
-    logger_->logEvent(
-        LongRunningFSRequest{static_cast<double>(duration.count()), detail});
+    if (edenFsEventsLogger_) {
+      edenFsEventsLogger_->logEvent(
+          LongRunningFSRequest{static_cast<double>(duration.count()), detail});
+    }
   }
 }
 

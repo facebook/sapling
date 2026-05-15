@@ -46,7 +46,6 @@ cpp_library(
     deps = [
         ":nfs_utils",
         ":nfsd_rpc",
-        "//eden/common/telemetry:structured_logger",
         "//eden/common/utils:system_error",
         "//eden/common/utils:throw",
         "//eden/common/utils:utils",
@@ -69,6 +68,7 @@ cpp_library(
         "//eden/fs/inodes:fs_channel",
         "//eden/fs/inodes:request_context",
         "//eden/fs/nfs/rpc:server",
+        "//eden/fs/telemetry:structured_logger",
         "//eden/fs/utils:process_access_log",
         "//folly:function",
     ],
@@ -96,6 +96,7 @@ cpp_library(
     deps = [
         ":nfsd3",
         "//eden/fs/nfs/portmap:portmapserver",
+        "//eden/fs/telemetry:structured_logger",
     ],
     exported_deps = [
         ":mountd",

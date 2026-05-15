@@ -28,7 +28,7 @@ class Executor;
 
 namespace facebook::eden {
 
-class StructuredLogger;
+class EdenFsEventsLogger;
 
 enum class RpcStopReason {
   /**
@@ -204,7 +204,7 @@ class RpcConnectionHandler : public folly::DelayedDestruction,
       std::shared_ptr<RpcServerProcessor> proc,
       folly::AsyncSocket::UniquePtr&& socket,
       std::shared_ptr<folly::Executor> threadPool,
-      const std::shared_ptr<StructuredLogger>& structuredLogger,
+      const std::shared_ptr<EdenFsEventsLogger>& edenFsEventsLogger,
       std::weak_ptr<RpcServer> owningServer,
       size_t maximumInFlightRequests,
       std::chrono::nanoseconds highNfsRequestsLogInterval);
@@ -315,7 +315,7 @@ class RpcConnectionHandler : public folly::DelayedDestruction,
    * are exported off the machine this EdenFS instance is running on. This is
    * where you log anomalous things that you want to monitor across the fleet.
    */
-  std::shared_ptr<StructuredLogger> errorLogger_;
+  std::shared_ptr<EdenFsEventsLogger> errorLogger_;
 
   folly::IOBufQueue readBuf_{folly::IOBufQueue::cacheChainLength()};
 
@@ -384,7 +384,7 @@ class RpcServer final : public std::enable_shared_from_this<RpcServer>,
       std::shared_ptr<RpcServerProcessor> proc,
       folly::EventBase* evb,
       std::shared_ptr<folly::Executor> threadPool,
-      const std::shared_ptr<StructuredLogger>& structuredLogger,
+      const std::shared_ptr<EdenFsEventsLogger>& edenFsEventsLogger,
       size_t maximumInFlightRequests,
       std::chrono::nanoseconds highNfsRequestsLogInterval);
 
@@ -457,7 +457,7 @@ class RpcServer final : public std::enable_shared_from_this<RpcServer>,
       std::shared_ptr<RpcServerProcessor> proc,
       folly::EventBase* evb,
       std::shared_ptr<folly::Executor> threadPool,
-      const std::shared_ptr<StructuredLogger>& structuredLogger,
+      const std::shared_ptr<EdenFsEventsLogger>& edenFsEventsLogger,
       size_t maximumInFlightRequests,
       std::chrono::nanoseconds highNfsRequestsLogInterval);
 
@@ -484,7 +484,7 @@ class RpcServer final : public std::enable_shared_from_this<RpcServer>,
   std::shared_ptr<folly::Executor> threadPool_;
 
   // Logger for logging anomalous things to Scuba
-  std::shared_ptr<StructuredLogger> structuredLogger_;
+  std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger_;
 
   // listening socket for this server.
   folly::AsyncServerSocket::UniquePtr serverSocket_;

@@ -23,7 +23,6 @@
 #include <folly/system/ThreadName.h>
 #include <gflags/gflags.h>
 
-#include "eden/common/telemetry/StructuredLogger.h"
 #include "eden/common/utils/Bug.h"
 #include "eden/common/utils/ErrnoUtils.h"
 #include "eden/common/utils/FaultInjector.h"
@@ -2599,7 +2598,7 @@ std::unique_ptr<FuseChannel, FsChannelDeleter> makeFuseChannel(
       &mount->getStraceLogger(),
       mount->getServerState()->getProcessInfoCache(),
       mount->getServerState()->getFsEventLogger(),
-      mount->getServerState()->getStructuredLogger(),
+      mount->getServerState()->getEdenFsEventsLogger(),
       std::chrono::duration_cast<folly::Duration>(
           edenConfig->fuseRequestTimeout.getValue()),
       mount->getServerState()->getNotifier(),
@@ -2637,7 +2636,7 @@ folly::Future<NfsServer::NfsMountInfo> makeNfsChannel(
                    &mount->getStraceLogger(),
                    mount->getServerState()->getProcessInfoCache(),
                    mount->getServerState()->getFsEventLogger(),
-                   mount->getServerState()->getStructuredLogger(),
+                   mount->getServerState()->getEdenFsEventsLogger(),
                    std::chrono::duration_cast<folly::Duration>(
                        edenConfig->nfsRequestTimeout.getValue()),
                    mount->getServerState()->getNotifier(),
@@ -2773,7 +2772,7 @@ folly::Future<folly::Unit> EdenMount::fsChannelMount(bool readOnly) {
                          EdenDispatcherFactory::makePrjfsDispatcher(this),
                          serverState_->getReloadableConfig(),
                          &getStraceLogger(),
-                         serverState_->getStructuredLogger(),
+                         serverState_->getEdenFsEventsLogger(),
                          serverState_->getFaultInjector(),
                          serverState_->getProcessInfoCache(),
                          getCheckoutConfig()->getRepoGuid(),

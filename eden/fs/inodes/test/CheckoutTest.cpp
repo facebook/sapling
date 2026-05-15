@@ -1981,7 +1981,7 @@ class FakePrjfsChannel final : public PrjfsChannel {
             EdenDispatcherFactory::makePrjfsDispatcher(mount.get()),
             mount->getServerState()->getReloadableConfig(),
             &mount->getStraceLogger(),
-            mount->getServerState()->getStructuredLogger(),
+            mount->getServerState()->getEdenFsEventsLogger(),
             mount->getServerState()->getFaultInjector(),
             mount->getServerState()->getProcessInfoCache(),
             mount->getCheckoutConfig()->getRepoGuid(),

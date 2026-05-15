@@ -25,7 +25,7 @@ namespace facebook::eden {
 
 class MountdServerProcessor;
 class RpcServer;
-class StructuredLogger;
+class EdenFsEventsLogger;
 
 class Mountd {
  public:
@@ -42,7 +42,7 @@ class Mountd {
   Mountd(
       folly::EventBase* evb,
       std::shared_ptr<folly::Executor> threadPool,
-      const std::shared_ptr<StructuredLogger>& structuredLogger,
+      const std::shared_ptr<EdenFsEventsLogger>& edenFsEventsLogger,
       size_t maximumInFlightRequests,
       std::chrono::nanoseconds highNfsRequestsLogInterval);
 

@@ -17,7 +17,6 @@
 #include <csignal>
 #include <type_traits>
 
-#include "eden/common/telemetry/StructuredLogger.h"
 #include "eden/common/utils/Bug.h"
 #include "eden/common/utils/IDGen.h"
 #include "eden/common/utils/Synchronized.h"
@@ -26,6 +25,7 @@
 #include "eden/fs/fuse/FuseDispatcher.h"
 #include "eden/fs/fuse/FuseRequestContext.h"
 #include "eden/fs/privhelper/PrivHelper.h"
+#include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/FsEventLogger.h"
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/utils/StaticAssert.h"
@@ -880,7 +880,7 @@ FuseChannel::FuseChannel(
     const folly::Logger* straceLogger,
     std::shared_ptr<ProcessInfoCache> processInfoCache,
     std::shared_ptr<FsEventLogger> fsEventLogger,
-    const std::shared_ptr<StructuredLogger>& structuredLogger,
+    const std::shared_ptr<EdenFsEventsLogger>& edenFsEventsLogger,
     folly::Duration requestTimeout,
     std::shared_ptr<Notifier> notifier,
     CaseSensitivity caseSensitive,
@@ -909,7 +909,7 @@ FuseChannel::FuseChannel(
       numThreads_(numThreads),
       dispatcher_(std::move(dispatcher)),
       straceLogger_(straceLogger),
-      structuredLogger_(structuredLogger),
+      edenFsEventsLogger_(edenFsEventsLogger),
       mountPath_(mountPath),
       requestTimeout_(requestTimeout),
       notifier_(std::move(notifier)),
@@ -2013,8 +2013,8 @@ void FuseChannel::dispatchRequest(
           }
         }
 
-        if (should_log) {
-          this->structuredLogger_->logEvent(ManyLiveFsChannelRequests{});
+        if (should_log && this->edenFsEventsLogger_) {
+          this->edenFsEventsLogger_->logEvent(ManyLiveFsChannelRequests{});
         }
 
         auto headerCopy = header;

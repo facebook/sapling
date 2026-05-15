@@ -21,7 +21,7 @@ class Executor;
 namespace facebook::eden {
 
 class RpcbinddServerProcessor;
-class StructuredLogger;
+class EdenFsEventsLogger;
 class RpcServer;
 
 class Rpcbindd {
@@ -40,7 +40,7 @@ class Rpcbindd {
   Rpcbindd(
       folly::EventBase* evb,
       std::shared_ptr<folly::Executor> threadPool,
-      const std::shared_ptr<StructuredLogger>& structuredLogger,
+      const std::shared_ptr<EdenFsEventsLogger>& edenFsEventsLogger,
       size_t maximumInFlightRequests,
       std::chrono::nanoseconds highNfsRequestsLogInterval);
 
