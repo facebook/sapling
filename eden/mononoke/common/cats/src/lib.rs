@@ -57,9 +57,28 @@ mod catmod {
         headers: &HeaderMap,
         verifier_identity: &Identity,
     ) -> Option<MononokeIdentitySet> {
+        try_get_cats_idents_impl_with_envs(
+            fb,
+            headers,
+            verifier_identity,
+            vec![EnvironmentType::PROD, EnvironmentType::CORP],
+        )
+    }
+
+    fn try_get_cats_idents_impl_with_envs(
+        fb: FacebookInit,
+        headers: &HeaderMap,
+        verifier_identity: &Identity,
+        allowed_environments: Vec<EnvironmentType>,
+    ) -> Option<MononokeIdentitySet> {
         match parse_cat_token_list(headers) {
             Ok(None) => None,
-            Ok(Some(cat_list)) => Some(verify_cat_tokens(fb, cat_list, verifier_identity)),
+            Ok(Some(cat_list)) => Some(verify_cat_tokens(
+                fb,
+                cat_list,
+                verifier_identity,
+                allowed_environments,
+            )),
             Err(e) => {
                 warn!(
                     "Error extracting CATs identities: {}. Ignoring CAT token.",
@@ -94,6 +113,7 @@ mod catmod {
         fb: FacebookInit,
         cat_list: cryptocat::CryptoAuthTokenList,
         verifier_identity: &Identity,
+        allowed_environments: Vec<EnvironmentType>,
     ) -> MononokeIdentitySet {
         let svc_scm_ident = cryptocat::Identity {
             id_type: verifier_identity.id_type.clone(),
@@ -110,7 +130,7 @@ mod catmod {
             cat_list,
             &svc_scm_ident,
             None,
-            vec![EnvironmentType::PROD, EnvironmentType::CORP],
+            allowed_environments,
         ) {
             Ok(idents) => idents
                 .into_iter()
@@ -129,6 +149,189 @@ mod catmod {
                 );
                 MononokeIdentitySet::new()
             }
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use std::sync::OnceLock;
+        use std::thread;
+        use std::time::Duration;
+
+        use cryptocat::CATOptionsBuilder;
+        use cryptocat::CryptoAuthToken;
+        use cryptocat::CryptoAuthTokenList;
+        use cryptocat::auth_consts;
+        use http::HeaderValue;
+        use mononoke_macros::mononoke;
+
+        use super::*;
+
+        // Cryptocat's test mode is a process-global singleton. Enable it once and
+        // never disable, so parallel tests in this crate see a stable test keychain.
+        fn ensure_test_mode() {
+            static INIT: OnceLock<()> = OnceLock::new();
+            INIT.get_or_init(|| {
+                cryptocat::enable_test_mode();
+            });
+        }
+
+        fn signer(name: &str) -> cryptocat::Identity {
+            cryptocat::Identity {
+                id_type: auth_consts::USER.to_string(),
+                id_data: name.to_string(),
+                ..Default::default()
+            }
+        }
+
+        fn cat_verifier(name: &str) -> cryptocat::Identity {
+            cryptocat::Identity {
+                id_type: auth_consts::SERVICE_IDENTITY.to_string(),
+                id_data: name.to_string(),
+                ..Default::default()
+            }
+        }
+
+        fn server_verifier(name: &str) -> Identity {
+            Identity {
+                id_type: auth_consts::SERVICE_IDENTITY.to_string(),
+                id_data: name.to_string(),
+            }
+        }
+
+        fn mint(
+            fb: FacebookInit,
+            signer: &cryptocat::Identity,
+            verifier: &cryptocat::Identity,
+            token_timeout: Option<Duration>,
+        ) -> CryptoAuthToken {
+            let mut builder = CATOptionsBuilder::default();
+            if let Some(t) = token_timeout {
+                builder.token_timeout(t);
+            }
+            cryptocat::get_crypto_auth_token(fb, signer, verifier, builder.build().unwrap())
+                .expect("failed to mint test CAT")
+        }
+
+        fn header(tokens: Vec<CryptoAuthToken>) -> HeaderMap {
+            let list = CryptoAuthTokenList {
+                tokens,
+                ..Default::default()
+            };
+            let s = cryptocat::serialize_crypto_auth_tokens(&list)
+                .expect("failed to serialize CAT list");
+            let mut h = HeaderMap::new();
+            h.insert(
+                X_AUTH_CATS_HEADER,
+                HeaderValue::from_str(&s).expect("serialized CAT list is not valid header"),
+            );
+            h
+        }
+
+        #[mononoke::fbinit_test]
+        fn no_header_returns_none(fb: FacebookInit) {
+            let result = try_get_cats_idents_impl_with_envs(
+                fb,
+                &HeaderMap::new(),
+                &server_verifier("scm.test"),
+                vec![EnvironmentType::TEST],
+            );
+            assert_eq!(result, None);
+        }
+
+        #[mononoke::fbinit_test]
+        fn unparseable_header_returns_none(fb: FacebookInit) {
+            // Valid base64 but not a serialized CryptoAuthTokenList — same shape as
+            // the failure tested by `tests/integration/facebook/test-cat-auth.t`.
+            let mut headers = HeaderMap::new();
+            headers.insert(X_AUTH_CATS_HEADER, HeaderValue::from_static("12345=="));
+            let result = try_get_cats_idents_impl_with_envs(
+                fb,
+                &headers,
+                &server_verifier("scm.test"),
+                vec![EnvironmentType::TEST],
+            );
+            assert_eq!(result, None);
+        }
+
+        #[mononoke::fbinit_test]
+        fn verifier_mismatch_drops_token(fb: FacebookInit) {
+            ensure_test_mode();
+            let token = mint(fb, &signer("alice"), &cat_verifier("scm.other"), None);
+            let result = try_get_cats_idents_impl_with_envs(
+                fb,
+                &header(vec![token]),
+                &server_verifier("scm.test"),
+                vec![EnvironmentType::TEST],
+            )
+            .expect("header was present, expected Some");
+            assert!(result.is_empty(), "expected dropped token, got {result:?}");
+        }
+
+        #[mononoke::fbinit_test]
+        fn expired_token_dropped(fb: FacebookInit) {
+            ensure_test_mode();
+            let verifier_name = "scm.test";
+            let token = mint(
+                fb,
+                &signer("alice"),
+                &cat_verifier(verifier_name),
+                Some(Duration::from_secs(1)),
+            );
+            // Cryptocat token timeouts have second-level granularity; sleep past the
+            // expiry so verification rejects this token.
+            thread::sleep(Duration::from_secs(2));
+            let result = try_get_cats_idents_impl_with_envs(
+                fb,
+                &header(vec![token]),
+                &server_verifier(verifier_name),
+                vec![EnvironmentType::TEST],
+            )
+            .expect("header was present, expected Some");
+            assert!(result.is_empty(), "expected dropped token, got {result:?}");
+        }
+
+        #[mononoke::fbinit_test]
+        fn mix_valid_and_invalid_returns_only_valid(fb: FacebookInit) {
+            ensure_test_mode();
+            let verifier_name = "scm.test";
+            let valid = mint(fb, &signer("alice"), &cat_verifier(verifier_name), None);
+            let wrong_verifier = mint(fb, &signer("bob"), &cat_verifier("scm.other"), None);
+            // Mint two short-lived tokens before the sleep so they actually expire
+            // by the time we call verify.
+            let expired_right_verifier = mint(
+                fb,
+                &signer("carol"),
+                &cat_verifier(verifier_name),
+                Some(Duration::from_secs(1)),
+            );
+            let expired_wrong_verifier = mint(
+                fb,
+                &signer("dave"),
+                &cat_verifier("scm.other"),
+                Some(Duration::from_secs(1)),
+            );
+            thread::sleep(Duration::from_secs(2));
+            let result = try_get_cats_idents_impl_with_envs(
+                fb,
+                &header(vec![
+                    valid,
+                    wrong_verifier,
+                    expired_right_verifier,
+                    expired_wrong_verifier,
+                ]),
+                &server_verifier(verifier_name),
+                vec![EnvironmentType::TEST],
+            )
+            .expect("header was present, expected Some");
+            assert_eq!(
+                result.len(),
+                1,
+                "verification of bad tokens must not drop the valid one, got {result:?}"
+            );
+            let only = result.iter().next().unwrap();
+            assert_eq!(only.id_type(), auth_consts::USER);
+            assert_eq!(only.id_data(), "alice");
         }
     }
 }

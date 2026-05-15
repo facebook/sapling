@@ -6,6 +6,7 @@ oncall("scm_server_treehugger")
 rust_library(
     name = "cats",
     srcs = glob(["src/**/*.rs"]),
+    test_deps = ([] if rust_oss.is_oss_build() else ["//eden/mononoke/common/mononoke_macros:mononoke_macros"]),
     deps = [
         "fbsource//third-party/rust:http",
         "//common/rust/shed/fbinit:fbinit",
