@@ -60,6 +60,7 @@
 #include "eden/fs/store/FilteredBackingStore.h"
 #include "eden/fs/store/filter/HgSparseFilter.h"
 #include "eden/fs/store/sl/SaplingBackingStore.h"
+#include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/IScribeLogger.h"
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/utils/WinStackTrace.h"
@@ -569,7 +570,7 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
     auto startTimeInSeconds =
         std::chrono::duration<double>{daemonStart.elapsed()}.count();
     if (server) {
-      server->getServerState()->getStructuredLogger()->logEvent(
+      server->getServerState()->getEdenFsEventsLogger()->logEvent(
           DaemonStart{
               startTimeInSeconds,
               FLAGS_takeover,
@@ -619,51 +620,51 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
 #endif
         startupLogger->success(startTimeInSeconds);
       })
-      .ensure(
-          [daemonStart,
-           structuredLogger = server->getServerState()->getStructuredLogger(),
-           takeover = FLAGS_takeover,
-           daemonMountNamespace,
-           daemonPidNamespace,
-           privhelperMountNamespace,
-           privhelperPidNamespace,
-           isDaemonInRootMountNamespace,
-           isPrivhelperInRootMountNamespace,
-           cgroupInfo,
-           &server] {
-            // This value is slightly different from `startTimeInSeconds`
-            // we pass into `startupLogger->success()`, but should be
-            // identical.
-            auto startTimeInSeconds =
-                std::chrono::duration<double>{daemonStart.elapsed()}.count();
-            // Here we log a success even if we did not successfully remount
-            // all repositories (if prepareFuture had an exception). In the
-            // future it would be helpful to log number of successful vs
-            // unsuccessful remounts
-            structuredLogger->logEvent(
-                DaemonStart{
-                    startTimeInSeconds,
-                    takeover,
-                    true /*success*/,
-                    daemonMountNamespace,
-                    daemonPidNamespace,
-                    privhelperMountNamespace,
-                    privhelperPidNamespace,
-                    isDaemonInRootMountNamespace,
-                    isPrivhelperInRootMountNamespace,
-                    cgroupInfo});
+      .ensure([daemonStart,
+               edenFsEventsLogger =
+                   server->getServerState()->getEdenFsEventsLogger(),
+               takeover = FLAGS_takeover,
+               daemonMountNamespace,
+               daemonPidNamespace,
+               privhelperMountNamespace,
+               privhelperPidNamespace,
+               isDaemonInRootMountNamespace,
+               isPrivhelperInRootMountNamespace,
+               cgroupInfo,
+               &server] {
+        // This value is slightly different from `startTimeInSeconds`
+        // we pass into `startupLogger->success()`, but should be
+        // identical.
+        auto startTimeInSeconds =
+            std::chrono::duration<double>{daemonStart.elapsed()}.count();
+        // Here we log a success even if we did not successfully remount
+        // all repositories (if prepareFuture had an exception). In the
+        // future it would be helpful to log number of successful vs
+        // unsuccessful remounts
+        edenFsEventsLogger->logEvent(
+            DaemonStart{
+                startTimeInSeconds,
+                takeover,
+                true /*success*/,
+                daemonMountNamespace,
+                daemonPidNamespace,
+                privhelperMountNamespace,
+                privhelperPidNamespace,
+                isDaemonInRootMountNamespace,
+                isPrivhelperInRootMountNamespace,
+                cgroupInfo});
 
 #ifndef _WIN32
-            // Check for previous heartbeat files and handle crash detection
-            server->checkForPreviousHeartbeat(takeover);
+        // Check for previous heartbeat files and handle crash detection
+        server->checkForPreviousHeartbeat(takeover);
 
-            // Create a new heartbeat file
-            server->createOrUpdateEdenHeartbeatFile();
+        // Create a new heartbeat file
+        server->createOrUpdateEdenHeartbeatFile();
 #else
-            // On Windows, EdenFS does not create a heartbeat file.
-            (void)server;
+        // On Windows, EdenFS does not create a heartbeat file.
+        (void)server;
 #endif
-          });
+      });
 
   while (true) {
     main.runServer(server.value());

@@ -16,7 +16,6 @@
 #include <folly/stop_watch.h>
 #include <optional>
 
-#include "eden/common/telemetry/StructuredLogger.h"
 #include "eden/common/utils/FaultInjector.h"
 #include "eden/common/utils/FileUtils.h"
 #include "eden/common/utils/PathFuncs.h"
@@ -29,6 +28,7 @@
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/ObjectStore.h"
+#include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/LogEvent.h"
 
@@ -1237,7 +1237,7 @@ ImmediateFuture<folly::Unit> fileNotification(
             // test, these should be treated as fatal errors, so we don't let
             // errors silently pass tests. In release builds, let's be less
             // aggressive and just log.
-            mount.getServerState()->getStructuredLogger()->logEvent(
+            mount.getServerState()->getEdenFsEventsLogger()->logEvent(
                 PrjFSFileNotificationFailure{
                     folly::exceptionStr(ew).toStdString(), path.asString()});
             if (dfatal_error) {

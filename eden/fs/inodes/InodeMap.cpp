@@ -23,6 +23,7 @@
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/ParentInodeInfo.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/utils/NotImplemented.h"
@@ -105,11 +106,11 @@ InodeMap::InodeMap(
     EdenMount* mount,
     std::shared_ptr<ReloadableConfig> config,
     EdenStatsPtr stats,
-    std::shared_ptr<StructuredLogger> logger)
+    std::shared_ptr<EdenFsEventsLogger> logger)
     : mount_{mount},
       config_{std::move(config)},
       stats_{std::move(stats)},
-      structuredLogger_{std::move(logger)},
+      edenFsEventsLogger_{std::move(logger)},
       lazyInodePersistence_{
           config_->getEdenConfig()->lazyInodePersistence.getValue()} {}
 
@@ -327,7 +328,7 @@ ImmediateFuture<InodePtr> InodeMap::lookupInode(InodeNumber number) {
       // windows does not have ESTALE. We need some other error to turn into the
       // nfs stale error. For now let's just let it throw.
 #ifndef _WIN32
-      structuredLogger_->logEvent(NFSStaleError{number.getRawValue()});
+      edenFsEventsLogger_->logEvent(NFSStaleError{number.getRawValue()});
       return ImmediateFuture<InodePtr>{folly::Try<InodePtr>{
           std::system_error{std::error_code{ESTALE, std::system_category()}}}};
 #endif
@@ -574,7 +575,7 @@ void InodeMap::inodeLoadFailed(
 
   // Temporarily log every inode load failure and associated error string.
   // This data will help us understand the impact of X2P errors on EdenFS.
-  structuredLogger_->logEvent(
+  edenFsEventsLogger_->logEvent(
       InodeLoadingFailed{errStr.toStdString(), number.getRawValue()});
   stats_->increment(&InodeMapStats::lookupInodeError, promises.size());
 }

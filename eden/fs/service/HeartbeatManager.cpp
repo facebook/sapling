@@ -24,9 +24,9 @@
 #include <unistd.h>
 #endif
 
-#include "eden/common/telemetry/StructuredLogger.h"
 #include "eden/common/utils/FileUtils.h"
 #include "eden/common/utils/SpawnedProcess.h"
+#include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/LogEvent.h"
 
 using std::optional;
@@ -74,9 +74,9 @@ time_t getBootTimeProcStat() {
 
 HeartbeatManager::HeartbeatManager(
     const EdenStateDir& edenDir,
-    std::shared_ptr<StructuredLogger> structuredLogger)
+    std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger)
     : edenDir_(edenDir),
-      structuredLogger_(std::move(structuredLogger)),
+      edenFsEventsLogger_(std::move(edenFsEventsLogger)),
       heartbeatFilePath_(
           edenDir_.getPath() + PathComponentPiece{getHeartbeatFileName()}),
       heartbeatFilePathString_(heartbeatFilePath_.c_str()),
@@ -212,7 +212,7 @@ bool HeartbeatManager::checkForPreviousHeartbeat(
             uint64_t now = static_cast<uint64_t>(std::time(nullptr));
             downtime = now - latestDaemonHeartbeat;
           }
-          self->structuredLogger_->logEvent(
+          self->edenFsEventsLogger_->logEvent(
               SilentDaemonExit{
                   latestDaemonHeartbeat,
                   daemon_exit_signal,

@@ -59,6 +59,7 @@
 #include "eden/fs/store/DiffCallback.h"
 #include "eden/fs/store/DiffContext.h"
 #include "eden/fs/store/ObjectStore.h"
+#include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/utils/Clock.h"
@@ -227,7 +228,7 @@ struct stat TreeInode::statWithCurrentRestrictionState() const {
   if (UNLIKELY(S_ISREG(st.st_mode))) {
     // TODO(T159626416): Log the path of the tree that is being misinterpreted
     // as a regular file. We should only do this if these events are infrequent.
-    getMount()->getServerState()->getStructuredLogger()->logEvent(
+    getMount()->getServerState()->getEdenFsEventsLogger()->logEvent(
         InodeMetadataMismatch{
             st.st_mode,
             st.st_ino,
@@ -4670,7 +4671,7 @@ ImmediateFuture<InvalidationRequired> TreeInode::checkoutUpdateEntry(
       auto success = invalidateChannelEntryCache(
           *contents, it->first, it->second.getInodeNumber());
       if (success.hasException()) {
-        getMount()->getServerState()->getStructuredLogger()->logEvent(
+        getMount()->getServerState()->getEdenFsEventsLogger()->logEvent(
             CheckoutUpdateError{
                 inode->getLogPath(), success.exception().what().toStdString()});
         if (folly::kIsWindows) {

@@ -29,6 +29,7 @@ class exception_wrapper;
 
 namespace facebook::eden {
 
+class EdenFsEventsLogger;
 class EdenMount;
 class FileInode;
 class InodeBase;
@@ -107,7 +108,7 @@ class InodeMap {
       EdenMount* mount,
       std::shared_ptr<ReloadableConfig> config,
       EdenStatsPtr stats,
-      std::shared_ptr<StructuredLogger> logger);
+      std::shared_ptr<EdenFsEventsLogger> logger);
   virtual ~InodeMap();
 
   InodeMap(InodeMap&&) = delete;
@@ -781,7 +782,7 @@ class InodeMap {
 
   std::shared_ptr<ReloadableConfig> config_;
   EdenStatsPtr stats_;
-  std::shared_ptr<StructuredLogger> structuredLogger_;
+  std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger_;
 
   /**
    * The root inode.

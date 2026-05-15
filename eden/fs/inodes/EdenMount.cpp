@@ -64,6 +64,7 @@
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/StatsFetchContext.h"
 #include "eden/fs/store/TreeLookupProcessor.h"
+#include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/EdenError.h"
@@ -271,7 +272,7 @@ EdenMount::EdenMount(
           this,
           serverState_->getReloadableConfig(),
           stats.copy(),
-          serverState_->getStructuredLogger())},
+          serverState_->getEdenFsEventsLogger())},
       objectStore_{std::move(objectStore)},
       blobCache_{std::move(blobCache)},
       blobAccess_{objectStore_, blobCache_},
@@ -1937,7 +1938,7 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
                   result.value().times.didFinish)
                   .count());
         }
-        this->serverState_->getStructuredLogger()->logEvent(finishedCheckout);
+        this->serverState_->getEdenFsEventsLogger()->logEvent(finishedCheckout);
 
         return std::move(result);
       });
@@ -2116,7 +2117,7 @@ ImmediateFuture<Unit> EdenMount::diff(
         auto renderedCommitId = objectStore_->renderRootId(commitId);
 
         // Log this occurrence to Scuba
-        getServerState()->getStructuredLogger()->logEvent(
+        getServerState()->getEdenFsEventsLogger()->logEvent(
             ParentMismatch{
                 commitId.value(), currentWorkingCopyParentRootId.value()});
         return makeImmediateFuture<Unit>(newEdenError(
@@ -2352,7 +2353,7 @@ folly::coro::now_task<std::unique_ptr<ScmStatus>> EdenMount::co_diff(
             objectStore_->renderRootId(currentWorkingCopyParentRootId);
         auto renderedCommitId = objectStore_->renderRootId(commitId);
 
-        getServerState()->getStructuredLogger()->logEvent(
+        getServerState()->getEdenFsEventsLogger()->logEvent(
             ParentMismatch{
                 commitId.value(), currentWorkingCopyParentRootId.value()});
         throw newEdenError(

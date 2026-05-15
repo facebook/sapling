@@ -18,7 +18,7 @@
 
 namespace facebook::eden {
 
-class StructuredLogger;
+class EdenFsEventsLogger;
 
 /**
  * Manages heartbeat files for Eden daemon processes.
@@ -33,7 +33,7 @@ class HeartbeatManager : public std::enable_shared_from_this<HeartbeatManager> {
  public:
   explicit HeartbeatManager(
       const EdenStateDir& edenDir,
-      std::shared_ptr<StructuredLogger> structuredLogger);
+      std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger);
 
   ~HeartbeatManager() = default;
 
@@ -95,7 +95,7 @@ class HeartbeatManager : public std::enable_shared_from_this<HeartbeatManager> {
 
  private:
   const EdenStateDir& edenDir_;
-  std::shared_ptr<StructuredLogger> structuredLogger_;
+  std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger_;
 
   // Cached paths for performance
   AbsolutePath heartbeatFilePath_;

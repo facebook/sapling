@@ -36,6 +36,7 @@
 
 #include "ThriftGetObjectImpl.h"
 #include "eden/common/telemetry/SessionInfo.h"
+#include "eden/common/telemetry/StructuredLogger.h"
 #include "eden/common/telemetry/Tracing.h"
 #include "eden/common/utils/Bug.h"
 #include "eden/common/utils/FaultInjector.h"
@@ -95,6 +96,7 @@
 #include "eden/fs/store/filter/GlobFilter.h"
 #include "eden/fs/store/sl/SaplingBackingStore.h"
 #include "eden/fs/telemetry/EdenErrorInfoBuilder.h"
+#include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/ErrorLogger.h"
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/telemetry/TaskTrace.h"
@@ -496,7 +498,7 @@ class SuffixGlobRequestScope {
         client_cmdline,
         globberLogString_,
         duration);
-    serverState_->getStructuredLogger()->logEvent(
+    serverState_->getEdenFsEventsLogger()->logEvent(
         SuffixGlob{
             duration, globberLogString_, std::move(client_cmdline), isLocal_});
   }
@@ -543,7 +545,7 @@ class GlobFilesRequestScope {
     if (duration >= EXPENSIVE_GLOB_FILES_DURATION) {
       std::string client_cmdline = getClientCmdline(serverState_, context_);
 
-      serverState_->getStructuredLogger()->logEvent(
+      serverState_->getEdenFsEventsLogger()->logEvent(
           ExpensiveGlob{
               duration, logString_, std::move(client_cmdline), local});
     }
@@ -4297,7 +4299,7 @@ void maybeLogExpensiveGlob(
         "EdenFS asked to evaluate expensive glob by caller {} : {}",
         client_cmdline,
         logString);
-    serverState->getStructuredLogger()->logEvent(
+    serverState->getEdenFsEventsLogger()->logEvent(
         StarGlob{std::move(logString), std::move(client_cmdline)});
   }
 }
@@ -7685,7 +7687,7 @@ bool EdenServiceHandler::removeCancellationSource(uint64_t requestId) {
         server_->getStats()->increment(&ThriftStats::cancelRequestLongRunning);
       }
 
-      server_->getServerState()->getStructuredLogger()->logEvent(
+      server_->getServerState()->getEdenFsEventsLogger()->logEvent(
           ThriftCancellation{
               it->second.endpoint,
               success,

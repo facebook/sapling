@@ -616,7 +616,7 @@ EdenServer::EdenServer(
               )},
       heartbeatManager_{std::make_shared<HeartbeatManager>(
           edenDir_,
-          serverState_->getStructuredLogger())},
+          serverState_->getEdenFsEventsLogger())},
       blobCache_{BlobCache::create(
           serverState_->getReloadableConfig(),
           serverState_->getStats().copy())},
