@@ -53,7 +53,7 @@ pub struct HgPreloadedAugmentedManifest {
 //
 // Source: mercurial/parsers.c:parse_manifest()
 
-pub(crate) fn serialize_manifest(
+pub fn serialize_manifest(
     sharded_augmented_manifest: &[(MPathElement, HgAugmentedManifestMetadata)],
 ) -> Result<Bytes> {
     let mut contents = Vec::new();
