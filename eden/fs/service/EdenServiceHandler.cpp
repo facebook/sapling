@@ -3506,6 +3506,15 @@ EdenServiceHandler::semifuture_getFileInformation(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<std::vector<std::string>> paths,
     std::unique_ptr<SyncBehavior> sync) {
+  return semifuture_getFileInformationImpl(
+      std::move(mountPoint), std::move(paths), std::move(sync));
+}
+
+folly::SemiFuture<std::unique_ptr<std::vector<FileInformationOrError>>>
+EdenServiceHandler::semifuture_getFileInformationImpl(
+    std::unique_ptr<std::string> mountPoint,
+    std::unique_ptr<std::vector<std::string>> paths,
+    std::unique_ptr<SyncBehavior> sync) {
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG3, *mountPoint, getSyncTimeout(*sync), toLogArg(*paths));
   auto mountHandle = lookupMount(mountPoint);
