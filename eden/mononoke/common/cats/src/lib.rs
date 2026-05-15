@@ -11,6 +11,8 @@ use anyhow::Error;
 use cats_constants::X_AUTH_CATS_HEADER;
 use fbinit::FacebookInit;
 use http::HeaderMap;
+#[cfg(fbcode_build)]
+use login_objects_thrift::EnvironmentType;
 use metaconfig_types::Identity;
 use permission_checker::MononokeIdentitySet;
 #[cfg(fbcode_build)]
@@ -34,13 +36,10 @@ pub fn try_get_cats_idents(
 /// `Some(set)` containing the identities of every token that successfully
 /// verified — invalid tokens are silently dropped.
 ///
-/// When the `scm/mononoke:cats_use_authenticated_identity_struct` JustKnob is
-/// set, the resulting identities are `MononokeIdentity::Authenticated` carrying
-/// the full `AuthenticatedIdentity` thrift struct (including attributes
-/// extracted from the verified token's `metaIdUri`, matching srserver's
-/// `authenticated_identities_cats_struct` path). Otherwise the legacy path is
-/// used, producing `MononokeIdentity::TypeData` from the token's signer
-/// identity.
+/// The resulting identities are `MononokeIdentity::Authenticated` carrying the
+/// full `AuthenticatedIdentity` thrift struct (including attributes extracted
+/// from the verified token's `metaIdUri`, matching srserver's
+/// `authenticated_identities_cats_struct` path).
 #[cfg(fbcode_build)]
 pub fn try_get_cats_idents(
     fb: FacebookInit,
@@ -93,27 +92,6 @@ fn verify_cat_tokens(
         ..Default::default()
     };
 
-    if justknobs::eval(
-        "scm/mononoke:cats_use_authenticated_identity_struct",
-        None,
-        None,
-    )
-    .expect("This JK doesn't exist?")
-    {
-        verify_cat_tokens_authenticated(fb, cat_list, &svc_scm_ident)
-    } else {
-        verify_cat_tokens_legacy(fb, cat_list, &svc_scm_ident, verifier_identity)
-    }
-}
-
-#[cfg(fbcode_build)]
-fn verify_cat_tokens_authenticated(
-    fb: FacebookInit,
-    cat_list: cryptocat::CryptoAuthTokenList,
-    svc_scm_ident: &cryptocat::Identity,
-) -> MononokeIdentitySet {
-    use login_objects_thrift::EnvironmentType;
-
     debug!(
         "CAT extraction: bulk-verifying {} token(s) via authenticated_identity path",
         cat_list.tokens.len(),
@@ -121,7 +99,7 @@ fn verify_cat_tokens_authenticated(
     match cryptocat::verify_and_extract_authenticated_identities(
         fb,
         cat_list,
-        svc_scm_ident,
+        &svc_scm_ident,
         None,
         vec![EnvironmentType::PROD, EnvironmentType::CORP],
     ) {
@@ -143,75 +121,4 @@ fn verify_cat_tokens_authenticated(
             MononokeIdentitySet::new()
         }
     }
-}
-
-#[cfg(fbcode_build)]
-fn verify_cat_tokens_legacy(
-    fb: FacebookInit,
-    cat_list: cryptocat::CryptoAuthTokenList,
-    svc_scm_ident: &cryptocat::Identity,
-    verifier_identity: &Identity,
-) -> MononokeIdentitySet {
-    cat_list
-        .tokens
-        .into_iter()
-        .filter_map(|token| {
-            extract_identity_from_token(fb, svc_scm_ident, verifier_identity, token)
-        })
-        .collect()
-}
-
-#[cfg(fbcode_build)]
-fn extract_identity_from_token(
-    fb: FacebookInit,
-    svc_scm_ident: &cryptocat::Identity,
-    verifier_identity: &Identity,
-    token: cryptocat::CryptoAuthToken,
-) -> Option<permission_checker::MononokeIdentity> {
-    let tdata = match cryptocat::deserialize_crypto_auth_token_data(
-        &token.serializedCryptoAuthTokenData[..],
-    ) {
-        Ok(tdata) => tdata,
-        Err(e) => {
-            warn!("CAT token skipped: failed to deserialize token data: {}", e);
-            return None;
-        }
-    };
-
-    if tdata.verifierIdentity.id_type != verifier_identity.id_type
-        || tdata.verifierIdentity.id_data != verifier_identity.id_data
-    {
-        debug!(
-            "CAT token skipped: verifier identity mismatch (token has {}:{}, expected {}:{})",
-            tdata.verifierIdentity.id_type,
-            tdata.verifierIdentity.id_data,
-            verifier_identity.id_type,
-            verifier_identity.id_data,
-        );
-        return None;
-    }
-
-    match cryptocat::verify_crypto_auth_token(fb, token, svc_scm_ident, None) {
-        Ok(res) if res.code == cryptocat::CATVerificationCode::SUCCESS => {}
-        Ok(res) => {
-            warn!(
-                "CAT token skipped: verification not successful. status code: {:?}",
-                res.code,
-            );
-            return None;
-        }
-        Err(e) => {
-            warn!("CAT token skipped: verification error: {}", e);
-            return None;
-        }
-    }
-
-    debug!(
-        "CAT extraction: extracted identity {}:{}",
-        tdata.signerIdentity.id_type, tdata.signerIdentity.id_data,
-    );
-    Some(permission_checker::MononokeIdentity::new(
-        tdata.signerIdentity.id_type,
-        tdata.signerIdentity.id_data,
-    ))
 }
