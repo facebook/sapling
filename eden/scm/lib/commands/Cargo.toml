@@ -75,6 +75,7 @@ sapling-hg-http = { version = "0.1.0", path = "../hg-http" }
 sapling-hg-metrics = { version = "0.1.0", path = "../hg-metrics" }
 sapling-hgplain = { version = "0.1.0", path = "../util/hgplain" }
 sapling-identity = { version = "0.1.0", path = "../identity" }
+sapling-indexedlog = { version = "0.1.0", path = "../indexedlog" }
 sapling-metrics = { version = "0.1.0", path = "../metrics" }
 sapling-metrics-render = { version = "0.1.0", path = "../metrics/render" }
 sapling-mincode = { version = "0.1.0", path = "../mincode" }
@@ -101,5 +102,5 @@ zstd = { version = "0.13.3", features = ["experimental", "zstdmt"] }
 [features]
 default = []
 eden = ["cmdclone/eden", "cmddebugwait/eden", "cmdgoto/eden", "cmdworktree", "pycheckout/eden", "pyworkingcopy/eden", "pyworkingcopyclient/eden", "sapling-clidispatch/eden"]
-fb = ["cmddebugdumpinternalconfig/fb", "cmddebugrefreshconfig/fb", "cmdpy/fb", "cmdversion/fb", "sapling-configloader/fb", "sapling-identity/fb"]
+fb = ["cmddebugdumpinternalconfig/fb", "cmddebugrefreshconfig/fb", "cmdpy/fb", "cmdversion/fb", "sapling-configloader/fb", "sapling-identity/fb", "sapling-indexedlog/metrics"]
 sl_oss = ["sapling-configloader/sl_oss"]

@@ -25,6 +25,7 @@ mod errors;
 pub mod index;
 pub mod lock;
 pub mod log;
+mod metrics;
 pub mod multi;
 mod page_out;
 mod repair;

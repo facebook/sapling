@@ -31,6 +31,7 @@ rust_library(
         "features": {
             "btrfs": ["sapling-btrfs"],
             "configurable": ["sapling-configmodel"],
+            "metrics": ["sapling-metrics"],
             "sigbus-handler": [],
         },
         "lib": {"name": "indexedlog"},
@@ -48,6 +49,7 @@ rust_library(
         "btrfs",
         "configurable",
         "sigbus-handler",
+        "metrics",
     ],
     test_deps = [
         "fbsource//third-party/rust:ctor",

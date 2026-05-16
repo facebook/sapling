@@ -14,10 +14,10 @@ use std::time::Instant;
 
 use memmap2::MmapMut;
 use memmap2::MmapOptions;
-use metrics::Counter;
 
 use crate::change_detect::SharedChangeDetector;
 use crate::errors::IoResultExt;
+use crate::metrics::Counter;
 use crate::utils;
 
 static DIR_LOCK_WAIT_MS: Counter = Counter::new_counter("indexedlog.dir_lock.wait_ms");

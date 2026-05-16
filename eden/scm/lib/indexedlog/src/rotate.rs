@@ -18,7 +18,6 @@ use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 use std::sync::atomic::Ordering::SeqCst;
 
-use metrics::Counter;
 use minibytes::Bytes;
 use once_cell::sync::OnceCell;
 use tracing::debug;
@@ -38,6 +37,7 @@ use crate::log::FlushFilterFunc;
 use crate::log::FlushFilterOutput;
 use crate::log::IndexDef;
 use crate::log::Log;
+use crate::metrics::Counter;
 use crate::repair::OpenOptionsOutput;
 use crate::repair::OpenOptionsRepair;
 use crate::repair::RepairMessage;
