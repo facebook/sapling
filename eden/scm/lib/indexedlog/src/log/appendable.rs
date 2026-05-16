@@ -48,8 +48,10 @@ impl_appendable! {
     [] &Bytes => |this| this, this.len();
     [] [u8] => |this| this, this.len();
     [] &[u8] => |this| this, this.len();
+    [] &&[u8] => |this| this, this.len();
     [] str => |this| this.as_bytes(), this.len();
     [] &str => |this| this.as_bytes(), this.len();
+    [] &&str => |this| this.as_bytes(), this.len();
     [const N: usize] [u8; N] => |this| this.as_slice(), N;
     [const N: usize] &[u8; N] => |this| this.as_slice(), N;
 }

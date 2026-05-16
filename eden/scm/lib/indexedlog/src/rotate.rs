@@ -31,6 +31,7 @@ use crate::errors::ResultExt;
 use crate::lock::READER_LOCK_OPTS;
 use crate::lock::ScopedDirLock;
 use crate::log;
+use crate::log::Appendable;
 use crate::log::ExtendWrite;
 use crate::log::FlushFilterContext;
 use crate::log::FlushFilterFunc;
@@ -395,14 +396,9 @@ impl fmt::Debug for OpenOptions {
 
 impl RotateLog {
     /// Append data to the writable [`Log`].
-    pub fn append(&mut self, data: impl AsRef<[u8]>) -> crate::Result<()> {
-        self.append_internal(
-            |buf| {
-                buf.extend_from_slice(data.as_ref());
-                crate::Result::Ok(())
-            },
-            Some(data.as_ref().len()),
-        )
+    pub fn append(&mut self, data: impl Appendable) -> crate::Result<()> {
+        let data_len = data.data_len();
+        self.append_internal(|buf| data.write_to(buf), data_len)
     }
 
     /// Append data directly to the writable [`Log`]'s in-memory buffer.

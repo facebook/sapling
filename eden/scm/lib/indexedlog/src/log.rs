@@ -274,22 +274,10 @@ impl Log {
     /// the change immediately.
     ///
     /// To write in-memory entries and indexes to disk, call [`Log::sync`].
-    pub fn append<T: AsRef<[u8]>>(&mut self, data: T) -> crate::Result<()> {
-        self.append_internal::<crate::Error>(
-            |buf| {
-                buf.extend_from_slice(data.as_ref());
-                Ok::<_, crate::Error>(())
-            },
-            Some(data.as_ref().len()),
-        )
-        .context(|| {
-            let data = data.as_ref();
-            if data.len() < 128 {
-                format!("in Log::append({:?})", data)
-            } else {
-                format!("in Log::append(<a {}-byte long slice>)", data.len())
-            }
-        })
+    pub fn append(&mut self, data: impl Appendable) -> crate::Result<()> {
+        let data_len = data.data_len();
+        self.append_internal::<crate::Error>(|buf| data.write_to(buf), data_len)
+            .context(|| format!("in Log::append(len={:?})", data_len))
     }
 
     /// Similar to [`Log::append`], but data is written via a callback. This allows the caller to

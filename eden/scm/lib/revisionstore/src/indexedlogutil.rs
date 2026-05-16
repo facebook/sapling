@@ -190,6 +190,7 @@ impl Inner {
 
     /// Add the buffer to the store.
     pub fn append(&mut self, buf: impl AsRef<[u8]>) -> Result<()> {
+        let buf = buf.as_ref();
         match self {
             Self::Permanent(log) => Ok(log.append(buf)?),
             Self::Rotated(log) => Ok(log.append(buf)?),
