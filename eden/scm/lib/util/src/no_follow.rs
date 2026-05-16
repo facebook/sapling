@@ -48,7 +48,10 @@ impl<'a> CheckedRelPath<'a> {
     /// Construct a path from an already-verified relative path.
     ///
     /// This is intended for stronger path newtypes, such as repository path
-    /// types, that already reject absolute paths and `..`.
+    /// types, that already reject absolute paths and `..`. Callers must be
+    /// aware of platform-specific path separators and platform-specific file
+    /// name syntax: on Windows, every component must reject `:` so the path
+    /// cannot name an NTFS alternate data stream.
     pub fn from_verified_relative(path: &'a Path) -> Self {
         Self(path)
     }

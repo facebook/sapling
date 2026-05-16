@@ -160,7 +160,9 @@ impl NoFollowRoot {
     /// `path` must be relative and must not contain `..`. If the leaf already
     /// exists as a regular file, it is truncated. If the leaf is a reparse
     /// point, the operation fails instead of following it. The `mode` argument
-    /// is ignored on Windows.
+    /// is ignored on Windows. This can write through hardlinks; callers that
+    /// need hardlink isolation should replace the leaf instead of updating an
+    /// existing file.
     pub fn write_file<'a, P>(&self, path: P, contents: &[u8], _mode: u32) -> io::Result<()>
     where
         P: TryInto<CheckedRelPath<'a>>,
@@ -203,7 +205,9 @@ impl NoFollowRoot {
     /// `path` must be relative and must not contain `..`. Parent components
     /// and the leaf must not be reparse points. `flags` controls
     /// read/write/create/truncate behavior. The `mode` argument is ignored on
-    /// Windows.
+    /// Windows. Writable opens can write through hardlinks; callers that need
+    /// hardlink isolation should replace the leaf instead of updating an
+    /// existing file.
     pub fn open_file<'a, P>(&self, path: P, flags: OpenFlags, mode: u32) -> io::Result<File>
     where
         P: TryInto<CheckedRelPath<'a>>,
@@ -233,6 +237,13 @@ impl NoFollowRoot {
     /// checked parent directory is pinned against deletion while the symlink is
     /// created with the standard path API, which works for developer-mode
     /// unprivileged symlink creation.
+    ///
+    /// Windows symlinks have separate file and directory kinds, and this method
+    /// chooses the kind by checking `target` before creating the link. If
+    /// `target` changes concurrently, the created symlink may have the wrong
+    /// kind for the new target. This race only affects the target kind: the
+    /// link path's final component is created atomically, and an existing final
+    /// component is not followed or replaced.
     pub fn write_symlink<'a, P>(&self, path: P, target: &Path) -> io::Result<()>
     where
         P: TryInto<CheckedRelPath<'a>>,
@@ -1306,6 +1317,10 @@ fn write_symlink(dir: HANDLE, leaf: &OsStr, target: &Path) -> io::Result<()> {
     };
     let mut link = parent;
     link.push(leaf);
+    // The target can change between this metadata check and the symlink
+    // creation below, so this may choose the wrong Windows symlink kind. The
+    // race only affects the link type; the link leaf itself is created
+    // atomically and existing leaves are not followed.
     match std::fs::symlink_metadata(target_metadata_path) {
         Ok(metadata) if metadata.file_type().is_dir() => {
             std::os::windows::fs::symlink_dir(target, link)
