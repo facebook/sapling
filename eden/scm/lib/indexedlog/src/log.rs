@@ -80,6 +80,7 @@ use crate::utils::mmap_path;
 use crate::utils::xxhash;
 use crate::utils::xxhash32;
 
+mod appendable;
 mod fold;
 mod meta;
 mod open_options;
@@ -93,6 +94,7 @@ static LOG_WRITE_MS: Counter = Counter::new_counter("indexedlog.log.write_ms");
 static SYNC_COUNT: Counter = Counter::new_counter("indexedlog.sync");
 static AUTO_SYNC_COUNT: Counter = Counter::new_counter("indexedlog.auto_sync");
 
+pub use appendable::Appendable;
 pub use open_options::ChecksumType;
 pub use open_options::FlushFilterContext;
 pub use open_options::FlushFilterFunc;
