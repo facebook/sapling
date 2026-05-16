@@ -120,7 +120,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "filteredhg",
     srcs = ["filteredhg_test.py"],
     env = artifacts["env"],
