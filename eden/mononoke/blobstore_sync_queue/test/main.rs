@@ -88,7 +88,7 @@ async fn test_write_ahead_log(fb: FacebookInit) -> Result<(), Error> {
         .await
         .expect("DateTime range iteration failed");
     assert_eq!(some_entries.len(), 4);
-    some_entries.sort_by(|a, b| a.timestamp.cmp(&b.timestamp));
+    some_entries.sort_by_key(|a| a.timestamp);
     validate(
         some_entries
             .get(3)
