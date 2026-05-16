@@ -648,9 +648,18 @@ impl<'a> TryFrom<&'a RepoPath> for CheckedRelPath<'a> {
             ));
         }
 
-        Ok(CheckedRelPath::from_verified_relative(Path::new(
-            path.as_str(),
-        )))
+        let path = Path::new(path.as_str());
+        #[cfg(windows)]
+        {
+            // RepoPath validation uses SCM `/` separators. Windows path parsing
+            // treats `\` and other platform syntax as path structure too, so
+            // re-validate before handing the path to no-follow filesystem code.
+            path.try_into()
+        }
+        #[cfg(not(windows))]
+        {
+            Ok(CheckedRelPath::from_verified_relative(path))
+        }
     }
 }
 
@@ -1317,6 +1326,18 @@ mod tests {
 
         let empty_result: io::Result<CheckedRelPath<'_>> = RepoPath::empty().try_into();
         assert!(empty_result.is_err());
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn test_repo_path_to_checked_rel_path_rejects_windows_escape() {
+        let path = RepoPath::from_str(r"..\escape").unwrap();
+        let result: io::Result<CheckedRelPath<'_>> = path.try_into();
+        assert!(result.is_err());
+
+        let path = RepoPath::from_str(r"a\..\..\escape").unwrap();
+        let result: io::Result<CheckedRelPath<'_>> = path.try_into();
+        assert!(result.is_err());
     }
 
     #[test]
