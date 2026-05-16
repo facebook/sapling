@@ -1642,7 +1642,7 @@ fn test_wait_for_changes() {
 }
 
 #[test]
-fn test_append_direct() {
+fn test_append_callback() {
     let dir = tempdir().unwrap();
 
     let mut log = OpenOptions::new()
@@ -1651,21 +1651,21 @@ fn test_append_direct() {
         .open(dir.path())
         .unwrap();
 
-    log.append_direct(|buf| {
+    log.append(|buf: &mut dyn ExtendWrite| {
         buf.extend_from_slice(b"hello");
         crate::Result::Ok(())
     })
     .unwrap();
 
     // Check that errors cause write to get rolled back.
-    let res = log.append_direct(|buf| {
+    let res = log.append(|buf: &mut dyn ExtendWrite| {
         buf.extend_from_slice(b"oops");
         Err(crate::Error::from("oops!"))
     });
     assert!(res.is_err());
     assert!(log.lookup(0, b"o").unwrap().is_empty());
 
-    log.append_direct(|buf| {
+    log.append(|buf: &mut dyn ExtendWrite| {
         buf.extend_from_slice(b"world");
         crate::Result::Ok(())
     })

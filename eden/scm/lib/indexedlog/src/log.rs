@@ -274,27 +274,16 @@ impl Log {
     /// the change immediately.
     ///
     /// To write in-memory entries and indexes to disk, call [`Log::sync`].
+    ///
+    /// [`Appendable`] supports a callback to reduce allocation on the caller side.
+    /// The callback is called twice, first to get the data length, second to
+    /// write the data. It must produce the same data.
+    /// If the callback returns an error, the operation is undone and the error
+    /// is propagated.
     pub fn append(&mut self, data: impl Appendable) -> crate::Result<()> {
         let data_len = data.data_len();
         self.append_internal::<crate::Error>(|buf| data.write_to(buf), data_len)
             .context(|| format!("in Log::append(len={:?})", data_len))
-    }
-
-    /// Similar to [`Log::append`], but data is written via a callback. This allows the caller to
-    /// reduce allocations by serializing directly to the [`Log`]'s internal buffer. The `cb` is
-    /// called twice, first to get the data length, second to write the data. It must produce the
-    /// same data.
-    ///
-    /// If `cb` returns an error, the operation is undone and the error is propagated.
-    pub fn append_direct<E>(
-        &mut self,
-        cb: impl Fn(&mut dyn ExtendWrite) -> Result<(), E>,
-    ) -> crate::Result<()>
-    where
-        // This works for anyhow::Error and crate::Error. Other error types will need to box.
-        E: Into<Box<dyn std::error::Error + Send + Sync + 'static>>,
-    {
-        self.append_internal(cb, None)
     }
 
     /// Append data written by `cb` to the [`Log`].

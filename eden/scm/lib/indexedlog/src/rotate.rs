@@ -401,17 +401,6 @@ impl RotateLog {
         self.append_internal(|buf| data.write_to(buf), data_len)
     }
 
-    /// Append data directly to the writable [`Log`]'s in-memory buffer.
-    pub fn append_direct<E>(
-        &mut self,
-        cb: impl Fn(&mut dyn ExtendWrite) -> Result<(), E>,
-    ) -> crate::Result<()>
-    where
-        E: Into<Box<dyn std::error::Error + Send + Sync + 'static>>,
-    {
-        self.append_internal(cb, None)
-    }
-
     fn append_internal<E>(
         &mut self,
         cb: impl Fn(&mut dyn ExtendWrite) -> Result<(), E>,

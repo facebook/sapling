@@ -199,8 +199,8 @@ impl Inner {
 
     pub fn append_direct(&mut self, cb: impl Fn(&mut dyn ExtendWrite) -> Result<()>) -> Result<()> {
         match self {
-            Self::Permanent(log) => Ok(log.append_direct(cb)?),
-            Self::Rotated(log) => Ok(log.append_direct(cb)?),
+            Self::Permanent(log) => Ok(log.append(cb)?),
+            Self::Rotated(log) => Ok(log.append(cb)?),
         }
     }
 
