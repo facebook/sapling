@@ -14,7 +14,6 @@ use im::Vector as ImVec;
 use crate::maybe_mut::MaybeMut;
 
 /// See https://sapling-scm.com/docs/internals/linelog for details.
-#[derive(Clone)]
 pub struct AbstractLineLog<T> {
     code: ImVec<Inst<T>>,
     max_rev: Rev,
@@ -22,8 +21,17 @@ pub struct AbstractLineLog<T> {
     a_lines_cache: Option<(Rev, ImVec<LineInfo<T>>)>,
 }
 
+impl<T> Clone for AbstractLineLog<T> {
+    fn clone(&self) -> Self {
+        Self {
+            code: self.code.clone(),
+            max_rev: self.max_rev,
+            a_lines_cache: self.a_lines_cache.clone(),
+        }
+    }
+}
+
 /// Information about a line.
-#[derive(Clone)]
 #[cfg_attr(debug_assertions, derive(Debug, PartialEq))]
 pub struct LineInfo<T> {
     /// Line content.
@@ -36,12 +44,23 @@ pub struct LineInfo<T> {
     pub deleted: bool,
 }
 
+impl<T> Clone for LineInfo<T> {
+    fn clone(&self) -> Self {
+        Self {
+            data: self.data.clone(),
+            rev: self.rev,
+            pc: self.pc,
+            deleted: self.deleted,
+        }
+    }
+}
+
 type Pc = usize;
 type Rev = usize;
 type LineIdx = usize;
 
 #[allow(clippy::upper_case_acronyms)]
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 enum Inst<T> {
     J(Pc),
     END,
@@ -50,7 +69,19 @@ enum Inst<T> {
     LINE(Rev, Arc<T>),
 }
 
-impl<T: Clone> Default for AbstractLineLog<T> {
+impl<T> Clone for Inst<T> {
+    fn clone(&self) -> Self {
+        match self {
+            Self::J(pc) => Self::J(*pc),
+            Self::END => Self::END,
+            Self::JGE(rev, pc) => Self::JGE(*rev, *pc),
+            Self::JL(rev, pc) => Self::JL(*rev, *pc),
+            Self::LINE(rev, line) => Self::LINE(*rev, line.clone()),
+        }
+    }
+}
+
+impl<T> Default for AbstractLineLog<T> {
     fn default() -> Self {
         Self {
             code: {
@@ -71,7 +102,7 @@ impl<T> AbstractLineLog<T> {
     }
 }
 
-impl<T: Clone + Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
+impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
     /// Edit chunk. Replace lines from `a1` (inclusive) to `a2` (exclusive) in rev
     /// `a_rev` with `b_lines`. `b_lines` are considered introduced by `b_rev`.
     /// If `b_lines` is empty, the edit is a deletion. If `a1` equals to `a2`,
@@ -225,13 +256,15 @@ impl<T: Clone + Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
         //                        b2Pc: <JL> (moved)      [*]
         //                            : J a1Pc            [*]
 
+        let b_lines = b_lines.into_iter().map(Arc::new).collect::<Vec<_>>();
+
         // Prepare updating a_lines.
         let new_b_lines = if a_lines.is_mut() {
             b_lines
                 .iter()
                 .enumerate()
                 .map(|(i, line)| LineInfo {
-                    data: Arc::new(line.clone()),
+                    data: line.clone(),
                     rev: b_rev,
                     pc: start + i + 1,
                     deleted: false,
@@ -256,7 +289,7 @@ impl<T: Clone + Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
             let b2_pc = start + b_lines.len() + 1;
             code.push_back(Inst::JL(b_rev, b2_pc));
             for line in b_lines {
-                code.push_back(Inst::LINE(b_rev, Arc::new(line)));
+                code.push_back(Inst::LINE(b_rev, line));
             }
             debug_assert_eq!(b2_pc, code.len());
         }
