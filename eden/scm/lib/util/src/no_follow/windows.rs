@@ -77,6 +77,7 @@ use winapi::um::ioapiset::DeviceIoControl;
 use winapi::um::minwinbase::FileBasicInfo;
 use winapi::um::minwinbase::FileDispositionInfo;
 use winapi::um::winbase::FILE_FLAG_BACKUP_SEMANTICS;
+use winapi::um::winbase::FILE_FLAG_OPEN_REPARSE_POINT;
 use winapi::um::winioctl::FSCTL_GET_REPARSE_POINT;
 use winapi::um::winnt::DELETE;
 use winapi::um::winnt::FILE_APPEND_DATA;
@@ -111,6 +112,7 @@ use crate::path_error;
 /// reject Windows reparse points.
 pub struct NoFollowRoot {
     root: OwnedHandle,
+    _root_ancestor_pins: Vec<OwnedHandle>,
 }
 
 impl From<Metadata> for LiteMetadata {
@@ -381,11 +383,15 @@ impl NoFollowRoot {
             return Err(io::Error::last_os_error());
         }
 
+        let root = unsafe {
+            // SAFETY: `CreateFileW` returned a valid owned handle.
+            OwnedHandle::from_raw_handle(handle as _)
+        };
+        let _root_ancestor_pins = pin_root_ancestors(&root)?;
+
         Ok(Self {
-            root: unsafe {
-                // SAFETY: `CreateFileW` returned a valid owned handle.
-                OwnedHandle::from_raw_handle(handle as _)
-            },
+            root,
+            _root_ancestor_pins,
         })
     }
 
@@ -598,6 +604,64 @@ fn split_parent_leaf(path: &Path) -> io::Result<(&Path, &OsStr)> {
     })?;
     let parent = path.parent().unwrap_or_else(|| Path::new(""));
     Ok((parent, leaf))
+}
+
+const ROOT_ANCESTOR_PIN_ATTEMPTS: usize = 3;
+
+fn pin_root_ancestors(root: &OwnedHandle) -> io::Result<Vec<OwnedHandle>> {
+    for _ in 0..ROOT_ANCESTOR_PIN_ATTEMPTS {
+        let before = final_path_by_handle(root.as_raw_handle() as HANDLE)?;
+        let pins = open_root_ancestor_pins(&before)?;
+        let after = final_path_by_handle(root.as_raw_handle() as HANDLE)?;
+        if before == after {
+            return Ok(pins);
+        }
+    }
+
+    Err(io::Error::new(
+        io::ErrorKind::Other,
+        "root path changed while pinning ancestors",
+    ))
+}
+
+fn open_root_ancestor_pins(root_path: &Path) -> io::Result<Vec<OwnedHandle>> {
+    let mut ancestors: Vec<_> = root_path
+        .ancestors()
+        .skip(1)
+        .filter(|path| path.file_name().is_some())
+        .map(Path::to_path_buf)
+        .collect();
+    ancestors.reverse();
+
+    ancestors
+        .iter()
+        .map(|path| open_absolute_dir_pinned(path))
+        .collect()
+}
+
+fn open_absolute_dir_pinned(path: &Path) -> io::Result<OwnedHandle> {
+    let wide = path_to_wide_z(path)?;
+    let handle = unsafe {
+        // SAFETY: `wide` is NUL-terminated and lives for the call.
+        // `CreateFileW` does not retain the pointer after returning.
+        CreateFileW(
+            wide.as_ptr(),
+            FILE_LIST_DIRECTORY | FILE_READ_ATTRIBUTES | SYNCHRONIZE,
+            FILE_SHARE_READ | FILE_SHARE_WRITE,
+            null_mut(),
+            OPEN_EXISTING,
+            FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
+            null_mut(),
+        )
+    };
+    if handle == INVALID_HANDLE_VALUE {
+        return Err(io::Error::last_os_error());
+    }
+
+    Ok(unsafe {
+        // SAFETY: `CreateFileW` returned a valid owned handle.
+        OwnedHandle::from_raw_handle(handle as _)
+    })
 }
 
 const fn no_follow_create_options(file_type_options: u32) -> u32 {
@@ -1679,6 +1743,26 @@ mod tests {
         );
 
         drop(root);
+        Ok(())
+    }
+
+    #[test]
+    fn pinned_root_ancestor_rejects_rename() -> io::Result<()> {
+        let dir = tempdir()?;
+        let parent = dir.path().join("parent");
+        let root_path = parent.join("root");
+        let moved = dir.path().join("moved");
+        fs::create_dir_all(&root_path)?;
+
+        let root = NoFollowRoot::new(&root_path)?;
+
+        assert!(
+            fs::rename(&parent, &moved).is_err(),
+            "root ancestor should resist rename while NoFollowRoot is alive"
+        );
+
+        drop(root);
+        fs::rename(&parent, &moved)?;
         Ok(())
     }
 
