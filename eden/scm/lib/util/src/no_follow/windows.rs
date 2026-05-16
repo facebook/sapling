@@ -589,6 +589,13 @@ fn split_parent_leaf(path: &Path) -> io::Result<(&Path, &OsStr)> {
     Ok((parent, leaf))
 }
 
+const fn no_follow_create_options(file_type_options: u32) -> u32 {
+    // Creation paths need this too: if another process creates a reparse point
+    // after our initial NotFound open, NtCreateFile may otherwise follow the
+    // final component and create/open its target instead.
+    file_type_options | FILE_OPEN_REPARSE_POINT
+}
+
 fn open_or_create_dir(dir: HANDLE, component: &OsStr) -> io::Result<OwnedHandle> {
     match open_dir_no_follow(dir, component) {
         Ok(handle) => Ok(handle),
@@ -598,7 +605,7 @@ fn open_or_create_dir(dir: HANDLE, component: &OsStr) -> io::Result<OwnedHandle>
                 component,
                 FILE_READ_ATTRIBUTES | SYNCHRONIZE,
                 FILE_CREATE,
-                FILE_DIRECTORY_FILE,
+                no_follow_create_options(FILE_DIRECTORY_FILE),
                 FILE_ATTRIBUTE_DIRECTORY,
             ) {
                 Ok(handle) => handle,
@@ -640,7 +647,7 @@ fn open_or_create_dir_pinned(dir: HANDLE, component: &OsStr) -> io::Result<Owned
                 component,
                 pinned_access,
                 FILE_CREATE,
-                FILE_DIRECTORY_FILE,
+                no_follow_create_options(FILE_DIRECTORY_FILE),
                 FILE_ATTRIBUTE_DIRECTORY,
                 pinned_share,
             ) {
@@ -725,7 +732,7 @@ fn create_temporary_file(dir: HANDLE) -> io::Result<File> {
             &name,
             DELETE | FILE_WRITE_DATA | FILE_READ_ATTRIBUTES | SYNCHRONIZE,
             FILE_CREATE,
-            FILE_NON_DIRECTORY_FILE,
+            no_follow_create_options(FILE_NON_DIRECTORY_FILE),
             FILE_ATTRIBUTE_NORMAL,
         ) {
             Ok(handle) => return Ok(File::from(handle)),
@@ -765,7 +772,7 @@ fn open_or_create_file_no_follow(dir: HANDLE, leaf: &OsStr) -> io::Result<OwnedH
                 leaf,
                 FILE_WRITE_DATA | FILE_READ_ATTRIBUTES | SYNCHRONIZE,
                 FILE_CREATE,
-                FILE_NON_DIRECTORY_FILE,
+                no_follow_create_options(FILE_NON_DIRECTORY_FILE),
                 FILE_ATTRIBUTE_NORMAL,
             ) {
                 Ok(handle) => Ok(handle),
