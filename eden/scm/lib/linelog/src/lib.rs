@@ -7,8 +7,10 @@
 
 mod linelog;
 mod maybe_mut;
+mod small_revs;
 
 pub use crate::linelog::AbstractLineLog;
+pub use crate::small_revs::SmallRevs;
 
 /// LineLog with string line content.
 pub type LineLog = AbstractLineLog<String>;
