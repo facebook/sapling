@@ -307,7 +307,7 @@ impl Log {
 
                     if let Err(err) = cb(&mut counter) {
                         return Err(crate::Error::blank()
-                            .message("append_direct callback error")
+                            .message("append callback error")
                             .source_dyn(err.into()));
                     }
 
@@ -378,7 +378,7 @@ impl Log {
                 // User error producing the bytes to serialize - undo whatever we've done so far.
                 self.mem_buf.truncate(mem_buf_start_len);
                 return Err(crate::Error::blank()
-                    .message("append_direct callback error")
+                    .message("append callback error")
                     .source_dyn(err.into()));
             }
 
@@ -386,7 +386,9 @@ impl Log {
             let apparent_len = self.mem_buf.len() - data_offset;
             if data_len != apparent_len {
                 self.mem_buf.truncate(mem_buf_start_len);
-                return Err(crate::Error::blank().message(format!("append_direct length mismatch: {data_len} (expected) != {apparent_len} (apparent)")));
+                return Err(crate::Error::blank().message(format!(
+                    "append length mismatch: {data_len} (expected) != {apparent_len} (apparent)"
+                )));
             }
 
             match checksum_type {

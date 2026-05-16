@@ -14,6 +14,7 @@ use anyhow::Context;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use derivative::Derivative;
+use indexedlog::log::ExtendWrite;
 use indexedlog::log::IndexOutput;
 use revisionstore::indexedlogutil::Store;
 use revisionstore::indexedlogutil::StoreOpenOptions;
@@ -183,7 +184,7 @@ impl FilterGenerator {
             } else {
                 // Store the entry
                 filter_store
-                    .append_direct(|buffer| {
+                    .append(|buffer: &mut dyn ExtendWrite| -> anyhow::Result<()> {
                         buffer.extend_from_slice(filter.filter_id.index());
                         mincode::serialize_into(buffer, &filter)?;
                         Ok(())

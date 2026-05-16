@@ -59,6 +59,7 @@ use http_client::TlsErrorKind;
 use http_client::curl;
 use indexedlog::DefaultOpenOptions;
 use indexedlog::Repair;
+use indexedlog::log::ExtendWrite;
 use indexedlog::log::IndexOutput;
 use indexedlog::rotate;
 use indexedlog::rotate::ConsistentReadGuard;
@@ -291,7 +292,8 @@ impl LfsPointersStore {
     }
 
     fn add(&self, entry: LfsPointersEntry) -> Result<()> {
-        self.0.append_direct(|buf| Ok(serialize_into(buf, &entry)?))
+        self.0
+            .append(|buf: &mut dyn ExtendWrite| -> Result<()> { Ok(serialize_into(buf, &entry)?) })
     }
 }
 
@@ -455,7 +457,9 @@ impl LfsIndexedLogBlobsStore {
 
         for entry in chunks {
             self.inner
-                .append_direct(|buf| Ok(serialize_into(buf, &entry)?))?;
+                .append(|buf: &mut dyn ExtendWrite| -> Result<()> {
+                    Ok(serialize_into(buf, &entry)?)
+                })?;
         }
 
         Ok(())
@@ -686,7 +690,9 @@ impl StreamingState {
                     };
                     store
                         .inner
-                        .append_direct(|buf| Ok(serialize_into(buf, &entry)?))?;
+                        .append(|buf: &mut dyn ExtendWrite| -> Result<()> {
+                            Ok(serialize_into(buf, &entry)?)
+                        })?;
                     *len += data_len;
 
                     if took_chunk {

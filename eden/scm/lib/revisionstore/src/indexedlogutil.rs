@@ -19,6 +19,7 @@ use configmodel::convert::ByteCount;
 use indexedlog::OpenWithRepair;
 use indexedlog::Result as IndexedlogResult;
 use indexedlog::log;
+use indexedlog::log::Appendable;
 use indexedlog::log::ExtendWrite;
 use indexedlog::log::IndexDef;
 use indexedlog::log::IndexOutput;
@@ -70,14 +71,9 @@ impl Store {
         self.read().is_permanent()
     }
 
-    /// Add the buffer to the store.
-    pub fn append(&self, buf: impl AsRef<[u8]>) -> Result<()> {
-        self.write().append(buf)
-    }
-
-    /// Write to the store directly.
-    pub fn append_direct(&self, cb: impl Fn(&mut dyn ExtendWrite) -> Result<()>) -> Result<()> {
-        self.write().append_direct(cb)
+    /// Add data to the store.
+    pub fn append(&self, data: impl Appendable) -> Result<()> {
+        self.write().append(data)
     }
 
     /// Attempt to make slice backed by the mmap buffer to avoid heap allocation.
@@ -121,7 +117,7 @@ impl Store {
         let mut log = self.write();
 
         for (k, v) in items {
-            log.append_direct(|buf| serialize(k, v, buf))?;
+            log.append(|buf: &mut dyn ExtendWrite| serialize(k, v, buf))?;
         }
 
         Ok(())
@@ -188,19 +184,11 @@ impl Inner {
         Ok(!self.lookup(index_id, key)?.is_empty()?)
     }
 
-    /// Add the buffer to the store.
-    pub fn append(&mut self, buf: impl AsRef<[u8]>) -> Result<()> {
-        let buf = buf.as_ref();
+    /// Add data to the store.
+    pub fn append(&mut self, data: impl Appendable) -> Result<()> {
         match self {
-            Self::Permanent(log) => Ok(log.append(buf)?),
-            Self::Rotated(log) => Ok(log.append(buf)?),
-        }
-    }
-
-    pub fn append_direct(&mut self, cb: impl Fn(&mut dyn ExtendWrite) -> Result<()>) -> Result<()> {
-        match self {
-            Self::Permanent(log) => Ok(log.append(cb)?),
-            Self::Rotated(log) => Ok(log.append(cb)?),
+            Self::Permanent(log) => Ok(log.append(data)?),
+            Self::Rotated(log) => Ok(log.append(data)?),
         }
     }
 
