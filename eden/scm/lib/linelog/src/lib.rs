@@ -8,9 +8,11 @@
 mod linelog;
 mod maybe_mut;
 mod small_revs;
+mod stacks;
 
 pub use crate::linelog::AbstractLineLog;
 pub use crate::small_revs::SmallRevs;
+pub use crate::stacks::FlattenLine;
 
 /// LineLog with string line content.
 pub type LineLog = AbstractLineLog<String>;

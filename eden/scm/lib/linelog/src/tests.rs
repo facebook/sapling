@@ -118,6 +118,53 @@ fn test_random_cases() {
     }
 }
 
+#[test]
+fn test_flatten() {
+    // 3 revisions: rev1 "a b c", rev2 "b c d e", rev3 "a c d f".
+    // Edits applied in reverse chunk order within each rev.
+    let log = LineLog::default()
+        .edit_chunk(0, 0, 0, 1, lines("a\nb\nc\n"))
+        // rev 1 "a b c" -> rev 2 "b c d e": delete "a", insert "d e"
+        .edit_chunk(1, 3, 3, 2, lines("d\ne\n"))
+        .edit_chunk(1, 0, 1, 2, vec![])
+        // rev 2 "b c d e" -> rev 3 "a c d f": replace "e"->"f", replace "b"->"a"
+        .edit_chunk(2, 3, 4, 3, lines("f\n"))
+        .edit_chunk(2, 0, 1, 3, lines("a\n"));
+
+    assert_eq!(log.checkout_text(1), "a\nb\nc\n");
+    assert_eq!(log.checkout_text(2), "b\nc\nd\ne\n");
+    assert_eq!(log.checkout_text(3), "a\nc\nd\nf\n");
+
+    let flat = log.flatten();
+    let show: Vec<(&str, Vec<usize>)> = flat
+        .iter()
+        .map(|l| (l.data.trim_end(), l.revs.iter().collect()))
+        .collect();
+    assert_eq!(
+        show,
+        vec![
+            ("a", vec![1]),
+            ("a", vec![3]),
+            ("b", vec![1, 2]),
+            ("c", vec![1, 2, 3]),
+            ("d", vec![2, 3]),
+            ("f", vec![3]),
+            ("e", vec![2]),
+        ]
+    );
+
+    // Cross-check: filtering flatten lines by rev reconstructs the checkout.
+    let text_list = ["a\nb\nc\n", "b\nc\nd\ne\n", "a\nc\nd\nf\n"];
+    for rev in 1..=3 {
+        let text: String = flat
+            .iter()
+            .filter(|l| l.revs.contains(rev))
+            .map(|l| l.data.as_str())
+            .collect();
+        assert_eq!(text, text_list[rev - 1]);
+    }
+}
+
 fn lines(s: &str) -> Vec<String> {
     s.lines().map(|s| format!("{}\n", s)).collect()
 }

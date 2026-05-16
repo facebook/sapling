@@ -1,0 +1,274 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+//! Linelog features that depend on `visit_with_ins_del_stacks`,
+//! including `flatten`, and `calculate_dep_map`.
+
+use std::sync::Arc;
+
+use crate::linelog::AbstractLineLog;
+use crate::linelog::Inst;
+use crate::linelog::Pc;
+use crate::linelog::Rev;
+use crate::small_revs::SmallRevs;
+
+/// A "flatten" line, annotating which revisions contain this line.
+#[derive(Clone)]
+#[cfg_attr(debug_assertions, derive(Debug, PartialEq))]
+pub struct FlattenLine<T> {
+    pub data: Arc<T>,
+    pub revs: SmallRevs,
+}
+
+pub(crate) struct Frame {
+    pub(crate) rev: Rev,
+    end_pc: Pc,
+}
+
+/// Callbacks for `visit_with_ins_del_stacks`. All methods are no-ops by
+/// default; implementors override only what they need.
+pub(crate) trait StackVisitor<T> {
+    /// Called for each LINE instruction, with the current stacks.
+    fn on_line(&mut self, _data: &Arc<T>, _rev: Rev, _ins_stack: &[Frame], _del_stack: &[Frame]) {}
+    /// Called for each JGE/JL (conditional jump) instruction, before the
+    /// corresponding stack push. Receives the current stacks so the
+    /// implementor can inspect the outer insertion/deletion context.
+    fn on_conditional_jump(&mut self, _rev: Rev, _ins_stack: &[Frame], _del_stack: &[Frame]) {}
+    /// Called after a stack push. `is_ins` indicates which stack changed.
+    fn on_stack_push(&mut self, _is_ins: bool, _ins_stack: &[Frame], _del_stack: &[Frame]) {}
+    /// Called after a stack pop. `is_ins` indicates which stack changed.
+    fn on_stack_pop(&mut self, _is_ins: bool, _ins_stack: &[Frame], _del_stack: &[Frame]) {}
+}
+
+impl<T> AbstractLineLog<T> {
+    /// Returns all lines that ever existed, including deleted lines,
+    /// each annotated with the set of revisions containing it.
+    ///
+    /// Useful for figuring out file contents after reordering or folding
+    /// commits, or providing a view similar to `absorb -e FILE` to edit
+    /// all versions of a file in a single view.
+    pub fn flatten(&self) -> Vec<FlattenLine<T>> {
+        // See the comments in visit_with_ins_del_stacks for what the stacks mean.
+        //
+        // The flatten algorithm works as follows:
+        // - For each line, we got an insRev (insStack.at(-1).rev), and a
+        //   delRev (delStack.at(-1)?.rev ?? maxRev + 1), meaning the rev
+        //   attached to the innermost insertion or deletion blocks,
+        //   respectively.
+        // - That line is then present in insRev .. delRev (exclusive) revs.
+        //
+        // This works because:
+        // - The blocks are nested in order:
+        //    - For nested insertions, the nested one must have a larger rev, and
+        //      lines inside the nested block are only present starting from the
+        //      larger rev.
+        //    - For nested deletions, the nested one must have a smaller rev, and
+        //      lines inside the nested block are considered as deleted by the
+        //      smaller rev.
+        //    - For interleaved insertion and deletions, insertion rev and deletion
+        //      rev are tracked separately so their calculations are independent
+        //      from each other.
+        // - Linelog tracks linear history, so (insRev, delRev) can be converted to
+        //   `Revs`.
+        struct FlattenVisitor<T> {
+            result: Vec<FlattenLine<T>>,
+            current_revs: SmallRevs,
+            max_del_rev: usize,
+        }
+
+        impl<T> StackVisitor<T> for FlattenVisitor<T> {
+            fn on_stack_push(&mut self, _is_ins: bool, ins_stack: &[Frame], del_stack: &[Frame]) {
+                let ins_rev = ins_stack.last().map_or(0, |f| f.rev);
+                let del_rev = del_stack.last().map_or(self.max_del_rev, |f| f.rev);
+                self.current_revs = SmallRevs::from_range(ins_rev..del_rev);
+            }
+
+            fn on_stack_pop(&mut self, is_ins: bool, ins_stack: &[Frame], del_stack: &[Frame]) {
+                self.on_stack_push(is_ins, ins_stack, del_stack);
+            }
+
+            fn on_line(
+                &mut self,
+                data: &Arc<T>,
+                _rev: Rev,
+                _ins_stack: &[Frame],
+                _del_stack: &[Frame],
+            ) {
+                self.result.push(FlattenLine {
+                    data: data.clone(),
+                    revs: self.current_revs.clone(),
+                });
+            }
+        }
+
+        let max_del_rev = self.max_rev + 1;
+        let mut visitor = FlattenVisitor {
+            result: Vec::new(),
+            current_revs: SmallRevs::from_range(0..max_del_rev),
+            max_del_rev,
+        };
+        self.visit_with_ins_del_stacks(&mut visitor);
+        visitor.result
+    }
+
+    /// Visit (execute) instructions with the insertion and deletion stacks
+    /// converted from JGE and JL instructions maintained by this function.
+    ///
+    /// See the comment in this function about how to turn JGE and JL to
+    /// the stacks.
+    ///
+    /// For stacks like this:
+    ///
+    /// ```text
+    ///    +---- Insertion (rev 1)
+    ///    |     Line 1
+    ///    |                    ----+ Deletion (rev 4)
+    ///    |     Line 2             |
+    ///    | +-- Insertion (rev 2)  |
+    ///    | |   Line 3             |
+    ///    | |                  --+ | Deletion (rev 3)
+    ///    | |   Line 4           | |
+    ///    | +--                  | |
+    ///    |     Line 5           | |
+    ///    |                    --+ |
+    ///    |     Line 6             |
+    ///    |                    ----+
+    ///    |     Line 7
+    ///    +----
+    /// ```
+    ///
+    /// When visiting "Line 3", the callsite will get insertion stack =
+    /// [rev 1, rev 2] and deletion stack = [rev 4].
+    ///
+    /// Internally, this is done by turning conditional jumps (JGE or JL)
+    /// to stack pushes, pops at the JGE or JL destinations, and follow
+    /// unconditional jumps (J) as usual. For more details, see the comment
+    /// inside this function.
+    ///
+    /// This function will call `withContext` to provide the `ins_stack` and
+    /// `del_stack` context, and expect the callsite to provide handlers it
+    /// is interested in.
+    ///
+    /// Typical use-cases include features that need to scan all (ever existed)
+    /// lines like flatten() and calculate_dep_map().
+    pub(crate) fn visit_with_ins_del_stacks(&self, visitor: &mut impl StackVisitor<T>) {
+        // How does it work? First, insertions and deletions in linelog form
+        // tree structures. For example:
+        //
+        //    +---- Insertion (rev 1)
+        //    |     Line 1
+        //    |                    ----+ Deletion (rev 4)
+        //    |     Line 2             |
+        //    | +-- Insertion (rev 2)  |
+        //    | |   Line 3             |
+        //    | |                  --+ | Deletion (rev 3)
+        //    | |   Line 4           | |
+        //    | +--                  | |
+        //    |     Line 5           | |
+        //    |                    --+ |
+        //    |     Line 6             |
+        //    |                    ----+
+        //    |     Line 7
+        //    +----
+        //
+        // Note interleaved insertions do not happen. For example, this does not
+        // happen:
+        //
+        //    +---- Insertion (rev 1)
+        //    |     Line 1
+        //    | +-- Insertion (rev 2)
+        //    | |   Line 2
+        //    +-|--
+        //      |   Line 3
+        //      +--
+        //
+        // Similarly, interleaved deletions do not happen. However, insertions
+        // might interleave with deletions, as shown above.
+        //
+        // Let's look at how this is done at the instruction level. First, look at
+        // the instructions generated by editChunk:
+        //
+        //      a2Pc: ...
+        //            ...
+        //     start: JL brev b2Pc
+        //            ...
+        //      b2Pc: JGE brev a2Pc
+        //          : <a1 Inst>
+        //       end: J a1Pc+1
+        //
+        // JL is used for insertion, JGE is used for deletion. We then use them to
+        // manipulate the ins_stack and del_stack:
+        //
+        // ins_stack:
+        //
+        //    - On "start: JL brev b2Pc":
+        //      Do not follow the JL jump.
+        //      Push {rev, b2Pc} to ins_stack.
+        //    - When pc is b2Pc, pop ins_stack.
+        //
+        // del_stack:
+        //
+        //    - On "b2Pc: JGE brev a2Pc":
+        //      Do not follow the JGE jump.
+        //      Push {rev, a2Pc} to del_stack.
+        //    - When pc is a2Pc, pop del_stack.
+        //
+        // You might have noticed that we don't use the revs in LINE instructions
+        // at all. This is because that LINE rev always matches its JL rev in this
+        // implementation. In other words, the "rev" in LINE instruction is
+        // redundant as it can be inferred from JL, with an ins_stack. Note in the
+        // original C implementation of LineLog the LINE rev can be different from
+        // the JL rev, to deal with merges while maintaining a linear history.
+        let mut ins_stack = vec![Frame {
+            rev: 0,
+            end_pc: usize::MAX,
+        }];
+        let mut del_stack: Vec<Frame> = Vec::new();
+        let mut pc = 0;
+        let mut patience = self.code.len() * 2;
+
+        while patience > 0 {
+            if ins_stack.last().is_some_and(|f| f.end_pc == pc) {
+                ins_stack.pop();
+                visitor.on_stack_pop(true, &ins_stack, &del_stack);
+            }
+            if del_stack.last().is_some_and(|f| f.end_pc == pc) {
+                del_stack.pop();
+                visitor.on_stack_pop(false, &ins_stack, &del_stack);
+            }
+
+            match &self.code[pc] {
+                Inst::LINE(rev, data) => {
+                    visitor.on_line(data, *rev, &ins_stack, &del_stack);
+                    pc += 1;
+                }
+                Inst::END => break,
+                Inst::J(j_pc) => pc = *j_pc,
+                Inst::JGE(rev, j_pc) => {
+                    visitor.on_conditional_jump(*rev, &ins_stack, &del_stack);
+                    del_stack.push(Frame {
+                        rev: *rev,
+                        end_pc: *j_pc,
+                    });
+                    visitor.on_stack_push(false, &ins_stack, &del_stack);
+                    pc += 1;
+                }
+                Inst::JL(rev, j_pc) => {
+                    visitor.on_conditional_jump(*rev, &ins_stack, &del_stack);
+                    ins_stack.push(Frame {
+                        rev: *rev,
+                        end_pc: *j_pc,
+                    });
+                    visitor.on_stack_push(true, &ins_stack, &del_stack);
+                    pc += 1;
+                }
+            }
+            patience -= 1;
+        }
+        assert!(patience > 0, "bug: code does not terminate");
+    }
+}

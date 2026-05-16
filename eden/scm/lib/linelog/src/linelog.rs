@@ -15,8 +15,8 @@ use crate::maybe_mut::MaybeMut;
 
 /// See https://sapling-scm.com/docs/internals/linelog for details.
 pub struct AbstractLineLog<T> {
-    code: ImVec<Inst<T>>,
-    max_rev: Rev,
+    pub(crate) code: ImVec<Inst<T>>,
+    pub(crate) max_rev: Rev,
 
     a_lines_cache: Option<(Rev, ImVec<LineInfo<T>>)>,
 }
@@ -55,13 +55,13 @@ impl<T> Clone for LineInfo<T> {
     }
 }
 
-type Pc = usize;
-type Rev = usize;
+pub(crate) type Pc = usize;
+pub(crate) type Rev = usize;
 type LineIdx = usize;
 
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Debug)]
-enum Inst<T> {
+pub(crate) enum Inst<T> {
     J(Pc),
     END,
     JGE(Rev, Pc),
