@@ -11,6 +11,7 @@
 //! paths passed to [`NoFollowRoot`] methods are converted to [`CheckedRelPath`]
 //! before any filesystem operation.
 
+use std::ffi::OsStr;
 use std::io;
 use std::path::Component;
 use std::path::Path;
@@ -64,7 +65,10 @@ impl<'a> TryFrom<&'a Path> for CheckedRelPath<'a> {
         let has_normal_component =
             path.components()
                 .try_fold(false, |has_normal, component| match component {
-                    Component::Normal(_) => Ok(true),
+                    Component::Normal(component) => {
+                        reject_ntfs_ads_component(path, component)?;
+                        Ok(true)
+                    }
                     Component::CurDir => Ok(has_normal),
                     Component::ParentDir => Err(invalid_path(path, "path contains `..`")),
                     Component::RootDir | Component::Prefix(_) => {
@@ -93,6 +97,22 @@ fn invalid_path(path: &Path, message: &str) -> io::Error {
         io::ErrorKind::InvalidInput,
         format!("{message}: {:?}", path),
     )
+}
+
+fn reject_ntfs_ads_component(path: &Path, component: &OsStr) -> io::Result<()> {
+    #[cfg(windows)]
+    if component.as_encoded_bytes().contains(&b':') {
+        return Err(invalid_path(
+            path,
+            "path component contains NTFS alternate data stream separator `:`",
+        ));
+    }
+
+    #[cfg(not(windows))]
+    let _ = component;
+
+    let _ = path;
+    Ok(())
 }
 
 #[cfg(any(unix, windows))]

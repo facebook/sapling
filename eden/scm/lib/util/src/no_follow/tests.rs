@@ -38,6 +38,13 @@ fn checked_rel_path_rejects_escape_paths() {
     assert!(CheckedRelPath::try_from(Path::new("/tmp/evil")).is_err());
 }
 
+#[cfg(windows)]
+#[test]
+fn checked_rel_path_rejects_ntfs_ads_paths() {
+    assert!(CheckedRelPath::try_from(Path::new("file:Zone.Identifier")).is_err());
+    assert!(CheckedRelPath::try_from(Path::new("dir:stream:$DATA")).is_err());
+}
+
 #[test]
 fn operations_reject_escape_paths() -> io::Result<()> {
     let dir = tempdir()?;
