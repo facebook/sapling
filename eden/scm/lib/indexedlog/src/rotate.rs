@@ -2158,6 +2158,8 @@ Reset latest to 2"#
         assert_eq!(count, THREAD_COUNT as u64 * WRITE_COUNT_PER_THREAD as u64);
     }
 
+    // see lib.rs - dummy_btrfs won't run this test
+    #[cfg(all(target_os = "linux", feature = "btrfs"))]
     #[test]
     fn test_btrfs_rotate() {
         let dir = tempdir().unwrap();
