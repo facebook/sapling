@@ -17,7 +17,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "add",
     srcs = ["add_test.py"],
     env = artifacts["env"],
