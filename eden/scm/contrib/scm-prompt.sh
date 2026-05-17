@@ -142,7 +142,7 @@ _hg_prompt() {
         if [[ -n "$remotemark" ]]; then
           br="$br|$remotemark"
           if [[ "$remotemark" != "$allremotemarks" ]]; then
-            # if there is more than one, let the user know with an elipsis
+            # if there is more than one, let the user know with an ellipsis
             br="${br}..."
           fi
         fi
