@@ -1469,13 +1469,13 @@ def setup_environment_variables(stderr: BinaryIO, fs: ShellFS, env: Env) -> int:
     if db_shard_name:
         env.setenv("MONONOKE_DEFAULT_START_TIMEOUT", "600")
         env.setenv("MONONOKE_LFS_DEFAULT_START_TIMEOUT", "60")
-        env.setenv("MONONOKE_GIT_SERVICE_DEFAULT_START_TIMEOUT", "60")
+        env.setenv("MONONOKE_GIT_SERVICE_DEFAULT_START_TIMEOUT", "120")
         env.setenv("MONONOKE_SCS_DEFAULT_START_TIMEOUT", "300")
         env.setenv("MONONOKE_LAND_SERVICE_DEFAULT_START_TIMEOUT", "120")
     else:
         env.setenv("MONONOKE_DEFAULT_START_TIMEOUT", "60")
         env.setenv("MONONOKE_LFS_DEFAULT_START_TIMEOUT", "60")
-        env.setenv("MONONOKE_GIT_SERVICE_DEFAULT_START_TIMEOUT", "60")
+        env.setenv("MONONOKE_GIT_SERVICE_DEFAULT_START_TIMEOUT", "120")
         env.setenv("MONONOKE_SCS_DEFAULT_START_TIMEOUT", "300")
         env.setenv("MONONOKE_LAND_SERVICE_DEFAULT_START_TIMEOUT", "120")
         env.setenv("MONONOKE_DDS_DEFAULT_START_TIMEOUT", "120")
