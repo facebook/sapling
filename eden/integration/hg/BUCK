@@ -385,7 +385,7 @@ python_integration_test(
     }),
 )
 
-python_unittest(
+python_integration_test(
     name = "symlink",
     srcs = ["symlink_test.py"],
     env = artifacts["env"],
