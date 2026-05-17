@@ -112,10 +112,7 @@ impl DerivedDataManager {
             repo_blobstore.boxed(),
             filestore_config,
             restricted_paths,
-            repo_config
-                .derived_data_config
-                .derivation_pipeline_config
-                .clone(),
+            repo_config.derived_data_config.pipeline_config.clone(),
             commit_derived_data_mapping,
         );
         DerivedDataManager {

@@ -14,7 +14,6 @@ use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::collections::VecDeque;
 use std::fmt;
 use std::num::NonZeroU64;
 use std::num::NonZeroUsize;
@@ -392,8 +391,8 @@ pub struct DerivedDataConfig {
     /// Extra derived data types that are available for read but not necessarily enabled for derivation.
     pub extra_types_available_for_read: HashSet<DerivableType>,
 
-    /// Derivation pipeline configuration per derived data type.
-    pub derivation_pipeline_config: HashMap<DerivableType, DerivationPipelineTypeConfig>,
+    /// Repo-level pipeline configuration.
+    pub pipeline_config: Option<DerivationPipelineConfig>,
 }
 
 impl DerivedDataConfig {
@@ -480,19 +479,41 @@ pub struct DerivationPipelineStageConfig {
     pub type_config: DerivationPipelineStageTypeConfig,
 }
 
-/// Derivation pipeline configuration for one derived data type.
+/// Repo-level pipeline configuration.
 #[derive(Eq, Clone, Debug, PartialEq)]
-pub struct DerivationPipelineTypeConfig {
-    /// Bookmarks to use derivation pipeline for.
+pub struct DerivationPipelineConfig {
+    /// Types managed by this pipeline.
+    pub types: BTreeSet<DerivableType>,
+    /// Bookmarks to tail.
     pub bookmarks: Vec<BookmarkKey>,
-    /// Stage DAG: stage_id -> config.
+    /// Stage DAG.
     pub stages: HashMap<String, DerivationPipelineStageConfig>,
+    /// Batch size.
+    pub batch_size: NonZeroU64,
 }
 
-impl DerivationPipelineTypeConfig {
-    /// Validate the derivation pipeline configuration.
+impl DerivationPipelineConfig {
+    /// Validate the pipeline configuration.
+    ///
+    /// Cycle-freedom is implied: the strict-prefix dep-path rule is
+    /// irreflexive and transitive, so no cycle can pass it.
     pub fn validate(&self) -> Result<()> {
-        // Exactly one terminal stage
+        if self.types.is_empty() {
+            bail!("Derivation pipeline config must have at least one derivable type");
+        }
+
+        for (stage_id, config) in &self.stages {
+            for dep in &config.dependencies {
+                if !self.stages.contains_key(dep) {
+                    bail!(
+                        "Stage '{}' depends on '{}', which does not exist",
+                        stage_id,
+                        dep,
+                    );
+                }
+            }
+        }
+
         let (terminal_stage_id, terminal_stage) = self
             .stages
             .iter()
@@ -506,7 +527,6 @@ impl DerivationPipelineTypeConfig {
                 )
             })?;
 
-        // Terminal stage must have root path
         match &terminal_stage.type_config {
             DerivationPipelineStageTypeConfig::Manifest(manifest_config) => {
                 if !manifest_config.path.is_root() {
@@ -519,53 +539,41 @@ impl DerivationPipelineTypeConfig {
             }
         }
 
-        // All dependency references resolve to existing stage IDs
-        for (stage_id, config) in &self.stages {
-            for dep in &config.dependencies {
-                if !self.stages.contains_key(dep) {
+        for (stage_id, stage) in &self.stages {
+            let DerivationPipelineStageTypeConfig::Manifest(stage_manifest) = &stage.type_config;
+            let stage_path = &stage_manifest.path;
+
+            for dep_id in &stage.dependencies {
+                let dep = &self.stages[dep_id];
+                let DerivationPipelineStageTypeConfig::Manifest(dep_manifest) = &dep.type_config;
+                let dep_path = &dep_manifest.path;
+
+                if dep_path == stage_path || !stage_path.is_prefix_of(dep_path) {
                     bail!(
-                        "Stage '{}' depends on '{}', which does not exist",
+                        "Stage '{}' (path {:?}) depends on '{}' (path {:?}), but the stage path must be a strict prefix of the dep path",
                         stage_id,
-                        dep,
+                        stage_path,
+                        dep_id,
+                        dep_path,
                     );
                 }
             }
         }
 
-        // No cycles - Kahn's algorithm starting from terminal stage
-        {
-            // in_degree[stage] = number of stages that list this stage as a dependency
-            let mut in_degree: HashMap<&String, usize> =
-                self.stages.keys().map(|id| (id, 0)).collect();
-            for config in self.stages.values() {
-                for dep in &config.dependencies {
-                    if let Some(count) = in_degree.get_mut(dep) {
-                        *count += 1;
-                    }
+        let mut in_degree: HashMap<&String, usize> = self.stages.keys().map(|id| (id, 0)).collect();
+        for config in self.stages.values() {
+            for dep in &config.dependencies {
+                if let Some(count) = in_degree.get_mut(dep) {
+                    *count += 1;
                 }
             }
-
-            let mut queue: VecDeque<&String> = VecDeque::new();
-            // Only seed with the terminal stage (the single stage nothing depends on)
-            queue.push_back(terminal_stage_id);
-
-            let mut visited = 0;
-            while let Some(stage_id) = queue.pop_front() {
-                visited += 1;
-                if let Some(config) = self.stages.get(stage_id) {
-                    for dep in &config.dependencies {
-                        if let Some(count) = in_degree.get_mut(dep) {
-                            *count -= 1;
-                            if *count == 0 {
-                                queue.push_back(dep);
-                            }
-                        }
-                    }
-                }
-            }
-
-            if visited != self.stages.len() {
-                bail!("Cycle detected in stage DAG");
+        }
+        for (stage_id, &count) in &in_degree {
+            if count == 0 && stage_id.as_str() != terminal_stage_id.as_str() {
+                bail!(
+                    "Stage '{}' is orphan: not depended on by any other stage",
+                    stage_id,
+                );
             }
         }
 
@@ -2641,8 +2649,7 @@ mod tests {
     }
 
     #[mononoke::test]
-    fn test_valid_dag_validates_successfully() {
-        // Terminal depends on children: terminal -> child_a, terminal -> child_b
+    fn test_pipeline_config_valid_dag_validates_successfully() {
         let stages = HashMap::from([
             (
                 "terminal".to_string(),
@@ -2652,9 +2659,11 @@ mod tests {
             ("child_b".to_string(), child_manifest_stage("b", vec![])),
         ]);
 
-        let config = DerivationPipelineTypeConfig {
+        let config = DerivationPipelineConfig {
+            types: BTreeSet::from([DerivableType::Fsnodes]),
             bookmarks: vec![BookmarkKey::new("main").unwrap()],
             stages,
+            batch_size: NonZeroU64::new(100).unwrap(),
         };
         config
             .validate()
@@ -2662,55 +2671,115 @@ mod tests {
     }
 
     #[mononoke::test]
-    fn test_empty_bookmarks_succeeds() {
-        let stages = HashMap::from([("terminal".to_string(), terminal_manifest_stage(vec![]))]);
-
-        let config = DerivationPipelineTypeConfig {
+    fn test_pipeline_config_rejects_empty_types() {
+        let config = DerivationPipelineConfig {
+            types: BTreeSet::new(),
             bookmarks: vec![],
-            stages,
+            stages: HashMap::from([("root".to_string(), terminal_manifest_stage(vec![]))]),
+            batch_size: NonZeroU64::new(100).unwrap(),
         };
-        config
-            .validate()
-            .expect("empty bookmarks should be allowed");
+        let err = config.validate().unwrap_err().to_string();
+        assert!(err.contains("at least one derivable type"), "got: {err}");
     }
 
     #[mononoke::test]
-    fn test_zero_terminal_stages_fails() {
-        let stages = HashMap::from([("a".to_string(), child_manifest_stage("a", vec![]))]);
-
-        let config = DerivationPipelineTypeConfig {
+    fn test_pipeline_config_rejects_non_prefix_dep_path() {
+        let stages = HashMap::from([
+            (
+                "child".to_string(),
+                child_manifest_stage("scripts/bar", vec![]),
+            ),
+            (
+                "middle".to_string(),
+                DerivationPipelineStageConfig {
+                    dependencies: vec!["child".to_string()],
+                    terminal: false,
+                    type_config: DerivationPipelineStageTypeConfig::Manifest(
+                        ManifestDerivationPipelineConfig {
+                            path: MPath::new(b"fbcode/foo").unwrap(),
+                        },
+                    ),
+                },
+            ),
+            ("root".to_string(), terminal_manifest_stage(vec!["middle"])),
+        ]);
+        let config = DerivationPipelineConfig {
+            types: BTreeSet::from([DerivableType::Fsnodes]),
             bookmarks: vec![],
             stages,
+            batch_size: NonZeroU64::new(100).unwrap(),
         };
-        let err = config.validate().unwrap_err();
-        assert!(
-            format!("{}", err).contains("exactly one terminal stage"),
-            "Expected 'exactly one terminal stage' error, got: {}",
-            err
-        );
+        let err = config.validate().unwrap_err().to_string();
+        assert!(err.contains("strict prefix"), "got: {err}");
     }
 
     #[mononoke::test]
-    fn test_two_terminal_stages_fails() {
+    fn test_pipeline_config_rejects_missing_dependency() {
+        let stages = HashMap::from([(
+            "terminal".to_string(),
+            terminal_manifest_stage(vec!["nonexistent"]),
+        )]);
+
+        let config = DerivationPipelineConfig {
+            types: BTreeSet::from([DerivableType::Fsnodes]),
+            bookmarks: vec![],
+            stages,
+            batch_size: NonZeroU64::new(100).unwrap(),
+        };
+        let err = config.validate().unwrap_err().to_string();
+        assert!(err.contains("does not exist"), "got: {err}");
+    }
+
+    #[mononoke::test]
+    fn test_pipeline_config_rejects_two_terminal_stages() {
         let stages = HashMap::from([
             ("terminal1".to_string(), terminal_manifest_stage(vec![])),
             ("terminal2".to_string(), terminal_manifest_stage(vec![])),
         ]);
 
-        let config = DerivationPipelineTypeConfig {
+        let config = DerivationPipelineConfig {
+            types: BTreeSet::from([DerivableType::Fsnodes]),
             bookmarks: vec![],
             stages,
+            batch_size: NonZeroU64::new(100).unwrap(),
         };
-        let err = config.validate().unwrap_err();
-        assert!(
-            format!("{}", err).contains("exactly one terminal stage"),
-            "Expected 'exactly one terminal stage' error, got: {}",
-            err
-        );
+        let err = config.validate().unwrap_err().to_string();
+        assert!(err.contains("exactly one terminal stage"), "got: {err}",);
     }
 
     #[mononoke::test]
-    fn test_terminal_with_non_empty_path_fails() {
+    fn test_pipeline_config_rejects_zero_terminal_stages() {
+        let stages = HashMap::from([("a".to_string(), child_manifest_stage("a", vec![]))]);
+
+        let config = DerivationPipelineConfig {
+            types: BTreeSet::from([DerivableType::Fsnodes]),
+            bookmarks: vec![],
+            stages,
+            batch_size: NonZeroU64::new(100).unwrap(),
+        };
+        let err = config.validate().unwrap_err().to_string();
+        assert!(err.contains("exactly one terminal stage"), "got: {err}",);
+    }
+
+    #[mononoke::test]
+    fn test_pipeline_config_rejects_orphan_stage() {
+        let stages = HashMap::from([
+            ("terminal".to_string(), terminal_manifest_stage(vec![])),
+            ("orphan".to_string(), child_manifest_stage("orphan", vec![])),
+        ]);
+
+        let config = DerivationPipelineConfig {
+            types: BTreeSet::from([DerivableType::Fsnodes]),
+            bookmarks: vec![],
+            stages,
+            batch_size: NonZeroU64::new(100).unwrap(),
+        };
+        let err = config.validate().unwrap_err().to_string();
+        assert!(err.contains("orphan"), "got: {err}");
+    }
+
+    #[mononoke::test]
+    fn test_pipeline_config_rejects_terminal_with_non_root_path() {
         let stages = HashMap::from([(
             "terminal".to_string(),
             DerivationPipelineStageConfig {
@@ -2724,56 +2793,14 @@ mod tests {
             },
         )]);
 
-        let config = DerivationPipelineTypeConfig {
+        let config = DerivationPipelineConfig {
+            types: BTreeSet::from([DerivableType::Fsnodes]),
             bookmarks: vec![],
             stages,
+            batch_size: NonZeroU64::new(100).unwrap(),
         };
-        let err = config.validate().unwrap_err();
-        assert!(
-            format!("{}", err).contains("must have empty path"),
-            "Expected 'must have empty path' error, got: {}",
-            err
-        );
-    }
-
-    #[mononoke::test]
-    fn test_missing_dependency_reference_fails() {
-        let stages = HashMap::from([(
-            "terminal".to_string(),
-            terminal_manifest_stage(vec!["nonexistent"]),
-        )]);
-
-        let config = DerivationPipelineTypeConfig {
-            bookmarks: vec![],
-            stages,
-        };
-        let err = config.validate().unwrap_err();
-        assert!(
-            format!("{}", err).contains("does not exist"),
-            "Expected 'does not exist' error, got: {}",
-            err
-        );
-    }
-
-    #[mononoke::test]
-    fn test_cycle_in_dag_fails() {
-        // terminal -> a -> b -> a (cycle between a and b)
-        let stages = HashMap::from([
-            ("terminal".to_string(), terminal_manifest_stage(vec!["a"])),
-            ("a".to_string(), child_manifest_stage("a", vec!["b"])),
-            ("b".to_string(), child_manifest_stage("b", vec!["a"])),
-        ]);
-
-        let config = DerivationPipelineTypeConfig {
-            bookmarks: vec![],
-            stages,
-        };
-        let err = config.validate().unwrap_err();
-        assert!(
-            format!("{}", err).contains("Cycle detected"),
-            "Expected 'Cycle detected' error, got: {}",
-            err
-        );
+        let err = config.validate().unwrap_err().to_string();
+        assert!(err.contains("must have empty path"), "got: {err}");
     }
 
     #[mononoke::test]

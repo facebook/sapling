@@ -52,8 +52,8 @@ impl PipelineDerivable for RootUnodeManifestId {
         dependency_outputs: HashMap<ChangesetId, HashMap<String, Self::StageOutput>>,
     ) -> Result<HashMap<ChangesetId, Self::StageOutput>> {
         let pipeline_config = derivation
-            .derivation_pipeline_config()
-            .get(&DerivableType::Unodes)
+            .pipeline_config()
+            .filter(|cfg| cfg.types.contains(&DerivableType::Unodes))
             .ok_or_else(|| anyhow!("no derivation pipeline config for unodes"))?;
 
         let stage_path = match &stage.type_config {
@@ -156,8 +156,8 @@ impl PipelineDerivable for RootUnodeManifestId {
             None,
             Some("unodes"),
         )? && derivation
-            .derivation_pipeline_config()
-            .get(&DerivableType::Unodes)
+            .pipeline_config()
+            .filter(|cfg| cfg.types.contains(&DerivableType::Unodes))
             .and_then(|cfg| cfg.stages.get(stage_id))
             .is_some_and(|stage| stage.terminal);
 
@@ -217,8 +217,8 @@ impl PipelineDerivable for RootUnodeManifestId {
             None,
             Some("unodes"),
         )? && derivation
-            .derivation_pipeline_config()
-            .get(&DerivableType::Unodes)
+            .pipeline_config()
+            .filter(|cfg| cfg.types.contains(&DerivableType::Unodes))
             .and_then(|cfg| cfg.stages.get(stage_id))
             .is_some_and(|stage| stage.terminal);
 

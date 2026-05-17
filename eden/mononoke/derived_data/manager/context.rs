@@ -20,7 +20,7 @@ use context::CoreContext;
 use filenodes::Filenodes;
 use filestore::FilestoreConfig;
 use futures::future::try_join_all;
-use metaconfig_types::DerivationPipelineTypeConfig;
+use metaconfig_types::DerivationPipelineConfig;
 use metaconfig_types::DerivedDataTypesConfig;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
@@ -57,7 +57,7 @@ pub struct DerivationContext {
         Arc<MemWritesKeyedBlobstore<Arc<dyn KeyedBlobstore>>>,
     )>,
     restricted_paths: ArcRestrictedPathsConfigBased,
-    derivation_pipeline_config: HashMap<DerivableType, DerivationPipelineTypeConfig>,
+    pipeline_config: Option<DerivationPipelineConfig>,
     commit_derived_data_mapping: Option<Arc<CommitDerivedDataMapping>>,
 }
 
@@ -73,7 +73,7 @@ impl DerivationContext {
         blobstore: Arc<dyn KeyedBlobstore>,
         filestore_config: FilestoreConfig,
         restricted_paths: ArcRestrictedPathsConfigBased,
-        derivation_pipeline_config: HashMap<DerivableType, DerivationPipelineTypeConfig>,
+        pipeline_config: Option<DerivationPipelineConfig>,
         commit_derived_data_mapping: Arc<CommitDerivedDataMapping>,
     ) -> Self {
         // Start with None. Use with_rederivation later if needed
@@ -91,7 +91,7 @@ impl DerivationContext {
             filestore_config,
             blobstore_write_cache: None,
             restricted_paths,
-            derivation_pipeline_config,
+            pipeline_config,
             commit_derived_data_mapping: Some(commit_derived_data_mapping),
         }
     }
@@ -377,11 +377,9 @@ impl DerivationContext {
         &self.config
     }
 
-    /// Derivation pipeline configuration per derived data type.
-    pub fn derivation_pipeline_config(
-        &self,
-    ) -> &HashMap<DerivableType, DerivationPipelineTypeConfig> {
-        &self.derivation_pipeline_config
+    /// Repo-level pipeline configuration.
+    pub fn pipeline_config(&self) -> Option<&DerivationPipelineConfig> {
+        self.pipeline_config.as_ref()
     }
 
     /// Mapping key prefix for a particular derived data type.

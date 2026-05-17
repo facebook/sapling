@@ -5,8 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::num::NonZeroU64;
 use std::str::FromStr;
 
 use anyhow::Context;
@@ -30,9 +32,9 @@ use metaconfig_types::CommitRateLimitRuleConfig;
 use metaconfig_types::CommitRateLimitWindow;
 use metaconfig_types::ComparableRegex;
 use metaconfig_types::CrossRepoCommitValidation;
+use metaconfig_types::DerivationPipelineConfig;
 use metaconfig_types::DerivationPipelineStageConfig;
 use metaconfig_types::DerivationPipelineStageTypeConfig;
-use metaconfig_types::DerivationPipelineTypeConfig;
 use metaconfig_types::DerivedDataConfig;
 use metaconfig_types::DerivedDataTypesConfig;
 use metaconfig_types::DirectoryBranchClusterConfig;
@@ -102,9 +104,9 @@ use repos::RawCommitGraphConfig;
 use repos::RawCommitIdentityScheme;
 use repos::RawCommitRateLimitConfig;
 use repos::RawCrossRepoCommitValidationConfig;
+use repos::RawDerivationPipelineConfig;
 use repos::RawDerivationPipelineStageConfig;
 use repos::RawDerivationPipelineStageTypeConfig;
-use repos::RawDerivationPipelineTypeConfig;
 use repos::RawDerivedDataBlockedChangesetDerivation;
 use repos::RawDerivedDataBlockedDerivation;
 use repos::RawDerivedDataConfig;
@@ -696,15 +698,7 @@ impl Convert for RawDerivedDataConfig {
                 .into_iter()
                 .map(|s| DerivableType::from_name(&s))
                 .collect::<Result<_, _>>()?,
-            derivation_pipeline_config: self
-                .derivation_pipeline
-                .unwrap_or_default()
-                .into_iter()
-                .map(|(type_name, raw_config)| {
-                    let derivable_type = DerivableType::from_name(&type_name)?;
-                    Ok((derivable_type, raw_config.convert()?))
-                })
-                .collect::<Result<_, anyhow::Error>>()?,
+            pipeline_config: self.pipeline_config.map(|raw| raw.convert()).transpose()?,
         })
     }
 }
@@ -892,10 +886,15 @@ impl Convert for RawDerivationPipelineStageConfig {
     }
 }
 
-impl Convert for RawDerivationPipelineTypeConfig {
-    type Output = DerivationPipelineTypeConfig;
+impl Convert for RawDerivationPipelineConfig {
+    type Output = DerivationPipelineConfig;
 
     fn convert(self) -> Result<Self::Output> {
+        let types = self
+            .types
+            .into_iter()
+            .map(|name| DerivableType::from_name(&name))
+            .collect::<Result<BTreeSet<_>, _>>()?;
         let bookmarks = self
             .bookmarks
             .into_iter()
@@ -906,7 +905,21 @@ impl Convert for RawDerivationPipelineTypeConfig {
             .into_iter()
             .map(|(id, raw_config)| Ok((id, raw_config.convert()?)))
             .collect::<Result<HashMap<_, _>>>()?;
-        let config = DerivationPipelineTypeConfig { bookmarks, stages };
+        let batch_size = u64::try_from(self.batch_size)
+            .ok()
+            .and_then(NonZeroU64::new)
+            .ok_or_else(|| {
+                anyhow!(
+                    "pipeline_config.batch_size must be a positive integer, got {}",
+                    self.batch_size,
+                )
+            })?;
+        let config = DerivationPipelineConfig {
+            types,
+            bookmarks,
+            stages,
+            batch_size,
+        };
         config
             .validate()
             .context("Invalid derivation pipeline config")?;
@@ -1457,9 +1470,41 @@ impl Convert for RawRestrictedPathsConfig {
 #[cfg(test)]
 mod tests {
     use mononoke_macros::mononoke;
+    use repos::RawDerivationPipelineConfig;
     use repos::RawEnforcementConditionSet;
 
     use super::*;
+
+    fn raw_pipeline_config_with_batch_size(batch_size: i64) -> RawDerivationPipelineConfig {
+        RawDerivationPipelineConfig {
+            types: Default::default(),
+            bookmarks: Default::default(),
+            stages: Default::default(),
+            batch_size,
+        }
+    }
+
+    #[mononoke::test]
+    fn test_parse_pipeline_config_rejects_zero_batch_size() {
+        let raw = raw_pipeline_config_with_batch_size(0);
+        let err = raw.convert().unwrap_err();
+        let msg = format!("{:#}", err);
+        assert!(
+            msg.contains("batch_size must be a positive integer") && msg.contains("got 0"),
+            "expected positive-batch-size error, got: {msg}",
+        );
+    }
+
+    #[mononoke::test]
+    fn test_parse_pipeline_config_rejects_negative_batch_size() {
+        let raw = raw_pipeline_config_with_batch_size(-5);
+        let err = raw.convert().unwrap_err();
+        let msg = format!("{:#}", err);
+        assert!(
+            msg.contains("batch_size must be a positive integer") && msg.contains("got -5"),
+            "expected positive-batch-size error, got: {msg}",
+        );
+    }
 
     fn empty_raw_restricted_paths_config() -> RawRestrictedPathsConfig {
         RawRestrictedPathsConfig {

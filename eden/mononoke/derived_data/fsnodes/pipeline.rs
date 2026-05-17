@@ -52,8 +52,8 @@ impl PipelineDerivable for RootFsnodeId {
         dependency_outputs: HashMap<ChangesetId, HashMap<String, Self::StageOutput>>,
     ) -> Result<HashMap<ChangesetId, Self::StageOutput>> {
         let pipeline_config = derivation
-            .derivation_pipeline_config()
-            .get(&DerivableType::Fsnodes)
+            .pipeline_config()
+            .filter(|cfg| cfg.types.contains(&DerivableType::Fsnodes))
             .ok_or_else(|| anyhow!("no derivation pipeline config for fsnodes"))?;
 
         let stage_path = match &stage.type_config {
@@ -147,8 +147,8 @@ impl PipelineDerivable for RootFsnodeId {
             None,
             Some("fsnodes"),
         )? && derivation
-            .derivation_pipeline_config()
-            .get(&DerivableType::Fsnodes)
+            .pipeline_config()
+            .filter(|cfg| cfg.types.contains(&DerivableType::Fsnodes))
             .and_then(|cfg| cfg.stages.get(stage_id))
             .is_some_and(|stage| stage.terminal);
 
@@ -206,8 +206,8 @@ impl PipelineDerivable for RootFsnodeId {
             None,
             Some("fsnodes"),
         )? && derivation
-            .derivation_pipeline_config()
-            .get(&DerivableType::Fsnodes)
+            .pipeline_config()
+            .filter(|cfg| cfg.types.contains(&DerivableType::Fsnodes))
             .and_then(|cfg| cfg.stages.get(stage_id))
             .is_some_and(|stage| stage.terminal);
 

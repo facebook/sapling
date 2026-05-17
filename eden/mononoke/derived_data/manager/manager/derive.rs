@@ -992,9 +992,9 @@ impl DerivedDataManager {
             derivation_ctx.enable_write_batching();
 
             let stage_config = derivation_ctx
-                .derivation_pipeline_config()
-                .get(&Derivable::VARIANT)
-                .and_then(|type_config| type_config.stages.get(stage_id))
+                .pipeline_config()
+                .filter(|cfg| cfg.types.contains(&Derivable::VARIANT))
+                .and_then(|cfg| cfg.stages.get(stage_id))
                 .ok_or_else(|| {
                     DerivationError::from(anyhow!(
                         "derivation pipeline config not found for type {} stage {}",
@@ -1208,9 +1208,9 @@ impl DerivedDataManager {
         let derivation_ctx = self.derivation_context(None);
 
         let stage_config = derivation_ctx
-            .derivation_pipeline_config()
-            .get(&Derivable::VARIANT)
-            .and_then(|type_config| type_config.stages.get(stage_id))
+            .pipeline_config()
+            .filter(|cfg| cfg.types.contains(&Derivable::VARIANT))
+            .and_then(|cfg| cfg.stages.get(stage_id))
             .ok_or_else(|| {
                 DerivationError::from(anyhow!(
                     "derivation pipeline config not found for type {} stage {}",

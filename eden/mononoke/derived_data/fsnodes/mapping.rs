@@ -204,8 +204,8 @@ pub async fn get_fsnode_subtree_changes(
                     None => {
                         // Fallback for pipeline-derived commits: fetch from terminal stage output.
                         let pipeline_config = derivation_ctx
-                            .derivation_pipeline_config()
-                            .get(&DerivableType::Fsnodes)
+                            .pipeline_config()
+                            .filter(|cfg| cfg.types.contains(&DerivableType::Fsnodes))
                             .ok_or_else(|| {
                                 anyhow::anyhow!(
                                     "No RootFsnodeId mapping and no pipeline config for {}",
