@@ -1568,6 +1568,9 @@ impl BookmarksCoordinator {
 
             let _ = select(infinite_loop, terminate).await;
 
+            // Reset the gauge so fb303/ODS stop reporting the last value indefinitely after shutdown.
+            STATS::max_staleness_secs.set_value(ctx.fb, 0, (repo_name.clone(),));
+
             tracing::info!("Stopped warm bookmark cache updater");
         }
         .instrument(span);
