@@ -30,6 +30,10 @@ pub trait IOObject: Send + Sync {
         None
     }
 
+    fn as_seek(&mut self) -> Option<&mut (dyn std_io::Seek + Send)> {
+        None
+    }
+
     fn close(&mut self) -> std_io::Result<()> {
         Ok(())
     }
@@ -139,6 +143,43 @@ py_class!(pub class PyRustIO |py| {
         metadata::create_instance(py, meta)
     }
 
+    def seek(&self, offset: i64, whence: i8 = 0) -> PyResult<u64> {
+        self.check_open(py)?;
+        let inner = self.inner(py);
+        let mut io = lock_write(py, inner)?;
+        let seek = match io.as_mut().and_then(|io| io.as_seek()) {
+            Some(seek) => seek,
+            None => {
+                return Err(unsupported_operation(py, "underlying stream is not seekable")?);
+            }
+        };
+        let pos = match whence {
+            0 => std_io::SeekFrom::Start(offset.try_into().map_pyerr(py)?),
+            1 => std_io::SeekFrom::Current(offset),
+            2 => std_io::SeekFrom::End(offset),
+            _ => {
+                return Err(PyErr::new::<exc::ValueError, _>(
+                    py,
+                    format!("invalid whence: {}", whence),
+                ));
+            }
+        };
+        py.allow_threads(|| std_io::Seek::seek(seek, pos)).map_pyerr(py)
+    }
+
+    def tell(&self) -> PyResult<u64> {
+        self.check_open(py)?;
+        let inner = self.inner(py);
+        let mut io = lock_write(py, inner)?;
+        let seek = match io.as_mut().and_then(|io| io.as_seek()) {
+            Some(seek) => seek,
+            None => {
+                return Err(unsupported_operation(py, "underlying stream is not seekable")?);
+            }
+        };
+        py.allow_threads(|| std_io::Seek::stream_position(seek)).map_pyerr(py)
+    }
+
     def isatty(&self) -> PyResult<bool> {
         let inner = self.inner(py);
         let mut io = lock_write(py, inner)?;
@@ -215,7 +256,9 @@ py_class!(pub class PyRustIO |py| {
     }
 
     def seekable(&self) -> PyResult<bool> {
-        Ok(false)
+        let inner = self.inner(py);
+        let mut io = lock_write(py, inner)?;
+        Ok(io.as_mut().and_then(|io| io.as_seek()).is_some())
     }
 
     def writable(&self) -> PyResult<bool> {
@@ -453,6 +496,10 @@ where
         Some(self.inner.get_mut().file())
     }
 
+    fn as_seek(&mut self) -> Option<&mut (dyn std_io::Seek + Send)> {
+        Some(&mut self.inner)
+    }
+
     fn close(&mut self) -> std_io::Result<()> {
         self.inner.get_mut().close()
     }
@@ -688,6 +735,28 @@ mod tests {
         let rest = io.read(py, -1).expect("failed to read rest");
         assert_eq!(rest.data(py), b"def");
         io.close(py).expect("failed to close file");
+    }
+
+    #[test]
+    fn file_like_seek_uses_buffered_logical_position() {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+        let file = tempfile_with_content(b"abc\ndef");
+        let io =
+            wrap_file_like(py, file, file_as_file, close_file).expect("failed to create PyRustIO");
+
+        let first = io.read(py, 1).expect("failed to read first byte");
+        assert_eq!(first.data(py), b"a");
+        assert_eq!(io.tell(py).expect("failed to tell position"), 1);
+        assert_eq!(
+            io.seek(py, 0, 1)
+                .expect("failed to seek to current position"),
+            1
+        );
+
+        assert_eq!(io.seek(py, 2, 0).expect("failed to seek"), 2);
+        let line = io.readline(py).expect("failed to read line");
+        assert_eq!(line.data(py), b"c\n");
     }
 
     #[test]
