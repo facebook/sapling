@@ -105,6 +105,7 @@ class CommandDispatcher<CommandName extends string> extends (
         if (key === event.keyCode && collapseModifiersToNumber(mods) === modValue) {
           this.dispatchEvent(new Event(command));
           event.preventDefault();
+          event.stopPropagation();
           break;
         }
       }
