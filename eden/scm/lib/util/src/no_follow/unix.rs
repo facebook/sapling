@@ -252,8 +252,8 @@ impl NoFollowRoot {
 
     /// Remove a file or symlink at `path`.
     ///
-    /// `path` must be relative and must not contain `..`. Missing leaves are
-    /// treated as success. Directories are not removed by this method; use
+    /// `path` must be relative and must not contain `..`. Directories are not
+    /// removed by this method; use
     /// [`NoFollowRoot::remove_dir`] for empty directories.
     pub fn remove_file<'a, P>(&self, path: P) -> io::Result<()>
     where
@@ -267,8 +267,7 @@ impl NoFollowRoot {
 
     /// Remove an empty directory at `path`.
     ///
-    /// `path` must be relative and must not contain `..`. Missing leaves are
-    /// treated as success.
+    /// `path` must be relative and must not contain `..`.
     pub fn remove_dir<'a, P>(&self, path: P) -> io::Result<()>
     where
         P: TryInto<CheckedRelPath<'a>>,
@@ -281,8 +280,8 @@ impl NoFollowRoot {
 
     /// Remove a directory tree at `path`.
     ///
-    /// `path` must be relative and must not contain `..`. Missing leaves are
-    /// treated as success. The target leaf must be a real directory; a symlink
+    /// `path` must be relative and must not contain `..`. The target leaf must
+    /// be a real directory; a symlink
     /// leaf is rejected instead of being removed. Symlinks inside the tree are
     /// removed as links and are not followed.
     pub fn remove_dir_all<'a, P>(&self, path: P) -> io::Result<()>
@@ -326,11 +325,7 @@ impl NoFollowRoot {
     ) -> io::Result<()> {
         retry_io(|| {
             let (parent, leaf) = self.open_parent_dir(path.as_path())?;
-            match unlinkat(parent.as_fd(), &leaf, flags) {
-                Ok(()) => Ok(()),
-                Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(()),
-                Err(err) => Err(err),
-            }
+            unlinkat(parent.as_fd(), &leaf, flags)
         })
         .map_err(|err| path_error::build(err, kind, path.as_path()))
     }
@@ -580,11 +575,7 @@ fn write_symlink(dir: BorrowedFd<'_>, leaf: &CString, target: &CString) -> io::R
 }
 
 fn remove_dir_all(dir: BorrowedFd<'_>, leaf: CString) -> io::Result<()> {
-    let child = match retry_io(|| open_dir_no_follow_cstring(dir, &leaf)) {
-        Ok(child) => child,
-        Err(err) if err.kind() == io::ErrorKind::NotFound => return Ok(()),
-        Err(err) => return Err(err),
-    };
+    let child = retry_io(|| open_dir_no_follow_cstring(dir, &leaf))?;
     let mut stack = vec![PendingDirRemove {
         parent: dir.try_clone_to_owned()?,
         name: leaf,

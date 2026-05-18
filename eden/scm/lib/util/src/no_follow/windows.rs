@@ -321,8 +321,8 @@ impl NoFollowRoot {
 
     /// Remove a file or symlink at `path`.
     ///
-    /// `path` must be relative and must not contain `..`. Missing leaves are
-    /// treated as success. Directories are not removed by this method; use
+    /// `path` must be relative and must not contain `..`. Directories are not
+    /// removed by this method; use
     /// [`NoFollowRoot::remove_dir`] for empty directories.
     pub fn remove_file<'a, P>(&self, path: P) -> io::Result<()>
     where
@@ -336,8 +336,7 @@ impl NoFollowRoot {
 
     /// Remove an empty directory at `path`.
     ///
-    /// `path` must be relative and must not contain `..`. Missing leaves are
-    /// treated as success.
+    /// `path` must be relative and must not contain `..`.
     pub fn remove_dir<'a, P>(&self, path: P) -> io::Result<()>
     where
         P: TryInto<CheckedRelPath<'a>>,
@@ -350,8 +349,8 @@ impl NoFollowRoot {
 
     /// Remove a directory tree at `path`.
     ///
-    /// `path` must be relative and must not contain `..`. Missing leaves are
-    /// treated as success. The target leaf must be a real directory; a reparse
+    /// `path` must be relative and must not contain `..`. The target leaf must
+    /// be a real directory; a reparse
     /// point leaf is rejected instead of being removed. Reparse points inside
     /// the tree are removed as links and are not followed.
     pub fn remove_dir_all<'a, P>(&self, path: P) -> io::Result<()>
@@ -505,7 +504,6 @@ impl NoFollowRoot {
                 }
                 remove_file_handle(parent, leaf, handle)
             }
-            Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(()),
             Err(err) => Err(err),
         }
     }
@@ -524,7 +522,6 @@ impl NoFollowRoot {
                 reject_reparse_point(&handle)?;
                 mark_delete(&handle)
             }
-            Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(()),
             Err(err) => Err(err),
         }
     }
@@ -533,7 +530,6 @@ impl NoFollowRoot {
         let (parent, leaf) = self.open_parent_dir(path)?;
         match open_dir_for_remove_all(parent.as_raw_handle() as HANDLE, leaf) {
             Ok(handle) => remove_dir_all_opened(handle),
-            Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(()),
             Err(err) => Err(err),
         }
     }

@@ -881,10 +881,49 @@ fn remove_file_removes_leaf_symlink_not_target() -> io::Result<()> {
     let root = NoFollowRoot::new(dir.path())?;
 
     root.remove_file(Path::new("link"))?;
-    root.remove_file(Path::new("missing"))?;
 
     assert!(fs::symlink_metadata(dir.path().join("link")).is_err());
     assert_eq!(fs::read(dir.path().join("target"))?, b"contents".to_vec());
+    Ok(())
+}
+
+#[test]
+fn remove_operations_reject_missing_paths() -> io::Result<()> {
+    let dir = tempdir()?;
+    let root = NoFollowRoot::new(dir.path())?;
+
+    assert_eq!(
+        root.remove_file(Path::new("missing")).unwrap_err().kind(),
+        io::ErrorKind::NotFound
+    );
+    assert_eq!(
+        root.remove_file(Path::new("missing/child"))
+            .unwrap_err()
+            .kind(),
+        io::ErrorKind::NotFound
+    );
+    assert_eq!(
+        root.remove_dir(Path::new("missing")).unwrap_err().kind(),
+        io::ErrorKind::NotFound
+    );
+    assert_eq!(
+        root.remove_dir(Path::new("missing/child"))
+            .unwrap_err()
+            .kind(),
+        io::ErrorKind::NotFound
+    );
+    assert_eq!(
+        root.remove_dir_all(Path::new("missing"))
+            .unwrap_err()
+            .kind(),
+        io::ErrorKind::NotFound
+    );
+    assert_eq!(
+        root.remove_dir_all(Path::new("missing/child"))
+            .unwrap_err()
+            .kind(),
+        io::ErrorKind::NotFound
+    );
     Ok(())
 }
 
@@ -951,7 +990,6 @@ fn remove_dir_removes_empty_directory() -> io::Result<()> {
     let root = NoFollowRoot::new(dir.path())?;
 
     root.remove_dir(Path::new("empty"))?;
-    root.remove_dir(Path::new("missing"))?;
 
     assert!(!dir.path().join("empty").exists());
     Ok(())
@@ -981,7 +1019,6 @@ fn remove_dir_all_removes_tree() -> io::Result<()> {
     let root = NoFollowRoot::new(dir.path())?;
 
     root.remove_dir_all(Path::new("tree"))?;
-    root.remove_dir_all(Path::new("missing"))?;
 
     assert!(!dir.path().join("tree").exists());
     Ok(())
