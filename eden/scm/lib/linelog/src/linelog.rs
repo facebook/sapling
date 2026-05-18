@@ -6,6 +6,7 @@
  */
 
 use std::collections::HashSet;
+use std::collections::VecDeque;
 use std::fmt;
 use std::sync::Arc;
 use std::sync::atomic::AtomicUsize;
@@ -143,6 +144,7 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
         b_rev: Rev,
         b_lines: Vec<T>,
     ) -> Self {
+        let b_lines = b_lines.into_iter().map(Arc::new).collect::<VecDeque<_>>();
         self.with_a_lines_cache(a_rev, b_rev, |this: Self, maybe_mut| {
             this.edit_chunk_internal(a1, a2, b_rev, b_lines, maybe_mut)
         })
@@ -238,7 +240,7 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
         a1: LineIdx,
         a2: LineIdx,
         b_rev: Rev,
-        b_lines: Vec<T>,
+        b_lines: VecDeque<Arc<T>>,
         mut a_lines: MaybeMut<ImVec<LineInfo<T>>>,
     ) -> Self {
         assert!(a1 <= a2);
@@ -303,8 +305,6 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
         //                        b2Pc: <jlInst> (moved)  [*]
         //                            : <a1Inst> (moved)
         //                            : J a1Pc            [*]
-
-        let b_lines = b_lines.into_iter().map(Arc::new).collect::<Vec<_>>();
 
         // Prepare updating a_lines.
         let new_b_lines = if a_lines.is_mut() {
