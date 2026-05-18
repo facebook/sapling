@@ -11,6 +11,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use configmodel::Config;
+use configmodel::ConfigExt;
 use context::CoreContext;
 use grepomanifest::parse::parse_manifest;
 use grepomanifest::schema::Project;
@@ -36,6 +37,7 @@ pub struct GrepoFileSystem {
     inner: DotGitFileSystem,
     vfs: VFS,
     tree_resolver: Arc<dyn ReadTreeManifest>,
+    manifest_path: PathBuf,
 }
 
 impl GrepoFileSystem {
@@ -43,21 +45,21 @@ impl GrepoFileSystem {
         inner: DotGitFileSystem,
         vfs: VFS,
         tree_resolver: Arc<dyn ReadTreeManifest>,
-    ) -> Self {
-        GrepoFileSystem {
+        config: &dyn Config,
+    ) -> Result<Self> {
+        let manifest_path = grepo_manifest_path(&vfs, config)?;
+        Ok(GrepoFileSystem {
             inner,
             vfs,
             tree_resolver,
-        }
+            manifest_path,
+        })
     }
 
     /// Parse the `.repo/manifests` from the working copy.
     fn parse_grepo_projects(&self) -> Result<BTreeMap<PathBuf, Project>> {
-        let manifest_path = self
-            .vfs
-            .join(".repo/manifests/static/static.xml".try_into()?);
-        let projects = if manifest_path.exists() {
-            let parsed = parse_manifest(&fs_err::read(&manifest_path)?)?;
+        let projects = if self.manifest_path.exists() {
+            let parsed = parse_manifest(&fs_err::read(&self.manifest_path)?)?;
             parsed.projects
         } else {
             tracing::debug!(target: "workingcopy::repo_tool", "manifest file does not exist");
@@ -66,6 +68,13 @@ impl GrepoFileSystem {
 
         Ok(projects)
     }
+}
+
+fn grepo_manifest_path(vfs: &VFS, config: &dyn Config) -> Result<PathBuf> {
+    let path = config.get_or("grepo", "manifestpath", || {
+        ".repo/manifests/default.xml".to_string()
+    })?;
+    Ok(vfs.join(path.as_str().try_into()?))
 }
 
 impl FileSystem for GrepoFileSystem {

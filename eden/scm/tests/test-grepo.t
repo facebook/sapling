@@ -2,6 +2,7 @@
 
   $ . $TESTDIR/git.sh
   $ enable smartlog
+  $ setconfig grepo.manifestpath=.repo/manifests/static/static.xml
 
 Set up small project repos to simulate repos managed by the repo tool.
 project-a is the outer project at vendor/a; project-c is a nested project at

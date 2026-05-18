@@ -367,7 +367,8 @@ impl WorkingCopy {
                     inner,
                     vfs.clone(),
                     tree_resolver.clone(),
-                ))
+                    &config,
+                )?)
             }
         })
     }
