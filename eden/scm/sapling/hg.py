@@ -323,10 +323,9 @@ def postshare(sourcerepo, destrepo, bookmarks: bool = True, defaultpath=None) ->
     """
     default = defaultpath or sourcerepo.ui.config("paths", "default")
     if default:
-        fp = destrepo.localvfs(destrepo.ui.identity.configrepofile(), "w", text=True)
-        fp.write("[paths]\n")
-        fp.write("default = %s\n" % default)
-        fp.close()
+        with destrepo.localvfs(destrepo.ui.identity.configrepofile(), "w") as fp:
+            fp.write(b"[paths]\n")
+            fp.write(("default = %s\n" % default).encode())
 
     with destrepo.wlock():
         if bookmarks:
