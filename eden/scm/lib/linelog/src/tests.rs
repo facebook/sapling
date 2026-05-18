@@ -119,6 +119,120 @@ fn test_random_cases() {
 }
 
 #[test]
+fn test_remap_revs() {
+    let log = log_from_texts(&["b\n".into(), "b\nc\n".into(), "a\nb\nc\n".into()]);
+    assert_eq!(log.checkout_text(1), "b\n");
+    assert_eq!(log.checkout_text(2), "b\nc\n");
+    assert_eq!(log.checkout_text(3), "a\nb\nc\n");
+
+    // Swap rev 2 and 3.
+    let swapped = log.clone().remap_revs(&|r| match r {
+        2 => 3,
+        3 => 2,
+        other => other,
+    });
+    assert_eq!(swapped.max_rev(), 3);
+    assert_eq!(swapped.checkout_text(3), "a\nb\nc\n");
+
+    // Updates max_rev up.
+    let mapped =
+        log_from_texts(&["a\n".into(), "b\n".into()]).remap_revs(&|r| if r == 1 { 10 } else { r });
+    assert_eq!(mapped.max_rev(), 10);
+
+    // Updates max_rev down.
+    let mapped =
+        log_from_texts(&["a\n".into(), "b\n".into()]).remap_revs(&|r| if r == 2 { 1 } else { r });
+    assert_eq!(mapped.max_rev(), 1);
+
+    // Merge changes.
+    let merged = log.clone().remap_revs(&|r| if r == 2 { 1 } else { r });
+    assert_eq!(merged.checkout_text(1), "b\nc\n");
+    assert_eq!(merged.checkout_text(3), "a\nb\nc\n");
+
+    // Can insert changes by remapping to make room, then recording at the gap.
+    let inserted = log_from_texts(&["b\n".into(), "b\nc\n".into()])
+        .remap_revs(&|r| if r == 2 { 3 } else { r });
+    let inserted = record_text(inserted, "a\nb\n", Some(2));
+    assert_eq!(inserted.checkout_text(3), "a\nb\nc\n");
+
+    // Does not check dependencies or conflicts.
+    let log = log_from_texts(&["a\nc\n".into(), "a\nb\nc\n".into()]);
+    let bad_swap = log.remap_revs(&|r| match r {
+        1 => 2,
+        2 => 1,
+        other => other,
+    });
+    assert_eq!(bad_swap.checkout_text(1), "");
+    assert_eq!(bad_swap.checkout_text(2), "a\nb\nc\n");
+}
+
+#[test]
+fn test_remap_revs_reorder_insertions() {
+    let log = log_from_texts(&["a\n".into(), "a\nb\n".into(), "a\nb\nc\n".into()]);
+
+    let dep_map = log.calculate_dep_map();
+    for rev in 1..=3 {
+        assert_eq!(
+            dep_map.get(&rev).map(|s| s.iter().collect::<Vec<_>>()),
+            Some(vec![0]),
+            "rev={rev}"
+        );
+    }
+
+    let swapped = log.remap_revs(&|r| match r {
+        2 => 3,
+        3 => 2,
+        other => other,
+    });
+    assert_eq!(swapped.checkout_text(3), "a\nb\nc\n");
+}
+
+#[test]
+fn test_truncate() {
+    let texts: Vec<String> = ["a\nb\nc\n", "b\nc\nd\n", "b\nd\ne\n", "f\n"]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+    let log = log_from_texts(&texts);
+
+    for truncate_rev in 0..texts.len() {
+        let truncated = log.clone().truncate(truncate_rev);
+        assert_eq!(
+            truncated.max_rev(),
+            if truncate_rev == 0 {
+                0
+            } else {
+                truncate_rev - 1
+            }
+        );
+        for rev in 0..texts.len() {
+            let text = truncated.checkout_text(rev);
+            if rev < truncate_rev {
+                let expected = if rev < 1 { "" } else { &texts[rev - 1] };
+                assert_eq!(text, expected, "truncate={truncate_rev}, rev={rev}");
+            } else {
+                let expected = if truncate_rev <= 1 {
+                    ""
+                } else {
+                    &texts[truncate_rev - 2]
+                };
+                assert_eq!(
+                    text,
+                    log.checkout_text(truncate_rev.saturating_sub(1)),
+                    "truncate={truncate_rev}, rev={rev}"
+                );
+                assert_eq!(text, expected, "truncate={truncate_rev}, rev={rev}");
+            }
+        }
+        let appended = record_text(truncated.clone(), "a\nc\ne\n", None);
+        assert_eq!(appended.checkout_text(appended.max_rev()), "a\nc\ne\n");
+        for rev in 0..truncate_rev {
+            assert_eq!(appended.checkout_text(rev), log.checkout_text(rev));
+        }
+    }
+}
+
+#[test]
 fn test_flatten() {
     // 3 revisions: rev1 "a b c", rev2 "b c d e", rev3 "a c d f".
     // Edits applied in reverse chunk order within each rev.

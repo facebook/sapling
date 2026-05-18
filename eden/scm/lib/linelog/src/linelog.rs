@@ -392,6 +392,67 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
     }
 }
 
+impl<T> AbstractLineLog<T> {
+    /// Rewrite `rev` references in all instructions.
+    /// This can be useful for reordering, folding, or inserting revisions.
+    ///
+    /// Note: There are no checks about whether the reordering is meaningful.
+    /// The callsite should use `calculate_dep_map` to check dependencies
+    /// and avoid troublesome reorders, like moving a change to before its
+    /// dependency.
+    pub fn remap_revs(self, rev_map: &dyn Fn(Rev) -> Rev) -> Self {
+        let mut max_rev = 0;
+        let code = self
+            .code
+            .into_iter()
+            .map(|inst| {
+                let mapped = match inst {
+                    Inst::JGE(rev, pc) => Inst::JGE(rev_map(rev), pc),
+                    Inst::JL(rev, pc) => Inst::JL(rev_map(rev), pc),
+                    Inst::LINE(rev, data) => Inst::LINE(rev_map(rev), data),
+                    other => other,
+                };
+                if let Inst::JGE(rev, _) | Inst::JL(rev, _) | Inst::LINE(rev, _) = &mapped {
+                    max_rev = max_rev.max(*rev);
+                }
+                mapped
+            })
+            .collect();
+
+        Self {
+            code,
+            max_rev,
+            a_lines_cache: None,
+        }
+    }
+
+    /// Truncate linelog. Drop revs >= the given `rev`.
+    pub fn truncate(self, rev: Rev) -> Self {
+        let mut max_rev = 0;
+        let code = self
+            .code
+            .into_iter()
+            .enumerate()
+            .map(|(pc, inst)| match inst {
+                Inst::JGE(r, _) | Inst::LINE(r, _) if r >= rev => Inst::J(pc + 1),
+                Inst::JL(r, target) if r >= rev => Inst::J(target),
+                other => {
+                    if let Inst::JGE(r, _) | Inst::JL(r, _) | Inst::LINE(r, _) = &other {
+                        max_rev = max_rev.max(*r);
+                    }
+                    other
+                }
+            })
+            .collect();
+
+        Self {
+            code,
+            max_rev,
+            a_lines_cache: None,
+        }
+    }
+}
+
 impl AbstractLineLog<String> {
     /// Checkout the text of the given `rev`.
     pub fn checkout_text(&self, rev: Rev) -> String {
