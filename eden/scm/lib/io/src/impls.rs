@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::fs::File;
 use std::io::Cursor;
 use std::io::IsTerminal;
 use std::io::stderr;
@@ -62,6 +63,12 @@ impl<'a> IsTty for &'a [u8] {
 impl<T> IsTty for Cursor<T> {
     fn is_tty(&self) -> bool {
         false
+    }
+}
+
+impl IsTty for File {
+    fn is_tty(&self) -> bool {
+        self.is_terminal()
     }
 }
 
@@ -155,6 +162,32 @@ impl IsTty for crate::IOError {
         } else {
             false
         }
+    }
+}
+
+impl<R: crate::Read> IsTty for std::io::BufReader<R> {
+    fn is_tty(&self) -> bool {
+        self.get_ref().is_tty()
+    }
+
+    fn is_stdin(&self) -> bool {
+        self.get_ref().is_stdin()
+    }
+
+    fn is_stdout(&self) -> bool {
+        self.get_ref().is_stdout()
+    }
+
+    fn is_stderr(&self) -> bool {
+        self.get_ref().is_stderr()
+    }
+
+    fn can_color(&self) -> bool {
+        self.get_ref().can_color()
+    }
+
+    fn pager_active(&self) -> bool {
+        self.get_ref().pager_active()
     }
 }
 
