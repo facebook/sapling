@@ -48,6 +48,7 @@ impl PipelineDerivable for RootUnodeManifestId {
         derivation: &DerivationContext,
         bonsais: Vec<BonsaiChangeset>,
         stage: &DerivationPipelineStageConfig,
+        _stage_id: &str,
         parents: HashMap<ChangesetId, Self::StageOutput>,
         dependency_outputs: HashMap<ChangesetId, HashMap<String, Self::StageOutput>>,
     ) -> Result<HashMap<ChangesetId, Self::StageOutput>> {

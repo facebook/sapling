@@ -1126,6 +1126,7 @@ impl DerivedDataManager {
                         derivation_ctx_ref,
                         bonsais,
                         stage_config,
+                        stage_id,
                         parents,
                         dependency_outputs,
                     )

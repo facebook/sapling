@@ -260,6 +260,7 @@ pub trait PipelineDerivable: BonsaiDerivable {
         derivation: &DerivationContext,
         bonsais: Vec<BonsaiChangeset>,
         stage: &DerivationPipelineStageConfig,
+        stage_id: &str,
         parents: HashMap<ChangesetId, Self::StageOutput>,
         dependency_outputs: HashMap<ChangesetId, HashMap<String, Self::StageOutput>>,
     ) -> Result<HashMap<ChangesetId, Self::StageOutput>>;
