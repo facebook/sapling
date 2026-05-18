@@ -11,10 +11,63 @@ use std::time::Duration;
 use clap::Parser;
 use clap::Subcommand;
 use mononoke_app::args::RepoArgs;
+use mononoke_app::args::TLSArgs;
 use mononoke_types::DateTime;
 
 use crate::ImportStage;
 use crate::RecoveryFields;
+
+/// URL pattern used by the LFS server to serve a single object by SHA256.
+#[derive(Clone, Copy, Debug, Default, clap::ValueEnum)]
+pub enum LfsServerUrlFormatArg {
+    /// Dewey-style: `GET {server}/{sha256}`
+    #[default]
+    Dewey,
+    /// Mononoke git-LFS: `GET {server}/{repo}/download_sha256/{sha256}`
+    MononokeGitLfs,
+}
+
+/// CLI arguments controlling LFS pointer resolution during repo_import.
+/// Mirrors the LFS arg surface of `gitimport`: pass `--lfs-server URL` to
+/// fetch LFS object bytes over HTTP from an upstream LFS server; otherwise
+/// repo_import resolves them from the local Mononoke filestore (by SHA256
+/// alias). LFS resolution only kicks in when the destination repo's config
+/// has `git_lfs_interpret_pointers = true`.
+#[derive(Parser, Debug)]
+pub struct LfsImportArgs {
+    /// LFS server URL to fetch LFS files from over HTTP. When unset,
+    /// repo_import falls back to internal mode (resolves LFS pointers from
+    /// the local Mononoke filestore by SHA256 alias). Mutually exclusive
+    /// with `--internal-lfs`.
+    #[clap(long, conflicts_with = "internal_lfs")]
+    pub lfs_server: Option<String>,
+    /// URL pattern that the LFS server uses to serve raw objects by SHA256.
+    /// Defaults to the Dewey-style `GET {server}/{sha256}`. Use
+    /// `mononoke-git-lfs` for the
+    /// `GET {server}/{repo}/download_sha256/{sha256}` shape served by
+    /// Mononoke LFS.
+    #[clap(long, value_enum, default_value_t = LfsServerUrlFormatArg::Dewey)]
+    pub lfs_server_url_format: LfsServerUrlFormatArg,
+    /// Explicitly request internal mode (resolve LFS pointers from the local
+    /// Mononoke filestore by SHA256 alias). Internal mode is also the default
+    /// when `--lfs-server` is not set; this flag is mainly useful for
+    /// documentation or to force a clap error if `--lfs-server` is also
+    /// passed by mistake. Mutually exclusive with `--lfs-server`.
+    #[clap(long, default_value_t = false)]
+    pub internal_lfs: bool,
+    /// TLS parameters used for outbound LFS connections (upstream mode only).
+    #[clap(flatten)]
+    pub tls_args: Option<TLSArgs>,
+    /// If an LFS file can't be obtained (from the upstream server in upstream
+    /// mode, or from the local filestore in internal mode), import the pointer
+    /// bytes as the file content instead of failing.
+    #[clap(long)]
+    pub allow_dangling_lfs_pointers: bool,
+    /// How many times to retry fetching LFS files from the upstream server
+    /// before deciding that the file is missing. Internal mode does not retry.
+    #[clap(long, default_value_t = 5)]
+    pub lfs_import_max_attempts: u32,
+}
 
 #[derive(Parser)]
 #[clap(about = "Check for additional setup steps before running the repo_import tool")]
@@ -107,6 +160,10 @@ pub struct MononokeRepoImportArgs {
     /// Set the path to the git binary - preset to git.real
     #[clap(long)]
     pub git_command_path: Option<String>,
+    /// LFS pointer resolution settings (only consulted when the destination
+    /// repo's config has `git_lfs_interpret_pointers = true`).
+    #[clap(flatten)]
+    pub lfs_args: LfsImportArgs,
     #[clap(subcommand)]
     pub command: Option<Commands>,
 }

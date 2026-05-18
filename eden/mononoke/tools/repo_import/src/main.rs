@@ -50,8 +50,10 @@ use futures::future::TryFutureExt;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use import_tools::GitImportLfs;
 use import_tools::GitimportPreferences;
 use import_tools::GitimportTarget;
+use import_tools::LfsServerUrlFormat;
 use import_tools::ReuploadCommits;
 use itertools::Itertools;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
@@ -103,9 +105,13 @@ use crate::cli::CheckAdditionalSetupStepsArgs;
 use crate::cli::Commands::CheckAdditionalSetupSteps;
 use crate::cli::Commands::Import;
 use crate::cli::Commands::RecoverProcess;
+use crate::cli::LfsImportArgs;
+use crate::cli::LfsServerUrlFormatArg;
 use crate::cli::MononokeRepoImportArgs;
 use crate::cli::setup_import_args;
 use crate::repo::Repo;
+
+const LFS_SIMULTANEOUS_CONNECTION_LIMIT: usize = 20;
 
 #[derive(Deserialize, Clone, Debug)]
 struct GraphqlQueryObj {
@@ -993,6 +999,7 @@ async fn repo_import(
     env: &MononokeEnvironment,
     no_merge: bool,
     git_command_path: Option<String>,
+    lfs_args: LfsImportArgs,
 ) -> Result<(), Error> {
     let arg_git_repo_path = recovery_fields.git_repo_path.clone();
     let path = Path::new(&arg_git_repo_path);
@@ -1130,9 +1137,46 @@ async fn repo_import(
 
     // Importing process starts here
     if recovery_fields.import_stage == ImportStage::GitImport {
+        // LFS resolution mode (only relevant when the destination repo's
+        // config has `git_lfs_interpret_pointers = true`). Mirrors the
+        // gitimport / git_server precedence: pass `--lfs-server URL` to opt
+        // into upstream HTTP fetches; otherwise resolve from the local
+        // Mononoke filestore by SHA256 alias. The `--internal-lfs` flag is
+        // documentary — its absence already selects internal mode when
+        // `--lfs-server` is unset.
+        let lfs = if repo.repo_config().git_configs.git_lfs_interpret_pointers {
+            match lfs_args.lfs_server {
+                Some(lfs_server) => {
+                    let url_format = match lfs_args.lfs_server_url_format {
+                        LfsServerUrlFormatArg::Dewey => LfsServerUrlFormat::LegacyDewey,
+                        LfsServerUrlFormatArg::MononokeGitLfs => {
+                            LfsServerUrlFormat::MononokeGitLfs {
+                                repo_name: repo.name().to_string(),
+                            }
+                        }
+                    };
+                    GitImportLfs::new(
+                        lfs_server,
+                        url_format,
+                        lfs_args.allow_dangling_lfs_pointers,
+                        lfs_args.lfs_import_max_attempts,
+                        Some(LFS_SIMULTANEOUS_CONNECTION_LIMIT),
+                        lfs_args.tls_args,
+                    )?
+                }
+                None => GitImportLfs::new_internal(
+                    repo.repo_blobstore().boxed(),
+                    lfs_args.allow_dangling_lfs_pointers,
+                ),
+            }
+        } else {
+            GitImportLfs::new_disabled()
+        };
+
         // Import without submodules.
         let mut prefs = GitimportPreferences {
             submodules: false,
+            lfs,
             ..Default::default()
         };
 
@@ -1625,6 +1669,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         env,
         args.no_merge,
         args.git_command_path,
+        args.lfs_args,
     )
     .await
     {
