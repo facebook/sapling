@@ -24,8 +24,11 @@ fsnodes = { version = "0.1.0", path = "../fsnodes" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 itertools = "0.14.0"
 manifest = { version = "0.1.0", path = "../../manifest" }
+metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 restricted_paths_acl_file = { version = "0.1.0", path = "../../repo_attributes/restricted_paths_acl_file" }
+scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 vec1 = { version = "1.12.1", features = ["serde"] }
 
 [dev-dependencies]

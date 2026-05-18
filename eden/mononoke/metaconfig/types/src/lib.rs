@@ -2564,7 +2564,7 @@ impl RestrictedPathsConfig {
 }
 
 /// Parsed contents of a restricted paths ACL file (.slacl)
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct RestrictedPathsAclFile {
     /// REPO_REGION ACL protecting this directory
     /// e.x. "repos/hg/fbsource/=project1"

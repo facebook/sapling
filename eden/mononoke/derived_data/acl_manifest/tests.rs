@@ -116,6 +116,55 @@ async fn test_derive_incremental_modify(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
+/// What it tests: incrementally adding an invalid .slacl file.
+/// Expected: derivation succeeds and the invalid file creates no ACL manifest leaf.
+#[mononoke::fbinit_test]
+async fn test_incremental_invalid_slacl_add_creates_no_restriction(fb: FacebookInit) -> Result<()> {
+    let result = setup_and_derive(
+        fb,
+        vec![vec![
+            Change::Add("dir/file.txt", b"content"),
+            Change::Add("dir/.slacl", INVALID_SLACL),
+        ]],
+    )
+    .await?;
+
+    assert_eq!(Vec::<ExpectedNode>::new(), result.last_tree().await?);
+
+    Ok(())
+}
+
+/// What it tests: incrementally modifying an existing .slacl file to invalid content.
+/// Expected: derivation succeeds and the old manifest entry is deleted.
+#[mononoke::fbinit_test]
+async fn test_incremental_invalid_slacl_modify_removes_existing_restriction(
+    fb: FacebookInit,
+) -> Result<()> {
+    let result = setup_and_derive(
+        fb,
+        vec![
+            vec![
+                Change::Add("dir/file.txt", b"content"),
+                Change::Add("dir/.slacl", SLACL_PROJECT1),
+            ],
+            vec![Change::Add("dir/.slacl", INVALID_SLACL)],
+        ],
+    )
+    .await?;
+
+    assert_eq!(
+        vec![node(
+            "dir",
+            Some("REPO_REGION:repos/hg/fbsource/=project1"),
+            vec![]
+        )],
+        result.tree(0).await?,
+    );
+    assert_eq!(Vec::<ExpectedNode>::new(), result.last_tree().await?);
+
+    Ok(())
+}
+
 /// Test incremental: add nested restrictions to existing restriction roots.
 /// Adds a restriction nested UNDER alpha, and a restriction ABOVE beta/deep.
 #[mononoke::fbinit_test]
@@ -760,6 +809,33 @@ async fn test_derive_multiple_independent_roots(fb: FacebookInit) -> Result<()> 
                 )],
             ),
         ],
+        result.last_tree().await?,
+    );
+
+    Ok(())
+}
+
+/// What it tests: from-scratch derivation with both valid and invalid .slacl files.
+/// Expected: derivation succeeds and omits only the invalid ACL file.
+#[mononoke::fbinit_test]
+async fn test_from_scratch_invalid_slacl_is_omitted(fb: FacebookInit) -> Result<()> {
+    let result = setup_and_derive_from_scratch(
+        fb,
+        vec![vec![
+            Change::Add("valid/file.txt", b"content"),
+            Change::Add("valid/.slacl", SLACL_PROJECT1),
+            Change::Add("invalid/file.txt", b"content"),
+            Change::Add("invalid/.slacl", INVALID_SLACL),
+        ]],
+    )
+    .await?;
+
+    assert_eq!(
+        vec![node(
+            "valid",
+            Some("REPO_REGION:repos/hg/fbsource/=project1"),
+            vec![]
+        )],
         result.last_tree().await?,
     );
 

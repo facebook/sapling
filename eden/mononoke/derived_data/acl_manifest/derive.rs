@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
 
+use anyhow::Context;
 use anyhow::Result;
 use basename_suffix_skeleton_manifest_v3::RootBssmV3DirectoryId;
 use blobstore::KeyedBlobstore;
@@ -32,6 +33,7 @@ use manifest::PathOrPrefix;
 use manifest::TreeInfo;
 use manifest::TreeInfoSubentries;
 use manifest::derive_manifest;
+use metaconfig_types::RestrictedPathsAclFile;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
@@ -51,6 +53,7 @@ use mononoke_types::sharded_map_v2::ShardedMapV2Node;
 use mononoke_types::typed_hash::AclManifestEntryBlobId;
 use mononoke_types::typed_hash::AclManifestId;
 use restricted_paths_acl_file::parse_acl_file;
+use scuba_ext::MononokeScubaSampleBuilder;
 use vec1::vec1;
 
 use crate::RootAclManifestId;
@@ -104,14 +107,7 @@ pub(crate) async fn derive_single(
     let subtree_changes =
         get_acl_manifest_subtree_changes(ctx, derivation_ctx, &bonsai, known).await?;
 
-    // Convert AclFileChange -> derive_manifest's Option<ContentId> format.
-    let derive_changes: Vec<(NonRootMPath, Option<ContentId>)> = changes
-        .into_iter()
-        .map(|(path, change)| match change {
-            AclFileChange::AddOrModify(content_id) => (path, Some(content_id)),
-            AclFileChange::Delete => (path, None),
-        })
-        .collect();
+    let derive_changes = prepare_acl_file_changes(ctx, blobstore, changes, &acl_file_name).await?;
 
     let result = inner_derive(
         ctx,
@@ -168,24 +164,37 @@ pub(crate) async fn derive_from_scratch(
         .try_collect()
         .await?;
 
-    // Resolve content IDs for each .slacl file via Fsnodes (in parallel).
-    let derive_changes: Vec<(NonRootMPath, Option<ContentId>)> = stream::iter(acl_paths)
-        .map(|path| {
-            cloned!(ctx, blobstore, root_fsnode_id);
-            async move {
-                let content_id = resolve_content_id_via_fsnode(
-                    &ctx,
-                    &blobstore,
-                    &root_fsnode_id,
-                    &MPath::from(path.clone()),
-                )
-                .await?;
-                Ok::<_, anyhow::Error>((path, Some(content_id)))
-            }
-        })
-        .buffer_unordered(100)
-        .try_collect()
-        .await?;
+    // Resolve content IDs for each .slacl file via Fsnodes and parse them
+    // before calling derive_manifest. Fsnodes/blobstore failures remain hard
+    // failures; parse failures are logged and omitted from from-scratch output.
+    let derive_changes: Vec<(NonRootMPath, Option<RestrictedPathsAclFile>)> =
+        stream::iter(acl_paths)
+            .map(|path| {
+                cloned!(ctx, blobstore, root_fsnode_id);
+                let acl_file_name = acl_file_name.clone();
+                async move {
+                    let content_id = resolve_content_id_via_fsnode(
+                        &ctx,
+                        &blobstore,
+                        &root_fsnode_id,
+                        &MPath::from(path.clone()),
+                    )
+                    .await?;
+                    let acl_file = fetch_and_parse_acl_file(
+                        &ctx,
+                        &blobstore,
+                        content_id,
+                        &path,
+                        &acl_file_name,
+                    )
+                    .await?;
+                    Ok::<_, anyhow::Error>(acl_file.map(|acl_file| (path, Some(acl_file))))
+                }
+            })
+            .buffer_unordered(100)
+            .try_filter_map(|change| async move { Ok(change) })
+            .try_collect()
+            .await?;
 
     // Call derive_manifest with empty parents.
     let result = inner_derive(
@@ -212,12 +221,12 @@ async fn inner_derive(
     ctx: &CoreContext,
     blobstore: &Arc<dyn KeyedBlobstore>,
     parents: Vec<AclManifestId>,
-    changes: Vec<(NonRootMPath, Option<ContentId>)>,
+    changes: Vec<(NonRootMPath, Option<RestrictedPathsAclFile>)>,
     subtree_changes: Vec<ManifestParentReplacement<AclManifestId, AclManifestRestriction>>,
     acl_file_name: &str,
 ) -> Result<Option<AclManifestId>> {
     type Leaf = AclManifestRestriction;
-    type LeafChange = ContentId;
+    type LeafChange = RestrictedPathsAclFile;
     type TreeId = AclManifestId;
     type Ctx = AclManifestNodeInfo;
 
@@ -243,14 +252,14 @@ async fn inner_derive(
             move |leaf_info: LeafInfo<Leaf, LeafChange>| {
                 cloned!(ctx, blobstore);
                 async move {
-                    let content_id = match leaf_info.change {
-                        Some(id) => id,
+                    let acl_file = match leaf_info.change {
+                        Some(acl_file) => acl_file,
                         None => {
                             anyhow::bail!("ACL file leaf with no change and no parents")
                         }
                     };
                     let entry_blob_id =
-                        store_acl_entry_from_content_id(&ctx, &blobstore, content_id).await?;
+                        store_acl_entry_from_acl_file(&ctx, &blobstore, &acl_file).await?;
                     let restriction = AclManifestRestriction { entry_blob_id };
                     Ok((AclManifestNodeInfo::default(), restriction))
                 }
@@ -507,17 +516,86 @@ async fn get_acl_manifest_subtree_changes(
 // Helpers
 // ---------------------------------------------------------------------------
 
-/// Fetch file content by ContentId, parse as ACL file, store as
-/// AclManifestEntryBlob, and return the blob ID.
-async fn store_acl_entry_from_content_id(
+async fn prepare_acl_file_changes(
+    ctx: &CoreContext,
+    blobstore: &Arc<dyn KeyedBlobstore>,
+    changes: Vec<(NonRootMPath, AclFileChange)>,
+    acl_file_name: &str,
+) -> Result<Vec<(NonRootMPath, Option<RestrictedPathsAclFile>)>> {
+    stream::iter(changes)
+        .map(|(path, change)| {
+            cloned!(ctx, blobstore);
+            let acl_file_name = acl_file_name.to_string();
+            async move {
+                match change {
+                    AclFileChange::AddOrModify(content_id) => {
+                        let acl_file = fetch_and_parse_acl_file(
+                            &ctx,
+                            &blobstore,
+                            content_id,
+                            &path,
+                            &acl_file_name,
+                        )
+                        .await?;
+                        Ok::<_, anyhow::Error>((path, acl_file))
+                    }
+                    AclFileChange::Delete => Ok((path, None)),
+                }
+            }
+        })
+        .buffer_unordered(100)
+        .try_collect()
+        .await
+}
+
+async fn fetch_and_parse_acl_file(
     ctx: &CoreContext,
     blobstore: &Arc<dyn KeyedBlobstore>,
     content_id: ContentId,
-) -> Result<AclManifestEntryBlobId> {
-    let bytes = fetch_concat(blobstore, ctx, content_id).await?;
+    path: &NonRootMPath,
+    acl_file_name: &str,
+) -> Result<Option<RestrictedPathsAclFile>> {
+    let fetch_context = format!(
+        "failed to fetch {acl_file_name} content for {path:?} with content id {content_id:?}"
+    );
+    let bytes = fetch_concat(blobstore, ctx, content_id)
+        .await
+        .context(fetch_context)?;
     let file_contents = FileContents::new_bytes(bytes);
-    let acl_file = parse_acl_file(&file_contents)?;
 
+    Ok(match parse_acl_file(&file_contents) {
+        Ok(acl_file) => Some(acl_file),
+        Err(error) => {
+            log_invalid_acl_file(ctx.scuba().clone(), acl_file_name, path, &error);
+            None
+        }
+    })
+}
+
+fn log_invalid_acl_file(
+    mut scuba: MononokeScubaSampleBuilder,
+    acl_file_name: &str,
+    path: &NonRootMPath,
+    error: &anyhow::Error,
+) {
+    let log_tag = format!("Invalid {acl_file_name} file");
+    let msg = format!("Invalid {acl_file_name} file at {path}: {error:#}");
+    tracing::error!(
+        log_tag = %log_tag,
+        acl_file_name = %acl_file_name,
+        acl_path = %path,
+        msg = %msg,
+        "Invalid ACL file"
+    );
+    scuba.log_with_msg(&log_tag, Some(msg));
+}
+
+/// Store a parsed ACL file as an AclManifestEntryBlob and return the blob ID.
+async fn store_acl_entry_from_acl_file(
+    ctx: &CoreContext,
+    blobstore: &Arc<dyn KeyedBlobstore>,
+    acl_file: &RestrictedPathsAclFile,
+) -> Result<AclManifestEntryBlobId> {
     let entry_blob = AclManifestEntryBlob {
         repo_region_acl: acl_file.repo_region_acl().to_string(),
         permission_request_group: acl_file.permission_request_group().map(|g| g.to_string()),

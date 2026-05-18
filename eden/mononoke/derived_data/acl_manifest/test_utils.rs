@@ -55,6 +55,8 @@ pub(crate) const SLACL_PROJECT2: &[u8] =
 pub(crate) const SLACL_PROJECT1_WITH_GROUP: &[u8] =
     b"repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=project1\"\npermission_request_group = \"GROUP:my_amp_group\"\n";
 
+pub(crate) const INVALID_SLACL: &[u8] = b"not valid toml [[[";
+
 /// Generate unique SLACL content for index `i` to avoid content-address
 /// deduplication in tests that measure per-restriction-root blob costs.
 pub(crate) fn unique_slacl(i: usize) -> &'static [u8] {
