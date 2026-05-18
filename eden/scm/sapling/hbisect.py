@@ -192,13 +192,11 @@ def load_state(repo):
 
 
 def save_state(repo, state) -> None:
-    f = repo.localvfs("bisect.state", "wb", atomictemp=True)
-    with repo.wlock():
+    with repo.localvfs("bisect.state", "wb", atomictemp=True) as f:
         for kind in sorted(state):
             for node in state[kind]:
                 s = hex(node) if isinstance(node, bytes) else node
-                f.writeutf8("%s %s\n" % (kind, s))
-        f.close()
+                f.write(("%s %s\n" % (kind, s)).encode())
 
 
 def resetstate(repo) -> None:
