@@ -330,7 +330,7 @@ fn test_remap_revs() {
     // Can insert changes by remapping to make room, then recording at the gap.
     let inserted = log_from_texts(&["b\n".into(), "b\nc\n".into()])
         .remap_revs(&|r| if r == 2 { 3 } else { r });
-    let inserted = record_text(inserted, "a\nb\n", Some(2));
+    let inserted = record_text(inserted, "a\nb\n", 1, 2);
     assert_eq!(inserted.checkout_text(3), "a\nb\nc\n");
 
     // Does not check dependencies or conflicts.
@@ -510,7 +510,7 @@ fn test_truncate() {
                 assert_eq!(text, expected, "truncate={truncate_rev}, rev={rev}");
             }
         }
-        let appended = record_text(truncated.clone(), "a\nc\ne\n", None);
+        let appended = append_text(truncated.clone(), "a\nc\ne\n");
         assert_eq!(appended.checkout_text(appended.max_rev()), "a\nc\ne\n");
         for rev in 0..truncate_rev {
             assert_eq!(appended.checkout_text(rev), log.checkout_text(rev));
@@ -645,15 +645,20 @@ fn lines(s: &str) -> Vec<String> {
 fn log_from_texts(texts: &[String]) -> LineLog {
     texts
         .iter()
-        .fold(LineLog::default(), |log, text| record_text(log, text, None))
+        .fold(LineLog::default(), |log, text| append_text(log, text))
 }
 
-/// Record text at a specific rev, or append as a new rev if `rev` is None.
-fn record_text(mut log: LineLog, text: &str, rev: Option<usize>) -> LineLog {
-    let (a_rev, b_rev) = match rev {
-        Some(r) => (r, r),
-        None => (log.max_rev(), log.max_rev() + 1),
-    };
+/// Append text as a new revision based on the current max revision.
+fn append_text(log: LineLog, text: &str) -> LineLog {
+    let a_rev = log.max_rev();
+    record_text(log, text, a_rev, a_rev + 1)
+}
+
+/// Record text at `b_rev`, using `a_rev` as the base revision.
+///
+/// `a_rev == b_rev` is valid for editing a revision that already exists. Callers
+/// that create a new revision should pass the actual parent as `a_rev`.
+fn record_text(mut log: LineLog, text: &str, a_rev: usize, b_rev: usize) -> LineLog {
     let a_lines_info = log.checkout_lines(a_rev);
     let a_text: Vec<String> = a_lines_info
         .iter()
@@ -783,7 +788,7 @@ fn test_block_shift_effectiveness() {
         let mut grouped: BTreeMap<String, Vec<usize>> = Default::default();
         for a1 in 0..=(2 * n) {
             let lines = expected_rev3_lines[a1..a1 + n].to_vec();
-            let log = base.clone().edit_chunk(3, a1, a1, 3, lines, flags);
+            let log = base.clone().edit_chunk(2, a1, a1, 3, lines, flags);
             assert_eq!(log.checkout_text(3), expected_rev3_text);
             let dep = log.calculate_dep_map();
             let dep = format!("DepMap({:?})", dep);
