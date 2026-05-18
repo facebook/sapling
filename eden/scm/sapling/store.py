@@ -362,6 +362,23 @@ class metavfs(util.proxy_wrapper, vfsmod.abstractvfs):
         else:
             raise error.ProgrammingError("mode %s is unsupported for %s" % (mode, path))
 
+    def read(self, path):
+        if path in self.metapaths:
+            with self.metaopen(path, "rb") as fp:
+                return fp.read()
+        return self.inner.read(path)
+
+    def tryread(self, path):
+        if path in self.metapaths:
+            return self.read(path)
+        return self.inner.tryread(path)
+
+    def write(self, path, data, backgroundclose=False):
+        if path in self.metapaths:
+            with self.metaopen(path, "wb") as fp:
+                return fp.write(data)
+        return self.inner.write(path, data, backgroundclose=backgroundclose)
+
     def __call__(self, path, mode="r", *args, **kw):
         if path in self.metapaths:
             return self.metaopen(path, mode)
