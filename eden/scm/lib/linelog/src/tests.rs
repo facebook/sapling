@@ -141,6 +141,112 @@ fn test_describe_instructions() {
 }
 
 #[test]
+fn test_describe_ins_del_stacks_interleaved() {
+    // First 3 revs are from https://sapling-scm.com/docs/internals/linelog
+    let log = log_from_texts(
+        &["a\nb\nc\n", "a\nb\n1\n2\nc\n", "a\n2\nc\n", "c\n", ""]
+            .iter()
+            .map(|s| s.to_string())
+            .collect::<Vec<_>>(),
+    );
+    assert_eq!(
+        log.describe_ins_del_stacks(),
+        vec![
+            "╭────Insert (rev 1)         ",
+            "│    Delete (rev 4)    ────╮",
+            "│    Line:  a              │",
+            "│    Delete (rev 3)    ───╮│",
+            "│    Line:  b             ││",
+            "│╭───Insert (rev 2)       ││",
+            "││   Line:  1             ││",
+            "││                     ───╯│",
+            "││   Line:  2              │",
+            "│╰───                      │",
+            "│                      ────╯",
+            "│    Delete (rev 5)    ────╮",
+            "│    Line:  c              │",
+            "│                      ────╯",
+            "╰────                       ",
+        ]
+    );
+}
+
+#[test]
+fn test_describe_ins_del_stacks_not_nested() {
+    // Insertions at the beginning and end are not nested.
+    let log = log_from_texts(
+        &["b\n", "a\nb\n", "a\nb\nc\n"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect::<Vec<_>>(),
+    );
+    assert_eq!(
+        log.describe_ins_del_stacks(),
+        vec![
+            "╭───Insert (rev 2)       ",
+            "│   Line:  a             ",
+            "╰───                     ",
+            "╭───Insert (rev 1)       ",
+            "│   Line:  b             ",
+            "╰───                     ",
+            "╭───Insert (rev 3)       ",
+            "│   Line:  c             ",
+            "╰───                     ",
+        ]
+    );
+}
+
+#[test]
+fn test_describe_ins_del_stacks_between_old_new() {
+    // Insertion between old new revs is not nested.
+    let log = log_from_texts(
+        &["a\n", "a\nc\n", "a\nb\nc\n"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect::<Vec<_>>(),
+    );
+    assert_eq!(
+        log.describe_ins_del_stacks(),
+        vec![
+            "╭───Insert (rev 1)       ",
+            "│   Line:  a             ",
+            "╰───                     ",
+            "╭───Insert (rev 3)       ",
+            "│   Line:  b             ",
+            "╰───                     ",
+            "╭───Insert (rev 2)       ",
+            "│   Line:  c             ",
+            "╰───                     ",
+        ]
+    );
+}
+
+#[test]
+fn test_describe_ins_del_stacks_between_new_old() {
+    // Insertion between new old revs is nested.
+    let log = log_from_texts(
+        &["c\n", "a\nc\n", "a\nb\nc\n"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect::<Vec<_>>(),
+    );
+    assert_eq!(
+        log.describe_ins_del_stacks(),
+        vec![
+            "╭────Insert (rev 2)       ",
+            "│    Line:  a             ",
+            "╰────                     ",
+            "╭────Insert (rev 1)       ",
+            "│╭───Insert (rev 3)       ",
+            "││   Line:  b             ",
+            "│╰───                     ",
+            "│    Line:  c             ",
+            "╰────                     ",
+        ]
+    );
+}
+
+#[test]
 fn test_remap_revs() {
     let log = log_from_texts(&["b\n".into(), "b\nc\n".into(), "a\nb\nc\n".into()]);
     assert_eq!(log.checkout_text(1), "b\n");
