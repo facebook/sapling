@@ -10,6 +10,9 @@ use std::io;
 use std::path::Path;
 use std::path::PathBuf;
 
+#[cfg(target_os = "windows")]
+use winapi::shared::winerror::ERROR_CANT_RESOLVE_FILENAME;
+
 pub(crate) const CREATE_FILE: &str = "failed to create file";
 pub(crate) const OPEN_FILE: &str = "failed to open file";
 pub(crate) const READ_LINK: &str = "failed to read symbolic link";
@@ -88,6 +91,27 @@ pub fn path_error_details(err: &io::Error) -> Option<PathErrorDetails<'_>> {
     }
 
     None
+}
+
+/// Return true if `err` means path resolution was blocked by a symlink or reparse point.
+pub fn is_symlink_traversal_error(err: &io::Error) -> bool {
+    let err = path_error_details(err).map_or(err, |details| details.original_io_error);
+    is_symlink_traversal_raw_error(err)
+}
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+fn is_symlink_traversal_raw_error(err: &io::Error) -> bool {
+    err.raw_os_error() == Some(libc::ELOOP)
+}
+
+#[cfg(target_os = "windows")]
+fn is_symlink_traversal_raw_error(err: &io::Error) -> bool {
+    err.raw_os_error() == Some(ERROR_CANT_RESOLVE_FILENAME as i32)
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
+fn is_symlink_traversal_raw_error(_err: &io::Error) -> bool {
+    false
 }
 
 #[derive(Debug)]
@@ -202,5 +226,25 @@ mod tests {
         let err = io::Error::from_raw_os_error(2);
 
         assert!(super::path_error_details(&err).is_none());
+    }
+
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    #[test]
+    fn symlink_traversal_error_checks_unix_loop_error() {
+        let plain = io::Error::from_raw_os_error(libc::ELOOP);
+        assert!(super::is_symlink_traversal_error(&plain));
+
+        let wrapped = super::build(plain, super::SYMLINK_METADATA, "link/file");
+        assert!(super::is_symlink_traversal_error(&wrapped));
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn symlink_traversal_error_checks_windows_loop_error() {
+        let plain = io::Error::from_raw_os_error(super::ERROR_CANT_RESOLVE_FILENAME as i32);
+        assert!(super::is_symlink_traversal_error(&plain));
+
+        let wrapped = super::build(plain, super::SYMLINK_METADATA, "link/file");
+        assert!(super::is_symlink_traversal_error(&wrapped));
     }
 }

@@ -64,6 +64,7 @@ use winapi::shared::ntstatus::STATUS_BUFFER_OVERFLOW;
 use winapi::shared::ntstatus::STATUS_INFO_LENGTH_MISMATCH;
 use winapi::shared::ntstatus::STATUS_NO_MORE_FILES;
 use winapi::shared::ntstatus::STATUS_NO_SUCH_FILE;
+use winapi::shared::winerror::ERROR_CANT_RESOLVE_FILENAME;
 use winapi::um::fileapi::BY_HANDLE_FILE_INFORMATION;
 use winapi::um::fileapi::CreateFileW;
 use winapi::um::fileapi::FILE_BASIC_INFO;
@@ -1531,9 +1532,8 @@ fn reject_reparse_point(handle: &OwnedHandle) -> io::Result<()> {
         return Ok(());
     }
 
-    Err(io::Error::new(
-        io::ErrorKind::InvalidInput,
-        "path component is a reparse point",
+    Err(io::Error::from_raw_os_error(
+        ERROR_CANT_RESOLVE_FILENAME as i32,
     ))
 }
 

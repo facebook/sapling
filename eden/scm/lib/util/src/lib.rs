@@ -25,4 +25,5 @@ pub mod utf8;
 
 pub use fs_err;
 pub use path_error::PathErrorDetails;
+pub use path_error::is_symlink_traversal_error;
 pub use path_error::path_error_details;
