@@ -6,6 +6,7 @@
  */
 
 use std::collections::HashMap;
+use std::io::ErrorKind;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -21,6 +22,7 @@ use types::FetchCause;
 use types::FetchContext;
 use types::Key;
 use types::RepoPathBuf;
+use util::is_symlink_traversal_error;
 use vfs::VFS;
 
 use crate::filesystem::PendingChange;
@@ -107,10 +109,8 @@ pub(crate) fn file_changed_given_metadata(
         Some(fs_meta) => fs_meta,
         None => match vfs.metadata(&path) {
             Ok(metadata) => Some(metadata.into()),
-            Err(e) => match e.downcast_ref::<std::io::Error>() {
-                Some(e) if e.kind() == std::io::ErrorKind::NotFound => None,
-                _ => return Err(e),
-            },
+            Err(e) if is_missing(&e) || is_through_symlink(&e) => None,
+            Err(e) => return Err(e),
         },
     };
 
@@ -242,14 +242,14 @@ fn compare_repo_bytes_to_disk(
             }
         }
         Err(e) => {
-            if let Some(e) = e.downcast_ref::<std::io::Error>() {
-                if e.kind() == std::io::ErrorKind::NotFound {
+            if let Some(err) = e.downcast_ref::<std::io::Error>() {
+                if err.kind() == ErrorKind::NotFound {
                     tracing::trace!(?path, "deleted (file missing)");
                     return Ok(ResolvedFileChangeResult::Yes(PendingChange::Deleted(path)));
                 }
             }
 
-            if let Some(vfs::AuditError::ThroughSymlink(..)) = e.downcast_ref::<vfs::AuditError>() {
+            if is_through_symlink(&e) {
                 tracing::trace!(?path, "deleted (read through symlink)");
                 return Ok(ResolvedFileChangeResult::Yes(PendingChange::Deleted(path)));
             }
@@ -259,6 +259,20 @@ fn compare_repo_bytes_to_disk(
             Err(e)
         }
     }
+}
+
+fn is_missing(err: &anyhow::Error) -> bool {
+    err.downcast_ref::<std::io::Error>()
+        .is_some_and(|err| err.kind() == ErrorKind::NotFound)
+}
+
+fn is_through_symlink(err: &anyhow::Error) -> bool {
+    if let Some(vfs::AuditError::ThroughSymlink(..)) = err.downcast_ref::<vfs::AuditError>() {
+        return true;
+    }
+
+    err.downcast_ref::<std::io::Error>()
+        .is_some_and(is_symlink_traversal_error)
 }
 
 impl FileChangeDetector {
@@ -441,5 +455,57 @@ impl IntoIterator for FileChangeDetector {
 
         self.results.extend(results_recv.into_iter());
         self.results.into_iter()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use anyhow::Result;
+    use treestate::filestate::FileStateV2;
+    use treestate::filestate::StateFlags;
+    use types::RepoPathBuf;
+    use vfs::VFS;
+
+    use super::FileChangeResult;
+    use super::file_changed_given_metadata;
+    use crate::filesystem::PendingChange;
+    use crate::metadata;
+
+    #[cfg(unix)]
+    #[test]
+    #[ignore = "Depends on D104479395"]
+    fn file_below_symlink_parent_is_deleted() -> Result<()> {
+        let dir = tempfile::tempdir()?;
+        std::fs::create_dir(dir.path().join("target"))?;
+        std::fs::write(dir.path().join("target/file"), b"content")?;
+        std::os::unix::fs::symlink("target", dir.path().join("link"))?;
+
+        let vfs = VFS::new(dir.path().to_path_buf())?;
+        let path = RepoPathBuf::from_string("link/file".to_string())?;
+        let state = FileStateV2 {
+            mode: 0,
+            size: 0,
+            mtime: 0,
+            copied: None,
+            state: StateFlags::EXIST_P1,
+        };
+
+        let result = file_changed_given_metadata(
+            &vfs,
+            metadata::File {
+                path: path.clone(),
+                fs_meta: None,
+                ts_state: Some(state),
+            },
+        )?;
+
+        match result {
+            FileChangeResult::Yes(PendingChange::Deleted(deleted_path)) => {
+                assert_eq!(deleted_path, path);
+            }
+            _ => panic!("expected file below a symlink parent to be deleted"),
+        }
+
+        Ok(())
     }
 }
