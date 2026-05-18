@@ -14,6 +14,7 @@ use ::vfs::LiteMetadata;
 use cpython::*;
 use cpython_ext::PyNone;
 use cpython_ext::ResultPyErrExt;
+use cpython_ext::SimplePyBuf;
 
 use crate::metadata::metadata;
 
@@ -91,7 +92,7 @@ py_class!(pub class PyRustIO |py| {
         Ok(lines.iter().map(|line| PyBytes::new(py, line)).collect())
     }
 
-    def write(&self, bytes: PyBytes) -> PyResult<usize> {
+    def write(&self, bytes: PyObject) -> PyResult<usize> {
         self.check_open(py)?;
         let inner = self.inner(py);
         let mut io = lock_write(py, inner)?;
@@ -99,12 +100,13 @@ py_class!(pub class PyRustIO |py| {
             Some(io) => io,
             None => return Err(not_writable(py)),
         };
-        let bytes = bytes.data(py);
+        let bytes = SimplePyBuf::<u8>::try_new(py, &bytes)?;
+        let bytes = bytes.as_ref();
         py.allow_threads(|| io.write_all(bytes)).map_pyerr(py)?;
         Ok(bytes.len())
     }
 
-    def writelines(&self, lines: Vec<PyBytes>) -> PyResult<PyNone> {
+    def writelines(&self, lines: Vec<PyObject>) -> PyResult<PyNone> {
         self.check_open(py)?;
         let inner = self.inner(py);
         let mut io = lock_write(py, inner)?;
@@ -112,7 +114,11 @@ py_class!(pub class PyRustIO |py| {
             Some(io) => io,
             None => return Err(not_writable(py)),
         };
-        let lines: Vec<&[u8]> = lines.iter().map(|line| line.data(py)).collect();
+        let lines: Vec<SimplePyBuf<u8>> = lines
+            .iter()
+            .map(|line| SimplePyBuf::<u8>::try_new(py, line))
+            .collect::<PyResult<_>>()?;
+        let lines: Vec<&[u8]> = lines.iter().map(|line| line.as_ref()).collect();
         py.allow_threads(|| write_lines(io, &lines)).map_pyerr(py)?;
         Ok(PyNone)
     }
@@ -716,9 +722,9 @@ mod tests {
         io.writelines(
             py,
             vec![
-                PyBytes::new(py, b"ab"),
-                PyBytes::new(py, b"cd"),
-                PyBytes::new(py, b"ef"),
+                PyBytes::new(py, b"ab").into_object(),
+                PyBytes::new(py, b"cd").into_object(),
+                PyBytes::new(py, b"ef").into_object(),
             ],
         )
         .expect("failed to write lines");
@@ -780,7 +786,7 @@ mod tests {
         let first = io.read(py, 1).expect("failed to read first byte");
         assert_eq!(first.data(py), b"a");
         assert_eq!(
-            io.write(py, PyBytes::new(py, b"Z"))
+            io.write(py, PyBytes::new(py, b"Z").into_object())
                 .expect("failed to write replacement byte"),
             1
         );
