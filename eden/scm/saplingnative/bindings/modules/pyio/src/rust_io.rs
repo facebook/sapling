@@ -72,6 +72,18 @@ py_class!(pub class PyRustIO |py| {
         Ok(PyBytes::new(py, &buf))
     }
 
+    def readlines(&self, hint: i64 = -1) -> PyResult<Vec<PyBytes>> {
+        self.check_open(py)?;
+        let inner = self.inner(py);
+        let mut io = lock_write(py, inner)?;
+        let io = match io.as_mut().and_then(|io| io.as_read()) {
+            Some(io) => io,
+            None => return Err(not_readable(py)),
+        };
+        let lines = py.allow_threads(|| read_lines(io, hint)).map_pyerr(py)?;
+        Ok(lines.iter().map(|line| PyBytes::new(py, line)).collect())
+    }
+
     def write(&self, bytes: PyBytes) -> PyResult<usize> {
         self.check_open(py)?;
         let inner = self.inner(py);
@@ -83,6 +95,19 @@ py_class!(pub class PyRustIO |py| {
         let bytes = bytes.data(py);
         py.allow_threads(|| io.write_all(bytes)).map_pyerr(py)?;
         Ok(bytes.len())
+    }
+
+    def writelines(&self, lines: Vec<PyBytes>) -> PyResult<PyNone> {
+        self.check_open(py)?;
+        let inner = self.inner(py);
+        let mut io = lock_write(py, inner)?;
+        let io = match io.as_mut().and_then(|io| io.as_write()) {
+            Some(io) => io,
+            None => return Err(not_writable(py)),
+        };
+        let lines: Vec<&[u8]> = lines.iter().map(|line| line.data(py)).collect();
+        py.allow_threads(|| write_lines(io, &lines)).map_pyerr(py)?;
+        Ok(PyNone)
     }
 
     def flush(&self) -> PyResult<PyNone> {
@@ -216,6 +241,32 @@ fn lock_write<'a>(
 ) -> PyResult<std::sync::RwLockWriteGuard<'a, Option<Box<dyn IOObject>>>> {
     py.allow_threads(|| lock.write())
         .map_err(|_| PyErr::new::<exc::RuntimeError, _>(py, "rust IO lock was poisoned"))
+}
+
+fn read_lines(io: &mut dyn ::io::Read, hint: i64) -> std_io::Result<Vec<Vec<u8>>> {
+    let mut lines = Vec::new();
+    let mut total_read = 0usize;
+
+    loop {
+        let mut line = Vec::new();
+        let read_bytes = read_line(io, &mut line)?;
+        if read_bytes == 0 {
+            return Ok(lines);
+        }
+        total_read += read_bytes;
+        lines.push(line);
+        if hint > 0 && total_read >= hint as usize {
+            return Ok(lines);
+        }
+    }
+}
+
+fn write_lines(io: &mut dyn ::io::Write, lines: &[&[u8]]) -> std_io::Result<()> {
+    let mut writer = std_io::BufWriter::new(io);
+    for line in lines {
+        std_io::Write::write_all(&mut writer, line)?;
+    }
+    std_io::Write::flush(&mut writer)
 }
 
 fn read_line(io: &mut dyn ::io::Read, buf: &mut Vec<u8>) -> std_io::Result<usize> {
@@ -415,6 +466,7 @@ pub(crate) fn wrap_rust_read(py: Python, r: impl ::io::Read + 'static) -> PyResu
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
+    use std::sync::Mutex;
     use std::sync::atomic::AtomicUsize;
     use std::sync::atomic::Ordering;
 
@@ -444,10 +496,42 @@ mod tests {
         close_count: Arc<AtomicUsize>,
     }
 
+    struct CountWrite {
+        write_count: Arc<AtomicUsize>,
+        bytes: Arc<Mutex<Vec<u8>>>,
+    }
+
     impl IOObject for CountClose {
         fn close(&mut self) -> std_io::Result<()> {
             self.close_count.fetch_add(1, Ordering::Relaxed);
             Ok(())
+        }
+    }
+
+    impl ::io::IsTty for CountWrite {
+        fn is_tty(&self) -> bool {
+            false
+        }
+    }
+
+    impl std_io::Write for CountWrite {
+        fn write(&mut self, buf: &[u8]) -> std_io::Result<usize> {
+            self.write_count.fetch_add(1, Ordering::Relaxed);
+            self.bytes
+                .lock()
+                .expect("failed to lock written bytes")
+                .extend_from_slice(buf);
+            Ok(buf.len())
+        }
+
+        fn flush(&mut self) -> std_io::Result<()> {
+            Ok(())
+        }
+    }
+
+    impl IOObject for CountWrite {
+        fn as_write(&mut self) -> Option<&mut dyn ::io::Write> {
+            Some(self)
         }
     }
 
@@ -530,6 +614,38 @@ mod tests {
 
         io.close(py).expect("failed to close file");
         assert_eq!(close_count.load(Ordering::Relaxed), 1);
+    }
+
+    #[test]
+    fn writelines_buffers_small_writes() {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+        let write_count = Arc::new(AtomicUsize::new(0));
+        let bytes = Arc::new(Mutex::new(Vec::new()));
+        let io = wrap_io_object(
+            py,
+            CountWrite {
+                write_count: write_count.clone(),
+                bytes: bytes.clone(),
+            },
+        )
+        .expect("failed to create PyRustIO");
+
+        io.writelines(
+            py,
+            vec![
+                PyBytes::new(py, b"ab"),
+                PyBytes::new(py, b"cd"),
+                PyBytes::new(py, b"ef"),
+            ],
+        )
+        .expect("failed to write lines");
+
+        assert_eq!(write_count.load(Ordering::Relaxed), 1);
+        assert_eq!(
+            *bytes.lock().expect("failed to lock written bytes"),
+            b"abcdef".to_vec()
+        );
     }
 
     #[test]
