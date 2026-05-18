@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
 
@@ -13,6 +14,8 @@ use rand_chacha::ChaChaRng;
 use rand_core::Rng as _;
 use rand_core::SeedableRng as _;
 
+use crate::AbstractLineLog;
+use crate::EditFlags;
 use crate::LineLog;
 use crate::linelog::PerfStats;
 
@@ -701,6 +704,94 @@ fn diff_lines(a: &[String], b: &[String]) -> Vec<(usize, usize, usize, usize)> {
         }
     }
     blocks
+}
+
+/// Test that block shifting avoids false dependencies when inserting
+/// in the middle of an existing insertion block, at various offsets.
+///
+/// ```text
+///   rev 1: def a():
+///   rev 1:     pass
+///   rev 2:
+///   rev 2: def b():
+///   rev 2:     pass
+/// ```
+///
+/// In `rev 3`, insert a function. It could be either:
+///
+/// ```text
+///   rev 1: def a():
+///   rev 1:     pass
+///   rev 3:
+///   rev 3: def c():
+///   rev 3:     pass
+///   rev 2:
+///   rev 2: def b():
+///   rev 2:     pass
+/// ```
+///
+/// Or (embed in rev 2, as if it depends on rev 2):
+///
+/// ```text
+///   rev 1: def a():
+///   rev 1:     pass
+///   rev 2:
+///   rev 3: def c():
+///   rev 3:     pass
+///   rev 3:
+///   rev 2: def b():
+///   rev 2:     pass
+/// ```
+///
+/// Or (embed in rev 1, as if it depends on rev 1):
+///
+/// ```text
+///   rev 1: def a():
+///   rev 3:     pass
+///   rev 3:
+///   rev 3: def c():
+///   rev 1:     pass
+///   rev 2:
+///   rev 2: def b():
+///   rev 2:     pass
+/// ```
+#[test]
+fn test_block_shift_effectiveness() {
+    // For simplicity,  use the same `func_lines` (with multiple lines) for 3 functions.
+    let text = "def f():\n    pass\n\n\n\n";
+    let lines = text.lines().collect::<Vec<_>>();
+    let n = lines.len();
+    let expected_rev3_lines = lines.repeat(3);
+    let expected_rev3_text = expected_rev3_lines.concat();
+    let no_block_shift_flags = EditFlags::default(); //- EditFlags::BLOCK_SHIFT;
+
+    // Rev 1: lines;  Rev 2: append lines.
+    let base = AbstractLineLog::<&'static str>::default()
+        .edit_chunk(0, 0, 0, 1, lines.clone(), no_block_shift_flags)
+        .edit_chunk(1, n, n, 2, lines.clone(), no_block_shift_flags);
+
+    let calculate_depends = |flags: EditFlags| -> Vec<String> {
+        let mut grouped: BTreeMap<String, Vec<usize>> = Default::default();
+        for a1 in 0..=(2 * n) {
+            let lines = expected_rev3_lines[a1..a1 + n].to_vec();
+            let log = base.clone().edit_chunk(3, a1, a1, 3, lines, flags);
+            assert_eq!(log.checkout_text(3), expected_rev3_text);
+            let dep = log.calculate_dep_map();
+            let dep = format!("DepMap({:?})", dep);
+            grouped.entry(dep).or_default().push(a1);
+        }
+        grouped.iter().map(|(k, v)| format!("{k}: {v:?}")).collect()
+    };
+
+    let depends = calculate_depends(no_block_shift_flags);
+    assert_eq!(
+        depends,
+        [
+            "DepMap({1: {0}, 2: {0}, 3: {0}}): [0, 5, 10]",
+            "DepMap({1: {0}, 2: {0}, 3: {1}}): [1, 2, 3, 4]",
+            "DepMap({1: {0}, 2: {0}, 3: {2}}): [6, 7, 8, 9]"
+        ]
+    );
 }
 
 impl LineLog {
