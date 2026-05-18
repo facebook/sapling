@@ -64,7 +64,6 @@ allow-non-interactive-editor=true
 log-implicit-follow-threshold=10000
 
 titles-namespace=true
-local-committemplate=true
 
 run-python-hooks-via-pyhook=true
 

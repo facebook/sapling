@@ -4825,6 +4825,8 @@ def buildcommittemplate(repo, ctx, ref, summaryfooter=""):
         t.t.cache.update({"summaryfooter": summaryfooter})
 
     # load extra aliases based on changed files
+    # Note: this feature allows executing arbitary templates controlled by the
+    # repo content. Do not enable for untrusted repos!
     if repo.ui.configbool("experimental", "local-committemplate"):
         localtemplate = localcommittemplate(repo, ctx)
         t.t.cache.update((k, templater.unquotestring(v)) for k, v in localtemplate)
