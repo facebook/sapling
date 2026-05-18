@@ -81,7 +81,8 @@
     "scm/mononoke:per_bookmark_locking": true,
     "scm/mononoke:per_bookmark_locking_shadow": false,
     "scm/mononoke:add_acl_manifest_pointer": true,
-    "scm/mononoke:use_blame_v3": false
+    "scm/mononoke:use_blame_v3": false,
+    "scm/mononoke:block_agentic_service_writes": true
   },
   "ints": {
     "scm/mononoke_timeouts:repo_client_clone_timeout_secs": 14400,
