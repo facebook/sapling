@@ -186,7 +186,17 @@ async fn push(
         // either passed `--internal-lfs` or did not pass
         // `--upstream-lfs-server` (so the default of "no LFS flags" is
         // internal mode).
+        //
+        // The `x-git-allow-dangling-lfs-pointers` pushvar relaxes both modes:
+        // when set, an LFS push still succeeds even if the pointer's content
+        // can't be found (in the filestore for internal mode, or at the
+        // upstream LFS server for upstream mode), in which case the pointer
+        // bytes themselves are stored as the file content and the file is
+        // marked as `GitLfs::FullContent`. When the content *is* present, this
+        // flag changes nothing — the pointer is still resolved and the file is
+        // stored as a `GitLfsPointer` referencing the resolved bytes.
         let git_ctx = GitServerContext::borrow_from(state);
+        let allow_dangling_lfs_pointers = request_context.pushvars.allow_dangling_lfs_pointers();
         let lfs = if request_context
             .repo
             .repo_config()
@@ -196,7 +206,7 @@ async fn push(
             if git_ctx.internal_lfs() {
                 GitImportLfs::new_internal(
                     request_context.repo.repo_blobstore_arc().boxed(),
-                    false, // allow_not_found
+                    allow_dangling_lfs_pointers,
                 )
             } else {
                 let max_lfs_tries =
@@ -215,7 +225,7 @@ async fn push(
                         .upstream_lfs_server()?
                         .ok_or_else(|| anyhow::anyhow!("No upstream LFS server specified"))?,
                     url_format,
-                    false,         // allow_not_found
+                    allow_dangling_lfs_pointers,
                     max_lfs_tries, // max attempts
                     Some(50),      // conn_limit
                     git_ctx.tls_args()?,
