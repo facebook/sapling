@@ -150,6 +150,17 @@ py_class!(pub class PyRustIO |py| {
         Ok(PyNone)
     }
 
+    def __enter__(&self) -> PyResult<Self> {
+        Ok(self.clone_ref(py))
+    }
+
+    def __exit__(&self, ty: Option<PyType>, _value: PyObject, _traceback: PyObject) -> PyResult<bool> {
+        if ty.is_none() {
+            self.close(py)?;
+        }
+        Ok(false)
+    }
+
     @property
     def closed(&self) -> PyResult<bool> {
         Ok(self.is_closed(py).get())
@@ -429,6 +440,17 @@ mod tests {
         close_count: Arc<AtomicUsize>,
     }
 
+    struct CountClose {
+        close_count: Arc<AtomicUsize>,
+    }
+
+    impl IOObject for CountClose {
+        fn close(&mut self) -> std_io::Result<()> {
+            self.close_count.fetch_add(1, Ordering::Relaxed);
+            Ok(())
+        }
+    }
+
     impl IOObject for FailFirstClose {
         fn close(&mut self) -> std_io::Result<()> {
             match self.close_count.fetch_add(1, Ordering::Relaxed) {
@@ -458,6 +480,56 @@ mod tests {
         io.close(py).expect("second close should retry and succeed");
         assert_eq!(close_count.load(Ordering::Relaxed), 2);
         assert!(io.closed(py).expect("failed to read closed state"));
+    }
+
+    #[test]
+    fn context_manager_exit_closes_without_exception() {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+        let close_count = Arc::new(AtomicUsize::new(0));
+        let io = wrap_io_object(
+            py,
+            CountClose {
+                close_count: close_count.clone(),
+            },
+        )
+        .expect("failed to create PyRustIO");
+
+        let suppress = io
+            .__exit__(py, None, py.None(), py.None())
+            .expect("failed to exit context manager");
+        assert!(!suppress);
+        assert_eq!(close_count.load(Ordering::Relaxed), 1);
+        assert!(io.closed(py).expect("failed to read closed state"));
+    }
+
+    #[test]
+    fn context_manager_exit_keeps_open_with_exception() {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+        let close_count = Arc::new(AtomicUsize::new(0));
+        let io = wrap_io_object(
+            py,
+            CountClose {
+                close_count: close_count.clone(),
+            },
+        )
+        .expect("failed to create PyRustIO");
+
+        let suppress = io
+            .__exit__(
+                py,
+                Some(py.get_type::<exc::RuntimeError>()),
+                py.None(),
+                py.None(),
+            )
+            .expect("failed to exit context manager");
+        assert!(!suppress);
+        assert_eq!(close_count.load(Ordering::Relaxed), 0);
+        assert!(!io.closed(py).expect("failed to read closed state"));
+
+        io.close(py).expect("failed to close file");
+        assert_eq!(close_count.load(Ordering::Relaxed), 1);
     }
 
     #[test]
