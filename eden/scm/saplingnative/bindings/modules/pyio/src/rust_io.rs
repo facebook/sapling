@@ -279,6 +279,15 @@ py_class!(pub class PyRustIO |py| {
             Err(unsupported_operation(py, "fileno is not supported")?)
         }
     }
+
+    def __iter__(&self) -> PyResult<PyObject> {
+        // For simplicity, just read the entire file, assuming the callsite will consume
+        // the iterable, before calling otheer file read methods.
+        self.readlines(py, -1)?
+            .to_py_object(py)
+            .into_object()
+            .call_method(py, "__iter__", NoArgs, None)
+    }
 });
 
 pub(crate) fn unsupported_operation(py: Python, message: &str) -> PyResult<PyErr> {
