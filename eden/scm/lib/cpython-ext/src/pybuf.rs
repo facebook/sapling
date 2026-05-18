@@ -38,8 +38,11 @@ use std::marker::PhantomData;
 use std::mem;
 use std::slice;
 
+use cpython::PyErr;
 use cpython::PyObject;
+use cpython::PyResult;
 use cpython::Python;
+use cpython::exc;
 use python3_sys as cpy;
 
 pub struct SimplePyBuf<T>(cpy::Py_buffer, PhantomData<T>);
@@ -68,7 +71,7 @@ unsafe fn is_safe_type(obj: &PyObject) -> bool {
 }
 
 impl<T: Copy> SimplePyBuf<T> {
-    pub fn new(py: Python<'_>, obj: &PyObject) -> Self {
+    pub fn try_new(py: Python<'_>, obj: &PyObject) -> PyResult<Self> {
         // Note about GC on obj:
         //
         // Practically, obj here is some low-level, non-container ones like
@@ -93,16 +96,23 @@ impl<T: Copy> SimplePyBuf<T> {
         unsafe {
             if !is_safe_type(obj) {
                 let ty = obj.get_type(py);
-                panic!("potentially unsafe type for SimplePyBuf: {}", ty.name(py));
+                return Err(PyErr::new::<exc::TypeError, _>(
+                    py,
+                    format!("a bytes-like object is required, not '{}'", ty.name(py)),
+                ));
             }
 
             let mut buf = mem::zeroed::<SimplePyBuf<T>>();
             let r = cpy::PyObject_GetBuffer(obj.as_ptr(), &mut buf.0, cpy::PyBUF_SIMPLE);
             if r == -1 {
-                panic!("failed to get Py_buffer");
+                return Err(PyErr::fetch(py));
             }
-            buf
+            Ok(buf)
         }
+    }
+
+    pub fn new(py: Python<'_>, obj: &PyObject) -> Self {
+        Self::try_new(py, obj).expect("failed to get Py_buffer")
     }
 }
 
