@@ -23,6 +23,7 @@ use io::IO as RustIO;
 use io::time_interval;
 use pyconfigloader::config as PyConfig;
 pub use rust_io::IOObject;
+use rust_io::unsupported_operation;
 pub use rust_io::wrap_file_like;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
@@ -342,7 +343,7 @@ py_class!(pub class BufIO |py| {
     }
 
     def fileno(&self) -> PyResult<u64> {
-        Err(PyErr::from_instance(py, py.import("io")?.get(py, "UnsupportedOperation")?))
+        Err(unsupported_operation(py, "fileno is not supported")?)
     }
 });
 

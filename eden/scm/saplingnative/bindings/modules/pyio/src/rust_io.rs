@@ -132,10 +132,7 @@ py_class!(pub class PyRustIO |py| {
         let file = match io.as_mut().and_then(|io| io.as_file()) {
             Some(file) => file,
             None => {
-                return Err(PyErr::from_instance(
-                    py,
-                    py.import("io")?.get(py, "UnsupportedOperation")?,
-                ));
+                return Err(unsupported_operation(py, "metadata")?);
             }
         };
         let meta: LiteMetadata = py.allow_threads(|| file.metadata()).map_pyerr(py)?.into();
@@ -236,10 +233,19 @@ py_class!(pub class PyRustIO |py| {
         } else if self.isstderr(py)? {
             Ok(2)
         } else {
-            Err(PyErr::from_instance(py, py.import("io")?.get(py, "UnsupportedOperation")?))
+            Err(unsupported_operation(py, "fileno is not supported")?)
         }
     }
 });
+
+pub(crate) fn unsupported_operation(py: Python, message: &str) -> PyResult<PyErr> {
+    Ok(PyErr::from_instance(
+        py,
+        py.import("io")?
+            .get(py, "UnsupportedOperation")?
+            .call(py, (message,), None)?,
+    ))
+}
 
 impl PyRustIO {
     fn check_open(&self, py: Python) -> PyResult<PyNone> {
