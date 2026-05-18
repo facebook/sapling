@@ -15,6 +15,7 @@ use tokio::sync::oneshot;
 use types::RepoPath;
 use types::RepoPathBuf;
 
+use crate::RemoveOptions;
 use crate::UpdateFlag;
 use crate::VFS;
 
@@ -114,6 +115,12 @@ struct ActionResult {
     remove_errors: Vec<(RepoPathBuf, Error)>,
 }
 
+fn remove_options() -> RemoveOptions {
+    RemoveOptions::IGNORE_MISSING_PATH
+        | RemoveOptions::IGNORE_NON_FILE_OR_SYMLINK
+        | RemoveOptions::PRUNE_EMPTY_PARENTS
+}
+
 fn async_vfs_worker(vfs: VFS, receiver: flume::Receiver<WorkItem>) {
     for item in receiver {
         // Quickcheck - if caller future dropped while item was in queue, no reason to execute
@@ -140,7 +147,7 @@ fn execute_action(vfs: &VFS, action: Work) -> Result<ActionResult> {
             }
         }
         Work::Remove(path) => {
-            if let Err(err) = vfs.remove(&path) {
+            if let Err(err) = vfs.remove(&path, remove_options()) {
                 remove_errors.push((path, err));
             }
         }
@@ -246,7 +253,7 @@ fn batch_worker(
                 }
             }
             Work::SetExecutable(path, exec) => vfs.set_executable(path, *exec).map(|_| ()),
-            Work::Remove(path) => vfs.remove(path),
+            Work::Remove(path) => vfs.remove(path, remove_options()),
             // Don't support batch for now - doesn't really make sense anyway since it precludes
             // parallelism.
             Work::Batch(_) => Err(anyhow::anyhow!("Work::Batch not supported")),

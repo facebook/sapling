@@ -42,6 +42,7 @@ use types::RepoPath;
 use types::workingcopy_client::CheckoutConflict;
 use types::workingcopy_client::CheckoutMode;
 use types::workingcopy_client::ConflictType;
+use vfs::RemoveOptions;
 use workingcopy::client::WorkingCopyClient;
 use workingcopy::util::walk_treestate;
 use workingcopy::workingcopy::LockedWorkingCopy;
@@ -139,7 +140,12 @@ fn actionmap_from_eden_conflicts(
                         if is_ignored {
                             // Remove the ignored file so EdenFS can create the
                             // directory during the NORMAL checkout.
-                            wc.vfs().remove(conflict_path)?;
+                            wc.vfs().remove(
+                                conflict_path,
+                                RemoveOptions::IGNORE_MISSING_PATH
+                                    | RemoveOptions::IGNORE_NON_FILE_OR_SYMLINK
+                                    | RemoveOptions::PRUNE_EMPTY_PARENTS,
+                            )?;
                         } else {
                             bail!(
                                 "{}: local file conflicts with a directory in the destination commit",

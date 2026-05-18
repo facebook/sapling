@@ -22,6 +22,7 @@ use std::sync::atomic::Ordering;
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::bail;
+use bitflags::bitflags;
 use fsinfo::FsType;
 use fsinfo::fstype;
 use minibytes::Bytes;
@@ -120,6 +121,22 @@ pub enum UpdateFlag {
     Regular,
     Symlink,
     Executable,
+}
+
+bitflags! {
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct RemoveOptions: u8 {
+        /// Return success if `path` does not exist.
+        const IGNORE_MISSING_PATH = 1 << 0;
+        /// Return success if the existing leaf is not a regular file or symlink.
+        ///
+        /// Symlinks are classified without following them. This requires a metadata
+        /// check before removal; that check is not atomic with the later removal, so
+        /// a concurrent change after classification can still make removal fail.
+        const IGNORE_NON_FILE_OR_SYMLINK = 1 << 1;
+        /// Remove empty parent directories after handling the leaf.
+        const PRUNE_EMPTY_PARENTS = 1 << 2;
+    }
 }
 
 impl VFS {
@@ -476,42 +493,60 @@ impl VFS {
         Ok(())
     }
 
-    /// Remove the file at `path`.
-    ///
-    /// If file does not exist, returns without an error
-    ///
-    /// The parent directories of this file will be removed recursively if they are empty.
-    pub fn remove(&self, path: &RepoPath) -> Result<()> {
+    /// Remove a file or symlink at `path`.
+    pub fn remove(&self, path: &RepoPath, options: RemoveOptions) -> Result<()> {
         self.inner.auditor.audit_components(path)?;
-        self.remove_keep_path(path)?;
+        self.remove_leaf(path, options)?;
 
-        // Mercurial doesn't track empty directories, remove them
-        // recursively.
-        let mut parent = path.to_owned();
-        loop {
-            if !parent.pop() || parent.is_empty() {
-                break;
-            }
+        if options.contains(RemoveOptions::PRUNE_EMPTY_PARENTS) {
+            // Mercurial doesn't track empty directories, remove them
+            // recursively.
+            let mut parent = path.to_owned();
+            loop {
+                if !parent.pop() || parent.is_empty() {
+                    break;
+                }
 
-            if self.no_follow()?.remove_dir(&parent).is_err() {
-                break;
+                if self.no_follow()?.remove_dir(&parent).is_err() {
+                    break;
+                }
             }
         }
         Ok(())
     }
 
-    /// Remove a file or symlink at `path` without pruning empty parent directories.
-    pub fn unlink(&self, path: &RepoPath) -> Result<()> {
-        self.inner.auditor.audit_components(path)?;
-        Ok(self.no_follow()?.remove_file(path)?)
-    }
+    fn remove_leaf(&self, path: &RepoPath, options: RemoveOptions) -> Result<()> {
+        let no_follow = self.no_follow()?;
 
-    /// Attempt to remove a file or symlink at `path`, ignoring missing files.
-    pub fn try_unlink(&self, path: &RepoPath) -> Result<()> {
-        self.inner.auditor.audit_components(path)?;
-        match self.no_follow()?.remove_file(path) {
+        if options.contains(RemoveOptions::IGNORE_NON_FILE_OR_SYMLINK) {
+            // The metadata check is only used to classify the current leaf for
+            // ignore options. The leaf may race and change before removal;
+            // NoFollowRoot::remove_file still removes the final component as a
+            // leaf and does not follow it.
+            let metadata = match no_follow.symlink_metadata((!path.is_empty()).then_some(path)) {
+                Ok(metadata) => metadata,
+                Err(err)
+                    if err.kind() == ErrorKind::NotFound
+                        && options.contains(RemoveOptions::IGNORE_MISSING_PATH) =>
+                {
+                    return Ok(());
+                }
+                Err(err) => return Err(err.into()),
+            };
+
+            if !metadata.is_file() && !metadata.is_symlink() {
+                return Ok(());
+            }
+        }
+
+        match no_follow.remove_file(path) {
             Ok(()) => Ok(()),
-            Err(err) if err.kind() == ErrorKind::NotFound => Ok(()),
+            Err(err)
+                if err.kind() == ErrorKind::NotFound
+                    && options.contains(RemoveOptions::IGNORE_MISSING_PATH) =>
+            {
+                Ok(())
+            }
             Err(err) => Err(err.into()),
         }
     }
@@ -540,7 +575,10 @@ impl VFS {
         if !cfg!(unix) {
             // unix supports O_NOFOLLOW when opening. For Windows, just remove the file first.
             self.inner.auditor.audit_components(path)?;
-            self.remove_keep_path(path)?;
+            self.remove_leaf(
+                path,
+                RemoveOptions::IGNORE_MISSING_PATH | RemoveOptions::IGNORE_NON_FILE_OR_SYMLINK,
+            )?;
         }
         self.write(path, data, flag)
     }
@@ -576,27 +614,6 @@ impl VFS {
             content
         };
         Ok((content.into(), metadata))
-    }
-
-    /// Removes file, but unlike Self::remove, does not delete empty directories.
-    fn remove_keep_path(&self, path: &RepoPath) -> Result<()> {
-        // The metadata check is only used to classify the current leaf. The
-        // leaf may race and change before removal; NoFollowRoot::remove_file
-        // still removes the final component as a leaf and does not follow it.
-        let metadata = match self
-            .no_follow()?
-            .symlink_metadata((!path.is_empty()).then_some(path))
-        {
-            Ok(metadata) => metadata,
-            Err(err) if err.kind() == ErrorKind::NotFound => return Ok(()),
-            Err(err) => return Err(err.into()),
-        };
-
-        if metadata.is_file() || metadata.is_symlink() {
-            self.no_follow()?.remove_file(path)?;
-        }
-
-        Ok(())
     }
 
     /// Converts a list of file symlinks into potentially directory symlinks by
@@ -774,31 +791,39 @@ mod unix_tests {
 
         let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
         let path = RepoPath::from_str("link/file").unwrap();
-        assert!(vfs.remove(path).is_err());
+        assert!(
+            vfs.remove(
+                path,
+                RemoveOptions::IGNORE_MISSING_PATH
+                    | RemoveOptions::IGNORE_NON_FILE_OR_SYMLINK
+                    | RemoveOptions::PRUNE_EMPTY_PARENTS,
+            )
+            .is_err()
+        );
         assert_eq!(fs::read(outside.path().join("file")).unwrap(), b"outside");
     }
 
     #[test]
-    fn test_unlink_keeps_empty_parent_dirs() {
+    fn test_remove_keeps_empty_parent_dirs_without_prune_option() {
         let tmp = tempfile::tempdir().unwrap();
         let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
         fs::create_dir_all(tmp.path().join("a/b")).unwrap();
         fs::write(tmp.path().join("a/b/file"), b"content").unwrap();
 
         let path = RepoPath::from_str("a/b/file").unwrap();
-        vfs.unlink(path).unwrap();
+        vfs.remove(path, RemoveOptions::empty()).unwrap();
 
         assert!(!tmp.path().join("a/b/file").exists());
         assert!(tmp.path().join("a/b").is_dir());
     }
 
     #[test]
-    fn test_unlink_rejects_missing_path() {
+    fn test_remove_rejects_missing_path_without_ignore_option() {
         let tmp = tempfile::tempdir().unwrap();
         let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
         let path = RepoPath::from_str("a/b/file").unwrap();
 
-        let err = vfs.unlink(path).unwrap_err();
+        let err = vfs.remove(path, RemoveOptions::empty()).unwrap_err();
         assert_eq!(
             err.downcast_ref::<io::Error>().map(|err| err.kind()),
             Some(ErrorKind::NotFound)
@@ -806,12 +831,40 @@ mod unix_tests {
     }
 
     #[test]
-    fn test_try_unlink_ignores_missing_path() {
+    fn test_remove_ignores_missing_path_with_ignore_option() {
         let tmp = tempfile::tempdir().unwrap();
         let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
         let path = RepoPath::from_str("a/b/file").unwrap();
 
-        vfs.try_unlink(path).unwrap();
+        vfs.remove(path, RemoveOptions::IGNORE_MISSING_PATH)
+            .unwrap();
+    }
+
+    #[test]
+    fn test_remove_ignores_non_file_or_symlink_with_ignore_option() {
+        let tmp = tempfile::tempdir().unwrap();
+        let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
+        fs::create_dir(tmp.path().join("dir")).unwrap();
+        let path = RepoPath::from_str("dir").unwrap();
+
+        vfs.remove(path, RemoveOptions::IGNORE_NON_FILE_OR_SYMLINK)
+            .unwrap();
+
+        assert!(tmp.path().join("dir").is_dir());
+    }
+
+    #[test]
+    fn test_remove_prunes_empty_parent_dirs_with_prune_option() {
+        let tmp = tempfile::tempdir().unwrap();
+        let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
+        fs::create_dir_all(tmp.path().join("a/b")).unwrap();
+        fs::write(tmp.path().join("a/b/file"), b"content").unwrap();
+        let path = RepoPath::from_str("a/b/file").unwrap();
+
+        vfs.remove(path, RemoveOptions::PRUNE_EMPTY_PARENTS)
+            .unwrap();
+
+        assert!(!tmp.path().join("a").exists());
     }
 
     #[test]
