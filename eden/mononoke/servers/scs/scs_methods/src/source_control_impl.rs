@@ -308,29 +308,17 @@ impl SourceControlServiceImpl {
     ) -> Result<Metadata, scs_errors::ServiceError> {
         let header = |h: &str| req_ctxt.header(h).map_err(scs_errors::invalid_request);
 
-        // Use authenticated_identities_struct to get full AuthenticatedIdentity thrift structs.
-        // Fall back to legacy identities() if the new method returns nothing (e.g. for callers
-        // presenting legacy certs without mid:// SAN URIs).
-        let tls_identities: MononokeIdentitySet = {
-            let auth_idents_vec = req_ctxt
-                .authenticated_identities_struct()
-                .map_err(scs_errors::internal_error)?;
-
-            if auth_idents_vec.is_empty() {
-                req_ctxt
-                    .identities()
-                    .map_err(scs_errors::internal_error)?
-                    .entries()
-                    .into_iter()
-                    .map(MononokeIdentity::from_identity_ref)
-                    .collect()
-            } else {
-                auth_idents_vec
-                    .into_iter()
-                    .map(MononokeIdentity::Authenticated)
-                    .collect()
-            }
-        };
+        // `authenticated_identities_struct()` already returns a normalized
+        // `AuthenticatedIdentity` list — the C++ side wraps legacy custom-OID identities via
+        // `getAuthenticatedIdentitiesFrom(ExtractedIdentityCert*)` (see
+        // `fbcode/access/lib/authn/X509AuthenticationProvider.cpp:30-48`), so no Rust-side
+        // fallback to legacy `identities()` is needed.
+        let tls_identities: MononokeIdentitySet = req_ctxt
+            .authenticated_identities_struct()
+            .map_err(scs_errors::internal_error)?
+            .into_iter()
+            .map(MononokeIdentity::Authenticated)
+            .collect();
 
         // Get any valid CAT identities.
         let cats_identities: MononokeIdentitySet = req_ctxt
@@ -365,8 +353,7 @@ impl SourceControlServiceImpl {
                     if let Some(forwarded_authenticated_identities) =
                         header(FORWARDED_AUTHENTICATED_IDENTITIES_HEADER)?
                     {
-                        // Parse authenticated identities using try_from_json_encoded_with_authn_identities
-                        let idents = MononokeIdentity::try_from_json_encoded_with_authn_identities(
+                        let idents = MononokeIdentity::try_from_json_encoded(
                             forwarded_authenticated_identities.as_str(),
                         )
                         .map_err(scs_errors::invalid_request)?;
