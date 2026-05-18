@@ -101,7 +101,7 @@
   $ RUST_BACKTRACE=1 bonsai_verify hg-manifest "$hghash" 1
   * 20572a577cfeaf2580444148d6abd34121a0899b total:1 bad:0 * (glob)
 
-  $ bonsai_verify round-trip "$hghash"
+  $ bonsai_verify round-trip "$hghash" 2>&1 | grep '% valid'
   [INFO] 100.00% valid ignored=0 errors=0 valid=5 total=5
 
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "SELECT HEX(filenode), HEX(linknode) FROM filenodes ORDER BY filenode DESC;"

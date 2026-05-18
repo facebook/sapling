@@ -31,5 +31,5 @@ setup repo
 
 smoke test to ensure bonsai_verify works
 
-  $ bonsai_verify round-trip $HG_ID 2>&1 | grep valid
+  $ bonsai_verify round-trip $HG_ID 2>&1 | grep '% valid'
   [INFO] 100.00% valid ignored=0 errors=0 valid=1 total=1
