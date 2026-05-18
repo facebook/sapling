@@ -30,6 +30,7 @@ use futures_retry::retry;
 use itertools::Itertools;
 use metaconfig_parser::RepoConfigs;
 use metaconfig_parser::StorageConfigs;
+use metaconfig_types::CommitIdentityScheme;
 use metaconfig_types::Redaction;
 use metaconfig_types::RepoConfig;
 use metaconfig_types::ShardedService;
@@ -75,6 +76,10 @@ pub struct MononokeReposManager<Repo> {
     // change a given repo's config (the common case when a sibling repo is
     // added or modified).
     applied_configs: Arc<ArcSwap<HashMap<String, RepoConfig>>>,
+    // Tier-wide list of enabled repos (name -> default identity scheme).
+    // Shared with Mononoke<R> (read by list_repos) and with
+    // MononokeConfigUpdateReceiver (which refreshes it on each config update).
+    repo_names_in_tier: Arc<ArcSwap<HashMap<String, CommitIdentityScheme>>>,
 }
 
 impl<Repo> MononokeReposManager<Repo> {
@@ -117,12 +122,14 @@ impl<Repo> MononokeReposManager<Repo> {
     {
         let repos = Arc::new(MononokeRepos::new());
         let applied_configs = Arc::new(ArcSwap::from_pointee(HashMap::new()));
+        let repo_names_in_tier = Arc::new(ArcSwap::from_pointee(HashMap::new()));
         let mgr = MononokeReposManager {
             repos,
             configs,
             repo_factory,
             redaction_disabled,
             applied_configs: applied_configs.clone(),
+            repo_names_in_tier: repo_names_in_tier.clone(),
         };
         mgr.populate_repos(repo_names).await?;
         let update_receiver = MononokeConfigUpdateReceiver::new(
@@ -131,6 +138,7 @@ impl<Repo> MononokeReposManager<Repo> {
             service_name,
             mgr.configs.clone(),
             applied_configs,
+            repo_names_in_tier,
         );
         mgr.configs
             .register_for_update(Arc::new(update_receiver) as Arc<dyn ConfigUpdateReceiver>);
@@ -273,18 +281,35 @@ impl<Repo> MononokeReposManager<Repo> {
 
 impl<R> MononokeReposManager<R> {
     pub fn make_mononoke_api(&self) -> Result<Mononoke<R>> {
+        // Note: the watcher receiver is already registered by the time we
+        // run, so in principle a configerator update fired between
+        // registration and this call could land a fresher snapshot that
+        // this store() overwrites. In practice make_mononoke_api runs
+        // milliseconds after registration during startup, before any
+        // notification is plausible; subsequent apply_update calls will
+        // correct any drift within one config refresh cycle.
         let configs = self.configs.load_all_repo_configs()?;
-
-        let repo_names_in_tier =
-            HashMap::from_iter(configs.into_iter().filter_map(|(name, config)| {
-                if config.enabled {
-                    Some((name, config.default_commit_identity_scheme.clone()))
-                } else {
-                    None
-                }
-            }));
-        Mononoke::new(self.repos.clone(), repo_names_in_tier)
+        self.repo_names_in_tier
+            .store(Arc::new(build_repo_names_in_tier(
+                configs.iter().map(|(name, config)| (name, config)),
+            )));
+        Mononoke::new(self.repos.clone(), self.repo_names_in_tier.clone())
     }
+}
+
+/// Build the tier-wide (name -> default identity scheme) map from an iterator
+/// of borrowed (repo_name, RepoConfig) pairs, dropping disabled repos. Takes
+/// borrows to avoid cloning the heavy RepoConfig struct just to read two
+/// fields.
+fn build_repo_names_in_tier<'a, I>(configs: I) -> HashMap<String, CommitIdentityScheme>
+where
+    I: IntoIterator<Item = (&'a String, &'a RepoConfig)>,
+{
+    configs
+        .into_iter()
+        .filter(|(_, config)| config.enabled)
+        .map(|(name, config)| (name.clone(), config.default_commit_identity_scheme.clone()))
+        .collect()
 }
 
 /// Struct responsible for receiving updated configurations from MononokeConfigs
@@ -296,6 +321,10 @@ pub struct MononokeConfigUpdateReceiver<Repo> {
     mononoke_configs: Arc<MononokeConfigs>,
     // Shared with the owning MononokeReposManager. See MononokeReposManager.
     applied_configs: Arc<ArcSwap<HashMap<String, RepoConfig>>>,
+    // Shared with MononokeReposManager and Mononoke<R>. Updated on every
+    // config change so `list_repos` sees newly-added repos without waiting
+    // for a process restart.
+    repo_names_in_tier: Arc<ArcSwap<HashMap<String, CommitIdentityScheme>>>,
 }
 
 /// Determines which repos should be loaded/reloaded based on config.
@@ -377,6 +406,7 @@ impl<Repo> MononokeConfigUpdateReceiver<Repo> {
         service_name: Option<ShardedService>,
         mononoke_configs: Arc<MononokeConfigs>,
         applied_configs: Arc<ArcSwap<HashMap<String, RepoConfig>>>,
+        repo_names_in_tier: Arc<ArcSwap<HashMap<String, CommitIdentityScheme>>>,
     ) -> Self {
         Self {
             repos,
@@ -384,7 +414,15 @@ impl<Repo> MononokeConfigUpdateReceiver<Repo> {
             service_name,
             mononoke_configs,
             applied_configs,
+            repo_names_in_tier,
         }
+    }
+
+    /// Rebuild the tier-wide repo names map from `repo_configs` (the full
+    /// tier config, not the per-task subset) and atomically swap it in.
+    fn refresh_repo_names_in_tier(&self, repo_configs: &RepoConfigs) {
+        let names = build_repo_names_in_tier(repo_configs.repos.iter());
+        self.repo_names_in_tier.store(Arc::new(names));
     }
 
     /// Merge the given (repo_name, RepoConfig) entries into the applied-config
@@ -456,6 +494,11 @@ where
         repo_configs: Arc<RepoConfigs>,
         _: Arc<StorageConfigs>,
     ) -> Result<()> {
+        // Refresh the tier-wide names list first so `list_repos` reflects the
+        // latest tier config independent of (and not blocked by) the heavy
+        // per-task repo rebuild below.
+        self.refresh_repo_names_in_tier(&repo_configs);
+
         let candidates = self.reloadable_repo(repo_configs.clone());
         let candidate_count = candidates.len();
         let applied_snapshot = self.applied_configs.load_full();
@@ -521,6 +564,30 @@ where
     }
 
     async fn apply_repo_update(&self, repo_name: &str, repo_config: &RepoConfig) -> Result<()> {
+        // Surgically patch the tier-wide names map from the passed-in
+        // arg, not from self.mononoke_configs.repo_configs(). The arg is
+        // authoritative for THIS repo; self.mononoke_configs depends on
+        // an ordering invariant (the caller must have already swapped in
+        // the new config) which isn't documented on the trait. Using the
+        // arg eliminates that coupling.
+        //
+        // rcu() makes the load-mutate-store atomic against concurrent writers:
+        // if anything else (another apply_repo_update, or apply_update's bulk
+        // refresh) stores during the closure, the CAS fails and the closure
+        // re-runs on the fresher snapshot. Idempotent for our patch shape.
+        self.repo_names_in_tier.rcu(|current| {
+            let mut snapshot = (**current).clone();
+            if repo_config.enabled {
+                snapshot.insert(
+                    repo_name.to_string(),
+                    repo_config.default_commit_identity_scheme.clone(),
+                );
+            } else {
+                snapshot.remove(repo_name);
+            }
+            Arc::new(snapshot)
+        });
+
         // Skip disabled or non-reloadable repos
         if !repo_config.enabled {
             return Ok(());

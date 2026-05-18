@@ -35,7 +35,8 @@ impl SourceControlServiceImpl {
         _ctx: CoreContext,
         params: thrift::ListReposParams,
     ) -> Result<Vec<thrift::Repo>, scs_errors::ServiceError> {
-        let names = self.mononoke.repo_names_in_tier.iter();
+        let snapshot = self.mononoke.repo_names_in_tier.load();
+        let names = snapshot.iter();
         let names: Box<dyn Iterator<Item = _>> =
             if let Some(identity_schemes) = params.identity_schemes {
                 let schemes = identity_schemes

@@ -12,6 +12,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::Error;
+use arc_swap::ArcSwap;
 pub use bookmarks::BookmarkCategory;
 pub use bookmarks::BookmarkKey;
 use maplit::hashmap;
@@ -110,21 +111,33 @@ pub use crate::xrepo::CandidateSelectionHintArgs;
 
 /// An instance of Mononoke, which may manage multiple repositories.
 pub struct Mononoke<R> {
-    // Collection of instantiated repos currently being served.
+    // Collection of instantiated repos currently being served by this task.
+    // Deep-sharded: a given SCS task only holds the repos assigned to it by
+    // shardmanager, not the full tier.
     pub repos: Arc<MononokeRepos<R>>,
-    // The collective list of all enabled repos that exist
-    // in the current tier (e.g. prod, backup, etc.)
-    pub repo_names_in_tier: HashMap<String, CommitIdentityScheme>,
+    // Tier-wide list of all enabled repos (name -> default identity scheme),
+    // sourced from configerator. Distinct from `repos` because `list_repos`
+    // must return the tier-wide view, not this task's sharded subset.
+    //
+    // Wrapped in ArcSwap so MononokeConfigUpdateReceiver can refresh it on
+    // every config change; reads from `list_repos` are lock-free via .load().
+    pub repo_names_in_tier: Arc<ArcSwap<HashMap<String, CommitIdentityScheme>>>,
 }
 
 impl<R> Mononoke<R> {
-    /// Create a MononokeAPI instance for MononokeRepos
+    /// Create a MononokeAPI instance for MononokeRepos.
     ///
-    /// Takes extra argument containing list of all available repos
-    /// (used to power APIs listing repos; TODO: change that arg to MononokeConfigs)
+    /// `repo_names_in_tier` is shared with the owning MononokeReposManager and
+    /// its MononokeConfigUpdateReceiver — updates land via the same ArcSwap.
+    ///
+    /// Note: a previous TODO suggested replacing this arg with `MononokeConfigs`
+    /// so the tier list could be derived on demand. We deliberately keep the
+    /// pre-computed ArcSwap: deriving from configs would iterate ~thousands of
+    /// repos per `list_repos` call and would require plumbing `MononokeConfigs`
+    /// through to here, which Mononoke<R> intentionally does not depend on.
     pub fn new(
         repos: Arc<MononokeRepos<R>>,
-        repo_names_in_tier: HashMap<String, CommitIdentityScheme>,
+        repo_names_in_tier: Arc<ArcSwap<HashMap<String, CommitIdentityScheme>>>,
     ) -> Result<Self, Error> {
         Ok(Self {
             repos,
@@ -255,7 +268,7 @@ pub mod test_impl {
             mononoke_repos.populate(repos);
             Ok(Self {
                 repos: Arc::new(mononoke_repos),
-                repo_names_in_tier,
+                repo_names_in_tier: Arc::new(ArcSwap::from_pointee(repo_names_in_tier)),
             })
         }
 
@@ -279,7 +292,7 @@ pub mod test_impl {
             ]);
             Ok(Self {
                 repos: Arc::new(mononoke_repos),
-                repo_names_in_tier,
+                repo_names_in_tier: Arc::new(ArcSwap::from_pointee(repo_names_in_tier)),
             })
         }
     }
