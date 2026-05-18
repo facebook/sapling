@@ -42,7 +42,7 @@ class SimplePlaygroundTest(unittest.TestCase):
         elif os.environ.get("TPX_PLAYGROUND_FATAL") is not None:
             os._exit(1)
         elif os.environ.get("TPX_PLAYGROUND_SLEEP") is not None:
-            # pyrefly: ignore [no-matching-overload]
+            # pyrefly: ignore [bad-argument-type, no-matching-overload]
             time.sleep(int(os.environ.get("TPX_PLAYGROUND_SLEEP")))
 
         self.assertEqual(add(21, 21), 42)
