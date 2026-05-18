@@ -187,6 +187,127 @@ fn test_remap_revs_reorder_insertions() {
     assert_eq!(swapped.checkout_text(3), "a\nb\nc\n");
 }
 
+/// Port of D52514621: test reordering for all insertion permutations.
+///
+/// If you append 2 functions in 2 commits, like:
+///
+///   Public    /* Previous code */
+///   Commit 1 +
+///   Commit 1 +function x() {
+///   Commit 1 +  ...
+///   Commit 1 +}
+///   Commit 2 +
+///   Commit 2 +function y() {
+///   Commit 2 +  ...
+///   Commit 2 +}
+///
+/// Then you can swap the 2 commits, but not swap back.
+///
+/// Tests cover all permutations of inserting 3 items, verifying
+/// independence (dep only on rev 0) and correct content after
+/// swapping rev 2 and 3.
+///
+/// Note the tests are kind of "strong" for pure insertions but it
+/// still does not cover deletions yet.
+#[test]
+fn test_reorder_insertion_permutations() {
+    let abc = ["a\n", "b\n", "c\n"];
+
+    // All 6 permutations of which rev adds which line.
+    let permutations: &[&[usize]] = &[
+        &[1, 2, 3],
+        &[1, 3, 2],
+        &[2, 1, 3],
+        &[2, 3, 1],
+        &[3, 1, 2],
+        &[3, 2, 1],
+    ];
+
+    for order in permutations {
+        // FIXME: [2,3,1] order produces suboptimal dep: rev 3 depends on
+        // rev 1 instead of rev 0. The block nesting causes a false dependency.
+        let expected_dep_override = if *order == [2, 3, 1] {
+            Some(vec![(1, vec![0]), (2, vec![0]), (3, vec![1])])
+        } else {
+            None
+        };
+
+        test_reorder_insertions(&abc, order, expected_dep_override);
+    }
+}
+
+/// Swap revs 2 and 3 from a linelog built by inserting `lines` in the given
+/// `line_added_order`. All lines are pure insertions by different revs.
+///
+/// For example, when lines = ["a\n", "b\n", "c\n"], line_added_order = [1, 3, 2]:
+///   rev 1 adds "a\n", rev 2 adds "c\n", rev 3 adds "b\n".
+///   texts: rev1 = "a\n", rev2 = "a\nc\n", rev3 = "a\nb\nc\n"
+///
+/// Verifies that (1) all revs depend only on rev 0 (independent),
+/// and (2) after swapping rev 2 and 3, checkout produces correct content.
+fn test_reorder_insertions(
+    lines: &[&str],
+    line_added_order: &[usize],
+    expected_dep_override: Option<Vec<(usize, Vec<usize>)>>,
+) {
+    let n = lines.len();
+    assert_eq!(n, line_added_order.len());
+    let revs: Vec<usize> = (1..=n).collect();
+
+    let texts = build_texts(lines, line_added_order, &revs);
+    let log = log_from_texts(&texts);
+
+    // Verify dep map.
+    let dep_map = log.calculate_dep_map();
+    let deps: Vec<(usize, Vec<usize>)> = dep_map
+        .iter()
+        .map(|(&rev, set)| (rev, set.iter().collect()))
+        .collect();
+    let expected =
+        expected_dep_override.unwrap_or_else(|| revs.iter().map(|&r| (r, vec![0])).collect());
+    assert_eq!(deps, expected, "order={line_added_order:?}");
+
+    // Swap rev 2 and 3.
+    let swap = |r: usize| match r {
+        2 => 3,
+        3 => 2,
+        other => other,
+    };
+    let swapped = log.remap_revs(&swap);
+
+    // Expected texts after swap.
+    let swapped_revs: Vec<usize> = revs.iter().map(|&r| swap(r)).collect();
+    let expected_texts = build_texts(lines, line_added_order, &swapped_revs);
+    for &rev in &revs {
+        assert_eq!(
+            swapped.checkout_text(rev),
+            expected_texts[rev - 1],
+            "order={line_added_order:?}, rev={rev}"
+        );
+    }
+}
+
+/// Build text for each rev by accumulating lines in `rev_order`.
+/// `line_added_order[i]` says which rev adds `lines[i]`.
+/// Result[j] is the text at rev `rev_order[0..=j]` (lines whose adding rev
+/// is in the accumulated set, preserving original line order).
+fn build_texts(lines: &[&str], line_added_order: &[usize], rev_order: &[usize]) -> Vec<String> {
+    use std::collections::HashSet;
+    let mut rev_set = HashSet::new();
+    rev_order
+        .iter()
+        .map(|&rev| {
+            rev_set.insert(rev);
+            lines
+                .iter()
+                .zip(line_added_order)
+                .filter(|&(_, &order)| rev_set.contains(&order))
+                .map(|(&line, _)| line)
+                .collect()
+        })
+        .collect()
+}
+
 #[test]
 fn test_truncate() {
     let texts: Vec<String> = ["a\nb\nc\n", "b\nc\nd\n", "b\nd\ne\n", "f\n"]
