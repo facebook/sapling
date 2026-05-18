@@ -10,6 +10,9 @@
 #include <boost/polymorphic_cast.hpp>
 #include <folly/FileUtil.h>
 #include <folly/chrono/Conv.h>
+#include <folly/coro/Collect.h>
+#include <folly/coro/CurrentExecutor.h>
+#include <folly/coro/Invoke.h>
 #include <folly/futures/Future.h>
 #include <folly/io/async/EventBase.h>
 #include <folly/logging/xlog.h>
@@ -630,7 +633,12 @@ folly::coro::now_task<VirtualInode> TreeInode::co_getOrFindChild(
   // If restricted, recheck permission before throwing EACCES — the restriction
   // may have expired.
   if (FOLLY_UNLIKELY(isRestricted())) {
-    recheckPermissionIfExpired(context).get();
+    auto recheck = recheckPermissionIfExpired(context);
+    if (recheck.isReady()) {
+      std::move(recheck).getTry().throwUnlessValue();
+    } else {
+      co_await std::move(recheck).semi();
+    }
   }
   // Explicit ACL check required: uses raw contents_.rlock() / contents_.wlock()
   // directly, bypassing guarded lock accessors.
@@ -738,6 +746,108 @@ TreeInode::getChildren(const ObjectFetchContextPtr& context, bool loadInodes) {
     }
   }
   return result;
+}
+
+folly::coro::now_task<
+    std::vector<std::pair<PathComponent, folly::Try<VirtualInode>>>>
+TreeInode::co_getChildren(
+    const ObjectFetchContextPtr& context,
+    bool loadInodes) {
+  auto self = inodePtrFromThis();
+
+  {
+    auto recheck = recheckPermissionIfExpired(context);
+    if (recheck.isReady()) {
+      std::move(recheck).getTry().throwUnlessValue();
+    } else {
+      co_await std::move(recheck).semi();
+    }
+  }
+
+  std::vector<std::pair<PathComponent, folly::Try<VirtualInode>>> result;
+  std::vector<folly::coro::Task<VirtualInode>> tasks;
+  std::vector<size_t> taskIdx;
+  std::vector<std::pair<PathComponent, TreeInode::LoadChildCleanUp>>
+      inodeLoadCleanUps;
+
+  auto store = getMount()->getObjectStore();
+
+  {
+    // SCOPE_EXIT must precede lockContentsWrite() so cleanups drain after
+    // the lock is released, even on exception.
+    SCOPE_EXIT {
+      for (auto& cleanUp : inodeLoadCleanUps) {
+        loadChildCleanUp(cleanUp.first, std::move(cleanUp.second));
+      }
+    };
+    auto contents = lockContentsWrite();
+    result.reserve(contents->entries.size());
+    tasks.reserve(contents->entries.size());
+    taskIdx.reserve(contents->entries.size());
+    inodeLoadCleanUps.reserve(contents->entries.size());
+
+    for (const auto& [name, _entry] : contents->entries) {
+      std::optional<PendingDirFetch> dirFetch;
+      auto sync =
+          rlockCheckChild(*contents, name, context, loadInodes, dirFetch);
+      if (sync.has_value()) {
+        // Already loaded, restricted, or otherwise synchronously representable.
+        result.emplace_back(name, folly::Try<VirtualInode>{std::move(*sync)});
+        continue;
+      }
+
+      taskIdx.push_back(result.size());
+      result.emplace_back(
+          name, folly::Try<VirtualInode>{folly::FutureNotReady{}});
+
+      if (dirFetch.has_value()) {
+        // Unloaded non-restricted directory: fetch its tree after the lock.
+        // The tree id and mode were snapshotted from contents, so this
+        // preserves getChildren()'s point-in-time view without holding the
+        // contents lock while the object store work runs.
+        tasks.emplace_back(
+            folly::coro::co_invoke(
+                [](std::shared_ptr<ObjectStore> s,
+                   PendingDirFetch fetch,
+                   ObjectFetchContextPtr ctx)
+                    -> folly::coro::Task<VirtualInode> {
+                  co_await folly::coro::co_reschedule_on_current_executor;
+                  auto tree = co_await s->co_getTree(fetch.treeId, ctx);
+                  co_return VirtualInode{std::move(tree), fetch.mode};
+                },
+                store,
+                *dirFetch,
+                context.copy()));
+      } else {
+        // Materialized entry or loadInodes=true: load the child inode.
+        // loadChild must run under the contents lock because it coordinates
+        // with the inode map and updates entry load state. Only the returned
+        // future is awaited after the cleanup runs outside the lock.
+        auto childResult = loadChild(contents, name, context);
+        // emplace_back must be no-throw so cleanup is guaranteed to run if
+        // the tasks.emplace_back below throws.
+        XCHECK_LT(inodeLoadCleanUps.size(), inodeLoadCleanUps.capacity());
+        inodeLoadCleanUps.emplace_back(name, std::move(childResult.second));
+        tasks.emplace_back(
+            folly::coro::co_invoke(
+                [](folly::SemiFuture<InodePtr> loadFut)
+                    -> folly::coro::Task<VirtualInode> {
+                  auto inode = co_await std::move(loadFut);
+                  co_return VirtualInode{std::move(inode)};
+                },
+                std::move(childResult.first)));
+      }
+    }
+  }
+
+  if (!tasks.empty()) {
+    auto tries = co_await folly::coro::collectAllTryRange(std::move(tasks));
+    XDCHECK_EQ(tries.size(), taskIdx.size());
+    for (size_t i = 0; i < tries.size(); ++i) {
+      result[taskIdx[i]].second = std::move(tries[i]);
+    }
+  }
+  co_return result;
 }
 
 ImmediateFuture<InodePtr> TreeInode::getOrLoadChild(

@@ -184,6 +184,14 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   getChildren(const ObjectFetchContextPtr& context, bool loadInodes);
 
   /**
+   * Coroutine variant of getChildren() returning eagerly-resolved
+   * Try<VirtualInode> values instead of per-entry ImmediateFutures.
+   */
+  folly::coro::now_task<
+      std::vector<std::pair<PathComponent, folly::Try<VirtualInode>>>>
+  co_getChildren(const ObjectFetchContextPtr& context, bool loadInodes = false);
+
+  /**
    * Get the inode object for a child of this directory.
    *
    * The Inode object will be loaded if it is not already loaded.

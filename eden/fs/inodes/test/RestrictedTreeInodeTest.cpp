@@ -7,6 +7,7 @@
 
 #include "eden/fs/inodes/TreeInode.h"
 
+#include <folly/coro/GtestHelpers.h>
 #include <gtest/gtest.h>
 #include <algorithm>
 #include <system_error>
@@ -449,4 +450,76 @@ TEST(RestrictedTreeInode, renameIntoRestrictedDirReturnsEACCES) {
            ObjectFetchContext::getNullContext())
         .get();
   });
+}
+
+// ============================================================================
+// Coroutine readdir ACL parity (regression for TreeInode coro recheck gate).
+// Mirrors the futures-side gate in TreeInode::getChildren
+// (recheckPermissionIfExpired before lock) so the coroutine variant does not
+// stick on stale EACCES after a TTL-expired permission grant.
+// ============================================================================
+
+CO_TEST(RestrictedTreeInode, co_getChildren_returnsEntriesOnUnrestrictedRoot) {
+  // Smoke test for the success path: recheck short-circuits on a
+  // non-restricted directory and entries are returned without EACCES.
+  FakeTreeBuilder builder;
+  builder.setFile("dir/file.txt", "content");
+  TestMount testMount{builder};
+
+  auto rootInode = testMount.getEdenMount()->getRootInode();
+  auto context = ObjectFetchContext::getNullContext();
+
+  auto results = co_await rootInode->co_getChildren(context);
+  bool sawDir = false;
+  for (auto& [name, tryVi] : results) {
+    if (name == "dir"_pc) {
+      sawDir = true;
+      CO_ASSERT_TRUE(tryVi.hasValue());
+    }
+  }
+  EXPECT_TRUE(sawDir);
+}
+
+// Exercises the wlock + loadChild + inodeLoadCleanUps + SCOPE_EXIT
+// discipline in TreeInode::co_getChildren that the loadInodes=false default
+// never reaches (rlockCheckChild returns an inline VirtualInode for
+// unmaterialized entries). loadInodes=true forces every non-loaded entry
+// through loadChild, which queues a LoadChildCleanUp drained by SCOPE_EXIT
+// after the lock releases.
+CO_TEST(RestrictedTreeInode, co_getChildren_loadInodesTrueExercisesLoadChild) {
+  FakeTreeBuilder builder;
+  builder.setFile("dir/a.txt", "a");
+  builder.setFile("dir/b.txt", "b");
+  builder.setFile("dir/c.txt", "c");
+  TestMount testMount{builder};
+
+  auto dirInode = testMount.getTreeInode("dir"_relpath);
+  auto context = ObjectFetchContext::getNullContext();
+
+  auto results =
+      co_await dirInode->co_getChildren(context, /*loadInodes=*/true);
+  EXPECT_EQ(results.size(), 3);
+  for (auto& [name, tryVi] : results) {
+    CO_ASSERT_TRUE(tryVi.hasValue());
+    EXPECT_TRUE(tryVi.value().asInodePtr() != nullptr);
+  }
+}
+
+// Exercises the EACCES-on-lockContentsWrite path. The SCOPE_EXIT is already
+// registered when lockContentsWrite() throws — this verifies the empty
+// inodeLoadCleanUps unwind branch is benign.
+CO_TEST(RestrictedTreeInode, co_getChildren_restrictedThrowsEACCES) {
+  FakeTreeBuilder builder;
+  builder.setFile("dir/file.txt", "content");
+  TestMount testMount{builder};
+
+  auto restricted = makeRestrictedInode(testMount, "restricted"_pc);
+  auto context = ObjectFetchContext::getNullContext();
+
+  auto result = co_await folly::coro::co_awaitTry(
+      restricted->co_getChildren(context, /*loadInodes=*/false));
+  CO_ASSERT_TRUE(result.hasException());
+  auto* err = result.tryGetExceptionObject<std::system_error>();
+  CO_ASSERT_NE(err, nullptr);
+  EXPECT_EQ(err->code().value(), EACCES);
 }
