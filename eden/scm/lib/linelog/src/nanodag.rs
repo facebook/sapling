@@ -7,12 +7,14 @@
 
 use std::sync::Arc;
 use std::sync::OnceLock;
+use std::sync::atomic::Ordering;
 
 use im::HashMap as ImMap;
 use im::Vector as ImVec;
 use smallvec::SmallVec;
 
 use crate::SmallRevs;
+use crate::linelog::PerfStats;
 use crate::linelog::Rev;
 
 /// Minimal dag implementation dedicated for linelog use-case.
@@ -33,6 +35,7 @@ pub struct NanoDag {
     /// `children` is automatically updated when `parents` is updated.
     pub(crate) children: ImMap<Rev, SmallRevs>,
     cache: OnceLock<Arc<Vec<CacheRevs>>>,
+    perf_stats: Option<Arc<PerfStats>>,
 }
 
 /// Parents and other dag info associated with rev.
@@ -264,6 +267,7 @@ impl NanoDag {
             // anyway, hope the insert, query, insert, query (interleaved use)
             // doesn't happen often.
             cache: Default::default(),
+            ..self
         }
     }
 
@@ -273,10 +277,21 @@ impl NanoDag {
         let cache = self.cache.get_or_init(|| {
             let mut vec = Vec::with_capacity(len);
             vec.resize_with(len, Default::default);
+            if let Some(stats) = &self.perf_stats {
+                stats.dag_cache.fetch_add(1, Ordering::Release);
+            }
             Arc::new(vec)
         });
         debug_assert_eq!(cache.len(), len);
         cache
+    }
+
+    /// Attach a `CacheStats` struct to analyse cache statistics.
+    pub(crate) fn with_perf_stats(self, stats: Option<Arc<PerfStats>>) -> Self {
+        Self {
+            perf_stats: stats,
+            ..self
+        }
     }
 }
 

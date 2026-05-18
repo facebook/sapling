@@ -35,6 +35,8 @@ pub(crate) struct PerfStats {
     pub cache_hit: AtomicUsize,
     /// How many times execute() is called.
     pub execute: AtomicUsize,
+    /// How many times the dag cache gets initialized.
+    pub dag_cache: AtomicUsize,
 }
 
 impl<T> Clone for AbstractLineLog<T> {
@@ -123,8 +125,10 @@ impl<T> AbstractLineLog<T> {
 
     /// Attach a `PerfStats` struct to analyse cache statistics.
     pub(crate) fn with_perf_stats(self, stats: Option<Arc<PerfStats>>) -> Self {
+        let dag = self.dag.with_perf_stats(stats.clone());
         Self {
             perf_stats: stats,
+            dag,
             ..self
         }
     }

@@ -110,7 +110,8 @@ fn test_random_cases() {
 
     for (end_rev, a_rev_offset, b_rev_offset) in [(1000, 0, 0), (20, 0, 2), (20, 2, 0)] {
         let cases: Vec<_> = generate_cases(end_rev).collect();
-        let mut log = LineLog::default();
+        let stats = Arc::new(PerfStats::default());
+        let mut log = LineLog::default().with_perf_stats(Some(stats.clone()));
 
         let mut line_count = 1;
         for (_lines, b_rev, a1, a2, b1, b2, b_lines) in &cases {
@@ -127,6 +128,10 @@ fn test_random_cases() {
             line_count -= *a2 - *a1;
             assert_eq!(log.checkout_lines(*b_rev + b_rev_offset).len(), line_count);
         }
+
+        // edit_chunk and checkout_lines sequentially do not trigger (slow)
+        // dag cache initialization.
+        assert_eq!(stats.dag_cache.load(Ordering::Acquire), 0);
 
         for (lines, b_rev, _a1, _a2, _b1, _b2, _b_lines) in cases {
             let text = lines.into_iter().collect::<Vec<String>>().concat();
@@ -166,6 +171,9 @@ fn test_a_lines_cache_effectiveness() {
     // Verify the content is correct despite heavy caching, and checkout hits cache too.
     assert_eq!(log.checkout_text(3), "x\nd\nb\nc\n");
     check("after checkout", 4, 1);
+
+    // Verify the dag cache (for ancestors and descendants) only gets built O(1) times.
+    assert_eq!(stats.dag_cache.load(Ordering::Acquire), 0);
 }
 
 #[test]
