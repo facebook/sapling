@@ -138,12 +138,14 @@ bitflags! {
     pub struct EditFlags: u32 {
         /// When inserting a block, try to shift it around to relax dependency.
         const BLOCK_SHIFT = 0b00000001;
+        /// When editing rev_a -> rev_b, try to add an edge in the dag.
+        const ADD_EDGE = 0b00000010;
     }
 }
 
 impl Default for EditFlags {
     fn default() -> Self {
-        Self::BLOCK_SHIFT
+        Self::BLOCK_SHIFT | Self::ADD_EDGE
     }
 }
 
@@ -162,6 +164,9 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
     /// `try_block_shift` for details. Block shift requires that `T::eq(l1, l2)`
     /// means `l1` and `l2` have the same content. If this cannot be guaranteed,
     /// disable `BLOCK_SHIFT`.
+    ///
+    /// If `ADD_EDGE` flag is set (default), also add an edge in the dag to
+    /// suggest `a_rev` is a parent of `b_rev` when `a_rev < b_rev`.
     pub fn edit_chunk(
         self,
         a_rev: Rev,
@@ -171,8 +176,17 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
         b_lines: Vec<T>,
         flags: EditFlags,
     ) -> Self {
+        let base_rev = self.max_rev.min(a_rev);
+        let this = if flags.contains(EditFlags::ADD_EDGE) && base_rev <= b_rev {
+            Self {
+                dag: self.dag.with_edge(base_rev, b_rev),
+                ..self
+            }
+        } else {
+            self
+        };
         let mut b_lines = b_lines.into_iter().map(Arc::new).collect::<VecDeque<_>>();
-        self.with_a_lines_cache(a_rev, b_rev, |this: Self, maybe_mut| {
+        this.with_a_lines_cache(base_rev, b_rev, |this: Self, maybe_mut| {
             if flags.contains(EditFlags::BLOCK_SHIFT) {
                 const DEFAULT_SHIFT_THRESHOLD: usize = 5;
                 this.try_block_shift(
