@@ -6,10 +6,18 @@ rust_library(
     name = "linelog",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_config": {
-        "dependencies_override": {"dependencies": {"im": {
-            "default-features": False,
-            "features": [],
-        }}},
+        "dependencies_override": {
+            "dependencies": {
+                "im": {
+                    "default-features": False,
+                    "features": [],
+                },
+                "smallvec": {
+                    "default-features": False,
+                    "features": [],
+                },
+            },
+        },
         "lib": {"name": "linelog"},
         "package": {
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
@@ -28,5 +36,6 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:bitflags",
         "fbsource//third-party/rust:im",
+        "fbsource//third-party/rust:smallvec",
     ],
 )

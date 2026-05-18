@@ -15,6 +15,7 @@ name = "linelog"
 [dependencies]
 bitflags = { version = "2.11.1", features = ["serde", "std"], default-features = false }
 im = { version = "15.1", default-features = false }
+smallvec = { version = "1.15", default-features = false }
 
 [dev-dependencies]
 quickcheck = "1.0"

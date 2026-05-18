@@ -8,6 +8,8 @@
 mod debug;
 mod linelog;
 mod maybe_mut;
+#[allow(unused)]
+mod nanodag;
 mod small_revs;
 mod stacks;
 
