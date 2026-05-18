@@ -147,6 +147,7 @@ InodePtr InodePtr::takeOwnership(std::unique_ptr<InodeBase> value) noexcept {
 }
 
 // Explicitly instantiate InodePtrImpl for all inode class types
+template class InodePtrImpl<InodeBase>;
 template class InodePtrImpl<FileInode>;
 template class InodePtrImpl<TreeInode>;
 template FileInodePtr InodePtr::asSubclassPtrOrNull<FileInodePtr>() const&;

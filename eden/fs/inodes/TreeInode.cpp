@@ -36,6 +36,7 @@
 #include "eden/fs/fuse/FuseDirList.h"
 #include "eden/fs/inodes/CheckoutAction.h"
 #include "eden/fs/inodes/CheckoutContext.h"
+#include "eden/fs/inodes/ChildEntryAttributes.h"
 #include "eden/fs/inodes/DeferredDiffEntry.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
@@ -846,6 +847,88 @@ TreeInode::co_getChildren(
     for (size_t i = 0; i < tries.size(); ++i) {
       result[taskIdx[i]].second = std::move(tries[i]);
     }
+  }
+  co_return result;
+}
+
+folly::coro::now_task<
+    std::vector<std::pair<PathComponent, folly::Try<EntryAttributes>>>>
+TreeInode::co_getChildrenAttributes(
+    EntryAttributeFlags requestedAttributes,
+    RelativePath path,
+    const std::shared_ptr<ObjectStore>& objectStore,
+    timespec lastCheckoutTime,
+    const ObjectFetchContextPtr& context) {
+  auto self = inodePtrFromThis();
+
+  if (FOLLY_UNLIKELY(isRestricted())) {
+    co_await recheckPermissionIfExpired(context).semi();
+  }
+
+  // Atomic snapshot under one wlock, same discipline as co_getChildren():
+  // SCOPE_EXIT drains inodeLoadCleanUps after the lock is released; per-child
+  // attribute tasks run in parallel via collectAllTryRange post-lock.
+  std::vector<PathComponent> names;
+  std::vector<folly::coro::Task<EntryAttributes>> tasks;
+  std::vector<std::pair<PathComponent, TreeInode::LoadChildCleanUp>>
+      inodeLoadCleanUps;
+
+  {
+    SCOPE_EXIT {
+      for (auto& cleanUp : inodeLoadCleanUps) {
+        loadChildCleanUp(cleanUp.first, std::move(cleanUp.second));
+      }
+    };
+    auto contents = lockContentsWrite();
+    names.reserve(contents->entries.size());
+    tasks.reserve(contents->entries.size());
+    inodeLoadCleanUps.reserve(contents->entries.size());
+
+    for (const auto& [name, _entry] : contents->entries) {
+      auto subPath = path + name;
+      std::optional<PendingDirFetch> dirFetch;
+      auto sync = rlockCheckChild(
+          *contents, name, context, /*loadInodes=*/false, dirFetch);
+      names.push_back(name);
+      if (sync.has_value()) {
+        tasks.emplace_back(coFetchEntryAttributesFromVI(
+            std::move(*sync),
+            requestedAttributes,
+            std::move(subPath),
+            objectStore,
+            lastCheckoutTime,
+            context.copy()));
+      } else if (dirFetch.has_value()) {
+        tasks.emplace_back(coFetchTreeEntryAttributes(
+            dirFetch->treeId,
+            dirFetch->mode,
+            requestedAttributes,
+            std::move(subPath),
+            objectStore,
+            lastCheckoutTime,
+            context.copy()));
+      } else {
+        auto childResult = loadChild(contents, name, context);
+        XCHECK_LT(inodeLoadCleanUps.size(), inodeLoadCleanUps.capacity());
+        inodeLoadCleanUps.emplace_back(name, std::move(childResult.second));
+        tasks.emplace_back(coFetchLoadedInodeEntryAttributes(
+            std::move(childResult.first),
+            requestedAttributes,
+            std::move(subPath),
+            objectStore,
+            lastCheckoutTime,
+            context.copy()));
+      }
+    }
+  }
+
+  auto tries = co_await folly::coro::collectAllTryRange(std::move(tasks));
+
+  XCHECK_EQ(tries.size(), names.size());
+  std::vector<std::pair<PathComponent, folly::Try<EntryAttributes>>> result;
+  result.reserve(tries.size());
+  for (size_t i = 0; i < tries.size(); ++i) {
+    result.emplace_back(std::move(names.at(i)), std::move(tries[i]));
   }
   co_return result;
 }

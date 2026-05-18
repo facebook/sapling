@@ -560,6 +560,126 @@ CO_TEST(RestrictedTreeInode, co_getChildren_onFileReturnsENOTDIR) {
   }
 }
 
+CO_TEST(
+    RestrictedTreeInode,
+    co_getChildrenAttributes_onRestrictedTreeReturnsEACCES) {
+  FakeTreeBuilder builder;
+  builder.setFile("restricted/secret.txt", "secret");
+  builder.setDirIsRestricted("restricted");
+  TestMount testMount{builder};
+
+  auto edenMount = testMount.getEdenMount();
+  auto vi = testMount.getVirtualInode("restricted"_relpath);
+  auto context = ObjectFetchContext::getNullContext();
+  auto attrs = ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE | ENTRY_ATTRIBUTE_SIZE;
+
+  auto result = co_await folly::coro::co_awaitTry(vi.co_getChildrenAttributes(
+      attrs,
+      RelativePath{"restricted"},
+      edenMount->getObjectStore(),
+      edenMount->getLastCheckoutTime().toTimespec(),
+      context));
+  CO_ASSERT_TRUE(result.hasException());
+  EXPECT_TRUE(result.hasException<std::system_error>());
+  if (auto* ex = result.exception().get_exception<std::system_error>()) {
+    EXPECT_EQ(ex->code().value(), EACCES);
+  }
+}
+
+// Dominant production path after a mount has loaded inodes.
+CO_TEST(
+    RestrictedTreeInode,
+    co_getChildrenAttributes_inodePtrBranchReturnsAttrs) {
+  FakeTreeBuilder builder;
+  builder.setFile("dir/a.txt", "a");
+  builder.setFile("dir/b.txt", "b");
+  TestMount testMount{builder};
+
+  auto edenMount = testMount.getEdenMount();
+  auto dirInode = testMount.getTreeInode("dir"_relpath);
+  TestMount::loadAllInodes(dirInode);
+  VirtualInode vi{InodePtr{dirInode}};
+  auto context = ObjectFetchContext::getNullContext();
+  auto attrs = ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE | ENTRY_ATTRIBUTE_SIZE;
+
+  auto results = co_await vi.co_getChildrenAttributes(
+      attrs,
+      RelativePath{"dir"},
+      edenMount->getObjectStore(),
+      edenMount->getLastCheckoutTime().toTimespec(),
+      context);
+  EXPECT_EQ(results.size(), 2);
+  for (auto& [name, tryAttrs] : results) {
+    CO_ASSERT_TRUE(tryAttrs.hasValue());
+  }
+}
+
+CO_TEST(RestrictedTreeInode, co_getChildrenAttributes_onFileReturnsENOTDIR) {
+  FakeTreeBuilder builder;
+  builder.setFile("dir/file.txt", "content");
+  TestMount testMount{builder};
+
+  auto edenMount = testMount.getEdenMount();
+  auto vi = testMount.getVirtualInode("dir/file.txt"_relpath);
+  auto context = ObjectFetchContext::getNullContext();
+  auto attrs = ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE | ENTRY_ATTRIBUTE_SIZE;
+
+  auto result = co_await folly::coro::co_awaitTry(vi.co_getChildrenAttributes(
+      attrs,
+      RelativePath{"dir/file.txt"},
+      edenMount->getObjectStore(),
+      edenMount->getLastCheckoutTime().toTimespec(),
+      context));
+  CO_ASSERT_TRUE(result.hasException());
+  EXPECT_TRUE(result.hasException<std::system_error>());
+  if (auto* ex = result.exception().get_exception<std::system_error>()) {
+    EXPECT_EQ(ex->code().value(), ENOTDIR);
+  }
+}
+
+// Covers the file-inline, restricted-child, and non-restricted-tree per-child
+// dispatch arms in one shot.
+CO_TEST(
+    RestrictedTreeInode,
+    co_getChildrenAttributes_treePtrBranchReturnsMixedAttrs) {
+  FakeTreeBuilder builder;
+  builder.setFile("parent/normal/file.txt", "ok");
+  builder.setFile("parent/leaf.txt", "leaf");
+  builder.setFile("parent/restricted_child/secret.txt", "secret");
+  builder.setDirIsRestricted("parent/restricted_child");
+  TestMount testMount{builder};
+
+  auto edenMount = testMount.getEdenMount();
+  auto vi = testMount.getVirtualInode("parent"_relpath);
+  auto context = ObjectFetchContext::getNullContext();
+  auto attrs = ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE;
+
+  auto results = co_await vi.co_getChildrenAttributes(
+      attrs,
+      RelativePath{"parent"},
+      edenMount->getObjectStore(),
+      edenMount->getLastCheckoutTime().toTimespec(),
+      context);
+  bool sawNormal = false;
+  bool sawLeaf = false;
+  bool sawRestricted = false;
+  for (auto& [name, tryAttrs] : results) {
+    if (name == "normal"_pc) {
+      sawNormal = true;
+      CO_ASSERT_TRUE(tryAttrs.hasValue());
+    } else if (name == "leaf.txt"_pc) {
+      sawLeaf = true;
+      CO_ASSERT_TRUE(tryAttrs.hasValue());
+    } else if (name == "restricted_child"_pc) {
+      sawRestricted = true;
+      CO_ASSERT_TRUE(tryAttrs.hasValue());
+    }
+  }
+  EXPECT_TRUE(sawNormal);
+  EXPECT_TRUE(sawLeaf);
+  EXPECT_TRUE(sawRestricted);
+}
+
 // ============================================================================
 // Coroutine readdir ACL parity (regression for TreeInode coro recheck gate).
 // Mirrors the futures-side gate in TreeInode::getChildren

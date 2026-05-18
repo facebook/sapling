@@ -73,6 +73,7 @@ cpp_library(
     srcs = [
         "CheckoutAction.cpp",
         "CheckoutContext.cpp",
+        "ChildEntryAttributes.cpp",
         "DeferredDiffEntry.cpp",
         "DirEntry.cpp",
         "EdenDispatcherFactory.cpp",
@@ -103,6 +104,7 @@ cpp_library(
         "CacheHint.h",
         "CheckoutAction.h",
         "CheckoutContext.h",
+        "ChildEntryAttributes.h",
         "DeferredDiffEntry.h",
         "DirEntry.h",
         "EdenDispatcherFactory.h",
@@ -266,6 +268,7 @@ cpp_library(
         "//folly/container:evicting_cache_map",
         "//folly/coro:collect",
         "//folly/coro:invoke",
+        "//folly/coro:task",
         "//folly/coro:via_if_async",
         "//folly/coro/safe:now_task",
         "//folly/functional:invoke",

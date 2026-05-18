@@ -10,6 +10,7 @@
 #include "eden/common/utils/Match.h"
 #include "eden/common/utils/StatTimes.h"
 #include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/inodes/ChildEntryAttributes.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/TreeInode.h"
@@ -1361,48 +1362,83 @@ VirtualInode::co_getChildrenAttributes(
     const std::shared_ptr<ObjectStore>& objectStore,
     timespec lastCheckoutTime,
     const ObjectFetchContextPtr& fetchContext) {
-  auto children = this->getChildren(path.piece(), objectStore, fetchContext);
-  if (children.hasException()) {
-    co_yield folly::coro::co_error(std::move(children.exception()));
+  if (!isDirectory()) {
+    co_yield folly::coro::co_error(PathError(ENOTDIR, path));
+  }
+
+  static_assert(
+      std::variant_size_v<detail::VariantVirtualInode> == 4,
+      "New variant type added to VariantVirtualInode - "
+      "update co_getChildrenAttributes");
+
+  if (auto* inode = std::get_if<InodePtr>(&variant_)) {
+    co_return co_await inode->asTreePtr()->co_getChildrenAttributes(
+        requestedAttributes,
+        std::move(path),
+        objectStore,
+        lastCheckoutTime,
+        fetchContext);
+  }
+
+  // Past the !isDirectory() guard, the static_assert above pins the variant
+  // to {InodePtr, TreePtr, UnmaterializedUnloadedBlobDirEntry, TreeEntry};
+  // the latter two are non-directories so we must hold a TreePtr here.
+  auto* tree = std::get_if<TreePtr>(&variant_);
+  XCHECK(tree != nullptr);
+
+  if ((*tree)->isRestricted()) {
+    co_yield folly::coro::co_error(PathError(EACCES, path));
   }
 
   std::vector<PathComponent> names;
   std::vector<folly::coro::Task<EntryAttributes>> tasks;
-  names.reserve(children.value().size());
-  tasks.reserve(children.value().size());
+  names.reserve((*tree)->size());
+  tasks.reserve((*tree)->size());
 
-  for (auto& [name, virtualInodeFuture] : children.value()) {
-    names.push_back(name);
-    tasks.emplace_back(
-        // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
-        folly::coro::co_invoke(
-            [](ImmediateFuture<VirtualInode> fut,
-               EntryAttributeFlags reqAttrs,
-               RelativePath subPath,
-               std::shared_ptr<ObjectStore> store,
-               timespec checkoutTime,
-               ObjectFetchContextPtr ctx)
-                -> folly::coro::Task<EntryAttributes> {
-              auto virtualInode = co_await std::move(fut).semi();
-              co_return co_await virtualInode.co_getEntryAttributes(
-                  reqAttrs, subPath, store, checkoutTime, ctx);
-            },
-            std::move(virtualInodeFuture),
+  for (auto& child : **tree) {
+    auto subPath = path + child.first;
+    names.push_back(child.first);
+    const auto& treeEntry = child.second;
+    if (treeEntry.isTree()) {
+      if (treeEntry.isRestricted()) {
+        // Restricted child: synthesize a placeholder; never fetch its contents.
+        tasks.emplace_back(coFetchEntryAttributesFromVI(
+            VirtualInode::makeRestricted(
+                treeEntry, (*tree)->getCaseSensitivity()),
             requestedAttributes,
-            path + name,
+            std::move(subPath),
             objectStore,
             lastCheckoutTime,
             fetchContext.copy()));
+      } else {
+        tasks.emplace_back(coFetchTreeEntryAttributes(
+            treeEntry.getObjectId(),
+            modeFromTreeEntryType(treeEntry.getType()),
+            requestedAttributes,
+            std::move(subPath),
+            objectStore,
+            lastCheckoutTime,
+            fetchContext.copy()));
+      }
+    } else {
+      tasks.emplace_back(coFetchEntryAttributesFromVI(
+          VirtualInode{treeEntry},
+          requestedAttributes,
+          std::move(subPath),
+          objectStore,
+          lastCheckoutTime,
+          fetchContext.copy()));
+    }
   }
 
   auto tries = co_await folly::coro::collectAllTryRange(std::move(tasks));
 
   std::vector<std::pair<PathComponent, folly::Try<EntryAttributes>>> result;
   result.reserve(tries.size());
-  XDCHECK_EQ(tries.size(), names.size())
+  XCHECK_EQ(tries.size(), names.size())
       << "Missing/too many attributes for the names.";
   for (size_t i = 0; i < tries.size(); ++i) {
-    result.emplace_back(std::move(names[i]), std::move(tries[i]));
+    result.emplace_back(std::move(names.at(i)), std::move(tries[i]));
   }
   co_return result;
 }

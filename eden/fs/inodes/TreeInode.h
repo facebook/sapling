@@ -21,6 +21,7 @@
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/inodes/Traverse.h"
+#include "eden/fs/model/EntryAttributeFlags.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeAuxDataFwd.h"
 #include "eden/fs/utils/MiniTracer.h"
@@ -190,6 +191,26 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   folly::coro::now_task<
       std::vector<std::pair<PathComponent, folly::Try<VirtualInode>>>>
   co_getChildren(const ObjectFetchContextPtr& context, bool loadInodes = false);
+
+  /**
+   * Pipelined coroutine version of getChildren + getEntryAttributes.
+   *
+   * Each child task does (resolve VirtualInode → fetch attributes) in
+   * sequence, and all child tasks run in parallel under a single
+   * collectAllTryRange. This avoids the barrier between phases that a
+   * separate co_getChildren followed by per-attr tasks would impose,
+   * preserving the latency profile of the original futures-based
+   * implementation while still avoiding the ImmediateFuture wrapper
+   * overhead.
+   */
+  folly::coro::now_task<
+      std::vector<std::pair<PathComponent, folly::Try<EntryAttributes>>>>
+  co_getChildrenAttributes(
+      EntryAttributeFlags requestedAttributes,
+      RelativePath path,
+      const std::shared_ptr<ObjectStore>& objectStore,
+      timespec lastCheckoutTime,
+      const ObjectFetchContextPtr& context);
 
   /**
    * Get the inode object for a child of this directory.
