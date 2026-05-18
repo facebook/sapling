@@ -132,6 +132,8 @@ fn test_random_cases() {
         // edit_chunk and checkout_lines sequentially do not trigger (slow)
         // dag cache initialization.
         assert_eq!(stats.dag_cache.load(Ordering::Acquire), 0);
+        // All in "happy" cache_hit paths. "execute" called O(1) times.
+        assert_eq!(stats.execute.load(Ordering::Acquire), 1);
 
         for (lines, b_rev, _a1, _a2, _b1, _b2, _b_lines) in cases {
             let text = lines.into_iter().collect::<Vec<String>>().concat();

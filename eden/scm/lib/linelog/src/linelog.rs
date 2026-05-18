@@ -434,7 +434,11 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
         assert!(a2 <= a_lines.len());
 
         if a1 == a2 && b_lines.is_empty() {
-            return self;
+            return Self {
+                max_rev: self.max_rev.max(b_rev),
+                dag: self.dag.with_edge(b_rev, b_rev),
+                ..self
+            };
         }
 
         let start = self.code.len();
