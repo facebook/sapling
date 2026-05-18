@@ -59,6 +59,39 @@ fn operations_reject_escape_paths() -> io::Result<()> {
 }
 
 #[test]
+fn open_root_opens_existing_directory_without_creating() -> io::Result<()> {
+    let dir = tempdir()?;
+    fs::create_dir(dir.path().join("sub"))?;
+    let root = NoFollowRoot::new(dir.path())?;
+
+    let sub = root.open_root(Path::new("sub"))?;
+    sub.write_file(Path::new("file"), b"contents", 0o600)?;
+
+    assert_eq!(fs::read(dir.path().join("sub/file"))?, b"contents".to_vec());
+    assert!(root.open_root(Path::new("missing")).is_err());
+    assert!(!dir.path().join("missing").exists());
+    Ok(())
+}
+
+#[test]
+fn open_root_rejects_symlink_components() -> io::Result<()> {
+    let dir = tempdir()?;
+    fs::create_dir_all(dir.path().join("real/child"))?;
+    fs::create_dir(dir.path().join("a"))?;
+    if !create_dir_symlink(Path::new("real"), &dir.path().join("link"))? {
+        return Ok(());
+    }
+    if !create_dir_symlink(Path::new("../real"), &dir.path().join("a/link"))? {
+        return Ok(());
+    }
+    let root = NoFollowRoot::new(dir.path())?;
+
+    assert!(root.open_root(Path::new("link")).is_err());
+    assert!(root.open_root(Path::new("a/link/child")).is_err());
+    Ok(())
+}
+
+#[test]
 fn write_file_creates_parents_and_truncates_existing_file() -> io::Result<()> {
     let dir = tempdir()?;
     fs::write(dir.path().join("file"), b"old")?;

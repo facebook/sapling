@@ -91,6 +91,30 @@ impl NoFollowRoot {
         Ok(Self { root: fd })
     }
 
+    /// Open an existing directory below this root as a new no-follow root.
+    ///
+    /// `path` must be relative and must not contain `..`. No directories are
+    /// created. Symlinks in parent components or at the leaf are rejected
+    /// instead of followed.
+    pub fn open_root<'a, P>(&self, path: P) -> io::Result<Self>
+    where
+        P: TryInto<CheckedRelPath<'a>>,
+        P::Error: Into<io::Error>,
+    {
+        let path = path.try_into().map_err(Into::into)?;
+        retry_io(|| {
+            let path = path_cstring(path.as_path())?;
+            open_path(
+                self.root.as_fd(),
+                &path,
+                libc::O_RDONLY | libc::O_DIRECTORY | libc::O_CLOEXEC,
+                0,
+            )
+            .map(|root| Self { root })
+        })
+        .map_err(|err| path_error::build(err, path_error::OPEN_FILE, path.as_path()))
+    }
+
     /// Write a regular file at `path`, creating parent directories.
     ///
     /// `path` must be relative and must not contain `..`. Parent directories

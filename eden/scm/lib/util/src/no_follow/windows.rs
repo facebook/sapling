@@ -112,7 +112,7 @@ use crate::path_error;
 /// reject Windows reparse points.
 pub struct NoFollowRoot {
     root: OwnedHandle,
-    _root_ancestor_pins: Vec<OwnedHandle>,
+    root_ancestor_pins: Vec<OwnedHandle>,
 }
 
 impl From<Metadata> for LiteMetadata {
@@ -155,6 +155,20 @@ impl NoFollowRoot {
     pub fn new(root: &Path) -> io::Result<Self> {
         retry_io(|| Self::open_inner(root))
             .map_err(|err| path_error::build(err, path_error::OPEN_FILE, root))
+    }
+
+    /// Open an existing directory below this root as a new no-follow root.
+    ///
+    /// `path` must be relative and must not contain `..`. No directories are
+    /// created. Parent components and the leaf must not be reparse points.
+    pub fn open_root<'a, P>(&self, path: P) -> io::Result<Self>
+    where
+        P: TryInto<CheckedRelPath<'a>>,
+        P::Error: Into<io::Error>,
+    {
+        let path = path.try_into().map_err(Into::into)?;
+        retry_io(|| self.open_root_inner(path.as_path()))
+            .map_err(|err| path_error::build(err, path_error::OPEN_FILE, path.as_path()))
     }
 
     /// Write a regular file at `path`, creating parent directories.
@@ -387,11 +401,41 @@ impl NoFollowRoot {
             // SAFETY: `CreateFileW` returned a valid owned handle.
             OwnedHandle::from_raw_handle(handle as _)
         };
-        let _root_ancestor_pins = pin_root_ancestors(&root)?;
+        let root_ancestor_pins = pin_root_ancestors(&root)?;
 
         Ok(Self {
             root,
-            _root_ancestor_pins,
+            root_ancestor_pins,
+        })
+    }
+
+    fn open_root_inner(&self, path: &Path) -> io::Result<Self> {
+        let mut pins = Vec::with_capacity(self.root_ancestor_pins.len() + path.iter().count());
+        for pin in &self.root_ancestor_pins {
+            pins.push(pin.as_handle().try_clone_to_owned()?);
+        }
+        pins.push(self.root.as_handle().try_clone_to_owned()?);
+
+        let mut current = self.root.as_raw_handle() as HANDLE;
+        let mut root = None;
+        for component in path.iter() {
+            let child = open_dir_no_follow_pinned(current, component)?;
+            current = child.as_raw_handle() as HANDLE;
+            if let Some(parent) = root.replace(child) {
+                pins.push(parent);
+            }
+        }
+
+        let root = root.ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!("path must name a file or directory: {:?}", path),
+            )
+        })?;
+
+        Ok(Self {
+            root,
+            root_ancestor_pins: pins,
         })
     }
 
@@ -694,6 +738,23 @@ fn open_or_create_dir(dir: HANDLE, component: &OsStr) -> io::Result<OwnedHandle>
         }
         Err(err) => Err(err),
     }
+}
+
+fn open_dir_no_follow_pinned(dir: HANDLE, component: &OsStr) -> io::Result<OwnedHandle> {
+    // FILE_LIST_DIRECTORY is required (not just FILE_READ_ATTRIBUTES) so that
+    // the handle participates in sharing mode enforcement. Without it, Windows
+    // allows RemoveDirectory to bypass the no-FILE_SHARE_DELETE constraint.
+    let handle = open_child_with_share(
+        dir,
+        component,
+        FILE_LIST_DIRECTORY | FILE_READ_ATTRIBUTES | SYNCHRONIZE,
+        FILE_OPEN,
+        FILE_DIRECTORY_FILE | FILE_OPEN_REPARSE_POINT,
+        FILE_ATTRIBUTE_NORMAL,
+        FILE_SHARE_READ | FILE_SHARE_WRITE,
+    )?;
+    reject_reparse_point(&handle)?;
+    Ok(handle)
 }
 
 fn open_or_create_dir_pinned(dir: HANDLE, component: &OsStr) -> io::Result<OwnedHandle> {
@@ -1762,6 +1823,28 @@ mod tests {
         );
 
         drop(root);
+        fs::rename(&parent, &moved)?;
+        Ok(())
+    }
+
+    #[test]
+    fn open_root_pins_new_root_ancestors() -> io::Result<()> {
+        let dir = tempdir()?;
+        let parent = dir.path().join("parent");
+        let child = parent.join("child");
+        let moved = dir.path().join("moved");
+        fs::create_dir_all(&child)?;
+
+        let root = NoFollowRoot::new(dir.path())?;
+        let child_root = root.open_root(Path::new("parent/child"))?;
+        drop(root);
+
+        assert!(
+            fs::rename(&parent, &moved).is_err(),
+            "opened root ancestor should resist rename while child root is alive"
+        );
+
+        drop(child_root);
         fs::rename(&parent, &moved)?;
         Ok(())
     }
