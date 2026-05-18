@@ -1028,7 +1028,7 @@ fn stat_dev_to_u64(dev: libc::dev_t) -> u64 {
 }
 
 fn stat_ino_to_u64(ino: libc::ino_t) -> u64 {
-    u64::from(ino)
+    ino
 }
 
 fn stat_nlink_to_u64(nlink: libc::nlink_t) -> u64 {
