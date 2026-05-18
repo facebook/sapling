@@ -223,7 +223,7 @@ fn test_describe_ins_del_stacks_between_old_new() {
 
 #[test]
 fn test_describe_ins_del_stacks_between_new_old() {
-    // Insertion between new old revs is nested.
+    // Insertion between new old revs is not nested, for easier reordering.
     let log = log_from_texts(
         &["c\n", "a\nc\n", "a\nb\nc\n"]
             .iter()
@@ -233,15 +233,15 @@ fn test_describe_ins_del_stacks_between_new_old() {
     assert_eq!(
         log.describe_ins_del_stacks(),
         vec![
-            "╭────Insert (rev 2)       ",
-            "│    Line:  a             ",
-            "╰────                     ",
-            "╭────Insert (rev 1)       ",
-            "│╭───Insert (rev 3)       ",
-            "││   Line:  b             ",
-            "│╰───                     ",
-            "│    Line:  c             ",
-            "╰────                     ",
+            "╭───Insert (rev 2)       ",
+            "│   Line:  a             ",
+            "╰───                     ",
+            "╭───Insert (rev 3)       ",
+            "│   Line:  b             ",
+            "╰───                     ",
+            "╭───Insert (rev 1)       ",
+            "│   Line:  c             ",
+            "╰───                     ",
         ]
     );
 }
@@ -352,15 +352,7 @@ fn test_reorder_insertion_permutations() {
     ];
 
     for order in permutations {
-        // FIXME: [2,3,1] order produces suboptimal dep: rev 3 depends on
-        // rev 1 instead of rev 0. The block nesting causes a false dependency.
-        let expected_dep_override = if *order == [2, 3, 1] {
-            Some(vec![(1, vec![0]), (2, vec![0]), (3, vec![1])])
-        } else {
-            None
-        };
-
-        test_reorder_insertions(&abc, order, expected_dep_override);
+        test_reorder_insertions(&abc, order);
     }
 }
 
@@ -373,11 +365,7 @@ fn test_reorder_insertion_permutations() {
 ///
 /// Verifies that (1) all revs depend only on rev 0 (independent),
 /// and (2) after swapping rev 2 and 3, checkout produces correct content.
-fn test_reorder_insertions(
-    lines: &[&str],
-    line_added_order: &[usize],
-    expected_dep_override: Option<Vec<(usize, Vec<usize>)>>,
-) {
+fn test_reorder_insertions(lines: &[&str], line_added_order: &[usize]) {
     let n = lines.len();
     assert_eq!(n, line_added_order.len());
     let revs: Vec<usize> = (1..=n).collect();
@@ -391,8 +379,7 @@ fn test_reorder_insertions(
         .iter()
         .map(|(&rev, set)| (rev, set.iter().collect()))
         .collect();
-    let expected =
-        expected_dep_override.unwrap_or_else(|| revs.iter().map(|&r| (r, vec![0])).collect());
+    let expected: Vec<(usize, Vec<usize>)> = revs.iter().map(|&r| (r, vec![0])).collect();
     assert_eq!(deps, expected, "order={line_added_order:?}");
 
     // Swap rev 2 and 3.

@@ -215,10 +215,10 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
         // # Before             # After
         // # (pc): Instruction  # (pc): Instruction
         //       : ...                : ...
-        //     a1: <a1 Inst>      a1Pc: J start
-        //   a1+1: ...          a1Pc+1: ...
+        //   a1Pc: <a1Inst>      a1Pc: J start
+        // a1Pc+1: ...          a1Pc+1: ...
         //       : ...                : ...
-        //     a2: ...            a2Pc: ...
+        //   a2Pc: ...            a2Pc: ...
         //       : ...                : ...
         //    len: N/A           start: JL brev b2Pc      [1]
         //                            : LINE brev b1      [1]
@@ -226,7 +226,7 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
         //                            : ...               [1]
         //                            : LINE brev b2-1    [1]
         //                        b2Pc: JGE brev a2Pc     [2]
-        //                            : <a1 Inst> (moved) [3]
+        //                            : <a1Inst> (moved)  [3]
         //                            : J a1Pc+1          [4]
         // [1]: Only present if `bLines` is not empty.
         // [2]: Only present if `a1 < a2`.
@@ -236,24 +236,29 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
         //      We pick the latter to avoid overly aggressive deletion.
         //      The original C implementation might pick the former when editing
         //      the last rev for performance optimization.
-        // [3]: <a1 Inst> could be LINE or END.
-        // [4]: As an optimization, this is only present if <a1 Inst> is not END.
+        // [3]: <a1Inst> could be LINE or END.
+        // [4]: As an optimization, this is only present if <a1Inst> is not END.
         //
-        // As an optimization to make reorder less restrictive, we treat insertion
-        // (a1 == a2) at the beginning of another insertion (<a1 Inst> is after a
-        // <JL>) specially by patching the <JL> instruction instead of <a1 Inst>
-        // and make sure the new <JL> (for this edit) is before the old <JL>.
-        // See the [*] lines below for differences with the above:
+        // Optimization [OPT1] to make reorder less restrictive, treat insertion
+        // (a1 == a2) at the beginning of another insertion (<a1Inst> is after a
+        // <JL>) specially. Our goal is to avoid nested JLs. Instead of patching
+        // the a1Inst after the JL, we patch the JL (jlInst) so we can insert our
+        // new JL (for this edit) before the old JL (jlInst, being patched).
+        // Note this "JL followed by a1Inst" optimization needs to be applicable
+        // multiple times. To do that, we also move the a1Inst to right after the
+        // jlInst so the pattern "JL followed by a1Inst" can be recognized by the
+        // next editChunk to apply the same optimization.
         //
         // # Before             # After
         // # (pc): Instruction  # (pc): Instruction
         //       : ...                : ...
-        //       : <JL>         a1Pc-1: J start           [*]
-        //     a1: <a1 Inst>      a1Pc: ... (unchanged)   [*]
+        //       : <jlInst>     a1Pc-1: J start           [*]
+        //   a1Pc: <a1Inst>       a1Pc: NOP (J a1Pc+1)    [*]
         //       : ...                : ...
         //    len: N/A           start: JL brev b2Pc
-        //                            : ...
-        //                        b2Pc: <JL> (moved)      [*]
+        //                            : (bLines)
+        //                        b2Pc: <jlInst> (moved)  [*]
+        //                            : <a1Inst> (moved)
         //                            : J a1Pc            [*]
 
         let b_lines = b_lines.into_iter().map(Arc::new).collect::<Vec<_>>();
@@ -277,6 +282,7 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
         // Update code.
         let mut code = self.code;
         let a1_pc = a_lines[a1].pc;
+        // If `jl_inst` is set, optimization [OPT1] is in effect.
         let mut jl_inst = if a1_pc > 0 && a1 == a2 {
             code.get(a1_pc - 1).cloned()
         } else {
@@ -286,6 +292,7 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
             jl_inst = None;
         }
         if !b_lines.is_empty() {
+            // [1]
             let b2_pc = start + b_lines.len() + 1;
             code.push_back(Inst::JL(b_rev, b2_pc));
             for line in b_lines {
@@ -294,22 +301,33 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
             debug_assert_eq!(b2_pc, code.len());
         }
         if a1 < a2 {
-            debug_assert!(jl_inst.is_none(), "no deletions when jl_inst is present");
+            debug_assert!(jl_inst.is_none(), "OPT1 requires no deletion");
+            // [2]
             let a2_pc = a_lines[a2 - 1].pc + 1;
             code.push_back(Inst::JGE(b_rev, a2_pc));
         }
-        if let (Some(a_lines_mut), None) = (a_lines.get_mut(), &jl_inst) {
-            a_lines_mut[a1].pc = code.len();
+        if let Some(a_lines_mut) = a_lines.get_mut() {
+            a_lines_mut[a1].pc = if jl_inst.is_none() {
+                code.len()
+            } else {
+                code.len() + 1
+            };
         }
         if let Some(jl_inst) = jl_inst {
+            // [OPT1] Move jlInst and a1Inst, NOP original a1Pc.
+            let a1_inst = code[a1_pc].clone();
             code.push_back(jl_inst);
+            code.push_back(a1_inst);
             code.push_back(Inst::J(a1_pc));
             code.set(a1_pc - 1, Inst::J(start));
+            code.set(a1_pc, Inst::J(a1_pc + 1));
         } else {
+            // [3]
             let a1_inst = code[a1_pc].clone();
             let is_end = matches!(a1_inst, Inst::END);
             code.push_back(a1_inst);
             if !is_end {
+                // [4]
                 code.push_back(Inst::J(a1_pc + 1));
             }
             code.set(a1_pc, Inst::J(start));
