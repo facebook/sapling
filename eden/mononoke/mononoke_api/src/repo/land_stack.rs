@@ -107,6 +107,11 @@ impl<R: MononokeRepo> RepoContext<R> {
     }
 
     /// Land a stack of commits to a bookmark via pushrebase.
+    ///
+    /// `merge_resolution_override` is forwarded to `normal_pushrebase`:
+    /// `UseJk` defers to the `pushrebase_enable_merge_resolution` JK;
+    /// `ForceOn`/`ForceOff` wins. Callers that don't care should pass
+    /// `MergeResolutionOverride::UseJk` to preserve current behavior.
     pub async fn land_stack(
         &self,
         bookmark: impl AsRef<str>,
@@ -116,6 +121,7 @@ impl<R: MononokeRepo> RepoContext<R> {
         bookmark_restrictions: BookmarkKindRestrictions,
         push_authored_by: PushAuthoredBy,
         force_local_pushrebase: bool,
+        merge_resolution_override: MergeResolutionOverride,
     ) -> Result<PushrebaseOutcome, MononokeError> {
         self.start_write()?;
 
@@ -191,7 +197,7 @@ impl<R: MononokeRepo> RepoContext<R> {
                 self.authorization_context(),
                 true, // log_new_public_commits_to_scribe
                 force_local_pushrebase,
-                MergeResolutionOverride::UseJk,
+                merge_resolution_override,
             )
             .await?;
             // Convert response back, finishing the land on the small repo
@@ -211,7 +217,7 @@ impl<R: MononokeRepo> RepoContext<R> {
                 self.authorization_context(),
                 true, // log_new_public_commits_to_scribe
                 force_local_pushrebase,
-                MergeResolutionOverride::UseJk,
+                merge_resolution_override,
             )
             .await?
         };

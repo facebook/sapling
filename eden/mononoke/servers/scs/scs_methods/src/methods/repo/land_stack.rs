@@ -12,6 +12,7 @@ use borrowed::borrowed;
 use context::CoreContext;
 use futures_watchdog::WatchdogExt;
 use hooks::PushAuthoredBy;
+use metaconfig_types::MergeResolutionOverride;
 use mononoke_api::ChangesetSpecifier;
 use mononoke_api::MononokeError;
 use pushrebase::PushrebaseConflict;
@@ -177,6 +178,8 @@ impl SourceControlServiceImpl {
                 bookmark_restrictions,
                 push_authored_by,
                 force_local_pushrebase,
+                // TODO(D4): replace with pushvar-parsed override
+                MergeResolutionOverride::UseJk,
             )
             .watched()
             .await?
