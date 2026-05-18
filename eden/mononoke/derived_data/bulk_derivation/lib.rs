@@ -32,6 +32,7 @@ use derived_data_manager::Rederivation;
 use derived_data_manager::SharedDerivationError;
 use derived_data_manager::VisitedDerivableTypesMap;
 use derived_data_manager::VisitedDerivableTypesMapStatic;
+use derived_data_manager::derivable::DerivationDependencies;
 use directory_branch_cluster_manifest::RootDirectoryBranchClusterManifestId;
 use fastlog::RootFastlog;
 use filenodes_derivation::FilenodesOnlyPublic;
@@ -186,6 +187,12 @@ pub trait BulkDerivation {
         rederivation: Option<Arc<dyn Rederivation>>,
         derived_data_type: DerivableType,
     ) -> Result<(), DerivationError>;
+
+    /// Returns the derivable types that the given type statically depends on,
+    /// as declared via the `dependencies!` macro on its `BonsaiDerivable` impl.
+    ///
+    /// Only direct dependencies are returned (no transitive closure).
+    fn dependency_types(&self, derived_data_type: DerivableType) -> Vec<DerivableType>;
 }
 
 struct SingleTypeManager<T: BonsaiDerivable> {
@@ -261,6 +268,8 @@ trait SingleTypeDerivation: Send + Sync {
         csid: ChangesetId,
         rederivation: Option<Arc<dyn Rederivation>>,
     ) -> Result<(), SharedDerivationError>;
+
+    fn dependency_types(&self) -> Vec<DerivableType>;
 }
 
 #[async_trait]
@@ -371,6 +380,10 @@ impl<T: BonsaiDerivable> SingleTypeDerivation for SingleTypeManager<T> {
             .derive::<T>(ctx, csid, rederivation, DerivationPriority::LOW)
             .await?;
         Ok(())
+    }
+
+    fn dependency_types(&self) -> Vec<DerivableType> {
+        <T::Dependencies as DerivationDependencies>::iter().collect()
     }
 }
 
@@ -724,5 +737,9 @@ impl BulkDerivation for DerivedDataManager {
         manager
             .unsafe_derive_untopologically(ctx, csid, rederivation)
             .await
+    }
+
+    fn dependency_types(&self, derived_data_type: DerivableType) -> Vec<DerivableType> {
+        manager_for_type(self, derived_data_type).dependency_types()
     }
 }
