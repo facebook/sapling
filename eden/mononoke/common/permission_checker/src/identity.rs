@@ -120,7 +120,7 @@ impl MononokeIdentity {
 
     pub fn to_typed_string(&self) -> String {
         if self.0.attributes.is_empty() {
-            format!("Authenticated;{}:{}", self.id_type(), self.id_data())
+            format!("{}:{}", self.id_type(), self.id_data())
         } else {
             let attrs = self
                 .0
@@ -129,12 +129,7 @@ impl MononokeIdentity {
                 .map(|attr| attr.val.as_str())
                 .collect::<Vec<_>>()
                 .join(",");
-            format!(
-                "Authenticated;{}:{};{}",
-                self.id_type(),
-                self.id_data(),
-                attrs
-            )
+            format!("{}:{};{}", self.id_type(), self.id_data(), attrs)
         }
     }
 
@@ -222,7 +217,7 @@ mod tests {
     #[mononoke::test]
     fn test_to_typed_string_thin() {
         let id = MononokeIdentity::from_legacy_type_data("SERVICE", "some_service");
-        assert_eq!(id.to_typed_string(), "Authenticated;SERVICE:some_service");
+        assert_eq!(id.to_typed_string(), "SERVICE:some_service");
     }
 
     #[cfg(not(fbcode_build))]
@@ -245,6 +240,6 @@ mod tests {
             }],
         };
         let id = MononokeIdentity(auth_id);
-        assert_eq!(id.to_typed_string(), "Authenticated;USER:mzr;AGENT:devmate");
+        assert_eq!(id.to_typed_string(), "USER:mzr;AGENT:devmate");
     }
 }
