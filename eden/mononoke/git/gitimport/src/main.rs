@@ -15,7 +15,6 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Error;
-use anyhow::anyhow;
 use blobstore::Loadable;
 use bonsai_tag_mapping::BonsaiTagMappingRef;
 use bookmarks::BookmarkCategory;
@@ -209,14 +208,24 @@ struct GitimportArgs {
     /// explicitly specified refs
     #[clap(long, use_value_delimiter = true, value_delimiter = ',')]
     include_refs: Vec<String>,
-    /// Lfs server url to use to fetch lfs files from
-    #[clap(long)]
+    /// LFS server URL to fetch LFS files from over HTTP. When unset, gitimport
+    /// falls back to internal mode (resolves LFS pointers from the local
+    /// Mononoke filestore by SHA256 alias). Mutually exclusive with
+    /// `--internal-lfs`.
+    #[clap(long, conflicts_with = "internal_lfs")]
     lfs_server: Option<String>,
     /// URL pattern that the LFS server uses to serve raw objects by SHA256.
     /// Defaults to the Dewey-style `GET {server}/{sha256}`. Use `mononoke-git-lfs` for
     /// the `GET {server}/{repo}/download_sha256/{sha256}` shape served by Mononoke LFS.
     #[clap(long, value_enum, default_value_t = LfsServerUrlFormatArg::Dewey)]
     lfs_server_url_format: LfsServerUrlFormatArg,
+    /// Explicitly request internal mode (resolve LFS pointers from the local
+    /// Mononoke filestore by SHA256 alias). Internal mode is also the default
+    /// when `--lfs-server` is not set; this flag is mainly useful for
+    /// documentation or to force a clap error if `--lfs-server` is also
+    /// passed by mistake. Mutually exclusive with `--lfs-server`.
+    #[clap(long, default_value_t = false)]
+    internal_lfs: bool,
     /// TLS parameters for this service used for outbound LFS connections
     #[clap(flatten)]
     tls_args: Option<TLSArgs>,
@@ -353,26 +362,36 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     } else {
         BackfillDerivation::AllConfiguredTypes
     };
-    let lfs = match repo.repo_config().git_configs.git_lfs_interpret_pointers {
-        true => {
-            let url_format = match args.lfs_server_url_format {
-                LfsServerUrlFormatArg::Dewey => LfsServerUrlFormat::LegacyDewey,
-                LfsServerUrlFormatArg::MononokeGitLfs => LfsServerUrlFormat::MononokeGitLfs {
-                    repo_name: repo.repo_identity().name().to_string(),
-                },
-            };
-            GitImportLfs::new(
-                args.lfs_server.ok_or_else(|| {
-                    anyhow!("LFS server url is required when LFS is enabled in the repo config")
-                })?,
-                url_format,
+    // LFS resolution mode (only relevant when the repo config has LFS pointer
+    // interpretation enabled). Internal mode is the default — pass
+    // `--lfs-server URL` to opt into upstream HTTP fetches. The `--internal-lfs`
+    // flag is documentary only; without it, the absence of `--lfs-server`
+    // already selects internal mode.
+    let lfs = if repo.repo_config().git_configs.git_lfs_interpret_pointers {
+        match args.lfs_server {
+            Some(lfs_server) => {
+                let url_format = match args.lfs_server_url_format {
+                    LfsServerUrlFormatArg::Dewey => LfsServerUrlFormat::LegacyDewey,
+                    LfsServerUrlFormatArg::MononokeGitLfs => LfsServerUrlFormat::MononokeGitLfs {
+                        repo_name: repo.repo_identity().name().to_string(),
+                    },
+                };
+                GitImportLfs::new(
+                    lfs_server,
+                    url_format,
+                    args.allow_dangling_lfs_pointers,
+                    args.lfs_import_max_attempts,
+                    Some(LFS_SIMULTANEOUS_CONNECTION_LIMIT),
+                    args.tls_args,
+                )?
+            }
+            None => GitImportLfs::new_internal(
+                repo.repo_blobstore_arc().boxed(),
                 args.allow_dangling_lfs_pointers,
-                args.lfs_import_max_attempts,
-                Some(LFS_SIMULTANEOUS_CONNECTION_LIMIT),
-                args.tls_args,
-            )?
+            ),
         }
-        false => GitImportLfs::new_disabled(),
+    } else {
+        GitImportLfs::new_disabled()
     };
 
     let mut prefs = GitimportPreferences {
