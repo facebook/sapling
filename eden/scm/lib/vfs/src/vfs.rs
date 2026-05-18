@@ -5,10 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::fs::File;
 use std::fs::Metadata;
 use std::io;
 use std::io::ErrorKind;
 use std::io::Read;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -24,6 +27,7 @@ use fsinfo::fstype;
 use minibytes::Bytes;
 use types::RepoPath;
 use types::RepoPathBuf;
+use util::no_follow::AtomicReplaceFile;
 use util::no_follow::LiteMetadata;
 use util::no_follow::NoFollowRoot;
 use util::no_follow::OpenFlags;
@@ -70,6 +74,27 @@ impl std::fmt::Display for ClearConflictError {
 }
 
 impl std::error::Error for ClearConflictError {}
+
+fn reset_open_file_permissions(file: &File, flags: OpenFlags, mode: u32) -> io::Result<()> {
+    if !flags.intersects(OpenFlags::TRUNCATE | OpenFlags::CREATE_NEW) {
+        return Ok(());
+    }
+
+    // Legacy vfs.py write paths unlink and recreate the destination before
+    // opening it, so writes reset the mode even when the file already exists.
+    // Apply umask here to preserve normal file creation permissions.
+    set_file_permissions(file, util::file::apply_umask(mode))
+}
+
+#[cfg(unix)]
+fn set_file_permissions(file: &File, mode: u32) -> io::Result<()> {
+    file.set_permissions(std::fs::Permissions::from_mode(mode))
+}
+
+#[cfg(windows)]
+fn set_file_permissions(_file: &File, _mode: u32) -> io::Result<()> {
+    Ok(())
+}
 
 #[derive(Clone)]
 pub struct VFS {
@@ -157,6 +182,29 @@ impl VFS {
         self.inner.root.join(path.as_str())
     }
 
+    /// Open an existing directory below this root as a new VFS root.
+    pub fn open_vfs(&self, path: &RepoPath) -> Result<Self> {
+        if path.is_empty() {
+            return Ok(self.clone());
+        }
+
+        self.inner.auditor.audit_components(path)?;
+
+        let root = self.join(path);
+        let no_follow = self.no_follow()?.open_root(path)?;
+        Ok(Self {
+            inner: Arc::new(Inner {
+                root: root.clone(),
+                no_follow: OnceLock::from(no_follow),
+                auditor: PathAuditor::new(&root, self.inner.case_sensitive),
+                supports_symlinks: AtomicBool::new(self.supports_symlinks()),
+                supports_executables: self.inner.supports_executables,
+                case_sensitive: self.inner.case_sensitive,
+                overwrite_path_conflicts: self.inner.overwrite_path_conflicts,
+            }),
+        })
+    }
+
     pub fn metadata(&self, path: &RepoPath) -> Result<LiteMetadata> {
         tracing::trace!(?path, "fetching metadata");
 
@@ -184,6 +232,37 @@ impl VFS {
 
     pub fn is_file(&self, path: &RepoPath) -> Result<bool> {
         Ok(self.metadata(path)?.is_file())
+    }
+
+    /// Open the regular file at `path` without following symlinks.
+    pub fn open(&self, path: &RepoPath, flags: OpenFlags, mode: u32) -> Result<File> {
+        self.inner.auditor.audit_components(path)?;
+        match self.no_follow()?.open_file(path, flags, mode) {
+            Ok(file) => {
+                reset_open_file_permissions(&file, flags, mode)?;
+                Ok(file)
+            }
+            Err(err) if flags.creates_file() => {
+                let err = anyhow::Error::from(err);
+                self.clear_conflicts(path).with_context(|| {
+                    format!("can't clear conflicts after handling error \"{:#}\"", err)
+                })?;
+                let file = self.no_follow()?.open_file(path, flags, mode)?;
+                reset_open_file_permissions(&file, flags, mode)?;
+                Ok(file)
+            }
+            Err(err) => Err(err.into()),
+        }
+    }
+
+    /// Open a temporary file that atomically replaces `path` when persisted.
+    pub fn open_with_atomic_replace(
+        &self,
+        path: &RepoPath,
+        mode: u32,
+    ) -> Result<AtomicReplaceFile> {
+        self.inner.auditor.audit_components(path)?;
+        Ok(self.no_follow()?.atomic_replace_file(path, mode)?)
     }
 
     /// The file `path` can't be written to, attempt to fixup the directories and files so the file can
@@ -391,6 +470,12 @@ impl VFS {
         self.set_exec(path, flag)
     }
 
+    pub fn set_permissions(&self, path: &RepoPath, mode: u32) -> Result<()> {
+        self.inner.auditor.audit_components(path)?;
+        self.no_follow()?.set_permissions(path, mode)?;
+        Ok(())
+    }
+
     /// Remove the file at `path`.
     ///
     /// If file does not exist, returns without an error
@@ -413,6 +498,34 @@ impl VFS {
             }
         }
         Ok(())
+    }
+
+    /// Remove a file or symlink at `path` without pruning empty parent directories.
+    pub fn unlink(&self, path: &RepoPath) -> Result<()> {
+        self.inner.auditor.audit_components(path)?;
+        Ok(self.no_follow()?.remove_file(path)?)
+    }
+
+    /// Attempt to remove a file or symlink at `path`, ignoring missing files.
+    pub fn try_unlink(&self, path: &RepoPath) -> Result<()> {
+        self.inner.auditor.audit_components(path)?;
+        match self.no_follow()?.remove_file(path) {
+            Ok(()) => Ok(()),
+            Err(err) if err.kind() == ErrorKind::NotFound => Ok(()),
+            Err(err) => Err(err.into()),
+        }
+    }
+
+    /// Remove the directory tree at `path` recursively.
+    pub fn remove_dir_all(&self, path: &RepoPath) -> Result<()> {
+        self.inner.auditor.audit_components(path)?;
+        Ok(self.no_follow()?.remove_dir_all(path)?)
+    }
+
+    /// Remove an empty directory at `path`.
+    pub fn remove_dir(&self, path: &RepoPath) -> Result<()> {
+        self.inner.auditor.audit_components(path)?;
+        Ok(self.no_follow()?.remove_dir(path)?)
     }
 
     /// Rewrite over a symlink that already exists.
@@ -666,6 +779,55 @@ mod unix_tests {
     }
 
     #[test]
+    fn test_unlink_keeps_empty_parent_dirs() {
+        let tmp = tempfile::tempdir().unwrap();
+        let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
+        fs::create_dir_all(tmp.path().join("a/b")).unwrap();
+        fs::write(tmp.path().join("a/b/file"), b"content").unwrap();
+
+        let path = RepoPath::from_str("a/b/file").unwrap();
+        vfs.unlink(path).unwrap();
+
+        assert!(!tmp.path().join("a/b/file").exists());
+        assert!(tmp.path().join("a/b").is_dir());
+    }
+
+    #[test]
+    fn test_unlink_rejects_missing_path() {
+        let tmp = tempfile::tempdir().unwrap();
+        let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
+        let path = RepoPath::from_str("a/b/file").unwrap();
+
+        let err = vfs.unlink(path).unwrap_err();
+        assert_eq!(
+            err.downcast_ref::<io::Error>().map(|err| err.kind()),
+            Some(ErrorKind::NotFound)
+        );
+    }
+
+    #[test]
+    fn test_try_unlink_ignores_missing_path() {
+        let tmp = tempfile::tempdir().unwrap();
+        let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
+        let path = RepoPath::from_str("a/b/file").unwrap();
+
+        vfs.try_unlink(path).unwrap();
+    }
+
+    #[test]
+    fn test_remove_dir_all_rejects_missing_path() {
+        let tmp = tempfile::tempdir().unwrap();
+        let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
+        let path = RepoPath::from_str("a/b").unwrap();
+
+        let err = vfs.remove_dir_all(path).unwrap_err();
+        assert_eq!(
+            err.downcast_ref::<io::Error>().map(|err| err.kind()),
+            Some(ErrorKind::NotFound)
+        );
+    }
+
+    #[test]
     fn test_set_executable_rejects_ancestor_symlink() {
         let tmp = tempfile::tempdir().unwrap();
         let outside = tempfile::tempdir().unwrap();
@@ -686,6 +848,29 @@ mod unix_tests {
             .unwrap();
         let buf = vfs.read(path).unwrap();
         assert_eq!(buf, b"abc")
+    }
+
+    #[test]
+    fn test_remove_dir_removes_empty_directory() {
+        let tmp = tempfile::tempdir().unwrap();
+        let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
+        fs::create_dir(tmp.path().join("dir")).unwrap();
+        let path = RepoPath::from_str("dir").unwrap();
+
+        vfs.remove_dir(path).unwrap();
+
+        assert!(!tmp.path().join("dir").exists());
+    }
+
+    #[test]
+    fn test_remove_dir_rejects_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
+        fs::write(tmp.path().join("file"), b"content").unwrap();
+        let path = RepoPath::from_str("file").unwrap();
+
+        assert!(vfs.remove_dir(path).is_err());
+        assert!(tmp.path().join("file").is_file());
     }
 
     #[test]
@@ -789,6 +974,8 @@ fn metadata_eq(m1: &Metadata, m2: &Metadata) -> Result<bool> {
 #[cfg(test)]
 mod tests {
     use std::fs;
+    use std::io::Read;
+    use std::io::Write;
 
     use blob::Blob;
 
@@ -804,6 +991,148 @@ mod tests {
         assert!(!case_sensitive);
         #[cfg(target_os = "macos")]
         assert!(!case_sensitive);
+    }
+
+    #[test]
+    fn test_open_reads_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
+        let path = RepoPath::from_str("file").unwrap();
+        vfs.write(path, Blob::from_static(b"content"), UpdateFlag::Regular)
+            .unwrap();
+
+        let mut file = vfs.open(path, OpenFlags::READ, 0).unwrap();
+        let mut content = Vec::new();
+        file.read_to_end(&mut content).unwrap();
+        assert_eq!(content, b"content");
+    }
+
+    #[test]
+    fn test_open_vfs_scopes_to_child_directory() {
+        let tmp = tempfile::tempdir().unwrap();
+        let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
+        fs::create_dir(tmp.path().join("sub")).unwrap();
+        fs::write(tmp.path().join("sub/file"), b"content").unwrap();
+
+        let sub = RepoPath::from_str("sub").unwrap();
+        let file = RepoPath::from_str("file").unwrap();
+        let sub_vfs = vfs.open_vfs(sub).unwrap();
+
+        assert_eq!(sub_vfs.root(), tmp.path().join("sub"));
+        assert_eq!(sub_vfs.read(file).unwrap().as_ref(), b"content");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_open_vfs_rejects_symlink_root() {
+        let tmp = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        std::os::unix::fs::symlink(outside.path(), tmp.path().join("link")).unwrap();
+
+        let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
+        let link = RepoPath::from_str("link").unwrap();
+        assert!(vfs.open_vfs(link).is_err());
+    }
+
+    #[test]
+    fn test_open_with_atomic_replace_persists_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
+        let path = RepoPath::from_str("file").unwrap();
+        vfs.write(path, Blob::from_static(b"old"), UpdateFlag::Regular)
+            .unwrap();
+
+        let mut file = vfs.open_with_atomic_replace(path, 0o600).unwrap();
+        file.write_all(b"new").unwrap();
+        file.persist().unwrap();
+
+        assert_eq!(vfs.read(path).unwrap().as_ref(), b"new");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_open_create_clears_leaf_symlink_in_destructive_vfs() {
+        let tmp = tempfile::tempdir().unwrap();
+        let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
+        let path = RepoPath::from_str("file").unwrap();
+        std::os::unix::fs::symlink("target", vfs.join(path)).unwrap();
+
+        let mut file = vfs
+            .open(
+                path,
+                OpenFlags::WRITE | OpenFlags::CREATE | OpenFlags::TRUNCATE,
+                0o600,
+            )
+            .unwrap();
+        file.write_all(b"content").unwrap();
+        drop(file);
+
+        let metadata = fs::symlink_metadata(vfs.join(path)).unwrap();
+        assert!(metadata.file_type().is_file());
+        assert_eq!(vfs.read(path).unwrap().as_ref(), b"content");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_open_truncate_resets_existing_file_mode() {
+        let tmp = tempfile::tempdir().unwrap();
+        let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
+        let path = RepoPath::from_str("file").unwrap();
+        vfs.write(path, Blob::from_static(b"old"), UpdateFlag::Executable)
+            .unwrap();
+
+        let mut file = vfs
+            .open(
+                path,
+                OpenFlags::WRITE | OpenFlags::CREATE | OpenFlags::TRUNCATE,
+                0o644,
+            )
+            .unwrap();
+        file.write_all(b"new").unwrap();
+        drop(file);
+
+        assert_eq!(vfs.read(path).unwrap().as_ref(), b"new");
+        assert_eq!(
+            fs::metadata(vfs.join(path)).unwrap().permissions().mode() & 0o777,
+            util::file::apply_umask(0o644)
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_open_create_uses_umask_for_new_file_mode() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let tmp = tempfile::tempdir().unwrap();
+        let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
+        let path = RepoPath::from_str("file").unwrap();
+
+        let mut file = vfs
+            .open(
+                path,
+                OpenFlags::WRITE | OpenFlags::CREATE | OpenFlags::TRUNCATE,
+                0o777,
+            )
+            .unwrap();
+        file.write_all(b"new").unwrap();
+        drop(file);
+
+        assert_eq!(
+            fs::metadata(vfs.join(path)).unwrap().permissions().mode() & 0o777,
+            util::file::apply_umask(0o777)
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_open_read_does_not_clear_leaf_symlink_in_destructive_vfs() {
+        let tmp = tempfile::tempdir().unwrap();
+        let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
+        let path = RepoPath::from_str("file").unwrap();
+        std::os::unix::fs::symlink("target", vfs.join(path)).unwrap();
+
+        assert!(vfs.open(path, OpenFlags::READ, 0).is_err());
+        assert!(fs::symlink_metadata(vfs.join(path)).unwrap().is_symlink());
     }
 
     #[test]
