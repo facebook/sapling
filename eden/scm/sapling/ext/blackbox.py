@@ -91,11 +91,10 @@ def _openlogfile(ui, vfs):
     else:
         needrotate = False
     if needrotate:
-        path = vfs.join(name)
         maxfiles = ui.configint("blackbox", "maxfiles")
         for i in range(maxfiles - 1, 1, -1):
-            rotate(oldpath="%s.%d" % (path, i - 1), newpath="%s.%d" % (path, i))
-        rotate(oldpath=path, newpath=maxfiles > 0 and path + ".1")
+            rotate(oldpath="%s.%d" % (name, i - 1), newpath="%s.%d" % (name, i))
+        rotate(oldpath=name, newpath=maxfiles > 0 and name + ".1")
     return vfs(name, "a")
 
 
@@ -107,7 +106,7 @@ def wrapui(ui) -> None:
             repo = getattr(self, "_bbrepo", lambda: None)()
             if repo:
                 vfs = repo.localvfs
-                if not vfs.isdir("."):
+                if not vfs.isdir():
                     vfs = None
             return vfs
 
