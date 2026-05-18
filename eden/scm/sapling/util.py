@@ -4832,6 +4832,11 @@ def lstat(path: str) -> "wrapped_stat_result":
 
 def fstat(fp: "Any") -> "wrapped_stat_result":
     """stat file object that may not have fileno method."""
+    # pyio's metadata, already in int form
+    m = getattr(fp, "metadata", None)
+    if callable(m):
+        return m()
+
     try:
         res = os.fstat(fp)
     except TypeError:
