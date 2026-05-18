@@ -122,13 +122,10 @@ impl<T> AbstractLineLog<T> {
     }
 
     /// Attach a `PerfStats` struct to analyse cache statistics.
-    pub(crate) fn with_perf_stats(&self, stats: Option<Arc<PerfStats>>) -> Self {
+    pub(crate) fn with_perf_stats(self, stats: Option<Arc<PerfStats>>) -> Self {
         Self {
-            code: self.code.clone(),
-            max_rev: self.max_rev.clone(),
-            dag: self.dag.clone(),
-            a_lines_cache: self.a_lines_cache.clone(),
             perf_stats: stats,
+            ..self
         }
     }
 }
@@ -406,7 +403,10 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
         if can_update_cache {
             #[cfg(debug_assertions)]
             {
-                let fresh_lines = result.with_perf_stats(None).execute(b_rev, b_rev, None);
+                let fresh_lines = result
+                    .clone()
+                    .with_perf_stats(None)
+                    .execute(b_rev, b_rev, None);
                 assert_eq!(fresh_lines, a_lines);
             }
             result.a_lines_cache = Some((b_rev, a_lines));
@@ -571,9 +571,8 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
         Self {
             code,
             max_rev: self.max_rev.max(b_rev),
-            dag: self.dag,
             a_lines_cache: None,
-            perf_stats: self.perf_stats,
+            ..self
         }
     }
 
@@ -671,9 +670,8 @@ impl<T> AbstractLineLog<T> {
         Self {
             code,
             max_rev,
-            dag: self.dag,
             a_lines_cache: None,
-            perf_stats: self.perf_stats,
+            ..self
         }
     }
 
@@ -699,9 +697,8 @@ impl<T> AbstractLineLog<T> {
         Self {
             code,
             max_rev,
-            dag: self.dag,
             a_lines_cache: None,
-            perf_stats: self.perf_stats,
+            ..self
         }
     }
 
