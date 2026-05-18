@@ -14,6 +14,7 @@ use std::sync::atomic::Ordering;
 
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::bail;
 use bulk_derivation::BulkDerivation;
 use clap::Args;
 use clap::ValueEnum;
@@ -36,6 +37,7 @@ use mononoke_types::DerivableType;
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 use tracing::debug;
+use tracing::error;
 
 use super::Repo;
 
@@ -64,6 +66,11 @@ pub(super) struct DeriveSliceArgs {
     /// Whether or not to rederive changesets that are already derived.
     #[clap(long)]
     pub(crate) rederive: bool,
+
+    /// Continue deriving remaining boundaries/slices even if some fail.
+    /// Reports all failures at the end instead of stopping on the first error.
+    #[clap(long)]
+    keep_going: bool,
 }
 
 #[derive(Clone, ValueEnum)]
@@ -107,6 +114,7 @@ async fn derive_boundaries(
     boundaries_concurrency: usize,
     derived_data_type: DerivableType,
     rederive: bool,
+    keep_going: bool,
 ) -> Result<()> {
     let rederivation: Option<Arc<dyn Rederivation>> = if rederive {
         Some(Arc::new(Mutex::new(
@@ -126,39 +134,96 @@ async fn derive_boundaries(
         boundaries_count, boundaries_concurrency
     );
     let completed = Arc::new(AtomicUsize::new(0));
-    stream::iter(boundaries)
-        .map(Ok)
-        .try_for_each_concurrent(boundaries_concurrency, |csid| {
-            cloned!(ctx, manager, completed, rederivation);
-            async move {
-                mononoke::spawn_task(async move {
-                    debug!("deriving csid {}", csid);
-                    let (derive_boundary_stats, ()) =
-                        BulkDerivation::unsafe_derive_untopologically(
-                            &manager,
-                            &ctx,
+    if keep_going {
+        let results: Vec<_> = stream::iter(boundaries)
+            .map(|csid| {
+                cloned!(ctx, manager, completed, rederivation);
+                async move {
+                    let result = mononoke::spawn_task(async move {
+                        debug!("deriving csid {}", csid);
+                        let (derive_boundary_stats, ()) =
+                            BulkDerivation::unsafe_derive_untopologically(
+                                &manager,
+                                &ctx,
+                                csid,
+                                rederivation,
+                                derived_data_type,
+                            )
+                            .try_timed()
+                            .await?;
+
+                        let completed_count = completed.fetch_add(1, Ordering::SeqCst) + 1;
+                        debug!(
+                            "derived boundary {} in {}ms, ({}/{})",
                             csid,
-                            rederivation,
-                            derived_data_type,
-                        )
-                        .try_timed()
-                        .await?;
+                            derive_boundary_stats.completion_time.as_millis(),
+                            completed_count,
+                            boundaries_count,
+                        );
 
-                    let completed_count = completed.fetch_add(1, Ordering::SeqCst) + 1;
-                    debug!(
-                        "derived boundary {} in {}ms, ({}/{})",
-                        csid,
-                        derive_boundary_stats.completion_time.as_millis(),
-                        completed_count,
-                        boundaries_count,
-                    );
+                        anyhow::Ok(())
+                    })
+                    .await
+                    .unwrap_or_else(|e| Err(e.into()));
+                    (csid, result)
+                }
+            })
+            .buffer_unordered(boundaries_concurrency)
+            .collect()
+            .await;
 
-                    Ok(())
-                })
-                .await?
+        let errors: Vec<_> = results
+            .into_iter()
+            .filter_map(|(csid, result)| result.err().map(|e| (csid, e)))
+            .collect();
+
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            for (csid, err) in &errors {
+                error!("Failed to derive boundary {}: {:#}", csid, err);
             }
-        })
-        .await
+            bail!(
+                "{} out of {} boundaries failed to derive",
+                errors.len(),
+                boundaries_count
+            )
+        }
+    } else {
+        stream::iter(boundaries)
+            .map(Ok)
+            .try_for_each_concurrent(boundaries_concurrency, |csid| {
+                cloned!(ctx, manager, completed, rederivation);
+                async move {
+                    mononoke::spawn_task(async move {
+                        debug!("deriving csid {}", csid);
+                        let (derive_boundary_stats, ()) =
+                            BulkDerivation::unsafe_derive_untopologically(
+                                &manager,
+                                &ctx,
+                                csid,
+                                rederivation,
+                                derived_data_type,
+                            )
+                            .try_timed()
+                            .await?;
+
+                        let completed_count = completed.fetch_add(1, Ordering::SeqCst) + 1;
+                        debug!(
+                            "derived boundary {} in {}ms, ({}/{})",
+                            csid,
+                            derive_boundary_stats.completion_time.as_millis(),
+                            completed_count,
+                            boundaries_count,
+                        );
+
+                        Ok(())
+                    })
+                    .await?
+                }
+            })
+            .await
+    }
 }
 
 async fn inner_derive_slice(
@@ -271,6 +336,7 @@ pub(super) async fn derive_slice(
                 args.boundaries_concurrency,
                 derived_data_type,
                 args.rederive,
+                args.keep_going,
             )
             .await
         }
@@ -283,29 +349,76 @@ pub(super) async fn derive_slice(
                 slice_count, args.slice_concurrency
             );
 
-            stream::iter(slice_descriptions)
-                .map(Ok)
-                .try_for_each_concurrent(args.slice_concurrency, |slice_description| {
-                    cloned!(ctx, manager, completed);
-                    let commit_graph = repo.commit_graph_arc();
-                    async move {
-                        mononoke::spawn_task(async move {
-                            inner_derive_slice(
-                                &ctx,
-                                commit_graph,
-                                manager,
-                                slice_description,
-                                slice_count,
-                                completed,
-                                derived_data_type,
-                                args.rederive,
-                            )
+            if args.keep_going {
+                let results: Vec<_> = stream::iter(slice_descriptions.into_iter().enumerate())
+                    .map(|(index, slice_description)| {
+                        cloned!(ctx, manager, completed);
+                        let commit_graph = repo.commit_graph_arc();
+                        async move {
+                            let result = mononoke::spawn_task(async move {
+                                inner_derive_slice(
+                                    &ctx,
+                                    commit_graph,
+                                    manager,
+                                    slice_description,
+                                    slice_count,
+                                    completed,
+                                    derived_data_type,
+                                    args.rederive,
+                                )
+                                .await
+                            })
                             .await
-                        })
-                        .await?
+                            .unwrap_or_else(|e| Err(e.into()));
+                            (index, result)
+                        }
+                    })
+                    .buffer_unordered(args.slice_concurrency)
+                    .collect()
+                    .await;
+
+                let errors: Vec<_> = results
+                    .into_iter()
+                    .filter_map(|(index, result)| result.err().map(|e| (index, e)))
+                    .collect();
+
+                if errors.is_empty() {
+                    Ok(())
+                } else {
+                    for (index, err) in &errors {
+                        error!("Failed to derive slice {}: {:#}", index, err);
                     }
-                })
-                .await
+                    bail!(
+                        "{} out of {} slices failed to derive",
+                        errors.len(),
+                        slice_count
+                    )
+                }
+            } else {
+                stream::iter(slice_descriptions)
+                    .map(Ok)
+                    .try_for_each_concurrent(args.slice_concurrency, |slice_description| {
+                        cloned!(ctx, manager, completed);
+                        let commit_graph = repo.commit_graph_arc();
+                        async move {
+                            mononoke::spawn_task(async move {
+                                inner_derive_slice(
+                                    &ctx,
+                                    commit_graph,
+                                    manager,
+                                    slice_description,
+                                    slice_count,
+                                    completed,
+                                    derived_data_type,
+                                    args.rederive,
+                                )
+                                .await
+                            })
+                            .await?
+                        }
+                    })
+                    .await
+            }
         }
     }
 }

@@ -148,3 +148,41 @@ check that A, C, F, G, H, I and J, K, L are now derived
 check that H is still not derived as it's not an ancestor of any bookmark
   $ mononoke_admin derived-data -R repo exists -T test_sharded_manifests -i 9cff72783886d8e1c03fc9420fe944b30e30f0518c2fbb65ea04bca9b7f880c0
   Not Derived: 9cff72783886d8e1c03fc9420fe944b30e30f0518c2fbb65ea04bca9b7f880c0
+
+test --keep-going flag for derive-slice in boundaries mode
+create a boundaries file with valid changesets (B, D) and one fake changeset.
+use test_sharded_manifests with --rederive since B and D are already derived from the earlier test.
+  $ python3 -c "import json; print(json.dumps(['f8c75e41a0c4d29281df765f39de47bca1dcadfdc55ada4ccc2f6df567201658', '0000000000000000000000000000000000000000000000000000000000001234', 'f41e886d61d03021b73d006acf237244086eb7a5d9c7989e44e59b76d3c3f2b5']))" > keep_going_boundaries.json
+
+derive-slice boundaries with --keep-going should rederive valid boundaries despite fake one failing
+  $ mononoke_admin derived-data -R repo derive-slice -T test_sharded_manifests -f keep_going_boundaries.json --mode boundaries --keep-going --rederive 2>"$TESTTMP/keep_going_boundaries_err.txt"
+  [1]
+  $ grep "boundaries failed to derive" "$TESTTMP/keep_going_boundaries_err.txt"
+  Error: 1 out of 3 boundaries failed to derive
+
+verify valid boundaries (B, D) are still derived
+  $ mononoke_admin derived-data -R repo exists -T test_sharded_manifests -i f8c75e41a0c4d29281df765f39de47bca1dcadfdc55ada4ccc2f6df567201658
+  Derived: f8c75e41a0c4d29281df765f39de47bca1dcadfdc55ada4ccc2f6df567201658
+  $ mononoke_admin derived-data -R repo exists -T test_sharded_manifests -i f41e886d61d03021b73d006acf237244086eb7a5d9c7989e44e59b76d3c3f2b5
+  Derived: f41e886d61d03021b73d006acf237244086eb7a5d9c7989e44e59b76d3c3f2b5
+
+test --keep-going flag for derive-slice in slices mode
+create a slices file with one valid slice (changeset A) and one with a fake changeset
+  $ python3 -c "
+  > import json
+  > slices = [
+  >     {'segments': [{'head': 'aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675', 'base': 'aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675'}]},
+  >     {'segments': [{'head': '0000000000000000000000000000000000000000000000000000000000001234', 'base': '0000000000000000000000000000000000000000000000000000000000001234'}]}
+  > ]
+  > print(json.dumps(slices))
+  > " > keep_going_slices.json
+
+derive-slice slices with --keep-going should derive valid slices despite fake one failing
+  $ mononoke_admin derived-data -R repo derive-slice -T test_sharded_manifests -f keep_going_slices.json --mode slices --keep-going 2>"$TESTTMP/keep_going_slices_err.txt"
+  [1]
+  $ grep "slices failed to derive" "$TESTTMP/keep_going_slices_err.txt"
+  Error: 1 out of 2 slices failed to derive
+
+verify valid slice changeset (A) is still derived
+  $ mononoke_admin derived-data -R repo exists -T test_sharded_manifests -i aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
+  Derived: aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
