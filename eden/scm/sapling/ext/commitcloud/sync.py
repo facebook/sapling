@@ -119,10 +119,10 @@ def sync(repo, *args, **kwargs):
                 ):
                     rc, synced = _sync(repo, *args, **kwargs)
             if synced is not None:
-                with repo.svfs(_syncstatusfile, "w+") as fp:
+                with repo.svfs(_syncstatusfile, "w") as fp:
                     fp.write(("Success" if synced else "Failed").encode())
     except BaseException as e:
-        with repo.svfs(_syncstatusfile, "w+") as fp:
+        with repo.svfs(_syncstatusfile, "w") as fp:
             fp.write(("Exception:\n%s" % e).encode())
         raise
     return rc

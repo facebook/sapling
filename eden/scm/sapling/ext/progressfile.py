@@ -93,7 +93,7 @@ def writeprogress(self, progressfile, filemode, bars) -> None:
 def uisetup(ui) -> None:
     progressfile = ui.config("progress", "statefile")
     append = ui.configbool("progress", "statefileappend", False)
-    filemode = "a+" if append else "w+"
+    filemode = "a" if append else "w"
     if progressfile:
         global _pid
         _pid = ui.configint("progress", "fakedpid") or util.getpid()

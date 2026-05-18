@@ -911,7 +911,7 @@ def _smartlog(ui, repo, *pats, **opts):
     cmdutil.displaygraph(ui, repo, revdag, displayer, reserved=reserved)
 
     try:
-        with open(repo.localvfs.join("completionhints"), "w+") as f:
+        with open(repo.localvfs.join("completionhints"), "w") as f:
             for rev in revdag:
                 commit_hash = rev[2].node()
                 f.write(nodemod.short(commit_hash) + "\n")

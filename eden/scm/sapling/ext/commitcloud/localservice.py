@@ -222,7 +222,7 @@ class LocalService(baseservice.BaseService):
         filename = os.path.join(
             self.path, self._workspacefilename("checkoutlocations", workspace)
         )
-        with open(filename, "w+") as f:
+        with open(filename, "w") as f:
             json.dump(data, f)
 
     def getworkspaces(self, reponame, prefix):
