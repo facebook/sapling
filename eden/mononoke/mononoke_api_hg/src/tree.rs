@@ -437,7 +437,7 @@ mod tests {
 
     /// Create a CoreContext with a test user identity for ACL checking.
     async fn create_test_ctx(fb: FacebookInit) -> CoreContext {
-        let client_identity = MononokeIdentity::new("USER", "myusername0");
+        let client_identity = MononokeIdentity::from_legacy_type_data("USER", "myusername0");
         let mut cri = ClientRequestInfo::new(ClientEntryPoint::Tests);
         cri.set_main_id("user:myusername0".to_string());
         let client_info = ClientInfo::new_with_client_request_info(cri);

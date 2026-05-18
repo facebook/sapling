@@ -180,7 +180,8 @@ impl ProdRepoPermissionChecker {
             let mut allowlisted_identities = MononokeIdentitySet::new();
 
             for Identity { id_type, id_data } in global_allowlist {
-                allowlisted_identities.insert(MononokeIdentity::new(id_type, id_data));
+                allowlisted_identities
+                    .insert(MononokeIdentity::from_legacy_type_data(id_type, id_data));
             }
 
             trace!("Adding global allowlist for repo {}", reponame);

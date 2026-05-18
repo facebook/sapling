@@ -317,7 +317,7 @@ impl SourceControlServiceImpl {
             .authenticated_identities_struct()
             .map_err(scs_errors::internal_error)?
             .into_iter()
-            .map(MononokeIdentity::Authenticated)
+            .map(MononokeIdentity)
             .collect();
 
         // Get any valid CAT identities.
@@ -328,7 +328,7 @@ impl SourceControlServiceImpl {
             )
             .map_err(scs_errors::internal_error)?
             .into_iter()
-            .map(MononokeIdentity::Authenticated)
+            .map(MononokeIdentity)
             .collect();
 
         let client_info: Option<ClientInfo> = req_ctxt

@@ -78,26 +78,11 @@ impl MononokeIdentity {
         let subject_name = subject_vec?.as_slice().join(",");
 
         let mut idents = MononokeIdentitySet::new();
-        idents.insert(MononokeIdentity::new("X509_SUBJECT_NAME", subject_name));
+        idents.insert(MononokeIdentity::from_legacy_type_data(
+            "X509_SUBJECT_NAME",
+            subject_name,
+        ));
         Ok(idents)
-    }
-
-    pub fn with_auth_idents(
-        id_type: impl Into<String>,
-        id_data: impl Into<String>,
-        _auth_ident: Option<AuthenticatedIdentity>,
-    ) -> Self {
-        Self::TypeData {
-            id_type: id_type.into(),
-            id_data: id_data.into(),
-        }
-    }
-
-    pub fn auth_ident(&self) -> Option<&AuthenticatedIdentity> {
-        match self {
-            Self::Authenticated(auth_id) => Some(auth_id),
-            Self::TypeData { .. } => None,
-        }
     }
 }
 

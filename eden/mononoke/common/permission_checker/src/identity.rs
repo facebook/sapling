@@ -14,6 +14,8 @@ use anyhow::Error;
 use anyhow::Result;
 #[cfg(fbcode_build)]
 use authenticated_identity_thrift::AuthenticatedIdentity;
+#[cfg(fbcode_build)]
+use infrasec_authorization::Identity as ThriftIdentity;
 use serde::Deserialize;
 use serde::Deserializer;
 use serde::Serialize;
@@ -21,17 +23,23 @@ use serde::Serializer;
 
 #[cfg(not(fbcode_build))]
 use crate::oss::AuthenticatedIdentity;
+#[cfg(not(fbcode_build))]
+use crate::oss::Identity as OssIdentity;
 
 pub type MononokeIdentitySet = BTreeSet<MononokeIdentity>;
 
+/// Newtype wrapper around `AuthenticatedIdentity`. All Mononoke identities are
+/// `AuthenticatedIdentity`s now -- "thin" ones produced by
+/// `MononokeIdentity::from_legacy_type_data` carry only `id_type` / `id_data` with
+/// empty attributes, while ingress paths (mTLS cert, `mid://` SAN URIs, forwarded
+/// JSON envelope, srserver) populate the full struct.
 #[derive(Clone, Debug)]
-pub enum MononokeIdentity {
-    TypeData { id_type: String, id_data: String },
-    Authenticated(AuthenticatedIdentity),
-}
+pub struct MononokeIdentity(pub AuthenticatedIdentity);
 
 // Manual implementations for Eq, PartialEq, Hash, Ord, PartialOrd
-// that compare based on id_type and id_data, regardless of variant
+// that compare based on id_type and id_data only -- attributes/source/etc
+// are not part of identity equality (an identity with different attributes
+// is still the same identity).
 impl PartialEq for MononokeIdentity {
     fn eq(&self, other: &Self) -> bool {
         self.id_type() == other.id_type() && self.id_data() == other.id_data()
@@ -60,32 +68,50 @@ impl PartialOrd for MononokeIdentity {
 }
 
 impl MononokeIdentity {
-    pub fn new(id_type: impl Into<String>, id_data: impl Into<String>) -> Self {
-        Self::TypeData {
-            id_type: id_type.into(),
-            id_data: id_data.into(),
-        }
+    /// Construct a "thin" identity from a legacy `(id_type, id_data)` pair.
+    ///
+    /// The result is a `MononokeIdentity` wrapping an `AuthenticatedIdentity` whose
+    /// only populated fields are `identity.id_type` / `identity.id_data` -- empty
+    /// `attributes`, empty `loggingKey`, no `catPayload`, default `Source::UNKNOWN`.
+    /// All the rich metadata that a real credential would carry (agent attributes,
+    /// origin tags, transport source, CAT payload, etc.) is lost.
+    ///
+    /// **Prefer wrapping a full `AuthenticatedIdentity` whenever the caller actually
+    /// has one** -- use `MononokeIdentity::from(auth_id)` (or `MononokeIdentity(auth_id)`)
+    /// for credentials parsed via `try_from_x509` / `try_from_json_encoded` /
+    /// `authenticated_identities_struct()` / CAT verification. This function should be
+    /// reserved for cases where only `(id_type, id_data)` is available -- synthetic
+    /// identities (allowlist entries from configerator, reviewer identities, hook
+    /// author lookups by unixname, test fixtures, the OSS `X509_SUBJECT_NAME`
+    /// fallback). Such identities are not distinguishable from real ones at the
+    /// `MononokeIdentitySet` level, but downstream code that inspects `attributes`
+    /// or `source` will see empty / default values.
+    pub fn from_legacy_type_data(id_type: impl Into<String>, id_data: impl Into<String>) -> Self {
+        let id_type = id_type.into();
+        let id_data = id_data.into();
+        #[cfg(fbcode_build)]
+        let auth_id = AuthenticatedIdentity {
+            identity: ThriftIdentity {
+                id_type,
+                id_data,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        #[cfg(not(fbcode_build))]
+        let auth_id = AuthenticatedIdentity {
+            identity: OssIdentity { id_type, id_data },
+            attributes: vec![],
+        };
+        Self(auth_id)
     }
 
     pub fn id_type(&self) -> &str {
-        match self {
-            Self::TypeData { id_type, .. } => id_type.as_str(),
-            Self::Authenticated(auth_id) => auth_id.identity.id_type.as_str(),
-        }
-    }
-
-    pub fn variant(&self) -> &str {
-        match self {
-            Self::TypeData { .. } => "TypeData",
-            Self::Authenticated(_) => "Authenticated",
-        }
+        self.0.identity.id_type.as_str()
     }
 
     pub fn id_data(&self) -> &str {
-        match self {
-            Self::TypeData { id_data, .. } => id_data.as_str(),
-            Self::Authenticated(auth_id) => auth_id.identity.id_data.as_str(),
-        }
+        self.0.identity.id_data.as_str()
     }
 
     pub fn is_of_type(&self, id_type: &str) -> bool {
@@ -93,35 +119,34 @@ impl MononokeIdentity {
     }
 
     pub fn to_typed_string(&self) -> String {
-        match self {
-            Self::TypeData { id_type, id_data } => {
-                format!("{};{}:{}", self.variant(), id_type, id_data)
-            }
-            Self::Authenticated(auth_id) => {
-                if auth_id.attributes.is_empty() {
-                    format!(
-                        "{};{}:{}",
-                        self.variant(),
-                        auth_id.identity.id_type,
-                        auth_id.identity.id_data
-                    )
-                } else {
-                    let attrs = auth_id
-                        .attributes
-                        .iter()
-                        .map(|attr| attr.val.as_str())
-                        .collect::<Vec<_>>()
-                        .join(",");
-                    format!(
-                        "{};{}:{};{}",
-                        self.variant(),
-                        auth_id.identity.id_type,
-                        auth_id.identity.id_data,
-                        attrs
-                    )
-                }
-            }
+        if self.0.attributes.is_empty() {
+            format!("Authenticated;{}:{}", self.id_type(), self.id_data())
+        } else {
+            let attrs = self
+                .0
+                .attributes
+                .iter()
+                .map(|attr| attr.val.as_str())
+                .collect::<Vec<_>>()
+                .join(",");
+            format!(
+                "Authenticated;{}:{};{}",
+                self.id_type(),
+                self.id_data(),
+                attrs
+            )
         }
+    }
+
+    /// Consume the wrapper and return the inner `AuthenticatedIdentity`.
+    pub fn into_inner(self) -> AuthenticatedIdentity {
+        self.0
+    }
+}
+
+impl From<AuthenticatedIdentity> for MononokeIdentity {
+    fn from(auth_id: AuthenticatedIdentity) -> Self {
+        Self(auth_id)
     }
 }
 
@@ -141,7 +166,7 @@ impl FromStr for MononokeIdentity {
                 value
             )
         })?;
-        Ok(Self::new(ty, data))
+        Ok(Self::from_legacy_type_data(ty, data))
     }
 }
 
@@ -195,28 +220,14 @@ mod tests {
     }
 
     #[mononoke::test]
-    fn test_to_typed_string_typedata() {
-        let id = MononokeIdentity::new("SERVICE", "some_service");
-        assert_eq!(id.to_typed_string(), "TypeData;SERVICE:some_service");
-    }
-
-    #[cfg(not(fbcode_build))]
-    #[mononoke::test]
-    fn test_to_typed_string_authenticated_no_attributes() {
-        let auth_id = AuthenticatedIdentity {
-            identity: crate::oss::Identity {
-                id_type: "SERVICE".to_string(),
-                id_data: "some_service".to_string(),
-            },
-            attributes: vec![],
-        };
-        let id = MononokeIdentity::Authenticated(auth_id);
+    fn test_to_typed_string_thin() {
+        let id = MononokeIdentity::from_legacy_type_data("SERVICE", "some_service");
         assert_eq!(id.to_typed_string(), "Authenticated;SERVICE:some_service");
     }
 
     #[cfg(not(fbcode_build))]
     #[mononoke::test]
-    fn test_to_typed_string_authenticated_with_attributes() {
+    fn test_to_typed_string_with_attributes() {
         let auth_id = AuthenticatedIdentity {
             identity: crate::oss::Identity {
                 id_type: "USER".to_string(),
@@ -233,7 +244,7 @@ mod tests {
                 val: "AGENT:devmate".to_string(),
             }],
         };
-        let id = MononokeIdentity::Authenticated(auth_id);
+        let id = MononokeIdentity(auth_id);
         assert_eq!(id.to_typed_string(), "Authenticated;USER:mzr;AGENT:devmate");
     }
 }

@@ -21,7 +21,6 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::path::MPath;
 use permission_checker::AclProvider;
-use permission_checker::MononokeIdentity;
 use repo_bookmark_attrs::RepoBookmarkAttrsRef;
 use repo_identity::RepoIdentityRef;
 use repo_permission_checker::RepoPermissionCheckerRef;
@@ -776,29 +775,13 @@ impl AuthorizationContext {
                     }
                     match &cc_ctx.owner {
                         Some(owner_identities) => {
-                            // Check if any requesting identity matches any owner identity
-                            // TODO(T248657108): Look into abstracting this in a better way and making authenticated identities be consistent with type data ones
+                            // Check if any requesting identity matches any owner identity.
                             for identity in ctx.metadata().identities().iter() {
                                 for owner in owner_identities.iter() {
-                                    match identity {
-                                        MononokeIdentity::TypeData { id_type, id_data } => {
-                                            if id_type == owner.id_type()
-                                                && id_data == owner.id_data()
-                                            {
-                                                return AuthorizationCheckOutcome::from_permitted(
-                                                    true,
-                                                );
-                                            }
-                                        }
-                                        MononokeIdentity::Authenticated(auth_ident) => {
-                                            if auth_ident.identity.id_type == owner.id_type()
-                                                && auth_ident.identity.id_data == owner.id_data()
-                                            {
-                                                return AuthorizationCheckOutcome::from_permitted(
-                                                    true,
-                                                );
-                                            }
-                                        }
+                                    if identity.id_type() == owner.id_type()
+                                        && identity.id_data() == owner.id_data()
+                                    {
+                                        return AuthorizationCheckOutcome::from_permitted(true);
                                     }
                                 }
                             }

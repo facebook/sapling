@@ -475,7 +475,7 @@ impl RestrictedPathsTestDataBuilder {
         // Use custom client identity or default to USER:myusername0
         let client_identity = self
             .client_identity
-            .unwrap_or_else(|| MononokeIdentity::new("USER", "myusername0"));
+            .unwrap_or_else(|| MononokeIdentity::from_legacy_type_data("USER", "myusername0"));
         let client_main_id = format!(
             "{}:{}",
             client_identity.id_type().to_lowercase(),

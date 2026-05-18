@@ -28,7 +28,7 @@ pub(crate) fn new_basic_context_with_unixname(app: &MononokeApp) -> CoreContext 
         _ => return ctx,
     };
     let mut identities = MononokeIdentitySet::new();
-    identities.insert(MononokeIdentity::new("USER", &unixname));
+    identities.insert(MononokeIdentity::from_legacy_type_data("USER", &unixname));
     let metadata = Arc::new(Metadata::default().set_identities(identities));
     let session = SessionContainer::builder(ctx.fb).metadata(metadata).build();
     session.new_context(ctx.scuba().clone())

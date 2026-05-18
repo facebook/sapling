@@ -66,10 +66,10 @@ mod catmod {
     /// `Some(set)` containing the identities of every token that successfully
     /// verified — invalid tokens are silently dropped.
     ///
-    /// The resulting identities are `MononokeIdentity::Authenticated` carrying the
-    /// full `AuthenticatedIdentity` thrift struct (including attributes extracted
-    /// from the verified token's `metaIdUri`, matching srserver's
-    /// `authenticated_identities_cats_struct` path).
+    /// The resulting identities wrap the full `AuthenticatedIdentity` thrift
+    /// struct (including attributes extracted from the verified token's
+    /// `metaIdUri`, matching srserver's `authenticated_identities_cats_struct`
+    /// path).
     pub fn try_get_cats_idents_impl(
         fb: FacebookInit,
         headers: &HeaderMap,
@@ -161,7 +161,7 @@ mod catmod {
                             "CAT extraction: extracted identity {}:{}",
                             auth_id.identity.id_type, auth_id.identity.id_data,
                         );
-                        permission_checker::MononokeIdentity::Authenticated(auth_id)
+                        permission_checker::MononokeIdentity(auth_id)
                     })
                     .collect();
                 debug!(

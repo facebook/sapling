@@ -245,7 +245,7 @@ impl HookManager {
         // and build a USER identity for the membership check.
         let is_member = match changeset_author.and_then(extract_unixname_from_author) {
             Some(unixname) => {
-                let author_identity = MononokeIdentity::new("USER", unixname);
+                let author_identity = MononokeIdentity::from_legacy_type_data("USER", unixname);
                 let identity_set: MononokeIdentitySet = std::iter::once(author_identity).collect();
                 checker.is_member(&identity_set).await
             }

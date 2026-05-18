@@ -61,7 +61,7 @@ mod tests {
         let result = parse_acl_file(&content).unwrap();
         assert_eq!(
             result.repo_region_acl(),
-            &MononokeIdentity::new("REPO_REGION", "repos/hg/fbsource/=project1"),
+            &MononokeIdentity::from_legacy_type_data("REPO_REGION", "repos/hg/fbsource/=project1"),
         );
         assert_eq!(result.permission_request_group(), None);
     }
@@ -77,11 +77,15 @@ permission_request_group = "GROUP:some_amp_group"
         let result = parse_acl_file(&content).unwrap();
         assert_eq!(
             result.repo_region_acl(),
-            &MononokeIdentity::new("REPO_REGION", "repos/hg/fbsource/=project1"),
+            &MononokeIdentity::from_legacy_type_data("REPO_REGION", "repos/hg/fbsource/=project1"),
         );
         assert_eq!(
             result.permission_request_group(),
-            Some(MononokeIdentity::new("GROUP", "some_amp_group")).as_ref(),
+            Some(MononokeIdentity::from_legacy_type_data(
+                "GROUP",
+                "some_amp_group"
+            ))
+            .as_ref(),
         );
     }
 
@@ -96,7 +100,7 @@ repo_region_acl = "REPO_REGION:repos/hg/fbsource/=project1"
         let result = parse_acl_file(&content).unwrap();
         assert_eq!(
             result.repo_region_acl(),
-            &MononokeIdentity::new("REPO_REGION", "repos/hg/fbsource/=project1"),
+            &MononokeIdentity::from_legacy_type_data("REPO_REGION", "repos/hg/fbsource/=project1"),
         );
     }
 

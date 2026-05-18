@@ -537,8 +537,8 @@ mod test {
 
     #[mononoke::test]
     fn test_target_matches() {
-        let test_ident = MononokeIdentity::new("USER", "foo");
-        let test2_ident = MononokeIdentity::new("USER", "baz");
+        let test_ident = MononokeIdentity::from_legacy_type_data("USER", "foo");
+        let test2_ident = MononokeIdentity::from_legacy_type_data("USER", "baz");
         let test_client_id = String::from("test_client_id");
         let empty_idents = Some(MononokeIdentitySet::new());
 
@@ -571,7 +571,10 @@ mod test {
     #[mononoke::test]
     fn test_target_in_static_slice() {
         let mut identities = MononokeIdentitySet::new();
-        identities.insert(MononokeIdentity::new("MACHINE", "abc123.abc1.facebook.com"));
+        identities.insert(MononokeIdentity::from_legacy_type_data(
+            "MACHINE",
+            "abc123.abc1.facebook.com",
+        ));
 
         assert!(!in_throttled_slice(None, 100.try_into().unwrap(), "abc"));
 
@@ -617,10 +620,12 @@ mod test {
     #[cfg(fbcode_build)]
     #[mononoke::test]
     fn test_static_slice_of_identity_set() {
-        let test_ident = MononokeIdentity::new("USER", "foo");
-        let test2_ident = MononokeIdentity::new("SERVICE_IDENTITY", "bar");
-        let test3_ident = MononokeIdentity::new("MACHINE", "abc125.abc.facebook.com");
-        let test4_ident = MononokeIdentity::new("MACHINE", "abc124.abc.facebook.com");
+        let test_ident = MononokeIdentity::from_legacy_type_data("USER", "foo");
+        let test2_ident = MononokeIdentity::from_legacy_type_data("SERVICE_IDENTITY", "bar");
+        let test3_ident =
+            MononokeIdentity::from_legacy_type_data("MACHINE", "abc125.abc.facebook.com");
+        let test4_ident =
+            MononokeIdentity::from_legacy_type_data("MACHINE", "abc124.abc.facebook.com");
 
         let ident_target = Target::Identities([test2_ident.clone()].into());
         let twenty_pct_service_identity = Target::StaticSlice(StaticSlice {
@@ -678,7 +683,7 @@ mod test {
         let identities_rate_limit = RateLimit {
             body: RateLimitBody::default(),
             target: Some(Target::Identities(
-                [MononokeIdentity::new("TIER", "foo")].into(),
+                [MononokeIdentity::from_legacy_type_data("TIER", "foo")].into(),
             )),
             fci_metric: FciMetric {
                 metric: Metric::EgressBytes,
@@ -712,7 +717,7 @@ mod test {
         );
 
         let mut idents = MononokeIdentitySet::new();
-        idents.insert(MononokeIdentity::new("USER", "bar"));
+        idents.insert(MononokeIdentity::from_legacy_type_data("USER", "bar"));
 
         assert!(
             rate_limiter.find_rate_limit(
@@ -731,7 +736,7 @@ mod test {
             ) == Some(main_client_id_rate_limit.clone())
         );
 
-        idents.insert(MononokeIdentity::new("TIER", "foo"));
+        idents.insert(MononokeIdentity::from_legacy_type_data("TIER", "foo"));
         assert!(
             rate_limiter.find_rate_limit(Metric::EgressBytes, Some(idents.clone()), None, None,)
                 == Some(identities_rate_limit)

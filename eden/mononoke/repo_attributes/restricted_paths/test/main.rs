@@ -451,7 +451,7 @@ async fn test_single_dir_single_restricted_change(fb: FacebookInit) -> Result<()
         (
             vec![
                 EnforcementConditionSetBuilder::new()
-                    .with_restriction_acls([MononokeIdentity::new(
+                    .with_restriction_acls([MononokeIdentity::from_legacy_type_data(
                         "REPO_REGION",
                         "nonexistent_acl",
                     )])
@@ -475,7 +475,7 @@ async fn test_single_dir_single_restricted_change(fb: FacebookInit) -> Result<()
         (
             vec![
                 EnforcementConditionSetBuilder::new()
-                    .with_restriction_acls([MononokeIdentity::new(
+                    .with_restriction_acls([MononokeIdentity::from_legacy_type_data(
                         "REPO_REGION",
                         "nonexistent_acl",
                     )])

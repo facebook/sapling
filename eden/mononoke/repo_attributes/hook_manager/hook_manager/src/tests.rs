@@ -1040,7 +1040,7 @@ async fn test_bypass_checks_commit_author_not_pusher(fb: FacebookInit) {
     let mut hook_manager = setup_hook_manager(fb, hashmap! {}, hashmap! {}).await;
 
     // Allowlist only the changeset author's unixname ("test" from "Test User <test@fb.com>")
-    let author_identity = MononokeIdentity::new("USER", "test");
+    let author_identity = MononokeIdentity::from_legacy_type_data("USER", "test");
     let allowlist = MemberAllowlist::new([author_identity].into());
 
     hook_manager.register_changeset_hook(
@@ -1083,7 +1083,7 @@ async fn test_bypass_rejects_when_author_not_in_allowlist(fb: FacebookInit) {
     let mut hook_manager = setup_hook_manager(fb, hashmap! {}, hashmap! {}).await;
 
     // Allowlist a DIFFERENT user — not the changeset author
-    let other_identity = MononokeIdentity::new("USER", "someoneelse");
+    let other_identity = MononokeIdentity::from_legacy_type_data("USER", "someoneelse");
     let allowlist = MemberAllowlist::new([other_identity].into());
 
     hook_manager.register_changeset_hook(

@@ -370,8 +370,8 @@ mod test {
     #[mononoke::test]
     fn test_should_disable_compression() -> Result<(), Error> {
         let mut config = ServerConfig::default();
-        let test_ident = MononokeIdentity::new("USER", "test");
-        let test_ident_2 = MononokeIdentity::new("USER", "test2");
+        let test_ident = MononokeIdentity::from_legacy_type_data("USER", "test");
+        let test_ident_2 = MononokeIdentity::from_legacy_type_data("USER", "test2");
         let mut client_idents = MononokeIdentitySet::new();
         client_idents.insert(test_ident.clone());
 
