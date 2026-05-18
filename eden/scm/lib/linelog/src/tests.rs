@@ -87,7 +87,14 @@ fn test_random_cases() {
             let b1 = rng_range(0, max_b1);
             let b2 = rng_range(b1, b1 + max_delta_b);
             let b_lines: Vec<String> = (b1..b2)
-                .map(|b_idx| format!("{}:{}\n", rev, b_idx))
+                .map(|b_idx| {
+                    if rng_range(0, 2) == 0 {
+                        format!("{}:{}\n", rev, b_idx)
+                    } else {
+                        // Exercise block shifting more easily.
+                        "\n".to_string()
+                    }
+                })
                 .collect();
 
             let mut new_lines = lines.take(a1);
@@ -763,7 +770,7 @@ fn test_block_shift_effectiveness() {
     let n = lines.len();
     let expected_rev3_lines = lines.repeat(3);
     let expected_rev3_text = expected_rev3_lines.concat();
-    let no_block_shift_flags = EditFlags::default(); //- EditFlags::BLOCK_SHIFT;
+    let no_block_shift_flags = EditFlags::default() - EditFlags::BLOCK_SHIFT;
 
     // Rev 1: lines;  Rev 2: append lines.
     let base = AbstractLineLog::<&'static str>::default()
@@ -792,6 +799,39 @@ fn test_block_shift_effectiveness() {
             "DepMap({1: {0}, 2: {0}, 3: {2}}): [6, 7, 8, 9]"
         ]
     );
+
+    // With BLOCK_SHIFT (EditFlags::default), rev 1 or rev 2 aren't depended on.
+    let flags = EditFlags::default();
+    let depends = calculate_depends(flags);
+    assert_eq!(
+        depends,
+        ["DepMap({1: {0}, 2: {0}, 3: {0}}): [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]"]
+    );
+
+    // BLOCK_SHIFT is enabled by default.
+    assert!(EditFlags::default().contains(flags));
+}
+
+/// Test that block shift distance > len(insert_lines).
+#[test]
+fn test_block_shift_overflow() {
+    // Insert into black lines.
+    let base = AbstractLineLog::<&'static str>::default().edit_chunk(
+        0,
+        0,
+        0,
+        1,
+        vec!["", "", "", ""],
+        EditFlags::default() - EditFlags::BLOCK_SHIFT,
+    );
+
+    for a1 in 0..4 {
+        let log = base
+            .clone()
+            .edit_chunk(1, a1, a1, 1, vec![""], EditFlags::default());
+        let dep = log.calculate_dep_map();
+        assert!(dep.values().all(|v| v.iter().count() == 1));
+    }
 }
 
 impl LineLog {

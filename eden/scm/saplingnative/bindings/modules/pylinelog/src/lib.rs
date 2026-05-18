@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use ::linelog::EditFlags;
 use cpython::*;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
@@ -33,7 +34,11 @@ py_class!(class IntLineLog |py| {
     def edit_chunk(&self, a_rev: usize, a1: usize, a2: usize, b_rev: usize, b1: usize, b2: usize) -> PyResult<Self> {
         let inner = self.inner(py);
         let b_lines = (b1..b2).collect::<Vec<_>>();
-        let new_value = inner.clone().edit_chunk(a_rev, a1, a2, b_rev, b_lines, Default::default());
+        // BLOCK_SHIFT compares lines. However, IntLineLog uses pure line numbers without revision
+        // numbers. So rev X line K can match rev Y line K (K == K), but the actual line content
+        // might not match. Disable BLOCK_SHIFT to maintain correctness.
+        let flags = EditFlags::default() - EditFlags::BLOCK_SHIFT;
+        let new_value = inner.clone().edit_chunk(a_rev, a1, a2, b_rev, b_lines, flags);
         Self::create_instance(py, new_value)
     }
 

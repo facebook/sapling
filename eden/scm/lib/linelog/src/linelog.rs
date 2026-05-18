@@ -131,12 +131,14 @@ impl<T> AbstractLineLog<T> {
 bitflags! {
     #[derive(Clone, Copy)]
     pub struct EditFlags: u32 {
+        /// When inserting a block, try to shift it around to relax dependency.
+        const BLOCK_SHIFT = 0b00000001;
     }
 }
 
 impl Default for EditFlags {
     fn default() -> Self {
-        Self::empty()
+        Self::BLOCK_SHIFT
     }
 }
 
@@ -149,19 +151,146 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
     /// While this function does not cause conflicts or error out, not all
     /// editings make practical sense. The callsite might want to do some
     /// extra checks to ensure the edit is meaningful.
+    ///
+    /// If `BLOCK_SHIFT` flag is set (default), consider shifting the insertion
+    /// lines to relax dependency for easier reordering. Check the comments of
+    /// `try_block_shift` for details. Block shift requires that `T::eq(l1, l2)`
+    /// means `l1` and `l2` have the same content. If this cannot be guaranteed,
+    /// disable `BLOCK_SHIFT`.
     pub fn edit_chunk(
         self,
         a_rev: Rev,
-        a1: LineIdx,
-        a2: LineIdx,
+        mut a1: LineIdx,
+        mut a2: LineIdx,
         b_rev: Rev,
         b_lines: Vec<T>,
-        _flags: EditFlags,
+        flags: EditFlags,
     ) -> Self {
-        let b_lines = b_lines.into_iter().map(Arc::new).collect::<VecDeque<_>>();
+        let mut b_lines = b_lines.into_iter().map(Arc::new).collect::<VecDeque<_>>();
         self.with_a_lines_cache(a_rev, b_rev, |this: Self, maybe_mut| {
+            if flags.contains(EditFlags::BLOCK_SHIFT) {
+                const DEFAULT_SHIFT_THRESHOLD: usize = 5;
+                this.try_block_shift(
+                    &maybe_mut,
+                    &mut a1,
+                    &mut a2,
+                    &mut b_lines,
+                    DEFAULT_SHIFT_THRESHOLD,
+                );
+            };
             this.edit_chunk_internal(a1, a2, b_rev, b_lines, maybe_mut)
         })
+    }
+
+    /// Attempt to shift the insertion chunk so the start of insertion aligns
+    /// with another "start insertion". This might trigger the [OPT1]
+    /// optimization in `edit_chunk_internal`, avoid nested insertions and
+    /// enable more flexible reordering.
+    ///
+    /// For example, we might get "Insert (rev 3)" below that forces a nested
+    /// insertion block. However, if we shift the block and use the
+    /// "Alternative Insert (rev 3)", we can use the [OPT1] optimization.
+    ///
+    /// ```text
+    ///   +----Insert (rev 1)
+    ///   |    Line:  function a () {
+    ///   |    Line:    return 'a';
+    ///   |    Line:  }
+    ///   +----
+    ///   +----Insert (rev 2)
+    ///   |                           ----+ Alternative Insert (rev 3)
+    ///   |    Line:                      |
+    ///   |+---Insert (rev 3)             |
+    ///   ||   Line:  function b () {     |
+    ///   ||   Line:    return 'b';       |
+    ///   ||   Line:  }                   |
+    ///   ||                          ----+
+    ///   ||   Line:
+    ///   |+---
+    ///   |    Line:  function c () {
+    ///   |    Line:    return 'c';
+    ///   |    Line:  }
+    ///   +----
+    /// ```
+    ///
+    /// Block shifting works if the surrounding lines match, see:
+    ///
+    /// ```text
+    ///     A                                    A
+    ///     B                                  +-------+
+    ///   +-------+     is equivalent to       | B     |
+    ///   | block |     === shift up   ==>     | block |
+    ///   | B     |     <== shift down ===     +-------+
+    ///   +-------+                              B
+    ///     C                                    C
+    /// ```
+    ///
+    /// Updates `a1`, `a2`, `b_lines` in-place if a better position was found,
+    /// Does nothing if [OPT1] already applies or no shift helps.
+    ///
+    /// `threshold` decides the search range. O(threshold) complexity.
+    fn try_block_shift(
+        &self,
+        a_lines: &ImVec<LineInfo<T>>,
+        a1: &mut LineIdx,
+        a2: &mut LineIdx,
+        b_lines: &mut VecDeque<Arc<T>>,
+        threshold: usize,
+    ) {
+        if *a1 != *a2 || b_lines.is_empty() {
+            // Not an insertion. Skip.
+            return;
+        }
+
+        let can_use_opt1 = |a: usize| -> bool {
+            let Some(info) = a_lines.get(a) else {
+                return false;
+            };
+            info.pc > 0 && matches!(self.code.get(info.pc - 1), Some(Inst::JL(..)))
+        };
+
+        if can_use_opt1(*a1) {
+            return;
+        }
+
+        let mut consider_shift = |step: i32| -> Option<()> {
+            let mut ai = *a1;
+            let blen = b_lines.len();
+            for k in 1..=threshold {
+                if step < 0 && ai == 0 || step > 0 && ai == a_lines.len() - 1 {
+                    return None;
+                }
+                // After k shifts, logical index i maps to b_lines[(i + k) % blen]
+                // (shift down) or b_lines[(i + blen - k) % blen] (shift up).
+                // Shift up: compare a_lines[ai-1] with logical last
+                // Shift down: compare a_lines[ai] with logical first
+                let (a_idx, b_phys) = if step < 0 {
+                    (ai - 1, (blen - (k % blen)) % blen)
+                } else {
+                    (ai, (k - 1) % blen)
+                };
+                let a_data = &*a_lines.get(a_idx)?.data;
+                let b_data = b_lines.get(b_phys)?;
+                if a_data != b_data.as_ref() {
+                    return None;
+                }
+                if step < 0 {
+                    ai -= 1;
+                } else {
+                    ai += 1;
+                }
+                if can_use_opt1(ai) {
+                    let rotate = if step < 0 { blen - (k % blen) } else { k };
+                    b_lines.rotate_left(rotate % blen);
+                    *a1 = ai;
+                    *a2 = ai;
+                    return Some(());
+                }
+            }
+            None
+        };
+
+        let _ = consider_shift(-1).is_some() || consider_shift(1).is_some();
     }
 
     /// Checkout the lines of the given revision `rev`.
