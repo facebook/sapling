@@ -201,6 +201,27 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
         })
     }
 
+    /// Add an edge in the dag without changing the linelog instructions.
+    /// See [`NanoDag::with_edge`].
+    /// Panics if `a_rev` > `b_rev`.
+    /// Bumps `max_rev` if `b_rev` > `max_rev`.
+    pub fn with_dag_edge(self, a_rev: Rev, b_rev: Rev) -> Self {
+        let mut a_lines_cache = self.a_lines_cache;
+        let new_dag = self.dag.with_edge(a_rev, b_rev);
+        if let Some((cached_rev, _)) = &a_lines_cache {
+            if new_dag.is_ancestor(b_rev, *cached_rev) {
+                // The new edge affects content. Invalidates a_lines_cache.
+                a_lines_cache = None;
+            }
+        }
+        Self {
+            dag: new_dag,
+            max_rev: self.max_rev.max(b_rev),
+            a_lines_cache,
+            ..self
+        }
+    }
+
     /// Attempt to shift the insertion chunk so the start of insertion aligns
     /// with another "start insertion". This might trigger the [OPT1]
     /// optimization in `edit_chunk_internal`, avoid nested insertions and

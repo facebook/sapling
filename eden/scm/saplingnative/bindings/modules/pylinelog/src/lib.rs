@@ -42,6 +42,13 @@ py_class!(class IntLineLog |py| {
         Self::create_instance(py, new_value)
     }
 
+    /// Add an edge to the dag.
+    def with_dag_edge(&self, a_rev: usize, b_rev: usize) -> PyResult<Self> {
+        let inner = self.inner(py);
+        let new_value = inner.clone().with_dag_edge(a_rev, b_rev);
+        Self::create_instance(py, new_value)
+    }
+
     /// Get the lines. (rev, start_rev=rev) -> [(rev, line_no, pc, deleted)].
     /// Includes a dummy "end" line at the end.
     def checkout_lines(&self, rev: usize, start_rev: Option<usize> = None) -> PyResult<Vec<(usize, usize, usize, bool)>> {
