@@ -534,13 +534,14 @@ impl<T> AbstractLineLog<T> {
     }
 }
 
-impl AbstractLineLog<String> {
+impl<T: AsRef<str> + Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
     /// Checkout the text of the given `rev`.
     pub fn checkout_text(&self, rev: Rev) -> String {
         let lines = self.checkout_lines(rev);
-        let mut text = String::with_capacity(lines.iter().map(|l| l.data.len()).sum());
+        let mut text =
+            String::with_capacity(lines.iter().map(|l| l.data.as_ref().as_ref().len()).sum());
         for line in lines {
-            text.push_str(line.data.as_ref());
+            text.push_str(line.data.as_ref().as_ref());
         }
         text
     }
