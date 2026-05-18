@@ -10,9 +10,12 @@ use std::fs::File;
 use std::io as std_io;
 use std::sync::RwLock;
 
+use ::vfs::LiteMetadata;
 use cpython::*;
 use cpython_ext::PyNone;
 use cpython_ext::ResultPyErrExt;
+
+use crate::metadata::metadata;
 
 pub trait IOObject: Send + Sync {
     fn as_read(&mut self) -> Option<&mut dyn ::io::Read> {
@@ -120,6 +123,23 @@ py_class!(pub class PyRustIO |py| {
         };
         py.allow_threads(|| io.flush()).map_pyerr(py)?;
         Ok(PyNone)
+    }
+
+    def metadata(&self) -> PyResult<metadata> {
+        self.check_open(py)?;
+        let inner = self.inner(py);
+        let mut io = lock_write(py, inner)?;
+        let file = match io.as_mut().and_then(|io| io.as_file()) {
+            Some(file) => file,
+            None => {
+                return Err(PyErr::from_instance(
+                    py,
+                    py.import("io")?.get(py, "UnsupportedOperation")?,
+                ));
+            }
+        };
+        let meta: LiteMetadata = py.allow_threads(|| file.metadata()).map_pyerr(py)?.into();
+        metadata::create_instance(py, meta)
     }
 
     def isatty(&self) -> PyResult<bool> {
