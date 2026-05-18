@@ -24,6 +24,7 @@ rust_library(
         "//common/rust/identity:identity_ext",
         "//common/rust/shed/fbinit:fbinit",
     ] + ([] if rust_oss.is_oss_build() else [
+        "fbsource//third-party/rust:base64",
         "//access/if:authenticated_identity_thrift-rust",
         "//access/lib/polyglot:authenticated_identity_serializer-rs_bindings",
         "//configerator/structs/infrasec/if:acl-rust",
@@ -32,5 +33,6 @@ rust_library(
         "//configerator/structs/infrasec/if:acl-rust",
         "//infrasec/authorization/if:if-service-rust",
         "//infrasec/authorization/if:if-service-rust-srclients",
+        "//thrift/lib/rust:fbthrift",
     ]),
 )

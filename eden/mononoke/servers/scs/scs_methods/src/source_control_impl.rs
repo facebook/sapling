@@ -97,8 +97,9 @@ use crate::scuba_params::AddScubaParams;
 use crate::scuba_response::AddScubaResponse;
 use crate::specifiers::SpecifierExt;
 
-const FORWARDED_IDENTITIES_HEADER: &str = "scm_forwarded_identities";
 const FORWARDED_AUTHENTICATED_IDENTITIES_HEADER: &str = "scm_forwarded_authenticated_identities";
+const FORWARDED_AUTHENTICATED_IDENTITIES_THRIFT_HEADER: &str =
+    "scm_forwarded_authenticated_identities_thrift";
 const FORWARDED_CLIENT_IP_HEADER: &str = "scm_forwarded_client_ip";
 const FORWARDED_CLIENT_PORT_HEADER: &str = "scm_forwarded_client_port";
 const FORWARDED_CLIENT_DEBUG_HEADER: &str = "scm_forwarded_client_debug";
@@ -343,27 +344,29 @@ impl SourceControlServiceImpl {
             .await;
 
         if is_trusted {
-            if let (Some(forwarded_identities), Some(forwarded_ip), Some(forwarded_port)) = (
-                header(FORWARDED_IDENTITIES_HEADER)?,
+            // Prefer the binary thrift envelope (lossless, smaller wire form);
+            // fall back to the JSON `mid://` envelope for old senders that
+            // haven't picked up the binary header yet.
+            let forwarded_identities: Option<MononokeIdentitySet> = match (
+                header(FORWARDED_AUTHENTICATED_IDENTITIES_THRIFT_HEADER)?,
+                header(FORWARDED_AUTHENTICATED_IDENTITIES_HEADER)?,
+            ) {
+                (Some(thrift_payload), _) => Some(
+                    MononokeIdentity::try_from_thrift_compact_encoded(thrift_payload.as_str())
+                        .map_err(scs_errors::invalid_request)?,
+                ),
+                (None, Some(json_payload)) => Some(
+                    MononokeIdentity::try_from_json_encoded(json_payload.as_str())
+                        .map_err(scs_errors::invalid_request)?,
+                ),
+                (None, None) => None,
+            };
+            if let (Some(mut header_identities), Some(forwarded_ip), Some(forwarded_port)) = (
+                forwarded_identities,
                 header(FORWARDED_CLIENT_IP_HEADER)?,
                 header(FORWARDED_CLIENT_PORT_HEADER)?,
             ) {
-                // Check for authenticated identities header first - it takes precedence
-                let mut header_identities: MononokeIdentitySet =
-                    if let Some(forwarded_authenticated_identities) =
-                        header(FORWARDED_AUTHENTICATED_IDENTITIES_HEADER)?
-                    {
-                        let idents = MononokeIdentity::try_from_json_encoded(
-                            forwarded_authenticated_identities.as_str(),
-                        )
-                        .map_err(scs_errors::invalid_request)?;
-                        debug!("Parsed authenticated identities");
-                        idents
-                    } else {
-                        // Fall back to regular forwarded identities
-                        serde_json::from_str(forwarded_identities.as_str())
-                            .map_err(scs_errors::invalid_request)?
-                    };
+                debug!("Parsed authenticated identities");
                 let client_ip = Some(
                     forwarded_ip
                         .parse::<IpAddr>()
