@@ -18,6 +18,7 @@
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/InodeMetadata.h"
 #include "eden/fs/inodes/Overlay.h"
+#include "eden/fs/inodes/VirtualInode.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeAuxData.h"
 #include "eden/fs/store/ObjectFetchContext.h"
@@ -450,6 +451,113 @@ TEST(RestrictedTreeInode, renameIntoRestrictedDirReturnsEACCES) {
            ObjectFetchContext::getNullContext())
         .get();
   });
+}
+
+CO_TEST(RestrictedTreeInode, co_getChildrenOnRestrictedTreeReturnsEACCES) {
+  FakeTreeBuilder builder;
+  builder.setFile("restricted/secret.txt", "secret");
+  builder.setDirIsRestricted("restricted");
+  TestMount testMount{builder};
+
+  auto edenMount = testMount.getEdenMount();
+  auto vi = testMount.getVirtualInode("restricted"_relpath);
+  auto context = ObjectFetchContext::getNullContext();
+
+  auto result = co_await folly::coro::co_awaitTry(vi.co_getChildren(
+      "restricted"_relpath, edenMount->getObjectStore(), context));
+  CO_ASSERT_TRUE(result.hasException());
+  EXPECT_TRUE(result.hasException<std::system_error>());
+  if (auto* ex = result.exception().get_exception<std::system_error>()) {
+    EXPECT_EQ(ex->code().value(), EACCES);
+  }
+}
+
+CO_TEST(
+    RestrictedTreeInode,
+    co_getChildrenSkipsBackingStoreFetchForRestrictedChild) {
+  // Parent is unrestricted; one child entry is restricted. The coro path
+  // must hand back a synthesized restricted VirtualInode for that child
+  // instead of fetching its tree from the backing store.
+  FakeTreeBuilder builder;
+  builder.setFile("parent/normal/file.txt", "ok");
+  builder.setFile("parent/restricted_child/secret.txt", "secret");
+  builder.setDirIsRestricted("parent/restricted_child");
+  TestMount testMount{builder};
+
+  auto edenMount = testMount.getEdenMount();
+  auto vi = testMount.getVirtualInode("parent"_relpath);
+  auto context = ObjectFetchContext::getNullContext();
+
+  auto results = co_await vi.co_getChildren(
+      "parent"_relpath, edenMount->getObjectStore(), context);
+  bool sawRestrictedChild = false;
+  bool sawNormalChild = false;
+  for (auto& [name, tryVi] : results) {
+    if (name == "restricted_child"_pc) {
+      sawRestrictedChild = true;
+      CO_ASSERT_TRUE(tryVi.hasValue());
+      // Reading children of the synthesized restricted VirtualInode must
+      // surface EACCES — it is a real restricted view, not the underlying
+      // tree contents.
+      auto childResult =
+          co_await folly::coro::co_awaitTry(tryVi.value().co_getChildren(
+              "parent/restricted_child"_relpath,
+              edenMount->getObjectStore(),
+              context));
+      EXPECT_TRUE(childResult.hasException<std::system_error>());
+      if (auto* ex =
+              childResult.exception().get_exception<std::system_error>()) {
+        EXPECT_EQ(ex->code().value(), EACCES);
+      }
+    } else if (name == "normal"_pc) {
+      sawNormalChild = true;
+      CO_ASSERT_TRUE(tryVi.hasValue());
+    }
+  }
+  EXPECT_TRUE(sawRestrictedChild);
+  EXPECT_TRUE(sawNormalChild);
+}
+
+// Exercises the InodePtr branch — the dominant production path after a
+// mount has loaded inodes.
+CO_TEST(RestrictedTreeInode, co_getChildren_inodePtrBranchReturnsEntries) {
+  FakeTreeBuilder builder;
+  builder.setFile("dir/a.txt", "a");
+  builder.setFile("dir/b.txt", "b");
+  TestMount testMount{builder};
+
+  auto edenMount = testMount.getEdenMount();
+  auto dirInode = testMount.getTreeInode("dir"_relpath);
+  TestMount::loadAllInodes(dirInode);
+  VirtualInode vi{InodePtr{dirInode}};
+  auto context = ObjectFetchContext::getNullContext();
+
+  auto results = co_await vi.co_getChildren(
+      "dir"_relpath, edenMount->getObjectStore(), context);
+  EXPECT_EQ(results.size(), 2);
+  for (auto& [name, tryVi] : results) {
+    CO_ASSERT_TRUE(tryVi.hasValue());
+  }
+}
+
+// Catches a regression where the early isDirectory() guard drifts out of
+// sync with the variant arms.
+CO_TEST(RestrictedTreeInode, co_getChildren_onFileReturnsENOTDIR) {
+  FakeTreeBuilder builder;
+  builder.setFile("dir/file.txt", "content");
+  TestMount testMount{builder};
+
+  auto edenMount = testMount.getEdenMount();
+  auto vi = testMount.getVirtualInode("dir/file.txt"_relpath);
+  auto context = ObjectFetchContext::getNullContext();
+
+  auto result = co_await folly::coro::co_awaitTry(vi.co_getChildren(
+      "dir/file.txt"_relpath, edenMount->getObjectStore(), context));
+  CO_ASSERT_TRUE(result.hasException());
+  EXPECT_TRUE(result.hasException<std::system_error>());
+  if (auto* ex = result.exception().get_exception<std::system_error>()) {
+    EXPECT_EQ(ex->code().value(), ENOTDIR);
+  }
 }
 
 // ============================================================================

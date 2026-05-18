@@ -1164,6 +1164,66 @@ getChildrenHelper(
 
   return result;
 }
+
+folly::coro::now_task<
+    std::vector<std::pair<PathComponent, folly::Try<VirtualInode>>>>
+co_getChildrenHelper(
+    const TreePtr& tree,
+    const std::shared_ptr<ObjectStore>& objectStore,
+    const ObjectFetchContextPtr& fetchContext) {
+  // Async entries get a placeholder Try; the matching task back-fills
+  // by index after collectAllTryRange so result preserves iteration order.
+  std::vector<std::pair<PathComponent, folly::Try<VirtualInode>>> result;
+  result.reserve(tree->size());
+  std::vector<folly::coro::Task<VirtualInode>> tasks;
+  std::vector<size_t> taskIdx;
+
+  for (auto& child : *tree) {
+    const auto* treeEntry = &child.second;
+    if (treeEntry->isTree()) {
+      if (treeEntry->isRestricted()) {
+        // Restricted child: synthesize a placeholder; never fetch its contents.
+        result.emplace_back(
+            child.first,
+            folly::Try<VirtualInode>{VirtualInode::makeRestricted(
+                *treeEntry, tree->getCaseSensitivity())});
+      } else {
+        taskIdx.push_back(result.size());
+        result.emplace_back(
+            child.first, folly::Try<VirtualInode>{folly::FutureNotReady{}});
+        tasks.emplace_back(
+            // @lint-ignore CLANGTIDY
+            // facebook-folly-coro-return-captures-local-var
+            folly::coro::co_invoke(
+                [](ObjectId oid,
+                   mode_t mode,
+                   std::shared_ptr<ObjectStore> store,
+                   ObjectFetchContextPtr ctx)
+                    -> folly::coro::Task<VirtualInode> {
+                  co_await folly::coro::co_reschedule_on_current_executor;
+                  auto childTree = co_await store->co_getTree(oid, ctx);
+                  co_return VirtualInode{std::move(childTree), mode};
+                },
+                treeEntry->getObjectId(),
+                modeFromTreeEntryType(treeEntry->getType()),
+                objectStore,
+                fetchContext.copy()));
+      }
+    } else {
+      result.emplace_back(
+          child.first, folly::Try<VirtualInode>{VirtualInode{*treeEntry}});
+    }
+  }
+
+  if (!tasks.empty()) {
+    auto tries = co_await folly::coro::collectAllTryRange(std::move(tasks));
+    XCHECK_EQ(tries.size(), taskIdx.size());
+    for (size_t i = 0; i < tries.size(); ++i) {
+      result.at(taskIdx.at(i)).second = std::move(tries[i]);
+    }
+  }
+  co_return result;
+}
 } // namespace
 
 folly::Try<std::vector<std::pair<PathComponent, ImmediateFuture<VirtualInode>>>>
@@ -1204,6 +1264,36 @@ VirtualInode::getChildren(
       },
       [&](const UnmaterializedUnloadedBlobDirEntry&) { return notDirectory(); },
       [&](const TreeEntry&) { return notDirectory(); });
+}
+
+folly::coro::now_task<
+    std::vector<std::pair<PathComponent, folly::Try<VirtualInode>>>>
+VirtualInode::co_getChildren(
+    RelativePathPiece path,
+    const std::shared_ptr<ObjectStore>& objectStore,
+    const ObjectFetchContextPtr& fetchContext) {
+  if (!isDirectory()) {
+    co_yield folly::coro::co_error(PathError(ENOTDIR, path));
+  }
+
+  static_assert(
+      std::variant_size_v<detail::VariantVirtualInode> == 4,
+      "New variant type added to VariantVirtualInode - update co_getChildren");
+  if (auto* inode = std::get_if<InodePtr>(&variant_)) {
+    co_return co_await inode->asTreePtr()->co_getChildren(
+        fetchContext, /*loadInodes=*/false);
+  } else if (auto* tree = std::get_if<TreePtr>(&variant_)) {
+    // Restricted unloaded tree denies enumeration outright.
+    if ((*tree)->isRestricted()) {
+      co_yield folly::coro::co_error(PathError(EACCES, path));
+    }
+    co_return co_await co_getChildrenHelper(*tree, objectStore, fetchContext);
+  } else {
+    // File variants (UnmaterializedUnloadedBlobDirEntry / TreeEntry) — the
+    // !isDirectory() guard above has already returned ENOTDIR; this is a
+    // defensive fallthrough kept honest by the static_assert above.
+    co_yield folly::coro::co_error(PathError(ENOTDIR, path));
+  }
 }
 
 ImmediateFuture<

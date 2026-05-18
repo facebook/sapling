@@ -233,6 +233,13 @@ class VirtualInode {
       const std::shared_ptr<ObjectStore>& objectStore,
       const ObjectFetchContextPtr& fetchContext);
 
+  folly::coro::now_task<
+      std::vector<std::pair<PathComponent, folly::Try<VirtualInode>>>>
+  co_getChildren(
+      RelativePathPiece path,
+      const std::shared_ptr<ObjectStore>& objectStore,
+      const ObjectFetchContextPtr& fetchContext);
+
   /**
    * Collect all requested attributes for all of the children
    * of a directory. All available attributes are currently:
