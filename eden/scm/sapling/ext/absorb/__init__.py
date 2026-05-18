@@ -397,11 +397,14 @@ class filefixupstate:
         for i in range(len(self.contents)):
             b, blines = self.contents[i], self.contentlines[i]
             # see filefixupstate docstring for linelog revs used here
+            prev_rev = llog.max_rev()
             llrev = i * 2 + 1
+            assert llrev > prev_rev
+            fixup_rev = llrev + 1
+            llog = llog.with_dag_edge(prev_rev, llrev).with_dag_edge(llrev, fixup_rev)
             chunks = self._alldiffchunks(a, b, alines, blines)
             for a1, a2, b1, b2 in reversed(list(chunks)):
-                a_rev = llog.max_rev()
-                llog = llog.edit_chunk(a_rev, a1, a2, llrev, b1, b2)
+                llog = llog.edit_chunk(llrev, a1, a2, llrev, b1, b2)
             a, alines = b, blines
         return llog
 

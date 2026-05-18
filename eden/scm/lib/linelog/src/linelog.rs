@@ -624,14 +624,14 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
                     break;
                 }
                 Inst::JGE(rev, j_pc) => {
-                    if start_rev >= *rev {
+                    if self.dag.is_ancestor(*rev, start_rev) {
                         pc = *j_pc;
                     } else {
                         pc += 1;
                     }
                 }
                 Inst::JL(rev, j_pc) => {
-                    if end_rev < *rev {
+                    if !self.dag.is_ancestor(*rev, end_rev) {
                         pc = *j_pc;
                     } else {
                         pc += 1;
@@ -657,6 +657,9 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
 impl<T> AbstractLineLog<T> {
     /// Rewrite `rev` references in all instructions.
     /// This can be useful for reordering, folding, or inserting revisions.
+    ///
+    /// The edges in the DAG are *unchanged*. If larger revs are introduced,
+    /// the dag will resize to make sure all revs are present in the dag.
     ///
     /// Note: There are no checks about whether the reordering is meaningful.
     /// The callsite should use `calculate_dep_map` to check dependencies
@@ -684,6 +687,7 @@ impl<T> AbstractLineLog<T> {
         Self {
             code,
             max_rev,
+            dag: self.dag.with_edge(max_rev, max_rev),
             a_lines_cache: None,
             ..self
         }
