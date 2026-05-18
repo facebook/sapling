@@ -68,6 +68,8 @@ use crate::filesystem::GrepoFileSystem;
 use crate::filesystem::PendingChange;
 use crate::filesystem::PhysicalFileSystem;
 use crate::filesystem::WatchmanFileSystem;
+use crate::filesystem::grepo::grepo_manifest_path;
+use crate::filesystem::grepo::parse_grepo_manifest;
 use crate::manifest::apply_status;
 use crate::status::compute_status;
 use crate::util::added_files;
@@ -705,6 +707,29 @@ impl WorkingCopy {
         };
 
         Ok(parsed)
+    }
+
+    /// Synthesize `Submodule` entries from the grepo projects in the workingcopy.
+    pub fn parse_grepo_submodules(&self) -> Result<Vec<Submodule>> {
+        let manifest_path = grepo_manifest_path(&self.vfs, &self.config)?;
+        let manifest = parse_grepo_manifest(&manifest_path)?;
+
+        manifest
+            .projects
+            .iter()
+            .map(|(path, project)| {
+                Ok(Submodule {
+                    name: project.name.clone(),
+                    url: "".to_string(), // Can probably be inferred but not useful for now
+                    path: path.to_string_lossy().into_owned(),
+                    r#ref: project
+                        .upstream
+                        .clone()
+                        .or_else(|| project.revision.clone()),
+                    active: true,
+                })
+            })
+            .collect()
     }
 
     pub fn copymap(&self, matcher: DynMatcher) -> Result<Vec<(RepoPathBuf, RepoPathBuf)>> {

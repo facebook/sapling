@@ -20,8 +20,12 @@ define_flags! {
     }
 }
 
-pub fn run(ctx: ReqCtx<DebugGitModulesOpts>, _repo: &Repo, wc: &WorkingCopy) -> Result<u8> {
-    let gitmodules = wc.parse_submodule_config()?;
+pub fn run(ctx: ReqCtx<DebugGitModulesOpts>, repo: &Repo, wc: &WorkingCopy) -> Result<u8> {
+    let gitmodules = if repo.requirements.contains("grepo") {
+        wc.parse_grepo_submodules()?
+    } else {
+        wc.parse_submodule_config()?
+    };
 
     if ctx.opts.json {
         let jstring = serde_json::to_string(&gitmodules)?;
@@ -40,7 +44,8 @@ pub fn aliases() -> &'static str {
 }
 
 pub fn doc() -> &'static str {
-    "list git submodules in the current working directory"
+    "List git submodules in the current working directory. \
+Only applicable to git superproject and git repo tool."
 }
 
 pub fn synopsis() -> Option<&'static str> {

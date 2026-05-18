@@ -159,3 +159,23 @@ Exact-path diff also works for the non-overlapping project:
   @@ -1,1 +1,1 @@
   -Subproject commit 6a9d13442cc0deb7f2b531a00ac679f62d09edf3
   +Subproject commit 96287d65976c48a2d3046495e3089baeb388a671
+
+sl debuggitmodules lists grepo projects as Submodule entries.
+Mainly used for ISL integration.
+
+  $ sl debuggitmodules
+  [submodule "project-b"]
+  	url=
+  	path=frameworks/b
+  	ref=* (glob)
+  	active=true
+  [submodule "project-a"]
+  	url=
+  	path=vendor/a
+  	ref=* (glob)
+  	active=true
+  [submodule "project-c"]
+  	url=
+  	path=vendor/a/sub/c
+  	ref=* (glob)
+  	active=true

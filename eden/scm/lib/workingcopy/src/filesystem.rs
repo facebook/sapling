@@ -7,7 +7,7 @@
 
 mod dotgit;
 mod filesystem;
-mod grepo;
+pub(crate) mod grepo;
 pub mod physicalfs;
 pub mod watchmanfs;
 
