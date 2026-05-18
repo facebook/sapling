@@ -32,6 +32,7 @@ use util::no_follow::AtomicReplaceFile;
 use util::no_follow::LiteMetadata;
 use util::no_follow::NoFollowRoot;
 use util::no_follow::OpenFlags;
+use util::no_follow::normalize_not_directory;
 
 use crate::pathauditor::PathAuditor;
 
@@ -97,6 +98,13 @@ fn set_file_permissions(_file: &File, _mode: u32) -> io::Result<()> {
     Ok(())
 }
 
+fn normalize_not_directory_anyhow(err: anyhow::Error) -> anyhow::Error {
+    match err.downcast::<io::Error>() {
+        Ok(err) => normalize_not_directory(err).into(),
+        Err(err) => err,
+    }
+}
+
 #[derive(Clone)]
 pub struct VFS {
     inner: Arc<Inner>,
@@ -157,11 +165,13 @@ impl VFS {
     }
 
     fn new_inner(root: PathBuf, overwrite_path_conflicts: bool) -> Result<Self> {
-        let fs_type =
-            fstype(&root).with_context(|| format!("can't construct a VFS for {:?}", root))?;
+        let fs_type = fstype(&root)
+            .map_err(normalize_not_directory_anyhow)
+            .with_context(|| format!("can't construct a VFS for {:?}", root))?;
         let supports_symlinks = AtomicBool::new(!cfg!(windows));
         let supports_executables = supports_executables(&fs_type);
-        let case_sensitive = case_sensitive(&root, &fs_type)?;
+        let case_sensitive =
+            case_sensitive(&root, &fs_type).map_err(normalize_not_directory_anyhow)?;
         let no_follow = OnceLock::new();
         let auditor = PathAuditor::new(&root, case_sensitive);
 
