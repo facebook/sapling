@@ -58,23 +58,26 @@ impl GrepoFileSystem {
 
     /// Parse the `.repo/manifests` from the working copy.
     fn parse_grepo_projects(&self) -> Result<BTreeMap<PathBuf, Project>> {
-        let projects = if self.manifest_path.exists() {
-            let parsed = parse_manifest(&fs_err::read(&self.manifest_path)?)?;
-            parsed.projects
-        } else {
-            tracing::debug!(target: "workingcopy::repo_tool", "manifest file does not exist");
-            BTreeMap::new()
-        };
-
-        Ok(projects)
+        Ok(parse_grepo_manifest(&self.manifest_path)?.projects)
     }
 }
 
-fn grepo_manifest_path(vfs: &VFS, config: &dyn Config) -> Result<PathBuf> {
+pub(crate) fn grepo_manifest_path(vfs: &VFS, config: &dyn Config) -> Result<PathBuf> {
     let path = config.get_or("grepo", "manifestpath", || {
         ".repo/manifests/default.xml".to_string()
     })?;
     Ok(vfs.join(path.as_str().try_into()?))
+}
+
+/// Parse `.repo/manifests` from the working copy.
+pub(crate) fn parse_grepo_manifest(
+    manifest_path: &PathBuf,
+) -> Result<grepomanifest::schema::Manifest> {
+    if !manifest_path.exists() {
+        tracing::debug!(target: "workingcopy::repo_tool", "manifest file does not exist");
+        return Ok(grepomanifest::schema::Manifest::default());
+    }
+    parse_manifest(&fs_err::read(manifest_path)?)
 }
 
 impl FileSystem for GrepoFileSystem {
