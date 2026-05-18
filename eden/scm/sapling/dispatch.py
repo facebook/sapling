@@ -979,8 +979,6 @@ def _dispatch(req):
                 )
 
             ui.atexit(print_time)
-        if options["profile"]:
-            profiler.start()
 
         for ui_ in uis:
             ui_.deriveconfigfromclioptions(options)

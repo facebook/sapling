@@ -11,17 +11,13 @@ Function to check that statprof ran
   >   grep -E 'Sample count:|No samples recorded' > /dev/null
   > }
 
-test --profile
+Test python profiling
 
-  $ sl log -r . --profile 2>&1 | statprofran
+  $ sl log -r . --config profiling.enabled-python=true 2>&1 | statprofran
 
-Abreviated version
+Affects alias
 
-  $ sl log -r . --prof 2>&1 | statprofran
-
-In alias
-
-  $ sl --config "alias.proflog=log -r . --profile" proflog 2>&1 | statprofran
+  $ sl --config "alias.proflog=log -r ."  --config profiling.enabled-python=true proflog 2>&1 | statprofran
 
 #if normal-layout
 statprof can be used as a standalone module
