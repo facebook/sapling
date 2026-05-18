@@ -161,7 +161,7 @@ mod catmod {
                             "CAT extraction: extracted identity {}:{}",
                             auth_id.identity.id_type, auth_id.identity.id_data,
                         );
-                        permission_checker::MononokeIdentity(auth_id)
+                        permission_checker::MononokeIdentity::from(auth_id)
                     })
                     .collect();
                 debug!(

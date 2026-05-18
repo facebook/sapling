@@ -25,6 +25,7 @@ rust_library(
         "//common/rust/shed/fbinit:fbinit",
     ] + ([] if rust_oss.is_oss_build() else [
         "//access/if:authenticated_identity_thrift-rust",
+        "//access/lib/polyglot:authenticated_identity_serializer-rs_bindings",
         "//configerator/structs/infrasec/if:acl-rust",
         "fbsource//third-party/rust:maplit",
         "fbsource//third-party/rust:tokio",

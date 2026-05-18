@@ -33,8 +33,13 @@ pub type MononokeIdentitySet = BTreeSet<MononokeIdentity>;
 /// `MononokeIdentity::from_legacy_type_data` carry only `id_type` / `id_data` with
 /// empty attributes, while ingress paths (mTLS cert, `mid://` SAN URIs, forwarded
 /// JSON envelope, srserver) populate the full struct.
+///
+/// The inner `AuthenticatedIdentity` is private to keep ingestion centralized:
+/// construct via `MononokeIdentity::from(auth_id)` (or
+/// `MononokeIdentity::from_legacy_type_data(...)`), and access via
+/// `inner()` / `into_inner()` / the `id_type()` / `id_data()` accessors.
 #[derive(Clone, Debug)]
-pub struct MononokeIdentity(pub AuthenticatedIdentity);
+pub struct MononokeIdentity(AuthenticatedIdentity);
 
 // Manual implementations for Eq, PartialEq, Hash, Ord, PartialOrd
 // that compare based on id_type and id_data only -- attributes/source/etc
@@ -118,19 +123,33 @@ impl MononokeIdentity {
         self.id_type() == id_type
     }
 
+    /// Render the identity as the canonical `mid://` URI (e.g.
+    /// `mid://PROD/USER/foo?agent.id=AGENT:devmate`) using
+    /// `authenticated_identity_serializer::serialize` -- the same serializer
+    /// `identity_ext::json::serialize_authn_identities` uses for the wire
+    /// envelope. This keeps Scuba's `client_identities_typed` column in lockstep
+    /// with whatever the `mid://` form encodes (attributes, source, logging
+    /// key, CAT payload presence).
+    ///
+    /// Falls back to a `TYPE:data` string if serialization fails (e.g. the
+    /// underlying serializer rejects an unrepresentable identity); in OSS
+    /// builds the serializer is unavailable, so the fallback is always used.
     pub fn to_typed_string(&self) -> String {
-        if self.0.attributes.is_empty() {
-            format!("{}:{}", self.id_type(), self.id_data())
-        } else {
-            let attrs = self
-                .0
-                .attributes
-                .iter()
-                .map(|attr| attr.val.as_str())
-                .collect::<Vec<_>>()
-                .join(",");
-            format!("{}:{};{}", self.id_type(), self.id_data(), attrs)
+        #[cfg(fbcode_build)]
+        {
+            authenticated_identity_serializer::serialize(self.0.clone()).unwrap_or_else(|_| {
+                format!("mid://SERIALIZEERR/{}/{}", self.id_type(), self.id_data())
+            })
         }
+        #[cfg(not(fbcode_build))]
+        {
+            format!("mid://TEST/{}/{}", self.id_type(), self.id_data())
+        }
+    }
+
+    /// Borrow the inner `AuthenticatedIdentity`.
+    pub fn inner(&self) -> &AuthenticatedIdentity {
+        &self.0
     }
 
     /// Consume the wrapper and return the inner `AuthenticatedIdentity`.
@@ -217,7 +236,16 @@ mod tests {
     #[mononoke::test]
     fn test_to_typed_string_thin() {
         let id = MononokeIdentity::from_legacy_type_data("SERVICE", "some_service");
-        assert_eq!(id.to_typed_string(), "SERVICE:some_service");
+        // In fbcode the identity is rendered through
+        // `authenticated_identity_serializer::serialize`, producing the canonical
+        // `mid://` URI. The serializer defaults the realm to `PROD` when a "thin"
+        // identity has no source info set. In OSS the serializer is unavailable,
+        // so the fallback uses a synthetic `TEST` realm to keep the output shaped
+        // like a real `mid://` URI.
+        #[cfg(fbcode_build)]
+        assert_eq!(id.to_typed_string(), "mid://PROD/SERVICE/some_service");
+        #[cfg(not(fbcode_build))]
+        assert_eq!(id.to_typed_string(), "mid://TEST/SERVICE/some_service");
     }
 
     #[cfg(not(fbcode_build))]
@@ -239,7 +267,10 @@ mod tests {
                 val: "AGENT:devmate".to_string(),
             }],
         };
-        let id = MononokeIdentity(auth_id);
-        assert_eq!(id.to_typed_string(), "USER:mzr;AGENT:devmate");
+        let id = MononokeIdentity::from(auth_id);
+        // OSS build: serializer unavailable, so the fallback emits the
+        // `mid://TEST/TYPE/data` shape and drops attributes (the OSS path has
+        // no way to encode them into the URI without the C++ serializer).
+        assert_eq!(id.to_typed_string(), "mid://TEST/USER/mzr");
     }
 }
