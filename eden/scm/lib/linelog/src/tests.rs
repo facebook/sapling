@@ -108,25 +108,24 @@ fn test_random_cases() {
         })
     }
 
-    for (end_rev, a_rev_offset, b_rev_offset) in [(1000, 0, 0), (20, 0, 2), (20, 2, 0)] {
-        let cases: Vec<_> = generate_cases(end_rev).collect();
+    for (end_rev, initial_rev_offset, b_rev_offset) in [(1000, 0, 0), (20, 0, 2), (20, 2, 0)] {
+        let mut cases: Vec<_> = generate_cases(end_rev).collect();
         let stats = Arc::new(PerfStats::default());
         let mut log = LineLog::default().with_perf_stats(Some(stats.clone()));
 
+        if initial_rev_offset > 0 {
+            log = log.edit_chunk(0, 0, 0, initial_rev_offset, Vec::new(), Default::default())
+        }
+
         let mut line_count = 1;
-        for (_lines, b_rev, a1, a2, b1, b2, b_lines) in &cases {
+        for (_lines, b_rev, a1, a2, b1, b2, b_lines) in &mut cases {
             let a_rev = log.max_rev();
-            log = log.edit_chunk(
-                a_rev + a_rev_offset,
-                *a1,
-                *a2,
-                *b_rev + b_rev_offset,
-                b_lines.clone(),
-                Default::default(),
-            );
+            *b_rev = *b_rev + b_rev_offset + initial_rev_offset;
+            assert!(*b_rev >= a_rev);
+            log = log.edit_chunk(a_rev, *a1, *a2, *b_rev, b_lines.clone(), Default::default());
             line_count += *b2 - *b1;
             line_count -= *a2 - *a1;
-            assert_eq!(log.checkout_lines(*b_rev + b_rev_offset).len(), line_count);
+            assert_eq!(log.checkout_lines(*b_rev).len(), line_count);
         }
 
         // edit_chunk and checkout_lines sequentially do not trigger (slow)
@@ -137,9 +136,16 @@ fn test_random_cases() {
 
         for (lines, b_rev, _a1, _a2, _b1, _b2, _b_lines) in cases {
             let text = lines.into_iter().collect::<Vec<String>>().concat();
-            assert_eq!(log.checkout_text(b_rev + b_rev_offset), text);
+            assert_eq!(log.checkout_text(b_rev), text);
         }
     }
+}
+
+#[test]
+#[should_panic(expected = "must not be greater than max_rev")]
+fn test_edit_chunk_rejects_future_a_rev() {
+    let log = LineLog::default();
+    let _ = log.edit_chunk(1, 0, 0, 1, lines("a\n"), Default::default());
 }
 
 #[test]

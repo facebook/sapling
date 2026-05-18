@@ -168,6 +168,8 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
     ///
     /// If `ADD_EDGE` flag is set (default), also add an edge in the dag to
     /// suggest `a_rev` is a parent of `b_rev` when `a_rev < b_rev`.
+    ///
+    /// Panics if `a_rev` > `max_rev`.
     pub fn edit_chunk(
         self,
         a_rev: Rev,
@@ -177,17 +179,21 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
         b_lines: Vec<T>,
         flags: EditFlags,
     ) -> Self {
-        let base_rev = self.max_rev.min(a_rev);
-        let this = if flags.contains(EditFlags::ADD_EDGE) && base_rev <= b_rev {
+        assert!(
+            a_rev <= self.max_rev,
+            "a_rev {a_rev} must not be greater than max_rev {}",
+            self.max_rev
+        );
+        let this = if flags.contains(EditFlags::ADD_EDGE) && a_rev <= b_rev {
             Self {
-                dag: self.dag.with_edge(base_rev, b_rev),
+                dag: self.dag.with_edge(a_rev, b_rev),
                 ..self
             }
         } else {
             self
         };
         let mut b_lines = b_lines.into_iter().map(Arc::new).collect::<VecDeque<_>>();
-        this.with_a_lines_cache(base_rev, b_rev, |this: Self, maybe_mut| {
+        this.with_a_lines_cache(a_rev, b_rev, |this: Self, maybe_mut| {
             if flags.contains(EditFlags::BLOCK_SHIFT) {
                 const DEFAULT_SHIFT_THRESHOLD: usize = 5;
                 this.try_block_shift(
@@ -383,7 +389,7 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
 
         // Reuse or rebuild cache.
         let mut a_lines: ImVec<LineInfo<T>> = (match cache {
-            Some((rev, a_lines)) if rev == a_rev || (rev == self.max_rev && a_rev > rev) => {
+            Some((rev, a_lines)) if rev == a_rev => {
                 if let Some(stats) = self.perf_stats.as_ref() {
                     stats.cache_hit.fetch_add(1, Ordering::Release);
                 }
