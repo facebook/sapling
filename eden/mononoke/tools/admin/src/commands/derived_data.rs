@@ -143,8 +143,17 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     // don't care about the identity; the extra identity is harmless there.
     let mut ctx = crate::user_ctx::new_basic_context_with_unixname(&app);
 
-    // BackfillStatus doesn't require opening a repo
-    if let DerivedDataSubcommand::BackfillStatus(backfill_status_args) = args.subcommand {
+    // The list view doesn't require opening a repo. Request details may need
+    // the repo's derived-data manager to check boundary derivation status.
+    let backfill_status_without_request_id = matches!(
+        &args.subcommand,
+        DerivedDataSubcommand::BackfillStatus(backfill_status_args)
+            if backfill_status_args.request_id().is_none()
+    );
+    if backfill_status_without_request_id {
+        let DerivedDataSubcommand::BackfillStatus(backfill_status_args) = args.subcommand else {
+            unreachable!("matched backfill status above")
+        };
         let sql_queue = async_requests_client::open_sql_connection(ctx.fb, &app).await?;
         let blobstore = async_requests_client::open_blobstore(ctx.fb, &app).await?;
         let repo_names = app
@@ -153,7 +162,16 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             .iter()
             .map(|(name, repo_config)| (repo_config.repoid, name.clone()))
             .collect();
-        return backfill_status(&ctx, sql_queue, blobstore, repo_names, backfill_status_args).await;
+        return backfill_status(
+            &ctx,
+            sql_queue,
+            blobstore,
+            repo_names,
+            backfill_status_args,
+            None,
+            None,
+        )
+        .await;
     }
 
     // BackfillAbort doesn't require opening a repo
@@ -165,13 +183,11 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let config_name_for_enqueue = args.config_name.clone();
 
     let repo: Repo = match &args.subcommand {
-        DerivedDataSubcommand::BackfillStatus(_) => {
-            unreachable!("BackfillStatus handled above")
-        }
         DerivedDataSubcommand::BackfillAbort(_) => {
             unreachable!("BackfillAbort handled above")
         }
-        DerivedDataSubcommand::Exists(_)
+        DerivedDataSubcommand::BackfillStatus(_)
+        | DerivedDataSubcommand::Exists(_)
         | DerivedDataSubcommand::Fetch(_)
         | DerivedDataSubcommand::CountUnderived(_)
         | DerivedDataSubcommand::VerifyManifests(_)
@@ -199,7 +215,8 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
 
     let is_read_only = matches!(
         &args.subcommand,
-        DerivedDataSubcommand::Exists(_)
+        DerivedDataSubcommand::BackfillStatus(_)
+            | DerivedDataSubcommand::Exists(_)
             | DerivedDataSubcommand::Fetch(_)
             | DerivedDataSubcommand::CountUnderived(_)
             | DerivedDataSubcommand::ListManifest(_)
@@ -216,8 +233,25 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     };
 
     match args.subcommand {
-        DerivedDataSubcommand::BackfillStatus(_) => {
-            unreachable!("BackfillStatus handled above")
+        DerivedDataSubcommand::BackfillStatus(args) => {
+            let sql_queue = async_requests_client::open_sql_connection(ctx.fb, &app).await?;
+            let blobstore = async_requests_client::open_blobstore(ctx.fb, &app).await?;
+            let repo_names = app
+                .repo_configs()
+                .repos
+                .iter()
+                .map(|(name, repo_config)| (repo_config.repoid, name.clone()))
+                .collect();
+            backfill_status(
+                &ctx,
+                sql_queue,
+                blobstore,
+                repo_names,
+                args,
+                Some(&repo),
+                Some(&manager),
+            )
+            .await?
         }
         DerivedDataSubcommand::BackfillAbort(_) => {
             unreachable!("BackfillAbort handled above")

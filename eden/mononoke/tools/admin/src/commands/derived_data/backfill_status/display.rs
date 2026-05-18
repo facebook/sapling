@@ -25,6 +25,7 @@ use super::types::BackfillChildDisplayData;
 use super::types::BackfillChildParams;
 use super::types::BackfillChildResult;
 use super::types::BackfillDisplayData;
+use super::types::BoundaryDerivationStatus;
 use super::types::RepoDisplayData;
 use super::types::RepoStatus;
 
@@ -34,6 +35,7 @@ pub(super) struct BackfillListRow {
     pub created_at: Timestamp,
     pub created_by: Option<String>,
     pub aggregate_status: RepoStatus,
+    pub has_failed_requests: bool,
     pub repo_count: i64,
     pub derived_data_type: Option<String>,
 }
@@ -138,11 +140,16 @@ pub(super) fn display_backfill_list(backfills: &[BackfillListRow]) {
     ]));
 
     for row in backfills {
+        let status = if row.aggregate_status == RepoStatus::InProgress && row.has_failed_requests {
+            format!("{}*", row.aggregate_status)
+        } else {
+            row.aggregate_status.to_string()
+        };
         table.add_row(Row::new(vec![
             Cell::new(&row.request_id.0.to_string()),
             Cell::new(&format_timestamp(&row.created_at)),
             Cell::new(row.created_by.as_deref().unwrap_or("-")),
-            Cell::new(&row.aggregate_status.to_string()),
+            Cell::new(&status),
             Cell::new(row.derived_data_type.as_deref().unwrap_or("-")),
             Cell::new(&row.repo_count.to_string()),
         ]));
@@ -150,6 +157,12 @@ pub(super) fn display_backfill_list(backfills: &[BackfillListRow]) {
 
     table.printstd();
     println!("{}", "━".repeat(80));
+    if backfills
+        .iter()
+        .any(|row| row.aggregate_status == RepoStatus::InProgress && row.has_failed_requests)
+    {
+        println!("\n* status has failed requests but still has pending or in-progress work.");
+    }
     println!("\nUse --request-id <ID> to see detailed progress for a specific backfill.");
 }
 
@@ -367,6 +380,30 @@ pub(super) fn display_child_request_detail(
                 "  Boundary Count:    {}",
                 format_number(boundary_cs_ids.len())
             );
+            if let Some(boundary_derivation_status) = &data.boundary_derivation_status {
+                match boundary_derivation_status {
+                    BoundaryDerivationStatus::Checked {
+                        already_derived_count,
+                        not_derived_count,
+                    } => {
+                        let checked_count = already_derived_count + not_derived_count;
+                        let derived_percentage = if checked_count == 0 {
+                            0.0
+                        } else {
+                            (*already_derived_count as f64 / checked_count as f64) * 100.0
+                        };
+                        println!(
+                            "  Derived:           {}/{} ({:.1}%)",
+                            format_number(*already_derived_count),
+                            format_number(checked_count),
+                            derived_percentage
+                        );
+                    }
+                    BoundaryDerivationStatus::NotChecked { reason } => {
+                        println!("  Derived Check:     not checked ({})", reason);
+                    }
+                }
+            }
             println!("  Boundary Changesets:");
             for cs_id in boundary_cs_ids {
                 println!("    {}", cs_id);

@@ -24,19 +24,25 @@ use async_requests::types::RequestTypeName;
 use async_requests::types::ThriftAsynchronousRequestParams;
 use async_requests::types::ThriftAsynchronousRequestResult;
 use blobstore::Blobstore;
+use bulk_derivation::BulkDerivation;
 use clap::Args;
 use context::CoreContext;
+use derived_data_manager::DerivedDataManager;
 use futures::stream;
 use futures::stream::StreamExt;
 use mononoke_types::ChangesetId;
+use mononoke_types::DerivableType;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
+use repo_derived_data::RepoDerivedDataRef;
+use repo_identity::RepoIdentityRef;
 use requests_table::BlobstoreKey;
 use requests_table::LongRunningRequestEntry;
 use requests_table::LongRunningRequestsQueue;
 use requests_table::RequestStatus;
 use requests_table::RowId;
 use requests_table::SqlLongRunningRequestsQueue;
+use strum::IntoEnumIterator;
 
 use self::display::BackfillListRow;
 use self::display::display_backfill_list;
@@ -48,10 +54,12 @@ use self::types::BackfillChildDisplayData;
 use self::types::BackfillChildParams;
 use self::types::BackfillChildResult;
 use self::types::BackfillDisplayData;
+use self::types::BoundaryDerivationStatus;
 use self::types::ChildCounts;
 use self::types::RepoDisplayData;
 use self::types::RepoStatus;
 use self::types::SliceSegmentDisplayData;
+use super::Repo;
 
 /// How many backfills to load params for in parallel for the list view.
 const PARAMS_LOAD_CONCURRENCY: usize = 16;
@@ -72,12 +80,20 @@ pub(super) struct BackfillStatusArgs {
     lookback: i64,
 }
 
+impl BackfillStatusArgs {
+    pub(super) fn request_id(&self) -> Option<u64> {
+        self.request_id
+    }
+}
+
 pub(super) async fn backfill_status(
     ctx: &CoreContext,
     queue: SqlLongRunningRequestsQueue,
     blobstore: Arc<dyn Blobstore>,
     repo_names: HashMap<RepositoryId, String>,
     args: BackfillStatusArgs,
+    repo: Option<&Repo>,
+    manager: Option<&DerivedDataManager>,
 ) -> Result<()> {
     match args.request_id {
         None => {
@@ -90,7 +106,16 @@ pub(super) async fn backfill_status(
             match args.repo_id {
                 None => {
                     // Show overall backfill progress
-                    show_backfill_detail(ctx, &queue, &blobstore, &repo_names, &row_id).await?;
+                    show_backfill_detail(
+                        ctx,
+                        &queue,
+                        &blobstore,
+                        &repo_names,
+                        &row_id,
+                        repo,
+                        manager,
+                    )
+                    .await?;
                 }
                 Some(repo_id) => {
                     // Drill down into a specific repo
@@ -151,12 +176,23 @@ async fn list_backfills(
             ready: entry.child_ready_count.max(0) as u64,
             failed: entry.child_failed_count.max(0) as u64,
         };
-        let aggregate_status = RepoStatus::from_root_and_children(entry.root_status, children);
+        let has_failed_requests = entry.root_status == RequestStatus::Failed || children.failed > 0;
+        let has_active_work = matches!(
+            entry.root_status,
+            RequestStatus::New | RequestStatus::InProgress
+        ) || children.new > 0
+            || children.inprogress > 0;
+        let aggregate_status = if has_failed_requests && has_active_work {
+            RepoStatus::InProgress
+        } else {
+            RepoStatus::from_root_and_children(entry.root_status, children)
+        };
         BackfillListRow {
             request_id: entry.id,
             created_at: entry.created_at,
             created_by: entry.created_by,
             aggregate_status,
+            has_failed_requests,
             repo_count: entry.repo_count,
             derived_data_type,
         }
@@ -176,6 +212,8 @@ async fn show_backfill_detail(
     blobstore: &Arc<dyn Blobstore>,
     repo_names: &HashMap<RepositoryId, String>,
     row_id: &RowId,
+    repo: Option<&Repo>,
+    manager: Option<&DerivedDataManager>,
 ) -> Result<()> {
     // Step 1: Verify the backfill exists
     let root_entry = queue
@@ -187,8 +225,10 @@ async fn show_backfill_detail(
         match root_entry {
             Some(entry) => entry,
             None => {
-                show_backfill_child_request_detail(ctx, queue, blobstore, repo_names, row_id)
-                    .await?;
+                show_backfill_child_request_detail(
+                    ctx, queue, blobstore, repo_names, row_id, repo, manager,
+                )
+                .await?;
                 return Ok(());
             }
         };
@@ -254,7 +294,7 @@ async fn show_backfill_detail(
 
     // Convert status_map to sorted vec
     let mut status_counts: Vec<(RequestStatus, usize)> = status_map.into_iter().collect();
-    status_counts.sort_by(|a, b| b.1.cmp(&a.1));
+    status_counts.sort_by_key(|(_, count)| std::cmp::Reverse(*count));
 
     // Group by request type
     let mut type_map: HashMap<String, Vec<(RequestStatus, usize)>> = HashMap::new();
@@ -390,6 +430,10 @@ fn format_changeset_id(bytes: &[u8]) -> String {
         .unwrap_or_else(|e| format!("<invalid changeset id: {}>", e))
 }
 
+fn parse_changeset_id(bytes: &[u8]) -> Result<ChangesetId> {
+    ChangesetId::from_bytes(bytes).context("parsing changeset id")
+}
+
 fn decode_child_params(
     entry: &LongRunningRequestEntry,
     params: &AsynchronousRequestParams,
@@ -402,8 +446,9 @@ fn decode_child_params(
                 boundary_cs_ids: p
                     .boundary_cs_ids
                     .iter()
-                    .map(|cs_id| format_changeset_id(cs_id.as_ref()))
-                    .collect(),
+                    .map(|cs_id| parse_changeset_id(cs_id.as_ref()))
+                    .collect::<Result<Vec<_>>>()
+                    .context("parsing derive_boundaries boundary changeset ids")?,
                 concurrency: p.concurrency,
                 use_predecessor_derivation: p.use_predecessor_derivation,
                 config_name: p.config_name.clone(),
@@ -473,12 +518,86 @@ async fn load_child_result(
     }
 }
 
+fn manager_with_all_types(manager: &DerivedDataManager) -> DerivedDataManager {
+    let mut config = manager.config().clone();
+    config.types = DerivableType::iter().collect();
+    manager.with_replaced_config(manager.config_name(), config)
+}
+
+async fn load_boundary_derivation_status(
+    ctx: &CoreContext,
+    repo: Option<&Repo>,
+    default_manager: Option<&DerivedDataManager>,
+    params: &BackfillChildParams,
+) -> Result<Option<BoundaryDerivationStatus>> {
+    let BackfillChildParams::DeriveBoundaries {
+        repo_id,
+        derived_data_type,
+        boundary_cs_ids,
+        config_name,
+        ..
+    } = params
+    else {
+        return Ok(None);
+    };
+
+    let Some(repo) = repo else {
+        return Ok(None);
+    };
+
+    let request_repo_id = match i32::try_from(*repo_id) {
+        Ok(repo_id) => RepositoryId::new(repo_id),
+        Err(_) => {
+            return Ok(Some(BoundaryDerivationStatus::NotChecked {
+                reason: format!("request repo id {} is out of range", repo_id),
+            }));
+        }
+    };
+    let opened_repo_id = repo.repo_identity().id();
+    if request_repo_id != opened_repo_id {
+        return Ok(Some(BoundaryDerivationStatus::NotChecked {
+            reason: format!(
+                "request repo {} does not match opened repo {}",
+                repo_id,
+                opened_repo_id.id()
+            ),
+        }));
+    }
+
+    let manager = match config_name {
+        Some(config_name) => {
+            let manager = repo
+                .repo_derived_data()
+                .manager_for_config(config_name)
+                .with_context(|| format!("loading derived data config {}", config_name))?;
+            manager_with_all_types(manager)
+        }
+        None => default_manager
+            .cloned()
+            .context("derived data manager unavailable for boundary derived status")?,
+    };
+    let derived_data_type = DerivableType::from_name(derived_data_type)
+        .with_context(|| format!("resolving derived data type {}", derived_data_type))?;
+    let not_derived =
+        BulkDerivation::pending(&manager, ctx, boundary_cs_ids, None, derived_data_type)
+            .await
+            .context("checking pending boundary changesets")?;
+    let not_derived_count = not_derived.len();
+
+    Ok(Some(BoundaryDerivationStatus::Checked {
+        already_derived_count: boundary_cs_ids.len().saturating_sub(not_derived_count),
+        not_derived_count,
+    }))
+}
+
 async fn show_backfill_child_request_detail(
     ctx: &CoreContext,
     queue: &impl LongRunningRequestsQueue,
     blobstore: &Arc<dyn Blobstore>,
     repo_names: &HashMap<RepositoryId, String>,
     row_id: &RowId,
+    repo: Option<&Repo>,
+    manager: Option<&DerivedDataManager>,
 ) -> Result<()> {
     let entry = queue
         .get_request_entry_by_id(ctx, row_id)
@@ -499,12 +618,15 @@ async fn show_backfill_child_request_detail(
             .context("loading request params")?;
     let params = decode_child_params(&entry, &params)?;
     let result = load_child_result(ctx, blobstore, &entry).await?;
+    let boundary_derivation_status =
+        load_boundary_derivation_status(ctx, repo, manager, &params).await?;
 
     display_child_request_detail(
         &BackfillChildDisplayData {
             entry,
             params,
             result,
+            boundary_derivation_status,
         },
         repo_names,
     );
@@ -564,7 +686,7 @@ async fn show_repo_detail(
 
     let mut status_counts: Vec<(RequestStatus, usize)> =
         status_map.iter().map(|(s, c)| (*s, *c)).collect();
-    status_counts.sort_by(|a, b| b.1.cmp(&a.1));
+    status_counts.sort_by_key(|(_, count)| std::cmp::Reverse(*count));
 
     // Group by request type
     let mut type_map: HashMap<String, Vec<(RequestStatus, usize)>> = HashMap::new();

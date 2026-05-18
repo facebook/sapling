@@ -10,6 +10,7 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
+use mononoke_types::ChangesetId;
 use mononoke_types::Timestamp;
 use requests_table::LongRunningRequestEntry;
 use requests_table::RequestStatus;
@@ -115,7 +116,7 @@ pub(super) enum BackfillChildParams {
     DeriveBoundaries {
         repo_id: i64,
         derived_data_type: String,
-        boundary_cs_ids: Vec<String>,
+        boundary_cs_ids: Vec<ChangesetId>,
         concurrency: i32,
         use_predecessor_derivation: bool,
         config_name: Option<String>,
@@ -148,10 +149,22 @@ pub(super) enum BackfillChildResult {
     },
 }
 
+/// Derived-data mapping status for boundary changesets in a derive_boundaries request.
+pub(super) enum BoundaryDerivationStatus {
+    Checked {
+        already_derived_count: usize,
+        not_derived_count: usize,
+    },
+    NotChecked {
+        reason: String,
+    },
+}
+
 pub(super) struct BackfillChildDisplayData {
     pub entry: LongRunningRequestEntry,
     pub params: BackfillChildParams,
     pub result: Option<BackfillChildResult>,
+    pub boundary_derivation_status: Option<BoundaryDerivationStatus>,
 }
 
 /// Counts of child requests grouped by their effective state. All four
