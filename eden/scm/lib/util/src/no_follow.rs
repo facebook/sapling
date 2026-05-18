@@ -119,7 +119,7 @@ fn reject_ntfs_ads_component(path: &Path, component: &OsStr) -> io::Result<()> {
 }
 
 #[cfg(any(unix, windows))]
-pub(crate) fn normalize_not_directory(err: io::Error) -> io::Error {
+pub fn normalize_not_directory(err: io::Error) -> io::Error {
     // Used by `symlink_metadata(path)`.
     // If `path` contains a directory that doesn't actually exist on disk, it surfaces as a
     // NotADirectory error. This error type is unstable and can't actually be matched on.
@@ -129,14 +129,18 @@ pub(crate) fn normalize_not_directory(err: io::Error) -> io::Error {
     const NOTDIR: i32 = 20; // ENOTDIR
     #[cfg(windows)]
     const NOTDIR: i32 = 267; // ERROR_DIRECTORY
+    #[cfg(windows)]
+    const PATH_NOT_FOUND: i32 = 3; // ERROR_PATH_NOT_FOUND
 
     match err.raw_os_error() {
         Some(errno) if errno == NOTDIR => io::Error::new(io::ErrorKind::NotFound, err),
+        #[cfg(windows)]
+        Some(errno) if errno == PATH_NOT_FOUND => io::Error::new(io::ErrorKind::NotFound, err),
         _ => err,
     }
 }
 
 #[cfg(not(any(unix, windows)))]
-pub(crate) fn normalize_not_directory(err: io::Error) -> io::Error {
+pub fn normalize_not_directory(err: io::Error) -> io::Error {
     err
 }

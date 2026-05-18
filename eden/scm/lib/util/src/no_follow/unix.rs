@@ -87,6 +87,7 @@ impl NoFollowRoot {
                 .open(root)
         })
         .map(|file| file.into())
+        .map_err(super::normalize_not_directory)
         .map_err(|err| path_error::build(err, path_error::OPEN_FILE, root))?;
         Ok(Self { root: fd })
     }
@@ -112,6 +113,7 @@ impl NoFollowRoot {
             )
             .map(|root| Self { root })
         })
+        .map_err(super::normalize_not_directory)
         .map_err(|err| path_error::build(err, path_error::OPEN_FILE, path.as_path()))
     }
 
@@ -180,6 +182,7 @@ impl NoFollowRoot {
             };
             open_file(parent.as_fd(), &leaf, flags, mode)
         })
+        .map_err(super::normalize_not_directory)
         .map_err(|err| path_error::build(err, path_error::OPEN_FILE, path.as_path()))
     }
 

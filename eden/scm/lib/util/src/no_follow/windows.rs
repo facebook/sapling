@@ -155,6 +155,7 @@ impl NoFollowRoot {
     /// Symlinks in `root` itself are allowed.
     pub fn new(root: &Path) -> io::Result<Self> {
         retry_io(|| Self::open_inner(root))
+            .map_err(super::normalize_not_directory)
             .map_err(|err| path_error::build(err, path_error::OPEN_FILE, root))
     }
 
@@ -169,6 +170,7 @@ impl NoFollowRoot {
     {
         let path = path.try_into().map_err(Into::into)?;
         retry_io(|| self.open_root_inner(path.as_path()))
+            .map_err(super::normalize_not_directory)
             .map_err(|err| path_error::build(err, path_error::OPEN_FILE, path.as_path()))
     }
 
@@ -239,6 +241,7 @@ impl NoFollowRoot {
             };
             open_file(parent.as_raw_handle() as HANDLE, leaf, flags, mode)
         })
+        .map_err(super::normalize_not_directory)
         .map_err(|err| path_error::build(err, path_error::OPEN_FILE, path.as_path()))
     }
 
