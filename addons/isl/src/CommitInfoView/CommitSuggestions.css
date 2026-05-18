@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-.suggested-reviewers {
+.commit-suggestions {
   display: flex;
   flex-direction: row;
   justify-content: space-between;
@@ -13,16 +13,16 @@
   overflow: hidden;
 }
 
-.suggested-reviewers > div:nth-child(2) {
+.commit-suggestions > div:nth-child(2) {
   flex-shrink: 2;
 }
 
-.suggested-reviewers .suggestion-header {
+.commit-suggestions .suggestion-header {
   font-size: 90%;
   font-variant: all-small-caps;
 }
 
-.suggested-reviewers .suggestions {
+.commit-suggestions .suggestions {
   display: flex;
   flex-direction: row;
   gap: var(--halfpad);
@@ -34,7 +34,7 @@
   height: var(--suggestion-height);
 }
 
-.suggested-reviewers .suggestion {
+.commit-suggestions .suggestion {
   display: block;
   flex: 1 0 var(--suggestion-height);
   height: var(--suggestion-height);
@@ -45,7 +45,7 @@
   cursor: pointer;
 }
 
-.suggested-reviewers .suggestion:hover {
+.commit-suggestions .suggestion:hover {
   background-color: var(--hover-darken);
 }
 

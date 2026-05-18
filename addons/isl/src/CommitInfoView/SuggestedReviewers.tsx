@@ -10,7 +10,6 @@ import type {ReactNode} from 'react';
 import {Icon} from 'isl-components/Icon';
 import {atom, useAtomValue} from 'jotai';
 import {loadable} from 'jotai/utils';
-import {tryJsonParse} from 'shared/utils';
 import serverAPI from '../ClientToServerAPI';
 import {tracker} from '../analytics';
 import {codeReviewProvider} from '../codeReview/CodeReviewInfo';
@@ -19,103 +18,14 @@ import {atomFamilyWeak} from '../jotaiUtils';
 import {uncommittedChangesWithPreviews} from '../previews';
 import {commitByHash} from '../serverAPIState';
 import {commitInfoViewCurrentCommits, commitMode} from './CommitInfoState';
+import {FrecencyStore} from './FrecencyStore';
 
-import './SuggestedReviewers.css';
+import './CommitSuggestions.css';
 
-const MAX_VISIBLE_RECENT_REVIEWERS = 3;
-const RECENT_REVIEWERS_STORAGE_KEY = 'ISL_RECENT_REVIEWERS';
-/**
- * Half-life for frecency decay in days. After this many days,
- * the recency multiplier is halved.
- */
-const FRECENCY_HALF_LIFE_DAYS = 14;
-/**
- * Maximum age in days before a reviewer is pruned from storage.
- * Reviewers not used within this period are removed to prevent
- * unbounded localStorage growth.
- */
-const MAX_REVIEWER_AGE_DAYS = 90;
-
-type ReviewerData = {count: number; lastUsed: number};
-
-/**
- * Frecency-based recent reviewers, persisted to localStorage.
- * Combines frequency (how often used) with recency (how recently used)
- * using exponential decay. More recent usage has higher weight.
- */
-class RecentReviewers {
-  private recent: Map<string, ReviewerData>;
-
-  constructor() {
-    try {
-      const stored = tryJsonParse(
-        localStorage.getItem(RECENT_REVIEWERS_STORAGE_KEY) ?? '[]',
-      ) as Array<[string, number | ReviewerData]> | null;
-      this.recent = new Map();
-      const maxAge = MAX_REVIEWER_AGE_DAYS * 24 * 60 * 60 * 1000;
-      const now = Date.now();
-      let needsPersist = false;
-      if (stored) {
-        for (const [key, value] of stored) {
-          if (typeof value === 'number') {
-            // Migrate from old format (count only) to new format
-            this.recent.set(key, {count: value, lastUsed: now});
-            needsPersist = true;
-          } else if (now - value.lastUsed <= maxAge) {
-            // Only keep reviewers used within MAX_REVIEWER_AGE_DAYS
-            this.recent.set(key, value);
-          } else {
-            needsPersist = true;
-          }
-        }
-      }
-      if (needsPersist) {
-        this.persist();
-      }
-    } catch {
-      this.recent = new Map();
-    }
-  }
-
-  private persist() {
-    try {
-      localStorage.setItem(
-        RECENT_REVIEWERS_STORAGE_KEY,
-        JSON.stringify([...this.recent.entries()]),
-      );
-    } catch {}
-  }
-
-  /**
-   * Calculate frecency score for a reviewer.
-   * Score = count * recencyMultiplier, where recencyMultiplier
-   * decays exponentially based on time since last use.
-   */
-  private getFrecencyScore(data: ReviewerData): number {
-    const daysSinceLastUse = (Date.now() - data.lastUsed) / (1000 * 60 * 60 * 24);
-    const recencyMultiplier = Math.pow(0.5, daysSinceLastUse / FRECENCY_HALF_LIFE_DAYS);
-    return data.count * recencyMultiplier;
-  }
-
-  public useReviewer(reviewer: string) {
-    const existing = this.recent.get(reviewer);
-    this.recent.set(reviewer, {
-      count: (existing?.count ?? 0) + 1,
-      lastUsed: Date.now(),
-    });
-    this.persist();
-  }
-
-  public getRecent(): Array<string> {
-    return [...this.recent.entries()]
-      .map(([name, data]) => ({name, score: this.getFrecencyScore(data)}))
-      .sort((a, b) => b.score - a.score)
-      .slice(0, MAX_VISIBLE_RECENT_REVIEWERS)
-      .map(({name}) => name);
-  }
-}
-
-export const recentReviewers = new RecentReviewers();
+export const recentReviewers = new FrecencyStore({
+  storageKey: 'ISL_RECENT_REVIEWERS',
+  maxVisible: 3,
+});
 
 /**
  * Since we use a selector to fetch suggestions, it will attempt to refetch
@@ -194,7 +104,7 @@ export function SuggestedReviewers({
   ).filter(s => !existingReviewers.includes(s));
 
   return (
-    <div className="suggested-reviewers" data-testid="suggested-reviewers">
+    <div className="commit-suggestions" data-testid="suggested-reviewers">
       {recent.length > 0 ? (
         <div data-testid="recent-reviewers-list">
           <div className="suggestion-header">

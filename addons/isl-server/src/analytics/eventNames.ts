@@ -72,6 +72,7 @@ export type TrackEventName =
   | 'GetCurrentStack'
   | 'GetFullFocusedBranch'
   | 'AcceptSuggestedReviewer'
+  | 'AcceptSuggestedTag'
   | 'GhStackSubmitOperation'
   | 'GotoOperation'
   | 'GoBackToOldISL'

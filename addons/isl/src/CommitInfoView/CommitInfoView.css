@@ -317,7 +317,7 @@
 }
 
 .commit-info-tokenized-field .token,
-.suggested-reviewers .token {
+.commit-suggestions .token {
   padding: 0;
   background-color: var(--tooltip-background);
   padding: 0 var(--pad);
