@@ -667,15 +667,6 @@ def getremotechanges(ui, repo, other, onlyheads=None, bundlename=None, force=Fal
 
     csets = localrepo.changelog.findmissing(common, rheads)
 
-    if bundlerepo:
-        cl = bundlerepo.changelog
-        reponodes = cl.bundlenodes
-        remotephases = other.listkeys("phases")
-
-        pullop = exchange.pulloperation(bundlerepo, other, heads=reponodes)
-        pullop.trmanager = bundletransactionmanager()
-        exchange._pullapplyphases(pullop, remotephases)
-
     def cleanup():
         if bundlerepo:
             bundlerepo.close()

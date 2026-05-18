@@ -1097,45 +1097,8 @@ def _pushchangeset(pushop):
 
 def _pushsyncphase(pushop):
     """synchronise phase information locally and remotely"""
-    # Skip phase sync if narrow-heads is on.
-    if pushop.repo.ui.configbool("experimental", "narrow-heads"):
-        return
-    cheads = pushop.commonheads
-    # even when we don't push, exchanging phase data is useful
-    remotephases = pushop.remote.listkeys("phases")
-    if not remotephases:  # old server or public only reply from non-publishing
-        _localphasemove(pushop, cheads)
-        # don't push any phase data as there is nothing to push
-    else:
-        ana = phases.analyzeremotephases(pushop.repo, cheads, remotephases)
-        pheads, droots = ana
-        ### Apply remote phase on local
-        if remotephases.get("publishing", False):
-            _localphasemove(pushop, cheads)
-        else:  # publish = False
-            _localphasemove(pushop, pheads)
-            _localphasemove(pushop, cheads, phases.draft)
-        ### Apply local phase on remote
-
-        if pushop.cgresult:
-            if "phases" in pushop.stepsdone:
-                # phases already pushed though bundle2
-                return
-            outdated = pushop.outdatedphases
-        else:
-            outdated = pushop.fallbackoutdatedphases
-
-        pushop.stepsdone.add("phases")
-
-        # filter heads already turned public by the push
-        outdated = [c for c in outdated if c.node() not in pheads]
-        # fallback to independent pushkey command
-        for newremotehead in outdated:
-            r = pushop.remote.pushkey(
-                "phases", newremotehead.hex(), str(phases.draft), str(phases.public)
-            )
-            if not r:
-                pushop.ui.warn(_("updating %s to public failed!\n") % newremotehead)
+    # narrow-heads is universally enabled; phase sync via listkeys is dead.
+    return
 
 
 def _localphasemove(pushop, nodes, phase=phases.public):
@@ -1749,14 +1712,8 @@ def _pullcommitgraph(pullop, version):
 
 
 def _pullphase(pullop):
-    # Skip phase exchange if narrow-heads is on.
-    if pullop.repo.ui.configbool("experimental", "narrow-heads"):
-        return
-    # Get remote phases data from remote
-    if "phases" in pullop.stepsdone:
-        return
-    remotephases = pullop.remote.listkeys("phases")
-    _pullapplyphases(pullop, remotephases)
+    # narrow-heads is universally enabled; phase sync via listkeys is dead.
+    return
 
 
 def _pullapplyphases(pullop, remotephases):
