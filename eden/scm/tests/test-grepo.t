@@ -179,3 +179,8 @@ Mainly used for ISL integration.
   	path=vendor/a/sub/c
   	ref=* (glob)
   	active=true
+
+(bad: blame doesn't work)
+  $ sl blame vendor/a
+  abort: vendor/a@000000000000: not found in manifest!
+  [255]
