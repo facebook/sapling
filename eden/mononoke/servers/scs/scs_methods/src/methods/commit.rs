@@ -1337,12 +1337,15 @@ impl SourceControlServiceImpl {
         let enforce_limit =
             justknobs::eval("scm/mononoke:scs_history_enforce_limit", None, client_id)
                 .map_err(scs_errors::internal_error)?;
-        let limit_max = if enforce_limit {
-            source_control::COMMIT_HISTORY_MAX_LIMIT
+        let limit: usize = if enforce_limit {
+            check_range_and_convert(
+                "limit",
+                params.limit,
+                0..=source_control::COMMIT_HISTORY_MAX_LIMIT,
+            )?
         } else {
-            i32::MAX
+            check_range_and_convert("limit", params.limit, 0..)?
         };
-        let limit: usize = check_range_and_convert("limit", params.limit, 0..=limit_max)?;
         let skip: usize = check_range_and_convert("skip", params.skip, 0..)?;
 
         // Time filter equal to zero might be mistaken by users for an unset, like None.

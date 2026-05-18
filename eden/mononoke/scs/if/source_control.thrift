@@ -1572,7 +1572,7 @@ struct CommitHistoryParams {
   11: optional string author;
 }
 
-const i32 COMMIT_LINEAR_HISTORY_MAX_LIMIT = 10000;
+const i32 COMMIT_LINEAR_HISTORY_MAX_LIMIT = 30000;
 
 /// Parameters for the `commit_linear_history` method.
 ///
