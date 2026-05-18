@@ -5,7 +5,12 @@ oncall("scm_server_treehugger")
 rust_library(
     name = "import_tools",
     srcs = glob(["src/**/*.rs"]),
-    test_deps = ["//eden/mononoke/common/mononoke_macros:mononoke_macros"],
+    test_deps = [
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/blobstore:memblob",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
+    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",

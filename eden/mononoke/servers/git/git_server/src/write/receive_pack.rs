@@ -181,7 +181,11 @@ async fn push(
 
         // Generate the GitObjectStore using the parsed objects
         let object_store = Arc::new(GitObjectStore::new(parsed_objects, ctx, blobstore.clone()));
-        // Instantiate the LFS configuration
+        // Instantiate the LFS configuration. `git_ctx.internal_lfs()` is the
+        // effective decision the CLI computed — it's true whenever the user
+        // either passed `--internal-lfs` or did not pass
+        // `--upstream-lfs-server` (so the default of "no LFS flags" is
+        // internal mode).
         let git_ctx = GitServerContext::borrow_from(state);
         let lfs = if request_context
             .repo
@@ -189,25 +193,34 @@ async fn push(
             .git_configs
             .git_lfs_interpret_pointers
         {
-            let max_lfs_tries =
-                justknobs::get_as::<u32>("scm/mononoke:git_server_lfs_max_retries", None)
-                    .unwrap_or(MAX_LFS_RETRIES);
-            let url_format = match git_ctx.upstream_lfs_url_format() {
-                crate::UpstreamLfsUrlFormat::Dewey => LfsServerUrlFormat::LegacyDewey,
-                crate::UpstreamLfsUrlFormat::MononokeGitLfs => LfsServerUrlFormat::MononokeGitLfs {
-                    repo_name: request_context.repo.repo_identity().name().to_string(),
-                },
-            };
-            GitImportLfs::new(
-                git_ctx
-                    .upstream_lfs_server()?
-                    .ok_or_else(|| anyhow::anyhow!("No upstream LFS server specified"))?,
-                url_format,
-                false,         // allow_not_found
-                max_lfs_tries, // max attempts
-                Some(50),      // conn_limit
-                git_ctx.tls_args()?,
-            )?
+            if git_ctx.internal_lfs() {
+                GitImportLfs::new_internal(
+                    request_context.repo.repo_blobstore_arc().boxed(),
+                    false, // allow_not_found
+                )
+            } else {
+                let max_lfs_tries =
+                    justknobs::get_as::<u32>("scm/mononoke:git_server_lfs_max_retries", None)
+                        .unwrap_or(MAX_LFS_RETRIES);
+                let url_format = match git_ctx.upstream_lfs_url_format() {
+                    crate::UpstreamLfsUrlFormat::Dewey => LfsServerUrlFormat::LegacyDewey,
+                    crate::UpstreamLfsUrlFormat::MononokeGitLfs => {
+                        LfsServerUrlFormat::MononokeGitLfs {
+                            repo_name: request_context.repo.repo_identity().name().to_string(),
+                        }
+                    }
+                };
+                GitImportLfs::new(
+                    git_ctx
+                        .upstream_lfs_server()?
+                        .ok_or_else(|| anyhow::anyhow!("No upstream LFS server specified"))?,
+                    url_format,
+                    false,         // allow_not_found
+                    max_lfs_tries, // max attempts
+                    Some(50),      // conn_limit
+                    git_ctx.tls_args()?,
+                )?
+            }
         } else {
             GitImportLfs::new_disabled()
         };

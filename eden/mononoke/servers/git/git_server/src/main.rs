@@ -179,14 +179,24 @@ struct GitServerArgs {
     /// Whether or not to use test-friendly logging
     #[clap(long)]
     test_friendly_logging: bool,
-    /// Lfs server url to use to fetch lfs files from
-    #[clap(long)]
+    /// LFS server URL to fetch LFS files from over HTTP. When unset, the git
+    /// server falls back to internal mode (resolves pointers from the local
+    /// Mononoke filestore by SHA256 alias). Mutually exclusive with
+    /// `--internal-lfs`.
+    #[clap(long, conflicts_with = "internal_lfs")]
     upstream_lfs_server: Option<String>,
     /// URL pattern that the upstream LFS server uses to serve raw objects by SHA256.
     /// Defaults to the Dewey-style `GET {server}/{sha256}`. Use `mononoke-git-lfs` for
     /// the `GET {server}/{repo}/download_sha256/{sha256}` shape served by Mononoke LFS.
     #[clap(long, value_enum, default_value_t = UpstreamLfsUrlFormat::Dewey)]
     upstream_lfs_url_format: UpstreamLfsUrlFormat,
+    /// Explicitly request internal mode (resolve LFS pointers from the local
+    /// Mononoke filestore by SHA256 alias). Internal mode is also the default
+    /// when `--upstream-lfs-server` is not set; this flag is mainly useful for
+    /// documentation or to force a clap error if `--upstream-lfs-server` is
+    /// also passed by mistake. Mutually exclusive with `--upstream-lfs-server`.
+    #[clap(long, default_value_t = false)]
+    internal_lfs: bool,
     /// How many times to retry fetching LFS files from the server
     /// before deciding that the file is missing.
     #[clap(long, default_value_t = 5)]
@@ -379,12 +389,19 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             // We use the listen_host rather than the ip of listener.local_addr()
             // because the certs user passed will be referencing listen_host
             let bound_addr = format!("{}:{}", listen_host, listener.local_addr()?.port());
+            // `--internal-lfs` defaults to true whenever `--upstream-lfs-server`
+            // is unset, so passing no LFS flags at all behaves like
+            // `--internal-lfs`. (When the user passes `--internal-lfs`
+            // explicitly, args.internal_lfs is already true; clap's
+            // `conflicts_with` keeps both from being set at once.)
+            let internal_lfs = args.internal_lfs || args.upstream_lfs_server.is_none();
             let git_server_context = GitServerContext::new(
                 fb,
                 repos,
                 enforce_authorization,
                 args.upstream_lfs_server,
                 args.upstream_lfs_url_format,
+                internal_lfs,
                 tls_args,
                 acl_provider.clone(),
                 args.multi_repo_land_service_address,

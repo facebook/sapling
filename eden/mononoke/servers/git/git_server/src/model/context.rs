@@ -74,10 +74,18 @@ impl RepositoryRequestContext {
 pub struct GitServerContextInner {
     repos: GitRepos,
     enforce_auth: bool,
-    // Upstream LFS server to fetch missing LFS objects from
+    // Upstream LFS server to fetch missing LFS objects from. Used only when
+    // `internal_lfs` is false.
     upstream_lfs_server: Option<String>,
     // URL pattern used to construct per-object fetch URLs against the upstream LFS server
     upstream_lfs_url_format: UpstreamLfsUrlFormat,
+    // Whether to resolve LFS pointers from the local Mononoke filestore (by
+    // SHA256 alias) instead of fetching them over HTTP from the upstream LFS
+    // server. The caller is responsible for the precedence: when set true,
+    // the upstream URL is ignored. The CLI defaults this to `true` whenever
+    // `--upstream-lfs-server` is not provided, so a git_server with no LFS
+    // flags at all behaves as if `--internal-lfs` was passed.
+    internal_lfs: bool,
     // Used for communicating with upstream LFS server
     tls_args: Option<TLSArgs>,
     // ACL provider for checking group membership
@@ -92,6 +100,7 @@ impl GitServerContextInner {
         enforce_auth: bool,
         upstream_lfs_server: Option<String>,
         upstream_lfs_url_format: UpstreamLfsUrlFormat,
+        internal_lfs: bool,
         tls_args: Option<TLSArgs>,
         acl_provider: Arc<dyn AclProvider>,
         multi_repo_land_service_address: Option<String>,
@@ -101,6 +110,7 @@ impl GitServerContextInner {
             enforce_auth,
             upstream_lfs_server,
             upstream_lfs_url_format,
+            internal_lfs,
             tls_args,
             acl_provider,
             multi_repo_land_service_address,
@@ -121,6 +131,7 @@ impl GitServerContext {
         enforce_auth: bool,
         upstream_lfs_server: Option<String>,
         upstream_lfs_url_format: UpstreamLfsUrlFormat,
+        internal_lfs: bool,
         tls_args: Option<TLSArgs>,
         acl_provider: Arc<dyn AclProvider>,
         multi_repo_land_service_address: Option<String>,
@@ -130,6 +141,7 @@ impl GitServerContext {
             enforce_auth,
             upstream_lfs_server,
             upstream_lfs_url_format,
+            internal_lfs,
             tls_args,
             acl_provider,
             multi_repo_land_service_address,
@@ -272,6 +284,13 @@ impl GitServerContext {
             .read()
             .expect("poisoned lock in git server context")
             .upstream_lfs_url_format
+    }
+
+    pub fn internal_lfs(&self) -> bool {
+        self.inner
+            .read()
+            .expect("poisoned lock in git server context")
+            .internal_lfs
     }
 
     pub fn tls_args(&self) -> Result<Option<TLSArgs>> {
