@@ -797,6 +797,13 @@ def origpath(ui, repo, filepath):
     if not origvfs.isdir(origbackupdir) or origvfs.islink(origbackupdir):
         ui.note(_("creating directory: %s\n") % origvfs.join(origbackupdir))
 
+        # The configured backup root itself may be a file or symlink. Handle
+        # that here instead of requiring the VFS to support a non-directory root.
+        origbackuproot = origvfs.join("")
+        if os.path.isfile(origbackuproot) or os.path.islink(origbackuproot):
+            ui.note(_("removing conflicting file: %s\n") % origbackuproot)
+            util.unlink(origbackuproot)
+
         # Remove any files that conflict with the backup file's path
         for f in reversed(list(util.finddirs(filepathfromroot))):
             if origvfs.isfileorlink(f):
