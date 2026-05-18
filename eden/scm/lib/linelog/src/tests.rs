@@ -119,6 +119,28 @@ fn test_random_cases() {
 }
 
 #[test]
+fn test_describe_instructions() {
+    let log = log_from_texts(&["a\n".into(), "b\n".into()]);
+    // The instructions are internal details. For example, an
+    // optimization pass might remove unconditional jumps.
+    // Shall the output change, just update the test here.
+    assert_eq!(
+        log.describe_instructions(),
+        vec![
+            "0: J 1",
+            "1: JL 1 3",
+            "2: J 4",
+            "3: END",
+            "4: JL 2 6",
+            "5: LINE 2 \"b\"",
+            "6: JGE 2 3",
+            "7: LINE 1 \"a\"",
+            "8: J 3",
+        ]
+    );
+}
+
+#[test]
 fn test_remap_revs() {
     let log = log_from_texts(&["b\n".into(), "b\nc\n".into(), "a\nb\nc\n".into()]);
     assert_eq!(log.checkout_text(1), "b\n");

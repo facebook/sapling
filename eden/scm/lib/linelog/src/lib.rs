@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+mod debug;
 mod linelog;
 mod maybe_mut;
 mod small_revs;
