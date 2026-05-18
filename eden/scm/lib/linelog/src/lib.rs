@@ -15,6 +15,7 @@ mod stacks;
 
 pub use crate::linelog::AbstractLineLog;
 pub use crate::linelog::EditFlags;
+pub use crate::nanodag::NanoDag;
 pub use crate::small_revs::SmallRevs;
 pub use crate::stacks::FlattenLine;
 
