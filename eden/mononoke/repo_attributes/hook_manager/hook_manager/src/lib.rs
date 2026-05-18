@@ -223,6 +223,7 @@ pub trait BookmarkHook: Send + Sync {
             .timed()
             .await;
         scuba.add("changeset_id", to.get_changeset_id().to_string());
+        scuba.add("author", to.author().to_string());
         scuba.add("type", "bookmark");
         log_execution_stats(ctx, scuba, stats, &mut result, log_only);
         result.map_err(|e| e.context(format!("while executing hook {}", hook_name)))
@@ -281,6 +282,7 @@ pub trait ChangesetHook: Send + Sync {
         // TODO: delete the hash column later
         scuba.add("hash", changeset.get_changeset_id().to_string());
         scuba.add("changeset_id", changeset.get_changeset_id().to_string());
+        scuba.add("author", changeset.author().to_string());
         scuba.add("type", "changeset");
         log_execution_stats(ctx, scuba, stats, &mut result, log_only);
         result.map_err(|e| e.context(format!("while executing hook {}", hook_name)))
