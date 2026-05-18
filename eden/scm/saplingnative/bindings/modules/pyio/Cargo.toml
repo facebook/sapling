@@ -12,3 +12,6 @@ pyconfigloader = { version = "0.1.0", path = "../pyconfigloader" }
 sapling-cpython-ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
 sapling-io = { version = "0.1.0", path = "../../../../lib/io" }
 sapling-termstyle = { version = "0.1.0", path = "../../../../lib/io/term/style" }
+
+[dev-dependencies]
+tempfile = "3.27.0"

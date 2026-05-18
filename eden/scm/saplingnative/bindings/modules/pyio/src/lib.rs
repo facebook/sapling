@@ -8,7 +8,6 @@
 #![allow(non_camel_case_types)]
 
 mod rust_io;
-
 use std::cell::Cell;
 use std::cell::RefCell;
 use std::io::Seek;
@@ -20,6 +19,8 @@ use cpython_ext::ResultPyErrExt;
 use io::IO as RustIO;
 use io::time_interval;
 use pyconfigloader::config as PyConfig;
+pub use rust_io::IOObject;
+pub use rust_io::wrap_file_like;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "io"].join(".");

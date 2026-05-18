@@ -6,26 +6,43 @@
  */
 
 use std::cell::Cell;
-use std::io;
-use std::io::BufRead;
-use std::io::Read;
+use std::fs::File;
+use std::io as std_io;
 use std::sync::RwLock;
 
 use cpython::*;
 use cpython_ext::PyNone;
 use cpython_ext::ResultPyErrExt;
 
+pub trait IOObject: Send + Sync {
+    fn as_read(&mut self) -> Option<&mut dyn ::io::Read> {
+        None
+    }
+
+    fn as_write(&mut self) -> Option<&mut dyn ::io::Write> {
+        None
+    }
+
+    fn as_file(&mut self) -> Option<&File> {
+        None
+    }
+
+    fn close(&mut self) -> std_io::Result<()> {
+        Ok(())
+    }
+}
+
 py_class!(pub class PyRustIO |py| {
-    data r: RwLock<Option<io::BufReader<Box<dyn ::io::Read + Send>>>>;
-    data w: RwLock<Option<Box<dyn ::io::Write + Send>>>;
+    data inner: RwLock<Option<Box<dyn IOObject>>>;
     data is_closed: Cell<bool>;
 
     /// Read at most `n` bytes from the input.
     /// If `n` is negative, read everything till the end.
     def read(&self, n: i64 = -1) -> PyResult<PyBytes> {
-        let r = self.r(py);
-        let mut io = py.allow_threads(|| r.write().unwrap());
-        let io = match io.as_mut() {
+        self.check_open(py)?;
+        let inner = self.inner(py);
+        let mut io = lock_write(py, inner)?;
+        let io = match io.as_mut().and_then(|io| io.as_read()) {
             Some(io) => io,
             None => return Err(not_readable(py)),
         };
@@ -43,21 +60,23 @@ py_class!(pub class PyRustIO |py| {
     }
 
     def readline(&self) -> PyResult<PyBytes> {
-        let r = self.r(py);
-        let mut io = py.allow_threads(|| r.write().unwrap());
-        let io = match io.as_mut() {
+        self.check_open(py)?;
+        let inner = self.inner(py);
+        let mut io = lock_write(py, inner)?;
+        let io = match io.as_mut().and_then(|io| io.as_read()) {
             Some(io) => io,
             None => return Err(not_readable(py)),
         };
         let mut buf = Vec::<u8>::new();
-        py.allow_threads(|| io.read_until(b'\n', &mut buf)).map_pyerr(py)?;
+        py.allow_threads(|| read_line(io, &mut buf)).map_pyerr(py)?;
         Ok(PyBytes::new(py, &buf))
     }
 
     def write(&self, bytes: PyBytes) -> PyResult<usize> {
-        let w = self.w(py);
-        let mut io = py.allow_threads(|| w.write().unwrap());
-        let io = match io.as_mut() {
+        self.check_open(py)?;
+        let inner = self.inner(py);
+        let mut io = lock_write(py, inner)?;
+        let io = match io.as_mut().and_then(|io| io.as_write()) {
             Some(io) => io,
             None => return Err(not_writable(py)),
         };
@@ -67,9 +86,10 @@ py_class!(pub class PyRustIO |py| {
     }
 
     def flush(&self) -> PyResult<PyNone> {
-        let w = self.w(py);
-        let mut io = py.allow_threads(|| w.write().unwrap());
-        let io = match io.as_mut() {
+        self.check_open(py)?;
+        let inner = self.inner(py);
+        let mut io = lock_write(py, inner)?;
+        let io = match io.as_mut().and_then(|io| io.as_write()) {
             Some(io) => io,
             None => return Ok(PyNone),
         };
@@ -78,59 +98,54 @@ py_class!(pub class PyRustIO |py| {
     }
 
     def isatty(&self) -> PyResult<bool> {
-        let w = self.w(py);
-        let io = py.allow_threads(|| w.read().unwrap());
-        match io.as_ref() {
+        let inner = self.inner(py);
+        let mut io = lock_write(py, inner)?;
+        let Some(io) = io.as_mut() else {
+            return Ok(false);
+        };
+        if let Some(io) = io.as_write() {
+            return Ok(io.is_tty());
+        }
+        match io.as_read() {
             Some(io) => Ok(io.is_tty()),
-            None => {
-                let io = self.r(py).read().unwrap();
-                match io.as_ref() {
-                    Some(io) => Ok(io.get_ref().is_tty()),
-                    None => Ok(false),
-                }
-            }
+            None => Ok(false),
         }
     }
 
     def isstdin(&self) -> PyResult<bool> {
-        let r = self.r(py);
-        let io = py.allow_threads(|| r.read().unwrap());
-        match io.as_ref() {
-            Some(io) => Ok(io.get_ref().is_stdin()),
+        let inner = self.inner(py);
+        let mut io = lock_write(py, inner)?;
+        match io.as_mut().and_then(|io| io.as_read()) {
+            Some(io) => Ok(io.is_stdin()),
             None => Ok(false),
         }
     }
 
     def isstdout(&self) -> PyResult<bool> {
-        let w = self.w(py);
-        let io = py.allow_threads(|| w.read().unwrap());
-        match io.as_ref() {
+        let inner = self.inner(py);
+        let mut io = lock_write(py, inner)?;
+        match io.as_mut().and_then(|io| io.as_write()) {
             Some(io) => Ok(io.is_stdout()),
             None => Ok(false),
         }
     }
 
     def isstderr(&self) -> PyResult<bool> {
-        let w = self.w(py);
-        let io = py.allow_threads(|| w.read().unwrap());
-        match io.as_ref() {
+        let inner = self.inner(py);
+        let mut io = lock_write(py, inner)?;
+        match io.as_mut().and_then(|io| io.as_write()) {
             Some(io) => Ok(io.is_stderr()),
             None => Ok(false),
         }
     }
 
     def close(&self) -> PyResult<PyNone> {
-        let w = self.w(py);
-        let mut io = py.allow_threads(|| w.write().unwrap());
-        if let Some(inner_io) = io.as_mut() {
-            inner_io.flush().map_pyerr(py)?;
-            *io = Some(Box::new(ClosedIO));
-        };
-        let r = self.r(py);
-        let mut io = py.allow_threads(|| r.write().unwrap());
-        if io.is_some() {
-            *io = Some(io::BufReader::new(Box::new(ClosedIO)));
+        let inner = self.inner(py);
+        let mut io = lock_write(py, inner)?;
+        if let Some(io) = io.as_mut() {
+            py.allow_threads(|| io.close()).map_pyerr(py)?;
         }
+        io.take();
         self.is_closed(py).set(true);
         Ok(PyNone)
     }
@@ -141,9 +156,9 @@ py_class!(pub class PyRustIO |py| {
     }
 
     def readable(&self) -> PyResult<bool> {
-        let r = self.r(py);
-        let io = py.allow_threads(|| r.read().unwrap());
-        Ok(io.is_some())
+        let inner = self.inner(py);
+        let mut io = lock_write(py, inner)?;
+        Ok(io.as_mut().and_then(|io| io.as_read()).is_some())
     }
 
     def seekable(&self) -> PyResult<bool> {
@@ -151,9 +166,9 @@ py_class!(pub class PyRustIO |py| {
     }
 
     def writable(&self) -> PyResult<bool> {
-        let w = self.w(py);
-        let io = py.allow_threads(|| w.read().unwrap());
-        Ok(io.is_some())
+        let inner = self.inner(py);
+        let mut io = lock_write(py, inner)?;
+        Ok(io.as_mut().and_then(|io| io.as_write()).is_some())
     }
 
     def fileno(&self) -> PyResult<usize> {
@@ -170,6 +185,46 @@ py_class!(pub class PyRustIO |py| {
     }
 });
 
+impl PyRustIO {
+    fn check_open(&self, py: Python) -> PyResult<PyNone> {
+        if self.is_closed(py).get() {
+            Err(std_io::Error::new(
+                std_io::ErrorKind::NotConnected,
+                "stream was closed",
+            ))
+            .map_pyerr(py)
+        } else {
+            Ok(PyNone)
+        }
+    }
+}
+
+fn lock_write<'a>(
+    py: Python,
+    lock: &'a RwLock<Option<Box<dyn IOObject>>>,
+) -> PyResult<std::sync::RwLockWriteGuard<'a, Option<Box<dyn IOObject>>>> {
+    py.allow_threads(|| lock.write())
+        .map_err(|_| PyErr::new::<exc::RuntimeError, _>(py, "rust IO lock was poisoned"))
+}
+
+fn read_line(io: &mut dyn ::io::Read, buf: &mut Vec<u8>) -> std_io::Result<usize> {
+    // This reads one byte at a time from the Read trait. It is still efficient
+    // for IOObjects that return a buffered reader from as_read().
+    let mut read_bytes = 0;
+    let mut byte = [0u8; 1];
+    loop {
+        let count = io.read(&mut byte)?;
+        if count == 0 {
+            return Ok(read_bytes);
+        }
+        read_bytes += count;
+        buf.push(byte[0]);
+        if byte[0] == b'\n' {
+            return Ok(read_bytes);
+        }
+    }
+}
+
 fn not_readable(py: Python) -> PyErr {
     PyErr::new::<exc::IOError, _>(py, "stream is not readable")
 }
@@ -178,55 +233,272 @@ fn not_writable(py: Python) -> PyErr {
     PyErr::new::<exc::IOError, _>(py, "stream is not writable")
 }
 
-struct ClosedIO;
+struct ReadObject<R> {
+    inner: std_io::BufReader<R>,
+}
 
-impl io::Write for ClosedIO {
-    fn write(&mut self, _buf: &[u8]) -> io::Result<usize> {
-        Err(io::Error::new(
-            io::ErrorKind::NotConnected,
-            "stream was closed",
-        ))
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        Err(io::Error::new(
-            io::ErrorKind::NotConnected,
-            "stream was closed",
-        ))
+impl<R: ::io::Read + 'static> IOObject for ReadObject<R> {
+    fn as_read(&mut self) -> Option<&mut dyn ::io::Read> {
+        Some(&mut self.inner)
     }
 }
 
-impl io::Read for ClosedIO {
-    fn read(&mut self, _buf: &mut [u8]) -> io::Result<usize> {
-        Err(io::Error::new(
-            io::ErrorKind::NotConnected,
-            "stream was closed",
-        ))
+struct WriteObject<W> {
+    inner: W,
+}
+
+impl<W: ::io::Write + 'static> IOObject for WriteObject<W> {
+    fn as_write(&mut self) -> Option<&mut dyn ::io::Write> {
+        Some(&mut self.inner)
+    }
+
+    fn close(&mut self) -> std_io::Result<()> {
+        self.inner.flush()
     }
 }
 
-impl ::io::IsTty for ClosedIO {
+struct FileLikeObject<T> {
+    inner: std_io::BufReader<FileLikeInner<T>>,
+}
+
+impl<T> FileLikeObject<T> {
+    fn new(
+        mut inner: T,
+        file_fn: fn(&mut T) -> &mut File,
+        close_fn: fn(&mut T) -> std_io::Result<()>,
+    ) -> Self {
+        let is_tty = ::io::IsTty::is_tty(file_fn(&mut inner));
+        Self {
+            inner: std_io::BufReader::new(FileLikeInner {
+                inner,
+                file_fn,
+                close_fn,
+                is_tty,
+            }),
+        }
+    }
+
+    fn sync_position(&mut self) -> std_io::Result<()> {
+        if !self.inner.buffer().is_empty() {
+            std_io::Seek::seek(&mut self.inner, std_io::SeekFrom::Current(0))?;
+        }
+        Ok(())
+    }
+}
+
+impl<T> ::io::IsTty for FileLikeObject<T> {
     fn is_tty(&self) -> bool {
-        false
+        ::io::IsTty::is_tty(self.inner.get_ref())
     }
+}
+
+impl<T> std_io::Write for FileLikeObject<T> {
+    fn write(&mut self, buf: &[u8]) -> std_io::Result<usize> {
+        self.sync_position()?;
+        std_io::Write::write(self.inner.get_mut(), buf)
+    }
+
+    fn flush(&mut self) -> std_io::Result<()> {
+        self.sync_position()?;
+        std_io::Write::flush(self.inner.get_mut())
+    }
+}
+
+struct FileLikeInner<T> {
+    inner: T,
+    file_fn: fn(&mut T) -> &mut File,
+    close_fn: fn(&mut T) -> std_io::Result<()>,
+    is_tty: bool,
+}
+
+impl<T> FileLikeInner<T> {
+    fn file(&mut self) -> &mut File {
+        (self.file_fn)(&mut self.inner)
+    }
+
+    fn close(&mut self) -> std_io::Result<()> {
+        (self.close_fn)(&mut self.inner)
+    }
+}
+
+impl<T> ::io::IsTty for FileLikeInner<T> {
+    fn is_tty(&self) -> bool {
+        self.is_tty
+    }
+}
+
+impl<T> std_io::Read for FileLikeInner<T> {
+    fn read(&mut self, buf: &mut [u8]) -> std_io::Result<usize> {
+        std_io::Read::read(self.file(), buf)
+    }
+}
+
+impl<T> std_io::Write for FileLikeInner<T> {
+    fn write(&mut self, buf: &[u8]) -> std_io::Result<usize> {
+        std_io::Write::write(self.file(), buf)
+    }
+
+    fn flush(&mut self) -> std_io::Result<()> {
+        std_io::Write::flush(self.file())
+    }
+}
+
+impl<T> std_io::Seek for FileLikeInner<T> {
+    fn seek(&mut self, pos: std_io::SeekFrom) -> std_io::Result<u64> {
+        std_io::Seek::seek(self.file(), pos)
+    }
+}
+
+impl<T> IOObject for FileLikeObject<T>
+where
+    T: Send + Sync + 'static,
+{
+    fn as_read(&mut self) -> Option<&mut dyn ::io::Read> {
+        Some(&mut self.inner)
+    }
+
+    fn as_write(&mut self) -> Option<&mut dyn ::io::Write> {
+        Some(self)
+    }
+
+    fn as_file(&mut self) -> Option<&File> {
+        Some(self.inner.get_mut().file())
+    }
+
+    fn close(&mut self) -> std_io::Result<()> {
+        self.inner.get_mut().close()
+    }
+}
+
+pub(crate) fn wrap_io_object(py: Python, io: impl IOObject + 'static) -> PyResult<PyRustIO> {
+    PyRustIO::create_instance(py, RwLock::new(Some(Box::new(io))), Cell::new(false))
+}
+
+pub fn wrap_file_like<T>(
+    py: Python,
+    obj: T,
+    file_fn: fn(&mut T) -> &mut File,
+    close_fn: fn(&mut T) -> std_io::Result<()>,
+) -> PyResult<PyRustIO>
+where
+    T: Send + Sync + 'static,
+{
+    wrap_io_object(py, FileLikeObject::new(obj, file_fn, close_fn))
 }
 
 /// Wrap a Rust Write trait object into a Python object.
 pub(crate) fn wrap_rust_write(py: Python, w: impl ::io::Write + 'static) -> PyResult<PyRustIO> {
-    PyRustIO::create_instance(
-        py,
-        RwLock::new(None),
-        RwLock::new(Some(Box::new(w))),
-        Cell::new(false),
-    )
+    wrap_io_object(py, WriteObject { inner: w })
 }
 
 /// Wrap a Rust Read trait object into a Python object.
 pub(crate) fn wrap_rust_read(py: Python, r: impl ::io::Read + 'static) -> PyResult<PyRustIO> {
-    PyRustIO::create_instance(
+    wrap_io_object(
         py,
-        RwLock::new(Some(io::BufReader::new(Box::new(r)))),
-        RwLock::new(None),
-        Cell::new(false),
+        ReadObject {
+            inner: std_io::BufReader::new(r),
+        },
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+    use std::sync::atomic::AtomicUsize;
+    use std::sync::atomic::Ordering;
+
+    use super::*;
+
+    fn file_as_file(file: &mut File) -> &mut File {
+        file
+    }
+
+    fn close_file(file: &mut File) -> std_io::Result<()> {
+        std_io::Write::flush(file)
+    }
+
+    fn tempfile_with_content(content: &[u8]) -> File {
+        let mut file = tempfile::tempfile().expect("failed to create temporary file");
+        std_io::Write::write_all(&mut file, content).expect("failed to write test file");
+        std_io::Seek::seek(&mut file, std_io::SeekFrom::Start(0))
+            .expect("failed to rewind test file");
+        file
+    }
+
+    struct FailFirstClose {
+        close_count: Arc<AtomicUsize>,
+    }
+
+    impl IOObject for FailFirstClose {
+        fn close(&mut self) -> std_io::Result<()> {
+            match self.close_count.fetch_add(1, Ordering::Relaxed) {
+                0 => Err(std_io::Error::other("close failed")),
+                _ => Ok(()),
+            }
+        }
+    }
+
+    #[test]
+    fn close_error_keeps_inner_open_for_retry() {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+        let close_count = Arc::new(AtomicUsize::new(0));
+        let io = wrap_io_object(
+            py,
+            FailFirstClose {
+                close_count: close_count.clone(),
+            },
+        )
+        .expect("failed to create PyRustIO");
+
+        assert!(io.close(py).is_err());
+        assert_eq!(close_count.load(Ordering::Relaxed), 1);
+        assert!(!io.closed(py).expect("failed to read closed state"));
+
+        io.close(py).expect("second close should retry and succeed");
+        assert_eq!(close_count.load(Ordering::Relaxed), 2);
+        assert!(io.closed(py).expect("failed to read closed state"));
+    }
+
+    #[test]
+    fn file_like_readline_keeps_buffered_bytes() {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+        let file = tempfile_with_content(b"abc\ndef");
+        let io =
+            wrap_file_like(py, file, file_as_file, close_file).expect("failed to create PyRustIO");
+
+        let line = io.readline(py).expect("failed to read line");
+        assert_eq!(line.data(py), b"abc\n");
+
+        let rest = io.read(py, -1).expect("failed to read rest");
+        assert_eq!(rest.data(py), b"def");
+        io.close(py).expect("failed to close file");
+    }
+
+    #[test]
+    fn file_like_write_after_buffered_read_uses_logical_position() {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+        let file = tempfile_with_content(b"abc\ndef");
+        let mut check_file = file.try_clone().expect("failed to clone test file");
+        let io =
+            wrap_file_like(py, file, file_as_file, close_file).expect("failed to create PyRustIO");
+
+        let first = io.read(py, 1).expect("failed to read first byte");
+        assert_eq!(first.data(py), b"a");
+        assert_eq!(
+            io.write(py, PyBytes::new(py, b"Z"))
+                .expect("failed to write replacement byte"),
+            1
+        );
+        io.close(py).expect("failed to close file");
+
+        let mut contents = Vec::new();
+        std_io::Seek::seek(&mut check_file, std_io::SeekFrom::Start(0))
+            .expect("failed to rewind test file");
+        std_io::Read::read_to_end(&mut check_file, &mut contents)
+            .expect("failed to read test file");
+        assert_eq!(contents, b"aZc\ndef");
+    }
 }
