@@ -6,11 +6,14 @@
  */
 
 use std::fmt;
+use std::fmt::Write;
 use std::sync::Arc;
 
+use crate::SmallRevs;
 use crate::linelog::AbstractLineLog;
 use crate::linelog::Inst;
 use crate::linelog::Rev;
+use crate::nanodag::NanoDag;
 use crate::stacks::Frame;
 use crate::stacks::StackVisitor;
 
@@ -174,5 +177,137 @@ fn describe_inst<T: fmt::Display>(inst: &Inst<T>) -> String {
             format!("LINE {rev} {trimmed:?}")
         }
         Inst::END => "END".to_string(),
+    }
+}
+
+impl fmt::Display for NanoDag {
+    /// Output compact representation of the dag, like: `1-{2,3-4}-5`.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.len() == 0 {
+            return Ok(());
+        }
+
+        struct State {
+            children_vec: Vec<SmallRevs>,
+            postdom: Vec<SmallRevs>,
+            end: usize,
+        }
+
+        impl SmallRevs {
+            fn shift1(&self) -> Self {
+                self.iter().map(|r| r + 1).collect()
+            }
+        }
+
+        impl State {
+            /// Construct from `NanoDag`.
+            ///
+            /// Calculate post-dominators to decide when to use "}".
+            ///
+            /// Main logic (`walk`) requires a single "start" and a single
+            /// "end", insert a super "root" (rev end), the parent of
+            /// dag.roots(), and a super "head" (rev 0), the head of dag.heads()
+            /// to satisfy the need. Original dag revs are added by 1 to make
+            /// room for the super head.
+            fn from_nanodag(dag: &NanoDag) -> Self {
+                let end = dag.len() + 1;
+                let end_revs = SmallRevs::from(end);
+
+                let mut children_vec = Vec::with_capacity(end + 1);
+                children_vec.push(dag.roots(&dag.all()).shift1());
+                for rev in 0..dag.parents.len() {
+                    let revs = match dag.children(rev) {
+                        Some(revs) => revs.shift1(),
+                        None => end_revs.clone(),
+                    };
+                    children_vec.push(revs);
+                }
+                children_vec.push(SmallRevs::empty());
+                assert_eq!(children_vec.len(), end + 1);
+
+                // postdom[v] = {v} ∪ intersection(postdom[c] for c in children[v])
+                // postdom[end] = {end}
+                let mut postdom = Vec::new();
+                postdom.resize_with(end + 1, SmallRevs::empty);
+                postdom[end].insert(end);
+                for rev in (0..end).rev() {
+                    postdom[rev].insert(rev);
+                    let children = &children_vec[rev];
+                    let mut revs = SmallRevs::empty();
+                    for child in children.iter() {
+                        if revs.is_empty() {
+                            revs = postdom[child].clone()
+                        } else {
+                            revs.intersect_with(&postdom[child]);
+                        }
+                    }
+                    postdom[rev].union_with(&revs);
+                }
+
+                Self {
+                    children_vec,
+                    postdom,
+                    end,
+                }
+            }
+
+            /// immediate post-dominator for rev, min(postdom[rev] - {rev}).
+            /// useful to decide the end (where to put '}').
+            fn ipdom(&self, rev: Rev) -> Rev {
+                for p in self.postdom[rev].iter() {
+                    if p > rev {
+                        return p;
+                    }
+                }
+                // should be unreachable, but just in case...
+                self.end
+            }
+
+            /// Draw from start (inclusive) to end (exclusive).
+            /// Super head and root are skipped.
+            fn walk(&self, f: &mut fmt::Formatter, mut start: Rev, end: Rev) -> fmt::Result {
+                let mut prefix = "";
+                while start < end {
+                    if let Some(rev) = start.checked_sub(1) {
+                        write!(f, "{}{}", prefix, rev)?;
+                        prefix = "-";
+                    }
+                    let children = &self.children_vec[start];
+                    match children.len() {
+                        0 => unreachable!(),
+                        1 => {
+                            start = children.iter().next().unwrap();
+                            continue;
+                        }
+                        _ => {
+                            f.write_str(prefix)?;
+                            f.write_char('{')?;
+                            let end = self.ipdom(start);
+                            let mut sep = "";
+                            for child in children.iter() {
+                                f.write_str(sep)?;
+                                self.walk(f, child, end)?;
+                                sep = ",";
+                            }
+                            f.write_char('}')?;
+                            prefix = "-";
+                            start = end;
+                        }
+                    }
+                }
+                Ok(())
+            }
+        }
+
+        let state = State::from_nanodag(self);
+        state.walk(f, 0, state.end)
+    }
+}
+
+impl fmt::Debug for NanoDag {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("NanoDag(")?;
+        fmt::Display::fmt(&self, f)?;
+        f.write_char(')')
     }
 }

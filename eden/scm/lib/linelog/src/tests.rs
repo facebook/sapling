@@ -18,6 +18,8 @@ use crate::AbstractLineLog;
 use crate::EditFlags;
 use crate::LineLog;
 use crate::linelog::PerfStats;
+use crate::linelog::Rev;
+use crate::nanodag::NanoDag;
 
 #[test]
 fn test_empty() {
@@ -832,6 +834,48 @@ fn test_block_shift_overflow() {
         let dep = log.calculate_dep_map();
         assert!(dep.values().all(|v| v.iter().count() == 1));
     }
+}
+
+#[test]
+fn test_debug_nanodag() {
+    let d = |edges: &[(Rev, Rev)]| -> String {
+        let dag = NanoDag::from_edges(0, edges);
+        format!("{:?}", dag)
+    };
+    assert_eq!(d(&[]), "NanoDag()");
+    assert_eq!(d(&[(3, 3)]), "NanoDag({0,1,2,3})");
+    assert_eq!(d(&[(0, 1), (1, 2)]), "NanoDag(0-1-2)");
+    assert_eq!(d(&[(0, 1), (2, 2)]), "NanoDag({0-1,2})");
+    assert_eq!(d(&[(0, 2)]), "NanoDag({0-2,1})");
+    assert_eq!(d(&[(0, 1), (0, 2)]), "NanoDag(0-{1,2})");
+    assert_eq!(d(&[(0, 2), (1, 2)]), "NanoDag({0,1}-2)");
+
+    // strange at first, but actually makes sense...
+    assert_eq!(d(&[(0, 1), (1, 2), (0, 2)]), "NanoDag(0-{1,}-2)");
+
+    // cross merge, some revs are duplicated
+    assert_eq!(
+        d(&[(0, 2), (0, 3), (1, 2), (1, 3)]),
+        "NanoDag({0-{2,3},1-{2,3}})"
+    );
+    assert_eq!(
+        d(&[(0, 1), (0, 2), (2, 4), (1, 3), (3, 4)]),
+        "NanoDag(0-{1-3,2}-4)"
+    );
+    assert_eq!(
+        d(&[(0, 1), (1, 2), (2, 5), (2, 3), (3, 4)]),
+        "NanoDag(0-1-2-{3-4,5})",
+    );
+
+    // nested
+    assert_eq!(
+        d(&[(0, 1), (0, 2), (2, 3), (2, 4)]),
+        "NanoDag(0-{1,2-{3,4}})"
+    );
+    assert_eq!(
+        d(&[(0, 1), (0, 2), (2, 3), (2, 4), (3, 5), (4, 5), (1, 5)]),
+        "NanoDag(0-{1,2-{3,4}}-5)"
+    );
 }
 
 impl LineLog {
