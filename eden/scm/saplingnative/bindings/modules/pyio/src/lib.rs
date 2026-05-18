@@ -7,7 +7,10 @@
 
 #![allow(non_camel_case_types)]
 
+mod metadata;
 mod rust_io;
+mod vfs;
+
 use std::cell::Cell;
 use std::cell::RefCell;
 use std::io::Seek;
@@ -33,6 +36,10 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
         "shouldcolor",
         py_fn!(py, should_color(config: PyConfig)),
     )?;
+
+    m.add_class::<metadata::metadata>(py)?;
+    m.add_class::<vfs::vfs>(py)?;
+
     Ok(m)
 }
 

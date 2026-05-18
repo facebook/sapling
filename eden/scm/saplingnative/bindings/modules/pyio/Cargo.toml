@@ -7,11 +7,14 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1.0.102"
+blob = { version = "0.1.0", path = "../../../../lib/blob" }
 cpython = { version = "0.7.2", features = ["python3-sys"], default-features = false }
 pyconfigloader = { version = "0.1.0", path = "../pyconfigloader" }
 sapling-cpython-ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
 sapling-io = { version = "0.1.0", path = "../../../../lib/io" }
 sapling-termstyle = { version = "0.1.0", path = "../../../../lib/io/term/style" }
+sapling-types = { version = "0.1.0", path = "../../../../lib/types" }
+sapling-vfs = { version = "0.1.0", path = "../../../../lib/vfs" }
 
 [dev-dependencies]
 tempfile = "3.27.0"

@@ -11,9 +11,12 @@ rust_python_library(
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
+        "//eden/scm/lib/blob:blob",
         "//eden/scm/lib/cpython-ext:cpython-ext",
         "//eden/scm/lib/io:io",
         "//eden/scm/lib/io/term/style:termstyle",
+        "//eden/scm/lib/types:types",
+        "//eden/scm/lib/vfs:vfs",
         "//eden/scm/saplingnative/bindings/modules/pyconfigloader:pyconfigloader",
     ],
 )
