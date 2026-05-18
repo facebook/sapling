@@ -16,11 +16,13 @@ use bitflags::bitflags;
 use im::Vector as ImVec;
 
 use crate::maybe_mut::MaybeMut;
+use crate::nanodag::NanoDag;
 
 /// See https://sapling-scm.com/docs/internals/linelog for details.
 pub struct AbstractLineLog<T> {
     pub(crate) code: ImVec<Inst<T>>,
     pub(crate) max_rev: Rev,
+    pub(crate) dag: NanoDag,
 
     a_lines_cache: Option<(Rev, ImVec<LineInfo<T>>)>,
     perf_stats: Option<Arc<PerfStats>>,
@@ -40,6 +42,7 @@ impl<T> Clone for AbstractLineLog<T> {
         Self {
             code: self.code.clone(),
             max_rev: self.max_rev,
+            dag: self.dag.clone(),
             a_lines_cache: self.a_lines_cache.clone(),
             perf_stats: self.perf_stats.clone(),
         }
@@ -105,6 +108,7 @@ impl<T> Default for AbstractLineLog<T> {
                 v
             },
             max_rev: 0,
+            dag: Default::default(),
             a_lines_cache: None,
             perf_stats: None,
         }
@@ -122,6 +126,7 @@ impl<T> AbstractLineLog<T> {
         Self {
             code: self.code.clone(),
             max_rev: self.max_rev.clone(),
+            dag: self.dag.clone(),
             a_lines_cache: self.a_lines_cache.clone(),
             perf_stats: stats,
         }
@@ -531,6 +536,7 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
         Self {
             code,
             max_rev: self.max_rev.max(b_rev),
+            dag: self.dag,
             a_lines_cache: None,
             perf_stats: self.perf_stats,
         }
@@ -630,6 +636,7 @@ impl<T> AbstractLineLog<T> {
         Self {
             code,
             max_rev,
+            dag: self.dag,
             a_lines_cache: None,
             perf_stats: self.perf_stats,
         }
@@ -657,9 +664,15 @@ impl<T> AbstractLineLog<T> {
         Self {
             code,
             max_rev,
+            dag: self.dag,
             a_lines_cache: None,
             perf_stats: self.perf_stats,
         }
+    }
+
+    /// Access to the `nanodag`.
+    pub fn nanodag(&self) -> &NanoDag {
+        &self.dag
     }
 }
 
