@@ -8,6 +8,8 @@
 use std::collections::HashSet;
 use std::fmt;
 use std::sync::Arc;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
 
 use im::Vector as ImVec;
 
@@ -19,6 +21,16 @@ pub struct AbstractLineLog<T> {
     pub(crate) max_rev: Rev,
 
     a_lines_cache: Option<(Rev, ImVec<LineInfo<T>>)>,
+    perf_stats: Option<Arc<PerfStats>>,
+}
+
+/// Performance statistics. Useful in tests.
+#[derive(Default, Debug)]
+pub(crate) struct PerfStats {
+    /// How many times the a_lines_cache gets hit.
+    pub cache_hit: AtomicUsize,
+    /// How many times execute() is called.
+    pub execute: AtomicUsize,
 }
 
 impl<T> Clone for AbstractLineLog<T> {
@@ -27,6 +39,7 @@ impl<T> Clone for AbstractLineLog<T> {
             code: self.code.clone(),
             max_rev: self.max_rev,
             a_lines_cache: self.a_lines_cache.clone(),
+            perf_stats: self.perf_stats.clone(),
         }
     }
 }
@@ -91,6 +104,7 @@ impl<T> Default for AbstractLineLog<T> {
             },
             max_rev: 0,
             a_lines_cache: None,
+            perf_stats: None,
         }
     }
 }
@@ -99,6 +113,16 @@ impl<T> AbstractLineLog<T> {
     /// Get the maximum rev (inclusive).
     pub fn max_rev(&self) -> Rev {
         self.max_rev
+    }
+
+    /// Attach a `PerfStats` struct to analyse cache statistics.
+    pub(crate) fn with_perf_stats(&self, stats: Option<Arc<PerfStats>>) -> Self {
+        Self {
+            code: self.code.clone(),
+            max_rev: self.max_rev.clone(),
+            a_lines_cache: self.a_lines_cache.clone(),
+            perf_stats: stats,
+        }
     }
 }
 
@@ -128,6 +152,9 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
     pub fn checkout_lines(&self, rev: Rev) -> ImVec<LineInfo<T>> {
         if let Some((a_rev, cache)) = self.a_lines_cache.as_ref() {
             if *a_rev == rev {
+                if let Some(stats) = self.perf_stats.as_ref() {
+                    stats.cache_hit.fetch_add(1, Ordering::Release);
+                }
                 return cache.clone();
             }
         }
@@ -147,6 +174,19 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
         self.execute(start, end, Some(Box::new(is_present)))
     }
 
+    /// Prepare and update a_lines_cache for edit_chunk_internal
+    /// (editing from a_rev to b_rev).
+    /// - Prepare `a_lines` (checkout a_rev), reuse `self.a_lines_cache`
+    ///   if possible (e.g. a_rev matches).
+    /// - Call `func` (edit function) with the a_lines.
+    /// - `func` can edit `a_lines` with the intention that the updated
+    ///   `a_lines` becomes `b_lines` and the `(b_rev, b_lines)` can be
+    ///   put back to `self.a_lines_cache`.
+    /// - Update `self.a_lines_cache` accordingly, if possible.
+    ///
+    /// This makes sequential edits, like (a_rev=1, b_rev=2),
+    /// (a_rev=2, b_rev=2), (a_rev=2, b_rev=3), (a_rev=3, b_rev=4), ...
+    /// hit the cache.
     fn with_a_lines_cache(
         mut self,
         a_rev: Rev,
@@ -158,6 +198,9 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
         // Reuse or rebuild cache.
         let mut a_lines: ImVec<LineInfo<T>> = (match cache {
             Some((rev, a_lines)) if rev == a_rev || (rev == self.max_rev && a_rev > rev) => {
+                if let Some(stats) = self.perf_stats.as_ref() {
+                    stats.cache_hit.fetch_add(1, Ordering::Release);
+                }
                 Some(a_lines)
             }
             _ => None,
@@ -178,7 +221,7 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
         if can_update_cache {
             #[cfg(debug_assertions)]
             {
-                let fresh_lines = result.execute(b_rev, b_rev, None);
+                let fresh_lines = result.with_perf_stats(None).execute(b_rev, b_rev, None);
                 assert_eq!(fresh_lines, a_lines);
             }
             result.a_lines_cache = Some((b_rev, a_lines));
@@ -346,6 +389,7 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
             code,
             max_rev: self.max_rev.max(b_rev),
             a_lines_cache: None,
+            perf_stats: self.perf_stats,
         }
     }
 
@@ -356,6 +400,9 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
         end_rev: Rev,
         present: Option<Box<dyn Fn(Pc) -> bool>>,
     ) -> ImVec<LineInfo<T>> {
+        if let Some(stats) = self.perf_stats.as_ref() {
+            stats.execute.fetch_add(1, Ordering::Release);
+        }
         let mut lines = ImVec::<LineInfo<T>>::new();
         let mut pc = 0;
         // Each instructions should be executed at most once. There is no loop.
@@ -441,6 +488,7 @@ impl<T> AbstractLineLog<T> {
             code,
             max_rev,
             a_lines_cache: None,
+            perf_stats: self.perf_stats,
         }
     }
 
@@ -467,6 +515,7 @@ impl<T> AbstractLineLog<T> {
             code,
             max_rev,
             a_lines_cache: None,
+            perf_stats: self.perf_stats,
         }
     }
 }

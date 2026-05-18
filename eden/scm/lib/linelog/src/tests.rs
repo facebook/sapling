@@ -5,12 +5,16 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::sync::Arc;
+use std::sync::atomic::Ordering;
+
 use im::Vector as ImVec;
 use rand_chacha::ChaChaRng;
 use rand_core::Rng as _;
 use rand_core::SeedableRng as _;
 
 use crate::LineLog;
+use crate::linelog::PerfStats;
 
 #[test]
 fn test_empty() {
@@ -116,6 +120,39 @@ fn test_random_cases() {
             assert_eq!(log.checkout_text(b_rev + b_rev_offset), text);
         }
     }
+}
+
+#[test]
+fn test_a_lines_cache_effectiveness() {
+    let stats = Arc::new(PerfStats::default());
+    let log = LineLog::default().with_perf_stats(Some(stats.clone()));
+
+    let check = |label: &str, expected_hits: usize, expected_execs: usize| {
+        let hits = stats.cache_hit.load(Ordering::Acquire);
+        let execs = stats.execute.load(Ordering::Acquire);
+        assert_eq!((hits, execs), (expected_hits, expected_execs), "{label}");
+    };
+
+    // Cold start: a_rev=0, b_rev=1. No cache yet, requires execute.
+    let log = log.edit_chunk(0, 0, 0, 1, lines("a\nb\nc\n"));
+    check("after rev 1 insert", 0, 1);
+
+    // a_rev=1, b_rev=1 (edit within same rev). Cache has (1, ...) from
+    // above, so a_rev=1 hits.
+    let log = log.edit_chunk(1, 1, 1, 1, lines("x\n"));
+    check("after rev 1 edit same rev", 1, 1);
+
+    // a_rev=1, b_rev=2. Cache has (1, ...), a_rev=1 hits.
+    let log = log.edit_chunk(1, 0, 1, 2, vec![]);
+    check("after rev 2 delete", 2, 1);
+
+    // a_rev=2, b_rev=3. Cache has (2, ...), a_rev=2 hits.
+    let log = log.edit_chunk(2, 1, 1, 3, lines("d\n"));
+    check("after rev 3 insert", 3, 1);
+
+    // Verify the content is correct despite heavy caching, and checkout hits cache too.
+    assert_eq!(log.checkout_text(3), "x\nd\nb\nc\n");
+    check("after checkout", 4, 1);
 }
 
 #[test]
