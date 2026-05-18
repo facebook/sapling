@@ -473,7 +473,6 @@ mod tests {
 
     #[cfg(unix)]
     #[test]
-    #[ignore = "Depends on D104479395"]
     fn file_below_symlink_parent_is_deleted() -> Result<()> {
         let dir = tempfile::tempdir()?;
         std::fs::create_dir(dir.path().join("target"))?;

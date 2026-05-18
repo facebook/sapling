@@ -161,6 +161,9 @@ impl PathAuditor {
 
         let full_path = self.root.join(path.as_str());
 
+        // This filesystem check is advisory and may be stale by the time the
+        // caller performs the write/remove. The no-follow VFS operations are
+        // still the security boundary for preventing symlink traversal.
         // XXX: Maybe filter by specific errors?
         if let Ok(metadata) = symlink_metadata(full_path) {
             if metadata.file_type().is_symlink() {

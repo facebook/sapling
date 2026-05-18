@@ -16,6 +16,7 @@ use bitflags::bitflags;
 use manifest::FileType;
 use treestate::filestate::FileStateV2;
 use types::RepoPathBuf;
+use vfs::LiteMetadata;
 use vfs::VFS;
 
 #[derive(Debug)]
@@ -228,6 +229,32 @@ impl From<std::fs::Metadata> for Metadata {
             mtime,
             mode,
             size: m.len(),
+        }
+    }
+}
+
+impl From<LiteMetadata> for Metadata {
+    fn from(m: LiteMetadata) -> Self {
+        let mode = m.mode();
+        let mut flags = MetadataFlags::HAS_SIZE | MetadataFlags::HAS_MTIME;
+        let mtime = m.mtime().into();
+
+        if mode & S_IFMT == S_IFLNK {
+            flags |= MetadataFlags::IS_SYMLINK;
+        } else if mode & S_IFMT == S_IFREG {
+            flags |= MetadataFlags::IS_REGULAR;
+            if mode & 0o111 != 0 {
+                flags |= MetadataFlags::IS_EXEC;
+            }
+        } else if mode & S_IFMT == S_IFDIR {
+            flags |= MetadataFlags::IS_DIR;
+        }
+
+        Self {
+            flags,
+            mtime,
+            mode,
+            size: m.size(),
         }
     }
 }

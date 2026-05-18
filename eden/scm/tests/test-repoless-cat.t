@@ -147,7 +147,7 @@ Test we don't blow away existing directories:
   $ mkdir -p output/precious
   $ echo "precious content" > output/precious/file
   $ sl cat -R test:server -r $B --output output/precious dir/file
-  abort: can't clear conflicts after handling error "failed to open file `*precious`: *": cannot write to "*precious": conflicting directory exists at "*precious" (glob)
+  abort: can't clear conflicts after handling error "failed to write to file `precious`*": cannot write to "*precious": conflicting directory exists at "*precious" (glob)
   [255]
   $ cat output/precious/file
   precious content

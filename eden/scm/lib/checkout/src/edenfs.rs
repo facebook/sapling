@@ -549,7 +549,7 @@ fn is_edenfs_redirect_okay(wc: &WorkingCopy) -> anyhow::Result<Option<bool>> {
     }
 
     #[cfg(unix)]
-    let root_device_inode = vfs.metadata(RepoPath::empty())?.dev();
+    let root_device_inode = vfs.root().metadata()?.dev();
     for (path, kind) in redirections.into_iter() {
         let path_metadata = match vfs.metadata(RepoPath::from_str(path.as_str())?) {
             Ok(m) => m,

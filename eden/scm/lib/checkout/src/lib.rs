@@ -839,7 +839,7 @@ impl CheckoutProgress {
             let _ = (|| -> Result<()> {
                 let stat = self.vfs.metadata(path)?;
                 let time = stat
-                    .modified()?
+                    .mtime()
                     .duration_since(SystemTime::UNIX_EPOCH)?
                     .as_millis();
 
@@ -880,12 +880,9 @@ impl CheckoutProgress {
 
             if let Ok(stat) = self.vfs.metadata(path) {
                 let time_matches = stat
-                    .modified()
-                    .map(|t| {
-                        t.duration_since(SystemTime::UNIX_EPOCH)
-                            .map(|d| d.as_millis() == *time)
-                            .unwrap_or(false)
-                    })
+                    .mtime()
+                    .duration_since(SystemTime::UNIX_EPOCH)
+                    .map(|d| d.as_millis() == *time)
                     .unwrap_or(false);
                 if time_matches && &stat.len() == size {
                     // Everything matches - clear out action indicating we don't need to check out the file.
@@ -955,12 +952,9 @@ impl fmt::Display for CheckoutPlan {
 
 pub fn file_state(vfs: &VFS, path: &RepoPath) -> Result<FileStateV2> {
     let meta = vfs.metadata(path)?;
-    #[cfg(unix)]
-    let mode = std::os::unix::fs::PermissionsExt::mode(&meta.permissions());
-    #[cfg(windows)]
-    let mode = if meta.is_symlink() { 0o120644 } else { 0o644 };
+    let mode = meta.mode();
     let mtime = meta
-        .modified()?
+        .mtime()
         .duration_since(SystemTime::UNIX_EPOCH)?
         .as_secs();
     let mtime = truncate_u64("mtime", path, mtime);

@@ -11,6 +11,9 @@ mod vfs;
 
 pub use fsinfo::fstype;
 pub use util::lock::PathLock;
+pub use util::no_follow::AtomicReplaceFile;
+pub use util::no_follow::LiteMetadata;
+pub use util::no_follow::OpenFlags;
 
 pub use crate::async_vfs::AsyncVfsWriter;
 pub use crate::async_vfs::Work;

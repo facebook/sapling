@@ -506,11 +506,11 @@ Test update_distance logging:
   $ chmod 444 dir
   $ sl go tip
   abort: error writing files:
-   dir/file_1: can't clear conflicts after handling error "failed to open file `$TESTTMP/repo-unix-perm/dir/file_1`: Permission denied (os error 13)": failed to query metadata of symlink `$TESTTMP/repo-unix-perm/dir/file_1`: Permission denied (os error 13)
-   dir/file_10: can't clear conflicts after handling error "failed to open file `$TESTTMP/repo-unix-perm/dir/file_10`: Permission denied (os error 13)": failed to query metadata of symlink `$TESTTMP/repo-unix-perm/dir/file_10`: Permission denied (os error 13)
-   dir/file_2: can't clear conflicts after handling error "failed to open file `$TESTTMP/repo-unix-perm/dir/file_2`: Permission denied (os error 13)": failed to query metadata of symlink `$TESTTMP/repo-unix-perm/dir/file_2`: Permission denied (os error 13)
-   dir/file_3: can't clear conflicts after handling error "failed to open file `$TESTTMP/repo-unix-perm/dir/file_3`: Permission denied (os error 13)": failed to query metadata of symlink `$TESTTMP/repo-unix-perm/dir/file_3`: Permission denied (os error 13)
-   dir/file_4: can't clear conflicts after handling error "failed to open file `$TESTTMP/repo-unix-perm/dir/file_4`: Permission denied (os error 13)": failed to query metadata of symlink `$TESTTMP/repo-unix-perm/dir/file_4`: Permission denied (os error 13)
+   dir/file_1: can't clear conflicts after handling error "failed to write to file `dir/file_1`: Permission denied (os error 13)": Permission denied (os error 13)
+   dir/file_10: can't clear conflicts after handling error "failed to write to file `dir/file_10`: Permission denied (os error 13)": Permission denied (os error 13)
+   dir/file_2: can't clear conflicts after handling error "failed to write to file `dir/file_2`: Permission denied (os error 13)": Permission denied (os error 13)
+   dir/file_3: can't clear conflicts after handling error "failed to write to file `dir/file_3`: Permission denied (os error 13)": Permission denied (os error 13)
+   dir/file_4: can't clear conflicts after handling error "failed to write to file `dir/file_4`: Permission denied (os error 13)": Permission denied (os error 13)
    ...and 5 more
   [255]
 #endif

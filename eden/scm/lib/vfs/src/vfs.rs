@@ -6,36 +6,27 @@
  */
 
 use std::fs::Metadata;
-#[cfg(unix)]
-use std::fs::Permissions;
 use std::io;
 use std::io::ErrorKind;
-use std::io::Write;
-#[cfg(unix)]
-use std::os::unix::fs::PermissionsExt;
+use std::io::Read;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::sync::OnceLock;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::bail;
-use fs::File;
-use fs::OpenOptions;
-use fs::create_dir_all;
-use fs::remove_dir;
-use fs::remove_dir_all;
-#[cfg(unix)]
-use fs::set_permissions;
-use fs::symlink_metadata;
-use fs_err as fs;
 use fsinfo::FsType;
 use fsinfo::fstype;
 use minibytes::Bytes;
 use types::RepoPath;
-use util::path::remove_file;
+use types::RepoPathBuf;
+use util::no_follow::LiteMetadata;
+use util::no_follow::NoFollowRoot;
+use util::no_follow::OpenFlags;
 
 use crate::pathauditor::PathAuditor;
 
@@ -87,6 +78,9 @@ pub struct VFS {
 
 struct Inner {
     root: PathBuf,
+    // Lazily initialized to better support use-cases that vfs root isn't present during
+    // initialization.
+    no_follow: OnceLock<NoFollowRoot>,
     auditor: PathAuditor,
     supports_symlinks: AtomicBool,
     supports_executables: bool,
@@ -126,11 +120,13 @@ impl VFS {
         let supports_symlinks = AtomicBool::new(!cfg!(windows));
         let supports_executables = supports_executables(&fs_type);
         let case_sensitive = case_sensitive(&root, &fs_type)?;
+        let no_follow = OnceLock::new();
         let auditor = PathAuditor::new(&root, case_sensitive);
 
         Ok(Self {
             inner: Arc::new(Inner {
                 root,
+                no_follow,
                 auditor,
                 supports_symlinks,
                 supports_executables,
@@ -138,6 +134,15 @@ impl VFS {
                 overwrite_path_conflicts,
             }),
         })
+    }
+
+    fn no_follow(&self) -> Result<&NoFollowRoot> {
+        if let Some(no_follow) = self.inner.no_follow.get() {
+            return Ok(no_follow);
+        } else {
+            let root = NoFollowRoot::new(self.root())?;
+            Ok(self.inner.no_follow.get_or_init(|| root))
+        }
     }
 
     pub fn root(&self) -> &Path {
@@ -152,34 +157,33 @@ impl VFS {
         self.inner.root.join(path.as_str())
     }
 
-    pub fn metadata(&self, path: &RepoPath) -> Result<Metadata> {
+    pub fn metadata(&self, path: &RepoPath) -> Result<LiteMetadata> {
         tracing::trace!(?path, "fetching metadata");
 
-        self.join(path).symlink_metadata().map_err(|e| {
-            // If `path` contains a directory that doesn't actually exist on disk, it surfaces as a
-            // NotADirectory error. This error type is unstable and can't actually be matched on.
-            // See https://github.com/rust-lang/rust/issues/86442
-            // For now, let's convert it to a NotFound error, users of vfs probably want to
-            // treat it as such.
-            #[cfg(unix)]
-            const NOTDIR: i32 = 20; // ENOTDIR
-            #[cfg(windows)]
-            const NOTDIR: i32 = 267; // ERROR_DIRECTORY
-
-            match e.raw_os_error() {
-                Some(errno) if errno == NOTDIR => io::Error::from(ErrorKind::NotFound).into(),
-                _ => e.into(),
-            }
-        })
+        if !path.is_empty() {
+            self.inner.auditor.audit_components(path)?;
+        }
+        self.no_follow()?
+            .symlink_metadata((!path.is_empty()).then_some(path))
+            .map_err(Into::into)
     }
 
     pub fn exists(&self, path: &RepoPath) -> Result<bool> {
-        Ok(self.join(path).try_exists()?)
+        match self.metadata(path) {
+            Ok(_) => Ok(true),
+            Err(err)
+                if err
+                    .downcast_ref::<io::Error>()
+                    .is_some_and(|err| err.kind() == ErrorKind::NotFound) =>
+            {
+                Ok(false)
+            }
+            Err(err) => Err(err),
+        }
     }
 
     pub fn is_file(&self, path: &RepoPath) -> Result<bool> {
-        let filepath = self.inner.auditor.audit(path)?;
-        Ok(filepath.is_file())
+        Ok(self.metadata(path)?.is_file())
     }
 
     /// The file `path` can't be written to, attempt to fixup the directories and files so the file can
@@ -194,95 +198,91 @@ impl VFS {
         let clear_conflicts_enabled = self.inner.overwrite_path_conflicts;
 
         // Walk down our ancestors, removing the first regular file or symlink
-        // we find. We have the invariant that path_buf contains no symlinks
-        // since we remove the top most symlink we come across.
-        let mut path_buf = self.inner.root.clone();
+        // we find. This is currently best-effort and has an inherent
+        // stat/remove TOCTOU window: another process can replace the path after
+        // `symlink_metadata` returns. Parent traversal and removals go through
+        // NoFollowRoot, and callers retry the actual write/open through
+        // NoFollowRoot too, so a racy replacement symlink is rejected or removed
+        // as a leaf instead of being followed.
+        let mut prefix = RepoPathBuf::new();
         for part in repo_path.components() {
-            path_buf.push(part.as_str());
+            prefix.push(part);
+            let conflict_path = self.join(&prefix);
 
-            let metadata = match symlink_metadata(&path_buf) {
+            let metadata = match self.no_follow()?.symlink_metadata(Some(&prefix)) {
                 Ok(metadata) => metadata,
                 Err(err) if err.kind() == ErrorKind::NotFound => break,
                 Err(err) => return Err(err.into()),
             };
 
-            let file_type = metadata.file_type();
-            if file_type.is_file() || file_type.is_symlink() {
+            if metadata.is_file() || metadata.is_symlink() {
                 if !clear_conflicts_enabled {
-                    let conflict_type = if file_type.is_symlink() {
+                    let conflict_type = if metadata.is_symlink() {
                         ConflictType::Symlink
                     } else {
                         ConflictType::File
                     };
                     return Err(ClearConflictError {
                         target_path: full_path,
-                        conflict_path: path_buf,
+                        conflict_path,
                         conflict_type,
                     }
                     .into());
                 }
-                remove_file(&path_buf)?;
+                self.no_follow()?.remove_file(&prefix)?;
                 break;
             }
 
             // If the full destination is a directory, clear it out.
-            if file_type.is_dir() && path_buf == full_path {
+            if metadata.is_dir() && prefix.as_repo_path() == repo_path {
                 if !clear_conflicts_enabled {
                     return Err(ClearConflictError {
                         target_path: full_path,
-                        conflict_path: path_buf,
+                        conflict_path,
                         conflict_type: ConflictType::Directory,
                     }
                     .into());
                 }
-                remove_dir_all(&path_buf)?;
+                self.no_follow()?.remove_dir_all(&prefix).with_context(|| {
+                    format!("can't remove conflicting directory {:?}", conflict_path)
+                })?;
                 break;
             }
         }
 
-        let dir = full_path.parent().unwrap();
-        create_dir_all(dir)?;
-
         Ok(())
     }
 
-    fn write_mode(
-        &self,
-        filepath: &Path,
-        content: blob::Blob,
-        #[allow(unused_variables)] exec: bool,
-    ) -> Result<usize> {
-        let mut options = OpenOptions::new();
-        options.write(true).create(true).truncate(true);
+    fn write_mode(&self, path: &RepoPath, content: blob::Blob, exec: bool) -> Result<usize> {
+        let bytes = content.into_bytes();
+
+        #[cfg(windows)]
+        let _ = exec;
 
         #[cfg(unix)]
-        {
-            use fs_err::os::unix::fs::OpenOptionsExt;
-            options.custom_flags(libc::O_NOFOLLOW);
-
-            // This sets file mode if file is created during "open".
-            options.mode(Self::update_mode(util::file::apply_umask(0o666), exec));
-        }
-
-        let mut f = options.open(filepath)?;
+        let existing_mode = self
+            .no_follow()?
+            .symlink_metadata(Some(path))
+            .ok()
+            .filter(|metadata| metadata.is_file())
+            .map(|metadata| metadata.mode() & 0o7777);
 
         #[cfg(unix)]
-        {
-            let metadata = f.metadata()?;
-            let mut permissions = metadata.permissions();
-            let mode = Self::update_mode(permissions.mode(), exec);
-            if mode != permissions.mode() {
-                permissions.set_mode(mode);
-                f.set_permissions(permissions)?;
+        let create_mode = Self::update_mode(util::file::apply_umask(0o666), exec);
+        #[cfg(windows)]
+        let create_mode = 0o666;
+
+        self.no_follow()?.write_file(path, &bytes, create_mode)?;
+
+        #[cfg(unix)]
+        if let Some(existing_mode) = existing_mode {
+            let mode = Self::update_mode(existing_mode, exec);
+            if mode != existing_mode {
+                self.no_follow()?.set_permissions(path, mode)?;
             }
         }
 
-        let mut total = 0;
-        content.each_chunk(|chunk| {
-            total += chunk.len();
-            f.write_all(chunk)
-        })?;
-        Ok(total)
+        Ok(bytes.len())
     }
 
     #[cfg(unix)]
@@ -295,69 +295,73 @@ impl VFS {
     }
 
     #[cfg(windows)]
-    fn set_exec(&self, _: &Path, _: bool) -> Result<()> {
+    fn set_exec(&self, path: &RepoPath, _: bool) -> Result<()> {
+        self.no_follow()?.set_permissions(path, 0o666)?;
         return Ok(());
     }
 
     #[cfg(unix)]
-    fn set_exec(&self, filepath: &Path, flag: bool) -> Result<()> {
-        let mode = if flag { 0o755 } else { 0o644 };
-        let perms = Permissions::from_mode(mode);
-        set_permissions(filepath, perms)?;
+    fn set_exec(&self, path: &RepoPath, flag: bool) -> Result<()> {
+        let mode = self.no_follow()?.symlink_metadata(Some(path))?.mode() & 0o7777;
+        let mode = Self::update_mode(mode, flag);
+        self.no_follow()?.set_permissions(path, mode)?;
         Ok(())
     }
 
     /// On some OS/filesystems, symlinks aren't supported, we simply create a file where it's content
     /// is the symlink destination for these.
-    fn plain_symlink_file(link_name: &Path, link_dest: &Path) -> Result<()> {
+    fn plain_symlink_file(&self, link_name: &RepoPath, link_dest: &Path) -> Result<()> {
         let link_dest = match link_dest.to_str() {
             None => bail!("not a valid UTF-8 path: {:?}", link_dest),
             Some(s) => s,
         };
 
-        Ok(File::create(link_name)?.write_all(link_dest.as_bytes())?)
+        Ok(self
+            .no_follow()?
+            .write_file(link_name, link_dest.as_bytes(), 0o666)?)
     }
 
     /// Add a symlink `link_name` pointing to `link_dest`. On platforms that do not support symlinks,
     /// `link_name` will be a file containing the path to `link_dest`.
-    fn symlink(&self, link_name: &Path, link_dest: &Path) -> Result<()> {
+    fn symlink(&self, link_name: &RepoPath, link_dest: &Path) -> Result<()> {
         if self.supports_symlinks() && (cfg!(unix) || cfg!(windows)) {
             #[cfg(windows)]
             {
-                fs_err::os::windows::fs::symlink_file(
-                    util::path::replace_slash_with_backslash(link_dest).as_path(),
+                self.no_follow()?.write_symlink(
                     link_name,
-                )
-                .map_err(Into::into)
+                    util::path::replace_slash_with_backslash(link_dest).as_path(),
+                )?;
+                Ok(())
             }
             #[cfg(unix)]
             {
-                fs_err::os::unix::fs::symlink(link_dest, link_name).map_err(Into::into)
+                self.no_follow()?.write_symlink(link_name, link_dest)?;
+                Ok(())
             }
         } else {
-            Self::plain_symlink_file(link_name, link_dest)
+            self.plain_symlink_file(link_name, link_dest)
         }
     }
 
     /// Write a symlink file at `filepath`. The destination is represented by `content`.
-    fn write_symlink(&self, filepath: &Path, content: blob::Blob) -> Result<usize> {
+    fn write_symlink(&self, path: &RepoPath, content: blob::Blob) -> Result<usize> {
         // This is zero-copy assuming blob contains a Bytes.
         let content = content.to_bytes();
         let link_dest = Path::new(std::str::from_utf8(content.as_ref())?);
 
-        self.symlink(filepath, link_dest)?;
-        Ok(filepath.as_os_str().len())
+        self.symlink(path, link_dest)?;
+        Ok(self.join(path).as_os_str().len())
     }
 
     /// Overwrite the content of the file at `path` with `data`. The number of bytes written on
     /// disk will be returned.
     fn write_inner(&self, path: &RepoPath, data: blob::Blob, flags: UpdateFlag) -> Result<usize> {
-        let filepath = self.inner.auditor.audit(path)?;
+        self.inner.auditor.audit_components(path)?;
 
         match flags {
-            UpdateFlag::Regular => self.write_mode(&filepath, data, false),
-            UpdateFlag::Executable => self.write_mode(&filepath, data, true),
-            UpdateFlag::Symlink => self.write_symlink(&filepath, data),
+            UpdateFlag::Regular => self.write_mode(path, data, false),
+            UpdateFlag::Executable => self.write_mode(path, data, true),
+            UpdateFlag::Symlink => self.write_symlink(path, data),
         }
     }
 
@@ -382,9 +386,9 @@ impl VFS {
     }
 
     pub fn set_executable(&self, path: &RepoPath, flag: bool) -> Result<()> {
-        let filepath = self.inner.auditor.audit(path)?;
+        self.inner.auditor.audit_components(path)?;
 
-        self.set_exec(&filepath, flag)
+        self.set_exec(path, flag)
     }
 
     /// Remove the file at `path`.
@@ -393,17 +397,18 @@ impl VFS {
     ///
     /// The parent directories of this file will be removed recursively if they are empty.
     pub fn remove(&self, path: &RepoPath) -> Result<()> {
-        let mut filepath = self.inner.auditor.audit(path)?;
-        self.remove_keep_path(&filepath)?;
+        self.inner.auditor.audit_components(path)?;
+        self.remove_keep_path(path)?;
 
         // Mercurial doesn't track empty directories, remove them
         // recursively.
+        let mut parent = path.to_owned();
         loop {
-            if !filepath.pop() || filepath == self.inner.root {
+            if !parent.pop() || parent.is_empty() {
                 break;
             }
 
-            if remove_dir(&filepath).is_err() {
+            if self.no_follow()?.remove_dir(&parent).is_err() {
                 break;
             }
         }
@@ -421,8 +426,8 @@ impl VFS {
     ) -> Result<usize> {
         if !cfg!(unix) {
             // unix supports O_NOFOLLOW when opening. For Windows, just remove the file first.
-            let filepath = self.inner.auditor.audit(path)?;
-            self.remove_keep_path(&filepath)?;
+            self.inner.auditor.audit_components(path)?;
+            self.remove_keep_path(path)?;
         }
         self.write(path, data, flag)
     }
@@ -433,11 +438,14 @@ impl VFS {
     }
 
     // Reads file content and metadata
-    pub fn read_with_metadata(&self, path: &RepoPath) -> Result<(Bytes, Metadata)> {
-        let filepath = self.inner.auditor.audit(path)?;
+    pub fn read_with_metadata(&self, path: &RepoPath) -> Result<(Bytes, LiteMetadata)> {
+        self.inner.auditor.audit_components(path)?;
+        // This is not an atomic snapshot: the path can change between the
+        // metadata query and the content read. NoFollowRoot still prevents a
+        // racy symlink replacement from being followed during the read.
         let metadata = self.metadata(path)?;
         let content = if metadata.is_symlink() {
-            match std::fs::read_link(&filepath)?.to_str() {
+            match self.no_follow()?.read_link(path)?.to_str() {
                 Some(p) => {
                     let p = if cfg!(windows) {
                         p.replace('\\', "/")
@@ -446,26 +454,33 @@ impl VFS {
                     };
                     p.as_bytes().to_vec()
                 }
-                None => bail!("invalid path during vfs::read {:?}", filepath),
+                None => bail!("invalid path during vfs::read {:?}", self.join(path)),
             }
         } else {
-            std::fs::read(filepath)?
+            let mut file = self.no_follow()?.open_file(path, OpenFlags::READ, 0)?;
+            let mut content = Vec::new();
+            file.read_to_end(&mut content)?;
+            content
         };
         Ok((content.into(), metadata))
     }
 
     /// Removes file, but unlike Self::remove, does not delete empty directories.
-    fn remove_keep_path(&self, filepath: &PathBuf) -> Result<()> {
-        if let Ok(metadata) = symlink_metadata(filepath) {
-            let file_type = metadata.file_type();
-            if file_type.is_file() || file_type.is_symlink() {
-                let result = remove_file(filepath);
-                if let Err(e) = result {
-                    if e.kind() != ErrorKind::NotFound {
-                        return Err(e.into());
-                    }
-                }
-            }
+    fn remove_keep_path(&self, path: &RepoPath) -> Result<()> {
+        // The metadata check is only used to classify the current leaf. The
+        // leaf may race and change before removal; NoFollowRoot::remove_file
+        // still removes the final component as a leaf and does not follow it.
+        let metadata = match self
+            .no_follow()?
+            .symlink_metadata((!path.is_empty()).then_some(path))
+        {
+            Ok(metadata) => metadata,
+            Err(err) if err.kind() == ErrorKind::NotFound => return Ok(()),
+            Err(err) => return Err(err.into()),
+        };
+
+        if metadata.is_file() || metadata.is_symlink() {
+            self.no_follow()?.remove_file(path)?;
         }
 
         Ok(())
@@ -482,9 +497,12 @@ impl VFS {
                 let (contents, _) = self.read_with_metadata(&path)?;
                 let target = PathBuf::from(String::from_utf8(contents.into_vec())?);
                 let target = util::path::replace_slash_with_backslash(&target);
-                let path = self.join(path);
-                util::path::remove_file(&path).context("Unable to remove symlink")?;
-                util::path::symlink_dir(&target, &path)?;
+                self.no_follow()?
+                    .remove_file(path)
+                    .context("Unable to remove symlink")?;
+                self.no_follow()?
+                    .write_symlink(path, &target)
+                    .context("Unable to write directory symlink")?;
             }
         }
         Ok(())
@@ -578,6 +596,88 @@ mod unix_tests {
     }
 
     #[test]
+    fn test_write_removes_ancestor_symlink_without_following_it() {
+        let tmp = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        fs::write(outside.path().join("file"), b"outside").unwrap();
+        std::os::unix::fs::symlink(outside.path(), tmp.path().join("link")).unwrap();
+
+        let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
+        let path = RepoPath::from_str("link/file").unwrap();
+        vfs.write(path, Blob::from_static(b"inside"), UpdateFlag::Regular)
+            .unwrap();
+
+        assert_eq!(fs::read(outside.path().join("file")).unwrap(), b"outside");
+        assert_eq!(vfs.read(path).unwrap(), b"inside");
+        assert!(
+            fs::symlink_metadata(tmp.path().join("link"))
+                .unwrap()
+                .is_dir()
+        );
+    }
+
+    #[test]
+    fn test_read_rejects_ancestor_symlink() {
+        let tmp = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        fs::write(outside.path().join("file"), b"outside").unwrap();
+        std::os::unix::fs::symlink(outside.path(), tmp.path().join("link")).unwrap();
+
+        let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
+        let path = RepoPath::from_str("link/file").unwrap();
+        assert!(vfs.read(path).is_err());
+    }
+
+    #[test]
+    fn test_metadata_rejects_ancestor_symlink() {
+        let tmp = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        fs::write(outside.path().join("file"), b"outside").unwrap();
+        std::os::unix::fs::symlink(outside.path(), tmp.path().join("link")).unwrap();
+
+        let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
+        let path = RepoPath::from_str("link/file").unwrap();
+        assert!(vfs.metadata(path).is_err());
+    }
+
+    #[test]
+    fn test_exists_rejects_ancestor_symlink() {
+        let tmp = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        fs::write(outside.path().join("file"), b"outside").unwrap();
+        std::os::unix::fs::symlink(outside.path(), tmp.path().join("link")).unwrap();
+
+        let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
+        let path = RepoPath::from_str("link/file").unwrap();
+        assert!(vfs.exists(path).is_err());
+    }
+
+    #[test]
+    fn test_remove_rejects_ancestor_symlink() {
+        let tmp = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        fs::write(outside.path().join("file"), b"outside").unwrap();
+        std::os::unix::fs::symlink(outside.path(), tmp.path().join("link")).unwrap();
+
+        let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
+        let path = RepoPath::from_str("link/file").unwrap();
+        assert!(vfs.remove(path).is_err());
+        assert_eq!(fs::read(outside.path().join("file")).unwrap(), b"outside");
+    }
+
+    #[test]
+    fn test_set_executable_rejects_ancestor_symlink() {
+        let tmp = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        fs::write(outside.path().join("file"), b"outside").unwrap();
+        std::os::unix::fs::symlink(outside.path(), tmp.path().join("link")).unwrap();
+
+        let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
+        let path = RepoPath::from_str("link/file").unwrap();
+        assert!(vfs.set_executable(path, true).is_err());
+    }
+
+    #[test]
     fn test_symlink_read() {
         let tmp = tempfile::tempdir().unwrap();
         let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
@@ -603,6 +703,26 @@ mod unix_tests {
         buf.push("a");
         let metadata = fs::symlink_metadata(buf).unwrap();
         assert_eq!(0, metadata.permissions().mode() & 0o111)
+    }
+
+    #[test]
+    fn test_set_executable_preserves_read_permissions() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let tmp = tempfile::tempdir().unwrap();
+        let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
+        let path = RepoPath::from_str("a").unwrap();
+        vfs.write(path, Blob::from_static(b"abc"), UpdateFlag::Regular)
+            .unwrap();
+        fs::set_permissions(vfs.join(path), fs::Permissions::from_mode(0o640)).unwrap();
+
+        vfs.set_executable(path, true).unwrap();
+        let metadata = fs::symlink_metadata(vfs.join(path)).unwrap();
+        assert_eq!(0o750, metadata.permissions().mode() & 0o777);
+
+        vfs.set_executable(path, false).unwrap();
+        let metadata = fs::symlink_metadata(vfs.join(path)).unwrap();
+        assert_eq!(0o640, metadata.permissions().mode() & 0o777);
     }
 
     #[test]
