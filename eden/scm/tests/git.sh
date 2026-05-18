@@ -26,5 +26,8 @@ git config --global core.autocrlf false
 # Support long paths on Windows.
 git config --global core.longpaths true
 
+# Disable internal features that might affect commit hashes in test outputs
+git config --global commit.recordPredecessor false
+
 # Undo default_hgrc.py defaults we don't want.
 setconfig remotenames.selectivepulldefault=main,master
