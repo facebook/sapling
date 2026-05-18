@@ -58,7 +58,7 @@ class ExtutilTests(unittest.TestCase):
             util.spawndetached([os.devnull, "arg1", "arg2"])
             self.fail("expected spawndetached to fail with EACCES")
         except (OSError, IOError) as ex:
-            self.assertEqual(ex.errno, errno.EPERM)
+            self.assertEqual(ex.errno, errno.EACCES)
 
     def testflock(self):
         testtmp = os.environ["TESTTMP"]

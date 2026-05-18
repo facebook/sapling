@@ -281,7 +281,7 @@ Inaccessible source
   $ mkdir a
   $ chmod 000 a
   $ sl clone a b
-  abort: Permission denied (os error 13)
+  abort: Permission denied
   [255]
 
 Inaccessible destination

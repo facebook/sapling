@@ -13,6 +13,7 @@ pub mod convert;
 pub mod de;
 pub mod error;
 mod extract;
+mod io_error;
 mod iter;
 mod keepalive;
 mod none;

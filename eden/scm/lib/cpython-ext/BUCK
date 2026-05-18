@@ -25,5 +25,6 @@ rust_python_library(
         "fbsource//third-party/rust:tracing",
         "//eden/scm/lib/backtrace-ext:backtrace-ext",
         "//eden/scm/lib/types:types",
+        "//eden/scm/lib/util:util",
     ],
 )
