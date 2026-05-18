@@ -12,6 +12,7 @@ use std::sync::Arc;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 
+use bitflags::bitflags;
 use im::Vector as ImVec;
 
 use crate::maybe_mut::MaybeMut;
@@ -127,6 +128,18 @@ impl<T> AbstractLineLog<T> {
     }
 }
 
+bitflags! {
+    #[derive(Clone, Copy)]
+    pub struct EditFlags: u32 {
+    }
+}
+
+impl Default for EditFlags {
+    fn default() -> Self {
+        Self::empty()
+    }
+}
+
 impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
     /// Edit chunk. Replace lines from `a1` (inclusive) to `a2` (exclusive) in rev
     /// `a_rev` with `b_lines`. `b_lines` are considered introduced by `b_rev`.
@@ -143,6 +156,7 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
         a2: LineIdx,
         b_rev: Rev,
         b_lines: Vec<T>,
+        _flags: EditFlags,
     ) -> Self {
         let b_lines = b_lines.into_iter().map(Arc::new).collect::<VecDeque<_>>();
         self.with_a_lines_cache(a_rev, b_rev, |this: Self, maybe_mut| {

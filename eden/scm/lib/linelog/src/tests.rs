@@ -27,7 +27,7 @@ fn test_empty() {
 #[test]
 fn test_edit_single() {
     let log = LineLog::default();
-    let log = log.edit_chunk(0, 0, 0, 1, lines("c\nd\ne\n"));
+    let log = log.edit_chunk(0, 0, 0, 1, lines("c\nd\ne\n"), Default::default());
     assert_eq!(log.checkout_text(0), "");
     assert_eq!(log.checkout_text(1), "c\nd\ne\n");
     assert_eq!(log.show(1), ["1:c", "1:d", "1:e", "0:"]);
@@ -36,18 +36,18 @@ fn test_edit_single() {
 #[test]
 fn test_edit_rev0() {
     let log = LineLog::default();
-    let log = log.edit_chunk(0, 0, 0, 0, lines("c\n"));
+    let log = log.edit_chunk(0, 0, 0, 0, lines("c\n"), Default::default());
     assert_eq!(log.checkout_text(0), "c\n");
-    let log = log.edit_chunk(0, 1, 1, 1, lines("d\n"));
+    let log = log.edit_chunk(0, 1, 1, 1, lines("d\n"), Default::default());
     assert_eq!(log.checkout_text(0), "c\n");
     assert_eq!(log.checkout_text(1), "c\nd\n");
     assert_eq!(log.show(1), ["0:c", "1:d", "0:"]);
     // Edit an old version.
-    let log = log.edit_chunk(0, 0, 0, 0, lines("b\n"));
+    let log = log.edit_chunk(0, 0, 0, 0, lines("b\n"), Default::default());
     assert_eq!(log.checkout_text(1), "b\nc\nd\n");
     assert_eq!(log.show(1), ["0:b", "0:c", "1:d", "0:"]);
     // Try deletion.
-    let log = log.edit_chunk(1, 1, 3, 2, lines("k\n"));
+    let log = log.edit_chunk(1, 1, 3, 2, lines("k\n"), Default::default());
     assert_eq!(log.show_range(0, 2), ["0:b", "2:k", "-0:c", "-1:d", "-0:"]);
 }
 
@@ -109,6 +109,7 @@ fn test_random_cases() {
                 *a2,
                 *b_rev + b_rev_offset,
                 b_lines.clone(),
+                Default::default(),
             );
             line_count += *b2 - *b1;
             line_count -= *a2 - *a1;
@@ -134,20 +135,20 @@ fn test_a_lines_cache_effectiveness() {
     };
 
     // Cold start: a_rev=0, b_rev=1. No cache yet, requires execute.
-    let log = log.edit_chunk(0, 0, 0, 1, lines("a\nb\nc\n"));
+    let log = log.edit_chunk(0, 0, 0, 1, lines("a\nb\nc\n"), Default::default());
     check("after rev 1 insert", 0, 1);
 
     // a_rev=1, b_rev=1 (edit within same rev). Cache has (1, ...) from
     // above, so a_rev=1 hits.
-    let log = log.edit_chunk(1, 1, 1, 1, lines("x\n"));
+    let log = log.edit_chunk(1, 1, 1, 1, lines("x\n"), Default::default());
     check("after rev 1 edit same rev", 1, 1);
 
     // a_rev=1, b_rev=2. Cache has (1, ...), a_rev=1 hits.
-    let log = log.edit_chunk(1, 0, 1, 2, vec![]);
+    let log = log.edit_chunk(1, 0, 1, 2, vec![], Default::default());
     check("after rev 2 delete", 2, 1);
 
     // a_rev=2, b_rev=3. Cache has (2, ...), a_rev=2 hits.
-    let log = log.edit_chunk(2, 1, 1, 3, lines("d\n"));
+    let log = log.edit_chunk(2, 1, 1, 3, lines("d\n"), Default::default());
     check("after rev 3 insert", 3, 1);
 
     // Verify the content is correct despite heavy caching, and checkout hits cache too.
@@ -510,13 +511,13 @@ fn test_flatten() {
     // 3 revisions: rev1 "a b c", rev2 "b c d e", rev3 "a c d f".
     // Edits applied in reverse chunk order within each rev.
     let log = LineLog::default()
-        .edit_chunk(0, 0, 0, 1, lines("a\nb\nc\n"))
+        .edit_chunk(0, 0, 0, 1, lines("a\nb\nc\n"), Default::default())
         // rev 1 "a b c" -> rev 2 "b c d e": delete "a", insert "d e"
-        .edit_chunk(1, 3, 3, 2, lines("d\ne\n"))
-        .edit_chunk(1, 0, 1, 2, vec![])
+        .edit_chunk(1, 3, 3, 2, lines("d\ne\n"), Default::default())
+        .edit_chunk(1, 0, 1, 2, vec![], Default::default())
         // rev 2 "b c d e" -> rev 3 "a c d f": replace "e"->"f", replace "b"->"a"
-        .edit_chunk(2, 3, 4, 3, lines("f\n"))
-        .edit_chunk(2, 0, 1, 3, lines("a\n"));
+        .edit_chunk(2, 3, 4, 3, lines("f\n"), Default::default())
+        .edit_chunk(2, 0, 1, 3, lines("a\n"), Default::default());
 
     assert_eq!(log.checkout_text(1), "a\nb\nc\n");
     assert_eq!(log.checkout_text(2), "b\nc\nd\ne\n");
@@ -651,11 +652,18 @@ fn record_text(mut log: LineLog, text: &str, rev: Option<usize>) -> LineLog {
 
     let blocks = diff_lines(&a_text, &b_lines);
     for (a1, a2, b1, b2) in blocks.into_iter().rev() {
-        log = log.edit_chunk(a_rev, a1, a2, b_rev, b_lines[b1..b2].to_vec());
+        log = log.edit_chunk(
+            a_rev,
+            a1,
+            a2,
+            b_rev,
+            b_lines[b1..b2].to_vec(),
+            Default::default(),
+        );
     }
     if log.max_rev() < b_rev {
         let n = log.checkout_lines(a_rev).len();
-        log = log.edit_chunk(a_rev, n - 1, n - 1, b_rev, vec![]);
+        log = log.edit_chunk(a_rev, n - 1, n - 1, b_rev, vec![], Default::default());
     }
     log
 }

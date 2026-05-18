@@ -33,7 +33,7 @@ py_class!(class IntLineLog |py| {
     def edit_chunk(&self, a_rev: usize, a1: usize, a2: usize, b_rev: usize, b1: usize, b2: usize) -> PyResult<Self> {
         let inner = self.inner(py);
         let b_lines = (b1..b2).collect::<Vec<_>>();
-        let new_value = inner.clone().edit_chunk(a_rev, a1, a2, b_rev, b_lines);
+        let new_value = inner.clone().edit_chunk(a_rev, a1, a2, b_rev, b_lines, Default::default());
         Self::create_instance(py, new_value)
     }
 

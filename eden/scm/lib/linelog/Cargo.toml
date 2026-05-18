@@ -13,6 +13,7 @@ license = "MIT"
 name = "linelog"
 
 [dependencies]
+bitflags = { version = "2.11.1", features = ["serde", "std"], default-features = false }
 im = { version = "15.1", default-features = false }
 
 [dev-dependencies]

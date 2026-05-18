@@ -26,6 +26,7 @@ rust_library(
         "fbsource//third-party/rust:rand_core",
     ],
     deps = [
+        "fbsource//third-party/rust:bitflags",
         "fbsource//third-party/rust:im",
     ],
 )

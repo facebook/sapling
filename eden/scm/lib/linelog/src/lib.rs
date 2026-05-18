@@ -12,6 +12,7 @@ mod small_revs;
 mod stacks;
 
 pub use crate::linelog::AbstractLineLog;
+pub use crate::linelog::EditFlags;
 pub use crate::small_revs::SmallRevs;
 pub use crate::stacks::FlattenLine;
 
