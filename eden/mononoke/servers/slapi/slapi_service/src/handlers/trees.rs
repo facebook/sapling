@@ -496,9 +496,11 @@ impl SaplingRemoteApiHandler for CheckManifestPermissionHandler {
                             .map_err(|e| anyhow::anyhow!("Invalid manifest id: {}", e))?,
                     );
 
-                    let restriction_ctx =
-                        HgAugmentedTreeRestrictionContext::new(repo.clone(), hg_manifest_id.into())
-                            .await?;
+                    let restriction_ctx = HgAugmentedTreeRestrictionContext::new_check_exists(
+                        repo.clone(),
+                        hg_manifest_id.into(),
+                    )
+                    .await?;
                     let restriction_checks = restriction_ctx.restriction_check().await?;
                     let has_access = restriction_checks
                         .iter()

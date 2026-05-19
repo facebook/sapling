@@ -289,7 +289,7 @@ impl<R: MononokeRepo> HgAugmentedTreeRestrictionContext<R> {
     /// Create a new restriction context for the given manifest ID.
     ///
     /// Checks repo read access but does NOT enforce Path ACL checks.
-    pub async fn new(
+    pub async fn new_check_exists(
         repo_ctx: HgRepoContext<R>,
         manifest_id: HgAugmentedManifestId,
     ) -> Result<Self, MononokeError> {
@@ -600,7 +600,8 @@ mod tests {
         )
         .into();
 
-        let restriction_ctx = HgAugmentedTreeRestrictionContext::new(hg, dummy_manifest_id).await?;
+        let restriction_ctx =
+            HgAugmentedTreeRestrictionContext::new_check_exists(hg, dummy_manifest_id).await?;
         let result = restriction_ctx.restriction_check().await?;
         assert!(
             result.is_empty(),
@@ -634,7 +635,8 @@ mod tests {
         let hg = repo_ctx.hg();
 
         // Root manifest is unrestricted, so not in the ManifestIdStore
-        let restriction_ctx = HgAugmentedTreeRestrictionContext::new(hg, root_mfid).await?;
+        let restriction_ctx =
+            HgAugmentedTreeRestrictionContext::new_check_exists(hg, root_mfid).await?;
         let result = restriction_ctx.restriction_check().await?;
         assert!(
             result.is_empty(),
@@ -675,7 +677,8 @@ mod tests {
         let repo_ctx = RepoContext::new_test(ctx, Arc::new(repo)).await?;
         let hg = repo_ctx.hg();
 
-        let restriction_ctx = HgAugmentedTreeRestrictionContext::new(hg, target_mfid).await?;
+        let restriction_ctx =
+            HgAugmentedTreeRestrictionContext::new_check_exists(hg, target_mfid).await?;
         restriction_ctx
             .restriction_check()
             .await
@@ -713,7 +716,8 @@ mod tests {
         let repo_ctx = RepoContext::new_test(ctx, Arc::new(repo)).await?;
         let hg = repo_ctx.hg();
 
-        let restriction_ctx = HgAugmentedTreeRestrictionContext::new(hg, target_mfid).await?;
+        let restriction_ctx =
+            HgAugmentedTreeRestrictionContext::new_check_exists(hg, target_mfid).await?;
         restriction_ctx
             .restriction_check()
             .await
@@ -977,7 +981,8 @@ mod tests {
 
         // Query the shared manifest ID. The AclManifest metadata for both roots
         // is identical, so the check should return that shared ACL.
-        let restriction_ctx = HgAugmentedTreeRestrictionContext::new(hg, dir_a_mfid).await?;
+        let restriction_ctx =
+            HgAugmentedTreeRestrictionContext::new_check_exists(hg, dir_a_mfid).await?;
         let result = restriction_ctx.restriction_check().await?;
 
         let check = result.first().ok_or_else(|| {
