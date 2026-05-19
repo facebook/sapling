@@ -33,6 +33,7 @@ import {executeVSCodeCommand} from './commands';
 import {getCLICommand, PERSISTED_STORAGE_KEY_PREFIX, shouldOpenBeside} from './config';
 import {assignWebviewHtml, getWebviewOptions} from './htmlForWebview';
 import {locale, t} from './i18n';
+import {Internal} from './Internal';
 import {hasMultiDiffEditorSupport, openMultiDiffEditor} from './multiDiffEditor';
 import {extensionVersion} from './utils';
 
@@ -450,6 +451,17 @@ export function registerISLCommands(
         }
       }
     }),
+    Internal.basecampOnDidChangeFocusedEnvironment?.(
+      (env?: {folderPaths: ReadonlyArray<string>}) => {
+        if (env?.folderPaths?.[0]) {
+          postMessageToISLWebview({
+            type: 'changeActiveRepo',
+            cwd: env.folderPaths[0],
+            focusDotCommit: true,
+          });
+        }
+      },
+    ) ?? new vscode.Disposable(() => {}),
   );
 }
 
@@ -553,7 +565,11 @@ function populateAndSetISLWebview<W extends vscode.WebviewPanel | vscode.Webview
   });
   const updatedPlatform = {...platform, panelOrView} as VSCodeServerPlatform as ServerPlatform;
 
-  const initialCwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd();
+  const focusedEnv = Internal.basecampGetFocusedEnvironment?.();
+  const initialCwd =
+    focusedEnv?.folderPaths?.[0] ??
+    vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ??
+    process.cwd();
   mostRecentISLCwd = initialCwd;
 
   const disposeConnection = onClientConnection({

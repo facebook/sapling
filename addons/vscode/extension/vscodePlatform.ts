@@ -249,10 +249,22 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
         }
         case 'platform/subscribeToAvailableCwds': {
           const postAllAvailableCwds = async () => {
+            const focusedEnv = Internal.basecampGetFocusedEnvironment?.();
+            const focusedPaths = focusedEnv?.folderPaths;
+
+            // When a focused environment is set, only
+            // show workspace folders that belong to that environment.
+            const folders = (vscode.workspace.workspaceFolders ?? []).filter(folder => {
+              if (!focusedPaths || focusedPaths.length === 0) {
+                return true;
+              }
+              return (
+                focusedPaths.includes(folder.uri.fsPath) || focusedPaths.includes(folder.uri.path)
+              );
+            });
+
             const results = await Promise.allSettled(
-              (vscode.workspace.workspaceFolders ?? []).map(folder =>
-                Repository.getCwdInfo({...ctx, cwd: folder.uri.fsPath}),
-              ),
+              folders.map(folder => Repository.getCwdInfo({...ctx, cwd: folder.uri.fsPath})),
             );
             const options = results
               .filter((r): r is PromiseFulfilledResult<CwdInfo> => r.status === 'fulfilled')
@@ -265,7 +277,11 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
 
           postAllAvailableCwds();
           const dispose = vscode.workspace.onDidChangeWorkspaceFolders(postAllAvailableCwds);
-          onConnectionDispose(() => dispose.dispose());
+          const envDispose = Internal.basecampOnDidChangeFocusedEnvironment?.(postAllAvailableCwds);
+          onConnectionDispose(() => {
+            dispose.dispose();
+            envDispose?.dispose();
+          });
           break;
         }
         case 'platform/setVSCodeConfig': {
