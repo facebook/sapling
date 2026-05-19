@@ -92,6 +92,115 @@ fn open_root_rejects_symlink_components() -> io::Result<()> {
 }
 
 #[test]
+fn create_dir_creates_leaf_without_creating_parents() -> io::Result<()> {
+    let dir = tempdir()?;
+    let root = NoFollowRoot::new(dir.path())?;
+
+    root.create_dir(Path::new("dir"), Some(0o700))?;
+
+    assert!(dir.path().join("dir").is_dir());
+    #[cfg(unix)]
+    assert_eq!(
+        fs::symlink_metadata(dir.path().join("dir"))?.mode() & 0o777,
+        crate::file::apply_umask(0o700)
+    );
+    assert!(root.create_dir(Path::new("missing/child"), None).is_err());
+    assert!(!dir.path().join("missing").exists());
+    Ok(())
+}
+
+#[test]
+fn create_dir_rejects_existing_leaf() -> io::Result<()> {
+    let dir = tempdir()?;
+    fs::create_dir(dir.path().join("dir"))?;
+    fs::write(dir.path().join("file"), b"contents")?;
+    let root = NoFollowRoot::new(dir.path())?;
+
+    assert!(root.create_dir(Path::new("dir"), None).is_err());
+    assert!(root.create_dir(Path::new("file"), None).is_err());
+    assert!(dir.path().join("dir").is_dir());
+    assert_eq!(fs::read(dir.path().join("file"))?, b"contents".to_vec());
+    Ok(())
+}
+
+#[test]
+fn create_dir_rejects_symlink_leaf() -> io::Result<()> {
+    let dir = tempdir()?;
+    fs::create_dir(dir.path().join("target"))?;
+    if !create_dir_symlink(Path::new("target"), &dir.path().join("link"))? {
+        return Ok(());
+    }
+    let root = NoFollowRoot::new(dir.path())?;
+
+    assert!(root.create_dir(Path::new("link"), None).is_err());
+    assert!(fs::symlink_metadata(dir.path().join("link"))?.is_symlink());
+    assert!(dir.path().join("target").is_dir());
+    Ok(())
+}
+
+#[test]
+fn create_dir_all_creates_missing_directories() -> io::Result<()> {
+    let dir = tempdir()?;
+    let root = NoFollowRoot::new(dir.path())?;
+
+    root.create_dir_all(Path::new("a/b/c"), Some(0o700))?;
+    root.create_dir_all(Path::new("a/b/c"), Some(0o755))?;
+
+    assert!(dir.path().join("a/b/c").is_dir());
+    #[cfg(unix)]
+    assert_eq!(
+        fs::symlink_metadata(dir.path().join("a"))?.mode() & 0o777,
+        crate::file::apply_umask(0o700)
+    );
+    Ok(())
+}
+
+#[test]
+fn create_dir_all_rejects_existing_file_leaf() -> io::Result<()> {
+    let dir = tempdir()?;
+    fs::write(dir.path().join("file"), b"contents")?;
+    let root = NoFollowRoot::new(dir.path())?;
+
+    assert!(root.create_dir_all(Path::new("file"), None).is_err());
+    assert_eq!(fs::read(dir.path().join("file"))?, b"contents".to_vec());
+    Ok(())
+}
+
+#[test]
+fn create_dir_all_rejects_leaf_symlink_to_directory() -> io::Result<()> {
+    let dir = tempdir()?;
+    fs::create_dir(dir.path().join("target"))?;
+    if !create_dir_symlink(Path::new("target"), &dir.path().join("link"))? {
+        return Ok(());
+    }
+    let root = NoFollowRoot::new(dir.path())?;
+
+    assert!(root.create_dir_all(Path::new("link/child"), None).is_err());
+    assert!(fs::symlink_metadata(dir.path().join("link"))?.is_symlink());
+    assert!(!dir.path().join("target/child").exists());
+    Ok(())
+}
+
+#[test]
+fn create_dir_all_rejects_parent_symlink() -> io::Result<()> {
+    let dir = tempdir()?;
+    fs::create_dir(dir.path().join("real"))?;
+    fs::create_dir(dir.path().join("a"))?;
+    if !create_dir_symlink(Path::new("../real"), &dir.path().join("a/link"))? {
+        return Ok(());
+    }
+    let root = NoFollowRoot::new(dir.path())?;
+
+    assert!(
+        root.create_dir_all(Path::new("a/link/child"), None)
+            .is_err()
+    );
+    assert!(!dir.path().join("real/child").exists());
+    assert!(fs::symlink_metadata(dir.path().join("a/link"))?.is_symlink());
+    Ok(())
+}
+
+#[test]
 fn write_file_creates_parents_and_truncates_existing_file() -> io::Result<()> {
     let dir = tempdir()?;
     fs::write(dir.path().join("file"), b"old")?;

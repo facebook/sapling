@@ -232,6 +232,23 @@ impl VFS {
         })
     }
 
+    /// Create a directory at `path` without following symlinks.
+    pub fn create_dir(&self, path: &RepoPath, mode: Option<u32>) -> Result<()> {
+        self.inner.auditor.audit_components(path)?;
+        Ok(self.no_follow()?.create_dir(path, mode)?)
+    }
+
+    /// Create a directory and all missing parent directories at `path` without
+    /// following symlinks.
+    pub fn create_dir_all(&self, path: &RepoPath, mode: Option<u32>) -> Result<()> {
+        if path.is_empty() {
+            return Ok(());
+        }
+
+        self.inner.auditor.audit_components(path)?;
+        Ok(self.no_follow()?.create_dir_all(path, mode)?)
+    }
+
     pub fn metadata(&self, path: &RepoPath) -> Result<LiteMetadata> {
         tracing::trace!(?path, "fetching metadata");
 
@@ -888,6 +905,31 @@ mod unix_tests {
             err.downcast_ref::<io::Error>().map(|err| err.kind()),
             Some(ErrorKind::NotFound)
         );
+    }
+
+    #[test]
+    fn test_create_dir_all_creates_missing_directories() {
+        let tmp = tempfile::tempdir().unwrap();
+        let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
+        let path = RepoPath::from_str("a/b").unwrap();
+
+        vfs.create_dir_all(path, Some(0o700)).unwrap();
+        vfs.create_dir_all(path, Some(0o755)).unwrap();
+
+        assert!(tmp.path().join("a/b").is_dir());
+    }
+
+    #[test]
+    fn test_create_dir_all_rejects_ancestor_symlink() {
+        let tmp = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        fs::create_dir(tmp.path().join("a")).unwrap();
+        std::os::unix::fs::symlink(outside.path(), tmp.path().join("a/link")).unwrap();
+
+        let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
+        let path = RepoPath::from_str("a/link/child").unwrap();
+        assert!(vfs.create_dir_all(path, None).is_err());
+        assert!(!outside.path().join("child").exists());
     }
 
     #[test]

@@ -55,6 +55,24 @@ py_class!(pub class vfs |py| {
         Self::create_instance(py, inner)
     }
 
+    /// mkdir(path: str, mode: Optional[int] = None) -> None
+    /// Create a directory without following symlinks.
+    def mkdir(&self, path: &PyPath, mode: Option<u32> = None) -> PyResult<PyNone> {
+        let inner = self.inner(py).clone();
+        let path = path.to_repo_path_buf().map_pyerr(py)?;
+        py.allow_threads(move || inner.create_dir(path.as_repo_path(), mode)).map_pyerr(py)?;
+        Ok(PyNone)
+    }
+
+    /// makedirs(path: str, mode: Optional[int] = None) -> None
+    /// Create a directory and missing parents without following symlinks.
+    def makedirs(&self, path: &PyPath, mode: Option<u32> = None) -> PyResult<PyNone> {
+        let inner = self.inner(py).clone();
+        let path = path.to_repo_path_buf().map_pyerr(py)?;
+        py.allow_threads(move || inner.create_dir_all(path.as_repo_path(), mode)).map_pyerr(py)?;
+        Ok(PyNone)
+    }
+
     /// case_sensitive() -> bool
     /// Return whether the root filesystem is case-sensitive.
     def case_sensitive(&self) -> PyResult<bool> {

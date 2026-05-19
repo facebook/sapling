@@ -14,6 +14,7 @@ use std::path::PathBuf;
 use winapi::shared::winerror::ERROR_CANT_RESOLVE_FILENAME;
 
 pub(crate) const CREATE_FILE: &str = "failed to create file";
+pub(crate) const CREATE_DIR: &str = "failed to create directory";
 pub(crate) const OPEN_FILE: &str = "failed to open file";
 pub(crate) const READ_LINK: &str = "failed to read symbolic link";
 pub(crate) const REMOVE_DIR: &str = "failed to remove directory";

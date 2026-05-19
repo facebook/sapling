@@ -174,6 +174,52 @@ impl NoFollowRoot {
             .map_err(|err| path_error::build(err, path_error::OPEN_FILE, path.as_path()))
     }
 
+    /// Create a directory at `path`.
+    ///
+    /// `path` must be relative and must not contain `..`. Parent directories
+    /// must already exist. Parent components and the leaf must not be reparse
+    /// points. The `mode` argument is ignored on Windows.
+    pub fn create_dir<'a, P>(&self, path: P, mode: Option<u32>) -> io::Result<()>
+    where
+        P: TryInto<CheckedRelPath<'a>>,
+        P::Error: Into<io::Error>,
+    {
+        let path = path.try_into().map_err(Into::into)?;
+        retry_io(|| {
+            let (parent, leaf) = self.open_parent_dir(path.as_path())?;
+            create_dir(parent.as_raw_handle() as HANDLE, leaf, mode)
+        })
+        .map_err(super::normalize_not_directory)
+        .map_err(|err| path_error::build(err, path_error::CREATE_DIR, path.as_path()))
+    }
+
+    /// Create a directory and all missing parent directories at `path`.
+    ///
+    /// `path` must be relative and must not contain `..`. Existing path
+    /// components must be real directories, not reparse points. The `mode`
+    /// argument is ignored on Windows.
+    pub fn create_dir_all<'a, P>(&self, path: P, mode: Option<u32>) -> io::Result<()>
+    where
+        P: TryInto<CheckedRelPath<'a>>,
+        P::Error: Into<io::Error>,
+    {
+        let path = path.try_into().map_err(Into::into)?;
+        retry_io(|| {
+            path.as_path()
+                .iter()
+                .try_fold(
+                    ParentHandle::Borrowed(self.root.as_handle()),
+                    |dir, component| {
+                        open_or_create_dir(dir.as_raw_handle(), component, mode)
+                            .map(ParentHandle::Owned)
+                    },
+                )
+                .map(|_| ())
+        })
+        .map_err(super::normalize_not_directory)
+        .map_err(|err| path_error::build(err, path_error::CREATE_DIR, path.as_path()))
+    }
+
     /// Write a regular file at `path`, creating parent directories.
     ///
     /// `path` must be relative and must not contain `..`. If the leaf already
@@ -450,7 +496,7 @@ impl NoFollowRoot {
         let parent = parent_path.iter().try_fold(
             ParentHandle::Borrowed(self.root.as_handle()),
             |dir, component| {
-                open_or_create_dir(dir.as_raw_handle(), component).map(ParentHandle::Owned)
+                open_or_create_dir(dir.as_raw_handle(), component, None).map(ParentHandle::Owned)
             },
         )?;
         Ok((parent, leaf))
@@ -715,26 +761,34 @@ const fn no_follow_create_options(file_type_options: u32) -> u32 {
     file_type_options | FILE_OPEN_REPARSE_POINT
 }
 
-fn open_or_create_dir(dir: HANDLE, component: &OsStr) -> io::Result<OwnedHandle> {
+fn create_dir(dir: HANDLE, component: &OsStr, _mode: Option<u32>) -> io::Result<()> {
+    open_child(
+        dir,
+        component,
+        FILE_READ_ATTRIBUTES | SYNCHRONIZE,
+        FILE_CREATE,
+        no_follow_create_options(FILE_DIRECTORY_FILE),
+        FILE_ATTRIBUTE_DIRECTORY,
+    )
+    .and_then(|handle| reject_reparse_point(&handle))
+}
+
+fn open_or_create_dir(
+    dir: HANDLE,
+    component: &OsStr,
+    mode: Option<u32>,
+) -> io::Result<OwnedHandle> {
     match open_dir_no_follow(dir, component) {
         Ok(handle) => Ok(handle),
         Err(err) if err.kind() == io::ErrorKind::NotFound => {
-            let handle = match open_child(
-                dir,
-                component,
-                FILE_READ_ATTRIBUTES | SYNCHRONIZE,
-                FILE_CREATE,
-                no_follow_create_options(FILE_DIRECTORY_FILE),
-                FILE_ATTRIBUTE_DIRECTORY,
-            ) {
-                Ok(handle) => handle,
+            match create_dir(dir, component, mode) {
+                Ok(()) => {}
                 Err(err) if err.kind() == io::ErrorKind::AlreadyExists => {
                     return open_dir_no_follow(dir, component);
                 }
                 Err(err) => return Err(err),
-            };
-            reject_reparse_point(&handle)?;
-            Ok(handle)
+            }
+            open_dir_no_follow(dir, component)
         }
         Err(err) => Err(err),
     }

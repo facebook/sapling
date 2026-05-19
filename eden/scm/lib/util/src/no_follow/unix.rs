@@ -45,7 +45,7 @@ use super::OpenFlags;
 use crate::file::retry_io;
 use crate::path_error;
 
-const DEFAULT_DIR_MODE: libc::mode_t = 0o755;
+const DEFAULT_DIR_MODE: u32 = 0o755;
 #[cfg(target_os = "linux")]
 static OPENAT2_UNAVAILABLE: AtomicBool = AtomicBool::new(false);
 
@@ -115,6 +115,58 @@ impl NoFollowRoot {
         })
         .map_err(super::normalize_not_directory)
         .map_err(|err| path_error::build(err, path_error::OPEN_FILE, path.as_path()))
+    }
+
+    /// Create a directory at `path`.
+    ///
+    /// `path` must be relative and must not contain `..`. Parent directories
+    /// must already exist. Symlinks in parent components or at the leaf are
+    /// rejected instead of followed. `mode`, or `0o755` when omitted, applies
+    /// to the created directory and is subject to umask.
+    pub fn create_dir<'a, P>(&self, path: P, mode: Option<u32>) -> io::Result<()>
+    where
+        P: TryInto<CheckedRelPath<'a>>,
+        P::Error: Into<io::Error>,
+    {
+        let path = path.try_into().map_err(Into::into)?;
+        retry_io(|| {
+            let (parent, leaf) = self.open_parent_dir(path.as_path())?;
+            create_dir(parent.as_fd(), &leaf, mode)
+        })
+        .map_err(super::normalize_not_directory)
+        .map_err(|err| path_error::build(err, path_error::CREATE_DIR, path.as_path()))
+    }
+
+    /// Create a directory and all missing parent directories at `path`.
+    ///
+    /// `path` must be relative and must not contain `..`. Existing path
+    /// components must be real directories. Symlinks in parent components or at
+    /// the leaf are rejected instead of followed. `mode`, or `0o755` when
+    /// omitted, applies to newly created directories and is subject to umask.
+    pub fn create_dir_all<'a, P>(&self, path: P, mode: Option<u32>) -> io::Result<()>
+    where
+        P: TryInto<CheckedRelPath<'a>>,
+        P::Error: Into<io::Error>,
+    {
+        let path = path.try_into().map_err(Into::into)?;
+        retry_io(|| {
+            // Fast path for the common case where the full directory already exists.
+            let path_c = path_cstring(path.as_path())?;
+            match open_dir_no_follow_cstring(self.root.as_fd(), &path_c) {
+                Ok(_) => return Ok(()),
+                Err(err) if err.kind() == io::ErrorKind::NotFound => {}
+                Err(err) => return Err(err),
+            }
+
+            path.as_path()
+                .iter()
+                .try_fold(ParentFd::Borrowed(self.root.as_fd()), |dir, component| {
+                    open_or_create_dir(dir.as_fd(), component, mode).map(ParentFd::Owned)
+                })
+                .map(|_| ())
+        })
+        .map_err(super::normalize_not_directory)
+        .map_err(|err| path_error::build(err, path_error::CREATE_DIR, path.as_path()))
     }
 
     /// Write a regular file at `path`, creating parent directories.
@@ -338,7 +390,7 @@ impl NoFollowRoot {
         let parent = parent_path
             .iter()
             .try_fold(ParentFd::Borrowed(self.root.as_fd()), |dir, component| {
-                open_or_create_dir(dir.as_fd(), component).map(ParentFd::Owned)
+                open_or_create_dir(dir.as_fd(), component, None).map(ParentFd::Owned)
             })?;
         Ok((parent, leaf))
     }
@@ -459,12 +511,20 @@ fn split_parent_leaf(path: &Path) -> io::Result<(&Path, CString)> {
     Ok((parent, leaf_cstring(leaf)?))
 }
 
-fn open_or_create_dir(dir: BorrowedFd<'_>, component: &OsStr) -> io::Result<OwnedFd> {
+fn create_dir(dir: BorrowedFd<'_>, leaf: &CString, mode: Option<u32>) -> io::Result<()> {
+    mkdirat(dir, leaf, mode.unwrap_or(DEFAULT_DIR_MODE) as libc::mode_t)
+}
+
+fn open_or_create_dir(
+    dir: BorrowedFd<'_>,
+    component: &OsStr,
+    mode: Option<u32>,
+) -> io::Result<OwnedFd> {
     let name = component_cstring(component)?;
     match open_dir_no_follow_cstring(dir, &name) {
         Ok(fd) => Ok(fd),
         Err(err) if err.kind() == io::ErrorKind::NotFound => {
-            match mkdirat(dir, &name, DEFAULT_DIR_MODE) {
+            match create_dir(dir, &name, mode) {
                 Ok(()) => {}
                 Err(err) if err.kind() == io::ErrorKind::AlreadyExists => {}
                 Err(err) => return Err(err),
