@@ -603,6 +603,89 @@ fn stream_snapshot_work_items(
     Ok(read_errors)
 }
 
+/// Remove deleted/removed files from `dst_vfs` in parallel.
+#[allow(dead_code)]
+fn remove_items(
+    dst_vfs: &vfs::VFS,
+    status: &status::Status,
+    logger: &TermLogger,
+) -> anyhow::Result<()> {
+    let paths: Vec<_> = status.removed().chain(status.deleted()).collect();
+    if paths.is_empty() {
+        return Ok(());
+    }
+    let (work_tx, result_rx) = prepare_batch_workers(dst_vfs, paths.len());
+    for path in paths {
+        if work_tx.send(vfs::Work::Remove(path.to_owned())).is_err() {
+            bail!("batch workers stopped unexpectedly");
+        }
+    }
+    drop(work_tx);
+    drain_workers(result_rx, logger)
+}
+
+/// Read modified/added/untracked files from `src_vfs` and write them to
+/// `dst_vfs` in parallel.
+#[allow(dead_code)]
+fn copy_items(
+    src_vfs: &vfs::VFS,
+    dst_vfs: &vfs::VFS,
+    status: &status::Status,
+    logger: &TermLogger,
+) -> anyhow::Result<()> {
+    let paths: Vec<_> = status
+        .modified()
+        .chain(status.added())
+        .chain(status.unknown())
+        .collect();
+    if paths.is_empty() {
+        return Ok(());
+    }
+    let (work_tx, result_rx) = prepare_batch_workers(dst_vfs, paths.len());
+    for path in paths {
+        let (data, metadata) = src_vfs
+            .read_with_metadata(path)
+            .with_context(|| format!("reading {}", path))?;
+        let flag = workingcopy::metadata::Metadata::from(metadata).to_update_flag(src_vfs);
+        if work_tx
+            .send(vfs::Work::Write(path.to_owned(), data.into(), flag, None))
+            .is_err()
+        {
+            bail!("batch workers stopped unexpectedly");
+        }
+    }
+    drop(work_tx);
+    drain_workers(result_rx, logger)
+}
+
+fn drain_workers(
+    result_rx: flume::Receiver<Result<vfs::Work, (Option<vfs::Work>, anyhow::Error)>>,
+    logger: &TermLogger,
+) -> anyhow::Result<()> {
+    let mut errors: Vec<(String, types::RepoPathBuf, anyhow::Error)> = Vec::new();
+    while let Ok(result) = result_rx.recv() {
+        if let Err((work, err)) = result {
+            let (action, path) = match work {
+                Some(vfs::Work::Remove(p)) => ("removing", p),
+                Some(vfs::Work::Write(p, ..)) => ("writing", p),
+                Some(vfs::Work::SetExecutable(p, ..)) => ("setting executable", p),
+                _ => ("applying", types::RepoPathBuf::new()),
+            };
+            errors.push((action.to_owned(), path, err));
+        }
+    }
+
+    for (action, path, err) in &errors {
+        logger.warn(format!("failed {} {}: {:#}", action, path, err));
+    }
+
+    if !errors.is_empty() {
+        bail!("{} file(s) failed during apply", errors.len());
+    }
+
+    Ok(())
+}
+
 /// Update destination treestate so `sl status` in the dest matches the source.
 ///
 /// Only `added` and `removed` files need treestate entries. Modified, untracked,
