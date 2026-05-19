@@ -59,6 +59,7 @@ use mononoke_api_hg::HgDataId;
 use mononoke_api_hg::HgRepoContext;
 use mononoke_api_hg::HgTreeContext;
 use mononoke_types::MPath;
+use mononoke_types::MPathElement;
 use rate_limiting::Metric;
 use rate_limiting::Scope;
 use repo_blobstore::RepoBlobstoreRef;
@@ -236,59 +237,13 @@ async fn fetch_tree<R: MononokeRepo>(
 
                 entry.with_children(Some(
                     ctx.augmented_children_entries()
-                        .map(|(path, augmented_entry)| match augmented_entry {
-                            HgAugmentedManifestEntry::FileNode(file) => {
-                                Ok(TreeChildEntry::new_file_entry(
-                                    Key {
-                                        hgid: file.filenode.into(),
-                                        path: RepoPathBuf::from_string(path.to_string()).map_err(
-                                            |e| {
-                                                SaplingRemoteApiServerError::with_key(
-                                                    key.clone(),
-                                                    e,
-                                                )
-                                            },
-                                        )?,
-                                    },
-                                    FileAuxData {
-                                        blake3: file.content_blake3.clone().into(),
-                                        sha1: file.content_sha1.clone().into(),
-                                        total_size: file.total_size.clone(),
-                                        file_header_metadata: Some(
-                                            file.file_header_metadata
-                                                .clone()
-                                                .unwrap_or(Bytes::new())
-                                                .into(),
-                                        ),
-                                    }
-                                    .into(),
-                                ))
-                            }
-                            HgAugmentedManifestEntry::DirectoryNode(tree) => {
-                                Ok(TreeChildEntry::new_directory_entry(
-                                    Key {
-                                        hgid: tree.treenode.into(),
-                                        path: RepoPathBuf::from_string(path.to_string()).map_err(
-                                            |e| {
-                                                SaplingRemoteApiServerError::with_key(
-                                                    key.clone(),
-                                                    e,
-                                                )
-                                            },
-                                        )?,
-                                    },
-                                    TreeAuxData {
-                                        augmented_manifest_id: tree
-                                            .augmented_manifest_id
-                                            .clone()
-                                            .into(),
-                                        augmented_manifest_size: tree
-                                            .augmented_manifest_size
-                                            .clone(),
-                                    },
-                                    ctx.child_is_restricted(path),
-                                ))
-                            }
+                        .map(|(path, augmented_entry)| {
+                            fetch_augmented_child_metadata(
+                                &key,
+                                path,
+                                augmented_entry,
+                                ctx.child_is_restricted(path),
+                            )
                         })
                         .collect(),
                 ));
@@ -355,6 +310,53 @@ async fn fetch_tree<R: MononokeRepo>(
     }
 
     Ok(entry)
+}
+
+/// Builds child metadata from preloaded augmented manifest entries.
+///
+/// The caller provides the directory `has_acl` value so this helper only owns
+/// response shaping: child keys, aux data, and file metadata. Keeping that
+/// shaping in one place lets callers change how directory ACL metadata is
+/// computed without duplicating the wire-format construction.
+fn fetch_augmented_child_metadata(
+    key: &Key,
+    path: &MPathElement,
+    augmented_entry: &HgAugmentedManifestEntry,
+    directory_has_acl: Option<bool>,
+) -> Result<TreeChildEntry, SaplingRemoteApiServerError> {
+    match augmented_entry {
+        HgAugmentedManifestEntry::FileNode(file) => Ok(TreeChildEntry::new_file_entry(
+            Key {
+                hgid: file.filenode.into(),
+                path: RepoPathBuf::from_string(path.to_string())
+                    .map_err(|e| SaplingRemoteApiServerError::with_key(key.clone(), e))?,
+            },
+            FileAuxData {
+                blake3: file.content_blake3.clone().into(),
+                sha1: file.content_sha1.clone().into(),
+                total_size: file.total_size.clone(),
+                file_header_metadata: Some(
+                    file.file_header_metadata
+                        .clone()
+                        .unwrap_or(Bytes::new())
+                        .into(),
+                ),
+            }
+            .into(),
+        )),
+        HgAugmentedManifestEntry::DirectoryNode(tree) => Ok(TreeChildEntry::new_directory_entry(
+            Key {
+                hgid: tree.treenode.into(),
+                path: RepoPathBuf::from_string(path.to_string())
+                    .map_err(|e| SaplingRemoteApiServerError::with_key(key.clone(), e))?,
+            },
+            TreeAuxData {
+                augmented_manifest_id: tree.augmented_manifest_id.clone().into(),
+                augmented_manifest_size: tree.augmented_manifest_size.clone(),
+            },
+            directory_has_acl,
+        )),
+    }
 }
 
 async fn fetch_child_file_metadata_entries<'a, R: MononokeRepo>(
