@@ -261,11 +261,12 @@ impl NoFollowRoot {
     {
         let path = path.try_into().map_err(Into::into)?;
         retry_io(|| {
-            let (parent, leaf) = if flags.creates_file() {
-                self.ensure_parent_dir(path.as_path())?
-            } else {
-                self.open_parent_dir(path.as_path())?
-            };
+            if !flags.creates_file() {
+                let path_c = path_cstring(path.as_path())?;
+                return open_file(self.root.as_fd(), &path_c, flags, mode);
+            }
+
+            let (parent, leaf) = { self.ensure_parent_dir(path.as_path())? };
             open_file(parent.as_fd(), &leaf, flags, mode)
         })
         .map_err(super::normalize_not_directory)
@@ -400,8 +401,8 @@ impl NoFollowRoot {
     {
         let path = path.try_into().map_err(Into::into)?;
         retry_io(|| {
-            let (parent, leaf) = self.open_parent_dir(path.as_path())?;
-            set_permissions(parent.as_fd(), &leaf, mode)
+            let path = path_cstring(path.as_path())?;
+            set_permissions(self.root.as_fd(), &path, mode)
         })
         .map_err(|err| path_error::build(err, path_error::SET_PERMISSIONS, path.as_path()))
     }
