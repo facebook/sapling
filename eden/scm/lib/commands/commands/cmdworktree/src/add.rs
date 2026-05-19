@@ -66,7 +66,7 @@ fn sapling_snapshot_create(sl_bin: &OsString, repo_path: PathBuf) -> anyhow::Res
 }
 
 /// Restore a snapshot into the worktree at `dest`.
-fn sapling_snapshot_checkout(sl_bin: &OsString, dest: &PathBuf, id: &str) -> anyhow::Result<()> {
+fn sapling_snapshot_checkout(sl_bin: &OsString, dest: &Path, id: &str) -> anyhow::Result<()> {
     Command::new(sl_bin)
         .args([
             "--config",
@@ -172,19 +172,8 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> 
         }
     }
 
-    let sl_bin = current_sl_binary();
-
-    // Spawn snapshot creation on a background thread so it runs concurrently
-    // with eden clone below. Snapshot create uploads dirty state from the
-    // source repo (network I/O) while eden clone sets up the new mount
-    // (daemon I/O). Neither depends on the other.
-    let snapshot_handle = if ctx.opts.snapshot && !use_direct_copy {
-        let repo_path = repo.path().to_path_buf();
-        let sl_bin = sl_bin.clone();
-        logger.info("creating snapshot of current working copy...");
-        Some(std::thread::spawn(move || {
-            sapling_snapshot_create(&sl_bin, repo_path)
-        }))
+    let legacy_snapshot_handle = if ctx.opts.snapshot && !use_direct_copy {
+        Some(take_snapshot_legacy(ctx, repo))
     } else {
         None
     };
@@ -285,47 +274,14 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> 
         Ok(())
     })?;
 
-    let mut exit_code: u8 = 0;
-
-    // Wait for snapshot creation to finish (legacy path).
-    let snapshot_id = snapshot_handle.and_then(|h| {
-        match h
-            .join()
-            .map_err(|_| anyhow::anyhow!("snapshot create thread panicked"))
-            .and_then(|r| r)
-        {
-            Ok(id) => {
-                logger.info(format!("created snapshot {}", id));
-                Some(id)
-            }
-            Err(e) => {
-                logger.warn(format!("snapshot create failed, skipping: {}", e));
-                exit_code = 1;
-                None
-            }
-        }
-    });
-
     logger.info(format!("created linked worktree at {}", dest.display()));
 
-    // Apply working copy state: direct copy OR legacy snapshot, never both.
-    if let Some(source_status) = source_status {
-        if let Err(e) = snapshot(ctx, repo, source_status, &dest) {
-            logger.warn(format!("{:#}", e));
-            exit_code = 1;
-        }
-    }
-
-    // Restore snapshot via legacy shell-out path.
-    if let Some(ref id) = snapshot_id {
-        logger.info(format!("restoring snapshot {} into worktree...", id));
-        if let Err(e) = sapling_snapshot_checkout(&sl_bin, &dest, id) {
-            logger.warn(format!(
-                "snapshot checkout failed (worktree created but snapshot not applied): {}",
-                e
-            ));
-            exit_code = 1;
-        }
+    if let Some(handle) = legacy_snapshot_handle {
+        // Legacy path: upload+restore via `sl snapshot create/checkout`.
+        restore_snapshot_legacy(ctx, handle, &dest)?;
+    } else if let Some(source_status) = source_status {
+        // Direct copy path: read dirty files from source and write into dest.
+        snapshot_with_direct_workingcopy_patch(ctx, repo, source_status, &dest)?;
     }
 
     let post_hooks = hook::Hooks::from_config(repo.config(), ctx.io(), "post-worktree-add");
@@ -341,7 +297,39 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> 
         ])),
     )?;
 
-    Ok(exit_code)
+    Ok(0)
+}
+
+type SnapshotHandle = std::thread::JoinHandle<anyhow::Result<String>>;
+
+fn take_snapshot_legacy(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo) -> SnapshotHandle {
+    let repo_path = repo.path().to_path_buf();
+    let sl_bin = current_sl_binary();
+    ctx.logger()
+        .info("creating snapshot of current working copy...");
+    std::thread::spawn(move || sapling_snapshot_create(&sl_bin, repo_path))
+}
+
+fn restore_snapshot_legacy(
+    ctx: &ReqCtx<WorktreeOpts>,
+    handle: SnapshotHandle,
+    dest: &Path,
+) -> anyhow::Result<()> {
+    let logger = ctx.logger();
+
+    let id = handle
+        .join()
+        .map_err(|_| anyhow::anyhow!("snapshot create thread panicked"))
+        .and_then(|r| r)
+        .context("creating snapshot")?;
+
+    logger.info(format!("created snapshot {}", id));
+    logger.info(format!("restoring snapshot {} into worktree...", id));
+
+    let sl_bin = current_sl_binary();
+    sapling_snapshot_checkout(&sl_bin, dest, &id).context("restoring snapshot")?;
+
+    Ok(())
 }
 
 fn resolve_group_for_main_path(
@@ -478,7 +466,7 @@ const DEFAULT_CONCURRENCY: usize = 16;
 const VFS_BATCH_SIZE: usize = 128;
 const WORK_QUEUE_SIZE: usize = 10_000;
 
-fn snapshot(
+fn snapshot_with_direct_workingcopy_patch(
     ctx: &ReqCtx<WorktreeOpts>,
     repo: &Repo,
     status: status::Status,
