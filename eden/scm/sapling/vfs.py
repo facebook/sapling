@@ -16,24 +16,12 @@ import contextlib
 import errno
 import os
 import queue as queuemod
-import re
 import shutil
 import stat
 import tempfile
 import threading
 import typing
-from typing import (
-    Any,
-    BinaryIO,
-    Callable,
-    IO,
-    Iterable,
-    Iterator,
-    List,
-    Optional,
-    Tuple,
-    Union,
-)
+from typing import Any, BinaryIO, Callable, IO, Iterator, List, Optional, Tuple, Union
 
 import bindings
 
@@ -799,54 +787,3 @@ class checkambigatclosing(closewrapbase):
     def close(self):
         self._origfh.close()
         self._checkambig()
-
-
-# 64 bytes for SHA256
-_blobvfsre = re.compile(r"\A[a-f0-9]{64}\Z")
-
-
-class blobvfs(vfs):
-    def join(self, path: "Optional[str]", *insidef: str) -> str:
-        """split the path at first two characters, like: XX/XXXXX..."""
-        if path is None or not _blobvfsre.match(path):
-            raise error.ProgrammingError("unexpected blob vfs path: %r" % (path,))
-        if insidef:
-            raise error.ProgrammingError(
-                "unexpected blob vfs path: %r, %r" % (path, insidef)
-            )
-        return super(blobvfs, self).join(path[0:2], path[2:])
-
-    def walk(
-        self,
-        path: "Optional[str]" = None,
-        onerror: "Optional[Callable[[OSError], None]]" = None,
-    ) -> "Iterable[Tuple[str, List[str], List[str]]]":
-        """Yield (dirpath, [], oids) tuple for blobs under path
-
-        Oids only exist in the root of this vfs, so dirpath is always ''.
-        """
-        root = os.path.normpath(self.base)
-        # when dirpath == root, dirpath[prefixlen:] becomes empty
-        # because len(dirpath) < prefixlen.
-        prefixlen = len(pathutil.normasprefix(root))
-        oids = []
-
-        for dirpath, dirs, files in os.walk(
-            self.reljoin(self.base, path or ""), onerror=onerror
-        ):
-            dirpath = dirpath[prefixlen:]
-
-            # Silently skip unexpected files and directories
-            if len(dirpath) == 2:
-                oids.extend(
-                    [dirpath + f for f in files if _blobvfsre.match(dirpath + f)]
-                )
-
-        yield ("", [], oids)
-
-    def linktovfs(self, oid, vfs):
-        """Hardlink a file to another blob vfs"""
-        src = self.join(oid)
-        dst = vfs.join(oid)
-        util.makedirs(os.path.dirname(dst))
-        util.copyfile(src, dst, hardlink=True)
