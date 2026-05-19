@@ -17,6 +17,7 @@ anyhow = "1.0.102"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context" }
 derivation_queue_thrift = { version = "0.1.0", path = "../repo_derivation_queues/if" }
+ephemeral_blobstore = { version = "0.1.0", path = "../../blobstore/ephemeral_blobstore" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

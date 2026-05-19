@@ -767,13 +767,19 @@ impl RepoWithBubble for Repo {
         let repo_blobstore = Arc::new(bubble.wrap_repo_blobstore(self.repo_blobstore().clone()));
         let commit_graph = Arc::new(bubble.repo_commit_graph(self));
         let commit_graph_writer = bubble.repo_commit_graph_writer(self);
-        let repo_derived_data = Arc::new(self.repo_derived_data().for_bubble(bubble));
+        let repo_derived_data = Arc::new(self.repo_derived_data().for_bubble(bubble.clone()));
+        // RestrictedPaths holds its own ArcRepoDerivedData snapshot — rewrap it
+        // so AclManifest derivation for bubble changesets routes through the
+        // bubble-aware derived-data manager (and not DDS, which doesn't know
+        // about ephemeral commits).
+        let restricted_paths = Arc::new(self.restricted_paths.for_bubble(bubble));
 
         Self {
             repo_blobstore,
             commit_graph,
             commit_graph_writer,
             repo_derived_data,
+            restricted_paths,
             ..self.clone()
         }
     }

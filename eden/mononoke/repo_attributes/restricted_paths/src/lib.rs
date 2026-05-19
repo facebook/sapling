@@ -21,6 +21,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use context::CoreContext;
+use ephemeral_blobstore::Bubble;
 use metaconfig_types::AclManifestMode;
 use metaconfig_types::RestrictedPathsConfig;
 use mononoke_types::ChangesetId;
@@ -134,6 +135,18 @@ impl RestrictedPaths {
             scuba,
             repo_derived_data,
         })
+    }
+
+    /// Return a copy of `self` whose `repo_derived_data` is wrapped for the
+    /// given bubble, so AclManifest derivation runs against the bubble's
+    /// derived-data manager rather than the persistent one.
+    pub fn for_bubble(&self, bubble: Bubble) -> Self {
+        Self {
+            config_based: self.config_based.clone(),
+            acl_provider: self.acl_provider.clone(),
+            scuba: self.scuba.clone(),
+            repo_derived_data: Arc::new(self.repo_derived_data.for_bubble(bubble)),
+        }
     }
 
     // TODO(T248660053): make pub(crate) once hooks use dedicated primitives
