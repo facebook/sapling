@@ -152,8 +152,7 @@ impl NoFollowRoot {
         let path = path.try_into().map_err(Into::into)?;
         retry_io(|| {
             // Fast path for the common case where the full directory already exists.
-            let path_c = path_cstring(path.as_path())?;
-            match open_dir_no_follow_cstring(self.root.as_fd(), &path_c) {
+            match open_dir_no_follow(self.root.as_fd(), path.as_path().as_os_str()) {
                 Ok(_) => return Ok(()),
                 Err(err) if err.kind() == io::ErrorKind::NotFound => {}
                 Err(err) => return Err(err),
@@ -422,6 +421,15 @@ impl NoFollowRoot {
 
     fn ensure_parent_dir(&self, path: &Path) -> io::Result<(ParentFd<'_>, CString)> {
         let (parent_path, leaf) = split_parent_leaf(path)?;
+        if !parent_path.as_os_str().is_empty() {
+            // Fast path for the common case where the full parent directory already exists.
+            match open_dir_no_follow(self.root.as_fd(), parent_path.as_os_str()) {
+                Ok(parent) => return Ok((ParentFd::Owned(parent), leaf)),
+                Err(err) if err.kind() == io::ErrorKind::NotFound => {}
+                Err(err) => return Err(err),
+            }
+        }
+
         let parent = parent_path
             .iter()
             .try_fold(ParentFd::Borrowed(self.root.as_fd()), |dir, component| {
@@ -432,11 +440,14 @@ impl NoFollowRoot {
 
     fn open_parent_dir(&self, path: &Path) -> io::Result<(ParentFd<'_>, CString)> {
         let (parent_path, leaf) = split_parent_leaf(path)?;
-        let parent = parent_path
-            .iter()
-            .try_fold(ParentFd::Borrowed(self.root.as_fd()), |dir, component| {
-                open_dir_no_follow(dir.as_fd(), component).map(ParentFd::Owned)
-            })?;
+        let parent = if parent_path.as_os_str().is_empty() {
+            ParentFd::Borrowed(self.root.as_fd())
+        } else {
+            ParentFd::Owned(open_dir_no_follow(
+                self.root.as_fd(),
+                parent_path.as_os_str(),
+            )?)
+        };
         Ok((parent, leaf))
     }
 }
@@ -573,15 +584,20 @@ fn open_or_create_dir(
     }
 }
 
-fn open_dir_no_follow(dir: BorrowedFd<'_>, component: &OsStr) -> io::Result<OwnedFd> {
-    let component = component_cstring(component)?;
-    open_dir_no_follow_cstring(dir, &component)
+fn open_dir_no_follow(dir: BorrowedFd<'_>, rel_path: &OsStr) -> io::Result<OwnedFd> {
+    let rel_path = CString::new(rel_path.as_bytes()).map_err(|_| {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("relative path contains a NUL byte: {:?}", rel_path),
+        )
+    })?;
+    open_dir_no_follow_cstring(dir, &rel_path)
 }
 
-fn open_dir_no_follow_cstring(dir: BorrowedFd<'_>, component: &CString) -> io::Result<OwnedFd> {
+fn open_dir_no_follow_cstring(dir: BorrowedFd<'_>, rel_path: &CString) -> io::Result<OwnedFd> {
     open_path(
         dir,
-        component,
+        rel_path,
         libc::O_RDONLY | libc::O_DIRECTORY | libc::O_CLOEXEC,
         0,
     )
