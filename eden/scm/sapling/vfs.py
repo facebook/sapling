@@ -532,6 +532,9 @@ class vfs(abstractvfs):
     def lstat(self, path: "Optional[str]" = None):
         return self._rustvfs.metadata(self._rustpath(path))
 
+    def listdir(self, path: "Optional[str]" = None) -> "List[str]":
+        return self._rustvfs.listdir(self._rustpath(path))
+
     def readlink(self, path: str) -> str:
         return self._rustvfs.read(self._rustpath(path)).decode()
 
