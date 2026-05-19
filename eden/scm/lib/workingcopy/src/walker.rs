@@ -6,7 +6,6 @@
  */
 
 use std::collections::HashSet;
-use std::fs::Metadata;
 use std::io;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -23,14 +22,15 @@ use crossbeam::channel::RecvError;
 use crossbeam::channel::RecvTimeoutError;
 use crossbeam::channel::Sender;
 use crossbeam::channel::unbounded;
-use fs_err as fs;
-use fs_err::DirEntry;
 use pathmatcher::DirectoryMatch;
 use pathmatcher::Matcher;
 use thiserror::Error;
 use types::RepoPath;
 use types::RepoPathBuf;
 use types::path::ParseError;
+use vfs::AuditError;
+use vfs::LiteMetadata;
+use vfs::VFS;
 
 #[derive(Error, Debug)]
 pub enum WalkError {
@@ -77,7 +77,7 @@ impl WalkError {
 }
 
 pub enum WalkEntry {
-    File(RepoPathBuf, Metadata),
+    File(RepoPathBuf, LiteMetadata),
     Directory(RepoPathBuf),
 }
 
@@ -97,7 +97,7 @@ pub struct WalkerData<M> {
     matcher: M,
     busy_nodes: AtomicU64,
     result_cnt: AtomicU64,
-    root: PathBuf,
+    vfs: VFS,
     include_directories: bool,
     dot_dir: String,
     skip_dirs: HashSet<RepoPathBuf>,
@@ -134,7 +134,7 @@ where
     const RECV_TIMEOUT: Duration = Duration::from_millis(5);
 
     pub fn new(
-        root: PathBuf,
+        vfs: VFS,
         dot_dir: String,
         skip_dirs: Vec<PathBuf>,
         matcher: M,
@@ -154,7 +154,7 @@ where
                 result_sender: s_results,
                 queue_sender: s_queue,
                 queue_receiver: r_queue,
-                root,
+                vfs,
                 matcher,
                 include_directories,
                 // dot_dir is only used to avoid walking into nested repos.
@@ -176,30 +176,24 @@ where
     // child and increment busy_nodes atomic.
     fn match_entry_and_enqueue(
         dir: &RepoPathBuf,
-        entry: DirEntry,
+        filename: &RepoPath,
         shared_data: Arc<WalkerData<M>>,
     ) -> Result<()> {
-        let filename = entry.file_name();
-        let filename = filename
-            .to_str()
-            .ok_or_else(|| WalkError::FsUtf8Error(filename.to_string_lossy().into_owned()))?;
-        let filename = RepoPath::from_str(filename)
-            .map_err(|e| WalkError::RepoPathError(filename.to_owned(), e))?;
-        let filetype = entry
-            .file_type()
-            .map_err(|e| WalkError::IOError(filename.to_owned(), e))?;
-
         let mut candidate_path = dir.clone();
         candidate_path.push(filename);
-        if filetype.is_file() || filetype.is_symlink() {
+        let metadata = match shared_data.vfs.metadata(candidate_path.as_repo_path()) {
+            Ok(metadata) => metadata,
+            Err(err) if is_invalid_component_error(&err) => return Ok(()),
+            Err(err) => return Err(err),
+        };
+        if metadata.is_file() || metadata.is_symlink() {
             if shared_data
                 .matcher
                 .matches_file(candidate_path.as_repo_path())?
             {
-                shared_data
-                    .enqueue_result(Ok(WalkEntry::File(candidate_path, entry.metadata()?)))?;
+                shared_data.enqueue_result(Ok(WalkEntry::File(candidate_path, metadata)))?;
             }
-        } else if filetype.is_dir() {
+        } else if metadata.is_dir() {
             if !shared_data.skip_dirs.contains(filename)
                 && shared_data
                     .matcher
@@ -245,23 +239,47 @@ where
                                     shared_data
                                         .enqueue_result(Ok(WalkEntry::Directory(dir.clone())))?;
                                 }
-                                let abs_dir_path = shared_data.root.join(dir.as_str());
 
-                                // Skip nested repos.
-                                if !dir.is_empty()
-                                    && abs_dir_path.join(&shared_data.dot_dir).exists()
-                                {
-                                    return Ok(());
+                                if !dir.is_empty() {
+                                    let dot_dir = RepoPath::from_str(&shared_data.dot_dir)
+                                        .map_err(|err| {
+                                            WalkError::RepoPathError(
+                                                shared_data.dot_dir.clone(),
+                                                err,
+                                            )
+                                        })?;
+                                    let mut dot_dir_path = dir.clone();
+                                    dot_dir_path.push(dot_dir);
+                                    if shared_data
+                                        .vfs
+                                        .raw_no_follow_root()?
+                                        .symlink_metadata(Some(dot_dir_path.as_repo_path()))
+                                        .is_ok()
+                                    {
+                                        return Ok(());
+                                    }
                                 }
 
-                                for entry in fs::read_dir(abs_dir_path)
-                                    .map_err(|e| WalkError::IOError(dir.clone(), e))?
-                                {
-                                    let entry =
-                                        entry.map_err(|e| WalkError::IOError(dir.clone(), e))?;
+                                for filename in shared_data.vfs.list_dir(dir.as_repo_path())? {
+                                    let filename = match filename {
+                                        Ok(filename) => filename.into_string(),
+                                        Err(err) => {
+                                            shared_data.enqueue_result(Err(err))?;
+                                            continue;
+                                        }
+                                    };
+                                    let repo_filename = match RepoPath::from_str(&filename) {
+                                        Ok(filename) => filename,
+                                        Err(err) => {
+                                            shared_data.enqueue_result(Err(
+                                                WalkError::RepoPathError(filename, err).into(),
+                                            ))?;
+                                            continue;
+                                        }
+                                    };
                                     if let Err(e) = Walker::match_entry_and_enqueue(
                                         &dir,
-                                        entry,
+                                        repo_filename,
                                         shared_data.clone(),
                                     ) {
                                         shared_data.enqueue_result(Err(e))?;
@@ -306,6 +324,13 @@ where
     }
 }
 
+fn is_invalid_component_error(err: &Error) -> bool {
+    matches!(
+        err.downcast_ref::<AuditError>(),
+        Some(AuditError::InvalidComponent(_, _))
+    )
+}
+
 impl<M> Iterator for Walker<M>
 where
     M: Matcher,
@@ -330,14 +355,13 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
-
     use fs_err::OpenOptions;
     use fs_err::create_dir_all;
     use pathmatcher::AlwaysMatcher;
     use pathmatcher::NeverMatcher;
     use pathmatcher::TreeMatcher;
     use tempfile::tempdir;
+    use vfs::VFS;
 
     use super::*;
 
@@ -364,10 +388,10 @@ mod tests {
         let directories = vec!["dirA"];
         let files = vec!["dirA/a.txt", "b.txt"];
         let root_dir = create_directory(&directories, &files)?;
-        let root_path = PathBuf::from(root_dir.path());
+        let vfs = VFS::new(root_dir.path().to_path_buf())?;
         let walker = Walker::new(
-            root_path,
-            ".hg".to_string(),
+            vfs,
+            ".sl".to_string(),
             Vec::new(),
             NeverMatcher::new(),
             false,
@@ -383,10 +407,10 @@ mod tests {
         let directories = vec!["foo", "foo/bar"];
         let files = vec!["foo/cat.txt", "foo/bar/baz.txt"];
         let root_dir = create_directory(&directories, &files)?;
-        let root_path = PathBuf::from(root_dir.path());
+        let vfs = VFS::new(root_dir.path().to_path_buf())?;
         let walker = Walker::new(
-            root_path,
-            ".hg".to_string(),
+            vfs,
+            ".sl".to_string(),
             Vec::new(),
             TreeMatcher::from_rules(["foo/bar/**"].iter(), true).unwrap(),
             false,
@@ -406,10 +430,10 @@ mod tests {
         let directories = vec!["dirA", "dirB/dirC/dirD"];
         let files = vec!["dirA/a.txt", "dirA/b.txt", "dirB/dirC/dirD/c.txt"];
         let root_dir = create_directory(&directories, &files)?;
-        let root_path = PathBuf::from(root_dir.path());
+        let vfs = VFS::new(root_dir.path().to_path_buf())?;
         let walker = Walker::new(
-            root_path,
-            ".hg".to_string(),
+            vfs,
+            ".sl".to_string(),
             Vec::new(),
             AlwaysMatcher::new(),
             true,
@@ -431,6 +455,90 @@ mod tests {
         for file in walked_files {
             assert!(res.contains(&file.as_ref().to_string().as_str()));
         }
+        Ok(())
+    }
+
+    #[test]
+    fn test_multiwalker_skips_nested_repo() -> Result<()> {
+        let directories = vec!["nested/.sl"];
+        let files = vec!["nested/file.txt", "root.txt"];
+        let root_dir = create_directory(&directories, &files)?;
+        let vfs = VFS::new(root_dir.path().to_path_buf())?;
+        let walker = Walker::new(
+            vfs,
+            ".sl".to_string(),
+            Vec::new(),
+            AlwaysMatcher::new(),
+            false,
+        )?;
+
+        let walked_files: Result<Vec<_>> = walker.collect();
+        let walked_files = walked_files?;
+        let walked_files: HashSet<_> = walked_files
+            .into_iter()
+            .map(|file| file.as_ref().to_string())
+            .collect();
+
+        assert!(walked_files.contains("root.txt"));
+        assert!(!walked_files.contains("nested/file.txt"));
+        Ok(())
+    }
+
+    #[test]
+    fn test_multiwalker_ignores_invalid_vfs_components() -> Result<()> {
+        let directories = vec![".sl"];
+        let files = vec![".sl/requires", "root.txt"];
+        let root_dir = create_directory(&directories, &files)?;
+        let vfs = VFS::new(root_dir.path().to_path_buf())?;
+        let walker = Walker::new(
+            vfs,
+            ".sl".to_string(),
+            vec![PathBuf::from(".sl")],
+            AlwaysMatcher::new(),
+            false,
+        )?;
+
+        let walked_files: Result<Vec<_>> = walker.collect();
+        let walked_files = walked_files?;
+        let walked_files: HashSet<_> = walked_files
+            .into_iter()
+            .map(|file| file.as_ref().to_string())
+            .collect();
+
+        assert!(walked_files.contains("root.txt"));
+        assert!(!walked_files.contains(".sl/requires"));
+        Ok(())
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_multiwalker_does_not_follow_directory_symlink() -> Result<()> {
+        let root = tempdir()?;
+        create_dir_all(root.path().join("target"))?;
+        OpenOptions::new()
+            .create(true)
+            .write(true)
+            .open(root.path().join("target/file.txt"))?;
+        std::os::unix::fs::symlink("target", root.path().join("link"))?;
+        let vfs = VFS::new(root.path().to_path_buf())?;
+        let walker = Walker::new(
+            vfs,
+            ".sl".to_string(),
+            Vec::new(),
+            AlwaysMatcher::new(),
+            false,
+        )?;
+
+        let walked_files: Result<Vec<_>> = walker.collect();
+        let walked_files = walked_files?;
+        let walked_files: HashSet<_> = walked_files
+            .into_iter()
+            .map(|file| file.as_ref().to_string())
+            .collect();
+
+        assert!(walked_files.contains("link"));
+        assert!(walked_files.contains("target/file.txt"));
+        assert!(!walked_files.contains("link/file.txt"));
         Ok(())
     }
 }

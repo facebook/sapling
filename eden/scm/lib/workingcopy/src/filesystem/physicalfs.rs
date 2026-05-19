@@ -142,7 +142,7 @@ impl FileSystem for PhysicalFileSystem {
         );
 
         let walker = Walker::new(
-            self.vfs.root().to_path_buf(),
+            self.vfs.clone(),
             self.dot_dir.clone(),
             ignore_dirs,
             matcher.clone(),

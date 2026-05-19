@@ -39,6 +39,7 @@ use rsworkingcopy::walker::WalkError;
 use rsworkingcopy::walker::Walker;
 use rsworkingcopy::workingcopy::WorkingCopy;
 use types::HgId;
+use vfs::VFS;
 
 mod impl_into;
 
@@ -66,8 +67,9 @@ py_class!(class walker |py| {
         include_directories: bool,
     ) -> PyResult<walker> {
         let matcher = extract_matcher(py, pymatcher)?.0;
+        let vfs = VFS::new(root.to_path_buf()).map_pyerr(py)?;
         let walker = Walker::new(
-            root.to_path_buf(),
+            vfs,
             dot_dir.clone(),
             vec![dot_dir.into()],
             matcher,

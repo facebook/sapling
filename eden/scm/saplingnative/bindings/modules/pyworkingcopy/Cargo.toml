@@ -20,6 +20,7 @@ sapling-pathmatcher = { version = "0.1.0", path = "../../../../lib/pathmatcher" 
 sapling-repostate = { version = "0.1.0", path = "../../../../lib/workingcopy/repostate" }
 sapling-sparse = { version = "0.1.0", path = "../../../../lib/sparse" }
 sapling-types = { version = "0.1.0", path = "../../../../lib/types" }
+sapling-vfs = { version = "0.1.0", path = "../../../../lib/vfs" }
 sapling-workingcopy = { version = "0.1.0", path = "../../../../lib/workingcopy" }
 
 [features]

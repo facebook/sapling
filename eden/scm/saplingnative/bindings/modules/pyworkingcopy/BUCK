@@ -20,6 +20,7 @@ rust_python_library(
         "//eden/scm/lib/pathmatcher:pathmatcher",
         "//eden/scm/lib/sparse:sparse",
         "//eden/scm/lib/types:types",
+        "//eden/scm/lib/vfs:vfs",
         "//eden/scm/lib/workingcopy:workingcopy",
         "//eden/scm/lib/workingcopy/repostate:repostate",
         "//eden/scm/saplingnative/bindings/modules/pypathmatcher:pypathmatcher",
