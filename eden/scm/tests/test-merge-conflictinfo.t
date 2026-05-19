@@ -850,19 +850,30 @@ Test case 7: Source is a directory, dest is a file (base is still a file)
      deleted:
   
 
+In this rebase, local/dest has `$TESTTMP/foo/file` as the changed regular
+file from `dest`. Other/source deleted repo path `file` and added
+`file/subfile`, so choosing the source side would require turning
+`$TESTTMP/foo/file` into a parent directory. That on-disk shape conflict
+should not abort before merge state is written: semantically this is still a
+file/delete conflict for repo path `file`, and conflictinfo should report it
+as local changed, other missing.
+
   $ sl rebase -d 'desc(dest)' -s 'desc(source)'
   rebasing * "source" (glob)
-  abort:*: $TESTTMP/foo/file (glob)
-  (current process runs with uid 42) (?)
-  ($TESTTMP/foo/file: mode 0o52, uid 42, gid 42) (?)
-  ($TESTTMP/foo: mode 0o52, uid 42, gid 42) (?)
-  [255]
+  local [dest (rebasing onto)] changed file which other [source (being rebased)] deleted
+  use (c)hanged version, (d)elete, or leave (u)nresolved? u
+  unresolved conflicts (see sl resolve, then sl rebase --continue)
+  [1]
   $ sl resolve --tool=internal:dumpjson --all
-  [abort:*: $TESTTMP/foo/file (glob)
-  (current process runs with uid 42) (?)
-  ($TESTTMP/foo/file: mode 0o52, uid 42, gid 42) (?)
-  ($TESTTMP/foo: mode 0o52, uid 42, gid 42) (?)
-  [255]
+  [
+   {
+    "command": "rebase",
+    "command_details": {"cmd": "rebase", "to_abort": "rebase --abort", "to_continue": "rebase --continue"},
+    "conflicts": [{"base": {"contents": "base\n", "exists": true, "isexec": false, "issymlink": false}, "local": {"contents": "change\n", "exists": true, "isexec": false, "issymlink": false}, "other": {"contents": null, "exists": false, "isexec": null, "issymlink": null}, "output": {"contents": "change\n", "exists": true, "isexec": false, "issymlink": false, "path": "$TESTTMP/foo/file"}, "path": "file"}],
+    "hashes": {"local": "fd7d10c36158e4f6e713ca1c40ddebce2b55a868", "other": "8679c40703d2db639fc4f0a9409ed58f0e6f0809"},
+    "pathconflicts": []
+   }
+  ]
 Test case 8: Source is a file, dest is a directory (base is still a file)
   $ reset
   $ echo "change" > file
@@ -887,13 +898,20 @@ Test case 8: Source is a file, dest is a directory (base is still a file)
      deleted:
   
 
+Here local/dest deleted repo path `file` and added `file/subfile`, so the
+working copy has `$TESTTMP/foo/file/` as a directory. Other/source changed
+repo path `file` as a regular file containing `change\n`. The directory at
+the destination path blocks writing the other-side file directly, but that
+filesystem shape conflict should still be represented as a normal
+changed-vs-deleted conflict: local is missing, other is the changed file.
+
   $ sl rebase -d 'desc(dest)' -s 'desc(source)'
   rebasing ec87889f5f90 "source"
-  abort:*: $TESTTMP/foo/file (glob)
-  (current process runs with uid 42) (?)
-  ($TESTTMP/foo/file: mode 0o52, uid 42, gid 42) (?)
-  ($TESTTMP/foo: mode 0o52, uid 42, gid 42) (?)
-  [255]
+  other [source (being rebased)] changed file which local [dest (rebasing onto)] is missing
+  hint: the missing file was probably deleted by commit 1803169f37a9 in the branch rebasing onto
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved, or input (r)enamed path? u
+  unresolved conflicts (see sl resolve, then sl rebase --continue)
+  [1]
   $ sl resolve --tool=internal:dumpjson --all | pp
   [
     {

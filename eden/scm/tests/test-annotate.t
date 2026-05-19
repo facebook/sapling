@@ -470,8 +470,7 @@ annotate missing file
   $ rm baz
 
   $ sl annotate -ncr "wdir()" baz
-  abort: $TESTTMP\repo\baz: $ENOENT$ (windows !)
-  abort: $ENOENT$: $TESTTMP/repo/baz (no-windows !)
+  abort: $ENOENT$: baz
   [255]
 
 annotate removed file
@@ -479,8 +478,7 @@ annotate removed file
   $ sl rm baz
 
   $ sl annotate -ncr "wdir()" baz
-  abort: $TESTTMP\repo\baz: $ENOENT$ (windows !)
-  abort: $ENOENT$: $TESTTMP/repo/baz (no-windows !)
+  abort: $ENOENT$: baz
   [255]
 
   $ sl revert --all --no-backup --quiet
