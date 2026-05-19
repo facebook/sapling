@@ -108,10 +108,11 @@ impl<R: MononokeRepo> RepoContext<R> {
 
     /// Land a stack of commits to a bookmark via pushrebase.
     ///
-    /// `merge_resolution_override` is forwarded to `normal_pushrebase`:
-    /// `UseJk` defers to the `pushrebase_enable_merge_resolution` JK;
-    /// `ForceOn`/`ForceOff` wins. Callers that don't care should pass
-    /// `MergeResolutionOverride::UseJk` to preserve current behavior.
+    /// The `MERGE_RESOLUTION_OVERRIDE` pushvar (if present) is parsed
+    /// from `pushvars` here and forwarded to `normal_pushrebase`. Absent
+    /// → defer to the `pushrebase_enable_merge_resolution` JK; `"true"` /
+    /// `"1"` → `ForceOn`; `"false"` / `"0"` → `ForceOff`. Callers don't
+    /// need to interpret the pushvar themselves.
     pub async fn land_stack(
         &self,
         bookmark: impl AsRef<str>,
@@ -121,9 +122,14 @@ impl<R: MononokeRepo> RepoContext<R> {
         bookmark_restrictions: BookmarkKindRestrictions,
         push_authored_by: PushAuthoredBy,
         force_local_pushrebase: bool,
-        merge_resolution_override: MergeResolutionOverride,
     ) -> Result<PushrebaseOutcome, MononokeError> {
         self.start_write()?;
+
+        let merge_resolution_override = MergeResolutionOverride::from_pushvar_value(
+            pushvars
+                .and_then(|p| p.get(MergeResolutionOverride::PUSHVAR_KEY))
+                .map(|b| b.as_ref()),
+        );
 
         let bookmark = bookmark.as_ref();
         let bookmark = BookmarkKey::new(bookmark)?;

@@ -22,7 +22,6 @@ use fbinit::FacebookInit;
 use futures::stream::TryStreamExt;
 use hooks::PushAuthoredBy::User;
 use maplit::hashset;
-use metaconfig_types::MergeResolutionOverride;
 use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use tests_utils::drawdag::create_from_dag;
@@ -74,7 +73,6 @@ async fn land_stack(fb: FacebookInit) -> Result<()> {
             AnyKind,
             User,
             force_local_pushrebase,
-            MergeResolutionOverride::UseJk,
         )
         .await?;
     let key = BookmarkKey::new("trunk")?;
@@ -97,7 +95,6 @@ async fn land_stack(fb: FacebookInit) -> Result<()> {
             AnyKind,
             User,
             force_local_pushrebase,
-            MergeResolutionOverride::UseJk,
         )
         .await?;
     let trunk_e = repo
@@ -126,7 +123,6 @@ async fn land_stack(fb: FacebookInit) -> Result<()> {
             AnyKind,
             User,
             force_local_pushrebase,
-            MergeResolutionOverride::UseJk,
         )
         .await?;
     let trunk_f = repo

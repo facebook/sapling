@@ -23,7 +23,6 @@ use futures::stream;
 use hooks::PushAuthoredBy;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
-use metaconfig_types::MergeResolutionOverride;
 use mononoke_api::MononokeRepo;
 use mononoke_api::Repo;
 use mononoke_api_hg::HgRepoContext;
@@ -126,12 +125,6 @@ async fn land_stack<R: MononokeRepo>(
         Some(repo.repo().repo_identity().name()),
     )?;
 
-    let merge_resolution_override = MergeResolutionOverride::from_pushvar_value(
-        pushvars
-            .get(MergeResolutionOverride::PUSHVAR_KEY)
-            .map(|b| b.as_ref()),
-    );
-
     let pushrebase_outcome = repo
         .land_stack(
             bookmark,
@@ -145,7 +138,6 @@ async fn land_stack<R: MononokeRepo>(
             BookmarkKindRestrictions::AnyKind,
             PushAuthoredBy::User,
             force_local_pushrebase,
-            merge_resolution_override,
         )
         .await?;
 
