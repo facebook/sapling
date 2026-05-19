@@ -205,6 +205,17 @@ impl VFS {
         }
     }
 
+    /// Return the raw no-follow root backing this VFS.
+    ///
+    /// This is a low-level escape hatch for callers that intentionally need to
+    /// bypass [`PathAuditor`] while preserving no-follow path traversal. Normal
+    /// working-copy file operations should use the VFS methods instead. This
+    /// is intended for narrow sentinel/probing cases, such as checking for a
+    /// nested repo marker below a directory.
+    pub fn raw_no_follow_root(&self) -> Result<&NoFollowRoot> {
+        self.no_follow()
+    }
+
     pub fn root(&self) -> &Path {
         &self.inner.root
     }
@@ -1018,6 +1029,23 @@ mod unix_tests {
         let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
         let path = RepoPath::from_str("link").unwrap();
         assert!(vfs.list_dir(path).is_err());
+    }
+
+    #[test]
+    fn test_raw_no_follow_root_bypasses_auditor_for_dot_dir() {
+        let tmp = tempfile::tempdir().unwrap();
+        fs::create_dir(tmp.path().join(".sl")).unwrap();
+        let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
+        let path = RepoPath::from_str(".sl").unwrap();
+
+        assert!(vfs.metadata(path).is_err());
+        assert!(
+            vfs.raw_no_follow_root()
+                .unwrap()
+                .symlink_metadata(Some(path))
+                .unwrap()
+                .is_dir()
+        );
     }
 
     #[test]
