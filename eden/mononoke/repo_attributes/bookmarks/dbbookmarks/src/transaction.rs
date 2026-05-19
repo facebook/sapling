@@ -715,14 +715,32 @@ impl SqlBookmarksTransactionPayload {
 
         let (mut txn, mut log) = if use_new_path {
             // New path: per-bookmark locks + auto-increment IDs
+            let new_path_start = std::time::Instant::now();
             let txn = self
                 .acquire_bookmark_locks(ctx, txn)
                 .await
                 .map_err(BookmarkTransactionError::RetryableError)?;
+            let lock_acquired_us = new_path_start.elapsed().as_micros() as i64;
             let log_entry_count = self.count_log_entries();
             let (txn, ids) = Self::allocate_log_ids(ctx, txn, log_entry_count)
                 .await
                 .map_err(BookmarkTransactionError::RetryableError)?;
+            let id_alloc_us = new_path_start.elapsed().as_micros() as i64 - lock_acquired_us;
+
+            // Unsampled telemetry: one row per bookmark-write on repos that have
+            // flipped per_bookmark_locking on. Lets us see lock-acquisition and
+            // ID-allocation latency distributions in production. Volume scales
+            // with bookmark-write rate; expected to be modest for current
+            // Phase 3 targets and revisitable if rolled out to fbsource master.
+            ctx.scuba()
+                .clone()
+                .unsampled()
+                .add("per_bookmark_lock_acquired_us", lock_acquired_us)
+                .add("per_bookmark_log_ids_allocated_us", id_alloc_us)
+                .add("per_bookmark_lock_repo_id", self.repo_id.id())
+                .add("per_bookmark_lock_entry_count", log_entry_count as i64)
+                .log_with_msg("per_bookmark_locking_active", None);
+
             (txn, TransactionLogUpdates::pre_allocated(ids))
         } else {
             // Old path: optimistic locking via repo-level SELECT MAX(id)
