@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeSet;
 use std::num::NonZeroU64;
 
 use anyhow::Error;
@@ -34,6 +35,7 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 use mononoke_types::Globalrev;
+use mononoke_types::NonRootMPath;
 use once_cell::sync::Lazy;
 use permission_checker::MononokeIdentitySet;
 use phases::PhasesRef;
@@ -101,20 +103,32 @@ pub fn extract_differential_revision(message: &str) -> Option<&str> {
 pub struct ChangedFilesInfo {
     changed_files_count: u64,
     changed_files_size: u64,
+    changed_paths: BTreeSet<NonRootMPath>,
 }
+
+/// Cap on the number of paths retained in `ChangedFilesInfo::changed_paths`.
+/// Large codemod commits can touch hundreds of thousands of paths; logging all
+/// of them blows up memory and log payload size. Consumers can detect
+/// truncation by comparing `changed_paths.len()` against `changed_files_count`.
+const MAX_LOGGED_CHANGED_PATHS: usize = 10_000;
 
 impl ChangedFilesInfo {
     pub fn new(bcs: &BonsaiChangeset) -> Self {
-        let changed_files_count = bcs.file_changes_map().len() as u64;
-        let changed_files_size = bcs
-            .file_changes_map()
-            .values()
-            .map(|fc| fc.size().unwrap_or(0))
-            .sum::<u64>();
+        let (changed_files_count, changed_files_size, changed_paths) =
+            bcs.file_changes_map().iter().fold(
+                (0u64, 0u64, BTreeSet::<NonRootMPath>::new()),
+                |(count, size, mut paths), (path, change)| {
+                    if paths.len() < MAX_LOGGED_CHANGED_PATHS {
+                        paths.insert(path.clone());
+                    }
+                    (count + 1, size + change.size().unwrap_or(0), paths)
+                },
+            );
 
         Self {
             changed_files_count,
             changed_files_size,
+            changed_paths,
         }
     }
 }
@@ -154,6 +168,7 @@ struct PlainCommitInfo {
     pusher_main_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     globalrev: Option<Globalrev>,
+    changed_paths: Vec<String>,
 }
 
 impl PlainCommitInfo {
@@ -173,6 +188,7 @@ impl PlainCommitInfo {
                 ChangedFilesInfo {
                     changed_files_count,
                     changed_files_size,
+                    changed_paths,
                 },
         } = commit_info;
         let repo_id = repo.repo_identity().id().id();
@@ -216,6 +232,11 @@ impl PlainCommitInfo {
             pusher_main_id = cri.main_id.clone();
         }
 
+        let changed_paths = changed_paths
+            .iter()
+            .map(|path| path.to_string())
+            .collect::<Vec<_>>();
+
         Ok(PlainCommitInfo {
             repo_id,
             repo_name,
@@ -237,6 +258,7 @@ impl PlainCommitInfo {
             pusher_entry_point,
             pusher_main_id,
             globalrev,
+            changed_paths,
         })
     }
 }
@@ -262,6 +284,7 @@ impl Loggable for PlainCommitInfo {
             .set_generation(self.generation.value() as i64)
             .set_changed_files_count(self.changed_files_count as i64)
             .set_changed_files_size(self.changed_files_size as i64)
+            .set_changed_paths(self.changed_paths.clone())
             .set_pusher_identities(
                 self.user_identities
                     .iter()
