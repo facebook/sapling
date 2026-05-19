@@ -58,7 +58,7 @@
       "client_atlas_env_id": null,
       "client_correlator": *, (glob)
       "client_entry_point": "curl_test",
-      "client_hostname": "localhost",
+      "client_hostname": "localhost.*", (re)
       "client_ip": "$LOCALIP",
       "client_main_id": *, (glob)
       "fetch_cause": null,
