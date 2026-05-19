@@ -3,6 +3,8 @@
 
 from __future__ import absolute_import
 
+import os
+
 from sapling import extensions, patch as patchmod, util
 
 
@@ -34,7 +36,7 @@ def internalpatch(
     if fakenow:
         fakenow = util.parsedate(fakenow)[0]
         for f in files:
-            repo.wvfs.utime(f, (fakenow, fakenow))
+            os.utime(repo.wvfs.join(f), (fakenow, fakenow))
 
     return r
 

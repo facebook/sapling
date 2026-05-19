@@ -274,10 +274,6 @@ class abstractvfs(abc.ABC):
         target = os.readlink(self.join(path))
         return target.replace("\\", "/") if os.name == "nt" else target
 
-    def removedirs(self, path: "Optional[str]" = None) -> None:
-        """Remove a leaf directory and all empty intermediate ones"""
-        return util.removedirs(self.join(path))
-
     def rmtree(
         self,
         path: "Optional[str]" = None,
@@ -326,9 +322,6 @@ class abstractvfs(abc.ABC):
         self, path: "Optional[str]" = None, ignoremissing: bool = False
     ) -> None:
         return util.unlinkpath(self.join(path), ignoremissing=ignoremissing)
-
-    def utime(self, path=None, t=None):
-        return os.utime(self.join(path), t)
 
     def walk(
         self,
