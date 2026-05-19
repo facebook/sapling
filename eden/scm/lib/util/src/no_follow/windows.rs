@@ -220,6 +220,40 @@ impl NoFollowRoot {
         .map_err(|err| path_error::build(err, path_error::CREATE_DIR, path.as_path()))
     }
 
+    /// List names in a directory below this root, or in the root itself.
+    ///
+    /// If provided, `path` must be relative and must not contain `..`. Parent
+    /// components and the leaf must not be reparse points. The returned names
+    /// exclude `.` and `..`.
+    pub fn list_dir<'a, P>(&self, path: Option<P>) -> io::Result<Vec<OsString>>
+    where
+        P: TryInto<CheckedRelPath<'a>>,
+        P::Error: Into<io::Error>,
+    {
+        let path = path
+            .map(|path| path.try_into().map_err(Into::into))
+            .transpose()?;
+        let list_path = path
+            .as_ref()
+            .map_or_else(|| Path::new("."), CheckedRelPath::as_path);
+        retry_io(|| {
+            if let Some(path) = &path {
+                let root = self.open_root_inner(path.as_path())?;
+                list_dir(&root.root)
+            } else {
+                // Open an empty object name relative to the root handle instead
+                // of duplicating the handle. Duplicated directory handles share
+                // the same underlying file object on Windows, including the
+                // directory query position, like a readdir offset. Reopening
+                // the root creates an independent file object for this listing.
+                let root = open_dir_for_list(self.root.as_raw_handle() as HANDLE, OsStr::new(""))?;
+                list_dir(&root)
+            }
+        })
+        .map_err(super::normalize_not_directory)
+        .map_err(|err| path_error::build(err, path_error::LIST_DIR, list_path))
+    }
+
     /// Write a regular file at `path`, creating parent directories.
     ///
     /// `path` must be relative and must not contain `..`. If the leaf already
@@ -872,6 +906,29 @@ fn open_dir_no_follow(dir: HANDLE, component: &OsStr) -> io::Result<OwnedHandle>
         component,
         FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
     )
+}
+
+fn open_dir_for_list(dir: HANDLE, component: &OsStr) -> io::Result<OwnedHandle> {
+    let handle = open_child_with_share(
+        dir,
+        component,
+        FILE_LIST_DIRECTORY | FILE_READ_ATTRIBUTES | SYNCHRONIZE,
+        FILE_OPEN,
+        FILE_DIRECTORY_FILE | FILE_OPEN_REPARSE_POINT,
+        FILE_ATTRIBUTE_NORMAL,
+        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+    )?;
+    reject_reparse_point(&handle)?;
+    Ok(handle)
+}
+
+fn list_dir(dir: &OwnedHandle) -> io::Result<Vec<OsString>> {
+    let mut names = Vec::new();
+    read_dir_entry_names(dir, |name| {
+        names.push(name);
+        Ok(())
+    })?;
+    Ok(names)
 }
 
 fn open_dir_no_follow_with_share(

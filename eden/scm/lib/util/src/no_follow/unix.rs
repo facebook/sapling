@@ -8,6 +8,7 @@
 use std::ffi::CStr;
 use std::ffi::CString;
 use std::ffi::OsStr;
+use std::ffi::OsString;
 use std::fs::File;
 use std::fs::Metadata;
 use std::io;
@@ -167,6 +168,40 @@ impl NoFollowRoot {
         })
         .map_err(super::normalize_not_directory)
         .map_err(|err| path_error::build(err, path_error::CREATE_DIR, path.as_path()))
+    }
+
+    /// List names in a directory below this root, or in the root itself.
+    ///
+    /// If provided, `path` must be relative and must not contain `..`.
+    /// Symlinks in parent components or at the leaf are rejected instead of
+    /// followed. The returned names exclude `.` and `..`.
+    pub fn list_dir<'a, P>(&self, path: Option<P>) -> io::Result<Vec<OsString>>
+    where
+        P: TryInto<CheckedRelPath<'a>>,
+        P::Error: Into<io::Error>,
+    {
+        let path = path
+            .map(|path| path.try_into().map_err(Into::into))
+            .transpose()?;
+        let list_path = path
+            .as_ref()
+            .map_or_else(|| Path::new("."), CheckedRelPath::as_path);
+        retry_io(|| {
+            // Open "." instead of dup-ing the root fd. Directory fds cloned
+            // with dup share the same open file description, including the
+            // readdir offset, so repeated root listings could otherwise
+            // resume at EOF.
+            let path_c = path_cstring(list_path)?;
+            let dir = open_path(
+                self.root.as_fd(),
+                &path_c,
+                libc::O_RDONLY | libc::O_DIRECTORY | libc::O_CLOEXEC,
+                0,
+            )?;
+            list_dir(dir)
+        })
+        .map_err(super::normalize_not_directory)
+        .map_err(|err| path_error::build(err, path_error::LIST_DIR, list_path))
     }
 
     /// Write a regular file at `path`, creating parent directories.
@@ -550,6 +585,15 @@ fn open_dir_no_follow_cstring(dir: BorrowedFd<'_>, component: &CString) -> io::R
         libc::O_RDONLY | libc::O_DIRECTORY | libc::O_CLOEXEC,
         0,
     )
+}
+
+fn list_dir(dir: OwnedFd) -> io::Result<Vec<OsString>> {
+    let mut names = Vec::new();
+    read_dir_names(dir, |name| {
+        names.push(OsString::from_vec(name.into_bytes()));
+        Ok(())
+    })?;
+    Ok(names)
 }
 
 fn write_file(dir: BorrowedFd<'_>, leaf: &CString, mode: u32, contents: &[u8]) -> io::Result<()> {

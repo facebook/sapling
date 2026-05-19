@@ -13,6 +13,9 @@ use std::io::Write;
 use std::os::unix::fs::MetadataExt;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::Arc;
+use std::sync::Barrier;
+use std::thread;
 
 use tempfile::tempdir;
 
@@ -54,6 +57,8 @@ fn operations_reject_escape_paths() -> io::Result<()> {
     assert!(root.write_file(Path::new("/tmp/evil"), b"", 0o600).is_err());
     assert!(root.remove_file(Path::new("../escape")).is_err());
     assert!(root.remove_dir(Path::new("/tmp/evil")).is_err());
+    assert!(root.list_dir(Some(Path::new("../escape"))).is_err());
+    assert!(root.list_dir(Some(Path::new("/tmp/evil"))).is_err());
     assert!(!dir.path().join("escape").exists());
     Ok(())
 }
@@ -197,6 +202,135 @@ fn create_dir_all_rejects_parent_symlink() -> io::Result<()> {
     );
     assert!(!dir.path().join("real/child").exists());
     assert!(fs::symlink_metadata(dir.path().join("a/link"))?.is_symlink());
+    Ok(())
+}
+
+#[test]
+fn list_dir_lists_root_entries() -> io::Result<()> {
+    let dir = tempdir()?;
+    fs::write(dir.path().join("file"), b"contents")?;
+    fs::create_dir(dir.path().join("sub"))?;
+    let root = NoFollowRoot::new(dir.path())?;
+
+    assert_eq!(
+        sorted_names(root.list_dir(None::<&Path>)?),
+        vec!["file".to_string(), "sub".to_string()]
+    );
+    Ok(())
+}
+
+#[test]
+fn list_dir_lists_root_entries_repeatedly() -> io::Result<()> {
+    let dir = tempdir()?;
+    fs::write(dir.path().join("file"), b"contents")?;
+    fs::create_dir(dir.path().join("sub"))?;
+    let root = NoFollowRoot::new(dir.path())?;
+
+    let expected = vec!["file".to_string(), "sub".to_string()];
+    assert_eq!(sorted_names(root.list_dir(None::<&Path>)?), expected);
+    assert_eq!(sorted_names(root.list_dir(None::<&Path>)?), expected);
+    Ok(())
+}
+
+#[test]
+fn list_dir_lists_root_entries_concurrently() -> io::Result<()> {
+    let dir = tempdir()?;
+    let mut expected = Vec::new();
+    for i in 0..64 {
+        let name = format!("file-{i:02}");
+        fs::write(dir.path().join(&name), b"contents")?;
+        expected.push(name);
+    }
+    expected.sort();
+
+    let root = Arc::new(NoFollowRoot::new(dir.path())?);
+    let thread_count = 8;
+    let iterations = 100;
+    let barrier = Arc::new(Barrier::new(thread_count));
+    let mut threads = Vec::new();
+
+    for _ in 0..thread_count {
+        let root = root.clone();
+        let barrier = barrier.clone();
+        let expected = expected.clone();
+        threads.push(thread::spawn(move || -> io::Result<()> {
+            barrier.wait();
+            for _ in 0..iterations {
+                let names = sorted_names(root.list_dir(None::<&Path>)?);
+                if names != expected {
+                    return Err(io::Error::other(format!(
+                        "unexpected directory listing: {names:?}"
+                    )));
+                }
+            }
+            Ok(())
+        }));
+    }
+
+    for thread in threads {
+        thread.join().expect("list_dir thread panicked")?;
+    }
+    Ok(())
+}
+
+#[test]
+fn list_dir_lists_child_entries() -> io::Result<()> {
+    let dir = tempdir()?;
+    fs::create_dir_all(dir.path().join("parent/sub"))?;
+    fs::write(dir.path().join("parent/file"), b"contents")?;
+    let root = NoFollowRoot::new(dir.path())?;
+
+    assert_eq!(
+        sorted_names(root.list_dir(Some(Path::new("parent")))?),
+        vec!["file".to_string(), "sub".to_string()]
+    );
+    Ok(())
+}
+
+#[test]
+fn list_dir_rejects_file_leaf() -> io::Result<()> {
+    let dir = tempdir()?;
+    fs::write(dir.path().join("file"), b"contents")?;
+    let root = NoFollowRoot::new(dir.path())?;
+
+    assert!(root.list_dir(Some(Path::new("file"))).is_err());
+    Ok(())
+}
+
+#[test]
+fn list_dir_rejects_leaf_symlink_to_directory() -> io::Result<()> {
+    let dir = tempdir()?;
+    fs::create_dir(dir.path().join("target"))?;
+    fs::write(dir.path().join("target/file"), b"contents")?;
+    if !create_dir_symlink(Path::new("target"), &dir.path().join("link"))? {
+        return Ok(());
+    }
+    let root = NoFollowRoot::new(dir.path())?;
+
+    assert!(root.list_dir(Some(Path::new("link"))).is_err());
+    assert_eq!(
+        fs::read(dir.path().join("target/file"))?,
+        b"contents".to_vec()
+    );
+    Ok(())
+}
+
+#[test]
+fn list_dir_rejects_parent_symlink() -> io::Result<()> {
+    let dir = tempdir()?;
+    fs::create_dir_all(dir.path().join("real/child"))?;
+    fs::write(dir.path().join("real/child/file"), b"contents")?;
+    fs::create_dir(dir.path().join("a"))?;
+    if !create_dir_symlink(Path::new("../real"), &dir.path().join("a/link"))? {
+        return Ok(());
+    }
+    let root = NoFollowRoot::new(dir.path())?;
+
+    assert!(root.list_dir(Some(Path::new("a/link/child"))).is_err());
+    assert_eq!(
+        fs::read(dir.path().join("real/child/file"))?,
+        b"contents".to_vec()
+    );
     Ok(())
 }
 
@@ -1347,4 +1481,13 @@ fn assert_no_atomic_temp_files(dir: &Path) -> io::Result<()> {
         );
     }
     Ok(())
+}
+
+fn sorted_names(names: Vec<std::ffi::OsString>) -> Vec<String> {
+    let mut names: Vec<_> = names
+        .into_iter()
+        .map(|name| name.to_string_lossy().into_owned())
+        .collect();
+    names.sort();
+    names
 }
