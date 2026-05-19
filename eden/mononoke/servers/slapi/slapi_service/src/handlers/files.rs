@@ -86,6 +86,7 @@ const MAX_CONCURRENT_UPLOAD_FILENODES_PER_REQUEST: usize = 1000;
 define_stats! {
     prefix = "mononoke.files";
     files_served: timeseries(Rate, Sum),
+    files_batch_keys_requested: timeseries(Rate, Sum),
 }
 
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
@@ -124,6 +125,8 @@ impl SaplingRemoteApiHandler for Files2Handler {
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
         let ctx = repo.ctx().clone();
+
+        STATS::files_batch_keys_requested.add_value(request.reqs.len() as i64);
 
         let fetches = request.reqs.into_iter().map({
             let ctx = ctx.clone();

@@ -84,6 +84,7 @@ use crate::utils::parse_wire_request;
 define_stats! {
     prefix = "mononoke.trees";
     manifests_served: timeseries(Rate, Sum),
+    trees_batch_keys_requested: timeseries(Rate, Sum),
 }
 
 // The size is optimized for the batching settings in EdenFs.
@@ -131,6 +132,8 @@ fn fetch_all_trees<R: MononokeRepo>(
     flavour: SlapiCommitIdentityScheme,
 ) -> impl Stream<Item = Result<TreeEntry, SaplingRemoteApiServerError>> {
     let ctx = repo.ctx().clone();
+
+    STATS::trees_batch_keys_requested.add_value(request.keys.len() as i64);
 
     let fetches = request.keys.into_iter().map(move |key| match flavour {
         SlapiCommitIdentityScheme::Git => fetch_git_object_as_tree(key.clone(), repo.clone())
