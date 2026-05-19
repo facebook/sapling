@@ -162,6 +162,16 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> 
         .config()
         .get_or("worktree", "snapshot-direct-copy", || false)?;
 
+    if ctx.opts.snapshot {
+        let parents = workingcopy::fast_path_wdir_parents(repo.path(), repo.ident())?;
+        if parents.p2().is_some() {
+            bail!(
+                "working copy has two parents; \
+                 snapshot cannot preserve merge state"
+            );
+        }
+    }
+
     let sl_bin = current_sl_binary();
 
     // Spawn snapshot creation on a background thread so it runs concurrently
@@ -188,14 +198,6 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> 
             let target = parents.p1().copied();
             let source_sparse_config = clone::snapshot_sparse_config(repo.dot_hg_path())?;
             let source_user_config = clone::snapshot_eden_user_config(&source_client_dir)?;
-            // Neither direct copy nor the legacy snapshot path preserves
-            // p2 or merge state.
-            if ctx.opts.snapshot && parents.p2().is_some() {
-                logger.warn(
-                    "working copy has two parents (merge in progress); \
-                     snapshot will not preserve merge state",
-                );
-            }
             let source_status = if ctx.opts.snapshot && use_direct_copy {
                 logger.info("computing working copy status...");
                 let matcher = Arc::new(pathmatcher::AlwaysMatcher::new());

@@ -225,8 +225,8 @@ test worktree add --snapshot - file replaced by directory with added file
   $ sl revert --all --no-backup -q && rm -rf file.txt && sl revert --all --no-backup -q
 
 test worktree add --snapshot - merge in progress (two parents)
-neither direct copy nor the legacy snapshot path preserves p2 or merge state.
-the destination gets the file contents but only p1 as its parent.
+neither direct copy nor the legacy snapshot path preserves p2 or merge state,
+so we bail out early.
 
   $ sl goto -C 'desc(init)' -q
   $ echo branch1 > branch.txt
@@ -245,17 +245,8 @@ verify source has two parents
   branch1
   branch2
   $ sl worktree add --snapshot $TESTTMP/wt_merge
-  working copy has two parents (merge in progress); snapshot will not preserve merge state
-  computing working copy status...
-  created linked worktree at $TESTTMP/wt_merge
-  applying working copy changes to new worktree...
-  working copy changes applied to new worktree
-destination only has p1 — p2 and merge state are not preserved
-  $ cd $TESTTMP/wt_merge && sl log -r 'parents()' -T '{desc}\n'
-  branch2
-file contents are still copied correctly
-  $ cat $TESTTMP/wt_merge/file.txt
-  dirty
+  abort: working copy has two parents; snapshot cannot preserve merge state
+  [255]
   $ cd $TESTTMP/myrepo
   $ sl debugsetparents .
   $ sl goto -C 'desc(init)' -q
