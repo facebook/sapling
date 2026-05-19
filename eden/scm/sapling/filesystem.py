@@ -9,7 +9,6 @@
 # GNU General Public License version 2 or any later version.
 
 
-import os
 import stat
 
 from bindings import workingcopy
@@ -52,11 +51,11 @@ class physicalfilesystem:
             self.dirstate, match, removefiles, removedirs, removeignored
         )
 
-        join = self.dirstate._repo.wjoin
+        wvfs = self.dirstate._repo.wvfs
 
         def remove(remove_func, name):
             try:
-                remove_func(join(name))
+                remove_func(name)
             except OSError:
                 errors.append(_("%s cannot be removed") % name)
 
@@ -68,7 +67,7 @@ class physicalfilesystem:
                     msg = _("cannot remove %s: it is a submodule (not supported)") % f
                     errors.append(msg)
                     continue
-                remove(util.unlink, f)
+                remove(wvfs.unlink, f)
 
         # Only evaluate dirs after deleting files, since the lazy evaluation
         # will be checking to see if the directory is empty.
@@ -76,7 +75,7 @@ class physicalfilesystem:
             resultdirs = []
             for f in dirs:
                 resultdirs.append(f)
-                remove(os.rmdir, f)
+                remove(wvfs.rmdir, f)
         else:
             resultdirs = list(dirs)
 
@@ -128,7 +127,7 @@ def _emptydirs(ui, wvfs, dirstate, match):
     dirs = (
         f
         for f in sorted(directories, reverse=True)
-        if (match(f) and not os.listdir(wvfs.join(f)))
+        if (match(f) and not wvfs.listdir(f))
     )
 
     errors = ["%s: %s" % (_(msg), path) for path, msg in sorted(walker.errors())]
