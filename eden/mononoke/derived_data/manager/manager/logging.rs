@@ -14,7 +14,6 @@ use context::CoreContext;
 use context::PerfCounters;
 use derived_data_constants::*;
 use futures_stats::FutureStats;
-use metadata::Metadata;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -36,12 +35,18 @@ pub(super) struct DerivedDataScuba<Derivable> {
 }
 
 impl DerivedDataManager {
-    pub(super) fn derived_data_scuba<Derivable>(&self) -> DerivedDataScuba<Derivable>
+    pub(super) fn derived_data_scuba<Derivable>(
+        &self,
+        ctx: &CoreContext,
+    ) -> DerivedDataScuba<Derivable>
     where
         Derivable: BonsaiDerivable,
     {
         let mut scuba = self.inner.scuba.clone();
         scuba.add("derived_data", Derivable::NAME);
+        // Attach request metadata (session id, client identities, client_correlator, ...)
+        // up front so every row this builder emits carries it.
+        scuba.add_metadata(ctx.metadata());
         DerivedDataScuba {
             scuba,
             description: None,
@@ -102,11 +107,6 @@ impl<Derivable: BonsaiDerivable> DerivedDataScuba<Derivable> {
             .map(|bcs| bcs.file_changes_map().len())
             .sum::<usize>();
         self.scuba.add("changed_files_count", changed_files_count);
-    }
-
-    /// Add metadata to the logger
-    pub fn add_metadata(&mut self, metadata: &Metadata) {
-        self.scuba.add_metadata(metadata);
     }
 
     /// Log the start of derivation to both the request and derived data scuba

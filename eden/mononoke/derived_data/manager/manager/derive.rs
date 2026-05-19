@@ -446,9 +446,8 @@ impl DerivedDataManager {
         let ctx = ctx.clone_and_reset();
         let ctx = self.set_derivation_session_class(ctx)?;
 
-        let mut derived_data_scuba = self.derived_data_scuba::<Derivable>();
+        let mut derived_data_scuba = self.derived_data_scuba::<Derivable>(&ctx);
         derived_data_scuba.add_changeset(&bonsai);
-        derived_data_scuba.add_metadata(ctx.metadata());
 
         derived_data_scuba.log_derivation_start(&ctx);
 
@@ -547,7 +546,7 @@ impl DerivedDataManager {
                 priority,
             };
             let mut request_state = DerivationState::NotRequested;
-            let mut derived_data_scuba = self.derived_data_scuba::<Derivable>();
+            let mut derived_data_scuba = self.derived_data_scuba::<Derivable>(ctx);
             derived_data_scuba.add_changeset_id(csid);
 
             // Try to perform remote derivation.  Capture the error so that we
@@ -851,10 +850,9 @@ impl DerivedDataManager {
                 None
             };
 
-            let mut derived_data_scuba = self.derived_data_scuba::<Derivable>();
+            let mut derived_data_scuba = self.derived_data_scuba::<Derivable>(ctx);
             derived_data_scuba.add_changesets(&bonsais);
             derived_data_scuba.log_batch_derivation_start(ctx);
-            derived_data_scuba.add_metadata(ctx.metadata());
             let (overall_stats, result) = async {
                 let derivation_ctx_ref = &derivation_ctx;
                 let (batch_duration, derived) = {
@@ -1004,7 +1002,7 @@ impl DerivedDataManager {
                 })?;
             let derivation_ctx_ref = &derivation_ctx;
 
-            let mut derived_data_scuba = self.derived_data_scuba::<Derivable>();
+            let mut derived_data_scuba = self.derived_data_scuba::<Derivable>(ctx);
             derived_data_scuba.add_stage_id(stage_id);
 
             let ctx = ctx.clone_and_reset();
@@ -1114,7 +1112,6 @@ impl DerivedDataManager {
                 }
 
                 derived_data_scuba.log_batch_derivation_start(ctx);
-                derived_data_scuba.add_metadata(ctx.metadata());
 
                 let setup_duration = setup_start.elapsed();
                 derived_data_scuba.add_setup_duration(setup_duration);
