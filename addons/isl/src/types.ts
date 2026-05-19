@@ -1004,6 +1004,7 @@ export type LocalStorageName =
   | 'isl.hide-cwd-irrelevant-stacks'
   | 'isl.split-suggestion-enabled'
   | 'isl.comparison-display-mode'
+  | 'isl.comparison-ignore-whitespace'
   | 'isl.expand-generated-files'
   | 'isl-color-theme'
   | 'isl.auto-resolve-before-continue'
@@ -1063,7 +1064,7 @@ export type ClientToServerMessage =
   | {type: 'updateRemoteDiffMessage'; diffId: DiffId; title: string; description: string}
   | {type: 'pageVisibility'; state: PageVisibility}
   | {type: 'getRepoUrlAtHash'; revset: Revset; path?: string}
-  | {type: 'requestComparison'; comparison: Comparison}
+  | {type: 'requestComparison'; comparison: Comparison; ignoreWhitespace?: boolean}
   | {
       type: 'requestComparisonContextLines';
       id: {
@@ -1250,7 +1251,7 @@ export type ServerToClientMessage =
     }
   | {type: 'uploadFileResult'; id: string; result: Result<string>}
   | {type: 'gotRepoUrlAtHash'; url: Result<string>}
-  | {type: 'comparison'; comparison: Comparison; data: ComparisonData}
+  | {type: 'comparison'; comparison: Comparison; data: ComparisonData; ignoreWhitespace?: boolean}
   | {type: 'comparisonContextLines'; path: RepoRelativePath; lines: Result<Array<string>>}
   | {type: 'beganLoadingMoreCommits'}
   | {type: 'commitsShownRange'; rangeInDays: number | undefined}

@@ -592,9 +592,9 @@ export default class ServerToClientAPI {
         break;
       }
       case 'requestComparison': {
-        const {comparison} = data;
+        const {comparison, ignoreWhitespace} = data;
         const diff: Promise<Result<string>> = repo
-          .runDiff(ctx, comparison)
+          .runDiff(ctx, comparison, undefined, ignoreWhitespace)
           .then(value => ({value}))
           .catch(error => {
             logger?.error('error running diff', error.toString());
@@ -605,6 +605,7 @@ export default class ServerToClientAPI {
             type: 'comparison',
             comparison,
             data: {diff: data},
+            ignoreWhitespace,
           }),
         );
         break;

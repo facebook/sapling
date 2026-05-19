@@ -281,6 +281,7 @@ describe('Shelve', () => {
               type: ComparisonType.Committed,
               hash: 'aaa',
             },
+            ignoreWhitespace: true,
           });
         });
       });

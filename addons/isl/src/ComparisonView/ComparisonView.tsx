@@ -12,6 +12,7 @@ import type {Context} from './SplitDiffView/types';
 
 import deepEqual from 'fast-deep-equal';
 import {Button} from 'isl-components/Button';
+import {Checkbox} from 'isl-components/Checkbox';
 import {Dropdown} from 'isl-components/Dropdown';
 import {ErrorBoundary, ErrorNotice} from 'isl-components/ErrorNotice';
 import {Icon} from 'isl-components/Icon';
@@ -50,11 +51,24 @@ function mapResult<T, U>(result: Result<T>, fn: (t: T) => U): Result<U> {
   return result.error == null ? {value: fn(result.value)} : result;
 }
 
+const comparisonIgnoreWhitespace = localStorageBackedAtom<boolean>(
+  'isl.comparison-ignore-whitespace',
+  true,
+);
+
 const currentComparisonData = atomFamilyWeak((comparison: Comparison) =>
-  atomLoadableWithRefresh<Result<Array<ParsedDiff>>>(async () => {
-    serverAPI.postMessage({type: 'requestComparison', comparison});
-    const event = await serverAPI.nextMessageMatching('comparison', event =>
-      deepEqual(comparison, event.comparison),
+  atomLoadableWithRefresh<Result<Array<ParsedDiff>>>(async get => {
+    const ignoreWhitespace = get(comparisonIgnoreWhitespace);
+    serverAPI.postMessage({
+      type: 'requestComparison',
+      comparison,
+      ...(ignoreWhitespace ? {ignoreWhitespace} : {}),
+    });
+    const event = await serverAPI.nextMessageMatching(
+      'comparison',
+      event =>
+        deepEqual(comparison, event.comparison) &&
+        (event.ignoreWhitespace ?? false) === ignoreWhitespace,
     );
     return mapResult(event.data.diff, parsePatchAndFilter);
   }),
@@ -306,6 +320,7 @@ function ComparisonViewHeader({
 
 function ComparisonSettingsDropdown() {
   const [mode, setMode] = useAtom(comparisonDisplayMode);
+  const [ignoreWhitespace, setIgnoreWhitespace] = useAtom(comparisonIgnoreWhitespace);
   return (
     <div className="dropdown-field">
       <RadioGroup
@@ -318,6 +333,9 @@ function ComparisonSettingsDropdown() {
         current={mode}
         onChange={setMode}
       />
+      <Checkbox checked={ignoreWhitespace} onChange={setIgnoreWhitespace}>
+        <T>Ignore Whitespace</T>
+      </Checkbox>
     </div>
   );
 }

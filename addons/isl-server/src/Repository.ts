@@ -1684,6 +1684,7 @@ export class Repository {
     ctx: RepositoryContext,
     comparison: Comparison,
     contextLines = 4,
+    ignoreWhitespace?: boolean,
   ): Promise<string> {
     const output = await this.runCommand(
       [
@@ -1695,6 +1696,7 @@ export class Repository {
         '--nodate',
         '--unified',
         String(contextLines),
+        ...(ignoreWhitespace ? ['-w'] : []),
       ],
       'DiffCommand',
       ctx,

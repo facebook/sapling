@@ -143,6 +143,7 @@ describe('ComparisonView', () => {
         expectMessageSentToServer({
           type: 'requestComparison',
           comparison: {type: ComparisonType.UncommittedChanges},
+          ignoreWhitespace: true,
         }),
       // Since this dynamically imports the comparison view, it may take a while to load in resource-constrained CI,
       // so add a generous timeout to reducy flakiness.
@@ -159,6 +160,7 @@ describe('ComparisonView', () => {
         type: 'comparison',
         comparison: {type: ComparisonType.UncommittedChanges},
         data: {diff: {value: diffContent ?? UNCOMMITTED_CHANGES_DIFF}},
+        ignoreWhitespace: true,
       });
       await nextTick();
     });
@@ -338,6 +340,7 @@ describe('ComparisonView', () => {
     expectMessageSentToServer({
       type: 'requestComparison',
       comparison: {type: ComparisonType.UncommittedChanges},
+      ignoreWhitespace: true,
     });
     unmountNow();
   });
@@ -353,6 +356,7 @@ describe('ComparisonView', () => {
     expectMessageSentToServer({
       type: 'requestComparison',
       comparison: {type: ComparisonType.StackChanges},
+      ignoreWhitespace: true,
     });
     unmountNow();
   });
@@ -366,6 +370,7 @@ describe('ComparisonView', () => {
         type: 'comparison',
         comparison: {type: ComparisonType.UncommittedChanges},
         data: {diff: {value: UNCOMMITTED_CHANGES_DIFF}},
+        ignoreWhitespace: true,
       });
       await nextTick();
     });
