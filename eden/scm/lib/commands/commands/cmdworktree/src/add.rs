@@ -16,6 +16,7 @@ use std::sync::Arc;
 use anyhow::Context;
 use anyhow::bail;
 use clidispatch::ReqCtx;
+use clidispatch::TermLogger;
 use clidispatch::abort;
 use cmdutil::ConfigExt;
 use cmdutil::Result;
@@ -276,12 +277,23 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> 
 
     logger.info(format!("created linked worktree at {}", dest.display()));
 
-    if let Some(handle) = legacy_snapshot_handle {
+    let snapshot_result = if let Some(handle) = legacy_snapshot_handle {
         // Legacy path: upload+restore via `sl snapshot create/checkout`.
-        restore_snapshot_legacy(ctx, handle, &dest)?;
+        restore_snapshot_legacy(ctx, handle, &dest)
     } else if let Some(source_status) = source_status {
         // Direct copy path: read dirty files from source and write into dest.
-        snapshot_with_direct_workingcopy_patch(ctx, repo, source_status, &dest)?;
+        snapshot_with_direct_workingcopy_patch(ctx, repo, source_status, &dest)
+    } else {
+        Ok(())
+    };
+    if let Err(e) = snapshot_result {
+        if let Err(recovery_err) = restore_clean_state(&dest, &logger) {
+            logger.warn(format!(
+                "also failed to restore clean state: {:#}",
+                recovery_err
+            ));
+        }
+        return Err(e);
     }
 
     let post_hooks = hook::Hooks::from_config(repo.config(), ctx.io(), "post-worktree-add");
@@ -521,6 +533,17 @@ fn snapshot_with_direct_workingcopy_patch(
     update_dest_treestate(dest, &status).context("failed to update treestate after file copy")?;
 
     logger.info("working copy changes applied to new worktree");
+    Ok(())
+}
+
+fn restore_clean_state(dest: &Path, logger: &TermLogger) -> anyhow::Result<()> {
+    let sl_bin = current_sl_binary();
+    Command::new(&sl_bin)
+        .args(["goto", ".", "--clean"])
+        .current_dir(dest)
+        .checked_run()
+        .with_context(|| format!("restoring clean state in {}", dest.display()))?;
+    logger.info("restored worktree to clean state");
     Ok(())
 }
 
