@@ -436,7 +436,7 @@ class vfs(abstractvfs):
     @util.propertycache
     def _rustvfs_mkdir(self):
         # Unlike _rustvfs, create self.base directory on demand.
-        util.makedirs(self.base, self.createmode, True)
+        util.makedirs(self.base, self.createmode)
         return self._rustvfs
 
     def _rustpath(self, path: "Optional[str]") -> str:
@@ -470,6 +470,23 @@ class vfs(abstractvfs):
         if self.createmode is None:
             return 0o666
         return typing.cast(int, self.createmode) & 0o666
+
+    def makedir(self, path: "Optional[str]" = None, notindexed: bool = True) -> None:
+        # notindexed is a legacy Windows indexing hint with few remaining
+        # callers. The Rust no-follow VFS intentionally ignores it.
+        return self.mkdir(path)
+
+    def makedirs(
+        self, path: "Optional[str]" = None, mode: "Optional[int]" = None
+    ) -> None:
+        if not path:
+            return util.makedirs(self.base, mode)
+        self._rustvfs_mkdir.makedirs(self._rustpath(path), mode=mode)
+
+    def mkdir(self, path: "Optional[str]" = None) -> None:
+        if not path:
+            return os.mkdir(self.base)
+        self._rustvfs_mkdir.mkdir(self._rustpath(path))
 
     def chmod(self, path: str, mode: int) -> None:
         self._rustvfs.set_permissions(self._rustpath(path), mode)
