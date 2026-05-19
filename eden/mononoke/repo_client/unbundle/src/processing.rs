@@ -280,6 +280,12 @@ async fn run_pushrebase(
                 None,
                 Some(repo.repo_identity().name()),
             )?;
+            let merge_resolution_override = MergeResolutionOverride::from_pushvar_value(
+                maybe_pushvars
+                    .as_ref()
+                    .and_then(|p| p.get(MergeResolutionOverride::PUSHVAR_KEY))
+                    .map(|b| b.as_ref()),
+            );
 
             let outcome = normal_pushrebase(
                 ctx,
@@ -293,7 +299,7 @@ async fn run_pushrebase(
                 &authz,
                 false, // We will log new commits locally
                 force_local_pushrebase,
-                MergeResolutionOverride::UseJk,
+                merge_resolution_override,
             )
             .await;
             let (pushrebased_rev, pushrebased_changesets) = match outcome {
