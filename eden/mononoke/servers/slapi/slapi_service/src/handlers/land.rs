@@ -126,6 +126,12 @@ async fn land_stack<R: MononokeRepo>(
         Some(repo.repo().repo_identity().name()),
     )?;
 
+    let merge_resolution_override = MergeResolutionOverride::from_pushvar_value(
+        pushvars
+            .get(MergeResolutionOverride::PUSHVAR_KEY)
+            .map(|b| b.as_ref()),
+    );
+
     let pushrebase_outcome = repo
         .land_stack(
             bookmark,
@@ -139,8 +145,7 @@ async fn land_stack<R: MononokeRepo>(
             BookmarkKindRestrictions::AnyKind,
             PushAuthoredBy::User,
             force_local_pushrebase,
-            // TODO(D3): replace with pushvar-parsed override
-            MergeResolutionOverride::UseJk,
+            merge_resolution_override,
         )
         .await?;
 

@@ -1108,6 +1108,88 @@ pub enum MergeResolutionOverride {
     ForceOff,
 }
 
+impl MergeResolutionOverride {
+    /// Pushvar key consulted by `from_pushvar_value`. All push surfaces
+    /// (SLAPI Land, SCS RepoLandStack, bundle2 unbundle) read this same
+    /// key so callers (Sandcastle, etc.) set it once regardless of path.
+    pub const PUSHVAR_KEY: &'static str = "MERGE_RESOLUTION_OVERRIDE";
+
+    /// Parse the pushvar value (already looked up from the pushvar map
+    /// by the caller — kept generic over `&[u8]` to avoid pulling
+    /// `bytes` into `metaconfig_types`). Accepts `"true"`/`"1"` -> `ForceOn`,
+    /// `"false"`/`"0"` -> `ForceOff` (case-insensitive). Anything else
+    /// — missing, empty, malformed — returns `UseJk` so callers without
+    /// an opinion fall through to the JK as before.
+    pub fn from_pushvar_value(raw: Option<&[u8]>) -> Self {
+        match raw.map(<[u8]>::to_ascii_lowercase).as_deref() {
+            Some(b"true" | b"1") => Self::ForceOn,
+            Some(b"false" | b"0") => Self::ForceOff,
+            _ => Self::UseJk,
+        }
+    }
+}
+
+#[cfg(test)]
+mod merge_resolution_override_tests {
+    use super::MergeResolutionOverride;
+
+    #[test]
+    fn from_pushvar_value_recognizes_truthy() {
+        assert_eq!(
+            MergeResolutionOverride::from_pushvar_value(Some(b"true")),
+            MergeResolutionOverride::ForceOn,
+        );
+        assert_eq!(
+            MergeResolutionOverride::from_pushvar_value(Some(b"TRUE")),
+            MergeResolutionOverride::ForceOn,
+        );
+        assert_eq!(
+            MergeResolutionOverride::from_pushvar_value(Some(b"True")),
+            MergeResolutionOverride::ForceOn,
+        );
+        assert_eq!(
+            MergeResolutionOverride::from_pushvar_value(Some(b"1")),
+            MergeResolutionOverride::ForceOn,
+        );
+    }
+
+    #[test]
+    fn from_pushvar_value_recognizes_falsy() {
+        assert_eq!(
+            MergeResolutionOverride::from_pushvar_value(Some(b"false")),
+            MergeResolutionOverride::ForceOff,
+        );
+        assert_eq!(
+            MergeResolutionOverride::from_pushvar_value(Some(b"FALSE")),
+            MergeResolutionOverride::ForceOff,
+        );
+        assert_eq!(
+            MergeResolutionOverride::from_pushvar_value(Some(b"0")),
+            MergeResolutionOverride::ForceOff,
+        );
+    }
+
+    #[test]
+    fn from_pushvar_value_defaults_to_use_jk() {
+        assert_eq!(
+            MergeResolutionOverride::from_pushvar_value(None),
+            MergeResolutionOverride::UseJk,
+        );
+        assert_eq!(
+            MergeResolutionOverride::from_pushvar_value(Some(b"")),
+            MergeResolutionOverride::UseJk,
+        );
+        assert_eq!(
+            MergeResolutionOverride::from_pushvar_value(Some(b"yes")),
+            MergeResolutionOverride::UseJk,
+        );
+        assert_eq!(
+            MergeResolutionOverride::from_pushvar_value(Some(b"\xff\xfe")),
+            MergeResolutionOverride::UseJk,
+        );
+    }
+}
+
 impl Default for PushrebaseFlags {
     fn default() -> Self {
         PushrebaseFlags {
