@@ -494,41 +494,14 @@ fn snapshot_with_direct_workingcopy_patch(
     let src_vfs = vfs::VFS::new(repo.path().to_path_buf())?;
     let dst_vfs = vfs::VFS::new_destructive(dest.to_path_buf())?;
 
-    let copy_paths: Vec<&types::RepoPathBuf> = status
-        .modified()
-        .chain(status.added())
-        .chain(status.unknown())
-        .collect();
-    let remove_paths: Vec<&types::RepoPathBuf> = status.removed().chain(status.deleted()).collect();
-
-    let total = copy_paths.len() + remove_paths.len();
-    let (work_tx, result_rx) = prepare_batch_workers(&dst_vfs, total);
-
     logger.info("applying working copy changes to new worktree...");
 
-    let read_errors = stream_snapshot_work_items(&src_vfs, work_tx, &copy_paths, &remove_paths)?;
+    // Phase 1: remove files before writing to avoid races where a write
+    // lands at a path that a concurrent remove is about to delete.
+    remove_items(&dst_vfs, &status, &logger)?;
 
-    let mut write_errors: Vec<(types::RepoPathBuf, anyhow::Error)> = Vec::new();
-    while let Ok(result) = result_rx.recv() {
-        if let Err((work, err)) = result {
-            let path = work
-                .map(|w| w.path().to_owned())
-                .unwrap_or_else(types::RepoPathBuf::new);
-            write_errors.push((path, err));
-        }
-    }
-
-    for (path, err) in &read_errors {
-        logger.warn(format!("failed to read {}: {:#}", path, err));
-    }
-    for (path, err) in &write_errors {
-        logger.warn(format!("failed to apply {}: {:#}", path, err));
-    }
-
-    let error_count = read_errors.len() + write_errors.len();
-    if error_count > 0 {
-        bail!("{} file(s) failed during direct copy", error_count);
-    }
+    // Phase 2: copy modified, added, and untracked files.
+    copy_items(&src_vfs, &dst_vfs, &status, &logger)?;
 
     update_dest_treestate(dest, &status).context("failed to update treestate after file copy")?;
 
@@ -562,49 +535,7 @@ fn prepare_batch_workers(
     dst_vfs.batch(workers, WORK_QUEUE_SIZE)
 }
 
-/// Stream file reads from src into VFS batch workers for writing to dest.
-///
-/// Returns `Ok(read_errors)` listing files that failed to read from source.
-/// Returns `Err` only if a send to the batch channel fails (workers died).
-fn stream_snapshot_work_items(
-    src_vfs: &vfs::VFS,
-    work_tx: flume::Sender<vfs::Work>,
-    copy_paths: &[&types::RepoPathBuf],
-    remove_paths: &[&types::RepoPathBuf],
-) -> anyhow::Result<Vec<(types::RepoPathBuf, anyhow::Error)>> {
-    for path in remove_paths {
-        if work_tx.send(vfs::Work::Remove((*path).to_owned())).is_err() {
-            anyhow::bail!("batch workers stopped unexpectedly");
-        }
-    }
-
-    let mut read_errors: Vec<(types::RepoPathBuf, anyhow::Error)> = Vec::new();
-
-    for path in copy_paths {
-        match src_vfs.read_with_metadata(path) {
-            Ok((data, metadata)) => {
-                let flag = workingcopy::metadata::Metadata::from(metadata).to_update_flag(src_vfs);
-                if work_tx
-                    .send(vfs::Work::Write(
-                        (*path).to_owned(),
-                        data.into(),
-                        flag,
-                        None,
-                    ))
-                    .is_err()
-                {
-                    anyhow::bail!("batch workers stopped unexpectedly");
-                }
-            }
-            Err(e) => read_errors.push(((*path).to_owned(), e)),
-        }
-    }
-
-    Ok(read_errors)
-}
-
 /// Remove deleted/removed files from `dst_vfs` in parallel.
-#[allow(dead_code)]
 fn remove_items(
     dst_vfs: &vfs::VFS,
     status: &status::Status,
@@ -626,7 +557,6 @@ fn remove_items(
 
 /// Read modified/added/untracked files from `src_vfs` and write them to
 /// `dst_vfs` in parallel.
-#[allow(dead_code)]
 fn copy_items(
     src_vfs: &vfs::VFS,
     dst_vfs: &vfs::VFS,
