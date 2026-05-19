@@ -73,6 +73,25 @@ py_class!(pub class vfs |py| {
         Ok(PyNone)
     }
 
+    /// listdir(path: Optional[str] = None) -> List[str]
+    /// List directory entries without following symlinks.
+    def listdir(&self, path: Option<&PyPath> = None) -> PyResult<Vec<PyPathBuf>> {
+        let inner = self.inner(py).clone();
+        let path = match path {
+            Some(path) => path.to_repo_path_buf().map_pyerr(py)?,
+            None => types::RepoPathBuf::new(),
+        };
+        let names = py
+            .allow_threads(move || {
+                inner
+                    .list_dir(path.as_repo_path())?
+                    .into_iter()
+                    .collect::<anyhow::Result<Vec<_>>>()
+            })
+            .map_pyerr(py)?;
+        Ok(names.into_iter().map(PyPathBuf::from).collect())
+    }
+
     /// case_sensitive() -> bool
     /// Return whether the root filesystem is case-sensitive.
     def case_sensitive(&self) -> PyResult<bool> {

@@ -26,6 +26,7 @@ use bitflags::bitflags;
 use fsinfo::FsType;
 use fsinfo::fstype;
 use minibytes::Bytes;
+use types::PathComponentBuf;
 use types::RepoPath;
 use types::RepoPathBuf;
 use util::no_follow::AtomicReplaceFile;
@@ -103,6 +104,13 @@ fn normalize_not_directory_anyhow(err: anyhow::Error) -> anyhow::Error {
         Ok(err) => normalize_not_directory(err).into(),
         Err(err) => err,
     }
+}
+
+fn path_component_from_dir_entry(name: std::ffi::OsString) -> Result<PathComponentBuf> {
+    let name = name
+        .into_string()
+        .map_err(|name| anyhow::format_err!("directory entry is not UTF-8: {:?}", name))?;
+    Ok(PathComponentBuf::from_string(name)?)
 }
 
 #[derive(Clone)]
@@ -247,6 +255,20 @@ impl VFS {
 
         self.inner.auditor.audit_components(path)?;
         Ok(self.no_follow()?.create_dir_all(path, mode)?)
+    }
+
+    /// List names in `path` without following symlinks.
+    pub fn list_dir(&self, path: &RepoPath) -> Result<Vec<Result<PathComponentBuf>>> {
+        if !path.is_empty() {
+            self.inner.auditor.audit_components(path)?;
+        }
+
+        Ok(self
+            .no_follow()?
+            .list_dir((!path.is_empty()).then_some(path))?
+            .into_iter()
+            .map(path_component_from_dir_entry)
+            .collect())
     }
 
     pub fn metadata(&self, path: &RepoPath) -> Result<LiteMetadata> {
@@ -933,6 +955,72 @@ mod unix_tests {
     }
 
     #[test]
+    fn test_list_dir_lists_root_entries() {
+        let tmp = tempfile::tempdir().unwrap();
+        fs::write(tmp.path().join("file"), b"content").unwrap();
+        fs::create_dir(tmp.path().join("dir")).unwrap();
+        let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
+
+        assert_eq!(
+            sorted_component_names(vfs.list_dir(RepoPath::empty()).unwrap()).unwrap(),
+            vec!["dir".to_string(), "file".to_string()]
+        );
+    }
+
+    #[test]
+    fn test_list_dir_lists_child_entries() {
+        let tmp = tempfile::tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join("parent/dir")).unwrap();
+        fs::write(tmp.path().join("parent/file"), b"content").unwrap();
+        let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
+        let path = RepoPath::from_str("parent").unwrap();
+
+        assert_eq!(
+            sorted_component_names(vfs.list_dir(path).unwrap()).unwrap(),
+            vec!["dir".to_string(), "file".to_string()]
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_list_dir_reports_invalid_entries_per_entry() {
+        let tmp = tempfile::tempdir().unwrap();
+        fs::write(tmp.path().join("file"), b"content").unwrap();
+        fs::write(tmp.path().join("bad\nname"), b"content").unwrap();
+        let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
+
+        let names = vfs.list_dir(RepoPath::empty()).unwrap();
+        let mut valid = Vec::new();
+        let mut invalid_count = 0;
+        for name in names {
+            match name {
+                Ok(name) => valid.push(name.into_string()),
+                Err(err) => {
+                    assert!(err.downcast_ref::<types::path::ParseError>().is_some());
+                    invalid_count += 1;
+                }
+            }
+        }
+        valid.sort();
+
+        assert_eq!(valid, vec!["file".to_string()]);
+        assert_eq!(invalid_count, 1);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_list_dir_rejects_ancestor_symlink() {
+        let tmp = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        fs::write(outside.path().join("file"), b"outside").unwrap();
+        std::os::unix::fs::symlink(outside.path(), tmp.path().join("link")).unwrap();
+
+        let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
+        let path = RepoPath::from_str("link").unwrap();
+        assert!(vfs.list_dir(path).is_err());
+    }
+
+    #[test]
     fn test_set_executable_rejects_ancestor_symlink() {
         let tmp = tempfile::tempdir().unwrap();
         let outside = tempfile::tempdir().unwrap();
@@ -1022,6 +1110,15 @@ mod unix_tests {
 
         assert_eq!(0o755, VFS::update_mode(0o644, true));
         assert_eq!(0o644, VFS::update_mode(0o755, false));
+    }
+
+    fn sorted_component_names(names: Vec<Result<PathComponentBuf>>) -> Result<Vec<String>> {
+        let mut names: Vec<_> = names
+            .into_iter()
+            .map(|name| name.map(|name| name.into_string()))
+            .collect::<Result<_>>()?;
+        names.sort();
+        Ok(names)
     }
 }
 
