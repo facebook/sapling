@@ -230,3 +230,35 @@
   content A
   $ cat gclone_repo_jobs/b/file_b.txt
   content B
+
+-- Test gclone git default --check-stat (minimal) --
+
+  $ cd "$TESTTMP"
+  $ quiet "$GCLONE" git "$MONONOKE_GIT_SERVICE_BASE_URL/repo_a.git" gclone_git_a_chkstat_default -b master --upload
+  $ git -C gclone_git_a_chkstat_default config --get core.checkStat
+  minimal
+
+-- Test gclone git --check-stat=default --
+
+  $ cd "$TESTTMP"
+  $ quiet "$GCLONE" git "$MONONOKE_GIT_SERVICE_BASE_URL/repo_b.git" gclone_git_b_chkstat_explicit -b master --check-stat=default --upload
+  $ git -C gclone_git_b_chkstat_explicit config --get core.checkStat
+  default
+
+-- Test gclone grepo default --check-stat (minimal) on all projects --
+
+  $ cd "$TESTTMP"
+  $ quiet "$GCLONE" grepo "$MONONOKE_GIT_SERVICE_BASE_URL/manifest.git" gclone_repo_chkstat -b master --require-cached-repo-url --upload
+  $ git -C gclone_repo_chkstat/a config --get core.checkStat
+  minimal
+  $ git -C gclone_repo_chkstat/b config --get core.checkStat
+  minimal
+
+-- Test gclone grepo --check-stat=default on all projects --
+
+  $ cd "$TESTTMP"
+  $ quiet "$GCLONE" grepo "$MONONOKE_GIT_SERVICE_BASE_URL/manifest.git" gclone_repo_chkstat_def -b master --require-cached-repo-url --check-stat=default --upload
+  $ git -C gclone_repo_chkstat_def/a config --get core.checkStat
+  default
+  $ git -C gclone_repo_chkstat_def/b config --get core.checkStat
+  default
