@@ -323,25 +323,6 @@ class abstractvfs(abc.ABC):
     ) -> None:
         return util.unlinkpath(self.join(path), ignoremissing=ignoremissing)
 
-    def walk(
-        self,
-        path: "Optional[str]" = None,
-        onerror: "Optional[Callable[[OSError], None]]" = None,
-    ) -> "Iterable[Tuple[str, List[str], List[str]]]":
-        """Yield (dirpath, dirs, files) tuple for each directories under path
-
-        ``dirpath`` is relative one from the root of this vfs. This
-        uses ``/`` as path separator.
-
-        "The root of this vfs" is represented as empty ``dirpath``.
-        """
-        root = os.path.normpath(self.join(None))
-        # when dirpath == root, dirpath[prefixlen:] becomes empty
-        # because len(dirpath) < prefixlen.
-        prefixlen = len(pathutil.normasprefix(root))
-        for dirpath, dirs, files in os.walk(self.join(path), onerror=onerror):
-            yield (util.pconvert(dirpath[prefixlen:]), dirs, files)
-
     @contextlib.contextmanager
     def backgroundclosing(
         self, ui: "Any", expectedcount: int = -1

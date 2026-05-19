@@ -12,6 +12,7 @@
 
 
 import hashlib
+import os
 import posixpath
 import shutil
 import sys
@@ -36,6 +37,7 @@ from . import (
     git,
     i18n,
     match as matchmod,
+    pathutil,
     perftrace,
     progress,
     scmutil,
@@ -642,7 +644,14 @@ class _unknowndirschecker:
         # Check if the file conflicts with a directory containing unknown files.
         if repo.wvfs.audit.check(f) and repo.wvfs.isdir(f):
             # Does the directory contain any files that are not in the dirstate?
-            for p, dirs, files in repo.wvfs.walk(f):
+            root = os.path.normpath(repo.wvfs.join(None))
+            # This conflict check does not read file contents, write files, or
+            # expose the listing. The actual merge writes go through protected
+            # paths, so a plain path-based walk is acceptable here even though
+            # it does not use VFS path audit or no-follow traversal.
+            prefixlen = len(pathutil.normasprefix(root))
+            for p, _dirs, files in os.walk(repo.wvfs.join(f)):
+                p = util.pconvert(p[prefixlen:])
                 for fn in files:
                     relf = repo.dirstate.normalize(posixpath.join(p, fn))
                     if relf not in repo.dirstate:
