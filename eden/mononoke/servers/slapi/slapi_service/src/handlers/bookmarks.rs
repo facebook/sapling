@@ -54,13 +54,13 @@ async fn fetch_bookmark<R: MononokeRepo>(
         SlapiCommitIdentityScheme::Git => repo
             .resolve_bookmark_git(bookmark.clone(), freshness)
             .await
-            .map_err(|_| ErrorKind::BookmarkResolutionFailed(bookmark.clone()))?
+            .map_err(|e| ErrorKind::BookmarkResolutionFailed(bookmark.clone(), e.into()))?
             .map(|id| HgId::from_slice(id.as_ref()))
             .transpose()?,
         SlapiCommitIdentityScheme::Hg => repo
             .resolve_bookmark(bookmark.clone(), freshness)
             .await
-            .map_err(|_| ErrorKind::BookmarkResolutionFailed(bookmark.clone()))?
+            .map_err(|e| ErrorKind::BookmarkResolutionFailed(bookmark.clone(), e.into()))?
             .map(|id| HgId::from(id.into_nodehash())),
     };
 

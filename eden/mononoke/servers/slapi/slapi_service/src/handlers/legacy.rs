@@ -292,7 +292,7 @@ async fn list_bookmarks_for_pattern<R: MononokeRepo>(
         let hgid = repo
             .resolve_bookmark(pattern.clone(), Freshness::MaybeStale)
             .await
-            .map_err(|_| ErrorKind::BookmarkResolutionFailed(pattern.clone()))?
+            .map_err(|e| ErrorKind::BookmarkResolutionFailed(pattern.clone(), e.into()))?
             .map(|id| HgId::from(id.into_nodehash()));
 
         match hgid {
