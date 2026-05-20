@@ -121,6 +121,19 @@ int64_t readI64(const std::string& data, size_t offset) {
   return v;
 }
 
+// Write an arbitrary blob into the WAL file for `parent`, replacing any
+// existing contents. Used to construct malformed/torn WAL files for the
+// load tests below without depending on appendWalEntry's invariants.
+void writeRawWal(
+    const folly::test::TemporaryDirectory& testDir,
+    InodeNumber parent,
+    folly::StringPiece bytes) {
+  auto walPath = FsFileContentStore::getWalPath(parent);
+  auto fullPath =
+      canonicalPath(testDir.path().string()) + RelativePathPiece{walPath};
+  ASSERT_TRUE(folly::writeFile(bytes, fullPath.c_str()));
+}
+
 } // namespace
 
 TEST_F(FsInodeCatalogWalTest, appendWalEntry_writesAddEntryWithHash) {
@@ -432,6 +445,182 @@ TEST_F(FsInodeCatalogWalTest, scanForWalFiles_skipsNonRegularEntries) {
 
   auto found = store_->scanForWalFiles();
   EXPECT_TRUE(found.empty());
+}
+
+TEST_F(FsInodeCatalogWalTest, loadWalDelta_emptyForMissingFile) {
+  EXPECT_TRUE(store_->loadWalDelta(InodeNumber{300}).delta.empty());
+}
+
+TEST_F(FsInodeCatalogWalTest, loadWalDelta_collapsesAddThenRemove) {
+  const InodeNumber parent{301};
+  auto entry = makeEntry(0100644, 1);
+  store_->appendWalEntry(
+      parent,
+      FsFileContentStore::WalOpType::ADD,
+      PathComponentPiece{"x"},
+      &entry);
+  store_->appendWalEntry(
+      parent,
+      FsFileContentStore::WalOpType::REMOVE,
+      PathComponentPiece{"x"},
+      nullptr);
+
+  auto delta = store_->loadWalDelta(parent).delta;
+  ASSERT_EQ(1u, delta.size());
+  EXPECT_EQ(FsFileContentStore::WalOpType::REMOVE, delta.at("x").type);
+}
+
+TEST_F(FsInodeCatalogWalTest, loadWalDelta_collapsesAddThenMaterialize) {
+  const InodeNumber parent{302};
+  auto entry = makeEntryWithHash(0100644, 1, std::string(20, '\xab'));
+  store_->appendWalEntry(
+      parent,
+      FsFileContentStore::WalOpType::ADD,
+      PathComponentPiece{"x"},
+      &entry);
+  store_->appendWalEntry(
+      parent,
+      FsFileContentStore::WalOpType::MATERIALIZE,
+      PathComponentPiece{"x"},
+      nullptr);
+
+  auto delta = store_->loadWalDelta(parent).delta;
+  ASSERT_EQ(1u, delta.size());
+  // ADD survives but its hash is cleared in place.
+  EXPECT_EQ(FsFileContentStore::WalOpType::ADD, delta.at("x").type);
+  EXPECT_FALSE(delta.at("x").entry.hash().has_value());
+  EXPECT_EQ(0100644, *delta.at("x").entry.mode());
+  EXPECT_EQ(1, *delta.at("x").entry.inodeNumber());
+}
+
+TEST_F(
+    FsInodeCatalogWalTest,
+    loadWalDelta_materializeAloneRecordedAsMaterialize) {
+  const InodeNumber parent{303};
+  store_->appendWalEntry(
+      parent,
+      FsFileContentStore::WalOpType::MATERIALIZE,
+      PathComponentPiece{"y"},
+      nullptr);
+
+  auto delta = store_->loadWalDelta(parent).delta;
+  ASSERT_EQ(1u, delta.size());
+  EXPECT_EQ(FsFileContentStore::WalOpType::MATERIALIZE, delta.at("y").type);
+}
+
+TEST_F(FsInodeCatalogWalTest, loadWalDelta_removeThenAddBecomesAdd) {
+  const InodeNumber parent{304};
+  store_->appendWalEntry(
+      parent,
+      FsFileContentStore::WalOpType::REMOVE,
+      PathComponentPiece{"x"},
+      nullptr);
+  auto entry = makeEntry(0100644, 99);
+  store_->appendWalEntry(
+      parent,
+      FsFileContentStore::WalOpType::ADD,
+      PathComponentPiece{"x"},
+      &entry);
+
+  auto delta = store_->loadWalDelta(parent).delta;
+  ASSERT_EQ(1u, delta.size());
+  EXPECT_EQ(FsFileContentStore::WalOpType::ADD, delta.at("x").type);
+  EXPECT_EQ(99, *delta.at("x").entry.inodeNumber());
+}
+
+TEST_F(FsInodeCatalogWalTest, loadWalDelta_repeatedNamesYieldFinalState) {
+  const InodeNumber parent{305};
+  auto e1 = makeEntry(0100644, 1);
+  auto e2 = makeEntry(0100644, 2);
+  auto e3 = makeEntry(0100644, 3);
+  store_->appendWalEntry(
+      parent, FsFileContentStore::WalOpType::ADD, PathComponentPiece{"x"}, &e1);
+  store_->appendWalEntry(
+      parent, FsFileContentStore::WalOpType::ADD, PathComponentPiece{"x"}, &e2);
+  store_->appendWalEntry(
+      parent, FsFileContentStore::WalOpType::ADD, PathComponentPiece{"x"}, &e3);
+
+  auto delta = store_->loadWalDelta(parent).delta;
+  ASSERT_EQ(1u, delta.size());
+  EXPECT_EQ(3, *delta.at("x").entry.inodeNumber());
+}
+
+TEST_F(FsInodeCatalogWalTest, loadWalDelta_truncatedTailIsDiscarded) {
+  const InodeNumber parent{306};
+  auto entry = makeEntry(0100644, 1);
+  store_->appendWalEntry(
+      parent,
+      FsFileContentStore::WalOpType::ADD,
+      PathComponentPiece{"keep"},
+      &entry);
+  store_->appendWalEntry(
+      parent,
+      FsFileContentStore::WalOpType::ADD,
+      PathComponentPiece{"drop"},
+      &entry);
+  auto walPath = FsFileContentStore::getWalPath(parent);
+  auto fullPath =
+      canonicalPath(testDir_.path().string()) + RelativePathPiece{walPath};
+  std::string bytes;
+  ASSERT_TRUE(folly::readFile(fullPath.c_str(), bytes));
+  ASSERT_TRUE(
+      folly::writeFile(bytes.substr(0, bytes.size() - 3), fullPath.c_str()));
+
+  auto delta = store_->loadWalDelta(parent).delta;
+  ASSERT_EQ(1u, delta.size());
+  EXPECT_TRUE(delta.count("keep"));
+  EXPECT_FALSE(delta.count("drop"));
+}
+
+TEST_F(FsInodeCatalogWalTest, loadWalDelta_unknownOpIsSkipped) {
+  // Forward-compat: an unknown opcode WITH a valid entryLen frame is
+  // skipped (advanced by entryLen), not fatal. A subsequent valid REMOVE
+  // in the same WAL must still be applied.
+  const InodeNumber parent{307};
+  // Frame: entryLen=3 covers op(1) + nameLen(2) + name(0). op=0xff is
+  // outside the WalOpType enum, so the parser must hit the default case
+  // in the switch and skip-by-entryLen.
+  std::string corrupt;
+  uint32_t bad = 3;
+  corrupt.append(reinterpret_cast<const char*>(&bad), sizeof(bad));
+  corrupt.push_back(static_cast<char>(0xff)); // op
+  uint16_t nameLen = 0;
+  corrupt.append(reinterpret_cast<const char*>(&nameLen), sizeof(nameLen));
+  ASSERT_NO_FATAL_FAILURE(writeRawWal(testDir_, parent, corrupt));
+
+  // Append a valid REMOVE after the unknown-op entry.
+  store_->appendWalEntry(
+      parent, FsFileContentStore::WalOpType::REMOVE, "y"_pc, nullptr);
+
+  auto result = store_->loadWalDelta(parent);
+  ASSERT_EQ(1u, result.delta.size());
+  EXPECT_EQ(FsFileContentStore::WalOpType::REMOVE, result.delta.at("y").type);
+  // The unknown-op skip counts toward parseErrors, not rawEntriesParsed.
+  // Only the valid REMOVE that follows is counted as a successfully-decoded
+  // entry — keeping the OverlayStats::walEntriesReplayed and
+  // wal_parse_failure counters from double-counting the same entry.
+  EXPECT_EQ(1u, result.parseErrors);
+  EXPECT_EQ(1u, result.rawEntriesParsed);
+}
+
+TEST_F(FsInodeCatalogWalTest, loadWalDelta_materializeAfterRemoveLeavesRemove) {
+  // Regression for the divergence between replayWal and loadWalDelta on
+  // the byte-stream [REMOVE x][MATERIALIZE x]. replayWal applies REMOVE
+  // first (deleting "x"), then no-ops on MATERIALIZE because "x" is gone.
+  // loadWalDelta must produce an equivalent net delta — REMOVE — instead
+  // of letting MATERIALIZE clobber the prior REMOVE and silently
+  // resurrecting the entry on the direct-serialization load path.
+  const InodeNumber parent{401};
+  store_->appendWalEntry(
+      parent, FsFileContentStore::WalOpType::REMOVE, "x"_pc, nullptr);
+  store_->appendWalEntry(
+      parent, FsFileContentStore::WalOpType::MATERIALIZE, "x"_pc, nullptr);
+
+  auto delta = store_->loadWalDelta(parent).delta;
+  ASSERT_EQ(1u, delta.size());
+  auto it = delta.find("x");
+  ASSERT_NE(delta.end(), it);
+  EXPECT_EQ(FsFileContentStore::WalOpType::REMOVE, it->second.type);
 }
 
 #endif

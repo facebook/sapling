@@ -734,6 +734,168 @@ bool FsFileContentStore::hasWal(InodeNumber parent) {
       err, fmt::format("error stat'ing WAL file for inode {}", parent));
 }
 
+FsFileContentStore::LoadWalResult FsFileContentStore::loadWalDelta(
+    InodeNumber parent) {
+  LoadWalResult result;
+  auto& delta = result.delta;
+
+  auto walPath = getWalPath(parent);
+  // Mirror loadRawOverlayDir: open once, ENOENT means no WAL, anything
+  // else throws. The caller (Overlay::loadOverlayDir for the hot path,
+  // OverlayChecker::scanForErrors for fsck) decides how to handle the
+  // error.
+  int fd =
+      openat(dirFile_.fd(), walPath.c_str(), O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
+  if (fd == -1) {
+    // ENOENT just means there is no pending WAL for this inode.
+    if (errno == ENOENT) {
+      return result;
+    }
+    folly::throwSystemError(
+        fmt::format("error opening WAL file for inode {}", parent));
+  }
+  folly::File file{fd, /* ownsFd */ true};
+
+  std::string data;
+  if (!folly::readFile(file.fd(), data)) {
+    folly::throwSystemError(
+        fmt::format("error reading WAL file for inode {}", parent));
+  }
+
+  if (data.empty()) {
+    return result;
+  }
+
+  size_t offset = 0;
+
+  while (offset + sizeof(uint32_t) <= data.size()) {
+    uint32_t entryLen;
+    memcpy(&entryLen, data.data() + offset, sizeof(uint32_t));
+
+    if (entryLen == 0 || offset + sizeof(uint32_t) + entryLen > data.size()) {
+      ++result.parseErrors;
+      break;
+    }
+
+    const uint8_t* entryData = reinterpret_cast<const uint8_t*>(data.data()) +
+        offset + sizeof(uint32_t);
+    size_t entryOffset = 0;
+
+    if (entryOffset + sizeof(uint8_t) > entryLen) {
+      ++result.parseErrors;
+      break;
+    }
+    auto opType = static_cast<WalOpType>(entryData[entryOffset]);
+    entryOffset += sizeof(uint8_t);
+
+    if (entryOffset + sizeof(uint16_t) > entryLen) {
+      ++result.parseErrors;
+      break;
+    }
+    uint16_t nameLen;
+    memcpy(&nameLen, entryData + entryOffset, sizeof(uint16_t));
+    entryOffset += sizeof(uint16_t);
+
+    if (entryOffset + nameLen > entryLen) {
+      ++result.parseErrors;
+      break;
+    }
+    std::string name(
+        reinterpret_cast<const char*>(entryData + entryOffset), nameLen);
+    entryOffset += nameLen;
+
+    bool valid = true;
+    bool skipped = false;
+    switch (opType) {
+      case WalOpType::ADD: {
+        if (entryOffset + sizeof(int32_t) > entryLen) {
+          valid = false;
+          break;
+        }
+        int32_t mode;
+        memcpy(&mode, entryData + entryOffset, sizeof(int32_t));
+        entryOffset += sizeof(int32_t);
+
+        if (entryOffset + sizeof(int64_t) > entryLen) {
+          valid = false;
+          break;
+        }
+        int64_t inodeNum;
+        memcpy(&inodeNum, entryData + entryOffset, sizeof(int64_t));
+        entryOffset += sizeof(int64_t);
+
+        if (entryOffset + sizeof(uint8_t) > entryLen) {
+          valid = false;
+          break;
+        }
+        uint8_t hashLen = entryData[entryOffset];
+        entryOffset += sizeof(uint8_t);
+
+        if (entryOffset + hashLen > entryLen) {
+          valid = false;
+          break;
+        }
+
+        overlay::OverlayEntry overlayEntry;
+        overlayEntry.mode() = mode;
+        overlayEntry.inodeNumber() = inodeNum;
+        if (hashLen > 0) {
+          overlayEntry.hash() = std::string(
+              reinterpret_cast<const char*>(entryData + entryOffset), hashLen);
+        }
+
+        delta[name] = WalDelta{WalOpType::ADD, std::move(overlayEntry)};
+        break;
+      }
+
+      case WalOpType::REMOVE: {
+        delta[name] = WalDelta{WalOpType::REMOVE, {}};
+        break;
+      }
+
+      case WalOpType::MATERIALIZE: {
+        auto it = delta.find(name);
+        if (it == delta.end()) {
+          // No prior delta for this name — record the MATERIALIZE so the
+          // mutator merge can clear the hash on the base entry.
+          delta[name] = WalDelta{WalOpType::MATERIALIZE, {}};
+        } else if (it->second.type == WalOpType::ADD) {
+          // Materialize an ADD we already have — clear the hash in place.
+          it->second.entry.hash().reset();
+        }
+        // REMOVE stays REMOVE; mirrors replayWal's MATERIALIZE-on-missing
+        // no-op (covered by loadWalDelta_materializeAfterRemoveLeavesRemove).
+        break;
+      }
+
+      default:
+        // Forward-compat: an unknown opcode with a valid entryLen frame is
+        // safe to skip — the entryLen prefix told us exactly how many bytes
+        // this entry occupies. Older binaries reading a newer WAL log and
+        // continue rather than dropping every entry past the unknown op.
+        ++result.parseErrors;
+        XLOGF(
+            WARN,
+            "Unknown WAL op {} for inode {}; skipping entry",
+            static_cast<int>(opType),
+            parent);
+        skipped = true;
+        break;
+    }
+
+    if (!valid) {
+      ++result.parseErrors;
+      break;
+    }
+    if (!skipped) {
+      ++result.rawEntriesParsed;
+    }
+    offset += sizeof(uint32_t) + entryLen;
+  }
+
+  return result;
+}
+
 void FsFileContentStore::removeWal(InodeNumber parent) {
   auto walPath = getWalPath(parent);
   if (::unlinkat(dirFile_.fd(), walPath.c_str(), 0) != 0) {

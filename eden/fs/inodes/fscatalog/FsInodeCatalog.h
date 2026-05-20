@@ -11,6 +11,7 @@
 #include <folly/Range.h>
 #include <gtest/gtest_prod.h>
 #include <array>
+#include <map>
 #include <optional>
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/inodes/FileContentStore.h"
@@ -196,6 +197,59 @@ class FsFileContentStore : public FileContentStore {
       WalOpType op,
       PathComponentPiece childName,
       const overlay::OverlayEntry* entry);
+
+  /**
+   * A collapsed WAL delta for a single child name. Represents the net
+   * effect of all WAL entries for that name.
+   */
+  struct WalDelta {
+    WalOpType type{};
+    overlay::OverlayEntry entry; // only meaningful for ADD
+  };
+
+  /**
+   * Result of a WAL load: the collapsed delta plus the count of raw WAL
+   * entries that were successfully decoded (before collapse). The raw
+   * count is preserved so callers driving the OverlayStats::walEntriesReplayed
+   * counter can report entries-as-written, not unique names net-affected.
+   */
+  struct LoadWalResult {
+    std::map<std::string, WalDelta> delta;
+    size_t rawEntriesParsed = 0;
+    // Count of entries that hit a structural-bounds break or an unknown
+    // opcode skip. Surfaced so callers can bump a single
+    // OverlayStats::wal_parse_failure counter and triage torn / forward-
+    // incompatible WAL files without per-category counters.
+    size_t parseErrors = 0;
+  };
+
+  /**
+   * Pre-process a WAL file into a collapsed net delta. Multiple operations
+   * on the same name are collapsed: e.g., ADD+REMOVE→REMOVE, ADD+MATERIALIZE
+   * →ADD(no hash). Returns an empty map if no WAL file exists.
+   *
+   * Crash-safety contract: callers SHOULD remove the WAL (via removeWal,
+   * or implicitly via saveOverlayDir's clearWalAfterFullWrite tail) after
+   * a successful read, so any torn tail left by a prior crash mid-append
+   * does not persist on disk. The parser stops at the first malformed or
+   * torn entry and returns the prefix that decoded successfully — but if
+   * the WAL is left in place, subsequent appendWalEntry calls land via
+   * O_APPEND past the tear, and the entries after the tear become
+   * permanently invisible to future loads. Removing the WAL after read
+   * lets the next append start from a clean file.
+   *
+   * The result.delta is a sorted std::map. Sorted iteration order matters
+   * for the direct-serialization load path in Overlay.cpp (introduced in a
+   * later commit): it feeds entries into a PathMapMutator whose
+   * insert_or_assign path falls into an O(N) compact() step on every
+   * out-of-order key. Returning sorted keys keeps that merge
+   * O(N + K log K) instead of O(K · N) for K WAL keys against N base entries.
+   *
+   * result.rawEntriesParsed counts well-formed WAL entries that were
+   * successfully decoded, regardless of whether they collapse against an
+   * earlier entry for the same name.
+   */
+  LoadWalResult loadWalDelta(InodeNumber parent);
 
   /** Returns true iff a WAL file exists for the given directory inode. */
   bool hasWal(InodeNumber parent);
