@@ -405,12 +405,7 @@ impl<T: Default + PartialEq> AbstractLineLog<T> {
         // (a_rev is the last rev, no higher revs ever exist, and b_rev's only direct
         // parent is a_rev, so nothing can get in-between).
         let can_update_cache = a_rev == b_rev
-            || (self
-                .dag
-                .parents(b_rev)
-                .map(|p| p == &[a_rev])
-                .unwrap_or(false)
-                && a_rev == self.max_rev);
+            || (self.dag.parents(b_rev) == [a_rev].as_slice() && a_rev == self.max_rev);
         let maybe_a_lines: MaybeMut<_> = match can_update_cache {
             true => MaybeMut::Mut(&mut a_lines),
             false => MaybeMut::Ref(&a_lines),
@@ -615,15 +610,11 @@ impl<T: Default + PartialEq> AbstractLineLog<T> {
         let mut insert_revs = SmallRevs::empty();
         let mut delete_revs: Option<SmallRevs> = None;
         for target_rev in target_revs.iter() {
-            match self.dag.ancestors(target_rev) {
-                Some(ancestors) => {
-                    insert_revs.union_with(ancestors);
-                    match delete_revs.as_mut() {
-                        Some(delete_revs) => delete_revs.intersect_with(ancestors),
-                        None => delete_revs = Some(ancestors.clone()),
-                    }
-                }
-                None => delete_revs = Some(SmallRevs::empty()),
+            let ancestors = self.dag.ancestors(target_rev);
+            insert_revs.union_with(ancestors);
+            match delete_revs.as_mut() {
+                Some(delete_revs) => delete_revs.intersect_with(ancestors),
+                None => delete_revs = Some(ancestors.clone()),
             }
         }
         let delete_revs = delete_revs.unwrap_or_else(SmallRevs::empty);

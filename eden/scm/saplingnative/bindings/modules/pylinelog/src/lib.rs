@@ -39,6 +39,10 @@ py_class!(class SmallRevs |py| {
         Ok(self.inner(py).contains(rev))
     }
 
+    def __bool__(&self) -> PyResult<bool> {
+        Ok(!self.inner(py).is_empty())
+    }
+
     def __repr__(&self) -> PyResult<String> {
         Ok(format!("{:?}", self.inner(py)))
     }
@@ -80,8 +84,8 @@ py_class!(class SmallRevs |py| {
 // Small immutable DAG for linelog revision ordering.
 //
 // Edges are parent -> child, and parent must be <= child. Query methods return
-// None for out-of-bound revisions. Ancestor and descendant sets include the
-// queried revision itself.
+// empty collections for out-of-bound revisions. Ancestor and descendant sets
+// include the queried revision itself.
 py_class!(class NanoDag |py| {
     data inner: NativeNanoDag;
 
@@ -89,33 +93,27 @@ py_class!(class NanoDag |py| {
         Self::create_instance(py, Default::default())
     }
 
-    /// Return parent revisions for rev, or None if rev is out of bound.
-    def parents(&self, rev: usize) -> PyResult<Option<Vec<usize>>> {
-        Ok(self.inner(py).parents(rev).map(|parents| parents.to_vec()))
+    /// Return parent revisions for rev, or an empty list if rev is out of bound.
+    def parents(&self, rev: usize) -> PyResult<Vec<usize>> {
+        Ok(self.inner(py).parents(rev).to_vec())
     }
 
     def __contains__(&self, rev: usize) -> PyResult<bool> {
-        Ok(self.inner(py).parents(rev).is_some())
+        Ok(rev < self.inner(py).len())
     }
 
     def __repr__(&self) -> PyResult<String> {
         Ok(format!("<{:?}>", self.inner(py)))
     }
 
-    /// Return ancestors of rev, including rev itself, or None if out of bound.
-    def ancestors(&self, rev: usize) -> PyResult<Option<SmallRevs>> {
-        self.inner(py)
-            .ancestors(rev)
-            .map(|revs| SmallRevs::create_instance(py, revs.clone()))
-            .transpose()
+    /// Return ancestors of rev, including rev itself, or an empty set if out of bound.
+    def ancestors(&self, rev: usize) -> PyResult<SmallRevs> {
+        SmallRevs::create_instance(py, self.inner(py).ancestors(rev).clone())
     }
 
-    /// Return descendants of rev, including rev itself, or None if out of bound.
-    def descendants(&self, rev: usize) -> PyResult<Option<SmallRevs>> {
-        self.inner(py)
-            .descendants(rev)
-            .map(|revs| SmallRevs::create_instance(py, revs.clone()))
-            .transpose()
+    /// Return descendants of rev, including rev itself, or an empty set if out of bound.
+    def descendants(&self, rev: usize) -> PyResult<SmallRevs> {
+        SmallRevs::create_instance(py, self.inner(py).descendants(rev).clone())
     }
 
     /// Return True if ancestor is an ancestor of descendant.

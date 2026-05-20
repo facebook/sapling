@@ -395,7 +395,7 @@ fn test_remap_revs_reorder_insertions() {
 
     let dep_map = log.dep_map();
     for rev in 1..=3 {
-        assert_eq!(dep_map.parents(rev), Some(&[0][..]), "rev={rev}");
+        assert_eq!(dep_map.parents(rev), &[0][..], "rev={rev}");
     }
 
     let swapped = log.remap_revs(&|r| match r {
