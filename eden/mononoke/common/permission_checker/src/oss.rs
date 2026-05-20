@@ -63,6 +63,12 @@ impl MononokeIdentity {
         bail!("Decoding from JSON is not yet implemented for MononokeIdentity")
     }
 
+    pub fn try_from_legacy_encoded(_: &str) -> Result<MononokeIdentitySet> {
+        bail!(
+            "Decoding legacy scm_forwarded_identities is not yet implemented for MononokeIdentity"
+        )
+    }
+
     pub fn try_from_x509(cert: &X509) -> Result<MononokeIdentitySet> {
         let subject_vec: Result<Vec<_>> = cert
             .subject_name()

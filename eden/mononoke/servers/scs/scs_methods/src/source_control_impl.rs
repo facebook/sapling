@@ -97,6 +97,7 @@ use crate::scuba_params::AddScubaParams;
 use crate::scuba_response::AddScubaResponse;
 use crate::specifiers::SpecifierExt;
 
+const FORWARDED_IDENTITIES_HEADER: &str = "scm_forwarded_identities";
 const FORWARDED_AUTHENTICATED_IDENTITIES_HEADER: &str = "scm_forwarded_authenticated_identities";
 const FORWARDED_AUTHENTICATED_IDENTITIES_THRIFT_HEADER: &str =
     "scm_forwarded_authenticated_identities_thrift";
@@ -344,22 +345,31 @@ impl SourceControlServiceImpl {
             .await;
 
         if is_trusted {
-            // Prefer the binary thrift envelope (lossless, smaller wire form);
-            // fall back to the JSON `mid://` envelope for old senders that
-            // haven't picked up the binary header yet.
+            // Prefer the binary thrift envelope (lossless, smaller wire form).
+            // Next preference is the JSON `mid://` envelope, which preserves
+            // attributes for senders with `Authenticated`-variant identities
+            // but no binary header. Final fallback is the legacy
+            // `scm_forwarded_identities` array, always emitted by every
+            // sender version -- covers pre-D105319204 senders whose identity
+            // sets are all `TypeData` and produce no JSON auth envelope.
             let forwarded_identities: Option<MononokeIdentitySet> = match (
                 header(FORWARDED_AUTHENTICATED_IDENTITIES_THRIFT_HEADER)?,
                 header(FORWARDED_AUTHENTICATED_IDENTITIES_HEADER)?,
+                header(FORWARDED_IDENTITIES_HEADER)?,
             ) {
-                (Some(thrift_payload), _) => Some(
+                (Some(thrift_payload), _, _) => Some(
                     MononokeIdentity::try_from_thrift_compact_encoded(thrift_payload.as_str())
                         .map_err(scs_errors::invalid_request)?,
                 ),
-                (None, Some(json_payload)) => Some(
+                (None, Some(json_payload), _) => Some(
                     MononokeIdentity::try_from_json_encoded(json_payload.as_str())
                         .map_err(scs_errors::invalid_request)?,
                 ),
-                (None, None) => None,
+                (None, None, Some(legacy_payload)) => Some(
+                    MononokeIdentity::try_from_legacy_encoded(legacy_payload.as_str())
+                        .map_err(scs_errors::invalid_request)?,
+                ),
+                (None, None, None) => None,
             };
             if let (Some(mut header_identities), Some(forwarded_ip), Some(forwarded_port)) = (
                 forwarded_identities,
