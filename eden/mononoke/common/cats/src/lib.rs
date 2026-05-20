@@ -10,6 +10,7 @@ use std::sync::atomic::Ordering;
 
 use fbinit::FacebookInit;
 use http::HeaderMap;
+use http::HeaderValue;
 use metaconfig_types::Identity;
 use permission_checker::MononokeIdentitySet;
 
@@ -90,7 +91,12 @@ mod catmod {
         verifier_identity: &Identity,
         allowed_environments: Vec<EnvironmentType>,
     ) -> Option<MononokeIdentitySet> {
-        match parse_cat_token_list(headers) {
+        let Some(cats) = headers.get(X_AUTH_CATS_HEADER) else {
+            debug!("CAT extraction: no {} header present", X_AUTH_CATS_HEADER);
+            return None;
+        };
+
+        match parse_cat_token_list(cats) {
             Ok(None) => None,
             Ok(Some(cat_list)) => Some(verify_cat_tokens(
                 fb,
@@ -100,8 +106,8 @@ mod catmod {
             )),
             Err(e) => {
                 warn!(
-                    "Error extracting CATs identities: {}. Ignoring CAT token.",
-                    e
+                    "Error extracting CATs identities: {:?} Error: {}. Ignoring CAT token.",
+                    cats, e
                 );
                 None
             }
@@ -109,15 +115,8 @@ mod catmod {
     }
 
     fn parse_cat_token_list(
-        headers: &HeaderMap,
+        cats: &HeaderValue,
     ) -> Result<Option<cryptocat::CryptoAuthTokenList>, Error> {
-        let cats = match headers.get(X_AUTH_CATS_HEADER) {
-            Some(cats) => cats,
-            None => {
-                debug!("CAT extraction: no {} header present", X_AUTH_CATS_HEADER);
-                return Ok(None);
-            }
-        };
         let s_cats = cats.to_str()?;
         trace!("CAT extraction: serialized CAT list: {s_cats}");
         let cat_list = cryptocat::deserialize_crypto_auth_tokens(s_cats)?;
