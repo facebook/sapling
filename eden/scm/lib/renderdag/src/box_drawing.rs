@@ -76,7 +76,10 @@ where
     inner: R,
     options: OutputRendererOptions,
     extra_pad_line: Option<String>,
+    insert_extra_pad_line: bool,
+    last_node_column: Option<usize>,
     glyphs: &'static [&'static str; glyph::COUNT],
+    pad_between_branches: bool,
     _phantom: PhantomData<N>,
 }
 
@@ -89,7 +92,10 @@ where
             inner,
             options,
             extra_pad_line: None,
+            insert_extra_pad_line: false,
+            last_node_column: None,
             glyphs: &CURVED_GLYPHS,
+            pad_between_branches: false,
             _phantom: PhantomData,
         }
     }
@@ -101,6 +107,11 @@ where
 
     pub fn with_dec_graphics_glyphs(mut self) -> Self {
         self.glyphs = &DEC_GLYPHS;
+        self
+    }
+
+    pub fn with_branch_padding(mut self) -> Self {
+        self.pad_between_branches = true;
         self
     }
 }
@@ -136,19 +147,15 @@ where
         let mut message_lines = pad_lines(line.message.lines(), self.options.min_row_height);
         let mut need_extra_pad_line = false;
 
-        // Render the previous extra pad line
-        if let Some(extra_pad_line) = self.extra_pad_line.take() {
-            out.push_str(extra_pad_line.trim_end());
-            out.push('\n');
-        }
-
-        // Render the nodeline
+        // Construct the nodeline, which has the graph node symbol
         let mut node_line = String::new();
-        for entry in line.node_line.iter() {
+        let mut node_column = None;
+        for (i, entry) in line.node_line.iter().enumerate() {
             match entry {
                 NodeLine::Node => {
                     node_line.push_str(&line.glyph);
                     node_line.push(' ');
+                    node_column = Some(i);
                 }
                 NodeLine::Parent => node_line.push_str(glyphs[glyph::PARENT]),
                 NodeLine::Ancestor => node_line.push_str(glyphs[glyph::ANCESTOR]),
@@ -159,14 +166,32 @@ where
             node_line.push(' ');
             node_line.push_str(msg);
         }
+
+        // The last node was in a different column, so force an extra pad line
+        // to separate the nodes visually
+        if self.pad_between_branches && node_column != self.last_node_column {
+            self.insert_extra_pad_line = true;
+        }
+
+        // Render the previous extra pad line
+        if self.insert_extra_pad_line
+            && let Some(extra_pad_line) = self.extra_pad_line.take()
+        {
+            out.push_str(extra_pad_line.clone().trim_end());
+            out.push('\n');
+        }
+
+        // Render the nodeline
         out.push_str(node_line.trim_end());
         out.push('\n');
 
-        // Render the link line
+        let mut next_node_is_other_branch = false;
+
+        // Render the link line, to show branches and merges
         #[allow(clippy::if_same_then_else)]
         if let Some(link_row) = line.link_line {
             let mut link_line = String::new();
-            for cur in link_row.iter() {
+            for (col, cur) in link_row.iter().enumerate() {
                 if cur.intersects(LinkLine::HORIZONTAL) {
                     if cur.intersects(LinkLine::CHILD) {
                         link_line.push_str(glyphs[glyph::JOIN_BOTH]);
@@ -232,6 +257,11 @@ where
                     link_line.push_str(glyphs[glyph::FORK_LEFT]);
                 } else if cur.intersects(LinkLine::LEFT_MERGE) {
                     link_line.push_str(glyphs[glyph::MERGE_LEFT]);
+                    // This is the only case where two consecutive nodes that
+                    // share the same column belong to different branches
+                    if self.pad_between_branches && node_column.is_some_and(|nc| nc == col) {
+                        next_node_is_other_branch = true;
+                    }
                 } else if cur.intersects(LinkLine::RIGHT_FORK) {
                     link_line.push_str(glyphs[glyph::FORK_RIGHT]);
                 } else if cur.intersects(LinkLine::RIGHT_MERGE) {
@@ -248,7 +278,7 @@ where
             out.push('\n');
         }
 
-        // Render the term line
+        // Render any term line, to indicate terminated branches
         if let Some(term_row) = line.term_line {
             let term_strs = [glyphs[glyph::PARENT], glyphs[glyph::TERMINATION]];
             for term_str in term_strs.iter() {
@@ -275,7 +305,7 @@ where
             base_pad_line.push_str(glyphs[entry.to_glyph()]);
         }
 
-        // Render any pad lines
+        // Render any pad lines, to fit multi-line messages
         for msg in message_lines {
             let mut pad_line = base_pad_line.clone();
             pad_line.push(' ');
@@ -285,9 +315,9 @@ where
             need_extra_pad_line = false;
         }
 
-        if need_extra_pad_line {
-            self.extra_pad_line = Some(base_pad_line);
-        }
+        self.extra_pad_line = Some(base_pad_line);
+        self.insert_extra_pad_line = need_extra_pad_line || next_node_is_other_branch;
+        self.last_node_column = node_column;
 
         out
     }
@@ -295,59 +325,131 @@ where
 
 #[cfg(test)]
 mod tests {
+    use core::fmt;
+
     use super::super::test_fixtures;
     use super::super::test_fixtures::TestFixture;
     use super::super::test_utils::render_string;
     use super::super::test_utils::render_string_with_order;
     use crate::GraphRowRenderer;
 
-    fn render(fixture: &TestFixture) -> String {
+    #[derive(Debug, Clone, Copy, PartialEq)]
+    enum BranchPadding {
+        Yes,
+        No,
+    }
+
+    impl std::fmt::Display for BranchPadding {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            fmt::Debug::fmt(self, f)
+        }
+    }
+
+    /// Type for rendering the graph strings with newlines in asserts.
+    #[derive(PartialEq, Eq)]
+    struct GraphString(String);
+
+    impl std::fmt::Debug for GraphString {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "{}", self.0.replace("\\n", "\n"))
+        }
+    }
+
+    impl From<&str> for GraphString {
+        fn from(value: &str) -> Self {
+            GraphString(value.to_owned())
+        }
+    }
+
+    fn render(fixture: &TestFixture, with_branch_pad: BranchPadding) -> GraphString {
         let mut renderer = GraphRowRenderer::new().output().build_box_drawing();
-        render_string(fixture, &mut renderer)
+        if with_branch_pad == BranchPadding::Yes {
+            renderer = renderer.with_branch_padding();
+        }
+        GraphString(render_string(fixture, &mut renderer))
+    }
+
+    /// Filters the expected graph string according to the options
+    ///
+    /// If a line ends with ` <branch pad>`, it will only be included if
+    /// `with_branch_pad` is `Yes`.
+    fn filter(with_branch_pad: BranchPadding, expected: &str) -> GraphString {
+        let mut filtered = String::new();
+        for mut line in expected.lines() {
+            if let Some(pad_pos) = line.find(" <branch pad>") {
+                match with_branch_pad {
+                    BranchPadding::Yes => line = line.split_at(pad_pos).0,
+                    BranchPadding::No => continue,
+                }
+            }
+            filtered.push_str(line);
+            filtered.push('\n');
+        }
+        if !filtered.is_empty() {
+            filtered.pop();
+        }
+        GraphString(filtered)
     }
 
     #[test]
     fn basic() {
-        assert_eq!(
-            render(&test_fixtures::BASIC),
-            r#"
+        for branch_pad in [BranchPadding::No, BranchPadding::Yes] {
+            assert_eq!(
+                render(&test_fixtures::BASIC, branch_pad),
+                filter(
+                    branch_pad,
+                    r#"
             o  C
             │
             o  B
             │
             o  A"#
-        );
+                ),
+                "branch_pad: {branch_pad}"
+            );
+        }
     }
 
     #[test]
     fn branches_and_merges() {
-        assert_eq!(
-            render(&test_fixtures::BRANCHES_AND_MERGES),
-            r#"
+        for branch_pad in [BranchPadding::No, BranchPadding::Yes] {
+            assert_eq!(
+                render(&test_fixtures::BRANCHES_AND_MERGES, branch_pad),
+                filter(
+                    branch_pad,
+                    r#"
             o  W
             │
             o    V
             ├─╮
+            │ │ <branch pad>
             │ o    U
             │ ├─╮
+            │ │ │ <branch pad>
             │ │ o  T
             │ │ │
+            │ │ │ <branch pad>
             │ o │  S
             │   │
+            │   │ <branch pad>
             o   │  R
             │   │
             o   │  Q
             ├─╮ │
+            │ │ │ <branch pad>
             │ o │    P
             │ ├───╮
+            │ │ │ │ <branch pad>
             │ │ │ o  O
             │ │ │ │
             │ │ │ o    N
             │ │ │ ├─╮
+            │ │ │ │ │ <branch pad>
             │ o │ │ │  M
             │ │ │ │ │
             │ o │ │ │  L
             │ │ │ │ │
+            │ │ │ │ │ <branch pad>
             o │ │ │ │  K
             ├───────╯
             o │ │ │  J
@@ -358,10 +460,13 @@ mod tests {
             │   │ │
             o   │ │  G
             ├─────╮
+            │   │ │ <branch pad>
             │   │ o  F
             │   ├─╯
+            │   │ <branch pad>
             │   o  E
             │   │
+            │   │ <branch pad>
             o   │  D
             │   │
             o   │  C
@@ -369,118 +474,171 @@ mod tests {
             o  B
             │
             o  A"#
-        );
+                ),
+                "branch_pad: {}",
+                branch_pad
+            );
+        }
     }
 
     #[test]
     fn octopus_branch_and_merge() {
-        assert_eq!(
-            render(&test_fixtures::OCTOPUS_BRANCH_AND_MERGE),
-            r#"
+        for branch_pad in [BranchPadding::No, BranchPadding::Yes] {
+            assert_eq!(
+                render(&test_fixtures::OCTOPUS_BRANCH_AND_MERGE, branch_pad),
+                filter(
+                    branch_pad,
+                    r#"
             o      J
             ├─┬─╮
+            │ │ │ <branch pad>
             │ │ o  I
             │ │ │
+            │ │ │ <branch pad>
             │ o │      H
             ╭─┼─┬─┬─╮
+            │ │ │ │ │ <branch pad>
             │ │ │ │ o  G
             │ │ │ │ │
+            │ │ │ │ │ <branch pad>
             │ │ │ o │  E
             │ │ │ ├─╯
+            │ │ │ │ <branch pad>
             │ │ o │  D
             │ │ ├─╮
+            │ │ │ │ <branch pad>
             │ o │ │  C
             │ ├───╯
+            │ │ │ <branch pad>
             o │ │  F
             ├─╯ │
             o   │  B
             ├───╯
             o  A"#
-        );
+                ),
+                "branch_pad: {branch_pad}"
+            );
+        }
     }
 
     #[test]
     fn reserved_column() {
-        assert_eq!(
-            render(&test_fixtures::RESERVED_COLUMN),
-            r#"
+        for branch_pad in [BranchPadding::No, BranchPadding::Yes] {
+            assert_eq!(
+                render(&test_fixtures::RESERVED_COLUMN, branch_pad),
+                filter(
+                    branch_pad,
+                    r#"
               o  Z
               │
               o  Y
               │
               o  X
             ╭─╯
+            │ <branch pad>
             │ o  W
             ├─╯
+            │ <branch pad>
             o  G
             │
             o    F
             ├─╮
+            │ │ <branch pad>
             │ o  E
             │ │
             │ o  D
             │
+            │ <branch pad>
             o  C
             │
             o  B
             │
             o  A"#
-        );
+                ),
+                "branch_pad: {branch_pad}"
+            );
+        }
     }
 
     #[test]
     fn ancestors() {
-        assert_eq!(
-            render(&test_fixtures::ANCESTORS),
-            r#"
+        for branch_pad in [BranchPadding::No, BranchPadding::Yes] {
+            assert_eq!(
+                render(&test_fixtures::ANCESTORS, branch_pad),
+                filter(
+                    branch_pad,
+                    r#"
               o  Z
               │
               o  Y
             ╭─╯
+            │ <branch pad>
             o  F
             ╷
+            ╷ <branch pad>
             ╷ o  X
             ╭─╯
+            │ <branch pad>
             │ o  W
             ├─╯
+            │ <branch pad>
             o  E
             ╷
             o    D
             ├─╮
+            │ ╷ <branch pad>
             │ o  C
             │ ╷
+            │ ╷ <branch pad>
             o ╷  B
             ├─╯
             o  A"#
-        );
+                ),
+                "branch_pad: {branch_pad}"
+            );
+        }
     }
 
     #[test]
     fn split_parents() {
-        assert_eq!(
-            render(&test_fixtures::SPLIT_PARENTS),
-            r#"
+        for branch_pad in [BranchPadding::No, BranchPadding::Yes] {
+            assert_eq!(
+                render(&test_fixtures::SPLIT_PARENTS, branch_pad),
+                filter(
+                    branch_pad,
+                    r#"
                   o  E
             ╭─┬─┬─┤
+            ╷ │ │ ╷ <branch pad>
             ╷ o │ ╷  D
             ╭─┴─╮ ╷
+            │   │ ╷ <branch pad>
             │   o ╷  C
             │   ├─╯
+            │   │ <branch pad>
             o   │  B
             ├───╯
             o  A"#
-        );
+                ),
+                "branch_pad: {branch_pad}"
+            );
+        }
     }
 
     #[test]
     fn terminations() {
-        assert_eq!(
-            render(&test_fixtures::TERMINATIONS),
-            r#"
+        for branch_pad in [BranchPadding::No, BranchPadding::Yes] {
+            assert_eq!(
+                render(&test_fixtures::TERMINATIONS, branch_pad),
+                filter(
+                    branch_pad,
+                    r#"
               o  K
               │
+              │ <branch pad>
               │ o  J
               ├─╯
+              │ <branch pad>
               o    I
             ╭─┼─╮
             │ │ │
@@ -488,6 +646,7 @@ mod tests {
             │   │
             │   o  H
             │   │
+            │   │ <branch pad>
             o   │  E
             ├───╯
             o  D
@@ -499,14 +658,20 @@ mod tests {
             o  B
             │
             ~"#
-        );
+                ),
+                "branch_pad: {branch_pad}"
+            );
+        }
     }
 
     #[test]
     fn long_messages() {
-        assert_eq!(
-            render(&test_fixtures::LONG_MESSAGES),
-            r#"
+        for branch_pad in [BranchPadding::No, BranchPadding::Yes] {
+            assert_eq!(
+                render(&test_fixtures::LONG_MESSAGES, branch_pad),
+                filter(
+                    branch_pad,
+                    r#"
             o      F
             ├─┬─╮  very long message 1
             │ │ │  very long message 2
@@ -516,10 +681,12 @@ mod tests {
             │ │    very long message 5
             │ │    very long message 6
             │ │
+            │ │ <branch pad>
             │ o  E
             │ │
             │ o  D
             │ │
+            │ │ <branch pad>
             o │  C
             ├─╯  long message 1
             │    long message 2
@@ -531,139 +698,205 @@ mod tests {
             │  long message 1
             ~  long message 2
                long message 3"#
-        );
+                ),
+                "branch_pad: {branch_pad}"
+            );
+        }
     }
 
     #[test]
     fn different_orders() {
-        let order = |order: &str| {
+        let order = |order: &str, branch_pad: BranchPadding| {
             let order = order.matches(|_: char| true).collect::<Vec<_>>();
             let mut renderer = GraphRowRenderer::new().output().build_box_drawing();
-            render_string_with_order(&test_fixtures::ORDERS1, &mut renderer, Some(&order))
+            if branch_pad == BranchPadding::Yes {
+                renderer = renderer.with_branch_padding();
+            }
+            GraphString(render_string_with_order(
+                &test_fixtures::ORDERS1,
+                &mut renderer,
+                Some(&order),
+            ))
         };
 
-        assert_eq!(
-            order("KJIHGFEDCBZA"),
-            r#"
+        for branch_pad in [BranchPadding::No, BranchPadding::Yes] {
+            assert_eq!(
+                order("KJIHGFEDCBZA", branch_pad),
+                filter(
+                    branch_pad,
+                    r#"
             o    K
             ├─╮
+            │ │ <branch pad>
             │ o    J
             │ ├─╮
+            │ │ │ <branch pad>
             │ │ o    I
             │ │ ├─╮
+            │ │ │ │ <branch pad>
             │ │ │ o    H
             │ │ │ ├─╮
+            │ │ │ │ │ <branch pad>
             │ │ │ │ o    G
             │ │ │ │ ├─╮
+            │ │ │ │ │ │ <branch pad>
             o │ │ │ │ │  F
             │ │ │ │ │ │
+            │ │ │ │ │ │ <branch pad>
             │ o │ │ │ │  E
             ├─╯ │ │ │ │
+            │   │ │ │ │ <branch pad>
             │   o │ │ │  D
             ├───╯ │ │ │
+            │     │ │ │ <branch pad>
             │     o │ │  C
             ├─────╯ │ │
+            │       │ │ <branch pad>
             │       o │  B
             ├───────╯ │
+            │         │ <branch pad>
             │         o  Z
             │
+            │ <branch pad>
             o  A"#
-        );
+                ),
+                "branch_pad: {branch_pad}"
+            );
 
-        assert_eq!(
-            order("KJIHGZBCDEFA"),
-            r#"
+            assert_eq!(
+                order("KJIHGZBCDEFA", branch_pad),
+                filter(
+                    branch_pad,
+                    r#"
             o    K
             ├─╮
+            │ │ <branch pad>
             │ o    J
             │ ├─╮
+            │ │ │ <branch pad>
             │ │ o    I
             │ │ ├─╮
+            │ │ │ │ <branch pad>
             │ │ │ o    H
             │ │ │ ├─╮
+            │ │ │ │ │ <branch pad>
             │ │ │ │ o    G
             │ │ │ │ ├─╮
+            │ │ │ │ │ │ <branch pad>
             │ │ │ │ │ o  Z
             │ │ │ │ │
+            │ │ │ │ │ <branch pad>
             │ │ │ │ o  B
             │ │ │ │ │
+            │ │ │ │ │ <branch pad>
             │ │ │ o │  C
             │ │ │ ├─╯
+            │ │ │ │ <branch pad>
             │ │ o │  D
             │ │ ├─╯
+            │ │ │ <branch pad>
             │ o │  E
             │ ├─╯
+            │ │ <branch pad>
             o │  F
             ├─╯
             o  A"#
-        );
+                ),
+                "branch_pad: {branch_pad}"
+            );
 
-        // Keeping the p1 branch the longest path (KFEDCBA) is a reasonable
-        // optimization for a cleaner graph (less columns, more text space).
-        assert_eq!(
-            render(&test_fixtures::ORDERS2),
-            r#"
+            // Keeping the p1 branch the longest path (KFEDCBA) is a reasonable
+            // optimization for a cleaner graph (less columns, more text space).
+            assert_eq!(
+                render(&test_fixtures::ORDERS2, branch_pad),
+                filter(
+                    branch_pad,
+                    r#"
             o    K
             ├─╮
+            │ │ <branch pad>
             │ o  J
             │ │
+            │ │ <branch pad>
             o │    F
             ├───╮
+            │ │ │ <branch pad>
             │ │ o  I
             │ ├─╯
+            │ │ <branch pad>
             o │    E
             ├───╮
+            │ │ │ <branch pad>
             │ │ o  H
             │ ├─╯
+            │ │ <branch pad>
             o │    D
             ├───╮
+            │ │ │ <branch pad>
             │ │ o  G
             │ ├─╯
+            │ │ <branch pad>
             o │    C
             ├───╮
+            │ │ │ <branch pad>
             │ │ o  Z
             │ │
+            │ │ <branch pad>
             o │  B
             ├─╯
             o  A"#
-        );
+                ),
+                "branch_pad: {branch_pad}"
+            );
 
-        // Try to use the ORDERS2 order. However, the parent ordering in the
-        // graph is different, which makes the rendering different.
-        //
-        // Note: it's KJFIEHDGCZBA in the ORDERS2 graph. To map it to ORDERS1,
-        // follow:
-        //
-        // ORDERS1: KFJEIDHCGBZA
-        // ORDERS2: KJFIEHDGCBZA
-        //
-        // And we get KFJEIDHCGZBA.
-        assert_eq!(
-            order("KFJEIDHCGZBA"),
-            r#"
+            // Try to use the ORDERS2 order. However, the parent ordering in the
+            // graph is different, which makes the rendering different.
+            //
+            // Note: it's KJFIEHDGCZBA in the ORDERS2 graph. To map it to ORDERS1,
+            // follow:
+            //
+            // ORDERS1: KFJEIDHCGBZA
+            // ORDERS2: KJFIEHDGCBZA
+            //
+            // And we get KFJEIDHCGZBA.
+            assert_eq!(
+                order("KFJEIDHCGZBA", branch_pad),
+                filter(
+                    branch_pad,
+                    r#"
             o    K
             ├─╮
             o │  F
             │ │
+            │ │ <branch pad>
             │ o    J
             │ ├─╮
             │ o │  E
             ├─╯ │
+            │   │ <branch pad>
             │   o  I
             │ ╭─┤
             │ │ o  D
             ├───╯
+            │ │ <branch pad>
             │ o    H
             │ ├─╮
             │ o │  C
             ├─╯ │
+            │   │ <branch pad>
             │   o  G
             │ ╭─┤
+            │ │ │ <branch pad>
             │ o │  Z
             │   │
+            │   │ <branch pad>
             │   o  B
             ├───╯
+            │ <branch pad>
             o  A"#
-        );
+                ),
+                "branch_pad: {branch_pad}"
+            );
+        }
     }
 }
