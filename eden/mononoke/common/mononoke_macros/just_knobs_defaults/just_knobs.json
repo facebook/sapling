@@ -70,6 +70,7 @@
     "scm/mononoke:hgmanifest_skip_writes": true,
     "scm/mononoke:hgmanifest_read_from_augmented": true,
     "scm/mononoke:use_acl_manifest_for_restricted_paths": true,
+    "scm/mononoke:use_restricted_paths_for_augmented_tree_acl_metadata": true,
     "scm/metagit:mononoke_git_lfs": false,
     "scm/mononoke:lfs_server_compression_sniff_enabled": false,
     "scm/mononoke:lfs_server_skip_upstream_for_downloads": false,

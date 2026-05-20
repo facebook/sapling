@@ -212,6 +212,11 @@ impl MononokeScubaSampleBuilder {
                 consistent_hashing: Some(client_info.correlator.as_str()),
             },
             ExperimentJKData {
+                jk_name: "scm/mononoke:use_restricted_paths_for_augmented_tree_acl_metadata",
+                switch_values: vec!["xrepo_test_small", "notes", "fbsource"],
+                consistent_hashing: Some(client_info.correlator.as_str()),
+            },
+            ExperimentJKData {
                 jk_name: "scm/mononoke:rendezvous_bonsai_git_mapping",
                 switch_values: vec![],
                 consistent_hashing: Some(client_info.correlator.as_str()),

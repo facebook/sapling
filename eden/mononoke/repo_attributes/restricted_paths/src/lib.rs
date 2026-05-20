@@ -243,6 +243,16 @@ impl RestrictedPaths {
         .await
     }
 
+    /// Get manifest restriction info without performing authorization checks.
+    pub async fn get_manifest_restriction_info(
+        &self,
+        ctx: &CoreContext,
+        manifest_id: &ManifestId,
+        manifest_type: &ManifestType,
+    ) -> Result<Vec<ManifestRestrictionInfo>> {
+        restriction_info::get_manifest_restriction_info(self, ctx, manifest_id, manifest_type).await
+    }
+
     /// Check if a path is itself a restriction root (exact match).
     /// Returns false for paths that are merely under a restriction root.
     pub async fn is_restriction_root(

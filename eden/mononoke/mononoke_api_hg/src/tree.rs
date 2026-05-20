@@ -5,9 +5,15 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+
+use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use bytes::Bytes;
+use futures::StreamExt;
+use futures::TryStreamExt;
+use futures::stream;
 use mercurial_types::HgAugmentedManifestEntry;
 use mercurial_types::HgAugmentedManifestId;
 use mercurial_types::HgBlobEnvelope;
@@ -19,13 +25,16 @@ use mercurial_types::HgPreloadedAugmentedManifest;
 use mercurial_types::fetch_augmented_manifest_envelope_opt;
 use mercurial_types::fetch_manifest_envelope;
 use mercurial_types::fetch_manifest_envelope_opt;
+use metaconfig_types::AclManifestMode;
 use mononoke_api::MononokeRepo;
 use mononoke_api::errors::MononokeError;
 use mononoke_types::MPathElement;
 use mononoke_types::hash::Blake3;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_identity::RepoIdentityRef;
 use restricted_paths::ManifestId;
 use restricted_paths::ManifestRestrictionCheckResult;
+use restricted_paths::ManifestRestrictionInfo;
 use restricted_paths::ManifestType;
 use restricted_paths::RestrictedPathsArc;
 use revisionstore_types::Metadata;
@@ -33,6 +42,9 @@ use revisionstore_types::Metadata;
 use super::HgDataContext;
 use super::HgDataId;
 use super::HgRepoContext;
+
+const USE_RESTRICTED_PATHS_FOR_AUGMENTED_TREE_ACL_METADATA: &str =
+    "scm/mononoke:use_restricted_paths_for_augmented_tree_acl_metadata";
 
 #[derive(Clone)]
 pub struct HgTreeContext<R> {
@@ -94,6 +106,7 @@ pub struct HgAugmentedTreeContext<R> {
     #[allow(dead_code)]
     repo_ctx: HgRepoContext<R>,
     preloaded_manifest: HgPreloadedAugmentedManifest,
+    restriction_ctx: HgAugmentedTreeRestrictionContext<R>,
 }
 
 impl<R: MononokeRepo> HgAugmentedTreeContext<R> {
@@ -122,6 +135,10 @@ impl<R: MononokeRepo> HgAugmentedTreeContext<R> {
             let preloaded_manifest =
                 HgPreloadedAugmentedManifest::load_from_sharded(envelope, ctx, blobstore).await?;
             Ok(Some(Self {
+                restriction_ctx: HgAugmentedTreeRestrictionContext::new(
+                    repo_ctx.clone(),
+                    augmented_manifest_id,
+                )?,
                 repo_ctx,
                 preloaded_manifest,
             }))
@@ -140,17 +157,58 @@ impl<R: MononokeRepo> HgAugmentedTreeContext<R> {
 
     /// Whether this directory itself is a restriction root (has a `.slacl` file).
     /// Waypoints (ancestors of restriction roots) return `false`.
-    pub fn is_restricted(&self) -> bool {
-        self.preloaded_manifest.is_restricted
+    pub async fn is_restricted(&self) -> Result<bool, MononokeError> {
+        self.restriction_ctx
+            .is_restricted(&self.preloaded_manifest)
+            .await
     }
 
-    /// Whether a child directory is itself a restriction root.
-    /// Returns `None` if the child is not in the ACL tree (or is a file).
-    pub fn child_is_restricted(&self, name: &MPathElement) -> Option<bool> {
-        self.preloaded_manifest
-            .child_restriction_map
-            .get(name)
-            .copied()
+    pub async fn children_restrictions(
+        &self,
+        max_concurrent_fetches: usize,
+    ) -> Result<HashMap<MPathElement, bool>, MononokeError> {
+        if !self.restriction_ctx.use_restricted_paths_for_acl_metadata {
+            return Ok(self.preloaded_manifest.child_restriction_map.clone());
+        }
+
+        if !self
+            .repo_ctx
+            .repo()
+            .restricted_paths_arc()
+            .may_have_restricted_paths()
+        {
+            return Ok(HashMap::new());
+        }
+
+        let child_restriction_data = self
+            .augmented_children_entries()
+            .filter_map(|(name, child_entry)| match child_entry {
+                HgAugmentedManifestEntry::DirectoryNode(tree) => Some((
+                    name.clone(),
+                    self.preloaded_manifest
+                        .child_restriction_map
+                        .get(name)
+                        .copied(),
+                    HgAugmentedManifestId::new(tree.treenode),
+                )),
+                HgAugmentedManifestEntry::FileNode(_) => None,
+            })
+            .collect::<Vec<_>>();
+
+        let child_restrictions = stream::iter(child_restriction_data)
+            .map(|(name, preloaded_child_is_restricted, child_mfid)| {
+                let restriction_ctx = self.restriction_ctx.clone();
+                async move {
+                    restriction_ctx
+                        .child_is_restricted(name, preloaded_child_is_restricted, child_mfid)
+                        .await
+                }
+            })
+            .buffer_unordered(max_concurrent_fetches)
+            .try_collect::<Vec<_>>()
+            .await?;
+
+        Ok(child_restrictions.into_iter().flatten().collect())
     }
 
     pub fn augmented_children_entries(
@@ -280,9 +338,16 @@ impl<R: MononokeRepo> HgDataId<R> for HgAugmentedManifestId {
 ///
 /// This type never returns manifest content — only restriction metadata
 /// (ACLs, access checks).
+#[derive(Clone)]
 pub struct HgAugmentedTreeRestrictionContext<R> {
     repo_ctx: HgRepoContext<R>,
     manifest_id: HgAugmentedManifestId,
+    // Whether the restricted_paths facet primitives should be used to get
+    // restriction information or it should just be fetched directly from the
+    // HgAugmentedManifest information (populated from the AclManifest data).
+    // This is set by a JK to ensure that we can roll-back in case there are any
+    // performance regressions.
+    use_restricted_paths_for_acl_metadata: bool,
 }
 
 impl<R: MononokeRepo> HgAugmentedTreeRestrictionContext<R> {
@@ -299,10 +364,80 @@ impl<R: MononokeRepo> HgAugmentedTreeRestrictionContext<R> {
             .require_full_repo_read(repo_ctx.ctx(), repo_ctx.repo_ctx().repo())
             .await?;
 
+        Ok(Self::new(repo_ctx, manifest_id)?)
+    }
+
+    fn new(repo_ctx: HgRepoContext<R>, manifest_id: HgAugmentedManifestId) -> Result<Self> {
+        let repo_name = repo_ctx.repo().repo_identity().name();
+        let use_restricted_paths_for_acl_metadata = justknobs::eval(
+            USE_RESTRICTED_PATHS_FOR_AUGMENTED_TREE_ACL_METADATA,
+            None,
+            Some(repo_name),
+        )
+        .with_context(|| {
+            format!(
+                "Failed to evaluate JustKnob {} for repo {}",
+                USE_RESTRICTED_PATHS_FOR_AUGMENTED_TREE_ACL_METADATA, repo_name,
+            )
+        })?;
+
         Ok(Self {
             repo_ctx,
             manifest_id,
+            use_restricted_paths_for_acl_metadata,
         })
+    }
+
+    async fn is_restricted(
+        &self,
+        preloaded_manifest: &HgPreloadedAugmentedManifest,
+    ) -> Result<bool, MononokeError> {
+        self.restriction_metadata(Some(preloaded_manifest.is_restricted))
+            .await
+            .map(|is_restricted| is_restricted.unwrap_or(false))
+    }
+
+    async fn child_is_restricted(
+        &self,
+        name: MPathElement,
+        preloaded_child_is_restricted: Option<bool>,
+        child_mfid: HgAugmentedManifestId,
+    ) -> Result<Option<(MPathElement, bool)>, MononokeError> {
+        let child_ctx = self.child_ctx(child_mfid);
+        child_ctx
+            .restriction_metadata(preloaded_child_is_restricted)
+            .await
+            .map(|is_restricted| is_restricted.map(|is_restricted| (name, is_restricted)))
+    }
+
+    async fn restriction_metadata(
+        &self,
+        preloaded_is_restricted: Option<bool>,
+    ) -> Result<Option<bool>, MononokeError> {
+        if !self.use_restricted_paths_for_acl_metadata {
+            return Ok(preloaded_is_restricted);
+        }
+
+        let restricted_paths = self.repo_ctx.repo().restricted_paths_arc();
+        if !restricted_paths.may_have_restricted_paths() {
+            return Ok(None);
+        }
+
+        match restricted_paths.config().acl_manifest_mode {
+            AclManifestMode::Authoritative => Ok(preloaded_is_restricted),
+            AclManifestMode::Both if preloaded_is_restricted == Some(true) => Ok(Some(true)),
+            AclManifestMode::Both => {
+                if self.has_restriction().await? {
+                    Ok(Some(true))
+                } else {
+                    Ok(preloaded_is_restricted)
+                }
+            }
+            AclManifestMode::Disabled | AclManifestMode::Shadow => self
+                .has_restriction()
+                .await
+                .map(|has_restriction| has_restriction.then_some(true)),
+        }
     }
 
     /// Query restriction and authorization check results for this manifest node.
@@ -338,6 +473,38 @@ impl<R: MononokeRepo> HgAugmentedTreeRestrictionContext<R> {
             )
             .await
             .map_err(MononokeError::from)
+    }
+
+    /// Query restriction metadata for this manifest node without checking authorization.
+    async fn restriction_info(&self) -> Result<Vec<ManifestRestrictionInfo>, MononokeError> {
+        let restricted_paths = self.repo_ctx.repo().restricted_paths_arc();
+
+        if !restricted_paths.may_have_restricted_paths() {
+            return Ok(vec![]);
+        }
+
+        let manifest_id_bytes = ManifestId::new(self.manifest_id.as_bytes().into());
+        restricted_paths
+            .get_manifest_restriction_info(
+                self.repo_ctx.ctx(),
+                &manifest_id_bytes,
+                &ManifestType::HgAugmented,
+            )
+            .await
+            .map_err(MononokeError::from)
+    }
+
+    async fn has_restriction(&self) -> Result<bool, MononokeError> {
+        self.restriction_info().await.map(|info| !info.is_empty())
+    }
+
+    /// Create a restriction context for a child directory after repo read access was checked.
+    fn child_ctx(&self, child_mfid: HgAugmentedManifestId) -> Self {
+        Self {
+            repo_ctx: self.repo_ctx.clone(),
+            manifest_id: child_mfid,
+            use_restricted_paths_for_acl_metadata: self.use_restricted_paths_for_acl_metadata,
+        }
     }
 }
 

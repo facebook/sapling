@@ -224,7 +224,7 @@ async fn fetch_tree<R: MononokeRepo>(
                 augmented_manifest_id: ctx.augmented_manifest_id().clone().into(),
                 augmented_manifest_size: ctx.augmented_manifest_size(),
             });
-            entry.with_has_acl(ctx.is_restricted());
+            entry.with_has_acl(ctx.is_restricted().await?);
 
             if attributes.parents {
                 entry.with_parents(Some(ctx.hg_parents().into()));
@@ -235,18 +235,22 @@ async fn fetch_tree<R: MononokeRepo>(
                     .perf_counters()
                     .increment_counter(PerfCounterType::EdenapiTreesAuxData);
 
-                entry.with_children(Some(
-                    ctx.augmented_children_entries()
-                        .map(|(path, augmented_entry)| {
-                            fetch_augmented_child_metadata(
-                                &key,
-                                path,
-                                augmented_entry,
-                                ctx.child_is_restricted(path),
-                            )
-                        })
-                        .collect(),
-                ));
+                let child_restrictions = ctx
+                    .children_restrictions(MAX_CONCURRENT_METADATA_FETCHES_PER_TREE_FETCH)
+                    .await?;
+                let children = ctx
+                    .augmented_children_entries()
+                    .map(|(path, augmented_entry)| {
+                        fetch_augmented_child_metadata(
+                            &key,
+                            path,
+                            augmented_entry,
+                            child_restrictions.get(path).copied(),
+                        )
+                    })
+                    .collect();
+
+                entry.with_children(Some(children));
             }
 
             if attributes.manifest_blob {
@@ -313,11 +317,6 @@ async fn fetch_tree<R: MononokeRepo>(
 }
 
 /// Builds child metadata from preloaded augmented manifest entries.
-///
-/// The caller provides the directory `has_acl` value so this helper only owns
-/// response shaping: child keys, aux data, and file metadata. Keeping that
-/// shaping in one place lets callers change how directory ACL metadata is
-/// computed without duplicating the wire-format construction.
 fn fetch_augmented_child_metadata(
     key: &Key,
     path: &MPathElement,

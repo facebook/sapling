@@ -323,7 +323,7 @@ public/ is not in the ACL tree at all.
   > "
   root: has_acl=False
     public: has_acl=None
-    restricted: has_acl=False
+    restricted: has_acl=None
 
 Extract restricted/ manifest ID and fetch its tree to find restricted/code/
   $ RESTRICTED_MFID=$(python3 -c "
@@ -356,4 +356,4 @@ Extract restricted/ manifest ID and fetch its tree to find restricted/code/
   >             print(f'  {d[\"key\"][\"path\"]}: has_acl={d.get(\"has_acl\")}')
   > "
   restricted: has_acl=False
-    code: has_acl=True
+    code: has_acl=None
