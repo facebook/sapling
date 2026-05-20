@@ -8,13 +8,14 @@
 //! Linelog features that depend on `visit_with_ins_del_stacks`,
 //! including `flatten`, and `calculate_dep_map`.
 
-use std::collections::BTreeMap;
+use std::mem::take;
 use std::sync::Arc;
 
 use crate::linelog::AbstractLineLog;
 use crate::linelog::Inst;
 use crate::linelog::Pc;
 use crate::linelog::Rev;
+use crate::nanodag::NanoDag;
 use crate::small_revs::SmallRevs;
 
 /// A "flatten" line, annotating which revisions contain this line.
@@ -126,7 +127,7 @@ impl<T> AbstractLineLog<T> {
     /// deletions) might be skipped incorrectly after `remap_revs`.
     /// Practically, LineLog might allow reorder cases that would be disallowed
     /// by traditional context-line dependencies.
-    pub fn calculate_dep_map(&self) -> BTreeMap<Rev, SmallRevs> {
+    pub fn calculate_dep_map(&self) -> NanoDag {
         // With the insertion and deletion stacks (see explanation in
         // visit_with_ins_del_stacks), when we see a new insertion block, or deletion
         // block, we add two dependencies:
@@ -164,26 +165,32 @@ impl<T> AbstractLineLog<T> {
         //      Mark the outer deletion as dependent on this brev.
         //      Push {rev, a2Pc} to delStack. (by visit_with_ins_del_stacks)
         //    - When pc is a2Pc, pop delStack. (by visit_with_ins_del_stacks)
-        struct DepMapVisitor(BTreeMap<Rev, SmallRevs>);
+        struct DepMapVisitor(NanoDag);
+
+        impl DepMapVisitor {
+            fn add_edge(&mut self, parent: Rev, child: Rev) {
+                self.0 = take(&mut self.0).with_edge(parent, child);
+            }
+        }
 
         impl<T> StackVisitor<T> for DepMapVisitor {
             fn on_conditional_jump(&mut self, rev: Rev, ins_stack: &[Frame], del_stack: &[Frame]) {
                 // rev depends on the outer insertion (parent).
                 if let Some(parent) = ins_stack.last().map(|f| f.rev) {
                     if rev > parent {
-                        self.0.entry(rev).or_default().insert(parent);
+                        self.add_edge(parent, rev);
                     }
                 }
                 // The outer deletion depends on rev (rev is the parent).
                 if let Some(child) = del_stack.last().map(|f| f.rev) {
                     if child > rev {
-                        self.0.entry(child).or_default().insert(rev);
+                        self.add_edge(rev, child);
                     }
                 }
             }
         }
 
-        let mut visitor = DepMapVisitor(BTreeMap::new());
+        let mut visitor = DepMapVisitor(NanoDag::default());
         self.visit_with_ins_del_stacks(&mut visitor);
         visitor.0
     }

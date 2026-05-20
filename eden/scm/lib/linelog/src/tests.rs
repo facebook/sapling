@@ -368,11 +368,7 @@ fn test_remap_revs_reorder_insertions() {
 
     let dep_map = log.calculate_dep_map();
     for rev in 1..=3 {
-        assert_eq!(
-            dep_map.get(&rev).map(|s| s.iter().collect::<Vec<_>>()),
-            Some(vec![0]),
-            "rev={rev}"
-        );
+        assert_eq!(dep_map.parents(rev), Some(&[0][..]), "rev={rev}");
     }
 
     let swapped = log.remap_revs(&|r| match r {
@@ -442,13 +438,11 @@ fn test_reorder_insertions(lines: &[&str], line_added_order: &[usize]) {
     let log = log_from_texts(&texts);
 
     // Verify dep map.
-    let dep_map = log.calculate_dep_map();
-    let deps: Vec<(usize, Vec<usize>)> = dep_map
-        .iter()
-        .map(|(&rev, set)| (rev, set.iter().collect()))
-        .collect();
-    let expected: Vec<(usize, Vec<usize>)> = revs.iter().map(|&r| (r, vec![0])).collect();
-    assert_eq!(deps, expected, "order={line_added_order:?}");
+    let deps = log.calculate_dep_map();
+    assert!(
+        deps.iter().all(|(rev, deps)| rev == 0 || deps == &[0]),
+        "order={line_added_order:?}"
+    );
 
     // Swap rev 2 and 3.
     let swap = |r: usize| match r {
@@ -585,73 +579,56 @@ fn test_flatten() {
 
 #[test]
 fn test_calculate_dep_map() {
-    let deps = |text_list: &[&str]| -> Vec<(usize, Vec<usize>)> {
+    let deps = |text_list: &[&str]| -> NanoDag {
         let texts: Vec<String> = text_list
             .iter()
             .map(|t| t.chars().map(|c| format!("{c}\n")).collect::<String>())
             .collect();
         let log = log_from_texts(&texts);
-        let dep_map = log.calculate_dep_map();
-        dep_map
-            .into_iter()
-            .map(|(rev, set)| (rev, set.iter().collect()))
-            .collect()
+        log.calculate_dep_map()
     };
 
-    assert_eq!(deps(&[]), Vec::<(usize, Vec<usize>)>::new());
+    assert_eq!(deps(&[]).to_string(), "");
 
     // Insertions.
-    assert_eq!(deps(&["a"]), vec![(1, vec![0])]);
-    assert_eq!(deps(&["a", "b"]), vec![(1, vec![0]), (2, vec![1])]);
-    assert_eq!(deps(&["a", "ab"]), vec![(1, vec![0]), (2, vec![0])]);
-    assert_eq!(deps(&["b", "ab"]), vec![(1, vec![0]), (2, vec![0])]);
-    assert_eq!(
-        deps(&["ad", "abd", "abcd"]),
-        vec![(1, vec![0]), (2, vec![1]), (3, vec![1])]
-    );
-    assert_eq!(
-        deps(&["ad", "acd", "abcd"]),
-        vec![(1, vec![0]), (2, vec![1]), (3, vec![1])]
-    );
+    assert_eq!(deps(&["a"]).to_string(), "0-1");
+    // rev 2 "b" deletes "a" (rev 1) and adds "b", depends on rev 1.
+    assert_eq!(deps(&["a", "b"]).to_string(), "0-1-2");
+    // rev 2 appends "b", do not depend on rev 1 (free to reorder).
+    assert_eq!(deps(&["a", "ab"]).to_string(), "0-{1,2}");
+    // rev 2 inserts "b", do not depend on rev 1 (free to reorder).
+    assert_eq!(deps(&["b", "ab"]).to_string(), "0-{1,2}");
+    // rev 3 inserts "b" or "c", next to rev 2, in the middle of rev 1, only depends on rev 1.
+    assert_eq!(deps(&["ad", "abd", "abcd"]).to_string(), "0-1-{2,3}");
+    assert_eq!(deps(&["ad", "acd", "abcd"]).to_string(), "0-1-{2,3}");
 
     // Deletions.
-    assert_eq!(
-        deps(&["abcd", "abd", "ad", "a"]),
-        vec![(1, vec![0]), (2, vec![1]), (3, vec![1]), (4, vec![1])]
-    );
-    assert_eq!(
-        deps(&["abcd", "acd", "ad", "d"]),
-        vec![(1, vec![0]), (2, vec![1]), (3, vec![1]), (4, vec![1])]
-    );
+    // rev 2, 3, 4 each delects one character from "abcd", rev 1.
+    // rev 2, 3, 4 do not depend on each other, but all depend on rev 1.
+    assert_eq!(deps(&["abcd", "abd", "ad", "a"]).to_string(), "0-1-{2,3,4}");
+    assert_eq!(deps(&["abcd", "acd", "ad", "d"]).to_string(), "0-1-{2,3,4}");
 
     // Multi-rev insertion, then delete.
-    assert_eq!(deps(&["abc", "abcdef", ""]).last(), Some(&(3, vec![1, 2])));
-    assert_eq!(
-        deps(&["abc", "abcdef", "af"]).last(),
-        Some(&(3, vec![1, 2]))
-    );
-    assert_eq!(
-        deps(&["abc", "abcdef", "cd"]).last(),
-        Some(&(3, vec![1, 2]))
-    );
+    // rev 3 deletes both parts of rev 1, and rev 2, so depends on both.
+    assert_eq!(deps(&["abc", "abcdef", ""]).to_string(), "0-{1,2}-3",);
+    assert_eq!(deps(&["abc", "abcdef", "af"]).to_string(), "0-{1,2}-3");
+    assert_eq!(deps(&["abc", "abcdef", "cd"]).to_string(), "0-{1,2}-3");
 
     // Complex 9-rev scenario.
     let text_list = [
         "abc", "abcd", "zabcd", "zad", "ad", "adef", "ade", "ad1e", "xyz",
     ];
     assert_eq!(
-        deps(&text_list),
-        vec![
-            (1, vec![0]),
-            (2, vec![0]),
-            (3, vec![0]),
-            (4, vec![1]),             // deletes "bc" added by rev 1
-            (5, vec![3]),             // deletes "z" added by rev 3
-            (6, vec![0]),             // appends after "d", considered independent
-            (7, vec![6]),             // deletes "f" added by rev 6
-            (8, vec![0]),             // inserts "1" between "d" and "e", independent
-            (9, vec![1, 2, 4, 6, 8]), // replaces all
-        ]
+        deps(&text_list).to_string(),
+        // rev 2: appends "d", do not depend on sibling line rev 1
+        // rev 3: inserts "z", do not depend on sibling line rev 1
+        // rev 4: deletes "bc" added by rev 1
+        // rev 5: deletes "z" added by rev 3
+        // rev 6: appends "ef" after EOF "d", considered independent
+        // rev 7: deletes "f" added by rev 6
+        // rev 8: inserts "1" between "d" (rev 2) and "e" (rev 6), independent
+        // rev 9: replace all, depends on [1, 2, 4, 6, 8]
+        "0-{1-{4,}-9,2-9,3-5,6-{7,9},8-9}",
     );
 }
 
@@ -809,7 +786,7 @@ fn test_block_shift_effectiveness() {
             let log = base.clone().edit_chunk(2, a1, a1, 3, lines, flags);
             assert_eq!(log.checkout_text(3), expected_rev3_text);
             let dep = log.calculate_dep_map();
-            let dep = format!("DepMap({:?})", dep);
+            let dep = format!("DepMap({})", dep);
             grouped.entry(dep).or_default().push(a1);
         }
         grouped.iter().map(|(k, v)| format!("{k}: {v:?}")).collect()
@@ -819,9 +796,9 @@ fn test_block_shift_effectiveness() {
     assert_eq!(
         depends,
         [
-            "DepMap({1: {0}, 2: {0}, 3: {0}}): [0, 5, 10]",
-            "DepMap({1: {0}, 2: {0}, 3: {1}}): [1, 2, 3, 4]",
-            "DepMap({1: {0}, 2: {0}, 3: {2}}): [6, 7, 8, 9]"
+            "DepMap(0-{1,2,3}): [0, 5, 10]",
+            "DepMap(0-{1,2-3}): [6, 7, 8, 9]",
+            "DepMap(0-{1-3,2}): [1, 2, 3, 4]"
         ]
     );
 
@@ -830,7 +807,7 @@ fn test_block_shift_effectiveness() {
     let depends = calculate_depends(flags);
     assert_eq!(
         depends,
-        ["DepMap({1: {0}, 2: {0}, 3: {0}}): [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]"]
+        ["DepMap(0-{1,2,3}): [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]"]
     );
 
     // BLOCK_SHIFT is enabled by default.
@@ -855,7 +832,7 @@ fn test_block_shift_overflow() {
             .clone()
             .edit_chunk(1, a1, a1, 1, vec![""], EditFlags::default());
         let dep = log.calculate_dep_map();
-        assert!(dep.values().all(|v| v.iter().count() == 1));
+        assert!(dep.iter().all(|(rev, deps)| rev == 0 || deps == &[0]))
     }
 }
 
