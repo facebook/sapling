@@ -326,6 +326,188 @@ impl NanoDag {
         }
     }
 
+    /// Build a topo-numbered DAG from a proposed DAG shape.
+    ///
+    /// `new_parents` must have the same length as this DAG. Each
+    /// `new_parents[old_child]` item lists the proposed parents of
+    /// `old_child`, using old revision ids. The proposed parents do not need
+    /// to be topologically numbered. For example, this is a valid input shape:
+    ///
+    /// ```text
+    /// old ids:     0   1
+    /// proposed:    1 -> 0
+    /// new_parents[0] = [1]
+    /// new_parents[1] = []
+    /// ```
+    ///
+    /// If there are no other constraints, this returns a mapping where old rev
+    /// 1 receives a smaller new rev than old rev 0, and a returned DAG shaped
+    /// as `0 -> 1`.
+    ///
+    /// `constraints` is another DAG over the same old revision ids. Its edges
+    /// are hard dependencies, typically from linelog textual dependencies
+    /// (`dep_map`). Every constraint edge must remain reachable in the returned
+    /// DAG. The proposed DAG may preserve a constraint as an indirect path. For
+    /// example, a constraint edge `1 -> 3` is satisfied by proposed edges
+    /// `1 -> 2 -> 3`.
+    ///
+    /// Returns the new topo-numbered DAG and an old-to-new rev mapping. Callers
+    /// that only want a dry run can use this method and ignore the successful
+    /// value. Callers that want to reoder revs that should match the nanodag
+    /// revs, for example, `LineLog`, should apply the old-to-new rev mapping
+    /// to their own internal states.
+    ///
+    /// Returns an error if a parent or constraint rev is out of bounds, if a
+    /// self-edge is proposed, if a constraint path is missing from the returned
+    /// DAG, or if the proposed edges contain a cycle.
+    pub fn topo_remap(
+        &self,
+        new_parents: Vec<SmallVec<[Rev; 1]>>,
+        constraints: &NanoDag,
+    ) -> Result<(Self, Vec<Rev>), String> {
+        let len = new_parents.len();
+        if self.len() != len {
+            return Err(format!(
+                "proposed dag has {} revs but current dag has {} revs",
+                len,
+                self.len()
+            ));
+        }
+        if constraints.len() > len {
+            return Err(format!(
+                "constraint dag has rev {} but proposed dag only has {} revs",
+                constraints.len() - 1,
+                len
+            ));
+        }
+
+        let mut children = vec![Vec::<Rev>::new(); len];
+
+        for (child, parents) in new_parents.iter().enumerate() {
+            for (index, parent) in parents.iter().enumerate() {
+                if *parent >= len {
+                    return Err(format!(
+                        "parent rev {parent} for child rev {child} is out of bounds"
+                    ));
+                }
+                if *parent == child {
+                    return Err(format!(
+                        "self edge {parent} -> {child} in proposed dag is not allowed"
+                    ));
+                }
+                if parents[..index].contains(parent) {
+                    return Err(format!("duplicate parent {parent} for child rev {child}"));
+                }
+                children[*parent].push(child);
+            }
+        }
+
+        fn find_cycle_edge(children: &[Vec<Rev>]) -> Option<(Rev, Rev)> {
+            fn visit(rev: Rev, children: &[Vec<Rev>], states: &mut [u8]) -> Option<(Rev, Rev)> {
+                states[rev] = 1;
+                for child in &children[rev] {
+                    match states[*child] {
+                        0 => {
+                            if let Some(edge) = visit(*child, children, states) {
+                                return Some(edge);
+                            }
+                        }
+                        1 => return Some((rev, *child)),
+                        _ => {}
+                    }
+                }
+                states[rev] = 2;
+                None
+            }
+
+            let mut states = vec![0; children.len()];
+            for rev in 0..children.len() {
+                if states[rev] == 0 {
+                    if let Some(edge) = visit(rev, children, &mut states) {
+                        return Some(edge);
+                    }
+                }
+            }
+            None
+        }
+        if let Some((parent, child)) = find_cycle_edge(&children) {
+            return Err(format!(
+                "proposed dag contains a cycle involving edge {parent} -> {child}"
+            ));
+        }
+
+        let mut ready: SmallRevs = new_parents
+            .iter()
+            .enumerate()
+            .filter_map(|(rev, parents)| parents.is_empty().then_some(rev))
+            .collect();
+        let mut visited = SmallRevs::empty();
+        let mut old_to_new = vec![0; len];
+        for new_rev in 0..len {
+            let Some(old_rev) = ready.iter().next() else {
+                return Err("proposed dag contains a cycle; no ready root rev remains".to_string());
+            };
+            ready.remove(old_rev);
+            visited.insert(old_rev);
+            old_to_new[old_rev] = new_rev;
+            for child in &children[old_rev] {
+                if new_parents[*child]
+                    .iter()
+                    .all(|parent| visited.contains(*parent))
+                {
+                    ready.insert(*child);
+                }
+            }
+        }
+
+        let mut parents: ImVec<SmallVec<[Rev; 1]>> =
+            (0..old_to_new.len()).map(|_| SmallVec::new()).collect();
+        for (old_child, old_parents) in new_parents.iter().enumerate() {
+            let new_child = old_to_new[old_child];
+            let remapped_parents = old_parents
+                .iter()
+                .map(|old_parent| old_to_new[*old_parent])
+                .collect();
+            parents.set(new_child, remapped_parents);
+        }
+
+        let dag = Self {
+            children: Self::children_from_parents(&parents),
+            parents,
+            cache: Default::default(),
+            perf_stats: self.perf_stats.clone(),
+        };
+
+        for (old_child, old_parents) in constraints.iter() {
+            for old_parent in old_parents {
+                if *old_parent >= len {
+                    return Err(format!(
+                        "constraint parent rev {old_parent} for child rev {old_child} is out of bounds"
+                    ));
+                }
+                if old_child >= len {
+                    return Err(format!(
+                        "constraint child rev {old_child} with parent rev {old_parent} is out of bounds"
+                    ));
+                }
+                if *old_parent == old_child {
+                    return Err(format!(
+                        "constraint self edge {old_parent} -> {old_child} is not allowed"
+                    ));
+                }
+                let new_parent = old_to_new[*old_parent];
+                let new_child = old_to_new[old_child];
+                if !dag.is_ancestor(new_parent, new_child) {
+                    return Err(format!(
+                        "constraint path {old_parent} -> {old_child} is missing from proposed dag after remap ({new_parent} -> {new_child})"
+                    ));
+                }
+            }
+        }
+
+        Ok((dag, old_to_new))
+    }
+
     /// Fold revs into the smallest rev in `revs`.
     ///
     /// Folded revs other than the smallest rev become isolated. Edges crossing
@@ -638,6 +820,82 @@ mod tests {
         let empty = truncated.truncate(0);
         assert_eq!(empty.parents(0), None);
         assert_eq!(revs_vec(&empty.heads(&empty.all())), vec![]);
+    }
+
+    #[test]
+    fn test_topo_remap_reorders_non_topological_parents() {
+        // Proposed old-id graph: 1 -> 0. The returned mapping makes old rev 1
+        // come before old rev 0.
+        let new_parents = vec![SmallVec::from_buf([1]), SmallVec::new()];
+        let dag = NanoDag::from_edges(2, &[]);
+        let (dag, old_to_new) = dag
+            .topo_remap(new_parents, &NanoDag::default())
+            .expect("proposal is acyclic");
+
+        assert_eq!(old_to_new, vec![1, 0]);
+        assert_eq!(dag.to_string(), "0-1");
+    }
+
+    #[test]
+    fn test_topo_remap_respects_constraints() {
+        // The constraint 1 -> 3 can be preserved as the indirect path 1 -> 2 -> 3.
+        let new_parents = vec![
+            SmallVec::new(),
+            SmallVec::new(),
+            SmallVec::from_buf([1]),
+            SmallVec::from_buf([2]),
+        ];
+        let constraints = NanoDag::from_edges(4, &[(1, 3)]);
+        let dag = NanoDag::from_edges(4, &[]);
+        let (dag, old_to_new) = dag
+            .topo_remap(new_parents, &constraints)
+            .expect("proposal preserves the constraint");
+
+        assert!(old_to_new[1] < old_to_new[3]);
+        assert_eq!(dag.to_string(), "{0,1-2-3}");
+
+        let missing_constraint = NanoDag::from_edges(3, &[]).topo_remap(
+            vec![SmallVec::new(), SmallVec::new(), SmallVec::new()],
+            &NanoDag::from_edges(3, &[(1, 2)]),
+        );
+        assert!(missing_constraint.is_err());
+    }
+
+    #[test]
+    fn test_topo_remap_rejects_invalid_proposal() {
+        let dag = NanoDag::from_edges(2, &[]);
+
+        assert!(
+            dag.topo_remap(vec![SmallVec::new()], &NanoDag::default())
+                .is_err()
+        );
+        let cycle = dag.topo_remap(
+            vec![SmallVec::from_buf([1]), SmallVec::from_buf([0])],
+            &NanoDag::default(),
+        );
+        assert_eq!(
+            cycle.err().unwrap(),
+            "proposed dag contains a cycle involving edge 1 -> 0"
+        );
+        assert!(
+            dag.topo_remap(
+                vec![SmallVec::from_buf([2]), SmallVec::new()],
+                &NanoDag::default(),
+            )
+            .is_err()
+        );
+        assert!(
+            dag.topo_remap(
+                vec![SmallVec::from_vec(vec![1, 1]), SmallVec::new()],
+                &NanoDag::default(),
+            )
+            .is_err()
+        );
+        assert!(
+            NanoDag::from_edges(1, &[])
+                .topo_remap(vec![SmallVec::new()], &NanoDag::from_edges(2, &[]))
+                .is_err()
+        );
     }
 
     #[test]
