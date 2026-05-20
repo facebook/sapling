@@ -271,6 +271,53 @@ impl NanoDag {
         }
     }
 
+    /// Insert a `rev`. Turn:
+    ///
+    /// ```text
+    /// parents -- rev -- children
+    /// ```
+    ///
+    /// into:
+    ///
+    /// ```text
+    /// parents -- rev -- rev+1 -- children
+    /// ```
+    ///
+    /// Original `r` (`r > rev`) will shift to `r + 1` to make room for
+    /// `rev + 1`. The new `rev` keeps the original parents. The new `rev+1`
+    /// keeps the original (but shifted) children.
+    ///
+    /// Panics if `rev` is out of bound.
+    pub fn insert_shift(mut self, rev: Rev) -> Self {
+        assert!(rev < self.len(), "rev {rev} out of bound");
+
+        // note: ImVec::slice is destructive - removes the slice from self.parents
+        let mut parents = self.parents.slice(..=rev);
+        parents.push_back(SmallVec::from_buf([rev])); // rev + 1
+        for mut item in self.parents {
+            for p in item.iter_mut() {
+                if *p >= rev {
+                    *p += 1;
+                }
+            }
+            parents.push_back(item);
+        }
+
+        let mut children: ImMap<Rev, SmallRevs> = ImMap::new();
+        for (child, child_parents) in parents.iter().enumerate() {
+            for parent in child_parents {
+                children.entry(*parent).or_default().insert(child)
+            }
+        }
+
+        Self {
+            parents,
+            children,
+            cache: Default::default(),
+            ..self
+        }
+    }
+
     /// Prepare the self.cache field on demand.
     fn cache(&self) -> &[CacheRevs] {
         let len = self.parents.len();
@@ -472,9 +519,53 @@ mod tests {
     }
 
     #[test]
+    fn test_insert_splits_rev_and_shifts_later_revs() {
+        //     3   4
+        //      \ /
+        //       2
+        //      / \
+        //     0   1
+        let dag = NanoDag::from_edges(5, &[(0, 2), (1, 2), (2, 3), (2, 4)]);
+        assert_eq!(dag.to_string(), "{0,1}-2-{3,4}");
+
+        let inserted = dag.clone().insert_shift(2);
+
+        assert_eq!(dag.to_string(), "{0,1}-2-{3,4}");
+        assert_eq!(inserted.to_string(), "{0,1}-2-3-{4,5}");
+    }
+
+    #[test]
+    fn test_insert_root_rev() {
+        let dag = NanoDag::from_edges(2, &[(0, 1)]);
+
+        let inserted = dag.insert_shift(0);
+
+        assert_eq!(inserted.to_string(), "0-1-2");
+    }
+
+    #[test]
+    fn test_insert_invalidates_derived_cache_without_mutating_original() {
+        let dag = NanoDag::from_edges(3, &[(0, 1), (1, 2)]);
+        assert_eq!(dag.descendants(0).map(revs_vec), Some(vec![0, 1, 2]));
+
+        let inserted = dag.clone().insert_shift(1);
+
+        assert_eq!(dag.to_string(), "0-1-2");
+        assert!(dag.cache.get().is_some());
+        assert!(inserted.cache.get().is_none());
+        assert_eq!(inserted.to_string(), "0-1-2-3");
+    }
+
+    #[test]
     #[should_panic]
     fn test_with_edge_panics_if_parent_is_after_child() {
         let _ = NanoDag::default().with_edge(2, 1);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_insert_panics_if_rev_is_out_of_bound() {
+        let _ = NanoDag::default().insert_shift(0);
     }
 
     quickcheck! {
