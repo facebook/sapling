@@ -23,7 +23,6 @@ pub use facebook::land_service::override_certificate_paths as land_service_overr
 use hooks::CrossRepoPushSource;
 pub use hybrid::normal_pushrebase;
 pub use local::LocalPushrebaseClient;
-use metaconfig_types::MergeResolutionOverride;
 use mononoke_types::BonsaiChangeset;
 use pushrebase::PushrebaseOutcome;
 
@@ -33,8 +32,9 @@ use pushrebase::PushrebaseOutcome;
 pub trait PushrebaseClient: Sync + Send {
     /// Pushrebase the given changesets to the given bookmark.
     ///
-    /// `merge_resolution_override`: `UseJk` defers to the
-    /// `pushrebase_enable_merge_resolution` JK; `ForceOn`/`ForceOff` wins.
+    /// Per-request control over `pushrebase_enable_merge_resolution` is
+    /// expressed via the `MERGE_RESOLUTION_OVERRIDE` pushvar; parsing
+    /// happens at the terminal `PushrebaseOntoBookmarkOp`.
     async fn pushrebase(
         &self,
         bookmark: &BookmarkKey,
@@ -43,6 +43,5 @@ pub trait PushrebaseClient: Sync + Send {
         cross_repo_push_source: CrossRepoPushSource,
         bookmark_restrictions: BookmarkKindRestrictions,
         log_new_public_commits_to_scribe: bool,
-        merge_resolution_override: MergeResolutionOverride,
     ) -> Result<PushrebaseOutcome, BookmarkMovementError>;
 }

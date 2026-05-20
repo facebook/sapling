@@ -24,7 +24,6 @@ use futures::stream::TryStreamExt;
 use hook_manager::CrossRepoPushSource;
 use hook_manager::PushAuthoredBy;
 use hook_manager::manager::HookManagerRef;
-use metaconfig_types::MergeResolutionOverride;
 use mononoke_types::ChangesetId;
 use pushrebase_client::normal_pushrebase;
 use repo_blobstore::RepoBlobstoreRef;
@@ -125,12 +124,6 @@ impl<R: MononokeRepo> RepoContext<R> {
     ) -> Result<PushrebaseOutcome, MononokeError> {
         self.start_write()?;
 
-        let merge_resolution_override = MergeResolutionOverride::from_pushvar_value(
-            pushvars
-                .and_then(|p| p.get(MergeResolutionOverride::PUSHVAR_KEY))
-                .map(|b| b.as_ref()),
-        );
-
         let bookmark = bookmark.as_ref();
         let bookmark = BookmarkKey::new(bookmark)?;
 
@@ -203,7 +196,6 @@ impl<R: MononokeRepo> RepoContext<R> {
                 self.authorization_context(),
                 true, // log_new_public_commits_to_scribe
                 force_local_pushrebase,
-                merge_resolution_override,
             )
             .await?;
             // Convert response back, finishing the land on the small repo
@@ -223,7 +215,6 @@ impl<R: MononokeRepo> RepoContext<R> {
                 self.authorization_context(),
                 true, // log_new_public_commits_to_scribe
                 force_local_pushrebase,
-                merge_resolution_override,
             )
             .await?
         };

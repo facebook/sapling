@@ -16,7 +16,6 @@ use context::CoreContext;
 use hooks::CrossRepoPushSource;
 use hooks::HookManager;
 use metaconfig_types::Address;
-use metaconfig_types::MergeResolutionOverride;
 use metaconfig_types::PushrebaseRemoteMode;
 use mononoke_types::BonsaiChangeset;
 use pushrebase::PushrebaseOutcome;
@@ -40,7 +39,6 @@ pub async fn normal_pushrebase<'a>(
     authz: &'a AuthorizationContext,
     log_new_public_commits_to_scribe: bool,
     force_local_pushrebase: bool,
-    merge_resolution_override: MergeResolutionOverride,
 ) -> Result<PushrebaseOutcome, BookmarkMovementError> {
     let remote_mode = if force_local_pushrebase {
         PushrebaseRemoteMode::Local
@@ -60,7 +58,6 @@ pub async fn normal_pushrebase<'a>(
                     cross_repo_push_source,
                     bookmark_restrictions,
                     log_new_public_commits_to_scribe,
-                    merge_resolution_override,
                 )
                 .await;
             match (result, &remote_mode) {
@@ -103,7 +100,6 @@ pub async fn normal_pushrebase<'a>(
         cross_repo_push_source,
         bookmark_restrictions,
         log_new_public_commits_to_scribe,
-        merge_resolution_override,
     )
     .await;
     if let Some((mut scuba, err)) = maybe_fallback_scuba {
