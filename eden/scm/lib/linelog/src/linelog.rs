@@ -405,8 +405,16 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
         .unwrap_or_else(|| self.execute(a_rev, a_rev, None));
 
         // Can only update cache if there are no possible edits between a_rev and b_rev.
-        // It could be a_rev == b_rev, or b_rev >= a_rev >= max_rev.
-        let can_update_cache = a_rev == b_rev || (b_rev >= a_rev && a_rev >= self.max_rev);
+        // It could be a_rev == b_rev, or parents(b_rev) == [a_rev] && a_rev >= max_rev
+        // (a_rev is the last rev, no higher revs ever exist, and b_rev's only direct
+        // parent is a_rev, so nothing can get in-between).
+        let can_update_cache = a_rev == b_rev
+            || (self
+                .dag
+                .parents(b_rev)
+                .map(|p| p == &[a_rev])
+                .unwrap_or(false)
+                && a_rev == self.max_rev);
         let maybe_a_lines: MaybeMut<_> = match can_update_cache {
             true => MaybeMut::Mut(&mut a_lines),
             false => MaybeMut::Ref(&a_lines),

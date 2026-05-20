@@ -185,6 +185,26 @@ fn test_a_lines_cache_effectiveness() {
 }
 
 #[test]
+fn test_a_lines_cache_does_not_cache_invisible_edit_without_edge() {
+    let stats = Arc::new(PerfStats::default());
+    let log = LineLog::default().with_perf_stats(Some(stats.clone()));
+    // Disabling ADD_EDGE is a power-user use case.
+    let flags = EditFlags::default() - EditFlags::ADD_EDGE;
+
+    let log = log.edit_chunk(0, 0, 0, 1, lines("a\n"), flags);
+
+    // "a" is invisible since rev 1 does not depend on rev 0 in the dag.
+    // If edit_chunk incorrectly updated a_lines_cache, checkout would return "a\n".
+    let cache_hit_before = stats.cache_hit.load(Ordering::Acquire);
+    assert_eq!(log.checkout_text(1), "");
+    let cache_hit_after = stats.cache_hit.load(Ordering::Acquire);
+
+    // No cache hit during checkout: edit_chunk cannot prepare the cache without
+    // the parent edge.
+    assert_eq!(cache_hit_before, cache_hit_after);
+}
+
+#[test]
 fn test_describe_instructions() {
     let log = log_from_texts(&["a\n".into(), "b\n".into()]);
     // The instructions are internal details. For example, an
