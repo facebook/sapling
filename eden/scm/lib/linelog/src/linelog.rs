@@ -18,6 +18,7 @@ use im::Vector as ImVec;
 
 use crate::maybe_mut::MaybeMut;
 use crate::nanodag::NanoDag;
+use crate::small_revs::SmallRevs;
 
 /// See https://sapling-scm.com/docs/internals/linelog for details.
 pub struct AbstractLineLog<T> {
@@ -356,7 +357,7 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
             }
         }
 
-        self.execute(rev, rev, None)
+        self.execute(&SmallRevs::from(rev), None)
     }
 
     /// Checkout the lines of the given revision range `start` to `end`, both
@@ -368,7 +369,12 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
         let lines = self.checkout_lines(end);
         let present_pc_set = lines.into_iter().map(|l| l.pc).collect::<HashSet<Pc>>();
         let is_present = move |pc| present_pc_set.contains(&pc);
-        self.execute(start, end, Some(Box::new(is_present)))
+        let target_revs = if start <= end {
+            SmallRevs::from_range(start..end + 1)
+        } else {
+            SmallRevs::empty()
+        };
+        self.execute(&target_revs, Some(Box::new(is_present)))
     }
 
     /// Prepare and update a_lines_cache for edit_chunk_internal
@@ -402,7 +408,7 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
             }
             _ => None,
         })
-        .unwrap_or_else(|| self.execute(a_rev, a_rev, None));
+        .unwrap_or_else(|| self.execute(&SmallRevs::from(a_rev), None));
 
         // Can only update cache if there are no possible edits between a_rev and b_rev.
         // It could be a_rev == b_rev, or parents(b_rev) == [a_rev] && a_rev >= max_rev
@@ -429,7 +435,7 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
                 let fresh_lines = result
                     .clone()
                     .with_perf_stats(None)
-                    .execute(b_rev, b_rev, None);
+                    .execute(&SmallRevs::from(b_rev), None);
                 assert_eq!(fresh_lines, a_lines);
             }
             result.a_lines_cache = Some((b_rev, a_lines));
@@ -607,13 +613,31 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
     // private because of `present`. no caching.
     fn execute(
         &self,
-        start_rev: Rev,
-        end_rev: Rev,
+        target_revs: &SmallRevs,
         present: Option<Box<dyn Fn(Pc) -> bool>>,
     ) -> ImVec<LineInfo<T>> {
         if let Some(stats) = self.perf_stats.as_ref() {
             stats.execute.fetch_add(1, Ordering::Release);
         }
+
+        // A line inserted in any target rev should be included, but a deletion
+        // only hides the line if it is effective in every target rev.
+        let mut insert_revs = SmallRevs::empty();
+        let mut delete_revs: Option<SmallRevs> = None;
+        for target_rev in target_revs.iter() {
+            match self.dag.ancestors(target_rev) {
+                Some(ancestors) => {
+                    insert_revs.union_with(ancestors);
+                    match delete_revs.as_mut() {
+                        Some(delete_revs) => delete_revs.intersect_with(ancestors),
+                        None => delete_revs = Some(ancestors.clone()),
+                    }
+                }
+                None => delete_revs = Some(SmallRevs::empty()),
+            }
+        }
+        let delete_revs = delete_revs.unwrap_or_else(SmallRevs::empty);
+
         let mut lines = ImVec::<LineInfo<T>>::new();
         let mut pc = 0;
         // Each instructions should be executed at most once. There is no loop.
@@ -638,14 +662,14 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
                     break;
                 }
                 Inst::JGE(rev, j_pc) => {
-                    if self.dag.is_ancestor(*rev, start_rev) {
+                    if delete_revs.contains(*rev) {
                         pc = *j_pc;
                     } else {
                         pc += 1;
                     }
                 }
                 Inst::JL(rev, j_pc) => {
-                    if !self.dag.is_ancestor(*rev, end_rev) {
+                    if !insert_revs.contains(*rev) {
                         pc = *j_pc;
                     } else {
                         pc += 1;
