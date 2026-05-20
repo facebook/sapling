@@ -343,12 +343,10 @@ fn test_remap_revs() {
     assert_eq!(merged.checkout_text(1), "b\nc\n");
     assert_eq!(merged.checkout_text(3), "a\nb\nc\n");
 
-    // Can insert changes by remapping to make room, then recording at the gap.
-    let inserted = log_from_texts(&["b\n".into(), "b\nc\n".into()])
-        .remap_revs(&|r| if r == 2 { 3 } else { r });
+    // Can insert changes by shifting revs to make room, then recording at the gap.
+    let inserted = log_from_texts(&["b\n".into(), "b\nc\n".into()]).insert_shift(1);
+    assert_eq!(inserted.max_rev(), 3);
     let inserted = record_text(inserted, "a\nb\n", 1, 2);
-    // Add missing edge 2 -> 3
-    let inserted = inserted.with_dag_edge(2, 3);
     assert_eq!(inserted.checkout_text(3), "a\nb\nc\n");
 
     // Does not check dependencies or conflicts.
