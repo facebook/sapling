@@ -366,7 +366,7 @@ fn test_remap_revs() {
 fn test_remap_revs_reorder_insertions() {
     let log = log_from_texts(&["a\n".into(), "a\nb\n".into(), "a\nb\nc\n".into()]);
 
-    let dep_map = log.calculate_dep_map();
+    let dep_map = log.dep_map();
     for rev in 1..=3 {
         assert_eq!(dep_map.parents(rev), Some(&[0][..]), "rev={rev}");
     }
@@ -438,7 +438,7 @@ fn test_reorder_insertions(lines: &[&str], line_added_order: &[usize]) {
     let log = log_from_texts(&texts);
 
     // Verify dep map.
-    let deps = log.calculate_dep_map();
+    let deps = log.dep_map();
     assert!(
         deps.iter().all(|(rev, deps)| rev == 0 || deps == &[0]),
         "order={line_added_order:?}"
@@ -578,14 +578,14 @@ fn test_flatten() {
 }
 
 #[test]
-fn test_calculate_dep_map() {
-    let deps = |text_list: &[&str]| -> NanoDag {
+fn test_dep_map() {
+    let deps = |text_list: &[&str]| -> Arc<NanoDag> {
         let texts: Vec<String> = text_list
             .iter()
             .map(|t| t.chars().map(|c| format!("{c}\n")).collect::<String>())
             .collect();
         let log = log_from_texts(&texts);
-        log.calculate_dep_map()
+        log.dep_map().clone()
     };
 
     assert_eq!(deps(&[]).to_string(), "");
@@ -785,7 +785,7 @@ fn test_block_shift_effectiveness() {
             let lines = expected_rev3_lines[a1..a1 + n].to_vec();
             let log = base.clone().edit_chunk(2, a1, a1, 3, lines, flags);
             assert_eq!(log.checkout_text(3), expected_rev3_text);
-            let dep = log.calculate_dep_map();
+            let dep = log.dep_map();
             let dep = format!("DepMap({})", dep);
             grouped.entry(dep).or_default().push(a1);
         }
@@ -831,7 +831,7 @@ fn test_block_shift_overflow() {
         let log = base
             .clone()
             .edit_chunk(1, a1, a1, 1, vec![""], EditFlags::default());
-        let dep = log.calculate_dep_map();
+        let dep = log.dep_map();
         assert!(dep.iter().all(|(rev, deps)| rev == 0 || deps == &[0]))
     }
 }

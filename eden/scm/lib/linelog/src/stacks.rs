@@ -127,7 +127,7 @@ impl<T> AbstractLineLog<T> {
     /// deletions) might be skipped incorrectly after `remap_revs`.
     /// Practically, LineLog might allow reorder cases that would be disallowed
     /// by traditional context-line dependencies.
-    pub fn calculate_dep_map(&self) -> NanoDag {
+    pub(crate) fn calculate_dep_map(&self) -> NanoDag {
         // With the insertion and deletion stacks (see explanation in
         // visit_with_ins_del_stacks), when we see a new insertion block, or deletion
         // block, we add two dependencies:

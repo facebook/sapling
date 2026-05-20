@@ -9,6 +9,7 @@ use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::fmt;
 use std::sync::Arc;
+use std::sync::OnceLock;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 
@@ -25,6 +26,7 @@ pub struct AbstractLineLog<T> {
     pub(crate) dag: NanoDag,
 
     a_lines_cache: Option<(Rev, ImVec<LineInfo<T>>)>,
+    deps_map_cache: OnceLock<Arc<NanoDag>>,
     perf_stats: Option<Arc<PerfStats>>,
 }
 
@@ -46,6 +48,7 @@ impl<T> Clone for AbstractLineLog<T> {
             max_rev: self.max_rev,
             dag: self.dag.clone(),
             a_lines_cache: self.a_lines_cache.clone(),
+            deps_map_cache: self.deps_map_cache.clone(),
             perf_stats: self.perf_stats.clone(),
         }
     }
@@ -112,6 +115,7 @@ impl<T> Default for AbstractLineLog<T> {
             max_rev: 0,
             dag: Default::default(),
             a_lines_cache: None,
+            deps_map_cache: OnceLock::new(),
             perf_stats: None,
         }
     }
@@ -225,6 +229,7 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
             dag: new_dag,
             max_rev: self.max_rev.max(b_rev),
             a_lines_cache,
+            deps_map_cache: Default::default(),
             ..self
         }
     }
@@ -586,6 +591,7 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
             code,
             max_rev: self.max_rev.max(b_rev),
             a_lines_cache: None,
+            deps_map_cache: Default::default(),
             ..self
         }
     }
@@ -662,7 +668,7 @@ impl<T> AbstractLineLog<T> {
     /// the dag will resize to make sure all revs are present in the dag.
     ///
     /// Note: There are no checks about whether the reordering is meaningful.
-    /// The callsite should use `calculate_dep_map` to check dependencies
+    /// The callsite should use `can_reorder` to check dependencies
     /// and avoid troublesome reorders, like moving a change to before its
     /// dependency.
     pub fn remap_revs(self, rev_map: &dyn Fn(Rev) -> Rev) -> Self {
@@ -689,6 +695,7 @@ impl<T> AbstractLineLog<T> {
             max_rev,
             dag: self.dag.with_edge(max_rev, max_rev),
             a_lines_cache: None,
+            deps_map_cache: Default::default(),
             ..self
         }
     }
@@ -716,6 +723,7 @@ impl<T> AbstractLineLog<T> {
             code,
             max_rev,
             a_lines_cache: None,
+            deps_map_cache: Default::default(),
             ..self
         }
     }
@@ -723,6 +731,16 @@ impl<T> AbstractLineLog<T> {
     /// Access to the `nanodag`.
     pub fn nanodag(&self) -> &NanoDag {
         &self.dag
+    }
+
+    /// Get the dependency dag. If `rev1` has parent `rev2`, then `rev1`
+    /// textually depend on `rev2` and cannot be moved to an ancestor of `rev2`.
+    ///
+    /// Only includes revs explicitly appear in linelog instructions, i.e. revs
+    /// that actually edit the lines.
+    pub fn dep_map(&self) -> &Arc<NanoDag> {
+        self.deps_map_cache
+            .get_or_init(|| Arc::new(self.calculate_dep_map()))
     }
 }
 
