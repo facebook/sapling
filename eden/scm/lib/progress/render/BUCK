@@ -5,18 +5,19 @@ oncall("sapling")
 rust_library(
     name = "progress-render",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {
-        "lib": {"name": "progress-render"},
-        "package": {
-            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-            "homepage": "https://sapling-scm.com/",
-            "license": "MIT",
-            "name": "sapling-progress-render",
-            "repository": "https://github.com/facebook/sapling",
-        },
-    }},
-    test_deps = [
-    ],
+    autocargo = {
+        "cargo_toml_config": {
+            "lib": {"name": "progress-render"},
+            "package": {
+                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+                "homepage": "https://sapling-scm.com/",
+                "license": "MIT",
+                "name": "sapling-progress-render",
+                "repository": "https://github.com/facebook/sapling",
+            },
+        }
+    },
+    test_deps = [],
     deps = [
         "fbsource//third-party/rust:serde",
         "fbsource//third-party/rust:termwiz",

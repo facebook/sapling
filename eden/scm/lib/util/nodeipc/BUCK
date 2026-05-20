@@ -6,16 +6,18 @@ oncall("sapling")
 rust_library(
     name = "nodeipc",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {
-        "lib": {"name": "nodeipc"},
-        "package": {
-            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-            "homepage": "https://sapling-scm.com/",
-            "license": "MIT",
-            "name": "sapling-nodeipc",
-            "repository": "https://github.com/facebook/sapling",
-        },
-    }},
+    autocargo = {
+        "cargo_toml_config": {
+            "lib": {"name": "nodeipc"},
+            "package": {
+                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+                "homepage": "https://sapling-scm.com/",
+                "license": "MIT",
+                "name": "sapling-nodeipc",
+                "repository": "https://github.com/facebook/sapling",
+            },
+        }
+    },
     crate_root = "src/lib.rs",
     deps = [
         "fbsource//third-party/rust:anyhow",

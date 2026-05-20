@@ -5,16 +5,18 @@ oncall("sapling")
 rust_library(
     name = "tracing-dyn-layer",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {
-        "lib": {"name": "tracing-dyn-layer"},
-        "package": {
-            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-            "homepage": "https://sapling-scm.com/",
-            "license": "MIT",
-            "name": "sapling-tracing-dyn-layer",
-            "repository": "https://github.com/facebook/sapling",
-        },
-    }},
+    autocargo = {
+        "cargo_toml_config": {
+            "lib": {"name": "tracing-dyn-layer"},
+            "package": {
+                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+                "homepage": "https://sapling-scm.com/",
+                "license": "MIT",
+                "name": "sapling-tracing-dyn-layer",
+                "repository": "https://github.com/facebook/sapling",
+            },
+        }
+    },
     crate_root = "src/lib.rs",
     test_deps = [],
     deps = [

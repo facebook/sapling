@@ -5,22 +5,24 @@ oncall("sapling")
 rust_library(
     name = "configmodel",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {
-        "features": {
-            "convert-matcher": ["sapling-pathmatcher"],
-            "convert-path": ["sapling-util"],
-            "convert-regex": ["regex"],
-        },
-        "lib": {"name": "configmodel"},
-        "package": {
-            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-            "description": "Configuration types used by Sapling.",
-            "homepage": "https://sapling-scm.com/",
-            "license": "MIT",
-            "name": "sapling-configmodel",
-            "repository": "https://github.com/facebook/sapling",
-        },
-    }},
+    autocargo = {
+        "cargo_toml_config": {
+            "features": {
+                "convert-matcher": ["sapling-pathmatcher"],
+                "convert-path": ["sapling-util"],
+                "convert-regex": ["regex"],
+            },
+            "lib": {"name": "configmodel"},
+            "package": {
+                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+                "description": "Configuration types used by Sapling.",
+                "homepage": "https://sapling-scm.com/",
+                "license": "MIT",
+                "name": "sapling-configmodel",
+                "repository": "https://github.com/facebook/sapling",
+            },
+        }
+    },
     crate_root = "src/lib.rs",
     features = [
         "convert-matcher",

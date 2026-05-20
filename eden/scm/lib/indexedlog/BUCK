@@ -6,44 +6,46 @@ oncall("sapling")
 rust_library(
     name = "indexedlog",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {
-        "bench": [
-            {
-                "harness": False,
-                "name": "index",
-            },
-            {
-                "harness": False,
-                "name": "misc",
-            },
-            {
-                "harness": False,
-                "name": "log",
-            },
-        ],
-        # Cargo bench deps.
-        "extra_buck_dependencies": {
-            "dev-dependencies": [
-                "fbsource//third-party/rust:rand_chacha",
-                "//eden/scm/lib/minibench:minibench",
+    autocargo = {
+        "cargo_toml_config": {
+            "bench": [
+                {
+                    "harness": False,
+                    "name": "index",
+                },
+                {
+                    "harness": False,
+                    "name": "misc",
+                },
+                {
+                    "harness": False,
+                    "name": "log",
+                },
             ],
-        },
-        "features": {
-            "btrfs": ["sapling-btrfs"],
-            "configurable": ["sapling-configmodel"],
-            "metrics": ["sapling-metrics"],
-            "sigbus-handler": [],
-        },
-        "lib": {"name": "indexedlog"},
-        "package": {
-            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-            "description": "Append-only on-disk storage with integrity checks and radix tree indexing.",
-            "homepage": "https://sapling-scm.com/",
-            "license": "MIT",
-            "name": "sapling-indexedlog",
-            "repository": "https://github.com/facebook/sapling",
-        },
-    }},
+            # Cargo bench deps.
+            "extra_buck_dependencies": {
+                "dev-dependencies": [
+                    "fbsource//third-party/rust:rand_chacha",
+                    "//eden/scm/lib/minibench:minibench",
+                ],
+            },
+            "features": {
+                "btrfs": ["sapling-btrfs"],
+                "configurable": ["sapling-configmodel"],
+                "metrics": ["sapling-metrics"],
+                "sigbus-handler": [],
+            },
+            "lib": {"name": "indexedlog"},
+            "package": {
+                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+                "description": "Append-only on-disk storage with integrity checks and radix tree indexing.",
+                "homepage": "https://sapling-scm.com/",
+                "license": "MIT",
+                "name": "sapling-indexedlog",
+                "repository": "https://github.com/facebook/sapling",
+            },
+        }
+    },
     crate_root = "src/lib.rs",
     features = [
         "btrfs",

@@ -5,17 +5,19 @@ oncall("sapling")
 rust_library(
     name = "filters",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {
-        "dependencies_override": {},
-        "lib": {"name": "filters"},
-        "package": {
-            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-            "homepage": "https://sapling-scm.com/",
-            "license": "MIT",
-            "name": "sapling-filters",
-            "repository": "https://github.com/facebook/sapling",
-        },
-    }},
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {},
+            "lib": {"name": "filters"},
+            "package": {
+                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+                "homepage": "https://sapling-scm.com/",
+                "license": "MIT",
+                "name": "sapling-filters",
+                "repository": "https://github.com/facebook/sapling",
+            },
+        }
+    },
     features = ["fb"],
     named_deps = {
         "blake3-constants": "//blake3:blake3-constants-rust-nothrift",

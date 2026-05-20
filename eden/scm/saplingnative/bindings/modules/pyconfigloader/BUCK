@@ -9,10 +9,12 @@ rust_python_library(
         "cargo_toml_config": {
             "dependencies_override": {
                 "dependencies": {
-                    "sapling-configmodel": {"features": [
-                        "convert-regex",
-                        "convert-matcher",
-                    ]},
+                    "sapling-configmodel": {
+                        "features": [
+                            "convert-regex",
+                            "convert-matcher",
+                        ]
+                    },
                 },
             },
         },

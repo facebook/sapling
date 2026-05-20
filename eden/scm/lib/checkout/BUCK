@@ -5,31 +5,35 @@ oncall("sapling")
 rust_library(
     name = "checkout",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {
-        "dependencies_override": {
-            "dependencies": {
-                "sapling-edenfs-client": {"optional": True},
-                "sapling-hg-metrics": {"optional": True},
-                "sapling-manifest": {"features": ["for-tests"]},
-                "toml": {"optional": True},
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "sapling-edenfs-client": {"optional": True},
+                    "sapling-hg-metrics": {"optional": True},
+                    "sapling-manifest": {"features": ["for-tests"]},
+                    "toml": {"optional": True},
+                },
+                "dev-dependencies": {"sapling-manifest-tree": {"features": ["for-tests"]}},
             },
-            "dev-dependencies": {"sapling-manifest-tree": {"features": ["for-tests"]}},
-        },
-        "features": {"eden": [
-            "sapling-edenfs-client",
-            "sapling-hg-metrics",
-            "toml",
-            "sapling-workingcopy/eden",
-        ]},
-        "lib": {"name": "checkout"},
-        "package": {
-            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-            "homepage": "https://sapling-scm.com/",
-            "license": "MIT",
-            "name": "sapling-checkout",
-            "repository": "https://github.com/facebook/sapling",
-        },
-    }},
+            "features": {
+                "eden": [
+                    "sapling-edenfs-client",
+                    "sapling-hg-metrics",
+                    "toml",
+                    "sapling-workingcopy/eden",
+                ]
+            },
+            "lib": {"name": "checkout"},
+            "package": {
+                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+                "homepage": "https://sapling-scm.com/",
+                "license": "MIT",
+                "name": "sapling-checkout",
+                "repository": "https://github.com/facebook/sapling",
+            },
+        }
+    },
     crate_root = "src/lib.rs",
     features = [
         "eden",

@@ -5,20 +5,22 @@ oncall("sapling")
 rust_library(
     name = "copytrace",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {
-        "dependencies_override": {
-            "dependencies": {"sapling-manifest": {"features": ["for-tests"]}},
-            "dev-dependencies": {"sapling-manifest-tree": {"features": ["for-tests"]}},
-        },
-        "lib": {"name": "copytrace"},
-        "package": {
-            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-            "homepage": "https://sapling-scm.com/",
-            "license": "MIT",
-            "name": "sapling-copytrace",
-            "repository": "https://github.com/facebook/sapling",
-        },
-    }},
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {"sapling-manifest": {"features": ["for-tests"]}},
+                "dev-dependencies": {"sapling-manifest-tree": {"features": ["for-tests"]}},
+            },
+            "lib": {"name": "copytrace"},
+            "package": {
+                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+                "homepage": "https://sapling-scm.com/",
+                "license": "MIT",
+                "name": "sapling-copytrace",
+                "repository": "https://github.com/facebook/sapling",
+            },
+        }
+    },
     crate_root = "src/lib.rs",
     test_deps = [
         "fbsource//third-party/rust:tokio",

@@ -5,22 +5,24 @@ oncall("sapling")
 rust_library(
     name = "sampling-profiler",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {
-        "features": {
-            "default": [],
-            "nightly": [],
-        },
-        "lib": {"name": "sampling-profiler"},
-        "package": {
-            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-            "autoexamples": False,
-            "description": "Sampling profiler based on libunwind.",
-            "homepage": "https://sapling-scm.com/",
-            "license": "MIT",
-            "name": "sapling-sampling-profiler",
-            "repository": "https://github.com/facebook/sapling",
-        },
-    }},
+    autocargo = {
+        "cargo_toml_config": {
+            "features": {
+                "default": [],
+                "nightly": [],
+            },
+            "lib": {"name": "sampling-profiler"},
+            "package": {
+                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+                "autoexamples": False,
+                "description": "Sampling profiler based on libunwind.",
+                "homepage": "https://sapling-scm.com/",
+                "license": "MIT",
+                "name": "sapling-sampling-profiler",
+                "repository": "https://github.com/facebook/sapling",
+            },
+        }
+    },
     crate_root = "src/lib.rs",
     features = ["nightly"],
     test_deps = ["fbsource//third-party/rust:quickcheck"],

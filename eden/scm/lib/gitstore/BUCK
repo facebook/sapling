@@ -5,20 +5,24 @@ oncall("sapling")
 rust_library(
     name = "gitstore",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {
-        "bench": [{
-            "harness": False,
-            "name": "read_obj",
-        }],
-        "lib": {"name": "gitstore"},
-        "package": {
-            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-            "homepage": "https://sapling-scm.com/",
-            "license": "MIT",
-            "name": "sapling-gitstore",
-            "repository": "https://github.com/facebook/sapling",
-        },
-    }},
+    autocargo = {
+        "cargo_toml_config": {
+            "bench": [
+                {
+                    "harness": False,
+                    "name": "read_obj",
+                }
+            ],
+            "lib": {"name": "gitstore"},
+            "package": {
+                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+                "homepage": "https://sapling-scm.com/",
+                "license": "MIT",
+                "name": "sapling-gitstore",
+                "repository": "https://github.com/facebook/sapling",
+            },
+        }
+    },
     crate_root = "src/lib.rs",
     deps = [
         "fbsource//third-party/rust:anyhow",

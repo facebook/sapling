@@ -6,11 +6,13 @@ oncall("sapling")
 rust_binary(
     name = "scm_daemon",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {
-        "package": {
-            "name": "scm_daemon",
-        },
-    }},
+    autocargo = {
+        "cargo_toml_config": {
+            "package": {
+                "name": "scm_daemon",
+            },
+        }
+    },
     link_style = "static",
     deps = [
         "fbsource//third-party/rust:anyhow",

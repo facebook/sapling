@@ -8,7 +8,8 @@ buck_genrule(
     out = "constants.rs",
     # Restricting commands doesn't work on Windows.
     bypass_restricted_cmd = True,
-    cmd = "$(exe //eden/scm:gen_version_py_bin) --version '%s' --release '%s' --revision '%s' $OUT" % (
+    cmd = "$(exe //eden/scm:gen_version_py_bin) --version '%s' --release '%s' --revision '%s' $OUT"
+    % (
         read_config("build_info", "package_version", ""),
         read_config("build_info", "package_release", ""),
         read_config("build_info", "revision", ""),
@@ -18,17 +19,19 @@ buck_genrule(
 rust_library(
     name = "rust_version",
     srcs = ["src/lib.rs"],
-    autocargo = {"cargo_toml_config": {
-        "features": {"generated": []},
-        "lib": {"name": "version"},
-        "package": {
-            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-            "homepage": "https://sapling-scm.com/",
-            "license": "MIT",
-            "name": "sapling-version",
-            "repository": "https://github.com/facebook/sapling",
-        },
-    }},
+    autocargo = {
+        "cargo_toml_config": {
+            "features": {"generated": []},
+            "lib": {"name": "version"},
+            "package": {
+                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+                "homepage": "https://sapling-scm.com/",
+                "license": "MIT",
+                "name": "sapling-version",
+                "repository": "https://github.com/facebook/sapling",
+            },
+        }
+    },
     crate = "version",
     features = ["generated"],
     mapped_srcs = {":gen_rust_version_constants.rs": "src/constants.rs"},

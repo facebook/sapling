@@ -6,17 +6,19 @@ oncall("sapling")
 rust_library(
     name = "edenapi_types",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {
-        "dependencies_override": {"dependencies": {"sapling-dag-types": {"features": ["for-tests"]}}},
-        "lib": {"name": "edenapi_types"},
-        "package": {
-            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-            "homepage": "https://sapling-scm.com/",
-            "license": "MIT",
-            "name": "sapling-edenapi_types",
-            "repository": "https://github.com/facebook/sapling",
-        },
-    }},
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {"dependencies": {"sapling-dag-types": {"features": ["for-tests"]}}},
+            "lib": {"name": "edenapi_types"},
+            "package": {
+                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+                "homepage": "https://sapling-scm.com/",
+                "license": "MIT",
+                "name": "sapling-edenapi_types",
+                "repository": "https://github.com/facebook/sapling",
+            },
+        }
+    },
     crate_root = "src/lib.rs",
     features = ["for-tests"],
     test_deps = [

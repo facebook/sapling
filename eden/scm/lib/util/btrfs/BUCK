@@ -6,16 +6,18 @@ oncall("sapling")
 rust_library(
     name = "btrfs",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {
-        "lib": {"name": "btrfs"},
-        "package": {
-            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-            "homepage": "https://sapling-scm.com/",
-            "license": "MIT",
-            "name": "sapling-btrfs",
-            "repository": "https://github.com/facebook/sapling",
-        },
-    }},
+    autocargo = {
+        "cargo_toml_config": {
+            "lib": {"name": "btrfs"},
+            "package": {
+                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+                "homepage": "https://sapling-scm.com/",
+                "license": "MIT",
+                "name": "sapling-btrfs",
+                "repository": "https://github.com/facebook/sapling",
+            },
+        }
+    },
     compatible_with = [
         "ovr_config//os:linux",
     ],

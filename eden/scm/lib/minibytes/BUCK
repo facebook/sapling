@@ -5,27 +5,29 @@ oncall("sapling")
 fb_xplat_rust_library(
     name = "minibytes",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {
-        "features": {
-            "default": [
-                "frombytes",
-                "frommmap",
-                "non-zerocopy-into",
-            ],
-            "frombytes": ["bytes"],
-            "frommmap": ["memmap2"],
-            "non-zerocopy-into": [],
-        },
-        "lib": {"name": "minibytes"},
-        "package": {
-            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-            "description": "Shared reference-counted bytes and str with zero-copy slicing support.",
-            "homepage": "https://sapling-scm.com/",
-            "license": "MIT",
-            "name": "sapling-minibytes",
-            "repository": "https://github.com/facebook/sapling",
-        },
-    }},
+    autocargo = {
+        "cargo_toml_config": {
+            "features": {
+                "default": [
+                    "frombytes",
+                    "frommmap",
+                    "non-zerocopy-into",
+                ],
+                "frombytes": ["bytes"],
+                "frommmap": ["memmap2"],
+                "non-zerocopy-into": [],
+            },
+            "lib": {"name": "minibytes"},
+            "package": {
+                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+                "description": "Shared reference-counted bytes and str with zero-copy slicing support.",
+                "homepage": "https://sapling-scm.com/",
+                "license": "MIT",
+                "name": "sapling-minibytes",
+                "repository": "https://github.com/facebook/sapling",
+            },
+        }
+    },
     crate_root = "src/lib.rs",
     features = [
         "frombytes",

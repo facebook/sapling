@@ -5,22 +5,24 @@ oncall("sapling")
 rust_library(
     name = "global-profiler",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {
-        "features": {
-            "default": [],
-            "nightly": [],
-        },
-        "lib": {"name": "global-profiler"},
-        "package": {
-            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-            "autoexamples": False,
-            "description": "global profiler for sapling.",
-            "homepage": "https://sapling-scm.com/",
-            "license": "MIT",
-            "name": "sapling-global-profiler",
-            "repository": "https://github.com/facebook/sapling",
-        },
-    }},
+    autocargo = {
+        "cargo_toml_config": {
+            "features": {
+                "default": [],
+                "nightly": [],
+            },
+            "lib": {"name": "global-profiler"},
+            "package": {
+                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+                "autoexamples": False,
+                "description": "global profiler for sapling.",
+                "homepage": "https://sapling-scm.com/",
+                "license": "MIT",
+                "name": "sapling-global-profiler",
+                "repository": "https://github.com/facebook/sapling",
+            },
+        }
+    },
     crate_root = "src/lib.rs",
     deps = [
         "fbsource//third-party/rust:anyhow",

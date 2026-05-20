@@ -5,10 +5,12 @@ oncall("sapling")
 rust_python_library(
     name = "cpython-ext",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {
-        "lib": {"name": "cpython-ext"},
-        "package": {"name": "sapling-cpython-ext"},
-    }},
+    autocargo = {
+        "cargo_toml_config": {
+            "lib": {"name": "cpython-ext"},
+            "package": {"name": "sapling-cpython-ext"},
+        }
+    },
     crate_root = "src/lib.rs",
     include_python_sys = True,
     test_deps = [

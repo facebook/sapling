@@ -8,12 +8,16 @@ rust_binary(
     srcs = glob([
         "src/**/*.rs",
     ]),
-    autocargo = {"cargo_toml_config": {
-        "extra_buck_dependencies": {"dependencies": [
-            "//eden/scm/lib/config/loader:configloader",
-        ]},
-        "features": {"fb": ["sapling-configloader/fb"]},
-    }},
+    autocargo = {
+        "cargo_toml_config": {
+            "extra_buck_dependencies": {
+                "dependencies": [
+                    "//eden/scm/lib/config/loader:configloader",
+                ]
+            },
+            "features": {"fb": ["sapling-configloader/fb"]},
+        }
+    },
     crate_root = "src/main.rs",
     deps = [
         "fbsource//third-party/rust:tempfile",
@@ -23,7 +27,12 @@ rust_binary(
         "//eden/scm/lib/procinfo:procinfo",
         "//eden/scm/lib/repo:repo",
         "//eden/scm/lib/types:types",
-    ] + ([] if rust_oss.is_oss_build() else [
-        "//common/rust/shed/fbinit:fbinit",
-    ]),
+    ]
+    + (
+        []
+        if rust_oss.is_oss_build()
+        else [
+            "//common/rust/shed/fbinit:fbinit",
+        ]
+    ),
 )

@@ -5,19 +5,21 @@ oncall("sapling")
 rust_library(
     name = "cmddebugfilterid",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {
-        "features": {
-            "default": [],
-        },
-        "lib": {"name": "cmddebugfilterid"},
-        "package": {
-            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-            "homepage": "https://sapling-scm.com/",
-            "license": "GPL-2.0-only",
-            "name": "cmddebugfilterid",
-            "repository": "https://github.com/facebook/sapling",
-        },
-    }},
+    autocargo = {
+        "cargo_toml_config": {
+            "features": {
+                "default": [],
+            },
+            "lib": {"name": "cmddebugfilterid"},
+            "package": {
+                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+                "homepage": "https://sapling-scm.com/",
+                "license": "GPL-2.0-only",
+                "name": "cmddebugfilterid",
+                "repository": "https://github.com/facebook/sapling",
+            },
+        }
+    },
     crate_root = "src/lib.rs",
     deps = [
         "//eden/scm/lib/clidispatch:clidispatch",

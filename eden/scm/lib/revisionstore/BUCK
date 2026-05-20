@@ -5,25 +5,29 @@ oncall("sapling")
 rust_library(
     name = "revisionstore",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {
-        "dependencies_override": {"dependencies": {
-            "sapling-minibytes": {"features": ["frombytes"]},
-            "sapling-version": {"path": "../version"},
-        }},
-        "features": {
-            "default": [],
-            "fb": [],
-            "for-tests": [],
-        },
-        "lib": {"name": "revisionstore"},
-        "package": {
-            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-            "homepage": "https://sapling-scm.com/",
-            "license": "MIT",
-            "name": "sapling-revisionstore",
-            "repository": "https://github.com/facebook/sapling",
-        },
-    }},
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "sapling-minibytes": {"features": ["frombytes"]},
+                    "sapling-version": {"path": "../version"},
+                }
+            },
+            "features": {
+                "default": [],
+                "fb": [],
+                "for-tests": [],
+            },
+            "lib": {"name": "revisionstore"},
+            "package": {
+                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+                "homepage": "https://sapling-scm.com/",
+                "license": "MIT",
+                "name": "sapling-revisionstore",
+                "repository": "https://github.com/facebook/sapling",
+            },
+        }
+    },
     crate = "revisionstore",
     features = [
         "fb",

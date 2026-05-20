@@ -41,15 +41,19 @@ rust_library(
     name = "backingstore",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {
-        "cargo_target_config": {"crate_type": [
-            "staticlib",
-            "lib",
-        ]},
+        "cargo_target_config": {
+            "crate_type": [
+                "staticlib",
+                "lib",
+            ]
+        },
         "cargo_toml_config": {
-            "dependencies_override": {"dependencies": {
-                "sapling-constructors": {"default-features": False},
-                "sapling-indexedlog": {"features": ["configurable"]},
-            }},
+            "dependencies_override": {
+                "dependencies": {
+                    "sapling-constructors": {"default-features": False},
+                    "sapling-indexedlog": {"features": ["configurable"]},
+                }
+            },
             "features": {"fb": ["sapling-configloader/fb"]},
             "lib": {"name": "backingstore"},
             "package": {

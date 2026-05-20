@@ -5,16 +5,18 @@ oncall("sapling")
 rust_library(
     name = "worktree",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {
-        "lib": {"name": "worktree"},
-        "package": {
-            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-            "homepage": "https://sapling-scm.com/",
-            "license": "GPL-2.0-only",
-            "name": "sapling-worktree-registry",
-            "repository": "https://github.com/facebook/sapling",
-        },
-    }},
+    autocargo = {
+        "cargo_toml_config": {
+            "lib": {"name": "worktree"},
+            "package": {
+                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+                "homepage": "https://sapling-scm.com/",
+                "license": "GPL-2.0-only",
+                "name": "sapling-worktree-registry",
+                "repository": "https://github.com/facebook/sapling",
+            },
+        }
+    },
     crate_root = "src/lib.rs",
     test_deps = [
         "fbsource//third-party/rust:tempfile",

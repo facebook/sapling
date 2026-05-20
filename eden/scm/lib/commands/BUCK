@@ -5,52 +5,58 @@ oncall("sapling")
 rust_library(
     name = "commands",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {
-        "dependencies_override": {"dependencies": {
-            "anyhow": {"features": ["backtrace"]},
-            "pytracing": {"default-features": False},
-            "sapling-constructors": {"features": ["git"]},
-            "sapling-repo": {"features": ["wdir"]},
-        }},
-        # Cargo feature deps: "pycheckout/eden" etc. require these declared.
-        "extra_buck_dependencies": {"dependencies": [
-            "//eden/scm/lib/indexedlog:indexedlog",
-            "//eden/scm/saplingnative/bindings/modules/pycheckout:pycheckout",
-            "//eden/scm/saplingnative/bindings/modules/pyworkingcopyclient:pyworkingcopyclient",
-            "//eden/scm/saplingnative/bindings/modules/pyworkingcopy:pyworkingcopy",
-        ]},
-        "features": {
-            "default": [],
-            "eden": [
-                "sapling-clidispatch/eden",
-                "pycheckout/eden",
-                "pyworkingcopyclient/eden",
-                "pyworkingcopy/eden",
-                "cmdclone/eden",
-                "cmdgoto/eden",
-                "cmddebugwait/eden",
-                "cmdworktree",
-            ],
-            "fb": [
-                "cmddebugdumpinternalconfig/fb",
-                "cmddebugrefreshconfig/fb",
-                "cmdpy/fb",
-                "cmdversion/fb",
-                "sapling-configloader/fb",
-                "sapling-identity/fb",
-                "sapling-indexedlog/metrics",
-            ],
-            "sl_oss": ["sapling-configloader/sl_oss"],
-        },
-        "lib": {"name": "commands"},
-        "package": {
-            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-            "homepage": "https://sapling-scm.com/",
-            "license": "GPL-2.0-only",
-            "name": "commands",
-            "repository": "https://github.com/facebook/sapling",
-        },
-    }},
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "anyhow": {"features": ["backtrace"]},
+                    "pytracing": {"default-features": False},
+                    "sapling-constructors": {"features": ["git"]},
+                    "sapling-repo": {"features": ["wdir"]},
+                }
+            },
+            # Cargo feature deps: "pycheckout/eden" etc. require these declared.
+            "extra_buck_dependencies": {
+                "dependencies": [
+                    "//eden/scm/lib/indexedlog:indexedlog",
+                    "//eden/scm/saplingnative/bindings/modules/pycheckout:pycheckout",
+                    "//eden/scm/saplingnative/bindings/modules/pyworkingcopyclient:pyworkingcopyclient",
+                    "//eden/scm/saplingnative/bindings/modules/pyworkingcopy:pyworkingcopy",
+                ]
+            },
+            "features": {
+                "default": [],
+                "eden": [
+                    "sapling-clidispatch/eden",
+                    "pycheckout/eden",
+                    "pyworkingcopyclient/eden",
+                    "pyworkingcopy/eden",
+                    "cmdclone/eden",
+                    "cmdgoto/eden",
+                    "cmddebugwait/eden",
+                    "cmdworktree",
+                ],
+                "fb": [
+                    "cmddebugdumpinternalconfig/fb",
+                    "cmddebugrefreshconfig/fb",
+                    "cmdpy/fb",
+                    "cmdversion/fb",
+                    "sapling-configloader/fb",
+                    "sapling-identity/fb",
+                    "sapling-indexedlog/metrics",
+                ],
+                "sl_oss": ["sapling-configloader/sl_oss"],
+            },
+            "lib": {"name": "commands"},
+            "package": {
+                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+                "homepage": "https://sapling-scm.com/",
+                "license": "GPL-2.0-only",
+                "name": "commands",
+                "repository": "https://github.com/facebook/sapling",
+            },
+        }
+    },
     crate_root = "src/lib.rs",
     features = [
         "eden",

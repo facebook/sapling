@@ -8,16 +8,18 @@ rust_library(
         "src/**/*.rs",
         "src/**/*.zst",
     ]),
-    autocargo = {"cargo_toml_config": {
-        "package": {
-            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-            "description": "Generate source control repo data on demand for testing purpose.",
-            "homepage": "https://sapling-scm.com/",
-            "license": "MIT",
-            "name": "sapling-virtual-repo",
-            "repository": "https://github.com/facebook/sapling",
-        },
-    }},
+    autocargo = {
+        "cargo_toml_config": {
+            "package": {
+                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+                "description": "Generate source control repo data on demand for testing purpose.",
+                "homepage": "https://sapling-scm.com/",
+                "license": "MIT",
+                "name": "sapling-virtual-repo",
+                "repository": "https://github.com/facebook/sapling",
+            },
+        }
+    },
     crate_root = "src/lib.rs",
     deps = [
         "fbsource//third-party/rust:anyhow",

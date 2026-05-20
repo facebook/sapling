@@ -5,22 +5,26 @@ oncall("sapling")
 rust_library(
     name = "zstdelta",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {
-        "bin": [{
-            "doc": False,
-            "name": "zstdelta",
-            "path": "src/main.rs",
-        }],
-        "dependencies_override": {"dependencies": {"zstd-sys": {"features": ["experimental"]}}},
-        "lib": {"name": "zstdelta"},
-        "package": {
-            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-            "homepage": "https://sapling-scm.com/",
-            "license": "MIT",
-            "name": "sapling-zstdelta",
-            "repository": "https://github.com/facebook/sapling",
-        },
-    }},
+    autocargo = {
+        "cargo_toml_config": {
+            "bin": [
+                {
+                    "doc": False,
+                    "name": "zstdelta",
+                    "path": "src/main.rs",
+                }
+            ],
+            "dependencies_override": {"dependencies": {"zstd-sys": {"features": ["experimental"]}}},
+            "lib": {"name": "zstdelta"},
+            "package": {
+                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+                "homepage": "https://sapling-scm.com/",
+                "license": "MIT",
+                "name": "sapling-zstdelta",
+                "repository": "https://github.com/facebook/sapling",
+            },
+        }
+    },
     crate_root = "src/lib.rs",
     test_deps = [
         "fbsource//third-party/rust:quickcheck",

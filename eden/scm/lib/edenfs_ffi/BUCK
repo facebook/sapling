@@ -9,10 +9,12 @@ rust_library(
     name = "edenfs_ffi",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {
-        "cargo_target_config": {"crate_type": [
-            "staticlib",
-            "lib",
-        ]},
+        "cargo_target_config": {
+            "crate_type": [
+                "staticlib",
+                "lib",
+            ]
+        },
         "cargo_toml_config": {
             "dependencies_override": {"build-dependencies": {"cxx-build": {"optional": False}}},
             "lib": {"name": "edenfs_ffi"},

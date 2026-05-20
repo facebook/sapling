@@ -5,51 +5,57 @@ oncall("sapling")
 rust_library(
     name = "manifest-tree",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {
-        "bench": [{
-            "harness": False,
-            "name": "bench",
-            "required-features": ["for-tests"],
-        }],
-        "dependencies_override": {"dependencies": {
-            "sapling-manifest": {
-                "default-features": False,
-                "features": ["for-tests"],
+    autocargo = {
+        "cargo_toml_config": {
+            "bench": [
+                {
+                    "harness": False,
+                    "name": "bench",
+                    "required-features": ["for-tests"],
+                }
+            ],
+            "dependencies_override": {
+                "dependencies": {
+                    "sapling-manifest": {
+                        "default-features": False,
+                        "features": ["for-tests"],
+                    },
+                    "sapling-types": {
+                        "default-features": False,
+                        "features": ["for-tests"],
+                    },
+                }
             },
-            "sapling-types": {
-                "default-features": False,
-                "features": ["for-tests"],
+            "extra_buck_dependencies": {
+                "dependencies": [
+                    "fbsource//third-party/rust:quickcheck",
+                    "fbsource//third-party/rust:rand",
+                ],
+                "dev-dependencies": [
+                    "fbsource//third-party/rust:rand",
+                    "fbsource//third-party/rust:rand_chacha",
+                    "//eden/scm/lib/manifest:manifest",
+                    "//eden/scm/lib/minibench:minibench",
+                    "//eden/scm/lib/types:types",
+                ],
             },
-        }},
-        "extra_buck_dependencies": {
-            "dependencies": [
-                "fbsource//third-party/rust:quickcheck",
-                "fbsource//third-party/rust:rand",
-            ],
-            "dev-dependencies": [
-                "fbsource//third-party/rust:rand",
-                "fbsource//third-party/rust:rand_chacha",
-                "//eden/scm/lib/manifest:manifest",
-                "//eden/scm/lib/minibench:minibench",
-                "//eden/scm/lib/types:types",
-            ],
-        },
-        "features": {
-            "default": [],
-            "for-tests": [
-                "quickcheck",
-                "rand",
-            ],
-        },
-        "lib": {"name": "manifest-tree"},
-        "package": {
-            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-            "homepage": "https://sapling-scm.com/",
-            "license": "MIT",
-            "name": "sapling-manifest-tree",
-            "repository": "https://github.com/facebook/sapling",
-        },
-    }},
+            "features": {
+                "default": [],
+                "for-tests": [
+                    "quickcheck",
+                    "rand",
+                ],
+            },
+            "lib": {"name": "manifest-tree"},
+            "package": {
+                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+                "homepage": "https://sapling-scm.com/",
+                "license": "MIT",
+                "name": "sapling-manifest-tree",
+                "repository": "https://github.com/facebook/sapling",
+            },
+        }
+    },
     crate_root = "src/lib.rs",
     features = ["for-tests"],
     test_deps = [

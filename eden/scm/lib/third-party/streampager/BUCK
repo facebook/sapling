@@ -5,45 +5,51 @@ oncall("sapling")
 rust_library(
     name = "streampager",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {
-        "dependencies_override": {"dependencies": {
-            "serde": {"features": ["derive"]},
-            "smallvec": {
-                "default-features": False,
-                "features": [],
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "serde": {"features": ["derive"]},
+                    "smallvec": {
+                        "default-features": False,
+                        "features": [],
+                    },
+                    "termwiz": {"features": []},
+                }
             },
-            "termwiz": {"features": []},
-        }},
-        # Cargo feature-gated dep ("load_file" feature not enabled in Buck).
-        "extra_buck_dependencies": {"dependencies": [
-            "fbsource//third-party/rust:notify",
-        ]},
-        "features": {
-            "keymap-file": [],
-            "load_file": ["notify"],
-            "toml_config": ["toml"],
-        },
-        "lib": {"name": "streampager"},
-        "package": {
-            "authors": [
-                "Mark Juggurnauth-Thomas <markbt@efaref.net>",
-                "Facebook Source Control Team <sourcecontrol-dev@fb.com>",
-            ],
-            "categories": [
-                "command-line-utilities",
-                "text-processing",
-            ],
-            "description": "streampager is a pager for command output or large files",
-            "keywords": [
-                "pager",
-                "less",
-                "more",
-            ],
-            "license": "MIT",
-            "name": "sapling-streampager",
-            "version": "0.12.0",
-        },
-    }},
+            # Cargo feature-gated dep ("load_file" feature not enabled in Buck).
+            "extra_buck_dependencies": {
+                "dependencies": [
+                    "fbsource//third-party/rust:notify",
+                ]
+            },
+            "features": {
+                "keymap-file": [],
+                "load_file": ["notify"],
+                "toml_config": ["toml"],
+            },
+            "lib": {"name": "streampager"},
+            "package": {
+                "authors": [
+                    "Mark Juggurnauth-Thomas <markbt@efaref.net>",
+                    "Facebook Source Control Team <sourcecontrol-dev@fb.com>",
+                ],
+                "categories": [
+                    "command-line-utilities",
+                    "text-processing",
+                ],
+                "description": "streampager is a pager for command output or large files",
+                "keywords": [
+                    "pager",
+                    "less",
+                    "more",
+                ],
+                "license": "MIT",
+                "name": "sapling-streampager",
+                "version": "0.12.0",
+            },
+        }
+    },
     edition = "2021",
     features = ["toml_config"],
     deps = [

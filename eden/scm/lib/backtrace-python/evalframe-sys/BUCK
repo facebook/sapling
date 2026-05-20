@@ -21,21 +21,25 @@ cpp_library(
 rust_library(
     name = "evalframe-sys",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {
-        "extra_buck_dependencies": {"build-dependencies": [
-            "fbsource//third-party/rust:cc",
-            "//eden/scm/lib/util/python-sysconfig:python-sysconfig",
-        ]},
-        "lib": {"name": "evalframe-sys"},
-        "package": {
-            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-            "description": "Raw FFI bindings for Python frame evaluation interception.",
-            "homepage": "https://sapling-scm.com/",
-            "license": "MIT",
-            "name": "sapling-evalframe-sys",
-            "repository": "https://github.com/facebook/sapling",
-        },
-    }},
+    autocargo = {
+        "cargo_toml_config": {
+            "extra_buck_dependencies": {
+                "build-dependencies": [
+                    "fbsource//third-party/rust:cc",
+                    "//eden/scm/lib/util/python-sysconfig:python-sysconfig",
+                ]
+            },
+            "lib": {"name": "evalframe-sys"},
+            "package": {
+                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+                "description": "Raw FFI bindings for Python frame evaluation interception.",
+                "homepage": "https://sapling-scm.com/",
+                "license": "MIT",
+                "name": "sapling-evalframe-sys",
+                "repository": "https://github.com/facebook/sapling",
+            },
+        }
+    },
     crate_root = "src/lib.rs",
     deps = [
         "fbsource//third-party/rust:libc",

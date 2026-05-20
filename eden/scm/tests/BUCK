@@ -2,7 +2,13 @@ load("@fbcode_macros//build_defs:native_rules.bzl", "buck_command_alias", "buck_
 load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
 load("//antlir/fbpkg/fetch:defs.bzl", "fbpkg_fetch")
 load("//eden:defs.bzl", "get_integration_test_env_and_deps")
-load("//eden/scm/tests:targets.bzl", "generate_trinity_smoketests", "get_sl_edenfs_watchman_run_tests_included", "get_sl_watchman_run_tests_excluded", "run_tests_target")
+load(
+    "//eden/scm/tests:targets.bzl",
+    "generate_trinity_smoketests",
+    "get_sl_edenfs_watchman_run_tests_included",
+    "get_sl_watchman_run_tests_excluded",
+    "run_tests_target",
+)
 
 oncall("sapling")
 
@@ -111,7 +117,9 @@ buck_command_alias(
 buck_genrule(
     name = "mononoke_prod",
     out = "mononoke",
-    bash = "$(exe fbsource//third-party/squashfs-tools-4.5.1:unsquashfs) -dest $OUT $(location " + fbpkg_fetch.fetched_with_nondeterministic_fs_metadata("mononoke.server", "prod") + ") -extract file mononoke",
+    bash = "$(exe fbsource//third-party/squashfs-tools-4.5.1:unsquashfs) -dest $OUT $(location "
+    + fbpkg_fetch.fetched_with_nondeterministic_fs_metadata("mononoke.server", "prod")
+    + ") -extract file mononoke",
     compatible_with = [
         "ovr_config//os:linux",
     ],

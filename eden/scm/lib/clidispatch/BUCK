@@ -5,28 +5,32 @@ oncall("sapling")
 rust_library(
     name = "clidispatch",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {
-        "dependencies_override": {"dependencies": {
-            "sapling-indexedlog": {"features": ["configurable"]},
-            "sapling-repo": {"features": ["wdir"]},
-            "sapling-thrift-types": {"optional": True},
-        }},
-        "features": {
-            "eden": [
-                "sapling-workingcopy/eden",
-                "sapling-thrift-types",
-            ],
-            "sl_oss": ["sapling-identity/sl_oss"],
-        },
-        "lib": {"name": "clidispatch"},
-        "package": {
-            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-            "homepage": "https://sapling-scm.com/",
-            "license": "MIT",
-            "name": "sapling-clidispatch",
-            "repository": "https://github.com/facebook/sapling",
-        },
-    }},
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "sapling-indexedlog": {"features": ["configurable"]},
+                    "sapling-repo": {"features": ["wdir"]},
+                    "sapling-thrift-types": {"optional": True},
+                }
+            },
+            "features": {
+                "eden": [
+                    "sapling-workingcopy/eden",
+                    "sapling-thrift-types",
+                ],
+                "sl_oss": ["sapling-identity/sl_oss"],
+            },
+            "lib": {"name": "clidispatch"},
+            "package": {
+                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+                "homepage": "https://sapling-scm.com/",
+                "license": "MIT",
+                "name": "sapling-clidispatch",
+                "repository": "https://github.com/facebook/sapling",
+            },
+        }
+    },
     features = [
         "eden",
     ],

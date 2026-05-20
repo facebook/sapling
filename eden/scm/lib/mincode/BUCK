@@ -5,24 +5,26 @@ oncall("sapling")
 rust_library(
     name = "mincode",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {
-        "lib": {"name": "mincode"},
-        "package": {
-            "authors": [
-                "David Tolnay <dtolnay@gmail.com>",
-                "Meta Source Control Team <sourcecontrol-dev@meta.com>",
-            ],
-            "description": "Bincode-like serialization with VLQ encoded integers.",
-            "homepage": "https://sapling-scm.com/",
-            "include": [
-                "Cargo.toml",
-                "src/**/*.rs",
-            ],
-            "license": "MIT",
-            "name": "sapling-mincode",
-            "repository": "https://github.com/facebook/sapling",
-        },
-    }},
+    autocargo = {
+        "cargo_toml_config": {
+            "lib": {"name": "mincode"},
+            "package": {
+                "authors": [
+                    "David Tolnay <dtolnay@gmail.com>",
+                    "Meta Source Control Team <sourcecontrol-dev@meta.com>",
+                ],
+                "description": "Bincode-like serialization with VLQ encoded integers.",
+                "homepage": "https://sapling-scm.com/",
+                "include": [
+                    "Cargo.toml",
+                    "src/**/*.rs",
+                ],
+                "license": "MIT",
+                "name": "sapling-mincode",
+                "repository": "https://github.com/facebook/sapling",
+            },
+        }
+    },
     crate_root = "src/lib.rs",
     test_deps = ["fbsource//third-party/rust:quickcheck"],
     deps = [

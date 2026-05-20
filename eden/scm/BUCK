@@ -165,11 +165,13 @@ hg_binary(
                 "build": "build.rs",
                 "name": "hgmain",
             },
-            "profile": {"release": {
-                "debug": True,
-                "incremental": True,
-                "lto": False,
-            }},
+            "profile": {
+                "release": {
+                    "debug": True,
+                    "incremental": True,
+                    "lto": False,
+                }
+            },
         },
         "cargo_toml_dir": "exec/hgmain",
     },

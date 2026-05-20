@@ -5,38 +5,42 @@ oncall("sapling")
 rust_library(
     name = "dag",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {
-        "dependencies_override": {"dependencies": {
-            "sapling-dag-types": {
-                "default-features": False,
-                "features": [],
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "sapling-dag-types": {
+                        "default-features": False,
+                        "features": [],
+                    },
+                    "sapling-minibytes": {
+                        "default-features": False,
+                        "features": [],
+                    },
+                }
             },
-            "sapling-minibytes": {
-                "default-features": False,
-                "features": [],
+            "features": {
+                "default": [
+                    "indexedlog-backend",
+                    "render",
+                ],
+                "indexedlog-backend": [
+                    "sapling-indexedlog",
+                    "tempfile",
+                ],
+                "render": ["sapling-renderdag"],
             },
-        }},
-        "features": {
-            "default": [
-                "indexedlog-backend",
-                "render",
-            ],
-            "indexedlog-backend": [
-                "sapling-indexedlog",
-                "tempfile",
-            ],
-            "render": ["sapling-renderdag"],
-        },
-        "lib": {"name": "dag"},
-        "package": {
-            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-            "description": "An implementation of a DAG used for source control.",
-            "homepage": "https://sapling-scm.com/",
-            "license": "MIT",
-            "name": "sapling-dag",
-            "repository": "https://github.com/facebook/sapling",
-        },
-    }},
+            "lib": {"name": "dag"},
+            "package": {
+                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+                "description": "An implementation of a DAG used for source control.",
+                "homepage": "https://sapling-scm.com/",
+                "license": "MIT",
+                "name": "sapling-dag",
+                "repository": "https://github.com/facebook/sapling",
+            },
+        }
+    },
     crate_root = "src/lib.rs",
     features = [
         "indexedlog-backend",
