@@ -326,6 +326,51 @@ impl NanoDag {
         }
     }
 
+    /// Fold revs into the smallest rev in `revs`.
+    ///
+    /// Folded revs other than the smallest rev become isolated. Edges crossing
+    /// the folded set are rewired to the smallest rev.
+    pub fn fold(self, revs: &SmallRevs) -> Result<Self, &'static str> {
+        let Some(start) = revs.iter().next() else {
+            return Ok(self);
+        };
+        if revs.iter().any(|rev| rev >= self.len()) {
+            return Err("fold rev is out of bounds");
+        }
+
+        let mut parents: ImVec<SmallVec<[Rev; 1]>> =
+            (0..self.len()).map(|_| SmallVec::new()).collect();
+        for (child, child_parents) in self.parents.iter().enumerate() {
+            let mapped_child = if revs.contains(child) { start } else { child };
+            for parent in child_parents {
+                let mapped_parent = if revs.contains(*parent) {
+                    start
+                } else {
+                    *parent
+                };
+                if mapped_parent == mapped_child {
+                    continue;
+                }
+                if mapped_parent >= mapped_child {
+                    return Err("fold breaks topological order");
+                }
+                let Some(child_parents) = parents.get_mut(mapped_child) else {
+                    return Err("fold child is out of bounds");
+                };
+                if !child_parents.contains(&mapped_parent) {
+                    child_parents.push(mapped_parent);
+                }
+            }
+        }
+
+        Ok(Self {
+            children: Self::children_from_parents(&parents),
+            parents,
+            cache: Default::default(),
+            ..self
+        })
+    }
+
     fn children_from_parents(parents: &ImVec<SmallVec<[Rev; 1]>>) -> ImMap<Rev, SmallRevs> {
         let mut children: ImMap<Rev, SmallRevs> = ImMap::new();
         for (child, child_parents) in parents.iter().enumerate() {
@@ -593,6 +638,31 @@ mod tests {
         let empty = truncated.truncate(0);
         assert_eq!(empty.parents(0), None);
         assert_eq!(revs_vec(&empty.heads(&empty.all())), vec![]);
+    }
+
+    #[test]
+    fn test_fold_rewires_edges_to_first_rev() {
+        let dag = NanoDag::from_edges(4, &[(0, 1), (0, 2), (1, 3), (2, 3)]);
+        assert_eq!(dag.to_string(), "0-{1,2}-3");
+
+        let folded = dag
+            .fold(&[1, 2].into_iter().collect())
+            .expect("folding sibling revs should be valid");
+
+        assert_eq!(folded.parents(1), Some([0].as_slice()));
+        assert_eq!(folded.parents(2), Some([].as_slice()));
+        assert_eq!(folded.parents(3), Some([1].as_slice()));
+        assert_eq!(folded.children(0).map(revs_vec), Some(vec![1]));
+        assert_eq!(folded.children(1).map(revs_vec), Some(vec![3]));
+        assert_eq!(folded.children(2), None);
+    }
+
+    #[test]
+    fn test_fold_rejects_invalid_set() {
+        let dag = NanoDag::from_edges(4, &[(0, 2), (1, 2), (2, 3)]);
+
+        assert!(dag.clone().fold(&[4].into_iter().collect()).is_err());
+        assert!(dag.fold(&[0, 2].into_iter().collect()).is_err());
     }
 
     #[test]
