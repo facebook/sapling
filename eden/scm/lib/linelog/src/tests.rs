@@ -191,10 +191,14 @@ fn test_a_lines_cache_does_not_cache_invisible_edit_without_edge() {
     // Disabling ADD_EDGE is a power-user use case.
     let flags = EditFlags::default() - EditFlags::ADD_EDGE;
 
-    let log = log.edit_chunk(0, 0, 0, 1, lines("a\n"), flags);
+    let log = log
+        .edit_chunk(0, 0, 0, 0, lines("a\nb\n"), flags)
+        .edit_chunk(0, 1, 1, 1, lines("c\n"), flags);
 
-    // "a" is invisible since rev 1 does not depend on rev 0 in the dag.
-    // If edit_chunk incorrectly updated a_lines_cache, checkout would return "a\n".
+    // rev 1's "c\n" is invisible:
+    // During checkout(rev 1) (in LineLog::execute), the outer rev 0 block is
+    // skipped (checked dag), so the rev 1 insertion inside rev 0 chunk is
+    // skipped too, becomes invisible.
     let cache_hit_before = stats.cache_hit.load(Ordering::Acquire);
     assert_eq!(log.checkout_text(1), "");
     let cache_hit_after = stats.cache_hit.load(Ordering::Acquire);
@@ -202,6 +206,11 @@ fn test_a_lines_cache_does_not_cache_invisible_edit_without_edge() {
     // No cache hit during checkout: edit_chunk cannot prepare the cache without
     // the parent edge.
     assert_eq!(cache_hit_before, cache_hit_after);
+
+    // linelog dep map, rev 1 depends on rev 0 (insert into rev 0 block)
+    assert_eq!(log.dep_map().to_string(), "0-1");
+    // dag edges, rev 1 does not depend on rev 0
+    assert_eq!(log.nanodag().to_string(), "{0,1}");
 }
 
 #[test]
