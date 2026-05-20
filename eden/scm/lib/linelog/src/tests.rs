@@ -17,6 +17,7 @@ use rand_core::SeedableRng as _;
 use crate::AbstractLineLog;
 use crate::EditFlags;
 use crate::LineLog;
+use crate::SmallRevs;
 use crate::linelog::PerfStats;
 use crate::linelog::Rev;
 use crate::nanodag::NanoDag;
@@ -944,7 +945,8 @@ impl LineLog {
     }
 
     fn show_range(&self, start: usize, end: usize) -> Vec<String> {
-        self.checkout_range_lines(start, end)
+        let target_revs = SmallRevs::from_range(start..=end);
+        self.checkout_revs_lines(&target_revs)
             .into_iter()
             .map(|l| {
                 format!(

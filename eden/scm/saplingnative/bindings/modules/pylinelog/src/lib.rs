@@ -177,14 +177,20 @@ py_class!(class IntLineLog |py| {
         NanoDag::create_instance(py, self.inner(py).nanodag().clone())
     }
 
-    /// Get the lines. (rev, start_rev=rev) -> [(rev, line_no, pc, deleted)].
+    /// Get the lines. rev -> [(rev, line_no, pc, deleted)].
     /// Includes a dummy "end" line at the end.
-    def checkout_lines(&self, rev: usize, start_rev: Option<usize> = None) -> PyResult<Vec<(usize, usize, usize, bool)>> {
+    def checkout_lines(&self, rev: usize) -> PyResult<Vec<(usize, usize, usize, bool)>> {
         let inner = self.inner(py);
-        let lines = match start_rev {
-            None => inner.checkout_lines(rev),
-            Some(start) => inner.checkout_range_lines(start, rev),
-        };
+        let lines = inner.checkout_lines(rev);
+        let lines: Vec<_> = lines.into_iter().map(|l| (l.rev, *l.data.as_ref(), l.pc, l.deleted)).collect();
+        Ok(lines)
+    }
+
+    /// Get the lines visible in the revs set. revs -> [(rev, line_no, pc, deleted)].
+    /// Includes a dummy "end" line at the end.
+    def checkout_revs_lines(&self, revs: SmallRevs) -> PyResult<Vec<(usize, usize, usize, bool)>> {
+        let inner = self.inner(py);
+        let lines = inner.checkout_revs_lines(revs.inner(py));
         let lines: Vec<_> = lines.into_iter().map(|l| (l.rev, *l.data.as_ref(), l.pc, l.deleted)).collect();
         Ok(lines)
     }
