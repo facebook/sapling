@@ -53,8 +53,8 @@ export function TopBar() {
       </span>
       <span className="button-group">
         <FlexSpacer />
-        <CommitTreeSearchFilterButton />
         <DebugToolsButton />
+        <CommitTreeSearchFilterButton />
         <FocusModeToggle />
         <BugButton />
         <SettingsGearButton />
