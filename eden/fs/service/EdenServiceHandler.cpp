@@ -1309,12 +1309,11 @@ EdenServiceHandler::co_getDigestHashImpl(
   auto results = co_await co_applyToVirtualInode(
       mountHandle.getRootInode(),
       *paths,
-      [mountHandle, fetchContext = fetchContext.copy()](
+      [objectStore, fetchContext = fetchContext.copy()](
           VirtualInode inode,
           RelativePath path) -> folly::coro::now_task<std::optional<Hash32>> {
-        co_return co_await inode
-            .getDigestHash(path, mountHandle.getObjectStorePtr(), fetchContext)
-            .semi();
+        co_return co_await inode.co_getDigestHash(
+            path, objectStore, fetchContext);
       },
       objectStore,
       fetchContext);

@@ -167,7 +167,13 @@ class VirtualInode {
       const std::shared_ptr<ObjectStore>& objectStore,
       const ObjectFetchContextPtr& fetchContext) const;
 
+  // DEPRECATED: Use co_getDigestHash instead.
   ImmediateFuture<std::optional<Hash32>> getDigestHash(
+      RelativePathPiece path,
+      const std::shared_ptr<ObjectStore>& objectStore,
+      const ObjectFetchContextPtr& fetchContext) const;
+
+  folly::coro::now_task<std::optional<Hash32>> co_getDigestHash(
       RelativePathPiece path,
       const std::shared_ptr<ObjectStore>& objectStore,
       const ObjectFetchContextPtr& fetchContext) const;
