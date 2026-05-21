@@ -1004,6 +1004,7 @@ class CoroutinesTestMixin:
             "enable-phase6 = true",
             "enable-phase8 = true",
             "enable-phase9 = true",
+            "enable-phase11 = true",
         ]
 
 
