@@ -2930,6 +2930,20 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectWorkingCopy(
       // First step of garbage collection varies by platform (e.g., Linux,
       // macOS, Windows)
       ->handleChildrenNotAccessedRecently(cutoff, context, gcToken)
+      // Wait for queued filesystem invalidations to drain before the unload
+      // sweep. On FUSE, invalidation-triggered FORGETs may arrive too late for
+      // this GC cycle if we start unloading immediately.
+      .thenTry(
+          [&mount](folly::Try<uint64_t>&& invalidatedTry)
+              -> ImmediateFuture<uint64_t> {
+            if (invalidatedTry.hasException()) {
+              return makeFuture<uint64_t>(invalidatedTry.exception());
+            }
+            return mount.flushInvalidations().thenValue(
+                [numInvalidated = invalidatedTry.value()](folly::Unit) {
+                  return numInvalidated;
+                });
+          })
       // Second step of garbage collection deletes all the unreferenced inodes
       .ensure([inode, lease = std::move(lease)] {
         inode->unloadChildrenUnreferencedByFs();
