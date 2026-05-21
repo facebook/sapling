@@ -30,7 +30,6 @@ use maplit::btreeset;
 use mononoke_api::BookmarkKey;
 use mononoke_api::CandidateSelectionHintArgs;
 use mononoke_api::ChangesetContext;
-use mononoke_api::ChangesetDiffItem;
 use mononoke_api::ChangesetFileOrdering;
 use mononoke_api::ChangesetHistoryOptions;
 use mononoke_api::ChangesetId;
@@ -45,7 +44,6 @@ use mononoke_api::MononokeError;
 use mononoke_api::MononokeRepo;
 use mononoke_api::RateLimitOutcome;
 use mononoke_api::Repo;
-use mononoke_api::RepoContext;
 use mononoke_api::UnifiedDiff;
 use mononoke_api::UnifiedDiffMode;
 use mononoke_api::XRepoLookupExactBehaviour;
@@ -65,115 +63,12 @@ use crate::from_request::FromRequest;
 use crate::from_request::check_range_and_convert;
 use crate::from_request::validate_timestamp;
 use crate::history::collect_history;
-use crate::into_response::AsyncIntoResponse;
 use crate::into_response::AsyncIntoResponseWith;
 use crate::into_response::IntoResponse;
 use crate::source_control_impl::SourceControlServiceImpl;
 
 // Magic number used when we want to limit concurrency with buffer_unordered.
 const CONCURRENCY_LIMIT: usize = 100;
-
-enum CommitComparePath {
-    File(thrift::CommitCompareFile),
-    Tree(thrift::CommitCompareTree),
-}
-
-impl CommitComparePath {
-    /// The main path that this comparison applies to.
-    fn path(&self) -> Result<&str, scs_errors::ServiceError> {
-        // Use the base path where available.  If it is not available, then
-        // this is a deletion and the other path should be used.
-        match self {
-            CommitComparePath::File(file) => file
-                .base_file
-                .as_ref()
-                .or(file.other_file.as_ref())
-                .map(|file| file.path.as_str())
-                .ok_or_else(|| {
-                    scs_errors::internal_error("programming error, file entry has no file").into()
-                }),
-
-            CommitComparePath::Tree(tree) => tree
-                .base_tree
-                .as_ref()
-                .or(tree.other_tree.as_ref())
-                .map(|tree| tree.path.as_str())
-                .ok_or_else(|| {
-                    scs_errors::internal_error("programming error, tree entry has no tree").into()
-                }),
-        }
-    }
-
-    async fn from_path_diff(
-        path_diff: ChangesetPathDiffContext<Repo>,
-        schemes: &BTreeSet<thrift::CommitIdentityScheme>,
-    ) -> Result<Self, scs_errors::ServiceError> {
-        if path_diff.is_file() {
-            let (base_file, other_file): (_, Option<thrift::FilePathInfo>) = try_join!(
-                path_diff.get_new_content().into_response(),
-                path_diff.get_old_content().into_response()
-            )?;
-            let copy_info = path_diff.copy_info().into_response();
-            let (other_file, subtree_source) = match (
-                path_diff.get_old_content(),
-                path_diff.subtree_copy_dest_path(),
-                other_file,
-            ) {
-                (Some(other), Some(replacement_path), Some(mut other_file)) => {
-                    let source_commit_ids = map_commit_identity(other.changeset(), schemes).await?;
-                    let source_path =
-                        std::mem::replace(&mut other_file.path, replacement_path.to_string());
-                    (
-                        Some(other_file),
-                        Some(thrift::CommitCompareSubtreeSource {
-                            source_commit_ids,
-                            source_path,
-                            ..Default::default()
-                        }),
-                    )
-                }
-                (_, _, other_file) => (other_file, None),
-            };
-            Ok(CommitComparePath::File(thrift::CommitCompareFile {
-                base_file,
-                other_file,
-                copy_info,
-                subtree_source,
-                ..Default::default()
-            }))
-        } else {
-            let (base_tree, other_tree) = try_join!(
-                path_diff.get_new_content().into_response(),
-                path_diff.get_old_content().into_response()
-            )?;
-            Ok(CommitComparePath::Tree(thrift::CommitCompareTree {
-                base_tree,
-                other_tree,
-                ..Default::default()
-            }))
-        }
-    }
-}
-
-/// Helper for commit_compare to add mutable rename information if appropriate
-async fn add_mutable_renames(
-    base_changeset: &mut ChangesetContext<Repo>,
-    params: &thrift::CommitCompareParams,
-) -> Result<(), scs_errors::ServiceError> {
-    if params.follow_mutable_file_history.unwrap_or(false) {
-        if let Some(paths) = &params.paths {
-            let paths: Vec<_> = paths
-                .iter()
-                .map(MPath::try_from)
-                .collect::<Result<Vec<_>, _>>()
-                .map_err(|error| MononokeError::InvalidRequest(error.to_string()))?;
-            base_changeset
-                .add_mutable_renames(paths.into_iter())
-                .await?;
-        }
-    }
-    Ok(())
-}
 
 struct CommitFileDiffsItem {
     path_diff_context: ChangesetPathDiffContext<Repo>,
@@ -890,49 +785,6 @@ impl SourceControlServiceImpl {
         Ok(!public.is_empty())
     }
 
-    /// Given a base changeset, find the "other" changeset from parent information
-    /// including mutable history if appropriate
-    ///
-    /// This is entirely a heuristic to guess the "right" thing if the client
-    /// doesn't provide an "other" changeset - errors would normally be fed back
-    /// to a human and not handled automatically.
-    async fn find_commit_compare_parent(
-        &self,
-        repo: &RepoContext<Repo>,
-        base_changeset: &mut ChangesetContext<Repo>,
-        params: &thrift::CommitCompareParams,
-    ) -> Result<Option<ChangesetContext<Repo>>, scs_errors::ServiceError> {
-        let commit_parents = base_changeset.parents().await?;
-        let mut other_changeset_id = commit_parents.first().copied();
-
-        if params.follow_mutable_file_history.unwrap_or(false) {
-            let mutable_parents = base_changeset.mutable_parents();
-
-            // If there are multiple choices to make, then bail - the user needs to be
-            // clear to avoid the ambiguity
-            if mutable_parents.len() > 1 {
-                return Err(scs_errors::invalid_request(
-                    "multiple different mutable parents in supplied paths",
-                )
-                .into());
-            }
-            if let Some(Some(parent)) = mutable_parents.into_iter().next() {
-                other_changeset_id = Some(parent);
-            }
-        }
-
-        match other_changeset_id {
-            None => Ok(None),
-            Some(other_changeset_id) => {
-                let other_changeset = repo
-                    .changeset(ChangesetSpecifier::Bonsai(other_changeset_id))
-                    .await?
-                    .ok_or_else(|| scs_errors::internal_error("other changeset is missing"))?;
-                Ok(Some(other_changeset))
-            }
-        }
-    }
-
     /// Diff two commits
     pub(crate) async fn commit_compare(
         &self,
@@ -966,197 +818,32 @@ impl SourceControlServiceImpl {
             }
         }
 
-        let (base_changeset, other_changeset) = match &params.other_commit_id {
+        let (repo, base_changeset, other_changeset) = match &params.other_commit_id {
             Some(id) => {
-                let (mut base_changeset, other_changeset) = self
-                    .repo_changeset_pair(ctx.clone(), &commit, id)
-                    .watched()
-                    .await?;
-                add_mutable_renames(&mut base_changeset, &params)
-                    .watched()
-                    .await?;
-                (base_changeset, Some(other_changeset))
+                let (base, other) = self.repo_changeset_pair(ctx.clone(), &commit, id).await?;
+                let repo = base.repo_ctx().clone();
+                (repo, base, Some(other))
             }
             None => {
-                let (repo, mut base_changeset) =
-                    self.repo_changeset(ctx.clone(), &commit).watched().await?;
-                add_mutable_renames(&mut base_changeset, &params)
-                    .watched()
-                    .await?;
-                let other_changeset = self
-                    .find_commit_compare_parent(&repo, &mut base_changeset, &params)
-                    .watched()
-                    .await?;
-                (base_changeset, other_changeset)
+                let (repo, base) = self.repo_changeset(ctx.clone(), &commit).await?;
+                (repo, base, None)
             }
         };
 
-        // Log the generation difference to drill down on clients making
-        // expensive `commit_compare` requests
-        let base_generation = base_changeset.generation().watched().await?.value();
-        let other_generation = match other_changeset {
-            Some(ref cs) => cs.generation().watched().await?.value(),
-            // If there isn't another commit, let's use the same generation
-            // to have a difference of 0.
-            None => base_generation,
-        };
+        let result = commit_compare::operations::commit_compare(
+            &ctx,
+            &repo,
+            base_changeset,
+            other_changeset,
+            &params,
+        )
+        .await
+        .map_err(|e| match e.downcast::<MononokeError>() {
+            Ok(mononoke_err) => scs_errors::ServiceError::from(mononoke_err),
+            Err(e) => scs_errors::internal_error(format!("{:#}", e)).into(),
+        })?;
 
-        let generation_diff = base_generation.abs_diff(other_generation);
-        let mut scuba = ctx.scuba().clone();
-        scuba.log_with_msg(
-            "Commit compare generation difference",
-            format!("{generation_diff}"),
-        );
-
-        let mut last_path = None;
-        let mut diff_items: BTreeSet<_> = params
-            .compare_items
-            .into_iter()
-            .filter_map(|item| match item {
-                thrift::CommitCompareItem::FILES => Some(ChangesetDiffItem::FILES),
-                thrift::CommitCompareItem::TREES => Some(ChangesetDiffItem::TREES),
-                _ => None,
-            })
-            .collect();
-
-        if diff_items.is_empty() {
-            diff_items = btreeset! { ChangesetDiffItem::FILES };
-        }
-
-        let paths: Option<Vec<MPath>> = match params.paths {
-            None => None,
-            Some(paths) => Some(
-                paths
-                    .iter()
-                    .map(MPath::try_from)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(|error| MononokeError::InvalidRequest(error.to_string()))?,
-            ),
-        };
-        let (diff_files, diff_trees) = match params.ordered_params {
-            None => {
-                let diff = match other_changeset {
-                    Some(ref other_changeset) => {
-                        base_changeset
-                            .diff_unordered(
-                                other_changeset,
-                                !params.skip_copies_renames,
-                                params.compare_with_subtree_copy_sources.unwrap_or_default(),
-                                paths,
-                                diff_items,
-                            )
-                            .watched()
-                            .await?
-                    }
-                    None => {
-                        base_changeset
-                            .diff_root_unordered(paths, diff_items)
-                            .watched()
-                            .await?
-                    }
-                };
-                stream::iter(diff)
-                    .map(|diff| CommitComparePath::from_path_diff(diff, &params.identity_schemes))
-                    // Use `buffered` instead of `buffer_unordered` to maintain deterministic
-                    // ordering of results. While `buffer_unordered` can yield results sooner,
-                    // it produces non-deterministic ordering based on which futures complete first.
-                    .buffered(CONCURRENCY_LIMIT)
-                    .try_collect::<Vec<_>>()
-                    .watched()
-                    .await?
-                    .into_iter()
-                    .partition_map(|diff| match diff {
-                        CommitComparePath::File(entry) => Either::Left(entry),
-                        CommitComparePath::Tree(entry) => Either::Right(entry),
-                    })
-            }
-            Some(ordered_params) => {
-                let limit: usize = check_range_and_convert(
-                    "limit",
-                    ordered_params.limit,
-                    0..=source_control::COMMIT_COMPARE_ORDERED_MAX_LIMIT,
-                )?;
-                let after = ordered_params
-                    .after_path
-                    .map(|after| {
-                        MPath::try_from(&after).map_err(|e| {
-                            scs_errors::invalid_request(format!(
-                                "invalid continuation path '{}': {}",
-                                after, e
-                            ))
-                        })
-                    })
-                    .transpose()?;
-                let diff = match other_changeset {
-                    Some(ref other_changeset) => {
-                        base_changeset
-                            .diff(
-                                other_changeset,
-                                !params.skip_copies_renames,
-                                params.compare_with_subtree_copy_sources.unwrap_or_default(),
-                                paths,
-                                diff_items,
-                                ChangesetFileOrdering::Ordered { after },
-                                Some(limit),
-                            )
-                            .watched()
-                            .await?
-                    }
-                    None => {
-                        base_changeset
-                            .diff_root(
-                                paths,
-                                diff_items,
-                                ChangesetFileOrdering::Ordered { after },
-                                Some(limit),
-                            )
-                            .watched()
-                            .await?
-                    }
-                };
-                let diff_items = stream::iter(diff)
-                    .map(|diff| CommitComparePath::from_path_diff(diff, &params.identity_schemes))
-                    .buffered(CONCURRENCY_LIMIT)
-                    .try_collect::<Vec<_>>()
-                    .watched()
-                    .await?;
-                if diff_items.len() >= limit {
-                    if let Some(item) = diff_items.last() {
-                        last_path = Some(item.path()?.to_string());
-                    }
-                }
-                diff_items.into_iter().partition_map(|diff| match diff {
-                    CommitComparePath::File(entry) => Either::Left(entry),
-                    CommitComparePath::Tree(entry) => Either::Right(entry),
-                })
-            }
-        };
-
-        let other_commit_ids = match other_changeset {
-            None => None,
-            Some(other_changeset) => {
-                // Snapshots currently only support Bonsai, so missing the remaining ones
-                // is not an error.
-                let is_snaptshot = other_changeset.bonsai_changeset().await?.is_snapshot();
-                let schemes = if is_snaptshot {
-                    BTreeSet::from([thrift::CommitIdentityScheme::BONSAI])
-                } else {
-                    params.identity_schemes
-                };
-                Some(
-                    map_commit_identity(&other_changeset, &schemes)
-                        .watched()
-                        .await?,
-                )
-            }
-        };
-        Ok(thrift::CommitCompareResponse {
-            diff_files,
-            diff_trees,
-            other_commit_ids,
-            last_path,
-            ..Default::default()
-        })
+        Ok(result.response)
     }
 
     /// Returns files that match the criteria

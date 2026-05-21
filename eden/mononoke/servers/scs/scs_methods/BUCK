@@ -74,6 +74,7 @@ rust_library(
         "//eden/mononoke/features/async_requests:async_requests",
         "//eden/mononoke/features/commit_cloud/helpers:commit_cloud_helpers",
         "//eden/mononoke/features/commit_cloud/types:commit_cloud_types",
+        "//eden/mononoke/features/commit_compare:commit_compare",
         "//eden/mononoke/features/commit_rewriting/synced_commit_mapping:synced_commit_mapping",
         "//eden/mononoke/features/hooks:hooks",
         "//eden/mononoke/features/pushrebase:pushrebase",

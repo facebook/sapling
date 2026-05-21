@@ -21,6 +21,7 @@ chrono = { version = "0.4.44", features = ["clock", "serde", "std"], default-fea
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 commit_cloud_helpers = { version = "0.1.0", path = "../../../features/commit_cloud/helpers" }
 commit_cloud_types = { version = "0.1.0", path = "../../../features/commit_cloud/types" }
+commit_compare = { version = "0.1.0", path = "../../../features/commit_compare" }
 commit_graph = { version = "0.1.0", path = "../../../repo_attributes/commit_graph/commit_graph" }
 connection_security_checker = { version = "0.1.0", path = "../../../common/connection_security_checker" }
 context = { version = "0.1.0", path = "../../slapi/slapi_server/context" }
