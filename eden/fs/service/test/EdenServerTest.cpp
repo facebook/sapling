@@ -36,9 +36,18 @@
 #include "eden/fs/service/EdenServiceHandler.h"
 #include "eden/fs/service/EdenStateDir.h"
 #include "eden/fs/takeover/TakeoverClient.h"
+#ifdef __linux__
+#include "eden/fs/store/ObjectFetchContext.h"
+#include "eden/fs/testharness/FakeFuse.h"
+#include "eden/fs/testharness/FakeTreeBuilder.h"
+#include "eden/fs/testharness/TestMount.h"
+#endif
 #include "eden/fs/testharness/TestServer.h"
 
 using namespace std::chrono_literals;
+#ifdef __linux__
+using namespace folly::string_piece_literals;
+#endif
 
 namespace facebook::eden {
 
@@ -441,5 +450,46 @@ TEST_F(EdenServerTest, RepeatedTakeoverFailuresDoNotBreakShutdownFuture) {
   }
 }
 #endif
+
+TEST_F(EdenServerTest, StopAllGarbageCollectionsDoesNotPoisonFutureGC) {
+  auto& server = testServer().getServer();
+#ifdef __linux__
+  FakeTreeBuilder builder;
+  builder.setFile("hello", "world");
+  TestMount mount{builder};
+  mount.updateEdenConfig({{"experimental:enable-pressure-based-gc", "true"}});
+
+  auto fuse = std::make_shared<FakeFuse>();
+  mount.startFuseAndWait(fuse);
+
+  auto entry =
+      mount.getDispatcher()
+          ->lookup(
+              0, kRootNodeId, "hello"_pc, ObjectFetchContext::getNullContext())
+          .get(0ms);
+  ASSERT_NE(0, entry.nodeid);
+
+  EXPECT_TRUE(server.stopAllGarbageCollections(
+      /*maxRetries=*/0, /*retryInterval=*/std::chrono::seconds{0}));
+
+  auto numInvalidated = server
+                            .garbageCollectWorkingCopy(
+                                *mount.getEdenMount(),
+                                mount.getRootInode(),
+                                std::chrono::system_clock::now() + 1h,
+                                ObjectFetchContext::getNullContext(),
+                                /*pressureBased=*/true)
+                            .get(10s);
+  EXPECT_GT(numInvalidated, 0u);
+
+  mount.getEdenMount()->flushInvalidations().get(10s);
+  fuse->close();
+  mount.getEdenMount()->getFsChannelCompletionFuture().within(10s).getVia(
+      mount.getServerExecutor().get());
+#else
+  EXPECT_TRUE(server.stopAllGarbageCollections(
+      /*maxRetries=*/0, /*retryInterval=*/std::chrono::seconds{0}));
+#endif
+}
 
 } // namespace facebook::eden

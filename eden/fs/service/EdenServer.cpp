@@ -2908,11 +2908,11 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectWorkingCopy(
       totalNumberOfInodesBeforeGC);
   // Use the member cancellation source for this operation
 
+  auto gcToken = gcCancelSource_.rlock()->getToken();
   return inode
       // First step of garbage collection varies by platform (e.g., Linux,
       // macOS, Windows)
-      ->handleChildrenNotAccessedRecently(
-          cutoff, context, gcCancelSource_.getToken())
+      ->handleChildrenNotAccessedRecently(cutoff, context, gcToken)
       // Second step of garbage collection deletes all the unreferenced inodes
       .ensure([inode, lease = std::move(lease)] {
         inode->unloadChildrenUnreferencedByFs();
@@ -3035,7 +3035,7 @@ bool EdenServer::stopAllGarbageCollections(
   // to forcibly stop a running task. We can cancel any running GC and wait
   // for them to stop. This is not guaranteed to work if the GC is stuck in
   // some operation, but it should work in most cases.
-  gcCancelSource_.requestCancellation();
+  gcCancelSource_.wlock()->requestCancellation();
   XLOGF(DBG1, "Cancel request sent to all ongoing garbage collections");
 
   bool isGCRunning = isWorkingCopyGCRunningForAnyMount();
@@ -3047,7 +3047,9 @@ bool EdenServer::stopAllGarbageCollections(
     currentAttempts++;
   }
 
-  return !isGCRunning;
+  const auto gcStopped = !isGCRunning;
+  *gcCancelSource_.wlock() = folly::CancellationSource{};
+  return gcStopped;
 }
 
 bool EdenServer::isWorkingCopyGCRunningForAnyMount() const {

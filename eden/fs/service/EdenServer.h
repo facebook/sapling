@@ -1006,6 +1006,6 @@ class EdenServer : private TakeoverHandler {
    * Cancellation source for garbage collection operations.
    * This allows cancelling any in-progress GC operations.
    */
-  folly::CancellationSource gcCancelSource_;
+  folly::Synchronized<folly::CancellationSource> gcCancelSource_;
 };
 } // namespace facebook::eden
