@@ -306,6 +306,47 @@ pub(crate) async fn is_restricted_path(
         .map(|result| !result.is_empty())
 }
 
+/// Lookup sparse manifest restriction metadata using the configured mode.
+pub(crate) async fn get_manifest_restriction_metadata(
+    restricted_paths: &RestrictedPaths,
+    ctx: &CoreContext,
+    manifest_id: &ManifestId,
+    manifest_type: &ManifestType,
+    preloaded_is_restricted: Option<bool>,
+) -> Result<Option<bool>> {
+    if !restricted_paths.may_have_restricted_paths() {
+        return Ok(None);
+    }
+
+    match restricted_paths.config().acl_manifest_mode {
+        AclManifestMode::Authoritative => Ok(preloaded_is_restricted),
+        AclManifestMode::Both if preloaded_is_restricted == Some(true) => Ok(Some(true)),
+        AclManifestMode::Both => {
+            if has_manifest_restriction(restricted_paths, ctx, manifest_id, manifest_type).await? {
+                Ok(Some(true))
+            } else {
+                Ok(preloaded_is_restricted)
+            }
+        }
+        AclManifestMode::Disabled | AclManifestMode::Shadow => {
+            has_manifest_restriction(restricted_paths, ctx, manifest_id, manifest_type)
+                .await
+                .map(|has_restriction| has_restriction.then_some(true))
+        }
+    }
+}
+
+async fn has_manifest_restriction(
+    restricted_paths: &RestrictedPaths,
+    ctx: &CoreContext,
+    manifest_id: &ManifestId,
+    manifest_type: &ManifestType,
+) -> Result<bool> {
+    get_manifest_restriction_info(restricted_paths, ctx, manifest_id, manifest_type)
+        .await
+        .map(|info| !info.is_empty())
+}
+
 /// Find all restriction roots that are descendants of any of the given root paths.
 pub(crate) async fn find_restricted_descendants(
     restricted_paths: &RestrictedPaths,
