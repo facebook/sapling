@@ -13,6 +13,8 @@ use diff_service_if_clients::errors::CommitCompareError;
 use diff_service_if_clients::errors::DiffHunksError;
 use diff_service_if_clients::errors::DiffUnifiedError;
 use diff_service_if_clients::errors::DiffUnifiedHeaderlessError;
+use diff_service_if_clients::errors::DiffUnifiedHeaderlessUnaryError;
+use diff_service_if_clients::errors::DiffUnifiedUnaryError;
 use diff_service_if_clients::errors::MetadataDiffError;
 use environment::RemoteDiffOptions;
 use futures::StreamExt;
@@ -75,6 +77,24 @@ impl DiffServiceError for MetadataDiffError {
 }
 
 impl DiffServiceError for CommitCompareError {
+    fn request_error(&self) -> Option<&diff_service_if::RequestError> {
+        match self {
+            Self::ex(req_err) => Some(req_err),
+            _ => None,
+        }
+    }
+}
+
+impl DiffServiceError for DiffUnifiedUnaryError {
+    fn request_error(&self) -> Option<&diff_service_if::RequestError> {
+        match self {
+            Self::ex(req_err) => Some(req_err),
+            _ => None,
+        }
+    }
+}
+
+impl DiffServiceError for DiffUnifiedHeaderlessUnaryError {
     fn request_error(&self) -> Option<&diff_service_if::RequestError> {
         match self {
             Self::ex(req_err) => Some(req_err),
@@ -294,6 +314,47 @@ impl<'a> DiffRouter<'a> {
             }
         }
         Ok(path_context.metadata_diff(ctx, false).await?)
+    }
+
+    /// Check if the unary transport for remote unified/headerless diffs should
+    /// be used for this repo. Independent of `should_use_remote_diff`: that
+    /// kill switch decides whether to call diff_service at all; this one
+    /// decides whether to use the unary RPC vs. the streamed RPC.
+    ///
+    /// Uses per-correlator consistent hashing — the only Mononoke routing
+    /// decision (vs. logging-only call sites) that does so. Aligns the JK
+    /// evaluation at routing time with the JK evaluation at scuba-logging
+    /// time so the `enabled_experiments_jk` Scuba column reliably reflects
+    /// which transport was actually used.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "wired by the next commit in the stack")
+    )]
+    fn should_use_remote_diff_unary(&self, ctx: &CoreContext, repo_name: &str) -> bool {
+        if !self.diff_options.diff_remotely {
+            return false;
+        }
+
+        let correlator = ctx
+            .metadata()
+            .client_request_info()
+            .map(|cri| cri.correlator.as_str());
+
+        match justknobs::eval(
+            "scm/mononoke:remote_diff_unary",
+            correlator,
+            Some(repo_name),
+        ) {
+            Ok(true) => true,
+            Ok(false) => false,
+            Err(_) => {
+                // JK not configured (e.g., in integration tests).
+                // Fall back to checking if remote_diff_config is present,
+                // which indicates explicit test configuration. Production
+                // is expected to have the JK present.
+                self.remote_diff_config.is_some()
+            }
+        }
     }
 
     /// Check if remote commit_compare should be used for this repo.
@@ -927,6 +988,133 @@ mod tests {
         );
     }
 
+    #[mononoke::fbinit_test]
+    fn test_should_use_remote_diff_unary_cli_flag_disabled(fb: fbinit::FacebookInit) {
+        let diff_options = RemoteDiffOptions {
+            diff_remotely: false,
+        };
+        let router = create_diff_router(fb, &diff_options, None);
+        let ctx = CoreContext::test_mock(fb);
+
+        let result = with_just_knobs(
+            JustKnobsInMemory::new(hashmap![
+                "scm/mononoke:remote_diff_unary".to_string() => KnobVal::Bool(true)
+            ]),
+            || router.should_use_remote_diff_unary(&ctx, "test_repo"),
+        );
+        assert!(!result, "Should return false when CLI flag is disabled");
+    }
+
+    #[mononoke::fbinit_test]
+    fn test_should_use_remote_diff_unary_jk_disabled(fb: fbinit::FacebookInit) {
+        let diff_options = RemoteDiffOptions {
+            diff_remotely: true,
+        };
+        let router = create_diff_router(fb, &diff_options, None);
+        let ctx = CoreContext::test_mock(fb);
+
+        let result = with_just_knobs(
+            JustKnobsInMemory::new(hashmap![
+                "scm/mononoke:remote_diff_unary".to_string() => KnobVal::Bool(false)
+            ]),
+            || router.should_use_remote_diff_unary(&ctx, "test_repo"),
+        );
+        assert!(!result, "Should return false when JK is disabled");
+    }
+
+    #[mononoke::fbinit_test]
+    fn test_should_use_remote_diff_unary_jk_is_kill_switch_with_config(fb: fbinit::FacebookInit) {
+        let diff_options = RemoteDiffOptions {
+            diff_remotely: true,
+        };
+        let config = RemoteDiffConfig::HostPort("localhost:8080".to_string());
+        let router = create_diff_router(fb, &diff_options, Some(&config));
+        let ctx = CoreContext::test_mock(fb);
+
+        let result = with_just_knobs(
+            JustKnobsInMemory::new(hashmap![
+                "scm/mononoke:remote_diff_unary".to_string() => KnobVal::Bool(false)
+            ]),
+            || router.should_use_remote_diff_unary(&ctx, "test_repo"),
+        );
+        assert!(
+            !result,
+            "JK should act as kill switch even when remote_diff_config is present"
+        );
+    }
+
+    #[mononoke::fbinit_test]
+    fn test_should_use_remote_diff_unary_enabled(fb: fbinit::FacebookInit) {
+        let diff_options = RemoteDiffOptions {
+            diff_remotely: true,
+        };
+        let router = create_diff_router(fb, &diff_options, None);
+        let ctx = CoreContext::test_mock(fb);
+
+        let result = with_just_knobs(
+            JustKnobsInMemory::new(hashmap![
+                "scm/mononoke:remote_diff_unary".to_string() => KnobVal::Bool(true)
+            ]),
+            || router.should_use_remote_diff_unary(&ctx, "test_repo"),
+        );
+        assert!(
+            result,
+            "Should return true when both CLI flag and JK are enabled"
+        );
+    }
+
+    #[mononoke::fbinit_test]
+    fn test_should_use_remote_diff_unary_enabled_with_config(fb: fbinit::FacebookInit) {
+        let diff_options = RemoteDiffOptions {
+            diff_remotely: true,
+        };
+        let config = RemoteDiffConfig::SmcTier("diff_service.smc".to_string());
+        let router = create_diff_router(fb, &diff_options, Some(&config));
+        let ctx = CoreContext::test_mock(fb);
+
+        let result = with_just_knobs(
+            JustKnobsInMemory::new(hashmap![
+                "scm/mononoke:remote_diff_unary".to_string() => KnobVal::Bool(true)
+            ]),
+            || router.should_use_remote_diff_unary(&ctx, "test_repo"),
+        );
+        assert!(
+            result,
+            "Should return true when CLI flag and JK are enabled with config"
+        );
+    }
+
+    #[mononoke::fbinit_test]
+    fn test_should_use_remote_diff_unary_jk_not_configured_no_config(fb: fbinit::FacebookInit) {
+        let diff_options = RemoteDiffOptions {
+            diff_remotely: true,
+        };
+        let router = create_diff_router(fb, &diff_options, None);
+        let ctx = CoreContext::test_mock(fb);
+
+        let result = router.should_use_remote_diff_unary(&ctx, "test_repo");
+        assert!(
+            !result,
+            "Should return false when JK is not configured and no config is present"
+        );
+    }
+
+    #[mononoke::fbinit_test]
+    fn test_should_use_remote_diff_unary_jk_not_configured_with_config(fb: fbinit::FacebookInit) {
+        let diff_options = RemoteDiffOptions {
+            diff_remotely: true,
+        };
+        let config = RemoteDiffConfig::HostPort("localhost:8080".to_string());
+        let router = create_diff_router(fb, &diff_options, Some(&config));
+        let ctx = CoreContext::test_mock(fb);
+
+        let result = router.should_use_remote_diff_unary(&ctx, "test_repo");
+        assert!(
+            result,
+            "Should return true when JK is not configured but config is present (test mode)"
+        );
+    }
+
     #[mononoke::test]
     fn test_is_request_error_diff_error() {
         let err = DiffUnifiedHeaderlessError::ex(diff_service_if::RequestError {
@@ -1029,6 +1217,86 @@ mod tests {
     #[test]
     fn test_classify_diff_error_transient() {
         let err = DiffUnifiedHeaderlessError::ex(diff_service_if::RequestError {
+            reason: diff_service_if::RequestErrorReason::transient_error(
+                diff_service_if::TransientError {
+                    error_type: diff_service_if::TransientErrorType::OVERLOADED,
+                    message: "overloaded".into(),
+                    ..Default::default()
+                },
+            ),
+            ..Default::default()
+        });
+        match classify_diff_error(err) {
+            RemoteDiffError::InfraError(msg) => {
+                assert!(
+                    msg.contains("OVERLOADED"),
+                    "InfraError message should contain error details, got: {msg}"
+                );
+            }
+            RemoteDiffError::RequestError(_) => {
+                panic!("TransientError(OVERLOADED) should classify as InfraError, not RequestError")
+            }
+        }
+    }
+
+    #[mononoke::test]
+    fn test_classify_diff_unified_unary_error_request() {
+        let err = DiffUnifiedUnaryError::ex(diff_service_if::RequestError {
+            reason: diff_service_if::RequestErrorReason::diff_error(diff_service_if::DiffError {
+                reason: "bad input".into(),
+                ..Default::default()
+            }),
+            ..Default::default()
+        });
+        assert!(
+            matches!(classify_diff_error(err), RemoteDiffError::RequestError(_)),
+            "DiffError should classify as RequestError"
+        );
+    }
+
+    #[mononoke::test]
+    fn test_classify_diff_unified_unary_error_transient() {
+        let err = DiffUnifiedUnaryError::ex(diff_service_if::RequestError {
+            reason: diff_service_if::RequestErrorReason::transient_error(
+                diff_service_if::TransientError {
+                    error_type: diff_service_if::TransientErrorType::OVERLOADED,
+                    message: "overloaded".into(),
+                    ..Default::default()
+                },
+            ),
+            ..Default::default()
+        });
+        match classify_diff_error(err) {
+            RemoteDiffError::InfraError(msg) => {
+                assert!(
+                    msg.contains("OVERLOADED"),
+                    "InfraError message should contain error details, got: {msg}"
+                );
+            }
+            RemoteDiffError::RequestError(_) => {
+                panic!("TransientError(OVERLOADED) should classify as InfraError, not RequestError")
+            }
+        }
+    }
+
+    #[mononoke::test]
+    fn test_classify_diff_unified_headerless_unary_error_request() {
+        let err = DiffUnifiedHeaderlessUnaryError::ex(diff_service_if::RequestError {
+            reason: diff_service_if::RequestErrorReason::diff_error(diff_service_if::DiffError {
+                reason: "bad input".into(),
+                ..Default::default()
+            }),
+            ..Default::default()
+        });
+        assert!(
+            matches!(classify_diff_error(err), RemoteDiffError::RequestError(_)),
+            "DiffError should classify as RequestError"
+        );
+    }
+
+    #[mononoke::test]
+    fn test_classify_diff_unified_headerless_unary_error_transient() {
+        let err = DiffUnifiedHeaderlessUnaryError::ex(diff_service_if::RequestError {
             reason: diff_service_if::RequestErrorReason::transient_error(
                 diff_service_if::TransientError {
                     error_type: diff_service_if::TransientErrorType::OVERLOADED,
