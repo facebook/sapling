@@ -364,6 +364,13 @@ std::shared_ptr<StructuredLogger> makeErrorStructuredLogger(
   }
 }
 
+#ifndef _WIN32
+bool shouldRunPeriodicInodeUnload(const EdenConfig& config) {
+  return !config.enablePressureBasedGc.getValue() &&
+      config.periodicUnloadIntervalMinutes.getValue() > 0;
+}
+#endif
+
 } // namespace
 
 namespace facebook::eden {
@@ -1145,7 +1152,7 @@ void EdenServer::startPeriodicTasks() {
   // so using unloadChildrenNow just to validate the behaviour. We will have to
   // modify current unloadChildrenNow function to unload inodes based on the
   // last access time.
-  if (config->periodicUnloadIntervalMinutes.getValue() > 0) {
+  if (shouldRunPeriodicInodeUnload(*config)) {
     scheduleInodeUnload(std::chrono::minutes(FLAGS_start_delay_minutes));
   }
 #endif
@@ -1268,6 +1275,18 @@ size_t EdenServer::enumerateInProgressCheckouts() {
 
 #ifndef _WIN32
 void EdenServer::unloadInodes() {
+  auto config = serverState_->getReloadableConfig()->getEdenConfig();
+  if (!shouldRunPeriodicInodeUnload(*config)) {
+    XLOG(
+        DBG4,
+        "Skipping periodic inode unload because it is disabled or pressure-based GC is enabled");
+    auto interval = config->periodicUnloadIntervalMinutes.getValue();
+    if (interval > 0) {
+      scheduleInodeUnload(std::chrono::minutes(interval));
+    }
+    return;
+  }
+
   auto mounts = getMountPoints();
 
   if (!mounts.empty()) {
@@ -1289,9 +1308,7 @@ void EdenServer::unloadInodes() {
     }
   }
   scheduleInodeUnload(
-      std::chrono::minutes(serverState_->getReloadableConfig()
-                               ->getEdenConfig()
-                               ->periodicUnloadIntervalMinutes.getValue()));
+      std::chrono::minutes(config->periodicUnloadIntervalMinutes.getValue()));
 }
 
 void EdenServer::scheduleInodeUnload(std::chrono::milliseconds timeout) {

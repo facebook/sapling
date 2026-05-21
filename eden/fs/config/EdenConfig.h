@@ -1066,7 +1066,7 @@ class EdenConfig : private ConfigSettingManager {
    * directory...
    *
    * This is bad for EdenFS for a number of reason. The main one being that
-   * EdenFS will attempt to recursively add all the childrens of that
+   * EdenFS will attempt to recursively add all the children of that
    * directory to the inode hierarchy. If the symlinks points to a very
    * large directory, this can be extremely slow, leading to a very poor
    * user experience.
@@ -1620,8 +1620,8 @@ class EdenConfig : private ConfigSettingManager {
    * 0 means periodic unloading is disabled.
    *
    * Note 1: Periodic inode unloading and Garbage Collection (GC) are mutually
-   * exclusive. If GC is enabled, periodic unloading should be disabled or
-   * vice versa.
+   * exclusive. EdenFS skips periodic unloading when pressure-based GC is
+   * enabled.
    * Note 2: Periodic inode unloading is no-op on Windows.
    */
   ConfigSetting<uint32_t> periodicUnloadIntervalMinutes{
