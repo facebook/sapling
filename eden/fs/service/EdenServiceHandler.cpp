@@ -1230,7 +1230,7 @@ EdenServiceHandler::semifuture_getBlake3(
 }
 
 folly::SemiFuture<std::unique_ptr<std::vector<DigestHashResult>>>
-EdenServiceHandler::semifuture_getDigestHash(
+EdenServiceHandler::semifuture_getDigestHashImpl(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<std::vector<std::string>> paths,
     std::unique_ptr<SyncBehavior> sync) {
@@ -1290,6 +1290,15 @@ EdenServiceHandler::semifuture_getDigestHash(
                    return out;
                  }))
       .semi();
+}
+
+folly::SemiFuture<std::unique_ptr<std::vector<DigestHashResult>>>
+EdenServiceHandler::semifuture_getDigestHash(
+    std::unique_ptr<std::string> mountPoint,
+    std::unique_ptr<std::vector<std::string>> paths,
+    std::unique_ptr<SyncBehavior> sync) {
+  return semifuture_getDigestHashImpl(
+      std::move(mountPoint), std::move(paths), std::move(sync));
 }
 
 folly::SemiFuture<std::unique_ptr<std::vector<SHA1Result>>>
