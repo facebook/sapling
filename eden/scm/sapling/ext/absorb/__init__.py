@@ -422,7 +422,9 @@ class filefixupstate:
         """() -> [str]. prompt all lines for edit"""
         max_rev = self.linelog.max_rev()
         # discard the "end" line
-        alllines = self.linelog.checkout_lines(max_rev, 0)[:-1]
+        alllines = self.linelog.checkout_revs_lines(
+            self.linelog.nanodag().ancestors(max_rev)
+        )[:-1]
         # header
         editortext = _(
             '{0}: editing {1}\n{0}: "y" means the line to the right '
@@ -1091,7 +1093,7 @@ def _amendcmd(flag, orig, ui, repo, *pats, **opts):
 def _calculate_gap_lines(linelog, rev=None):
     if rev is None:
         rev = linelog.max_rev()
-    all_lines = linelog.checkout_lines(rev, 0)
+    all_lines = linelog.checkout_revs_lines(linelog.nanodag().ancestors(rev))
     gap_lines = []
     lineno = -1
     last_gap_line = -1

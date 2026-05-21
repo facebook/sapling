@@ -360,21 +360,13 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
         self.execute(&SmallRevs::from(rev), None)
     }
 
-    /// Checkout the lines of the given revision range `start` to `end`, both
-    /// inclusive.
-    ///
-    /// For example, if `start` is 0, and `rev` is `max_rev()`, the result will
-    /// include all lines ever existed in all revisions.
-    pub fn checkout_range_lines(&self, start: Rev, end: Rev) -> ImVec<LineInfo<T>> {
-        let lines = self.checkout_lines(end);
+    /// Checkout the lines that are visible in any of the given target revisions.
+    pub fn checkout_revs_lines(&self, target_revs: &SmallRevs) -> ImVec<LineInfo<T>> {
+        let head_revs = self.dag.heads(target_revs);
+        let lines = self.execute(&head_revs, None);
         let present_pc_set = lines.into_iter().map(|l| l.pc).collect::<HashSet<Pc>>();
         let is_present = move |pc| present_pc_set.contains(&pc);
-        let target_revs = if start <= end {
-            SmallRevs::from_range(start..end + 1)
-        } else {
-            SmallRevs::empty()
-        };
-        self.execute(&target_revs, Some(Box::new(is_present)))
+        self.execute(target_revs, Some(Box::new(is_present)))
     }
 
     /// Prepare and update a_lines_cache for edit_chunk_internal
