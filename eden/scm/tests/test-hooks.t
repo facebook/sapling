@@ -44,6 +44,5 @@ Test a matrix of:
   $ sl log -r . -q -T '\n'
   hook 1
   hook 2
-  sh: command not found: base64:ZWNobyBob29rIDMK
-  abort: pre-log.sh2 hook exited with status 127
-  [255]
+  hook 3
+  hook 4

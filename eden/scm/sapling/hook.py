@@ -11,6 +11,7 @@
 # GNU General Public License version 2 or any later version.
 
 
+import base64
 import os
 import sys
 
@@ -140,6 +141,13 @@ def _pythonhook_via_pyhook(ui, repo, htype, hname, funcname, args, throw):
     return r, False
 
 
+def _maybe_decode_base64(cmd):
+    if cmd.startswith("base64:"):
+        s = cmd[7:]
+        return base64.b64decode(s).decode("utf-8")
+    return cmd
+
+
 def _exthook(ui, repo, htype, name, cmd, args, throw, background=False):
     ui.note(_("running hook %s: %s\n") % (name, cmd))
 
@@ -264,11 +272,13 @@ def runhooks(ui, repo, htype, hooks, throw: bool = False, **args):
         elif cmd.startswith("background:"):
             # Run a shell command in background. Do not throw.
             cmd = cmd.split(":", 1)[1]
+            cmd = _maybe_decode_base64(cmd)
             r = _exthook(
                 ui, repo, htype, hname, cmd, args, throw=False, background=True
             )
             raised = False
         else:
+            cmd = _maybe_decode_base64(cmd)
             r = _exthook(ui, repo, htype, hname, cmd, args, throw)
             raised = False
 
