@@ -1,0 +1,679 @@
+#!/usr/bin/env python3
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
+"""Script to build Sapling (sl) and ISL
+
+Currently support:
+- facebook/sapling (github) cargo build.
+- fbsource (monorepo) cargo build with fb-internal features.
+- fbsource (monorepo) cargo build without fb-internal features (--oss).
+
+Does not support EdenFS related features yet.
+"""
+
+import argparse
+import datetime
+import glob
+import hashlib
+import os
+import platform
+import shutil
+import struct
+import subprocess
+import sys
+import tempfile
+import zipfile
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parent
+FBSOURCE = ROOT.parent.parent.parent if (ROOT / "fb").is_dir() else None
+OUT = ROOT / "out"
+CARGO_TARGET = OUT / "cargo-target"
+CARGO_CONFIG_DIR = OUT / "cargo_config"
+HGMAIN_MANIFEST = ROOT / "exec" / "hgmain" / "Cargo.toml"
+_VCVARS_ENV = None
+
+
+def status(args, message):
+    if not args.quiet:
+        print(message, file=sys.stderr)
+
+
+def run(cmd, *, cwd=ROOT, env=None, quiet=False):
+    if not quiet:
+        print("$", subprocess.list2cmdline([str(c) for c in cmd]), file=sys.stderr)
+    subprocess.run([str(c) for c in cmd], cwd=cwd, env=env, check=True)
+
+
+def output(cmd, *, cwd=ROOT, env=None):
+    return subprocess.check_output(
+        [str(c) for c in cmd], cwd=cwd, env=env, stderr=subprocess.DEVNULL
+    ).decode("utf-8", "replace")
+
+
+def load_out_env():
+    env_path = OUT / "env"
+    if not env_path.exists():
+        return {}
+    result = {}
+    with open(env_path, "r") as f:
+        for line in f:
+            line = line.rstrip("\n")
+            if "=" in line:
+                key, value = line.split("=", 1)
+                result[key] = value
+    return result
+
+
+def find_vcvarsall():
+    if os.name != "nt":
+        return ""
+    patterns = []
+    for envvar in ("ProgramFiles", "ProgramFiles(x86)"):
+        root = os.environ.get(envvar)
+        if root:
+            patterns.append(
+                os.path.join(
+                    root,
+                    "Microsoft Visual Studio",
+                    "20[0-9][0-9]",
+                    "*",
+                    "VC",
+                    "Auxiliary",
+                    "Build",
+                    "vcvarsall.bat",
+                )
+            )
+    paths = [path for pattern in patterns for path in glob.glob(pattern)]
+    return sorted(paths, reverse=True)[0] if paths else ""
+
+
+def strip_outer_quotes(value):
+    value = value.strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'):
+        return value[1:-1]
+    return value
+
+
+def capture_vcvars_env(args, base_env):
+    global _VCVARS_ENV
+    if os.name != "nt":
+        return {}
+    if _VCVARS_ENV is not None:
+        return _VCVARS_ENV
+
+    vcvarsall = (
+        args.vcvarsall
+        or base_env.get("VCVARSALL")
+        or base_env.get("VCVARSALL_PATH")
+        or find_vcvarsall()
+    )
+    vcvarsall = strip_outer_quotes(vcvarsall)
+    if not vcvarsall or not os.path.exists(vcvarsall):
+        _VCVARS_ENV = {}
+        return _VCVARS_ENV
+
+    status(args, "Loading Visual Studio build environment")
+    fd, script = tempfile.mkstemp(suffix=".cmd")
+    os.close(fd)
+    script_path = Path(script)
+    try:
+        script_path.write_text(
+            f'@echo off\r\ncall "{vcvarsall}" amd64 >nul\r\n'
+            "if errorlevel 1 exit /b %errorlevel%\r\nset\r\n",
+            encoding="mbcs",
+        )
+        out = subprocess.check_output(
+            ["cmd.exe", "/d", "/q", "/c", str(script_path)],
+            env=base_env,
+            encoding="utf-8",
+            errors="replace",
+        )
+    finally:
+        os.remove(script)
+    _VCVARS_ENV = {}
+    for line in out.splitlines():
+        if "=" in line:
+            key, value = line.split("=", 1)
+            _VCVARS_ENV[key] = value
+    return _VCVARS_ENV
+
+
+def scoped_env(args, *, msvc=False, base=None):
+    env = dict(base or os.environ)
+    env.update(load_out_env())
+    if msvc:
+        env.update(capture_vcvars_env(args, env))
+    return env
+
+
+def ensure_out_dir(args):
+    if OUT.exists():
+        return
+    if OUT.is_symlink():
+        OUT.unlink()
+    status(args, "Creating out directory")
+    try:
+        scratch = output(["mkscratch", "path", "--subdir", "sl-out"]).strip()
+        scratch_path = Path(scratch)
+        scratch_path.mkdir(parents=True, exist_ok=True)
+        OUT.symlink_to(scratch_path, target_is_directory=True)
+    except Exception:
+        OUT.mkdir(parents=True, exist_ok=True)
+
+
+def pick_python():
+    env = os.environ.copy()
+    env.update(load_out_env())
+    return (
+        subprocess.check_output(
+            [sys.executable, ROOT / "contrib" / "pick_python.py", sys.executable],
+            env=env,
+        )
+        .decode("utf-8", "replace")
+        .strip()
+    )
+
+
+def set_windows_python_path(env, python):
+    if os.name != "nt":
+        return
+    try:
+        version = output(
+            [
+                python,
+                "-c",
+                "import sys; print(f'{sys.version_info.major}{sys.version_info.minor}')",
+            ]
+        ).strip()
+    except Exception:
+        version = f"{sys.version_info.major}{sys.version_info.minor}"
+    dll = f"python{version}.dll"
+    dirs = [Path(python).parent, Path(sys.base_prefix), Path(sys.prefix)]
+    for path in dirs:
+        if (path / dll).exists():
+            env["PATH"] = os.pathsep.join([str(path), env.get("PATH", "")])
+            return
+
+
+def auto_version():
+    env_version = os.environ.get("SAPLING_VERSION")
+    if env_version:
+        return env_version
+
+    now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d_%H%M%S")
+    node = ""
+    for cmd in (
+        ["sl", "log", "-r.", "-T", "{node|short}"],
+        ["git", "rev-parse", "--short=12", "HEAD"],
+    ):
+        try:
+            node = output(cmd).strip()
+            if node:
+                break
+        except Exception:
+            pass
+    return f"{now}_{node}" if node else now
+
+
+def version_hash(version):
+    data = version.encode("utf-8")
+    return str(struct.unpack(">Q", hashlib.sha1(data).digest()[:8])[0])
+
+
+def rustup_override():
+    try:
+        for line in output(["rustup", "override", "list"]).splitlines():
+            path, toolchain = (line + " ").split()[:2]
+            if Path(path).resolve() == ROOT:
+                return toolchain
+    except Exception:
+        pass
+    return None
+
+
+def rust_paths(args):
+    suffix = ".exe" if os.name == "nt" else ""
+    env = dict(os.environ)
+    env.update(load_out_env())
+    override = rustup_override()
+    if override:
+        status(args, f"Using rustup overridden toolchain: {override}")
+        return {
+            name: output(["rustup", "which", "--toolchain", override, name]).strip()
+            for name in ("cargo", "rustc", "rustdoc")
+        }
+
+    if FBSOURCE is not None:
+        toolchain = FBSOURCE / "xplat/rust/toolchain/current/basic/bin"
+        toolchain = toolchain.resolve()
+        cargo = toolchain / f"cargo{suffix}"
+        if cargo.exists():
+            return {
+                "cargo": str(cargo),
+                "rustc": str(toolchain / f"rustc{suffix}"),
+                "rustdoc": str(toolchain / f"rustdoc{suffix}"),
+            }
+
+    return {"cargo": env.get("CARGO_BIN", "cargo")}
+
+
+def write_cargo_config(args, paths):
+    status(args, "Configuring cargo")
+    config = """
+# On OS X targets, configure the linker to perform dynamic lookup of undefined
+# symbols. This allows Python extension dependencies to resolve symbols.
+
+[target.i686-apple-darwin]
+rustflags = ["-C", "link-args=-Wl,-undefined,dynamic_lookup"]
+
+[target.x86_64-apple-darwin]
+rustflags = ["-C", "link-args=-Wl,-undefined,dynamic_lookup"]
+
+[target.aarch64-apple-darwin]
+rustflags = ["-C", "link-args=-Wl,-undefined,dynamic_lookup"]
+
+[target.arm64-apple-darwin]
+rustflags = ["-C", "link-args=-Wl,-undefined,dynamic_lookup"]
+"""
+    if Path("/usr/bin/lld").exists():
+        config += """
+# Use lld on Linux to improve build time.
+[target.x86_64-unknown-linux-gnu]
+rustflags = ["-C", "link-args=-fuse-ld=lld"]
+"""
+    elif Path("/usr/bin/ld.gold").exists():
+        config += """
+# Use ld.gold on Linux to improve build time.
+[target.x86_64-unknown-linux-gnu]
+rustflags = ["-C", "link-args=-fuse-ld=gold"]
+"""
+
+    config += "\n[build]\n"
+    if args.rust_target:
+        config += f'target = "{args.rust_target}"\n'
+    config += f'target-dir = "{CARGO_TARGET.resolve()}"\n'
+    for name in ("rustc", "rustdoc"):
+        if name in paths:
+            config += f'{name} = "{paths[name]}"\n'
+
+    vendored = None
+    if FBSOURCE is not None:
+        candidate = (FBSOURCE / "third-party/rust/vendor").resolve()
+        if candidate.exists():
+            vendored = candidate
+    if not vendored and os.environ.get("RUST_VENDORED_CRATES_DIR"):
+        vendored = Path(os.environ["RUST_VENDORED_CRATES_DIR"]).resolve()
+    if vendored:
+        config += f"""
+[source.crates-io]
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "{vendored}"
+"""
+
+    if os.name == "nt":
+        config = config.replace("\\", "\\\\")
+    CARGO_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    config_path = CARGO_CONFIG_DIR / "config.toml"
+    config_path.write_text(config)
+
+    cargo_dir = ROOT / ".cargo"
+    link_cargo_dir(cargo_dir, CARGO_CONFIG_DIR)
+
+
+def link_cargo_dir(cargo_dir, target_dir):
+    link_target = Path("out") / "cargo_config"
+    if cargo_dir.is_dir() and not cargo_dir.is_symlink():
+        shutil.rmtree(cargo_dir)
+    elif cargo_dir.exists() or cargo_dir.is_symlink():
+        cargo_dir.unlink()
+
+    try:
+        cargo_dir.symlink_to(link_target, target_is_directory=True)
+    except OSError:
+        cargo_dir.mkdir(exist_ok=True)
+        link_config_file(cargo_dir, target_dir / "config.toml")
+
+
+def link_config_file(cargo_dir, config_path):
+    link_path = cargo_dir / "config.toml"
+    link_target = Path("..") / "out" / "cargo_config" / "config.toml"
+    if link_path.exists() or link_path.is_symlink():
+        link_path.unlink()
+    try:
+        link_path.symlink_to(link_target)
+    except OSError:
+        shutil.copy2(config_path, link_path)
+
+
+def cargo_features(oss):
+    features = []
+    if os.name != "nt":
+        features.append("with_chg")
+    if oss:
+        features.append("sl_oss")
+    else:
+        features.extend(["fb", "eden"])
+    return " ".join(features)
+
+
+def windows_openssl_dir(args):
+    if FBSOURCE is None or os.name != "nt":
+        return None
+
+    openssl_dirname = "openssl-windows_x64-windows"
+    openssl_filename = f"{openssl_dirname}.zip"
+    ensure_out_dir(args)
+    openssl_dir = OUT / openssl_dirname
+    if openssl_dir.exists():
+        return openssl_dir
+
+    archive = OUT / openssl_filename
+    lfs_script = FBSOURCE / "fbcode/tools/lfs/lfs.py"
+    status(args, "Downloading OpenSSL binaries")
+    run(
+        [sys.executable, lfs_script, "download", openssl_filename],
+        cwd=OUT,
+        quiet=args.quiet,
+    )
+
+    status(args, "Extracting OpenSSL binaries")
+    with zipfile.ZipFile(archive) as zip_file:
+        zip_file.extractall(OUT)
+
+    if not openssl_dir.exists():
+        raise RuntimeError(f"OpenSSL archive did not create {openssl_dir}")
+    return openssl_dir
+
+
+def copy_windows_openssl_dlls(args, dest):
+    openssl_dir = windows_openssl_dir(args)
+    if openssl_dir is None:
+        return
+    status(args, "Copying OpenSSL DLLs")
+    for name in ("libeay32.dll", "ssleay32.dll"):
+        copy_artifact(openssl_dir / "bin" / name, dest / name)
+
+
+def cargo_env(args):
+    env = scoped_env(args, msvc=(os.name == "nt"))
+    env["PYTHON_SYS_EXECUTABLE"] = args.python
+    env["SAPLING_VERSION"] = args.version
+    env["SAPLING_VERSION_HASH"] = version_hash(args.version)
+    env["LIB_DIRS"] = str((OUT / "temp").resolve())
+    env.pop("HOMEBREW_CCCFG", None)
+    if platform.system() == "Darwin" and "OPENSSL_DIR" not in env:
+        openssl = Path("/opt/homebrew/opt/openssl")
+        if openssl.is_dir():
+            env["OPENSSL_DIR"] = str(openssl)
+    openssl = windows_openssl_dir(args)
+    if openssl is not None:
+        env["OPENSSL_DIR"] = str(openssl)
+        env.pop("OPENSSL_STATIC", None)
+    env["RUSTFLAGS"] = (env.get("RUSTFLAGS", "") + " -Anon_local_definitions").strip()
+    set_windows_python_path(env, args.python)
+    return env
+
+
+def cargo_output_path(args):
+    parts = [CARGO_TARGET]
+    if args.rust_target:
+        parts.append(args.rust_target)
+    parts.append("debug" if args.debug else "release")
+    exe = ".exe" if os.name == "nt" else ""
+    return Path(*parts) / f"hgmain{exe}"
+
+
+def copy_artifact(src, dest):
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    if dest.exists() or dest.is_symlink():
+        dest.unlink()
+    if os.name == "nt":
+        try:
+            os.link(src, dest)
+            return
+        except OSError:
+            pass
+    elif platform.system() == "Linux":
+        try:
+            import fcntl
+
+            with open(src, "rb") as srcf, open(dest, "wb") as destf:
+                fcntl.ioctl(destf.fileno(), 0x40049409, srcf.fileno())
+            shutil.copystat(src, dest)
+            return
+        except OSError:
+            dest.unlink(missing_ok=True)
+    shutil.copy2(src, dest)
+
+
+def env_path(env):
+    for key, value in env.items():
+        if key.upper() == "PATH":
+            return value
+    return None
+
+
+def set_long_paths_manifest(args, exe):
+    if os.name != "nt":
+        return
+    long_paths_manifest = """\
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+    <application>
+        <windowsSettings
+        xmlns:ws2="http://schemas.microsoft.com/SMI/2016/WindowsSettings">
+            <ws2:longPathAware>true</ws2:longPathAware>
+        </windowsSettings>
+    </application>
+</assembly>"""
+    env = scoped_env(args, msvc=True)
+    fd, manifest = tempfile.mkstemp(suffix=".xpy.manifest")
+    os.close(fd)
+    Path(manifest).write_text(long_paths_manifest)
+    inputresource = f"-inputresource:{exe};#1"
+    outputresource = f"-outputresource:{exe};#1"
+    mt = shutil.which("mt.exe", path=env_path(env))
+    if mt is None:
+        raise RuntimeError("mt.exe not found in Visual Studio build environment PATH")
+    cmd = [mt, "-nologo", "-manifest", manifest, outputresource, inputresource]
+    try:
+        try:
+            subprocess.check_output(cmd, stderr=subprocess.STDOUT, env=env)
+        except subprocess.CalledProcessError as ex:
+            if b"c101008c" not in ex.output.lower():
+                raise
+            cmd.remove(inputresource)
+            subprocess.check_output(cmd, stderr=subprocess.STDOUT, env=env)
+    finally:
+        os.remove(manifest)
+
+
+def eden_prefetch_fbsource(args, path, message):
+    if FBSOURCE is None:
+        return
+    status(args, message)
+    run(
+        ["eden", "prefetch", f"{path}/**"],
+        cwd=FBSOURCE,
+        quiet=args.quiet,
+    )
+
+
+def build_sl(args):
+    ensure_out_dir(args)
+    paths = rust_paths(args)
+    write_cargo_config(args, paths)
+
+    lock = HGMAIN_MANIFEST.parent / "Cargo.lock"
+    if lock.exists():
+        status(args, "Removing Cargo.lock")
+        lock.unlink()
+
+    cmd = [paths.get("cargo", "cargo"), "build", "--manifest-path", HGMAIN_MANIFEST]
+    if args.rust_target:
+        cmd.append(f"--target={args.rust_target}")
+    if not args.debug:
+        cmd.append("--release")
+    features = cargo_features(args.oss)
+    if features:
+        cmd.extend(["--features", features])
+
+    eden_prefetch_fbsource(
+        args, "third-party/rust/vendor", "Prefetching vendored Rust crates"
+    )
+    status(args, "Building sl")
+    run(cmd, env=cargo_env(args), quiet=args.quiet)
+
+    src = cargo_output_path(args)
+    if os.name == "nt":
+        status(args, "Embedding Windows long path manifest")
+        for _ in range(6):
+            try:
+                set_long_paths_manifest(args, src)
+                break
+            except Exception:
+                if _ == 5:
+                    raise
+
+    exe = ".exe" if os.name == "nt" else ""
+    dest = OUT / f"sl{exe}"
+    status(args, f"Copying sl to {dest}")
+    copy_artifact(src, dest)
+
+    pdb = src.with_suffix(".pdb")
+    if pdb.exists():
+        status(args, "Copying sl debug symbols")
+        copy_artifact(pdb, OUT / "sl.pdb")
+    copy_windows_openssl_dlls(args, OUT)
+
+
+def build_isl(args):
+    ensure_out_dir(args)
+    addons = (ROOT / "../../addons").resolve()
+    if not addons.is_dir():
+        addons = (ROOT / "../addons").resolve()
+    if not addons.is_dir():
+        return
+
+    env = scoped_env(args)
+    if FBSOURCE is not None and "YARN" not in env:
+        yarn = FBSOURCE / "xplat/third-party/yarn"
+        yarn = yarn / ("yarn.bat" if os.name == "nt" else "yarn")
+        yarn = yarn.resolve()
+        if yarn.exists():
+            env["YARN"] = str(yarn)
+    # Skip prefetching the yarn offline mirror: it downloads too many files and
+    # is too slow for this helper.
+    # eden_prefetch_fbsource(
+    #     args, "xplat/third-party/yarn", "Prefetching yarn offline mirror"
+    # )
+    status(args, "Building ISL assets")
+    run(
+        [args.python, "build-tar.py", "-o", OUT / "isl-dist.tar.xz"],
+        cwd=addons,
+        env=env,
+        quiet=args.quiet,
+    )
+
+
+def add_common_options(parser):
+    parser.add_argument(
+        "--with-python",
+        dest="with_python",
+        metavar="PYTHON",
+        help=(
+            "Python executable used by Rust Python build scripts. Defaults to "
+            "the selection from contrib/pick_python.py."
+        ),
+    )
+    parser.add_argument(
+        "--with-version",
+        dest="with_version",
+        metavar="VERSION",
+        help=(
+            "Sapling version embedded in the binary. By default, uses "
+            "SAPLING_VERSION if set, otherwise generates a timestamp plus the "
+            "current sl/hg/git node."
+        ),
+    )
+    parser.add_argument(
+        "--oss",
+        action="store_true",
+        help=("Build without fb-only features. By default, this is auto-detected."),
+    )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Run cargo without --release and copy the debug binary to out/sl.",
+    )
+    parser.add_argument(
+        "-q",
+        "--quiet",
+        action="store_true",
+        help="Do not print build progress.",
+    )
+    parser.add_argument(
+        "--rust-target",
+        metavar="TRIPLE",
+        default=os.environ.get("RUST_TARGET"),
+        help=(
+            "Cargo target triple. Defaults to RUST_TARGET when that environment "
+            "variable is set."
+        ),
+    )
+    parser.add_argument(
+        "--vcvarsall",
+        metavar="PATH",
+        default=os.environ.get("VCVARSALL", ""),
+        help=(
+            "Windows-only path to vcvarsall.bat. If omitted, out/env "
+            "VCVARSALL or VCVARSALL_PATH is used, then Visual Studio "
+            "2017/2019/2022 install paths are searched."
+        ),
+    )
+
+
+def normalize_args(args):
+    args.oss = args.oss or FBSOURCE is None
+    args.python = args.with_python or pick_python()
+    status(args, f"Using Python: {args.python}")
+    args.version = args.with_version or auto_version()
+    status(args, f"Using Sapling version: {args.version}")
+
+
+def main(argv):
+    build_targets = ("sl", "isl")
+    parser = argparse.ArgumentParser(
+        description="Build sl and isl.",
+        epilog=("Generated files live under out/."),
+    )
+    add_common_options(parser)
+    parser.add_argument(
+        "targets",
+        metavar="TARGET",
+        nargs="*",
+        choices=build_targets,
+        help="Targets to build. Choices: sl, isl. Defaults to both.",
+    )
+
+    args = parser.parse_intermixed_args(argv)
+    normalize_args(args)
+
+    for target in args.targets or build_targets:
+        if target == "sl":
+            build_sl(args)
+        elif target == "isl":
+            build_isl(args)
+        else:
+            raise SystemExit(f"unknown target: {target}")
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

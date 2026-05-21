@@ -15,8 +15,7 @@
 *.swp
 *.prof
 *.zip
-.cargo/config
-.cargo/config.toml
+.cargo
 .shim/
 tests/.coverage*
 tests/.test*
@@ -31,7 +30,7 @@ fb/tests/*.err
 tests/htmlcov
 tests/getdb.sh
 tests/testutil/getdb.py
-tests/__pycache__/
+__pycache__/
 contrib/chg/chg
 contrib/chg/libchg.a
 contrib/hgsh/hgsh
@@ -74,6 +73,7 @@ debbuild/
 install/
 .pytype/
 rpmbuild/
+out
 getdeps_build.log
 /isl-dist.tar.xz
 
