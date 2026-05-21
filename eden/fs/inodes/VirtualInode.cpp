@@ -268,7 +268,7 @@ folly::coro::now_task<std::optional<Hash32>> VirtualInode::co_getDigestHash(
   }
 
   if (auto* inode = std::get_if<InodePtr>(&variant_)) {
-    co_return co_await inode->asTreePtr()->getDigestHash(fetchContext).semi();
+    co_return co_await inode->asTreePtr()->co_getDigestHash(fetchContext);
   } else if (
       auto* entry =
           std::get_if<UnmaterializedUnloadedBlobDirEntry>(&variant_)) {

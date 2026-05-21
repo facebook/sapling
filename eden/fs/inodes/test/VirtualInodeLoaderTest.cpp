@@ -10,6 +10,7 @@
 #include <folly/test/TestUtils.h>
 #include <folly/testing/TestUtil.h>
 #include <gtest/gtest.h>
+#include <optional>
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
@@ -203,6 +204,83 @@ CO_TEST(CoInodeLoader, loadBlake3) {
 
     EXPECT_EQ(
         Hash32::blake3(folly::ByteRange{folly::StringPiece{"dir/a.txt"}}),
+        results[0].value());
+    EXPECT_THROW_RE(results[1].value(), std::domain_error, "absolute path");
+  }
+}
+
+CO_TEST(CoInodeLoader, loadDigestHash) {
+  FakeTreeBuilder builder;
+  builder.setFiles(FILES);
+  TestMount mount(builder);
+
+  auto rootInode = mount.getTreeInode(RelativePathPiece());
+  auto objectStore = mount.getEdenMount()->getObjectStore();
+  auto fetchContext = ObjectFetchContext::getNullContext();
+
+  {
+    // Exercise co_applyToVirtualInode with a now_task returning an optional,
+    // matching the co_getDigestHash result type.
+    auto results = co_await co_applyToVirtualInode(
+        rootInode,
+        std::vector<std::string>{
+            "dir/a.txt", "not/exist/a", "not/exist/b", "dir/sub/b.txt"},
+        [objectStore, fetchContext = fetchContext.copy()](
+            VirtualInode inode,
+            RelativePath path) -> folly::coro::now_task<std::optional<Hash32>> {
+          co_return co_await inode.co_getDigestHash(
+              path, objectStore, fetchContext);
+        },
+        objectStore,
+        fetchContext);
+
+    EXPECT_EQ(
+        std::optional<Hash32>{
+            Hash32::blake3(folly::ByteRange{folly::StringPiece{"dir/a.txt"}})},
+        results[0].value());
+    EXPECT_THROW_ERRNO(results[1].value(), ENOENT);
+    EXPECT_THROW_ERRNO(results[2].value(), ENOENT);
+    EXPECT_EQ(
+        std::optional<Hash32>{Hash32::blake3(
+            folly::ByteRange{folly::StringPiece{"dir/sub/b.txt"}})},
+        results[3].value());
+  }
+
+  {
+    // Verify duplicate paths return the same digest hash.
+    auto results = co_await co_applyToVirtualInode(
+        rootInode,
+        std::vector<std::string>{"dir/a.txt", "dir/sub/b.txt", "dir/a.txt"},
+        [objectStore, fetchContext = fetchContext.copy()](
+            VirtualInode inode,
+            RelativePath path) -> folly::coro::now_task<std::optional<Hash32>> {
+          co_return co_await inode.co_getDigestHash(
+              path, objectStore, fetchContext);
+        },
+        objectStore,
+        fetchContext);
+
+    EXPECT_EQ(results[0].value(), results[2].value())
+        << "dir/a.txt was requested twice and both entries are the same";
+  }
+
+  {
+    // Verify malformed paths surface as per-result exceptions.
+    auto results = co_await co_applyToVirtualInode(
+        rootInode,
+        std::vector<std::string>{"dir/a.txt", "/invalid///exist/a"},
+        [objectStore, fetchContext = fetchContext.copy()](
+            VirtualInode inode,
+            RelativePath path) -> folly::coro::now_task<std::optional<Hash32>> {
+          co_return co_await inode.co_getDigestHash(
+              path, objectStore, fetchContext);
+        },
+        objectStore,
+        fetchContext);
+
+    EXPECT_EQ(
+        std::optional<Hash32>{
+            Hash32::blake3(folly::ByteRange{folly::StringPiece{"dir/a.txt"}})},
         results[0].value());
     EXPECT_THROW_RE(results[1].value(), std::domain_error, "absolute path");
   }

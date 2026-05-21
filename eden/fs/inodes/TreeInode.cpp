@@ -1929,6 +1929,30 @@ ImmediateFuture<std::optional<Hash32>> TreeInode::getDigestHash(
   return ImmediateFuture<std::optional<Hash32>>{std::nullopt};
 }
 
+folly::coro::now_task<std::optional<Hash32>> TreeInode::co_getDigestHash(
+    const ObjectFetchContextPtr& fetchContext) {
+  // Mirrors getDigestHash() — restricted directories must not expose
+  // digest hash, and materialized trees do not have backing-store digest
+  // hash available.
+  if (FOLLY_UNLIKELY(isRestricted())) {
+    co_return std::nullopt;
+  }
+  logAccess(*fetchContext);
+  ObjectId treeId;
+  {
+    auto state = lockContentsRead();
+    if (state->isMaterialized()) {
+      co_return std::nullopt;
+    }
+    // If a tree is not materialized, it should have an id value.
+    treeId = state->treeId.value();
+  }
+  // ObjectStore::getTreeDigestHash has no co_ version yet, bridge via .semi()
+  co_return co_await getObjectStore()
+      .getTreeDigestHash(treeId, fetchContext)
+      .semi();
+}
+
 ImmediateFuture<std::optional<uint64_t>> TreeInode::getDigestSize(
     const ObjectFetchContextPtr& fetchContext) {
   if (FOLLY_UNLIKELY(isRestricted())) {

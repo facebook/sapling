@@ -330,8 +330,13 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
 
   /**
    * Get the digest id for this inode.
+   *
+   * DEPRECATED: Use co_getDigestHash() instead.
    */
   ImmediateFuture<std::optional<Hash32>> getDigestHash(
+      const ObjectFetchContextPtr& fetchContext);
+
+  folly::coro::now_task<std::optional<Hash32>> co_getDigestHash(
       const ObjectFetchContextPtr& fetchContext);
 
   /**
