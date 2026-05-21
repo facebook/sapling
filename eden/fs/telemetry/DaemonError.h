@@ -47,6 +47,9 @@ struct DaemonError : public TypelessEvent {
     if (info.mountStatus.has_value()) {
       event.addString("mount_status", *info.mountStatus);
     }
+    if (info.errorType.has_value()) {
+      event.addString("error_type", *info.errorType);
+    }
   }
 };
 
