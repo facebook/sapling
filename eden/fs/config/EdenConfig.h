@@ -615,6 +615,16 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * When pressure-based inode GC evaluates whether a directory subtree can be
+   * collapsed into a single FUSE invalidation, entries newer than the normal GC
+   * cutoff by less than this grace period do not block collapse.
+   */
+  ConfigSetting<std::chrono::nanoseconds> pressureBasedGcCollapseGrace{
+      "mount:pressure-gc-collapse-grace",
+      std::chrono::seconds{5},
+      this};
+
+  /**
    * Specifies which directory children will be prefetched upon readdir.
    */
   ConfigSetting<ReaddirPrefetch> readdirPrefetch{

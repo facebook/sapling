@@ -5751,14 +5751,46 @@ ImmediateFuture<uint64_t> TreeInode::invalidateChildrenNotAccessedRecentlyFuse(
     std::chrono::system_clock::time_point cutoff,
     const ObjectFetchContextPtr& context,
     const folly::CancellationToken& cancellationToken) {
+  const auto collapseGrace =
+      getMount()->getEdenConfig()->pressureBasedGcCollapseGrace.getValue();
+  auto collapseCutoff = cutoff;
+  if (collapseGrace > std::chrono::nanoseconds::zero() &&
+      cutoff != std::chrono::system_clock::time_point::max()) {
+    // cutoff is the direct invalidation threshold. collapseCutoff is only used
+    // to decide whether a child blocks collapsing a stale subtree; it permits a
+    // small grace window so files loaded by a streaming read stop blocking
+    // collapse just before they become direct invalidation candidates. For
+    // normal pressure GC this keeps cutoff <= collapseCutoff <= now. Preserve
+    // max(), used by debug invalidation to mean "everything is stale".
+    const auto collapseGraceDuration =
+        std::chrono::duration_cast<std::chrono::system_clock::duration>(
+            collapseGrace);
+    if (cutoff >
+        std::chrono::system_clock::time_point::max() - collapseGraceDuration) {
+      collapseCutoff = std::chrono::system_clock::time_point::max();
+    } else {
+      collapseCutoff += collapseGraceDuration;
+    }
+    const auto now = folly::to<std::chrono::system_clock::time_point>(
+        getMount()->getClock().getRealtime());
+    if (collapseCutoff > now) {
+      collapseCutoff = now;
+    }
+  }
+
   return invalidateChildrenNotAccessedRecentlyFuseImpl(
-             cutoff, context, cancellationToken, /*isRoot=*/true)
+             cutoff,
+             collapseCutoff,
+             context,
+             cancellationToken,
+             /*isRoot=*/true)
       .thenValue([](std::pair<uint64_t, bool> result) { return result.first; });
 }
 
 ImmediateFuture<std::pair<uint64_t, bool>>
 TreeInode::invalidateChildrenNotAccessedRecentlyFuseImpl(
     std::chrono::system_clock::time_point cutoff,
+    std::chrono::system_clock::time_point collapseCutoff,
     const ObjectFetchContextPtr& context,
     const folly::CancellationToken& cancellationToken,
     bool isRoot) {
@@ -5772,12 +5804,15 @@ TreeInode::invalidateChildrenNotAccessedRecentlyFuseImpl(
              getInodeMap(),
              context,
              cancellationToken,
-             [cutoff, context = context.copy(), cancellationToken](
-                 TreeInodePtr tree) {
+             [cutoff,
+              collapseCutoff,
+              context = context.copy(),
+              cancellationToken](TreeInodePtr tree) {
                auto nodeId = tree->getNodeId();
                return tree
                    ->invalidateChildrenNotAccessedRecentlyFuseImpl(
                        cutoff,
+                       collapseCutoff,
                        context,
                        cancellationToken,
                        /*isRoot=*/false)
@@ -5785,7 +5820,11 @@ TreeInode::invalidateChildrenNotAccessedRecentlyFuseImpl(
                      return std::make_pair(nodeId, result);
                    });
              })
-      .thenValue([self = inodePtrFromThis(), cutoff, cancellationToken, isRoot](
+      .thenValue([self = inodePtrFromThis(),
+                  cutoff,
+                  collapseCutoff,
+                  cancellationToken,
+                  isRoot](
                      const std::vector<
                          std::pair<InodeNumber, std::pair<uint64_t, bool>>>&
                          childResults) {
@@ -5815,7 +5854,7 @@ TreeInode::invalidateChildrenNotAccessedRecentlyFuseImpl(
         auto selfFsRefcount = self->debugGetFsRefcount();
         auto selfLastFsRequestTime = std::chrono::system_clock::from_time_t(
             self->getLastFsRequestTime().toTimespec().tv_sec);
-        bool allStale = selfLastFsRequestTime < cutoff;
+        bool allStale = selfLastFsRequestTime < collapseCutoff;
         uint64_t numSkippedParentNoFsRef = 0;
         uint64_t numSkippedChildNoFsRef = 0;
         std::vector<std::pair<PathComponentPiece, InodeBase*>>
@@ -5831,21 +5870,28 @@ TreeInode::invalidateChildrenNotAccessedRecentlyFuseImpl(
             return std::make_pair(uint64_t{0}, false);
           }
 
-          bool entryIsStale = false;
+          // The collapse cutoff is intentionally more aggressive than the
+          // direct invalidation cutoff. A recently read file can stop being a
+          // collapse blocker before it is old enough to invalidate by name.
+          bool entryIsStaleForCollapse = false;
+          bool entryShouldInvalidate = false;
           if (entry.second.isDirectory()) {
             auto childResult = childAllStale.find(entryInode->getNodeId());
-            entryIsStale =
+            entryIsStaleForCollapse =
                 childResult != childAllStale.end() && childResult->second;
+            entryShouldInvalidate = entryIsStaleForCollapse;
           } else {
             auto lastFsRequestTime = std::chrono::system_clock::from_time_t(
                 entryInode->getLastFsRequestTime().toTimespec().tv_sec);
-            entryIsStale = lastFsRequestTime < cutoff;
+            entryIsStaleForCollapse = lastFsRequestTime < collapseCutoff;
+            entryShouldInvalidate = lastFsRequestTime < cutoff;
           }
 
-          if (entryIsStale) {
+          if (entryShouldInvalidate) {
             staleEntriesToInvalidate.emplace_back(
                 entry.first.piece(), entryInode);
-          } else {
+          }
+          if (!entryIsStaleForCollapse) {
             allStale = false;
           }
         }

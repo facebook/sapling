@@ -747,9 +747,9 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    *
    * Walks the inode tree bottom-up, sending FUSE_NOTIFY_INVAL_ENTRY for stale
    * entries. Fully stale directory subtrees are collapsed into a single
-   * invalidation from the first non-stale ancestor. This causes the kernel to
-   * send FORGET for those inodes, decrementing fsRefcount so they can be
-   * unloaded.
+   * invalidation from the first ancestor that cannot also be collapsed. This
+   * causes the kernel to send FORGET for those inodes, decrementing fsRefcount
+   * so they can be unloaded.
    *
    * Both materialized and non-materialized inodes are invalidated —
    * invalidateEntry only drops the dcache entry, overlay data is preserved.
@@ -763,6 +763,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   ImmediateFuture<std::pair<uint64_t /* numInvalidated */, bool /* allStale */>>
   invalidateChildrenNotAccessedRecentlyFuseImpl(
       std::chrono::system_clock::time_point cutoff,
+      std::chrono::system_clock::time_point collapseCutoff,
       const ObjectFetchContextPtr& context,
       const folly::CancellationToken& cancellationToken,
       bool isRoot);

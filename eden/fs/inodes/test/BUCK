@@ -107,6 +107,7 @@ cpp_unittest(
         "//eden/fs/model:model",
         "//eden/fs/store:context",
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
+        "//eden/fs/testharness:fake_fuse",
         "//eden/fs/testharness:stored_object",
         "//eden/fs/testharness:test_mount",
         "//folly/test:test_utils",

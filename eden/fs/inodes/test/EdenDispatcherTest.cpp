@@ -19,6 +19,7 @@
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/store/ObjectFetchContext.h"
+#include "eden/fs/testharness/FakeFuse.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/StoredObject.h"
 #include "eden/fs/testharness/TestMount.h"
@@ -273,6 +274,57 @@ TEST(RawEdenDispatcherTest, getattr_returns_dynamic_ttl_with_pressure_gc) {
               InodeNumber{entry.nodeid}, ObjectFetchContext::getNullContext())
           .get(0ms);
   EXPECT_EQ(3600u, attr.timeout_seconds);
+}
+
+TEST(
+    RawEdenDispatcherTest,
+    pressure_gc_collapse_grace_collapses_recent_subtree) {
+#ifndef __linux__
+  GTEST_SKIP() << "FakeFuse invalidation tests are Linux-only";
+#else
+  FakeTreeBuilder builder;
+  builder.setFile("dir/file.txt", "contents");
+  builder.setFile("dir/cold.txt", "not loaded");
+  TestMount mount{builder};
+
+  mount.updateEdenConfig({
+      {"experimental:enable-pressure-based-gc", "true"},
+      {"mount:pressure-gc-collapse-grace", "5s"},
+  });
+
+  auto fuse = std::make_shared<FakeFuse>();
+  mount.startFuseAndWait(fuse);
+
+  auto dirEntry =
+      mount.getDispatcher()
+          ->lookup(
+              0, kRootNodeId, "dir"_pc, ObjectFetchContext::getNullContext())
+          .get(0ms);
+  mount.getDispatcher()
+      ->lookup(
+          0,
+          InodeNumber{dirEntry.nodeid},
+          "file.txt"_pc,
+          ObjectFetchContext::getNullContext())
+      .get(0ms);
+
+  mount.getClock().advance(6s);
+  auto cutoff = folly::to<std::chrono::system_clock::time_point>(
+                    mount.getClock().getRealtime()) -
+      10s;
+
+  auto numInvalidated = mount.getEdenMount()
+                            ->getRootInode()
+                            ->handleChildrenNotAccessedRecently(
+                                cutoff, ObjectFetchContext::getNullContext())
+                            .get(10s);
+  EXPECT_EQ(1u, numInvalidated);
+
+  mount.getEdenMount()->flushInvalidations().get(10s);
+  fuse->close();
+  mount.getEdenMount()->getFsChannelCompletionFuture().within(10s).getVia(
+      mount.getServerExecutor().get());
+#endif
 }
 
 TEST(RawEdenDispatcherTest, lookup_returns_valid_inode_for_bad_file) {
