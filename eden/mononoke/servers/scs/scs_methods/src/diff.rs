@@ -326,10 +326,6 @@ impl<'a> DiffRouter<'a> {
     /// evaluation at routing time with the JK evaluation at scuba-logging
     /// time so the `enabled_experiments_jk` Scuba column reliably reflects
     /// which transport was actually used.
-    #[cfg_attr(
-        not(test),
-        expect(dead_code, reason = "wired by the next commit in the stack")
-    )]
     fn should_use_remote_diff_unary(&self, ctx: &CoreContext, repo_name: &str) -> bool {
         if !self.diff_options.diff_remotely {
             return false;
@@ -436,6 +432,17 @@ impl<'a> DiffRouter<'a> {
             .map_err(|e| RemoteDiffError::InfraError(format!("{e:?}")))?;
         let repo_client = RepoDiffServiceClient::new(repo_name.to_string(), client);
 
+        if self.should_use_remote_diff_unary(ctx, repo_name) {
+            let response = repo_client
+                .diff_unified_headerless_unary(ctx, base_input, other_input, options)
+                .await
+                .map_err(classify_diff_error)?;
+            return Ok(HeaderlessUnifiedDiff {
+                raw_diff: response.content,
+                is_binary: response.is_binary,
+            });
+        }
+
         let (response, mut stream) = repo_client
             .diff_unified_headerless(ctx, base_input, other_input, options)
             .await
@@ -534,6 +541,17 @@ impl<'a> DiffRouter<'a> {
             .create_diff_service_client(repo_name)
             .map_err(|e| RemoteDiffError::InfraError(format!("{e:?}")))?;
         let repo_client = RepoDiffServiceClient::new(repo_name.to_string(), client);
+
+        if self.should_use_remote_diff_unary(ctx, repo_name) {
+            let response = repo_client
+                .diff_unified_unary(ctx, base_input, other_input, options)
+                .await
+                .map_err(classify_diff_error)?;
+            return Ok(UnifiedDiff {
+                raw_diff: response.content,
+                is_binary: response.is_binary,
+            });
+        }
 
         let (response, mut stream) = repo_client
             .diff_unified(ctx, base_input, other_input, options)
