@@ -23,8 +23,8 @@ use dbbookmarks::transaction::AddBookmarkLog;
 use dbbookmarks::transaction::AllocateBookmarkLogId;
 use dbbookmarks::transaction::DeleteBookmarkIf;
 use dbbookmarks::transaction::EnsureBookmarkLockRow;
-use dbbookmarks::transaction::FindGlobalMaxBookmarkLogId;
 use dbbookmarks::transaction::FindMaxBookmarkLogId;
+use dbbookmarks::transaction::FindReposMaxBookmarkLogId;
 use dbbookmarks::transaction::InsertBookmarks;
 use dbbookmarks::transaction::ReadLastInsertId;
 use dbbookmarks::transaction::ReadMaxSequenceId;
@@ -427,7 +427,16 @@ async fn attempt_commit(
             .await
             .map_err(BookmarkTransactionError::Other)?;
         let total_entries = ops.len();
-        let (txn, ids) = allocate_multi_log_ids(txn, total_entries)
+        // Collect unique repo_ids participating in this multi-repo transaction
+        // so the seeding check can scope its MAX query to them (PK seeks
+        // per repo) rather than scanning the whole bookmarks_update_log.
+        let repo_ids: Vec<RepositoryId> = ops
+            .iter()
+            .map(|op| op.repo_id())
+            .collect::<HashSet<_>>()
+            .into_iter()
+            .collect();
+        let (txn, ids) = allocate_multi_log_ids(txn, &repo_ids, total_entries)
             .await
             .map_err(BookmarkTransactionError::Other)?;
         (txn, TransactionLog::from_pre_allocated(ids))
@@ -568,33 +577,49 @@ async fn acquire_multi_repo_bookmark_locks(
 
 /// Allocate N log IDs from the global auto-increment sequence.
 ///
-/// Allocate N log IDs from the global auto-increment sequence.
+/// On every call, ensures the sequence is seeded above the MAX(id) across
+/// all participating repos in bookmarks_update_log so that the next
+/// allocation cannot collide with an existing (repo_id, id) row. Self-heals
+/// across old↔new path transitions for any repo in the set: if any repo's
+/// max has advanced past the sequence (e.g. legacy-path writes after a
+/// per_bookmark_locking rollback), the sequence gets bumped on the next
+/// allocation.
 ///
-/// On first use (empty sequence table), seeds the table from the global
-/// MAX(id) in bookmarks_update_log so that new IDs don't conflict with
-/// existing log entries. Then inserts N rows and reads back the last
-/// generated ID — consecutive single-row INSERTs produce consecutive
-/// auto-increment IDs, so all N IDs can be derived from the last one.
+/// Both reads (ReadMaxSequenceId, FindReposMaxBookmarkLogId) are index-
+/// friendly: the sequence table has a single-column PK, and bookmarks_update_log
+/// has PK (repo_id, id) so IN-clause filtering uses index seeks rather than
+/// a table scan.
 async fn allocate_multi_log_ids(
     mut txn: SqlTransaction,
+    repo_ids: &[RepositoryId],
     count: usize,
 ) -> Result<(SqlTransaction, Vec<u64>)> {
     if count == 0 {
         return Ok((txn, vec![]));
     }
 
-    // Seed the sequence table on first use so new IDs start above
-    // existing entries in bookmarks_update_log.
-    let (txn_, rows) = ReadMaxSequenceId::query_with_transaction(txn).await?;
+    let (txn_, seq_rows) = ReadMaxSequenceId::query_with_transaction(txn).await?;
     txn = txn_;
-    if rows.first().and_then(|r| r.0).is_none() {
-        let (txn_, global_max_rows) =
-            FindGlobalMaxBookmarkLogId::query_with_transaction(txn).await?;
+    let seq_max = seq_rows.first().and_then(|r| r.0).unwrap_or(0);
+
+    let (txn_, repos_max_rows) =
+        FindReposMaxBookmarkLogId::query_with_transaction(txn, repo_ids).await?;
+    txn = txn_;
+    let repos_max = repos_max_rows.first().and_then(|r| r.0).unwrap_or(0);
+
+    if repos_max > seq_max {
+        // The sequence is behind at least one participating repo's max.
+        // Bump it past repos_max. INSERT OR IGNORE keeps concurrent
+        // transactions racing to bump the same value idempotent — at most
+        // one row is inserted, and auto-increment will give strictly higher
+        // values to every transaction afterward.
+        //
+        // Strictly greater (not >=): when seq_max == repos_max, the next
+        // auto-increment allocation already gives a value strictly above
+        // repos_max. Includes the (0, 0) empty case.
+        let target = repos_max + 1;
+        let (txn_, _) = SeedSequenceId::query_with_transaction(txn, &target).await?;
         txn = txn_;
-        if let Some(max_id) = global_max_rows.first().and_then(|r| r.0) {
-            let (txn_, _) = SeedSequenceId::query_with_transaction(txn, &max_id).await?;
-            txn = txn_;
-        }
     }
 
     // N individual INSERTs rather than a single multi-row INSERT because

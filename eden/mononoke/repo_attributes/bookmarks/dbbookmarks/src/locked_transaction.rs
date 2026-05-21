@@ -135,8 +135,8 @@ impl LockedBookmarkTransaction {
             .current_value
             .ok_or_else(|| anyhow!("Cannot update a bookmark that does not exist"))?;
 
-        // Allocate a log ID via auto-increment (with seeding on first use).
-        let (txn_, ids) = allocate_log_ids_from_sequence(txn, 1).await?;
+        // Allocate a log ID via auto-increment (with per-repo seed check).
+        let (txn_, ids) = allocate_log_ids_from_sequence(txn, self.repo_id, 1).await?;
         txn = txn_;
         let log_id = ids
             .into_iter()

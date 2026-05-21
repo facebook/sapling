@@ -162,10 +162,22 @@ mononoke_queries! {
         sqlite("SELECT last_insert_rowid()")
     }
 
-    // Read the global max ID across ALL repos in bookmarks_update_log.
-    // Used to seed the sequence table on first transition to the new path.
-    pub read FindGlobalMaxBookmarkLogId() -> (Option<u64>) {
-        "SELECT MAX(id) FROM bookmarks_update_log"
+    // Read the max ID for a single repo in bookmarks_update_log. The PK
+    // on bookmarks_update_log is (repo_id, id), so this is a fast index
+    // seek rather than a full table scan. Used by the seeding logic in
+    // allocate_log_ids_from_sequence to ensure the sequence stays ahead
+    // of any per-repo writes that may have happened on the old path.
+    pub read FindRepoMaxBookmarkLogId(repo_id: RepositoryId) -> (Option<u64>) {
+        "SELECT MAX(id) FROM bookmarks_update_log WHERE repo_id = {repo_id}"
+    }
+
+    // Read the max ID across a set of repos in bookmarks_update_log. The PK
+    // on bookmarks_update_log is (repo_id, id), so this remains an index-
+    // friendly query (one seek per repo_id in the IN list) rather than a
+    // full table scan. Used by multi_repo_bookmarks_transaction's seeding
+    // logic to bump the sequence above all participating repos' maxes.
+    pub read FindReposMaxBookmarkLogId(>list repo_ids: RepositoryId) -> (Option<u64>) {
+        "SELECT MAX(id) FROM bookmarks_update_log WHERE repo_id IN {repo_ids}"
     }
 
     // Seed the sequence table with an explicit ID so that subsequent
@@ -387,9 +399,10 @@ impl SqlBookmarksTransactionPayload {
     async fn allocate_log_ids(
         _ctx: &CoreContext,
         txn: SqlTransaction,
+        repo_id: RepositoryId,
         count: usize,
     ) -> Result<(SqlTransaction, Vec<u64>)> {
-        allocate_log_ids_from_sequence(txn, count).await
+        allocate_log_ids_from_sequence(txn, repo_id, count).await
     }
 
     /// Count the number of log entries this transaction will produce.
@@ -722,7 +735,7 @@ impl SqlBookmarksTransactionPayload {
                 .map_err(BookmarkTransactionError::RetryableError)?;
             let lock_acquired_us = new_path_start.elapsed().as_micros() as i64;
             let log_entry_count = self.count_log_entries();
-            let (txn, ids) = Self::allocate_log_ids(ctx, txn, log_entry_count)
+            let (txn, ids) = Self::allocate_log_ids(ctx, txn, self.repo_id, log_entry_count)
                 .await
                 .map_err(BookmarkTransactionError::RetryableError)?;
             let id_alloc_us = new_path_start.elapsed().as_micros() as i64 - lock_acquired_us;
@@ -1097,33 +1110,57 @@ pub(crate) async fn acquire_single_bookmark_lock(
 
 /// Allocate N globally unique log IDs via the auto-increment sequence table.
 ///
-/// On first use (empty sequence table), seeds the table from the global
-/// MAX(id) in bookmarks_update_log so that new IDs don't conflict with
-/// existing log entries. This makes the old→new→old→new transition safe.
+/// On every call, ensures the sequence table is seeded above this repo's
+/// current MAX(id) in bookmarks_update_log so that the next auto-increment
+/// allocation cannot collide with an existing (repo_id, id) row.
+///
+/// Self-healing across old↔new path transitions: if a repo is rolled back
+/// to the legacy path and then re-enabled, its bookmarks_update_log max may
+/// have advanced past the sequence value. This check catches that on the
+/// next allocation and bumps the sequence accordingly. No-op on the common
+/// case where the sequence is already ahead.
+///
+/// Both queries used (ReadMaxSequenceId, FindRepoMaxBookmarkLogId) are PK
+/// seeks: the sequence table has a single column PK, and bookmarks_update_log
+/// has PK (repo_id, id). This makes the seed check cheap enough to run on
+/// every bookmark write.
 ///
 /// Used by both `SqlBookmarksTransactionPayload::allocate_log_ids` (per-bookmark
 /// locking optimistic path) and `LockedBookmarkTransaction::commit` (pessimistic
 /// path).
 pub(crate) async fn allocate_log_ids_from_sequence(
     mut txn: SqlTransaction,
+    repo_id: RepositoryId,
     count: usize,
 ) -> Result<(SqlTransaction, Vec<u64>)> {
     if count == 0 {
         return Ok((txn, vec![]));
     }
 
-    // Seed the sequence table on first use so new IDs start above
-    // existing entries in bookmarks_update_log.
-    let (txn_, rows) = ReadMaxSequenceId::query_with_transaction(txn).await?;
+    let (txn_, seq_rows) = ReadMaxSequenceId::query_with_transaction(txn).await?;
     txn = txn_;
-    if rows.first().and_then(|r| r.0).is_none() {
-        let (txn_, global_max_rows) =
-            FindGlobalMaxBookmarkLogId::query_with_transaction(txn).await?;
+    let seq_max = seq_rows.first().and_then(|r| r.0).unwrap_or(0);
+
+    let (txn_, repo_rows) = FindRepoMaxBookmarkLogId::query_with_transaction(txn, &repo_id).await?;
+    txn = txn_;
+    let repo_max = repo_rows.first().and_then(|r| r.0).unwrap_or(0);
+
+    if repo_max > seq_max {
+        // The sequence is behind this repo's max. Bump it past repo_max so
+        // the next allocation cannot collide with an existing log row. Uses
+        // INSERT OR IGNORE so that concurrent transactions racing to bump
+        // for the same target value are idempotent — only one INSERT wins,
+        // both transactions then proceed to the allocation loop and get
+        // strictly higher IDs from auto-increment.
+        //
+        // Strictly greater (not >=) because when seq_max == repo_max, the
+        // next auto-increment allocation already gives seq_max + 1 which is
+        // strictly above repo_max. Equality includes the (0, 0) empty case
+        // and the steady-state case where the previous allocation set both
+        // to the same value — neither needs a bump.
+        let target = repo_max + 1;
+        let (txn_, _) = SeedSequenceId::query_with_transaction(txn, &target).await?;
         txn = txn_;
-        if let Some(max_id) = global_max_rows.first().and_then(|r| r.0) {
-            let (txn_, _) = SeedSequenceId::query_with_transaction(txn, &max_id).await?;
-            txn = txn_;
-        }
     }
 
     // Allocate N IDs by inserting N individual rows, reading back each
