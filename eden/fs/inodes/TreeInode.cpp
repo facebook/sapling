@@ -10,6 +10,7 @@
 #include <boost/polymorphic_cast.hpp>
 #include <folly/FileUtil.h>
 #include <folly/chrono/Conv.h>
+#include <folly/container/F14Map.h>
 #include <folly/coro/Collect.h>
 #include <folly/coro/CurrentExecutor.h>
 #include <folly/coro/Invoke.h>
@@ -5750,8 +5751,19 @@ ImmediateFuture<uint64_t> TreeInode::invalidateChildrenNotAccessedRecentlyFuse(
     std::chrono::system_clock::time_point cutoff,
     const ObjectFetchContextPtr& context,
     const folly::CancellationToken& cancellationToken) {
+  return invalidateChildrenNotAccessedRecentlyFuseImpl(
+             cutoff, context, cancellationToken, /*isRoot=*/true)
+      .thenValue([](std::pair<uint64_t, bool> result) { return result.first; });
+}
+
+ImmediateFuture<std::pair<uint64_t, bool>>
+TreeInode::invalidateChildrenNotAccessedRecentlyFuseImpl(
+    std::chrono::system_clock::time_point cutoff,
+    const ObjectFetchContextPtr& context,
+    const folly::CancellationToken& cancellationToken,
+    bool isRoot) {
   if (shouldCancelGC(cancellationToken, getMount())) {
-    return ImmediateFuture<uint64_t>{0ULL};
+    return std::make_pair(uint64_t{0}, false);
   }
 
   // First, recursively process child tree inodes (bottom-up invalidation).
@@ -5762,32 +5774,53 @@ ImmediateFuture<uint64_t> TreeInode::invalidateChildrenNotAccessedRecentlyFuse(
              cancellationToken,
              [cutoff, context = context.copy(), cancellationToken](
                  TreeInodePtr tree) {
-               return tree->invalidateChildrenNotAccessedRecentlyFuse(
-                   cutoff, context, cancellationToken);
+               auto nodeId = tree->getNodeId();
+               return tree
+                   ->invalidateChildrenNotAccessedRecentlyFuseImpl(
+                       cutoff,
+                       context,
+                       cancellationToken,
+                       /*isRoot=*/false)
+                   .thenValue([nodeId](std::pair<uint64_t, bool> result) {
+                     return std::make_pair(nodeId, result);
+                   });
              })
-      .thenValue([self = inodePtrFromThis(), cutoff, cancellationToken](
-                     const std::vector<uint64_t>& childInvalidations) {
+      .thenValue([self = inodePtrFromThis(), cutoff, cancellationToken, isRoot](
+                     const std::vector<
+                         std::pair<InodeNumber, std::pair<uint64_t, bool>>>&
+                         childResults) {
         if (shouldCancelGC(cancellationToken)) {
-          return uint64_t{0};
+          return std::make_pair(uint64_t{0}, false);
         }
 
         uint64_t numInvalidated = 0;
-        for (auto count : childInvalidations) {
-          numInvalidated += count;
+        folly::F14FastMap<InodeNumber, bool> childAllStale;
+        childAllStale.reserve(childResults.size());
+        for (const auto& [inodeNumber, result] : childResults) {
+          numInvalidated += result.first;
+          childAllStale.emplace(inodeNumber, result.second);
         }
 
         auto* fuseChannel = self->getMount()->getFuseChannel();
         if (!fuseChannel) {
-          return numInvalidated;
+          return std::make_pair(numInvalidated, false);
         }
 
-        // Now invalidate our own children that haven't been accessed recently.
+        // Now inspect our own children. Fully stale subtrees are propagated to
+        // the parent so it can invalidate one directory entry instead of every
+        // descendant.
         // We need to hold the contents lock to iterate entries, and call
         // invalidateEntry for each stale child.
         auto contents = self->getContentsUnchecked().rlock();
         auto selfFsRefcount = self->debugGetFsRefcount();
+        auto selfLastFsRequestTime = std::chrono::system_clock::from_time_t(
+            self->getLastFsRequestTime().toTimespec().tv_sec);
+        bool allStale = selfLastFsRequestTime < cutoff;
         uint64_t numSkippedParentNoFsRef = 0;
         uint64_t numSkippedChildNoFsRef = 0;
+        std::vector<std::pair<PathComponentPiece, InodeBase*>>
+            staleEntriesToInvalidate;
+        staleEntriesToInvalidate.reserve(contents->entries.size());
         for (const auto& entry : contents->entries) {
           auto* entryInode = entry.second.getInode();
           if (!entryInode) {
@@ -5795,32 +5828,51 @@ ImmediateFuture<uint64_t> TreeInode::invalidateChildrenNotAccessedRecentlyFuse(
           }
 
           if (shouldCancelGC(cancellationToken)) {
-            break;
+            return std::make_pair(uint64_t{0}, false);
           }
 
-          auto lastFsRequestTime = std::chrono::system_clock::from_time_t(
-              entryInode->getLastFsRequestTime().toTimespec().tv_sec);
-          if (lastFsRequestTime < cutoff) {
-            // This is a racy best-effort optimization. If the kernel has
-            // already dropped the parent inode, FUSE_NOTIFY_INVAL_ENTRY cannot
-            // identify the entry to invalidate. If the child inode has no
-            // kernel references, invalidating it cannot produce more FORGETs.
-            if (selfFsRefcount == 0) {
-              numSkippedParentNoFsRef++;
-              continue;
-            }
-            if (entryInode->debugGetFsRefcount() == 0) {
-              numSkippedChildNoFsRef++;
-              continue;
-            }
-            // Send FUSE_NOTIFY_INVAL_ENTRY. This causes the kernel to drop
-            // its dcache entry and asynchronously send FORGET, which
-            // decrements fsRefcount. The inode can then be unloaded by a
-            // subsequent unloadChildrenUnreferencedByFs pass.
-            fuseChannel->invalidateEntry(
-                self->getNodeId(), entry.first.piece());
-            numInvalidated++;
+          bool entryIsStale = false;
+          if (entry.second.isDirectory()) {
+            auto childResult = childAllStale.find(entryInode->getNodeId());
+            entryIsStale =
+                childResult != childAllStale.end() && childResult->second;
+          } else {
+            auto lastFsRequestTime = std::chrono::system_clock::from_time_t(
+                entryInode->getLastFsRequestTime().toTimespec().tv_sec);
+            entryIsStale = lastFsRequestTime < cutoff;
           }
+
+          if (entryIsStale) {
+            staleEntriesToInvalidate.emplace_back(
+                entry.first.piece(), entryInode);
+          } else {
+            allStale = false;
+          }
+        }
+
+        if (allStale && !isRoot) {
+          return std::make_pair(numInvalidated, true);
+        }
+
+        for (const auto& [name, entryInode] : staleEntriesToInvalidate) {
+          // This is a racy best-effort optimization. If the kernel has already
+          // dropped the parent inode, FUSE_NOTIFY_INVAL_ENTRY cannot identify
+          // the entry to invalidate. If the child inode has no kernel
+          // references, invalidating it cannot produce more FORGETs.
+          if (selfFsRefcount == 0) {
+            numSkippedParentNoFsRef++;
+            continue;
+          }
+          if (entryInode->debugGetFsRefcount() == 0) {
+            numSkippedChildNoFsRef++;
+            continue;
+          }
+          // Send FUSE_NOTIFY_INVAL_ENTRY. This causes the kernel to drop its
+          // dcache entry and asynchronously send FORGET, which decrements
+          // fsRefcount. The inode can then be unloaded by a subsequent
+          // unloadChildrenUnreferencedByFs pass.
+          fuseChannel->invalidateEntry(self->getNodeId(), name);
+          numInvalidated++;
         }
 
         if (numInvalidated > 0) {
@@ -5839,7 +5891,7 @@ ImmediateFuture<uint64_t> TreeInode::invalidateChildrenNotAccessedRecentlyFuse(
               numSkippedChildNoFsRef);
         }
 
-        return numInvalidated;
+        return std::make_pair(numInvalidated, false);
       });
 }
 #endif

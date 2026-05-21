@@ -108,6 +108,9 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
             # actually get unloaded (unlike the legacy path which can't
             # invalidate on FUSE).
             self.assertGreater(invalidated, 0)
+            # Fully stale directory subtrees should be invalidated as higher
+            # directory entries, not as one invalidation per file.
+            self.assertLess(invalidated, len(self.directories) * self.num_files)
             self.assertLess(loaded_after, loaded_after_read)
         elif sys.platform == "darwin":
             self.assertLess(loaded_after, loaded_after_read)
@@ -130,8 +133,11 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
 
         loaded_before = await self.get_loaded_count()
 
-        # Invalidate with 2s age — should affect "a" but not "b"
-        await self.invalidate("", seconds=2)
+        # Invalidate with 2s age: "a" is a fully stale subtree and "b" is
+        # fresh, so the root should invalidate only the "a" directory entry.
+        invalidated = await self.invalidate("", seconds=2)
+        if sys.platform == "linux":
+            self.assertLess(invalidated, self.num_files)
 
         loaded_after = await self.get_loaded_count()
         # Some inodes from "a" should have been unloaded
