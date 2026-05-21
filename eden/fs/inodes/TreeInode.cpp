@@ -1948,9 +1948,8 @@ folly::coro::now_task<std::optional<Hash32>> TreeInode::co_getDigestHash(
     treeId = state->treeId.value();
   }
   // ObjectStore::getTreeDigestHash has no co_ version yet, bridge via .semi()
-  co_return co_await getObjectStore()
-      .getTreeDigestHash(treeId, fetchContext)
-      .semi();
+  co_return co_await getObjectStore().co_getTreeDigestHash(
+      treeId, fetchContext);
 }
 
 ImmediateFuture<std::optional<uint64_t>> TreeInode::getDigestSize(

@@ -517,6 +517,13 @@ ImmediateFuture<std::optional<Hash32>> ObjectStore::getTreeDigestHash(
           });
 }
 
+folly::coro::now_task<std::optional<Hash32>> ObjectStore::co_getTreeDigestHash(
+    const ObjectId& id,
+    const ObjectFetchContextPtr& context) const {
+  auto auxData = co_await co_getTreeAuxData(id, context);
+  co_return auxData.has_value() ? auxData->digestHash : std::nullopt;
+}
+
 ImmediateFuture<std::optional<uint64_t>> ObjectStore::getTreeDigestSize(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) const {

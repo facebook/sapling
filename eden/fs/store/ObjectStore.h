@@ -251,8 +251,14 @@ class ObjectStore : public IObjectStore,
 
   /**
    * Returns the DigestHash hash of the contents of the tree with the given ID.
+   *
+   * DEPRECATED: Use co_getTreeDigestHash instead.
    */
   ImmediateFuture<std::optional<Hash32>> getTreeDigestHash(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context) const;
+
+  folly::coro::now_task<std::optional<Hash32>> co_getTreeDigestHash(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) const;
 

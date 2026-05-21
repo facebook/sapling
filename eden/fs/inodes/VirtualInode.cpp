@@ -272,17 +272,14 @@ folly::coro::now_task<std::optional<Hash32>> VirtualInode::co_getDigestHash(
   } else if (
       auto* entry =
           std::get_if<UnmaterializedUnloadedBlobDirEntry>(&variant_)) {
-    co_return co_await objectStore
-        ->getTreeDigestHash(entry->getObjectId(), fetchContext)
-        .semi();
+    co_return co_await objectStore->co_getTreeDigestHash(
+        entry->getObjectId(), fetchContext);
   } else if (auto* tree = std::get_if<TreePtr>(&variant_)) {
-    co_return co_await objectStore
-        ->getTreeDigestHash((*tree)->getObjectId(), fetchContext)
-        .semi();
+    co_return co_await objectStore->co_getTreeDigestHash(
+        (*tree)->getObjectId(), fetchContext);
   } else if (auto* treeEntry = std::get_if<TreeEntry>(&variant_)) {
-    co_return co_await objectStore
-        ->getTreeDigestHash(treeEntry->getObjectId(), fetchContext)
-        .semi();
+    co_return co_await objectStore->co_getTreeDigestHash(
+        treeEntry->getObjectId(), fetchContext);
   } else {
     co_yield folly::coro::co_error(PathError(
         EINVAL, path, std::string_view{"variant is of unhandled type"}));
