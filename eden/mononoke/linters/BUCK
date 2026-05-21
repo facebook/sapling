@@ -1,0 +1,9 @@
+load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
+
+oncall("scm_server_treehugger")
+
+python_binary(
+    name = "jk_exists_linter",
+    srcs = ["jk_exists_linter.py"],
+    main_module = "eden.mononoke.linters.jk_exists_linter",
+)
