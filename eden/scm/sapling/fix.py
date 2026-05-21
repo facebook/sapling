@@ -74,3 +74,107 @@ Other configuration::
     max-file-size = SIZE # skip files larger than SIZE (e.g. ``2MB``);
                          # unset/0 means no cap
 """
+
+import json
+
+from . import error, match as matchmod, util
+from .i18n import _
+
+
+class FixTool:
+    """A configured external formatting tool with a name, command, and matcher."""
+
+    def __init__(self, name, command, matcher):
+        self.name = name
+        self.command = command
+        self.matcher = matcher
+
+    def matches(self, path):
+        return self.matcher(path)
+
+
+def _loadtools(ui, repo):
+    """Parse [fix.tools.<NAME>] config sections into FixTool instances.
+
+    Each section must define ``command`` (a JSON array of argv strings) and
+    ``patterns`` (a JSON array of glob strings). Aborts if no tools are
+    configured.
+    """
+    tools = []
+    prefix = "fix.tools."
+    for section in ui.configsections():
+        if not section.startswith(prefix):
+            continue
+        name = section[len(prefix) :]
+        if not name:
+            raise error.ConfigError(
+                _("invalid fix tool section [%s]: missing tool name") % section
+            )
+        command = _parsecommand(ui.config(section, "command"), section)
+        patterns = _parsepatterns(ui.config(section, "patterns"), section)
+        matcher = matchmod.match(repo.root, "", patterns, default="glob")
+        tools.append(FixTool(name, command, matcher))
+    if not tools:
+        raise error.Abort(
+            _("no fix tools configured"),
+            hint=_(
+                "configure sections like [fix.tools.NAME] with command and patterns"
+            ),
+        )
+    return tools
+
+
+def _parsecommand(rawvalue, section):
+    """Parse a tool command from config. Requires a JSON array of strings."""
+    if rawvalue is None:
+        raise error.ConfigError(_("missing %s.command") % section)
+    command = _parsearray(rawvalue, section, "command")
+    if not command:
+        raise error.ConfigError(_("empty %s.command") % section)
+    return command
+
+
+def _parsepatterns(rawvalue, section):
+    """Parse file matching patterns from config. Expects a JSON string array."""
+    if rawvalue is None:
+        raise error.ConfigError(_("missing %s.patterns") % section)
+    patterns = _parsearray(rawvalue, section, "patterns")
+    if not patterns:
+        raise error.ConfigError(_("empty %s.patterns") % section)
+    return [_normalizepattern(pattern, section) for pattern in patterns]
+
+
+def _parsearray(rawvalue, section, name):
+    """Parse a JSON array of strings."""
+    try:
+        value = json.loads(rawvalue)
+    except ValueError as exc:
+        raise error.ConfigError(
+            _("invalid %s.%s: %s") % (section, name, util.forcebytestr(exc))
+        )
+    if not isinstance(value, list):
+        raise error.ConfigError(_("%s.%s must be a JSON array") % (section, name))
+    for item in value:
+        if not isinstance(item, str):
+            raise error.ConfigError(
+                _("%s.%s must contain only strings") % (section, name)
+            )
+    return value
+
+
+def _normalizepattern(pattern, section):
+    """Strip surrounding quotes from the value part of kind:value patterns.
+
+    Config values like ``glob:'*.py'`` arrive with the quotes still embedded;
+    the matcher expects ``glob:*.py``.
+    """
+    kind, sep, value = pattern.partition(":")
+    if not sep:
+        return pattern
+    if not kind:
+        raise error.ConfigError(
+            _("invalid empty matcher kind in %s.patterns") % section
+        )
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'):
+        return "%s:%s" % (kind, value[1:-1])
+    return pattern
