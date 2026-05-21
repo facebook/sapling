@@ -5785,6 +5785,9 @@ ImmediateFuture<uint64_t> TreeInode::invalidateChildrenNotAccessedRecentlyFuse(
         // We need to hold the contents lock to iterate entries, and call
         // invalidateEntry for each stale child.
         auto contents = self->getContentsUnchecked().rlock();
+        auto selfFsRefcount = self->debugGetFsRefcount();
+        uint64_t numSkippedParentNoFsRef = 0;
+        uint64_t numSkippedChildNoFsRef = 0;
         for (const auto& entry : contents->entries) {
           auto* entryInode = entry.second.getInode();
           if (!entryInode) {
@@ -5798,6 +5801,18 @@ ImmediateFuture<uint64_t> TreeInode::invalidateChildrenNotAccessedRecentlyFuse(
           auto lastFsRequestTime = std::chrono::system_clock::from_time_t(
               entryInode->getLastFsRequestTime().toTimespec().tv_sec);
           if (lastFsRequestTime < cutoff) {
+            // This is a racy best-effort optimization. If the kernel has
+            // already dropped the parent inode, FUSE_NOTIFY_INVAL_ENTRY cannot
+            // identify the entry to invalidate. If the child inode has no
+            // kernel references, invalidating it cannot produce more FORGETs.
+            if (selfFsRefcount == 0) {
+              numSkippedParentNoFsRef++;
+              continue;
+            }
+            if (entryInode->debugGetFsRefcount() == 0) {
+              numSkippedChildNoFsRef++;
+              continue;
+            }
             // Send FUSE_NOTIFY_INVAL_ENTRY. This causes the kernel to drop
             // its dcache entry and asynchronously send FORGET, which
             // decrements fsRefcount. The inode can then be unloaded by a
@@ -5814,6 +5829,14 @@ ImmediateFuture<uint64_t> TreeInode::invalidateChildrenNotAccessedRecentlyFuse(
               "FUSE GC invalidated {} entries under {}",
               numInvalidated,
               self->getLogPath());
+        }
+        if (numSkippedParentNoFsRef > 0 || numSkippedChildNoFsRef > 0) {
+          XLOGF(
+              DBG9,
+              "FUSE GC skipped invalidating entries under {}: parentNoFsRef={}, childNoFsRef={}",
+              self->getLogPath(),
+              numSkippedParentNoFsRef,
+              numSkippedChildNoFsRef);
         }
 
         return numInvalidated;
