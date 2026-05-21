@@ -529,6 +529,46 @@ fn test_truncate() {
 }
 
 #[test]
+fn test_non_linear_skipped_rev() {
+    let flags = EditFlags::default();
+    // rev 0 has content, rev 1 is skipped (not depend on rev 0), rev 2 depends on rev 1.
+    let log = AbstractLineLog::default()
+        .edit_chunk(0, 0, 0, 0, vec!["a", "c"], flags)
+        .edit_chunk(0, 1, 1, 2, vec!["b"], flags);
+    assert_eq!(log.nanodag().to_string(), "{0-2,1}");
+    assert_eq!(log.dep_map().to_string(), "{0-2,1}");
+    assert_eq!(log.checkout_text(0), "ac");
+    assert_eq!(log.checkout_text(1), "");
+    assert_eq!(log.checkout_text(2), "abc");
+}
+
+#[test]
+fn test_non_linear_merged_rev() {
+    let flags = EditFlags::default();
+    // rev 0: a -> rev 1: b b    ------------> b
+    // rev 0: c                  --> rev 3 --> x
+    // rev 0: d ----> rev 2: e e ------------> e
+    // rev 0: f
+    let log = AbstractLineLog::default()
+        .with_dag_edge(3, 3)
+        .edit_chunk(0, 0, 0, 0, vec!["a", "c", "d", "f"], flags)
+        .edit_chunk(0, 0, 1, 1, vec!["b", "b"], flags)
+        .edit_chunk(0, 2, 3, 2, vec!["e", "e"], flags)
+        .with_dag_edge(2, 3)
+        .with_dag_edge(1, 3);
+    assert_eq!(log.nanodag().to_string(), "0-{1,2}-3");
+    assert_eq!(log.dep_map().to_string(), "0-{1,2}");
+    assert_eq!(log.checkout_text(0), "acdf"); // rev 0, orig content
+    assert_eq!(log.checkout_text(1), "bbcdf"); // rev 1 replaced "a" with "bb"
+    assert_eq!(log.checkout_text(2), "aceef"); // rev 2 replaced "d" with "ee", without rev 1 "bb"
+    assert_eq!(log.checkout_text(3), "bbceef"); // rev 3 is a (unchanged) merge, with both "bb" and "ee"
+
+    // changes on the default merge result
+    let log = log.edit_chunk(3, 1, 4, 3, vec!["x"], flags);
+    assert_eq!(log.checkout_text(3), "bxef"); // rev 3 replaced the middle "bce" with "x"
+}
+
+#[test]
 fn test_flatten() {
     // 3 revisions: rev1 "a b c", rev2 "b c d e", rev3 "a c d f".
     // Edits applied in reverse chunk order within each rev.
