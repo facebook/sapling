@@ -523,6 +523,33 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Minimum interval between pressure-based GC runs for a mount, used when
+   * inode count is at/above gc-pressure-max-inodes.
+   */
+  ConfigSetting<std::chrono::nanoseconds> pressureBasedGcPeriodMin{
+      "mount:pressure-gc-period-min",
+      std::chrono::seconds{30},
+      this};
+
+  /**
+   * Maximum interval between pressure-based GC runs for a mount, used when
+   * inode count is below gc-pressure-min-inodes.
+   */
+  ConfigSetting<std::chrono::nanoseconds> pressureBasedGcPeriodMax{
+      "mount:pressure-gc-period-max",
+      std::chrono::minutes{5},
+      this};
+
+  /**
+   * How often the pressure-based GC scheduler wakes up to check whether each
+   * mount is due for a pressure-derived GC run.
+   */
+  ConfigSetting<std::chrono::nanoseconds> pressureBasedGcTickPeriod{
+      "mount:pressure-gc-tick-period",
+      std::chrono::seconds{5},
+      this};
+
+  /**
    * If the number of inodes is greater than this threshold, the garbage
    * collection cutoff will be more aggressive.
    *

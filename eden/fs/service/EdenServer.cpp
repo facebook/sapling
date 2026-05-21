@@ -645,7 +645,8 @@ EdenServer::EdenServer(
           makePrefetchFilesV2Threads(thriftUsePrefetchExecutor_, edenConfig)},
       progressManager_{
           std::make_unique<folly::Synchronized<EdenServer::ProgressManager>>()},
-      startupStatusChannel_{std::move(startupStatusChannel)} {
+      startupStatusChannel_{std::move(startupStatusChannel)},
+      lastPressureBasedGcTimes_{kPathMapDefaultCaseSensitive} {
   auto counters = fb303::ServiceData::get()->getDynamicCounters();
 
   registerInodePopulationReportsCallback();
@@ -1180,14 +1181,20 @@ void EdenServer::updatePeriodicTaskIntervals(const EdenConfig& config) {
       std::chrono::duration_cast<std::chrono::milliseconds>(
           config.overlayMaintenanceInterval.getValue()));
 
-  /**
-   * For now, periodic GC only makes sense on Windows and macOS, with unknown
-   * behavior on Linux.
-   */
+  // Pressure-based GC ticks frequently so it can react quickly to sudden inode
+  // growth. Each tick uses the pressure policy to decide which mounts are due.
   if (config.enableGc.getValue()) {
-    gcTask_.updateInterval(
-        std::chrono::duration_cast<std::chrono::milliseconds>(
-            config.gcPeriod.getValue()));
+    if (config.enablePressureBasedGc.getValue()) {
+      gcTask_.updateInterval(
+          std::chrono::duration_cast<std::chrono::milliseconds>(
+              config.pressureBasedGcTickPeriod.getValue()));
+    } else {
+      gcTask_.updateInterval(
+          std::chrono::duration_cast<std::chrono::milliseconds>(
+              config.gcPeriod.getValue()));
+    }
+  } else {
+    gcTask_.updateInterval(0s);
   }
 
   if (config.enableNfsServer.getValue() &&
@@ -3002,9 +3009,24 @@ void EdenServer::garbageCollectAllMounts() {
       std::chrono::duration_cast<std::chrono::system_clock::duration>(
           config->aggressiveGcCutoff.getValue());
   auto pressureBasedGc = config->enablePressureBasedGc.getValue();
+  auto steadyNow = std::chrono::steady_clock::now();
   std::chrono::system_clock::time_point cutoff;
 
   auto mountPoints = getMountPoints();
+  if (pressureBasedGc) {
+    PathMap<std::chrono::steady_clock::time_point, AbsolutePath>
+        activePressureBasedGcTimes{kPathMapDefaultCaseSensitive};
+    for (auto& mountHandle : mountPoints) {
+      auto& mount = mountHandle.getEdenMount();
+      auto lastGcTime = lastPressureBasedGcTimes_.find(mount.getPath());
+      if (lastGcTime != lastPressureBasedGcTimes_.end()) {
+        activePressureBasedGcTimes.emplace(mount.getPath(), lastGcTime->second);
+      }
+    }
+    lastPressureBasedGcTimes_ = std::move(activePressureBasedGcTimes);
+  } else {
+    lastPressureBasedGcTimes_.clear();
+  }
   for (auto& mountHandle : mountPoints) {
     if (pressureBasedGc) {
       // Use the pressure-based policy to compute a dynamic cutoff based on
@@ -3012,6 +3034,28 @@ void EdenServer::garbageCollectAllMounts() {
       auto& mount = mountHandle.getEdenMount();
       auto policy = mount.getInodePressurePolicy();
       auto inodeCount = mount.getInodeMap()->getTotalInodeCountFast();
+      auto gcPeriod = policy->getGcPeriod(inodeCount);
+      auto lastGcTime = lastPressureBasedGcTimes_.find(mount.getPath());
+      if (lastGcTime != lastPressureBasedGcTimes_.end() &&
+          steadyNow - lastGcTime->second < gcPeriod) {
+        XLOGF(
+            DBG6,
+            "Skipping pressure-based GC for: {}, next run in {} seconds",
+            mount.getPath(),
+            std::chrono::duration_cast<std::chrono::seconds>(
+                gcPeriod - (steadyNow - lastGcTime->second))
+                .count());
+        continue;
+      }
+      if (mount.isWorkingCopyGCRunning()) {
+        XLOGF(
+            DBG6,
+            "Skipping pressure-based GC for: {}, another GC is already in progress",
+            mount.getPath());
+        continue;
+      }
+      lastPressureBasedGcTimes_[mount.getPath()] = steadyNow;
+
       auto gcCutoffDuration = policy->getGcCutoff(inodeCount);
 
       if constexpr (folly::kIsWindows) {

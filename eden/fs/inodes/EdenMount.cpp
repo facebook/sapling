@@ -1140,6 +1140,10 @@ void EdenMount::updateInodePressurePolicy() {
   auto fuseTtlMin = config->fuseTtlMinSeconds.getValue();
   auto gcCutoffMax = config->gcCutoffMaxSeconds.getValue();
   auto gcCutoffMin = config->gcCutoffMinSeconds.getValue();
+  auto gcPeriodMax = std::chrono::duration_cast<std::chrono::seconds>(
+      config->pressureBasedGcPeriodMax.getValue());
+  auto gcPeriodMin = std::chrono::duration_cast<std::chrono::seconds>(
+      config->pressureBasedGcPeriodMin.getValue());
 
   cachedPressurePolicy_ = std::make_shared<const InodePressurePolicy>(
       minInodes,
@@ -1147,19 +1151,24 @@ void EdenMount::updateInodePressurePolicy() {
       std::chrono::seconds{fuseTtlMax},
       std::chrono::seconds{fuseTtlMin},
       std::chrono::seconds{gcCutoffMax},
-      std::chrono::seconds{gcCutoffMin});
+      std::chrono::seconds{gcCutoffMin},
+      gcPeriodMax,
+      gcPeriodMin);
 
   XLOGF(
       DBG4,
       "Updated InodePressurePolicy for {}: "
-      "inodes=[{}, {}], fuseTtl=[{}s, {}s], gcCutoff=[{}s, {}s]",
+      "inodes=[{}, {}], fuseTtl=[{}s, {}s], gcCutoff=[{}s, {}s], "
+      "gcPeriod=[{}s, {}s]",
       getPath(),
       minInodes,
       maxInodes,
       fuseTtlMin,
       fuseTtlMax,
       gcCutoffMin,
-      gcCutoffMax);
+      gcCutoffMax,
+      gcPeriodMin.count(),
+      gcPeriodMax.count());
 }
 
 std::optional<int64_t> EdenMount::getCheckoutProgress() const {

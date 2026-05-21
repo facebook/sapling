@@ -38,6 +38,8 @@ class InodePressurePolicy {
    * @param fuseTtlMin TTL at the highest pressure (seconds).
    * @param gcCutoffMax GC cutoff at the lowest pressure (seconds).
    * @param gcCutoffMin GC cutoff at the highest pressure (seconds).
+   * @param gcPeriodMax GC period at the lowest pressure (seconds).
+   * @param gcPeriodMin GC period at the highest pressure (seconds).
    */
   InodePressurePolicy(
       uint64_t minInodeCount,
@@ -45,7 +47,9 @@ class InodePressurePolicy {
       std::chrono::seconds fuseTtlMax,
       std::chrono::seconds fuseTtlMin,
       std::chrono::seconds gcCutoffMax,
-      std::chrono::seconds gcCutoffMin);
+      std::chrono::seconds gcCutoffMin,
+      std::chrono::seconds gcPeriodMax,
+      std::chrono::seconds gcPeriodMin);
 
   /**
    * Get the FUSE entry/attribute cache TTL for a given inode count.
@@ -57,6 +61,11 @@ class InodePressurePolicy {
    * Inodes not accessed within this duration are candidates for GC.
    */
   std::chrono::seconds getGcCutoff(uint64_t totalInodeCount) const;
+
+  /**
+   * Get the interval between pressure-based GC runs for a given inode count.
+   */
+  std::chrono::seconds getGcPeriod(uint64_t totalInodeCount) const;
 
  private:
   std::chrono::seconds interpolate(
@@ -72,9 +81,11 @@ class InodePressurePolicy {
   uint64_t maxInodeCount_;
   std::chrono::seconds fuseTtlMax_;
   std::chrono::seconds gcCutoffMax_;
+  std::chrono::seconds gcPeriodMax_;
   double logRange_; // precomputed log2(maxInodeCount/minInodeCount)
   double fuseTtlLogRatio_; // precomputed log2(fuseTtlMin/fuseTtlMax)
   double gcCutoffLogRatio_; // precomputed log2(gcCutoffMin/gcCutoffMax)
+  double gcPeriodLogRatio_; // precomputed log2(gcPeriodMin/gcPeriodMax)
 };
 
 } // namespace facebook::eden

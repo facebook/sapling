@@ -1003,6 +1003,12 @@ class EdenServer : private TakeoverHandler {
   std::unique_ptr<folly::LifoSem> fsckSemaphore_;
 
   /**
+   * Last scheduled pressure-based GC time by mount path.
+   */
+  PathMap<std::chrono::steady_clock::time_point, AbsolutePath>
+      lastPressureBasedGcTimes_;
+
+  /**
    * Cancellation source for garbage collection operations.
    * This allows cancelling any in-progress GC operations.
    */

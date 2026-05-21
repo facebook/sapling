@@ -28,7 +28,9 @@ InodePressurePolicy makePolicy() {
       std::chrono::seconds{3600},
       std::chrono::seconds{60},
       std::chrono::seconds{7200},
-      std::chrono::seconds{300});
+      std::chrono::seconds{300},
+      std::chrono::seconds{3600},
+      std::chrono::seconds{5});
 }
 
 } // namespace

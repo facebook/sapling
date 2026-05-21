@@ -19,17 +19,21 @@ InodePressurePolicy::InodePressurePolicy(
     std::chrono::seconds fuseTtlMax,
     std::chrono::seconds fuseTtlMin,
     std::chrono::seconds gcCutoffMax,
-    std::chrono::seconds gcCutoffMin)
+    std::chrono::seconds gcCutoffMin,
+    std::chrono::seconds gcPeriodMax,
+    std::chrono::seconds gcPeriodMin)
     : minInodeCount_(minInodeCount),
       maxInodeCount_(std::max(maxInodeCount, minInodeCount + 1)),
       fuseTtlMax_(fuseTtlMax),
       gcCutoffMax_(gcCutoffMax),
+      gcPeriodMax_(gcPeriodMax),
       logRange_(
           std::log2(
               static_cast<double>(maxInodeCount_) /
               static_cast<double>(std::max(minInodeCount_, uint64_t{1})))),
       fuseTtlLogRatio_(computeLogRatio(fuseTtlMax, fuseTtlMin)),
-      gcCutoffLogRatio_(computeLogRatio(gcCutoffMax, gcCutoffMin)) {}
+      gcCutoffLogRatio_(computeLogRatio(gcCutoffMax, gcCutoffMin)),
+      gcPeriodLogRatio_(computeLogRatio(gcPeriodMax, gcPeriodMin)) {}
 
 double InodePressurePolicy::computeLogRatio(
     std::chrono::seconds max,
@@ -102,6 +106,11 @@ std::chrono::seconds InodePressurePolicy::getFuseTtl(
 std::chrono::seconds InodePressurePolicy::getGcCutoff(
     uint64_t totalInodeCount) const {
   return interpolate(totalInodeCount, gcCutoffMax_, gcCutoffLogRatio_);
+}
+
+std::chrono::seconds InodePressurePolicy::getGcPeriod(
+    uint64_t totalInodeCount) const {
+  return interpolate(totalInodeCount, gcPeriodMax_, gcPeriodLogRatio_);
 }
 
 } // namespace facebook::eden

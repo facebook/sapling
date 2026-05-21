@@ -22,7 +22,9 @@ InodePressurePolicy makeStandardPolicy() {
       /*fuseTtlMax=*/600s,
       /*fuseTtlMin=*/10s,
       /*gcCutoffMax=*/3600s,
-      /*gcCutoffMin=*/60s);
+      /*gcCutoffMin=*/60s,
+      /*gcPeriodMax=*/1h,
+      /*gcPeriodMin=*/5s);
 }
 
 } // namespace
@@ -34,6 +36,8 @@ TEST(InodePressurePolicy, BelowMinReturnsMaxValues) {
   EXPECT_EQ(600s, policy.getFuseTtl(100'000));
   EXPECT_EQ(3600s, policy.getGcCutoff(0));
   EXPECT_EQ(3600s, policy.getGcCutoff(100'000));
+  EXPECT_EQ(1h, policy.getGcPeriod(0));
+  EXPECT_EQ(1h, policy.getGcPeriod(100'000));
 }
 
 TEST(InodePressurePolicy, AboveMaxReturnsMinValues) {
@@ -43,6 +47,8 @@ TEST(InodePressurePolicy, AboveMaxReturnsMinValues) {
   EXPECT_EQ(10s, policy.getFuseTtl(10'000'000));
   EXPECT_EQ(60s, policy.getGcCutoff(1'000'000));
   EXPECT_EQ(60s, policy.getGcCutoff(10'000'000));
+  EXPECT_EQ(5s, policy.getGcPeriod(1'000'000));
+  EXPECT_EQ(5s, policy.getGcPeriod(10'000'000));
 }
 
 TEST(InodePressurePolicy, ContinuousInterpolationInRange) {
@@ -57,6 +63,10 @@ TEST(InodePressurePolicy, ContinuousInterpolationInRange) {
   EXPECT_LT(gcLow, 3600s);
   EXPECT_GT(gcLow, 3000s);
 
+  auto gcPeriodLow = policy.getGcPeriod(110'000);
+  EXPECT_LT(gcPeriodLow, 1h);
+  EXPECT_GT(gcPeriodLow, 50min);
+
   // Near max: should be close to min
   auto ttlHigh = policy.getFuseTtl(900'000);
   EXPECT_LT(ttlHigh, 50s);
@@ -65,6 +75,10 @@ TEST(InodePressurePolicy, ContinuousInterpolationInRange) {
   auto gcHigh = policy.getGcCutoff(900'000);
   EXPECT_LT(gcHigh, 300s);
   EXPECT_GT(gcHigh, 60s);
+
+  auto gcPeriodHigh = policy.getGcPeriod(900'000);
+  EXPECT_LT(gcPeriodHigh, 30s);
+  EXPECT_GT(gcPeriodHigh, 5s);
 }
 
 TEST(InodePressurePolicy, ValuesDecreaseMonotonically) {
@@ -72,13 +86,17 @@ TEST(InodePressurePolicy, ValuesDecreaseMonotonically) {
 
   std::chrono::seconds prevTtl = 601s;
   std::chrono::seconds prevGc = 3601s;
+  std::chrono::seconds prevPeriod = 1h + 1s;
   for (uint64_t count = 100'000; count <= 1'000'000; count += 50'000) {
     auto ttl = policy.getFuseTtl(count);
     auto gc = policy.getGcCutoff(count);
+    auto period = policy.getGcPeriod(count);
     EXPECT_LE(ttl, prevTtl) << "at count " << count;
     EXPECT_LE(gc, prevGc) << "at count " << count;
+    EXPECT_LE(period, prevPeriod) << "at count " << count;
     prevTtl = ttl;
     prevGc = gc;
+    prevPeriod = period;
   }
 }
 
@@ -106,7 +124,9 @@ TEST(InodePressurePolicy, EqualMinMaxProducesConstantValues) {
       /*fuseTtlMax=*/300s,
       /*fuseTtlMin=*/300s,
       /*gcCutoffMax=*/1800s,
-      /*gcCutoffMin=*/1800s);
+      /*gcCutoffMin=*/1800s,
+      /*gcPeriodMax=*/60s,
+      /*gcPeriodMin=*/60s);
 
   EXPECT_EQ(300s, policy.getFuseTtl(0));
   EXPECT_EQ(300s, policy.getFuseTtl(500'000));
@@ -114,6 +134,9 @@ TEST(InodePressurePolicy, EqualMinMaxProducesConstantValues) {
   EXPECT_EQ(1800s, policy.getGcCutoff(0));
   EXPECT_EQ(1800s, policy.getGcCutoff(500'000));
   EXPECT_EQ(1800s, policy.getGcCutoff(2'000'000));
+  EXPECT_EQ(60s, policy.getGcPeriod(0));
+  EXPECT_EQ(60s, policy.getGcPeriod(500'000));
+  EXPECT_EQ(60s, policy.getGcPeriod(2'000'000));
 }
 
 TEST(InodePressurePolicy, EqualInodeCountsUsesMaxValues) {
@@ -123,11 +146,15 @@ TEST(InodePressurePolicy, EqualInodeCountsUsesMaxValues) {
       /*fuseTtlMax=*/600s,
       /*fuseTtlMin=*/10s,
       /*gcCutoffMax=*/3600s,
-      /*gcCutoffMin=*/60s);
+      /*gcCutoffMin=*/60s,
+      /*gcPeriodMax=*/1h,
+      /*gcPeriodMin=*/5s);
 
   // At or below → max, above → min
   EXPECT_EQ(600s, policy.getFuseTtl(500'000));
   EXPECT_EQ(10s, policy.getFuseTtl(500'001));
   EXPECT_EQ(3600s, policy.getGcCutoff(500'000));
   EXPECT_EQ(60s, policy.getGcCutoff(500'001));
+  EXPECT_EQ(1h, policy.getGcPeriod(500'000));
+  EXPECT_EQ(5s, policy.getGcPeriod(500'001));
 }
