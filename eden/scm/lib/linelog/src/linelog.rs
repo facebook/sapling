@@ -700,6 +700,16 @@ impl<T> AbstractLineLog<T> {
         }
     }
 
+    /// Insert a rev after `rev`.
+    ///
+    /// Original `r` (`r > rev`) will shift to `r + 1` in both the linelog
+    /// instructions and the dag.
+    pub fn insert_shift(self, rev: Rev) -> Self {
+        let result = self.remap_revs(&|r| if r > rev { r + 1 } else { r });
+        let dag = result.dag.insert_shift(rev);
+        Self { dag, ..result }
+    }
+
     /// Truncate linelog. Drop revs >= the given `rev`.
     pub fn truncate(self, rev: Rev) -> Self {
         let mut max_rev = 0;
