@@ -128,9 +128,8 @@ fn test_random_cases() {
             assert_eq!(log.checkout_lines(*b_rev).len(), line_count);
         }
 
-        // edit_chunk and checkout_lines sequentially do not trigger (slow)
-        // dag cache initialization.
-        assert_eq!(stats.dag_cache.load(Ordering::Acquire), 0);
+        // execute prepares ancestor revsets once, then reuses the dag cache.
+        assert_eq!(stats.dag_cache.load(Ordering::Acquire), 1);
         // All in "happy" cache_hit paths. "execute" called O(1) times.
         assert_eq!(stats.execute.load(Ordering::Acquire), 1);
 
@@ -181,7 +180,7 @@ fn test_a_lines_cache_effectiveness() {
     check("after checkout", 4, 1);
 
     // Verify the dag cache (for ancestors and descendants) only gets built O(1) times.
-    assert_eq!(stats.dag_cache.load(Ordering::Acquire), 0);
+    assert_eq!(stats.dag_cache.load(Ordering::Acquire), 1);
 }
 
 #[test]
