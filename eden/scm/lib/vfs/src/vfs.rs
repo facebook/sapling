@@ -198,7 +198,7 @@ impl VFS {
 
     fn no_follow(&self) -> Result<&NoFollowRoot> {
         if let Some(no_follow) = self.inner.no_follow.get() {
-            return Ok(no_follow);
+            Ok(no_follow)
         } else {
             let root = NoFollowRoot::new(self.root())?;
             Ok(self.inner.no_follow.get_or_init(|| root))
