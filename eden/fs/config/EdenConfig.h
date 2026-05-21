@@ -1880,6 +1880,14 @@ class EdenConfig : private ConfigSettingManager {
       false,
       this};
 
+  /**
+   * Controls whether EdenFS uses getDigestHash coroutine implementations
+   */
+  ConfigSetting<bool> enableCoroutinesPhase11{
+      "coroutines:enable-phase11",
+      false,
+      this};
+
   // [blobcache]
 
   /**
