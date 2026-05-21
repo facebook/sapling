@@ -2918,7 +2918,7 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectWorkingCopy(
   auto totalNumberOfInodesBeforeGC = inodeCountsBeforeGC.fileCount +
       inodeCountsBeforeGC.treeCount + inodeCountsBeforeGC.unloadedInodeCount;
   XLOGF(
-      DBG1,
+      DBG4,
       "Starting {} GC for: {} total number of inodes {}",
       pressureBased ? "pressure-based" : "config-based",
       mountPath,
@@ -2950,25 +2950,30 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectWorkingCopy(
         auto totalNumberOfInodesAfterGC = inodeCountsAfterGC.fileCount +
             inodeCountsAfterGC.treeCount +
             inodeCountsAfterGC.unloadedInodeCount;
+        auto inodeDelta = folly::to_signed(totalNumberOfInodesBeforeGC) -
+            folly::to_signed(totalNumberOfInodesAfterGC);
 
         edenFsEventsLogger->logEvent(
             WorkingCopyGc{
-                runtime.count(),
-                numInvalidated,
-                success,
-                static_cast<int64_t>(
-                    (totalNumberOfInodesBeforeGC -
-                     totalNumberOfInodesAfterGC))});
-        XLOGF(
-            DBG1,
-            "{} GC for: {}, completed in: {} seconds, "
-            "invalidated: {}, inodes before: {}, inodes after: {}",
-            pressureBased ? "Pressure-based" : "Config-based",
-            mountPath,
-            runtime.count(),
-            numInvalidated,
-            totalNumberOfInodesBeforeGC,
-            totalNumberOfInodesAfterGC);
+                runtime.count(), numInvalidated, success, inodeDelta});
+        auto shouldLogAtDbg2 = runtime > std::chrono::seconds{5} ||
+            numInvalidated > 10'000 || inodeDelta > 10'000;
+        auto logMessage = [&] {
+          return fmt::format(
+              "{} GC for: {}, completed in: {} seconds, "
+              "invalidated: {}, inodes before: {}, inodes after: {}",
+              pressureBased ? "Pressure-based" : "Config-based",
+              mountPath,
+              runtime.count(),
+              numInvalidated,
+              totalNumberOfInodesBeforeGC,
+              totalNumberOfInodesAfterGC);
+        };
+        if (shouldLogAtDbg2) {
+          XLOG(DBG2) << logMessage();
+        } else {
+          XLOG(DBG4) << logMessage();
+        }
 
         return invalidatedTry.value();
       });
