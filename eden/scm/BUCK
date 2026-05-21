@@ -280,14 +280,6 @@ buck_sh_binary(
     main = "contrib/zsh_completion",
 )
 
-export_file(
-    name = "contrib/scm-prompt.sh",
-)
-
-export_file(
-    name = "contrib/zsh_completion",
-)
-
 buck_genrule(
     name = "paths.d_mercurial",
     out = "mercurial",
