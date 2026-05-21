@@ -246,7 +246,7 @@ impl GitImportLfs {
                 "{} not found. Using gitlfs metadata as file content instead.",
                 uri,
             );
-            return Ok(not_found_pointer_fallback(metadata)?);
+            return not_found_pointer_fallback(metadata);
         }
         Err(format_err!("{} response {:?}", uri, resp))
     }
