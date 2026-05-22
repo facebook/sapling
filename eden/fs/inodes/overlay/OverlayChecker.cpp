@@ -11,6 +11,7 @@
 
 #include <boost/filesystem.hpp>
 #include <fcntl.h>
+#include <fmt/core.h>
 #include <folly/portability/Unistd.h>
 #include <ctime>
 
@@ -18,7 +19,6 @@
 #include <folly/ExceptionWrapper.h>
 #include <folly/File.h>
 #include <folly/FileUtil.h>
-#include <folly/Format.h>
 #include <folly/Overload.h>
 #include <folly/String.h>
 #include <folly/gen/Base.h>
@@ -365,10 +365,8 @@ class OverlayChecker::UnexpectedInodeShard : public OverlayChecker::Error {
 
 class OverlayChecker::InodeDataError : public OverlayChecker::Error {
  public:
-  template <typename... Args>
-  explicit InodeDataError(InodeNumber number, Args&&... args)
-      : number_(number),
-        message_(folly::sformat(std::forward<Args>(args)...)) {}
+  explicit InodeDataError(InodeNumber number, std::string message)
+      : number_(number), message_(std::move(message)) {}
 
   string getMessage(OverlayChecker*) const override {
     return fmt::format(

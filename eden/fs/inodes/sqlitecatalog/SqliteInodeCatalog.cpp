@@ -7,8 +7,8 @@
 
 #include "eden/fs/inodes/sqlitecatalog/SqliteInodeCatalog.h"
 
+#include <fmt/core.h>
 #include <folly/File.h>
-#include <folly/Format.h>
 
 #include "eden/common/utils/Bug.h"
 #include "eden/fs/inodes/InodeNumber.h"
@@ -97,9 +97,9 @@ InodeNumber SqliteInodeCatalog::nextInodeNumber() {
 
 std::optional<fsck::InodeInfo> SqliteInodeCatalog::loadInodeInfo(
     InodeNumber number) {
-  auto inodeError = [number](auto&&... args) -> std::optional<fsck::InodeInfo> {
-    return {fsck::InodeInfo(
-        number, fsck::InodeType::Error, folly::sformat(args...))};
+  auto inodeError =
+      [number](std::string msg) -> std::optional<fsck::InodeInfo> {
+    return {fsck::InodeInfo(number, fsck::InodeType::Error, std::move(msg))};
   };
 
   if (!hasOverlayDir(number)) {

@@ -6,8 +6,7 @@
  */
 
 #include <fmt/format.h>
-#include <folly/Conv.h>
-#include <folly/Format.h>
+#include <folly/String.h>
 #include <iomanip>
 #include <map>
 #include <sstream>
@@ -57,19 +56,6 @@ void fmt_benchmark(benchmark::State& state) {
   TestData data;
   for (auto _ : state) {
     std::string result = fmt::format(
-        "Data{{number: {}, str: {}, dbl: {}, flag: {}}}",
-        data.number,
-        data.str,
-        data.dbl,
-        data.flag);
-    benchmark::DoNotOptimize(result);
-  }
-}
-
-void folly_benchmark(benchmark::State& state) {
-  TestData data;
-  for (auto _ : state) {
-    std::string result = folly::sformat(
         "Data{{number: {}, str: {}, dbl: {}, flag: {}}}",
         data.number,
         data.str,
@@ -161,54 +147,12 @@ void expensive_fmt_benchmark(benchmark::State& state) {
   }
 }
 
-void expensive_folly_benchmark(benchmark::State& state) {
-  ExpensiveTestData data;
-  for (auto _ : state) {
-    std::string numbers_str = folly::join(", ", data.numbers);
-
-    std::string metadata_str;
-    bool first = true;
-    for (const auto& [key, value] : data.metadata) {
-      if (!first) {
-        metadata_str += folly::sformat(",{}: {}", key, value);
-      } else {
-        metadata_str += folly::sformat("{}: {}", key, value);
-        first = false;
-      }
-    }
-
-    std::string tags_str = folly::join(", ", data.tags);
-
-    std::string metrics_str = folly::sformat(
-        "{:.2f}, {:.2f}, {:.2f}, {:.2f}, {:.2f}",
-        data.performance_metrics[0],
-        data.performance_metrics[1],
-        data.performance_metrics[2],
-        data.performance_metrics[3],
-        data.performance_metrics[4]);
-
-    std::string result = folly::sformat(
-        "ExpensiveData{{numbers: [{}], metadata: {{{}}}, tags: [{}], "
-        "metrics: [{}], errors: {}, active: {}, desc: {}}}",
-        numbers_str,
-        metadata_str,
-        tags_str,
-        metrics_str,
-        data.count,
-        data.is_active,
-        data.description);
-    benchmark::DoNotOptimize(result);
-  }
-}
-
 // TODO std::format benchmark
 
 BENCHMARK(iostream_benchmark);
 BENCHMARK(fmt_benchmark);
-BENCHMARK(folly_benchmark);
 BENCHMARK(expensive_iostream_benchmark);
 BENCHMARK(expensive_fmt_benchmark);
-BENCHMARK(expensive_folly_benchmark);
 
 } // namespace
 

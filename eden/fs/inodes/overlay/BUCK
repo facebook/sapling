@@ -15,6 +15,9 @@ thrift_library(
     thrift_srcs = {
         "overlay.thrift": [],
     },
+    deps = [
+        "//thrift/annotation:thrift",
+    ],
 )
 
 cpp_library(
@@ -37,13 +40,13 @@ cpp_library(
         "OverlayChecker.h",
     ],
     deps = [
+        "fbsource//third-party/fmt:fmt",
         "//eden/common/utils:enum",
         "//eden/fs/inodes/fscatalog:fsinodecatalog",
         "//folly:conv",
         "//folly:exception_wrapper",
         "//folly:file",
         "//folly:file_util",
-        "//folly:format",
         "//folly:overload",
         "//folly:string",
         "//folly/gen:base",

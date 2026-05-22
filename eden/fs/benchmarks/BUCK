@@ -260,8 +260,7 @@ cpp_binary(
     deps = [
         "fbsource//third-party/fmt:fmt",
         "//eden/common/utils/benchharness:benchharness",
-        "//folly:conv",
-        "//folly:format",
+        "//folly:string",
     ],
 )
 
