@@ -130,8 +130,6 @@ Pull (lazy):
         pulling from test:e1
         DEBUG eagerepo::api: bookmarks master
         DEBUG eagerepo::api: bookmarks master
-        DEBUG sapling::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', '23d30dc6b70380b2d939023947578ae0e0198999')])
-        DEBUG eagerepo::api: bookmarks master
         DEBUG eagerepo::api: commit_known 
         DEBUG eagerepo::api: commit_graph 23d30dc6b70380b2d939023947578ae0e0198999 
         DEBUG eagerepo::api: commit_mutations 178c10ffbc2f92d5407c14478ae9d9dea81f232e, 23d30dc6b70380b2d939023947578ae0e0198999, 748104bd5058bf2c386d074d8dcf2704855380f6
@@ -141,8 +139,6 @@ Pull (lazy):
       DEBUG eagerepo::api: bookmarks master
       DEBUG eagerepo::api: commit_known 99dac869f01e09fe3d501fa645ea524af80d498f
       TRACE sapling::eagerpeer: known 99dac869f01e09fe3d501fa645ea524af80d498f: True
-      DEBUG eagerepo::api: bookmarks master
-      DEBUG sapling::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', '23d30dc6b70380b2d939023947578ae0e0198999')])
       DEBUG eagerepo::api: bookmarks master
       DEBUG eagerepo::api: commit_known 23d30dc6b70380b2d939023947578ae0e0198999
       searching for changes

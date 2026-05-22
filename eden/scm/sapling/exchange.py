@@ -31,7 +31,6 @@ from . import (
     obsolete,
     perftrace,
     phases,
-    pushkey,
     scmutil,
     sslutil,
     streamclone,
@@ -1398,22 +1397,6 @@ def _pulldiscovery(pullop):
         step(pullop)
 
 
-@pulldiscovery("b1:bookmarks")
-def _pullbookmarkbundle1(pullop):
-    """fetch bookmark data in bundle1 case
-
-    If not using bundle2, we have to fetch bookmarks before changeset
-    discovery to reduce the chance and impact of race conditions."""
-    if pullop.remotebookmarks is not None:
-        return
-    if pullop.canusebundle2 and "listkeys" in pullop.remotebundle2caps:
-        # all known bundle2 servers now support listkeys, but lets be nice with
-        # new implementation.
-        return
-    books = pullop.remote.listkeys("bookmarks")
-    pullop.remotebookmarks = bookmod.unhexlifybookmarks(books)
-
-
 @pulldiscovery("changegroup")
 def _pulldiscoverychangegroup(pullop):
     """discovery phase for the pull
@@ -1495,17 +1478,6 @@ def _pullbundle2(pullop):
         kwargs["bookmarks"] = True
         bookmarksrequested = True
 
-    if "listkeys" in pullop.remotebundle2caps:
-        if "phases" not in pullop.stepsdone and pullop.extras.get("phases", True):
-            kwargs["listkeys"] = ["phases"]
-        if "request-bookmarks" not in pullop.stepsdone and pullop.extras.get(
-            "bookmarks", True
-        ):
-            # make sure to always includes bookmark data when migrating
-            # `hg incoming --bundle` to using this function.
-            pullop.stepsdone.add("request-bookmarks")
-            kwargs.setdefault("listkeys", []).append("bookmarks")
-
     # If this is a full pull / clone and the server supports the clone bundles
     # feature, tell the server whether we attempted a clone bundle. The
     # presence of this flag indicates the client supports clone bundles. This
@@ -1543,21 +1515,12 @@ def _pullbundle2(pullop):
     if pullop.fetch:
         pullop.cgresult = bundle2.combinechangegroupresults(op)
 
-    # processing phases change
-    for namespace, value in op.records["listkeys"]:
-        if namespace == "phases":
-            _pullapplyphases(pullop, value)
-
     # processing bookmark update
     if bookmarksrequested:
         books = {}
         for record in op.records["bookmarks"]:
             books[record["bookmark"]] = record["node"]
         pullop.remotebookmarks = books
-    else:
-        for namespace, value in op.records["listkeys"]:
-            if namespace == "bookmarks":
-                pullop.remotebookmarks = bookmod.unhexlifybookmarks(value)
 
     # bookmark data were either already there or pulled in the bundle
     if pullop.remotebookmarks is not None and pullop.extras.get("bookmarks", True):
@@ -1714,42 +1677,6 @@ def _pullcommitgraph(pullop, version):
 def _pullphase(pullop):
     # narrow-heads is universally enabled; phase sync via listkeys is dead.
     return
-
-
-def _pullapplyphases(pullop, remotephases):
-    """apply phase movement from observed remote state"""
-    if "phases" in pullop.stepsdone:
-        return
-    pullop.stepsdone.add("phases")
-    publishing = bool(remotephases.get("publishing", False))
-    if remotephases and not publishing:
-        # remote is new and non-publishing
-        pheads, _dr = phases.analyzeremotephases(
-            pullop.repo, pullop.pulledsubset, remotephases
-        )
-        dheads = pullop.pulledsubset
-    else:
-        # Remote is old or publishing all common changesets
-        # should be seen as public
-        pheads = pullop.pulledsubset
-        dheads = []
-    unfi = pullop.repo
-    phase = unfi._phasecache.phase
-    rev = unfi.changelog.nodemap.get
-    public = phases.public
-    draft = phases.draft
-
-    # exclude changesets already public locally and update the others
-    pheads = [pn for pn in pheads if phase(unfi, rev(pn)) > public]
-    if pheads:
-        tr = pullop.gettransaction()
-        phases.advanceboundary(pullop.repo, tr, public, pheads)
-
-    # exclude changesets already draft locally and update the others
-    dheads = [pn for pn in dheads if phase(unfi, rev(pn)) > draft]
-    if dheads:
-        tr = pullop.gettransaction()
-        phases.advanceboundary(pullop.repo, tr, draft, dheads)
 
 
 def _pullbookmarks(pullop):
@@ -1934,19 +1861,6 @@ def _getbundlebookmarkpart(
     data = bookmod.binaryencode(books)
     if data:
         bundler.newpart("bookmarks", data=data)
-
-
-@getbundle2partsgenerator("listkeys")
-def _getbundlelistkeysparts(
-    bundler, repo, source, bundlecaps=None, b2caps=None, **kwargs
-):
-    """add parts containing listkeys namespaces to the requested bundle"""
-    listkeys = kwargs.get(r"listkeys", ())
-    for namespace in listkeys:
-        part = bundler.newpart("listkeys")
-        part.addparam("namespace", namespace)
-        keys = repo.listkeys(namespace).items()
-        part.data = pushkey.encodekeys(keys)
 
 
 @getbundle2partsgenerator("phases")
