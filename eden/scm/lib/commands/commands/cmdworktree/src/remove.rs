@@ -75,7 +75,7 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, _wc: &WorkingCopy) ->
             )])),
         )?;
 
-        edenfs_client::run_eden_remove(repo.config().as_ref(), &target)?;
+        run_eden_remove(ctx, repo, &target)?;
 
         Ok(())
     })?;
@@ -143,7 +143,7 @@ fn run_remove_all(
         }
 
         for path in &linked_paths {
-            edenfs_client::run_eden_remove(repo.config().as_ref(), path)?;
+            run_eden_remove(ctx, repo, path)?;
             grp.worktrees.remove(path);
         }
 
@@ -162,6 +162,20 @@ fn run_remove_all(
     // path above for cwd caveat.
 
     Ok(0)
+}
+
+/// Run `eden remove` for `path`. If the checkout directory is already gone
+/// (e.g., removed externally via `eden rm`), skips the call and returns Ok
+/// so the caller can proceed to clean the worktree registry.
+fn run_eden_remove(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, path: &Path) -> Result<()> {
+    if !path.exists() {
+        ctx.logger().warn(format!(
+            "eden checkout {} not found on disk, continuing to remove from registry",
+            path.display()
+        ));
+        return Ok(());
+    }
+    edenfs_client::run_eden_remove(repo.config().as_ref(), path)
 }
 
 fn confirm_remove(ctx: &ReqCtx<WorktreeOpts>, paths: &[&Path]) -> Result<()> {

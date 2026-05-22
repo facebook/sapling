@@ -100,15 +100,19 @@ eden rm removes the checkout but leaves the registry entry
   $ test -d $TESTTMP/orphan_wt
   [1]
 
-FIXME: sl worktree remove should clean the registry for the already-removed checkout
-instead of failing because eden rm can't find the checkout
+sl worktree remove should clean the registry for the already-removed checkout
 
   $ sl worktree remove $TESTTMP/orphan_wt -y
-  abort: * (glob)
-  [255]
+  eden checkout $TESTTMP/orphan_wt not found on disk, continuing to remove from registry
+  removed $TESTTMP/orphan_wt
 
-FIXME: sl worktree add to the same path should succeed after the registry is cleaned
+  $ sl worktree list
+  this worktree is not part of a group
+
+sl worktree add to the same path should succeed after the registry is cleaned
 
   $ sl worktree add $TESTTMP/orphan_wt
-  abort: * (glob)
-  [255]
+  created linked worktree at $TESTTMP/orphan_wt
+
+  $ sl worktree remove $TESTTMP/orphan_wt -y
+  removed $TESTTMP/orphan_wt
