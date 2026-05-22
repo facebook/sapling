@@ -21,7 +21,7 @@ struct DaemonError;
 class EdenErrorInfoBuilder {
  public:
   EdenErrorInfoBuilder& withMountPoint(std::string mountPoint);
-  EdenErrorInfoBuilder& withInode(uint64_t inode);
+  EdenErrorInfoBuilder& withInode(std::optional<uint64_t> inode);
   EdenErrorInfoBuilder& withFilePath(std::string filePath);
   EdenErrorInfoBuilder& withClientCommandName(std::string name);
   EdenErrorInfoBuilder& withErrorCode(int64_t code);

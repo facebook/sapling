@@ -12,7 +12,7 @@ namespace facebook::eden {
 
 EdenErrorInfoBuilder EdenErrorInfo::fuse(
     const ErrorArg& error,
-    uint64_t inode,
+    std::optional<uint64_t> inode,
     std::string mountPoint,
     SourceInfo loc) {
   return EdenErrorInfoBuilder{EdenComponent::Fuse, error, loc}
@@ -22,7 +22,7 @@ EdenErrorInfoBuilder EdenErrorInfo::fuse(
 
 EdenErrorInfoBuilder EdenErrorInfo::nfs(
     const ErrorArg& error,
-    uint64_t inode,
+    std::optional<uint64_t> inode,
     std::string mountPoint,
     SourceInfo loc) {
   return EdenErrorInfoBuilder{EdenComponent::Nfs, error, loc}
@@ -30,8 +30,10 @@ EdenErrorInfoBuilder EdenErrorInfo::nfs(
       .withMountPoint(std::move(mountPoint));
 }
 
-EdenErrorInfoBuilder
-EdenErrorInfo::overlay(const ErrorArg& error, uint64_t inode, SourceInfo loc) {
+EdenErrorInfoBuilder EdenErrorInfo::overlay(
+    const ErrorArg& error,
+    std::optional<uint64_t> inode,
+    SourceInfo loc) {
   return EdenErrorInfoBuilder{EdenComponent::Overlay, error, loc}.withInode(
       inode);
 }

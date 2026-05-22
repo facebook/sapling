@@ -52,19 +52,19 @@ class EdenErrorInfo {
 
   static EdenErrorInfoBuilder fuse(
       const ErrorArg& error,
-      uint64_t inode,
+      std::optional<uint64_t> inode,
       std::string mountPoint,
       SourceInfo loc = SourceInfo::current());
 
   static EdenErrorInfoBuilder nfs(
       const ErrorArg& error,
-      uint64_t inode,
+      std::optional<uint64_t> inode,
       std::string mountPoint,
       SourceInfo loc = SourceInfo::current());
 
   static EdenErrorInfoBuilder overlay(
       const ErrorArg& error,
-      uint64_t inode,
+      std::optional<uint64_t> inode,
       SourceInfo loc = SourceInfo::current());
 
   static EdenErrorInfoBuilder thrift(

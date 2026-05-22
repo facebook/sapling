@@ -20,7 +20,8 @@ EdenErrorInfoBuilder& EdenErrorInfoBuilder::withMountPoint(
   return *this;
 }
 
-EdenErrorInfoBuilder& EdenErrorInfoBuilder::withInode(uint64_t inode) {
+EdenErrorInfoBuilder& EdenErrorInfoBuilder::withInode(
+    std::optional<uint64_t> inode) {
   inode_ = inode;
   return *this;
 }
