@@ -66,7 +66,7 @@ sqlx = { git = "https://github.com/launchbadge/sqlx", rev = "24317d5eab40fbc33ca
 ssh2 = { git = "https://github.com/alexcrichton/ssh2-rs", rev = "5219ffbaa5b0a170376d6d1896c5cb5367bdedb8" }
 stabby = { git = "https://github.com/nitinsingh-meta/stabby", rev = "304c895c34e502fc635b85df6d4f22f746747ed4" }
 tokio-postgres = { git = "https://github.com/neondatabase/rust-postgres.git", rev = "f3cf448febde5fd298071d54d568a9c875a7a62b" }
-tonic = { git = "https://github.com/hyperium/tonic", rev = "322ed793ea14c6f8a53381234cc1d4a296021cad" }
+tonic = { git = "https://github.com/grpc/grpc-rust", rev = "de65d0a48783869d89b7d8d4a65ce703f1612249" }
 vm-allocator = { git = "https://github.com/rust-vmm/vm-allocator", rev = "5fb545cc6e41fdc9f27d48d97ed26274a35bc6c6" }
 warp = { git = "https://github.com/jdthomas/warp.git", rev = "c794232d182abaa3add8184e7d661e084cc516c5" }
 wezterm-color-types = { git = "https://github.com/wezterm/wezterm.git", rev = "05343b387085842b434d267f91b6b0ec157e4331" }
