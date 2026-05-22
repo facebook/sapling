@@ -1,9 +1,26 @@
-load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
+load("//linttool:defs.bzl", "python_binary_through_command_alias")
+load("//linttool:linttool_linter_test.bzl", "external_linter_test")
 
 oncall("scm_server_treehugger")
 
-python_binary(
+python_binary_through_command_alias(
     name = "jk_exists_linter",
-    srcs = ["jk_exists_linter.py"],
-    main_module = "eden.mononoke.linters.jk_exists_linter",
+    main_src = "jk_exists_linter.py",
+    visibility = [],
+)
+
+python_binary_through_command_alias(
+    name = "mock_jk",
+    main_src = "__tests__/mock_jk.py",
+    visibility = [],
+)
+
+external_linter_test(
+    name = "jk_exists_linter_tests",
+    srcs = glob(["__tests__/*.external-linter-test"]),
+    test_fixtures = glob(["__tests__/**"]),
+    tools = {
+        "JK_LINTER": ":jk_exists_linter",
+        "MOCK_JK": ":mock_jk",
+    },
 )
