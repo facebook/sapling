@@ -24,6 +24,7 @@ use unionconfig::UnionConfig;
 use crate::hg::OptionsHgExt;
 
 mod core;
+mod eden;
 pub mod git;
 mod merge_tools;
 mod open_source;
@@ -86,6 +87,9 @@ pub(crate) fn builtin_system(
         }
         if info.store_requirements.contains("dotgit") {
             configs.push(Arc::new(&git::DOTGIT_OVERRIDE_CONFIG));
+        }
+        if info.requirements.contains("eden") {
+            configs.push(Arc::new(&eden::EDEN_CONFIG));
         }
     }
 
