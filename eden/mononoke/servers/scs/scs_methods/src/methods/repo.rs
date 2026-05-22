@@ -380,63 +380,54 @@ impl SourceControlServiceImpl {
         // get stack
         let stack = repo.stack(heads_ids, limit).await?;
 
-        // resolve draft changesets & public changesets
-        let (draft_commits, public_parents, leftover_heads) = try_join!(
-            stream::iter(stack.draft)
-                .map(|cs_id| repo.changeset(ChangesetSpecifier::Bonsai(cs_id)))
-                .buffer_unordered(CONCURRENCY_LIMIT)
-                .try_collect::<Vec<_>>(),
-            stream::iter(stack.public)
-                .map(|cs_id| repo.changeset(ChangesetSpecifier::Bonsai(cs_id)))
-                .buffer_unordered(CONCURRENCY_LIMIT)
-                .try_collect::<Vec<_>>(),
-            stream::iter(stack.leftover_heads)
-                .map(|cs_id| repo.changeset(ChangesetSpecifier::Bonsai(cs_id)))
-                .buffer_unordered(CONCURRENCY_LIMIT)
-                .try_collect::<Vec<_>>(),
-        )?;
+        // The ids in `stack` were just produced by walking the commit graph in
+        // `repo.stack`, so they are guaranteed to exist. Skip the redundant
+        // existence check that `repo.changeset(Bonsai(_))` would do.
+        let draft_commits: Vec<_> = stack
+            .draft
+            .into_iter()
+            .map(|cs_id| repo.changeset_from_existing_id(cs_id))
+            .collect();
+        let public_parents: Vec<_> = stack
+            .public
+            .into_iter()
+            .map(|cs_id| repo.changeset_from_existing_id(cs_id))
+            .collect();
+        let leftover_heads: Vec<_> = stack
+            .leftover_heads
+            .into_iter()
+            .map(|cs_id| repo.changeset_from_existing_id(cs_id))
+            .collect();
 
         if draft_commits.len() <= params.heads.len() && !leftover_heads.is_empty() {
             Err(scs_errors::limit_too_low(limit))?;
         }
 
         // generate response
-        match (
-            draft_commits.into_iter().collect::<Option<Vec<_>>>(),
-            public_parents.into_iter().collect::<Option<Vec<_>>>(),
-            leftover_heads.into_iter().collect::<Option<Vec<_>>>(),
-        ) {
-            (Some(draft_commits), Some(public_parents), Some(leftover_heads)) => {
-                let schemes = &params.identity_schemes;
-                let (mut draft_commits, public_parents, leftover_heads) = try_join!(
-                    stream::iter(draft_commits)
-                        .map(|cs| cs.into_response_with(schemes))
-                        .buffer_unordered(CONCURRENCY_LIMIT)
-                        .try_collect::<Vec<_>>(),
-                    stream::iter(public_parents)
-                        .map(|cs| cs.into_response_with(schemes))
-                        .buffer_unordered(CONCURRENCY_LIMIT)
-                        .try_collect::<Vec<_>>(),
-                    leftover_heads.into_response_with(schemes),
-                )?;
+        let schemes = &params.identity_schemes;
+        let (mut draft_commits, public_parents, leftover_heads) = try_join!(
+            stream::iter(draft_commits)
+                .map(|cs| cs.into_response_with(schemes))
+                .buffer_unordered(CONCURRENCY_LIMIT)
+                .try_collect::<Vec<_>>(),
+            stream::iter(public_parents)
+                .map(|cs| cs.into_response_with(schemes))
+                .buffer_unordered(CONCURRENCY_LIMIT)
+                .try_collect::<Vec<_>>(),
+            leftover_heads.into_response_with(schemes),
+        )?;
 
-                // Need to return the draft commits in topological order to meet the API definition
-                // at https://fburl.com/code/a017qoam.
-                draft_commits.sort_by_key(|commit| commit.generation);
-                draft_commits.reverse();
+        // Need to return the draft commits in topological order to meet the API definition
+        // at https://fburl.com/code/a017qoam.
+        draft_commits.sort_by_key(|commit| commit.generation);
+        draft_commits.reverse();
 
-                Ok(thrift::RepoStackInfoResponse {
-                    draft_commits,
-                    public_parents,
-                    leftover_heads,
-                    ..Default::default()
-                })
-            }
-            _ => Err(scs_errors::internal_error(
-                "unexpected failure to resolve an existing commit",
-            )
-            .into()),
-        }
+        Ok(thrift::RepoStackInfoResponse {
+            draft_commits,
+            public_parents,
+            leftover_heads,
+            ..Default::default()
+        })
     }
 
     pub(crate) async fn repo_create_bookmark(
