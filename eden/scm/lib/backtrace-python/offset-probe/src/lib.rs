@@ -117,7 +117,10 @@ fn examine_backtrace(_py: Python) -> PyResult<Option<bool>> {
         // How many bytes the `Sapling_PyEvalFrameInner` stack might be at most?
         const STACK_SIZE_THRESHOLD: usize = 48;
 
-        if func_name == "Sapling_PyEvalFrame" {
+        // On macOS, backtrace may resolve names either from DWARF frames (often
+        // "Sapling_PyEvalFrame") or from Mach-O symtab fallback (raw nlist name
+        // "_Sapling_PyEvalFrame"), so we match both forms.
+        if func_name == "Sapling_PyEvalFrame" || func_name == "_Sapling_PyEvalFrame" {
             let sp = frame.sp() as usize;
             let (last_code, last_line_no) = evalframe_sys::get_last_code_line_no();
             let last_frame = evalframe_sys::get_last_frame();
