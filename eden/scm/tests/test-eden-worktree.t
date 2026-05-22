@@ -83,3 +83,32 @@ test auto-cleanup: all linked worktrees missing - group dissolved
 
   $ sl worktree list
   this worktree is not part of a group
+
+test corner case: eden rm removes worktree, then sl worktree remove cleans registry
+
+  $ cd $TESTTMP
+  $ newclientrepo orphan_repo
+  $ touch file.txt
+  $ sl add file.txt
+  $ sl commit -m "init"
+  $ sl worktree add $TESTTMP/orphan_wt
+  created linked worktree at $TESTTMP/orphan_wt
+
+eden rm removes the checkout but leaves the registry entry
+
+  $ EDENFSCTL_ONLY_RUST=true eden rm -y $TESTTMP/orphan_wt > /dev/null 2>&1
+  $ test -d $TESTTMP/orphan_wt
+  [1]
+
+FIXME: sl worktree remove should clean the registry for the already-removed checkout
+instead of failing because eden rm can't find the checkout
+
+  $ sl worktree remove $TESTTMP/orphan_wt -y
+  abort: * (glob)
+  [255]
+
+FIXME: sl worktree add to the same path should succeed after the registry is cleaned
+
+  $ sl worktree add $TESTTMP/orphan_wt
+  abort: * (glob)
+  [255]
