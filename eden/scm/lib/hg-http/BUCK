@@ -15,7 +15,7 @@ rust_library(
                 "name": "sapling-hg-http",
                 "repository": "https://github.com/facebook/sapling",
             },
-        }
+        },
     },
     deps = [
         "fbsource//third-party/rust:once_cell",

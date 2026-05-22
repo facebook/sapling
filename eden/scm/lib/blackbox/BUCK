@@ -11,7 +11,7 @@ rust_library(
                 {
                     "harness": False,
                     "name": "blackbox",
-                }
+                },
             ],
             # Cargo bench deps.
             "extra_buck_dependencies": {"dev-dependencies": ["//eden/scm/lib/minibench:minibench"]},
@@ -23,7 +23,7 @@ rust_library(
                 "name": "sapling-blackbox",
                 "repository": "https://github.com/facebook/sapling",
             },
-        }
+        },
     },
     crate_root = "src/lib.rs",
     test_deps = ["fbsource//third-party/rust:tempfile"],

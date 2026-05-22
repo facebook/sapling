@@ -13,9 +13,9 @@ rust_library(
                         "features": [
                             "convert-regex",
                             "convert-path",
-                        ]
+                        ],
                     },
-                }
+                },
             },
             "features": {"eden": ["sapling-clone/eden"]},
             "lib": {"name": "cmdclone"},
@@ -26,7 +26,7 @@ rust_library(
                 "name": "cmdclone",
                 "repository": "https://github.com/facebook/sapling",
             },
-        }
+        },
     },
     crate_root = "src/lib.rs",
     features = ["eden"],

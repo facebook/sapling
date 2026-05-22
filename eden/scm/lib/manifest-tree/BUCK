@@ -12,7 +12,7 @@ rust_library(
                     "harness": False,
                     "name": "bench",
                     "required-features": ["for-tests"],
-                }
+                },
             ],
             "dependencies_override": {
                 "dependencies": {
@@ -24,7 +24,7 @@ rust_library(
                         "default-features": False,
                         "features": ["for-tests"],
                     },
-                }
+                },
             },
             "extra_buck_dependencies": {
                 "dependencies": [
@@ -54,7 +54,7 @@ rust_library(
                 "name": "sapling-manifest-tree",
                 "repository": "https://github.com/facebook/sapling",
             },
-        }
+        },
     },
     crate_root = "src/lib.rs",
     features = ["for-tests"],

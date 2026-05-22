@@ -11,7 +11,7 @@ rust_python_library(
                 "dependencies": {
                     "sapling-io": {"optional": True},
                     "sapling-workingcopy": {"optional": True},
-                }
+                },
             },
             "features": {
                 "default": [],
@@ -21,7 +21,7 @@ rust_python_library(
                     "sapling-workingcopy",
                 ],
             },
-        }
+        },
     },
     crate_root = "src/lib.rs",
     features = ["eden"],

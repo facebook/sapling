@@ -16,7 +16,7 @@ rust_library(
                 "name": "sapling-mpatch-sys",
                 "repository": "https://github.com/facebook/sapling",
             },
-        }
+        },
     },
     crate_root = "src/lib.rs",
     deps = ["//eden/scm:libmpatch"],

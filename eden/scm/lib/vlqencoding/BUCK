@@ -11,7 +11,7 @@ rust_library(
                 {
                     "harness": False,
                     "name": "bench",
-                }
+                },
             ],
             "lib": {"name": "vlqencoding"},
             "package": {
@@ -22,7 +22,7 @@ rust_library(
                 "name": "sapling-vlqencoding",
                 "repository": "https://github.com/facebook/sapling",
             },
-        }
+        },
     },
     crate_root = "src/lib.rs",
     test_deps = ["fbsource//third-party/rust:quickcheck"],

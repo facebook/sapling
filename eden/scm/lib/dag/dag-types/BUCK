@@ -13,7 +13,7 @@ rust_library(
                         "default-features": False,
                         "features": [],
                     },
-                }
+                },
             },
             "features": {
                 "for-tests": ["quickcheck"],
@@ -27,7 +27,7 @@ rust_library(
                 "name": "sapling-dag-types",
                 "repository": "https://github.com/facebook/sapling",
             },
-        }
+        },
     },
     crate_root = "src/lib.rs",
     features = [

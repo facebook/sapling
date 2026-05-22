@@ -18,7 +18,7 @@ rust_library(
                 "name": "sapling-xdiff-sys",
                 "repository": "https://github.com/facebook/sapling",
             },
-        }
+        },
     },
     crate_root = "src/lib.rs",
     deps = ["//eden/scm/lib/third-party/xdiff:xdiff"],

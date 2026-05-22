@@ -17,7 +17,7 @@ rust_library(
                 "name": "sapling-xdiff",
                 "repository": "https://github.com/facebook/sapling",
             },
-        }
+        },
     },
     crate_root = "src/lib.rs",
     deps = [
@@ -36,8 +36,7 @@ cram_test(
     name = "tests",
     srcs = glob([
         "tests/*.t",
-    ])
-    + [
+    ]) + [
         "tests/setup.sh",
     ],
     compatible_with = [

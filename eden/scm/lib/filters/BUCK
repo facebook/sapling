@@ -16,7 +16,7 @@ rust_library(
                 "name": "sapling-filters",
                 "repository": "https://github.com/facebook/sapling",
             },
-        }
+        },
     },
     features = ["fb"],
     named_deps = {

@@ -20,7 +20,7 @@ rust_library(
                 "name": "sapling-hgtime",
                 "repository": "https://github.com/facebook/sapling",
             },
-        }
+        },
     },
     crate_root = "src/lib.rs",
     features = ["serde"],

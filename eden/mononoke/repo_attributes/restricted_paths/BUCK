@@ -50,11 +50,8 @@ rust_library(
         "//eden/mononoke/repo_attributes/repo_derived_data:repo_derived_data",
         "//eden/mononoke/repo_attributes/restricted_paths_common:restricted_paths_common",
         "//eden/mononoke/servers/slapi/slapi_server/context:context",
-    ]
-    + (
-        []
-        if rust_oss.is_oss_build()
-        else [
+    ] + (
+        [] if rust_oss.is_oss_build() else [
             "//eden/scm/lib/clientinfo:clientinfo",
             # fbcode-only dep for schematized logger (CommonServerData/CommonMetadata from scuba_ext)
             "//dsi/logger/configs/MononokeRestrictedPathsAccessLoggerConfig:mononoke_restricted_paths_access_rust_logger",

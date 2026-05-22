@@ -17,7 +17,7 @@ rust_library(
                         "default-features": False,
                         "features": [],
                     },
-                }
+                },
             },
             "features": {
                 "default": [
@@ -39,7 +39,7 @@ rust_library(
                 "name": "sapling-dag",
                 "repository": "https://github.com/facebook/sapling",
             },
-        }
+        },
     },
     crate_root = "src/lib.rs",
     features = [

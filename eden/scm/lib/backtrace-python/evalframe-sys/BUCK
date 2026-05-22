@@ -27,7 +27,7 @@ rust_library(
                 "build-dependencies": [
                     "fbsource//third-party/rust:cc",
                     "//eden/scm/lib/util/python-sysconfig:python-sysconfig",
-                ]
+                ],
             },
             "lib": {"name": "evalframe-sys"},
             "package": {
@@ -38,7 +38,7 @@ rust_library(
                 "name": "sapling-evalframe-sys",
                 "repository": "https://github.com/facebook/sapling",
             },
-        }
+        },
     },
     crate_root = "src/lib.rs",
     deps = [

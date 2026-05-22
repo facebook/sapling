@@ -16,7 +16,7 @@ rust_library(
                 "name": "sapling-drawdag",
                 "repository": "https://github.com/facebook/sapling",
             },
-        }
+        },
     },
     crate_root = "src/lib.rs",
     # A test inside this target is using #[should_panic], setting the backtrace

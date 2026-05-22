@@ -13,7 +13,7 @@ rust_library(
             "crate_type": [
                 "staticlib",
                 "lib",
-            ]
+            ],
         },
         "cargo_toml_config": {
             "dependencies_override": {"build-dependencies": {"cxx-build": {"optional": False}}},

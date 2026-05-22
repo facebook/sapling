@@ -21,13 +21,10 @@ rust_python_library(
     deps = [
         "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/cpython-ext:cpython-ext",
-    ]
-    + (
+    ] + (
         [
             "//eden/fs/rust/edenfs-asserted-states-client:edenfs-asserted-states-client",
-        ]
-        if not rust_oss.is_oss_build()
-        else [
+        ] if not rust_oss.is_oss_build() else [
             "fbsource//third-party/rust:anyhow",
         ]
     ),

@@ -9,7 +9,7 @@ rust_python_library(
         "cargo_toml_config": {
             "lib": {"name": "cpython-ext"},
             "package": {"name": "sapling-cpython-ext"},
-        }
+        },
     },
     crate_root = "src/lib.rs",
     include_python_sys = True,

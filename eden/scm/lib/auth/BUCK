@@ -12,9 +12,9 @@ rust_library(
                     "sapling-configmodel": {
                         "features": [
                             "convert-path",
-                        ]
+                        ],
                     },
-                }
+                },
             },
             "lib": {"name": "auth"},
             "package": {
@@ -24,7 +24,7 @@ rust_library(
                 "name": "sapling-auth",
                 "repository": "https://github.com/facebook/sapling",
             },
-        }
+        },
     },
     crate_root = "src/lib.rs",
     test_deps = [

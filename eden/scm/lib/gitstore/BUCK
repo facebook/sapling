@@ -11,7 +11,7 @@ rust_library(
                 {
                     "harness": False,
                     "name": "read_obj",
-                }
+                },
             ],
             "lib": {"name": "gitstore"},
             "package": {
@@ -21,7 +21,7 @@ rust_library(
                 "name": "sapling-gitstore",
                 "repository": "https://github.com/facebook/sapling",
             },
-        }
+        },
     },
     crate_root = "src/lib.rs",
     deps = [

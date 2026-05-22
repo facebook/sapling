@@ -15,7 +15,7 @@ rust_library(
                 "name": "sapling-network-doctor",
                 "repository": "https://github.com/facebook/sapling",
             },
-        }
+        },
     },
     test_deps = ["fbsource//third-party/rust:tempfile"],
     deps = [

@@ -15,7 +15,7 @@ rust_library(
                 "name": "sapling-thrift-types",
                 "repository": "https://github.com/facebook/sapling",
             },
-        }
+        },
     },
     named_deps = {
         "edenfs": "//eden/fs/service:thrift-rust",

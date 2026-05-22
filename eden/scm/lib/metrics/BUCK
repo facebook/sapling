@@ -24,7 +24,7 @@ rust_library(
                 "name": "sapling-metrics",
                 "repository": "https://github.com/facebook/sapling",
             },
-        }
+        },
     },
     crate_root = "src/lib.rs",
     features = [] + ([] if rust_oss.is_oss_build() else ["ods"]),
@@ -34,11 +34,8 @@ rust_library(
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:once_cell",
         "fbsource//third-party/rust:parking_lot",
-    ]
-    + (
-        []
-        if rust_oss.is_oss_build()
-        else [
+    ] + (
+        [] if rust_oss.is_oss_build() else [
             "//common/rust/shed/fbinit:fbinit",
             "//common/rust/monitoring:obc_lib",
             "//common/rust/shed/stats:stats",

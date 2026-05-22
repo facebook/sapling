@@ -27,7 +27,7 @@ rust_library(
                 "name": "sapling-linelog",
                 "repository": "https://github.com/facebook/sapling",
             },
-        }
+        },
     },
     crate_root = "src/lib.rs",
     test_deps = [

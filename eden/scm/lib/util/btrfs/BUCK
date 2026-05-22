@@ -16,7 +16,7 @@ rust_library(
                 "name": "sapling-btrfs",
                 "repository": "https://github.com/facebook/sapling",
             },
-        }
+        },
     },
     compatible_with = [
         "ovr_config//os:linux",

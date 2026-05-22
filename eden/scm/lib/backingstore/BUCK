@@ -45,14 +45,14 @@ rust_library(
             "crate_type": [
                 "staticlib",
                 "lib",
-            ]
+            ],
         },
         "cargo_toml_config": {
             "dependencies_override": {
                 "dependencies": {
                     "sapling-constructors": {"default-features": False},
                     "sapling-indexedlog": {"features": ["configurable"]},
-                }
+                },
             },
             "features": {"fb": ["sapling-configloader/fb"]},
             "lib": {"name": "backingstore"},

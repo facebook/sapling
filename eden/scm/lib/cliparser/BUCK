@@ -16,7 +16,7 @@ rust_python_library(
                 "authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"],
                 "name": "sapling-cliparser",
             },
-        }
+        },
     },
     features = [
         "python",

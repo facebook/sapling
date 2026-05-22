@@ -170,7 +170,7 @@ hg_binary(
                     "debug": True,
                     "incremental": True,
                     "lto": False,
-                }
+                },
             },
         },
         "cargo_toml_dir": "exec/hgmain",

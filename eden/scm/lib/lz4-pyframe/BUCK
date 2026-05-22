@@ -11,7 +11,7 @@ rust_library(
                 {
                     "harness": False,
                     "name": "bench",
-                }
+                },
             ],
             "lib": {"name": "lz4-pyframe"},
             "package": {
@@ -21,7 +21,7 @@ rust_library(
                 "name": "sapling-lz4-pyframe",
                 "repository": "https://github.com/facebook/sapling",
             },
-        }
+        },
     },
     crate_root = "src/lib.rs",
     test_deps = ["fbsource//third-party/rust:quickcheck"],

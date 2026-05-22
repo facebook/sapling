@@ -9,7 +9,7 @@ rust_python_library(
         "cargo_toml_config": {
             "lib": {"name": "cpython-async"},
             "package": {"name": "sapling-cpython-async"},
-        }
+        },
     },
     crate_root = "src/lib.rs",
     test_deps = ["fbsource//third-party/rust:tokio"],

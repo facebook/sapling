@@ -20,7 +20,7 @@ rust_library(
                 "name": "cmdgrep",
                 "repository": "https://github.com/facebook/sapling",
             },
-        }
+        },
     },
     crate_root = "src/lib.rs",
     features = ["fb"],
@@ -38,11 +38,8 @@ rust_library(
         "//eden/scm/lib/pathmatcher:pathmatcher",
         "//eden/scm/lib/repo:repo",
         "//eden/scm/lib/types:types",
-    ]
-    + (
-        []
-        if rust_oss.is_oss_build()
-        else [
+    ] + (
+        [] if rust_oss.is_oss_build() else [
             "//eden/scm/lib/manifest:manifest",
         ]
     ),

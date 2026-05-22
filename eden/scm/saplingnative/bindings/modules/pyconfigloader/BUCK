@@ -13,7 +13,7 @@ rust_python_library(
                         "features": [
                             "convert-regex",
                             "convert-matcher",
-                        ]
+                        ],
                     },
                 },
             },

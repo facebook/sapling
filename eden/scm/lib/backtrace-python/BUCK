@@ -38,7 +38,7 @@ rust_library(
                 "name": "sapling-backtrace-python",
                 "repository": "https://github.com/facebook/sapling",
             },
-        }
+        },
     },
     crate_root = "src/lib.rs",
     mapped_srcs = {":gen_offsets.rs": "src/offsets.rs"},

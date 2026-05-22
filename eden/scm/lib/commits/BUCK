@@ -11,7 +11,7 @@ rust_library(
                 "dependencies": {
                     "sapling-dag": {"features": ["indexedlog-backend"]},
                     "sapling-minibytes": {"features": ["frombytes"]},
-                }
+                },
             },
             "lib": {"name": "commits"},
             "package": {
@@ -21,7 +21,7 @@ rust_library(
                 "name": "sapling-commits",
                 "repository": "https://github.com/facebook/sapling",
             },
-        }
+        },
     },
     crate_root = "src/lib.rs",
     test_deps = [

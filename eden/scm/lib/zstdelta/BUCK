@@ -12,7 +12,7 @@ rust_library(
                     "doc": False,
                     "name": "zstdelta",
                     "path": "src/main.rs",
-                }
+                },
             ],
             "dependencies_override": {"dependencies": {"zstd-sys": {"features": ["experimental"]}}},
             "lib": {"name": "zstdelta"},
@@ -23,7 +23,7 @@ rust_library(
                 "name": "sapling-zstdelta",
                 "repository": "https://github.com/facebook/sapling",
             },
-        }
+        },
     },
     crate_root = "src/lib.rs",
     test_deps = [

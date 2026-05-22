@@ -11,7 +11,7 @@ rust_library(
                 "dependencies": {
                     "sapling-configmodel": {"features": ["convert-path"]},
                     "sapling-repo": {"features": ["wdir"]},
-                }
+                },
             },
             "features": {"eden": ["sapling-edenfs-client"]},
             "lib": {"name": "clone"},
@@ -22,7 +22,7 @@ rust_library(
                 "name": "sapling-clone",
                 "repository": "https://github.com/facebook/sapling",
             },
-        }
+        },
     },
     crate_root = "src/lib.rs",
     features = [

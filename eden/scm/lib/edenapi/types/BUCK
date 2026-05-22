@@ -17,7 +17,7 @@ rust_library(
                 "name": "sapling-edenapi_types",
                 "repository": "https://github.com/facebook/sapling",
             },
-        }
+        },
     },
     crate_root = "src/lib.rs",
     features = ["for-tests"],

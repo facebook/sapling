@@ -16,7 +16,7 @@ rust_library(
                         "default-features": False,
                         "features": [],
                     },
-                }
+                },
             },
             "package": {
                 "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
@@ -32,7 +32,7 @@ rust_library(
                     "overflow-checks": True,
                 },
             },
-        }
+        },
     },
     crate_root = "src/lib.rs",
     deps = [

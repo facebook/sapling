@@ -22,7 +22,7 @@ rust_library(
                     "sapling-hg-metrics",
                     "toml",
                     "sapling-workingcopy/eden",
-                ]
+                ],
             },
             "lib": {"name": "checkout"},
             "package": {
@@ -32,7 +32,7 @@ rust_library(
                 "name": "sapling-checkout",
                 "repository": "https://github.com/facebook/sapling",
             },
-        }
+        },
     },
     crate_root = "src/lib.rs",
     features = [

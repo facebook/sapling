@@ -15,7 +15,7 @@ rust_library(
                 "name": "sapling-tracing-reload-states",
                 "repository": "https://github.com/facebook/sapling",
             },
-        }
+        },
     },
     crate_root = "src/lib.rs",
     deps = [

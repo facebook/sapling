@@ -12,7 +12,7 @@ rust_python_library(
                 "default": [],
                 "eden": ["sapling-edenfs-client"],
             },
-        }
+        },
     },
     crate_root = "src/lib.rs",
     features = ["eden"],

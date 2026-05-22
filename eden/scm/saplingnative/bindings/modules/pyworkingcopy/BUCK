@@ -10,8 +10,8 @@ rust_python_library(
             "features": {
                 "default": [],
                 "eden": ["pyworkingcopyclient/eden"],
-            }
-        }
+            },
+        },
     },
     crate_root = "src/lib.rs",
     features = ["eden"],

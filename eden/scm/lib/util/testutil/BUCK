@@ -15,7 +15,7 @@ rust_library(
                 "name": "sapling-testutil",
                 "repository": "https://github.com/facebook/sapling",
             },
-        }
+        },
     },
     deps = [
         "fbsource//third-party/rust:fail",

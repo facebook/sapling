@@ -17,7 +17,7 @@ rust_library(
                 "name": "sapling-edenfs-client",
                 "repository": "https://github.com/facebook/sapling",
             },
-        }
+        },
     },
     features = ["fb"],
     deps = [

@@ -11,9 +11,9 @@ rust_python_library(
                 "build-dependencies": [
                     "fbsource//third-party/rust:cc",
                     "//eden/scm/lib/util/python-sysconfig:python-sysconfig",
-                ]
-            }
-        }
+                ],
+            },
+        },
     },
     crate_root = "src/lib.rs",
     include_python_sys = True,

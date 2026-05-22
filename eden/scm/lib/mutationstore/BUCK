@@ -13,7 +13,7 @@ rust_library(
                     "sapling-types": {
                         "default-features": False,
                         "features": ["for-tests"],
-                    }
+                    },
                 },
             },
             "extra_buck_dependencies": {"dev-dependencies": ["//eden/scm/lib/types:types"]},
@@ -25,7 +25,7 @@ rust_library(
                 "name": "sapling-mutationstore",
                 "repository": "https://github.com/facebook/sapling",
             },
-        }
+        },
     },
     crate_root = "src/lib.rs",
     test_deps = [

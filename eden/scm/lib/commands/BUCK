@@ -13,7 +13,7 @@ rust_library(
                     "pytracing": {"default-features": False},
                     "sapling-constructors": {"features": ["git"]},
                     "sapling-repo": {"features": ["wdir"]},
-                }
+                },
             },
             # Cargo feature deps: "pycheckout/eden" etc. require these declared.
             "extra_buck_dependencies": {
@@ -22,7 +22,7 @@ rust_library(
                     "//eden/scm/saplingnative/bindings/modules/pycheckout:pycheckout",
                     "//eden/scm/saplingnative/bindings/modules/pyworkingcopyclient:pyworkingcopyclient",
                     "//eden/scm/saplingnative/bindings/modules/pyworkingcopy:pyworkingcopy",
-                ]
+                ],
             },
             "features": {
                 "default": [],
@@ -55,7 +55,7 @@ rust_library(
                 "name": "commands",
                 "repository": "https://github.com/facebook/sapling",
             },
-        }
+        },
     },
     crate_root = "src/lib.rs",
     features = [

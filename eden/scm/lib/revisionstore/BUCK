@@ -11,7 +11,7 @@ rust_library(
                 "dependencies": {
                     "sapling-minibytes": {"features": ["frombytes"]},
                     "sapling-version": {"path": "../version"},
-                }
+                },
             },
             "features": {
                 "default": [],
@@ -26,7 +26,7 @@ rust_library(
                 "name": "sapling-revisionstore",
                 "repository": "https://github.com/facebook/sapling",
             },
-        }
+        },
     },
     crate = "revisionstore",
     features = [

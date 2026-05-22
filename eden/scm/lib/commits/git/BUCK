@@ -12,7 +12,7 @@ rust_library(
                     "sapling-configmodel": {
                         "features": [
                             "convert-matcher",
-                        ]
+                        ],
                     },
                 },
             },
@@ -24,7 +24,7 @@ rust_library(
                 "name": "sapling-commits-git",
                 "repository": "https://github.com/facebook/sapling",
             },
-        }
+        },
     },
     crate_root = "src/lib.rs",
     deps = [

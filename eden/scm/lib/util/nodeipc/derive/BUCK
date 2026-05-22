@@ -15,7 +15,7 @@ rust_library(
                 "name": "sapling-nodeipc_derive",
                 "repository": "https://github.com/facebook/sapling",
             },
-        }
+        },
     },
     crate_root = "src/lib.rs",
     proc_macro = True,

@@ -16,7 +16,7 @@ rust_library(
                 "name": "sapling-edenapi",
                 "repository": "https://github.com/facebook/sapling",
             },
-        }
+        },
     },
     deps = [
         "fbsource//third-party/rust:anyhow",
