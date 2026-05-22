@@ -210,7 +210,7 @@ jobs:
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests edencommon
 
     - name: Build eden
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --build-type RelWithDebInfo --no-tests --recursive --src-dir=. eden --project-install-prefix eden:/usr/local
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --build-type RelWithDebInfo --no-tests --src-dir=. eden --project-install-prefix eden:/usr/local
 
     - name: Show sccache stats
       if: always()

@@ -180,7 +180,7 @@ jobs:
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests rust-shed
 
     - name: Build sapling
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --build-type RelWithDebInfo --recursive --src-dir=. sapling --project-install-prefix sapling:/
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --build-type RelWithDebInfo --src-dir=. sapling --project-install-prefix sapling:/
 
     - name: Show sccache stats
       if: always()

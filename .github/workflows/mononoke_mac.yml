@@ -148,7 +148,7 @@ jobs:
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests rust-shed
 
     - name: Build mononoke
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --build-type RelWithDebInfo --recursive --src-dir=. mononoke --project-install-prefix mononoke:/usr/local
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --build-type RelWithDebInfo --src-dir=. mononoke --project-install-prefix mononoke:/usr/local
 
     - name: Show sccache stats
       if: always()
