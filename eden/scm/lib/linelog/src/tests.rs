@@ -458,7 +458,7 @@ fn test_reorder_insertions(lines: &[&str], line_added_order: &[usize]) {
     // Verify dep map.
     let deps = log.dep_map();
     assert!(
-        deps.iter().all(|(rev, deps)| rev == 0 || deps == &[0]),
+        deps.iter().all(|(rev, deps)| rev == 0 || deps == [0]),
         "order={line_added_order:?}"
     );
 
@@ -890,7 +890,7 @@ fn test_block_shift_overflow() {
             .clone()
             .edit_chunk(1, a1, a1, 1, vec![""], EditFlags::default());
         let dep = log.dep_map();
-        assert!(dep.iter().all(|(rev, deps)| rev == 0 || deps == &[0]))
+        assert!(dep.iter().all(|(rev, deps)| rev == 0 || deps == [0]))
     }
 }
 
