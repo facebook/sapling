@@ -1336,4 +1336,37 @@ mod tests {
             }
         }
     }
+
+    #[mononoke::test]
+    fn test_classify_diff_error_repo_not_found() {
+        let err = DiffUnifiedHeaderlessError::ex(diff_service_if::RequestError {
+            reason: diff_service_if::RequestErrorReason::transient_error(
+                diff_service_if::TransientError {
+                    error_type: diff_service_if::TransientErrorType::REPO_NOT_FOUND,
+                    message: "repo not loaded on this server: test_repo".into(),
+                    ..Default::default()
+                },
+            ),
+            ..Default::default()
+        });
+        assert!(
+            matches!(classify_diff_error(err), RemoteDiffError::InfraError(_)),
+            "REPO_NOT_FOUND (in-tier-not-loaded shard-routing race) must classify as InfraError so the SCS-side DiffRouter retries locally"
+        );
+    }
+
+    #[mononoke::test]
+    fn test_classify_diff_error_repo_does_not_exist() {
+        let err = DiffUnifiedHeaderlessError::ex(diff_service_if::RequestError {
+            reason: diff_service_if::RequestErrorReason::diff_error(diff_service_if::DiffError {
+                reason: "repo does not exist: ghost_repo".into(),
+                ..Default::default()
+            }),
+            ..Default::default()
+        });
+        assert!(
+            matches!(classify_diff_error(err), RemoteDiffError::RequestError(_)),
+            "diff_error reasons (including the truly-missing case) must classify as RequestError so SCS does not waste a local fallback"
+        );
+    }
 }
