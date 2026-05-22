@@ -21,11 +21,24 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
+import shutil
+import subprocess
 import sys
+from collections import defaultdict
 from enum import Enum
 from typing import NamedTuple, Optional
 
 LINTER_CODE = "RUSTJKEXISTS"
+JK_QUERY_TIMEOUT = 30
+
+# Matches justknobs::eval, justknobs::get, and justknobs::get_as::<T> calls
+# with an inline string literal JK name. The \s* between ( and " handles
+# multi-line call formatting.
+JK_CALL_RE = re.compile(
+    r'justknobs::(?:eval|get(?:_as::<[^>]+>)?)\s*\(\s*"'
+    r'([a-z][a-z0-9_]*(?:/[a-z][a-z0-9_]*)+:[a-z][a-z0-9_:]*[a-z0-9_])"'
+)
 
 
 class LintSeverity(str, Enum):
@@ -47,6 +60,136 @@ class LintMessage(NamedTuple):
     description: Optional[str] = None
     bypassChangedLineFiltering: Optional[bool] = None
     failureCategory: Optional[str] = None
+
+
+def extract_jk_references_regex(
+    filepaths: list[str],
+    verbose: bool,
+) -> list[tuple[str, int, str]]:
+    """Extract JK references from Rust files using regex matching.
+
+    Returns list of (filepath, line_number, jk_name).
+    """
+    results: list[tuple[str, int, str]] = []
+    seen: set[tuple[str, int, str]] = set()
+
+    for filepath in filepaths:
+        try:
+            with open(filepath) as f:
+                content = f.read()
+        except OSError:
+            continue
+
+        for m in JK_CALL_RE.finditer(content):
+            jk_name = m.group(1)
+            line_no = content[: m.start()].count("\n") + 1
+            key = (filepath, line_no, jk_name)
+            if key not in seen:
+                seen.add(key)
+                results.append(key)
+                if verbose:
+                    print(
+                        f"  [{filepath}:{line_no}] found JK: {jk_name}",
+                        file=sys.stderr,
+                    )
+
+    return results
+
+
+def _parse_jk_knobset(jk_name: str) -> str:
+    """Extract the knobset from a JK name (everything before the first colon)."""
+    return jk_name.split(":", 1)[0]
+
+
+def _query_knobset_knobs(
+    knobset: str,
+    verbose: bool,
+    jk_command: str = "jk",
+) -> set[str]:
+    """Query all knob names in a knobset via ``jk get <knobset>``.
+
+    Returns a set of fully-qualified knob names.
+    Raises RuntimeError if the command fails.
+    """
+    cmd = [jk_command, "get", knobset]
+
+    if verbose:
+        print(f"  Running: jk get {knobset}", file=sys.stderr)
+
+    result = subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        timeout=JK_QUERY_TIMEOUT,
+    )
+
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"jk get {knobset} returned exit code {result.returncode}: "
+            f"{result.stderr.strip()}"
+        )
+
+    knobs: set[str] = set()
+    prefix = f"{knobset}:"
+    for line in result.stdout.splitlines():
+        line = line.strip()
+        if line.startswith(prefix):
+            metadata_sep = " (last modified: "
+            if metadata_sep in line:
+                line = line.split(metadata_sep, 1)[0]
+            last_sep = line.rfind(": ")
+            if last_sep > 0:
+                knob_name = line[:last_sep]
+                knobs.add(knob_name)
+
+    if verbose:
+        print(
+            f"  Found {len(knobs)} knobs in knobset {knobset}",
+            file=sys.stderr,
+        )
+
+    return knobs
+
+
+def query_jk_existence(
+    jk_names: list[str],
+    verbose: bool,
+    jk_command: str = "jk",
+) -> dict[str, bool]:
+    """Check whether each JK name exists by querying knobsets in batches.
+
+    Returns a dict mapping each JK name to True (exists) or False (not found).
+    On per-knobset query failure, assumes knobs exist (safe default).
+    """
+    if not jk_names:
+        return {}
+
+    by_knobset: dict[str, list[str]] = defaultdict(list)
+    for name in jk_names:
+        ks = _parse_jk_knobset(name)
+        by_knobset[ks].append(name)
+
+    if verbose:
+        print(
+            f"  Querying {len(by_knobset)} knobset(s): "
+            f"{', '.join(sorted(by_knobset.keys()))}",
+            file=sys.stderr,
+        )
+
+    existence: dict[str, bool] = {}
+    for ks, names in by_knobset.items():
+        try:
+            known_knobs = _query_knobset_knobs(ks, verbose, jk_command)
+        except (RuntimeError, subprocess.TimeoutExpired) as e:
+            if verbose:
+                print(f"  Skipping knobset {ks}: {e}", file=sys.stderr)
+            for name in names:
+                existence[name] = True
+            continue
+        for name in names:
+            existence[name] = name in known_knobs
+
+    return existence
 
 
 def emit(msg: LintMessage) -> None:
@@ -81,11 +224,69 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    severity = LintSeverity(args.severity)
+
+    all_refs = extract_jk_references_regex(args.filenames, args.verbose)
+    unique_jks = {jk_name for _, _, jk_name in all_refs}
+
+    if not unique_jks:
+        if args.verbose:
+            print("  No JK references found in any files.", file=sys.stderr)
+        return
+
+    jk_command = args.jk_command
+    if shutil.which(jk_command) is None:
+        emit(
+            LintMessage(
+                path=args.filenames[0],
+                line=None,
+                char=None,
+                code=LINTER_CODE,
+                severity=LintSeverity.DISABLED,
+                name="jk-not-available",
+                description=(
+                    "The 'jk' CLI is not available. Cannot verify JustKnob existence."
+                ),
+                failureCategory="skipped",
+            )
+        )
+        return
+
     if args.verbose:
         print(
-            f"  RUSTJKEXISTS: received {len(args.filenames)} file(s)",
+            f"  Found {len(all_refs)} JK references "
+            f"({len(unique_jks)} unique) across {len(args.filenames)} files.",
             file=sys.stderr,
         )
+
+    existence = query_jk_existence(list(unique_jks), args.verbose, jk_command)
+
+    for filepath, line_no, jk_name in all_refs:
+        exists = existence.get(jk_name, True)
+
+        if not exists:
+            ks = _parse_jk_knobset(jk_name)
+            emit(
+                LintMessage(
+                    path=filepath,
+                    line=line_no,
+                    char=1,
+                    code=LINTER_CODE,
+                    severity=severity,
+                    name="jk-not-found",
+                    description=(
+                        f"JustKnob '{jk_name}' does not exist in knobset "
+                        f"'{ks}'. This will cause a runtime error and may "
+                        f"crash the service. Create the knob first at "
+                        f"https://www.internalfb.com/justknobs/{ks}"
+                    ),
+                )
+            )
+        elif args.verbose:
+            print(
+                f"  OK: {jk_name} exists.",
+                file=sys.stderr,
+            )
 
 
 if __name__ == "__main__":
