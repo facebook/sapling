@@ -69,6 +69,9 @@ tokio-postgres = { git = "https://github.com/neondatabase/rust-postgres.git", re
 tonic = { git = "https://github.com/hyperium/tonic", rev = "322ed793ea14c6f8a53381234cc1d4a296021cad" }
 vm-allocator = { git = "https://github.com/rust-vmm/vm-allocator", rev = "5fb545cc6e41fdc9f27d48d97ed26274a35bc6c6" }
 warp = { git = "https://github.com/jdthomas/warp.git", rev = "c794232d182abaa3add8184e7d661e084cc516c5" }
+wezterm-color-types = { git = "https://github.com/wezterm/wezterm.git", rev = "05343b387085842b434d267f91b6b0ec157e4331" }
+wezterm-dynamic = { git = "https://github.com/wezterm/wezterm.git", rev = "05343b387085842b434d267f91b6b0ec157e4331" }
+wezterm-input-types = { git = "https://github.com/wezterm/wezterm.git", rev = "05343b387085842b434d267f91b6b0ec157e4331" }
 zbus = { git = "https://github.com/z-galaxy/zbus", rev = "db642298a0567a9c7f3afd735014ae7803fe8615" }
 zbus_macros = { git = "https://github.com/z-galaxy/zbus", rev = "db642298a0567a9c7f3afd735014ae7803fe8615" }
 zvariant = { git = "https://github.com/z-galaxy/zbus", rev = "db642298a0567a9c7f3afd735014ae7803fe8615" }
@@ -76,6 +79,16 @@ zvariant_derive = { git = "https://github.com/z-galaxy/zbus", rev = "db642298a05
 
 [patch."https://github.com/milvus-io/rust-stemmers.git"]
 rust-stemmers = { git = "https://github.com/fbsource/rust-stemmers", rev = "3b2545218f76e797baecbf91fa1cbd2c0db60726" }
+
+[patch."https://github.com/wez/finl_unicode.git"]
+finl_unicode = { git = "https://github.com/dahosek/finl_unicode.git", rev = "a1892f26245529f2ef3877a9ebd610c96cec07a6" }
+
+[patch."https://github.com/wezterm/wezterm.git"]
+filedescriptor = "0.8.3"
+vtparse = "0.7"
+wezterm-bidi = "0.2.3"
+wezterm-blob-leases = "0.1.1"
+wezterm-dynamic-derive = "0.1.1"
 
 [workspace]
 members = [

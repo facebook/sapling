@@ -16,5 +16,5 @@ name = "termstyle"
 sapling-configmodel = { version = "0.1.0", path = "../../../config/model" }
 sapling-hgplain = { version = "0.1.0", path = "../../../util/hgplain" }
 sapling-io = { version = "0.1.0", path = "../.." }
-termwiz = { version = "0.23.3", features = ["use_serde", "widgets"], default-features = false }
+termwiz = { git = "https://github.com/wezterm/wezterm.git", rev = "05343b387085842b434d267f91b6b0ec157e4331", features = ["use_serde", "widgets"], default-features = false }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
