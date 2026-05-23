@@ -10,6 +10,12 @@ FUSE transport.
 - collecting EdenFS daemon CPU from `/proc/$PID/stat`
 - printing a compact comparison summary
 
+Optional cold-cache mode:
+- set `DROP_CACHES=1` to clear Linux kernel caches when switching between modes
+- `DROP_CACHES_MODE=2` clears dentries/inodes
+- `DROP_CACHES_MODE=3` clears page cache, dentries, and inodes
+- cache dropping is host-wide and requires `sudo`
+
 Default workload:
 - recursive `ls -lR > /dev/null` under `TARGET_DIR`
 
@@ -23,6 +29,18 @@ RUNS=5 \
 eden/fs/fuse/fuse_tester/run_transport_bench.sh
 ```
 
+Cold-cache example:
+
+```bash
+cd fbcode
+chmod +x eden/fs/fuse/fuse_tester/run_transport_bench.sh
+TARGET_DIR="$HOME/fbsource-dev/fbcode/eden" \
+DROP_CACHES=1 \
+DROP_CACHES_MODE=3 \
+RUNS=5 \
+eden/fs/fuse/fuse_tester/run_transport_bench.sh
+```
+
 Useful environment overrides:
 - `EDEN_DEV_STATE`
 - `MOUNT_DIR`
@@ -30,5 +48,8 @@ Useful environment overrides:
 - `CLONE_REVISION`
 - `TARGET_DIR`
 - `RUNS`
+- `WORKLOAD`
+- `DROP_CACHES`
+- `DROP_CACHES_MODE`
 - `OUTPUT_DIR`
 - `DRY_RUN`

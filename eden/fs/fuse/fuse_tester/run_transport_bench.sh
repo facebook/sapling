@@ -13,6 +13,8 @@ CLONE_REVISION="${CLONE_REVISION:-master}"
 TARGET_DIR="${TARGET_DIR:-$MOUNT_DIR/fbcode/eden}"
 RUNS="${RUNS:-5}"
 WORKLOAD="${WORKLOAD:-ls_recursive}"
+DROP_CACHES="${DROP_CACHES:-0}"
+DROP_CACHES_MODE="${DROP_CACHES_MODE:-3}"
 DRY_RUN="${DRY_RUN:-0}"
 OUTPUT_DIR="${OUTPUT_DIR:-/tmp}"
 
@@ -27,7 +29,9 @@ Environment overrides:
   CLONE_REVISION   Revision passed to edenfsctl clone
   TARGET_DIR       Subdirectory used by the workload
   RUNS             Number of benchmark repetitions per mode
-  WORKLOAD         Benchmark workload name (currently: ls_recursive)
+  WORKLOAD         Benchmark workload name (ls_recursive)
+  DROP_CACHES      Drop Linux kernel caches when switch between modes (0 or 1)
+  DROP_CACHES_MODE Linux drop_caches mode (2 for dentries/inodes, 3 for all)
   DRY_RUN          Print Eden commands instead of executing them (0 or 1)
   OUTPUT_DIR       Directory for raw benchmark outputs
 EOF
@@ -55,6 +59,19 @@ validate_configuration() {
       ;;
   esac
 
+  if [[ "$DROP_CACHES" != "0" && "$DROP_CACHES" != "1" ]]; then
+    echo "DROP_CACHES must be 0 or 1" >&2
+    exit 1
+  fi
+
+  case "$DROP_CACHES_MODE" in
+    2|3) ;;
+    *)
+      echo "DROP_CACHES_MODE must be 2 or 3" >&2
+      exit 1
+      ;;
+  esac
+
   if [[ "$DRY_RUN" != "0" && "$DRY_RUN" != "1" ]]; then
     echo "DRY_RUN must be 0 or 1" >&2
     exit 1
@@ -73,6 +90,8 @@ Transport benchmark configuration
   TARGET_DIR:     $TARGET_DIR
   RUNS:           $RUNS
   WORKLOAD:       $WORKLOAD
+  DROP_CACHES:    $DROP_CACHES
+  DROP_CACHES_MODE: $DROP_CACHES_MODE
   DRY_RUN:        $DRY_RUN
   OUTPUT_DIR:     $OUTPUT_DIR
 EOF
@@ -90,6 +109,15 @@ run_optional_cmd() {
   if ! run_cmd "$@"; then
     echo "warning: command failed but benchmark will continue: $*" >&2
   fi
+}
+
+drop_kernel_caches() {
+  if [[ "$DROP_CACHES" != "1" ]]; then
+    return 0
+  fi
+
+  run_cmd sync
+  run_cmd sudo sh -c "echo $DROP_CACHES_MODE > /proc/sys/vm/drop_caches"
 }
 
 reclone_mount() {
@@ -226,6 +254,7 @@ run_mode() {
     exit 1
   fi
 
+  drop_kernel_caches
   for run in $(seq 1 "$RUNS"); do
     local before_utime
     local before_stime
