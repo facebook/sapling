@@ -781,6 +781,26 @@ size_t IoUringFuseTransport::getWorkerThreadCount(
 #endif
 }
 
+void IoUringFuseTransport::requestStopWakeup() {
+#ifdef __linux__
+  if (!ringPool_) {
+    return;
+  }
+
+  for (const auto& queue : ringPool_->queues) {
+    try {
+      notifyWorker(queue);
+    } catch (const std::exception& ex) {
+      XLOGF(
+          ERR,
+          "failed to wake io_uring queue {} during shutdown: {}",
+          queue.queueId,
+          ex.what());
+    }
+  }
+#endif
+}
+
 ssize_t IoUringFuseTransport::readInitPacket(
     int /* fd */,
     void* /* buf */,

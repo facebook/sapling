@@ -1124,7 +1124,11 @@ FuseChannel::StopFuture FuseChannel::initializeFromTakeover(
 folly::SemiFuture<folly::Unit> FuseChannel::unmount(UnmountOptions options) {
   // TODO: This does not handle the situation where the mount has been moved by,
   // for example, renaming a parent directory, or `mount --move`.
-  return privHelper_->fuseUnmount(mountPath_.view(), options);
+  return privHelper_->fuseUnmount(mountPath_.view(), options)
+      .thenTry([this](Try<Unit>&& result) {
+        requestSessionExit(StopReason::UNMOUNTED);
+        return std::move(result);
+      });
 }
 
 void FuseChannel::startWorkerThreads() {
@@ -1441,6 +1445,19 @@ void FuseChannel::requestSessionExit(StopReason reason) {
   requestSessionExit(state_.wlock(), reason);
 }
 
+void FuseChannel::requestTransportStopWakeup() {
+  try {
+    transport_->requestStopWakeup();
+  } catch (const std::exception& ex) {
+    XLOGF(
+        WARN,
+        "failed to wake FUSE transport {} during shutdown for {}: {}",
+        transport_->getName(),
+        mountPath_,
+        exceptionStr(ex));
+  }
+}
+
 void FuseChannel::requestSessionExit(
     const Synchronized<State>::LockedPtr& state,
     StopReason reason) {
@@ -1462,6 +1479,8 @@ void FuseChannel::requestSessionExit(
 
   // Update stop_ so that worker threads will break out of their loop.
   stop_.store(true, std::memory_order_relaxed);
+
+  requestTransportStopWakeup();
 
   // Send a signal to knock our workers out of their blocking read() syscalls
   // TODO: This code is slightly racy, since threads could receive the signal
@@ -2187,9 +2206,18 @@ void FuseChannel::dispatchRequest(
               auto state = state_.wlock();
               XCHECK_NE(state->pendingRequests, 0u)
                   << "pendingRequests double decrement";
-              if (--state->pendingRequests == 0 &&
-                  state->stoppedThreads == effectiveWorkerThreadCount_) {
-                sessionComplete(std::move(state));
+              if (--state->pendingRequests == 0) {
+                // If workers are still running, wake transport-specific waits
+                // so they can observe that shutdown has fully drained. If they
+                // already stopped, completing the final request completes the
+                // session immediately.
+                if (state->stopReason != StopReason::RUNNING &&
+                    state->stoppedThreads != effectiveWorkerThreadCount_) {
+                  requestTransportStopWakeup();
+                }
+                if (state->stoppedThreads == effectiveWorkerThreadCount_) {
+                  sessionComplete(std::move(state));
+                }
               }
 
               // The requestPermit will automatically release the permit when

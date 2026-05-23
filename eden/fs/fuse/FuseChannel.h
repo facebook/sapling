@@ -932,6 +932,7 @@ class FuseChannel final : public FsChannel {
   void requestSessionExit(
       const folly::Synchronized<State>::LockedPtr& state,
       StopReason reason);
+  void requestTransportStopWakeup();
 
   PrivHelper* const privHelper_;
 

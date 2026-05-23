@@ -27,6 +27,7 @@ class FuseTransport {
   virtual size_t getWorkerThreadCount(size_t defaultThreadCount) const {
     return defaultThreadCount;
   }
+  virtual void requestStopWakeup() {}
   virtual ssize_t readInitPacket(int fd, void* buf, size_t size) const = 0;
   virtual void processSession(FuseChannel& channel) = 0;
   virtual void replyError(
