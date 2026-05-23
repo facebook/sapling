@@ -13,6 +13,7 @@
 #include <sys/eventfd.h>
 #endif
 #include <unistd.h>
+#include <cstring>
 #include <stdexcept>
 #include <system_error>
 
@@ -180,8 +181,57 @@ void IoUringFuseTransport::initializeQueue(RingQueue& queue, int fuseFd) const {
   }
 }
 
+void IoUringFuseTransport::initializeEntryBuffers(
+    RingQueue& queue,
+    RingEntry& entry) const {
+  entry.pool = queue.pool;
+  entry.queueId = queue.queueId;
+  entry.requestHeaderStorage.reset(
+      allocatePageAlignedBuffer(queue.requestHeaderSize));
+  entry.payloadStorage.reset(
+      allocatePageAlignedBuffer(queue.pool->maxRequestPayloadSize));
+
+  entry.requestHeader =
+      static_cast<fuse_uring_req_header*>(entry.requestHeaderStorage.get());
+  entry.payload = entry.payloadStorage.get();
+  entry.payloadSize = queue.pool->maxRequestPayloadSize;
+  entry.requestCommitId = 0;
+
+  entry.iov[0].iov_base = entry.requestHeader;
+  entry.iov[0].iov_len = queue.requestHeaderSize;
+  entry.iov[1].iov_base = entry.payload;
+  entry.iov[1].iov_len = entry.payloadSize;
+}
+
 void IoUringFuseTransport::destroyRingPool() noexcept {
   ringPool_.reset();
+}
+
+void* IoUringFuseTransport::allocatePageAlignedBuffer(size_t size) {
+  if (size == 0) {
+    throw std::invalid_argument(
+        "io_uring page-aligned buffer size must be non-zero");
+  }
+
+  void* ptr = nullptr;
+  auto rc = posix_memalign(&ptr, static_cast<size_t>(getpagesize()), size);
+  if (rc != 0) {
+    throw std::system_error(
+        rc,
+        std::generic_category(),
+        fmt::format(
+            "failed to allocate page-aligned io_uring buffer of size {}",
+            size));
+  }
+
+  if (!ptr) {
+    throw std::runtime_error(
+        fmt::format(
+            "posix_memalign returned null for io_uring buffer of size {}",
+            size));
+  }
+
+  return ptr;
 }
 #endif
 

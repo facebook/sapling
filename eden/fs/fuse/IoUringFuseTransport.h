@@ -12,6 +12,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <memory>
 #include <vector>
 
@@ -47,8 +48,12 @@ class IoUringFuseTransport final : public FuseTransport {
   struct RingPool;
 
   struct RingEntry {
+    using Buffer = std::unique_ptr<void, decltype(&free)>;
+
     RingPool* pool{nullptr};
     size_t queueId{0};
+    Buffer requestHeaderStorage{nullptr, &free};
+    Buffer payloadStorage{nullptr, &free};
     fuse_uring_req_header* requestHeader{nullptr};
     void* payload{nullptr};
     size_t payloadSize{0};
@@ -96,7 +101,9 @@ class IoUringFuseTransport final : public FuseTransport {
       size_t maxRequestPayloadSize,
       int fuseFd);
   void initializeQueue(RingQueue& queue, int fuseFd) const;
+  void initializeEntryBuffers(RingQueue& queue, RingEntry& entry) const;
   void destroyRingPool() noexcept;
+  static void* allocatePageAlignedBuffer(size_t size);
 #endif
   uint32_t queueDepth_;
 };
