@@ -12,6 +12,7 @@
 
 #ifdef __linux__
 #include <poll.h>
+#include <sched.h>
 #include <sys/eventfd.h>
 #include <sys/sysinfo.h>
 #endif
@@ -70,6 +71,34 @@ void prepareUringCmdSqe(
   cmd.qid = queueId;
   std::memcpy(sqe.cmd, &cmd, sizeof(cmd));
 }
+
+size_t roundUpToPageSize(size_t size) {
+  const auto pageSize = static_cast<size_t>(getpagesize());
+  return ((size + pageSize - 1) / pageSize) * pageSize;
+}
+
+void pinThreadToCpu(size_t cpu, size_t cpuCount) {
+  if (cpuCount == 0) {
+    return;
+  }
+
+  // cpu_set_t has a fixed capacity, so clamp the affinity domain to the CPUs
+  // that CPU_SET() can actually encode before normalizing the queue id.
+  const auto usableCpuCount =
+      std::min(cpuCount, static_cast<size_t>(CPU_SETSIZE));
+  cpu %= usableCpuCount;
+  cpu_set_t cpuset;
+  CPU_ZERO(&cpuset);
+  CPU_SET(cpu, &cpuset);
+  if (sched_setaffinity(0, sizeof(cpuset), &cpuset) != 0) {
+    const auto savedErrno = errno;
+    XLOGF(
+        WARN,
+        "failed to pin io_uring worker to cpu {}: {}",
+        cpu,
+        std::generic_category().message(savedErrno));
+  }
+}
 #endif
 
 } // namespace
@@ -86,6 +115,7 @@ IoUringFuseTransport::~IoUringFuseTransport() {
 #ifdef __linux__
 IoUringFuseTransport::RingQueue::RingQueue() {
   ring.ring_fd = -1;
+  requestHeaderSize = roundUpToPageSize(sizeof(fuse_uring_req_header));
 }
 
 IoUringFuseTransport::RingQueue::~RingQueue() noexcept {
@@ -188,7 +218,7 @@ void IoUringFuseTransport::initializeSession(FuseChannel& channel) {
 }
 
 void IoUringFuseTransport::initializeQueue(RingQueue& queue, int fuseFd) const {
-  queue.eventFd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
+  queue.eventFd = eventfd(0, EFD_CLOEXEC);
   if (queue.eventFd < 0) {
     const auto savedErrno = errno;
     throw std::system_error(
@@ -526,6 +556,10 @@ void IoUringFuseTransport::processSession(FuseChannel& channel) {
 
   auto& queue = ringPool_->queues[queueId];
   const auto myPid = getpid();
+  const auto configuredCpuCount = get_nprocs_conf();
+  if (configuredCpuCount > 0) {
+    pinThreadToCpu(queue.queueId, static_cast<size_t>(configuredCpuCount));
+  }
 
   while (!channel.stop_.load(std::memory_order_relaxed)) {
     auto rc = io_uring_submit_and_wait(&queue.ring, 1);
