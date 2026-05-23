@@ -8,6 +8,7 @@
 #ifndef _WIN32
 
 #include "eden/fs/fuse/IoUringFuseTransport.h"
+#include "eden/fs/fuse/FuseChannel.h"
 
 #ifdef __linux__
 #include <poll.h>
@@ -170,6 +171,16 @@ void IoUringFuseTransport::initializeRingPool(
   }
 
   ringPool_ = std::move(ringPool);
+}
+
+void IoUringFuseTransport::initializeSession(FuseChannel& channel) {
+  folly::call_once(sessionInitFlag_, [&] {
+    const auto maxRequestPayloadSize = channel.bufferSize_ > 4096
+        ? channel.bufferSize_ - 4096
+        : channel.bufferSize_;
+    initializeRingPool(
+        channel.numThreads_, maxRequestPayloadSize, channel.fuseDevice_.fd());
+  });
 }
 
 void IoUringFuseTransport::initializeQueue(RingQueue& queue, int fuseFd) const {
@@ -476,10 +487,75 @@ ssize_t IoUringFuseTransport::readInitPacket(
   throwIoUringNotImplemented("readInitPacket", queueDepth_);
 }
 
-void IoUringFuseTransport::processSession(FuseChannel& /* channel */) {
-  // Not implemented: io_uring request processing will be added in a follow-up
-  // diff.
+void IoUringFuseTransport::processSession(FuseChannel& channel) {
+#ifdef __linux__
+  initializeSession(channel);
+
+  const auto queueId = nextQueueId_.fetch_add(1, std::memory_order_acq_rel);
+  if (!ringPool_ || queueId >= ringPool_->queues.size()) {
+    throw std::runtime_error(
+        fmt::format(
+            "failed to assign io_uring queue {} (queue_count={})",
+            queueId,
+            ringPool_ ? ringPool_->queues.size() : 0));
+  }
+
+  auto& queue = ringPool_->queues[queueId];
+  const auto myPid = getpid();
+
+  while (!channel.stop_.load(std::memory_order_relaxed)) {
+    auto rc = io_uring_submit_and_wait(&queue.ring, 1);
+    if (rc < 0) {
+      if (channel.stop_.load(std::memory_order_relaxed) &&
+          (rc == -EINTR || rc == -EAGAIN)) {
+        break;
+      }
+      throw std::system_error(
+          -rc,
+          std::generic_category(),
+          fmt::format(
+              "io_uring_submit_and_wait failed for queue {}", queue.queueId));
+    }
+
+    unsigned completed = 0;
+    unsigned head = 0;
+    io_uring_cqe* cqe = nullptr;
+    io_uring_for_each_cqe(&queue.ring, head, cqe) {
+      ++completed;
+      if (!cqe) {
+        throw std::runtime_error(
+            fmt::format(
+                "io_uring CQE iteration returned null on queue {}",
+                queue.queueId));
+      }
+      auto result = handleCqe(queue, *cqe);
+      switch (result.action) {
+        case CqeResult::Action::DispatchRequest: {
+          XCHECK(result.request.has_value());
+          auto& request = *result.request;
+          channel.dispatchRequest(
+              request.header,
+              folly::ByteRange{
+                  request.arguments.data(), request.arguments.size()},
+              myPid);
+          break;
+        }
+        case CqeResult::Action::Ignored:
+          break;
+        case CqeResult::Action::StopRequested:
+          channel.requestSessionExit(FuseChannel::StopReason::UNMOUNTED);
+          channel.stop_.store(true, std::memory_order_relaxed);
+          break;
+      }
+    }
+    if (completed > 0) {
+      io_uring_cq_advance(&queue.ring, completed);
+    }
+  }
+#else
+  (void)channel;
   throwIoUringNotImplemented("processSession", queueDepth_);
+#endif
 }
 
 void IoUringFuseTransport::replyError(

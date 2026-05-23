@@ -1901,6 +1901,10 @@ void FuseChannel::processSession() {
   transport_->processSession(*this);
 }
 
+bool FuseChannel::usesIoUringTransport() const {
+  return dynamic_cast<IoUringFuseTransport*>(transport_.get()) != nullptr;
+}
+
 void FuseChannel::processDevFuseSession() {
   std::vector<char> buf(bufferSize_);
   // Save this for the sanity check later in the loop to avoid
@@ -2088,6 +2092,14 @@ void FuseChannel::dispatchRequest(
       // that interrupting functions correctly.
       // In addition, the kernel (certainly on macOS) may recycle
       // ids too quickly for us to safely track by `unique` id.
+      if (usesIoUringTransport()) {
+        // Classic /dev/fuse can treat this as a true no-reply request.
+        // io_uring cannot: each decoded kernel request owns a ring entry that
+        // stays outstanding until we submit a commit back through io_uring.
+        // Sending a synthetic success reply is how we drive that commit path
+        // and return the entry to the kernel so it can fetch the next request.
+        replyError(header, 0);
+      }
       break;
 
     case FUSE_DESTROY:
@@ -2106,6 +2118,13 @@ void FuseChannel::dispatchRequest(
       // Don't strictly need to do anything here, but may want to
       // turn the kernel notifications in Futures and use this as
       // a way to fulfil the promise
+      if (usesIoUringTransport()) {
+        // Classic /dev/fuse can drop this on the floor, but io_uring must
+        // still commit the outstanding ring entry for this request. A
+        // zero-error reply is the transport-level completion that recycles the
+        // entry and lets the kernel post another fetch on it.
+        replyError(header, 0);
+      }
       break;
 
     case FUSE_IOCTL:
@@ -2366,7 +2385,15 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseForget(
   XLOGF(
       DBG7, "FUSE_FORGET inode={} nlookup={}", header.nodeid, forget->nlookup);
   dispatcher_->forget(InodeNumber{header.nodeid}, forget->nlookup);
-  request.replyNone();
+  if (usesIoUringTransport()) {
+    // FORGET has no semantic FUSE reply, but the io_uring transport still has
+    // to commit the ring entry that delivered the request. replyError(0)
+    // produces the minimal success completion needed to hand that entry back
+    // to the kernel so it can be reused for future fetches.
+    request.replyError(0);
+  } else {
+    request.replyNone();
+  }
   return folly::unit;
 }
 
@@ -2861,7 +2888,15 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseBatchForget(
     dispatcher_->forget(InodeNumber{item->nodeid}, item->nlookup);
     ++item;
   }
-  request.replyNone();
+  if (usesIoUringTransport()) {
+    // BATCH_FORGET is the same transport issue as FORGET above: there is no
+    // logical reply payload, but io_uring still requires a success completion
+    // so the outstanding ring entry can commit and return to the kernel's
+    // fetch pool.
+    request.replyError(0);
+  } else {
+    request.replyNone();
+  }
   return folly::unit;
 }
 

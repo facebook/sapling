@@ -698,6 +698,7 @@ class FuseChannel final : public FsChannel {
 
   friend struct fmt::formatter<facebook::eden::FuseChannel::InvalidationEntry>;
   friend class DevFuseTransport;
+  friend class IoUringFuseTransport;
 
   FRIEND_TEST(FuseChannelTest, formatting_inode);
   FRIEND_TEST(FuseChannelTest, formatting_dir);
@@ -891,6 +892,7 @@ class FuseChannel final : public FsChannel {
    */
   void processSession();
   void processDevFuseSession();
+  bool usesIoUringTransport() const;
   void dispatchRequest(
       const fuse_in_header& header,
       folly::ByteRange arg,

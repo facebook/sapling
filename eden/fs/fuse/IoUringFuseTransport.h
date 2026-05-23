@@ -10,6 +10,7 @@
 #ifndef _WIN32
 
 #include <array>
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
@@ -19,6 +20,7 @@
 #include <vector>
 
 #include <folly/Synchronized.h>
+#include <folly/synchronization/CallOnce.h>
 
 #ifdef __linux__
 #include <liburing.h>
@@ -121,6 +123,7 @@ class IoUringFuseTransport final : public FuseTransport {
       size_t queueCount,
       size_t maxRequestPayloadSize,
       int fuseFd);
+  void initializeSession(FuseChannel& channel);
   void initializeQueue(RingQueue& queue, int fuseFd) const;
   void initializeEntryBuffers(RingQueue& queue, RingEntry& entry) const;
   void prepareFetchRequests(RingQueue& queue) const;
@@ -135,6 +138,8 @@ class IoUringFuseTransport final : public FuseTransport {
 
   mutable folly::Synchronized<std::unordered_map<uint64_t, RingEntry*>>
       outstandingEntries_;
+  mutable folly::once_flag sessionInitFlag_;
+  mutable std::atomic<size_t> nextQueueId_{0};
 #endif
   uint32_t queueDepth_;
 };
