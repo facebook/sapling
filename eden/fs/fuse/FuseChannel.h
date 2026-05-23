@@ -893,7 +893,6 @@ class FuseChannel final : public FsChannel {
    * fuse worker threads provided by the MountPoint.
    */
   void processSession();
-  void processDevFuseSession();
   bool usesIoUringTransport() const;
 
   // Update the effective number of worker threads. For traditional dev/fuse, it
