@@ -135,9 +135,7 @@ cpp_library(
         ":stack_trace_uploader",
         "//eden/fs/config:config",
     ],
-    exported_deps = [
-        ":structured_logger",
-    ],
+    exported_deps = [":structured_logger"],
 )
 
 cpp_library(

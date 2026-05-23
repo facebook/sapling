@@ -19,14 +19,19 @@ ErrorLogger::ErrorLogger(
     std::shared_ptr<ScribeLogger> scribeLogger,
     SessionInfo sessionInfo,
     std::shared_ptr<ReloadableConfig> config)
-    : EdenStructuredLogger(std::move(scribeLogger), std::move(sessionInfo)),
+    : hasScribe_(scribeLogger != nullptr),
+      structuredLogger_(std::move(scribeLogger), std::move(sessionInfo)),
       config_(std::move(config)) {}
 
 bool ErrorLogger::isEnabled() const {
-  return config_->getEdenConfig()->enableErrorLogging.getValue();
+  return hasScribe_ && config_ &&
+      config_->getEdenConfig()->enableErrorLogging.getValue();
 }
 
-void ErrorLogger::logEvent(EdenErrorInfoBuilder builder) {
+void ErrorLogger::log(EdenErrorInfoBuilder builder) {
+  if (!hasScribe_ || !config_) {
+    return;
+  }
   auto edenConfig = config_->getEdenConfig();
   if (!edenConfig->enableErrorLogging.getValue()) {
     return;
@@ -37,7 +42,7 @@ void ErrorLogger::logEvent(EdenErrorInfoBuilder builder) {
     event.info.stackTrace =
         StackTraceUploader::uploadToManifold(std::move(*event.info.stackTrace));
   }
-  EdenStructuredLogger::logEvent(std::move(event));
+  structuredLogger_.logEvent(std::move(event));
 }
 
 } // namespace facebook::eden

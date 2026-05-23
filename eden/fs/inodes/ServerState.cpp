@@ -58,7 +58,7 @@ ServerState::ServerState(
     std::shared_ptr<ProcessInfoCache> processInfoCache,
     std::shared_ptr<StructuredLogger> structuredLogger,
     std::shared_ptr<StructuredLogger> notificationsStructuredLogger,
-    std::shared_ptr<StructuredLogger> errorStructuredLogger,
+    std::shared_ptr<ErrorLogger> errorLogger,
     std::shared_ptr<IScribeLogger> scribeLogger,
     std::shared_ptr<ReloadableConfig> reloadableConfig,
     const EdenConfig& initialConfig,
@@ -81,7 +81,7 @@ ServerState::ServerState(
           reloadableConfig,
           edenStats_.copy())},
       notificationsStructuredLogger_{std::move(notificationsStructuredLogger)},
-      errorStructuredLogger_{std::move(errorStructuredLogger)},
+      errorLogger_{std::move(errorLogger)},
       scribeLogger_{std::move(scribeLogger)},
       faultInjector_{std::make_unique<FaultInjector>(enableFaultDetection)},
       nfs_{
@@ -140,13 +140,9 @@ ServerState::ServerState(
 
 ServerState::~ServerState() = default;
 
-ErrorLogger* ServerState::getErrorLogger() const {
-  return dynamic_cast<ErrorLogger*>(errorStructuredLogger_.get());
-}
-
 void ServerState::logErrorEvent(EdenErrorInfoBuilder builder) {
-  if (auto* logger = getErrorLogger()) {
-    logger->logEvent(std::move(builder));
+  if (errorLogger_) {
+    errorLogger_->log(std::move(builder));
   }
 }
 

@@ -338,30 +338,28 @@ std::shared_ptr<folly::Executor> makePrefetchFilesV2Threads(
   return nullptr;
 }
 
-std::shared_ptr<StructuredLogger> makeErrorStructuredLogger(
+std::shared_ptr<ErrorLogger> makeErrorLogger(
     const EdenConfig& edenConfig,
     SessionInfo sessionInfo,
     std::shared_ptr<ReloadableConfig> config,
     EdenStatsPtr edenStats) {
   auto scribeBinary = edenConfig.scribeLogger.getValue();
   auto errorCategory = edenConfig.errorScribeCategory.getValue();
-  if (scribeBinary.empty() || errorCategory.empty()) {
-    return std::make_shared<NullStructuredLogger>();
+  std::shared_ptr<ScribeLogger> scribeLogger;
+  if (!scribeBinary.empty() && !errorCategory.empty()) {
+    try {
+      scribeLogger = std::make_shared<SubprocessScribeLogger>(
+          scribeBinary.c_str(), errorCategory);
+    } catch (const std::exception& ex) {
+      edenStats->increment(&TelemetryStats::subprocessLoggerFailure, 1);
+      XLOGF(
+          ERR,
+          "Failed to create scribe logger for ErrorLogger: {}. Error logging is disabled.",
+          folly::exceptionStr(ex));
+    }
   }
-  try {
-    return std::make_shared<ErrorLogger>(
-        std::make_shared<SubprocessScribeLogger>(
-            scribeBinary.c_str(), errorCategory),
-        std::move(sessionInfo),
-        std::move(config));
-  } catch (const std::exception& ex) {
-    edenStats->increment(&TelemetryStats::subprocessLoggerFailure, 1);
-    XLOGF(
-        ERR,
-        "Failed to create ErrorLogger: {}. Error logging is disabled.",
-        folly::exceptionStr(ex));
-    return std::make_shared<NullStructuredLogger>();
-  }
+  return std::make_shared<ErrorLogger>(
+      std::move(scribeLogger), std::move(sessionInfo), std::move(config));
 }
 
 #ifndef _WIN32
@@ -570,11 +568,8 @@ EdenServer::EdenServer(
               edenConfig->notificationsScribeCategory.getValue(),
               sessionInfo,
               edenStats.copy())},
-      errorStructuredLogger_{makeErrorStructuredLogger(
-          *edenConfig,
-          sessionInfo,
-          config_,
-          edenStats.copy())},
+      errorLogger_{
+          makeErrorLogger(*edenConfig, sessionInfo, config_, edenStats.copy())},
 #ifdef EDEN_HAVE_LOGGER
       xplatLogger_{std::make_unique<XplatLogger>(
           EdenTelemetryIdentity::fromSessionInfo(sessionInfo),
@@ -604,7 +599,7 @@ EdenServer::EdenServer(
           std::make_shared<ProcessInfoCache>(),
           structuredLogger_,
           notificationsStructuredLogger_,
-          errorStructuredLogger_,
+          errorLogger_,
           std::move(scribeLogger),
           config_,
           *edenConfig,

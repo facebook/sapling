@@ -6719,14 +6719,14 @@ void EdenServiceHandler::debugOutstandingPrjfsCalls(
 
 bool EdenServiceHandler::debugLogError() {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG2);
-  auto* logger = server_->getServerState()->getErrorLogger();
-  if (!logger || !logger->isEnabled()) {
+  auto& logger = server_->getServerState()->getErrorLogger();
+  if (!logger.isEnabled()) {
     return false;
   }
   try {
     throw std::runtime_error("debugLogError: test error for e2e validation");
   } catch (const std::exception& ex) {
-    logger->logEvent(EdenErrorInfo::thrift(ex, "debugLogError"));
+    logger.log(EdenErrorInfo::thrift(ex, "debugLogError"));
   }
   return true;
 }

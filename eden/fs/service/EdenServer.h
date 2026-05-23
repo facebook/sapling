@@ -822,9 +822,9 @@ class EdenServer : private TakeoverHandler {
   /**
    * Structured logger for error telemetry. When scribe binary and
    * error category are configured, this is an ErrorLogger instance;
-   * otherwise falls back to NullStructuredLogger.
+   * Always created; no-ops internally when scribe is not configured.
    */
-  std::shared_ptr<StructuredLogger> errorStructuredLogger_;
+  std::shared_ptr<ErrorLogger> errorLogger_;
 
 #ifdef EDEN_HAVE_LOGGER
   /**

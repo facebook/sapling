@@ -43,6 +43,7 @@
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/TreeCache.h"
 #include "eden/fs/telemetry/EdenStats.h"
+#include "eden/fs/telemetry/ErrorLogger.h"
 #include "eden/fs/telemetry/IScribeLogger.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeClock.h"
@@ -124,7 +125,7 @@ TestMount::TestMount(bool enableActivityBuffer, CaseSensitivity caseSensitivity)
       make_shared<ProcessInfoCache>(),
       make_shared<NullStructuredLogger>(),
       make_shared<NullStructuredLogger>(),
-      make_shared<NullStructuredLogger>(),
+      make_shared<ErrorLogger>(nullptr, SessionInfo{}, nullptr),
       make_shared<NullScribeLogger>(),
       reloadableConfig,
       *edenConfig_,
