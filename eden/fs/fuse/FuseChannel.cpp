@@ -599,7 +599,7 @@ constexpr const HandlerEntry* lookupFuseHandlerEntry(uint32_t opcode) {
   return entry.name.empty() ? nullptr : &entry;
 }
 
-constexpr std::pair<uint32_t, const char*> kCapsLabels[] = {
+constexpr std::pair<uint64_t, const char*> kCapsLabels[] = {
     {FUSE_ASYNC_READ, "ASYNC_READ"},
     {FUSE_POSIX_LOCKS, "POSIX_LOCKS"},
     {FUSE_ATOMIC_O_TRUNC, "ATOMIC_O_TRUNC"},
@@ -638,9 +638,15 @@ constexpr std::pair<uint32_t, const char*> kCapsLabels[] = {
 #ifdef FUSE_NO_OPENDIR_SUPPORT
     {FUSE_NO_OPENDIR_SUPPORT, "NO_OPENDIR_SUPPORT"},
 #endif
+#ifdef FUSE_INIT_EXT
+    {FUSE_INIT_EXT, "INIT_EXT"},
+#endif
+#ifdef FUSE_OVER_IO_URING
+    {FUSE_OVER_IO_URING, "OVER_IO_URING"},
+#endif
 };
 
-std::string capsFlagsToLabel(uint32_t flags) {
+std::string capsFlagsToLabel(uint64_t flags) {
   std::vector<const char*> bits;
   bits.reserve(std::size(kCapsLabels));
   for (const auto& [flag, name] : kCapsLabels) {
@@ -1530,7 +1536,7 @@ void FuseChannel::readInitPacket() {
     // https://github.com/torvalds/linux/commit/1fb027d7596464d3fad3ed59f70f43807ef926c6
     // we have to request at least 8KB even for the init request
     char padding_[FUSE_MIN_READ_BUFFER];
-  } init;
+  } init = {};
 
   // Loop until we receive the INIT packet, or until we are stopped.
   while (true) {
@@ -1627,8 +1633,13 @@ void FuseChannel::readInitPacket() {
   // Allow the kernel to default connInfo.congestion_threshold. Linux
   // picks 3/4 of max_background.
 
-  const auto capable = init.init.flags;
-  auto& want = connInfo.flags;
+  uint64_t capable = init.init.flags;
+#ifdef FUSE_INIT_EXT
+  if (capable & FUSE_INIT_EXT) {
+    capable |= uint64_t{init.init.flags2} << 32;
+  }
+#endif
+  uint64_t want = 0;
 
   // TODO: follow up and look at the new flags; particularly
   // FUSE_DO_READDIRPLUS, FUSE_READDIRPLUS_AUTO. FUSE_SPLICE_XXX are interesting
@@ -1695,7 +1706,25 @@ void FuseChannel::readInitPacket() {
 #endif
 
   // Only return the capabilities the kernel supports.
+#ifdef FUSE_OVER_IO_URING
+  if (useIoUring_) {
+    want |= FUSE_OVER_IO_URING;
+  }
+#else
+  (void)useIoUring_;
+#endif
+
+#ifdef FUSE_INIT_EXT
+  if (want & 0xffffffff00000000ULL) {
+    want |= FUSE_INIT_EXT;
+  }
+#endif
+
   want &= capable;
+  connInfo.flags = static_cast<uint32_t>(want);
+#ifdef FUSE_INIT_EXT
+  connInfo.flags2 = static_cast<uint32_t>(want >> 32);
+#endif
 
 #ifdef FUSE_MAX_PAGES
   // Set max_pages only if the kernel actually supports FUSE_MAX_PAGES

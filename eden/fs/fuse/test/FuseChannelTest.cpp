@@ -68,7 +68,8 @@ class FuseChannelTest : public ::testing::Test {
  protected:
   std::unique_ptr<FuseChannel, FsChannelDeleter> createChannel(
       size_t numThreads = 2,
-      uint32_t fuseMaxPages = 0) {
+      uint32_t fuseMaxPages = 0,
+      bool useIoUring = false) {
     auto testDispatcher = std::make_unique<TestDispatcher>(stats_.copy());
     dispatcher_ = testDispatcher.get();
     return makeFuseChannel(
@@ -94,7 +95,8 @@ class FuseChannelTest : public ::testing::Test {
         /*useWriteBackCache=*/false,
         /*fuseTraceBusCapacity*/ kTraceBusCapacity,
         /*fuseBdiReadAheadKb=*/std::nullopt,
-        /*fuseMaxPages=*/fuseMaxPages);
+        /*fuseMaxPages=*/fuseMaxPages,
+        /*useIoUring=*/useIoUring);
   }
 
   FuseChannel::StopFuture performInit(
@@ -102,13 +104,23 @@ class FuseChannelTest : public ::testing::Test {
       uint32_t majorVersion = FUSE_KERNEL_VERSION,
       uint32_t minorVersion = FUSE_KERNEL_MINOR_VERSION,
       uint32_t maxReadahead = 0,
-      uint32_t flags = 0) {
+      uint32_t flags = 0,
+      uint32_t flags2 = 0) {
     auto initFuture = channel->initialize();
     EXPECT_FALSE(initFuture.isReady());
 
     // Send the INIT packet
-    auto reqID =
-        fuse_.sendInitRequest(majorVersion, minorVersion, maxReadahead, flags);
+    struct fuse_init_in initArg = {};
+    initArg.major = majorVersion;
+    initArg.minor = minorVersion;
+    initArg.max_readahead = maxReadahead;
+    initArg.flags = flags;
+#ifdef FUSE_INIT_EXT
+    initArg.flags2 = flags2;
+#else
+    (void)flags2;
+#endif
+    auto reqID = fuse_.sendRequest(FUSE_INIT, FUSE_ROOT_ID, initArg);
 
     // Wait for the INIT response
     auto response = fuse_.recvResponse();
@@ -204,6 +216,30 @@ TEST_F(FuseChannelTest, testTakeoverStop) {
   EXPECT_EQ(maxReadahead, fuseStopData->fuseSettings.max_readahead);
   EXPECT_EQ(flags, fuseStopData->fuseSettings.flags);
 }
+
+#ifdef FUSE_INIT_EXT
+#ifdef FUSE_OVER_IO_URING
+TEST_F(FuseChannelTest, testInitNegotiatesIoUring) {
+  auto channel = createChannel(/*numThreads=*/2, /*fuseMaxPages=*/0, true);
+  auto completeFuture = performInit(
+      channel.get(),
+      FUSE_KERNEL_VERSION,
+      FUSE_KERNEL_MINOR_VERSION,
+      0,
+      FUSE_INIT_EXT,
+      static_cast<uint32_t>(FUSE_OVER_IO_URING >> 32));
+
+  channel->takeoverStop();
+  auto stopData = std::move(completeFuture).get(kTimeout);
+  auto* fuseStopData = dynamic_cast<FuseChannel::StopData*>(stopData.get());
+  ASSERT_NE(nullptr, fuseStopData);
+  EXPECT_EQ(FUSE_INIT_EXT, fuseStopData->fuseSettings.flags);
+  EXPECT_EQ(
+      static_cast<uint32_t>(FUSE_OVER_IO_URING >> 32),
+      fuseStopData->fuseSettings.flags2);
+}
+#endif
+#endif
 
 TEST_F(FuseChannelTest, testInitUnmountRace) {
   auto channel = createChannel();
