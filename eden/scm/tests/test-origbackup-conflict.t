@@ -120,6 +120,9 @@ Perform an update that causes b/c and d to be backed up again - b/c should not g
 
 Incorrectly configure origbackuppath to be under a file
 
+#if no-windows
+Does not work on Windows: abort: The process cannot access the file because it is being used by another process: $TESTTMP\repo\.sl/badorigbackups
+
   $ echo data > .sl/badorigbackups
   $ sl up -q 'desc(base)'
   $ mkdir b
@@ -135,3 +138,4 @@ Incorrectly configure origbackuppath to be under a file
   (activating bookmark c1)
   $ ls .sl/badorigbackups/b
   c
+#endif
