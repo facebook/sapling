@@ -22,6 +22,8 @@
 #include <folly/Synchronized.h>
 #include <folly/synchronization/CallOnce.h>
 
+#include <gtest/gtest_prod.h>
+
 #ifdef __linux__
 #include <liburing.h>
 #endif
@@ -52,6 +54,9 @@ class IoUringFuseTransport final : public FuseTransport {
 
  private:
 #ifdef __linux__
+  FRIEND_TEST(FuseChannelTest, ioUringSubmitAndWaitErrorPolicy);
+  FRIEND_TEST(FuseChannelTest, ioUringCqeErrorPolicy);
+
   struct RingPool;
 
   struct RingEntry {
@@ -120,22 +125,28 @@ class IoUringFuseTransport final : public FuseTransport {
 
   std::unique_ptr<RingPool> ringPool_;
 
+  // io_uring error handelings are aligned with the libfuse error handling
   static bool isTransientSubmitAndWaitError(int result);
   static bool shouldRetrySubmitAndWaitError(int result, bool stopRequested);
   static bool shouldIgnoreSubmitAndWaitError(int result, bool stopRequested);
   static bool shouldIgnoreCqeError(int result);
   static bool shouldIgnoreCqeErrorDuringShutdown(int result);
+  static bool shouldIgnoreCqeError(int result, bool stopRequested);
   static bool isStopEventCqe(
       const RingQueue& queue,
       const io_uring_cqe& cqe,
       void* userData);
+
   static size_t getConfiguredQueueCount(size_t defaultThreadCount);
   void initializeRingPool(size_t queueCount, size_t maxRequestPayloadSize);
   void initializeSession(FuseChannel& channel);
   void initializeQueue(RingQueue& queue, int fuseFd) const;
   void initializeEntryBuffers(RingQueue& queue, RingEntry& entry) const;
   void prepareFetchRequests(RingQueue& queue) const;
-  CqeResult handleCqe(RingQueue& queue, const io_uring_cqe& cqe) const;
+  CqeResult handleCqe(
+      RingQueue& queue,
+      const io_uring_cqe& cqe,
+      bool stopRequested) const;
   void registerOutstandingEntry(uint64_t unique, RingEntry& entry) const;
   RingEntry& takeOutstandingEntry(uint64_t unique) const;
   void submitCommitAndFetch(RingEntry& entry) const;

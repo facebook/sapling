@@ -6,6 +6,7 @@
  */
 
 #include "eden/fs/fuse/FuseChannel.h"
+#include "eden/fs/fuse/IoUringFuseTransport.h"
 
 #include <folly/Random.h>
 #include <folly/executors/GlobalExecutor.h>
@@ -14,6 +15,7 @@
 #ifdef FUSE_OVER_IO_URING
 #include <sys/utsname.h>
 #endif
+#include <cerrno>
 
 #include "eden/common/utils/CaseSensitivity.h"
 #include "eden/common/utils/EnumValue.h"
@@ -302,6 +304,46 @@ TEST_F(FuseChannelTest, testInitUnmountRace) {
            << enumValue(fuseStopData->reason);
   }
 }
+
+#ifdef __linux__
+TEST_F(FuseChannelTest, ioUringSubmitAndWaitErrorPolicy) {
+  EXPECT_TRUE(IoUringFuseTransport::isTransientSubmitAndWaitError(-EINTR));
+  EXPECT_TRUE(IoUringFuseTransport::isTransientSubmitAndWaitError(-EAGAIN));
+  EXPECT_FALSE(IoUringFuseTransport::isTransientSubmitAndWaitError(-EIO));
+
+  EXPECT_TRUE(
+      IoUringFuseTransport::shouldRetrySubmitAndWaitError(-EINTR, false));
+  EXPECT_TRUE(
+      IoUringFuseTransport::shouldRetrySubmitAndWaitError(-EAGAIN, false));
+  EXPECT_FALSE(
+      IoUringFuseTransport::shouldRetrySubmitAndWaitError(-EINTR, true));
+
+  EXPECT_TRUE(
+      IoUringFuseTransport::shouldIgnoreSubmitAndWaitError(-EINTR, true));
+  EXPECT_TRUE(
+      IoUringFuseTransport::shouldIgnoreSubmitAndWaitError(-EAGAIN, true));
+  EXPECT_FALSE(
+      IoUringFuseTransport::shouldIgnoreSubmitAndWaitError(-EINTR, false));
+}
+
+TEST_F(FuseChannelTest, ioUringCqeErrorPolicy) {
+  EXPECT_TRUE(IoUringFuseTransport::shouldIgnoreCqeError(-EINTR));
+  EXPECT_TRUE(IoUringFuseTransport::shouldIgnoreCqeError(-EOPNOTSUPP));
+  EXPECT_TRUE(IoUringFuseTransport::shouldIgnoreCqeError(-EAGAIN));
+  EXPECT_TRUE(IoUringFuseTransport::shouldIgnoreCqeError(-ENOTCONN));
+  EXPECT_FALSE(IoUringFuseTransport::shouldIgnoreCqeError(-ECANCELED));
+  EXPECT_FALSE(IoUringFuseTransport::shouldIgnoreCqeError(-EIO));
+
+  EXPECT_TRUE(
+      IoUringFuseTransport::shouldIgnoreCqeErrorDuringShutdown(-ECANCELED));
+  EXPECT_FALSE(
+      IoUringFuseTransport::shouldIgnoreCqeErrorDuringShutdown(-EINTR));
+
+  EXPECT_FALSE(IoUringFuseTransport::shouldIgnoreCqeError(-ECANCELED, false));
+  EXPECT_TRUE(IoUringFuseTransport::shouldIgnoreCqeError(-ECANCELED, true));
+  EXPECT_TRUE(IoUringFuseTransport::shouldIgnoreCqeError(-EINTR, false));
+}
+#endif
 
 TEST_F(FuseChannelTest, testInitErrorClose) {
   // Close the FUSE device while the FuseChannel is waiting on the INIT request

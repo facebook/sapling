@@ -318,7 +318,8 @@ void IoUringFuseTransport::prepareFetchRequests(RingQueue& queue) const {
 
 IoUringFuseTransport::CqeResult IoUringFuseTransport::handleCqe(
     RingQueue& queue,
-    const io_uring_cqe& cqe) const {
+    const io_uring_cqe& cqe,
+    bool stopRequested) const {
   auto* userData = io_uring_cqe_get_data(&cqe);
   if (cqe.res != 0) {
     if (isStopEventCqe(queue, cqe, userData)) {
@@ -326,7 +327,7 @@ IoUringFuseTransport::CqeResult IoUringFuseTransport::handleCqe(
           .action = CqeResult::Action::StopRequested, .request = std::nullopt};
     }
 
-    if (shouldIgnoreCqeError(cqe.res)) {
+    if (shouldIgnoreCqeError(cqe.res, stopRequested)) {
       return {.action = CqeResult::Action::Ignored, .request = std::nullopt};
     }
 
@@ -530,6 +531,13 @@ bool IoUringFuseTransport::shouldIgnoreCqeErrorDuringShutdown(int result) {
   return result == -ECANCELED;
 }
 
+bool IoUringFuseTransport::shouldIgnoreCqeError(
+    int result,
+    bool stopRequested) {
+  return shouldIgnoreCqeError(result) ||
+      (stopRequested && shouldIgnoreCqeErrorDuringShutdown(result));
+}
+
 bool IoUringFuseTransport::isStopEventCqe(
     const RingQueue& queue,
     const io_uring_cqe& cqe,
@@ -633,7 +641,8 @@ void IoUringFuseTransport::processSession(FuseChannel& channel) {
                 "io_uring CQE iteration returned null on queue {}",
                 queue.queueId));
       }
-      auto result = handleCqe(queue, *cqe);
+      auto result =
+          handleCqe(queue, *cqe, channel.stop_.load(std::memory_order_relaxed));
       switch (result.action) {
         case CqeResult::Action::DispatchRequest: {
           XCHECK(result.request.has_value());

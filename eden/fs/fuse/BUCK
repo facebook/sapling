@@ -56,7 +56,12 @@ cpp_library(
         "//folly:synchronized",
         "//folly/futures:core",
         "//folly/synchronization:call_once",
-    ],
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:linux": [
+            "fbsource//third-party/liburing:uring",
+        ],
+    }),
     external_deps = [
         "boost",
     ],
