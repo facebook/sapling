@@ -366,6 +366,8 @@ class FuseChannel final : public FsChannel {
     return "fuse";
   }
 
+  const char* getTransportName() const;
+
   /**
    * Initialize the FuseChannel; until this completes successfully,
    * FUSE requests will not be serviced.

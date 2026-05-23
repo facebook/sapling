@@ -120,6 +120,7 @@ inline constexpr std::string_view kEndpoint = "endpoint";
 inline constexpr std::string_view kBackingStoreType = "backing_store_type";
 inline constexpr std::string_view kRepoType = "repo_type";
 inline constexpr std::string_view kFsChannelType = "fs_channel_type";
+inline constexpr std::string_view kFuseTransport = "fuse_transport";
 inline constexpr std::string_view kClean = "clean";
 inline constexpr std::string_view kOverlayType = "overlay_type";
 

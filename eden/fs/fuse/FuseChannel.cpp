@@ -1062,6 +1062,10 @@ FuseChannel::~FuseChannel() {
       << "This shared_ptr should not be copied; see attached comment.";
 }
 
+const char* FuseChannel::getTransportName() const {
+  return transport_ ? transport_->getName() : "unknown";
+}
+
 Future<FuseChannel::StopFuture> FuseChannel::initialize() {
   // Start one worker thread which will perform the initialization,
   // and will then start the remaining worker threads and signal success

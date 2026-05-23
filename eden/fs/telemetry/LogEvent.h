@@ -419,6 +419,7 @@ struct FinishedMount : public EdenFSEvent {
   std::string repo_type;
   std::string repo_source;
   std::string fs_channel_type;
+  std::optional<std::string> fuse_transport;
   bool is_takeover = false;
   double duration = 0.0;
   bool success = false;
@@ -430,6 +431,7 @@ struct FinishedMount : public EdenFSEvent {
       std::string repo_type,
       std::string repo_source,
       std::string fs_channel_type,
+      std::optional<std::string> fuse_transport,
       bool is_takeover,
       double duration,
       bool success,
@@ -439,6 +441,7 @@ struct FinishedMount : public EdenFSEvent {
         repo_type(std::move(repo_type)),
         repo_source(std::move(repo_source)),
         fs_channel_type(std::move(fs_channel_type)),
+        fuse_transport(std::move(fuse_transport)),
         is_takeover(is_takeover),
         duration(duration),
         success(success),
@@ -450,6 +453,9 @@ struct FinishedMount : public EdenFSEvent {
     event.addString("repo_type", repo_type);
     event.addString("repo_source", repo_source);
     event.addString("fs_channel_type", fs_channel_type);
+    if (fuse_transport.has_value()) {
+      event.addString("fuse_transport", *fuse_transport);
+    }
     event.addBool("is_takeover", is_takeover);
     event.addDouble("duration", duration);
     event.addBool("success", success);

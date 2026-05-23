@@ -2140,6 +2140,12 @@ ImmediateFuture<std::shared_ptr<EdenMount>> EdenServer::mount(
               auto* fsChannel = edenMount->getFsChannel();
               auto inodeCatalogType =
                   edenMount->getCheckoutConfig()->getInodeCatalogType();
+              std::optional<std::string> fsTransportName;
+#ifdef __linux__
+              if (auto* fuseChannel = dynamic_cast<FuseChannel*>(fsChannel)) {
+                fsTransportName = fuseChannel->getTransportName();
+              }
+#endif
               serverState_->getEdenFsEventsLogger()->logEvent(
                   FinishedMount{
                       std::string{toBackingStoreString(
@@ -2149,6 +2155,7 @@ ImmediateFuture<std::shared_ptr<EdenMount>> EdenServer::mount(
                       std::string{basename(
                           edenMount->getCheckoutConfig()->getRepoSource())},
                       fsChannel ? fsChannel->getName() : "unknown",
+                      std::move(fsTransportName),
                       doTakeover,
                       std::chrono::duration<double>{mountStopWatch.elapsed()}
                           .count(),
