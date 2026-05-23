@@ -16,6 +16,7 @@
 #include <sys/eventfd.h>
 #include <sys/sysinfo.h>
 #endif
+
 #include <unistd.h>
 #include <algorithm>
 #include <cstring>
@@ -320,13 +321,12 @@ IoUringFuseTransport::CqeResult IoUringFuseTransport::handleCqe(
     const io_uring_cqe& cqe) const {
   auto* userData = io_uring_cqe_get_data(&cqe);
   if (cqe.res != 0) {
-    if (cqe.res > 0 && userData == &queue) {
+    if (isStopEventCqe(queue, cqe, userData)) {
       return {
           .action = CqeResult::Action::StopRequested, .request = std::nullopt};
     }
 
-    if (cqe.res == -EINTR || cqe.res == -EOPNOTSUPP || cqe.res == -EAGAIN ||
-        cqe.res == -ENOTCONN) {
+    if (shouldIgnoreCqeError(cqe.res)) {
       return {.action = CqeResult::Action::Ignored, .request = std::nullopt};
     }
 
@@ -504,6 +504,41 @@ void* IoUringFuseTransport::allocatePageAlignedBuffer(size_t size) {
 
   return ptr;
 }
+
+bool IoUringFuseTransport::isTransientSubmitAndWaitError(int result) {
+  return result == -EINTR || result == -EAGAIN;
+}
+
+bool IoUringFuseTransport::shouldIgnoreSubmitAndWaitError(
+    int result,
+    bool stopRequested) {
+  return stopRequested && isTransientSubmitAndWaitError(result);
+}
+
+bool IoUringFuseTransport::shouldIgnoreCqeError(int result) {
+  return result == -EINTR || result == -EOPNOTSUPP || result == -EAGAIN ||
+      result == -ENOTCONN;
+}
+
+bool IoUringFuseTransport::shouldIgnoreCqeErrorDuringShutdown(int result) {
+  return result == -ECANCELED;
+}
+
+bool IoUringFuseTransport::isStopEventCqe(
+    const RingQueue& queue,
+    const io_uring_cqe& cqe,
+    void* userData) {
+  return cqe.res > 0 && userData == &queue;
+}
+
+size_t IoUringFuseTransport::getConfiguredQueueCount(
+    size_t defaultThreadCount) {
+  const auto configuredCpuCount = get_nprocs_conf();
+  if (configuredCpuCount <= 0) {
+    return defaultThreadCount;
+  }
+  return static_cast<size_t>(configuredCpuCount);
+}
 #endif
 
 const char* IoUringFuseTransport::getName() const {
@@ -518,17 +553,6 @@ size_t IoUringFuseTransport::getWorkerThreadCount(
   return defaultThreadCount;
 #endif
 }
-
-#ifdef __linux__
-size_t IoUringFuseTransport::getConfiguredQueueCount(
-    size_t defaultThreadCount) {
-  const auto configuredCpuCount = get_nprocs_conf();
-  if (configuredCpuCount <= 0) {
-    return defaultThreadCount;
-  }
-  return static_cast<size_t>(configuredCpuCount);
-}
-#endif
 
 ssize_t IoUringFuseTransport::readInitPacket(
     int /* fd */,
@@ -578,8 +602,8 @@ void IoUringFuseTransport::processSession(FuseChannel& channel) {
   while (!channel.stop_.load(std::memory_order_relaxed)) {
     rc = io_uring_submit_and_wait(&queue.ring, 1);
     if (rc < 0) {
-      if (channel.stop_.load(std::memory_order_relaxed) &&
-          (rc == -EINTR || rc == -EAGAIN)) {
+      if (shouldIgnoreSubmitAndWaitError(
+              rc, channel.stop_.load(std::memory_order_relaxed))) {
         break;
       }
       throw std::system_error(

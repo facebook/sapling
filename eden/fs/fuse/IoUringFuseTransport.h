@@ -120,6 +120,14 @@ class IoUringFuseTransport final : public FuseTransport {
 
   std::unique_ptr<RingPool> ringPool_;
 
+  static bool isTransientSubmitAndWaitError(int result);
+  static bool shouldIgnoreSubmitAndWaitError(int result, bool stopRequested);
+  static bool shouldIgnoreCqeError(int result);
+  static bool shouldIgnoreCqeErrorDuringShutdown(int result);
+  static bool isStopEventCqe(
+      const RingQueue& queue,
+      const io_uring_cqe& cqe,
+      void* userData);
   static size_t getConfiguredQueueCount(size_t defaultThreadCount);
   void initializeRingPool(size_t queueCount, size_t maxRequestPayloadSize);
   void initializeSession(FuseChannel& channel);
