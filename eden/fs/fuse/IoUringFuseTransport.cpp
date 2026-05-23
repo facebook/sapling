@@ -509,6 +509,12 @@ bool IoUringFuseTransport::isTransientSubmitAndWaitError(int result) {
   return result == -EINTR || result == -EAGAIN;
 }
 
+bool IoUringFuseTransport::shouldRetrySubmitAndWaitError(
+    int result,
+    bool stopRequested) {
+  return !stopRequested && isTransientSubmitAndWaitError(result);
+}
+
 bool IoUringFuseTransport::shouldIgnoreSubmitAndWaitError(
     int result,
     bool stopRequested) {
@@ -602,8 +608,11 @@ void IoUringFuseTransport::processSession(FuseChannel& channel) {
   while (!channel.stop_.load(std::memory_order_relaxed)) {
     rc = io_uring_submit_and_wait(&queue.ring, 1);
     if (rc < 0) {
-      if (shouldIgnoreSubmitAndWaitError(
-              rc, channel.stop_.load(std::memory_order_relaxed))) {
+      const auto stopRequested = channel.stop_.load(std::memory_order_relaxed);
+      if (shouldRetrySubmitAndWaitError(rc, stopRequested)) {
+        continue;
+      }
+      if (shouldIgnoreSubmitAndWaitError(rc, stopRequested)) {
         break;
       }
       throw std::system_error(

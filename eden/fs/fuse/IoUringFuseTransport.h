@@ -121,6 +121,7 @@ class IoUringFuseTransport final : public FuseTransport {
   std::unique_ptr<RingPool> ringPool_;
 
   static bool isTransientSubmitAndWaitError(int result);
+  static bool shouldRetrySubmitAndWaitError(int result, bool stopRequested);
   static bool shouldIgnoreSubmitAndWaitError(int result, bool stopRequested);
   static bool shouldIgnoreCqeError(int result);
   static bool shouldIgnoreCqeErrorDuringShutdown(int result);
