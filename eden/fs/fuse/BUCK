@@ -24,7 +24,12 @@ cpp_library(
         "//folly/executors:global_executor",
         "//folly/logging:logging",
         "//folly/system:thread_name",
-    ],
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:linux": [
+            "fbsource//third-party/liburing:uring",
+        ],
+    }),
     exported_deps = [
         "fbsource//third-party/fmt:fmt",
         "fbsource//third-party/googletest:gtest",
