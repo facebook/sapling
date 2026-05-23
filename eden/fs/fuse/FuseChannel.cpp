@@ -13,6 +13,11 @@
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
 #include <folly/system/ThreadName.h>
+#include <re2/re2.h>
+#include <algorithm>
+#ifdef FUSE_OVER_IO_URING
+#include <sys/utsname.h>
+#endif
 #include <chrono>
 #include <csignal>
 #include <type_traits>
@@ -667,6 +672,21 @@ std::string capsFlagsToLabel(uint64_t flags) {
   return fmt::format("{} unknown:0x{:x}", str, flags);
 }
 
+#ifdef FUSE_OVER_IO_URING
+std::string getRunningKernelRelease() {
+  struct utsname uts = {};
+  if (uname(&uts) != 0) {
+    const auto savedErrno = errno;
+    XLOGF(
+        WARN,
+        "failed to read running kernel release while evaluating FUSE io_uring support: errno={}",
+        savedErrno);
+    return {};
+  }
+  return uts.release;
+}
+#endif
+
 void sigusr2Handler(int /* signum */) {
   // Do nothing.
   // The purpose of this signal is only to interrupt the blocking read() calls
@@ -719,6 +739,27 @@ ProcessAccessLog::AccessType fuseOpcodeAccessType(uint32_t opcode) {
   return entry ? entry->accessType
                : ProcessAccessLog::AccessType::FsChannelOther;
 }
+
+#ifdef FUSE_OVER_IO_URING
+bool FuseChannel::isKernelAllowedForIoUring(
+    folly::StringPiece kernelRelease) const {
+  if (ioUringKernelReleaseRegex_.empty()) {
+    return false;
+  }
+
+  re2::RE2 regex{ioUringKernelReleaseRegex_};
+  if (!regex.ok()) {
+    XLOGF(
+        WARN,
+        "Not negotiating FUSE io_uring because kernel release regex \"{}\" is invalid: {}",
+        ioUringKernelReleaseRegex_,
+        regex.error());
+    return false;
+  }
+
+  return re2::RE2::PartialMatch(kernelRelease.str(), regex);
+}
+#endif
 
 FuseChannel::DataRange::DataRange(int64_t off, int64_t len)
     : offset(off), length(len) {}
@@ -903,7 +944,8 @@ FuseChannel::FuseChannel(
     size_t fuseTraceBusCapacity,
     std::optional<uint32_t> fuseBdiReadAheadKb,
     uint32_t fuseMaxPages,
-    bool useIoUring)
+    bool useIoUring,
+    std::string ioUringKernelReleaseRegex)
     : privHelper_{privHelper},
       // Pre-allocate based on configured max_pages so the buffer can handle
       // the larger requests we'll negotiate during FUSE_INIT. This is
@@ -934,6 +976,7 @@ FuseChannel::FuseChannel(
       fuseBdiReadAheadKb_{fuseBdiReadAheadKb},
       fuseMaxPages_{fuseMaxPages},
       useIoUring_{useIoUring},
+      ioUringKernelReleaseRegex_{std::move(ioUringKernelReleaseRegex)},
       fuseDevice_(std::move(fuseDevice)),
       transport_(std::make_unique<DevFuseTransport>()),
       processAccessLog_(std::move(processInfoCache)),
@@ -1708,7 +1751,17 @@ void FuseChannel::readInitPacket() {
   // Only return the capabilities the kernel supports.
 #ifdef FUSE_OVER_IO_URING
   if (useIoUring_) {
-    want |= FUSE_OVER_IO_URING;
+    const auto kernelRelease = getRunningKernelRelease();
+    if (isKernelAllowedForIoUring(kernelRelease)) {
+      want |= FUSE_OVER_IO_URING;
+    } else {
+      XLOGF(
+          DBG1,
+          "Not negotiating FUSE io_uring on mount \"{}\": kernel release \"{}\" does not match configured regex \"{}\"",
+          mountPath_,
+          kernelRelease,
+          ioUringKernelReleaseRegex_);
+    }
   }
 #else
   (void)useIoUring_;

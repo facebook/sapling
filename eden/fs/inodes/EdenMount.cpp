@@ -2622,7 +2622,8 @@ std::unique_ptr<FuseChannel, FsChannelDeleter> makeFuseChannel(
       mount->getServerState()->getEdenConfig()->FuseTraceBusCapacity.getValue(),
       edenConfig->fuseBdiReadAheadKb.getValue(),
       edenConfig->fuseMaxPages.getValue(),
-      edenConfig->fuseUseIoUring.getValue());
+      edenConfig->fuseUseIoUring.getValue(),
+      edenConfig->fuseIoUringKernelReleaseRegex.getValue());
 }
 } // namespace
 #endif

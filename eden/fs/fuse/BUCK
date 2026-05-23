@@ -7,6 +7,7 @@ cpp_library(
     srcs = glob(["*.cpp"]),
     headers = glob(["*.h"]),
     deps = [
+        "fbsource//third-party/re2:re2",
         "//eden/common/utils:bug",
         "//eden/common/utils:synchronized",
         "//eden/common/utils:system_error",

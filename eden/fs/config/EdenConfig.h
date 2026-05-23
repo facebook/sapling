@@ -827,6 +827,17 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<bool> fuseUseIoUring{"fuse:use-io-uring", false, this};
 
+  /**
+   * RE2 regex pattern matched against the Linux kernel release string
+   * (`uname -r`) where Eden may negotiate FUSE io_uring when
+   * fuse:use-io-uring is enabled. Defaults to fbk 6.13 kernels, where Eden's
+   * graceful restart flow has been validated.
+   */
+  ConfigSetting<std::string> fuseIoUringKernelReleaseRegex{
+      "fuse:io-uring-kernel-release-regex",
+      "^6\\.13\\.",
+      this};
+
   // [nfs]
 
   /**

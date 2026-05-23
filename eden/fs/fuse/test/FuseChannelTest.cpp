@@ -11,6 +11,9 @@
 #include <folly/executors/GlobalExecutor.h>
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
+#ifdef FUSE_OVER_IO_URING
+#include <sys/utsname.h>
+#endif
 
 #include "eden/common/utils/CaseSensitivity.h"
 #include "eden/common/utils/EnumValue.h"
@@ -69,7 +72,8 @@ class FuseChannelTest : public ::testing::Test {
   std::unique_ptr<FuseChannel, FsChannelDeleter> createChannel(
       size_t numThreads = 2,
       uint32_t fuseMaxPages = 0,
-      bool useIoUring = false) {
+      bool useIoUring = false,
+      std::string ioUringKernelReleaseRegex = {}) {
     auto testDispatcher = std::make_unique<TestDispatcher>(stats_.copy());
     dispatcher_ = testDispatcher.get();
     return makeFuseChannel(
@@ -96,7 +100,8 @@ class FuseChannelTest : public ::testing::Test {
         /*fuseTraceBusCapacity*/ kTraceBusCapacity,
         /*fuseBdiReadAheadKb=*/std::nullopt,
         /*fuseMaxPages=*/fuseMaxPages,
-        /*useIoUring=*/useIoUring);
+        /*useIoUring=*/useIoUring,
+        std::move(ioUringKernelReleaseRegex));
   }
 
   FuseChannel::StopFuture performInit(
@@ -217,10 +222,21 @@ TEST_F(FuseChannelTest, testTakeoverStop) {
   EXPECT_EQ(flags, fuseStopData->fuseSettings.flags);
 }
 
-#ifdef FUSE_INIT_EXT
-#ifdef FUSE_OVER_IO_URING
-TEST_F(FuseChannelTest, testInitNegotiatesIoUring) {
-  auto channel = createChannel(/*numThreads=*/2, /*fuseMaxPages=*/0, true);
+#if defined(FUSE_INIT_EXT) && defined(FUSE_OVER_IO_URING)
+std::string getRunningKernelReleaseForTest() {
+  struct utsname uts = {};
+  if (uname(&uts) != 0) {
+    return {};
+  }
+  return uts.release;
+}
+
+TEST_F(FuseChannelTest, testInitNegotiatesIoUringOnlyOnAllowedKernel) {
+  auto channel = createChannel(
+      /*numThreads=*/2,
+      /*fuseMaxPages=*/0,
+      /*useIoUring=*/true,
+      /*ioUringKernelReleaseRegex=*/"^" + getRunningKernelReleaseForTest());
   auto completeFuture = performInit(
       channel.get(),
       FUSE_KERNEL_VERSION,
@@ -238,7 +254,29 @@ TEST_F(FuseChannelTest, testInitNegotiatesIoUring) {
       static_cast<uint32_t>(FUSE_OVER_IO_URING >> 32),
       fuseStopData->fuseSettings.flags2);
 }
-#endif
+
+TEST_F(FuseChannelTest, testInitDoesNotNegotiateIoUringOnDisallowedKernel) {
+  auto channel = createChannel(
+      /*numThreads=*/2,
+      /*fuseMaxPages=*/0,
+      /*useIoUring=*/true,
+      /*ioUringKernelReleaseRegex=*/
+      "^not-" + getRunningKernelReleaseForTest());
+  auto completeFuture = performInit(
+      channel.get(),
+      FUSE_KERNEL_VERSION,
+      FUSE_KERNEL_MINOR_VERSION,
+      0,
+      FUSE_INIT_EXT,
+      static_cast<uint32_t>(FUSE_OVER_IO_URING >> 32));
+
+  channel->takeoverStop();
+  auto stopData = std::move(completeFuture).get(kTimeout);
+  auto* fuseStopData = dynamic_cast<FuseChannel::StopData*>(stopData.get());
+  ASSERT_NE(nullptr, fuseStopData);
+  EXPECT_EQ(0, fuseStopData->fuseSettings.flags);
+  EXPECT_EQ(0, fuseStopData->fuseSettings.flags2);
+}
 #endif
 
 TEST_F(FuseChannelTest, testInitUnmountRace) {

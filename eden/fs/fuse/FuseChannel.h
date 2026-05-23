@@ -303,7 +303,11 @@ class FuseChannel final : public FsChannel {
    *      the kernel default (32). Maximum 256 (1MB).
    * useIoUring -
    *      Whether to use io_uring for FUSE request/reply transport instead of
-   *      traditional /dev/fuse read/write.
+   *      traditional /dev/fuse read/write when the running kernel is known to
+   *      support Eden's graceful restart flow safely.
+   * ioUringKernelReleaseRegex -
+   *      RE2 regex matched against Linux kernel release strings (`uname -r`)
+   *      where Eden may negotiate io_uring when useIoUring is enabled.
    */
   FuseChannel(
       PrivHelper* privHelper,
@@ -329,7 +333,8 @@ class FuseChannel final : public FsChannel {
       size_t fuseTraceBusCapacity,
       std::optional<uint32_t> fuseBdiReadAheadKb = std::nullopt,
       uint32_t fuseMaxPages = 0,
-      bool useIoUring = false);
+      bool useIoUring = false,
+      std::string ioUringKernelReleaseRegex = {});
 
   FuseChannel(const FuseChannel&) = delete;
   FuseChannel(FuseChannel&&) = delete;
@@ -837,6 +842,10 @@ class FuseChannel final : public FsChannel {
       folly::ByteRange arg);
 
  private:
+#ifdef FUSE_OVER_IO_URING
+  bool isKernelAllowedForIoUring(folly::StringPiece kernelRelease) const;
+#endif
+
   void setThreadSigmask();
   void initWorkerThread() noexcept;
   void fuseWorkerThread() noexcept;
@@ -939,6 +948,7 @@ class FuseChannel final : public FsChannel {
   std::optional<uint32_t> fuseBdiReadAheadKb_;
   uint32_t fuseMaxPages_{0};
   bool useIoUring_{false};
+  std::string ioUringKernelReleaseRegex_;
 
   /*
    * connInfo_ is modified during the initialization process,
