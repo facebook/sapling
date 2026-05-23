@@ -16,9 +16,7 @@
 # For rust: `choco install rust`
 
 
-import glob
 import io
-import os
 import subprocess
 import sys
 import time
@@ -34,68 +32,80 @@ def main():
     # This is typically .../eden/scm
     project_root = (Path(__file__).parent / ".." / "..").resolve()
 
-    build_dir = (project_root / "build").resolve()
+    out_dir = (project_root / "out").resolve()
 
-    # eden/scm/build/python - where we extract the embedded Python distribution and the Python NuPkg
-    python_dir = build_dir / "python"
+    # eden/scm/out/python - where we extract the embedded Python distribution and the Python NuPkg
+    python_dir = out_dir / "python"
 
     fetch_python(python_dir)
 
     build_sapling(project_root, python_dir)
 
-    zip_sapling(project_root, build_dir)
+    zip_sapling(project_root, python_dir, out_dir)
 
 
 def build_sapling(project_root: Path, python_dir: Path):
-    env = os.environ.copy()
-
-    env["SAPLING_OSS_BUILD"] = "1"
-    env["HGNAME"] = "sl"
-
-    # TODO(T132168309): generate an appropriate version string
-
-    # By default setup.py packages up the Python runtime it is invoked
-    # with, so use our embedded python.exe.
     pythonexe = str(python_dir / "python.exe")
 
     with step("Building Sapling"):
         subprocess.check_call(
             [
-                vcvarsbat(),
-                "amd64",
-                "&&",
                 pythonexe,
-                "setup.py",
-                "build_interactive_smartlog",
-                "build_clib",
-                "build_rust_ext",
-                "--long-paths-support",
-                "build_embedded",
+                "build.py",
+                "--oss",
+                "--with-python",
+                pythonexe,
             ],
-            env=env,
             cwd=project_root,
         )
 
 
-def zip_sapling(project_root: Path, build_dir: Path):
-    # This is where "setup.py build_embedded" puts stuff.
-    embedded_dir = build_dir / "embedded"
+def python_runtime_files(python_dir: Path):
+    version_parts = PY_VERSION.split(".")
+    python_lib = f"python{version_parts[0]}{version_parts[1]}"
 
-    artifacts_dir = project_root / "artifacts"
-    artifacts_dir.mkdir(exist_ok=True)
-    zipfile_path = artifacts_dir / f"sapling_windows_amd64.zip"
+    for path in python_dir.glob(f"{python_lib}.*"):
+        if path.suffix.lower() in (".dll", ".zip"):
+            yield path, path.name
+
+    for path in python_dir.glob("*.pyd"):
+        yield path, f"DLLs/{path.name}"
+
+    for path in python_dir.glob("*.dll"):
+        arcname = (
+            path.name
+            if path.name.startswith(("python", "vcruntime"))
+            else f"DLLs/{path.name}"
+        )
+        yield path, arcname
+
+
+def build_output_files(project_root: Path, out_dir: Path):
+    yield out_dir / "sl.exe", "sl.exe"
+    yield out_dir / "isl-dist.tar.xz", "isl-dist.tar.xz"
+    yield project_root / "contrib" / "editmergeps.ps1", "contrib/editmergeps.ps1"
+    yield project_root / "contrib" / "editmergeps.bat", "contrib/editmergeps.bat"
+    pdb = out_dir / "sl.pdb"
+    if pdb.exists():
+        yield pdb, "sl.pdb"
+
+
+def zip_sapling(project_root: Path, python_dir: Path, out_dir: Path):
+    zipfile_path = out_dir / f"sapling_windows_amd64.zip"
 
     with step(f"Zipping into {zipfile_path}"):
         with zipfile.ZipFile(zipfile_path, "w", zipfile.ZIP_DEFLATED) as z:
-            for root, _dirs, files in os.walk(embedded_dir):
-                for f in files:
-                    source_file = os.path.join(root, f)
-                    z.write(
-                        source_file,
-                        os.path.join(
-                            "Sapling", os.path.relpath(source_file, embedded_dir)
-                        ),
-                    )
+            seen = set()
+            for path, arcname in python_runtime_files(python_dir):
+                if arcname in seen:
+                    continue
+                seen.add(arcname)
+                z.write(path, f"Sapling/{arcname}")
+            for path, arcname in build_output_files(project_root, out_dir):
+                if arcname in seen:
+                    continue
+                seen.add(arcname)
+                z.write(path, f"Sapling/{arcname}")
 
 
 def fetch_python(python_dir: Path):
@@ -126,37 +136,6 @@ def fetch_python(python_dir: Path):
                 ) or info.filename.startswith("tools/libs/"):
                     info.filename = info.filename[len("tools/") :]
                     py_zip.extract(info, python_dir)
-
-
-def vcvarsbat() -> str:
-    vcvarsall_paths = glob.glob(
-        os.path.join(
-            os.environ["ProgramFiles(x86)"],
-            "Microsoft Visual Studio",
-            "201[79]",
-            "*",
-            "VC",
-            "Auxiliary",
-            "Build",
-            "vcvarsall.bat",
-        )
-    ) + glob.glob(
-        os.path.join(
-            os.environ["ProgramFiles"],
-            "Microsoft Visual Studio",
-            "2022",
-            "*",
-            "VC",
-            "Auxiliary",
-            "Build",
-            "vcvarsall.bat",
-        )
-    )
-
-    if not vcvarsall_paths:
-        raise RuntimeError("couldn't find vcvarsall.bat")
-
-    return vcvarsall_paths[0]
 
 
 @contextmanager

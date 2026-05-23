@@ -659,11 +659,17 @@ def main(argv):
         "targets",
         metavar="TARGET",
         nargs="*",
-        choices=build_targets,
         help="Targets to build. Choices: sl, isl. Defaults to both.",
     )
 
     args = parser.parse_intermixed_args(argv)
+    invalid_targets = [target for target in args.targets if target not in build_targets]
+    if invalid_targets:
+        choices = ", ".join(repr(target) for target in build_targets)
+        parser.error(
+            "argument TARGET: invalid choice: "
+            f"{invalid_targets[0]!r} (choose from {choices})"
+        )
     normalize_args(args)
 
     for target in args.targets or build_targets:
