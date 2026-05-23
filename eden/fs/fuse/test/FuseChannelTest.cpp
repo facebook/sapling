@@ -17,6 +17,7 @@
 #include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/fs/fuse/FuseDispatcher.h"
 #include "eden/fs/telemetry/EdenStats.h"
+#include "eden/fs/telemetry/ErrorLogger.h"
 #include "eden/fs/testharness/FakeFuse.h"
 #include "eden/fs/testharness/TestDispatcher.h"
 
@@ -81,6 +82,7 @@ class FuseChannelTest : public ::testing::Test {
         std::make_shared<ProcessInfoCache>(),
         /*fsEventLogger=*/nullptr,
         /*edenFsEventsLogger=*/nullptr,
+        /*errorLogger=*/noopErrorLogger_,
         std::chrono::seconds(60),
         /*notifications=*/nullptr,
         CaseSensitivity::Sensitive,
@@ -124,6 +126,7 @@ class FuseChannelTest : public ::testing::Test {
 
   FakeFuse fuse_;
   EdenStatsPtr stats_ = makeRefPtr<EdenStats>();
+  ErrorLogger noopErrorLogger_{nullptr, {}, nullptr};
   TestDispatcher* dispatcher_;
   AbsolutePath mountPath_{canonicalPath("/fake/mount/path")};
 };

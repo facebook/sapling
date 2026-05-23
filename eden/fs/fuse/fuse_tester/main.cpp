@@ -27,6 +27,7 @@
 #include "eden/fs/privhelper/PrivHelperImpl.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/telemetry/EdenStats.h"
+#include "eden/fs/telemetry/ErrorLogger.h"
 
 using namespace facebook::eden;
 using namespace std::chrono_literals;
@@ -129,6 +130,8 @@ int main(int argc, char** argv) {
   auto dispatcher =
       std::make_unique<TestDispatcher>(std::move(stats), identity);
 
+  ErrorLogger noopErrorLogger{nullptr, {}, nullptr};
+
   folly::Logger straceLogger{"eden.strace"};
 
   auto channel = makeFuseChannel(
@@ -142,6 +145,7 @@ int main(int argc, char** argv) {
       std::make_shared<ProcessInfoCache>(),
       /*fsEventLogger=*/nullptr,
       /*edenFsEventsLogger=*/nullptr,
+      /*errorLogger=*/noopErrorLogger,
       std::chrono::seconds(60),
       /*notifications=*/nullptr,
       CaseSensitivity::Sensitive,
