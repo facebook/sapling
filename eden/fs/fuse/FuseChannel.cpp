@@ -21,6 +21,7 @@
 #include "eden/common/utils/IDGen.h"
 #include "eden/common/utils/Synchronized.h"
 #include "eden/common/utils/SystemError.h"
+#include "eden/fs/fuse/DevFuseTransport.h"
 #include "eden/fs/fuse/FuseDirList.h"
 #include "eden/fs/fuse/FuseDispatcher.h"
 #include "eden/fs/fuse/FuseRequestContext.h"
@@ -768,7 +769,7 @@ FuseChannel::InvalidationEntry::
 }
 
 void FuseChannel::replyError(const fuse_in_header& request, int errorCode) {
-  replyErrorDevFuse(request, errorCode);
+  transport_->replyError(*this, request, errorCode);
 }
 
 void FuseChannel::replyErrorDevFuse(
@@ -838,7 +839,7 @@ void FuseChannel::sendReply(
 }
 
 void FuseChannel::sendRawReply(const iovec iov[], size_t count) const {
-  sendRawReplyDevFuse(iov, count);
+  transport_->sendRawReply(const_cast<FuseChannel&>(*this), iov, count);
 }
 
 void FuseChannel::sendRawReplyDevFuse(const iovec iov[], size_t count) const {
@@ -928,6 +929,7 @@ FuseChannel::FuseChannel(
       fuseMaxPages_{fuseMaxPages},
       useIoUring_{useIoUring},
       fuseDevice_(std::move(fuseDevice)),
+      transport_(std::make_unique<DevFuseTransport>()),
       processAccessLog_(std::move(processInfoCache)),
       traceDetailedArguments_(std::make_shared<std::atomic<size_t>>(0)),
       traceBus_(
@@ -1539,7 +1541,8 @@ void FuseChannel::readInitPacket() {
           "\" stopped while waiting for INIT packet");
     }
 
-    auto res = read(fuseDevice_.fd(), &init, sizeof(init));
+    auto res =
+        transport_->readInitPacket(fuseDevice_.fd(), &init, sizeof(init));
     if (res < 0) {
       int errnum = errno;
       if (stop_.load(std::memory_order_relaxed)) {
@@ -1773,7 +1776,7 @@ void FuseChannel::readInitPacket() {
 }
 
 void FuseChannel::processSession() {
-  processDevFuseSession();
+  transport_->processSession(*this);
 }
 
 void FuseChannel::processDevFuseSession() {

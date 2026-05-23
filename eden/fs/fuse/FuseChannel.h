@@ -53,6 +53,7 @@ class ErrorLogger;
 class Notifier;
 class FsEventLogger;
 class FuseRequestContext;
+class FuseTransport;
 class PrivHelper;
 
 #ifndef _WIN32
@@ -687,6 +688,7 @@ class FuseChannel final : public FsChannel {
   };
 
   friend struct fmt::formatter<facebook::eden::FuseChannel::InvalidationEntry>;
+  friend class DevFuseTransport;
 
   FRIEND_TEST(FuseChannelTest, formatting_inode);
   FRIEND_TEST(FuseChannelTest, formatting_dir);
@@ -961,6 +963,7 @@ class FuseChannel final : public FsChannel {
    *   destroyed in the same thread that creates the StopData object.
    */
   folly::File fuseDevice_;
+  std::unique_ptr<FuseTransport> transport_;
 
   /*
    * Mutable state that is accessed from the worker threads.

@@ -30,6 +30,12 @@ class FuseTransport {
       FuseChannel& channel,
       const fuse_in_header& request,
       int errorCode) const = 0;
+
+  // The iovec array and all iov_base pointers are borrowed and may point to
+  // caller-owned stack storage. Implementations MUST either fully consume the
+  // reply before returning or copy the data into transport-owned storage before
+  // any asynchronous use. Implementations MUST NOT retain these pointers after
+  // this call returns.
   virtual void
   sendRawReply(FuseChannel& channel, const iovec iov[], size_t count) const = 0;
 };
