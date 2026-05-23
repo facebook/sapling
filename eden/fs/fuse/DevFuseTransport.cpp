@@ -19,6 +19,10 @@ const char* DevFuseTransport::getName() const {
   return "devfuse";
 }
 
+size_t DevFuseTransport::getWorkerThreadCount(size_t defaultThreadCount) const {
+  return defaultThreadCount;
+}
+
 ssize_t DevFuseTransport::readInitPacket(int fd, void* buf, size_t size) const {
   return read(fd, buf, size);
 }

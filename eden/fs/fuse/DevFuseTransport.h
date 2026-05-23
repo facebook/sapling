@@ -16,6 +16,7 @@ namespace facebook::eden {
 class DevFuseTransport final : public FuseTransport {
  public:
   const char* getName() const override;
+  size_t getWorkerThreadCount(size_t defaultThreadCount) const override;
   ssize_t readInitPacket(int fd, void* buf, size_t size) const override;
   void processSession(FuseChannel& channel) override;
   void replyError(

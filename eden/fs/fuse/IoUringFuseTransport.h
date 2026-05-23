@@ -40,6 +40,7 @@ class IoUringFuseTransport final : public FuseTransport {
   IoUringFuseTransport& operator=(IoUringFuseTransport&&) = delete;
 
   const char* getName() const override;
+  size_t getWorkerThreadCount(size_t defaultThreadCount) const override;
   ssize_t readInitPacket(int fd, void* buf, size_t size) const override;
   void processSession(FuseChannel& channel) override;
   void replyError(
@@ -119,6 +120,7 @@ class IoUringFuseTransport final : public FuseTransport {
 
   std::unique_ptr<RingPool> ringPool_;
 
+  static size_t getConfiguredQueueCount(size_t defaultThreadCount);
   void initializeRingPool(
       size_t queueCount,
       size_t maxRequestPayloadSize,

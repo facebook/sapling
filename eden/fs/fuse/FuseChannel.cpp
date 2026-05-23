@@ -969,7 +969,7 @@ FuseChannel::FuseChannel(
                   ? size_t(fuseMaxPages) * size_t(getpagesize()) + 0x1000
                   : size_t(getpagesize()) + 0x1000)),
       threadPool_{std::move(threadPool)},
-      numThreads_(numThreads),
+      configuredWorkerThreadCount_(numThreads),
       dispatcher_(std::move(dispatcher)),
       straceLogger_(straceLogger),
       edenFsEventsLogger_(edenFsEventsLogger),
@@ -1009,7 +1009,8 @@ FuseChannel::FuseChannel(
       useWriteBackCache,
       fuseMaxPages_,
       ioUringQueueDepth_);
-  XCHECK_GE(numThreads_, 1ul);
+  XCHECK_GE(configuredWorkerThreadCount_, 1ul);
+  updateEffectiveWorkerThreadCount();
   installSignalHandler();
 
   initializeInflightRequestsRateLimiter(maximumInFlightRequests);
@@ -1067,7 +1068,7 @@ Future<FuseChannel::StopFuture> FuseChannel::initialize() {
   // once initialization completes.
   return folly::makeFutureWith([&] {
     auto state = state_.wlock();
-    state->workerThreads.reserve(numThreads_);
+    state->workerThreads.reserve(configuredWorkerThreadCount_);
     state->workerThreads.emplace_back([this] { initWorkerThread(); });
     return initPromise_.getFuture();
   });
@@ -1106,6 +1107,7 @@ FuseChannel::StopFuture FuseChannel::initializeFromTakeover(
   if (negotiatedIoUringTransport(connInfo)) {
     transport_ = std::make_unique<IoUringFuseTransport>(ioUringQueueDepth_);
   }
+  updateEffectiveWorkerThreadCount();
   dispatcher_->initConnection(connInfo);
   maybeSetFuseReadAhead();
 
@@ -1141,8 +1143,8 @@ void FuseChannel::startWorkerThreads() {
   }
 
   try {
-    state->workerThreads.reserve(numThreads_);
-    while (state->workerThreads.size() < numThreads_) {
+    state->workerThreads.reserve(effectiveWorkerThreadCount_);
+    while (state->workerThreads.size() < effectiveWorkerThreadCount_) {
       state->workerThreads.emplace_back([this] { fuseWorkerThread(); });
     }
 
@@ -1490,12 +1492,29 @@ void FuseChannel::initWorkerThread() noexcept {
   try {
     setThreadSigmask();
     setThreadName(fmt::format("fuse{}", mountPath_.basename()));
+    XLOGF(
+        DBG6,
+        "Fuse init worker starting for mount={} transport={} useIoUringConfig={}",
+        mountPath_,
+        transport_->getName(),
+        useIoUring_);
 
     // Read the INIT packet
     readInitPacket();
+    XLOGF(
+        DBG6,
+        "Fuse init handshake completed for mount={} negotiated transport={}",
+        mountPath_,
+        transport_->getName());
 
     // Start the other FUSE worker threads.
     startWorkerThreads();
+    XLOGF(
+        DBG6,
+        "Fuse worker threads started for mount={} threadCount={} transport={}",
+        mountPath_,
+        effectiveWorkerThreadCount_,
+        transport_->getName());
   } catch (...) {
     auto ew = folly::exception_wrapper(std::current_exception());
     XLOGF(ERR, "Error performing FUSE channel initialization: {}", ew);
@@ -1547,7 +1566,8 @@ void FuseChannel::fuseWorkerThread() noexcept {
     // but there are still outstanding requests we will invoke
     // sessionComplete() when we process the final stage of the request
     // processing for the last request.
-    if (state->stoppedThreads == numThreads_ && state->pendingRequests == 0) {
+    if (state->stoppedThreads == effectiveWorkerThreadCount_ &&
+        state->pendingRequests == 0) {
       sessionComplete(std::move(state));
     }
   }
@@ -1875,8 +1895,15 @@ void FuseChannel::readInitPacket() {
 #endif
 
   if (negotiatedIoUringTransport(connInfo)) {
+    XLOGF(
+        DBG1,
+        "Switching mount={} transport from {} to io_uring queueDepth={}",
+        mountPath_,
+        transport_->getName(),
+        ioUringQueueDepth_);
     transport_ = std::make_unique<IoUringFuseTransport>(ioUringQueueDepth_);
   }
+  updateEffectiveWorkerThreadCount();
 
   XLOGF(
       DBG1,
@@ -1903,6 +1930,11 @@ void FuseChannel::processSession() {
 
 bool FuseChannel::usesIoUringTransport() const {
   return dynamic_cast<IoUringFuseTransport*>(transport_.get()) != nullptr;
+}
+
+void FuseChannel::updateEffectiveWorkerThreadCount() {
+  effectiveWorkerThreadCount_ =
+      transport_->getWorkerThreadCount(configuredWorkerThreadCount_);
 }
 
 void FuseChannel::processDevFuseSession() {
@@ -2231,7 +2263,7 @@ void FuseChannel::dispatchRequest(
               XCHECK_NE(state->pendingRequests, 0u)
                   << "pendingRequests double decrement";
               if (--state->pendingRequests == 0 &&
-                  state->stoppedThreads == numThreads_) {
+                  state->stoppedThreads == effectiveWorkerThreadCount_) {
                 sessionComplete(std::move(state));
               }
 

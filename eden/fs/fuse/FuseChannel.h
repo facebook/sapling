@@ -893,6 +893,10 @@ class FuseChannel final : public FsChannel {
   void processSession();
   void processDevFuseSession();
   bool usesIoUringTransport() const;
+
+  // Update the effective number of worker threads. For traditional dev/fuse, it
+  // is configured. For io_uring, it is the number of CPU cores.
+  void updateEffectiveWorkerThreadCount();
   void dispatchRequest(
       const fuse_in_header& header,
       folly::ByteRange arg,
@@ -915,7 +919,11 @@ class FuseChannel final : public FsChannel {
    */
   const size_t bufferSize_{0};
   std::shared_ptr<folly::Executor> threadPool_;
-  const size_t numThreads_;
+  // The number of worker threads that are configured to be created.
+  const size_t configuredWorkerThreadCount_;
+  // The number of worker threads that are actually created. When using
+  // io_uring, this is the number of CPU cores on the machine.
+  size_t effectiveWorkerThreadCount_{0};
   std::unique_ptr<FuseDispatcher> dispatcher_;
   const folly::Logger* const straceLogger_;
   const std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger_;

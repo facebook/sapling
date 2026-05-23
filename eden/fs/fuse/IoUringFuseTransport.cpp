@@ -13,8 +13,10 @@
 #ifdef __linux__
 #include <poll.h>
 #include <sys/eventfd.h>
+#include <sys/sysinfo.h>
 #endif
 #include <unistd.h>
+#include <algorithm>
 #include <cstring>
 #include <limits>
 #include <stdexcept>
@@ -178,8 +180,10 @@ void IoUringFuseTransport::initializeSession(FuseChannel& channel) {
     const auto maxRequestPayloadSize = channel.bufferSize_ > 4096
         ? channel.bufferSize_ - 4096
         : channel.bufferSize_;
+    const auto queueCount =
+        getConfiguredQueueCount(channel.configuredWorkerThreadCount_);
     initializeRingPool(
-        channel.numThreads_, maxRequestPayloadSize, channel.fuseDevice_.fd());
+        queueCount, maxRequestPayloadSize, channel.fuseDevice_.fd());
   });
 }
 
@@ -478,6 +482,26 @@ void* IoUringFuseTransport::allocatePageAlignedBuffer(size_t size) {
 const char* IoUringFuseTransport::getName() const {
   return "io_uring";
 }
+
+size_t IoUringFuseTransport::getWorkerThreadCount(
+    size_t defaultThreadCount) const {
+#ifdef __linux__
+  return getConfiguredQueueCount(defaultThreadCount);
+#else
+  return defaultThreadCount;
+#endif
+}
+
+#ifdef __linux__
+size_t IoUringFuseTransport::getConfiguredQueueCount(
+    size_t defaultThreadCount) {
+  const auto configuredCpuCount = get_nprocs_conf();
+  if (configuredCpuCount <= 0) {
+    return defaultThreadCount;
+  }
+  return static_cast<size_t>(configuredCpuCount);
+}
+#endif
 
 ssize_t IoUringFuseTransport::readInitPacket(
     int /* fd */,
