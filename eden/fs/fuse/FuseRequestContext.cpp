@@ -13,8 +13,11 @@
 
 #include "eden/common/telemetry/RequestMetricsScope.h"
 #include "eden/common/utils/SystemError.h"
+#include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/notifications/Notifier.h"
+#include "eden/fs/telemetry/EdenErrorInfoBuilder.h"
 #include "eden/fs/telemetry/EdenFsEventsLogger.h"
+#include "eden/fs/telemetry/ErrorLogger.h"
 
 using namespace folly;
 
@@ -56,6 +59,9 @@ void FuseRequestContext::systemErrorHandler(
     errnum = err.code().value();
   }
   XLOG(DBG5, folly::exceptionStr(err));
+  channel_->getErrorLogger().log(
+      EdenErrorInfo::fuse(err, fuseHeader_.nodeid, channel_->getMountPath())
+          .withErrorCode(errnum));
   replyError(errnum);
   if (notifier) {
     notifier->showNetworkNotification(err);
@@ -66,6 +72,8 @@ void FuseRequestContext::genericErrorHandler(
     const std::exception& err,
     Notifier* FOLLY_NULLABLE notifier) {
   XLOG(DBG5, folly::exceptionStr(err));
+  channel_->getErrorLogger().log(
+      EdenErrorInfo::fuse(err, fuseHeader_.nodeid, channel_->getMountPath()));
   replyError(EIO);
   if (notifier) {
     notifier->showNetworkNotification(err);

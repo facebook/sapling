@@ -25,7 +25,9 @@
 #include "eden/fs/fuse/FuseDispatcher.h"
 #include "eden/fs/fuse/FuseRequestContext.h"
 #include "eden/fs/privhelper/PrivHelper.h"
+#include "eden/fs/telemetry/EdenErrorInfoBuilder.h"
 #include "eden/fs/telemetry/EdenFsEventsLogger.h"
+#include "eden/fs/telemetry/ErrorLogger.h"
 #include "eden/fs/telemetry/FsEventLogger.h"
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/utils/StaticAssert.h"
@@ -1193,6 +1195,8 @@ void FuseChannel::sendInvalidation(InvalidationEntry& entry) {
           "error sending invalidation request: {}:{}",
           entry,
           folly::exceptionStr(ex));
+      errorLogger_.log(
+          EdenErrorInfo::fuse(ex, entry.inode.get(), mountPath_.asString()));
     }
   } catch (const std::exception& ex) {
     XLOGF(
@@ -1200,6 +1204,8 @@ void FuseChannel::sendInvalidation(InvalidationEntry& entry) {
         "error sending invalidation request: {}:{}",
         entry,
         folly::exceptionStr(ex));
+    errorLogger_.log(
+        EdenErrorInfo::fuse(ex, entry.inode.get(), mountPath_.asString()));
   }
 }
 
@@ -1407,6 +1413,10 @@ void FuseChannel::initWorkerThread() noexcept {
   } catch (...) {
     auto ew = folly::exception_wrapper(std::current_exception());
     XLOGF(ERR, "Error performing FUSE channel initialization: {}", ew);
+    ew.with_exception([&](const std::exception& ex) {
+      errorLogger_.log(
+          EdenErrorInfo::fuse(ex, std::nullopt, mountPath_.asString()));
+    });
     // Indicate that initialization failed.
     initPromise_.setException(std::move(ew));
     return;
@@ -1430,6 +1440,8 @@ void FuseChannel::fuseWorkerThread() noexcept {
     processSession();
   } catch (const std::exception& ex) {
     XLOGF(ERR, "unexpected error in FUSE worker thread: {}", exceptionStr(ex));
+    errorLogger_.log(
+        EdenErrorInfo::fuse(ex, std::nullopt, mountPath_.asString()));
     // Request that all other FUSE threads exit.
     // This will cause us to stop processing the mount and signal our session
     // complete future.
@@ -1797,9 +1809,12 @@ void FuseChannel::processDevFuseSession() {
         break;
       } else {
         XLOGF(
-            WARNING,
-            "error reading from fuse channel: {}",
-            folly::errnoStr(error));
+            ERR, "error reading from fuse channel: {}", folly::errnoStr(error));
+        errorLogger_.log(
+            EdenErrorInfo::fuse(
+                std::system_error(error, std::generic_category()),
+                std::nullopt,
+                mountPath_.asString()));
         requestSessionExit(StopReason::FUSE_READ_ERROR);
         break;
       }
@@ -2106,6 +2121,8 @@ void FuseChannel::dispatchRequest(
         replyError(header, ENOSYS);
       } catch (const std::system_error& exc) {
         XLOGF(ERR, "Failed to write error response to fuse: {}", exc.what());
+        errorLogger_.log(
+            EdenErrorInfo::fuse(exc, std::nullopt, mountPath_.asString()));
         requestSessionExit(StopReason::FUSE_WRITE_ERROR);
         return;
       }
