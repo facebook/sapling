@@ -391,6 +391,7 @@ class FuseChannel final : public FsChannel {
       folly::ByteRange arg,
       pid_t myPid);
   void requestSessionExitFromTransport(StopReason reason);
+  void notifyTransportWorkerReady(size_t queueId, size_t expectedWorkerCount);
   void logUnmountEventAndExit();
 
   /**
@@ -426,14 +427,20 @@ class FuseChannel final : public FsChannel {
    * The connInfo parameter specifies the connection data that was already
    * negotiated by the previous owner of the FuseDevice.
    *
-   * This function will immediately set up the thread pool used to service
-   * incoming fuse requests.
+   * This function starts the thread pool used to service incoming fuse
+   * requests.
    *
    * Returns a StopFuture that will be fulfilled when the FuseChannel has
    * stopped.  This future can be used to detect if the FuseChannel has been
    * unmounted or stopped because of an error or any other reason.
    */
   StopFuture initializeFromTakeover(fuse_init_out connInfo);
+
+  /**
+   * Returns a Future that completes when the takeover transport is ready to
+   * service requests.
+   */
+  folly::Future<folly::Unit> takeoverReadyFuture();
 
   /**
    * Uses the configured PrivHelper to unmount this FUSE mount from the
@@ -915,6 +922,8 @@ class FuseChannel final : public FsChannel {
    * fuse worker threads provided by the MountPoint.
    */
   void processSession();
+  void fulfillTakeoverReadiness();
+  void failTakeoverReadiness(folly::exception_wrapper&& ew);
 
   // Update the effective number of worker threads. For traditional dev/fuse, it
   // is configured. For io_uring, it is the number of CPU cores.
@@ -929,7 +938,7 @@ class FuseChannel final : public FsChannel {
    * Requests that the worker threads terminate their processing loop.
    */
   void requestSessionExit(StopReason reason);
-  void requestSessionExit(
+  bool requestSessionExitLocked(
       const folly::Synchronized<State>::LockedPtr& state,
       StopReason reason);
   void requestTransportStopWakeup();
@@ -1020,7 +1029,11 @@ class FuseChannel final : public FsChannel {
   folly::once_flag unmountLogFlag_;
   folly::Synchronized<State> state_;
   folly::Promise<StopFuture> initPromise_;
+  folly::Promise<folly::Unit> takeoverReadyPromise_;
   folly::Promise<FsStopDataPtr> sessionCompletePromise_;
+  std::atomic<size_t> takeoverReadyWorkerCount_{0};
+  std::atomic<bool> takeoverReadinessStarted_{false};
+  std::atomic<bool> takeoverReadyFinished_{false};
 
   folly::Synchronized<TelemetryState> telemetryState_;
 

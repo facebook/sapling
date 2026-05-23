@@ -1003,7 +1003,7 @@ TEST(EdenMount, takeoverFuseFailsIfUnmountWasEverCalled) {
   mount.unmount(options).within(kTimeout).get();
   auto fuse = std::make_shared<FakeFuse>();
   EXPECT_THROW(
-      { mount.takeoverFuse(FuseChannelData{fuse->start(), {}}); },
+      mount.takeoverFuse(FuseChannelData{fuse->start(), {}}).get(kTimeout),
       EdenMountCancelled);
 }
 

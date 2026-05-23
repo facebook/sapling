@@ -257,6 +257,42 @@ void IoUringFuseTransport::initializeQueue(RingQueue& queue, int fuseFd) const {
   }
 }
 
+void IoUringFuseTransport::initializeQueueForWorker(
+    RingQueue& queue,
+    int fuseFd) const {
+  XLOGF(
+      DBG6,
+      "io_uring worker initializing queueId={} queueDepth={} payloadSize={}",
+      queue.queueId,
+      queue.entries.size(),
+      queue.pool->maxRequestPayloadSize);
+
+  initializeQueue(queue, fuseFd);
+  for (auto& entry : queue.entries) {
+    initializeEntryBuffers(queue, entry);
+  }
+
+  prepareFetchRequests(queue);
+  auto rc = io_uring_submit(&queue.ring);
+  if (rc < 0) {
+    throw std::system_error(
+        -rc,
+        std::generic_category(),
+        fmt::format(
+            "failed to submit initial io_uring fetch SQEs for queue {}",
+            queue.queueId));
+  }
+
+  XLOGF(
+      DBG6,
+      "io_uring worker ready queueId={} queueDepth={} submitted={} eventFd={} ringFd={}",
+      queue.queueId,
+      queue.entries.size(),
+      rc,
+      queue.eventFd,
+      queue.ring.ring_fd);
+}
+
 void IoUringFuseTransport::initializeEntryBuffers(
     RingQueue& queue,
     RingEntry& entry) const {
@@ -825,26 +861,19 @@ void IoUringFuseTransport::processSession(FuseChannel& channel) {
   auto& queue = ringPool_->queues[queueId];
   const auto myPid = getpid();
   const auto configuredCpuCount = get_nprocs_conf();
+  XLOGF(
+      DBG6,
+      "io_uring worker claimed queueId={} queueCount={} queueDepth={} configuredCpuCount={}",
+      queue.queueId,
+      ringPool_->queues.size(),
+      queue.entries.size(),
+      configuredCpuCount);
   if (configuredCpuCount > 0) {
     pinThreadToCpu(queue.queueId, static_cast<size_t>(configuredCpuCount));
   }
 
-  // Match libfuse by initializing the queue and its entry buffers after CPU
-  // pinning, so the per-queue memory follows the worker's CPU locality.
-  initializeQueue(queue, channel.getFuseDeviceFd());
-  for (auto& entry : queue.entries) {
-    initializeEntryBuffers(queue, entry);
-  }
-  prepareFetchRequests(queue);
-  auto rc = io_uring_submit(&queue.ring);
-  if (rc < 0) {
-    throw std::system_error(
-        -rc,
-        std::generic_category(),
-        fmt::format(
-            "failed to submit initial io_uring fetch SQEs for queue {}",
-            queue.queueId));
-  }
+  initializeQueueForWorker(queue, channel.getFuseDeviceFd());
+  channel.notifyTransportWorkerReady(queue.queueId, ringPool_->queues.size());
 
   while (true) {
     processPendingCommits(queue);
@@ -852,7 +881,7 @@ void IoUringFuseTransport::processSession(FuseChannel& channel) {
       break;
     }
 
-    rc = io_uring_submit_and_wait(&queue.ring, 1);
+    auto rc = io_uring_submit_and_wait(&queue.ring, 1);
     if (rc < 0) {
       const auto stopRequested = channel.isStopRequested();
       if (shouldRetrySubmitAndWaitError(rc, stopRequested)) {

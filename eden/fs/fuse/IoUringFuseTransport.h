@@ -172,6 +172,7 @@ class IoUringFuseTransport final : public FuseTransport {
   void initializeRingPool(size_t queueCount, size_t maxRequestPayloadSize);
   void initializeSession(FuseChannel& channel);
   void initializeQueue(RingQueue& queue, int fuseFd) const;
+  void initializeQueueForWorker(RingQueue& queue, int fuseFd) const;
   void initializeEntryBuffers(RingQueue& queue, RingEntry& entry) const;
   void prepareWakePollSqe(RingQueue& queue) const;
   void prepareFetchRequest(RingQueue& queue, RingEntry& entry) const;

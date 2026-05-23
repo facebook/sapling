@@ -2966,7 +2966,8 @@ void EdenMount::fsChannelInitSuccessful(
   preparePostFsChannelCompletion(std::move(channelCompleteFuture));
 }
 
-void EdenMount::takeoverFuse(FuseChannelData takeoverData) {
+folly::Future<folly::Unit> EdenMount::takeoverFuse(
+    FuseChannelData takeoverData) {
 #ifndef _WIN32
   transitionState(State::INITIALIZED, State::STARTING);
 
@@ -2974,17 +2975,29 @@ void EdenMount::takeoverFuse(FuseChannelData takeoverData) {
     beginMount().setValue();
 
     auto channel = makeFuseChannel(this, std::move(takeoverData.fd));
+    auto fuseReadyFuture = channel->takeoverReadyFuture();
     auto fuseCompleteFuture =
         channel->initializeFromTakeover(takeoverData.connInfo);
     setChannel(std::move(channel));
-    fsChannelInitSuccessful(std::move(fuseCompleteFuture));
+    return std::move(fuseReadyFuture)
+        .thenValue([self = shared_from_this(),
+                    fuseCompleteFuture =
+                        std::move(fuseCompleteFuture)](folly::Unit) mutable {
+          self->fsChannelInitSuccessful(std::move(fuseCompleteFuture));
+        })
+        .thenError([self = shared_from_this()](folly::exception_wrapper&& ew) {
+          self->transitionToFsChannelInitializationErrorState();
+          return folly::makeFuture<folly::Unit>(std::move(ew));
+        });
   } catch (const std::exception&) {
     transitionToFsChannelInitializationErrorState();
-    throw;
+    return folly::makeFuture<folly::Unit>(
+        folly::exception_wrapper(std::current_exception()));
   }
 #else
   (void)takeoverData;
-  throw std::runtime_error("FUSE not supported on this platform.");
+  return folly::makeFuture<folly::Unit>(
+      std::runtime_error("FUSE not supported on this platform."));
 #endif
 }
 

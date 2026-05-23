@@ -2013,8 +2013,7 @@ Future<Unit> EdenServer::completeTakeoverStart(
     [[maybe_unused]] TakeoverData::MountInfo&& info) {
   if (auto channelData = std::get_if<FuseChannelData>(&info.channelInfo)) {
     // Start up the fuse workers.
-    return folly::makeFutureWith(
-        [&] { edenMount->takeoverFuse(std::move(*channelData)); });
+    return edenMount->takeoverFuse(std::move(*channelData));
   } else if (
       auto nfsMountInfo = std::get_if<NfsChannelData>(&info.channelInfo)) {
     return edenMount->takeoverNfs(std::move(*nfsMountInfo));

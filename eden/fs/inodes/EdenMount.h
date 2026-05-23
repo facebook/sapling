@@ -960,14 +960,15 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * Take over a FUSE channel for an existing mount point.
    *
    * This spins up worker threads to service the existing FUSE channel and
-   * returns immediately, or throws an exception on error.
+   * returns a Future that completes once the channel is ready to service
+   * requests, or as soon as startup fails.
    *
    * If unmount() is called before takeoverFuse() is called, then takeoverFuse()
    * throws an EdenMountCancelled exception.
    *
    * throws a runtime_error if fuse is not supported on this platform.
    */
-  void takeoverFuse(FuseChannelData takeoverData);
+  folly::Future<folly::Unit> takeoverFuse(FuseChannelData takeoverData);
 
   /**
    * Takeover an NFSd3 channel for an existing mount point.

@@ -20,6 +20,7 @@
 #endif
 #include <chrono>
 #include <csignal>
+#include <exception>
 #include <type_traits>
 
 #include "eden/common/utils/Bug.h"
@@ -673,6 +674,13 @@ std::string capsFlagsToLabel(uint64_t flags) {
   return fmt::format("{} unknown:0x{:x}", str, flags);
 }
 
+folly::exception_wrapper makeTakeoverReadinessStopException(
+    FuseChannel::StopReason reason) {
+  return folly::make_exception_wrapper<std::runtime_error>(fmt::format(
+      "FUSE transport stopped before readiness completed: reason={}",
+      static_cast<int>(reason)));
+}
+
 #ifdef FUSE_OVER_IO_URING
 std::string getRunningKernelRelease() {
   struct utsname uts = {};
@@ -1054,6 +1062,37 @@ void FuseChannel::requestSessionExitFromTransport(StopReason reason) {
   requestSessionExit(reason);
 }
 
+void FuseChannel::notifyTransportWorkerReady(
+    size_t queueId,
+    size_t expectedWorkerCount) {
+  if (!takeoverReadinessStarted_.load(std::memory_order_acquire)) {
+    return;
+  }
+
+  const auto readyCount =
+      takeoverReadyWorkerCount_.fetch_add(1, std::memory_order_acq_rel) + 1;
+  XLOGF(
+      DBG6,
+      "FUSE transport worker ready mount={} transport={} queueId={} readyWorkers={} expectedWorkers={}",
+      mountPath_,
+      transport_->getName(),
+      queueId,
+      readyCount,
+      expectedWorkerCount);
+
+  if (readyCount == expectedWorkerCount) {
+    fulfillTakeoverReadiness();
+  } else if (readyCount > expectedWorkerCount) {
+    XLOGF(
+        WARN,
+        "FUSE transport reported more ready workers than expected mount={} transport={} readyWorkers={} expectedWorkers={}",
+        mountPath_,
+        transport_->getName(),
+        readyCount,
+        expectedWorkerCount);
+  }
+}
+
 void FuseChannel::logUnmountEventAndExit() {
   folly::call_once(unmountLogFlag_, [this] {
     XLOGF(DBG3, "received unmount event ENODEV on mount {}", mountPath_);
@@ -1102,6 +1141,7 @@ bool negotiatedIoUringTransport(const fuse_init_out& connInfo) {
 
 FuseChannel::StopFuture FuseChannel::initializeFromTakeover(
     fuse_init_out connInfo) {
+  takeoverReadinessStarted_.store(true, std::memory_order_release);
   connInfo_ = connInfo;
   if (negotiatedIoUringTransport(connInfo)) {
     transport_ = std::make_unique<IoUringFuseTransport>(ioUringQueueDepth_);
@@ -1118,7 +1158,14 @@ FuseChannel::StopFuture FuseChannel::initializeFromTakeover(
       connInfo_->max_readahead,
       capsFlagsToLabel(fuseInitFlags(*connInfo_)));
   startWorkerThreads();
+  if (!usesIoUringTransport()) {
+    fulfillTakeoverReadiness();
+  }
   return sessionCompletePromise_.getFuture();
+}
+
+folly::Future<folly::Unit> FuseChannel::takeoverReadyFuture() {
+  return takeoverReadyPromise_.getFuture();
 }
 
 folly::SemiFuture<folly::Unit> FuseChannel::unmount(UnmountOptions options) {
@@ -1155,7 +1202,13 @@ void FuseChannel::startWorkerThreads() {
   } catch (const std::exception& ex) {
     XLOGF(ERR, "Error starting FUSE worker threads: {}", exceptionStr(ex));
     // Request any threads we did start to stop now.
-    requestSessionExit(state, StopReason::INIT_FAILED);
+    const auto shouldFailTakeoverReadiness =
+        requestSessionExitLocked(state, StopReason::INIT_FAILED);
+    state.unlock();
+    if (shouldFailTakeoverReadiness) {
+      failTakeoverReadiness(
+          makeTakeoverReadinessStopException(StopReason::INIT_FAILED));
+    }
     stopInvalidationThread();
     throw;
   }
@@ -1163,10 +1216,16 @@ void FuseChannel::startWorkerThreads() {
 
 void FuseChannel::destroy() {
   std::vector<std::thread> threads;
+  bool shouldFailTakeoverReadiness = false;
   {
     auto state = state_.wlock();
-    requestSessionExit(state, StopReason::DESTRUCTOR);
+    shouldFailTakeoverReadiness =
+        requestSessionExitLocked(state, StopReason::DESTRUCTOR);
     threads.swap(state->workerThreads);
+  }
+  if (shouldFailTakeoverReadiness) {
+    failTakeoverReadiness(
+        makeTakeoverReadinessStopException(StopReason::DESTRUCTOR));
   }
 
   for (auto& thread : threads) {
@@ -1442,7 +1501,13 @@ TraceDetailedArgumentsHandle FuseChannel::traceDetailedArguments() const {
 }
 
 void FuseChannel::requestSessionExit(StopReason reason) {
-  requestSessionExit(state_.wlock(), reason);
+  const auto shouldFailTakeoverReadiness = [&] {
+    auto state = state_.wlock();
+    return requestSessionExitLocked(state, reason);
+  }();
+  if (shouldFailTakeoverReadiness) {
+    failTakeoverReadiness(makeTakeoverReadinessStopException(reason));
+  }
 }
 
 void FuseChannel::requestTransportStopWakeup() {
@@ -1458,7 +1523,7 @@ void FuseChannel::requestTransportStopWakeup() {
   }
 }
 
-void FuseChannel::requestSessionExit(
+bool FuseChannel::requestSessionExitLocked(
     const Synchronized<State>::LockedPtr& state,
     StopReason reason) {
   // We have already been asked to stop before.
@@ -1469,7 +1534,7 @@ void FuseChannel::requestSessionExit(
         !isFuseDeviceValid(state->stopReason)) {
       state->stopReason = reason;
     }
-    return;
+    return false;
   }
 
   // This was the first time requestSessionExit has been called.
@@ -1492,6 +1557,7 @@ void FuseChannel::requestSessionExit(
       pthread_kill(thr.native_handle(), SIGUSR2);
     }
   }
+  return true;
 }
 
 void FuseChannel::setThreadSigmask() {
@@ -1565,6 +1631,7 @@ void FuseChannel::fuseWorkerThread() noexcept {
     XLOGF(ERR, "unexpected error in FUSE worker thread: {}", exceptionStr(ex));
     errorLogger_.log(
         EdenErrorInfo::fuse(ex, std::nullopt, mountPath_.asString()));
+    failTakeoverReadiness(folly::exception_wrapper(std::current_exception()));
     // Request that all other FUSE threads exit.
     // This will cause us to stop processing the mount and signal our session
     // complete future.
@@ -1948,6 +2015,40 @@ void FuseChannel::processSession() {
 
 bool FuseChannel::usesIoUringTransport() const {
   return dynamic_cast<IoUringFuseTransport*>(transport_.get()) != nullptr;
+}
+
+void FuseChannel::fulfillTakeoverReadiness() {
+  if (!takeoverReadinessStarted_.load(std::memory_order_acquire)) {
+    return;
+  }
+  if (takeoverReadyFinished_.exchange(true, std::memory_order_acq_rel)) {
+    return;
+  }
+
+  XLOGF(
+      DBG6,
+      "FUSE transport ready mount={} transport={} readyWorkers={}",
+      mountPath_,
+      transport_->getName(),
+      takeoverReadyWorkerCount_.load(std::memory_order_acquire));
+  takeoverReadyPromise_.setValue();
+}
+
+void FuseChannel::failTakeoverReadiness(folly::exception_wrapper&& ew) {
+  if (!takeoverReadinessStarted_.load(std::memory_order_acquire)) {
+    return;
+  }
+  if (takeoverReadyFinished_.exchange(true, std::memory_order_acq_rel)) {
+    return;
+  }
+
+  XLOGF(
+      WARN,
+      "FUSE transport readiness failed mount={} transport={}: {}",
+      mountPath_,
+      transport_->getName(),
+      ew.what());
+  takeoverReadyPromise_.setException(std::move(ew));
 }
 
 void FuseChannel::updateEffectiveWorkerThreadCount() {
