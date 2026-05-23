@@ -334,6 +334,15 @@ IoUringFuseTransport::CqeResult IoUringFuseTransport::handleCqe(
     bool stopRequested) const {
   auto* userData = io_uring_cqe_get_data(&cqe);
   if (cqe.res != 0) {
+    if (cqe.res == -ECANCELED) {
+      logCanceledCqe(queue, cqe, stopRequested, userData);
+      if (shouldRecoverCanceledCommitAndFetchCqe(
+              queue, userData, stopRequested)) {
+        auto& entry = *static_cast<RingEntry*>(userData);
+        recoverCanceledCommitAndFetchCqe(queue, entry);
+        return {.action = CqeResult::Action::Ignored, .request = std::nullopt};
+      }
+    }
     if (isStopEventCqe(queue, cqe, userData)) {
       return {
           .action = CqeResult::Action::StopRequested, .request = std::nullopt};
@@ -571,6 +580,94 @@ void IoUringFuseTransport::markDecodedRequest(RingEntry& entry) const {
 void IoUringFuseTransport::markCommitAndFetchSubmission(
     RingEntry& entry) const {
   entry.phase = RingEntry::Phase::CommitAndFetchInFlight;
+}
+
+bool IoUringFuseTransport::shouldRecoverCanceledCommitAndFetchCqe(
+    const RingQueue& queue,
+    void* userData,
+    bool stopRequested) const {
+  if (stopRequested || !userData) {
+    return false;
+  }
+
+  if (userData == &queue) {
+    return false;
+  }
+
+  const auto& entry = *static_cast<RingEntry*>(userData);
+  return entry.phase == RingEntry::Phase::CommitAndFetchInFlight;
+}
+
+void IoUringFuseTransport::recoverCanceledCommitAndFetchCqe(
+    RingQueue& queue,
+    RingEntry& entry) const {
+  XLOGF(
+      WARN,
+      "recovering canceled io_uring commit_and_fetch CQE for queueId={} entry={} commitId={} phase={}",
+      queue.queueId,
+      static_cast<void*>(&entry),
+      entry.requestCommitId,
+      static_cast<int>(entry.phase));
+  prepareFetchRequest(queue, entry);
+}
+
+bool IoUringFuseTransport::isEntryOutstanding(const RingEntry& entry) const {
+  auto outstandingEntries = outstandingEntries_.rlock();
+  for (const auto& [unique, candidate] : *outstandingEntries) {
+    (void)unique;
+    if (candidate == &entry) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void IoUringFuseTransport::logCanceledCqe(
+    const RingQueue& queue,
+    const io_uring_cqe& cqe,
+    bool stopRequested,
+    void* userData) const {
+  const auto isEventFd = userData == &queue;
+  if (!userData || isEventFd) {
+    XLOGF(
+        ERR,
+        "io_uring canceled CQE queueId={} stopRequested={} res={} flags=0x{:x} userData={} eventFd={} isEventFd={}",
+        queue.queueId,
+        stopRequested,
+        cqe.res,
+        cqe.flags,
+        userData,
+        queue.eventFd,
+        isEventFd);
+    return;
+  }
+
+  const auto& entry = *static_cast<RingEntry*>(userData);
+  const auto& ringInOut = entry.requestHeader->ring_ent_in_out;
+  const auto& bestEffortIn =
+      *reinterpret_cast<const fuse_in_header*>(&entry.requestHeader->in_out);
+  const auto& bestEffortOut =
+      *reinterpret_cast<const fuse_out_header*>(&entry.requestHeader->in_out);
+  XLOGF(
+      ERR,
+      "io_uring canceled CQE queueId={} stopRequested={} res={} flags=0x{:x} userData={} entry.queueId={} phase={} requestCommitId={} outstanding={} bestEffortIn.unique={} bestEffortIn.opcode={} bestEffortIn.len={} ringInOut.commitId={} ringInOut.payloadSz={} bestEffortOut.unique={} bestEffortOut.error={} bestEffortOut.len={}",
+      queue.queueId,
+      stopRequested,
+      cqe.res,
+      cqe.flags,
+      userData,
+      entry.queueId,
+      static_cast<int>(entry.phase),
+      entry.requestCommitId,
+      isEntryOutstanding(entry),
+      bestEffortIn.unique,
+      bestEffortIn.opcode,
+      bestEffortIn.len,
+      ringInOut.commit_id,
+      ringInOut.payload_sz,
+      bestEffortOut.unique,
+      bestEffortOut.error,
+      bestEffortOut.len);
 }
 
 size_t IoUringFuseTransport::getConfiguredQueueCount(

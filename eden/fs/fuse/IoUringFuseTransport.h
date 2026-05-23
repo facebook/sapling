@@ -147,6 +147,18 @@ class IoUringFuseTransport final : public FuseTransport {
   void markRegisterFetchSubmission(RingEntry& entry) const;
   void markDecodedRequest(RingEntry& entry) const;
   void markCommitAndFetchSubmission(RingEntry& entry) const;
+  bool shouldRecoverCanceledCommitAndFetchCqe(
+      const RingQueue& queue,
+      void* userData,
+      bool stopRequested) const;
+  void recoverCanceledCommitAndFetchCqe(RingQueue& queue, RingEntry& entry)
+      const;
+  bool isEntryOutstanding(const RingEntry& entry) const;
+  void logCanceledCqe(
+      const RingQueue& queue,
+      const io_uring_cqe& cqe,
+      bool stopRequested,
+      void* userData) const;
   static size_t getConfiguredQueueCount(size_t defaultThreadCount);
   void initializeRingPool(size_t queueCount, size_t maxRequestPayloadSize);
   void initializeSession(FuseChannel& channel);
