@@ -141,7 +141,7 @@ class IoUringFuseTransport final : public FuseTransport {
   static bool shouldIgnoreCqeError(int result);
   static bool shouldIgnoreCqeErrorDuringShutdown(int result);
   static bool shouldIgnoreCqeError(int result, bool stopRequested);
-  static bool isStopEventCqe(
+  static bool isWakeEventCqe(
       const RingQueue& queue,
       const io_uring_cqe& cqe,
       void* userData);
@@ -173,6 +173,7 @@ class IoUringFuseTransport final : public FuseTransport {
       RingQueue& queue,
       const io_uring_cqe& cqe,
       bool stopRequested) const;
+  CqeResult handleWakeEventCqe(RingQueue& queue, bool stopRequested) const;
   void registerOutstandingEntry(uint64_t unique, RingEntry& entry) const;
   RingEntry& takeOutstandingEntry(uint64_t unique) const;
   void submitCommitAndFetch(RingEntry& entry) const;

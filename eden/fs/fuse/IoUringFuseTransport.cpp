@@ -337,6 +337,9 @@ IoUringFuseTransport::CqeResult IoUringFuseTransport::handleCqe(
     const io_uring_cqe& cqe,
     bool stopRequested) const {
   auto* userData = io_uring_cqe_get_data(&cqe);
+  if (isWakeEventCqe(queue, cqe, userData)) {
+    return handleWakeEventCqe(queue, stopRequested);
+  }
   if (cqe.res != 0) {
     if (cqe.res == -ECANCELED) {
       logCanceledCqe(queue, cqe, stopRequested, userData);
@@ -346,10 +349,6 @@ IoUringFuseTransport::CqeResult IoUringFuseTransport::handleCqe(
         recoverCanceledCommitAndFetchCqe(queue, entry);
         return {.action = CqeResult::Action::Ignored, .request = std::nullopt};
       }
-    }
-    if (isStopEventCqe(queue, cqe, userData)) {
-      return {
-          .action = CqeResult::Action::StopRequested, .request = std::nullopt};
     }
 
     if (shouldIgnoreCqeError(cqe.res, stopRequested)) {
@@ -438,6 +437,28 @@ IoUringFuseTransport::CqeResult IoUringFuseTransport::handleCqe(
   return {
       .action = CqeResult::Action::DispatchRequest,
       .request = std::move(request)};
+}
+
+IoUringFuseTransport::CqeResult IoUringFuseTransport::handleWakeEventCqe(
+    RingQueue& queue,
+    bool stopRequested) const {
+  if (stopRequested) {
+    return {
+        .action = CqeResult::Action::StopRequested, .request = std::nullopt};
+  }
+
+  eventfd_t value = 0;
+  if (eventfd_read(queue.eventFd, &value) != 0) {
+    throw std::system_error(
+        errno,
+        std::generic_category(),
+        fmt::format(
+            "failed to drain io_uring wake eventfd for queue {}",
+            queue.queueId));
+  }
+
+  prepareWakePollSqe(queue);
+  return {.action = CqeResult::Action::Ignored, .request = std::nullopt};
 }
 
 void IoUringFuseTransport::registerOutstandingEntry(
@@ -565,7 +586,7 @@ bool IoUringFuseTransport::shouldIgnoreCqeError(
       (stopRequested && shouldIgnoreCqeErrorDuringShutdown(result));
 }
 
-bool IoUringFuseTransport::isStopEventCqe(
+bool IoUringFuseTransport::isWakeEventCqe(
     const RingQueue& queue,
     const io_uring_cqe& cqe,
     void* userData) {
