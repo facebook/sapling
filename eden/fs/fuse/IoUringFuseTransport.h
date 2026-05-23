@@ -61,6 +61,12 @@ class IoUringFuseTransport final : public FuseTransport {
 
   struct RingEntry {
     using Buffer = std::unique_ptr<void, decltype(&free)>;
+    enum class Phase {
+      Idle,
+      RegisterFetchInFlight,
+      RequestOutstanding,
+      CommitAndFetchInFlight,
+    };
 
     RingPool* pool{nullptr};
     size_t queueId{0};
@@ -70,6 +76,7 @@ class IoUringFuseTransport final : public FuseTransport {
     void* payload{nullptr};
     size_t payloadSize{0};
     uint64_t requestCommitId{0};
+    Phase phase{Phase::Idle};
     std::array<iovec, 2> iov{};
   };
 
@@ -137,6 +144,9 @@ class IoUringFuseTransport final : public FuseTransport {
       const io_uring_cqe& cqe,
       void* userData);
 
+  void markRegisterFetchSubmission(RingEntry& entry) const;
+  void markDecodedRequest(RingEntry& entry) const;
+  void markCommitAndFetchSubmission(RingEntry& entry) const;
   static size_t getConfiguredQueueCount(size_t defaultThreadCount);
   void initializeRingPool(size_t queueCount, size_t maxRequestPayloadSize);
   void initializeSession(FuseChannel& channel);

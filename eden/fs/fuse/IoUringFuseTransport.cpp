@@ -267,6 +267,7 @@ void IoUringFuseTransport::initializeEntryBuffers(
   entry.payload = entry.payloadStorage.get();
   entry.payloadSize = queue.pool->maxRequestPayloadSize;
   entry.requestCommitId = 0;
+  entry.phase = RingEntry::Phase::Idle;
 
   entry.iov[0].iov_base = entry.requestHeader;
   entry.iov[0].iov_len = queue.requestHeaderSize;
@@ -290,6 +291,7 @@ void IoUringFuseTransport::prepareFetchRequests(RingQueue& queue) const {
         static_cast<uint16_t>(queue.queueId),
         /* commitId */ 0,
         &entry);
+    markRegisterFetchSubmission(entry);
     sqe->addr = reinterpret_cast<uint64_t>(entry.iov.data());
     sqe->len = static_cast<__u32>(entry.iov.size());
   }
@@ -408,6 +410,7 @@ IoUringFuseTransport::CqeResult IoUringFuseTransport::handleCqe(
         request.arguments.data() + opHeaderSize, entry.payload, payloadSize);
   }
 
+  markDecodedRequest(entry);
   registerOutstandingEntry(in.unique, entry);
   return {
       .action = CqeResult::Action::DispatchRequest,
@@ -455,6 +458,7 @@ void IoUringFuseTransport::submitCommitAndFetch(RingEntry& entry) const {
       static_cast<uint16_t>(entry.queueId),
       entry.requestCommitId,
       &entry);
+  markCommitAndFetchSubmission(entry);
 
   auto rc = io_uring_submit(&queue.ring);
   if (rc < 0) {
@@ -543,6 +547,20 @@ bool IoUringFuseTransport::isStopEventCqe(
     const io_uring_cqe& cqe,
     void* userData) {
   return cqe.res > 0 && userData == &queue;
+}
+
+void IoUringFuseTransport::markRegisterFetchSubmission(RingEntry& entry) const {
+  entry.requestCommitId = 0;
+  entry.phase = RingEntry::Phase::RegisterFetchInFlight;
+}
+
+void IoUringFuseTransport::markDecodedRequest(RingEntry& entry) const {
+  entry.phase = RingEntry::Phase::RequestOutstanding;
+}
+
+void IoUringFuseTransport::markCommitAndFetchSubmission(
+    RingEntry& entry) const {
+  entry.phase = RingEntry::Phase::CommitAndFetchInFlight;
 }
 
 size_t IoUringFuseTransport::getConfiguredQueueCount(
