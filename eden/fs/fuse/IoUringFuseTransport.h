@@ -14,7 +14,10 @@
 #include <cstdint>
 #include <cstdlib>
 #include <memory>
+#include <unordered_map>
 #include <vector>
+
+#include <folly/Synchronized.h>
 
 #ifdef __linux__
 #include <liburing.h>
@@ -102,8 +105,16 @@ class IoUringFuseTransport final : public FuseTransport {
       int fuseFd);
   void initializeQueue(RingQueue& queue, int fuseFd) const;
   void initializeEntryBuffers(RingQueue& queue, RingEntry& entry) const;
+  void registerOutstandingEntry(uint64_t unique, RingEntry& entry) const;
+  RingEntry& takeOutstandingEntry(uint64_t unique) const;
+  void submitCommitAndFetch(RingEntry& entry) const;
+  static fuse_out_header& getReplyHeader(RingEntry& entry);
+  static fuse_uring_ent_in_out& getRingEntryInOut(RingEntry& entry);
   void destroyRingPool() noexcept;
   static void* allocatePageAlignedBuffer(size_t size);
+
+  mutable folly::Synchronized<std::unordered_map<uint64_t, RingEntry*>>
+      outstandingEntries_;
 #endif
   uint32_t queueDepth_;
 };

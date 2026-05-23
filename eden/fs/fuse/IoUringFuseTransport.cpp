@@ -41,6 +41,32 @@ namespace {
           queueDepth));
 }
 
+#ifdef __linux__
+void prepareUringCmdSqe(
+    io_uring_sqe& sqe,
+    uint32_t cmdOp,
+    uint16_t queueId,
+    uint64_t commitId,
+    void* userData) {
+  std::memset(&sqe, 0, sizeof(sqe));
+  sqe.opcode = IORING_OP_URING_CMD;
+  sqe.flags = IOSQE_FIXED_FILE;
+  sqe.ioprio = 0;
+  sqe.fd = 0;
+  sqe.off = 0;
+  sqe.rw_flags = 0;
+  io_uring_sqe_set_data(&sqe, userData);
+  sqe.cmd_op = cmdOp;
+  sqe.__pad1 = 0;
+
+  fuse_uring_cmd_req cmd = {};
+  cmd.flags = 0;
+  cmd.commit_id = commitId;
+  cmd.qid = queueId;
+  std::memcpy(sqe.cmd, &cmd, sizeof(cmd));
+}
+#endif
+
 } // namespace
 
 IoUringFuseTransport::IoUringFuseTransport(uint32_t queueDepth)
@@ -203,6 +229,67 @@ void IoUringFuseTransport::initializeEntryBuffers(
   entry.iov[1].iov_len = entry.payloadSize;
 }
 
+void IoUringFuseTransport::registerOutstandingEntry(
+    uint64_t unique,
+    RingEntry& entry) const {
+  auto outstandingEntries = outstandingEntries_.wlock();
+  auto [it, inserted] = outstandingEntries->emplace(unique, &entry);
+  if (!inserted) {
+    throw std::runtime_error(
+        fmt::format(
+            "duplicate io_uring outstanding request unique={}", unique));
+  }
+  (void)it;
+}
+
+IoUringFuseTransport::RingEntry& IoUringFuseTransport::takeOutstandingEntry(
+    uint64_t unique) const {
+  auto outstandingEntries = outstandingEntries_.wlock();
+  auto it = outstandingEntries->find(unique);
+  if (it == outstandingEntries->end()) {
+    throw std::runtime_error(
+        fmt::format("unknown io_uring outstanding request unique={}", unique));
+  }
+  auto* entry = it->second;
+  outstandingEntries->erase(it);
+  return *entry;
+}
+
+void IoUringFuseTransport::submitCommitAndFetch(RingEntry& entry) const {
+  auto& queue = entry.pool->queues.at(entry.queueId);
+  auto* sqe = io_uring_get_sqe(&queue.ring);
+  if (!sqe) {
+    throw std::runtime_error(
+        fmt::format(
+            "failed to get io_uring SQE for queue {} commit", entry.queueId));
+  }
+
+  prepareUringCmdSqe(
+      *sqe,
+      FUSE_IO_URING_CMD_COMMIT_AND_FETCH,
+      static_cast<uint16_t>(entry.queueId),
+      entry.requestCommitId,
+      &entry);
+
+  auto rc = io_uring_submit(&queue.ring);
+  if (rc < 0) {
+    throw std::system_error(
+        -rc,
+        std::generic_category(),
+        fmt::format(
+            "failed to submit io_uring commit on queue {}", entry.queueId));
+  }
+}
+
+fuse_out_header& IoUringFuseTransport::getReplyHeader(RingEntry& entry) {
+  return *reinterpret_cast<fuse_out_header*>(&entry.requestHeader->in_out);
+}
+
+fuse_uring_ent_in_out& IoUringFuseTransport::getRingEntryInOut(
+    RingEntry& entry) {
+  return entry.requestHeader->ring_ent_in_out;
+}
+
 void IoUringFuseTransport::destroyRingPool() noexcept {
   ringPool_.reset();
 }
@@ -255,11 +342,24 @@ void IoUringFuseTransport::processSession(FuseChannel& /* channel */) {
 
 void IoUringFuseTransport::replyError(
     FuseChannel& /* channel */,
-    const fuse_in_header& /* request */,
-    int /* errorCode */) const {
-  // Not implemented: io_uring reply submission will be added in a follow-up
-  // diff.
+    const fuse_in_header& request,
+    int errorCode) const {
+#ifdef __linux__
+  auto& entry = takeOutstandingEntry(request.unique);
+  auto& out = getReplyHeader(entry);
+  auto& ringInOut = getRingEntryInOut(entry);
+
+  out.error = -errorCode;
+  out.unique = request.unique;
+  out.len = 0;
+  ringInOut.payload_sz = 0;
+
+  submitCommitAndFetch(entry);
+#else
+  (void)request;
+  (void)errorCode;
   throwIoUringNotImplemented("replyError", queueDepth_);
+#endif
 }
 
 void IoUringFuseTransport::sendRawReply(
