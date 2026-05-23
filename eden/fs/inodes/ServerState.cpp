@@ -19,7 +19,6 @@
 #include "eden/fs/inodes/InodeAccessLogger.h"
 #include "eden/fs/model/git/TopLevelIgnores.h"
 #include "eden/fs/nfs/NfsServer.h"
-#include "eden/fs/telemetry/EdenErrorInfoBuilder.h"
 #include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/ErrorLogger.h"
@@ -139,12 +138,6 @@ ServerState::ServerState(
 }
 
 ServerState::~ServerState() = default;
-
-void ServerState::logErrorEvent(EdenErrorInfoBuilder builder) {
-  if (errorLogger_) {
-    errorLogger_->log(std::move(builder));
-  }
-}
 
 folly::ReadMostlySharedPtr<const EdenConfig> ServerState::getEdenConfig() {
   return config_->getEdenConfig();

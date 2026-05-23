@@ -187,8 +187,6 @@ class ServerState {
     return *errorLogger_;
   }
 
-  void logErrorEvent(EdenErrorInfoBuilder builder);
-
   /**
    * Returns a ScribeLogger that can be used to send log events to external
    * long term storage for offline consumption. Prefer this method if the

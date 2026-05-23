@@ -1060,7 +1060,7 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover(
         XLOGF(
             ERR, "Error while stopping \"{}\" for takeover: {}", mountPath, ew);
         ew.with_exception([&](const std::exception& ex) {
-          serverState_->logErrorEvent(
+          serverState_->getErrorLogger().log(
               EdenErrorInfo::takeover(ex)
                   .withMountPoint(std::string(mountPath.view()))
                   .withMountStatus(
@@ -1099,7 +1099,7 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover(
                 path,
                 result.exception().what());
             result.exception().with_exception([&](const std::exception& ex) {
-              serverState->logErrorEvent(
+              serverState->getErrorLogger().log(
                   EdenErrorInfo::takeover(ex).withMountPoint(path.asString()));
             });
             continue;
