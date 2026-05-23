@@ -2647,6 +2647,7 @@ folly::Future<NfsServer::NfsMountInfo> makeNfsChannel(
                    mount->getServerState()->getProcessInfoCache(),
                    mount->getServerState()->getFsEventLogger(),
                    mount->getServerState()->getEdenFsEventsLogger(),
+                   mount->getServerState()->getErrorLogger(),
                    std::chrono::duration_cast<folly::Duration>(
                        edenConfig->nfsRequestTimeout.getValue()),
                    mount->getServerState()->getNotifier(),

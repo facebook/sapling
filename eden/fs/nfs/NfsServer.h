@@ -21,6 +21,7 @@ class Executor;
 namespace facebook::eden {
 
 class EdenFsEventsLogger;
+class ErrorLogger;
 class FsEventLogger;
 class Notifier;
 class NfsDispatcher;
@@ -87,6 +88,7 @@ class NfsServer {
       std::shared_ptr<ProcessInfoCache> processInfoCache,
       std::shared_ptr<FsEventLogger> fsEventLogger,
       const std::shared_ptr<EdenFsEventsLogger>& edenFsEventsLogger,
+      ErrorLogger& errorLogger,
       folly::Duration requestTimeout,
       std::shared_ptr<Notifier> notifier,
       CaseSensitivity caseSensitive,

@@ -56,6 +56,8 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
       std::unique_ptr<NfsDispatcher> dispatcher,
       const folly::Logger* straceLogger,
       const std::shared_ptr<EdenFsEventsLogger>& edenFsEventsLogger,
+      ErrorLogger& errorLogger,
+      AbsolutePath mountPath,
       CaseSensitivity caseSensitive,
       uint32_t iosize,
       folly::Promise<FsStopDataPtr>& stopPromise,
@@ -67,6 +69,8 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
       : dispatcher_(std::move(dispatcher)),
         straceLogger_(straceLogger),
         edenFsEventsLogger_(edenFsEventsLogger),
+        errorLogger_(errorLogger),
+        mountPath_(std::move(mountPath)),
         caseSensitive_(caseSensitive),
         iosize_(iosize),
         stopPromise_{stopPromise},
@@ -207,6 +211,8 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
   // EdenFS instance runs on.
   const folly::Logger* straceLogger_;
   const std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger_;
+  [[maybe_unused]] ErrorLogger& errorLogger_;
+  [[maybe_unused]] AbsolutePath mountPath_;
   CaseSensitivity caseSensitive_;
   uint32_t iosize_;
   // This promise is owned by the nfs3d. The nfs3d owns an RPC server that owns
@@ -2353,6 +2359,7 @@ Nfsd3::Nfsd3(
     std::shared_ptr<ProcessInfoCache> processInfoCache,
     std::shared_ptr<FsEventLogger> fsEventLogger,
     const std::shared_ptr<EdenFsEventsLogger>& edenFsEventsLogger,
+    ErrorLogger& errorLogger,
     folly::Duration /*requestTimeout*/,
     std::shared_ptr<Notifier> /*notifier*/,
     CaseSensitivity caseSensitive,
@@ -2370,6 +2377,8 @@ Nfsd3::Nfsd3(
             std::move(dispatcher),
             straceLogger,
             edenFsEventsLogger,
+            errorLogger,
+            mountPath_,
             caseSensitive,
             iosize,
             stopPromise_,
