@@ -12,7 +12,7 @@
 #include <folly/executors/GlobalExecutor.h>
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
-#ifdef FUSE_OVER_IO_URING
+#if EDEN_HAVE_FUSE_IO_URING
 #include <sys/utsname.h>
 #endif
 #include <cerrno>
@@ -225,7 +225,7 @@ TEST_F(FuseChannelTest, testTakeoverStop) {
   EXPECT_EQ(flags, fuseStopData->fuseSettings.flags);
 }
 
-#if defined(FUSE_INIT_EXT) && defined(FUSE_OVER_IO_URING)
+#if EDEN_HAVE_FUSE_IO_URING
 std::string getRunningKernelReleaseForTest() {
   struct utsname uts = {};
   if (uname(&uts) != 0) {
@@ -341,7 +341,7 @@ TEST_F(FuseChannelTest, testInitUnmountRace) {
   }
 }
 
-#ifdef __linux__
+#if EDEN_HAVE_FUSE_IO_URING
 TEST_F(FuseChannelTest, ioUringSubmitAndWaitErrorPolicy) {
   EXPECT_TRUE(IoUringFuseTransport::isTransientSubmitAndWaitError(-EINTR));
   EXPECT_TRUE(IoUringFuseTransport::isTransientSubmitAndWaitError(-EAGAIN));

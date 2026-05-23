@@ -15,7 +15,7 @@
 #include <folly/system/ThreadName.h>
 #include <re2/re2.h>
 #include <algorithm>
-#ifdef FUSE_OVER_IO_URING
+#if EDEN_HAVE_FUSE_IO_URING
 #include <sys/utsname.h>
 #endif
 #include <chrono>
@@ -648,7 +648,7 @@ constexpr std::pair<uint64_t, const char*> kCapsLabels[] = {
 #ifdef FUSE_INIT_EXT
     {FUSE_INIT_EXT, "INIT_EXT"},
 #endif
-#ifdef FUSE_OVER_IO_URING
+#if EDEN_HAVE_FUSE_IO_URING
     {FUSE_OVER_IO_URING, "OVER_IO_URING"},
 #endif
 };
@@ -681,7 +681,7 @@ folly::exception_wrapper makeTakeoverReadinessStopException(
       static_cast<int>(reason)));
 }
 
-#ifdef FUSE_OVER_IO_URING
+#if EDEN_HAVE_FUSE_IO_URING
 std::string getRunningKernelRelease() {
   struct utsname uts = {};
   if (uname(&uts) != 0) {
@@ -758,7 +758,7 @@ ProcessAccessLog::AccessType fuseOpcodeAccessType(uint32_t opcode) {
                : ProcessAccessLog::AccessType::FsChannelOther;
 }
 
-#ifdef FUSE_OVER_IO_URING
+#if EDEN_HAVE_FUSE_IO_URING
 bool FuseChannel::isKernelAllowedForIoUring(
     folly::StringPiece kernelRelease) const {
   if (ioUringKernelReleaseRegex_.empty()) {
@@ -1130,7 +1130,7 @@ namespace {
 // during FUSE_INIT. After init, including takeover, the transport must follow
 // the capability that was actually negotiated for this FUSE connection.
 bool negotiatedIoUringTransport(const fuse_init_out& connInfo) {
-#ifdef FUSE_OVER_IO_URING
+#if EDEN_HAVE_FUSE_IO_URING
   return (fuseInitFlags(connInfo) & FUSE_OVER_IO_URING) != 0;
 #else
   (void)connInfo;
@@ -1889,7 +1889,7 @@ void FuseChannel::readInitPacket() {
 #endif
 
   // Only return the capabilities the kernel supports.
-#ifdef FUSE_OVER_IO_URING
+#if EDEN_HAVE_FUSE_IO_URING
   if (useIoUring_) {
     const auto kernelRelease = getRunningKernelRelease();
     if (isKernelAllowedForIoUring(kernelRelease)) {

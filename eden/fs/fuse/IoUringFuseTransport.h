@@ -24,7 +24,9 @@
 
 #include <gtest/gtest_prod.h>
 
-#ifdef __linux__
+#include "eden/fs/fuse/FuseFeatures.h"
+
+#if EDEN_HAVE_FUSE_IO_URING
 #include <liburing.h>
 #endif
 
@@ -54,7 +56,7 @@ class IoUringFuseTransport final : public FuseTransport {
       const override;
 
  private:
-#ifdef __linux__
+#if EDEN_HAVE_FUSE_IO_URING
   FRIEND_TEST(FuseChannelTest, ioUringSubmitAndWaitErrorPolicy);
   FRIEND_TEST(FuseChannelTest, ioUringCqeErrorPolicy);
 

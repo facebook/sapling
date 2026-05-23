@@ -31,6 +31,7 @@
 #include "eden/common/utils/ImmediateFuture.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/fuse/FuseDispatcher.h"
+#include "eden/fs/fuse/FuseFeatures.h"
 #include "eden/fs/inodes/FsChannel.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/utils/FsChannelTypes.h"
@@ -878,7 +879,7 @@ class FuseChannel final : public FsChannel {
       folly::ByteRange arg);
 
  private:
-#ifdef FUSE_OVER_IO_URING
+#if EDEN_HAVE_FUSE_IO_URING
   bool isKernelAllowedForIoUring(folly::StringPiece kernelRelease) const;
 #endif
 

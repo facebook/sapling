@@ -10,7 +10,7 @@
 #include "eden/fs/fuse/IoUringFuseTransport.h"
 #include "eden/fs/fuse/FuseChannel.h"
 
-#ifdef __linux__
+#if EDEN_HAVE_FUSE_IO_URING
 #include <poll.h>
 #include <sched.h>
 #include <sys/eventfd.h>
@@ -28,7 +28,7 @@
 #include <fmt/core.h>
 #include <folly/logging/xlog.h>
 
-#ifdef __linux__
+#if EDEN_HAVE_FUSE_IO_URING
 #ifndef IORING_SETUP_SQE128
 #error \
     "FUSE io_uring transport requires liburing support for IORING_SETUP_SQE128"
@@ -49,7 +49,7 @@ namespace {
           queueDepth));
 }
 
-#ifdef __linux__
+#if EDEN_HAVE_FUSE_IO_URING
 void prepareUringCmdSqe(
     io_uring_sqe& sqe,
     uint32_t cmdOp,
@@ -109,12 +109,12 @@ IoUringFuseTransport::IoUringFuseTransport(uint32_t queueDepth)
     : queueDepth_{queueDepth} {}
 
 IoUringFuseTransport::~IoUringFuseTransport() {
-#ifdef __linux__
+#if EDEN_HAVE_FUSE_IO_URING
   destroyRingPool();
 #endif
 }
 
-#ifdef __linux__
+#if EDEN_HAVE_FUSE_IO_URING
 IoUringFuseTransport::RingQueue::RingQueue() {
   ring.ring_fd = -1;
   requestHeaderSize = roundUpToPageSize(sizeof(fuse_uring_req_header));
@@ -810,7 +810,7 @@ const char* IoUringFuseTransport::getName() const {
 
 size_t IoUringFuseTransport::getWorkerThreadCount(
     size_t defaultThreadCount) const {
-#ifdef __linux__
+#if EDEN_HAVE_FUSE_IO_URING
   return getConfiguredQueueCount(defaultThreadCount);
 #else
   return defaultThreadCount;
@@ -818,7 +818,7 @@ size_t IoUringFuseTransport::getWorkerThreadCount(
 }
 
 void IoUringFuseTransport::requestStopWakeup() {
-#ifdef __linux__
+#if EDEN_HAVE_FUSE_IO_URING
   if (!ringPool_) {
     return;
   }
@@ -846,7 +846,7 @@ ssize_t IoUringFuseTransport::readInitPacket(
 }
 
 void IoUringFuseTransport::processSession(FuseChannel& channel) {
-#ifdef __linux__
+#if EDEN_HAVE_FUSE_IO_URING
   initializeSession(channel);
 
   const auto queueId = nextQueueId_.fetch_add(1, std::memory_order_acq_rel);
@@ -955,7 +955,7 @@ void IoUringFuseTransport::replyError(
     FuseChannel& /* channel */,
     const fuse_in_header& request,
     int errorCode) const {
-#ifdef __linux__
+#if EDEN_HAVE_FUSE_IO_URING
   auto& entry = takeOutstandingEntry(request.unique);
   auto& out = getReplyHeader(entry);
   auto& ringInOut = getRingEntryInOut(entry);
@@ -977,7 +977,7 @@ void IoUringFuseTransport::sendRawReply(
     FuseChannel& /* channel */,
     const iovec iov[],
     size_t count) const {
-#ifdef __linux__
+#if EDEN_HAVE_FUSE_IO_URING
   if (count == 0) {
     throw std::runtime_error("io_uring reply requires at least one iovec");
   }
