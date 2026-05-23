@@ -1111,7 +1111,8 @@ FuseChannel::StopFuture FuseChannel::initializeFromTakeover(
 
   XLOGF(
       DBG1,
-      "Takeover using max_write={}, max_readahead={}, want={}",
+      "Takeover using transport={}, max_write={}, max_readahead={}, want={}",
+      transport_->getName(),
       connInfo_->max_write,
       connInfo_->max_readahead,
       capsFlagsToLabel(fuseInitFlags(*connInfo_)));
@@ -1828,20 +1829,6 @@ void FuseChannel::readInitPacket() {
   const auto logMaxPages = 0;
 #endif
 
-  XLOGF(
-      DBG1,
-      "Speaking fuse protocol kernel={}.{} local={}.{} on mount \"{}\", max_write={}, max_readahead={}, max_pages={}, capable={}, want={}",
-      init.init.major,
-      init.init.minor,
-      FUSE_KERNEL_VERSION,
-      FUSE_KERNEL_MINOR_VERSION,
-      mountPath_,
-      connInfo.max_write,
-      connInfo.max_readahead,
-      logMaxPages,
-      capsFlagsToLabel(capable),
-      capsFlagsToLabel(want));
-
   if (init.init.major != FUSE_KERNEL_VERSION) {
     replyError(init.header, EPROTO);
     throw_<std::runtime_error>(
@@ -1890,6 +1877,21 @@ void FuseChannel::readInitPacket() {
   if (negotiatedIoUringTransport(connInfo)) {
     transport_ = std::make_unique<IoUringFuseTransport>(ioUringQueueDepth_);
   }
+
+  XLOGF(
+      DBG1,
+      "Speaking fuse protocol kernel={}.{} local={}.{} on mount \"{}\" via {}, max_write={}, max_readahead={}, max_pages={}, capable={}, want={}",
+      init.init.major,
+      init.init.minor,
+      FUSE_KERNEL_VERSION,
+      FUSE_KERNEL_MINOR_VERSION,
+      mountPath_,
+      transport_->getName(),
+      connInfo.max_write,
+      connInfo.max_readahead,
+      logMaxPages,
+      capsFlagsToLabel(capable),
+      capsFlagsToLabel(want));
 
   dispatcher_->initConnection(connInfo);
   maybeSetFuseReadAhead();
