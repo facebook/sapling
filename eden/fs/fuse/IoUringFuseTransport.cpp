@@ -211,11 +211,11 @@ void IoUringFuseTransport::initializeRingPool(
 
 void IoUringFuseTransport::initializeSession(FuseChannel& channel) {
   folly::call_once(sessionInitFlag_, [&] {
-    const auto maxRequestPayloadSize = channel.bufferSize_ > 4096
-        ? channel.bufferSize_ - 4096
-        : channel.bufferSize_;
+    const auto bufferSize = channel.getTransportBufferSize();
+    const auto maxRequestPayloadSize =
+        bufferSize > 4096 ? bufferSize - 4096 : bufferSize;
     const auto queueCount =
-        getConfiguredQueueCount(channel.configuredWorkerThreadCount_);
+        getConfiguredQueueCount(channel.getTransportWorkerThreadCount());
     initializeRingPool(queueCount, maxRequestPayloadSize);
   });
 }
@@ -539,13 +539,13 @@ bool IoUringFuseTransport::hasPendingCommits(const RingQueue& queue) const {
 bool IoUringFuseTransport::shouldExitWorkerLoop(
     const FuseChannel& channel,
     const RingQueue& queue) const {
-  if (!channel.stop_.load(std::memory_order_relaxed)) {
+  if (!channel.isStopRequested()) {
     return false;
   }
   if (hasPendingCommits(queue)) {
     return false;
   }
-  return channel.state_.rlock()->pendingRequests == 0;
+  return !channel.hasPendingRequests();
 }
 
 void IoUringFuseTransport::notifyWorker(const RingQueue& queue) const {
@@ -811,7 +811,7 @@ void IoUringFuseTransport::processSession(FuseChannel& channel) {
 
   // Match libfuse by initializing the queue and its entry buffers after CPU
   // pinning, so the per-queue memory follows the worker's CPU locality.
-  initializeQueue(queue, channel.fuseDevice_.fd());
+  initializeQueue(queue, channel.getFuseDeviceFd());
   for (auto& entry : queue.entries) {
     initializeEntryBuffers(queue, entry);
   }
@@ -834,7 +834,7 @@ void IoUringFuseTransport::processSession(FuseChannel& channel) {
 
     rc = io_uring_submit_and_wait(&queue.ring, 1);
     if (rc < 0) {
-      const auto stopRequested = channel.stop_.load(std::memory_order_relaxed);
+      const auto stopRequested = channel.isStopRequested();
       if (shouldRetrySubmitAndWaitError(rc, stopRequested)) {
         continue;
       }
@@ -862,13 +862,12 @@ void IoUringFuseTransport::processSession(FuseChannel& channel) {
                 "io_uring CQE iteration returned null on queue {}",
                 queue.queueId));
       }
-      auto result =
-          handleCqe(queue, *cqe, channel.stop_.load(std::memory_order_relaxed));
+      auto result = handleCqe(queue, *cqe, channel.isStopRequested());
       switch (result.action) {
         case CqeResult::Action::DispatchRequest: {
           XCHECK(result.request.has_value());
           auto& request = *result.request;
-          if (channel.stop_.load(std::memory_order_relaxed)) {
+          if (channel.isStopRequested()) {
             // COMMIT_AND_FETCH can return another request while shutdown is
             // draining. Recycle it with an error instead of dispatching new
             // work into FuseChannel after stop was requested.
@@ -876,7 +875,7 @@ void IoUringFuseTransport::processSession(FuseChannel& channel) {
             break;
           }
           registerOutstandingEntry(request.header.unique, *request.entry);
-          channel.dispatchRequest(
+          channel.dispatchRequestFromTransport(
               request.header,
               folly::ByteRange{
                   request.arguments.data(), request.arguments.size()},
@@ -886,8 +885,8 @@ void IoUringFuseTransport::processSession(FuseChannel& channel) {
         case CqeResult::Action::Ignored:
           break;
         case CqeResult::Action::StopRequested:
-          channel.requestSessionExit(FuseChannel::StopReason::UNMOUNTED);
-          channel.stop_.store(true, std::memory_order_relaxed);
+          channel.requestSessionExitFromTransport(
+              FuseChannel::StopReason::UNMOUNTED);
           break;
       }
     }

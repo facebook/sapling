@@ -829,29 +829,6 @@ void FuseChannel::replyError(const fuse_in_header& request, int errorCode) {
   transport_->replyError(*this, request, errorCode);
 }
 
-void FuseChannel::replyErrorDevFuse(
-    const fuse_in_header& request,
-    int errorCode) const {
-  fuse_out_header err;
-  err.len = sizeof(err);
-  err.error = -errorCode;
-  err.unique = request.unique;
-  XLOGF(
-      DBG7,
-      "replyError unique={} error={} {}",
-      err.unique,
-      errorCode,
-      folly::errnoStr(errorCode));
-  auto res = write(fuseDevice_.fd(), &err, sizeof(err));
-  if (res != sizeof(err)) {
-    if (res < 0) {
-      throwSystemError("replyError: error writing to fuse device");
-    } else {
-      throw std::runtime_error("unexpected short write to FUSE device");
-    }
-  }
-}
-
 void FuseChannel::sendReply(
     const fuse_in_header& request,
     folly::fbvector<iovec>&& vec) const {
@@ -1064,6 +1041,24 @@ FuseChannel::~FuseChannel() {
 
 const char* FuseChannel::getTransportName() const {
   return transport_ ? transport_->getName() : "unknown";
+}
+
+void FuseChannel::dispatchRequestFromTransport(
+    const fuse_in_header& header,
+    folly::ByteRange arg,
+    pid_t myPid) {
+  dispatchRequest(header, arg, myPid);
+}
+
+void FuseChannel::requestSessionExitFromTransport(StopReason reason) {
+  requestSessionExit(reason);
+}
+
+void FuseChannel::logUnmountEventAndExit() {
+  folly::call_once(unmountLogFlag_, [this] {
+    XLOGF(DBG3, "received unmount event ENODEV on mount {}", mountPath_);
+  });
+  requestSessionExit(StopReason::UNMOUNTED);
 }
 
 Future<FuseChannel::StopFuture> FuseChannel::initialize() {

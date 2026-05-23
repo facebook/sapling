@@ -367,6 +367,30 @@ class FuseChannel final : public FsChannel {
   }
 
   const char* getTransportName() const;
+  size_t getTransportBufferSize() const {
+    return bufferSize_;
+  }
+  size_t getTransportWorkerThreadCount() const {
+    return configuredWorkerThreadCount_;
+  }
+  int getFuseDeviceFd() const {
+    return fuseDevice_.fd();
+  }
+  bool isStopRequested() const {
+    return stop_.load(std::memory_order_relaxed);
+  }
+  bool hasPendingRequests() const {
+    return state_.rlock()->pendingRequests != 0;
+  }
+  bool isFuseDeviceValidForWrites() const {
+    return isFuseDeviceValid(state_.rlock()->stopReason);
+  }
+  void dispatchRequestFromTransport(
+      const fuse_in_header& header,
+      folly::ByteRange arg,
+      pid_t myPid);
+  void requestSessionExitFromTransport(StopReason reason);
+  void logUnmountEventAndExit();
 
   /**
    * Initialize the FuseChannel; until this completes successfully,
@@ -699,9 +723,6 @@ class FuseChannel final : public FsChannel {
   };
 
   friend struct fmt::formatter<facebook::eden::FuseChannel::InvalidationEntry>;
-  friend class DevFuseTransport;
-  friend class IoUringFuseTransport;
-
   FRIEND_TEST(FuseChannelTest, formatting_inode);
   FRIEND_TEST(FuseChannelTest, formatting_dir);
   FRIEND_TEST(FuseChannelTest, formatting_flush);
@@ -902,7 +923,6 @@ class FuseChannel final : public FsChannel {
       const fuse_in_header& header,
       folly::ByteRange arg,
       pid_t myPid);
-  void replyErrorDevFuse(const fuse_in_header& request, int errorCode) const;
   void sendRawReplyDevFuse(const iovec iov[], size_t count) const;
 
   /**
