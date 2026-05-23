@@ -14,6 +14,7 @@
 #endif
 #include <unistd.h>
 #include <cstring>
+#include <limits>
 #include <stdexcept>
 #include <system_error>
 
@@ -364,11 +365,63 @@ void IoUringFuseTransport::replyError(
 
 void IoUringFuseTransport::sendRawReply(
     FuseChannel& /* channel */,
-    const iovec[] /* iov */,
-    size_t /* count */) const {
-  // Not implemented: io_uring reply submission will be added in a follow-up
-  // diff.
+    const iovec iov[],
+    size_t count) const {
+#ifdef __linux__
+  if (count == 0) {
+    throw std::runtime_error("io_uring reply requires at least one iovec");
+  }
+
+  const auto& sourceHeader =
+      *static_cast<const fuse_out_header*>(iov[0].iov_base);
+  auto& entry = takeOutstandingEntry(sourceHeader.unique);
+  auto& out = getReplyHeader(entry);
+  auto& ringInOut = getRingEntryInOut(entry);
+
+  size_t payloadLength = 0;
+  int error = sourceHeader.error;
+  auto* payload = static_cast<uint8_t*>(entry.payload);
+  for (size_t idx = 1; idx < count; ++idx) {
+    if (iov[idx].iov_len > entry.payloadSize - payloadLength) {
+      XLOGF(
+          WARN,
+          "io_uring reply payload exceeds buffer: unique={} iov_index={} iov_len={} copied_payload_length={} payload_buffer_size={}",
+          sourceHeader.unique,
+          idx,
+          iov[idx].iov_len,
+          payloadLength,
+          entry.payloadSize);
+      error = -EINVAL;
+      payloadLength = 0;
+      break;
+    }
+
+    std::memcpy(payload + payloadLength, iov[idx].iov_base, iov[idx].iov_len);
+    payloadLength += iov[idx].iov_len;
+  }
+
+  if (payloadLength > std::numeric_limits<uint32_t>::max()) {
+    XLOGF(
+        WARN,
+        "io_uring reply payload exceeds uint32_t limit: unique={} payload_length={}",
+        sourceHeader.unique,
+        payloadLength);
+    error = -EINVAL;
+    payloadLength = 0;
+  }
+  const auto payloadLength32 = static_cast<uint32_t>(payloadLength);
+
+  out.error = error;
+  out.unique = sourceHeader.unique;
+  out.len = payloadLength32;
+  ringInOut.payload_sz = payloadLength32;
+
+  submitCommitAndFetch(entry);
+#else
+  (void)iov;
+  (void)count;
   throwIoUringNotImplemented("sendRawReply", queueDepth_);
+#endif
 }
 
 } // namespace facebook::eden
