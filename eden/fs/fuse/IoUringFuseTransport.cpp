@@ -19,6 +19,7 @@
 
 #include <unistd.h>
 #include <algorithm>
+#include <cerrno>
 #include <cstring>
 #include <limits>
 #include <stdexcept>
@@ -338,7 +339,7 @@ IoUringFuseTransport::CqeResult IoUringFuseTransport::handleCqe(
     bool stopRequested) const {
   auto* userData = io_uring_cqe_get_data(&cqe);
   if (isWakeEventCqe(queue, cqe, userData)) {
-    return handleWakeEventCqe(queue, stopRequested);
+    return handleWakeEventCqe(queue);
   }
   if (cqe.res != 0) {
     if (cqe.res == -ECANCELED) {
@@ -433,20 +434,13 @@ IoUringFuseTransport::CqeResult IoUringFuseTransport::handleCqe(
   }
 
   markDecodedRequest(entry);
-  registerOutstandingEntry(in.unique, entry);
   return {
       .action = CqeResult::Action::DispatchRequest,
       .request = std::move(request)};
 }
 
 IoUringFuseTransport::CqeResult IoUringFuseTransport::handleWakeEventCqe(
-    RingQueue& queue,
-    bool stopRequested) const {
-  if (stopRequested) {
-    return {
-        .action = CqeResult::Action::StopRequested, .request = std::nullopt};
-  }
-
+    RingQueue& queue) const {
   eventfd_t value = 0;
   if (eventfd_read(queue.eventFd, &value) != 0) {
     throw std::system_error(
@@ -459,6 +453,20 @@ IoUringFuseTransport::CqeResult IoUringFuseTransport::handleWakeEventCqe(
 
   prepareWakePollSqe(queue);
   return {.action = CqeResult::Action::Ignored, .request = std::nullopt};
+}
+
+void IoUringFuseTransport::rejectDecodedRequestAfterStop(
+    const DecodedRequest& request) const {
+  auto& entry = *request.entry;
+  auto& out = getReplyHeader(entry);
+  auto& ringInOut = getRingEntryInOut(entry);
+
+  out.error = -EIO;
+  out.unique = request.header.unique;
+  out.len = 0;
+  ringInOut.payload_sz = 0;
+
+  queueCommitAndFetch(entry);
 }
 
 void IoUringFuseTransport::registerOutstandingEntry(
@@ -487,8 +495,72 @@ IoUringFuseTransport::RingEntry& IoUringFuseTransport::takeOutstandingEntry(
   return *entry;
 }
 
-void IoUringFuseTransport::submitCommitAndFetch(RingEntry& entry) const {
+void IoUringFuseTransport::queueCommitAndFetch(RingEntry& entry) const {
   auto& queue = entry.pool->queues.at(entry.queueId);
+  {
+    auto pendingCommits = queue.pendingCommits->wlock();
+    pendingCommits->push_back(&entry);
+  }
+  notifyWorker(queue);
+}
+
+void IoUringFuseTransport::processPendingCommits(RingQueue& queue) const {
+  std::vector<RingEntry*> pendingEntries;
+  {
+    auto pendingCommits = queue.pendingCommits->wlock();
+    pendingEntries.swap(*pendingCommits);
+  }
+
+  if (pendingEntries.empty()) {
+    return;
+  }
+
+  for (auto* entry : pendingEntries) {
+    prepareCommitAndFetchSqe(queue, *entry);
+  }
+
+  auto rc = io_uring_submit(&queue.ring);
+  if (rc < 0) {
+    throw std::system_error(
+        -rc,
+        std::generic_category(),
+        fmt::format(
+            "failed to submit io_uring commit SQEs on queue {} while batching {} commits",
+            queue.queueId,
+            pendingEntries.size()));
+  }
+}
+
+bool IoUringFuseTransport::hasPendingCommits(const RingQueue& queue) const {
+  auto pendingCommits = queue.pendingCommits->rlock();
+  return !pendingCommits->empty();
+}
+
+bool IoUringFuseTransport::shouldExitWorkerLoop(
+    const FuseChannel& channel,
+    const RingQueue& queue) const {
+  if (!channel.stop_.load(std::memory_order_relaxed)) {
+    return false;
+  }
+  if (hasPendingCommits(queue)) {
+    return false;
+  }
+  return channel.state_.rlock()->pendingRequests == 0;
+}
+
+void IoUringFuseTransport::notifyWorker(const RingQueue& queue) const {
+  if (eventfd_write(queue.eventFd, 1) != 0) {
+    throw std::system_error(
+        errno,
+        std::generic_category(),
+        fmt::format(
+            "failed to notify io_uring worker for queue {}", queue.queueId));
+  }
+}
+
+void IoUringFuseTransport::prepareCommitAndFetchSqe(
+    RingQueue& queue,
+    RingEntry& entry) const {
   auto* sqe = io_uring_get_sqe(&queue.ring);
   if (!sqe) {
     throw std::runtime_error(
@@ -503,15 +575,6 @@ void IoUringFuseTransport::submitCommitAndFetch(RingEntry& entry) const {
       entry.requestCommitId,
       &entry);
   markCommitAndFetchSubmission(entry);
-
-  auto rc = io_uring_submit(&queue.ring);
-  if (rc < 0) {
-    throw std::system_error(
-        -rc,
-        std::generic_category(),
-        fmt::format(
-            "failed to submit io_uring commit on queue {}", entry.queueId));
-  }
 }
 
 fuse_out_header& IoUringFuseTransport::getReplyHeader(RingEntry& entry) {
@@ -763,7 +826,12 @@ void IoUringFuseTransport::processSession(FuseChannel& channel) {
             queue.queueId));
   }
 
-  while (!channel.stop_.load(std::memory_order_relaxed)) {
+  while (true) {
+    processPendingCommits(queue);
+    if (shouldExitWorkerLoop(channel, queue)) {
+      break;
+    }
+
     rc = io_uring_submit_and_wait(&queue.ring, 1);
     if (rc < 0) {
       const auto stopRequested = channel.stop_.load(std::memory_order_relaxed);
@@ -771,7 +839,10 @@ void IoUringFuseTransport::processSession(FuseChannel& channel) {
         continue;
       }
       if (shouldIgnoreSubmitAndWaitError(rc, stopRequested)) {
-        break;
+        if (shouldExitWorkerLoop(channel, queue)) {
+          break;
+        }
+        continue;
       }
       throw std::system_error(
           -rc,
@@ -797,6 +868,14 @@ void IoUringFuseTransport::processSession(FuseChannel& channel) {
         case CqeResult::Action::DispatchRequest: {
           XCHECK(result.request.has_value());
           auto& request = *result.request;
+          if (channel.stop_.load(std::memory_order_relaxed)) {
+            // COMMIT_AND_FETCH can return another request while shutdown is
+            // draining. Recycle it with an error instead of dispatching new
+            // work into FuseChannel after stop was requested.
+            rejectDecodedRequestAfterStop(request);
+            break;
+          }
+          registerOutstandingEntry(request.header.unique, *request.entry);
           channel.dispatchRequest(
               request.header,
               folly::ByteRange{
@@ -815,6 +894,8 @@ void IoUringFuseTransport::processSession(FuseChannel& channel) {
     if (completed > 0) {
       io_uring_cq_advance(&queue.ring, completed);
     }
+
+    processPendingCommits(queue);
   }
 #else
   (void)channel;
@@ -836,7 +917,7 @@ void IoUringFuseTransport::replyError(
   out.len = 0;
   ringInOut.payload_sz = 0;
 
-  submitCommitAndFetch(entry);
+  queueCommitAndFetch(entry);
 #else
   (void)request;
   (void)errorCode;
@@ -897,7 +978,7 @@ void IoUringFuseTransport::sendRawReply(
   out.len = payloadLength32;
   ringInOut.payload_sz = payloadLength32;
 
-  submitCommitAndFetch(entry);
+  queueCommitAndFetch(entry);
 #else
   (void)iov;
   (void)count;

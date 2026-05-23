@@ -161,6 +161,12 @@ class IoUringFuseTransport final : public FuseTransport {
       const io_uring_cqe& cqe,
       bool stopRequested,
       void* userData) const;
+  void queueCommitAndFetch(RingEntry& entry) const;
+  void processPendingCommits(RingQueue& queue) const;
+  bool hasPendingCommits(const RingQueue& queue) const;
+  bool shouldExitWorkerLoop(const FuseChannel& channel, const RingQueue& queue)
+      const;
+  void notifyWorker(const RingQueue& queue) const;
   static size_t getConfiguredQueueCount(size_t defaultThreadCount);
   void initializeRingPool(size_t queueCount, size_t maxRequestPayloadSize);
   void initializeSession(FuseChannel& channel);
@@ -173,10 +179,11 @@ class IoUringFuseTransport final : public FuseTransport {
       RingQueue& queue,
       const io_uring_cqe& cqe,
       bool stopRequested) const;
-  CqeResult handleWakeEventCqe(RingQueue& queue, bool stopRequested) const;
+  CqeResult handleWakeEventCqe(RingQueue& queue) const;
+  void rejectDecodedRequestAfterStop(const DecodedRequest& request) const;
   void registerOutstandingEntry(uint64_t unique, RingEntry& entry) const;
   RingEntry& takeOutstandingEntry(uint64_t unique) const;
-  void submitCommitAndFetch(RingEntry& entry) const;
+  void prepareCommitAndFetchSqe(RingQueue& queue, RingEntry& entry) const;
   static fuse_out_header& getReplyHeader(RingEntry& entry);
   static fuse_uring_ent_in_out& getRingEntryInOut(RingEntry& entry);
   void destroyRingPool() noexcept;
