@@ -21,7 +21,11 @@ Default workload:
 
 Available workloads:
 - `ls_recursive`
+- `tar_recursive`
 - `rg_recursive`
+
+`tar_recursive` runs `tar -cf /dev/null .` over the target subtree and is useful
+when you want a cleaner read-heavy macro workload than `rg_recursive`.
 
 `rg_recursive` runs ripgrep over the target subtree and is useful when you want
 to stress file reads in addition to traversal.
@@ -41,6 +45,19 @@ Cold-cache example:
 ```bash
 cd fbcode
 chmod +x eden/fs/fuse/fuse_tester/run_transport_bench.sh
+TARGET_DIR="$HOME/fbsource-dev/fbcode/eden" \
+DROP_CACHES=1 \
+DROP_CACHES_MODE=3 \
+RUNS=5 \
+eden/fs/fuse/fuse_tester/run_transport_bench.sh
+```
+
+Tar example:
+
+```bash
+cd fbcode
+chmod +x eden/fs/fuse/fuse_tester/run_transport_bench.sh
+WORKLOAD=tar_recursive \
 TARGET_DIR="$HOME/fbsource-dev/fbcode/eden" \
 DROP_CACHES=1 \
 DROP_CACHES_MODE=3 \

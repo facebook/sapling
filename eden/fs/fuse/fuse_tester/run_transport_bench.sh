@@ -31,7 +31,7 @@ Environment overrides:
   CLONE_REVISION   Revision passed to edenfsctl clone
   TARGET_DIR       Subdirectory used by the workload
   RUNS             Number of benchmark repetitions per mode
-  WORKLOAD         Benchmark workload name (ls_recursive or rg_recursive)
+  WORKLOAD         Benchmark workload name (ls_recursive tar_recursive, or rg_recursive)
   RG_JOBS          ripgrep -j value when WORKLOAD=rg_recursive
   RG_PATTERN       ripgrep search pattern when WORKLOAD=rg_recursive
   DROP_CACHES      Drop Linux kernel caches when switch between modes (0 or 1)
@@ -56,7 +56,7 @@ validate_configuration() {
   fi
 
   case "$WORKLOAD" in
-    ls_recursive|rg_recursive) ;;
+    ls_recursive|tar_recursive|rg_recursive) ;;
     *)
       echo "Unsupported WORKLOAD: $WORKLOAD" >&2
       exit 1
@@ -160,6 +160,13 @@ run_workload() {
         cd "$TARGET_DIR"
         /usr/bin/time -f 'real_sec=%e user_sec=%U sys_sec=%S cpu_pct=%P' \
           sh -c 'ls -lR > /dev/null'
+      )
+      ;;
+    tar_recursive)
+      (
+        cd "$TARGET_DIR"
+        /usr/bin/time -f 'real_sec=%e user_sec=%U sys_sec=%S cpu_pct=%P' \
+          tar -cf /dev/null .
       )
       ;;
     rg_recursive)
@@ -447,6 +454,9 @@ main() {
 
   require_command buck2
   require_command python3
+  if [[ "$WORKLOAD" == "tar_recursive" ]]; then
+    require_command tar
+  fi
   if [[ "$WORKLOAD" == "rg_recursive" ]]; then
     require_command rg
   fi
