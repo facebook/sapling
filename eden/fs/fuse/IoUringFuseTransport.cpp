@@ -273,6 +273,104 @@ void IoUringFuseTransport::prepareFetchRequests(RingQueue& queue) const {
   io_uring_sqe_set_data(sqe, &queue);
 }
 
+IoUringFuseTransport::CqeResult IoUringFuseTransport::handleCqe(
+    RingQueue& queue,
+    const io_uring_cqe& cqe) const {
+  auto* userData = io_uring_cqe_get_data(&cqe);
+  if (cqe.res != 0) {
+    if (cqe.res > 0 && userData == &queue) {
+      return {
+          .action = CqeResult::Action::StopRequested, .request = std::nullopt};
+    }
+
+    if (cqe.res == -EINTR || cqe.res == -EOPNOTSUPP || cqe.res == -EAGAIN ||
+        cqe.res == -ENOTCONN) {
+      return {.action = CqeResult::Action::Ignored, .request = std::nullopt};
+    }
+
+    throw std::system_error(
+        -cqe.res,
+        std::generic_category(),
+        fmt::format(
+            "io_uring CQE failed on queue {} with result {}",
+            queue.queueId,
+            cqe.res));
+  }
+
+  if (!userData) {
+    throw std::runtime_error(
+        fmt::format(
+            "io_uring CQE on queue {} had no request data", queue.queueId));
+  }
+
+  auto& entry = *static_cast<RingEntry*>(userData);
+  auto& in = *reinterpret_cast<fuse_in_header*>(&entry.requestHeader->in_out);
+  auto& ringInOut = entry.requestHeader->ring_ent_in_out;
+  entry.requestCommitId = ringInOut.commit_id;
+  if (entry.requestCommitId == 0) {
+    throw std::runtime_error(
+        fmt::format(
+            "io_uring request on queue {} returned commit_id=0",
+            queue.queueId));
+  }
+
+  if (in.len < sizeof(fuse_in_header)) {
+    throw std::runtime_error(
+        fmt::format(
+            "io_uring request on queue {} was truncated: len={}",
+            queue.queueId,
+            in.len));
+  }
+
+  const auto argumentSize =
+      static_cast<size_t>(in.len) - sizeof(fuse_in_header);
+  const auto payloadSize = static_cast<size_t>(ringInOut.payload_sz);
+  if (payloadSize > entry.payloadSize) {
+    throw std::runtime_error(
+        fmt::format(
+            "io_uring request on queue {} has payload {} larger than buffer {}",
+            queue.queueId,
+            payloadSize,
+            entry.payloadSize));
+  }
+  if (payloadSize > argumentSize) {
+    throw std::runtime_error(
+        fmt::format(
+            "io_uring request on queue {} has payload {} larger than arg size {}",
+            queue.queueId,
+            payloadSize,
+            argumentSize));
+  }
+
+  const auto opHeaderSize = argumentSize - payloadSize;
+  if (opHeaderSize > sizeof(entry.requestHeader->op_in)) {
+    throw std::runtime_error(
+        fmt::format(
+            "io_uring request on queue {} has op header {} larger than buffer {}",
+            queue.queueId,
+            opHeaderSize,
+            sizeof(entry.requestHeader->op_in)));
+  }
+
+  DecodedRequest request;
+  request.entry = &entry;
+  request.header = in;
+  request.arguments.resize(argumentSize);
+  if (opHeaderSize > 0) {
+    std::memcpy(
+        request.arguments.data(), entry.requestHeader->op_in, opHeaderSize);
+  }
+  if (payloadSize > 0) {
+    std::memcpy(
+        request.arguments.data() + opHeaderSize, entry.payload, payloadSize);
+  }
+
+  registerOutstandingEntry(in.unique, entry);
+  return {
+      .action = CqeResult::Action::DispatchRequest,
+      .request = std::move(request)};
+}
+
 void IoUringFuseTransport::registerOutstandingEntry(
     uint64_t unique,
     RingEntry& entry) const {

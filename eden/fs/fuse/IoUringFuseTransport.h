@@ -14,6 +14,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <memory>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 
@@ -97,6 +98,23 @@ class IoUringFuseTransport final : public FuseTransport {
     std::vector<RingQueue> queues;
   };
 
+  struct DecodedRequest {
+    RingEntry* entry{nullptr};
+    fuse_in_header header{};
+    std::vector<uint8_t> arguments;
+  };
+
+  struct CqeResult {
+    enum class Action {
+      DispatchRequest,
+      Ignored,
+      StopRequested,
+    };
+
+    Action action{Action::Ignored};
+    std::optional<DecodedRequest> request;
+  };
+
   std::unique_ptr<RingPool> ringPool_;
 
   void initializeRingPool(
@@ -106,6 +124,7 @@ class IoUringFuseTransport final : public FuseTransport {
   void initializeQueue(RingQueue& queue, int fuseFd) const;
   void initializeEntryBuffers(RingQueue& queue, RingEntry& entry) const;
   void prepareFetchRequests(RingQueue& queue) const;
+  CqeResult handleCqe(RingQueue& queue, const io_uring_cqe& cqe) const;
   void registerOutstandingEntry(uint64_t unique, RingEntry& entry) const;
   RingEntry& takeOutstandingEntry(uint64_t unique) const;
   void submitCommitAndFetch(RingEntry& entry) const;
