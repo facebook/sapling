@@ -187,8 +187,7 @@ void IoUringFuseTransport::RingQueue::reset() noexcept {
 
 void IoUringFuseTransport::initializeRingPool(
     size_t queueCount,
-    size_t maxRequestPayloadSize,
-    int fuseFd) {
+    size_t maxRequestPayloadSize) {
   auto ringPool = std::make_unique<RingPool>();
   ringPool->queueDepth = queueDepth_;
   ringPool->maxRequestPayloadSize = maxRequestPayloadSize;
@@ -199,7 +198,6 @@ void IoUringFuseTransport::initializeRingPool(
     queue.pool = ringPool.get();
     queue.queueId = queueId;
     queue.entries.resize(queueDepth_);
-    initializeQueue(queue, fuseFd);
   }
 
   ringPool_ = std::move(ringPool);
@@ -212,8 +210,7 @@ void IoUringFuseTransport::initializeSession(FuseChannel& channel) {
         : channel.bufferSize_;
     const auto queueCount =
         getConfiguredQueueCount(channel.configuredWorkerThreadCount_);
-    initializeRingPool(
-        queueCount, maxRequestPayloadSize, channel.fuseDevice_.fd());
+    initializeRingPool(queueCount, maxRequestPayloadSize);
   });
 }
 
@@ -561,8 +558,25 @@ void IoUringFuseTransport::processSession(FuseChannel& channel) {
     pinThreadToCpu(queue.queueId, static_cast<size_t>(configuredCpuCount));
   }
 
+  // Match libfuse by initializing the queue and its entry buffers after CPU
+  // pinning, so the per-queue memory follows the worker's CPU locality.
+  initializeQueue(queue, channel.fuseDevice_.fd());
+  for (auto& entry : queue.entries) {
+    initializeEntryBuffers(queue, entry);
+  }
+  prepareFetchRequests(queue);
+  auto rc = io_uring_submit(&queue.ring);
+  if (rc < 0) {
+    throw std::system_error(
+        -rc,
+        std::generic_category(),
+        fmt::format(
+            "failed to submit initial io_uring fetch SQEs for queue {}",
+            queue.queueId));
+  }
+
   while (!channel.stop_.load(std::memory_order_relaxed)) {
-    auto rc = io_uring_submit_and_wait(&queue.ring, 1);
+    rc = io_uring_submit_and_wait(&queue.ring, 1);
     if (rc < 0) {
       if (channel.stop_.load(std::memory_order_relaxed) &&
           (rc == -EINTR || rc == -EAGAIN)) {

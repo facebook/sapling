@@ -121,10 +121,7 @@ class IoUringFuseTransport final : public FuseTransport {
   std::unique_ptr<RingPool> ringPool_;
 
   static size_t getConfiguredQueueCount(size_t defaultThreadCount);
-  void initializeRingPool(
-      size_t queueCount,
-      size_t maxRequestPayloadSize,
-      int fuseFd);
+  void initializeRingPool(size_t queueCount, size_t maxRequestPayloadSize);
   void initializeSession(FuseChannel& channel);
   void initializeQueue(RingQueue& queue, int fuseFd) const;
   void initializeEntryBuffers(RingQueue& queue, RingEntry& entry) const;
