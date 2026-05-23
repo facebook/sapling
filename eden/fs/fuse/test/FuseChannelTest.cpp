@@ -101,7 +101,8 @@ class FuseChannelTest : public ::testing::Test {
         /*fuseBdiReadAheadKb=*/std::nullopt,
         /*fuseMaxPages=*/fuseMaxPages,
         /*useIoUring=*/useIoUring,
-        std::move(ioUringKernelReleaseRegex));
+        std::move(ioUringKernelReleaseRegex),
+        /*ioUringQueueDepth=*/8);
   }
 
   FuseChannel::StopFuture performInit(

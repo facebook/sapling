@@ -308,6 +308,9 @@ class FuseChannel final : public FsChannel {
    * ioUringKernelReleaseRegex -
    *      RE2 regex matched against Linux kernel release strings (`uname -r`)
    *      where Eden may negotiate io_uring when useIoUring is enabled.
+   * ioUringQueueDepth -
+   *      The io_uring queue depth to use when the io_uring transport is
+   *      enabled.
    */
   FuseChannel(
       PrivHelper* privHelper,
@@ -334,7 +337,8 @@ class FuseChannel final : public FsChannel {
       std::optional<uint32_t> fuseBdiReadAheadKb = std::nullopt,
       uint32_t fuseMaxPages = 0,
       bool useIoUring = false,
-      std::string ioUringKernelReleaseRegex = {});
+      std::string ioUringKernelReleaseRegex = {},
+      uint32_t ioUringQueueDepth = 8);
 
   FuseChannel(const FuseChannel&) = delete;
   FuseChannel(FuseChannel&&) = delete;
@@ -949,6 +953,7 @@ class FuseChannel final : public FsChannel {
   uint32_t fuseMaxPages_{0};
   bool useIoUring_{false};
   std::string ioUringKernelReleaseRegex_;
+  uint32_t ioUringQueueDepth_{8};
 
   /*
    * connInfo_ is modified during the initialization process,

@@ -954,7 +954,8 @@ FuseChannel::FuseChannel(
     std::optional<uint32_t> fuseBdiReadAheadKb,
     uint32_t fuseMaxPages,
     bool useIoUring,
-    std::string ioUringKernelReleaseRegex)
+    std::string ioUringKernelReleaseRegex,
+    uint32_t ioUringQueueDepth)
     : privHelper_{privHelper},
       // Pre-allocate based on configured max_pages so the buffer can handle
       // the larger requests we'll negotiate during FUSE_INIT. This is
@@ -986,6 +987,7 @@ FuseChannel::FuseChannel(
       fuseMaxPages_{fuseMaxPages},
       useIoUring_{useIoUring},
       ioUringKernelReleaseRegex_{std::move(ioUringKernelReleaseRegex)},
+      ioUringQueueDepth_{ioUringQueueDepth},
       fuseDevice_(std::move(fuseDevice)),
       transport_(std::make_unique<DevFuseTransport>()),
       processAccessLog_(std::move(processInfoCache)),
@@ -996,7 +998,7 @@ FuseChannel::FuseChannel(
               fuseTraceBusCapacity)) {
   XLOGF(
       INFO,
-      "Creating FuseChannel: mountPath={}, numThreads={}, caseSensitive={}, requireUtf8={}, maximumBackgroundRequests={}, maximumInFlightRequests={}, useWriteBackCache={}, fuseMaxPages={}",
+      "Creating FuseChannel: mountPath={}, numThreads={}, caseSensitive={}, requireUtf8={}, maximumBackgroundRequests={}, maximumInFlightRequests={}, useWriteBackCache={}, fuseMaxPages={}, ioUringQueueDepth={}",
       mountPath,
       numThreads,
       caseSensitive,
@@ -1004,7 +1006,8 @@ FuseChannel::FuseChannel(
       maximumBackgroundRequests,
       maximumInFlightRequests,
       useWriteBackCache,
-      fuseMaxPages_);
+      fuseMaxPages_,
+      ioUringQueueDepth_);
   XCHECK_GE(numThreads_, 1ul);
   installSignalHandler();
 

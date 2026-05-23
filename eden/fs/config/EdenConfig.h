@@ -838,6 +838,15 @@ class EdenConfig : private ConfigSettingManager {
       "^6\\.13\\.",
       this};
 
+  /**
+   * The io_uring queue depth to use when the FUSE io_uring transport is
+   * enabled. Match libfuse's current default.
+   */
+  ConfigSetting<uint32_t> fuseIoUringQueueDepth{
+      "fuse:io-uring-queue-depth",
+      8,
+      this};
+
   // [nfs]
 
   /**
