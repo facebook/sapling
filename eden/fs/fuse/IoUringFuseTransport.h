@@ -98,6 +98,8 @@ class IoUringFuseTransport final : public FuseTransport {
     io_uring ring{};
     bool ringInitialized{false};
     std::vector<RingEntry> entries;
+    std::unique_ptr<folly::Synchronized<std::vector<RingEntry*>>>
+        pendingCommits;
   };
 
   struct RingPool {

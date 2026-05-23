@@ -117,6 +117,8 @@ IoUringFuseTransport::~IoUringFuseTransport() {
 IoUringFuseTransport::RingQueue::RingQueue() {
   ring.ring_fd = -1;
   requestHeaderSize = roundUpToPageSize(sizeof(fuse_uring_req_header));
+  pendingCommits =
+      std::make_unique<folly::Synchronized<std::vector<RingEntry*>>>();
 }
 
 IoUringFuseTransport::RingQueue::~RingQueue() noexcept {
@@ -130,7 +132,8 @@ IoUringFuseTransport::RingQueue::RingQueue(RingQueue&& other) noexcept
       requestHeaderSize{other.requestHeaderSize},
       ring{other.ring},
       ringInitialized{other.ringInitialized},
-      entries{std::move(other.entries)} {
+      entries{std::move(other.entries)},
+      pendingCommits{std::move(other.pendingCommits)} {
   other.resetMovedFrom();
 }
 
@@ -149,6 +152,7 @@ IoUringFuseTransport::RingQueue& IoUringFuseTransport::RingQueue::operator=(
   ring = other.ring;
   ringInitialized = other.ringInitialized;
   entries = std::move(other.entries);
+  pendingCommits = std::move(other.pendingCommits);
 
   other.resetMovedFrom();
 
