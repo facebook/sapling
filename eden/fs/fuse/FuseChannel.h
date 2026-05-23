@@ -367,6 +367,7 @@ class FuseChannel final : public FsChannel {
   }
 
   const char* getTransportName() const;
+  bool usesIoUringTransport() const;
   size_t getTransportBufferSize() const {
     return bufferSize_;
   }
@@ -914,7 +915,6 @@ class FuseChannel final : public FsChannel {
    * fuse worker threads provided by the MountPoint.
    */
   void processSession();
-  bool usesIoUringTransport() const;
 
   // Update the effective number of worker threads. For traditional dev/fuse, it
   // is configured. For io_uring, it is the number of CPU cores.

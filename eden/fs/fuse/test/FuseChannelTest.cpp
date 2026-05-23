@@ -280,6 +280,42 @@ TEST_F(FuseChannelTest, testInitDoesNotNegotiateIoUringOnDisallowedKernel) {
   EXPECT_EQ(0, fuseStopData->fuseSettings.flags);
   EXPECT_EQ(0, fuseStopData->fuseSettings.flags2);
 }
+
+TEST_F(FuseChannelTest, testTakeoverKeepsDevFuseWithoutNegotiatedIoUring) {
+  auto channel = createChannel(/*numThreads=*/2, /*fuseMaxPages=*/0, true);
+  fuse_init_out connInfo = {};
+  connInfo.major = FUSE_KERNEL_VERSION;
+  connInfo.minor = FUSE_KERNEL_MINOR_VERSION;
+
+  auto completeFuture = channel->initializeFromTakeover(connInfo);
+
+  EXPECT_FALSE(channel->usesIoUringTransport());
+
+  channel->takeoverStop();
+  auto stopData = std::move(completeFuture).get(kTimeout);
+  auto* fuseStopData = dynamic_cast<FuseChannel::StopData*>(stopData.get());
+  ASSERT_NE(nullptr, fuseStopData);
+  EXPECT_EQ(FuseChannel::StopReason::TAKEOVER, fuseStopData->reason);
+}
+
+TEST_F(FuseChannelTest, testTakeoverRestoresNegotiatedIoUringTransport) {
+  auto channel = createChannel(/*numThreads=*/2, /*fuseMaxPages=*/0, false);
+  fuse_init_out connInfo = {};
+  connInfo.major = FUSE_KERNEL_VERSION;
+  connInfo.minor = FUSE_KERNEL_MINOR_VERSION;
+  connInfo.flags = FUSE_INIT_EXT;
+  connInfo.flags2 = static_cast<uint32_t>(FUSE_OVER_IO_URING >> 32);
+
+  auto completeFuture = channel->initializeFromTakeover(connInfo);
+
+  EXPECT_TRUE(channel->usesIoUringTransport());
+
+  channel->takeoverStop();
+  auto stopData = std::move(completeFuture).get(kTimeout);
+  auto* fuseStopData = dynamic_cast<FuseChannel::StopData*>(stopData.get());
+  ASSERT_NE(nullptr, fuseStopData);
+  EXPECT_EQ(FuseChannel::StopReason::TAKEOVER, fuseStopData->reason);
+}
 #endif
 
 TEST_F(FuseChannelTest, testInitUnmountRace) {
