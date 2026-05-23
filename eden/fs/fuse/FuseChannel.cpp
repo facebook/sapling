@@ -30,6 +30,7 @@
 #include "eden/fs/fuse/FuseDirList.h"
 #include "eden/fs/fuse/FuseDispatcher.h"
 #include "eden/fs/fuse/FuseRequestContext.h"
+#include "eden/fs/fuse/IoUringFuseTransport.h"
 #include "eden/fs/privhelper/PrivHelper.h"
 #include "eden/fs/telemetry/EdenErrorInfoBuilder.h"
 #include "eden/fs/telemetry/EdenFsEventsLogger.h"
@@ -1085,9 +1086,26 @@ void FuseChannel::maybeSetFuseReadAhead() {
   }
 }
 
+namespace {
+// fuse:use-io-uring config only gates whether we request FUSE_OVER_IO_URING
+// during FUSE_INIT. After init, including takeover, the transport must follow
+// the capability that was actually negotiated for this FUSE connection.
+bool negotiatedIoUringTransport(const fuse_init_out& connInfo) {
+#ifdef FUSE_OVER_IO_URING
+  return (fuseInitFlags(connInfo) & FUSE_OVER_IO_URING) != 0;
+#else
+  (void)connInfo;
+  return false;
+#endif
+}
+} // namespace
+
 FuseChannel::StopFuture FuseChannel::initializeFromTakeover(
     fuse_init_out connInfo) {
   connInfo_ = connInfo;
+  if (negotiatedIoUringTransport(connInfo)) {
+    transport_ = std::make_unique<IoUringFuseTransport>(ioUringQueueDepth_);
+  }
   dispatcher_->initConnection(connInfo);
   maybeSetFuseReadAhead();
 
@@ -1300,7 +1318,9 @@ void FuseChannel::sendInvalidateInode(
   iov[1].iov_len = sizeof(notify);
 
   try {
-    sendRawReply(iov.data(), iov.size());
+    // Invalidation are always send over devfuse (not io_uring). Then we don't
+    // use transport to send the requests.
+    sendRawReplyDevFuse(iov.data(), iov.size());
     XLOGF(
         DBG7, "sendInvalidateInode(ino={}, off={}, len={}) OK!", ino, off, len);
   } catch (const std::system_error& exc) {
@@ -1368,7 +1388,9 @@ void FuseChannel::sendInvalidateEntry(
   iov[3].iov_len = 1;
 
   try {
-    sendRawReply(iov.data(), iov.size());
+    // Invalidation are always send over devfuse (not io_uring). Then we don't
+    // use transport to send the requests.
+    sendRawReplyDevFuse(iov.data(), iov.size());
   } catch (const std::system_error& exc) {
     // Ignore ENOENT.  This can happen for inode numbers that we allocated on
     // our own and haven't actually told the kernel about yet.
@@ -1864,6 +1886,10 @@ void FuseChannel::readInitPacket() {
       " linux code above to send the correct response to the kernel");
   sendReply(init.header, connInfo);
 #endif
+
+  if (negotiatedIoUringTransport(connInfo)) {
+    transport_ = std::make_unique<IoUringFuseTransport>(ioUringQueueDepth_);
+  }
 
   dispatcher_->initConnection(connInfo);
   maybeSetFuseReadAhead();
