@@ -39,6 +39,14 @@ fn io_error_strerror(e: &std::io::Error, errno: Option<i32>) -> String {
     let suffix = format!(" (os error {errno})");
     if message.ends_with(&suffix) {
         message.truncate(message.len() - suffix.len());
+        // Match CPython's Windows OSError behavior in
+        // `Python/errors.c`'s `PyErr_SetExcFromWindowsErrWithFilenameObjects`:
+        // FormatMessageW results have trailing whitespace and dots stripped
+        // before becoming strerror.
+        let len = message
+            .trim_end_matches(|c: char| c.is_whitespace() || c == '.')
+            .len();
+        message.truncate(len);
     }
     message
 }
