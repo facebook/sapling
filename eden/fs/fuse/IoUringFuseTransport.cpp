@@ -277,23 +277,7 @@ void IoUringFuseTransport::initializeEntryBuffers(
 
 void IoUringFuseTransport::prepareFetchRequests(RingQueue& queue) const {
   for (auto& entry : queue.entries) {
-    auto* sqe = io_uring_get_sqe(&queue.ring);
-    if (!sqe) {
-      throw std::runtime_error(
-          fmt::format(
-              "failed to get io_uring SQE for queue {} fetch registration",
-              queue.queueId));
-    }
-
-    prepareUringCmdSqe(
-        *sqe,
-        FUSE_IO_URING_CMD_REGISTER,
-        static_cast<uint16_t>(queue.queueId),
-        /* commitId */ 0,
-        &entry);
-    markRegisterFetchSubmission(entry);
-    sqe->addr = reinterpret_cast<uint64_t>(entry.iov.data());
-    sqe->len = static_cast<__u32>(entry.iov.size());
+    prepareFetchRequest(queue, entry);
   }
 
   const auto sqReady = io_uring_sq_ready(&queue.ring);
@@ -306,6 +290,10 @@ void IoUringFuseTransport::prepareFetchRequests(RingQueue& queue) const {
             queue.entries.size()));
   }
 
+  prepareWakePollSqe(queue);
+}
+
+void IoUringFuseTransport::prepareWakePollSqe(RingQueue& queue) const {
   auto* sqe = io_uring_get_sqe(&queue.ring);
   if (!sqe) {
     throw std::runtime_error(
@@ -316,6 +304,28 @@ void IoUringFuseTransport::prepareFetchRequests(RingQueue& queue) const {
 
   io_uring_prep_poll_add(sqe, queue.eventFd, POLLIN);
   io_uring_sqe_set_data(sqe, &queue);
+}
+
+void IoUringFuseTransport::prepareFetchRequest(
+    RingQueue& queue,
+    RingEntry& entry) const {
+  auto* sqe = io_uring_get_sqe(&queue.ring);
+  if (!sqe) {
+    throw std::runtime_error(
+        fmt::format(
+            "failed to get io_uring SQE for queue {} fetch registration",
+            queue.queueId));
+  }
+
+  prepareUringCmdSqe(
+      *sqe,
+      FUSE_IO_URING_CMD_REGISTER,
+      static_cast<uint16_t>(queue.queueId),
+      /* commitId */ 0,
+      &entry);
+  markRegisterFetchSubmission(entry);
+  sqe->addr = reinterpret_cast<uint64_t>(entry.iov.data());
+  sqe->len = static_cast<__u32>(entry.iov.size());
 }
 
 IoUringFuseTransport::CqeResult IoUringFuseTransport::handleCqe(

@@ -152,6 +152,8 @@ class IoUringFuseTransport final : public FuseTransport {
   void initializeSession(FuseChannel& channel);
   void initializeQueue(RingQueue& queue, int fuseFd) const;
   void initializeEntryBuffers(RingQueue& queue, RingEntry& entry) const;
+  void prepareWakePollSqe(RingQueue& queue) const;
+  void prepareFetchRequest(RingQueue& queue, RingEntry& entry) const;
   void prepareFetchRequests(RingQueue& queue) const;
   CqeResult handleCqe(
       RingQueue& queue,
