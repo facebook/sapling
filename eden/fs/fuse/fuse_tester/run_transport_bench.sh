@@ -13,6 +13,8 @@ CLONE_REVISION="${CLONE_REVISION:-master}"
 TARGET_DIR="${TARGET_DIR:-$MOUNT_DIR/fbcode/eden}"
 RUNS="${RUNS:-5}"
 WORKLOAD="${WORKLOAD:-ls_recursive}"
+RG_JOBS="${RG_JOBS:-117}"
+RG_PATTERN="${RG_PATTERN:-}"
 DROP_CACHES="${DROP_CACHES:-0}"
 DROP_CACHES_MODE="${DROP_CACHES_MODE:-3}"
 DRY_RUN="${DRY_RUN:-0}"
@@ -29,7 +31,9 @@ Environment overrides:
   CLONE_REVISION   Revision passed to edenfsctl clone
   TARGET_DIR       Subdirectory used by the workload
   RUNS             Number of benchmark repetitions per mode
-  WORKLOAD         Benchmark workload name (ls_recursive)
+  WORKLOAD         Benchmark workload name (ls_recursive or rg_recursive)
+  RG_JOBS          ripgrep -j value when WORKLOAD=rg_recursive
+  RG_PATTERN       ripgrep search pattern when WORKLOAD=rg_recursive
   DROP_CACHES      Drop Linux kernel caches when switch between modes (0 or 1)
   DROP_CACHES_MODE Linux drop_caches mode (2 for dentries/inodes, 3 for all)
   DRY_RUN          Print Eden commands instead of executing them (0 or 1)
@@ -52,12 +56,17 @@ validate_configuration() {
   fi
 
   case "$WORKLOAD" in
-    ls_recursive) ;;
+    ls_recursive|rg_recursive) ;;
     *)
       echo "Unsupported WORKLOAD: $WORKLOAD" >&2
       exit 1
       ;;
   esac
+
+  if [[ "$RG_JOBS" -le 0 ]]; then
+    echo "RG_JOBS must be positive" >&2
+    exit 1
+  fi
 
   if [[ "$DROP_CACHES" != "0" && "$DROP_CACHES" != "1" ]]; then
     echo "DROP_CACHES must be 0 or 1" >&2
@@ -90,6 +99,8 @@ Transport benchmark configuration
   TARGET_DIR:     $TARGET_DIR
   RUNS:           $RUNS
   WORKLOAD:       $WORKLOAD
+  RG_JOBS:        $RG_JOBS
+  RG_PATTERN:     ${RG_PATTERN:-<empty>}
   DROP_CACHES:    $DROP_CACHES
   DROP_CACHES_MODE: $DROP_CACHES_MODE
   DRY_RUN:        $DRY_RUN
@@ -149,6 +160,13 @@ run_workload() {
         cd "$TARGET_DIR"
         /usr/bin/time -f 'real_sec=%e user_sec=%U sys_sec=%S cpu_pct=%P' \
           sh -c 'ls -lR > /dev/null'
+      )
+      ;;
+    rg_recursive)
+      (
+        cd "$TARGET_DIR"
+        /usr/bin/time -f 'real_sec=%e user_sec=%U sys_sec=%S cpu_pct=%P' \
+          rg -j "$RG_JOBS" "$RG_PATTERN" > /dev/null
       )
       ;;
   esac
@@ -429,6 +447,9 @@ main() {
 
   require_command buck2
   require_command python3
+  if [[ "$WORKLOAD" == "rg_recursive" ]]; then
+    require_command rg
+  fi
   require_command /usr/bin/time
 
   validate_configuration

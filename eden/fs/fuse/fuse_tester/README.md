@@ -19,6 +19,13 @@ Optional cold-cache mode:
 Default workload:
 - recursive `ls -lR > /dev/null` under `TARGET_DIR`
 
+Available workloads:
+- `ls_recursive`
+- `rg_recursive`
+
+`rg_recursive` runs ripgrep over the target subtree and is useful when you want
+to stress file reads in addition to traversal.
+
 Example:
 
 ```bash
@@ -41,6 +48,22 @@ RUNS=5 \
 eden/fs/fuse/fuse_tester/run_transport_bench.sh
 ```
 
+
+Ripgrep example:
+
+```bash
+cd fbcode
+chmod +x eden/fs/fuse/fuse_tester/run_transport_bench.sh
+WORKLOAD=rg_recursive \
+TARGET_DIR="$HOME/fbsource-dev/fbcode/eden" \
+DROP_CACHES=1 \
+DROP_CACHES_MODE=3 \
+RG_JOBS=117 \
+RG_PATTERN="" \
+RUNS=5 \
+eden/fs/fuse/fuse_tester/run_transport_bench.sh
+```
+
 Useful environment overrides:
 - `EDEN_DEV_STATE`
 - `MOUNT_DIR`
@@ -49,6 +72,8 @@ Useful environment overrides:
 - `TARGET_DIR`
 - `RUNS`
 - `WORKLOAD`
+- `RG_JOBS`
+- `RG_PATTERN`
 - `DROP_CACHES`
 - `DROP_CACHES_MODE`
 - `OUTPUT_DIR`
