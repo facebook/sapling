@@ -122,15 +122,6 @@ endif
 build:
 	$(PYTHON) setup.py $(PURE) build $(COMPILERFLAG)
 
-deb:
-	./packaging/debian/build_deb.sh
-
-rpm:
-	rpmbuild \
-		--define "sapling_root `pwd`" \
-		--define "version $(VERSION)" \
-		-bb packaging/rpm/sapling.spec
-
 wheel:
 	FORCE_SETUPTOOLS=1 $(PYTHON) setup.py $(PURE) bdist_wheel $(COMPILERFLAG)
 
