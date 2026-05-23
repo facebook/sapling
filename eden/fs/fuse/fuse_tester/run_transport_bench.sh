@@ -258,6 +258,140 @@ run_mode() {
   done
 }
 
+print_comparison_summary() {
+  python3 - \
+    "$OUTPUT_DIR/transport-bench-devfuse.txt" \
+    "$OUTPUT_DIR/transport-bench-io_uring.txt" \
+    "$OUTPUT_DIR/transport-bench-devfuse-edenfs-cpu.txt" \
+    "$OUTPUT_DIR/transport-bench-io_uring-edenfs-cpu.txt" <<'PY'
+import re
+import sys
+
+dev_raw, uring_raw, dev_eden_cpu_path, uring_eden_cpu_path = sys.argv[1:]
+
+time_line = re.compile(
+    r"real_sec=(?P<real>\S+)\s+user_sec=(?P<user>\S+)\s+sys_sec=(?P<sys>\S+)\s+cpu_pct=(?P<cpu>\S+)"
+)
+eden_cpu_line = re.compile(
+    r"edenfs_user_sec=(?P<user>\S+)\s+"
+    r"edenfs_sys_sec=(?P<sys>\S+)\s+"
+    r"edenfs_cpu_sec=(?P<cpu_sec>\S+)\s+"
+    r"edenfs_cpu_pct=(?P<cpu_pct>\S+)"
+)
+
+
+def parse_workload(path):
+    rows = []
+    with open(path, "r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            m = time_line.search(line)
+            if not m:
+                continue
+            rows.append(
+                {
+                    "real": float(m.group("real")),
+                    "user": float(m.group("user")),
+                    "sys": float(m.group("sys")),
+                    "cpu": float(m.group("cpu").rstrip("%")),
+                }
+            )
+    return rows
+
+
+def parse_eden_cpu(path):
+    rows = []
+    with open(path, "r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            m = eden_cpu_line.search(line)
+            if not m:
+                continue
+            rows.append(
+                {
+                    "user": float(m.group("user")),
+                    "sys": float(m.group("sys")),
+                    "cpu_sec": float(m.group("cpu_sec")),
+                    "cpu_pct": float(m.group("cpu_pct")),
+                }
+            )
+    return rows
+
+
+def mean(values):
+    return sum(values) / len(values) if values else None
+
+
+def pct_change(base, new):
+    if base in (None, 0) or new is None:
+        return None
+    return ((new - base) / base) * 100.0
+
+
+def fmt_num(value):
+    return f"{value:.3f}" if value is not None else "n/a"
+
+
+def fmt_pct(value):
+    return f"{value:+.1f}%" if value is not None else "n/a"
+
+
+dev_workload = parse_workload(dev_raw)
+uring_workload = parse_workload(uring_raw)
+dev_eden_cpu = parse_eden_cpu(dev_eden_cpu_path)
+uring_eden_cpu = parse_eden_cpu(uring_eden_cpu_path)
+
+if not dev_workload:
+    raise SystemExit(f"no workload samples captured in {dev_raw}")
+if not uring_workload:
+    raise SystemExit(f"no workload samples captured in {uring_raw}")
+if not dev_eden_cpu:
+    raise SystemExit(f"no edenfs CPU samples captured in {dev_eden_cpu_path}")
+if not uring_eden_cpu:
+    raise SystemExit(f"no edenfs CPU samples captured in {uring_eden_cpu_path}")
+
+metrics = [
+    ("real", "real_sec"),
+    ("user", "user_sec"),
+    ("sys", "sys_sec"),
+    ("cpu", "client_cpu_pct"),
+]
+
+print()
+print("Workload comparison")
+print(f"{'metric':>16}  {'devfuse':>10}  {'io_uring':>10}  {'delta %':>8}")
+print("-" * 52)
+for key, label in metrics:
+    dev_mean = mean([row[key] for row in dev_workload])
+    uring_mean = mean([row[key] for row in uring_workload])
+    delta = pct_change(dev_mean, uring_mean)
+    print(
+        f"{label:>16}  {fmt_num(dev_mean):>10}  {fmt_num(uring_mean):>10}  {fmt_pct(delta):>8}"
+    )
+
+print()
+print("EdenFS CPU comparison")
+print(f"{'metric':>16}  {'devfuse':>10}  {'io_uring':>10}  {'delta %':>8}")
+print("-" * 52)
+for key, label in [
+    ("user", "edenfs_user_sec"),
+    ("sys", "edenfs_sys_sec"),
+    ("cpu_sec", "edenfs_cpu_sec"),
+    ("cpu_pct", "edenfs_cpu_pct"),
+]:
+    dev_mean = mean([row[key] for row in dev_eden_cpu])
+    uring_mean = mean([row[key] for row in uring_eden_cpu])
+    print(
+        f"{label:>16}  {fmt_num(dev_mean):>10}  {fmt_num(uring_mean):>10}  "
+        f"{fmt_pct(pct_change(dev_mean, uring_mean)):>8}"
+    )
+
+print()
+print("Interpretation:")
+print("- Lower real_sec is better for end-to-end latency.")
+print("- Lower user_sec/sys_sec is better for client-side CPU cost.")
+print("- edenfs_* metrics come from /proc/$PID/stat over the exact benchmark window.")
+PY
+}
+
 main() {
   if [[ "${1:-}" == "--help" ]]; then
     usage
@@ -283,6 +417,12 @@ Raw outputs:
   $OUTPUT_DIR/transport-bench-io_uring.txt
   $OUTPUT_DIR/transport-bench-io_uring-edenfs-cpu.txt
 EOF
+
+  if [[ "$DRY_RUN" == "1" ]]; then
+    echo "DRY_RUN: skipping comparison summary"
+  else
+    print_comparison_summary
+  fi
 }
 
 main "$@"
