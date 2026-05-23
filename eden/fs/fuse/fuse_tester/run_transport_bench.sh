@@ -13,6 +13,7 @@ CLONE_REVISION="${CLONE_REVISION:-master}"
 TARGET_DIR="${TARGET_DIR:-$MOUNT_DIR/fbcode/eden}"
 RUNS="${RUNS:-5}"
 WORKLOAD="${WORKLOAD:-ls_recursive}"
+DRY_RUN="${DRY_RUN:-0}"
 
 usage() {
   cat <<EOF
@@ -26,6 +27,7 @@ Environment overrides:
   TARGET_DIR       Subdirectory used by the workload
   RUNS             Number of benchmark repetitions per mode
   WORKLOAD         Benchmark workload name (currently: ls_recursive)
+  DRY_RUN          Print Eden commands instead of executing them (0 or 1)
 EOF
 }
 
@@ -50,6 +52,11 @@ validate_configuration() {
       exit 1
       ;;
   esac
+
+  if [[ "$DRY_RUN" != "0" && "$DRY_RUN" != "1" ]]; then
+    echo "DRY_RUN must be 0 or 1" >&2
+    exit 1
+  fi
 }
 
 print_configuration() {
@@ -62,7 +69,44 @@ Transport benchmark configuration
   TARGET_DIR:     $TARGET_DIR
   RUNS:           $RUNS
   WORKLOAD:       $WORKLOAD
+  DRY_RUN:        $DRY_RUN
 EOF
+}
+
+run_cmd() {
+  echo "+ $*"
+  if [[ "$DRY_RUN" == "1" ]]; then
+    return 0
+  fi
+  "$@"
+}
+
+run_optional_cmd() {
+  if ! run_cmd "$@"; then
+    echo "warning: command failed but benchmark will continue: $*" >&2
+  fi
+}
+
+reclone_mount() {
+  run_optional_cmd buck2 run @mode/opt edenfsctl -- --config-dir="$EDEN_DEV_STATE" stop
+  run_optional_cmd buck2 run @mode/opt edenfsctl -- --config-dir="$EDEN_DEV_STATE" rm "$MOUNT_DIR"
+  run_cmd buck2 run @mode/opt edenfsctl -- --config-dir="$EDEN_DEV_STATE" start
+  run_cmd buck2 run @mode/opt edenfsctl -- --config-dir="$EDEN_DEV_STATE" clone \
+    "$BACKING_REPO" -r "$CLONE_REVISION" "$MOUNT_DIR"
+}
+
+configure_mode() {
+  local mode="$1"
+
+  cat <<EOF
+
+Configure ~/.edenrc for mode: $mode
+  devfuse  -> use-io-uring = "false"
+  io_uring -> use-io-uring = "true"
+EOF
+  read -r -p "Press Enter when $mode is configured..."
+  reclone_mount
+  echo "Mount prepared for mode: $mode"
 }
 
 main() {
@@ -79,6 +123,8 @@ main() {
 
   validate_configuration
   print_configuration
+  configure_mode devfuse
+  configure_mode io_uring
 }
 
 main "$@"
