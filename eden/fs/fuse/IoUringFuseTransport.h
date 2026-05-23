@@ -105,6 +105,7 @@ class IoUringFuseTransport final : public FuseTransport {
       int fuseFd);
   void initializeQueue(RingQueue& queue, int fuseFd) const;
   void initializeEntryBuffers(RingQueue& queue, RingEntry& entry) const;
+  void prepareFetchRequests(RingQueue& queue) const;
   void registerOutstandingEntry(uint64_t unique, RingEntry& entry) const;
   RingEntry& takeOutstandingEntry(uint64_t unique) const;
   void submitCommitAndFetch(RingEntry& entry) const;

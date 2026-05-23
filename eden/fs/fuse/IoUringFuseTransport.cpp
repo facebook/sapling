@@ -10,6 +10,7 @@
 #include "eden/fs/fuse/IoUringFuseTransport.h"
 
 #ifdef __linux__
+#include <poll.h>
 #include <sys/eventfd.h>
 #endif
 #include <unistd.h>
@@ -228,6 +229,48 @@ void IoUringFuseTransport::initializeEntryBuffers(
   entry.iov[0].iov_len = queue.requestHeaderSize;
   entry.iov[1].iov_base = entry.payload;
   entry.iov[1].iov_len = entry.payloadSize;
+}
+
+void IoUringFuseTransport::prepareFetchRequests(RingQueue& queue) const {
+  for (auto& entry : queue.entries) {
+    auto* sqe = io_uring_get_sqe(&queue.ring);
+    if (!sqe) {
+      throw std::runtime_error(
+          fmt::format(
+              "failed to get io_uring SQE for queue {} fetch registration",
+              queue.queueId));
+    }
+
+    prepareUringCmdSqe(
+        *sqe,
+        FUSE_IO_URING_CMD_REGISTER,
+        static_cast<uint16_t>(queue.queueId),
+        /* commitId */ 0,
+        &entry);
+    sqe->addr = reinterpret_cast<uint64_t>(entry.iov.data());
+    sqe->len = static_cast<__u32>(entry.iov.size());
+  }
+
+  const auto sqReady = io_uring_sq_ready(&queue.ring);
+  if (sqReady != queue.entries.size()) {
+    throw std::runtime_error(
+        fmt::format(
+            "io_uring queue {} prepared {} SQEs for {} fetch requests",
+            queue.queueId,
+            sqReady,
+            queue.entries.size()));
+  }
+
+  auto* sqe = io_uring_get_sqe(&queue.ring);
+  if (!sqe) {
+    throw std::runtime_error(
+        fmt::format(
+            "failed to get io_uring SQE for queue {} eventfd poll",
+            queue.queueId));
+  }
+
+  io_uring_prep_poll_add(sqe, queue.eventFd, POLLIN);
+  io_uring_sqe_set_data(sqe, &queue);
 }
 
 void IoUringFuseTransport::registerOutstandingEntry(
