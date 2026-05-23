@@ -686,6 +686,15 @@ std::string getRunningKernelRelease() {
   return uts.release;
 }
 #endif
+uint64_t fuseInitFlags(const fuse_init_out& connInfo) {
+  uint64_t flags = connInfo.flags;
+#ifdef FUSE_INIT_EXT
+  if (flags & FUSE_INIT_EXT) {
+    flags |= uint64_t{connInfo.flags2} << 32;
+  }
+#endif
+  return flags;
+}
 
 void sigusr2Handler(int /* signum */) {
   // Do nothing.
@@ -1084,7 +1093,7 @@ FuseChannel::StopFuture FuseChannel::initializeFromTakeover(
       "Takeover using max_write={}, max_readahead={}, want={}",
       connInfo_->max_write,
       connInfo_->max_readahead,
-      capsFlagsToLabel(connInfo_->flags));
+      capsFlagsToLabel(fuseInitFlags(*connInfo_)));
   startWorkerThreads();
   return sessionCompletePromise_.getFuture();
 }
