@@ -9,7 +9,11 @@
 
 #ifndef _WIN32
 
+#include <array>
+#include <cstddef>
 #include <cstdint>
+#include <memory>
+#include <vector>
 
 #include "eden/fs/fuse/FuseTransport.h"
 
@@ -30,6 +34,35 @@ class IoUringFuseTransport final : public FuseTransport {
       const override;
 
  private:
+#ifdef __linux__
+  struct RingPool;
+
+  struct RingEntry {
+    RingPool* pool{nullptr};
+    size_t queueId{0};
+    fuse_uring_req_header* requestHeader{nullptr};
+    void* payload{nullptr};
+    size_t payloadSize{0};
+    uint64_t requestCommitId{0};
+    std::array<iovec, 2> iov{};
+  };
+
+  struct RingQueue {
+    RingPool* pool{nullptr};
+    size_t queueId{0};
+    int eventFd{-1};
+    size_t requestHeaderSize{sizeof(fuse_uring_req_header)};
+    std::vector<RingEntry> entries;
+  };
+
+  struct RingPool {
+    size_t queueDepth{0};
+    size_t maxRequestPayloadSize{0};
+    std::vector<RingQueue> queues;
+  };
+
+  std::unique_ptr<RingPool> ringPool_;
+#endif
   uint32_t queueDepth_;
 };
 
