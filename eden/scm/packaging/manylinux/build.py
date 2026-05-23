@@ -73,11 +73,13 @@ def build_sl_and_isl(python_prefix):
     project_root = os.path.dirname(
         os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
     )
-    env = os.environ.copy()
-    env["PYTHON_SYS_EXECUTABLE"] = os.path.join(python_prefix, "bin/python")
-    subprocess.check_call(["make", "oss"], cwd=project_root, env=env)
-    return os.path.join(project_root, "sl"), os.path.join(
-        project_root, "isl-dist.tar.xz"
+    python = os.path.join(python_prefix, "bin/python")
+    subprocess.check_call(
+        [python, "build.py", "--oss", "--with-python", python],
+        cwd=project_root,
+    )
+    return os.path.join(project_root, "out", "sl"), os.path.join(
+        project_root, "out", "isl-dist.tar.xz"
     )
 
 
