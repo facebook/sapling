@@ -14,6 +14,7 @@ TARGET_DIR="${TARGET_DIR:-$MOUNT_DIR/fbcode/eden}"
 RUNS="${RUNS:-5}"
 WORKLOAD="${WORKLOAD:-ls_recursive}"
 DRY_RUN="${DRY_RUN:-0}"
+OUTPUT_DIR="${OUTPUT_DIR:-/tmp}"
 
 usage() {
   cat <<EOF
@@ -28,6 +29,7 @@ Environment overrides:
   RUNS             Number of benchmark repetitions per mode
   WORKLOAD         Benchmark workload name (currently: ls_recursive)
   DRY_RUN          Print Eden commands instead of executing them (0 or 1)
+  OUTPUT_DIR       Directory for raw benchmark outputs
 EOF
 }
 
@@ -57,6 +59,8 @@ validate_configuration() {
     echo "DRY_RUN must be 0 or 1" >&2
     exit 1
   fi
+
+  mkdir -p "$OUTPUT_DIR"
 }
 
 print_configuration() {
@@ -70,6 +74,7 @@ Transport benchmark configuration
   RUNS:           $RUNS
   WORKLOAD:       $WORKLOAD
   DRY_RUN:        $DRY_RUN
+  OUTPUT_DIR:     $OUTPUT_DIR
 EOF
 }
 
@@ -109,6 +114,36 @@ EOF
   echo "Mount prepared for mode: $mode"
 }
 
+run_workload() {
+  case "$WORKLOAD" in
+    ls_recursive)
+      (
+        cd "$TARGET_DIR"
+        /usr/bin/time -f 'real_sec=%e user_sec=%U sys_sec=%S cpu_pct=%P' \
+          sh -c 'ls -lR > /dev/null'
+      )
+      ;;
+  esac
+}
+
+run_mode() {
+  local mode="$1"
+  local raw_out="$OUTPUT_DIR/transport-bench-${mode}.txt"
+
+  : > "$raw_out"
+
+  if [[ "$DRY_RUN" == "1" ]]; then
+    echo "DRY_RUN: skipping workload for mode=$mode" | tee -a "$raw_out"
+    return 0
+  fi
+
+  for run in $(seq 1 "$RUNS"); do
+    echo "mode=$mode run=$run target=$TARGET_DIR" | tee -a "$raw_out"
+    run_workload 2>&1 | tee -a "$raw_out"
+    echo >>"$raw_out"
+  done
+}
+
 main() {
   if [[ "${1:-}" == "--help" ]]; then
     usage
@@ -116,15 +151,22 @@ main() {
   fi
 
   require_command buck2
-  require_command pidstat
-  require_command pgrep
   require_command python3
   require_command /usr/bin/time
 
   validate_configuration
   print_configuration
   configure_mode devfuse
+  run_mode devfuse
   configure_mode io_uring
+  run_mode io_uring
+
+  cat <<EOF
+
+Raw outputs:
+  $OUTPUT_DIR/transport-bench-devfuse.txt
+  $OUTPUT_DIR/transport-bench-io_uring.txt
+EOF
 }
 
 main "$@"
