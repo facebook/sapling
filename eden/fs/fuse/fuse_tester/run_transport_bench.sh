@@ -126,20 +126,134 @@ run_workload() {
   esac
 }
 
+find_edenfs_pid() {
+  buck2 run @mode/opt edenfsctl -- --config-dir="$EDEN_DEV_STATE" pid
+}
+
+get_clock_ticks_per_sec() {
+  getconf CLK_TCK
+}
+
+read_edenfs_cpu_ticks() {
+  local pid="$1"
+  python3 - "$pid" <<'PY'
+import sys
+
+pid = sys.argv[1]
+with open(f"/proc/{pid}/stat", "r", encoding="utf-8") as f:
+    stat = f.read().strip()
+
+fields = stat.rsplit(") ", 1)[1].split()
+utime = int(fields[11])
+stime = int(fields[12])
+print(f"{utime} {stime}")
+PY
+}
+
+compute_edenfs_cpu_sample() {
+  local before_utime="$1"
+  local before_stime="$2"
+  local after_utime="$3"
+  local after_stime="$4"
+  local clock_ticks="$5"
+  local real_sec="$6"
+
+  python3 - \
+    "$before_utime" \
+    "$before_stime" \
+    "$after_utime" \
+    "$after_stime" \
+    "$clock_ticks" \
+    "$real_sec" <<'PY'
+import sys
+
+before_utime = int(sys.argv[1])
+before_stime = int(sys.argv[2])
+after_utime = int(sys.argv[3])
+after_stime = int(sys.argv[4])
+clock_ticks = float(sys.argv[5])
+real_sec = float(sys.argv[6])
+
+user_sec = (after_utime - before_utime) / clock_ticks
+sys_sec = (after_stime - before_stime) / clock_ticks
+cpu_sec = user_sec + sys_sec
+cpu_pct = (cpu_sec / real_sec) * 100.0 if real_sec > 0 else 0.0
+
+print(
+    f"edenfs_user_sec={user_sec:.6f} "
+    f"edenfs_sys_sec={sys_sec:.6f} "
+    f"edenfs_cpu_sec={cpu_sec:.6f} "
+    f"edenfs_cpu_pct={cpu_pct:.3f}"
+)
+PY
+}
+
+extract_real_sec() {
+  local workload_output="$1"
+  python3 - "$workload_output" <<'PY'
+import re
+import sys
+
+text = sys.argv[1]
+match = re.search(r"real_sec=(\S+)", text)
+if not match:
+    raise SystemExit("failed to parse real_sec from workload output")
+print(match.group(1))
+PY
+}
+
 run_mode() {
   local mode="$1"
   local raw_out="$OUTPUT_DIR/transport-bench-${mode}.txt"
+  local eden_cpu_out="$OUTPUT_DIR/transport-bench-${mode}-edenfs-cpu.txt"
+  local clock_ticks
+  clock_ticks="$(get_clock_ticks_per_sec)"
 
   : > "$raw_out"
+  : > "$eden_cpu_out"
 
   if [[ "$DRY_RUN" == "1" ]]; then
     echo "DRY_RUN: skipping workload for mode=$mode" | tee -a "$raw_out"
+    echo "DRY_RUN: skipping edenfs CPU capture for mode=$mode" \
+      | tee -a "$eden_cpu_out"
     return 0
   fi
 
+  local eden_pid
+  eden_pid="$(find_edenfs_pid)"
+  if [[ -z "$eden_pid" ]]; then
+    echo "Failed to find edenfs pid for mode=$mode" >&2
+    exit 1
+  fi
+
   for run in $(seq 1 "$RUNS"); do
+    local before_utime
+    local before_stime
+    read -r before_utime before_stime < <(read_edenfs_cpu_ticks "$eden_pid")
+
     echo "mode=$mode run=$run target=$TARGET_DIR" | tee -a "$raw_out"
-    run_workload 2>&1 | tee -a "$raw_out"
+    local workload_output
+    workload_output="$(run_workload 2>&1)"
+    printf '%s\n' "$workload_output" | tee -a "$raw_out"
+
+    local after_utime
+    local after_stime
+    read -r after_utime after_stime < <(read_edenfs_cpu_ticks "$eden_pid")
+
+    local real_sec
+    real_sec="$(extract_real_sec "$workload_output")"
+    {
+      echo "mode=$mode run=$run pid=$eden_pid target=$TARGET_DIR"
+      compute_edenfs_cpu_sample \
+        "$before_utime" \
+        "$before_stime" \
+        "$after_utime" \
+        "$after_stime" \
+        "$clock_ticks" \
+        "$real_sec"
+      echo
+    } | tee -a "$eden_cpu_out"
+
     echo >>"$raw_out"
   done
 }
@@ -165,7 +279,9 @@ main() {
 
 Raw outputs:
   $OUTPUT_DIR/transport-bench-devfuse.txt
+  $OUTPUT_DIR/transport-bench-devfuse-edenfs-cpu.txt
   $OUTPUT_DIR/transport-bench-io_uring.txt
+  $OUTPUT_DIR/transport-bench-io_uring-edenfs-cpu.txt
 EOF
 }
 
