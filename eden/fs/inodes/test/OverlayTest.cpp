@@ -1665,6 +1665,90 @@ TEST(OverlayLoadWalTest, collapsedAddOverwritesBaseEntry) {
   bundle.overlay->close();
 }
 
+TEST(WalAddRemoveChildTest, addChildAppendsWalWhenWalEnabled) {
+  folly::test::TemporaryDirectory tmp("eden_wal_addchild");
+  auto dir = canonicalPath(tmp.path().string());
+  auto bundle = makeWalLifecycleOverlay(dir);
+  ASSERT_NE(nullptr, bundle.store);
+
+  auto parent = bundle.overlay->allocateInodeNumber();
+  // Establish a base file so the WAL has something to attach to.
+  DirContents content(kPathMapDefaultCaseSensitive);
+  bundle.overlay->saveOverlayDir(parent, content);
+  ASSERT_FALSE(bundle.store->hasWal(parent));
+
+  auto childIno = bundle.overlay->allocateInodeNumber();
+  auto child =
+      std::make_pair(PathComponent{"file"}, DirEntry(S_IFREG | 0644, childIno));
+  content.emplace(child.first, S_IFREG | 0644, childIno);
+  bundle.overlay->addChild(parent, child, content);
+
+  EXPECT_TRUE(bundle.store->hasWal(parent));
+
+  bundle.overlay->close();
+}
+
+TEST(WalAddRemoveChildTest, addChildFallsBackToFullSaveWhenWalDisabled) {
+  folly::test::TemporaryDirectory tmp("eden_wal_addchild_off");
+  auto dir = canonicalPath(tmp.path().string());
+
+  // Build an overlay with overlayUseWal=false directly via Overlay::create;
+  // the lifecycle helper enables WAL by default, which we need to bypass
+  // to verify the saveOverlayDir fallback path.
+  auto rawConfig = EdenConfig::createTestEdenConfig();
+  rawConfig->overlayUseWal.setValue(false, ConfigSourceType::CommandLine);
+  auto reloadable = std::make_shared<ReloadableConfig>(rawConfig);
+  auto overlay = Overlay::create(
+      dir,
+      kPathMapDefaultCaseSensitive,
+      kInodeCatalogType,
+      kInodeCatalogOptions,
+      makeTestEdenFsEventsLogger(),
+      makeRefPtr<EdenStats>(),
+      *rawConfig);
+  overlay->initialize(reloadable).get();
+  auto* store =
+      dynamic_cast<FsFileContentStore*>(overlay->getRawFileContentStore());
+  ASSERT_NE(nullptr, store);
+
+  auto parent = overlay->allocateInodeNumber();
+  DirContents content(kPathMapDefaultCaseSensitive);
+  overlay->saveOverlayDir(parent, content);
+
+  auto childIno = overlay->allocateInodeNumber();
+  auto child =
+      std::make_pair(PathComponent{"file"}, DirEntry(S_IFREG | 0644, childIno));
+  content.emplace(child.first, S_IFREG | 0644, childIno);
+  overlay->addChild(parent, child, content);
+
+  // WAL disabled → addChild took the full-save path, no WAL file exists.
+  EXPECT_FALSE(store->hasWal(parent));
+
+  overlay->close();
+}
+
+TEST(WalAddRemoveChildTest, removeChildAppendsWalWhenWalEnabled) {
+  folly::test::TemporaryDirectory tmp("eden_wal_removechild");
+  auto dir = canonicalPath(tmp.path().string());
+  auto bundle = makeWalLifecycleOverlay(dir);
+  ASSERT_NE(nullptr, bundle.store);
+
+  auto parent = bundle.overlay->allocateInodeNumber();
+  auto childIno = bundle.overlay->allocateInodeNumber();
+  DirContents content(kPathMapDefaultCaseSensitive);
+  content.emplace("file"_pc, S_IFREG | 0644, childIno);
+  bundle.overlay->saveOverlayDir(parent, content);
+  ASSERT_FALSE(bundle.store->hasWal(parent));
+
+  // Remove the child — content reflects the post-remove state.
+  content.erase("file"_pc);
+  bundle.overlay->removeChild(parent, "file"_pc, content);
+
+  EXPECT_TRUE(bundle.store->hasWal(parent));
+
+  bundle.overlay->close();
+}
+
 } // namespace facebook::eden
 
 #endif

@@ -20,6 +20,7 @@
 #include <folly/stop_watch.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 
+#include "eden/common/telemetry/DurationScope.h"
 #include "eden/common/utils/Bug.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/PathMapMutator.h"
@@ -1265,6 +1266,16 @@ void Overlay::addChild(
     if (supportsSemanticOperations_) {
       inodeCatalog_->addChild(
           parent, childEntry.first, serializeOverlayEntry(childEntry.second));
+#ifndef _WIN32
+    } else if (useWal()) {
+      auto entry = serializeOverlayEntry(childEntry.second);
+      appendWalEntryAndCompact(
+          parent,
+          FsFileContentStore::WalOpType::ADD,
+          childEntry.first,
+          &entry,
+          content);
+#endif
     } else {
       saveOverlayDir(parent, content);
     }
@@ -1286,6 +1297,16 @@ void Overlay::removeChild(
       if (inodeCatalog_->removeChild(parent, childName)) {
         stats_->increment(&OverlayStats::removeChildSuccessful);
       }
+#ifndef _WIN32
+    } else if (useWal()) {
+      appendWalEntryAndCompact(
+          parent,
+          FsFileContentStore::WalOpType::REMOVE,
+          childName,
+          /*entry=*/nullptr,
+          content);
+      stats_->increment(&OverlayStats::removeChildSuccessful);
+#endif
     } else {
       saveOverlayDir(parent, content);
       stats_->increment(&OverlayStats::removeChildSuccessful);
