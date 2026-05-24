@@ -896,6 +896,30 @@ FsFileContentStore::LoadWalResult FsFileContentStore::loadWalDelta(
   return result;
 }
 
+size_t FsFileContentStore::replayWal(
+    InodeNumber parent,
+    overlay::OverlayDir& dir) {
+  auto result = loadWalDelta(parent);
+  for (auto& [name, op] : result.delta) {
+    switch (op.type) {
+      case WalOpType::ADD:
+        (*dir.entries_ref())[name] = std::move(op.entry);
+        break;
+      case WalOpType::REMOVE:
+        dir.entries_ref()->erase(name);
+        break;
+      case WalOpType::MATERIALIZE: {
+        auto it = dir.entries_ref()->find(name);
+        if (it != dir.entries_ref()->end()) {
+          it->second.hash().reset();
+        }
+        break;
+      }
+    }
+  }
+  return result.rawEntriesParsed;
+}
+
 void FsFileContentStore::removeWal(InodeNumber parent) {
   auto walPath = getWalPath(parent);
   if (::unlinkat(dirFile_.fd(), walPath.c_str(), 0) != 0) {

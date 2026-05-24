@@ -251,6 +251,20 @@ class FsFileContentStore : public FileContentStore {
    */
   LoadWalResult loadWalDelta(InodeNumber parent);
 
+  /**
+   * Replay WAL entries into an OverlayDir. Returns the count of raw WAL
+   * entries successfully parsed (LoadWalResult::rawEntriesParsed).
+   *
+   * Thin wrapper over loadWalDelta: parsing, bounds checks, and the
+   * crash-safety contract (callers should removeWal after a successful
+   * read — see loadWalDelta) live there. This function only folds the
+   * collapsed delta into the passed-in OverlayDir.
+   *
+   * Used by cold paths (recursive remove, GC, fsck). The hot direct-
+   * serialization load path uses loadWalDelta directly.
+   */
+  size_t replayWal(InodeNumber parent, overlay::OverlayDir& dir);
+
   /** Returns true iff a WAL file exists for the given directory inode. */
   bool hasWal(InodeNumber parent);
 

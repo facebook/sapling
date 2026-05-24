@@ -623,4 +623,157 @@ TEST_F(FsInodeCatalogWalTest, loadWalDelta_materializeAfterRemoveLeavesRemove) {
   EXPECT_EQ(FsFileContentStore::WalOpType::REMOVE, it->second.type);
 }
 
+TEST_F(FsInodeCatalogWalTest, replayWal_missingFileReturnsZero) {
+  overlay::OverlayDir dir;
+  EXPECT_EQ(0u, store_->replayWal(InodeNumber{100}, dir));
+  EXPECT_TRUE(dir.entries_ref()->empty());
+}
+
+TEST_F(FsInodeCatalogWalTest, replayWal_roundTripsAddRemoveMaterialize) {
+  const InodeNumber parent{101};
+  auto add = makeEntry(0100644, 200);
+  auto addWithHash = makeEntryWithHash(0100644, 201, std::string(20, '\xab'));
+  store_->appendWalEntry(
+      parent,
+      FsFileContentStore::WalOpType::ADD,
+      PathComponentPiece{"a"},
+      &add);
+  store_->appendWalEntry(
+      parent,
+      FsFileContentStore::WalOpType::ADD,
+      PathComponentPiece{"b"},
+      &addWithHash);
+  store_->appendWalEntry(
+      parent,
+      FsFileContentStore::WalOpType::MATERIALIZE,
+      PathComponentPiece{"b"},
+      nullptr);
+  store_->appendWalEntry(
+      parent,
+      FsFileContentStore::WalOpType::REMOVE,
+      PathComponentPiece{"a"},
+      nullptr);
+
+  overlay::OverlayDir dir;
+  // 4 raw WAL entries; ADD/REMOVE/MATERIALIZE collapse to 2 unique names
+  // but rawEntriesParsed reports the 4 as-written.
+  EXPECT_EQ(4u, store_->replayWal(parent, dir));
+  // "a" was added then removed.
+  EXPECT_EQ(0u, dir.entries_ref()->count("a"));
+  // "b" was added with a hash, then materialized clears the hash.
+  ASSERT_EQ(1u, dir.entries_ref()->count("b"));
+  const auto& b = dir.entries_ref()->at("b");
+  EXPECT_EQ(0100644, *b.mode());
+  EXPECT_EQ(201, *b.inodeNumber());
+  EXPECT_FALSE(b.hash().has_value());
+}
+
+TEST_F(FsInodeCatalogWalTest, replayWal_overwritesExistingDirEntries) {
+  const InodeNumber parent{102};
+  // Pre-populate the dir as if the base file already had this entry.
+  overlay::OverlayDir dir;
+  auto stale = makeEntry(0100600, 1);
+  (*dir.entries_ref())["x"] = stale;
+
+  // WAL ADD with new metadata for the same name should overwrite.
+  auto fresh = makeEntry(0100644, 999);
+  store_->appendWalEntry(
+      parent,
+      FsFileContentStore::WalOpType::ADD,
+      PathComponentPiece{"x"},
+      &fresh);
+
+  EXPECT_EQ(1u, store_->replayWal(parent, dir));
+  ASSERT_EQ(1u, dir.entries_ref()->count("x"));
+  EXPECT_EQ(0100644, *dir.entries_ref()->at("x").mode());
+  EXPECT_EQ(999, *dir.entries_ref()->at("x").inodeNumber());
+}
+
+TEST_F(FsInodeCatalogWalTest, replayWal_truncatedTailIsDiscarded) {
+  const InodeNumber parent{103};
+  auto entry = makeEntry(0100644, 1);
+  store_->appendWalEntry(
+      parent,
+      FsFileContentStore::WalOpType::ADD,
+      PathComponentPiece{"keep"},
+      &entry);
+  // Append a second entry, then truncate the file inside that second entry.
+  store_->appendWalEntry(
+      parent,
+      FsFileContentStore::WalOpType::ADD,
+      PathComponentPiece{"drop"},
+      &entry);
+  auto walPath = FsFileContentStore::getWalPath(parent);
+  auto fullPath =
+      canonicalPath(testDir_.path().string()) + RelativePathPiece{walPath};
+  std::string bytes;
+  ASSERT_TRUE(folly::readFile(fullPath.c_str(), bytes));
+  ASSERT_TRUE(
+      folly::writeFile(bytes.substr(0, bytes.size() - 3), fullPath.c_str()));
+
+  overlay::OverlayDir dir;
+  EXPECT_EQ(1u, store_->replayWal(parent, dir));
+  EXPECT_EQ(1u, dir.entries_ref()->count("keep"));
+  EXPECT_EQ(0u, dir.entries_ref()->count("drop"));
+}
+
+TEST_F(FsInodeCatalogWalTest, replayWal_zeroEntryLenStops) {
+  const InodeNumber parent{104};
+  // Four zero bytes: a zero entryLen, indistinguishable from a sparse file
+  // tail. Replay must stop without applying anything.
+  ASSERT_NO_FATAL_FAILURE(writeRawWal(testDir_, parent, std::string(4, '\0')));
+  overlay::OverlayDir dir;
+  EXPECT_EQ(0u, store_->replayWal(parent, dir));
+}
+
+TEST_F(FsInodeCatalogWalTest, replayWal_unknownOpIsSkipped) {
+  // Forward-compat: an unknown opcode with a valid entryLen frame is
+  // skipped via replayWal too (it inherits loadWalDelta's parser).
+  const InodeNumber parent{105};
+  // Write valid REMOVE first; replay should still apply it after skipping
+  // the unknown-op entry that follows.
+  store_->appendWalEntry(
+      parent,
+      FsFileContentStore::WalOpType::REMOVE,
+      PathComponentPiece{"good"},
+      nullptr);
+
+  // Append a valid frame for an unknown opcode: entryLen=3 covers
+  // op(1) + nameLen(2) + name(0).
+  auto walPath = FsFileContentStore::getWalPath(parent);
+  auto fullPath =
+      canonicalPath(testDir_.path().string()) + RelativePathPiece{walPath};
+  std::string existing;
+  ASSERT_TRUE(folly::readFile(fullPath.c_str(), existing));
+  std::string corrupt;
+  uint32_t entryLen = 3;
+  corrupt.append(reinterpret_cast<const char*>(&entryLen), sizeof(entryLen));
+  corrupt.push_back(static_cast<char>(0xff)); // op
+  uint16_t nameLen = 0;
+  corrupt.append(reinterpret_cast<const char*>(&nameLen), sizeof(nameLen));
+  ASSERT_TRUE(folly::writeFile(existing + corrupt, fullPath.c_str()));
+
+  overlay::OverlayDir dir;
+  (*dir.entries_ref())["good"] = makeEntry(0100644, 1);
+  // 1 raw entry parsed (REMOVE); unknown-op skip doesn't count as raw.
+  EXPECT_EQ(1u, store_->replayWal(parent, dir));
+  EXPECT_EQ(0u, dir.entries_ref()->count("good"));
+}
+
+TEST_F(FsInodeCatalogWalTest, replayWal_truncatedInsideFieldsStopsCleanly) {
+  // Construct an entry whose declared entryLen exceeds the bytes that
+  // follow. Replay must not parse past the buffer and must apply zero
+  // entries.
+  const InodeNumber parent{106};
+  std::string corrupt;
+  // entryLen = 100, but only 1 byte (the opByte) follows.
+  uint32_t bad = 100;
+  corrupt.append(reinterpret_cast<const char*>(&bad), sizeof(bad));
+  corrupt.push_back(static_cast<char>(FsFileContentStore::WalOpType::ADD));
+  ASSERT_NO_FATAL_FAILURE(writeRawWal(testDir_, parent, corrupt));
+
+  overlay::OverlayDir dir;
+  EXPECT_EQ(0u, store_->replayWal(parent, dir));
+}
+
 #endif
