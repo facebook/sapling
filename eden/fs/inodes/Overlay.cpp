@@ -622,6 +622,15 @@ DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
     XCHECK(fsCore_ != nullptr) << "hasWal implies FsFileContentStore";
     auto walResult = fsCore_->loadWalDelta(inodeNumber);
     auto& delta = walResult.delta;
+    stats_->increment(&OverlayStats::walReplay);
+    stats_->increment(
+        &OverlayStats::walEntriesReplayed,
+        static_cast<double>(walResult.rawEntriesParsed));
+    if (walResult.parseErrors > 0) {
+      stats_->increment(
+          &OverlayStats::walParseFailure,
+          static_cast<double>(walResult.parseErrors));
+    }
 
     DirContents base{std::move(entries), caseSensitive_};
     PathMapMutator<DirEntry> mutator{std::move(base)};
@@ -799,7 +808,16 @@ void Overlay::mergeWalIntoOverlayDir(
   if (!canHaveWalFiles() || fsCore_ == nullptr || !fsCore_->hasWal(parent)) {
     return;
   }
-  fsCore_->replayWal(parent, dir);
+  auto walResult = fsCore_->replayWal(parent, dir);
+  stats_->increment(&OverlayStats::walReplay);
+  stats_->increment(
+      &OverlayStats::walEntriesReplayed,
+      static_cast<double>(walResult.rawEntriesParsed));
+  if (walResult.parseErrors > 0) {
+    stats_->increment(
+        &OverlayStats::walParseFailure,
+        static_cast<double>(walResult.parseErrors));
+  }
   // Drop the WAL file now that we've folded its entries into `dir`.
   // Callers (recursivelyRemoveOverlayDir) have already removed the base
   // overlay file via loadAndRemoveOverlayDir, so leaving the WAL behind
@@ -854,6 +872,8 @@ void Overlay::maybeCompactWal(InodeNumber parent, const DirContents& content) {
     // explicitly: WAL-tracked directories are materialized by construction,
     // and we need the crash-safe (atomic-rename) write path so a crash
     // mid-rewrite cannot leave a truncated base file alongside a stale WAL.
+    DurationScope<EdenStats> compactScope{
+        stats_, &OverlayStats::walCompactionInline};
     saveOverlayDir(parent, content, /*isMaterialized=*/true);
   }
 #else
@@ -871,6 +891,7 @@ void Overlay::appendWalEntryAndCompact(
     const DirContents& content) {
   XCHECK(fsCore_ != nullptr) << "useWal() implies FsFileContentStore";
   fsCore_->appendWalEntry(parent, op, childName, entry);
+  stats_->increment(&OverlayStats::walAppend);
   maybeCompactWal(parent, content);
 }
 #endif // !_WIN32

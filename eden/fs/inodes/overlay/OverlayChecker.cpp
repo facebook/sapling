@@ -800,12 +800,14 @@ bool OverlayChecker::recoverWalFiles() {
         dirData.emplace();
       }
       // Best-effort merge; replayWal stops at the first torn entry but
-      // keeps the good prefix.
-      auto applied = impl_->fcs->replayWal(ino, *dirData);
+      // keeps the good prefix. parseErrors are discarded here because
+      // OverlayChecker has no EdenStats; fsck-discovered torn WALs are
+      // captured by fsck's own structured logs, not OverlayStats.
+      auto walResult = impl_->fcs->replayWal(ino, *dirData);
       // On missing base, only ADDs grow an empty dir; parse count would
       // lie on REMOVE-only WALs and synthesize a useless empty base.
-      const bool shouldSave =
-          baseWasMissing ? !dirData->entries()->empty() : applied > 0;
+      const bool shouldSave = baseWasMissing ? !dirData->entries()->empty()
+                                             : walResult.rawEntriesParsed > 0;
       if (shouldSave) {
         if (baseWasMissing) {
           XLOGF(

@@ -1205,24 +1205,26 @@ namespace {
 struct WalLifecycleOverlay {
   std::shared_ptr<Overlay> overlay;
   FsFileContentStore* store{nullptr};
+  EdenStatsPtr stats;
 };
 
 WalLifecycleOverlay makeWalLifecycleOverlay(const AbsolutePath& dir) {
   auto rawConfig = EdenConfig::createTestEdenConfig();
   rawConfig->overlayUseWal.setValue(true, ConfigSourceType::CommandLine);
   auto reloadable = std::make_shared<ReloadableConfig>(rawConfig);
+  auto stats = makeRefPtr<EdenStats>();
   auto overlay = Overlay::create(
       dir,
       kPathMapDefaultCaseSensitive,
       kInodeCatalogType,
       kInodeCatalogOptions,
       makeTestEdenFsEventsLogger(),
-      makeRefPtr<EdenStats>(),
+      stats.copy(),
       *rawConfig);
   overlay->initialize(reloadable).get();
   auto* store =
       dynamic_cast<FsFileContentStore*>(overlay->getRawFileContentStore());
-  return {std::move(overlay), store};
+  return {std::move(overlay), store, std::move(stats)};
 }
 
 } // namespace

@@ -648,7 +648,6 @@ struct OverlayStats : StatsGroup<OverlayStats> {
   Counter loadOverlayDirFailure{"overlay.load_overlay_dir_failure"};
   Counter saveOverlayDirSuccessful{"overlay.save_overlay_dir_successful"};
   Counter saveOverlayDirFailure{"overlay.save_overlay_dir_failure"};
-  Counter walCompaction{"overlay.wal_compaction"};
   Counter openOverlayFileSuccessful{"overlay.open_overlay_file_successful"};
   Counter openOverlayFileFailure{"overlay.open_overlay_file_failure"};
   Counter createOverlayFileSuccessful{"overlay.create_overlay_file_successful"};
@@ -675,6 +674,18 @@ struct OverlayStats : StatsGroup<OverlayStats> {
   Counter renameChildFailure{"overlay.rename_child_failure"};
   Counter materializeChildSuccessful{"overlay.materialize_child_successful"};
   Counter materializeChildFailure{"overlay.materialize_child_failure"};
+
+  // WAL for deferred overlay directory writes (overlay:use-wal config gate).
+  Counter walAppend{"overlay.wal_append"};
+  Counter walReplay{"overlay.wal_replay"};
+  Counter walEntriesReplayed{"overlay.wal_entries_replayed"};
+  Counter walParseFailure{"overlay.wal_parse_failure"};
+  Counter walCompaction{"overlay.wal_compaction"};
+  // Wall time spent inside the synchronous saveOverlayDir triggered by
+  // maybeCompactWal. Bounded by kCompactionCap, but worth a histogram
+  // because compaction runs on the FUSE/NFS dispatch thread under the
+  // parent contents lock.
+  Duration walCompactionInline{"overlay.wal_compaction_inline_us"};
 };
 
 struct InodeMapStats : StatsGroup<InodeMapStats> {

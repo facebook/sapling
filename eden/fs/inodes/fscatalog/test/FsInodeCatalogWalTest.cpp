@@ -625,7 +625,7 @@ TEST_F(FsInodeCatalogWalTest, loadWalDelta_materializeAfterRemoveLeavesRemove) {
 
 TEST_F(FsInodeCatalogWalTest, replayWal_missingFileReturnsZero) {
   overlay::OverlayDir dir;
-  EXPECT_EQ(0u, store_->replayWal(InodeNumber{100}, dir));
+  EXPECT_EQ(0u, store_->replayWal(InodeNumber{100}, dir).rawEntriesParsed);
   EXPECT_TRUE(dir.entries_ref()->empty());
 }
 
@@ -657,7 +657,7 @@ TEST_F(FsInodeCatalogWalTest, replayWal_roundTripsAddRemoveMaterialize) {
   overlay::OverlayDir dir;
   // 4 raw WAL entries; ADD/REMOVE/MATERIALIZE collapse to 2 unique names
   // but rawEntriesParsed reports the 4 as-written.
-  EXPECT_EQ(4u, store_->replayWal(parent, dir));
+  EXPECT_EQ(4u, store_->replayWal(parent, dir).rawEntriesParsed);
   // "a" was added then removed.
   EXPECT_EQ(0u, dir.entries_ref()->count("a"));
   // "b" was added with a hash, then materialized clears the hash.
@@ -683,7 +683,7 @@ TEST_F(FsInodeCatalogWalTest, replayWal_overwritesExistingDirEntries) {
       PathComponentPiece{"x"},
       &fresh);
 
-  EXPECT_EQ(1u, store_->replayWal(parent, dir));
+  EXPECT_EQ(1u, store_->replayWal(parent, dir).rawEntriesParsed);
   ASSERT_EQ(1u, dir.entries_ref()->count("x"));
   EXPECT_EQ(0100644, *dir.entries_ref()->at("x").mode());
   EXPECT_EQ(999, *dir.entries_ref()->at("x").inodeNumber());
@@ -712,7 +712,11 @@ TEST_F(FsInodeCatalogWalTest, replayWal_truncatedTailIsDiscarded) {
       folly::writeFile(bytes.substr(0, bytes.size() - 3), fullPath.c_str()));
 
   overlay::OverlayDir dir;
-  EXPECT_EQ(1u, store_->replayWal(parent, dir));
+  auto result = store_->replayWal(parent, dir);
+  EXPECT_EQ(1u, result.rawEntriesParsed);
+  // Torn tail surfaces through replayWal's parseErrors so cold-path callers
+  // can bump OverlayStats::walParseFailure.
+  EXPECT_GT(result.parseErrors, 0u);
   EXPECT_EQ(1u, dir.entries_ref()->count("keep"));
   EXPECT_EQ(0u, dir.entries_ref()->count("drop"));
 }
@@ -723,7 +727,7 @@ TEST_F(FsInodeCatalogWalTest, replayWal_zeroEntryLenStops) {
   // tail. Replay must stop without applying anything.
   ASSERT_NO_FATAL_FAILURE(writeRawWal(testDir_, parent, std::string(4, '\0')));
   overlay::OverlayDir dir;
-  EXPECT_EQ(0u, store_->replayWal(parent, dir));
+  EXPECT_EQ(0u, store_->replayWal(parent, dir).rawEntriesParsed);
 }
 
 TEST_F(FsInodeCatalogWalTest, replayWal_unknownOpIsSkipped) {
@@ -755,8 +759,12 @@ TEST_F(FsInodeCatalogWalTest, replayWal_unknownOpIsSkipped) {
 
   overlay::OverlayDir dir;
   (*dir.entries_ref())["good"] = makeEntry(0100644, 1);
-  // 1 raw entry parsed (REMOVE); unknown-op skip doesn't count as raw.
-  EXPECT_EQ(1u, store_->replayWal(parent, dir));
+  // 1 raw entry parsed (REMOVE); unknown-op skip counts as parseError
+  // and surfaces through replayWal so cold paths see the same signal as
+  // loadWalDelta.
+  auto result = store_->replayWal(parent, dir);
+  EXPECT_EQ(1u, result.rawEntriesParsed);
+  EXPECT_EQ(1u, result.parseErrors);
   EXPECT_EQ(0u, dir.entries_ref()->count("good"));
 }
 
@@ -773,7 +781,7 @@ TEST_F(FsInodeCatalogWalTest, replayWal_truncatedInsideFieldsStopsCleanly) {
   ASSERT_NO_FATAL_FAILURE(writeRawWal(testDir_, parent, corrupt));
 
   overlay::OverlayDir dir;
-  EXPECT_EQ(0u, store_->replayWal(parent, dir));
+  EXPECT_EQ(0u, store_->replayWal(parent, dir).rawEntriesParsed);
 }
 
 #endif

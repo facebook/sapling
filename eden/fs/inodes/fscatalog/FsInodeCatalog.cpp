@@ -896,7 +896,7 @@ FsFileContentStore::LoadWalResult FsFileContentStore::loadWalDelta(
   return result;
 }
 
-size_t FsFileContentStore::replayWal(
+FsFileContentStore::LoadWalResult FsFileContentStore::replayWal(
     InodeNumber parent,
     overlay::OverlayDir& dir) {
   auto result = loadWalDelta(parent);
@@ -917,7 +917,7 @@ size_t FsFileContentStore::replayWal(
       }
     }
   }
-  return result.rawEntriesParsed;
+  return result;
 }
 
 void FsFileContentStore::removeWal(InodeNumber parent) {
