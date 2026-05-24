@@ -140,10 +140,7 @@ TEST_F(FsInodeCatalogWalTest, appendWalEntry_writesAddEntryWithHash) {
   const InodeNumber parent{1};
   auto entry = makeEntryWithHash(0100644, 42, std::string(20, '\xab'));
   store_->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::ADD,
-      PathComponentPiece{"foo"},
-      &entry);
+      parent, WalOpType::ADD, PathComponentPiece{"foo"}, &entry);
 
   auto bytes = readWal(parent);
   // entryLen header.
@@ -153,8 +150,7 @@ TEST_F(FsInodeCatalogWalTest, appendWalEntry_writesAddEntryWithHash) {
 
   size_t off = kEntryLenSize;
   EXPECT_EQ(
-      static_cast<uint8_t>(FsFileContentStore::WalOpType::ADD),
-      static_cast<uint8_t>(bytes[off]));
+      static_cast<uint8_t>(WalOpType::ADD), static_cast<uint8_t>(bytes[off]));
   off += kOpByteSize;
   EXPECT_EQ(kTestNameSize, readU16(bytes, off));
   off += kNameLenSize;
@@ -173,10 +169,7 @@ TEST_F(FsInodeCatalogWalTest, appendWalEntry_writesAddEntryWithoutHash) {
   const InodeNumber parent{2};
   auto entry = makeEntry(0100644, 7);
   store_->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::ADD,
-      PathComponentPiece{"bar"},
-      &entry);
+      parent, WalOpType::ADD, PathComponentPiece{"bar"}, &entry);
 
   auto bytes = readWal(parent);
   ASSERT_GE(bytes.size(), kEntryLenSize);
@@ -193,10 +186,7 @@ TEST_F(FsInodeCatalogWalTest, appendWalEntry_writesAddEntryWithoutHash) {
 TEST_F(FsInodeCatalogWalTest, appendWalEntry_writesRemoveEntry) {
   const InodeNumber parent{3};
   store_->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::REMOVE,
-      PathComponentPiece{"baz"},
-      nullptr);
+      parent, WalOpType::REMOVE, PathComponentPiece{"baz"}, nullptr);
 
   auto bytes = readWal(parent);
   // REMOVE payload = opByte + nameLen + name.
@@ -205,7 +195,7 @@ TEST_F(FsInodeCatalogWalTest, appendWalEntry_writesRemoveEntry) {
   EXPECT_EQ(kEntryLenSize + kRemovePayloadSize, bytes.size());
   EXPECT_EQ(kRemovePayloadSize, readU32(bytes, 0));
   EXPECT_EQ(
-      static_cast<uint8_t>(FsFileContentStore::WalOpType::REMOVE),
+      static_cast<uint8_t>(WalOpType::REMOVE),
       static_cast<uint8_t>(bytes[kEntryLenSize]));
   EXPECT_EQ(kTestNameSize, readU16(bytes, kEntryLenSize + kOpByteSize));
   EXPECT_EQ(
@@ -216,10 +206,7 @@ TEST_F(FsInodeCatalogWalTest, appendWalEntry_writesRemoveEntry) {
 TEST_F(FsInodeCatalogWalTest, appendWalEntry_writesMaterializeEntry) {
   const InodeNumber parent{4};
   store_->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::MATERIALIZE,
-      PathComponentPiece{"qux"},
-      nullptr);
+      parent, WalOpType::MATERIALIZE, PathComponentPiece{"qux"}, nullptr);
 
   auto bytes = readWal(parent);
   // MATERIALIZE has the same shape as REMOVE: just a name, no payload.
@@ -227,23 +214,17 @@ TEST_F(FsInodeCatalogWalTest, appendWalEntry_writesMaterializeEntry) {
       kOpByteSize + kNameLenSize + kTestNameSize;
   EXPECT_EQ(kEntryLenSize + kMaterializePayloadSize, bytes.size());
   EXPECT_EQ(
-      static_cast<uint8_t>(FsFileContentStore::WalOpType::MATERIALIZE),
+      static_cast<uint8_t>(WalOpType::MATERIALIZE),
       static_cast<uint8_t>(bytes[kEntryLenSize]));
 }
 
 TEST_F(FsInodeCatalogWalTest, appendWalEntry_appendsAcrossMultipleCalls) {
   const InodeNumber parent{5};
   store_->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::REMOVE,
-      PathComponentPiece{"a"},
-      nullptr);
+      parent, WalOpType::REMOVE, PathComponentPiece{"a"}, nullptr);
   auto sizeAfterFirst = readWal(parent).size();
   store_->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::REMOVE,
-      PathComponentPiece{"b"},
-      nullptr);
+      parent, WalOpType::REMOVE, PathComponentPiece{"b"}, nullptr);
   auto bytes = readWal(parent);
 
   // The second entry must be appended after the first, not overwrite it.
@@ -257,10 +238,7 @@ TEST_F(FsInodeCatalogWalTest, appendWalEntry_appendsAcrossMultipleCalls) {
 TEST_F(FsInodeCatalogWalTest, appendWalEntry_createsWalFileWithMode0600) {
   const InodeNumber parent{6};
   store_->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::REMOVE,
-      PathComponentPiece{"x"},
-      nullptr);
+      parent, WalOpType::REMOVE, PathComponentPiece{"x"}, nullptr);
 
   auto walPath = FsFileContentStore::getWalPath(parent);
   auto fullPath =
@@ -277,10 +255,7 @@ TEST_F(FsInodeCatalogWalTest, hasWal_falseWhenMissing) {
 TEST_F(FsInodeCatalogWalTest, hasWal_trueAfterAppend) {
   const InodeNumber parent{201};
   store_->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::REMOVE,
-      PathComponentPiece{"x"},
-      nullptr);
+      parent, WalOpType::REMOVE, PathComponentPiece{"x"}, nullptr);
   EXPECT_TRUE(store_->hasWal(parent));
 }
 
@@ -291,10 +266,7 @@ TEST_F(FsInodeCatalogWalTest, removeWal_missingFileIsNotAnError) {
 TEST_F(FsInodeCatalogWalTest, removeWal_removesAfterAppend) {
   const InodeNumber parent{203};
   store_->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::REMOVE,
-      PathComponentPiece{"x"},
-      nullptr);
+      parent, WalOpType::REMOVE, PathComponentPiece{"x"}, nullptr);
   ASSERT_TRUE(store_->hasWal(parent));
   store_->removeWal(parent);
   EXPECT_FALSE(store_->hasWal(parent));
@@ -304,10 +276,7 @@ TEST_F(FsInodeCatalogWalTest, hasWal_togglesWithAppendAndRemove) {
   const InodeNumber parent{204};
   EXPECT_FALSE(store_->hasWal(parent));
   store_->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::REMOVE,
-      PathComponentPiece{"x"},
-      nullptr);
+      parent, WalOpType::REMOVE, PathComponentPiece{"x"}, nullptr);
   EXPECT_TRUE(store_->hasWal(parent));
   store_->removeWal(parent);
   EXPECT_FALSE(store_->hasWal(parent));
@@ -341,10 +310,7 @@ TEST_F(FsInodeCatalogWalTest, scanForWalFiles_returnsInodesAcrossShards) {
   const InodeNumber c{0x303};
   for (auto ino : {a, b, c}) {
     store_->appendWalEntry(
-        ino,
-        FsFileContentStore::WalOpType::REMOVE,
-        PathComponentPiece{"x"},
-        nullptr);
+        ino, WalOpType::REMOVE, PathComponentPiece{"x"}, nullptr);
   }
 
   auto found = store_->scanForWalFiles();
@@ -361,10 +327,7 @@ TEST_F(FsInodeCatalogWalTest, scanForWalFiles_ignoresUnparsableNames) {
   // Make sure at least one shard directory exists by writing a real WAL.
   const InodeNumber real{0xab};
   store_->appendWalEntry(
-      real,
-      FsFileContentStore::WalOpType::REMOVE,
-      PathComponentPiece{"x"},
-      nullptr);
+      real, WalOpType::REMOVE, PathComponentPiece{"x"}, nullptr);
 
   auto root = canonicalPath(testDir_.path().string());
   auto stray = root + RelativePathPiece{"ab/notanumber.wal"};
@@ -381,10 +344,7 @@ TEST_F(FsInodeCatalogWalTest, scanForWalFiles_coexistsWithOverlayFiles) {
   // latter.
   const InodeNumber ino{0xcd};
   store_->appendWalEntry(
-      ino,
-      FsFileContentStore::WalOpType::REMOVE,
-      PathComponentPiece{"x"},
-      nullptr);
+      ino, WalOpType::REMOVE, PathComponentPiece{"x"}, nullptr);
 
   auto root = canonicalPath(testDir_.path().string());
   auto overlayStub = root + RelativePathPiece{"cd/205"};
@@ -455,39 +415,27 @@ TEST_F(FsInodeCatalogWalTest, loadWalDelta_collapsesAddThenRemove) {
   const InodeNumber parent{301};
   auto entry = makeEntry(0100644, 1);
   store_->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::ADD,
-      PathComponentPiece{"x"},
-      &entry);
+      parent, WalOpType::ADD, PathComponentPiece{"x"}, &entry);
   store_->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::REMOVE,
-      PathComponentPiece{"x"},
-      nullptr);
+      parent, WalOpType::REMOVE, PathComponentPiece{"x"}, nullptr);
 
   auto delta = store_->loadWalDelta(parent).delta;
   ASSERT_EQ(1u, delta.size());
-  EXPECT_EQ(FsFileContentStore::WalOpType::REMOVE, delta.at("x").type);
+  EXPECT_EQ(WalOpType::REMOVE, delta.at("x").type);
 }
 
 TEST_F(FsInodeCatalogWalTest, loadWalDelta_collapsesAddThenMaterialize) {
   const InodeNumber parent{302};
   auto entry = makeEntryWithHash(0100644, 1, std::string(20, '\xab'));
   store_->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::ADD,
-      PathComponentPiece{"x"},
-      &entry);
+      parent, WalOpType::ADD, PathComponentPiece{"x"}, &entry);
   store_->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::MATERIALIZE,
-      PathComponentPiece{"x"},
-      nullptr);
+      parent, WalOpType::MATERIALIZE, PathComponentPiece{"x"}, nullptr);
 
   auto delta = store_->loadWalDelta(parent).delta;
   ASSERT_EQ(1u, delta.size());
   // ADD survives but its hash is cleared in place.
-  EXPECT_EQ(FsFileContentStore::WalOpType::ADD, delta.at("x").type);
+  EXPECT_EQ(WalOpType::ADD, delta.at("x").type);
   EXPECT_FALSE(delta.at("x").entry.hash().has_value());
   EXPECT_EQ(0100644, *delta.at("x").entry.mode());
   EXPECT_EQ(1, *delta.at("x").entry.inodeNumber());
@@ -498,33 +446,24 @@ TEST_F(
     loadWalDelta_materializeAloneRecordedAsMaterialize) {
   const InodeNumber parent{303};
   store_->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::MATERIALIZE,
-      PathComponentPiece{"y"},
-      nullptr);
+      parent, WalOpType::MATERIALIZE, PathComponentPiece{"y"}, nullptr);
 
   auto delta = store_->loadWalDelta(parent).delta;
   ASSERT_EQ(1u, delta.size());
-  EXPECT_EQ(FsFileContentStore::WalOpType::MATERIALIZE, delta.at("y").type);
+  EXPECT_EQ(WalOpType::MATERIALIZE, delta.at("y").type);
 }
 
 TEST_F(FsInodeCatalogWalTest, loadWalDelta_removeThenAddBecomesAdd) {
   const InodeNumber parent{304};
   store_->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::REMOVE,
-      PathComponentPiece{"x"},
-      nullptr);
+      parent, WalOpType::REMOVE, PathComponentPiece{"x"}, nullptr);
   auto entry = makeEntry(0100644, 99);
   store_->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::ADD,
-      PathComponentPiece{"x"},
-      &entry);
+      parent, WalOpType::ADD, PathComponentPiece{"x"}, &entry);
 
   auto delta = store_->loadWalDelta(parent).delta;
   ASSERT_EQ(1u, delta.size());
-  EXPECT_EQ(FsFileContentStore::WalOpType::ADD, delta.at("x").type);
+  EXPECT_EQ(WalOpType::ADD, delta.at("x").type);
   EXPECT_EQ(99, *delta.at("x").entry.inodeNumber());
 }
 
@@ -533,12 +472,9 @@ TEST_F(FsInodeCatalogWalTest, loadWalDelta_repeatedNamesYieldFinalState) {
   auto e1 = makeEntry(0100644, 1);
   auto e2 = makeEntry(0100644, 2);
   auto e3 = makeEntry(0100644, 3);
-  store_->appendWalEntry(
-      parent, FsFileContentStore::WalOpType::ADD, PathComponentPiece{"x"}, &e1);
-  store_->appendWalEntry(
-      parent, FsFileContentStore::WalOpType::ADD, PathComponentPiece{"x"}, &e2);
-  store_->appendWalEntry(
-      parent, FsFileContentStore::WalOpType::ADD, PathComponentPiece{"x"}, &e3);
+  store_->appendWalEntry(parent, WalOpType::ADD, PathComponentPiece{"x"}, &e1);
+  store_->appendWalEntry(parent, WalOpType::ADD, PathComponentPiece{"x"}, &e2);
+  store_->appendWalEntry(parent, WalOpType::ADD, PathComponentPiece{"x"}, &e3);
 
   auto delta = store_->loadWalDelta(parent).delta;
   ASSERT_EQ(1u, delta.size());
@@ -549,15 +485,9 @@ TEST_F(FsInodeCatalogWalTest, loadWalDelta_truncatedTailIsDiscarded) {
   const InodeNumber parent{306};
   auto entry = makeEntry(0100644, 1);
   store_->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::ADD,
-      PathComponentPiece{"keep"},
-      &entry);
+      parent, WalOpType::ADD, PathComponentPiece{"keep"}, &entry);
   store_->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::ADD,
-      PathComponentPiece{"drop"},
-      &entry);
+      parent, WalOpType::ADD, PathComponentPiece{"drop"}, &entry);
   auto walPath = FsFileContentStore::getWalPath(parent);
   auto fullPath =
       canonicalPath(testDir_.path().string()) + RelativePathPiece{walPath};
@@ -589,12 +519,11 @@ TEST_F(FsInodeCatalogWalTest, loadWalDelta_unknownOpIsSkipped) {
   ASSERT_NO_FATAL_FAILURE(writeRawWal(testDir_, parent, corrupt));
 
   // Append a valid REMOVE after the unknown-op entry.
-  store_->appendWalEntry(
-      parent, FsFileContentStore::WalOpType::REMOVE, "y"_pc, nullptr);
+  store_->appendWalEntry(parent, WalOpType::REMOVE, "y"_pc, nullptr);
 
   auto result = store_->loadWalDelta(parent);
   ASSERT_EQ(1u, result.delta.size());
-  EXPECT_EQ(FsFileContentStore::WalOpType::REMOVE, result.delta.at("y").type);
+  EXPECT_EQ(WalOpType::REMOVE, result.delta.at("y").type);
   // The unknown-op skip counts toward parseErrors, not rawEntriesParsed.
   // Only the valid REMOVE that follows is counted as a successfully-decoded
   // entry — keeping the OverlayStats::walEntriesReplayed and
@@ -611,16 +540,14 @@ TEST_F(FsInodeCatalogWalTest, loadWalDelta_materializeAfterRemoveLeavesRemove) {
   // of letting MATERIALIZE clobber the prior REMOVE and silently
   // resurrecting the entry on the direct-serialization load path.
   const InodeNumber parent{401};
-  store_->appendWalEntry(
-      parent, FsFileContentStore::WalOpType::REMOVE, "x"_pc, nullptr);
-  store_->appendWalEntry(
-      parent, FsFileContentStore::WalOpType::MATERIALIZE, "x"_pc, nullptr);
+  store_->appendWalEntry(parent, WalOpType::REMOVE, "x"_pc, nullptr);
+  store_->appendWalEntry(parent, WalOpType::MATERIALIZE, "x"_pc, nullptr);
 
   auto delta = store_->loadWalDelta(parent).delta;
   ASSERT_EQ(1u, delta.size());
   auto it = delta.find("x");
   ASSERT_NE(delta.end(), it);
-  EXPECT_EQ(FsFileContentStore::WalOpType::REMOVE, it->second.type);
+  EXPECT_EQ(WalOpType::REMOVE, it->second.type);
 }
 
 TEST_F(FsInodeCatalogWalTest, replayWal_missingFileReturnsZero) {
@@ -633,26 +560,13 @@ TEST_F(FsInodeCatalogWalTest, replayWal_roundTripsAddRemoveMaterialize) {
   const InodeNumber parent{101};
   auto add = makeEntry(0100644, 200);
   auto addWithHash = makeEntryWithHash(0100644, 201, std::string(20, '\xab'));
+  store_->appendWalEntry(parent, WalOpType::ADD, PathComponentPiece{"a"}, &add);
   store_->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::ADD,
-      PathComponentPiece{"a"},
-      &add);
+      parent, WalOpType::ADD, PathComponentPiece{"b"}, &addWithHash);
   store_->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::ADD,
-      PathComponentPiece{"b"},
-      &addWithHash);
+      parent, WalOpType::MATERIALIZE, PathComponentPiece{"b"}, nullptr);
   store_->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::MATERIALIZE,
-      PathComponentPiece{"b"},
-      nullptr);
-  store_->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::REMOVE,
-      PathComponentPiece{"a"},
-      nullptr);
+      parent, WalOpType::REMOVE, PathComponentPiece{"a"}, nullptr);
 
   overlay::OverlayDir dir;
   // 4 raw WAL entries; ADD/REMOVE/MATERIALIZE collapse to 2 unique names
@@ -678,10 +592,7 @@ TEST_F(FsInodeCatalogWalTest, replayWal_overwritesExistingDirEntries) {
   // WAL ADD with new metadata for the same name should overwrite.
   auto fresh = makeEntry(0100644, 999);
   store_->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::ADD,
-      PathComponentPiece{"x"},
-      &fresh);
+      parent, WalOpType::ADD, PathComponentPiece{"x"}, &fresh);
 
   EXPECT_EQ(1u, store_->replayWal(parent, dir).rawEntriesParsed);
   ASSERT_EQ(1u, dir.entries_ref()->count("x"));
@@ -693,16 +604,10 @@ TEST_F(FsInodeCatalogWalTest, replayWal_truncatedTailIsDiscarded) {
   const InodeNumber parent{103};
   auto entry = makeEntry(0100644, 1);
   store_->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::ADD,
-      PathComponentPiece{"keep"},
-      &entry);
+      parent, WalOpType::ADD, PathComponentPiece{"keep"}, &entry);
   // Append a second entry, then truncate the file inside that second entry.
   store_->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::ADD,
-      PathComponentPiece{"drop"},
-      &entry);
+      parent, WalOpType::ADD, PathComponentPiece{"drop"}, &entry);
   auto walPath = FsFileContentStore::getWalPath(parent);
   auto fullPath =
       canonicalPath(testDir_.path().string()) + RelativePathPiece{walPath};
@@ -737,10 +642,7 @@ TEST_F(FsInodeCatalogWalTest, replayWal_unknownOpIsSkipped) {
   // Write valid REMOVE first; replay should still apply it after skipping
   // the unknown-op entry that follows.
   store_->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::REMOVE,
-      PathComponentPiece{"good"},
-      nullptr);
+      parent, WalOpType::REMOVE, PathComponentPiece{"good"}, nullptr);
 
   // Append a valid frame for an unknown opcode: entryLen=3 covers
   // op(1) + nameLen(2) + name(0).
@@ -777,7 +679,7 @@ TEST_F(FsInodeCatalogWalTest, replayWal_truncatedInsideFieldsStopsCleanly) {
   // entryLen = 100, but only 1 byte (the opByte) follows.
   uint32_t bad = 100;
   corrupt.append(reinterpret_cast<const char*>(&bad), sizeof(bad));
-  corrupt.push_back(static_cast<char>(FsFileContentStore::WalOpType::ADD));
+  corrupt.push_back(static_cast<char>(WalOpType::ADD));
   ASSERT_NO_FATAL_FAILURE(writeRawWal(testDir_, parent, corrupt));
 
   overlay::OverlayDir dir;

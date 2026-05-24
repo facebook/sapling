@@ -734,8 +734,7 @@ bool FsFileContentStore::hasWal(InodeNumber parent) {
       err, fmt::format("error stat'ing WAL file for inode {}", parent));
 }
 
-FsFileContentStore::LoadWalResult FsFileContentStore::loadWalDelta(
-    InodeNumber parent) {
+LoadWalResult FsFileContentStore::loadWalDelta(InodeNumber parent) {
   LoadWalResult result;
   auto& delta = result.delta;
 
@@ -896,7 +895,7 @@ FsFileContentStore::LoadWalResult FsFileContentStore::loadWalDelta(
   return result;
 }
 
-FsFileContentStore::LoadWalResult FsFileContentStore::replayWal(
+LoadWalResult FsFileContentStore::replayWal(
     InodeNumber parent,
     overlay::OverlayDir& dir) {
   auto result = loadWalDelta(parent);

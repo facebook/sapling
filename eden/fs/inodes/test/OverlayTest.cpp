@@ -1250,10 +1250,7 @@ TEST(OverlayWalLifecycleTest, saveOverlayDirRemovesExistingWal) {
   // catalog to simulate prior WAL activity, then trigger a full save.
   auto parent = bundle.overlay->allocateInodeNumber();
   bundle.store->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::REMOVE,
-      PathComponentPiece{"x"},
-      nullptr);
+      parent, WalOpType::REMOVE, PathComponentPiece{"x"}, nullptr);
   ASSERT_TRUE(bundle.store->hasWal(parent));
 
   DirContents dir1(kPathMapDefaultCaseSensitive);
@@ -1273,10 +1270,7 @@ TEST(OverlayWalLifecycleTest, removeOverlayDirRemovesExistingWal) {
   DirContents dir1(kPathMapDefaultCaseSensitive);
   bundle.overlay->saveOverlayDir(parent, dir1);
   bundle.store->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::REMOVE,
-      PathComponentPiece{"x"},
-      nullptr);
+      parent, WalOpType::REMOVE, PathComponentPiece{"x"}, nullptr);
   ASSERT_TRUE(bundle.store->hasWal(parent));
 
   bundle.overlay->removeOverlayDir(parent);
@@ -1295,10 +1289,7 @@ TEST(OverlayWalLifecycleTest, recursiveRemoveDoesNotLeaveOrphanWal) {
   DirContents dir1(kPathMapDefaultCaseSensitive);
   bundle.overlay->saveOverlayDir(parent, dir1);
   bundle.store->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::REMOVE,
-      PathComponentPiece{"x"},
-      nullptr);
+      parent, WalOpType::REMOVE, PathComponentPiece{"x"}, nullptr);
   ASSERT_TRUE(bundle.store->hasWal(parent));
 
   bundle.overlay->recursivelyRemoveOverlayDir(parent);
@@ -1347,10 +1338,7 @@ TEST(OverlayWalLifecycleTest, recursiveRemoveReplaysWalBeforeDelete) {
   walEntry.mode() = S_IFREG | 0644;
   walEntry.inodeNumber() = walChild.get();
   bundle.store->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::ADD,
-      PathComponentPiece{"walAdded"},
-      &walEntry);
+      parent, WalOpType::ADD, PathComponentPiece{"walAdded"}, &walEntry);
   ASSERT_TRUE(bundle.store->hasWal(parent));
 
   // Recursively remove the parent. mergeWalIntoOverlayDir replays the WAL
@@ -1377,10 +1365,7 @@ TEST(WalCompactionTest, belowThresholdRetainsWal) {
   // not trigger compaction.
   DirContents content(kPathMapDefaultCaseSensitive);
   bundle.store->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::REMOVE,
-      PathComponentPiece{"x"},
-      nullptr);
+      parent, WalOpType::REMOVE, PathComponentPiece{"x"}, nullptr);
   for (int i = 0; i < 5; ++i) {
     bundle.overlay->maybeCompactWal(parent, content);
   }
@@ -1398,10 +1383,7 @@ TEST(WalCompactionTest, exceedsThresholdTriggersFullSave) {
   auto parent = bundle.overlay->allocateInodeNumber();
   DirContents content(kPathMapDefaultCaseSensitive);
   bundle.store->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::REMOVE,
-      PathComponentPiece{"x"},
-      nullptr);
+      parent, WalOpType::REMOVE, PathComponentPiece{"x"}, nullptr);
   // Empty content → threshold = 30. Crossing it triggers full save which
   // calls clearWalAfterFullWrite.
   for (int i = 0; i < 30; ++i) {
@@ -1428,10 +1410,7 @@ TEST(WalCompactionTest, largeBaseSizeScalesThreshold) {
         name, S_IFREG | 0644, bundle.overlay->allocateInodeNumber());
   }
   bundle.store->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::REMOVE,
-      PathComponentPiece{"file0"},
-      nullptr);
+      parent, WalOpType::REMOVE, PathComponentPiece{"file0"}, nullptr);
   for (int i = 0; i < 30; ++i) {
     bundle.overlay->maybeCompactWal(parent, content);
   }
@@ -1493,10 +1472,7 @@ TEST(WalCompactionTest, thresholdIsCappedForLargeDirectories) {
   }
   // Prime the WAL so hasWal returns true at start.
   bundle.store->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::REMOVE,
-      PathComponentPiece{"f00000000"},
-      nullptr);
+      parent, WalOpType::REMOVE, PathComponentPiece{"f00000000"}, nullptr);
   // kCompactionCap-1 calls must not trigger compaction (threshold is
   // capped at kCompactionCap, count is below it).
   for (size_t i = 0; i < kCompactionCap - 1; ++i) {
@@ -1519,10 +1495,7 @@ TEST(WalCompactionTest, recompactsAfterReset) {
   auto parent = bundle.overlay->allocateInodeNumber();
   DirContents content(kPathMapDefaultCaseSensitive);
   bundle.store->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::REMOVE,
-      PathComponentPiece{"x"},
-      nullptr);
+      parent, WalOpType::REMOVE, PathComponentPiece{"x"}, nullptr);
   for (int i = 0; i < 30; ++i) {
     bundle.overlay->maybeCompactWal(parent, content);
   }
@@ -1531,10 +1504,7 @@ TEST(WalCompactionTest, recompactsAfterReset) {
   // Second batch must also trigger compaction once the counter again
   // exceeds the threshold.
   bundle.store->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::REMOVE,
-      PathComponentPiece{"y"},
-      nullptr);
+      parent, WalOpType::REMOVE, PathComponentPiece{"y"}, nullptr);
   for (int i = 0; i < 30; ++i) {
     bundle.overlay->maybeCompactWal(parent, content);
   }
@@ -1561,10 +1531,7 @@ TEST(OverlayLoadWalTest, loadAppliesDelta) {
   entryB.mode() = S_IFREG | 0644;
   entryB.inodeNumber() = inoB.get();
   bundle.store->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::ADD,
-      PathComponentPiece{"b"},
-      &entryB);
+      parent, WalOpType::ADD, PathComponentPiece{"b"}, &entryB);
 
   auto loaded = bundle.overlay->loadOverlayDir(parent);
   EXPECT_NE(loaded.end(), loaded.find("a"_pc));
@@ -1594,15 +1561,9 @@ TEST(OverlayLoadWalTest, collapsedAddRemoveIsApplied) {
   entryB.mode() = S_IFREG | 0644;
   entryB.inodeNumber() = bundle.overlay->allocateInodeNumber().get();
   bundle.store->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::ADD,
-      PathComponentPiece{"b"},
-      &entryB);
+      parent, WalOpType::ADD, PathComponentPiece{"b"}, &entryB);
   bundle.store->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::REMOVE,
-      PathComponentPiece{"b"},
-      nullptr);
+      parent, WalOpType::REMOVE, PathComponentPiece{"b"}, nullptr);
 
   auto loaded = bundle.overlay->loadOverlayDir(parent);
   EXPECT_NE(loaded.end(), loaded.find("a"_pc));
@@ -1623,10 +1584,7 @@ TEST(OverlayLoadWalTest, removesWalAfterMerge) {
   bundle.overlay->saveOverlayDir(parent, base);
 
   bundle.store->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::REMOVE,
-      PathComponentPiece{"x"},
-      nullptr);
+      parent, WalOpType::REMOVE, PathComponentPiece{"x"}, nullptr);
   ASSERT_TRUE(bundle.store->hasWal(parent));
 
   bundle.overlay->loadOverlayDir(parent);
@@ -1654,18 +1612,12 @@ TEST(OverlayLoadWalTest, collapsedAddOverwritesBaseEntry) {
   // these into a single ADD; the streaming load now needs to *overwrite*
   // the base entry for "foo" with the WAL's version.
   bundle.store->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::REMOVE,
-      PathComponentPiece{"foo"},
-      nullptr);
+      parent, WalOpType::REMOVE, PathComponentPiece{"foo"}, nullptr);
   overlay::OverlayEntry entry;
   entry.mode() = S_IFREG | 0644;
   entry.inodeNumber() = walChild.get();
   bundle.store->appendWalEntry(
-      parent,
-      FsFileContentStore::WalOpType::ADD,
-      PathComponentPiece{"foo"},
-      &entry);
+      parent, WalOpType::ADD, PathComponentPiece{"foo"}, &entry);
 
   auto loaded = bundle.overlay->loadOverlayDir(parent);
   auto it = loaded.find("foo"_pc);

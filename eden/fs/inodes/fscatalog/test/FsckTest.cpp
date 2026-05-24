@@ -819,10 +819,7 @@ TEST(FsckWalTest, repairReplaysWalAfterReadOnlyScan) {
   entry.mode() = S_IFREG | 0644;
   entry.inodeNumber() = childIno.get();
   testOverlay->fcs().appendWalEntry(
-      kRootNodeId,
-      FsFileContentStore::WalOpType::ADD,
-      PathComponentPiece{"walAdded"},
-      &entry);
+      kRootNodeId, WalOpType::ADD, PathComponentPiece{"walAdded"}, &entry);
   ASSERT_TRUE(testOverlay->fcs().hasWal(kRootNodeId));
 
   runFsckRepair(*testOverlay, nextInode);
@@ -849,10 +846,7 @@ TEST(FsckWalTest, danglingWalIsRemoved) {
   // and unlink the WAL.
   auto orphan = testOverlay->allocateInodeNumber();
   testOverlay->fcs().appendWalEntry(
-      orphan,
-      FsFileContentStore::WalOpType::REMOVE,
-      PathComponentPiece{"x"},
-      nullptr);
+      orphan, WalOpType::REMOVE, PathComponentPiece{"x"}, nullptr);
   ASSERT_TRUE(testOverlay->fcs().hasWal(orphan));
 
   runFsckRepair(*testOverlay, nextInode);
@@ -881,7 +875,7 @@ TEST(FsckWalTest, corruptWalDoesNotCrashFsck) {
   std::string corrupt;
   uint32_t bad = 100;
   corrupt.append(reinterpret_cast<const char*>(&bad), sizeof(bad));
-  corrupt.push_back(static_cast<char>(FsFileContentStore::WalOpType::ADD));
+  corrupt.push_back(static_cast<char>(WalOpType::ADD));
   ASSERT_TRUE(folly::writeFile(corrupt, fullPath.c_str()));
 
   EXPECT_NO_THROW(runFsckRepair(*testOverlay, nextInode));
@@ -905,10 +899,7 @@ TEST(FsckWalTest, scanForErrorsLeavesWalUntouched) {
   entry.mode() = S_IFREG | 0644;
   entry.inodeNumber() = childIno.get();
   testOverlay->fcs().appendWalEntry(
-      kRootNodeId,
-      FsFileContentStore::WalOpType::ADD,
-      PathComponentPiece{"walAdded"},
-      &entry);
+      kRootNodeId, WalOpType::ADD, PathComponentPiece{"walAdded"}, &entry);
   ASSERT_TRUE(testOverlay->fcs().hasWal(kRootNodeId));
 
   // Snapshot the base directory so we can detect any rewrite.
@@ -990,10 +981,7 @@ TEST(FsckWalTest, repairReplaysWalOntoMissingBase) {
   entry.mode() = S_IFREG | 0644;
   entry.inodeNumber() = walChildIno.get();
   testOverlay->fcs().appendWalEntry(
-      missingBaseDir,
-      FsFileContentStore::WalOpType::ADD,
-      PathComponentPiece{"walChild"},
-      &entry);
+      missingBaseDir, WalOpType::ADD, PathComponentPiece{"walChild"}, &entry);
   ASSERT_TRUE(testOverlay->fcs().hasWal(missingBaseDir));
   ASSERT_FALSE(
       testOverlay->inodeCatalog()->loadOverlayDir(missingBaseDir).has_value());

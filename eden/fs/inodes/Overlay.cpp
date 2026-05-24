@@ -247,14 +247,7 @@ Overlay::Overlay(
       useWal_{config.overlayUseWal.getValue() && inodeCatalog_->supportsWal()},
       walCompactionMultiplier_{
           config.overlayWalCompactionMultiplier.getValue()},
-      walCompactionCap_{config.overlayWalCompactionCap.getValue()} {
-  // Cache the FsFileContentStore* once for the WAL fast paths
-  // (addChild/removeChild/etc.) so they avoid a per-call dynamic_cast.
-  // Null when the backing store is not file-system based.
-#ifndef _WIN32
-  fsCore_ = dynamic_cast<FsFileContentStore*>(fileContentStore_.get());
-#endif
-}
+      walCompactionCap_{config.overlayWalCompactionCap.getValue()} {}
 
 Overlay::~Overlay() {
   close();
@@ -583,11 +576,9 @@ DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
   bool shouldRewriteOverlay = false;
 
   bool hasWal = false;
-#ifndef _WIN32
-  if (canHaveWalFiles() && fsCore_ != nullptr) {
-    hasWal = fsCore_->hasWal(inodeNumber);
+  if (canHaveWalFiles()) {
+    hasWal = inodeCatalog_->hasWal(inodeNumber);
   }
-#endif
 
   bool found = inodeCatalog_->loadOverlayEntries(
       inodeNumber,
@@ -613,14 +604,12 @@ DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
         inodeNumber);
   }
 
-#ifndef _WIN32
   if (hasWal) {
     // Pre-process WAL into a collapsed net delta and merge it into the
     // streamed-load PathMap via PathMapMutator. saveOverlayDir below
     // flushes the merged base file and clearWalAfterFullWrite removes
     // the WAL.
-    XCHECK(fsCore_ != nullptr) << "hasWal implies FsFileContentStore";
-    auto walResult = fsCore_->loadWalDelta(inodeNumber);
+    auto walResult = inodeCatalog_->loadWalDelta(inodeNumber);
     auto& delta = walResult.delta;
     stats_->increment(&OverlayStats::walReplay);
     stats_->increment(
@@ -637,7 +626,7 @@ DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
 
     for (auto& [name, walDelta] : delta) {
       switch (walDelta.type) {
-        case FsFileContentStore::WalOpType::ADD: {
+        case WalOpType::ADD: {
           auto mode = static_cast<mode_t>(*walDelta.entry.mode());
           auto ino = InodeNumber::fromThrift(*walDelta.entry.inodeNumber());
           const bool isRestricted = getOverlayEntryIsRestricted(walDelta.entry);
@@ -654,10 +643,10 @@ DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
           }
           break;
         }
-        case FsFileContentStore::WalOpType::REMOVE:
+        case WalOpType::REMOVE:
           mutator.erase(PathComponentPiece{name});
           break;
-        case FsFileContentStore::WalOpType::MATERIALIZE: {
+        case WalOpType::MATERIALIZE: {
           auto it = mutator.find(PathComponentPiece{name});
           if (it != mutator.end()) {
             it->second.setMaterialized();
@@ -672,7 +661,6 @@ DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
     stats_->increment(&OverlayStats::loadOverlayDirSuccessful);
     return merged;
   }
-#endif
 
   DirContents result{std::move(entries), caseSensitive_};
 
@@ -774,8 +762,7 @@ void Overlay::saveOverlayDir(
 }
 
 void Overlay::clearWalAfterFullWrite(InodeNumber parent) {
-#ifndef _WIN32
-  if (!canHaveWalFiles() || fsCore_ == nullptr) {
+  if (!canHaveWalFiles()) {
     return;
   }
   // Clear the in-memory counter first so a concurrent appender on the
@@ -788,7 +775,7 @@ void Overlay::clearWalAfterFullWrite(InodeNumber parent) {
   // error rather than propagate, because the caller is interpreting a
   // throw here as "the save failed" and would mark the dir dirty again.
   try {
-    fsCore_->removeWal(parent);
+    inodeCatalog_->removeWal(parent);
   } catch (const std::exception& ex) {
     XLOGF(
         WARN,
@@ -796,19 +783,15 @@ void Overlay::clearWalAfterFullWrite(InodeNumber parent) {
         parent,
         ex.what());
   }
-#else
-  (void)parent;
-#endif
 }
 
 void Overlay::mergeWalIntoOverlayDir(
     InodeNumber parent,
     overlay::OverlayDir& dir) {
-#ifndef _WIN32
-  if (!canHaveWalFiles() || fsCore_ == nullptr || !fsCore_->hasWal(parent)) {
+  if (!canHaveWalFiles() || !inodeCatalog_->hasWal(parent)) {
     return;
   }
-  auto walResult = fsCore_->replayWal(parent, dir);
+  auto walResult = inodeCatalog_->replayWal(parent, dir);
   stats_->increment(&OverlayStats::walReplay);
   stats_->increment(
       &OverlayStats::walEntriesReplayed,
@@ -825,18 +808,13 @@ void Overlay::mergeWalIntoOverlayDir(
   // best-effort; mismatched on-disk state is not worse than the
   // pre-existing pattern (fsck handles it).
   try {
-    fsCore_->removeWal(parent);
+    inodeCatalog_->removeWal(parent);
   } catch (const std::exception& ex) {
     XLOGF(WARN, "removeWal({}) after merge failed: {}", parent, ex.what());
   }
-#else
-  (void)parent;
-  (void)dir;
-#endif
 }
 
 void Overlay::maybeCompactWal(InodeNumber parent, const DirContents& content) {
-#ifndef _WIN32
   if (!canHaveWalFiles()) {
     return;
   }
@@ -876,25 +854,18 @@ void Overlay::maybeCompactWal(InodeNumber parent, const DirContents& content) {
         stats_, &OverlayStats::walCompactionInline};
     saveOverlayDir(parent, content, /*isMaterialized=*/true);
   }
-#else
-  (void)parent;
-  (void)content;
-#endif
 }
 
-#ifndef _WIN32
 void Overlay::appendWalEntryAndCompact(
     InodeNumber parent,
-    FsFileContentStore::WalOpType op,
+    WalOpType op,
     PathComponentPiece childName,
     const overlay::OverlayEntry* entry,
     const DirContents& content) {
-  XCHECK(fsCore_ != nullptr) << "useWal() implies FsFileContentStore";
-  fsCore_->appendWalEntry(parent, op, childName, entry);
+  inodeCatalog_->appendWalEntry(parent, op, childName, entry);
   stats_->increment(&OverlayStats::walAppend);
   maybeCompactWal(parent, content);
 }
-#endif // !_WIN32
 
 void Overlay::freeInodeFromMetadataTable(InodeNumber ino) {
 #ifndef _WIN32
@@ -1297,16 +1268,10 @@ void Overlay::addChild(
     if (supportsSemanticOperations_) {
       inodeCatalog_->addChild(
           parent, childEntry.first, serializeOverlayEntry(childEntry.second));
-#ifndef _WIN32
     } else if (useWal()) {
       auto entry = serializeOverlayEntry(childEntry.second);
       appendWalEntryAndCompact(
-          parent,
-          FsFileContentStore::WalOpType::ADD,
-          childEntry.first,
-          &entry,
-          content);
-#endif
+          parent, WalOpType::ADD, childEntry.first, &entry, content);
     } else {
       saveOverlayDir(parent, content);
     }
@@ -1328,16 +1293,14 @@ void Overlay::removeChild(
       if (inodeCatalog_->removeChild(parent, childName)) {
         stats_->increment(&OverlayStats::removeChildSuccessful);
       }
-#ifndef _WIN32
     } else if (useWal()) {
       appendWalEntryAndCompact(
           parent,
-          FsFileContentStore::WalOpType::REMOVE,
+          WalOpType::REMOVE,
           childName,
           /*entry=*/nullptr,
           content);
       stats_->increment(&OverlayStats::removeChildSuccessful);
-#endif
     } else {
       saveOverlayDir(parent, content);
       stats_->increment(&OverlayStats::removeChildSuccessful);
@@ -1372,10 +1335,7 @@ void Overlay::renameChild(
   try {
     if (supportsSemanticOperations_) {
       inodeCatalog_->renameChild(src, dst, srcName, dstName);
-#ifndef _WIN32
     } else if (useWal()) {
-      XCHECK(fsCore_ != nullptr) << "useWal() implies FsFileContentStore";
-
       // Fall back to a full rewrite when dstContent does not yet contain
       // the renamed entry — there is nothing concrete for the ADD WAL
       // entry to carry.
@@ -1404,19 +1364,14 @@ void Overlay::renameChild(
         // post-rename state); replayWal tolerates REMOVE on a missing name.
         auto entry = serializeOverlayEntry(dstIt->second);
         appendWalEntryAndCompact(
-            dst,
-            FsFileContentStore::WalOpType::ADD,
-            dstName,
-            &entry,
-            dstContent);
+            dst, WalOpType::ADD, dstName, &entry, dstContent);
         appendWalEntryAndCompact(
             src,
-            FsFileContentStore::WalOpType::REMOVE,
+            WalOpType::REMOVE,
             srcName,
             /*entry=*/nullptr,
             srcContent);
       }
-#endif
     } else {
       saveOverlayDir(src, srcContent);
       if (dst.get() != src.get()) {
@@ -1437,17 +1392,14 @@ void Overlay::materializeChild(
     const DirContents& content) {
   DurationScope<EdenStats> statScope{stats_, &OverlayStats::materializeChild};
   try {
-#ifndef _WIN32
     if (useWal()) {
       appendWalEntryAndCompact(
           parent,
-          FsFileContentStore::WalOpType::MATERIALIZE,
+          WalOpType::MATERIALIZE,
           childName,
           /*entry=*/nullptr,
           content);
-    } else
-#endif
-    {
+    } else {
       // WAL disabled — fall back to a full directory write.
       saveOverlayDir(parent, content);
     }

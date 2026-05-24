@@ -166,18 +166,6 @@ class FsFileContentStore : public FileContentStore {
   static WalPath getWalPath(InodeNumber inodeNumber);
 
   /**
-   * WAL (Write-Ahead Log) operation types for deferred directory writes.
-   * Instead of rewriting the entire directory on every addChild/removeChild,
-   * we append a small delta to a WAL file. The WAL is replayed on load and
-   * compacted inline when the entry count exceeds a threshold.
-   */
-  enum class WalOpType : uint8_t {
-    ADD = 1,
-    REMOVE = 2,
-    MATERIALIZE = 3,
-  };
-
-  /**
    * Append a WAL entry for the given directory inode. Writes the entryLen
    * prefix plus the payload in a single write() call. For ADD, entry must
    * be non-null and contains the child's overlay data. For REMOVE and
@@ -197,31 +185,6 @@ class FsFileContentStore : public FileContentStore {
       WalOpType op,
       PathComponentPiece childName,
       const overlay::OverlayEntry* entry);
-
-  /**
-   * A collapsed WAL delta for a single child name. Represents the net
-   * effect of all WAL entries for that name.
-   */
-  struct WalDelta {
-    WalOpType type{};
-    overlay::OverlayEntry entry; // only meaningful for ADD
-  };
-
-  /**
-   * Result of a WAL load: the collapsed delta plus the count of raw WAL
-   * entries that were successfully decoded (before collapse). The raw
-   * count is preserved so callers driving the OverlayStats::walEntriesReplayed
-   * counter can report entries-as-written, not unique names net-affected.
-   */
-  struct LoadWalResult {
-    std::map<std::string, WalDelta> delta;
-    size_t rawEntriesParsed = 0;
-    // Count of entries that hit a structural-bounds break or an unknown
-    // opcode skip. Surfaced so callers can bump a single
-    // OverlayStats::wal_parse_failure counter and triage torn / forward-
-    // incompatible WAL files without per-category counters.
-    size_t parseErrors = 0;
-  };
 
   /**
    * Pre-process a WAL file into a collapsed net delta. Multiple operations
@@ -475,6 +438,31 @@ class FsInodeCatalog : public InodeCatalog {
   void maintenance() override {}
 
   std::optional<fsck::InodeInfo> loadInodeInfo(InodeNumber number) override;
+
+  void appendWalEntry(
+      InodeNumber parent,
+      WalOpType op,
+      PathComponentPiece childName,
+      const overlay::OverlayEntry* entry) override {
+    core_->appendWalEntry(parent, op, childName, entry);
+  }
+
+  bool hasWal(InodeNumber parent) override {
+    return core_->hasWal(parent);
+  }
+
+  void removeWal(InodeNumber parent) override {
+    core_->removeWal(parent);
+  }
+
+  LoadWalResult loadWalDelta(InodeNumber parent) override {
+    return core_->loadWalDelta(parent);
+  }
+
+  LoadWalResult replayWal(InodeNumber parent, overlay::OverlayDir& dir)
+      override {
+    return core_->replayWal(parent, dir);
+  }
 
  private:
   FsFileContentStore* core_;

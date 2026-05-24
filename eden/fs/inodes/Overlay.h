@@ -437,7 +437,6 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
    */
   void maybeCompactWal(InodeNumber parent, const DirContents& content);
 
-#ifndef _WIN32
   /**
    * Append a WAL entry and immediately bump the compaction counter. This
    * is the single entry point used by every WAL-using fast path in
@@ -448,18 +447,13 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
    *
    * Callers must hold the parent TreeInode's contents lock so that
    * `content` is consistent with the WAL file on disk.
-   *
-   * Windows builds do not include FsInodeCatalog.h (the legacy `Fs*`
-   * catalogs are non-Windows only), so `FsFileContentStore::WalOpType`
-   * is unavailable there and the entire helper is gated out.
    */
   void appendWalEntryAndCompact(
       InodeNumber parent,
-      FsFileContentStore::WalOpType op,
+      WalOpType op,
       PathComponentPiece childName,
       const overlay::OverlayEntry* entry,
       const DirContents& content);
-#endif // !_WIN32
 
   /**
    * A request for the background GC thread.  There are three types of
@@ -550,15 +544,6 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   std::atomic<uint64_t> nextInodeNumber_{0};
 
   std::unique_ptr<FileContentStore> fileContentStore_;
-  /**
-   * Cached non-owning pointer to fileContentStore_ when it is an
-   * FsFileContentStore (nullptr otherwise). Lets WAL fast paths avoid a
-   * per-call dynamic_cast on the hot directory-mutation path. Set in
-   * initOverlay() and never reassigned. Must outlive every WAL caller —
-   * fileContentStore_ owns the storage, so this pointer is valid as long
-   * as the Overlay is alive.
-   */
-  FsFileContentStore* fsCore_{nullptr};
   std::unique_ptr<InodeCatalog> inodeCatalog_;
   InodeCatalogType inodeCatalogType_;
   InodeCatalogOptions inodeCatalogOptions_;

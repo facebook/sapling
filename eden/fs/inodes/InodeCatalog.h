@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <map>
 #include <optional>
 
 #include <folly/Function.h>
@@ -48,6 +49,42 @@ class NonEmptyError : public std::exception {
 
  private:
   std::string message_;
+};
+
+/**
+ * The type of a WAL (write-ahead log) entry — the per-child mutation a
+ * WAL-capable catalog appends instead of rewriting the full directory.
+ */
+enum class WalOpType : uint8_t {
+  ADD = 1,
+  REMOVE = 2,
+  MATERIALIZE = 3,
+};
+
+/**
+ * A collapsed WAL delta for a single child name. Represents the net
+ * effect of all WAL entries for that name.
+ */
+struct WalDelta {
+  WalOpType type{};
+  overlay::OverlayEntry entry; // only meaningful for ADD
+};
+
+/**
+ * Result of a WAL load: the collapsed delta plus the count of raw WAL
+ * entries that were successfully decoded (before collapse). The raw
+ * count is preserved so callers driving the
+ * `OverlayStats::walEntriesReplayed` counter can report entries-as-
+ * written, not unique names net-affected.
+ */
+struct LoadWalResult {
+  std::map<std::string, WalDelta> delta;
+  size_t rawEntriesParsed = 0;
+  // Count of entries that hit a structural-bounds break or an unknown
+  // opcode skip. Surfaced so callers can bump a single
+  // `OverlayStats::wal_parse_failure` counter and triage torn / forward-
+  // incompatible WAL files without per-category counters.
+  size_t parseErrors = 0;
 };
 
 /**
@@ -246,6 +283,53 @@ class InodeCatalog {
   }
 
   virtual void maintenance() {
+    EDEN_BUG() << "UNIMPLEMENTED";
+  }
+
+  // WAL operations. Only implemented by catalogs that return
+  // `supportsWal() == true`; the default bodies abort.
+
+  /**
+   * Append a single WAL entry for `parent`. For `ADD`, `entry` must be
+   * non-null and contains the child's overlay data. For `REMOVE` and
+   * `MATERIALIZE`, `entry` must be nullptr. The caller is responsible
+   * for serializing calls for a given parent (the Overlay holds the
+   * parent `TreeInode`'s contents lock).
+   */
+  virtual void appendWalEntry(
+      InodeNumber /* parent */,
+      WalOpType /* op */,
+      PathComponentPiece /* childName */,
+      const overlay::OverlayEntry* /* entry */) {
+    EDEN_BUG() << "UNIMPLEMENTED";
+  }
+
+  /** Returns true iff a WAL file exists for `parent`. */
+  virtual bool hasWal(InodeNumber /* parent */) {
+    EDEN_BUG() << "UNIMPLEMENTED";
+  }
+
+  /** Remove the WAL file for `parent`. Missing files are not an error. */
+  virtual void removeWal(InodeNumber /* parent */) {
+    EDEN_BUG() << "UNIMPLEMENTED";
+  }
+
+  /**
+   * Pre-process the WAL file for `parent` into a collapsed net delta.
+   * Returns an empty `LoadWalResult` if no WAL file exists.
+   */
+  virtual LoadWalResult loadWalDelta(InodeNumber /* parent */) {
+    EDEN_BUG() << "UNIMPLEMENTED";
+  }
+
+  /**
+   * Replay WAL entries into `dir`. Returns the full LoadWalResult
+   * (rawEntriesParsed + parseErrors) so cold-path callers can bump the
+   * same OverlayStats counters that the hot loadWalDelta path bumps.
+   */
+  virtual LoadWalResult replayWal(
+      InodeNumber /* parent */,
+      overlay::OverlayDir& /* dir */) {
     EDEN_BUG() << "UNIMPLEMENTED";
   }
 };
