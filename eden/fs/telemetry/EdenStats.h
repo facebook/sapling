@@ -643,6 +643,7 @@ struct OverlayStats : StatsGroup<OverlayStats> {
   Duration removeChild{"overlay.remove_child_us"};
   Duration removeChildren{"overlay.remove_children_us"};
   Duration renameChild{"overlay.rename_child_us"};
+  Duration materializeChild{"overlay.materialize_child_us"};
   Counter loadOverlayDirSuccessful{"overlay.load_overlay_dir_successful"};
   Counter loadOverlayDirFailure{"overlay.load_overlay_dir_failure"};
   Counter saveOverlayDirSuccessful{"overlay.save_overlay_dir_successful"};
@@ -672,6 +673,8 @@ struct OverlayStats : StatsGroup<OverlayStats> {
   Counter removeChildrenFailure{"overlay.remove_children_failure"};
   Counter renameChildSuccessful{"overlay.rename_child_successful"};
   Counter renameChildFailure{"overlay.rename_child_failure"};
+  Counter materializeChildSuccessful{"overlay.materialize_child_successful"};
+  Counter materializeChildFailure{"overlay.materialize_child_failure"};
 };
 
 struct InodeMapStats : StatsGroup<InodeMapStats> {

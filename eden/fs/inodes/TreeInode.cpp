@@ -1594,7 +1594,15 @@ void TreeInode::childMaterialized(
     childEntry.setMaterialized();
     contents->setMaterialized();
     if (writeOverlay) {
-      saveOverlayDir(contents->entries);
+      if (!wasAlreadyMaterialized) {
+        // First materialization — write the full directory to create
+        // the overlay file. Subsequent calls go through the WAL fast
+        // path (or full save fallback) below.
+        saveOverlayDir(contents->entries);
+      } else {
+        getOverlay()->materializeChild(
+            getNodeId(), childName, contents->entries);
+      }
     }
   }
 

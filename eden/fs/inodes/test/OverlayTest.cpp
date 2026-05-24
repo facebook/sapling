@@ -1919,6 +1919,57 @@ TEST(WalRenameTest, fallsBackWhenWalDisabled) {
   overlay->close();
 }
 
+TEST(WalMaterializeChildTest, appendsMaterializeWhenWalEnabled) {
+  folly::test::TemporaryDirectory tmp("eden_wal_mat");
+  auto dir = canonicalPath(tmp.path().string());
+  auto bundle = makeWalLifecycleOverlay(dir);
+  ASSERT_NE(nullptr, bundle.store);
+
+  auto parent = bundle.overlay->allocateInodeNumber();
+  auto childIno = bundle.overlay->allocateInodeNumber();
+  DirContents content(kPathMapDefaultCaseSensitive);
+  content.emplace("file"_pc, S_IFREG | 0644, childIno);
+  bundle.overlay->saveOverlayDir(parent, content);
+  ASSERT_FALSE(bundle.store->hasWal(parent));
+
+  bundle.overlay->materializeChild(parent, "file"_pc, content);
+  EXPECT_TRUE(bundle.store->hasWal(parent));
+
+  bundle.overlay->close();
+}
+
+TEST(WalMaterializeChildTest, fallsBackToFullSaveWhenWalDisabled) {
+  folly::test::TemporaryDirectory tmp("eden_wal_mat_off");
+  auto dir = canonicalPath(tmp.path().string());
+
+  auto rawConfig = EdenConfig::createTestEdenConfig();
+  rawConfig->overlayUseWal.setValue(false, ConfigSourceType::CommandLine);
+  auto reloadable = std::make_shared<ReloadableConfig>(rawConfig);
+  auto overlay = Overlay::create(
+      dir,
+      kPathMapDefaultCaseSensitive,
+      kInodeCatalogType,
+      kInodeCatalogOptions,
+      makeTestEdenFsEventsLogger(),
+      makeRefPtr<EdenStats>(),
+      *rawConfig);
+  overlay->initialize(reloadable).get();
+  auto* store =
+      dynamic_cast<FsFileContentStore*>(overlay->getRawFileContentStore());
+  ASSERT_NE(nullptr, store);
+
+  auto parent = overlay->allocateInodeNumber();
+  auto childIno = overlay->allocateInodeNumber();
+  DirContents content(kPathMapDefaultCaseSensitive);
+  content.emplace("file"_pc, S_IFREG | 0644, childIno);
+  overlay->saveOverlayDir(parent, content);
+
+  overlay->materializeChild(parent, "file"_pc, content);
+  EXPECT_FALSE(store->hasWal(parent));
+
+  overlay->close();
+}
+
 } // namespace facebook::eden
 
 #endif

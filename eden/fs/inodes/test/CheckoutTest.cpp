@@ -2309,8 +2309,13 @@ TEST(Checkout, overlayWritesDuringCheckout) {
   stats->flush();
   auto checkoutWrites = data->getCounter(key) - initialWrites;
 
-  // This is the test - no excessive writes (7 total dirs, including root).
-  EXPECT_EQ(7, checkoutWrites)
+  // WAL adds one checkout-time flush when the parent overlay is loaded.
+  // Without WAL, the pre-checkout writes were already saved, so the expected
+  // count is one lower.
+  auto expected =
+      testMount.getEdenMount()->getEdenConfig()->overlayUseWal.getValue() ? 8
+                                                                          : 7;
+  EXPECT_EQ(expected, checkoutWrites)
       << "Overlay writes during checkout: " << checkoutWrites;
 
   // Verify files have new content

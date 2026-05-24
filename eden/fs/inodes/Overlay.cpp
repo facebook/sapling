@@ -801,6 +801,17 @@ void Overlay::mergeWalIntoOverlayDir(
     return;
   }
   fsCore_->replayWal(parent, dir);
+  // Drop the WAL file now that we've folded its entries into `dir`.
+  // Callers (recursivelyRemoveOverlayDir) have already removed the base
+  // overlay file via loadAndRemoveOverlayDir, so leaving the WAL behind
+  // would orphan it on disk until fsck swept it up. removeWal is
+  // best-effort; mismatched on-disk state is not worse than the
+  // pre-existing pattern (fsck handles it).
+  try {
+    fsCore_->removeWal(parent);
+  } catch (const std::exception& ex) {
+    XLOGF(WARN, "removeWal({}) after merge failed: {}", parent, ex.what());
+  }
 #else
   (void)parent;
   (void)dir;
@@ -1396,6 +1407,34 @@ void Overlay::renameChild(
   } catch (const std::exception& e) {
     XLOGF(ERR, "Failed to rename child {} {}", srcName, e.what());
     stats_->increment(&OverlayStats::renameChildFailure);
+    throw;
+  }
+}
+
+void Overlay::materializeChild(
+    InodeNumber parent,
+    PathComponentPiece childName,
+    const DirContents& content) {
+  DurationScope<EdenStats> statScope{stats_, &OverlayStats::materializeChild};
+  try {
+#ifndef _WIN32
+    if (useWal()) {
+      appendWalEntryAndCompact(
+          parent,
+          FsFileContentStore::WalOpType::MATERIALIZE,
+          childName,
+          /*entry=*/nullptr,
+          content);
+    } else
+#endif
+    {
+      // WAL disabled — fall back to a full directory write.
+      saveOverlayDir(parent, content);
+    }
+    stats_->increment(&OverlayStats::materializeChildSuccessful);
+  } catch (const std::exception& e) {
+    XLOGF(ERR, "Failed to materialize child {} {}", childName, e.what());
+    stats_->increment(&OverlayStats::materializeChildFailure);
     throw;
   }
 }

@@ -313,6 +313,17 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
    */
   void maintenance();
 
+  /**
+   * Update a child entry in the overlay to mark it as materialized
+   * (clear its source control hash). When WAL is enabled, appends a
+   * MATERIALIZE entry to the WAL. When WAL is disabled, falls back
+   * to a full saveOverlayDir write.
+   */
+  void materializeChild(
+      InodeNumber parent,
+      PathComponentPiece childName,
+      const DirContents& content);
+
   /*
    * Returns a raw pointer to the inode catalog. This method should only be
    * used for testing.
