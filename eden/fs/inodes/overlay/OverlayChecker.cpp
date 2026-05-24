@@ -837,7 +837,36 @@ bool OverlayChecker::recoverWalFiles() {
   return recoveredCount > 0;
 }
 
-void OverlayChecker::scanForErrors(const ProgressCallback& progressCallback) {
+void OverlayChecker::scanForWalChildren() {
+  auto walInodes = impl_->fcs->scanForWalFiles();
+  for (auto ino : walInodes) {
+    try {
+      auto dirData = impl_->inodeCatalog->loadOverlayDir(ino);
+      if (!dirData.has_value()) {
+        dirData.emplace();
+      }
+
+      auto walResult = impl_->fcs->replayWal(ino, *dirData);
+      if (walResult.rawEntriesParsed == 0 && dirData->entries()->empty()) {
+        continue;
+      }
+
+      auto iter = impl_->inodes.find(ino);
+      if (iter != impl_->inodes.end()) {
+        iter->second.children = std::move(*dirData);
+      } else if (!dirData->entries()->empty()) {
+        impl_->inodes.emplace(ino, InodeInfo{ino, std::move(*dirData)});
+        updateMaxInodeNumber(ino);
+      }
+    } catch (const std::exception& e) {
+      XLOGF(WARN, "fsck: failed to replay WAL for inode {}: {}", ino, e.what());
+    }
+  }
+}
+
+void OverlayChecker::scanForErrors(
+    const ProgressCallback& progressCallback,
+    bool includeWalChildren) {
   XLOGF(INFO, "Starting fsck scan on overlay {}", impl_->fcs->getLocalDir());
 
   impl_->inodes.clear();
@@ -849,6 +878,9 @@ void OverlayChecker::scanForErrors(const ProgressCallback& progressCallback) {
     callback(0);
   }
   readInodes(progressCallback);
+  if (includeWalChildren) {
+    scanForWalChildren();
+  }
   linkInodeChildren();
   scanForParentErrors();
   checkNextInodeNumber();
@@ -1118,6 +1150,16 @@ void OverlayChecker::readInodes(const ProgressCallback& progressCallback) {
             while (iterator != endIterator) {
               const auto& dirEntry = *iterator;
               AbsolutePath inodePath = canonicalPath(dirEntry.path().string());
+              if (folly::StringPiece{inodePath.basename().value()}.endsWith(
+                      ".wal")) {
+                iterator.increment(error);
+                if (error.value() != 0) {
+                  errors.wlock()->push_back(
+                      make_error<ShardDirectoryEnumerationError>(path, error));
+                  break;
+                }
+                continue;
+              }
               auto entryInodeNumber =
                   folly::tryTo<uint64_t>(inodePath.basename().value());
               if (entryInodeNumber.hasValue()) {

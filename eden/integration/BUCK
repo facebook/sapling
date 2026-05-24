@@ -89,6 +89,16 @@ python_integration_test(
 )
 
 python_integration_test(
+    name = "wal",
+    srcs = ["wal_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_integration_test(
     name = "debug_getpath",
     srcs = ["debug_getpath_test.py"],
     env = artifacts["env"],

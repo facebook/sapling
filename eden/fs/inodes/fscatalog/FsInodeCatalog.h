@@ -316,7 +316,7 @@ class FsFileContentStore : public FileContentStore {
   static constexpr size_t kMaxDecimalInodeNumberLength = 20;
 
  private:
-  FRIEND_TEST(OverlayTest, getFilePath);
+  FRIEND_TEST(OverlayFilePathTest, getFilePath);
   friend class RawOverlayTest;
   friend class FsInodeCatalog;
 

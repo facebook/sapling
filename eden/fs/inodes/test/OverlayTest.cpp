@@ -133,7 +133,7 @@ TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
   EXPECT_EQ("", result.value());
 }
 
-class OverlayTest : public ::testing::Test {
+class OverlayTest : public ::testing::TestWithParam<bool> {
  protected:
   void SetUp() override {
     // Set up a directory structure that we will use for most
@@ -142,13 +142,23 @@ class OverlayTest : public ::testing::Test {
     builder.setFiles({
         {"dir/a.txt", "This is a.txt.\n"},
     });
+    mount_.updateEdenConfig(
+        {{"overlay:use-wal", GetParam() ? "true" : "false"}});
     mount_.initialize(builder);
   }
 
   TestMount mount_;
 };
 
-TEST_F(OverlayTest, testRemount) {
+INSTANTIATE_TEST_SUITE_P(
+    OverlayTest,
+    OverlayTest,
+    ::testing::Values(false, true),
+    [](const ::testing::TestParamInfo<bool>& info) {
+      return info.param ? "WalOn" : "WalOff";
+    });
+
+TEST_P(OverlayTest, testRemount) {
   mount_.addFile("dir/new.txt", "test\n");
   mount_.remount();
   // Confirm that the tree has been updated correctly.
@@ -156,7 +166,7 @@ TEST_F(OverlayTest, testRemount) {
   EXPECT_FILE_INODE(newInode, "test\n", 0644);
 }
 
-TEST_F(OverlayTest, testModifyRemount) {
+TEST_P(OverlayTest, testModifyRemount) {
   // inode object has to be destroyed
   // before remount is called to release the reference
   {
@@ -175,7 +185,7 @@ TEST_F(OverlayTest, testModifyRemount) {
 // In memory timestamps should be same before and after a remount.
 // (inmemory timestamps should be written to overlay on
 // on unmount and should be read back from the overlay on remount)
-TEST_F(OverlayTest, testTimeStampsInOverlayOnMountAndUnmount) {
+TEST_P(OverlayTest, testTimeStampsInOverlayOnMountAndUnmount) {
   // Materialize file and directory
   // test timestamp behavior in overlay on remount.
   InodeTimestamps beforeRemountFile;
@@ -211,7 +221,7 @@ TEST_F(OverlayTest, testTimeStampsInOverlayOnMountAndUnmount) {
   }
 }
 
-TEST_F(OverlayTest, roundTripThroughSaveAndLoad) {
+TEST_P(OverlayTest, roundTripThroughSaveAndLoad) {
   auto id = ObjectId::fromHex("0123456789012345678901234567890123456789");
 
   auto overlay = mount_.getEdenMount()->getOverlay();
@@ -238,7 +248,7 @@ TEST_F(OverlayTest, roundTripThroughSaveAndLoad) {
   EXPECT_TRUE(two.isMaterialized());
 }
 
-TEST_F(OverlayTest, roundTripThroughSaveAndLoadPreservesIsRestricted) {
+TEST_P(OverlayTest, roundTripThroughSaveAndLoadPreservesIsRestricted) {
   auto id = ObjectId::fromHex("0123456789012345678901234567890123456789");
   auto overlay = mount_.getEdenMount()->getOverlay();
   auto ino1 = overlay->allocateInodeNumber();
@@ -263,7 +273,7 @@ TEST_F(OverlayTest, roundTripThroughSaveAndLoadPreservesIsRestricted) {
   EXPECT_FALSE(normal.isRestricted());
 }
 
-TEST_F(OverlayTest, getFilePath) {
+TEST(OverlayFilePathTest, getFilePath) {
   InodePath path;
 
   path = FsFileContentStore::getFilePath(1_ino);

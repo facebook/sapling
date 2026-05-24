@@ -855,6 +855,61 @@ def _replicate_eden_nfs_repo_test(
 # decorator.
 eden_nfs_repo_test = test_replicator(_replicate_eden_nfs_repo_test)
 
+
+class WalEnabledMixin:
+    """Enables the overlay write-ahead log via `edenfs_extra_config`.
+
+    Used by `eden_nfs_repo_test_with_wal_variant` to generate sibling
+    WAL flavors of overlay-sensitive tests so we cover the WAL fast path
+    alongside the default (non-WAL) overlay rewrite path.
+    """
+
+    # pyre-ignore[15]: Inconsistent override is expected — the mixin
+    # composes with EdenRepoTest at runtime via MRO.
+    def edenfs_extra_config(self) -> Optional[Dict[str, List[str]]]:
+        # pyre-ignore[16]: `super()` resolves to EdenRepoTest at runtime.
+        configs = super().edenfs_extra_config() or {}
+        configs.setdefault("overlay", []).append("use-wal = true")
+        return configs
+
+
+def _replicate_eden_nfs_repo_test_with_wal_variant(
+    test_class: Type[EdenRepoTest],
+) -> Iterable[Tuple[str, Type[EdenRepoTest]]]:
+    """Variant generator: every `eden_nfs_repo_test` variant, plus a
+    WAL flavor of each.
+
+    Yields the base Default/NFS variants unchanged, then re-emits each
+    with `WalEnabledMixin` mixed in (suffixed `Wal`). Picks up new
+    base variants automatically if `_replicate_eden_nfs_repo_test`
+    grows them.
+    """
+    base_variants = list(_replicate_eden_nfs_repo_test(test_class))
+    # WAL is only implemented for the Legacy/LegacyDev FsInodeCatalog
+    # (Linux/macOS). Windows uses the Sqlite catalog, so the WAL variants
+    # would exercise the same code path as the base variants.
+    if sys.platform == "win32":
+        return base_variants
+    wal_variants: List[Tuple[str, Type[EdenRepoTest]]] = []
+    for label, cls in base_variants:
+
+        class WalRepoTest(WalEnabledMixin, cls):
+            pass
+
+        wal_variants.append(
+            (f"{label}Wal", typing.cast(Type[EdenRepoTest], WalRepoTest))
+        )
+    return base_variants + wal_variants
+
+
+# Like `eden_nfs_repo_test` but also generates a WAL-on variant for
+# every base variant. Apply to overlay-format-sensitive tests where WAL
+# changes the on-disk layout (corrupt-overlay recovery, fsck, etc.).
+eden_nfs_repo_test_with_wal_variant = test_replicator(
+    _replicate_eden_nfs_repo_test_with_wal_variant
+)
+
+
 MixinList = List[Tuple[str, List[Type[Any]]]]
 
 

@@ -88,7 +88,9 @@ class OverlayChecker {
    *
    * Safe to call multiple times; each call clears any prior scan state.
    */
-  void scanForErrors(const ProgressCallback& progressCallback = [](auto) {});
+  void scanForErrors(
+      const ProgressCallback& progressCallback = [](auto) {},
+      bool includeWalChildren = false);
 
   /**
    * Merge any pending WALs, scan for problems, and repair them.
@@ -196,6 +198,7 @@ class OverlayChecker {
   PathInfo cachedPathComputation(InodeNumber number, Fn&& fn);
 
   using ShardID = uint32_t;
+  void scanForWalChildren();
   bool recoverWalFiles();
   void readInodes(const ProgressCallback& progressCallback = [](auto) {});
   void readInodeSubdir(const AbsolutePath& path, ShardID shardID);

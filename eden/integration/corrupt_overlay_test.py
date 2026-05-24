@@ -17,7 +17,7 @@ from eden.fs.service.eden.thrift_types import MountState
 from eden.integration.lib import testcase
 
 
-@testcase.eden_nfs_repo_test
+@testcase.eden_nfs_repo_test_with_wal_variant
 class CorruptOverlayTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
     """Test file operations when Eden's overlay is corrupted."""
 

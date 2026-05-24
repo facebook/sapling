@@ -933,28 +933,31 @@ TEST(FsckWalTest, scanForErrorsLeavesWalUntouched) {
       nextInode,
       lookup,
       testOverlay->getTestConfig()->fsckNumErrorDiscoveryThreads.getValue());
+  auto childInoStr = std::to_string(childIno.get());
+  auto hasOrphanReport = [&] {
+    for (const auto& err : checker.getErrors()) {
+      auto msg = err->getMessage(&checker);
+      if (msg.find("orphan") != std::string::npos &&
+          msg.find(childInoStr) != std::string::npos) {
+        return true;
+      }
+    }
+    return false;
+  };
+
   checker.scanForErrors();
+  EXPECT_TRUE(hasOrphanReport())
+      << "expected orphan report for inode " << childInoStr;
+
+  checker.scanForErrors(
+      /*progressCallback=*/[](auto) {}, /*includeWalChildren=*/true);
+  EXPECT_FALSE(hasOrphanReport())
+      << "unexpected orphan report for inode " << childInoStr;
 
   EXPECT_TRUE(testOverlay->fcs().hasWal(kRootNodeId));
   auto baseAfter = testOverlay->inodeCatalog()->loadOverlayDir(kRootNodeId);
   ASSERT_TRUE(baseAfter.has_value());
   EXPECT_EQ(0u, baseAfter->entries()->count("walAdded"));
-
-  // Without WAL replay, the WAL-only child has no parent and must be
-  // reported as a (false-positive) orphan - the documented trade-off
-  // for keeping --dry-run read-only.
-  bool foundOrphan = false;
-  auto childInoStr = std::to_string(childIno.get());
-  for (const auto& err : checker.getErrors()) {
-    auto msg = err->getMessage(&checker);
-    if (msg.find("orphan") != std::string::npos &&
-        msg.find(childInoStr) != std::string::npos) {
-      foundOrphan = true;
-      break;
-    }
-  }
-  EXPECT_TRUE(foundOrphan) << "expected orphan report for inode "
-                           << childInoStr;
 
   testOverlay->inodeCatalog()->close(std::nullopt);
 }

@@ -17,7 +17,7 @@ from .lib import edenclient, overlay as overlay_mod, repobase, testcase
 from .lib.hgrepo import HgRepository
 
 
-@testcase.eden_nfs_repo_test
+@testcase.eden_nfs_repo_test_with_wal_variant
 class FsckTest(testcase.EdenRepoTest):
     # pyre-fixme[13]: Attribute `overlay` is never initialized.
     overlay: overlay_mod.OverlayStore
