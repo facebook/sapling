@@ -742,7 +742,7 @@ FsFileContentStore::LoadWalResult FsFileContentStore::loadWalDelta(
   auto walPath = getWalPath(parent);
   // Mirror loadRawOverlayDir: open once, ENOENT means no WAL, anything
   // else throws. The caller (Overlay::loadOverlayDir for the hot path,
-  // OverlayChecker::scanForErrors for fsck) decides how to handle the
+  // OverlayChecker's repair path for fsck) decides how to handle the
   // error.
   int fd =
       openat(dirFile_.fd(), walPath.c_str(), O_RDONLY | O_CLOEXEC | O_NOFOLLOW);

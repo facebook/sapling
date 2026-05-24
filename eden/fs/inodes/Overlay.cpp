@@ -451,8 +451,7 @@ void Overlay::initOverlay(
         lookupCallback,
         config->getEdenConfig()->fsckNumErrorDiscoveryThreads.getValue());
     folly::stop_watch<> fsckRuntime;
-    checker.scanForErrors(progressCallback);
-    auto result = checker.repairErrors();
+    auto result = checker.repairErrors(progressCallback);
     auto fsckRuntimeInSeconds =
         std::chrono::duration<double>{fsckRuntime.elapsed()}.count();
     if (result) {

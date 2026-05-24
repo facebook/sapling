@@ -772,8 +772,77 @@ OverlayChecker::OverlayChecker(
 
 OverlayChecker::~OverlayChecker() = default;
 
+bool OverlayChecker::recoverWalFiles() {
+  // Kept out of scanForErrors so `eden fsck --dry-run` stays read-only
+  // (see header). Every WAL we observe is unconditionally removed after
+  // a best-effort replay:
+  //   - Base present: merge WAL into the base file.
+  //   - Base missing but WAL replays into a non-empty dir: synthesize a
+  //     new base, mirroring Overlay::loadOverlayDir's runtime behavior.
+  //     Without this, inodes referenced only by WAL-ADD entries would
+  //     become orphans for fsck to quarantine in lost+found/.
+  //   - Base missing and WAL replays to empty (only REMOVEs/MATERIALIZEs
+  //     that no-op against an empty base, or a torn WAL): skip the save -
+  //     creating an empty base for an unreferenced inode would just give
+  //     fsck a new orphan to quarantine.
+  //   - Torn or empty WAL on an existing base (replayWal returned 0): no
+  //     rewrite needed.
+  // The only exception is when an exception escapes (e.g., I/O error
+  // unrelated to corruption); in that case we log and skip removal so the
+  // next mount can retry.
+  auto walInodes = impl_->fcs->scanForWalFiles();
+  size_t recoveredCount = 0;
+  for (auto ino : walInodes) {
+    try {
+      auto dirData = impl_->inodeCatalog->loadOverlayDir(ino);
+      const bool baseWasMissing = !dirData.has_value();
+      if (baseWasMissing) {
+        dirData.emplace();
+      }
+      // Best-effort merge; replayWal stops at the first torn entry but
+      // keeps the good prefix.
+      auto applied = impl_->fcs->replayWal(ino, *dirData);
+      // On missing base, only ADDs grow an empty dir; parse count would
+      // lie on REMOVE-only WALs and synthesize a useless empty base.
+      const bool shouldSave =
+          baseWasMissing ? !dirData->entries()->empty() : applied > 0;
+      if (shouldSave) {
+        if (baseWasMissing) {
+          XLOGF(
+              WARN,
+              "fsck: overlay base missing for inode {} but WAL present; "
+              "synthesized base with {} entries from WAL replay",
+              ino,
+              dirData->entries()->size());
+        }
+        // Only rewrite the base when needed. For an existing base, a
+        // 0-entry replay leaves dirData equal to disk so the rewrite
+        // would be redundant I/O on a large mount with many torn WALs.
+        // For a missing base, a replay that net-collapses to empty would
+        // create an orphan inode for fsck to quarantine.
+        impl_->inodeCatalog->saveOverlayDir(
+            ino, std::move(*dirData), /*crashSafe=*/true);
+        ++recoveredCount;
+      }
+      impl_->fcs->removeWal(ino);
+    } catch (const std::exception& e) {
+      XLOGF(WARN, "fsck: failed to replay WAL for inode {}: {}", ino, e.what());
+    }
+  }
+  if (recoveredCount > 0) {
+    XLOGF(INFO, "fsck: merged {} WAL files; rescanning", recoveredCount);
+  }
+  return recoveredCount > 0;
+}
+
 void OverlayChecker::scanForErrors(const ProgressCallback& progressCallback) {
   XLOGF(INFO, "Starting fsck scan on overlay {}", impl_->fcs->getLocalDir());
+
+  impl_->inodes.clear();
+  errors_.clear();
+  pathCache_.clear();
+  maxInodeNumber_ = kRootNodeId.get();
+
   if (auto callback = progressCallback) {
     callback(0);
   }
@@ -796,7 +865,11 @@ void OverlayChecker::scanForErrors(const ProgressCallback& progressCallback) {
   }
 }
 
-optional<OverlayChecker::RepairResult> OverlayChecker::repairErrors() {
+optional<OverlayChecker::RepairResult> OverlayChecker::repairErrors(
+    const ProgressCallback& progressCallback) {
+  recoverWalFiles();
+  scanForErrors(progressCallback);
+
   if (errors_.empty()) {
     return std::nullopt;
   }
