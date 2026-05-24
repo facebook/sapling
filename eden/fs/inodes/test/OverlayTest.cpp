@@ -1198,6 +1198,162 @@ TEST(PlainOverlayTest, no_semaphore_allows_concurrent_fsck) {
   ov2->close();
 }
 
+namespace {
+
+// Initialize a fully-functional Overlay with WAL enabled and return the
+// underlying FsFileContentStore so tests can poke the WAL directly.
+struct WalLifecycleOverlay {
+  std::shared_ptr<Overlay> overlay;
+  FsFileContentStore* store{nullptr};
+};
+
+WalLifecycleOverlay makeWalLifecycleOverlay(const AbsolutePath& dir) {
+  auto rawConfig = EdenConfig::createTestEdenConfig();
+  rawConfig->overlayUseWal.setValue(true, ConfigSourceType::CommandLine);
+  auto reloadable = std::make_shared<ReloadableConfig>(rawConfig);
+  auto overlay = Overlay::create(
+      dir,
+      kPathMapDefaultCaseSensitive,
+      kInodeCatalogType,
+      kInodeCatalogOptions,
+      makeTestEdenFsEventsLogger(),
+      makeRefPtr<EdenStats>(),
+      *rawConfig);
+  overlay->initialize(reloadable).get();
+  auto* store =
+      dynamic_cast<FsFileContentStore*>(overlay->getRawFileContentStore());
+  return {std::move(overlay), store};
+}
+
+} // namespace
+
+TEST(OverlayWalLifecycleTest, saveOverlayDirRemovesExistingWal) {
+  folly::test::TemporaryDirectory tmp("eden_wal_lifecycle");
+  auto dir = canonicalPath(tmp.path().string());
+  auto bundle = makeWalLifecycleOverlay(dir);
+  ASSERT_NE(nullptr, bundle.store);
+
+  // Allocate a fresh inode for the parent so we don't collide with the
+  // root directory's overlay file. Prime a WAL entry directly via the
+  // catalog to simulate prior WAL activity, then trigger a full save.
+  auto parent = bundle.overlay->allocateInodeNumber();
+  bundle.store->appendWalEntry(
+      parent,
+      FsFileContentStore::WalOpType::REMOVE,
+      PathComponentPiece{"x"},
+      nullptr);
+  ASSERT_TRUE(bundle.store->hasWal(parent));
+
+  DirContents dir1(kPathMapDefaultCaseSensitive);
+  bundle.overlay->saveOverlayDir(parent, dir1);
+  EXPECT_FALSE(bundle.store->hasWal(parent));
+
+  bundle.overlay->close();
+}
+
+TEST(OverlayWalLifecycleTest, removeOverlayDirRemovesExistingWal) {
+  folly::test::TemporaryDirectory tmp("eden_wal_lifecycle");
+  auto dir = canonicalPath(tmp.path().string());
+  auto bundle = makeWalLifecycleOverlay(dir);
+  ASSERT_NE(nullptr, bundle.store);
+
+  auto parent = bundle.overlay->allocateInodeNumber();
+  DirContents dir1(kPathMapDefaultCaseSensitive);
+  bundle.overlay->saveOverlayDir(parent, dir1);
+  bundle.store->appendWalEntry(
+      parent,
+      FsFileContentStore::WalOpType::REMOVE,
+      PathComponentPiece{"x"},
+      nullptr);
+  ASSERT_TRUE(bundle.store->hasWal(parent));
+
+  bundle.overlay->removeOverlayDir(parent);
+  EXPECT_FALSE(bundle.store->hasWal(parent));
+
+  bundle.overlay->close();
+}
+
+TEST(OverlayWalLifecycleTest, recursiveRemoveDoesNotLeaveOrphanWal) {
+  folly::test::TemporaryDirectory tmp("eden_wal_lifecycle");
+  auto dir = canonicalPath(tmp.path().string());
+  auto bundle = makeWalLifecycleOverlay(dir);
+  ASSERT_NE(nullptr, bundle.store);
+
+  auto parent = bundle.overlay->allocateInodeNumber();
+  DirContents dir1(kPathMapDefaultCaseSensitive);
+  bundle.overlay->saveOverlayDir(parent, dir1);
+  bundle.store->appendWalEntry(
+      parent,
+      FsFileContentStore::WalOpType::REMOVE,
+      PathComponentPiece{"x"},
+      nullptr);
+  ASSERT_TRUE(bundle.store->hasWal(parent));
+
+  bundle.overlay->recursivelyRemoveOverlayDir(parent);
+  EXPECT_FALSE(bundle.store->hasWal(parent));
+
+  bundle.overlay->close();
+}
+
+TEST(OverlayWalLifecycleTest, clearOnDirWithoutWalIsNoOp) {
+  folly::test::TemporaryDirectory tmp("eden_wal_lifecycle");
+  auto dir = canonicalPath(tmp.path().string());
+  auto bundle = makeWalLifecycleOverlay(dir);
+  ASSERT_NE(nullptr, bundle.store);
+
+  // No WAL exists for this inode — saveOverlayDir must succeed without
+  // errors and leave hasWal() false.
+  auto parent = bundle.overlay->allocateInodeNumber();
+  DirContents dir1(kPathMapDefaultCaseSensitive);
+  EXPECT_NO_THROW(bundle.overlay->saveOverlayDir(parent, dir1));
+  EXPECT_FALSE(bundle.store->hasWal(parent));
+
+  bundle.overlay->close();
+}
+
+TEST(OverlayWalLifecycleTest, recursiveRemoveReplaysWalBeforeDelete) {
+  folly::test::TemporaryDirectory tmp("eden_wal_recursive_remove");
+  auto dir = canonicalPath(tmp.path().string());
+  auto bundle = makeWalLifecycleOverlay(dir);
+  ASSERT_NE(nullptr, bundle.store);
+
+  // Create a parent with one child already in the base file plus a *second*
+  // child that lives only in the WAL (an addChild that hasn't crossed the
+  // compaction threshold yet, complete with its own overlay file on disk).
+  auto parent = bundle.overlay->allocateInodeNumber();
+  auto baseChild = bundle.overlay->allocateInodeNumber();
+  auto walChild = bundle.overlay->allocateInodeNumber();
+
+  DirContents content(kPathMapDefaultCaseSensitive);
+  content.emplace("base"_pc, S_IFREG | 0644, baseChild);
+  bundle.overlay->saveOverlayDir(parent, content);
+
+  bundle.overlay->createOverlayFile(walChild, folly::ByteRange{"contents"_sp});
+  ASSERT_TRUE(bundle.overlay->hasOverlayFile(walChild));
+
+  overlay::OverlayEntry walEntry;
+  walEntry.mode() = S_IFREG | 0644;
+  walEntry.inodeNumber() = walChild.get();
+  bundle.store->appendWalEntry(
+      parent,
+      FsFileContentStore::WalOpType::ADD,
+      PathComponentPiece{"walAdded"},
+      &walEntry);
+  ASSERT_TRUE(bundle.store->hasWal(parent));
+
+  // Recursively remove the parent. mergeWalIntoOverlayDir replays the WAL
+  // into the loaded dirData before queuing for GC, so the gcThread sees
+  // walChild and removes its overlay file; without the merge, the WAL-only
+  // child would leak.
+  bundle.overlay->recursivelyRemoveOverlayDir(parent);
+  bundle.overlay->flushPendingAsync().get();
+
+  EXPECT_FALSE(bundle.overlay->hasOverlayFile(walChild));
+  EXPECT_FALSE(bundle.store->hasWal(parent));
+
+  bundle.overlay->close();
+}
+
 } // namespace facebook::eden
 
 #endif

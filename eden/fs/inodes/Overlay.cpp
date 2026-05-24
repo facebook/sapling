@@ -679,6 +679,52 @@ void Overlay::saveOverlayDir(
     stats_->increment(&OverlayStats::saveOverlayDirFailure);
     throw;
   }
+
+  // Any pending WAL entries are now redundant: the base file we just wrote
+  // already reflects the in-memory state.
+  clearWalAfterFullWrite(inodeNumber);
+}
+
+void Overlay::clearWalAfterFullWrite(InodeNumber parent) {
+#ifndef _WIN32
+  if (!canHaveWalFiles() || fsCore_ == nullptr) {
+    return;
+  }
+  // Clear the in-memory counter first so a concurrent appender on the
+  // same parent does not observe count > 0 with no on-disk WAL between
+  // the unlinkat and the erase.
+  walEntryCountsShard(parent).wlock()->erase(parent);
+  // Cleanup failure on a successful base rewrite is best-effort: the
+  // base file is durable, so the new state is correct on disk; a stale
+  // WAL will be re-merged (idempotently) on the next load. Swallow the
+  // error rather than propagate, because the caller is interpreting a
+  // throw here as "the save failed" and would mark the dir dirty again.
+  try {
+    fsCore_->removeWal(parent);
+  } catch (const std::exception& ex) {
+    XLOGF(
+        WARN,
+        "removeWal({}) failed after successful base rewrite: {}",
+        parent,
+        ex.what());
+  }
+#else
+  (void)parent;
+#endif
+}
+
+void Overlay::mergeWalIntoOverlayDir(
+    InodeNumber parent,
+    overlay::OverlayDir& dir) {
+#ifndef _WIN32
+  if (!canHaveWalFiles() || fsCore_ == nullptr || !fsCore_->hasWal(parent)) {
+    return;
+  }
+  fsCore_->replayWal(parent, dir);
+#else
+  (void)parent;
+  (void)dir;
+#endif
 }
 
 void Overlay::freeInodeFromMetadataTable(InodeNumber ino) {
@@ -717,6 +763,8 @@ void Overlay::removeOverlayDir(InodeNumber inodeNumber) {
     freeInodeFromMetadataTable(inodeNumber);
     inodeCatalog_->removeOverlayDir(inodeNumber);
     stats_->increment(&OverlayStats::removeOverlayDirSuccessful);
+
+    clearWalAfterFullWrite(inodeNumber);
   } catch (const std::exception& e) {
     XLOGF(ERR, "Failed to remove overlay dir {} {}", inodeNumber, e.what());
     stats_->increment(&OverlayStats::removeOverlayDirFailure);
@@ -738,11 +786,18 @@ void Overlay::recursivelyRemoveOverlayDir(InodeNumber inodeNumber) {
     // could remove this data.
     auto dirData = inodeCatalog_->loadAndRemoveOverlayDir(inodeNumber);
     if (dirData) {
+      // Apply any pending WAL entries so the GC walk below enumerates
+      // (and deletes) every child the WAL added since the base file was
+      // last rewritten. Without this, WAL-only children leak as orphan
+      // overlay files on disk.
+      mergeWalIntoOverlayDir(inodeNumber, *dirData);
       freeInodeFromMetadataTable(inodeNumber);
       gcQueue_.lock()->queue.emplace_back(std::move(*dirData));
       gcCondVar_.notify_one();
       stats_->increment(&OverlayStats::recursivelyRemoveOverlayDirSuccessful);
     }
+
+    clearWalAfterFullWrite(inodeNumber);
   } catch (const std::exception& e) {
     XLOGF(
         ERR,
@@ -1045,8 +1100,12 @@ void Overlay::handleGCRequest(GCRequest& request) {
         XLOGF(DBG7, "no dir data for inode {}", ino);
         continue;
       }
+      // Same WAL merge as the entry point: ensure WAL-only children are
+      // enumerated for cleanup, then drop the WAL file from disk.
+      mergeWalIntoOverlayDir(ino, *dirData);
       freeInodeFromMetadataTable(ino);
       dir = std::move(*dirData);
+      clearWalAfterFullWrite(ino);
     } catch (const std::exception& e) {
       XLOGF(
           ERR,

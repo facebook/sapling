@@ -207,6 +207,13 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
    * and can be reconstructed from the backing store. In this case, the write
    * may use a faster but less crash-safe code path (direct write without
    * temp+rename) since data loss on crash is recoverable.
+   *
+   * Callers that flush WAL state into the base file (maybeCompactWal,
+   * loadOverlayDir's WAL merge, recursive removal cleanup) must pass
+   * isMaterialized=true explicitly. WAL-tracked directories are by
+   * definition materialized — letting a non-crash-safe O_TRUNC rewrite
+   * race with a crash on those directories would leave a truncated base
+   * file plus a dropped WAL = lost user data.
    */
   void saveOverlayDir(
       InodeNumber inodeNumber,
@@ -553,6 +560,29 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
 
   bool useDirectFileWrites_;
   bool useWal_{false};
+
+  /**
+   * Drop any WAL state for `parent` after a full directory rewrite or
+   * removal. Idempotent (safe to call when no WAL exists). No-op for
+   * catalog types that never have WAL files on disk.
+   */
+  void clearWalAfterFullWrite(InodeNumber parent);
+
+  /**
+   * Replay any pending WAL entries for `parent` into `dir` so callers
+   * that consume the loaded directory (e.g., recursive removal) see the
+   * merged state.
+   *
+   * Steady-state cost is one fstatat (via hasWal) when no WAL exists;
+   * the dynamic_cast and replay are skipped entirely. When a WAL does
+   * exist, the cost is bounded by the inline-compaction threshold
+   * (3 * max(dirSize, 10)) — the deferred work the WAL was hiding.
+   *
+   * Caller is responsible for cleaning up the on-disk WAL file
+   * afterwards (e.g., via clearWalAfterFullWrite); this helper only
+   * mutates `dir`.
+   */
+  void mergeWalIntoOverlayDir(InodeNumber parent, overlay::OverlayDir& dir);
 
   /**
    * Sharded in-memory count of WAL entries per directory inode, used to
