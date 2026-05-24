@@ -1749,6 +1749,176 @@ TEST(WalAddRemoveChildTest, removeChildAppendsWalWhenWalEnabled) {
   bundle.overlay->close();
 }
 
+TEST(WalRenameTest, sameDirRenameAppendsBothEntries) {
+  folly::test::TemporaryDirectory tmp("eden_wal_rename_same");
+  auto dir = canonicalPath(tmp.path().string());
+  auto bundle = makeWalLifecycleOverlay(dir);
+  ASSERT_NE(nullptr, bundle.store);
+
+  auto parent = bundle.overlay->allocateInodeNumber();
+  auto childIno = bundle.overlay->allocateInodeNumber();
+  DirContents content(kPathMapDefaultCaseSensitive);
+  content.emplace("old"_pc, S_IFREG | 0644, childIno);
+  bundle.overlay->saveOverlayDir(parent, content);
+  ASSERT_FALSE(bundle.store->hasWal(parent));
+
+  // Same-dir rename: src and dst share a parent. dstContent reflects
+  // the post-rename state.
+  DirContents postContent(kPathMapDefaultCaseSensitive);
+  postContent.emplace("new"_pc, S_IFREG | 0644, childIno);
+  bundle.overlay->renameChild(
+      parent, parent, "old"_pc, "new"_pc, postContent, postContent);
+
+  EXPECT_TRUE(bundle.store->hasWal(parent));
+
+  bundle.overlay->close();
+}
+
+TEST(WalRenameTest, sameDirRenameTriggersCompactionAfterEnoughOps) {
+  // Regression for the per-rename counter under-count: same-dir renames
+  // append two WAL entries each but used to bump the compaction counter
+  // only once, doubling the effective WAL size before compaction fired.
+  // With the fix, 15 same-dir renames on an empty dir should be enough
+  // to cross the floor-of-30 threshold (15 renames * 2 ticks = 30).
+  folly::test::TemporaryDirectory tmp("eden_wal_rename_compact");
+  auto dir = canonicalPath(tmp.path().string());
+  auto bundle = makeWalLifecycleOverlay(dir);
+  ASSERT_NE(nullptr, bundle.store);
+
+  auto parent = bundle.overlay->allocateInodeNumber();
+  auto childIno = bundle.overlay->allocateInodeNumber();
+
+  // Seed the dir with one stable entry "stay" plus the renaming entry "a".
+  DirContents content(kPathMapDefaultCaseSensitive);
+  content.emplace("stay"_pc, S_IFREG | 0644, childIno);
+  content.emplace("a"_pc, S_IFREG | 0644, childIno);
+  bundle.overlay->saveOverlayDir(parent, content);
+  ASSERT_FALSE(bundle.store->hasWal(parent));
+
+  // Rename "a" → "b" → "a" → "b" ... 15 times; each rename appends 2 WAL
+  // entries so the counter should reach 30 and trigger a full save.
+  // baseSize is 2, so threshold = 3 * max(2, 10) = 30 — exactly 15 ticks
+  // suffices.
+  bool oddRotation = false;
+  for (int i = 0; i < 15; ++i) {
+    auto srcName =
+        oddRotation ? PathComponentPiece{"b"} : PathComponentPiece{"a"};
+    auto dstName =
+        oddRotation ? PathComponentPiece{"a"} : PathComponentPiece{"b"};
+
+    DirContents post(kPathMapDefaultCaseSensitive);
+    post.emplace("stay"_pc, S_IFREG | 0644, childIno);
+    post.emplace(PathComponent{dstName}, S_IFREG | 0644, childIno);
+
+    bundle.overlay->renameChild(parent, parent, srcName, dstName, post, post);
+    oddRotation = !oddRotation;
+  }
+
+  // Compaction (saveOverlayDir → clearWalAfterFullWrite) should have
+  // fired by now. Without the per-append counter fix, only 15 ticks
+  // would have accumulated, leaving the WAL on disk with 30 entries.
+  EXPECT_FALSE(bundle.store->hasWal(parent));
+
+  bundle.overlay->close();
+}
+
+TEST(WalRenameTest, crossDirRenameAppendsToBothWals) {
+  folly::test::TemporaryDirectory tmp("eden_wal_rename_cross");
+  auto dir = canonicalPath(tmp.path().string());
+  auto bundle = makeWalLifecycleOverlay(dir);
+  ASSERT_NE(nullptr, bundle.store);
+
+  auto srcParent = bundle.overlay->allocateInodeNumber();
+  auto dstParent = bundle.overlay->allocateInodeNumber();
+  auto childIno = bundle.overlay->allocateInodeNumber();
+
+  DirContents srcContent(kPathMapDefaultCaseSensitive);
+  srcContent.emplace("old"_pc, S_IFREG | 0644, childIno);
+  bundle.overlay->saveOverlayDir(srcParent, srcContent);
+
+  DirContents dstContent(kPathMapDefaultCaseSensitive);
+  bundle.overlay->saveOverlayDir(dstParent, dstContent);
+
+  // After the rename: src is empty, dst has the moved entry.
+  DirContents postSrc(kPathMapDefaultCaseSensitive);
+  DirContents postDst(kPathMapDefaultCaseSensitive);
+  postDst.emplace("new"_pc, S_IFREG | 0644, childIno);
+
+  bundle.overlay->renameChild(
+      srcParent, dstParent, "old"_pc, "new"_pc, postSrc, postDst);
+
+  EXPECT_TRUE(bundle.store->hasWal(srcParent));
+  EXPECT_TRUE(bundle.store->hasWal(dstParent));
+
+  bundle.overlay->close();
+}
+
+TEST(WalRenameTest, fallbackOnMissingDstEntry) {
+  folly::test::TemporaryDirectory tmp("eden_wal_rename_fallback");
+  auto dir = canonicalPath(tmp.path().string());
+  auto bundle = makeWalLifecycleOverlay(dir);
+  ASSERT_NE(nullptr, bundle.store);
+
+  auto srcParent = bundle.overlay->allocateInodeNumber();
+  auto dstParent = bundle.overlay->allocateInodeNumber();
+  auto childIno = bundle.overlay->allocateInodeNumber();
+  DirContents srcContent(kPathMapDefaultCaseSensitive);
+  srcContent.emplace("old"_pc, S_IFREG | 0644, childIno);
+  bundle.overlay->saveOverlayDir(srcParent, srcContent);
+  DirContents dstContent(kPathMapDefaultCaseSensitive);
+  bundle.overlay->saveOverlayDir(dstParent, dstContent);
+
+  // dstContent does not contain "new" — renameChild must fall back to
+  // the dual-saveOverlayDir path. No WAL files should be left behind
+  // since saveOverlayDir runs clearWalAfterFullWrite.
+  DirContents postSrc(kPathMapDefaultCaseSensitive);
+  DirContents postDst(kPathMapDefaultCaseSensitive);
+  bundle.overlay->renameChild(
+      srcParent, dstParent, "old"_pc, "new"_pc, postSrc, postDst);
+
+  EXPECT_FALSE(bundle.store->hasWal(srcParent));
+  EXPECT_FALSE(bundle.store->hasWal(dstParent));
+
+  bundle.overlay->close();
+}
+
+TEST(WalRenameTest, fallsBackWhenWalDisabled) {
+  folly::test::TemporaryDirectory tmp("eden_wal_rename_off");
+  auto dir = canonicalPath(tmp.path().string());
+
+  auto rawConfig = EdenConfig::createTestEdenConfig();
+  rawConfig->overlayUseWal.setValue(false, ConfigSourceType::CommandLine);
+  auto reloadable = std::make_shared<ReloadableConfig>(rawConfig);
+  auto overlay = Overlay::create(
+      dir,
+      kPathMapDefaultCaseSensitive,
+      kInodeCatalogType,
+      kInodeCatalogOptions,
+      makeTestEdenFsEventsLogger(),
+      makeRefPtr<EdenStats>(),
+      *rawConfig);
+  overlay->initialize(reloadable).get();
+  auto* store =
+      dynamic_cast<FsFileContentStore*>(overlay->getRawFileContentStore());
+  ASSERT_NE(nullptr, store);
+
+  auto parent = overlay->allocateInodeNumber();
+  auto childIno = overlay->allocateInodeNumber();
+  DirContents content(kPathMapDefaultCaseSensitive);
+  content.emplace("old"_pc, S_IFREG | 0644, childIno);
+  overlay->saveOverlayDir(parent, content);
+
+  DirContents postContent(kPathMapDefaultCaseSensitive);
+  postContent.emplace("new"_pc, S_IFREG | 0644, childIno);
+  overlay->renameChild(
+      parent, parent, "old"_pc, "new"_pc, postContent, postContent);
+
+  // WAL disabled → renameChild took the full-save path, no WAL exists.
+  EXPECT_FALSE(store->hasWal(parent));
+
+  overlay->close();
+}
+
 } // namespace facebook::eden
 
 #endif

@@ -1341,6 +1341,51 @@ void Overlay::renameChild(
   try {
     if (supportsSemanticOperations_) {
       inodeCatalog_->renameChild(src, dst, srcName, dstName);
+#ifndef _WIN32
+    } else if (useWal()) {
+      XCHECK(fsCore_ != nullptr) << "useWal() implies FsFileContentStore";
+
+      // Fall back to a full rewrite when dstContent does not yet contain
+      // the renamed entry — there is nothing concrete for the ADD WAL
+      // entry to carry.
+      auto dstIt = dstContent.find(dstName);
+      if (dstIt == dstContent.end()) {
+        saveOverlayDir(src, srcContent);
+        if (dst.get() != src.get()) {
+          saveOverlayDir(dst, dstContent);
+        }
+      } else {
+        // Order matters: write ADD-to-dst first so a crash between the
+        // two appends leaves the entry visible from both `src` and `dst`
+        // rather than dropping it entirely. The user observes the rename
+        // as incomplete (the source still exists alongside the destination)
+        // and can `rm` the unwanted copy to converge the state. The opposite
+        // ordering would risk losing the entry permanently. No fsck pass is
+        // required to recover.
+        //
+        // Both appends bump the per-parent compaction counter, so on a
+        // same-dir rename (src == dst) the counter ticks twice — matching
+        // the two on-disk WAL entries. Without this the counter under-reports
+        // by 50% on same-dir renames and the WAL grows to ~2x the intended
+        // threshold before compaction fires. If compaction fires after the
+        // first append, the second append targets the freshly-rewritten base
+        // file with `srcName` already absent (because srcContent reflects the
+        // post-rename state); replayWal tolerates REMOVE on a missing name.
+        auto entry = serializeOverlayEntry(dstIt->second);
+        appendWalEntryAndCompact(
+            dst,
+            FsFileContentStore::WalOpType::ADD,
+            dstName,
+            &entry,
+            dstContent);
+        appendWalEntryAndCompact(
+            src,
+            FsFileContentStore::WalOpType::REMOVE,
+            srcName,
+            /*entry=*/nullptr,
+            srcContent);
+      }
+#endif
     } else {
       saveOverlayDir(src, srcContent);
       if (dst.get() != src.get()) {
