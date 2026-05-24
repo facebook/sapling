@@ -415,6 +415,10 @@ class FsInodeCatalog : public InodeCatalog {
     return false;
   }
 
+  bool supportsWal() const override {
+    return true;
+  }
+
   std::vector<InodeNumber> getAllParentInodeNumbers() override {
     return {};
   }

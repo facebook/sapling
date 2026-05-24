@@ -58,6 +58,10 @@ class BufferedSqliteInodeCatalog : public SqliteInodeCatalog {
     return false;
   }
 
+  bool supportsWal() const override {
+    return false;
+  }
+
   void close(std::optional<InodeNumber> inodeNumber) override;
 
   std::optional<overlay::OverlayDir> loadOverlayDir(

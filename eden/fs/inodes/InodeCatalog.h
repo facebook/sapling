@@ -74,6 +74,18 @@ class InodeCatalog {
   virtual bool supportsSemanticOperations() const = 0;
 
   /**
+   * Whether this catalog can use the directory write-ahead log (WAL) to
+   * defer full `saveOverlayDir` writes. The WAL is a file-system based
+   * mechanism specific to the legacy `Fs*` catalogs; other backends
+   * (LMDB, Sqlite, in-memory) manage their own durability and do not
+   * use it.
+   *
+   * Pure virtual so adding a new `InodeCatalog` subclass forces an explicit
+   * decision instead of silently inheriting WAL behavior.
+   */
+  virtual bool supportsWal() const = 0;
+
+  /**
    * Get all of the `InodeNumber`s corresponding to directories. This is only
    * implemented for SqliteInodeCatalog for use in OverlayChecker to facilitate
    * loading of all of the known inodes.

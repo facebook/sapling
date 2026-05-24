@@ -234,7 +234,15 @@ Overlay::Overlay(
       caseSensitive_{caseSensitive},
       edenFsEventsLogger_{std::move(logger)},
       stats_{std::move(stats)},
-      useDirectFileWrites_(config.overlayDirectFileWrites.getValue()) {}
+      useDirectFileWrites_(config.overlayDirectFileWrites.getValue()),
+      useWal_{config.overlayUseWal.getValue() && inodeCatalog_->supportsWal()} {
+  // Cache the FsFileContentStore* once for the WAL fast paths
+  // (addChild/removeChild/etc.) so they avoid a per-call dynamic_cast.
+  // Null when the backing store is not file-system based.
+#ifndef _WIN32
+  fsCore_ = dynamic_cast<FsFileContentStore*>(fileContentStore_.get());
+#endif
+}
 
 Overlay::~Overlay() {
   close();

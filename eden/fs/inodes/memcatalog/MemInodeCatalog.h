@@ -32,6 +32,10 @@ class MemInodeCatalog : public InodeCatalog {
     return true;
   }
 
+  bool supportsWal() const override {
+    return false;
+  }
+
   std::vector<InodeNumber> getAllParentInodeNumbers() override;
 
   /**

@@ -46,6 +46,10 @@ class LMDBInodeCatalog : public InodeCatalog {
     return false;
   }
 
+  bool supportsWal() const override {
+    return false;
+  }
+
   void maintenance() override;
 
   std::vector<InodeNumber> getAllParentInodeNumbers() override;

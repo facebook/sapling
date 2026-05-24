@@ -9,14 +9,18 @@
 #include <folly/File.h>
 #include <folly/Function.h>
 #include <folly/Range.h>
+#include <folly/Synchronized.h>
+#include <folly/container/F14Map.h>
 #include <folly/futures/Future.h>
 #include <folly/futures/Promise.h>
 #include <folly/synchronization/Baton.h>
 #include <folly/synchronization/LifoSem.h>
+#include <array>
 #include <atomic>
 #include <condition_variable>
 #include <optional>
 #include <thread>
+#include <unordered_map>
 
 #include "eden/common/utils/CaseSensitivity.h"
 #include "eden/common/utils/PathFuncs.h"
@@ -363,6 +367,28 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
       const EdenConfig& config);
 
   /**
+   * Returns true if the overlay should use WAL (Write-Ahead Log) for
+   * deferred directory writes. Computed once at construction as
+   * `overlayUseWal` config flag AND `InodeCatalog::supportsWal()`.
+   */
+  bool useWal() const {
+    return useWal_;
+  }
+
+  /**
+   * Whether this overlay's backing catalog can have WAL files on disk.
+   * Used for replay — we always replay WAL files if they exist,
+   * regardless of whether WAL is currently enabled via config. This
+   * ensures safe rollback when disabling the WAL.
+   */
+  bool canHaveWalFiles() const {
+    return inodeCatalog_->supportsWal();
+  }
+
+  friend class WalGuardTest_useWalRequiresFlagAndLegacyCatalog_Test;
+  friend class WalGuardTest_canHaveWalFilesIgnoresFlag_Test;
+
+  /**
    * A request for the background GC thread.  There are three types of
    * requests: recursively forget data underneath a given directory, perform
    * some maintenance of the overlay or complete a promise.  The latter is used
@@ -451,6 +477,15 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   std::atomic<uint64_t> nextInodeNumber_{0};
 
   std::unique_ptr<FileContentStore> fileContentStore_;
+  /**
+   * Cached non-owning pointer to fileContentStore_ when it is an
+   * FsFileContentStore (nullptr otherwise). Lets WAL fast paths avoid a
+   * per-call dynamic_cast on the hot directory-mutation path. Set in
+   * initOverlay() and never reassigned. Must outlive every WAL caller —
+   * fileContentStore_ owns the storage, so this pointer is valid as long
+   * as the Overlay is alive.
+   */
+  FsFileContentStore* fsCore_{nullptr};
   std::unique_ptr<InodeCatalog> inodeCatalog_;
   InodeCatalogType inodeCatalogType_;
   InodeCatalogOptions inodeCatalogOptions_;
@@ -517,6 +552,40 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   friend class IORequest;
 
   bool useDirectFileWrites_;
+  bool useWal_{false};
+
+  /**
+   * Sharded in-memory count of WAL entries per directory inode, used to
+   * trigger inline compaction. Sharding by inode-number prevents the
+   * shared mutex from becoming a global bottleneck during parallel
+   * checkout (where every TreeInode mutation contends).
+   *
+   * Intentionally a process-global structure rather than a member on
+   * `TreeInode` / `DirContents`: the WAL append path runs under the
+   * parent's contents lock, so storing the counter on the inode would
+   * either piggyback on that lock (forcing the counter increment into
+   * the same critical section) or require an additional per-inode
+   * mutex just for this counter. The sharded global keeps the counter
+   * update to a leaf-level lock acquisition that can be released
+   * before saveOverlayDir runs. Counters are inserted on append and erased on
+   * full rewrite or removal via clearWalAfterFullWrite.
+   *
+   * Does not need to survive restart — on load, WAL files are replayed
+   * and compacted immediately.
+   */
+  static constexpr size_t kWalEntryCountsShards = 64;
+  std::array<
+      folly::Synchronized<folly::F14FastMap<InodeNumber, size_t>>,
+      kWalEntryCountsShards>
+      walEntryCountsShards_;
+
+  /**
+   * Pick the shard for a given inode number.
+   */
+  folly::Synchronized<folly::F14FastMap<InodeNumber, size_t>>&
+  walEntryCountsShard(InodeNumber inode) {
+    return walEntryCountsShards_[inode.get() % kWalEntryCountsShards];
+  }
 };
 
 constexpr InodeCatalogType kDefaultInodeCatalogType =
