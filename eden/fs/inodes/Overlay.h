@@ -426,6 +426,30 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
    */
   void maybeCompactWal(InodeNumber parent, const DirContents& content);
 
+#ifndef _WIN32
+  /**
+   * Append a WAL entry and immediately bump the compaction counter. This
+   * is the single entry point used by every WAL-using fast path in
+   * Overlay (`addChild`, `removeChild`, `renameChild`, `materializeChild`).
+   * Bundling the two steps in one call ensures the compaction trigger
+   * cannot be forgotten when a new WAL op is added later — a missed
+   * `maybeCompactWal` would let the WAL grow unbounded for that op.
+   *
+   * Callers must hold the parent TreeInode's contents lock so that
+   * `content` is consistent with the WAL file on disk.
+   *
+   * Windows builds do not include FsInodeCatalog.h (the legacy `Fs*`
+   * catalogs are non-Windows only), so `FsFileContentStore::WalOpType`
+   * is unavailable there and the entire helper is gated out.
+   */
+  void appendWalEntryAndCompact(
+      InodeNumber parent,
+      FsFileContentStore::WalOpType op,
+      PathComponentPiece childName,
+      const overlay::OverlayEntry* entry,
+      const DirContents& content);
+#endif // !_WIN32
+
   /**
    * A request for the background GC thread.  There are three types of
    * requests: recursively forget data underneath a given directory, perform

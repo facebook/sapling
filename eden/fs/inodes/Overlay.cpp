@@ -775,6 +775,19 @@ void Overlay::maybeCompactWal(InodeNumber parent, const DirContents& content) {
 #endif
 }
 
+#ifndef _WIN32
+void Overlay::appendWalEntryAndCompact(
+    InodeNumber parent,
+    FsFileContentStore::WalOpType op,
+    PathComponentPiece childName,
+    const overlay::OverlayEntry* entry,
+    const DirContents& content) {
+  XCHECK(fsCore_ != nullptr) << "useWal() implies FsFileContentStore";
+  fsCore_->appendWalEntry(parent, op, childName, entry);
+  maybeCompactWal(parent, content);
+}
+#endif // !_WIN32
+
 void Overlay::freeInodeFromMetadataTable(InodeNumber ino) {
 #ifndef _WIN32
   // TODO: batch request during GC
