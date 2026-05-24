@@ -467,6 +467,39 @@ TEST_F(FsInodeCatalogWalTest, loadWalDelta_removeThenAddBecomesAdd) {
   EXPECT_EQ(99, *delta.at("x").entry.inodeNumber());
 }
 
+TEST_F(
+    FsInodeCatalogWalTest,
+    loadWalDelta_caseInsensitiveRemoveThenAddPreservesAddCasing) {
+  const InodeNumber parent{330};
+  store_->appendWalEntry(
+      parent, WalOpType::REMOVE, PathComponentPiece{"foo"}, nullptr);
+  auto entry = makeEntry(0100644, 99);
+  store_->appendWalEntry(
+      parent, WalOpType::ADD, PathComponentPiece{"FOO"}, &entry);
+
+  auto delta = store_->loadWalDelta(parent, CaseSensitivity::Insensitive).delta;
+  ASSERT_EQ(1u, delta.size());
+  auto it = delta.begin();
+  EXPECT_EQ("FOO", it->first);
+  EXPECT_EQ(WalOpType::ADD, it->second.type);
+  EXPECT_EQ(99, *it->second.entry.inodeNumber());
+}
+
+TEST_F(FsInodeCatalogWalTest, loadWalDelta_caseInsensitiveAddThenRemoveWins) {
+  const InodeNumber parent{331};
+  auto entry = makeEntry(0100644, 99);
+  store_->appendWalEntry(
+      parent, WalOpType::ADD, PathComponentPiece{"FOO"}, &entry);
+  store_->appendWalEntry(
+      parent, WalOpType::REMOVE, PathComponentPiece{"foo"}, nullptr);
+
+  auto delta = store_->loadWalDelta(parent, CaseSensitivity::Insensitive).delta;
+  ASSERT_EQ(1u, delta.size());
+  auto it = delta.begin();
+  EXPECT_EQ("foo", it->first);
+  EXPECT_EQ(WalOpType::REMOVE, it->second.type);
+}
+
 TEST_F(FsInodeCatalogWalTest, loadWalDelta_repeatedNamesYieldFinalState) {
   const InodeNumber parent{305};
   auto e1 = makeEntry(0100644, 1);
@@ -598,6 +631,24 @@ TEST_F(FsInodeCatalogWalTest, replayWal_overwritesExistingDirEntries) {
   ASSERT_EQ(1u, dir.entries_ref()->count("x"));
   EXPECT_EQ(0100644, *dir.entries_ref()->at("x").mode());
   EXPECT_EQ(999, *dir.entries_ref()->at("x").inodeNumber());
+}
+
+TEST_F(FsInodeCatalogWalTest, replayWal_caseInsensitiveAddRekeysEntry) {
+  const InodeNumber parent{108};
+  overlay::OverlayDir dir;
+  (*dir.entries_ref())["foo"] = makeEntry(0100644, 1);
+
+  auto fresh = makeEntry(0100644, 999);
+  store_->appendWalEntry(
+      parent, WalOpType::ADD, PathComponentPiece{"FOO"}, &fresh);
+
+  EXPECT_EQ(
+      1u,
+      store_->replayWal(parent, dir, CaseSensitivity::Insensitive)
+          .rawEntriesParsed);
+  EXPECT_EQ(0u, dir.entries_ref()->count("foo"));
+  ASSERT_EQ(1u, dir.entries_ref()->count("FOO"));
+  EXPECT_EQ(999, *dir.entries_ref()->at("FOO").inodeNumber());
 }
 
 TEST_F(FsInodeCatalogWalTest, replayWal_truncatedTailIsDiscarded) {

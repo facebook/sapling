@@ -212,7 +212,9 @@ class FsFileContentStore : public FileContentStore {
    * successfully decoded, regardless of whether they collapse against an
    * earlier entry for the same name.
    */
-  LoadWalResult loadWalDelta(InodeNumber parent);
+  LoadWalResult loadWalDelta(
+      InodeNumber parent,
+      CaseSensitivity caseSensitive = CaseSensitivity::Sensitive);
 
   /**
    * Replay WAL entries into an OverlayDir. Returns the full LoadWalResult
@@ -227,7 +229,10 @@ class FsFileContentStore : public FileContentStore {
    * Used by cold paths (recursive remove, GC, fsck). The hot direct-
    * serialization load path uses loadWalDelta directly.
    */
-  LoadWalResult replayWal(InodeNumber parent, overlay::OverlayDir& dir);
+  LoadWalResult replayWal(
+      InodeNumber parent,
+      overlay::OverlayDir& dir,
+      CaseSensitivity caseSensitive = CaseSensitivity::Sensitive);
 
   /** Returns true iff a WAL file exists for the given directory inode. */
   bool hasWal(InodeNumber parent);
@@ -455,13 +460,17 @@ class FsInodeCatalog : public InodeCatalog {
     core_->removeWal(parent);
   }
 
-  LoadWalResult loadWalDelta(InodeNumber parent) override {
-    return core_->loadWalDelta(parent);
+  LoadWalResult loadWalDelta(
+      InodeNumber parent,
+      CaseSensitivity caseSensitive = CaseSensitivity::Sensitive) override {
+    return core_->loadWalDelta(parent, caseSensitive);
   }
 
-  LoadWalResult replayWal(InodeNumber parent, overlay::OverlayDir& dir)
-      override {
-    return core_->replayWal(parent, dir);
+  LoadWalResult replayWal(
+      InodeNumber parent,
+      overlay::OverlayDir& dir,
+      CaseSensitivity caseSensitive = CaseSensitivity::Sensitive) override {
+    return core_->replayWal(parent, dir, caseSensitive);
   }
 
  private:

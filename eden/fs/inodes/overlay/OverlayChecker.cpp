@@ -49,17 +49,20 @@ struct OverlayChecker::Impl {
   FsFileContentStore* const fcs;
   std::optional<InodeNumber> loadedNextInodeNumber;
   InodeCatalog::LookupCallback& lookupCallback;
+  CaseSensitivity caseSensitive;
   std::unordered_map<InodeNumber, InodeInfo> inodes;
 
   Impl(
       InodeCatalog* inodeCatalog,
       FsFileContentStore* fcs,
       std::optional<InodeNumber> nextInodeNumber,
-      InodeCatalog::LookupCallback& lookupCallback)
+      InodeCatalog::LookupCallback& lookupCallback,
+      CaseSensitivity caseSensitive)
       : inodeCatalog{inodeCatalog},
         fcs{fcs},
         loadedNextInodeNumber{nextInodeNumber},
-        lookupCallback{lookupCallback} {}
+        lookupCallback{lookupCallback},
+        caseSensitive{caseSensitive} {}
 };
 
 class OverlayChecker::RepairState {
@@ -760,12 +763,14 @@ OverlayChecker::OverlayChecker(
     FsFileContentStore* fcs,
     optional<InodeNumber> nextInodeNumber,
     InodeCatalog::LookupCallback& lookupCallback,
-    uint64_t numErrorDiscoveryThreads)
+    uint64_t numErrorDiscoveryThreads,
+    CaseSensitivity caseSensitive)
     : impl_{std::make_unique<Impl>(
           inodeCatalog,
           fcs,
           nextInodeNumber,
-          lookupCallback)},
+          lookupCallback,
+          caseSensitive)},
       numErrorDiscoveryThreads_{numErrorDiscoveryThreads} {
   XCHECK_GT(numErrorDiscoveryThreads_, 0u);
 }
@@ -803,7 +808,8 @@ bool OverlayChecker::recoverWalFiles() {
       // keeps the good prefix. parseErrors are discarded here because
       // OverlayChecker has no EdenStats; fsck-discovered torn WALs are
       // captured by fsck's own structured logs, not OverlayStats.
-      auto walResult = impl_->fcs->replayWal(ino, *dirData);
+      auto walResult =
+          impl_->fcs->replayWal(ino, *dirData, impl_->caseSensitive);
       // On missing base, only ADDs grow an empty dir; parse count would
       // lie on REMOVE-only WALs and synthesize a useless empty base.
       const bool shouldSave = baseWasMissing ? !dirData->entries()->empty()

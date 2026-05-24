@@ -9,6 +9,7 @@
 
 #include "eden/fs/inodes/fscatalog/FsInodeCatalog.h"
 
+#include <algorithm>
 #include <bit>
 
 #include <boost/filesystem.hpp>
@@ -734,9 +735,18 @@ bool FsFileContentStore::hasWal(InodeNumber parent) {
       err, fmt::format("error stat'ing WAL file for inode {}", parent));
 }
 
-LoadWalResult FsFileContentStore::loadWalDelta(InodeNumber parent) {
-  LoadWalResult result;
+LoadWalResult FsFileContentStore::loadWalDelta(
+    InodeNumber parent,
+    CaseSensitivity caseSensitive) {
+  LoadWalResult result{caseSensitive};
   auto& delta = result.delta;
+  auto assignDelta = [&](std::string walName, WalDelta walDelta) {
+    auto it = delta.find(walName);
+    if (it != delta.end()) {
+      delta.erase(it);
+    }
+    delta.emplace(std::move(walName), std::move(walDelta));
+  };
 
   auto walPath = getWalPath(parent);
   // Mirror loadRawOverlayDir: open once, ENOENT means no WAL, anything
@@ -843,12 +853,13 @@ LoadWalResult FsFileContentStore::loadWalDelta(InodeNumber parent) {
               reinterpret_cast<const char*>(entryData + entryOffset), hashLen);
         }
 
-        delta[name] = WalDelta{WalOpType::ADD, std::move(overlayEntry)};
+        assignDelta(
+            std::move(name), WalDelta{WalOpType::ADD, std::move(overlayEntry)});
         break;
       }
 
       case WalOpType::REMOVE: {
-        delta[name] = WalDelta{WalOpType::REMOVE, {}};
+        assignDelta(std::move(name), WalDelta{WalOpType::REMOVE, {}});
         break;
       }
 
@@ -857,7 +868,7 @@ LoadWalResult FsFileContentStore::loadWalDelta(InodeNumber parent) {
         if (it == delta.end()) {
           // No prior delta for this name — record the MATERIALIZE so the
           // mutator merge can clear the hash on the base entry.
-          delta[name] = WalDelta{WalOpType::MATERIALIZE, {}};
+          delta.emplace(std::move(name), WalDelta{WalOpType::MATERIALIZE, {}});
         } else if (it->second.type == WalOpType::ADD) {
           // Materialize an ADD we already have — clear the hash in place.
           it->second.entry.hash().reset();
@@ -897,19 +908,43 @@ LoadWalResult FsFileContentStore::loadWalDelta(InodeNumber parent) {
 
 LoadWalResult FsFileContentStore::replayWal(
     InodeNumber parent,
-    overlay::OverlayDir& dir) {
-  auto result = loadWalDelta(parent);
+    overlay::OverlayDir& dir,
+    CaseSensitivity caseSensitive) {
+  auto result = loadWalDelta(parent, caseSensitive);
+  auto& entries = *dir.entries_ref();
+  auto findEntry = [&](const std::string& name) {
+    if (caseSensitive == CaseSensitivity::Sensitive) {
+      return entries.find(name);
+    }
+    // TODO: Build a temporary case-aware index for large cold-path WAL
+    // replays so insensitive lookups do not scan the directory per delta.
+    return std::find_if(entries.begin(), entries.end(), [&](const auto& item) {
+      return isPathPieceEqual(
+          PathComponentPiece{item.first},
+          PathComponentPiece{name},
+          caseSensitive);
+    });
+  };
   for (auto& [name, op] : result.delta) {
     switch (op.type) {
-      case WalOpType::ADD:
-        (*dir.entries_ref())[name] = std::move(op.entry);
+      case WalOpType::ADD: {
+        auto it = findEntry(name);
+        if (it != entries.end()) {
+          entries.erase(it);
+        }
+        entries.emplace(name, std::move(op.entry));
         break;
-      case WalOpType::REMOVE:
-        dir.entries_ref()->erase(name);
+      }
+      case WalOpType::REMOVE: {
+        auto it = findEntry(name);
+        if (it != entries.end()) {
+          entries.erase(it);
+        }
         break;
+      }
       case WalOpType::MATERIALIZE: {
-        auto it = dir.entries_ref()->find(name);
-        if (it != dir.entries_ref()->end()) {
+        auto it = findEntry(name);
+        if (it != entries.end()) {
           it->second.hash().reset();
         }
         break;

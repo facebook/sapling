@@ -24,6 +24,7 @@
 #include <folly/testing/TestUtil.h>
 #include <gtest/gtest.h>
 #include <algorithm>
+#include <string_view>
 #include <thread>
 
 #include "eden/common/testharness/TempFile.h"
@@ -1218,14 +1219,16 @@ struct WalLifecycleOverlay {
   EdenStatsPtr stats;
 };
 
-WalLifecycleOverlay makeWalLifecycleOverlay(const AbsolutePath& dir) {
+WalLifecycleOverlay makeWalLifecycleOverlay(
+    const AbsolutePath& dir,
+    CaseSensitivity caseSensitive = kPathMapDefaultCaseSensitive) {
   auto rawConfig = EdenConfig::createTestEdenConfig();
   rawConfig->overlayUseWal.setValue(true, ConfigSourceType::CommandLine);
   auto reloadable = std::make_shared<ReloadableConfig>(rawConfig);
   auto stats = makeRefPtr<EdenStats>();
   auto overlay = Overlay::create(
       dir,
-      kPathMapDefaultCaseSensitive,
+      caseSensitive,
       kInodeCatalogType,
       kInodeCatalogOptions,
       makeTestEdenFsEventsLogger(),
@@ -1629,6 +1632,37 @@ TEST(OverlayLoadWalTest, collapsedAddOverwritesBaseEntry) {
   bundle.overlay->close();
 }
 
+TEST(OverlayLoadWalTest, caseInsensitiveCollapsedAddRekeysBaseEntry) {
+  folly::test::TemporaryDirectory tmp("eden_wal_case_insensitive_rekey");
+  auto dir = canonicalPath(tmp.path().string());
+  auto bundle = makeWalLifecycleOverlay(dir, CaseSensitivity::Insensitive);
+  ASSERT_NE(nullptr, bundle.store);
+
+  auto parent = bundle.overlay->allocateInodeNumber();
+  auto baseChild = bundle.overlay->allocateInodeNumber();
+  auto walChild = bundle.overlay->allocateInodeNumber();
+
+  DirContents content(CaseSensitivity::Insensitive);
+  content.emplace("foo"_pc, S_IFREG | 0644, baseChild);
+  bundle.overlay->saveOverlayDir(parent, content);
+
+  bundle.store->appendWalEntry(
+      parent, WalOpType::REMOVE, PathComponentPiece{"foo"}, nullptr);
+  overlay::OverlayEntry entry;
+  entry.mode() = S_IFREG | 0644;
+  entry.inodeNumber() = walChild.get();
+  bundle.store->appendWalEntry(
+      parent, WalOpType::ADD, PathComponentPiece{"FOO"}, &entry);
+
+  auto loaded = bundle.overlay->loadOverlayDir(parent);
+  ASSERT_EQ(1u, loaded.size());
+  EXPECT_EQ(std::string_view{"FOO"}, loaded.begin()->first.view());
+  EXPECT_EQ(walChild, loaded.begin()->second.getInodeNumber());
+  EXPECT_FALSE(bundle.store->hasWal(parent));
+
+  bundle.overlay->close();
+}
+
 TEST(WalAddRemoveChildTest, addChildAppendsWalWhenWalEnabled) {
   folly::test::TemporaryDirectory tmp("eden_wal_addchild");
   auto dir = canonicalPath(tmp.path().string());
@@ -1734,6 +1768,34 @@ TEST(WalRenameTest, sameDirRenameAppendsBothEntries) {
       parent, parent, "old"_pc, "new"_pc, postContent, postContent);
 
   EXPECT_TRUE(bundle.store->hasWal(parent));
+
+  bundle.overlay->close();
+}
+
+TEST(WalRenameTest, caseInsensitiveCaseOnlyRenameAppendsReplacementAdd) {
+  folly::test::TemporaryDirectory tmp("eden_wal_rename_case_only");
+  auto dir = canonicalPath(tmp.path().string());
+  auto bundle = makeWalLifecycleOverlay(dir, CaseSensitivity::Insensitive);
+  ASSERT_NE(nullptr, bundle.store);
+
+  auto parent = bundle.overlay->allocateInodeNumber();
+  auto childIno = bundle.overlay->allocateInodeNumber();
+  DirContents content(CaseSensitivity::Insensitive);
+  content.emplace("foo"_pc, S_IFREG | 0644, childIno);
+  bundle.overlay->saveOverlayDir(parent, content);
+  ASSERT_FALSE(bundle.store->hasWal(parent));
+
+  DirContents postContent(CaseSensitivity::Insensitive);
+  postContent.emplace("FOO"_pc, S_IFREG | 0644, childIno);
+  bundle.overlay->renameChild(
+      parent, parent, "foo"_pc, "FOO"_pc, postContent, postContent);
+
+  ASSERT_TRUE(bundle.store->hasWal(parent));
+  auto loaded = bundle.overlay->loadOverlayDir(parent);
+  ASSERT_EQ(1u, loaded.size());
+  EXPECT_EQ(std::string_view{"FOO"}, loaded.begin()->first.view());
+  EXPECT_EQ(childIno, loaded.begin()->second.getInodeNumber());
+  EXPECT_FALSE(bundle.store->hasWal(parent));
 
   bundle.overlay->close();
 }

@@ -74,7 +74,8 @@ class OverlayChecker {
       FsFileContentStore* fcs,
       std::optional<InodeNumber> nextInodeNumber,
       InodeCatalog::LookupCallback& lookupCallback,
-      uint64_t numErrorDiscoveryThreads);
+      uint64_t numErrorDiscoveryThreads,
+      CaseSensitivity caseSensitive = CaseSensitivity::Sensitive);
 
   ~OverlayChecker();
 

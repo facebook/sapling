@@ -442,7 +442,8 @@ void Overlay::initOverlay(
         static_cast<FsFileContentStore*>(fileContentStore_.get()),
         std::nullopt,
         lookupCallback,
-        config->getEdenConfig()->fsckNumErrorDiscoveryThreads.getValue());
+        config->getEdenConfig()->fsckNumErrorDiscoveryThreads.getValue(),
+        caseSensitive_);
     folly::stop_watch<> fsckRuntime;
     auto result = checker.repairErrors(progressCallback);
     auto fsckRuntimeInSeconds =
@@ -609,7 +610,7 @@ DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
     // streamed-load PathMap via PathMapMutator. saveOverlayDir below
     // flushes the merged base file and clearWalAfterFullWrite removes
     // the WAL.
-    auto walResult = inodeCatalog_->loadWalDelta(inodeNumber);
+    auto walResult = inodeCatalog_->loadWalDelta(inodeNumber, caseSensitive_);
     auto& delta = walResult.delta;
     stats_->increment(&OverlayStats::walReplay);
     stats_->increment(
@@ -630,16 +631,26 @@ DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
           auto mode = static_cast<mode_t>(*walDelta.entry.mode());
           auto ino = InodeNumber::fromThrift(*walDelta.entry.inodeNumber());
           const bool isRestricted = getOverlayEntryIsRestricted(walDelta.entry);
+          DirEntry entry{mode, ino, isRestricted};
           if (walDelta.entry.hash().has_value() &&
               !walDelta.entry.hash()->empty()) {
             auto hash = ObjectId{
                 folly::ByteRange{folly::StringPiece{*walDelta.entry.hash()}}};
+            entry = DirEntry{mode, ino, hash, isRestricted};
+          }
+          if (caseSensitive_ == CaseSensitivity::Sensitive) {
+            // WAL key matches the stored key exactly — no rekey needed, so
+            // insert_or_assign is sufficient (vs. the erase+emplace in the
+            // case-insensitive branch).
             mutator.insert_or_assign(
-                PathComponentPiece{name},
-                DirEntry{mode, ino, hash, isRestricted});
+                PathComponentPiece{name}, std::move(entry));
           } else {
-            mutator.insert_or_assign(
-                PathComponentPiece{name}, DirEntry{mode, ino, isRestricted});
+            // On case-insensitive mounts the stored key spelling may differ
+            // from the WAL ADD's spelling (e.g., base "foo" with WAL ADD
+            // "FOO"). Erase any case-equivalent entry first so the inserted
+            // key uses the WAL casing.
+            mutator.erase(PathComponentPiece{name});
+            mutator.emplace(PathComponentPiece{name}, std::move(entry));
           }
           break;
         }
@@ -791,7 +802,7 @@ void Overlay::mergeWalIntoOverlayDir(
   if (!canHaveWalFiles() || !inodeCatalog_->hasWal(parent)) {
     return;
   }
-  auto walResult = inodeCatalog_->replayWal(parent, dir);
+  auto walResult = inodeCatalog_->replayWal(parent, dir, caseSensitive_);
   stats_->increment(&OverlayStats::walReplay);
   stats_->increment(
       &OverlayStats::walEntriesReplayed,
@@ -1346,31 +1357,43 @@ void Overlay::renameChild(
           saveOverlayDir(dst, dstContent);
         }
       } else {
-        // Order matters: write ADD-to-dst first so a crash between the
-        // two appends leaves the entry visible from both `src` and `dst`
-        // rather than dropping it entirely. The user observes the rename
-        // as incomplete (the source still exists alongside the destination)
-        // and can `rm` the unwanted copy to converge the state. The opposite
-        // ordering would risk losing the entry permanently. No fsck pass is
-        // required to recover.
-        //
-        // Both appends bump the per-parent compaction counter, so on a
-        // same-dir rename (src == dst) the counter ticks twice — matching
-        // the two on-disk WAL entries. Without this the counter under-reports
-        // by 50% on same-dir renames and the WAL grows to ~2x the intended
-        // threshold before compaction fires. If compaction fires after the
-        // first append, the second append targets the freshly-rewritten base
-        // file with `srcName` already absent (because srcContent reflects the
-        // post-rename state); replayWal tolerates REMOVE on a missing name.
+        const bool isCaseOnlyRename = src == dst &&
+            caseSensitive_ == CaseSensitivity::Insensitive &&
+            isPathPieceEqual(srcName, dstName, CaseSensitivity::Insensitive) &&
+            !isPathPieceEqual(srcName, dstName, CaseSensitivity::Sensitive);
         auto entry = serializeOverlayEntry(dstIt->second);
-        appendWalEntryAndCompact(
-            dst, WalOpType::ADD, dstName, &entry, dstContent);
-        appendWalEntryAndCompact(
-            src,
-            WalOpType::REMOVE,
-            srcName,
-            /*entry=*/nullptr,
-            srcContent);
+        if (isCaseOnlyRename) {
+          // On a case-insensitive mount, source and destination are the same
+          // logical key. The replacement ADD is the whole update: replay
+          // removes the equivalent source spelling before inserting dstName.
+          appendWalEntryAndCompact(
+              dst, WalOpType::ADD, dstName, &entry, dstContent);
+        } else {
+          // Order matters: write ADD-to-dst first so a crash between the
+          // two appends leaves the entry visible from both `src` and `dst`
+          // rather than dropping it entirely. The user observes the rename
+          // as incomplete (the source still exists alongside the destination)
+          // and can `rm` the unwanted copy to converge the state. The opposite
+          // ordering would risk losing the entry permanently. No fsck pass is
+          // required to recover.
+          //
+          // Both appends bump the per-parent compaction counter, so on a
+          // same-dir rename (src == dst) the counter ticks twice — matching
+          // the two on-disk WAL entries. Without this the counter under-reports
+          // by 50% on same-dir renames and the WAL grows to ~2x the intended
+          // threshold before compaction fires. If compaction fires after the
+          // first append, the second append targets the freshly-rewritten base
+          // file with `srcName` already absent (because srcContent reflects the
+          // post-rename state); replayWal tolerates REMOVE on a missing name.
+          appendWalEntryAndCompact(
+              dst, WalOpType::ADD, dstName, &entry, dstContent);
+          appendWalEntryAndCompact(
+              src,
+              WalOpType::REMOVE,
+              srcName,
+              /*entry=*/nullptr,
+              srcContent);
+        }
       }
     } else {
       saveOverlayDir(src, srcContent);

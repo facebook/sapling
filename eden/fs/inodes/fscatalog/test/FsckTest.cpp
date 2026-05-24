@@ -785,7 +785,8 @@ namespace {
 // inspect the post-repair state.
 void runFsckRepair(
     TestOverlay& testOverlay,
-    std::optional<InodeNumber> nextInode) {
+    std::optional<InodeNumber> nextInode,
+    CaseSensitivity caseSensitive = CaseSensitivity::Sensitive) {
   InodeCatalog::LookupCallback lookup = [](auto&&, auto&&) {
     return makeImmediateFuture<InodeCatalog::LookupCallbackValue>(
         std::runtime_error("no lookup callback"));
@@ -795,7 +796,8 @@ void runFsckRepair(
       &testOverlay.fcs(),
       nextInode,
       lookup,
-      testOverlay.getTestConfig()->fsckNumErrorDiscoveryThreads.getValue());
+      testOverlay.getTestConfig()->fsckNumErrorDiscoveryThreads.getValue(),
+      caseSensitive);
   checker.repairErrors();
 }
 
@@ -995,5 +997,44 @@ TEST(FsckWalTest, repairReplaysWalOntoMissingBase) {
   ASSERT_EQ(1u, recovered->entries()->count("walChild"));
   EXPECT_EQ(
       walChildIno.get(), *recovered->entries()->at("walChild").inodeNumber());
+  testOverlay->inodeCatalog()->close(std::nullopt);
+}
+
+TEST(FsckWalTest, caseInsensitiveCollapsedAddRekeysBaseEntry) {
+  // Regression for case-only rename replay on case-insensitive mounts.
+  // Without CaseSensitivity threaded through to replayWal, fsck would
+  // collapse REMOVE "foo" + ADD "FOO" using std::map's default sensitive
+  // ordering, applying them as independent entries; the REMOVE would then
+  // erase the freshly-inserted FOO and saveOverlayDir would persist a
+  // missing entry on macOS/Windows mounts.
+  auto testOverlay = std::make_shared<TestOverlay>(InodeCatalogType::Legacy);
+  auto root = testOverlay->init();
+  auto baseChildIno = testOverlay->allocateInodeNumber();
+  auto walChildIno = testOverlay->allocateInodeNumber();
+  root.linkFile(baseChildIno, "foo", std::nullopt, 0644);
+  root.save();
+  testOverlay->closeCleanly();
+
+  auto nextInode =
+      testOverlay->inodeCatalog()->initOverlay(/*createIfNonExisting=*/false);
+  ASSERT_TRUE(nextInode.has_value());
+
+  testOverlay->fcs().appendWalEntry(
+      kRootNodeId, WalOpType::REMOVE, PathComponentPiece{"foo"}, nullptr);
+  overlay::OverlayEntry walEntry;
+  walEntry.mode() = S_IFREG | 0644;
+  walEntry.inodeNumber() = walChildIno.get();
+  testOverlay->fcs().appendWalEntry(
+      kRootNodeId, WalOpType::ADD, PathComponentPiece{"FOO"}, &walEntry);
+  ASSERT_TRUE(testOverlay->fcs().hasWal(kRootNodeId));
+
+  runFsckRepair(*testOverlay, nextInode, CaseSensitivity::Insensitive);
+
+  EXPECT_FALSE(testOverlay->fcs().hasWal(kRootNodeId));
+  auto reload = testOverlay->inodeCatalog()->loadOverlayDir(kRootNodeId);
+  ASSERT_TRUE(reload.has_value());
+  EXPECT_EQ(0u, reload->entries()->count("foo"));
+  ASSERT_EQ(1u, reload->entries()->count("FOO"));
+  EXPECT_EQ(walChildIno.get(), *reload->entries()->at("FOO").inodeNumber());
   testOverlay->inodeCatalog()->close(std::nullopt);
 }

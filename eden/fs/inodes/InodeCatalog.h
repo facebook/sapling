@@ -9,6 +9,7 @@
 
 #include <map>
 #include <optional>
+#include <string>
 
 #include <folly/Function.h>
 
@@ -70,6 +71,20 @@ struct WalDelta {
   overlay::OverlayEntry entry; // only meaningful for ADD
 };
 
+struct WalDeltaNameCompare {
+  explicit WalDeltaNameCompare(
+      CaseSensitivity caseSensitive = CaseSensitivity::Sensitive)
+      : caseSensitive_{caseSensitive} {}
+
+  bool operator()(const std::string& left, const std::string& right) const {
+    return isPathPieceLess(
+        PathComponentPiece{left}, PathComponentPiece{right}, caseSensitive_);
+  }
+
+ private:
+  CaseSensitivity caseSensitive_;
+};
+
 /**
  * Result of a WAL load: the collapsed delta plus the count of raw WAL
  * entries that were successfully decoded (before collapse). The raw
@@ -78,7 +93,11 @@ struct WalDelta {
  * written, not unique names net-affected.
  */
 struct LoadWalResult {
-  std::map<std::string, WalDelta> delta;
+  explicit LoadWalResult(
+      CaseSensitivity caseSensitive = CaseSensitivity::Sensitive)
+      : delta{WalDeltaNameCompare{caseSensitive}} {}
+
+  std::map<std::string, WalDelta, WalDeltaNameCompare> delta;
   size_t rawEntriesParsed = 0;
   // Count of entries that hit a structural-bounds break or an unknown
   // opcode skip. Surfaced so callers can bump a single
@@ -318,7 +337,9 @@ class InodeCatalog {
    * Pre-process the WAL file for `parent` into a collapsed net delta.
    * Returns an empty `LoadWalResult` if no WAL file exists.
    */
-  virtual LoadWalResult loadWalDelta(InodeNumber /* parent */) {
+  virtual LoadWalResult loadWalDelta(
+      InodeNumber /* parent */,
+      CaseSensitivity /* caseSensitive */ = CaseSensitivity::Sensitive) {
     EDEN_BUG() << "UNIMPLEMENTED";
   }
 
@@ -329,7 +350,8 @@ class InodeCatalog {
    */
   virtual LoadWalResult replayWal(
       InodeNumber /* parent */,
-      overlay::OverlayDir& /* dir */) {
+      overlay::OverlayDir& /* dir */,
+      CaseSensitivity /* caseSensitive */ = CaseSensitivity::Sensitive) {
     EDEN_BUG() << "UNIMPLEMENTED";
   }
 };
