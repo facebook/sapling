@@ -1531,6 +1531,140 @@ TEST(WalCompactionTest, recompactsAfterReset) {
   bundle.overlay->close();
 }
 
+TEST(OverlayLoadWalTest, loadAppliesDelta) {
+  folly::test::TemporaryDirectory tmp("eden_wal_load");
+  auto dir = canonicalPath(tmp.path().string());
+  auto bundle = makeWalLifecycleOverlay(dir);
+  ASSERT_NE(nullptr, bundle.store);
+
+  auto parent = bundle.overlay->allocateInodeNumber();
+  auto inoA = bundle.overlay->allocateInodeNumber();
+  auto inoB = bundle.overlay->allocateInodeNumber();
+
+  DirContents base(kPathMapDefaultCaseSensitive);
+  base.emplace("a"_pc, S_IFREG | 0644, inoA);
+  bundle.overlay->saveOverlayDir(parent, base);
+
+  overlay::OverlayEntry entryB;
+  entryB.mode() = S_IFREG | 0644;
+  entryB.inodeNumber() = inoB.get();
+  bundle.store->appendWalEntry(
+      parent,
+      FsFileContentStore::WalOpType::ADD,
+      PathComponentPiece{"b"},
+      &entryB);
+
+  auto loaded = bundle.overlay->loadOverlayDir(parent);
+  EXPECT_NE(loaded.end(), loaded.find("a"_pc));
+  EXPECT_NE(loaded.end(), loaded.find("b"_pc));
+  EXPECT_FALSE(bundle.store->hasWal(parent));
+
+  bundle.overlay->close();
+}
+
+TEST(OverlayLoadWalTest, collapsedAddRemoveIsApplied) {
+  folly::test::TemporaryDirectory tmp("eden_wal_load_collapse");
+  auto dir = canonicalPath(tmp.path().string());
+  auto bundle = makeWalLifecycleOverlay(dir);
+  ASSERT_NE(nullptr, bundle.store);
+
+  auto parent = bundle.overlay->allocateInodeNumber();
+  auto inoA = bundle.overlay->allocateInodeNumber();
+
+  DirContents base(kPathMapDefaultCaseSensitive);
+  base.emplace("a"_pc, S_IFREG | 0644, inoA);
+  bundle.overlay->saveOverlayDir(parent, base);
+
+  // ADD then REMOVE for a fresh name → loadWalDelta collapses to REMOVE,
+  // which the mutator then erases. The base "a" is unaffected since the
+  // collapsed delta only touches "b".
+  overlay::OverlayEntry entryB;
+  entryB.mode() = S_IFREG | 0644;
+  entryB.inodeNumber() = bundle.overlay->allocateInodeNumber().get();
+  bundle.store->appendWalEntry(
+      parent,
+      FsFileContentStore::WalOpType::ADD,
+      PathComponentPiece{"b"},
+      &entryB);
+  bundle.store->appendWalEntry(
+      parent,
+      FsFileContentStore::WalOpType::REMOVE,
+      PathComponentPiece{"b"},
+      nullptr);
+
+  auto loaded = bundle.overlay->loadOverlayDir(parent);
+  EXPECT_NE(loaded.end(), loaded.find("a"_pc));
+  EXPECT_EQ(loaded.end(), loaded.find("b"_pc));
+  EXPECT_FALSE(bundle.store->hasWal(parent));
+
+  bundle.overlay->close();
+}
+
+TEST(OverlayLoadWalTest, removesWalAfterMerge) {
+  folly::test::TemporaryDirectory tmp("eden_wal_load_clean");
+  auto dir = canonicalPath(tmp.path().string());
+  auto bundle = makeWalLifecycleOverlay(dir);
+  ASSERT_NE(nullptr, bundle.store);
+
+  auto parent = bundle.overlay->allocateInodeNumber();
+  DirContents base(kPathMapDefaultCaseSensitive);
+  bundle.overlay->saveOverlayDir(parent, base);
+
+  bundle.store->appendWalEntry(
+      parent,
+      FsFileContentStore::WalOpType::REMOVE,
+      PathComponentPiece{"x"},
+      nullptr);
+  ASSERT_TRUE(bundle.store->hasWal(parent));
+
+  bundle.overlay->loadOverlayDir(parent);
+  EXPECT_FALSE(bundle.store->hasWal(parent));
+
+  bundle.overlay->close();
+}
+
+TEST(OverlayLoadWalTest, collapsedAddOverwritesBaseEntry) {
+  folly::test::TemporaryDirectory tmp("eden_wal_collapsed_add_overwrite");
+  auto dir = canonicalPath(tmp.path().string());
+  auto bundle = makeWalLifecycleOverlay(dir);
+  ASSERT_NE(nullptr, bundle.store);
+
+  // Seed the base directory with ("foo", inode=baseChild).
+  auto parent = bundle.overlay->allocateInodeNumber();
+  auto baseChild = bundle.overlay->allocateInodeNumber();
+  auto walChild = bundle.overlay->allocateInodeNumber();
+
+  DirContents content(kPathMapDefaultCaseSensitive);
+  content.emplace("foo"_pc, S_IFREG | 0644, baseChild);
+  bundle.overlay->saveOverlayDir(parent, content);
+
+  // Write REMOVE foo then ADD foo (inode=walChild). loadWalDelta collapses
+  // these into a single ADD; the streaming load now needs to *overwrite*
+  // the base entry for "foo" with the WAL's version.
+  bundle.store->appendWalEntry(
+      parent,
+      FsFileContentStore::WalOpType::REMOVE,
+      PathComponentPiece{"foo"},
+      nullptr);
+  overlay::OverlayEntry entry;
+  entry.mode() = S_IFREG | 0644;
+  entry.inodeNumber() = walChild.get();
+  bundle.store->appendWalEntry(
+      parent,
+      FsFileContentStore::WalOpType::ADD,
+      PathComponentPiece{"foo"},
+      &entry);
+
+  auto loaded = bundle.overlay->loadOverlayDir(parent);
+  auto it = loaded.find("foo"_pc);
+  ASSERT_NE(loaded.end(), it);
+  // Without insert_or_assign, this would still report baseChild because
+  // PathMapMutator::emplace silently drops collisions.
+  EXPECT_EQ(walChild, it->second.getInodeNumber());
+
+  bundle.overlay->close();
+}
+
 } // namespace facebook::eden
 
 #endif

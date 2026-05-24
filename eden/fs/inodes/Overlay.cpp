@@ -22,6 +22,7 @@
 
 #include "eden/common/utils/Bug.h"
 #include "eden/common/utils/PathFuncs.h"
+#include "eden/common/utils/PathMapMutator.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/FileContentStore.h"
@@ -48,6 +49,13 @@ namespace facebook::eden {
 namespace {
 constexpr uint64_t ioCountMask = 0x7FFFFFFFFFFFFFFFull;
 constexpr uint64_t ioClosedMask = 1ull << 63;
+
+bool getOverlayEntryIsRestricted(const overlay::OverlayEntry& entry) {
+  return apache::thrift::is_non_optional_field_set_manually_or_by_serializer(
+             entry.isRestricted())
+      ? *entry.isRestricted()
+      : false;
+}
 
 std::unique_ptr<InodeCatalog> makeInodeCatalog(
     AbsolutePathPiece localDir,
@@ -551,11 +559,7 @@ bool Overlay::buildDirEntries(
       shouldRewriteOverlay = true;
     }
 
-    const bool isRestricted =
-        apache::thrift::is_non_optional_field_set_manually_or_by_serializer(
-            value.isRestricted())
-        ? *value.isRestricted()
-        : false;
+    const bool isRestricted = getOverlayEntryIsRestricted(value);
     if (value.hash() && !value.hash()->empty()) {
       auto hash = ObjectId{folly::ByteRange{folly::StringPiece{*value.hash()}}};
       entries.emplace_back(
@@ -578,16 +582,88 @@ DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
   folly::fbvector<std::pair<PathComponent, DirEntry>> entries;
   bool shouldRewriteOverlay = false;
 
+  bool hasWal = false;
+#ifndef _WIN32
+  if (canHaveWalFiles() && fsCore_ != nullptr) {
+    hasWal = fsCore_->hasWal(inodeNumber);
+  }
+#endif
+
   bool found = inodeCatalog_->loadOverlayEntries(
       inodeNumber,
       [&](uint32_t count, InodeCatalog::OverlayEntryIterator iterate) {
         entries.reserve(count);
         shouldRewriteOverlay = buildDirEntries(iterate, entries);
       });
-  if (!found) {
+  if (!found && !hasWal) {
     stats_->increment(&OverlayStats::loadOverlayDirFailure);
     return DirContents{caseSensitive_};
   }
+  if (!found && hasWal) {
+    // Base file is missing but a WAL exists. This happens when the
+    // daemon crashed between appendWalEntry creating the WAL and the
+    // first saveOverlayDir creating the base — or when the base was
+    // truncated/lost externally. Replay the WAL onto an empty base
+    // rather than dropping it (the WAL ADDs reference real on-disk
+    // inodes that would otherwise become orphans for fsck to delete).
+    XLOGF(
+        WARN,
+        "Overlay base missing for inode {} but WAL present; "
+        "replaying WAL onto empty base",
+        inodeNumber);
+  }
+
+#ifndef _WIN32
+  if (hasWal) {
+    // Pre-process WAL into a collapsed net delta and merge it into the
+    // streamed-load PathMap via PathMapMutator. saveOverlayDir below
+    // flushes the merged base file and clearWalAfterFullWrite removes
+    // the WAL.
+    XCHECK(fsCore_ != nullptr) << "hasWal implies FsFileContentStore";
+    auto walResult = fsCore_->loadWalDelta(inodeNumber);
+    auto& delta = walResult.delta;
+
+    DirContents base{std::move(entries), caseSensitive_};
+    PathMapMutator<DirEntry> mutator{std::move(base)};
+
+    for (auto& [name, walDelta] : delta) {
+      switch (walDelta.type) {
+        case FsFileContentStore::WalOpType::ADD: {
+          auto mode = static_cast<mode_t>(*walDelta.entry.mode());
+          auto ino = InodeNumber::fromThrift(*walDelta.entry.inodeNumber());
+          const bool isRestricted = getOverlayEntryIsRestricted(walDelta.entry);
+          if (walDelta.entry.hash().has_value() &&
+              !walDelta.entry.hash()->empty()) {
+            auto hash = ObjectId{
+                folly::ByteRange{folly::StringPiece{*walDelta.entry.hash()}}};
+            mutator.insert_or_assign(
+                PathComponentPiece{name},
+                DirEntry{mode, ino, hash, isRestricted});
+          } else {
+            mutator.insert_or_assign(
+                PathComponentPiece{name}, DirEntry{mode, ino, isRestricted});
+          }
+          break;
+        }
+        case FsFileContentStore::WalOpType::REMOVE:
+          mutator.erase(PathComponentPiece{name});
+          break;
+        case FsFileContentStore::WalOpType::MATERIALIZE: {
+          auto it = mutator.find(PathComponentPiece{name});
+          if (it != mutator.end()) {
+            it->second.setMaterialized();
+          }
+          break;
+        }
+      }
+    }
+
+    DirContents merged{mutator.finalize()};
+    saveOverlayDir(inodeNumber, merged, /*isMaterialized=*/true);
+    stats_->increment(&OverlayStats::loadOverlayDirSuccessful);
+    return merged;
+  }
+#endif
 
   DirContents result{std::move(entries), caseSensitive_};
 
