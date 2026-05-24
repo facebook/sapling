@@ -235,7 +235,10 @@ Overlay::Overlay(
       edenFsEventsLogger_{std::move(logger)},
       stats_{std::move(stats)},
       useDirectFileWrites_(config.overlayDirectFileWrites.getValue()),
-      useWal_{config.overlayUseWal.getValue() && inodeCatalog_->supportsWal()} {
+      useWal_{config.overlayUseWal.getValue() && inodeCatalog_->supportsWal()},
+      walCompactionMultiplier_{
+          config.overlayWalCompactionMultiplier.getValue()},
+      walCompactionCap_{config.overlayWalCompactionCap.getValue()} {
   // Cache the FsFileContentStore* once for the WAL fast paths
   // (addChild/removeChild/etc.) so they avoid a per-call dynamic_cast.
   // Null when the backing store is not file-system based.
@@ -724,6 +727,51 @@ void Overlay::mergeWalIntoOverlayDir(
 #else
   (void)parent;
   (void)dir;
+#endif
+}
+
+void Overlay::maybeCompactWal(InodeNumber parent, const DirContents& content) {
+#ifndef _WIN32
+  if (!canHaveWalFiles()) {
+    return;
+  }
+  size_t count = 0;
+  {
+    auto counts = walEntryCountsShard(parent).wlock();
+    count = ++(*counts)[parent];
+  }
+  // Use the directory size at last compaction (current size minus WAL
+  // entries) as the base for threshold calculation. This prevents the
+  // threshold from growing faster than the counter for directories that
+  // start small.
+  //
+  // The threshold is also capped at walCompactionCap_ so that a single
+  // compaction event cannot serialize an unboundedly large directory
+  // under the parent contents lock. Both the multiplier and the cap are
+  // snapshotted from EdenConfig at Overlay construction.
+  size_t baseSize = content.size() > count ? content.size() - count : 0;
+  size_t threshold = std::min(
+      walCompactionMultiplier_ * std::max(baseSize, static_cast<size_t>(10)),
+      walCompactionCap_);
+  if (count >= threshold) {
+    stats_->increment(&OverlayStats::walCompaction);
+    XLOGF(
+        DBG2,
+        "Compacting WAL for overlay dir {} after {} entries; content size {}, threshold {}",
+        parent,
+        count,
+        content.size(),
+        threshold);
+    // saveOverlayDir calls clearWalAfterFullWrite which removes the .wal
+    // file and erases the walEntryCounts_ entry. Pass isMaterialized=true
+    // explicitly: WAL-tracked directories are materialized by construction,
+    // and we need the crash-safe (atomic-rename) write path so a crash
+    // mid-rewrite cannot leave a truncated base file alongside a stale WAL.
+    saveOverlayDir(parent, content, /*isMaterialized=*/true);
+  }
+#else
+  (void)parent;
+  (void)content;
 #endif
 }
 

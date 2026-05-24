@@ -164,3 +164,7 @@ Count the number of successfully rename child commands in Overlay.
 39. `Counter renameChildFailure{"overlay.rename_child_failure"}` :
 
 Count the number of failure rename child commands in Overlay.
+
+40. `Counter walCompaction{"overlay.wal_compaction"}` :
+
+Count the number of times WAL inline compaction rewrites an overlay directory.

@@ -1354,6 +1354,183 @@ TEST(OverlayWalLifecycleTest, recursiveRemoveReplaysWalBeforeDelete) {
   bundle.overlay->close();
 }
 
+TEST(WalCompactionTest, belowThresholdRetainsWal) {
+  folly::test::TemporaryDirectory tmp("eden_wal_compact");
+  auto dir = canonicalPath(tmp.path().string());
+  auto bundle = makeWalLifecycleOverlay(dir);
+  ASSERT_NE(nullptr, bundle.store);
+
+  auto parent = bundle.overlay->allocateInodeNumber();
+  // Empty content → baseSize = 0 so threshold = 30. Five appends must
+  // not trigger compaction.
+  DirContents content(kPathMapDefaultCaseSensitive);
+  bundle.store->appendWalEntry(
+      parent,
+      FsFileContentStore::WalOpType::REMOVE,
+      PathComponentPiece{"x"},
+      nullptr);
+  for (int i = 0; i < 5; ++i) {
+    bundle.overlay->maybeCompactWal(parent, content);
+  }
+  EXPECT_TRUE(bundle.store->hasWal(parent));
+
+  bundle.overlay->close();
+}
+
+TEST(WalCompactionTest, exceedsThresholdTriggersFullSave) {
+  folly::test::TemporaryDirectory tmp("eden_wal_compact");
+  auto dir = canonicalPath(tmp.path().string());
+  auto bundle = makeWalLifecycleOverlay(dir);
+  ASSERT_NE(nullptr, bundle.store);
+
+  auto parent = bundle.overlay->allocateInodeNumber();
+  DirContents content(kPathMapDefaultCaseSensitive);
+  bundle.store->appendWalEntry(
+      parent,
+      FsFileContentStore::WalOpType::REMOVE,
+      PathComponentPiece{"x"},
+      nullptr);
+  // Empty content → threshold = 30. Crossing it triggers full save which
+  // calls clearWalAfterFullWrite.
+  for (int i = 0; i < 30; ++i) {
+    bundle.overlay->maybeCompactWal(parent, content);
+  }
+  EXPECT_FALSE(bundle.store->hasWal(parent));
+
+  bundle.overlay->close();
+}
+
+TEST(WalCompactionTest, largeBaseSizeScalesThreshold) {
+  folly::test::TemporaryDirectory tmp("eden_wal_compact");
+  auto dir = canonicalPath(tmp.path().string());
+  auto bundle = makeWalLifecycleOverlay(dir);
+  ASSERT_NE(nullptr, bundle.store);
+
+  auto parent = bundle.overlay->allocateInodeNumber();
+  // Build a content with 100 entries → baseSize floor of 100 → threshold
+  // 300. 30 appends must not trigger compaction.
+  DirContents content(kPathMapDefaultCaseSensitive);
+  for (int i = 0; i < 100; ++i) {
+    auto name = PathComponent{fmt::format("file{}", i)};
+    content.emplace(
+        name, S_IFREG | 0644, bundle.overlay->allocateInodeNumber());
+  }
+  bundle.store->appendWalEntry(
+      parent,
+      FsFileContentStore::WalOpType::REMOVE,
+      PathComponentPiece{"file0"},
+      nullptr);
+  for (int i = 0; i < 30; ++i) {
+    bundle.overlay->maybeCompactWal(parent, content);
+  }
+  EXPECT_TRUE(bundle.store->hasWal(parent));
+
+  bundle.overlay->close();
+}
+
+TEST(WalCompactionTest, nonWalCatalogDoesNotTrackCompaction) {
+  auto tmpdir = makeTempDir("eden_wal_compact");
+  auto path = realpath(tmpdir.path().string());
+  auto config = EdenConfig::createTestEdenConfig();
+  config->overlayUseWal.setValue(true, ConfigSourceType::CommandLine);
+  auto overlay = Overlay::create(
+      path,
+      kPathMapDefaultCaseSensitive,
+      InodeCatalogType::InMemory,
+      kInodeCatalogOptions,
+      makeTestEdenFsEventsLogger(),
+      makeRefPtr<EdenStats>(),
+      *config);
+
+  auto parent = InodeNumber{123};
+  DirContents content(kPathMapDefaultCaseSensitive);
+  overlay->maybeCompactWal(parent, content);
+
+  EXPECT_TRUE(overlay->walEntryCountsShard(parent).rlock()->empty());
+}
+
+TEST(WalCompactionTest, thresholdIsCappedForLargeDirectories) {
+  // For very large directories, the unbounded `multiplier * baseSize`
+  // threshold would let the WAL accumulate millions of entries before
+  // triggering an inline rewrite — and that rewrite would stall every
+  // other op on the directory while it serializes the entire base file.
+  // The cap bounds the worst-case latency by ensuring compaction fires
+  // no later than `overlay:wal-compaction-cap` WAL entries regardless
+  // of base size. This test exercises the default cap (100,000).
+  constexpr size_t kCompactionCap = 100'000;
+  folly::test::TemporaryDirectory tmp("eden_wal_compact");
+  auto dir = canonicalPath(tmp.path().string());
+  auto bundle = makeWalLifecycleOverlay(dir);
+  ASSERT_NE(nullptr, bundle.store);
+
+  auto parent = bundle.overlay->allocateInodeNumber();
+  // Build a content with kCompactionCap + 40,000 entries. The threshold
+  // formula computes `baseSize = content.size() - count`, so for the
+  // entire test loop (count in [1, kCompactionCap]) baseSize stays
+  // >= 40,000 and the uncapped threshold (3 * baseSize >= 120,000)
+  // exceeds the cap. Without the cap, no compaction would fire within
+  // the loop; with the cap, compaction fires at exactly kCompactionCap.
+  // Names are zero-padded so PathMap insertion is sorted (O(N log N))
+  // instead of arbitrary-order O(N^2).
+  DirContents content(kPathMapDefaultCaseSensitive);
+  constexpr size_t kEntryCount = kCompactionCap + 40'000;
+  for (size_t i = 0; i < kEntryCount; ++i) {
+    auto name = PathComponent{fmt::format("f{:08d}", i)};
+    content.emplace(
+        name, S_IFREG | 0644, bundle.overlay->allocateInodeNumber());
+  }
+  // Prime the WAL so hasWal returns true at start.
+  bundle.store->appendWalEntry(
+      parent,
+      FsFileContentStore::WalOpType::REMOVE,
+      PathComponentPiece{"f00000000"},
+      nullptr);
+  // kCompactionCap-1 calls must not trigger compaction (threshold is
+  // capped at kCompactionCap, count is below it).
+  for (size_t i = 0; i < kCompactionCap - 1; ++i) {
+    bundle.overlay->maybeCompactWal(parent, content);
+  }
+  EXPECT_TRUE(bundle.store->hasWal(parent));
+  // The kCompactionCap-th call (count == kCompactionCap) triggers it.
+  bundle.overlay->maybeCompactWal(parent, content);
+  EXPECT_FALSE(bundle.store->hasWal(parent));
+
+  bundle.overlay->close();
+}
+
+TEST(WalCompactionTest, recompactsAfterReset) {
+  folly::test::TemporaryDirectory tmp("eden_wal_compact");
+  auto dir = canonicalPath(tmp.path().string());
+  auto bundle = makeWalLifecycleOverlay(dir);
+  ASSERT_NE(nullptr, bundle.store);
+
+  auto parent = bundle.overlay->allocateInodeNumber();
+  DirContents content(kPathMapDefaultCaseSensitive);
+  bundle.store->appendWalEntry(
+      parent,
+      FsFileContentStore::WalOpType::REMOVE,
+      PathComponentPiece{"x"},
+      nullptr);
+  for (int i = 0; i < 30; ++i) {
+    bundle.overlay->maybeCompactWal(parent, content);
+  }
+  ASSERT_FALSE(bundle.store->hasWal(parent));
+
+  // Second batch must also trigger compaction once the counter again
+  // exceeds the threshold.
+  bundle.store->appendWalEntry(
+      parent,
+      FsFileContentStore::WalOpType::REMOVE,
+      PathComponentPiece{"y"},
+      nullptr);
+  for (int i = 0; i < 30; ++i) {
+    bundle.overlay->maybeCompactWal(parent, content);
+  }
+  EXPECT_FALSE(bundle.store->hasWal(parent));
+
+  bundle.overlay->close();
+}
+
 } // namespace facebook::eden
 
 #endif

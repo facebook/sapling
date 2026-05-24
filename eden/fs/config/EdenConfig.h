@@ -2229,6 +2229,31 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<bool> overlayUseWal{"overlay:use-wal", false, this};
 
+  /**
+   * Multiplier applied to a directory's base size when computing the
+   * inline-compaction threshold. A compaction is triggered when the WAL
+   * entry count for a parent exceeds `multiplier * max(baseSize, 10)`,
+   * capped by `overlay:wal-compaction-cap`. Larger values let the WAL
+   * absorb more appends before paying the rewrite cost; smaller values
+   * keep load-time replay shorter at the cost of more frequent
+   * compactions. Snapshot at Overlay construction.
+   */
+  ConfigSetting<size_t> overlayWalCompactionMultiplier{
+      "overlay:wal-compaction-multiplier",
+      3,
+      this};
+
+  /**
+   * Hard upper bound on the inline-compaction threshold, regardless of
+   * directory size. Caps the worst-case time spent serializing a
+   * directory under the parent `TreeInode::contents_` lock during a
+   * compaction rewrite. Snapshot at Overlay construction.
+   */
+  ConfigSetting<size_t> overlayWalCompactionCap{
+      "overlay:wal-compaction-cap",
+      100'000,
+      this};
+
   // [clone]
 
   /**

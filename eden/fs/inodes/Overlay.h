@@ -394,6 +394,37 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
 
   friend class WalGuardTest_useWalRequiresFlagAndLegacyCatalog_Test;
   friend class WalGuardTest_canHaveWalFilesIgnoresFlag_Test;
+  friend class WalCompactionTest_belowThresholdRetainsWal_Test;
+  friend class WalCompactionTest_exceedsThresholdTriggersFullSave_Test;
+  friend class WalCompactionTest_largeBaseSizeScalesThreshold_Test;
+  friend class WalCompactionTest_nonWalCatalogDoesNotTrackCompaction_Test;
+  friend class WalCompactionTest_thresholdIsCappedForLargeDirectories_Test;
+  friend class WalCompactionTest_recompactsAfterReset_Test;
+
+  /**
+   * Increment the per-parent WAL entry counter and, if it crosses the
+   * inline-compaction threshold, rewrite the parent directory file from
+   * `content` and clear the WAL.
+   *
+   * Threshold is `min(walCompactionMultiplier_ * max(content.size() - count,
+   * 10), walCompactionCap_)`. For tiny directories the floor of 10 keeps a
+   * small constant overhead; for larger directories the threshold scales with
+   * the base size so the amortized rewrite cost stays O(1) per WAL append. The
+   * cap bounds the worst-case latency of the compaction itself: without it, a
+   * million-entry directory could let the WAL grow to ~3M entries before the
+   * inline rewrite stalls every other op on the directory.
+   *
+   * Compaction is intentionally inline (rather than on a background
+   * thread) — the existing `saveOverlayDir` path also runs synchronously
+   * under the parent contents lock, so a WAL write's worst case matches
+   * pre-WAL behavior while its expected case is O(1). A background
+   * compactor would need to coordinate with mutators on the same lock
+   * and offers no asymptotic improvement.
+   *
+   * Callers must hold the parent TreeInode's contents lock so that
+   * `content` is consistent with the WAL file on disk.
+   */
+  void maybeCompactWal(InodeNumber parent, const DirContents& content);
 
   /**
    * A request for the background GC thread.  There are three types of
@@ -559,7 +590,10 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   friend class IORequest;
 
   bool useDirectFileWrites_;
+
   bool useWal_{false};
+  size_t walCompactionMultiplier_{3};
+  size_t walCompactionCap_{100'000};
 
   /**
    * Drop any WAL state for `parent` after a full directory rewrite or

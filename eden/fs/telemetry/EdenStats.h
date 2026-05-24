@@ -647,6 +647,7 @@ struct OverlayStats : StatsGroup<OverlayStats> {
   Counter loadOverlayDirFailure{"overlay.load_overlay_dir_failure"};
   Counter saveOverlayDirSuccessful{"overlay.save_overlay_dir_successful"};
   Counter saveOverlayDirFailure{"overlay.save_overlay_dir_failure"};
+  Counter walCompaction{"overlay.wal_compaction"};
   Counter openOverlayFileSuccessful{"overlay.open_overlay_file_successful"};
   Counter openOverlayFileFailure{"overlay.open_overlay_file_failure"};
   Counter createOverlayFileSuccessful{"overlay.create_overlay_file_successful"};
