@@ -4,7 +4,7 @@ sidebar_position: 41
 
 ## status | st
 <!--
-  @generated SignedSource<<a3c52cd22ade381d4bfcb2b663c552d6>>
+  @generated SignedSource<<2214e9e3da8c505d62b95d14c3598aff>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -43,6 +43,9 @@ If `--rev` is specified and only one revision is given, it is used as
 the base revision. If two revisions are given, the differences between
 them are shown. The `--change` option can also be used as a shortcut
 to list the changed files of a revision from its first parent.
+
+`-A/--all`, `-c/--clean` can be extremely slow in large repositories
+because they scan all tracked files.
 
 `sl status` might appear to disagree with `sl diff` if permissions
 have changed or a merge has occurred, because the standard diff

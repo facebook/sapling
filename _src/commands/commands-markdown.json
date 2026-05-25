@@ -5,7 +5,7 @@
       "absorb",
       "ab"
     ],
-    "doc": "\n**intelligently integrate pending changes into current stack**\n\nAttempt to amend each pending change to the proper commit in your\nstack. Absorb does not write to the working copy.\n\nIf absorb cannot find an unambiguous commit to amend for a change, that\nchange will be left in the working copy, untouched. The unabsorbed\nchanges can be observed by `sl status` or `sl diff` afterwards.\n\nCommits outside the revset `::. and not public() and not merge()` will\nnot be changed.\n\nCommits that become empty after applying the changes will be deleted.\n\nBy default, absorb will show what it plans to do and prompt for\nconfirmation.  If you are confident that the changes will be absorbed\nto the correct place, run `sl absorb -a` to apply the changes\nimmediately.\n\nReturns 0 if anything was absorbed, 1 if nothing was absorbed.\n",
+    "doc": "\n**intelligently integrate pending changes into current stack**\n\nAttempt to amend each pending change to the proper commit in your\nstack. Absorb does not write to the working copy.\n\nIf absorb cannot find an unambiguous commit to amend for a change, that\nchange will be left in the working copy, untouched. The unabsorbed\nchanges can be observed by `sl status` or `sl diff` afterwards.\n\nCommits outside the revset\n`. % (public() | merge() | immutable)` will not be changed.\n\nCommits that become empty after applying the changes will be deleted.\n\nBy default, absorb will show what it plans to do and prompt for\nconfirmation.  If you are confident that the changes will be absorbed\nto the correct place, run `sl absorb -a` to apply the changes\nimmediately.\n\nReturns 0 if anything was absorbed, 1 if nothing was absorbed.\n",
     "args": [
       {
         "shortname": "a",
@@ -36,6 +36,12 @@
         "fullname": "date",
         "default": "",
         "description": "record the specified date as commit date"
+      },
+      {
+        "shortname": "P",
+        "fullname": "immutable",
+        "default": [],
+        "description": "consider REV as immutable"
       },
       {
         "shortname": "n",
@@ -2549,7 +2555,7 @@
     "aliases": [
       "show"
     ],
-    "doc": "\n**show commit in detail**\n\nShow the commit message and contents for the specified commit. If no commit\nis specified, shows the current commit.\n\n`sl show` behaves similarly to `sl log -vp -r REV [OPTION]... [FILE]...`, or\nif called without a `REV`, `sl log -vp -r . [OPTION]...` Use\n`sl log` for more powerful operations than supported by `sl show`.\n",
+    "doc": "\n**show commit in detail**\n\nShow the commit message and contents for the specified commit. If no commit\nis specified, shows the current commit.\n\nThe revision can be given positionally or via `-r/--rev`:\n\n- `sl show REV [FILE]...` \u2014 first positional is the revision, the rest  are files.\n\n- `sl show -r REV [FILE]...` \u2014 all positionals are files.\n\nA bare `sl show FILE` does not work, because `FILE` is parsed as a\nrevision.\n\n`sl show` behaves similarly to `sl log -vp -r REV [OPTION]... [FILE]...`, or\nif called without a `REV`, `sl log -vp -r . [OPTION]...` Use\n`sl log` for more powerful operations than supported by `sl show`.\n",
     "args": [
       {
         "shortname": "",
@@ -2580,6 +2586,12 @@
         "fullname": "unified",
         "default": 3,
         "description": "number of lines of diff context to show"
+      },
+      {
+        "shortname": "r",
+        "fullname": "rev",
+        "default": [],
+        "description": "show the specified revision"
       },
       {
         "shortname": "w",
@@ -2685,7 +2697,7 @@
       "status",
       "st"
     ],
-    "doc": "\n**list files with pending changes**\n\nShow status of files in the working copy using the following status\nindicators:\n\n```\nM = modified\nA = added\nR = removed\nC = clean\n! = missing (deleted by a non-sl command, but still tracked)\n? = not tracked\nI = ignored\n  = origin of the previous file (with --copies)\n```\n\nBy default, shows files that have been modified, added, removed,\ndeleted, or that are unknown (corresponding to the options `-mardu`,\nrespectively). Files that are unmodified, ignored, or the source of\na copy/move operation are not listed.\n\nTo control the exact statuses that are shown, specify the relevant\nflags (like `-rd` to show only files that are removed or deleted).\nAdditionally, specify `-q/--quiet` to hide both unknown and ignored\nfiles.\n\nTo show the status of specific files, provide a list of files to\nmatch. To include or exclude files using patterns or filesets, use\n`-I` or `-X`.\n\nIf `--rev` is specified and only one revision is given, it is used as\nthe base revision. If two revisions are given, the differences between\nthem are shown. The `--change` option can also be used as a shortcut\nto list the changed files of a revision from its first parent.\n\n`sl status` might appear to disagree with `sl diff` if permissions\nhave changed or a merge has occurred, because the standard diff\nformat does not report permission changes and `sl diff` only\nreports changes relative to one merge parent.\n\nThe `-t/--terse` option abbreviates the output by showing only the directory\nname if all the files in it share the same status. The option takes an\nargument indicating the statuses to abbreviate: &#x27;m&#x27; for &#x27;modified&#x27;, &#x27;a&#x27;\nfor &#x27;added&#x27;, &#x27;r&#x27; for &#x27;removed&#x27;, &#x27;d&#x27; for &#x27;deleted&#x27;, &#x27;u&#x27; for &#x27;unknown&#x27;, &#x27;i&#x27;\nfor &#x27;ignored&#x27; and &#x27;c&#x27; for clean.\n\nIt abbreviates only those statuses which are passed. Note that clean and\nignored files are not displayed with `--terse ic` unless the `-c/--clean`\nand `-i/--ignored` options are also used.\n\nThe `-v/--verbose` option shows information when the repository is in an\nunfinished merge, shelve, rebase state, etc. You can have this behavior\nturned on by default by enabling the `commands.status.verbose` config option.\n\nYou can skip displaying some of these states by setting\n`commands.status.skipstates` to one or more of: &#x27;bisect&#x27;, &#x27;graft&#x27;,\n&#x27;histedit&#x27;, &#x27;merge&#x27;, &#x27;rebase&#x27;, or &#x27;unshelve&#x27;.\n\nExamples:\n\n- show changes in the working directory relative to a  commit:\n\n```\nsl status --rev 88a692db8\n```\n\n- show changes in the working copy relative to the  current directory (see `sl help patterns` for more information):\n\n```\nsl status re:\n```\n\n- show all changes including copies in a commit:\n\n```\nsl status --copies --change 88a692db8\n```\n\n- get a NUL separated list of added files, suitable for xargs:\n\n```\nsl status -an0\n```\n\n- show more information about the repository status, abbreviating  added, removed, modified, deleted, and untracked paths:\n\n```\nsl status -v -t mardu\n```\n\nReturns 0 on success.\n",
+    "doc": "\n**list files with pending changes**\n\nShow status of files in the working copy using the following status\nindicators:\n\n```\nM = modified\nA = added\nR = removed\nC = clean\n! = missing (deleted by a non-sl command, but still tracked)\n? = not tracked\nI = ignored\n  = origin of the previous file (with --copies)\n```\n\nBy default, shows files that have been modified, added, removed,\ndeleted, or that are unknown (corresponding to the options `-mardu`,\nrespectively). Files that are unmodified, ignored, or the source of\na copy/move operation are not listed.\n\nTo control the exact statuses that are shown, specify the relevant\nflags (like `-rd` to show only files that are removed or deleted).\nAdditionally, specify `-q/--quiet` to hide both unknown and ignored\nfiles.\n\nTo show the status of specific files, provide a list of files to\nmatch. To include or exclude files using patterns or filesets, use\n`-I` or `-X`.\n\nIf `--rev` is specified and only one revision is given, it is used as\nthe base revision. If two revisions are given, the differences between\nthem are shown. The `--change` option can also be used as a shortcut\nto list the changed files of a revision from its first parent.\n\n`-A/--all`, `-c/--clean` can be extremely slow in large repositories\nbecause they scan all tracked files.\n\n`sl status` might appear to disagree with `sl diff` if permissions\nhave changed or a merge has occurred, because the standard diff\nformat does not report permission changes and `sl diff` only\nreports changes relative to one merge parent.\n\nThe `-t/--terse` option abbreviates the output by showing only the directory\nname if all the files in it share the same status. The option takes an\nargument indicating the statuses to abbreviate: &#x27;m&#x27; for &#x27;modified&#x27;, &#x27;a&#x27;\nfor &#x27;added&#x27;, &#x27;r&#x27; for &#x27;removed&#x27;, &#x27;d&#x27; for &#x27;deleted&#x27;, &#x27;u&#x27; for &#x27;unknown&#x27;, &#x27;i&#x27;\nfor &#x27;ignored&#x27; and &#x27;c&#x27; for clean.\n\nIt abbreviates only those statuses which are passed. Note that clean and\nignored files are not displayed with `--terse ic` unless the `-c/--clean`\nand `-i/--ignored` options are also used.\n\nThe `-v/--verbose` option shows information when the repository is in an\nunfinished merge, shelve, rebase state, etc. You can have this behavior\nturned on by default by enabling the `commands.status.verbose` config option.\n\nYou can skip displaying some of these states by setting\n`commands.status.skipstates` to one or more of: &#x27;bisect&#x27;, &#x27;graft&#x27;,\n&#x27;histedit&#x27;, &#x27;merge&#x27;, &#x27;rebase&#x27;, or &#x27;unshelve&#x27;.\n\nExamples:\n\n- show changes in the working directory relative to a  commit:\n\n```\nsl status --rev 88a692db8\n```\n\n- show changes in the working copy relative to the  current directory (see `sl help patterns` for more information):\n\n```\nsl status re:\n```\n\n- show all changes including copies in a commit:\n\n```\nsl status --copies --change 88a692db8\n```\n\n- get a NUL separated list of added files, suitable for xargs:\n\n```\nsl status -an0\n```\n\n- show more information about the repository status, abbreviating  added, removed, modified, deleted, and untracked paths:\n\n```\nsl status -v -t mardu\n```\n\nReturns 0 on success.\n",
     "args": [
       {
         "shortname": "A",

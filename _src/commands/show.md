@@ -4,7 +4,7 @@ sidebar_position: 37
 
 ## show
 <!--
-  @generated SignedSource<<9f092b0c1a7f5edec50001dfd99cc7a8>>
+  @generated SignedSource<<41a030799ac6ee8480059a8b65d6a242>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -13,6 +13,15 @@ sidebar_position: 37
 
 Show the commit message and contents for the specified commit. If no commit
 is specified, shows the current commit.
+
+The revision can be given positionally or via `-r/--rev`:
+
+- `sl show REV [FILE]...` — first positional is the revision, the rest  are files.
+
+- `sl show -r REV [FILE]...` — all positionals are files.
+
+A bare `sl show FILE` does not work, because `FILE` is parsed as a
+revision.
 
 `sl show` behaves similarly to `sl log -vp -r REV [OPTION]... [FILE]...`, or
 if called without a `REV`, `sl log -vp -r . [OPTION]...` Use
@@ -26,6 +35,7 @@ if called without a `REV`, `sl log -vp -r . [OPTION]...` Use
 | | `--stat`| | output diffstat-style summary of changes|
 | `-g`| `--git`| | use git extended diff format|
 | `-U`| `--unified`| `3`| number of lines of diff context to show|
+| `-r`| `--rev`| | show the specified revision|
 | `-w`| `--ignore-all-space`| | ignore white space when comparing lines|
 | `-b`| `--ignore-space-change`| | ignore changes in the amount of white space|
 | `-B`| `--ignore-blank-lines`| | ignore changes whose lines are all blank|
