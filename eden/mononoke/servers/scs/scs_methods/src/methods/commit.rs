@@ -25,8 +25,6 @@ use futures_watchdog::WatchdogExt;
 use hooks::HookExecution;
 use hooks::HookOutcome;
 use itertools::Either;
-use itertools::Itertools;
-use maplit::btreeset;
 use mononoke_api::BookmarkKey;
 use mononoke_api::CandidateSelectionHintArgs;
 use mononoke_api::ChangesetContext;
