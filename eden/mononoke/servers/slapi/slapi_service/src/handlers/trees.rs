@@ -245,7 +245,7 @@ async fn fetch_tree<R: MononokeRepo>(
                             &key,
                             path,
                             augmented_entry,
-                            child_restrictions.get(path).copied(),
+                            child_restrictions.get(path).copied().unwrap_or(false),
                         )
                     })
                     .collect();
@@ -321,7 +321,7 @@ fn fetch_augmented_child_metadata(
     key: &Key,
     path: &MPathElement,
     augmented_entry: &HgAugmentedManifestEntry,
-    directory_has_acl: Option<bool>,
+    directory_has_acl: bool,
 ) -> Result<TreeChildEntry, SaplingRemoteApiServerError> {
     match augmented_entry {
         HgAugmentedManifestEntry::FileNode(file) => Ok(TreeChildEntry::new_file_entry(
@@ -353,7 +353,7 @@ fn fetch_augmented_child_metadata(
                 augmented_manifest_id: tree.augmented_manifest_id.clone().into(),
                 augmented_manifest_size: tree.augmented_manifest_size.clone(),
             },
-            directory_has_acl,
+            Some(directory_has_acl),
         )),
     }
 }

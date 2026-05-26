@@ -306,47 +306,6 @@ pub(crate) async fn is_restricted_path(
         .map(|result| !result.is_empty())
 }
 
-/// Lookup sparse manifest restriction metadata using the configured mode.
-pub(crate) async fn get_manifest_restriction_metadata(
-    restricted_paths: &RestrictedPaths,
-    ctx: &CoreContext,
-    manifest_id: &ManifestId,
-    manifest_type: &ManifestType,
-    preloaded_is_restricted: Option<bool>,
-) -> Result<Option<bool>> {
-    if !restricted_paths.may_have_restricted_paths() {
-        return Ok(None);
-    }
-
-    match restricted_paths.config().acl_manifest_mode {
-        AclManifestMode::Authoritative => Ok(preloaded_is_restricted),
-        AclManifestMode::Both if preloaded_is_restricted == Some(true) => Ok(Some(true)),
-        AclManifestMode::Both => {
-            if has_manifest_restriction(restricted_paths, ctx, manifest_id, manifest_type).await? {
-                Ok(Some(true))
-            } else {
-                Ok(preloaded_is_restricted)
-            }
-        }
-        AclManifestMode::Disabled | AclManifestMode::Shadow => {
-            has_manifest_restriction(restricted_paths, ctx, manifest_id, manifest_type)
-                .await
-                .map(|has_restriction| has_restriction.then_some(true))
-        }
-    }
-}
-
-async fn has_manifest_restriction(
-    restricted_paths: &RestrictedPaths,
-    ctx: &CoreContext,
-    manifest_id: &ManifestId,
-    manifest_type: &ManifestType,
-) -> Result<bool> {
-    get_manifest_restriction_info(restricted_paths, ctx, manifest_id, manifest_type)
-        .await
-        .map(|info| !info.is_empty())
-}
-
 /// Returns whether an HgAugmented manifest is a restriction root according to
 /// the sources enabled by `AclManifestMode`.
 ///
@@ -357,14 +316,56 @@ async fn has_manifest_restriction(
 /// intentional: manifests recorded while a path was configured as restricted
 /// should remain restricted even if that path is later removed from config.
 pub async fn is_restricted_manifest(
-    _restricted_paths: &RestrictedPaths,
-    _ctx: &CoreContext,
-    _manifest_id: &ManifestId,
-    _manifest_type: &ManifestType,
-    _preloaded_is_restricted: bool,
+    restricted_paths: &RestrictedPaths,
+    ctx: &CoreContext,
+    manifest_id: &ManifestId,
+    manifest_type: &ManifestType,
+    preloaded_is_restricted: bool,
 ) -> Result<bool> {
-    // TODO(T248658346): implement this
-    return Ok(false);
+    if !matches!(manifest_type, ManifestType::HgAugmented) {
+        return unsupported_acl_manifest_type_error(manifest_type);
+    }
+
+    if !restricted_paths.may_have_restricted_paths() {
+        return Ok(false);
+    }
+
+    match restricted_paths.config().acl_manifest_mode {
+        AclManifestMode::Disabled | AclManifestMode::Shadow => {
+            is_restricted_manifest_from_config(restricted_paths, ctx, manifest_id, manifest_type)
+                .await
+        }
+        AclManifestMode::Authoritative => Ok(preloaded_is_restricted),
+        AclManifestMode::Both => {
+            if preloaded_is_restricted {
+                Ok(true)
+            } else {
+                is_restricted_manifest_from_config(
+                    restricted_paths,
+                    ctx,
+                    manifest_id,
+                    manifest_type,
+                )
+                .await
+            }
+        }
+    }
+}
+
+async fn is_restricted_manifest_from_config(
+    restricted_paths: &RestrictedPaths,
+    ctx: &CoreContext,
+    manifest_id: &ManifestId,
+    manifest_type: &ManifestType,
+) -> Result<bool> {
+    Ok(!get_manifest_restricted_paths_from_config(
+        restricted_paths,
+        ctx,
+        manifest_id,
+        manifest_type,
+    )
+    .await?
+    .is_empty())
 }
 
 /// Find all restriction roots that are descendants of any of the given root paths.

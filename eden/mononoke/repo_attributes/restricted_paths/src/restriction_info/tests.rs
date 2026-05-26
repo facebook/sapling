@@ -333,7 +333,7 @@ mod manifest_restriction_metadata {
         let (ctx, restricted_paths) =
             manifest_restriction_metadata_fixture(fb, AclManifestMode::Both).await?;
 
-        let _err = is_restricted_manifest(
+        let err = is_restricted_manifest(
             &restricted_paths,
             &ctx,
             &ManifestId::from("unsupported_manifest"),
@@ -341,9 +341,14 @@ mod manifest_restriction_metadata {
             false,
         )
         .await
-        .err();
+        .err()
+        .context("expected unsupported manifest type to error")?;
 
-        // TODO(T248658346): assert expected error message was thrown
+        assert!(
+            err.to_string()
+                .contains("AclManifest manifest restriction lookup only supports HgAugmented"),
+            "unexpected error: {err:#}"
+        );
 
         Ok(())
     }
@@ -355,8 +360,26 @@ mod manifest_restriction_metadata {
         let manifest_id = ManifestId::from("authoritative_manifest");
         add_manifest_id_store_entry(&restricted_paths, &ctx, manifest_id.clone()).await?;
 
-        // TODO(T248658346): assert preloaded manifest is used for authoritative mode
-
+        assert!(
+            !is_restricted_manifest(
+                &restricted_paths,
+                &ctx,
+                &manifest_id,
+                &ManifestType::HgAugmented,
+                false,
+            )
+            .await?
+        );
+        assert!(
+            is_restricted_manifest(
+                &restricted_paths,
+                &ctx,
+                &manifest_id,
+                &ManifestType::HgAugmented,
+                true,
+            )
+            .await?
+        );
         Ok(())
     }
 
@@ -368,9 +391,39 @@ mod manifest_restriction_metadata {
             manifest_restriction_metadata_fixture(fb, AclManifestMode::Both).await?;
         let manifest_id = ManifestId::from("both_manifest");
 
+        assert!(
+            is_restricted_manifest(
+                &restricted_paths,
+                &ctx,
+                &manifest_id,
+                &ManifestType::HgAugmented,
+                true,
+            )
+            .await?
+        );
+        assert!(
+            !is_restricted_manifest(
+                &restricted_paths,
+                &ctx,
+                &manifest_id,
+                &ManifestType::HgAugmented,
+                false,
+            )
+            .await?
+        );
+
         add_manifest_id_store_entry(&restricted_paths, &ctx, manifest_id.clone()).await?;
 
-        // TODO(T248658346): assert preloaded is used
+        assert!(
+            is_restricted_manifest(
+                &restricted_paths,
+                &ctx,
+                &manifest_id,
+                &ManifestType::HgAugmented,
+                false,
+            )
+            .await?
+        );
 
         Ok(())
     }
@@ -388,9 +441,19 @@ mod manifest_restriction_metadata {
         ] {
             let (ctx, restricted_paths) = manifest_restriction_metadata_fixture(fb, mode).await?;
             add_manifest_id_store_entry(&restricted_paths, &ctx, manifest_id.clone()).await?;
+
+            assert!(
+                is_restricted_manifest(
+                    &restricted_paths,
+                    &ctx,
+                    &manifest_id,
+                    &ManifestType::HgAugmented,
+                    false,
+                )
+                .await?
+            );
         }
 
-        // TODO(T248658346): assert preloaded is not used
         Ok(())
     }
 }

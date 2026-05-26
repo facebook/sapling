@@ -206,7 +206,7 @@ impl<R: MononokeRepo> HgAugmentedTreeContext<R> {
             .try_collect::<Vec<_>>()
             .await?;
 
-        Ok(child_restrictions.into_iter().flatten().collect())
+        Ok(child_restrictions.into_iter().collect())
     }
 
     pub fn augmented_children_entries(
@@ -390,9 +390,12 @@ impl<R: MononokeRepo> HgAugmentedTreeRestrictionContext<R> {
         &self,
         preloaded_manifest: &HgPreloadedAugmentedManifest,
     ) -> Result<bool, MononokeError> {
-        self.restriction_metadata(Some(preloaded_manifest.is_restricted))
+        if !self.use_restricted_paths_for_acl_metadata {
+            return Ok(preloaded_manifest.is_restricted);
+        }
+
+        self.is_manifest_restricted(preloaded_manifest.is_restricted)
             .await
-            .map(|is_restricted| is_restricted.unwrap_or(false))
     }
 
     async fn child_is_restricted(
@@ -400,33 +403,12 @@ impl<R: MononokeRepo> HgAugmentedTreeRestrictionContext<R> {
         name: MPathElement,
         preloaded_child_is_restricted: Option<bool>,
         child_mfid: HgAugmentedManifestId,
-    ) -> Result<Option<(MPathElement, bool)>, MononokeError> {
+    ) -> Result<(MPathElement, bool), MononokeError> {
         let child_ctx = self.child_ctx(child_mfid);
-        child_ctx
-            .restriction_metadata(preloaded_child_is_restricted)
-            .await
-            .map(|is_restricted| is_restricted.map(|is_restricted| (name, is_restricted)))
-    }
-
-    async fn restriction_metadata(
-        &self,
-        preloaded_is_restricted: Option<bool>,
-    ) -> Result<Option<bool>, MononokeError> {
-        if !self.use_restricted_paths_for_acl_metadata {
-            return Ok(preloaded_is_restricted);
-        }
-
-        let restricted_paths = self.repo_ctx.repo().restricted_paths_arc();
-        let manifest_id_bytes = ManifestId::new(self.manifest_id.as_bytes().into());
-        restricted_paths
-            .get_manifest_restriction_metadata(
-                self.repo_ctx.ctx(),
-                &manifest_id_bytes,
-                &ManifestType::HgAugmented,
-                preloaded_is_restricted,
-            )
-            .await
-            .map_err(MononokeError::from)
+        let is_restricted = child_ctx
+            .is_manifest_restricted(preloaded_child_is_restricted.unwrap_or(false))
+            .await?;
+        Ok((name, is_restricted))
     }
 
     /// Query restriction and authorization check results for this manifest node.
@@ -459,6 +441,25 @@ impl<R: MononokeRepo> HgAugmentedTreeRestrictionContext<R> {
                 self.repo_ctx.ctx(),
                 &manifest_id_bytes,
                 &ManifestType::HgAugmented,
+            )
+            .await
+            .map_err(MononokeError::from)
+    }
+
+    /// Query restriction metadata for this manifest node without checking authorization.
+    async fn is_manifest_restricted(
+        &self,
+        preloaded_is_restricted: bool,
+    ) -> Result<bool, MononokeError> {
+        let restricted_paths = self.repo_ctx.repo().restricted_paths_arc();
+
+        let manifest_id_bytes = ManifestId::new(self.manifest_id.as_bytes().into());
+        restricted_paths
+            .is_restricted_manifest(
+                self.repo_ctx.ctx(),
+                &manifest_id_bytes,
+                &ManifestType::HgAugmented,
+                preloaded_is_restricted,
             )
             .await
             .map_err(MononokeError::from)

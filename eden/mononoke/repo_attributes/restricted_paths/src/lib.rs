@@ -162,6 +162,10 @@ impl RestrictedPaths {
     /// dynamically from `.slacl` files in the repo, so callers cannot treat a
     /// false config-only lookup as proof that no restricted paths exist.
     pub fn may_have_restricted_paths(&self) -> bool {
+        // TODO(T248658346): account for manifest-id store entries that were
+        // recorded for paths that have since been removed from the current
+        // config. Historical manifests for those paths should still be treated
+        // as restricted.
         !self.config().acl_manifest_mode.is_disabled() || self.config_based.has_restricted_paths()
     }
 
@@ -251,24 +255,6 @@ impl RestrictedPaths {
         manifest_type: &ManifestType,
     ) -> Result<Vec<ManifestRestrictionInfo>> {
         restriction_info::get_manifest_restriction_info(self, ctx, manifest_id, manifest_type).await
-    }
-
-    /// Get sparse manifest restriction metadata without performing authorization checks.
-    pub async fn get_manifest_restriction_metadata(
-        &self,
-        ctx: &CoreContext,
-        manifest_id: &ManifestId,
-        manifest_type: &ManifestType,
-        preloaded_is_restricted: Option<bool>,
-    ) -> Result<Option<bool>> {
-        restriction_info::get_manifest_restriction_metadata(
-            self,
-            ctx,
-            manifest_id,
-            manifest_type,
-            preloaded_is_restricted,
-        )
-        .await
     }
 
     /// Check if a path is itself a restriction root (exact match).
