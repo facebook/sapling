@@ -293,6 +293,30 @@ impl RestrictedPaths {
         restriction_info::is_restricted_path(self, ctx, cs_id, path).await
     }
 
+    /// Returns whether this HgAugmented manifest is a restriction root
+    /// according to the sources enabled by `AclManifestMode`.
+    ///
+    /// `preloaded_is_restricted` is the AclManifest-backed restriction bit that
+    /// the caller already loaded with the HgAugmented manifest. This primitive
+    /// combines that value with the config-backed manifest-id store when the
+    /// selected mode requires it, without reloading AclManifest data.
+    pub async fn is_restricted_manifest(
+        &self,
+        ctx: &CoreContext,
+        manifest_id: &ManifestId,
+        manifest_type: &ManifestType,
+        preloaded_is_restricted: bool,
+    ) -> Result<bool> {
+        restriction_info::is_restricted_manifest(
+            self,
+            ctx,
+            manifest_id,
+            manifest_type,
+            preloaded_is_restricted,
+        )
+        .await
+    }
+
     /// Find all restriction roots that are descendants of any of the given root paths.
     /// Results are deduplicated by restriction_root.
     pub async fn find_restricted_descendants(

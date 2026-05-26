@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use acl_manifest::RootAclManifestId;
@@ -28,6 +29,7 @@ use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
+use mononoke_types::RepoPath;
 use mononoke_types::RepositoryId;
 use permission_checker::dummy::DummyAclProvider;
 use repo_blobstore::RepoBlobstore;
@@ -46,9 +48,11 @@ use super::find_restricted_descendants_from_acl_manifest;
 use super::get_manifest_restriction_info_from_acl_manifest;
 use super::get_path_restriction_info_from_acl_manifest;
 use super::get_path_restriction_root_info_from_acl_manifest;
+use super::is_restricted_manifest;
 use super::union_manifest_restriction_info_with_config_precedence;
 use crate::ManifestId;
 use crate::ManifestType;
+use crate::RestrictedPathManifestIdEntry;
 use crate::RestrictedPaths;
 use crate::RestrictedPathsConfig;
 use crate::RestrictedPathsConfigBased;
@@ -78,6 +82,8 @@ struct ManifestLookupFixture {
     manifest_id: ManifestId,
     manifest_type: ManifestType,
 }
+
+const CONFIG_ACL: &str = "REPO_REGION:repos/hg/fbsource/=configured";
 
 mod manifest_metadata_union {
     use super::*;
@@ -304,14 +310,87 @@ mod hg_augmented_manifest_lookup {
             &fixture.manifest_type,
         )
         .await;
+
         let err = results
             .err()
             .context("expected unsupported manifest type to error")?;
+
         assert!(
             err.to_string()
                 .contains("AclManifest manifest restriction lookup only supports HgAugmented"),
             "unexpected error: {err:#}"
         );
+
+        Ok(())
+    }
+}
+
+mod manifest_restriction_metadata {
+    use super::*;
+
+    #[mononoke::fbinit_test]
+    async fn test_rejects_unsupported_manifest_type(fb: FacebookInit) -> Result<()> {
+        let (ctx, restricted_paths) =
+            manifest_restriction_metadata_fixture(fb, AclManifestMode::Both).await?;
+
+        let _err = is_restricted_manifest(
+            &restricted_paths,
+            &ctx,
+            &ManifestId::from("unsupported_manifest"),
+            &ManifestType::Hg,
+            false,
+        )
+        .await
+        .err();
+
+        // TODO(T248658346): assert expected error message was thrown
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_authoritative_uses_preloaded_acl_manifest_value(fb: FacebookInit) -> Result<()> {
+        let (ctx, restricted_paths) =
+            manifest_restriction_metadata_fixture(fb, AclManifestMode::Authoritative).await?;
+        let manifest_id = ManifestId::from("authoritative_manifest");
+        add_manifest_id_store_entry(&restricted_paths, &ctx, manifest_id.clone()).await?;
+
+        // TODO(T248658346): assert preloaded manifest is used for authoritative mode
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_both_unions_preloaded_acl_manifest_and_config_store(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        let (ctx, restricted_paths) =
+            manifest_restriction_metadata_fixture(fb, AclManifestMode::Both).await?;
+        let manifest_id = ManifestId::from("both_manifest");
+
+        add_manifest_id_store_entry(&restricted_paths, &ctx, manifest_id.clone()).await?;
+
+        // TODO(T248658346): assert preloaded is used
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_config_backed_modes_use_manifest_id_store_without_current_config_revalidation(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        for (mode, manifest_id) in [
+            (
+                AclManifestMode::Disabled,
+                ManifestId::from("disabled_manifest"),
+            ),
+            (AclManifestMode::Shadow, ManifestId::from("shadow_manifest")),
+        ] {
+            let (ctx, restricted_paths) = manifest_restriction_metadata_fixture(fb, mode).await?;
+            add_manifest_id_store_entry(&restricted_paths, &ctx, manifest_id.clone()).await?;
+        }
+
+        // TODO(T248658346): assert preloaded is not used
         Ok(())
     }
 }
@@ -378,13 +457,27 @@ fn restricted_paths_for_repo(
     fb: FacebookInit,
     repo: &AclManifestLookupTestRepo,
 ) -> Result<RestrictedPaths> {
+    restricted_paths_for_repo_with_mode_and_path_acls(fb, repo, AclManifestMode::Both, vec![])
+}
+
+fn restricted_paths_for_repo_with_mode_and_path_acls(
+    fb: FacebookInit,
+    repo: &AclManifestLookupTestRepo,
+    acl_manifest_mode: AclManifestMode,
+    path_acls: Vec<(&str, &str)>,
+) -> Result<RestrictedPaths> {
     let manifest_id_store = Arc::new(
         SqlRestrictedPathsManifestIdStoreBuilder::with_sqlite_in_memory()?
             .with_repo_id(RepositoryId::new(0)),
     );
+    let path_acls = path_acls
+        .into_iter()
+        .map(|(path, acl)| Ok((NonRootMPath::new(path)?, acl.parse()?)))
+        .collect::<Result<HashMap<_, _>>>()?;
     let config_based = Arc::new(RestrictedPathsConfigBased::new(
         RestrictedPathsConfig {
-            acl_manifest_mode: AclManifestMode::Both,
+            acl_manifest_mode,
+            path_acls,
             ..Default::default()
         },
         manifest_id_store,
@@ -396,6 +489,41 @@ fn restricted_paths_for_repo(
         MononokeScubaSampleBuilder::with_discard(),
         repo.repo_derived_data_arc(),
     )
+}
+
+async fn manifest_restriction_metadata_fixture(
+    fb: FacebookInit,
+    acl_manifest_mode: AclManifestMode,
+) -> Result<(CoreContext, RestrictedPaths)> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: AclManifestLookupTestRepo = test_repo_factory::build_empty(fb).await?;
+    let restricted_paths = restricted_paths_for_repo_with_mode_and_path_acls(
+        fb,
+        &repo,
+        acl_manifest_mode,
+        vec![("still_configured", CONFIG_ACL)],
+    )?;
+    Ok((ctx, restricted_paths))
+}
+
+async fn add_manifest_id_store_entry(
+    restricted_paths: &RestrictedPaths,
+    ctx: &CoreContext,
+    manifest_id: ManifestId,
+) -> Result<()> {
+    restricted_paths
+        .config_based()
+        .manifest_id_store()
+        .add_entry(
+            ctx,
+            RestrictedPathManifestIdEntry::new(
+                ManifestType::HgAugmented,
+                manifest_id,
+                RepoPath::DirectoryPath(NonRootMPath::new("removed_from_config")?),
+            )?,
+        )
+        .await?;
+    Ok(())
 }
 
 async fn derive_and_load_hg_augmented_manifest(
