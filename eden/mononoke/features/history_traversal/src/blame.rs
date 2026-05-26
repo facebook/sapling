@@ -59,12 +59,11 @@ use crate::common::find_possible_mutable_ancestors;
 type BlameFileId = Either<FileUnodeId, HistoryManifestFileId>;
 
 fn should_use_blame_v3(repo: &impl Repo) -> Result<bool, BlameError> {
-    justknobs::eval(
+    Ok(justknobs::eval(
         "scm/mononoke:use_blame_v3",
         None,
         Some(repo.repo_identity().name()),
-    )
-    .map_err(BlameError::Error)
+    ))
 }
 
 /// Load file content given a BlameFileId (either unode or history manifest).

@@ -566,8 +566,7 @@ impl SqlBookmarks {
             // on USC.
             client_main_id,
             None,
-        )
-        .unwrap_or(false);
+        );
 
         let conn = if read_from_replica && freshness == Freshness::MaybeStale {
             ctx.perf_counters()

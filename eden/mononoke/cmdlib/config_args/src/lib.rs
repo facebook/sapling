@@ -119,7 +119,7 @@ impl ConfigArgs {
     /// Derives the per-repo manifest path when split-loading is enabled.
     /// Returns `None` when the JustKnob is off or when using non-configerator config.
     fn manifest_path(&self) -> Result<Option<String>> {
-        if !justknobs::eval("scm/mononoke:use_split_config_loading", None, None)? {
+        if !justknobs::eval("scm/mononoke:use_split_config_loading", None, None) {
             return Ok(None);
         }
         // Try --config_tier / --prod / --git_config first, then fall back to

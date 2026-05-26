@@ -49,7 +49,6 @@ pub async fn save_changesets(
             None,
             Some(repo.repo_identity().name()),
         )
-        .unwrap_or(false)
     {
         return Err(anyhow!("Subtree changes are disabled"));
     }
@@ -62,7 +61,6 @@ pub async fn save_changesets(
             None,
             Some(repo.repo_identity().name()),
         )
-        .unwrap_or(false)
     {
         return Err(anyhow!("Subtree changes that alter manifests are disabled"));
     }

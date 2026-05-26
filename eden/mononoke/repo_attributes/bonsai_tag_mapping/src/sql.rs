@@ -315,7 +315,7 @@ async fn select_mapping_by_changeset(
         "scm/mononoke:rendezvous_bonsai_tag_mapping",
         ctx.client_correlator(),
         None,
-    )?;
+    );
 
     if use_rendezvous {
         select_mapping_by_changeset_rendezvous(ctx, connection, repo_id, changeset_ids).await
@@ -418,7 +418,7 @@ async fn select_mapping_by_tag_hash(
         "scm/mononoke:rendezvous_bonsai_tag_mapping",
         ctx.client_correlator(),
         None,
-    )?;
+    );
 
     if use_rendezvous {
         select_mapping_by_tag_hash_rendezvous(ctx, connection, repo_id, tag_hashes).await

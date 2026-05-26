@@ -43,7 +43,10 @@ pub struct CommitCompareResult {
 /// Returns the maximum number of paths allowed in an unordered commit_compare,
 /// read from JustKnobs (`scm/mononoke:commit_compare_unordered_max_paths`).
 pub fn unordered_max_paths() -> Result<usize> {
-    justknobs::get_as::<usize>("scm/mononoke:commit_compare_unordered_max_paths", None)
+    Ok(justknobs::get_as::<usize>(
+        "scm/mononoke:commit_compare_unordered_max_paths",
+        None,
+    ))
 }
 
 /// Core commit_compare logic, shared between SCS and diff_service.

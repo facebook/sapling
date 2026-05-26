@@ -132,9 +132,7 @@ impl BonsaiTagMapping for CachedBonsaiTagMapping {
 
     /// Fetch all the tag mapping entries for the given repo
     async fn get_all_entries(&self, ctx: &CoreContext) -> Result<Vec<BonsaiTagMappingEntry>> {
-        if justknobs::eval("scm/mononoke:enable_bonsai_tag_mapping_caching", None, None)
-            .unwrap_or(false)
-        {
+        if justknobs::eval("scm/mononoke:enable_bonsai_tag_mapping_caching", None, None) {
             Ok(self.entries.load_full().to_vec())
         } else {
             self.inner.get_all_entries(ctx).await
@@ -148,9 +146,7 @@ impl BonsaiTagMapping for CachedBonsaiTagMapping {
         ctx: &CoreContext,
         changeset_ids: Vec<ChangesetId>,
     ) -> Result<Vec<BonsaiTagMappingEntry>> {
-        if justknobs::eval("scm/mononoke:enable_bonsai_tag_mapping_caching", None, None)
-            .unwrap_or(false)
-        {
+        if justknobs::eval("scm/mononoke:enable_bonsai_tag_mapping_caching", None, None) {
             let changeset_ids = changeset_ids.into_iter().collect::<HashSet<_>>();
             Ok(self
                 .entries
@@ -183,9 +179,7 @@ impl BonsaiTagMapping for CachedBonsaiTagMapping {
                     .await
             }
             Freshness::MaybeStale => {
-                if justknobs::eval("scm/mononoke:enable_bonsai_tag_mapping_caching", None, None)
-                    .unwrap_or(false)
-                {
+                if justknobs::eval("scm/mononoke:enable_bonsai_tag_mapping_caching", None, None) {
                     let entry = self
                         .entries
                         .load()
@@ -208,9 +202,7 @@ impl BonsaiTagMapping for CachedBonsaiTagMapping {
         ctx: &CoreContext,
         tag_hashes: Vec<GitSha1>,
     ) -> Result<Vec<BonsaiTagMappingEntry>> {
-        if justknobs::eval("scm/mononoke:enable_bonsai_tag_mapping_caching", None, None)
-            .unwrap_or(false)
-        {
+        if justknobs::eval("scm/mononoke:enable_bonsai_tag_mapping_caching", None, None) {
             let tag_hashes = tag_hashes.into_iter().collect::<HashSet<_>>();
             Ok(self
                 .entries

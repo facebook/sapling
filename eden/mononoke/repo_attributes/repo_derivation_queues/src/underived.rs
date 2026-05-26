@@ -130,7 +130,7 @@ pub async fn build_underived_batched_graph<'a>(
                     None,
                 )?;
 
-                let max_failed_attempts = justknobs::get_as::<u64>("scm/mononoke:build_underived_batched_graph_max_failed_attempts", None)?;
+                let max_failed_attempts = justknobs::get_as::<u64>("scm/mononoke:build_underived_batched_graph_max_failed_attempts", None);
 
                 let mut upstream_dep: Option<DagItemDep> = Some(DagItemDep {
                     dag_item_id: item.id().clone(),

@@ -388,7 +388,7 @@ where
         "scm/mononoke:xrepo_disable_forward_sync_over_mapping_change",
         None,
         None,
-    )? {
+    ) {
         return Ok((parent_version, HashMap::new()));
     }
     let target_repo = commit_sync_data.get_target_repo();
@@ -853,7 +853,7 @@ pub async fn update_mapping_with_version<'a, R: Repo>(
     version_name: &CommitSyncConfigVersion,
 ) -> Result<(), Error> {
     let xrepo_sync_disable_all_syncs =
-        justknobs::eval("scm/mononoke:xrepo_sync_disable_all_syncs", None, None)?;
+        justknobs::eval("scm/mononoke:xrepo_sync_disable_all_syncs", None, None);
     if xrepo_sync_disable_all_syncs {
         return Err(ErrorKind::XRepoSyncDisabled.into());
     }

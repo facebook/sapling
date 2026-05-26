@@ -94,7 +94,7 @@ pub(crate) async fn derive_from_predecessor(
     let chunk_size = justknobs::get_as::<usize>(
         "scm/mononoke:content_manifest_derive_from_predecessor_chunk_size",
         None,
-    )?;
+    );
 
     let maybe_id =
         inner_derive_from_predecessor(ctx, blobstore, &restricted_paths, predecessor, chunk_size)

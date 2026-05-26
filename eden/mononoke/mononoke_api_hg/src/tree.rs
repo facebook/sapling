@@ -7,7 +7,6 @@
 
 use std::collections::HashMap;
 
-use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use bytes::Bytes;
@@ -371,13 +370,7 @@ impl<R: MononokeRepo> HgAugmentedTreeRestrictionContext<R> {
             USE_RESTRICTED_PATHS_FOR_AUGMENTED_TREE_ACL_METADATA,
             None,
             Some(repo_name),
-        )
-        .with_context(|| {
-            format!(
-                "Failed to evaluate JustKnob {} for repo {}",
-                USE_RESTRICTED_PATHS_FOR_AUGMENTED_TREE_ACL_METADATA, repo_name,
-            )
-        })?;
+        );
 
         Ok(Self {
             repo_ctx,

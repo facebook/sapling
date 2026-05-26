@@ -34,9 +34,7 @@ const CHANGE_XREPO_MAPPING_EXTRA: &str = "change-xrepo-mapping-to-version";
 fn get_mapping_change_version_from_hg_extra<'a>(
     mut hg_extra: impl Iterator<Item = (&'a str, &'a [u8])>,
 ) -> Result<Option<CommitSyncConfigVersion>, Error> {
-    if justknobs::eval("scm/mononoke:ignore_change_xrepo_mapping_extra", None, None)
-        .unwrap_or(false)
-    {
+    if justknobs::eval("scm/mononoke:ignore_change_xrepo_mapping_extra", None, None) {
         return Ok(None);
     }
     let maybe_mapping = hg_extra.find(|(name, _)| name == &CHANGE_XREPO_MAPPING_EXTRA);
@@ -252,8 +250,7 @@ impl PushrebaseTransactionHook for CrossRepoSyncTransactionHook {
     ) -> Result<Transaction, BookmarkTransactionError> {
         let txn = if let Some(entry) = &self.forward_synced_entry {
             let xrepo_sync_disable_all_syncs =
-                justknobs::eval("scm/mononoke:xrepo_sync_disable_all_syncs", None, None)
-                    .unwrap_or_default();
+                justknobs::eval("scm/mononoke:xrepo_sync_disable_all_syncs", None, None);
             if xrepo_sync_disable_all_syncs {
                 return Err(anyhow!(
                     "X-repo sync is temporarily disabled, contact source control oncall"

@@ -73,7 +73,7 @@ fn get_squashing_overrides(repo_name: &str, target_bookmark: &str) -> Result<(Op
     let squashing_limit = justknobs::get(
         "scm/mononoke:megarepo_override_squashing_limit",
         Some(&switchval),
-    )?;
+    );
 
     let maybe_squashing_limit = if squashing_limit == 0 {
         None

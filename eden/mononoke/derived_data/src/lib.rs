@@ -89,8 +89,7 @@ pub fn override_ctx(mut ctx: CoreContext, repo: impl RepoIdentityRef) -> CoreCon
         "scm/mononoke:derived_data_use_background_session_class",
         None,
         Some(repo.repo_identity().name()),
-    )
-    .unwrap_or_default();
+    );
     if use_bg_class {
         ctx.session_mut()
             .override_session_class(SessionClass::BackgroundUnlessTooSlow);

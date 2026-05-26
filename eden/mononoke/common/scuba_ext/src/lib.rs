@@ -248,8 +248,7 @@ impl MononokeScubaSampleBuilder {
                         .chain(vec![(None)])
                         .filter_map(move |opt_switch| {
                             let enabled =
-                                justknobs::eval(jk_name, consistent_hashing, opt_switch.clone())
-                                    .unwrap_or(false);
+                                justknobs::eval(jk_name, consistent_hashing, opt_switch.clone());
                             // If it's enabled, log either the JK name (no switch)
                             // or `<JK>::<switch>`
                             enabled.then(|| {

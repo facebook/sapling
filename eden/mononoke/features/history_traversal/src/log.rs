@@ -12,7 +12,6 @@ use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::sync::Arc;
 
-use anyhow::Context;
 use anyhow::Error;
 use anyhow::anyhow;
 use anyhow::format_err;
@@ -301,9 +300,7 @@ pub async fn list_file_history<'a>(
         "scm/mononoke:fastlog_disable_mutable_renames",
         None,
         Some(repo.repo_identity().name()),
-    )
-    .context("Failed to contact justknob server")?
-    {
+    ) {
         follow_mutable_renames = FollowMutableRenames::No;
     }
     let path = Arc::new(path);

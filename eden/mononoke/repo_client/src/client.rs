@@ -123,13 +123,10 @@ struct SamplingRate(NonZeroU64);
 const UNSAMPLED: SamplingRate = SamplingRate(nonzero!(1u64));
 
 fn default_timeout() -> Duration {
-    const FALLBACK_TIMEOUT_SECS: u64 = 15 * 60;
-
     let timeout: u64 = justknobs::get_as::<u64>(
         "scm/mononoke_timeouts:repo_client_default_timeout_secs",
         None,
-    )
-    .unwrap_or(FALLBACK_TIMEOUT_SECS);
+    );
 
     Duration::from_secs(timeout)
 }
@@ -401,7 +398,7 @@ impl<R: Repo> RepoClient<R> {
                     let max_nodes = justknobs::get_as::<usize>(
                         "scm/mononoke:repo_client_max_nodes_in_known_method",
                         None,
-                    )?;
+                    );
 
                     if max_nodes > 0 {
                         if nodes_len > max_nodes {

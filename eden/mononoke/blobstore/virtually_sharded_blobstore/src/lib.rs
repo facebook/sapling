@@ -424,7 +424,7 @@ fn report_deduplicated_put(ctx: &CoreContext, key: &str) -> Result<()> {
     if let Some(sampling_rate) = NonZeroU64::new(justknobs::get_as::<u64>(
         "scm/mononoke:blobstore_deduplicated_put_sampling_rate",
         None,
-    )?) {
+    )) {
         scuba.sampled(sampling_rate);
     }
     scuba.add("key", key).log_with_msg("Put deduplicated", None);

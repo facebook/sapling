@@ -519,8 +519,7 @@ impl<R: RepoDerivedDataArc + RepoIdentityRef> ChangesetContext<R> {
                     "scm/mononoke:derived_data_use_content_manifests",
                     None,
                     Some(&repo_name),
-                )
-                .unwrap_or(false);
+                );
                 if use_content_manifests {
                     let fut = self.derive::<RootContentManifestId>();
                     either::Either::Left(async move {
@@ -1133,7 +1132,7 @@ impl<R: MononokeRepo> ChangesetContext<R> {
             "scm/mononoke:changeset_path_context_use_skeleton_manifest_v2",
             None,
             Some(self.repo_ctx().name()),
-        )? {
+        ) {
             Ok(self
                 .root_skeleton_manifest_v2_id()
                 .await?
@@ -1984,7 +1983,7 @@ where
                 ENABLE_BONSAI_ONLY_LFS_DIFFS,
                 None,
                 Some(self.repo_ctx().name()),
-            )?;
+            );
         if supplement_enabled {
             // Ordered mode only needs supplement paths up to the final manifest
             // entry in this page: anything after it cannot affect the first
@@ -2167,7 +2166,7 @@ impl<R: MononokeRepo> ChangesetContext<R> {
                 "scm/mononoke:dbcm_read_from_manifest",
                 None,
                 Some(self.repo_ctx().name()),
-            )?;
+            );
 
         let mut clusters_by_primary: HashMap<MPath, DirectoryBranchCluster> = if read_dbcm {
             let root_dbcm = self

@@ -213,9 +213,7 @@ impl SourceControlServiceImpl {
             "scm/mononoke:scs_disable_mutable_blame",
             None,
             Some(repo.name()),
-        )
-        .map_err(scs_errors::internal_error)?
-        {
+        ) {
             false
         } else {
             params.follow_mutable_file_history.unwrap_or(false)
@@ -522,8 +520,7 @@ impl SourceControlServiceImpl {
         // across history methods (commit_history, commit_path_history).
         let client_id = ctx.metadata().upstream_client_id();
         let enforce_limit =
-            justknobs::eval("scm/mononoke:scs_history_enforce_limit", None, client_id)
-                .map_err(scs_errors::internal_error)?;
+            justknobs::eval("scm/mononoke:scs_history_enforce_limit", None, client_id);
         let limit: usize = if enforce_limit {
             check_range_and_convert(
                 "limit",

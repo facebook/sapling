@@ -220,7 +220,7 @@ async fn do_cache_warmup(
         "scm/mononoke:use_maybe_stale_freshness_for_bookmarks",
         client_correlator,
         Some("cache_warmup::do_cache_warmup"),
-    )?;
+    );
 
     let freshness = if read_from_replica {
         bookmarks::Freshness::MaybeStale

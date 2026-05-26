@@ -49,7 +49,7 @@ async fn test_original_blobstore_and_changesets_are_the_same_after_validation(
         "scm/mononoke:derived_data_use_content_manifests",
         None,
         Some(orig_repo.repo_identity().name()),
-    )?;
+    );
 
     if use_content_manifests {
         // Derive ContentManifest for a commit in the InMemoryRepo

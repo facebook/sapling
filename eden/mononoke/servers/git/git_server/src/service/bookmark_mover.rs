@@ -296,8 +296,7 @@ async fn bookmark_operation(
                 "scm/mononoke:use_maybe_stale_freshness_for_bookmarks",
                 client_correlator,
                 Some("mononoke_api::repo::git::get_bookmark_state"),
-            )
-            .unwrap_or(false);
+            );
 
             let freshness = if read_from_replica {
                 bookmarks::Freshness::MaybeStale

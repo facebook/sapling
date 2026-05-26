@@ -83,7 +83,9 @@
     "scm/mononoke:per_bookmark_locking_shadow": false,
     "scm/mononoke:add_acl_manifest_pointer": true,
     "scm/mononoke:use_blame_v3": false,
-    "scm/mononoke:block_agentic_service_writes": true
+    "scm/mononoke:block_agentic_service_writes": true,
+    "scm/mononoke:disable_blobstore_reads": false,
+    "scm/mononoke:mononoke_log_draft_acl_failures": false
   },
   "ints": {
     "scm/mononoke_timeouts:repo_client_clone_timeout_secs": 14400,
@@ -127,6 +129,7 @@
     "scm/mononoke:git_server_max_packfile_size": 7516192768,
     "scm/mononoke:git_server_shutdown_grace_period_secs": 1800,
     "scm/mononoke:sql_telemetry_sample_rate": 1,
+    "scm/mononoke:sql_telemetry_error_sample_rate": 10,
     "scm/mononoke:derivation_queue_max_retry_count": 20,
     "scm/mononoke:derivation_queue_evict_rdeps_max_retries": 5,
     "scm/mononoke:derivation_pipeline_tailer_enqueue_max_retries": 5,

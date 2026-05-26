@@ -141,7 +141,7 @@ impl PushRedirectionConfig for SqlPushRedirectionConfig {
         repo_id: RepositoryId,
     ) -> Result<Option<PushRedirectionConfigEntry>> {
         let ttl =
-            justknobs::get_as::<u64>("scm/mononoke:pushredirection_config_cache_ttl_secs", None)?;
+            justknobs::get_as::<u64>("scm/mononoke:pushredirection_config_cache_ttl_secs", None);
 
         let rows = Get::query(
             self.sql_query_config.as_ref(),

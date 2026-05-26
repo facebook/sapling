@@ -125,14 +125,12 @@ fn health_handler(state: State) -> Pin<Box<HandlerFuture>> {
         );
 
         let fb = GitServerContext::borrow_from(&state).fb();
-        if let Ok(avg_window) =
-            justknobs::get_as::<i64>("scm/mononoke:git_server_healthcheck_load_avg_secs", None)
-        {
-            if avg_window > 0 {
-                let counter = format!("container_memory_usage_percent.avg.{}", avg_window);
-                if let Some(load) = STATS::container_memory.get_value(fb, (counter,)) {
-                    res.headers_mut().insert("X-FB-Load", load.into());
-                }
+        let avg_window =
+            justknobs::get_as::<i64>("scm/mononoke:git_server_healthcheck_load_avg_secs", None);
+        if avg_window > 0 {
+            let counter = format!("container_memory_usage_percent.avg.{}", avg_window);
+            if let Some(load) = STATS::container_memory.get_value(fb, (counter,)) {
+                res.headers_mut().insert("X-FB-Load", load.into());
             }
         }
 

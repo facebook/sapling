@@ -9,7 +9,6 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::future::Future;
 
-use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
 use bookmarks::BookmarkKey;
@@ -380,7 +379,7 @@ impl MultiRepoBookmarksTransaction {
         }
 
         let max_attempts: u64 =
-            justknobs::get_as::<u64>("scm/mononoke:multi_repo_bookmark_max_retry_attempts", None)?
+            justknobs::get_as::<u64>("scm/mononoke:multi_repo_bookmark_max_retry_attempts", None)
                 .max(1);
 
         let Self {
@@ -408,9 +407,7 @@ async fn attempt_commit(
     write_connection: &Connection,
     ops: &[BookmarkOp],
 ) -> Result<MultiRepoBookmarksTransactionResult, BookmarkTransactionError> {
-    let use_new_path = justknobs::eval("scm/mononoke:per_bookmark_locking", None, None)
-        .context("Failed to read per_bookmark_locking JustKnob for multi-repo transaction")
-        .map_err(BookmarkTransactionError::Other)?;
+    let use_new_path = justknobs::eval("scm/mononoke:per_bookmark_locking", None, None);
 
     let repo_ids: HashSet<_> = ops.iter().map(|op| op.repo_id()).collect();
 

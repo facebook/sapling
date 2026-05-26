@@ -89,7 +89,7 @@ pub async fn run(
         "scm/mononoke:derived_data_use_content_manifests",
         None,
         Some(large_repo.repo_identity().name()),
-    )?;
+    );
 
     let root: compat::ContentManifestId = if use_content_manifests {
         large_repo

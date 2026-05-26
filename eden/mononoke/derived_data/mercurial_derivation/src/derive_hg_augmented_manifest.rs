@@ -82,7 +82,7 @@ pub async fn derive_from_hg_manifest_and_parents(
         None, // hashing
         // Adding a switch value to be able to disable writes only
         Some("hg_augmented_manifest_write"),
-    )?;
+    );
     let parents = parents.into_iter().map(Some).collect::<Vec<_>>();
     let (_, root, _, _) = bounded_traversal::bounded_traversal(
         256,
@@ -460,7 +460,7 @@ pub fn normalize_acl_root(
     root_acl_manifest_id: &acl_manifest::RootAclManifestId,
 ) -> Result<Option<AclManifestId>> {
     let add_acl_manifest_pointer =
-        justknobs::eval("scm/mononoke:add_acl_manifest_pointer", None, None)?;
+        justknobs::eval("scm/mononoke:add_acl_manifest_pointer", None, None);
     if !add_acl_manifest_pointer {
         return Ok(None);
     }

@@ -89,7 +89,7 @@ pub async fn update_remote_bookmarks(
     let books = updated_remote_bookmarks.unwrap_or_default();
     if !books.is_empty() {
         //TODO: Resolve remote bookmarks if no node available (e.g. master)
-        if justknobs::eval("scm/mononoke:commitcloud_bulk_inserts", None, None)? {
+        if justknobs::eval("scm/mononoke:commitcloud_bulk_inserts", None, None) {
             txn = InsertMany::<WorkspaceRemoteBookmark>::insert_many(
                 sql_commit_cloud,
                 txn,

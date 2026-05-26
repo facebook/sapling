@@ -260,7 +260,7 @@ async fn backsync_forever(
                 "scm/mononoke:cross_repo_pause_backsyncer",
                 None,
                 Some(&target_repo_name),
-            )?;
+            );
 
             if paused {
                 // Compute stats without doing any sync work

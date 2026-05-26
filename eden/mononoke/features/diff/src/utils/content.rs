@@ -58,7 +58,10 @@ impl LoadResult {
 }
 
 fn max_diff_file_size_mb() -> Result<u64> {
-    justknobs::get_as::<u64>("scm/mononoke:max_diff_file_size_mb", None)
+    Ok(justknobs::get_as::<u64>(
+        "scm/mononoke:max_diff_file_size_mb",
+        None,
+    ))
 }
 
 fn is_binary(content: &Bytes) -> bool {
@@ -168,8 +171,7 @@ pub async fn get_file_info_from_changeset_path(
         "scm/mononoke:derived_data_use_content_manifests",
         None,
         Some(repo.repo_identity().name()),
-    )
-    .map_err(DiffError::internal)?;
+    );
 
     let root_manifest_id: compat::ContentManifestId = if use_content_manifests {
         repo.repo_derived_data()

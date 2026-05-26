@@ -323,7 +323,7 @@ async fn create_hg_manifest(
         None, // hashing
         // Adding a switch value to be able to disable writes only
         Some("hg_manifest_write"),
-    )?;
+    );
     // Track restricted paths by storing manifest IDs for directories that match restricted path prefixes
     if restricted_paths_enabled {
         if let path @ RepoPath::DirectoryPath(non_root_path) = &path {

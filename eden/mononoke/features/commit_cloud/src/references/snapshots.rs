@@ -38,7 +38,7 @@ pub async fn update_snapshots(
         .await?;
     }
     if !new_snapshots.is_empty() {
-        if justknobs::eval("scm/mononoke:commitcloud_bulk_inserts", None, None)? {
+        if justknobs::eval("scm/mononoke:commitcloud_bulk_inserts", None, None) {
             let snapshots: Vec<WorkspaceSnapshot> = new_snapshots
                 .into_iter()
                 .map(|commit| WorkspaceSnapshot { commit })
