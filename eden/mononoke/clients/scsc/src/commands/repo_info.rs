@@ -39,6 +39,7 @@ pub(crate) struct RepoInfo {
     pub name: String,
     pub default_commit_identity_scheme: String,
     pub push_redirected_to: Option<String>,
+    pub acl_name: Option<String>,
 }
 
 impl TryFrom<&thrift::RepoInfo> for RepoInfo {
@@ -50,6 +51,7 @@ impl TryFrom<&thrift::RepoInfo> for RepoInfo {
             name: repo.name.clone(),
             default_commit_identity_scheme: repo.default_commit_identity_scheme.to_string(),
             push_redirected_to: repo.push_redirected_to.clone().map(|s| s.to_string()),
+            acl_name: repo.acl_name.clone(),
         })
     }
 }
@@ -70,6 +72,9 @@ impl Render for RepoInfoOutput {
         )?;
         if let Some(push_redirected_to) = &self.repo.push_redirected_to {
             write!(w, "Source of truth: {}\n", push_redirected_to)?;
+        }
+        if let Some(acl_name) = &self.repo.acl_name {
+            write!(w, "ACL name: {}\n", acl_name)?;
         }
         Ok(())
     }

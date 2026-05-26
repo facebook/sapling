@@ -208,6 +208,8 @@ struct RepoInfo {
   /// Name of a large repo to which this repo is push redirected, i.e. when
   /// the large repo is the source of truth.
   3: optional string push_redirected_to;
+  /// Name of the ACL that controls access to this repo.
+  4: optional string acl_name;
 }
 
 struct CommitInfo {

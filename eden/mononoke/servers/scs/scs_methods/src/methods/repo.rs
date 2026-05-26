@@ -106,6 +106,7 @@ impl SourceControlServiceImpl {
             name: repo_name.to_string(),
             default_commit_identity_scheme,
             push_redirected_to,
+            acl_name: repo_config.hipster_acl.clone(),
             ..Default::default()
         })
     }
