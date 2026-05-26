@@ -2077,6 +2077,14 @@ async fn find_closest_ancestor_root(
 
         if let Some(index) = roots.get(&id) {
             if config.forbid_p2_root_rebases && *index != ChildIndex(0) {
+                ctx.scuba().clone().log_with_msg(
+                    "pushrebase_p2_root_rejected",
+                    Some(format!(
+                        "root={}, bookmark={}, depth={}, child_index={}",
+                        id, bookmark, depth, index.0,
+                    )),
+                );
+
                 let hgcs = repo.derive_hg_changeset(ctx, id).await?;
                 return Err(PushrebaseError::Error(
                     PushrebaseInternalError::P2RootRebaseForbidden(hgcs, bookmark.clone()).into(),
