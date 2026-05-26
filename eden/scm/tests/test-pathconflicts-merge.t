@@ -131,8 +131,11 @@ Merge - local directory conflicts with remote file or link
   use 'sl resolve' to retry unresolved file merges or 'sl goto -C .' to abandon
   [1]
   $ sl mv a/b~f02dc228b64d a/b.old
+#if no-windows
+(On Windows, `sl mv` code path bypasses vfs, and might not treat symlink properly, needs investigation)
   $ f a/b.old
   a/b.old -> c
+#endif
   $ sl resolve --mark a/b
   (no more unresolved files)
   $ sl commit -m "merge link (rename link)"

@@ -384,15 +384,14 @@ class vfs(abstractvfs):
 
     @util.propertycache
     def _cansymlink(self) -> bool:
-        if self._disablesymlinks:
-            return False
-        return util.checklink(self.base)
+        return self._rustvfs.supports_symlinks()
 
     @util.propertycache
     def _rustvfs(self):
         # This will raise if self.base does not exist
         vfs = bindings.io.vfs(self.base, destructive=True)
-        vfs.set_supports_symlinks(self._cansymlink)
+        if self._disablesymlinks:
+            vfs.set_supports_symlinks(False)
         return vfs
 
     @util.propertycache
