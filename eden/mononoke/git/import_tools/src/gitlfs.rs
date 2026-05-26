@@ -48,6 +48,27 @@ use tokio::time::sleep;
 use tracing::error;
 use tracing::warn;
 
+/// Builds an HTTPS client suitable for fetching LFS objects from any of the
+/// supported upstream sources. When `tls_args` is provided, the client presents
+/// the given Meta-internal mTLS identity; otherwise it uses the OpenSSL default
+/// trust store (the latter is needed when talking to public servers such as
+/// github.com that don't recognize Meta certs).
+fn build_https_client(
+    tls_args: Option<TLSArgs>,
+) -> Result<Client<HttpsConnector<HttpConnector>, Full<Bytes>>, Error> {
+    let mut ssl_connector = SslConnector::builder(SslMethod::tls_client())?;
+    if let Some(tls_args) = tls_args {
+        ssl_connector.set_ca_file(tls_args.tls_ca)?;
+        ssl_connector.set_certificate_file(tls_args.tls_certificate, SslFiletype::PEM)?;
+        ssl_connector.set_private_key_file(tls_args.tls_private_key, SslFiletype::PEM)?;
+    };
+    let mut http_connector = HttpConnector::new();
+    http_connector.enforce_http(false);
+    let connector =
+        HttpsConnector::with_connector(http_connector, ssl_connector).map_err(Error::from)?;
+    Ok(Client::builder(TokioExecutor::new()).build(connector))
+}
+
 /// URL pattern used by the upstream LFS server to serve a single object keyed by SHA256.
 /// `LegacyDewey` matches Dewey's bare-suffix scheme; `MononokeGitLfs` matches the
 /// Mononoke LFS server's `/{repo}/download_sha256/{oid}` route.
@@ -153,18 +174,7 @@ impl GitImportLfs {
         conn_limit: Option<usize>,
         tls_args: Option<TLSArgs>,
     ) -> Result<Self, Error> {
-        let mut ssl_connector = SslConnector::builder(SslMethod::tls_client())?;
-        if let Some(tls_args) = tls_args {
-            ssl_connector.set_ca_file(tls_args.tls_ca)?;
-            ssl_connector.set_certificate_file(tls_args.tls_certificate, SslFiletype::PEM)?;
-            ssl_connector.set_private_key_file(tls_args.tls_private_key, SslFiletype::PEM)?;
-        };
-        let mut http_connector = HttpConnector::new();
-        http_connector.enforce_http(false);
-        let connector =
-            HttpsConnector::with_connector(http_connector, ssl_connector).map_err(Error::from)?;
-
-        let client = Client::builder(TokioExecutor::new()).build(connector);
+        let client = build_https_client(tls_args)?;
         let upstream = UpstreamLfs {
             lfs_server,
             url_format,
