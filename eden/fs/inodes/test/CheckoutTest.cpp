@@ -2390,6 +2390,106 @@ TEST(Checkout, backgroundOverlayCleanupDuringCheckout) {
   EXPECT_FALSE(testMount.hasOverlayDir(subInodeNumber));
 }
 
+TEST(Checkout, forceCheckoutRemovesLoadedRestrictedTree) {
+  auto currentBuilder = FakeTreeBuilder{};
+  currentBuilder.setFile("project/notes/readme.md", "current note\n");
+  currentBuilder.setFile(
+      "project/notes/restricted_child/secret.txt", "secret\n");
+  currentBuilder.setDirIsRestricted("project/notes/restricted_child");
+  TestMount testMount{RootId{"current"}, currentBuilder};
+
+  auto restrictedTree =
+      testMount.getTreeInode("project/notes/restricted_child"_relpath);
+  ASSERT_TRUE(restrictedTree->isRestricted());
+  auto restrictedInodeNumber = restrictedTree->getNodeId();
+  restrictedTree->incFsRefcount();
+  restrictedTree.reset();
+
+  auto targetBuilder = FakeTreeBuilder{};
+  targetBuilder.setFile("project/notes/readme.md", "target note\n");
+  targetBuilder.finalize(testMount.getBackingStore(), true);
+  auto targetCommit =
+      testMount.getBackingStore()->putCommit(RootId{"target"}, targetBuilder);
+  targetCommit->setReady();
+
+  auto executor = testMount.getServerExecutor().get();
+  auto checkoutResult = testMount.getEdenMount()
+                            ->checkout(
+                                testMount.getRootInode(),
+                                RootId{"target"},
+                                ObjectFetchContext::getNullContext(),
+                                __func__,
+                                CheckoutMode::FORCE)
+                            .semi()
+                            .via(executor);
+  testMount.drainServerExecutor();
+  ASSERT_TRUE(checkoutResult.isReady());
+
+  try {
+    std::move(checkoutResult).get();
+    FAIL() << "checkout should have failed with EdenError";
+  } catch (const EdenError& exception) {
+    // FIXME(T272514471): checkout should remove the loaded restricted child
+    // without fetching or walking it.
+    auto message = std::string{exception.what()};
+    EXPECT_NE(message.find("path ACL restriction"), std::string::npos);
+    EXPECT_NE(
+        message.find("project/notes/restricted_child"), std::string::npos);
+  }
+
+  testMount.getEdenMount()->getInodeMap()->decFsRefcount(restrictedInodeNumber);
+}
+
+TEST(Checkout, forceCheckoutReplacesLoadedRestrictedTreeWithFile) {
+  auto currentBuilder = FakeTreeBuilder{};
+  currentBuilder.setFile("project/notes/readme.md", "current note\n");
+  currentBuilder.setFile(
+      "project/notes/restricted_child/secret.txt", "secret\n");
+  currentBuilder.setDirIsRestricted("project/notes/restricted_child");
+  auto targetBuilder = currentBuilder.clone();
+  targetBuilder.replaceFile("project/notes/restricted_child", "replacement\n");
+  TestMount testMount{RootId{"current"}, currentBuilder};
+
+  auto restrictedTree =
+      testMount.getTreeInode("project/notes/restricted_child"_relpath);
+  ASSERT_TRUE(restrictedTree->isRestricted());
+  auto restrictedInodeNumber = restrictedTree->getNodeId();
+  restrictedTree->incFsRefcount();
+  restrictedTree.reset();
+
+  targetBuilder.finalize(testMount.getBackingStore(), true);
+  auto targetCommit =
+      testMount.getBackingStore()->putCommit(RootId{"target"}, targetBuilder);
+  targetCommit->setReady();
+
+  auto executor = testMount.getServerExecutor().get();
+  auto checkoutResult = testMount.getEdenMount()
+                            ->checkout(
+                                testMount.getRootInode(),
+                                RootId{"target"},
+                                ObjectFetchContext::getNullContext(),
+                                __func__,
+                                CheckoutMode::FORCE)
+                            .semi()
+                            .via(executor);
+  testMount.drainServerExecutor();
+  ASSERT_TRUE(checkoutResult.isReady());
+
+  try {
+    std::move(checkoutResult).get();
+    FAIL() << "checkout should have failed with EdenError";
+  } catch (const EdenError& exception) {
+    // FIXME(T272514471): checkout should replace the loaded restricted child
+    // without fetching or walking it.
+    auto message = std::string{exception.what()};
+    EXPECT_NE(message.find("path ACL restriction"), std::string::npos);
+    EXPECT_NE(
+        message.find("project/notes/restricted_child"), std::string::npos);
+  }
+
+  testMount.getEdenMount()->getInodeMap()->decFsRefcount(restrictedInodeNumber);
+}
+
 #endif
 
 /*

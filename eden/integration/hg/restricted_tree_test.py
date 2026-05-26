@@ -484,3 +484,79 @@ class RestrictedTreeConfigOffTest(
     """Feature disabled — all directories accessible."""
 
     expect_restricted: bool = False
+
+
+@hg_test
+# pyre-ignore[13]: T62487924
+class RestrictedTreeRebaseCombinedEnforcementTest(_RestrictedTreeTestBase):
+    """Rebase over a destination that removes a loaded restricted child."""
+
+    enable_server_acl_enforcement: bool = True
+
+    base_commit: str = ""
+    dest_commit: str = ""
+    conflict_path: str = "project/notes/conflict.txt"
+    restricted_path: str = "project/notes/restricted_child"
+
+    def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
+        eagerepo_path = repo.eagerepo
+        assert eagerepo_path is not None, (
+            "backing HgRepository.init() must populate self.eagerepo before "
+            "populate_backing_repo runs"
+        )
+        eager = EagerRepo(
+            eagerepo_path,
+            hg_environment=repo.hg_environment,
+            system_hgrc=None,
+        )
+        eager.init()
+
+        eager.write_file("project/notes/README.md", "base\n")
+        eager.write_file(f"{self.restricted_path}/.slacl", "acl config\n")
+        eager.write_file(f"{self.restricted_path}/secret.txt", "secret\n")
+        self.base_commit = eager.commit("Initial restricted tree.")
+
+        eager.remove_file(f"{self.restricted_path}/.slacl")
+        eager.remove_file(f"{self.restricted_path}/secret.txt")
+        eager.write_file(self.conflict_path, "destination\n")
+        self.dest_commit = eager.commit("Remove restricted tree and add conflict file.")
+
+        repo.hg("pull", "-r", self.base_commit)
+        repo.hg("pull", "-r", self.dest_commit)
+        repo.hg("update", self.base_commit)
+
+    def test_rebase_removes_loaded_restricted_tree(self) -> None:
+        self.repo.hg("update", self.base_commit)
+
+        restricted_abspath = os.path.join(self.mount, self.restricted_path)
+        restricted_stat = os.lstat(restricted_abspath)
+        self.assertTrue(stat.S_ISDIR(restricted_stat.st_mode))
+        self.assertEqual(restricted_stat.st_mode & 0o7777, 0)
+        with self.assertRaises(OSError) as ctx:
+            os.listdir(restricted_abspath)
+        self.assertEqual(ctx.exception.errno, errno.EACCES)
+
+        self.write_file(self.conflict_path, "local\n")
+        self.repo.add_file(self.conflict_path)
+        local_commit = self.repo.commit("Add local conflict file.")
+
+        try:
+            with self.assertRaises(hgrepo.HgError) as context:
+                self.hg(
+                    "rebase",
+                    "--config",
+                    "rebase.experimental.inmemory=False",
+                    "-r",
+                    local_commit,
+                    "-d",
+                    self.dest_commit,
+                )
+
+            # FIXME(T272514471): this should fail with the normal file conflict
+            # for conflict_path and should not report EdenError/path ACL
+            # restriction for the removed restricted subtree.
+            self.assertIn(b"EdenError", context.exception.stderr)
+            self.assertIn(b"path ACL restriction", context.exception.stderr)
+            self.assertIn(self.restricted_path.encode(), context.exception.stderr)
+        finally:
+            self.hg("rebase", "--abort", check=False)
