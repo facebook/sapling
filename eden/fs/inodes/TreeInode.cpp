@@ -4493,6 +4493,53 @@ DirEntry dirEntryFromScmEntry(const TreeEntry& scmEntry, Overlay* overlay) {
 } // namespace
 
 template <typename Contents>
+folly::Try<folly::Unit> TreeInode::removeOrReplaceCheckoutEntryLocked(
+    CheckoutContext* ctx,
+    TreeInodeState& state,
+    Contents& contents,
+    typename Contents::iterator it,
+    const InodePtr& loadedChild,
+    const Tree::value_type* newScmEntry,
+    bool& wasDirectoryListModified) {
+  if (ctx->isDryRun()) {
+    return folly::Try<folly::Unit>{folly::unit};
+  }
+
+  const auto oldEntryName = it->first;
+  const auto oldEntryInodeNumber = it->second.getInodeNumber();
+  const auto oldEntryIsDirectory = it->second.isDirectory();
+  auto success =
+      invalidateChannelEntryCache(state, oldEntryName, oldEntryInodeNumber);
+  if (success.hasException()) {
+    return success;
+  }
+
+  if (loadedChild) {
+    loadedChild->markUnlinked(this, oldEntryName, ctx->renameLock());
+  }
+  contents.erase(it);
+  if (newScmEntry) {
+    auto [_it, inserted] = contents.emplace(
+        newScmEntry->first,
+        dirEntryFromScmEntry(newScmEntry->second, getOverlay()));
+    XDCHECK(inserted);
+  }
+
+  wasDirectoryListModified = true;
+  if (oldEntryIsDirectory) {
+    if (getMount()
+            ->getEdenConfig()
+            ->backgroundOverlayCleanupDuringCheckout.getValue()) {
+      getOverlay()->recursivelyRemoveOverlayDirBackground(oldEntryInodeNumber);
+    } else {
+      getOverlay()->recursivelyRemoveOverlayDir(oldEntryInodeNumber);
+    }
+  }
+
+  return folly::Try<folly::Unit>{folly::unit};
+}
+
+template <typename Contents>
 std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
     CheckoutContext* ctx,
     TreeInodeState& state,
@@ -4552,6 +4599,30 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
 
   auto& entry = it->second;
   if (auto childPtr = entry.getInodePtr()) {
+    if (auto treeInode = childPtr.asTreePtrOrNull(); treeInode &&
+        treeInode->isRestricted() && oldScmEntry &&
+        oldScmEntry->second.isTree() &&
+        (!newScmEntry || !newScmEntry->second.isTree())) {
+      // Restricted children are opaque to checkout. They cannot have visible
+      // local modifications, so remove or replace the parent entry without
+      // fetching or walking the restricted tree.
+      auto descendants = treeInode->getInMemoryDescendants();
+      auto success = removeOrReplaceCheckoutEntryLocked(
+          ctx,
+          state,
+          contents,
+          it,
+          childPtr,
+          newScmEntry,
+          wasDirectoryListModified);
+      if (success.hasException()) {
+        ctx->addError(this, name, success.exception());
+        return nullptr;
+      }
+      ctx->increaseCheckoutCounter(1 + descendants);
+      return nullptr;
+    }
+
     // If the inode is already loaded, create a CheckoutAction to process it
     return std::make_shared<CheckoutAction>(
         ctx, oldScmEntry, newScmEntry, std::move(childPtr));
@@ -4638,11 +4709,16 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
     return nullptr;
   }
 
-  auto oldEntryInodeNumber = entry.getInodeNumber();
-
   // We are removing or replacing an entry - attempt to invalidate it while the
   // write lock is held and before the contents are updated.
-  auto success = invalidateChannelEntryCache(state, name, oldEntryInodeNumber);
+  auto success = removeOrReplaceCheckoutEntryLocked(
+      ctx,
+      state,
+      contents,
+      it,
+      InodePtr{},
+      newScmEntry,
+      wasDirectoryListModified);
   if (success.hasException()) {
     if (folly::kIsWindows) {
       // On Windows, reads aren't being done on the inodes, but on the Trees
@@ -4672,35 +4748,6 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
     }
     ctx->addError(this, name, success.exception());
     return nullptr;
-  }
-
-  // TODO: remove entry.getInodeNumber() from both the overlay and the
-  // InodeTable.  Or at least verify that it's already done in a test.
-  //
-  // This logic could potentially be unified with TreeInode::tryRemoveChild
-  // and TreeInode::checkoutUpdateEntry.
-  contents.erase(it);
-  if (newScmEntry) {
-    contents.emplace(
-        newScmEntry->first,
-        dirEntryFromScmEntry(newScmEntry->second, getOverlay()));
-  }
-
-  wasDirectoryListModified = true;
-
-  // Contents have changed and the entry is not materialized, but we may have
-  // allocated and remembered inode numbers for this tree.  It's much faster to
-  // simply forget the inode numbers we allocated here -- if we were a real
-  // filesystem, it's as if the entire subtree got deleted and checked out
-  // from scratch.
-  if (entry.isDirectory()) {
-    if (getMount()
-            ->getEdenConfig()
-            ->backgroundOverlayCleanupDuringCheckout.getValue()) {
-      getOverlay()->recursivelyRemoveOverlayDirBackground(oldEntryInodeNumber);
-    } else {
-      getOverlay()->recursivelyRemoveOverlayDir(oldEntryInodeNumber);
-    }
   }
 
   // TODO: contents have changed: we probably should propagate

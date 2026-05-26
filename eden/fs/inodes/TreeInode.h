@@ -1120,6 +1120,16 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       bool& wasDirectoryListModified);
 
   template <typename Contents>
+  folly::Try<folly::Unit> removeOrReplaceCheckoutEntryLocked(
+      CheckoutContext* ctx,
+      TreeInodeState& state,
+      Contents& contents,
+      typename Contents::iterator it,
+      const InodePtr& loadedChild,
+      const Tree::value_type* newScmEntry,
+      bool& wasDirectoryListModified);
+
+  template <typename Contents>
   std::shared_ptr<CheckoutAction> processAbsentCheckoutEntry(
       CheckoutContext* ctx,
       TreeInodeState& state,

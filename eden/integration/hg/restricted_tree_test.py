@@ -552,11 +552,14 @@ class RestrictedTreeRebaseCombinedEnforcementTest(_RestrictedTreeTestBase):
                     self.dest_commit,
                 )
 
-            # FIXME(T272514471): this should fail with the normal file conflict
-            # for conflict_path and should not report EdenError/path ACL
-            # restriction for the removed restricted subtree.
-            self.assertIn(b"EdenError", context.exception.stderr)
-            self.assertIn(b"path ACL restriction", context.exception.stderr)
-            self.assertIn(self.restricted_path.encode(), context.exception.stderr)
+            self.assertIn(
+                f"conflicts while merging {self.conflict_path}!".encode(),
+                context.exception.stderr,
+            )
+            self.assertNotIn(b"EdenError", context.exception.stderr)
+            self.assertNotIn(b"path ACL restriction", context.exception.stderr)
+            self.assert_unresolved(unresolved=[self.conflict_path])
+            self.assert_status({self.conflict_path: "M"}, op="rebase")
+            self.assertFalse(os.path.exists(restricted_abspath))
         finally:
             self.hg("rebase", "--abort", check=False)

@@ -2424,19 +2424,16 @@ TEST(Checkout, forceCheckoutRemovesLoadedRestrictedTree) {
                             .via(executor);
   testMount.drainServerExecutor();
   ASSERT_TRUE(checkoutResult.isReady());
+  EXPECT_EQ(0, checkoutResult.value().conflicts.size());
 
-  try {
-    std::move(checkoutResult).get();
-    FAIL() << "checkout should have failed with EdenError";
-  } catch (const EdenError& exception) {
-    // FIXME(T272514471): checkout should remove the loaded restricted child
-    // without fetching or walking it.
-    auto message = std::string{exception.what()};
-    EXPECT_NE(message.find("path ACL restriction"), std::string::npos);
-    EXPECT_NE(
-        message.find("project/notes/restricted_child"), std::string::npos);
-  }
+  restrictedTree = testMount.getEdenMount()
+                       ->getInodeMap()
+                       ->lookupTreeInode(restrictedInodeNumber)
+                       .get(1ms);
+  EXPECT_TRUE(restrictedTree->isUnlinked());
 
+  EXPECT_THROW_ERRNO(
+      testMount.getTreeInode("project/notes/restricted_child"_relpath), ENOENT);
   testMount.getEdenMount()->getInodeMap()->decFsRefcount(restrictedInodeNumber);
 }
 
@@ -2474,18 +2471,17 @@ TEST(Checkout, forceCheckoutReplacesLoadedRestrictedTreeWithFile) {
                             .via(executor);
   testMount.drainServerExecutor();
   ASSERT_TRUE(checkoutResult.isReady());
+  EXPECT_EQ(0, checkoutResult.value().conflicts.size());
 
-  try {
-    std::move(checkoutResult).get();
-    FAIL() << "checkout should have failed with EdenError";
-  } catch (const EdenError& exception) {
-    // FIXME(T272514471): checkout should replace the loaded restricted child
-    // without fetching or walking it.
-    auto message = std::string{exception.what()};
-    EXPECT_NE(message.find("path ACL restriction"), std::string::npos);
-    EXPECT_NE(
-        message.find("project/notes/restricted_child"), std::string::npos);
-  }
+  restrictedTree = testMount.getEdenMount()
+                       ->getInodeMap()
+                       ->lookupTreeInode(restrictedInodeNumber)
+                       .get(1ms);
+  EXPECT_TRUE(restrictedTree->isUnlinked());
+  EXPECT_FILE_INODE(
+      testMount.getFileInode("project/notes/restricted_child"_relpath),
+      "replacement\n",
+      0644);
 
   testMount.getEdenMount()->getInodeMap()->decFsRefcount(restrictedInodeNumber);
 }
