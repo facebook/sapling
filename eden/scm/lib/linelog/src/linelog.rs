@@ -410,7 +410,7 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
             || (self
                 .dag
                 .parents(b_rev)
-                .map(|p| p == &[a_rev])
+                .map(|p| p == [a_rev])
                 .unwrap_or(false)
                 && a_rev == self.max_rev);
         let maybe_a_lines: MaybeMut<_> = match can_update_cache {
