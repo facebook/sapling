@@ -64,7 +64,7 @@ const MAX_SYNC_PARSE_SIZE: usize = 1_000_000;
 /// rather than direct blobstore reads.  When false (default), blobstore reads
 /// are tried first with reconstruction as fallback for missing blobs.  When
 /// true, reconstruction is attempted first with blobstore as fallback.
-fn should_read_from_augmented() -> bool {
+fn should_read_from_augmented() -> Result<bool> {
     justknobs::eval("scm/mononoke:hgmanifest_read_from_augmented", None, None)
 }
 
@@ -219,7 +219,7 @@ pub async fn fetch_manifest_envelope_opt<B: KeyedBlobstore>(
         return Ok(None);
     }
 
-    if should_read_from_augmented() {
+    if should_read_from_augmented()? {
         // Reconstruction-first: try augmented manifest reconstruction, fall
         // back to blobstore on failure.
         match fetch_manifest_envelope_via_augmented(ctx, blobstore, node_id).await {

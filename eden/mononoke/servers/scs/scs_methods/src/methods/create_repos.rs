@@ -688,7 +688,8 @@ async fn prepare_repo_configs_mutation_nowait(
     );
     let mut txn = configo_client.managed_transaction();
 
-    let use_repo_spec = justknobs::eval("scm/mononoke:create_repos_use_repo_spec", None, None);
+    let use_repo_spec = justknobs::eval("scm/mononoke:create_repos_use_repo_spec", None, None)
+        .map_err(scs_errors::internal_error)?;
 
     // Load default repo config template once before the loop
     let default_repo_config = if use_repo_spec {
@@ -923,7 +924,8 @@ async fn create_repos_in_mononoke(
             .await?;
 
             let spawn_task =
-                justknobs::eval("scm/mononoke:spawn_mutation_polling_task", None, None);
+                justknobs::eval("scm/mononoke:spawn_mutation_polling_task", None, None)
+                    .map_err(scs_errors::internal_error)?;
             if spawn_task {
                 // Clone necessary data for the spawned task
                 let poll_ctx = ctx.clone();

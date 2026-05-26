@@ -142,7 +142,7 @@ impl MemcacheOps {
             backing_store_params.to_string()
         );
 
-        let sitever = justknobs::get_as::<u32>("scm/mononoke_memcache_sitevers:blobstore", None);
+        let sitever = justknobs::get_as::<u32>("scm/mononoke_memcache_sitevers:blobstore", None)?;
 
         Ok(Self {
             lease_type,

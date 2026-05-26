@@ -59,7 +59,7 @@ pub async fn update_heads(
         .await?;
     }
     if !new_heads.is_empty() {
-        if justknobs::eval("scm/mononoke:commitcloud_bulk_inserts", None, None) {
+        if justknobs::eval("scm/mononoke:commitcloud_bulk_inserts", None, None)? {
             let heads: Vec<WorkspaceHead> = new_heads
                 .into_iter()
                 .map(|commit| WorkspaceHead { commit })

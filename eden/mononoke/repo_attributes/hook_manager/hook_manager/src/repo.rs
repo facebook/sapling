@@ -435,7 +435,7 @@ async fn derive_manifest(
         "scm/mononoke:derived_data_use_content_manifests",
         None,
         Some(repo_name),
-    );
+    )?;
 
     if use_content_manifests {
         let root_id = repo_derived_data

@@ -494,7 +494,7 @@ pub fn consistent_read_options(
         "scm/mononoke:retry_query_from_replica_with_consistency_check",
         client_correlator,
         callsite,
-    );
+    )?;
 
     if !should_query_with_consistency {
         return Ok(None);
@@ -503,22 +503,24 @@ pub fn consistent_read_options(
     let max_attempts = justknobs::get_as::<usize>(
         "scm/mononoke:retry_query_from_replica_with_consistency_check_max_attempts",
         callsite,
-    );
+    )?;
 
-    let interval = Duration::from_millis(justknobs::get_as::<u64>(
+    let interval = justknobs::get_as::<u64>(
         "scm/mononoke:retry_query_from_replica_with_consistency_check_interval_ms",
         callsite,
-    ));
+    )
+    .map(Duration::from_millis)?;
 
-    let jitter = Duration::from_millis(justknobs::get_as::<u64>(
+    let jitter = justknobs::get_as::<u64>(
         "scm/mononoke:retry_query_from_replica_with_consistency_check_jitter",
         callsite,
-    ));
+    )
+    .map(Duration::from_millis)?;
 
     let hlc_drift_tolerance_ns = justknobs::get_as::<i64>(
         "scm/mononoke:retry_query_from_replica_with_consistency_check_hlc_drift_tolerance_ns",
         callsite,
-    );
+    )?;
 
     let cons_read_opts = ConsistentReadOptions {
         interval,

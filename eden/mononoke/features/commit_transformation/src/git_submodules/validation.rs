@@ -89,7 +89,7 @@ impl ValidSubmoduleExpansionBonsai {
             "scm/mononoke:derived_data_use_content_manifests",
             None,
             Some(sm_exp_data.large_repo.repo_identity().name()),
-        );
+        )?;
 
         let bonsai_res: Result<BonsaiChangeset> =
             stream::iter(sm_exp_data.submodule_deps.iter().map(anyhow::Ok))

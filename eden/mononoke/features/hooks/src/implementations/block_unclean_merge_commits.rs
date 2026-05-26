@@ -98,7 +98,7 @@ impl ChangesetHook for BlockUncleanMergeCommitsHook {
             "scm/mononoke:derived_data_use_content_manifests",
             None,
             Some(hook_repo.repo_identity.name()),
-        );
+        )?;
         let parent_root_manifests: HashMap<ChangesetId, compat::ContentManifestId> =
             stream::iter(changeset.parents().map(|p| {
                 Ok(async move {

@@ -124,7 +124,7 @@ impl<R: MononokeRepo> ChangesetContext<R> {
             "scm/mononoke:mononoke_api_find_files_use_skeleton_manifests_v2",
             None,
             Some(self.repo_ctx().name()),
-        ) {
+        )? {
             let entries = self.find_entries_v2(prefixes, ordering).await?;
             entries
                 .try_filter_map(|(path, entry)| async move {

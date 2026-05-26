@@ -256,10 +256,10 @@ impl SourceControlServiceImpl {
             scuba.add("config_store_last_updated_at", config_info.last_updated_at);
         }
 
-        let sampling_rate = NonZeroU64::new(justknobs::get_as::<u64>(
-            "scm/mononoke:scs_method_sampling_rate",
-            Some(name),
-        ));
+        let sampling_rate = NonZeroU64::new(
+            justknobs::get_as::<u64>("scm/mononoke:scs_method_sampling_rate", Some(name))
+                .map_err(scs_errors::internal_error)?,
+        );
         if let Some(sampling_rate) = sampling_rate {
             scuba.sampled(sampling_rate);
         } else {
@@ -731,7 +731,9 @@ fn maybe_set_nocache_thriftcache(
         "scm/mononoke:scs_thriftcache_nocache_for_non_kcb_identities",
         None,
         None,
-    ) {
+    )
+    .map_err(scs_errors::internal_error)?
+    {
         return Ok(());
     }
 
@@ -819,7 +821,7 @@ fn log_result<T: AddScubaResponse>(
         }
     };
 
-    if justknobs::eval("scm/mononoke:scs_alert_on_methods", None, Some(method)) {
+    if let Ok(true) = justknobs::eval("scm/mononoke:scs_alert_on_methods", None, Some(method)) {
         STATS::total_method_requests.add_value(1, (method.to_string(),));
         if status == "INTERNAL_ERROR" {
             STATS::total_method_internal_failure.add_value(1, (method.to_string(),));
@@ -928,10 +930,14 @@ fn log_stream_chunk<T: AddScubaResponse>(
     if let Some(error) = error {
         scuba.add("error", error.as_str());
     }
-    let sampling_rate = NonZeroU64::new(justknobs::get_as::<u64>(
-        "scm/mononoke:scs_stream_chunk_scuba_sampling_rate",
-        Some(method),
-    ));
+    let sampling_rate = NonZeroU64::new(
+        justknobs::get_as::<u64>(
+            "scm/mononoke:scs_stream_chunk_scuba_sampling_rate",
+            Some(method),
+        )
+        .ok()
+        .unwrap_or(1000),
+    ); // 1:1000 by default to avoid spamming scuba
     if let Some(sampling_rate) = sampling_rate {
         scuba.sampled(sampling_rate);
     }
@@ -989,7 +995,7 @@ fn log_stream_complete(
             None => ("SUCCESS", Outcome::Success, None, 0, 0, 0),
         };
 
-    if justknobs::eval("scm/mononoke:scs_alert_on_methods", None, Some(method)) {
+    if let Ok(true) = justknobs::eval("scm/mononoke:scs_alert_on_methods", None, Some(method)) {
         STATS::total_method_requests.add_value(1, (method.to_string(),));
         if status == "INTERNAL_ERROR" {
             STATS::total_method_internal_failure.add_value(1, (method.to_string(),));
@@ -1115,9 +1121,11 @@ fn check_memory_usage(
         },
     };
     let rss_min_free_bytes =
-        justknobs::get_as::<usize>("scm/mononoke:scs_rss_min_free_bytes", Some(method));
+        justknobs::get_as::<usize>("scm/mononoke:scs_rss_min_free_bytes", Some(method))
+            .map_err(scs_errors::internal_error)?;
     let rss_min_free_pct =
-        justknobs::get_as::<i32>("scm/mononoke:scs_rss_min_free_pct", Some(method));
+        justknobs::get_as::<i32>("scm/mononoke:scs_rss_min_free_pct", Some(method))
+            .map_err(scs_errors::internal_error)?;
 
     if rss_min_free_bytes > 0 || rss_min_free_pct > 0 {
         debug!(
@@ -1866,7 +1874,8 @@ mod tests {
                     "scm/mononoke:scs_thriftcache_nocache_for_non_kcb_identities",
                     None,
                     None,
-                );
+                )
+                .unwrap_or(false);
                 assert!(!jk_enabled);
                 // Since JK is disabled, nocache should not be set.
                 assert!(!ctx.nocache_thriftcache());
@@ -1889,7 +1898,8 @@ mod tests {
                     "scm/mononoke:scs_thriftcache_nocache_for_non_kcb_identities",
                     None,
                     None,
-                );
+                )
+                .unwrap_or(false);
                 assert!(jk_enabled);
 
                 // With non-KCB type, should_set_nocache returns true.

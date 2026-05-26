@@ -8,6 +8,7 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
+use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
 use bookmarks::BookmarkCategory;
@@ -329,18 +330,31 @@ impl SqlBookmarksTransactionPayload {
         }
     }
 
-    fn use_per_bookmark_locking(&self) -> bool {
+    fn use_per_bookmark_locking(&self) -> Result<bool> {
         let switch = self.repo_id.id().to_string();
-        justknobs::eval("scm/mononoke:per_bookmark_locking", None, Some(&switch))
+        justknobs::eval("scm/mononoke:per_bookmark_locking", None, Some(&switch)).with_context(
+            || {
+                format!(
+                    "Failed to read per_bookmark_locking JustKnob for repo {}",
+                    self.repo_id
+                )
+            },
+        )
     }
 
-    fn use_per_bookmark_locking_shadow_mode(&self) -> bool {
+    fn use_per_bookmark_locking_shadow_mode(&self) -> Result<bool> {
         let switch = self.repo_id.id().to_string();
         justknobs::eval(
             "scm/mononoke:per_bookmark_locking_shadow",
             None,
             Some(&switch),
         )
+        .with_context(|| {
+            format!(
+                "Failed to read per_bookmark_locking_shadow JustKnob for repo {}",
+                self.repo_id
+            )
+        })
     }
 
     /// Acquire per-bookmark locks for all bookmarks being modified.
@@ -671,8 +685,15 @@ impl SqlBookmarksTransactionPayload {
         ctx: &CoreContext,
         txn: SqlTransaction,
     ) -> Result<(SqlTransaction, u64), BookmarkTransactionError> {
-        let use_new_path = self.use_per_bookmark_locking();
-        let shadow_mode = !use_new_path && self.use_per_bookmark_locking_shadow_mode();
+        // JK errors are hard errors (Other), not retryable: a missing JustKnob
+        // won't fix itself on retry — it requires config/deployment action.
+        let use_new_path = self
+            .use_per_bookmark_locking()
+            .map_err(BookmarkTransactionError::Other)?;
+        let shadow_mode = !use_new_path
+            && self
+                .use_per_bookmark_locking_shadow_mode()
+                .map_err(BookmarkTransactionError::Other)?;
 
         if shadow_mode {
             // Shadow mode: log what per-bookmark locking would do, without

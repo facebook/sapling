@@ -336,7 +336,7 @@ pub async fn do_pushrebase_bonsai(
         "scm/mononoke:per_bookmark_locking",
         None,
         Some(&repo.repo_identity().id().to_string()),
-    ) && config.pessimistic_locking_bookmarks.contains(onto_bookmark);
+    )? && config.pessimistic_locking_bookmarks.contains(onto_bookmark);
 
     if use_pessimistic {
         return rebase_with_lock(
@@ -441,11 +441,20 @@ pub async fn do_batched_pushrebase(
     onto_bookmark: &BookmarkKey,
     requests: Vec<PushrebaseRequest>,
 ) -> Vec<PushrebaseRequest> {
-    let use_pessimistic = justknobs::eval(
+    let use_pessimistic = match justknobs::eval(
         "scm/mononoke:per_bookmark_locking",
         None,
         Some(&repo.repo_identity().id().to_string()),
-    ) && config.pessimistic_locking_bookmarks.contains(onto_bookmark);
+    ) {
+        Ok(v) => v && config.pessimistic_locking_bookmarks.contains(onto_bookmark),
+        Err(e) => {
+            let shared = SharedError::from(PushrebaseError::from(e));
+            for req in requests {
+                let _ = req.response_tx.send(Err(shared.clone()));
+            }
+            return vec![];
+        }
+    };
 
     if use_pessimistic {
         return batched_rebase_with_lock(ctx, repo, config, onto_bookmark, requests).await;
@@ -866,22 +875,22 @@ async fn check_pushrebase_conflicts(
                     "scm/mononoke:pushrebase_enable_merge_resolution",
                     None,
                     Some(reponame),
-                ),
+                )?,
             };
             let max_merge_conflicts: usize = justknobs::get_as::<usize>(
                 "scm/mononoke:pushrebase_max_merge_conflicts",
                 Some(reponame),
-            );
+            )?;
             let max_merge_file_size: u64 = justknobs::get_as::<u64>(
                 "scm/mononoke:pushrebase_max_merge_file_size",
                 Some(reponame),
-            );
+            )?;
             let merge_result = if merge_enabled {
                 let derive_fsnodes: bool = justknobs::eval(
                     "scm/mononoke:pushrebase_merge_resolution_derive_fsnodes",
                     None,
                     Some(reponame),
-                );
+                )?;
                 Some(
                     collect_merge_file_info(
                         ctx,
@@ -937,13 +946,13 @@ async fn check_pushrebase_conflicts(
                         "scm/mononoke:pushrebase_dry_run_merge_resolution",
                         None,
                         Some(reponame),
-                    );
+                    )?;
                     if dry_run_enabled {
                         let derive_fsnodes: bool = justknobs::eval(
                             "scm/mononoke:pushrebase_merge_resolution_derive_fsnodes",
                             None,
                             Some(reponame),
-                        );
+                        )?;
                         dry_run_merge_check(
                             ctx,
                             repo,
@@ -2284,7 +2293,7 @@ async fn fetch_manifest_file(
         "scm/mononoke:derived_data_use_content_manifests",
         None,
         Some(repo_name),
-    );
+    )?;
 
     let root_id: compat::ContentManifestId = if use_content_manifests {
         repo.repo_derived_data()
@@ -3097,7 +3106,7 @@ async fn create_rebased_changesets(
             "scm/mononoke:pushrebase_reject_noop_merge_commits",
             None,
             Some(repo_name),
-        );
+        )?;
         let enforcement = if reject_noop { "rejected" } else { "logged" };
 
         for (cs_id, paths) in &noop_commits {
@@ -7561,7 +7570,7 @@ line 5.1
             "scm/mononoke:per_bookmark_locking",
             None,
             Some(&repo_id_str),
-        ) && config.pessimistic_locking_bookmarks.contains(&book);
+        )? && config.pessimistic_locking_bookmarks.contains(&book);
         assert!(!use_pessimistic, "should be optimistic when knob is off");
 
         init_just_knobs_for_pessimistic_test();
@@ -7569,7 +7578,7 @@ line 5.1
             "scm/mononoke:per_bookmark_locking",
             None,
             Some(&repo_id_str),
-        ) && config.pessimistic_locking_bookmarks.contains(&other_book);
+        )? && config.pessimistic_locking_bookmarks.contains(&other_book);
         assert!(
             !use_pessimistic,
             "should be optimistic when bookmark not in pessimistic list"
@@ -7579,7 +7588,7 @@ line 5.1
             "scm/mononoke:per_bookmark_locking",
             None,
             Some(&repo_id_str),
-        ) && config.pessimistic_locking_bookmarks.contains(&book);
+        )? && config.pessimistic_locking_bookmarks.contains(&book);
         assert!(
             use_pessimistic,
             "should be pessimistic when knob is on and bookmark is in list"
@@ -7590,7 +7599,7 @@ line 5.1
             "scm/mononoke:per_bookmark_locking",
             None,
             Some(&repo_id_str),
-        ) && config_empty.pessimistic_locking_bookmarks.contains(&book);
+        )? && config_empty.pessimistic_locking_bookmarks.contains(&book);
         assert!(
             !use_pessimistic,
             "should be optimistic with empty pessimistic_locking_bookmarks"

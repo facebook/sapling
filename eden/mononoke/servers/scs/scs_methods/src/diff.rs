@@ -216,7 +216,22 @@ impl<'a> DiffRouter<'a> {
         }
 
         // Gate 2: Check JK - this is the kill switch in production
-        justknobs::eval("scm/mononoke:remote_diff", None, Some(repo_name))
+        match justknobs::eval("scm/mononoke:remote_diff", None, Some(repo_name)) {
+            Ok(true) => {
+                // JK explicitly enabled - allow remote diff
+                true
+            }
+            Ok(false) => {
+                // JK explicitly disabled - this is the kill switch, always block
+                false
+            }
+            Err(_) => {
+                // JK not configured (e.g., in integration tests)
+                // Fall back to checking if remote_diff_config is present,
+                // which indicates explicit test configuration
+                self.remote_diff_config.is_some()
+            }
+        }
     }
 
     /// Generate headerless unified diff between two files.
@@ -321,11 +336,21 @@ impl<'a> DiffRouter<'a> {
             .client_request_info()
             .map(|cri| cri.correlator.as_str());
 
-        justknobs::eval(
+        match justknobs::eval(
             "scm/mononoke:remote_diff_unary",
             correlator,
             Some(repo_name),
-        )
+        ) {
+            Ok(true) => true,
+            Ok(false) => false,
+            Err(_) => {
+                // JK not configured (e.g., in integration tests).
+                // Fall back to checking if remote_diff_config is present,
+                // which indicates explicit test configuration. Production
+                // is expected to have the JK present.
+                self.remote_diff_config.is_some()
+            }
+        }
     }
 
     /// Check if remote commit_compare should be used for this repo.
@@ -337,7 +362,22 @@ impl<'a> DiffRouter<'a> {
         }
 
         // Gate 2: Check JK - this is the kill switch in production
-        justknobs::eval("scm/mononoke:remote_commit_compare", None, Some(repo_name))
+        match justknobs::eval("scm/mononoke:remote_commit_compare", None, Some(repo_name)) {
+            Ok(true) => {
+                // JK explicitly enabled - allow remote commit_compare
+                true
+            }
+            Ok(false) => {
+                // JK explicitly disabled - this is the kill switch, always block
+                false
+            }
+            Err(_) => {
+                // JK not configured (e.g., in integration tests)
+                // Fall back to checking if remote_diff_config is present,
+                // which indicates explicit test configuration
+                self.remote_diff_config.is_some()
+            }
+        }
     }
 
     /// Forward a commit_compare request to the remote diff_service.

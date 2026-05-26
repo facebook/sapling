@@ -179,10 +179,13 @@ pub async fn ensure_backsynced<R>(
 where
     R: RepoLike + Send + Sync + Clone + 'static,
 {
-    let timeout = Duration::from_secs(justknobs::get_as::<u64>(
-        "scm/mononoke:defer_to_backsyncer_for_backsync_timeout_seconds",
-        None,
-    ));
+    let timeout = Duration::from_secs(
+        justknobs::get_as::<u64>(
+            "scm/mononoke:defer_to_backsyncer_for_backsync_timeout_seconds",
+            None,
+        )
+        .unwrap_or(60),
+    );
 
     let source_repo_id = commit_sync_data.get_source_repo().repo_identity().id();
     let counter_name = format_counter(&source_repo_id);

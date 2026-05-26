@@ -102,11 +102,7 @@ fn should_route_to_mononoke_lfs(state: &State, repo_name: &str) -> anyhow::Resul
         }
     }
 
-    Ok(justknobs::eval(
-        "scm/metagit:mononoke_git_lfs",
-        None,
-        Some(repo_name),
-    ))
+    justknobs::eval("scm/metagit:mononoke_git_lfs", None, Some(repo_name))
 }
 
 async fn handle_lfs_redirect(state: &mut State) -> Result<Response<Body>, HttpError> {

@@ -85,7 +85,7 @@ impl DefaultEdenapiSenderBuilder {
             ..Default::default()
         };
 
-        let timeout = justknobs::get_as::<u64>("scm/mononoke:modern_sync_edenapi_timeout", None);
+        let timeout = justknobs::get_as::<u64>("scm/mononoke:modern_sync_edenapi_timeout", None)?;
 
         tracing::info!(
             "Connecting to {}, timeout {}s",

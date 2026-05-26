@@ -139,7 +139,7 @@ impl CachedHgMutationStore {
     fn create_key_gen() -> Result<KeyGen> {
         let key_prefix = "scm.mononoke.hg_mutation_store";
         let sitever =
-            justknobs::get_as::<u32>("scm/mononoke_memcache_sitevers:hg_mutation_store", None);
+            justknobs::get_as::<u32>("scm/mononoke_memcache_sitevers:hg_mutation_store", None)?;
         Ok(KeyGen::new(key_prefix, thrift::MC_CODEVER as u32, sitever))
     }
 }

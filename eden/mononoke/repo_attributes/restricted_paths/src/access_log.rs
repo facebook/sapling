@@ -1114,7 +1114,7 @@ fn log_checked_access_to_restricted_path(
             "scm/mononoke:restricted_paths_use_schematized_logger",
             None,
             None,
-        );
+        )?;
 
         if let Some(aggregate) = log_data.aggregate.as_ref()
             && use_schematized_logger

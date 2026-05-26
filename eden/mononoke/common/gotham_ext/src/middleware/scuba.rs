@@ -399,7 +399,8 @@ fn log_stats<H: ScubaHandler>(
             let threshold: u64 = justknobs::get_as::<u64>(
                 "scm/mononoke_timeouts:edenapi_unsampled_duration_threshold_ms",
                 None,
-            );
+            )
+            .unwrap_or_default();
 
             if duration.as_millis_unchecked() > threshold {
                 scuba.unsampled();
@@ -530,15 +531,19 @@ impl<H: ScubaHandler> Middleware for ScubaMiddleware<H> {
                 if uri.path() == "/health_check" || uri.path() == "/proxygen/health_check" {
                     let sampling_rate = core::num::NonZeroU64::new(
                         if status.as_u16() >= 200 || status.as_u16() < 299 {
+                            const FALLBACK_SAMPLING_RATE: u64 = 1000;
                             justknobs::get_as::<u64>(
                                 "scm/mononoke:health_check_scuba_log_success_sampling_rate",
                                 None,
                             )
+                            .unwrap_or(FALLBACK_SAMPLING_RATE)
                         } else {
+                            const FALLBACK_SAMPLING_RATE: u64 = 1;
                             justknobs::get_as::<u64>(
                                 "scm/mononoke:health_check_scuba_log_failure_sampling_rate",
                                 None,
                             )
+                            .unwrap_or(FALLBACK_SAMPLING_RATE)
                         },
                     );
                     if let Some(sampling_rate) = sampling_rate {

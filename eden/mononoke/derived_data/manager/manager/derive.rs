@@ -525,7 +525,7 @@ impl DerivedDataManager {
             let overall_timeout = Duration::from_millis(justknobs::get_as::<u64>(
                 "scm/mononoke_timeouts:remote_derivation_client_timeout_ms",
                 None,
-            ));
+            )?);
             // The maximum number of times to try remote derivation before giving up.
             const RETRY_ATTEMPTS_LIMIT: u32 = 10;
             // How long to wait between requests to the remote derivation service, either to
@@ -533,7 +533,7 @@ impl DerivedDataManager {
             let retry_delay = Duration::from_millis(justknobs::get_as::<u64>(
                 "scm/mononoke_timeouts:remote_derivation_client_retry_delay_ms",
                 None,
-            ));
+            )?);
             let request = DeriveRequest {
                 repo_name: self.repo_name().to_string(),
                 derived_data_type: DerivedDataType {
@@ -556,7 +556,7 @@ impl DerivedDataManager {
                     "scm/mononoke:derived_data_disable_remote_derivation",
                     None,
                     Some(self.repo_name()),
-                ) {
+                )? {
                     // Remote derivation has been disabled, fall back to local derivation.
                     return Ok(None);
                 }
@@ -893,7 +893,7 @@ impl DerivedDataManager {
                         "scm/mononoke:derived_data_use_store_mapping_batch",
                         None,
                         None,
-                    ) {
+                    )? {
                         let csids: Vec<_> = derived.keys().copied().collect();
                         Derivable::store_mapping_batch(
                             ctx,

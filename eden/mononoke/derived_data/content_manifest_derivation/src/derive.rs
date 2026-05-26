@@ -191,7 +191,7 @@ pub(crate) async fn create_content_manifest_directory(
         "scm/mononoke:enabled_restricted_paths_access_logging",
         None,
         Some("content_manifest_write"),
-    );
+    )?;
 
     if restricted_paths_enabled {
         if let Some(non_root_path) = path.clone().into_optional_non_root_path() {

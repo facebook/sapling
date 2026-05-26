@@ -146,7 +146,7 @@ where
     let want_sniff = sniff_enabled_cli
         && !range_present
         && matches!(desired, ContentEncoding::Compressed(_))
-        && justknobs::eval(SNIFF_JK, None, Some(repo_name));
+        && justknobs::eval(SNIFF_JK, None, Some(repo_name)).unwrap_or(false);
 
     if !want_sniff {
         return (desired, stream.boxed());

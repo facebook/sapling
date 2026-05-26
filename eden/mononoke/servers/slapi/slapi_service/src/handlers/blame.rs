@@ -125,7 +125,7 @@ async fn blame_file_data<R: MononokeRepo>(
         "scm/mononoke:edenapi_disable_mutable_blame",
         None,
         Some(repo.name()),
-    );
+    )?;
 
     let blame = cs
         .path_with_history(

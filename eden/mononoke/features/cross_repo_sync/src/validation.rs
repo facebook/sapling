@@ -141,11 +141,11 @@ pub async fn verify_working_copy_with_version<'a, R: Repo>(
         "scm/mononoke:derived_data_use_content_manifests",
         None,
         Some(source_repo.repo_identity().name()),
-    ) && justknobs::eval(
+    )? && justknobs::eval(
         "scm/mononoke:derived_data_use_content_manifests",
         None,
         Some(target_repo.repo_identity().name()),
-    );
+    )?;
 
     let (source_root_id, target_root_id): (compat::ContentManifestId, compat::ContentManifestId) =
         if use_content_manifests {

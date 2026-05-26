@@ -293,7 +293,8 @@ where
             .context("Invalid metadata")
             .map_err(HttpError::BadRequest)?;
 
-        let zstd_level = justknobs::get_as::<i32>("scm/mononoke:zstd_compression_level", None);
+        let zstd_level = justknobs::get_as::<i32>("scm/mononoke:zstd_compression_level", None)
+            .unwrap_or_default();
         let compression = match req.headers().get(HEADER_CLIENT_COMPRESSION) {
             Some(header_value) => match header_value.as_bytes() {
                 b"zstd=stdin" if zstd_level > 0 => Ok(Some(zstd_level)),

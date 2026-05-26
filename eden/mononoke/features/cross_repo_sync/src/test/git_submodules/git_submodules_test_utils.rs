@@ -713,7 +713,7 @@ pub(crate) async fn check_submodule_metadata_file_in_large_repo<'a>(
         "scm/mononoke:derived_data_use_content_manifests",
         None,
         Some(large_repo.repo_identity().name()),
-    );
+    )?;
 
     let root: compat::ContentManifestId = if use_content_manifests {
         large_repo
@@ -800,7 +800,7 @@ pub(crate) async fn assert_working_copy_matches_expected(
         "scm/mononoke:derived_data_use_content_manifests",
         None,
         Some(repo.repo_identity().name()),
-    );
+    )?;
 
     let root: compat::ContentManifestId = if use_content_manifests {
         repo.repo_derived_data()

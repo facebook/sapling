@@ -126,7 +126,7 @@ async fn check_receiver(
         "scm/mononoke:derived_data_use_content_manifests",
         None,
         Some(hg_repo.repo_identity().name()),
-    ) {
+    )? {
         Either::Left(
             hg_repo
                 .repo_derived_data()

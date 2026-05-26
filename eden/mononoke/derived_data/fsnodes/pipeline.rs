@@ -147,7 +147,7 @@ impl PipelineDerivable for RootFsnodeId {
             "scm/mononoke:derived_data_pipeline_terminal_stage_prod_mapping",
             None,
             Some("fsnodes"),
-        ) && derivation
+        )? && derivation
             .pipeline_config()
             .filter(|cfg| cfg.types.contains(&DerivableType::Fsnodes))
             .and_then(|cfg| cfg.stages.get(stage_id))
@@ -206,7 +206,7 @@ impl PipelineDerivable for RootFsnodeId {
             "scm/mononoke:derived_data_pipeline_terminal_stage_prod_mapping",
             None,
             Some("fsnodes"),
-        ) && derivation
+        )? && derivation
             .pipeline_config()
             .filter(|cfg| cfg.types.contains(&DerivableType::Fsnodes))
             .and_then(|cfg| cfg.stages.get(stage_id))

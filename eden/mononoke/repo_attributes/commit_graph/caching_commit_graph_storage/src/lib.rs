@@ -275,7 +275,9 @@ impl EntityStore<CachedPrefetchedChangesetEdges> for CacheRequest<'_> {
                 "scm/mononoke:disable_commit_graph_memcache_for_prefetch",
                 None,
                 None,
-            ) {
+            )
+            .unwrap_or_default()
+            {
                 // If asked to prefetch, fetching from memcache is actually
                 // slower, so don't perform memcache look-ups.
                 &MemcacheHandler::Noop
@@ -373,7 +375,7 @@ impl KeyedEntityStore<ChangesetId, CachedPrefetchedChangesetEdges> for CacheRequ
         &self,
         values: impl IntoIterator<Item = (&'a ChangesetId, &'a mut CachedPrefetchedChangesetEdges)>,
     ) -> Result<()> {
-        let should_apply_fallback = self.caching_storage.should_apply_fallback();
+        let should_apply_fallback = self.caching_storage.should_apply_fallback()?;
         let mut fetched = 0;
         for (_cs_id, edges) in values {
             fetched += 1;
@@ -441,6 +443,7 @@ impl CachingCommitGraphStorage {
     /// requested by the user and current rollout values.
     fn request_prefetch_params(prefetch: Prefetch) -> (Prefetch, bool) {
         let prefetch = if justknobs::eval("scm/mononoke:disable_commit_graph_prefetch", None, None)
+            .unwrap_or_default()
         {
             Prefetch::None
         } else {
@@ -476,12 +479,12 @@ impl CachingCommitGraphStorage {
     }
 
     /// Check if fallback should be applied for this repository
-    fn should_apply_fallback(&self) -> bool {
-        !justknobs::eval(
+    fn should_apply_fallback(&self) -> Result<bool> {
+        Ok(!justknobs::eval(
             "scm/mononoke:commit_graph_disable_subtree_source_fallback",
             None,
             Some(self.repo_name()),
-        )
+        )?)
     }
 }
 

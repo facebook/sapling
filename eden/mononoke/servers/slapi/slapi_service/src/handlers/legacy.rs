@@ -132,7 +132,7 @@ impl SaplingRemoteApiHandler for StreamingCloneHandler {
         let aggregation_factor = justknobs::get_as::<usize>(
             "scm/mononoke:streaming_clone_chunk_aggregation_factor",
             None,
-        );
+        )?;
 
         let data_blobs = aggregate_blob_chunks(
             changelog.data_blobs,

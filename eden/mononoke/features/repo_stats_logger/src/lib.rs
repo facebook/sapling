@@ -36,6 +36,8 @@ define_stats! {
     repo_objects_count: dynamic_singleton_counter("{}.objects.count", (repo_name: String)),
 }
 
+const DEFAULT_REPO_OBJECTS_COUNT: i64 = 1_000_000;
+
 #[derive(Clone)]
 #[facet::facet]
 pub struct RepoStatsLogger {
@@ -131,13 +133,15 @@ fn get_repo_objects_count_settings(
     let default_objects_count = repo_config
         .default_objects_count
         .clone()
-        .unwrap_or_else(|| justknobs::get("scm/mononoke:scs_default_repo_objects_count", None));
+        .or_else(|| justknobs::get("scm/mononoke:scs_default_repo_objects_count", None).ok())
+        .unwrap_or(DEFAULT_REPO_OBJECTS_COUNT);
 
     // setting the override to 0 means no override
-    let maybe_override_objects_count = Some(justknobs::get_as::<i64>(
+    let maybe_override_objects_count = justknobs::get_as::<i64>(
         "scm/mononoke:scs_override_repo_objects_count",
         Some(repo_name),
-    ))
+    )
+    .ok()
     .filter(|x| *x > 0)
     .or_else(|| repo_config.override_objects_count.clone())
     .filter(|x| *x > 0);
@@ -211,7 +215,7 @@ async fn get_descendant_count(
         "scm/mononoke:derived_data_use_content_manifests",
         None,
         Some(repo_name),
-    );
+    )?;
 
     let count = if use_content_manifests {
         let root_content_manifest_id = repo_derived_data

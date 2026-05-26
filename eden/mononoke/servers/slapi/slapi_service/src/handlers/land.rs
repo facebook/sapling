@@ -123,7 +123,7 @@ async fn land_stack<R: MononokeRepo>(
         "scm/mononoke:edenapi_force_local_pushrebase",
         None,
         Some(repo.repo().repo_identity().name()),
-    );
+    )?;
 
     let pushrebase_outcome = repo
         .land_stack(

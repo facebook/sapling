@@ -118,7 +118,8 @@ fn setup_error_logging(
     let jk_sample_rate = justknobs::get_as::<u64>(
         "scm/mononoke:sql_telemetry_error_sample_rate",
         Some(shard_name),
-    );
+    )
+    .unwrap_or(10);
 
     let mut scuba = setup_scuba_sample(
         sql_query_tel,
@@ -423,7 +424,8 @@ mod facebook {
         }
 
         let jk_sample_rate =
-            justknobs::get_as::<u64>("scm/mononoke:sql_telemetry_sample_rate", Some(shard_name));
+            justknobs::get_as::<u64>("scm/mononoke:sql_telemetry_sample_rate", Some(shard_name))
+                .unwrap_or(10);
 
         let mut scuba = setup_scuba_sample(
             sql_query_tel,
@@ -846,7 +848,8 @@ mod facebook {
         }
 
         let jk_sample_rate =
-            justknobs::get_as::<u64>("scm/mononoke:sql_telemetry_sample_rate", Some(shard_name));
+            justknobs::get_as::<u64>("scm/mononoke:sql_telemetry_sample_rate", Some(shard_name))
+                .unwrap_or(10);
 
         let mut scuba = setup_scuba_sample(
             sql_query_tel,

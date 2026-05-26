@@ -835,6 +835,7 @@ pub(crate) fn inner_multi_get<'a>(
                 client_correlator,
                 Some(bs_id_str),
             )
+            .unwrap_or(false)
         })
         .map(|(bs, _)| {
             cloned!(bs, scuba.inner_blobstores_scuba, counter);

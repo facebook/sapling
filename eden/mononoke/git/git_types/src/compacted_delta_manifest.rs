@@ -238,10 +238,10 @@ impl CGDMComponentsReloader {
         let reloader = Reloader::reload_periodically(
             ctx.clone(),
             move || {
-                std::time::Duration::from_secs(justknobs::get_as::<u64>(
-                    "scm/mononoke:cgdm_reloading_interval_secs",
-                    None,
-                ))
+                std::time::Duration::from_secs(
+                    justknobs::get_as::<u64>("scm/mononoke:cgdm_reloading_interval_secs", None)
+                        .unwrap(),
+                )
             },
             loader,
         )

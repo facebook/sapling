@@ -89,7 +89,7 @@ impl LogMiddleware {
 }
 
 fn log_request_tracing(state: &mut State, entry: LogEntry, jk_name: &str) -> Option<()> {
-    if !justknobs::eval(jk_name, None, None) {
+    if !justknobs::eval(jk_name, None, None).unwrap_or(false) {
         return None;
     }
 

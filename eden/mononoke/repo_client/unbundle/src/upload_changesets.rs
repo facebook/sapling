@@ -126,7 +126,7 @@ impl NewBlobs {
         };
 
         let buffer_size =
-            justknobs::get_as::<usize>("scm/mononoke:repo_client_concurrent_blob_uploads", None);
+            justknobs::get_as::<usize>("scm/mononoke:repo_client_concurrent_blob_uploads", None)?;
 
         let s = stream::iter(entries).buffer_unordered(buffer_size);
 

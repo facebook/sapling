@@ -303,11 +303,7 @@ fn get_hg_changeset_derivation_options(
 /// When enabled, HG manifest blobs are dropped from the write cache before flush,
 /// relying on reconstruction from augmented manifests for subsequent reads.
 fn should_skip_hgmanifest_writes(repo_name: &str) -> Result<bool> {
-    Ok(justknobs::eval(
-        "scm/mononoke:hgmanifest_skip_writes",
-        None,
-        Some(repo_name),
-    ))
+    justknobs::eval("scm/mononoke:hgmanifest_skip_writes", None, Some(repo_name))
 }
 
 async fn get_subtree_change_sources(
@@ -361,7 +357,7 @@ async fn track_all_restricted_paths(
         None, // hashing
         // Adding a switch value to be able to disable writes only
         Some("hg_augmented_manifest_write"),
-    );
+    )?;
 
     if !restricted_paths_enabled {
         return Ok(());

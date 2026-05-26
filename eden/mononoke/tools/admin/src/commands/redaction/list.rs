@@ -56,7 +56,7 @@ pub(super) async fn paths_for_content_keys(
         "scm/mononoke:derived_data_use_content_manifests",
         None,
         Some(repo.repo_identity().name()),
-    );
+    )?;
 
     let root: compat::ContentManifestId = if use_content_manifests {
         repo.repo_derived_data()

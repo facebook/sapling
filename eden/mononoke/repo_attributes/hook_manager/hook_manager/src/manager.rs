@@ -229,7 +229,7 @@ impl HookManager {
             "scm/mononoke:enable_hook_bypass_permission_groups",
             None,
             None,
-        );
+        )?;
         if !jk_enabled {
             return Ok(BypassAuthorizationResult::Bypassed(bypass_reason));
         }
@@ -530,11 +530,13 @@ impl HookManager {
         let individual_concurrency = justknobs::get_as::<usize>(
             "scm/mononoke:bookmark_movement_changeset_hooks_individual_concurency",
             Some(&self.repo_name),
-        );
+        )
+        .unwrap_or(100);
         let batched_concurrency = justknobs::get_as::<usize>(
             "scm/mononoke:bookmark_movement_changeset_hooks_batched_concurency",
             Some(&self.repo_name),
-        );
+        )
+        .unwrap_or(10);
 
         // Avoid mixing fast and slow futures by joining two streams:
         // * One that runs fast futures that operate on a single changeset or file.

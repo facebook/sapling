@@ -349,7 +349,7 @@ impl AffectedChangesets {
                     "scm/mononoke:case_conflicts_check_use_ccsm",
                     None,
                     Some(repo.repo_identity().name()),
-                ) {
+                )? {
                     Self::check_case_conflicts_using_ccsm(ctx, repo, bcs).await
                 } else {
                     Self::check_case_conflicts_using_skeleton_manifest(ctx, repo, bcs).await
@@ -483,7 +483,8 @@ impl AffectedChangesets {
             && should_run_hooks(authz, reason);
         if reason == BookmarkUpdateReason::Push {
             let disable_fallback_to_master =
-                justknobs::eval("scm/mononoke:disable_hooks_on_plain_push", None, None);
+                justknobs::eval("scm/mononoke:disable_hooks_on_plain_push", None, None)
+                    .unwrap_or_default();
             if disable_fallback_to_master {
                 // Skip running hooks for this plain push.
                 needs_hooks_check = false;

@@ -351,7 +351,8 @@ impl CommitCloud {
 
         if latest_version >= HISTORY_KEEP_VERSIONS {
             let delete_limit =
-                justknobs::get_as::<u64>("scm/mononoke:commitcloud_history_gc_chunk_size", None);
+                justknobs::get_as::<u64>("scm/mononoke:commitcloud_history_gc_chunk_size", None)
+                    .map_err(CommitCloudInternalError::Error)?;
 
             // Delete old history entries
             txn = Delete::<WorkspaceHistory>::delete(

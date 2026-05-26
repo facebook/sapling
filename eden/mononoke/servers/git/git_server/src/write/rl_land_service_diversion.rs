@@ -94,7 +94,7 @@ pub fn should_divert_to_rl_land_service(
             "scm/mononoke:divert_aosp_push_to_rl_land_service",
             None,
             Some(repo_name),
-        );
+        )?;
     Ok(divert)
 }
 
@@ -403,8 +403,8 @@ pub async fn divert_to_rl_land_service(
 
     // Poll for completion.
     let poll_interval_secs =
-        justknobs::get_as::<u64>("scm/mononoke:rl_land_poll_interval_secs", None).max(1);
-    let timeout_secs = justknobs::get_as::<u64>("scm/mononoke:rl_land_timeout_secs", None);
+        justknobs::get_as::<u64>("scm/mononoke:rl_land_poll_interval_secs", None)?.max(1);
+    let timeout_secs = justknobs::get_as::<u64>("scm/mononoke:rl_land_timeout_secs", None)?;
     let deadline = Instant::now() + Duration::from_secs(timeout_secs);
 
     loop {

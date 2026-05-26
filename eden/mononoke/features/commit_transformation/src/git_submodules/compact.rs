@@ -357,7 +357,7 @@ async fn compact_submodule_expansion_deletion<'a, R: Repo>(
         "scm/mononoke:derived_data_use_content_manifests",
         None,
         Some(large_repo.repo_identity().name()),
-    );
+    )?;
 
     let parent_root: compat::ContentManifestId = if use_content_manifests {
         large_repo

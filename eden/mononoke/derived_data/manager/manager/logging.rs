@@ -232,10 +232,13 @@ impl<Derivable: BonsaiDerivable> DerivedDataScuba<Derivable> {
 
 impl DerivedDataManager {
     fn should_log_slow_derivation(&self, duration: Duration) -> bool {
+        const FALLBACK_THRESHOLD_SECS: u64 = 15;
+
         let threshold: u64 = justknobs::get_as::<u64>(
             "scm/mononoke_timeouts:derived_data_slow_derivation_threshold_secs",
             None,
-        );
+        )
+        .unwrap_or(FALLBACK_THRESHOLD_SECS);
 
         duration > Duration::from_secs(threshold)
     }

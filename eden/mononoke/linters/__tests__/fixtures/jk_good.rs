@@ -8,9 +8,9 @@
 // File with only existing JK references -- should produce no lint errors
 
 fn check_feature() -> Result<bool, anyhow::Error> {
-    Ok(justknobs::eval(
+    justknobs::eval(
         "scm/mononoke:pushrebase_enable_merge_resolution",
         None,
         None,
-    ))
+    )
 }

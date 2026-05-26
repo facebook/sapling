@@ -217,7 +217,8 @@ impl GitServerContext {
                 // Repo exists in config but not loaded
                 // Check if dynamic repo loading is enabled via JustKnobs
                 let dynamic_loading_enabled =
-                    justknobs::eval("scm/mononoke:git_server_dynamic_repo_loading", None, None);
+                    justknobs::eval("scm/mononoke:git_server_dynamic_repo_loading", None, None)
+                        .unwrap_or(false);
 
                 if !dynamic_loading_enabled {
                     // Dynamic loading is disabled, return the old behavior

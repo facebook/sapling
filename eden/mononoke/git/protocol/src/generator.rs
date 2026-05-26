@@ -81,6 +81,8 @@ use crate::utils::filter_object;
 use crate::utils::tag_entries_to_hashes;
 use crate::utils::to_git_object_stream;
 
+const DEFAULT_GIT_GENERATOR_BUFFER_BYTES: usize = 104_857_600; // 100 MB
+
 /// Fetch and collect the tree and blob objects that are expressed as full objects
 /// for the boundary commits of a shallow fetch
 async fn boundary_trees_and_blobs(
@@ -438,7 +440,8 @@ fn packfile_stream_from_changesets<'a, T: GDMEntryProvider + Send + 'static>(
 
     mononoke::spawn_task(async move {
         let max_buffer =
-            justknobs::get_as::<usize>("scm/mononoke:git_generator_buffer_bytes", None);
+            justknobs::get_as::<usize>("scm/mononoke:git_generator_buffer_bytes", None)
+                .unwrap_or(DEFAULT_GIT_GENERATOR_BUFFER_BYTES);
 
         let weighted_stream =
             tokio_stream::wrappers::ReceiverStream::new(gdm_receiver).filter_map({

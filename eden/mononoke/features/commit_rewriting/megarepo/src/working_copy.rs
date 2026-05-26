@@ -34,7 +34,7 @@ async fn derive_compat_manifest_ids(
         "scm/mononoke:derived_data_use_content_manifests",
         None,
         Some(repo.repo_identity().name()),
-    );
+    )?;
 
     if use_content_manifests {
         let id = repo.repo_derived_data().derive::<RootContentManifestId>(

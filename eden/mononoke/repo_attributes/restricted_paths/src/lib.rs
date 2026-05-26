@@ -778,7 +778,7 @@ fn fetch_options_for_access(
     enforcement_enabled: bool,
 ) -> Result<SourceFetchOptions> {
     Ok(SourceFetchOptions {
-        logging_enabled: justknobs::eval(ACCESS_LOGGING_JK, None, Some(switch_value)),
+        logging_enabled: justknobs::eval(ACCESS_LOGGING_JK, None, Some(switch_value))?,
         enforcement_enabled,
     })
 }

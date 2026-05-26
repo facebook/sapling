@@ -981,7 +981,7 @@ impl<R: MononokeRepo> ChangesetPathContext<R> {
                             "scm/mononoke:changeset_path_context_use_skeleton_manifest_v2",
                             None,
                             Some(&repo_name),
-                        ) {
+                        )? {
                             let root_skeleton_manifest_v2_id =
                                 changeset.root_skeleton_manifest_v2_id().await?;
                             root_skeleton_manifest_v2_id

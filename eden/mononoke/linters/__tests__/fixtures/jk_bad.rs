@@ -8,9 +8,5 @@
 // File with a non-existent JK reference -- should produce a lint error
 
 fn check_feature() -> Result<bool, anyhow::Error> {
-    Ok(justknobs::eval(
-        "scm/mononoke:this_knob_does_not_exist",
-        None,
-        None,
-    ))
+    justknobs::eval("scm/mononoke:this_knob_does_not_exist", None, None)
 }

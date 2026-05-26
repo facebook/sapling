@@ -702,7 +702,7 @@ where
             "scm/mononoke:derived_data_use_content_manifests",
             None,
             Some(large_repo.repo_identity().name()),
-        );
+        )?;
 
         if use_content_manifests {
             let root_content_manifest_id = large_repo

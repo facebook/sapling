@@ -56,7 +56,7 @@ pub struct CacheHandlers {
 impl CacheHandlers {
     pub fn new(cache_handler_factory: CacheHandlerFactory) -> Result<Self, Error> {
         let sitever =
-            justknobs::get_as::<u32>("scm/mononoke_memcache_sitevers:mutable_renames", None);
+            justknobs::get_as::<u32>("scm/mononoke_memcache_sitevers:mutable_renames", None)?;
         let presence_keygen =
             KeyGen::new("scm.mononoke.mutable_renames.present", MC_CODEVER, sitever);
         let rename_keygen = KeyGen::new("scm.mononoke.mutable_renames.rename", MC_CODEVER, sitever);

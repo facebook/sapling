@@ -118,7 +118,7 @@ impl ChangesetHook for LimitUsersDirectorySizeHook {
             "scm/mononoke:derived_data_use_content_manifests",
             None,
             Some(repo_name),
-        );
+        )?;
 
         let root_manifest_id: compat::ContentManifestId = if use_content_manifests {
             hook_repo

@@ -578,7 +578,9 @@ async fn batch_download(
         SKIP_UPSTREAM_FOR_DOWNLOADS_JK,
         None,
         Some(ctx.repo.repo_identity().name()),
-    ) {
+    )
+    .map_err(ErrorKind::Error)?
+    {
         let internal_objects = internal_objects(ctx, &batch.objects).await?;
         ScubaMiddlewareState::maybe_add(scuba, LfsScubaKey::BatchOrder, "skip_upstream");
         let upstream = Ok(UpstreamObjects::NoUpstream);

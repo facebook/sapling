@@ -59,10 +59,10 @@ const JK_BACKFILL_SEGMENT_CHUNK_SIZE: &str =
 /// Get a DerivedDataManager with optional read/write throttling applied.
 /// If JustKnobs are not set or are zero, returns the manager unchanged.
 fn get_throttled_manager(manager: &DerivedDataManager) -> Result<DerivedDataManager> {
-    let write_qps = justknobs::get_as::<i64>(JK_BACKFILL_WRITE_QPS, None);
-    let write_bytes = justknobs::get_as::<i64>(JK_BACKFILL_WRITE_BYTES_S, None);
-    let read_qps = justknobs::get_as::<i64>(JK_BACKFILL_READ_QPS, None);
-    let read_bytes = justknobs::get_as::<i64>(JK_BACKFILL_READ_BYTES_S, None);
+    let write_qps = justknobs::get_as::<i64>(JK_BACKFILL_WRITE_QPS, None)?;
+    let write_bytes = justknobs::get_as::<i64>(JK_BACKFILL_WRITE_BYTES_S, None)?;
+    let read_qps = justknobs::get_as::<i64>(JK_BACKFILL_READ_QPS, None)?;
+    let read_bytes = justknobs::get_as::<i64>(JK_BACKFILL_READ_BYTES_S, None)?;
 
     if write_qps <= 0 && write_bytes <= 0 && read_qps <= 0 && read_bytes <= 0 {
         return Ok(manager.clone());
@@ -270,8 +270,8 @@ pub(crate) async fn compute_derive_slice(
     let manager = get_throttled_manager(base_manager).map_err(AsyncRequestsError::internal)?;
     let manager = with_type_enabled(&manager, derived_data_type);
 
-    let segment_chunk_size =
-        justknobs::get_as::<i64>(JK_BACKFILL_SEGMENT_CHUNK_SIZE, None) as usize;
+    let segment_chunk_size = justknobs::get_as::<i64>(JK_BACKFILL_SEGMENT_CHUNK_SIZE, None)
+        .map_err(AsyncRequestsError::internal)? as usize;
 
     // Derive each segment by explicitly enumerating all changesets from base
     // to head, then deriving them in batches.  Segments are processed

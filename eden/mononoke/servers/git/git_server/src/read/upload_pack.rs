@@ -91,6 +91,8 @@ const SHALLOW_INFO_HEADER: &[u8] = b"shallow-info";
 const ACK: &str = "ACK";
 /// Acknowledgement that the object sent by the client does not exist on the server
 const NAK: &[u8] = b"NAK";
+/// The default number of bytes to be buffered at the writer layer
+const DEFAULT_GIT_WRITER_BUFFER_BYTES: usize = 52_428_800; // 50 MB
 
 #[derive(Debug, Clone)]
 struct FetchResponseHeaders {
@@ -172,7 +174,7 @@ async fn shallow_info(
         "scm/mononoke:git_block_indirect_unshallow_fetch",
         None,
         None,
-    );
+    )?;
     if block_indirect_unshallow && !request.shallow.is_empty() && request.variant.is_none() {
         validate_shallow_fetch_without_deepen(&context.ctx, &context.repo, &request).await?;
     }
@@ -545,7 +547,8 @@ pub async fn fetch(
     } else {
         DeltaForm::RefAndOffset
     };
-    let max_buffer = justknobs::get_as::<usize>("scm/mononoke:git_writer_buffer_bytes", None);
+    let max_buffer = justknobs::get_as::<usize>("scm/mononoke:git_writer_buffer_bytes", None)
+        .unwrap_or(DEFAULT_GIT_WRITER_BUFFER_BYTES);
     // Some repos might be configured to display a message to users when they
     // run `git pull`.
     let mb_fetch_msg = git_fetch_message(request_context).await?;
@@ -606,7 +609,9 @@ pub async fn fetch(
                 "scm/mononoke:git_server_enable_memory_tracking",
                 None,
                 Some(&repo_name),
-            ) {
+            )
+            .unwrap_or(false)
+            {
                 Some(WeightTracker::new(
                     request_context.ctx.fb,
                     repo_name.clone(),

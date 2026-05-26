@@ -48,10 +48,8 @@ use tracing::info;
 use tracing::warn;
 
 fn repos_manager_concurrency() -> Result<usize> {
-    Ok(justknobs::get_as::<usize>(
-        "scm/mononoke:repos_manager_concurrency",
-        None,
-    ))
+    justknobs::get_as::<usize>("scm/mononoke:repos_manager_concurrency", None)
+        .context("Failed to read scm/mononoke:repos_manager_concurrency JustKnob")
 }
 
 define_stats! {

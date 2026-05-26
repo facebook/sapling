@@ -1400,11 +1400,11 @@ impl SqlCommitGraphStorage {
         }
 
         let sql_query_tel = ctx.sql_query_telemetry();
-        let should_apply_fallback = self.should_apply_fallback();
+        let should_apply_fallback = self.should_apply_fallback()?;
 
         if let Some(target) = prefetch.target() {
             let steps_limit =
-                justknobs::get_as::<u64>("scm/mononoke:commit_graph_prefetch_step_limit", None);
+                justknobs::get_as::<u64>("scm/mononoke:commit_graph_prefetch_step_limit", None)?;
 
             let fetched_edges = match target {
                 PrefetchTarget::LinearAncestors { steps, generation } => {
@@ -1544,7 +1544,7 @@ impl SqlCommitGraphStorage {
         )
         .await?;
         let cs_id_and_origin_to_edges =
-            Self::collect_changeset_edges_impl(&fetched_rows, self.should_apply_fallback());
+            Self::collect_changeset_edges_impl(&fetched_rows, self.should_apply_fallback()?);
         Ok(cs_id_and_origin_to_edges
             .into_iter()
             .map(|((cs_id, _origin_cs_id), (id, edges))| (cs_id, (id, ChangesetEdges::from(edges))))
@@ -1876,12 +1876,12 @@ impl SqlCommitGraphStorage {
 
 impl SqlCommitGraphStorage {
     /// Check if fallback should be applied for this repository
-    fn should_apply_fallback(&self) -> bool {
-        !justknobs::eval(
+    fn should_apply_fallback(&self) -> Result<bool> {
+        Ok(!justknobs::eval(
             "scm/mononoke:commit_graph_disable_subtree_source_fallback",
             None,
             Some(self.repo_identity.name()),
-        )
+        )?)
     }
 }
 
@@ -1893,7 +1893,7 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
 
     async fn add_many(&self, ctx: &CoreContext, many_edges: Vec1<ChangesetEdges>) -> Result<usize> {
         let max_retry_attempts =
-            justknobs::get_as::<usize>("scm/mononoke:commit_graph_storage_sql_retries_num", None);
+            justknobs::get_as::<usize>("scm/mononoke:commit_graph_storage_sql_retries_num", None)?;
         Ok(
             retry(|_| self._add_many(ctx, &many_edges), Duration::from_secs(1))
                 .exponential_backoff(1.2)

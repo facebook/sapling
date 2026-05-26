@@ -509,7 +509,8 @@ async fn wireproto_idle_watchdog(data: Arc<Mutex<WireprotoSinkData>>) {
 /// configured threshold). Sync; safe to call from the watchdog loop without
 /// holding any guard across an await.
 fn check_wireproto_idle(data: &Arc<Mutex<WireprotoSinkData>>) -> Result<bool> {
-    let threshold_secs = justknobs::get_as::<i64>("scm/mononoke:wireproto_idle_kill_seconds", None);
+    let threshold_secs =
+        justknobs::get_as::<i64>("scm/mononoke:wireproto_idle_kill_seconds", None)?;
     if threshold_secs <= 0 {
         // Off switch: not configured for this rollout, or explicitly disabled.
         return Ok(false);

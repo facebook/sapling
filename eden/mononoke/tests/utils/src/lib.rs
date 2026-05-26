@@ -159,7 +159,7 @@ pub async fn list_working_copy_with_types(
         "scm/mononoke:derived_data_use_content_manifests",
         None,
         Some(repo.repo_identity().name()),
-    ) {
+    )? {
         let root = repo
             .repo_derived_data()
             .derive::<RootContentManifestId>(ctx, cs_id, DerivationPriority::LOW)
