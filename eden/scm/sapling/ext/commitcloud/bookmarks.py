@@ -44,19 +44,7 @@ def _bookmarks(orig, ui, repo, *names, **opts):
                 hint=_('use "@prog@ book" to get a list of your local bookmarks'),
             )
         else:
-            # Use SaplingRemoteAPI for bookmark listing.
-            # _http_bookmark_fetch only handles exact names;
-            # _http_bookmark_patterns_fetch supports prefix patterns with '*'.
-            usehttp = repo.ui.configbool("infinitepush", "httpbookmarks") and not any(
-                n.endswith("*") for n in names
-            )
-
-            if usehttp and repo.nullableedenapi is not None:
-                fetchedbookmarks = _http_bookmark_fetch(repo, names)
-            elif (
-                repo.ui.configbool("commitcloud", "httplistbookmarkpatterns", True)
-                and repo.nullableedenapi is not None
-            ):
+            if repo.nullableedenapi is not None:
                 fetchedbookmarks = _http_bookmark_patterns_fetch(repo, names)
             else:
                 destpath = path.pushloc or path.loc

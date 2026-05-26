@@ -1071,10 +1071,7 @@ class localrepository:
                     b for b in bookmarknames if b not in remotebookmarks
                 ]
                 if missing_bookmarknames:
-                    if (
-                        self.ui.configbool("pull", "httpbookmarks")
-                        and self.nullableedenapi is not None
-                    ):
+                    if self.nullableedenapi is not None:
                         fetchedbookmarks = self.edenapi.bookmarks(missing_bookmarknames)
                         tracing.debug(
                             "edenapi fetched bookmarks: %s" % str(fetchedbookmarks),
@@ -1092,7 +1089,7 @@ class localrepository:
                             remote.listkeyspatterns(
                                 "bookmarks", patterns=missing_bookmarknames
                             )
-                        )  # {name: hexnode}
+                        )
 
                 for name in bookmarknames:
                     if name in remotebookmarks:

@@ -137,11 +137,8 @@ def expushop(
 
 
 def _listremotebookmarks(repo, remote, bookmarks):
-    """Fetch remote bookmarks, preferring SaplingRemoteAPI when available."""
-    if (
-        repo.ui.configbool("remotenames", "httplistbookmarks", True)
-        and repo.nullableedenapi is not None
-    ):
+    """Fetch remote bookmarks via SaplingRemoteAPI."""
+    if repo.nullableedenapi is not None:
         # Use SaplingRemoteAPI for bookmark lookup.
         # remotenames.httplistbookmarksfreshness controls the freshness level
         # for bookmark requests. "MostRecent" bypasses Mononoke's warm bookmark
