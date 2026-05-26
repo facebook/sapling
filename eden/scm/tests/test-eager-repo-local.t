@@ -64,6 +64,3 @@ Rename
   diff --git a/E b/E1
   rename from E
   rename to E1
-
-Export to revlog repo:
-  $ sl debugexportrevlog "$TESTTMP/export-revlog"
