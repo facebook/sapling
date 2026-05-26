@@ -34,6 +34,8 @@ use tupperware_api_tupperware_srclients::make_TupperwareReadOnlyService_srclient
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 const SCS_PORT_NAME: &str = "thrift";
+const SCSC_ADMIN_ENABLED_ENV: &str = "SCSC_ADMIN_ENABLED";
+const SCSC_CLIENT_CORRELATOR_ENV: &str = "SCSC_CLIENT_CORRELATOR";
 
 #[derive(clap::Args)]
 pub(super) struct ConnectionArgs {
@@ -97,6 +99,14 @@ async fn resolve_task_ip_and_port_with_client(
     Ok((task_info.taskIp.parse()?, port))
 }
 
+fn client_correlator_override() -> Option<String> {
+    if std::env::var_os(SCSC_ADMIN_ENABLED_ENV).is_some() {
+        std::env::var(SCSC_CLIENT_CORRELATOR_ENV).ok()
+    } else {
+        None
+    }
+}
+
 impl ConnectionArgs {
     pub async fn get_connection(
         &self,
@@ -135,7 +145,9 @@ impl ConnectionArgs {
 
         if let Some(ref host_str) = host {
             if disable_sr {
-                return ScsClientHostBuilder::new().build_from_host_port(fb, host_str);
+                return ScsClientHostBuilder::new()
+                    .with_client_correlator(client_correlator_override())
+                    .build_from_host_port(fb, host_str);
             }
         }
 
@@ -145,6 +157,7 @@ impl ConnectionArgs {
             .with_host_and_port(host)?
             .with_processing_timeout(self.processing_timeout)
             .with_cat(self.cat.clone())
+            .with_client_correlator(client_correlator_override())
             .build()
     }
 }

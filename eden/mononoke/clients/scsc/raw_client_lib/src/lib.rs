@@ -18,6 +18,7 @@ use anyhow::anyhow;
 use clientinfo::CLIENT_INFO_HEADER;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
+use clientinfo::ClientRequestInfo;
 use fbinit::FacebookInit;
 #[cfg(not(target_os = "windows"))]
 use identity::IdentitySet;
@@ -42,6 +43,7 @@ pub struct ScsClientBuilder {
     single_host: Option<SocketAddr>,
     processing_timeout: Option<Duration>,
     cat: Option<String>,
+    client_correlator: Option<String>,
 }
 
 impl ScsClientBuilder {
@@ -54,6 +56,7 @@ impl ScsClientBuilder {
             single_host: None,
             processing_timeout: None,
             cat: None,
+            client_correlator: None,
         }
     }
 
@@ -86,6 +89,11 @@ impl ScsClientBuilder {
         self
     }
 
+    pub fn with_client_correlator(mut self, client_correlator: Option<String>) -> Self {
+        self.client_correlator = client_correlator;
+        self
+    }
+
     pub fn build(self) -> Result<ScsClient, Error> {
         build_from_tier_name(
             self.fb,
@@ -95,6 +103,7 @@ impl ScsClientBuilder {
             self.single_host,
             self.processing_timeout,
             self.cat,
+            self.client_correlator,
         )
     }
 }
@@ -109,18 +118,19 @@ fn build_from_tier_name_via_sr(
     single_host: Option<SocketAddr>,
     processing_timeout: Option<Duration>,
     cat: Option<String>,
+    client_correlator: Option<String>,
 ) -> Result<ScsClient, Error> {
     use source_control_srclients::make_SourceControlService_srclient;
     use srclient::ClientParams;
 
-    let (client_info, correlator) = new_scs_client_info()?;
+    let (client_info, correlator) = new_scs_client_info(client_correlator);
     let headers = hashmap! {
         String::from(CLIENT_INFO_HEADER) => client_info.to_json()?,
     };
 
     let client_params = ClientParams::new()
         .with_client_id(client_id)
-        .maybe_with(correlator.clone(), |c, correlator| {
+        .maybe_with(Some(correlator.clone()), |c, correlator| {
             c.with_logging_context(correlator)
         })
         .maybe_with(shardmanager_domain, |c, shardmanager_domain| {
@@ -144,7 +154,10 @@ fn build_from_tier_name_via_sr(
         with_cat_optional = cat,
     )?;
 
-    Ok(ScsClient { client, correlator })
+    Ok(ScsClient {
+        client,
+        correlator: Some(correlator),
+    })
 }
 
 /// Build a scsclient from a tier name via servicerouter.
@@ -157,6 +170,7 @@ fn build_from_tier_name_via_sr(
     _single_host: Option<SocketAddr>,
     _processing_timeout: Option<Duration>,
     _cat: Option<String>,
+    _client_correlator: Option<String>,
 ) -> Result<ScsClient, Error> {
     Err(anyhow!(
         "Connection via ServiceRouter is not supported on this platform"
@@ -172,8 +186,9 @@ fn build_from_tier_name_via_x2p(
     single_host: Option<SocketAddr>,
     _processing_timeout: Option<Duration>,
     cat: Option<String>,
+    client_correlator: Option<String>,
 ) -> Result<ScsClient, Error> {
-    let (client_info, correlator) = new_scs_client_info()?;
+    let (client_info, correlator) = new_scs_client_info(client_correlator);
     let headers = hashmap! {
         String::from(CLIENT_INFO_HEADER) => client_info.to_json()?,
     };
@@ -189,7 +204,10 @@ fn build_from_tier_name_via_x2p(
 
     let client = build_SourceControlService_client(channel)?;
 
-    Ok(ScsClient { client, correlator })
+    Ok(ScsClient {
+        client,
+        correlator: Some(correlator),
+    })
 }
 
 /// Build a scsclient from a tier name.
@@ -201,6 +219,7 @@ fn build_from_tier_name(
     single_host: Option<SocketAddr>,
     processing_timeout: Option<Duration>,
     cat: Option<String>,
+    client_correlator: Option<String>,
 ) -> Result<ScsClient, Error> {
     match x2pclient::get_env(fb) {
         x2pclient::Environment::Prod => {
@@ -213,6 +232,7 @@ fn build_from_tier_name(
                     single_host,
                     processing_timeout,
                     cat,
+                    client_correlator,
                 )
             } else {
                 build_from_tier_name_via_x2p(
@@ -223,6 +243,7 @@ fn build_from_tier_name(
                     single_host,
                     processing_timeout,
                     cat,
+                    client_correlator,
                 )
             }
         }
@@ -234,16 +255,26 @@ fn build_from_tier_name(
             single_host,
             processing_timeout,
             cat,
+            client_correlator,
         ),
         other_env => Err(anyhow!("{} not supported", other_env)),
     }
 }
 
-pub struct ScsClientHostBuilder {}
+pub struct ScsClientHostBuilder {
+    client_correlator: Option<String>,
+}
 
 impl ScsClientHostBuilder {
     pub fn new() -> Self {
-        Self {}
+        Self {
+            client_correlator: None,
+        }
+    }
+
+    pub fn with_client_correlator(mut self, client_correlator: Option<String>) -> Self {
+        self.client_correlator = client_correlator;
+        self
     }
 
     /// Build a scsclient from a `host:port` string.
@@ -265,7 +296,7 @@ impl ScsClientHostBuilder {
 
         let mut addrs = host_port.as_ref().to_socket_addrs()?;
         let addr = addrs.next().expect("no address found");
-        let (_client_info, correlator) = new_scs_client_info()?;
+        let (_client_info, correlator) = new_scs_client_info(self.client_correlator);
         let client = make_SourceControlService_thriftclient!(
             fb,
             from_sock_addr = addr,
@@ -274,7 +305,10 @@ impl ScsClientHostBuilder {
             with_secure = true,
             with_expected_identities = expected_identities,
         )?;
-        Ok(ScsClient { client, correlator })
+        Ok(ScsClient {
+            client,
+            correlator: Some(correlator),
+        })
     }
 
     /// Build a scsclient from a `host:port` string.
@@ -351,12 +385,12 @@ impl MaybeWith<x2pclient::X2pClientBuilder> for x2pclient::X2pClientBuilder {
     }
 }
 
-fn new_scs_client_info() -> Result<(ClientInfo, Option<String>)> {
-    let client_info = ClientInfo::new_with_entry_point(ClientEntryPoint::ScsClient)?;
-    let correlator = client_info
-        .request_info
-        .as_ref()
-        .map(|request_info| request_info.correlator.clone());
+fn new_scs_client_info(client_correlator: Option<String>) -> (ClientInfo, String) {
+    let request_info = client_correlator
+        .map(|correlator| ClientRequestInfo::new_ext(ClientEntryPoint::ScsClient, correlator))
+        .unwrap_or_else(|| ClientRequestInfo::new(ClientEntryPoint::ScsClient));
+    let correlator = request_info.correlator.clone();
+    let client_info = ClientInfo::new_with_client_request_info(request_info);
 
-    Ok((client_info, correlator))
+    (client_info, correlator)
 }
