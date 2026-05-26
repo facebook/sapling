@@ -176,7 +176,7 @@ impl<T: Default + PartialEq> AbstractLineLog<T> {
     ///
     /// Panics if `a_rev` > `max_rev`.
     pub fn edit_chunk(
-        self,
+        mut self,
         a_rev: Rev,
         mut a1: LineIdx,
         mut a2: LineIdx,
@@ -189,16 +189,13 @@ impl<T: Default + PartialEq> AbstractLineLog<T> {
             "a_rev {a_rev} must not be greater than max_rev {}",
             self.max_rev
         );
-        let this = if flags.contains(EditFlags::ADD_EDGE) && a_rev <= b_rev {
-            Self {
-                dag: self.dag.with_edge(a_rev, b_rev),
-                ..self
-            }
-        } else {
-            self
+        // Resize dag to make b_rev valid rev, regardless of ADD_EDGE.
+        self.dag = self.dag.with_edge(b_rev, b_rev);
+        if flags.contains(EditFlags::ADD_EDGE) && a_rev <= b_rev {
+            self.dag = self.dag.with_edge(a_rev, b_rev);
         };
         let mut b_lines = b_lines.into_iter().map(Arc::new).collect::<VecDeque<_>>();
-        this.with_a_lines_cache(a_rev, b_rev, |this: Self, maybe_mut| {
+        self.with_a_lines_cache(a_rev, b_rev, |this: Self, maybe_mut| {
             if flags.contains(EditFlags::BLOCK_SHIFT) {
                 const DEFAULT_SHIFT_THRESHOLD: usize = 5;
                 this.try_block_shift(
@@ -209,6 +206,7 @@ impl<T: Default + PartialEq> AbstractLineLog<T> {
                     DEFAULT_SHIFT_THRESHOLD,
                 );
             };
+            debug_assert!(this.dag.all().contains(b_rev));
             this.edit_chunk_internal(a1, a2, b_rev, b_lines, maybe_mut)
         })
     }
