@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::io::BufRead;
 use std::path::Path;
@@ -25,84 +26,115 @@ use crate::WorktreeOpts;
 use crate::require_group;
 
 pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, _wc: &WorkingCopy) -> Result<u8> {
-    let logger = ctx.logger();
     let current_group = require_group(repo)?;
 
     if ctx.opts.all {
         return run_remove_all(ctx, repo, &current_group);
     }
 
-    let target_str = match ctx.opts.args.get(1) {
-        Some(value) => value,
-        None => abort!("usage: sl worktree remove PATH"),
-    };
-    let target =
-        util::path::strip_unc_prefix(util::path::canonical_path_allow_missing(target_str)?);
-
-    let registry = load_registry(&current_group.shared_store_path)?;
-    let grp = match registry.groups.get(&current_group.group_id) {
-        Some(group) => group,
-        None => abort!("group '{}' not found in registry", current_group.group_id),
-    };
-    if !grp.worktrees.contains_key(&target) {
-        if let Some(parent_wt) = grp.worktrees.keys().find(|wt| target.starts_with(wt)) {
-            abort!(
-                "{} is not the root of checkout {}, not removing",
-                target.display(),
-                parent_wt.display()
-            );
-        }
-        abort!(
-            "{} is not in this worktree group, use `eden rm` instead",
-            target.display()
-        );
+    let path_args = &ctx.opts.args[1..];
+    if path_args.is_empty() {
+        abort!("usage: sl worktree remove PATH [PATH...]");
     }
-    if target == grp.main {
-        abort!("cannot remove a main worktree with linked worktrees");
-    }
-    let group_main = grp.main.clone();
 
-    with_worktree_path_op_lock(&current_group.shared_store_path, &target, || {
-        confirm_remove(ctx, &[&target])?;
+    let targets: BTreeSet<PathBuf> = path_args
+        .iter()
+        .map(|s| -> Result<PathBuf> {
+            Ok(util::path::strip_unc_prefix(
+                util::path::canonical_path_allow_missing(s)?,
+            ))
+        })
+        .collect::<Result<_>>()?;
+    let target_refs: Vec<&Path> = targets.iter().map(|p| p.as_path()).collect();
+    validate_targets(&current_group, &target_refs)?;
 
-        let pre_hooks = hook::Hooks::from_config(repo.config(), ctx.io(), "pre-worktree-remove");
-        pre_hooks.run_hooks(
-            Some(repo),
-            true,
-            Some(&HashMap::from([(
-                "path".to_string(),
-                target.display().to_string(),
-            )])),
-        )?;
-
-        run_eden_remove(ctx, repo, &target)?;
-
-        Ok(())
-    })?;
-
-    with_registry_lock(&current_group.shared_store_path, |registry| {
-        let Some(group_id) = registry.find_group_for_path(&group_main) else {
-            return Ok(());
-        };
-        let grp = registry
-            .groups
-            .get_mut(&group_id)
-            .expect("group must exist after find_group_for_path");
-        grp.worktrees.remove(&target);
-        let linked_count = grp.worktrees.keys().filter(|p| **p != grp.main).count();
-        if linked_count == 0 {
-            dissolve_group(registry, &group_id);
-        }
-        Ok(())
-    })?;
-
-    logger.info(format!("removed {}", target.display()));
+    remove_and_update_registry(ctx, repo, &current_group, &target_refs)?;
 
     // NOTE: Add post-worktree-remove hook if the need arises. Note that the
     // hook's cwd (repo.path()) may not exist if the user removed the worktree
     // they were standing in (see D98226466).
 
     Ok(0)
+}
+
+/// Validate that all user-specified paths are removable linked worktrees.
+fn validate_targets(current_group: &CurrentGroup, targets: &[&Path]) -> Result<()> {
+    let registry = load_registry(&current_group.shared_store_path)?;
+    let grp = match registry.groups.get(&current_group.group_id) {
+        Some(group) => group,
+        None => abort!("group '{}' not found in registry", current_group.group_id),
+    };
+    for target in targets {
+        if !grp.worktrees.contains_key(*target) {
+            if let Some(parent_wt) = grp.worktrees.keys().find(|wt| target.starts_with(wt)) {
+                abort!(
+                    "{} is not the root of checkout {}, not removing",
+                    target.display(),
+                    parent_wt.display()
+                );
+            }
+            abort!(
+                "{} is not in this worktree group, use `eden rm` instead",
+                target.display()
+            );
+        }
+        if *target == grp.main {
+            abort!("cannot remove a main worktree with linked worktrees");
+        }
+    }
+    Ok(())
+}
+
+/// Confirm, run hooks, tear down EdenFS mounts, and update the worktree registry.
+fn remove_and_update_registry(
+    ctx: &ReqCtx<WorktreeOpts>,
+    repo: &Repo,
+    current_group: &CurrentGroup,
+    targets: &[&Path],
+) -> Result<()> {
+    if targets.is_empty() {
+        return Ok(());
+    }
+
+    let logger = ctx.logger();
+
+    confirm_remove(ctx, targets)?;
+
+    let pre_hooks = hook::Hooks::from_config(repo.config(), ctx.io(), "pre-worktree-remove");
+    for target in targets {
+        with_worktree_path_op_lock(&current_group.shared_store_path, target, || {
+            pre_hooks.run_hooks(
+                Some(repo),
+                true,
+                Some(&HashMap::from([(
+                    "path".to_string(),
+                    target.display().to_string(),
+                )])),
+            )?;
+            run_eden_remove(ctx, repo, target)?;
+            Ok(())
+        })?;
+    }
+
+    with_registry_lock(&current_group.shared_store_path, |registry| {
+        let Some(grp) = registry.groups.get_mut(&current_group.group_id) else {
+            return Ok(());
+        };
+        for target in targets {
+            grp.worktrees.remove(*target);
+        }
+        let linked_count = grp.worktrees.keys().filter(|p| **p != grp.main).count();
+        if linked_count == 0 {
+            dissolve_group(registry, &current_group.group_id);
+        }
+        Ok(())
+    })?;
+
+    for target in targets {
+        logger.info(format!("removed {}", target.display()));
+    }
+
+    Ok(())
 }
 
 fn run_remove_all(

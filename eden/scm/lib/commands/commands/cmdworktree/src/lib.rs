@@ -100,7 +100,7 @@ pub fn doc() -> &'static str {
 
       list [-Tjson]                            List all worktrees in the group
       add [PATH] [--label TEXT] [--snapshot]   Create a new linked worktree
-      remove PATH [--all] [-y]                 Remove linked worktree(s)
+      remove PATH [PATH...] [--all] [-y]        Remove linked worktree(s)
       label [PATH] TEXT [--remove]             Set or remove a worktree label
 
     If PATH is omitted from `add`, `worktree.path-generator` is used to
