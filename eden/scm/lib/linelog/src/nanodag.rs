@@ -303,19 +303,37 @@ impl NanoDag {
             parents.push_back(item);
         }
 
+        Self {
+            children: Self::children_from_parents(&parents),
+            parents,
+            cache: Default::default(),
+            ..self
+        }
+    }
+
+    /// Keep only revs below `len`.
+    pub fn truncate(mut self, len: usize) -> Self {
+        if len >= self.len() {
+            return self;
+        }
+
+        let parents = self.parents.slice(..len);
+        Self {
+            children: Self::children_from_parents(&parents),
+            parents,
+            cache: Default::default(),
+            ..self
+        }
+    }
+
+    fn children_from_parents(parents: &ImVec<SmallVec<[Rev; 1]>>) -> ImMap<Rev, SmallRevs> {
         let mut children: ImMap<Rev, SmallRevs> = ImMap::new();
         for (child, child_parents) in parents.iter().enumerate() {
             for parent in child_parents {
                 children.entry(*parent).or_default().insert(child)
             }
         }
-
-        Self {
-            parents,
-            children,
-            cache: Default::default(),
-            ..self
-        }
+        children
     }
 
     /// Prepare the self.cache field on demand.
@@ -554,6 +572,27 @@ mod tests {
         assert!(dag.cache.get().is_some());
         assert!(inserted.cache.get().is_none());
         assert_eq!(inserted.to_string(), "0-1-2-3");
+    }
+
+    #[test]
+    fn test_truncate_removes_revs_and_rebuilds_children() {
+        let dag = NanoDag::from_edges(5, &[(0, 1), (0, 2), (1, 3), (2, 3), (3, 4)]);
+        assert_eq!(dag.to_string(), "0-{1,2}-3-4");
+        assert_eq!(dag.descendants(0).map(revs_vec), Some(vec![0, 1, 2, 3, 4]));
+
+        let truncated = dag.clone().truncate(3);
+
+        assert_eq!(dag.to_string(), "0-{1,2}-3-4");
+        assert!(dag.cache.get().is_some());
+        assert_eq!(truncated.to_string(), "0-{1,2}");
+        assert_eq!(truncated.parents(3), None);
+        assert_eq!(truncated.children(1), None);
+        assert_eq!(truncated.children(2), None);
+        assert!(truncated.cache.get().is_none());
+
+        let empty = truncated.truncate(0);
+        assert_eq!(empty.parents(0), None);
+        assert_eq!(revs_vec(&empty.heads(&empty.all())), vec![]);
     }
 
     #[test]
