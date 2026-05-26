@@ -155,7 +155,7 @@ impl Default for EditFlags {
     }
 }
 
-impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
+impl<T: Default + PartialEq> AbstractLineLog<T> {
     /// Edit chunk. Replace lines from `a1` (inclusive) to `a2` (exclusive) in rev
     /// `a_rev` with `b_lines`. `b_lines` are considered introduced by `b_rev`.
     /// If `b_lines` is empty, the edit is a deletion. If `a1` equals to `a2`,
@@ -428,7 +428,7 @@ impl<T: Default + PartialEq + fmt::Debug> AbstractLineLog<T> {
                     .clone()
                     .with_perf_stats(None)
                     .execute(&SmallRevs::from(b_rev), None);
-                assert_eq!(fresh_lines, a_lines);
+                assert!(fresh_lines == a_lines);
             }
             result.a_lines_cache = Some((b_rev, a_lines));
         } else {
