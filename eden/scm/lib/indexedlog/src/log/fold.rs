@@ -171,7 +171,13 @@ impl FoldState {
             .map(|p| p.join(format!("fold-{}", self.def.name)));
         if let Some(path) = &opt_path {
             if let Err(e) = self.load_from_file(path) {
-                tracing::warn!("cannot load FoldState: {}", e);
+                // ENOENT is expected on first open; `save_to_file` creates it lazily below.
+                match e.io_error_kind() {
+                    io::ErrorKind::NotFound => {
+                        tracing::debug!("FoldState not on disk yet: {}", e)
+                    }
+                    _ => tracing::warn!("cannot load FoldState: {}", e),
+                }
             }
         }
 
