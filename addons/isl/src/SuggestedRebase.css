@@ -9,4 +9,11 @@
   display: flex;
   gap: var(--pad);
   align-items: center;
+  overflow: hidden;
+}
+
+.suggested-rebase-context-menu-option > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

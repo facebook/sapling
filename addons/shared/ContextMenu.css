@@ -17,6 +17,7 @@
   flex-direction: column;
   z-index: 2000;
   min-width: 180px;
+  max-width: 500px;
   box-sizing: border-box;
 }
 
@@ -35,6 +36,9 @@
   padding: var(--halfpad);
   border-radius: var(--halfpad);
   cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .context-menu-submenu {
   display: flex;
