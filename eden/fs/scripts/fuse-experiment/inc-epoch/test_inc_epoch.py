@@ -17,13 +17,17 @@ The test mounts a minimal FUSE filesystem with:
   - no AUTO_INVAL_DATA
   - infinite TTL on all caches (entry, attr, readdir)
 
-It verifies that after INC_EPOCH, a subsequent listdir() from a process
-whose cwd is inside the mount sees the updated directory contents,
-even though no INVAL_INODE or INVAL_ENTRY was sent.
+It verifies that after INC_EPOCH, subsequent listdir() calls see the
+updated directory contents, even though no INVAL_INODE or INVAL_ENTRY was
+sent. It checks both:
+  - listdir(".") with cwd inside the changed directory
+  - listdir("dir") with cwd at the FUSE root, so fuse_root/dir is cached
 
 Expected output (patched kernel):
-    baseline (no invalidation)  STALE   ['a.txt']
-    inc_epoch                   FRESH   ['a.txt', 'b.txt']
+    cwd=. baseline (no invalidation)       STALE   ['a.txt']
+    cwd=. inc_epoch                        FRESH   ['a.txt', 'b.txt']
+    cwd=root baseline (no invalidation)    STALE   ['a.txt']
+    cwd=root inc_epoch                     FRESH   ['a.txt', 'b.txt']
 
 On stock kernel (no INC_EPOCH fix), both show STALE.
 """
@@ -105,7 +109,7 @@ class FuseDaemon:
             self.proc.kill()
 
 
-def run_case(fs, name, invalidate):
+def run_case(fs, name, invalidate, cwd, path):
     """Run one test case. Returns (readdir_fresh, files)."""
     # Reset to clean state: only a.txt visible, flush all caches
     fs.cmd("reset")
@@ -115,40 +119,41 @@ def run_case(fs, name, invalidate):
     time.sleep(0.3)
     fs.drain()
 
-    # chdir into the mount and prime the readdir cache
     saved = os.getcwd()
-    os.chdir(fs.mnt / "dir")
-    os.listdir(".")
-    time.sleep(0.2)
-    fs.drain()
+    try:
+        os.chdir(cwd)
 
-    # Verify cache is working: second listdir should NOT hit FUSE
-    os.listdir(".")
-    time.sleep(0.2)
-    logs = fs.drain()
-    if any("[READDIRPLUS]" in l for l in logs):
+        # Prime the path lookup and readdir cache. For the cwd=root case, this
+        # specifically caches fuse_root/dir before INC_EPOCH.
+        os.listdir(path)
+        time.sleep(0.2)
+        fs.drain()
+
+        # Verify cache is working: second listdir should NOT hit FUSE
+        os.listdir(path)
+        time.sleep(0.2)
+        logs = fs.drain()
+        if any("[READDIRPLUS]" in l for l in logs):
+            print(f"  {R}SKIP{N} {name}: readdir cache not working")
+            return None
+
+        # Make b.txt visible server-side
+        fs.cmd("add")
+        fs.drain()
+
+        # Invalidate (or not, for baseline)
+        if invalidate:
+            fs.cmd("inc_epoch")
+        time.sleep(0.2)
+        fs.drain()
+
+        files = sorted(os.listdir(path))
+        time.sleep(0.2)
+        fs.drain()
+        fresh = "b.txt" in files
+        return fresh, files
+    finally:
         os.chdir(saved)
-        print(f"  {R}SKIP{N} {name}: readdir cache not working")
-        return None
-
-    # Make b.txt visible server-side
-    fs.cmd("add")
-    fs.drain()
-
-    # Invalidate (or not, for baseline)
-    if invalidate:
-        fs.cmd("inc_epoch")
-    time.sleep(0.2)
-    fs.drain()
-
-    # Probe: listdir from cwd
-    files = sorted(os.listdir("."))
-    time.sleep(0.2)
-    logs = fs.drain()
-    fresh = "b.txt" in files
-
-    os.chdir(saved)
-    return fresh, files
 
 
 def main():
@@ -164,8 +169,14 @@ def main():
     print(f"  {'─' * 35}  ───────  ─────────────────")
 
     try:
-        for name, inval in [("baseline (no invalidation)", False), ("inc_epoch", True)]:
-            r = run_case(fs, name, inval)
+        cases = [
+            ("cwd=. baseline (no invalidation)", False, fs.mnt / "dir", "."),
+            ("cwd=. inc_epoch", True, fs.mnt / "dir", "."),
+            ("cwd=root baseline (no invalidation)", False, fs.mnt, "dir"),
+            ("cwd=root inc_epoch", True, fs.mnt, "dir"),
+        ]
+        for name, inval, cwd, path in cases:
+            r = run_case(fs, name, inval, cwd, path)
             if r is None:
                 continue
             fresh, files = r
