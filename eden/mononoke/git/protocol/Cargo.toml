@@ -34,7 +34,7 @@ gix-features = { version = "0.48.0", features = ["parallel"] }
 gix-hash = { version = "0.25.0", features = ["sha1"] }
 gix-object = "0.60.0"
 gix-pack = "0.70.0"
-justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+justknobs = { version = "0.1.0", path = "../../common/rust/justknobs_ext" }
 manifest = { version = "0.1.0", path = "../../manifest" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_macros = { version = "0.1.0", path = "../../common/mononoke_macros" }

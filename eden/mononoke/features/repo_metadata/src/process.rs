@@ -88,7 +88,7 @@ async fn manifest_and_unode(
         "scm/mononoke:derived_data_use_content_manifests",
         None,
         Some(repo_name),
-    )?;
+    );
 
     let (root, unode) = if use_content_manifests {
         let (content_manifest, blame) = try_join!(

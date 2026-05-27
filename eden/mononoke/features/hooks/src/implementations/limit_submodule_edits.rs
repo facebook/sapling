@@ -119,7 +119,7 @@ async fn get_new_submodule_mpaths(
         "scm/mononoke:derived_data_use_content_manifests",
         None,
         Some(hook_repo.repo_identity.name()),
-    )?;
+    );
 
     let parent_roots: &HashSet<compat::ContentManifestId> = &stream::iter(changeset.parents())
         .map(|p| async move {
