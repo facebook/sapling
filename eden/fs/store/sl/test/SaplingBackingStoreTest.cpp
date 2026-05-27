@@ -24,6 +24,8 @@
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/TestOps.h"
 #include "eden/fs/store/BackingStoreLogger.h"
+#include "eden/fs/store/ObjectStore.h"
+#include "eden/fs/store/TreeCache.h"
 #include "eden/fs/store/sl/SaplingBackingStore.h"
 #include "eden/fs/store/sl/SaplingBackingStoreOptions.h"
 #include "eden/fs/telemetry/EdenFsEventsLogger.h"
@@ -163,6 +165,32 @@ TEST_F(SaplingBackingStoreNoFaultInjectorTest, getTree) {
           .get(kTestTimeout);
 
   EXPECT_TRUE(*tree1.tree == *tree2);
+}
+
+TEST_F(
+    SaplingBackingStoreNoFaultInjectorTest,
+    checkPermissionRejectsObjectIdWithPath) {
+  testEdenConfig->restrictedTreeTtlSeconds.setValue(
+      0, ConfigSourceType::UserConfig, true);
+  auto objectStore = ObjectStore::create(
+      queuedBackingStore,
+      TreeCache::create(edenConfig, stats.copy()),
+      stats.copy(),
+      nullptr,
+      nullptr,
+      edenConfig,
+      CaseSensitivity::Sensitive);
+  auto rootTree =
+      objectStore->getRootTree(commit1, ObjectFetchContext::getNullContext())
+          .get(kTestTimeout);
+  auto rootTreeId = SlOid{rootTree.treeId};
+  auto idWithPath = SlOid{rootTreeId.node(), RelativePathPiece{"src"}}.oid();
+
+  auto permissionCheck = objectStore->checkPermissionIfExpired(
+      idWithPath, std::chrono::steady_clock::now());
+
+  EXPECT_THROW(
+      std::move(permissionCheck).get(kTestTimeout), std::runtime_error);
 }
 
 TEST_F(
