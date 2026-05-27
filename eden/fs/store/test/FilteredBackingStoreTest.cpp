@@ -26,6 +26,8 @@
 #include "eden/fs/model/TestOps.h"
 #include "eden/fs/store/BackingStoreLogger.h"
 #include "eden/fs/store/FilteredBackingStore.h"
+#include "eden/fs/store/ObjectStore.h"
+#include "eden/fs/store/TreeCache.h"
 #include "eden/fs/store/filter/HgSparseFilter.h"
 #include "eden/fs/store/sl/SaplingBackingStore.h"
 #include "eden/fs/store/sl/SaplingBackingStoreOptions.h"
@@ -207,6 +209,37 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, getNonExistent) {
           ObjectFetchContext::getNullContext()),
       std::domain_error,
       "tree 0.*1 not found");
+}
+
+TEST_F(
+    FakeSubstringFilteredBackingStoreTest,
+    checkPermissionFailsOpenForFilteredTreeId) {
+  testEdenConfig->restrictedTreeTtlSeconds.setValue(
+      0, ConfigSourceType::UserConfig, true);
+  auto stats = makeRefPtr<EdenStats>();
+  auto objectStore = ObjectStore::create(
+      filteredStore_,
+      TreeCache::create(edenConfig, stats.copy()),
+      stats.copy(),
+      nullptr,
+      nullptr,
+      edenConfig,
+      CaseSensitivity::Sensitive);
+
+  auto rawManifestId = makeTestId("1");
+  auto filteredTreeId = ObjectId{FilteredObjectId{
+      RelativePathPiece{"src/restricted"}, kTestFilter1, rawManifestId}
+                                     .getValue()};
+  wrappedStore_->setCheckPermissionResult(rawManifestId, false);
+
+  auto hasAccess = objectStore
+                       ->checkPermissionIfExpired(
+                           filteredTreeId, std::chrono::steady_clock::now())
+                       .get(0ms);
+
+  EXPECT_TRUE(hasAccess);
+  EXPECT_EQ(0, wrappedStore_->getCheckPermissionCount(rawManifestId));
+  EXPECT_EQ(0, wrappedStore_->getCheckPermissionCount(filteredTreeId));
 }
 
 TEST_F(FakeSubstringFilteredBackingStoreTest, getBlob) {
