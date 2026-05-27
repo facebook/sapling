@@ -44,11 +44,7 @@ async fn create_changeset_stack<R: MononokeRepo>(
         repo,
         changes_stack,
         stack_parents,
-        CreateChangesetChecks {
-            noop_file_changes: CreateChangesetCheckMode::Check,
-            deleted_files_existed_in_a_parent: CreateChangesetCheckMode::Check,
-            empty_changeset: CreateChangesetCheckMode::Check,
-        },
+        CreateChangesetChecks::check(),
     )
     .await
 }
@@ -66,6 +62,8 @@ async fn create_changeset_stack_fix_request<R: MononokeRepo>(
             noop_file_changes: CreateChangesetCheckMode::Fix,
             deleted_files_existed_in_a_parent: CreateChangesetCheckMode::Fix,
             empty_changeset: CreateChangesetCheckMode::Fix,
+            copy_from_path: CreateChangesetCheckMode::Check,
+            prefix_files_deleted: CreateChangesetCheckMode::Check,
         },
     )
     .await
@@ -139,11 +137,7 @@ async fn create_changesets_sequentially<R: MononokeRepo>(
                 info,
                 changes,
                 bubble,
-                CreateChangesetChecks {
-                    noop_file_changes: CreateChangesetCheckMode::Check,
-                    deleted_files_existed_in_a_parent: CreateChangesetCheckMode::Check,
-                    empty_changeset: CreateChangesetCheckMode::Check,
-                },
+                CreateChangesetChecks::check(),
             )
             .await?
             .changeset_ctx;

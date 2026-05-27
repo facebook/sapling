@@ -83,6 +83,7 @@ impl CreateCopyInfo {
         &self,
         stack_changes: Option<&PathTree<CreateChangeType>>,
         stack_parents: &[ChangesetContext<R>],
+        copy_from_path_mode: CreateChangesetCheckMode,
     ) -> Result<(), MononokeError> {
         if let Some(stack_changes) = stack_changes {
             // Since this is a stacked commit, there is only one parent.
@@ -112,6 +113,11 @@ impl CreateCopyInfo {
                     )));
                 }
             }
+            // The remaining branch checks the parent's content manifest, so
+            // skip it when the bypass is requested.
+            if matches!(copy_from_path_mode, CreateChangesetCheckMode::Skip) {
+                return Ok(());
+            }
             // The copy-from path wasn't touched in the stack, check it was in
             // at least one of the stack's parents.
             for parent_ctx in stack_parents {
@@ -133,6 +139,9 @@ impl CreateCopyInfo {
                     stack_parents.len()
                 ))
             })?;
+            if matches!(copy_from_path_mode, CreateChangesetCheckMode::Skip) {
+                return Ok(());
+            }
             // Check the file exists in that parent.
             if parent_ctx
                 .path_with_content(self.path.clone())
@@ -343,11 +352,14 @@ impl CreateChange {
         repo_blobstore: RepoBlobstore,
         stack_changes: Option<&PathTree<CreateChangeType>>,
         stack_parents: &[ChangesetContext<R>],
+        copy_from_path_mode: CreateChangesetCheckMode,
     ) -> Result<(), MononokeError> {
         let file = match self {
             CreateChange::Tracked(file, copy_info) => {
                 if let Some(copy_info) = copy_info {
-                    copy_info.check_valid(stack_changes, stack_parents).await?;
+                    copy_info
+                        .check_valid(stack_changes, stack_parents, copy_from_path_mode)
+                        .await?;
                 }
                 file
             }
@@ -802,11 +814,16 @@ pub(crate) fn is_prefix_changed(path: &MPath, paths: &PathTree<CreateChangeType>
 /// Verify that any files in `prefix_paths` that exist in any of
 /// `parent_ctxs`, as modified by the existing stack changes, have been marked
 /// as deleted in `path_changes`.
+///
+/// `prefix_files_deleted_mode` only controls the parent-traversal half of the
+/// check (which depends on derived data of the parents). The stack-local half
+/// always runs because it is cheap and self-consistent.
 pub(crate) async fn verify_prefix_files_deleted<R: MononokeRepo>(
     parent_ctxs: &[ChangesetContext<R>],
     stack_changes: Option<&PathTree<CreateChangeType>>,
     mut prefix_paths: BTreeSet<MPath>,
     path_changes: &PathTree<CreateChangeType>,
+    prefix_files_deleted_mode: CreateChangesetCheckMode,
 ) -> Result<(), MononokeError> {
     if let Some(stack_changes) = stack_changes {
         // Remove any prefix paths that have already been deleted earlier in the stack.
@@ -827,6 +844,9 @@ pub(crate) async fn verify_prefix_files_deleted<R: MononokeRepo>(
                 )));
             }
         }
+    }
+    if matches!(prefix_files_deleted_mode, CreateChangesetCheckMode::Skip) {
+        return Ok(());
     }
     // Check that any prefix path that exists in any parent is being deleted.
     stream::iter(parent_ctxs.iter().map(Ok))
@@ -969,6 +989,8 @@ pub struct CreateChangesetChecks {
     pub noop_file_changes: CreateChangesetCheckMode,
     pub deleted_files_existed_in_a_parent: CreateChangesetCheckMode,
     pub empty_changeset: CreateChangesetCheckMode,
+    pub copy_from_path: CreateChangesetCheckMode,
+    pub prefix_files_deleted: CreateChangesetCheckMode,
 }
 
 impl CreateChangesetChecks {
@@ -978,6 +1000,8 @@ impl CreateChangesetChecks {
             noop_file_changes: CreateChangesetCheckMode::Check,
             deleted_files_existed_in_a_parent: CreateChangesetCheckMode::Check,
             empty_changeset: CreateChangesetCheckMode::Check,
+            copy_from_path: CreateChangesetCheckMode::Check,
+            prefix_files_deleted: CreateChangesetCheckMode::Check,
         }
     }
 
@@ -987,6 +1011,8 @@ impl CreateChangesetChecks {
         self.noop_file_changes == Skip
             || self.deleted_files_existed_in_a_parent == Skip
             || self.empty_changeset == Skip
+            || self.copy_from_path == Skip
+            || self.prefix_files_deleted == Skip
     }
 }
 
@@ -1283,6 +1309,7 @@ impl<R: MononokeRepo> RepoContext<R> {
                     stack_changes.as_ref(),
                     prefix_paths,
                     path_changes,
+                    checks.prefix_files_deleted,
                 )
                 .timed()
                 .await
@@ -1340,6 +1367,7 @@ impl<R: MononokeRepo> RepoContext<R> {
                                     blobstore.clone(),
                                     stack_changes.as_ref(),
                                     &stack_parent_ctxs,
+                                    checks.copy_from_path,
                                 )
                                 .await?;
                             Ok::<_, MononokeError>((path, change))

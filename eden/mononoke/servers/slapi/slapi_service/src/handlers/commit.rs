@@ -668,6 +668,8 @@ async fn upload_bonsai_changeset(
                 noop_file_changes: CreateChangesetCheckMode::Skip,
                 deleted_files_existed_in_a_parent: CreateChangesetCheckMode::Skip,
                 empty_changeset: CreateChangesetCheckMode::Skip,
+                copy_from_path: CreateChangesetCheckMode::Skip,
+                prefix_files_deleted: CreateChangesetCheckMode::Skip,
             },
         )
         .await

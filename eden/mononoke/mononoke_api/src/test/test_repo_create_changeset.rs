@@ -32,7 +32,6 @@ use crate::ChangesetId;
 use crate::CoreContext;
 use crate::CreateChange;
 use crate::CreateChangeFile;
-use crate::CreateChangesetCheckMode;
 use crate::CreateChangesetChecks;
 use crate::CreateInfo;
 use crate::FileType;
@@ -119,11 +118,7 @@ async fn create_commit(
             },
             changes.clone(),
             bubble,
-            CreateChangesetChecks {
-                noop_file_changes: CreateChangesetCheckMode::Check,
-                deleted_files_existed_in_a_parent: CreateChangesetCheckMode::Check,
-                empty_changeset: CreateChangesetCheckMode::Check,
-            },
+            CreateChangesetChecks::check(),
         )
         .await?
         .changeset_ctx;
@@ -156,11 +151,7 @@ async fn create_commit(
             },
             changes,
             bubble,
-            CreateChangesetChecks {
-                noop_file_changes: CreateChangesetCheckMode::Check,
-                deleted_files_existed_in_a_parent: CreateChangesetCheckMode::Check,
-                empty_changeset: CreateChangesetCheckMode::Check,
-            },
+            CreateChangesetChecks::check(),
         )
         .await?
         .changeset_ctx;
@@ -271,11 +262,7 @@ async fn create_commit_bad_changes(fb: FacebookInit) -> Result<(), Error> {
             },
             changes,
             bubble,
-            CreateChangesetChecks {
-                noop_file_changes: CreateChangesetCheckMode::Check,
-                deleted_files_existed_in_a_parent: CreateChangesetCheckMode::Check,
-                empty_changeset: CreateChangesetCheckMode::Check,
-            },
+            CreateChangesetChecks::check(),
         )
         .await
         .map(|created_changeset| created_changeset.changeset_ctx)
@@ -385,11 +372,7 @@ async fn test_create_merge_commit(fb: FacebookInit) -> Result<(), Error> {
             },
             changes.clone(),
             bubble,
-            CreateChangesetChecks {
-                noop_file_changes: CreateChangesetCheckMode::Check,
-                deleted_files_existed_in_a_parent: CreateChangesetCheckMode::Check,
-                empty_changeset: CreateChangesetCheckMode::Check,
-            },
+            CreateChangesetChecks::check(),
         )
         .await
         .map(|created_changeset| created_changeset.changeset_ctx)
@@ -471,11 +454,7 @@ async fn test_merge_commit_parent_file_conflict(fb: FacebookInit) -> Result<(), 
             },
             changes.clone(),
             bubble,
-            CreateChangesetChecks {
-                noop_file_changes: CreateChangesetCheckMode::Check,
-                deleted_files_existed_in_a_parent: CreateChangesetCheckMode::Check,
-                empty_changeset: CreateChangesetCheckMode::Check,
-            },
+            CreateChangesetChecks::check(),
         )
         .await
         .map(|created_changeset| created_changeset.changeset_ctx)
@@ -573,11 +552,7 @@ async fn test_merge_commit_parent_tree_file_conflict(fb: FacebookInit) -> Result
             },
             changes.clone(),
             bubble,
-            CreateChangesetChecks {
-                noop_file_changes: CreateChangesetCheckMode::Check,
-                deleted_files_existed_in_a_parent: CreateChangesetCheckMode::Check,
-                empty_changeset: CreateChangesetCheckMode::Check,
-            },
+            CreateChangesetChecks::check(),
         )
         .await
         .map(|created_changeset| created_changeset.changeset_ctx)

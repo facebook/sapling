@@ -1137,6 +1137,15 @@ struct CreateCommitChecks {
   /// the fixes for the previous checks if they are in FIX mode. FIX mode will still
   /// throw for this check as there's no reasonable way to fix it
   3: CreateCommitCheckMode empty_changeset_check = CreateCommitCheckMode.CHECK;
+  /// Check that the source path of any copy-from declaration exists as a file in
+  /// the parent it is being copied from. Depends on derived data of the parent.
+  /// Only SKIP is currently supported. FIX has no defined behavior.
+  4: CreateCommitCheckMode copy_from_path_check = CreateCommitCheckMode.CHECK;
+  /// Check that when a file replaces a directory (or a file added under a path
+  /// previously occupied by a file in any parent), the prior file is marked as
+  /// deleted. Depends on derived data of the parents.
+  /// Only SKIP is currently supported. FIX has no defined behavior.
+  5: CreateCommitCheckMode prefix_files_deleted_check = CreateCommitCheckMode.CHECK;
 }
 
 enum CreateCommitCheckMode {

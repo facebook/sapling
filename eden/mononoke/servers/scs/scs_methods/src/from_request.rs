@@ -404,6 +404,21 @@ impl FromRequest<thrift::RepoCreateCommitParamsCommitInfo> for CreateInfo {
 
 impl FromRequest<thrift::CreateCommitChecks> for CreateChangesetChecks {
     fn from_request(checks: &thrift::CreateCommitChecks) -> Result<Self, thrift::RequestError> {
+        let reject_fix = |mode: &thrift::CreateCommitCheckMode, field: &str| {
+            if *mode == thrift::CreateCommitCheckMode::FIX {
+                Err(scs_errors::invalid_request(format!(
+                    "FIX mode is not supported for '{}'; only CHECK and SKIP are valid",
+                    field,
+                )))
+            } else {
+                Ok(())
+            }
+        };
+        reject_fix(&checks.copy_from_path_check, "copy_from_path_check")?;
+        reject_fix(
+            &checks.prefix_files_deleted_check,
+            "prefix_files_deleted_check",
+        )?;
         Ok(CreateChangesetChecks {
             noop_file_changes: CreateChangesetCheckMode::from_request(
                 &checks.noop_file_changes_check,
@@ -412,6 +427,10 @@ impl FromRequest<thrift::CreateCommitChecks> for CreateChangesetChecks {
                 &checks.deleted_files_existed_in_a_parent_check,
             )?,
             empty_changeset: CreateChangesetCheckMode::from_request(&checks.empty_changeset_check)?,
+            copy_from_path: CreateChangesetCheckMode::from_request(&checks.copy_from_path_check)?,
+            prefix_files_deleted: CreateChangesetCheckMode::from_request(
+                &checks.prefix_files_deleted_check,
+            )?,
         })
     }
 }

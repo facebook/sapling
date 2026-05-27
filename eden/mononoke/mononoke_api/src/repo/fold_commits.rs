@@ -431,6 +431,7 @@ impl<R: MononokeRepo> RepoContext<R> {
                         repo_blobstore.clone(),
                         Some(&stack_changes),
                         std::slice::from_ref(&base_ctx),
+                        checks.copy_from_path,
                     )
                     .await?;
             }
@@ -477,6 +478,7 @@ impl<R: MononokeRepo> RepoContext<R> {
                 Some(&stack_changes),
                 prefix_paths,
                 &path_changes,
+                checks.prefix_files_deleted,
             )
             .timed()
             .await
