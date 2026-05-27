@@ -213,7 +213,7 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, getNonExistent) {
 
 TEST_F(
     FakeSubstringFilteredBackingStoreTest,
-    checkPermissionFailsOpenForFilteredTreeId) {
+    checkPermissionUnwrapsFilteredTreeId) {
   testEdenConfig->restrictedTreeTtlSeconds.setValue(
       0, ConfigSourceType::UserConfig, true);
   auto stats = makeRefPtr<EdenStats>();
@@ -237,8 +237,8 @@ TEST_F(
                            filteredTreeId, std::chrono::steady_clock::now())
                        .get(0ms);
 
-  EXPECT_TRUE(hasAccess);
-  EXPECT_EQ(0, wrappedStore_->getCheckPermissionCount(rawManifestId));
+  EXPECT_FALSE(hasAccess);
+  EXPECT_EQ(1, wrappedStore_->getCheckPermissionCount(rawManifestId));
   EXPECT_EQ(0, wrappedStore_->getCheckPermissionCount(filteredTreeId));
 }
 

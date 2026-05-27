@@ -601,6 +601,16 @@ folly::coro::Task<BackingStore::GetBlobResult> FilteredBackingStore::co_getBlob(
   co_return co_await backingStore_->co_getBlob(filteredId.object(), context);
 }
 
+ImmediateFuture<bool> FilteredBackingStore::checkPermission(
+    const ObjectId& manifestId) {
+  if (isSlOid(manifestId)) {
+    return backingStore_->checkPermission(manifestId);
+  }
+
+  return backingStore_->checkPermission(
+      FilteredObjectId::fromObjectId(manifestId).object());
+}
+
 folly::SemiFuture<folly::Unit> FilteredBackingStore::prefetchBlobs(
     ObjectIdRange ids,
     const ObjectFetchContextPtr& context) {

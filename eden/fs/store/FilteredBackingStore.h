@@ -216,6 +216,8 @@ class FilteredBackingStore
       const std::vector<std::string>& globs,
       const std::vector<std::string>& prefixes) override;
 
+  ImmediateFuture<bool> checkPermission(const ObjectId& manifestId) override;
+
   /*
    * Does the actual filtering logic for tree and root-tree objects.
    */
