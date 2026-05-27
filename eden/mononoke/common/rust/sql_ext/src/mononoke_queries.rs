@@ -1290,7 +1290,7 @@ where
     T: Send + 'static,
     Fut: Future<Output = Result<T>>,
 {
-    if justknobs::eval("scm/mononoke:sql_disable_auto_retries", None, None)? {
+    if justknobs::eval("scm/mononoke:sql_disable_auto_retries", None, None) {
         return Ok((do_query(0).await?, 0));
     }
     let (res, attempt) = retry(do_query, Duration::from_secs(10))
@@ -1327,7 +1327,7 @@ where
     CachedQueryResult<Vec<T>>: MemcacheEntity,
     Fut: Future<Output = Result<CachedQueryResult<Vec<T>>>> + Send,
 {
-    if justknobs::eval("scm/mononoke:sql_disable_auto_cache", None, None)? {
+    if justknobs::eval("scm/mononoke:sql_disable_auto_cache", None, None) {
         return query_with_retry_no_cache(
             &do_query,
             shard_name,
