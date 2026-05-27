@@ -58,8 +58,10 @@ use tls::TLSArgs;
 use tokio::sync::Mutex;
 use tokio::sync::Semaphore;
 use tokio::time::Duration;
+use tokio::time::Instant;
 use tokio::time::sleep;
 use tracing::error;
+use tracing::info;
 use tracing::warn;
 
 /// Builds an HTTPS client suitable for fetching LFS objects from any of the
@@ -493,16 +495,22 @@ impl GitImportLfs {
             HeaderValue::from_str(&client_info.to_json()?)?,
         );
 
+        let batch_started_at = Instant::now();
         let batch_resp = github
             .client
             .request(batch_request)
             .await
             .with_context(|| format!("POST GitHub LFS batch {}", batch_uri))?;
+        let batch_status = batch_resp.status();
+        let batch_latency_ms = batch_started_at.elapsed().as_millis() as u64;
 
-        if batch_resp.status() == StatusCode::NOT_FOUND && github.allow_not_found {
+        if batch_status == StatusCode::NOT_FOUND && github.allow_not_found {
             warn!(
-                "GitHub LFS batch {} returned 404 for sha256:{}. Using gitlfs metadata as file content instead.",
-                batch_uri, metadata.sha256,
+                sha256 = %metadata.sha256,
+                size = metadata.size,
+                batch_url = %batch_uri,
+                latency_ms = batch_latency_ms,
+                "GitHub LFS batch returned 404; using gitlfs metadata as file content instead",
             );
             return not_found_pointer_fallback(metadata);
         }
@@ -532,13 +540,24 @@ impl GitImportLfs {
                 batch_resp.status(),
             ));
         }
-        if !batch_resp.status().is_success() {
+        if !batch_status.is_success() {
             return Err(format_err!(
-                "GitHub LFS batch {} failed: {:?}",
+                "GitHub LFS batch {} failed: status={} sha256={} size={} latency_ms={}",
                 batch_uri,
-                batch_resp.status(),
+                batch_status,
+                metadata.sha256,
+                metadata.size,
+                batch_latency_ms,
             ));
         }
+        info!(
+            sha256 = %metadata.sha256,
+            size = metadata.size,
+            batch_url = %batch_uri,
+            status = %batch_status,
+            latency_ms = batch_latency_ms,
+            "GitHub LFS batch ok",
+        );
         let batch_resp_bytes = batch_resp.into_body().collect().await?.to_bytes();
         let parsed: ResponseBatch =
             serde_json::from_slice(&batch_resp_bytes).with_context(|| {
@@ -570,8 +589,12 @@ impl GitImportLfs {
             ObjectStatus::Err { error } => {
                 if error.code == 404 && github.allow_not_found {
                     warn!(
-                        "GitHub LFS object sha256:{} not found ({}). Using gitlfs metadata as file content instead.",
-                        metadata.sha256, error.message,
+                        sha256 = %metadata.sha256,
+                        size = metadata.size,
+                        batch_url = %batch_uri,
+                        error_code = error.code,
+                        error_message = %error.message,
+                        "GitHub LFS object not found; using gitlfs metadata as file content instead",
                     );
                     return not_found_pointer_fallback(metadata);
                 }
@@ -602,26 +625,43 @@ impl GitImportLfs {
             }
         }
 
+        let download_started_at = Instant::now();
         let download_resp = github
             .client
             .request(download_request)
             .await
             .with_context(|| format!("GET GitHub LFS object {}", action.href))?;
+        let download_status = download_resp.status();
+        let download_latency_ms = download_started_at.elapsed().as_millis() as u64;
 
-        if download_resp.status() == StatusCode::NOT_FOUND && github.allow_not_found {
+        if download_status == StatusCode::NOT_FOUND && github.allow_not_found {
             warn!(
-                "GitHub LFS download {} returned 404 for sha256:{}. Using gitlfs metadata as file content instead.",
-                action.href, metadata.sha256,
+                sha256 = %metadata.sha256,
+                size = metadata.size,
+                download_url = %action.href,
+                latency_ms = download_latency_ms,
+                "GitHub LFS download returned 404; using gitlfs metadata as file content instead",
             );
             return not_found_pointer_fallback(metadata);
         }
-        if !download_resp.status().is_success() {
+        if !download_status.is_success() {
             return Err(format_err!(
-                "GitHub LFS download {} failed: {:?}",
+                "GitHub LFS download {} failed: status={} sha256={} size={} latency_ms={}",
                 action.href,
-                download_resp.status(),
+                download_status,
+                metadata.sha256,
+                metadata.size,
+                download_latency_ms,
             ));
         }
+        info!(
+            sha256 = %metadata.sha256,
+            size = metadata.size,
+            download_url = %action.href,
+            status = %download_status,
+            latency_ms = download_latency_ms,
+            "GitHub LFS download ok; streaming bytes",
+        );
 
         let bytes = download_resp
             .into_body()
