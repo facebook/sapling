@@ -383,7 +383,7 @@ async fn create_fsnode(
         "scm/mononoke:enabled_restricted_paths_access_logging",
         None,
         Some("fsnodes_write"),
-    )?;
+    );
 
     let path = &tree_info.path;
     if restricted_paths_enabled {

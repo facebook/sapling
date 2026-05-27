@@ -24,7 +24,7 @@ impl DerivedDataManager {
             "scm/mononoke:derived_data_use_background_session_class",
             None,
             Some(self.repo_name()),
-        )? {
+        ) {
             ctx.session_mut()
                 .override_session_class(SessionClass::BackgroundUnlessTooSlow);
         }

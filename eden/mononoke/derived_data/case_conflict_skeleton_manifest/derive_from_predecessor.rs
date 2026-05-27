@@ -59,7 +59,7 @@ pub(crate) async fn derive_from_predecessor(
     let predecessor = predecessor.into_skeleton_manifest_id();
 
     let chunk_size =
-        justknobs::get_as::<usize>("scm/mononoke:ccsm_derive_from_predecessor_chunk_size", None)?;
+        justknobs::get_as::<usize>("scm/mononoke:ccsm_derive_from_predecessor_chunk_size", None);
     let directory = inner_derive_from_predecessor(ctx, blobstore, predecessor, chunk_size).await?;
 
     Ok(RootCaseConflictSkeletonManifestId(

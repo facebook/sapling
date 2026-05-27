@@ -156,7 +156,7 @@ impl PipelineDerivable for RootUnodeManifestId {
             "scm/mononoke:derived_data_pipeline_terminal_stage_prod_mapping",
             None,
             Some("unodes"),
-        )? && derivation
+        ) && derivation
             .pipeline_config()
             .filter(|cfg| cfg.types.contains(&DerivableType::Unodes))
             .and_then(|cfg| cfg.stages.get(stage_id))
@@ -217,7 +217,7 @@ impl PipelineDerivable for RootUnodeManifestId {
             "scm/mononoke:derived_data_pipeline_terminal_stage_prod_mapping",
             None,
             Some("unodes"),
-        )? && derivation
+        ) && derivation
             .pipeline_config()
             .filter(|cfg| cfg.types.contains(&DerivableType::Unodes))
             .and_then(|cfg| cfg.stages.get(stage_id))
