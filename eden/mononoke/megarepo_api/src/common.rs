@@ -418,7 +418,7 @@ pub trait MegarepoOp<R> {
             "scm/mononoke:derived_data_use_content_manifests",
             None,
             Some(repo.repo_identity().name()),
-        )? {
+        ) {
             repo.repo_derived_data()
                 .derive::<RootContentManifestId>(ctx, cs_id, DerivationPriority::LOW)
                 .await
@@ -1307,12 +1307,11 @@ pub(crate) async fn derive_all_types_locally(
         "scm/mononoke:megarepo_override_num_heads_to_derive_at_once",
         None,
     )
-    .map(|jk| jk.max(1) as usize)?;
+    .max(1) as usize;
 
-    let override_batch_size =
-        justknobs::get("scm/mononoke:megarepo_override_derivation_batch_size", None)
-            .map(|jk| jk.max(1) as u64)
-            .ok();
+    let override_batch_size = Some(
+        justknobs::get("scm/mononoke:megarepo_override_derivation_batch_size", None).max(1) as u64,
+    );
 
     for chunk in csids.chunks(num_heads_to_derive_at_once) {
         retry(
@@ -1354,14 +1353,15 @@ pub(crate) async fn derive_all_types_remotely(
         "scm/mononoke:megarepo_override_num_heads_to_derive_at_once",
         None,
     )
-    .map(|jk| jk.max(1) as usize)?;
+    .max(1) as usize;
 
-    let override_concurrency = justknobs::get(
-        "scm/mononoke:megarepo_override_remote_derivation_concurrency",
-        None,
-    )
-    .map(|jk| jk.max(1) as usize)
-    .ok();
+    let override_concurrency = Some(
+        justknobs::get(
+            "scm/mononoke:megarepo_override_remote_derivation_concurrency",
+            None,
+        )
+        .max(1) as usize,
+    );
 
     let manager = repo
         .repo_derived_data()
@@ -1401,7 +1401,7 @@ pub(crate) async fn derive_all_types(
     repo: &impl Repo,
     csids: &[ChangesetId],
 ) -> Result<(), Error> {
-    let derive_remotely = justknobs::eval("scm/mononoke:megarepo_derive_remotely", None, None)?;
+    let derive_remotely = justknobs::eval("scm/mononoke:megarepo_derive_remotely", None, None);
 
     let derived_data_types = repo
         .repo_derived_data()

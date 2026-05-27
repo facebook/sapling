@@ -1408,7 +1408,7 @@ impl<R: MononokeRepo> RepoContext<R> {
                 "scm/mononoke:create_changeset_stack_noop_file_changes_check",
                 None,
                 Some(self.name()),
-            )?
+            )
         {
             // When to build another stack of PathTrees that contains the content_id for each file change
             let mut stack_changes_stack = vec![None];
@@ -1523,7 +1523,7 @@ impl<R: MononokeRepo> RepoContext<R> {
                     "scm/mononoke:create_changeset_stack_empty_changeset_check",
                     None,
                     Some(self.name()),
-                )?
+                )
                 && file_changes.is_empty()
                 // exclude merge commits
                 && parents.len() <= 1

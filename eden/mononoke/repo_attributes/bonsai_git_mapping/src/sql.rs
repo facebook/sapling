@@ -410,7 +410,7 @@ async fn select_mapping(
         "scm/mononoke:rendezvous_bonsai_git_mapping",
         ctx.client_correlator(),
         None,
-    )?;
+    );
 
     if use_rendezvous {
         select_mapping_rendezvous(ctx, connection, repo_id, objects).await

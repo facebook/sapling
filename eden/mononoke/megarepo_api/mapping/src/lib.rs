@@ -177,7 +177,7 @@ impl CommitRemappingState {
             "scm/mononoke:derived_data_use_content_manifests",
             None,
             Some(repo.repo_identity().name()),
-        )? {
+        ) {
             repo.repo_derived_data()
                 .derive::<RootContentManifestId>(ctx, cs_id, DerivationPriority::LOW)
                 .await?

@@ -156,7 +156,7 @@ impl CachingBonsaiHgMapping {
         let key_prefix = "scm.mononoke.bonsai_hg_mapping";
 
         let sitever =
-            justknobs::get_as::<u32>("scm/mononoke_memcache_sitevers:bonsai_hg_mapping", None)?;
+            justknobs::get_as::<u32>("scm/mononoke_memcache_sitevers:bonsai_hg_mapping", None);
 
         Ok(KeyGen::new(key_prefix, thrift::MC_CODEVER as u32, sitever))
     }

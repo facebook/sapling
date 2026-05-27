@@ -25,7 +25,7 @@ futures = { version = "0.3.31", features = ["async-await", "compat"] }
 futures_retry = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 hg_mutation_entry_thrift = { version = "0.1.0", path = "if" }
 itertools = "0.14.0"
-justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+justknobs = { version = "0.1.0", path = "../../common/rust/justknobs_ext" }
 memcache = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mercurial_types = { version = "0.1.0", path = "../types" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
