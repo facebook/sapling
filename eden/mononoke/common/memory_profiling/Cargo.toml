@@ -11,5 +11,5 @@ license = "GPLv2+"
 anyhow = "1.0.102"
 gotham_ext = { version = "0.1.0", path = "../gotham_ext" }
 http = "1.4.0"
-jemalloc_pprof = { version = "0.7", features = ["flamegraph"], optional = true }
+jemalloc_pprof = { version = "0.8.2", features = ["flamegraph"], optional = true }
 permission_checker = { version = "0.1.0", path = "../permission_checker" }
