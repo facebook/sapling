@@ -1018,8 +1018,8 @@ impl<'a> DescribeTreeSpan<TreeSpanExtra> for TracingTreeDescriptor<'a> {
             .map(|item| {
                 let k = strings.get(*item.0);
                 let v = strings.get(*item.1);
-                let v = if v.len() > 32 {
-                    format!("{}...", &v[..30])
+                let v = if v.len() > 256 {
+                    format!("{}...", &v[..253])
                 } else {
                     v.to_string()
                 };
