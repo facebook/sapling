@@ -1262,30 +1262,32 @@ where
         .await
     }
 
-    /// Find paths whose only effective change between `self` and `other` is a
-    /// Git-LFS discriminator flip (raw blob ↔ canonical pointer with the
-    /// same resolved content). The manifest walk in `diff()` misses these
-    /// because `FsnodeFile` / `ContentManifestFile` carry no `git_lfs`
-    /// field.
+    /// Find paths whose only change between `self` and `other` is a
+    /// Git-LFS discriminator flip (raw blob ↔ canonical pointer, same
+    /// resolved content). The manifest walk in `diff()` misses these
+    /// because manifest leaves carry no `git_lfs` field.
     ///
-    /// `excluded_paths` should be the set of paths the manifest walk already
-    /// emitted: any path in there is by definition NOT an LFS-only flip
-    /// (the manifests differed on `content_id` or `file_type`), so the
-    /// supplement skips it. This is what guarantees the returned set is
-    /// disjoint from the manifest walk's output without re-deriving the
-    /// content manifests here.
+    /// Candidates are `FileChange::Change` entries in `self`'s bonsai
+    /// that the manifest walk did not emit; by construction, such a
+    /// candidate matches `other` on `(content_id, file_type)`, so the
+    /// only field that can differ is `git_lfs`. We do not inspect
+    /// `other`'s bonsai — the orphan-pointer cleanup workflow inherits
+    /// the LFS state from an ancestor, so neither side records it.
     ///
-    /// Caller invariants (not enforced here):
-    /// - `other` should be `self`'s first parent. Comparisons against a
-    ///   non-leftmost merge parent or a non-parent skip the supplement.
-    /// - The repo must have `git_lfs_interpret_pointers` set; this method
-    ///   short-circuits to an empty result when it doesn't.
+    /// Pass `excluded_paths` as the set already emitted by the manifest
+    /// walk; this keeps the returned set disjoint from it without
+    /// re-deriving manifests.
     ///
-    /// Returns entries materialized into `ChangesetPathDiffContext`, sorted
-    /// ascending by path. The contained `ChangesetPathContentContext`
-    /// instances lazy-load their manifest entries on first access, so
-    /// consumers that only read paths pay no blobstore cost beyond the
-    /// per-path ACL checks.
+    /// Assumes producers only emit `FileChange::Change` for real changes
+    /// (`emits_re_recorded_state` locks the no-op-Change case: we
+    /// surface, never mask) and that candidates have `copy_from = None`
+    /// (gitimport hardcodes this; if a future producer changes it,
+    /// filter `tracked.copy_from().is_some()` here).
+    ///
+    /// Callers must pass `self`'s first parent for `other` and a repo
+    /// with `git_lfs_interpret_pointers`, or this returns empty. Returns
+    /// `ChangesetPathDiffContext` entries sorted ascending by path,
+    /// lazy-loaded so path-only consumers pay only per-path ACL cost.
     pub(crate) async fn get_potential_lfs_changes(
         &self,
         other: &ChangesetContext<R>,
@@ -1322,14 +1324,8 @@ where
                     .any(|path_restriction| path.is_related_to(path_restriction))
             })
         }
-        fn is_lfs_pointer(file_change: &FileChange) -> bool {
-            file_change
-                .simplify()
-                .is_some_and(|bfc| bfc.git_lfs().is_lfs_pointer())
-        }
 
-        let (self_changes, other_changes) =
-            try_join(self.file_changes(), other.file_changes()).await?;
+        let self_changes = self.file_changes().await?;
 
         let start_bound = after
             .cloned()
@@ -1346,12 +1342,6 @@ where
                 let FileChange::Change(_) = file_change else {
                     return None;
                 };
-
-                if !is_lfs_pointer(file_change)
-                    && !other_changes.get(non_root_path).is_some_and(is_lfs_pointer)
-                {
-                    return None;
-                }
 
                 let path: MPath = non_root_path.clone().into();
                 if !within_restrictions(&path, path_restrictions) {
