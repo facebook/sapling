@@ -85,7 +85,7 @@ impl RemoteCache {
             backing_store_name, backing_store_params,
         );
 
-        let sitever = justknobs::get_as::<u32>("scm/mononoke_memcache_sitevers:filenodes", None)?;
+        let sitever = justknobs::get_as::<u32>("scm/mononoke_memcache_sitevers:filenodes", None);
 
         Ok(KeyGen::new(key_prefix, thrift::MC_CODEVER as u32, sitever))
     }

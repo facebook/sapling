@@ -753,8 +753,7 @@ where
     let sql_timeout_ms = justknobs::get_as::<u64>(
         "scm/mononoke_timeouts:remote_derivation_client_timeout_ms",
         None,
-    )
-    .map_err(ErrorKind::SqlError)?;
+    );
 
     match timeout(Duration::from_millis(sql_timeout_ms), fut).await {
         Ok(Ok(r)) => Ok(r),
