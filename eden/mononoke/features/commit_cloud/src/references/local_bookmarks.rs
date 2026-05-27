@@ -60,7 +60,7 @@ pub async fn update_bookmarks(
         .await?;
     }
     if !updated_bookmarks.is_empty() {
-        if justknobs::eval("scm/mononoke:commitcloud_bulk_inserts", None, None)? {
+        if justknobs::eval("scm/mononoke:commitcloud_bulk_inserts", None, None) {
             let bookmarks: Vec<WorkspaceLocalBookmark> = updated_bookmarks
                 .into_iter()
                 .map(|(name, commit)| WorkspaceLocalBookmark::new(name, commit))

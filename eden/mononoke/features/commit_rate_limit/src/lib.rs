@@ -128,8 +128,7 @@ pub async fn check_all_commit_rate_limits(
         "scm/mononoke:allow_bare_author_unixname",
         None,
         Some("commit_rate_limit"),
-    )
-    .unwrap_or(false);
+    );
     let rules = repo.commit_rate_limit().rules();
     let futures: Vec<_> = rules
         .iter()

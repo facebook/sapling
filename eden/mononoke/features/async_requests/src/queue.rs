@@ -183,7 +183,7 @@ impl AsyncMethodRequestQueue {
     ) -> Result<bool, Error> {
         let (switch, count_types) = concurrency_key(&request_type.0);
 
-        let max_concurrent = justknobs::get_as::<i64>(JK_MAX_CONCURRENT, Some(switch))?;
+        let max_concurrent = justknobs::get_as::<i64>(JK_MAX_CONCURRENT, Some(switch));
 
         if max_concurrent <= 0 {
             return Ok(false);
@@ -445,7 +445,7 @@ impl AsyncMethodRequestQueue {
 
     pub async fn retry(&self, ctx: &CoreContext, req_id: &RequestId) -> Result<bool, Error> {
         STATS::retry_called.add_value(1);
-        let max_retry_allowed = justknobs::get_as::<u8>(JK_RETRY_LIMIT, Some(&req_id.1.0))?;
+        let max_retry_allowed = justknobs::get_as::<u8>(JK_RETRY_LIMIT, Some(&req_id.1.0));
 
         self.table
             .update_for_retry_or_fail(ctx, req_id, max_retry_allowed)
@@ -1006,7 +1006,7 @@ mod tests {
         let res = q.retry(ctx, &req_id).await;
         assert!(res.is_err());
 
-        let max_retry_allowed = justknobs::get_as::<u8>(JK_RETRY_LIMIT, Some(&req_id.1.0))?;
+        let max_retry_allowed = justknobs::get_as::<u8>(JK_RETRY_LIMIT, Some(&req_id.1.0));
         for i in 0..max_retry_allowed {
             // Mark the request as in progress to test retry
             q.table.mark_in_progress(ctx, &req_id, &claimed_by).await?;
