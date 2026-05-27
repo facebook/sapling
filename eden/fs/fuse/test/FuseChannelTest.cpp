@@ -252,10 +252,10 @@ TEST_F(FuseChannelTest, testInitNegotiatesIoUringOnlyOnAllowedKernel) {
   auto stopData = std::move(completeFuture).get(kTimeout);
   auto* fuseStopData = dynamic_cast<FuseChannel::StopData*>(stopData.get());
   ASSERT_NE(nullptr, fuseStopData);
-  EXPECT_EQ(FUSE_INIT_EXT, fuseStopData->fuseSettings.flags);
-  EXPECT_EQ(
-      static_cast<uint32_t>(FUSE_OVER_IO_URING >> 32),
-      fuseStopData->fuseSettings.flags2);
+  EXPECT_TRUE(fuseStopData->fuseSettings.flags & FUSE_INIT_EXT);
+  EXPECT_TRUE(
+      fuseStopData->fuseSettings.flags2 &
+      static_cast<uint32_t>(FUSE_OVER_IO_URING >> 32));
 }
 
 TEST_F(FuseChannelTest, testInitDoesNotNegotiateIoUringOnDisallowedKernel) {
@@ -277,8 +277,9 @@ TEST_F(FuseChannelTest, testInitDoesNotNegotiateIoUringOnDisallowedKernel) {
   auto stopData = std::move(completeFuture).get(kTimeout);
   auto* fuseStopData = dynamic_cast<FuseChannel::StopData*>(stopData.get());
   ASSERT_NE(nullptr, fuseStopData);
-  EXPECT_EQ(0, fuseStopData->fuseSettings.flags);
-  EXPECT_EQ(0, fuseStopData->fuseSettings.flags2);
+  EXPECT_FALSE(
+      fuseStopData->fuseSettings.flags2 &
+      static_cast<uint32_t>(FUSE_OVER_IO_URING >> 32));
 }
 
 TEST_F(FuseChannelTest, testTakeoverKeepsDevFuseWithoutNegotiatedIoUring) {
@@ -671,6 +672,58 @@ TEST_F(FuseChannelTest, testMaxPagesKernelDoesNotSupport) {
   EXPECT_FALSE(fuseStopData->fuseSettings.flags & FUSE_MAX_PAGES)
       << "FUSE_MAX_PAGES should not be set when kernel doesn't support it";
   EXPECT_EQ(0, fuseStopData->fuseSettings.max_pages);
+}
+#endif
+
+#ifdef FUSE_ALLOW_IDMAP
+TEST_F(FuseChannelTest, testAllowIdmapNegotiation) {
+  auto channel = createChannel();
+
+  // FUSE_ALLOW_IDMAP is bit 40, which lives in flags2 (bits 32..63 shifted
+  // down by 32). FUSE_INIT_EXT must be set in flags for the kernel to
+  // inspect flags2.
+  auto completeFuture = performInit(
+      channel.get(),
+      FUSE_KERNEL_VERSION,
+      FUSE_KERNEL_MINOR_VERSION,
+      /*maxReadahead=*/0,
+      /*flags=*/FUSE_INIT_EXT,
+      /*flags2=*/static_cast<uint32_t>(FUSE_ALLOW_IDMAP >> 32));
+
+  channel->takeoverStop();
+
+  auto stopData = std::move(completeFuture).get(kTimeout);
+  auto* fuseStopData = dynamic_cast<FuseChannel::StopData*>(stopData.get());
+  EXPECT_EQ(fuseStopData->reason, FuseChannel::StopReason::TAKEOVER);
+  EXPECT_TRUE(fuseStopData->fuseDevice);
+
+#ifdef __linux__
+  EXPECT_TRUE(
+      fuseStopData->fuseSettings.flags2 &
+      static_cast<uint32_t>(FUSE_ALLOW_IDMAP >> 32))
+      << "FUSE_ALLOW_IDMAP should be set when kernel advertises it";
+#endif
+}
+
+TEST_F(FuseChannelTest, testAllowIdmapNotSetWhenKernelLacksSupport) {
+  auto channel = createChannel();
+
+  // Kernel does not advertise FUSE_ALLOW_IDMAP (flags2=0)
+  auto completeFuture = performInit(channel.get());
+
+  channel->takeoverStop();
+
+  auto stopData = std::move(completeFuture).get(kTimeout);
+  auto* fuseStopData = dynamic_cast<FuseChannel::StopData*>(stopData.get());
+  EXPECT_EQ(fuseStopData->reason, FuseChannel::StopReason::TAKEOVER);
+  EXPECT_TRUE(fuseStopData->fuseDevice);
+
+#ifdef __linux__
+  EXPECT_FALSE(
+      fuseStopData->fuseSettings.flags2 &
+      static_cast<uint32_t>(FUSE_ALLOW_IDMAP >> 32))
+      << "FUSE_ALLOW_IDMAP should not be set when kernel doesn't support it";
+#endif
 }
 #endif
 

@@ -651,6 +651,9 @@ constexpr std::pair<uint64_t, const char*> kCapsLabels[] = {
 #if EDEN_HAVE_FUSE_IO_URING
     {FUSE_OVER_IO_URING, "OVER_IO_URING"},
 #endif
+#ifdef FUSE_ALLOW_IDMAP
+    {FUSE_ALLOW_IDMAP, "ALLOW_IDMAP"},
+#endif
 };
 
 std::string capsFlagsToLabel(uint64_t flags) {
@@ -1886,6 +1889,13 @@ void FuseChannel::readInitPacket() {
   }
 #else
   (void)caseSensitive_;
+#endif
+
+#ifdef FUSE_ALLOW_IDMAP
+  // Allow processes whose uid/gid doesn't map into our user namespace to
+  // access this mount. Without this, the kernel FUSE layer rejects requests
+  // from such processes with EOVERFLOW.
+  want |= FUSE_ALLOW_IDMAP;
 #endif
 
   // Only return the capabilities the kernel supports.
