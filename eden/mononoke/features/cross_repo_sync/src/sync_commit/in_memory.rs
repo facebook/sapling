@@ -189,9 +189,7 @@ pub(crate) async fn unsafe_sync_commit_in_memory<'a, R: Repo>(
             "scm/mononoke:cross_repo_skip_backsyncing_ordinary_empty_commits",
             None,
             Some(in_memory_syncer.source_repo_name().0),
-        )
-        .unwrap_or(false)
-    {
+        ) {
         EmptyCommitFromLargeRepo::Discard
     } else {
         EmptyCommitFromLargeRepo::Keep

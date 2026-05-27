@@ -66,7 +66,7 @@ impl CachingSyncedCommitMapping {
     fn keygen() -> Result<KeyGen, Error> {
         let key_prefix = "scm.mononoke.syncedcommitmapping";
         let sitever =
-            justknobs::get_as::<u32>("scm/mononoke_memcache_sitevers:synced_commit_mapping", None)?;
+            justknobs::get_as::<u32>("scm/mononoke_memcache_sitevers:synced_commit_mapping", None);
         Ok(KeyGen::new(key_prefix, thrift::MC_CODEVER as u32, sitever))
     }
 }

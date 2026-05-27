@@ -401,7 +401,7 @@ where
         version_name: CommitSyncConfigVersion,
     ) -> Result<(), Error> {
         let xrepo_sync_disable_all_syncs =
-            justknobs::eval("scm/mononoke:xrepo_sync_disable_all_syncs", None, None)?;
+            justknobs::eval("scm/mononoke:xrepo_sync_disable_all_syncs", None, None);
         if xrepo_sync_disable_all_syncs {
             return Err(ErrorKind::XRepoSyncDisabled.into());
         }
