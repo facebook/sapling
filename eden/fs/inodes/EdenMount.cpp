@@ -281,6 +281,7 @@ EdenMount::EdenMount(
           getInodeCatalogType(inodeCatalogType),
           getInodeCatalogOptions(inodeCatalogOptions),
           serverState_->getEdenFsEventsLogger(),
+          serverState_->getErrorLogger(),
           std::move(stats),
           *serverState_->getEdenConfig())},
 #ifndef _WIN32

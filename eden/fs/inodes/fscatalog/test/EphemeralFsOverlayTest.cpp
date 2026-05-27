@@ -50,6 +50,7 @@ class EphemeralFsOverlayTest : public ::testing::Test {
         InodeCatalogType::LegacyEphemeral,
         INODE_CATALOG_DEFAULT,
         makeTestEdenFsEventsLogger(),
+        /*errorLogger=*/noopErrorLogger_,
         makeRefPtr<EdenStats>(),
         *edenConfig);
     overlay
@@ -62,6 +63,7 @@ class EphemeralFsOverlayTest : public ::testing::Test {
   }
 
   folly::test::TemporaryDirectory testDir;
+  ErrorLogger noopErrorLogger_ = makeTestErrorLogger();
   std::shared_ptr<Overlay> overlay;
 };
 

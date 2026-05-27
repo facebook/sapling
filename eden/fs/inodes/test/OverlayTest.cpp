@@ -70,12 +70,14 @@ TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
       {"/usr/bin/tar", "-xzf", overlayPath, "-C", tmpdir.path().string()});
   EXPECT_EQ(tarProcess.wait().str(), "exited with status 0");
 
+  auto noopErrorLogger = makeTestErrorLogger();
   auto overlay = Overlay::create(
       realpath(tmpdir.path().string()) + "overlay-v2"_pc,
       kPathMapDefaultCaseSensitive,
       kInodeCatalogType,
       kInodeCatalogOptions,
       makeTestEdenFsEventsLogger(),
+      /*errorLogger=*/noopErrorLogger,
       makeRefPtr<EdenStats>(),
       *EdenConfig::createTestEdenConfig());
   overlay
@@ -293,12 +295,14 @@ TEST(OverlayFilePathTest, getFilePath) {
 
 TEST(PlainOverlayTest, new_overlay_is_clean) {
   folly::test::TemporaryDirectory testDir;
+  auto noopErrorLogger = makeTestErrorLogger();
   auto overlay = Overlay::create(
       canonicalPath(testDir.path().string()),
       kPathMapDefaultCaseSensitive,
       kInodeCatalogType,
       kInodeCatalogOptions,
       makeTestEdenFsEventsLogger(),
+      /*errorLogger=*/noopErrorLogger,
       makeRefPtr<EdenStats>(),
       *EdenConfig::createTestEdenConfig());
   overlay
@@ -311,6 +315,7 @@ TEST(PlainOverlayTest, new_overlay_is_clean) {
 
 TEST(PlainOverlayTest, reopened_overlay_is_clean) {
   folly::test::TemporaryDirectory testDir;
+  auto noopErrorLogger = makeTestErrorLogger();
   {
     auto overlay = Overlay::create(
         canonicalPath(testDir.path().string()),
@@ -318,6 +323,7 @@ TEST(PlainOverlayTest, reopened_overlay_is_clean) {
         kInodeCatalogType,
         kInodeCatalogOptions,
         makeTestEdenFsEventsLogger(),
+        /*errorLogger=*/noopErrorLogger,
         makeRefPtr<EdenStats>(),
         *EdenConfig::createTestEdenConfig());
     overlay
@@ -333,6 +339,7 @@ TEST(PlainOverlayTest, reopened_overlay_is_clean) {
       kInodeCatalogType,
       kInodeCatalogOptions,
       makeTestEdenFsEventsLogger(),
+      /*errorLogger=*/noopErrorLogger,
       makeRefPtr<EdenStats>(),
       *EdenConfig::createTestEdenConfig());
   overlay
@@ -346,6 +353,7 @@ TEST(PlainOverlayTest, reopened_overlay_is_clean) {
 TEST(PlainOverlayTest, unclean_overlay_is_dirty) {
   folly::test::TemporaryDirectory testDir;
   auto localDir = canonicalPath(testDir.path().string());
+  auto noopErrorLogger = makeTestErrorLogger();
 
   {
     auto overlay = Overlay::create(
@@ -354,6 +362,7 @@ TEST(PlainOverlayTest, unclean_overlay_is_dirty) {
         kInodeCatalogType,
         kInodeCatalogOptions,
         makeTestEdenFsEventsLogger(),
+        /*errorLogger=*/noopErrorLogger,
         makeRefPtr<EdenStats>(),
         *EdenConfig::createTestEdenConfig());
     overlay
@@ -373,6 +382,7 @@ TEST(PlainOverlayTest, unclean_overlay_is_dirty) {
       kInodeCatalogType,
       kInodeCatalogOptions,
       makeTestEdenFsEventsLogger(),
+      /*errorLogger=*/noopErrorLogger,
       makeRefPtr<EdenStats>(),
       *EdenConfig::createTestEdenConfig());
   overlay
@@ -421,6 +431,7 @@ class RawOverlayTest : public ::testing::TestWithParam<OverlayRestartMode> {
         kInodeCatalogType,
         kInodeCatalogOptions,
         makeTestEdenFsEventsLogger(),
+        /*errorLogger=*/noopErrorLogger_,
         makeRefPtr<EdenStats>(),
         *EdenConfig::createTestEdenConfig());
     overlay
@@ -455,6 +466,7 @@ class RawOverlayTest : public ::testing::TestWithParam<OverlayRestartMode> {
   }
 
   folly::test::TemporaryDirectory testDir_;
+  ErrorLogger noopErrorLogger_ = makeTestErrorLogger();
   std::shared_ptr<Overlay> overlay;
 };
 
@@ -869,6 +881,7 @@ class DebugDumpOverlayInodesTest : public ::testing::Test {
             kInodeCatalogType,
             kInodeCatalogOptions,
             makeTestEdenFsEventsLogger(),
+            /*errorLogger=*/noopErrorLogger_,
             makeRefPtr<EdenStats>(),
             *EdenConfig::createTestEdenConfig())} {
     overlay
@@ -879,6 +892,7 @@ class DebugDumpOverlayInodesTest : public ::testing::Test {
   }
 
   folly::test::TemporaryDirectory testDir_;
+  ErrorLogger noopErrorLogger_ = makeTestErrorLogger();
   std::shared_ptr<Overlay> overlay;
 };
 
@@ -1059,12 +1073,14 @@ namespace {
 void createDirtyOverlay(const AbsolutePath& dir) {
   auto config =
       std::make_shared<ReloadableConfig>(EdenConfig::createTestEdenConfig());
+  auto noopErrorLogger = makeTestErrorLogger();
   auto ov = Overlay::create(
       dir,
       kPathMapDefaultCaseSensitive,
       kInodeCatalogType,
       kInodeCatalogOptions,
       makeTestEdenFsEventsLogger(),
+      /*errorLogger=*/noopErrorLogger,
       makeRefPtr<EdenStats>(),
       *EdenConfig::createTestEdenConfig());
   ov->initialize(config).get();
@@ -1086,13 +1102,16 @@ void createDirtyOverlay(const AbsolutePath& dir) {
   }
 }
 
-std::shared_ptr<Overlay> createTestOverlay(const AbsolutePath& dir) {
+std::shared_ptr<Overlay> createTestOverlay(
+    const AbsolutePath& dir,
+    ErrorLogger& errorLogger) {
   return Overlay::create(
       dir,
       kPathMapDefaultCaseSensitive,
       kInodeCatalogType,
       kInodeCatalogOptions,
       makeTestEdenFsEventsLogger(),
+      /*errorLogger=*/errorLogger,
       makeRefPtr<EdenStats>(),
       *EdenConfig::createTestEdenConfig());
 }
@@ -1112,8 +1131,9 @@ TEST(PlainOverlayTest, semaphore_serializes_fsck) {
   auto config =
       std::make_shared<ReloadableConfig>(EdenConfig::createTestEdenConfig());
 
-  auto ov1 = createTestOverlay(localDir1);
-  auto ov2 = createTestOverlay(localDir2);
+  auto noopErrorLogger = makeTestErrorLogger();
+  auto ov1 = createTestOverlay(localDir1, noopErrorLogger);
+  auto ov2 = createTestOverlay(localDir2, noopErrorLogger);
 
   // Semaphore with capacity 1 -- only one fsck at a time.
   folly::LifoSem sem(1);
@@ -1182,8 +1202,9 @@ TEST(PlainOverlayTest, no_semaphore_allows_concurrent_fsck) {
   auto config =
       std::make_shared<ReloadableConfig>(EdenConfig::createTestEdenConfig());
 
-  auto ov1 = createTestOverlay(localDir1);
-  auto ov2 = createTestOverlay(localDir2);
+  auto noopErrorLogger = makeTestErrorLogger();
+  auto ov1 = createTestOverlay(localDir1, noopErrorLogger);
+  auto ov2 = createTestOverlay(localDir2, noopErrorLogger);
   // No setFsckSemaphore -- simulates fsck:max-concurrent-mounts = 0.
 
   // A barrier that unblocks only when both threads reach it.  If fsck
@@ -1226,12 +1247,14 @@ WalLifecycleOverlay makeWalLifecycleOverlay(
   rawConfig->overlayUseWal.setValue(true, ConfigSourceType::CommandLine);
   auto reloadable = std::make_shared<ReloadableConfig>(rawConfig);
   auto stats = makeRefPtr<EdenStats>();
+  auto noopErrorLogger = makeTestErrorLogger();
   auto overlay = Overlay::create(
       dir,
       caseSensitive,
       kInodeCatalogType,
       kInodeCatalogOptions,
       makeTestEdenFsEventsLogger(),
+      /*errorLogger=*/noopErrorLogger,
       stats.copy(),
       *rawConfig);
   overlay->initialize(reloadable).get();
@@ -1427,12 +1450,14 @@ TEST(WalCompactionTest, nonWalCatalogDoesNotTrackCompaction) {
   auto path = realpath(tmpdir.path().string());
   auto config = EdenConfig::createTestEdenConfig();
   config->overlayUseWal.setValue(true, ConfigSourceType::CommandLine);
+  auto noopErrorLogger = makeTestErrorLogger();
   auto overlay = Overlay::create(
       path,
       kPathMapDefaultCaseSensitive,
       InodeCatalogType::InMemory,
       kInodeCatalogOptions,
       makeTestEdenFsEventsLogger(),
+      /*errorLogger=*/noopErrorLogger,
       makeRefPtr<EdenStats>(),
       *config);
 
@@ -1696,12 +1721,14 @@ TEST(WalAddRemoveChildTest, addChildFallsBackToFullSaveWhenWalDisabled) {
   auto rawConfig = EdenConfig::createTestEdenConfig();
   rawConfig->overlayUseWal.setValue(false, ConfigSourceType::CommandLine);
   auto reloadable = std::make_shared<ReloadableConfig>(rawConfig);
+  auto noopErrorLogger = makeTestErrorLogger();
   auto overlay = Overlay::create(
       dir,
       kPathMapDefaultCaseSensitive,
       kInodeCatalogType,
       kInodeCatalogOptions,
       makeTestEdenFsEventsLogger(),
+      /*errorLogger=*/noopErrorLogger,
       makeRefPtr<EdenStats>(),
       *rawConfig);
   overlay->initialize(reloadable).get();
@@ -1915,12 +1942,14 @@ TEST(WalRenameTest, fallsBackWhenWalDisabled) {
   auto rawConfig = EdenConfig::createTestEdenConfig();
   rawConfig->overlayUseWal.setValue(false, ConfigSourceType::CommandLine);
   auto reloadable = std::make_shared<ReloadableConfig>(rawConfig);
+  auto noopErrorLogger = makeTestErrorLogger();
   auto overlay = Overlay::create(
       dir,
       kPathMapDefaultCaseSensitive,
       kInodeCatalogType,
       kInodeCatalogOptions,
       makeTestEdenFsEventsLogger(),
+      /*errorLogger=*/noopErrorLogger,
       makeRefPtr<EdenStats>(),
       *rawConfig);
   overlay->initialize(reloadable).get();
@@ -1971,12 +2000,14 @@ TEST(WalMaterializeChildTest, fallsBackToFullSaveWhenWalDisabled) {
   auto rawConfig = EdenConfig::createTestEdenConfig();
   rawConfig->overlayUseWal.setValue(false, ConfigSourceType::CommandLine);
   auto reloadable = std::make_shared<ReloadableConfig>(rawConfig);
+  auto noopErrorLogger = makeTestErrorLogger();
   auto overlay = Overlay::create(
       dir,
       kPathMapDefaultCaseSensitive,
       kInodeCatalogType,
       kInodeCatalogOptions,
       makeTestEdenFsEventsLogger(),
+      /*errorLogger=*/noopErrorLogger,
       makeRefPtr<EdenStats>(),
       *rawConfig);
   overlay->initialize(reloadable).get();

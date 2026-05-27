@@ -145,12 +145,14 @@ void benchmarkOverlayDirSerialization(
   // overlayPath is parameterized to measure on different filesystem types.
   printf("Creating Overlay...\n");
 
+  auto noopErrorLogger = makeTestErrorLogger();
   auto overlay = Overlay::create(
       overlayPath,
       kPathMapDefaultCaseSensitive,
       overlayType,
       kDefaultInodeCatalogOptions,
       makeTestEdenFsEventsLogger(),
+      /*errorLogger=*/noopErrorLogger,
       makeRefPtr<EdenStats>(),
       *EdenConfig::createTestEdenConfig());
   printf("Initializing Overlay...\n");

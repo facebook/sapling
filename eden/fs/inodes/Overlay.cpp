@@ -184,6 +184,7 @@ std::shared_ptr<Overlay> Overlay::create(
     InodeCatalogType inodeCatalogType,
     InodeCatalogOptions inodeCatalogOptions,
     std::shared_ptr<EdenFsEventsLogger> logger,
+    ErrorLogger& errorLogger,
     EdenStatsPtr stats,
     const EdenConfig& config) {
   // This allows us to access the private constructor.
@@ -194,6 +195,7 @@ std::shared_ptr<Overlay> Overlay::create(
         InodeCatalogType inodeCatalogType,
         InodeCatalogOptions inodeCatalogOptions,
         std::shared_ptr<EdenFsEventsLogger> logger,
+        ErrorLogger& errorLogger,
         EdenStatsPtr stats,
         const EdenConfig& config)
         : Overlay(
@@ -202,6 +204,7 @@ std::shared_ptr<Overlay> Overlay::create(
               inodeCatalogType,
               inodeCatalogOptions,
               logger,
+              errorLogger,
               std::move(stats),
               config) {}
   };
@@ -211,6 +214,7 @@ std::shared_ptr<Overlay> Overlay::create(
       inodeCatalogType,
       inodeCatalogOptions,
       logger,
+      errorLogger,
       std::move(stats),
       config);
 }
@@ -221,6 +225,7 @@ Overlay::Overlay(
     InodeCatalogType inodeCatalogType,
     InodeCatalogOptions inodeCatalogOptions,
     std::shared_ptr<EdenFsEventsLogger> logger,
+    ErrorLogger& errorLogger,
     EdenStatsPtr stats,
     const EdenConfig& config)
     : fileContentStore_{makeFileContentStore(
@@ -242,6 +247,7 @@ Overlay::Overlay(
       localDir_{localDir},
       caseSensitive_{caseSensitive},
       edenFsEventsLogger_{std::move(logger)},
+      errorLogger_(errorLogger),
       stats_{std::move(stats)},
       useDirectFileWrites_(config.overlayDirectFileWrites.getValue()),
       useWal_{config.overlayUseWal.getValue() && inodeCatalog_->supportsWal()},

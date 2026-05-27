@@ -340,6 +340,7 @@ cpp_library(
         "//eden/common/utils:ref_ptr",
         "//eden/fs/inodes:inode_number",
         "//eden/fs/inodes:inodes",
+        "//eden/fs/telemetry:error_logger",
         "//eden/fs/telemetry:stats",
         "//eden/fs/telemetry:structured_logger",
     ],

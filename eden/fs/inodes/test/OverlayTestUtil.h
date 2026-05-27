@@ -19,6 +19,7 @@
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/EdenStats.h"
+#include "eden/fs/telemetry/ErrorLogger.h"
 
 namespace facebook::eden {
 
@@ -46,6 +47,14 @@ inline std::shared_ptr<EdenFsEventsLogger> makeTestEdenFsEventsLogger() {
       /*xplatLogger=*/nullptr,
       /*reloadableConfig=*/nullptr,
       makeRefPtr<EdenStats>());
+}
+
+/**
+ * Create a no-op ErrorLogger for use in unit tests.
+ * Scribe is null so log() returns immediately.
+ */
+inline ErrorLogger makeTestErrorLogger() {
+  return ErrorLogger{nullptr, {}, nullptr};
 }
 
 } // namespace facebook::eden

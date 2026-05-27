@@ -111,12 +111,14 @@ void benchmarkOverlay(
 
   printf("Creating Overlay...\n");
 
+  auto noopErrorLogger = makeTestErrorLogger();
   auto overlay = Overlay::create(
       overlayPath,
       kPathMapDefaultCaseSensitive,
       overlayType,
       kDefaultInodeCatalogOptions,
       makeTestEdenFsEventsLogger(),
+      /*errorLogger=*/noopErrorLogger,
       makeRefPtr<EdenStats>(),
       *edenConfig);
 

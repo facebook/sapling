@@ -43,12 +43,14 @@ void createGoldMasterOverlay(AbsolutePath overlayPath) {
   ObjectId id3{folly::ByteRange{"e0e0e0e0e0e0e0e0e0e0"_sp}};
   ObjectId id4{folly::ByteRange{"44444444444444444444"_sp}};
 
+  auto noopErrorLogger = makeTestErrorLogger();
   auto overlay = Overlay::create(
       overlayPath,
       CaseSensitivity::Sensitive,
       InodeCatalogType::Legacy,
       kDefaultInodeCatalogOptions,
       makeTestEdenFsEventsLogger(),
+      /*errorLogger=*/noopErrorLogger,
       makeRefPtr<EdenStats>(),
       *EdenConfig::createTestEdenConfig());
 

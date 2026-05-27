@@ -49,6 +49,7 @@ class OverlayFileTest : public ::testing::Test {
         facebook::eden::InodeCatalogType::Legacy,
         INODE_CATALOG_DEFAULT,
         makeTestEdenFsEventsLogger(),
+        /*errorLogger=*/noopErrorLogger_,
         makeRefPtr<EdenStats>(),
         *EdenConfig::createTestEdenConfig());
     fsOverlay
@@ -63,6 +64,7 @@ class OverlayFileTest : public ::testing::Test {
         facebook::eden::InodeCatalogType::LMDB,
         INODE_CATALOG_DEFAULT,
         makeTestEdenFsEventsLogger(),
+        /*errorLogger=*/noopErrorLogger_,
         makeRefPtr<EdenStats>(),
         *EdenConfig::createTestEdenConfig());
     lmdbOverlay
@@ -106,6 +108,7 @@ class OverlayFileTest : public ::testing::Test {
   }
 
   folly::test::TemporaryDirectory testDir_;
+  ErrorLogger noopErrorLogger_ = makeTestErrorLogger();
   std::shared_ptr<Overlay> fsOverlay;
   std::shared_ptr<Overlay> lmdbOverlay;
 };

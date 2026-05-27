@@ -79,12 +79,14 @@ INSTANTIATE_TEST_SUITE_P(
 
 TEST(PlainSqliteInodeCatalogTest, new_overlay_is_clean) {
   folly::test::TemporaryDirectory testDir;
+  auto noopErrorLogger = makeTestErrorLogger();
   auto overlay = Overlay::create(
       canonicalPath(testDir.path().string()),
       kPathMapDefaultCaseSensitive,
       InodeCatalogType::Sqlite,
       kDefaultInodeCatalogOptions,
       makeTestEdenFsEventsLogger(),
+      /*errorLogger=*/noopErrorLogger,
       makeRefPtr<EdenStats>(),
       *EdenConfig::createTestEdenConfig());
   overlay
@@ -97,12 +99,14 @@ TEST(PlainSqliteInodeCatalogTest, new_overlay_is_clean) {
 
 TEST(PlainSqliteInodeCatalogTest, new_overlay_is_clean_buffered) {
   folly::test::TemporaryDirectory testDir;
+  auto noopErrorLogger = makeTestErrorLogger();
   auto overlay = Overlay::create(
       canonicalPath(testDir.path().string()),
       kPathMapDefaultCaseSensitive,
       InodeCatalogType::Sqlite,
       INODE_CATALOG_BUFFERED,
       makeTestEdenFsEventsLogger(),
+      /*errorLogger=*/noopErrorLogger,
       makeRefPtr<EdenStats>(),
       *EdenConfig::createTestEdenConfig());
   overlay
@@ -115,6 +119,7 @@ TEST(PlainSqliteInodeCatalogTest, new_overlay_is_clean_buffered) {
 
 TEST(PlainSqliteInodeCatalogTest, reopened_overlay_is_clean) {
   folly::test::TemporaryDirectory testDir;
+  auto noopErrorLogger = makeTestErrorLogger();
   {
     auto overlay = Overlay::create(
         canonicalPath(testDir.path().string()),
@@ -122,6 +127,7 @@ TEST(PlainSqliteInodeCatalogTest, reopened_overlay_is_clean) {
         InodeCatalogType::Sqlite,
         kDefaultInodeCatalogOptions,
         makeTestEdenFsEventsLogger(),
+        /*errorLogger=*/noopErrorLogger,
         makeRefPtr<EdenStats>(),
         *EdenConfig::createTestEdenConfig());
     overlay
@@ -136,6 +142,7 @@ TEST(PlainSqliteInodeCatalogTest, reopened_overlay_is_clean) {
       InodeCatalogType::Sqlite,
       kDefaultInodeCatalogOptions,
       makeTestEdenFsEventsLogger(),
+      /*errorLogger=*/noopErrorLogger,
       makeRefPtr<EdenStats>(),
       *EdenConfig::createTestEdenConfig());
   overlay
@@ -148,6 +155,7 @@ TEST(PlainSqliteInodeCatalogTest, reopened_overlay_is_clean) {
 
 TEST(PlainSqliteInodeCatalogTest, reopened_overlay_is_clean_buffered) {
   folly::test::TemporaryDirectory testDir;
+  auto noopErrorLogger = makeTestErrorLogger();
   {
     auto overlay = Overlay::create(
         canonicalPath(testDir.path().string()),
@@ -155,6 +163,7 @@ TEST(PlainSqliteInodeCatalogTest, reopened_overlay_is_clean_buffered) {
         InodeCatalogType::Sqlite,
         INODE_CATALOG_BUFFERED,
         makeTestEdenFsEventsLogger(),
+        /*errorLogger=*/noopErrorLogger,
         makeRefPtr<EdenStats>(),
         *EdenConfig::createTestEdenConfig());
     overlay
@@ -169,6 +178,7 @@ TEST(PlainSqliteInodeCatalogTest, reopened_overlay_is_clean_buffered) {
       InodeCatalogType::Sqlite,
       INODE_CATALOG_BUFFERED,
       makeTestEdenFsEventsLogger(),
+      /*errorLogger=*/noopErrorLogger,
       makeRefPtr<EdenStats>(),
       *EdenConfig::createTestEdenConfig());
   overlay
@@ -183,12 +193,14 @@ TEST(PlainSqliteInodeCatalogTest, close_overlay_with_no_capacity_buffered) {
   auto config = EdenConfig::createTestEdenConfig();
   config->overlayBufferSize.setValue(0, ConfigSourceType::Default, true);
   folly::test::TemporaryDirectory testDir;
+  auto noopErrorLogger = makeTestErrorLogger();
   auto overlay = Overlay::create(
       canonicalPath(testDir.path().string()),
       kPathMapDefaultCaseSensitive,
       InodeCatalogType::Sqlite,
       INODE_CATALOG_BUFFERED,
       makeTestEdenFsEventsLogger(),
+      /*errorLogger=*/noopErrorLogger,
       makeRefPtr<EdenStats>(),
       *config);
   overlay
@@ -206,12 +218,14 @@ TEST(
   auto config = EdenConfig::createTestEdenConfig();
   config->overlayBufferSize.setValue(1, ConfigSourceType::Default, true);
   folly::test::TemporaryDirectory testDir;
+  auto noopErrorLogger = makeTestErrorLogger();
   auto overlay = Overlay::create(
       canonicalPath(testDir.path().string()),
       kPathMapDefaultCaseSensitive,
       InodeCatalogType::Sqlite,
       INODE_CATALOG_BUFFERED,
       makeTestEdenFsEventsLogger(),
+      /*errorLogger=*/noopErrorLogger,
       makeRefPtr<EdenStats>(),
       *config);
   overlay
@@ -265,6 +279,7 @@ class RawSqliteInodeCatalogTest
         InodeCatalogType::Sqlite,
         overlayOptions(),
         makeTestEdenFsEventsLogger(),
+        /*errorLogger=*/noopErrorLogger_,
         makeRefPtr<EdenStats>(),
         *EdenConfig::createTestEdenConfig());
     overlay
@@ -279,6 +294,7 @@ class RawSqliteInodeCatalogTest
   }
 
   folly::test::TemporaryDirectory testDir_;
+  ErrorLogger noopErrorLogger_ = makeTestErrorLogger();
   std::shared_ptr<Overlay> overlay;
 };
 
@@ -445,6 +461,7 @@ class DebugDumpSqliteInodeCatalogInodesTest
         InodeCatalogType::Sqlite,
         overlayOptions(),
         makeTestEdenFsEventsLogger(),
+        /*errorLogger=*/noopErrorLogger_,
         makeRefPtr<EdenStats>(),
         *EdenConfig::createTestEdenConfig());
     overlay
@@ -468,6 +485,7 @@ class DebugDumpSqliteInodeCatalogInodesTest
   }
 
   folly::test::TemporaryDirectory testDir_;
+  ErrorLogger noopErrorLogger_ = makeTestErrorLogger();
   std::shared_ptr<Overlay> overlay;
 };
 

@@ -53,6 +53,7 @@ class FileContentStore;
 class DirEntry;
 class EdenConfig;
 class EdenStats;
+class ErrorLogger;
 
 using EdenStatsPtr = RefPtr<EdenStats>;
 
@@ -96,6 +97,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
       InodeCatalogType inodeCatalogType,
       InodeCatalogOptions inodeCatalogOptions,
       std::shared_ptr<EdenFsEventsLogger> logger,
+      ErrorLogger& errorLogger,
       EdenStatsPtr stats,
       const EdenConfig& config);
 
@@ -353,6 +355,10 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
     return localDir_;
   }
 
+  ErrorLogger& getErrorLogger() const {
+    return errorLogger_;
+  }
+
   void setFsckSemaphore(folly::LifoSem* sem) {
     fsckSemaphore_ = sem;
   }
@@ -381,6 +387,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
       InodeCatalogType inodeCatalogType,
       InodeCatalogOptions inodeCatalogOptions,
       std::shared_ptr<EdenFsEventsLogger> logger,
+      ErrorLogger& errorLogger,
       EdenStatsPtr stats,
       const EdenConfig& config);
 
@@ -598,6 +605,9 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   CaseSensitivity caseSensitive_;
 
   std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger_;
+  // Borrowed from ServerState. Valid for Overlay's lifetime because
+  // ServerState outlives all EdenMount instances.
+  ErrorLogger& errorLogger_;
   EdenStatsPtr stats_;
 
   // Borrowed from EdenServer. Valid for Overlay's lifetime because
