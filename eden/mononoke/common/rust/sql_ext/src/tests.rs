@@ -693,7 +693,7 @@ mod facebook {
                     ..Default::default()
                 },
                 transaction_query_names: vec![],
-                attempt: None,
+                attempt: Some(1),
             },
         ];
 
@@ -805,6 +805,17 @@ mod facebook {
             attempt: Some(1),
         };
 
+        // Pop the last log for ConsistentRead granularity from both sources
+        let scuba_file_cons_read_log = scuba_file_logs
+            .pop()
+            .ok_or(anyhow!("Expected ConsistentRead log from Scuba file"))?;
+
+        let mock_transport_cons_read_log = mock_transport_logs
+            .pop()
+            .ok_or(anyhow!("Expected ConsistentRead log from mock transport"))?;
+
+        let expected_final_attempt = scuba_file_logs.len();
+
         let expected_cons_read_log = ScubaTelemetryLogSample {
             success: true,
             repo_ids: vec![1.into()],
@@ -817,17 +828,8 @@ mod facebook {
                 ..Default::default()
             },
             transaction_query_names: vec![],
-            attempt: None,
+            attempt: Some(expected_final_attempt as i64),
         };
-
-        // Pop the last log for ConsistentRead granularity from both sources
-        let scuba_file_cons_read_log = scuba_file_logs
-            .pop()
-            .ok_or(anyhow!("Expected ConsistentRead log from Scuba file"))?;
-
-        let mock_transport_cons_read_log = mock_transport_logs
-            .pop()
-            .ok_or(anyhow!("Expected ConsistentRead log from mock transport"))?;
 
         // Check all the query logs from both sources
         scuba_file_logs

@@ -537,10 +537,10 @@ macro_rules! mononoke_queries {
                     // Check if any parameter is a RepositoryId and pass it to telemetry
                     let repo_ids = $crate::extract_repo_ids_from_queries!($($pname: $ptype; )*);
 
-                    let (fut_stats, (final_res, opt_tel)) = {
+                    let (fut_stats, (final_res, opt_tel, attempt)) = {
                         cloned!(sql_query_tel);
                         async {
-                            let res = query_with_consistency_no_cache(
+                            let (res, cons_read_attempt) = query_with_consistency_no_cache(
                                 |_attempt| {
 
                                     cloned!(sql_query_tel);
@@ -567,16 +567,18 @@ macro_rules! mononoke_queries {
                             if let Err(ConsistentReadError::MissingHLC) = res {
                                 // If the query failed because the HLC was missing,
                                 // fallback to the primary connection
-                                return query_impl(
+                                let (res, opt_tel) = query_impl(
                                     &connections.read_master_connection,
                                     sql_query_tel,
                                     granularity,
                                     $( $pname, )*
                                     $( $lname, )*
-                                ).await;
+                                ).await?;
+                                return anyhow::Ok((res, opt_tel, cons_read_attempt + 1));
                             };
 
-                            Ok(res?)
+                            let (res, opt_tel) = res?;
+                            anyhow::Ok((res, opt_tel, cons_read_attempt))
                         }
                     }
                     .try_timed()
@@ -590,7 +592,7 @@ macro_rules! mononoke_queries {
                         query_name,
                         shard_name.as_ref(),
                         fut_stats,
-                        None,
+                        Some(attempt),
                     )?;
 
                     Ok(final_res)
@@ -1392,7 +1394,10 @@ pub async fn query_with_consistency_no_cache<T, Fut>(
     sql_query_tel: &SqlQueryTelemetry,
     granularity: TelemetryGranularity,
     repo_ids: &[RepositoryId],
-) -> Result<(T, Option<QueryTelemetry>), ConsistentReadError>
+) -> (
+    Result<(T, Option<QueryTelemetry>), ConsistentReadError>,
+    usize,
+)
 where
     T: Send + 'static,
     Fut: Future<Output = Result<(T, Option<QueryTelemetry>)>>,
@@ -1406,8 +1411,11 @@ where
     // Wrap in Arc so it can be cloned into the retry closure
     let do_query = Arc::new(do_query);
 
-    let result = retry(
+    let last_attempt = std::sync::atomic::AtomicUsize::new(0);
+
+    let retry_result = retry(
         |attempt| {
+            last_attempt.store(attempt, std::sync::atomic::Ordering::Relaxed);
             let do_query = Arc::clone(&do_query);
             let return_early_if = return_early_if.clone();
             async move {
@@ -1469,10 +1477,14 @@ where
             attempt < cons_read_opts.max_attempts,
         );
     })
-    .await?
-    .0;
+    .await;
 
-    Ok(result)
+    let attempt = last_attempt.load(std::sync::atomic::Ordering::Relaxed);
+
+    match retry_result {
+        Ok((result, _)) => (Ok(result), attempt),
+        Err(e) => (Err(e), attempt),
+    }
 }
 
 fn replica_was_up_to_date(
