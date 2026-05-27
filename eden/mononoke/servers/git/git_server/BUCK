@@ -6,6 +6,9 @@ oncall("scm_server_treehugger")
 rust_binary(
     name = "git_server",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_config": {
+        "dependencies_override": {"dependencies": {"gix-hash": {"features": ["sha1"]}}},
+    }},
     named_deps = ({} if rust_oss.is_oss_build() else {
         "MononokeGitRequest_ods3_types": "//eden/mononoke/facebook/ods3_schemas:MononokeGitRequest_ods3-rust",
     }),

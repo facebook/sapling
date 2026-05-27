@@ -30,7 +30,7 @@ futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimen
 git_env = { version = "0.1.0", path = "../../../git/git_env" }
 git_source_of_truth = { version = "0.1.0", path = "../../../repo_attributes/git_source_of_truth" }
 git_types = { version = "0.1.0", path = "../../../git/git_types" }
-gix-hash = "0.25.0"
+gix-hash = { version = "0.25.0", features = ["sha1"] }
 gix-object = "0.60.0"
 gix-packetline = { version = "0.21.3", features = ["blocking-io"] }
 gix-transport = "0.57.0"

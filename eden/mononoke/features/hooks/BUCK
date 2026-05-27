@@ -12,6 +12,9 @@ rust_library(
             "doctest": False,
             "test": False,
         },
+        "cargo_toml_config": {
+            "dependencies_override": {"dependencies": {"gix-config": {"features": ["sha1"]}}},
+        },
     },
     test_deps = [
         "fbsource//third-party/rust:assert_matches",

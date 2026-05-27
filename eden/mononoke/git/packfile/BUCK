@@ -6,6 +6,12 @@ oncall("scm_server_treehugger")
 rust_library(
     name = "packfile",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_config": {
+        "dependencies_override": {
+            "dependencies": {"gix-hash": {"features": ["sha1"]}},
+            "dev-dependencies": {"gix-hash": {"features": ["sha1"]}},
+        },
+    }},
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:futures",

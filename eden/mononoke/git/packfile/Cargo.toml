@@ -15,7 +15,7 @@ path = "test/packfile_test.rs"
 anyhow = "1.0.102"
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 git_types = { version = "0.1.0", path = "../git_types" }
-gix-hash = "0.25.0"
+gix-hash = { version = "0.25.0", features = ["sha1"] }
 gix-pack = "0.70.0"
 pin-project = "1.1.11"
 rustc-hash = "2.1.2"

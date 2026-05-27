@@ -31,7 +31,7 @@ git_ref_content_mapping = { version = "0.1.0", path = "../../repo_attributes/git
 git_symbolic_refs = { version = "0.1.0", path = "../../repo_attributes/git_symbolic_refs" }
 git_types = { version = "0.1.0", path = "../git_types" }
 gix-features = { version = "0.48.0", features = ["parallel"] }
-gix-hash = "0.25.0"
+gix-hash = { version = "0.25.0", features = ["sha1"] }
 gix-object = "0.60.0"
 gix-pack = "0.70.0"
 justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

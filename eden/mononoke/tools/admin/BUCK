@@ -10,9 +10,12 @@ rust_binary(
         "src/**/*.rs",
     ]),
     autocargo = {"cargo_toml_config": {
-        "dependencies_override": {"dependencies": {"sapling-dag-types": {"features": [
-            "for-tests",
-        ]}}},
+        "dependencies_override": {"dependencies": {
+            "gix-hash": {"features": ["sha1"]},
+            "sapling-dag-types": {"features": [
+                "for-tests",
+            ]},
+        }},
         "extra_buck_dependencies": {"dependencies": [
             "//eden/scm/lib/dag:dag",
             "//eden/scm/lib/dag/dag-types:dag-types",

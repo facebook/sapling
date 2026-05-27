@@ -5,6 +5,9 @@ oncall("scm_server_treehugger")
 rust_binary(
     name = "repo_import",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_config": {
+        "dependencies_override": {"dependencies": {"gix-hash": {"features": ["sha1"]}}},
+    }},
     test_deps = [
         "fbsource//third-party/rust:ascii",
         "fbsource//third-party/rust:tokio",

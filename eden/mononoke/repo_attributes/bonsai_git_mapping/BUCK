@@ -9,6 +9,9 @@ rust_library(
         "src/**/*.rs",
         "schemas/**/*.sql",
     ]),
+    autocargo = {"cargo_toml_config": {
+        "dependencies_override": {"dependencies": {"gix-hash": {"features": ["sha1"]}}},
+    }},
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:ascii",
