@@ -79,6 +79,10 @@ class FindExeClass:
     def get_edenfsctl_env(self) -> Tuple[str, Dict[str, str]]:
         """Get path to edenfsctl and environmental variable required to run it."""
         env = os.environ.copy()
+        for name in ("EDEN_HG_BINARY", "HG_REAL_BIN", "HG_ETC_MERCURIAL"):
+            path = env.get(name)
+            if path:
+                env[name] = os.path.abspath(path)
         edenfsctlreal = f"{self._EDENFSCTL_REAL}"
         if sys.platform == "win32":
             # On Windows, par files (which edenfsctl.real is) aren't directly
@@ -272,16 +276,16 @@ class FindExeClass:
         buck_cell_path: Optional[str] = None,
         system_candidates: Optional[List[str]] = None,
     ) -> Optional[str]:
-        if env is not None:
-            path = os.environ.get(env)
-            if path:
-                if not os.access(path, os.X_OK):
-                    raise Exception(
-                        f"able to find {name}: specified as {path!r} "
-                        f"by ${env}, but it doesn't exist or we lack"
-                        " permissions to execute it"
-                    )
-                return path
+        path = os.environ.get(env) if env is not None else None
+        if path:
+            path = os.path.abspath(path)
+            if not os.access(path, os.X_OK):
+                raise Exception(
+                    f"able to find {name}: specified as {path!r} "
+                    f"by ${env}, but it doesn't exist or we lack"
+                    " permissions to execute it"
+                )
+            return path
 
         candidates = []
         # In some cases, we want to use a pre-installed (or system) binary
@@ -376,7 +380,7 @@ class FindExeClass:
         print(f"{env} = {path}")
 
         if path:
-            path = os.path.join(path, src_name)
+            path = os.path.join(os.path.abspath(path), src_name)
             if not os.access(path, os.R_OK):
                 raise Exception(
                     f"unable to find source asset specified as {path!r} "

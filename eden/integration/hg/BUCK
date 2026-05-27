@@ -283,6 +283,10 @@ python_integration_test(
         "ovr_config//os:macos",
     ],
     env = artifacts["env"],
+    # This test relies on the host-installed edenfs_privhelper, which must be
+    # root-owned and setuid, so the test action cannot [easily] run on RE workers today. Discussion here:
+    # https://fb.workplace.com/groups/1042353022615812/posts/3259731087544650/?comment_id=3259741330876959
+    remote_execution = "disabled",
     supports_static_listing = False,
     deps = [
         "//eden/fs/service:thrift-python-types",
