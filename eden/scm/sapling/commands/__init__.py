@@ -3922,6 +3922,14 @@ def locate(ui, repo, *pats, **opts):
         ),
     ]
     + logopts
+    + [
+        (
+            "t",
+            "mutation",
+            False,
+            _("use mutation history for DAG and diffs (EXPERIMENTAL)"),
+        ),
+    ]
     + walkopts,
     _("[OPTION]... [FILE]"),
     inferrepo=True,
@@ -4100,6 +4108,9 @@ def log(ui, repo, *pats, **opts):
 def _dolog(ui, repo, pats, opts, count, xreponame):
     revs, expr, filematcher = cmdutil.getlogrevs(repo, pats, opts)
     hunksfilter = None
+    prevfn = None
+    if opts.get("mutation"):
+        prevfn = cmdutil.mutation_prevfn
 
     linerange = opts.get("line_range")
     if linerange:
@@ -4161,6 +4172,7 @@ def _dolog(ui, repo, pats, opts, count, xreponame):
             revcache=revcache,
             matchfn=revmatchfn,
             hunksfilterfn=revhunksfilter,
+            prevfn=prevfn,
         )
         if displayer.flush(ctx):
             count += 1

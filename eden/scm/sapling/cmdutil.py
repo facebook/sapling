@@ -3367,11 +3367,15 @@ def displaygraph(
     out=None,
     on_output=None,
     graphnodeid_to_rev=None,
+    mutation=False,
 ):
     repogetrenamed = repogetrenamed or {}
     repofilematcher = repofilematcher or {}
     props = props or {}
     formatnode = _graphnodeformatter(ui, displayer)
+    prevfn = None
+    if mutation:
+        prevfn = mutation_prevfn
     if ui.plain("graph"):
         renderername = "ascii"
     else:
@@ -3451,7 +3455,12 @@ def displaygraph(
             revcache["xreponame"] = xreponame
         width = renderer.width(graphnodeid, parents)
         displayer.show(
-            ctx, revcache=revcache, matchfn=revmatchfn, _graphwidth=width, **props
+            ctx,
+            revcache=revcache,
+            matchfn=revmatchfn,
+            prevfn=prevfn,
+            _graphwidth=width,
+            **props,
         )
         # The Rust graph renderer works with unicode.
         msg = "".join(
@@ -3515,7 +3524,10 @@ class ShowAbbreviatedAncestorsWhen(Enum):
 def graphlog(ui, repo, pats: Tuple[str, ...], opts: Dict[str, Any]):
     # Parameters are identical to log command ones
     repogetrenamed, repofilematcher, repoids = {}, {}, {}
-    revdag = _logdagwalker(repo, pats, opts, repogetrenamed, repofilematcher, repoids)
+    mutation = opts.get("mutation")
+    revdag = _logdagwalker(
+        repo, pats, opts, repogetrenamed, repofilematcher, repoids, mutation
+    )
 
     ui.pager("log")
     displayer = show_changeset(ui, repo, opts, buffered=True)
@@ -3528,17 +3540,51 @@ def graphlog(ui, repo, pats: Tuple[str, ...], opts: Dict[str, Any]):
         repogetrenamed,
         repofilematcher,
         graphnodeid_to_rev=graphnodeid_to_rev,
+        mutation=mutation,
     )
 
 
-def _logdagwalker(repo, pats, opts, repogetrenamed, repofilematcher, repoids):
+def mutation_prevfn(ctx):
+    repo = ctx.repo()
+    cl = repo.changelog
+    node = ctx.node()
+    entry = repo._mutationstore.get(node)
+    if entry and len(entry.preds()) == 1 and not entry.split():
+        pred = entry.preds()[0]
+        # Skip, if the pred is not known locally.
+        if cl.filternodes([pred], local=True):
+            # Do not try to diff if the stack is rebased to another public commit.
+            # The diff will include public changes, and could be a waste of time.
+            # Ideally, we can show second-order diff (diff of two diffs),
+            # and no need for this protection.
+            rebased = repo.dageval(
+                lambda: set(headsancestors(ancestors([node]) & public()))
+                != set(headsancestors(ancestors([pred]) & public()))
+            )
+            if not rebased:
+                return repo[pred]
+
+    # fallback to regular p1 parent
+    return ctx.p1()
+
+
+def _logdagwalker(repo, pats, opts, repogetrenamed, repofilematcher, repoids, mutation):
     revs, expr, filematcher = getgraphlogrevs(repo, pats, opts)
+    dag = None
+    if mutation:
+        nodes = repo.changelog.tonodes(revs)
+        # Mutation dag might contain nodes unknown to the main dag. Filter them out via subdag.
+        # ".subdag" is a trade-off. If we migrate graphmod.dagwalker to not use rev numbers,
+        # then we might drop ".subdag" here. See also test-glob-mutation.t
+        dag = repo._mutationstore.getdag(nodes).subdag(nodes)
     template = opts.get("template") or ""
     if repo.root not in repoids:
         repoids[repo.root] = len(repoids)
     rid = repoids[repo.root]
     rev_to_graphnodeid = lambda rev: (rid, rev)
-    revdag = graphmod.dagwalker(repo, revs, template, idfunc=rev_to_graphnodeid)
+    revdag = graphmod.dagwalker(
+        repo, revs, template, idfunc=rev_to_graphnodeid, dag=dag
+    )
 
     getrenamed = None
     if opts.get("copies"):
@@ -3550,11 +3596,13 @@ def _logdagwalker(repo, pats, opts, repogetrenamed, repofilematcher, repoids):
     repogetrenamed[repo.root] = getrenamed
     repofilematcher[repo.root] = filematcher
     return _dagfollowxrepo(
-        repo, pats, opts, revdag, repogetrenamed, repofilematcher, repoids
+        repo, pats, opts, revdag, repogetrenamed, repofilematcher, repoids, mutation
     )
 
 
-def _dagfollowxrepo(repo, pats, opts, revdag, repogetrenamed, repofilematcher, repoids):
+def _dagfollowxrepo(
+    repo, pats, opts, revdag, repogetrenamed, repofilematcher, repoids, mutation
+):
     for item, is_last in iterutil.mark_last(revdag):
         # It currently doesn't handle multiple imports/merges. In those cases, the
         # xrepo operation can appear in the middle of the dag.
@@ -3576,6 +3624,7 @@ def _dagfollowxrepo(repo, pats, opts, revdag, repogetrenamed, repofilematcher, r
                     repogetrenamed,
                     repofilematcher,
                     repoids,
+                    mutation,
                 )
             ):
                 if is_first:
