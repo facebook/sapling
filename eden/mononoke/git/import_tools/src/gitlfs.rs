@@ -6,10 +6,13 @@
  */
 
 use core::future::Future;
+use std::fmt;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Error;
+use anyhow::bail;
 use anyhow::format_err;
 use blobstore::KeyedBlobstore;
 use bytes::Bytes;
@@ -26,6 +29,7 @@ use git_types::git_lfs::LfsPointerData;
 use git_types::git_lfs::parse_lfs_pointer;
 use gix_hash::ObjectId;
 use http::HeaderValue;
+use http::Method;
 use http::Request;
 use http::StatusCode;
 use http::Uri;
@@ -35,6 +39,15 @@ use hyper_openssl::client::legacy::HttpsConnector;
 use hyper_util::client::legacy::Client;
 use hyper_util::client::legacy::connect::HttpConnector;
 use hyper_util::rt::TokioExecutor;
+use lfs_protocol::ObjectAction;
+use lfs_protocol::ObjectStatus;
+use lfs_protocol::Operation;
+use lfs_protocol::RequestBatch;
+use lfs_protocol::RequestObject;
+use lfs_protocol::ResponseBatch;
+use lfs_protocol::Sha256 as LfsProtocolSha256;
+use lfs_protocol::Transfer;
+use lfs_protocol::git_lfs_mime;
 use mononoke_macros::mononoke;
 use mononoke_types::hash;
 use openssl::ssl::SslConnector;
@@ -42,6 +55,7 @@ use openssl::ssl::SslFiletype;
 use openssl::ssl::SslMethod;
 use repourl::encode_repo_name;
 use tls::TLSArgs;
+use tokio::sync::Mutex;
 use tokio::sync::Semaphore;
 use tokio::time::Duration;
 use tokio::time::sleep;
@@ -105,10 +119,16 @@ impl LfsServerUrlFormat {
 /// will be used to fetch the data.
 #[derive(Debug)]
 pub enum GitImportLfsInner {
-    /// Fetch LFS object bytes over HTTP from an upstream LFS server.
+    /// Fetch LFS object bytes over HTTP from an upstream LFS server using the
+    /// Dewey-style `GET {server}/{sha256}` (or `MononokeGitLfs`) URL scheme.
     Upstream(UpstreamLfs),
     /// Fetch LFS object bytes directly from the local Mononoke filestore by SHA256 alias.
     Internal(InternalLfs),
+    /// Fetch LFS object bytes from a GitHub-hosted LFS Batch API endpoint,
+    /// authenticating with a GitHub App installation token. Two HTTP calls per
+    /// object: a `POST {batch_url}` to obtain a signed object URL, then a `GET`
+    /// of that URL to stream the bytes.
+    GitHub(GitHubLfs),
 }
 
 #[derive(Debug)]
@@ -140,6 +160,82 @@ pub struct InternalLfs {
     /// instead of an HTTP response. When true, missing objects fall back to storing the
     /// pointer bytes as the file content; when false, missing objects are a hard error.
     allow_not_found: bool,
+}
+
+pub struct GitHubLfs {
+    /// Fully-qualified GitHub LFS Batch API endpoint, e.g.
+    /// `https://github.com/par-msl/jarvis.git/info/lfs/objects/batch`.
+    batch_url: String,
+    /// Path to a file containing the GitHub App installation token to use as
+    /// `Authorization: Bearer <token>`. The file is expected to be kept fresh
+    /// by an out-of-process refresher (Sandcastle/cron) since GitHub App
+    /// installation tokens expire after ~1h and a full repo import can run
+    /// for several hours.
+    token_file: PathBuf,
+    /// In-memory cache of the most recently read token. Populated lazily on
+    /// first use; invalidated on 401/403 from the batch endpoint so the next
+    /// attempt picks up the rotated value from disk.
+    token_cache: Arc<Mutex<Option<String>>>,
+    /// Same semantics as `UpstreamLfs::allow_not_found`.
+    allow_not_found: bool,
+    /// Number of retries on transient failures (batch POST or object GET).
+    max_attempts: u32,
+    time_ms_between_attempts: u32,
+    /// Optional connection-concurrency limiter (per-host; helps stay under
+    /// GitHub's per-installation rate limits when importing wide trees).
+    conn_limit_sem: Option<Arc<Semaphore>>,
+    /// HTTPS client built with the system trust store (no Meta mTLS) so it
+    /// can talk to github.com.
+    client: Client<HttpsConnector<HttpConnector>, Full<Bytes>>,
+}
+
+impl fmt::Debug for GitHubLfs {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("GitHubLfs")
+            .field("batch_url", &self.batch_url)
+            .field("token_file", &self.token_file)
+            .field("allow_not_found", &self.allow_not_found)
+            .field("max_attempts", &self.max_attempts)
+            .field("time_ms_between_attempts", &self.time_ms_between_attempts)
+            .field("conn_limit_sem", &self.conn_limit_sem)
+            .finish()
+    }
+}
+
+impl GitHubLfs {
+    /// Return the cached token, reading from `token_file` on cache miss.
+    async fn load_token(&self) -> Result<String, Error> {
+        if let Some(cached) = self.token_cache.lock().await.clone() {
+            return Ok(cached);
+        }
+        self.reload_token_from_file().await
+    }
+
+    /// Re-read the token from disk and replace the in-memory cache.
+    async fn reload_token_from_file(&self) -> Result<String, Error> {
+        let contents = tokio::fs::read_to_string(&self.token_file)
+            .await
+            .with_context(|| {
+                format!(
+                    "reading GitHub LFS token file {}",
+                    self.token_file.display(),
+                )
+            })?;
+        let token = contents.trim().to_string();
+        if token.is_empty() {
+            bail!(
+                "GitHub LFS token file {} is empty",
+                self.token_file.display(),
+            );
+        }
+        *self.token_cache.lock().await = Some(token.clone());
+        Ok(token)
+    }
+
+    /// Drop the cached token; the next `load_token` will re-read from disk.
+    async fn invalidate_token(&self) {
+        *self.token_cache.lock().await = None;
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -200,6 +296,37 @@ impl GitImportLfs {
         GitImportLfs {
             inner: Some(Arc::new(GitImportLfsInner::Internal(internal))),
         }
+    }
+
+    /// Build a `GitImportLfs` that fetches LFS objects from a GitHub LFS Batch
+    /// API endpoint authenticated with a GitHub App installation token read
+    /// from `token_file`. The HTTPS client is built with the system trust
+    /// store (not Meta mTLS) since it talks to github.com. The token is read
+    /// lazily on first use and re-read from disk after a 401/403, so an
+    /// out-of-process refresher can rotate the file while gitimport is
+    /// running (installation tokens expire after ~1h; large imports take
+    /// several hours).
+    pub fn new_github(
+        batch_url: String,
+        token_file: PathBuf,
+        allow_not_found: bool,
+        max_attempts: u32,
+        conn_limit: Option<usize>,
+    ) -> Result<Self, Error> {
+        let client = build_https_client(None)?;
+        let github = GitHubLfs {
+            batch_url,
+            token_file,
+            token_cache: Arc::new(Mutex::new(None)),
+            allow_not_found,
+            max_attempts,
+            time_ms_between_attempts: 10000,
+            conn_limit_sem: conn_limit.map(|x| Arc::new(Semaphore::new(x))),
+            client,
+        };
+        Ok(GitImportLfs {
+            inner: Some(Arc::new(GitImportLfsInner::GitHub(github))),
+        })
     }
 
     /// Checks whether given blob is valid Git LFS pointer and returns its metadata
@@ -311,6 +438,199 @@ impl GitImportLfs {
         }
     }
 
+    /// Fetch an LFS object from a GitHub LFS Batch API endpoint. Two HTTP
+    /// round-trips per object:
+    ///   1. `POST {batch_url}` with a single-object download request to obtain
+    ///      a signed download URL (plus any extra headers GitHub requires).
+    ///   2. `GET` of that signed URL to stream the actual object bytes.
+    ///
+    /// `allow_not_found` triggers the pointer-fallback path on both a 404 from
+    /// the batch endpoint and an `ObjectStatus::Err { code: 404, .. }` entry
+    /// inside an otherwise-200 batch response.
+    async fn fetch_bytes_github(
+        github: &GitHubLfs,
+        ctx: &CoreContext,
+        metadata: &LfsPointerData,
+    ) -> Result<
+        (
+            StoreRequest,
+            Box<dyn Stream<Item = Result<Bytes, Error>> + Send + Unpin>,
+            GitLfsFetchResult,
+        ),
+        Error,
+    > {
+        let client_info = ctx
+            .metadata()
+            .client_info()
+            .cloned()
+            .unwrap_or_else(ClientInfo::default);
+
+        let batch_uri = github
+            .batch_url
+            .parse::<Uri>()
+            .with_context(|| format!("parsing GitHub LFS batch URL {}", github.batch_url))?;
+
+        let batch_req_body = serde_json::to_vec(&RequestBatch {
+            operation: Operation::Download,
+            transfers: vec![Transfer::Basic],
+            r#ref: None,
+            objects: vec![RequestObject {
+                oid: LfsProtocolSha256(metadata.sha256.into_inner()),
+                size: metadata.size,
+            }],
+        })?;
+        let token = github.load_token().await?;
+        let mut batch_request = Request::builder()
+            .method(Method::POST)
+            .uri(batch_uri.clone())
+            .header(http::header::ACCEPT, git_lfs_mime().to_string())
+            .header(http::header::CONTENT_TYPE, git_lfs_mime().to_string())
+            .header(http::header::AUTHORIZATION, format!("Bearer {}", token))
+            .body(Full::new(Bytes::from(batch_req_body)))
+            .context("creating GitHub LFS batch request")?;
+        batch_request.headers_mut().insert(
+            CLIENT_INFO_HEADER,
+            HeaderValue::from_str(&client_info.to_json()?)?,
+        );
+
+        let batch_resp = github
+            .client
+            .request(batch_request)
+            .await
+            .with_context(|| format!("POST GitHub LFS batch {}", batch_uri))?;
+
+        if batch_resp.status() == StatusCode::NOT_FOUND && github.allow_not_found {
+            warn!(
+                "GitHub LFS batch {} returned 404 for sha256:{}. Using gitlfs metadata as file content instead.",
+                batch_uri, metadata.sha256,
+            );
+            return not_found_pointer_fallback(metadata);
+        }
+        if matches!(
+            batch_resp.status(),
+            StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN
+        ) {
+            // The installation token is most likely expired. Invalidate the
+            // in-memory cache and re-read from disk; the caller's retry loop
+            // will pick up the new value. If the disk content is unchanged,
+            // the refresher has fallen behind — surface a clear error instead
+            // of looping uselessly on the same stale value.
+            github.invalidate_token().await;
+            let refreshed = github.reload_token_from_file().await?;
+            if refreshed == token {
+                return Err(format_err!(
+                    "GitHub LFS batch {} returned {:?} and token file {} contents are unchanged; \
+                     the token refresher has fallen behind",
+                    batch_uri,
+                    batch_resp.status(),
+                    github.token_file.display(),
+                ));
+            }
+            return Err(format_err!(
+                "GitHub LFS batch {} returned {:?} (stale token, refreshed on disk; retrying)",
+                batch_uri,
+                batch_resp.status(),
+            ));
+        }
+        if !batch_resp.status().is_success() {
+            return Err(format_err!(
+                "GitHub LFS batch {} failed: {:?}",
+                batch_uri,
+                batch_resp.status(),
+            ));
+        }
+        let batch_resp_bytes = batch_resp.into_body().collect().await?.to_bytes();
+        let parsed: ResponseBatch =
+            serde_json::from_slice(&batch_resp_bytes).with_context(|| {
+                format!(
+                    "decoding GitHub LFS batch response from {} ({} bytes)",
+                    batch_uri,
+                    batch_resp_bytes.len(),
+                )
+            })?;
+
+        let object = parsed.objects.into_iter().next().ok_or_else(|| {
+            format_err!(
+                "GitHub LFS batch {} returned no objects for sha256:{}",
+                batch_uri,
+                metadata.sha256,
+            )
+        })?;
+
+        let action: ObjectAction = match object.status {
+            ObjectStatus::Ok { mut actions, .. } => {
+                actions.remove(&Operation::Download).ok_or_else(|| {
+                    format_err!(
+                        "GitHub LFS batch {} returned no download action for sha256:{}",
+                        batch_uri,
+                        metadata.sha256,
+                    )
+                })?
+            }
+            ObjectStatus::Err { error } => {
+                if error.code == 404 && github.allow_not_found {
+                    warn!(
+                        "GitHub LFS object sha256:{} not found ({}). Using gitlfs metadata as file content instead.",
+                        metadata.sha256, error.message,
+                    );
+                    return not_found_pointer_fallback(metadata);
+                }
+                return Err(format_err!(
+                    "GitHub LFS batch {} reported error code={} message={} for sha256:{}",
+                    batch_uri,
+                    error.code,
+                    error.message,
+                    metadata.sha256,
+                ));
+            }
+        };
+
+        let mut download_request = Request::builder()
+            .method(Method::GET)
+            .uri(action.href.clone())
+            .body(Full::new(Bytes::new()))
+            .context("creating GitHub LFS download request")?;
+        if let Some(headers) = action.header {
+            for (name, value) in headers {
+                let header_name = http::header::HeaderName::from_bytes(name.as_bytes())
+                    .with_context(|| format!("invalid LFS action header name: {name}"))?;
+                let header_value = HeaderValue::from_str(&value)
+                    .with_context(|| format!("invalid LFS action header value for {name}"))?;
+                download_request
+                    .headers_mut()
+                    .insert(header_name, header_value);
+            }
+        }
+
+        let download_resp = github
+            .client
+            .request(download_request)
+            .await
+            .with_context(|| format!("GET GitHub LFS object {}", action.href))?;
+
+        if download_resp.status() == StatusCode::NOT_FOUND && github.allow_not_found {
+            warn!(
+                "GitHub LFS download {} returned 404 for sha256:{}. Using gitlfs metadata as file content instead.",
+                action.href, metadata.sha256,
+            );
+            return not_found_pointer_fallback(metadata);
+        }
+        if !download_resp.status().is_success() {
+            return Err(format_err!(
+                "GitHub LFS download {} failed: {:?}",
+                action.href,
+                download_resp.status(),
+            ));
+        }
+
+        let bytes = download_resp
+            .into_body()
+            .into_data_stream()
+            .map_err(Error::from);
+        let sr = StoreRequest::with_sha256(metadata.size, metadata.sha256);
+        Ok((sr, Box::new(bytes), GitLfsFetchResult::Fetched))
+    }
+
     async fn fetch_bytes(
         &self,
         ctx: &CoreContext,
@@ -356,6 +676,28 @@ impl GitImportLfs {
                 // and "not in filestore" doesn't get better by waiting.
                 Self::fetch_bytes_internal_store(internal, ctx, metadata).await
             }
+            GitImportLfsInner::GitHub(github) => {
+                let mut attempt: u32 = 0;
+                loop {
+                    let r = Self::fetch_bytes_github(github, ctx, metadata).await;
+                    match r {
+                        Ok(res) => return Ok(res),
+                        Err(err) => {
+                            if attempt >= github.max_attempts {
+                                return Err(err);
+                            }
+                            attempt += 1;
+                            let sleep_time_ms =
+                                rand::random_range(0..github.time_ms_between_attempts * 2);
+                            error!(
+                                "{}. Attempt {} of {} - Retrying in {} ms",
+                                err, attempt, github.max_attempts, sleep_time_ms,
+                            );
+                            sleep(Duration::from_millis(sleep_time_ms.into())).await;
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -384,9 +726,13 @@ impl GitImportLfs {
                 .as_ref()
                 .ok_or_else(|| format_err!("GitImportLfs::with called on disabled GitImportLfs"))?;
 
-            // If configured a connection limit (upstream only), grab semaphore lock enforcing it.
+            // If configured a connection limit (HTTP variants only), grab semaphore lock enforcing it.
             let _slock = match inner.as_ref() {
                 GitImportLfsInner::Upstream(upstream) => match &upstream.conn_limit_sem {
+                    Some(semaphore) => Some(semaphore.clone().acquire_owned().await?),
+                    None => None,
+                },
+                GitImportLfsInner::GitHub(github) => match &github.conn_limit_sem {
                     Some(semaphore) => Some(semaphore.clone().acquire_owned().await?),
                     None => None,
                 },

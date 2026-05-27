@@ -211,8 +211,8 @@ struct GitimportArgs {
     /// LFS server URL to fetch LFS files from over HTTP. When unset, gitimport
     /// falls back to internal mode (resolves LFS pointers from the local
     /// Mononoke filestore by SHA256 alias). Mutually exclusive with
-    /// `--internal-lfs`.
-    #[clap(long, conflicts_with = "internal_lfs")]
+    /// `--internal-lfs` and `--github-lfs-url`.
+    #[clap(long, conflicts_with_all = ["internal_lfs", "github_lfs_url"])]
     lfs_server: Option<String>,
     /// URL pattern that the LFS server uses to serve raw objects by SHA256.
     /// Defaults to the Dewey-style `GET {server}/{sha256}`. Use `mononoke-git-lfs` for
@@ -223,9 +223,25 @@ struct GitimportArgs {
     /// Mononoke filestore by SHA256 alias). Internal mode is also the default
     /// when `--lfs-server` is not set; this flag is mainly useful for
     /// documentation or to force a clap error if `--lfs-server` is also
-    /// passed by mistake. Mutually exclusive with `--lfs-server`.
-    #[clap(long, default_value_t = false)]
+    /// passed by mistake. Mutually exclusive with `--lfs-server` and
+    /// `--github-lfs-url`.
+    #[clap(long, default_value_t = false, conflicts_with = "github_lfs_url")]
     internal_lfs: bool,
+    /// GitHub LFS Batch API endpoint, e.g.
+    /// `https://github.com/par-msl/jarvis.git/info/lfs/objects/batch`. When
+    /// set, gitimport speaks the LFS Batch protocol against this URL using a
+    /// GitHub App installation token read from `--github-lfs-token-file`.
+    /// Mutually exclusive with `--lfs-server` and `--internal-lfs`.
+    #[clap(long, requires = "github_lfs_token_file")]
+    github_lfs_url: Option<String>,
+    /// Path to a file containing the GitHub App installation token used as
+    /// `Authorization: Bearer <token>` against the GitHub LFS Batch endpoint.
+    /// The file is re-read after a 401/403 response, so an out-of-process
+    /// refresher can rotate the token while gitimport is running
+    /// (installation tokens expire after ~1h; large imports take several
+    /// hours). Required when `--github-lfs-url` is set.
+    #[clap(long, requires = "github_lfs_url")]
+    github_lfs_token_file: Option<PathBuf>,
     /// TLS parameters for this service used for outbound LFS connections
     #[clap(flatten)]
     tls_args: Option<TLSArgs>,
@@ -368,8 +384,8 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     // flag is documentary only; without it, the absence of `--lfs-server`
     // already selects internal mode.
     let lfs = if repo.repo_config().git_configs.git_lfs_interpret_pointers {
-        match args.lfs_server {
-            Some(lfs_server) => {
+        match (args.lfs_server, args.github_lfs_url) {
+            (Some(lfs_server), None) => {
                 let url_format = match args.lfs_server_url_format {
                     LfsServerUrlFormatArg::Dewey => LfsServerUrlFormat::LegacyDewey,
                     LfsServerUrlFormatArg::MononokeGitLfs => LfsServerUrlFormat::MononokeGitLfs {
@@ -385,10 +401,25 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                     args.tls_args,
                 )?
             }
-            None => GitImportLfs::new_internal(
+            (None, Some(github_lfs_url)) => {
+                let token_file = args.github_lfs_token_file.ok_or_else(|| {
+                    anyhow::format_err!(
+                        "--github-lfs-token-file is required when --github-lfs-url is set",
+                    )
+                })?;
+                GitImportLfs::new_github(
+                    github_lfs_url,
+                    token_file,
+                    args.allow_dangling_lfs_pointers,
+                    args.lfs_import_max_attempts,
+                    Some(LFS_SIMULTANEOUS_CONNECTION_LIMIT),
+                )?
+            }
+            (None, None) => GitImportLfs::new_internal(
                 repo.repo_blobstore_arc().boxed(),
                 args.allow_dangling_lfs_pointers,
             ),
+            (Some(_), Some(_)) => unreachable!("clap conflicts_with rejects this combination"),
         }
     } else {
         GitImportLfs::new_disabled()
