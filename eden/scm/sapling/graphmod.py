@@ -23,7 +23,7 @@ Data depends on type.
 """
 
 from . import dagop, smartset
-from .node import nullrev
+from .node import nullid
 
 CHANGESET = "C"
 PARENT = "P"
@@ -37,7 +37,7 @@ MISSINGPARENT = "M"
 EDGES = {PARENT: "|", GRANDPARENT: ":", MISSINGPARENT: None}
 
 
-def dagwalker(repo, revs, template, idfunc=None):
+def dagwalker(repo, revs, template, idfunc=None, dag=None):
     """cset DAG generator yielding (id, CHANGESET, ctx, [parentinfo]) tuples
 
     This generator function walks through revisions (which should be ordered
@@ -49,6 +49,8 @@ def dagwalker(repo, revs, template, idfunc=None):
     returned.
 
     The idfunc is a function that takes a rev number and returns an id for it.
+
+    If dag is set, use the specified dag instead.
     """
     if not revs:
         return
@@ -57,8 +59,12 @@ def dagwalker(repo, revs, template, idfunc=None):
     cl = repo.changelog
     if cl.algorithmbackend != "segments":
         simplifygrandparents = False
-    if simplifygrandparents:
-        rootnodes = cl.tonodes(revs)
+    rootnodes = cl.tonodes(revs)
+    if dag is None:
+        dag = cl.dag
+    else:
+        # more efficient when running `& rootnodes` below.
+        rootnodes = dag.sort(rootnodes)
 
     if idfunc is None:
         idfunc = lambda rev: rev
@@ -69,10 +75,15 @@ def dagwalker(repo, revs, template, idfunc=None):
         # partition into parents in the rev set and missing parents, then
         # augment the lists with markers, to inform graph drawing code about
         # what kind of edge to draw between nodes.
-        pset = set(p.rev() for p in ctx.parents() if p.rev() in revs)
-        mpars = [
-            p.rev() for p in ctx.parents() if p.rev() != nullrev and p.rev() not in pset
-        ]
+        node = ctx.node()
+        if node == nullid:
+            parent_nodes = []
+        else:
+            parent_nodes = dag.parentnames(node)
+        pset_nodes = {n for n in parent_nodes if n in rootnodes}
+        pset = set(cl.torevs(pset_nodes))
+        mpars_nodes = [n for n in parent_nodes if n not in pset_nodes]
+        mpars = [cl.rev(n) for n in mpars_nodes]
         parents = [(PARENT, idfunc(p)) for p in sorted(pset)]
 
         for mpar in mpars:
@@ -80,11 +91,7 @@ def dagwalker(repo, revs, template, idfunc=None):
             if gp is None:
                 if simplifygrandparents:
                     gp = gpcache[mpar] = cl.torevs(
-                        cl.dageval(
-                            lambda: headsancestors(
-                                ancestors(cl.tonodes([mpar])) & rootnodes
-                            )
-                        )
+                        dag.headsancestors(dag.ancestors([cl.node(mpar)]) & rootnodes)
                     )
 
                 else:
