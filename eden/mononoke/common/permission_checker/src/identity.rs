@@ -123,27 +123,28 @@ impl MononokeIdentity {
         self.id_type() == id_type
     }
 
-    /// Render the identity as the canonical `mid://` URI (e.g.
-    /// `mid://PROD/USER/foo?agent.id=AGENT:devmate`) using
-    /// `authenticated_identity_serializer::serialize` -- the same serializer
-    /// `identity_ext::json::serialize_authn_identities` uses for the wire
-    /// envelope. This keeps Scuba's `client_identities_typed` column in lockstep
-    /// with whatever the `mid://` form encodes (attributes, source, logging
-    /// key, CAT payload presence).
+    /// Render the identity in the debug-friendly form produced by the C++
+    /// canonical logging formatter at `access/if/AuthenticatedIdentity.cpp`:
+    /// `AuthenticatedIdentity{identity=TYPE:data, source=ENUM, attributes=[{ns/name=val}, ...]}`.
     ///
-    /// Falls back to a `TYPE:data` string if serialization fails (e.g. the
-    /// underlying serializer rejects an unrepresentable identity); in OSS
-    /// builds the serializer is unavailable, so the fallback is always used.
+    /// Used for Scuba's `client_identities_typed` column and for log lines
+    /// that surface client identity. Attributes are emitted without URI
+    /// escaping, structure is explicit, and `source` is included as a name --
+    /// so this is suitable for human reading and Scuba grouping, but **not**
+    /// for wire envelopes or anything that needs to round-trip through a URI
+    /// parser. For those, serialize the underlying `AuthenticatedIdentity` via
+    /// `authenticated_identity_serializer::serialize` directly.
+    ///
+    /// In OSS builds the C++ formatter is unavailable, so this falls back to
+    /// a plain `TYPE:data` summary that drops attributes.
     pub fn to_typed_string(&self) -> String {
         #[cfg(fbcode_build)]
         {
-            authenticated_identity_serializer::serialize(self.0.clone()).unwrap_or_else(|_| {
-                format!("mid://SERIALIZEERR/{}/{}", self.id_type(), self.id_data())
-            })
+            authenticated_identity_serializer::to_string(self.0.clone())
         }
         #[cfg(not(fbcode_build))]
         {
-            format!("mid://TEST/{}/{}", self.id_type(), self.id_data())
+            format!("{}:{}", self.id_type(), self.id_data())
         }
     }
 
@@ -236,16 +237,19 @@ mod tests {
     #[mononoke::test]
     fn test_to_typed_string_thin() {
         let id = MononokeIdentity::from_legacy_type_data("SERVICE", "some_service");
-        // In fbcode the identity is rendered through
-        // `authenticated_identity_serializer::serialize`, producing the canonical
-        // `mid://` URI. The serializer defaults the realm to `PROD` when a "thin"
-        // identity has no source info set. In OSS the serializer is unavailable,
-        // so the fallback uses a synthetic `TEST` realm to keep the output shaped
-        // like a real `mid://` URI.
+        // In fbcode the identity is rendered through the C++ canonical
+        // logging formatter at `access/if/AuthenticatedIdentity.cpp`,
+        // producing the `AuthenticatedIdentity{...}` debug shape with the
+        // default source (UNKNOWN) and an empty attribute list. In OSS the
+        // formatter is unavailable, so the fallback emits a plain
+        // `TYPE:data` summary.
         #[cfg(fbcode_build)]
-        assert_eq!(id.to_typed_string(), "mid://PROD/SERVICE/some_service");
+        assert_eq!(
+            id.to_typed_string(),
+            "AuthenticatedIdentity{identity=SERVICE:some_service, source=UNKNOWN, attributes=[]}",
+        );
         #[cfg(not(fbcode_build))]
-        assert_eq!(id.to_typed_string(), "mid://TEST/SERVICE/some_service");
+        assert_eq!(id.to_typed_string(), "SERVICE:some_service");
     }
 
     #[cfg(not(fbcode_build))]
@@ -268,9 +272,9 @@ mod tests {
             }],
         };
         let id = MononokeIdentity::from(auth_id);
-        // OSS build: serializer unavailable, so the fallback emits the
-        // `mid://TEST/TYPE/data` shape and drops attributes (the OSS path has
-        // no way to encode them into the URI without the C++ serializer).
-        assert_eq!(id.to_typed_string(), "mid://TEST/USER/mzr");
+        // OSS build: C++ formatter unavailable, so the fallback emits a
+        // plain `TYPE:data` summary and drops attributes (the OSS path has
+        // no way to mirror the C++ debug form without the formatter).
+        assert_eq!(id.to_typed_string(), "USER:mzr");
     }
 }
