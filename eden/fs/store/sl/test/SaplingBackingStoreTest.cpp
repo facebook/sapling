@@ -169,7 +169,7 @@ TEST_F(SaplingBackingStoreNoFaultInjectorTest, getTree) {
 
 TEST_F(
     SaplingBackingStoreNoFaultInjectorTest,
-    checkPermissionRejectsObjectIdWithPath) {
+    checkPermissionAcceptsObjectIdWithPath) {
   testEdenConfig->restrictedTreeTtlSeconds.setValue(
       0, ConfigSourceType::UserConfig, true);
   auto objectStore = ObjectStore::create(
@@ -186,11 +186,10 @@ TEST_F(
   auto rootTreeId = SlOid{rootTree.treeId};
   auto idWithPath = SlOid{rootTreeId.node(), RelativePathPiece{"src"}}.oid();
 
-  auto permissionCheck = objectStore->checkPermissionIfExpired(
-      idWithPath, std::chrono::steady_clock::now());
-
-  EXPECT_THROW(
-      std::move(permissionCheck).get(kTestTimeout), std::runtime_error);
+  EXPECT_TRUE(objectStore
+                  ->checkPermissionIfExpired(
+                      idWithPath, std::chrono::steady_clock::now())
+                  .get(kTestTimeout));
 }
 
 TEST_F(

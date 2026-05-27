@@ -2439,7 +2439,7 @@ SaplingBackingStore::co_getGlobFiles(
 
 ImmediateFuture<bool> SaplingBackingStore::checkPermission(
     const ObjectId& manifestId) {
-  auto hgId = manifestId.getBytes();
+  auto hgId = SlOidView{manifestId}.node().getBytes();
   auto result = sapling_backingstore_check_permission(
       *store_.get(), rust::Slice<const uint8_t>{hgId.data(), hgId.size()});
 
