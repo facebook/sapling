@@ -22,6 +22,8 @@
 #include "eden/fs/inodes/OverlayFile.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Blob.h"
+#include "eden/fs/telemetry/EdenErrorInfoBuilder.h"
+#include "eden/fs/telemetry/ErrorLogger.h"
 
 namespace facebook::eden {
 
@@ -140,6 +142,8 @@ FileOffset OverlayFileAccess::getFileSize(InodeNumber ino, InodeBase* inode) {
         "overlay file for {} is too short for header: size={}",
         ino,
         st.st_size);
+    overlay_->getErrorLogger().log(
+        EdenErrorInfo::overlay("corrupt overlay file", ino.get()));
     throw InodeError(
         EIO,
         inode ? inode->inodePtrFromThis() : InodePtr{},

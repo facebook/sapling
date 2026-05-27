@@ -166,6 +166,7 @@ cpp_library(
         "//eden/fs/service:thrift_util",
         "//eden/fs/sqlite:sqlite",
         "//eden/fs/store:backing_store_interface",
+        "//eden/fs/telemetry:error_info",
         "//eden/fs/telemetry:error_logger",
         "//eden/fs/telemetry:file_access_structured_logger",
         "//eden/fs/telemetry:fs_event_logger",

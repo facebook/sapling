@@ -38,6 +38,7 @@
 #include "eden/fs/service/PrettyPrinters.h"
 #include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/EdenStats.h"
+#include "eden/fs/telemetry/test/CapturingScribeLogger.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestChecks.h"
@@ -556,6 +557,45 @@ TEST_P(RawOverlayTest, cannot_create_overlay_file_in_corrupt_overlay) {
   EXPECT_NO_THROW(
       overlay->createOverlayFile(ino2, folly::ByteRange{"contents"_sp}));
   overlay->close();
+}
+
+TEST(OverlayErrorLoggingTest, createOverlayFileLogsErrorOnFailure) {
+  folly::test::TemporaryDirectory testDir;
+  auto scribe = std::make_shared<CapturingScribeLogger>();
+  auto edenConfig = EdenConfig::createTestEdenConfig();
+  edenConfig->enableErrorLogging.setValue(
+      true, ConfigSourceType::Default, true);
+  auto config = std::make_shared<ReloadableConfig>(edenConfig);
+  ErrorLogger errorLogger(scribe, SessionInfo{}, config);
+
+  auto overlay = Overlay::create(
+      canonicalPath(testDir.path().string()),
+      kPathMapDefaultCaseSensitive,
+      kInodeCatalogType,
+      kInodeCatalogOptions,
+      makeTestEdenFsEventsLogger(),
+      errorLogger,
+      makeRefPtr<EdenStats>(),
+      *EdenConfig::createTestEdenConfig());
+  overlay
+      ->initialize(
+          std::make_shared<ReloadableConfig>(
+              EdenConfig::createTestEdenConfig()))
+      .get();
+
+  auto ino = overlay->allocateInodeNumber();
+
+  // Remove the overlay directory to force createOverlayFile to fail
+  boost::filesystem::remove_all(testDir.path());
+
+  EXPECT_THROW(
+      overlay->createOverlayFile(ino, folly::ByteRange{"contents"_sp}),
+      std::system_error);
+
+  ASSERT_EQ(scribe->messages().size(), 1);
+  const auto& msg = scribe->messages()[0];
+  EXPECT_NE(msg.find("overlay"), std::string::npos)
+      << "Should contain overlay component, got: " << msg;
 }
 
 TEST_P(RawOverlayTest, cannot_save_overlay_dir_when_closed) {

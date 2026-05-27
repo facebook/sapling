@@ -364,6 +364,7 @@ cpp_unittest(
         "//eden/fs/service:pretty_printers",
         "//eden/fs/telemetry:stats",
         "//eden/fs/telemetry:structured_logger",
+        "//eden/fs/telemetry/test:capturing_scribe_logger",
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
         "//eden/fs/testharness:test_checks",
         "//eden/fs/testharness:test_mount",

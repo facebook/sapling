@@ -35,8 +35,10 @@
 #include "eden/fs/inodes/sqlitecatalog/BufferedSqliteInodeCatalog.h"
 #include "eden/fs/inodes/sqlitecatalog/SqliteInodeCatalog.h"
 #include "eden/fs/sqlite/SqliteDatabase.h"
+#include "eden/fs/telemetry/EdenErrorInfoBuilder.h"
 #include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/EdenStats.h"
+#include "eden/fs/telemetry/ErrorLogger.h"
 #include "eden/fs/telemetry/LogEvent.h"
 
 #ifndef _WIN32
@@ -769,6 +771,7 @@ void Overlay::saveOverlayDir(
     stats_->increment(&OverlayStats::saveOverlayDirSuccessful);
   } catch (const std::exception& e) {
     XLOGF(ERR, "Failed to save overlay dir {} {}", inodeNumber, e.what());
+    errorLogger_.log(EdenErrorInfo::overlay(e, inodeNumber.get()));
     stats_->increment(&OverlayStats::saveOverlayDirFailure);
     throw;
   }
@@ -1036,6 +1039,7 @@ OverlayFile Overlay::openFile(
     return file;
   } catch (const std::exception& e) {
     XLOGF(ERR, "Failed to open file {} {} {}", inodeNumber, headerId, e.what());
+    errorLogger_.log(EdenErrorInfo::overlay(e, inodeNumber.get()));
     stats_->increment(&OverlayStats::openOverlayFileFailure);
     throw;
   }
@@ -1052,6 +1056,7 @@ OverlayFile Overlay::openFileNoVerify(InodeNumber inodeNumber) {
     return file;
   } catch (const std::exception& e) {
     XLOGF(ERR, "Failed to open file {} {}", inodeNumber, e.what());
+    errorLogger_.log(EdenErrorInfo::overlay(e, inodeNumber.get()));
     stats_->increment(&OverlayStats::openOverlayFileFailure);
     throw;
   }
@@ -1074,6 +1079,7 @@ OverlayFile Overlay::createOverlayFile(
     return file;
   } catch (const std::exception& e) {
     XLOGF(ERR, "Failed to create file {} {}", inodeNumber, e.what());
+    errorLogger_.log(EdenErrorInfo::overlay(e, inodeNumber.get()));
     stats_->increment(&OverlayStats::createOverlayFileFailure);
     throw;
   }
@@ -1096,6 +1102,7 @@ OverlayFile Overlay::createOverlayFile(
     return file;
   } catch (const std::exception& e) {
     XLOGF(ERR, "Failed to create file {} {}", inodeNumber, e.what());
+    errorLogger_.log(EdenErrorInfo::overlay(e, inodeNumber.get()));
     stats_->increment(&OverlayStats::createOverlayFileFailure);
     throw;
   }
