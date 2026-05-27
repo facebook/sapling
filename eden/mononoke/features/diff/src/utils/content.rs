@@ -364,6 +364,12 @@ pub async fn get_lfs_pointer(
     Ok(None)
 }
 
+fn lfs_pointer_text(lfs: &LfsPointer) -> Result<String, DiffError> {
+    let sha256 =
+        mononoke_types::hash::Sha256::from_str(&lfs.sha256).map_err(DiffError::internal)?;
+    Ok(format_lfs_pointer(sha256, lfs.size as u64))
+}
+
 pub async fn get_content_metadata(
     ctx: &CoreContext,
     repo: &impl Repo,
@@ -448,21 +454,26 @@ pub async fn load_diff_file(
                 .with_context(|| format!("Invalid commit hash for submodule at {}", path))?
                 .to_string();
             (xdiff::FileContent::Submodule { commit_hash }, false)
-        } else if options.omit_content || (!options.inspect_lfs_pointers && lfs_pointer.is_some()) {
-            // Omit content if selected, or if there is an LFS pointer that should not be
-            // inspected.
+        } else if options.omit_content {
             (
                 xdiff::FileContent::Omitted {
                     content_hash: format!("{:?}", id),
-                    git_lfs_pointer: lfs_pointer.and_then(|lfs| {
-                        // Parse string sha256 to Sha256 type and convert i64 to u64
-                        let sha256 = mononoke_types::hash::Sha256::from_str(&lfs.sha256).ok()?;
-                        let size = lfs.size as u64;
-                        Some(format_lfs_pointer(sha256, size))
-                    }),
+                    git_lfs_pointer: lfs_pointer.as_ref().map(lfs_pointer_text).transpose()?,
                 },
                 false,
             )
+        } else if !options.inspect_lfs_pointers
+            && let Some(lfs) = lfs_pointer
+        {
+            // Surface the pointer text to xdiff as `Inline`. xdiff then
+            // walks its standard text/binary branch: text raw → unified
+            // diff between pointer text and content (matches `git add
+            // --renormalize`); binary raw → `Binary file X has changed`
+            // (matches `git diff --no-textconv`). For both-sides-pointer
+            // diffs this matches the legacy `Omitted{Some(text)}` output
+            // byte-for-byte.
+            let pointer_text = lfs_pointer_text(&lfs)?;
+            (xdiff::FileContent::Inline(Bytes::from(pointer_text)), false)
         } else {
             match load_content(ctx, repo, input).await? {
                 Some(LoadResult::Content(bytes)) => (xdiff::FileContent::Inline(bytes), false),
