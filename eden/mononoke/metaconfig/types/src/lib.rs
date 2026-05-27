@@ -2584,6 +2584,9 @@ pub struct EnforcementConditionSet {
     /// Non-empty = match only when the access result's `restriction_acls`
     /// overlaps this list.
     pub restriction_acls: Vec<MononokeIdentity>,
+    /// Machine tiers (MACHINE_TIER identity values) that trigger enforcement.
+    /// Empty = don't filter on this dimension.
+    pub machine_tiers: Vec<String>,
 }
 
 /// Configuration for restricted paths and their associated ACLs

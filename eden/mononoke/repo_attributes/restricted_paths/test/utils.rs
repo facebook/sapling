@@ -111,6 +111,7 @@ pub struct RestrictedPathsTestDataBuilder {
     groups_config: Vec<(String, Vec<String>)>,
     server_side_tenting: bool,
     client_identity: Option<MononokeIdentity>,
+    client_machine_tier_identity: Option<MononokeIdentity>,
     file_path_changes: Vec<(String, Option<String>)>,
     expected_manifest_entries: Option<Vec<RestrictedPathManifestIdEntry>>,
     expected_scuba_logs: Option<Vec<ScubaAccessLogSample>>,
@@ -345,6 +346,7 @@ impl RestrictedPathsTestDataBuilder {
             repo_regions_config: vec![],
             server_side_tenting: false,
             client_identity: None,
+            client_machine_tier_identity: None,
             file_path_changes: vec![],
             expected_manifest_entries: None,
             expected_scuba_logs: None,
@@ -394,6 +396,17 @@ impl RestrictedPathsTestDataBuilder {
     pub fn with_client_identity(mut self, identity: &str) -> Result<Self> {
         self.client_identity = Some(MononokeIdentity::from_str(identity)?);
         Ok(self)
+    }
+
+    /// Adds a MACHINE_TIER identity to the simulated caller. Used by tests
+    /// that exercise the `machine_tiers` enforcement condition. Default (no
+    /// call) leaves the caller without a MACHINE_TIER identity.
+    pub fn with_machine_tier(mut self, tier: &str) -> Self {
+        self.client_machine_tier_identity = Some(MononokeIdentity::from_legacy_type_data(
+            "MACHINE_TIER",
+            tier,
+        ));
+        self
     }
 
     /// Set up test groups for membership checking.
@@ -486,7 +499,13 @@ impl RestrictedPathsTestDataBuilder {
         cri.set_main_id(client_main_id);
         let client_info = ClientInfo::new_with_client_request_info(cri);
 
-        let identities = BTreeSet::from([client_identity]);
+        let identities = {
+            let mut set = BTreeSet::from([client_identity]);
+            if let Some(machine_tier_identity) = self.client_machine_tier_identity {
+                set.insert(machine_tier_identity);
+            }
+            set
+        };
         let metadata = {
             let mut md = Metadata::new(
                 Some(&"restricted_paths_test".to_string()),
@@ -1065,6 +1084,7 @@ pub(crate) struct EnforcementConditionSetBuilder {
     entry_points: Vec<String>,
     require_client_request_flag: bool,
     restriction_acls: Vec<MononokeIdentity>,
+    machine_tiers: Vec<String>,
 }
 
 impl EnforcementConditionSetBuilder {
@@ -1102,12 +1122,22 @@ impl EnforcementConditionSetBuilder {
         self
     }
 
+    pub(crate) fn with_machine_tiers<I, S>(mut self, machine_tiers: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        self.machine_tiers = machine_tiers.into_iter().map(Into::into).collect();
+        self
+    }
+
     pub(crate) fn build(self) -> EnforcementConditionSet {
         EnforcementConditionSet {
             always_enabled: self.always_enabled,
             entry_points: self.entry_points,
             require_client_request_flag: self.require_client_request_flag,
             restriction_acls: self.restriction_acls,
+            machine_tiers: self.machine_tiers,
         }
     }
 }

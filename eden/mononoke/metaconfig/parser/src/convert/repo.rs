@@ -1446,6 +1446,7 @@ impl Convert for RawRestrictedPathsConfig {
                                 .with_context(|| format!("parsing restriction_acl `{s}`"))
                         })
                         .collect::<Result<Vec<_>>>()?,
+                    machine_tiers: raw.machine_tiers.unwrap_or_default(),
                 })
             })
             .collect::<Result<Vec<_>>>()?;

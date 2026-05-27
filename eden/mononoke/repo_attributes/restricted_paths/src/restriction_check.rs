@@ -685,6 +685,7 @@ pub(crate) fn pre_filter_condition_sets<'a>(
         .client_request_info()
         .map(|cri| cri.entry_point.to_string());
     let server_side_tenting = ctx.session().server_side_tenting();
+    let client_machine_tier = ctx.metadata().machine_tier();
 
     let candidates = condition_sets
         .iter()
@@ -703,7 +704,14 @@ pub(crate) fn pre_filter_condition_sets<'a>(
                         .iter()
                         .any(|candidate| candidate == entry_point)
                 });
-            entry_point_matches && (!set.require_client_request_flag || server_side_tenting)
+
+            let machine_tier_matches = set.machine_tiers.is_empty()
+                || client_machine_tier
+                    .is_some_and(|tier| set.machine_tiers.iter().any(|c| c == tier));
+
+            entry_point_matches
+                && machine_tier_matches
+                && (!set.require_client_request_flag || server_side_tenting)
         })
         .collect::<Vec<_>>();
 
@@ -723,6 +731,7 @@ fn condition_set_has_active_filter(set: &EnforcementConditionSet) -> bool {
         || !set.entry_points.is_empty()
         || set.require_client_request_flag
         || !set.restriction_acls.is_empty()
+        || !set.machine_tiers.is_empty()
 }
 
 pub(crate) fn condition_sets_match_restriction_acls(

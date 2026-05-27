@@ -675,6 +675,58 @@ async fn test_enforcement_condition_set_request_flag_and_restriction_acl(
     Ok(())
 }
 
+// What it tests: condition set whose `machine_tiers` list contains the caller's
+// MACHINE_TIER identity value.
+// Expected: filter matches, so unauthorized access is enforced.
+#[mononoke::fbinit_test]
+async fn machine_tier_matches_caller_tier_triggers_enforcement(fb: FacebookInit) -> Result<()> {
+    let restricted_acl = MononokeIdentity::from_str("REPO_REGION:restricted_acl")?;
+    let was_denied = RestrictedPathsTestDataBuilder::new()
+        .with_restricted_paths(vec![(NonRootMPath::new("restricted/dir")?, restricted_acl)])
+        .with_machine_tier("devvm")
+        .build(fb)
+        .await?
+        .observe_path_enforcement(
+            NonRootMPath::new("restricted/dir/file")?,
+            &[EnforcementConditionSetBuilder::new()
+                .with_machine_tiers(["devvm"])
+                .build()],
+        )
+        .await?;
+
+    assert!(
+        was_denied,
+        "caller MACHINE_TIER `devvm` is listed in the condition set's machine_tiers, so enforcement should fire"
+    );
+    Ok(())
+}
+
+// What it tests: condition set whose `machine_tiers` list does not contain the
+// caller's MACHINE_TIER identity value.
+// Expected: filter does not match, so unauthorized access is not enforced.
+#[mononoke::fbinit_test]
+async fn machine_tier_mismatch_does_not_trigger_enforcement(fb: FacebookInit) -> Result<()> {
+    let restricted_acl = MononokeIdentity::from_str("REPO_REGION:restricted_acl")?;
+    let was_denied = RestrictedPathsTestDataBuilder::new()
+        .with_restricted_paths(vec![(NonRootMPath::new("restricted/dir")?, restricted_acl)])
+        .with_machine_tier("devvm")
+        .build(fb)
+        .await?
+        .observe_path_enforcement(
+            NonRootMPath::new("restricted/dir/file")?,
+            &[EnforcementConditionSetBuilder::new()
+                .with_machine_tiers(["nonexistent_tier"])
+                .build()],
+        )
+        .await?;
+
+    assert!(
+        !was_denied,
+        "caller MACHINE_TIER `devvm` is not in `[nonexistent_tier]`, so enforcement should not fire"
+    );
+    Ok(())
+}
+
 // What it tests: enforcement should not depend on the access-log JK once
 // source fetches are spawned for enforcement independently from logging.
 // Expected: disabling `enabled_restricted_paths_access_logging` still denies

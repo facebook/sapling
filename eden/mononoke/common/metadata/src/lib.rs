@@ -309,4 +309,11 @@ impl Metadata {
     pub fn upstream_client_id(&self) -> Option<&str> {
         self.upstream_client_id.as_deref()
     }
+
+    pub fn machine_tier(&self) -> Option<&str> {
+        self.identities()
+            .iter()
+            .find(|identity| identity.id_type() == "MACHINE_TIER")
+            .map(|identity| identity.id_data())
+    }
 }
