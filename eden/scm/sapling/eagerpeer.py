@@ -122,7 +122,8 @@ class eagerpeer(repository.peer):
         self._inner.flush()
 
     def branchmap(self):
-        return {"default": self.heads()}
+        heads = list(self.dag.heads(self.dag.all()))
+        return {"default": heads}
 
     def capabilities(self):
         return {
@@ -139,12 +140,6 @@ class eagerpeer(repository.peer):
 
     def getbundle(self, source, **kwargs):
         raise NotImplementedError()
-
-    def heads(self):
-        # Legacy API. Should not be used if selectivepull is on.
-        heads = list(self.dag.heads(self.dag.all()))
-        tracing.debug("heads = %r" % (heads,))
-        return heads
 
     def known(self, nodes):
         assert isinstance(nodes, list)

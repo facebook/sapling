@@ -109,13 +109,6 @@ class _basewirecommands(abc.ABC):
         """
 
     @abc.abstractmethod
-    def heads(self):
-        """Determine all known head revisions in the peer.
-
-        Returns an iterable of binary nodes.
-        """
-
-    @abc.abstractmethod
     def known(self, nodes):
         """Determine whether multiple nodes are known.
 

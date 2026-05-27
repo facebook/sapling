@@ -286,16 +286,6 @@ class wirepeer(repository.legacypeer):
             self._abort(error.RepoError(data.decode(errors="replace")))
 
     @batchable
-    def heads(self):
-        f = future()
-        yield {}, f
-        d = f.value
-        try:
-            yield decodelist(d[:-1].decode())
-        except ValueError:
-            self._abort(error.ResponseError(_("unexpected response:"), d))
-
-    @batchable
     def known(self, nodes):
         f = future()
         yield {"nodes": encodelist(nodes)}, f
@@ -1096,12 +1086,6 @@ def getbundle(repo, proto, others):
         bundler.addpart(bundle2.createerrorpart(str(exc), hint=exc.hint))
         return streamres(gen=bundler.getchunks(), v1compressible=True)
     return streamres(gen=chunks, v1compressible=True)
-
-
-@wireprotocommand("heads")
-def heads(repo, proto):
-    h = repo.heads()
-    return encodelist(h) + "\n"
 
 
 @wireprotocommand("hello")
