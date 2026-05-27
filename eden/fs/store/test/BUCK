@@ -27,6 +27,7 @@ cpp_unittest(
         "//eden/fs/store/filter:hg_sparse_filter",
         "//eden/fs/store/sl:sapling_backing_store",
         "//eden/fs/store/sl:sapling_backing_store_options",
+        "//eden/fs/telemetry:error_logger",
         "//eden/fs/telemetry:stats",
         "//eden/fs/telemetry:structured_logger",
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",

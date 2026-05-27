@@ -193,6 +193,7 @@ std::shared_ptr<SaplingBackingStore> createSaplingBackingStore(
       reloadableConfig,
       std::move(runtimeOptions),
       params.serverState->getEdenFsEventsLogger(),
+      params.serverState->getErrorLogger(),
       std::make_unique<BackingStoreLogger>(
           params.serverState->getEdenFsEventsLogger(),
           params.serverState->getProcessInfoCache()),

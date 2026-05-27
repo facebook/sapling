@@ -33,6 +33,7 @@
 #include "eden/fs/store/sl/SaplingBackingStoreOptions.h"
 #include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/EdenStats.h"
+#include "eden/fs/telemetry/ErrorLogger.h"
 #include "eden/fs/testharness/FakeFilter.h"
 #include "eden/fs/testharness/HgRepo.h"
 #include "eden/fs/testharness/TestUtil.h"
@@ -154,6 +155,8 @@ struct SaplingFilteredBackingStoreTest : FilteredBackingStoreTestBase {
 
   folly::InlineExecutor executor_ = folly::InlineExecutor::instance();
 
+  ErrorLogger noopErrorLogger{nullptr, {}, nullptr};
+
   std::shared_ptr<SaplingBackingStore> wrappedStore_{
       std::make_shared<SaplingBackingStore>(
           repo.path(),
@@ -168,6 +171,7 @@ struct SaplingFilteredBackingStoreTest : FilteredBackingStoreTestBase {
               /*xplatLogger=*/nullptr,
               edenConfig,
               stats.copy()),
+          /*errorLogger=*/noopErrorLogger,
           std::make_unique<BackingStoreLogger>(),
           &faultInjector)};
 };

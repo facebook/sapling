@@ -86,6 +86,7 @@ cpp_library(
         "//eden/fs/store:context",
         "//eden/fs/store:store",
         "//eden/fs/telemetry:activity_buffer",
+        "//eden/fs/telemetry:error_logger",
         "//eden/scm/lib/backingstore:backingstore",  # @manual
         "//eden/scm/lib/backingstore:backingstore@header",  # @manual
         "//eden/scm/lib/backingstore:sapling_native_backingstore",

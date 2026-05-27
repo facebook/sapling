@@ -30,6 +30,7 @@
 #include "eden/fs/store/sl/SaplingBackingStoreOptions.h"
 #include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/EdenStats.h"
+#include "eden/fs/telemetry/ErrorLogger.h"
 #include "eden/fs/testharness/HgRepo.h"
 #include "eden/fs/testharness/TestConfigSource.h"
 #include "eden/scm/lib/backingstore/include/SaplingBackingStoreError.h"
@@ -94,6 +95,7 @@ struct SaplingBackingStoreTestBase : TestRepo, ::testing::Test {
 struct SaplingBackingStoreNoFaultInjectorTest : SaplingBackingStoreTestBase {
   FaultInjector faultInjector{/*enabled=*/false};
   folly::InlineExecutor executor = folly::InlineExecutor::instance();
+  ErrorLogger noopErrorLogger{nullptr, {}, nullptr};
 
   std::shared_ptr<SaplingBackingStore> queuedBackingStore =
       std::make_shared<SaplingBackingStore>(
@@ -105,6 +107,7 @@ struct SaplingBackingStoreNoFaultInjectorTest : SaplingBackingStoreTestBase {
           edenConfig,
           std::make_unique<SaplingBackingStoreOptions>(),
           makeTestEdenFsEventsLogger(edenConfig, stats),
+          /*errorLogger=*/noopErrorLogger,
           std::make_unique<BackingStoreLogger>(),
           &faultInjector);
 };
@@ -116,6 +119,7 @@ struct SaplingBackingStoreWithFaultInjectorTest : SaplingBackingStoreTestBase {
   // Use a real executor so coroutine tests don't trip the coro::Task
   // DCHECK on InlineExecutor (Task.h:470).
   folly::CPUThreadPoolExecutor executor{1};
+  ErrorLogger noopErrorLogger{nullptr, {}, nullptr};
 
   std::shared_ptr<SaplingBackingStore> queuedBackingStore =
       std::make_shared<SaplingBackingStore>(
@@ -127,6 +131,7 @@ struct SaplingBackingStoreWithFaultInjectorTest : SaplingBackingStoreTestBase {
           edenConfig,
           std::make_unique<SaplingBackingStoreOptions>(),
           makeTestEdenFsEventsLogger(edenConfig, stats),
+          /*errorLogger=*/noopErrorLogger,
           std::make_unique<BackingStoreLogger>(),
           &faultInjector);
 };
@@ -137,6 +142,7 @@ struct SaplingBackingStoreWithFaultInjectorIgnoreConfigTest
       std::make_shared<TestConfigSource>(ConfigSourceType::SystemConfig)};
   FaultInjector faultInjector{/*enabled=*/true};
   folly::InlineExecutor executor = folly::InlineExecutor::instance();
+  ErrorLogger noopErrorLogger{nullptr, {}, nullptr};
 
   std::shared_ptr<SaplingBackingStore> queuedBackingStore =
       std::make_shared<SaplingBackingStore>(
@@ -148,6 +154,7 @@ struct SaplingBackingStoreWithFaultInjectorIgnoreConfigTest
           edenConfig,
           std::make_unique<SaplingBackingStoreOptions>(),
           makeTestEdenFsEventsLogger(edenConfig, stats),
+          /*errorLogger=*/noopErrorLogger,
           std::make_unique<BackingStoreLogger>(),
           &faultInjector);
 };

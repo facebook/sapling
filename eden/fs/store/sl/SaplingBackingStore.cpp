@@ -118,6 +118,7 @@ SaplingBackingStore::SaplingBackingStore(
     std::shared_ptr<ReloadableConfig> config,
     std::unique_ptr<SaplingBackingStoreOptions> runtimeOptions,
     std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger,
+    ErrorLogger& errorLogger,
     std::unique_ptr<BackingStoreLogger> logger,
     FaultInjector* FOLLY_NONNULL faultInjector)
     : stats_(stats.copy()),
@@ -125,6 +126,7 @@ SaplingBackingStore::SaplingBackingStore(
       serverThreadPool_(serverThreadPool),
       queue_(std::move(config)),
       edenFsEventsLogger_{std::move(edenFsEventsLogger)},
+      errorLogger_(errorLogger),
       logger_(std::move(logger)),
       faultInjector_{*faultInjector},
       runtimeOptions_(computeRuntimeOptions(std::move(runtimeOptions))),
@@ -187,6 +189,7 @@ SaplingBackingStore::SaplingBackingStore(
     std::shared_ptr<ReloadableConfig> config,
     std::unique_ptr<SaplingBackingStoreOptions> runtimeOptions,
     std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger,
+    ErrorLogger& errorLogger,
     std::unique_ptr<BackingStoreLogger> logger,
     FaultInjector* FOLLY_NONNULL faultInjector)
     : stats_(std::move(stats)),
@@ -194,6 +197,7 @@ SaplingBackingStore::SaplingBackingStore(
       serverThreadPool_(executor),
       queue_(std::move(config)),
       edenFsEventsLogger_{std::move(edenFsEventsLogger)},
+      errorLogger_(errorLogger),
       logger_(std::move(logger)),
       faultInjector_{*faultInjector},
       runtimeOptions_(std::move(runtimeOptions)),
