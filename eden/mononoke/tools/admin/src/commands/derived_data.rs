@@ -25,14 +25,18 @@ use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
 use bookmarks::Bookmarks;
+use clap::ArgGroup;
+use clap::Args;
 use clap::Parser;
 use clap::Subcommand;
 use commit_graph::CommitGraph;
 use filenodes::Filenodes;
 use filestore::FilestoreConfig;
 use mononoke_app::MononokeApp;
+use mononoke_app::args::RepoArg;
 use mononoke_app::args::RepoArgs;
 use mononoke_types::DerivableType;
+use mononoke_types::RepositoryId;
 use repo_blobstore::RepoBlobstore;
 use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataRef;
@@ -91,11 +95,40 @@ struct Repo {
     filestore_config: FilestoreConfig,
 }
 
+#[derive(Args, Debug)]
+#[clap(group(
+    ArgGroup::new("repos")
+        .multiple(true)
+        .args(&["repo_id", "repo_name"]),
+))]
+struct DerivedDataRepoArgs {
+    /// Numeric repository ID
+    #[clap(long)]
+    repo_id: Vec<i32>,
+
+    /// Repository name
+    #[clap(short = 'R', long)]
+    repo_name: Vec<String>,
+}
+
+impl DerivedDataRepoArgs {
+    fn ids_or_names(&self) -> Vec<RepoArg> {
+        let mut l = Vec::new();
+        for id in &self.repo_id {
+            l.push(RepoArg::Id(RepositoryId::new(*id)));
+        }
+        for name in &self.repo_name {
+            l.push(RepoArg::Name(name.clone()));
+        }
+        l
+    }
+}
+
 /// Request information about derived data
 #[derive(Parser)]
 pub struct CommandArgs {
     #[clap(flatten)]
-    repo: RepoArgs,
+    repo: DerivedDataRepoArgs,
 
     /// The derived data config name to use. If not specified, the enabled config will be used
     #[clap(short, long)]
@@ -143,16 +176,43 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     // don't care about the identity; the extra identity is harmless there.
     let mut ctx = crate::user_ctx::new_basic_context_with_unixname(&app);
 
-    // The list view doesn't require opening a repo. Request details may need
-    // the repo's derived-data manager to check boundary derivation status.
-    let backfill_status_without_request_id = matches!(
-        &args.subcommand,
-        DerivedDataSubcommand::BackfillStatus(backfill_status_args)
-            if backfill_status_args.request_id().is_none()
-    );
-    if backfill_status_without_request_id {
-        let DerivedDataSubcommand::BackfillStatus(backfill_status_args) = args.subcommand else {
-            unreachable!("matched backfill status above")
+    // BackfillAbort doesn't require opening a repo
+    if let DerivedDataSubcommand::BackfillAbort(backfill_abort_args) = args.subcommand {
+        return backfill_abort(ctx, &app, backfill_abort_args).await;
+    }
+
+    let repo_arg_list = args.repo.ids_or_names();
+
+    // BackfillStatus: repo is optional (enriches boundary derivation checks)
+    if let DerivedDataSubcommand::BackfillStatus(status_args) = args.subcommand {
+        let opt_repo: Option<Repo> = match repo_arg_list.as_slice() {
+            [single] => {
+                let ra = match single {
+                    RepoArg::Id(id) => RepoArgs::from_repo_id(id.id()),
+                    RepoArg::Name(name) => RepoArgs::from_repo_name(name.clone()),
+                };
+                Some(
+                    open_repo_for_derive(&app, &ra, false, args.bypass_redaction)
+                        .await
+                        .context("Failed to open repo")?,
+                )
+            }
+            _ => None,
+        };
+        let opt_manager = match (&opt_repo, &args.config_name) {
+            (Some(repo), Some(cfg)) => {
+                let mgr = repo.repo_derived_data().manager_for_config(cfg)?;
+                let mut config = mgr.config().clone();
+                config.types = DerivableType::iter().collect();
+                Some(mgr.with_replaced_config(mgr.config_name(), config))
+            }
+            (Some(repo), None) => {
+                let mgr = repo.repo_derived_data().manager();
+                let mut config = mgr.config().clone();
+                config.types = DerivableType::iter().collect();
+                Some(mgr.with_replaced_config(mgr.config_name(), config))
+            }
+            _ => None,
         };
         let sql_queue = async_requests_client::open_sql_connection(ctx.fb, &app).await?;
         let blobstore = async_requests_client::open_blobstore(ctx.fb, &app).await?;
@@ -167,41 +227,58 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             sql_queue,
             blobstore,
             repo_names,
-            backfill_status_args,
-            None,
-            None,
+            status_args,
+            opt_repo.as_ref(),
+            opt_manager.as_ref(),
         )
         .await;
     }
 
-    // BackfillAbort doesn't require opening a repo
-    if let DerivedDataSubcommand::BackfillAbort(backfill_abort_args) = args.subcommand {
-        return backfill_abort(ctx, &app, backfill_abort_args).await;
+    // BackfillEnqueue supports multiple repos
+    if let DerivedDataSubcommand::BackfillEnqueue(enqueue_args) = args.subcommand {
+        let queue = async_requests_client::build(ctx.fb, &app, None)
+            .await
+            .context("acquiring the async requests queue")?;
+        return backfill_enqueue(
+            &ctx,
+            &app,
+            queue,
+            enqueue_args,
+            &repo_arg_list,
+            args.config_name.as_deref(),
+            args.bypass_redaction,
+        )
+        .await;
     }
 
-    let bypass_redaction = args.bypass_redaction;
-    let config_name_for_enqueue = args.config_name.clone();
+    // All remaining subcommands require exactly one repo
+    let repo_args = match repo_arg_list.as_slice() {
+        [] => anyhow::bail!("--repo-id or --repo-name is required for this subcommand"),
+        [RepoArg::Id(id)] => RepoArgs::from_repo_id(id.id()),
+        [RepoArg::Name(name)] => RepoArgs::from_repo_name(name.clone()),
+        _ => anyhow::bail!("this subcommand requires exactly one repo"),
+    };
 
     let repo: Repo = match &args.subcommand {
-        DerivedDataSubcommand::BackfillAbort(_) => {
-            unreachable!("BackfillAbort handled above")
+        DerivedDataSubcommand::BackfillAbort(_)
+        | DerivedDataSubcommand::BackfillEnqueue(_)
+        | DerivedDataSubcommand::BackfillStatus(_) => {
+            unreachable!("handled above")
         }
-        DerivedDataSubcommand::BackfillStatus(_)
-        | DerivedDataSubcommand::Exists(_)
+        DerivedDataSubcommand::Exists(_)
         | DerivedDataSubcommand::Fetch(_)
         | DerivedDataSubcommand::CountUnderived(_)
         | DerivedDataSubcommand::VerifyManifests(_)
         | DerivedDataSubcommand::VerifyStageOutput(_)
         | DerivedDataSubcommand::ListManifest(_)
         | DerivedDataSubcommand::Slice(_) => {
-            open_repo_for_derive(&app, &args.repo, false, args.bypass_redaction)
+            open_repo_for_derive(&app, &repo_args, false, args.bypass_redaction)
                 .await
                 .context("Failed to open repo")?
         }
         DerivedDataSubcommand::Derive(DeriveArgs { rederive, .. })
-        | DerivedDataSubcommand::DeriveSlice(DeriveSliceArgs { rederive, .. })
-        | DerivedDataSubcommand::BackfillEnqueue(BackfillEnqueueArgs { rederive, .. }) => {
-            open_repo_for_derive(&app, &args.repo, *rederive, args.bypass_redaction)
+        | DerivedDataSubcommand::DeriveSlice(DeriveSliceArgs { rederive, .. }) => {
+            open_repo_for_derive(&app, &repo_args, *rederive, args.bypass_redaction)
                 .await
                 .context("Failed to open repo")?
         }
@@ -215,8 +292,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
 
     let is_read_only = matches!(
         &args.subcommand,
-        DerivedDataSubcommand::BackfillStatus(_)
-            | DerivedDataSubcommand::Exists(_)
+        DerivedDataSubcommand::Exists(_)
             | DerivedDataSubcommand::Fetch(_)
             | DerivedDataSubcommand::CountUnderived(_)
             | DerivedDataSubcommand::ListManifest(_)
@@ -233,43 +309,10 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     };
 
     match args.subcommand {
-        DerivedDataSubcommand::BackfillStatus(args) => {
-            let sql_queue = async_requests_client::open_sql_connection(ctx.fb, &app).await?;
-            let blobstore = async_requests_client::open_blobstore(ctx.fb, &app).await?;
-            let repo_names = app
-                .repo_configs()
-                .repos
-                .iter()
-                .map(|(name, repo_config)| (repo_config.repoid, name.clone()))
-                .collect();
-            backfill_status(
-                &ctx,
-                sql_queue,
-                blobstore,
-                repo_names,
-                args,
-                Some(&repo),
-                Some(&manager),
-            )
-            .await?
-        }
-        DerivedDataSubcommand::BackfillAbort(_) => {
-            unreachable!("BackfillAbort handled above")
-        }
-        DerivedDataSubcommand::BackfillEnqueue(args) => {
-            let queue = async_requests_client::build(ctx.fb, &app, None)
-                .await
-                .context("acquiring the async requests queue")?;
-            backfill_enqueue(
-                &ctx,
-                &app,
-                &repo,
-                queue,
-                args,
-                config_name_for_enqueue.as_deref(),
-                bypass_redaction,
-            )
-            .await?
+        DerivedDataSubcommand::BackfillAbort(_)
+        | DerivedDataSubcommand::BackfillEnqueue(_)
+        | DerivedDataSubcommand::BackfillStatus(_) => {
+            unreachable!("handled above")
         }
         DerivedDataSubcommand::Exists(args) => exists(&ctx, &repo, &manager, args).await?,
         DerivedDataSubcommand::Fetch(args) => fetch(&ctx, &repo, &manager, args).await?,

@@ -80,12 +80,6 @@ pub(super) struct BackfillStatusArgs {
     lookback: i64,
 }
 
-impl BackfillStatusArgs {
-    pub(super) fn request_id(&self) -> Option<u64> {
-        self.request_id
-    }
-}
-
 pub(super) async fn backfill_status(
     ctx: &CoreContext,
     queue: SqlLongRunningRequestsQueue,

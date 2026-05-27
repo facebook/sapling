@@ -14,6 +14,7 @@ use context::CoreContext;
 use mononoke_app::MononokeApp;
 use mononoke_app::args::ChangesetArgs;
 use mononoke_app::args::DerivedDataArgs;
+use mononoke_app::args::RepoArg;
 use mononoke_app::args::RepoArgs;
 use repo_identity::RepoIdentityRef;
 use source_control as thrift;
@@ -48,79 +49,48 @@ pub(super) struct BackfillEnqueueArgs {
     /// Whether to compute slices as if all commits were underived
     #[clap(long)]
     reslice: bool,
-
-    /// Repositories to backfill (comma-separated names).
-    /// If provided, overrides the top-level --repo-name/--repo-id.
-    #[clap(long, value_delimiter = ',')]
-    repos: Vec<String>,
 }
 
 pub(super) async fn backfill_enqueue(
     ctx: &CoreContext,
     app: &MononokeApp,
-    default_repo: &Repo,
     queue: AsyncMethodRequestQueue,
     args: BackfillEnqueueArgs,
+    repo_args: &[RepoArg],
     config_name: Option<&str>,
     bypass_redaction: bool,
 ) -> Result<()> {
+    anyhow::ensure!(
+        !repo_args.is_empty(),
+        "--repo-id or --repo-name is required"
+    );
+
     let derived_data_type = args.derived_data_args.resolve_type()?;
 
-    // Collect all repos to process
-    let repos: Vec<Repo> = if args.repos.is_empty() {
-        vec![]
-    } else {
-        let mut opened = Vec::new();
-        for repo_name in &args.repos {
-            let repo_arg = RepoArgs::from_repo_name(repo_name.clone());
-            let repo: Repo =
-                super::open_repo_for_derive(app, &repo_arg, args.rederive, bypass_redaction)
-                    .await
-                    .with_context(|| format!("Failed to open repo: {}", repo_name))?;
-            opened.push(repo);
-        }
-        opened
-    };
-
-    // Build repo entries: resolve changesets for each repo
     let mut repo_entries: Vec<thrift::DeriveBackfillRepoEntry> = Vec::new();
-
-    if repos.is_empty() {
-        // Single repo mode: use the default repo
-        let cs_ids = args
-            .changeset_args
-            .resolve_changesets(ctx, default_repo)
-            .await?;
-        let repo_id = default_repo.repo_identity().id();
+    for repo_arg in repo_args {
+        let repo_arg = match repo_arg {
+            RepoArg::Id(id) => RepoArgs::from_repo_id(id.id()),
+            RepoArg::Name(name) => RepoArgs::from_repo_name(name.clone()),
+        };
+        let repo: Repo =
+            super::open_repo_for_derive(app, &repo_arg, args.rederive, bypass_redaction)
+                .await
+                .context("Failed to open repo")?;
+        let cs_ids = args.changeset_args.resolve_changesets(ctx, &repo).await?;
+        let repo_id = repo.repo_identity().id();
         let cs_id_bytes: Vec<Vec<u8>> = cs_ids.iter().map(|cs| cs.as_ref().to_vec()).collect();
         info!(
             "Resolved {} changesets for repo {} ({})",
             cs_ids.len(),
             repo_id,
-            default_repo.repo_identity().name(),
+            repo.repo_identity().name(),
         );
         repo_entries.push(thrift::DeriveBackfillRepoEntry {
             repo_id: repo_id.id() as i64,
             cs_ids: cs_id_bytes,
             ..Default::default()
         });
-    } else {
-        for repo in &repos {
-            let cs_ids = args.changeset_args.resolve_changesets(ctx, repo).await?;
-            let repo_id = repo.repo_identity().id();
-            let cs_id_bytes: Vec<Vec<u8>> = cs_ids.iter().map(|cs| cs.as_ref().to_vec()).collect();
-            info!(
-                "Resolved {} changesets for repo {} ({})",
-                cs_ids.len(),
-                repo_id,
-                repo.repo_identity().name(),
-            );
-            repo_entries.push(thrift::DeriveBackfillRepoEntry {
-                repo_id: repo_id.id() as i64,
-                cs_ids: cs_id_bytes,
-                ..Default::default()
-            });
-        }
     }
 
     let params = thrift::DeriveBackfillParams {
