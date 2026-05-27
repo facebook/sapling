@@ -257,7 +257,7 @@ _scm_prompt() {
     fi
     [[ "$dir" = "/" ]] && break
     # portable "realpath" equivalent
-    dir="$(builtin cd -P "$dir/.." >/dev/null && builtin echo "$PWD")"
+    dir="$(chpwd_functions=(); chpwd() { :; }; builtin cd -P "$dir/.." >/dev/null && builtin echo "$PWD")"
   done
 
   if [[ -n "$br" ]]; then
