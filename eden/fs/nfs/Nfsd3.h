@@ -12,6 +12,7 @@
 
 #include <optional>
 
+#include <folly/ExceptionWrapper.h>
 #include "eden/common/telemetry/TraceBus.h"
 #include "eden/common/utils/CaseSensitivity.h"
 #include "eden/fs/inodes/FsChannel.h"
@@ -32,6 +33,19 @@ class PrivHelper;
 class ProcessInfoCache;
 class EdenFsEventsLogger;
 class FsEventLogger;
+
+namespace detail {
+/**
+ * Log SERVERFAULT errors to structured error telemetry.
+ * Normal filesystem errors (ENOENT, EACCES, etc.) are not logged.
+ */
+void logNfsError(
+    nfsstat3 error,
+    const folly::exception_wrapper& ex,
+    ErrorLogger& errorLogger,
+    uint64_t inode,
+    const AbsolutePath& mountPath);
+} // namespace detail
 
 using TraceDetailedArgumentsHandle = std::shared_ptr<void>;
 

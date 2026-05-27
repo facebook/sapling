@@ -25,7 +25,9 @@
 #include "eden/fs/nfs/NfsdRpc.h"
 #include "eden/fs/privhelper/PrivHelper.h"
 #include "eden/fs/store/ObjectFetchContext.h"
+#include "eden/fs/telemetry/EdenErrorInfoBuilder.h"
 #include "eden/fs/telemetry/EdenFsEventsLogger.h"
+#include "eden/fs/telemetry/ErrorLogger.h"
 #include "eden/fs/telemetry/FsEventLogger.h"
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/utils/Clock.h"
@@ -36,6 +38,23 @@
 #endif
 
 namespace facebook::eden {
+
+namespace detail {
+
+void logNfsError(
+    nfsstat3 error,
+    const folly::exception_wrapper& ex,
+    ErrorLogger& errorLogger,
+    uint64_t inode,
+    const AbsolutePath& mountPath) {
+  if (error == nfsstat3::NFS3ERR_SERVERFAULT) {
+    ex.with_exception([&](const std::exception& e) {
+      errorLogger.log(EdenErrorInfo::nfs(e, inode, mountPath.asString()));
+    });
+  }
+}
+
+} // namespace detail
 
 namespace {
 static_assert(CheckSize<NfsTraceEvent, 40>());
@@ -211,8 +230,8 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
   // EdenFS instance runs on.
   const folly::Logger* straceLogger_;
   const std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger_;
-  [[maybe_unused]] ErrorLogger& errorLogger_;
-  [[maybe_unused]] AbsolutePath mountPath_;
+  ErrorLogger& errorLogger_;
+  AbsolutePath mountPath_;
   CaseSensitivity caseSensitive_;
   uint32_t iosize_;
   // This promise is owned by the nfs3d. The nfs3d owns an RPC server that owns
@@ -373,13 +392,17 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::getattr(
 
   auto args = XdrTrait<GETATTR3args>::deserialize(deser);
 
-  return dispatcher_->getattr(args.object.ino, context.getObjectFetchContext())
-      .thenTry([ser = std::move(ser), stats = dispatcher_->getStats().copy()](
-                   const folly::Try<struct stat>& try_) mutable {
+  auto ino = args.object.ino;
+  return dispatcher_->getattr(ino, context.getObjectFetchContext())
+      .thenTry([this,
+                ser = std::move(ser),
+                stats = dispatcher_->getStats().copy(),
+                ino](const folly::Try<struct stat>& try_) mutable {
         if (try_.hasException()) {
-          GETATTR3res res{
-              {{exceptionToNfsError(try_.exception(), stats),
-                std::monostate{}}}};
+          auto error = exceptionToNfsError(try_.exception(), stats);
+          detail::logNfsError(
+              error, try_.exception(), errorLogger_, ino.get(), mountPath_);
+          GETATTR3res res{{{error, std::monostate{}}}};
           XdrTrait<GETATTR3res>::serialize(ser, res);
         } else {
           const auto& stat = try_.value();
@@ -453,12 +476,16 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::setattr(
 
   return dispatcher_
       ->setattr(args.object.ino, desired, context.getObjectFetchContext())
-      .thenTry([ser = std::move(ser), stats = dispatcher_->getStats().copy()](
+      .thenTry([this,
+                ser = std::move(ser),
+                stats = dispatcher_->getStats().copy(),
+                ino = args.object.ino](
                    folly::Try<NfsDispatcher::SetattrRes>&& try_) mutable {
         if (try_.hasException()) {
-          SETATTR3res res{
-              {{exceptionToNfsError(try_.exception(), stats),
-                SETATTR3resfail{}}}};
+          auto error = exceptionToNfsError(try_.exception(), stats);
+          detail::logNfsError(
+              error, try_.exception(), errorLogger_, ino.get(), mountPath_);
+          SETATTR3res res{{{error, SETATTR3resfail{}}}};
           XdrTrait<SETATTR3res>::serialize(ser, res);
         } else {
           const auto& setattrRes = try_.value();
@@ -485,8 +512,9 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::lookup(
   // be consumed in this function to avoid use-after-free. This future may also
   // need to be executed after the lookup call to conform to fill the "post-op"
   // attributes
+  auto dirIno = args.what.dir.ino;
   auto dirAttrFut =
-      dispatcher_->getattr(args.what.dir.ino, context.getObjectFetchContext());
+      dispatcher_->getattr(dirIno, context.getObjectFetchContext());
 
   if (args.what.name.length() > NAME_MAX) {
     // The filename is too long, let's try to get the attributes of the
@@ -540,27 +568,36 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::lookup(
                  });
            }
          })
-      .thenTry([ser = std::move(ser),
+      .thenTry([this,
+                ser = std::move(ser),
                 dirAttrFut = std::move(dirAttrFut),
-                stats = dispatcher_->getStats().copy()](
+                stats = dispatcher_->getStats().copy(),
+                ino = dirIno](
                    folly::Try<std::tuple<InodeNumber, struct stat>>&&
                        lookupTry) mutable {
         return std::move(dirAttrFut)
-            .thenTry([ser = std::move(ser),
+            .thenTry([this,
+                      ser = std::move(ser),
                       lookupTry = std::move(lookupTry),
-                      stats = std::move(stats)](
-                         const folly::Try<struct stat>& dirStat) mutable {
+                      stats = std::move(stats),
+                      ino](const folly::Try<struct stat>& dirStat) mutable {
               if (lookupTry.hasException()) {
+                auto error = exceptionToNfsError(lookupTry.exception(), stats);
+                detail::logNfsError(
+                    error,
+                    lookupTry.exception(),
+                    errorLogger_,
+                    ino.get(),
+                    mountPath_);
                 LOOKUP3res res{
-                    {{exceptionToNfsError(lookupTry.exception(), stats),
-                      LOOKUP3resfail{statToPostOpAttr(dirStat)}}}};
+                    {{error, LOOKUP3resfail{statToPostOpAttr(dirStat)}}}};
                 XdrTrait<LOOKUP3res>::serialize(ser, res);
               } else {
-                const auto& [ino, stat] = lookupTry.value();
+                const auto& [lookupIno, stat] = lookupTry.value();
                 LOOKUP3res res{
                     {{nfsstat3::NFS3_OK,
                       LOOKUP3resok{
-                          /*object*/ nfs_fh3{ino},
+                          /*object*/ nfs_fh3{lookupIno},
                           /*obj_attributes*/
                           post_op_attr{statToFattr3(stat)},
                           /*dir_attributes*/
@@ -582,14 +619,16 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::access(
   auto args = XdrTrait<ACCESS3args>::deserialize(deser);
 
   return dispatcher_->getattr(args.object.ino, context.getObjectFetchContext())
-      .thenTry([ser = std::move(ser),
+      .thenTry([this,
+                ser = std::move(ser),
                 desiredAccess = args.access,
-                stats = dispatcher_->getStats().copy()](
-                   folly::Try<struct stat>&& try_) mutable {
+                stats = dispatcher_->getStats().copy(),
+                ino = args.object.ino](folly::Try<struct stat>&& try_) mutable {
         if (try_.hasException()) {
-          ACCESS3res res{
-              {{exceptionToNfsError(try_.exception(), stats),
-                ACCESS3resfail{post_op_attr{}}}}};
+          auto error = exceptionToNfsError(try_.exception(), stats);
+          detail::logNfsError(
+              error, try_.exception(), errorLogger_, ino.get(), mountPath_);
+          ACCESS3res res{{{error, ACCESS3resfail{post_op_attr{}}}}};
           XdrTrait<ACCESS3res>::serialize(ser, res);
         } else {
           const auto& stat = try_.value();
@@ -618,18 +657,27 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::readlink(
       dispatcher_->getattr(args.symlink.ino, context.getObjectFetchContext());
   return dispatcher_
       ->readlink(args.symlink.ino, context.getObjectFetchContext())
-      .thenTry([ser = std::move(ser),
+      .thenTry([this,
+                ser = std::move(ser),
                 getattr = std::move(getattr),
-                stats = dispatcher_->getStats().copy()](
+                stats = dispatcher_->getStats().copy(),
+                ino = args.symlink.ino](
                    folly::Try<std::string> tryReadlink) mutable {
         return std::move(getattr).thenTry(
-            [ser = std::move(ser),
+            [this,
+             ser = std::move(ser),
              tryReadlink = std::move(tryReadlink),
-             stats = std::move(stats)](
-                const folly::Try<struct stat>& tryAttr) mutable {
+             stats = std::move(stats),
+             ino](const folly::Try<struct stat>& tryAttr) mutable {
               if (tryReadlink.hasException()) {
                 auto error =
                     exceptionToNfsError(tryReadlink.exception(), stats);
+                detail::logNfsError(
+                    error,
+                    tryReadlink.exception(),
+                    errorLogger_,
+                    ino.get(),
+                    mountPath_);
                 READLINK3res res{
                     {{error, READLINK3resfail{statToPostOpAttr(tryAttr)}}}};
                 XdrTrait<READLINK3res>::serialize(ser, res);
@@ -678,6 +726,12 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::read(
                          const folly::Try<struct stat>& tryStat) mutable {
               if (tryRead.hasException()) {
                 auto error = exceptionToNfsError(tryRead.exception(), stats);
+                detail::logNfsError(
+                    error,
+                    tryRead.exception(),
+                    errorLogger_,
+                    ino.get(),
+                    mountPath_);
                 READ3res res{
                     {{error, READ3resfail{statToPostOpAttr(tryStat)}}}};
                 XdrTrait<READ3res>::serialize(ser, res);
@@ -758,12 +812,16 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::write(
           std::move(data),
           args.offset,
           context.getObjectFetchContext())
-      .thenTry([ser = std::move(ser), stats = dispatcher_->getStats().copy()](
+      .thenTry([this,
+                ser = std::move(ser),
+                stats = dispatcher_->getStats().copy(),
+                ino = args.file.ino](
                    folly::Try<NfsDispatcher::WriteRes> writeTry) mutable {
         if (writeTry.hasException()) {
-          WRITE3res res{
-              {{exceptionToNfsError(writeTry.exception(), stats),
-                WRITE3resfail{}}}};
+          auto error = exceptionToNfsError(writeTry.exception(), stats);
+          detail::logNfsError(
+              error, writeTry.exception(), errorLogger_, ino.get(), mountPath_);
+          WRITE3res res{{{error, WRITE3resfail{}}}};
           XdrTrait<WRITE3res>::serialize(ser, res);
         } else {
           const auto& writeRes = writeTry.value();
@@ -844,9 +902,11 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::create(
         return dispatcher_->create(
             ino, std::move(name), mode, how, context.getObjectFetchContext());
       })
-      .thenTry([ser = std::move(ser),
+      .thenTry([this,
+                ser = std::move(ser),
                 createmode = args.how.tag,
-                stats = dispatcher_->getStats().copy()](
+                stats = dispatcher_->getStats().copy(),
+                ino = args.where.dir.ino](
                    folly::Try<NfsDispatcher::CreateRes> try_) mutable {
         if (try_.hasException()) {
           if (createmode == createmode3::UNCHECKED &&
@@ -870,9 +930,10 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::create(
                                }}}}};
             XdrTrait<CREATE3res>::serialize(ser, res);
           } else {
-            CREATE3res res{
-                {{exceptionToNfsError(try_.exception(), stats),
-                  CREATE3resfail{}}}};
+            auto error = exceptionToNfsError(try_.exception(), stats);
+            detail::logNfsError(
+                error, try_.exception(), errorLogger_, ino.get(), mountPath_);
+            CREATE3res res{{{error, CREATE3resfail{}}}};
             XdrTrait<CREATE3res>::serialize(ser, res);
           }
         } else {
@@ -922,12 +983,16 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::mkdir(
         return dispatcher_->mkdir(
             ino, std::move(name), mode, context.getObjectFetchContext());
       })
-      .thenTry([ser = std::move(ser), stats = dispatcher_->getStats().copy()](
+      .thenTry([this,
+                ser = std::move(ser),
+                stats = dispatcher_->getStats().copy(),
+                ino = args.where.dir.ino](
                    folly::Try<NfsDispatcher::MkdirRes> try_) mutable {
         if (try_.hasException()) {
-          MKDIR3res res{
-              {{exceptionToNfsError(try_.exception(), stats),
-                MKDIR3resfail{}}}};
+          auto error = exceptionToNfsError(try_.exception(), stats);
+          detail::logNfsError(
+              error, try_.exception(), errorLogger_, ino.get(), mountPath_);
+          MKDIR3res res{{{error, MKDIR3resfail{}}}};
           XdrTrait<MKDIR3res>::serialize(ser, res);
         } else {
           const auto& mkdirRes = try_.value();
@@ -974,12 +1039,16 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::symlink(
             std::move(symlink_data),
             context.getObjectFetchContext());
       })
-      .thenTry([ser = std::move(ser), stats = dispatcher_->getStats().copy()](
+      .thenTry([this,
+                ser = std::move(ser),
+                stats = dispatcher_->getStats().copy(),
+                ino = args.where.dir.ino](
                    folly::Try<NfsDispatcher::SymlinkRes> try_) mutable {
         if (try_.hasException()) {
-          SYMLINK3res res{
-              {{exceptionToNfsError(try_.exception(), stats),
-                SYMLINK3resfail{}}}};
+          auto error = exceptionToNfsError(try_.exception(), stats);
+          detail::logNfsError(
+              error, try_.exception(), errorLogger_, ino.get(), mountPath_);
+          SYMLINK3res res{{{error, SYMLINK3resfail{}}}};
           XdrTrait<SYMLINK3res>::serialize(ser, res);
         } else {
           const auto& symlinkRes = try_.value();
@@ -1056,12 +1125,16 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::mknod(
         return dispatcher_->mknod(
             ino, std::move(name), mode, rdev, context.getObjectFetchContext());
       })
-      .thenTry([ser = std::move(ser), stats = dispatcher_->getStats().copy()](
+      .thenTry([this,
+                ser = std::move(ser),
+                stats = dispatcher_->getStats().copy(),
+                ino = args.where.dir.ino](
                    folly::Try<NfsDispatcher::MknodRes> try_) mutable {
         if (try_.hasException()) {
-          MKNOD3res res{
-              {{exceptionToNfsError(try_.exception(), stats),
-                MKNOD3resfail{}}}};
+          auto error = exceptionToNfsError(try_.exception(), stats);
+          detail::logNfsError(
+              error, try_.exception(), errorLogger_, ino.get(), mountPath_);
+          MKNOD3res res{{{error, MKNOD3resfail{}}}};
           XdrTrait<MKNOD3res>::serialize(ser, res);
         } else {
           const auto& mknodRes = try_.value();
@@ -1106,12 +1179,16 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::remove(
             return dispatcher_->unlink(
                 ino, std::move(name), context.getObjectFetchContext());
           })
-      .thenTry([ser = std::move(ser), stats = dispatcher_->getStats().copy()](
+      .thenTry([this,
+                ser = std::move(ser),
+                stats = dispatcher_->getStats().copy(),
+                ino = args.object.dir.ino](
                    folly::Try<NfsDispatcher::UnlinkRes> try_) mutable {
         if (try_.hasException()) {
-          REMOVE3res res{
-              {{exceptionToNfsError(try_.exception(), stats),
-                REMOVE3resfail{}}}};
+          auto error = exceptionToNfsError(try_.exception(), stats);
+          detail::logNfsError(
+              error, try_.exception(), errorLogger_, ino.get(), mountPath_);
+          REMOVE3res res{{{error, REMOVE3resfail{}}}};
           XdrTrait<REMOVE3res>::serialize(ser, res);
         } else {
           const auto& unlinkRes = try_.value();
@@ -1149,12 +1226,16 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::rmdir(
             return dispatcher_->rmdir(
                 ino, std::move(name), context.getObjectFetchContext());
           })
-      .thenTry([ser = std::move(ser), stats = dispatcher_->getStats().copy()](
+      .thenTry([this,
+                ser = std::move(ser),
+                stats = dispatcher_->getStats().copy(),
+                ino = args.object.dir.ino](
                    folly::Try<NfsDispatcher::RmdirRes> try_) mutable {
         if (try_.hasException()) {
-          RMDIR3res res{
-              {{exceptionToNfsError(try_.exception(), stats),
-                RMDIR3resfail{}}}};
+          auto error = exceptionToNfsError(try_.exception(), stats);
+          detail::logNfsError(
+              error, try_.exception(), errorLogger_, ino.get(), mountPath_);
+          RMDIR3res res{{{error, RMDIR3resfail{}}}};
           XdrTrait<RMDIR3res>::serialize(ser, res);
         } else {
           const auto& rmdirRes = try_.value();
@@ -1211,12 +1292,16 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::rename(
             std::move(toName),
             context.getObjectFetchContext());
       })
-      .thenTry([ser = std::move(ser), stats = dispatcher_->getStats().copy()](
+      .thenTry([this,
+                ser = std::move(ser),
+                stats = dispatcher_->getStats().copy(),
+                ino = args.from.dir.ino](
                    folly::Try<NfsDispatcher::RenameRes> try_) mutable {
         if (try_.hasException()) {
-          RENAME3res res{
-              {{exceptionToNfsError(try_.exception(), stats),
-                RENAME3resfail{}}}};
+          auto error = exceptionToNfsError(try_.exception(), stats);
+          detail::logNfsError(
+              error, try_.exception(), errorLogger_, ino.get(), mountPath_);
+          RENAME3res res{{{error, RENAME3resfail{}}}};
           XdrTrait<RENAME3res>::serialize(ser, res);
         } else {
           const auto& renameRes = try_.value();
@@ -1306,14 +1391,21 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::readdir(
       .thenTry([this, ino = args.dir.ino, ser = std::move(ser), &context](
                    folly::Try<NfsDispatcher::ReaddirRes> try_) mutable {
         return dispatcher_->getattr(ino, context.getObjectFetchContext())
-            .thenTry([ser = std::move(ser),
+            .thenTry([this,
+                      ser = std::move(ser),
                       try_ = std::move(try_),
-                      stats = dispatcher_->getStats().copy()](
-                         const folly::Try<struct stat>& tryStat) mutable {
+                      stats = dispatcher_->getStats().copy(),
+                      ino](const folly::Try<struct stat>& tryStat) mutable {
               if (try_.hasException()) {
+                auto error = exceptionToNfsError(try_.exception(), stats);
+                detail::logNfsError(
+                    error,
+                    try_.exception(),
+                    errorLogger_,
+                    ino.get(),
+                    mountPath_);
                 READDIR3res res{
-                    {{exceptionToNfsError(try_.exception(), stats),
-                      READDIR3resfail{statToPostOpAttr(tryStat)}}}};
+                    {{error, READDIR3resfail{statToPostOpAttr(tryStat)}}}};
                 XdrTrait<READDIR3res>::serialize(ser, res);
               } else {
                 auto& readdirRes = try_.value();
@@ -1360,14 +1452,21 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::readdirplus(
       .thenTry([this, ino = args.dir.ino, ser = std::move(ser), &context](
                    folly::Try<NfsDispatcher::ReaddirRes> try_) mutable {
         return dispatcher_->getattr(ino, context.getObjectFetchContext())
-            .thenTry([ser = std::move(ser),
+            .thenTry([this,
+                      ser = std::move(ser),
                       try_ = std::move(try_),
-                      stats = dispatcher_->getStats().copy()](
-                         const folly::Try<struct stat>& tryStat) mutable {
+                      stats = dispatcher_->getStats().copy(),
+                      ino](const folly::Try<struct stat>& tryStat) mutable {
               if (try_.hasException()) {
+                auto error = exceptionToNfsError(try_.exception(), stats);
+                detail::logNfsError(
+                    error,
+                    try_.exception(),
+                    errorLogger_,
+                    ino.get(),
+                    mountPath_);
                 READDIRPLUS3res res{
-                    {{exceptionToNfsError(try_.exception(), stats),
-                      READDIRPLUS3resfail{statToPostOpAttr(tryStat)}}}};
+                    {{error, READDIRPLUS3resfail{statToPostOpAttr(tryStat)}}}};
                 XdrTrait<READDIRPLUS3res>::serialize(ser, res);
               } else {
                 auto& readdirRes = try_.value();
@@ -1410,14 +1509,21 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::fsstat(
       .thenTry([this, ser = std::move(ser), ino = args.fsroot.ino, &context](
                    folly::Try<struct statfs> statFsTry) mutable {
         return dispatcher_->getattr(ino, context.getObjectFetchContext())
-            .thenTry([ser = std::move(ser),
+            .thenTry([this,
+                      ser = std::move(ser),
                       statFsTry = std::move(statFsTry),
-                      stats = dispatcher_->getStats().copy()](
-                         const folly::Try<struct stat>& statTry) mutable {
+                      stats = dispatcher_->getStats().copy(),
+                      ino](const folly::Try<struct stat>& statTry) mutable {
               if (statFsTry.hasException()) {
+                auto error = exceptionToNfsError(statFsTry.exception(), stats);
+                detail::logNfsError(
+                    error,
+                    statFsTry.exception(),
+                    errorLogger_,
+                    ino.get(),
+                    mountPath_);
                 FSSTAT3res res{
-                    {{exceptionToNfsError(statFsTry.exception(), stats),
-                      FSSTAT3resfail{statToPostOpAttr(statTry)}}}};
+                    {{error, FSSTAT3resfail{statToPostOpAttr(statTry)}}}};
                 XdrTrait<FSSTAT3res>::serialize(ser, res);
               } else {
                 auto& statfs = statFsTry.value();

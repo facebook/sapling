@@ -8,9 +8,14 @@ cpp_unittest(
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
+        "//eden/common/utils:path",
+        "//eden/fs/config:config",
         "//eden/fs/nfs:dirlist",
         "//eden/fs/nfs:nfs_utils",
+        "//eden/fs/nfs:nfsd3",
         "//eden/fs/nfs:nfsd_rpc",
         "//eden/fs/nfs/testharness:xdr_test_utils",
+        "//eden/fs/telemetry:error_logger",
+        "//eden/fs/telemetry/test:capturing_scribe_logger",
     ],
 )

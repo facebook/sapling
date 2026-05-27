@@ -51,6 +51,8 @@ cpp_library(
         "//eden/common/utils:utils",
         "//eden/fs/privhelper:interface",
         "//eden/fs/store:context",
+        "//eden/fs/telemetry:error_info",
+        "//eden/fs/telemetry:error_logger",
         "//eden/fs/telemetry:fs_event_logger",
         "//eden/fs/telemetry:log_info",
         "//eden/fs/utils:clock",
@@ -70,6 +72,7 @@ cpp_library(
         "//eden/fs/nfs/rpc:server",
         "//eden/fs/telemetry:structured_logger",
         "//eden/fs/utils:process_access_log",
+        "//folly:exception_wrapper",
         "//folly:function",
     ],
 )

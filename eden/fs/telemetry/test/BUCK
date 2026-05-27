@@ -1,7 +1,16 @@
 load("@fbcode_macros//build_defs:cpp_benchmark.bzl", "cpp_benchmark")
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
 load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
 
 oncall("scm_client_infra")
+
+cpp_library(
+    name = "capturing_scribe_logger",
+    headers = ["CapturingScribeLogger.h"],
+    exported_deps = [
+        "//eden/common/telemetry:scribe_logger",
+    ],
+)
 
 cpp_unittest(
     name = "task_trace_test",
