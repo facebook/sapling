@@ -1481,8 +1481,7 @@ impl BookmarksCoordinator {
                 "scm/mononoke:wbc_update_by_scribe_tailer",
                 None,
                 Some(&repo_name),
-            )
-            .unwrap_or(false);
+            );
             let mut bookmark_update_subscriber = tailing_enabled
                 .then(|| {
                     self.repo
@@ -1527,21 +1526,16 @@ impl BookmarksCoordinator {
                         notify_sync_complete.notify_waiters();
                     }
 
-                    const FALLBACK_WBC_POLL_INTERVAL_MS: u64 = 5000;
-                    let delay = Duration::from_millis(
-                        justknobs::get_as::<u64>(
-                            "scm/mononoke:warm_bookmark_cache_poll_interval_ms",
-                            None,
-                        )
-                        .unwrap_or(FALLBACK_WBC_POLL_INTERVAL_MS),
-                    );
+                    let delay = Duration::from_millis(justknobs::get_as::<u64>(
+                        "scm/mononoke:warm_bookmark_cache_poll_interval_ms",
+                        None,
+                    ));
 
                     let tailing_enabled = justknobs::eval(
                         "scm/mononoke:wbc_update_by_scribe_tailer",
                         None,
                         Some(&repo_name),
-                    )
-                    .unwrap_or(false);
+                    );
 
                     // Receiving a sync notification interrupts sleep/listen and forces
                     // waiting for all updaters to finish in the next iteration
