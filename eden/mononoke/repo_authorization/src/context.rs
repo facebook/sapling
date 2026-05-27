@@ -894,6 +894,30 @@ impl AuthorizationContext {
             .await
             .permitted_or_else(|| self.permission_denied(ctx, repo, DeniedAction::MirrorUpload))
     }
+
+    /// Check whether the caller is allowed to bypass the create-commit checks.
+    pub async fn check_create_commit_check_bypass(
+        &self,
+        ctx: &CoreContext,
+        repo: &(impl RepoPermissionCheckerRef + RepoConfigRef),
+    ) -> AuthorizationCheckOutcome {
+        let permitted = match self {
+            AuthorizationContext::FullAccess => true,
+            AuthorizationContext::Service(service_name) => {
+                repo.repo_permission_checker()
+                    .check_if_service_writes_allowed(ctx.metadata().identities(), service_name)
+                    .await
+                    && repo
+                        .repo_config()
+                        .source_control_service
+                        .service_create_commit_check_bypass_permitted(service_name)
+            }
+            AuthorizationContext::Identity
+            | AuthorizationContext::ReadOnlyIdentity
+            | AuthorizationContext::DraftOnlyIdentity => false,
+        };
+        AuthorizationCheckOutcome::from_permitted(permitted)
+    }
 }
 
 /// Write operations that can be performed on a repo.

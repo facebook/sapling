@@ -265,6 +265,9 @@ impl SourceControlServiceImpl {
             .repo_for_service(ctx, &repo, params.service_identity.clone())
             .await?;
 
+        let checks = CreateChangesetChecks::from_request(&params.checks)?;
+        repo.enforce_create_commit_check_bypass(&checks).await?;
+
         let parent_ctxs = Self::convert_create_commit_parents(&repo, &params.parents).await?;
         let parent_ids: Vec<ChangesetId> = parent_ctxs.iter().map(|ctx| ctx.id()).collect();
         let mut info = CreateInfo::from_request(&params.info)?;
@@ -283,13 +286,7 @@ impl SourceControlServiceImpl {
         }
 
         let created_changeset = repo
-            .create_changeset(
-                parent_ids,
-                info,
-                changes,
-                bubble,
-                CreateChangesetChecks::from_request(&params.checks)?,
-            )
+            .create_changeset(parent_ids, info, changes, bubble, checks)
             .await?;
 
         // If you ask for a git identity back, then we'll assume that you supplied one to us
@@ -327,6 +324,9 @@ impl SourceControlServiceImpl {
             .await?;
         let repo = &repo;
 
+        let checks = CreateChangesetChecks::from_request(&params.checks)?;
+        repo.enforce_create_commit_check_bypass(&checks).await?;
+
         let parent_ctxs = Self::convert_create_commit_parents(repo, &params.parents).await?;
         let stack_parent_ids: Vec<ChangesetId> = parent_ctxs.iter().map(|ctx| ctx.id()).collect();
         let mut info_stack = params
@@ -362,13 +362,7 @@ impl SourceControlServiceImpl {
 
         let bubble = None;
         let stack = repo
-            .create_changeset_stack(
-                stack_parent_ids,
-                info_stack,
-                changes_stack,
-                bubble,
-                CreateChangesetChecks::from_request(&params.checks)?,
-            )
+            .create_changeset_stack(stack_parent_ids, info_stack, changes_stack, bubble, checks)
             .await?;
         // If you ask for a git identity back, then we'll assume that you supplied one to us
         // and set it. Later, when we can derive a git commit hash, this'll become more
@@ -424,6 +418,9 @@ impl SourceControlServiceImpl {
             .repo_for_service(ctx.clone(), &repo, params.service_identity.clone())
             .await?;
 
+        let checks = CreateChangesetChecks::from_request(&params.checks)?;
+        repo.enforce_create_commit_check_bypass(&checks).await?;
+
         let bottom_id = self
             .changeset_id(&repo, &params.bottom)
             .await
@@ -452,7 +449,7 @@ impl SourceControlServiceImpl {
                 top_id,
                 Some(additional_changes),
                 create_info,
-                CreateChangesetChecks::from_request(&params.checks)?,
+                checks,
             )
             .await?;
 

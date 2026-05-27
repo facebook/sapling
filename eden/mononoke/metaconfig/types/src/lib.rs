@@ -2001,6 +2001,16 @@ impl SourceControlServiceParams {
         false
     }
 
+    /// Returns true if the named service is permitted to bypass create-commit checks.
+    pub fn service_create_commit_check_bypass_permitted(
+        &self,
+        service_identity: impl AsRef<str>,
+    ) -> bool {
+        self.service_write_restrictions
+            .get(service_identity.as_ref())
+            .is_some_and(|r| r.permit_create_commit_check_bypass)
+    }
+
     /// Returns true if the named service is permitted to modify all paths.
     pub fn service_write_all_paths_permitted(&self, service_identity: impl AsRef<str>) -> bool {
         if let Some(restrictions) = self
@@ -2058,6 +2068,9 @@ pub struct ServiceWriteRestrictions {
     /// The service is permitted to modify bookmarks that match this regex in addition
     /// to those specified by `permitted_bookmarks`.
     pub permitted_bookmark_regex: Option<ComparableRegex>,
+
+    /// The service is permitted to bypass create-commit checks.
+    pub permit_create_commit_check_bypass: bool,
 }
 
 /// Configuration for health monitoring of the Source Control Service

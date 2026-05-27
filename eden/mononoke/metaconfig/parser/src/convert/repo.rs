@@ -488,6 +488,7 @@ impl Convert for RawServiceWriteRestrictions {
             permitted_path_prefixes,
             permitted_bookmarks,
             permitted_bookmark_regex,
+            permit_create_commit_check_bypass,
             ..
         } = self;
 
@@ -516,11 +517,15 @@ impl Convert for RawServiceWriteRestrictions {
             .transpose()
             .context("invalid service write permitted bookmark regex")?;
 
+        let permit_create_commit_check_bypass =
+            permit_create_commit_check_bypass.unwrap_or_default();
+
         Ok(ServiceWriteRestrictions {
             permitted_methods,
             permitted_path_prefixes,
             permitted_bookmarks,
             permitted_bookmark_regex,
+            permit_create_commit_check_bypass,
         })
     }
 }

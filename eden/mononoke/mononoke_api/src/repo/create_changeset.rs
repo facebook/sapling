@@ -980,9 +980,51 @@ impl CreateChangesetChecks {
             empty_changeset: CreateChangesetCheckMode::Check,
         }
     }
+
+    /// Returns true if any check is set to `Skip`.
+    pub fn any_bypass_requested(&self) -> bool {
+        use CreateChangesetCheckMode::Skip;
+        self.noop_file_changes == Skip
+            || self.deleted_files_existed_in_a_parent == Skip
+            || self.empty_changeset == Skip
+    }
 }
 
 impl<R: MononokeRepo> RepoContext<R> {
+    pub async fn enforce_create_commit_check_bypass(
+        &self,
+        checks: &CreateChangesetChecks,
+    ) -> Result<(), MononokeError> {
+        if !checks.any_bypass_requested() {
+            return Ok(());
+        }
+        if self
+            .authorization_context()
+            .check_create_commit_check_bypass(self.ctx(), self.repo())
+            .await
+            .is_permitted()
+        {
+            return Ok(());
+        }
+        let enforce = justknobs::eval(
+            "scm/mononoke:create_commit_bypass_config_enforce",
+            None,
+            Some(self.name()),
+        )?;
+        let log_tag = if enforce {
+            "create_commit bypass not permitted by service_write_restrictions"
+        } else {
+            "create_commit bypass would not be permitted by service_write_restrictions"
+        };
+        self.ctx().scuba().clone().log_with_msg(log_tag, None);
+        if enforce {
+            return Err(MononokeError::AuthorizationError(
+                "create_commit bypass not permitted by service_write_restrictions".to_string(),
+            ));
+        }
+        Ok(())
+    }
+
     pub(crate) async fn save_changesets(
         &self,
         changesets: Vec<BonsaiChangeset>,

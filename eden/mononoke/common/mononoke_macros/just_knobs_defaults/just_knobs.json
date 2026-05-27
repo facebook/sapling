@@ -46,6 +46,7 @@
     "scm/mononoke:create_changeset_stack_noop_file_changes_check": true,
     "scm/mononoke:spawn_mutation_polling_task": true,
     "scm/mononoke:create_changeset_stack_empty_changeset_check": true,
+    "scm/mononoke:create_commit_bypass_config_enforce": false,
     "scm/mononoke:rendezvous_bonsai_tag_mapping": true,
     "scm/mononoke:scs_restricted_paths_use_mock_api": false,
     "scm/mononoke:restricted_paths_use_schematized_logger": false,
