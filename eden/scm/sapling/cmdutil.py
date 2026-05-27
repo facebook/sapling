@@ -2040,18 +2040,20 @@ class changeset_printer:
         if self.footer:
             self.ui.write(self.footer)
 
-    def show(self, ctx, revcache=None, matchfn=None, hunksfilterfn=None, **props):
+    def show(
+        self, ctx, revcache=None, matchfn=None, hunksfilterfn=None, prevfn=None, **props
+    ):
         props = props
         if revcache is None:
             revcache = {}
         if self.buffered:
             self.ui.pushbuffer(labeled=True)
-            self._show(ctx, revcache, matchfn, hunksfilterfn, props)
+            self._show(ctx, revcache, matchfn, hunksfilterfn, prevfn, props)
             self.hunk[ctx.rev()] = self.ui.popbufferlist()
         else:
-            self._show(ctx, revcache, matchfn, hunksfilterfn, props)
+            self._show(ctx, revcache, matchfn, hunksfilterfn, prevfn, props)
 
-    def _show(self, ctx, revcache, matchfn, hunksfilterfn, props):
+    def _show(self, ctx, revcache, matchfn, hunksfilterfn, prevfn, props):
         """show a single changeset or file revision"""
         changenode = ctx.node()
         rev = ctx.rev()
@@ -2129,16 +2131,19 @@ class changeset_printer:
                 )
         self.ui.write("\n")
 
-        self.showpatch(ctx, matchfn, hunksfilterfn=hunksfilterfn)
+        self.showpatch(ctx, matchfn, hunksfilterfn=hunksfilterfn, prevfn=prevfn)
 
-    def showpatch(self, ctx, matchfn, hunksfilterfn=None):
+    def showpatch(self, ctx, matchfn, hunksfilterfn=None, prevfn=None):
         if not matchfn:
             matchfn = self.matchfn
         if matchfn:
             stat = self.diffopts.get("stat")
             diff = self.diffopts.get("patch")
             diffopts = patch.diffallopts(self.ui, self.diffopts)
-            prevctx = ctx.p1()
+            if prevfn is not None:
+                prevctx = prevfn(ctx)
+            else:
+                prevctx = ctx.p1()
             if stat:
                 diffordiffstat(
                     self.ui,
@@ -2180,7 +2185,7 @@ class jsonchangeset(changeset_printer):
         else:
             self.ui.write("[]\n")
 
-    def _show(self, ctx, revcache, matchfn, hunksfilterfn, props):
+    def _show(self, ctx, revcache, matchfn, hunksfilterfn, prevfn, props):
         """show a single changeset or file revision"""
         rev = ctx.rev()
         if rev is None:
@@ -2267,7 +2272,10 @@ class jsonchangeset(changeset_printer):
             stat = self.diffopts.get("stat")
             diff = self.diffopts.get("patch")
             diffopts = patch.difffeatureopts(self.ui, self.diffopts, git=True)
-            prevctx = ctx.p1()
+            if prevfn is None:
+                prevctx = ctx.p1()
+            else:
+                prevctx = prevfn(ctx)
             if stat:
                 self.ui.pushbuffer()
                 diffordiffstat(
@@ -2351,7 +2359,7 @@ class changeset_templater(changeset_printer):
             self.footer += templater.stringify(self.t(self._parts["docfooter"]))
         return super(changeset_templater, self).close()
 
-    def _show(self, ctx, revcache, matchfn, hunksfilterfn, props):
+    def _show(self, ctx, revcache, matchfn, hunksfilterfn, prevfn, props):
         """show a single changeset or file revision"""
         props = props.copy()
         props.update(templatekw.keywords)
@@ -2382,7 +2390,7 @@ class changeset_templater(changeset_printer):
         # write changeset metadata, then patch if requested
         key = self._parts[self._tref]
         self.ui.writebytes(templater.byteify(self.t(key, **props)))
-        self.showpatch(ctx, matchfn, hunksfilterfn=hunksfilterfn)
+        self.showpatch(ctx, matchfn, hunksfilterfn=hunksfilterfn, prevfn=prevfn)
 
         if self._parts["footer"]:
             if not self.footer:
