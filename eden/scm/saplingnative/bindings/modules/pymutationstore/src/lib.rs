@@ -268,6 +268,8 @@ py_class!(class mutationstore |py| {
         Ok(entries)
     }
 
+    /// get_dag(nodes, successors=True, predecessors=True)
+    ///
     /// Figure out connected components related to specified nodes.
     /// The returned graph supports DAG related calculations like
     /// ancestors, heads, roots, etc.
