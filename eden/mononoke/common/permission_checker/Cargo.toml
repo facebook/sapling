@@ -16,7 +16,7 @@ fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbth
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 itertools = "0.14.0"
 maplit = "1.0"
-openssl = "0.10.72"
+openssl = "0.10.80"
 serde = { version = "1.0.219", features = ["derive", "rc"] }
 serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 tokio = { version = "1.52.3", features = ["full", "test-util", "tracing"] }
