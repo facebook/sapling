@@ -645,8 +645,9 @@ def rage(ui, repo, *pats, **opts) -> None:
             )
             out, err = p.communicate(input=(msg + "\n").encode())
             ret = p.returncode
-        except OSError:
+        except OSError as e:
             ui.write(_("Failed calling pastry. (is it in your PATH?)\n"))
+            out = str(e).encode()
             ret = 1
 
     if ret:
@@ -671,7 +672,6 @@ def rage(ui, repo, *pats, **opts) -> None:
             % (ui.config("ui", "supportcontact"))
         )
         ui.write(
-            # pyre-fixme[61]: `out` is undefined, or not always defined.
             "  " + out.decode(errors="replace") + "\n",
             label="rage.link",
         )
