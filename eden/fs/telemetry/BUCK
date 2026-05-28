@@ -202,7 +202,10 @@ cpp_library(
         ":throw_trace_capture",
         "//folly:demangle",
     ],
-    exported_deps = ["//eden/common/telemetry:log_info"],
+    exported_deps = [
+        "//eden/common/telemetry:log_info",
+        "//folly/json:dynamic",
+    ],
 )
 
 cpp_library(

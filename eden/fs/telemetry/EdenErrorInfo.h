@@ -39,12 +39,15 @@ class EdenErrorInfo {
   std::optional<std::string> errorName;
   std::optional<std::string> exceptionType;
   std::optional<std::string> stackTrace;
-  std::optional<std::string> clientCommandName;
   std::optional<uint64_t> inode;
   std::optional<std::string> filePath;
   std::optional<std::string> mountPoint;
   std::optional<std::string> mountStatus;
   std::optional<std::string> errorType;
+
+  // Fields below are serialized into the "extras" JSON column in Scuba
+  // (not their own dedicated columns). See DaemonError::populate().
+  std::optional<std::string> clientCommandName;
 
   // Per-component factory methods.
   // Return an EdenErrorInfoBuilder for optional chaining (withMountPoint, etc.)

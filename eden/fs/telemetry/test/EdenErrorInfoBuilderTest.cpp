@@ -13,6 +13,9 @@
 
 #include <folly/CPortability.h>
 
+#include "eden/common/telemetry/DynamicEvent.h"
+#include "eden/fs/telemetry/DaemonError.h"
+
 #include "eden/fs/telemetry/ErrorArg.h"
 #include "eden/fs/telemetry/ThrowTraceCapture.h"
 
@@ -96,6 +99,19 @@ TEST(EdenErrorInfoTest, InitializeThriftEdenErrorInfoWithSystemError) {
   EXPECT_TRUE(info.errorCode.has_value());
   EXPECT_TRUE(info.errorName.has_value());
   EXPECT_NE(info.exceptionType.value().find("system_error"), std::string::npos);
+}
+
+TEST(EdenErrorInfoTest, ClientCommandNameSerializedIntoExtrasJsonColumn) {
+  std::runtime_error ex("test error");
+
+  // Verify clientCommandName is serialized into extras JSON column
+  auto event = EdenErrorInfo::thrift(ex, "mount").createEvent();
+  DynamicEvent de;
+  event.populate(de);
+  auto it = de.getStringMap().find("extras");
+  ASSERT_NE(it, de.getStringMap().end()) << "Should have extras column";
+  EXPECT_NE(it->second.find("client_command_name"), std::string::npos);
+  EXPECT_NE(it->second.find("mount"), std::string::npos);
 }
 
 TEST(EdenErrorInfoTest, SymbolizationIsDeferredUntilCreate) {

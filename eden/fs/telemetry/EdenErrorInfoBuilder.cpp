@@ -31,12 +31,6 @@ EdenErrorInfoBuilder& EdenErrorInfoBuilder::withFilePath(std::string filePath) {
   return *this;
 }
 
-EdenErrorInfoBuilder& EdenErrorInfoBuilder::withClientCommandName(
-    std::string name) {
-  clientCommandName_ = std::move(name);
-  return *this;
-}
-
 EdenErrorInfoBuilder& EdenErrorInfoBuilder::withErrorCode(int64_t code) {
   errorCode_ = code;
   return *this;

@@ -42,8 +42,9 @@ EdenErrorInfoBuilder EdenErrorInfo::thrift(
     const ErrorArg& error,
     std::string clientCommandName,
     SourceInfo loc) {
-  return EdenErrorInfoBuilder{EdenComponent::Thrift, error, loc}
-      .withClientCommandName(std::move(clientCommandName));
+  auto builder = EdenErrorInfoBuilder{EdenComponent::Thrift, error, loc};
+  builder.clientCommandName_ = std::move(clientCommandName);
+  return builder;
 }
 
 EdenErrorInfoBuilder EdenErrorInfo::prjfs(

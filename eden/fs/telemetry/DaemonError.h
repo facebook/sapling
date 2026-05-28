@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <folly/json/json.h>
 #include "eden/common/telemetry/LogEvent.h"
 #include "eden/fs/telemetry/EdenErrorInfo.h"
 
@@ -32,9 +33,6 @@ struct DaemonError : public TypelessEvent {
     if (info.stackTrace.has_value()) {
       event.addString("stack_trace", *info.stackTrace);
     }
-    if (info.clientCommandName.has_value()) {
-      event.addString("client_command_name", *info.clientCommandName);
-    }
     if (info.inode.has_value()) {
       event.addInt("inode", static_cast<int64_t>(*info.inode));
     }
@@ -49,6 +47,15 @@ struct DaemonError : public TypelessEvent {
     }
     if (info.errorType.has_value()) {
       event.addString("error_type", *info.errorType);
+    }
+    // Sparse per-component fields are serialized into a single "extras"
+    // JSON column in Scuba rather than getting their own dedicated columns.
+    folly::dynamic extrasObj = folly::dynamic::object;
+    if (info.clientCommandName.has_value()) {
+      extrasObj["client_command_name"] = *info.clientCommandName;
+    }
+    if (!extrasObj.empty()) {
+      event.addString("extras", folly::toJson(extrasObj));
     }
   }
 };
