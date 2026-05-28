@@ -14,6 +14,7 @@ use serde::Serialize;
 
 use super::column::Column;
 use super::column::ColumnsExt;
+use super::output::DEFAULT_MIN_ROW_HEIGHT;
 use super::output::OutputRendererBuilder;
 
 pub trait Renderer<N> {
@@ -21,6 +22,13 @@ pub trait Renderer<N> {
 
     // Returns the width of the graph line, possibly including another node.
     fn width(&self, new_node: Option<&N>, new_parents: Option<&Vec<Ancestor<N>>>) -> u64;
+
+    // Set the minimum rendered row height.
+    fn set_min_row_height(&mut self, _min_row_height: usize) {}
+
+    // Set whether disconnected consecutive nodes should be staggered into
+    // different columns instead of separated by a blank line.
+    fn set_stagger_disconnected_nodes(&mut self, _stagger: bool) {}
 
     // Reserve a column for the given node.
     fn reserve(&mut self, node: N);
@@ -40,6 +48,15 @@ pub trait Renderer<N> {
 /// Converts a sequence of DAG node descriptions into rendered graph rows.
 pub struct GraphRowRenderer<N> {
     columns: Vec<Column<N>>,
+    // The remaining fields only have an effect when min_row_height is 1. With
+    // taller rows, the padding row already distinguishes connected same-column
+    // nodes from disconnected same-column nodes. But when there is no padding
+    // row, we must track what column the previous node is in so that either
+    // vertical or horizontal space can be added to indicate that the next node
+    // is not connected to the previous node.
+    min_row_height: usize,
+    stagger_disconnected_nodes: bool,
+    previous_node_column: Option<usize>,
 }
 
 /// Ancestor type indication for an ancestor or parent node.
@@ -298,6 +315,9 @@ pub struct GraphRow<N> {
 
     /// The pad columns for this row.
     pub pad_lines: Vec<PadLine>,
+
+    /// True if a blank line should be rendered before this row.
+    pub blank_line_before: bool,
 }
 
 impl<N> GraphRowRenderer<N>
@@ -308,6 +328,9 @@ where
     pub fn new() -> Self {
         GraphRowRenderer {
             columns: Vec::new(),
+            min_row_height: DEFAULT_MIN_ROW_HEIGHT,
+            stagger_disconnected_nodes: false,
+            previous_node_column: None,
         }
     }
 
@@ -335,6 +358,20 @@ where
             // space for the node, then adding the new node would create
             // a new column.
             if self.columns.find(node).is_none() {
+                if self.min_row_height == 1 && self.stagger_disconnected_nodes {
+                    if let Some(previous_node_column) = self.previous_node_column {
+                        if self.columns.get(previous_node_column) == Some(&Column::Empty) {
+                            // Dense stagger mode cannot use the previous node's column for an
+                            // unallocated node, so do not count that empty column as available.
+                            empty_columns = empty_columns.saturating_sub(1);
+                        } else if previous_node_column == self.columns.len() {
+                            // The previous node's column was trimmed from the end of the column
+                            // list. To keep the new node out of that column, rendering it requires
+                            // a blank placeholder column plus a new column for the node.
+                            width += 1;
+                        }
+                    }
+                }
                 if empty_columns == 0 {
                     width += 1;
                 } else {
@@ -360,6 +397,14 @@ where
         width as u64
     }
 
+    fn set_min_row_height(&mut self, min_row_height: usize) {
+        self.min_row_height = min_row_height;
+    }
+
+    fn set_stagger_disconnected_nodes(&mut self, stagger: bool) {
+        self.stagger_disconnected_nodes = stagger;
+    }
+
     fn reserve(&mut self, node: N) {
         if self.columns.find(&node).is_none() {
             if let Some(index) = self.columns.first_empty() {
@@ -378,10 +423,30 @@ where
         message: String,
     ) -> GraphRow<N> {
         // Find a column for this node.
-        let column = self.columns.find(&node).unwrap_or_else(|| {
-            self.columns
-                .first_empty()
-                .unwrap_or_else(|| self.columns.new_empty())
+        let existing_column = self.columns.find(&node);
+        let mut blank_line_before = false;
+        let column = existing_column.unwrap_or_else(|| {
+            let column = if self.min_row_height == 1 && self.stagger_disconnected_nodes {
+                if let Some(index) = self.columns.iter().enumerate().find_map(|(index, column)| {
+                    (*column == Column::Empty && Some(index) != self.previous_node_column)
+                        .then_some(index)
+                }) {
+                    index
+                } else {
+                    if self.previous_node_column == Some(self.columns.len()) {
+                        self.columns.push(Column::Empty);
+                    }
+                    self.columns.new_empty()
+                }
+            } else {
+                self.columns
+                    .first_empty()
+                    .unwrap_or_else(|| self.columns.new_empty())
+            };
+            blank_line_before = self.min_row_height == 1
+                && !self.stagger_disconnected_nodes
+                && Some(column) == self.previous_node_column;
+            column
         });
         self.columns[column] = Column::Empty;
 
@@ -518,9 +583,6 @@ where
                 } else if i == column {
                     link_line[i] |= LinkLine::CHILD
                         | p.to_link_line(LinkLine::VERT_PARENT, LinkLine::VERT_ANCESTOR);
-                    if p.id().is_some() {
-                        need_link_line = true;
-                    }
                 } else {
                     link_line[i] |=
                         p.to_link_line(LinkLine::LEFT_FORK_PARENT, LinkLine::LEFT_FORK_ANCESTOR);
@@ -530,6 +592,7 @@ where
 
         // Now that we have assigned all the columns, reset their state.
         self.columns.reset();
+        self.previous_node_column = Some(column);
 
         // Filter out the link line or term line if they are not needed.
         let link_line = Some(link_line).filter(|_| need_link_line);
@@ -544,6 +607,7 @@ where
             link_line,
             term_line,
             pad_lines,
+            blank_line_before,
         }
     }
 }

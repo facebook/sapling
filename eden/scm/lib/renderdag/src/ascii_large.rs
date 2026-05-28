@@ -78,6 +78,10 @@ where
             out.push('\n');
         }
 
+        if line.blank_line_before {
+            out.push('\n');
+        }
+
         // Render the nodeline
         let mut node_line = String::new();
         for (i, entry) in line.node_line.iter().enumerate() {
@@ -301,9 +305,12 @@ mod tests {
         assert_eq!(
             render(&test_fixtures::BASIC_DISCONNECTED),
             r#"
+            o  D
+            |
+            |
             o  C
-            |
-            |
+            
+            
             o  B
             
             

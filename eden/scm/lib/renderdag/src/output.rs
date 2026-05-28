@@ -13,6 +13,8 @@ use super::box_drawing::BoxDrawingRenderer;
 use super::render::GraphRow;
 use super::render::Renderer;
 
+pub(crate) const DEFAULT_MIN_ROW_HEIGHT: usize = 2;
+
 pub(crate) struct OutputRendererOptions {
     pub(crate) min_row_height: usize,
 }
@@ -33,13 +35,21 @@ where
     pub fn new(inner: R) -> Self {
         OutputRendererBuilder {
             inner,
-            options: OutputRendererOptions { min_row_height: 2 },
+            options: OutputRendererOptions {
+                min_row_height: DEFAULT_MIN_ROW_HEIGHT,
+            },
             _phantom: PhantomData,
         }
     }
 
     pub fn with_min_row_height(mut self, min_row_height: usize) -> Self {
         self.options.min_row_height = min_row_height;
+        self.inner.set_min_row_height(min_row_height);
+        self
+    }
+
+    pub fn with_stagger_consecutive_disconnected_nodes(mut self, stagger: bool) -> Self {
+        self.inner.set_stagger_disconnected_nodes(stagger);
         self
     }
 

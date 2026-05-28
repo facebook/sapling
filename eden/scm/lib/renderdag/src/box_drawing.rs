@@ -142,6 +142,10 @@ where
             out.push('\n');
         }
 
+        if line.blank_line_before {
+            out.push('\n');
+        }
+
         // Render the nodeline
         let mut node_line = String::new();
         for entry in line.node_line.iter() {
@@ -324,8 +328,10 @@ mod tests {
         assert_eq!(
             render(&test_fixtures::BASIC_DISCONNECTED),
             r#"
-            o  C
+            o  D
             │
+            o  C
+            
             o  B
             
             o  A"#
@@ -341,9 +347,28 @@ mod tests {
         assert_eq!(
             render_string(&test_fixtures::BASIC_DISCONNECTED, &mut renderer),
             r#"
+            o  D
             o  C
-            │
+            
             o  B
+            
+            o  A"#
+        );
+    }
+
+    #[test]
+    fn basic_disconnected_min_row_height_1_staggered() {
+        let mut renderer = GraphRowRenderer::new()
+            .output()
+            .with_min_row_height(1)
+            .with_stagger_consecutive_disconnected_nodes(true)
+            .build_box_drawing();
+        assert_eq!(
+            render_string(&test_fixtures::BASIC_DISCONNECTED, &mut renderer),
+            r#"
+            o  D
+            o  C
+              o  B
             o  A"#
         );
     }
