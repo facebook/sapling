@@ -127,13 +127,16 @@ wheel:
 
 getdepsbuild: HGNAME=$(SL_NAME)
 getdepsbuild:
-	mkdir -p $(GETDEPS_BUILD_DIR)/sapling
-	ln -sfn $(GETDEPS_BUILD_DIR)/sapling build
+	@test -n "$(GETDEPS_BUILD_DIR)" || (echo "GETDEPS_BUILD_DIR is required" >&2; exit 1)
+	@test -n "$(GETDEPS_INSTALL_DIR)" || (echo "GETDEPS_INSTALL_DIR is required" >&2; exit 1)
+	mkdir -p "$(GETDEPS_BUILD_DIR)/sapling"
+	rm -rf out
+	ln -sfn "$(GETDEPS_BUILD_DIR)/sapling" out
 	HGNAME=$(HGNAME) GETDEPS_BUILD=1 \
 		PYTHON_SYS_EXECUTABLE=$(PYTHON_SYS_EXECUTABLE) \
 		THRIFT="$(GETDEPS_INSTALL_DIR)/fbthrift/bin/thrift1" \
-		$(PYTHON_SYS_EXECUTABLE) setup.py \
-		$(PURE) build $(COMPILERFLAG)
+		$(PYTHON_SYS_EXECUTABLE) ./build.py --getdeps \
+		--with-python $(PYTHON_SYS_EXECUTABLE) sl
 
 cleanbutpackages:
 	-$(PYTHON3) setup.py clean --all # ignore errors from this command
@@ -161,10 +164,9 @@ install-home: build
 	$(PYTHON) setup.py $(PURE) install --home="$(HOME)" --prefix="" --force
 
 install-getdeps:
-	PYTHON_SYS_EXECUTABLE=$(PYTHON_SYS_EXECUTABLE) \
-	    GETDEPS_BUILD=1 $(PYTHON_SYS_EXECUTABLE) \
-		setup.py $(PURE) install --skip-build --prefix="$(PREFIX)" --install-scripts="$(PREFIX)/bin"  --install-lib="$(PREFIX)/bin" --force && \
-		cd "$(PREFIX)/bin" && ln -f "$(SL_BIN_NAME)" "$(HG_BIN_NAME)"
+	mkdir -p "$(PREFIX)/bin"
+	cp out/$(SL_BIN_NAME) "$(PREFIX)/bin/$(SL_BIN_NAME)"
+	cd "$(PREFIX)/bin" && ln -f "$(SL_BIN_NAME)" "$(HG_BIN_NAME)"
 
 # Exclusions for OSS getdeps cli tests.  Newline separated
 # test-casecollision.t: flaky on github CI, intermittent FATAL: exception not rethrown
