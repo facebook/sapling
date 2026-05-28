@@ -128,6 +128,7 @@ pub async fn build_underived_batched_graph<'a>(
                     ctx.metadata().client_info(),
                     priority,
                     None,
+                    None, // stage_payload (no pipeline stages in this code path)
                 )?;
 
                 let max_failed_attempts = justknobs::get_as::<u64>("scm/mononoke:build_underived_batched_graph_max_failed_attempts", None);
@@ -135,6 +136,7 @@ pub async fn build_underived_batched_graph<'a>(
                 let mut upstream_dep: Option<DagItemDep> = Some(DagItemDep {
                     dag_item_id: item.id().clone(),
                     head_cs_id: item.head_cs_id(),
+                    stage_path: None, // non-pipeline derivation
                 });
                 let mut cur_item = Some(item);
                 let mut failed_attempt = 0;
@@ -234,6 +236,7 @@ pub async fn build_underived_batched_graph<'a>(
                                                 item.client_info(),
                                                 priority,
                                                 None,
+                                                None, // stage_payload
                                             )?
                                         )
                                     }
@@ -245,6 +248,7 @@ pub async fn build_underived_batched_graph<'a>(
                         upstream_dep = Some(DagItemDep {
                             dag_item_id: item.id().clone(),
                             head_cs_id: item.head_cs_id(),
+                            stage_path: None, // non-pipeline derivation
                         });
                     });
                 }
@@ -313,10 +317,12 @@ async fn deduplicate(
             vec![DagItemDep {
                 dag_item_id: existing.id().clone(),
                 head_cs_id: existing.head_cs_id(),
+                stage_path: existing.stage_payload().map(|p| p.path().clone()),
             }],
             ctx.metadata().client_info(),
             rejected.info().priority(),
             None,
+            None, // stage_payload
         )?;
         return Ok(Some(item));
     }

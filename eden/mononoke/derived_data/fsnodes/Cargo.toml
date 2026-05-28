@@ -27,7 +27,6 @@ fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbth
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 justknobs = { version = "0.1.0", path = "../../common/rust/justknobs_ext" }
 manifest = { version = "0.1.0", path = "../../manifest" }
-metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 restricted_paths_common = { version = "0.1.0", path = "../../repo_attributes/restricted_paths_common" }
 sha1 = "0.10.5"

@@ -25,6 +25,7 @@ use futures::future::BoxFuture;
 use futures::stream::BoxStream;
 use mononoke_types::ChangesetId;
 use mononoke_types::DerivableType;
+use mononoke_types::MPathHash;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
 use serde::Deserialize;
@@ -40,6 +41,9 @@ pub struct DerivationQueueArgs {
     #[clap(long, default_value_t = false)]
     pub use_pipeline_zelos_config: bool,
 }
+
+pub use derived_data_manager::DerivationStagePayload;
+pub use derived_data_manager::ManifestStagePayload;
 
 pub use crate::dag_items::DagItemDep;
 pub use crate::dag_items::DagItemId;
@@ -313,7 +317,11 @@ impl DerivationQueueSummaryItem {
         self.dag_item_info.priority()
     }
 
-    pub fn stage_id(&self) -> Option<&str> {
-        self.dag_item_id.stage_id.as_deref()
+    pub fn stage_id(&self) -> Option<&MPathHash> {
+        self.dag_item_id.stage_id.as_ref()
+    }
+
+    pub fn stage_payload(&self) -> Option<&DerivationStagePayload> {
+        self.dag_item_info.stage_payload()
     }
 }

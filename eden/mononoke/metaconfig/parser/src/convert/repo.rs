@@ -34,7 +34,6 @@ use metaconfig_types::ComparableRegex;
 use metaconfig_types::CrossRepoCommitValidation;
 use metaconfig_types::DerivationPipelineConfig;
 use metaconfig_types::DerivationPipelineStageConfig;
-use metaconfig_types::DerivationPipelineStageTypeConfig;
 use metaconfig_types::DerivedDataConfig;
 use metaconfig_types::DerivedDataTypesConfig;
 use metaconfig_types::DirectoryBranchClusterConfig;
@@ -57,7 +56,6 @@ use metaconfig_types::InfinitepushNamespace;
 use metaconfig_types::InfinitepushParams;
 use metaconfig_types::LfsParams;
 use metaconfig_types::LoggingDestination;
-use metaconfig_types::ManifestDerivationPipelineConfig;
 use metaconfig_types::MergeResolutionOverride;
 use metaconfig_types::MetadataCacheConfig;
 use metaconfig_types::MetadataCacheUpdateMode;
@@ -106,7 +104,6 @@ use repos::RawCommitRateLimitConfig;
 use repos::RawCrossRepoCommitValidationConfig;
 use repos::RawDerivationPipelineConfig;
 use repos::RawDerivationPipelineStageConfig;
-use repos::RawDerivationPipelineStageTypeConfig;
 use repos::RawDerivedDataBlockedChangesetDerivation;
 use repos::RawDerivedDataBlockedDerivation;
 use repos::RawDerivedDataConfig;
@@ -127,7 +124,6 @@ use repos::RawInfinitepushParams;
 use repos::RawLfsParams;
 use repos::RawLoggingDestination;
 use repos::RawLoggingDestinationScribe;
-use repos::RawManifestDerivationPipelineConfig;
 use repos::RawMetadataCacheConfig;
 use repos::RawMetadataCacheUpdateMode;
 use repos::RawMetadataLoggerConfig;
@@ -703,7 +699,14 @@ impl Convert for RawDerivedDataConfig {
                 .into_iter()
                 .map(|s| DerivableType::from_name(&s))
                 .collect::<Result<_, _>>()?,
-            pipeline_config: self.pipeline_config.map(|raw| raw.convert()).transpose()?,
+            // Reads thrift field `pipeline_config_v2` (renamed from
+            // `pipeline_config` so old binaries' JSON deserializer skips
+            // the new shape instead of crashing on it). The in-memory
+            // Rust field stays named `pipeline_config`.
+            pipeline_config: self
+                .pipeline_config_v2
+                .map(|raw| raw.convert())
+                .transpose()?,
         })
     }
 }
@@ -847,47 +850,16 @@ impl Convert for RawCommitRateLimitConfig {
     }
 }
 
-impl Convert for RawManifestDerivationPipelineConfig {
-    type Output = ManifestDerivationPipelineConfig;
-
-    fn convert(self) -> Result<Self::Output> {
-        let path = MPath::new(self.path.as_bytes()).with_context(|| {
-            format!(
-                "Invalid path for manifest derivation pipeline config: {}",
-                self.path
-            )
-        })?;
-        Ok(ManifestDerivationPipelineConfig { path })
-    }
-}
-
-impl Convert for RawDerivationPipelineStageTypeConfig {
-    type Output = DerivationPipelineStageTypeConfig;
-
-    fn convert(self) -> Result<Self::Output> {
-        match self {
-            Self::manifest(config) => Ok(DerivationPipelineStageTypeConfig::Manifest(
-                config.convert()?,
-            )),
-            Self::UnknownField(id) => {
-                bail!(
-                    "Unknown derivation pipeline stage type config variant: {}",
-                    id
-                )
-            }
-        }
-    }
-}
-
 impl Convert for RawDerivationPipelineStageConfig {
     type Output = DerivationPipelineStageConfig;
 
     fn convert(self) -> Result<Self::Output> {
-        Ok(DerivationPipelineStageConfig {
-            dependencies: self.dependencies,
-            terminal: self.terminal,
-            type_config: self.type_config.convert()?,
-        })
+        let dependencies = self
+            .dependencies
+            .into_iter()
+            .map(|p| MPath::new(p.as_bytes()))
+            .collect::<Result<Vec<_>>>()?;
+        Ok(DerivationPipelineStageConfig { dependencies })
     }
 }
 
@@ -908,7 +880,7 @@ impl Convert for RawDerivationPipelineConfig {
         let stages = self
             .stages
             .into_iter()
-            .map(|(id, raw_config)| Ok((id, raw_config.convert()?)))
+            .map(|(path, raw_config)| Ok((MPath::new(path.as_bytes())?, raw_config.convert()?)))
             .collect::<Result<HashMap<_, _>>>()?;
         let batch_size = u64::try_from(self.batch_size)
             .ok()

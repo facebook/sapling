@@ -6,12 +6,14 @@
  */
 
 use anyhow::Result;
+use anyhow::anyhow;
 use bulk_derivation::BulkDerivation;
 use clap::Args;
 use context::CoreContext;
 use derived_data_manager::DerivedDataManager;
 use mononoke_app::args::ChangesetArgs;
 use mononoke_app::args::DerivedDataArgs;
+use mononoke_types::MPath;
 
 use super::Repo;
 
@@ -23,9 +25,10 @@ pub(super) struct VerifyStageOutputArgs {
     #[clap(flatten)]
     derived_data_args: DerivedDataArgs,
 
-    /// The stage ID to verify (e.g. "root", "dir1")
-    #[clap(long)]
-    stage: String,
+    /// Absolute path of the pipeline stage to verify (e.g. `""` for root,
+    /// `"fbcode"` for the fbcode subtree).
+    #[clap(long, value_parser = |s: &str| MPath::new(s.as_bytes()))]
+    stage_path: MPath,
 }
 
 pub(super) async fn verify_stage_output(
@@ -37,13 +40,26 @@ pub(super) async fn verify_stage_output(
     let cs_ids = args.changeset_args.resolve_changesets(ctx, repo).await?;
     let derived_data_type = args.derived_data_args.resolve_type()?;
 
+    let pipeline_config = manager
+        .repo_config()
+        .derived_data_config
+        .pipeline_config
+        .as_ref()
+        .ok_or_else(|| anyhow!("repo has no derivation pipeline config"))?;
+    if !pipeline_config.stages.contains_key(&args.stage_path) {
+        return Err(anyhow!(
+            "Pipeline config has no stage at path {}",
+            args.stage_path,
+        ));
+    }
+
     for cs_id in cs_ids {
         match BulkDerivation::verify_stage_output(
             manager,
             ctx,
             cs_id,
             derived_data_type,
-            &args.stage,
+            &args.stage_path,
         )
         .await
         {

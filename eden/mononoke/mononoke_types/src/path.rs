@@ -16,6 +16,7 @@ use std::iter::Once;
 use std::iter::once;
 use std::os::unix::ffi::OsStrExt;
 use std::slice::Iter;
+use std::str::FromStr;
 
 use anyhow::Context as _;
 use anyhow::Error;
@@ -1080,6 +1081,20 @@ impl MPathHash {
 
     pub fn sampling_fingerprint(&self) -> u64 {
         self.0.sampling_fingerprint()
+    }
+}
+
+impl FromStr for MPathHash {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        Ok(MPathHash(Blake2::from_str(s)?))
+    }
+}
+
+impl Display for MPathHash {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "{}", self.0.to_hex())
     }
 }
 

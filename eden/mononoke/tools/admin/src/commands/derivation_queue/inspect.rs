@@ -11,6 +11,7 @@ use clap::Args;
 use context::CoreContext;
 use mononoke_app::args::ChangesetArgs;
 use mononoke_app::args::DerivedDataArgs;
+use mononoke_types::MPath;
 use repo_derivation_queues::DagItemId;
 use repo_derivation_queues::ReadyState;
 use repo_derivation_queues::RepoDerivationQueuesRef;
@@ -27,9 +28,10 @@ pub struct InspectArgs {
     #[clap(flatten)]
     derived_data_args: DerivedDataArgs,
 
-    /// Stage ID for staged derivation items
-    #[clap(long)]
-    stage_id: Option<String>,
+    /// Absolute path of the pipeline stage (e.g. `""` for root, `"fbcode"`).
+    /// Omit for non-pipeline items.
+    #[clap(long, value_parser = |s: &str| MPath::new(s.as_bytes()))]
+    stage_path: Option<MPath>,
 }
 
 pub async fn inspect(
@@ -45,6 +47,7 @@ pub async fn inspect(
 
     let derived_data_type = args.derived_data_args.resolve_type()?;
     let cs_ids = args.changeset_args.resolve_changesets(ctx, repo).await?;
+    let stage_hash = args.stage_path.as_ref().map(|p| p.get_path_hash());
 
     for cs_id in cs_ids {
         let item_id = DagItemId::new(
@@ -52,13 +55,16 @@ pub async fn inspect(
             config_name.to_string(),
             derived_data_type,
             cs_id,
-            args.stage_id.clone(),
+            stage_hash,
         );
 
         println!(
             "Item: {:?}/{}/{}",
             derived_data_type,
-            args.stage_id.as_deref().unwrap_or("(no stage)"),
+            args.stage_path
+                .as_ref()
+                .map(|p| p.to_string())
+                .unwrap_or_else(|| "(no stage)".to_string()),
             cs_id
         );
 

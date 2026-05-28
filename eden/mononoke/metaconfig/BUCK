@@ -15,7 +15,6 @@ rust_library(
         "fbsource//third-party/rust:bincode",
         "fbsource//third-party/rust:clap",
         "fbsource//third-party/rust:derive_more",
-        "fbsource//third-party/rust:itertools",
         "fbsource//third-party/rust:lazy_static",
         "fbsource//third-party/rust:mysql_common",
         "fbsource//third-party/rust:parking_lot",
