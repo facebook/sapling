@@ -1036,7 +1036,7 @@ impl<R: MononokeRepo> RepoContext<R> {
             "scm/mononoke:create_commit_bypass_config_enforce",
             None,
             Some(self.name()),
-        )?;
+        );
         let log_tag = if enforce {
             "create_commit bypass not permitted by service_write_restrictions"
         } else {
