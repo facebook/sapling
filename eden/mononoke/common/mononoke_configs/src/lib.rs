@@ -698,8 +698,11 @@ async fn unified_config_watcher(
     }
 }
 
-/// Syncs repo_handles with the manifest: adds handles for new repos, removes
-/// handles for repos no longer in the manifest.
+/// Adds preload handles for new non-deep-sharded entries; removes handles
+/// whose repo is gone from the manifest. The add/remove filters are
+/// asymmetric on purpose: deep-sharded repos are loaded on-demand by
+/// ShardManager via `load_repo_config_handle` and must survive manifest
+/// refreshes.
 fn sync_repo_handles(
     manifest: &TierManifest,
     repo_handles: &RwLock<HashMap<String, ConfigHandle<RepoSpec>>>,
@@ -712,12 +715,7 @@ fn sync_repo_handles(
         .cloned()
         .collect();
 
-    let manifest_repos: HashSet<String> = manifest
-        .repos
-        .iter()
-        .filter(|e| !e.is_deep_sharded)
-        .map(|e| e.repo_name.clone())
-        .collect();
+    let to_remove = compute_handles_to_remove(&current_repos, manifest);
 
     let new_handles: Vec<_> = manifest
         .repos
@@ -738,20 +736,36 @@ fn sync_repo_handles(
         )
         .collect();
 
-    let to_remove: Vec<&String> = current_repos.difference(&manifest_repos).collect();
-
     if !new_handles.is_empty() || !to_remove.is_empty() {
         let mut handles = repo_handles
             .write()
             .map_err(|e| anyhow!("repo_handles lock poisoned: {}", e))?;
         handles.extend(new_handles);
         for repo_name in &to_remove {
-            handles.remove(*repo_name);
+            handles.remove(repo_name);
             info!("Removed config handle for repo: {}", repo_name);
         }
     }
 
     Ok(())
+}
+
+/// Names in `current_repos` no longer present in the manifest. Pure helper
+/// extracted to make the diff testable without a ConfigStore.
+fn compute_handles_to_remove(
+    current_repos: &HashSet<String>,
+    manifest: &TierManifest,
+) -> Vec<String> {
+    let manifest_repo_names: HashSet<&str> = manifest
+        .repos
+        .iter()
+        .map(|e| e.repo_name.as_str())
+        .collect();
+    current_repos
+        .iter()
+        .filter(|name| !manifest_repo_names.contains(name.as_str()))
+        .cloned()
+        .collect()
 }
 
 /// Trait defining methods related to config update notification. A struct implementing
@@ -818,6 +832,8 @@ mod test {
     use mononoke_macros::mononoke;
     use repos::RawRepoConfig;
     use repos::RawRepoConfigs;
+    use repos::TierManifest;
+    use repos::TierRepoEntry;
 
     use super::*;
 
@@ -960,5 +976,72 @@ mod test {
                 h
             });
         assert_eq!(results.len(), 1);
+    }
+
+    fn tier_entry(name: &str, is_deep_sharded: bool) -> TierRepoEntry {
+        TierRepoEntry {
+            repo_name: name.to_owned(),
+            is_deep_sharded,
+            ..Default::default()
+        }
+    }
+
+    fn manifest_with(entries: Vec<TierRepoEntry>) -> TierManifest {
+        TierManifest {
+            repos: entries,
+            ..Default::default()
+        }
+    }
+
+    // Regression: deep-sharded handles inserted on-demand by ShardManager
+    // must survive manifest refresh.
+    #[mononoke::test]
+    fn test_compute_handles_to_remove_preserves_deep_sharded() {
+        let manifest = manifest_with(vec![
+            tier_entry("non_sharded_repo", false),
+            tier_entry("deep_sharded_repo", true),
+        ]);
+        let current: HashSet<String> = ["non_sharded_repo", "deep_sharded_repo"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        let to_remove = compute_handles_to_remove(&current, &manifest);
+        assert!(
+            to_remove.is_empty(),
+            "deep-sharded repo present in manifest must not be removed, got {:?}",
+            to_remove,
+        );
+    }
+
+    #[mononoke::test]
+    fn test_compute_handles_to_remove_drops_repos_missing_from_manifest() {
+        let manifest = manifest_with(vec![tier_entry("still_present", true)]);
+        let current: HashSet<String> = ["still_present", "gone_from_manifest"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        let to_remove = compute_handles_to_remove(&current, &manifest);
+        assert_eq!(
+            to_remove,
+            vec!["gone_from_manifest".to_string()],
+            "only entries absent from manifest should be removed",
+        );
+    }
+
+    #[mononoke::test]
+    fn test_compute_handles_to_remove_empty_manifest() {
+        let manifest = manifest_with(vec![]);
+        let current: HashSet<String> = ["a", "b"].iter().map(|s| s.to_string()).collect();
+        let mut to_remove = compute_handles_to_remove(&current, &manifest);
+        to_remove.sort();
+        assert_eq!(to_remove, vec!["a".to_string(), "b".to_string()]);
+    }
+
+    #[mononoke::test]
+    fn test_compute_handles_to_remove_empty_current() {
+        let manifest = manifest_with(vec![tier_entry("a", false), tier_entry("b", true)]);
+        let current: HashSet<String> = HashSet::new();
+        let to_remove = compute_handles_to_remove(&current, &manifest);
+        assert!(to_remove.is_empty());
     }
 }
