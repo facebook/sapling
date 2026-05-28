@@ -64,23 +64,17 @@ pub async fn inspect(
 
         let result = derivation_queue.inspect(ctx, item_id).await?;
 
-        match &result.needed {
-            Some(info) => {
-                let ts = info
-                    .enqueue_timestamp()
-                    .map(|t| format!("{}s{}ms ago", t.since_seconds(), t.since_millis() % 1000))
-                    .unwrap_or_else(|| "unknown".to_string());
-                println!(
-                    "  needed:   EXISTS (retry_count={}, priority={}, enqueued {})",
-                    info.retry_count(),
-                    derivation_priority_to_str(info.priority()),
-                    ts
-                );
-                println!("  head:     {}", info.head_cs_id());
+        // needed / ready / deriving / info are printed as independent
+        // fields so inconsistent states (e.g. info present in ready but
+        // needed znode missing) are visible rather than hidden.
+        println!(
+            "  needed:   {}",
+            if result.needed_exists {
+                "EXISTS"
+            } else {
+                "MISSING"
             }
-            None => println!("  needed:   MISSING"),
-        }
-
+        );
         let ready_str = match result.ready_state {
             ReadyState::NotReady => "no",
             ReadyState::ReadyHighPri => "YES (high priority)",
@@ -91,6 +85,22 @@ pub async fn inspect(
             "  deriving: {}",
             if result.is_deriving { "YES" } else { "no" }
         );
+        match &result.info {
+            Some(info) => {
+                let ts = info
+                    .enqueue_timestamp()
+                    .map(|t| format!("{}s{}ms ago", t.since_seconds(), t.since_millis() % 1000))
+                    .unwrap_or_else(|| "unknown".to_string());
+                println!(
+                    "  info:     retry_count={}, priority={}, enqueued {}",
+                    info.retry_count(),
+                    derivation_priority_to_str(info.priority()),
+                    ts
+                );
+                println!("  head:     {}", info.head_cs_id());
+            }
+            None => println!("  info:     (none)"),
+        }
 
         if result.forward_deps.is_empty() {
             println!("  forward deps: (none)");

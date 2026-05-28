@@ -64,7 +64,14 @@ pub enum ReadyState {
 
 /// Result of inspecting a specific DAG item in the derivation queue.
 pub struct InspectResult {
-    pub needed: Option<DagItemInfo>,
+    /// `DagItemInfo` from the freshest source available: ready (high-pri),
+    /// then ready (low-pri), then needed. `None` only if the item is not
+    /// present in any of those znodes (i.e. not in the queue).
+    pub info: Option<DagItemInfo>,
+    /// Whether the `needed` znode itself is present, independent of where
+    /// `info` was sourced from. The item is considered to be in the queue
+    /// iff this is `true`.
+    pub needed_exists: bool,
     pub ready_state: ReadyState,
     pub is_deriving: bool,
     pub forward_deps: Vec<DepStatus>,
