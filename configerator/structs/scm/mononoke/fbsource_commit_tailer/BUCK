@@ -10,5 +10,7 @@ thrift_library(
     py_base_module = "configerator.mononoke",
     thrift_py_options = "json",
     thrift_srcs = {"relevant_paths.thrift": None},
-    deps = [],
+    deps = [
+        "//thrift/annotation:thrift",
+    ],
 )
