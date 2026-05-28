@@ -35,15 +35,13 @@ endif
 
 PYTHON_MINOR_VERSION=$(shell $(PYTHON_SYS_EXECUTABLE) -c "import sys; print(sys.version_info.minor)")
 
-ifeq ($(RUST_DEBUG),1)
-RUST_FLAG = --debug
-endif
+BUILD_PY = $(PYTHON_SYS_EXECUTABLE) ./build.py
+BUILD_MODE_FLAG = $(if $(OSS),--oss,)
+BUILD_ARGS = $(BUILD_MODE_FLAG) --with-python $(PYTHON_SYS_EXECUTABLE)
 
 $(eval HGROOT := $(shell pwd))
 HGPYTHONS ?= $(HGROOT)/build/pythons
 PURE=
-PYFILES:=$(shell find mercurial ext -name '*.py' 2>/dev/null)
-DOCFILES=sapling/help/*.txt
 export LANGUAGE=C
 export LC_ALL=C
 TESTFLAGS ?= $(shell echo $$HGTESTFLAGS)
@@ -68,22 +66,11 @@ export SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
 
 help:
 	@echo 'Commonly used make targets:'
-	@echo '  all          - build program'
-	@echo '  install      - install program and man pages to $$PREFIX ($(PREFIX))'
-	@echo '  install-home - install with setup.py install --home=$$HOME ($(HOME))'
 	@echo '  local        - build for inplace usage'
 	@echo '  tests        - run all tests in the automatic test suite'
-	@echo '  test-foo     - run only specified tests (e.g. test-merge1.t)'
-	@echo '  dist         - run all tests and create a source tarball in dist/'
-	@echo '  clean        - remove files created by other targets'
-	@echo '                 (except installed files or dist source tarball)'
-	@echo '  update-pot   - update i18n/hg.pot'
-	@echo
-	@echo 'Example for a system-wide installation under /usr/local:'
-	@echo '  make all && su -c "make install" && hg version'
 	@echo
 	@echo 'Example for a local installation (usable in this directory):'
-	@echo '  make local && ./hg version'
+	@echo '  make sl && ./sl version'
 
 all: build
 
@@ -95,35 +82,27 @@ oss: local
 install-oss: oss
 	$(SL_NAME) --kill-chg-daemon || true
 	mkdir -p $(DESTDIR)/$(PREFIX)/bin
-	cp $(SL_NAME) $(DESTDIR)/$(PREFIX)/bin
+	cp out/$(SL_BIN_NAME) $(DESTDIR)/$(PREFIX)/bin/$(SL_BIN_NAME)
 	mkdir -p $(DESTDIR)/$(PREFIX)/lib
-	cp isl-dist.tar.xz $(DESTDIR)/$(PREFIX)/lib
+	cp out/isl-dist.tar.xz $(DESTDIR)/$(PREFIX)/lib
 
 local:
-	SAPLING_OSS_BUILD=$(OSS) HGNAME=$(HGNAME) \
-	  $(PYTHON_SYS_EXECUTABLE) setup.py $(PURE) \
-	  build_interactive_smartlog \
-	  build_rust_ext -i -l $(RUST_FLAG) \
-	  build_mo
-ifneq ($(OS),Windows_NT)
-	$(RM) $(HGNAME)
-endif
-	cp build/scripts-3.$(PYTHON_MINOR_VERSION)/$(HG_BIN_NAME) $(HG_BIN_NAME)
+	$(BUILD_PY) $(BUILD_ARGS)
+	$(RM) $(SL_BIN_NAME)
+	ln -s out/$(SL_BIN_NAME) $(SL_BIN_NAME)
 
 hg:
-	SAPLING_SKIP_OTHER_RUST_BINARIES=true $(PYTHON_SYS_EXECUTABLE) setup.py $(PURE) \
-	  build_rust_ext -i -l $(RUST_FLAG) \
-	  build_mo
-ifneq ($(OS),Windows_NT)
-	$(RM) $(HGNAME)
-endif
-	cp build/scripts-3.$(PYTHON_MINOR_VERSION)/$(HG_BIN_NAME) $(HG_BIN_NAME)
+	$(BUILD_PY) $(BUILD_ARGS) sl
+	$(RM) $(HG_BIN_NAME)
+	ln -s out/$(SL_BIN_NAME) $(HG_BIN_NAME)
+
+sl:
+	$(BUILD_PY) $(BUILD_ARGS) sl
+	$(RM) $(SL_BIN_NAME)
+	ln -s out/$(SL_BIN_NAME) $(SL_BIN_NAME)
 
 build:
-	$(PYTHON) setup.py $(PURE) build $(COMPILERFLAG)
-
-wheel:
-	FORCE_SETUPTOOLS=1 $(PYTHON) setup.py $(PURE) bdist_wheel $(COMPILERFLAG)
+	$(BUILD_PY) $(BUILD_ARGS)
 
 getdepsbuild: HGNAME=$(SL_NAME)
 getdepsbuild:
@@ -137,31 +116,6 @@ getdepsbuild:
 		THRIFT="$(GETDEPS_INSTALL_DIR)/fbthrift/bin/thrift1" \
 		$(PYTHON_SYS_EXECUTABLE) ./build.py --getdeps \
 		--with-python $(PYTHON_SYS_EXECUTABLE) sl
-
-cleanbutpackages:
-	-$(PYTHON3) setup.py clean --all # ignore errors from this command
-	find contrib doc i18n sapling tests \
-		\( -name '*.py[cdo]' -o -name '*.so' \) -exec rm -f '{}' ';'
-	rm -f MANIFEST MANIFEST.in sapling/ext/__index__.py tests/*.err
-	rm -f sapling/__modulepolicy__.py
-	if test -d .hg; then rm -f sapling/__version__.py; fi
-	rm -rf build/*
-	rm -rf build sapling/locale
-	rm -f Cargo.lock
-ifeq ($(OS),Windows_NT)
-	$(RM) -r hg-python $(HGNAME).exe python27.dll
-else
-	$(RM) $(HGNAME)
-endif
-
-clean: cleanbutpackages
-	rm -rf packages
-
-install: build
-	$(PYTHON) setup.py $(PURE) install --root="$(DESTDIR)/" --prefix="$(PREFIX)" --force
-
-install-home: build
-	$(PYTHON) setup.py $(PURE) install --home="$(HOME)" --prefix="" --force
 
 install-getdeps:
 	mkdir -p "$(PREFIX)/bin"
@@ -274,40 +228,6 @@ tests:
 	cd tests && PYTHON_SYS_EXECUTABLE=$(PYTHON_SYS_EXECUTABLE) \
 	    $(PYTHON_SYS_EXECUTABLE) run-tests.py
 
-update-pot: i18n/hg.pot
-
-i18n/hg.pot: $(PYFILES) $(DOCFILES) i18n/posplit i18n/hggettext
-	$(PYTHON) i18n/hggettext sapling/commands.py \
-	  sapling/ext/*.py sapling/ext/*/__init__.py \
-	  sapling/fileset.py sapling/revset.py \
-	  sapling/templatefilters.py sapling/templatekw.py \
-	  sapling/templater.py \
-	  sapling/filemerge.py \
-	  sapling/util.py \
-	  $(DOCFILES) > i18n/hg.pot.tmp
-        # All strings marked for translation in Mercurial contain
-        # ASCII characters only. But some files contain string
-        # literals like this '\037\213'. xgettext thinks it has to
-        # parse them even though they are not marked for translation.
-        # Extracting with an explicit encoding of ISO-8859-1 will make
-        # xgettext "parse" and ignore them.
-	echo $(PYFILES) | xargs \
-	  xgettext --package-name "Mercurial" \
-	  --msgid-bugs-address "<mercurial-devel@mercurial-scm.org>" \
-	  --copyright-holder "Olivia Mackall <olivia@selenic.com> and others" \
-	  --from-code ISO-8859-1 --join --sort-by-file --add-comments=i18n: \
-	  --keyword=_n:1,2 -d hg -p i18n -o hg.pot.tmp
-	$(PYTHON) i18n/posplit i18n/hg.pot.tmp
-        # The target file is not created before the last step. So it never is in
-        # an intermediate state.
-	mv -f i18n/hg.pot.tmp i18n/hg.pot
-
-%.po: i18n/hg.pot
-        # work on a temporary copy for never having a half completed target
-	cp $@ $@.tmp
-	msgmerge --no-location --update $@.tmp $^
-	mv -f $@.tmp $@
-
 buck:
 	cp $(shell buck2 build $(BUCK_BUILD_MODE) fbcode//eden/scm:hg --show-full-simple-output) $(HG_BIN_NAME)
 
@@ -316,4 +236,4 @@ buck-isl:
 
 # Packaging targets
 
-.PHONY: help all local build cleanbutpackages clean install install-home install-getdeps getdepsbuild deb hg buck
+.PHONY: help all local build install-getdeps getdepsbuild hg sl buck
