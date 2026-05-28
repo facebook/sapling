@@ -57,6 +57,7 @@ define_stats! {
     refresh_success_count: timeseries(Average, Sum, Count),
     liveness_count: timeseries(Average, Sum, Count),
     spurious_reload_suppressed: timeseries(Average, Sum, Count),
+    merge_skipped_no_handle: timeseries(Average, Sum, Count),
 }
 
 fn content_changed<T: PartialEq>(prev: &Option<Arc<T>>, current: &Option<Arc<T>>) -> bool {
@@ -301,6 +302,25 @@ impl MononokeConfigs {
         let mut update_receivers = Vec::from_iter(self.update_receivers.load().iter().cloned());
         update_receivers.push(update_receiver);
         self.update_receivers.store(Arc::new(update_receivers));
+    }
+
+    /// Drop the per-repo ConfigHandle (called by ShardManager on_drop_shard via
+    /// repos_manager::remove_repo). Symmetric counterpart to load_repo_config_handle.
+    /// No-op if no handle is held.
+    pub fn remove_repo_config_handle(&self, repo_name: &str) {
+        match self.repo_handles.write() {
+            Ok(mut handles) => {
+                if handles.remove(repo_name).is_some() {
+                    info!("Removed config handle for repo: {}", repo_name);
+                }
+            }
+            Err(e) => {
+                error!(
+                    "repo_handles lock poisoned while removing {}: {}",
+                    repo_name, e
+                );
+            }
+        }
     }
 
     /// Create a per-repo ConfigHandle on-demand (called by ShardManager on_add_shard).
@@ -664,6 +684,8 @@ async fn unified_config_watcher(
                                 );
                             }
                         }
+                    } else {
+                        STATS::merge_skipped_no_handle.add_value(1);
                     }
                 }
                 RepoConfigs::new(repos, base.common.clone())

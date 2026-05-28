@@ -205,6 +205,7 @@ impl<Repo> MononokeReposManager<Repo> {
     /// Remove a repo from the managed repo collection.
     pub fn remove_repo(&self, repo_name: &str) {
         self.repos.remove(repo_name);
+        self.configs.remove_repo_config_handle(repo_name);
     }
 
     async fn populate_repos<Names>(&self, repo_names: Names) -> Result<()>
