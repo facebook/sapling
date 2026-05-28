@@ -116,8 +116,15 @@ fn build_github_https_client(
     };
     let proxy_connector =
         ProxyConnector::from_proxy_unsecured(inner, Proxy::new(intercept, proxy_uri));
-    Ok(Client::builder(TokioExecutor::new()).build(proxy_connector))
+    Ok(Client::builder(TokioExecutor::new())
+        .pool_idle_timeout(Duration::from_secs(GITHUB_LFS_POOL_IDLE_TIMEOUT_SECS))
+        .build(proxy_connector))
 }
+
+/// Short enough to evict CONNECT tunnels before fwdproxy / github.com
+/// silently reap them — hyper's default 90s left stale connections in the
+/// pool that failed mid-POST during long jarvis-scale imports.
+const GITHUB_LFS_POOL_IDLE_TIMEOUT_SECS: u64 = 10;
 
 /// URL pattern used by the upstream LFS server to serve a single object keyed by SHA256.
 /// `LegacyDewey` matches Dewey's bare-suffix scheme; `MononokeGitLfs` matches the
@@ -742,7 +749,7 @@ impl GitImportLfs {
                             let sleep_time_ms =
                                 rand::random_range(0..upstream.time_ms_between_attempts * 2);
                             error!(
-                                "{}. Attempt {} of {} - Retrying in {} ms",
+                                "{:#}. Attempt {} of {} - Retrying in {} ms",
                                 err, attempt, upstream.max_attempts, sleep_time_ms,
                             );
                             sleep(Duration::from_millis(sleep_time_ms.into())).await;
@@ -769,7 +776,7 @@ impl GitImportLfs {
                             let sleep_time_ms =
                                 rand::random_range(0..github.time_ms_between_attempts * 2);
                             error!(
-                                "{}. Attempt {} of {} - Retrying in {} ms",
+                                "{:#}. Attempt {} of {} - Retrying in {} ms",
                                 err, attempt, github.max_attempts, sleep_time_ms,
                             );
                             sleep(Duration::from_millis(sleep_time_ms.into())).await;
