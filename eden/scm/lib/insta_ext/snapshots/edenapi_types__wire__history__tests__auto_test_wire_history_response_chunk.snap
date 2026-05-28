@@ -1,6 +1,0 @@
----
-source: history.rs
-expression: "WireHistoryResponseChunk::arbitrary(&mut g)"
-
----
-{"path":"jaiffe","entries":[{"node":[127,21,211,79,1,180,239,159,71,129,237,47,133,207,59,183,155,157,133,85],"parents":null,"linknode":null,"copyfrom":null}]}

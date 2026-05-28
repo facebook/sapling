@@ -1,6 +1,0 @@
----
-source: mod.rs
-expression: "WireRepoPathBuf::arbitrary(&mut g)"
-
----
-"jaiffe/nuat/fk/ejkleav/rc/ohh"

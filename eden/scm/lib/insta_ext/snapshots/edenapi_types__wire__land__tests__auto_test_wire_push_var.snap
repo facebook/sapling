@@ -1,6 +1,0 @@
----
-source: land.rs
-expression: "WirePushVar::arbitrary(&mut g)"
-
----
-{"0":"","1":"*"}

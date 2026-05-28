@@ -130,7 +130,6 @@ members = [
   "lib/http-client",
   "lib/identity",
   "lib/indexedlog",
-  "lib/insta_ext",
   "lib/io",
   "lib/io/term/logger",
   "lib/io/term/style",

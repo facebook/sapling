@@ -1,6 +1,0 @@
----
-source: tree.rs
-expression: "WireTreeRequest::arbitrary(&mut g)"
-
----
-{"0":"0"}

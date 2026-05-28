@@ -1,6 +1,0 @@
----
-source: mod.rs
-expression: "WireDagId::arbitrary(&mut g)"
-
----
-75845996241657629

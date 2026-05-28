@@ -1,5 +1,0 @@
----
-source: tree.rs
-expression: "WireTreeAttributesRequest::arbitrary(&mut g)"
----
-{"5":true}
