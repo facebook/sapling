@@ -7,7 +7,8 @@
 """Script to build Sapling (sl) and ISL
 
 Currently support:
-- facebook/sapling (github) cargo build.
+- facebook/sapling (github) cargo build (without edenfs).
+- facebook/sapling (github) getdeps cargo build (with edenfs, requires fbthrift).
 - fbsource (monorepo) cargo build with fb-internal features.
 - fbsource (monorepo) cargo build without fb-internal features (--oss).
 
@@ -36,6 +37,7 @@ CARGO_TARGET = OUT / "cargo-target"
 CARGO_CONFIG_DIR = OUT / "cargo_config"
 HGMAIN_MANIFEST = ROOT / "exec" / "hgmain" / "Cargo.toml"
 _VCVARS_ENV = None
+BUILD_MODES = ("oss", "fbsource", "getdeps")
 
 
 def status(args, message):
@@ -352,14 +354,21 @@ def link_config_file(cargo_dir, config_path):
         shutil.copy2(config_path, link_path)
 
 
-def cargo_features(oss):
+def cargo_features(mode):
+    # sl_oss: disable ".hg" support
+    # eden: edenfs related features, requires Thrift
+    # fb: (fbsource-only) fb-only features
     features = []
     if os.name != "nt":
         features.append("with_chg")
-    if oss:
+    if mode == "oss":
         features.append("sl_oss")
-    else:
+    elif mode == "fbsource":
         features.extend(["fb", "eden"])
+    elif mode == "getdeps":
+        features.extend(["eden", "sl_oss"])
+    else:
+        raise RuntimeError(f"unknown build mode: {mode}")
     return " ".join(features)
 
 
@@ -403,6 +412,11 @@ def copy_windows_openssl_dlls(args, dest):
 
 def cargo_env(args):
     env = scoped_env(args, msvc=(os.name == "nt"))
+    if args.mode == "getdeps":
+        env["GETDEPS_BUILD"] = "1"
+        getdeps_install = env.get("GETDEPS_INSTALL_DIR")
+        if getdeps_install and "THRIFT" not in env:
+            env["THRIFT"] = str(Path(getdeps_install) / "fbthrift/bin/thrift1")
     env["PYTHON_SYS_EXECUTABLE"] = args.python
     env["SAPLING_VERSION"] = args.version
     env["SAPLING_VERSION_HASH"] = version_hash(args.version)
@@ -521,7 +535,7 @@ def build_sl(args):
         cmd.append(f"--target={args.rust_target}")
     if not args.debug:
         cmd.append("--release")
-    features = cargo_features(args.oss)
+    features = cargo_features(args.mode)
     if features:
         cmd.extend(["--features", features])
 
@@ -604,9 +618,23 @@ def add_common_options(parser):
         ),
     )
     parser.add_argument(
+        "--mode",
+        metavar="MODE",
+        help=(
+            "Build mode. Defaults to getdeps when GETDEPS_BUILD=1, "
+            "fbsource when fb/ exists, otherwise oss. Choices: oss, "
+            "fbsource, getdeps."
+        ),
+    )
+    parser.add_argument(
         "--oss",
         action="store_true",
-        help=("Build without fb-only features. By default, this is auto-detected."),
+        help="Shortcut for --mode oss.",
+    )
+    parser.add_argument(
+        "--getdeps",
+        action="store_true",
+        help="Shortcut for --mode getdeps.",
     )
     parser.add_argument(
         "--debug",
@@ -640,8 +668,40 @@ def add_common_options(parser):
     )
 
 
-def normalize_args(args):
-    args.oss = args.oss or FBSOURCE is None
+def auto_mode():
+    if (
+        os.environ.get("GETDEPS_BUILD") == "1"
+        or os.environ.get("GETDEPS_BUILD_DIR")
+        or os.environ.get("GETDEPS_INSTALL_DIR")
+    ):
+        return "getdeps"
+    if FBSOURCE is not None:
+        return "fbsource"
+    return "oss"
+
+
+def normalize_mode(args, parser):
+    if args.mode and args.mode not in BUILD_MODES:
+        choices = ", ".join(repr(mode) for mode in BUILD_MODES)
+        parser.error(
+            f"argument --mode: invalid choice: {args.mode!r} (choose from {choices})"
+        )
+
+    modes = []
+    if args.mode:
+        modes.append(args.mode)
+    if args.oss:
+        modes.append("oss")
+    if args.getdeps:
+        modes.append("getdeps")
+    if len(set(modes)) > 1:
+        parser.error("--mode, --oss, and --getdeps specify conflicting modes")
+    args.mode = modes[0] if modes else auto_mode()
+
+
+def normalize_args(args, parser):
+    normalize_mode(args, parser)
+    status(args, f"Using build mode (--mode): {args.mode}")
     args.python = args.with_python or pick_python()
     status(args, f"Using Python: {args.python}")
     args.version = args.with_version or auto_version()
@@ -670,7 +730,7 @@ def main(argv):
             "argument TARGET: invalid choice: "
             f"{invalid_targets[0]!r} (choose from {choices})"
         )
-    normalize_args(args)
+    normalize_args(args, parser)
 
     for target in args.targets or build_targets:
         if target == "sl":
