@@ -987,7 +987,7 @@ FuseChannel::FuseChannel(
               fuseTraceBusCapacity)) {
   XLOGF(
       INFO,
-      "Creating FuseChannel: mountPath={}, numThreads={}, caseSensitive={}, requireUtf8={}, maximumBackgroundRequests={}, maximumInFlightRequests={}, useWriteBackCache={}, fuseMaxPages={}, ioUringQueueDepth={}",
+      "Creating FuseChannel: mountPath={}, numThreads={}, caseSensitive={}, requireUtf8={}, maximumBackgroundRequests={}, maximumInFlightRequests={}, useWriteBackCache={}, fuseMaxPages={}",
       mountPath,
       numThreads,
       caseSensitive,
@@ -995,8 +995,7 @@ FuseChannel::FuseChannel(
       maximumBackgroundRequests,
       maximumInFlightRequests,
       useWriteBackCache,
-      fuseMaxPages_,
-      ioUringQueueDepth_);
+      fuseMaxPages_);
   XCHECK_GE(configuredWorkerThreadCount_, 1ul);
   updateEffectiveWorkerThreadCount();
   installSignalHandler();
