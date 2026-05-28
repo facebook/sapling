@@ -77,13 +77,10 @@ impl<R: Repo> BookmarkCacheRepo for Arc<R> {
 }
 
 fn bookmarks_timeout() -> Duration {
-    const FALLBACK_TIMEOUT_SECS: u64 = 3 * 60;
-
     let timeout: u64 = justknobs::get_as::<u64>(
         "scm/mononoke_timeouts:repo_client_bookmarks_timeout_secs",
         None,
-    )
-    .unwrap_or(FALLBACK_TIMEOUT_SECS);
+    );
 
     Duration::from_secs(timeout)
 }
@@ -262,9 +259,7 @@ where
                 "scm/mononoke:disable_repo_client_warm_bookmarks_cache",
                 None,
                 None,
-            )
-            .unwrap_or_default()
-            {
+            ) {
                 return Some(self.repo.warm_bookmarks_cache());
             }
         }

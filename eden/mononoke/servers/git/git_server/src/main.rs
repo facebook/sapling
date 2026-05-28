@@ -106,8 +106,6 @@ define_stats! {
 
 const SERVICE_NAME: &str = "mononoke_git_server";
 const SM_CLEANUP_TIMEOUT_SECS: u64 = 60;
-/// The sampling rate for perf logging, default to 1 for no sampling
-const PERF_LOG_SAMPLING: u64 = 1;
 /// Configerator path for rate limiting config
 const CONFIGERATOR_RATE_LIMITING_CONFIG: &str = "scm/mononoke/ratelimiting/git_ratelimits";
 /// JustKnob to enable vectored writes for HTTP/1.1 connections.
@@ -123,15 +121,14 @@ const SHUTDOWN_GRACE_PERIOD_OVERRIDE: &str = "scm/mononoke:git_server_shutdown_g
 // More info: https://fburl.com/wiki/i78i3uzk
 const CACHE_OBJECT_SIZE: usize = 256 * 1024;
 
-struct DynamicGracePeriod {
-    fallback: Duration,
-}
+struct DynamicGracePeriod;
 
 impl ShutdownGracePeriod for DynamicGracePeriod {
     fn resolve(&self) -> Duration {
-        justknobs::get_as::<u64>(SHUTDOWN_GRACE_PERIOD_OVERRIDE, None)
-            .map(Duration::from_secs)
-            .unwrap_or(self.fallback)
+        Duration::from_secs(justknobs::get_as::<u64>(
+            SHUTDOWN_GRACE_PERIOD_OVERRIDE,
+            None,
+        ))
     }
 }
 
@@ -246,9 +243,7 @@ fn construct_memory_health_check(
             "scm/mononoke:git_server_enable_memory_health_check",
             None,
             None,
-        )
-        .expect("JustKnob scm/mononoke:git_server_enable_memory_health_check not found")
-        {
+        ) {
             return true;
         }
         let util_pct = match STATS::container_memory
@@ -412,8 +407,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             let capture_session_data = tls_session_data_log.is_some();
             let mut git_scuba = scuba.clone();
             let perf_sampling =
-                justknobs::get_as::<u64>("scm/mononoke:git_server_perf_log_sampling", None)
-                    .unwrap_or(PERF_LOG_SAMPLING);
+                justknobs::get_as::<u64>("scm/mononoke:git_server_perf_log_sampling", None);
             git_scuba.sampled(perf_sampling.try_into()?);
             let handler = MononokeHttpHandler::builder()
                 .add(TlsSessionDataMiddleware::new(tls_session_data_log)?)
@@ -493,8 +487,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
             let serve = async move {
                 let http1_vectored_writes =
-                    justknobs::eval(HTTP1_VECTORED_WRITES, None, Some(SERVICE_NAME))
-                        .unwrap_or(false);
+                    justknobs::eval(HTTP1_VECTORED_WRITES, None, Some(SERVICE_NAME));
 
                 if let Some(tls_acceptor) = tls_acceptor {
                     let connection_security_checker =
@@ -523,9 +516,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             Ok(())
         }
     };
-    let shutdown_grace_period = DynamicGracePeriod {
-        fallback: args.shutdown_timeout_args.shutdown_grace_period,
-    };
+    let shutdown_grace_period = DynamicGracePeriod;
     app.run_until_terminated(
         server,
         move || {

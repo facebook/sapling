@@ -166,17 +166,11 @@ pub(crate) async fn find_nested_restricted_roots(
 
 /// Check if the mock API should be used for this repo.
 pub(crate) fn use_mock_api(repo_name: &str) -> Result<bool, scs_errors::ServiceError> {
-    justknobs::eval(
+    Ok(justknobs::eval(
         "scm/mononoke:scs_restricted_paths_use_mock_api",
         None,
         Some(repo_name),
-    )
-    .map_err(|e| {
-        scs_errors::internal_error(format!(
-            "Failed to read JustKnob scm/mononoke:scs_restricted_paths_use_mock_api: {e}"
-        ))
-        .into()
-    })
+    ))
 }
 
 pub(crate) fn compute_path_coverage(

@@ -216,22 +216,7 @@ impl<'a> DiffRouter<'a> {
         }
 
         // Gate 2: Check JK - this is the kill switch in production
-        match justknobs::eval("scm/mononoke:remote_diff", None, Some(repo_name)) {
-            Ok(true) => {
-                // JK explicitly enabled - allow remote diff
-                true
-            }
-            Ok(false) => {
-                // JK explicitly disabled - this is the kill switch, always block
-                false
-            }
-            Err(_) => {
-                // JK not configured (e.g., in integration tests)
-                // Fall back to checking if remote_diff_config is present,
-                // which indicates explicit test configuration
-                self.remote_diff_config.is_some()
-            }
-        }
+        justknobs::eval("scm/mononoke:remote_diff", None, Some(repo_name))
     }
 
     /// Generate headerless unified diff between two files.
@@ -336,21 +321,11 @@ impl<'a> DiffRouter<'a> {
             .client_request_info()
             .map(|cri| cri.correlator.as_str());
 
-        match justknobs::eval(
+        justknobs::eval(
             "scm/mononoke:remote_diff_unary",
             correlator,
             Some(repo_name),
-        ) {
-            Ok(true) => true,
-            Ok(false) => false,
-            Err(_) => {
-                // JK not configured (e.g., in integration tests).
-                // Fall back to checking if remote_diff_config is present,
-                // which indicates explicit test configuration. Production
-                // is expected to have the JK present.
-                self.remote_diff_config.is_some()
-            }
-        }
+        )
     }
 
     /// Check if remote commit_compare should be used for this repo.
@@ -362,22 +337,7 @@ impl<'a> DiffRouter<'a> {
         }
 
         // Gate 2: Check JK - this is the kill switch in production
-        match justknobs::eval("scm/mononoke:remote_commit_compare", None, Some(repo_name)) {
-            Ok(true) => {
-                // JK explicitly enabled - allow remote commit_compare
-                true
-            }
-            Ok(false) => {
-                // JK explicitly disabled - this is the kill switch, always block
-                false
-            }
-            Err(_) => {
-                // JK not configured (e.g., in integration tests)
-                // Fall back to checking if remote_diff_config is present,
-                // which indicates explicit test configuration
-                self.remote_diff_config.is_some()
-            }
-        }
+        justknobs::eval("scm/mononoke:remote_commit_compare", None, Some(repo_name))
     }
 
     /// Forward a commit_compare request to the remote diff_service.
@@ -849,40 +809,6 @@ mod tests {
     }
 
     #[mononoke::fbinit_test]
-    fn test_should_use_remote_diff_jk_not_configured_no_config(fb: fbinit::FacebookInit) {
-        // When JK is not configured (returns error) and no config, should return false
-        let diff_options = RemoteDiffOptions {
-            diff_remotely: true,
-        };
-        let router = create_diff_router(fb, &diff_options, None);
-
-        // Don't use with_just_knobs - JK will fail to evaluate
-        let result = router.should_use_remote_diff("test_repo");
-        assert!(
-            !result,
-            "Should return false when JK is not configured and no config is present"
-        );
-    }
-
-    #[mononoke::fbinit_test]
-    fn test_should_use_remote_diff_jk_not_configured_with_config(fb: fbinit::FacebookInit) {
-        // When JK is not configured (returns error) but config is present,
-        // should return true (test/dev mode fallback)
-        let diff_options = RemoteDiffOptions {
-            diff_remotely: true,
-        };
-        let config = RemoteDiffConfig::HostPort("localhost:8080".to_string());
-        let router = create_diff_router(fb, &diff_options, Some(&config));
-
-        // Don't use with_just_knobs - JK will fail to evaluate
-        let result = router.should_use_remote_diff("test_repo");
-        assert!(
-            result,
-            "Should return true when JK is not configured but config is present (test mode)"
-        );
-    }
-
-    #[mononoke::fbinit_test]
     fn test_should_use_remote_commit_compare_cli_flag_disabled(fb: fbinit::FacebookInit) {
         let diff_options = RemoteDiffOptions {
             diff_remotely: false,
@@ -972,37 +898,6 @@ mod tests {
         assert!(
             result,
             "Should return true when CLI flag and JK are enabled with config"
-        );
-    }
-
-    #[mononoke::fbinit_test]
-    fn test_should_use_remote_commit_compare_jk_not_configured_no_config(fb: fbinit::FacebookInit) {
-        let diff_options = RemoteDiffOptions {
-            diff_remotely: true,
-        };
-        let router = create_diff_router(fb, &diff_options, None);
-
-        let result = router.should_use_remote_commit_compare("test_repo");
-        assert!(
-            !result,
-            "Should return false when JK is not configured and no config is present"
-        );
-    }
-
-    #[mononoke::fbinit_test]
-    fn test_should_use_remote_commit_compare_jk_not_configured_with_config(
-        fb: fbinit::FacebookInit,
-    ) {
-        let diff_options = RemoteDiffOptions {
-            diff_remotely: true,
-        };
-        let config = RemoteDiffConfig::HostPort("localhost:8080".to_string());
-        let router = create_diff_router(fb, &diff_options, Some(&config));
-
-        let result = router.should_use_remote_commit_compare("test_repo");
-        assert!(
-            result,
-            "Should return true when JK is not configured but config is present (test mode)"
         );
     }
 
@@ -1099,37 +994,6 @@ mod tests {
         assert!(
             result,
             "Should return true when CLI flag and JK are enabled with config"
-        );
-    }
-
-    #[mononoke::fbinit_test]
-    fn test_should_use_remote_diff_unary_jk_not_configured_no_config(fb: fbinit::FacebookInit) {
-        let diff_options = RemoteDiffOptions {
-            diff_remotely: true,
-        };
-        let router = create_diff_router(fb, &diff_options, None);
-        let ctx = CoreContext::test_mock(fb);
-
-        let result = router.should_use_remote_diff_unary(&ctx, "test_repo");
-        assert!(
-            !result,
-            "Should return false when JK is not configured and no config is present"
-        );
-    }
-
-    #[mononoke::fbinit_test]
-    fn test_should_use_remote_diff_unary_jk_not_configured_with_config(fb: fbinit::FacebookInit) {
-        let diff_options = RemoteDiffOptions {
-            diff_remotely: true,
-        };
-        let config = RemoteDiffConfig::HostPort("localhost:8080".to_string());
-        let router = create_diff_router(fb, &diff_options, Some(&config));
-        let ctx = CoreContext::test_mock(fb);
-
-        let result = router.should_use_remote_diff_unary(&ctx, "test_repo");
-        assert!(
-            result,
-            "Should return true when JK is not configured but config is present (test mode)"
         );
     }
 

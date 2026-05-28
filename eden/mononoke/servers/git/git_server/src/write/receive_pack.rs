@@ -62,7 +62,6 @@ const PACK_OK: &[u8] = b"unpack ok";
 const REF_OK: &str = "ok";
 const REF_ERR: &str = "ng";
 const REF_UPDATE_CONCURRENCY: usize = 20;
-const MAX_LFS_RETRIES: u32 = 2;
 const MAX_PACKETLINE_TEXT: usize = 65_000;
 
 pub async fn receive_pack(state: &mut State) -> Result<Response<Body>, HttpError> {
@@ -116,7 +115,7 @@ async fn push(
         let max_request_size = justknobs::get_as::<usize>(
             "scm/mononoke:git_server_max_packfile_size",
             Some(repo_name.as_str()),
-        )?;
+        );
 
         let packfile_size = pack_file.get_ref().len();
         if packfile_size > max_request_size {
@@ -137,9 +136,7 @@ async fn push(
             "scm/mononoke:git_server_enable_push_memory_tracking",
             None,
             Some(repo_name.as_str()),
-        )
-        .unwrap_or(false)
-        {
+        ) {
             let main_client_id = request_context
                 .ctx
                 .metadata()
@@ -210,8 +207,7 @@ async fn push(
                 )
             } else {
                 let max_lfs_tries =
-                    justknobs::get_as::<u32>("scm/mononoke:git_server_lfs_max_retries", None)
-                        .unwrap_or(MAX_LFS_RETRIES);
+                    justknobs::get_as::<u32>("scm/mononoke:git_server_lfs_max_retries", None);
                 let url_format = match git_ctx.upstream_lfs_url_format() {
                     crate::UpstreamLfsUrlFormat::Dewey => LfsServerUrlFormat::LegacyDewey,
                     crate::UpstreamLfsUrlFormat::MononokeGitLfs => {

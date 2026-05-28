@@ -278,7 +278,7 @@ async fn run_pushrebase(
                 "scm/mononoke:wireproto_force_local_pushrebase",
                 None,
                 Some(repo.repo_identity().name()),
-            )?;
+            );
 
             let outcome = normal_pushrebase(
                 ctx,

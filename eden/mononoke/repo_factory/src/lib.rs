@@ -1026,7 +1026,7 @@ impl RepoFactory {
             "scm/mononoke:enable_bonsai_tag_mapping_caching",
             None,
             Some(repo_name),
-        )? {
+        ) {
             match repo_event_publisher.subscribe_for_tag_updates(&repo_name.to_string()) {
                 Ok(update_notification_receiver) => {
                     let cached_bonsai_tag_mapping = CachedBonsaiTagMapping::new(
@@ -1114,7 +1114,7 @@ impl RepoFactory {
             "scm/mononoke:disable_git_symbolic_refs_caching",
             None,
             Some(repo_name),
-        )? {
+        ) {
             Ok(Arc::new(git_symbolic_refs))
         } else {
             let cached_git_symbolic_refs =
@@ -1227,7 +1227,7 @@ impl RepoFactory {
         let mutation_limit = justknobs::get_as::<usize>(
             "scm/mononoke:mutation_chain_length_limit",
             Some(repo_identity.name()),
-        )?;
+        );
         builder = builder.with_mutation_limit(mutation_limit);
         let hg_mutation_store = builder.with_repo_id(repo_identity.id());
 
@@ -1741,7 +1741,7 @@ impl RepoFactory {
             "scm/mononoke:use_local_wbc_for_git_repos",
             None,
             Some(repo_identity.name()),
-        )?;
+        );
 
         if use_local_for_git
             && repo_config.default_commit_identity_scheme == CommitIdentityScheme::GIT
@@ -1950,7 +1950,7 @@ impl RepoFactory {
         let caching = if let Some(cache_handler_factory) = self.cache_handler_factory("sql")? {
             const KEY_PREFIX: &str = "scm.mononoke.sql";
             const MC_CODEVER: u32 = 0;
-            let sitever = justknobs::get_as::<u32>("scm/mononoke_memcache_sitevers:sql", None)?;
+            let sitever = justknobs::get_as::<u32>("scm/mononoke_memcache_sitevers:sql", None);
             Some(sql_query_config::CachingConfig {
                 keygen: KeyGen::new(KEY_PREFIX, MC_CODEVER, sitever),
                 cache_handler_factory,
