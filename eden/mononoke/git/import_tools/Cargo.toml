@@ -36,6 +36,7 @@ gix-object = "0.60.0"
 http = "1.4.0"
 http-body-util = "0.1.0"
 hyper-openssl = { version = "0.10", features = ["client-legacy", "tokio"] }
+hyper-proxy2 = { version = "0.1", features = ["rustls"], default-features = false }
 hyper-util = { version = "0.1.20", features = ["client-legacy", "http1", "http2", "server-auto", "service", "tokio"] }
 lfs_protocol = { version = "0.1.0", path = "../../common/lfs_protocol" }
 linked-hash-map = { version = "0.5", features = ["serde_impl"] }

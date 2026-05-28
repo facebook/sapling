@@ -36,6 +36,9 @@ use http::Uri;
 use http_body_util::BodyExt as _;
 use http_body_util::Full;
 use hyper_openssl::client::legacy::HttpsConnector;
+use hyper_proxy2::Intercept;
+use hyper_proxy2::Proxy;
+use hyper_proxy2::ProxyConnector;
 use hyper_util::client::legacy::Client;
 use hyper_util::client::legacy::connect::HttpConnector;
 use hyper_util::rt::TokioExecutor;
@@ -72,6 +75,13 @@ use tracing::warn;
 fn build_https_client(
     tls_args: Option<TLSArgs>,
 ) -> Result<Client<HttpsConnector<HttpConnector>, Full<Bytes>>, Error> {
+    let connector = build_https_connector(tls_args)?;
+    Ok(Client::builder(TokioExecutor::new()).build(connector))
+}
+
+fn build_https_connector(
+    tls_args: Option<TLSArgs>,
+) -> Result<HttpsConnector<HttpConnector>, Error> {
     let mut ssl_connector = SslConnector::builder(SslMethod::tls_client())?;
     if let Some(tls_args) = tls_args {
         ssl_connector.set_ca_file(tls_args.tls_ca)?;
@@ -80,9 +90,33 @@ fn build_https_client(
     };
     let mut http_connector = HttpConnector::new();
     http_connector.enforce_http(false);
-    let connector =
-        HttpsConnector::with_connector(http_connector, ssl_connector).map_err(Error::from)?;
-    Ok(Client::builder(TokioExecutor::new()).build(connector))
+    HttpsConnector::with_connector(http_connector, ssl_connector).map_err(Error::from)
+}
+
+/// Builds an HTTPS client for the GitHub LFS path, optionally tunneling
+/// HTTPS through an `http://...` forward proxy via CONNECT. Required when
+/// running inside Meta's prod fleet (e.g. Sandcastle workers), where direct
+/// outbound traffic to github.com is blocked and must go through
+/// `http://fwdproxy:8080`. When `proxy_url` is `None` the proxy connector
+/// is configured with `Intercept::None`, which makes it a no-op pass-through
+/// over the underlying `HttpsConnector` (the only reason it's still wrapped
+/// is to keep one client type regardless of whether a proxy is configured).
+fn build_github_https_client(
+    proxy_url: Option<String>,
+) -> Result<Client<ProxyConnector<HttpsConnector<HttpConnector>>, Full<Bytes>>, Error> {
+    let inner = build_https_connector(None)?;
+    let (intercept, proxy_uri) = match proxy_url {
+        Some(url) => {
+            let uri = url
+                .parse::<Uri>()
+                .with_context(|| format!("parsing --https-proxy URL {url}"))?;
+            (Intercept::All, uri)
+        }
+        None => (Intercept::None, "http://unused.invalid".parse::<Uri>()?),
+    };
+    let proxy_connector =
+        ProxyConnector::from_proxy_unsecured(inner, Proxy::new(intercept, proxy_uri));
+    Ok(Client::builder(TokioExecutor::new()).build(proxy_connector))
 }
 
 /// URL pattern used by the upstream LFS server to serve a single object keyed by SHA256.
@@ -187,8 +221,10 @@ pub struct GitHubLfs {
     /// GitHub's per-installation rate limits when importing wide trees).
     conn_limit_sem: Option<Arc<Semaphore>>,
     /// HTTPS client built with the system trust store (no Meta mTLS) so it
-    /// can talk to github.com.
-    client: Client<HttpsConnector<HttpConnector>, Full<Bytes>>,
+    /// can talk to github.com, optionally tunneling through an `http://...`
+    /// forward proxy via CONNECT (required from Sandcastle / prod workers
+    /// where direct outbound traffic to github.com is blocked).
+    client: Client<ProxyConnector<HttpsConnector<HttpConnector>>, Full<Bytes>>,
 }
 
 impl fmt::Debug for GitHubLfs {
@@ -303,19 +339,22 @@ impl GitImportLfs {
     /// Build a `GitImportLfs` that fetches LFS objects from a GitHub LFS Batch
     /// API endpoint authenticated with a GitHub App installation token read
     /// from `token_file`. The HTTPS client is built with the system trust
-    /// store (not Meta mTLS) since it talks to github.com. The token is read
-    /// lazily on first use and re-read from disk after a 401/403, so an
-    /// out-of-process refresher can rotate the file while gitimport is
-    /// running (installation tokens expire after ~1h; large imports take
-    /// several hours).
+    /// store (not Meta mTLS) since it talks to github.com, optionally
+    /// tunneling through `https_proxy_url` via HTTP CONNECT (required from
+    /// Sandcastle / prod workers where direct outbound traffic to github.com
+    /// is blocked). The token is read lazily on first use and re-read from
+    /// disk after a 401/403, so an out-of-process refresher can rotate the
+    /// file while gitimport is running (installation tokens expire after
+    /// ~1h; large imports take several hours).
     pub fn new_github(
         batch_url: String,
         token_file: PathBuf,
+        https_proxy_url: Option<String>,
         allow_not_found: bool,
         max_attempts: u32,
         conn_limit: Option<usize>,
     ) -> Result<Self, Error> {
-        let client = build_https_client(None)?;
+        let client = build_github_https_client(https_proxy_url)?;
         let github = GitHubLfs {
             batch_url,
             token_file,

@@ -27,6 +27,7 @@ rust_library(
         "fbsource//third-party/rust:http",
         "fbsource//third-party/rust:http-body-util",
         "fbsource//third-party/rust:hyper-openssl",
+        "fbsource//third-party/rust:hyper-proxy2",
         "fbsource//third-party/rust:hyper-util",
         "fbsource//third-party/rust:linked-hash-map",
         "fbsource//third-party/rust:openssl",
