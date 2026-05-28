@@ -107,9 +107,12 @@ where
             ]);
         let output = spawner.output(&mut command).await?;
 
-        if !output.status().success() || !output.stderr().is_empty() {
+        // Only treat a non-zero exit status as failure. `hg log` may write to stderr on
+        // success (e.g. when `SL_LOG` is set in the caller's environment).
+        if !output.status().success() {
             Err(SaplingError::Other(format!(
-                "Failed to obtain mergebase:\n{}",
+                "Failed to obtain mergebase (exit status {:?}):\n{}",
+                output.status().code(),
                 String::from_utf8(output.stderr().to_vec())
                     .unwrap_or("Failed to parse stderr".to_string())
             )))
@@ -154,6 +157,7 @@ fn parse_mergebase_details(mergebase_details: Vec<u8>) -> Result<Option<Mergebas
 mod tests {
     use crate::mergebase::*;
     use crate::utils::tests::get_mock_spawner;
+    use crate::utils::tests::get_mock_spawner_with_stderr;
 
     // the format is {node}\n{date}\n{global_rev}
     const DETAILS: &str = "0000111122223333444455556666777788889999\n1234567890.012345\n9876543210";
@@ -189,6 +193,58 @@ mod tests {
         assert_eq!(details.timestamp, expected.timestamp);
         assert_eq!(details.global_rev, expected.global_rev);
 
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_mergebase_details_succeeds_with_non_empty_stderr() -> Result<()> {
+        // A successful `hg log` can still write to stderr — for example when the caller's
+        // environment sets `SL_LOG=info`, or when sapling emits routine WARN lines like
+        // the `cats` preminted-key fallback. Exit status is the source of truth; non-empty
+        // stderr alone must NOT be treated as failure.
+        let stdout = DETAILS.to_owned();
+        let stderr = "2026-05-27T10:19:36Z  INFO clienttelemetry: client_entry_point=\"sapling\"\n\
+                      2026-05-27T10:19:36Z  WARN run: cats: wanted-key not found, falling back\n";
+        let spawner = get_mock_spawner_with_stderr(
+            get_sapling_executable_path(),
+            Some((
+                0,
+                Some(stdout.as_bytes().to_vec()),
+                Some(stderr.as_bytes().to_vec()),
+            )),
+        );
+
+        let details = get_mergebase_details_impl(&spawner, ".", COMMIT_ID, MERGEBASE_WITH)
+            .await?
+            .expect("mergebase should parse successfully despite stderr output");
+        assert_eq!(details.mergebase, COMMIT_ID);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_mergebase_details_errors_on_non_zero_exit() -> Result<()> {
+        // The mirror case: real sapling failures (non-zero exit) must still surface as
+        // an error, with the exit code and stderr included in the message so the caller
+        // can diagnose. Pick a different commit/mergebase pair than the success test to
+        // bypass the module-level LRU cache.
+        let stderr = "abort: unknown revision\n";
+        let spawner = get_mock_spawner_with_stderr(
+            get_sapling_executable_path(),
+            Some((255, None, Some(stderr.as_bytes().to_vec()))),
+        );
+
+        let err = get_mergebase_details_impl(&spawner, ".", "bogus-commit", "bogus-mergebase")
+            .await
+            .expect_err("non-zero exit must propagate as an error");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("Failed to obtain mergebase"),
+            "missing context in error: {msg}"
+        );
+        assert!(
+            msg.contains("abort: unknown revision"),
+            "stderr missing from error: {msg}"
+        );
         Ok(())
     }
 

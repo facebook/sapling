@@ -219,7 +219,7 @@ pub(crate) mod tests {
         MockCommandSpawner::with_callback(move |cmd| match cmd.program.to_str() {
             Some(cmd_program) if cmd_program == program && output.is_some() => {
                 let (exit_code, stdout_lines) = output.clone().unwrap();
-                Ok(mock_child(exit_code, stdout_lines))
+                Ok(mock_child(exit_code, stdout_lines, None))
             }
             program => Err(Error::other(anyhow::anyhow!(
                 "Not expected program: {:?}",
@@ -228,14 +228,44 @@ pub(crate) mod tests {
         })
     }
 
-    fn mock_child(exit_code: i32, stdout_lines: Option<Vec<u8>>) -> MockChild {
+    pub(crate) fn get_mock_spawner_with_stderr(
+        program: String,
+        output: Option<(i32, Option<Vec<u8>>, Option<Vec<u8>>)>,
+    ) -> MockCommandSpawner {
+        MockCommandSpawner::with_callback(move |cmd| match cmd.program.to_str() {
+            Some(cmd_program) if cmd_program == program && output.is_some() => {
+                let (exit_code, stdout_lines, stderr_lines) = output.clone().unwrap();
+                Ok(mock_child(exit_code, stdout_lines, stderr_lines))
+            }
+            program => Err(Error::other(anyhow::anyhow!(
+                "Not expected program: {:?}",
+                program
+            ))),
+        })
+    }
+
+    fn mock_child(
+        exit_code: i32,
+        stdout_lines: Option<Vec<u8>>,
+        stderr_lines: Option<Vec<u8>>,
+    ) -> MockChild {
         let handle = MockChildHandle::new();
         handle.set_status(Ok(Some(MockExitStatus::new(Some(exit_code)))));
-        if let Some(stdout_lines) = stdout_lines {
-            let stdout = MockIoBuilder::new().read(&stdout_lines).build();
-            MockChild::with_stdio(handle, Some(io::sink()), Some(stdout), Some(io::empty()))
-        } else {
-            MockChild::new(handle)
+        match (stdout_lines, stderr_lines) {
+            (None, None) => MockChild::new(handle),
+            (Some(stdout_lines), None) => {
+                let stdout = MockIoBuilder::new().read(&stdout_lines).build();
+                MockChild::with_stdio(handle, Some(io::sink()), Some(stdout), Some(io::empty()))
+            }
+            (None, Some(stderr_lines)) => {
+                let stderr = MockIoBuilder::new().read(&stderr_lines).build();
+                MockChild::with_stdio(handle, Some(io::sink()), Some(io::empty()), Some(stderr))
+            }
+            (Some(stdout_lines), Some(stderr_lines)) => {
+                let stdout = MockIoBuilder::new().read(&stdout_lines).build();
+                let stderr = MockIoBuilder::new().read(&stderr_lines).build();
+                MockChild::with_stdio(handle, Some(io::sink()), Some(stdout), Some(stderr))
+            }
         }
     }
 }
