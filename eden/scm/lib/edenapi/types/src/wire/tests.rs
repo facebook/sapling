@@ -6,11 +6,10 @@
  */
 
 pub(crate) mod support {
-    pub(crate) use insta_ext;
-    pub(crate) use paste::paste;
     pub(crate) use quickcheck::Arbitrary;
     pub(crate) use quickcheck::Gen;
     pub(crate) use quickcheck::quickcheck;
+    pub(crate) use serde_json;
 
     pub(crate) use crate::wire::ToApi;
     pub(crate) use crate::wire::ToWire;
@@ -24,27 +23,36 @@ pub(crate) mod support {
         let roundtrip = wire.to_api().unwrap();
         original == roundtrip
     }
-}
 
-macro_rules! auto_wire_tests {
-    ($wire: ident $(,)?) => {
-        $crate::wire::tests::support::paste!{
-            #[test]
-            fn [<auto_test_ $wire:snake>]() {
-                use $crate::wire::tests::support::*;
-                let mut g = Gen::from_seed(42);
-                g.set_size(5);
-                insta_ext::assert_json!($wire::arbitrary(&mut g), [<auto_test_ $wire:snake>]);
+    fn json_hash(json: &str) -> u64 {
+        json.bytes().fold(0xcbf29ce484222325, |hash, byte| {
+            hash.wrapping_mul(0x100000001b3) ^ u64::from(byte)
+        })
+    }
 
-                type Api = <$wire as ToApi>::Api;
-                println!("Checking wire roundtrip");
-                quickcheck(check_wire_roundtrip::<Api> as fn(Api) -> bool);
-            }
-        }
-    };
-    ($first: ident, $($rest: ident),* $(,)?) => {
-        auto_wire_tests!($first);
-        auto_wire_tests!($($rest),*);
+    pub(crate) fn wire_json_hash<Wire>() -> u64
+    where
+        Wire: ToApi + Arbitrary + serde::Serialize,
+        <Wire as ToApi>::Api: ToWire + Clone + PartialEq + Arbitrary + std::fmt::Debug + 'static,
+        <<Wire as ToApi>::Api as ToWire>::Wire: ToApi,
+        <<<Wire as ToApi>::Api as ToWire>::Wire as ToApi>::Error: std::fmt::Debug,
+    {
+        let mut g = Gen::from_seed(42);
+        g.set_size(5);
+        let json = serde_json::to_string(&Wire::arbitrary(&mut g)).unwrap();
+
+        println!("Checking wire roundtrip");
+        quickcheck(
+            check_wire_roundtrip::<<Wire as ToApi>::Api> as fn(<Wire as ToApi>::Api) -> bool,
+        );
+
+        json_hash(&json)
     }
 }
-pub(crate) use auto_wire_tests;
+
+macro_rules! wire_json_hashes {
+    ($($wire: ty),* $(,)?) => {{
+        vec![$($crate::wire::tests::support::wire_json_hash::<$wire>()),*]
+    }};
+}
+pub(crate) use wire_json_hashes;

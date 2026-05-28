@@ -130,11 +130,21 @@ impl ToApi for WireHistoryResponseChunk {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::wire::tests::auto_wire_tests;
+    use crate::wire::tests::wire_json_hashes;
 
-    auto_wire_tests!(
-        WireHistoryRequest,
-        WireWireHistoryEntry,
-        WireHistoryResponseChunk,
-    );
+    #[test]
+    fn test_wire_json() {
+        assert_eq!(
+            wire_json_hashes![
+                WireHistoryRequest,
+                WireWireHistoryEntry,
+                WireHistoryResponseChunk,
+            ],
+            [
+                13047656530226210317,
+                10709635955301273020,
+                5233514993242930271,
+            ]
+        );
+    }
 }

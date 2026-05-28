@@ -136,7 +136,13 @@ impl Arbitrary for WireCloneData {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::wire::tests::auto_wire_tests;
+    use crate::wire::tests::wire_json_hashes;
 
-    auto_wire_tests!(WireCloneData, WireFlatSegment);
+    #[test]
+    fn test_wire_json() {
+        assert_eq!(
+            wire_json_hashes![WireCloneData, WireFlatSegment,],
+            [14663808847648480625, 5115227637285670758,]
+        );
+    }
 }

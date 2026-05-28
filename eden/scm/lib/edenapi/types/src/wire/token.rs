@@ -15,7 +15,13 @@ pub use crate::token::WireUploadTokenSignature;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::wire::tests::auto_wire_tests;
+    use crate::wire::tests::wire_json_hashes;
 
-    auto_wire_tests!(WireUploadToken, WireIndexableId);
+    #[test]
+    fn test_wire_json() {
+        assert_eq!(
+            wire_json_hashes![WireUploadToken, WireIndexableId,],
+            [3037370629790314427, 85862624571164977,]
+        );
+    }
 }

@@ -36,7 +36,6 @@ thiserror = "2.0.18"
 
 [dev-dependencies]
 quickcheck_macros = "1.2.0"
-sapling-insta_ext = { version = "0.1.0", path = "../../insta_ext" }
 serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 
 [features]

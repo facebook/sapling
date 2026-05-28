@@ -29,12 +29,23 @@ wire_hash! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::wire::tests::auto_wire_tests;
+    use crate::wire::tests::wire_json_hashes;
 
-    auto_wire_tests!(
-        WireAnyId,
-        WireLookupRequest,
-        WireLookupResponse,
-        WireLookupResult,
-    );
+    #[test]
+    fn test_wire_json() {
+        assert_eq!(
+            wire_json_hashes![
+                WireAnyId,
+                WireLookupRequest,
+                WireLookupResponse,
+                WireLookupResult,
+            ],
+            [
+                18016271001948764658,
+                544339036379794663,
+                3126519700045157283,
+                10777414199575108374,
+            ]
+        );
+    }
 }

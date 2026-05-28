@@ -315,16 +315,31 @@ impl Arbitrary for WireTreeEntry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::wire::tests::auto_wire_tests;
+    use crate::wire::tests::wire_json_hashes;
 
-    auto_wire_tests!(
-        WireTreeAttributesRequest,
-        WireTreeRequest,
-        WireTreeEntry,
-        WireUploadTreeResponse,
-        WireCheckManifestPermissionRequest,
-        WireCheckManifestPermissionResponse,
-        WireCheckPathPermissionRequest,
-        WireCheckPathPermissionResponse
-    );
+    #[test]
+    fn test_wire_json() {
+        assert_eq!(
+            wire_json_hashes![
+                WireTreeAttributesRequest,
+                WireTreeRequest,
+                WireTreeEntry,
+                WireUploadTreeResponse,
+                WireCheckManifestPermissionRequest,
+                WireCheckManifestPermissionResponse,
+                WireCheckPathPermissionRequest,
+                WireCheckPathPermissionResponse,
+            ],
+            [
+                6351037083219284408,
+                13668626468130363555,
+                378625067962416767,
+                10777414199575108374,
+                14438020693941555678,
+                13391161431290265368,
+                15997828792110433715,
+                7907248036226328353,
+            ]
+        );
+    }
 }

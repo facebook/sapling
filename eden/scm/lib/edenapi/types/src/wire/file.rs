@@ -152,12 +152,23 @@ impl Arbitrary for WireFileEntry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::wire::tests::auto_wire_tests;
+    use crate::wire::tests::wire_json_hashes;
 
-    auto_wire_tests!(
-        WireFileRequest,
-        WireFileEntry,
-        WireUploadHgFilenodeRequest,
-        WireUploadTokensResponse
-    );
+    #[test]
+    fn test_wire_json() {
+        assert_eq!(
+            wire_json_hashes![
+                WireFileRequest,
+                WireFileEntry,
+                WireUploadHgFilenodeRequest,
+                WireUploadTokensResponse,
+            ],
+            [
+                15607204096548501105,
+                9887507261823696907,
+                729078608399898522,
+                2232271818848477927,
+            ]
+        );
+    }
 }

@@ -63,9 +63,12 @@ where
 mod tests {
     use super::*;
     use crate::wire::WireHgId;
-    use crate::wire::tests::auto_wire_tests;
+    use crate::wire::tests::wire_json_hashes;
 
     type WireHgIdBatch = WireBatch<WireHgId>;
 
-    auto_wire_tests!(WireHgIdBatch);
+    #[test]
+    fn test_wire_json() {
+        assert_eq!(wire_json_hashes![WireHgIdBatch,], [14438020693941555678,]);
+    }
 }

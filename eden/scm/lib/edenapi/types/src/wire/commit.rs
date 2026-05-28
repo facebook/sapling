@@ -653,27 +653,53 @@ impl Arbitrary for WireEphemeralExtendResponse {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::wire::tests::auto_wire_tests;
+    use crate::wire::tests::wire_json_hashes;
 
-    auto_wire_tests!(
-        WireCommitLocation,
-        WireCommitLocationToHashRequest,
-        WireCommitLocationToHashResponse,
-        WireCommitLocationToHashRequestBatch,
-        WireCommitHashToLocationRequestBatch,
-        WireCommitHashToLocationResponse,
-        WireCommitHashLookupRequest,
-        WireCommitHashLookupResponse,
-        WireEphemeralExtendRequest,
-        WireEphemeralExtendResponse,
-        WireEphemeralPrepareRequest,
-        WireEphemeralPrepareResponse,
-        WireCommitGraphRequest,
-        WireUploadHgChangeset,
-        WireUploadHgChangesetsRequest,
-        WireFetchSnapshotRequest,
-        WireFetchSnapshotResponse,
-        WireCommitMutationsRequest,
-        WireCommitMutationsResponse,
-    );
+    #[test]
+    fn test_wire_json() {
+        assert_eq!(
+            wire_json_hashes![
+                WireCommitLocation,
+                WireCommitLocationToHashRequest,
+                WireCommitLocationToHashResponse,
+                WireCommitLocationToHashRequestBatch,
+                WireCommitHashToLocationRequestBatch,
+                WireCommitHashToLocationResponse,
+                WireCommitHashLookupRequest,
+                WireCommitHashLookupResponse,
+                WireEphemeralExtendRequest,
+                WireEphemeralExtendResponse,
+                WireEphemeralPrepareRequest,
+                WireEphemeralPrepareResponse,
+                WireCommitGraphRequest,
+                WireUploadHgChangeset,
+                WireUploadHgChangesetsRequest,
+                WireFetchSnapshotRequest,
+                WireFetchSnapshotResponse,
+                WireCommitMutationsRequest,
+                WireCommitMutationsResponse,
+            ],
+            [
+                14668431686654819669,
+                17327367442177098230,
+                37631670223816880,
+                508429652872430453,
+                291522140365080583,
+                14416255146983088941,
+                17611070785802035643,
+                4419178910808353550,
+                11243813877635040088,
+                16686205637097237691,
+                1091232497517608820,
+                17628324369677378451,
+                18108065169278241603,
+                6899135680986097919,
+                2844421648780328168,
+                1869834113905546902,
+                7834989376191193333,
+                14438020693941555678,
+                15860719775843700771,
+            ]
+        );
+    }
 }

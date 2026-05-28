@@ -50,7 +50,17 @@ wire_hash! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::wire::tests::auto_wire_tests;
+    use crate::wire::tests::wire_json_hashes;
 
-    auto_wire_tests!(WireFileMetadata, WireTreeAuxData, WireAnyFileContentId);
+    #[test]
+    fn test_wire_json() {
+        assert_eq!(
+            wire_json_hashes![WireFileMetadata, WireTreeAuxData, WireAnyFileContentId,],
+            [
+                15806109187469357706,
+                739324447226664920,
+                6030323533477365567,
+            ]
+        );
+    }
 }

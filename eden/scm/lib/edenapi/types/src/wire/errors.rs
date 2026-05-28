@@ -102,7 +102,10 @@ impl quickcheck::Arbitrary for WireError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::wire::tests::auto_wire_tests;
+    use crate::wire::tests::wire_json_hashes;
 
-    auto_wire_tests!(WireError);
+    #[test]
+    fn test_wire_json() {
+        assert_eq!(wire_json_hashes![WireError,], [4161343590350686482,]);
+    }
 }
