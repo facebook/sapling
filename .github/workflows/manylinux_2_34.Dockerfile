@@ -83,11 +83,6 @@ PYEOF
 RUN /opt/_internal/build_scripts/build-cpython.sh x x \
     $($PYTHON_SYS_EXECUTABLE -c "import sys; print('.'.join(map(str, sys.version_info[:3])))")
 
-# Python related build dependencies.
-# - Used by setup.py
-RUN /opt/python/cp312-cp312/bin/pip install setuptools
-
-
 # Node.js interpreter.
 # - Relatively up-to-date node.js. The dnf nodejs is 4+yrs older.
 RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
