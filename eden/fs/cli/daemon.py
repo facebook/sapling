@@ -68,7 +68,7 @@ def _build_systemd_run_cmd(edenfs_cmd: List[str], eden_dir: str) -> List[str]:
         "--quiet",
         "--collect",
         "--property=Delegate=yes",
-        "--slice=eden",
+        "--slice=edenfs",
         f"--unit={unit_name}",
     ] + edenfs_cmd
 
