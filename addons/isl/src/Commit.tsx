@@ -26,6 +26,7 @@ import {notEmpty, nullthrows} from 'shared/utils';
 import {AllBookmarksTruncated, Bookmark, Bookmarks, createBookmarkAtCommit} from './Bookmark';
 import {openBrowseUrlForHash, supportsBrowseUrlForHash} from './BrowseRepo';
 import css from './Commit.module.css';
+import {cloudSyncStateAtom} from './CommitCloud';
 import {hasUnsavedEditedCommitMessage} from './CommitInfoView/CommitInfoState';
 import {showComparison} from './ComparisonView/atoms';
 import {Row} from './ComponentUtils';
@@ -65,6 +66,7 @@ import {
 } from './jotaiUtils';
 import {CONFLICT_SIDE_LABELS} from './mergeConflicts/consts';
 import {getAmendToOperation, isAmendToAllowedForCommit} from './operationUtils';
+import {CommitCloudMoveCommitsOperation} from './operations/CommitCloudMoveCommitsOperation';
 import {GotoOperation} from './operations/GotoOperation';
 import {HideOperation} from './operations/HideOperation';
 import {RebaseOperation} from './operations/RebaseOperation';
@@ -477,6 +479,77 @@ export const Commit = memo(
               ),
             loggingLabel: 'Hide Commit',
           });
+        }
+      }
+      if (!isPublic && !actionsPrevented && !inConflicts) {
+        // Render "Move to workspace …" only when cloud is enabled, the
+        // current workspace is known, and at least one other workspace
+        // exists to target. `sl cloud move` itself follows descendants
+        // and bookmarks, so each per-destination submenu item dispatches
+        // exactly the hashes the user has selected — no separate
+        // stack-aware branching is needed beyond multi-select.
+        const cloudSyncState = readAtom(cloudSyncStateAtom);
+        const cloud = cloudSyncState?.value;
+        const currentWorkspace = cloud?.currentWorkspace;
+        const workspaceChoices = cloud?.workspaceChoices;
+        if (
+          cloud != null &&
+          cloud.isDisabled !== true &&
+          currentWorkspace != null &&
+          workspaceChoices != null &&
+          workspaceChoices.length >= 2
+        ) {
+          const destinations = workspaceChoices.filter(ws => ws !== currentWorkspace);
+          if (destinations.length > 0) {
+            // Multi-select: when the right-clicked commit is part of the
+            // current smartlog selection (>1 commits), the operation
+            // moves the whole selection in one `sl cloud move` invocation.
+            // Mirrors the sibling Hide flow above (`isHideMultiSelect`)
+            // so the two context-menu items behave consistently — without
+            // this, the user would right-click on one of N selected
+            // commits, see no visible cue that the menu only acts on
+            // that single commit, and silently lose the other N-1
+            // commits' moves (they'd stay in the source workspace).
+            //
+            // Filter to draft-phase only on the multi-select path. The
+            // outer `!isPublic` gate at the submenu level already
+            // protects the right-clicked commit; this filter extends
+            // the same guarantee to the rest of the selection. `sl
+            // cloud move` rejects public commits server-side, so
+            // dispatching them in a mixed batch would either fail the
+            // whole batch (no commits moved) or silently skip them
+            // (depending on the sl version) — both bad UX. Filtering
+            // client-side makes the behavior deterministic: only
+            // drafts get moved, public commits stay put.
+            const moveSelectedInfos = readAtom(selectedCommitInfos);
+            const isMoveMultiSelect =
+              moveSelectedInfos.length > 1 && moveSelectedInfos.some(c => c.hash === commit.hash);
+            // Use `latestSuccessorUnlessExplicitlyObsolete` instead of raw
+            // hashes so queued operations that mutate these commits before
+            // `cloud move` runs are followed to their successor — except
+            // when the user right-clicked a visibly-obsolete commit, in
+            // which case we lock the action to the exact hash they saw.
+            // Mirrors the sibling `HideOperation` callsite above.
+            const sourcesToMove = isMoveMultiSelect
+              ? moveSelectedInfos
+                  .filter(c => c.phase !== 'public')
+                  .map(c => latestSuccessorUnlessExplicitlyObsolete(c))
+              : [latestSuccessorUnlessExplicitlyObsolete(commit)];
+            items.push({
+              label: isMoveMultiSelect ? (
+                <T replace={{$count: sourcesToMove.length}}>Move $count Commits to workspace</T>
+              ) : (
+                <T>Move to workspace</T>
+              ),
+              type: 'submenu',
+              children: destinations.map(ws => ({
+                label: ws,
+                onClick: () => {
+                  runOperation(new CommitCloudMoveCommitsOperation(ws, sourcesToMove));
+                },
+              })),
+            });
+          }
         }
       }
       if (!actionsPrevented && !commit.isDot) {

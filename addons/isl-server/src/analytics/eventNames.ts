@@ -43,6 +43,7 @@ export type TrackEventName =
   | 'CommitCloudSyncBackupStatusCommand'
   | 'CommitCloudChangeWorkspaceOperation'
   | 'CommitCloudCreateWorkspaceOperation'
+  | 'CommitCloudMoveCommitsOperation'
   | 'CommitCloudSyncOperation'
   | 'CreateEmptyInitialCommit'
   | 'ClickGotoTimeButton'

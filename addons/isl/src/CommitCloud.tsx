@@ -31,7 +31,7 @@ import {CommitPreview, dagWithPreviews, useMostRecentPendingOperation} from './p
 import {RelativeDate} from './relativeDate';
 import {repoRootAndCwd} from './repositoryData';
 import {CommitCloudBackupStatus} from './types';
-import {registerDisposable} from './utils';
+import {registerCleanup, registerDisposable} from './utils';
 
 import './CommitCloud.css';
 
@@ -50,13 +50,26 @@ export const commitCloudEnabledAtom = atom(async (get): Promise<boolean> => {
   return enabled;
 });
 
-const cloudSyncStateAtom = atom<Result<CommitCloudSyncState> | null>(null);
+export const cloudSyncStateAtom = atom<Result<CommitCloudSyncState> | null>(null);
 
 registerDisposable(
   cloudSyncStateAtom,
   serverAPI.onMessageOfType('fetchedCommitCloudState', event => {
     writeAtom(cloudSyncStateAtom, event.state);
   }),
+  import.meta.hot,
+);
+
+// Trigger an initial fetch on every repo connect (and reconnect, and cwd
+// change) so consumers outside the Download Commits dropdown — e.g. the
+// commit context-menu "Move to workspace" submenu — can read a populated
+// state without first requiring the user to open that dropdown.
+// `onSetup` fires exactly once per setup transition by design, matching
+// the precedent used elsewhere in this codebase for connect-time fetches
+// (serverAPIState.ts, CommitInfoState.tsx, codeReview/CodeReviewInfo.ts).
+registerCleanup(
+  cloudSyncStateAtom,
+  serverAPI.onSetup(() => serverAPI.postMessage({type: 'fetchCommitCloudState'})),
   import.meta.hot,
 );
 
