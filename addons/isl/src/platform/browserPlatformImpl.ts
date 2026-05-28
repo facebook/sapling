@@ -36,6 +36,8 @@ export const makeBrowserLikePlatformImpl = (platformName: PlatformName): Platfor
       ? new URLSearchParams(window.location.search).getAll('extraCwd')
       : [];
   const initialUrlParams = computeInitialParams(platformName === 'browser');
+  const themeParam = initialUrlParams.get('theme');
+  const themeOverride = themeParam === 'light' || themeParam === 'dark' ? themeParam : undefined;
   return {
     platformName,
     confirm: (message: string, details?: string) => {
@@ -104,6 +106,11 @@ export const makeBrowserLikePlatformImpl = (platformName: PlatformName): Platfor
     },
 
     clipboardCopy: browserClipboardCopy,
+
+    theme: themeOverride && {
+      getTheme: () => themeOverride,
+      onDidChangeTheme: () => ({dispose: () => {}}),
+    },
 
     messageBus: new LocalWebSocketEventBus(
       process.env.NODE_ENV === 'development'
