@@ -20,7 +20,6 @@ import datetime
 import glob
 import hashlib
 import os
-import platform
 import shutil
 import struct
 import subprocess
@@ -38,6 +37,8 @@ CARGO_CONFIG_DIR = OUT / "cargo_config"
 HGMAIN_MANIFEST = ROOT / "exec" / "hgmain" / "Cargo.toml"
 _VCVARS_ENV = None
 BUILD_MODES = ("oss", "fbsource", "getdeps")
+RUST_BUILD_TOOLS = ("cargo", "buck")
+BUCK_SL_TARGET = "fbcode//eden/scm:hg"
 
 
 def status(args, message):
@@ -422,7 +423,7 @@ def cargo_env(args):
     env["SAPLING_VERSION_HASH"] = version_hash(args.version)
     env["LIB_DIRS"] = str((OUT / "temp").resolve())
     env.pop("HOMEBREW_CCCFG", None)
-    if platform.system() == "Darwin" and "OPENSSL_DIR" not in env:
+    if sys.platform == "darwin" and "OPENSSL_DIR" not in env:
         openssl = Path("/opt/homebrew/opt/openssl")
         if openssl.is_dir():
             env["OPENSSL_DIR"] = str(openssl)
@@ -444,6 +445,22 @@ def cargo_output_path(args):
     return Path(*parts) / f"hgmain{exe}"
 
 
+def buck_build_mode():
+    if os.name == "nt":
+        return "@fbcode//mode/opt-win"
+    if sys.platform == "darwin":
+        return "@fbcode//mode/opt-mac"
+    return "@fbcode//mode/opt"
+
+
+def buck_output_path(output_text):
+    for line in output_text.splitlines():
+        parts = line.split()
+        if len(parts) == 2 and parts[0] == BUCK_SL_TARGET:
+            return (FBSOURCE / parts[1]).resolve()
+    raise RuntimeError(f"buck build did not print an output path for {BUCK_SL_TARGET}")
+
+
 def copy_artifact(src, dest):
     dest.parent.mkdir(parents=True, exist_ok=True)
     if dest.exists() or dest.is_symlink():
@@ -454,7 +471,7 @@ def copy_artifact(src, dest):
             return
         except OSError:
             pass
-    elif platform.system() == "Linux":
+    elif sys.platform.startswith("linux"):
         try:
             import fcntl
 
@@ -522,6 +539,13 @@ def eden_prefetch_fbsource(args, path, message):
 
 def build_sl(args):
     ensure_out_dir(args)
+    if args.rust_build_tool == "buck":
+        build_sl_with_buck(args)
+    else:
+        build_sl_with_cargo(args)
+
+
+def build_sl_with_cargo(args):
     paths = rust_paths(args)
     write_cargo_config(args, paths)
 
@@ -566,6 +590,33 @@ def build_sl(args):
         status(args, "Copying sl debug symbols")
         copy_artifact(pdb, OUT / "sl.pdb")
     copy_windows_openssl_dlls(args, OUT)
+
+
+def build_sl_with_buck(args):
+    cmd = [
+        "buck2",
+        "build",
+        buck_build_mode(),
+        BUCK_SL_TARGET,
+        "--show-output",
+    ]
+    status(args, "Building sl with buck")
+    if not args.quiet:
+        print("$", subprocess.list2cmdline(cmd), file=sys.stderr)
+    output_text = subprocess.check_output(
+        cmd,
+        cwd=FBSOURCE,
+        env=scoped_env(args),
+        encoding="utf-8",
+        errors="replace",
+    )
+    if not args.quiet:
+        print(output_text, end="", file=sys.stderr)
+
+    exe = ".exe" if os.name == "nt" else ""
+    dest = OUT / f"sl{exe}"
+    status(args, f"Copying sl to {dest}")
+    copy_artifact(buck_output_path(output_text), dest)
 
 
 def build_isl(args):
@@ -637,6 +688,25 @@ def add_common_options(parser):
         help="Shortcut for --mode getdeps.",
     )
     parser.add_argument(
+        "--rust-build-tool",
+        metavar="TOOL",
+        help=(
+            "Rust build tool. Defaults to buck in fbsource mode, otherwise "
+            "cargo. Choices: cargo, buck. buck is only valid with --mode "
+            "fbsource."
+        ),
+    )
+    parser.add_argument(
+        "--buck",
+        action="store_true",
+        help="Shortcut for --rust-build-tool buck.",
+    )
+    parser.add_argument(
+        "--cargo",
+        action="store_true",
+        help="Shortcut for --rust-build-tool cargo.",
+    )
+    parser.add_argument(
         "--debug",
         action="store_true",
         help="Run cargo without --release and copy the debug binary to out/sl.",
@@ -699,9 +769,36 @@ def normalize_mode(args, parser):
     args.mode = modes[0] if modes else auto_mode()
 
 
+def normalize_rust_build_tool(args, parser):
+    if args.rust_build_tool and args.rust_build_tool not in RUST_BUILD_TOOLS:
+        choices = ", ".join(repr(tool) for tool in RUST_BUILD_TOOLS)
+        parser.error(
+            "argument --rust-build-tool: invalid choice: "
+            f"{args.rust_build_tool!r} (choose from {choices})"
+        )
+
+    tools = []
+    if args.rust_build_tool:
+        tools.append(args.rust_build_tool)
+    if args.buck:
+        tools.append("buck")
+    if args.cargo:
+        tools.append("cargo")
+    if len(set(tools)) > 1:
+        parser.error("--rust-build-tool, --buck, and --cargo specify conflicting tools")
+    args.rust_build_tool = (
+        tools[0] if tools else ("buck" if args.mode == "fbsource" else "cargo")
+    )
+
+    if args.rust_build_tool == "buck" and args.mode != "fbsource":
+        parser.error("--rust-build-tool buck requires --mode fbsource")
+
+
 def normalize_args(args, parser):
     normalize_mode(args, parser)
     status(args, f"Using build mode (--mode): {args.mode}")
+    normalize_rust_build_tool(args, parser)
+    status(args, f"Using Rust build tool (--rust-build-tool): {args.rust_build_tool}")
     args.python = args.with_python or pick_python()
     status(args, f"Using Python: {args.python}")
     args.version = args.with_version or auto_version()
