@@ -6,14 +6,36 @@
  */
 
 import type {Repository} from 'isl-server/src/Repository';
+import type {RepositoryContext} from 'isl-server/src/serverTypes';
 import type {CommitInfo} from 'isl/src/types';
 
 import {GitHubCodeReviewProvider} from 'isl-server/src/github/githubCodeReviewProvider';
 import {mockLogger} from 'shared/testUtils';
+import {contextForRepo} from '../blame';
 import {getDiffBlameHoverMarkup} from '../blameHover';
 import {getRealignedBlameInfo, shortenAuthorName} from '../blameUtils';
 
+jest.mock('vscode', () => jest.requireActual('../../../__mocks__/vscode'));
+
 describe('blame', () => {
+  describe('contextForRepo', () => {
+    it('uses the target repo root as the command cwd', () => {
+      const ctx = {
+        cmd: 'sl',
+        cwd: '/workspace/first-repo',
+        logger: mockLogger,
+        tracker: {},
+      } as unknown as RepositoryContext;
+      const repo = {
+        info: {
+          repoRoot: '/workspace/second-repo',
+        },
+      } as unknown as Repository;
+
+      expect(contextForRepo(ctx, repo).cwd).toEqual('/workspace/second-repo');
+    });
+  });
+
   describe('getRealignedBlameInfo', () => {
     it('realigns blame', () => {
       const person1 = {author: 'person1', date: new Date('2020-01-01'), hash: 'A'} as CommitInfo;

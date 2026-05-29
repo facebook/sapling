@@ -50,6 +50,13 @@ type CachedBlame = {
 
 const MAX_NUM_FILES_CACHED = 20;
 
+export function contextForRepo(ctx: RepositoryContext, repo: Repository): RepositoryContext {
+  return {
+    ...ctx,
+    cwd: repo.info.repoRoot,
+  };
+}
+
 /**
  * Provides inline blame annotations.
  *
@@ -297,7 +304,8 @@ export class InlineBlameProvider implements Disposable {
     const uri = textEditor.document.uri.fsPath;
     const repo = this.reposList.repoForPath(uri)?.repo;
     try {
-      return {value: await nullthrows(repo).blame(this.ctx, uri, baseHash)};
+      const targetRepo = nullthrows(repo);
+      return {value: await targetRepo.blame(contextForRepo(this.ctx, targetRepo), uri, baseHash)};
     } catch (err: unknown) {
       return {error: err as Error};
     }
