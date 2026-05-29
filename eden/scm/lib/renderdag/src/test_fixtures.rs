@@ -23,6 +23,18 @@ pub(crate) const BASIC: TestFixture = TestFixture {
     missing: &[],
 };
 
+// C-D is a connected pair; A and B are isolated nodes that end up in the same
+// column after D's column is freed. Used to verify that the renderer visually
+// distinguishes connected from unconnected adjacent nodes.
+pub(crate) const BASIC_DISCONNECTED: TestFixture = TestFixture {
+    dag: "A B C-D",
+    messages: &[],
+    heads: &["A", "B", "D"],
+    reserve: &[],
+    ancestors: &[],
+    missing: &[],
+};
+
 pub(crate) const BRANCHES_AND_MERGES: TestFixture = TestFixture {
     dag: r#"
                       T /---------------N--O---\           T
