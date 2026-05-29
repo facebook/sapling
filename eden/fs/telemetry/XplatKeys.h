@@ -26,6 +26,11 @@
  * exactly for debuggability.
  *
  * When adding a new table, add its event-specific key constants here.
+ *
+ * Rust counterpart:
+ * eden/fs/rust/facebook/edenfs-telemetry/src/xplat_keys.rs. Keep shared
+ * XplatLogger key names and logger config constants in sync between the C++
+ * and Rust files when adding or renaming fields.
  */
 namespace facebook::eden::xplat_keys {
 
