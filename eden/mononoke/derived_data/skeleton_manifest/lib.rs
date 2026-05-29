@@ -11,6 +11,7 @@ use thiserror::Error;
 mod batch;
 mod derive;
 pub mod mapping;
+mod pipeline;
 
 pub use mapping::RootSkeletonManifestId;
 pub use mapping::format_key;

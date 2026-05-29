@@ -534,6 +534,10 @@ pub async fn derive_stage_batch(
             ddm.derive_stage_batch::<RootSkeletonManifestV2Id>(ctx, csids, payload)
                 .await
         }
+        PipelineDerivableVariant::SkeletonManifests => {
+            ddm.derive_stage_batch::<RootSkeletonManifestId>(ctx, csids, payload)
+                .await
+        }
     }
 }
 
@@ -557,6 +561,10 @@ pub async fn is_stage_derived(
             ddm.is_stage_derived::<RootSkeletonManifestV2Id>(ctx, csid, stage_path)
                 .await
         }
+        PipelineDerivableVariant::SkeletonManifests => {
+            ddm.is_stage_derived::<RootSkeletonManifestId>(ctx, csid, stage_path)
+                .await
+        }
     }
 }
 
@@ -578,6 +586,10 @@ pub async fn verify_stage_output(
         }
         PipelineDerivableVariant::SkeletonManifestsV2 => {
             ddm.verify_stage_output::<RootSkeletonManifestV2Id>(ctx, csid, stage_path)
+                .await
+        }
+        PipelineDerivableVariant::SkeletonManifests => {
+            ddm.verify_stage_output::<RootSkeletonManifestId>(ctx, csid, stage_path)
                 .await
         }
     }
