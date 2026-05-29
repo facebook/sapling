@@ -17,7 +17,7 @@ abomonation = { git = "https://github.com/markbt/abomonation", rev = "0f43346d2a
 audio_streams = { git = "https://github.com/google/crosvm", rev = "299c1e7c3d5a1b98106212c20f58b9fdb7b1b1ea" }
 backtrace = { git = "https://github.com/rust-lang/backtrace-rs", rev = "df979dcf80027eb047d7bb9e0874710c15009f31" }
 base64urlsafedata = { git = "https://github.com/kanidm/webauthn-rs.git", rev = "d278c56adfa39a0723c79bdcd461644194bc5138" }
-bf-tree = { git = "https://github.com/ddrcoder/bf-tree.git", rev = "5b66d45329ba1c992c247983c0803baf38bbb55f" }
+bf-tree = { git = "https://github.com/fbsource/bf-tree", rev = "da3f2364e8f9fe002a85c19de8a879fc2c05f12c" }
 bindgen = { git = "https://github.com/jsgf/rust-bindgen", rev = "4d385d21c160e6ee1f443aeb7e00528a1dc7fd44" }
 bindgen-cli = { git = "https://github.com/jsgf/rust-bindgen", rev = "4d385d21c160e6ee1f443aeb7e00528a1dc7fd44" }
 c2pa = { git = "https://github.com/peekmoar/c2pa-rs", rev = "6bcd530a0b681d828e1b07430058c13427fe8bb1" }
