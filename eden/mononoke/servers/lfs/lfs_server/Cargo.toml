@@ -48,7 +48,7 @@ ods_counters = { version = "0.1.0", path = "../../../common/ods_counters" }
 once_cell = "1.21.4"
 openssl = "0.10.80"
 permission_checker = { version = "0.1.0", path = "../../../common/permission_checker" }
-pin-project = "1.1.11"
+pin-project = "1.1.13"
 rand = "0.10.1"
 rate_limiting = { version = "0.1.0", path = "../../../common/rate_limiting" }
 redactedblobstore = { version = "0.1.0", path = "../../../blobstore/redactedblobstore" }

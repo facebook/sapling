@@ -17,7 +17,7 @@ itertools = "0.14.0"
 mercurial_bundles = { version = "0.1.0", path = "../../mercurial/bundles" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 nom = "8"
-pin-project = "1.1.11"
+pin-project = "1.1.13"
 qps = { version = "0.1.0", path = "../../servers/slapi/slapi_server/qps" }
 thiserror = "2.0.18"
 tokio = { version = "1.52.3", features = ["full", "test-util", "tracing"] }
