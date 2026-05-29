@@ -1,0 +1,35 @@
+code = "RUSTJKEXISTS"
+oncall = "scm_server_treehugger"
+command = [
+  "{{JK_LINTER}}",
+  "--jk-command",
+  "{{MOCK_JK}}",
+  "@{{PATHSFILE}}",
+]
+~~~~~~~~~~
+fbcode/eden/mononoke/linters/__tests__/fixtures/jk_mixed_in_one_file.rs
+~~~~~~~~~~
+{
+  "path": "fbcode/eden/mononoke/linters/__tests__/fixtures/jk_mixed_in_one_file.rs",
+  "line": 10,
+  "char": 1,
+  "code": "RUSTJKEXISTS",
+  "severity": "disabled",
+  "name": "jk-not-found",
+  "description": "JustKnob 'scm/mononoke:this_knob_does_not_exist' does not exist in knobset 'scm/mononoke'. This will cause a runtime error and may crash the service. Create the knob first at https://www.internalfb.com/justknobs/scm/mononoke",
+  "original": null,
+  "replacement": null,
+  "bypassChangedLineFiltering": null
+}
+{
+  "path": "fbcode/eden/mononoke/linters/__tests__/fixtures/jk_mixed_in_one_file.rs",
+  "line": 14,
+  "char": 1,
+  "code": "RUSTJKEXISTS",
+  "severity": "error",
+  "name": "jk-not-found",
+  "description": "JustKnob 'scm/mononoke:this_knob_does_not_exist' does not exist in knobset 'scm/mononoke'. This will cause a runtime error and may crash the service. Create the knob first at https://www.internalfb.com/justknobs/scm/mononoke",
+  "original": null,
+  "replacement": null,
+  "bypassChangedLineFiltering": null
+}
