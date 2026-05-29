@@ -191,9 +191,12 @@ python_library(
         "//fb303/thrift:fb303_core-python-types",
         "//thrift/lib/python:types",
     ] + select({
-        "DEFAULT": [],
+        "DEFAULT": [
+            "//eden/fs/cli/facebook:xplat_logger",
+        ],
         "ovr_config//os:linux": [
             "//eden/fs/cli/facebook:telemetry",
+            "//eden/fs/cli/facebook:xplat_logger",
         ],
     }),
 )
