@@ -1,6 +1,7 @@
 # Hook Performance Constraints
 
-Hooks run on every push in the critical path. These are mandatory:
+Hooks run on every push in the critical path. **P95 latency must be under 2 seconds.** All guidance below exists to meet this budget:
+
 
 - **Filter early**: check `changeset.file_changes()` before deriving manifests. If no files match, return `Accepted` immediately.
 - **Never walk the entire tree.** Only look up directories/files touched by the changeset.

@@ -30,20 +30,20 @@ Read `implementations.rs` and an existing similar hook (e.g. `limit_directory_si
 
 Split the work into 3 commits on a stack:
 
-**Commit 1 -- Skeleton + tests showing wrong behavior:**
+**Commit 1 -- Skeleton:**
 - New file `implementations/<hook_name>.rs` with:
   - Config struct with `#[derive(Deserialize, Clone, Debug)]`
   - Hook struct with `new(config: &HookConfig)` and `with_config(config: Config)`
   - No-op `run()` that returns `Ok(HookExecution::Accepted)`
-  - `#[cfg(test)] mod test` with ALL test cases, but rejection tests assert `Accepted` with `// TODO` comments
 - `implementations.rs`: add `mod <hook_name>;` line only (NOT the match arm)
-- No BUCK/Cargo changes (skeleton has minimal imports)
+- No tests, no BUCK/Cargo changes (skeleton has minimal imports)
 
-**Commit 2 -- Wiring (no-op):**
-- `implementations.rs`: add match arm in `make_changeset_hook`/`make_file_hook`/`make_bookmark_hook`
+**Commit 2 -- Tests:**
+- `implementations/<hook_name>.rs`: add `#[cfg(test)] mod test` with ALL test cases, but rejection tests assert `Accepted` with `// TODO` comments (showing wrong/no-op behavior)
 - Integration test `.t` file with all pushes succeeding (wrong behavior)
 
-**Commit 3 -- Implementation:**
+**Commit 3 -- Wiring + Implementation:**
+- `implementations.rs`: add match arm in `make_changeset_hook`/`make_file_hook`/`make_bookmark_hook`
 - `implementations/<hook_name>.rs`: real `run()` logic + updated tests asserting correct rejections
 - BUCK + both Cargo.toml: add new deps (sorted order)
 - Integration test: updated expected output with rejections

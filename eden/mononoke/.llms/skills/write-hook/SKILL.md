@@ -13,3 +13,4 @@ Create a server-side Mononoke hook based on the user's request.
 - When writing hook logic that touches manifests or derived data, read [references/performance-constraints.md](references/performance-constraints.md)
 - When writing unit or integration tests, read [references/testing-patterns.md](references/testing-patterns.md)
 - Before submitting, read [references/common-mistakes.md](references/common-mistakes.md)
+- After implementation is complete, read [references/configerator-setup.md](references/configerator-setup.md) for enabling the hook in production
