@@ -13,6 +13,7 @@ use std::sync::Arc;
 use std::sync::OnceLock;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
+use std::thread::JoinHandle;
 use std::time::Duration;
 use std::time::Instant;
 
@@ -63,7 +64,8 @@ pub(crate) fn multi_worker_dispatcher(worker_count: usize) -> Arc<dyn AsyncReque
 }
 
 struct MultiWorkerDispatcher {
-    jobs: Sender<HttpJob>,
+    jobs: Option<Sender<HttpJob>>,
+    workers: Vec<JoinHandle<()>>,
 }
 
 struct HttpJob {
@@ -127,15 +129,20 @@ impl MultiWorkerDispatcher {
         // unbounded number of outstanding request batches via spawned tasks.
         let (jobs, rx) = flume::unbounded();
         let pool = Pool::new();
-        for index in 0..worker_count {
-            let rx = rx.clone();
-            let pool = pool.clone();
-            std::thread::Builder::new()
-                .name(format!("sl-http-client-{}", index))
-                .spawn(move || run_dispatcher_worker(rx, pool))
-                .expect("failed to start http dispatcher worker");
+        let workers = (0..worker_count)
+            .map(|index| {
+                let rx = rx.clone();
+                let pool = pool.clone();
+                std::thread::Builder::new()
+                    .name(format!("sl-http-client-{}", index))
+                    .spawn(move || run_dispatcher_worker(rx, pool))
+                    .expect("failed to start http dispatcher worker")
+            })
+            .collect();
+        Self {
+            jobs: Some(jobs),
+            workers,
         }
-        Self { jobs }
     }
 }
 
@@ -147,6 +154,8 @@ impl AsyncRequestDispatcher for MultiWorkerDispatcher {
     ) -> Result<StatsFuture, HttpClientError> {
         let (stats_tx, stats_rx) = oneshot::channel();
         self.jobs
+            .as_ref()
+            .ok_or_else(|| anyhow!("http dispatcher worker terminated unexpectedly"))?
             .send(HttpJob {
                 client,
                 requests,
@@ -154,6 +163,31 @@ impl AsyncRequestDispatcher for MultiWorkerDispatcher {
             })
             .map_err(|_| anyhow!("http dispatcher worker terminated unexpectedly"))?;
         Ok(stats_rx.map(|res| res?).boxed())
+    }
+}
+
+impl Drop for MultiWorkerDispatcher {
+    fn drop(&mut self) {
+        drop(self.jobs.take());
+        for worker in self.workers.drain(..) {
+            if let Err(err) = worker.join() {
+                tracing::error!(
+                    panic_message = panic_message(err.as_ref()),
+                    "http dispatcher worker panicked during shutdown"
+                );
+            }
+        }
+    }
+}
+
+fn panic_message(payload: &(dyn std::any::Any + Send)) -> &str {
+    if let Some(message) = payload.downcast_ref::<&str>() {
+        message
+    } else {
+        payload
+            .downcast_ref::<String>()
+            .map(|message| message.as_str())
+            .unwrap_or("<non-String payload>")
     }
 }
 
