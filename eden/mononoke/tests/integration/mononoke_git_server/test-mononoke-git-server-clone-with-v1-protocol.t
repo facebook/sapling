@@ -10,6 +10,15 @@
   $ GIT_REPO_ORIGIN="${TESTTMP}/origin/repo-git"
   $ GIT_REPO="${TESTTMP}/repo-git"
 
+# Enable v1 protocol support
+  $ merge_just_knobs <<EOF
+  > {
+  >   "bools": {
+  >     "scm/mononoke:git_server_enable_v1_protocol": true
+  >   }
+  > }
+  > EOF
+
 # Setup git repository
   $ mkdir -p "$GIT_REPO_ORIGIN"
   $ cd "$GIT_REPO_ORIGIN"
@@ -37,7 +46,27 @@
 
 # Start up the Mononoke Git Service
   $ mononoke_git_service
-# Clone the Git repo from Mononoke. If V1 was supported, we would have gotten a complete repo. Since its not, we get an empty one.
-  $ git_client -c protocol.version=1 clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
-  Cloning into 'repo'...
-  warning: You appear to have cloned an empty repository.
+
+# Test ls-remote with v1 protocol — should return all refs
+# Verify the correct ref names are present (use awk to extract ref names for stable comparison)
+  $ git_client -c protocol.version=1 ls-remote $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git | awk '{print $2}' | sort
+  HEAD
+  refs/heads/master_bookmark
+  refs/remotes/origin/HEAD
+  refs/remotes/origin/master_bookmark
+  refs/tags/empty_tag
+  refs/tags/first_tag
+
+# Delete the HEAD symref to test v1 protocol without HEAD configured
+  $ mononoke_admin git-symref -R repo delete --symref-names HEAD
+  Successfully deleted symrefs ["HEAD"]
+
+# Test ls-remote with v1 protocol when HEAD symref is missing — should still return all branch/tag refs without error
+# HEAD still appears because it exists as a regular bookmark from gitimport, but without the symref capability
+  $ git_client -c protocol.version=1 ls-remote $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git | awk '{print $2}' | sort
+  HEAD
+  refs/heads/master_bookmark
+  refs/remotes/origin/HEAD
+  refs/remotes/origin/master_bookmark
+  refs/tags/empty_tag
+  refs/tags/first_tag

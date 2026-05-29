@@ -44,6 +44,7 @@ pub enum MononokeGitScubaKey {
     ClientMainId,
     ClientIdentities,
     ClientIdentitiesTyped,
+    ProtocolVersion,
 }
 
 impl AsRef<str> for MononokeGitScubaKey {
@@ -69,6 +70,7 @@ impl AsRef<str> for MononokeGitScubaKey {
             Self::ClientMainId => "client_main_id",
             Self::ClientIdentities => "client_identities",
             Self::ClientIdentitiesTyped => "client_identities_typed",
+            Self::ProtocolVersion => "protocol_version",
         }
     }
 }
