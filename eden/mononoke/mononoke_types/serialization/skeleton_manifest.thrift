@@ -94,3 +94,13 @@ union SkeletonManifestV2Entry {
   1: SkeletonManifestV2File file;
   2: SkeletonManifestV2 directory;
 }
+
+struct SkeletonManifestV2StageOutputEmpty {}
+
+// Per-stage output for pipeline derivation; the directory variant holds the
+// subtree value rooted at the stage path.
+union SkeletonManifestV2StageOutput {
+  1: SkeletonManifestV2 directory;
+  2: SkeletonManifestV2StageOutputEmpty empty;
+  3: SkeletonManifestV2File file;
+}

@@ -87,6 +87,7 @@ pub enum DerivableUntopologicallyVariant {
 pub enum PipelineDerivableVariant {
     Fsnodes,
     Unodes,
+    SkeletonManifestsV2,
 }
 
 impl DerivableType {
@@ -249,6 +250,7 @@ impl DerivableType {
         match self {
             DerivableType::Fsnodes => Ok(PipelineDerivableVariant::Fsnodes),
             DerivableType::Unodes => Ok(PipelineDerivableVariant::Unodes),
+            DerivableType::SkeletonManifestsV2 => Ok(PipelineDerivableVariant::SkeletonManifestsV2),
             _ => bail!("{} does not support derivation pipeline", self.name()),
         }
     }
@@ -259,6 +261,7 @@ impl PipelineDerivableVariant {
         match self {
             PipelineDerivableVariant::Fsnodes => DerivableType::Fsnodes,
             PipelineDerivableVariant::Unodes => DerivableType::Unodes,
+            PipelineDerivableVariant::SkeletonManifestsV2 => DerivableType::SkeletonManifestsV2,
         }
     }
 }

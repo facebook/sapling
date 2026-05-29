@@ -8,6 +8,7 @@
 mod derive;
 mod derive_from_predecessor;
 mod mapping;
+mod pipeline;
 #[cfg(test)]
 mod test_fixtures;
 #[cfg(test)]

@@ -28,12 +28,14 @@ use manifest::ManifestParentReplacement;
 use manifest::TreeInfo;
 use manifest::TreeInfoSubentries;
 use manifest::derive_manifest;
+use manifest::derive_manifest_with_known_entries;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
 use mononoke_types::SkeletonManifestV2Id;
 use mononoke_types::TrieMap;
+use mononoke_types::path::MPath;
 use mononoke_types::sharded_map_v2::LoadableShardedMapV2Node;
 use mononoke_types::sharded_map_v2::ShardedMapV2Node;
 use mononoke_types::skeleton_manifest_v2::SkeletonManifestV2;
@@ -41,13 +43,13 @@ use mononoke_types::skeleton_manifest_v2::SkeletonManifestV2Entry;
 
 use crate::RootSkeletonManifestV2Id;
 
-fn get_file_changes(bcs: &BonsaiChangeset) -> Vec<(NonRootMPath, Option<()>)> {
+pub(crate) fn get_file_changes(bcs: &BonsaiChangeset) -> Vec<(NonRootMPath, Option<()>)> {
     bcs.file_changes()
         .map(|(path, file_change)| (path.clone(), file_change.simplify().map(|_| ())))
         .collect()
 }
 
-async fn get_skeleton_manifest_subtree_changes(
+pub(crate) async fn get_skeleton_manifest_subtree_changes(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
     known: Option<&HashMap<ChangesetId, RootSkeletonManifestV2Id>>,
@@ -175,6 +177,53 @@ pub(crate) async fn inner_derive(
         move |_leaf_info: LeafInfo<Leaf, LeafChange>| async move { anyhow::Ok(((), ())) },
     )
     .await
+}
+
+/// Path-scoped SkeletonManifestV2 derivation for one pipeline stage; mirrors `derive_fsnode_entry`.
+pub(crate) async fn derive_skeleton_manifest_v2_entry(
+    ctx: &CoreContext,
+    derivation_ctx: &DerivationContext,
+    parents: Vec<Entry<SkeletonManifestV2, ()>>,
+    changes: Vec<(NonRootMPath, Option<()>)>,
+    subtree_changes: Vec<ManifestParentReplacement<SkeletonManifestV2, ()>>,
+    known_entries: HashMap<MPath, Option<Entry<SkeletonManifestV2, ()>>>,
+    prefix: MPath,
+) -> Result<Option<Entry<SkeletonManifestV2, ()>>> {
+    type Leaf = ();
+    type LeafChange = ();
+    type TreeId = SkeletonManifestV2;
+    type Ctx = ();
+
+    let blobstore = derivation_ctx.blobstore();
+    // Box so the blobstore borrow is seen to outlive the future.
+    let derive_fut = derive_manifest_with_known_entries(
+        ctx.clone(),
+        blobstore.clone(),
+        parents,
+        changes,
+        subtree_changes,
+        known_entries,
+        prefix,
+        {
+            cloned!(ctx, blobstore);
+            move |info: TreeInfo<
+                TreeId,
+                Leaf,
+                Ctx,
+                LoadableShardedMapV2Node<SkeletonManifestV2Entry>,
+            >| {
+                cloned!(ctx, blobstore);
+                async move {
+                    let manifest =
+                        create_skeleton_manifest_v2(ctx, blobstore, info.subentries).await?;
+                    Ok(((), manifest))
+                }
+            }
+        },
+        move |_leaf_info: LeafInfo<Leaf, LeafChange>| async move { anyhow::Ok(((), ())) },
+    )
+    .boxed();
+    derive_fut.await
 }
 
 pub(crate) async fn derive_single(
