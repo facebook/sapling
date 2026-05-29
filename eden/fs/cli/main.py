@@ -2133,7 +2133,7 @@ Do you still want to delete {path}?"""
                 # Handle aux process error (log but continue)
                 if result.aux_process_error:
                     msg = f"error stopping auxiliary processes {mount}: {result.aux_process_error}"
-                    telemetry_sample.add_string("problem_fixable", msg)
+                    telemetry_sample.fail(msg)
                     print_stderr(msg)
                     exit_code = 1
                     # We intentionally fall through here - unmount may still work
