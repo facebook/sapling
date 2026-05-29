@@ -263,7 +263,14 @@ impl From<anyhow::Error> for SourceRestrictionError {
 
 impl std::fmt::Display for SourceRestrictionError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.inner.as_ref())
+        // Propagate the alternate flag so `format!("{:#}", err)` emits the full
+        // anyhow chain joined by ": "; otherwise only the top-level context is
+        // shown and inner causes are dropped from Scuba logs.
+        if f.alternate() {
+            write!(f, "{:#}", self.inner.as_ref())
+        } else {
+            write!(f, "{}", self.inner.as_ref())
+        }
     }
 }
 
