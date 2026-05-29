@@ -27,7 +27,7 @@ name = "commitcloudsubscriber"
 [dependencies]
 anyhow = "1.0.102"
 base64 = { version = "0.22.1", features = ["alloc"] }
-filetime = "0.2.27"
+filetime = "0.2.29"
 hostcaps = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 log = { version = "0.4.29", features = ["kv_unstable", "kv_unstable_std"] }
 mime = "0.3.14"
