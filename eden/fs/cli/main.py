@@ -423,6 +423,13 @@ class ListCmd(Subcmd):
             default=False,
             help="Print the output in JSON format",
         )
+        parser.add_argument(
+            "--verbose",
+            "-v",
+            action="store_true",
+            default=False,
+            help="Show additional details such as filesystem channel and transport type",
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
@@ -432,7 +439,7 @@ class ListCmd(Subcmd):
         if args.json:
             self.print_mounts_json(out, mounts)
         else:
-            self.print_mounts(out, mounts)
+            self.print_mounts(out, mounts, verbose=args.verbose)
         return 0
 
     @staticmethod
@@ -447,7 +454,11 @@ class ListCmd(Subcmd):
         out.writeln(json_str)
 
     @staticmethod
-    def print_mounts(out: ui.Output, mount_points: Dict[Path, ListMountInfo]) -> None:
+    def print_mounts(
+        out: ui.Output,
+        mount_points: Dict[Path, ListMountInfo],
+        verbose: bool = False,
+    ) -> None:
         for path, mount_info in sorted(mount_points.items()):
             if not mount_info.configured:
                 suffix = " (unconfigured)"
@@ -464,7 +475,16 @@ class ListCmd(Subcmd):
                 state_name = mount_info.state.name
                 state_str = f" ({state_name})"
 
-            out.writeln(f"{path.as_posix()}{state_str}{suffix}")
+            transport_str = ""
+            if verbose and mount_info.fs_channel_type is not None:
+                if mount_info.fuse_transport is not None:
+                    transport_str = (
+                        f" ({mount_info.fs_channel_type}, {mount_info.fuse_transport})"
+                    )
+                else:
+                    transport_str = f" ({mount_info.fs_channel_type})"
+
+            out.writeln(f"{path.as_posix()}{state_str}{transport_str}{suffix}")
 
 
 @subcmd("clone", "Create a clone of a specific repo and check it out")

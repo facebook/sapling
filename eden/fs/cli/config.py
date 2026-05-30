@@ -241,6 +241,8 @@ class ListMountInfo(typing.NamedTuple):
     state: Optional[MountState]
     configured: bool
     backing_repo: Optional[Path]
+    fs_channel_type: Optional[str] = None
+    fuse_transport: Optional[str] = None
 
     def to_json_dict(self) -> Dict[str, Any]:
         if self.state is None:
@@ -250,7 +252,7 @@ class ListMountInfo(typing.NamedTuple):
         else:
             # State is a raw int
             state_str = MountState(self.state).name
-        return {
+        d: Dict[str, Any] = {
             "data_dir": self.data_dir.as_posix(),
             "state": state_str,
             "configured": self.configured,
@@ -258,6 +260,11 @@ class ListMountInfo(typing.NamedTuple):
                 self.backing_repo.as_posix() if self.backing_repo is not None else None
             ),
         }
+        if self.fs_channel_type is not None:
+            d["fs_channel_type"] = self.fs_channel_type
+        if self.fuse_transport is not None:
+            d["fuse_transport"] = self.fuse_transport
+        return d
 
 
 class SnapshotState(typing.NamedTuple):
@@ -650,6 +657,8 @@ class EdenInstance(AbstractEdenInstance):
                 state=state,
                 configured=False,
                 backing_repo=backing_repo,
+                fs_channel_type=thrift_mount.fsChannelType,
+                fuse_transport=thrift_mount.fuseTransport,
             )
 
         # Add all mount points listed in the config that were not reported
