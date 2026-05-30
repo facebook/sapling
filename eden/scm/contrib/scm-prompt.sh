@@ -114,7 +114,11 @@ _hg_prompt() {
 
   local shared_hg="$hg"
   if [[ -f "$hg/sharedpath" ]]; then
-    shared_hg="$(command cat $hg/sharedpath)"
+    shared_hg="$(command cat "$hg/sharedpath")"
+    # `relshared` shares store a path relative to $hg, not absolute.
+    if [[ "$shared_hg" != /* ]]; then
+      shared_hg="$hg/$shared_hg"
+    fi
   fi
   local remote="$shared_hg/store/remotenames"
 
@@ -185,7 +189,12 @@ _git_prompt() {
   local git br
   git="$1"
   if [[ -f "$git" ]]; then
-      git=$(awk '/^gitdir:/ {print $2}' < "$git")
+      local gitfile="$git"
+      git="$(command awk '/^gitdir:/ { sub(/^gitdir:[[:space:]]*/, ""); print; exit }' < "$gitfile")"
+      [[ -z "$git" ]] && return
+      if [[ "$git" != /* ]]; then
+        git="${gitfile%/*}/$git"
+      fi
   fi
   if [[ -f "$git/HEAD" ]]; then
     read br < "$git/HEAD"
