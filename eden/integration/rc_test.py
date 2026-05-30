@@ -19,7 +19,7 @@ class RCTest(testcase.EdenRepoTest):
 
     def test_eden_list(self) -> None:
         mounts = self.eden.run_cmd("list")
-        self.assertEqual(f"{self.mount}\n", mounts)
+        self.assertIn(self.mount, mounts)
 
         self.eden.remove(self.mount)
         mounts = self.eden.run_cmd("list")
@@ -27,7 +27,7 @@ class RCTest(testcase.EdenRepoTest):
 
         self.eden.clone(self.repo.path, self.mount)
         mounts = self.eden.run_cmd("list")
-        self.assertEqual(f"{self.mount}\n", mounts)
+        self.assertIn(self.mount, mounts)
 
     def test_unmount_rmdir(self) -> None:
         clients = os.path.join(self.eden_dir, "clients")

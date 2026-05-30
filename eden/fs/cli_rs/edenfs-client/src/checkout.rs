@@ -657,6 +657,10 @@ pub struct EdenFsCheckout {
     /// As opposed to being populated with information from the configuration & live mount info.
     configured: bool,
     backing_repo: Option<PathBuf>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    fs_channel_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    fuse_transport: Option<String>,
     #[serde(skip)]
     pub(crate) redirections: Option<BTreeMap<PathBuf, RedirectionType>>,
     #[serde(skip)]
@@ -670,6 +674,43 @@ impl EdenFsCheckout {
 
     pub fn data_dir(&self) -> PathBuf {
         self.data_dir.clone()
+    }
+
+    pub fn display(&self, verbose: bool) -> String {
+        let suffix = if self.configured {
+            ""
+        } else {
+            " (unconfigured)"
+        };
+
+        let state_str = match self.state {
+            Some(state) => {
+                if state == MountState::RUNNING {
+                    String::new()
+                } else {
+                    format!(" ({})", state)
+                }
+            }
+            None => " (not mounted)".to_string(),
+        };
+
+        let transport_str = if verbose {
+            match (&self.fs_channel_type, &self.fuse_transport) {
+                (Some(channel), Some(transport)) => format!(" ({}, {})", channel, transport),
+                (Some(channel), None) => format!(" ({})", channel),
+                _ => String::new(),
+            }
+        } else {
+            String::new()
+        };
+
+        format!(
+            "{}{}{}{}",
+            self.path.display(),
+            state_str,
+            transport_str,
+            suffix
+        )
     }
 
     pub fn fsck_dir(&self) -> PathBuf {
@@ -816,6 +857,8 @@ impl EdenFsCheckout {
                 Some(path_string) => Some(path_from_bytes(&path_string)?),
                 None => None,
             },
+            fs_channel_type: thrift_mount.fsChannelType,
+            fuse_transport: thrift_mount.fuseTransport,
             redirections: None,
             redirection_targets: None,
         })
@@ -828,6 +871,8 @@ impl EdenFsCheckout {
             state: None,
             configured: true,
             backing_repo: Some(config.repository.path.clone()),
+            fs_channel_type: None,
+            fuse_transport: None,
             redirections: Some(config.redirections),
             redirection_targets: Some(config.redirection_targets),
         }
@@ -1174,24 +1219,7 @@ where
 
 impl fmt::Display for EdenFsCheckout {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let suffix = if self.configured {
-            ""
-        } else {
-            " (unconfigured)"
-        };
-
-        let state_str = match self.state {
-            Some(state) => {
-                if state == MountState::RUNNING {
-                    String::new()
-                } else {
-                    format!(" ({})", state)
-                }
-            }
-            None => " (not mounted)".to_string(),
-        };
-
-        write!(f, "{}{}{}", self.path.display(), state_str, suffix)
+        write!(f, "{}", self.display(false))
     }
 }
 

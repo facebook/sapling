@@ -20,6 +20,13 @@ use crate::get_edenfs_instance;
 pub struct ListCmd {
     #[clap(long, help = "Print the output in JSON format")]
     json: bool,
+
+    #[clap(
+        long,
+        short,
+        help = "Show additional details such as filesystem channel and transport type"
+    )]
+    verbose: bool,
 }
 
 #[async_trait]
@@ -30,8 +37,8 @@ impl crate::Subcommand for ListCmd {
         if self.json {
             println!("{}", serde_json::to_string_pretty(&mounts)?);
         } else {
-            for (_, mount) in mounts {
-                println!("{}", mount);
+            for (_, mount) in &mounts {
+                println!("{}", mount.display(self.verbose));
             }
         }
 
