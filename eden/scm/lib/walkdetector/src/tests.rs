@@ -519,8 +519,11 @@ fn test_gc_stats() {
     detector.file_loaded(p("dir3/dir4/b"), 0);
 
     // Manually run GC to check stats.
-    let (nodes_removed, nodes_remaining, walks_removed) =
-        detector.inner.write().node.gc(&Default::default());
+    let gc_result = detector.inner.write().node.gc(&Default::default(), false);
+    let nodes_removed = gc_result.deleted_nodes;
+    let nodes_remaining = gc_result.remaining_nodes;
+    let walks_removed = gc_result.deleted_walks;
+    assert!(gc_result.important_metadata.is_none());
 
     // "dir1" and "dir2"
     assert_eq!(nodes_removed, 2);
@@ -1059,9 +1062,181 @@ fn test_might_have_walk() {
     insert_walk(&detector, p("foo/bar"), WalkType::Directory, 2);
 
     // GC foo/baz/qux walk - foo/baz should no longer have walk
-    detector.inner.write().node.gc(&detector.config);
+    detector.inner.write().node.gc(&detector.config, false);
     assert!(might_have_walk(""));
     assert!(might_have_walk("foo"));
     assert!(!might_have_walk("foo/bar"));
     assert!(!might_have_walk("foo/baz"));
+}
+
+#[test]
+fn test_persist_and_load_metadata() {
+    let dir = tempfile::tempdir().unwrap();
+    let persist_path = dir.path().join("walk_metadata.jsonl");
+
+    // Create a detector with large directory metadata.
+    let mut detector = Detector::new();
+    detector.set_walk_threshold(TEST_WALK_THRESHOLD);
+    detector.set_walk_ratio(0.1);
+    detector.set_persistence_path(persist_path.clone());
+
+    detector.dir_loaded(p("big_dir"), 500, 500, 0);
+    detector.dir_loaded(p("another/big"), 0, 300, 0);
+    // Small dir - should NOT be persisted.
+    detector.dir_loaded(p("small"), 2, 2, 0);
+
+    // Persist metadata collected during GC.
+    let metadata = detector
+        .inner
+        .write()
+        .node
+        .gc(&detector.config, true)
+        .important_metadata
+        .unwrap();
+    detector.persist_metadata(metadata);
+
+    assert!(persist_path.exists());
+    let contents = std::fs::read_to_string(&persist_path).unwrap();
+    let lines: Vec<&str> = contents.lines().collect();
+    assert_eq!(lines.len(), 2);
+
+    // Load into a fresh detector.
+    let mut detector2 = Detector::new();
+    detector2.set_walk_threshold(TEST_WALK_THRESHOLD);
+    detector2.set_walk_ratio(0.1);
+    detector2.set_persistence_path(persist_path);
+    detector2.load_persisted_metadata();
+
+    let inner = detector2.inner.read();
+    let big_dir = inner.node.get_node(&p("big_dir")).unwrap();
+    assert_eq!(big_dir.total_dirs(), Some(500));
+    assert_eq!(big_dir.total_files(), Some(500));
+
+    let another_big = inner.node.get_node(&p("another/big")).unwrap();
+    assert_eq!(another_big.total_dirs(), Some(300));
+    assert_eq!(another_big.total_files(), Some(0));
+
+    // Small dir should not have been persisted/loaded.
+    assert!(inner.node.get_node(&p("small")).is_none());
+}
+
+#[test]
+fn test_gc_from_dir_loaded_persists_metadata() {
+    let dir = tempfile::tempdir().unwrap();
+    let persist_path = dir.path().join("walk_metadata.jsonl");
+
+    let mut detector = Detector::new();
+    detector.set_walk_threshold(TEST_WALK_THRESHOLD);
+    detector.set_walk_ratio(0.1);
+    detector.set_persistence_path(persist_path.clone());
+
+    assert!(!persist_path.exists());
+
+    MockClock::advance(Duration::from_secs(11));
+    detector.dir_loaded(p("big_dir"), 500, 500, 0);
+
+    assert!(persist_path.exists());
+    let contents = std::fs::read_to_string(&persist_path).unwrap();
+    let lines: Vec<&str> = contents.lines().collect();
+    assert_eq!(lines.len(), 1);
+}
+
+#[test]
+fn test_load_missing_file() {
+    let mut detector = Detector::new();
+    detector.set_persistence_path("/nonexistent/path/metadata.jsonl".into());
+    // Should not panic.
+    detector.load_persisted_metadata();
+}
+
+#[test]
+fn test_load_skips_malformed_metadata() {
+    let dir = tempfile::tempdir().unwrap();
+    let persist_path = dir.path().join("walk_metadata.jsonl");
+    std::fs::write(
+        &persist_path,
+        concat!(
+            "{\"v\":1,\"d\":\"big_dir\",\"f\":500,\"s\":500}\n",
+            "{\"d\":\"missing_version\",\"f\":500,\"s\":500}\n",
+            "{\"v\":2,\"d\":\"wrong_version\",\"f\":500,\"s\":500}\n",
+            "{\"v\":1,\"f\":500,\"s\":500}\n",
+            "{\"v\":1,\"d\":\"missing_files\",\"s\":500}\n",
+            "{\"v\":1,\"d\":\"wrong_type\",\"f\":\"500\",\"s\":500}\n",
+            "{\"v\":1,\"d\":\"bad//path\",\"f\":500,\"s\":500}\n",
+            "not json\n",
+        ),
+    )
+    .unwrap();
+
+    let mut detector = Detector::new();
+    detector.set_walk_threshold(TEST_WALK_THRESHOLD);
+    detector.set_walk_ratio(0.1);
+    detector.set_persistence_path(persist_path);
+    detector.load_persisted_metadata();
+
+    let inner = detector.inner.read();
+    assert!(inner.node.get_node(&p("big_dir")).is_some());
+    assert!(inner.node.get_node(&p("missing_version")).is_none());
+    assert!(inner.node.get_node(&p("wrong_version")).is_none());
+    assert!(inner.node.get_node(&p("missing_files")).is_none());
+    assert!(inner.node.get_node(&p("wrong_type")).is_none());
+    assert!(inner.node.total_dirs().is_none());
+}
+
+#[test]
+fn test_persist_empty_cleans_up() {
+    let dir = tempfile::tempdir().unwrap();
+    let persist_path = dir.path().join("walk_metadata.jsonl");
+
+    let mut detector = Detector::new();
+    detector.set_persistence_path(persist_path.clone());
+
+    // Write a file with content first.
+    std::fs::write(&persist_path, "junk\n").unwrap();
+    assert!(persist_path.exists());
+
+    // Persisting with no important metadata removes the file.
+    detector.persist_metadata(Vec::new());
+    assert!(!persist_path.exists());
+}
+
+#[test]
+fn test_clear_persistence_path_disables_persistence() {
+    let dir = tempfile::tempdir().unwrap();
+    let persist_path = dir.path().join("walk_metadata.jsonl");
+
+    let mut detector = Detector::new();
+    detector.set_walk_threshold(TEST_WALK_THRESHOLD);
+    detector.set_walk_ratio(0.1);
+    detector.set_persistence_path(persist_path.clone());
+    detector.dir_loaded(p("big_dir"), 500, 500, 0);
+    let metadata = detector
+        .inner
+        .write()
+        .node
+        .gc(&detector.config, true)
+        .important_metadata
+        .unwrap();
+    detector.persist_metadata(metadata);
+    assert!(persist_path.exists());
+
+    let mut detector2 = Detector::new();
+    detector2.set_walk_threshold(TEST_WALK_THRESHOLD);
+    detector2.set_walk_ratio(0.1);
+    detector2.set_persistence_path(persist_path.clone());
+    detector2.clear_persistence_path();
+    detector2.load_persisted_metadata();
+
+    assert!(
+        detector2
+            .inner
+            .read()
+            .node
+            .get_node(&p("big_dir"))
+            .is_none()
+    );
+
+    detector2.persist_metadata(vec![(p("big_dir"), 500, 500)]);
+    let contents = std::fs::read_to_string(&persist_path).unwrap();
+    assert!(!contents.is_empty());
 }

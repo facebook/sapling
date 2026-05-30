@@ -248,6 +248,16 @@ impl BackingStore {
         }
 
         walk_detector.set_root(Some(mount.to_path_buf()));
+        if config.get_or("backingstore", "enable-walk-metadata-persistence", || true)? {
+            if let Some(path) = walk_metadata_persistence_path(mount) {
+                walk_detector.set_persistence_path(path);
+                walk_detector.load_persisted_metadata();
+            } else {
+                walk_detector.clear_persistence_path();
+            }
+        } else {
+            walk_detector.clear_persistence_path();
+        }
 
         let prefetch_send = if walk_mode == WalkMode::Prefetch {
             let prefetch_config = prefetch::Config {
@@ -692,6 +702,33 @@ impl Inner {
 
         let _ = self.prefetch_send.try_send(());
     }
+}
+
+fn walk_metadata_persistence_path(mount: &Path) -> Option<PathBuf> {
+    let ident = match identity::sniff_dir(mount) {
+        Ok(Some(ident)) => ident,
+        Ok(None) => {
+            tracing::warn!(
+                ?mount,
+                "disabling walk metadata persistence: mount is not a recognized repo"
+            );
+            return None;
+        }
+        Err(e) => {
+            tracing::warn!(
+                ?e,
+                ?mount,
+                "disabling walk metadata persistence: error resolving mount repo identity"
+            );
+            return None;
+        }
+    };
+
+    Some(
+        ident
+            .resolve_full_dot_dir(mount)
+            .join("walk_detector_metadata.jsonl"),
+    )
 }
 
 fn touch_file_mtime() -> Option<SystemTime> {

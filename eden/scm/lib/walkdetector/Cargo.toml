@@ -16,9 +16,13 @@ name = "walkdetector"
 coarsetime = "0.1.37"
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }
 rand = "0.10.1"
+sapling-atomicfile = { version = "0.1.0", path = "../atomicfile" }
 sapling-procinfo = { version = "0.1.0", path = "../procinfo" }
 sapling-types = { version = "0.1.0", path = "../types" }
+serde = { version = "1.0.219", features = ["derive", "rc"] }
+serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
 mock_instant = "0.3.2"
+tempfile = "3.27.0"

@@ -20,12 +20,16 @@ rust_library(
     crate_root = "src/lib.rs",
     test_deps = [
         "fbsource//third-party/rust:mock_instant",
+        "fbsource//third-party/rust:tempfile",
     ],
     deps = [
         "fbsource//third-party/rust:coarsetime",
         "fbsource//third-party/rust:parking_lot",
         "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/atomicfile:atomicfile",
         "//eden/scm/lib/procinfo:procinfo",
         "//eden/scm/lib/types:types",
     ],
