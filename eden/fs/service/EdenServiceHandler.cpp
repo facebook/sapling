@@ -910,6 +910,14 @@ void EdenServiceHandler::listMounts(std::vector<MountInfo>& results) {
         edenMount->getCheckoutConfig()->getClientDirectory());
     info.state() = edenMount->getState();
     info.backingRepoPath() = edenMount->getCheckoutConfig()->getRepoSource();
+    if (auto* fsChannel = edenMount->getFsChannel()) {
+      info.fsChannelType() = fsChannel->getName();
+#ifdef __linux__
+      if (auto* fuseChannel = dynamic_cast<FuseChannel*>(fsChannel)) {
+        info.fuseTransport() = fuseChannel->getTransportName();
+      }
+#endif
+    }
     results.push_back(info);
   }
 }
