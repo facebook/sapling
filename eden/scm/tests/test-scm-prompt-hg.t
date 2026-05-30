@@ -205,3 +205,32 @@ Test many remotenames
   $ echo 97af35b3648c0098cbd8114ae1b1bafab997ac20 bookmarks remote/@ >> .sl/store/remotenames
   $ cmd
   (4c449fd971|remote/remote9...)
+
+Test worktreename marker (.sl/worktreename) gated on SCM_PROMPT_SHOW_WORKTREE.
+The marker is auto-written (no trailing newline) by `sl worktree add` and
+`sl worktree label`; this test simulates that with `printf > .sl/worktreename`.
+
+Without marker, env var is a no-op (covers main checkouts and non-EdenFS sl)
+  $ test -e .sl/worktreename
+  [1]
+  $ export SCM_PROMPT_SHOW_WORKTREE=1
+  $ cmd
+  (4c449fd971|remote/remote9...)
+  $ unset SCM_PROMPT_SHOW_WORKTREE
+
+With marker present, env var gates display
+  $ printf feature1 > .sl/worktreename
+  $ cmd
+  (4c449fd971|remote/remote9...)
+  $ export SCM_PROMPT_SHOW_WORKTREE=1
+  $ cmd
+  (4c449fd971|feature1|remote/remote9...)
+
+Empty marker file produces no suffix
+  $ printf '' > .sl/worktreename
+  $ cmd
+  (4c449fd971|remote/remote9...)
+  $ rm .sl/worktreename
+  $ cmd
+  (4c449fd971|remote/remote9...)
+  $ unset SCM_PROMPT_SHOW_WORKTREE

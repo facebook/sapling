@@ -57,6 +57,13 @@
 #    For git, show staged change with +.  When SHOW_DIRTY_STATE is set,
 #    you can opt out individual repo by setting shell.showDirtyState to false
 #    in .hg/hgrc or .git/config.
+#  * SCM_PROMPT_SHOW_WORKTREE : When in a linked worktree, append the
+#    worktree's name to the prompt so two checkouts at the same commit are
+#    visually distinguishable. For git, the name is the basename of the
+#    per-worktree gitdir (set automatically by `git worktree add`). For
+#    sl/hg, the name is read from `.sl/worktreename` (or
+#    `.hg/worktreename`), which `sl worktree add` and `sl worktree label`
+#    auto-write.
 #
 # Notes to developers:
 #
@@ -137,6 +144,10 @@ _hg_prompt() {
   else
     br="$(builtin echo "$dirstate" | command cut -c 1-10)"
   fi
+  if [[ -n "$SCM_PROMPT_SHOW_WORKTREE" ]] && [[ -f "$hg/worktreename" ]]; then
+    local wtname="$(command cat "$hg/worktreename")"
+    [[ -n "$wtname" ]] && br="$br|$wtname"
+  fi
   if [[ -f "$remote" ]]; then
     local allremotemarks="$(command grep "^$dirstate bookmarks" "$remote" | \
       command cut -f 3 -d ' ')"
@@ -186,7 +197,7 @@ _git_dirty() {
 }
 
 _git_prompt() {
-  local git br
+  local git br wtname
   git="$1"
   if [[ -f "$git" ]]; then
       local gitfile="$git"
@@ -195,6 +206,16 @@ _git_prompt() {
       if [[ "$git" != /* ]]; then
         git="${gitfile%/*}/$git"
       fi
+      if [[ -n "$SCM_PROMPT_SHOW_WORKTREE" ]]; then
+        # Linked worktrees store per-worktree state directly under
+        # /main/.git/worktrees/<name>; other .git pointers include submodules.
+        case "$git" in
+          */.git/worktrees/*/*|.git/worktrees/*/*) ;;
+          */.git/worktrees/*|.git/worktrees/*)
+            wtname="$(command basename "$git")"
+            ;;
+        esac
+      fi
   fi
   if [[ -f "$git/HEAD" ]]; then
     read br < "$git/HEAD"
@@ -202,6 +223,7 @@ _git_prompt() {
       ref:\ refs/heads/*) br=${br#ref: refs/heads/} ;;
       *) br="$(builtin echo "$br" | command cut -c 1-8)" ;;
     esac
+    [[ -n "$wtname" ]] && br="$br|$wtname"
     if [[ -f "$git/rebase-merge/interactive" ]]; then
       b="$(command cat "$git/rebase-merge/head-name")"
       b="${b#refs/heads/}"
