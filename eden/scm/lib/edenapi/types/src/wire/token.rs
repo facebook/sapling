@@ -21,7 +21,7 @@ mod tests {
     fn test_wire_json() {
         assert_eq!(
             wire_json_hashes![WireUploadToken, WireIndexableId,],
-            [3037370629790314427, 85862624571164977,]
+            [3507574737796826804, 12507243810918595860]
         );
     }
 }

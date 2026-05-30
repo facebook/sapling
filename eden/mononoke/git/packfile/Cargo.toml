@@ -34,5 +34,5 @@ git_delta = { version = "0.1.0", path = "../../third_party/git_delta" }
 gix-features = { version = "0.48.0", features = ["parallel"] }
 gix-object = "0.60.0"
 mononoke_macros = { version = "0.1.0", path = "../../common/mononoke_macros" }
-quickcheck = "1.0"
+quickcheck = "1.1"
 tempfile = "3.27.0"

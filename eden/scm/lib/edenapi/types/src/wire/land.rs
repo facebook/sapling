@@ -19,9 +19,9 @@ mod tests {
         assert_eq!(
             wire_json_hashes![WirePushVar, WireLandStackRequest, WireLandStackResponse,],
             [
-                2916119817887315348,
-                5261778358158556968,
-                16443577252314239815,
+                554167251054503582,
+                11781303561977194028,
+                8680749065747339838
             ]
         );
     }

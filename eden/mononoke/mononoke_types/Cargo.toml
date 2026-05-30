@@ -40,7 +40,7 @@ lfs_protocol = { version = "0.1.0", path = "../common/lfs_protocol" }
 maplit = "1.0"
 mononoke_types_serialization = { version = "0.1.0", path = "serialization" }
 nonzero_ext = "0.2"
-quickcheck = "1.0"
+quickcheck = "1.1"
 quickcheck_arbitrary_derive = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 regex = "1.12.3"
 sapling-edenapi_types = { version = "0.1.0", path = "../../scm/lib/edenapi/types" }

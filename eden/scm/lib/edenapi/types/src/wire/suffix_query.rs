@@ -17,7 +17,7 @@ mod tests {
     fn test_wire_json() {
         assert_eq!(
             wire_json_hashes![WireSuffixQueryRequest, WireSuffixQueryResponse,],
-            [5069422647784383927, 7131752237410966674,]
+            [10314064990398522914, 7714689301404996401]
         );
     }
 }

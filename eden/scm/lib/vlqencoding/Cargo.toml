@@ -18,4 +18,4 @@ name = "bench"
 harness = false
 
 [dev-dependencies]
-quickcheck = "1.0"
+quickcheck = "1.1"

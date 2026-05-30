@@ -18,6 +18,6 @@ im = { version = "15.1", default-features = false }
 smallvec = { version = "1.15", default-features = false }
 
 [dev-dependencies]
-quickcheck = "1.0"
+quickcheck = "1.1"
 rand_chacha = "0.10"
 rand_core = { version = "0.10.1", default-features = false }

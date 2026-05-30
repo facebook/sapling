@@ -16,5 +16,5 @@ facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust
 filenodes_if = { version = "0.1.0", path = "if" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-quickcheck = "1.0"
+quickcheck = "1.1"
 quickcheck_arbitrary_derive = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

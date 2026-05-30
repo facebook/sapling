@@ -12,4 +12,4 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 ascii = "1.1.0"
-quickcheck = "1.0"
+quickcheck = "1.1"

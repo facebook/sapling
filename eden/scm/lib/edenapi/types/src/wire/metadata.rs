@@ -57,9 +57,9 @@ mod tests {
         assert_eq!(
             wire_json_hashes![WireFileMetadata, WireTreeAuxData, WireAnyFileContentId,],
             [
-                15806109187469357706,
-                739324447226664920,
-                6030323533477365567,
+                12882997419762578685,
+                6683549012888618662,
+                15581001751496134542
             ]
         );
     }

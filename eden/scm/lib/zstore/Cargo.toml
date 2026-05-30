@@ -25,5 +25,5 @@ sha1 = "0.10.5"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
-quickcheck = "1.0"
+quickcheck = "1.1"
 tempfile = "3.27.0"

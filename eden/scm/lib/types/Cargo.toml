@@ -17,7 +17,7 @@ anyhow = "1.0.102"
 bitflags = { version = "2.11.1", features = ["serde", "std"], default-features = false }
 bytecount = "0.6.9"
 byteorder = "1.5"
-quickcheck = { version = "1.0", optional = true }
+quickcheck = { version = "1.1", optional = true }
 quickcheck_arbitrary_derive = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 rand = { version = "0.10.1", optional = true }
 ref-cast = "1.0.18"
@@ -30,7 +30,7 @@ sha1 = "0.10.5"
 thiserror = "2.0.18"
 
 [dev-dependencies]
-quickcheck = "1.0"
+quickcheck = "1.1"
 rand = "0.10.1"
 serde_cbor = "0.11.2"
 serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }

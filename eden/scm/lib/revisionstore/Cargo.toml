@@ -26,7 +26,7 @@ lfs_protocol = { version = "0.1.0", path = "../../../mononoke/common/lfs_protoco
 once_cell = "1.21.4"
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }
 paste = "1.0.14"
-quickcheck = "1.0"
+quickcheck = "1.1"
 quickcheck_arbitrary_derive = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 rand = "0.10.1"
 redacted = { version = "0.1.0", path = "../util/redacted" }

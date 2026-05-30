@@ -23,4 +23,4 @@ lz4-sys = "1.9.4"
 thiserror = "2.0.18"
 
 [dev-dependencies]
-quickcheck = "1.0"
+quickcheck = "1.1"

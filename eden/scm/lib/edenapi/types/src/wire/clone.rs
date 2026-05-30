@@ -142,7 +142,7 @@ mod tests {
     fn test_wire_json() {
         assert_eq!(
             wire_json_hashes![WireCloneData, WireFlatSegment,],
-            [14663808847648480625, 5115227637285670758,]
+            [1373985574694422521, 11061360995979110534]
         );
     }
 }

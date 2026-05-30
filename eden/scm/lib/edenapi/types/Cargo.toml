@@ -22,7 +22,7 @@ blob = { version = "0.1.0", path = "../../blob" }
 bytes = { version = "1.11.1", features = ["serde"] }
 manifest-augmented-tree = { version = "0.1.0", path = "../../manifest-augmented-tree" }
 paste = "1.0.14"
-quickcheck = "1.0"
+quickcheck = "1.1"
 quickcheck_arbitrary_derive = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sapling-dag-types = { version = "0.1.0", path = "../../dag/dag-types", features = ["for-tests"] }
 sapling-format-util = { version = "0.1.0", path = "../../util/format-util" }

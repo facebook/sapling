@@ -28,7 +28,7 @@ serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
-quickcheck = "1.0"
+quickcheck = "1.1"
 rand_chacha = "0.10"
 rand_core = { version = "0.10.1", default-features = false }
 tempfile = "3.27.0"

@@ -20,6 +20,6 @@ tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
 memmap2 = "0.9.10"
-quickcheck = "1.0"
+quickcheck = "1.1"
 sapling-minibytes = { version = "0.1.0", path = "../../../../lib/minibytes" }
 tempfile = "3.27.0"

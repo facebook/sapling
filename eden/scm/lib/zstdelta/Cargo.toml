@@ -22,6 +22,6 @@ libc = "0.2.186"
 zstd-sys = { version = "2.0.16", features = ["experimental"], default-features = false }
 
 [dev-dependencies]
-quickcheck = "1.0"
+quickcheck = "1.1"
 rand = "0.10.1"
 rand_chacha = "0.10"

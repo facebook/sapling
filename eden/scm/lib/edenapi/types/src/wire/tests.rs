@@ -37,8 +37,7 @@ pub(crate) mod support {
         <<Wire as ToApi>::Api as ToWire>::Wire: ToApi,
         <<<Wire as ToApi>::Api as ToWire>::Wire as ToApi>::Error: std::fmt::Debug,
     {
-        let mut g = Gen::from_seed(42);
-        g.set_size(5);
+        let mut g = Gen::from_size_and_seed(5, 42);
         let json = serde_json::to_string(&Wire::arbitrary(&mut g)).unwrap();
 
         println!("Checking wire roundtrip");

@@ -22,7 +22,7 @@ sapling-ascii-tree = { version = "0.1.0", path = "../util/ascii-tree" }
 sapling-backtrace-ext = { version = "0.1.0", path = "../backtrace-ext" }
 
 [dev-dependencies]
-quickcheck = "1.0"
+quickcheck = "1.1"
 
 [features]
 default = []

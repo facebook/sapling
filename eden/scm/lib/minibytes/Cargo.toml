@@ -19,7 +19,7 @@ memmap2 = { version = "0.9.10", optional = true }
 serde = { version = "1.0.219", features = ["derive", "rc"] }
 
 [dev-dependencies]
-quickcheck = "1.0"
+quickcheck = "1.1"
 serde_cbor = "0.11.2"
 
 [features]

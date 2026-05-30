@@ -69,6 +69,6 @@ mod tests {
 
     #[test]
     fn test_wire_json() {
-        assert_eq!(wire_json_hashes![WireHgIdBatch,], [14438020693941555678,]);
+        assert_eq!(wire_json_hashes![WireHgIdBatch,], [3944835397023904073]);
     }
 }

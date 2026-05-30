@@ -106,6 +106,6 @@ mod tests {
 
     #[test]
     fn test_wire_json() {
-        assert_eq!(wire_json_hashes![WireError,], [4161343590350686482,]);
+        assert_eq!(wire_json_hashes![WireError,], [11860080072614944696]);
     }
 }
