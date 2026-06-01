@@ -23,8 +23,7 @@ impl std::str::FromStr for PushvarEntry {
             (Some(name), Some(value)) => Ok(Self(name.to_string(), value.to_string())),
             _ => {
                 anyhow::bail!(
-                    "Pushvar specification must be of the form 'name=value', received '{}'",
-                    txt
+                    "Pushvar specification must be of the form 'name=value', received '{txt}'"
                 )
             }
         }

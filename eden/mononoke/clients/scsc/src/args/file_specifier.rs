@@ -131,12 +131,11 @@ fn decode_hex(hex_str: &str) -> Result<Vec<u8>> {
     let hex_str = hex_str.trim();
     if !hex_str.len().is_multiple_of(2) {
         return Err(anyhow::anyhow!(
-            "Hex string must have even number of characters, got: {}",
-            hex_str
+            "Hex string must have even number of characters, got: {hex_str}"
         ));
     }
     let mut binary = vec![0u8; hex_str.len() / 2];
     faster_hex::hex_decode(hex_str.as_bytes(), &mut binary)
-        .map_err(|e| anyhow::anyhow!("Invalid hex string '{}': {}", hex_str, e))?;
+        .map_err(|e| anyhow::anyhow!("Invalid hex string '{hex_str}': {e}"))?;
     Ok(binary)
 }
