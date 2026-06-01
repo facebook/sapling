@@ -19,7 +19,7 @@ use crate::hexdump;
 pub fn display_content(mut w: impl Write, content: impl AsRef<[u8]>) -> Result<()> {
     let content = content.as_ref();
     if let Ok(utf8_content) = std::str::from_utf8(content) {
-        writeln!(w, "\n{}", utf8_content)?;
+        writeln!(w, "\n{utf8_content}")?;
     } else {
         writeln!(w, "Hexdump (first 1024 bytes):")?;
         hexdump(w, &content[..content.len().min(1024)])?;

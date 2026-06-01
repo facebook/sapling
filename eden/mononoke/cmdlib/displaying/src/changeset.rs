@@ -114,7 +114,7 @@ impl TryFrom<&BonsaiChangeset> for DisplayChangeset {
                 .map(|(k, v)| {
                     Ok((
                         String::from_utf8(k.to_vec())
-                            .with_context(|| format!("Invalid extra name: {:?}", k))?,
+                            .with_context(|| format!("Invalid extra name: {k:?}"))?,
                         v.clone(),
                     ))
                 })
@@ -157,18 +157,18 @@ pub fn display_file_change(path: &String, change: &FileChange) -> String {
                 } => " (LFS)".to_string(),
                 GitLfs::GitLfsPointer {
                     non_canonical_pointer: Some(id),
-                } => format!(" (LFS, non-canonical pointer: {})", id),
+                } => format!(" (LFS, non-canonical pointer: {id})"),
             };
             match change.copy_from() {
                 Some(_) => format!("\t COPY/MOVE{}: {} {}", lfs, path, change.content_id()),
                 None => format!("\t ADDED/MODIFIED{}: {} {}", lfs, path, change.content_id()),
             }
         }
-        FileChange::Deletion => format!("\t REMOVED: {}", path),
+        FileChange::Deletion => format!("\t REMOVED: {path}"),
         FileChange::UntrackedChange(change) => {
             format!("\t UNTRACKED ADD/MODIFY: {} {}", path, change.content_id())
         }
-        FileChange::UntrackedDeletion => format!("\t MISSING: {}", path),
+        FileChange::UntrackedDeletion => format!("\t MISSING: {path}"),
     }
 }
 
@@ -177,39 +177,28 @@ pub fn display_subtree_change(path: &String, change: &DisplaySubtreeChange) -> S
         DisplaySubtreeChange::SubtreeCopy {
             from_path,
             from_cs_id,
-        } => format!(
-            "\t SUBTREE_COPY: {} (from {} @ {})",
-            path, from_path, from_cs_id
-        ),
+        } => format!("\t SUBTREE_COPY: {path} (from {from_path} @ {from_cs_id})"),
         DisplaySubtreeChange::SubtreeDeepCopy {
             from_path,
             from_cs_id,
-        } => format!(
-            "\t SUBTREE_DEEP_COPY: {} (from {} @ {})",
-            path, from_path, from_cs_id
-        ),
+        } => format!("\t SUBTREE_DEEP_COPY: {path} (from {from_path} @ {from_cs_id})"),
         DisplaySubtreeChange::SubtreeMerge {
             from_path,
             from_cs_id,
-        } => format!(
-            "\t SUBTREE_MERGE: {} (from {} @ {})",
-            path, from_path, from_cs_id
-        ),
+        } => format!("\t SUBTREE_MERGE: {path} (from {from_path} @ {from_cs_id})"),
         DisplaySubtreeChange::SubtreeImport {
             from_path,
             from_commit,
             from_repo_url,
         } => format!(
-            "\t SUBTREE_IMPORT: {} (from {} @ {} in {})",
-            path, from_path, from_commit, from_repo_url
+            "\t SUBTREE_IMPORT: {path} (from {from_path} @ {from_commit} in {from_repo_url})"
         ),
         DisplaySubtreeChange::SubtreeCrossRepoMerge {
             from_path,
             from_commit,
             from_repo_url,
         } => format!(
-            "\t SUBTREE_CROSS_REPO_MERGE: {} (from {} @ {} in {})",
-            path, from_path, from_commit, from_repo_url
+            "\t SUBTREE_CROSS_REPO_MERGE: {path} (from {from_path} @ {from_commit} in {from_repo_url})"
         ),
     }
 }
