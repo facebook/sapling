@@ -33,10 +33,7 @@ fn verify_unique_source_names(_ctx: &CoreContext, config: &SyncTargetConfig) -> 
             seen_more_than_once
         );
 
-        Err(anyhow!(
-            "Non-unique source names: {:?}",
-            seen_more_than_once
-        ))
+        Err(anyhow!("Non-unique source names: {seen_more_than_once:?}"))
     } else {
         Ok(())
     }
