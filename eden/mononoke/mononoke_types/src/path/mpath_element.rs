@@ -106,10 +106,7 @@ impl MPathElement {
         if p.len() > MPATH_ELEMENT_MAX_LENGTH {
             bail!(MononokeTypeError::InvalidPath(
                 String::from_utf8_lossy(p).into_owned(),
-                format!(
-                    "path elements cannot exceed {} bytes",
-                    MPATH_ELEMENT_MAX_LENGTH
-                )
+                format!("path elements cannot exceed {MPATH_ELEMENT_MAX_LENGTH} bytes")
             ));
         }
 
@@ -286,10 +283,7 @@ impl MPathElementPrefix {
         if self.0.len() == MPATH_ELEMENT_MAX_LENGTH {
             bail!(MononokeTypeError::InvalidPath(
                 String::from_utf8_lossy(&self.0).into_owned(),
-                format!(
-                    "path elements cannot exceed {} bytes",
-                    MPATH_ELEMENT_MAX_LENGTH
-                )
+                format!("path elements cannot exceed {MPATH_ELEMENT_MAX_LENGTH} bytes")
             ));
         }
         if let Some((_, byte_escaped)) = MPATH_ELEMENT_INVALID_BYTES
