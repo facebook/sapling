@@ -190,13 +190,12 @@ impl Middleware for MetadataMiddleware {
 
             if client_info.is_none() && self.require_client_info(state) {
                 let msg = format!(
-                    "Error: {} header not provided or wrong format (expected json).",
-                    CLIENT_INFO_HEADER
+                    "Error: {CLIENT_INFO_HEADER} header not provided or wrong format (expected json)."
                 );
                 error!("{}", &msg,);
                 let response = Response::builder()
                     .status(StatusCode::UNAUTHORIZED)
-                    .body(format!("{{\"message:\"{}\"}}", msg).into_body())
+                    .body(format!("{{\"message:\"{msg}\"}}").into_body())
                     .expect("Couldn't build http response");
                 return Some(response);
             }

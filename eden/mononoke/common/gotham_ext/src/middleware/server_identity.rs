@@ -42,10 +42,7 @@ impl ServerIdentityMiddleware {
         let tw_job_user = env::var("TW_JOB_USER")?;
         let tw_job_name = env::var("TW_JOB_NAME")?;
         let tw_task_id = env::var("TW_TASK_ID")?;
-        let task = format!(
-            "{}/{}/{}/{}",
-            tw_job_cluster, tw_job_user, tw_job_name, tw_task_id
-        );
+        let task = format!("{tw_job_cluster}/{tw_job_user}/{tw_job_name}/{tw_task_id}");
         let header = HeaderValue::from_str(&task)?;
         headers.insert("X-TW-Task", header);
         Ok(())
