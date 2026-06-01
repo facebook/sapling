@@ -64,15 +64,13 @@ impl RendezVousConnection {
             bonsai: RendezVous::new(
                 ConfigurableRendezVousController::new(opts),
                 Arc::new(RendezVousStats::new(format!(
-                    "bonsai_git_mapping.bonsai.{}",
-                    name,
+                    "bonsai_git_mapping.bonsai.{name}",
                 ))),
             ),
             git: RendezVous::new(
                 ConfigurableRendezVousController::new(opts),
                 Arc::new(RendezVousStats::new(format!(
-                    "bonsai_git_mapping.git.{}",
-                    name,
+                    "bonsai_git_mapping.git.{name}",
                 ))),
             ),
         }

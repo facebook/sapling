@@ -233,8 +233,7 @@ pub trait BonsaiGitMapping: Send + Sync {
             }
             ensure!(
                 missing.is_empty(),
-                "Missing bonsai mapping for git commits: {:?}",
-                missing,
+                "Missing bonsai mapping for git commits: {missing:?}",
             );
             Ok(result)
         } else {
@@ -268,8 +267,7 @@ pub trait BonsaiGitMapping: Send + Sync {
             }
             ensure!(
                 missing.is_empty(),
-                "Missing git mapping for bonsai changesets: {:?}",
-                missing,
+                "Missing git mapping for bonsai changesets: {missing:?}",
             );
             Ok(result)
         } else {
