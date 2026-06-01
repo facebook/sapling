@@ -327,7 +327,7 @@ impl Sqlblob {
             put_behaviour,
             move |shard_id| {
                 let con = open_sqlite_path(
-                    pathbuf.join(format!("shard_{}.sqlite", shard_id)),
+                    pathbuf.join(format!("shard_{shard_id}.sqlite")),
                     readonly_storage,
                 )?;
                 con.execute_batch(Self::CREATION_QUERY)?;
@@ -391,7 +391,7 @@ impl Sqlblob {
     const CREATION_QUERY: &'static str = include_str!("../schema/sqlite-sqlblob.sql");
 
     fn counted(self, label: String) -> CountedBlobstore<Self> {
-        CountedBlobstore::new(format!("{}.{}", COUNTED_ID, label), self)
+        CountedBlobstore::new(format!("{COUNTED_ID}.{label}"), self)
     }
 
     #[cfg(test)]
@@ -525,7 +525,7 @@ impl Sqlblob {
             }
             Ok(())
         } else {
-            println!("Key {} has no associated data chunk", key); //TODO delete the key without content
+            println!("Key {key} has no associated data chunk"); //TODO delete the key without content
             Ok(())
         }
     }
@@ -601,9 +601,7 @@ impl Blobstore for Sqlblob {
     ) -> Result<OverwriteStatus> {
         if key.len() > MAX_KEY_SIZE {
             return Err(format_err!(
-                "Key {} exceeded max key size {}",
-                key,
-                MAX_KEY_SIZE
+                "Key {key} exceeded max key size {MAX_KEY_SIZE}"
             ));
         }
 
@@ -758,7 +756,7 @@ impl Blobstore for Sqlblob {
             .data_store
             .get(ctx, old_key)
             .await?
-            .ok_or_else(|| format_err!("Key {} does not exist in the blobstore", old_key))?;
+            .ok_or_else(|| format_err!("Key {old_key} does not exist in the blobstore"))?;
         self.data_store
             .put(
                 ctx,
@@ -773,10 +771,7 @@ impl Blobstore for Sqlblob {
 
     async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
         if !self.data_store.is_present(ctx, key).await? {
-            bail!(
-                "Sqlblob::unlink: key {} does not exist in the blobstore",
-                key
-            )
+            bail!("Sqlblob::unlink: key {key} does not exist in the blobstore")
         };
         self.data_store.unlink(ctx, key).await
     }

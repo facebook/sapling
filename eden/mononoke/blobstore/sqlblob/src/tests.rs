@@ -35,7 +35,7 @@ where
         let ctx = CoreContext::test_mock(fb);
         do_test(ctx, blobstore, test_source)
             .await
-            .with_context(|| format_err!("while testing allow_inline {}", allow_inline))?;
+            .with_context(|| format_err!("while testing allow_inline {allow_inline}"))?;
     }
     Ok(())
 }
@@ -53,7 +53,7 @@ async fn read_write_size(
             .take(10)
             .map(char::from)
             .collect();
-        let key = format!("manifoldblob_test_{}", suffix);
+        let key = format!("manifoldblob_test_{suffix}");
 
         let mut bytes_in = vec![0u8; blob_size];
         rand::rng().fill_bytes(&mut bytes_in);
@@ -88,7 +88,7 @@ async fn read_write(fb: FacebookInit) -> Result<(), Error> {
             let blob_size: usize = size.try_into()?;
             read_write_size(fb, put_behaviour, blob_size)
                 .await
-                .with_context(|| format_err!("while testing size {}", size))?;
+                .with_context(|| format_err!("while testing size {size}"))?;
         }
     }
     Ok(())
@@ -104,7 +104,7 @@ async fn double_put(fb: FacebookInit) -> Result<(), Error> {
             .take(10)
             .map(char::from)
             .collect();
-        let key = format!("manifoldblob_test_{}", suffix);
+        let key = format!("manifoldblob_test_{suffix}");
 
         let mut bytes_in = [0u8; 64];
         rand::rng().fill_bytes(&mut bytes_in);
@@ -140,7 +140,7 @@ async fn overwrite(fb: FacebookInit) -> Result<(), Error> {
             .take(10)
             .map(char::from)
             .collect();
-        let key = format!("manifoldblob_test_{}", suffix);
+        let key = format!("manifoldblob_test_{suffix}");
 
         let mut bytes_1 = [0u8; 64];
         rand::rng().fill_bytes(&mut bytes_1);
@@ -174,13 +174,13 @@ async fn dedup(fb: FacebookInit) -> Result<(), Error> {
             .take(10)
             .map(char::from)
             .collect();
-        let key1 = format!("manifoldblob_test_{}", suffix);
+        let key1 = format!("manifoldblob_test_{suffix}");
         let suffix: String = rand::rng()
             .sample_iter(&Alphanumeric)
             .take(10)
             .map(char::from)
             .collect();
-        let key2 = format!("manifoldblob_test_{}", suffix);
+        let key2 = format!("manifoldblob_test_{suffix}");
 
         let mut bytes_in = [0u8; 64];
         rand::rng().fill_bytes(&mut bytes_in);
@@ -231,13 +231,13 @@ async fn link(fb: FacebookInit) -> Result<(), Error> {
             .take(10)
             .map(char::from)
             .collect();
-        let key1 = format!("manifoldblob_test_{}", suffix);
+        let key1 = format!("manifoldblob_test_{suffix}");
         let suffix: String = rand::rng()
             .sample_iter(&Alphanumeric)
             .take(10)
             .map(char::from)
             .collect();
-        let key2 = format!("manifoldblob_test_{}", suffix);
+        let key2 = format!("manifoldblob_test_{suffix}");
 
         let mut bytes_in = [0u8; 64];
         rand::rng().fill_bytes(&mut bytes_in);
@@ -295,13 +295,13 @@ async fn generations(fb: FacebookInit) -> Result<(), Error> {
             .take(10)
             .map(char::from)
             .collect();
-        let key1 = format!("manifoldblob_test_{}", suffix);
+        let key1 = format!("manifoldblob_test_{suffix}");
         let suffix: String = rand::rng()
             .sample_iter(&Alphanumeric)
             .take(10)
             .map(char::from)
             .collect();
-        let key2 = format!("manifoldblob_test_{}", suffix);
+        let key2 = format!("manifoldblob_test_{suffix}");
 
         let blobstore_bytes_inline = {
             let mut bytes_in = [0u8; MAX_INLINE_LEN as usize];
@@ -338,9 +338,7 @@ async fn generations(fb: FacebookInit) -> Result<(), Error> {
                 assert_eq!(
                     generations,
                     vec![Some(2)],
-                    "Generation set to 2 {} {}",
-                    auto_inline_puts,
-                    value_len
+                    "Generation set to 2 {auto_inline_puts} {value_len}"
                 );
             } else {
                 assert_eq!(

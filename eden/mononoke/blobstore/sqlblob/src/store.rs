@@ -465,13 +465,10 @@ impl ChunkSqlStore {
             rows.into_iter()
                 .next()
                 .map(|(value,)| (&*value).into())
-                .ok_or_else(|| {
-                    format_err!("Missing chunk with id {} shard {}", chunk_num, shard_id)
-                })
+                .ok_or_else(|| format_err!("Missing chunk with id {chunk_num} shard {shard_id}"))
         } else {
             bail!(
-                "ChunkSqlStore::get() unexpectedly called for inline chunking_method {:?}",
-                chunking_method
+                "ChunkSqlStore::get() unexpectedly called for inline chunking_method {chunking_method:?}"
             )
         }
     }
@@ -616,7 +613,7 @@ impl ChunkSqlStore {
         rows.into_iter()
             .next()
             .map(|(value_len,)| value_len)
-            .ok_or_else(|| format_err!("Missing chunk with id {} shard {}", key, shard_id))
+            .ok_or_else(|| format_err!("Missing chunk with id {key} shard {shard_id}"))
     }
 
     // Returns length of the chunk value if known
