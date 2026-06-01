@@ -62,10 +62,7 @@ pub async fn create_commit_syncers_from_app<R: CrossRepo>(
         (source_repo, target_repo)
     } else {
         bail!(
-            "Unexpectedly CommitSyncConfig {:?} has neither of {}, {} as a large repo",
-            common_config,
-            source_repo_id,
-            target_repo_id
+            "Unexpectedly CommitSyncConfig {common_config:?} has neither of {source_repo_id}, {target_repo_id} as a large repo"
         );
     };
 
