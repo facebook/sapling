@@ -413,14 +413,14 @@ async fn get_filenode_from_envelope(
 ) -> Result<FilenodeInfo, Error> {
     let envelope = node.load(ctx, &blobstore).await.with_context({
         cloned!(path);
-        move || format!("While fetching filenode for {} {}", path, node)
+        move || format!("While fetching filenode for {path} {node}")
     })?;
     let (p1, p2) = envelope.parents();
     let copyfrom = envelope
         .get_copy_info()
         .with_context({
             cloned!(path);
-            move || format!("While parsing copy information for {} {}", path, node)
+            move || format!("While parsing copy information for {path} {node}")
         })?
         .map(|(path, node)| (RepoPath::FilePath(path), node));
     Ok(FilenodeInfo {
