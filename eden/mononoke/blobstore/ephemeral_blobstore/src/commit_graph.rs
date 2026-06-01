@@ -228,8 +228,7 @@ impl ParentsFetcher for EphemeralOnlyChangesetStorage {
             .await
             .with_context(|| {
                 format!(
-                    "Failed to load bonsai changeset with id {} (in EphemeralCommitGraphStorage)",
-                    cs_id
+                    "Failed to load bonsai changeset with id {cs_id} (in EphemeralCommitGraphStorage)"
                 )
             })?;
         Ok(cs.parents().collect())
@@ -290,12 +289,7 @@ impl CommitGraphStorage for EphemeralCommitGraphStorage {
             .fetch_many_edges(ctx, &[cs_id], Prefetch::None)
             .await?
             .remove(&cs_id)
-            .ok_or_else(|| {
-                anyhow!(
-                    "Missing changeset {} in ephemeral commit graph storage",
-                    cs_id
-                )
-            })?
+            .ok_or_else(|| anyhow!("Missing changeset {cs_id} in ephemeral commit graph storage"))?
             .into())
     }
 
@@ -327,8 +321,7 @@ impl CommitGraphStorage for EphemeralCommitGraphStorage {
 
         if let Some(cs_id) = unfetched_ids.first() {
             return Err(anyhow::anyhow!(
-                "Changeset {} not found in ephemeral commit graph storage",
-                cs_id,
+                "Changeset {cs_id} not found in ephemeral commit graph storage",
             ));
         }
 

@@ -950,7 +950,7 @@ mod test {
             .await?;
         assert_eq!(
             enumerated.keys,
-            hashset! { format!("eph{}.repo0000.{}", bubble1_id, key) }
+            hashset! { format!("eph{bubble1_id}.repo0000.{key}") }
         );
 
         // Create a new bubble and put data in it.
@@ -977,7 +977,7 @@ mod test {
         assert_eq!(
             enumerated.keys,
             hashset! {
-                format!("eph{}.repo0000.{}", bubble1_id, key),
+                format!("eph{bubble1_id}.repo0000.{key}"),
                 format!("eph{}.repo0000.{}", bubble2_id, key),
             }
         );
