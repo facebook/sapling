@@ -903,6 +903,63 @@ async fn test_bypass_rejects_when_author_not_in_allowlist(fb: FacebookInit) {
 }
 
 // =========================================================================
+// Client-identity-based bypass permission group tests
+//
+// These verify that, on the default-on client-identities path, group
+// membership is checked against the pusher's client identities (from
+// ctx.metadata()), NOT the changeset author. Each test forces author/client
+// divergence to prove the dispatch uses client identities.
+// =========================================================================
+
+/// What it tests: on the default client-identities path, the client identity
+/// ("client_user") is in the allowlist while the author ("test") is NOT — so a
+/// bypass can only be granted via the client identity. Proves the client
+/// identity, not the author, is used.
+/// Expected: bypassed.
+#[mononoke::fbinit_test]
+async fn test_bypass_with_client_identities_authorized(fb: FacebookInit) {
+    let res = BypassScenario {
+        checker: Some(allowlist(&["client_user"])),
+        client_identities: vec!["client_user".to_string()],
+        ..Default::default()
+    }
+    .run(fb)
+    .await;
+    assert_bypassed(&res);
+}
+
+/// What it tests: on the default client-identities path, the allowlist contains
+/// the author's unixname ("test") but NOT the client identity ("client_user").
+/// Proves the author is ignored.
+/// Expected: hook runs (rejected).
+#[mononoke::fbinit_test]
+async fn test_bypass_with_client_identities_unauthorized_ignores_author(fb: FacebookInit) {
+    let res = BypassScenario {
+        checker: Some(allowlist(&["test"])),
+        client_identities: vec!["client_user".to_string()],
+        ..Default::default()
+    }
+    .run(fb)
+    .await;
+    assert_hook_rejected(&res);
+}
+
+/// What it tests: on the default client-identities path, a request with no
+/// client identities fails closed (a real checker admits no one).
+/// Expected: hook runs (rejected).
+#[mononoke::fbinit_test]
+async fn test_bypass_with_empty_client_identities_fails_closed(fb: FacebookInit) {
+    let res = BypassScenario {
+        checker: Some(allowlist(&[])),
+        client_identities: Vec::new(),
+        ..Default::default()
+    }
+    .run(fb)
+    .await;
+    assert_hook_rejected(&res);
+}
+
+// =========================================================================
 // Bypass permission group test helpers
 // =========================================================================
 

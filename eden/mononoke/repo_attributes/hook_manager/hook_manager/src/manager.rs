@@ -234,14 +234,28 @@ impl HookManager {
             return Ok(BypassAuthorizationResult::Bypassed(bypass_reason));
         }
 
-        // Bypass was triggered and JK is enabled — check permission group
-        self.check_bypass_authorization_with_changeset_author(
-            hook,
-            ctx,
-            changeset_author,
-            bypass_reason,
-        )
-        .await
+        let use_client_identities = justknobs::eval(
+            "scm/mononoke:check_hook_bypass_permission_group_with_client_identities",
+            None,
+            None,
+        );
+
+        if !use_client_identities {
+            // Bypass was triggered and JK is enabled — check permission group
+            return self
+                .check_bypass_authorization_with_changeset_author(
+                    hook,
+                    ctx,
+                    changeset_author,
+                    bypass_reason,
+                )
+                .await;
+        }
+
+        // Bypass triggered + JK enabled — check permission group against
+        // pusher's client identities. Missing identities fail closed (hook runs).
+        self.check_membership(hook, ctx.metadata().identities(), bypass_reason)
+            .await
     }
 
     /// Check whether `identity_set` is a member of the hook's bypass permission
