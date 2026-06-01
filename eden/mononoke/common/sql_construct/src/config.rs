@@ -41,10 +41,7 @@ pub trait SqlConstructFromDatabaseConfig: FbSqlConstruct + SqlConstruct {
             }
         }
         .with_context(|| {
-            format!(
-                "While connecting to {:?} (with options {:?})",
-                database_config, mysql_options
-            )
+            format!("While connecting to {database_config:?} (with options {mysql_options:?})")
         })
     }
 }
@@ -76,10 +73,7 @@ pub trait SqlConstructFromShardedDatabaseConfig: FbSqlShardedConstruct {
             }
         }
         .with_context(|| {
-            format!(
-                "While connecting to {:?} (with options {:?})",
-                database_config, mysql_options
-            )
+            format!("While connecting to {database_config:?} (with options {mysql_options:?})")
         })
     }
 }
