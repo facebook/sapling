@@ -25,7 +25,7 @@ impl GFlagsArgs {
         for flag in &self.gflag {
             let (key, value) = flag
                 .rsplit_once('=')
-                .ok_or_else(|| anyhow::anyhow!("Invalid flag value: {}", flag))?;
+                .ok_or_else(|| anyhow::anyhow!("Invalid flag value: {flag}"))?;
             gflags::set_raw_gflag_value(fb, key, value)?;
         }
         #[cfg(not(fbcode_build))]

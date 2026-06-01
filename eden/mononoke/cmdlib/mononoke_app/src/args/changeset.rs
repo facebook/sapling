@@ -93,14 +93,14 @@ impl ChangesetArgs {
                 repo.bookmarks()
                     .get(ctx.clone(), bookmark, bookmarks::Freshness::MostRecent)
                     .await
-                    .with_context(|| format!("Failed to resolve bookmark '{}'", bookmark))?
-                    .ok_or_else(|| anyhow!("Couldn't find bookmark: {}", bookmark))
+                    .with_context(|| format!("Failed to resolve bookmark '{bookmark}'"))?
+                    .ok_or_else(|| anyhow!("Couldn't find bookmark: {bookmark}"))
             })
             .chain(
                 stream::iter(self.commit_id.iter()).then(|commit_id| async move {
                     parse_commit_id(ctx, repo, commit_id)
                         .await
-                        .with_context(|| format!("Failed to parse commit id '{}'", commit_id))
+                        .with_context(|| format!("Failed to parse commit id '{commit_id}'"))
                 }),
             )
             .chain(
