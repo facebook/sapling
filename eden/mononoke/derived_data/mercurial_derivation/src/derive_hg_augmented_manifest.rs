@@ -188,9 +188,7 @@ pub async fn derive_from_hg_manifest_and_parents(
                                 .get_mut(index)
                                 .ok_or_else(|| {
                                     anyhow!(
-                                        "Cannot find corresponding parent {} of {} (ManifestComparison::Same)",
-                                        index,
-                                        hg_manifest_id
+                                        "Cannot find corresponding parent {index} of {hg_manifest_id} (ManifestComparison::Same)"
                                     )
                                 })?
                                 .push(Either::Left(elem));
@@ -224,9 +222,7 @@ pub async fn derive_from_hg_manifest_and_parents(
                                 .get_mut(index)
                                 .ok_or_else(|| {
                                     anyhow!(
-                                        "Cannot find corresponding parent {} of {} (ManifestComparison::ManySame)",
-                                        index,
-                                        hg_manifest_id
+                                        "Cannot find corresponding parent {index} of {hg_manifest_id} (ManifestComparison::ManySame)"
                                     )
                                 })?
                                 .push(Either::Right(prefix));
@@ -251,9 +247,7 @@ pub async fn derive_from_hg_manifest_and_parents(
                                     .and_then(Option::as_ref)
                                     .ok_or_else(|| {
                                         anyhow!(
-                                            "Cannot find corresponding parent {} of {}",
-                                            index,
-                                            hg_manifest_id
+                                            "Cannot find corresponding parent {index} of {hg_manifest_id}"
                                         )
                                     })?;
 
@@ -447,7 +441,7 @@ async fn get_metadata<'a>(
             let metadata =
                 filestore::get_metadata(blobstore, ctx, &FetchKey::Canonical(content_id))
                     .await?
-                    .ok_or_else(|| anyhow!("Missing metadata for {}", content_id))?;
+                    .ok_or_else(|| anyhow!("Missing metadata for {content_id}"))?;
             Cow::Owned(metadata)
         }
     })
@@ -583,8 +577,7 @@ pub(crate) fn check_content_identical_at_parents(
         // linknode is not a Mercurial ancestor of the changeset, so this is an
         // unresolved conflict.
         bail!(
-            "Unresolved leaf conflict at {}: file is present only in step-parents (p3+) of an octopus merge",
-            path,
+            "Unresolved leaf conflict at {path}: file is present only in step-parents (p3+) of an octopus merge",
         );
     }
 
@@ -707,7 +700,7 @@ pub async fn derive_from_full_hg_manifest(
                         &FetchKey::Canonical(filenode.content_id()),
                     )
                     .await?
-                    .ok_or_else(|| anyhow!("Missing metadata for {}", filenode_id))?;
+                    .ok_or_else(|| anyhow!("Missing metadata for {filenode_id}"))?;
                     let hg_augmented_file_leaf_node = HgAugmentedFileLeafNode {
                         file_type,
                         filenode: filenode_id.into_nodehash(),

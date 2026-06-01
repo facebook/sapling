@@ -192,9 +192,7 @@ impl BonsaiDerivable for MappedHgChangesetId {
                         derivation_ctx.restricted_paths(),
                     )
                     .await
-                    .with_context(|| {
-                        format!("failed deriving stack of {:?} to {:?}", first, last,)
-                    })?;
+                    .with_context(|| format!("failed deriving stack of {first:?} to {last:?}",))?;
 
                 // This pattern is used to convert a ref to tuple into a tuple of refs.
                 #[allow(clippy::map_identity)]
@@ -454,7 +452,7 @@ impl From<RootHgAugmentedManifestId> for BlobstoreBytes {
 pub fn format_key(derivation_ctx: &DerivationContext, cs_id: ChangesetId) -> String {
     let root_prefix = "derived_root_hgaugmentedmanifest.";
     let key_prefix = derivation_ctx.mapping_key_prefix::<RootHgAugmentedManifestId>();
-    format!("{}{}{}", root_prefix, key_prefix, cs_id)
+    format!("{root_prefix}{key_prefix}{cs_id}")
 }
 
 /// Gets the HgManifestId for a commit, optionally deriving the HgChangeset inline.
@@ -974,12 +972,11 @@ mod test {
         for (cs_id, expected_hg_cs_id) in commits_desc_to_anc.into_iter().rev() {
             let hg_cs = hg_cs_derived
                 .get(&cs_id)
-                .unwrap_or_else(|| panic!("HgChangeset not derived for {}", cs_id));
+                .unwrap_or_else(|| panic!("HgChangeset not derived for {cs_id}"));
             assert_eq!(
                 hg_cs.hg_changeset_id(),
                 expected_hg_cs_id,
-                "HgChangeset mismatch for {}",
-                cs_id,
+                "HgChangeset mismatch for {cs_id}",
             );
 
             // Load the manifest — goes through reconstruction when blobs

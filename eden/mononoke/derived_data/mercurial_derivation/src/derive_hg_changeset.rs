@@ -438,10 +438,7 @@ pub async fn derive_simple_hg_changeset_stack_without_copy_info(
     for bonsai in bonsais {
         let cs_id = bonsai.get_changeset_id();
         let mf_id = mf_ids.get(&cs_id).ok_or_else(|| {
-            anyhow!(
-                "not found manifest for {} but should have derived it in this function",
-                cs_id
-            )
+            anyhow!("not found manifest for {cs_id} but should have derived it in this function")
         })?;
         let (hg_changeset_id, hg_cs) =
             generate_hg_changeset(ctx, blobstore, bonsai, *mf_id, parents, None, options).await?;
