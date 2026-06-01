@@ -94,8 +94,7 @@ fn read_raw_configs_toml(config_path: &Path) -> Result<RawRepoConfigs> {
             .and_then(|s| s.to_str())
             .ok_or_else(|| {
                 ConfigurationError::InvalidFileStructure(format!(
-                    "invalid repo path {:?}",
-                    repo_definition_path
+                    "invalid repo path {repo_definition_path:?}"
                 ))
             })?;
 
@@ -128,8 +127,7 @@ fn read_raw_configs_toml(config_path: &Path) -> Result<RawRepoConfigs> {
             .and_then(|s| s.to_str())
             .ok_or_else(|| {
                 ConfigurationError::InvalidFileStructure(format!(
-                    "invalid repo path {:?}",
-                    repo_config_path
+                    "invalid repo path {repo_config_path:?}"
                 ))
             })?;
 
@@ -189,6 +187,6 @@ where
 
             Ok(t)
         }
-        Err(e) => Err(anyhow!("error parsing toml: {}", e)),
+        Err(e) => Err(anyhow!("error parsing toml: {e}")),
     }
 }

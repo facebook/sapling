@@ -218,8 +218,7 @@ fn parse_with_repo_definition(
         .map(|key| {
             named_acl_region_configs.get(&key).cloned().ok_or_else(|| {
                 ConfigurationError::InvalidConfig(format!(
-                    "ACL region config \"{}\" not defined",
-                    key
+                    "ACL region config \"{key}\" not defined"
                 ))
             })
         })
@@ -232,8 +231,7 @@ fn parse_with_repo_definition(
         .get(named_repo_config_name.as_str())
         .ok_or_else(|| {
             ConfigurationError::InvalidConfig(format!(
-                "no named_repo_config \"{}\" for repo \"{:?}\".",
-                named_repo_config_name, repo_name
+                "no named_repo_config \"{named_repo_config_name}\" for repo \"{repo_name:?}\"."
             ))
         })?
         .clone();
@@ -440,7 +438,7 @@ fn build_repo_config(
             .or_else(|| named_storage_configs.get(name))
             .cloned()
             .ok_or_else(|| {
-                ConfigurationError::InvalidConfig(format!("Storage \"{}\" not defined", name))
+                ConfigurationError::InvalidConfig(format!("Storage \"{name}\" not defined"))
             })?;
 
         raw_storage_config.convert()
@@ -659,8 +657,7 @@ fn parse_common_config(
             .cloned()
             .ok_or_else(|| {
                 ConfigurationError::InvalidConfig(format!(
-                    "Storage \"{}\" not defined for redaction config",
-                    name
+                    "Storage \"{name}\" not defined for redaction config"
                 ))
             })?
             .convert()?
@@ -957,8 +954,8 @@ mod test {
             crate::raw::read_raw_configs(tmp_dir.path(), &config_store).unwrap();
         for (_config_name, commit_sync_config) in commit_sync {
             let res = commit_sync_config.convert();
-            let msg = format!("{:#?}", res);
-            println!("res = {}", msg);
+            let msg = format!("{res:#?}");
+            println!("res = {msg}");
             assert!(res.is_err());
             assert!(msg.contains("is one of the small repos too"));
         }
@@ -994,8 +991,8 @@ mod test {
             crate::raw::read_raw_configs(tmp_dir.path(), &config_store).unwrap();
         for (_config_name, commit_sync_config) in commit_sync {
             let res = commit_sync_config.convert();
-            let msg = format!("{:#?}", res);
-            println!("res = {}", msg);
+            let msg = format!("{res:#?}");
+            println!("res = {msg}");
             assert!(res.is_err());
             assert!(msg.contains("present multiple times in the same CommitSyncConfig"));
         }
@@ -1048,8 +1045,8 @@ mod test {
         let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
         let tmp_dir = write_files(&paths);
         let res = load_repo_configs(tmp_dir.path(), &config_store);
-        let msg = format!("{:#?}", res);
-        println!("res = {}", msg);
+        let msg = format!("{res:#?}");
+        println!("res = {msg}");
         assert!(res.is_err());
         assert!(msg.contains("DuplicatedRepoId"));
     }
@@ -1851,8 +1848,8 @@ mod test {
         let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
         let tmp_dir = write_files(&paths);
         let res = load_repo_configs(tmp_dir.path(), &config_store);
-        let msg = format!("{:#?}", res);
-        println!("res = {}", msg);
+        let msg = format!("{res:#?}");
+        println!("res = {msg}");
         assert!(res.is_err());
         assert!(msg.contains("InvalidPushvar"));
     }
@@ -1889,14 +1886,12 @@ mod test {
             let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
             let tmp_dir = write_files(&paths);
             let res = load_repo_configs(tmp_dir.path(), &config_store);
-            println!("res = {:?}", res);
-            let msg = format!("{:?}", res);
-            assert!(res.is_err(), "unexpected success for {}", common);
+            println!("res = {res:?}");
+            let msg = format!("{res:?}");
+            assert!(res.is_err(), "unexpected success for {common}");
             assert!(
                 msg.contains(expect),
-                "wrong failure, wanted \"{}\" in {}",
-                expect,
-                common
+                "wrong failure, wanted \"{expect}\" in {common}"
             );
         }
 
