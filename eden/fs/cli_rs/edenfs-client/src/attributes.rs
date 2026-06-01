@@ -498,8 +498,7 @@ impl FromStr for AttributesRequestScope {
             "treesonly" => Ok(Self::TreesOnly),
             "treesandfiles" => Ok(Self::TreesAndFiles),
             _ => Err(EdenFsError::Other(anyhow!(
-                "invalid file attribute request scope: {:?}",
-                s
+                "invalid file attribute request scope: {s:?}"
             ))),
         }
     }
@@ -539,8 +538,7 @@ impl EdenFsClient {
         .await
         .map_err(|e| {
             EdenFsError::Other(anyhow!(
-                "failed to get getAttributesFromFilesV2 result: {:?}",
-                e
+                "failed to get getAttributesFromFilesV2 result: {e:?}"
             ))
         })
         .map(Into::into)

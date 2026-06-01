@@ -30,7 +30,7 @@ pub fn get_systemd_unit(instance: &EdenFsInstance) -> Result<String> {
         .arg("--path")
         .arg(config_dir.as_ref())
         .output()
-        .map_err(|e| anyhow!("systemd-escape is not installed: {}", e))?;
+        .map_err(|e| anyhow!("systemd-escape is not installed: {e}"))?;
 
     if !output.status.success() {
         return Err(anyhow!(

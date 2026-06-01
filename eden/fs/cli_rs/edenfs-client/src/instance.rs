@@ -412,7 +412,7 @@ impl EdenFsInstance {
         pid_str
             .trim()
             .parse()
-            .with_context(|| format!("Unable to parse pid file content: '{}'", pid_str))
+            .with_context(|| format!("Unable to parse pid file content: '{pid_str}'"))
     }
 
     /// Retrieves the running EdenFS process status based on the lock file.
@@ -471,8 +471,7 @@ impl EdenFsInstance {
         {
             Err(anyhow!(
                 "EdenFS's Thrift server does not appear to be running, \
-                but the process is still alive (PID={})",
-                pid
+                but the process is still alive (PID={pid})"
             ))
         } else {
             Err(anyhow!("EdenFS is not running"))
@@ -531,7 +530,7 @@ impl EdenFsInstance {
             }
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(BTreeMap::new()),
             Err(e) => Err(e)
-                .with_context(|| format!("Failed to read directory map from {:?}", directory_map)),
+                .with_context(|| format!("Failed to read directory map from {directory_map:?}")),
         }
     }
 

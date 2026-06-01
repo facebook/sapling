@@ -88,8 +88,7 @@ impl FromStr for RedirectionType {
         } else {
             // deliberately did not implement "Unknown"
             Err(EdenFsError::ConfigurationError(format!(
-                "Unknown redirection type: {}. Must be one of: bind, symlink",
-                s
+                "Unknown redirection type: {s}. Must be one of: bind, symlink"
             )))
         }
     }
@@ -888,7 +887,7 @@ If this path should not be deleted automatically, please reach out to 'EdenFS Wi
             match forcefully_remove_dir_all(&self.expand_repo_path(checkout)) {
                 Ok(_) => Ok(RepoPathDisposition::DoesNotExist),
                 Err(e) => {
-                    println!("System error occurred while removing directory: {}", e);
+                    println!("System error occurred while removing directory: {e}");
                     Err(EdenFsError::Other(anyhow!(
                         "Failed to delete a non-empty directory (full path `{}`).
 This happens mostly when some of its files are in use by another process.
@@ -920,7 +919,7 @@ To detect and kill such processes, follow https://fburl.com/edenfs-redirection-n
             match remove_file(&self.expand_repo_path(checkout)) {
                 Ok(_) => Ok(RepoPathDisposition::DoesNotExist),
                 Err(e) => {
-                    println!("System error occurred while removing file: {}", e);
+                    println!("System error occurred while removing file: {e}");
                     Err(EdenFsError::Other(anyhow!(
                         "Failed to delete the file (full path `{}`).
 This happens mostly when the file is being used by another process.
@@ -1155,8 +1154,7 @@ where
             );
         } else {
             return Err(serde::de::Error::custom(format!(
-                "Unsupported redirection value type {}. Must be string.",
-                value
+                "Unsupported redirection value type {value}. Must be string."
             )));
         }
     }
@@ -1914,7 +1912,7 @@ pub mod scratch {
 
             assert!(res.contains(&path.join("D")));
 
-            eprintln!("{:?}", res);
+            eprintln!("{res:?}");
             assert!(res.contains(&path.join("E/1/2")));
             Ok(())
         }

@@ -72,9 +72,7 @@ impl EdenFsClient {
         .await
         .map_err(|err| {
             EdenFsError::Other(anyhow!(
-                "Failed invoking prefetchFilesV2 using params='{:?}' with error={:?}'",
-                prefetch_params,
-                err
+                "Failed invoking prefetchFilesV2 using params='{prefetch_params:?}' with error={err:?}'"
             ))
         })
         .map(Into::into)

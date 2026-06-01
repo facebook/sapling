@@ -147,9 +147,7 @@ impl EdenFsClient {
             .await
             .map_err(|err| {
                 EdenFsError::Other(anyhow!(
-                    "Failed invoking globFiles using params='{:?}' with error={:?}'",
-                    glob_params,
-                    err
+                    "Failed invoking globFiles using params='{glob_params:?}' with error={err:?}'"
                 ))
             })
             .map(Into::into)

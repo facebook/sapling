@@ -114,7 +114,7 @@ impl EdenFsClient {
         );
         self.with_thrift(|t| (t.readdir(&params), EdenThriftMethod::ReadDir))
             .await
-            .map_err(|e| EdenFsError::Other(anyhow!("failed to get readdir result: {:?}", e)))
+            .map_err(|e| EdenFsError::Other(anyhow!("failed to get readdir result: {e:?}")))
             .map(Into::into)
     }
 
@@ -232,7 +232,7 @@ async fn recursive_readdir_impl(
                 Ok(SourceControlType::Symlink) => {
                     tracing::debug!("symlink: {}", directory.display());
                 }
-                bad => return Err(anyhow!("unexpected SourceControlType: {:?}", bad).into()),
+                bad => return Err(anyhow!("unexpected SourceControlType: {bad:?}").into()),
             }
         }
     }

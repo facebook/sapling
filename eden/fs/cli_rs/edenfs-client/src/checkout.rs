@@ -282,8 +282,7 @@ where
             arr.push(s.to_string());
         } else {
             return Err(serde::de::Error::custom(format!(
-                "Unsupported [profiles] active type {}. Must be string.",
-                val
+                "Unsupported [profiles] active type {val}. Must be string."
             )));
         }
     }
@@ -351,8 +350,7 @@ where
             Ok(_) => continue,
             Err(e) => {
                 return Err(serde::ser::Error::custom(format!(
-                    "Unsupported redirection. Target must be string. Error: {}",
-                    e
+                    "Unsupported redirection. Target must be string. Error: {e}"
                 )));
             }
         }
@@ -383,8 +381,7 @@ where
             );
         } else {
             return Err(serde::de::Error::custom(format!(
-                "Unsupported redirection target {}. Must be string.",
-                value
+                "Unsupported redirection target {value}. Must be string."
             )));
         }
     }
@@ -524,7 +521,7 @@ impl CheckoutConfig {
         if let Some(profiles) = &mut self.profiles {
             if profiles.active.iter().any(|x| x == profile) {
                 // The profile is already activated so we don't need to update the profile list
-                eprintln!("{} is already an active prefetch profile", profile);
+                eprintln!("{profile} is already an active prefetch profile");
                 return Ok(());
             }
 
@@ -538,8 +535,7 @@ impl CheckoutConfig {
             Ok(())
         } else {
             Err(EdenFsError::Other(anyhow!(
-                "failed to activate prefetch profile '{}'; could not find active profile list",
-                profile
+                "failed to activate prefetch profile '{profile}'; could not find active profile list"
             )))
         }
     }
@@ -558,8 +554,7 @@ impl CheckoutConfig {
             {
                 return Err(EdenFsError::Other(anyhow!(
                     "Predictive prefetch profiles are already activated \
-                            with {} directories configured.",
-                    num_dirs
+                            with {num_dirs} directories configured."
                 )));
             }
             profiles.predictive_prefetch_active = true;
@@ -580,8 +575,7 @@ impl CheckoutConfig {
         if let Some(profiles) = &mut self.profiles {
             if !profiles.active.iter().any(|x| x == profile) {
                 return Err(EdenFsError::Other(anyhow!(
-                    "Profile {} was not deactivated since it wasn't active.",
-                    profile
+                    "Profile {profile} was not deactivated since it wasn't active."
                 )));
             }
             profiles.active.retain(|x| *x != *profile);
@@ -688,7 +682,7 @@ impl EdenFsCheckout {
                 if state == MountState::RUNNING {
                     String::new()
                 } else {
-                    format!(" ({})", state)
+                    format!(" ({state})")
                 }
             }
             None => " (not mounted)".to_string(),
@@ -696,8 +690,8 @@ impl EdenFsCheckout {
 
         let transport_str = if verbose {
             match (&self.fs_channel_type, &self.fuse_transport) {
-                (Some(channel), Some(transport)) => format!(" ({}, {})", channel, transport),
-                (Some(channel), None) => format!(" ({})", channel),
+                (Some(channel), Some(transport)) => format!(" ({channel}, {transport})"),
+                (Some(channel), None) => format!(" ({channel})"),
                 _ => String::new(),
             }
         } else {
@@ -720,7 +714,7 @@ impl EdenFsCheckout {
     fn encode_hex(bytes: &[u8]) -> String {
         let mut s = String::with_capacity(bytes.len() * 2);
         for &b in bytes {
-            write!(&mut s, "{:02x}", b).unwrap();
+            write!(&mut s, "{b:02x}").unwrap();
         }
         s
     }
@@ -807,11 +801,7 @@ impl EdenFsCheckout {
 
             // TODO(xavierd): return a proper object that the caller could use.
             Err(EdenFsError::Other(anyhow!(
-                "A checkout operation is ongoing from {} (filter: {:?}) to {} (filter: {:?})",
-                from_hash,
-                from_filter,
-                to_hash,
-                to_filter,
+                "A checkout operation is ongoing from {from_hash} (filter: {from_filter:?}) to {to_hash} (filter: {to_filter:?})",
             )))
         } else if header == SNAPSHOT_MAGIC_4 {
             let working_copy_parent_length = f.read_u32::<BigEndian>().from_err()?;
@@ -979,10 +969,7 @@ impl EdenFsCheckout {
                 .arg("{node}")
                 .output()
                 .with_context(|| {
-                    anyhow!(
-                        "Failed to execute subprocess `hg log -r {} -T {{node}}`",
-                        bookmark
-                    )
+                    anyhow!("Failed to execute subprocess `hg log -r {bookmark} -T {{node}}`")
                 })?;
 
             if !output.status.success() {
@@ -1025,7 +1012,7 @@ impl EdenFsCheckout {
                 predictive_num_dirs
                     .try_into()
                     .with_context(|| {
-                        anyhow!("could not convert u32 ({}) to i32", predictive_num_dirs)
+                        anyhow!("could not convert u32 ({predictive_num_dirs}) to i32")
                     })
                     .ok()
             } else {
@@ -1211,7 +1198,7 @@ where
 {
     s.serialize_str(&match *field {
         Some(state) => {
-            format!("{}", state)
+            format!("{state}")
         }
         None => "NOT_RUNNING".to_string(),
     })

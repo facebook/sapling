@@ -31,14 +31,8 @@ pub trait RequestFactory {
 
 fn sanity_check_requests(num_requests: usize, num_tasks: usize) -> usize {
     if num_tasks > num_requests {
-        eprintln!(
-            "Cannot specify more tasks ({}) than requests ({}).",
-            num_tasks, num_requests
-        );
-        eprintln!(
-            "Falling back to issuing {} requests on {} tasks.",
-            num_tasks, num_tasks
-        );
+        eprintln!("Cannot specify more tasks ({num_tasks}) than requests ({num_requests}).");
+        eprintln!("Falling back to issuing {num_tasks} requests on {num_tasks} tasks.");
         num_tasks
     } else {
         num_requests
@@ -47,9 +41,9 @@ fn sanity_check_requests(num_requests: usize, num_tasks: usize) -> usize {
 
 fn print_update(total: usize, finished: &mut usize) {
     let update_cadence = total / 10;
-    let update = format!("{}/{} tasks finished running", finished, total);
+    let update = format!("{finished}/{total} tasks finished running");
     if update_cadence == 0 || (*finished).is_multiple_of(update_cadence) {
-        println!("{}", update);
+        println!("{update}");
     } else {
         tracing::debug!(update);
     }

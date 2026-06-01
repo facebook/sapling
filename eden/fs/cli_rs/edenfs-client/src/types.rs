@@ -200,7 +200,7 @@ impl fmt::Display for Dtype {
             Dtype::Whiteout => "Whiteout",
             _ => "Undefined",
         };
-        write!(f, "{}", display_str)
+        write!(f, "{display_str}")
     }
 }
 
@@ -243,7 +243,7 @@ impl FromStr for JournalPosition {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let parts = s.split(':').collect::<Vec<&str>>();
         if parts.len() != 3 {
-            return Err(anyhow!(format!("Invalid journal position format: {}", s)).into());
+            return Err(anyhow!(format!("Invalid journal position format: {s}")).into());
         }
 
         let mount_generation = parts[0].parse::<i64>().from_err()?;
@@ -451,10 +451,7 @@ impl FromStr for FileAttributes {
             "mode" => Ok(Self::Mode),
             "underacl" => Ok(Self::UnderAcl),
             "acls" => Ok(Self::Acls),
-            _ => Err(EdenFsError::Other(anyhow!(
-                "invalid file attribute: {:?}",
-                s
-            ))),
+            _ => Err(EdenFsError::Other(anyhow!("invalid file attribute: {s:?}"))),
         }
     }
 }

@@ -507,20 +507,19 @@ impl TelemetryCounters {
     /// Serialize the TelemetryCounters to a JSON string
     pub fn to_json(&self) -> Result<String> {
         serde_json::to_string(self)
-            .map_err(|e| EdenFsError::from(anyhow::anyhow!("Failed to serialize to JSON: {}", e)))
+            .map_err(|e| EdenFsError::from(anyhow::anyhow!("Failed to serialize to JSON: {e}")))
     }
 
     /// Serialize the TelemetryCounters to a pretty-printed JSON string
     pub fn to_json_pretty(&self) -> Result<String> {
         serde_json::to_string_pretty(self)
-            .map_err(|e| EdenFsError::from(anyhow::anyhow!("Failed to serialize to JSON: {}", e)))
+            .map_err(|e| EdenFsError::from(anyhow::anyhow!("Failed to serialize to JSON: {e}")))
     }
 
     /// Deserialize a TelemetryCounters from a JSON string
     pub fn from_json(json: &str) -> Result<Self> {
-        serde_json::from_str(json).map_err(|e| {
-            EdenFsError::from(anyhow::anyhow!("Failed to deserialize from JSON: {}", e))
-        })
+        serde_json::from_str(json)
+            .map_err(|e| EdenFsError::from(anyhow::anyhow!("Failed to deserialize from JSON: {e}")))
     }
 }
 
@@ -650,13 +649,13 @@ impl CrawlingScore {
     /// Serialize the CrawlingScore to a JSON string
     pub fn to_json(&self) -> Result<String> {
         serde_json::to_string(self)
-            .map_err(|e| EdenFsError::from(anyhow::anyhow!("Failed to serialize to JSON: {}", e)))
+            .map_err(|e| EdenFsError::from(anyhow::anyhow!("Failed to serialize to JSON: {e}")))
     }
 
     /// Serialize the CrawlingScore to a pretty-printed JSON string
     pub fn to_json_pretty(&self) -> Result<String> {
         serde_json::to_string_pretty(self)
-            .map_err(|e| EdenFsError::from(anyhow::anyhow!("Failed to serialize to JSON: {}", e)))
+            .map_err(|e| EdenFsError::from(anyhow::anyhow!("Failed to serialize to JSON: {e}")))
     }
 }
 
@@ -746,7 +745,7 @@ impl EdenFsClient {
     pub async fn get_counter(&self, key: &str) -> Result<i64> {
         self.with_thrift(|thrift| (thrift.getCounter(key), EdenThriftMethod::GetCounter))
             .await
-            .with_context(|| format!("failed to get counter for key {}", key))
+            .with_context(|| format!("failed to get counter for key {key}"))
             .map_err(EdenFsError::from)
     }
 

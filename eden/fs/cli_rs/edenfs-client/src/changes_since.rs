@@ -259,11 +259,11 @@ impl SmallChangeNotification {
 impl fmt::Display for SmallChangeNotification {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            SmallChangeNotification::Added(added) => write!(f, "added {}", added),
-            SmallChangeNotification::Modified(modified) => write!(f, "modified {}", modified),
-            SmallChangeNotification::Renamed(renamed) => write!(f, "renamed {}", renamed),
-            SmallChangeNotification::Replaced(replaced) => write!(f, "replaced {}", replaced),
-            SmallChangeNotification::Removed(removed) => write!(f, "removed {}", removed),
+            SmallChangeNotification::Added(added) => write!(f, "added {added}"),
+            SmallChangeNotification::Modified(modified) => write!(f, "modified {modified}"),
+            SmallChangeNotification::Renamed(renamed) => write!(f, "renamed {renamed}"),
+            SmallChangeNotification::Replaced(replaced) => write!(f, "replaced {replaced}"),
+            SmallChangeNotification::Removed(removed) => write!(f, "removed {removed}"),
         }
     }
 }
@@ -420,7 +420,7 @@ impl fmt::Display for LostChangesReason {
             LostChangesReason::TooManyChanges => "TooManyChanges",
             _ => "Undefined",
         };
-        write!(f, "{}", display_str)
+        write!(f, "{display_str}")
     }
 }
 
@@ -463,13 +463,13 @@ impl fmt::Display for LargeChangeNotification {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             LargeChangeNotification::DirectoryRenamed(directory_renamed) => {
-                write!(f, "directory_renamed {}", directory_renamed)
+                write!(f, "directory_renamed {directory_renamed}")
             }
             LargeChangeNotification::CommitTransition(commit_transition) => {
-                write!(f, "commit_transition {}", commit_transition)
+                write!(f, "commit_transition {commit_transition}")
             }
             LargeChangeNotification::LostChanges(lost_changes) => {
-                write!(f, "lost_changes {}", lost_changes)
+                write!(f, "lost_changes {lost_changes}")
             }
         }
     }
@@ -570,10 +570,10 @@ impl fmt::Display for StateChangeNotification {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             StateChangeNotification::StateEntered(state_entered) => {
-                write!(f, "Entered {}", state_entered)
+                write!(f, "Entered {state_entered}")
             }
             StateChangeNotification::StateLeft(state_left) => {
-                write!(f, "Left {}", state_left)
+                write!(f, "Left {state_left}")
             }
         }
     }
@@ -615,13 +615,13 @@ impl fmt::Display for ChangeNotification {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             ChangeNotification::SmallChange(small_change) => {
-                write!(f, "small: {}", small_change)
+                write!(f, "small: {small_change}")
             }
             ChangeNotification::LargeChange(large_change) => {
-                write!(f, "large: {}", large_change)
+                write!(f, "large: {large_change}")
             }
             ChangeNotification::StateChange(state_change) => {
-                write!(f, "state: {}", state_change)
+                write!(f, "state: {state_change}")
             }
         }
     }
