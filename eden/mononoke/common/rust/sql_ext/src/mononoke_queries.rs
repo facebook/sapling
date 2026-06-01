@@ -1250,7 +1250,7 @@ where
         keys: HashSet<Key>,
     ) -> Result<HashMap<Key, CachedQueryResult<Vec<T>>>> {
         let key = keys.into_iter().exactly_one()?;
-        anyhow::ensure!(key == self.key, "Fetched invalid key {}", key);
+        anyhow::ensure!(key == self.key, "Fetched invalid key {key}");
         let val = (self.fetcher)().await?;
         Ok(hashmap! { key => val })
     }

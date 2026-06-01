@@ -241,7 +241,7 @@ mod facebook {
         let columns = extract_all_scuba_columns(&content, expected_in_all, expected_values);
 
         // For debugging purposes. By default will only print if test fails.
-        println!("All columns logged in scuba samples: {:#?}", columns);
+        println!("All columns logged in scuba samples: {columns:#?}");
 
         assert!(
             expected_in_some.is_subset(&columns),
@@ -281,14 +281,14 @@ mod facebook {
         let mut scuba_file_logs = deserialize_scuba_log_file(&temp_path)?;
         clear_instance_type(&mut scuba_file_logs);
 
-        println!("scuba_file_logs: {:#?}", scuba_file_logs);
+        println!("scuba_file_logs: {scuba_file_logs:#?}");
 
         // Verify logs from mock transport
         let mut mock_transport_logs =
             parse_captured_logs(&mock_transport).context("Parsing logger samples")?;
         clear_instance_type(&mut mock_transport_logs);
 
-        println!("mock_transport_logs: {:#?}", mock_transport_logs);
+        println!("mock_transport_logs: {mock_transport_logs:#?}");
 
         // Expected logs
         let expected_logs = vec![
@@ -434,14 +434,14 @@ mod facebook {
         let mut scuba_file_logs = deserialize_scuba_log_file(&temp_path)?;
         clear_instance_type(&mut scuba_file_logs);
 
-        println!("scuba_file_logs: {:#?}", scuba_file_logs);
+        println!("scuba_file_logs: {scuba_file_logs:#?}");
 
         // Verify logs from mock transport
         let mut mock_transport_logs =
             parse_captured_logs(&mock_transport).context("Parsing logger samples")?;
         clear_instance_type(&mut mock_transport_logs);
 
-        println!("mock_transport_logs: {:#?}", mock_transport_logs);
+        println!("mock_transport_logs: {mock_transport_logs:#?}");
 
         // Expected logs
         let expected_logs = vec![
@@ -542,14 +542,14 @@ mod facebook {
         let mut scuba_file_logs = deserialize_scuba_log_file(&temp_path)?;
         clear_instance_type(&mut scuba_file_logs);
 
-        println!("scuba_file_logs: {:#?}", scuba_file_logs);
+        println!("scuba_file_logs: {scuba_file_logs:#?}");
 
         // Verify logs from mock transport
         let mut mock_transport_logs =
             parse_captured_logs(&mock_transport).context("Parsing logger samples")?;
         clear_instance_type(&mut mock_transport_logs);
 
-        println!("mock_transport_logs: {:#?}", mock_transport_logs);
+        println!("mock_transport_logs: {mock_transport_logs:#?}");
 
         let expected_log_for_each_attempt = ScubaTelemetryLogSample {
             success: true,
@@ -656,14 +656,14 @@ mod facebook {
         let mut scuba_file_logs = deserialize_scuba_log_file(&temp_path)?;
         clear_instance_type(&mut scuba_file_logs);
 
-        println!("scuba_file_logs: {:#?}", scuba_file_logs);
+        println!("scuba_file_logs: {scuba_file_logs:#?}");
 
         // Verify logs from mock transport
         let mut mock_transport_logs =
             parse_captured_logs(&mock_transport).context("Parsing logger samples")?;
         clear_instance_type(&mut mock_transport_logs);
 
-        println!("mock_transport_logs: {:#?}", mock_transport_logs);
+        println!("mock_transport_logs: {mock_transport_logs:#?}");
 
         let expected_logs = vec![
             // Single log for the one and only query that ran
@@ -763,14 +763,14 @@ mod facebook {
         let mut scuba_file_logs = deserialize_scuba_log_file(&temp_path)?;
         clear_instance_type(&mut scuba_file_logs);
 
-        println!("scuba_file_logs: {:#?}", scuba_file_logs);
+        println!("scuba_file_logs: {scuba_file_logs:#?}");
 
         // Verify logs from mock transport
         let mut mock_transport_logs =
             parse_captured_logs(&mock_transport).context("Parsing logger samples")?;
         clear_instance_type(&mut mock_transport_logs);
 
-        println!("mock_transport_logs: {:#?}", mock_transport_logs);
+        println!("mock_transport_logs: {mock_transport_logs:#?}");
 
         assert!(
             scuba_file_logs.len() > 1,
@@ -1094,7 +1094,7 @@ mod facebook {
                     .granularity_thrift_safe
                     .ok_or_else(|| anyhow!("granularity field missing"))
                     .and_then(|g| {
-                        serde_json::from_str::<TelemetryGranularity>(&format!("\"{}\"", g))
+                        serde_json::from_str::<TelemetryGranularity>(&format!("\"{g}\""))
                             .context("Failed to parse granularity")
                     })?;
 

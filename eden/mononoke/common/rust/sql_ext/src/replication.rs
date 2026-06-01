@@ -98,7 +98,7 @@ impl fmt::Display for ReplicaLag {
             self.delay.subsec_millis(),
         )?;
         if let Some(details) = &self.details {
-            write!(f, " {}", details)?;
+            write!(f, " {details}")?;
         }
         Ok(())
     }
@@ -106,7 +106,7 @@ impl fmt::Display for ReplicaLag {
 
 impl fmt::Debug for ReplicaLag {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self)
+        write!(f, "{self}")
     }
 }
 
@@ -157,7 +157,7 @@ mod test {
     impl ReplicaLagMonitor for TestMonitor {
         async fn get_replica_lag(&self) -> Result<Vec<ReplicaLag>> {
             Ok((1..self.0)
-                .map(|lag| ReplicaLag::new(Duration::from_secs(lag), Some(format!("{}", lag))))
+                .map(|lag| ReplicaLag::new(Duration::from_secs(lag), Some(format!("{lag}"))))
                 .collect())
         }
     }

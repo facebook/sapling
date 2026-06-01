@@ -178,7 +178,7 @@ pub fn log_query_error(
         }
     };
 
-    scuba.add("error", format!("{:?}", err));
+    scuba.add("error", format!("{err:?}"));
     scuba.add("success", 0);
 
     #[cfg(fbcode_build)]
@@ -325,7 +325,7 @@ fn setup_scuba_sample(
 
     scuba.add_common_server_data();
 
-    scuba.add("granularity", format!("{:?}", granularity));
+    scuba.add("granularity", format!("{granularity:?}"));
     scuba.add("query_name", query_name);
     scuba.add("shard_name", shard_name);
 
@@ -446,7 +446,7 @@ mod facebook {
             (
                 shard_name.to_string(),
                 query_name.to_string(),
-                format!("{:?}", granularity),
+                format!("{granularity:?}"),
             ),
         );
 
@@ -474,7 +474,7 @@ mod facebook {
                 (
                     shard_name.to_string(),
                     query_name.to_string(),
-                    format!("{:?}", granularity),
+                    format!("{granularity:?}"),
                     instance_type.clone(),
                     read_or_write.to_string(),
                 ),
@@ -608,7 +608,7 @@ mod facebook {
         let mut log_entry = MononokeXdbTelemetryLogger::new(fb);
 
         // Set required fields
-        log_entry.set_granularity(format!("{:?}", granularity));
+        log_entry.set_granularity(format!("{granularity:?}"));
         log_entry.set_shard_name(shard_name.to_string());
 
         // Set optional fields if available
@@ -772,7 +772,7 @@ mod facebook {
 
         log_entry.set_success(0); // 0 indicates failed query
         // Set error message
-        log_entry.set_error(format!("{:?}", err));
+        log_entry.set_error(format!("{err:?}"));
         mysql_errno(err).map(|errno| log_entry.set_mysql_errno(errno));
         mysql_error_type(err).map(|etype| log_entry.set_mysql_error_type(etype));
         // Set retry fields
