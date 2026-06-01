@@ -140,7 +140,7 @@ pub fn record_get_stats(
         Err(error) => {
             // Always log errors
             scuba.unsampled();
-            scuba.add(ERROR, format!("{:#}", error));
+            scuba.add(ERROR, format!("{error:#}"));
         }
         Ok(None) => {
             scuba.add(BLOB_PRESENT, false);
@@ -182,11 +182,11 @@ pub fn record_is_present_stats(
             // Always log errors
             scuba.unsampled();
             scuba.add(BLOB_PRESENT, false);
-            scuba.add(ERROR, format!("{:#}", error));
+            scuba.add(ERROR, format!("{error:#}"));
         }
         Err(error) => {
             scuba.unsampled();
-            scuba.add(ERROR, format!("{:#}", error));
+            scuba.add(ERROR, format!("{error:#}"));
         }
     }
 
@@ -225,7 +225,7 @@ pub fn record_put_stats(
             }
         }
         Err(error) => {
-            scuba.add(ERROR, format!("{:#}", error));
+            scuba.add(ERROR, format!("{error:#}"));
         }
     };
 
@@ -260,7 +260,7 @@ pub fn record_unlink_stats(
         Err(error) => {
             // Always log errors
             scuba.unsampled();
-            scuba.add(ERROR, format!("{:#}", error));
+            scuba.add(ERROR, format!("{error:#}"));
         }
     };
 
@@ -293,7 +293,7 @@ pub fn record_queue_stats(
     scuba.add(QUEUE, queue);
 
     if let Err(error) = result {
-        scuba.add(ERROR, format!("{:#}", error));
+        scuba.add(ERROR, format!("{error:#}"));
     }
 
     scuba.log();
