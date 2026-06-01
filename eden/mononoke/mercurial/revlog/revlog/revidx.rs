@@ -178,16 +178,16 @@ mod test {
     #[mononoke::test]
     fn fromstr_bad1() {
         match RevIdx::from_str("abc123") {
-            Ok(x) => panic!("unexpected success with {:?}", x),
-            Err(err) => println!("ok {:?}", err),
+            Ok(x) => panic!("unexpected success with {x:?}"),
+            Err(err) => println!("ok {err:?}"),
         }
     }
 
     #[mononoke::test]
     fn fromstr_bad2() {
         match RevIdx::from_str("-1") {
-            Ok(x) => panic!("unexpected success with {:?}", x),
-            Err(err) => println!("ok {:?}", err),
+            Ok(x) => panic!("unexpected success with {x:?}"),
+            Err(err) => println!("ok {err:?}"),
         }
     }
 }
