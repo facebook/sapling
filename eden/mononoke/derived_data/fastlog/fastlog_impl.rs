@@ -195,10 +195,10 @@ pub fn unode_entry_to_fastlog_batch_key(
     unode_entry: &Entry<ManifestUnodeId, FileUnodeId>,
 ) -> String {
     let key_part = match unode_entry {
-        Entry::Leaf(file_unode_id) => format!("fileunode.{}", file_unode_id),
-        Entry::Tree(mf_unode_id) => format!("manifestunode.{}", mf_unode_id),
+        Entry::Leaf(file_unode_id) => format!("fileunode.{file_unode_id}"),
+        Entry::Tree(mf_unode_id) => format!("manifestunode.{mf_unode_id}"),
     };
-    format!("fastlogbatch.{}", key_part)
+    format!("fastlogbatch.{key_part}")
 }
 
 pub async fn fetch_flattened<B: KeyedBlobstore>(
