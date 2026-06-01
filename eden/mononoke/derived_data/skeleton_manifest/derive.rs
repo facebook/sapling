@@ -511,7 +511,7 @@ mod test {
     ) -> Result<&'a SkeletonManifestDirectory> {
         match skeleton.lookup(&MPathElement::new(elem.to_vec())?) {
             Some(SkeletonManifestEntry::Directory(dir)) => Ok(dir),
-            entry => Err(anyhow!("Unexpected skeleton manifest entry: {:?}", entry)),
+            entry => Err(anyhow!("Unexpected skeleton manifest entry: {entry:?}")),
         }
     }
 

@@ -140,7 +140,7 @@ pub async fn new_batch_derivation(
             parent_skeleton_manifests.first().copied(),
         )
         .await
-        .with_context(|| format!("failed deriving stack of {:?} to {:?}", first, last,))?;
+        .with_context(|| format!("failed deriving stack of {first:?} to {last:?}",))?;
 
         already_derived.extend(
             derived

@@ -75,9 +75,7 @@ impl PipelineDerivable for RootSkeletonManifestId {
                     let output = results
                         .get(&parent_csid)
                         .or_else(|| parents.get(&parent_csid))
-                        .ok_or_else(|| {
-                            anyhow!("missing stage output for parent {}", parent_csid)
-                        })?;
+                        .ok_or_else(|| anyhow!("missing stage output for parent {parent_csid}"))?;
                     Ok(output.clone())
                 })
                 .collect::<Result<Vec<_>>>()?
@@ -151,9 +149,7 @@ impl PipelineDerivable for RootSkeletonManifestId {
             if use_normal_mapping {
                 let Some(Entry::Tree(skeleton_manifest_id)) = output else {
                     return Err(anyhow!(
-                        "terminal stage output for {} should be Some(Entry::Tree), got {:?}",
-                        cs_id,
-                        output,
+                        "terminal stage output for {cs_id} should be Some(Entry::Tree), got {output:?}",
                     ));
                 };
                 let key = format_key(derivation, cs_id);
@@ -211,26 +207,28 @@ impl PipelineDerivable for RootSkeletonManifestId {
             );
 
         let key_prefix = derivation.mapping_key_prefix::<RootSkeletonManifestId>();
-        let results = stream::iter(cs_ids.into_iter().map(|cs_id| async move {
-            if use_normal_mapping {
-                let key = format_key(derivation, cs_id);
-                let Some(blob_data) = derivation.blobstore().get(ctx, &key).await? else {
-                    return Ok::<_, Error>(None);
-                };
-                let root: RootSkeletonManifestId = blob_data.try_into()?;
-                Ok(Some((
-                    cs_id,
-                    Some(Entry::Tree(root.into_skeleton_manifest_id())),
-                )))
-            } else {
-                let key = stage_blobstore_key(stage_path, key_prefix, cs_id);
-                let maybe_bytes = derivation.blobstore().get(ctx, &key).await?;
-                match maybe_bytes {
-                    None => Ok::<_, Error>(None),
-                    Some(blob_data) => {
-                        let thrift_output: skmf_thrift::SkeletonManifestStageOutput =
-                            compact_protocol::deserialize(blob_data.into_raw_bytes())?;
-                        let output = match thrift_output {
+        let results =
+            stream::iter(
+                cs_ids.into_iter().map(|cs_id| async move {
+                    if use_normal_mapping {
+                        let key = format_key(derivation, cs_id);
+                        let Some(blob_data) = derivation.blobstore().get(ctx, &key).await? else {
+                            return Ok::<_, Error>(None);
+                        };
+                        let root: RootSkeletonManifestId = blob_data.try_into()?;
+                        Ok(Some((
+                            cs_id,
+                            Some(Entry::Tree(root.into_skeleton_manifest_id())),
+                        )))
+                    } else {
+                        let key = stage_blobstore_key(stage_path, key_prefix, cs_id);
+                        let maybe_bytes = derivation.blobstore().get(ctx, &key).await?;
+                        match maybe_bytes {
+                            None => Ok::<_, Error>(None),
+                            Some(blob_data) => {
+                                let thrift_output: skmf_thrift::SkeletonManifestStageOutput =
+                                    compact_protocol::deserialize(blob_data.into_raw_bytes())?;
+                                let output = match thrift_output {
                             skmf_thrift::SkeletonManifestStageOutput::skeleton_manifest_id(id) => {
                                 Some(Entry::Tree(SkeletonManifestId::from_thrift(id)?))
                             }
@@ -240,21 +238,20 @@ impl PipelineDerivable for RootSkeletonManifestId {
                             skmf_thrift::SkeletonManifestStageOutput::empty(_) => None,
                             skmf_thrift::SkeletonManifestStageOutput::UnknownField(x) => {
                                 return Err(anyhow!(
-                                    "unknown SkeletonManifestStageOutput variant {} for {}",
-                                    x,
-                                    cs_id
+                                    "unknown SkeletonManifestStageOutput variant {x} for {cs_id}"
                                 ));
                             }
                         };
-                        Ok(Some((cs_id, output)))
+                                Ok(Some((cs_id, output)))
+                            }
+                        }
                     }
-                }
-            }
-        }))
-        .buffered(100)
-        .try_filter_map(|opt| async move { Ok(opt) })
-        .try_collect::<HashMap<_, _>>()
-        .await?;
+                }),
+            )
+            .buffered(100)
+            .try_filter_map(|opt| async move { Ok(opt) })
+            .try_collect::<HashMap<_, _>>()
+            .await?;
         Ok(results)
     }
 }

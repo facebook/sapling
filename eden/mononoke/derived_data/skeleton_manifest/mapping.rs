@@ -76,7 +76,7 @@ impl From<RootSkeletonManifestId> for BlobstoreBytes {
 pub fn format_key(derivation_ctx: &DerivationContext, changeset_id: ChangesetId) -> String {
     let root_prefix = "derived_root_skeletonmanifest.";
     let key_prefix = derivation_ctx.mapping_key_prefix::<RootSkeletonManifestId>();
-    format!("{}{}{}", root_prefix, key_prefix, changeset_id)
+    format!("{root_prefix}{key_prefix}{changeset_id}")
 }
 
 #[async_trait]
@@ -211,9 +211,7 @@ pub async fn get_skeleton_manifest_subtree_changes(
                     .await?
                     .ok_or_else(|| {
                         anyhow::anyhow!(
-                            "Subtree copy source {} does not exist in {}",
-                            from_path,
-                            from_cs_id
+                            "Subtree copy source {from_path} does not exist in {from_cs_id}"
                         )
                     })?;
                 Ok(ManifestParentReplacement {
