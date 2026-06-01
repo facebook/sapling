@@ -259,8 +259,7 @@ impl RendezVousConnection {
             fetch_globalrev: RendezVous::new(
                 ConfigurableRendezVousController::new(opts),
                 Arc::new(RendezVousStats::new(format!(
-                    "bonsai_globalrev_mapping.fetch_globalrev.{}",
-                    name
+                    "bonsai_globalrev_mapping.fetch_globalrev.{name}"
                 ))),
             ),
         }
