@@ -356,7 +356,7 @@ impl<T: BonsaiDerivable> SingleTypeDerivation for SingleTypeManager<T> {
             .await?;
         Ok(derived
             .into_iter()
-            .map(|(csid, derived)| (csid, format!("{:?}", derived)))
+            .map(|(csid, derived)| (csid, format!("{derived:?}")))
             .collect())
     }
 
