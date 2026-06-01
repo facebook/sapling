@@ -86,14 +86,12 @@ impl CommonServerData {
             var("TW_JOB_USER"),
             var("TW_JOB_NAME"),
         ) {
-            data.tw_handle = Some(format!("{}/{}/{}", tw_cluster, tw_user, tw_name));
+            data.tw_handle = Some(format!("{tw_cluster}/{tw_user}/{tw_name}"));
 
             // Tupperware task handle (format: cluster/user/name/taskid)
             if let Ok(tw_task_id) = var("TW_TASK_ID") {
-                data.tw_task_handle = Some(format!(
-                    "{}/{}/{}/{}",
-                    tw_cluster, tw_user, tw_name, tw_task_id
-                ));
+                data.tw_task_handle =
+                    Some(format!("{tw_cluster}/{tw_user}/{tw_name}/{tw_task_id}"));
             }
         }
 
