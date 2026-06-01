@@ -240,8 +240,7 @@ pub async fn rewrite_partial_changesets<R: MononokeRepo>(
                         .await
                         .with_context(|| {
                             format!(
-                                "Error in deriving RootGitDeltaManifestV2Id for Bonsai commit {:?}",
-                                new_bcs_id
+                                "Error in deriving RootGitDeltaManifestV2Id for Bonsai commit {new_bcs_id:?}"
                             )
                         })?
                         .log_future_stats(
@@ -527,7 +526,7 @@ async fn create_temp_repo(fb: FacebookInit, ctx: &CoreContext) -> Result<RepoCon
     let system_tmp = env::temp_dir();
     let temp_dir_suffix = Alphanumeric.sample_string(&mut rand::rng(), 16);
 
-    let mk_temp_path = |prefix| system_tmp.join(format!("{}_{}", prefix, temp_dir_suffix));
+    let mk_temp_path = |prefix| system_tmp.join(format!("{prefix}_{temp_dir_suffix}"));
 
     let metadata_db_path = mk_temp_path("metadata_temp");
     let hg_mutation_db_path = mk_temp_path("hg_mut_temp");
@@ -537,7 +536,7 @@ async fn create_temp_repo(fb: FacebookInit, ctx: &CoreContext) -> Result<RepoCon
     debug!("hg_mutation_db_path: {0:#?}", hg_mutation_db_path);
     debug!("blobstore_path: {0:#?}", blobstore_path);
 
-    let temp_repo_name = format!("temp_repo_{}", temp_dir_suffix);
+    let temp_repo_name = format!("temp_repo_{temp_dir_suffix}");
     debug!("Temporary repo name: {}", temp_repo_name);
 
     let metadata_conn = SqliteConnection::open(metadata_db_path)?;

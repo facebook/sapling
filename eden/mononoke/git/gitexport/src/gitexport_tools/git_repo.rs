@@ -49,7 +49,7 @@ pub async fn create_git_repo_on_disk(
     // Open the output file for writing
     let output_file = tokio::fs::File::create(git_repo_path.clone())
         .await
-        .with_context(|| format!("Error in opening/creating output file {0:?}", git_repo_path))?;
+        .with_context(|| format!("Error in opening/creating output file {git_repo_path:?}"))?;
 
     let delta_inclusion = DeltaInclusion::Include {
         form: DeltaForm::RefAndOffset,
