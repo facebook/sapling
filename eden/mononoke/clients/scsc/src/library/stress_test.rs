@@ -175,6 +175,6 @@ fn print_header(msg: String, client_correlator: &Option<String>) {
         msg,
         client_correlator
             .clone()
-            .map_or("".to_string(), |c| format!(" client correlator: {}", c)),
+            .map_or("".to_string(), |c| format!(" client correlator: {c}")),
     );
 }

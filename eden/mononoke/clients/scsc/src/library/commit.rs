@@ -124,9 +124,9 @@ fn render_date(
     let local_date = date.with_timezone(&Local).to_string();
     let date = date.to_string();
     if date != local_date {
-        write!(w, "{}: {} ({})\n", description, date, local_date)?;
+        write!(w, "{description}: {date} ({local_date})\n")?;
     } else {
-        write!(w, "{}: {}\n", description, date)?;
+        write!(w, "{description}: {date}\n")?;
     }
     Ok(())
 }
@@ -153,7 +153,7 @@ pub(crate) fn render_commit_summary(
     }
     write!(w, "Author: {}\n", commit.author)?;
     if let Some(committer) = &commit.committer {
-        write!(w, "Committer: {}\n", committer)?;
+        write!(w, "Committer: {committer}\n")?;
     }
     write!(
         w,
@@ -182,12 +182,12 @@ pub(crate) fn render_commit_info(
         let header = if commit.parents.len() == 1 {
             "Parent".to_string()
         } else {
-            format!("Parent-{}", i)
+            format!("Parent-{i}")
         };
         render_commit_id(
             Some((&header, "    ")),
             "\n",
-            &format!("Parent {} of {}", i, requested),
+            &format!("Parent {i} of {requested}"),
             parent,
             schemes,
             w,
@@ -200,25 +200,25 @@ pub(crate) fn render_commit_info(
     }
     write!(w, "Author: {}\n", commit.author)?;
     if let Some(committer) = &commit.committer {
-        write!(w, "Committer: {}\n", committer)?;
+        write!(w, "Committer: {committer}\n")?;
     }
     write!(w, "Generation: {}\n", commit.generation)?;
     if !commit.extra.is_empty() {
         write!(w, "Extra:\n")?;
         for (name, value) in commit.extra.iter() {
-            write!(w, "    {}={}\n", name, value)?;
+            write!(w, "    {name}={value}\n")?;
         }
     }
     if !commit.extra_hex.is_empty() {
         write!(w, "Extra-Binary:\n")?;
         for (name, value) in commit.extra_hex.iter() {
-            write!(w, "    {}={}\n", name, value)?;
+            write!(w, "    {name}={value}\n")?;
         }
     }
     if let Some(ref headers) = commit.git_extra_headers {
         write!(w, "Git Extra Headers:\n")?;
         for (key, value) in headers {
-            write!(w, "    {}={}\n", key, value)?;
+            write!(w, "    {key}={value}\n")?;
         }
     }
     write!(w, "\n{}\n", commit.message)?;

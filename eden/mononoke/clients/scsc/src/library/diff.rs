@@ -94,15 +94,15 @@ fn render_file_info(
     file_info: &FileInfo,
     w: &mut dyn Write,
 ) -> Result<()> {
-    write!(w, "{} {},", tag, path)?;
+    write!(w, "{tag} {path},")?;
     if let Some(file_type) = &file_info.file_type {
-        write!(w, " file type: {},", file_type)?;
+        write!(w, " file type: {file_type},")?;
     }
     if let Some(content_type) = &file_info.file_content_type {
-        write!(w, " content type: {},", content_type)?;
+        write!(w, " content type: {content_type},")?;
     }
     if let Some(generated_status) = &file_info.file_generated_status {
-        write!(w, " generated status: {},", generated_status)?;
+        write!(w, " generated status: {generated_status},")?;
     }
     write!(w, "\n")?;
     Ok(())
@@ -121,7 +121,7 @@ impl Render for DiffOutput {
 
                     if let Some(lines_count) = &diff.lines_count {
                         if let Some(first_added_line_number) = lines_count.first_added_line_number {
-                            write!(w, "first added line number: {}, ", first_added_line_number)?;
+                            write!(w, "first added line number: {first_added_line_number}, ")?;
                         }
                         writeln!(
                             w,
@@ -199,9 +199,9 @@ async fn make_file_diff_request(
                 ..
             } => Some(DiffOutputElement::MetadataDiff(MetadataDiffElement {
                 old_path: other_path
-                    .map_or_else(|| "/dev/null".to_string(), |path| format!("a/{}", path)),
+                    .map_or_else(|| "/dev/null".to_string(), |path| format!("a/{path}")),
                 new_path: base_path
-                    .map_or_else(|| "/dev/null".to_string(), |path| format!("b/{}", path)),
+                    .map_or_else(|| "/dev/null".to_string(), |path| format!("b/{path}")),
                 old_file_info: FileInfo::from(&diff.old_file_info),
                 new_file_info: FileInfo::from(&diff.new_file_info),
                 lines_count: diff.lines_count.as_ref().map(LinesCount::from),

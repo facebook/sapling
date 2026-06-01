@@ -42,7 +42,7 @@ pub(crate) fn summary_output(
     let ret = results
         .map(|res| match res {
             Ok(_) => "OK".to_string(),
-            Err(e) => format!("{:?}", e),
+            Err(e) => format!("{e:?}"),
         })
         .sorted()
         .counts()

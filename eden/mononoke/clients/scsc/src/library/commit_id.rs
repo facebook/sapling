@@ -61,19 +61,19 @@ pub(crate) fn render_commit_id(
             if let Some((header, _indent)) = header {
                 write!(w, "{header}: ")?;
             }
-            write!(w, "{}", id)?;
+            write!(w, "{id}")?;
         }
         Err(ids_iter) => {
             let mut prefix = "";
             if let Some((header, indent)) = header {
-                write!(w, "{}:{}", header, separator)?;
+                write!(w, "{header}:{separator}")?;
                 prefix = indent;
             }
             for (i, (scheme, id)) in ids_iter.enumerate() {
                 if i > 0 {
-                    write!(w, "{}", separator)?;
+                    write!(w, "{separator}")?;
                 }
-                write!(w, "{}{}={}", prefix, scheme, id)?;
+                write!(w, "{prefix}{scheme}={id}")?;
             }
         }
     }

@@ -76,9 +76,9 @@ pub(crate) fn render_bookmark_info(
     let date_str = date.to_string();
     let local_date_str = date.with_timezone(&Local).to_string();
     if date_str != local_date_str {
-        write!(w, "Last update: {} ({})\n", date_str, local_date_str)?;
+        write!(w, "Last update: {date_str} ({local_date_str})\n")?;
     } else {
-        write!(w, "Last update: {}\n", date_str)?;
+        write!(w, "Last update: {date_str}\n")?;
     }
     Ok(())
 }
