@@ -103,6 +103,7 @@ const FORWARDED_CLIENT_IP_HEADER: &str = "scm_forwarded_client_ip";
 const FORWARDED_CLIENT_PORT_HEADER: &str = "scm_forwarded_client_port";
 const FORWARDED_CLIENT_DEBUG_HEADER: &str = "scm_forwarded_client_debug";
 const FORWARDED_OTHER_CATS_HEADER: &str = "scm_forwarded_other_cats";
+const ALWAYS_LOG_HEADER: &str = "always_log";
 const PER_REQUEST_READ_QPS: usize = 4000;
 const PER_REQUEST_WRITE_QPS: usize = 4000;
 
@@ -217,7 +218,18 @@ impl SourceControlServiceImpl {
         let session_uuid = session.metadata().session_id().to_string();
         scuba.add("session_uuid", session_uuid.clone());
 
+        let always_log = req_ctxt
+            .header(ALWAYS_LOG_HEADER)
+            .map_err(scs_errors::internal_error)?
+            .is_some();
+        if always_log {
+            scuba.unsampled();
+        }
+
         let ctx = session.new_context_with_scribe(scuba, self.scribe.clone());
+        if always_log {
+            ctx.set_override_sampling();
+        }
 
         let repo_name = if let Some(specifier) = specifier {
             specifier.scuba_reponame()
