@@ -75,14 +75,14 @@ impl Scribe {
                     .chars()
                     .all(|c| char::is_alphanumeric(c) || c == '-' || c == '_');
                 if !is_valid_category {
-                    return Err(anyhow!("invalid category: {}", category));
+                    return Err(anyhow!("invalid category: {category}"));
                 }
                 let filename = dir_path.join(category);
                 let mut file = OpenOptions::new()
                     .create(true)
                     .append(true)
                     .open(filename)?;
-                ::std::writeln!(file, "{}", sample)?;
+                ::std::writeln!(file, "{sample}")?;
                 Ok(())
             }
         }
