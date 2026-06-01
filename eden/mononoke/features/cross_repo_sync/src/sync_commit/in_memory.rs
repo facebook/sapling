@@ -297,7 +297,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
             self.target_repo_id,
         )
         .await
-        .with_context(|| format!("failed getting a mover of version {}", version))?;
+        .with_context(|| format!("failed getting a mover of version {version}"))?;
         Ok((movers, version))
     }
 
@@ -338,10 +338,7 @@ async fn sync_commit_no_parents_in_memory<'a, R: Repo>(
     if let Some(version) = maybe_version {
         if version != expected_version {
             return Err(format_err!(
-                "computed sync config version {} for {} not the same as expected version {}",
-                source_cs_id,
-                version,
-                expected_version
+                "computed sync config version {source_cs_id} for {version} not the same as expected version {expected_version}"
             ));
         }
     }
@@ -421,7 +418,7 @@ async fn sync_commit_single_parent_in_memory<'a, R: Repo>(
     let parent_sync_outcome = in_memory_syncer
         .mapped_parents
         .get(&p)
-        .with_context(|| format!("Parent commit {} is not synced yet", p))?
+        .with_context(|| format!("Parent commit {p} is not synced yet"))?
         .clone();
 
     use CommitSyncOutcome::*;
@@ -443,7 +440,7 @@ async fn sync_commit_single_parent_in_memory<'a, R: Repo>(
             )
             .await?;
             let version = maybe_version
-                .ok_or_else(|| format_err!("sync config version not found for {}", source_cs_id))?;
+                .ok_or_else(|| format_err!("sync config version not found for {source_cs_id}"))?;
 
             if let Some(expected_version) = expected_version {
                 if expected_version != version {
@@ -561,7 +558,7 @@ async fn sync_merge_in_memory<'a, R: Repo>(
                 in_memory_syncer
                     .mapped_parents
                     .get(id)
-                    .with_context(|| format!("Missing parent {}", id))?
+                    .with_context(|| format!("Missing parent {id}"))?
                     .clone(),
             ))
         })
@@ -714,16 +711,13 @@ async fn sync_merge_in_memory<'a, R: Repo>(
         let version = match (iter.next(), iter.next()) {
             (Some(_v1), Some(_v2)) => {
                 return Err(format_err!(
-                    "Too many parent NotSyncCandidate versions: {:?} while syncing {}",
-                    not_sync_candidate_versions,
-                    source_cs_id
+                    "Too many parent NotSyncCandidate versions: {not_sync_candidate_versions:?} while syncing {source_cs_id}"
                 ));
             }
             (Some(version), None) => version,
             _ => {
                 return Err(format_err!(
-                    "Can't find parent version for merge commit {}",
-                    source_cs_id
+                    "Can't find parent version for merge commit {source_cs_id}"
                 ));
             }
         };
