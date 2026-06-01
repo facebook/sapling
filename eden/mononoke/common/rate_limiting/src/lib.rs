@@ -271,60 +271,62 @@ impl LoadShedLimit {
         }
 
         // Fetch the counter
-        let (metric_string, value, force_targeted) =
-            match self.raw_config.load_shedding_metric.clone() {
-                LoadSheddingMetric::local_fb303_counter(metric) => {
-                    let metric = metric.to_string();
-                    (
-                        metric.clone(),
-                        STATS::load_shed_counter.get_value(fb, (metric,)),
-                        false,
-                    )
-                }
-                LoadSheddingMetric::external_ods_counter(ExternalOdsCounter {
-                    entity,
-                    key,
-                    reduce,
-                    transform,
-                }) => {
-                    let value = ods_counters
-                        .read()
-                        .expect("Poisoned lock")
-                        .get_counter_value(&entity, &key, reduce.as_deref(), transform.as_deref())
-                        .map(|v| v as i64);
-                    (
-                        format!(
-                            "Ods key:{} entity:{} reduce:{:?} transform:{:?}",
-                            entity, key, reduce, transform
-                        ),
-                        value,
-                        false,
-                    )
-                }
-                LoadSheddingMetric::top_client(top_client) => {
-                    let client_bucket: ClientBucket = main_id.into();
-                    let registry = global_client_memory_registry();
-                    let is_top = matches!(
-                        registry.top_consumer(),
-                        Some((top_bucket, _)) if client_bucket == top_bucket
-                    );
-                    let value = if is_top {
-                        STATS::load_shed_counter.get_value(fb, (top_client.metric.clone(),))
-                    } else {
-                        None
-                    };
-                    (
-                        format!(
-                            "top_client (bucket: {}, metric: {})",
-                            client_bucket.name(),
-                            top_client.metric
-                        ),
-                        value,
-                        true,
-                    )
-                }
-                _ => ("".to_string(), None, false),
-            };
+        let (metric_string, value, force_targeted) = match self
+            .raw_config
+            .load_shedding_metric
+            .clone()
+        {
+            LoadSheddingMetric::local_fb303_counter(metric) => {
+                let metric = metric.to_string();
+                (
+                    metric.clone(),
+                    STATS::load_shed_counter.get_value(fb, (metric,)),
+                    false,
+                )
+            }
+            LoadSheddingMetric::external_ods_counter(ExternalOdsCounter {
+                entity,
+                key,
+                reduce,
+                transform,
+            }) => {
+                let value = ods_counters
+                    .read()
+                    .expect("Poisoned lock")
+                    .get_counter_value(&entity, &key, reduce.as_deref(), transform.as_deref())
+                    .map(|v| v as i64);
+                (
+                    format!(
+                        "Ods key:{entity} entity:{key} reduce:{reduce:?} transform:{transform:?}"
+                    ),
+                    value,
+                    false,
+                )
+            }
+            LoadSheddingMetric::top_client(top_client) => {
+                let client_bucket: ClientBucket = main_id.into();
+                let registry = global_client_memory_registry();
+                let is_top = matches!(
+                    registry.top_consumer(),
+                    Some((top_bucket, _)) if client_bucket == top_bucket
+                );
+                let value = if is_top {
+                    STATS::load_shed_counter.get_value(fb, (top_client.metric.clone(),))
+                } else {
+                    None
+                };
+                (
+                    format!(
+                        "top_client (bucket: {}, metric: {})",
+                        client_bucket.name(),
+                        top_client.metric
+                    ),
+                    value,
+                    true,
+                )
+            }
+            _ => ("".to_string(), None, false),
+        };
 
         match value {
             Some(value) if value > self.raw_config.limit => {

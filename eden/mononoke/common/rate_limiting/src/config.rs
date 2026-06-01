@@ -190,7 +190,7 @@ impl<'de> Deserialize<'de> for LoadShedLimit {
         let raw = rate_limiting_config::LoadShedLimit::deserialize(deserializer)?;
         let load_shed_limit = raw
             .try_into()
-            .map_err(|e| D::Error::custom(format!("{:?}", e)))?;
+            .map_err(|e| D::Error::custom(format!("{e:?}")))?;
 
         Ok(load_shed_limit)
     }
@@ -209,7 +209,7 @@ impl<'de> Deserialize<'de> for MononokeRateLimitConfig {
             .into_iter()
             .map(|r| r.try_into())
             .collect::<Result<Vec<_>, _>>()
-            .map_err(|e| D::Error::custom(format!("{:?}", e)))?;
+            .map_err(|e| D::Error::custom(format!("{e:?}")))?;
 
         let load_shed_limits = raw_config
             .load_shed_limits
@@ -217,7 +217,7 @@ impl<'de> Deserialize<'de> for MononokeRateLimitConfig {
             .into_iter()
             .map(|r| r.try_into())
             .collect::<Result<Vec<_>, _>>()
-            .map_err(|e| D::Error::custom(format!("{:?}", e)))?;
+            .map_err(|e| D::Error::custom(format!("{e:?}")))?;
 
         Ok(Self {
             rate_limits,
