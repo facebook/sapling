@@ -109,7 +109,7 @@ async fn test_for_fixture<F: TestRepoFixture + Send>(fb: FacebookInit) -> Result
         .await?;
     let all_commits = match all_commits {
         ChangesetIdsResolvedFromPrefix::Multiple(all_commits) => all_commits,
-        other => anyhow::bail!("Weird number of commits: {:?}", other),
+        other => anyhow::bail!("Weird number of commits: {other:?}"),
     };
     if let Some(master_cs_id) = repo
         .bookmarks()
