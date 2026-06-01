@@ -1668,6 +1668,7 @@ struct CommitRateLimitExceeded {
 }
 
 /// Outcome of checking a single rate limit rule.
+@hack.MigrationBlockingLegacyJSONSerialization
 union CommitRateLimitRuleOutcome {
   1: CommitRateLimitAllowed allowed;
   2: CommitRateLimitExceeded exceeded;
