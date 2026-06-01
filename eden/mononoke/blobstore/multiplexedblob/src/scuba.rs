@@ -71,7 +71,7 @@ pub fn record_put<T>(
 
     if let Err(error) = result.as_ref() {
         scuba.unsampled();
-        scuba.add(ERROR, format!("{:#}", error)).add(SUCCESS, false);
+        scuba.add(ERROR, format!("{error:#}")).add(SUCCESS, false);
     } else {
         scuba.add(SUCCESS, true);
     }
@@ -91,7 +91,7 @@ pub fn record_unlink(
 
     if let Err(error) = result.as_ref() {
         scuba.unsampled();
-        scuba.add(ERROR, format!("{:#}", error)).add(SUCCESS, false);
+        scuba.add(ERROR, format!("{error:#}")).add(SUCCESS, false);
     } else {
         scuba.add(SUCCESS, true);
     }
@@ -112,7 +112,7 @@ pub fn record_get(
     match result.as_ref() {
         Err(error) => {
             scuba.unsampled();
-            scuba.add(ERROR, format!("{:#}", error)).add(SUCCESS, false);
+            scuba.add(ERROR, format!("{error:#}")).add(SUCCESS, false);
         }
         Ok(mb_blob) => {
             let blob_present = mb_blob.is_some();
@@ -147,7 +147,7 @@ pub fn record_is_present(
     match outcome {
         Err(error) => {
             scuba.unsampled();
-            scuba.add(ERROR, format!("{:#}", error)).add(SUCCESS, false);
+            scuba.add(ERROR, format!("{error:#}")).add(SUCCESS, false);
         }
         Ok(is_present) => {
             if let Some(is_present) = is_present {
