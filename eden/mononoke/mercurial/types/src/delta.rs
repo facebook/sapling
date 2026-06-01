@@ -70,7 +70,7 @@ impl Delta {
         let mut prev_frag: Option<&Fragment> = None;
         for (i, frag) in frags.iter().enumerate() {
             frag.verify().with_context(|| {
-                MononokeHgError::InvalidFragmentList(format!("invalid fragment {}", i))
+                MononokeHgError::InvalidFragmentList(format!("invalid fragment {i}"))
             })?;
             if let Some(prev) = prev_frag {
                 if frag.start < prev.end {
@@ -532,7 +532,7 @@ mod tests {
 
         match apply(text, &delta) {
             Err(_) => {}
-            Ok(res) => panic!("Unexpected success: {:?}", res),
+            Ok(res) => panic!("Unexpected success: {res:?}"),
         }
     }
 
@@ -549,7 +549,7 @@ mod tests {
 
         match apply(text, &delta) {
             Err(_) => {}
-            Ok(res) => panic!("Unexpected success: {:?}", res),
+            Ok(res) => panic!("Unexpected success: {res:?}"),
         }
     }
 

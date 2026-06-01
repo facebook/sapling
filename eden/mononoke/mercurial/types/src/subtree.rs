@@ -148,7 +148,7 @@ impl HgSubtreeChanges {
                         to_path: path.clone(),
                         from_commit: subtree_change_sources
                             .get(from_cs_id)
-                            .ok_or_else(|| anyhow!("Subtree copy source {} not found", from_cs_id))?
+                            .ok_or_else(|| anyhow!("Subtree copy source {from_cs_id} not found"))?
                             .clone(),
                     });
                 }
@@ -161,7 +161,7 @@ impl HgSubtreeChanges {
                         to_path: path.clone(),
                         from_commit: subtree_change_sources
                             .get(from_cs_id)
-                            .ok_or_else(|| anyhow!("Subtree copy source {} not found", from_cs_id))?
+                            .ok_or_else(|| anyhow!("Subtree copy source {from_cs_id} not found"))?
                             .clone(),
                     });
                 }
@@ -174,7 +174,7 @@ impl HgSubtreeChanges {
                         to_path: path.clone(),
                         from_commit: subtree_change_sources
                             .get(from_cs_id)
-                            .ok_or_else(|| anyhow!("Subtree copy source {} not found", from_cs_id))?
+                            .ok_or_else(|| anyhow!("Subtree copy source {from_cs_id} not found"))?
                             .clone(),
                     });
                 }
@@ -319,8 +319,7 @@ mod version {
         let version = u64::deserialize(deserializer)?;
         if version != 1 {
             return Err(D::Error::custom(format!(
-                "Unsupported version of subtree changes: {}",
-                version
+                "Unsupported version of subtree changes: {version}"
             )));
         }
         Ok(version)

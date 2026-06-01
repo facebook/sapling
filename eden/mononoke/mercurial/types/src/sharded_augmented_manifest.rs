@@ -617,8 +617,7 @@ impl HgAugmentedManifestEnvelope {
         .with_max_poll(blobstore::BLOBSTORE_MAX_POLL_TIME_MS)
         .await
         .context(format!(
-            "Failed to load manifest {} from blobstore",
-            manifestid
+            "Failed to load manifest {manifestid} from blobstore"
         ))
     }
 
