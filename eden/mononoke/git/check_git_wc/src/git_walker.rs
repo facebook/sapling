@@ -73,7 +73,7 @@ fn process_entry(git_lfs: bool, repo: &Repository, entry: TreeEntry<'_>) -> Resu
                 0o100644 => FileType::Regular,
                 0o100755 => FileType::Executable,
                 0o120000 => FileType::Symlink,
-                _ => bail!("Unknown git filemode {}", filemode),
+                _ => bail!("Unknown git filemode {filemode}"),
             };
 
             Ok(CheckEntry::File(filetype, hash))
@@ -84,7 +84,7 @@ fn process_entry(git_lfs: bool, repo: &Repository, entry: TreeEntry<'_>) -> Resu
             // `git checkout` does when submodules aren't enabled
             Ok(CheckEntry::Directory)
         }
-        kind => Err(anyhow!("Object is of unexpected kind {:?}", kind)),
+        kind => Err(anyhow!("Object is of unexpected kind {kind:?}")),
     }
 }
 

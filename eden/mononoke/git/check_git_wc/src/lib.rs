@@ -66,13 +66,13 @@ async fn check_node(
     for (filename, fsnode_entry) in entries {
         let git_entry = contents
             .remove(&filename)
-            .ok_or_else(|| anyhow!("File {}/{} in Bonsai but not git", path, filename))?;
+            .ok_or_else(|| anyhow!("File {path}/{filename} in Bonsai but not git"))?;
         match git_entry {
             CheckEntry::Directory => match fsnode_entry {
                 Entry::Leaf(_) => {
                     let entry_path =
                         RepoPath::dir(NonRootMPath::join_opt_element(path.mpath(), &filename))?;
-                    bail!("{} is a file in Mononoke", entry_path);
+                    bail!("{entry_path} is a file in Mononoke");
                 }
                 Entry::Tree(_) => {}
             },
@@ -81,26 +81,16 @@ async fn check_node(
                     let entry_path =
                         RepoPath::file(NonRootMPath::join_opt_element(path.mpath(), &filename))?;
                     if file_type != git_file_type {
-                        bail!(
-                            "{} is type {} in git and {} in Mononoke",
-                            path,
-                            git_file_type,
-                            file_type,
-                        );
+                        bail!("{path} is type {git_file_type} in git and {file_type} in Mononoke",);
                     }
                     if sha256 != git_sha256 {
-                        bail!(
-                            "{} has hash {} in git and {} in Mononoke",
-                            entry_path,
-                            git_sha256,
-                            sha256,
-                        );
+                        bail!("{entry_path} has hash {git_sha256} in git and {sha256} in Mononoke",);
                     }
                 }
                 Entry::Tree(_) => {
                     let entry_path =
                         RepoPath::file(NonRootMPath::join_opt_element(path.mpath(), &filename))?;
-                    bail!("{} is a directory in Mononoke", entry_path);
+                    bail!("{entry_path} is a directory in Mononoke");
                 }
             },
         }
@@ -109,7 +99,7 @@ async fn check_node(
     // By this point, all the Mononoke entries have been checked
     if let Some((filename, _)) = contents.drain().next() {
         let entry_path = RepoPath::file(NonRootMPath::join_opt_element(path.mpath(), &filename))?;
-        bail!("{} in git but not Bonsai", entry_path);
+        bail!("{entry_path} in git but not Bonsai");
     }
 
     Ok(())
@@ -164,8 +154,8 @@ async fn check_receiver(
                 .lock()
                 .expect("lock poisoned")
                 .remove(path.mpath().into())
-                .ok_or_else(|| anyhow!("{} not found in Mononoke", path))?
-                .ok_or_else(|| anyhow!("{} in git is a file in Mononoke", path))?;
+                .ok_or_else(|| anyhow!("{path} not found in Mononoke"))?
+                .ok_or_else(|| anyhow!("{path} in git is a file in Mononoke"))?;
             // Fetch all children in parallel, storing them in the map
             this_content_mf
                 .list(ctx, hg_repo.repo_blobstore())
@@ -244,9 +234,7 @@ pub async fn check_git_wc(
         (Ok(()), Ok(())) => Ok(()),
         (Err(e), Ok(())) | (Ok(()), Err(e)) => Err(e),
         (Err(e1), Err(e2)) => Err(anyhow!(
-            "Both git and Mononoke threads failed.\ngit: {}\nMononoke: {}\n",
-            e2,
-            e1
+            "Both git and Mononoke threads failed.\ngit: {e2}\nMononoke: {e1}\n"
         )),
     }
 }
