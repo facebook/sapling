@@ -210,7 +210,7 @@ async fn test_acl_regions(fb: FacebookInit) -> Result<()> {
     ];
 
     for (index, data) in test_data.iter().enumerate() {
-        eprintln!("Verifying test data #{}", index);
+        eprintln!("Verifying test data #{index}");
         data.verify(&ctx, acl_regions).await?;
     }
 
