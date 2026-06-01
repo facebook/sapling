@@ -93,18 +93,21 @@ fn build_https_connector(
     HttpsConnector::with_connector(http_connector, ssl_connector).map_err(Error::from)
 }
 
-/// Builds an HTTPS client for the GitHub LFS path, optionally tunneling
-/// HTTPS through an `http://...` forward proxy via CONNECT. Required when
-/// running inside Meta's prod fleet (e.g. Sandcastle workers), where direct
-/// outbound traffic to github.com is blocked and must go through
-/// `http://fwdproxy:8080`. When `proxy_url` is `None` the proxy connector
-/// is configured with `Intercept::None`, which makes it a no-op pass-through
-/// over the underlying `HttpsConnector` (the only reason it's still wrapped
-/// is to keep one client type regardless of whether a proxy is configured).
+/// Builds an HTTPS client for the GitHub LFS path that tunnels HTTPS to
+/// github.com through an `http://...` forward proxy via CONNECT — required
+/// from Sandcastle / prod workers where direct outbound to github.com is
+/// blocked. Target TLS is handled by hyper-proxy2's built-in rustls path
+/// (rustls-native-certs supplies the trust store).
+///
+/// **Do NOT switch to `ProxyConnector::from_proxy_unsecured`** — it returns
+/// a plaintext tunnel for HTTPS targets (no TLS handshake with the target),
+/// which github.com:443 closes immediately. Production hit this silently
+/// until 2026-06-01.
 fn build_github_https_client(
     proxy_url: Option<String>,
-) -> Result<Client<ProxyConnector<HttpsConnector<HttpConnector>>, Full<Bytes>>, Error> {
-    let inner = build_https_connector(None)?;
+) -> Result<Client<ProxyConnector<HttpConnector>, Full<Bytes>>, Error> {
+    let mut http_connector = HttpConnector::new();
+    http_connector.enforce_http(false);
     let (intercept, proxy_uri) = match proxy_url {
         Some(url) => {
             let uri = url
@@ -114,8 +117,8 @@ fn build_github_https_client(
         }
         None => (Intercept::None, "http://unused.invalid".parse::<Uri>()?),
     };
-    let proxy_connector =
-        ProxyConnector::from_proxy_unsecured(inner, Proxy::new(intercept, proxy_uri));
+    let mut proxy_connector = ProxyConnector::new(http_connector)?;
+    proxy_connector.add_proxy(Proxy::new(intercept, proxy_uri));
     Ok(Client::builder(TokioExecutor::new())
         .pool_idle_timeout(Duration::from_secs(GITHUB_LFS_POOL_IDLE_TIMEOUT_SECS))
         .build(proxy_connector))
@@ -227,11 +230,10 @@ pub struct GitHubLfs {
     /// Optional connection-concurrency limiter (per-host; helps stay under
     /// GitHub's per-installation rate limits when importing wide trees).
     conn_limit_sem: Option<Arc<Semaphore>>,
-    /// HTTPS client built with the system trust store (no Meta mTLS) so it
-    /// can talk to github.com, optionally tunneling through an `http://...`
-    /// forward proxy via CONNECT (required from Sandcastle / prod workers
-    /// where direct outbound traffic to github.com is blocked).
-    client: Client<ProxyConnector<HttpsConnector<HttpConnector>>, Full<Bytes>>,
+    /// HTTPS client that CONNECT-tunnels to github.com through the forward
+    /// proxy; target TLS done via hyper-proxy2's rustls path. See
+    /// `build_github_https_client` for details.
+    client: Client<ProxyConnector<HttpConnector>, Full<Bytes>>,
 }
 
 impl fmt::Debug for GitHubLfs {
