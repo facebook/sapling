@@ -145,7 +145,7 @@ impl std::fmt::Display for RequestStatus {
             Polled => "polled",
             Failed => "failed",
         };
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 

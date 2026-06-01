@@ -1305,7 +1305,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
 
         match res.last_insert_id() {
             Some(last_insert_id) if res.affected_rows() == 1 => Ok(RowId(last_insert_id)),
-            _ => bail!("Failed to insert a new request of type {}", request_type),
+            _ => bail!("Failed to insert a new request of type {request_type}"),
         }
     }
 
@@ -1566,7 +1566,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
 
         let (mut txn, rows) = GetRequest::query_with_transaction(txn, &req_id.0, &req_id.1).await?;
         let entry = match rows.into_iter().next() {
-            None => bail!("unknown request polled: {:?}", req_id),
+            None => bail!("unknown request polled: {req_id:?}"),
             Some(row) => {
                 let mut entry = row_to_entry(row);
 
@@ -1714,7 +1714,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
 
         let (mut txn, rows) = GetRequest::query_with_transaction(txn, &req_id.0, &req_id.1).await?;
         let will_retry = match rows.into_iter().next() {
-            None => bail!("Failed to get request: {:?}", req_id),
+            None => bail!("Failed to get request: {req_id:?}"),
             Some(row) => {
                 let entry = row_to_entry(row);
                 match &entry.status {
@@ -1741,10 +1741,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
                             Ok(true)
                         }
                     }
-                    _ => bail!(
-                        "Request {:?} is not in progress, it can't be retried",
-                        req_id
-                    ),
+                    _ => bail!("Request {req_id:?} is not in progress, it can't be retried"),
                 }
             }
         };
@@ -1796,13 +1793,13 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
 
         let row_id = match res.last_insert_id() {
             Some(last_insert_id) if res.affected_rows() == 1 => RowId(last_insert_id),
-            _ => bail!("Failed to insert a new request of type {}", request_type),
+            _ => bail!("Failed to insert a new request of type {request_type}"),
         };
 
         for dep_id in depends_on {
             txn = AddDependency::query_with_transaction(txn, &row_id, dep_id)
                 .await
-                .with_context(|| format!("adding dependency {:?} to request {:?}", dep_id, row_id))?
+                .with_context(|| format!("adding dependency {dep_id:?} to request {row_id:?}"))?
                 .0;
         }
 
@@ -1881,9 +1878,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
                 rows.into_iter()
                     .next()
                     .map(|(row_id,)| row_id)
-                    .ok_or_else(|| {
-                        anyhow::anyhow!("Failed to find request of type {}", request_type)
-                    })
+                    .ok_or_else(|| anyhow::anyhow!("Failed to find request of type {request_type}"))
             }
             None => {
                 let res = AddRequestWithRoot::query(
@@ -1898,7 +1893,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
                 .await?;
                 match res.last_insert_id() {
                     Some(last_insert_id) if res.affected_rows() == 1 => Ok(RowId(last_insert_id)),
-                    _ => bail!("Failed to insert a new request of type {}", request_type),
+                    _ => bail!("Failed to insert a new request of type {request_type}"),
                 }
             }
         }
@@ -1939,7 +1934,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
                     .next()
                     .map(|(row_id,)| row_id)
                     .ok_or_else(|| {
-                        anyhow::anyhow!("Failed to find request of type {}", request_type)
+                        anyhow::anyhow!("Failed to find request of type {request_type}")
                     })?;
                 (txn, row_id)
             }
@@ -1955,7 +1950,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
                 .await?;
                 let row_id = match res.last_insert_id() {
                     Some(last_insert_id) if res.affected_rows() == 1 => RowId(last_insert_id),
-                    _ => bail!("Failed to insert a new request of type {}", request_type),
+                    _ => bail!("Failed to insert a new request of type {request_type}"),
                 };
                 (txn, row_id)
             }
@@ -1964,7 +1959,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
         for dep_id in depends_on {
             txn = AddDependency::query_with_transaction(txn, &row_id, dep_id)
                 .await
-                .with_context(|| format!("adding dependency {:?} to request {:?}", dep_id, row_id))?
+                .with_context(|| format!("adding dependency {dep_id:?} to request {row_id:?}"))?
                 .0;
         }
 
@@ -2056,10 +2051,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
         )
         .await?;
         rows.into_iter().next().ok_or_else(|| {
-            anyhow::anyhow!(
-                "No timing stats found for root_request_id {}",
-                root_request_id
-            )
+            anyhow::anyhow!("No timing stats found for root_request_id {root_request_id}")
         })
     }
 
