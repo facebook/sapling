@@ -439,27 +439,25 @@ pub async fn load_diff_file(
                         })?
                         .ok_or_else(|| {
                             DiffError::Internal(anyhow::anyhow!(
-                                "Failed to load submodule content for content_id: {:?}",
-                                id
+                                "Failed to load submodule content for content_id: {id:?}"
                             ))
                         })?
                 }
                 None => {
                     return Err(DiffError::Internal(anyhow::anyhow!(
-                        "Failed to load submodule content for content_id: {:?}",
-                        id
+                        "Failed to load submodule content for content_id: {id:?}"
                     )));
                 }
             };
 
             let commit_hash = GitSha1::from_bytes(commit_hash_bytes)
-                .with_context(|| format!("Invalid commit hash for submodule at {}", path))?
+                .with_context(|| format!("Invalid commit hash for submodule at {path}"))?
                 .to_string();
             (xdiff::FileContent::Submodule { commit_hash }, false)
         } else if options.omit_content {
             (
                 xdiff::FileContent::Omitted {
-                    content_hash: format!("{:?}", id),
+                    content_hash: format!("{id:?}"),
                     git_lfs_pointer: lfs_pointer.as_ref().map(lfs_pointer_text).transpose()?,
                 },
                 false,
@@ -481,15 +479,14 @@ pub async fn load_diff_file(
                 Some(LoadResult::Content(bytes)) => (xdiff::FileContent::Inline(bytes), false),
                 Some(LoadResult::Binary) => (
                     xdiff::FileContent::Omitted {
-                        content_hash: format!("{:?}", id),
+                        content_hash: format!("{id:?}"),
                         git_lfs_pointer: None,
                     },
                     true,
                 ),
                 None => {
                     return Err(DiffError::Internal(anyhow::anyhow!(
-                        "Failed to load content for content_id: {:?}",
-                        id
+                        "Failed to load content for content_id: {id:?}"
                     )));
                 }
             }
@@ -555,8 +552,7 @@ mod tests {
         let result = load_content(&ctx, &repo, input).await?;
         assert!(
             matches!(result, Some(LoadResult::Binary)),
-            "Expected Some(LoadResult::Binary), got {:?}",
-            result
+            "Expected Some(LoadResult::Binary), got {result:?}"
         );
         Ok(())
     }
@@ -581,8 +577,7 @@ mod tests {
         let result = load_content(&ctx, &repo, input).await?;
         assert!(
             matches!(&result, Some(LoadResult::Content(bytes)) if bytes.as_ref() == b"hello world\n"),
-            "Expected Some(LoadResult::Content) with text content, got {:?}",
-            result
+            "Expected Some(LoadResult::Content) with text content, got {result:?}"
         );
         Ok(())
     }
@@ -599,8 +594,7 @@ mod tests {
         let result = load_content(&ctx, &repo, input).await?;
         assert!(
             matches!(result, Some(LoadResult::Binary)),
-            "Expected Some(LoadResult::Binary) for binary string input, got {:?}",
-            result
+            "Expected Some(LoadResult::Binary) for binary string input, got {result:?}"
         );
         Ok(())
     }
