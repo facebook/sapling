@@ -148,7 +148,8 @@ enum DerivedDataSubcommand {
     BackfillAbort(BackfillAbortArgs),
     /// Enqueue derived data backfill work via async requests
     BackfillEnqueue(BackfillEnqueueArgs),
-    /// Show status of derive backfill jobs
+    /// Show status of derive backfill jobs.
+    /// Pass -R or --repo-id to drill down on a specific repo in a multi-repo backfill.
     BackfillStatus(BackfillStatusArgs),
     /// Count how many ancestors of a given commit weren't derived
     CountUnderived(CountUnderivedArgs),

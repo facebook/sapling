@@ -246,7 +246,7 @@ pub(super) fn display_multi_repo_summary(
         }
         println!();
         println!(
-            "Use --request-id {} --repo-id <ID> to drill down into a specific repo.",
+            "Use -R <REPO> --request-id {} to drill down into a specific repo.",
             data.request_id.0
         );
     }

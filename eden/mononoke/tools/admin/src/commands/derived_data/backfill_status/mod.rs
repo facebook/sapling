@@ -71,10 +71,6 @@ pub(super) struct BackfillStatusArgs {
     #[clap(long)]
     request_id: Option<u64>,
 
-    /// For a multi-repo backfill, drill down on a specific repo
-    #[clap(long)]
-    repo_id: Option<i64>,
-
     /// Lookback window in days for listing backfills
     #[clap(long, default_value = "7")]
     lookback: i64,
@@ -97,26 +93,8 @@ pub(super) async fn backfill_status(
         Some(request_id) => {
             // Mode 2: Show detailed progress for a specific backfill
             let row_id = RowId(request_id);
-            match args.repo_id {
-                None => {
-                    // Show overall backfill progress
-                    show_backfill_detail(
-                        ctx,
-                        &queue,
-                        &blobstore,
-                        &repo_names,
-                        &row_id,
-                        repo,
-                        manager,
-                    )
-                    .await?;
-                }
-                Some(repo_id) => {
-                    // Drill down into a specific repo
-                    show_repo_detail(ctx, &queue, &blobstore, &repo_names, &row_id, repo_id)
-                        .await?;
-                }
-            }
+            show_backfill_detail(ctx, &queue, &blobstore, &repo_names, &row_id, repo, manager)
+                .await?;
         }
     }
 
@@ -333,6 +311,9 @@ async fn show_backfill_detail(
     if is_single_repo {
         let repo_id = unique_repos.iter().next().map(|r| r.id() as i64);
         display_single_repo_detail(&data, repo_id, repo_names);
+    } else if let Some(r) = repo {
+        let drilldown_repo_id = r.repo_identity().id().id() as i64;
+        show_repo_detail(ctx, queue, blobstore, repo_names, row_id, drilldown_repo_id).await?;
     } else {
         // Multi-repo backfill: show condensed view
         let total_repos = unique_repos.len();
