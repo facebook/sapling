@@ -224,7 +224,7 @@ impl BookmarkName {
     pub fn new<B: AsRef<str>>(bookmark: B) -> Result<Self, Error> {
         Ok(Self {
             bookmark: AsciiString::from_ascii(bookmark.as_ref())
-                .map_err(|bytes| format_err!("non-ascii bookmark name: {:?}", bytes))?,
+                .map_err(|bytes| format_err!("non-ascii bookmark name: {bytes:?}"))?,
         })
     }
 
@@ -339,7 +339,7 @@ impl std::fmt::Display for BookmarkKind {
             PullDefaultPublishing => "pull_default",
         };
 
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 
@@ -474,7 +474,7 @@ impl std::fmt::Display for BookmarkCategory {
             Note => "note",
         };
 
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 
@@ -586,7 +586,7 @@ impl BookmarkPrefix {
     pub fn new<B: AsRef<str>>(bookmark_prefix: B) -> Result<Self, Error> {
         Ok(Self {
             bookmark_prefix: AsciiString::from_ascii(bookmark_prefix.as_ref())
-                .map_err(|bytes| format_err!("non-ascii bookmark prefix: {:?}", bytes))?,
+                .map_err(|bytes| format_err!("non-ascii bookmark prefix: {bytes:?}"))?,
         })
     }
 
