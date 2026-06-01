@@ -125,13 +125,13 @@ impl Pack {
         blob: BlobstoreBytes,
     ) -> Result<()> {
         if self.dictionaries.contains_key(&key) {
-            bail!("Key {} cannot appear in the same pack twice", key);
+            bail!("Key {key} cannot appear in the same pack twice");
         }
         let zstd = {
             let dictionary = self
                 .dictionaries
                 .get(&dict_key)
-                .ok_or_else(|| format_err!("Cannot find dictionary for blob {}", dict_key))?;
+                .ok_or_else(|| format_err!("Cannot find dictionary for blob {dict_key}"))?;
 
             let mut compressed_blob = BytesMut::with_capacity(blob.len());
             let writer = (&mut compressed_blob).writer();
@@ -235,7 +235,7 @@ pub(crate) fn decode_independent(v: SingleValue) -> Result<(BlobstoreBytes, u64)
             v.len() as u64,
             zstd::decode_all(v.reader()).map(BlobstoreBytes::from_bytes)?,
         ),
-        SingleValue::UnknownField(e) => bail!("SingleValue::UnknownField {:?}", e),
+        SingleValue::UnknownField(e) => bail!("SingleValue::UnknownField {e:?}"),
     };
     Ok((decoded, compressed_size))
 }
@@ -298,14 +298,10 @@ pub(crate) fn decode_pack(
                     // Handled below
                     break;
                 }
-                bail!(
-                    "Key {} needs dictionary {} but it is not in the pack",
-                    key,
-                    next_key
-                );
+                bail!("Key {key} needs dictionary {next_key} but it is not in the pack");
             }
             Some(PackedValue::UnknownField(e)) => {
-                bail!("PackedValue::UnknownField {:?}", e);
+                bail!("PackedValue::UnknownField {e:?}");
             }
             Some(PackedValue::Single(v)) => {
                 let (decoded, compressed_size) = decode_independent(v)?;
@@ -339,7 +335,7 @@ pub(crate) fn decode_pack(
 
     let decoded = decoded_blobs
         .remove(key)
-        .ok_or_else(|| format_err!("Key {} not in the pack it is pointing to {}", key, pack_key))?;
+        .ok_or_else(|| format_err!("Key {key} not in the pack it is pointing to {pack_key}"))?;
 
     let pack_meta = PackMetadata {
         pack_key,
@@ -613,13 +609,11 @@ mod tests {
         let base_compressed_size = pack.get_compressed_size()?;
         assert!(
             base_compressed_size > 1024,
-            "Compression turned 64 KiB into {} bytes - suspiciously small",
-            base_compressed_size
+            "Compression turned 64 KiB into {base_compressed_size} bytes - suspiciously small"
         );
         assert!(
             base_compressed_size < 65535,
-            "Compression turned 64 KiB into {} bytes - expansion unexpected",
-            base_compressed_size
+            "Compression turned 64 KiB into {base_compressed_size} bytes - expansion unexpected"
         );
 
         // incrementally build a pack from seeded random data
@@ -647,9 +641,7 @@ mod tests {
         let limit = base_compressed_size + 20 * 1000;
         assert!(
             compressed_size < limit,
-            "Pack grew by more than the size of added data. Expected {} < {}",
-            compressed_size,
-            limit,
+            "Pack grew by more than the size of added data. Expected {compressed_size} < {limit}",
         );
 
         Ok(())

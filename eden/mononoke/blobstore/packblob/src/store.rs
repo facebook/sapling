@@ -75,7 +75,7 @@ impl<T: Blobstore> Blobstore for PackBlob<T> {
             self.inner
                 .get(ctx, inner_key)
                 .await
-                .with_context(|| format!("While getting inner data for {:?}", key))?
+                .with_context(|| format!("While getting inner data for {key:?}"))?
         };
         let inner_get_data = match inner_get_data {
             Some(inner_get_data) => inner_get_data,
@@ -205,7 +205,7 @@ impl<T: Blobstore> PackBlob<T> {
         // add the links
         let links = FuturesUnordered::new();
         for key in link_keys {
-            let key = format!("{}{}{}", key_prefix, key, ENVELOPE_SUFFIX);
+            let key = format!("{key_prefix}{key}{ENVELOPE_SUFFIX}");
             links.push(self.inner.copy(ctx, &pack_key, key));
         }
         links.try_collect::<()>().await?;
@@ -358,7 +358,7 @@ mod tests {
             let mut app_key = "app_key".to_string();
             app_key.push_str(&i.to_string());
 
-            let app_data = format!("app_data{}", i);
+            let app_data = format!("app_data{i}");
             let app_data = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(app_data.as_bytes()));
             input_values.push(app_data.clone());
 
@@ -389,12 +389,11 @@ mod tests {
 
         for (expected, i) in input_values.into_iter().zip(0..3usize) {
             // Get, should remove the thrift envelope as it is loaded
-            let fetched_value = packblob.get(ctx, &format!("repo0000.app_key{}", i)).await?;
+            let fetched_value = packblob.get(ctx, &format!("repo0000.app_key{i}")).await?;
 
             assert!(
                 fetched_value.is_some(),
-                "Failed to fetch repo0000.app_key{}",
-                i
+                "Failed to fetch repo0000.app_key{i}"
             );
 
             // Make sure the thrift wrapper is not still there

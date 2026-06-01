@@ -35,7 +35,7 @@ impl TryFrom<u32> for HeaderType {
         match value {
             // 0 is thrift compact_protocol.  We can use other values for other encodings in future
             0 => Ok(HeaderType::PackBlobCompactFormat),
-            _ => Err(format_err!("Unknown header value for packblob {}", value))?,
+            _ => Err(format_err!("Unknown header value for packblob {value}"))?,
         }
     }
 }
@@ -79,7 +79,7 @@ impl PackEnvelope {
         Ok(match self.0.storage {
             StorageFormat::Single(single) => {
                 let (decoded, unique_compressed_size) = pack::decode_independent(single)
-                    .with_context(|| format!("While decoding independent {:?}", key))?;
+                    .with_context(|| format!("While decoding independent {key:?}"))?;
                 let sizing = SizeMetadata {
                     unique_compressed_size,
                     pack_meta: None,
@@ -87,9 +87,9 @@ impl PackEnvelope {
                 (decoded, sizing)
             }
             StorageFormat::Packed(packed) => pack::decode_pack(packed, key)
-                .with_context(|| format!("While decoding pack for {:?}", key))?,
+                .with_context(|| format!("While decoding pack for {key:?}"))?,
             StorageFormat::UnknownField(e) => {
-                return Err(format_err!("StorageFormat::UnknownField {:?}", e));
+                return Err(format_err!("StorageFormat::UnknownField {e:?}"));
             }
         })
     }
