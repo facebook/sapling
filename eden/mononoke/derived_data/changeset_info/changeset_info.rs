@@ -88,7 +88,7 @@ impl ChangesetMessage {
                 Ok(ChangesetMessage::Message(message))
             }
             thrift::changeset_info::ChangesetMessage::UnknownField(other) => {
-                Err(format_err!("Unknown ChangesetMessage field: {}", other))
+                Err(format_err!("Unknown ChangesetMessage field: {other}"))
             }
         }
     }
