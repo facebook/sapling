@@ -560,8 +560,7 @@ async fn test_blame_v2_v3_produce_identical_results(fb: FacebookInit) -> Result<
 
             assert_eq!(
                 v2_ranges, v3_ranges,
-                "Blame V2 and V3 differ for {} at {:?}",
-                file, csid,
+                "Blame V2 and V3 differ for {file} at {csid:?}",
             );
         }
     }

@@ -261,7 +261,7 @@ async fn fetch_content_by_content_id(
     let (mut stream, size) =
         filestore::fetch_with_size(blobstore.clone(), ctx, &FetchKey::Canonical(content_id))
             .await?
-            .ok_or_else(|| anyhow!("Missing content: {}", content_id))?;
+            .ok_or_else(|| anyhow!("Missing content: {content_id}"))?;
     if size > filesize_limit {
         return Ok(FetchOutcome::Rejected(BlameRejected::TooBig));
     }

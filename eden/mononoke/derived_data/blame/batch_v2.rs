@@ -79,7 +79,7 @@ pub async fn derive_blame_v2_in_batch(
                     let csid = item.cs_id;
                     let bonsai = bonsais
                         .with(|bonsais| bonsais.remove(&csid))
-                        .ok_or_else(|| anyhow!("changeset {} should be in bonsai batch", csid))?;
+                        .ok_or_else(|| anyhow!("changeset {csid} should be in bonsai batch"))?;
                     let derivation_fut = async move {
                         let root_manifest = derivation_ctx
                             .fetch_dependency::<RootUnodeManifestId>(&ctx, csid)
