@@ -215,8 +215,7 @@ impl PushrebaseCommitHook for CrossRepoSyncPushrebaseCommitHook {
                          .get(&cs_id)
                          .ok_or_else(|| {
                              let e = format!(
-                                 "Commit was assigned a version, but is not found in rebased set: {}",
-                                 cs_id
+                                 "Commit was assigned a version, but is not found in rebased set: {cs_id}"
                              );
                              Error::msg(e)
                          })?
