@@ -117,10 +117,10 @@ pub(crate) fn add_bookmark_entry_info(
     scuba_sample.add("bookmark_entry_id", u64::from(entry.id));
     scuba_sample.add("bookmark_entry_bookmark_name", entry.bookmark_name.as_str());
     if let Some(cs_id) = entry.from_changeset_id {
-        scuba_sample.add("bookmark_entry_from_changeset_id", format!("{}", cs_id));
+        scuba_sample.add("bookmark_entry_from_changeset_id", format!("{cs_id}"));
     }
     if let Some(cs_id) = entry.to_changeset_id {
-        scuba_sample.add("bookmark_entry_to_changeset_id", format!("{}", cs_id));
+        scuba_sample.add("bookmark_entry_to_changeset_id", format!("{cs_id}"));
     }
     scuba_sample.add("bookmark_entry_reason", format!("{}", entry.reason));
     scuba_sample.add("bookmark_entry_timestamp", entry.timestamp.since_seconds());
@@ -137,7 +137,7 @@ pub(crate) fn log_bookmark_update_entry_error(
 
     scuba_sample.add("log_tag", "Error processing bookmark");
     add_bookmark_entry_info(&mut scuba_sample, entry);
-    scuba_sample.add("error", format!("{:?}", error));
+    scuba_sample.add("error", format!("{error:?}"));
     scuba_sample.add("elapsed", elapsed.as_millis());
 
     scuba_sample.log();
@@ -181,7 +181,7 @@ pub(crate) fn log_changeset_error(
 
     scuba_sample.add("log_tag", "Error processing changeset");
     add_changeset_info(&mut scuba_sample, changeset_id);
-    scuba_sample.add("error", format!("{:?}", error));
+    scuba_sample.add("error", format!("{error:?}"));
     scuba_sample.add("elapsed", elapsed.as_millis());
 
     scuba_sample.log()
@@ -199,7 +199,7 @@ pub(crate) fn log_edenapi_stats(
 ) {
     let mut contents = contents
         .iter()
-        .map(|id| format!("{:?}", id))
+        .map(|id| format!("{id:?}"))
         .collect::<Vec<_>>();
     contents.sort();
 
@@ -265,7 +265,7 @@ pub(crate) fn log_upload_changeset_error(
 
     scuba_sample.add("log_tag", "Error uploading changesets");
     add_changesets_info(&mut scuba_sample, changeset_ids);
-    scuba_sample.add("error", format!("{:?}", error));
+    scuba_sample.add("error", format!("{error:?}"));
     scuba_sample.add("elapsed", elapsed.as_millis());
 
     scuba_sample.log()

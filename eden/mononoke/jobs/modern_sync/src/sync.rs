@@ -149,8 +149,7 @@ pub async fn sync(
             .modern_sync_config
             .clone()
             .ok_or(format_err!(
-                "No modern sync config found for repo {}",
-                repo_name
+                "No modern sync config found for repo {repo_name}"
             ))?;
 
         let ctx = build_context(app.clone(), &repo_name, dry_run);
@@ -165,8 +164,7 @@ pub async fn sync(
                 .transpose()?
                 .ok_or_else(|| {
                     format_err!(
-                        "No start-id or mutable counter {} provided",
-                        MODERN_SYNC_COUNTER_NAME
+                        "No start-id or mutable counter {MODERN_SYNC_COUNTER_NAME} provided"
                     )
                 })?
         };
@@ -359,7 +357,7 @@ pub async fn build_edenfs_client(
         .edenapi_args
         .tls_params
         .clone()
-        .ok_or_else(|| format_err!("TLS params not found for repo {}", repo_name))?;
+        .ok_or_else(|| format_err!("TLS params not found for repo {repo_name}"))?;
 
     let config = edenapi::EdenapiConfig {
         url: Url::parse(&url)?,
@@ -425,7 +423,7 @@ pub async fn process_bookmark_update_log_entry(
         let from_generation = commit_graph.changeset_generation(ctx, from_cs).await?;
         let diff = to_generation.difference_from(from_generation);
         if let Some(diff) = diff {
-            (Some(diff as i64), format!("approx {} commit(s)", diff))
+            (Some(diff as i64), format!("approx {diff} commit(s)"))
         } else {
             // This can happen if the bookmark was moved backwards
             let diff = from_generation.difference_from(to_generation);
@@ -435,14 +433,11 @@ pub async fn process_bookmark_update_log_entry(
                 } else {
                     None
                 };
-                (neg_diff, format!("moved back by approx {} commit(s)", diff))
+                (neg_diff, format!("moved back by approx {diff} commit(s)"))
             } else {
                 (
                     None,
-                    format!(
-                        "generation from {:?} to {:?}",
-                        from_generation, to_generation
-                    ),
+                    format!("generation from {from_generation:?} to {to_generation:?}"),
                 )
             }
         }
