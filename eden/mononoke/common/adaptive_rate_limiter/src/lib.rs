@@ -257,7 +257,7 @@ mod tests {
                 mem_hard_limit_ratio: 0.95,
                 load_update_period_ms: 100,
             };
-            let limiter = AdaptiveRateLimiter::new(config, format!("test_mode_{}", i));
+            let limiter = AdaptiveRateLimiter::new(config, format!("test_mode_{i}"));
             let _ = limiter.should_shed();
         }
     }
