@@ -257,7 +257,7 @@ fn build_from_tier_name(
             cat,
             client_correlator,
         ),
-        other_env => Err(anyhow!("{} not supported", other_env)),
+        other_env => Err(anyhow!("{other_env} not supported")),
     }
 }
 
