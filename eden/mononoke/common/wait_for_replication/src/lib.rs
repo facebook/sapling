@@ -80,7 +80,7 @@ impl WaitForReplication {
         config_name: &'static str,
     ) -> Result<Self> {
         let config_handle =
-            config_store.get_config_handle(format!("{}/{}", CONFIGS_PATH, config_name))?;
+            config_store.get_config_handle(format!("{CONFIGS_PATH}/{config_name}"))?;
         let (sync_queue_monitor, xdb_blobstore_monitor) = match storage_config.blobstore {
             BlobConfig::MultiplexedWal {
                 blobstores,
