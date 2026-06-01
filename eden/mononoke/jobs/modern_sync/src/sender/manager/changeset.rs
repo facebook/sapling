@@ -217,8 +217,7 @@ impl Manager for ChangesetManager {
                                     }
                                     Err(e) => {
                                         encountered_error.get_or_insert(anyhow::anyhow!(
-                                            "Error waiting for files/trees error received {:#}",
-                                            e
+                                            "Error waiting for files/trees error received {e:#}"
                                         ));
                                     }
                                 }
@@ -260,8 +259,7 @@ impl Manager for ChangesetManager {
                             Some(ChangesetMessage::NotifyCompletion(sender)) => {
                                 let e = encountered_error.unwrap();
                                 let _ = sender.send(Err(anyhow::anyhow!(
-                                    "Error processing changesets: {:?}",
-                                    e
+                                    "Error processing changesets: {e:?}"
                                 )));
                                 return Err(e);
                             }
@@ -290,8 +288,7 @@ impl Manager for ChangesetManager {
                                 Err(e) => {
                                     stat::log_upload_changeset_error(&ctx, changeset_ids, &e, now.elapsed());
                                     return Err(anyhow::anyhow!(
-                                        "Error processing changesets: {:?}",
-                                        e
+                                        "Error processing changesets: {e:?}"
                                     ));
                                 }
                             }
@@ -310,7 +307,7 @@ impl Manager for ChangesetManager {
                             }
                             Err(e) => {
                                 stat::log_upload_changeset_error(&ctx, changeset_ids, &e, now.elapsed());
-                                return Err(anyhow::anyhow!("Error processing changesets: {:?}", e));
+                                return Err(anyhow::anyhow!("Error processing changesets: {e:?}"));
                             }
                         }
                     }

@@ -63,7 +63,7 @@ impl FilenodeManager {
         if !batch_filenodes.is_empty() || !batch_done_senders.is_empty() {
             let batch_size = batch_filenodes.len() as i64;
             if let Some(e) = encountered_error {
-                let msg = format!("Error processing filenodes: {:?}", e);
+                let msg = format!("Error processing filenodes: {e:?}");
                 while let Some(sender) = batch_done_senders.pop_front() {
                     let _ = sender.send(Err(anyhow::anyhow!(msg.clone())));
                 }
@@ -93,7 +93,7 @@ impl FilenodeManager {
             while let Some(sender) = batch_done_senders.pop_front() {
                 let res = sender.send(Ok(()));
                 if let Err(e) = res {
-                    let msg = format!("Error sending filenodes ready: {:?}", e);
+                    let msg = format!("Error sending filenodes ready: {e:?}");
                     tracing::error!("{}", msg);
                     return Err(anyhow::anyhow!(msg));
                 }

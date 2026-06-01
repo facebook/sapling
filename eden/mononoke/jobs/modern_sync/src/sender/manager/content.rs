@@ -123,7 +123,7 @@ impl ContentManager {
         while let Some(sender) = pending_messages.pop_front() {
             let res = sender.send(Ok(()));
             if let Err(e) = res {
-                return Err(anyhow::anyhow!("Error sending content ready: {:?}", e));
+                return Err(anyhow::anyhow!("Error sending content ready: {e:?}"));
             }
         }
         Ok(())
