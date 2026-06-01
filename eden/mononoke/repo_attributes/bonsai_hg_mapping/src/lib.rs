@@ -216,8 +216,7 @@ pub trait BonsaiHgMapping: Send + Sync {
             }
             ensure!(
                 missing.is_empty(),
-                "Missing bonsai mapping for hg changesets: {:?}",
-                missing,
+                "Missing bonsai mapping for hg changesets: {missing:?}",
             );
             Ok(result)
         } else {
@@ -251,8 +250,7 @@ pub trait BonsaiHgMapping: Send + Sync {
             }
             ensure!(
                 missing.is_empty(),
-                "Missing hg mapping for bonsai changesets: {:?}",
-                missing,
+                "Missing hg mapping for bonsai changesets: {missing:?}",
             );
             Ok(result)
         } else {
@@ -288,16 +286,14 @@ impl RendezVousConnection {
             bonsai: RendezVous::new(
                 ConfigurableRendezVousController::new(opts),
                 Arc::new(RendezVousStats::new(format!(
-                    "bonsai_hg_mapping.bonsai.{}",
-                    name,
+                    "bonsai_hg_mapping.bonsai.{name}",
                 ))),
             ),
             hg: RendezVous::new(
                 ConfigurableRendezVousController::new(opts),
-                Arc::new(RendezVousStats::new(format!(
-                    "bonsai_hg_mapping.hg.{}",
-                    name,
-                ))),
+                Arc::new(RendezVousStats::new(
+                    format!("bonsai_hg_mapping.hg.{name}",),
+                )),
             ),
         }
     }
