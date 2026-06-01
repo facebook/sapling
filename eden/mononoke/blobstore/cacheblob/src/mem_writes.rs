@@ -424,7 +424,7 @@ impl<T: KeyedBlobstore + Clone> KeyedBlobstore for MemWritesKeyedBlobstore<T> {
         let value = self
             .get(ctx, old_key)
             .await?
-            .with_context(|| format!("key {} not present", old_key))?;
+            .with_context(|| format!("key {old_key} not present"))?;
         self.put(ctx, new_key, value.into()).await
     }
 
