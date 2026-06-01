@@ -804,7 +804,7 @@ pub async fn assert_changeset_ids_to_locations(
         if graph.is_ancestor_of_any(ctx, target, heads.clone()).await? {
             let location = locations.get(&target).ok_or_else(|| {
                 anyhow!(
-                    "changeset_ids_to_locations didn't return location for {} which is an ancestor of heads {:?}", target, heads
+                    "changeset_ids_to_locations didn't return location for {target} which is an ancestor of heads {heads:?}"
                 )
             })?;
             // Verify that the returned location resolves to the target.
