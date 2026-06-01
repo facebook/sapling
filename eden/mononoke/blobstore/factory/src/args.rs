@@ -112,8 +112,7 @@ impl BlobstoreArgs {
                 "Invalid arguments: --blobstore-write-zstd=true requires --blobstore-write-zstd-level"
             )),
             (_, Some(level)) => Err(anyhow!(
-                "Invalid arguments: --blobstore-write-zstd-level={} requires --blobstore-write-zstd=true",
-                level
+                "Invalid arguments: --blobstore-write-zstd-level={level} requires --blobstore-write-zstd=true"
             )),
         }
     }
