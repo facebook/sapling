@@ -332,15 +332,7 @@ impl fmt::Display for PrintableValidationOutput {
                 } => {
                     writeln!(
                         f,
-                        "file differs between {} (path: {:?}, content_id: {:?}, type: {:?}) and {} (path: {:?}, content_id: {:?}, type: {:?})",
-                        source_name,
-                        source_path,
-                        source_id,
-                        source_type,
-                        target_name,
-                        target_path,
-                        target_id,
-                        target_type,
+                        "file differs between {source_name} (path: {source_path:?}, content_id: {source_id:?}, type: {source_type:?}) and {target_name} (path: {target_path:?}, content_id: {target_id:?}, type: {target_type:?})",
                     )?;
                 }
                 RewriteMismatch {
@@ -349,12 +341,11 @@ impl fmt::Display for PrintableValidationOutput {
                 } => {
                     writeln!(
                         f,
-                        "path differs between {} (path: {:?}) and {} (path: {:?})",
-                        source_name, source_path, target_name, target_path,
+                        "path differs between {source_name} (path: {source_path:?}) and {target_name} (path: {target_path:?})",
                     )?;
                 }
                 SubmoduleExpansionMismatch(msg) => {
-                    writeln!(f, "submodule expansion mismatch: {}", msg)?;
+                    writeln!(f, "submodule expansion mismatch: {msg}")?;
                 }
             }
         }
@@ -415,10 +406,7 @@ async fn verify_working_copy_inner<'a>(
                 out
             ),
         );
-        return Err(format_err!(
-            "verification failed, found {} differences",
-            len
-        ));
+        return Err(format_err!("verification failed, found {len} differences"));
     }
     Ok(())
 }
@@ -557,9 +545,7 @@ async fn verify_git_submodule_expansion_small_to_large<'a>(
 
     if git_hash != exp_metadata_git_hash {
         return Err(anyhow!(
-            "submodule metadata file git hash {:?} doesn't match the hash in metadata file {:?}",
-            git_hash,
-            exp_metadata_git_hash,
+            "submodule metadata file git hash {git_hash:?} doesn't match the hash in metadata file {exp_metadata_git_hash:?}",
         ));
     }
 
@@ -673,9 +659,7 @@ async fn verify_git_submodule_expansion_large_to_small<'a>(
 
     if git_hash != exp_metadata_git_hash {
         return Err(anyhow!(
-            "submodule metadata file git hash {:?} doesn't match the hash in metadata file {:?}",
-            git_hash,
-            exp_metadata_git_hash,
+            "submodule metadata file git hash {git_hash:?} doesn't match the hash in metadata file {exp_metadata_git_hash:?}",
         ));
     }
 
@@ -1202,11 +1186,7 @@ async fn get_large_repo_prefixes_to_visit<'a, R: Repo>(
         .await?;
 
     let small_repo_config = config.small_repos.get(&small_repo_id).ok_or_else(|| {
-        format_err!(
-            "cannot find small repo id {} in commit sync config for {}",
-            small_repo_id,
-            version
-        )
+        format_err!("cannot find small repo id {small_repo_id} in commit sync config for {version}")
     })?;
 
     // Gets a list of large repo paths that small repo paths can map to.
@@ -1368,11 +1348,11 @@ async fn get_synced_commit<R: Repo>(
 ) -> Result<(ChangesetId, CommitSyncConfigVersion), Error> {
     let maybe_sync_outcome = commit_sync_data.get_commit_sync_outcome(&ctx, hash).await?;
     let sync_outcome = maybe_sync_outcome
-        .ok_or_else(|| format_err!("No sync outcome for {} in {:?}", hash, commit_sync_data))?;
+        .ok_or_else(|| format_err!("No sync outcome for {hash} in {commit_sync_data:?}"))?;
 
     use crate::commit_sync_outcome::CommitSyncOutcome::*;
     match sync_outcome {
-        NotSyncCandidate(_) => Err(format_err!("{} does not remap in small repo", hash)),
+        NotSyncCandidate(_) => Err(format_err!("{hash} does not remap in small repo")),
         RewrittenAs(cs_id, mapping_version)
         | EquivalentWorkingCopyAncestor(cs_id, mapping_version) => Ok((cs_id, mapping_version)),
     }
@@ -1439,7 +1419,7 @@ async fn rename_and_remap_bookmarks<R: Repo>(
                         Some(RewrittenAs(cs_id, _))
                         | Some(EquivalentWorkingCopyAncestor(cs_id, _)) => Some(cs_id),
                         Some(NotSyncCandidate(_)) => {
-                            return Err(format_err!("{} is not a sync candidate", cs_id));
+                            return Err(format_err!("{cs_id} is not a sync candidate"));
                         }
                         None => None,
                     };
@@ -1628,7 +1608,7 @@ pub async fn update_large_repo_bookmarks<'a, R: Repo>(
                     .get_plural_commit_sync_outcome(ctx, *target_cs_id)
                     .await?
                     .with_context(|| {
-                        format!("Missing outcome for {} from small repo", target_cs_id)
+                        format!("Missing outcome for {target_cs_id} from small repo")
                     })?;
 
                 use crate::commit_sync_outcome::PluralCommitSyncOutcome::*;
@@ -1670,7 +1650,7 @@ pub async fn update_large_repo_bookmarks<'a, R: Repo>(
                     let reason = BookmarkUpdateReason::XRepoSync;
                     let large_bookmark =
                         bookmark_renamer(target_bookmark).await?.ok_or_else(|| {
-                            format_err!("small bookmark {} remaps to nothing", target_bookmark)
+                            format_err!("small bookmark {target_bookmark} remaps to nothing")
                         })?;
 
                     info!("setting {} {}", large_bookmark, large_cs_id);
@@ -1687,7 +1667,7 @@ pub async fn update_large_repo_bookmarks<'a, R: Repo>(
                     target_bookmark,
                 );
                 let large_bookmark = bookmark_renamer(target_bookmark).await?.ok_or_else(|| {
-                    format_err!("small bookmark {} remaps to nothing", target_bookmark)
+                    format_err!("small bookmark {target_bookmark} remaps to nothing")
                 })?;
                 let reason = BookmarkUpdateReason::XRepoSync;
                 info!("deleting {}", large_bookmark);
@@ -2069,7 +2049,7 @@ mod test {
 
         println!("checking root commit");
         for version in &["first_version", "second_version"] {
-            println!("version: {}", version);
+            println!("version: {version}");
             verify_working_copy_with_version(
                 &ctx,
                 &commit_sync_data,
@@ -2083,7 +2063,7 @@ mod test {
 
         println!("checking first commit");
         for version in &["first_version", "second_version"] {
-            println!("version: {}", version);
+            println!("version: {version}");
             verify_working_copy_with_version(
                 &ctx,
                 &commit_sync_data,
@@ -2096,7 +2076,7 @@ mod test {
         }
 
         let version = "second_version";
-        println!("checking second commit, version: {}", version);
+        println!("checking second commit, version: {version}");
         verify_working_copy_with_version(
             &ctx,
             &commit_sync_data,
@@ -2108,7 +2088,7 @@ mod test {
         .await?;
 
         let version = "first_version";
-        println!("checking second commit, version: {}", version);
+        println!("checking second commit, version: {version}");
         let res = verify_working_copy_with_version(
             &ctx,
             &commit_sync_data,
@@ -2121,7 +2101,7 @@ mod test {
         assert!(res.is_err());
 
         let version = "second_version";
-        println!("checking first and second commit, version: {}", version);
+        println!("checking first and second commit, version: {version}");
         let res = verify_working_copy_with_version(
             &ctx,
             &commit_sync_data,

@@ -74,12 +74,8 @@ fn get_version_for_merge_impl<'a>(
             }),
     )?;
 
-    maybe_version.ok_or_else(|| {
-        format_err!(
-            "unexpected absence of rewritten parents for {}",
-            source_cs_id,
-        )
-    })
+    maybe_version
+        .ok_or_else(|| format_err!("unexpected absence of rewritten parents for {source_cs_id}",))
 }
 
 pub async fn get_version<'a>(
@@ -120,10 +116,7 @@ fn get_version_impl<'a>(
     let mut iter = versions.into_iter();
     match (iter.next(), iter.next()) {
         (Some(v1), Some(v2)) => Err(format_err!(
-            "too many CommitSyncConfig versions used to remap parents of {}: {}, {} (may be more)",
-            source_cs_id,
-            v1,
-            v2,
+            "too many CommitSyncConfig versions used to remap parents of {source_cs_id}: {v1}, {v2} (may be more)",
         )),
         (Some(v1), None) => Ok(Some(v1.clone())),
         (None, _) => Ok(None),
@@ -171,8 +164,7 @@ pub fn set_mapping_change_version(
         .contains_key(&CHANGE_XREPO_MAPPING_EXTRA.to_string())
     {
         return Err(format_err!(
-            "changeset already contains the {}",
-            CHANGE_XREPO_MAPPING_EXTRA
+            "changeset already contains the {CHANGE_XREPO_MAPPING_EXTRA}"
         ));
     }
     bcs.hg_extra.insert(
@@ -234,7 +226,7 @@ mod tests {
 
         let e = get_version_for_merge_impl(&bonsai::ONES_CSID, &parent_outcomes).unwrap_err();
         assert!(
-            format!("{}", e).contains("too many CommitSyncConfig versions used to remap parents")
+            format!("{e}").contains("too many CommitSyncConfig versions used to remap parents")
         );
     }
 
@@ -246,6 +238,6 @@ mod tests {
         let parent_outcomes = [NotSyncCandidate(v1.clone()), NotSyncCandidate(v1)];
 
         let e = get_version_for_merge_impl(&bonsai::ONES_CSID, &parent_outcomes).unwrap_err();
-        assert!(format!("{}", e).contains("unexpected absence of rewritten parents"));
+        assert!(format!("{e}").contains("unexpected absence of rewritten parents"));
     }
 }

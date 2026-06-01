@@ -497,7 +497,7 @@ async fn test_sync_causes_conflict(fb: FacebookInit) -> Result<(), Error> {
     let megarepo_fail_bcs_id =
         sync_to_master(ctx.clone(), &master_file_config, linear_second_bcs_id).await;
     // Confirm the syncing failed
-    assert!(megarepo_fail_bcs_id.is_err(), "{:?}", megarepo_fail_bcs_id);
+    assert!(megarepo_fail_bcs_id.is_err(), "{megarepo_fail_bcs_id:?}");
 
     check_mapping(ctx.clone(), &master_file_config, linear_second_bcs_id, None).await;
     Ok(())
@@ -938,10 +938,7 @@ async fn check_rewritten_multiple(
     if let PluralCommitSyncOutcome::RewrittenAs(v) = plural_commit_sync_outcome {
         assert_eq!(v.len(), expected_rewrite_count);
     } else {
-        panic!(
-            "incorrect remapping of {}: {:?}",
-            cs_id, plural_commit_sync_outcome
-        );
+        panic!("incorrect remapping of {cs_id}: {plural_commit_sync_outcome:?}");
     }
 
     Ok(())
@@ -1119,7 +1116,7 @@ async fn test_sync_parent_has_multiple_mappings(fb: FacebookInit) -> Result<(), 
     )
     .await
     .expect_err("sync should have failed");
-    assert!(format!("{:?}", e).contains("Too many rewritten candidates for"));
+    assert!(format!("{e:?}").contains("Too many rewritten candidates for"));
 
     // Can sync with a bookmark-based hint
     let book = Target(BookmarkKey::new("master").unwrap());
@@ -1282,7 +1279,7 @@ async fn test_sync_with_mapping_change(fb: FacebookInit) -> Result<(), Error> {
             assert_eq!(version, new_version);
         }
         _ => {
-            return Err(anyhow!("unexpected outcome: {:?}", outcome));
+            return Err(anyhow!("unexpected outcome: {outcome:?}"));
         }
     }
 
@@ -1331,7 +1328,7 @@ async fn test_sync_with_mapping_change(fb: FacebookInit) -> Result<(), Error> {
             assert_eq!(version, old_version);
         }
         _ => {
-            return Err(anyhow!("unexpected outcome: {:?}", outcome));
+            return Err(anyhow!("unexpected outcome: {outcome:?}"));
         }
     }
     Ok(())
@@ -1424,7 +1421,7 @@ async fn test_sync_equivalent_wc_with_mapping_change(fb: FacebookInit) -> Result
             assert_eq!(version, new_version);
         }
         _ => {
-            return Err(anyhow!("unexpected outcome: {:?}", outcome));
+            return Err(anyhow!("unexpected outcome: {outcome:?}"));
         }
     }
 
@@ -1480,7 +1477,7 @@ async fn test_sync_equivalent_wc_with_mapping_change(fb: FacebookInit) -> Result
             assert_eq!(version, old_version);
         }
         _ => {
-            return Err(anyhow!("unexpected outcome: {:?}", outcome));
+            return Err(anyhow!("unexpected outcome: {outcome:?}"));
         }
     }
     Ok(())
@@ -1612,9 +1609,9 @@ async fn test_disabled_sync_pushrebase(fb: FacebookInit) -> Result<(), Error> {
                         check_x_repo_sync_disabled(err);
                         Ok(())
                     }
-                    _ => Err(anyhow!("unexpected pushrebase error: {}", error)),
+                    _ => Err(anyhow!("unexpected pushrebase error: {error}")),
                 },
-                _ => Err(anyhow!("unexpected ErrorKind: {}", error_kind)),
+                _ => Err(anyhow!("unexpected ErrorKind: {error_kind}")),
             },
             None => Err(anyhow!("unexpected error - not ErrorKind")),
         },
@@ -1989,10 +1986,7 @@ async fn test_sync_merge_gets_version_from_parents_1(fb: FacebookInit) -> Result
     if let CommitSyncOutcome::RewrittenAs(_, merge_version) = outcome {
         assert_eq!(v1, merge_version);
     } else {
-        panic!(
-            "unexpected outcome after syncing a merge commit: {:?}",
-            outcome
-        );
+        panic!("unexpected outcome after syncing a merge commit: {outcome:?}");
     }
     Ok(())
 }
@@ -2020,10 +2014,7 @@ async fn test_sync_merge_gets_version_from_parents_2(fb: FacebookInit) -> Result
     if let CommitSyncOutcome::RewrittenAs(_, merge_version) = outcome {
         assert_eq!(v2, merge_version);
     } else {
-        panic!(
-            "unexpected outcome after syncing a merge commit: {:?}",
-            outcome
-        );
+        panic!("unexpected outcome after syncing a merge commit: {outcome:?}");
     }
     Ok(())
 }
@@ -2049,7 +2040,7 @@ async fn test_sync_merge_fails_when_parents_have_different_versions(
     )
     .await
     .expect_err("syncing a merge with differently-remapped parents must fail");
-    assert!(format!("{}", e).contains("failed getting a mover to use for merge rewriting"));
+    assert!(format!("{e}").contains("failed getting a mover to use for merge rewriting"));
     Ok(())
 }
 

@@ -379,15 +379,11 @@ fn get_only_item_selector<'a>(
         let mut v = v.into_iter();
         match (v.next(), v.next()) {
             (None, None) => Err(anyhow!(
-                "ProgrammingError: PluralCommitSyncOutcome::RewrittenAs has 0-sized payload for {}",
-                original_source_cs_id
+                "ProgrammingError: PluralCommitSyncOutcome::RewrittenAs has 0-sized payload for {original_source_cs_id}"
             )),
             (Some((cs_id, version)), None) => Ok((cs_id, version)),
             (Some((first, _)), Some((second, _))) => Err(anyhow!(
-                "Too many rewritten candidates for {}: {}, {} (may be more)",
-                original_source_cs_id,
-                first,
-                second
+                "Too many rewritten candidates for {original_source_cs_id}: {first}, {second} (may be more)"
             )),
             (None, Some(_)) => panic!("iterator cannot produce Some after None"),
         }
@@ -765,7 +761,7 @@ mod tests {
             .await
             .expect_err("selection was expected to fail");
 
-        assert!(format!("{:?}", selection_error).contains(expected_error_message));
+        assert!(format!("{selection_error:?}").contains(expected_error_message));
         Ok(())
     }
 

@@ -66,8 +66,7 @@ pub async fn get_git_submodule_action_by_version(
     log_warning(
         ctx,
         format!(
-            "Couldn't find git submodule action for source repo id {}, target repo id {} and commit sync version {}",
-            source_repo_id, target_repo_id, version,
+            "Couldn't find git submodule action for source repo id {source_repo_id}, target repo id {target_repo_id} and commit sync version {version}",
         ),
     );
     Ok(GitSubmodulesChangesAction::default())
@@ -204,9 +203,7 @@ fn get_direction_and_small_repo_id(
         source_repo_id
     } else {
         return Err(anyhow!(
-            "CommitSyncMapping incompatible with source repo {:?} and target repo {:?}",
-            source_repo_id,
-            target_repo_id,
+            "CommitSyncMapping incompatible with source repo {source_repo_id:?} and target repo {target_repo_id:?}",
         ));
     };
 

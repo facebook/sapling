@@ -414,10 +414,7 @@ where
     } else {
         log_debug(
             ctx,
-            format!(
-                "target bookmark version: none, parent version: {}",
-                parent_version,
-            ),
+            format!("target bookmark version: none, parent version: {parent_version}",),
         );
         // If we don't have a version for the target bookmark, we can't do anything.
         return Ok((parent_version, HashMap::new()));
@@ -425,8 +422,7 @@ where
     log_debug(
         ctx,
         format!(
-            "target bookmark version: {}, parent version: {}",
-            target_bookmark_version, parent_version,
+            "target bookmark version: {target_bookmark_version}, parent version: {parent_version}",
         ),
     );
 
@@ -486,7 +482,7 @@ where
             parent_mapping.insert(*target_parent_csid, target_bookmark_csid);
         }
     }
-    log_debug(ctx, format!("parent_mapping: {:?}", parent_mapping));
+    log_debug(ctx, format!("parent_mapping: {parent_mapping:?}"));
 
     if parent_mapping.is_empty() {
         // None of the parents are ancestors of current position of target_bookmark. Perhaps
@@ -500,8 +496,7 @@ where
         log_debug(
             ctx,
             format!(
-                "all validations passed, using target_bookmark_version: {}",
-                target_bookmark_version
+                "all validations passed, using target_bookmark_version: {target_bookmark_version}"
             ),
         );
         // There's exactly one parent that's ancestor of target_bookmark.
@@ -532,8 +527,7 @@ where
     log_warning(
         ctx,
         format!(
-            "Building parent override map without working copy validation to sync using synced_ancestors_versions {:#?}",
-            synced_ancestors_versions,
+            "Building parent override map without working copy validation to sync using synced_ancestors_versions {synced_ancestors_versions:#?}",
         ),
     );
 
@@ -566,7 +560,7 @@ where
             parent_mapping.insert(*target_parent_csid, target_bookmark_csid);
         }
     }
-    log_debug(ctx, format!("parent_mapping: {:?}", parent_mapping));
+    log_debug(ctx, format!("parent_mapping: {parent_mapping:?}"));
 
     if parent_mapping.is_empty() {
         // None of the parents are ancestors of current position of target_bookmark. Perhaps
