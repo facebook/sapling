@@ -564,7 +564,7 @@ mod test {
     #[async_trait]
     impl KeyedEntityStore<String, TestEntity> for TestStore {
         fn get_cache_key(&self, key: &String) -> String {
-            format!("key:{}", key)
+            format!("key:{key}")
         }
 
         async fn get_from_db(
