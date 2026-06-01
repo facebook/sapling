@@ -906,7 +906,7 @@ async fn test_rewrite_commit_cs_id_with_file_change_filters<'a>(
         file_change_filters,
     )
     .await?;
-    let rewritten = maybe_rewritten.ok_or_else(|| anyhow!("can't rewrite commit {}", bcs_id))?;
+    let rewritten = maybe_rewritten.ok_or_else(|| anyhow!("can't rewrite commit {bcs_id}"))?;
     let rewritten = rewritten.freeze()?;
 
     save_changesets(ctx, repo, vec![rewritten.clone()]).await?;
@@ -923,8 +923,7 @@ async fn assert_changeset_is_marked_lossy<'a>(
     assert!(
         bcs.hg_extra()
             .any(|(key, _)| key == "created_by_lossy_conversion"),
-        "Failed with {:?}",
-        bcs
+        "Failed with {bcs:?}"
     );
     Ok(())
 }
@@ -938,8 +937,7 @@ async fn assert_changeset_is_not_marked_lossy<'a>(
     assert!(
         !bcs.hg_extra()
             .any(|(key, _)| key == "created_by_lossy_conversion"),
-        "Failed with {:?}",
-        bcs
+        "Failed with {bcs:?}"
     );
     Ok(())
 }
