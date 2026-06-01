@@ -169,7 +169,7 @@ impl StatisticsCollector {
         let repo = repos
             .repos()
             .get_by_name(&repo_name)
-            .ok_or_else(|| anyhow::anyhow!("Repo {} is not loaded on the server", repo_name))?;
+            .ok_or_else(|| anyhow::anyhow!("Repo {repo_name} is not loaded on the server"))?;
         let args = process.args.clone();
         let bookmark = BookmarkKey::new(&process.args.bookmark)?;
         let scuba_logger = if process.args.log_to_scuba {
