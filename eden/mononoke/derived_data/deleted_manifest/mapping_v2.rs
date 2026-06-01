@@ -51,7 +51,7 @@ impl RootDeletedManifestIdCommon for RootDeletedManifestV2Id {
     fn format_key(derivation_ctx: &DerivationContext, changeset_id: ChangesetId) -> String {
         let root_prefix = "derived_root_deleted_manifest2.";
         let key_prefix = derivation_ctx.mapping_key_prefix::<RootDeletedManifestV2Id>();
-        format!("{}{}{}", root_prefix, key_prefix, changeset_id)
+        format!("{root_prefix}{key_prefix}{changeset_id}")
     }
 }
 

@@ -575,7 +575,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
 
             sender
                 .unbounded_send(f)
-                .map_err(|err| anyhow!("failed to send manifest future {}", err))?;
+                .map_err(|err| anyhow!("failed to send manifest future {err}"))?;
         }
         Ok(mf_id)
     }
