@@ -500,7 +500,7 @@ impl MononokeApp {
         let (repo_name, repo_config) = self
             .configs
             .get_or_load_repo_config_by_id(repo_id.id())
-            .with_context(|| format!("unknown repoid: {:?}", repo_id))?;
+            .with_context(|| format!("unknown repoid: {repo_id:?}"))?;
         let common_config = self.repo_configs().common.clone();
         let repo = self
             .repo_factory
@@ -854,7 +854,7 @@ impl MononokeApp {
         let storage_config = storage_configs
             .storage
             .get(storage_name)
-            .ok_or_else(|| anyhow!("unknown storage name: {:?}", storage_name))?
+            .ok_or_else(|| anyhow!("unknown storage name: {storage_name:?}"))?
             .clone();
 
         let mut blob_config = if use_mutable {
@@ -896,13 +896,13 @@ impl MononokeApp {
                 let (_repo_name, repo_config) = self
                     .configs
                     .get_or_load_repo_config_by_id(repo_id.id())
-                    .with_context(|| format!("unknown repoid: {:?}", repo_id))?;
+                    .with_context(|| format!("unknown repoid: {repo_id:?}"))?;
                 (repo_id, repo_config.redaction, repo_config.storage_config)
             } else if let Some(repo_name) = &repo_blobstore_args.repo_name {
                 let repo_config = self
                     .configs
                     .get_or_load_repo_config(repo_name)
-                    .with_context(|| format!("unknown reponame: {:?}", repo_name))?;
+                    .with_context(|| format!("unknown reponame: {repo_name:?}"))?;
                 (
                     repo_config.repoid,
                     repo_config.redaction,
@@ -1004,7 +1004,7 @@ impl MononokeApp {
                             None
                         }
                     })
-                    .ok_or_else(|| anyhow!("could not find a blobstore with id {}", id))?;
+                    .ok_or_else(|| anyhow!("could not find a blobstore with id {id}"))?;
                 *blob_config = inner_blob_config;
             }
             _ => {
@@ -1027,7 +1027,7 @@ pub fn setup_repo_dir<P: AsRef<Path>>(data_dir: P, create: CreateStorage) -> Res
     let data_dir = data_dir.as_ref();
 
     if !data_dir.is_dir() {
-        bail!("{:?} does not exist or is not a directory", data_dir);
+        bail!("{data_dir:?} does not exist or is not a directory");
     }
 
     // Validate directory layout
@@ -1036,15 +1036,15 @@ pub fn setup_repo_dir<P: AsRef<Path>>(data_dir: P, create: CreateStorage) -> Res
         let subdir = data_dir.join(subdir);
 
         if subdir.exists() && !subdir.is_dir() {
-            bail!("{:?} already exists and is not a directory", subdir);
+            bail!("{subdir:?} already exists and is not a directory");
         }
 
         if !subdir.exists() {
             if CreateStorage::ExistingOnly == create {
-                bail!("{:?} not found in ExistingOnly mode", subdir,);
+                bail!("{subdir:?} not found in ExistingOnly mode",);
             }
             fs::create_dir(&subdir)
-                .with_context(|| format!("failed to create subdirectory {:?}", subdir))?;
+                .with_context(|| format!("failed to create subdirectory {subdir:?}"))?;
         }
     }
     Ok(())

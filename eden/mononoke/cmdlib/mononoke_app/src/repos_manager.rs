@@ -186,7 +186,7 @@ impl<Repo> MononokeReposManager<Repo> {
         self.record_applied_configs(std::iter::once((repo_name.to_string(), tracked_config)));
         self.repos
             .get_by_name(repo_name)
-            .ok_or_else(|| anyhow!("Couldn't retrieve added repo {}", repo_name))
+            .ok_or_else(|| anyhow!("Couldn't retrieve added repo {repo_name}"))
     }
 
     /// Merge the given (repo_name, RepoConfig) entries into the applied-config
@@ -626,7 +626,7 @@ where
         .binary_exponential_backoff()
         .max_attempts(5)
         .await
-        .with_context(|| format!("Failed to reload repo '{}'", repo_name))?
+        .with_context(|| format!("Failed to reload repo '{repo_name}'"))?
         .0;
 
         info!("Reloaded single repo: {}", repo_name);

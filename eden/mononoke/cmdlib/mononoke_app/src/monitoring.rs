@@ -83,7 +83,7 @@ impl MonitoringArgs {
                             fb,
                             handle,
                             prometheus_host_port.clone(),
-                            format!("[::0]:{}", port),
+                            format!("[::0]:{port}"),
                         )?;
                     }
                 }

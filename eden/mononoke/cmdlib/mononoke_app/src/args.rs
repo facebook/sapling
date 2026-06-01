@@ -70,6 +70,6 @@ pub fn parse_config_spec_to_path(source_spec: &str) -> Result<String> {
     match (iter.next(), iter.next(), iter.next()) {
         (Some("configerator"), Some(path), None) => Ok(path.to_string()),
         (Some(path), None, None) => Ok(path.to_string()),
-        _ => Err(format_err!("Invalid configuration spec: {:?}", source_spec)),
+        _ => Err(format_err!("Invalid configuration spec: {source_spec:?}")),
     }
 }
