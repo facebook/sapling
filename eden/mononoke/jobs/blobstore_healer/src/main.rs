@@ -193,7 +193,7 @@ async fn maybe_schedule_healer_for_storage(
             ));
             Result::<_, Error>::Ok(healer)
         }
-        s => bail!("Storage doesn't use Multiplexed blobstore, got {:?}", s),
+        s => bail!("Storage doesn't use Multiplexed blobstore, got {s:?}"),
     }?;
 
     let wait_for_replication = WaitForReplication::new(fb, config_store, storage_config, "healer")?;
@@ -358,7 +358,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     let storage_config = storage_configs
         .storage
         .get(&storage_id)
-        .ok_or_else(|| format_err!("Storage id `{}` not found", storage_id))?;
+        .ok_or_else(|| format_err!("Storage id `{storage_id}` not found"))?;
     let blobstore_sync_queue_limit = args.sync_queue_limit;
     let heal_concurrency = args.heal_concurrency;
     let heal_max_bytes = args.heal_max_bytes;

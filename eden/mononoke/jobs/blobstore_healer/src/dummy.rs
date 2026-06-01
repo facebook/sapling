@@ -102,7 +102,7 @@ impl<Q: BlobstoreWal> BlobstoreWal for DummyBlobstoreWal<Q> {
         _ctx: &'a CoreContext,
         entries: Vec<BlobstoreWalEntry>,
     ) -> Result<Vec<BlobstoreWalEntry>> {
-        let entries_str: Vec<_> = entries.iter().map(|e| format!("{:?}", e)).collect();
+        let entries_str: Vec<_> = entries.iter().map(|e| format!("{e:?}")).collect();
         info!("I would have written {}", entries_str.join(",\n"));
         Ok(entries)
     }
@@ -122,13 +122,13 @@ impl<Q: BlobstoreWal> BlobstoreWal for DummyBlobstoreWal<Q> {
         _ctx: &'a CoreContext,
         entries: &'a [BlobstoreWalEntry],
     ) -> Result<()> {
-        let entries: Vec<_> = entries.iter().map(|e| format!("{:?}", e)).collect();
+        let entries: Vec<_> = entries.iter().map(|e| format!("{e:?}")).collect();
         info!("I would have deleted {}", entries.join(",\n"));
         Ok(())
     }
 
     async fn delete_by_key(&self, _ctx: &CoreContext, entries: &[BlobstoreWalEntry]) -> Result<()> {
-        let entries: Vec<_> = entries.iter().map(|e| format!("{:?}", e)).collect();
+        let entries: Vec<_> = entries.iter().map(|e| format!("{e:?}")).collect();
         info!("I would have deleted by key {}", entries.join(",\n"));
         Ok(())
     }
