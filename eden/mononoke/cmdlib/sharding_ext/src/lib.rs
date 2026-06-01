@@ -67,37 +67,24 @@ impl RepoShard {
             let mut parts = split_chunk_parts(chunk_parts).into_iter();
             if let (Some(chunk_id), Some(total_chunks)) = (parts.next(), parts.next()) {
                 let chunk_id = chunk_id.parse::<usize>().with_context(|| {
-                    format_err!(
-                        "Failure in creating RepoShard. Invalid chunk_id {}",
-                        chunk_id
-                    )
+                    format_err!("Failure in creating RepoShard. Invalid chunk_id {chunk_id}")
                 })?;
                 let total_chunks = total_chunks.parse::<usize>().with_context(|| {
                     format_err!(
-                        "Failure in creating RepoShard. Invalid total_chunks {}",
-                        total_chunks
+                        "Failure in creating RepoShard. Invalid total_chunks {total_chunks}"
                     )
                 })?;
                 repo_shard.chunk_id = Some(chunk_id);
                 repo_shard.total_chunks = Some(total_chunks);
             } else {
-                anyhow::bail!(
-                    "Failure in creating RepoShard. Invalid chunk parts format {:?}",
-                    parts
-                )
+                anyhow::bail!("Failure in creating RepoShard. Invalid chunk parts format {parts:?}")
             }
         } else {
-            anyhow::bail!(
-                "Failure in creating RepoShard. Invalid chunk format {:?}",
-                chunks
-            )
+            anyhow::bail!("Failure in creating RepoShard. Invalid chunk format {chunks:?}")
         }
         if let Some(chunk_size) = chunk_size_split.next() {
             let chunk_size = chunk_size.parse::<usize>().with_context(|| {
-                format_err!(
-                    "Failure in creating RepoShard. Invalid chunk_size {}",
-                    chunk_size
-                )
+                format_err!("Failure in creating RepoShard. Invalid chunk_size {chunk_size}")
             })?;
             repo_shard.chunk_size = Some(chunk_size);
         }
@@ -124,10 +111,7 @@ impl RepoShard {
                     RepoShard::with_chunks(source_repo_name, chunk_parts, Some(target_repo_name))?
                 }
             },
-            _ => anyhow::bail!(
-                "Failure in creating RepoShard. Invalid shard id {}",
-                shard_id
-            ),
+            _ => anyhow::bail!("Failure in creating RepoShard. Invalid shard id {shard_id}"),
         };
         Ok(repo_shard)
     }
@@ -142,12 +126,11 @@ impl std::fmt::Display for RepoShard {
         }
         if let (Some(total_chunks), Some(chunk_id)) = (self.total_chunks, self.chunk_id) {
             f.write_fmt(format_args!(
-                "{}{}{}{}",
-                CHUNK_SEPARATOR, chunk_id, CHUNK_PART_SEPARATOR, total_chunks
+                "{CHUNK_SEPARATOR}{chunk_id}{CHUNK_PART_SEPARATOR}{total_chunks}"
             ))?;
         }
         if let Some(chunk_size) = self.chunk_size {
-            f.write_fmt(format_args!("{}{}", CHUNK_SIZE_SEPARATOR, chunk_size))?;
+            f.write_fmt(format_args!("{CHUNK_SIZE_SEPARATOR}{chunk_size}"))?;
         }
         Ok(())
     }
@@ -163,10 +146,7 @@ fn get_repo_with_chunks<'a>(input: &'a str) -> Result<ShardSplit<'a>> {
     let shard_split = match (split.next(), split.next()) {
         (Some(repo), None) => ShardSplit::Repo(repo),
         (Some(repo), Some(chunk_parts)) => ShardSplit::RepoWithChunks(repo, chunk_parts),
-        _ => anyhow::bail!(
-            "Failure in creating RepoShard. Invalid shard split {}",
-            input
-        ),
+        _ => anyhow::bail!("Failure in creating RepoShard. Invalid shard split {input}"),
     };
     Ok(shard_split)
 }
