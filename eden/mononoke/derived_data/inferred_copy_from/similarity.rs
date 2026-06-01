@@ -25,10 +25,7 @@ fn normalize_text(text: &[u8]) -> Vec<&[u8]> {
 // Return a value between 0.0 (no similarity) and 1.0 (identical)
 pub fn estimate_similarity(text1: &[u8], text2: &[u8]) -> Result<f64> {
     if text1.len() >= MAX_FILE_SIZE || text2.len() >= MAX_FILE_SIZE {
-        bail!(
-            "Files in comparison exceeded the size limit of {} bytes.",
-            MAX_FILE_SIZE
-        )
+        bail!("Files in comparison exceeded the size limit of {MAX_FILE_SIZE} bytes.")
     }
 
     let lines1 = normalize_text(text1);

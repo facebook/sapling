@@ -327,10 +327,7 @@ async fn find_exact_renames(
             )
             .await
             .with_context(|| {
-                format!(
-                    "Failed to get content for deleted paths from parent {:?}",
-                    parent_cs_id
-                )
+                format!("Failed to get content for deleted paths from parent {parent_cs_id:?}")
             })
         }
     }))
