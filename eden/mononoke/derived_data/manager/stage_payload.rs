@@ -48,7 +48,7 @@ impl DerivationStagePayload {
                 DerivationStagePayload::Manifest(ManifestStagePayload::from_thrift(payload)?),
             ),
             derivation_queue_thrift::DerivationStagePayload::UnknownField(x) => {
-                Err(anyhow!("Unknown DerivationStagePayload variant: {}", x))
+                Err(anyhow!("Unknown DerivationStagePayload variant: {x}"))
             }
         }
     }
