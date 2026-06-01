@@ -123,7 +123,7 @@ impl GetAccessCountsResultExt for GetAccessCountsResult {
                 } else {
                     // Show only the binary's filename, not its full path.
                     Ok(trim_cmd_binary_path(cmd)
-                        .unwrap_or_else(|e| format!("{}: {}", UNKNOWN_COMMAND, e)))
+                        .unwrap_or_else(|e| format!("{UNKNOWN_COMMAND}: {e}")))
                 }
             }
             None => Ok(String::from(UNKNOWN_COMMAND)),
@@ -267,12 +267,12 @@ async fn get_pending_import_counts(client: &EdenFsClient) -> Result<BTreeMap<Str
 
     let counters = client.get_regex_counters(PENDING_COUNTER_REGEX).await?;
     for import_type in IMPORT_OBJECT_TYPES {
-        let counter_prefix = format!("store.sapling.pending_import.{}", import_type);
+        let counter_prefix = format!("store.sapling.pending_import.{import_type}");
         let number_requests = counters
-            .get(&format!("{}.count", counter_prefix))
+            .get(&format!("{counter_prefix}.count"))
             .unwrap_or(&STATS_NOT_AVAILABLE);
         let longest_outstanding_request_us = counters
-            .get(&format!("{}.max_duration_us", counter_prefix))
+            .get(&format!("{counter_prefix}.max_duration_us"))
             .unwrap_or(&STATS_NOT_AVAILABLE);
 
         imports.insert(
@@ -291,21 +291,21 @@ async fn get_live_import_counts(client: &EdenFsClient) -> Result<BTreeMap<String
     let mut imports = BTreeMap::<String, ImportStat>::new();
     let counters = client.get_regex_counters(LIVE_COUNTER_REGEX).await?;
     for import_type in IMPORT_OBJECT_TYPES {
-        let single_prefix = format!("store.sapling.live_import.{}", import_type);
-        let batched_prefix = format!("store.sapling.live_import.batched_{}", import_type);
+        let single_prefix = format!("store.sapling.live_import.{import_type}");
+        let batched_prefix = format!("store.sapling.live_import.batched_{import_type}");
 
         let count = counters
-            .get(&format!("{}.count", single_prefix))
+            .get(&format!("{single_prefix}.count"))
             .unwrap_or(&STATS_NOT_AVAILABLE)
             + counters
-                .get(&format!("{}.count", batched_prefix))
+                .get(&format!("{batched_prefix}.count"))
                 .unwrap_or(&STATS_NOT_AVAILABLE);
         let max_duration_us = std::cmp::max(
             counters
-                .get(&format!("{}.max_duration_us", single_prefix))
+                .get(&format!("{single_prefix}.max_duration_us"))
                 .unwrap_or(&STATS_NOT_AVAILABLE),
             counters
-                .get(&format!("{}.max_duration_us", batched_prefix))
+                .get(&format!("{batched_prefix}.max_duration_us"))
                 .unwrap_or(&STATS_NOT_AVAILABLE),
         );
 
@@ -483,10 +483,10 @@ impl crate::Subcommand for MinitopCmd {
             for import_type in IMPORT_OBJECT_TYPES {
                 let pending_counts = pending_imports
                     .get(*import_type)
-                    .ok_or_else(|| anyhow!("Did not fetch pending {} info", import_type))?;
+                    .ok_or_else(|| anyhow!("Did not fetch pending {import_type} info"))?;
                 let live_counts = live_imports
                     .get(*import_type)
-                    .ok_or_else(|| anyhow!("Did not fetch live {} info", import_type))?;
+                    .ok_or_else(|| anyhow!("Did not fetch live {import_type} info"))?;
                 let pending_string = format!(
                     "total pending {}: {} ({:.3}s)",
                     import_type,
@@ -501,7 +501,7 @@ impl crate::Subcommand for MinitopCmd {
                 );
                 queue!(
                     stdout,
-                    style::Print(format!("{:<40} {}", pending_string, live_string)),
+                    style::Print(format!("{pending_string:<40} {live_string}")),
                 )?;
                 cursor.new_line(&mut stdout)?;
             }

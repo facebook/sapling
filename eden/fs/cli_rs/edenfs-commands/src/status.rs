@@ -89,7 +89,7 @@ impl StatusCmd {
                             println!("{}", String::from_utf8_lossy(&message));
                         }
                         Err(e) => {
-                            println!("Error received from EdenFS while starting: {}", e);
+                            println!("Error received from EdenFS while starting: {e}");
                             break;
                         }
                     }
@@ -139,7 +139,7 @@ impl StatusCmd {
                     return Ok(EdenFsRunningStatus::Starting);
                 }
                 if let Some(status) = health.status {
-                    return Err(anyhow!("EdenFS is {:?}", status));
+                    return Err(anyhow!("EdenFS is {status:?}"));
                 }
             }
             Err(e) => {
@@ -159,7 +159,7 @@ impl StatusCmd {
     fn display_simple(&self, status: Result<EdenFsRunningStatus, anyhow::Error>) -> ExitCode {
         match status {
             Ok(EdenFsRunningStatus::Running(pid)) => {
-                println!("EdenFS is running normally (pid {})", pid);
+                println!("EdenFS is running normally (pid {pid})");
                 0
             }
             Ok(EdenFsRunningStatus::Starting) => {
@@ -169,7 +169,7 @@ impl StatusCmd {
                 1
             }
             Err(cause) => {
-                println!("EdenFS is not healthy: {}", cause);
+                println!("EdenFS is not healthy: {cause}");
                 1
             }
         }
@@ -191,10 +191,7 @@ fn print_systemd_status_full(instance: &EdenFsInstance) {
         .args(["--user", "status", "--no-pager", &unit])
         .status()
     {
-        eprintln!(
-            "warning: failed to get status of edenfs service unit: {}",
-            e
-        );
+        eprintln!("warning: failed to get status of edenfs service unit: {e}");
     }
 }
 

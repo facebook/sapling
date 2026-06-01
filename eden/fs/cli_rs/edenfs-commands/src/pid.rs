@@ -31,7 +31,7 @@ impl crate::Subcommand for PidCmd {
                 0
             }
             Err(cause) => {
-                eprintln!("edenfs not healthy: {}", cause);
+                eprintln!("edenfs not healthy: {cause}");
                 1
             }
         })

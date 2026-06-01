@@ -382,7 +382,7 @@ impl TopCmd {
                 },
                 Ok(None) => {}
                 Err(e) => {
-                    print!("{:?}\r\n", e);
+                    print!("{e:?}\r\n");
                     break;
                 }
             }
@@ -403,7 +403,7 @@ impl crate::Subcommand for TopCmd {
         match self.main_loop() {
             Ok(_) => Ok(0),
             Err(cause) => {
-                println!("Error: {}", cause);
+                println!("Error: {cause}");
                 Ok(1)
             }
         }

@@ -44,7 +44,7 @@ impl crate::Subcommand for UptimeCmd {
                 Ok(0)
             }
             Err(cause) => {
-                println!("edenfs not healthy: {}", cause);
+                println!("edenfs not healthy: {cause}");
                 Ok(1)
             }
         }

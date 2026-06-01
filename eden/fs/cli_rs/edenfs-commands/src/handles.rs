@@ -77,7 +77,7 @@ impl HandlesCmd {
                 // Unwrap here OK since we know that for kill, we have Some
                 if let Some(process) = sys.as_ref().unwrap().process(Pid::from_u32(pid)) {
                     let res = process.kill();
-                    println!("  (kill signal sent, result = {})", res);
+                    println!("  (kill signal sent, result = {res})");
                 }
             }
         }

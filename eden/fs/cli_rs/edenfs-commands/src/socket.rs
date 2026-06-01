@@ -33,7 +33,7 @@ impl crate::Subcommand for SocketCmd {
                 0
             }
             Err(cause) => {
-                eprintln!("Error finding socket file: {}", cause);
+                eprintln!("Error finding socket file: {cause}");
                 1
             }
         })

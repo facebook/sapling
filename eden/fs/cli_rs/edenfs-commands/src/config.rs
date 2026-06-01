@@ -33,18 +33,18 @@ impl crate::Subcommand for CliConfigCmd {
         let config = match instance.get_config() {
             Ok(config) => config,
             Err(e) => {
-                eprintln!("{}", e);
+                eprintln!("{e}");
                 return Ok(1);
             }
         };
 
         match toml::to_string(&config) {
             Ok(st) => {
-                println!("{}", st);
+                println!("{st}");
                 Ok(0)
             }
             Err(e) => {
-                eprintln!("Error when serializing configurations: {:?}", e);
+                eprintln!("Error when serializing configurations: {e:?}");
                 Ok(1)
             }
         }
@@ -233,13 +233,13 @@ impl crate::Subcommand for FsConfigCmd {
                 if current_section.is_some() {
                     println!();
                 }
-                println!("[{}]", section);
+                println!("[{section}]");
                 current_section = cs;
             }
 
             let str = format!("{} = \"{}\"", name, value.parsed_value);
             if value.source_path == PathBuf::new() {
-                println!("{}", str);
+                println!("{str}");
             } else {
                 const SOURCE_COLUMN: usize = 39;
                 let white = if str.len() >= SOURCE_COLUMN {

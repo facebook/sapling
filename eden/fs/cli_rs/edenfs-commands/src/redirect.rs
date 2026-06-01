@@ -162,7 +162,7 @@ impl RedirectCmd {
                 redir.state,
             ));
         }
-        println!("{}", table);
+        println!("{table}");
         Ok(0)
     }
 
@@ -172,7 +172,7 @@ impl RedirectCmd {
     ) -> Result<ExitCode> {
         let json_out = serde_json::to_string(&redirections.into_values().collect::<Vec<_>>())
             .with_context(|| anyhow!("could not serialize redirections",))?;
-        println!("{}", json_out);
+        println!("{json_out}");
         Ok(0)
     }
 

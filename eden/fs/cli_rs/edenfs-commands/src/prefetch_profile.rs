@@ -231,7 +231,7 @@ impl PrefetchProfileCmd {
         match profiles {
             Some(profiles) if !profiles.is_empty() => {
                 for s in profiles.iter() {
-                    println!("{}", s);
+                    println!("{s}");
                 }
             }
             _ => println!("No active prefetch profiles."),
@@ -245,7 +245,7 @@ impl PrefetchProfileCmd {
                 .context("Failed to serialize list of active prfetch profiles as JSON")?,
             _ => "[]".to_owned(),
         };
-        println!("{}", out);
+        println!("{out}");
         Ok(())
     }
 
@@ -270,8 +270,7 @@ impl PrefetchProfileCmd {
                 Ok(0)
             }
             Err(_) => Err(anyhow!(
-                "Could not print prefetch profile data for {}",
-                client_name
+                "Could not print prefetch profile data for {client_name}"
             )),
         }
     }
@@ -493,7 +492,7 @@ impl PrefetchProfileCmd {
         match result {
             PrefetchProfilesResult::Prefetched => Ok(0),
             PrefetchProfilesResult::Skipped(reason) => {
-                eprintln!("{}", reason);
+                eprintln!("{reason}");
                 Ok(0)
             }
         }
@@ -579,7 +578,7 @@ impl PrefetchProfileCmd {
                 Ok(0)
             }
             PrefetchProfilesResult::Skipped(reason) => {
-                eprintln!("{}", reason);
+                eprintln!("{reason}");
                 Ok(0)
             }
         }
