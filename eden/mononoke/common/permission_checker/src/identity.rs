@@ -176,10 +176,7 @@ impl FromStr for MononokeIdentity {
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         let (ty, data) = value.split_once(':').with_context(|| {
-            format!(
-                "MononokeIdentity parse error, expected TYPE:data, got {:?}",
-                value
-            )
+            format!("MononokeIdentity parse error, expected TYPE:data, got {value:?}")
         })?;
         Ok(Self::from_legacy_type_data(ty, data))
     }
