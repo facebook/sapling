@@ -110,12 +110,7 @@ impl MegarepoSyncConfig for SqlMegarepoSyncConfig {
 
         match res.last_insert_id() {
             Some(last_insert_id) if res.affected_rows() == 1 => Ok(RowId(last_insert_id)),
-            _ => bail!(
-                "Failed to insert a repo config for {} {} {}",
-                repo_id,
-                bookmark,
-                version
-            ),
+            _ => bail!("Failed to insert a repo config for {repo_id} {bookmark} {version}"),
         }
     }
 
