@@ -85,7 +85,7 @@ pub fn bytes_from_path(path: PathBuf) -> Result<Vec<u8>> {
     Ok(path
         .into_os_string()
         .into_string()
-        .map_err(|e| EdenFsError::Other(anyhow!("invalid checkout path {:?}", e)))?
+        .map_err(|e| EdenFsError::Other(anyhow!("invalid checkout path {e:?}")))?
         .as_bytes()
         .to_vec())
 }
@@ -211,7 +211,7 @@ pub fn is_buckd_running_for_repo(path: &Path) -> bool {
             }
         }
         Err(e) => {
-            eprintln!("Error running buck2 status: {}", e);
+            eprintln!("Error running buck2 status: {e}");
             false
         }
     }
