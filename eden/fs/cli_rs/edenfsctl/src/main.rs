@@ -41,7 +41,7 @@ fn python_fallback() -> Result<Command> {
         let mut parts = args.split_ascii_whitespace();
         let binary = parts
             .next()
-            .ok_or_else(|| anyhow!("invalid fallback environment variable: {:?}", args))?;
+            .ok_or_else(|| anyhow!("invalid fallback environment variable: {args:?}"))?;
         let mut cmd = Command::new(binary);
         #[cfg(windows)]
         if binary.ends_with(".par") {
@@ -112,7 +112,7 @@ fn fallback(reason: Option<&clap::Error>) -> Result<i32> {
     // Create a subprocess to run Python edenfsctl
     let status = cmd
         .status()
-        .with_context(|| format!("failed to execute: {:?}", cmd))?;
+        .with_context(|| format!("failed to execute: {cmd:?}"))?;
 
     Ok(status.code().unwrap_or(1))
 }
@@ -127,10 +127,7 @@ fn setup_logging() {
     let subscriber = subscriber.with_env_filter(EnvFilter::from_env("EDENFS_LOG"));
 
     if let Err(e) = subscriber.try_init() {
-        eprintln!(
-            "Unable to initialize logger. Logging will be disabled. Cause: {:?}",
-            e
-        );
+        eprintln!("Unable to initialize logger. Logging will be disabled. Cause: {e:?}");
     }
 }
 
