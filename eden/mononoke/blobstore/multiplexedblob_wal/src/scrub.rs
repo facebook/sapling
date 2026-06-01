@@ -174,7 +174,7 @@ impl Blobstore for WalScrubBlobstore {
                     || futures::future::ok(true),
                 )
                 .await
-                .with_context(|| anyhow!("While repairing blobstore key {}", key))
+                .with_context(|| anyhow!("While repairing blobstore key {key}"))
             }
             Err(err) => Err(err.into()),
         }

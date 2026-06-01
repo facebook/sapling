@@ -78,9 +78,7 @@ impl MultiplexQuorum {
     fn new(num_stores: usize, write: usize) -> Result<Self> {
         if write > num_stores {
             return Err(anyhow!(
-                "Not enough blobstores for configured put or get needs. Have {}, need {} puts",
-                num_stores,
-                write,
+                "Not enough blobstores for configured put or get needs. Have {num_stores}, need {write} puts",
             ));
         }
 
@@ -282,10 +280,7 @@ impl WalMultiplexedBlobstore {
         );
 
         let entry = result.with_context(|| {
-            format!(
-                "WAL Multiplexed Blobstore: Failed writing to the WAL: key {}",
-                key
-            )
+            format!("WAL Multiplexed Blobstore: Failed writing to the WAL: key {key}")
         })?;
 
         // Prepare underlying main blobstores puts

@@ -155,7 +155,7 @@ async fn test_put_fails(fb: FacebookInit) -> Result<()> {
 
         // all blobstores should fail
         for (id, store) in tickable_blobstores.iter() {
-            store.tick(Some(format!("all fail: bs{} failed", id).as_str()));
+            store.tick(Some(format!("all fail: bs{id} failed").as_str()));
         }
 
         assert!(put_fut.await.is_err());
@@ -524,7 +524,7 @@ async fn test_get_on_existing(fb: FacebookInit) -> Result<()> {
         assert_pending(&mut get_fut).await;
 
         for (id, store) in tickable_blobstores {
-            store.tick(Some(format!("bs{} failed!", id).as_str()));
+            store.tick(Some(format!("bs{id} failed!").as_str()));
         }
 
         validate_blob(get_fut.await, Err(anyhow::anyhow!("error")));
@@ -593,7 +593,7 @@ async fn test_is_present_missing(fb: FacebookInit) -> Result<()> {
         assert_pending(&mut fut).await;
 
         for (id, store) in tickable_blobstores {
-            store.tick(Some(format!("bs{} failed!", id).as_str()));
+            store.tick(Some(format!("bs{id} failed!").as_str()));
         }
         assert!(fut.await.is_err());
     }
@@ -818,7 +818,7 @@ async fn test_is_present_existing(fb: FacebookInit) -> Result<()> {
 
             tickable_blobstores[0].1.tick(None);
             for (id, store) in &tickable_blobstores[1..] {
-                store.tick(Some(format!("bs{} failed", id).as_str()));
+                store.tick(Some(format!("bs{id} failed").as_str()));
             }
 
             assert_is_present_ok(
@@ -918,7 +918,7 @@ async fn assert_pending<T: Debug>(fut: &mut (impl Future<Output = T> + Unpin)) {
     match futures::poll!(fut) {
         Poll::Pending => {}
         state => {
-            panic!("future must be pending, received: {:?}", state);
+            panic!("future must be pending, received: {state:?}");
         }
     }
 }
@@ -1000,10 +1000,7 @@ fn assert_is_present_ok(result: Result<BlobstoreIsPresent>, expected: BlobstoreI
         | (BlobstoreIsPresent::ProbablyNotPresent(_), BlobstoreIsPresent::ProbablyNotPresent(_)) => {
         }
         (res, exp) => {
-            panic!(
-                "`is_present` call must return {:?}, received: {:?}",
-                exp, res
-            );
+            panic!("`is_present` call must return {exp:?}, received: {res:?}");
         }
     }
 }
@@ -1062,7 +1059,7 @@ async fn scrub_scenarios(
     scrub_action_on_missing_write_only: SrubWriteOnly,
 ) -> Result<()> {
     use SrubWriteOnly::*;
-    println!("{:?}", scrub_action_on_missing_write_only);
+    println!("{scrub_action_on_missing_write_only:?}");
     let ctx = CoreContext::test_mock(fb);
     borrowed!(ctx);
     let (tick_queue, queue) = setup_queue();

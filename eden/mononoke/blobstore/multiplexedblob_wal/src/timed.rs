@@ -225,5 +225,5 @@ async fn with_timeout<T>(
     operation: &str,
 ) -> Result<T> {
     let timeout_or_result = timeout(to, fut).await;
-    timeout_or_result.unwrap_or_else(|_| Err(anyhow!("blobstore {} timeout", operation)))
+    timeout_or_result.unwrap_or_else(|_| Err(anyhow!("blobstore {operation} timeout")))
 }
