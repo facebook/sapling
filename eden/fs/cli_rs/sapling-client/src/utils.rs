@@ -222,8 +222,7 @@ pub(crate) mod tests {
                 Ok(mock_child(exit_code, stdout_lines, None))
             }
             program => Err(Error::other(anyhow::anyhow!(
-                "Not expected program: {:?}",
-                program
+                "Not expected program: {program:?}"
             ))),
         })
     }
@@ -238,8 +237,7 @@ pub(crate) mod tests {
                 Ok(mock_child(exit_code, stdout_lines, stderr_lines))
             }
             program => Err(Error::other(anyhow::anyhow!(
-                "Not expected program: {:?}",
-                program
+                "Not expected program: {program:?}"
             ))),
         })
     }
