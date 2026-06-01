@@ -357,10 +357,7 @@ impl BlobstoreWal for SqlBlobstoreWal {
             .map_err(|err| {
                 // If one of the futures fails to receive result from the sql wal,
                 // we cannot be sure that the entries were written Mysql WAL table.
-                format_err!(
-                    "Failed to receive results from the SqlBlobstoreWal: {:?}",
-                    err
-                )
+                format_err!("Failed to receive results from the SqlBlobstoreWal: {err:?}")
             })
             .await?;
 
