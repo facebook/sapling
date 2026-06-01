@@ -137,7 +137,7 @@ mod tests {
     use super::*;
 
     fn make_file_entry(discriminant: u8) -> (HistoryManifestFileId, HistoryManifestEntry) {
-        let path_hash = NonRootMPath::new(format!("path_{}", discriminant))
+        let path_hash = NonRootMPath::new(format!("path_{discriminant}"))
             .unwrap()
             .get_path_hash();
         let file = HistoryManifestFile {
