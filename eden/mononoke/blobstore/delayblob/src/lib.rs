@@ -223,7 +223,7 @@ impl<B: Blobstore> KeyedBlobstore for DelayedKeyedBlobstore<B> {
             .inner
             .get(ctx, old_key)
             .await?
-            .with_context(|| format!("key {} not present", old_key))?;
+            .with_context(|| format!("key {old_key} not present"))?;
         self.inner.put(ctx, new_key, value.into_bytes()).await
     }
 }
