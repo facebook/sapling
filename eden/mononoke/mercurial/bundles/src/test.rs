@@ -66,7 +66,7 @@ struct ByteBuf<'a>(&'a [u8]);
 impl<'a> Debug for ByteBuf<'a> {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for byte in self.0 {
-            fmt.write_fmt(format_args!(r"\x{:02x}", byte))?;
+            fmt.write_fmt(format_args!(r"\x{byte:02x}"))?;
         }
         Ok(())
     }
@@ -243,7 +243,7 @@ async fn parse_bundle(
                 assert_eq!(h, header);
                 cg2s
             }
-            bad => panic!("Unexpected bundle2 item: {:?}", bad),
+            bad => panic!("Unexpected bundle2 item: {bad:?}"),
         };
         (stream, cg2s)
     };
@@ -419,7 +419,7 @@ async fn parse_wirepack(read_ops: PartialWithErrors<GenWouldBlock>) -> bool {
                     .await
                     .unwrap();
             }
-            bad => panic!("Unexpected Bundle2Item: {:?}", bad),
+            bad => panic!("Unexpected Bundle2Item: {bad:?}"),
         }
         stream
     };
@@ -437,7 +437,7 @@ async fn parse_wirepack(read_ops: PartialWithErrors<GenWouldBlock>) -> bool {
                 assert_eq!(h, header);
                 wirepacks
             }
-            bad => panic!("Unexpected bundle2 item: {:?}", bad),
+            bad => panic!("Unexpected bundle2 item: {bad:?}"),
         };
         (stream, wirepacks)
     };

@@ -43,8 +43,7 @@ pub fn decode_delta(buf: BytesMut) -> Result<Delta> {
         let delta_len = (new_len as usize) + DELTA_HEADER_LEN;
         if remaining < delta_len {
             bail!(ErrorKind::InvalidDelta(format!(
-                "expected {} bytes, {} remaining",
-                delta_len, remaining
+                "expected {delta_len} bytes, {remaining} remaining"
             )));
         }
 
@@ -60,8 +59,7 @@ pub fn decode_delta(buf: BytesMut) -> Result<Delta> {
 
     if remaining != 0 {
         bail!(ErrorKind::InvalidDelta(format!(
-            "{} trailing bytes in encoded delta",
-            remaining
+            "{remaining} trailing bytes in encoded delta"
         ),));
     }
 
@@ -113,11 +111,11 @@ mod test {
         // start = 2, end = 0
         let start_after_end = BytesMut::from(&b"\0\0\0\x02\0\0\0\0\0\0\0\0"[..]);
         match decode_delta(start_after_end) {
-            Ok(bad) => panic!("unexpected success {:?}", bad),
+            Ok(bad) => panic!("unexpected success {bad:?}"),
             Err(err) => match err_downcast_ref!(err, err: ErrorKind => err) {
                 Some(&ErrorKind::InvalidDelta(..)) => {}
-                Some(bad) => panic!("Bad ErrorKind {:?}", bad),
-                None => panic!("Unexpected error {:?}", err),
+                Some(bad) => panic!("Bad ErrorKind {bad:?}"),
+                None => panic!("Unexpected error {err:?}"),
             },
         }
     }

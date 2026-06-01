@@ -83,7 +83,7 @@ pub fn encode_capabilities(caps: Capabilities) -> Bytes {
     for (key, values) in caps.caps {
         let key = percent_encode(&key);
         let values = itertools::join(values.into_iter().map(|v| percent_encode(&v)), ",");
-        res.push(format!("{}={}", key, values));
+        res.push(format!("{key}={values}"));
     }
     Bytes::from(itertools::join(res, "\n"))
 }

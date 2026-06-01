@@ -92,7 +92,7 @@ impl Decoder for InfinitepushMutationUnpacker {
         let mut cursor = Cursor::new(buf);
         let version = cursor.read_u8()?;
         if version != MUTATION_PART_VERSION {
-            bail!("Unsupported infinitepush mutation part format: {}", version);
+            bail!("Unsupported infinitepush mutation part format: {version}");
         }
         let count = cursor.read_vlq()?;
         entries.reserve_exact(count);

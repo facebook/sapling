@@ -75,7 +75,7 @@ pub fn is_mandatory_param(s: &str) -> Result<bool> {
     match s.chars().next() {
         Some(ch) => {
             if !ch.is_alphabetic() {
-                bail!("'{}': first char '{}' is not alphabetic", s, ch);
+                bail!("'{s}': first char '{ch}' is not alphabetic");
             }
             Ok(ch.is_uppercase())
         }
@@ -99,8 +99,7 @@ impl<R: AsyncBufRead> Decompressor<R> {
             Some("ZS") => Ok(Self::Zstd(ZstdDecoder::new(read))),
             Some("UN") | None => Ok(Self::Uncompressed(read)),
             Some(s) => bail!(ErrorKind::Bundle2Decode(format!(
-                "unknown compression '{}'",
-                s
+                "unknown compression '{s}'"
             ),)),
         }
     }

@@ -141,8 +141,7 @@ impl Decoder for ChunkDecoder {
         }
         if len < 0 {
             bail!(ErrorKind::Bundle2Chunk(format!(
-                "chunk length must be >= -1, found {}",
-                len
+                "chunk length must be >= -1, found {len}"
             ),));
         }
 
@@ -242,7 +241,7 @@ mod test {
         let mut collector: Vec<Chunk> = Vec::with_capacity(count);
         collector
             .send_all(&mut stream.map_err(|err| {
-                panic!("Unexpected error: {}", err);
+                panic!("Unexpected error: {err}");
             }))
             .await
             .unwrap();

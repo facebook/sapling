@@ -107,7 +107,7 @@ impl PartHeaderType {
             "pushvars" => Ok(Pushvars),
             "phase-heads" => Ok(PhaseHeads),
             "obsmarkers" => Ok(Obsmarkers),
-            bad => bail!("unknown header type {}", bad),
+            bad => bail!("unknown header type {bad}"),
         }
     }
 

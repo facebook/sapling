@@ -241,8 +241,8 @@ pub fn replychangegroup_part(
     in_reply_to: PartId,
 ) -> Result<PartEncodeBuilder> {
     let mut builder = PartEncodeBuilder::mandatory(PartHeaderType::ReplyChangegroup)?;
-    builder.add_mparam("return", format!("{}", res))?;
-    builder.add_mparam("in-reply-to", format!("{}", in_reply_to))?;
+    builder.add_mparam("return", format!("{res}"))?;
+    builder.add_mparam("in-reply-to", format!("{in_reply_to}"))?;
 
     Ok(builder)
 }
@@ -264,7 +264,7 @@ pub fn replypushkey_part(res: bool, in_reply_to: PartId) -> Result<PartEncodeBui
     } else {
         builder.add_mparam("return", "0")?;
     }
-    builder.add_mparam("in-reply-to", format!("{}", in_reply_to))?;
+    builder.add_mparam("in-reply-to", format!("{in_reply_to}"))?;
 
     Ok(builder)
 }

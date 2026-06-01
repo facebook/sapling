@@ -67,28 +67,28 @@ impl Part {
     pub(crate) fn unwrap_history_meta(self) -> (RepoPath, u32) {
         match self {
             Part::HistoryMeta { path, entry_count } => (path, entry_count),
-            other => panic!("expected wirepack part to be HistoryMeta, was {:?}", other),
+            other => panic!("expected wirepack part to be HistoryMeta, was {other:?}"),
         }
     }
 
     pub(crate) fn unwrap_history(self) -> HistoryEntry {
         match self {
             Part::History(entry) => entry,
-            other => panic!("expected wirepack part to be History, was {:?}", other),
+            other => panic!("expected wirepack part to be History, was {other:?}"),
         }
     }
 
     pub(crate) fn unwrap_data_meta(self) -> (RepoPath, u32) {
         match self {
             Part::DataMeta { path, entry_count } => (path, entry_count),
-            other => panic!("expected wirepack part to be HistoryMeta, was {:?}", other),
+            other => panic!("expected wirepack part to be HistoryMeta, was {other:?}"),
         }
     }
 
     pub(crate) fn unwrap_data(self) -> DataEntry {
         match self {
             Part::Data(entry) => entry,
-            other => panic!("expected wirepack part to be Data, was {:?}", other),
+            other => panic!("expected wirepack part to be Data, was {other:?}"),
         }
     }
 }
@@ -142,21 +142,21 @@ impl HistoryEntry {
         let p2 = buf.get_node()?;
         let linknode = buf.get_node()?;
         let _ = buf.get_u16();
-        let copy_from =
-            if copy_from_len > 0 {
-                let path = buf.get_path(copy_from_len)?;
-                match kind {
-                    Kind::Tree => bail!(ErrorKind::WirePackDecode(format!(
-                        "tree entry {} is marked as copied from path {}, but they cannot be copied",
-                        node, path
-                    ))),
-                    Kind::File => Some(RepoPath::file(path).with_context(|| {
+        let copy_from = if copy_from_len > 0 {
+            let path = buf.get_path(copy_from_len)?;
+            match kind {
+                Kind::Tree => bail!(ErrorKind::WirePackDecode(format!(
+                    "tree entry {node} is marked as copied from path {path}, but they cannot be copied"
+                ))),
+                Kind::File => {
+                    Some(RepoPath::file(path).with_context(|| {
                         ErrorKind::WirePackDecode("invalid copy from path".into())
-                    })?),
+                    })?)
                 }
-            } else {
-                None
-            };
+            }
+        } else {
+            None
+        };
         Ok(Some(Self {
             node,
             p1,

@@ -113,21 +113,19 @@ pub fn get_cg_version(header: PartHeader, field: &str) -> Result<changegroup::un
         .get(field)
         .or_else(|| header.aparams().get(field));
     let err = ErrorKind::CgDecode(format!(
-        "No changegroup version in Part Header in field {}",
-        field
+        "No changegroup version in Part Header in field {field}"
     ))
     .into();
 
     version
         .ok_or(err)
         .and_then(|version_bytes| {
-            str::from_utf8(version_bytes)
-                .map_err(|e| ErrorKind::CgDecode(format!("{:?}", e)).into())
+            str::from_utf8(version_bytes).map_err(|e| ErrorKind::CgDecode(format!("{e:?}")).into())
         })
         .and_then(|version_str| {
             version_str
                 .parse::<changegroup::unpacker::CgVersion>()
-                .map_err(|e| ErrorKind::CgDecode(format!("{:?}", e)).into())
+                .map_err(|e| ErrorKind::CgDecode(format!("{e:?}")).into())
         })
 }
 
@@ -204,7 +202,7 @@ pub(crate) fn inner_stream<R: AsyncBufRead + Send + 'static>(
             let caps = decode_stream(wrapped_stream, capabilities::CapabilitiesUnpacker)
                 .try_collect::<Vec<_>>()
                 .and_then(|caps| async move {
-                    ensure!(caps.len() == 1, "Unexpected Replycaps payload: {:?}", caps);
+                    ensure!(caps.len() == 1, "Unexpected Replycaps payload: {caps:?}");
                     Ok(caps.into_iter().next().unwrap())
                 });
             Bundle2Item::Replycaps(header, caps.boxed())
