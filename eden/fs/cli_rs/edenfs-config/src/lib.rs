@@ -124,7 +124,7 @@ fn load_system(loader: &mut EdenFsConfigLoader, etc_dir: &Path) -> Result<()> {
 fn load_system_rcs(loader: &mut EdenFsConfigLoader, etc_dir: &Path) -> Result<()> {
     let rcs_dir = etc_dir.join("config.d");
     let entries = std::fs::read_dir(&rcs_dir)
-        .with_context(|| format!("Unable to read configuration from {:?}", rcs_dir))?;
+        .with_context(|| format!("Unable to read configuration from {rcs_dir:?}"))?;
 
     for rc in entries {
         let rc = match rc {
