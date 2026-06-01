@@ -258,10 +258,7 @@ impl SqlDeletionLog {
             .partition(|(_, _, stage)| *stage == from_stage);
         if !other_state.is_empty() {
             return Err(anyhow!(
-                "While transition from {} to {} found blobs in the incorrect state {:?}",
-                from_stage,
-                to_stage,
-                other_state
+                "While transition from {from_stage} to {to_stage} found blobs in the incorrect state {other_state:?}"
             ));
         }
 
