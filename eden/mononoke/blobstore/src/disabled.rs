@@ -94,7 +94,7 @@ mod test {
 
         match disabled.get(&ctx, "foobar").await {
             Ok(_) => panic!("Unexpected success"),
-            Err(err) => println!("Got error: {:?}", err),
+            Err(err) => println!("Got error: {err:?}"),
         }
 
         match disabled
@@ -106,7 +106,7 @@ mod test {
             .await
         {
             Ok(_) => panic!("Unexpected success"),
-            Err(err) => println!("Got error: {:?}", err),
+            Err(err) => println!("Got error: {err:?}"),
         }
     }
 }
