@@ -44,7 +44,7 @@ pub trait GitReader: Clone + Send + Sync + 'static {
         self.get_object(oid)
             .await
             .map(|obj| obj.raw().clone())
-            .with_context(|| format!("Error while fetching Git object for ID {}", oid))
+            .with_context(|| format!("Error while fetching Git object for ID {oid}"))
     }
 
     async fn peel_to_target(&self, oid: ObjectId) -> Result<(Kind, ObjectId)> {
@@ -68,10 +68,7 @@ pub trait GitReader: Clone + Send + Sync + 'static {
             .get_object(object_id)
             .await
             .with_context(|| {
-                format_err!(
-                    "Failed to fetch git object {} for checking if its a tag",
-                    object_id,
-                )
+                format_err!("Failed to fetch git object {object_id} for checking if its a tag",)
             })?
             .is_tag())
     }
@@ -126,7 +123,7 @@ impl GitRepoReader {
             mononoke::spawn_task(async move {
                 while let Some(object) = recv_request.recv().await {
                     if cat_file_stdin
-                        .write_all(format!("{}\n", object).as_bytes())
+                        .write_all(format!("{object}\n").as_bytes())
                         .await
                         .is_err()
                     {
@@ -202,7 +199,7 @@ fn kind_str_to_kind(kind: &str) -> Result<Kind> {
         "blob" => Kind::Blob,
         "commit" => Kind::Commit,
         "tag" => Kind::Tag,
-        _ => bail!("Object kind {} unknown", kind),
+        _ => bail!("Object kind {kind} unknown"),
     };
     Ok(kind)
 }
@@ -213,7 +210,7 @@ fn parse_cat_header(header: &str) -> Result<(ObjectId, Result<(Kind, usize)>)> {
 }
 
 fn convert_to_object(kind: Kind, size: usize, bytes: Vec<u8>) -> Result<ObjectContent> {
-    let mut raw = format!("{} {}\x00", kind, size).into_bytes();
+    let mut raw = format!("{kind} {size}\x00").into_bytes();
     raw.append(&mut bytes.clone());
     Ok(ObjectContent::try_from_loose(raw.into())?)
 }
@@ -265,7 +262,7 @@ async fn read_objects_task(
             reader
                 .read_exact(&mut bytes)
                 .await
-                .with_context(|| format!("failed to read exactly {} bytes", size))?;
+                .with_context(|| format!("failed to read exactly {size} bytes"))?;
             if let Some(sender) = maybe_sender {
                 let object = convert_to_object(kind, size, bytes);
                 let _ = sender.send(object);

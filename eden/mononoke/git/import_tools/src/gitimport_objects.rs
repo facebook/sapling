@@ -300,9 +300,9 @@ impl GitimportTarget {
     async fn write_filter_list(&self, rev_list: &mut Child) -> Result<(), Error> {
         if let Some(wanted) = self.wanted.as_ref() {
             let mut stdin = rev_list.stdin.take().context("stdin not set up properly")?;
-            stdin.write_all(format!("{}\n", wanted).as_bytes()).await?;
+            stdin.write_all(format!("{wanted}\n").as_bytes()).await?;
             for commit in self.known.keys() {
-                stdin.write_all(format!("^{}\n", commit).as_bytes()).await?;
+                stdin.write_all(format!("^{commit}\n").as_bytes()).await?;
             }
         }
 
@@ -673,7 +673,7 @@ mod tests {
     fn should_decode_into(message: &[u8], encoding: &Option<BString>, expected: &str) {
         let m = decode_message(message, encoding);
         if m.is_err() {
-            panic!("{:?}", m);
+            panic!("{m:?}");
         }
         assert_eq!(expected, &m.unwrap())
     }

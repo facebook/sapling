@@ -421,7 +421,7 @@ impl GitImportLfs {
             .client
             .request(req)
             .await
-            .with_context(|| format!("fetch_bytes_upstream {}", uri))?;
+            .with_context(|| format!("fetch_bytes_upstream {uri}"))?;
 
         if resp.status().is_success() {
             let bytes = resp.into_body().into_data_stream().map_err(Error::from);
@@ -435,7 +435,7 @@ impl GitImportLfs {
             );
             return not_found_pointer_fallback(metadata);
         }
-        Err(format_err!("{} response {:?}", uri, resp))
+        Err(format_err!("{uri} response {resp:?}"))
     }
 
     /// Stream LFS object bytes directly from the local Mononoke filestore.
@@ -535,7 +535,7 @@ impl GitImportLfs {
             .uri(batch_uri.clone())
             .header(http::header::ACCEPT, git_lfs_mime().to_string())
             .header(http::header::CONTENT_TYPE, git_lfs_mime().to_string())
-            .header(http::header::AUTHORIZATION, format!("Bearer {}", token))
+            .header(http::header::AUTHORIZATION, format!("Bearer {token}"))
             .body(Full::new(Bytes::from(batch_req_body)))
             .context("creating GitHub LFS batch request")?;
         batch_request.headers_mut().insert(
@@ -548,7 +548,7 @@ impl GitImportLfs {
             .client
             .request(batch_request)
             .await
-            .with_context(|| format!("POST GitHub LFS batch {}", batch_uri))?;
+            .with_context(|| format!("POST GitHub LFS batch {batch_uri}"))?;
         let batch_status = batch_resp.status();
         let batch_latency_ms = batch_started_at.elapsed().as_millis() as u64;
 

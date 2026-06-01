@@ -362,14 +362,11 @@ pub async fn generate_changeset_for_commit(
         .iter()
         .map(|p| {
             acc.get(p).ok_or_else(|| {
-                format_err!(
-                    "Couldn't find parent: {} in local list of imported commits",
-                    p
-                )
+                format_err!("Couldn't find parent: {p} in local list of imported commits")
             })
         })
         .collect::<Result<Vec<_>, _>>()
-        .with_context(|| format_err!("While looking for parents of {}", oid))?;
+        .with_context(|| format_err!("While looking for parents of {oid}"))?;
 
     let bcs = generate_bonsai_changeset(metadata, bonsai_parents, changes)?;
     acc.insert(oid, bcs.get_changeset_id());
