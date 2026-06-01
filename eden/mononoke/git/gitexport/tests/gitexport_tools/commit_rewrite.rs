@@ -540,12 +540,7 @@ async fn test_end_to_end_with_true_merge(fb: FacebookInit) -> Result<()> {
 
     // C should have 2 parents in the partial graph
     let c_parents = &graph_info.parents_map[&C];
-    assert_eq!(
-        c_parents.len(),
-        2,
-        "C should have 2 parents: {:?}",
-        c_parents
-    );
+    assert_eq!(c_parents.len(), 2, "C should have 2 parents: {c_parents:?}");
 
     // Step 2: Rewrite changesets to temporary repo
     let temp_repo_ctx = rewrite_partial_changesets(

@@ -164,18 +164,15 @@ async fn test_true_merge_produces_two_parent_graph(fb: FacebookInit) -> Result<(
     assert_eq!(
         g_parents.len(),
         2,
-        "Merge commit G should have 2 parents in partial graph, got: {:?}",
-        g_parents
+        "Merge commit G should have 2 parents in partial graph, got: {g_parents:?}"
     );
     assert!(
         g_parents.contains(&F),
-        "G's parents should include F: {:?}",
-        g_parents
+        "G's parents should include F: {g_parents:?}"
     );
     assert!(
         g_parents.contains(&K),
-        "G's parents should include K: {:?}",
-        g_parents
+        "G's parents should include K: {g_parents:?}"
     );
 
     // Other commits should have normal single parents
@@ -370,8 +367,7 @@ async fn test_renamed_export_paths_are_followed<R: MononokeRepo>(
             async move {
                 let cs_id = changeset_ids[cs_name];
                 let cs_context = source_repo_ctx.changeset(cs_id).await?.ok_or(anyhow!(
-                    "Failed to fetch changeset context from commit {}.",
-                    cs_name
+                    "Failed to fetch changeset context from commit {cs_name}."
                 ))?;
 
                 anyhow::Ok::<(NonRootMPath, ChangesetContext<R>)>((path, cs_context))
@@ -542,8 +538,7 @@ async fn test_true_merge_with_diamond_dag(fb: FacebookInit) -> Result<()> {
     assert_eq!(
         c_parents.len(),
         2,
-        "Merge commit C should have 2 parents, got: {:?}",
-        c_parents
+        "Merge commit C should have 2 parents, got: {c_parents:?}"
     );
     assert!(c_parents.contains(&A), "C's parents should include A");
     assert!(c_parents.contains(&E), "C's parents should include E");
@@ -614,8 +609,7 @@ async fn test_octopus_merge_produces_multi_parent_graph(fb: FacebookInit) -> Res
     assert_eq!(
         d_parents.len(),
         3,
-        "Octopus merge D should have 3 parents in partial graph, got: {:?}",
-        d_parents
+        "Octopus merge D should have 3 parents in partial graph, got: {d_parents:?}"
     );
     assert!(d_parents.contains(&A), "D's parents should include A");
     assert!(d_parents.contains(&B), "D's parents should include B");
@@ -678,8 +672,7 @@ async fn test_merge_with_ancestor_walk_on_both_sides(fb: FacebookInit) -> Result
     assert_eq!(
         m_parents.len(),
         2,
-        "M should have 2 partial parents after ancestor walk, got: {:?}",
-        m_parents
+        "M should have 2 partial parents after ancestor walk, got: {m_parents:?}"
     );
     assert!(m_parents.contains(&A), "M's parents should include A");
     assert!(m_parents.contains(&E), "M's parents should include E");
