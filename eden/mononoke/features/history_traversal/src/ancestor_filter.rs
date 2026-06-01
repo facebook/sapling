@@ -98,7 +98,7 @@ pub async fn matching_ancestors_stream(
                     if in_window {
                         predicate_cache
                             .lock()
-                            .map_err(|e| anyhow::anyhow!("predicate_cache lock poisoned: {}", e))?
+                            .map_err(|e| anyhow::anyhow!("predicate_cache lock poisoned: {e}"))?
                             .insert(cs_id, predicate(&bonsai));
                     }
                     Ok(in_window)
@@ -114,7 +114,7 @@ pub async fn matching_ancestors_stream(
                 async move {
                     let matches = predicate_cache
                         .lock()
-                        .map_err(|e| anyhow::anyhow!("predicate_cache lock poisoned: {}", e))?
+                        .map_err(|e| anyhow::anyhow!("predicate_cache lock poisoned: {e}"))?
                         .remove(&cs_id)
                         .unwrap_or(false);
                     Ok(if matches { Some(cs_id) } else { None })
