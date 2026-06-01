@@ -1839,8 +1839,8 @@ async fn test_per_bookmark_locking_log_ids_monotonic(fb: FacebookInit) {
             let id3 = txn.commit().await.unwrap().unwrap();
 
             // IDs should be strictly increasing
-            assert!(id2 > id1, "id2 ({}) should be > id1 ({})", id2, id1);
-            assert!(id3 > id2, "id3 ({}) should be > id2 ({})", id3, id2);
+            assert!(id2 > id1, "id2 ({id2}) should be > id1 ({id1})");
+            assert!(id3 > id2, "id3 ({id3}) should be > id2 ({id2})");
         }
         .boxed(),
     )
