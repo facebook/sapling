@@ -578,11 +578,11 @@ async fn test_deleting_submodule_but_keeping_directory(fb: FacebookInit) -> Resu
             .delete_file(REPO_B_SUBMODULE_PATH)
             // Delete the submodule file change, but keep the contents in the same path
             .add_file(
-                format!("{}/B_A", REPO_B_SUBMODULE_PATH).as_str(),
+                format!("{REPO_B_SUBMODULE_PATH}/B_A").as_str(),
                 "first commit in submodule B",
             )
             .add_file(
-                format!("{}/B_B", REPO_B_SUBMODULE_PATH).as_str(),
+                format!("{REPO_B_SUBMODULE_PATH}/B_B").as_str(),
                 "second commit in submodule B",
             )
             .commit()
@@ -595,7 +595,7 @@ async fn test_deleting_submodule_but_keeping_directory(fb: FacebookInit) -> Resu
 
     let first_expected_cs_id = large_repo_cs_id;
 
-    println!("large_repo_cs_id: {0:#?}", large_repo_cs_id);
+    println!("large_repo_cs_id: {large_repo_cs_id:#?}");
 
     assert_working_copy_matches_expected(
         &ctx,
@@ -619,13 +619,13 @@ async fn test_deleting_submodule_but_keeping_directory(fb: FacebookInit) -> Resu
         .set_message(CHANGE_SUBMODULE_PATH_MSG)
         // Modify files in the submodule path, because they're now regular files
         // in the small repo
-        .delete_file(format!("{}/B_A", REPO_B_SUBMODULE_PATH).as_str())
+        .delete_file(format!("{REPO_B_SUBMODULE_PATH}/B_A").as_str())
         .add_file(
-            format!("{}/B_B", REPO_B_SUBMODULE_PATH).as_str(),
+            format!("{REPO_B_SUBMODULE_PATH}/B_B").as_str(),
             "Changing B_B in static copy of repo_b",
         )
         .add_file(
-            format!("{}/B_C", REPO_B_SUBMODULE_PATH).as_str(),
+            format!("{REPO_B_SUBMODULE_PATH}/B_C").as_str(),
             "Add file to static copy of repo_b",
         )
         .commit()

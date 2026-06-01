@@ -736,7 +736,7 @@ async fn test_deleting_submodule_expansion_without_metadata_file_fails(
 fn assert_backsync_validation_error(result: Result<Option<ChangesetId>>, expected_msgs: Vec<&str>) {
     assert!(result.is_err_and(|e| {
         let error_msgs = e.chain().map(|e| e.to_string()).collect::<Vec<_>>();
-        println!("Error messages: {:#?}", error_msgs);
+        println!("Error messages: {error_msgs:#?}");
         error_msgs == expected_msgs
     }));
 }

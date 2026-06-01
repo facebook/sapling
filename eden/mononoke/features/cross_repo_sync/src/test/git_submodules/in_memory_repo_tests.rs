@@ -106,16 +106,12 @@ async fn test_original_blobstore_and_changesets_are_the_same_after_validation(
 
     // Fallback repo changeset can be loaded from in_memory repo
     let fallback_changeset_in_memory = cs_id.load(&ctx, &in_memory_repo.repo_blobstore()).await?;
-    println!(
-        "fallback_changeset_in_memory: {0:#?}",
-        fallback_changeset_in_memory
-    );
+    println!("fallback_changeset_in_memory: {fallback_changeset_in_memory:#?}");
 
     // Fallback repo bonsai can't be loaded from original repo
     let fallback_changeset_orig_repo = cs_id.load(&ctx, &orig_repo.repo_blobstore()).await;
     println!(
-        "Loading Fallback repo changeset from original repo: {0:#?}",
-        fallback_changeset_orig_repo
+        "Loading Fallback repo changeset from original repo: {fallback_changeset_orig_repo:#?}"
     );
     assert!(fallback_changeset_orig_repo.is_err_and(|e| {
         // Fails to find changeset blob
