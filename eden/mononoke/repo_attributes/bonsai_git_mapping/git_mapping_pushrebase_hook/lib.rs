@@ -92,8 +92,7 @@ impl PushrebaseCommitHook for GitMappingCommitHook {
                     .get(cs_id)
                     .ok_or_else(|| {
                         let e = format!(
-                            "Commit was assigned a git hash, but is not found in rebased set: {}",
-                            cs_id
+                            "Commit was assigned a git hash, but is not found in rebased set: {cs_id}"
                         );
                         Error::msg(e)
                     })?
