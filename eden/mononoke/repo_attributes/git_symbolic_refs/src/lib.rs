@@ -32,10 +32,7 @@ impl TryFrom<&str> for RefType {
         match value {
             "branch" => Ok(RefType::Branch),
             "tag" => Ok(RefType::Tag),
-            ty => Err(anyhow::anyhow!(
-                "Unknown ref type {} as target of symref",
-                ty
-            )),
+            ty => Err(anyhow::anyhow!("Unknown ref type {ty} as target of symref")),
         }
     }
 }
