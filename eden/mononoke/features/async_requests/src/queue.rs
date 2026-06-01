@@ -481,8 +481,7 @@ impl AsyncMethodRequestQueue {
             Some(rbk) => rbk,
             None => {
                 return Err(PollError::Fatal(anyhow!(
-                    "Programming error: successful poll with empty result_blobstore_key for {:?}",
-                    req_id
+                    "Programming error: successful poll with empty result_blobstore_key for {req_id:?}"
                 ).into()));
             }
         };
@@ -634,7 +633,7 @@ impl AsyncMethodRequestQueue {
             results.try_collect().await
         } else {
             Ok(results
-                .inspect_err(|err| println!("Error: {:?}, skipping", err))
+                .inspect_err(|err| println!("Error: {err:?}, skipping"))
                 .then(|entry| async { stream::iter(entry) })
                 .flatten()
                 .collect::<Vec<(

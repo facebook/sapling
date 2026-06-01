@@ -893,8 +893,7 @@ impl AsynchronousRequestParams {
             }
             ThriftAsynchronousRequestParams::UnknownField(union_tag) => {
                 Err(AsyncRequestsError::internal(anyhow!(
-                    "this type of request (AsynchronousRequestParams tag {}) not supported by this worker!",
-                    union_tag
+                    "this type of request (AsynchronousRequestParams tag {union_tag}) not supported by this worker!"
                 )))
             }
         }

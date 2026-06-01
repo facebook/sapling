@@ -135,7 +135,7 @@ impl From<AsyncRequestsError> for scs_thrift::AsyncRequestError {
             AsyncRequestsError::RequestError(e) => {
                 Self::request_error(scs_thrift::RequestErrorStruct {
                     kind: scs_thrift::RequestErrorKind::INVALID_REQUEST,
-                    reason: format!("{}", e),
+                    reason: format!("{e}"),
                     ..Default::default()
                 })
             }
@@ -192,7 +192,7 @@ impl From<AsyncRequestsError> for scs_thrift::MegarepoAsynchronousRequestError {
             AsyncRequestsError::RequestError(e) => {
                 Self::request_error(scs_thrift::RequestErrorStruct {
                     kind: scs_thrift::RequestErrorKind::INVALID_REQUEST,
-                    reason: format!("{}", e),
+                    reason: format!("{e}"),
                     ..Default::default()
                 })
             }
