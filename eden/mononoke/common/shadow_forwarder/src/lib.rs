@@ -579,21 +579,15 @@ mod tests {
     ) -> String {
         format!(
             r#"{{
-                "enabled": {},
-                "sample_ratio": {},
-                "path_include": "{}",
-                "path_exclude": "{}",
+                "enabled": {enabled},
+                "sample_ratio": {sample_ratio},
+                "path_include": "{path_include}",
+                "path_exclude": "{path_exclude}",
                 "target_url": "https://shadow.example.com",
                 "semaphore_permits": 100,
-                "shadow_first_timeout_ms": {},
-                "shadow_first": {}
+                "shadow_first_timeout_ms": {shadow_first_timeout_ms},
+                "shadow_first": {shadow_first}
             }}"#,
-            enabled,
-            sample_ratio,
-            path_include,
-            path_exclude,
-            shadow_first_timeout_ms,
-            shadow_first,
         )
     }
 
@@ -1252,12 +1246,11 @@ mod tests {
                 "sample_ratio": 100,
                 "path_include": "",
                 "path_exclude": "",
-                "target_url": "http://127.0.0.1:{}",
+                "target_url": "http://127.0.0.1:{port}",
                 "semaphore_permits": 100,
                 "shadow_first_timeout_ms": 5000,
                 "shadow_first": true
-            }}"#,
-            port
+            }}"#
         );
         let mw = make_middleware_from_config(&config_json, false);
 
