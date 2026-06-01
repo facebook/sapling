@@ -163,7 +163,7 @@ async fn run_in_single_sync_mode(
             .commit_sync_outcome_exists(ctx, Source(bcs_id))
             .await?
         {
-            log_info(ctx, format!("{} is already synced", bcs_id));
+            log_info(ctx, format!("{bcs_id} is already synced"));
             continue;
         }
 
@@ -223,7 +223,7 @@ async fn run_in_initial_import_mode_for_single_head(
         .commit_sync_outcome_exists(ctx, Source(bcs))
         .await?
     {
-        log_info(ctx, format!("{} is already synced", bcs));
+        log_info(ctx, format!("{bcs} is already synced"));
         return Ok(());
     }
     let res = sync_commits_for_initial_import(
@@ -244,7 +244,7 @@ async fn run_in_initial_import_mode_for_single_head(
         return Err(e);
     }
 
-    log_info(ctx, format!("successful sync of head {}", bcs));
+    log_info(ctx, format!("successful sync of head {bcs}"));
     Ok(())
 }
 
@@ -363,8 +363,7 @@ async fn run_in_tailing_mode(
                             .await?
                             .ok_or_else(|| {
                                 anyhow!(
-                                    "Bookmark {} does not exist in the large repo",
-                                    target_bookmark
+                                    "Bookmark {target_bookmark} does not exist in the large repo"
                                 )
                             })?;
 
@@ -430,7 +429,7 @@ async fn tail(
     };
 
     scuba_sample.add("queue_size", remaining_entries);
-    log_info(ctx, format!("queue size is {}", remaining_entries));
+    log_info(ctx, format!("queue size is {remaining_entries}"));
 
     for entry in log_entries {
         let entry_id = entry.id;
@@ -524,7 +523,7 @@ async fn maybe_apply_backpressure(
                     match maybe_counter {
                         Some(counter) => {
                             let bookmark_update_log = repo.bookmark_update_log();
-                            log_debug(ctx, format!("repo {}, counter {}", repo_id, counter));
+                            log_debug(ctx, format!("repo {repo_id}, counter {counter}"));
                             bookmark_update_log
                                 .count_further_bookmark_log_entries(
                                     ctx.clone(),
@@ -536,7 +535,7 @@ async fn maybe_apply_backpressure(
                         None => {
                             log_warning(
                                 ctx,
-                                format!("backsyncer counter not found for repo {}!", repo_id),
+                                format!("backsyncer counter not found for repo {repo_id}!"),
                             );
                             Ok(0)
                         }
@@ -564,7 +563,7 @@ where
     R: RepoIdentityRef + cross_repo_sync::Repo,
 {
     let source_repo_id = commit_sync_data.get_source_repo_id();
-    format!("xreposync_from_{}", source_repo_id)
+    format!("xreposync_from_{source_repo_id}")
 }
 
 async fn async_main(app: MononokeApp, ctx: CoreContext) -> Result<(), Error> {

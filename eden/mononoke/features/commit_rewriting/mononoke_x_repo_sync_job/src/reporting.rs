@@ -54,11 +54,11 @@ pub fn log_success_to_scuba(
     scuba_sample
         .add(DURATION_MS, stats.completion_time.as_millis() as u64)
         .add(SUCCESS, 1)
-        .add(SOURCE_CS_ID, format!("{}", source_cs_id));
+        .add(SOURCE_CS_ID, format!("{source_cs_id}"));
     if let Some(cs_id) = maybe_synced_cs_id {
         // Not producing changeset in a target repo is possible,
         // when syncing just dropped all the changes in the commit
-        scuba_sample.add(TARGET_CS_ID, format!("{}", cs_id));
+        scuba_sample.add(TARGET_CS_ID, format!("{cs_id}"));
     }
     if let Some(timestamp) = bookmark_update_timestamp {
         scuba_sample.add(DELAY_SECONDS, timestamp.since_seconds() as u64);
@@ -76,7 +76,7 @@ fn log_error_to_scuba(
 ) {
     scuba_sample.add(SUCCESS, 0).add(ERROR, error_string);
     scuba_sample.add(DURATION_MS, stats.completion_time.as_millis() as u64);
-    scuba_sample.add(SOURCE_CS_ID, format!("{}", source_cs_id));
+    scuba_sample.add(SOURCE_CS_ID, format!("{source_cs_id}"));
     if let Some(timestamp) = bookmark_update_timestamp {
         scuba_sample.add(DELAY_SECONDS, timestamp.since_seconds() as u64);
     }
@@ -150,7 +150,7 @@ fn log_sync_single_changeset_result(
             );
         }
         Err(e) => {
-            let es = format!("{}", e);
+            let es = format!("{e}");
             trace_error("Syncing", &bcs_id, &stats, &es);
             log_error_to_scuba(scuba_sample, bcs_id, stats, es, bookmark_update_timestamp);
         }
@@ -193,7 +193,7 @@ pub fn log_bookmark_deletion_result(
             scuba_sample.add(SUCCESS, 1);
         }
         Err(err) => {
-            scuba_sample.add(SUCCESS, 0).add(ERROR, format!("{}", err));
+            scuba_sample.add(SUCCESS, 0).add(ERROR, format!("{err}"));
         }
     }
     scuba_sample.add(DURATION_MS, stats.completion_time.as_millis() as u64);
@@ -208,7 +208,7 @@ pub fn log_backpressure(
     entries: u64,
     mut scuba_sample: MononokeScubaSampleBuilder,
 ) {
-    let msg = format!("{} entries in backsyncer queue, waiting...", entries);
+    let msg = format!("{entries} entries in backsyncer queue, waiting...");
 
     info!("{}", msg);
     scuba_sample.log_with_msg("Backpressure", Some(msg));
@@ -239,7 +239,7 @@ pub fn log_bookmark_update_result(
         Err(err) => {
             error!("failed to sync bookmark update log #{}, {}", entry_id, err);
             scuba_sample.add(SUCCESS, 0);
-            scuba_sample.add(ERROR, format!("{}", err));
+            scuba_sample.add(ERROR, format!("{err}"));
             scuba_sample.log();
         }
     }
