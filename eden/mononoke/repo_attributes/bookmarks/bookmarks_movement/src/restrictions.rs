@@ -125,9 +125,7 @@ pub(crate) async fn ensure_ancestor_of(
         .await?
         .ok_or_else(|| {
             anyhow::anyhow!(
-                "Bookmark '{}' does not exist, but it should be a descendant of '{}'!",
-                descendant_bookmark,
-                bookmark_to_move
+                "Bookmark '{descendant_bookmark}' does not exist, but it should be a descendant of '{bookmark_to_move}'!"
             )
         })?;
 

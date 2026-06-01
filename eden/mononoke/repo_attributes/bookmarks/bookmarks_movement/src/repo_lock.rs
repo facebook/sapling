@@ -172,8 +172,7 @@ impl PushrebaseTransactionHook for RepoLockCommitTransactionHook {
             .context("Failed to fetch repo lock state")?;
         if let RepoLockState::Locked(reason) = state {
             return Err(BookmarkTransactionError::Other(anyhow!(
-                "Repo is locked: {}",
-                reason
+                "Repo is locked: {reason}"
             )));
         }
 

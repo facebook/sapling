@@ -121,7 +121,7 @@ pub async fn run_bookmark_hooks(
                 "pushvars",
                 pushvars
                     .iter()
-                    .map(|(key, val)| format!("{}={:?}", key, val))
+                    .map(|(key, val)| format!("{key}={val:?}"))
                     .collect::<Vec<_>>(),
             );
         }
@@ -148,7 +148,7 @@ pub async fn run_bookmark_hooks(
         )
         .timed()
         .await;
-    let outcomes = outcomes.with_context(|| format!("Failed to run hooks for {}", bookmark))?;
+    let outcomes = outcomes.with_context(|| format!("Failed to run hooks for {bookmark}"))?;
 
     let rejections: Vec<_> = outcomes
         .into_iter()
@@ -210,7 +210,7 @@ pub async fn run_changeset_hooks(
                 "pushvars",
                 pushvars
                     .iter()
-                    .map(|(key, val)| format!("{}={:?}", key, val))
+                    .map(|(key, val)| format!("{key}={val:?}"))
                     .collect::<Vec<_>>(),
             );
         }
@@ -231,7 +231,7 @@ pub async fn run_changeset_hooks(
         )
         .timed()
         .await;
-    let outcomes = outcomes.with_context(|| format!("Failed to run hooks for {}", bookmark))?;
+    let outcomes = outcomes.with_context(|| format!("Failed to run hooks for {bookmark}"))?;
 
     let rejections: Vec<_> = outcomes
         .into_iter()

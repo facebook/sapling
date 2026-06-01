@@ -191,7 +191,7 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
                             .join(","),
                     );
                 }
-                scuba_logger.log_with_msg("Pushrebase failed", Some(format!("{:#?}", err)));
+                scuba_logger.log_with_msg("Pushrebase failed", Some(format!("{err:#?}")));
             }
         }
 
