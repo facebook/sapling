@@ -198,7 +198,7 @@ impl MononokeConfigs {
 
             repo_handles
                 .write()
-                .map_err(|e| anyhow!("repo_handles lock poisoned: {}", e))?
+                .map_err(|e| anyhow!("repo_handles lock poisoned: {e}"))?
                 .extend(handles_to_add);
         }
 
@@ -329,7 +329,7 @@ impl MononokeConfigs {
         if self
             .repo_handles
             .read()
-            .map_err(|e| anyhow!("repo_handles lock poisoned: {}", e))?
+            .map_err(|e| anyhow!("repo_handles lock poisoned: {e}"))?
             .contains_key(repo_name)
         {
             return Ok(());
@@ -345,7 +345,7 @@ impl MononokeConfigs {
             .repos
             .iter()
             .find(|e| e.repo_name == repo_name)
-            .ok_or_else(|| anyhow!("Repo {} not found in manifest", repo_name))?;
+            .ok_or_else(|| anyhow!("Repo {repo_name} not found in manifest"))?;
 
         let config_store = self
             .config_store
@@ -355,7 +355,7 @@ impl MononokeConfigs {
         let handle = configerator_repo_spec_handle(&entry.config_path, config_store)?;
         self.repo_handles
             .write()
-            .map_err(|e| anyhow!("repo_handles lock poisoned: {}", e))?
+            .map_err(|e| anyhow!("repo_handles lock poisoned: {e}"))?
             .insert(repo_name.to_owned(), handle);
         Ok(())
     }
@@ -383,7 +383,7 @@ impl MononokeConfigs {
             let _guard = self
                 .config_update_lock
                 .lock()
-                .map_err(|e| anyhow!("config_update_lock poisoned: {}", e))?;
+                .map_err(|e| anyhow!("config_update_lock poisoned: {e}"))?;
 
             // Double-check: another thread may have loaded it while we were parsing
             let current = self.repo_configs.load_full();
@@ -406,7 +406,7 @@ impl MononokeConfigs {
         let handle = self
             .repo_handles
             .read()
-            .map_err(|e| anyhow!("repo_handles lock poisoned: {}", e))?
+            .map_err(|e| anyhow!("repo_handles lock poisoned: {e}"))?
             .get(repo_name)
             .context("handle not found after load")?
             .clone();
@@ -463,7 +463,7 @@ impl MononokeConfigs {
             let _guard = self
                 .config_update_lock
                 .lock()
-                .map_err(|e| anyhow!("config_update_lock poisoned: {}", e))?;
+                .map_err(|e| anyhow!("config_update_lock poisoned: {e}"))?;
             let mut new = (*self.repo_configs.load_full()).clone();
             for (name, config) in &loaded {
                 new.insert_repo(name.clone(), config.clone());
@@ -508,13 +508,13 @@ impl MononokeConfigs {
         // fall back to the original "unknown repoid" error.
         let manifest = match self.maybe_manifest_handle.as_ref() {
             Some(handle) => handle.get(),
-            None => anyhow::bail!("unknown repoid: RepositoryId({})", repo_id),
+            None => anyhow::bail!("unknown repoid: RepositoryId({repo_id})"),
         };
         let entry = manifest
             .repos
             .iter()
             .find(|e| e.repo_id == repo_id)
-            .ok_or_else(|| anyhow!("unknown repoid: RepositoryId({})", repo_id))?;
+            .ok_or_else(|| anyhow!("unknown repoid: RepositoryId({repo_id})"))?;
         let config = self.get_or_load_repo_config(&entry.repo_name)?;
         Ok((entry.repo_name.clone(), config))
     }
@@ -732,7 +732,7 @@ fn sync_repo_handles(
 ) -> Result<()> {
     let current_repos: HashSet<String> = repo_handles
         .read()
-        .map_err(|e| anyhow!("repo_handles lock poisoned: {}", e))?
+        .map_err(|e| anyhow!("repo_handles lock poisoned: {e}"))?
         .keys()
         .cloned()
         .collect();
@@ -761,7 +761,7 @@ fn sync_repo_handles(
     if !new_handles.is_empty() || !to_remove.is_empty() {
         let mut handles = repo_handles
             .write()
-            .map_err(|e| anyhow!("repo_handles lock poisoned: {}", e))?;
+            .map_err(|e| anyhow!("repo_handles lock poisoned: {e}"))?;
         handles.extend(new_handles);
         for repo_name in &to_remove {
             handles.remove(repo_name);
@@ -1030,8 +1030,7 @@ mod test {
         let to_remove = compute_handles_to_remove(&current, &manifest);
         assert!(
             to_remove.is_empty(),
-            "deep-sharded repo present in manifest must not be removed, got {:?}",
-            to_remove,
+            "deep-sharded repo present in manifest must not be removed, got {to_remove:?}",
         );
     }
 
