@@ -240,10 +240,7 @@ async fn commit_is_ancestor_of(fb: FacebookInit) -> Result<(), Error> {
                 .is_ancestor_of(changesets[base_index].as_ref().unwrap().id())
                 .await?,
             is_ancestor_of,
-            "changesets[{}].is_ancestor_of(changesets[{}].id()) == {}",
-            index,
-            base_index,
-            is_ancestor_of
+            "changesets[{index}].is_ancestor_of(changesets[{base_index}].id()) == {is_ancestor_of}"
         );
     }
     Ok(())
@@ -366,7 +363,7 @@ async fn tree_list(fb: FacebookInit) -> Result<(), Error> {
             .expect("entry should exist for subsubdir2")
         {
             Either::Left(ContentManifestEntry::Directory(dir)) => dir.id.clone().into(),
-            entry => panic!("subsubdir2 entry should be a directory, not {:?}", entry),
+            entry => panic!("subsubdir2 entry should be a directory, not {entry:?}"),
         }
     };
     assert_eq!(

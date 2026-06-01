@@ -1346,8 +1346,7 @@ async fn test_diff_lfs_supplement_skipped_when_repo_lfs_disabled(
         diff.iter().map(|d| d.path().to_string()).collect();
     assert!(
         !paths.contains("binary_file"),
-        "supplement must not fire when git_lfs_interpret_pointers=false (paths: {:?})",
-        paths,
+        "supplement must not fire when git_lfs_interpret_pointers=false (paths: {paths:?})",
     );
 
     Ok(())
@@ -1428,8 +1427,7 @@ async fn test_diff_lfs_supplement_skipped_for_non_first_parent_compare(
         diff_c_vs_a.iter().map(|d| d.path().to_string()).collect();
     assert!(
         !paths_c_vs_a.contains("binary_file"),
-        "C vs A must not surface binary_file via the supplement (paths: {:?})",
-        paths_c_vs_a,
+        "C vs A must not surface binary_file via the supplement (paths: {paths_c_vs_a:?})",
     );
 
     let diff_m_vs_p1 = diff_files_only(&m_ctx, &p1_ctx, ChangesetFileOrdering::Unordered).await?;
@@ -1437,8 +1435,7 @@ async fn test_diff_lfs_supplement_skipped_for_non_first_parent_compare(
         diff_m_vs_p1.iter().map(|d| d.path().to_string()).collect();
     assert!(
         !paths_m_vs_p1.contains("merge_target"),
-        "M vs P1 (non-leftmost parent) must not surface merge_target via the supplement (paths: {:?})",
-        paths_m_vs_p1,
+        "M vs P1 (non-leftmost parent) must not surface merge_target via the supplement (paths: {paths_m_vs_p1:?})",
     );
 
     let diff_m_vs_p0 = diff_files_only(&m_ctx, &p0_ctx, ChangesetFileOrdering::Unordered).await?;
@@ -1446,8 +1443,7 @@ async fn test_diff_lfs_supplement_skipped_for_non_first_parent_compare(
         diff_m_vs_p0.iter().map(|d| d.path().to_string()).collect();
     assert!(
         paths_m_vs_p0.contains("merge_target"),
-        "M vs P0 (first parent) must surface merge_target via the supplement (paths: {:?})",
-        paths_m_vs_p0,
+        "M vs P0 (first parent) must surface merge_target via the supplement (paths: {paths_m_vs_p0:?})",
     );
 
     Ok(())
