@@ -255,7 +255,7 @@ impl crate::Subcommand for ChangesSinceCmd {
                         }
 
                         Err(e) => {
-                            eprintln!("Error: {}", e);
+                            eprintln!("Error: {e}");
                         }
                     }
                     if self.max_events.is_some_and(|max| nonempty_count >= max) {
@@ -272,7 +272,7 @@ impl crate::Subcommand for ChangesSinceCmd {
                             }
                         }
                         Err(e) => {
-                            eprintln!("Error: {}", e);
+                            eprintln!("Error: {e}");
                         }
                     }
                     if self.max_events.is_some_and(|max| nonempty_count >= max) {

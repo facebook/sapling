@@ -51,7 +51,7 @@ impl crate::Subcommand for EnterStateCmd {
             Ok(_state_lock) => {
                 match self.duration {
                     Some(duration) => {
-                        println!("Holding state for {} seconds", duration);
+                        println!("Holding state for {duration} seconds");
                         std::thread::sleep(std::time::Duration::from_secs(duration));
                     }
                     None => {

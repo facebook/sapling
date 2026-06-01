@@ -47,7 +47,7 @@ impl crate::Subcommand for GetStatesCmd {
         } else {
             println!("Asserted States:");
             for state in states {
-                println!("{}", state);
+                println!("{state}");
             }
         }
         Ok(0)
