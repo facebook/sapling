@@ -163,7 +163,7 @@ impl CommitRemappingState {
     ) -> Result<Self, Error> {
         let maybe_state = Self::read_state_from_commit_opt(ctx, repo, cs_id).await?;
 
-        maybe_state.ok_or_else(|| anyhow!("file {} not found", REMAPPING_STATE_FILE))
+        maybe_state.ok_or_else(|| anyhow!("file {REMAPPING_STATE_FILE} not found"))
     }
 
     pub async fn read_state_from_commit_opt(
@@ -201,7 +201,7 @@ impl CommitRemappingState {
 
         let bytes = filestore::fetch_concat(repo.repo_blobstore(), ctx, content_id).await?;
         let content = String::from_utf8(bytes.to_vec())
-            .with_context(|| format!("{} is not utf8", REMAPPING_STATE_FILE))?;
+            .with_context(|| format!("{REMAPPING_STATE_FILE} is not utf8"))?;
         let state: CommitRemappingState = serde_json::from_str(&content)?;
         Ok(Some(state))
     }
@@ -224,8 +224,7 @@ impl CommitRemappingState {
         );
         if bcs.file_changes.insert(path, fc).is_some() {
             return Err(anyhow!(
-                "New bonsai changeset already has {} file",
-                REMAPPING_STATE_FILE,
+                "New bonsai changeset already has {REMAPPING_STATE_FILE} file",
             ));
         }
 
