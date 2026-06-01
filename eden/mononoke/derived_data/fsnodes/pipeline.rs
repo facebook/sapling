@@ -74,9 +74,7 @@ impl PipelineDerivable for RootFsnodeId {
                     let output = results
                         .get(&parent_csid)
                         .or_else(|| parents.get(&parent_csid))
-                        .ok_or_else(|| {
-                            anyhow!("missing stage output for parent {}", parent_csid)
-                        })?;
+                        .ok_or_else(|| anyhow!("missing stage output for parent {parent_csid}"))?;
                     Ok(output.clone())
                 })
                 .collect::<Result<Vec<_>>>()?
@@ -151,9 +149,7 @@ impl PipelineDerivable for RootFsnodeId {
             if use_normal_mapping {
                 let Some(Entry::Tree(fsnode_id)) = output else {
                     return Err(anyhow!(
-                        "terminal stage output for {} should be Some(Entry::Tree), got {:?}",
-                        cs_id,
-                        output,
+                        "terminal stage output for {cs_id} should be Some(Entry::Tree), got {output:?}",
                     ));
                 };
                 let key = format_key(derivation, cs_id);
@@ -229,9 +225,7 @@ impl PipelineDerivable for RootFsnodeId {
                             fsnodes_thrift::FsnodeStageOutput::empty(_) => None,
                             fsnodes_thrift::FsnodeStageOutput::UnknownField(x) => {
                                 return Err(anyhow!(
-                                    "unknown FsnodeStageOutput variant {} for {}",
-                                    x,
-                                    cs_id
+                                    "unknown FsnodeStageOutput variant {x} for {cs_id}"
                                 ));
                             }
                         };
