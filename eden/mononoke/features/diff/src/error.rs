@@ -29,17 +29,17 @@ impl DiffError {
 
     /// Create an error for when content is not found
     pub fn content_not_found(content_id: ContentId) -> Self {
-        DiffError::InvalidInput(format!("Content not found: {}", content_id))
+        DiffError::InvalidInput(format!("Content not found: {content_id}"))
     }
 
     /// Create an error for when a changeset is not found
     pub fn changeset_not_found(changeset_id: ChangesetId) -> Self {
-        DiffError::InvalidInput(format!("changeset not found: {}", changeset_id))
+        DiffError::InvalidInput(format!("changeset not found: {changeset_id}"))
     }
 
     /// Create an error for invalid path
     pub fn invalid_path(path: &str, error: impl std::fmt::Display) -> Self {
-        DiffError::InvalidInput(format!("invalid path '{}': {}", path, error))
+        DiffError::InvalidInput(format!("invalid path '{path}': {error}"))
     }
 
     /// Create an internal error by wrapping another error
@@ -50,8 +50,7 @@ impl DiffError {
     /// Create an error for when string input exceeds size limit
     pub fn string_input_too_large(size: usize, max_size: usize) -> Self {
         DiffError::InvalidInput(format!(
-            "String input size {} exceeds maximum allowed size of {} bytes",
-            size, max_size
+            "String input size {size} exceeds maximum allowed size of {max_size} bytes"
         ))
     }
 
