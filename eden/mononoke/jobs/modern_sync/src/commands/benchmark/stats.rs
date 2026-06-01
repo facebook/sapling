@@ -56,7 +56,7 @@ impl StatsBuilder {
         let filename = {
             let pid = format!("{}", std::process::id());
             let benchmark = if let Some(name) = &self.name {
-                format!("benchmark-{}", name)
+                format!("benchmark-{name}")
             } else {
                 "benchmark".to_string()
             };
@@ -131,7 +131,7 @@ impl Stats {
 }
 
 fn get_fb303_client(fb: FacebookInit, port: u16) -> Result<Arc<dyn BaseService + Sync + Send>> {
-    let addr: SocketAddr = format!("[::]:{}", port).parse()?;
+    let addr: SocketAddr = format!("[::]:{port}").parse()?;
     make_BaseService_thriftclient!(
         fb,
         from_sock_addr = addr,
@@ -151,25 +151,15 @@ async fn log_perf_stats(
     stats_writer: Arc<File>,
 ) -> Result<()> {
     let regex = format!(
-        "^mononoke\\.modern_sync\\.manager\\.changeset\\.{}\\.commits_synced\\.sum.*",
-        repo_name
+        "^mononoke\\.modern_sync\\.manager\\.changeset\\.{repo_name}\\.commits_synced\\.sum.*"
     );
-    let sum_key = format!(
-        "mononoke.modern_sync.manager.changeset.{}.commits_synced.sum",
-        repo_name
-    );
-    let last60_key = format!(
-        "mononoke.modern_sync.manager.changeset.{}.commits_synced.sum.60",
-        repo_name
-    );
-    let last600_key = format!(
-        "mononoke.modern_sync.manager.changeset.{}.commits_synced.sum.600",
-        repo_name
-    );
-    let last3600_key = format!(
-        "mononoke.modern_sync.manager.changeset.{}.commits_synced.sum.3600",
-        repo_name
-    );
+    let sum_key = format!("mononoke.modern_sync.manager.changeset.{repo_name}.commits_synced.sum");
+    let last60_key =
+        format!("mononoke.modern_sync.manager.changeset.{repo_name}.commits_synced.sum.60");
+    let last600_key =
+        format!("mononoke.modern_sync.manager.changeset.{repo_name}.commits_synced.sum.600");
+    let last3600_key =
+        format!("mononoke.modern_sync.manager.changeset.{repo_name}.commits_synced.sum.3600");
 
     let counters = fb303
         .getRegexCounters(&regex)
