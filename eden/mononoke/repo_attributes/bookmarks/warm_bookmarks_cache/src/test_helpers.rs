@@ -214,22 +214,19 @@ pub fn assert_bookmark_pointers(
     assert_eq!(
         state.get(WarmerRequirement::HgOnly).unwrap(),
         expected_hg,
-        "{}: HgOnly pointer mismatch",
-        description
+        "{description}: HgOnly pointer mismatch"
     );
 
     assert_eq!(
         state.get(WarmerRequirement::GitOnly).unwrap(),
         expected_git,
-        "{}: GitOnly pointer mismatch",
-        description
+        "{description}: GitOnly pointer mismatch"
     );
 
     assert_eq!(
         state.get(WarmerRequirement::AllKinds).unwrap(),
         expected_all,
-        "{}: AllKinds pointer mismatch",
-        description
+        "{description}: AllKinds pointer mismatch"
     );
 }
 
@@ -249,24 +246,21 @@ pub async fn assert_scoped_get(
         ScopedBookmarksCache::get(cache, ctx, bookmark_key, WarmerRequirement::HgOnly).await?;
     assert_eq!(
         hg_result, expected_hg,
-        "{}: ScopedBookmarksCache HgOnly mismatch",
-        description
+        "{description}: ScopedBookmarksCache HgOnly mismatch"
     );
 
     let git_result =
         ScopedBookmarksCache::get(cache, ctx, bookmark_key, WarmerRequirement::GitOnly).await?;
     assert_eq!(
         git_result, expected_git,
-        "{}: ScopedBookmarksCache GitOnly mismatch",
-        description
+        "{description}: ScopedBookmarksCache GitOnly mismatch"
     );
 
     let all_result =
         ScopedBookmarksCache::get(cache, ctx, bookmark_key, WarmerRequirement::AllKinds).await?;
     assert_eq!(
         all_result, expected_all,
-        "{}: ScopedBookmarksCache AllKinds mismatch",
-        description
+        "{description}: ScopedBookmarksCache AllKinds mismatch"
     );
 
     Ok(())

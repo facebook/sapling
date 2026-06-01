@@ -213,8 +213,7 @@ impl BookmarkState {
             Ok(())
         } else {
             Err(anyhow!(
-                "The specified requirement is not being tracked: {:?}",
-                requirement
+                "The specified requirement is not being tracked: {requirement:?}"
             ))
         }
     }
@@ -225,8 +224,7 @@ impl BookmarkState {
             RequirementState::At(cs_id) => Ok(Some(cs_id)),
             RequirementState::Unknown => Ok(None),
             RequirementState::NotTracked => Err(anyhow!(
-                "The requirement requested is not being tracked: {:?}",
-                requirement
+                "The requirement requested is not being tracked: {requirement:?}"
             )),
         }
     }
@@ -723,7 +721,7 @@ impl ScopedBookmarksCache for WarmBookmarksCache {
         Ok(self
             .bookmarks
             .read()
-            .map_err(|e| anyhow!("Failed to take bookmarks lock: {:#?}", e))?
+            .map_err(|e| anyhow!("Failed to take bookmarks lock: {e:#?}"))?
             .get(bookmark)
             .map(|state| state.get(scope))
             .transpose()?
@@ -741,7 +739,7 @@ impl ScopedBookmarksCache for WarmBookmarksCache {
         let bookmarks = self
             .bookmarks
             .read()
-            .map_err(|e| anyhow!("Failed to take bookmarks lock: {:#?}", e))?;
+            .map_err(|e| anyhow!("Failed to take bookmarks lock: {e:#?}"))?;
 
         if prefix.is_empty() && *pagination == BookmarkPagination::FromStart && limit.is_none() {
             // Simple case: return all bookmarks
@@ -1048,8 +1046,7 @@ impl WarmState {
             }
             TagStatus::Untracked => {
                 return Err(anyhow!(
-                    "WarmState.apply() called on non-tracked tag {:?}",
-                    tag
+                    "WarmState.apply() called on non-tracked tag {tag:?}"
                 ));
             }
         };
@@ -1101,7 +1098,7 @@ async fn warm_all(ctx: &CoreContext, cs_id: ChangesetId, warmers: &[Warmer]) -> 
                     scuba.log_with_msg("Warmer succeed", None);
                 }
                 Err(err) => {
-                    scuba.log_with_msg("Warmer failed", Some(format!("{:#}", err)));
+                    scuba.log_with_msg("Warmer failed", Some(format!("{err:#}")));
                 }
             }
             res
@@ -2007,7 +2004,7 @@ mod tests {
 
         for i in 1..50 {
             let new_master = CreateCommitContext::new(&ctx, &repo, vec!["master"])
-                .add_file(format!("{}", i).as_str(), "content")
+                .add_file(format!("{i}").as_str(), "content")
                 .commit()
                 .await?;
 
@@ -2066,7 +2063,7 @@ mod tests {
         // First history threshold is 10. Let's make sure we don't have off-by one errors
         for i in 0..10 {
             let new_master = CreateCommitContext::new(&ctx, &repo, vec!["master"])
-                .add_file(format!("{}", i).as_str(), "content")
+                .add_file(format!("{i}").as_str(), "content")
                 .commit()
                 .await?;
 
@@ -2201,7 +2198,7 @@ mod tests {
         tracing::info!("created stack of commits");
         for i in 1..10 {
             let master = CreateCommitContext::new(&ctx, &repo, vec!["master"])
-                .add_file(format!("somefile{}", i).as_str(), "content")
+                .add_file(format!("somefile{i}").as_str(), "content")
                 .commit()
                 .await?;
             tracing::info!("created {}", master);

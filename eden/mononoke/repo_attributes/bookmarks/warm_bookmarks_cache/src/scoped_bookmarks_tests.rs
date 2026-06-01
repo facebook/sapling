@@ -794,14 +794,14 @@ async fn test_multiple_bookmarks_different_states(fb: FacebookInit) -> Result<()
     let mut bookmarks = Vec::new();
 
     for i in 0..3 {
-        let bookmark_name = format!("bookmark{}", i);
+        let bookmark_name = format!("bookmark{i}");
 
         // Create bookmarks at master first to build history
         bookmark(&ctx, &repo, &*bookmark_name)
             .create_publishing(master_cs_id)
             .await?;
 
-        let file_name = format!("file{}", i);
+        let file_name = format!("file{i}");
         let commit = CreateCommitContext::new(&ctx, &repo, vec![master_cs_id])
             .add_file(&*file_name, "content")
             .commit()
