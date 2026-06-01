@@ -49,8 +49,8 @@ pub fn log_validation_result_to_scuba(
     validation_duration: Duration,
 ) {
     scuba_sample
-        .add(LARGE_CS_ID, format!("{}", large_cs_id))
-        .add(SMALL_CS_ID, format!("{}", small_cs_id))
+        .add(LARGE_CS_ID, format!("{large_cs_id}"))
+        .add(SMALL_CS_ID, format!("{small_cs_id}"))
         .add(NOOP_ITERATION, 0)
         .add(QUEUE_SIZE, queue_size.0)
         .add(

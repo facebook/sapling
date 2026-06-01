@@ -320,8 +320,7 @@ impl ValidationHelper {
                         // something fishy (we really should not have gotten ChangedTo
                         // in the first place).
                         return Err(format_err!(
-                            "parent's manifest lacks a file at {:?}, but we were told the diff is Changed, not Added",
-                            mpath
+                            "parent's manifest lacks a file at {mpath:?}, but we were told the diff is Changed, not Added"
                         ));
                     }
                     Some(Entry::Tree(_)) => {
@@ -529,7 +528,7 @@ impl ValidationHelpers {
     fn get_helper(&self, repo_id: &Small<RepositoryId>) -> Result<&ValidationHelper, Error> {
         self.helpers
             .get(repo_id)
-            .ok_or_else(|| format_err!("Repo {} is not present in ValidationHelpers", repo_id))
+            .ok_or_else(|| format_err!("Repo {repo_id} is not present in ValidationHelpers"))
     }
 
     fn get_small_repo(&self, repo_id: &Small<RepositoryId>) -> Result<&Small<Repo>, Error> {
@@ -986,10 +985,7 @@ async fn validate_topological_order<'a, R: RepoIdentityRef + CommitGraphRef + Co
 
                 let commit_sync_outcome = maybe_commit_sync_outcome.ok_or_else(|| {
                     format_err!(
-                        "Unexpectedly missing CommitSyncOutcome for {} in {}->{}",
-                        small_parent,
-                        small_repo_id,
-                        large_repo_id,
+                        "Unexpectedly missing CommitSyncOutcome for {small_parent} in {small_repo_id}->{large_repo_id}",
                     )
                 })?;
 
@@ -998,10 +994,7 @@ async fn validate_topological_order<'a, R: RepoIdentityRef + CommitGraphRef + Co
                     RewrittenAs(cs_id, _) | EquivalentWorkingCopyAncestor(cs_id, _) => cs_id,
                     NotSyncCandidate(_) => {
                         return Err(format_err!(
-                            "Parent of synced {} is NotSyncCandidate in {}->{}",
-                            small_cs_id,
-                            small_repo_id,
-                            large_repo_id,
+                            "Parent of synced {small_cs_id} is NotSyncCandidate in {small_repo_id}->{large_repo_id}",
                         ));
                     }
                 };
@@ -1020,13 +1013,7 @@ async fn validate_topological_order<'a, R: RepoIdentityRef + CommitGraphRef + Co
                     .await?
                 {
                     Err(format_err!(
-                        "{} (remapping of parent {} of {} in {}) is not an ancestor of {} in {}",
-                        remapping_of_small_parent,
-                        small_parent,
-                        small_cs_id,
-                        small_repo_id,
-                        large_cs_id,
-                        large_repo_id,
+                        "{remapping_of_small_parent} (remapping of parent {small_parent} of {small_cs_id} in {small_repo_id}) is not an ancestor of {large_cs_id} in {large_repo_id}",
                     ))
                 } else {
                     Ok(())
@@ -1224,8 +1211,7 @@ async fn validate_full_manifest_diffs_equivalence<'a>(
                 .move_path(&small_mpath.0)?
                 .ok_or_else(|| {
                     format_err!(
-                        "{:?} surprisingly produces None when moved small-to-large",
-                        small_mpath
+                        "{small_mpath:?} surprisingly produces None when moved small-to-large"
                     )
                 })?;
 
@@ -1392,7 +1378,7 @@ pub async fn validate_entry(
                 let validation_helper = validation_helpers
                     .helpers
                     .get(&repo_id)
-                    .ok_or_else(|| format_err!("small repo {} not found", repo_id))?
+                    .ok_or_else(|| format_err!("small repo {repo_id} not found"))?
                     .clone();
                 let scuba_sample = validation_helper.scuba_sample.clone();
                 let mapping = &validation_helpers.mapping;
@@ -1430,7 +1416,7 @@ pub async fn validate_entry(
                     Ok(()) => None,
                     Err(e) => {
                         error!("Error while verifying against {}: {:?}", version_name, e);
-                        Some(format!("{}", e))
+                        Some(format!("{e}"))
                     }
                 };
                 log_validation_result_to_scuba(

@@ -135,7 +135,7 @@ pub async fn get_start_id(
                 .await?
                 .map(|val| val.try_into())
                 .transpose()?
-                .ok_or_else(|| format_err!("mutable counter {} is missing", counter))
+                .ok_or_else(|| format_err!("mutable counter {counter} is missing"))
         }
     }
 }
