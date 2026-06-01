@@ -59,7 +59,7 @@ impl GitPool {
                 let repo = match &*result_repo {
                     Ok(repo) => repo,
                     Err(err) => {
-                        return Err(anyhow!("error while opening repo: {}", err));
+                        return Err(anyhow!("error while opening repo: {err}"));
                     }
                 };
                 let ret = f(repo).map_err(|e| e.into())?;
