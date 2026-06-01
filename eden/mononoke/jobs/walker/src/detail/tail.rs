@@ -82,7 +82,7 @@ fn roots_for_chunk(
                 NodeType::FsnodeMapping => Node::FsnodeMapping(id),
                 NodeType::SkeletonManifestMapping => Node::SkeletonManifestMapping(id),
                 NodeType::UnodeMapping => Node::UnodeMapping(id),
-                _ => bail!("Unsupported root type for chunking {:?}", r),
+                _ => bail!("Unsupported root type for chunking {r:?}"),
             };
             if let Some(edge_type) = n.get_type().root_edge_type() {
                 let edge = OutgoingEdge::new(edge_type, n);
@@ -402,10 +402,7 @@ where
                         if last_chunk_low == chunk_low && last_chunk_upper == chunk_upper =>
                     {
                         bail!(
-                            "No progress at chunk {} with bounds ({}, {})",
-                            chunk_num,
-                            chunk_low,
-                            chunk_upper
+                            "No progress at chunk {chunk_num} with bounds ({chunk_low}, {chunk_upper})"
                         )
                     }
                     _ => {

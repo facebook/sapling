@@ -158,7 +158,7 @@ where
                 .or_insert_with(|| {
                     let id = self.next_id.fetch_add(1, Ordering::Release);
                     if id == InternId::MAX {
-                        panic!("Intern counter wrapped around for {:?}", k);
+                        panic!("Intern counter wrapped around for {k:?}");
                     }
                     V::new(id)
                 })
@@ -743,7 +743,7 @@ impl VisitOne for WalkState {
                 self.bcs_to_hg.insert(bcs_int, *hg_cs_id);
                 bcs_id
             } else {
-                bail!("Can't have hg without bonsai for {}", hg_cs_id);
+                bail!("Can't have hg without bonsai for {hg_cs_id}");
             }
         };
         Ok(bcs_id)
@@ -1011,11 +1011,7 @@ impl WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), EmptyRoute> for Wa
             // We'll never visit backward looking edges when running OldestFirst, so don't record them.
             // returning Some for NodeData tells record_resolved_visit that we don't need to visit this node again if we see it.
             Some(Direction::OldestFirst) => Some(NodeData::OutsideChunk),
-            None => bail!(
-                "Attempt to defer {:?} step {:?} when not chunking",
-                bcs_id,
-                walk_item
-            ),
+            None => bail!("Attempt to defer {bcs_id:?} step {walk_item:?} when not chunking"),
         };
         Ok(((walk_item.target.clone(), node_data, None), EmptyRoute {}))
     }

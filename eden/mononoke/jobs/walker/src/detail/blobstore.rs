@@ -125,7 +125,7 @@ impl ScrubHandler for StatsScrubHandler {
             }
             Ok(_) => {}
             Err(e) => {
-                scuba.add(ERROR_MSG, format!("{:?}", e));
+                scuba.add(ERROR_MSG, format!("{e:?}"));
             }
         }
 
@@ -174,7 +174,7 @@ pub fn replace_blobconfig(
                         }
                     })
                     .ok_or_else(|| {
-                        anyhow!("could not find a blobstore with id {}", inner_blobstore_id)
+                        anyhow!("could not find a blobstore with id {inner_blobstore_id}")
                     })?;
                 *blob_config = inner_blob_config;
             }

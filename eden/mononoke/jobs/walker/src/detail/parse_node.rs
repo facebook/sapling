@@ -38,8 +38,7 @@ const NODE_SEP: &str = ":";
 fn check_and_build_path(node_type: NodeType, parts: &[&str]) -> Result<WrappedPath, Error> {
     if parts.len() < 2 {
         return Err(format_err!(
-            "parse_node requires a path and key for {}",
-            node_type
+            "parse_node requires a path and key for {node_type}"
         ));
     }
     let mpath = match parts[1..].join(NODE_SEP).as_str() {
@@ -118,7 +117,7 @@ impl FromStr for UnodeFlags {
     type Err = Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let bits = u8::from_str_radix(s, 2)?;
-        UnodeFlags::from_bits(bits).ok_or_else(|| format_err!("Bad bit flags: {:b}", bits))
+        UnodeFlags::from_bits(bits).ok_or_else(|| format_err!("Bad bit flags: {bits:b}"))
     }
 }
 
@@ -174,14 +173,12 @@ pub fn parse_node(s: &str) -> Result<Node, Error> {
         (NodeType::Root, 1) | (NodeType::PublishedBookmarks, 1) => {}
         (NodeType::Root, _) | (NodeType::PublishedBookmarks, _) => {
             return Err(format_err!(
-                "parse_node expects {} not to be followed by any parts",
-                node_type
+                "parse_node expects {node_type} not to be followed by any parts"
             ));
         }
         (_, l) if l < 2 => {
             return Err(format_err!(
-                "parse_node for {} requires at least NodeType:node_key",
-                node_type
+                "parse_node for {node_type} requires at least NodeType:node_key"
             ));
         }
         _ => {}
@@ -217,19 +214,19 @@ mod tests {
             }
             NodeType::Bookmark => assert_eq!(
                 Node::Bookmark(BookmarkKey::new("foo")?),
-                parse_node(&format!("Bookmark{}foo", NODE_SEP))?
+                parse_node(&format!("Bookmark{NODE_SEP}foo"))?
             ),
             NodeType::Changeset => assert_eq!(
                 node_type,
-                &parse_node(&format!("Changeset{}{}", NODE_SEP, SAMPLE_BLAKE2))?.get_type()
+                &parse_node(&format!("Changeset{NODE_SEP}{SAMPLE_BLAKE2}"))?.get_type()
             ),
             NodeType::BonsaiHgMapping => assert_eq!(
                 node_type,
-                &parse_node(&format!("BonsaiHgMapping{}{}", NODE_SEP, SAMPLE_BLAKE2))?.get_type()
+                &parse_node(&format!("BonsaiHgMapping{NODE_SEP}{SAMPLE_BLAKE2}"))?.get_type()
             ),
             NodeType::PhaseMapping => assert_eq!(
                 node_type,
-                &parse_node(&format!("PhaseMapping{}{}", NODE_SEP, SAMPLE_BLAKE2))?.get_type()
+                &parse_node(&format!("PhaseMapping{NODE_SEP}{SAMPLE_BLAKE2}"))?.get_type()
             ),
             NodeType::PublishedBookmarks => {
                 assert_eq!(
@@ -244,57 +241,49 @@ mod tests {
             // Hg
             NodeType::HgBonsaiMapping => assert_eq!(
                 node_type,
-                &parse_node(&format!("HgBonsaiMapping{}{}", NODE_SEP, SAMPLE_SHA1))?.get_type()
+                &parse_node(&format!("HgBonsaiMapping{NODE_SEP}{SAMPLE_SHA1}"))?.get_type()
             ),
             NodeType::HgChangeset => assert_eq!(
                 node_type,
-                &parse_node(&format!("HgChangeset{}{}", NODE_SEP, SAMPLE_SHA1))?.get_type()
+                &parse_node(&format!("HgChangeset{NODE_SEP}{SAMPLE_SHA1}"))?.get_type()
             ),
             NodeType::HgChangesetViaBonsai => assert_eq!(
                 node_type,
-                &parse_node(&format!("HgChangesetViaBonsai{}{}", NODE_SEP, SAMPLE_SHA1))?
-                    .get_type()
+                &parse_node(&format!("HgChangesetViaBonsai{NODE_SEP}{SAMPLE_SHA1}"))?.get_type()
             ),
             NodeType::HgManifest => assert_eq!(
                 node_type,
                 &parse_node(&format!(
-                    "HgManifest{}{}{}{}",
-                    NODE_SEP, SAMPLE_SHA1, NODE_SEP, SAMPLE_PATH
+                    "HgManifest{NODE_SEP}{SAMPLE_SHA1}{NODE_SEP}{SAMPLE_PATH}"
                 ))?
                 .get_type()
             ),
             NodeType::HgFileEnvelope => assert_eq!(
                 node_type,
-                &parse_node(&format!("HgFileEnvelope{}{}", NODE_SEP, SAMPLE_SHA1))?.get_type()
+                &parse_node(&format!("HgFileEnvelope{NODE_SEP}{SAMPLE_SHA1}"))?.get_type()
             ),
             NodeType::HgFileNode => assert_eq!(
                 node_type,
                 &parse_node(&format!(
-                    "HgFileNode{}{}{}{}",
-                    NODE_SEP, SAMPLE_SHA1, NODE_SEP, SAMPLE_PATH
+                    "HgFileNode{NODE_SEP}{SAMPLE_SHA1}{NODE_SEP}{SAMPLE_PATH}"
                 ))?
                 .get_type()
             ),
             NodeType::HgManifestFileNode => assert_eq!(
                 node_type,
                 &parse_node(&format!(
-                    "HgManifestFileNode{}{}{}{}",
-                    NODE_SEP, SAMPLE_SHA1, NODE_SEP, SAMPLE_PATH
+                    "HgManifestFileNode{NODE_SEP}{SAMPLE_SHA1}{NODE_SEP}{SAMPLE_PATH}"
                 ))?
                 .get_type()
             ),
             // Content
             NodeType::FileContent => assert_eq!(
                 node_type,
-                &parse_node(&format!("FileContent{}{}", NODE_SEP, SAMPLE_BLAKE2))?.get_type()
+                &parse_node(&format!("FileContent{NODE_SEP}{SAMPLE_BLAKE2}"))?.get_type()
             ),
             NodeType::FileContentMetadataV2 => assert_eq!(
                 node_type,
-                &parse_node(&format!(
-                    "FileContentMetadataV2{}{}",
-                    NODE_SEP, SAMPLE_BLAKE2
-                ))?
-                .get_type()
+                &parse_node(&format!("FileContentMetadataV2{NODE_SEP}{SAMPLE_BLAKE2}"))?.get_type()
             ),
             NodeType::AliasContentMapping => {
                 assert_eq!(
@@ -325,38 +314,33 @@ mod tests {
             NodeType::Blame => {
                 assert_eq!(
                     node_type,
-                    &parse_node(&format!("Blame{}{}", NODE_SEP, SAMPLE_BLAKE2))?.get_type()
+                    &parse_node(&format!("Blame{NODE_SEP}{SAMPLE_BLAKE2}"))?.get_type()
                 );
             }
             NodeType::ChangesetInfo => {
                 assert_eq!(
                     node_type,
-                    &parse_node(&format!("ChangesetInfo{}{}", NODE_SEP, SAMPLE_BLAKE2))?.get_type()
+                    &parse_node(&format!("ChangesetInfo{NODE_SEP}{SAMPLE_BLAKE2}"))?.get_type()
                 );
             }
             NodeType::ChangesetInfoMapping => {
                 assert_eq!(
                     node_type,
-                    &parse_node(&format!(
-                        "ChangesetInfoMapping{}{}",
-                        NODE_SEP, SAMPLE_BLAKE2
-                    ))?
-                    .get_type()
+                    &parse_node(&format!("ChangesetInfoMapping{NODE_SEP}{SAMPLE_BLAKE2}"))?
+                        .get_type()
                 );
             }
             NodeType::DeletedManifestV2 => {
                 assert_eq!(
                     node_type,
-                    &parse_node(&format!("DeletedManifestV2{}{}", NODE_SEP, SAMPLE_BLAKE2))?
-                        .get_type()
+                    &parse_node(&format!("DeletedManifestV2{NODE_SEP}{SAMPLE_BLAKE2}"))?.get_type()
                 );
             }
             NodeType::DeletedManifestV2Mapping => {
                 assert_eq!(
                     node_type,
                     &parse_node(&format!(
-                        "DeletedManifestV2Mapping{}{}",
-                        NODE_SEP, SAMPLE_BLAKE2
+                        "DeletedManifestV2Mapping{NODE_SEP}{SAMPLE_BLAKE2}"
                     ))?
                     .get_type()
                 );
@@ -364,48 +348,44 @@ mod tests {
             NodeType::FastlogBatch => {
                 assert_eq!(
                     node_type,
-                    &parse_node(&format!("FastlogBatch{}{}", NODE_SEP, SAMPLE_BLAKE2))?.get_type()
+                    &parse_node(&format!("FastlogBatch{NODE_SEP}{SAMPLE_BLAKE2}"))?.get_type()
                 );
             }
             NodeType::FastlogDir => {
                 assert_eq!(
                     node_type,
-                    &parse_node(&format!("FastlogDir{}{}", NODE_SEP, SAMPLE_BLAKE2))?.get_type()
+                    &parse_node(&format!("FastlogDir{NODE_SEP}{SAMPLE_BLAKE2}"))?.get_type()
                 );
             }
             NodeType::FastlogFile => {
                 assert_eq!(
                     node_type,
-                    &parse_node(&format!("FastlogFile{}{}", NODE_SEP, SAMPLE_BLAKE2))?.get_type()
+                    &parse_node(&format!("FastlogFile{NODE_SEP}{SAMPLE_BLAKE2}"))?.get_type()
                 );
             }
             NodeType::Fsnode => {
                 assert_eq!(
                     node_type,
-                    &parse_node(&format!("Fsnode{}{}", NODE_SEP, SAMPLE_BLAKE2))?.get_type()
+                    &parse_node(&format!("Fsnode{NODE_SEP}{SAMPLE_BLAKE2}"))?.get_type()
                 );
             }
             NodeType::FsnodeMapping => {
                 assert_eq!(
                     node_type,
-                    &parse_node(&format!("FsnodeMapping{}{}", NODE_SEP, SAMPLE_BLAKE2))?.get_type()
+                    &parse_node(&format!("FsnodeMapping{NODE_SEP}{SAMPLE_BLAKE2}"))?.get_type()
                 );
             }
             NodeType::SkeletonManifest => {
                 assert_eq!(
                     node_type,
-                    &parse_node(&format!("SkeletonManifest{}{}", NODE_SEP, SAMPLE_BLAKE2))?
-                        .get_type()
+                    &parse_node(&format!("SkeletonManifest{NODE_SEP}{SAMPLE_BLAKE2}"))?.get_type()
                 );
             }
             NodeType::SkeletonManifestMapping => {
                 assert_eq!(
                     node_type,
-                    &parse_node(&format!(
-                        "SkeletonManifestMapping{}{}",
-                        NODE_SEP, SAMPLE_BLAKE2
-                    ))?
-                    .get_type()
+                    &parse_node(&format!("SkeletonManifestMapping{NODE_SEP}{SAMPLE_BLAKE2}"))?
+                        .get_type()
                 );
             }
             NodeType::UnodeFile => {
@@ -431,7 +411,7 @@ mod tests {
             NodeType::UnodeMapping => {
                 assert_eq!(
                     node_type,
-                    &parse_node(&format!("UnodeMapping{}{}", NODE_SEP, SAMPLE_BLAKE2))?.get_type()
+                    &parse_node(&format!("UnodeMapping{NODE_SEP}{SAMPLE_BLAKE2}"))?.get_type()
                 );
             }
         };

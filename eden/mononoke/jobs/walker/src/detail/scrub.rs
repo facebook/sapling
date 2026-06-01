@@ -326,7 +326,7 @@ impl ProgressStateCountByType<ScrubStats, ScrubStats> {
             .iter()
             .map(|t| {
                 let s = summary_by_type.get(t).unwrap_or(&def);
-                format!("{}:{}", t, s)
+                format!("{t}:{s}")
             })
             .collect::<Vec<_>>()
             .join(" ");

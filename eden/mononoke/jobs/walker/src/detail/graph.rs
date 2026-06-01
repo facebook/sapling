@@ -509,7 +509,7 @@ create_graph!(
 
 impl fmt::Display for NodeType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{self:?}")
     }
 }
 
@@ -788,7 +788,7 @@ define_type_enum! {
 
 impl fmt::Display for EdgeType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{self:?}")
     }
 }
 
@@ -802,7 +802,7 @@ impl fmt::Debug for FileContentData {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             FileContentData::ContentStream(_s) => write!(f, "FileContentData::ContentStream(_)"),
-            FileContentData::Consumed(s) => write!(f, "FileContentData::Consumed({})", s),
+            FileContentData::Consumed(s) => write!(f, "FileContentData::Consumed({s})"),
         }
     }
 }
@@ -1067,11 +1067,7 @@ impl Node {
                     .await?;
 
                     let file_bytes = file_bytes.ok_or_else(|| {
-                        format_err!(
-                            "content {} not found for filenode {}",
-                            content_id,
-                            hg_filenode_id
-                        )
+                        format_err!("content {content_id} not found for filenode {hg_filenode_id}")
                     })?;
                     let HgFileEnvelopeMut {
                         p1, p2, metadata, ..
@@ -1087,8 +1083,8 @@ impl Node {
 
                     if actual != hg_filenode_id {
                         return Err(HashValidationError::HashMismatch {
-                            actual_hash: format!("{}", actual),
-                            expected_hash: format!("{}", hg_filenode_id),
+                            actual_hash: format!("{actual}"),
+                            expected_hash: format!("{hg_filenode_id}"),
                         });
                     }
                     Ok(())
@@ -1185,9 +1181,7 @@ mod tests {
             if let Some(d) = t.derived_data_type() {
                 assert!(
                     a.contains(&d),
-                    "graph derived data type {} for {} is not known by default_test_repo_config()",
-                    d,
-                    t
+                    "graph derived data type {d} for {t} is not known by default_test_repo_config()"
                 );
                 s.insert(d);
             }
@@ -1218,8 +1212,7 @@ mod tests {
             if s.contains(&t) {
                 assert!(
                     !grandfathered.contains(&t),
-                    "You've added support for {}, please remove it from the grandfathered missing set",
-                    t
+                    "You've added support for {t}, please remove it from the grandfathered missing set"
                 );
             } else if !grandfathered.contains(&t) {
                 missing.insert(t);
@@ -1227,8 +1220,7 @@ mod tests {
         }
         assert!(
             missing.is_empty(),
-            "Derived data types {:?} not supported by walker graph",
-            missing,
+            "Derived data types {missing:?} not supported by walker graph",
         );
     }
 }

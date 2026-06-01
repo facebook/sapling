@@ -325,7 +325,7 @@ async fn bookmark_step<V: VisitOne>(
                 edges,
             ))
         }
-        None => Err(StepError::Missing(format!("Unknown Bookmark {}", b))),
+        None => Err(StepError::Missing(format!("Unknown Bookmark {b}"))),
     }
 }
 
@@ -682,7 +682,7 @@ async fn file_content_step<V: VisitOne>(
     let s = match maybe_s {
         Some(s) => s.map_ok(FileBytes),
         None => {
-            return Err(StepError::Missing(format!("missing content for {}", id)));
+            return Err(StepError::Missing(format!("missing content for {id}")));
         }
     };
 
@@ -2200,13 +2200,13 @@ where
                 match f.await {
                     Ok(()) => Ok(StepOutput::Done(node_data, children)),
                     Err(err @ HashValidationError::HashMismatch { .. }) => {
-                        Err(StepError::HashValidationFailure(format_err!("{:?}", err)))
+                        Err(StepError::HashValidationFailure(format_err!("{err:?}")))
                     }
                     Err(HashValidationError::Error(err)) => {
                         return Err(err);
                     }
                     Err(HashValidationError::NotSupported(err)) => {
-                        return Err(format_err!("{}", err));
+                        return Err(format_err!("{err}"));
                     }
                 }
             } else {
@@ -2276,7 +2276,7 @@ where
         ErrorKind::NotTraversable(
             repo.repo_identity().name().to_string(),
             walk_item.clone(),
-            format!("{:?}", via),
+            format!("{via:?}"),
         )
     })?;
 
