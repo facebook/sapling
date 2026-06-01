@@ -929,7 +929,7 @@ async fn check_pushrebase_conflicts(
                         ctx.scuba()
                             .clone()
                             .add("repo_name", reponame)
-                            .add("merge_resolution_outcome", format!("{}", err))
+                            .add("merge_resolution_outcome", format!("{err}"))
                             .log_with_msg("Pushrebase merge resolution failed", None);
                     }
                     // Run dry-run merge if enabled (for logging/observability)
@@ -988,7 +988,7 @@ async fn rebase_with_lock(
     // Phase 1: Speculative conflict check OUTSIDE the lock.
     let speculative_bv = get_bookmark_value(ctx, repo, onto_bookmark).await?;
     let speculative_bv_cs = speculative_bv
-        .ok_or_else(|| PushrebaseError::Error(anyhow!("bookmark {} not found", onto_bookmark)))?;
+        .ok_or_else(|| PushrebaseError::Error(anyhow!("bookmark {onto_bookmark} not found")))?;
 
     let speculative_conflicts = check_pushrebase_conflicts(
         ctx,
@@ -1314,7 +1314,7 @@ async fn batched_rebase_with_lock(
             log_pessimistic_batch_failure(
                 ctx,
                 "rebase",
-                &SharedError::from(PushrebaseError::Error(anyhow!("{:#}", e))),
+                &SharedError::from(PushrebaseError::Error(anyhow!("{e:#}"))),
             );
             let _ = locked_txn.rollback().await;
             return requeued;
@@ -1589,7 +1589,7 @@ async fn rebase_batch_under_lock(
                         req
                     })
                     .collect();
-                return Err((requeued, PushrebaseError::Error(anyhow!("{:#}", shared))));
+                return Err((requeued, PushrebaseError::Error(anyhow!("{shared:#}"))));
             }
         }
     }
@@ -1725,7 +1725,7 @@ fn log_pessimistic_batch_failure(
     ctx.scuba()
         .clone()
         .add("pessimistic_failure_phase", phase.to_string())
-        .add("pessimistic_failure_reason", format!("{:#}", error))
+        .add("pessimistic_failure_reason", format!("{error:#}"))
         .log_with_msg("pessimistic_batched_pushrebase_failure", None);
 }
 
@@ -2201,8 +2201,7 @@ async fn find_changed_files(
                             find_changed_files_between_manifests(ctx, repo, id, *p_id).await
                         }
                         (None, None) => panic!(
-                            "`range_stream` produced invalid result for: ({}, {})",
-                            descendant, ancestor,
+                            "`range_stream` produced invalid result for: ({descendant}, {ancestor})",
                         ),
                     }
                 }
@@ -2358,7 +2357,7 @@ async fn try_merge_file(
     let base_file = match fetch_manifest_file(ctx, repo, root, path).await {
         Ok(Some(f)) => f,
         Ok(None) => {
-            return FileMergeOutcome::Skipped(format!("file {} not found in base", path));
+            return FileMergeOutcome::Skipped(format!("file {path} not found in base"));
         }
         Err(e) => return FileMergeOutcome::Error(e),
     };
@@ -2368,8 +2367,7 @@ async fn try_merge_file(
         let base_type = base_file.file_type();
         if base_type != local_type {
             return FileMergeOutcome::Skipped(format!(
-                "file {} has type mismatch: base={:?}, local={:?}",
-                path, base_type, local_type,
+                "file {path} has type mismatch: base={base_type:?}, local={local_type:?}",
             ));
         }
     }
@@ -2385,7 +2383,7 @@ async fn try_merge_file(
         (Ok(base), Ok(local), Ok(other)) => match merge_text(&base, &local, &other) {
             MergeResult::Clean(merged) => FileMergeOutcome::Clean(Bytes::from(merged)),
             MergeResult::Conflict(desc) => {
-                FileMergeOutcome::Conflict(format!("file {}: {}", path, desc))
+                FileMergeOutcome::Conflict(format!("file {path}: {desc}"))
             }
         },
         (Err(e), _, _) | (_, Err(e), _) | (_, _, Err(e)) => FileMergeOutcome::Error(e),
@@ -2414,7 +2412,7 @@ async fn merge_file_by_content_ids(
         (Ok(base), Ok(local), Ok(other)) => match merge_text(&base, &local, &other) {
             MergeResult::Clean(merged) => FileMergeOutcome::Clean(Bytes::from(merged)),
             MergeResult::Conflict(desc) => {
-                FileMergeOutcome::Conflict(format!("file {}: {}", path, desc))
+                FileMergeOutcome::Conflict(format!("file {path}: {desc}"))
             }
         },
         (Err(e), _, _) | (_, Err(e), _) | (_, _, Err(e)) => FileMergeOutcome::Error(e),
@@ -2537,8 +2535,7 @@ async fn dry_run_merge_check(
                 all_clean = false;
                 skipped_count += 1;
                 skip_reasons.push(format!(
-                    "{}: not a tracked change in pushed changeset",
-                    non_root_path,
+                    "{non_root_path}: not a tracked change in pushed changeset",
                 ));
                 continue;
             }
@@ -2551,8 +2548,7 @@ async fn dry_run_merge_check(
                 all_clean = false;
                 skipped_count += 1;
                 skip_reasons.push(format!(
-                    "{}: not a tracked change in bookmark head",
-                    non_root_path,
+                    "{non_root_path}: not a tracked change in bookmark head",
                 ));
                 continue;
             }
@@ -2600,7 +2596,7 @@ async fn dry_run_merge_check(
             FileMergeOutcome::Error(err) => {
                 all_clean = false;
                 error_count += 1;
-                error_reasons.push(format!("{:#}", err));
+                error_reasons.push(format!("{err:#}"));
             }
         }
     }
@@ -2733,8 +2729,7 @@ async fn collect_merge_file_info(
 
         if excluded_path_prefixes.contains_prefix(&non_root_path) {
             return Err(MergeResolutionError::Skipped(format!(
-                "file {} is under an excluded path prefix",
-                non_root_path,
+                "file {non_root_path} is under an excluded path prefix",
             )));
         }
 
@@ -2743,8 +2738,7 @@ async fn collect_merge_file_info(
             Some(FileChange::Change(tc)) => tc,
             _ => {
                 return Err(MergeResolutionError::Skipped(format!(
-                    "file {} not a tracked change in pushed changeset",
-                    path,
+                    "file {path} not a tracked change in pushed changeset",
                 )));
             }
         };
@@ -2752,8 +2746,7 @@ async fn collect_merge_file_info(
         // Skip files with copy info
         if client_fc.copy_from().is_some() {
             return Err(MergeResolutionError::Skipped(format!(
-                "file {} has copy-from info",
-                path,
+                "file {path} has copy-from info",
             )));
         }
 
@@ -2771,8 +2764,7 @@ async fn collect_merge_file_info(
             Some(FileChange::Change(tc)) => tc,
             _ => {
                 return Err(MergeResolutionError::Skipped(format!(
-                    "file {} not a tracked change in bookmark head",
-                    path,
+                    "file {path} not a tracked change in bookmark head",
                 )));
             }
         };
@@ -2804,8 +2796,7 @@ async fn collect_merge_file_info(
             Ok(Some(f)) => f,
             Ok(None) => {
                 return Err(MergeResolutionError::Skipped(format!(
-                    "file {} not found in base",
-                    non_root_path,
+                    "file {non_root_path} not found in base",
                 )));
             }
             Err(e) => return Err(MergeResolutionError::InternalError(e)),
@@ -3639,7 +3630,7 @@ mod tests {
             .bonsai_hg_mapping()
             .get_bonsai_from_hg(&ctx, head)
             .await?
-            .ok_or_else(|| Error::msg(format_err!("Head not found: {:?}", cs_id)))?;
+            .ok_or_else(|| Error::msg(format_err!("Head not found: {cs_id:?}")))?;
 
         let mut txn = repo.bookmarks().create_transaction(ctx);
         txn.force_set(book, head, BookmarkUpdateReason::TestMove)?;
@@ -3708,7 +3699,7 @@ mod tests {
             .await?;
 
         do_pushrebase(&ctx, &repo, &Default::default(), &book, &hashset![hg_cs])
-            .map_err(|err| format_err!("{:?}", err))
+            .map_err(|err| format_err!("{err:?}"))
             .await?;
         Ok(())
     }
@@ -3803,11 +3794,11 @@ mod tests {
             &hashset![bcs.clone()],
             &hooks,
         )
-        .map_err(|err| format_err!("{:?}", err))
+        .map_err(|err| format_err!("{err:?}"))
         .await?;
 
         let master_val = resolve_cs_id(&ctx, &repo, "master").await?;
-        let key = format!("{}", master_val);
+        let key = format!("{master_val}");
         assert_eq!(
             repo.mutable_counters().get_counter(&ctx, &key).await?,
             Some(1),
@@ -3824,7 +3815,7 @@ mod tests {
             &hashset![bcs],
             &hooks,
         )
-        .map_err(|err| format_err!("{:?}", err))
+        .map_err(|err| format_err!("{err:?}"))
         .await?;
 
         let key = format!("{}", resolve_cs_id(&ctx, &repo, "newbook").await?);
@@ -4215,8 +4206,8 @@ mod tests {
         // create a lot of commits
         let (_, bcss) = stream::iter((0..128usize).map(Ok))
             .try_fold((root, vec![]), async |(head, mut bcss), index| {
-                let file = format!("f{}", index);
-                let content = format!("{}", index);
+                let file = format!("f{index}");
+                let content = format!("{index}");
                 let bcs = CreateCommitContext::new(&ctx, &repo, vec![head])
                     .add_file(file.as_str(), content)
                     .commit()
@@ -4744,7 +4735,7 @@ mod tests {
 
             let hooks = [Box::new(SleepHook) as Box<dyn PushrebaseHook>];
 
-            let f = format!("file{}", i);
+            let f = format!("file{i}");
             let bcs_id = CreateCommitContext::new(&ctx, &repo, parents.clone())
                 .add_file(f.as_str(), "content")
                 .commit()
@@ -4833,7 +4824,7 @@ mod tests {
 
             let hooks = [Box::new(SleepHook) as Box<dyn PushrebaseHook>];
 
-            let f = format!("file{}", i);
+            let f = format!("file{i}");
             let bcs_id = CreateCommitContext::new(&ctx, &repo, parents.clone())
                 .add_file(f.as_str(), "content")
                 .commit()
@@ -4989,7 +4980,7 @@ mod tests {
 
         set_bookmark(ctx.clone(), &repo, &book, &{
             // https://github.com/rust-lang/rust/pull/64856
-            let r = format!("{}", merge_hg_cs_id);
+            let r = format!("{merge_hg_cs_id}");
             r
         })
         .await?;
@@ -5128,7 +5119,7 @@ mod tests {
         let book = master_bookmark();
         set_bookmark(ctx.clone(), &repo, &book, &{
             // https://github.com/rust-lang/rust/pull/64856
-            let r = format!("{}", hg_cs);
+            let r = format!("{hg_cs}");
             r
         })
         .await?;
@@ -5202,7 +5193,7 @@ mod tests {
         let book = master_bookmark();
         set_bookmark(ctx.clone(), &repo, &book, &{
             // https://github.com/rust-lang/rust/pull/64856
-            let r = format!("{}", hg_cs);
+            let r = format!("{hg_cs}");
             r
         })
         .await?;
@@ -5282,7 +5273,7 @@ mod tests {
         let book = master_bookmark();
         set_bookmark(ctx.clone(), &repo, &book, &{
             // https://github.com/rust-lang/rust/pull/64856
-            let r = format!("{}", hg_cs);
+            let r = format!("{hg_cs}");
             r
         })
         .await?;
@@ -5343,7 +5334,7 @@ mod tests {
             &master_bookmark(),
             &hashset![hg_cs],
         )
-        .map_err(|err| format_err!("{:?}", err))
+        .map_err(|err| format_err!("{err:?}"))
         .await?;
 
         let bcs = result.head.load(&ctx, repo.repo_blobstore()).await?;
@@ -5411,8 +5402,7 @@ mod tests {
             Err(PushrebaseError::ForceFailPushrebase(_)) => {}
             _ => {
                 return Err(format_err!(
-                    "unexpected result: expected ForceFailPushrebase error, found {:?}",
-                    err
+                    "unexpected result: expected ForceFailPushrebase error, found {err:?}"
                 ));
             }
         };
@@ -5432,7 +5422,7 @@ mod tests {
             &BookmarkKey::new("head")?,
             &hashset![hg_cs],
         )
-        .map_err(|err| format_err!("{:?}", err))
+        .map_err(|err| format_err!("{err:?}"))
         .await?;
 
         Ok(())
@@ -5616,8 +5606,8 @@ mod tests {
         assert!(requeued.is_empty(), "Expected no re-queued requests");
 
         // Both receivers should get Ok outcomes
-        let outcome_a = rx_a.await.unwrap().map_err(|e| format_err!("{:?}", e))?;
-        let outcome_b = rx_b.await.unwrap().map_err(|e| format_err!("{:?}", e))?;
+        let outcome_a = rx_a.await.unwrap().map_err(|e| format_err!("{e:?}"))?;
+        let outcome_b = rx_b.await.unwrap().map_err(|e| format_err!("{e:?}"))?;
 
         // outcome_a sees the original bookmark value (it was rebased first)
         assert_eq!(outcome_a.old_bookmark_value, Some(master_cs));
@@ -5718,7 +5708,7 @@ mod tests {
         assert!(requeued.is_empty(), "Expected no re-queued requests");
 
         // Stack A should succeed
-        let outcome_a = rx_a.await.unwrap().map_err(|e| format_err!("{:?}", e))?;
+        let outcome_a = rx_a.await.unwrap().map_err(|e| format_err!("{e:?}"))?;
         assert_eq!(outcome_a.rebased_changesets.len(), 1);
 
         // Stack B should fail with conflicts
@@ -5726,7 +5716,7 @@ mod tests {
         assert!(result_b.is_err(), "Expected stack B to fail with conflicts");
         match result_b.unwrap_err().inner() {
             PushrebaseError::Conflicts(_) => {}
-            other => panic!("Expected Conflicts error, got: {:?}", other),
+            other => panic!("Expected Conflicts error, got: {other:?}"),
         }
 
         // Bookmark should still be updated (stack A succeeded)
@@ -5952,7 +5942,7 @@ mod tests {
         // Set bookmark to the server commit
         let book = BookmarkKey::new("master")?;
         let hg_server = repo.derive_hg_changeset(&ctx, server).await?;
-        set_bookmark(ctx.clone(), &repo, &book, &format!("{}", hg_server)).await?;
+        set_bookmark(ctx.clone(), &repo, &book, &format!("{hg_server}")).await?;
 
         // Client-side commit (based on base, not server): modify the last line
         let client_content = "line1\nline2\nline3\nline4\nmodified_line5\n";
@@ -6017,7 +6007,7 @@ mod tests {
         // Set bookmark to the server commit
         let book = BookmarkKey::new("master")?;
         let hg_server = repo.derive_hg_changeset(&ctx, server).await?;
-        set_bookmark(ctx.clone(), &repo, &book, &format!("{}", hg_server)).await?;
+        set_bookmark(ctx.clone(), &repo, &book, &format!("{hg_server}")).await?;
 
         // Client-side commit (based on base): also modify line 2 differently
         let client_content = "line1\nclient_modified\nline3\n";
@@ -6099,7 +6089,7 @@ line 8
         // Set bookmark to S2 (after both server commits)
         let book = BookmarkKey::new("master")?;
         let hg_s2 = repo.derive_hg_changeset(&ctx, s2).await?;
-        set_bookmark(ctx.clone(), &repo, &book, &format!("{}", hg_s2)).await?;
+        set_bookmark(ctx.clone(), &repo, &book, &format!("{hg_s2}")).await?;
 
         // Client commit: adds "line 6.1" between line 6 and line 7
         // (based on base, NOT on server commits)
@@ -6212,8 +6202,7 @@ line 8
         );
         assert!(
             file_content.contains("line 2.1"),
-            "rebased commit should have server's line 2.1. Actual:\n{}",
-            file_content,
+            "rebased commit should have server's line 2.1. Actual:\n{file_content}",
         );
 
         Ok(())
@@ -6249,7 +6238,7 @@ line 8
 
         let book = BookmarkKey::new("master")?;
         let hg_s2 = repo.derive_hg_changeset(&ctx, s2).await?;
-        set_bookmark(ctx.clone(), &repo, &book, &format!("{}", hg_s2)).await?;
+        set_bookmark(ctx.clone(), &repo, &book, &format!("{hg_s2}")).await?;
 
         // Client modifies both files at the END (non-overlapping with server)
         let client = CreateCommitContext::new(&ctx, &repo, vec![base])
@@ -6386,7 +6375,7 @@ line 8
 
         let book = BookmarkKey::new("master")?;
         let hg_server = repo.derive_hg_changeset(&ctx, server).await?;
-        set_bookmark(ctx.clone(), &repo, &book, &format!("{}", hg_server)).await?;
+        set_bookmark(ctx.clone(), &repo, &book, &format!("{hg_server}")).await?;
 
         // Client commit 1: adds "line 6.1" between line 6 and line 7 (bottom region)
         let client_content_1 = "\
@@ -6493,8 +6482,7 @@ line 8
         assert!(
             file_content.contains("line 2.1"),
             "first rebased commit should have server's 'line 2.1' \
-             (cascading merge applied per-commit). Actual:\n{}",
-            file_content,
+             (cascading merge applied per-commit). Actual:\n{file_content}",
         );
 
         Ok(())
@@ -6536,7 +6524,7 @@ line 5
 
         let book = BookmarkKey::new("master")?;
         let hg_server = repo.derive_hg_changeset(&ctx, server).await?;
-        set_bookmark(ctx.clone(), &repo, &book, &format!("{}", hg_server)).await?;
+        set_bookmark(ctx.clone(), &repo, &book, &format!("{hg_server}")).await?;
 
         let client_content = "\
 line 1
@@ -6669,7 +6657,7 @@ line 5.1
         // Set bookmark to S2
         let book = BookmarkKey::new("master")?;
         let hg_s2 = repo.derive_hg_changeset(&ctx, s2).await?;
-        set_bookmark(ctx.clone(), &repo, &book, &format!("{}", hg_s2)).await?;
+        set_bookmark(ctx.clone(), &repo, &book, &format!("{hg_s2}")).await?;
 
         // Client: modify last line (based on base)
         let client_content = "line1\nline2\nline3\nline4\nmodified_line5\n";
@@ -6714,10 +6702,9 @@ line 5.1
         // File was deleted on server but client modifies it — irreconcilable
         match result2 {
             Err(PushrebaseError::Conflicts(_)) => { /* expected */ }
-            Err(e) => panic!(
-                "Expected Conflicts error for file deleted on server, got error: {}",
-                e,
-            ),
+            Err(e) => {
+                panic!("Expected Conflicts error for file deleted on server, got error: {e}",)
+            }
             Ok(_) => panic!("Expected Conflicts error for file deleted on server, but got Ok",),
         }
 
@@ -6757,7 +6744,7 @@ line 5.1
 
         let book = BookmarkKey::new("master")?;
         let hg_s2 = repo.derive_hg_changeset(&ctx, s2).await?;
-        set_bookmark(ctx.clone(), &repo, &book, &format!("{}", hg_s2)).await?;
+        set_bookmark(ctx.clone(), &repo, &book, &format!("{hg_s2}")).await?;
 
         // Client: modify last line
         let client_content = "line1\nline2\nline3\nline4\nmodified_line5\n";
@@ -6881,7 +6868,7 @@ line 5.1
         // Set bookmark to server commit
         let bookmark = BookmarkKey::new("master")?;
         let hg_server = repo.derive_hg_changeset(&ctx, server).await?;
-        set_bookmark(ctx.clone(), &repo, &bookmark, &format!("{}", hg_server)).await?;
+        set_bookmark(ctx.clone(), &repo, &bookmark, &format!("{hg_server}")).await?;
 
         // Client: modify last line (based on base)
         let client_content = "line1\nline2\nline3\nline4\nmodified_line5\n";
@@ -6989,7 +6976,7 @@ line 5.1
 
         let bookmark = BookmarkKey::new("master")?;
         let hg_s2 = repo.derive_hg_changeset(&ctx, s2).await?;
-        set_bookmark(ctx.clone(), &repo, &bookmark, &format!("{}", hg_s2)).await?;
+        set_bookmark(ctx.clone(), &repo, &bookmark, &format!("{hg_s2}")).await?;
 
         // Client: modify last line
         let client_content = "line1\nline2\nline3\nline4\nmodified_line5\n";
@@ -7109,7 +7096,7 @@ line 5.1
 
         let book = BookmarkKey::new("master")?;
         let hg_server = repo.derive_hg_changeset(&ctx, server).await?;
-        set_bookmark(ctx.clone(), &repo, &book, &format!("{}", hg_server)).await?;
+        set_bookmark(ctx.clone(), &repo, &book, &format!("{hg_server}")).await?;
 
         // Client wrote IDENTICAL content (same `shared_content`) — duplicate change.
         let client = CreateCommitContext::new(&ctx, &repo, vec![base])
@@ -7155,7 +7142,7 @@ line 5.1
 
         let book = BookmarkKey::new("master")?;
         let hg_server = repo.derive_hg_changeset(&ctx, server).await?;
-        set_bookmark(ctx.clone(), &repo, &book, &format!("{}", hg_server)).await?;
+        set_bookmark(ctx.clone(), &repo, &book, &format!("{hg_server}")).await?;
 
         let client = CreateCommitContext::new(&ctx, &repo, vec![base])
             .add_file("file.txt", shared_content)
@@ -7188,7 +7175,7 @@ line 5.1
                     "Conflict should name the duplicate file"
                 );
             }
-            other => panic!("Expected Conflicts error, got: {:?}", other),
+            other => panic!("Expected Conflicts error, got: {other:?}"),
         }
         Ok(())
     }
@@ -7215,7 +7202,7 @@ line 5.1
 
         let book = BookmarkKey::new("master")?;
         let hg_server = repo.derive_hg_changeset(&ctx, server).await?;
-        set_bookmark(ctx.clone(), &repo, &book, &format!("{}", hg_server)).await?;
+        set_bookmark(ctx.clone(), &repo, &book, &format!("{hg_server}")).await?;
 
         // Client: duplicate edit to dup.txt + real new file `new.txt`
         let client = CreateCommitContext::new(&ctx, &repo, vec![base])
@@ -7270,7 +7257,7 @@ line 5.1
 
         let book = BookmarkKey::new("master")?;
         let hg_server = repo.derive_hg_changeset(&ctx, server).await?;
-        set_bookmark(ctx.clone(), &repo, &book, &format!("{}", hg_server)).await?;
+        set_bookmark(ctx.clone(), &repo, &book, &format!("{hg_server}")).await?;
 
         // Client commit 1: duplicate edit to dup.txt only — would become no-op
         let c1 = CreateCommitContext::new(&ctx, &repo, vec![base])
@@ -7306,10 +7293,7 @@ line 5.1
                     "Conflicts should include dup.txt from the no-op c1"
                 );
             }
-            other => panic!(
-                "Expected Conflicts error rejecting the entire stack, got: {:?}",
-                other
-            ),
+            other => panic!("Expected Conflicts error rejecting the entire stack, got: {other:?}"),
         }
         Ok(())
     }
@@ -7341,7 +7325,7 @@ line 5.1
 
         let book = BookmarkKey::new("master")?;
         let hg_server = repo.derive_hg_changeset(&ctx, server).await?;
-        set_bookmark(ctx.clone(), &repo, &book, &format!("{}", hg_server)).await?;
+        set_bookmark(ctx.clone(), &repo, &book, &format!("{hg_server}")).await?;
 
         // Client wrote IDENTICAL content to both files.
         let client = CreateCommitContext::new(&ctx, &repo, vec![base])
@@ -7369,11 +7353,10 @@ line 5.1
                     conflicts.iter().map(|c| format!("{}", c.left)).collect();
                 assert!(
                     path_strs.contains("a.txt") && path_strs.contains("b.txt"),
-                    "Conflicts must include both duplicate paths, got: {:?}",
-                    path_strs
+                    "Conflicts must include both duplicate paths, got: {path_strs:?}"
                 );
             }
-            other => panic!("Expected Conflicts error, got: {:?}", other),
+            other => panic!("Expected Conflicts error, got: {other:?}"),
         }
         Ok(())
     }
@@ -7404,7 +7387,7 @@ line 5.1
 
         let book = BookmarkKey::new("master")?;
         let hg_server = repo.derive_hg_changeset(&ctx, server).await?;
-        set_bookmark(ctx.clone(), &repo, &book, &format!("{}", hg_server)).await?;
+        set_bookmark(ctx.clone(), &repo, &book, &format!("{hg_server}")).await?;
 
         // Client edits line 1 only — non-overlapping with server.
         let client_content = "CLIENT_EDIT\nline2\nline3\n";
@@ -7470,7 +7453,7 @@ line 5.1
 
         let book = BookmarkKey::new("master")?;
         let hg_server2 = repo.derive_hg_changeset(&ctx, server2).await?;
-        set_bookmark(ctx.clone(), &repo, &book, &format!("{}", hg_server2)).await?;
+        set_bookmark(ctx.clone(), &repo, &book, &format!("{hg_server2}")).await?;
 
         // Client edits file.txt to brand-new content.
         let client = CreateCommitContext::new(&ctx, &repo, vec![base])
@@ -7668,7 +7651,7 @@ line 5.1
 
         let book = BookmarkKey::new("master")?;
         let hg_server = repo.derive_hg_changeset(ctx, server).await?;
-        set_bookmark(ctx.clone(), repo, &book, &format!("{}", hg_server)).await?;
+        set_bookmark(ctx.clone(), repo, &book, &format!("{hg_server}")).await?;
 
         let client_content = "line1\nline2\nline3\nline4\nmodified_line5\n";
         let client = CreateCommitContext::new(ctx, repo, vec![base])
