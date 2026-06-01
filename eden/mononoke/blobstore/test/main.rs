@@ -51,8 +51,7 @@ async fn overwrite<B: Blobstore>(
     };
     assert_eq!(
         expected_status1, put_status1,
-        "checking new {:?}",
-        put_behaviour
+        "checking new {put_behaviour:?}"
     );
 
     let roundtrip1 = blobstore.get(ctx, &key).await?.unwrap();
@@ -72,16 +71,14 @@ async fn overwrite<B: Blobstore>(
         assert_eq!(
             value2,
             roundtrip2.into_bytes(),
-            "checking overwrite value {:?}",
-            put_behaviour
+            "checking overwrite value {put_behaviour:?}"
         );
     } else {
         assert_eq!(ctime1, ctime2);
         assert_eq!(
             value,
             roundtrip2.into_bytes(),
-            "checking overwrite value {:?}",
-            put_behaviour
+            "checking overwrite value {put_behaviour:?}"
         );
     }
 
@@ -92,8 +89,7 @@ async fn overwrite<B: Blobstore>(
     };
     assert_eq!(
         expected_status2, put_status2,
-        "checking overwrite {:?}",
-        put_behaviour
+        "checking overwrite {put_behaviour:?}"
     );
 
     Ok(())
