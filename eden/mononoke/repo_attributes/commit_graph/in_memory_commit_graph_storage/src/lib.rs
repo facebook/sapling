@@ -114,10 +114,7 @@ impl CommitGraphStorage for InMemoryCommitGraphStorage {
 
     async fn fetch_edges(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<ChangesetEdges> {
         self.maybe_fetch_edges(ctx, cs_id).await?.ok_or_else(|| {
-            anyhow!(
-                "Missing changeset from in-memory commit graph storage: {}",
-                cs_id
-            )
+            anyhow!("Missing changeset from in-memory commit graph storage: {cs_id}")
         })
     }
 
@@ -147,7 +144,7 @@ impl CommitGraphStorage for InMemoryCommitGraphStorage {
                 missing_changesets
                     .into_iter()
                     .fold(String::new(), |mut acc, cs_id| {
-                        let _ = write!(acc, "{}, ", cs_id);
+                        let _ = write!(acc, "{cs_id}, ");
                         acc
                     })
             ))
