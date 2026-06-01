@@ -588,7 +588,7 @@ where
                         .await?;
                     match maybe_outcome {
                         Some(outcome) => Ok(Some((outcome, cs_id))),
-                        None => Err(format_err!("{} hasn't been backsynced yet", cs_id)),
+                        None => Err(format_err!("{cs_id} hasn't been backsynced yet")),
                     }
                 }
                 None => Ok(None),
@@ -602,8 +602,7 @@ where
                 use CommitSyncOutcome::*;
                 match outcome {
                     NotSyncCandidate(_) => Err(format_err!(
-                        "invalid bookmark move: {:?} should not be synced to target repo",
-                        cs_id
+                        "invalid bookmark move: {cs_id:?} should not be synced to target repo"
                     )),
                     RewrittenAs(cs_id, _) | EquivalentWorkingCopyAncestor(cs_id, _) => {
                         Ok(Some(cs_id))
@@ -678,7 +677,7 @@ where
                             Err(err) => {
                                 ctx.scuba().clone().log_with_msg(
                                     "Failed to find draft ancestors for logging",
-                                    Some(format!("{}", err)),
+                                    Some(format!("{err}")),
                                 );
                                 vec![]
                             }

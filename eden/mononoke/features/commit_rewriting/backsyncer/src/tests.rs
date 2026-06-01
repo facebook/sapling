@@ -894,7 +894,7 @@ async fn build_unrelated_branch(ctx: CoreContext, large_repo: &TestRepo) -> Chan
         btreemap! {"unrelated_branch" => Some("first content")},
     )
     .await;
-    println!("p1: {:?}", p1);
+    println!("p1: {p1:?}");
 
     let p2 = new_commit(
         ctx.clone(),
@@ -903,7 +903,7 @@ async fn build_unrelated_branch(ctx: CoreContext, large_repo: &TestRepo) -> Chan
         btreemap! {"unrelated_branch" => Some("second content")},
     )
     .await;
-    println!("p2: {:?}", p2);
+    println!("p2: {p2:?}");
 
     let merge = new_commit(
         ctx.clone(),
@@ -912,7 +912,7 @@ async fn build_unrelated_branch(ctx: CoreContext, large_repo: &TestRepo) -> Chan
         btreemap! {"unrelated_branch" => Some("merge content")},
     )
     .await;
-    println!("merge: {:?}", merge);
+    println!("merge: {merge:?}");
 
     merge
 }
@@ -1015,12 +1015,8 @@ async fn verify_mapping_and_all_wc(
         let csc = commit_sync_data.clone();
         let outcome = csc.get_commit_sync_outcome(&ctx, source_cs_id).await?;
         let source_bcs = source_cs_id.load(&ctx, large_repo.repo_blobstore()).await?;
-        let outcome = outcome.unwrap_or_else(|| {
-            panic!(
-                "commit has not been synced {} {:?}",
-                source_cs_id, source_bcs
-            )
-        });
+        let outcome = outcome
+            .unwrap_or_else(|| panic!("commit has not been synced {source_cs_id} {source_bcs:?}"));
         use CommitSyncOutcome::*;
 
         let (target_cs_id, movers_to_use) = match outcome {
@@ -1029,7 +1025,7 @@ async fn verify_mapping_and_all_wc(
             }
             EquivalentWorkingCopyAncestor(target_cs_id, ref version)
             | RewrittenAs(target_cs_id, ref version) => {
-                println!("using mover for {:?}", version);
+                println!("using mover for {version:?}");
                 (
                     target_cs_id,
                     commit_sync_data.get_movers_by_version(version).await?,
@@ -1045,7 +1041,7 @@ async fn verify_mapping_and_all_wc(
             match outcome {
                 RewrittenAs(..) => {}
                 _ => {
-                    panic!("empty commit should always be remapped {:?}", outcome);
+                    panic!("empty commit should always be remapped {outcome:?}");
                 }
             };
         }
@@ -1109,8 +1105,7 @@ async fn verify_bookmarks(
                 let commit_sync_outcome = commit_sync_outcome.expect("unsynced commit");
 
                 println!(
-                    "verify_bookmarks. calling compare_contents: source_bcs_id: {}, outcome: {:?}",
-                    source_bcs_id, commit_sync_outcome
+                    "verify_bookmarks. calling compare_contents: source_bcs_id: {source_bcs_id}, outcome: {commit_sync_outcome:?}"
                 );
 
                 use CommitSyncOutcome::*;
@@ -1119,7 +1114,7 @@ async fn verify_bookmarks(
                         panic!("commit should not point to NotSyncCandidate");
                     }
                     EquivalentWorkingCopyAncestor(_, version) | RewrittenAs(_, version) => {
-                        println!("using mover for {:?}", version);
+                        println!("using mover for {version:?}");
                         commit_sync_data.get_movers_by_version(&version).await?
                     }
                 };
@@ -1162,10 +1157,7 @@ async fn compare_contents(
     let target_content =
         list_content(ctx, target_hg_cs_id, commit_sync_data.get_target_repo()).await?;
 
-    println!(
-        "source content: {:?}, target content {:?}",
-        source_content, target_content
-    );
+    println!("source content: {source_content:?}, target content {target_content:?}");
 
     let mover = movers.mover;
 
@@ -1177,7 +1169,7 @@ async fn compare_contents(
                 .unwrap()
                 .map(|key| (key, value))
         })
-        .map(|(path, value)| (format!("{}", path), value))
+        .map(|(path, value)| (format!("{path}"), value))
         .collect();
 
     assert_eq!(target_content, filtered_source_content);
@@ -1300,7 +1292,7 @@ impl MoverType {
                 for file in files {
                     map.insert(
                         NonRootMPath::new(file).unwrap(),
-                        NonRootMPath::new(format!("nonexistentpath{}", file)).unwrap(),
+                        NonRootMPath::new(format!("nonexistentpath{file}")).unwrap(),
                     );
                 }
                 SmallRepoCommitSyncConfig {
@@ -1519,10 +1511,10 @@ async fn init_repos(
     move_bookmark(ctx.clone(), large_repo.clone(), &master, first_bcs_id).await?;
 
     // Merge new repo into master
-    let first_new_repo_file = format!("{}/first", REPOMERGE_FOLDER);
-    let to_remove_new_repo_file = format!("{}/toremove", REPOMERGE_FOLDER);
-    let move_dest_new_repo_file = format!("{}/movedest", REPOMERGE_FOLDER);
-    let second_new_repo_file = format!("{}/second", REPOMERGE_FOLDER);
+    let first_new_repo_file = format!("{REPOMERGE_FOLDER}/first");
+    let to_remove_new_repo_file = format!("{REPOMERGE_FOLDER}/toremove");
+    let move_dest_new_repo_file = format!("{REPOMERGE_FOLDER}/movedest");
+    let second_new_repo_file = format!("{REPOMERGE_FOLDER}/second");
 
     let first_new_repo_commit = new_commit(
         ctx.clone(),
@@ -1750,7 +1742,7 @@ async fn init_merged_repos(
             .await,
         )
         .await;
-        println!("small repo cs id w/o parents: {}", small_repo_cs_id);
+        println!("small repo cs id w/o parents: {small_repo_cs_id}");
 
         small_repos.push((small_repo.clone(), small_repo_cs_id.clone()));
 
@@ -1794,7 +1786,7 @@ async fn init_merged_repos(
             },
         )
         .await;
-        println!("large repo moved cs id: {}", moved_cs_id);
+        println!("large repo moved cs id: {moved_cs_id}");
         moved_cs_ids.push(moved_cs_id);
     }
 
@@ -1807,7 +1799,7 @@ async fn init_merged_repos(
     )
     .await;
 
-    println!("large repo merge cs id: {}", merge_cs_id);
+    println!("large repo merge cs id: {merge_cs_id}");
     // Create an empty commit on top of a merge commit and sync it to all small repos
     let empty: BTreeMap<_, Option<&str>> = BTreeMap::new();
     // Create empty commit in the large repo, and sync it to all small repos
@@ -1818,7 +1810,7 @@ async fn init_merged_repos(
         store_files(&ctx, empty.clone(), &large_repo).await,
     )
     .await;
-    println!("large repo empty commit: {}", first_after_merge_commit);
+    println!("large repo empty commit: {first_after_merge_commit}");
 
     for (small_repo, latest_small_repo_cs_id) in &small_repos {
         let small_repo_first_after_merge = create_commit(
@@ -1851,7 +1843,7 @@ async fn init_merged_repos(
         let master = BookmarkKey::new("master")?;
         let mut prev_master = None;
         for repo_id in 0..num_repos {
-            let filename = format!("smallrepo{}/newfile", repo_id);
+            let filename = format!("smallrepo{repo_id}/newfile");
             let new_commit = create_commit(
                 ctx.clone(),
                 large_repo.clone(),
@@ -1865,7 +1857,7 @@ async fn init_merged_repos(
             )
             .await;
 
-            println!("new commit in large repo: {}", new_commit);
+            println!("new commit in large repo: {new_commit}");
             latest_log_id += 1;
             move_bookmark(ctx.clone(), large_repo.clone(), &master, new_commit).await?;
             prev_master = Some(new_commit);
@@ -1920,7 +1912,7 @@ async fn init_merged_repos(
             .await,
         )
         .await;
-        println!("large_repo newcommit: {}", new_commit);
+        println!("large_repo newcommit: {new_commit}");
 
         latest_log_id += 1;
         move_bookmark(ctx.clone(), large_repo.clone(), &master, new_commit).await?;
@@ -1942,7 +1934,7 @@ async fn init_merged_repos(
             .await,
         )
         .await;
-        println!("smallrepo1 newcommit: {}", new_commit);
+        println!("smallrepo1 newcommit: {new_commit}");
 
         latest_log_id += 1;
         move_bookmark(ctx.clone(), large_repo.clone(), &premerge_book, new_commit).await?;
