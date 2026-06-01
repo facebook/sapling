@@ -104,8 +104,8 @@ async fn make_initial_large_directory(
     let mut create = CreateCommitContext::new_root(ctx, repo);
     for filename in filenames.iter() {
         create = create.add_file(
-            format!("large_directory/{}", filename).as_str(),
-            format!("content of {}", filename),
+            format!("large_directory/{filename}").as_str(),
+            format!("content of {filename}"),
         );
     }
     let csid = create.commit().await?;
@@ -163,12 +163,12 @@ async fn modify_large_directory(
 
     for filename in add_filenames.iter().chain(modify_filenames) {
         create = create.add_file(
-            format!("large_directory/{}", filename).as_str(),
-            format!("content {} of {}", index, filename),
+            format!("large_directory/{filename}").as_str(),
+            format!("content {index} of {filename}"),
         );
     }
     for filename in delete_filenames.iter() {
-        create = create.delete_file(format!("large_directory/{}", filename).as_str());
+        create = create.delete_file(format!("large_directory/{filename}").as_str());
     }
 
     let csid = create.commit().await?;
@@ -240,7 +240,7 @@ async fn derive(ctx: &CoreContext, repo: &Repo, data: &str, csid: ChangesetId) -
             .unwrap()
             .into_history_manifest_directory_id()
             .to_string(),
-        _ => panic!("invalid derived data type: {}", data),
+        _ => panic!("invalid derived data type: {data}"),
     }
 }
 
@@ -338,7 +338,7 @@ async fn iterate(ctx: &CoreContext, repo: &Repo, data: &str, csid: ChangesetId) 
             println!("  (iteration not supported for history_manifests)");
             0
         }
-        _ => panic!("invalid derived data type: {}", data),
+        _ => panic!("invalid derived data type: {data}"),
     }
 }
 
@@ -349,15 +349,15 @@ async fn main(fb: FacebookInit) -> Result<()> {
     let mut args = std::env::args();
     let _ = args.next();
     let data = args.next().unwrap_or_else(|| String::from("fsnodes"));
-    println!("Deriving: {}", data);
+    println!("Deriving: {data}");
 
     let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
 
     let (mut csid, mut filenames) = make_initial_large_directory(&ctx, &repo, 100_000).await?;
 
-    println!("First commit: {}", csid);
+    println!("First commit: {csid}");
     let (stats, derived_id) = derive(&ctx, &repo, &data, csid).timed().await;
-    println!("Derived id: {}  stats: {:?}", derived_id, stats);
+    println!("Derived id: {derived_id}  stats: {stats:?}");
 
     let commit_count = 10;
 
@@ -366,12 +366,12 @@ async fn main(fb: FacebookInit) -> Result<()> {
             modify_large_directory(&ctx, &repo, &mut filenames, csid, commit, 25, 100, 25).await?;
     }
 
-    println!("Last commit: {}", csid);
+    println!("Last commit: {csid}");
     let (stats, derived_id) = derive(&ctx, &repo, &data, csid).timed().await;
-    println!("Derived id: {}  stats: {:?}", derived_id, stats);
+    println!("Derived id: {derived_id}  stats: {stats:?}");
 
     let (stats, count) = iterate(&ctx, &repo, &data, csid).timed().await;
-    println!("Iterated count: {}  stats: {:?}", count, stats);
+    println!("Iterated count: {count}  stats: {stats:?}");
 
     Ok(())
 }

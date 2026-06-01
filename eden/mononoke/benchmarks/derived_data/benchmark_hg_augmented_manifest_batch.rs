@@ -152,7 +152,7 @@ fn gen_realistic_path(rng: &mut impl Rng, commit_index: usize, mode: BenchmarkMo
         BenchmarkMode::Isolated => {
             // Add commit-specific prefix to ensure no overlap between commits
             // This creates the worst-case scenario for batch derivation
-            components.push(format!("commit_{:03}", commit_index));
+            components.push(format!("commit_{commit_index:03}"));
             components.push(SUBDIRS[rng.random_range(0..SUBDIRS.len())].to_string());
         }
     }
@@ -167,7 +167,7 @@ fn gen_realistic_path(rng: &mut impl Rng, commit_index: usize, mode: BenchmarkMo
     let filename_len = rng.random_range(5..=20);
     let filename = gen_filename(rng, filename_len);
     let ext = EXTENSIONS[rng.random_range(0..EXTENSIONS.len())];
-    components.push(format!("{}.{}", filename, ext));
+    components.push(format!("{filename}.{ext}"));
 
     components.join("/")
 }
@@ -196,7 +196,7 @@ async fn create_linear_commit_stack(
         };
 
         for path in paths.iter() {
-            create = create.add_file(path.as_str(), format!("content of {}", path));
+            create = create.add_file(path.as_str(), format!("content of {path}"));
         }
 
         let csid = create.commit().await?;
@@ -227,10 +227,7 @@ async fn main(fb: FacebookInit) -> Result<()> {
     println!("  Stack size: {} commits", args.stack_size);
     println!("  Files per commit: {}", args.files);
     if use_delay {
-        println!(
-            "  I/O latency: {:.0}ms GET / {:.0}ms PUT",
-            GET_LATENCY_MS, PUT_LATENCY_MS
-        );
+        println!("  I/O latency: {GET_LATENCY_MS:.0}ms GET / {PUT_LATENCY_MS:.0}ms PUT");
     } else {
         println!("  I/O latency: disabled");
     }
@@ -278,7 +275,7 @@ async fn main(fb: FacebookInit) -> Result<()> {
         "Throughput: {:.2} commits/sec",
         csids.len() as f64 / derive_time.as_secs_f64()
     );
-    println!("Blobstore: {} GETs, {} PUTs", total_gets, total_puts);
+    println!("Blobstore: {total_gets} GETs, {total_puts} PUTs");
     println!(
         "Average per commit: {:.3}s, {:.0} GETs, {:.0} PUTs",
         derive_time.as_secs_f64() / csids.len() as f64,

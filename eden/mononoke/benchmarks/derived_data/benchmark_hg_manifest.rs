@@ -79,7 +79,7 @@ fn gen_realistic_path(rng: &mut impl Rng) -> String {
     let filename_len = rng.random_range(5..=20);
     let filename = gen_filename(rng, filename_len);
     let ext = EXTENSIONS[rng.random_range(0..EXTENSIONS.len())];
-    components.push(format!("{}.{}", filename, ext));
+    components.push(format!("{filename}.{ext}"));
 
     components.join("/")
 }
@@ -98,7 +98,7 @@ async fn create_test_commit(
 
     let mut create = CreateCommitContext::new_root(ctx, repo);
     for path in paths.iter() {
-        create = create.add_file(path.as_str(), format!("content of {}", path));
+        create = create.add_file(path.as_str(), format!("content of {path}"));
     }
     let csid = create.commit().await?;
 
@@ -120,10 +120,7 @@ async fn main(fb: FacebookInit) -> Result<()> {
         args.files
     );
     if use_delay {
-        println!(
-            "I/O latency: {:.0}ms GET / {:.0}ms PUT",
-            GET_LATENCY_MS, PUT_LATENCY_MS
-        );
+        println!("I/O latency: {GET_LATENCY_MS:.0}ms GET / {PUT_LATENCY_MS:.0}ms PUT");
     } else {
         println!("I/O latency: disabled (no-delay mode)");
     }
@@ -165,7 +162,7 @@ async fn main(fb: FacebookInit) -> Result<()> {
         stats.completion_time.as_secs_f64()
     );
     println!();
-    println!("Blobstore operations: {} GETs, {} PUTs", gets, puts);
+    println!("Blobstore operations: {gets} GETs, {puts} PUTs");
 
     Ok(())
 }
