@@ -481,11 +481,10 @@ impl ShardedProcessHandler {
                             result => {
                                 result.with_context(|| {
                                     format!(
-                                        "Failed to cancel setup for shard {} due to Tokio JoinError",
-                                        old_repo_name
+                                        "Failed to cancel setup for shard {old_repo_name} due to Tokio JoinError"
                                     )
                                 })?.with_context(|| {
-                                    format!("Error during cancelled setup for shard {}", old_repo_name)
+                                    format!("Error during cancelled setup for shard {old_repo_name}")
                                 })?;
                             }
                         };
@@ -503,7 +502,7 @@ impl ShardedProcessHandler {
                     // to this replice. Finish the cleanup.
                     Cleanup(old_repo_cleanup_process) => {
                         old_repo_cleanup_process.close().await.with_context(|| {
-                            format!("Failed to execute cleanup for shard {}", old_repo_name)
+                            format!("Failed to execute cleanup for shard {old_repo_name}")
                         })?;
                     }
                 }
@@ -570,7 +569,7 @@ impl ShardedProcessHandler {
                         STATS::shard_setup_failures.add_value(1);
                         continue;
                     }
-                    Err(e) => anyhow::bail!("Error while setting up shard: {:?}", e),
+                    Err(e) => anyhow::bail!("Error while setting up shard: {e:?}"),
                 }
             }
             if shard_setup_count == 0 && input_shard_count > 0 {
@@ -744,7 +743,7 @@ impl ShardedProcessHandler {
                     // by creating the corresponding RepoCleanupProcess.
                     Execution(repo_execution_process) => {
                         info!("Initiating drop of shard '{}'", key,);
-                        let details = format!("Dropping shard {} in progress", key);
+                        let details = format!("Dropping shard {key} in progress");
                         // SM requires the drop shard callback to be near-instantaneous.
                         // Since the unloading of a repo can take time, the cleanup is
                         // offloaded to tokio runtime returning an InProgress status to SM.
@@ -766,13 +765,12 @@ impl ShardedProcessHandler {
                             // process and drop repo.
                             Ok(Some(_)) => {
                                 info!("Dropped shard '{}'", key);
-                                RepoState::Completed(format!("Dropped shard {} successfully", key))
+                                RepoState::Completed(format!("Dropped shard {key} successfully"))
                             }
                             // Repo clean-up process is still underway. Return in-progress
                             // status. Added the cleanup process back to the map.
                             Ok(None) => {
-                                let details =
-                                    format!("Dropping shard {} in still in-progress", key);
+                                let details = format!("Dropping shard {key} in still in-progress");
                                 guarded_repo_map
                                     .insert(key, RepoProcess::Cleanup(repo_cleanup_process));
                                 RepoState::InProgress(details)
@@ -791,8 +789,7 @@ impl ShardedProcessHandler {
                             Err(e) => {
                                 error!("Failure in dropping shard '{}'. Error: {:#}", key, e);
                                 RepoState::Failed(format!(
-                                    "Dropping shard {} failed due to error in cleanup. Error: {:#}",
-                                    key, e
+                                    "Dropping shard {key} failed due to error in cleanup. Error: {e:#}"
                                 ))
                             }
                         }
@@ -830,8 +827,7 @@ impl ShardedProcessHandler {
                                 );
                                 error!("{}", &details);
                                 RepoState::Completed(format!(
-                                    "Shard {} was dropped after setup failure",
-                                    key
+                                    "Shard {key} was dropped after setup failure"
                                 ))
                             }
                         }
@@ -841,7 +837,7 @@ impl ShardedProcessHandler {
             // deleted it and this is a duplicate request. Log the anomaly but return success.
             } else {
                 error!("Couldn't find shard {} in repo_map for removal", key);
-                RepoState::Completed(format!("Shard {} was already dropped", key))
+                RepoState::Completed(format!("Shard {key} was already dropped"))
             }
         }
     }
@@ -921,7 +917,7 @@ impl sm::ShardManagerHandler for ShardedProcessHandler {
 
         Ok(smtypes::PrepareAddShardResponse {
             status: sm::smtypes::CallbackCompletionStatus::success,
-            details: format!("Beginning repo (raw format) {} assignment", key),
+            details: format!("Beginning repo (raw format) {key} assignment"),
             ..Default::default()
         })
     }
@@ -977,7 +973,7 @@ impl sm::ShardManagerHandler for ShardedProcessHandler {
         self.on_prepare_drop_shard(&key);
         Ok(smtypes::PrepareDropShardResponse {
             status: smtypes::CallbackCompletionStatus::success,
-            details: format!("Beginning repo {} removal", key),
+            details: format!("Beginning repo {key} removal"),
             ..Default::default()
         })
     }
@@ -1135,7 +1131,7 @@ impl ShardedProcessExecutor {
             .max_sm_client_init_retries(MAX_SM_CLIENT_INIT_RETRIES)
             .sm_client_init_retry_interval_secs(SM_CLIENT_INIT_RETRY_SECS)
             .build()
-            .map_err(|x| anyhow!("Error while building SM AppServerConfig: {}", x))?;
+            .map_err(|x| anyhow!("Error while building SM AppServerConfig: {x}"))?;
         let handler = Arc::new(ShardedProcessHandler::new(
             fb,
             service_name,
