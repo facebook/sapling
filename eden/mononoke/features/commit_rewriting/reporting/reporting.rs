@@ -78,23 +78,23 @@ pub fn log_rewrite(
 ) {
     sample
         .add(DURATION_MS, duration.as_millis() as u64)
-        .add(SOURCE_CS_ID, format!("{}", source_cs_id))
+        .add(SOURCE_CS_ID, format!("{source_cs_id}"))
         .add(SYNC_FN, sync_fn)
         .add(
             SESSION_ID,
             format!("session {}", ctx.metadata().session_id()),
         )
-        .add(SYNC_CONTEXT, format!("{}", commit_sync_context));
+        .add(SYNC_CONTEXT, format!("{commit_sync_context}"));
 
     match sync_result {
         Ok(maybe_target_cs_id) => {
             sample.add(SUCCESS, 1);
             if let Some(target_cs_id) = maybe_target_cs_id {
-                sample.add(TARGET_CS_ID, format!("{}", target_cs_id));
+                sample.add(TARGET_CS_ID, format!("{target_cs_id}"));
             }
         }
         Err(e) => {
-            sample.add(SUCCESS, 0).add(ERROR, format!("{}", e));
+            sample.add(SUCCESS, 0).add(ERROR, format!("{e}"));
         }
     }
 
