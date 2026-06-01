@@ -94,7 +94,7 @@ impl Display for Required {
             TreeState => "treestate",
             LFS => "lfs",
         };
-        write!(fmt, "{}", s)
+        write!(fmt, "{s}")
     }
 }
 

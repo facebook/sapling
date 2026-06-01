@@ -115,7 +115,7 @@ impl Revlog {
         let hdr = match parser::header(idx.as_slice()) {
             Ok((_, hdr)) => hdr,
             Err(err) => {
-                return Err(ErrorKind::Revlog(format!("Header parse failed: {:?}", err)).into());
+                return Err(ErrorKind::Revlog(format!("Header parse failed: {err:?}")).into());
             }
         };
 
@@ -184,7 +184,7 @@ impl Revlog {
         DP: AsRef<Path> + Debug,
     {
         let mut revlog = Self::from_idx_no_data(&idxpath)
-            .with_context(|| format!("Can't open index {:?}", idxpath))?;
+            .with_context(|| format!("Can't open index {idxpath:?}"))?;
         let datapath = datapath.as_ref().map(DP::as_ref);
         let idxpath = idxpath.as_ref();
 
@@ -193,10 +193,11 @@ impl Revlog {
                 None => {
                     let path = idxpath.with_extension("d");
                     Datafile::map(&path)
-                        .with_context(|| format!("Can't open data file {:?}", path))?
+                        .with_context(|| format!("Can't open data file {path:?}"))?
                 }
-                Some(path) => Datafile::map(path)
-                    .with_context(|| format!("Can't open data file {:?}", path))?,
+                Some(path) => {
+                    Datafile::map(path).with_context(|| format!("Can't open data file {path:?}"))?
+                }
             };
             Arc::get_mut(&mut revlog.inner).unwrap().data = Some(datafile);
         }
@@ -285,8 +286,7 @@ impl RevlogInner {
                 Ok(res)
             }
             Err(err) => Err(ErrorKind::Revlog(format!(
-                "failed to parse entry offset {}: {:?}",
-                off, err
+                "failed to parse entry offset {off}: {err:?}"
             ))
             .into()),
         }
@@ -329,7 +329,7 @@ impl RevlogInner {
             // cache hit or computed
             self.parse_entry(off)
         } else {
-            Err(ErrorKind::Revlog(format!("rev {:?} not found", idx)).into())
+            Err(ErrorKind::Revlog(format!("rev {idx:?} not found")).into())
         }
     }
 
@@ -343,7 +343,7 @@ impl RevlogInner {
     fn get_idx_by_nodeid(&self, nodeid: HgNodeHash) -> Result<RevIdx> {
         match self.nodeidx.get(&nodeid).cloned() {
             Some(idx) => Ok(idx), // cache hit
-            None => Err(ErrorKind::Revlog(format!("nodeid {} not found", nodeid)).into()),
+            None => Err(ErrorKind::Revlog(format!("nodeid {nodeid} not found")).into()),
         }
     }
 
@@ -399,11 +399,9 @@ impl RevlogInner {
                     ))
                     .into()),
                     Ok((_, literal)) => Ok(Chunk::Literal(literal)),
-                    Err(err) => Err(ErrorKind::Revlog(format!(
-                        "Failed to unpack literal: {:?}",
-                        err
-                    ))
-                    .into()),
+                    Err(err) => {
+                        Err(ErrorKind::Revlog(format!("Failed to unpack literal: {err:?}")).into())
+                    }
                 }
             }
         } else {
@@ -416,7 +414,7 @@ impl RevlogInner {
                 .into()),
                 Ok((_, deltas)) => Ok(Chunk::Deltas(deltas)),
                 Err(err) => {
-                    Err(ErrorKind::Revlog(format!("Failed to unpack deltas: {:?}", err)).into())
+                    Err(ErrorKind::Revlog(format!("Failed to unpack deltas: {err:?}")).into())
                 }
             }
         }
@@ -445,7 +443,7 @@ impl RevlogInner {
         for idx in baserev.range_to(tgtidx.succ()) {
             let chunk = self
                 .get_chunk(idx)
-                .with_context(|| format_err!("simple tgtidx {:?} idx {:?}", tgtidx, idx));
+                .with_context(|| format_err!("simple tgtidx {tgtidx:?} idx {idx:?}"));
 
             match chunk? {
                 Chunk::Literal(v) => {
@@ -471,9 +469,9 @@ impl RevlogInner {
         let data = loop {
             chunks.push(idx);
 
-            let chunk = self.get_chunk(idx).with_context(|| {
-                format_err!("construct_general tgtidx {:?} idx {:?}", tgtidx, idx)
-            })?;
+            let chunk = self
+                .get_chunk(idx)
+                .with_context(|| format_err!("construct_general tgtidx {tgtidx:?} idx {idx:?}"))?;
 
             // We have three valid cases:
             // 1) Literal chunk - this is possible only if baserev == idx
@@ -498,8 +496,7 @@ impl RevlogInner {
                 }
                 Some(baseidx) => {
                     Err(ErrorKind::Revlog(format!(
-                        "baserev {:?} >= idx {:?}",
-                        baseidx, idx
+                        "baserev {baseidx:?} >= idx {idx:?}"
                     )))?;
                 }
                 None => match chunk {
@@ -571,14 +568,14 @@ impl RevlogInner {
     fn get_rev_by_nodeid(&self, id: HgNodeHash) -> Result<HgBlobNode> {
         self.get_idx_by_nodeid(id).and_then(move |idx| {
             self.get_rev(idx)
-                .with_context(|| format!("can't get rev for id {}", id))
+                .with_context(|| format!("can't get rev for id {id}"))
         })
     }
 
     fn get_rev_parents_by_nodeid(&self, id: HgNodeHash) -> Result<HgParents> {
         self.get_idx_by_nodeid(id).and_then(move |idx| {
             self.get_parents(idx)
-                .with_context(|| format!("can't get parents for id {}", id))
+                .with_context(|| format!("can't get parents for id {id}"))
         })
     }
 

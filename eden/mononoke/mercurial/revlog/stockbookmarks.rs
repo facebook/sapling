@@ -206,27 +206,27 @@ mod tests {
         let bookmarks = StockBookmarks::from_reader(reader);
         let err = bookmarks.unwrap_err();
         match err_downcast_ref!(err, err: ErrorKind => err) {
-            Some(ok @ ErrorKind::InvalidHash(..)) => println!("OK: {:?}", ok),
-            Some(bad) => panic!("other ErrorKind error: {:?}", bad),
-            None => panic!("other error: {:?}", err),
+            Some(ok @ ErrorKind::InvalidHash(..)) => println!("OK: {ok:?}"),
+            Some(bad) => panic!("other ErrorKind error: {bad:?}"),
+            None => panic!("other error: {err:?}"),
         };
 
         // non-ASCII
         let reader = Cursor::new(&b"111111111111111111111111111111111111111\xff test\n"[..]);
         let err = StockBookmarks::from_reader(reader).unwrap_err();
         match err_downcast_ref!(err, err: ErrorKind => err) {
-            Some(ok @ ErrorKind::InvalidHash(..)) => println!("OK: {:?}", ok),
-            Some(bad) => panic!("other ErrorKind error: {:?}", bad),
-            None => panic!("other error: {:?}", err),
+            Some(ok @ ErrorKind::InvalidHash(..)) => println!("OK: {ok:?}"),
+            Some(bad) => panic!("other ErrorKind error: {bad:?}"),
+            None => panic!("other error: {err:?}"),
         };
 
         // not a valid hex string
         let reader = Cursor::new(&b"abcdefgabcdefgabcdefgabcdefgabcdefgabcde test\n"[..]);
         let err = StockBookmarks::from_reader(reader).unwrap_err();
         match err_downcast_ref!(err, err: ErrorKind => err) {
-            Some(ok @ ErrorKind::InvalidHash(..)) => println!("OK: {:?}", ok),
-            Some(bad) => panic!("other ErrorKind error: {:?}", bad),
-            None => panic!("other error: {:?}", err),
+            Some(ok @ ErrorKind::InvalidHash(..)) => println!("OK: {ok:?}"),
+            Some(bad) => panic!("other ErrorKind error: {bad:?}"),
+            None => panic!("other error: {err:?}"),
         };
     }
 }
