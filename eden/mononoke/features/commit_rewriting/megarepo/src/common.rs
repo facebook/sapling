@@ -133,7 +133,7 @@ async fn create_bookmark(
     let commit_result = transaction.commit().await?.is_some();
 
     if !commit_result {
-        Err(format_err!("Logical failure while setting {:?}", bookmark))
+        Err(format_err!("Logical failure while setting {bookmark:?}"))
     } else {
         info!("Setting bookmark {:?} finished", bookmark);
         Ok(())
