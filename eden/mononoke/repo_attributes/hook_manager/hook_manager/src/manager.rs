@@ -235,35 +235,74 @@ impl HookManager {
         }
 
         // Bypass was triggered and JK is enabled — check permission group
+        self.check_bypass_authorization_with_changeset_author(
+            hook,
+            ctx,
+            changeset_author,
+            bypass_reason,
+        )
+        .await
+    }
+
+    /// Check whether `identity_set` is a member of the hook's bypass permission
+    /// group and map the result to a BypassAuthorizationResult.
+    ///
+    /// If the hook has no bypass permission checker configured, the bypass is
+    /// allowed unconditionally (preserves pre-permission-group behavior). An
+    /// empty `identity_set` fails closed: a real membership checker returns
+    /// `false`, so the result is `Unauthorized` and the hook runs normally.
+    async fn check_membership(
+        &self,
+        hook: &Hook,
+        identity_set: &MononokeIdentitySet,
+        bypass_reason: String,
+    ) -> Result<BypassAuthorizationResult> {
         let checker = match hook.get_bypass_permission_checker() {
             Some(checker) => checker,
             None => return Ok(BypassAuthorizationResult::Bypassed(bypass_reason)),
         };
 
-        // Check group membership against the commit author's identity.
-        // We extract the unixname from the author string ("Name <user@host>")
-        // and build a USER identity for the membership check.
-        let is_member = match changeset_author.and_then(extract_unixname_from_author) {
-            Some(unixname) => {
-                let author_identity = MononokeIdentity::from_legacy_type_data("USER", unixname);
-                let identity_set: MononokeIdentitySet = std::iter::once(author_identity).collect();
-                checker.is_member(&identity_set).await
-            }
-            None => {
-                // Fallback to pusher identities if author is unavailable
-                // or unparseable
-                checker.is_member(ctx.metadata().identities()).await
-            }
-        };
-        if is_member {
+        if checker.is_member(identity_set).await {
             Ok(BypassAuthorizationResult::Bypassed(bypass_reason))
         } else {
-            let group_name = bypass
+            let group_name = hook
+                .get_config()
+                .bypass
+                .as_ref()
                 .and_then(|b| b.permission_group())
                 .unwrap_or("unknown");
             Ok(BypassAuthorizationResult::Unauthorized(
                 group_name.to_string(),
             ))
+        }
+    }
+
+    /// Check if the commit author (or pusher, as fallback) is a member of the
+    /// hook's bypass permission group.
+    ///
+    /// When `changeset_author` is parseable as `"Name <user@host>"`, group
+    /// membership is checked against the extracted unixname. Otherwise falls
+    /// back to the pusher's TLS cert identities.
+    async fn check_bypass_authorization_with_changeset_author(
+        &self,
+        hook: &Hook,
+        ctx: &CoreContext,
+        changeset_author: Option<&str>,
+        bypass_reason: String,
+    ) -> Result<BypassAuthorizationResult> {
+        match changeset_author.and_then(extract_unixname_from_author) {
+            Some(unixname) => {
+                let author_identity = MononokeIdentity::from_legacy_type_data("USER", unixname);
+                let identity_set: MononokeIdentitySet = std::iter::once(author_identity).collect();
+                self.check_membership(hook, &identity_set, bypass_reason)
+                    .await
+            }
+            None => {
+                // Fallback to pusher identities if author is unavailable
+                // or unparseable
+                self.check_membership(hook, ctx.metadata().identities(), bypass_reason)
+                    .await
+            }
         }
     }
 
