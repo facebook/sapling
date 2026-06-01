@@ -131,7 +131,7 @@ impl RepoShardedProcess for WorkerProcess {
             .repos_mgr
             .add_repo(repo_name)
             .await
-            .with_context(|| format!("Failure in setting up repo {}", repo_name))?;
+            .with_context(|| format!("Failure in setting up repo {repo_name}"))?;
         let repos = vec![repo.repo_identity.id()];
         info!("Completed setup for repo {} ({:?})", repo_name, repos);
 
