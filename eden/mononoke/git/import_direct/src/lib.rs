@@ -37,10 +37,7 @@ pub async fn range(
         .get_bonsai_from_git_sha1(ctx, oid_to_sha1(&from)?)
         .await?
         .ok_or_else(|| {
-            format_err!(
-                "Cannot start import from root {}: commit does not exist in repo",
-                from
-            )
+            format_err!("Cannot start import from root {from}: commit does not exist in repo")
         })?;
     let known = [(from, from_csid)].into();
     GitimportTarget::new(to, known)
@@ -73,7 +70,7 @@ pub async fn missing_for_commit(
                     .with_parsed_as_commit(|commit| {
                         q.extend(commit.parents());
                     })
-                    .ok_or_else(|| format_err!("oid {} is not a commit", id))?;
+                    .ok_or_else(|| format_err!("oid {id} is not a commit"))?;
             }
         }
     }
