@@ -166,7 +166,7 @@ where
         let cs = hash
             .load(ctx, blobstore)
             .await
-            .with_context(|| format!("Failed to load changeset {}", hash))?;
+            .with_context(|| format!("Failed to load changeset {hash}"))?;
 
         writer.write_fmt(format_args!(
             "{}\n",
