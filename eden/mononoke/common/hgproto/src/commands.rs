@@ -408,14 +408,14 @@ mod test {
 
         let (r, _) = handler.handle(SingleRequest::Hello, StreamReader::new(stream::empty()));
         let r = assert_one(r.collect::<Vec<_>>().await);
-        println!("hello r = {:?}", r);
+        println!("hello r = {r:?}");
 
         let mut res: HashMap<String, Vec<String>> = HashMap::new();
         res.insert("capabilities".into(), vec!["something".into()]);
 
         match r {
             Ok(SingleResponse::Hello(ref r)) if r == &res => {}
-            bad => panic!("Bad result {:?}", bad),
+            bad => panic!("Bad result {bad:?}"),
         }
 
         Ok(())
@@ -427,11 +427,11 @@ mod test {
 
         let (r, _) = handler.handle(SingleRequest::Heads, StreamReader::new(stream::empty()));
         let r = assert_one(r.collect::<Vec<_>>().await);
-        println!("heads r = {:?}", r);
+        println!("heads r = {r:?}");
 
         match r {
-            Err(ref err) => println!("got expected error {:?}", err),
-            bad => panic!("Bad result {:?}", bad),
+            Err(ref err) => println!("got expected error {err:?}"),
+            bad => panic!("Bad result {bad:?}"),
         }
 
         Ok(())

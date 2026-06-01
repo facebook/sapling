@@ -249,7 +249,7 @@ mod tests {
         let dechunker = Dechunker::new(Cursor::new(&concat_chunks));
         match check_bufread_api(dechunker, chunks, remainder).await {
             Ok(()) => TestResult::passed(),
-            Err(e) => TestResult::error(format!("{}", e)),
+            Err(e) => TestResult::error(format!("{e}")),
         }
     }
 
@@ -263,7 +263,7 @@ mod tests {
 
         match check_read_api(dechunker, chunks, remainder).await {
             Ok(()) => TestResult::passed(),
-            Err(e) => TestResult::error(format!("{}", e)),
+            Err(e) => TestResult::error(format!("{e}")),
         }
     }
 
@@ -288,9 +288,7 @@ mod tests {
                 let buf = d.fill_buf().await?;
                 ensure!(
                     buf == chunk.as_slice(),
-                    "expected {:?} found {:?} in bufread api check",
-                    chunk,
-                    buf
+                    "expected {chunk:?} found {buf:?} in bufread api check"
                 );
                 buf.len()
             };
@@ -323,9 +321,7 @@ mod tests {
         );
         ensure!(
             buf == all_chunks,
-            "expected read_to_end {:?}, but read {:?}",
-            all_chunks,
-            buf
+            "expected read_to_end {all_chunks:?}, but read {buf:?}"
         );
 
         check_remainder(d, remainder).await
@@ -348,9 +344,7 @@ mod tests {
         );
         ensure!(
             buf.as_slice() == remainder,
-            "expected read_to_end {:?} from inner reader, but read {:?}",
-            remainder,
-            buf
+            "expected read_to_end {remainder:?} from inner reader, but read {buf:?}"
         );
         Ok(())
     }
