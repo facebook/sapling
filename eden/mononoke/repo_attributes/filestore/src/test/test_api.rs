@@ -97,7 +97,7 @@ async fn filestore_put_alias(fb: FacebookInit) -> Result<()> {
     .await?;
     let res = filestore::get_metadata(blob, ctx, &FetchKey::Canonical(content_id)).await?;
 
-    println!("res = {:#?}", res);
+    println!("res = {res:#?}");
 
     assert_eq!(
         res,
@@ -142,7 +142,7 @@ async fn filestore_put_get_canon(fb: FacebookInit) -> Result<()> {
 
     let res = filestore::fetch_concat_opt(blob, ctx, &FetchKey::Canonical(content_id)).await;
 
-    println!("res = {:#?}", res);
+    println!("res = {res:#?}");
 
     assert_eq!(res?, Some(Bytes::from(HELLO_WORLD)));
 
@@ -173,7 +173,7 @@ async fn filestore_put_get_sha1(fb: FacebookInit) -> Result<()> {
     )
     .await;
 
-    println!("res = {:#?}", res);
+    println!("res = {res:#?}");
 
     assert_eq!(res?, Some(Bytes::from(HELLO_WORLD)));
     Ok(())
@@ -203,7 +203,7 @@ async fn filestore_put_get_git_sha1(fb: FacebookInit) -> Result<()> {
     )
     .await;
 
-    println!("res = {:#?}", res);
+    println!("res = {res:#?}");
 
     assert_eq!(res?, Some(Bytes::from(HELLO_WORLD)));
     Ok(())
@@ -233,7 +233,7 @@ async fn filestore_put_get_sha256(fb: FacebookInit) -> Result<()> {
     )
     .await;
 
-    println!("res = {:#?}", res);
+    println!("res = {res:#?}");
 
     assert_eq!(res?, Some(Bytes::from(HELLO_WORLD)));
     Ok(())
@@ -263,7 +263,7 @@ async fn filestore_put_get_seeded_blake3(fb: FacebookInit) -> Result<()> {
     )
     .await;
 
-    println!("res = {:#?}", res);
+    println!("res = {res:#?}");
 
     assert_eq!(res?, Some(Bytes::from(HELLO_WORLD)));
     Ok(())
@@ -294,7 +294,7 @@ async fn filestore_chunked_put_get(fb: FacebookInit) -> Result<()> {
 
     let res = filestore::fetch_concat_opt(blob, ctx, &FetchKey::Canonical(content_id)).await;
 
-    println!("res = {:#?}", res);
+    println!("res = {res:#?}");
 
     assert_eq!(res?, Some(Bytes::from(HELLO_WORLD)));
     Ok(())
@@ -360,7 +360,7 @@ async fn filestore_content_not_found(fb: FacebookInit) -> Result<()> {
     // Verify that we can still read the full thing.
     let res = filestore::fetch_concat_opt(blob, ctx, &FetchKey::Canonical(content_id)).await;
 
-    println!("res = {:#?}", res);
+    println!("res = {res:#?}");
     assert_eq!(res?, None);
     Ok(())
 }
@@ -395,7 +395,7 @@ async fn filestore_chunk_not_found(fb: FacebookInit) -> Result<()> {
     // This should fail
     let res = filestore::fetch_concat_opt(&blob, &ctx, &FetchKey::Canonical(content_id)).await;
 
-    println!("res = {:#?}", res);
+    println!("res = {res:#?}");
     assert!(res.is_err());
     Ok(())
 }
@@ -421,7 +421,7 @@ async fn filestore_put_invalid_size(fb: FacebookInit) -> Result<()> {
         stream::once(future::ready(Ok(Bytes::from(data)))),
     )
     .await;
-    println!("res = {:#?}", res);
+    println!("res = {res:#?}");
     assert_matches!(
         res.unwrap_err().downcast::<errors::ErrorKind>(),
         Ok(errors::ErrorKind::InvalidSize(..))
@@ -450,7 +450,7 @@ async fn filestore_put_content_id(fb: FacebookInit) -> Result<()> {
         stream::once(future::ready(Ok(Bytes::from(HELLO_WORLD)))),
     )
     .await;
-    println!("res = {:#?}", res);
+    println!("res = {res:#?}");
     assert_matches!(
         res.unwrap_err().downcast::<errors::ErrorKind>(),
         Ok(errors::ErrorKind::InvalidContentId(..))
@@ -466,7 +466,7 @@ async fn filestore_put_content_id(fb: FacebookInit) -> Result<()> {
         stream::once(future::ready(Ok(Bytes::from(HELLO_WORLD)))),
     )
     .await;
-    println!("res = {:#?}", res);
+    println!("res = {res:#?}");
     assert!(res.is_ok());
 
     Ok(())
@@ -492,7 +492,7 @@ async fn filestore_put_sha1(fb: FacebookInit) -> Result<()> {
         stream::once(future::ready(Ok(Bytes::from(HELLO_WORLD)))),
     )
     .await;
-    println!("res = {:#?}", res);
+    println!("res = {res:#?}");
     assert_matches!(
         res.unwrap_err().downcast::<errors::ErrorKind>(),
         Ok(errors::ErrorKind::InvalidSha1(..))
@@ -508,7 +508,7 @@ async fn filestore_put_sha1(fb: FacebookInit) -> Result<()> {
         stream::once(future::ready(Ok(Bytes::from(HELLO_WORLD)))),
     )
     .await;
-    println!("res = {:#?}", res);
+    println!("res = {res:#?}");
     assert!(res.is_ok());
 
     Ok(())
@@ -538,7 +538,7 @@ async fn filestore_put_git_sha1(fb: FacebookInit) -> Result<()> {
         stream::once(future::ready(Ok(Bytes::from(HELLO_WORLD)))),
     )
     .await;
-    println!("res = {:#?}", res);
+    println!("res = {res:#?}");
     assert_matches!(
         res.unwrap_err().downcast::<errors::ErrorKind>(),
         Ok(errors::ErrorKind::InvalidGitSha1(..))
@@ -554,7 +554,7 @@ async fn filestore_put_git_sha1(fb: FacebookInit) -> Result<()> {
         stream::once(future::ready(Ok(Bytes::from(HELLO_WORLD)))),
     )
     .await;
-    println!("res = {:#?}", res);
+    println!("res = {res:#?}");
     assert!(res.is_ok());
 
     Ok(())
@@ -584,7 +584,7 @@ async fn filestore_put_sha256(fb: FacebookInit) -> Result<()> {
         stream::once(future::ready(Ok(Bytes::from(HELLO_WORLD)))),
     )
     .await;
-    println!("res = {:#?}", res);
+    println!("res = {res:#?}");
     assert_matches!(
         res.unwrap_err().downcast::<errors::ErrorKind>(),
         Ok(errors::ErrorKind::InvalidSha256(..))
@@ -600,7 +600,7 @@ async fn filestore_put_sha256(fb: FacebookInit) -> Result<()> {
         stream::once(future::ready(Ok(Bytes::from(HELLO_WORLD)))),
     )
     .await;
-    println!("res = {:#?}", res);
+    println!("res = {res:#?}");
     assert!(res.is_ok());
 
     Ok(())
@@ -630,7 +630,7 @@ async fn filestore_put_seeded_blake3(fb: FacebookInit) -> Result<()> {
         stream::once(future::ready(Ok(Bytes::from(HELLO_WORLD)))),
     )
     .await;
-    println!("res = {:#?}", res);
+    println!("res = {res:#?}");
     assert_matches!(
         res.unwrap_err().downcast::<errors::ErrorKind>(),
         Ok(errors::ErrorKind::InvalidBlake3(..))
@@ -646,7 +646,7 @@ async fn filestore_put_seeded_blake3(fb: FacebookInit) -> Result<()> {
         stream::once(future::ready(Ok(Bytes::from(HELLO_WORLD)))),
     )
     .await;
-    println!("res = {:#?}", res);
+    println!("res = {res:#?}");
     assert!(res.is_ok());
 
     Ok(())
@@ -693,7 +693,7 @@ async fn filestore_get_range(fb: FacebookInit) -> Result<()> {
     }
     .await;
 
-    println!("res = {:#?}", res);
+    println!("res = {res:#?}");
 
     assert_eq!(res?, Bytes::from(&HELLO_WORLD[7..]));
 
@@ -801,7 +801,7 @@ async fn filestore_get_chunked_range(fb: FacebookInit) -> Result<()> {
     }
     .await;
 
-    println!("res = {:#?}", res);
+    println!("res = {res:#?}");
 
     assert_eq!(res?, Bytes::from(&b"arbazq"[..]));
 
@@ -821,7 +821,7 @@ async fn filestore_get_chunked_range(fb: FacebookInit) -> Result<()> {
     }
     .await;
 
-    println!("res = {:#?}", res);
+    println!("res = {res:#?}");
 
     let res = res?;
     assert_eq!(res.len(), 1);
@@ -843,7 +843,7 @@ async fn filestore_get_chunked_range(fb: FacebookInit) -> Result<()> {
     }
     .await;
 
-    println!("res = {:#?}", res);
+    println!("res = {res:#?}");
 
     let res = res?;
     assert_eq!(res.len(), 1);
@@ -893,7 +893,7 @@ async fn filestore_rebuild_metadata(fb: FacebookInit) -> Result<()> {
 
     // Getting the metadata should cause it to get recomputed
     let res = filestore::get_metadata(blob, ctx, &FetchKey::Canonical(content_id)).await?;
-    println!("res = {:#?}", res);
+    println!("res = {res:#?}");
     assert_eq!(res, expected);
 
     // Now, delete the content (this shouldn't normally happen, but we're injecting failure here).
@@ -901,7 +901,7 @@ async fn filestore_rebuild_metadata(fb: FacebookInit) -> Result<()> {
 
     // Query the metadata again. It should succeed because it's saved.
     let res = filestore::get_metadata(blob, ctx, &FetchKey::Canonical(content_id)).await?;
-    println!("res = {:#?}", res);
+    println!("res = {res:#?}");
     assert_eq!(res, expected);
 
     // Delete the metadata now.
@@ -910,7 +910,7 @@ async fn filestore_rebuild_metadata(fb: FacebookInit) -> Result<()> {
     // And then, query it again. This should now return None, because the metadata isn't there,
     // and we can't recreate it.
     let res = filestore::get_metadata(blob, ctx, &FetchKey::Canonical(content_id)).await?;
-    println!("res = {:#?}", res);
+    println!("res = {res:#?}");
     assert_eq!(res, None);
 
     Ok(())
@@ -927,7 +927,7 @@ async fn filestore_test_missing_metadata(fb: FacebookInit) -> Result<()> {
     // No matter the Fetchkey, querying the metadata should return None.
 
     let res = filestore::get_metadata(blob, ctx, &FetchKey::Canonical(content_id)).await;
-    println!("res = {:#?}", res);
+    println!("res = {res:#?}");
     assert_eq!(res?, None);
 
     let res = filestore::get_metadata(
@@ -936,7 +936,7 @@ async fn filestore_test_missing_metadata(fb: FacebookInit) -> Result<()> {
         &FetchKey::Aliased(Alias::Sha1(*HELLO_WORLD_SHA1)),
     )
     .await;
-    println!("res = {:#?}", res);
+    println!("res = {res:#?}");
     assert_eq!(res?, None);
 
     let res = filestore::get_metadata(
@@ -945,7 +945,7 @@ async fn filestore_test_missing_metadata(fb: FacebookInit) -> Result<()> {
         &FetchKey::Aliased(Alias::Sha256(*HELLO_WORLD_SHA256)),
     )
     .await;
-    println!("res = {:#?}", res);
+    println!("res = {res:#?}");
     assert_eq!(res?, None);
 
     let res = filestore::get_metadata(
@@ -954,7 +954,7 @@ async fn filestore_test_missing_metadata(fb: FacebookInit) -> Result<()> {
         &FetchKey::Aliased(Alias::SeededBlake3(*HELLO_WORLD_SEEDED_BLAKE3)),
     )
     .await;
-    println!("res = {:#?}", res);
+    println!("res = {res:#?}");
     assert_eq!(res?, None);
 
     let res = filestore::get_metadata(
@@ -963,7 +963,7 @@ async fn filestore_test_missing_metadata(fb: FacebookInit) -> Result<()> {
         &FetchKey::Aliased(Alias::GitSha1(HELLO_WORLD_GIT_SHA1.sha1())),
     )
     .await;
-    println!("res = {:#?}", res);
+    println!("res = {res:#?}");
     assert_eq!(res?, None);
 
     Ok(())
@@ -988,7 +988,7 @@ async fn filestore_test_peek(fb: FacebookInit) -> Result<()> {
     .await?;
 
     let res = filestore::peek(blob, ctx, &FetchKey::Canonical(content_id), 3).await;
-    println!("res = {:#?}", res);
+    println!("res = {res:#?}");
 
     // @lint-ignore SPELL
     let expected: &[u8] = b"hel";
@@ -1021,7 +1021,7 @@ async fn filestore_test_chunked_peek(fb: FacebookInit) -> Result<()> {
     .await?;
 
     let res = filestore::peek(blob, ctx, &FetchKey::Canonical(content_id), 3).await;
-    println!("res = {:#?}", res);
+    println!("res = {res:#?}");
 
     // @lint-ignore SPELL
     let expected: &[u8] = b"hel";
@@ -1049,7 +1049,7 @@ async fn filestore_test_short_peek(fb: FacebookInit) -> Result<()> {
     .await?;
 
     let res = filestore::peek(blob, ctx, &FetchKey::Canonical(content_id), 128).await;
-    println!("res = {:#?}", res);
+    println!("res = {res:#?}");
 
     assert_eq!(res?, Some(Bytes::from(HELLO_WORLD)));
 
@@ -1077,7 +1077,7 @@ async fn filestore_test_empty_peek(fb: FacebookInit) -> Result<()> {
     .await?;
 
     let res = filestore::peek(blob, ctx, &FetchKey::Canonical(content_id), 128).await;
-    println!("res = {:#?}", res);
+    println!("res = {res:#?}");
 
     assert_eq!(res?, Some(bytes.clone()));
 
@@ -1098,7 +1098,7 @@ async fn filestore_store_bytes(fb: FacebookInit) -> Result<()> {
 
     let res = filestore::fetch_concat_opt(blob, ctx, &FetchKey::Canonical(content_id)).await;
 
-    println!("res = {:#?}", res);
+    println!("res = {res:#?}");
 
     assert_eq!(res?, Some(Bytes::from(HELLO_WORLD)));
     Ok(())
@@ -1125,7 +1125,7 @@ async fn filestore_store_error(fb: FacebookInit) -> Result<()> {
     )
     .await;
 
-    println!("res = {:#?}", res);
+    println!("res = {res:#?}");
     assert_matches!(
         res.unwrap_err().downcast::<FailingBlobstoreError>(),
         Ok(FailingBlobstoreError)
@@ -1260,7 +1260,7 @@ async fn filestore_test_rechunk_missing_content(fb: FacebookInit) -> Result<()> 
     // Attempt to rechunk the file into 1 byte sections
     let res = filestore::rechunk::force_rechunk(blob, conf, ctx, full_id).await;
 
-    println!("res = {:#?}", res);
+    println!("res = {res:#?}");
     assert_matches!(
         res.unwrap_err().downcast::<filestore::rechunk::ErrorKind>(),
         Ok(filestore::rechunk::ErrorKind::ContentNotFound(..))
@@ -1305,7 +1305,7 @@ async fn filestore_chunked_put_get_with_size(fb: FacebookInit) -> Result<()> {
 
     let bytes = fut.await;
 
-    println!("{:?}", bytes);
+    println!("{bytes:?}");
 
     assert_eq!(bytes?, Bytes::from(HELLO_WORLD));
     assert_eq!(size, HELLO_WORLD_LENGTH);
@@ -1486,7 +1486,7 @@ async fn assert_fetches_as<B: KeyedBlobstore + Clone + 'static, S: Into<Bytes>>(
         None => None,
     };
 
-    println!("res = {:#?}", res);
+    println!("res = {res:#?}");
     assert_eq!(res, Some(expected));
     Ok(())
 }

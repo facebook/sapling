@@ -70,7 +70,7 @@ async fn check_consistency<B: KeyedBlobstore + Clone + 'static>(
     if h.len() == 1 {
         Ok(*h.into_iter().next().unwrap())
     } else {
-        Err(format_err!("Inconsistent fetch results: {:?}", outcomes))
+        Err(format_err!("Inconsistent fetch results: {outcomes:?}"))
     }
 }
 
@@ -118,15 +118,15 @@ async fn test_invariants(fb: FacebookInit) -> Result<()> {
             stream::once(future::ready(Ok(bytes.clone()))),
         )
         .await;
-        println!("store: {:?}", res);
+        println!("store: {res:?}");
 
         // Try to read with a functional blobstore. All results should be consistent.
         let content_ok = check_consistency(memblob, ctx, &bytes).await?;
-        println!("content_ok: {:?}", content_ok);
+        println!("content_ok: {content_ok:?}");
 
         // If we can read the content metadata, then we should also be able to read a metadata.
         let metadata_ok = check_metadata(memblob, ctx, &bytes).await?;
-        println!("metadata_ok: {:?}", metadata_ok);
+        println!("metadata_ok: {metadata_ok:?}");
         assert_eq!(content_ok, metadata_ok)
     }
 
