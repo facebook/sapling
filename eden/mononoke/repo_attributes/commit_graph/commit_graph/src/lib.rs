@@ -720,7 +720,7 @@ impl<E: EdgeType> CommitGraphOps<E> {
                     for (cs_id, edges) in all_edges.into_iter() {
                         let distance = *cs_ids_and_remaining_distance
                             .get(&cs_id)
-                            .ok_or_else(|| anyhow!("missing distance for changeset {} (in CommitGraph::ancestors_within_distance)", cs_id))?;
+                            .ok_or_else(|| anyhow!("missing distance for changeset {cs_id} (in CommitGraph::ancestors_within_distance)"))?;
                         for parent in edges.parents::<E>() {
                             let parent_distance = frontier
                                 .entry(parent.generation::<E>())

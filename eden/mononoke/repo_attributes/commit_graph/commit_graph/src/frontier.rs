@@ -60,7 +60,7 @@ impl<E: EdgeType> CommitGraphOps<E> {
                     cs_id,
                     all_edges
                         .get(&cs_id)
-                        .ok_or_else(|| anyhow!("Missing changeset in commit graph: {}", cs_id))?
+                        .ok_or_else(|| anyhow!("Missing changeset in commit graph: {cs_id}"))?
                         .node()
                         .generation::<E>(),
                 ))
@@ -97,7 +97,7 @@ impl<E: EdgeType> CommitGraphOps<E> {
                     cs_id,
                     all_edges
                         .get(&cs_id)
-                        .ok_or_else(|| anyhow!("Missing changeset in commit graph: {}", cs_id))?
+                        .ok_or_else(|| anyhow!("Missing changeset in commit graph: {cs_id}"))?
                         .node()
                         .generation::<E>(),
                     distance,
@@ -147,8 +147,7 @@ impl<E: EdgeType> CommitGraphOps<E> {
                 for (cs_id, edges) in frontier_edges {
                     if *property_map.get(&cs_id).ok_or_else(|| {
                         anyhow!(
-                            "Missing changeset id {} from property_map (in ancestors_frontier)",
-                            cs_id
+                            "Missing changeset id {cs_id} from property_map (in ancestors_frontier)"
                         )
                     })? {
                         property_frontier.push(edges.node().cs_id);
@@ -231,7 +230,7 @@ impl<E: EdgeType> CommitGraphOps<E> {
             for cs_id in cs_ids {
                 let edges = frontier_edges
                     .get(&cs_id)
-                    .ok_or_else(|| anyhow!("Missing changeset in commit graph: {}", cs_id))?;
+                    .ok_or_else(|| anyhow!("Missing changeset in commit graph: {cs_id}"))?;
 
                 for parent in edges.parents::<E>() {
                     frontier

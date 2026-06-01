@@ -156,7 +156,7 @@ impl CommitGraphWriter for LoggingCommitGraphWriter {
             .await
         {
             Err(err) => {
-                scuba.add("error", format!("{:#}", err));
+                scuba.add("error", format!("{err:#}"));
                 scuba.log_with_msg("Insertion failed", None);
 
                 Err(err)

@@ -102,7 +102,7 @@ impl CommitGraph {
                 }))
                 .await?
                 .remove(&ancestor)
-                .ok_or_else(|| anyhow!("Missing changeset from commit graph storage: {} (linear_ancestors_stream)", ancestor))?
+                .ok_or_else(|| anyhow!("Missing changeset from commit graph storage: {ancestor} (linear_ancestors_stream)"))?
                 .into_edges();
 
             Ok(Some((ancestor, LinearAncestorsStreamState {

@@ -52,7 +52,7 @@ impl CommitGraph {
         for parent in &parents {
             let parent_edge = edges_map
                 .get(parent)
-                .ok_or_else(|| anyhow!("Missing parent: {}", parent))?;
+                .ok_or_else(|| anyhow!("Missing parent: {parent}"))?;
             max_parent_gen = max_parent_gen.max(parent_edge.node().generation::<Parents>().value());
             max_subtree_source_gen = max_subtree_source_gen.max(
                 parent_edge
@@ -98,7 +98,7 @@ impl CommitGraph {
         for source in &subtree_sources {
             let source_edge = edges_map
                 .get(source)
-                .ok_or_else(|| anyhow!("Missing subtree source: {}", source))?;
+                .ok_or_else(|| anyhow!("Missing subtree source: {source}"))?;
 
             max_subtree_source_gen = max_subtree_source_gen.max(
                 source_edge
@@ -247,8 +247,7 @@ pub(crate) async fn skip_tree_level_ancestor<E: EdgeType>(
             (_, Some(parent)) => cs_id = parent.cs_id,
             _ => {
                 return Err(anyhow!(
-                    "Changeset has positive depth yet has no parent: {}",
-                    cs_id
+                    "Changeset has positive depth yet has no parent: {cs_id}"
                 ));
             }
         }

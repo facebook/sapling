@@ -353,7 +353,7 @@ impl<E: EdgeType> CommitGraphOps<E> {
 
                     for cs_id in last_changesets.keys() {
                         let edges = all_edges.get(cs_id).ok_or_else(|| {
-                            anyhow!("Missing changeset edges in commit graph for {}", cs_id)
+                            anyhow!("Missing changeset edges in commit graph for {cs_id}")
                         })?;
 
                         if let Some(skew_ancestor) = edges.skip_tree_skew_ancestor::<E>() {
@@ -374,7 +374,7 @@ impl<E: EdgeType> CommitGraphOps<E> {
 
                     for (cs_id, origin) in last_changesets.iter() {
                         let edges = all_edges.get(cs_id).ok_or_else(|| {
-                            anyhow!("Missing changeset edges in commit graph for {}", cs_id)
+                            anyhow!("Missing changeset edges in commit graph for {cs_id}")
                         })?;
 
                         if let Some(skew_ancestor) = edges.skip_tree_skew_ancestor::<E>() {
@@ -736,10 +736,7 @@ impl<E: EdgeType> CommitGraphOps<E> {
             if let Some(segment) = segments.remove(&segment_head) {
                 sorted_segments.push(segment);
             } else {
-                panic!(
-                    "Segment head {} not found in segments {:?}",
-                    segment_head, segments
-                );
+                panic!("Segment head {segment_head} not found in segments {segments:?}");
             }
         }
         sorted_segments
@@ -772,15 +769,12 @@ impl<E: EdgeType> CommitGraphOps<E> {
             match (parents.next(), parents.next()) {
                 (_, Some(_)) => {
                     return Err(anyhow!(
-                        "Found merge changeset {} before segment base",
-                        current_cs_id
+                        "Found merge changeset {current_cs_id} before segment base"
                     ));
                 }
                 (None, _) => {
                     return Err(anyhow!(
-                        "Segment base {} is not reachable from head {}",
-                        base,
-                        head
+                        "Segment base {base} is not reachable from head {head}"
                     ));
                 }
                 (Some(parent), None) => current_cs_id = parent,
@@ -842,8 +836,7 @@ impl<E: EdgeType> CommitGraphOps<E> {
                     && !union_segments_cs_ids.contains_key(&parent.cs_id)
                 {
                     return Err(anyhow!(
-                        "Segments are not in reverse topological order, segment parent {} not found in any subsequent segment and isn't an ancestor of common",
-                        parent,
+                        "Segments are not in reverse topological order, segment parent {parent} not found in any subsequent segment and isn't an ancestor of common",
                     ));
                 }
 
@@ -856,8 +849,7 @@ impl<E: EdgeType> CommitGraphOps<E> {
                     (Some(location), _) => {
                         if !segment_heads.contains(&location.head) {
                             return Err(anyhow!(
-                                "Segment parent location {} isn't relative to a subsequent segment head",
-                                location
+                                "Segment parent location {location} isn't relative to a subsequent segment head"
                             ));
                         }
 
@@ -870,8 +862,7 @@ impl<E: EdgeType> CommitGraphOps<E> {
                         let location_level = match location_head_depth.cmp(&location.distance) {
                             Ordering::Less => {
                                 return Err(anyhow!(
-                                    "Invalid location {}, location head depth is less than location distance",
-                                    location,
+                                    "Invalid location {location}, location head depth is less than location distance",
                                 ));
                             }
                             Ordering::Greater | Ordering::Equal => {
@@ -881,7 +872,7 @@ impl<E: EdgeType> CommitGraphOps<E> {
                         let resolved_location = self
                             .skip_tree_level_ancestor(ctx, location.head, location_level)
                             .await?
-                            .ok_or_else(|| anyhow!("While resolving location {}", location))?;
+                            .ok_or_else(|| anyhow!("While resolving location {location}"))?;
 
                         if resolved_location.cs_id != parent.cs_id {
                             return Err(anyhow!(
@@ -913,17 +904,12 @@ impl<E: EdgeType> CommitGraphOps<E> {
             for cs_id in segment_cs_ids {
                 if !difference_cs_ids.contains(&cs_id) {
                     return Err(anyhow!(
-                        "Changeset {} in segment {:?} doesn't belong to ancestors difference",
-                        cs_id,
-                        segment,
+                        "Changeset {cs_id} in segment {segment:?} doesn't belong to ancestors difference",
                     ));
                 }
                 if let Some(other_segment) = union_segments_cs_ids.insert(cs_id, segment) {
                     return Err(anyhow!(
-                        "Changeset {} found in two segments: {:?}, {:?}",
-                        cs_id,
-                        segment,
-                        other_segment,
+                        "Changeset {cs_id} found in two segments: {segment:?}, {other_segment:?}",
                     ));
                 }
             }
@@ -940,8 +926,7 @@ impl<E: EdgeType> CommitGraphOps<E> {
             .next()
         {
             return Err(anyhow!(
-                "Changeset {} found in ancestors difference but is not contained in any segment",
-                cs_id,
+                "Changeset {cs_id} found in ancestors difference but is not contained in any segment",
             ));
         }
 
@@ -1017,7 +1002,7 @@ impl<E: EdgeType> CommitGraphOps<E> {
                 }))
                 .await?
                 .remove(&ancestor)
-                .ok_or_else(|| anyhow!("Missing changeset from commit graph storage: {} (locations_to_changeset_ids)", cs_id))?
+                .ok_or_else(|| anyhow!("Missing changeset from commit graph storage: {cs_id} (locations_to_changeset_ids)"))?
                 .into_edges();
 
             ancestor = ancestor_edges
@@ -1099,7 +1084,7 @@ impl<E: EdgeType> CommitGraphOps<E> {
                     // immediate parent otherwise.
                     for (head, origin) in heads {
                         let edges = heads_edges.get(&head).ok_or_else(|| {
-                            anyhow!("Missing changeset edges in commit graph {}", head)
+                            anyhow!("Missing changeset edges in commit graph {head}")
                         })?;
 
                         if let Some(ancestor) = edges
