@@ -49,9 +49,7 @@ impl<R: MononokeRepo> RepoContext<R> {
             .await?
         {
             None => anyhow::bail!(
-                "Bookmark: unexpected absence of CommitSyncOutcome for {} in {:?}",
-                large_cs_id,
-                syncer
+                "Bookmark: unexpected absence of CommitSyncOutcome for {large_cs_id} in {syncer:?}"
             ),
             // EquivalentWorkingCopyAncestor is fine because the bookmark commit in the
             // large repo might not have come from the small repo
@@ -60,10 +58,7 @@ impl<R: MononokeRepo> RepoContext<R> {
                 Ok(Small(Some(small_cs_id)))
             }
             Some(outcome) => anyhow::bail!(
-                "Bookmark: unexpected CommitSyncOutcome for {} in {:?}: {:?}",
-                large_cs_id,
-                syncer,
-                outcome
+                "Bookmark: unexpected CommitSyncOutcome for {large_cs_id} in {syncer:?}: {outcome:?}"
             ),
         }
     }
@@ -136,8 +131,7 @@ impl<R: MononokeRepo> RepoContext<R> {
             .await?
         {
             return Err(MononokeError::InvalidRequest(format!(
-                "Not a stack: base commit {} is not an ancestor of head commit {}",
-                base, head,
+                "Not a stack: base commit {base} is not an ancestor of head commit {head}",
             )));
         }
 

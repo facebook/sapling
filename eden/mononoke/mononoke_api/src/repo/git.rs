@@ -328,7 +328,7 @@ pub async fn create_annotated_tag(
     // Store the created changeset
     changesets_creation::save_changesets(ctx, repo, vec![changeset])
         .await
-        .map_err(|e| anyhow::anyhow!("Error in saving changeset {}, Cause: {:?}", changeset_id, e))
+        .map_err(|e| anyhow::anyhow!("Error in saving changeset {changeset_id}, Cause: {e:?}"))
         .map_err(|e| GitError::StorageFailure(tag_id.to_string(), e.into()))?;
     let tag_hash = GitSha1::from_bytes(tag_hash.as_bytes())
         .map_err(|_| GitError::InvalidHash(tag_hash.to_string()))?;
@@ -343,11 +343,7 @@ pub async fn create_annotated_tag(
         .add_or_update_mappings(ctx, vec![mapping_entry])
         .await
         .map_err(|e| {
-            anyhow::anyhow!(
-                "Error in storing bonsai tag mappings for tag {}, Cause: {:?}",
-                tag_id,
-                e
-            )
+            anyhow::anyhow!("Error in storing bonsai tag mappings for tag {tag_id}, Cause: {e:?}")
         })
         .map_err(|e| GitError::StorageFailure(tag_id.to_string(), e.into()))?;
     Ok(changeset_id)
@@ -383,12 +379,11 @@ async fn get_git_commit(
         .await
         .map_err(|e| {
             GitError::PackfileError(format!(
-                "Error in fetching Git Sha1 for changeset {:?} through BonsaiGitMapping. Cause: {}",
-                cs_id, e
+                "Error in fetching Git Sha1 for changeset {cs_id:?} through BonsaiGitMapping. Cause: {e}"
             ))
         })?;
     let git_sha1 = maybe_git_sha1.ok_or_else(|| {
-        GitError::PackfileError(format!("Git Sha1 not found for changeset {:?}", cs_id))
+        GitError::PackfileError(format!("Git Sha1 not found for changeset {cs_id:?}"))
     })?;
     ObjectId::from_hex(git_sha1.to_hex().as_bytes()).map_err(|e| {
         GitError::PackfileError(format!(
@@ -433,7 +428,7 @@ pub async fn get_bookmark_state<'a, 'b>(
         .bookmarks()
         .get(ctx.clone(), bookmark, freshness)
         .await
-        .with_context(|| format!("Error fetching bookmark: {}", bookmark))?;
+        .with_context(|| format!("Error fetching bookmark: {bookmark}"))?;
     if let Some(cs_id) = maybe_bookmark_val {
         Ok(BookmarkState::Existing(cs_id))
     } else {
@@ -470,8 +465,7 @@ pub async fn repo_stack_git_bundle(
         .await
         .map_err(|e| {
             GitError::PackfileError(format!(
-                "Error in generating pack item stream for head {} and base {}. Cause: {}",
-                head, base, e
+                "Error in generating pack item stream for head {head} and base {base}. Cause: {e}"
             ))
         })?;
     let base_git_commit = get_git_commit(ctx, repo, base).await?;
@@ -504,22 +498,19 @@ pub async fn repo_stack_git_bundle(
     .await
     .map_err(|e| {
         GitError::PackfileError(format!(
-            "Error in creating BundleWriter for head {} and base {}. Cause: {}",
-            head, base, e
+            "Error in creating BundleWriter for head {head} and base {base}. Cause: {e}"
         ))
     })?;
     // Write the packfile item stream to the bundle
     writer.write(response.items).await.map_err(|e| {
         GitError::PackfileError(format!(
-            "Error in writing packfile items to bundle for head {} and base {}. Cause: {}",
-            head, base, e
+            "Error in writing packfile items to bundle for head {head} and base {base}. Cause: {e}"
         ))
     })?;
     // Finish writing the bundle
     writer.finish().await.map_err(|e| {
         GitError::PackfileError(format!(
-            "Error in finishing writing to the bundle for head {} and base {}. Cause: {}",
-            head, base, e
+            "Error in finishing writing to the bundle for head {head} and base {base}. Cause: {e}"
         ))
     })?;
 

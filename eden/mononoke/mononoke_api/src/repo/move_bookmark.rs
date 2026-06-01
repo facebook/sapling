@@ -57,7 +57,7 @@ impl<R: MononokeRepo> RepoContext<R> {
                 .await
                 .context("Failed to fetch old bookmark target")?
                 .ok_or_else(|| {
-                    MononokeError::InvalidRequest(format!("bookmark '{}' does not exist", bookmark))
+                    MononokeError::InvalidRequest(format!("bookmark '{bookmark}' does not exist"))
                 })?,
         };
 
@@ -89,8 +89,7 @@ impl<R: MononokeRepo> RepoContext<R> {
             let large_bookmark = redirector.small_to_large_bookmark(bookmark).await?;
             if &large_bookmark == bookmark {
                 return Err(MononokeError::InvalidRequest(format!(
-                    "Cannot move shared bookmark '{}' from small repo",
-                    bookmark
+                    "Cannot move shared bookmark '{bookmark}' from small repo"
                 )));
             }
             let ctx = self.ctx();
@@ -105,8 +104,7 @@ impl<R: MononokeRepo> RepoContext<R> {
             .await?
             .ok_or_else(|| {
                 format_err!(
-                    "Error in move_bookmark absence of corresponding commit in target repo for {}",
-                    target,
+                    "Error in move_bookmark absence of corresponding commit in target repo for {target}",
                 )
             })?;
             let old_target = redirector

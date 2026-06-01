@@ -74,8 +74,7 @@ impl<R> RepoContext<R> {
                 .get(&csid)
                 .ok_or_else(|| {
                     MononokeError::InvalidRequest(format!(
-                        "failed to find mapped commit for {} {}",
-                        name, csid,
+                        "failed to find mapped commit for {name} {csid}",
                     ))
                 })
                 .copied()

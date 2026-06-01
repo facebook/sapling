@@ -179,7 +179,7 @@ impl<R: MononokeRepo> RepoContext<R> {
                         .changeset(ChangesetSpecifier::Bonsai(cs_id))
                         .await?
                         .ok_or_else(|| {
-                            anyhow::anyhow!("changeset not found for bonsai id {}", cs_id)
+                            anyhow::anyhow!("changeset not found for bonsai id {cs_id}")
                         })?;
                     let date = cs_ctx
                         .changeset_info()

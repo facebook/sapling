@@ -66,8 +66,7 @@ impl<R: MononokeRepo> RepoContext<R> {
                 .await?
                 .ok_or_else(|| {
                     format_err!(
-                        "Error in create_bookmark absence of corresponding commit in target repo for {}",
-                        target,
+                        "Error in create_bookmark absence of corresponding commit in target repo for {target}",
                     )
                 })?;
             make_create_op(&large_bookmark, target, pushvars)

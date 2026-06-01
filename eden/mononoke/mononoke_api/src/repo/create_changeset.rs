@@ -280,8 +280,7 @@ impl CreateChangeFileContents {
                     .await?
                     .ok_or_else(|| {
                         MononokeError::InvalidRequest(format!(
-                            "File id '{}' is not available in this repo",
-                            file_id
+                            "File id '{file_id}' is not available in this repo"
                         ))
                     })?
                     .total_size;
@@ -644,8 +643,7 @@ pub(crate) async fn verify_deleted_files_existed_in_a_parent<R: MononokeRepo>(
                     deletions_to_remove.insert(deleted_file.clone());
                 } else {
                     return Err(MononokeError::InvalidRequest(format!(
-                        "Deleted file '{}' was deleted earlier in the stack",
-                        deleted_file
+                        "Deleted file '{deleted_file}' was deleted earlier in the stack"
                     )));
                 }
             }
@@ -655,8 +653,7 @@ pub(crate) async fn verify_deleted_files_existed_in_a_parent<R: MononokeRepo>(
                         deletions_to_remove.insert(deleted_file.clone());
                     } else {
                         return Err(MononokeError::InvalidRequest(format!(
-                            "Deleted file '{}' was deleted earlier in the stack through replacement of '{}'",
-                            deleted_file, prefix
+                            "Deleted file '{deleted_file}' was deleted earlier in the stack through replacement of '{prefix}'"
                         )));
                     }
                 }
@@ -693,13 +690,11 @@ pub(crate) async fn verify_deleted_files_existed_in_a_parent<R: MononokeRepo>(
         let path_count = deleted_files.len().saturating_sub(parent_files.len());
         if path_count == 1 {
             Err(MononokeError::InvalidRequest(format!(
-                "Deleted file '{}' does not exist in any parent",
-                non_existent_path
+                "Deleted file '{non_existent_path}' does not exist in any parent"
             )))
         } else {
             Err(MononokeError::InvalidRequest(format!(
-                "{} deleted files ('{}', ...) do not exist in any parent",
-                path_count, non_existent_path
+                "{path_count} deleted files ('{non_existent_path}', ...) do not exist in any parent"
             )))
         }
     }
@@ -771,8 +766,7 @@ pub(crate) async fn verify_no_noop_file_changes<R: MononokeRepo>(
         .try_for_each_concurrent(10, async |(path, change)| {
             if is_noop_file_change(parent_ctxs, stack_changes.as_ref(), path, change).await? {
                 return Err(MononokeError::InvalidRequest(format!(
-                    "Found no-op file change at path '{}'. File changes that don't change file content are not allowed",
-                    path
+                    "Found no-op file change at path '{path}'. File changes that don't change file content are not allowed"
                 )));
             }
             Ok(())
@@ -1153,7 +1147,7 @@ impl<R: MononokeRepo> RepoContext<R> {
                 .changeset(ChangesetSpecifier::Bonsai(parent_id.clone()))
                 .await?
                 .ok_or_else(|| {
-                    MononokeError::InvalidRequest(format!("Parent {} does not exist", parent_id))
+                    MononokeError::InvalidRequest(format!("Parent {parent_id} does not exist"))
                 })?;
             Ok::<_, MononokeError>(parent_ctx)
         }))
@@ -1563,8 +1557,7 @@ impl<R: MononokeRepo> RepoContext<R> {
             .freeze()
             .map_err(|e| {
                 MononokeError::InvalidRequest(format!(
-                    "Changes create invalid bonsai changeset: {}",
-                    e
+                    "Changes create invalid bonsai changeset: {e}"
                 ))
             })?;
 

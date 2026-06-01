@@ -214,8 +214,7 @@ impl<R: MononokeRepo> RepoContext<R> {
 
         if !public.is_empty() {
             return Err(MononokeError::InvalidRequest(format!(
-                "Cannot fold public commits: {}",
-                bottom_id
+                "Cannot fold public commits: {bottom_id}"
             )));
         }
         let top_id = top_id.unwrap_or(bottom_id);
