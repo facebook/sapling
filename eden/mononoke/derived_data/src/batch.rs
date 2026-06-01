@@ -571,7 +571,7 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
 
         let dir = "dir";
-        let file1 = format!("{}/file1", dir);
+        let file1 = format!("{dir}/file1");
         let root = CreateCommitContext::new_root(&ctx, &repo)
             .add_file(file1.as_str(), "content1")
             .commit()
