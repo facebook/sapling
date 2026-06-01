@@ -41,7 +41,7 @@ fn lfs_stream(
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .spawn()
-        .with_context(|| format!("Error starting lfs_helper: {:?}", lfs_helper))?;
+        .with_context(|| format!("Error starting lfs_helper: {lfs_helper:?}"))?;
 
     let stdout = cmd
         .stdout
