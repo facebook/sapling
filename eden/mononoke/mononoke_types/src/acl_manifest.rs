@@ -81,7 +81,7 @@ impl ThriftConvert for AclManifestEntry {
                 }))
             }
             thrift::acl_manifest::AclManifestEntry::UnknownField(x) => {
-                anyhow::bail!("Unknown AclManifestEntry variant: {}", x)
+                anyhow::bail!("Unknown AclManifestEntry variant: {x}")
             }
         }
     }

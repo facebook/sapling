@@ -1086,123 +1086,111 @@ mod test {
         // These IDs are persistent, and this test is really to make sure that they don't change
         // accidentally.
         let id = ChangesetId::new(Blake2::from_byte_array([1; 32]));
-        assert_eq!(id.blobstore_key(), format!("changeset.blake2.{}", id));
+        assert_eq!(id.blobstore_key(), format!("changeset.blake2.{id}"));
 
         let id = ContentId::new(Blake2::from_byte_array([1; 32]));
-        assert_eq!(id.blobstore_key(), format!("content.blake2.{}", id));
+        assert_eq!(id.blobstore_key(), format!("content.blake2.{id}"));
 
         let id = ShardedMapNodeDMv2Id::from_byte_array([1; 32]);
         assert_eq!(
             id.blobstore_key(),
-            format!("deletedmanifest2.mapnode.blake2.{}", id)
+            format!("deletedmanifest2.mapnode.blake2.{id}")
         );
 
         let id = ShardedMapV2NodeBssmV3Id::from_byte_array([1; 32]);
-        assert_eq!(id.blobstore_key(), format!("bssm3.map2node.blake2.{}", id));
+        assert_eq!(id.blobstore_key(), format!("bssm3.map2node.blake2.{id}"));
 
         let id = ShardedMapV2NodeSkeletonManifestV2Id::from_byte_array([1; 32]);
-        assert_eq!(id.blobstore_key(), format!("skmf2.map2node.blake2.{}", id));
+        assert_eq!(id.blobstore_key(), format!("skmf2.map2node.blake2.{id}"));
 
         let id = ShardedMapV2NodeCcsmId::from_byte_array([1; 32]);
-        assert_eq!(id.blobstore_key(), format!("ccsm.map2node.blake2.{}", id));
+        assert_eq!(id.blobstore_key(), format!("ccsm.map2node.blake2.{id}"));
 
         let id = DirectoryBranchClusterManifestId::from_byte_array([1; 32]);
-        assert_eq!(id.blobstore_key(), format!("dbcm.blake2.{}", id));
+        assert_eq!(id.blobstore_key(), format!("dbcm.blake2.{id}"));
 
         let id = ShardedMapV2NodeDbcmId::from_byte_array([1; 32]);
-        assert_eq!(id.blobstore_key(), format!("dbcm.map2node.blake2.{}", id));
+        assert_eq!(id.blobstore_key(), format!("dbcm.map2node.blake2.{id}"));
 
         let id = ShardedMapV2NodeTestShardedManifestId::from_byte_array([1; 32]);
         assert_eq!(
             id.blobstore_key(),
-            format!("testshardedmanifest.map2node.blake2.{}", id)
+            format!("testshardedmanifest.map2node.blake2.{id}")
         );
 
         let id = ContentChunkId::from_byte_array([1; 32]);
-        assert_eq!(id.blobstore_key(), format!("chunk.blake2.{}", id));
+        assert_eq!(id.blobstore_key(), format!("chunk.blake2.{id}"));
 
         let id = RawBundle2Id::from_byte_array([1; 32]);
-        assert_eq!(id.blobstore_key(), format!("rawbundle2.blake2.{}", id));
+        assert_eq!(id.blobstore_key(), format!("rawbundle2.blake2.{id}"));
 
         let id = FileUnodeId::from_byte_array([1; 32]);
-        assert_eq!(id.blobstore_key(), format!("fileunode.blake2.{}", id));
+        assert_eq!(id.blobstore_key(), format!("fileunode.blake2.{id}"));
 
         let id = ManifestUnodeId::from_byte_array([1; 32]);
-        assert_eq!(id.blobstore_key(), format!("manifestunode.blake2.{}", id));
+        assert_eq!(id.blobstore_key(), format!("manifestunode.blake2.{id}"));
 
         let id = DeletedManifestV2Id::from_byte_array([1; 32]);
-        assert_eq!(
-            id.blobstore_key(),
-            format!("deletedmanifest2.blake2.{}", id)
-        );
+        assert_eq!(id.blobstore_key(), format!("deletedmanifest2.blake2.{id}"));
 
         let id = BssmV3DirectoryId::from_byte_array([1; 32]);
-        assert_eq!(id.blobstore_key(), format!("bssm3.blake2.{}", id),);
+        assert_eq!(id.blobstore_key(), format!("bssm3.blake2.{id}"),);
 
         let id = SkeletonManifestV2Id::from_byte_array([1; 32]);
-        assert_eq!(id.blobstore_key(), format!("skmf2.blake2.{}", id),);
+        assert_eq!(id.blobstore_key(), format!("skmf2.blake2.{id}"),);
 
         let id = CaseConflictSkeletonManifestId::from_byte_array([1; 32]);
-        assert_eq!(id.blobstore_key(), format!("ccsm.blake2.{}", id),);
+        assert_eq!(id.blobstore_key(), format!("ccsm.blake2.{id}"),);
 
         let id = TestManifestId::from_byte_array([1; 32]);
-        assert_eq!(id.blobstore_key(), format!("testmanifest.blake2.{}", id),);
+        assert_eq!(id.blobstore_key(), format!("testmanifest.blake2.{id}"),);
 
         let id = TestShardedManifestId::from_byte_array([1; 32]);
         assert_eq!(
             id.blobstore_key(),
-            format!("testshardedmanifest.blake2.{}", id),
+            format!("testshardedmanifest.blake2.{id}"),
         );
 
         let id = FsnodeId::from_byte_array([1; 32]);
-        assert_eq!(id.blobstore_key(), format!("fsnode.blake2.{}", id));
+        assert_eq!(id.blobstore_key(), format!("fsnode.blake2.{id}"));
 
         let id = ContentManifestId::from_byte_array([1; 32]);
-        assert_eq!(id.blobstore_key(), format!("contentmf.blake2.{}", id));
+        assert_eq!(id.blobstore_key(), format!("contentmf.blake2.{id}"));
 
         let id = ShardedMapV2NodeContentManifestId::from_byte_array([1; 32]);
         assert_eq!(
             id.blobstore_key(),
-            format!("contentmf.map2node.blake2.{}", id)
+            format!("contentmf.map2node.blake2.{id}")
         );
 
         let id = SkeletonManifestId::from_byte_array([1; 32]);
-        assert_eq!(
-            id.blobstore_key(),
-            format!("skeletonmanifest.blake2.{}", id)
-        );
+        assert_eq!(id.blobstore_key(), format!("skeletonmanifest.blake2.{id}"));
 
         let id = ContentMetadataV2Id::from_byte_array([1; 32]);
-        assert_eq!(
-            id.blobstore_key(),
-            format!("content_metadata2.blake2.{}", id)
-        );
+        assert_eq!(id.blobstore_key(), format!("content_metadata2.blake2.{id}"));
 
         let id = FastlogBatchId::from_byte_array([1; 32]);
-        assert_eq!(id.blobstore_key(), format!("fastlogbatch.blake2.{}", id));
+        assert_eq!(id.blobstore_key(), format!("fastlogbatch.blake2.{id}"));
 
         let id = RedactionKeyListId::from_byte_array([1; 32]);
-        assert_eq!(
-            id.blobstore_key(),
-            format!("redactionkeylist.blake2.{}", id)
-        );
+        assert_eq!(id.blobstore_key(), format!("redactionkeylist.blake2.{id}"));
 
         let id = ShardedMapV2NodeInferredCopyFromId::from_byte_array([1; 32]);
-        assert_eq!(id.blobstore_key(), format!("icf.map2node.blake2.{}", id));
+        assert_eq!(id.blobstore_key(), format!("icf.map2node.blake2.{id}"));
 
         let id = InferredCopyFromId::from_byte_array([1; 32]);
-        assert_eq!(id.blobstore_key(), format!("icf.blake2.{}", id));
+        assert_eq!(id.blobstore_key(), format!("icf.blake2.{id}"));
 
         let id = HistoryManifestFileId::from_byte_array([1; 32]);
-        assert_eq!(id.blobstore_key(), format!("historymf.file.blake2.{}", id));
+        assert_eq!(id.blobstore_key(), format!("historymf.file.blake2.{id}"));
 
         let id = HistoryManifestDirectoryId::from_byte_array([1; 32]);
-        assert_eq!(id.blobstore_key(), format!("historymf.dir.blake2.{}", id));
+        assert_eq!(id.blobstore_key(), format!("historymf.dir.blake2.{id}"));
 
         let id = ShardedMapV2NodeHistoryManifestId::from_byte_array([1; 32]);
         assert_eq!(
             id.blobstore_key(),
-            format!("historymf.map2node.blake2.{}", id)
+            format!("historymf.map2node.blake2.{id}")
         );
     }
 

@@ -51,7 +51,7 @@ impl FileContents {
             thrift::content::FileContents::UnknownField(x) => {
                 bail!(MononokeTypeError::InvalidThrift(
                     "FileContents".into(),
-                    format!("unknown file contents field: {}", x)
+                    format!("unknown file contents field: {x}")
                 ))
             }
         }

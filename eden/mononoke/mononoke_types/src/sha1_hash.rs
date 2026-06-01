@@ -48,8 +48,7 @@ impl Sha1 {
         let bytes = bytes.as_ref();
         if bytes.len() != SHA1_HASH_LENGTH_BYTES {
             bail!(MononokeTypeError::InvalidSha1Input(format!(
-                "need exactly {} bytes",
-                SHA1_HASH_LENGTH_BYTES
+                "need exactly {SHA1_HASH_LENGTH_BYTES} bytes"
             )));
         } else {
             let mut ret = [0; SHA1_HASH_LENGTH_BYTES];
@@ -137,8 +136,7 @@ impl FromStr for Sha1 {
     fn from_str(s: &str) -> Result<Sha1> {
         if s.len() != SHA1_HASH_LENGTH_HEX {
             bail!(MononokeTypeError::InvalidSha1Input(format!(
-                "need exactly {} hex digits",
-                SHA1_HASH_LENGTH_HEX
+                "need exactly {SHA1_HASH_LENGTH_HEX} hex digits"
             )));
         }
 
@@ -161,7 +159,7 @@ impl Display for Sha1 {
 /// Custom `Debug` output for `Sha1` so it prints in hex.
 impl Debug for Sha1 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "Sha1({})", self)
+        write!(fmt, "Sha1({self})")
     }
 }
 
@@ -197,8 +195,7 @@ impl Sha1Prefix {
         let bytes = bytes.as_ref();
         if bytes.len() > SHA1_HASH_LENGTH_BYTES {
             bail!(MononokeTypeError::InvalidSha1Input(format!(
-                "prefix needs to be less or equal to {} bytes",
-                SHA1_HASH_LENGTH_BYTES
+                "prefix needs to be less or equal to {SHA1_HASH_LENGTH_BYTES} bytes"
             )))
         } else {
             static SHA1_MIN: [u8; SHA1_HASH_LENGTH_BYTES] = [0x00; SHA1_HASH_LENGTH_BYTES];
@@ -256,8 +253,7 @@ impl FromStr for Sha1Prefix {
     fn from_str(s: &str) -> Result<Sha1Prefix> {
         if s.len() > SHA1_HASH_LENGTH_HEX {
             bail!(MononokeTypeError::InvalidSha1Input(format!(
-                "prefix needs to be less or equal {} hex digits",
-                SHA1_HASH_LENGTH_HEX
+                "prefix needs to be less or equal {SHA1_HASH_LENGTH_HEX} hex digits"
             )));
         }
         let min_tail: String = String::from_utf8(vec![b'0'; SHA1_HASH_LENGTH_HEX - s.len()])?;
@@ -279,7 +275,7 @@ impl Display for Sha1Prefix {
 /// Custom `Debug` output for `Sha1Prefix` so it prints in hex.
 impl Debug for Sha1Prefix {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "Sha1Prefix({})", self)
+        write!(fmt, "Sha1Prefix({self})")
     }
 }
 
@@ -349,11 +345,11 @@ mod test {
     #[mononoke::test]
     fn test_display() {
         assert_eq!(
-            format!("{}", NULL),
+            format!("{NULL}"),
             "0000000000000000000000000000000000000000"
         );
         assert_eq!(
-            format!("{}", NILHASH),
+            format!("{NILHASH}"),
             "da39a3ee5e6b4b0d3255bfef95601890afd80709"
         );
     }
@@ -444,7 +440,7 @@ mod test {
                 return TestResult::discard()
             }
             let h = Sha1::from_bytes(v).unwrap();
-            let s = format!("{}", h);
+            let s = format!("{h}");
             let sh = s.parse().unwrap();
 
             TestResult::from_bool(h == sh)

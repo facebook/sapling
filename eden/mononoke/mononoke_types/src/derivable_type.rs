@@ -120,7 +120,7 @@ impl DerivableType {
             "directory_branch_cluster_manifest" => DerivableType::DirectoryBranchClusterManifest,
             "acl_manifests" => DerivableType::AclManifests,
             "history_manifests" => DerivableType::HistoryManifests,
-            _ => bail!("invalid name for DerivedDataType: {}", s),
+            _ => bail!("invalid name for DerivedDataType: {s}"),
         })
     }
     pub const fn name(&self) -> &'static str {
@@ -181,7 +181,7 @@ impl DerivableType {
             }
             thrift::DerivedDataType::ACL_MANIFEST => Self::AclManifests,
             thrift::DerivedDataType::HISTORY_MANIFEST => Self::HistoryManifests,
-            _ => bail!("invalid thrift value for DerivedDataType: {:?}", other),
+            _ => bail!("invalid thrift value for DerivedDataType: {other:?}"),
         })
     }
     pub fn into_thrift(&self) -> thrift::DerivedDataType {

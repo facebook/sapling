@@ -65,15 +65,13 @@ impl DateTime {
         // https://docs.rs/chrono/latest/chrono/struct.FixedOffset.html#method.west_opt
         let tz = FixedOffset::west_opt(tz_offset_secs).ok_or_else(|| {
             MononokeTypeError::InvalidDateTime(format!(
-                "timezone offset out of range: {}",
-                tz_offset_secs
+                "timezone offset out of range: {tz_offset_secs}"
             ))
         })?;
         let dt = match tz.timestamp_opt(secs, 0) {
             LocalResult::Single(dt) => dt,
             _ => bail!(MononokeTypeError::InvalidDateTime(format!(
-                "seconds out of range: {}",
-                secs
+                "seconds out of range: {secs}"
             ))),
         };
         Ok(Self::new(dt))

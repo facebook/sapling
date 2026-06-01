@@ -77,7 +77,7 @@ impl Globalrev {
             (Some((_, globalrev)), None) => {
                 let globalrev = str::from_utf8(globalrev)?.parse::<u64>()?;
                 if globalrev < START_COMMIT_GLOBALREV {
-                    bail!("Bonsai cs {:?} without globalrev", bcs)
+                    bail!("Bonsai cs {bcs:?} without globalrev")
                 } else {
                     Ok(Self::new(globalrev))
                 }
@@ -86,7 +86,7 @@ impl Globalrev {
                 let svnrev = Globalrev::parse_svnrev(str::from_utf8(svnrev)?)?;
                 Ok(Self::new(svnrev))
             }
-            (None, None) => bail!("Bonsai cs {:?} without globalrev", bcs),
+            (None, None) => bail!("Bonsai cs {bcs:?} without globalrev"),
         }
     }
 

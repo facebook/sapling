@@ -51,7 +51,7 @@ impl ContentAlias {
             thrift::content::ContentAlias::UnknownField(x) => {
                 bail!(MononokeTypeError::InvalidThrift(
                     "ContentAlias".into(),
-                    format!("unknown content alias field: {}", x)
+                    format!("unknown content alias field: {x}")
                 ))
             }
         }
@@ -503,8 +503,7 @@ mod test {
         let bytes_stream = stream::once(future::ready(Bytes::from(input)));
         assert!(
             is_ascii(bytes_stream).await,
-            "The input '{}' wasn't ASCII",
-            input
+            "The input '{input}' wasn't ASCII"
         )
     }
 
@@ -514,8 +513,7 @@ mod test {
         let bytes_stream = stream::once(future::ready(Bytes::from(input)));
         assert!(
             !is_ascii(bytes_stream).await,
-            "The input '{}' was ASCII",
-            input
+            "The input '{input}' was ASCII"
         )
     }
 
@@ -525,8 +523,7 @@ mod test {
         let bytes_stream = stream::once(future::ready(Bytes::from(input)));
         assert!(
             !is_ascii(bytes_stream).await,
-            "The input '{}' was ASCII",
-            input
+            "The input '{input}' was ASCII"
         )
     }
 
@@ -585,8 +582,7 @@ mod test {
         let bytes_stream = stream::once(future::ready(Bytes::from(input)));
         assert!(
             is_utf8(bytes_stream).await,
-            "The input '{}' wasn't UTF8",
-            input
+            "The input '{input}' wasn't UTF8"
         )
     }
 

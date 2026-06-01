@@ -233,7 +233,7 @@ impl TrackedFileChange {
         catch_block().with_context(|| {
             MononokeTypeError::InvalidThrift(
                 "FileChange".into(),
-                format!("Invalid changed entry for path {}", mpath),
+                format!("Invalid changed entry for path {mpath}"),
             )
         })
     }
@@ -521,7 +521,7 @@ impl ThriftConvert for FileType {
             thrift::bonsai::FileType::GitSubmodule => FileType::GitSubmodule,
             thrift::bonsai::FileType(x) => bail!(MononokeTypeError::InvalidThrift(
                 "FileType".into(),
-                format!("unknown file type '{}'", x)
+                format!("unknown file type '{x}'")
             )),
         };
         Ok(file_type)
@@ -582,7 +582,7 @@ impl fmt::Display for FileType {
             FileType::Regular => "regular",
             FileType::GitSubmodule => "git-submodule",
         };
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 

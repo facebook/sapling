@@ -146,8 +146,7 @@ impl FsnodeEntry {
                 Ok(FsnodeEntry::Directory(fsnode_directory))
             }
             thrift::fsnodes::FsnodeEntry::UnknownField(unknown) => bail!(
-                "Unknown field encountered when parsing thrift::fsnodes::FsnodeEntry: {}",
-                unknown,
+                "Unknown field encountered when parsing thrift::fsnodes::FsnodeEntry: {unknown}",
             ),
         }
     }

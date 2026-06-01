@@ -160,7 +160,7 @@ impl ThriftConvert for TestShardedManifestEntry {
                 Self::Directory(ThriftConvert::from_thrift(dir)?)
             }
             thrift::test_manifest::TestShardedManifestEntry::UnknownField(variant) => {
-                anyhow::bail!("Unknown variant: {}", variant)
+                anyhow::bail!("Unknown variant: {variant}")
             }
         })
     }

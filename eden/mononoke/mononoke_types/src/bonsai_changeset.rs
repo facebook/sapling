@@ -239,14 +239,12 @@ impl BonsaiChangesetMut {
         // characters.
         if let Some(offset) = self.author.find('\n') {
             bail!(MononokeTypeError::InvalidBonsaiChangeset(format!(
-                "commit author contains a newline at offset {}",
-                offset
+                "commit author contains a newline at offset {offset}"
             )));
         }
         if let Some(offset) = self.committer.as_ref().and_then(|c| c.find('\n')) {
             bail!(MononokeTypeError::InvalidBonsaiChangeset(format!(
-                "committer contains a newline at offset {}",
-                offset
+                "committer contains a newline at offset {offset}"
             )));
         }
 
@@ -255,9 +253,8 @@ impl BonsaiChangesetMut {
             if let Some((copy_from_path, copy_from_id)) = fc.copy_from() {
                 if !self.parents.contains(copy_from_id) {
                     bail!(MononokeTypeError::InvalidBonsaiChangeset(format!(
-                        "copy information for path '{}' (from '{}') has parent {} which isn't \
-                             recognized",
-                        path, copy_from_path, copy_from_id
+                        "copy information for path '{path}' (from '{copy_from_path}') has parent {copy_from_id} which isn't \
+                             recognized"
                     )));
                 }
             }
@@ -608,7 +605,7 @@ impl BonsaiAnnotatedTagTarget {
             thrift::bonsai::BonsaiAnnotatedTagTarget::UnknownField(x) => {
                 bail!(MononokeTypeError::InvalidThrift(
                     "BonsaiAnnotatedTagTarget".into(),
-                    format!("unknown bonsai annotated tag target field: {}", x)
+                    format!("unknown bonsai annotated tag target field: {x}")
                 ))
             }
         }

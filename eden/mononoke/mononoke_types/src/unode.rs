@@ -305,8 +305,7 @@ impl UnodeEntry {
                 Ok(UnodeEntry::Directory(manifest_unode_id))
             }
             thrift::unodes::UnodeEntry::UnknownField(unknown) => bail!(
-                "Unknown field encountered when parsing thrift::unodes::UnodeEntry: {}",
-                unknown,
+                "Unknown field encountered when parsing thrift::unodes::UnodeEntry: {unknown}",
             ),
         }
     }

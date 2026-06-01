@@ -49,7 +49,7 @@ impl Svnrev {
                 let svnrev = Svnrev::parse_svnrev(str::from_utf8(svnrev)?)?;
                 Ok(Self::new(svnrev))
             }
-            None => bail!("Bonsai cs {:?} without svnrev", bcs),
+            None => bail!("Bonsai cs {bcs:?} without svnrev"),
         }
     }
 }

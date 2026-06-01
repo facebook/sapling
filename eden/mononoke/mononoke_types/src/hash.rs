@@ -71,8 +71,7 @@ impl Blake2 {
         let bytes = bytes.as_ref();
         if bytes.len() != BLAKE2_HASH_LENGTH_BYTES {
             bail!(MononokeTypeError::InvalidBlake2Input(format!(
-                "need exactly {} bytes",
-                BLAKE2_HASH_LENGTH_BYTES
+                "need exactly {BLAKE2_HASH_LENGTH_BYTES} bytes"
             )));
         } else {
             let mut ret = [0; BLAKE2_HASH_LENGTH_BYTES];
@@ -194,8 +193,7 @@ impl FromStr for Blake2 {
     fn from_str(s: &str) -> Result<Self> {
         if s.len() != BLAKE2_HASH_LENGTH_HEX {
             bail!(MononokeTypeError::InvalidBlake2Input(format!(
-                "need exactly {} hex digits",
-                BLAKE2_HASH_LENGTH_HEX
+                "need exactly {BLAKE2_HASH_LENGTH_HEX} hex digits"
             )));
         }
 
@@ -218,7 +216,7 @@ impl Display for Blake2 {
 /// Custom `Debug` output for `Blake2` so it prints in hex.
 impl Debug for Blake2 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "Blake2({})", self)
+        write!(fmt, "Blake2({self})")
     }
 }
 
@@ -232,8 +230,7 @@ impl Blake2Prefix {
         let bytes = bytes.as_ref();
         if bytes.len() > BLAKE2_HASH_LENGTH_BYTES {
             bail!(MononokeTypeError::InvalidBlake2Input(format!(
-                "prefix needs to be less or equal to {} bytes",
-                BLAKE2_HASH_LENGTH_BYTES
+                "prefix needs to be less or equal to {BLAKE2_HASH_LENGTH_BYTES} bytes"
             )))
         } else {
             let min_tail: Vec<u8> = vec![0x00; BLAKE2_HASH_LENGTH_BYTES - bytes.len()];
@@ -299,8 +296,7 @@ impl FromStr for Blake2Prefix {
     fn from_str(s: &str) -> Result<Blake2Prefix> {
         if s.len() > BLAKE2_HASH_LENGTH_HEX {
             bail!(MononokeTypeError::InvalidBlake2Input(format!(
-                "prefix needs to be less or equal {} hex digits",
-                BLAKE2_HASH_LENGTH_HEX
+                "prefix needs to be less or equal {BLAKE2_HASH_LENGTH_HEX} hex digits"
             )));
         }
         let min_tail: String = String::from_utf8(vec![b'0'; BLAKE2_HASH_LENGTH_HEX - s.len()])?;
@@ -321,7 +317,7 @@ impl Display for Blake2Prefix {
 /// Custom `Debug` output for `Blake2Prefix` so it prints in hex.
 impl Debug for Blake2Prefix {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "Blake2Prefix({})", self)
+        write!(fmt, "Blake2Prefix({self})")
     }
 }
 
@@ -487,7 +483,7 @@ impl GitSha1 {
     pub fn from_object_id(oid: &gix_hash::oid) -> Result<Self> {
         use anyhow::Context;
         Self::from_bytes(oid.as_bytes())
-            .with_context(|| format!("Error in converting Git ObjectId {:?} to GitSha1", oid))
+            .with_context(|| format!("Error in converting Git ObjectId {oid:?} to GitSha1"))
     }
 
     pub fn from_thrift(b: thrift::id::GitSha1) -> Result<Self> {
@@ -802,11 +798,11 @@ mod test {
     #[mononoke::test]
     fn test_display() {
         assert_eq!(
-            format!("{}", NULL),
+            format!("{NULL}"),
             "0000000000000000000000000000000000000000000000000000000000000000"
         );
         assert_eq!(
-            format!("{}", NILHASH),
+            format!("{NILHASH}"),
             "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8"
         );
     }

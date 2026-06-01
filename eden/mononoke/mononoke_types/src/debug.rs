@@ -17,7 +17,7 @@ pub(crate) fn format_byte_string(value: &impl AsRef<[u8]>, f: &mut fmt::Formatte
     for byte in bytes {
         match byte {
             b'\\' | b'"' => write!(f, "\\{}", *byte as char)?,
-            0..=31 | 127..=255 => write!(f, "\\x{:02x}", byte)?,
+            0..=31 | 127..=255 => write!(f, "\\x{byte:02x}")?,
             32..=126 => write!(f, "{}", *byte as char)?,
         }
     }
@@ -34,7 +34,7 @@ pub(crate) fn format_byte(byte: &u8, f: &mut fmt::Formatter) -> fmt::Result {
     write!(f, "b'")?;
     match byte {
         b'\\' | b'\'' => write!(f, "\\{}", *byte as char)?,
-        0..=31 | 127..=255 => write!(f, "\\x{:02x}", byte)?,
+        0..=31 | 127..=255 => write!(f, "\\x{byte:02x}")?,
         32..=126 => write!(f, "{}", *byte as char)?,
     }
     write!(f, "'")?;

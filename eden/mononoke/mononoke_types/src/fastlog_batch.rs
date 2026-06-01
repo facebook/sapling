@@ -146,7 +146,7 @@ impl FastlogBatch {
     pub fn from_bytes(serialized: &Bytes) -> Result<FastlogBatch> {
         let thrift_entry: Result<thrift::fastlog::FastlogBatch> =
             compact_protocol::deserialize(serialized)
-                .map_err(|err| MononokeTypeError::BlobDeserializeError(format!("{}", err)).into());
+                .map_err(|err| MononokeTypeError::BlobDeserializeError(format!("{err}")).into());
         thrift_entry.and_then(Self::from_thrift)
     }
 

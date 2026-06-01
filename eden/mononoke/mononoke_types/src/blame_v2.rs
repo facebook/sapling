@@ -139,7 +139,7 @@ impl BlameRejected {
             thrift::blame::BlameRejected::TooBig => Ok(BlameRejected::TooBig),
             thrift::blame::BlameRejected::Binary => Ok(BlameRejected::Binary),
             thrift::blame::BlameRejected(id) => {
-                Err(anyhow!("BlameRejected contains unknown variant: {}", id))
+                Err(anyhow!("BlameRejected contains unknown variant: {id}"))
             }
         }
     }
@@ -203,7 +203,7 @@ impl BlameV2 {
                 Ok(BlameV2::Blame(BlameData::from_thrift(blame_data)?))
             }
             thrift::blame::BlameV2::UnknownField(id) => {
-                Err(anyhow!("BlameV2 contains unknown variant with id: {}", id))
+                Err(anyhow!("BlameV2 contains unknown variant with id: {id}"))
             }
         }
     }
@@ -298,8 +298,7 @@ impl BlameV2 {
                 // Blame rejection happens based on the file at this point
                 // As rejection cannot be due to the *parents*, this is an impossible case.
                 bail!(
-                    "Ancestor blame is inconsistently rejected ({:?} for the reject, but other form is not rejected) - this should not be possible.",
-                    reason
+                    "Ancestor blame is inconsistently rejected ({reason:?} for the reject, but other form is not rejected) - this should not be possible."
                 );
             }
             (
@@ -484,8 +483,7 @@ impl BlameData {
         let mut csids = blame_parent.blame.csids.clone();
         if csids.values().any(|existing_csid| &csid == existing_csid) {
             return Err(anyhow!(
-                "{} already exists in the history of this blame.",
-                csid,
+                "{csid} already exists in the history of this blame.",
             ));
         }
         let csid_index = blame_parent.blame.max_csid_index + 1;
@@ -817,17 +815,13 @@ impl BlameData {
             let csid_index = range.csid_index.0 as u32;
             if !csids.contains_key(csid_index as usize) {
                 return Err(anyhow!(
-                    "invalid blame changeset index for range at {}: {}",
-                    offset,
-                    csid_index
+                    "invalid blame changeset index for range at {offset}: {csid_index}"
                 ));
             }
             let path_index = range.path_index.0 as u32;
             if path_index as usize >= paths.len() {
                 return Err(anyhow!(
-                    "invalid blame path index for range at {}: {}",
-                    offset,
-                    path_index
+                    "invalid blame path index for range at {offset}: {path_index}"
                 ));
             }
             let origin_offset = range.origin_offset as u32;

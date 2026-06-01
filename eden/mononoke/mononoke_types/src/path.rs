@@ -148,10 +148,9 @@ impl RepoPath {
                 Self::dir(NonRootMPath::from_thrift(path)?)?
             }
             thrift::path::RepoPath::FilePath(path) => Self::file(NonRootMPath::from_thrift(path)?)?,
-            thrift::path::RepoPath::UnknownField(unknown) => bail!(
-                "Unknown field encountered when parsing thrift::path::RepoPath: {}",
-                unknown,
-            ),
+            thrift::path::RepoPath::UnknownField(unknown) => {
+                bail!("Unknown field encountered when parsing thrift::path::RepoPath: {unknown}",)
+            }
         };
         Ok(path)
     }
@@ -175,8 +174,8 @@ impl Display for RepoPath {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             RepoPath::RootPath => write!(f, "(root path)"),
-            RepoPath::DirectoryPath(ref path) => write!(f, "directory '{}'", path),
-            RepoPath::FilePath(ref path) => write!(f, "file '{}'", path),
+            RepoPath::DirectoryPath(ref path) => write!(f, "directory '{path}'"),
+            RepoPath::FilePath(ref path) => write!(f, "file '{path}'"),
         }
     }
 }
@@ -447,7 +446,7 @@ impl MPath {
             .split(|elem| elem == &b'\0')
             .map(MPathElement::new_from_slice)
             .collect::<Result<Vec<_>>>()
-            .with_context(|| format!("Error in creating Vec<MPathElement> from {:?}", path))?;
+            .with_context(|| format!("Error in creating Vec<MPathElement> from {path:?}"))?;
         Ok(MPath::from_elements(segments.iter()))
     }
 
@@ -459,11 +458,7 @@ impl MPath {
 
     pub fn reparent(&self, old_prefix: &MPath, new_prefix: &MPath) -> Result<Self> {
         if !old_prefix.is_prefix_of(self) {
-            bail!(
-                "Cannot reparent path {:?} with old prefix {:?}",
-                self,
-                old_prefix
-            );
+            bail!("Cannot reparent path {self:?} with old prefix {old_prefix:?}");
         }
         let mut new_path = new_prefix.clone();
         new_path
@@ -900,7 +895,7 @@ impl NonRootMPath {
     }
 
     pub fn matches_regex(&self, re: &Regex) -> bool {
-        let s: String = format!("{}", self);
+        let s: String = format!("{self}");
         re.is_match(&s)
     }
 
@@ -1066,7 +1061,7 @@ impl MPathHash {
             thrift::id::Id::Blake2(blake2) => Ok(MPathHash(Blake2::from_thrift(blake2)?)),
             thrift::id::Id::UnknownField(x) => bail!(MononokeTypeError::InvalidThrift(
                 "MPathHash".into(),
-                format!("unknown id type field: {}", x)
+                format!("unknown id type field: {x}")
             )),
         }
     }
@@ -1234,13 +1229,13 @@ impl Display for MPath {
 // Implement our own Debug so that strings are displayed properly
 impl fmt::Debug for NonRootMPath {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "NonRootMPath(\"{}\")", self)
+        write!(fmt, "NonRootMPath(\"{self}\")")
     }
 }
 
 impl fmt::Debug for MPath {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "MPath(\"{}\")", self)
+        write!(fmt, "MPath(\"{self}\")")
     }
 }
 
@@ -1651,10 +1646,8 @@ mod test {
     #[mononoke::test]
     fn empty_non_root_paths() {
         fn assert_empty(path: &str) {
-            NonRootMPath::new(path).expect_err(&format!(
-                "unexpected OK - path '{}' is logically empty",
-                path,
-            ));
+            NonRootMPath::new(path)
+                .expect_err(&format!("unexpected OK - path '{path}' is logically empty",));
         }
         assert_empty("");
         assert_empty("/");
@@ -1666,8 +1659,7 @@ mod test {
     #[mononoke::test]
     fn empty_paths() {
         fn assert_empty(path: &str) {
-            MPath::new(path).unwrap_or_else(|_| panic!("unexpected err - path '{}' is logically empty which should be allowed for MPath",
-                path));
+            MPath::new(path).unwrap_or_else(|_| panic!("unexpected err - path '{path}' is logically empty which should be allowed for MPath"));
         }
         assert_empty("");
         assert_empty("/");

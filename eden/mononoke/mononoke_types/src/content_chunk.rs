@@ -41,7 +41,7 @@ impl ContentChunk {
             thrift::content::ContentChunk::UnknownField(x) => {
                 bail!(MononokeTypeError::InvalidThrift(
                     "ContentChunk".into(),
-                    format!("unknown ContentChunk variant: {}", x)
+                    format!("unknown ContentChunk variant: {x}")
                 ))
             }
         }

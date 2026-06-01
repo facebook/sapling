@@ -1185,7 +1185,7 @@ mod test {
     #[mononoke::test]
     fn sharded_map_v2_blobstore_key() {
         let id = ShardedMapV2NodeTestId::from_byte_array([1; 32]);
-        assert_eq!(id.blobstore_key(), format!("test.map2node.blake2.{}", id));
+        assert_eq!(id.blobstore_key(), format!("test.map2node.blake2.{id}"));
     }
 
     impl ShardedMapV2Value for TestValue {
@@ -1534,8 +1534,7 @@ mod test {
                 assert_eq!(
                     self.into_entries_skip(map.clone(), skip).await?,
                     to_test_vec(&EXAMPLE_ENTRIES[skip..12]),
-                    "skip value {} failed",
-                    skip,
+                    "skip value {skip} failed",
                 );
             }
 

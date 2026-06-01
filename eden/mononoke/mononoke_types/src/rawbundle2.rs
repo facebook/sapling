@@ -42,7 +42,7 @@ impl RawBundle2 {
             thrift::raw_bundle2::RawBundle2::UnknownField(x) => {
                 bail!(MononokeTypeError::InvalidThrift(
                     "RawBundle2".into(),
-                    format!("unknown rawbundle2 field: {}", x)
+                    format!("unknown rawbundle2 field: {x}")
                 ))
             }
         }
