@@ -633,7 +633,7 @@ mod tests {
             // compare PreparedFilenode::Info::Linknode
             if let Some(cs_id) = *self.cs_id.lock().unwrap() {
                 if info.iter().any(|filenode| filenode.info.linknode == cs_id) {
-                    return Err(anyhow!("filenodes for {} are prohibited", cs_id));
+                    return Err(anyhow!("filenodes for {cs_id} are prohibited"));
                 }
             }
             self.inner.add_filenodes(ctx, info).await
@@ -683,7 +683,7 @@ mod tests {
             .await?
             .load(ctx, &repo.repo_blobstore)
             .await
-            .with_context(|| format!("while fetching manifest from prod for cs {:?}", cs))?
+            .with_context(|| format!("while fetching manifest from prod for cs {cs:?}"))?
             .manifestid();
         manifest
             .list_all_entries(ctx.clone(), repo.repo_blobstore.clone())
@@ -703,18 +703,18 @@ mod tests {
                     let prod = repo.filenodes
                         .get_filenode(ctx, &path, node)
                         .await
-                        .with_context(|| format!("while get prod filenode for cs {:?}", cs))?;
+                        .with_context(|| format!("while get prod filenode for cs {cs:?}"))?;
                     let backup = backup_repo.filenodes
                         .get_filenode(ctx, &path, node)
                         .await
-                        .with_context(|| format!("while get backup filenode for cs {:?}", cs))?;
+                        .with_context(|| format!("while get backup filenode for cs {cs:?}"))?;
                     match (prod, backup) {
                         (FilenodeResult::Present(prod), FilenodeResult::Present(backup)) => {
-                            assert!(prod == backup, "Different filenode for cs {} with path {:?}\nfilenode in prod repo {:?}\nfilenode in backup repo {:?}", cs, path, prod, backup);
+                            assert!(prod == backup, "Different filenode for cs {cs} with path {path:?}\nfilenode in prod repo {prod:?}\nfilenode in backup repo {backup:?}");
                             Ok(())
                         }
                         (FilenodeResult::Disabled, FilenodeResult::Disabled) => Ok(()),
-                        (_, _) => Err(anyhow!("filenodes results different for cs: {:?}", cs)),
+                        (_, _) => Err(anyhow!("filenodes results different for cs: {cs:?}")),
                     }
                 }
             })

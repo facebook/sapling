@@ -81,7 +81,7 @@ impl TryFrom<PreparedFilenode> for PreparedRootFilenode {
         } = info;
 
         if path != RepoPath::RootPath {
-            return Err(format_err!("unexpected path for root filenode: {:?}", path));
+            return Err(format_err!("unexpected path for root filenode: {path:?}"));
         }
         Ok(Self {
             filenode,
