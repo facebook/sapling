@@ -71,7 +71,7 @@ impl IdentityScheme {
                 repo.bonsai_hg_mapping()
                     .get_bonsai_from_hg(ctx, hg_cs_id)
                     .await?
-                    .ok_or_else(|| anyhow!("hg-bonsai mapping not found for {}", hg_cs_id))?
+                    .ok_or_else(|| anyhow!("hg-bonsai mapping not found for {hg_cs_id}"))?
             }
             IdentityScheme::Git => {
                 let git_id = commit_id
@@ -80,7 +80,7 @@ impl IdentityScheme {
                 repo.bonsai_git_mapping()
                     .get_bonsai_from_git_sha1(ctx, git_id)
                     .await?
-                    .ok_or_else(|| anyhow!("git-bonsai mapping not found for {}", git_id))?
+                    .ok_or_else(|| anyhow!("git-bonsai mapping not found for {git_id}"))?
             }
             IdentityScheme::Globalrev => {
                 let globalrev = commit_id
@@ -89,16 +89,14 @@ impl IdentityScheme {
                 repo.bonsai_globalrev_mapping()
                     .get_bonsai_from_globalrev(ctx, globalrev)
                     .await?
-                    .ok_or_else(|| {
-                        anyhow!("globalrev-bonsai mapping not found for {}", globalrev)
-                    })?
+                    .ok_or_else(|| anyhow!("globalrev-bonsai mapping not found for {globalrev}"))?
             }
             IdentityScheme::Svnrev => {
                 let svnrev = commit_id.parse::<Svnrev>().context("Invalid svnrev")?;
                 repo.bonsai_svnrev_mapping()
                     .get_bonsai_from_svnrev(ctx, svnrev)
                     .await?
-                    .ok_or_else(|| anyhow!("svnrev-bonsai mapping not found for {}", svnrev))?
+                    .ok_or_else(|| anyhow!("svnrev-bonsai mapping not found for {svnrev}"))?
             }
         };
         Ok(cs_id)
@@ -165,7 +163,7 @@ pub async fn parse_commit_id(
 ) -> Result<ChangesetId> {
     if let Some((scheme, id)) = commit_id.split_once('=') {
         let scheme = IdentityScheme::from_str(scheme, /* ignore_case */ true)
-            .map_err(|e| anyhow!("Failed to parse commit identity scheme '{}': {}", scheme, e))?;
+            .map_err(|e| anyhow!("Failed to parse commit identity scheme '{scheme}': {e}"))?;
         scheme.parse_commit_id(ctx, repo, id).await
     } else if let Some(globalrev) = commit_id.strip_prefix('m') {
         IdentityScheme::Globalrev
@@ -191,7 +189,7 @@ pub async fn parse_commit_id(
             (Err(e), Err(_)) => Err(e),
         }
     } else {
-        Err(anyhow!("Invalid commit id: {}", commit_id))
+        Err(anyhow!("Invalid commit id: {commit_id}"))
     }
 }
 
@@ -212,19 +210,19 @@ pub async fn print_commit_id(
 ) -> Result<()> {
     match schemes {
         [] => {
-            println!("{}", cs_id);
+            println!("{cs_id}");
         }
         [scheme] => {
             let commit_id = scheme
                 .map_commit_id(ctx, repo, cs_id)
                 .await?
-                .ok_or_else(|| anyhow!("bonsai-{} mapping not found for {}", scheme, cs_id))?;
-            println!("{}", commit_id);
+                .ok_or_else(|| anyhow!("bonsai-{scheme} mapping not found for {cs_id}"))?;
+            println!("{commit_id}");
         }
         schemes => {
             for scheme in schemes {
                 if let Some(commit_id) = scheme.map_commit_id(ctx, repo, cs_id).await? {
-                    println!("{}: {}", scheme, commit_id);
+                    println!("{scheme}: {commit_id}");
                 }
             }
         }
@@ -276,7 +274,7 @@ pub async fn resolve_commit_ids(
                     )
                     .await
                     .and_then(|cs_id| {
-                        cs_id.ok_or_else(|| anyhow!("bookmark {} not found", bookmark))
+                        cs_id.ok_or_else(|| anyhow!("bookmark {bookmark} not found"))
                     }),
                 CommitId::Resolve(cs_id_hash) => parse_commit_id(ctx, repo, cs_id_hash).await,
                 _ => Err(anyhow!("Unsupported commit id type"))?,
