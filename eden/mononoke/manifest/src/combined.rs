@@ -53,9 +53,7 @@ fn combine_entries<
             Ok((m_elem, Entry::Leaf(CombinedId(m_leaf, n_leaf))))
         }
         _ => bail!(
-            "Found non-matching entries while iterating over a pair of manifests: {} vs {}",
-            m_elem,
-            n_elem,
+            "Found non-matching entries while iterating over a pair of manifests: {m_elem} vs {n_elem}",
         ),
     }
 }
@@ -168,7 +166,7 @@ impl<M: Manifest<Store> + Send + Sync, N: Manifest<Store> + Send + Sync, Store: 
                 Ok(Some(Entry::Leaf(CombinedId(m_leaf, n_leaf))))
             }
             (None, None) => Ok(None),
-            _ => bail!("Found non-matching entry types during lookup for {}", name),
+            _ => bail!("Found non-matching entry types during lookup for {name}"),
         }
     }
 

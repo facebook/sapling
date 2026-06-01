@@ -507,9 +507,7 @@ where
                             // Current entry is a leaf but we still have changes that needs
                             // to be applied to its subentries, we cannot resolve this merge.
                             let error = format_err!(
-                                "Can not apply changes to a leaf:\npath: {:?}\nparents: {:?}",
-                                path,
-                                parents
+                                "Can not apply changes to a leaf:\npath: {path:?}\nparents: {parents:?}"
                             );
                             return Err(error);
                         }
@@ -571,9 +569,7 @@ where
                     //     applied to it current nodes subentries.
                     // both of this situation result in unresolvable conflict.
                     let error = format_err!(
-                        "Unresolved conflict at:\npath: {:?}\nparents: {:?}",
-                        path,
-                        parents
+                        "Unresolved conflict at:\npath: {path:?}\nparents: {parents:?}"
                     );
                     return Err(error);
                 }

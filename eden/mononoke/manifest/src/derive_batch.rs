@@ -236,8 +236,7 @@ where
 
                                 if only_single_deletion.is_none() {
                                     return Err(anyhow!(
-                                        "unsupported stack derive - {:?} is a prefix of other paths",
-                                        path
+                                        "unsupported stack derive - {path:?} is a prefix of other paths"
                                     ));
                                 }
 
@@ -308,8 +307,7 @@ where
                             FoldState::CreateLeaves(path, name, parent, changes) => {
                                 if !subentries.is_empty() {
                                     anyhow::bail!(
-                                        "Can't create entries for {:?} - have unexpected subentries",
-                                        path,
+                                        "Can't create entries for {path:?} - have unexpected subentries",
                                     );
                                 }
 
@@ -378,7 +376,7 @@ where
                 None => parent.clone(),
             };
             let new_mf_id =
-                new_mf_id.ok_or_else(|| anyhow!("unexpected empty manifest for {}", cs_id))?;
+                new_mf_id.ok_or_else(|| anyhow!("unexpected empty manifest for {cs_id}"))?;
             res.insert(*cs_id, new_mf_id);
         }
 
@@ -517,9 +515,7 @@ where
                     // let's exit.
                     if delta_sub_entries.contains_key(cs_id) {
                         return Err(anyhow!(
-                            "Unexpected file deletion of {:?} in {}",
-                            path,
-                            deletion_cs_id
+                            "Unexpected file deletion of {path:?} in {deletion_cs_id}"
                         ));
                     }
                 }
@@ -527,13 +523,11 @@ where
             (Some(Entry::Tree(_)), Some(deletion_cs_id)) => {
                 // Something is odd here - parent is a tree but we try to delete it as a file
                 return Err(anyhow!(
-                    "Unexpected file deletion of {:?} in {}",
-                    path,
-                    deletion_cs_id
+                    "Unexpected file deletion of {path:?} in {deletion_cs_id}"
                 ));
             }
             (Some(Entry::Leaf(_)), None) => {
-                return Err(anyhow!("Unexpected file parent for a directory {:?}", path,));
+                return Err(anyhow!("Unexpected file parent for a directory {path:?}",));
             }
             (Some(Entry::Tree(_)), None) | (None, None) => {
                 // Simple cases, nothing to do here

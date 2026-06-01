@@ -436,9 +436,9 @@ mod tests {
         let mf = mf
             .find_entry(ctx.clone(), blobstore.clone(), MPath::new(path)?)
             .await?
-            .ok_or_else(|| anyhow!("path {} not found", path))?
+            .ok_or_else(|| anyhow!("path {path} not found"))?
             .into_tree()
-            .ok_or_else(|| anyhow!("path {} is not a tree", path))?;
+            .ok_or_else(|| anyhow!("path {path} is not a tree"))?;
         let mut trie_map = mf
             .load(ctx, blobstore)
             .await?
@@ -449,7 +449,7 @@ mod tests {
             let mut subentries = subentries.into_iter().collect::<BTreeMap<_, _>>();
             trie_map = subentries
                 .remove(byte)
-                .ok_or_else(|| anyhow!("prefix {} not found at {}", prefix, path))?;
+                .ok_or_else(|| anyhow!("prefix {prefix} not found at {path}"))?;
         }
         Ok(trie_map)
     }
@@ -462,7 +462,7 @@ mod tests {
     ) -> Result<Entry<TestManifestId, (FileType, TestLeafId)>> {
         mf.find_entry(ctx.clone(), blobstore.clone(), MPath::new(path)?)
             .await?
-            .ok_or_else(|| anyhow!("path {} not found", path))
+            .ok_or_else(|| anyhow!("path {path} not found"))
     }
 
     #[mononoke::fbinit_test]
