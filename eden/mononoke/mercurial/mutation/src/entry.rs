@@ -148,9 +148,7 @@ impl HgMutationEntry {
             // predecessor list.  This probably means the predecessor table is
             // missing a row.
             return Err(anyhow!(
-                "Unexpected out-of-order predecessor {}, expected index {}",
-                pred,
-                expected_index
+                "Unexpected out-of-order predecessor {pred}, expected index {expected_index}"
             ));
         }
         if index == expected_index {
@@ -173,9 +171,7 @@ impl HgMutationEntry {
             // split successor list.  This probably means the split table is
             // missing a row.
             return Err(anyhow!(
-                "Unexpected out-of-order split successor {}, expected index {}",
-                split,
-                expected_index
+                "Unexpected out-of-order split successor {split}, expected index {expected_index}"
             ));
         }
         if index == expected_index {

@@ -310,7 +310,7 @@ impl SqlHgMutationStore {
             entry
                 .add_predecessor(p_seq, p_predecessor)
                 .with_context(|| {
-                    format!("Failed to collect predecessor {} for {}", p_seq, successor)
+                    format!("Failed to collect predecessor {p_seq} for {successor}")
                 })?;
         }
         if !to_fetch_split.is_empty() {
@@ -325,10 +325,7 @@ impl SqlHgMutationStore {
             for (successor, seq, split_successor) in rows {
                 if let Some(entry) = entries.get_mut(&successor) {
                     entry.add_split(seq, split_successor).with_context(|| {
-                        format!(
-                            "Failed to collect split successor {} for {}",
-                            seq, successor
-                        )
+                        format!("Failed to collect split successor {seq} for {successor}")
                     })?;
                 }
             }
@@ -361,7 +358,7 @@ impl SqlHgMutationStore {
                 &changesets,
             )
             .await
-            .with_context(|| format!("Error fetching mutation chains for: {:?}", changesets))
+            .with_context(|| format!("Error fetching mutation chains for: {changesets:?}"))
         }))
         .buffered(10)
         .try_collect::<Vec<_>>()
