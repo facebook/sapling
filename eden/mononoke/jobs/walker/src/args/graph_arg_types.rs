@@ -82,7 +82,7 @@ impl FromStr for NodeTypeArg {
             HG => {
                 let mut node_types = vec![];
                 for hg_derived in HG_DERIVED_TYPES {
-                    let hg_derived = format!("{}{}", DERIVED_PREFIX, hg_derived);
+                    let hg_derived = format!("{DERIVED_PREFIX}{hg_derived}");
                     let nodes_derived = DERIVED_DATA_NODE_TYPES.get(&hg_derived);
                     if let Some(nd) = nodes_derived {
                         nd.iter().for_each(|node| node_types.push(node.clone()));
@@ -96,7 +96,7 @@ impl FromStr for NodeTypeArg {
                 } else {
                     NodeType::from_str(arg)
                         .map(|e| GraphTypeArg(vec![e]))
-                        .with_context(|| format_err!("Unknown NodeType {}", arg))?
+                        .with_context(|| format_err!("Unknown NodeType {arg}"))?
                 }
             }
         })
@@ -289,7 +289,7 @@ impl FromStr for EdgeTypeArg {
             HG => EdgeTypeArg::new(HG_EDGE_TYPES.iter()),
             _ => EdgeType::from_str(arg)
                 .map(|e| GraphTypeArg(vec![e]))
-                .with_context(|| format_err!("Unknown EdgeType {}", arg))?,
+                .with_context(|| format_err!("Unknown EdgeType {arg}"))?,
         })
     }
 }
