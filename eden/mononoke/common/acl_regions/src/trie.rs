@@ -179,7 +179,7 @@ mod test {
         ];
 
         for (index, data) in test_data.iter().enumerate() {
-            eprintln!("Verifying test data #{}", index);
+            eprintln!("Verifying test data #{index}");
             data.verify(&trie);
         }
     }
