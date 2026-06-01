@@ -321,10 +321,7 @@ async fn list_directory(
             return Ok(None);
         }
         Some(Entry::Leaf(_)) => {
-            return Err(anyhow!(
-                "{} is a file, but expected to be a directory",
-                path
-            ));
+            return Err(anyhow!("{path} is a file, but expected to be a directory"));
         }
     };
 
