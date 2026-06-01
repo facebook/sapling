@@ -491,7 +491,7 @@ where
                     .clone()
                     .add("log_tag", "multi_repo_commit_retryable_error")
                     .add("attempt", attempt as i64)
-                    .add("error", format!("{:#}", err))
+                    .add("error", format!("{err:#}"))
                     .unsampled()
                     .log();
                 continue;
@@ -500,8 +500,7 @@ where
                 STATS::attempt_count.add_value(attempt as i64);
                 STATS::retryable_error_exhausted.add_value(1);
                 return Err(err.context(format!(
-                    "Multi-repo bookmark transaction exhausted {} retry attempts",
-                    max_attempts
+                    "Multi-repo bookmark transaction exhausted {max_attempts} retry attempts"
                 )));
             }
             Err(BookmarkTransactionError::Other(err)) => {
@@ -528,9 +527,7 @@ async fn find_next_log_ids(
             [(Some(max_existing),)] => *max_existing + 1,
             _ => {
                 return Err(anyhow!(
-                    "FindMaxBookmarkLogId returned multiple entries for repo {}: {:?}",
-                    repo_id,
-                    max_id_entries
+                    "FindMaxBookmarkLogId returned multiple entries for repo {repo_id}: {max_id_entries:?}"
                 ));
             }
         };
@@ -636,9 +633,7 @@ async fn allocate_multi_log_ids(
         .0;
     anyhow::ensure!(
         last_id >= count as u64,
-        "Auto-increment IDs inconsistent: last_id={} but expected at least {} IDs",
-        last_id,
-        count
+        "Auto-increment IDs inconsistent: last_id={last_id} but expected at least {count} IDs"
     );
     let first_id = last_id - (count as u64) + 1;
     let ids: Vec<u64> = (first_id..=last_id).collect();
@@ -1203,11 +1198,10 @@ mod tests {
             3,
             "should attempt exactly max_attempts times"
         );
-        let err_msg = format!("{:#}", err);
+        let err_msg = format!("{err:#}");
         assert!(
             err_msg.contains("exhausted 3 retry attempts"),
-            "error should describe exhaustion: {}",
-            err_msg
+            "error should describe exhaustion: {err_msg}"
         );
         Ok(())
     }
