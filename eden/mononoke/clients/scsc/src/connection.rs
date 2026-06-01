@@ -129,7 +129,7 @@ impl ConnectionArgs {
                         tw_handle.parse().context("failed to parse task handle")?;
                     let (ip_addr, port) = resolve_task_ip_and_port(fb, &task_handle).await?;
                     let host_port = if let Some(port) = port {
-                        format!("{}:{}", ip_addr, port)
+                        format!("{ip_addr}:{port}")
                     } else {
                         ip_addr.to_string()
                     };

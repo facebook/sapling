@@ -66,8 +66,7 @@ pub(crate) fn convert_to_ts(date_str: Option<&str>) -> Result<Option<i64>> {
             return Ok(Some(ts));
         }
         anyhow::bail!(
-            "The given date or timestamp must be after 1970-01-01 00:00:00 UTC: {:?}",
-            date_str
+            "The given date or timestamp must be after 1970-01-01 00:00:00 UTC: {date_str:?}"
         )
     }
 

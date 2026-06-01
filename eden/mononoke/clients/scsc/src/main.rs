@@ -61,7 +61,7 @@ lazy_static::lazy_static! {
         #[cfg(not(target_os = "windows"))]
         {
             use build_info::BuildInfo;
-            format!("{:#?}", BuildInfo)
+            format!("{BuildInfo:#?}")
         }
     };
 }
@@ -79,7 +79,7 @@ impl ScscApp {
         let conn = self.connection_args.get_connection(self.fb, repo).await?;
         if self.print_correlator {
             match conn.get_client_corrrelator() {
-                Some(correlator) => println!("Client correlator: {}", correlator),
+                Some(correlator) => println!("Client correlator: {correlator}"),
                 None => println!("Client correlator: <none>"),
             }
         }
@@ -155,7 +155,7 @@ async fn main(fb: FacebookInit) -> ExitCode {
                 e
             );
         } else {
-            eprintln!("{}: error: {:#}", prog_name, e);
+            eprintln!("{prog_name}: error: {e:#}");
         }
         return ExitCode::FAILURE;
     }
