@@ -475,8 +475,8 @@ impl AsRef<JournalPosition> for Changes {
 impl fmt::Display for Changes {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Changes::ChangeEvent(event) => write!(f, "{}", event),
-            Changes::ChangesSince(changes) => write!(f, "{}", changes),
+            Changes::ChangeEvent(event) => write!(f, "{event}"),
+            Changes::ChangesSince(changes) => write!(f, "{changes}"),
         }
     }
 }
@@ -555,8 +555,7 @@ impl TryFrom<FileChange> for ChangeNotification {
             // we error out on anything unexpected.
             other => {
                 return Err(EdenFsError::from(anyhow::anyhow!(
-                    "unhandled file change status: {}",
-                    other
+                    "unhandled file change status: {other}"
                 )));
             }
         };
@@ -628,9 +627,7 @@ pub async fn get_changes_between_commits(
 
     if !exit_status.success() {
         return Err(EdenFsError::from(anyhow::anyhow!(
-            "sl status failed with status {exit_status}: stdout: {}, stderr: {}",
-            stdout_buf,
-            stderr_buf
+            "sl status failed with status {exit_status}: stdout: {stdout_buf}, stderr: {stderr_buf}"
         )));
     }
 
