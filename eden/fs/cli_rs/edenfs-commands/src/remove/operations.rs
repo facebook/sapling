@@ -180,11 +180,7 @@ pub async fn remove_active_eden_mount(context: &RemoveContext) -> Result<()> {
             context.io.done();
             remove_inactive_eden_mount(context).await
         }
-        Err(e) => Err(anyhow!(
-            "Failed to unmount mount point at {}: {}",
-            context,
-            e
-        )),
+        Err(e) => Err(anyhow!("Failed to unmount mount point at {context}: {e}")),
     }
 }
 
@@ -214,7 +210,7 @@ pub async fn clean_up(context: &RemoveContext) -> Result<()> {
             context.original_path
         ));
         utils::clean_mount_point(&context.canonical_path)
-            .with_context(|| anyhow!("Failed to clean mount point {}", context))?;
+            .with_context(|| anyhow!("Failed to clean mount point {context}"))?;
         context.io.done();
 
         validate_removal_completion(context).await
@@ -227,7 +223,7 @@ async fn validate_removal_completion(context: &RemoveContext) -> Result<()> {
         .info("Checking eden mount list and file system to verify the removal...".to_string());
     // check eden list
     if utils::path_in_eden_config(context.canonical_path.as_path()).await? {
-        return Err(anyhow!("Repo {} is still mounted", context));
+        return Err(anyhow!("Repo {context} is still mounted"));
     }
 
     fail_point!("remove:validate", |_| {
@@ -241,12 +237,8 @@ async fn validate_removal_completion(context: &RemoveContext) -> Result<()> {
                 context.io.done();
                 Ok(())
             }
-            Ok(true) => Err(anyhow!("Directory left by repo {} is not removed", context)),
-            Err(e) => Err(anyhow!(
-                "Failed to check the status of path {}: {}",
-                context,
-                e
-            )),
+            Ok(true) => Err(anyhow!("Directory left by repo {context} is not removed")),
+            Err(e) => Err(anyhow!("Failed to check the status of path {context}: {e}")),
         }
     } else {
         Ok(())
