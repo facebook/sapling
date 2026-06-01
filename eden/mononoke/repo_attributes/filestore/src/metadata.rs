@@ -64,8 +64,7 @@ pub async fn get_metadata<B: KeyedBlobstore>(
             Some(MononokeTypeError::InvalidThrift(..)) => {
                 let key = ContentMetadataV2Id::from(content_id).blobstore_key();
                 let msg = format!(
-                    "Invalid ContentMetadataV2 format exists in blobstore for key {}. Error: {}",
-                    key, e
+                    "Invalid ContentMetadataV2 format exists in blobstore for key {key}. Error: {e}"
                 );
                 warn!("{}", &msg);
                 let mut scuba = ctx.scuba().clone();

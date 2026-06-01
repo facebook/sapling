@@ -69,7 +69,7 @@ impl Range {
 
     pub fn range_inclusive(start: u64, end: u64) -> Result<Self, Error> {
         if start > end {
-            return Err(anyhow::anyhow!("Invalid range bounds: {}-{}", start, end));
+            return Err(anyhow::anyhow!("Invalid range bounds: {start}-{end}"));
         }
 
         let end = end + 1;

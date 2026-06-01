@@ -52,7 +52,7 @@ impl From<MultiplexerError<Error>> for Error {
 
         match me {
             InputError(e) => e,
-            e @ Cancelled => format_err!("MultiplexerError: {:?}", e),
+            e @ Cancelled => format_err!("MultiplexerError: {e:?}"),
         }
     }
 }

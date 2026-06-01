@@ -143,7 +143,7 @@ impl Debug for Chunks<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Chunks::Inline(_) => write!(f, "Chunks::Inline(..)"),
-            Chunks::Chunked(size, _) => write!(f, "Chunks::Chunked({:?}, ...)", size),
+            Chunks::Chunked(size, _) => write!(f, "Chunks::Chunked({size:?}, ...)"),
         }
     }
 }
@@ -211,7 +211,7 @@ mod test {
 
         match make_chunks(in_stream, ExpectedSize::new(10), None) {
             Chunks::Inline(_) => {}
-            c => panic!("Did not expect {:?}", c),
+            c => panic!("Did not expect {c:?}"),
         };
     }
 
@@ -221,7 +221,7 @@ mod test {
 
         match make_chunks(in_stream, ExpectedSize::new(10), Some(100)) {
             Chunks::Inline(_) => {}
-            c => panic!("Did not expect {:?}", c),
+            c => panic!("Did not expect {c:?}"),
         };
     }
 
@@ -231,7 +231,7 @@ mod test {
 
         match make_chunks(in_stream, ExpectedSize::new(100), Some(100)) {
             Chunks::Inline(_) => {}
-            c => panic!("Did not expect {:?}", c),
+            c => panic!("Did not expect {c:?}"),
         };
     }
 
@@ -241,7 +241,7 @@ mod test {
 
         match make_chunks(in_stream, ExpectedSize::new(1000), Some(100)) {
             Chunks::Chunked(h, _) if h.check_equals(1000).is_ok() => {}
-            c => panic!("Did not expect {:?}", c),
+            c => panic!("Did not expect {c:?}"),
         };
     }
 
@@ -259,7 +259,7 @@ mod test {
         let in_stream = stream::iter(chunks).map(Ok);
 
         let fut = match make_chunks(in_stream, ExpectedSize::new(10), Some(100)) {
-            c @ Chunks::Chunked(..) => panic!("Did not expect {:?}", c),
+            c @ Chunks::Chunked(..) => panic!("Did not expect {c:?}"),
             Chunks::Inline(fut) => fut,
         };
 
@@ -281,7 +281,7 @@ mod test {
 
         let fut = match make_chunks(in_stream, ExpectedSize::new(10), Some(1)) {
             Chunks::Chunked(_, stream) => stream.try_collect::<Vec<_>>(),
-            c @ Chunks::Inline(..) => panic!("Did not expect {:?}", c),
+            c @ Chunks::Inline(..) => panic!("Did not expect {c:?}"),
         };
 
         fut.await
@@ -459,7 +459,7 @@ mod test {
 
         let fut = match make_chunks(in_stream, ExpectedSize::new(len), Some(len)) {
             Chunks::Inline(fut) => fut,
-            c => panic!("Did not expect {:?}", c),
+            c => panic!("Did not expect {c:?}"),
         };
 
         let out_bytes = fut.await.unwrap();
