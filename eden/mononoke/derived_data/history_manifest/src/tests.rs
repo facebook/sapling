@@ -304,9 +304,7 @@ async fn test_single_parent_modify(fb: FacebookInit) -> Result<()> {
         let entry = find_entry(&entries, path).unwrap();
         assert!(
             matches!(entry, EntryInfo::File { linknode, num_parents } if *linknode == cs_b && *num_parents == 1),
-            "unexpected entry for {}: {:?}",
-            path,
-            entry,
+            "unexpected entry for {path}: {entry:?}",
         );
     }
 
@@ -315,9 +313,7 @@ async fn test_single_parent_modify(fb: FacebookInit) -> Result<()> {
         let entry = find_entry(&entries, path).unwrap();
         assert!(
             matches!(entry, EntryInfo::File { linknode, .. } if *linknode == cs_a),
-            "unchanged file {} should have linknode cs_a: {:?}",
-            path,
-            entry,
+            "unchanged file {path} should have linknode cs_a: {entry:?}",
         );
     }
 
@@ -365,9 +361,7 @@ async fn test_file_deletion(fb: FacebookInit) -> Result<()> {
         let entry = find_entry(&entries, path).unwrap();
         assert!(
             matches!(entry, EntryInfo::DeletedNode { linknode, num_parents } if *linknode == cs_b && *num_parents == 1),
-            "unexpected entry for {}: {:?}",
-            path,
-            entry,
+            "unexpected entry for {path}: {entry:?}",
         );
     }
 
@@ -376,9 +370,7 @@ async fn test_file_deletion(fb: FacebookInit) -> Result<()> {
         let entry = find_entry(&entries, path).unwrap();
         assert!(
             matches!(entry, EntryInfo::File { linknode, .. } if *linknode == cs_a),
-            "unchanged file {} should have linknode cs_a: {:?}",
-            path,
-            entry,
+            "unchanged file {path} should have linknode cs_a: {entry:?}",
         );
     }
 
@@ -424,9 +416,7 @@ async fn test_directory_deletion(fb: FacebookInit) -> Result<()> {
         let entry = find_entry(&entries, path).expect("deleted file should exist");
         assert!(
             matches!(entry, EntryInfo::DeletedNode { linknode, num_parents } if *linknode == cs_b && *num_parents == 1),
-            "unexpected entry for {}: {:?}",
-            path,
-            entry,
+            "unexpected entry for {path}: {entry:?}",
         );
     }
 
@@ -434,24 +424,21 @@ async fn test_directory_deletion(fb: FacebookInit) -> Result<()> {
     let dir_entry = find_entry(&entries, "dir").expect("dir entry should exist");
     assert!(
         matches!(dir_entry, EntryInfo::DeletedNode { linknode, num_parents } if *linknode == cs_b && *num_parents == 1),
-        "dir should be a deleted node with linknode cs_b: {:?}",
-        dir_entry,
+        "dir should be a deleted node with linknode cs_b: {dir_entry:?}",
     );
 
     // "other" directory should be unchanged with linknode cs_a.
     let other_entry = find_entry(&entries, "other").expect("other entry should exist");
     assert!(
         matches!(other_entry, EntryInfo::Directory { linknode, .. } if *linknode == cs_a),
-        "other should have linknode cs_a: {:?}",
-        other_entry,
+        "other should have linknode cs_a: {other_entry:?}",
     );
 
     // The unchanged file should retain linknode cs_a.
     let keep_entry = find_entry(&entries, "other/keep.txt").expect("keep entry should exist");
     assert!(
         matches!(keep_entry, EntryInfo::File { linknode, .. } if *linknode == cs_a),
-        "other/keep.txt should have linknode cs_a: {:?}",
-        keep_entry,
+        "other/keep.txt should have linknode cs_a: {keep_entry:?}",
     );
 
     Ok(())
@@ -503,9 +490,7 @@ async fn test_merge_commit(fb: FacebookInit) -> Result<()> {
         let entry = find_entry(&entries, path).unwrap();
         assert!(
             matches!(entry, EntryInfo::File { linknode, num_parents } if *linknode == cs_d && *num_parents == 2),
-            "unexpected entry for {}: {:?}",
-            path,
-            entry,
+            "unexpected entry for {path}: {entry:?}",
         );
     }
 
@@ -514,8 +499,7 @@ async fn test_merge_commit(fb: FacebookInit) -> Result<()> {
     let stable = find_entry(&entries, "stable.txt").unwrap();
     assert!(
         matches!(stable, EntryInfo::File { linknode, num_parents } if *linknode == cs_a && *num_parents == 0),
-        "stable.txt should have linknode cs_a and 0 parents: {:?}",
-        stable,
+        "stable.txt should have linknode cs_a and 0 parents: {stable:?}",
     );
 
     Ok(())
@@ -548,8 +532,7 @@ async fn test_file_replaces_directory(fb: FacebookInit) -> Result<()> {
     let dir_entry = find_entry(&entries, "dir").unwrap();
     assert!(
         matches!(dir_entry, EntryInfo::File { linknode, .. } if *linknode == cs_b),
-        "dir should be a file with linknode cs_b: {:?}",
-        dir_entry,
+        "dir should be a file with linknode cs_b: {dir_entry:?}",
     );
 
     // Former directory children should be deleted (including subdirectory entries).
@@ -567,8 +550,7 @@ async fn test_file_replaces_directory(fb: FacebookInit) -> Result<()> {
     let other = find_entry(&entries, "other.txt").unwrap();
     assert!(
         matches!(other, EntryInfo::File { linknode, .. } if *linknode == cs_a),
-        "other.txt should have linknode cs_a: {:?}",
-        other,
+        "other.txt should have linknode cs_a: {other:?}",
     );
 
     Ok(())
@@ -609,8 +591,7 @@ async fn test_file_replaces_directory_with_prior_deletions(fb: FacebookInit) -> 
     let dir_entry = find_entry(&entries, "dir").unwrap();
     assert!(
         matches!(dir_entry, EntryInfo::File { linknode, .. } if *linknode == cs_c),
-        "dir should be a file with linknode cs_c: {:?}",
-        dir_entry,
+        "dir should be a file with linknode cs_c: {dir_entry:?}",
     );
 
     // a.txt and c.txt were live in the parent — they should have
@@ -619,9 +600,7 @@ async fn test_file_replaces_directory_with_prior_deletions(fb: FacebookInit) -> 
         let entry = find_entry(&entries, path).unwrap();
         assert!(
             matches!(entry, EntryInfo::DeletedNode { linknode, .. } if *linknode == cs_c),
-            "{} should have linknode cs_c (deleted by replacement): {:?}",
-            path,
-            entry,
+            "{path} should have linknode cs_c (deleted by replacement): {entry:?}",
         );
     }
 
@@ -630,8 +609,7 @@ async fn test_file_replaces_directory_with_prior_deletions(fb: FacebookInit) -> 
     let b_entry = find_entry(&entries, "dir/b.txt").unwrap();
     assert!(
         matches!(b_entry, EntryInfo::DeletedNode { linknode, .. } if *linknode == cs_b),
-        "dir/b.txt should preserve original deletion linknode cs_b, not cs_c: {:?}",
-        b_entry,
+        "dir/b.txt should preserve original deletion linknode cs_b, not cs_c: {b_entry:?}",
     );
 
     Ok(())
@@ -673,8 +651,7 @@ async fn test_merge_disagreeing_files(fb: FacebookInit) -> Result<()> {
     let file = find_entry(&entries, "file.txt").unwrap();
     assert!(
         matches!(file, EntryInfo::File { linknode, num_parents } if *linknode == cs_b && *num_parents == 1),
-        "file.txt should reuse first parent's entry (linknode cs_b, 1 parent): {:?}",
-        file,
+        "file.txt should reuse first parent's entry (linknode cs_b, 1 parent): {file:?}",
     );
 
     Ok(())
@@ -721,16 +698,14 @@ async fn test_merge_deleted_on_one_branch(fb: FacebookInit) -> Result<()> {
     let file = find_entry(&entries, "file.txt").unwrap();
     assert!(
         matches!(file, EntryInfo::File { linknode, num_parents } if *linknode == cs_b && *num_parents == 1),
-        "file.txt should reuse branch B's entry (linknode cs_b, 1 parent): {:?}",
-        file,
+        "file.txt should reuse branch B's entry (linknode cs_b, 1 parent): {file:?}",
     );
 
     // stable.txt unchanged — should retain linknode cs_a.
     let stable = find_entry(&entries, "stable.txt").unwrap();
     assert!(
         matches!(stable, EntryInfo::File { linknode, .. } if *linknode == cs_a),
-        "stable.txt should have linknode cs_a: {:?}",
-        stable,
+        "stable.txt should have linknode cs_a: {stable:?}",
     );
 
     Ok(())
@@ -762,8 +737,7 @@ async fn test_directory_replaces_file(fb: FacebookInit) -> Result<()> {
     let path_entry = find_entry(&entries, "path").unwrap();
     assert!(
         matches!(path_entry, EntryInfo::Directory { linknode, .. } if *linknode == cs_b),
-        "path should be a live directory with linknode cs_b: {:?}",
-        path_entry,
+        "path should be a live directory with linknode cs_b: {path_entry:?}",
     );
 
     // The new children should be live files with linknode cs_b.
@@ -775,9 +749,7 @@ async fn test_directory_replaces_file(fb: FacebookInit) -> Result<()> {
         let entry = find_entry(&entries, path).unwrap();
         assert!(
             matches!(entry, EntryInfo::File { linknode, num_parents } if *linknode == cs_b && *num_parents == 0),
-            "unexpected entry for {}: {:?}",
-            path,
-            entry,
+            "unexpected entry for {path}: {entry:?}",
         );
     }
 
@@ -785,8 +757,7 @@ async fn test_directory_replaces_file(fb: FacebookInit) -> Result<()> {
     let other = find_entry(&entries, "other.txt").unwrap();
     assert!(
         matches!(other, EntryInfo::File { linknode, .. } if *linknode == cs_a),
-        "other.txt should have linknode cs_a: {:?}",
-        other,
+        "other.txt should have linknode cs_a: {other:?}",
     );
 
     Ok(())
@@ -832,16 +803,14 @@ async fn test_file_undeletion(fb: FacebookInit) -> Result<()> {
     let file = find_entry(&entries_c, "file.txt").unwrap();
     assert!(
         matches!(file, EntryInfo::File { linknode, num_parents } if *linknode == cs_c && *num_parents == 1),
-        "file.txt should have linknode cs_c and 1 parent: {:?}",
-        file,
+        "file.txt should have linknode cs_c and 1 parent: {file:?}",
     );
 
     // stable.txt unchanged — should retain linknode cs_a.
     let stable = find_entry(&entries_c, "stable.txt").unwrap();
     assert!(
         matches!(stable, EntryInfo::File { linknode, .. } if *linknode == cs_a),
-        "stable.txt should have linknode cs_a: {:?}",
-        stable,
+        "stable.txt should have linknode cs_a: {stable:?}",
     );
 
     Ok(())
@@ -876,9 +845,7 @@ async fn test_empty_commit(fb: FacebookInit) -> Result<()> {
         let entry = find_entry(&entries, path).unwrap();
         assert!(
             matches!(entry, EntryInfo::File { linknode, .. } if *linknode == cs_a),
-            "{} should have linknode cs_a: {:?}",
-            path,
-            entry,
+            "{path} should have linknode cs_a: {entry:?}",
         );
     }
 
@@ -886,8 +853,7 @@ async fn test_empty_commit(fb: FacebookInit) -> Result<()> {
     let dir_entry = find_entry(&entries, "dir").unwrap();
     assert!(
         matches!(dir_entry, EntryInfo::Directory { linknode, .. } if *linknode == cs_a),
-        "dir should have linknode cs_a: {:?}",
-        dir_entry,
+        "dir should have linknode cs_a: {dir_entry:?}",
     );
 
     Ok(())
@@ -922,8 +888,7 @@ async fn test_root_all_files_deleted(fb: FacebookInit) -> Result<()> {
     let entry = find_entry(&entries, "only.txt").unwrap();
     assert!(
         matches!(entry, EntryInfo::DeletedNode { linknode, num_parents } if *linknode == cs_b && *num_parents == 1),
-        "only.txt should be a DeletedNode with linknode cs_b: {:?}",
-        entry,
+        "only.txt should be a DeletedNode with linknode cs_b: {entry:?}",
     );
 
     Ok(())
@@ -959,16 +924,14 @@ async fn test_directory_deletion_invariant(fb: FacebookInit) -> Result<()> {
     let dir_entry = find_entry(&entries, "dir").unwrap();
     assert!(
         matches!(dir_entry, EntryInfo::Directory { .. }),
-        "dir with mixed live/deleted children should be a Directory: {:?}",
-        dir_entry,
+        "dir with mixed live/deleted children should be a Directory: {dir_entry:?}",
     );
 
     // "allgone" has only deleted children — should be a DeletedNode.
     let allgone_entry = find_entry(&entries, "allgone").unwrap();
     assert!(
         matches!(allgone_entry, EntryInfo::DeletedNode { .. }),
-        "allgone with all deleted children should be a DeletedNode: {:?}",
-        allgone_entry,
+        "allgone with all deleted children should be a DeletedNode: {allgone_entry:?}",
     );
 
     Ok(())
@@ -1050,16 +1013,14 @@ async fn test_merge_deletes_file(fb: FacebookInit) -> Result<()> {
     let file = find_entry(&entries, "file.txt").unwrap();
     assert!(
         matches!(file, EntryInfo::DeletedNode { linknode, num_parents } if *linknode == cs_d && *num_parents == 2),
-        "file.txt should be deleted at merge with 2 parents: {:?}",
-        file,
+        "file.txt should be deleted at merge with 2 parents: {file:?}",
     );
 
     // stable.txt should be unchanged.
     let stable = find_entry(&entries, "stable.txt").unwrap();
     assert!(
         matches!(stable, EntryInfo::File { linknode, .. } if *linknode == cs_a),
-        "stable.txt should have linknode cs_a: {:?}",
-        stable,
+        "stable.txt should have linknode cs_a: {stable:?}",
     );
 
     Ok(())
@@ -1109,8 +1070,7 @@ async fn test_merge_both_parents_deleted(fb: FacebookInit) -> Result<()> {
     let file = find_entry(&entries, "file.txt").unwrap();
     assert!(
         matches!(file, EntryInfo::DeletedNode { num_parents, .. } if *num_parents == 2),
-        "file.txt should have 2 parents from merge of independent deletions: {:?}",
-        file,
+        "file.txt should have 2 parents from merge of independent deletions: {file:?}",
     );
 
     Ok(())
@@ -1167,23 +1127,20 @@ async fn test_merge_disjoint_files(fb: FacebookInit) -> Result<()> {
     let only_b = find_entry(&entries, "only_b.txt").unwrap();
     assert!(
         matches!(only_b, EntryInfo::File { linknode, num_parents } if *linknode == cs_b && *num_parents == 0),
-        "only_b.txt should have linknode cs_b and 0 parents: {:?}",
-        only_b,
+        "only_b.txt should have linknode cs_b and 0 parents: {only_b:?}",
     );
 
     let only_c = find_entry(&entries, "only_c.txt").unwrap();
     assert!(
         matches!(only_c, EntryInfo::File { linknode, num_parents } if *linknode == cs_c && *num_parents == 0),
-        "only_c.txt should have linknode cs_c and 0 parents: {:?}",
-        only_c,
+        "only_c.txt should have linknode cs_c and 0 parents: {only_c:?}",
     );
 
     // shared.txt unchanged across merge — should retain linknode cs_a.
     let shared = find_entry(&entries, "shared.txt").unwrap();
     assert!(
         matches!(shared, EntryInfo::File { linknode, .. } if *linknode == cs_a),
-        "shared.txt should have linknode cs_a: {:?}",
-        shared,
+        "shared.txt should have linknode cs_a: {shared:?}",
     );
 
     Ok(())
@@ -1230,8 +1187,7 @@ async fn test_merge_file_vs_directory(fb: FacebookInit) -> Result<()> {
     let thing_entry = find_entry(&entries, "thing").unwrap();
     assert!(
         matches!(thing_entry, EntryInfo::Directory { num_parents, .. } if *num_parents == 2),
-        "thing should be a live directory with 2 parents: {:?}",
-        thing_entry,
+        "thing should be a live directory with 2 parents: {thing_entry:?}",
     );
 
     // thing/child.txt should be live.
@@ -1241,8 +1197,7 @@ async fn test_merge_file_vs_directory(fb: FacebookInit) -> Result<()> {
     let stable = find_entry(&entries, "stable.txt").unwrap();
     assert!(
         matches!(stable, EntryInfo::File { linknode, .. } if *linknode == cs_a),
-        "stable.txt should have linknode cs_a: {:?}",
-        stable,
+        "stable.txt should have linknode cs_a: {stable:?}",
     );
 
     Ok(())
@@ -1292,16 +1247,14 @@ async fn test_merge_asymmetric_directories(fb: FacebookInit) -> Result<()> {
     let deep = find_entry(&entries, "new_dir/sub/deep.txt").unwrap();
     assert!(
         matches!(deep, EntryInfo::File { linknode, .. } if *linknode == cs_b),
-        "new_dir/sub/deep.txt should have linknode cs_b: {:?}",
-        deep,
+        "new_dir/sub/deep.txt should have linknode cs_b: {deep:?}",
     );
 
     // root.txt was resolved in the merge.
     let root = find_entry(&entries, "root.txt").unwrap();
     assert!(
         matches!(root, EntryInfo::File { linknode, num_parents } if *linknode == cs_d && *num_parents == 2),
-        "root.txt should have linknode cs_d with 2 parents: {:?}",
-        root,
+        "root.txt should have linknode cs_d with 2 parents: {root:?}",
     );
 
     Ok(())
@@ -1354,24 +1307,21 @@ async fn test_merge_reuses_single_branch_changes(fb: FacebookInit) -> Result<()>
     let x = find_entry(&entries, "dir/x.txt").unwrap();
     assert!(
         matches!(x, EntryInfo::File { linknode, num_parents } if *linknode == cs_b && *num_parents == 1),
-        "dir/x.txt should reuse branch B's entry (linknode cs_b, 1 parent): {:?}",
-        x,
+        "dir/x.txt should reuse branch B's entry (linknode cs_b, 1 parent): {x:?}",
     );
 
     // y.txt was only changed on branch C — same logic.
     let y = find_entry(&entries, "dir/y.txt").unwrap();
     assert!(
         matches!(y, EntryInfo::File { linknode, num_parents } if *linknode == cs_c && *num_parents == 1),
-        "dir/y.txt should reuse branch C's entry (linknode cs_c, 1 parent): {:?}",
-        y,
+        "dir/y.txt should reuse branch C's entry (linknode cs_c, 1 parent): {y:?}",
     );
 
     // shared.txt unchanged across all commits — should retain cs_a.
     let shared = find_entry(&entries, "dir/shared.txt").unwrap();
     assert!(
         matches!(shared, EntryInfo::File { linknode, .. } if *linknode == cs_a),
-        "dir/shared.txt should have linknode cs_a: {:?}",
-        shared,
+        "dir/shared.txt should have linknode cs_a: {shared:?}",
     );
 
     Ok(())
@@ -1428,16 +1378,14 @@ async fn test_ambiguous_file_directory_deletion(fb: FacebookInit) -> Result<()> 
     let foo_entry = find_entry(&entries, "foo").unwrap();
     assert!(
         matches!(foo_entry, EntryInfo::DeletedNode { linknode, .. } if *linknode == cs_e),
-        "foo should be a DeletedNode with linknode cs_e: {:?}",
-        foo_entry,
+        "foo should be a DeletedNode with linknode cs_e: {foo_entry:?}",
     );
 
     // foo/bar.txt should also be a DeletedNode.
     let bar_entry = find_entry(&entries, "foo/bar.txt").unwrap();
     assert!(
         matches!(bar_entry, EntryInfo::DeletedNode { linknode, .. } if *linknode == cs_e),
-        "foo/bar.txt should be a DeletedNode with linknode cs_e: {:?}",
-        bar_entry,
+        "foo/bar.txt should be a DeletedNode with linknode cs_e: {bar_entry:?}",
     );
 
     Ok(())
@@ -1486,30 +1434,26 @@ async fn test_three_parent_merge(fb: FacebookInit) -> Result<()> {
     let from_b = find_entry(&entries, "from_b.txt").unwrap();
     assert!(
         matches!(from_b, EntryInfo::File { linknode, num_parents } if *linknode == cs_b && *num_parents == 0),
-        "from_b.txt should have linknode cs_b: {:?}",
-        from_b,
+        "from_b.txt should have linknode cs_b: {from_b:?}",
     );
 
     let from_c = find_entry(&entries, "from_c.txt").unwrap();
     assert!(
         matches!(from_c, EntryInfo::File { linknode, num_parents } if *linknode == cs_c && *num_parents == 0),
-        "from_c.txt should have linknode cs_c: {:?}",
-        from_c,
+        "from_c.txt should have linknode cs_c: {from_c:?}",
     );
 
     let from_d = find_entry(&entries, "from_d.txt").unwrap();
     assert!(
         matches!(from_d, EntryInfo::File { linknode, num_parents } if *linknode == cs_d && *num_parents == 0),
-        "from_d.txt should have linknode cs_d: {:?}",
-        from_d,
+        "from_d.txt should have linknode cs_d: {from_d:?}",
     );
 
     // shared.txt unchanged — should retain linknode cs_a.
     let shared = find_entry(&entries, "shared.txt").unwrap();
     assert!(
         matches!(shared, EntryInfo::File { linknode, .. } if *linknode == cs_a),
-        "shared.txt should have linknode cs_a: {:?}",
-        shared,
+        "shared.txt should have linknode cs_a: {shared:?}",
     );
 
     Ok(())
@@ -1551,8 +1495,7 @@ async fn test_merge_conflict_resolved_to_parent(fb: FacebookInit) -> Result<()> 
     let file = find_entry(&entries, "file.txt").unwrap();
     assert!(
         matches!(file, EntryInfo::File { linknode, num_parents } if *linknode == cs_b && *num_parents == 1),
-        "file.txt should reuse branch B's entry (linknode cs_b, 1 parent): {:?}",
-        file,
+        "file.txt should reuse branch B's entry (linknode cs_b, 1 parent): {file:?}",
     );
 
     Ok(())
@@ -1598,23 +1541,20 @@ async fn test_merge_keeps_file_over_directory(fb: FacebookInit) -> Result<()> {
     let thing = find_entry(&entries, "thing").unwrap();
     assert!(
         matches!(thing, EntryInfo::File { linknode, num_parents } if *linknode == cs_d && *num_parents == 2),
-        "thing should be a file with linknode cs_d and 2 parents: {:?}",
-        thing,
+        "thing should be a file with linknode cs_d and 2 parents: {thing:?}",
     );
 
     // The old directory child should appear as a deleted subentry.
     assert!(
         deleted_file_paths(&entries).contains(&"thing/child.txt"),
-        "thing/child.txt should be a deleted subentry: {:?}",
-        entries,
+        "thing/child.txt should be a deleted subentry: {entries:?}",
     );
 
     // stable.txt unchanged.
     let stable = find_entry(&entries, "stable.txt").unwrap();
     assert!(
         matches!(stable, EntryInfo::File { linknode, .. } if *linknode == cs_a),
-        "stable.txt should have linknode cs_a: {:?}",
-        stable,
+        "stable.txt should have linknode cs_a: {stable:?}",
     );
 
     Ok(())
@@ -1666,20 +1606,17 @@ async fn test_subentries_preserved_on_file_modify(fb: FacebookInit) -> Result<()
     let dir_entry = find_entry(&entries_c, "dir").unwrap();
     assert!(
         matches!(dir_entry, EntryInfo::File { linknode, .. } if *linknode == cs_c),
-        "dir should be a file with linknode cs_c: {:?}",
-        dir_entry,
+        "dir should be a file with linknode cs_c: {dir_entry:?}",
     );
 
     // Subentries from the replacement should still be present.
     assert!(
         deleted_file_paths(&entries_c).contains(&"dir/child1.txt"),
-        "child1.txt subentry should be preserved after modify: {:?}",
-        entries_c,
+        "child1.txt subentry should be preserved after modify: {entries_c:?}",
     );
     assert!(
         deleted_file_paths(&entries_c).contains(&"dir/child2.txt"),
-        "child2.txt subentry should be preserved after modify: {:?}",
-        entries_c,
+        "child2.txt subentry should be preserved after modify: {entries_c:?}",
     );
 
     Ok(())
@@ -1717,15 +1654,13 @@ async fn test_subentries_preserved_on_file_delete(fb: FacebookInit) -> Result<()
     let dir_entry = find_entry(&entries_c, "dir").unwrap();
     assert!(
         matches!(dir_entry, EntryInfo::DeletedNode { linknode, .. } if *linknode == cs_c),
-        "dir should be a DeletedNode with linknode cs_c: {:?}",
-        dir_entry,
+        "dir should be a DeletedNode with linknode cs_c: {dir_entry:?}",
     );
 
     // The subentry from the prior replacement should be preserved.
     assert!(
         deleted_file_paths(&entries_c).contains(&"dir/child.txt"),
-        "child.txt subentry should be preserved on deletion node: {:?}",
-        entries_c,
+        "child.txt subentry should be preserved on deletion node: {entries_c:?}",
     );
 
     Ok(())
@@ -1783,21 +1718,18 @@ async fn test_subentries_accumulated_on_merge(fb: FacebookInit) -> Result<()> {
     let thing = find_entry(&entries_d, "thing").unwrap();
     assert!(
         matches!(thing, EntryInfo::File { .. }),
-        "thing should be a file: {:?}",
-        thing,
+        "thing should be a file: {thing:?}",
     );
 
     // Subentries from both branches should be present.
     let deleted = deleted_file_paths(&entries_d);
     assert!(
         deleted.contains(&"thing/from_b.txt"),
-        "from_b.txt subentry should be present: {:?}",
-        entries_d,
+        "from_b.txt subentry should be present: {entries_d:?}",
     );
     assert!(
         deleted.contains(&"thing/from_c.txt"),
-        "from_c.txt subentry should be present: {:?}",
-        entries_d,
+        "from_c.txt subentry should be present: {entries_d:?}",
     );
 
     Ok(())
@@ -1831,16 +1763,14 @@ async fn test_file_type_change(fb: FacebookInit) -> Result<()> {
     let script = find_entry(&entries, "script.sh").unwrap();
     assert!(
         matches!(script, EntryInfo::File { linknode, num_parents } if *linknode == cs_b && *num_parents == 1),
-        "script.sh should have linknode cs_b with 1 parent: {:?}",
-        script,
+        "script.sh should have linknode cs_b with 1 parent: {script:?}",
     );
 
     // stable.txt unchanged.
     let stable = find_entry(&entries, "stable.txt").unwrap();
     assert!(
         matches!(stable, EntryInfo::File { linknode, .. } if *linknode == cs_a),
-        "stable.txt should have linknode cs_a: {:?}",
-        stable,
+        "stable.txt should have linknode cs_a: {stable:?}",
     );
 
     Ok(())
@@ -1918,14 +1848,12 @@ async fn test_subtree_copy_directory(fb: FacebookInit) -> Result<()> {
     let src_file1 = find_entry(&entries, "a/file1.txt").unwrap();
     assert!(
         matches!(src_file1, EntryInfo::File { linknode, num_parents: 0 } if *linknode == cs_a),
-        "a/file1.txt should be unchanged from parent: {:?}",
-        src_file1,
+        "a/file1.txt should be unchanged from parent: {src_file1:?}",
     );
     let b_file = find_entry(&entries, "b/file3.txt").unwrap();
     assert!(
         matches!(b_file, EntryInfo::File { linknode, num_parents: 0 } if *linknode == cs_a),
-        "b/file3.txt should be unchanged from parent: {:?}",
-        b_file,
+        "b/file3.txt should be unchanged from parent: {b_file:?}",
     );
 
     // Destination files exist, have cs_b as linknode, and have no parents
@@ -1936,8 +1864,7 @@ async fn test_subtree_copy_directory(fb: FacebookInit) -> Result<()> {
             dst_file1,
             EntryInfo::File { linknode, num_parents: 0 } if *linknode == cs_b
         ),
-        "c/file1.txt should be a fresh node under cs_b: {:?}",
-        dst_file1,
+        "c/file1.txt should be a fresh node under cs_b: {dst_file1:?}",
     );
     let dst_file2 = find_entry(&entries, "c/file2.txt").unwrap();
     assert!(
@@ -1945,8 +1872,7 @@ async fn test_subtree_copy_directory(fb: FacebookInit) -> Result<()> {
             dst_file2,
             EntryInfo::File { linknode, num_parents: 0 } if *linknode == cs_b
         ),
-        "c/file2.txt should be a fresh node under cs_b: {:?}",
-        dst_file2,
+        "c/file2.txt should be a fresh node under cs_b: {dst_file2:?}",
     );
 
     // Destination directory itself should also be fresh (no parents).
@@ -1956,8 +1882,7 @@ async fn test_subtree_copy_directory(fb: FacebookInit) -> Result<()> {
             dst_dir,
             EntryInfo::Directory { linknode, num_parents: 0 } if *linknode == cs_b
         ),
-        "c/ should be a fresh directory under cs_b: {:?}",
-        dst_dir,
+        "c/ should be a fresh directory under cs_b: {dst_dir:?}",
     );
 
     // No extra files should appear under c/.
@@ -1967,8 +1892,7 @@ async fn test_subtree_copy_directory(fb: FacebookInit) -> Result<()> {
         .collect::<Vec<_>>();
     assert!(
         unexpected.is_empty(),
-        "no extra files under c/: {:?}",
-        unexpected
+        "no extra files under c/: {unexpected:?}"
     );
 
     Ok(())
@@ -2009,8 +1933,7 @@ async fn test_subtree_copy_directory_with_override(fb: FacebookInit) -> Result<(
     let dst_b = find_entry(&entries, "dst/b.txt").unwrap();
     assert!(
         matches!(dst_b, EntryInfo::File { linknode, num_parents: 0 } if *linknode == cs_b),
-        "dst/b.txt should be a fresh node: {:?}",
-        dst_b,
+        "dst/b.txt should be a fresh node: {dst_b:?}",
     );
     // dst/a.txt was explicitly changed in this commit. It's also inside a
     // replacement subtree so its parents should be empty (not inherited
@@ -2018,8 +1941,7 @@ async fn test_subtree_copy_directory_with_override(fb: FacebookInit) -> Result<(
     let dst_a = find_entry(&entries, "dst/a.txt").unwrap();
     assert!(
         matches!(dst_a, EntryInfo::File { linknode, num_parents: 0 } if *linknode == cs_b),
-        "dst/a.txt should be a fresh node with no parents: {:?}",
-        dst_a,
+        "dst/a.txt should be a fresh node with no parents: {dst_a:?}",
     );
 
     Ok(())
@@ -2055,8 +1977,7 @@ async fn test_subtree_copy_file(fb: FacebookInit) -> Result<()> {
     let copied = find_entry(&entries, "copied.txt").unwrap();
     assert!(
         matches!(copied, EntryInfo::File { linknode, num_parents: 0 } if *linknode == cs_b),
-        "copied.txt should be a fresh node under cs_b: {:?}",
-        copied,
+        "copied.txt should be a fresh node under cs_b: {copied:?}",
     );
 
     Ok(())
@@ -2104,15 +2025,13 @@ async fn test_subtree_copy_nested(fb: FacebookInit) -> Result<()> {
     let b_top = find_entry(&entries, "b/top.txt").unwrap();
     assert!(
         matches!(b_top, EntryInfo::File { linknode, num_parents: 0 } if *linknode == cs_b),
-        "b/top.txt should be fresh: {:?}",
-        b_top,
+        "b/top.txt should be fresh: {b_top:?}",
     );
     // b/sub/y.txt comes from the nested copy; NOT b/sub/leaked.txt.
     let b_sub_y = find_entry(&entries, "b/sub/y.txt").unwrap();
     assert!(
         matches!(b_sub_y, EntryInfo::File { linknode, num_parents: 0 } if *linknode == cs_b),
-        "b/sub/y.txt should be fresh: {:?}",
-        b_sub_y,
+        "b/sub/y.txt should be fresh: {b_sub_y:?}",
     );
     assert!(
         find_entry(&entries, "b/sub/leaked.txt").is_none(),
@@ -2170,8 +2089,7 @@ async fn test_subtree_copy_outer_fully_covered_by_nested(fb: FacebookInit) -> Re
     let dst_leaked = find_entry(&entries, "dst/leaked.txt").unwrap();
     assert!(
         matches!(dst_leaked, EntryInfo::File { linknode, num_parents: 0 } if *linknode == cs_b),
-        "dst/leaked.txt should be fresh: {:?}",
-        dst_leaked,
+        "dst/leaked.txt should be fresh: {dst_leaked:?}",
     );
     // The outer destination exists as a fresh directory with only the
     // nested copy's content under it.
@@ -2181,8 +2099,7 @@ async fn test_subtree_copy_outer_fully_covered_by_nested(fb: FacebookInit) -> Re
             dst_dir,
             EntryInfo::Directory { linknode, num_parents: 0 } if *linknode == cs_b
         ),
-        "dst/ should be a fresh directory: {:?}",
-        dst_dir,
+        "dst/ should be a fresh directory: {dst_dir:?}",
     );
     let stray = file_paths(&entries)
         .into_iter()
@@ -2190,8 +2107,7 @@ async fn test_subtree_copy_outer_fully_covered_by_nested(fb: FacebookInit) -> Re
         .collect::<Vec<_>>();
     assert!(
         stray.is_empty(),
-        "dst/ should contain only the nested copy, got: {:?}",
-        stray,
+        "dst/ should contain only the nested copy, got: {stray:?}",
     );
 
     Ok(())
@@ -2233,8 +2149,7 @@ async fn test_subtree_copy_replaces_existing_dir(fb: FacebookInit) -> Result<()>
     let dst_new = find_entry(&entries, "dst/new.txt").unwrap();
     assert!(
         matches!(dst_new, EntryInfo::File { linknode, num_parents: 0 } if *linknode == cs_b),
-        "dst/new.txt should be fresh: {:?}",
-        dst_new,
+        "dst/new.txt should be fresh: {dst_new:?}",
     );
     // dst/old.txt is entirely gone — not as a file, not as a deleted node.
     assert!(
@@ -2249,8 +2164,7 @@ async fn test_subtree_copy_replaces_existing_dir(fb: FacebookInit) -> Result<()>
             dst_dir,
             EntryInfo::Directory { linknode, num_parents: 0 } if *linknode == cs_b
         ),
-        "dst/ should be fresh: {:?}",
-        dst_dir,
+        "dst/ should be fresh: {dst_dir:?}",
     );
 
     Ok(())
@@ -2301,28 +2215,24 @@ async fn test_subtree_copy_on_merge_commit(fb: FacebookInit) -> Result<()> {
     let copied = find_entry(&entries, "copied_base/x.txt").unwrap();
     assert!(
         matches!(copied, EntryInfo::File { linknode, num_parents: 0 } if *linknode == cs_merge),
-        "copied_base/x.txt should be fresh under cs_merge: {:?}",
-        copied,
+        "copied_base/x.txt should be fresh under cs_merge: {copied:?}",
     );
     // Branch-exclusive files carry over from each parent unchanged.
     let branch_b = find_entry(&entries, "branch_b.txt").unwrap();
     assert!(
         matches!(branch_b, EntryInfo::File { linknode, num_parents: 0 } if *linknode == cs_b),
-        "branch_b.txt should carry over from cs_b: {:?}",
-        branch_b,
+        "branch_b.txt should carry over from cs_b: {branch_b:?}",
     );
     let branch_c = find_entry(&entries, "branch_c.txt").unwrap();
     assert!(
         matches!(branch_c, EntryInfo::File { linknode, num_parents: 0 } if *linknode == cs_c),
-        "branch_c.txt should carry over from cs_c: {:?}",
-        branch_c,
+        "branch_c.txt should carry over from cs_c: {branch_c:?}",
     );
     // Base path is untouched.
     let base_x = find_entry(&entries, "base/x.txt").unwrap();
     assert!(
         matches!(base_x, EntryInfo::File { linknode, num_parents: 0 } if *linknode == cs_a),
-        "base/x.txt should still come from cs_a: {:?}",
-        base_x,
+        "base/x.txt should still come from cs_a: {base_x:?}",
     );
 
     Ok(())

@@ -285,7 +285,7 @@ mod tests {
                         NonRootMPath::new(expected_from_path).unwrap()
                     );
                 }
-                _ => panic!("expected CopyInfo rename source for {}", path),
+                _ => panic!("expected CopyInfo rename source for {path}"),
             }
         };
 
