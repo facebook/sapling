@@ -470,7 +470,7 @@ impl TestLiveCommitSyncConfigSource {
         if Self::related_to_repo(&config, repo_id) {
             Ok(Some(config))
         } else {
-            Err(anyhow!("{} not found", version_name))
+            Err(anyhow!("{version_name} not found"))
         }
     }
 
