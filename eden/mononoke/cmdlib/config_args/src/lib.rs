@@ -44,7 +44,7 @@ pub struct ConfigArgs {
 const PRODUCTION_PREFIX: &str = "configerator://scm/mononoke/repos/tiers/";
 
 fn configerator_config_path(tier: &str) -> String {
-    format!("{}{}", PRODUCTION_PREFIX, tier)
+    format!("{PRODUCTION_PREFIX}{tier}")
 }
 
 impl ConfigArgs {
@@ -131,7 +131,7 @@ impl ConfigArgs {
                 .and_then(|p| p.strip_prefix(PRODUCTION_PREFIX))
                 .filter(|t| !t.is_empty())
         });
-        Ok(tier.map(|t| format!("scm/mononoke/repos/tiers/{}_manifest", t)))
+        Ok(tier.map(|t| format!("scm/mononoke/repos/tiers/{t}_manifest")))
     }
 }
 
