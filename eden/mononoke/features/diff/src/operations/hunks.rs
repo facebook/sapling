@@ -76,7 +76,7 @@ pub async fn hunks(
     let hunks =
         tokio::task::spawn_blocking(move || xdiff::diff_hunks(&base_content, &other_content))
             .await
-            .map_err(|e| DiffError::internal(anyhow::anyhow!("spawn_blocking failed: {}", e)))?
+            .map_err(|e| DiffError::internal(anyhow::anyhow!("spawn_blocking failed: {e}")))?
             .into_iter()
             .map(HunkData::from)
             .collect();

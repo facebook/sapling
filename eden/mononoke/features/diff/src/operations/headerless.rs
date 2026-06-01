@@ -85,7 +85,7 @@ pub async fn headerless_unified(
         xdiff::diff_unified_headerless(&other_content, &base_content, xdiff_opts)
     })
     .await
-    .map_err(|e| DiffError::internal(anyhow::anyhow!("spawn_blocking failed: {}", e)))?;
+    .map_err(|e| DiffError::internal(anyhow::anyhow!("spawn_blocking failed: {e}")))?;
 
     Ok(HeaderlessUnifiedDiff {
         raw_diff,

@@ -86,7 +86,7 @@ pub async fn unified(
     let raw_diff =
         tokio::task::spawn_blocking(move || xdiff::diff_unified(base_file, other_file, xdiff_opts))
             .await
-            .map_err(|e| DiffError::internal(anyhow::anyhow!("spawn_blocking failed: {}", e)))?;
+            .map_err(|e| DiffError::internal(anyhow::anyhow!("spawn_blocking failed: {e}")))?;
 
     Ok(UnifiedDiff {
         raw_diff,
