@@ -241,8 +241,7 @@ impl Convert for RawBookmarkConfig {
                 Ok(comparable_regex) => BookmarkOrRegex::Regex(comparable_regex),
                 Err(err) => {
                     return Err(ConfigurationError::InvalidConfig(format!(
-                        "invalid bookmark regex: {}",
-                        err
+                        "invalid bookmark regex: {err}"
                     ))
                     .into());
                 }
@@ -251,8 +250,7 @@ impl Convert for RawBookmarkConfig {
                 Ok(comparable_regex) => BookmarkOrRegex::InverseRegex(comparable_regex),
                 Err(err) => {
                     return Err(ConfigurationError::InvalidConfig(format!(
-                        "invalid bookmark inverse regex: {}",
-                        err
+                        "invalid bookmark inverse regex: {err}"
                     ))
                     .into());
                 }
@@ -319,7 +317,7 @@ impl Convert for RawCommitIdentityScheme {
             RawCommitIdentityScheme::GIT => CommitIdentityScheme::GIT,
             RawCommitIdentityScheme::BONSAI => CommitIdentityScheme::BONSAI,
             RawCommitIdentityScheme::UNKNOWN => CommitIdentityScheme::UNKNOWN,
-            v => return Err(anyhow!("Invalid value {} for enum CommitIdentityScheme", v)),
+            v => return Err(anyhow!("Invalid value {v} for enum CommitIdentityScheme")),
         };
         Ok(converted)
     }
@@ -332,7 +330,7 @@ impl Convert for RawPushrebaseRemoteModeRemote {
         match self {
             Self::tier(t) => Ok(Address::Tier(t)),
             Self::host_port(host) => Ok(Address::HostPort(host)),
-            Self::UnknownField(e) => anyhow::bail!("Unknown field: {}", e),
+            Self::UnknownField(e) => anyhow::bail!("Unknown field: {e}"),
         }
     }
 }
@@ -349,7 +347,7 @@ impl Convert for RawPushrebaseRemoteMode {
             Self::remote_land_service_local_fallback(addr) => Ok(
                 PushrebaseRemoteMode::RemoteLandServiceWithLocalFallback(addr.convert()?),
             ),
-            Self::UnknownField(e) => anyhow::bail!("Unknown field: {}", e),
+            Self::UnknownField(e) => anyhow::bail!("Unknown field: {e}"),
         }
     }
 }
@@ -565,7 +563,7 @@ impl Convert for RawDerivedDataTypesConfig {
             None => UnodeVersion::default(),
             Some(1) => return Err(anyhow!("unode version 1 has been deprecated")),
             Some(2) => UnodeVersion::V2,
-            Some(version) => return Err(anyhow!("unknown unode version {}", version)),
+            Some(version) => return Err(anyhow!("unknown unode version {version}")),
         };
         let blame_filesize_limit = self.blame_filesize_limit.map(|limit| limit as u64);
         let blame_version = match self.blame_version {
@@ -573,13 +571,13 @@ impl Convert for RawDerivedDataTypesConfig {
             Some(1) => return Err(anyhow!("blame version 1 has been deprecated")),
             Some(2) => BlameVersion::V2,
             Some(3) => BlameVersion::V3,
-            Some(version) => return Err(anyhow!("unknown blame version {}", version)),
+            Some(version) => return Err(anyhow!("unknown blame version {version}")),
         };
         let git_delta_manifest_version = match self.git_delta_manifest_version {
             None => GitDeltaManifestVersion::default(),
             Some(2) => GitDeltaManifestVersion::V2,
             Some(3) => GitDeltaManifestVersion::V3,
-            Some(version) => return Err(anyhow!("unknown git delta manifest version {}", version)),
+            Some(version) => return Err(anyhow!("unknown git delta manifest version {version}")),
         };
         let git_delta_manifest_v2_config = self
             .git_delta_manifest_v2_config
@@ -754,7 +752,7 @@ impl Convert for RawRemoteDerivationConfig {
                 Ok(RemoteDerivationConfig::HostPort(host_port))
             }
             RawRemoteDerivationConfig::UnknownField(e) => {
-                anyhow::bail!("Unknown variant of RawRemoteDerivationConfig: {}", e)
+                anyhow::bail!("Unknown variant of RawRemoteDerivationConfig: {e}")
             }
         }
     }
@@ -771,7 +769,7 @@ impl Convert for RawRemoteDiffConfig {
             RawRemoteDiffConfig::smc_tier(smc_tier) => Ok(RemoteDiffConfig::SmcTier(smc_tier)),
             RawRemoteDiffConfig::host_port(host_port) => Ok(RemoteDiffConfig::HostPort(host_port)),
             RawRemoteDiffConfig::UnknownField(e) => {
-                anyhow::bail!("Unknown variant of RawRemoteDiffConfig: {}", e)
+                anyhow::bail!("Unknown variant of RawRemoteDiffConfig: {e}")
             }
         }
     }
@@ -814,7 +812,7 @@ impl Convert for RawCommitRateLimitConfig {
                             Ok(CommitRateLimitEligibilityCheck::AlwaysPass)
                         }
                         RawEligibilityCheck::UnknownField(id) => {
-                            bail!("Unknown variant of RawEligibilityCheck: {}", id)
+                            bail!("Unknown variant of RawEligibilityCheck: {id}")
                         }
                     })
                     .collect::<Result<Vec<_>>>()?;
@@ -926,7 +924,7 @@ impl Convert for RawWalkerJobType {
             RawWalkerJobType::SHALLOW_HG_SCRUB => WalkerJobType::ShallowHgScrub,
             RawWalkerJobType::VALIDATE_ALL => WalkerJobType::ValidateAll,
             RawWalkerJobType::UNKNOWN => WalkerJobType::Unknown,
-            v => return Err(anyhow!("Invalid value {} for enum WalkerJobType", v)),
+            v => return Err(anyhow!("Invalid value {v} for enum WalkerJobType")),
         };
         Ok(job_type)
     }
@@ -1043,7 +1041,7 @@ impl Convert for RawLoggingDestination {
                 LoggingDestination::Scribe { scribe_category }
             }
             Self::UnknownField(f) => {
-                return Err(anyhow!("Unknown variant {} of RawLoggingDestination", f));
+                return Err(anyhow!("Unknown variant {f} of RawLoggingDestination"));
             }
         };
         Ok(dest)
@@ -1101,7 +1099,7 @@ impl Convert for RawZelosConfig {
                 port: port.try_into()?,
             }),
             Self::zelos_tier(tier) => Ok(ZelosConfig::Remote { tier }),
-            Self::UnknownField(f) => Err(anyhow!("Unknown variant {} of RawZelosConfig", f)),
+            Self::UnknownField(f) => Err(anyhow!("Unknown variant {f} of RawZelosConfig")),
         }
     }
 }
@@ -1130,7 +1128,7 @@ impl Convert for RawGitBundleURIConfig {
                 trusted_only: self.trusted_only,
             }),
             RawUriGeneratorType::UnknownField(f) => {
-                Err(anyhow!("Unknown variant {} of RawGitBundleURIConfig", f))
+                Err(anyhow!("Unknown variant {f} of RawGitBundleURIConfig"))
             }
         }
     }
@@ -1160,7 +1158,7 @@ impl Convert for RawShardedService {
             RawShardedService::DERIVATION_PIPELINE_TAILER => {
                 ShardedService::DerivationPipelineTailer
             }
-            v => return Err(anyhow!("Invalid value {} for enum ShardedService", v)),
+            v => return Err(anyhow!("Invalid value {v} for enum ShardedService")),
         };
         Ok(service)
     }
@@ -1264,7 +1262,7 @@ impl Convert for RawMetadataCacheUpdateMode {
             },
             RawMetadataCacheUpdateMode::polling(_) => MetadataCacheUpdateMode::Polling,
             RawMetadataCacheUpdateMode::UnknownField(f) => {
-                bail!("Unsupported MetadataCacheUpdateMode {}", f)
+                bail!("Unsupported MetadataCacheUpdateMode {f}")
             }
         };
         Ok(cache_update_mode)
@@ -1360,8 +1358,7 @@ fn parse_acl_manifest_mode(s: Option<&str>) -> Result<AclManifestMode> {
         Some("Both") => Ok(AclManifestMode::Both),
         Some("Authoritative") => Ok(AclManifestMode::Authoritative),
         Some(other) => Err(anyhow!(
-            "invalid acl_manifest_mode value '{}': expected one of Disabled, Shadow, Both, Authoritative",
-            other
+            "invalid acl_manifest_mode value '{other}': expected one of Disabled, Shadow, Both, Authoritative"
         )),
     }
 }
@@ -1374,9 +1371,8 @@ impl Convert for RawRestrictedPathsConfig {
             .path_acls
             .into_iter()
             .map(|(path, acl)| {
-                let non_root_path = NonRootMPath::new(path.as_bytes()).with_context(|| {
-                    format!("Invalid path for restricted path config: {}", path)
-                })?;
+                let non_root_path = NonRootMPath::new(path.as_bytes())
+                    .with_context(|| format!("Invalid path for restricted path config: {path}"))?;
                 Ok((
                     non_root_path,
                     MononokeIdentity::from_str(&acl)
@@ -1466,7 +1462,7 @@ mod tests {
     fn test_parse_pipeline_config_rejects_zero_batch_size() {
         let raw = raw_pipeline_config_with_batch_size(0);
         let err = raw.convert().unwrap_err();
-        let msg = format!("{:#}", err);
+        let msg = format!("{err:#}");
         assert!(
             msg.contains("batch_size must be a positive integer") && msg.contains("got 0"),
             "expected positive-batch-size error, got: {msg}",
@@ -1477,7 +1473,7 @@ mod tests {
     fn test_parse_pipeline_config_rejects_negative_batch_size() {
         let raw = raw_pipeline_config_with_batch_size(-5);
         let err = raw.convert().unwrap_err();
-        let msg = format!("{:#}", err);
+        let msg = format!("{err:#}");
         assert!(
             msg.contains("batch_size must be a positive integer") && msg.contains("got -5"),
             "expected positive-batch-size error, got: {msg}",
@@ -1532,11 +1528,10 @@ mod tests {
 
         let result: Result<RestrictedPathsConfig> = raw.convert();
         let err = result.unwrap_err();
-        let msg = format!("{:#}", err);
+        let msg = format!("{err:#}");
         assert!(
             msg.contains("restriction_acl `bogus`"),
-            "error should contain offending value: {}",
-            msg
+            "error should contain offending value: {msg}"
         );
     }
 }

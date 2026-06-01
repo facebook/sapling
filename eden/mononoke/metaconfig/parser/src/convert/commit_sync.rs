@@ -103,9 +103,7 @@ fn validate_common_commit_sync_config(
         let sp = second_prefix.as_str();
         if fp.starts_with(sp) || sp.starts_with(fp) {
             return Err(anyhow!(
-                "One bookmark prefix starts with another, which is prohibited: {:?}, {:?}",
-                fp,
-                sp
+                "One bookmark prefix starts with another, which is prohibited: {fp:?}, {sp:?}"
             ));
         }
     }
@@ -170,8 +168,7 @@ impl Convert for RawGitSubmodulesChangesAction {
             RawGitSubmodulesChangesAction::UNKNOWN => GitSubmodulesChangesAction::default(),
             v => {
                 return Err(anyhow!(
-                    "Invalid value {} for enum GitSubmodulesChangesAction",
-                    v
+                    "Invalid value {v} for enum GitSubmodulesChangesAction"
                 ));
             }
         };
@@ -211,7 +208,7 @@ impl Convert for RawCommitSyncSmallRepoConfig {
                     ));
                 }
             },
-            other => return Err(anyhow!("unknown default_action: {:?}", other)),
+            other => return Err(anyhow!("unknown default_action: {other:?}")),
         };
         let submodule_dependencies = submodule_dependencies
             .unwrap_or_default()

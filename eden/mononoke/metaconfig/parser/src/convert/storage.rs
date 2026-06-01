@@ -82,7 +82,7 @@ impl Convert for RawBubbleDeletionMode {
             RawBubbleDeletionMode::DISABLED => BubbleDeletionMode::Disabled,
             RawBubbleDeletionMode::MARK_ONLY => BubbleDeletionMode::MarkOnly,
             RawBubbleDeletionMode::MARK_AND_DELETE => BubbleDeletionMode::MarkAndDelete,
-            v => return Err(anyhow!("Invalid value {} for enum BubbleDeletionMode", v)),
+            v => return Err(anyhow!("Invalid value {v} for enum BubbleDeletionMode")),
         };
         Ok(deletion_mode)
     }
@@ -195,7 +195,7 @@ impl Convert for RawBlobstoreConfig {
                     .transpose()?,
             },
             RawBlobstoreConfig::UnknownField(f) => {
-                return Err(anyhow!("unsupported blobstore configuration ({})", f));
+                return Err(anyhow!("unsupported blobstore configuration ({f})"));
             }
         };
         Ok(config)
@@ -223,7 +223,7 @@ impl Convert for RawBlobstorePackFormat {
             RawBlobstorePackFormat::ZstdIndividual(zstd) => {
                 PackFormat::ZstdIndividual(zstd.compression_level)
             }
-            RawBlobstorePackFormat::UnknownField(f) => bail!("Unsupported PackFormat {}", f),
+            RawBlobstorePackFormat::UnknownField(f) => bail!("Unsupported PackFormat {f}"),
         };
         Ok(pack_format)
     }
@@ -298,7 +298,7 @@ impl Convert for RawDbShardableRemote {
                 Ok(ShardableRemoteDatabaseConfig::Sharded(raw.convert()?))
             }
             RawDbShardableRemote::UnknownField(f) => {
-                Err(anyhow!("unsupported database configuration ({})", f))
+                Err(anyhow!("unsupported database configuration ({f})"))
             }
         }
     }
@@ -312,7 +312,7 @@ impl Convert for RawDbConfig {
             RawDbConfig::local(raw) => Ok(DatabaseConfig::Local(raw.convert()?)),
             RawDbConfig::remote(raw) => Ok(DatabaseConfig::Remote(raw.convert()?)),
             RawDbConfig::UnknownField(f) => {
-                Err(anyhow!("unsupported database configuration ({})", f))
+                Err(anyhow!("unsupported database configuration ({f})"))
             }
         }
     }
@@ -329,7 +329,7 @@ impl Convert for RawShardedDbConfig {
                 Ok(ShardedDatabaseConfig::Unsharded(raw.convert()?))
             }
             RawShardedDbConfig::UnknownField(f) => {
-                Err(anyhow!("unsupported database configuration ({})", f))
+                Err(anyhow!("unsupported database configuration ({f})"))
             }
         }
     }
@@ -379,10 +379,9 @@ impl Convert for RawMetadataConfig {
                     commit_derived_data_mapping: raw.derived_data_mapping.convert()?,
                 },
             )),
-            RawMetadataConfig::UnknownField(f) => Err(anyhow!(
-                "unsupported metadata database configuration ({})",
-                f
-            )),
+            RawMetadataConfig::UnknownField(f) => {
+                Err(anyhow!("unsupported metadata database configuration ({f})"))
+            }
         }
     }
 }
@@ -410,7 +409,7 @@ impl Convert for RawMultiplexedStoreType {
                 Ok(MultiplexedStoreType::WriteOnly)
             }
             RawMultiplexedStoreType::UnknownField(field) => {
-                Err(anyhow!("unknown store type {}", field))
+                Err(anyhow!("unknown store type {field}"))
             }
         }
     }
