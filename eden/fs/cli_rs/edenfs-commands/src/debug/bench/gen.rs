@@ -32,7 +32,7 @@ impl TestDir {
     pub fn validate(test_dir: &str) -> Result<Self> {
         let test_dir_path = Path::new(test_dir);
         if !test_dir_path.exists() {
-            return Err(anyhow!("The directory {} does not exist.", test_dir));
+            return Err(anyhow!("The directory {test_dir} does not exist."));
         }
         let bench_dir_path = test_dir_path.join(types::BENCH_DIR_NAME);
         if bench_dir_path.exists() {
@@ -48,7 +48,7 @@ impl TestDir {
     /// Prepares subdirectories for the test directory.
     fn prepare_directories(root: &Path) -> Result<()> {
         for i in 0..types::NUMBER_OF_SUB_DIRS {
-            let sub_dir = format!("{:02x}", i);
+            let sub_dir = format!("{i:02x}");
             let sub_dir_path = root.join(sub_dir);
             fs::create_dir_all(&sub_dir_path)?;
         }

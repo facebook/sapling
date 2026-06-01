@@ -92,13 +92,13 @@ pub fn bench_write_mfmd(
 
     let chunk_size_kb = random_data.chunk_size as f64 / types::BYTES_IN_KILOBYTE as f64;
     result.add_metric(
-        &format!("write() {:.0} KiB latency", chunk_size_kb),
+        &format!("write() {chunk_size_kb:.0} KiB latency"),
         avg_write_dur * 1000.0,
         types::Unit::Ms,
         Some(4),
     );
     result.add_metric(
-        &format!("sync() {:.0} KiB latency", chunk_size_kb),
+        &format!("sync() {chunk_size_kb:.0} KiB latency"),
         avg_sync_dur * 1000.0,
         types::Unit::Ms,
         Some(4),
@@ -108,7 +108,7 @@ pub fn bench_write_mfmd(
     {
         if no_caches {
             if let Err(e) = drop_kernel_caches() {
-                eprintln!("\nFailed to drop caches: {}\n", e);
+                eprintln!("\nFailed to drop caches: {e}\n");
             } else {
                 println!("\nCaches dropped successfully after writes\n");
             }
@@ -157,14 +157,14 @@ pub fn bench_fs_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Resul
 
     let chunk_size_kb = random_data.chunk_size as f64 / types::BYTES_IN_KILOBYTE as f64;
     result.add_metric(
-        &format!("read() {:.0} KiB latency", chunk_size_kb),
+        &format!("read() {chunk_size_kb:.0} KiB latency"),
         avg_read_dur * 1000.0,
         types::Unit::Ms,
         Some(4),
     );
 
     result.add_metric(
-        &format!("total {:.0} KiB latency", chunk_size_kb),
+        &format!("total {chunk_size_kb:.0} KiB latency"),
         (avg_read_dur + avg_open_dur) * 1000.0,
         types::Unit::Ms,
         Some(4),
@@ -214,7 +214,7 @@ pub fn bench_write_sfmd(
     {
         if no_caches {
             if let Err(e) = drop_kernel_caches() {
-                eprintln!("\nFailed to drop caches: {}\n", e);
+                eprintln!("\nFailed to drop caches: {e}\n");
             } else {
                 println!("\nCaches dropped successfully after writes\n");
             }
@@ -255,11 +255,11 @@ fn drop_kernel_caches() -> Result<()> {
         .uid(0)
         .gid(0)
         .status()
-        .map_err(|e| anyhow!("Failed to execute shell: {}", e))?;
+        .map_err(|e| anyhow!("Failed to execute shell: {e}"))?;
 
     if status.success() {
         Ok(())
     } else {
-        Err(anyhow!("Failed to drop caches: {}", status))
+        Err(anyhow!("Failed to drop caches: {status}"))
     }
 }

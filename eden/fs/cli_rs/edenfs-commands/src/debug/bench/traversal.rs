@@ -1219,8 +1219,7 @@ impl Traversal {
                     &format!("0/{}", max_files.to_formatted_string(&Locale::en))
                 };
                 pb.set_message(format!(
-                    "{} files | 0 dirs | 0 files/s",
-                    initial_files_display
+                    "{initial_files_display} files | 0 dirs | 0 files/s"
                 ));
 
                 let (mut system, pid) = if resource_usage {
@@ -1320,7 +1319,7 @@ pub async fn bench_traversal(
     for dir_path in dir_paths {
         let path = Path::new(dir_path);
         if !path.exists() || !path.is_dir() {
-            return Err(anyhow::anyhow!("Invalid directory path: {}", dir_path));
+            return Err(anyhow::anyhow!("Invalid directory path: {dir_path}"));
         }
     }
 
@@ -1469,16 +1468,16 @@ fn print_detailed_read_statistics(stats: &Arc<AdvancedStats>) {
                 "  Files:           {}",
                 count.to_formatted_string(&Locale::en)
             );
-            println!("  Total Size:      {:.2} MB", mb);
-            println!("  Avg open():      {:.1} µs", avg_open_us);
+            println!("  Total Size:      {mb:.2} MB");
+            println!("  Avg open():      {avg_open_us:.1} µs");
 
             // Use microseconds for small/medium, milliseconds for large files
             match category {
-                FileSizeCategory::Large => println!("  Avg read():      {:.1} ms", avg_read_ms),
-                _ => println!("  Avg read():      {:.1} µs", avg_read_us),
+                FileSizeCategory::Large => println!("  Avg read():      {avg_read_ms:.1} ms"),
+                _ => println!("  Avg read():      {avg_read_us:.1} µs"),
             }
 
-            println!("  Throughput:      {:.2} MB/s", throughput);
+            println!("  Throughput:      {throughput:.2} MB/s");
             println!(
                 "  Overhead:        {:.1}% of time in open()",
                 (open_nanos as f64 / (open_nanos + read_nanos).max(1) as f64) * 100.0
@@ -1746,10 +1745,7 @@ fn print_detailed_listing_statistics(stats: &Arc<ListingStats>, total_runtime_se
                 rates.iter().map(|r| (*r - avg).powi(2)).sum::<f64>() / rates.len() as f64;
             let stddev = variance.sqrt();
 
-            println!(
-                "  Files/sec: min={:.0} max={:.0} avg={:.0} stddev={:.0}",
-                min, max, avg, stddev
-            );
+            println!("  Files/sec: min={min:.0} max={max:.0} avg={avg:.0} stddev={stddev:.0}");
 
             if stddev > avg * 0.2 {
                 println!("  High variance detected - may indicate cache effects or contention");
@@ -1772,14 +1768,8 @@ fn print_detailed_listing_statistics(stats: &Arc<ListingStats>, total_runtime_se
     let proc_mins = (total_processing_time_secs / 60.0).floor() as u64;
     let proc_secs_rem = total_processing_time_secs % 60.0;
 
-    println!(
-        "  Total runtime (wall-clock):           {}m {:.2}s",
-        runtime_mins, runtime_secs_rem
-    );
-    println!(
-        "  Sum of directory processing times:    {}m {:.2}s",
-        proc_mins, proc_secs_rem
-    );
+    println!("  Total runtime (wall-clock):           {runtime_mins}m {runtime_secs_rem:.2}s");
+    println!("  Sum of directory processing times:    {proc_mins}m {proc_secs_rem:.2}s");
 
     // Calculate efficiency metric
     let efficiency_pct = if total_runtime_secs > 0.0 {
@@ -1788,10 +1778,7 @@ fn print_detailed_listing_statistics(stats: &Arc<ListingStats>, total_runtime_se
         0.0
     };
 
-    println!(
-        "  Directory processing efficiency:      {:.1}%",
-        efficiency_pct
-    );
+    println!("  Directory processing efficiency:      {efficiency_pct:.1}%");
 
     if efficiency_pct < 50.0 {
         println!("  Note: Low efficiency may indicate overhead in traversal queue or I/O wait");
@@ -1825,7 +1812,7 @@ fn setup_cancellation() -> CancellationToken {
     if let Err(err) = ctrlc::set_handler(move || {
         token_clone.cancel();
     }) {
-        eprintln!("Failed to set Ctrl+C handler: {}", err);
+        eprintln!("Failed to set Ctrl+C handler: {err}");
     }
 
     token

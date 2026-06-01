@@ -61,7 +61,7 @@ pub fn bench_lmdb_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Re
     // Add latency metrics
     let chunk_size_kb = random_data.chunk_size as f64 / types::BYTES_IN_KILOBYTE as f64;
     result.add_metric(
-        &format!("write() {:.0} KiB latency", chunk_size_kb),
+        &format!("write() {chunk_size_kb:.0} KiB latency"),
         avg_write_dur * 1000.0,
         types::Unit::Ms,
         Some(4),
@@ -91,7 +91,7 @@ pub fn bench_lmdb_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Res
         let dbres = db.get(&txn, &key)?;
         match dbres {
             Some(value) => read_data.copy_from_slice(value),
-            None => return Err(anyhow!("Data not found for key {:?}", key)),
+            None => return Err(anyhow!("Data not found for key {key:?}")),
         }
         agg_read_dur += start.elapsed();
     }
@@ -107,7 +107,7 @@ pub fn bench_lmdb_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Res
     // Add latency metrics
     let chunk_size_kb = random_data.chunk_size as f64 / types::BYTES_IN_KILOBYTE as f64;
     result.add_metric(
-        &format!("read() {:.0} KiB latency", chunk_size_kb),
+        &format!("read() {chunk_size_kb:.0} KiB latency"),
         avg_read_dur * 1000.0,
         types::Unit::Ms,
         Some(4),
@@ -144,7 +144,7 @@ pub fn bench_sqlite_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> 
     // Add latency metrics
     let chunk_size_kb = random_data.chunk_size as f64 / types::BYTES_IN_KILOBYTE as f64;
     result.add_metric(
-        &format!("write() {:.0} KiB latency", chunk_size_kb),
+        &format!("write() {chunk_size_kb:.0} KiB latency"),
         avg_write_dur * 1000.0,
         types::Unit::Ms,
         Some(4),
@@ -181,7 +181,7 @@ pub fn bench_sqlite_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> R
     // Add latency metrics
     let chunk_size_kb = random_data.chunk_size as f64 / types::BYTES_IN_KILOBYTE as f64;
     result.add_metric(
-        &format!("read() {:.0} KiB latency", chunk_size_kb),
+        &format!("read() {chunk_size_kb:.0} KiB latency"),
         avg_read_dur * 1000.0,
         types::Unit::Ms,
         Some(4),

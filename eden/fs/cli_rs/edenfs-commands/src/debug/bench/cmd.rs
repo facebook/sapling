@@ -238,7 +238,7 @@ impl crate::Subcommand for BenchCmd {
                             dir.len()
                         );
                         for directory in dir {
-                            println!("  - {}", directory);
+                            println!("  - {directory}");
                         }
                     }
                 }
@@ -261,7 +261,7 @@ impl crate::Subcommand for BenchCmd {
                 if *json {
                     println!("{}", serde_json::to_string_pretty(&benchmark_result)?);
                 } else {
-                    println!("{}", benchmark_result);
+                    println!("{benchmark_result}");
                 }
             }
         }
