@@ -143,11 +143,10 @@ async fn cache_warmup_target(
             Ok(CacheWarmupTarget::Changeset(cs_id))
         }
         LatestDerivedBookmarkEntry::Found(None) => {
-            Err(format_err!("Bookmark {} has no derived data", bookmark))
+            Err(format_err!("Bookmark {bookmark} has no derived data"))
         }
         LatestDerivedBookmarkEntry::NotFound => Err(format_err!(
-            "Bookmark {} has too many underived commits",
-            bookmark
+            "Bookmark {bookmark} has too many underived commits"
         )),
     }
 }
