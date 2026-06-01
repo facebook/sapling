@@ -68,7 +68,7 @@ impl std::fmt::Display for BookmarkOperation {
             Delete(_) => "delete",
         };
 
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 
@@ -244,11 +244,11 @@ impl PlainBookmarkInfo {
             old_bookmark_value: info
                 .operation
                 .old_bookmark_value()
-                .map(|cs| format!("{}", cs)),
+                .map(|cs| format!("{cs}")),
             new_bookmark_value: info
                 .operation
                 .new_bookmark_value()
-                .map(|cs| format!("{}", cs)),
+                .map(|cs| format!("{cs}")),
             operation: format!("{}", info.operation),
             update_reason: format!("{}", info.reason),
         }
