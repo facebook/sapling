@@ -112,8 +112,7 @@ impl<R: MononokeRepo> HgFileContext<R> {
             .await?
             .ok_or_else(|| {
                 MononokeError::NotAvailable(format!(
-                    "metadata not found for content id {}",
-                    content_id
+                    "metadata not found for content id {content_id}"
                 ))
             })
     }

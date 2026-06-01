@@ -166,8 +166,7 @@ impl<R: MononokeRepo> HgRepoContext<R> {
         .await?
         .ok_or_else(|| {
             MononokeError::InvalidRequest(format!(
-                "failed to fetch or rebuild metadata for ContentId('{}'), file content must be prior uploaded",
-                content_id
+                "failed to fetch or rebuild metadata for ContentId('{content_id}'), file content must be prior uploaded"
             ))
         })?
         .total_size)
@@ -217,7 +216,7 @@ impl<R: MononokeRepo> HgRepoContext<R> {
             Ok(cid) => Ok(Some(cid)),
             Err(LoadableError::Missing(_)) => Ok(None),
             Err(LoadableError::Error(err)) => {
-                Err(err).with_context(|| format_err!("While fetching ContentId for {:?}", hash))?
+                Err(err).with_context(|| format_err!("While fetching ContentId for {hash:?}"))?
             }
         }
     }
@@ -255,8 +254,7 @@ impl<R: MononokeRepo> HgRepoContext<R> {
                 AnyId::AnyFileContentId(file_id) => file_id.into(),
                 e => {
                     return Err(MononokeError::from(format_err!(
-                        "Id is not of a file: {:?}",
-                        e
+                        "Id is not of a file: {e:?}"
                     )));
                 }
             },
@@ -511,8 +509,7 @@ impl<R: MononokeRepo> HgRepoContext<R> {
             .map(|master_id| {
                 hg_to_bonsai.get(master_id).cloned().ok_or_else(|| {
                     MononokeError::InvalidRequest(format!(
-                        "failed to find bonsai equivalent for client head {}",
-                        master_id
+                        "failed to find bonsai equivalent for client head {master_id}"
                     ))
                 })
             })
@@ -560,8 +557,7 @@ impl<R: MononokeRepo> HgRepoContext<R> {
                     Ok(cs_location) => cs_location.try_map_descendant(|descendant| {
                         bonsai_to_hg.get(&descendant).cloned().ok_or_else(|| {
                             MononokeError::InvalidRequest(format!(
-                                "failed to find hg equivalent for bonsai {}",
-                                descendant
+                                "failed to find hg equivalent for bonsai {descendant}"
                             ))
                         })
                     }),
@@ -791,7 +787,7 @@ impl<R: MononokeRepo> HgRepoContext<R> {
             bonsai_hg_mapping
                 .get(&cs_id)
                 .cloned()
-                .with_context(|| format_err!("failed to find bonsai '{}' mapping to hg", cs_id))
+                .with_context(|| format_err!("failed to find bonsai '{cs_id}' mapping to hg"))
         };
 
         let hg_parent_mapping = cs_parent_mapping

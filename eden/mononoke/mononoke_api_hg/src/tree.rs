@@ -1145,7 +1145,7 @@ mod tests {
         let root_hg_augmented_manifest_id = manager
             .fetch_derived::<RootHgAugmentedManifestId>(ctx, bcs_id, None)
             .await?
-            .with_context(|| format!("Missing RootHgAugmentedManifestId for {}", bcs_id))?
+            .with_context(|| format!("Missing RootHgAugmentedManifestId for {bcs_id}"))?
             .hg_augmented_manifest_id();
         let root_envelope = root_hg_augmented_manifest_id
             .clone()
@@ -1170,7 +1170,7 @@ mod tests {
                 .subentries
                 .lookup(ctx, repo.repo_blobstore(), element.as_ref())
                 .await?
-                .with_context(|| format!("{} should exist at depth {}", element, index))?;
+                .with_context(|| format!("{element} should exist at depth {index}"))?;
             match entry {
                 HgAugmentedManifestEntry::DirectoryNode(directory) => {
                     let hg_augmented_manifest_id = HgAugmentedManifestId::new(directory.treenode);
@@ -1184,7 +1184,7 @@ mod tests {
                     );
                 }
                 HgAugmentedManifestEntry::FileNode(_) => {
-                    anyhow::bail!("{} should be a directory node", element);
+                    anyhow::bail!("{element} should be a directory node");
                 }
             }
         }
