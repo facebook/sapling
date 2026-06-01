@@ -61,7 +61,7 @@ impl RedactedBlobs {
     ) -> Result<Self, Error> {
         let handle = store
             .get_config_handle(config_path.to_string())
-            .with_context(|| format!("redaction sets not found at {}", config_path))?;
+            .with_context(|| format!("redaction sets not found at {config_path}"))?;
         Ok(Self::FromConfigerator(Arc::new(
             ConfigeratorRedactedBlobs::new(ctx, handle, blobstore).await?,
         )))
