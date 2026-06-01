@@ -179,9 +179,7 @@ impl SqlCommitDerivedDataMapping {
         let count = self.read_connections.len();
         if id >= count {
             return Err(anyhow!(
-                "connection index {} out of range (have {} connections)",
-                id,
-                count,
+                "connection index {id} out of range (have {count} connections)",
             ));
         }
         Ok(id)
