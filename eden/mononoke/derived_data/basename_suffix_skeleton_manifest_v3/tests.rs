@@ -104,7 +104,7 @@ async fn test_for_fixture<F: TestRepoFixture + Send>(fb: FacebookInit) -> Result
         .await?;
     let all_commits = match all_commits {
         ChangesetIdsResolvedFromPrefix::Multiple(all_commits) => all_commits,
-        other => anyhow::bail!("Unexpected number of commits: {:?}", other),
+        other => anyhow::bail!("Unexpected number of commits: {other:?}"),
     };
     let visited = &RwLock::new(HashSet::new());
     repo.commit_graph()

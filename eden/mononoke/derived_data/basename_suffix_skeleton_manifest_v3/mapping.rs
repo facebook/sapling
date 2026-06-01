@@ -39,7 +39,7 @@ pub struct RootBssmV3DirectoryId(pub(crate) BssmV3DirectoryId);
 pub fn format_key(derivation_ctx: &DerivationContext, changeset_id: ChangesetId) -> String {
     let root_prefix = "derived_root_bssm3.";
     let key_prefix = derivation_ctx.mapping_key_prefix::<RootBssmV3DirectoryId>();
-    format!("{}{}{}", root_prefix, key_prefix, changeset_id)
+    format!("{root_prefix}{key_prefix}{changeset_id}")
 }
 
 impl TryFrom<BlobstoreBytes> for RootBssmV3DirectoryId {
