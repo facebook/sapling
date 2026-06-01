@@ -207,10 +207,9 @@ async fn check_dir_size(
         return Ok(Some(HookExecution::Rejected(HookRejectionInfo::new_long(
             "Directory too large",
             format!(
-                "Directory '{}' is {} bytes ({} MB), which exceeds the \
-                 size limit of {} bytes ({} MB). Please reduce the size \
+                "Directory '{path}' is {size} bytes ({size_mb} MB), which exceeds the \
+                 size limit of {limit} bytes ({limit_mb} MB). Please reduce the size \
                  of this directory before pushing.",
-                path, size, size_mb, limit, limit_mb,
             ),
         ))));
     }

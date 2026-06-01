@@ -224,9 +224,8 @@ impl FileHook for BlockInvalidSymlinksHook {
                             ctx.scuba().clone().log_with_msg(
                                 "block_absolute_symlinks dry run: would reject",
                                 format!(
-                                    "symlink '{}' points to an absolute path which will break builds. \
-                                     Use a relative path instead.",
-                                    path
+                                    "symlink '{path}' points to an absolute path which will break builds. \
+                                     Use a relative path instead."
                                 ),
                             );
                         } else {
@@ -234,9 +233,8 @@ impl FileHook for BlockInvalidSymlinksHook {
                             return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
                                 "symlink uses absolute path",
                                 format!(
-                                    "symlink '{}' points to an absolute path which will break builds. \
-                                     Use a relative path instead.",
-                                    path
+                                    "symlink '{path}' points to an absolute path which will break builds. \
+                                     Use a relative path instead."
                                 ),
                             )));
                         }
@@ -257,10 +255,9 @@ impl FileHook for BlockInvalidSymlinksHook {
                             if relative_target_escapes_root(&text, &path, root) {
                                 let target_str = String::from_utf8_lossy(&text);
                                 let message = format!(
-                                    "symlink '{}' resolves to a target outside '{}' which will \
-                                     break builds on hosts that only check out '{}'. \
-                                     Symlink target was '{}'.",
-                                    path, root, root, target_str,
+                                    "symlink '{path}' resolves to a target outside '{root}' which will \
+                                     break builds on hosts that only check out '{root}'. \
+                                     Symlink target was '{target_str}'.",
                                 );
                                 if self.config.block_escaping_relative_symlinks_dry_run {
                                     ctx.scuba().clone().log_with_msg(
@@ -582,8 +579,7 @@ mod tests {
                             .into(),
                 }),
             )),
-            "absolute symlink should be rejected, got: {:?}",
-            results
+            "absolute symlink should be rejected, got: {results:?}"
         );
 
         // Relative symlink -> accepted
@@ -598,8 +594,7 @@ mod tests {
         .await?;
         assert!(
             results.contains(&("www/bar/link".try_into()?, HookExecution::Accepted)),
-            "relative symlink should be accepted, got: {:?}",
-            results
+            "relative symlink should be accepted, got: {results:?}"
         );
 
         // Absolute symlink in ignored path -> accepted
@@ -614,8 +609,7 @@ mod tests {
         .await?;
         assert!(
             results.contains(&("ignored/link".try_into()?, HookExecution::Accepted)),
-            "absolute symlink in ignored path should be accepted, got: {:?}",
-            results
+            "absolute symlink in ignored path should be accepted, got: {results:?}"
         );
 
         // Windows drive letter absolute symlink -> rejected
@@ -639,8 +633,7 @@ mod tests {
                             .into(),
                 }),
             )),
-            "Windows drive letter absolute symlink should be rejected, got: {:?}",
-            results
+            "Windows drive letter absolute symlink should be rejected, got: {results:?}"
         );
 
         // Windows UNC path absolute symlink -> rejected
@@ -664,8 +657,7 @@ mod tests {
                             .into(),
                 }),
             )),
-            "Windows UNC absolute symlink should be rejected, got: {:?}",
-            results
+            "Windows UNC absolute symlink should be rejected, got: {results:?}"
         );
 
         // Absolute symlink in www/ with path regex -> rejected
@@ -689,8 +681,7 @@ mod tests {
                             .into(),
                 }),
             )),
-            "absolute symlink in www/ should be rejected with path regex, got: {:?}",
-            results
+            "absolute symlink in www/ should be rejected with path regex, got: {results:?}"
         );
 
         // Absolute symlink outside www/ with path regex -> accepted
@@ -705,8 +696,7 @@ mod tests {
         .await?;
         assert!(
             results.contains(&("fbcode/link".try_into()?, HookExecution::Accepted)),
-            "absolute symlink outside www/ should be accepted with path regex, got: {:?}",
-            results
+            "absolute symlink outside www/ should be accepted with path regex, got: {results:?}"
         );
 
         Ok(())
@@ -880,8 +870,7 @@ mod tests {
                     e,
                     HookExecution::Rejected(info) if info.description == "symlink escapes containment root"
                 )),
-            "escaping relative symlink should be rejected, got: {:?}",
-            results
+            "escaping relative symlink should be rejected, got: {results:?}"
         );
 
         // Relative symlink that stays inside www/ -- accepted.
@@ -896,8 +885,7 @@ mod tests {
         .await?;
         assert!(
             results.contains(&("www/a/b/link".try_into()?, HookExecution::Accepted)),
-            "in-tree relative symlink should be accepted, got: {:?}",
-            results
+            "in-tree relative symlink should be accepted, got: {results:?}"
         );
 
         // Symlink outside www/ doesn't match the rule -- accepted.
@@ -912,8 +900,7 @@ mod tests {
         .await?;
         assert!(
             results.contains(&("other/foo/link".try_into()?, HookExecution::Accepted)),
-            "non-matching path should be accepted, got: {:?}",
-            results
+            "non-matching path should be accepted, got: {results:?}"
         );
 
         // ignore_path_regexes provides an escape hatch.
@@ -928,8 +915,7 @@ mod tests {
         .await?;
         assert!(
             results.contains(&("www/ignored/link".try_into()?, HookExecution::Accepted)),
-            "ignored path should be accepted, got: {:?}",
-            results
+            "ignored path should be accepted, got: {results:?}"
         );
 
         // Absolute symlinks fall through this check -- accepted because no
@@ -945,8 +931,7 @@ mod tests {
         .await?;
         assert!(
             results.contains(&("www/abs/link".try_into()?, HookExecution::Accepted)),
-            "absolute symlink should fall through this check, got: {:?}",
-            results
+            "absolute symlink should fall through this check, got: {results:?}"
         );
 
         // `..` past the repo root -- rejected.
@@ -965,8 +950,7 @@ mod tests {
                     e,
                     HookExecution::Rejected(info) if info.description == "symlink escapes containment root"
                 )),
-            "symlink escaping above repo root should be rejected, got: {:?}",
-            results
+            "symlink escaping above repo root should be rejected, got: {results:?}"
         );
 
         // Same-directory symlink -- accepted.
@@ -981,8 +965,7 @@ mod tests {
         .await?;
         assert!(
             results.contains(&("www/safe/link".try_into()?, HookExecution::Accepted)),
-            "same-directory symlink should be accepted, got: {:?}",
-            results
+            "same-directory symlink should be accepted, got: {results:?}"
         );
 
         // Dry run mode -- escaping symlink is accepted instead of rejected.
@@ -997,8 +980,7 @@ mod tests {
         .await?;
         assert!(
             results.contains(&("www/a/b/c/link.py".try_into()?, HookExecution::Accepted,)),
-            "dry-run mode should accept escaping symlink, got: {:?}",
-            results
+            "dry-run mode should accept escaping symlink, got: {results:?}"
         );
 
         Ok(())

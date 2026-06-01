@@ -69,8 +69,7 @@ fn rejection<'a, 'b>(path: &'a String, pattern: &'b Regex) -> HookExecution {
     HookExecution::Rejected(HookRejectionInfo::new_long(
         "Blocked filename matched name pattern",
         format!(
-            "Blocked filename '{}' matched name pattern '{}'. Rename or remove this file and try again.",
-            path, pattern
+            "Blocked filename '{path}' matched name pattern '{pattern}'. Rename or remove this file and try again."
         ),
     ))
 }

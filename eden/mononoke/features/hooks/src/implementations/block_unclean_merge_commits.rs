@@ -85,8 +85,7 @@ impl ChangesetHook for BlockUncleanMergeCommitsHook {
                 return Ok(HookExecution::Accepted);
             } else {
                 format!(
-                    "The bookmark matching regex {} can't have merge commits with conflicts, even if they have been resolved",
-                    regex
+                    "The bookmark matching regex {regex} can't have merge commits with conflicts, even if they have been resolved"
                 )
             }
         } else {

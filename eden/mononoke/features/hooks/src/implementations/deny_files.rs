@@ -139,8 +139,7 @@ fn rejection<'a, 'b>(path: &'a String, pattern: &'b LuaPattern) -> HookExecution
     HookExecution::Rejected(HookRejectionInfo::new_long(
         "Denied filename matched name pattern",
         format!(
-            "Denied filename '{}' matched name pattern '{}'. Rename or remove this file and try again.",
-            path, pattern
+            "Denied filename '{path}' matched name pattern '{pattern}'. Rename or remove this file and try again."
         ),
     ))
 }

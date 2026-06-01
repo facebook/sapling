@@ -218,7 +218,7 @@ impl ChangesetHook for LimitDirectorySizeHook {
                 _ => {
                     let details: Vec<String> = matching_overrides
                         .iter()
-                        .map(|(regex, limit)| format!("'{}' (limit={})", regex, limit))
+                        .map(|(regex, limit)| format!("'{regex}' (limit={limit})"))
                         .collect();
                     anyhow::bail!(
                         "limit_directory_size hook: directory '{}' matches multiple \
@@ -657,8 +657,7 @@ mod test {
             err.contains("limit_directory_size hook")
                 && err.contains("dir1")
                 && err.contains("matches multiple path_overrides"),
-            "unexpected error: {}",
-            err,
+            "unexpected error: {err}",
         );
 
         Ok(())

@@ -91,12 +91,11 @@ async fn check_lfsconfig_for_dewey_url(
             return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
                 "The .lfsconfig file must not set lfs.url to dewey-lfs.vip.facebook.com.",
                 format!(
-                    "The .lfsconfig file sets lfs.url to \"{}\". \
+                    "The .lfsconfig file sets lfs.url to \"{url_str}\". \
                      The hardcoded dewey-lfs.vip.facebook.com URL must be removed as part of \
                      the Dewey LFS to Mononoke LFS migration tracked in S629462. \
                      Hardcoding an lfs.url for the internal LFS server is no longer required at Meta. \
                      Please remove the lfs.url setting from .lfsconfig.",
-                    url_str,
                 ),
             )));
         }

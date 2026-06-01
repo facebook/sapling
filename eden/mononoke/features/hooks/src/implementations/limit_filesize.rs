@@ -131,9 +131,9 @@ impl FileHook for LimitFilesize {
                     return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
                         "File too large",
                         format!(
-                            "File size limit is {} bytes. You tried to push file {} that is over the limit \
-                            ({} bytes, {:.2}x the limit). This limit is enforced for files matching the \
-                            following regex: \"{}\".\n\
+                            "File size limit is {limit} bytes. You tried to push file {path} that is over the limit \
+                            ({len} bytes, {ratio:.2}x the limit). This limit is enforced for files matching the \
+                            following regex: \"{regex}\".\n\
                             \n\
                             WHY THIS IS BLOCKED: Large files have ongoing infrastructure costs — they impact \
                             caching systems, Mononoke, biggrep indexing, and permanent backups used by \
@@ -151,8 +151,7 @@ impl FileHook for LimitFilesize {
                             (using `sl amend -e`).\n\
                             2. Request bypass approval at https://fburl.com/support/sourcecontrol.\n\
                             \n\
-                            See https://fburl.com/landing_big_diffs for more details.",
-                            limit, path, len, ratio, regex
+                            See https://fburl.com/landing_big_diffs for more details."
                         ),
                     )));
                 }

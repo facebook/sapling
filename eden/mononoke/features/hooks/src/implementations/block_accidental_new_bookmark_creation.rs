@@ -131,7 +131,7 @@ impl BookmarkHook for BlockAccidentalNewBookmarkCreationHook {
         if let Some(options) = &self.creation_allowed_with_marker_options {
             if let Some(value_from_marker) = extract_value_from_marker(options, to) {
                 let value_to_compare = if let Some(comparison_prefix) = &options.comparison_prefix {
-                    &format!("{}{}", comparison_prefix, value_from_marker)
+                    &format!("{comparison_prefix}{value_from_marker}")
                 } else {
                     value_from_marker
                 };

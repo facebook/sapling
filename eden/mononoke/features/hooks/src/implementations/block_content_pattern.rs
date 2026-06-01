@@ -92,7 +92,7 @@ impl FileHook for BlockContentPatternHook {
                     if let Some(caps) = self.config.pattern.captures(text) {
                         let mut message = String::new();
                         caps.expand(&self.config.message, &mut message);
-                        write!(message, ": {}", path)?;
+                        write!(message, ": {path}")?;
                         return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
                             "File contains blocked pattern",
                             message,

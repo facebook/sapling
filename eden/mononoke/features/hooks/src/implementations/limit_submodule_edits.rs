@@ -219,10 +219,7 @@ impl ChangesetHook for LimitSubmoduleEditsHook {
                                         "Commit creates submodules at the following paths:\n{}\n  This is disallowed even with correct markers in this repository.",
                                         new_submodule_mpaths
                                             .iter()
-                                            .map(|submodule_path| format!(
-                                                "    - {}",
-                                                submodule_path
-                                            ))
+                                            .map(|submodule_path| format!("    - {submodule_path}"))
                                             .collect::<Vec<_>>()
                                             .join("\n"),
                                     ),
@@ -238,7 +235,7 @@ impl ChangesetHook for LimitSubmoduleEditsHook {
                                 "Commit creates or edits submodules at the following paths:\n{}\n  If you did mean to do this, add the following lines to your commit message:\n{}",
                                 blocked_submodule_paths
                                     .iter()
-                                    .map(|submodule_path| format!("    - {}", submodule_path))
+                                    .map(|submodule_path| format!("    - {submodule_path}"))
                                     .collect::<Vec<_>>()
                                     .join("\n"),
                                 blocked_submodule_paths
@@ -259,7 +256,7 @@ impl ChangesetHook for LimitSubmoduleEditsHook {
                         "Commit creates or edits submodules at the following paths:\n{}",
                         submodule_paths
                             .iter()
-                            .map(|submodule_path| format!("    - {}", submodule_path))
+                            .map(|submodule_path| format!("    - {submodule_path}"))
                             .collect::<Vec<_>>()
                             .join("\n"),
                     ),

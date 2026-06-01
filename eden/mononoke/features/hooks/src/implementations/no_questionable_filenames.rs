@@ -115,8 +115,7 @@ impl FileHook for NoQuestionableFilenames {
                     return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
                         "Illegal filename",
                         format!(
-                            "ABORT: Illegal filename: {}. The file name cannot include spaces, apostrophes or start with hyphens.",
-                            path
+                            "ABORT: Illegal filename: {path}. The file name cannot include spaces, apostrophes or start with hyphens."
                         ),
                     )));
                 }
