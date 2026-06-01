@@ -386,7 +386,7 @@ impl<R: MononokeRepo> ChangesetPathDiffContext<R> {
             options,
         )
         .await
-        .map_err(|e| MononokeError::from(anyhow::anyhow!("Diff error: {}", e)))?;
+        .map_err(|e| MononokeError::from(anyhow::anyhow!("Diff error: {e}")))?;
 
         Ok(UnifiedDiff {
             raw_diff: diff_result.raw_diff,

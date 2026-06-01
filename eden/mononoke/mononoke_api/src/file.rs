@@ -267,5 +267,5 @@ pub async fn headerless_unified_diff<
 /// has been lost from the blobstore, or the file context was erroneously
 /// constructed.
 fn content_not_found_error(fetch_key: &FetchKey) -> MononokeError {
-    MononokeError::from(format_err!("content not found: {:?}", fetch_key))
+    MononokeError::from(format_err!("content not found: {fetch_key:?}"))
 }

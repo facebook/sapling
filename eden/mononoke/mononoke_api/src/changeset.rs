@@ -1551,8 +1551,7 @@ where
             for (from_path, to_paths) in copy_path_map.iter() {
                 let mf_entry = from_path_to_mf_entry.get(from_path).ok_or_else(|| {
                     MononokeError::from(anyhow!(
-                        "internal error: cannot find {:?} in parent commit",
-                        from_path
+                        "internal error: cannot find {from_path:?} in parent commit"
                     ))
                 })?;
                 for to_path in to_paths {

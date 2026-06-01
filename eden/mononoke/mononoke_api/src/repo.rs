@@ -1186,7 +1186,7 @@ where
         repos: Arc<MononokeRepos<R>>,
     ) -> Result<Self, MononokeError> {
         let ctx = ctx.with_mutated_scuba(|mut scuba| {
-            scuba.add("permissions_model", format!("{:?}", authz));
+            scuba.add("permissions_model", format!("{authz:?}"));
             scuba
         });
 
@@ -1550,10 +1550,7 @@ impl<R: MononokeRepo> RepoContext<R> {
 
         let prefix = match prefix {
             Some(prefix) => BookmarkPrefix::new(prefix).map_err(|e| {
-                MononokeError::InvalidRequest(format!(
-                    "invalid bookmark prefix '{}': {}",
-                    prefix, e
-                ))
+                MononokeError::InvalidRequest(format!("invalid bookmark prefix '{prefix}': {e}"))
             })?,
             None => BookmarkPrefix::empty(),
         };
@@ -1561,10 +1558,7 @@ impl<R: MononokeRepo> RepoContext<R> {
         let pagination = match after {
             Some(after) => {
                 let name = BookmarkName::new(after).map_err(|e| {
-                    MononokeError::InvalidRequest(format!(
-                        "invalid bookmark name '{}': {}",
-                        after, e
-                    ))
+                    MononokeError::InvalidRequest(format!("invalid bookmark name '{after}': {e}"))
                 })?;
                 BookmarkPagination::After(name)
             }
@@ -1816,8 +1810,7 @@ impl<R: MononokeRepo> RepoContext<R> {
                     .await?
                     .ok_or_else(|| {
                         MononokeError::InvalidRequest(format!(
-                            "unknown commit specifier {}",
-                            specifier
+                            "unknown commit specifier {specifier}"
                         ))
                     })?;
                 Ok(CandidateSelectionHint::AncestorOfCommit(
@@ -1832,8 +1825,7 @@ impl<R: MononokeRepo> RepoContext<R> {
                     .await?
                     .ok_or_else(|| {
                         MononokeError::InvalidRequest(format!(
-                            "unknown commit specifier {}",
-                            specifier
+                            "unknown commit specifier {specifier}"
                         ))
                     })?;
                 Ok(CandidateSelectionHint::DescendantOfCommit(
@@ -1847,8 +1839,7 @@ impl<R: MononokeRepo> RepoContext<R> {
                     .await?
                     .ok_or_else(|| {
                         MononokeError::InvalidRequest(format!(
-                            "unknown commit specifier {}",
-                            specifier
+                            "unknown commit specifier {specifier}"
                         ))
                     })?;
                 Ok(CandidateSelectionHint::Exact(Target(cs_id)))
@@ -1909,7 +1900,7 @@ impl<R: MononokeRepo> RepoContext<R> {
 
         let specifier = specifier.into();
         let changeset = self.resolve_specifier(specifier).await?.ok_or_else(|| {
-            MononokeError::InvalidRequest(format!("unknown commit specifier {}", specifier))
+            MononokeError::InvalidRequest(format!("unknown commit specifier {specifier}"))
         })?;
 
         let commit_sync_data =
@@ -1958,8 +1949,7 @@ impl<R: MononokeRepo> RepoContext<R> {
                     .await?
                     .ok_or_else(|| {
                         MononokeError::InvalidRequest(format!(
-                            "git changeset {} not found",
-                            descendant
+                            "git changeset {descendant} not found"
                         ))
                     })
             })
@@ -1996,8 +1986,7 @@ impl<R: MononokeRepo> RepoContext<R> {
             .map(|master_id| {
                 git_to_bonsai.get(master_id).cloned().ok_or_else(|| {
                     MononokeError::InvalidRequest(format!(
-                        "failed to find bonsai equivalent for client head {}",
-                        master_id
+                        "failed to find bonsai equivalent for client head {master_id}"
                     ))
                 })
             })
@@ -2043,8 +2032,7 @@ impl<R: MononokeRepo> RepoContext<R> {
                     Ok(cs_location) => cs_location.try_map_descendant(|descendant| {
                         bonsai_to_git.get(&descendant).cloned().ok_or_else(|| {
                             MononokeError::InvalidRequest(format!(
-                                "failed to find git equivalent for bonsai {}",
-                                descendant
+                                "failed to find git equivalent for bonsai {descendant}"
                             ))
                         })
                     }),

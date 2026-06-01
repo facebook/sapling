@@ -112,7 +112,7 @@ impl ChangesetSpecifier {
                 None => ephemeral_blobstore
                     .bubble_from_changeset(ctx, cs_id)
                     .await?
-                    .with_context(|| format!("changeset {} does not belong to bubble", cs_id))?,
+                    .with_context(|| format!("changeset {cs_id} does not belong to bubble"))?,
             }),
             Bonsai(_) | Hg(_) | Globalrev(_) | GitSha1(_) | Svnrev(_) => None,
         })
@@ -234,7 +234,7 @@ impl From<Option<Globalrev>> for ChangesetSpecifierPrefixResolution {
 impl fmt::Display for ChangesetSpecifier {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            ChangesetSpecifier::Bonsai(cs_id) => write!(f, "changeset {}", cs_id),
+            ChangesetSpecifier::Bonsai(cs_id) => write!(f, "changeset {cs_id}"),
             ChangesetSpecifier::EphemeralBonsai(cs_id, bubble_id) => {
                 write!(
                     f,
@@ -243,9 +243,9 @@ impl fmt::Display for ChangesetSpecifier {
                     bubble_id.map_or_else(|| "unknown".to_string(), |b| b.to_string())
                 )
             }
-            ChangesetSpecifier::Hg(hg_cs_id) => write!(f, "hg changeset {}", hg_cs_id),
+            ChangesetSpecifier::Hg(hg_cs_id) => write!(f, "hg changeset {hg_cs_id}"),
             ChangesetSpecifier::Globalrev(rev) => write!(f, "globalrev {}", rev.id()),
-            ChangesetSpecifier::GitSha1(git_sha1) => write!(f, "git sha1 {}", git_sha1),
+            ChangesetSpecifier::GitSha1(git_sha1) => write!(f, "git sha1 {git_sha1}"),
             ChangesetSpecifier::Svnrev(rev) => write!(f, "svn rev {}", rev.id()),
         }
     }
