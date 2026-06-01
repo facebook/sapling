@@ -464,7 +464,7 @@ async fn get_submodule_expansion_manifest_id<'a, R: Repo>(
             .log_future_stats(
                 ctx.scuba().clone(),
                 "Deriving large repo bonsai parent's content manifest ids",
-                format!("Synced submodule path: {}", synced_submodule_path),
+                format!("Synced submodule path: {synced_submodule_path}"),
             )
             .context("Failed to derive parent content manifests in large repo")?;
 
@@ -480,7 +480,7 @@ async fn get_submodule_expansion_manifest_id<'a, R: Repo>(
         .log_future_stats(
             ctx.scuba().clone(),
             "Deriving large repo bonsai root content manifest id",
-            format!("Synced submodule path: {}", synced_submodule_path),
+            format!("Synced submodule path: {synced_submodule_path}"),
         )
         .context("Deriving root content manifest for new bonsai")?;
 
@@ -497,7 +497,7 @@ async fn get_submodule_expansion_manifest_id<'a, R: Repo>(
             .log_future_stats(
                 ctx.scuba().clone(),
                 "Deriving large repo bonsai parent's fsnode ids",
-                format!("Synced submodule path: {}", synced_submodule_path),
+                format!("Synced submodule path: {synced_submodule_path}"),
             )
             .context("Failed to derive parent fsnodes in large repo")?;
 
@@ -513,7 +513,7 @@ async fn get_submodule_expansion_manifest_id<'a, R: Repo>(
         .log_future_stats(
             ctx.scuba().clone(),
             "Deriving large repo bonsai root fsnode id",
-            format!("Synced submodule path: {}", synced_submodule_path),
+            format!("Synced submodule path: {synced_submodule_path}"),
         )
         .context("Deriving root fsnode for new bonsai")?;
 
@@ -774,10 +774,7 @@ where
         let unexpected_entries = entries.keys().sorted().collect::<Vec<_>>();
         log_error(
             ctx,
-            format!(
-                "{entry_kind} unaccounted for in {location}: {:#?}",
-                unexpected_entries
-            ),
+            format!("{entry_kind} unaccounted for in {location}: {unexpected_entries:#?}"),
         );
 
         Err(anyhow!(

@@ -174,7 +174,7 @@ pub async fn submodule_diff<T: Repo>(
         .repo_derived_data()
         .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
         .await
-        .with_context(|| format!("Failed to get fsnode id form changeset id {}", cs_id))?
+        .with_context(|| format!("Failed to get fsnode id form changeset id {cs_id}"))?
         .into_fsnode_id();
 
     let parent_fsnode_ids = stream::iter(parents)
@@ -186,8 +186,7 @@ pub async fn submodule_diff<T: Repo>(
                     .await
                     .with_context(|| {
                         format!(
-                            "Failed to get parent's fsnode id from its changeset id: {}",
-                            parent_cs_id
+                            "Failed to get parent's fsnode id from its changeset id: {parent_cs_id}"
                         )
                     })?
                     .into_fsnode_id(),
