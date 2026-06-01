@@ -98,18 +98,15 @@ mod test {
             let stats = populate_stats(max_memory, used_mem);
             assert_eq!(
                 stats.total_rss_bytes, expected_total_rss_bytes,
-                "when max_memory={} and used_mem={}",
-                max_memory, used_mem
+                "when max_memory={max_memory} and used_mem={used_mem}"
             );
             assert_eq!(
                 stats.rss_free_bytes, expected_rss_free_bytes,
-                "when max_memory={} and used_mem={}",
-                max_memory, used_mem
+                "when max_memory={max_memory} and used_mem={used_mem}"
             );
             assert_eq!(
                 stats.rss_free_pct, expected_rss_free_pct,
-                "when max_memory={} and used_mem={}",
-                max_memory, used_mem
+                "when max_memory={max_memory} and used_mem={used_mem}"
             );
         }
     }
