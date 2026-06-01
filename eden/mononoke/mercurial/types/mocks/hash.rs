@@ -59,69 +59,51 @@ mod test {
     #[mononoke::test]
     fn verify() {
         assert_eq!(
-            format!("{}", NULL),
+            format!("{NULL}"),
             "0000000000000000000000000000000000000000"
         );
         assert_eq!(
-            format!("{}", ONES),
+            format!("{ONES}"),
             "1111111111111111111111111111111111111111"
         );
         assert_eq!(
-            format!("{}", TWOS),
+            format!("{TWOS}"),
             "2222222222222222222222222222222222222222"
         );
         assert_eq!(
-            format!("{}", THREES),
+            format!("{THREES}"),
             "3333333333333333333333333333333333333333"
         );
         assert_eq!(
-            format!("{}", FOURS),
+            format!("{FOURS}"),
             "4444444444444444444444444444444444444444"
         );
         assert_eq!(
-            format!("{}", FIVES),
+            format!("{FIVES}"),
             "5555555555555555555555555555555555555555"
         );
         assert_eq!(
-            format!("{}", SIXES),
+            format!("{SIXES}"),
             "6666666666666666666666666666666666666666"
         );
         assert_eq!(
-            format!("{}", SEVENS),
+            format!("{SEVENS}"),
             "7777777777777777777777777777777777777777"
         );
         assert_eq!(
-            format!("{}", EIGHTS),
+            format!("{EIGHTS}"),
             "8888888888888888888888888888888888888888"
         );
         assert_eq!(
-            format!("{}", NINES),
+            format!("{NINES}"),
             "9999999999999999999999999999999999999999"
         );
-        assert_eq!(
-            format!("{}", AS),
-            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-        );
-        assert_eq!(
-            format!("{}", BS),
-            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-        );
-        assert_eq!(
-            format!("{}", CS),
-            "cccccccccccccccccccccccccccccccccccccccc"
-        );
-        assert_eq!(
-            format!("{}", DS),
-            "dddddddddddddddddddddddddddddddddddddddd"
-        );
-        assert_eq!(
-            format!("{}", ES),
-            "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
-        );
-        assert_eq!(
-            format!("{}", FS),
-            "ffffffffffffffffffffffffffffffffffffffff"
-        );
+        assert_eq!(format!("{AS}"), "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+        assert_eq!(format!("{BS}"), "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+        assert_eq!(format!("{CS}"), "cccccccccccccccccccccccccccccccccccccccc");
+        assert_eq!(format!("{DS}"), "dddddddddddddddddddddddddddddddddddddddd");
+        assert_eq!(format!("{ES}"), "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee");
+        assert_eq!(format!("{FS}"), "ffffffffffffffffffffffffffffffffffffffff");
         assert_eq!(
             format!("{}", make_hash(b"test", 0x123456)),
             "7465737400000000000000000000000000123456"
