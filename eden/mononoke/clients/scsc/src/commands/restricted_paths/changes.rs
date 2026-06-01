@@ -52,7 +52,7 @@ impl Render for ChangesOutput {
         if !self.changed_paths.is_empty() {
             writeln!(w, "\nChanged paths:")?;
             for path in &self.changed_paths {
-                writeln!(w, "  {}", path)?;
+                writeln!(w, "  {path}")?;
             }
         }
 
@@ -69,7 +69,7 @@ impl Render for ChangesOutput {
         if !self.authorized_paths.is_empty() {
             writeln!(w, "\nAuthorized paths:")?;
             for path in &self.authorized_paths {
-                writeln!(w, "  {}", path)?;
+                writeln!(w, "  {path}")?;
             }
         }
 

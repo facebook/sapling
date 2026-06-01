@@ -69,7 +69,7 @@ impl Render for AccessOutput {
         if !self.authorized_paths.is_empty() {
             writeln!(w, "\nAuthorized paths:")?;
             for path in &self.authorized_paths {
-                writeln!(w, "  {}", path)?;
+                writeln!(w, "  {path}")?;
             }
         }
 
