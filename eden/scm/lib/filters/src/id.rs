@@ -60,8 +60,7 @@ impl<'de> Deserialize<'de> for FilterVersion {
             )),
             1 => Ok(FilterVersion::V1),
             v => Err(serde::de::Error::custom(format!(
-                "Unknown filter version: {}",
-                v
+                "Unknown filter version: {v}"
             ))),
         }
     }
@@ -74,7 +73,7 @@ impl FromStr for FilterVersion {
         match s {
             "V1" => Ok(FilterVersion::V1),
             "Legacy" => Ok(FilterVersion::Legacy),
-            _ => Err(anyhow::anyhow!("Invalid FilterVersion: {}", s)),
+            _ => Err(anyhow::anyhow!("Invalid FilterVersion: {s}")),
         }
     }
 }
@@ -149,7 +148,7 @@ impl FilterId {
                 let filter = str::from_utf8(b)?;
                 let parts = filter.split(":");
                 if parts.count() != 2 {
-                    Err(anyhow::anyhow!("Unknown filter id type: {:?}", b))
+                    Err(anyhow::anyhow!("Unknown filter id type: {b:?}"))
                 } else {
                     Ok(FilterId::Legacy(b.to_vec()))
                 }
@@ -269,7 +268,7 @@ mod tests {
         if let FilterId::Legacy(id) = filter_id {
             assert_eq!(
                 id,
-                format!("{}:{}", DEFAULT_FILTER_PATH, TEST_COMMIT_ID_STR).as_bytes()
+                format!("{DEFAULT_FILTER_PATH}:{TEST_COMMIT_ID_STR}").as_bytes()
             );
         } else {
             panic!("Expected Legacy FilterId");

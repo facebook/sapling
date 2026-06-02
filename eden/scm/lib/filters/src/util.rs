@@ -107,8 +107,7 @@ pub fn read_filter_config(dot_dir: &Path) -> anyhow::Result<Option<HashSet<RepoP
                 continue;
             } else if !trimmed.is_empty() {
                 return Err(anyhow::anyhow!(
-                    "Unexpected edensparse config format: {}",
-                    line
+                    "Unexpected edensparse config format: {line}"
                 ));
             }
         }
@@ -129,11 +128,11 @@ pub(crate) fn write_filter_config(
     } else {
         let content = filter_paths
             .iter()
-            .map(|p| format!("%include {}", p))
+            .map(|p| format!("%include {p}"))
             .collect::<Vec<String>>()
             .join("\n");
         if let Some(header) = header {
-            format!("{}\n\n{}", header, content)
+            format!("{header}\n\n{content}")
         } else {
             content
         }

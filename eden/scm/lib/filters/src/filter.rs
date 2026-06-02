@@ -132,8 +132,7 @@ impl FilterGenerator {
                         .permanent(&filter_store_path)
                         .with_context(|| {
                             anyhow::anyhow!(
-                                "Failed to open filter index store at {:?}",
-                                filter_store_path
+                                "Failed to open filter index store at {filter_store_path:?}"
                             )
                         })?,
                 ),
@@ -171,8 +170,7 @@ impl FilterGenerator {
             Ok(!lookup_iter.is_empty()?)
         } else {
             Err(anyhow::anyhow!(
-                "Tried to check for existing filter {:?}, but filter storage is disabled",
-                filter_index
+                "Tried to check for existing filter {filter_index:?}, but filter storage is disabled"
             ))
         }
     }
@@ -240,14 +238,12 @@ impl FilterGenerator {
                     }),
                 Some(Err(e)) => Err(e),
                 None => Err(anyhow::anyhow!(
-                    "Failed to find a stored Filter for ID: {:?}",
-                    id
+                    "Failed to find a stored Filter for ID: {id:?}"
                 )),
             }
         } else {
             Err(anyhow::anyhow!(
-                "Tried to fetch V1 filter {:?}, but filter storage is disabled",
-                id,
+                "Tried to fetch V1 filter {id:?}, but filter storage is disabled",
             ))
         }
     }
@@ -297,10 +293,10 @@ impl FilterGenerator {
         // Parse both filter IDs
         let lhs_filter = self
             .get_filter_from_bytes(lhs)
-            .with_context(|| anyhow::anyhow!("failed to parse lhs filter: {:?}", lhs))?;
+            .with_context(|| anyhow::anyhow!("failed to parse lhs filter: {lhs:?}"))?;
         let rhs_filter = self
             .get_filter_from_bytes(rhs)
-            .with_context(|| anyhow::anyhow!("failed to parse rhs filter: {:?}", rhs))?;
+            .with_context(|| anyhow::anyhow!("failed to parse rhs filter: {rhs:?}"))?;
 
         // Compare the underlying filter properties
         // Two filters are identical if they have the same commit_id and filter_paths
@@ -367,7 +363,7 @@ mod tests {
         assert_eq!(filter.filter_paths, vec![filter_path.clone()]);
         assert_eq!(
             filter.filter_id.id().unwrap(),
-            format!("{}:{}", filter_path, TEST_COMMIT_ID_STR).as_bytes()
+            format!("{filter_path}:{TEST_COMMIT_ID_STR}").as_bytes()
         );
     }
 
@@ -386,7 +382,7 @@ mod tests {
         let commit_id = HgId::from_hex(TEST_COMMIT_ID).unwrap();
 
         // Create sparse file with filters
-        let contents = format!("%include {}\n", DEFAULT_FILTER_PATH);
+        let contents = format!("%include {DEFAULT_FILTER_PATH}\n");
         create_sparse_file(&filter_gen.dot_dir, &contents).unwrap();
 
         let result = filter_gen.active_filter_id(commit_id).unwrap();
@@ -407,7 +403,7 @@ mod tests {
     fn test_get_filter_legacy() {
         let (_tmp_dir, filter_gen) = create_test_filter_generator(FilterVersion::Legacy, None);
 
-        let legacy_id_str = &format!("{}:{}", DEFAULT_FILTER_PATH, TEST_COMMIT_ID_STR);
+        let legacy_id_str = &format!("{DEFAULT_FILTER_PATH}:{TEST_COMMIT_ID_STR}");
         let filter = filter_gen
             .get_filter_from_bytes(legacy_id_str.as_bytes())
             .unwrap();
