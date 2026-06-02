@@ -575,18 +575,19 @@ impl RepoFactory {
                     ZelosConfig::Local { port } => {
                         ZeusCppClient::zelos_client_for_local_ensemble_reconnecting(*port)
                             .with_context(|| {
-                                format!("Error creating Local Zeus client on port {}", port)
+                                format!("Error creating Local Zeus client on port {port}")
                             })?
                     }
-                    ZelosConfig::Remote { tier } => {
-                        ZeusCppClient::new_reconnecting(self.env.fb, ZEUS_CLIENT_ID, tier)
-                            .with_context(|| {
-                                format!(
-                                    "Error creating Zeus client to {} with client id {}",
-                                    tier, ZEUS_CLIENT_ID
-                                )
-                            })?
-                    }
+                    ZelosConfig::Remote { tier } => ZeusCppClient::new_reconnecting(
+                        self.env.fb,
+                        ZEUS_CLIENT_ID,
+                        tier,
+                    )
+                    .with_context(|| {
+                        format!(
+                            "Error creating Zeus client to {tier} with client id {ZEUS_CLIENT_ID}"
+                        )
+                    })?,
                 };
                 let zelos_client: Arc<dyn ZeusClient> = Arc::new(zelos_client);
                 Ok(zelos_client)
