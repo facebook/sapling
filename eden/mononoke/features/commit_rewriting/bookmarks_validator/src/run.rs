@@ -165,8 +165,7 @@ async fn validate<R: CrossRepo>(
             } => (target_bookmark, None, Some(source_cs_id)),
             NoSyncOutcome { target_bookmark } => {
                 return Err(ValidationError::ValidationError(format!(
-                    "unexpected no sync outcome for {}",
-                    target_bookmark
+                    "unexpected no sync outcome for {target_bookmark}"
                 )));
             }
         };
@@ -190,8 +189,7 @@ async fn validate<R: CrossRepo>(
             info!("all is well");
         } else {
             let err_msg = format!(
-                "{} points to {:?} in {}, but points to {:?} in {}",
-                large_bookmark, large_cs_id, large_repo_name, small_cs_id, small_repo_name,
+                "{large_bookmark} points to {large_cs_id:?} in {large_repo_name}, but points to {small_cs_id:?} in {small_repo_name}",
             );
             return Err(ValidationError::ValidationError(err_msg));
         }
@@ -418,7 +416,7 @@ mod tests {
         let mut last = None;
         for i in 1..10 {
             let cs_id = CreateCommitContext::new(&ctx, large_repo, vec!["master"])
-                .add_file("somefile", format!("content{}", i))
+                .add_file("somefile", format!("content{i}"))
                 .commit()
                 .await?;
             bookmark(&ctx, &large_repo, "master").set_to(cs_id).await?;
@@ -456,7 +454,7 @@ mod tests {
         // In that case validation should fail.
         for i in 1..10 {
             let cs_id = CreateCommitContext::new(&ctx, large_repo, vec!["master"])
-                .add_file("prefix/somefile", format!("content{}", i))
+                .add_file("prefix/somefile", format!("content{i}"))
                 .commit()
                 .await?;
             bookmark(&ctx, &large_repo, "master").set_to(cs_id).await?;
@@ -488,7 +486,7 @@ mod tests {
         // Move master a few times
         for i in 1..10 {
             let cs_id = CreateCommitContext::new(&ctx, large_repo, vec!["master"])
-                .add_file("somefile", format!("content{}", i))
+                .add_file("somefile", format!("content{i}"))
                 .commit()
                 .await?;
             bookmark(&ctx, &large_repo, "master").set_to(cs_id).await?;

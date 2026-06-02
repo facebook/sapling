@@ -50,11 +50,10 @@ impl RepoShardedProcess for BookmarkValidateProcess {
             Some(repo_name) => repo_name,
             None => {
                 let details = format!(
-                    "Only source repo name {} provided, target repo name missing in {}",
-                    source_repo_name, repo
+                    "Only source repo name {source_repo_name} provided, target repo name missing in {repo}"
                 );
                 error!("{}", details);
-                bail!("{}", details)
+                bail!("{details}")
             }
         };
         info!(
@@ -119,7 +118,7 @@ impl BookmarkValidateProcessExecutor {
                 &source_repo_name, &target_repo_name
             );
             error!("{}", details);
-            bail!("{}", details);
+            bail!("{details}");
         }
 
         Ok(Self {
