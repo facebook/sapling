@@ -24,7 +24,7 @@ pub async fn create_key_list(
     let blob = RedactionKeyList { keys }.into_blob();
     let id = store(ctx, blob, redaction_blobstore).await?;
 
-    println!("Redaction saved as: {}", id);
+    println!("Redaction saved as: {id}");
     println!(concat!(
         "To finish the redaction process, you need to commit this id to ",
         "scm/mononoke/redaction/redaction_sets.cconf in configerator"
