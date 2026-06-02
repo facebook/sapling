@@ -74,7 +74,7 @@ mod tests {
         let content = b"hello\nworld\n";
         match merge_text(content, content, content) {
             MergeResult::Clean(result) => assert_eq!(result, content),
-            MergeResult::Conflict(e) => panic!("unexpected conflict: {}", e),
+            MergeResult::Conflict(e) => panic!("unexpected conflict: {e}"),
         }
     }
 
@@ -84,7 +84,7 @@ mod tests {
         let local = b"hello\nrust\n";
         match merge_text(base, local, base) {
             MergeResult::Clean(result) => assert_eq!(result, local),
-            MergeResult::Conflict(e) => panic!("unexpected conflict: {}", e),
+            MergeResult::Conflict(e) => panic!("unexpected conflict: {e}"),
         }
     }
 
@@ -94,7 +94,7 @@ mod tests {
         let other = b"hello\nrust\n";
         match merge_text(base, base, other) {
             MergeResult::Clean(result) => assert_eq!(result, other),
-            MergeResult::Conflict(e) => panic!("unexpected conflict: {}", e),
+            MergeResult::Conflict(e) => panic!("unexpected conflict: {e}"),
         }
     }
 
@@ -107,7 +107,7 @@ mod tests {
             MergeResult::Clean(result) => {
                 assert_eq!(result, b"modified1\nline2\nline3\nline4\nmodified5\n")
             }
-            MergeResult::Conflict(e) => panic!("unexpected conflict: {}", e),
+            MergeResult::Conflict(e) => panic!("unexpected conflict: {e}"),
         }
     }
 
@@ -138,7 +138,7 @@ mod tests {
         let content = b"binary\0content";
         match merge_text(content, content, content) {
             MergeResult::Clean(result) => assert_eq!(result, content),
-            MergeResult::Conflict(e) => panic!("unexpected conflict: {}", e),
+            MergeResult::Conflict(e) => panic!("unexpected conflict: {e}"),
         }
     }
 
@@ -150,7 +150,7 @@ mod tests {
         // without checking binary status (since there's no conflict).
         match merge_text(base, local, base) {
             MergeResult::Clean(result) => assert_eq!(result, local),
-            MergeResult::Conflict(e) => panic!("unexpected conflict: {}", e),
+            MergeResult::Conflict(e) => panic!("unexpected conflict: {e}"),
         }
     }
 
@@ -158,7 +158,7 @@ mod tests {
     fn test_merge_text_empty_files() {
         match merge_text(b"", b"", b"") {
             MergeResult::Clean(result) => assert!(result.is_empty()),
-            MergeResult::Conflict(e) => panic!("unexpected conflict: {}", e),
+            MergeResult::Conflict(e) => panic!("unexpected conflict: {e}"),
         }
     }
 
@@ -168,7 +168,7 @@ mod tests {
         let changed = b"line1\nmodified\nline3\n";
         match merge_text(base, changed, changed) {
             MergeResult::Clean(result) => assert_eq!(result, changed),
-            MergeResult::Conflict(e) => panic!("unexpected conflict: {}", e),
+            MergeResult::Conflict(e) => panic!("unexpected conflict: {e}"),
         }
     }
 }

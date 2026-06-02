@@ -455,8 +455,7 @@ mod tests {
         let err = result.unwrap_err();
         assert!(
             err.contains("conflict"),
-            "error should mention conflict: {}",
-            err
+            "error should mention conflict: {err}"
         );
     }
 
@@ -539,7 +538,7 @@ mod tests {
     fn test_large_file_non_overlapping() {
         let mut base_lines = Vec::new();
         for i in 0..1000 {
-            base_lines.push(format!("line {}\n", i));
+            base_lines.push(format!("line {i}\n"));
         }
         let base: Vec<u8> = base_lines.iter().flat_map(|s| s.bytes()).collect();
 
