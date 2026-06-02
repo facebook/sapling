@@ -647,7 +647,7 @@ impl BaseUri {
     pub fn build(&self, args: Arguments, scheme_override: Option<Scheme>) -> Result<Uri, Error> {
         let mut p = String::new();
         if let Some(ref path_and_query) = self.path_and_query {
-            write!(&mut p, "{}", path_and_query)?;
+            write!(&mut p, "{path_and_query}")?;
             if !path_and_query.path().ends_with('/') {
                 write!(&mut p, "/")?;
             }
@@ -951,8 +951,7 @@ mod test {
             )?
             .to_string(),
             format!(
-                "http://foo.com/repo123%2Fblah/download/{}?routing={}&server_hostname={}&tpc=1",
-                ONES_HASH, TWOS_HASH, SERVER_HOSTNAME
+                "http://foo.com/repo123%2Fblah/download/{ONES_HASH}?routing={TWOS_HASH}&server_hostname={SERVER_HOSTNAME}&tpc=1"
             ),
         );
         Ok(())
@@ -1150,15 +1149,10 @@ mod test {
             force_http: true,
         };
         let uri = b.upload_uri(&obj()?)?.to_string();
-        assert!(
-            uri.starts_with("http://"),
-            "expected http:// but got {}",
-            uri
-        );
+        assert!(uri.starts_with("http://"), "expected http:// but got {uri}");
         assert!(
             !uri.starts_with("https://"),
-            "expected no https:// but got {}",
-            uri
+            "expected no https:// but got {uri}"
         );
         Ok(())
     }
@@ -1179,11 +1173,7 @@ mod test {
             force_http: true,
         };
         let uri = b.download_uri(&content_id()?)?.to_string();
-        assert!(
-            uri.starts_with("http://"),
-            "expected http:// but got {}",
-            uri
-        );
+        assert!(uri.starts_with("http://"), "expected http:// but got {uri}");
         Ok(())
     }
 
@@ -1205,8 +1195,7 @@ mod test {
         let uri = b.upstream_batch_uri()?.unwrap().to_string();
         assert!(
             uri.starts_with("https://"),
-            "upstream should stay https:// but got {}",
-            uri
+            "upstream should stay https:// but got {uri}"
         );
         Ok(())
     }
@@ -1229,8 +1218,7 @@ mod test {
         let uri = b.upload_uri(&obj()?)?.to_string();
         assert!(
             uri.starts_with("https://"),
-            "expected https:// but got {}",
-            uri
+            "expected https:// but got {uri}"
         );
         Ok(())
     }

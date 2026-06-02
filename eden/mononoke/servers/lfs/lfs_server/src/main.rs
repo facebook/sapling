@@ -224,7 +224,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let git_blob_upload_allowed = args.git_blob_upload_allowed;
 
-    let addr = format!("{}:{}", listen_host, listen_port);
+    let addr = format!("{listen_host}:{listen_port}");
 
     let tls_acceptor = args
         .tls_params
@@ -396,7 +396,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             pin_mut!(serve);
             try_select(
                 serve,
-                shutdown_rx.map_err(|err| anyhow!("Cancelled channel: {}", err)),
+                shutdown_rx.map_err(|err| anyhow!("Cancelled channel: {err}")),
             )
             .await
             .map_err(|e| futures::future::Either::factor_first(e).0)?;

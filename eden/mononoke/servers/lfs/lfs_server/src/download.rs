@@ -81,7 +81,7 @@ fn parse_range(header: &str) -> Result<Range, Error> {
 
     let caps = RE
         .captures(header)
-        .with_context(|| format!("Unsupported range: {}", header))?;
+        .with_context(|| format!("Unsupported range: {header}"))?;
 
     let range = Range::range_inclusive(
         caps[1]

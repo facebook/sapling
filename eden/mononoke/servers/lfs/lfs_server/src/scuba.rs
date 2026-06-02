@@ -178,7 +178,7 @@ impl ScubaHandler for LfsScubaHandler {
             }
 
             if let Some(err) = info.first_error() {
-                scuba.add(LfsScubaKey::ErrorMessage, format!("{:?}", err));
+                scuba.add(LfsScubaKey::ErrorMessage, format!("{err:?}"));
             }
 
             scuba.add(LfsScubaKey::ErrorCount, info.error_count());

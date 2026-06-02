@@ -160,7 +160,7 @@ impl<'de> Deserialize<'de> for ServerConfig {
         D: Deserializer<'de>,
     {
         let raw = lfs_server_config::LfsServerConfig::deserialize(deserializer)?;
-        let config = Self::try_from(raw).map_err(|e| D::Error::custom(format!("{:?}", e)))?;
+        let config = Self::try_from(raw).map_err(|e| D::Error::custom(format!("{e:?}")))?;
         Ok(config)
     }
 }

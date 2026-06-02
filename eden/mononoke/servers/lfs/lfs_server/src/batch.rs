@@ -266,7 +266,7 @@ async fn resolve_internal_object(
 
     let meta = filestore::get_metadata(&blobstore, &ctx.ctx, &(content_id.into()))
         .await
-        .with_context(|| format!("Failed fetching content metadata for {:?}", content_id));
+        .with_context(|| format!("Failed fetching content metadata for {content_id:?}"));
 
     match meta {
         Ok(Some(meta)) => {
@@ -293,7 +293,7 @@ async fn resolve_internal_object(
     let exists = blobstore
         .is_present(&ctx.ctx, &content_id.blobstore_key())
         .await
-        .with_context(|| format!("Failed to check for existence of: {:?}", content_id))?
+        .with_context(|| format!("Failed to check for existence of: {content_id:?}"))?
         .assume_not_found_if_unsure();
 
     if exists {
@@ -307,10 +307,10 @@ fn generate_routing_key(tasks_per_content: NonZeroU16, oid: Sha256) -> String {
     // Randomly generate task number to send to.
     let task_n = rand::random_range(0..tasks_per_content.get());
     // For the base task, no extension is added to routing key.
-    let mut routing_key = format!("{}", oid);
+    let mut routing_key = format!("{oid}");
     if task_n > 0 {
         // All other tasks have tailing number in routing key.
-        routing_key = format!("{}-{}", routing_key, task_n);
+        routing_key = format!("{routing_key}-{task_n}");
     }
     routing_key
 }
@@ -858,8 +858,8 @@ mod test {
     #[mononoke::test]
     fn test_routing_keys() -> Result<(), Error> {
         // allowed keys
-        let allowed_routing_key_base: String = format!("{}", ONES_SHA256);
-        let allowed_routing_key_one: String = format!("{}-1", allowed_routing_key_base);
+        let allowed_routing_key_base: String = format!("{ONES_SHA256}");
+        let allowed_routing_key_one: String = format!("{allowed_routing_key_base}-1");
         // base case
         let routing_key_base = generate_routing_key(NonZeroU16::new(1).unwrap(), ONES_SHA256);
         assert_eq!(&routing_key_base, &allowed_routing_key_base);
