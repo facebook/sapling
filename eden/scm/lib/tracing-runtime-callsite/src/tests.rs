@@ -134,29 +134,29 @@ impl Subscriber for TestSubscriber {
     }
     fn new_span(&self, span: &Attributes) -> Id {
         let id = self.id.fetch_add(1, AcqRel) + 1;
-        self.log(format!("new_span({:?} = {}", span, id));
+        self.log(format!("new_span({span:?} = {id}"));
         Id::from_u64(id)
     }
     fn record(&self, span: &Id, values: &Record) {
-        self.log(format!("record({:?}, {:?})", span, values));
+        self.log(format!("record({span:?}, {values:?})"));
     }
     fn event(&self, event: &Event) {
-        self.log(format!("event({:?})", event));
+        self.log(format!("event({event:?})"));
     }
     fn enter(&self, span: &Id) {
-        self.log(format!("enter({:?})", span));
+        self.log(format!("enter({span:?})"));
     }
     fn exit(&self, span: &Id) {
-        self.log(format!("exit({:?})", span));
+        self.log(format!("exit({span:?})"));
     }
     fn record_follows_from(&self, span: &Id, follows: &Id) {
-        self.log(format!("record_follows_from({:?}, {:?})", span, follows));
+        self.log(format!("record_follows_from({span:?}, {follows:?})"));
     }
 }
 
 /// Debug format with some normalization.
 fn d<T: fmt::Debug>(t: T) -> String {
-    let s = format!("{:?}", t);
+    let s = format!("{t:?}");
     normalize(&s)
 }
 
