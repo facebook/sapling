@@ -48,7 +48,7 @@ pub fn run(ctx: ReqCtx<Opts>, repo: &Repo) -> Result<u8> {
             let tx = tx.clone();
             let mut error_start = None;
             std::thread::Builder::new()
-                .name(format!("wait:{}", name))
+                .name(format!("wait:{name}"))
                 .spawn(move || {
                     loop {
                         if let Err(e) = wait() {
@@ -131,7 +131,7 @@ pub fn run(ctx: ReqCtx<Opts>, repo: &Repo) -> Result<u8> {
                 ret = 254;
                 break;
             }
-            io.write(format!("{}\n", changed))?;
+            io.write(format!("{changed}\n"))?;
             io.flush()?;
             count += 1;
             if limit > 0 && count >= limit {
