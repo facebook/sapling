@@ -677,7 +677,7 @@ impl ConfigSetExtInternal for ConfigSet {
                         "ui",
                         "editor",
                         Some(editor),
-                        &opts.clone().source(format!("${}", name)),
+                        &opts.clone().source(format!("${name}")),
                     );
                     break;
                 }
@@ -757,8 +757,7 @@ fn get_config_dir(info: Option<&RepoMinimalInfo>) -> Result<PathBuf, Error> {
             }
 
             return Err(Error::General(format!(
-                "couldn't find config cache dir: {:?}",
-                errs
+                "couldn't find config cache dir: {errs:?}"
             )));
         }
     })
@@ -840,7 +839,7 @@ pub fn maybe_refresh_internalconfig_on_disk(
             } else {
                 return Err(IOError::new(
                     ErrorKind::PermissionDenied,
-                    format!("no write access to {:?} ({:?})", config_dir, e),
+                    format!("no write access to {config_dir:?} ({e:?})"),
                 )
                 .into());
             }
@@ -887,7 +886,7 @@ pub fn maybe_refresh_internalconfig_on_disk(
         domain_override,
         info,
     )?;
-    let config_str = format!("{}{}", header, config);
+    let config_str = format!("{header}{config}");
 
     // If the file exists and will be unchanged, just update the mtime.
     if hgrc_path.exists() && read_to_string(&hgrc_path).unwrap_or_default() == config_str {
