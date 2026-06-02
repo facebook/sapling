@@ -164,7 +164,7 @@ impl RepoShardedProcess for ScsServerProcess {
         if self.repos_mgr.repos().get_by_name(repo_name).is_none() {
             // The input repo is a deep-sharded repo, so it needs to be added now.
             self.repos_mgr.add_repo(repo_name).await.with_context(|| {
-                format!("Failure in setting up repo {} in SCS service", repo_name)
+                format!("Failure in setting up repo {repo_name} in SCS service")
             })?;
             info!("Completed repo {} setup in SCS service", repo_name);
         } else {
