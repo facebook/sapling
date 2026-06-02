@@ -486,7 +486,7 @@ fn test_hashes_are_unique() -> Result<(), Error> {
                         let copy_info = Some((copy_path.clone(), copy_parent.clone()));
 
                         let ptr = FileNodeIdPointer::new(&content_id, &copy_info, &p1, &p2);
-                        assert!(!h.contains(&ptr), "Duplicate entry: {:?}", ptr);
+                        assert!(!h.contains(&ptr), "Duplicate entry: {ptr:?}");
                         h.insert(ptr);
 
                         if p1 == p2 {
@@ -494,13 +494,13 @@ fn test_hashes_are_unique() -> Result<(), Error> {
                         }
 
                         let ptr = FileNodeIdPointer::new(&content_id, &copy_info, &p2, &p1);
-                        assert!(!h.contains(&ptr), "Duplicate entry: {:?}", ptr);
+                        assert!(!h.contains(&ptr), "Duplicate entry: {ptr:?}");
                         h.insert(ptr);
                     }
                 }
 
                 let ptr = FileNodeIdPointer::new(&content_id, &None, &p1, &p2);
-                assert!(!h.contains(&ptr), "Duplicate entry: {:?}", ptr);
+                assert!(!h.contains(&ptr), "Duplicate entry: {ptr:?}");
                 h.insert(ptr);
 
                 if p1 == p2 {
@@ -508,7 +508,7 @@ fn test_hashes_are_unique() -> Result<(), Error> {
                 }
 
                 let ptr = FileNodeIdPointer::new(&content_id, &None, &p2, &p1);
-                assert!(!h.contains(&ptr), "Duplicate entry: {:?}", ptr);
+                assert!(!h.contains(&ptr), "Duplicate entry: {ptr:?}");
                 h.insert(ptr);
             }
         }
