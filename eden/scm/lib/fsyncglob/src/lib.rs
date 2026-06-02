@@ -157,6 +157,6 @@ mod tests {
     }
 
     fn d(value: impl std::fmt::Debug) -> String {
-        format!("{:?}", value)
+        format!("{value:?}")
     }
 }
