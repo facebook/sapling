@@ -136,8 +136,7 @@ impl SourceControlServiceImpl {
             }
             thrift::RepoCreateCommitParamsFileContent::UnknownField(t) => {
                 return Err(scs_errors::invalid_request(format!(
-                    "file content type not supported: {}",
-                    t
+                    "file content type not supported: {t}"
                 ))
                 .into());
             }
@@ -199,8 +198,7 @@ impl SourceControlServiceImpl {
                         },
                         thrift::RepoCreateCommitParamsGitLfs::UnknownField(t) => {
                             return Err(scs_errors::invalid_request(format!(
-                                "git lfs variant not supported: {}",
-                                t
+                                "git lfs variant not supported: {t}"
                             ))
                             .into());
                         }
@@ -225,8 +223,7 @@ impl SourceControlServiceImpl {
             thrift::RepoCreateCommitParamsChange::deleted(_d) => CreateChange::Deletion,
             thrift::RepoCreateCommitParamsChange::UnknownField(t) => {
                 return Err(scs_errors::invalid_request(format!(
-                    "file change type not supported: {}",
-                    t
+                    "file change type not supported: {t}"
                 ))
                 .into());
             }
@@ -242,7 +239,7 @@ impl SourceControlServiceImpl {
             .into_iter()
             .map(|(path, change)| async move {
                 let path = MPath::try_from(&path).map_err(|e| {
-                    scs_errors::invalid_request(format!("invalid path '{}': {}", path, e))
+                    scs_errors::invalid_request(format!("invalid path '{path}': {e}"))
                 })?;
                 let change = Self::convert_create_commit_change(repo, change).await?;
                 Ok::<_, scs_errors::ServiceError>((path, change))

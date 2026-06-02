@@ -70,7 +70,7 @@ fn reason_rejections(rejections: &Vec<HookRejection>) -> String {
 }
 
 fn reason_conflicts(conflicts: &Vec<PushrebaseConflict>) -> String {
-    format!("Conflicts while pushrebasing: {:?}", conflicts)
+    format!("Conflicts while pushrebasing: {conflicts:?}")
 }
 
 fn convert_rejection(rejection: HookRejection) -> thrift::HookRejection {
