@@ -34,7 +34,7 @@ pub fn convert_to_remote(config: &dyn Config, bookmark: &str) -> Result<RefName>
         Some(s) if !s.trim().is_empty() => s.trim(),
         _ => "default",
     };
-    Ok(format!("{}/{}", name, bookmark).try_into()?)
+    Ok(format!("{name}/{bookmark}").try_into()?)
 }
 
 /// Download initial commit data via fast pull endpoint. Returns hash of bookmarks, if any.
