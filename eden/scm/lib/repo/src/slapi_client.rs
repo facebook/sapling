@@ -193,9 +193,7 @@ pub(crate) fn get_eden_api_with_capabilities(
                 && !capabilities.is_subset(caps.get(edenapi.clone())?)
             {
                 return Err(SaplingRemoteApiError::Other(anyhow!(
-                    "SaplingRemoteAPI is requested but capabilities {:?} are not supported within {:?}",
-                    capabilities,
-                    caps
+                    "SaplingRemoteAPI is requested but capabilities {capabilities:?} are not supported within {caps:?}"
                 )));
             }
             Ok(edenapi)
