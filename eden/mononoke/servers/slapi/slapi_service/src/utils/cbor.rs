@@ -135,7 +135,7 @@ where
                     if this.first_error.is_some() {
                         *this.extra_error_count += 1;
                     } else {
-                        this.first_error.replace(format_err!("{:?}", e));
+                        this.first_error.replace(format_err!("{e:?}"));
                     }
                 }
                 match to_cbor_bytes(&item.to_wire()) {

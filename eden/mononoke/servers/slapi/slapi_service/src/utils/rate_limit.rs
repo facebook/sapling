@@ -72,7 +72,7 @@ pub async fn counter_check_and_bump<'a>(
                     rate_limit, count, max_value,
                 );
                 let log_tag = "Request would have been rejected due to rate limiting, but enforcement is disabled";
-                let msg = format!("Rate limit exceeded: {:?} (log only)", rate_limit);
+                let msg = format!("Rate limit exceeded: {rate_limit:?} (log only)");
                 scuba.log_with_msg(log_tag, msg);
                 Ok(())
             } else {
@@ -81,7 +81,7 @@ pub async fn counter_check_and_bump<'a>(
                     rate_limit, count, max_value,
                 );
                 let log_tag = "Request rejected due to rate limiting";
-                let msg = format!("Rate limit exceeded: {:?} (enforced)", rate_limit);
+                let msg = format!("Rate limit exceeded: {rate_limit:?} (enforced)");
                 scuba.log_with_msg(log_tag, msg.clone());
                 Err(anyhow!(msg))
             }
@@ -98,7 +98,7 @@ pub async fn counter_check_and_bump<'a>(
         }
         Err(_) => {
             let log_tag = "Rate limiting counter fetch timed out";
-            let msg = format!("Rate limit {:?}: Timed out", rate_limit);
+            let msg = format!("Rate limit {rate_limit:?}: Timed out");
             scuba.log_with_msg(log_tag, Some(msg));
             // Fail open to prevent DoS as we can't check the rate limit
             Ok(())
