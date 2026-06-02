@@ -12,6 +12,7 @@ use std::num::NonZeroUsize;
 use std::sync::Arc;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
+use std::time::Duration;
 
 use anyhow::Error;
 use anyhow::Result;
@@ -27,6 +28,7 @@ use derived_data_manager::DerivedDataManager;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use futures::stream;
+use futures_retry::retry;
 use futures_stats::TimedTryFutureExt;
 use mononoke_api::Mononoke;
 use mononoke_api::Repo;
@@ -42,6 +44,7 @@ use source_control as thrift;
 use throttledblob::ThrottleOptions;
 use throttledblob::ThrottledBlob;
 use tracing::info;
+use tracing::warn;
 
 /// JustKnob for write QPS throttling during backfill derivation
 const JK_BACKFILL_WRITE_QPS: &str = "scm/mononoke:derived_data_backfill_write_qps";
@@ -55,6 +58,11 @@ const JK_BACKFILL_READ_BYTES_S: &str = "scm/mononoke:derived_data_backfill_read_
 /// JustKnob for chunk size when deriving slices of commits
 const JK_BACKFILL_SEGMENT_CHUNK_SIZE: &str =
     "scm/mononoke:derived_data_backfill_segment_chunk_size";
+
+/// JustKnob for per-chunk retry limit during slice derivation
+const JK_BACKFILL_CHUNK_RETRY_LIMIT: &str = "scm/mononoke:derived_data_backfill_chunk_retry_limit";
+const CHUNK_RETRY_BASE_BACKOFF: Duration = Duration::from_secs(1);
+const CHUNK_RETRY_MAX_BACKOFF: Duration = Duration::from_secs(30);
 
 /// Get a DerivedDataManager with optional read/write throttling applied.
 /// If JustKnobs are not set or are zero, returns the manager unchanged.
@@ -139,7 +147,7 @@ pub(crate) async fn compute_derive_boundaries(
         params
             .repo_id
             .try_into()
-            .map_err(|e| AsyncRequestsError::request(anyhow::anyhow!("Invalid repo_id: {}", e)))?,
+            .map_err(|e| AsyncRequestsError::request(anyhow::anyhow!("Invalid repo_id: {e}")))?,
     );
 
     let repo = mononoke
@@ -208,7 +216,7 @@ pub(crate) async fn compute_derive_boundaries(
                             None, // override_batch_size
                         )
                         .await
-                        .map_err(|e| anyhow::anyhow!("{}", e))?;
+                        .map_err(|e| anyhow::anyhow!("{e}"))?;
                 }
                 derived_count.fetch_add(1, Ordering::SeqCst);
                 Ok::<_, Error>(())
@@ -237,7 +245,7 @@ pub(crate) async fn compute_derive_slice(
         params
             .repo_id
             .try_into()
-            .map_err(|e| AsyncRequestsError::request(anyhow::anyhow!("Invalid repo_id: {}", e)))?,
+            .map_err(|e| AsyncRequestsError::request(anyhow::anyhow!("Invalid repo_id: {e}")))?,
     );
 
     let repo = mononoke
@@ -291,6 +299,9 @@ pub(crate) async fn compute_derive_slice(
         .collect::<Result<Vec<_>, _>>()
         .map_err(AsyncRequestsError::request)?;
 
+    let max_attempts =
+        (justknobs::get_as::<i64>(JK_BACKFILL_CHUNK_RETRY_LIMIT, None).max(0) as usize) + 1;
+
     for (base, head) in segments {
         let segment_cs_ids: Vec<ChangesetId> = commit_graph
             .range_stream(ctx, base, head)
@@ -300,14 +311,29 @@ pub(crate) async fn compute_derive_slice(
             .await;
 
         for chunk in segment_cs_ids.chunks(segment_chunk_size) {
-            BulkDerivation::derive_exactly_underived_batch(
-                &manager,
-                ctx,
-                chunk,
-                None,
-                derived_data_type,
+            retry(
+                |_attempt| {
+                    BulkDerivation::derive_exactly_underived_batch(
+                        &manager,
+                        ctx,
+                        chunk,
+                        None,
+                        derived_data_type,
+                    )
+                },
+                CHUNK_RETRY_BASE_BACKOFF,
             )
+            .binary_exponential_backoff()
+            .max_interval(CHUNK_RETRY_MAX_BACKOFF)
+            .max_attempts(max_attempts)
+            .inspect_err(|attempt, err| {
+                warn!(
+                    "Chunk derivation failed (attempt {}/{}, repo {}, type {:?}): {:#}",
+                    attempt, max_attempts, params.repo_id, derived_data_type, err,
+                );
+            })
             .await
+            .map(|(_result, _attempt)| ())
             .map_err(AsyncRequestsError::internal)?;
         }
         derived_count += segment_cs_ids.len() as i64;
@@ -333,7 +359,7 @@ pub(crate) async fn compute_derive_backfill_repo(
         params
             .repo_id
             .try_into()
-            .map_err(|e| AsyncRequestsError::request(anyhow::anyhow!("Invalid repo_id: {}", e)))?,
+            .map_err(|e| AsyncRequestsError::request(anyhow::anyhow!("Invalid repo_id: {e}")))?,
     );
 
     let repo = mononoke
@@ -423,7 +449,7 @@ pub(crate) async fn compute_derive_backfill(
             let created_by = created_by.clone();
             async move {
                 let repo_id = RepositoryId::new(entry_repo_id.try_into().map_err(|e| {
-                    AsyncRequestsError::request(anyhow::anyhow!("Invalid repo_id: {}", e))
+                    AsyncRequestsError::request(anyhow::anyhow!("Invalid repo_id: {e}"))
                 })?);
 
                 let repo_params = thrift::DeriveBackfillRepoParams {

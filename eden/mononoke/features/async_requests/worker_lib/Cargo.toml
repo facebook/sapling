@@ -21,6 +21,7 @@ derived_data_manager = { version = "0.1.0", path = "../../../derived_data/manage
 ephemeral_blobstore = { version = "0.1.0", path = "../../../blobstore/ephemeral_blobstore" }
 executor_lib = { version = "0.1.0", path = "../../../cmdlib/sharding" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
+futures_retry = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures_watchdog = { version = "0.1.0", path = "../../../common/futures_watchdog" }
 hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
