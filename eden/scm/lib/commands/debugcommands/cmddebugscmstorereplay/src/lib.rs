@@ -45,10 +45,10 @@ pub fn run(ctx: ReqCtx<DebugScmStoreReplayOpts>, repo: &Repo) -> Result<u8> {
                 match result.missing() {
                     Ok(failed) => {
                         if !failed.is_empty() {
-                            write!(stderr, "Failed to fetch keys {:?}\n", failed)?;
+                            write!(stderr, "Failed to fetch keys {failed:?}\n")?;
                         }
                     }
-                    Err(err) => write!(stderr, "Fetch error: {:#?}\n", err)?,
+                    Err(err) => write!(stderr, "Fetch error: {err:#?}\n")?,
                 };
             }
         }
