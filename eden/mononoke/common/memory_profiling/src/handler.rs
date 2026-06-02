@@ -88,7 +88,7 @@ pub async fn generate_flamegraph() -> Result<Vec<u8>, HttpError> {
     }
 
     let svg = guard.dump_flamegraph().map_err(|e| HttpError {
-        error: anyhow!("Failed to generate flamegraph: {}", e),
+        error: anyhow!("Failed to generate flamegraph: {e}"),
         status_code: StatusCode::UNPROCESSABLE_ENTITY,
     })?;
 
