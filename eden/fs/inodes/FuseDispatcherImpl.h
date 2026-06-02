@@ -133,6 +133,12 @@ class FuseDispatcherImpl : public FuseDispatcher {
    */
   uint64_t computeTtl() const;
 
+  /**
+   * Compute the TTL for negative dentry cache entries returned from ENOENT
+   * lookups.
+   */
+  uint64_t computeNegativeEntryTtl() const;
+
   // The EdenMount associated with this dispatcher.
   EdenMount* const mount_;
 

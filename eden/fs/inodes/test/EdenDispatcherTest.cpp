@@ -221,6 +221,26 @@ TEST(RawEdenDispatcherTest, lookup_returns_infinite_ttl_without_pressure_gc) {
       entry.attr_valid);
 }
 
+TEST(RawEdenDispatcherTest, lookup_returns_configured_negative_dcache_ttl) {
+  TestMount mount{FakeTreeBuilder{}};
+
+  mount.updateEdenConfig({
+      {"fuse:negative-dcache-ttl-seconds", "7"},
+  });
+
+  auto entry = mount.getDispatcher()
+                   ->lookup(
+                       0,
+                       kRootNodeId,
+                       "missing"_pc,
+                       ObjectFetchContext::getNullContext())
+                   .get(0ms);
+
+  EXPECT_EQ(0u, entry.nodeid);
+  EXPECT_EQ(7u, entry.entry_valid);
+  EXPECT_EQ(7u, entry.attr_valid);
+}
+
 TEST(RawEdenDispatcherTest, lookup_returns_dynamic_ttl_with_pressure_gc) {
   FakeTreeBuilder builder;
   builder.setFile("hello", "world");

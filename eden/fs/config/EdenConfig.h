@@ -625,6 +625,15 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * FUSE negative dentry cache TTL (seconds) for ENOENT lookups.
+   * Defaults to the legacy "effectively infinite" cache duration.
+   */
+  ConfigSetting<uint64_t> fuseNegativeDcacheTtlSeconds{
+      "fuse:negative-dcache-ttl-seconds",
+      2147483647,
+      this};
+
+  /**
    * Maximum GC cutoff duration (seconds), used at lowest pressure.
    * Inodes not accessed within this duration are candidates for GC.
    */

@@ -69,6 +69,10 @@ uint64_t FuseDispatcherImpl::computeTtl() const {
   return static_cast<uint64_t>(policy->getFuseTtl(inodeCount).count());
 }
 
+uint64_t FuseDispatcherImpl::computeNegativeEntryTtl() const {
+  return mount_->getEdenConfig()->fuseNegativeDcacheTtlSeconds.getValue();
+}
+
 ImmediateFuture<FuseDispatcher::Attr> FuseDispatcherImpl::getattr(
     InodeNumber ino,
     const ObjectFetchContextPtr& context) {
@@ -150,17 +154,27 @@ ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::lookup(
               }
             });
       })
-      .thenTry([](folly::Try<fuse_entry_out> try_) {
+      .thenTry([this](folly::Try<fuse_entry_out> try_) {
         if (auto* err = try_.tryGetExceptionObject<std::system_error>()) {
           if (isEnoent(*err)) {
-            // Translate ENOENT into a successful response with an
-            // inode number of 0 and a large entry_valid time, to let the kernel
-            // cache this negative lookup result.
+            // Translate ENOENT into a successful response with an inode
+            // number of 0 so the kernel can cache the negative lookup result.
+            //
+            // Note: if this negative dcache entry becomes incorrect for a
+            // name that is still returned by readdir, the kernel will stop
+            // asking EdenFS for that name and return ENOENT directly to
+            // user-space `stat`; `ls -l` will then show "?????????" because
+            // the name is visible but its metadata cannot be refreshed.
+            //
+            // This has happened in production, may be caused by a race, and is
+            // tricky to reproduce. A shorter TTL mitigates the issue by
+            // reducing how long a negative dcache entry can remain incorrect.
+            //
+            // Example report: https://fburl.com/workplace/329ni6ek
             fuse_entry_out entry = {};
-            entry.attr_valid =
-                std::numeric_limits<decltype(entry.attr_valid)>::max();
-            entry.entry_valid =
-                std::numeric_limits<decltype(entry.entry_valid)>::max();
+            auto ttl = computeNegativeEntryTtl();
+            entry.attr_valid = ttl;
+            entry.entry_valid = ttl;
             return folly::Try<fuse_entry_out>{entry};
           }
         }
