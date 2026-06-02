@@ -119,7 +119,7 @@ impl crate::Subcommand for PrefetchCmd {
             }
             Err(e) => {
                 sample.add_bool("success", false);
-                sample.add_string("error", format!("{:#}", e).as_str());
+                sample.add_string("error", format!("{e:#}").as_str());
                 Err(e)
             }
         }?;
