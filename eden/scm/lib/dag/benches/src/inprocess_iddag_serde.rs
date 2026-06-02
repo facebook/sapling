@@ -31,7 +31,7 @@ pub fn main() {
             .unwrap();
         Ok(parents[i]
             .iter()
-            .map(|p| format!("{}", p).as_bytes().to_vec().into())
+            .map(|p| format!("{p}").as_bytes().to_vec().into())
             .collect())
     });
 

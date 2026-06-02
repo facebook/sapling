@@ -31,7 +31,7 @@ pub fn main() {
             .unwrap();
         Ok(parents[i]
             .iter()
-            .map(|p| format!("{}", p).as_bytes().to_vec().into())
+            .map(|p| format!("{p}").as_bytes().to_vec().into())
             .collect())
     };
 
@@ -63,10 +63,10 @@ pub fn main() {
         }
 
         let log_len = dag_dir.path().join("log").metadata().unwrap().len();
-        eprintln!("segments: {}  log len: {}", segment_len, log_len);
+        eprintln!("segments: {segment_len}  log len: {log_len}");
 
         bench(
-            format!("ancestor calculation segment_size={}", segment_size),
+            format!("ancestor calculation segment_size={segment_size}"),
             || {
                 let dag = IdDag::open(dag_dir.path()).unwrap();
                 elapsed(|| {

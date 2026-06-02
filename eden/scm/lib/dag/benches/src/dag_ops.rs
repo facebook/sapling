@@ -47,7 +47,7 @@ fn bench_with_iddag<S: IdDagStore + Persist>(get_empty_iddag: impl Fn() -> IdDag
             .unwrap();
         Ok(parents[i]
             .iter()
-            .map(|p| format!("{}", p).as_bytes().to_vec().into())
+            .map(|p| format!("{p}").as_bytes().to_vec().into())
             .collect())
     });
 
@@ -273,7 +273,7 @@ fn bench_many_heads_dag() {
         Ok(parents)
     });
     let non_master_heads: Vec<Vertex> = (0..M)
-        .map(|i| Vertex::copy_from(format!("N{}", i).as_bytes()))
+        .map(|i| Vertex::copy_from(format!("N{i}").as_bytes()))
         .collect::<Vec<_>>();
     let master_heads: Vec<Vertex> = vec![Vertex::copy_from(format!("{}", M - 1).as_bytes())];
     let heads = VertexListWithOptions::from(master_heads)
@@ -291,8 +291,8 @@ fn bench_many_heads_dag() {
     };
     let head_root_pairs: Vec<(Set, Set)> = (0..M)
         .map(|i| {
-            let head = to_set(&format!("N{}", i));
-            let root = to_set(&format!("{}", i));
+            let head = to_set(&format!("N{i}"));
+            let root = to_set(&format!("{i}"));
             (head, root)
         })
         .collect();
@@ -305,7 +305,7 @@ fn bench_many_heads_dag() {
     });
 
     let heads = nbr(dag.heads(nbr(dag.all()).unwrap())).unwrap();
-    let root_list: Vec<Set> = ((M - 64)..M).map(|i| to_set(&format!("N{}", i))).collect();
+    let root_list: Vec<Set> = ((M - 64)..M).map(|i| to_set(&format!("N{i}"))).collect();
     bench("range (recent_draft::drafts)", || {
         elapsed(|| {
             for root in &root_list {
