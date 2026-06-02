@@ -77,7 +77,7 @@ impl ScubaHandler for SaplingRemoteApiScubaHandler {
         }
 
         if let Some(err) = info.first_error() {
-            scuba.add(SaplingRemoteApiScubaKey::HandlerError, format!("{:?}", err));
+            scuba.add(SaplingRemoteApiScubaKey::HandlerError, format!("{err:?}"));
         }
 
         scuba.add(
