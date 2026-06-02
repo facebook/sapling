@@ -615,11 +615,11 @@ async fn resolve_content_id_via_fsnode(
         .fsnode_id()
         .find_entry(ctx.clone(), blobstore.clone(), acl_path.clone())
         .await?
-        .ok_or_else(|| anyhow::anyhow!("ACL file not found in fsnodes: {:?}", acl_path))?;
+        .ok_or_else(|| anyhow::anyhow!("ACL file not found in fsnodes: {acl_path:?}"))?;
 
     match entry {
         Entry::Leaf(f) => Ok(*f.content_id()),
-        Entry::Tree(_) => anyhow::bail!("expected file but found directory: {:?}", acl_path),
+        Entry::Tree(_) => anyhow::bail!("expected file but found directory: {acl_path:?}"),
     }
 }
 

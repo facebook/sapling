@@ -37,7 +37,7 @@ pub struct RootAclManifestId(pub(crate) AclManifestId);
 pub fn format_key(derivation_ctx: &DerivationContext, changeset_id: ChangesetId) -> String {
     let root_prefix = "derived_root_aclmf.";
     let key_prefix = derivation_ctx.mapping_key_prefix::<RootAclManifestId>();
-    format!("{}{}{}", root_prefix, key_prefix, changeset_id)
+    format!("{root_prefix}{key_prefix}{changeset_id}")
 }
 
 impl TryFrom<BlobstoreBytes> for RootAclManifestId {

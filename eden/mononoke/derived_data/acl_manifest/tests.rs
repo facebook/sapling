@@ -1209,7 +1209,7 @@ async fn test_derive_permission_request_group(fb: FacebookInit) -> Result<()> {
 async fn test_derive_large_fan_out(fb: FacebookInit) -> Result<()> {
     let changes: Vec<Change<'_>> = (0..20)
         .flat_map(|i| {
-            let dir = format!("dir_{:03}", i);
+            let dir = format!("dir_{i:03}");
             // Box::leak needed: Change::Add borrows &str but format! is temporary
             let slacl_path: &str = Box::leak(format!("{dir}/.slacl").into_boxed_str());
             let file_path: &str = Box::leak(format!("{dir}/file.txt").into_boxed_str());
