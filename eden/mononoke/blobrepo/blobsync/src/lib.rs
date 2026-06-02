@@ -29,7 +29,7 @@ pub async fn copy_content(
 
     let content_metadata = filestore::get_metadata(src_blobstore, ctx, &fetch_key)
         .await?
-        .ok_or_else(|| anyhow!("File not found for fetch key: {:?}", fetch_key))?;
+        .ok_or_else(|| anyhow!("File not found for fetch key: {fetch_key:?}"))?;
 
     filestore::copy(
         src_blobstore,
