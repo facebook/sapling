@@ -82,7 +82,7 @@ fn get_tw_job_handle() -> Option<String> {
     let job_user = var("TW_JOB_USER").ok()?;
     let job_name = var("TW_JOB_NAME").ok()?;
 
-    Some(format!("{}/{}/{}", job_cluster, job_user, job_name))
+    Some(format!("{job_cluster}/{job_user}/{job_name}"))
 }
 
 pub fn get_fb_client_info() -> FbClientInfo {

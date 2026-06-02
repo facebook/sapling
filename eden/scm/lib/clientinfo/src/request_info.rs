@@ -232,7 +232,7 @@ impl Display for ClientEntryPoint {
             ClientEntryPoint::MononokeCasNewCommitTailer => "mononoke_cas_new_commit_tailer",
             ClientEntryPoint::Tests => "tests",
         };
-        write!(f, "{}", out)
+        write!(f, "{out}")
     }
 }
 
