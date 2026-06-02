@@ -79,7 +79,7 @@ impl Display for ChangesetSegmentParent {
         write!(f, "{}", self.cs_id)?;
 
         if let Some(location) = &self.location {
-            write!(f, " ({})", location)?;
+            write!(f, " ({location})")?;
         }
 
         Ok(())
