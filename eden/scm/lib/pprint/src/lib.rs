@@ -68,8 +68,8 @@ fn format_value(value: &Value, indent: usize, out: &mut String) {
     match value {
         Null => out.push_str("None"),
         Bool(v) => out.push_str(if *v { "True" } else { "False" }),
-        Integer(v) => out.push_str(&format!("{}", v)),
-        Float(v) => out.push_str(&format!("{}", v)),
+        Integer(v) => out.push_str(&format!("{v}")),
+        Float(v) => out.push_str(&format!("{v}")),
         Bytes(v) => {
             if [20, 32].contains(&v.len()) {
                 out.push_str(&format!("bin({:?})", to_hex(v)));
@@ -77,7 +77,7 @@ fn format_value(value: &Value, indent: usize, out: &mut String) {
                 format_bytes(v, out);
             }
         }
-        Text(v) => out.push_str(&format!("{:?}", v)),
+        Text(v) => out.push_str(&format!("{v:?}")),
         Array(a) => {
             out.push('[');
             for (i, v) in a.iter().enumerate() {
