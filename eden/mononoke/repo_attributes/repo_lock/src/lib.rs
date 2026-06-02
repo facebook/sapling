@@ -120,7 +120,7 @@ fn convert_sql_state((state, reason): &(u8, Option<String>)) -> Result<RepoLockS
         1 => Ok(RepoLockState::Locked(
             reason.clone().unwrap_or_else(|| DEFAULT_DB_MSG.to_string()),
         )),
-        _ => Err(anyhow!("Invalid repo lock state: {}", state)),
+        _ => Err(anyhow!("Invalid repo lock state: {state}")),
     }
 }
 
