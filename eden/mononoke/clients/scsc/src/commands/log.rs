@@ -252,7 +252,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
             app.target.render_one(&args, output).await
         }
         thrift::History::UnknownField(id) => {
-            anyhow::bail!("Unknown thrift::History field id: {}", id)
+            anyhow::bail!("Unknown thrift::History field id: {id}")
         }
         _ => anyhow::bail!("Unexpected thrift::History format"),
     }

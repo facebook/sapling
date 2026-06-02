@@ -73,17 +73,14 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
                         println!("ping is not ready yet, waiting some more...");
                     }
                     source_control::AsyncPingPollResponse::UnknownField(t) => {
-                        return Err(anyhow::anyhow!(
-                            "request failed with unknown result: {:?}",
-                            t
-                        ));
+                        return Err(anyhow::anyhow!("request failed with unknown result: {t:?}"));
                     }
                 },
                 Err(e) => match e {
                     AsyncPingPollError::poll_error(_) => {
                         eprintln!("poll error, retrying...");
                     }
-                    _ => return Err(anyhow::anyhow!("request failed with error: {:?}", e)),
+                    _ => return Err(anyhow::anyhow!("request failed with error: {e:?}")),
                 },
             }
             tokio::time::sleep(POLL_SLEEP_DURATION).await;

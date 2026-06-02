@@ -38,7 +38,7 @@ impl Render for ReposOutput {
 
     fn render(&self, _args: &Self::Args, w: &mut dyn Write) -> Result<()> {
         for repo in self.repos.iter() {
-            write!(w, "{}\n", repo)?;
+            write!(w, "{repo}\n")?;
         }
         Ok(())
     }

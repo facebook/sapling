@@ -196,10 +196,10 @@ impl Render for SubtreeChangeOutput {
     fn render(&self, _args: &Self::Args, w: &mut dyn Write) -> Result<()> {
         write!(w, "subtree {} ", self.change_type)?;
         if let Some(source_url) = &self.source_url {
-            write!(w, "{} ", source_url)?;
+            write!(w, "{source_url} ")?;
         }
         if let Some(source_commit_id) = &self.source_commit_id {
-            write!(w, "{}", source_commit_id)?;
+            write!(w, "{source_commit_id}")?;
         }
         if let Some(source_commit_ids) = &self.source_commit_ids {
             render_commit_id(

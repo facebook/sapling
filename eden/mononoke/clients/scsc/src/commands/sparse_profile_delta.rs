@@ -51,20 +51,18 @@ impl Render for SparseProfileDeltaOutput {
                         thrift::SparseProfileChangeElement::added(thrift::SparseProfileAdded {
                             size,
                             ..
-                        }) => writeln!(w, "profile {} was added, size: {}", profile_name, size)?,
+                        }) => writeln!(w, "profile {profile_name} was added, size: {size}")?,
                         thrift::SparseProfileChangeElement::removed(
                             thrift::SparseProfileRemoved { previous_size, .. },
                         ) => writeln!(
                             w,
-                            "profile {} was removed, previous size: {}",
-                            profile_name, previous_size
+                            "profile {profile_name} was removed, previous size: {previous_size}"
                         )?,
                         thrift::SparseProfileChangeElement::changed(
                             thrift::SparseProfileSizeChanged { size_change, .. },
                         ) => writeln!(
                             w,
-                            "profile {} was changed, size change: {}",
-                            profile_name, size_change
+                            "profile {profile_name} was changed, size change: {size_change}"
                         )?,
                         _ => bail!("unrecognized change!"),
                     };
@@ -129,17 +127,14 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
                     eprintln!("sparse profile size is not ready yet, waiting some more...");
                 }
                 source_control::CommitSparseProfileDeltaPollResponse::UnknownField(t) => {
-                    return Err(anyhow::anyhow!(
-                        "request failed with unknown result: {:?}",
-                        t
-                    ));
+                    return Err(anyhow::anyhow!("request failed with unknown result: {t:?}"));
                 }
             },
             Err(e) => match e {
                 CommitSparseProfileDeltaPollError::poll_error(_) => {
                     eprintln!("poll error, retrying...");
                 }
-                _ => return Err(anyhow::anyhow!("request failed with error: {:?}", e)),
+                _ => return Err(anyhow::anyhow!("request failed with error: {e:?}")),
             },
         }
         tokio::time::sleep(POLL_SLEEP_DURATION).await;

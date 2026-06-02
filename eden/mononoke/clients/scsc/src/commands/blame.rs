@@ -189,7 +189,7 @@ impl Render for BlameOut {
                         separator = " ";
                     }
                     if !args.no_commit_id {
-                        write!(w, "{}", separator)?;
+                        write!(w, "{separator}")?;
                         render_commit_id(
                             None,
                             " ",
@@ -209,7 +209,7 @@ impl Render for BlameOut {
                         } else {
                             blame_date.format("%+")
                         };
-                        write!(w, "{}{}", separator, blame_date_formatted)?;
+                        write!(w, "{separator}{blame_date_formatted}")?;
                         separator = " ";
                     }
                     if !separator.is_empty() {
@@ -264,7 +264,7 @@ impl Render for BlameOut {
                             (line.parent_start_line, line.parent_range_length)
                         {
                             if length == 0 {
-                                write!(plr, "+{}", start)?;
+                                write!(plr, "+{start}")?;
                             } else {
                                 write!(plr, "{}-{}", start, start + length - 1)?;
                             }
@@ -324,7 +324,7 @@ impl Render for BlameOut {
                 Ok(())
             }
             thrift::Blame::UnknownField(id) => {
-                Err(format_err!("Unknown thrift::Blame field id: {}", id))
+                Err(format_err!("Unknown thrift::Blame field id: {id}"))
             }
         }
     }
@@ -406,7 +406,7 @@ impl Render for BlameOut {
                 Ok(serde_json::to_writer(w, &lines)?)
             }
             thrift::Blame::UnknownField(id) => {
-                Err(format_err!("Unknown thrift::Blame field id: {}", id))
+                Err(format_err!("Unknown thrift::Blame field id: {id}"))
             }
         }
     }
@@ -444,13 +444,12 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
                 .parents
                 .get(parent_index)
                 .ok_or_else(|| {
-                    format_err!("Commit does not have a parent with index {}", parent_index)
+                    format_err!("Commit does not have a parent with index {parent_index}")
                 })?
                 .get(&thrift::CommitIdentityScheme::BONSAI)
                 .ok_or_else(|| {
                     format_err!(
-                        "Could not determine ID of commit's parent with index {}",
-                        parent_index
+                        "Could not determine ID of commit's parent with index {parent_index}"
                     )
                 })?,
         );

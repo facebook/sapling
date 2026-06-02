@@ -74,12 +74,12 @@ impl Render for ClustersOutput {
                 } else {
                     writeln!(w, "  Secondaries:")?;
                     for secondary in &cluster.secondary_paths {
-                        writeln!(w, "    - {}", secondary)?;
+                        writeln!(w, "    - {secondary}")?;
                     }
                 }
             }
             if let Some(last_path) = &self.last_path {
-                writeln!(w, "(more results available, last_path: {})", last_path)?;
+                writeln!(w, "(more results available, last_path: {last_path})")?;
             }
         }
         Ok(())

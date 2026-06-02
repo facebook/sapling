@@ -71,10 +71,10 @@ impl Render for RepoInfoOutput {
             self.repo.default_commit_identity_scheme
         )?;
         if let Some(push_redirected_to) = &self.repo.push_redirected_to {
-            write!(w, "Source of truth: {}\n", push_redirected_to)?;
+            write!(w, "Source of truth: {push_redirected_to}\n")?;
         }
         if let Some(acl_name) = &self.repo.acl_name {
-            write!(w, "ACL name: {}\n", acl_name)?;
+            write!(w, "ACL name: {acl_name}\n")?;
         }
         Ok(())
     }

@@ -84,7 +84,7 @@ impl Render for RateLimitCheckOutput {
         for rule in &self.rule_results {
             write!(w, "{}", rule.rule_name)?;
             if let Some(user) = &rule.user_filter {
-                write!(w, " (user: {})", user)?;
+                write!(w, " (user: {user})")?;
             }
             if let Some(dirs) = &rule.directories {
                 if !dirs.is_empty() {
@@ -100,8 +100,7 @@ impl Render for RateLimitCheckOutput {
                     window_secs,
                 } => write!(
                     w,
-                    "EXCEEDED: {} commits in the last {} seconds (limit: {})\n",
-                    current_count, window_secs, max_commits
+                    "EXCEEDED: {current_count} commits in the last {window_secs} seconds (limit: {max_commits})\n"
                 )?,
             };
         }
@@ -146,7 +145,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
                     window_secs: e.window_secs,
                 },
                 thrift::CommitRateLimitRuleOutcome::UnknownField(id) => {
-                    anyhow::bail!("Unknown rate limit outcome variant: {}", id)
+                    anyhow::bail!("Unknown rate limit outcome variant: {id}")
                 }
             };
             Ok(RuleResult {

@@ -57,7 +57,7 @@ impl Render for FileListOutput {
 
     fn render(&self, _args: &Self::Args, w: &mut dyn Write) -> Result<()> {
         for file in &self.0 {
-            write!(w, "{}\n", file)?;
+            write!(w, "{file}\n")?;
         }
         Ok(())
     }

@@ -56,19 +56,19 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
                     let msg = result
                         .message
                         .unwrap_or_else(|| "no details provided".to_string());
-                    bail!("Repo creation failed: {}", msg);
+                    bail!("Repo creation failed: {msg}");
                 }
                 thrift::CreateReposStatus::ABORTED => {
                     let msg = result
                         .message
                         .unwrap_or_else(|| "no details provided".to_string());
-                    bail!("Repo creation aborted: {}", msg);
+                    bail!("Repo creation aborted: {msg}");
                 }
                 thrift::CreateReposStatus::IN_PROGRESS => {
                     // Still in progress, keep polling
                 }
                 status => {
-                    bail!("Repo creation returned unexpected status: {:?}", status);
+                    bail!("Repo creation returned unexpected status: {status:?}");
                 }
             }
         }

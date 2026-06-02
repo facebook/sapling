@@ -226,7 +226,7 @@ fn case_insensitive_subpath<'a>(
         pin_mut!(elements);
         while let Some(elem) = elements.try_next().await? {
             if elem.to_lowercase() == target_elem_lower {
-                let target = format!("{}/{}", target_dir, elem);
+                let target = format!("{target_dir}/{elem}");
                 if target_subpath.is_empty() {
                     return Ok(Some(target));
                 } else if let Some(response) =
@@ -285,7 +285,7 @@ async fn case_insensitive_path(
         pin_mut!(elements);
         while let Some(elem) = elements.try_next().await? {
             if elem.to_lowercase() == target_elem_lower {
-                let target = format!("{}/{}", target_dir, elem);
+                let target = format!("{target_dir}/{elem}");
                 if let Some(response) =
                     case_insensitive_subpath(connection, commit, &target, target_subpath).await?
                 {
@@ -940,7 +940,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     };
 
     if !response.exists {
-        bail!("'{}' does not exist in {}", path, commit_id);
+        bail!("'{path}' does not exist in {commit_id}");
     }
 
     let file_count;
@@ -1014,7 +1014,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
             }
         }
         _ => {
-            bail!("malformed response for '{}' in {}", path, commit_id);
+            bail!("malformed response for '{path}' in {commit_id}");
         }
     };
 

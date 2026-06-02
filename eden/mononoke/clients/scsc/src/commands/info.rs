@@ -253,11 +253,11 @@ async fn path_info(
                     .await
             }
             _ => {
-                bail!("malformed response for '{}' in {}", path, commit_id)
+                bail!("malformed response for '{path}' in {commit_id}")
             }
         }
     } else {
-        bail!("'{}' does not exist in {}", path, commit_id)
+        bail!("'{path}' does not exist in {commit_id}")
     }
 }
 
@@ -295,7 +295,7 @@ async fn multiple_path_info(
                     as Box<dyn Render<Args = CommandArgs>>)
             }
             _ => {
-                bail!("malformed response for '{}'", path);
+                bail!("malformed response for '{path}'");
             }
         }
     });

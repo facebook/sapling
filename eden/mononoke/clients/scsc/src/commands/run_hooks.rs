@@ -63,10 +63,10 @@ impl Render for RunHooksOutput {
             self.commit, self.bookmark
         )?;
         for (hook_name, outcome) in &self.outcomes {
-            write!(w, "{} => ", hook_name)?;
+            write!(w, "{hook_name} => ")?;
             match outcome {
                 HookOutcome::Accepted => write!(w, "ACCEPTED\n")?,
-                HookOutcome::Rejected { reason } => write!(w, "REJECTED: {}\n", reason)?,
+                HookOutcome::Rejected { reason } => write!(w, "REJECTED: {reason}\n")?,
             };
         }
         Ok(())

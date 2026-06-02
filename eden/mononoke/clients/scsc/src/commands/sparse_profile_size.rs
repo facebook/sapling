@@ -49,7 +49,7 @@ impl Render for SparseProfileSizeOutput {
             for (profile_name, thrift::SparseProfileSize { size, .. }) in
                 self.profiles_size.sizes.iter()
             {
-                writeln!(w, "profile: {}, size: {}", profile_name, size)?;
+                writeln!(w, "profile: {profile_name}, size: {size}")?;
             }
         }
         Ok(())
@@ -100,17 +100,14 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
                     eprintln!("sparse profile size is not ready yet, waiting some more...");
                 }
                 source_control::CommitSparseProfileSizePollResponse::UnknownField(t) => {
-                    return Err(anyhow::anyhow!(
-                        "request failed with unknown result: {:?}",
-                        t
-                    ));
+                    return Err(anyhow::anyhow!("request failed with unknown result: {t:?}"));
                 }
             },
             Err(e) => match e {
                 CommitSparseProfileSizePollError::poll_error(_) => {
                     eprintln!("poll error, retrying...");
                 }
-                _ => return Err(anyhow::anyhow!("request failed with error: {:?}", e)),
+                _ => return Err(anyhow::anyhow!("request failed with error: {e:?}")),
             },
         }
         tokio::time::sleep(POLL_SLEEP_DURATION).await;
