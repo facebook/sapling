@@ -419,7 +419,7 @@ impl SaplingRemoteApiHandler for HashToLocationHandler {
             .result
             .as_ref()
             .err()
-            .map(|err| format_err!("{:?}", err))
+            .map(|err| format_err!("{err:?}"))
     }
 }
 
@@ -612,7 +612,7 @@ impl SaplingRemoteApiHandler for UploadBonsaiChangesetHandler {
             .then(|hgid| async move {
                 repo.get_bonsai_from_hg(hgid.into())
                     .await?
-                    .ok_or_else(|| anyhow!("Parent HgId {} is invalid", hgid))
+                    .ok_or_else(|| anyhow!("Parent HgId {hgid} is invalid"))
             })
             .try_collect()
             .await?;
@@ -655,7 +655,7 @@ async fn upload_bonsai_changeset(
                 .into_iter()
                 .map(|(path, fc)| {
                     let create_change = to_create_change(fc, bubble_id)
-                        .with_context(|| anyhow!("Parsing file changes for {}", path))?;
+                        .with_context(|| anyhow!("Parsing file changes for {path}"))?;
                     Ok((to_mpath(path)?, create_change))
                 })
                 .collect::<anyhow::Result<_>>()?,
@@ -704,8 +704,7 @@ impl SaplingRemoteApiHandler for FetchSnapshotHandler {
             .context("Failure in fetching bubble from changeset")?
             .ok_or_else(|| {
                 HttpError::e404(MononokeError::NotAvailable(format!(
-                    "Snapshot for changeset {} not found in bubble",
-                    cs_id
+                    "Snapshot for changeset {cs_id} not found in bubble"
                 )))
             })?;
         let labels = repo
@@ -725,8 +724,7 @@ impl SaplingRemoteApiHandler for FetchSnapshotHandler {
                     .is_some_and(EphemeralBlobstoreError::is_bubble_expiry);
                 let err = if bubble_expired {
                     HttpError::e400(MononokeError::NotAvailable(format!(
-                        "Snapshot for changeset {} with bubble ID {} expired",
-                        cs_id, bubble_id
+                        "Snapshot for changeset {cs_id} with bubble ID {bubble_id} expired"
                     )))
                 } else {
                     HttpError::e500(MononokeError::from(e))
@@ -749,8 +747,7 @@ impl SaplingRemoteApiHandler for FetchSnapshotHandler {
                     .is_some_and(EphemeralBlobstoreError::is_bubble_expiry);
                 let err = if bubble_expired {
                     HttpError::e400(MononokeError::NotAvailable(format!(
-                        "Snapshot for changeset {} with bubble ID {} expired",
-                        cs_id, bubble_id
+                        "Snapshot for changeset {cs_id} with bubble ID {bubble_id} expired"
                     )))
                 } else {
                     HttpError::e500(MononokeError::from(e))
@@ -850,8 +847,7 @@ impl SaplingRemoteApiHandler for AlterSnapshotHandler {
             .await?
             .ok_or_else(|| {
                 HttpError::e404(MononokeError::NotAvailable(format!(
-                    "Snapshot for changeset {} not found in bubble",
-                    cs_id
+                    "Snapshot for changeset {cs_id} not found in bubble"
                 )))
             })?;
         let (label_addition, label_removal) = (
@@ -950,8 +946,7 @@ impl SaplingRemoteApiHandler for EphemeralExtendHandler {
                     .is_some_and(EphemeralBlobstoreError::is_bubble_expiry);
                 let err = if bubble_expired {
                     HttpError::e400(MononokeError::NotAvailable(format!(
-                        "Bubble with ID {} expired",
-                        bubble_id
+                        "Bubble with ID {bubble_id} expired"
                     )))
                 } else {
                     HttpError::e500(MononokeError::from(e))
@@ -1377,7 +1372,7 @@ impl SaplingRemoteApiHandler for UploadIdenticalChangesetsHandler {
                         .into_iter()
                         .map(|(path, bfc)| {
                             let create_change = to_create_change(bfc, None)
-                                .with_context(|| anyhow!("Parsing file changes for {}", path))?;
+                                .with_context(|| anyhow!("Parsing file changes for {path}"))?;
 
                             let create_change2 = create_change.into_file_change(&parents)?;
 

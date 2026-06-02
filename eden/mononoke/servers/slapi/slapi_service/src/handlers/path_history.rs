@@ -104,7 +104,7 @@ async fn fetch_history_for_path_wrapper<R: MononokeRepo>(
         path: path.clone(),
         entries: fetch_history_for_path(repo, commit, path, limit, cursor, flavour)
             .await
-            .map_err(|e| ServerError::generic(format!("{:?}", e))),
+            .map_err(|e| ServerError::generic(format!("{e:?}"))),
     })
 }
 
@@ -212,7 +212,7 @@ async fn csids_to_hgids<R: MononokeRepo>(
                     to_id
                         .remove(csid)
                         .map(|git_sha1| HgId::from_byte_array(git_sha1.into_inner()))
-                        .ok_or_else(|| anyhow!("No git mapping for csid {:?}", csid))
+                        .ok_or_else(|| anyhow!("No git mapping for csid {csid:?}"))
                 })
                 .collect::<Result<Vec<_>>>()?
         }
@@ -228,7 +228,7 @@ async fn csids_to_hgids<R: MononokeRepo>(
                     to_id
                         .remove(csid)
                         .map(Into::into)
-                        .ok_or_else(|| anyhow!("No hg mapping for csid {:?}", csid))
+                        .ok_or_else(|| anyhow!("No hg mapping for csid {csid:?}"))
                 })
                 .collect::<Result<Vec<_>>>()?
         }

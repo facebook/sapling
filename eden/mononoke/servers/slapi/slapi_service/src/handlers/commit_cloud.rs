@@ -96,7 +96,7 @@ impl SaplingRemoteApiHandler for CommitCloudWorkspace {
             .data
             .as_ref()
             .err()
-            .map(|err| format_err!("{:?}", err))
+            .map(|err| format_err!("{err:?}"))
     }
 }
 
@@ -145,7 +145,7 @@ impl SaplingRemoteApiHandler for CommitCloudWorkspaces {
             .data
             .as_ref()
             .err()
-            .map(|err| format_err!("{:?}", err))
+            .map(|err| format_err!("{err:?}"))
     }
 }
 
@@ -201,7 +201,7 @@ impl SaplingRemoteApiHandler for CommitCloudReferences {
             .data
             .as_ref()
             .err()
-            .map(|err| format_err!("{:?}", err))
+            .map(|err| format_err!("{err:?}"))
     }
 }
 
@@ -267,7 +267,7 @@ impl SaplingRemoteApiHandler for CommitCloudUpdateReferences {
             .data
             .as_ref()
             .err()
-            .map(|err| format_err!("{:?}", err))
+            .map(|err| format_err!("{err:?}"))
     }
 }
 
@@ -322,7 +322,7 @@ impl SaplingRemoteApiHandler for CommitCloudSmartlog {
             .data
             .as_ref()
             .err()
-            .map(|err| format_err!("{:?}", err))
+            .map(|err| format_err!("{err:?}"))
     }
 }
 
@@ -380,7 +380,7 @@ impl SaplingRemoteApiHandler for CommitCloudShareWorkspace {
             .data
             .as_ref()
             .err()
-            .map(|err| format_err!("{:?}", err))
+            .map(|err| format_err!("{err:?}"))
     }
 }
 
@@ -428,7 +428,7 @@ impl SaplingRemoteApiHandler for CommitCloudUpdateArchive {
             .data
             .as_ref()
             .err()
-            .map(|err| format_err!("{:?}", err))
+            .map(|err| format_err!("{err:?}"))
     }
 }
 
@@ -476,7 +476,7 @@ impl SaplingRemoteApiHandler for CommitCloudRenameWorkspace {
             .data
             .as_ref()
             .err()
-            .map(|err| format_err!("{:?}", err))
+            .map(|err| format_err!("{err:?}"))
     }
 }
 
@@ -524,7 +524,7 @@ impl SaplingRemoteApiHandler for CommitCloudSmartlogByVersion {
             .data
             .as_ref()
             .err()
-            .map(|err| format_err!("{:?}", err))
+            .map(|err| format_err!("{err:?}"))
     }
 }
 
@@ -583,7 +583,7 @@ impl SaplingRemoteApiHandler for CommitCloudHistoricalVersions {
             .data
             .as_ref()
             .err()
-            .map(|err| format_err!("{:?}", err))
+            .map(|err| format_err!("{err:?}"))
     }
 }
 
@@ -637,7 +637,7 @@ impl SaplingRemoteApiHandler for CommitCloudRollbackWorkspace {
             .data
             .as_ref()
             .err()
-            .map(|err| format_err!("{:?}", err))
+            .map(|err| format_err!("{err:?}"))
     }
 }
 
@@ -685,7 +685,7 @@ impl SaplingRemoteApiHandler for CommitCloudOtherRepoWorkspaces {
             .data
             .as_ref()
             .err()
-            .map(|err| format_err!("{:?}", err))
+            .map(|err| format_err!("{err:?}"))
     }
 }
 

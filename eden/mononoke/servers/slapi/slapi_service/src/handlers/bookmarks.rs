@@ -103,7 +103,7 @@ impl SaplingRemoteApiHandler for SetBookmarkHandler {
             .data
             .as_ref()
             .err()
-            .map(|err| format_err!("{:?}", err))
+            .map(|err| format_err!("{err:?}"))
     }
 }
 
@@ -117,7 +117,7 @@ async fn set_bookmark_response<R: MononokeRepo>(
     Ok(SetBookmarkResponse {
         data: set_bookmark(repo, bookmark, to, from, pushvars)
             .await
-            .map_err(|e| ServerError::generic(format!("{:?}", e))),
+            .map_err(|e| ServerError::generic(format!("{e:?}"))),
     })
 }
 
@@ -253,6 +253,6 @@ impl SaplingRemoteApiHandler for Bookmarks2Handler {
             .data
             .as_ref()
             .err()
-            .map(|err| format_err!("{:?}", err))
+            .map(|err| format_err!("{err:?}"))
     }
 }

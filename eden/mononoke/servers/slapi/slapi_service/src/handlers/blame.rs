@@ -84,7 +84,7 @@ impl SaplingRemoteApiHandler for BlameHandler {
             .data
             .as_ref()
             .err()
-            .map(|err| format_err!("{:?}", err))
+            .map(|err| format_err!("{err:?}"))
     }
 }
 
@@ -97,7 +97,7 @@ async fn blame_file<R: MononokeRepo>(
         file: key.clone(),
         data: blame_file_data(repo, key.clone(), flavour)
             .await
-            .map_err(|e| ServerError::generic(format!("{:?}", e))),
+            .map_err(|e| ServerError::generic(format!("{e:?}"))),
     })
 }
 
@@ -192,7 +192,7 @@ async fn blame_file_data<R: MononokeRepo>(
                     to_id
                         .remove(csid)
                         .map(|git_sha1| HgId::from_byte_array(git_sha1.into_inner()))
-                        .ok_or_else(|| anyhow!("no git mapping for blame csid {:?}", csid))
+                        .ok_or_else(|| anyhow!("no git mapping for blame csid {csid:?}"))
                 })
                 .collect::<Result<Vec<_>>>()?
         }
@@ -208,7 +208,7 @@ async fn blame_file_data<R: MononokeRepo>(
                     to_id
                         .remove(csid)
                         .map(Into::into)
-                        .ok_or_else(|| anyhow!("no hg mapping for blame csid {:?}", csid))
+                        .ok_or_else(|| anyhow!("no hg mapping for blame csid {csid:?}"))
                 })
                 .collect::<Result<Vec<_>>>()?
         }

@@ -69,7 +69,7 @@ impl SaplingRemoteApiHandler for LandStackHandler {
             .data
             .as_ref()
             .err()
-            .map(|err| format_err!("{:?}", err))
+            .map(|err| format_err!("{err:?}"))
     }
 }
 
@@ -83,7 +83,7 @@ async fn land_stack_response<R: MononokeRepo>(
     Ok(LandStackResponse {
         data: land_stack(repo, bookmark, head_hgid, base_hgid, pushvars)
             .await
-            .map_err(|e| ServerError::generic(format!("{:?}", e))),
+            .map_err(|e| ServerError::generic(format!("{e:?}"))),
     })
 }
 

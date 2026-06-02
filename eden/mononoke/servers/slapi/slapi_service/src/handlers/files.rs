@@ -174,7 +174,7 @@ async fn fetch_file_response<R: MononokeRepo>(
 ) -> Result<FileResponse, Error> {
     let result = fetch_file(repo, key.clone(), attrs)
         .await
-        .map_err(|e| ServerError::generic(format!("{}", e)));
+        .map_err(|e| ServerError::generic(format!("{e}")));
     Ok(FileResponse { key, result })
 }
 
@@ -260,7 +260,7 @@ async fn fetch_git_object_as_file<R: MononokeRepo>(
         });
     Ok(FileResponse {
         key,
-        result: result.map_err(|e| ServerError::generic(format!("{}", e))),
+        result: result.map_err(|e| ServerError::generic(format!("{e}"))),
     })
 }
 
@@ -324,8 +324,7 @@ pub async fn upload_file(state: &mut State) -> Result<impl TryIntoResponse + use
         }
         None => Ok((body.right_stream(), content_size)),
         Some(compression) => Err(HttpError::e400(anyhow!(
-            "Unsupported compression type: {:?}",
-            compression
+            "Unsupported compression type: {compression:?}"
         ))),
     }?;
 
@@ -408,8 +407,7 @@ async fn store_hg_filenode<R: MononokeRepo>(
         Some(_copy_from) => {
             ensure!(
                 p2.is_none(),
-                "Copy metadata is not valid for merged filenodes: {}",
-                filenode
+                "Copy metadata is not valid for merged filenodes: {filenode}"
             );
             repo.store_hg_filenode(filenode, None, p1, content_id, content_size, metadata)
                 .await?;

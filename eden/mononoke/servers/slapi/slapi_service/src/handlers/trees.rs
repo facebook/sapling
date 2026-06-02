@@ -492,7 +492,7 @@ impl SaplingRemoteApiHandler for CheckManifestPermissionHandler {
                 async move {
                     let hg_manifest_id = HgManifestId::new(
                         HgNodeHash::from_bytes(manifest_id.as_ref())
-                            .map_err(|e| anyhow::anyhow!("Invalid manifest id: {}", e))?,
+                            .map_err(|e| anyhow::anyhow!("Invalid manifest id: {e}"))?,
                     );
 
                     let restriction_ctx = HgAugmentedTreeRestrictionContext::new_check_exists(
@@ -557,11 +557,11 @@ impl SaplingRemoteApiHandler for CheckPathPermissionHandler {
                 let cs = cs.clone();
                 async move {
                     let mpath = MPath::new(path.as_str().as_bytes())
-                        .with_context(|| format!("Invalid path: {}", path))?;
+                        .with_context(|| format!("Invalid path: {path}"))?;
                     let restriction_ctx = cs
                         .path_restriction(mpath)
                         .await
-                        .with_context(|| format!("Failed to check path restriction: {}", path))?;
+                        .with_context(|| format!("Failed to check path restriction: {path}"))?;
                     let restriction_infos = restriction_ctx.restriction_info(true).await?;
 
                     let has_access = restriction_infos

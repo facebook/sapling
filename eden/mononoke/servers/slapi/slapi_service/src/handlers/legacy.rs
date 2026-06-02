@@ -81,7 +81,7 @@ fn aggregate_blob_chunks(
                         }
                         Err(e) => {
                             return StreamingChangelogResponse {
-                                data: Err(ServerError::generic(format!("{:?}", e))),
+                                data: Err(ServerError::generic(format!("{e:?}"))),
                             };
                         }
                     }
@@ -210,7 +210,7 @@ impl SaplingRemoteApiHandler for ListBookmarkPatternsHandler {
                 .map(|entry| Ok(ListBookmarkPatternsResponse { data: Ok(entry) }))
                 .collect::<Vec<_>>(),
             Err(e) => vec![Ok(ListBookmarkPatternsResponse {
-                data: Err(ServerError::generic(format!("{:?}", e))),
+                data: Err(ServerError::generic(format!("{e:?}"))),
             })],
         });
 
@@ -222,7 +222,7 @@ impl SaplingRemoteApiHandler for ListBookmarkPatternsHandler {
             .data
             .as_ref()
             .err()
-            .map(|err| format_err!("{:?}", err))
+            .map(|err| format_err!("{err:?}"))
     }
 }
 
@@ -258,8 +258,7 @@ async fn list_bookmarks_for_pattern<R: MononokeRepo>(
 
         if bookmarks.len() >= max as usize {
             return Err(format_err!(
-                "Bookmark query was truncated after {} results, use a more specific prefix search.",
-                max,
+                "Bookmark query was truncated after {max} results, use a more specific prefix search.",
             ));
         }
 

@@ -55,7 +55,7 @@ impl SaplingRemoteApiHandler for GitObjectsHandler {
                 let git_object = fetch_git_object(oid, &repo).await;
                 yield GitObjectsResponse {
                     oid,
-                    result: git_object.map_err(|e| ServerError::generic(format!("{}", e))),
+                    result: git_object.map_err(|e| ServerError::generic(format!("{e}"))),
                 }
             }
         }
@@ -67,7 +67,7 @@ impl SaplingRemoteApiHandler for GitObjectsHandler {
             .result
             .as_ref()
             .err()
-            .map(|err| format_err!("{:?}", err))
+            .map(|err| format_err!("{err:?}"))
     }
 }
 
