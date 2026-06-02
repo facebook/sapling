@@ -34,9 +34,9 @@ where
         if first {
             first = false;
         } else {
-            write!(write, "{}", sep)?;
+            write!(write, "{sep}")?;
         }
-        write!(write, "{}", it)?;
+        write!(write, "{it}")?;
     }
     write!(write, "\n")?;
     Ok(())
@@ -56,7 +56,7 @@ pub fn encode(response: Response) -> OutputStream {
             for res in separated_results.iter() {
                 len += res.len();
             }
-            let len = stream::once(future::ok(Bytes::from(format!("{}\n", len))));
+            let len = stream::once(future::ok(Bytes::from(format!("{len}\n"))));
 
             len.chain(stream::iter(separated_results.into_iter().map(Ok)))
                 .boxed()
@@ -133,7 +133,7 @@ fn encode_cmd(response: SingleResponse) -> Bytes {
         ListKeysPatterns(res) => {
             let it = res
                 .into_iter()
-                .map(|(bookmark, hash)| format!("{}\t{}", bookmark, hash));
+                .map(|(bookmark, hash)| format!("{bookmark}\t{hash}"));
 
             Itertools::intersperse(it, String::from("\n"))
                 .collect::<String>()
@@ -146,6 +146,6 @@ fn encode_cmd(response: SingleResponse) -> Bytes {
             Bytes::new()
         }
 
-        r => panic!("Response for {:?} unimplemented", r),
+        r => panic!("Response for {r:?} unimplemented"),
     }
 }

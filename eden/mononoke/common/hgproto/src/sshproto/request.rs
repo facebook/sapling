@@ -296,14 +296,14 @@ where
     F: Fn(&'a [u8]) -> IResult<&'a [u8], T, Error>,
 {
     match params.get(key.as_bytes()) {
-        None => bail!("missing param {}", key),
+        None => bail!("missing param {key}"),
         Some(v) => match parser(v.as_ref()) {
             Ok((rest, v)) => match rest {
                 [] => Ok(v),
                 [..] => bail!("Unconsumed characters remain after parsing param"),
             },
-            Err(Err::Incomplete(err)) => bail!("param parse incomplete: {:?}", err),
-            Err(Err::Error(err) | Err::Failure(err)) => bail!("param parse failed: {:?}", err),
+            Err(Err::Incomplete(err)) => bail!("param parse incomplete: {err:?}"),
+            Err(Err::Error(err) | Err::Failure(err)) => bail!("param parse failed: {err:?}"),
         },
     }
 }
@@ -438,7 +438,7 @@ pub fn parse_request(buf: &mut BytesMut) -> Result<Option<Request>> {
         }
         Err(Err::Incomplete(_)) => Ok(None),
         Err(Err::Error(err) | Err::Failure(err)) => {
-            println!("parse_request parsing error: {:?}", err);
+            println!("parse_request parsing error: {err:?}");
             bail!(errors::ErrorKind::CommandParse(
                 String::from_utf8_lossy(buf.as_ref()).into_owned(),
             ));
@@ -629,7 +629,7 @@ mod test {
                     b"bar".to_vec() => b"hello world!".to_vec(),
                 }
             ),
-            Err(bad) => panic!("bad result {:?}", bad),
+            Err(bad) => panic!("bad result {bad:?}"),
         }
 
         match params(p, 2) {
@@ -640,7 +640,7 @@ mod test {
                     b"foo".to_vec() => b"blibble".to_vec(),
                 }
             ),
-            Err(bad) => panic!("bad result {:?}", bad),
+            Err(bad) => panic!("bad result {bad:?}"),
         }
 
         match params(p, 4) {
@@ -653,17 +653,17 @@ mod test {
                     b"is_ok".to_vec() => b"y".to_vec(),
                 }
             ),
-            bad => panic!("bad result {:?}", bad),
+            bad => panic!("bad result {bad:?}"),
         }
 
         match params(p, 5) {
             Err(Err::Error(Error::Nom(ErrorKind::AlphaNumeric))) => {}
-            bad => panic!("bad result {:?}", bad),
+            bad => panic!("bad result {bad:?}"),
         }
 
         match params(&p[..3], 1) {
             Err(Err::Incomplete(_)) => {}
-            bad => panic!("bad result {:?}", bad),
+            bad => panic!("bad result {bad:?}"),
         }
 
         for l in 0..p.len() {
@@ -673,11 +673,10 @@ mod test {
                     assert_eq!(kv.len(), 4);
                     assert!(
                         b"\nbadly formatted thing ".starts_with(remain),
-                        "remain \"{:?}\"",
-                        remain
+                        "remain \"{remain:?}\""
                     );
                 }
-                bad => panic!("bad result l {} bad {:?}", l, bad),
+                bad => panic!("bad result l {l} bad {bad:?}"),
             }
         }
     }
@@ -699,7 +698,7 @@ mod test {
                     }
                 );
             }
-            Err(Err::Error(err) | Err::Failure(err)) => panic!("unexpected error {:?}", err),
+            Err(Err::Error(err) | Err::Failure(err)) => panic!("unexpected error {err:?}"),
         }
 
         let star = b"* 2\n\
@@ -719,7 +718,7 @@ mod test {
                     }
                 );
             }
-            Err(Err::Error(err) | Err::Failure(err)) => panic!("unexpected error {:?}", err),
+            Err(Err::Error(err) | Err::Failure(err)) => panic!("unexpected error {err:?}"),
         }
 
         let star = b"* 0\n\
@@ -735,13 +734,13 @@ mod test {
                     }
                 );
             }
-            Err(Err::Error(err) | Err::Failure(err)) => panic!("unexpected error {:?}", err),
+            Err(Err::Error(err) | Err::Failure(err)) => panic!("unexpected error {err:?}"),
         }
 
         match params(&star[..4], 2) {
             Err(Err::Incomplete(_)) => {}
-            Ok((remain, kv)) => panic!("unexpected Done remain {:?} kv {:?}", remain, kv),
-            Err(Err::Error(err) | Err::Failure(err)) => panic!("unexpected error {:?}", err),
+            Ok((remain, kv)) => panic!("unexpected Done remain {remain:?} kv {kv:?}"),
+            Err(Err::Error(err) | Err::Failure(err)) => panic!("unexpected error {err:?}"),
         }
     }
 
@@ -1168,7 +1167,7 @@ mod test_parse {
                 assert_eq!(val, SingleRequest::Heads {});
             }
             Err(Err::Incomplete(_)) => panic!("unexpected incomplete input"),
-            Err(Err::Error(err) | Err::Failure(err)) => panic!("failed with {:?}", err),
+            Err(Err::Error(err) | Err::Failure(err)) => panic!("failed with {err:?}"),
         }
     }
 
