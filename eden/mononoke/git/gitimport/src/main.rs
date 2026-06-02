@@ -499,12 +499,12 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                     cloned!(ctx, uploader, reader);
                     async move {
                         let tag_sha1 = ObjectId::from_str(&tag_sha1).with_context(|| {
-                            format!("Invalid SHA1 hash provided for Git Tag {}", tag_sha1)
+                            format!("Invalid SHA1 hash provided for Git Tag {tag_sha1}")
                         })?;
                         upload_git_tag(&ctx, uploader.clone(), reader.clone(), &tag_sha1)
                             .await
                             .with_context(|| {
-                                format!("Error in uploading tag with ID {}", tag_sha1)
+                                format!("Error in uploading tag with ID {tag_sha1}")
                             })?;
                         info!("Uploaded tag with ID {}", tag_sha1);
                         anyhow::Ok(())
