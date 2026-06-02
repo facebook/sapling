@@ -210,9 +210,7 @@ impl MutableRenames {
                 //
                 // For now, though, just bail
                 bail!(
-                    "{} is a potential descendant of {} - rejecting to avoid loops in history",
-                    src,
-                    dst,
+                    "{src} is a potential descendant of {dst} - rejecting to avoid loops in history",
                 );
             }
         }
