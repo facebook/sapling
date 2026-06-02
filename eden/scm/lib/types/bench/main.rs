@@ -61,7 +61,7 @@ fn make_hashes() -> Vec<String> {
     let mut hashes = vec![];
     for i in 0..1000 {
         let mut hasher = Sha1::new();
-        hasher.update(format!("{}", i));
+        hasher.update(format!("{i}"));
         hashes.push(hex::encode(hasher.finalize()));
     }
     hashes
