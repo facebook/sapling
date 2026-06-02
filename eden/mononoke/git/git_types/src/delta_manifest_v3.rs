@@ -281,8 +281,7 @@ impl GDMV3Instructions {
                             let instructions_chunk =
                                 GDMV3InstructionsChunk(fallible_bytes.with_context(|| {
                                     format!(
-                                        "Error in getting bytes from chunk {} in chunked stream",
-                                        idx
+                                        "Error in getting bytes from chunk {idx} in chunked stream"
                                     )
                                 })?);
                             instructions_chunk.into_blob().store(ctx, blobstore).await

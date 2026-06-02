@@ -46,10 +46,7 @@ pub async fn fetch_git_delta_manifest(
                 .derive::<RootGitDeltaManifestV2Id>(ctx, cs_id, DerivationPriority::LOW)
                 .await
                 .with_context(|| {
-                    format!(
-                        "Error in deriving RootGitDeltaManifestV2Id for changeset {:?}",
-                        cs_id
-                    )
+                    format!("Error in deriving RootGitDeltaManifestV2Id for changeset {cs_id:?}")
                 })?;
 
             Ok(Box::new(
@@ -58,10 +55,7 @@ pub async fn fetch_git_delta_manifest(
                     .load(ctx, blobstore)
                     .await
                     .with_context(|| {
-                        format!(
-                            "Error in loading GitDeltaManifestV2 from root id {:?}",
-                            root_mf_id
-                        )
+                        format!("Error in loading GitDeltaManifestV2 from root id {root_mf_id:?}")
                     })?,
             ))
         }
@@ -73,10 +67,7 @@ pub async fn fetch_git_delta_manifest(
                 .fetch_derived_direct::<RootGitDeltaManifestV3Id>(ctx, cs_id)
                 .await
                 .with_context(|| {
-                    format!(
-                        "Error in deriving RootGitDeltaManifestV3Id for changeset {:?}",
-                        cs_id
-                    )
+                    format!("Error in deriving RootGitDeltaManifestV3Id for changeset {cs_id:?}")
                 })?;
 
             let gdm_v3 = match gdm_v3 {
@@ -87,8 +78,7 @@ pub async fn fetch_git_delta_manifest(
                         .await
                         .with_context(|| {
                             format!(
-                                "Error in deriving RootGitDeltaManifestV3Id for changeset {:?}",
-                                cs_id
+                                "Error in deriving RootGitDeltaManifestV3Id for changeset {cs_id:?}"
                             )
                         })?;
 
@@ -97,12 +87,11 @@ pub async fn fetch_git_delta_manifest(
                         .await
                         .with_context(|| {
                             format!(
-                                "Error in deriving RootGitDeltaManifestV3Id for changeset {:?}",
-                                cs_id
+                                "Error in deriving RootGitDeltaManifestV3Id for changeset {cs_id:?}"
                             )
                         })?
                         .ok_or_else(|| {
-                            anyhow!("GitDeltaManifestV3 not found for changeset {:?}", cs_id)
+                            anyhow!("GitDeltaManifestV3 not found for changeset {cs_id:?}")
                         })?
                 }
             };
@@ -144,7 +133,7 @@ impl TryFrom<thrift::ObjectKind> for ObjectKind {
         match value {
             thrift::ObjectKind::Blob => Ok(Self::Blob),
             thrift::ObjectKind::Tree => Ok(Self::Tree),
-            thrift::ObjectKind(x) => anyhow::bail!("Unsupported object kind: {}", x),
+            thrift::ObjectKind(x) => anyhow::bail!("Unsupported object kind: {x}"),
         }
     }
 }

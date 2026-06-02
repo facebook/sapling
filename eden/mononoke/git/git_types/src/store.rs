@@ -168,7 +168,7 @@ async fn maybe_fetch_blob_bytes(
     };
     // The blob object stored in the blobstore exists without the git header. If requested, prepend the git blob header before returning the bytes
     let mut header_bytes = match header_state {
-        HeaderState::Included => format!("blob {}\0", num_bytes).into_bytes(),
+        HeaderState::Included => format!("blob {num_bytes}\0").into_bytes(),
         HeaderState::Excluded => vec![],
     };
     // We know the number of bytes we are going to write so reserve the buffer to avoid resizing

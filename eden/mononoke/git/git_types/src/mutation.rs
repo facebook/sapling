@@ -114,7 +114,7 @@ mod tests {
     fn test_multiple_predecessors_fold() {
         let sha1_a = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
         let sha1_b = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
-        let value = format!("{},{}", sha1_a, sha1_b);
+        let value = format!("{sha1_a},{sha1_b}");
         let headers = vec![
             (b"predecessor".to_vec(), value.as_bytes().to_vec()),
             (b"predecessor-op".to_vec(), b"fold".to_vec()),

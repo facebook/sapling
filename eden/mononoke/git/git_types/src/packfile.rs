@@ -259,7 +259,7 @@ impl TryFrom<thrift::GitPackfileBaseItem> for GitPackfileBaseItem {
             thrift::GitObjectKind::Tree => gix_object::Kind::Tree,
             thrift::GitObjectKind::Commit => gix_object::Kind::Commit,
             thrift::GitObjectKind::Tag => gix_object::Kind::Tag,
-            thrift::GitObjectKind(x) => anyhow::bail!("Unsupported object kind: {}", x),
+            thrift::GitObjectKind(x) => anyhow::bail!("Unsupported object kind: {x}"),
         };
         anyhow::Ok(Self {
             id,

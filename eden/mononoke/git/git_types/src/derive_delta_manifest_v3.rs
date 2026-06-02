@@ -63,7 +63,7 @@ pub struct RootGitDeltaManifestV3Id;
 pub fn format_key(derivation_ctx: &DerivationContext, changeset_id: ChangesetId) -> String {
     let root_prefix = "derived_root_gdm3.";
     let key_prefix = derivation_ctx.mapping_key_prefix::<RootGitDeltaManifestV3Id>();
-    format!("{}{}{}", root_prefix, key_prefix, changeset_id)
+    format!("{root_prefix}{key_prefix}{changeset_id}")
 }
 
 pub fn format_manifest_key(
@@ -72,7 +72,7 @@ pub fn format_manifest_key(
 ) -> String {
     let manifest_prefix = "gdm3.";
     let key_prefix = derivation_ctx.mapping_key_prefix::<RootGitDeltaManifestV3Id>();
-    format!("{}{}{}", manifest_prefix, key_prefix, changeset_id)
+    format!("{manifest_prefix}{key_prefix}{changeset_id}")
 }
 
 async fn derive_single(
@@ -567,10 +567,7 @@ mod tests {
             .fetch_derived_direct::<RootGitDeltaManifestV3Id>(ctx, cs_id)
             .await?
             .ok_or_else(|| {
-                format_err!(
-                    "GitDeltaManifestV3 should be present for changeset {}",
-                    cs_id
-                )
+                format_err!("GitDeltaManifestV3 should be present for changeset {cs_id}")
             })?;
         // Validate the derivation of all the commits in this repo succeeds
         let all_cs_ids = repo

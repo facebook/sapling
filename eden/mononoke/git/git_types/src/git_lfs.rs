@@ -21,11 +21,7 @@ use regex::Regex;
 
 /// In line with https://github.com/git-lfs/git-lfs/blob/main/docs/spec.md
 pub fn format_lfs_pointer(sha256: Sha256, size: u64) -> String {
-    format!(
-        "version https://git-lfs.github.com/spec/v1\noid sha256:{sha256}\nsize {size}\n",
-        sha256 = sha256,
-        size = size
-    )
+    format!("version https://git-lfs.github.com/spec/v1\noid sha256:{sha256}\nsize {size}\n")
 }
 
 /// Given a file change generates a Git LFS pointer that points to actual file contents
