@@ -289,7 +289,7 @@ impl RepoDerivedData {
     pub fn manager_for_config(&self, config_name: &str) -> Result<&DerivedDataManager> {
         self.managers
             .get(config_name)
-            .ok_or_else(|| anyhow!("No manager found for config {}", config_name))
+            .ok_or_else(|| anyhow!("No manager found for config {config_name}"))
     }
 
     /// Count the number of ancestors of a commit that are underived.
