@@ -631,8 +631,7 @@ impl SourceControlServiceImpl {
             .await?
             .ok_or_else(|| {
                 MononokeError::InvalidRequest(format!(
-                    "unknown commit specifier {}",
-                    base_cs_specifier
+                    "unknown commit specifier {base_cs_specifier}"
                 ))
             })?;
         let submodule_expansion_path =

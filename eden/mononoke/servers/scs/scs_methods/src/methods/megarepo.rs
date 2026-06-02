@@ -52,7 +52,7 @@ impl SourceControlServiceImpl {
         for repo_id_in_cfg in repo_ids_in_cfg {
             if !known_repo_ids.contains(&RepositoryId::new(repo_id_in_cfg as i32)) {
                 return Err(scs_errors::ServiceError::from(scs_errors::repo_not_found(
-                    format!("{}", repo_id_in_cfg),
+                    format!("{repo_id_in_cfg}"),
                 )));
             }
         }
@@ -70,9 +70,7 @@ impl SourceControlServiceImpl {
             .repo_by_id(ctx.clone(), target_repo_id)
             .await
             .map_err(scs_errors::invalid_request)?
-            .ok_or_else(|| {
-                scs_errors::invalid_request(anyhow!("repo not found {}", target_repo_id))
-            })?
+            .ok_or_else(|| scs_errors::invalid_request(anyhow!("repo not found {target_repo_id}")))?
             .build()
             .await?;
         // Check that source control service writes are enabled

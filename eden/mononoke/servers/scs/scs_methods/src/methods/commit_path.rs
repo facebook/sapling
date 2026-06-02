@@ -175,8 +175,7 @@ impl SourceControlServiceImpl {
                     .await
             }
             other_format => Err(scs_errors::invalid_request(format!(
-                "unsupported blame format {}",
-                other_format
+                "unsupported blame format {other_format}"
             ))
             .into()),
         }
@@ -331,7 +330,7 @@ impl SourceControlServiceImpl {
             let mut parent_commit_ids = Vec::with_capacity(indexed_csids.len());
             for csid in indexed_csids {
                 let parents = changeset_parents.get(&csid).ok_or_else(|| {
-                    scs_errors::internal_error(format!("missing parents for {}", csid))
+                    scs_errors::internal_error(format!("missing parents for {csid}"))
                 })?;
                 let mut changeset_parent_commit_ids = Vec::with_capacity(parents.len());
                 for parent in parents {
@@ -340,8 +339,7 @@ impl SourceControlServiceImpl {
                             .get(parent)
                             .ok_or_else(|| {
                                 scs_errors::internal_error(format!(
-                                    "missing parent commit ids for {}",
-                                    parent
+                                    "missing parent commit ids for {parent}"
                                 ))
                             })?
                             .clone(),
@@ -548,8 +546,7 @@ impl SourceControlServiceImpl {
         if let (Some(ats), Some(bts)) = (after_timestamp, before_timestamp) {
             if bts < ats {
                 return Err(scs_errors::invalid_request(format!(
-                    "after_timestamp ({}) cannot be greater than before_timestamp ({})",
-                    ats, bts,
+                    "after_timestamp ({ats}) cannot be greater than before_timestamp ({bts})",
                 ))
                 .into());
             }
@@ -557,8 +554,7 @@ impl SourceControlServiceImpl {
         if let (Some(ats), Some(bts)) = (after_committer_timestamp, before_committer_timestamp) {
             if bts < ats {
                 return Err(scs_errors::invalid_request(format!(
-                    "after_committer_timestamp ({}) cannot be greater than before_committer_timestamp ({})",
-                    ats, bts,
+                    "after_committer_timestamp ({ats}) cannot be greater than before_committer_timestamp ({bts})",
                 ))
                 .into());
             }

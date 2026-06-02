@@ -126,11 +126,9 @@ impl CommitFileDiffsItem {
             thrift::DiffFormat::METADATA_DIFF => {
                 self.metadata_diff(ctx, repo_name, diff_router).await
             }
-            unknown => Err(scs_errors::invalid_request(format!(
-                "invalid diff format: {:?}",
-                unknown
-            ))
-            .into()),
+            unknown => {
+                Err(scs_errors::invalid_request(format!("invalid diff format: {unknown:?}")).into())
+            }
         }
     }
 
@@ -523,8 +521,7 @@ impl SourceControlServiceImpl {
                         Some(base_path) => {
                             Some(base_path_contexts.get(base_path).ok_or_else(|| {
                                 scs_errors::invalid_request(format!(
-                                    "{} not found in {:?}",
-                                    base_path, commit
+                                    "{base_path} not found in {commit:?}"
                                 ))
                             })?)
                         }
@@ -542,8 +539,7 @@ impl SourceControlServiceImpl {
                         (None, Some(other_path)) => {
                             Some(other_path_contexts.get(other_path).ok_or_else(|| {
                                 scs_errors::invalid_request(format!(
-                                    "{} not found in {:?}",
-                                    other_path, other_commit
+                                    "{other_path} not found in {other_commit:?}"
                                 ))
                             })?)
                         }
@@ -673,8 +669,7 @@ impl SourceControlServiceImpl {
             other => {
                 return Err(scs_errors::ServiceError::from(
                     MononokeError::InvalidRequest(format!(
-                        "unsupported fingerprint version: {:?}",
-                        other
+                        "unsupported fingerprint version: {other:?}"
                     )),
                 ));
             }
@@ -730,9 +725,7 @@ impl SourceControlServiceImpl {
                     let cs_ctx = repo
                         .changeset(ChangesetSpecifier::from_request(&candidate_id)?)
                         .await?
-                        .ok_or_else(|| {
-                            scs_errors::commit_not_found(format!("{:?}", candidate_id))
-                        })?;
+                        .ok_or_else(|| scs_errors::commit_not_found(format!("{candidate_id:?}")))?;
                     Ok::<_, scs_errors::ServiceError>(cs_ctx.id())
                 }
             })
@@ -838,7 +831,7 @@ impl SourceControlServiceImpl {
         .await
         .map_err(|e| match e.downcast::<MononokeError>() {
             Ok(mononoke_err) => scs_errors::ServiceError::from(mononoke_err),
-            Err(e) => scs_errors::internal_error(format!("{:#}", e)).into(),
+            Err(e) => scs_errors::internal_error(format!("{e:#}")).into(),
         })?;
 
         Ok(result.response)
@@ -863,10 +856,7 @@ impl SourceControlServiceImpl {
                     .into_iter()
                     .map(|prefix| {
                         MPath::try_from(&prefix).map_err(|e| {
-                            scs_errors::invalid_request(format!(
-                                "invalid prefix '{}': {}",
-                                prefix, e
-                            ))
+                            scs_errors::invalid_request(format!("invalid prefix '{prefix}': {e}"))
                         })
                     })
                     .collect::<Result<Vec<_>, _>>()?,
@@ -876,10 +866,7 @@ impl SourceControlServiceImpl {
         let ordering = match &params.after {
             Some(after) => {
                 let after = Some(MPath::try_from(after).map_err(|e| {
-                    scs_errors::invalid_request(format!(
-                        "invalid continuation path '{}': {}",
-                        after, e
-                    ))
+                    scs_errors::invalid_request(format!("invalid continuation path '{after}': {e}"))
                 })?);
                 ChangesetFileOrdering::Ordered { after }
             }
@@ -926,10 +913,7 @@ impl SourceControlServiceImpl {
                     .iter()
                     .map(|prefix| {
                         MPath::try_from(prefix).map_err(|e| {
-                            scs_errors::invalid_request(format!(
-                                "invalid prefix '{}': {}",
-                                prefix, e
-                            ))
+                            scs_errors::invalid_request(format!("invalid prefix '{prefix}': {e}"))
                         })
                     })
                     .collect::<Result<Vec<_>, _>>()?,
@@ -939,10 +923,7 @@ impl SourceControlServiceImpl {
         let ordering = match &params.after {
             Some(after) => {
                 let after = Some(MPath::try_from(after).map_err(|e| {
-                    scs_errors::invalid_request(format!(
-                        "invalid continuation path '{}': {}",
-                        after, e
-                    ))
+                    scs_errors::invalid_request(format!("invalid continuation path '{after}': {e}"))
                 })?);
                 ChangesetFileOrdering::Ordered { after }
             }
@@ -1048,8 +1029,7 @@ impl SourceControlServiceImpl {
         if let (Some(ats), Some(bts)) = (after_timestamp, before_timestamp) {
             if bts < ats {
                 return Err(scs_errors::invalid_request(format!(
-                    "after_timestamp ({}) cannot be greater than before_timestamp ({})",
-                    ats, bts,
+                    "after_timestamp ({ats}) cannot be greater than before_timestamp ({bts})",
                 ))
                 .into());
             }
@@ -1057,8 +1037,7 @@ impl SourceControlServiceImpl {
         if let (Some(ats), Some(bts)) = (after_committer_timestamp, before_committer_timestamp) {
             if bts < ats {
                 return Err(scs_errors::invalid_request(format!(
-                    "after_committer_timestamp ({}) cannot be greater than before_committer_timestamp ({})",
-                    ats, bts,
+                    "after_committer_timestamp ({ats}) cannot be greater than before_committer_timestamp ({bts})",
                 ))
                 .into());
             }
@@ -1319,7 +1298,7 @@ impl SourceControlServiceImpl {
     ) -> Result<thrift::CommitRateLimitCheckResponse, scs_errors::ServiceError> {
         let (_repo, changeset) = self.repo_changeset(ctx, &commit).await?;
         let bookmark = BookmarkKey::new(&params.bookmark)
-            .map_err(|e| scs_errors::invalid_request(format!("Invalid bookmark: {}", e)))?;
+            .map_err(|e| scs_errors::invalid_request(format!("Invalid bookmark: {e}")))?;
 
         let result = changeset.commit_rate_limit_check(&bookmark).await?;
 
@@ -1493,8 +1472,7 @@ impl SourceControlServiceImpl {
             }
             unknown => {
                 return Err(scs_errors::invalid_request(format!(
-                    "invalid mutation history format: {:?}",
-                    unknown
+                    "invalid mutation history format: {unknown:?}"
                 ))
                 .into());
             }
@@ -1583,8 +1561,7 @@ impl SourceControlServiceImpl {
             }
             unknown => {
                 return Err(scs_errors::invalid_request(format!(
-                    "invalid mutation history format: {:?}",
-                    unknown
+                    "invalid mutation history format: {unknown:?}"
                 ))
                 .into());
             }

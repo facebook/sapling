@@ -49,7 +49,7 @@ impl SourceControlServiceImpl {
         let repo_ctx = self
             .repo_for_service(ctx, &repo, params.service_identity.clone())
             .await
-            .with_context(|| format!("Error in opening repo using specifier {:?}", repo))?;
+            .with_context(|| format!("Error in opening repo using specifier {repo:?}"))?;
         // Validate that the request sender has an internal service identity with the right permission.
         repo_ctx
             .authorization_context()
@@ -79,7 +79,7 @@ impl SourceControlServiceImpl {
         let repo_ctx = self
             .repo_for_service(ctx, &repo, params.service_identity.clone())
             .await
-            .with_context(|| format!("Error in opening repo using specifier {:?}", repo))?;
+            .with_context(|| format!("Error in opening repo using specifier {repo:?}"))?;
         // Validate that the request sender has an internal service identity with the right permission.
         repo_ctx
             .authorization_context()
@@ -107,7 +107,7 @@ impl SourceControlServiceImpl {
         let repo_ctx = self
             .repo_for_service(ctx, &repo, params.service_identity.clone())
             .await
-            .with_context(|| format!("Error in opening repo using specifier {:?}", repo))?;
+            .with_context(|| format!("Error in opening repo using specifier {repo:?}"))?;
         // Validate that the request sender has an internal service identity with the right permission.
         repo_ctx
             .authorization_context()
@@ -146,8 +146,7 @@ impl SourceControlServiceImpl {
                     .map(|oid| oid.to_owned())
                     .map_err(|err| {
                         invalid_request(format!(
-                            "Error in creating Git ObjectId from {:?}. Cause: {:#}",
-                            hash, err
+                            "Error in creating Git ObjectId from {hash:?}. Cause: {err:#}"
                         ))
                     })
             })
@@ -182,7 +181,7 @@ impl SourceControlServiceImpl {
         let repo_ctx = self
             .repo_for_service(ctx, &repo, params.service_identity.clone())
             .await
-            .with_context(|| format!("Error in opening repo using specifier {:?}", repo))?;
+            .with_context(|| format!("Error in opening repo using specifier {repo:?}"))?;
         // Parse the input as appropriate types
         let (base_changeset_id, head_changeset_id) = try_join!(
             self.changeset_id(&repo_ctx, &params.base),
@@ -203,16 +202,14 @@ impl SourceControlServiceImpl {
                     let client_options =
                         ClientOptionsBuilder::default().build().map_err(|err| {
                             internal_error(format!(
-                                "Error in building Everstore client options. Cause: {:#}",
-                                err
+                                "Error in building Everstore client options. Cause: {err:#}"
                             ))
                         })?;
                     Arc::new(
                         EverstoreCppClient::from_options(repo_ctx.ctx().fb, &client_options)
                             .map_err(|err| {
                                 internal_error(format!(
-                                    "Error in building Everstore client. Cause: {:#}",
-                                    err
+                                    "Error in building Everstore client. Cause: {err:#}"
                                 ))
                             })?,
                     )
@@ -226,16 +223,14 @@ impl SourceControlServiceImpl {
             .build()
             .map_err(|err| {
                 internal_error(format!(
-                    "Error in building Everstore write request options. Cause: {:#}",
-                    err
+                    "Error in building Everstore write request options. Cause: {err:#}"
                 ))
             })?;
         let mut write_req = client
             .create_write_request(&write_req_opts)
             .map_err(|err| {
                 internal_error(format!(
-                    "Error in creating Everstore write request. Cause: {:#}",
-                    err
+                    "Error in creating Everstore write request. Cause: {err:#}"
                 ))
             })?;
         let everstore_handle = write_req
@@ -243,8 +238,7 @@ impl SourceControlServiceImpl {
             .await
             .map_err(|err| {
                 internal_error(format!(
-                    "Error in storing Git bundle in Everstore. Cause: {:#}",
-                    err
+                    "Error in storing Git bundle in Everstore. Cause: {err:#}"
                 ))
             })?
             .to_string();
@@ -264,7 +258,7 @@ impl SourceControlServiceImpl {
         let repo_ctx = self
             .repo_for_service(ctx, &repo, params.service_identity.clone())
             .await
-            .with_context(|| format!("Error in opening repo using specifier {:?}", repo))?;
+            .with_context(|| format!("Error in opening repo using specifier {repo:?}"))?;
         // Validate that the request sender has an internal service identity with the right permission.
         repo_ctx
             .authorization_context()
@@ -291,7 +285,7 @@ impl SourceControlServiceImpl {
         let repo_ctx = self
             .repo_for_service(ctx, &repo, None)
             .await
-            .with_context(|| format!("Error in opening repo using specifier {:?}", repo))?;
+            .with_context(|| format!("Error in opening repo using specifier {repo:?}"))?;
 
         let blobstore = repo_ctx.repo().repo_blobstore_arc();
 
@@ -306,16 +300,14 @@ impl SourceControlServiceImpl {
                         .await
                         .map_err(|err| {
                             internal_error(format!(
-                                "Error fetching tag mapping for tag '{}'. Cause: {:#}",
-                                tag_name, err
+                                "Error fetching tag mapping for tag '{tag_name}'. Cause: {err:#}"
                             ))
                         })?;
 
                     if let Some(entry) = entry {
                         let tag_hash_oid = entry.tag_hash.to_object_id().map_err(|err| {
                             internal_error(format!(
-                                "Error in creating Git ObjectId from tag hash for tag '{}'. Cause: {:#}",
-                                tag_name, err
+                                "Error in creating Git ObjectId from tag hash for tag '{tag_name}'. Cause: {err:#}"
                             ))
                         })?;
 
@@ -324,8 +316,7 @@ impl SourceControlServiceImpl {
                                 .await
                                 .map_err(|err| {
                                     internal_error(format!(
-                                        "Error fetching tag object for tag '{}'. Cause: {:#}",
-                                        tag_name, err
+                                        "Error fetching tag object for tag '{tag_name}'. Cause: {err:#}"
                                     ))
                                 })?;
 
@@ -342,8 +333,7 @@ impl SourceControlServiceImpl {
                             })
                             .ok_or_else(|| {
                                 internal_error(format!(
-                                    "Expected tag object for '{}' but got a different object type",
-                                    tag_name
+                                    "Expected tag object for '{tag_name}' but got a different object type"
                                 ))
                             })?;
 
@@ -359,8 +349,7 @@ impl SourceControlServiceImpl {
                         let commit_hash_oid =
                             gix_hash::oid::try_from_bytes(&commit_hash).map_err(|_| {
                                 invalid_request(format!(
-                                    "Invalid commit hash for tag '{}': {:x?}",
-                                    tag_name, commit_hash
+                                    "Invalid commit hash for tag '{tag_name}': {commit_hash:x?}"
                                 ))
                             })?;
 
@@ -369,8 +358,7 @@ impl SourceControlServiceImpl {
                                 .await
                                 .map_err(|err| {
                                     internal_error(format!(
-                                        "Error fetching commit object for tag '{}'. Cause: {:#}",
-                                        tag_name, err
+                                        "Error fetching commit object for tag '{tag_name}'. Cause: {err:#}"
                                     ))
                                 })?;
 
@@ -386,8 +374,7 @@ impl SourceControlServiceImpl {
                             })
                             .ok_or_else(|| {
                                 internal_error(format!(
-                                    "Expected commit object for tag '{}' but got a different object type",
-                                    tag_name
+                                    "Expected commit object for tag '{tag_name}' but got a different object type"
                                 ))
                             })?;
 
