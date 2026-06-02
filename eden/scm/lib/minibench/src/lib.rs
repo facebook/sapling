@@ -62,7 +62,7 @@ pub fn bench<T: Measure, F: FnMut() -> Result<T, String>>(name: impl ToString, m
             Ok(measured) => measured.to_string(),
             Err(text) => text,
         };
-        println!("{:50}{}", name, text);
+        println!("{name:50}{text}");
     }
 }
 

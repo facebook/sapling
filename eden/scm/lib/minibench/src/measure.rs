@@ -77,7 +77,7 @@ impl Measure for WallClock {
         if value <= 1.0 {
             format!("{:7.3} ms", value * 1000.0)
         } else {
-            format!("{:7.3} s ", value)
+            format!("{value:7.3} s ")
         }
     }
 }
@@ -100,7 +100,7 @@ impl Measure for Bytes {
     fn to_string(&self) -> String {
         let value = self.0;
         if value < 1_000 {
-            format!("{:7} B ", value)
+            format!("{value:7} B ")
         } else if value < 1_000_000 {
             format!("{:7.3} KB", (value as f64) / 1000.0)
         } else {
@@ -174,7 +174,7 @@ impl<D: Default, A: Measure<FuncOutput = ()>, B: Measure<FuncOutput = D>> Measur
             Ok(b) => b.to_string(),
             Err(b) => b.clone(),
         };
-        format!("{} {}", a, b)
+        format!("{a} {b}")
     }
 }
 
