@@ -269,7 +269,7 @@ impl fmt::Display for NanoDag {
                 let mut prefix = "";
                 while start < end {
                     if let Some(rev) = start.checked_sub(1) {
-                        write!(f, "{}{}", prefix, rev)?;
+                        write!(f, "{prefix}{rev}")?;
                         prefix = "-";
                     }
                     let children = &self.children_vec[start];

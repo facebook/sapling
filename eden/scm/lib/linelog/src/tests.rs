@@ -92,7 +92,7 @@ fn test_random_cases() {
             let b_lines: Vec<String> = (b1..b2)
                 .map(|b_idx| {
                     if rng_range(0, 2) == 0 {
-                        format!("{}:{}\n", rev, b_idx)
+                        format!("{rev}:{b_idx}\n")
                     } else {
                         // Exercise block shifting more easily.
                         "\n".to_string()
@@ -700,7 +700,7 @@ fn test_dep_map() {
 }
 
 fn lines(s: &str) -> Vec<String> {
-    s.lines().map(|s| format!("{}\n", s)).collect()
+    s.lines().map(|s| format!("{s}\n")).collect()
 }
 
 /// Build a LineLog by appending texts as successive revisions.
@@ -853,7 +853,7 @@ fn test_block_shift_effectiveness() {
             let log = base.clone().edit_chunk(2, a1, a1, 3, lines, flags);
             assert_eq!(log.checkout_text(3), expected_rev3_text);
             let dep = log.dep_map();
-            let dep = format!("DepMap({})", dep);
+            let dep = format!("DepMap({dep})");
             grouped.entry(dep).or_default().push(a1);
         }
         grouped.iter().map(|(k, v)| format!("{k}: {v:?}")).collect()
@@ -907,7 +907,7 @@ fn test_block_shift_overflow() {
 fn test_debug_nanodag() {
     let d = |edges: &[(Rev, Rev)]| -> String {
         let dag = NanoDag::from_edges(0, edges);
-        format!("{:?}", dag)
+        format!("{dag:?}")
     };
     assert_eq!(d(&[]), "NanoDag()");
     assert_eq!(d(&[(3, 3)]), "NanoDag({0,1,2,3})");
