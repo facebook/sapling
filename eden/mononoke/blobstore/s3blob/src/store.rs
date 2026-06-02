@@ -59,7 +59,7 @@ where
                     attempt = NonZeroU32::new(attempt.get() + 1).unwrap();
                     continue;
                 } else {
-                    return Err(e.context(format_err!("Request failed on attempt {}", attempt)));
+                    return Err(e.context(format_err!("Request failed on attempt {attempt}")));
                 }
             }
         }
