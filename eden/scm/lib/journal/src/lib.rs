@@ -60,14 +60,11 @@ impl JournalEntry {
         let elems = line.split('\n').collect::<Vec<_>>();
         let [time, user, command, namespace, name, old_hashes, new_hashes] = *elems.as_slice()
         else {
-            bail!(
-                "journal entry '{}' contains incorrect number of elements",
-                line
-            );
+            bail!("journal entry '{line}' contains incorrect number of elements");
         };
         let timestamp = HgTime::parse_hg_internal_format(time)
             .flatten()
-            .with_context(|| format!("unable to parse timestamp from journal line '{}'", line))?;
+            .with_context(|| format!("unable to parse timestamp from journal line '{line}'"))?;
         let old_hashes = parse_hashes(line.as_str(), old_hashes)?;
         let new_hashes = parse_hashes(line.as_str(), new_hashes)?;
         Ok(Self {
@@ -101,14 +98,14 @@ impl JournalEntry {
             if idx > 0 {
                 write!(buf, ",")?;
             }
-            write!(buf, "{}", id)?;
+            write!(buf, "{id}")?;
         }
         write!(buf, "\n")?;
         for (idx, id) in self.new_hashes.iter().enumerate() {
             if idx > 0 {
                 write!(buf, ",")?;
             }
-            write!(buf, "{}", id)?;
+            write!(buf, "{id}")?;
         }
         Ok(())
     }
@@ -119,7 +116,7 @@ fn parse_hashes(line: &str, hashes: &str) -> Result<Vec<HgId>> {
         .split(',')
         .map(HgId::from_str)
         .collect::<Result<Vec<_>, _>>()
-        .with_context(|| format!("unable to parse hashes from journal line '{}'", line))
+        .with_context(|| format!("unable to parse hashes from journal line '{line}'"))
 }
 
 impl Journal {
@@ -145,7 +142,7 @@ impl Journal {
             .context("unable to determine current time when writing to journal")?;
         let user = username()?;
         let command = if let Some((left, _)) = command.split_once('\n') {
-            format!("{} ...", left)
+            format!("{left} ...")
         } else {
             command.to_owned()
         };
