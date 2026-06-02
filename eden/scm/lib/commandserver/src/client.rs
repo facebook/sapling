@@ -26,7 +26,7 @@ pub fn run_via_commandserver(args: Vec<String>, config: &dyn Config) -> anyhow::
     let (should, reason) = should_run_remotely(&args);
     if !should {
         tracing::debug!("skipped using commandserver: {}", reason);
-        anyhow::bail!("skipped using commandserver: {}", reason);
+        anyhow::bail!("skipped using commandserver: {reason}");
     }
 
     // For now, the server does not fork and can only be used with "exclusive".

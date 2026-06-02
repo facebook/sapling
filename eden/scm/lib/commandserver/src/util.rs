@@ -21,7 +21,7 @@ use once_cell::sync::Lazy;
 // and invalidate servers manually.
 static SOCKET_DIR_NAME: Lazy<String> = Lazy::new(|| {
     let cli_name = identity::default().cli_name();
-    format!("{}-cmdserver", cli_name)
+    format!("{cli_name}-cmdserver")
 });
 
 static PREFIX: Lazy<String> = Lazy::new(|| {
@@ -36,7 +36,7 @@ static PREFIX: Lazy<String> = Lazy::new(|| {
     if ngroups == 0 {
         short_version.to_string()
     } else {
-        format!("{}n{}", short_version, ngroups)
+        format!("{short_version}n{ngroups}")
     }
 });
 
