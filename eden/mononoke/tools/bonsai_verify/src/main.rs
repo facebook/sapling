@@ -288,7 +288,7 @@ fn summarize(
 ) -> i32 {
     let end_points: Vec<_> = end_points
         .iter()
-        .map(|changeset_id| format!("{}", changeset_id))
+        .map(|changeset_id| format!("{changeset_id}"))
         .collect();
     let valid = valid.load(Ordering::Acquire);
     let invalid = invalid.load(Ordering::Acquire);
@@ -398,8 +398,7 @@ fn subcommmand_hg_manifest_verify(
                         .map_ok(move |result| {
                             if result != expected {
                                 println!(
-                                    "\x1b[KBAD hg_cisd:{} result:{} expected:{}\x1b[m",
-                                    hg_csid, result, expected,
+                                    "\x1b[KBAD hg_cisd:{hg_csid} result:{result} expected:{expected}\x1b[m",
                                 );
                                 bad.with(|bad| bad.insert((csid, hg_csid, result, expected)));
                             }
@@ -428,7 +427,7 @@ fn subcommmand_hg_manifest_verify(
                 if bad.is_empty() {
                     println!()
                 } else {
-                    println!("\n BAD: {:#?}", bad)
+                    println!("\n BAD: {bad:#?}")
                 }
             })
             .await
