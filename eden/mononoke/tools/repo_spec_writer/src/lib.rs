@@ -89,7 +89,7 @@ pub fn format_python_bool(val: bool) -> &'static str {
 }
 
 pub fn format_python_list(items: &[&str]) -> String {
-    let quoted: Vec<String> = items.iter().map(|s| format!("\"{}\"", s)).collect();
+    let quoted: Vec<String> = items.iter().map(|s| format!("\"{s}\"")).collect();
     format!("[{}]", quoted.join(", "))
 }
 
