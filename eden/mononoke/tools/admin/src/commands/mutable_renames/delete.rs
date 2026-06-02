@@ -79,10 +79,7 @@ pub async fn delete(ctx: &CoreContext, repo: &Repo, delete_args: DeleteArgs) -> 
     } else {
         let (num_deleted_renames, num_deleted_paths) =
             repo.mutable_renames().delete_renames(ctx, renames).await?;
-        println!(
-            "Deleted {} mutable renames, {} paths",
-            num_deleted_renames, num_deleted_paths
-        );
+        println!("Deleted {num_deleted_renames} mutable renames, {num_deleted_paths} paths");
     }
 
     Ok(())

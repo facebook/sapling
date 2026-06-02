@@ -174,7 +174,7 @@ pub async fn add(ctx: &CoreContext, repo: &Repo, add_args: AddArgs) -> Result<()
                     let dst_entry = dst_entries.remove(&dst_entry_path);
 
                     if let Some(dst_entry) = dst_entry {
-                        create_mutable_rename(src_cs_id, src_entry_path, src_entry, dst_cs_id, dst_entry_path, dst_entry).map_err(|e| {eprintln!("{}",e); e}).ok()
+                        create_mutable_rename(src_cs_id, src_entry_path, src_entry, dst_cs_id, dst_entry_path, dst_entry).map_err(|e| {eprintln!("{e}"); e}).ok()
                     } else {
                         eprintln!(
                             "Source path `{}` has no matching destination `{}` - no entry created.",

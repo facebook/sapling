@@ -92,8 +92,7 @@ pub async fn copy_immutable_impl(
                     .await?
                     .with_context(|| {
                         format!(
-                            "Cannot load source manifest entry, does `{}` exist in `{}`?",
-                            src_path, src_cs_id,
+                            "Cannot load source manifest entry, does `{src_path}` exist in `{src_cs_id}`?",
                         )
                     })?;
 
@@ -110,9 +109,7 @@ pub async fn copy_immutable_impl(
                 )
             } else {
                 bail!(
-                    "Could not find unode manifest for path {} in cs {}!",
-                    src_path,
-                    src_cs_id
+                    "Could not find unode manifest for path {src_path} in cs {src_cs_id}!"
                 );
             }
         }
