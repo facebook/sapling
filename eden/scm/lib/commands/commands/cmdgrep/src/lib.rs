@@ -265,8 +265,7 @@ impl<W: Write> PlainTextWriter<W> {
             .map(char::from)
             .collect::<String>();
         let remainder = format!(
-            "WARNING: stopped searching binary file after match (found \"{}\" byte around offset {})\n",
-            escaped, offset
+            "WARNING: stopped searching binary file after match (found \"{escaped}\" byte around offset {offset})\n"
         );
         self.inner.write_all(remainder.as_bytes())
     }

@@ -104,7 +104,7 @@ pub fn try_biggrep(
 
     // Build the biggrep pattern
     let biggrep_pattern = if ctx.opts.word_regexp {
-        format!(r"\b{}\b", pattern)
+        format!(r"\b{pattern}\b")
     } else if ctx.opts.fixed_strings {
         pattern.to_string()
     } else {
@@ -166,8 +166,7 @@ pub fn try_biggrep(
         let cmd_args: Vec<_> = std::iter::once(cmd.get_program().to_string_lossy().into_owned())
             .chain(cmd.get_args().map(|a| a.to_string_lossy().into_owned()))
             .collect();
-        ctx.logger()
-            .info(format!("biggrep command: {:?}", cmd_args));
+        ctx.logger().info(format!("biggrep command: {cmd_args:?}"));
     }
 
     // Execute biggrep with streaming output
@@ -240,8 +239,7 @@ pub fn try_biggrep(
                 Ok((to_grep, to_exclude)) => (to_grep, to_exclude),
                 Err(e) => {
                     ctx.logger().warn(format!(
-                        "Could not check for changes since corpus revision {}: {}. Results may be stale.",
-                        corpus_rev, e
+                        "Could not check for changes since corpus revision {corpus_rev}: {e}. Results may be stale."
                     ));
                     (HashSet::new(), HashSet::new())
                 }
