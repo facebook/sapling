@@ -562,18 +562,14 @@ impl fmt::Display for Event {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use Event::*;
         match self {
-            Alias { from, to } => write!(f, "[command_alias] {:?} expands to {:?}", from, to)?,
+            Alias { from, to } => write!(f, "[command_alias] {from:?} expands to {to:?}")?,
             Blocked {
                 op,
                 name,
                 duration_ms,
             } => match name {
-                Some(name) => write!(
-                    f,
-                    "[blocked] {:?} ({}) blocked for {} ms",
-                    op, name, duration_ms
-                )?,
-                None => write!(f, "[blocked] {:?} blocked for {} ms", op, duration_ms)?,
+                Some(name) => write!(f, "[blocked] {op:?} ({name}) blocked for {duration_ms} ms")?,
+                None => write!(f, "[blocked] {op:?} blocked for {duration_ms} ms")?,
             },
             CommitCloudSync {
                 op,
@@ -592,26 +588,25 @@ impl fmt::Display for Event {
                 };
                 write!(
                     f,
-                    "[commit_cloud_sync] sync {} cloud version {}, previous version was {}",
-                    direction, version, prev_version
+                    "[commit_cloud_sync] sync {direction} cloud version {version}, previous version was {prev_version}"
                 )?;
                 if added_heads.len > 0 {
-                    write!(f, "; heads added {}", added_heads)?;
+                    write!(f, "; heads added {added_heads}")?;
                 }
                 if removed_heads.len > 0 {
-                    write!(f, "; heads removed {}", removed_heads)?;
+                    write!(f, "; heads removed {removed_heads}")?;
                 }
                 if added_bookmarks.len > 0 {
-                    write!(f, "; bookmarks added {}", added_bookmarks)?;
+                    write!(f, "; bookmarks added {added_bookmarks}")?;
                 }
                 if removed_bookmarks.len > 0 {
-                    write!(f, "; bookmarks removed {}", removed_bookmarks)?;
+                    write!(f, "; bookmarks removed {removed_bookmarks}")?;
                 }
                 if added_remote_bookmarks.len > 0 {
-                    write!(f, "; remote bookmarks added {}", added_remote_bookmarks)?;
+                    write!(f, "; remote bookmarks added {added_remote_bookmarks}")?;
                 }
                 if removed_remote_bookmarks.len > 0 {
-                    write!(f, "; remote bookmarks removed {}", removed_remote_bookmarks)?;
+                    write!(f, "; remote bookmarks removed {removed_remote_bookmarks}")?;
                 }
             }
             Config { items, interactive } => {
@@ -626,7 +621,7 @@ impl fmt::Display for Event {
                     interactive,
                     items
                         .iter()
-                        .map(|(k, v)| format!("{}={}", k, v))
+                        .map(|(k, v)| format!("{k}={v}"))
                         .collect::<Vec<_>>()
                         .join(" ")
                 )?;
@@ -640,7 +635,7 @@ impl fmt::Display for Event {
                 peer_name,
                 peer_info
                     .iter()
-                    .map(|(k, v)| format!("{}={}", k, v))
+                    .map(|(k, v)| format!("{k}={v}"))
                     .collect::<Vec<_>>()
                     .join(" ")
             )?,
@@ -659,8 +654,7 @@ impl fmt::Display for Event {
             } => {
                 write!(
                     f,
-                    "[command_finish] exited {} in {} ms, max RSS: {} bytes",
-                    exit_code, duration_ms, max_rss
+                    "[command_finish] exited {exit_code} in {duration_ms} ms, max RSS: {max_rss} bytes"
                 )?;
             }
             FsmonitorQuery {
@@ -675,23 +669,21 @@ impl fmt::Display for Event {
                     "query failed".to_string()
                 } else if *is_fresh {
                     format!(
-                        "clock: {:?} -> {:?}; need check: {} + all files",
-                        old_clock, new_clock, old_files
+                        "clock: {old_clock:?} -> {new_clock:?}; need check: {old_files} + all files"
                     )
                 } else {
                     format!(
-                        "clock: {:?} -> {:?}; need check: {} + {}",
-                        old_clock, new_clock, old_files, new_files
+                        "clock: {old_clock:?} -> {new_clock:?}; need check: {old_files} + {new_files}"
                     )
                 };
-                write!(f, "[fsmonitor] {}", msg)?;
+                write!(f, "[fsmonitor] {msg}")?;
             }
             LegacyLog {
                 service,
                 msg,
                 opts: _,
             } => {
-                write!(f, "[legacy][{}] {}", service, msg,)?;
+                write!(f, "[legacy][{service}] {msg}",)?;
             }
             Network {
                 op,
@@ -710,16 +702,7 @@ impl fmt::Display for Event {
                 };
                 write!(
                     f,
-                    "[network] {:?} finished in {} calls, duration {} ms, latency {} ms, read {} bytes, write {} bytes, session id {}, url {}{}",
-                    op,
-                    calls,
-                    duration_ms,
-                    latency_ms,
-                    read_bytes,
-                    write_bytes,
-                    session_id,
-                    url,
-                    result,
+                    "[network] {op:?} finished in {calls} calls, duration {duration_ms} ms, latency {latency_ms} ms, read {read_bytes} bytes, write {write_bytes} bytes, session id {session_id}, url {url}{result}",
                 )?;
             }
             Start {
@@ -731,19 +714,18 @@ impl fmt::Display for Event {
             } => {
                 write!(
                     f,
-                    "[command] {:?} started by uid {} as pid {} with nice {}",
-                    args, uid, pid, nice
+                    "[command] {args:?} started by uid {uid} as pid {pid} with nice {nice}"
                 )?;
             }
-            PerfTrace { msg } => write!(f, "[perftrace] {}", msg)?,
+            PerfTrace { msg } => write!(f, "[perftrace] {msg}")?,
             ProcessTree { names, pids } => {
                 write!(f, "[process_tree]")?;
                 for (name, pid) in names.iter().rev().zip(pids.iter().rev()) {
-                    write!(f, " {} ({}) ->", name, pid)?;
+                    write!(f, " {name} ({pid}) ->")?;
                 }
                 write!(f, " (this process)")?;
             }
-            Profile { msg } => write!(f, "[profile] {}", msg)?,
+            Profile { msg } => write!(f, "[profile] {msg}")?,
             Tags { names } => write!(f, "[tags] {}", names.join(", "))?,
             TracingData { serialized } => {
                 write!(f, "[tracing] (binary data of {} bytes)", serialized.0.len())?
@@ -767,7 +749,7 @@ impl fmt::Display for Event {
             }
             _ => {
                 // Fallback to "Debug"
-                write!(f, "[uncategorized] {:?}", self)?;
+                write!(f, "[uncategorized] {self:?}")?;
             }
         }
         Ok(())
