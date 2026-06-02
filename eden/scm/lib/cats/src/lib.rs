@@ -61,7 +61,7 @@ impl CatTokenType {
         match s {
             "forwarded" => Ok(Self::Forwarded),
             "auth" => Ok(Self::Auth),
-            other => anyhow::bail!("unknown CAT token type: {}", other),
+            other => anyhow::bail!("unknown CAT token type: {other}"),
         }
     }
 
