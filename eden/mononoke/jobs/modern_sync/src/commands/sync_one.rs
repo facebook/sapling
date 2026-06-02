@@ -51,8 +51,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         .modern_sync_config
         .clone()
         .ok_or(format_err!(
-            "No modern sync config found for repo {}",
-            repo_name
+            "No modern sync config found for repo {repo_name}"
         ))?;
 
     let ctx = crate::sync::build_context(Arc::new(app), &repo_name, false);
@@ -69,7 +68,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             .edenapi_args
             .tls_params
             .clone()
-            .ok_or_else(|| format_err!("TLS params not found for repo {}", repo_name))?;
+            .ok_or_else(|| format_err!("TLS params not found for repo {repo_name}"))?;
 
         let dest_repo = sync_args
             .dest_repo_name

@@ -77,10 +77,9 @@ impl RepoShardedProcess for ModernSyncProcess {
             Some(repo_name) => repo_name,
             None => {
                 let details = format!(
-                    "Only source repo name {} provided, target repo name missing in {}",
-                    source_repo_name, repo
+                    "Only source repo name {source_repo_name} provided, target repo name missing in {repo}"
                 );
-                bail!("{}", details)
+                bail!("{details}")
             }
         };
 
@@ -96,8 +95,7 @@ impl RepoShardedProcess for ModernSyncProcess {
         let source_repo_args = SourceRepoArgs::with_name(source_repo_name.clone());
         let repo: Repo = self.app.open_repo_unredacted(&source_repo_args).await?;
         let config = repo.repo_config.modern_sync_config.clone().ok_or(anyhow!(
-            "No modern sync config found for repo {}",
-            source_repo_name
+            "No modern sync config found for repo {source_repo_name}"
         ))?;
         let repo_blobstore = repo.repo_blobstore();
 
@@ -111,7 +109,7 @@ impl RepoShardedProcess for ModernSyncProcess {
             repo_blobstore,
         )
         .await
-        .with_context(|| format!("checking that we can connect to {}", target_repo_name))?;
+        .with_context(|| format!("checking that we can connect to {target_repo_name}"))?;
 
         Ok(Arc::new(ModernSyncProcessExecutor {
             app: self.app.clone(),
