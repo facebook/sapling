@@ -105,7 +105,7 @@ pub trait MegarepoOp<R> {
             .repo_by_id(ctx.clone(), target_repo_id)
             .await
             .map_err(MegarepoError::internal)?
-            .ok_or_else(|| MegarepoError::request(anyhow!("repo not found {}", target_repo_id)))?
+            .ok_or_else(|| MegarepoError::request(anyhow!("repo not found {target_repo_id}")))?
             .with_authorization_context(AuthorizationContext::new_bypass_access_control())
             .build()
             .await
@@ -306,7 +306,7 @@ pub trait MegarepoOp<R> {
             .collect();
         let message = match new_version {
             Some(new_version) => {
-                format!("deletion commit for {}", new_version)
+                format!("deletion commit for {new_version}")
             }
             None => "deletion commit".to_string(),
         };
@@ -336,7 +336,7 @@ pub trait MegarepoOp<R> {
         let p1 = repo
             .changeset(p1)
             .await?
-            .ok_or_else(|| anyhow!("p1 commit {} not found", p1))?;
+            .ok_or_else(|| anyhow!("p1 commit {p1} not found"))?;
 
         // First find if any of the files from additions merge conflict
         // with a file or a directory from the target - if target commit
@@ -1060,23 +1060,20 @@ pub trait MegarepoOp<R> {
                 match entry {
                     EitherOrBoth::Left((key, value)) => {
                         error = Some(format!(
-                            "{} -> {} is not present in the state file, but present in request",
-                            key, value,
+                            "{key} -> {value} is not present in the state file, but present in request",
                         ));
                         break;
                     }
                     EitherOrBoth::Right((key, value)) => {
                         error = Some(format!(
-                            "{} -> {} is present in the state file, but not present in request",
-                            key, value,
+                            "{key} -> {value} is present in the state file, but not present in request",
                         ));
                         break;
                     }
                     EitherOrBoth::Both(request, state) => {
                         if request != state {
                             error = Some(format!(
-                                "{:?} is present in request, but {:?} in state file",
-                                request, state
+                                "{request:?} is present in request, but {state:?} in state file"
                             ));
                             break;
                         }
@@ -1109,7 +1106,7 @@ pub trait MegarepoOp<R> {
             .map_err(MegarepoError::request)?;
 
         maybe_state.ok_or_else(|| {
-            MegarepoError::request(anyhow!("no remapping state file exist for {}", cs_id))
+            MegarepoError::request(anyhow!("no remapping state file exist for {cs_id}"))
         })
     }
 }
@@ -1127,7 +1124,7 @@ pub async fn find_bookmark_and_value<R: MononokeRepo>(
         .get(ctx.clone(), &bookmark, bookmarks::Freshness::MostRecent)
         .map_err(MegarepoError::internal)
         .await?
-        .ok_or_else(|| MegarepoError::request(anyhow!("bookmark {} not found", bookmark)))?;
+        .ok_or_else(|| MegarepoError::request(anyhow!("bookmark {bookmark} not found")))?;
 
     Ok((bookmark, cs_id))
 }
@@ -1139,9 +1136,7 @@ fn create_relative_symlink(path: &NonRootMPath, base: &NonRootMPath) -> Result<B
 
     if path_no_prefix.is_empty() || base_no_prefix.is_empty() {
         return Err(anyhow!(
-            "Can't create symlink for {} and {}: one path is a parent of another",
-            path,
-            base,
+            "Can't create symlink for {path} and {base}: one path is a parent of another",
         ));
     }
 
@@ -1238,7 +1233,7 @@ pub fn find_source_config<'a, 'b>(
         }
     }
     let source_config = maybe_source_config.ok_or_else(|| {
-        MegarepoError::request(anyhow!("config for source {} not found", source_name))
+        MegarepoError::request(anyhow!("config for source {source_name} not found"))
     })?;
 
     Ok(source_config)
@@ -1289,8 +1284,7 @@ pub async fn save_sync_target_config_in_changeset(
     );
     if bcs.file_changes.insert(path, fc).is_some() {
         return Err(anyhow!(
-            "New bonsai changeset already has {} file",
-            SYNC_TARGET_CONFIG_FILE,
+            "New bonsai changeset already has {SYNC_TARGET_CONFIG_FILE} file",
         ));
     }
 

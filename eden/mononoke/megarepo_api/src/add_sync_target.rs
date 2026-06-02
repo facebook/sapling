@@ -121,7 +121,7 @@ impl<'a, R: MononokeRepo> AddSyncTarget<'a, R> {
 
         scuba.log_with_msg(
             "Created add sync target merge commit",
-            Some(format!("{}", top_merge_cs_id)),
+            Some(format!("{top_merge_cs_id}")),
         );
 
         derive_all_types(ctx, repo.repo(), &[top_merge_cs_id]).await?;

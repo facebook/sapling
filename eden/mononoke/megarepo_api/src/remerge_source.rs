@@ -126,13 +126,7 @@ impl<'a, R: MononokeRepo> RemergeSource<'a, R> {
 
         let current_source_cs = old_remapping_state
             .get_latest_synced_changeset(source_name)
-            .ok_or_else(|| {
-                anyhow!(
-                    "Source {} does not exist in target {:?}",
-                    source_name,
-                    target
-                )
-            })?;
+            .ok_or_else(|| anyhow!("Source {source_name} does not exist in target {target:?}"))?;
 
         let remerged = self
             .create_final_merge_commit_with_removals(
@@ -185,10 +179,7 @@ impl<'a, R: MononokeRepo> RemergeSource<'a, R> {
         let latest_synced_for_source = state.get_latest_synced_changeset(source_name);
         if state.get_latest_synced_changeset(source_name) != Some(&remerge_cs_id) {
             return Err(MegarepoError::request(anyhow!(
-                "Target cs {} has unexpected changeset {:?} for {}",
-                actual_target_location,
-                latest_synced_for_source,
-                source_name,
+                "Target cs {actual_target_location} has unexpected changeset {latest_synced_for_source:?} for {source_name}",
             )));
         }
 

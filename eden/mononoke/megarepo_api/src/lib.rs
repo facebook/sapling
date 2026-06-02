@@ -203,7 +203,7 @@ impl<R: MononokeRepo> MegarepoApi<R> {
             Some(repo) => repo,
             None => {
                 warn!("Unknown repo: {} in target {:?}", repo_id, target);
-                bail!("unknown repo in the target: {}", repo_id)
+                bail!("unknown repo in the target: {repo_id}")
             }
         };
         Ok((repo.repo_config_arc(), repo.repo_identity_arc()))
@@ -224,9 +224,9 @@ impl<R: MononokeRepo> MegarepoApi<R> {
             .map_err(MegarepoError::internal)?
             .ok_or_else(|| {
                 if repo_id.id() != 0 {
-                    panic!("repo not found {}", repo_id)
+                    panic!("repo not found {repo_id}")
                 } else {
-                    MegarepoError::request(anyhow!("repo not found {}", repo_id))
+                    MegarepoError::request(anyhow!("repo not found {repo_id}"))
                 }
             })?
             .with_authorization_context(AuthorizationContext::new_bypass_access_control())
@@ -293,13 +293,13 @@ impl<R: MononokeRepo> MegarepoApi<R> {
             Ok(cs_id) => {
                 ctx.scuba()
                     .clone()
-                    .add("Result", format!("{}", cs_id))
+                    .add("Result", format!("{cs_id}"))
                     .log_with_msg("Success", None);
             }
             Err(err) => {
                 ctx.scuba()
                     .clone()
-                    .log_with_msg("Failed", Some(format!("{:#?}", err)));
+                    .log_with_msg("Failed", Some(format!("{err:#?}")));
             }
         }
         res

@@ -777,7 +777,7 @@ async fn test_add_sync_target_repeat_same_request(fb: FacebookInit) -> Result<()
         .await;
     assert!(res.is_err());
     let err = res.unwrap_err();
-    assert!(format!("{}", err).contains("it's different from the one sent in request parameters"));
+    assert!(format!("{err}").contains("it's different from the one sent in request parameters"));
 
     Ok(())
 }
