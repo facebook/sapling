@@ -165,7 +165,7 @@ impl<'a> State<'a> {
                         } else {
                             self.write_line("")?;
                         }
-                        self.write_line(&format!("[{}]", section))?;
+                        self.write_line(&format!("[{section}]"))?;
                         section_printed = true;
                     }
                     let value_str = match source.value() {
@@ -185,7 +185,7 @@ impl<'a> State<'a> {
                     } else {
                         String::new()
                     };
-                    self.write_line(&format!("{}={}{}", name, first_value_line, source_str))?;
+                    self.write_line(&format!("{name}={first_value_line}{source_str}"))?;
                     self.push_indent();
                     for line in value_lines {
                         self.write_line(line)?;
