@@ -155,7 +155,7 @@ fn log_execution_stats(
         },
         Err(e) => {
             errorcode = 1;
-            stderr = Some(format!("{:?}", e));
+            stderr = Some(format!("{e:?}"));
             scuba.add("internal_failure", true);
         }
     };
@@ -226,7 +226,7 @@ pub trait BookmarkHook: Send + Sync {
         scuba.add("author", to.author().to_string());
         scuba.add("type", "bookmark");
         log_execution_stats(ctx, scuba, stats, &mut result, log_only);
-        result.map_err(|e| e.context(format!("while executing hook {}", hook_name)))
+        result.map_err(|e| e.context(format!("while executing hook {hook_name}")))
     }
 }
 
@@ -285,7 +285,7 @@ pub trait ChangesetHook: Send + Sync {
         scuba.add("author", changeset.author().to_string());
         scuba.add("type", "changeset");
         log_execution_stats(ctx, scuba, stats, &mut result, log_only);
-        result.map_err(|e| e.context(format!("while executing hook {}", hook_name)))
+        result.map_err(|e| e.context(format!("while executing hook {hook_name}")))
     }
 
     fn run_hook_on_many_changesets<'this: 'cs, 'ctx: 'this, 'cs, 'repo: 'cs>(
@@ -375,7 +375,7 @@ pub trait FileHook: Send + Sync {
         scuba.add("changeset_id", cs_id.to_string());
         scuba.add("type", "file");
         log_execution_stats(ctx, scuba, stats, &mut result, log_only);
-        result.map_err(|e| e.context(format!("while executing hook {}", hook_name)))
+        result.map_err(|e| e.context(format!("while executing hook {hook_name}")))
     }
 }
 

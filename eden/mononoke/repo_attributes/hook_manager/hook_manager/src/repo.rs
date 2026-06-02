@@ -157,8 +157,8 @@ impl HookRepo {
             .bookmarks
             .get(ctx.clone(), &bookmark, bookmarks::Freshness::MostRecent)
             .await
-            .with_context(|| format!("Error fetching bookmark: {}", bookmark))?
-            .ok_or_else(|| anyhow!("Bookmark {} does not exist", bookmark))?;
+            .with_context(|| format!("Error fetching bookmark: {bookmark}"))?
+            .ok_or_else(|| anyhow!("Bookmark {bookmark} does not exist"))?;
 
         self.find_content_by_changeset_id(ctx, changeset_id, paths)
             .await
@@ -283,8 +283,8 @@ impl HookRepo {
             .bookmarks
             .get(ctx.clone(), &bookmark, bookmarks::Freshness::MostRecent)
             .await
-            .with_context(|| format!("Error fetching bookmark: {}", bookmark))?
-            .ok_or_else(|| anyhow!("Bookmark {} does not exist", bookmark))?;
+            .with_context(|| format!("Error fetching bookmark: {bookmark}"))?
+            .ok_or_else(|| anyhow!("Bookmark {bookmark} does not exist"))?;
 
         let master_mf = derive_unode_manifest(ctx, &self.repo_derived_data, changeset_id).await?;
         master_mf
@@ -307,7 +307,7 @@ impl HookRepo {
                         .derive::<ChangesetInfo>(ctx, linknode, DerivationPriority::LOW)
                         .await
                         .with_context(|| {
-                            format!("Error deriving changeset info for bonsai: {}", linknode)
+                            format!("Error deriving changeset info for bonsai: {linknode}")
                         })?;
 
                     Ok(Some((path, cs_info)))
@@ -331,7 +331,7 @@ impl HookRepo {
             .repo_derived_data
             .derive::<RootSkeletonManifestId>(ctx, changeset_id, DerivationPriority::LOW)
             .await
-            .with_context(|| format!("Error deriving skeleton manifest for {}", changeset_id))?
+            .with_context(|| format!("Error deriving skeleton manifest for {changeset_id}"))?
             .skeleton_manifest_id()
             .clone();
         sk_mf
@@ -362,7 +362,7 @@ impl HookRepo {
             .bookmarks
             .get(ctx.clone(), bookmark, bookmarks::Freshness::MostRecent)
             .await
-            .with_context(|| format!("Error fetching bookmark: {}", bookmark))?;
+            .with_context(|| format!("Error fetching bookmark: {bookmark}"))?;
         if let Some(cs_id) = maybe_bookmark_val {
             Ok(BookmarkState::Existing(cs_id))
         } else {
@@ -442,10 +442,7 @@ async fn derive_manifest(
             .derive::<RootContentManifestId>(ctx, changeset_id.clone(), DerivationPriority::LOW)
             .await
             .with_context(|| {
-                format!(
-                    "Error deriving content manifest for bonsai: {}",
-                    changeset_id
-                )
+                format!("Error deriving content manifest for bonsai: {changeset_id}")
             })?;
         Ok(root_id.into_content_manifest_id().into())
     } else {
@@ -453,10 +450,7 @@ async fn derive_manifest(
             .derive::<RootFsnodeId>(ctx, changeset_id.clone(), DerivationPriority::LOW)
             .await
             .with_context(|| {
-                format!(
-                    "Error deriving fsnode manifest for bonsai: {}",
-                    changeset_id
-                )
+                format!("Error deriving fsnode manifest for bonsai: {changeset_id}")
             })?;
         Ok(root_id.into_fsnode_id().into())
     }
@@ -470,7 +464,7 @@ async fn derive_unode_manifest(
     let unode_mf = repo_derived_data
         .derive::<RootUnodeManifestId>(ctx, changeset_id.clone(), DerivationPriority::LOW)
         .await
-        .with_context(|| format!("Error deriving unode manifest for bonsai: {}", changeset_id))?
+        .with_context(|| format!("Error deriving unode manifest for bonsai: {changeset_id}"))?
         .manifest_unode_id()
         .clone();
     Ok(unode_mf)

@@ -618,10 +618,9 @@ fn unauthorized_bypass_rejection(group_name: &str) -> HookExecution {
     HookExecution::Rejected(HookRejectionInfo::new_long(
         "Hook bypass not authorized",
         format!(
-            "You are not a member of group '{}'. \
+            "You are not a member of group '{group_name}'. \
              Remove the bypass string/pushvar and let the hook \
              execute normally, or request access to the group.",
-            group_name,
         ),
     ))
 }
@@ -670,7 +669,7 @@ fn get_bypassed_by_pushvar_reason(
 
             if let Some(Ok(pushvar_val)) = pushvar_val {
                 if pushvar_val == *value {
-                    return Some(format!("bypass pushvar: {}={}", name, value));
+                    return Some(format!("bypass pushvar: {name}={value}"));
                 }
             }
         }
@@ -684,7 +683,7 @@ fn get_bypassed_by_commit_msg_reason(bypass: Option<&HookBypass>, cs_msg: &str) 
 
     if let Some(bypass_string) = bypass.commit_message_bypass() {
         if cs_msg.contains(bypass_string) {
-            return Some(format!("bypass string: {}", bypass_string));
+            return Some(format!("bypass string: {bypass_string}"));
         }
     }
 
