@@ -228,15 +228,15 @@ impl Details {
     }
 
     fn parse(data: &[u8]) -> Result<Details> {
-        ensure!(data.len() >= 40, "hash too small: {:?}", data);
+        ensure!(data.len() >= 40, "hash too small: {data:?}");
 
         let (hash, flags) = data.split_at(40);
         let hash = str::from_utf8(hash)
             .map_err(Error::from)
             .and_then(|hash| hash.parse::<HgNodeHash>())
-            .with_context(|| format!("malformed hash: {:?}", hash))?;
+            .with_context(|| format!("malformed hash: {hash:?}"))?;
 
-        ensure!(flags.len() <= 1, "More than 1 flag: {:?}", flags);
+        ensure!(flags.len() <= 1, "More than 1 flag: {flags:?}");
 
         let flag = if flags.is_empty() {
             Type::File(FileType::Regular)
@@ -245,7 +245,7 @@ impl Details {
                 b'l' => Type::File(FileType::Symlink),
                 b'x' => Type::File(FileType::Executable),
                 b't' => Type::Tree,
-                unk => bail!("Unknown flag {}", unk),
+                unk => bail!("Unknown flag {unk}"),
             }
         };
 
@@ -481,24 +481,24 @@ mod test {
     #[mononoke::test]
     fn bad_nonil() {
         match RevlogManifest::parse(None, &HgParents::None, b"hello123") {
-            Ok(m) => panic!("unexpected manifest {:?}", m),
-            Err(e) => println!("got expected error: {}", e),
+            Ok(m) => panic!("unexpected manifest {m:?}"),
+            Err(e) => println!("got expected error: {e}"),
         }
     }
 
     #[mononoke::test]
     fn bad_nohash() {
         match RevlogManifest::parse(None, &HgParents::None, b"hello123\0") {
-            Ok(m) => panic!("unexpected manifest {:?}", m),
-            Err(e) => println!("got expected error: {}", e),
+            Ok(m) => panic!("unexpected manifest {m:?}"),
+            Err(e) => println!("got expected error: {e}"),
         }
     }
 
     #[mononoke::test]
     fn bad_badhash1() {
         match RevlogManifest::parse(None, &HgParents::None, b"hello123\0abc123") {
-            Ok(m) => panic!("unexpected manifest {:?}", m),
-            Err(e) => println!("got expected error: {}", e),
+            Ok(m) => panic!("unexpected manifest {m:?}"),
+            Err(e) => println!("got expected error: {e}"),
         }
     }
 
@@ -520,7 +520,7 @@ mod test {
                 )];
                 assert_eq!(m.content.files.into_iter().collect::<Vec<_>>(), expect);
             }
-            Err(e) => println!("got expected error: {}", e),
+            Err(e) => println!("got expected error: {e}"),
         }
     }
 
@@ -554,11 +554,11 @@ mod test {
             Ok(m) => {
                 println!("Got manifest:");
                 for (k, v) in &m.content.files {
-                    println!("{:?} {:?}", k, v);
+                    println!("{k:?} {v:?}");
                 }
                 assert_eq!(m.parents(), &HgParents::Two(ONES_HASH, TWOS_HASH));
             }
-            Err(e) => panic!("Failed to load manifest: {}", e),
+            Err(e) => panic!("Failed to load manifest: {e}"),
         }
     }
 
