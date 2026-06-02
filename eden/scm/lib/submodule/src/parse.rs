@@ -35,7 +35,7 @@ impl fmt::Display for Submodule {
         writeln!(f, "\turl={}", self.url)?;
         writeln!(f, "\tpath={}", self.path)?;
         if let Some(ref r) = self.r#ref {
-            writeln!(f, "\tref={}", r)?;
+            writeln!(f, "\tref={r}")?;
         }
         writeln!(f, "\tactive={}", self.active)
     }
@@ -162,7 +162,7 @@ pub(crate) fn join_url(mut base_url: &str, mut maybe_relative_url: &str) -> Stri
         }
     }
 
-    format!("{}/{}", base_url, maybe_relative_url)
+    format!("{base_url}/{maybe_relative_url}")
 }
 
 #[cfg(test)]
