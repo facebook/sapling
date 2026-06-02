@@ -198,7 +198,7 @@ fn teardown_profiling(output: Option<String>) {
                     }
                 }
             };
-            let _ = write!(&mut out, "Profiling summary:\n{}", summary);
+            let _ = write!(&mut out, "Profiling summary:\n{summary}");
         }
     }
 
