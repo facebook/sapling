@@ -137,7 +137,7 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &Repo, wc: &WorkingCopy) -> Result<u8>
     ) {
         Ok(matcher) => {
             for warning in matcher.warnings() {
-                lgr.warn(format!("warning: {}", warning));
+                lgr.warn(format!("warning: {warning}"));
             }
 
             Arc::new(matcher)
