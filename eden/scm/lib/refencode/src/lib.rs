@@ -45,7 +45,7 @@ pub fn decode_remotenames(bytes: &[u8]) -> io::Result<BTreeMap<RefName, HgId>> {
                 decoded.insert(name, node);
             }
         } else {
-            return Err(invalid(format!("corrupt entry in remotenames: {}", line)));
+            return Err(invalid(format!("corrupt entry in remotenames: {line}")));
         }
     }
     Ok(decoded)
@@ -55,7 +55,7 @@ pub fn decode_remotenames(bytes: &[u8]) -> io::Result<BTreeMap<RefName, HgId>> {
 pub fn encode_remotename_phases(name_nodes: &BTreeMap<RefName, Phase>) -> io::Result<Vec<u8>> {
     let encoded = name_nodes
         .iter()
-        .map(|(name, phase)| format!("{} {}\n", phase, name))
+        .map(|(name, phase)| format!("{phase} {name}\n"))
         .collect::<Vec<_>>()
         .concat();
     Ok(encoded.into_bytes())
@@ -72,8 +72,7 @@ pub fn decode_remotename_phases(bytes: &[u8]) -> io::Result<BTreeMap<RefName, Ph
             decoded.insert(name, phase);
         } else {
             return Err(invalid(format!(
-                "corrupt entry in remotenames-phases: {}",
-                line
+                "corrupt entry in remotenames-phases: {line}"
             )));
         }
     }
@@ -101,7 +100,7 @@ pub fn decode_bookmarks(bytes: &[u8]) -> io::Result<BTreeMap<RefName, HgId>> {
             let name = RefName::try_from(name)?;
             decoded.insert(name, node);
         } else {
-            return Err(invalid(format!("corrupt entry in bookmarks: {}", line)));
+            return Err(invalid(format!("corrupt entry in bookmarks: {line}")));
         }
     }
     Ok(decoded)
@@ -123,7 +122,7 @@ pub fn decode_visibleheads(bytes: &[u8]) -> io::Result<Vec<HgId>> {
     for (i, line) in text.lines().enumerate() {
         if i == 0 {
             if line != "v1" {
-                return Err(invalid(format!("invalid visibleheads format: {}", line)));
+                return Err(invalid(format!("invalid visibleheads format: {line}")));
             }
         } else {
             let node = HgId::from_str(line).map_err(invalid)?;
@@ -189,7 +188,7 @@ mod tests {
     fn map() -> BTreeMap<RefName, HgId> {
         let mut m = BTreeMap::new();
         for i in 0..10 {
-            let name = format!("foo/a {}", i);
+            let name = format!("foo/a {i}");
             let node = HgId::from_byte_array([i * 11; HgId::len()]);
             m.insert(name.try_into().unwrap(), node);
         }
@@ -199,7 +198,7 @@ mod tests {
     fn map_phases() -> BTreeMap<RefName, Phase> {
         let mut m = BTreeMap::new();
         for i in 0..10 {
-            let name = format!("foo/a {}", i);
+            let name = format!("foo/a {i}");
             let phase = match i % 2 {
                 0 => Phase::Public,
                 _ => Phase::Draft,
