@@ -71,7 +71,7 @@ impl GitBundleUrlGenerator for LocalFSBUndleUriGenerator {
         _ttl: i64,
         handle: &str,
     ) -> Result<String> {
-        Ok(format!("file://{}", handle))
+        Ok(format!("file://{handle}"))
     }
 }
 
