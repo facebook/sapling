@@ -184,7 +184,7 @@ impl Blobstore for Memblob {
         if inner.unlink(key).is_some() {
             Ok(())
         } else {
-            Err(format_err!("Unknown key {} to Memblob::unlink()", key))
+            Err(format_err!("Unknown key {key} to Memblob::unlink()"))
         }
     }
 }
@@ -289,7 +289,7 @@ impl KeyedBlobstore for KeyedMemblob {
             .inner
             .get(ctx, old_key)
             .await?
-            .with_context(|| format!("key {} not present", old_key))?;
+            .with_context(|| format!("key {old_key} not present"))?;
         Ok(self.inner.put(ctx, new_key, value.into_bytes()).await?)
     }
 
