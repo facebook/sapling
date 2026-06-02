@@ -482,11 +482,7 @@ impl DerivationPipelineConfig {
         for (stage_path, config) in &self.stages {
             for dep in &config.dependencies {
                 if !self.stages.contains_key(dep) {
-                    bail!(
-                        "Stage {:?} depends on {:?}, which does not exist",
-                        stage_path,
-                        dep,
-                    );
+                    bail!("Stage {stage_path:?} depends on {dep:?}, which does not exist",);
                 }
             }
         }
@@ -501,9 +497,7 @@ impl DerivationPipelineConfig {
                     || dep_path.num_components() != stage_path.num_components() + 1
                 {
                     bail!(
-                        "Stage {:?} depends on {:?}, but the dep path must be exactly one MPathElement deeper than the stage path",
-                        stage_path,
-                        dep_path,
+                        "Stage {stage_path:?} depends on {dep_path:?}, but the dep path must be exactly one MPathElement deeper than the stage path",
                     );
                 }
             }
@@ -519,10 +513,7 @@ impl DerivationPipelineConfig {
         }
         for (stage_path, &count) in &in_degree {
             if count == 0 && !stage_path.is_root() {
-                bail!(
-                    "Stage {:?} is orphan: not depended on by any other stage",
-                    stage_path,
-                );
+                bail!("Stage {stage_path:?} is orphan: not depended on by any other stage",);
             }
         }
 
@@ -2143,7 +2134,7 @@ impl fmt::Display for WalkerJobType {
             Self::ShallowHgScrub => "shallow-hg-scrub",
             Self::ValidateAll => "validate-all",
         };
-        write!(f, "{}", str_val)
+        write!(f, "{str_val}")
     }
 }
 
@@ -2655,7 +2646,7 @@ impl RestrictedPathsAclFile {
     fn validate(self) -> Result<Self> {
         match self.repo_region_acl().id_type() {
             "REPO_REGION" => {}
-            acl_type => bail!("ACL must be of type REPO_REGION, got {}", acl_type),
+            acl_type => bail!("ACL must be of type REPO_REGION, got {acl_type}"),
         };
 
         Ok(self)
