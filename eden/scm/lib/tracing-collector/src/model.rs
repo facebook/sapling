@@ -481,7 +481,7 @@ impl<'a> FieldVisitor<'a> {
 
 impl<'a> tracing::field::Visit for FieldVisitor<'a> {
     fn record_debug(&mut self, field: &tracing::field::Field, value: &dyn std::fmt::Debug) {
-        self.record(field, format!("{:?}", value));
+        self.record(field, format!("{value:?}"));
     }
     fn record_i64(&mut self, field: &tracing::field::Field, value: i64) {
         // NOTE: Maybe consider doing '+' here?
@@ -578,7 +578,7 @@ fn record_tracing_metadata(
     if let Some(line) = tracing_metadata.line() {
         output_meta.insert(
             output_strings.id("line"),
-            output_strings.id(format!("{}", line)),
+            output_strings.id(format!("{line}")),
         );
     }
 }
@@ -964,12 +964,12 @@ impl<'a> DescribeTreeSpan<TreeSpanExtra> for TracingTreeDescriptor<'a> {
             if cat.is_empty() {
                 String::new()
             } else {
-                format!("({})", cat)
+                format!("({cat})")
             }
         } else if line.is_empty() {
             module_path.to_string()
         } else {
-            format!("{} line {}", module_path, line)
+            format!("{module_path} line {line}")
         }
     }
 
@@ -1023,7 +1023,7 @@ impl<'a> DescribeTreeSpan<TreeSpanExtra> for TracingTreeDescriptor<'a> {
                 } else {
                     v.to_string()
                 };
-                format!("- {} = {}", k, v)
+                format!("- {k} = {v}")
             })
             .collect()
     }
