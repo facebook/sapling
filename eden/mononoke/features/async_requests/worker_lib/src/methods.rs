@@ -385,7 +385,7 @@ pub(crate) async fn megarepo_async_request_compute<R: MononokeRepo>(
         }
         async_requests_types_thrift::AsynchronousRequestParams::UnknownField(union_tag) => {
              bail!(
-                "this type of request (AsynchronousRequestParams tag {}) not supported by this worker!", union_tag
+                "this type of request (AsynchronousRequestParams tag {union_tag}) not supported by this worker!"
              )
         }
     }
@@ -431,8 +431,7 @@ async fn repo_changeset_pair(
         .context("invalid or missing other commit id")?;
     if other_changeset_specifier.in_bubble() {
         Err(scs_errors::invalid_request(format!(
-            "Can't compare against a snapshot: {}",
-            other_changeset_specifier
+            "Can't compare against a snapshot: {other_changeset_specifier}"
         )))?
     }
     let bubble_fetcher = bubble_fetcher_for_changeset(ctx.clone(), changeset_specifier.clone());

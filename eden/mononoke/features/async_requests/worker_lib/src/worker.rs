@@ -142,7 +142,7 @@ impl AsyncMethodRequestWorker {
             let tw_task_id = std::env::var("TW_TASK_ID");
             match (tw_job_cluster, tw_job_name, tw_task_id) {
                 (Ok(tw_job_cluster), Ok(tw_job_name), Ok(tw_task_id)) => {
-                    format!("{}/{}/{}", tw_job_cluster, tw_job_name, tw_task_id)
+                    format!("{tw_job_cluster}/{tw_job_name}/{tw_task_id}")
                 }
                 _ => format!(
                     "async_requests_worker/{}",
@@ -347,9 +347,7 @@ impl AsyncMethodRequestWorker {
             let configs = self.repos_mgr.configs();
             let (repo_name, _) = configs
                 .get_or_load_repo_config_by_id(repo_id.id())
-                .map_err(|e| {
-                    Error::msg(format!("No config found for repo_id {}: {}", repo_id, e))
-                })?;
+                .map_err(|e| Error::msg(format!("No config found for repo_id {repo_id}: {e}")))?;
             refs.insert(repo_id, (repo_name, 1));
         }
 
@@ -586,7 +584,7 @@ impl AsyncMethodRequestWorker {
                     );
                     scuba.log_with_msg(
                         "Failed to update inprogress timestamp",
-                        Some(format!("{:?}", err)),
+                        Some(format!("{err:?}")),
                     );
                 }
             }
