@@ -186,8 +186,8 @@ pub async fn create_from_mononoke_repo(
                     .bonsai_git_mapping
                     .get_git_sha1_from_bonsai(ctx, bonsai)
                     .await
-                    .with_context(|| format!("Error in getting git sha1 for changeset {}", bonsai))?
-                    .ok_or_else(|| anyhow::anyhow!("No git sha1 found for changeset {}", bonsai))?;
+                    .with_context(|| format!("Error in getting git sha1 for changeset {bonsai}"))?
+                    .ok_or_else(|| anyhow::anyhow!("No git sha1 found for changeset {bonsai}"))?;
                 git_sha1.to_object_id()
             }
         })
@@ -272,9 +272,7 @@ async fn create_from_on_disk_repo(path: PathBuf, output_file: tokio::fs::File) -
     if let Some(head_ref) = head_ref {
         let pointed_ref = refs_to_include.get(head_ref.as_str()).ok_or_else(|| {
             anyhow::anyhow!(
-                "HEAD ref points to a non-existent ref {}. Known refs: {:?}",
-                head_ref,
-                refs_to_include
+                "HEAD ref points to a non-existent ref {head_ref}. Known refs: {refs_to_include:?}"
             )
         })?;
         refs_to_include.insert("HEAD".to_string(), *pointed_ref);
@@ -316,7 +314,7 @@ async fn get_head_ref(head_path: PathBuf) -> Result<String> {
         .trim()
         .strip_prefix(HEAD_REF_PREFIX)
         .map(String::from)
-        .ok_or_else(|| anyhow::anyhow!("Invalid string content {} in HEAD file", head_str))
+        .ok_or_else(|| anyhow::anyhow!("Invalid string content {head_str} in HEAD file"))
 }
 
 /// Get the list of refs from .git/refs directory along with the ObjectId that they point to.
