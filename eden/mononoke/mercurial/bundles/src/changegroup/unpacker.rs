@@ -55,8 +55,7 @@ impl FromStr for CgVersion {
             "02" => Ok(CgVersion::Cg2Version),
             "03" => Ok(CgVersion::Cg3Version),
             bad => Err(ErrorKind::CgDecode(format!(
-                "Non supported Cg version in Part Header {}",
-                bad
+                "Non supported Cg version in Part Header {bad}"
             ))
             .into()),
         }
@@ -293,7 +292,7 @@ impl CgUnpacker {
             CgVersion::Cg3Version => {
                 let bits = buf.get_u16();
                 let flags = RevFlags::from_bits(bits)
-                    .ok_or_else(|| format_err!("unknown revlog flags: {}", bits))?;
+                    .ok_or_else(|| format_err!("unknown revlog flags: {bits}"))?;
                 Some(flags)
             }
         };
@@ -328,7 +327,7 @@ impl CgUnpacker {
         }
         let _ = buf.split_to(4);
         let filename = buf.get_path(filename_len - 4).with_context(|| {
-            let msg = format!("invalid filename of length {}", filename_len);
+            let msg = format!("invalid filename of length {filename_len}");
             ErrorKind::CgDecode(msg)
         })?;
         Ok(DecodeRes::Some(filename))
