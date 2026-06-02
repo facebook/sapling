@@ -47,7 +47,7 @@ pub fn serde_alt(_attr: TokenStream, item: TokenStream) -> TokenStream {
                         && name != "Vec"
                     {
                         // Append "Alt" to the type name
-                        format!("{}Alt", name)
+                        format!("{name}Alt")
                     } else if name == "alias" {
                         // Translate "alias" to "rename"
                         "rename".to_string()
