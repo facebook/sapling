@@ -63,9 +63,9 @@ pub(super) async fn verify_stage_output(
         )
         .await
         {
-            Ok(true) => println!("{}: Match", cs_id),
-            Ok(false) => println!("{}: Mismatch", cs_id),
-            Err(e) => println!("{}: Error: {:#}", cs_id, e),
+            Ok(true) => println!("{cs_id}: Match"),
+            Ok(false) => println!("{cs_id}: Mismatch"),
+            Err(e) => println!("{cs_id}: Error: {e:#}"),
         }
     }
 

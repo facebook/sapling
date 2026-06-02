@@ -98,7 +98,7 @@ pub(super) async fn derive(
         let stage = pipeline_config
             .stages
             .get(&stage_path)
-            .ok_or_else(|| anyhow!("Pipeline config has no stage at path {}", stage_path))?;
+            .ok_or_else(|| anyhow!("Pipeline config has no stage at path {stage_path}"))?;
         let deps = stage
             .dependencies
             .iter()

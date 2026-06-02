@@ -39,9 +39,9 @@ pub(super) async fn exists(
 
     for cs_id in cs_ids {
         if pending.contains(&cs_id) {
-            println!("Not Derived: {}", cs_id);
+            println!("Not Derived: {cs_id}");
         } else {
-            println!("Derived: {}", cs_id);
+            println!("Derived: {cs_id}");
         }
     }
 

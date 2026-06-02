@@ -74,7 +74,7 @@ impl fmt::Display for FileContentValue {
             if i > 0 {
                 write!(f, " ")?;
             }
-            write!(f, "({})", value)?;
+            write!(f, "({value})")?;
         }
         Ok(())
     }
@@ -347,7 +347,7 @@ async fn list_git_tree(
                 let fetch_key = GitSha1::from_object_id(&oid)?.into();
                 let metadata = filestore::get_metadata(repo.repo_blobstore(), ctx, &fetch_key)
                     .await?
-                    .ok_or_else(|| anyhow!("No metadata for {}", oid))?;
+                    .ok_or_else(|| anyhow!("No metadata for {oid}"))?;
                 metadata.content_id
             };
             let val = ManifestData::Git(file_type, content_id);
@@ -409,8 +409,8 @@ pub(super) async fn verify_manifests(
     let mut invalid_count = 0u64;
     for (path, val) in combined {
         if !val.is_valid(&manifests) {
-            println!("Invalid!\nPath: {}", path);
-            println!("{}\n", val);
+            println!("Invalid!\nPath: {path}");
+            println!("{val}\n");
             invalid_count += 1;
         }
     }

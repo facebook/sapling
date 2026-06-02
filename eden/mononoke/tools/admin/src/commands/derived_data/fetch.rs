@@ -38,9 +38,9 @@ pub(super) async fn fetch(
 
     for cs_id in cs_ids {
         if let Some(derived) = derived.get(&cs_id) {
-            println!("Derived: {} -> {}", cs_id, derived);
+            println!("Derived: {cs_id} -> {derived}");
         } else {
-            println!("Not Derived: {}", cs_id);
+            println!("Not Derived: {cs_id}");
         }
     }
 

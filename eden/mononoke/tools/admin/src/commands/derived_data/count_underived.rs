@@ -45,7 +45,7 @@ pub(super) async fn count_underived(
         })
         .buffer_unordered(10)
         .try_for_each(|(cs_id, underived)| async move {
-            println!("{}: {}", cs_id, underived);
+            println!("{cs_id}: {underived}");
             Ok(())
         })
         .await

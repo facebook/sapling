@@ -140,9 +140,9 @@ impl ListItem {
 
     fn new_deleted(path: MPath, entry_id: DeletedManifestV2Id, entry: DeletedManifestV2) -> Self {
         let desc = if let Some(linknode) = entry.linknode() {
-            format!("{}\tlinknode={}", entry_id, linknode)
+            format!("{entry_id}\tlinknode={linknode}")
         } else {
-            format!("{}", entry_id)
+            format!("{entry_id}")
         };
         if entry.subentries.is_empty() {
             ListItem::File(path, desc)
@@ -156,10 +156,10 @@ impl std::fmt::Display for ListItem {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ListItem::Directory(path, entry) => {
-                write!(f, "{}/\t{}", path, entry)?;
+                write!(f, "{path}/\t{entry}")?;
             }
             ListItem::File(path, entry) => {
-                write!(f, "{}\t{}", path, entry)?;
+                write!(f, "{path}\t{entry}")?;
             }
         }
         Ok(())
@@ -205,7 +205,7 @@ impl Listable for Entry<SkeletonManifestV2, ()> {
 fn format_cluster_info(primary: &Option<MPath>, secondaries: &Option<Vec<MPath>>) -> String {
     let mut parts = Vec::new();
     if let Some(p) = primary {
-        parts.push(format!("primary={}", p));
+        parts.push(format!("primary={p}"));
     }
     if let Some(s) = secondaries {
         if !s.is_empty() {
@@ -228,7 +228,7 @@ impl Listable for Entry<DirectoryBranchClusterManifest, DirectoryBranchClusterMa
                 if cluster.is_empty() {
                     String::from("tree")
                 } else {
-                    format!("tree\t{}", cluster)
+                    format!("tree\t{cluster}")
                 }
             }
             Entry::Leaf(file) => {
@@ -236,7 +236,7 @@ impl Listable for Entry<DirectoryBranchClusterManifest, DirectoryBranchClusterMa
                 if cluster.is_empty() {
                     String::from("file")
                 } else {
-                    format!("file\t{}", cluster)
+                    format!("file\t{cluster}")
                 }
             }
         }
@@ -290,7 +290,7 @@ impl Listable for Entry<HgManifestId, (FileType, HgFileNodeId)> {
     fn list_item(self) -> String {
         match self {
             Entry::Tree(tree) => tree.to_string(),
-            Entry::Leaf((file_type, filenode)) => format!("{}\ttype={}", filenode, file_type,),
+            Entry::Leaf((file_type, filenode)) => format!("{filenode}\ttype={file_type}",),
         }
     }
 }
@@ -299,7 +299,7 @@ impl Listable for Entry<GitTreeId, GitLeaf> {
     fn list_item(self) -> String {
         match self {
             Entry::Tree(GitTreeId(oid)) => oid.to_string(),
-            Entry::Leaf(GitLeaf(oid, mode)) => format!("{}\tmode={:06o}", oid, mode),
+            Entry::Leaf(GitLeaf(oid, mode)) => format!("{oid}\tmode={mode:06o}"),
         }
     }
 }
@@ -327,7 +327,7 @@ where
         let entry = root_id
             .find_entry(ctx.clone(), repo.repo_blobstore().clone(), path.clone())
             .await?
-            .ok_or_else(|| anyhow!("No manifest for path '{}'", path))?;
+            .ok_or_else(|| anyhow!("No manifest for path '{path}'"))?;
         let item = ListItem::new(path, entry);
         Ok(futures::stream::once(async move { Ok(item) }).boxed())
     } else if recursive {
@@ -343,7 +343,7 @@ where
         let entry = root_id
             .find_entry(ctx.clone(), repo.repo_blobstore().clone(), path.clone())
             .await?
-            .ok_or_else(|| anyhow!("No manifest for path '{}'", path))?;
+            .ok_or_else(|| anyhow!("No manifest for path '{path}'"))?;
 
         match entry {
             Entry::Tree(tree_id) => {
@@ -380,7 +380,7 @@ async fn list_dbcm(
         let entry = root
             .find_entry(ctx.clone(), repo.repo_blobstore().clone(), path.clone())
             .await?
-            .ok_or_else(|| anyhow!("No manifest for path '{}'", path))?;
+            .ok_or_else(|| anyhow!("No manifest for path '{path}'"))?;
         let item = ListItem::new(path, entry);
         Ok(futures::stream::once(async move { Ok(item) }).boxed())
     } else if recursive {
@@ -391,7 +391,7 @@ async fn list_dbcm(
         let entry = root
             .find_entry(ctx.clone(), repo.repo_blobstore().clone(), path.clone())
             .await?
-            .ok_or_else(|| anyhow!("No manifest for path '{}'", path))?;
+            .ok_or_else(|| anyhow!("No manifest for path '{path}'"))?;
 
         match entry {
             Entry::Tree(tree_id) => {
@@ -442,7 +442,7 @@ where
         let entry = root_id
             .find_entry(ctx.clone(), blobstore.clone(), start_path.clone())
             .await?
-            .ok_or_else(|| anyhow!("No manifest for path '{}'", start_path))?;
+            .ok_or_else(|| anyhow!("No manifest for path '{start_path}'"))?;
 
         match entry {
             Entry::Tree(tree_id) => {
@@ -501,7 +501,7 @@ async fn list_acl(
         let entry = current
             .lookup(ctx, &blobstore, &elem)
             .await?
-            .ok_or_else(|| anyhow!("No ACL manifest for path '{}'", path))?;
+            .ok_or_else(|| anyhow!("No ACL manifest for path '{path}'"))?;
         match entry {
             AclManifestEntry::Directory(dir) => {
                 current = dir.id.load(ctx, &blobstore).await?;
@@ -513,7 +513,7 @@ async fn list_acl(
                     })
                     .boxed());
                 }
-                return Err(anyhow!("Path '{}' is a leaf, not a directory", path));
+                return Err(anyhow!("Path '{path}' is a leaf, not a directory"));
             }
         }
     }
@@ -622,7 +622,7 @@ async fn list_deleted(
                 .subentries
                 .lookup(&ctx, &blobstore, elem.as_ref())
                 .await?
-                .ok_or_else(|| anyhow!("No manifest for path '{}'", path))?;
+                .ok_or_else(|| anyhow!("No manifest for path '{path}'"))?;
         }
         let entry = entry_id.load(&ctx, &blobstore).await?;
         // See if the path itself is deleted, and yield a "file" entry for this path if so.
@@ -656,7 +656,7 @@ async fn list_deleted(
                     .subentries
                     .lookup(&ctx, &blobstore, elem.as_ref())
                     .await?
-                    .ok_or_else(|| anyhow!("No manifest for path '{}'", path))?;
+                    .ok_or_else(|| anyhow!("No manifest for path '{path}'"))?;
             }
             let entry = entry_id.load(&ctx, &blobstore).await?;
             // Work through the subentries of this directory, yielding a "directory" entry for
@@ -790,7 +790,7 @@ async fn list_history_manifest(
                             for (sub_name, sub_entry) in file_subs {
                                 let sub_path = subpath.join(&sub_name);
                                 let sub_desc = format_history_entry(&ctx, &blobstore, &sub_entry).await?;
-                                yield ListItem::new_history_manifest(sub_path.clone(), &sub_entry, format!("(file-sub) {}", sub_desc));
+                                yield ListItem::new_history_manifest(sub_path.clone(), &sub_entry, format!("(file-sub) {sub_desc}"));
                                 if let HistoryManifestEntry::Directory(sub_id) = sub_entry {
                                     let sub_dir: HistoryManifestDirectory = sub_id.load(&ctx, &blobstore).await?;
                                     stack.push((sub_path, sub_dir));
@@ -851,7 +851,7 @@ async fn find_history_entry(
         let entry = current_dir
             .lookup(ctx, blobstore, elem)
             .await?
-            .ok_or_else(|| anyhow!("No entry for path '{}' in history manifest", path))?;
+            .ok_or_else(|| anyhow!("No entry for path '{path}' in history manifest"))?;
 
         if i == elements.len() - 1 {
             return Ok(entry);
@@ -864,15 +864,13 @@ async fn find_history_entry(
             }
             _ => {
                 return Err(anyhow!(
-                    "Expected directory at intermediate path component '{}' in '{}'",
-                    elem,
-                    path
+                    "Expected directory at intermediate path component '{elem}' in '{path}'"
                 ));
             }
         }
     }
 
-    Err(anyhow!("Unexpected end of path traversal for '{}'", path))
+    Err(anyhow!("Unexpected end of path traversal for '{path}'"))
 }
 
 async fn fetch_or_derive_root<TreeId>(
@@ -892,7 +890,7 @@ where
         manager
             .fetch_derived::<TreeId>(ctx, cs_id, None)
             .await?
-            .ok_or_else(|| anyhow!("No manifest for changeset {}", cs_id))
+            .ok_or_else(|| anyhow!("No manifest for changeset {cs_id}"))
     }
 }
 
@@ -905,7 +903,7 @@ pub(super) async fn list_manifest(
     let cs_id = args.changeset_args.resolve_changeset(ctx, repo).await?;
 
     let path = args.path.as_deref().unwrap_or("");
-    let path: MPath = MPath::new(path).with_context(|| anyhow!("Invalid path: {}", path))?;
+    let path: MPath = MPath::new(path).with_context(|| anyhow!("Invalid path: {path}"))?;
 
     let items = match args.manifest_type {
         ListManifestType::SkeletonManifests => {
@@ -1013,7 +1011,7 @@ pub(super) async fn list_manifest(
 
     items
         .try_for_each(|item| async move {
-            println!("{}", item);
+            println!("{item}");
             Ok(())
         })
         .await?;

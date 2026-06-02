@@ -125,7 +125,7 @@ pub(super) async fn slice(
 
         println!("Boundary changesets:");
         for cs_id in boundary_changesets {
-            println!("{}", cs_id);
+            println!("{cs_id}");
         }
     }
 
