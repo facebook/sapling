@@ -132,11 +132,7 @@ async fn do_busy_work(repo: &RepoShard, terminate_execution: Arc<AtomicBool>) ->
         }
         // Fail at every 10th iteration and let the framework reassign this task
         if iteration % 10 == 0 {
-            bail!(
-                "Sample transient error for repo {} after {} iterations",
-                repo,
-                iteration
-            )
+            bail!("Sample transient error for repo {repo} after {iteration} iterations")
         }
     }
 }
