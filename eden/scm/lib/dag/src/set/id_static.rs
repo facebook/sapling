@@ -193,7 +193,7 @@ impl fmt::Debug for IdStaticSet {
         match len.saturating_sub(limit) {
             0 => {}
             1 => write!(f, " + 1 span")?,
-            n => write!(f, " + {} spans", n)?,
+            n => write!(f, " + {n} spans")?,
         }
         match &self.iteration_order {
             // + means ASC order.
@@ -1250,7 +1250,7 @@ pub(crate) mod tests {
             format!(
                 "\n{}{}",
                 prefix,
-                s.trim().replace('\n', &format!("\n{}", prefix))
+                s.trim().replace('\n', &format!("\n{prefix}"))
             )
         }
 
@@ -1304,7 +1304,7 @@ pub(crate) mod tests {
                     if need_wrap {
                         s = indent(&s, "  ");
                     } else {
-                        s = format!(" {}", s);
+                        s = format!(" {s}");
                     }
                     out.push_str(&s);
                 }

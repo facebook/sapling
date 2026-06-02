@@ -255,7 +255,7 @@ impl fmt::Debug for UnionSet {
         write_debug(f, &self.sets[1])?;
         match self.order {
             UnionOrder::FirstSecond => {}
-            order => write!(f, " (order={:?})", order)?,
+            order => write!(f, " (order={order:?})")?,
         }
         write!(f, ">")
     }

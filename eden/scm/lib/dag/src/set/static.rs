@@ -91,7 +91,7 @@ impl fmt::Debug for StaticSet {
         f.debug_list().entries(self.0.iter().take(limit)).finish()?;
         let remaining = self.0.len().max(limit) - limit;
         if remaining > 0 {
-            write!(f, " + {} more>", remaining)?;
+            write!(f, " + {remaining} more>")?;
         } else {
             write!(f, ">")?;
         }

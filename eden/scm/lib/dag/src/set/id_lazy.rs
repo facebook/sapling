@@ -168,9 +168,9 @@ impl fmt::Debug for IdLazySet {
         let remaining = inner.visited.len().max(limit) - limit;
         match (remaining, inner.state) {
             (0, State::Incomplete) => f.write_str(" + ? more")?,
-            (n, State::Incomplete) => write!(f, "+ {} + ? more", n)?,
+            (n, State::Incomplete) => write!(f, "+ {n} + ? more")?,
             (0, _) => {}
-            (n, _) => write!(f, " + {} more", n)?,
+            (n, _) => write!(f, " + {n} more")?,
         }
         f.write_str(">")?;
         Ok(())
