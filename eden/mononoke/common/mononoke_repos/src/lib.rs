@@ -156,7 +156,7 @@ impl<R> MononokeRepos<R> {
                 Ok(())
             }
             // Someone else has the lock, bail.
-            None => bail!("Lock could not be acquired for repo {}", repo_name),
+            None => bail!("Lock could not be acquired for repo {repo_name}"),
         }
     }
 
@@ -235,7 +235,7 @@ impl<R> MononokeRepos<R> {
                 Ok(())
             }
             // Someone else has the lock, bail.
-            None => bail!("Lock could not be acquired for repo {}", repo_name),
+            None => bail!("Lock could not be acquired for repo {repo_name}"),
         }
     }
 
