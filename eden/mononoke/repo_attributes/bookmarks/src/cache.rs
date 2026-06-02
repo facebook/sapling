@@ -759,7 +759,7 @@ mod tests {
 
             match future::select(delay, fut).await {
                 Either::Left((_, b)) => b,
-                Either::Right((r, _)) => panic!("pending request was found: {:?}", r),
+                Either::Right((r, _)) => panic!("pending request was found: {r:?}"),
             }
         })
     }

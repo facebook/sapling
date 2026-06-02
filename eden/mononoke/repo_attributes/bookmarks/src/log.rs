@@ -208,7 +208,7 @@ impl std::fmt::Display for BookmarkUpdateReason {
             ApiRequest => "apirequest",
             MultiRepoLand => "multirepoland",
         };
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 
