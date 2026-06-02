@@ -36,7 +36,7 @@ pub struct RootCaseConflictSkeletonManifestId(pub(crate) CaseConflictSkeletonMan
 pub fn format_key(derivation_ctx: &DerivationContext, changeset_id: ChangesetId) -> String {
     let root_prefix = "derived_root_ccsm.";
     let key_prefix = derivation_ctx.mapping_key_prefix::<RootCaseConflictSkeletonManifestId>();
-    format!("{}{}{}", root_prefix, key_prefix, changeset_id)
+    format!("{root_prefix}{key_prefix}{changeset_id}")
 }
 
 impl TryFrom<BlobstoreBytes> for RootCaseConflictSkeletonManifestId {

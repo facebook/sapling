@@ -82,9 +82,7 @@ async fn get_ccsm_subtree_changes(
                     .await?
                     .ok_or_else(|| {
                         anyhow::anyhow!(
-                            "Subtree copy source {} does not exist in {}",
-                            from_path,
-                            from_cs_id
+                            "Subtree copy source {from_path} does not exist in {from_cs_id}"
                         )
                     })?;
                 Ok(ManifestParentReplacement {

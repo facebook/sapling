@@ -60,14 +60,12 @@ impl CcsmPath {
                 != original
                     .to_lowercase_utf8()
                     .ok_or_else(|| {
-                        anyhow::anyhow!("Can't untransform non-utf8 path element: {}", original)
+                        anyhow::anyhow!("Can't untransform non-utf8 path element: {original}")
                     })?
                     .as_bytes()
             {
                 anyhow::bail!(
-                    "Found consecutive non-matching path elements in ccsm transformed path: lowercase: {}, original: {}",
-                    lowercase,
-                    original,
+                    "Found consecutive non-matching path elements in ccsm transformed path: lowercase: {lowercase}, original: {original}",
                 );
             }
             path_elements.push(original.clone());
