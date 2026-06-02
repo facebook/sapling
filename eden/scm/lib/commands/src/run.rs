@@ -168,7 +168,7 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
     let exit_code = (|| {
         let cwd = match current_dir(io) {
             Err(e) => {
-                let _ = io.write_err(format!("abort: cannot get current directory: {}\n", e));
+                let _ = io.write_err(format!("abort: cannot get current directory: {e}\n"));
                 return exitcode::IOERR;
             }
             Ok(dir) => dir,
@@ -250,7 +250,7 @@ fn dispatch_command(
         match runlog::Logger::from_repo(dispatcher.repo(), dispatcher.args()[1..].to_vec()) {
             Ok(logger) => Some(logger),
             Err(err) => {
-                let _ = io.write_err(format!("Error creating runlogger: {}\n", err));
+                let _ = io.write_err(format!("Error creating runlogger: {err}\n"));
                 None
             }
         };
@@ -992,7 +992,7 @@ fn log_metrics(io: &IO, config: &dyn Config) -> Result<()> {
                     .iter()
                     .any(|prefix| key.starts_with(prefix.as_ref()))
         }) {
-            writeln!(io.error(), "{key}: {}", value)?;
+            writeln!(io.error(), "{key}: {value}")?;
         }
     }
 
