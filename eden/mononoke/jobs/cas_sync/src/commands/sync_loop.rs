@@ -292,10 +292,7 @@ async fn run_sync(
         .mononoke_cas_sync_config
         .as_ref()
         .ok_or_else(|| {
-            format_err!(
-                "mononoke_cas_sync_config is not found for the repo {}",
-                repo_name
-            )
+            format_err!("mononoke_cas_sync_config is not found for the repo {repo_name}")
         })?;
 
     let re_cas_client = CasChangesetsUploader::new(build_mononoke_cas_client(
@@ -373,8 +370,7 @@ async fn run_sync(
                         .or(start_id)
                         .ok_or_else(|| {
                             format_err!(
-                                "{} counter not found. Pass `--start-id` flag to set the counter",
-                                LATEST_REPLAYED_REQUEST_KEY
+                                "{LATEST_REPLAYED_REQUEST_KEY} counter not found. Pass `--start-id` flag to set the counter"
                             )
                         }),
                 )
