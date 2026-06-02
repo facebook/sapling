@@ -57,7 +57,7 @@ pub fn run(ctx: ReqCtx<DebugMergeStateOpts>, _repo: &Repo, wc: &WorkingCopy) -> 
         },
     };
 
-    write!(io, "{:?}", ms)?;
+    write!(io, "{ms:?}")?;
 
     Ok(0)
 }
