@@ -1064,7 +1064,7 @@ impl SaplingRemoteApi for EagerRepo {
                 if let Err(err) = mut_store.add(&edenapi_mutation_to_local(m)) {
                     return Err(SaplingRemoteApiError::HttpError {
                         status: StatusCode::INTERNAL_SERVER_ERROR,
-                        message: format!("error inserting mutation entry: {:?}", err),
+                        message: format!("error inserting mutation entry: {err:?}"),
                         headers: Box::default(),
                         url: self.url("upload_changesets"),
                     });
@@ -1122,7 +1122,7 @@ impl SaplingRemoteApi for EagerRepo {
                 Err(e) => {
                     return Err(SaplingRemoteApiError::HttpError {
                         status: StatusCode::INTERNAL_SERVER_ERROR,
-                        message: format!("{:?}", e),
+                        message: format!("{e:?}"),
                         headers: Box::default(),
                         url: self.url("lookup_batch"),
                     });
@@ -1308,7 +1308,7 @@ impl SaplingRemoteApi for EagerRepo {
             _ => {
                 return Err(SaplingRemoteApiError::HttpError {
                     status: StatusCode::NOT_FOUND,
-                    message: format!("bookmark {} was not found", bookmark),
+                    message: format!("bookmark {bookmark} was not found"),
                     headers: Box::default(),
                     url: self.url("land_stack"),
                 });
@@ -1363,7 +1363,7 @@ impl SaplingRemoteApi for EagerRepo {
                 pushrebase_conflicts(&base_manifest, &bookmark_manifest, &head_manifest)?;
             if !conflicts.is_empty() {
                 let e =
-                    ServerError::generic(format!("Conflicts while pushrebasing: {:?}", conflicts));
+                    ServerError::generic(format!("Conflicts while pushrebasing: {conflicts:?}"));
 
                 return Ok(LandStackResponse { data: Err(e) });
             }
@@ -1439,7 +1439,7 @@ impl SaplingRemoteApi for EagerRepo {
                 Some(raw_text) => raw_text,
             };
             let mut new_raw_text: Vec<u8> = Vec::new();
-            write!(new_raw_text, "{}", new_tree_id)?;
+            write!(new_raw_text, "{new_tree_id}")?;
             new_raw_text.extend_from_slice(&old_raw_text[HgId::hex_len()..]);
 
             let commit_parents = vec![dest_commit];
@@ -1645,7 +1645,7 @@ impl EagerRepo {
             }
             Err(e) => Err(SaplingRemoteApiError::HttpError {
                 status: StatusCode::INTERNAL_SERVER_ERROR,
-                message: format!("{:?}", e),
+                message: format!("{e:?}"),
                 headers: Box::default(),
                 url: self.url(handler),
             }),
@@ -1663,7 +1663,7 @@ impl EagerRepo {
             Err(e) => {
                 return Err(SaplingRemoteApiError::HttpError {
                     status: StatusCode::INTERNAL_SERVER_ERROR,
-                    message: format!("{:?}", e),
+                    message: format!("{e:?}"),
                     headers: Box::default(),
                     url: self.url(handler),
                 });
@@ -1698,7 +1698,7 @@ impl EagerRepo {
             }
             Err(e) => Err(SaplingRemoteApiError::HttpError {
                 status: StatusCode::INTERNAL_SERVER_ERROR,
-                message: format!("{:?}", e),
+                message: format!("{e:?}"),
                 headers: Box::default(),
                 url: self.url(handler),
             }),
@@ -1727,7 +1727,7 @@ impl EagerRepo {
             .await
             .map_err(|err| SaplingRemoteApiError::HttpError {
                 status: StatusCode::INTERNAL_SERVER_ERROR,
-                message: format!("error flushing dag/store: {:?}", err),
+                message: format!("error flushing dag/store: {err:?}"),
                 headers: Box::default(),
                 url: self.url(handler),
             })
@@ -1757,7 +1757,7 @@ impl EagerRepo {
                 Ok(HgId::from_byte_array(id.into_byte_array()))
             }
             _ => Err(self.not_implemented_error(
-                format!("id type {:?} not supported by EagerRepo", id),
+                format!("id type {id:?} not supported by EagerRepo"),
                 handler,
             )),
         }

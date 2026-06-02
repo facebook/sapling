@@ -975,7 +975,7 @@ mod tests {
                 assert_eq!(unsupported, &["remotefilelog"]);
                 assert_eq!(missing, &["treestate", "windowssymlinks"]);
             }
-            _ => panic!("expect RequirementsMismatch, got {:?}", err),
+            _ => panic!("expect RequirementsMismatch, got {err:?}"),
         }
     }
 
