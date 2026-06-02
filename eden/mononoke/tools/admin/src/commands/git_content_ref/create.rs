@@ -74,6 +74,6 @@ pub async fn create(
         },
     };
     log_git_content_ref(ctx, &repo, &info).await;
-    println!("{}", success_msg);
+    println!("{success_msg}");
     Ok(())
 }
