@@ -146,7 +146,7 @@ fn kill_active_pids_in_mounts(mut mount_points: Vec<String>) -> Result<()> {
             output
         ));
     }
-    println!("result: {:?}", output);
+    println!("result: {output:?}");
     Ok(())
 }
 
@@ -207,7 +207,7 @@ fn make_new_volume(apfs_util: &ApfsUtil, name: &str, disk: &str) -> Result<ApfsV
             .args(["apfs", "addVolume", disk, "apfs", name, "-nomount"])
             .output()?;
         if !output.status.success() {
-            anyhow::bail!("failed to execute diskutil addVolume: {:?}", output);
+            anyhow::bail!("failed to execute diskutil addVolume: {output:?}");
         }
         let containers = apfs_util.list_containers()?;
 
@@ -216,7 +216,7 @@ fn make_new_volume(apfs_util: &ApfsUtil, name: &str, disk: &str) -> Result<ApfsV
         } else {
             tried += 1;
             if tried == MAX_ADDVOLUME_RETRY {
-                return Err(anyhow!("failed to create volume `{}`: {:#?}", name, output));
+                return Err(anyhow!("failed to create volume `{name}`: {output:#?}"));
             } else {
                 println!(
                     "APFS subvolume created, but not found in `diskutil apfs list`, retrying."
@@ -246,10 +246,9 @@ fn get_real_uid() -> Result<u32> {
     // We're really root (not just setuid root).  We may actually be
     // running under sudo so let's see what sudo says about the UID
     match std::env::var("SUDO_UID") {
-        Ok(uid) => Ok(uid.parse().context(format!(
-            "parsing the SUDO_UID={} env var as an integer",
-            uid
-        ))?),
+        Ok(uid) => Ok(uid
+            .parse()
+            .context(format!("parsing the SUDO_UID={uid} env var as an integer"))?),
         Err(std::env::VarError::NotPresent) => Ok(uid),
         Err(std::env::VarError::NotUnicode(_)) => bail!("the SUDO_UID env var is not unicode"),
     }
@@ -296,12 +295,12 @@ fn find_disk_for_eden_mount(_mount_point: &str) -> Result<String> {
 
 fn mount_scratch_space_on(apfs_util: &ApfsUtil, input_mount_point: &str) -> Result<()> {
     let mount_point = canonicalize_mount_point_path(input_mount_point)?;
-    println!("want to mount at {:?}", mount_point);
+    println!("want to mount at {mount_point:?}");
 
     // First, let's ensure that mounting at this location makes sense.
     // Inspect the directory and ensure that it is owned by us.
     let metadata = std::fs::metadata(&mount_point)
-        .context(format!("Obtaining filesystem metadata for {}", mount_point))?;
+        .context(format!("Obtaining filesystem metadata for {mount_point}"))?;
     let my_uid = get_real_uid()?;
     if metadata.uid() != my_uid {
         bail!(
@@ -369,7 +368,7 @@ fn mount_scratch_space_on(apfs_util: &ApfsUtil, input_mount_point: &str) -> Resu
             output
         );
     }
-    println!("output: {:?}", output);
+    println!("output: {output:?}");
 
     // Make sure that we own the mounted directory; the default is mounted
     // with root:wheel ownership, and that isn't desirable
@@ -384,11 +383,11 @@ fn mount_scratch_space_on(apfs_util: &ApfsUtil, input_mount_point: &str) -> Resu
 
 fn chown(path: &str, uid: u32, gid: u32) -> Result<()> {
     let cstr = std::ffi::CString::new(path)
-        .with_context(|| format!("creating a C string from path `{}`", path))?;
+        .with_context(|| format!("creating a C string from path `{path}`"))?;
     let rc = unsafe { libc::chown(cstr.as_ptr(), uid, gid) };
     if rc != 0 {
         let err = std::io::Error::last_os_error();
-        Err(err).with_context(|| format!("failed to chown {} to uid={}, gid={}", path, uid, gid))
+        Err(err).with_context(|| format!("failed to chown {path} to uid={uid}, gid={gid}"))
     } else {
         Ok(())
     }
@@ -401,10 +400,7 @@ fn disable_spotlight(mount_point: &str) -> Result<()> {
         .args(["-Ed", "-i", "off", mount_point])
         .output()?;
     if !output.status.success() {
-        eprintln!(
-            "failed to disable spotlight on {}: {:#?}",
-            mount_point, output
-        );
+        eprintln!("failed to disable spotlight on {mount_point}: {output:#?}");
     }
 
     let spotlight = Path::new(mount_point).join(".Spotlight-V100");
@@ -487,7 +483,7 @@ fn main() -> Result<()> {
                 println!("{}", serde_json::to_string(&stale_volume_names)?);
             } else {
                 for name in stale_volume_names.iter() {
-                    println!("{}", name);
+                    println!("{name}");
                 }
             }
             Ok(())
@@ -540,7 +536,7 @@ fn main() -> Result<()> {
                             if let Err(err) =
                                 apfs_util.unmount_scratch(&mount_point, force, &mounts)
                             {
-                                eprintln!("Failed to unmount: {}", err);
+                                eprintln!("Failed to unmount: {err}");
                                 try_delete = false;
                                 was_failure = true;
                             }
@@ -549,10 +545,10 @@ fn main() -> Result<()> {
                         if try_delete {
                             let mount_point = vol.preferred_mount_point().unwrap();
                             if let Err(err) = apfs_util.delete_scratch(&mount_point) {
-                                eprintln!("Failed to delete {:#?}: {}", vol, err);
+                                eprintln!("Failed to delete {vol:#?}: {err}");
                                 was_failure = true
                             } else {
-                                println!("Deleted {}", mount_point);
+                                println!("Deleted {mount_point}");
                             }
                         }
                     }
