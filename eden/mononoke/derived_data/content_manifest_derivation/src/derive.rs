@@ -94,9 +94,7 @@ pub async fn get_content_manifest_subtree_changes(
                     .await?
                     .ok_or_else(|| {
                         anyhow::anyhow!(
-                            "Subtree copy source {} does not exist in {}",
-                            from_path,
-                            from_cs_id
+                            "Subtree copy source {from_path} does not exist in {from_cs_id}"
                         )
                     })?;
                 Ok(ManifestParentReplacement {
@@ -345,7 +343,7 @@ mod test {
             .await?
         {
             ChangesetIdsResolvedFromPrefix::Multiple(cs) => cs,
-            other => anyhow::bail!("Unexpected: {:?}", other),
+            other => anyhow::bail!("Unexpected: {other:?}"),
         };
 
         // Build parent -> child map and find root for topological ordering
@@ -395,7 +393,7 @@ mod test {
             .unwrap()
         {
             ContentManifestEntry::Directory(d) => d,
-            other => panic!("expected directory for '{}', got {:?}", name, other),
+            other => panic!("expected directory for '{name}', got {other:?}"),
         }
     }
 

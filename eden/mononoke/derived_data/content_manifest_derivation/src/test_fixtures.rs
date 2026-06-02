@@ -53,7 +53,7 @@ async fn test_for_fixture<F: TestRepoFixture + Send>(fb: FacebookInit) -> Result
         .await?
     {
         ChangesetIdsResolvedFromPrefix::Multiple(all_commits) => all_commits,
-        other => anyhow::bail!("Unexpected number of commits: {:?}", other),
+        other => anyhow::bail!("Unexpected number of commits: {other:?}"),
     };
     let restricted_paths = derived_data
         .manager()
@@ -89,8 +89,7 @@ async fn test_for_fixture<F: TestRepoFixture + Send>(fb: FacebookInit) -> Result
 
                 assert_eq!(
                     content_manifest_id, from_predecessor,
-                    "ContentManifestId mismatch for changeset {:?}",
-                    cs_id,
+                    "ContentManifestId mismatch for changeset {cs_id:?}",
                 );
 
                 Ok(())
