@@ -92,8 +92,7 @@ where
 
         if state != State::End {
             Err(ErrorKind::WirePackEncode(format!(
-                "invalid encode stream: unexpected None (state: {:?})",
-                state
+                "invalid encode stream: unexpected None (state: {state:?})"
             )))?;
         }
     }
@@ -132,8 +131,7 @@ impl State {
             State::HistoryMeta => Self::next_history_state(path, entry_count),
             other => {
                 bail!(ErrorKind::WirePackEncode(format!(
-                    "invalid encode stream: unexpected history meta entry (state: {:?})",
-                    other
+                    "invalid encode stream: unexpected history meta entry (state: {other:?})"
                 )));
             }
         };
@@ -172,18 +170,16 @@ impl State {
                 ensure!(
                     path == expected_path,
                     ErrorKind::WirePackEncode(format!(
-                        "invalid encode stream: saw data meta for path '{}', expected path '{}'\
-                         (entry_count: {})",
-                        path, expected_path, entry_count
+                        "invalid encode stream: saw data meta for path '{path}', expected path '{expected_path}'\
+                         (entry_count: {entry_count})"
                     ))
                 );
                 Self::next_data_state(path, entry_count)
             }
             other => {
                 bail!(ErrorKind::WirePackEncode(format!(
-                    "invalid encode stream: saw unexpected data meta for {} (entry count: {}, \
-                     state: {:?}",
-                    path, entry_count, other
+                    "invalid encode stream: saw unexpected data meta for {path} (entry count: {entry_count}, \
+                     state: {other:?}"
                 ),));
             }
         };
@@ -219,8 +215,7 @@ impl State {
             State::HistoryMeta => State::End,
             other => {
                 bail!(ErrorKind::WirePackEncode(format!(
-                    "invalid encode stream: unexpected end (state: {:?})",
-                    other
+                    "invalid encode stream: unexpected end (state: {other:?})"
                 )));
             }
         };

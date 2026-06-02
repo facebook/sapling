@@ -206,7 +206,7 @@ impl UnpackerInner {
             }
         } else {
             let mpath = buf.get_path(filename_len).with_context(|| {
-                let msg = format!("invalid filename of length {}", filename_len);
+                let msg = format!("invalid filename of length {filename_len}");
                 ErrorKind::WirePackDecode(msg)
             })?;
 
