@@ -319,7 +319,7 @@ impl HgTime {
             for part in ["S", "M", "HI", "d", "mb", "Yy"] {
                 if part
                     .chars()
-                    .any(|ch| naive_format.contains(&format!("%{}", ch)))
+                    .any(|ch| naive_format.contains(&format!("%{ch}")))
                 {
                     // For example, if the user specified "d" (day), but
                     // not other things, we should use 0 for "H:M:S", and
@@ -327,7 +327,7 @@ impl HgTime {
                     use_now = true;
                 } else {
                     let format_char = part.chars().next().unwrap();
-                    default_format += &format!(" @%{}", format_char);
+                    default_format += &format!(" @%{format_char}");
                     if use_now {
                         // For example, if the user only specified "month/day",
                         // then we should use the current "year", instead of
@@ -336,7 +336,7 @@ impl HgTime {
                         match now {
                             Some(now) => {
                                 date_with_defaults +=
-                                    &format!(" @{}", now.format(&format!("%{}", format_char)))
+                                    &format!(" @{}", now.format(&format!("%{format_char}")))
                             }
                             None => return None,
                         }
@@ -352,7 +352,7 @@ impl HgTime {
 
             // Try parse with timezone.
             // See https://docs.rs/chrono/0.4.9/chrono/format/strftime/index.html#specifiers
-            let format = format!("{}%#z{}", naive_format, default_format);
+            let format = format!("{naive_format}%#z{default_format}");
             if let Ok(parsed) = DateTime::parse_from_str(&date_with_defaults, &format) {
                 if let Ok(parsed) = parsed.try_into() {
                     return Some(parsed);
@@ -360,7 +360,7 @@ impl HgTime {
             }
 
             // Without timezone.
-            let format = format!("{}{}", naive_format, default_format);
+            let format = format!("{naive_format}{default_format}");
             if let Ok(parsed) = NaiveDateTime::parse_from_str(&date_with_defaults, &format) {
                 if let Ok(parsed) = parsed.try_into() {
                     return Some(parsed);
@@ -686,7 +686,7 @@ mod tests {
             Some(time) => {
                 let value = (time.unixtime - HgTime::now().unwrap().unixtime).abs()
                     / duration.num_seconds();
-                format!("{}", value)
+                format!("{value}")
             }
             None => "fail".to_string(),
         }

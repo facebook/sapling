@@ -113,7 +113,7 @@ mod tests {
     fn deserialize_from(v: impl Serialize) -> String {
         let s = serde_cbor::to_vec(&v).unwrap();
         match serde_cbor::from_slice::<HgTime>(&s) {
-            Err(e) => format!("Err({})", e),
+            Err(e) => format!("Err({e})"),
             Ok(v) => format!("{} {}", v.unixtime, v.offset),
         }
     }
