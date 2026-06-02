@@ -115,13 +115,13 @@ impl Bar {
                     "n" => b.name = v.to_string(),
                     "s" => b.sleep_ms = v.parse()?,
                     "u" => b.unit = v.to_string(),
-                    _ => bail!("unknown key: {}", k),
+                    _ => bail!("unknown key: {k}"),
                 },
                 None => match v {
                     "a" => b.adhoc = true,
                     "p" => b.parallel = true,
                     "" => {}
-                    _ => bail!("unknown flag: {}", v),
+                    _ => bail!("unknown flag: {v}"),
                 },
             }
         }
@@ -172,7 +172,7 @@ impl Bar {
 }
 
 fn consume<'a>(s: &'a str, p: &str) -> Result<&'a str> {
-    s.strip_prefix(p).ok_or_else(|| anyhow!("expected {}", p))
+    s.strip_prefix(p).ok_or_else(|| anyhow!("expected {p}"))
 }
 
 pub fn aliases() -> &'static str {
