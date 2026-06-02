@@ -504,7 +504,7 @@ impl CommitGraphStorage for CachingCommitGraphStorage {
             get_or_fill(&self.request_required(ctx, Prefetch::None), hashset![cs_id]).await?;
         Ok(found
             .remove(&cs_id)
-            .ok_or_else(|| anyhow!("Missing changeset from commit graph storage: {}", cs_id))?
+            .ok_or_else(|| anyhow!("Missing changeset from commit graph storage: {cs_id}"))?
             .take())
     }
 
