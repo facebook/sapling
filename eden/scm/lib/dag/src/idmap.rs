@@ -574,10 +574,10 @@ mod tests {
                 match (lookup_id, lookup_name) {
                     (None, None) => deleted_ids.push(id),
                     (None, Some(_)) => {
-                        panic!("name->id deleted but not id->name: ({:?} {:?})", id, name)
+                        panic!("name->id deleted but not id->name: ({id:?} {name:?})")
                     }
                     (Some(_), None) => {
-                        panic!("id->name deleted but not name->id: ({:?} {:?})", id, name)
+                        panic!("id->name deleted but not name->id: ({id:?} {name:?})")
                     }
                     (Some(lid), Some(lname)) => {
                         assert_eq!(lid, id);

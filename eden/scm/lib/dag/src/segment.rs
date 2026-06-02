@@ -172,8 +172,7 @@ impl Segment {
         let span = self.span()?;
         if high.group() != span.high.group() || high < span.low {
             return programming(format!(
-                "with_high got invalid input (segment: {:?} new_high: {:?})",
-                self, high,
+                "with_high got invalid input (segment: {self:?} new_high: {high:?})",
             ));
         }
         let parents = self.parents()?;
@@ -261,10 +260,10 @@ pub fn describe_segment_bytes(data: &[u8]) -> String {
     };
     if let Ok(flags) = cur.read_u8() {
         let flags = SegmentFlags::from_bits_truncate(flags);
-        explain(&cur, format!("Flags = {:?}", flags));
+        explain(&cur, format!("Flags = {flags:?}"));
     }
     if let Ok(lv) = cur.read_u8() {
-        explain(&cur, format!("Level = {:?}", lv));
+        explain(&cur, format!("Level = {lv:?}"));
     }
     if let Ok(head) = cur.read_u64::<BigEndian>() {
         explain(&cur, format!("High = {}", Id(head)));
@@ -274,7 +273,7 @@ pub fn describe_segment_bytes(data: &[u8]) -> String {
         }
     }
     if let Ok(count) = VLQDecode::<usize>::read_vlq(&mut cur) {
-        explain(&cur, format!("Parent count = {}", count));
+        explain(&cur, format!("Parent count = {count}"));
         for i in 0..count {
             if let Ok(p) = VLQDecode::<u64>::read_vlq(&mut cur) {
                 explain(&cur, format!("Parents[{}] = {}", i, Id(p)));
@@ -288,7 +287,7 @@ pub(crate) fn hex(bytes: &[u8]) -> String {
     bytes
         .iter()
         .cloned()
-        .map(|b| format!("{:02x}", b))
+        .map(|b| format!("{b:02x}"))
         .collect::<Vec<String>>()
         .join(" ")
 }

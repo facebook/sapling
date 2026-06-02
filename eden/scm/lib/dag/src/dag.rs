@@ -356,8 +356,7 @@ where
         // Warn about possible misuses.
         if heads.vertexes_by_group(Group::MASTER).len() != heads.len() {
             return programming(format!(
-                "Dag::flush({:?}) is probably misused (group is not master)",
-                heads
+                "Dag::flush({heads:?}) is probably misused (group is not master)"
             ));
         }
 
@@ -858,8 +857,7 @@ where
         for id in clone_data.flat_segments.parents_head_and_roots() {
             if !clone_data.idmap.contains_key(&id) {
                 return programming(format!(
-                    "server does not provide name for id {:?} in pull data",
-                    id
+                    "server does not provide name for id {id:?} in pull data"
                 ));
             }
         }
@@ -904,9 +902,7 @@ where
             let to_names = |ids: &[Id], hint: &str| -> Result<Vec<Vertex>> {
                 let names = ids.iter().map(|i| match clone_data.idmap.get(i) {
                     Some(v) => Ok(v.clone()),
-                    None => {
-                        programming(format!("server does not provide name for {} {:?}", hint, i))
-                    }
+                    None => programming(format!("server does not provide name for {hint} {i:?}")),
                 });
                 names.collect()
             };
@@ -940,7 +936,7 @@ where
 
             for name in root_names {
                 if new.contains_vertex_name(&name).await? {
-                    let e = NeedSlowPath(format!("{:?} exists in local graph", name));
+                    let e = NeedSlowPath(format!("{name:?} exists in local graph"));
                     return Err(e);
                 }
             }
@@ -986,8 +982,7 @@ where
                 };
                 seg.ok_or_else(|| {
                     DagError::Programming(format!(
-                        "server does not provide segment covering id {}",
-                        server_id
+                        "server does not provide segment covering id {server_id}"
                     ))
                 })
             }
@@ -2831,7 +2826,7 @@ pub(crate) fn debug_segments_by_level_group<S: IdDagStore>(
                 );
                 let flags = show_flags(flags);
                 if !flags.is_empty() {
-                    line += &format!(" {}", flags);
+                    line += &format!(" {flags}");
                 }
                 result.push(line);
             }
@@ -2846,15 +2841,15 @@ fn debug<S: IdDagStore>(
     f: &mut fmt::Formatter,
 ) -> fmt::Result {
     if let Ok(max_level) = iddag.max_level() {
-        writeln!(f, "Max Level: {}", max_level)?;
+        writeln!(f, "Max Level: {max_level}")?;
         for lv in (0..=max_level).rev() {
-            writeln!(f, " Level {}", lv)?;
+            writeln!(f, " Level {lv}")?;
             for group in Group::ALL.iter().cloned() {
-                writeln!(f, "  {}:", group)?;
+                writeln!(f, "  {group}:")?;
                 if let Ok(segments) = iddag.next_segments(group.min_id(), lv) {
                     writeln!(f, "   Segments: {}", segments.len())?;
                     for line in debug_segments_by_level_group(iddag, idmap, lv, group) {
-                        writeln!(f, "    {}", line)?;
+                        writeln!(f, "    {line}")?;
                     }
                 }
             }

@@ -86,7 +86,7 @@ impl fmt::Display for AncestorPath {
 
 impl fmt::Debug for AncestorPath {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self)?;
+        write!(f, "{self}")?;
         if self.batch_size != 1 {
             write!(f, "(+{})", self.batch_size)?;
         }
@@ -144,10 +144,8 @@ impl RemoteIdConvertProtocol for () {
         &self,
         paths: Vec<AncestorPath>,
     ) -> Result<Vec<(AncestorPath, Vec<Vertex>)>> {
-        let msg = format!(
-            "Asked to resolve {:?} in graph but remote protocol is not configured",
-            paths
-        );
+        let msg =
+            format!("Asked to resolve {paths:?} in graph but remote protocol is not configured");
         crate::errors::programming(msg)
     }
 

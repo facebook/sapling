@@ -70,7 +70,7 @@ impl Ord for Span {
 
 impl Span {
     pub fn new(low: Id, high: Id) -> Self {
-        assert!(low <= high, "low {:?} <= high {:?}", low, high);
+        assert!(low <= high, "low {low:?} <= high {high:?}");
         Self { low, high }
     }
 
@@ -764,7 +764,7 @@ impl Debug for IdSet {
             .flat_map(|s| {
                 if s.low + 2 >= s.high {
                     // "low..=high" form is not shorter.
-                    (s.low.to(s.high)).map(|i| format!("{}", i)).collect()
+                    (s.low.to(s.high)).map(|i| format!("{i}")).collect()
                 } else {
                     vec![format!("{}..={}", s.low, s.high)]
                 }
@@ -1741,7 +1741,7 @@ mod tests {
         assert_eq!(iter.rev().collect::<Vec<Id>>(), rev_ids);
         for i in 0..=ids.len().min(10) {
             let nth = list.into_iter().nth(i);
-            assert_eq!(nth, ids.get(i).copied(), "{:?}.nth({})", ids, i);
+            assert_eq!(nth, ids.get(i).copied(), "{ids:?}.nth({i})");
         }
     }
 
@@ -1780,10 +1780,7 @@ mod tests {
         assert_eq!(
             sub_list.into_iter().collect::<Vec<Id>>(),
             ids,
-            "{:?}.skip({}).take({})",
-            list,
-            skip,
-            take
+            "{list:?}.skip({skip}).take({take})"
         );
     }
 

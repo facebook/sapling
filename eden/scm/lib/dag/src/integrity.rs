@@ -72,12 +72,11 @@ where
                     expected_low = span.low.group().min_id();
                 }
                 if span.low > span.high || span.low.group() != span.high.group() {
-                    add_problem(format!("has invalid span {:?}", span));
+                    add_problem(format!("has invalid span {span:?}"));
                 }
                 if span.low < expected_low {
                     add_problem(format!(
-                        "has unexpected span ({:?}), expected low ({:?})",
-                        span, expected_low
+                        "has unexpected span ({span:?}), expected low ({expected_low:?})"
                     ));
                 }
                 expected_low = span.high + 1;
@@ -100,8 +99,7 @@ where
                     if let Some(head) = previous_head {
                         if span.low <= head {
                             add_problem(format!(
-                                "overlapped segments: {:?} with previous head {:?}",
-                                span, head
+                                "overlapped segments: {span:?} with previous head {head:?}"
                             ));
                         }
                     }
@@ -128,8 +126,7 @@ where
                 let flags = seg.flags()?;
                 if !flags.contains(expected_flags_min) || !expected_flags_max.contains(flags) {
                     add_problem(format!(
-                        "has unexpected flags: {:?} (expected: min: {:?}, max: {:?})",
-                        flags, expected_flags_min, expected_flags_max
+                        "has unexpected flags: {flags:?} (expected: min: {expected_flags_min:?}, max: {expected_flags_max:?})"
                     ));
                 }
 
@@ -158,8 +155,7 @@ where
                     expected_parents.dedup();
                     if parents != expected_parents {
                         add_problem(format!(
-                            "has unexpected parents (expected: {:?})",
-                            expected_parents
+                            "has unexpected parents (expected: {expected_parents:?})"
                         ));
                     }
                 }
@@ -219,8 +215,7 @@ where
                 Some(seg) => seg,
                 None => {
                     problems.push(format!(
-                        "head_id {:?} should be covered by a flat segment",
-                        head_id
+                        "head_id {head_id:?} should be covered by a flat segment"
                     ));
                     continue;
                 }
@@ -243,26 +238,20 @@ where
             let set = match other.range(root.clone().into(), head.clone().into()).await {
                 Ok(set) => set,
                 Err(e) => {
-                    add_problem(format!("cannot resolve range on the other graph: {:?}", e));
+                    add_problem(format!("cannot resolve range on the other graph: {e:?}"));
                     continue;
                 }
             };
             let other_count = set.count_slow().await?;
             if other_count != this_count {
-                add_problem(format!(
-                    "length mismatch: {} != {}",
-                    this_count, other_count
-                ));
+                add_problem(format!("length mismatch: {this_count} != {other_count}"));
             }
 
             // Check that merge can only be at most 1 (`root`).
             let other_merges = other.merges(set).await?.count_slow().await?;
             let this_merges = if parents.len() > 1 { 1 } else { 0 };
             if other_merges != this_merges {
-                add_problem(format!(
-                    "merge mismatch: {} != {}",
-                    this_merges, other_merges
-                ));
+                add_problem(format!("merge mismatch: {this_merges} != {other_merges}"));
             }
 
             // Check parents of root.

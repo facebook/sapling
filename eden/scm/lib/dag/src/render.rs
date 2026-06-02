@@ -50,7 +50,7 @@ pub fn render_dag(
             renderer.next_row(node, parents, name, message)
         } else {
             if !message.is_empty() {
-                name += &format!(" {}", message);
+                name += &format!(" {message}");
             }
             renderer.next_row(node, parents, String::from("o"), name)
         };
@@ -61,7 +61,7 @@ pub fn render_dag(
         "\n{}",
         out.trim_end()
             .lines()
-            .map(|l| format!("            {}", l))
+            .map(|l| format!("            {l}"))
             .collect::<Vec<_>>()
             .join("\n")
     );
@@ -178,7 +178,7 @@ pub fn render_segment_dag(
         let span = seg.span()?;
         let get_hex = |id| -> String {
             non_blocking_result(dag.vertex_name(id))
-                .map(|s| format!("{:.12?}", s))
+                .map(|s| format!("{s:.12?}"))
                 .unwrap_or_default()
         };
         let name = format!(
@@ -189,7 +189,7 @@ pub fn render_segment_dag(
             span.high,
         );
         let row = renderer.next_row(seg, parents, String::from("o"), name);
-        write!(out, "{}", row)?;
+        write!(out, "{row}")?;
     }
 
     Ok(())

@@ -55,8 +55,8 @@ impl<'a, 'b: 'a> fmt::Write for PadAdapter<'a, 'b> {
 pub fn write_debug(formatter: &mut fmt::Formatter, value: impl fmt::Debug) -> fmt::Result {
     if formatter.alternate() {
         let mut writer = PadAdapter::new(formatter);
-        fmt::write(&mut writer, format_args!("\n{:#?}", value))
+        fmt::write(&mut writer, format_args!("\n{value:#?}"))
     } else {
-        write!(formatter, " {:?}", value)
+        write!(formatter, " {value:?}")
     }
 }

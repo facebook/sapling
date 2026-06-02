@@ -423,7 +423,7 @@ Lv1: R0-0[] R1-8[0]"#
     // Replace "[66]" to "B", "[67]" to "C", etc.
     let replace = |mut s: String| -> String {
         for ch in "ABCDEFGHIJKL".chars() {
-            s = s.replace(&format!("[{}]", ch as u8), &format!("{}", ch));
+            s = s.replace(&format!("[{}]", ch as u8), &format!("{ch}"));
         }
         s
     };
@@ -1360,12 +1360,12 @@ impl IdMap {
                     // Try to replace while maintaining width
                     if name.len() + 2 == id_str.len() {
                         result = result
-                            .replace(&format!("{}--", name), &id_str)
-                            .replace(&format!("{}  ", name), &id_str);
+                            .replace(&format!("{name}--"), &id_str)
+                            .replace(&format!("{name}  "), &id_str);
                     } else if name.len() + 1 == id_str.len() {
                         result = result
-                            .replace(&format!("{}-", name), &id_str)
-                            .replace(&format!("{} ", name), &id_str);
+                            .replace(&format!("{name}-"), &id_str)
+                            .replace(&format!("{name} "), &id_str);
                     }
                     result = result.replace(&name.to_string(), &id_str);
                 }
@@ -1408,7 +1408,7 @@ pub(crate) fn build_segments(text: &str, heads: &str, segment_size: usize) -> Bu
         dag.drawdag_with_limited_heads(text, &master[..], Some(&[head]));
         let annotated = dag.annotate_ascii(text);
         let segments = dag.render_segments();
-        ascii.push(format!("{}\n{}", annotated, segments));
+        ascii.push(format!("{annotated}\n{segments}"));
     }
 
     BuildSegmentResult {
@@ -1462,5 +1462,5 @@ pub(crate) fn dbg_iter<'a, T: std::fmt::Debug>(
 
 #[cfg(test)]
 pub(crate) fn dbg<T: std::fmt::Debug>(t: T) -> String {
-    format!("{:?}", t)
+    format!("{t:?}")
 }

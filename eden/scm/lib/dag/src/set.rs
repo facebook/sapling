@@ -1220,7 +1220,7 @@ pub(crate) mod tests {
                 .map(|i| String::from_utf8(i.unwrap().as_ref().to_vec()).unwrap())
                 .collect::<Vec<String>>()
                 .join(" ");
-            format!("{} = [{}]", s, v)
+            format!("{s} = [{v}]")
         };
 
         assert_eq!(f(a()), "<spans []> = []");

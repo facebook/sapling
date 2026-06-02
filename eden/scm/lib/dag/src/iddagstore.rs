@@ -72,8 +72,7 @@ pub trait IdDagStore: Send + Sync + 'static {
         // `segment` must be a flat segment.
         if segment.level()? != 0 {
             return programming(format!(
-                "resize_flat_segment requires a flat segment, got {:?}",
-                segment
+                "resize_flat_segment requires a flat segment, got {segment:?}"
             ));
         }
 
@@ -89,14 +88,12 @@ pub trait IdDagStore: Send + Sync + 'static {
         if let Some(existing_segment) = self.find_flat_segment_including_id(span.high)? {
             if &existing_segment != segment {
                 return programming(format!(
-                    "resize_flat_segment got {:?} which does not match the existing segment {:?}",
-                    segment, existing_segment
+                    "resize_flat_segment got {segment:?} which does not match the existing segment {existing_segment:?}"
                 ));
             }
         } else {
             return programming(format!(
-                "resize_flat_segment got a non-existed segment {:?}",
-                segment
+                "resize_flat_segment got a non-existed segment {segment:?}"
             ));
         }
 
@@ -106,8 +103,7 @@ pub trait IdDagStore: Send + Sync + 'static {
             let overlap = taken.intersection(&span.into());
             if !overlap.is_empty() {
                 return programming(format!(
-                    "resize_flat_segment cannot overlap with existing segments (segment: {:?} new_high: {:?}, overlap: {:?})",
-                    segment, new_high, overlap,
+                    "resize_flat_segment cannot overlap with existing segments (segment: {segment:?} new_high: {new_high:?}, overlap: {overlap:?})",
                 ));
             }
         }
@@ -117,8 +113,7 @@ pub trait IdDagStore: Send + Sync + 'static {
             if let Some(item) = self.iter_flat_segments_with_parent_span(span)?.next() {
                 let (_, child) = item?;
                 return programming(format!(
-                    "resize_flat_segment requires a segment without descendants, got {:?} with child segment {:?}",
-                    segment, child
+                    "resize_flat_segment requires a segment without descendants, got {segment:?} with child segment {child:?}"
                 ));
             }
         }
@@ -210,8 +205,7 @@ pub trait IdDagStore: Send + Sync + 'static {
                     // sanity check
                     if !span.contains(seg_span.low) {
                         return programming(format!(
-                            "span {:?} from all_ids_in_groups should cover all segment {:?}",
-                            span, seg
+                            "span {span:?} from all_ids_in_groups should cover all segment {seg:?}"
                         ));
                     }
                     result.push(span.low..=seg_span.high);
@@ -1023,7 +1017,7 @@ P->C: 50->N100, 50->N300"#
             relations.sort_unstable();
             let mut relations = relations
                 .into_iter()
-                .map(|(parent, child)| format!("{:?}->{:?}", parent, child))
+                .map(|(parent, child)| format!("{parent:?}->{child:?}"))
                 .collect::<Vec<_>>();
             parent_child_relations.append(&mut relations);
         }
