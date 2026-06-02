@@ -37,7 +37,7 @@ impl crate::Subcommand for ListCmd {
         if self.json {
             println!("{}", serde_json::to_string_pretty(&mounts)?);
         } else {
-            for (_, mount) in &mounts {
+            for mount in mounts.values() {
                 println!("{}", mount.display(self.verbose));
             }
         }
