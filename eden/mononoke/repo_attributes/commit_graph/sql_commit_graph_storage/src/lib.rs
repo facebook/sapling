@@ -167,29 +167,25 @@ impl RendezVousConnection {
             fetch_single: RendezVous::new(
                 ConfigurableRendezVousController::new(opts),
                 Arc::new(RendezVousStats::new(format!(
-                    "commit_graph.fetch_single.{}",
-                    name
+                    "commit_graph.fetch_single.{name}"
                 ))),
             ),
             fetch_linear_prefetch: RendezVous::new(
                 ConfigurableRendezVousController::new(opts),
                 Arc::new(RendezVousStats::new(format!(
-                    "commit_graph.fetch_linear_prefetch.{}",
-                    name
+                    "commit_graph.fetch_linear_prefetch.{name}"
                 ))),
             ),
             fetch_skip_tree_prefetch: RendezVous::new(
                 ConfigurableRendezVousController::new(opts),
                 Arc::new(RendezVousStats::new(format!(
-                    "commit_graph.fetch_skip_tree_prefetch.{}",
-                    name
+                    "commit_graph.fetch_skip_tree_prefetch.{name}"
                 ))),
             ),
             fetch_exact_skip_tree_prefetch: RendezVous::new(
                 ConfigurableRendezVousController::new(opts),
                 Arc::new(RendezVousStats::new(format!(
-                    "commit_graph.fetch_exact_skip_tree_prefetch.{}",
-                    name
+                    "commit_graph.fetch_exact_skip_tree_prefetch.{name}"
                 ))),
             ),
         }
@@ -2064,7 +2060,7 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
             .await?
             .remove(&cs_id)
             .map(|edges| edges.into())
-            .ok_or_else(|| anyhow!("Missing changeset from sql commit graph storage: {}", cs_id))
+            .ok_or_else(|| anyhow!("Missing changeset from sql commit graph storage: {cs_id}"))
     }
 
     async fn maybe_fetch_edges(
@@ -2097,7 +2093,7 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
                 unfetched_ids
                     .into_iter()
                     .fold(String::new(), |mut acc, cs_id| {
-                        let _ = write!(acc, "{}, ", cs_id);
+                        let _ = write!(acc, "{cs_id}, ");
                         acc
                     })
             );

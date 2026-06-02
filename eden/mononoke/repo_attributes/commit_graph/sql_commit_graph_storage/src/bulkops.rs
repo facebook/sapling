@@ -636,10 +636,7 @@ mod tests {
             assert_eq!(
                 result_with_edges.len(),
                 expected_count,
-                "Expected {} commits for range {:?} ({})",
-                expected_count,
-                range,
-                description
+                "Expected {expected_count} commits for range {range:?} ({description})"
             );
 
             let mut emitted_positions = HashMap::new();
@@ -653,13 +650,7 @@ mod tests {
                     if let Some(parent_pos) = emitted_positions.get(parent_cs_id) {
                         assert!(
                             *parent_pos < pos,
-                            "Parent {:?} at position {} should appear before child {:?} at position {} (range: {:?}, {})",
-                            parent_cs_id,
-                            parent_pos,
-                            cs_id,
-                            pos,
-                            range,
-                            description
+                            "Parent {parent_cs_id:?} at position {parent_pos} should appear before child {cs_id:?} at position {pos} (range: {range:?}, {description})"
                         );
                     }
                 }
