@@ -28,9 +28,13 @@ and add B_add and C_add. Note: there are no conflicts.
   $ cat > $TESTTMP/mergedriver-test.py << EOF
   > from sapling import node
   > import os
+  > def print_p1(ui, repo):
+  >     ui.write("  dirstate p1: %s\n" % (node.hex(repo.localvfs.tryread("dirstate")[:len(node.nullid)]),))
+  >     ui.write("  repo['.']  : %s\n" % (repo['.'].hex(),))
   > def preprocess(ui, repo, hooktype, mergestate, wctx, labels):
   >     from sapling import util
   >     ui.write("merge driver preprocess\n")
+  >     print_p1(ui, repo)
   >     # Right now, need to mark at least one file to get mergedriver running
   >     mergestate.mark("A", "d")  # driver-resovled
   >     # Intentionally not marking all touched files as "driver-resolved", to
@@ -39,6 +43,7 @@ and add B_add and C_add. Note: there are no conflicts.
   > 
   > def conclude(ui, repo, hooktype, mergestate, wctx, labels):
   >     ui.write("merge driver conclude\n")
+  >     print_p1(ui, repo)
   > 
   >     # emulating an external script making changes to the working copy
   >     os.unlink("A")
@@ -63,10 +68,18 @@ and add B_add and C_add. Note: there are no conflicts.
 
 Do the merge:
 
+  $ sl log -r . -T '{node}\n'
+  07830bb2f52c641cbdf5980da2ed28d3e27810db
   $ sl graft $C
   grafting cb95dc195621 "C"
   merge driver preprocess
+    dirstate p1: 07830bb2f52c641cbdf5980da2ed28d3e27810db
+    repo['.']  : 07830bb2f52c641cbdf5980da2ed28d3e27810db
   merge driver conclude
+    dirstate p1: 07830bb2f52c641cbdf5980da2ed28d3e27810db
+    repo['.']  : 07830bb2f52c641cbdf5980da2ed28d3e27810db
+  $ sl log -r . -T '{node}\n'
+  787731c2a155fbee93b622a2ef0f20823e1e87e4
 
 Status should be clean:
 
