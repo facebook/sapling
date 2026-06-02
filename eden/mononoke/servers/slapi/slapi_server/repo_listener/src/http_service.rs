@@ -110,13 +110,13 @@ impl HttpError {
 
         let body = match self {
             Self::BadRequest(e) => {
-                UnsyncBoxBody::new(Full::from(format!("{:#}", e)).map_err(|never| match never {}))
+                UnsyncBoxBody::new(Full::from(format!("{e:#}")).map_err(|never| match never {}))
             }
             Self::Forbidden => UnsyncBoxBody::default(),
             Self::NotFound => UnsyncBoxBody::default(),
             Self::MethodNotAllowed => UnsyncBoxBody::default(),
             Self::InternalServerError(e) => {
-                UnsyncBoxBody::new(Full::from(format!("{:#}", e)).map_err(|never| match never {}))
+                UnsyncBoxBody::new(Full::from(format!("{e:#}")).map_err(|never| match never {}))
             }
         };
 
@@ -157,7 +157,7 @@ fn bump_qps(headers: &HeaderMap, qps: Option<&Qps>) -> Result<()> {
             qps.bump(proxy_region.to_str()?)?;
             Ok(())
         }
-        None => Err(anyhow!("No {:?} header.", HEADER_REVPROXY_REGION)),
+        None => Err(anyhow!("No {HEADER_REVPROXY_REGION:?} header.")),
     }
 }
 
@@ -182,7 +182,7 @@ fn is_websocket_req(is_h2: bool, req: &Request<Incoming>) -> Result<bool, HttpEr
                 // NOTE: We're just stringifying here: the borrow is fine.
                 #[allow(clippy::borrow_interior_mutable_const)]
                 let header = &http::header::UPGRADE;
-                format!("Invalid header: {}", header)
+                format!("Invalid header: {header}")
             })
             .map_err(HttpError::BadRequest)?
             .unwrap_or_default()
@@ -238,7 +238,7 @@ where
             .and_then(|pq| pq.as_str().strip_prefix("/"))
             .and_then(|pq| pq.split_once('/'))
         {
-            let pq = http::uri::PathAndQuery::from_str(&format!("/{}", path_and_query))
+            let pq = http::uri::PathAndQuery::from_str(&format!("/{path_and_query}"))
                 .context("Error translating SaplingRemoteAPI request path")
                 .map_err(HttpError::internal)?;
             match flavour {
@@ -308,7 +308,7 @@ where
 
         match compression {
             Some(zstd_level) => {
-                builder = builder.header(HEADER_MONONOKE_ENCODING, format!("zstd={}", zstd_level));
+                builder = builder.header(HEADER_MONONOKE_ENCODING, format!("zstd={zstd_level}"));
             }
             _ => {}
         };

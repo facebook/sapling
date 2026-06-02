@@ -145,10 +145,10 @@ pub async fn connection_acceptor(
     let security_checker = ConnectionSecurityChecker::new(acl_provider, &common_config).await?;
     let addr: SocketAddr = sockname
         .parse()
-        .with_context(|| format!("could not parse '{}'", sockname))?;
+        .with_context(|| format!("could not parse '{sockname}'"))?;
     let listener = TcpListener::bind(&addr)
         .await
-        .with_context(|| format!("could not bind mononoke on '{}'", sockname))?;
+        .with_context(|| format!("could not bind mononoke on '{sockname}'"))?;
 
     let mut terminate_process = terminate_process.fuse();
 
@@ -650,7 +650,7 @@ impl ChannelConn {
                         scuba.add("stderr_bytes", data.stderr.bytes);
                         scuba.add("stderr_messages", data.stderr.messages);
                     }
-                    scuba.log_with_msg("Forwarding failed", format!("{:#}", e));
+                    scuba.log_with_msg("Forwarding failed", format!("{e:#}"));
                 }
 
                 wr.flush().await?;

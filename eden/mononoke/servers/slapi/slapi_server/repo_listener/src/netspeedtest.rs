@@ -88,11 +88,11 @@ fn download(
     fn read_byte_count(headers: &HeaderMap<HeaderValue>) -> Result<u64, Error> {
         headers
             .get(HEADER_DOWNLOAD_NBYTES)
-            .ok_or_else(|| anyhow!("Missing {} header", HEADER_DOWNLOAD_NBYTES))?
+            .ok_or_else(|| anyhow!("Missing {HEADER_DOWNLOAD_NBYTES} header"))?
             .to_str()
-            .with_context(|| format!("Invalid {} header (not UTF-8)", HEADER_DOWNLOAD_NBYTES))?
+            .with_context(|| format!("Invalid {HEADER_DOWNLOAD_NBYTES} header (not UTF-8)"))?
             .parse()
-            .with_context(|| format!("Invalid {} header (invalid usize)", HEADER_DOWNLOAD_NBYTES))
+            .with_context(|| format!("Invalid {HEADER_DOWNLOAD_NBYTES} header (invalid usize)"))
     }
 
     let byte_count = read_byte_count(headers).map_err(RequestError::Invalid)?;
