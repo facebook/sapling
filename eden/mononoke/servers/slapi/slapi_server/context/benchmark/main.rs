@@ -18,7 +18,7 @@ fn main() {
     let k2 = PerfCounterType::BlobPuts;
 
     let start = Local::now();
-    println!("Start: {}", start);
+    println!("Start: {start}");
 
     let n_threads = 10;
     let n_ops = 100000;
