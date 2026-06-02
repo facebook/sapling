@@ -74,8 +74,8 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: CheckPrereqsArgs) ->
                 bookmarks::Freshness::MostRecent,
             )
             .await
-            .with_context(|| format!("Failed to resolve bookmark '{}'", bookmark))?
-            .ok_or_else(|| anyhow!("Couldn't find bookmark: {}", bookmark))
+            .with_context(|| format!("Failed to resolve bookmark '{bookmark}'"))?
+            .ok_or_else(|| anyhow!("Couldn't find bookmark: {bookmark}"))
     } else {
         parse_commit_id(ctx, &source_repo, &args.source_changeset).await
     }?;
@@ -94,8 +94,8 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: CheckPrereqsArgs) ->
                 bookmarks::Freshness::MostRecent,
             )
             .await
-            .with_context(|| format!("Failed to resolve bookmark '{}'", bookmark))?
-            .ok_or_else(|| anyhow!("Couldn't find bookmark: {}", bookmark))
+            .with_context(|| format!("Failed to resolve bookmark '{bookmark}'"))?
+            .ok_or_else(|| anyhow!("Couldn't find bookmark: {bookmark}"))
     } else {
         parse_commit_id(ctx, &target_repo, &args.target_changeset).await
     }?;

@@ -92,7 +92,7 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: PreMergeDeleteArgs) 
     );
     delete_commits.reverse();
     for delete_commit in delete_commits {
-        println!("{}", delete_commit);
+        println!("{delete_commit}");
     }
 
     Ok(())

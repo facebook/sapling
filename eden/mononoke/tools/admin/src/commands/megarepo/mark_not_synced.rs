@@ -65,7 +65,7 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: MarkNotSyncedArgs) -
         .version_exists(&mapping_version_name)
         .await?
     {
-        return Err(format_err!("{} version is not found", mapping_version_name));
+        return Err(format_err!("{mapping_version_name} version is not found"));
     }
 
     let input_file = File::open(&args.input_file)
@@ -89,7 +89,7 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: MarkNotSyncedArgs) -
 
             if args.overwrite {
                 if let Some(WorkingCopyEquivalence::WorkingCopy(_, _)) = existing_value {
-                    return Err(format_err!("unexpected working copy found for {}", cs_id));
+                    return Err(format_err!("unexpected working copy found for {cs_id}"));
                 }
             } else if existing_value.is_some() {
                 info!("{} already have mapping", cs_id);

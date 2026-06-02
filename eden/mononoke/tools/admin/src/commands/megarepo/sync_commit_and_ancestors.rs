@@ -78,7 +78,7 @@ pub async fn run(
     let commit_sync_outcome = commit_sync_data
         .get_commit_sync_outcome(ctx, source_cs)
         .await?
-        .ok_or_else(|| format_err!("was not able to remap a commit {}", source_cs))?;
+        .ok_or_else(|| format_err!("was not able to remap a commit {source_cs}"))?;
     info!("remapped to {:?}", commit_sync_outcome);
 
     Ok(())

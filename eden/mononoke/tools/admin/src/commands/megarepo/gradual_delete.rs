@@ -75,7 +75,7 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: GradualDeleteArgs) -
     info!("Deletion finished");
     info!("Listing commits in an ancestor-descendant order");
     for delete_commit in delete_commits {
-        println!("{}", delete_commit);
+        println!("{delete_commit}");
     }
 
     Ok(())

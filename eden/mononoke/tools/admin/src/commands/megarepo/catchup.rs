@@ -81,7 +81,7 @@ pub async fn create_deletion_head_commits<'a>(
             .await?;
 
         let head_bookmark_val =
-            maybe_head_bookmark_val.ok_or_else(|| anyhow!("{} not found", head_bookmark))?;
+            maybe_head_bookmark_val.ok_or_else(|| anyhow!("{head_bookmark} not found"))?;
 
         let bcs_id = create_and_save_bonsai(
             ctx,
@@ -174,11 +174,11 @@ pub async fn validate(
     } else {
         error!("validation failed!");
         for (path, unode) in head_leaves {
-            println!("{}\t{}\t{}", head_commit, path, unode);
+            println!("{head_commit}\t{path}\t{unode}");
         }
 
         for (path, unode) in to_merge_commit_leaves {
-            println!("{}\t{}\t{}", to_merge_commit, path, unode);
+            println!("{to_merge_commit}\t{path}\t{unode}");
         }
     }
     Ok(())
@@ -200,7 +200,7 @@ async fn find_files_that_need_to_be_deleted(
         .await?;
 
     let head_bookmark_val =
-        maybe_head_bookmark_val.ok_or_else(|| anyhow!("{} not found", head_bookmark))?;
+        maybe_head_bookmark_val.ok_or_else(|| anyhow!("{head_bookmark} not found"))?;
 
     let head_root_unode = repo.repo_derived_data().derive::<RootUnodeManifestId>(
         ctx,

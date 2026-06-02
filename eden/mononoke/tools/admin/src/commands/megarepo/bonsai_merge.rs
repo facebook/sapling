@@ -48,6 +48,6 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: BonsaiMergeArgs) -> 
     let merge_cs_id =
         create_and_save_bonsai(ctx, &repo, changesets, Default::default(), cs_args).await?;
 
-    println!("{}", merge_cs_id);
+    println!("{merge_cs_id}");
     Ok(())
 }

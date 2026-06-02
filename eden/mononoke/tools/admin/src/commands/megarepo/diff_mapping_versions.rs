@@ -102,25 +102,25 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: DiffMappingVersionsA
     );
 
     if let Some((from, to)) = diff.default_action_change {
-        println!("default action change: {:?} to {:?}", from, to);
+        println!("default action change: {from:?} to {to:?}");
     }
 
     let mut mapping_added = diff.mapping_added.into_iter().collect::<Vec<_>>();
     mapping_added.sort();
     for (path_from, path_to) in mapping_added {
-        println!("mapping added: {} => {}", path_from, path_to);
+        println!("mapping added: {path_from} => {path_to}");
     }
 
     let mut mapping_changed = diff.mapping_changed.into_iter().collect::<Vec<_>>();
     mapping_changed.sort();
     for (path_from, (before, after)) in mapping_changed {
-        println!("mapping changed: {} => {} vs {}", path_from, before, after);
+        println!("mapping changed: {path_from} => {before} vs {after}");
     }
 
     let mut mapping_removed = diff.mapping_removed.into_iter().collect::<Vec<_>>();
     mapping_removed.sort();
     for (path_from, path_to) in mapping_removed {
-        println!("mapping removed: {} => {}", path_from, path_to);
+        println!("mapping removed: {path_from} => {path_to}");
     }
 
     Ok(())

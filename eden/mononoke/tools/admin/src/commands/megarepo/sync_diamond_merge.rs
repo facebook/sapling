@@ -233,8 +233,7 @@ pub async fn do_sync_diamond_merge(
         let parents = bcs.parents().collect::<Vec<_>>();
         if parents.len() > 1 {
             return Err(format_err!(
-                "{} from branch contains more than one parent",
-                cs_id
+                "{cs_id} from branch contains more than one parent"
             ));
         }
         info!("syncing commit from new branch {}", cs_id);
@@ -265,7 +264,7 @@ pub async fn do_sync_diamond_merge(
         .await?;
 
     let onto_value =
-        maybe_onto_value.ok_or_else(|| format_err!("cannot find bookmark {}", onto_bookmark))?;
+        maybe_onto_value.ok_or_else(|| format_err!("cannot find bookmark {onto_bookmark}"))?;
 
     let (rewritten, version_for_merge) = create_rewritten_merge_commit(
         ctx.clone(),
@@ -346,17 +345,13 @@ async fn create_rewritten_merge_commit(
 
     if version_p1 != version_p2 {
         return Err(format_err!(
-            "Parents are remapped with different commit sync config versions: {} vs {}",
-            version_p1,
-            version_p2
+            "Parents are remapped with different commit sync config versions: {version_p1} vs {version_p2}"
         ));
     }
 
     if root_version != version_p1 {
         return Err(format_err!(
-            "Commit sync version of root commit is different from p1 version: {} vs {}",
-            root_version,
-            version_p1,
+            "Commit sync version of root commit is different from p1 version: {root_version} vs {version_p1}",
         ));
     }
 
@@ -469,19 +464,14 @@ async fn remap_commit(
         .get_commit_sync_outcome(&ctx, cs_id)
         .await?;
 
-    let sync_outcome = maybe_sync_outcome.ok_or_else(|| {
-        format_err!(
-            "{} from small repo hasn't been remapped in large repo",
-            cs_id
-        )
-    })?;
+    let sync_outcome = maybe_sync_outcome
+        .ok_or_else(|| format_err!("{cs_id} from small repo hasn't been remapped in large repo"))?;
 
     use CommitSyncOutcome::*;
     match sync_outcome {
         RewrittenAs(ref cs_id, ref version) => Ok((*cs_id, version.clone())),
         _ => Err(format_err!(
-            "unexpected commit sync outcome for root, got {:?}",
-            sync_outcome
+            "unexpected commit sync outcome for root, got {sync_outcome:?}"
         )),
     }
 }
@@ -532,8 +522,7 @@ async fn find_new_branch_oldest_first(
 fn validate_parents(parents: Vec<ChangesetId>) -> Result<(ChangesetId, ChangesetId), Error> {
     if parents.len() > 2 {
         return Err(format_err!(
-            "too many parents, expected only 2: {:?}",
-            parents
+            "too many parents, expected only 2: {parents:?}"
         ));
     }
     let p1 = parents
@@ -548,7 +537,7 @@ fn validate_parents(parents: Vec<ChangesetId>) -> Result<(ChangesetId, Changeset
 
 fn validate_roots(roots: Vec<&ChangesetId>) -> Result<&ChangesetId, Error> {
     if roots.len() > 1 {
-        return Err(format_err!("too many roots, expected only 1: {:?}", roots));
+        return Err(format_err!("too many roots, expected only 1: {roots:?}"));
     }
 
     roots

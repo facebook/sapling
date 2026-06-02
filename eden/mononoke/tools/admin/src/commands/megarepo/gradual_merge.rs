@@ -448,7 +448,7 @@ mod test {
             .bookmarks()
             .get(ctx.clone(), &head, bookmarks::Freshness::MostRecent)
             .await?
-            .ok_or_else(|| anyhow::anyhow!("Bookmark {} doesn't exist", head))?;
+            .ok_or_else(|| anyhow::anyhow!("Bookmark {head} doesn't exist"))?;
 
         let merge = CreateCommitContext::new(
             &ctx,
@@ -470,7 +470,7 @@ mod test {
             .bookmarks()
             .get(ctx.clone(), &head, bookmarks::Freshness::MostRecent)
             .await?
-            .ok_or_else(|| anyhow::anyhow!("Bookmark {} doesn't exist", head))?;
+            .ok_or_else(|| anyhow::anyhow!("Bookmark {head} doesn't exist"))?;
 
         let merge = CreateCommitContext::new(
             &ctx,
@@ -608,7 +608,7 @@ mod test {
             assert_eq!(merged.len(), 1);
             let pushrebased_cs_id = merged.values().next().unwrap();
             let bcs_id = pushrebased_cs_id.load(&ctx, repo.repo_blobstore()).await?;
-            assert_eq!(bcs_id.message(), format!("{}", i));
+            assert_eq!(bcs_id.message(), format!("{i}"));
             result.extend(merged)
         }
         verify_gradual_merges(&ctx, &repo, result, pre_deletion_commit, &deletion_commits).await?;

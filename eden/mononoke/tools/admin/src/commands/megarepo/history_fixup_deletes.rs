@@ -113,7 +113,7 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: HistoryFixupDeletesA
     );
     delete_commits_fixup_branch.reverse();
     for delete_commit in delete_commits_fixup_branch {
-        println!("{}", delete_commit);
+        println!("{delete_commit}");
     }
 
     info!(
@@ -121,7 +121,7 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: HistoryFixupDeletesA
     );
     delete_commits_correct_branch.reverse();
     for delete_commit in delete_commits_correct_branch {
-        println!("{}", delete_commit);
+        println!("{delete_commit}");
     }
 
     Ok(())

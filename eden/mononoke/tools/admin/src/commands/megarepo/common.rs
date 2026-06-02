@@ -92,7 +92,7 @@ pub(crate) fn get_delete_commits_cs_args_factory(
     res_cs_args: LightResultingChangesetArgs,
 ) -> Result<Box<dyn ChangesetArgsFactory>> {
     get_commit_factory(res_cs_args, |s, num| -> String {
-        format!("[MEGAREPO DELETE] {} ({})", s, num)
+        format!("[MEGAREPO DELETE] {s} ({num})")
     })
 }
 
