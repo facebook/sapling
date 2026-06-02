@@ -31,7 +31,10 @@ py_class!(pub class BufferedTerminal |py| {
             .color_level(Some(ColorLevel::TrueColor))
             .mouse_reporting(Some(false));
         let caps = Capabilities::new_with_hints(hints).pyerr(py)?;
-        let system_terminal = SystemTerminal::new(caps.clone()).or_else(|_| SystemTerminal::new_from_stdio(caps)).pyerr(py)?;
+        let system_terminal = match SystemTerminal::new(caps.clone()) {
+            Ok(terminal) => terminal,
+            Err(_) => SystemTerminal::new_from_stdio(caps).pyerr(py)?,
+        };
         let terminal = NativeBufferedTerminal::new(system_terminal).pyerr(py)?;
         Self::create_instance(py, RwLock::new(terminal))
     }
