@@ -182,6 +182,7 @@
     "scm/mononoke:manifold_weak_consistency_max_age_ms": 0,
     "scm/mononoke:modern_sync_edenapi_timeout": 300,
     "scm/mononoke:blobstore_deduplicated_put_sampling_rate": 100000,
+    "scm/mononoke:virtually_sharded_blobstore_read_shard_timeout_ms": 0,
     "scm/mononoke:streaming_clone_chunk_aggregation_factor": 4,
     "scm/mononoke:diff_service_memory_multiplier": 3,
     "scm/mononoke:diff_service_commit_compare_estimated_bytes_per_path": 1024,
