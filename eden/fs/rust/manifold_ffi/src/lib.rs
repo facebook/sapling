@@ -44,11 +44,11 @@ fn manifold_write(
             timeout_msec,
         },
     )
-    .with_context(|| format!("Failed to create Manifold client for bucket {}", bucket))?;
+    .with_context(|| format!("Failed to create Manifold client for bucket {bucket}"))?;
 
     client
         .write(key.to_owned(), content.to_vec(), expiration_secs)
-        .with_context(|| format!("Failed to write key {} to Manifold bucket {}", key, bucket))?;
+        .with_context(|| format!("Failed to write key {key} to Manifold bucket {bucket}"))?;
 
     Ok(())
 }
