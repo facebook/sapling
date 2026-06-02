@@ -77,7 +77,7 @@ impl PreloadedEdges {
                     Ok(self
                         .cs_id_to_edges
                         .get(cs_id)
-                        .ok_or_else(|| anyhow!("Missing changeset edges for {}", cs_id))?
+                        .ok_or_else(|| anyhow!("Missing changeset edges for {cs_id}"))?
                         .to_thrift(**cs_id, *unique_id))
                 })
                 .collect::<Result<_>>()?,
@@ -110,11 +110,11 @@ impl PreloadedEdges {
         let cs_id = **self
             .unique_id_to_cs_id
             .get(&unique_id)
-            .ok_or_else(|| anyhow!("Missing changeset id for unique id: {}", unique_id))?;
+            .ok_or_else(|| anyhow!("Missing changeset id for unique id: {unique_id}"))?;
         let edges = self
             .cs_id_to_edges
             .get(&cs_id)
-            .ok_or_else(|| anyhow!("Missing changeset edges for {}", cs_id))?;
+            .ok_or_else(|| anyhow!("Missing changeset edges for {cs_id}"))?;
 
         Ok(ChangesetNode::new(
             cs_id,
@@ -286,7 +286,7 @@ impl ExtendablePreloadedEdges {
                 subtree_source_skew_ancestor,
             }),
         ) {
-            Some(old_edges) => Err(anyhow!("Duplicate changeset edges found: {:?}", old_edges)),
+            Some(old_edges) => Err(anyhow!("Duplicate changeset edges found: {old_edges:?}")),
             None => Ok(()),
         }
     }
@@ -419,8 +419,7 @@ impl CommitGraphStorage for PreloadedCommitGraphStorage {
         let edges = self.maybe_fetch_many_edges(ctx, cs_ids, prefetch).await?;
         if let Some(missing_changeset) = cs_ids.iter().find(|cs_id| !edges.contains_key(cs_id)) {
             Err(anyhow!(
-                "Missing changeset from preloaded commit graph storage: {}",
-                missing_changeset,
+                "Missing changeset from preloaded commit graph storage: {missing_changeset}",
             ))
         } else {
             Ok(edges)
