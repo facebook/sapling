@@ -31,12 +31,12 @@ where
     // Compatible with hex.
     if bytes.len() == Sha256::hex_len() {
         Sha256::from_hex(bytes).map_err(|e| {
-            let msg = format!("invalid Sha256: {} ({:?})", e, bytes);
+            let msg = format!("invalid Sha256: {e} ({bytes:?})");
             D::Error::custom(msg)
         })
     } else {
         Sha256::from_slice(bytes).map_err(|e| {
-            let msg = format!("invalid Sha256: {} ({:?})", e, bytes);
+            let msg = format!("invalid Sha256: {e} ({bytes:?})");
             D::Error::custom(msg)
         })
     }
