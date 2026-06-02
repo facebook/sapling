@@ -113,7 +113,7 @@ async fn get_manifests(
     let acl_root = manager
         .fetch_derived::<RootAclManifestId>(ctx, cs_id, None)
         .await?
-        .unwrap_or_else(|| panic!("Missing RootAclManifestId for {}", cs_id));
+        .unwrap_or_else(|| panic!("Missing RootAclManifestId for {cs_id}"));
     let acl_root_overlay = derive_hg_augmented_manifest::normalize_acl_root(&acl_root)?;
 
     // First derive the manifest in full using a temporary side blobstore.
@@ -186,10 +186,7 @@ async fn compare_manifests(
                 assert_eq!(filenode.into_nodehash(), aug_leaf.filenode);
             }
             _ => {
-                panic!(
-                    "Mismatched entry types for {}: {:?} vs {:?}",
-                    hg_path, hg_entry, aug_entry
-                );
+                panic!("Mismatched entry types for {hg_path}: {hg_entry:?} vs {aug_entry:?}");
             }
         }
     }
@@ -300,7 +297,7 @@ async fn test_augmented_manifest_multi_batch(fb: FacebookInit) -> Result<()> {
     for i in 1..10 {
         let parent = *csids.last().unwrap();
         let cs = CreateCommitContext::new(&ctx, &repo, vec![parent])
-            .add_file("file", format!("content_{}", i))
+            .add_file("file", format!("content_{i}"))
             .commit()
             .await?;
         csids.push(cs);
@@ -338,7 +335,7 @@ async fn test_augmented_manifest_multi_batch(fb: FacebookInit) -> Result<()> {
     for cs_id in &csids {
         let aug_id = derived
             .get(cs_id)
-            .unwrap_or_else(|| panic!("Missing RootHgAugmentedManifestId for {}", cs_id))
+            .unwrap_or_else(|| panic!("Missing RootHgAugmentedManifestId for {cs_id}"))
             .hg_augmented_manifest_id();
 
         let hg_cs_id = repo.derive_hg_changeset(&ctx, *cs_id).await?;
@@ -393,7 +390,7 @@ async fn test_augmented_manifest_derive_heads(fb: FacebookInit) -> Result<()> {
         let aug = manager
             .fetch_derived::<RootHgAugmentedManifestId>(&ctx, cs_id, None)
             .await?
-            .unwrap_or_else(|| panic!("Missing RootHgAugmentedManifestId for {}", cs_id));
+            .unwrap_or_else(|| panic!("Missing RootHgAugmentedManifestId for {cs_id}"));
 
         let hg_cs_id = repo.derive_hg_changeset(&ctx, cs_id).await?;
         let hg_manifest_id = hg_cs_id
@@ -462,7 +459,7 @@ async fn test_augmented_manifest_skip_writes(fb: FacebookInit) -> Result<()> {
         let aug = manager
             .fetch_derived::<RootHgAugmentedManifestId>(&ctx, cs_id, None)
             .await?
-            .unwrap_or_else(|| panic!("Missing RootHgAugmentedManifestId for {}", cs_id));
+            .unwrap_or_else(|| panic!("Missing RootHgAugmentedManifestId for {cs_id}"));
 
         let hg_cs_id = repo.derive_hg_changeset(&ctx, cs_id).await?;
         let hg_manifest_id = hg_cs_id
@@ -592,8 +589,7 @@ async fn test_resolve_copy_from_filenodes(fb: FacebookInit) -> Result<()> {
     let original_path = NonRootMPath::new("original_file")?;
     assert!(
         result.contains_key(&(original_path.clone(), root)),
-        "Should resolve copy-from for original_file in parent {}",
-        root,
+        "Should resolve copy-from for original_file in parent {root}",
     );
 
     // Verify the resolved filenode matches the actual filenode in the parent HgManifest

@@ -819,7 +819,7 @@ async fn derive_and_load_augmented_manifest(
     let aug = manager
         .fetch_derived::<RootHgAugmentedManifestId>(ctx, cs_id, None)
         .await?
-        .context(format!("Missing RootHgAugmentedManifestId for {}", cs_id))?;
+        .context(format!("Missing RootHgAugmentedManifestId for {cs_id}"))?;
     let envelope = aug
         .hg_augmented_manifest_id()
         .load(ctx, repo.repo_blobstore())
@@ -875,7 +875,7 @@ async fn get_nested_dir_acl_pointer(
             .subentries
             .lookup(ctx, repo.repo_blobstore(), element.as_ref())
             .await?
-            .context(format!("{} should exist at depth {}", element, i))?;
+            .context(format!("{element} should exist at depth {i}"))?;
         match entry {
             HgAugmentedManifestEntry::DirectoryNode(dir) => {
                 if i == elements.len() - 1 {
@@ -887,7 +887,7 @@ async fn get_nested_dir_acl_pointer(
                     .await?;
                 current_envelope = std::borrow::Cow::Owned(child);
             }
-            _ => anyhow::bail!("{} should be a directory node at depth {}", element, i),
+            _ => anyhow::bail!("{element} should be a directory node at depth {i}"),
         }
     }
     unreachable!()

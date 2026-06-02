@@ -226,14 +226,14 @@ async fn create_one_changeset(fb: FacebookInit) {
     let (dirhash, manifest_dir_future) = upload_manifest_no_parents(
         ctx.clone(),
         &repo,
-        format!("file\0{}\n", filehash),
+        format!("file\0{filehash}\n"),
         &fake_dir_path,
     );
 
     let (root_mfid, root_manifest_future) = upload_manifest_no_parents(
         ctx.clone(),
         &repo,
-        format!("dir\0{}t\n", dirhash),
+        format!("dir\0{dirhash}t\n"),
         &RepoPath::root(),
     );
 
@@ -252,9 +252,7 @@ async fn create_one_changeset(fb: FacebookInit) {
     let files: Vec<_> = cs.files().into();
     assert!(
         files == expected_files,
-        "Got {:?}, expected {:?}",
-        files,
-        expected_files
+        "Got {files:?}, expected {expected_files:?}"
     );
 
     // And check the file blob is present
@@ -278,14 +276,14 @@ async fn create_two_changesets(fb: FacebookInit) {
     let (dirhash, manifest_dir_future) = upload_manifest_no_parents(
         ctx.clone(),
         &repo,
-        format!("file\0{}\n", filehash),
+        format!("file\0{filehash}\n"),
         &fake_dir_path,
     );
 
     let (roothash, root_manifest_future) = upload_manifest_no_parents(
         ctx.clone(),
         &repo,
-        format!("dir\0{}t\n", dirhash),
+        format!("dir\0{dirhash}t\n"),
         &RepoPath::root(),
     );
 
@@ -302,7 +300,7 @@ async fn create_two_changesets(fb: FacebookInit) {
     let (roothash, root_manifest_future) = upload_manifest_one_parent(
         ctx.clone(),
         &repo,
-        format!("file\0{}\n", filehash),
+        format!("file\0{filehash}\n"),
         &RepoPath::root(),
         roothash,
     );
@@ -332,9 +330,7 @@ async fn create_two_changesets(fb: FacebookInit) {
     ];
     assert!(
         files == expected_files,
-        "Got {:?}, expected {:?}",
-        files,
-        expected_files
+        "Got {files:?}, expected {expected_files:?}"
     );
 
     assert!(commit1.parents().get_nodes() == (None, None));
@@ -358,14 +354,14 @@ async fn check_bonsai_creation(fb: FacebookInit) {
     let (dirhash, manifest_dir_future) = upload_manifest_no_parents(
         ctx.clone(),
         &repo,
-        format!("file\0{}\n", filehash),
+        format!("file\0{filehash}\n"),
         &fake_dir_path,
     );
 
     let (_, root_manifest_future) = upload_manifest_no_parents(
         ctx.clone(),
         &repo,
-        format!("dir\0{}t\n", dirhash),
+        format!("dir\0{dirhash}t\n"),
         &RepoPath::root(),
     );
 
@@ -413,7 +409,7 @@ async fn check_bonsai_creation_with_rename(fb: FacebookInit) {
         let (_, root_manifest_future) = upload_manifest_no_parents(
             ctx.clone(),
             &repo,
-            format!("file\0{}\n", filehash),
+            format!("file\0{filehash}\n"),
             &RepoPath::root(),
         );
 
@@ -439,7 +435,7 @@ async fn check_bonsai_creation_with_rename(fb: FacebookInit) {
         let (_, root_manifest_future) = upload_manifest_no_parents(
             ctx.clone(),
             &repo,
-            format!("file_rename\0{}\n", filehash),
+            format!("file_rename\0{filehash}\n"),
             &RepoPath::root(),
         );
 
@@ -496,12 +492,8 @@ async fn create_bad_changeset(fb: FacebookInit) {
         .expect("Couldn't create repo");
     let dirhash = string_to_nodehash("c2d60b35a8e7e034042a9467783bbdac88a0d219");
 
-    let (_, root_manifest_future) = upload_manifest_no_parents(
-        ctx,
-        &repo,
-        format!("dir\0{}t\n", dirhash),
-        &RepoPath::root(),
-    );
+    let (_, root_manifest_future) =
+        upload_manifest_no_parents(ctx, &repo, format!("dir\0{dirhash}t\n"), &RepoPath::root());
 
     let commit =
         create_changeset_no_parents(fb, &repo, root_manifest_future.map_ok(Some).boxed(), vec![]);
@@ -527,7 +519,7 @@ async fn upload_entries_finalize_success(fb: FacebookInit) {
     let (roothash, root_manifest_future) = upload_manifest_no_parents(
         ctx.clone(),
         &repo,
-        format!("file\0{}\n", filehash),
+        format!("file\0{filehash}\n"),
         &RepoPath::root(),
     );
 
@@ -568,7 +560,7 @@ async fn upload_entries_finalize_fail(fb: FacebookInit) {
     let (_, root_manifest_future) = upload_manifest_no_parents(
         ctx.clone(),
         &repo,
-        format!("dir\0{}t\n", dirhash),
+        format!("dir\0{dirhash}t\n"),
         &RepoPath::root(),
     );
     let (root_mfid, _) = root_manifest_future.await.unwrap();
@@ -609,12 +601,7 @@ async fn test_compute_changed_files_no_parents(fb: FacebookInit) {
     ))
     .await
     .unwrap();
-    assert!(
-        diff == expected,
-        "Got {:?}, expected {:?}\n",
-        diff,
-        expected,
-    );
+    assert!(diff == expected, "Got {diff:?}, expected {expected:?}\n",);
 }
 
 #[mononoke::fbinit_test]
@@ -653,12 +640,7 @@ async fn test_compute_changed_files_one_parent(fb: FacebookInit) {
     )
     .await
     .unwrap();
-    assert!(
-        diff == expected,
-        "Got {:?}, expected {:?}\n",
-        diff,
-        expected,
-    );
+    assert!(diff == expected, "Got {diff:?}, expected {expected:?}\n",);
 }
 
 fn make_bonsai_changeset(
@@ -1324,7 +1306,7 @@ impl TestHelper {
 
         let hg_cs = self.lookup_changeset(cs_id).await?;
 
-        let err = Error::msg(format!("Missing entry: {}", path));
+        let err = Error::msg(format!("Missing entry: {path}"));
 
         let entry = hg_cs
             .manifestid()
@@ -1348,7 +1330,7 @@ impl TestHelper {
             .lookup_entry(cs_id, path)
             .await?
             .into_tree()
-            .ok_or_else(|| Error::msg(format!("Not a manifest: {}", path)))?;
+            .ok_or_else(|| Error::msg(format!("Not a manifest: {path}")))?;
 
         let manifest = id.load(&self.ctx, self.repo.repo_blobstore()).await?;
 
@@ -1364,7 +1346,7 @@ impl TestHelper {
             .lookup_entry(cs_id, path)
             .await?
             .into_leaf()
-            .ok_or_else(|| Error::msg(format!("Not a filenode: {}", path)))?;
+            .ok_or_else(|| Error::msg(format!("Not a filenode: {path}")))?;
 
         let envelope = filenode.load(&self.ctx, self.repo.repo_blobstore()).await?;
 
