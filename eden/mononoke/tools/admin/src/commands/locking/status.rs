@@ -95,7 +95,7 @@ pub async fn locking_status(app: &MononokeApp, args: LockingStatusArgs) -> Resul
     all_status.sort_unstable_by_key(|(name, _)| name.clone());
 
     for (name, state) in all_status {
-        println!("{:20} {:?}", name, state);
+        println!("{name:20} {state:?}");
     }
     Ok(())
 }
