@@ -922,7 +922,7 @@ impl storemodel::KeyStore for TreeStore {
             Some(entry) => Ok(Blob::Bytes(
                 entry.content.expect("no tree content").hg_content()?,
             )),
-            None => Err(anyhow!("key {:?} not found in manifest", key)),
+            None => Err(anyhow!("key {key:?} not found in manifest")),
         }
     }
 

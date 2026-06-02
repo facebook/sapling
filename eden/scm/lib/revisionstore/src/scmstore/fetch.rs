@@ -314,7 +314,7 @@ impl fmt::Display for KeyFetchError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::KeyedError(KeyedError(key, err)) => {
-                write!(f, "key fetch failed {}: {:?}", key, err)
+                write!(f, "key fetch failed {key}: {err:?}")
             }
             Self::MaxFetchCountExceeded(msg) => f.write_str(msg),
             Self::NotFoundLocally(key) => {
