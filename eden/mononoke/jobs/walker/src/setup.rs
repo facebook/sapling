@@ -146,7 +146,7 @@ pub async fn setup_common(
         let metadatadb_config = &repo_conf.storage_config.metadata;
         let tail_params = parsed_tail_params
             .get_mut(metadatadb_config)
-            .ok_or_else(|| format_err!("No tail params for {}", repo))?;
+            .ok_or_else(|| format_err!("No tail params for {repo}"))?;
 
         // repo factory reuses sql factory if one was already initiated for the config
         let sql_factory = repo_factory.sql_factory(metadatadb_config).await?;
@@ -189,7 +189,7 @@ pub async fn setup_common(
             if let Some(walker_type) = walker_type {
                 if let Some(ref mut checkpoints) = chunking.checkpoints {
                     checkpoints.checkpoint_name =
-                        format!("{}_{}_{}", CHECKPOINT_PREFIX, walker_type, repo);
+                        format!("{CHECKPOINT_PREFIX}_{walker_type}_{repo}");
                 }
             }
         }
