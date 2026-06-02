@@ -53,10 +53,7 @@ fn main() {
     let files = stats.files.load(Ordering::Relaxed) as f64;
     let lat = duration_ms / files;
     let qps = files / duration_ms;
-    println!(
-        "lat: {:.4} ms, qps: {:.0}, dur: {:?}, {}, rate {}",
-        lat, qps, duration, stats, rate
-    );
+    println!("lat: {lat:.4} ms, qps: {qps:.0}, dur: {duration:?}, {stats}, rate {rate}");
 }
 
 #[derive(Default)]
@@ -145,7 +142,7 @@ impl ProbeAction {
             let cmd = &s[..space];
             let path = &s[space + 1..];
             if path.is_empty() {
-                bail!("{} requires path", cmd);
+                bail!("{cmd} requires path");
             }
             match cmd {
                 "cat" => Ok(ProbeAction::Read(path.into())),
@@ -155,10 +152,10 @@ impl ProbeAction {
                 "rm" => Ok(ProbeAction::Rm(path.into())),
                 "mkdirall" => Ok(ProbeAction::MkdirAll(path.into())),
                 "rmdirall" => Ok(ProbeAction::RmdirAll(path.into())),
-                _ => bail!("Unknown command {}", cmd),
+                _ => bail!("Unknown command {cmd}"),
             }
         } else {
-            bail!("Invalid action {}", s);
+            bail!("Invalid action {s}");
         }
     }
 
@@ -174,7 +171,7 @@ impl ProbeAction {
         };
         if let Err(err) = r {
             stats.errors.fetch_add(1, Ordering::Relaxed);
-            eprintln!("{} failed: {}", self, err);
+            eprintln!("{self} failed: {err}");
         }
     }
 
@@ -264,5 +261,5 @@ fn rate(rate: f64) -> String {
     let unit = ["b/s", "kb/s", "Mb/s", "Gb/s", "Tb/s", "Pb/s", "Eb/s"][log];
     let prec = if log > 1 { 2 } else { 0 };
 
-    format!("{:.*} {}", prec, shifted, unit)
+    format!("{shifted:.prec$} {unit}")
 }
