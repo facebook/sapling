@@ -214,7 +214,7 @@ pub fn build_reporting_handler<'a>(
                     let duration =
                         maybe_stats.map_or_else(|| Duration::from_secs(0), |s| s.completion_time);
 
-                    let error = maybe_error.map(|e| format!("{:?}", e));
+                    let error = maybe_error.map(|e| format!("{e:?}"));
                     let next_id = get_id_to_search_after(&log_entries);
 
                     let n = bookmarks
