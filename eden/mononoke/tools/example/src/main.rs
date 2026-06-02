@@ -50,7 +50,7 @@ async fn async_main(app: MononokeApp) -> Result<()> {
         );
     }
     if let Some(test_arg) = test_args.test_arg {
-        println!("Test arg: {}", test_arg);
+        println!("Test arg: {test_arg}");
     }
 
     Ok(())
