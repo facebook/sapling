@@ -79,7 +79,7 @@ struct CacheKey(String);
 
 impl CacheKey {
     fn from_key(key: &str) -> Self {
-        Self(format!("vsb.{}", key))
+        Self(format!("vsb.{key}"))
     }
 }
 
@@ -113,7 +113,7 @@ impl CacheData {
             return Ok(Self::Stored(val));
         }
 
-        Err(anyhow!("Invalid prefix: {:?}", prefix))
+        Err(anyhow!("Invalid prefix: {prefix:?}"))
     }
 }
 
@@ -151,7 +151,7 @@ impl PresenceData {
             return Ok(Self::Put(u64::from_ne_bytes(bytes)));
         }
 
-        Err(anyhow!("Invalid prefix: {:?}", prefix))
+        Err(anyhow!("Invalid prefix: {prefix:?}"))
     }
 
     fn serialize(&self) -> Bytes {
@@ -1042,7 +1042,7 @@ mod test {
                     let count = sender.receiver_count();
 
                     if count > 1 {
-                        return Err(anyhow!("Too many first receivers: {}", count));
+                        return Err(anyhow!("Too many first receivers: {count}"));
                     }
 
                     if count > 0 {
@@ -1061,7 +1061,7 @@ mod test {
                     let count = sender.receiver_count();
 
                     if count > 1 {
-                        return Err(anyhow!("Too many second receivers: {}", count));
+                        return Err(anyhow!("Too many second receivers: {count}"));
                     }
 
                     if count > 0 {
@@ -1091,7 +1091,7 @@ mod test {
                     let count = sender.receiver_count();
 
                     if count > 1 {
-                        return Err(anyhow!("Too many third receivers: {}", count));
+                        return Err(anyhow!("Too many third receivers: {count}"));
                     }
 
                     if count > 0 {
@@ -1353,7 +1353,7 @@ mod test {
 
             // get
             let (stats, _) = futures::future::try_join_all((0..10u64).map(|i| {
-                let key = format!("get{}", i);
+                let key = format!("get{i}");
                 async move { blobstore.get(ctx, &key).await }
             }))
             .try_timed()
@@ -1363,7 +1363,7 @@ mod test {
 
             // is_present
             let (stats, _) = futures::future::try_join_all((0..10u64).map(|i| {
-                let key = format!("present{}", i);
+                let key = format!("present{i}");
                 async move { blobstore.is_present(ctx, &key).await }
             }))
             .try_timed()
@@ -1374,7 +1374,7 @@ mod test {
             // put
             let bytes = BlobstoreBytes::from_bytes("test foobar");
             let (stats, _) = futures::future::try_join_all(
-                (0..10u64).map(|i| blobstore.put(ctx, format!("put{}", i), bytes.clone())),
+                (0..10u64).map(|i| blobstore.put(ctx, format!("put{i}"), bytes.clone())),
             )
             .try_timed()
             .await?;
@@ -1413,7 +1413,7 @@ mod test {
             // get
             let (stats, _) = futures::future::try_join_all((0..10u64).flat_map(|i| {
                 (0..10u64).map(move |_| {
-                    let key = format!("get{}", i);
+                    let key = format!("get{i}");
                     async move { blobstore.get(ctx, &key).await }
                 })
             }))
@@ -1428,7 +1428,7 @@ mod test {
             // put
             let bytes = &BlobstoreBytes::from_bytes("test foobar");
             let (stats, _) = futures::future::try_join_all((0..10u64).flat_map(|i| {
-                (0..10u64).map(move |_| blobstore.put(ctx, format!("put{}", i), bytes.clone()))
+                (0..10u64).map(move |_| blobstore.put(ctx, format!("put{i}"), bytes.clone()))
             }))
             .try_timed()
             .await?;
