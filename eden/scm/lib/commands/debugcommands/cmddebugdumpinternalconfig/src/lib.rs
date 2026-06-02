@@ -79,7 +79,7 @@ pub fn run(ctx: ReqCtx<DebugDumpConfigOpts>, repo: Option<&Repo>) -> Result<u8> 
                 let split: Vec<_> = arg.splitn(2, '.').collect();
                 if let [section, name] = split[..] {
                     let value: String = generated.get_opt(section, name)?.unwrap_or_default();
-                    ctx.core.io.write(format!("{}\n", value))?;
+                    ctx.core.io.write(format!("{value}\n"))?;
                 }
             }
         }
