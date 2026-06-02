@@ -456,7 +456,7 @@ impl EdenConfig {
         let root = fs_err::read_link(dot_eden.join("root"))?
             .into_os_string()
             .into_string()
-            .map_err(|path| anyhow!("couldn't stringify path {:?}", path))?;
+            .map_err(|path| anyhow!("couldn't stringify path {path:?}"))?;
         let socket = fs_err::read_link(dot_eden.join("socket"))?;
         let client = fs_err::read_link(dot_eden.join("client"))?;
         Ok(Self {

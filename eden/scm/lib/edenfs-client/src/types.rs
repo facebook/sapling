@@ -40,7 +40,7 @@ impl LocalFrom<edenfs::ScmFileStatus> for FileStatus {
             edenfs::ScmFileStatus::MODIFIED => FileStatus::Modified,
             edenfs::ScmFileStatus::REMOVED => FileStatus::Removed,
             edenfs::ScmFileStatus::IGNORED => FileStatus::Ignored,
-            _ => panic!("unexpected ScmFileStatus: {}", status),
+            _ => panic!("unexpected ScmFileStatus: {status}"),
         }
     }
 }
@@ -65,7 +65,7 @@ impl LocalFrom<edenfs::ConflictType> for ConflictType {
             edenfs::ConflictType::MISSING_REMOVED => ConflictType::MissingRemoved,
             edenfs::ConflictType::MODIFIED_MODIFIED => ConflictType::ModifiedModified,
             edenfs::ConflictType::DIRECTORY_NOT_EMPTY => ConflictType::DirectoryNotEmpty,
-            _ => panic!("unexpected ConflictType: {}", conflict_type),
+            _ => panic!("unexpected ConflictType: {conflict_type}"),
         }
     }
 }
