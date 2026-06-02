@@ -149,15 +149,11 @@ impl crate::Subcommand for StressCmd {
                     .await
                     .with_context(|| {
                         anyhow!(
-                            "failed to complete {} {} requests across {} tasks",
-                            num_requests,
-                            request_name,
-                            num_tasks
+                            "failed to complete {num_requests} {request_name} requests across {num_tasks} tasks"
                         )
                     })?;
                 println!(
-                    "Successfully issued {} {} requests across {} tasks",
-                    num_requests, request_name, num_tasks
+                    "Successfully issued {num_requests} {request_name} requests across {num_tasks} tasks"
                 );
                 Ok(0)
             }
@@ -202,8 +198,7 @@ impl crate::Subcommand for StressCmd {
                     }
                 }
                 println!(
-                    "Total results: {} ({} directories, {} files).",
-                    num_results, num_tree_results, num_file_results
+                    "Total results: {num_results} ({num_tree_results} directories, {num_file_results} files)."
                 );
                 Ok(0)
             }

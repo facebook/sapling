@@ -68,7 +68,7 @@ mod fmt {
 
     pub fn debug_change_notification(notification: &ChangeNotification) -> impl Debug + '_ {
         let notification_str = notification.to_string();
-        Fmt(move |f| write!(f, "{}", notification_str))
+        Fmt(move |f| write!(f, "{notification_str}"))
     }
 
     pub fn debug_changes_since_result(result: &ChangesSinceV2Result) -> impl Debug + '_ {
@@ -131,7 +131,7 @@ fn handle_result(result: &ChangesSinceV2Result) -> Result<(), EdenFsError> {
 
     match serde_json::to_string(&response) {
         Ok(string) => {
-            println!("{}", string);
+            println!("{string}");
         }
         Err(e) => {
             tracing::error!(?e, ?response, "unable to serialize response to JSON");
@@ -186,7 +186,7 @@ impl crate::Subcommand for SubscribeCmd {
             .for_each(|result| async move {
                 match result {
                     Ok(result) => handle_result(&result).expect("Error while handling result."),
-                    Err(e) => eprintln!("Error: {}", e),
+                    Err(e) => eprintln!("Error: {e}"),
                 }
             })
             .await;

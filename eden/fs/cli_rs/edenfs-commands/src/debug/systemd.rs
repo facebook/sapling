@@ -26,7 +26,7 @@ impl crate::Subcommand for SystemdCmd {
         let instance = get_edenfs_instance();
         let unit = edenfs_client::daemon::get_systemd_unit(instance)
             .context("Failed to get systemd unit name")?;
-        println!("{}", unit);
+        println!("{unit}");
         Ok(0)
     }
 }
