@@ -106,7 +106,7 @@ impl FromStr for Sha256 {
 
     fn from_str(s: &str) -> Result<Self> {
         if s.len() != mem::size_of::<Sha256>() * 2 {
-            bail!("invalid sha256 length: {}", s);
+            bail!("invalid sha256 length: {s}");
         }
 
         let mut ret = [0; mem::size_of::<Sha256>()];
@@ -196,7 +196,7 @@ impl Arbitrary for ObjectAction {
 
         let path = if bool::arbitrary(g) { "" } else { "/123" };
 
-        let uri: Uri = format!("{}://{}{}", proto, domain, path).parse().unwrap();
+        let uri: Uri = format!("{proto}://{domain}{path}").parse().unwrap();
 
         Self {
             href: uri,
