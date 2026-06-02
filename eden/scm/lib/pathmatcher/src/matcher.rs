@@ -485,7 +485,7 @@ mod tests {
             .unwrap();
 
         let pats = &[
-            format!("relpath:{}", foo_glob),
+            format!("relpath:{foo_glob}"),
             "no".to_string(),
             foo_glob.clone(),
         ];
@@ -497,7 +497,7 @@ mod tests {
                 got,
                 vec![
                     // Not expanded - has explicit kind.
-                    format!("relpath:{}", foo_glob),
+                    format!("relpath:{foo_glob}"),
                     // Not expanded - doesn't match any files.
                     "no".to_string(),
                     // Expanded into file names.

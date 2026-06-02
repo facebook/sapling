@@ -271,8 +271,7 @@ mod test {
             for fileset in [None, Some(&fileset[..0]), Some(&fileset)] {
                 for empty_means_always_match in [true, false] {
                     let assert_context = format!(
-                        "pat={:?} fileset={:?} empty_means_always={:?}",
-                        pat, fileset, empty_means_always_match
+                        "pat={pat:?} fileset={fileset:?} empty_means_always={empty_means_always_match:?}"
                     );
 
                     let m =

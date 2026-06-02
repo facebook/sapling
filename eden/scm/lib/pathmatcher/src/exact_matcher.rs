@@ -149,7 +149,7 @@ mod tests {
         ];
         for (path, should_match) in cases {
             let matches = m.matches_file(RepoPath::from_str(path).unwrap()).unwrap();
-            assert_eq!(should_match, matches, "Matching {:?}", path);
+            assert_eq!(should_match, matches, "Matching {path:?}");
         }
 
         // Test directory prefix lookups.
@@ -166,7 +166,7 @@ mod tests {
             let actual = m
                 .matches_directory(RepoPath::from_str(path).unwrap())
                 .unwrap();
-            assert_eq!(expected, actual, "Directory match {:?}", path);
+            assert_eq!(expected, actual, "Directory match {path:?}");
         }
     }
 
@@ -183,7 +183,7 @@ mod tests {
             for path in cases {
                 let matches = m.matches_file(RepoPath::from_str(path).unwrap()).unwrap();
                 let expected = path == "dir/file" || !sensitive;
-                assert_eq!(expected, matches, "Matching {:?}", path);
+                assert_eq!(expected, matches, "Matching {path:?}");
             }
         }
     }
