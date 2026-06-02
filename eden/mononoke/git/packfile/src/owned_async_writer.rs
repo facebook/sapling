@@ -21,11 +21,11 @@ impl<T: AsyncWrite + Unpin> OwnedAsyncWrite for T {
     async fn write_all(&mut self, src: Vec<u8>) -> anyhow::Result<()> {
         tokio::io::AsyncWriteExt::write_all(self, src.as_slice())
             .await
-            .map_err(|e| anyhow::anyhow!("Error while writing bytes through OwnedAsyncWrite::write_all to underlying AsyncWrite: {:?}", e))
+            .map_err(|e| anyhow::anyhow!("Error while writing bytes through OwnedAsyncWrite::write_all to underlying AsyncWrite: {e:?}"))
     }
 
     async fn flush(&mut self) -> anyhow::Result<()> {
-        tokio::io::AsyncWriteExt::flush(self).await.map_err(|e| anyhow::anyhow!("Error while flushing bytes through OwnedAsyncWrite::flush to underlying AsyncWrite: {:?}", e))
+        tokio::io::AsyncWriteExt::flush(self).await.map_err(|e| anyhow::anyhow!("Error while flushing bytes through OwnedAsyncWrite::flush to underlying AsyncWrite: {e:?}"))
     }
 }
 
@@ -44,8 +44,7 @@ impl OwnedAsyncWrite for WrapperSender<Vec<u8>> {
     async fn write_all(&mut self, src: Vec<u8>) -> anyhow::Result<()> {
         self.inner.send(src).await.map_err(|e| {
             anyhow::anyhow!(
-                "Error while writing bytes to MPSC sender through OwnedAsyncWrite::write_all: {:?}",
-                e
+                "Error while writing bytes to MPSC sender through OwnedAsyncWrite::write_all: {e:?}"
             )
         })
     }

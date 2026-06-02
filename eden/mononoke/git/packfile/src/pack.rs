@@ -198,7 +198,7 @@ impl<T: OwnedAsyncWrite> PackfileWriter<T> {
                     let object_index = self
                         .object_id_with_index
                         .get(&id)
-                        .ok_or_else(|| anyhow::anyhow!("Couldn't find index for {}", id))?
+                        .ok_or_else(|| anyhow::anyhow!("Couldn't find index for {id}"))?
                         .clone();
                     let kind = DeltaRef { object_index };
                     Ok(Entry { kind, ..entry })

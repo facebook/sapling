@@ -105,13 +105,13 @@ impl<T: AsyncWrite + Unpin> BundleWriter<T> {
 
         // Append the pre-requisite objects, if present
         for prereq in prereqs.iter() {
-            let line = format!("-{} {}\n", prereq, BUNDLE_PREREQ_MSG);
+            let line = format!("-{prereq} {BUNDLE_PREREQ_MSG}\n");
             writer.write_all(line.as_bytes()).await?;
             bytes_written += line.len();
         }
         // Append the refs
         for (ref_name, id) in &refs {
-            let line = format!("{} {}\n", id, ref_name);
+            let line = format!("{id} {ref_name}\n");
             writer.write_all(line.as_bytes()).await?;
             bytes_written += line.len();
         }
