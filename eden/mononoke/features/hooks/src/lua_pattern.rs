@@ -139,7 +139,7 @@ fn pattern_to_regex(other: &str) -> String {
         .map(|item| match item {
             TranslationOutput::Literal(s) => regex::escape(&s),
             TranslationOutput::LuaSpecial(s) => lua_special_to_regex(&s),
-            TranslationOutput::CharClass(s) => format!("[{}]", s),
+            TranslationOutput::CharClass(s) => format!("[{s}]"),
         })
         .collect()
 }
