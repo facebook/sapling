@@ -39,7 +39,7 @@ pub fn run(ctx: ReqCtx<GraphOpts>, repo: &Repo) -> Result<u8> {
     };
 
     let mut out = ctx.io().output();
-    write!(out, "{}, Level: {}\n", group, level)?;
+    write!(out, "{group}, Level: {level}\n")?;
 
     let dag = dag::Dag::open(repo.store_path().join("segments/v1"))?;
     render_segment_dag(out, &dag, level, group)?;
