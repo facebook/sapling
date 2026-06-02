@@ -167,10 +167,10 @@ impl FromStr for AnyFileContentId {
 impl fmt::Display for AnyFileContentId {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            AnyFileContentId::ContentId(id) => write!(f, "{}", id),
-            AnyFileContentId::Sha1(id) => write!(f, "{}", id),
-            AnyFileContentId::Sha256(id) => write!(f, "{}", id),
-            AnyFileContentId::SeededBlake3(id) => write!(f, "{}", id),
+            AnyFileContentId::ContentId(id) => write!(f, "{id}"),
+            AnyFileContentId::Sha1(id) => write!(f, "{id}"),
+            AnyFileContentId::Sha256(id) => write!(f, "{id}"),
+            AnyFileContentId::SeededBlake3(id) => write!(f, "{id}"),
         }
     }
 }

@@ -250,21 +250,21 @@ pub struct SaplingRemoteApiServerError {
 impl SaplingRemoteApiServerError {
     pub fn new(err: impl std::fmt::Debug) -> SaplingRemoteApiServerError {
         SaplingRemoteApiServerError {
-            err: SaplingRemoteApiServerErrorKind::OpaqueError(format!("{:?}", err)),
+            err: SaplingRemoteApiServerErrorKind::OpaqueError(format!("{err:?}")),
             key: None,
         }
     }
 
     pub fn with_key(key: Key, err: impl std::fmt::Debug) -> SaplingRemoteApiServerError {
         SaplingRemoteApiServerError {
-            err: SaplingRemoteApiServerErrorKind::OpaqueError(format!("{:?}", err)),
+            err: SaplingRemoteApiServerErrorKind::OpaqueError(format!("{err:?}")),
             key: Some(key),
         }
     }
 
     pub fn with_path(path: RepoPathBuf, err: impl std::fmt::Debug) -> SaplingRemoteApiServerError {
         SaplingRemoteApiServerError {
-            err: SaplingRemoteApiServerErrorKind::OpaqueError(format!("{:?}", err)),
+            err: SaplingRemoteApiServerErrorKind::OpaqueError(format!("{err:?}")),
             key: Some(Key {
                 path,
                 hgid: *HgId::null_id(),
@@ -274,7 +274,7 @@ impl SaplingRemoteApiServerError {
 
     pub fn with_hgid(hgid: HgId, err: impl std::fmt::Debug) -> SaplingRemoteApiServerError {
         SaplingRemoteApiServerError {
-            err: SaplingRemoteApiServerErrorKind::OpaqueError(format!("{:?}", err)),
+            err: SaplingRemoteApiServerErrorKind::OpaqueError(format!("{err:?}")),
             key: Some(Key {
                 hgid,
                 path: RepoPathBuf::new(),
