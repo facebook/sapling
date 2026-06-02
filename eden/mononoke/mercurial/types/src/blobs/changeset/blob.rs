@@ -53,7 +53,7 @@ impl ChangesetMetadata {
             if idx > 0 {
                 write!(meta, ",").expect("writes to memory don't fail");
             }
-            write!(meta, "{}", parent).expect("writes to memory don't fail");
+            write!(meta, "{parent}").expect("writes to memory don't fail");
         }
 
         if meta.is_empty() {
@@ -174,7 +174,7 @@ impl HgChangesetContent {
 
         write!(out, "\n")?;
         for f in &self.files {
-            write!(out, "{}\n", f)?;
+            write!(out, "{f}\n")?;
         }
         write!(out, "\n")?;
         out.write_all(&self.message)?;

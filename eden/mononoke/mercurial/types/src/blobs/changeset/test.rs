@@ -130,7 +130,7 @@ quickcheck! {
         let esc = escape(&s);
         let unesc = unescape(&esc);
         if s != unesc {
-            println!("s: {:?}, esc: {:?}, unesc: {:?}", s, esc, unesc)
+            println!("s: {s:?}, esc: {esc:?}, unesc: {unesc:?}")
         }
         s == unesc
     }

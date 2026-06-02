@@ -249,10 +249,7 @@ impl RevlogChangeset {
             }
             .await
             .with_context(move || {
-                format!(
-                    "Error while deserializing changeset retrieved from key '{}'",
-                    key
-                )
+                format!("Error while deserializing changeset retrieved from key '{key}'")
             })
         }
     }
@@ -435,7 +432,7 @@ pub fn serialize_cs<W: Write>(cs: &RevlogChangeset, out: &mut W) -> Result<()> {
 
     write!(out, "\n")?;
     for f in cs.files() {
-        write!(out, "{}\n", f)?;
+        write!(out, "{f}\n")?;
     }
     write!(out, "\n")?;
     out.write_all(cs.message())?;
