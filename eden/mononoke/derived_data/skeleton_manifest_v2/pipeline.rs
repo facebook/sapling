@@ -79,9 +79,7 @@ impl PipelineDerivable for RootSkeletonManifestV2Id {
                     let output = results
                         .get(&parent_csid)
                         .or_else(|| parents.get(&parent_csid))
-                        .ok_or_else(|| {
-                            anyhow!("missing stage output for parent {}", parent_csid)
-                        })?;
+                        .ok_or_else(|| anyhow!("missing stage output for parent {parent_csid}"))?;
                     Ok(output.clone())
                 })
                 .collect::<Result<Vec<_>>>()?
@@ -155,9 +153,7 @@ impl PipelineDerivable for RootSkeletonManifestV2Id {
             if use_normal_mapping {
                 let Some(Entry::Tree(manifest)) = output else {
                     return Err(anyhow!(
-                        "terminal stage output for {} should be Some(Entry::Tree), got {:?}",
-                        cs_id,
-                        output,
+                        "terminal stage output for {cs_id} should be Some(Entry::Tree), got {output:?}",
                     ));
                 };
                 let mf_id = manifest
@@ -240,9 +236,7 @@ impl PipelineDerivable for RootSkeletonManifestV2Id {
                             skmf_thrift::SkeletonManifestV2StageOutput::empty(_) => None,
                             skmf_thrift::SkeletonManifestV2StageOutput::UnknownField(x) => {
                                 return Err(anyhow!(
-                                    "unknown SkeletonManifestV2StageOutput variant {} for {}",
-                                    x,
-                                    cs_id
+                                    "unknown SkeletonManifestV2StageOutput variant {x} for {cs_id}"
                                 ));
                             }
                         };
