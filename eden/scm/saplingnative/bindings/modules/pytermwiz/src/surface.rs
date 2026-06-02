@@ -91,6 +91,9 @@ py_class!(pub class Surface |py| {
         Ok(result)
     }
 
+    /// has_changes(seq) -> bool
+    ///
+    /// Return whether the surface has changes after the given sequence number.
     def has_changes(&self, seq: SequenceNo) -> PyResult<bool> {
         let mut result = false;
         self.inner(py).with_surface(py, &mut |surface| {
@@ -99,12 +102,25 @@ py_class!(pub class Surface |py| {
         Ok(result)
     }
 
+    /// current_seqno() -> int
+    ///
+    /// Return the current surface sequence number.
     def current_seqno(&self) -> PyResult<SequenceNo> {
         let mut result = 0;
         self.inner(py).with_surface(py, &mut |surface| {
             result = surface.current_seqno();
         });
         Ok(result)
+    }
+
+    /// flush_changes_older_than(seq) -> None
+    ///
+    /// Prune changes older than seq to free resources from the change log.
+    def flush_changes_older_than(&self, seq: SequenceNo) -> PyResult<PyNone> {
+        self.inner(py).with_surface_mut(py, &mut |surface| {
+            surface.flush_changes_older_than(seq);
+        });
+        Ok(PyNone)
     }
 
     def diff_screens(&self, other: Surface) -> PyResult<Vec<Change>> {

@@ -13,6 +13,7 @@ use cpython_ext::convert::Serde;
 use termwiz::caps::Capabilities;
 use termwiz::caps::ColorLevel;
 use termwiz::caps::ProbeHints;
+use termwiz::surface::SequenceNo;
 use termwiz::surface::Surface as NativeSurface;
 use termwiz::terminal::SystemTerminal;
 use termwiz::terminal::Terminal;
@@ -55,6 +56,31 @@ py_class!(pub class BufferedTerminal |py| {
         let mut inner = self.inner(py).write().unwrap();
         let result = inner.check_for_resize().pyerr(py)?;
         Ok(result)
+    }
+
+    /// has_changes(seq) -> bool
+    ///
+    /// Return whether the surface has changes after the given sequence number.
+    def has_changes(&self, seq: SequenceNo) -> PyResult<bool> {
+        let inner = self.inner(py).read().unwrap();
+        Ok(inner.has_changes(seq))
+    }
+
+    /// current_seqno() -> int
+    ///
+    /// Return the current surface sequence number.
+    def current_seqno(&self) -> PyResult<SequenceNo> {
+        let inner = self.inner(py).read().unwrap();
+        Ok(inner.current_seqno())
+    }
+
+    /// flush_changes_older_than(seq) -> None
+    ///
+    /// Prune changes older than seq to free resources from the change log.
+    def flush_changes_older_than(&self, seq: SequenceNo) -> PyResult<PyNone> {
+        let mut inner = self.inner(py).write().unwrap();
+        inner.flush_changes_older_than(seq);
+        Ok(PyNone)
     }
 
     // Deref<Target=Surface>
