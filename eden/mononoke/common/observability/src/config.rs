@@ -21,7 +21,7 @@ fn cfgr_to_scuba_level(level: &CfgrScubaVerbosityLevel) -> Result<ScubaVerbosity
     match *level {
         CfgrScubaVerbosityLevel::Normal => Ok(ScubaVerbosityLevel::Normal),
         CfgrScubaVerbosityLevel::Verbose => Ok(ScubaVerbosityLevel::Verbose),
-        other => Err(anyhow!("unexpected ScubaLoggingLevel: {:?}", other)),
+        other => Err(anyhow!("unexpected ScubaLoggingLevel: {other:?}")),
     }
 }
 
@@ -84,7 +84,7 @@ impl<'de> Deserialize<'de> for ObservabilityConfig {
         D: Deserializer<'de>,
     {
         let raw = CfgrObservabilityConfig::deserialize(deserializer)?;
-        let config = Self::try_from(raw).map_err(|e| D::Error::custom(format!("{:?}", e)))?;
+        let config = Self::try_from(raw).map_err(|e| D::Error::custom(format!("{e:?}")))?;
         Ok(config)
     }
 }
