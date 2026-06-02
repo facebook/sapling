@@ -7,6 +7,7 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     test_deps = [
         "//eden/mononoke/common/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/tests/fixtures:fixtures",
     ],
     deps = [
