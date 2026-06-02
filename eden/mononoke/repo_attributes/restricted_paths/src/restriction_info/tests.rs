@@ -607,7 +607,7 @@ async fn derive_and_load_hg_augmented_manifest(
     let root_hg_augmented_manifest_id = manager
         .fetch_derived::<RootHgAugmentedManifestId>(ctx, cs_id, None)
         .await?
-        .with_context(|| format!("Missing RootHgAugmentedManifestId for {}", cs_id))?
+        .with_context(|| format!("Missing RootHgAugmentedManifestId for {cs_id}"))?
         .hg_augmented_manifest_id();
     let root_envelope = root_hg_augmented_manifest_id
         .clone()
@@ -632,7 +632,7 @@ async fn load_hg_augmented_manifest_id_at_path(
             .subentries
             .lookup(ctx, repo.repo_blobstore(), element.as_ref())
             .await?
-            .with_context(|| format!("{} should exist at depth {}", element, index))?;
+            .with_context(|| format!("{element} should exist at depth {index}"))?;
         match entry {
             HgAugmentedManifestEntry::DirectoryNode(directory) => {
                 let hg_augmented_manifest_id = HgAugmentedManifestId::new(directory.treenode);
@@ -645,7 +645,7 @@ async fn load_hg_augmented_manifest_id_at_path(
                 current_envelope = std::borrow::Cow::Owned(child);
             }
             HgAugmentedManifestEntry::FileNode(_) => {
-                anyhow::bail!("{} should be a directory node", element);
+                anyhow::bail!("{element} should be a directory node");
             }
         }
     }
