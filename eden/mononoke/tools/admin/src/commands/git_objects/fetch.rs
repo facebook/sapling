@@ -70,13 +70,13 @@ async fn fetch_object(repo: &Repo, ctx: &CoreContext, mut fetch_args: FetchArgs)
         }
     };
     git_object.with_parsed(|object| match object {
-        Tree(tree) => println!("The object is a Git Tree\n\n{:#?}", tree),
+        Tree(tree) => println!("The object is a Git Tree\n\n{tree:#?}"),
         Blob(blob) => println!(
             "The object is a Git Blob\n\n{:#?}",
             String::from_utf8_lossy(blob.data)
         ),
-        Commit(commit) => println!("The object is a Git Commit\n\n{:#?}", commit),
-        Tag(tag) => println!("The object is a Git Tag\n\n{:#?}", tag),
+        Commit(commit) => println!("The object is a Git Commit\n\n{commit:#?}"),
+        Tag(tag) => println!("The object is a Git Tag\n\n{tag:#?}"),
     });
     Ok(())
 }
