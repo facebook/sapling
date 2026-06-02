@@ -108,13 +108,10 @@ fn log_perf<I, E: Debug>(stats: FutureStats, res: &Result<I, E>, len: u64) {
             let bytes_per_ns = (len as f64) / (stats.completion_time.as_nanos() as f64);
             let mbytes_per_s = bytes_per_ns * (10_u128.pow(9) as f64) / (2_u128.pow(20) as f64);
             let gb_per_s = mbytes_per_s * 8_f64 / 1024_f64;
-            eprintln!(
-                "Success: {:.2} MB/s ({:.2} Gb/s) ({:?})",
-                mbytes_per_s, gb_per_s, stats
-            );
+            eprintln!("Success: {mbytes_per_s:.2} MB/s ({gb_per_s:.2} Gb/s) ({stats:?})");
         }
         Err(e) => {
-            eprintln!("Failure: {:?}", e);
+            eprintln!("Failure: {e:?}");
         }
     };
 }
@@ -154,7 +151,7 @@ async fn run_benchmark_filestore<'a>(
         concurrency: args.concurrency,
     };
 
-    eprintln!("Test with {:?}, writing into {:?}", config, blobstore);
+    eprintln!("Test with {config:?}, writing into {blobstore:?}");
 
     let file = File::open(&args.input).await?;
     let metadata = file.metadata().await?;
@@ -174,7 +171,7 @@ async fn run_benchmark_filestore<'a>(
         (len, data.right_stream())
     };
 
-    eprintln!("Write start: {:?} B", len);
+    eprintln!("Write start: {len:?} B");
 
     let req = StoreRequest::new(len);
 
@@ -230,7 +227,7 @@ async fn open_blobstore(
                     blobstore_options.manifold_options.clone(),
                     put_behaviour,
                 )?;
-                let blobstore = PrefixBlobstore::new(manifold, format!("{}.", NAME));
+                let blobstore = PrefixBlobstore::new(manifold, format!("{NAME}."));
                 Arc::new(blobstore)
             }
             #[cfg(not(fbcode_build))]
@@ -359,7 +356,7 @@ impl KeyedBlobstore for NoopKeyedBlobstore {
             .inner
             .get(ctx, old_key)
             .await?
-            .with_context(|| format!("key {} not present", old_key))?;
+            .with_context(|| format!("key {old_key} not present"))?;
         Ok(self.inner.put(ctx, new_key, value.into_bytes()).await?)
     }
 
