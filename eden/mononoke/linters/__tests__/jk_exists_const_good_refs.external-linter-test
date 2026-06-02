@@ -1,0 +1,12 @@
+code = "RUSTJKEXISTS"
+oncall = "scm_server_treehugger"
+command = [
+  "{{JK_LINTER}}",
+  "--jk-command",
+  "{{MOCK_JK}}",
+  "@{{PATHSFILE}}",
+]
+~~~~~~~~~~
+fbcode/eden/mononoke/linters/__tests__/fixtures/jk_const_good.rs
+~~~~~~~~~~
+No lint messages.

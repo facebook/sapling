@@ -32,12 +32,11 @@ from typing import NamedTuple, Optional
 LINTER_CODE = "RUSTJKEXISTS"
 JK_QUERY_TIMEOUT = 30
 
-# Matches justknobs::eval, justknobs::get, and justknobs::get_as::<T> calls
-# with an inline string literal JK name. The \s* between ( and " handles
-# multi-line call formatting.
-JK_CALL_RE = re.compile(
-    r'justknobs::(?:eval|get(?:_as::<[^>]+>)?)\s*\(\s*"'
-    r'([a-z][a-z0-9_]*(?:/[a-z][a-z0-9_]*)+:[a-z][a-z0-9_:]*[a-z0-9_])"'
+# Matches any string literal that looks like a JK name ("knobset/path:knob").
+# Broader than matching only justknobs:: call sites -- also catches references
+# via const declarations, struct fields, and enum variant construction.
+JK_STRING_RE = re.compile(
+    r'"([a-z][a-z0-9_]*(?:/[a-z][a-z0-9_]*)+:[a-z][a-z0-9_:]*[a-z0-9_])"'
 )
 
 
@@ -80,7 +79,7 @@ def extract_jk_references_regex(
         except OSError:
             continue
 
-        for m in JK_CALL_RE.finditer(content):
+        for m in JK_STRING_RE.finditer(content):
             jk_name = m.group(1)
             line_no = content[: m.start()].count("\n") + 1
             key = (filepath, line_no, jk_name)
