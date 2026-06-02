@@ -193,14 +193,14 @@ impl Client for ThriftClient {
                     );
                 }
                 ErrorHandlingStrategy::Abort => {
-                    sample.fail(format!("{:?}", error).as_str());
+                    sample.fail(format!("{error:?}").as_str());
                     let _ = SCUBA_CLIENT.log(sample);
                     break Err(error);
                 }
             };
 
             if attempts > MAX_RETRY_ATTEMPTS {
-                sample.fail(format!("{:?}", error).as_str());
+                sample.fail(format!("{error:?}").as_str());
                 sample.add_bool("max_retry_reached", true);
                 let _ = SCUBA_CLIENT.log(sample);
                 break Err(error);
