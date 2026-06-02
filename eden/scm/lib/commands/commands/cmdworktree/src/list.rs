@@ -46,7 +46,7 @@ impl Formattable for ListOutputEntry {
             self.path.display()
         )?;
         if let Some(label) = &self.label {
-            write!(writer, "   {}", label)?;
+            write!(writer, "   {label}")?;
         }
         writeln!(writer)?;
         Ok(())

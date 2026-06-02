@@ -289,8 +289,7 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> 
     if let Err(e) = snapshot_result {
         if let Err(recovery_err) = restore_clean_state(&dest, &logger) {
             logger.warn(format!(
-                "also failed to restore clean state: {:#}",
-                recovery_err
+                "also failed to restore clean state: {recovery_err:#}"
             ));
         }
         return Err(e);
@@ -335,8 +334,8 @@ fn restore_snapshot_legacy(
         .and_then(|r| r)
         .context("creating snapshot")?;
 
-    logger.info(format!("created snapshot {}", id));
-    logger.info(format!("restoring snapshot {} into worktree...", id));
+    logger.info(format!("created snapshot {id}"));
+    logger.info(format!("restoring snapshot {id} into worktree..."));
 
     let sl_bin = current_sl_binary();
     sapling_snapshot_checkout(&sl_bin, dest, &id).context("restoring snapshot")?;
@@ -417,27 +416,18 @@ fn run_path_generator(
     let path_bytes = parse_generated_path_bytes(&output.stdout)?;
     let display_path = display_path_bytes(path_bytes);
     if path_bytes.contains(&b'\0') {
-        bail!(
-            "worktree.path-generator returned invalid path '{}': contains NUL byte",
-            display_path
-        );
+        bail!("worktree.path-generator returned invalid path '{display_path}': contains NUL byte");
     }
     let path = shell_output_bytes_to_path(path_bytes)
         .context("worktree.path-generator output could not be decoded as a path")?
         .into_owned();
     if !path.is_absolute() {
-        bail!(
-            "worktree.path-generator must return an absolute path, got '{}'",
-            display_path
-        );
+        bail!("worktree.path-generator must return an absolute path, got '{display_path}'");
     }
 
     let path = util::path::strip_unc_prefix(
         util::path::canonical_path_allow_missing(&path).with_context(|| {
-            format!(
-                "worktree.path-generator returned invalid path '{}'",
-                display_path
-            )
+            format!("worktree.path-generator returned invalid path '{display_path}'")
         })?,
     );
     Ok(path)
@@ -575,7 +565,7 @@ fn copy_items(
     for path in paths {
         let (data, metadata) = src_vfs
             .read_with_metadata(path)
-            .with_context(|| format!("reading {}", path))?;
+            .with_context(|| format!("reading {path}"))?;
         let flag = workingcopy::metadata::Metadata::from(metadata).to_update_flag(src_vfs);
         if work_tx
             .send(vfs::Work::Write(path.to_owned(), data.into(), flag, None))
@@ -606,7 +596,7 @@ fn drain_workers(
     }
 
     for (action, path, err) in &errors {
-        logger.warn(format!("failed {} {}: {:#}", action, path, err));
+        logger.warn(format!("failed {action} {path}: {err:#}"));
     }
 
     if !errors.is_empty() {
