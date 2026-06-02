@@ -581,8 +581,7 @@ fn union_manifest_restriction_info_with_config_precedence(
 
 fn unsupported_acl_manifest_type_error<T>(manifest_type: &ManifestType) -> Result<T> {
     anyhow::bail!(
-        "AclManifest manifest restriction lookup only supports HgAugmented manifests, got {}",
-        manifest_type
+        "AclManifest manifest restriction lookup only supports HgAugmented manifests, got {manifest_type}"
     )
 }
 
@@ -816,8 +815,7 @@ async fn load_acl_manifest_directory_id_from_manifest(
             .await
             .with_context(|| {
                 format!(
-                    "Failed to load HgAugmentedManifest envelope for manifest type {} id {}",
-                    manifest_type, manifest_id
+                    "Failed to load HgAugmentedManifest envelope for manifest type {manifest_type} id {manifest_id}"
                 )
             })?
     else {

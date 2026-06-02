@@ -155,7 +155,7 @@ pub async fn is_part_of_group(
     let membership_checker = acl_provider
         .group(group_name)
         .await
-        .with_context(|| format!("Failed to get membership checker for group {}", group_name))?;
+        .with_context(|| format!("Failed to get membership checker for group {group_name}"))?;
 
     Ok(membership_checker
         .is_member(ctx.metadata().identities())
@@ -278,7 +278,7 @@ fn restriction_check_result_for_source_results<T: SourceRestrictionCheck>(
     } else {
         let config = config_result
             .as_ref()
-            .map_err(|err| anyhow::anyhow!("{:#}", err))?;
+            .map_err(|err| anyhow::anyhow!("{err:#}"))?;
         SourceRestrictionSummary::from_checks(config.as_ref())
     };
     Ok(summary.into_restriction_check_result())
@@ -380,7 +380,7 @@ pub(crate) fn log_source_results_to_scuba_with_enforcement<T: SourceRestrictionC
             .iter()
             .map(|acl| {
                 MononokeIdentity::from_str(acl)
-                    .with_context(|| format!("Failed to parse repo_region_acl {}", acl))
+                    .with_context(|| format!("Failed to parse repo_region_acl {acl}"))
             })
             .collect::<Result<Vec<_>>>()?,
         None => Vec::new(),
@@ -417,7 +417,7 @@ pub(crate) fn log_source_results_to_scuba_with_enforcement<T: SourceRestrictionC
     config_result
         .as_ref()
         .map(|_| ())
-        .map_err(|err| anyhow::anyhow!("{:#}", err))
+        .map_err(|err| anyhow::anyhow!("{err:#}"))
 }
 
 async fn log_source_results<T>(
@@ -552,9 +552,9 @@ fn source_comparison_log_context<T: SourceRestrictionCheck>(
 
     Some(SourceComparisonLogContext {
         acl_manifest_mode,
-        config_error: config_result.as_ref().err().map(|err| format!("{:#}", err)),
+        config_error: config_result.as_ref().err().map(|err| format!("{err:#}")),
         acl_manifest_error: acl_manifest_result
-            .and_then(|result| result.as_ref().err().map(|err| format!("{:#}", err))),
+            .and_then(|result| result.as_ref().err().map(|err| format!("{err:#}"))),
         shadow_mismatch: shadow_mismatch_for_source_results(
             Some(config_result),
             acl_manifest_result,
