@@ -245,7 +245,7 @@ impl CommitId {
     pub fn into_bookmark_name(self) -> Result<String, Error> {
         match self {
             Self::Bookmark(name) => Ok(name),
-            _ => anyhow::bail!("expected bookmark name (got {})", self),
+            _ => anyhow::bail!("expected bookmark name (got {self})"),
         }
     }
 }
@@ -253,7 +253,7 @@ impl CommitId {
 impl fmt::Display for CommitId {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            CommitId::Resolve(id) => write!(f, "commit id '{}'", id),
+            CommitId::Resolve(id) => write!(f, "commit id '{id}'"),
             CommitId::BonsaiId(bonsai) => write!(f, "bonsai id '{}'", hex_string(bonsai)),
             CommitId::EphemeralBonsai(bonsai, bubble_id) => write!(
                 f,
@@ -263,9 +263,9 @@ impl fmt::Display for CommitId {
             ),
             CommitId::HgId(id) => write!(f, "hg commit id '{}'", hex_string(id)),
             CommitId::GitSha1(id) => write!(f, "git sha1 '{}'", hex_string(id)),
-            CommitId::Globalrev(rev) => write!(f, "globalrev '{}'", rev),
-            CommitId::Svnrev(rev) => write!(f, "svn revision '{}'", rev),
-            CommitId::Bookmark(bookmark) => write!(f, "bookmark '{}'", bookmark),
+            CommitId::Globalrev(rev) => write!(f, "globalrev '{rev}'"),
+            CommitId::Svnrev(rev) => write!(f, "svn revision '{rev}'"),
+            CommitId::Bookmark(bookmark) => write!(f, "bookmark '{bookmark}'"),
         }
     }
 }
