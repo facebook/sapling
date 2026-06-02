@@ -59,7 +59,7 @@ impl Fileblob {
         let base = base.as_ref();
 
         if !base.is_dir() {
-            bail!("Base {:?} doesn't exist or is not directory", base);
+            bail!("Base {base:?} doesn't exist or is not directory");
         }
 
         Ok(Self {
@@ -76,7 +76,7 @@ impl Fileblob {
 
     fn path(&self, key: &str) -> PathBuf {
         let key = percent_encode(key.as_bytes(), PATH);
-        self.base.join(format!("{}-{}", PREFIX, key))
+        self.base.join(format!("{PREFIX}-{key}"))
     }
 
     /// Stripping the prepended prefix (if its exists) before returning
