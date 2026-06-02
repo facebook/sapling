@@ -42,7 +42,7 @@ pub(crate) async fn bookmarks(
             match refs {
                 RequestedRefs::Included(refs) if refs.contains(&name) => Some((bookmark, cs_id)),
                 RequestedRefs::IncludedWithPrefix(ref_prefixes) => {
-                    let ref_name = format!("{}{}", REF_PREFIX, name);
+                    let ref_name = format!("{REF_PREFIX}{name}");
                     if ref_prefixes
                         .iter()
                         .any(|ref_prefix| ref_name.starts_with(ref_prefix))

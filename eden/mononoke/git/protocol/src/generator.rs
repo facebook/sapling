@@ -104,7 +104,7 @@ async fn boundary_trees_and_blobs(
                 .await
                 .context("Error in fetching boundary commit")?
                 .with_parsed_as_commit(|commit| GitTreeId(commit.tree()))
-                .ok_or_else(|| anyhow::anyhow!("Git object {:?} is not a commit", git_commit_id))?;
+                .ok_or_else(|| anyhow::anyhow!("Git object {git_commit_id:?} is not a commit"))?;
             let objects = root_tree.list_all_entries((*ctx).clone(), blobstore.clone()).try_collect::<Vec<_>>().await?;
             let objects = stream::iter(objects).map(async |(path, entry)| {
                 // If the entry is a submodule OR if the request has no filter or doesn't care about size, then let's assume size as 0
@@ -252,8 +252,7 @@ async fn trees_and_blobs_count(
                 .await
                 .with_context(|| {
                     format!(
-                        "Error while listing entries from GitDeltaManifest for changeset {:?}",
-                        changeset_id,
+                        "Error while listing entries from GitDeltaManifest for changeset {changeset_id:?}",
                     )
                 })?;
             Ok(objects)
@@ -743,10 +742,7 @@ async fn tag_packfile_stream<'a>(
                 )
                 .await
                 .with_context(|| {
-                    format!(
-                        "Error in getting bonsai_tag_mapping entry for tag name {}",
-                        tag_name
-                    )
+                    format!("Error in getting bonsai_tag_mapping entry for tag name {tag_name}")
                 })
                 .transpose()
         })

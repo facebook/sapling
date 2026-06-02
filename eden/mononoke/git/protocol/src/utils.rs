@@ -76,7 +76,7 @@ pub(crate) fn symref_target(
 ) -> RefTarget {
     match symref_format {
         SymrefFormat::NameWithTarget => {
-            let metadata = format!("symref-target:{}", symref_target);
+            let metadata = format!("symref-target:{symref_target}");
             RefTarget::WithMetadata(commit_id, metadata)
         }
         SymrefFormat::NameOnly => RefTarget::Plain(commit_id),
@@ -201,7 +201,7 @@ pub(crate) async fn tag_entries_to_hashes(
             if entry.target_is_tag {
                 fetch_nested_tags(&ctx, &blobstore, tag_hash.clone())
                     .await
-                    .with_context(|| format!("Error in fetching nested tags for entry {:?}", entry))
+                    .with_context(|| format!("Error in fetching nested tags for entry {entry:?}"))
             } else {
                 Ok(vec![tag_hash])
             }
@@ -249,8 +249,7 @@ pub(crate) async fn ancestors_after_time(
     let ancestors_with_boundaries = ancestors_with_boundaries(ctx, repo, ancestors).await?;
     if ancestors_with_boundaries.is_empty() {
         return Err(anyhow::anyhow!(
-            "No commits selected for shallow requests with committer time greater than {}",
-            time
+            "No commits selected for shallow requests with committer time greater than {time}"
         ));
     }
     Ok(ancestors_with_boundaries)

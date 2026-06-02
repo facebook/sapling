@@ -143,8 +143,8 @@ impl RefTarget {
 impl Display for RefTarget {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         match self {
-            RefTarget::Plain(oid) => write!(f, "{}", oid),
-            RefTarget::WithMetadata(oid, meta) => write!(f, "{} {}", oid, meta),
+            RefTarget::Plain(oid) => write!(f, "{oid}"),
+            RefTarget::WithMetadata(oid, meta) => write!(f, "{oid} {meta}"),
         }
     }
 }
@@ -843,8 +843,7 @@ impl BonsaiBookmarks {
             .map(|(bookmark, cs_id)| {
                 let git_objectid = bonsai_git_map.get(&cs_id).ok_or_else(|| {
                     anyhow::anyhow!(
-                        "No Git ObjectId found for changeset {:?} when converting to GitBookmarks",
-                        cs_id
+                        "No Git ObjectId found for changeset {cs_id:?} when converting to GitBookmarks"
                     )
                 })?;
                 Ok((bookmark, *git_objectid))
