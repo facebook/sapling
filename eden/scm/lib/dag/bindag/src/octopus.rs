@@ -29,7 +29,7 @@ pub fn cross_octopus() -> Vec<Vec<usize>> {
 
     (0..=32)
         .map(|i| {
-            parents[&format!("r{:02}", i)]
+            parents[&format!("r{i:02}")]
                 .iter()
                 .map(|p| p.trim_start_matches('r').parse::<usize>().unwrap())
                 .collect()

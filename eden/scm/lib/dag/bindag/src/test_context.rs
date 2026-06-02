@@ -74,7 +74,7 @@ impl<T: AsRef<[usize]> + Send + Sync + Clone + 'static> GeneralTestContext<T> {
                 Ok(parents[i]
                     .as_ref()
                     .iter()
-                    .map(|p| format!("{}", p).as_bytes().to_vec().into())
+                    .map(|p| format!("{p}").as_bytes().to_vec().into())
                     .collect())
             }
         };
@@ -88,7 +88,7 @@ impl<T: AsRef<[usize]> + Send + Sync + Clone + 'static> GeneralTestContext<T> {
             }
             let mut names: Vec<Vertex> = Vec::new();
             for h in heads {
-                names.push(Vertex::copy_from(format!("{}", h).as_bytes()));
+                names.push(Vertex::copy_from(format!("{h}").as_bytes()));
             }
             names
         };

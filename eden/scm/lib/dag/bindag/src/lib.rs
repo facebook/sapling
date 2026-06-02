@@ -41,7 +41,7 @@ impl From<Vec<usize>> for ParentRevs {
             0 => Self([Self::NONE, Self::NONE]),
             1 => Self([revs[0], Self::NONE]),
             2 => Self([revs[0], revs[1]]),
-            n => panic!("unsupported len: {}", n),
+            n => panic!("unsupported len: {n}"),
         }
     }
 }
