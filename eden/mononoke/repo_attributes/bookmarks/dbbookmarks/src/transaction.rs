@@ -430,8 +430,7 @@ impl SqlBookmarksTransactionPayload {
             [(Some(max_existing),)] => *max_existing + 1,
             _ => {
                 return Err(anyhow!(
-                    "FindMaxBookmarkLogId returned multiple entries: {:?}",
-                    max_id_entries
+                    "FindMaxBookmarkLogId returned multiple entries: {max_id_entries:?}"
                 ));
             }
         };
@@ -786,7 +785,7 @@ impl SqlBookmarksTransaction {
 
     pub fn check_not_seen(&mut self, bookmark: &BookmarkKey) -> Result<()> {
         if !self.seen.insert(bookmark.clone()) {
-            return Err(anyhow!("{} bookmark was already used", bookmark));
+            return Err(anyhow!("{bookmark} bookmark was already used"));
         }
         Ok(())
     }

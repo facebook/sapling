@@ -788,8 +788,7 @@ impl BookmarkUpdateLog for SqlBookmarks {
                         None => "",
                     };
                     Err(anyhow!(
-                        "Failed to query further bookmark log entries{}",
-                        extra
+                        "Failed to query further bookmark log entries{extra}"
                     ))
                 }
             }

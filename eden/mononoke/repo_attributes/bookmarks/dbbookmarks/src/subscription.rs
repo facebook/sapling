@@ -179,7 +179,7 @@ impl BookmarksSubscription for SqlBookmarksSubscription {
             let value = match (kind, cs_id) {
                 (Some(kind), Some(cs_id)) => Some((cs_id, kind)),
                 (None, None) => None,
-                _ => bail!("Inconsistent data for bookmark: {}", bookmark),
+                _ => bail!("Inconsistent data for bookmark: {bookmark}"),
             };
 
             max_log_id = std::cmp::max(max_log_id, Some(log_id));
