@@ -31,12 +31,12 @@ where
     // Compatible with hex.
     if bytes.len() == HgId::hex_len() {
         HgId::from_hex(bytes).map_err(|e| {
-            let msg = format!("invalid HgId: {} ({:?})", e, bytes);
+            let msg = format!("invalid HgId: {e} ({bytes:?})");
             D::Error::custom(msg)
         })
     } else {
         HgId::from_slice(bytes).map_err(|e| {
-            let msg = format!("invalid HgId: {} ({:?})", e, bytes);
+            let msg = format!("invalid HgId: {e} ({bytes:?})");
             D::Error::custom(msg)
         })
     }
