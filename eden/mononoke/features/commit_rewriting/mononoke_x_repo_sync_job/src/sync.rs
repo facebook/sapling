@@ -53,8 +53,6 @@ use indicatif::ProgressStyle;
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::ChangesetId;
 use mononoke_types::Timestamp;
-use repo_blobstore::RepoBlobstoreRef;
-use repo_identity::RepoIdentityRef;
 use scuba_ext::FutureStatsScubaExt;
 use scuba_ext::MononokeScubaSampleBuilder;
 use tracing::trace;
@@ -903,7 +901,7 @@ where
 /// This function returns new commits that were introduced by this merge
 async fn validate_if_new_repo_merge(
     ctx: &CoreContext,
-    repo: &(impl RepoBlobstoreRef + RepoIdentityRef + CommitGraphRef),
+    repo: &impl CommitGraphRef,
     p1: ChangesetId,
     p2: ChangesetId,
 ) -> Result<Vec<ChangesetId>, Error> {
@@ -933,26 +931,23 @@ async fn validate_if_new_repo_merge(
 /// i.e. (::branch_tips) is returned in mercurial's revset terms
 async fn check_if_independent_branch_and_return(
     ctx: &CoreContext,
-    repo: &(impl RepoBlobstoreRef + RepoIdentityRef + CommitGraphRef),
+    repo: &impl CommitGraphRef,
     branch_tips: Vec<ChangesetId>,
     other_branches: Vec<ChangesetId>,
 ) -> Result<Option<Vec<ChangesetId>>, Error> {
-    let blobstore = repo.repo_blobstore();
-    let bcss = repo
+    let cs_ids: Vec<ChangesetId> = repo
         .commit_graph()
         .ancestors_difference_stream(ctx, branch_tips.clone(), other_branches)
         .await?
-        .map_ok(move |cs| async move { Ok(cs.load(ctx, blobstore).await?) })
-        .try_buffered(100)
-        .try_collect::<Vec<_>>()
+        .try_collect()
         .await?;
 
-    let bcss: Vec<_> = bcss.into_iter().rev().collect();
-    let mut cs_to_parents: HashMap<_, Vec<_>> = HashMap::new();
-    for bcs in &bcss {
-        let cs_id = bcs.get_changeset_id();
-        cs_to_parents.insert(cs_id, bcs.parents().collect());
-    }
+    // Use commit_graph to fetch all parent IDs in one batch instead of loading
+    // full bonsai changesets (which include file changes and other expensive data).
+    let cs_to_parents = repo
+        .commit_graph()
+        .many_changeset_parents(ctx, &cs_ids)
+        .await?;
 
     // If any of branch_tips hasn't been returned, then it was an ancestor of some of the
     // other_branches.
@@ -970,7 +965,7 @@ async fn check_if_independent_branch_and_return(
         }
     }
 
-    Ok(Some(cs_to_parents.keys().cloned().collect()))
+    Ok(Some(cs_to_parents.into_keys().collect()))
 }
 
 async fn delete_bookmark(
