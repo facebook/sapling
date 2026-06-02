@@ -92,7 +92,7 @@ impl CreateChangeset {
         // This is used for logging, so that we can tie up all our pieces without knowing about
         // the final commit hash
         let uuid = Uuid::new_v4();
-        scuba_logger.add("changeset_uuid", format!("{}", uuid));
+        scuba_logger.add("changeset_uuid", format!("{uuid}"));
 
         let entry_processor =
             UploadEntries::new(repo.repo_blobstore().clone(), scuba_logger.clone());
@@ -204,7 +204,7 @@ impl CreateChangeset {
                 }
 
                 scuba_logger
-                    .add("changeset_id", format!("{}", cs_id))
+                    .add("changeset_id", format!("{cs_id}"))
                     .log_with_msg("Changeset uuid to hash mapping", None);
                 // NOTE(luk): an attempt was made in D8187210 to split the
                 // upload_entries signal into upload_entries and
@@ -251,7 +251,7 @@ impl CreateChangeset {
                         let trigger = signal_parent_ready.lock().expect("poisoned lock").take();
                         if let Some(trigger) = trigger {
                             // Ignore errors if the receiving end has gone away.
-                            let e = format_err!("signal_parent_ready failed: {:?}", err);
+                            let e = format_err!("signal_parent_ready failed: {err:?}");
                             let _ = trigger.send(Err(e));
                         }
                         Err(err)
@@ -302,8 +302,7 @@ impl CreateChangeset {
                     Ok(result)
                 }
                 Err(err) => Err(err.context(format!(
-                    "While creating Changeset {:?}, uuid: {}",
-                    expected_nodeid, uuid
+                    "While creating Changeset {expected_nodeid:?}, uuid: {uuid}"
                 ))),
             }
         });
@@ -311,7 +310,7 @@ impl CreateChangeset {
         let can_be_parent = can_be_parent
             .map(|r| match r {
                 Ok(res) => res,
-                Err(e) => Err(format_err!("can_be_parent: {:?}", e)),
+                Err(e) => Err(format_err!("can_be_parent: {e:?}")),
             })
             .boxed()
             .try_shared();

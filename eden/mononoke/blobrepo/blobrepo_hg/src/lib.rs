@@ -463,7 +463,7 @@ where
                         .collect();
                     let res = chunk.into_iter().map(move |(bookmark, cs_id)| {
                         let hg_cs_id = mapping.get(&cs_id).ok_or_else(|| {
-                            anyhow::format_err!("cs_id was missing from mapping: {:?}", cs_id)
+                            anyhow::format_err!("cs_id was missing from mapping: {cs_id:?}")
                         })?;
                         Ok((bookmark, *hg_cs_id))
                     });

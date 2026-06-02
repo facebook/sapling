@@ -113,7 +113,7 @@ impl ChangesetHandle {
     ) -> Self {
         let (trigger, can_be_parent) = oneshot::channel();
         let can_be_parent = can_be_parent
-            .map_err(|e| format_err!("can_be_parent: {:?}", e))
+            .map_err(|e| format_err!("can_be_parent: {e:?}"))
             .boxed()
             .try_shared();
 
@@ -237,10 +237,7 @@ impl UploadEntries {
                 let envelope = fetch_manifest_envelope(ctx, &self.blobstore, manifest_id)
                     .await
                     .with_context(|| {
-                        format!(
-                            "Error processing manifest with id {} and path {}",
-                            manifest_id, path
-                        )
+                        format!("Error processing manifest with id {manifest_id} and path {path}")
                     })?;
 
                 envelope
@@ -256,10 +253,7 @@ impl UploadEntries {
                     .load(ctx, &self.blobstore)
                     .await
                     .with_context(|| {
-                        format!(
-                            "Error processing file with id {} and path {}",
-                            filenode_id, path
-                        )
+                        format!("Error processing file with id {filenode_id} and path {path}")
                     })?;
 
                 envelope
@@ -344,7 +338,7 @@ impl UploadEntries {
                             let entry = entry.map_leaf(|(_, fnid)| fnid);
                             Self::assert_in_blobstore(ctx, &this.blobstore, entry)
                                 .await
-                                .with_context(|| format!("Error checking for path: {:?}", path))?;
+                                .with_context(|| format!("Error checking for path: {path:?}"))?;
                             Ok(())
                         }
                         .boxed()
@@ -370,7 +364,7 @@ impl UploadEntries {
                         Self::assert_in_blobstore(ctx, &this.blobstore, entry)
                             .await
                             .with_context(|| {
-                                format!("Error checking for a parent node: {:?}", entry)
+                                format!("Error checking for a parent node: {entry:?}")
                             })?;
                         STATS::parents_checked.add_value(1);
                         Result::<_, Error>::Ok(())
