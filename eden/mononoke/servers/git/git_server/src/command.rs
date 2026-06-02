@@ -71,7 +71,7 @@ impl RequestCommand {
                         capability_list.push(BString::new(data.trim().to_vec()));
                     }
                 } else {
-                    anyhow::bail!("Unexpected token {:?} in packetline", token);
+                    anyhow::bail!("Unexpected token {token:?} in packetline");
                 }
             }
         }
@@ -82,7 +82,7 @@ impl RequestCommand {
             PUSH_COMMAND => Command::Push(PushArgs::parse_from_packetline(args)?), // we went over
             BUNDLE_URI_COMMAND => Command::BundleUri,
             unknown_command => {
-                anyhow::bail!("Unknown git protocol V2 command {:?}", unknown_command)
+                anyhow::bail!("Unknown git protocol V2 command {unknown_command:?}")
             }
         };
         Ok(RequestCommand {

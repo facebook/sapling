@@ -182,7 +182,7 @@ impl MononokeGitScubaHandler {
             scuba.add(MononokeGitScubaKey::PackfileSize, push_data.packfile_size);
         }
         if let Some(err) = info.first_error() {
-            scuba.add(MononokeGitScubaKey::Error, format!("{:?}", err));
+            scuba.add(MononokeGitScubaKey::Error, format!("{err:?}"));
         }
         scuba.add(MononokeGitScubaKey::ErrorCount, info.error_count());
 

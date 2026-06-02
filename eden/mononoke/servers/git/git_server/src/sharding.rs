@@ -43,10 +43,7 @@ impl RepoShardedProcess for MononokeGitServerProcess {
         if self.repos_mgr.repos().get_by_name(repo_name).is_none() {
             // The input repo is a deep-sharded repo, so it needs to be added now.
             self.repos_mgr.add_repo(repo_name).await.with_context(|| {
-                format!(
-                    "Failure in setting up repo {} in Mononoke Git Server",
-                    repo_name
-                )
+                format!("Failure in setting up repo {repo_name} in Mononoke Git Server")
             })?;
             info!("Completed repo {} setup in Mononoke Git Server", repo_name);
         } else {

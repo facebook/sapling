@@ -300,7 +300,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let listen_port = args.listen_port.clone();
     let bound_addr_path = args.bound_address_file.clone();
 
-    let addr = format!("{}:{}", listen_host, listen_port);
+    let addr = format!("{listen_host}:{listen_port}");
     let common_config = app.repo_configs().common.clone();
     let tls_acceptor = args
         .tls_params
@@ -509,7 +509,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             pin_mut!(serve);
             try_select(
                 serve,
-                shutdown_rx.map_err(|err| anyhow!("Cancelled channel: {}", err)),
+                shutdown_rx.map_err(|err| anyhow!("Cancelled channel: {err}")),
             )
             .await
             .map_err(|e| futures::future::Either::factor_first(e).0)?;
