@@ -206,8 +206,7 @@ impl AsyncBody {
                 Encoding::Zstd => decode!(ZstdDecoder, body),
                 other => {
                     return Err(HttpClientError::BadResponse(anyhow!(
-                        "Unsupported Content-Encoding: {:?}",
-                        other
+                        "Unsupported Content-Encoding: {other:?}"
                     )));
                 }
             })

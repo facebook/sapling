@@ -348,7 +348,7 @@ mod tests {
 
         match res1 {
             Err(CborStreamError::TrailingData(l)) if l == len => {}
-            other => panic!("Unexpected result on trailing data: {:?}", other),
+            other => panic!("Unexpected result on trailing data: {other:?}"),
         };
 
         Ok(())

@@ -566,7 +566,7 @@ mod tests {
         let listener = TcpListener::bind("127.0.0.1:0").expect("bind local test port");
         let addr = listener.local_addr().expect("get local test port");
         drop(listener);
-        format!("http://{}", addr)
+        format!("http://{addr}")
     }
 
     fn read_request(stream: &mut TcpStream) {

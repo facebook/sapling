@@ -222,7 +222,7 @@ impl MultiWorkerDispatcher {
             .map(|index| {
                 let (jobs, rx) = flume::unbounded();
                 let handle = std::thread::Builder::new()
-                    .name(format!("sl-http-client-{}", index))
+                    .name(format!("sl-http-client-{index}"))
                     .spawn(move || run_dispatcher_worker(rx))
                     .expect("failed to start http dispatcher worker");
                 (

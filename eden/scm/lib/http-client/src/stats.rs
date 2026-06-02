@@ -73,7 +73,7 @@ fn byte_count(value: usize) -> String {
     let unit = ["B", "kiB", "MiB", "GiB", "TiB", "PiB", "EiB"][log];
     let prec = if log > 1 { 2 } else { 0 };
 
-    format!("{:.*} {}", prec, shifted, unit)
+    format!("{shifted:.prec$} {unit}")
 }
 
 /// Format a bit rate using decimal prefixes.
@@ -91,7 +91,7 @@ fn bit_rate(rate: f64) -> String {
     let unit = ["b/s", "kb/s", "Mb/s", "Gb/s", "Tb/s", "Pb/s", "Eb/s"][log];
     let prec = if log > 1 { 2 } else { 0 };
 
-    format!("{:.*} {}", prec, shifted, unit)
+    format!("{shifted:.prec$} {unit}")
 }
 
 #[cfg(test)]

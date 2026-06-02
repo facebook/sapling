@@ -821,7 +821,7 @@ impl Request {
         // Add headers.
         let mut headers = List::new();
         for (name, value) in self.headers.iter() {
-            let header = format!("{}: {}", name, value);
+            let header = format!("{name}: {value}");
             headers.append(&header)?;
         }
         easy.http_headers(headers)?;
