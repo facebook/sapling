@@ -285,7 +285,7 @@ impl OpenOptions {
             Ok(rotate_log)
         })();
 
-        result.context(|| format!("in rotate::OpenOptions::open({:?})", dir))
+        result.context(|| format!("in rotate::OpenOptions::open({dir:?})"))
     }
 
     /// Open an-empty [`RotateLog`] in memory. The [`RotateLog`] cannot [`RotateLog::sync`].
@@ -322,7 +322,7 @@ impl OpenOptions {
             let _lock = ScopedDirLock::new(dir)?;
 
             let mut message = RepairMessage::new(dir);
-            message += &format!("Processing RotateLog: {:?}\n", dir);
+            message += &format!("Processing RotateLog: {dir:?}\n");
             let read_dir = dir.read_dir().context(dir, "cannot readdir")?;
             let mut ids = Vec::new();
 
@@ -339,25 +339,25 @@ impl OpenOptions {
             ids.sort_unstable();
             for &id in ids.iter() {
                 let name = id.to_string();
-                message += &format!("Attempt to repair log {:?}\n", name);
+                message += &format!("Attempt to repair log {name:?}\n");
                 match self.log_open_options.repair(dir.join(name)) {
                     Ok(log) => message += &log,
-                    Err(err) => message += &format!("Failed: {}\n", err),
+                    Err(err) => message += &format!("Failed: {err}\n"),
                 }
             }
 
             let latest_path = dir.join(LATEST_FILE);
             match read_latest_raw(dir) {
-                Ok(latest) => message += &format!("Latest = {}\n", latest),
+                Ok(latest) => message += &format!("Latest = {latest}\n"),
                 Err(err) => match err.kind() {
                     io::ErrorKind::NotFound
                     | io::ErrorKind::InvalidData
                     | io::ErrorKind::UnexpectedEof => {
                         let latest = guess_latest(ids);
-                        let content = format!("{}", latest);
+                        let content = format!("{latest}");
                         let fsync = false;
                         utils::atomic_write(&latest_path, content, fsync)?;
-                        message += &format!("Reset latest to {}\n", latest);
+                        message += &format!("Reset latest to {latest}\n");
                     }
                     _ => return Err(err).context(&latest_path, "cannot read or parse"),
                 },
@@ -365,7 +365,7 @@ impl OpenOptions {
 
             Ok(message.into_string())
         })()
-        .context(|| format!("in rotate::OpenOptions::repair({:?})", dir))
+        .context(|| format!("in rotate::OpenOptions::repair({dir:?})"))
     }
 }
 
@@ -494,7 +494,7 @@ impl RotateLog {
             .get()
             .unwrap()
             .lookup(index_id, key)
-            .context(|| format!("in RotateLog::lookup_latest({}, {:?})", index_id, key))
+            .context(|| format!("in RotateLog::lookup_latest({index_id}, {key:?})"))
             .context(|| format!("  RotateLog.dir = {:?}", self.dir))
     }
 
@@ -982,7 +982,7 @@ fn create_log_cell(log: Log) -> OnceCell<Log> {
 
 /// Load a single log at the given location.
 fn load_log(dir: &Path, id: u8, open_options: log::OpenOptions) -> crate::Result<Log> {
-    let name = format!("{}", id);
+    let name = format!("{id}");
     let log_path = dir.join(name);
     open_options.create(false).open(log_path)
 }
@@ -1115,7 +1115,7 @@ fn create_empty_log(
     Ok(match dir {
         Some(dir) => {
             let latest_path = dir.join(LATEST_FILE);
-            let latest_str = format!("{}", latest);
+            let latest_str = format!("{latest}");
             let log_path = dir.join(&latest_str);
             let opts = open_options.log_open_options.clone().create(true);
             opts.delete_content(&log_path)?;
@@ -1138,16 +1138,13 @@ fn read_latest_raw(dir: &Path) -> io::Result<u8> {
     let content: String = String::from_utf8(data).map_err(|_e| {
         io::Error::new(
             io::ErrorKind::InvalidData,
-            format!("{:?}: failed to read as utf8 string", latest_path),
+            format!("{latest_path:?}: failed to read as utf8 string"),
         )
     })?;
     let id: u8 = content.parse().map_err(|_e| {
         io::Error::new(
             io::ErrorKind::InvalidData,
-            format!(
-                "{:?}: failed to parse {:?} as u8 integer",
-                latest_path, content
-            ),
+            format!("{latest_path:?}: failed to parse {content:?} as u8 integer"),
         )
     })?;
     Ok(id)
@@ -1169,7 +1166,7 @@ fn read_logs(
         let id = latest.wrapping_sub(index);
         // Do a quick check about whether the log exists or not so we
         // can avoid unnecessary `Log::open`.
-        let name = format!("{}", id);
+        let name = format!("{id}");
         let log_path = dir.join(&name);
         if !log_path.is_dir() {
             break;
@@ -1581,7 +1578,7 @@ mod tests {
 
         let size = |log_index: u64| {
             dir.path()
-                .join(format!("{}", log_index))
+                .join(format!("{log_index}"))
                 .join(log::PRIMARY_FILE)
                 .metadata()
                 .unwrap()

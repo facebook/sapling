@@ -172,7 +172,7 @@ where
                     msg += "Auto-repair is skipped due to active readers.\n";
                     let _ = msg.into_string();
                     return Err(e.source(lock_err))
-                        .context(|| format!("in open_with_repair({:?})", path))
+                        .context(|| format!("in open_with_repair({path:?})"))
                         .context("repair is skipped due to active readers");
                 }
             };
@@ -189,13 +189,10 @@ where
             // Repair and retry.
             let repair_message = opts
                 .open_options_repair(path)
-                .context(|| format!("in open_with_repair({:?}), attempt to repair", path))?;
+                .context(|| format!("in open_with_repair({path:?}), attempt to repair"))?;
             tracing::info!("Auto-repair {:?} Result:\n{}", path, &repair_message);
             opts.open_path(path).context(|| {
-                format!(
-                    "in open_with_repair({:?}), after repair ({})",
-                    path, repair_message
-                )
+                format!("in open_with_repair({path:?}), after repair ({repair_message})")
             })
         }
         Err(e) => Err(e),

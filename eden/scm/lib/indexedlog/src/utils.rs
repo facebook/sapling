@@ -34,10 +34,7 @@ pub fn mmap_bytes(file: &File, len: Option<u64>) -> io::Result<Bytes> {
             if len > actual_len {
                 return Err(io::Error::new(
                     io::ErrorKind::UnexpectedEof,
-                    format!(
-                        "mmap length {} is greater than file size {}",
-                        len, actual_len
-                    ),
+                    format!("mmap length {len} is greater than file size {actual_len}"),
                 ));
             } else {
                 len
@@ -172,14 +169,11 @@ pub fn atomic_write_plain(path: &Path, content: &[u8], fsync: bool) -> crate::Re
     };
     result.context(|| {
         let content_desc = if content.len() < 128 {
-            format!("{:?}", content)
+            format!("{content:?}")
         } else {
             format!("<{}-byte slice>", content.len())
         };
-        format!(
-            "  in atomic_write(path={:?}, content={}) ",
-            path, content_desc
-        )
+        format!("  in atomic_write(path={path:?}, content={content_desc}) ")
     })
 }
 
@@ -272,8 +266,7 @@ pub(crate) fn mkdir_p(dir: impl AsRef<Path>) -> crate::Result<()> {
                 io::ErrorKind::NotFound => {
                     // Try to create the parent directory first.
                     if let Some(parent) = dir.parent() {
-                        mkdir_p(parent)
-                            .context(|| format!("while trying to mkdir_p({:?})", dir))?;
+                        mkdir_p(parent).context(|| format!("while trying to mkdir_p({dir:?})"))?;
                         return try_mkdir_once()
                             .context(dir, "cannot mkdir after mkdir its parent");
                     }
