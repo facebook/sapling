@@ -376,7 +376,7 @@ impl wrapfunc {
 
         // If the callsite provides a class name, use it.
         if let Some(class_name) = class_name {
-            name = format!("{}.{}", class_name, name);
+            name = format!("{class_name}.{name}");
         }
 
         // Function wrapping is used a lot in hg extensions (via mercurial.
@@ -391,7 +391,7 @@ impl wrapfunc {
             // in a span, and common prefix like `sapling` is not
             // very interesting.
             if module_last_name != "<missing>" {
-                name = format!("{}.{}", module_last_name, name);
+                name = format!("{module_last_name}.{name}");
             }
         }
 
