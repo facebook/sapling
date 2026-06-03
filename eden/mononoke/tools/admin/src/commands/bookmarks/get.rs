@@ -39,7 +39,7 @@ pub async fn get(ctx: &CoreContext, repo: &Repo, get_args: BookmarksGetArgs) -> 
         .bookmarks()
         .get(ctx.clone(), &key, bookmarks::Freshness::MostRecent)
         .await
-        .with_context(|| format!("Failed to resolve bookmark '{}'", key))?;
+        .with_context(|| format!("Failed to resolve bookmark '{key}'"))?;
     match bookmark_value {
         None => println!("(not set)"),
         Some(cs_id) => {

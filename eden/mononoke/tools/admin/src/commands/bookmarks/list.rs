@@ -92,10 +92,10 @@ impl fmt::Display for BookmarkValue {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match self.ids.as_slice() {
             [] => {}
-            [(_, id)] => write!(fmt, "{} ", id)?,
+            [(_, id)] => write!(fmt, "{id} ")?,
             ids => {
                 for (scheme, id) in ids {
-                    write!(fmt, "{}={} ", scheme, id)?;
+                    write!(fmt, "{scheme}={id} ")?;
                 }
             }
         }
@@ -130,7 +130,7 @@ pub async fn list(ctx: &CoreContext, repo: &Repo, list_args: BookmarksListArgs) 
         })
         .try_buffered(100)
         .try_for_each(|value| async move {
-            println!("{}", value);
+            println!("{value}");
             Ok(())
         })
         .await?;

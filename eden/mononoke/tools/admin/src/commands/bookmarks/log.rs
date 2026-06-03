@@ -82,7 +82,7 @@ pub async fn log(ctx: &CoreContext, repo: &Repo, log_args: BookmarksLogArgs) -> 
         })
         .try_buffered(100)
         .try_for_each(|entry| async move {
-            println!("{}", entry);
+            println!("{entry}");
             Ok(())
         })
         .await?;
