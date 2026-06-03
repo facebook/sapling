@@ -391,7 +391,7 @@ mod tests {
         std::fs::create_dir(dir.path().join(".hg")).unwrap();
         let dest = dir.path().join("sub").join("worktree");
         let err = check_dest_not_in_repo(&dest).unwrap_err();
-        assert!(format!("{}", err).contains("inside an existing checkout"));
+        assert!(format!("{err}").contains("inside an existing checkout"));
     }
 
     #[test]
@@ -400,7 +400,7 @@ mod tests {
         std::fs::create_dir(dir.path().join(".sl")).unwrap();
         let dest = dir.path().join("worktree");
         let err = check_dest_not_in_repo(&dest).unwrap_err();
-        assert!(format!("{}", err).contains("inside an existing checkout"));
+        assert!(format!("{err}").contains("inside an existing checkout"));
     }
 
     #[test]
@@ -409,7 +409,7 @@ mod tests {
         std::fs::create_dir(dir.path().join(".git")).unwrap();
         let dest = dir.path().join("worktree");
         let err = check_dest_not_in_repo(&dest).unwrap_err();
-        assert!(format!("{}", err).contains("inside an existing checkout"));
+        assert!(format!("{err}").contains("inside an existing checkout"));
     }
 
     // --- Registry tests ---
@@ -457,7 +457,7 @@ mod tests {
         std::fs::create_dir(dir.path().join(".svn")).unwrap();
         let dest = dir.path().join("worktree");
         let err = check_dest_not_in_repo(&dest).unwrap_err();
-        assert!(format!("{}", err).contains("inside an existing checkout"));
+        assert!(format!("{err}").contains("inside an existing checkout"));
     }
 
     #[test]
@@ -466,8 +466,8 @@ mod tests {
         std::fs::create_dir(dir.path().join(".git")).unwrap();
         let dest = dir.path().join("a").join("b").join("c").join("d");
         let err = check_dest_not_in_repo(&dest).unwrap_err();
-        assert!(format!("{}", err).contains("inside an existing checkout"));
-        assert!(format!("{}", err).contains(&dir.path().display().to_string()));
+        assert!(format!("{err}").contains("inside an existing checkout"));
+        assert!(format!("{err}").contains(&dir.path().display().to_string()));
     }
 
     #[test]
