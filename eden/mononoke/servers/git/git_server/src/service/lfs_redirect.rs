@@ -78,10 +78,7 @@ fn build_redirect_url(network_env: NetworkEnv, repo_name: &str, to_mononoke: boo
             encoded_repo
         )
     } else {
-        format!(
-            "https://dewey-lfs.vip.facebook.com/lfs-by-repo/{}/objects/batch",
-            repo_name
-        )
+        format!("https://dewey-lfs.vip.facebook.com/lfs-by-repo/{repo_name}/objects/batch")
     }
 }
 
@@ -130,8 +127,7 @@ async fn handle_lfs_redirect(state: &mut State) -> Result<Response<Body>, HttpEr
     let network_env =
         NetworkEnv::from_host_header(&host_header, corpx2pagent).ok_or_else(|| {
             HttpError::e400(anyhow::anyhow!(
-                "Hostname in the 'Host' header not supported: {}",
-                host_header
+                "Hostname in the 'Host' header not supported: {host_header}"
             ))
         })?;
 

@@ -53,7 +53,7 @@ fn capability_advertisement_handler(mut state: State) -> Pin<Box<HandlerFuture>>
         match res {
             Ok(res) => Ok((state, res)),
             Err(err) => {
-                println!("Encountered error {:?}", err);
+                println!("Encountered error {err:?}");
                 build_error_response(err, state, &GitErrorFormatter)
             }
         }
@@ -68,7 +68,7 @@ fn upload_pack_handler(mut state: State) -> Pin<Box<HandlerFuture>> {
         match res {
             Ok(res) => Ok((state, res)),
             Err(err) => {
-                println!("Encountered error {:?}", err);
+                println!("Encountered error {err:?}");
                 build_error_response(err, state, &GitErrorFormatter)
             }
         }
@@ -83,7 +83,7 @@ fn receive_pack_handler(mut state: State) -> Pin<Box<HandlerFuture>> {
         match res {
             Ok(res) => Ok((state, res)),
             Err(err) => {
-                println!("Encountered error {:?}", err);
+                println!("Encountered error {err:?}");
                 build_error_response(err, state, &GitErrorFormatter)
             }
         }
@@ -98,7 +98,7 @@ fn clone_bundle_handler(mut state: State) -> Pin<Box<HandlerFuture>> {
         match res {
             Ok(res) => Ok((state, res)),
             Err(err) => {
-                println!("Encountered error {:?}", err);
+                println!("Encountered error {err:?}");
                 build_error_response(err, state, &GitErrorFormatter)
             }
         }
@@ -128,7 +128,7 @@ fn health_handler(state: State) -> Pin<Box<HandlerFuture>> {
         let avg_window =
             justknobs::get_as::<i64>("scm/mononoke:git_server_healthcheck_load_avg_secs", None);
         if avg_window > 0 {
-            let counter = format!("container_memory_usage_percent.avg.{}", avg_window);
+            let counter = format!("container_memory_usage_percent.avg.{avg_window}");
             if let Some(load) = STATS::container_memory.get_value(fb, (counter,)) {
                 res.headers_mut().insert("X-FB-Load", load.into());
             }

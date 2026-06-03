@@ -17,7 +17,7 @@ impl ErrorFormatter for GitErrorFormatter {
     type Body = Vec<u8>;
 
     fn format(&self, error: &Error, _state: &State) -> Result<(Self::Body, Mime), Error> {
-        let message = format!("{:#}", error);
+        let message = format!("{error:#}");
         Ok((message.as_bytes().to_vec(), mime::TEXT_PLAIN))
     }
 }

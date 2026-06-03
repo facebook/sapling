@@ -235,7 +235,7 @@ async fn process_tags<Uploader: GitUploader>(
             if let Some(bonsai_target) = bonsai_target.as_ref() {
                 ref_map.insert_tag(&tag_id, *bonsai_target);
             } else {
-                content_tags.insert(format!("refs/{}", name), git_target);
+                content_tags.insert(format!("refs/{name}"), git_target);
             }
             (tag_id, name, bonsai_target)
         })
