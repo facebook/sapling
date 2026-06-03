@@ -173,7 +173,7 @@ fn get_wire_struct(original: &mut ItemStruct) -> Result<TokenStream> {
             else {
                 field.ty = parse_quote!( <#ty as crate::ToWire>::Wire );
             }
-            let name = format!("{}", id);
+            let name = format!("{id}");
 
             if extract_no_default(&mut field.attrs) {
                 has_no_default_field = true;
@@ -287,7 +287,7 @@ fn get_wire_enum(original: &mut ItemEnum) -> Result<TokenStream> {
         if id == 0 {
             return Err(Error::new(variant.span(), "Variant id can't be 0"));
         }
-        let name = format!("{}", id);
+        let name = format!("{id}");
         variant.attrs.push(parse_quote!( #[serde(rename=#name)]));
         let unit = match &mut variant.fields {
             Fields::Unit => true,
