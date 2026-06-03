@@ -1307,11 +1307,15 @@ impl SourceControlServiceImpl {
             .into_iter()
             .map(|r| {
                 let outcome = match r.outcome {
-                    RateLimitOutcome::Allowed => thrift::CommitRateLimitRuleOutcome::allowed(
-                        thrift::CommitRateLimitAllowed {
-                            ..Default::default()
-                        },
-                    ),
+                    // `Skipped` (rule not applicable) is reported as `allowed`
+                    // on the SCS API.
+                    RateLimitOutcome::Allowed | RateLimitOutcome::Skipped => {
+                        thrift::CommitRateLimitRuleOutcome::allowed(
+                            thrift::CommitRateLimitAllowed {
+                                ..Default::default()
+                            },
+                        )
+                    }
                     RateLimitOutcome::Exceeded {
                         total,
                         window_secs,

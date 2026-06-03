@@ -78,7 +78,12 @@ impl<T> Repo for T where
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum RateLimitOutcome {
+    /// The rule was evaluated for this changeset and it is under the limit.
     Allowed,
+    /// The rule does not apply to this changeset (it does not touch the rule's
+    /// directories, or it is not eligible per the rule's eligibility checks),
+    /// so no rate limit was enforced.
+    Skipped,
     Exceeded {
         total: u64,
         window_secs: u64,
@@ -89,6 +94,10 @@ pub enum RateLimitOutcome {
 impl RateLimitOutcome {
     pub fn is_allowed(&self) -> bool {
         matches!(self, RateLimitOutcome::Allowed)
+    }
+
+    pub fn is_exceeded(&self) -> bool {
+        matches!(self, RateLimitOutcome::Exceeded { .. })
     }
 }
 
@@ -174,7 +183,9 @@ pub async fn check_all_commit_rate_limits(
     indexed_results.sort_by_key(|(idx, _)| *idx);
     let rule_results: Vec<RuleCheckResult> = indexed_results.into_iter().map(|(_, r)| r).collect();
 
-    let passed = rule_results.iter().all(|r| r.outcome.is_allowed());
+    // A commit passes unless some rule's limit was exceeded. `Skipped` rules
+    // (not eligible / out of scope) and `Allowed` rules both pass.
+    let passed = rule_results.iter().all(|r| !r.outcome.is_exceeded());
     Ok(CommitRateLimitCheckResult {
         passed,
         rule_results,
@@ -200,10 +211,10 @@ pub async fn check_commit_rate_limit(
     allow_bare_unixname: bool,
 ) -> Result<RateLimitOutcome> {
     if !touches_directories(changeset, config.directories()) {
-        return Ok(RateLimitOutcome::Allowed);
+        return Ok(RateLimitOutcome::Skipped);
     }
     if !is_eligible_for_rate_limit(config.eligibility_checks(), changeset) {
-        return Ok(RateLimitOutcome::Allowed);
+        return Ok(RateLimitOutcome::Skipped);
     }
 
     let cache = config.cache().cloned();

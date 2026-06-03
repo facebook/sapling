@@ -628,21 +628,23 @@ async fn test_non_eligible_commit_never_blocked(fb: FacebookInit) -> Result<()> 
         .await?;
     let bcs = draft.load(ctx, repo.repo_blobstore()).await?;
 
+    // The draft is not eligible (no AUTO_APPROVED tag / auto_approved extra),
+    // so every rule skips it -- and a skipped rule never blocks the commit.
     assert_eq!(
         check_commit_rate_limit(ctx, repo, &bm, &bcs, &global, None, true).await?,
-        RateLimitOutcome::Allowed,
+        RateLimitOutcome::Skipped,
     );
     assert_eq!(
         check_commit_rate_limit(ctx, repo, &bm, &bcs, &per_user, Some("alice"), true).await?,
-        RateLimitOutcome::Allowed,
+        RateLimitOutcome::Skipped,
     );
     assert_eq!(
         check_commit_rate_limit(ctx, repo, &bm, &bcs, &users_global, None, true).await?,
-        RateLimitOutcome::Allowed,
+        RateLimitOutcome::Skipped,
     );
     assert_eq!(
         check_commit_rate_limit(ctx, repo, &bm, &bcs, &users_per_user, Some("alice"), true).await?,
-        RateLimitOutcome::Allowed,
+        RateLimitOutcome::Skipped,
     );
     Ok(())
 }
@@ -792,13 +794,15 @@ async fn test_eligible_commit_outside_scoped_directory(fb: FacebookInit) -> Resu
         .await?;
     let bcs = draft.load(ctx, repo.repo_blobstore()).await?;
 
+    // The commit touches fbcode/, not users/, so the directory-scoped rules
+    // skip it; the repo-wide rules still evaluate it and allow it.
     assert_eq!(
         check_commit_rate_limit(ctx, repo, &bm, &bcs, &users_global, None, true).await?,
-        RateLimitOutcome::Allowed,
+        RateLimitOutcome::Skipped,
     );
     assert_eq!(
         check_commit_rate_limit(ctx, repo, &bm, &bcs, &users_per_user, Some("alice"), true).await?,
-        RateLimitOutcome::Allowed,
+        RateLimitOutcome::Skipped,
     );
     assert_eq!(
         check_commit_rate_limit(ctx, repo, &bm, &bcs, &global, None, true).await?,
@@ -1154,7 +1158,7 @@ async fn test_draft_stack_bypass_prevention(fb: FacebookInit) -> Result<()> {
             true
         )
         .await?,
-        RateLimitOutcome::Allowed,
+        RateLimitOutcome::Skipped,
         "non-eligible commit must always pass",
     );
     Ok(())
