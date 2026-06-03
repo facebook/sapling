@@ -93,7 +93,7 @@ where
             // space for the node, then adding the new node would create
             // a new column.
             if self.columns.find(node).is_none() {
-                if options.min_row_height == 1 && options.stagger_consecutive_disconnected_nodes {
+                if options.min_row_height <= 1 && options.stagger_consecutive_disconnected_nodes {
                     if let Some(previous_node_column) = self.previous_node_column {
                         if self.columns.get(previous_node_column) == Some(&Column::Empty) {
                             // Dense stagger mode cannot use the previous node's column for an
@@ -181,7 +181,7 @@ where
         }
 
         let separator_line = existing_column.is_none()
-            && self.options.min_row_height == 1
+            && self.options.min_row_height <= 1
             && !self.options.stagger_consecutive_disconnected_nodes
             && Some(column) == self.previous_node_column
             && !need_term_line;
@@ -282,7 +282,7 @@ where
     }
 
     fn find_column_for_unallocated_node(&mut self) -> usize {
-        if self.options.min_row_height == 1 && self.options.stagger_consecutive_disconnected_nodes {
+        if self.options.min_row_height <= 1 && self.options.stagger_consecutive_disconnected_nodes {
             if let Some(index) = self.columns.iter().enumerate().find_map(|(index, column)| {
                 (*column == Column::Empty && Some(index) != self.previous_node_column)
                     .then_some(index)

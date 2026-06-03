@@ -266,13 +266,14 @@ mod tests {
                 .build_box_drawing()
         };
         let render = |t| render_string(t, &mut get_renderer());
-        // Suboptimal: no spaces
         assert_eq!(
             render(&test_fixtures::BASIC_DISCONNECTED),
             r#"
             o  D
             o  C
+            
             o  B
+            
             o  A"#
         );
     }
@@ -286,13 +287,12 @@ mod tests {
                 .with_stagger_consecutive_disconnected_nodes(true)
                 .build_box_drawing()
         };
-        // Suboptimal: staggered isn't used.
         assert_eq!(
             render_string(&test_fixtures::BASIC_DISCONNECTED, &mut get_renderer(0)),
             r#"
             o  D
             o  C
-            o  B
+              o  B
             o  A"#
         );
 
