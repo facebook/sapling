@@ -210,7 +210,7 @@ static PROGRESS_REPORTING_STATE: Lazy<()> = Lazy::new(|| {
             files_bar.create_or_extend_detached(0)
         } else if let Some((prefix, _)) = url.split_once("/download/") {
             // Strip out the fetch key after /download/.
-            url = format!("{}/download/... (LFS)", prefix);
+            url = format!("{prefix}/download/... (LFS)");
             lfs_bar.create_or_extend_detached(0)
         } else {
             is_single_bar = true;
@@ -242,7 +242,7 @@ static PROGRESS_REPORTING_STATE: Lazy<()> = Lazy::new(|| {
 });
 
 fn bump_counters(client_id: &str, stats: &Stats) {
-    let n = |suffix: &'static str| -> String { format!("http.{}.{}", client_id, suffix) };
+    let n = |suffix: &'static str| -> String { format!("http.{client_id}.{suffix}") };
     // TODO: gauges: rx_bytes and tx_bytes; histograms: request_time_ms, response_delay_ms
     increment_counter(n("total_rx_bytes"), stats.downloaded as u64);
     increment_counter(n("total_tx_bytes"), stats.uploaded as u64);
