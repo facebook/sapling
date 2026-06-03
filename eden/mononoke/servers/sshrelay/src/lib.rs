@@ -108,7 +108,7 @@ impl SshDecoder {
 }
 
 fn ioerr_cvt(err: anyhow::Error) -> io::Error {
-    io::Error::new(io::ErrorKind::InvalidData, format!("{}", err))
+    io::Error::new(io::ErrorKind::InvalidData, format!("{err}"))
 }
 
 impl Decoder for SshDecoder {
@@ -376,7 +376,7 @@ mod test {
         let mut decoder = SshDecoder::new();
 
         match decoder.decode(&mut buf) {
-            Ok(bad) => panic!("unexpected success: {:?}", bad),
+            Ok(bad) => panic!("unexpected success: {bad:?}"),
             Err(_err) => {}
         }
     }
@@ -390,7 +390,7 @@ mod test {
 
         match decoder.decode(&mut buf) {
             Ok(None) => {}
-            bad => panic!("bad framing: {:?}", bad),
+            bad => panic!("bad framing: {bad:?}"),
         }
     }
 
@@ -402,7 +402,7 @@ mod test {
         let mut decoder = SshDecoder::new();
 
         match decoder.decode(&mut buf) {
-            Ok(bad) => panic!("unexpected success: {:?}", bad),
+            Ok(bad) => panic!("unexpected success: {bad:?}"),
             Err(_err) => {}
         }
     }
