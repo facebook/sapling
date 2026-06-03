@@ -151,7 +151,7 @@ impl From<BundleResolverError> for Error {
                 format_err!("hooks failed:\n{}", err_msgs.join("\n"))
             }
             PushrebaseConflicts(conflicts) => {
-                format_err!("pushrebase failed Conflicts({:?})", conflicts)
+                format_err!("pushrebase failed Conflicts({conflicts:?})")
             }
             Error(err) => err,
         }
@@ -608,15 +608,13 @@ async fn resolve_pushrebase<'r, R: Repo>(
 
     let bookmark_pushes = collect_pushkey_bookmark_pushes(pushkeys);
     if bookmark_pushes.len() > 1 {
-        return Err(format_err!("Too many pushkey parts: {:?}", bookmark_pushes).into());
+        return Err(format_err!("Too many pushkey parts: {bookmark_pushes:?}").into());
     }
 
     let (bookmark_push_part_id, bookmark_spec) = match bookmark_pushes.into_iter().next() {
         Some(bk_push) if bk_push.name != onto_bookmark && onto_bookmark != *DONOTREBASEBOOKMARK => {
             return Err(format_err!(
-                "allowed only pushes of {} bookmark: {:?}",
-                onto_bookmark,
-                bk_push
+                "allowed only pushes of {onto_bookmark} bookmark: {bk_push:?}"
             )
             .into());
         }
@@ -683,7 +681,7 @@ async fn resolve_bookmark_only_pushrebase<'r, R: Repo>(
     }
 
     if bookmark_pushes.len() != 1 {
-        return Err(format_err!("Too many pushkey parts: {:?}", bookmark_pushes));
+        return Err(format_err!("Too many pushkey parts: {bookmark_pushes:?}"));
     }
 
     let bookmark_push = bookmark_pushes.into_iter().next().unwrap();
@@ -1038,10 +1036,7 @@ impl<'r, R: Repo> Bundle2Resolver<'r, R> {
                         })
                     }
                     _ => {
-                        return Err(format_err!(
-                            "pushkey: unexpected namespace: {:?}",
-                            namespace
-                        ));
+                        return Err(format_err!("pushkey: unexpected namespace: {namespace:?}"));
                     }
                 };
 
@@ -1274,13 +1269,13 @@ fn get_optional_ascii_param(
 ) -> Option<Result<AsciiString>> {
     params.get(param).map(|val| {
         AsciiString::from_ascii(val.to_vec())
-            .map_err(|err| format_err!("`{}` parameter is not ascii: {}", param, err))
+            .map_err(|err| format_err!("`{param}` parameter is not ascii: {err}"))
     })
 }
 
 fn get_ascii_param(params: &HashMap<String, Bytes>, param: &str) -> Result<AsciiString> {
     get_optional_ascii_param(params, param)
-        .unwrap_or_else(|| Err(format_err!("`{}` parameter is not set", param)))
+        .unwrap_or_else(|| Err(format_err!("`{param}` parameter is not set")))
 }
 
 fn get_optional_changeset_param(
@@ -1451,7 +1446,7 @@ async fn bonsai_from_hg_opt(
                 .get_bonsai_from_hg(ctx, cs_id)
                 .await?;
             if maybe_bcs_id.is_none() {
-                Err(format_err!("No bonsai mapping found for {}", cs_id))
+                Err(format_err!("No bonsai mapping found for {cs_id}"))
             } else {
                 Ok(maybe_bcs_id)
             }

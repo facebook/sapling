@@ -135,8 +135,7 @@ impl NewBlobs {
             sub_entries: s
                 .map_err(move |err| {
                     err.context(format!(
-                        "While walking dependencies of Root Manifest with id {:?}",
-                        manifest_root_id
+                        "While walking dependencies of Root Manifest with id {manifest_root_id:?}"
                     ))
                 })
                 .boxed(),
@@ -152,10 +151,7 @@ impl NewBlobs {
         filelogs: &Filelogs,
     ) -> Result<(Vec<HgBlobFuture>, WalkHelperCounters)> {
         if path_taken.len() > 4096 {
-            bail!(
-                "Exceeded max manifest path during walking with path: {:?}",
-                path_taken
-            );
+            bail!("Exceeded max manifest path during walking with path: {path_taken:?}");
         }
 
         let mut entries: Vec<HgBlobFuture> = Vec::new();
