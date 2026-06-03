@@ -2313,6 +2313,79 @@ EdenMountHandle EdenServer::getMount(AbsolutePathPiece mountPath) const {
   return {mount, mount->getRootInodeUnchecked()};
 }
 
+namespace {
+
+CheckoutResult finishCheckoutPostProcessing(
+    EdenServer* server,
+    CheckoutResult&& result,
+    CheckoutMode checkoutMode,
+    bool isNfs,
+    AbsolutePath mountPath) {
+  server->getServerState()->getNotifier()->signalCheckout(
+      server->enumerateInProgressCheckouts());
+  if (checkoutMode == CheckoutMode::DRY_RUN) {
+    return std::move(result);
+  }
+
+  // In NFSv3 the kernel never tells us when its safe to unload
+  // inodes ("safe" meaning all file handles to the inode have been
+  // closed).
+  //
+  // To avoid unbounded memory and disk use we need to periodically
+  // clean them up. Checkout will likely create a lot of stale innodes
+  // so we run a delayed cleanup after checkout.
+  if (isNfs &&
+      server->getServerState()
+          ->getReloadableConfig()
+          ->getEdenConfig()
+          ->unloadUnlinkedInodes.getValue()) {
+    // During whole Eden Process shutdown, this function can only be
+    // run before the mount is destroyed. This is because the function
+    // is either run before the server event base is destroyed or it
+    // is not run at all, and the server event base is destroyed
+    // before the mountPoints. Since the function must be run before
+    // the eventbase is destroyed and the eventbase is destroyed
+    // before the mountPoints, this function can only be called before
+    // the mount points are destroyed during normal destruction.
+    // However, the mount point might have been unmounted before this
+    // function is run outside of shutdown.
+    auto delay = server->getServerState()
+                     ->getReloadableConfig()
+                     ->getEdenConfig()
+                     ->postCheckoutDelayToUnloadInodes.getValue();
+    XLOGF(
+        DBG9,
+        "Scheduling unlinked inode cleanup for mount {} in {} seconds.",
+        mountPath,
+        durationStr(delay));
+    server->scheduleCallbackOnMainEventBase(
+        std::chrono::duration_cast<std::chrono::milliseconds>(delay),
+        [server, mountPath = std::move(mountPath)]() {
+          try {
+            // TODO: This might be a pretty expensive operation to run
+            // on an EventBase. Maybe we should debounce onto a
+            // different executor.
+            auto mountHandle = server->getMount(mountPath);
+            mountHandle.getEdenMount().forgetStaleInodes();
+          } catch (EdenError& err) {
+            // This is an expected error if the mount has been
+            // unmounted before this callback ran.
+            if (err.errorCode() == ENOENT) {
+              XLOGF(
+                  DBG3,
+                  "Callback to clear inodes: Mount cannot be found. {}",
+                  *err.message());
+            } else {
+              throw;
+            }
+          }
+        });
+  }
+  return std::move(result);
+}
+
+} // namespace
+
 ImmediateFuture<CheckoutResult> EdenServer::checkOutRevision(
     AbsolutePathPiece mountPath,
     std::string& rootId,
@@ -2375,65 +2448,8 @@ ImmediateFuture<CheckoutResult> EdenServer::checkOutRevision(
           })
           .thenValue([this, checkoutMode, isNfs, mountPath = mountPath.copy()](
                          CheckoutResult&& result) {
-            getServerState()->getNotifier()->signalCheckout(
-                enumerateInProgressCheckouts());
-            if (checkoutMode == CheckoutMode::DRY_RUN) {
-              return std::move(result);
-            }
-
-            // In NFSv3 the kernel never tells us when its safe to unload
-            // inodes ("safe" meaning all file handles to the inode have been
-            // closed).
-            //
-            // To avoid unbounded memory and disk use we need to periodically
-            // clean them up. Checkout will likely create a lot of stale innodes
-            // so we run a delayed cleanup after checkout.
-            if (isNfs &&
-                serverState_->getReloadableConfig()
-                    ->getEdenConfig()
-                    ->unloadUnlinkedInodes.getValue()) {
-              // During whole Eden Process shutdown, this function can only be
-              // run before the mount is destroyed. This is because the function
-              // is either run before the server event base is destroyed or it
-              // is not run at all, and the server event base is destroyed
-              // before the mountPoints. Since the function must be run before
-              // the eventbase is destroyed and the eventbase is destroyed
-              // before the mountPoints, this function can only be called before
-              // the mount points are destroyed during normal destruction.
-              // However, the mount point might have been unmounted before this
-              // function is run outside of shutdown.
-              auto delay = serverState_->getReloadableConfig()
-                               ->getEdenConfig()
-                               ->postCheckoutDelayToUnloadInodes.getValue();
-              XLOGF(
-                  DBG9,
-                  "Scheduling unlinked inode cleanup for mount {} in {} seconds.",
-                  mountPath,
-                  durationStr(delay));
-              this->scheduleCallbackOnMainEventBase(
-                  std::chrono::duration_cast<std::chrono::milliseconds>(delay),
-                  [this, mountPath = mountPath.copy()]() {
-                    try {
-                      // TODO: This might be a pretty expensive operation to run
-                      // on an EventBase. Maybe we should debounce onto a
-                      // different executor.
-                      auto mountHandle = this->getMount(mountPath);
-                      mountHandle.getEdenMount().forgetStaleInodes();
-                    } catch (EdenError& err) {
-                      // This is an expected error if the mount has been
-                      // unmounted before this callback ran.
-                      if (err.errorCode() == ENOENT) {
-                        XLOGF(
-                            DBG3,
-                            "Callback to clear inodes: Mount cannot be found. {}",
-                            *err.message());
-                      } else {
-                        throw;
-                      }
-                    }
-                  });
-            }
-            return std::move(result);
+            return finishCheckoutPostProcessing(
+                this, std::move(result), checkoutMode, isNfs, mountPath);
           });
 
   if (thriftUseCheckoutExecutor_) {
@@ -2458,7 +2474,6 @@ ImmediateFuture<CheckoutResult> EdenServer::checkOutRevision(
 
   return std::move(checkoutFuture).ensure([mountHandle] {});
 }
-
 shared_ptr<BackingStore> EdenServer::getBackingStore(
     BackingStoreType type,
     StringPiece name,
