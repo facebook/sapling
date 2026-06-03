@@ -415,7 +415,7 @@ mod tests {
             CompiledPaths::compile(v.iter().map(|s| p(s)).collect::<Vec<_>>())
                 .ops
                 .into_iter()
-                .map(|s| format!("{:?}", s))
+                .map(|s| format!("{s:?}"))
                 .collect::<Vec<String>>()
         };
 

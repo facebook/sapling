@@ -259,7 +259,7 @@ impl KeyStore for TestHistory {
             .map(|k| format!("{}/{}", &k.hgid.to_hex()[..5], k.path.as_str()))
             .collect::<Vec<_>>()
             .join(", ");
-        let log = format!("Trees: [{}]", log);
+        let log = format!("Trees: [{log}]");
         let mut inner = self.inner.lock().unwrap();
         for key in keys {
             inner.prefetched_trees.insert(key);
@@ -291,7 +291,7 @@ impl ReadRootTreeIds for TestHistory {
             .map(|id| hgid_to_int(*id).to_string())
             .collect::<Vec<_>>()
             .join(", ");
-        let log = format!("Commits: [{}]", log);
+        let log = format!("Commits: [{log}]");
         let result = commits
             .into_iter()
             .map(|commit_id| {

@@ -523,9 +523,6 @@ impl Action {
 fn set_to_id_set_and_id_map(set: &Set) -> Result<(IdSet, Arc<dyn IdConvert + Send + Sync>)> {
     match set.to_id_set_and_id_map_in_o1() {
         Some(v) => Ok(v),
-        None => bail!(
-            "PathHistory requires {:?} to convert to IdSet and IdMap in O(1)",
-            set
-        ),
+        None => bail!("PathHistory requires {set:?} to convert to IdSet and IdMap in O(1)"),
     }
 }
