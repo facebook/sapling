@@ -611,7 +611,7 @@ impl<R: Repo> HgCommands for RepoClient<R> {
                                 async move {
                                     Ok(generate_lookup_resp_buf(
                                         false,
-                                        format!("ambiguous identifier '{}'", key).as_bytes(),
+                                        format!("ambiguous identifier '{key}'").as_bytes(),
                                     ))
                                 }
                                 .boxed(),
@@ -620,7 +620,7 @@ impl<R: Repo> HgCommands for RepoClient<R> {
                                 async move {
                                     Ok(generate_lookup_resp_buf(
                                         false,
-                                        format!("{} not found", key).as_bytes(),
+                                        format!("{key} not found").as_bytes(),
                                     ))
                                 }
                                 .boxed(),
@@ -742,8 +742,7 @@ impl<R: Repo> HgCommands for RepoClient<R> {
         if namespace != "bookmarks" {
             info!("unsupported listkeyspatterns namespace: {}", namespace,);
             return future::err(format_err!(
-                "unsupported listkeyspatterns namespace: {}",
-                namespace
+                "unsupported listkeyspatterns namespace: {namespace}"
             ))
             .boxed();
         }
@@ -770,8 +769,7 @@ impl<R: Repo> HgCommands for RepoClient<R> {
                             Ok(bookmarks)
                         } else {
                             Err(format_err!(
-                                    "Bookmark query was truncated after {} results, use a more specific prefix search.",
-                                    max,
+                                    "Bookmark query was truncated after {max} results, use a more specific prefix search.",
                             ))
                         }
                     } else {
