@@ -1,6 +1,7 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 
   $ . "${TEST_FIXTURES}/library.sh"
+  $ export CLI_USAGE_LOG=0
 
 -- Setup repos --
 
