@@ -172,7 +172,7 @@ impl ProdRepoPermissionChecker {
         if let Some(acl_name) = repo_hipster_acl {
             repo_permchecker_builder = repo_permchecker_builder.allow(
                 acl_provider.repo_acl(acl_name).await.with_context(|| {
-                    format!("Failed to create repo PermissionChecker for {}", acl_name)
+                    format!("Failed to create repo PermissionChecker for {acl_name}")
                 })?,
             );
         }
@@ -192,7 +192,7 @@ impl ProdRepoPermissionChecker {
         let service_permchecker = if let Some(acl_name) = service_hipster_acl {
             PermissionCheckerBuilder::new()
                 .allow(acl_provider.tier_acl(acl_name).await.with_context(|| {
-                    format!("Failed to create PermissionChecker for {}", acl_name)
+                    format!("Failed to create PermissionChecker for {acl_name}")
                 })?)
                 .build()
         } else {
@@ -221,8 +221,7 @@ impl ProdRepoPermissionChecker {
                             .await
                             .with_context(|| {
                                 format!(
-                                    "Failed to create repo region PermissionChecker for {}",
-                                    acl_name
+                                    "Failed to create repo region PermissionChecker for {acl_name}"
                                 )
                             })?,
                     )
