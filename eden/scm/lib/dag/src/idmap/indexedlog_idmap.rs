@@ -256,8 +256,7 @@ impl IdMap {
                 return Ok(());
             } else {
                 return bug(format!(
-                    "new entry {} = {:?} conflicts with an existing entry {} = {:?}",
-                    id, name, id, existing_name
+                    "new entry {id} = {name:?} conflicts with an existing entry {id} = {existing_name:?}"
                 ));
             }
         }
@@ -272,8 +271,7 @@ impl IdMap {
                 return Ok(());
             } else {
                 return bug(format!(
-                    "new entry {} = {:?} conflicts with an existing entry {} = {:?}",
-                    id, name, existing_id, name
+                    "new entry {id} = {name:?} conflicts with an existing entry {existing_id} = {name:?}"
                 ));
             }
         }
@@ -441,7 +439,7 @@ impl fmt::Debug for IdMap {
             } else {
                 String::from_utf8_lossy(name).to_string()
             };
-            write!(f, "  {}: {},\n", name, id)?;
+            write!(f, "  {name}: {id},\n")?;
         }
         write!(f, "}}\n")?;
         Ok(())
