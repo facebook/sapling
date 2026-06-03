@@ -453,7 +453,7 @@ impl CommitCloud {
         let acl_name = make_workspace_acl_name(&ctx.workspace, &ctx.reponame);
 
         #[cfg(fbcode_build)]
-        let link = format!("[{}{}]", ACL_LINK, acl_name);
+        let link = format!("[{ACL_LINK}{acl_name}]");
         #[cfg(not(fbcode_build))]
         let link = String::new();
 
@@ -515,10 +515,7 @@ impl CommitCloud {
             )
             .await?
             .is_none(),
-            format!(
-                "'rename_workspace' failed: workspace {} already exists",
-                new_workspace
-            ),
+            format!("'rename_workspace' failed: workspace {new_workspace} already exists"),
         );
 
         let (txn, affected_rows) =
@@ -607,7 +604,7 @@ impl CommitCloud {
             !history.is_empty(),
             "'get_smartlog_by_version' failed: no smartlog found for {}",
             match args {
-                GetType::GetHistoryVersion { version } => format!("version {}", version),
+                GetType::GetHistoryVersion { version } => format!("version {version}"),
                 GetType::GetHistoryDate { timestamp, .. } =>
                     format!("timestamp {}", DateTime::from(timestamp)),
                 _ => unreachable!(),
@@ -684,10 +681,7 @@ impl CommitCloud {
 
         ensure!(
             !result.is_empty(),
-            format!(
-                "'rollback_workspace' failed: no record found for version {}",
-                version
-            )
+            format!("'rollback_workspace' failed: no record found for version {version}")
         );
 
         let destination_workspace = match result.first().unwrap() {
