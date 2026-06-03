@@ -26,10 +26,7 @@ pub fn static_rc(tokens: TokenStream) -> TokenStream {
     // Extract.
     let content: String = match extract_string_literal(tokens.clone()) {
         Some(content) => content,
-        None => panic!(
-            "static_rc requires a single string literal, got: {:?}",
-            tokens
-        ),
+        None => panic!("static_rc requires a single string literal, got: {tokens:?}"),
     };
 
     // Parse hgrc.
@@ -154,17 +151,16 @@ fn static_config_from_items(items: &[(&str, &str, Option<String>)]) -> TokenStre
     let mut code = "{ use staticconfig::phf;\n".to_string();
     for (i, (_section, items)) in sections.iter().enumerate() {
         code += &format!(
-            "const SECTION{}: phf::OrderedMap<&'static str, Option<&'static str>> = phf::phf_ordered_map! {{\n",
-            i
+            "const SECTION{i}: phf::OrderedMap<&'static str, Option<&'static str>> = phf::phf_ordered_map! {{\n"
         );
         for (name, value) in items.iter() {
-            code += &format!("    {:?} => {:?},\n", name, value);
+            code += &format!("    {name:?} => {value:?},\n");
         }
         code += "};\n";
     }
     code += "const SECTIONS: phf::OrderedMap<&'static str, phf::OrderedMap<&'static str, Option<&'static str>>> = phf::phf_ordered_map! {\n";
     for (i, (section, _items)) in sections.iter().enumerate() {
-        code += &format!("    {:?} => SECTION{},\n", section, i);
+        code += &format!("    {section:?} => SECTION{i},\n");
     }
     code += "};\n";
     code += r#"staticconfig::StaticConfig::from_macro_rules(SECTIONS) }"#;
