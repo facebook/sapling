@@ -53,7 +53,7 @@ fn print_traceback(bt: &[String]) {
         bt.len()
     );
     for name in bt {
-        println!("  {}", name);
+        println!("  {name}");
     }
 }
 
@@ -137,16 +137,13 @@ fn main() {
     drop(profiler2);
 
     let summary = collector.lock().unwrap().ascii_summary();
-    println!("\nASCII tree summary (Profiler 1 at 2hz):\n{}", summary);
+    println!("\nASCII tree summary (Profiler 1 at 2hz):\n{summary}");
 
     let summary = collector2.lock().unwrap().ascii_summary();
-    println!("\nASCII tree summary (Profiler 2 at 20hz):\n{}", summary);
+    println!("\nASCII tree summary (Profiler 2 at 20hz):\n{summary}");
 
     let summary = handle.join().unwrap();
-    println!(
-        "\nASCII tree summary (Profiler 3 at 2hz in a separate thread):\n{}",
-        summary
-    );
+    println!("\nASCII tree summary (Profiler 3 at 2hz in a separate thread):\n{summary}");
 
     println!(
         r#"Check:
