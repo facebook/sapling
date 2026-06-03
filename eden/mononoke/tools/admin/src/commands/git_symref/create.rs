@@ -53,6 +53,6 @@ pub async fn create(ctx: &CoreContext, repo: &Repo, create_args: CreateSymrefArg
     .context("Error in creating GitSymbolicRefsEntry from provided input")?;
 
     symrefs.add_or_update_entries(ctx, vec![entry]).await?;
-    println!("{}", success_msg);
+    println!("{success_msg}");
     Ok(())
 }

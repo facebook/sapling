@@ -26,6 +26,6 @@ pub async fn delete(ctx: &CoreContext, repo: &Repo, delete_args: DeleteSymrefArg
     repo.git_symbolic_refs
         .delete_symrefs(ctx, delete_args.symref_names)
         .await?;
-    println!("{}", success_msg);
+    println!("{success_msg}");
     Ok(())
 }

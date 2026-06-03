@@ -41,6 +41,6 @@ pub async fn update(ctx: &CoreContext, repo: &Repo, update_args: UpdateSymrefArg
     repo.git_symbolic_refs
         .add_or_update_entries(ctx, vec![entry])
         .await?;
-    println!("{}", success_msg);
+    println!("{success_msg}");
     Ok(())
 }
