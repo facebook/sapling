@@ -72,7 +72,7 @@ where
             Bound::Excluded(&n) => n,
             Bound::Unbounded => self.len,
         };
-        assert!(start <= end, "invalid slice {}..{}", start, end);
+        assert!(start <= end, "invalid slice {start}..{end}");
         assert!(end <= self.len, "{} exceeds Bytes length {}", end, self.len);
         if start == end {
             Self::new()
