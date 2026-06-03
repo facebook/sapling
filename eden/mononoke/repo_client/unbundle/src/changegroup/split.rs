@@ -38,7 +38,7 @@ pub(crate) fn split_changegroup(
             future::ready(match part {
                 &Part::CgChunk(Section::Changeset, _) => Ok(true),
                 &Part::SectionEnd(Section::Changeset) => Ok(false),
-                bad => Err(anyhow!("Expected Changeset chunk or end, found: {:?}", bad)),
+                bad => Err(anyhow!("Expected Changeset chunk or end, found: {bad:?}")),
             })
         })
         .return_remainder();
@@ -47,7 +47,7 @@ pub(crate) fn split_changegroup(
         .and_then(|part| {
             future::ready(match part {
                 Part::CgChunk(Section::Changeset, chunk) => Ok(ChangesetDeltaed { chunk }),
-                bad => Err(anyhow!("Expected Changeset chunk, found: {:?}", bad)),
+                bad => Err(anyhow!("Expected Changeset chunk, found: {bad:?}")),
             })
         })
         .map_err(|err| err.context("While extracting Changesets from Changegroup"));
@@ -64,7 +64,7 @@ pub(crate) fn split_changegroup(
                     Ok(true)
                 }
                 _ if seen_manifest_end => Ok(false),
-                bad => Err(anyhow!("Expected Manifest end, found: {:?}", bad)),
+                bad => Err(anyhow!("Expected Manifest end, found: {bad:?}")),
             })
         })
         .map_err(|err| {
@@ -79,10 +79,7 @@ pub(crate) fn split_changegroup(
                         | &Part::SectionEnd(Section::Filelog(ref path)) => {
                             if seen_path != path {
                                 return future::ready(Err(anyhow!(
-                                    "Mismatched path found {0} ({0:?}) != {1} ({1:?}), for part: {2:?}",
-                                    seen_path,
-                                    path,
-                                    part
+                                    "Mismatched path found {seen_path} ({seen_path:?}) != {path} ({path:?}), for part: {part:?}"
                                 )));
                             }
                         }
@@ -106,15 +103,11 @@ pub(crate) fn split_changegroup(
                     bad => Err(
                         if seen_path.is_some() {
                             anyhow!(
-                                "Expected Filelog chunk or end, seen_path was {:?}, found: {:?}",
-                                seen_path,
-                                bad
+                                "Expected Filelog chunk or end, seen_path was {seen_path:?}, found: {bad:?}"
                             )
                         } else {
                             anyhow!(
-                                "Expected Filelog chunk or Part::End, seen_path was {:?}, found: {:?}",
-                                seen_path,
-                                bad
+                                "Expected Filelog chunk or Part::End, seen_path was {seen_path:?}, found: {bad:?}"
                             )
                         }
                     )

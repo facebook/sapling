@@ -79,7 +79,7 @@ impl UploadableHgBlob for Filelog {
         let node_key = self.node_key;
         let path = match &node_key.path {
             RepoPath::FilePath(path) => path.clone(),
-            other => bail!("internal error: expected file path, got {}", other),
+            other => bail!("internal error: expected file path, got {other}"),
         };
 
         // If LFSMetaData
@@ -145,10 +145,7 @@ pub(crate) fn convert_to_revlog_filelog<R: Repo>(
                 })
                 .map(move |res| {
                     res.with_context(move || {
-                        format!(
-                            "While decoding delta cache for file id {}, path {}",
-                            node, path
-                        )
+                        format!("While decoding delta cache for file id {node}, path {path}")
                     })
                 })
         })
@@ -211,15 +208,14 @@ impl<R: Repo> DeltaCache<R> {
                 let vec_u8 = match base {
                     None => async move {
                         delta::apply(b"", &delta)
-                            .with_context(|| format!("File content empty, delta: {:?}", delta))
+                            .with_context(|| format!("File content empty, delta: {delta:?}"))
                     }
                     .left_future(),
                     Some(base) => self
                         .apply_delta_on_base(ctx, base, delta)
                         .map_err(move |err| {
                             err.context(format!(
-                                "While looking for base {:?} to apply on delta {:?}",
-                                base, node
+                                "While looking for base {base:?} to apply on delta {node:?}"
                             ))
                         })
                         .right_future(),
@@ -264,7 +260,7 @@ impl<R: Repo> DeltaCache<R> {
                 }
             };
             delta::apply(&bytes, &delta)
-                .with_context(|| format!("File content: {:?} delta: {:?}", bytes, delta))
+                .with_context(|| format!("File content: {bytes:?} delta: {delta:?}"))
         }
     }
 }
