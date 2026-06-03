@@ -157,7 +157,7 @@ impl RepoShardedProcess for AliasVerifyProcess {
         self.repos_mgr
             .add_repo(repo_name.as_ref())
             .await
-            .with_context(|| format!("Failure in opening repo {}", repo_name))?;
+            .with_context(|| format!("Failure in opening repo {repo_name}"))?;
         let db_config = self
             .app
             .repo_config_by_name(repo_name.as_ref())?
@@ -300,10 +300,7 @@ impl AliasVerification {
             .load(&self.ctx, self.repo()?.repo_blobstore())
             .await
             .with_context(|| {
-                format!(
-                    "Failure in fetching changeset for changeset ID {:?}",
-                    bcs_id
-                )
+                format!("Failure in fetching changeset for changeset ID {bcs_id:?}")
             })?;
         let file_changes: Vec<_> = bcs
             .file_changes_map()
@@ -324,10 +321,9 @@ impl AliasVerification {
             Ok(())
         } else {
             panic!(
-                "Collision: Wrong content_id by alias for {:?},
-                ContentId in the blobstore {:?},
-                Expected ContentId {:?}",
-                alias, content_id, expected_content_id
+                "Collision: Wrong content_id by alias for {alias:?},
+                ContentId in the blobstore {content_id:?},
+                Expected ContentId {expected_content_id:?}"
             );
         }
     }
@@ -351,7 +347,7 @@ impl AliasVerification {
                     filestore::get_metadata(&blobstore, ctx, &FetchKey::Canonical(content_id))
                         .await?;
                 let meta = maybe_meta.ok_or_else(|| {
-                    format_err!("Missing content {:?} for alias {:?}", content_id, alias)
+                    format_err!("Missing content {content_id:?} for alias {alias:?}")
                 })?;
                 let is_valid_match = match *alias {
                     Alias::Sha256(hash_val) => meta.sha256 == hash_val,
@@ -406,9 +402,7 @@ impl AliasVerification {
             .map_ok(FileBytes)
             .map_ok(|content| self.args.alias_type.get_alias(&content.into_bytes()))
             .await
-            .with_context(|| {
-                format!("Failure in fetching content at content ID {:?}", content_id)
-            })?;
+            .with_context(|| format!("Failure in fetching content at content ID {content_id:?}"))?;
         self.process_alias(ctx, &alias, content_id).await
     }
 
@@ -430,7 +424,7 @@ impl AliasVerification {
         } else {
             format!("{}_{}_{}", self.repo_name, self.start, self.total)
         };
-        format!("{}_alias_backfill_counter", counter_prefix)
+        format!("{counter_prefix}_alias_backfill_counter")
     }
 
     async fn update_overall_progress(&self, completed: usize, max_id: u64) -> Result<()> {
@@ -459,10 +453,7 @@ impl AliasVerification {
                         .get_counter(&self.ctx, &overall_counter_name)
                         .await
                         .with_context(|| {
-                            format!(
-                                "Error while getting mutable counter {}",
-                                overall_counter_name
-                            )
+                            format!("Error while getting mutable counter {overall_counter_name}")
                         })?;
                     let new_counter_val =
                         maybe_counter_val.clone().unwrap_or(0) + (completed as i64);
@@ -551,7 +542,7 @@ impl AliasVerification {
             .mutable_counters()
             .get_counter(&self.ctx, &counter_name)
             .await
-            .with_context(|| format!("Error while getting mutable counter {}", counter_name))?;
+            .with_context(|| format!("Error while getting mutable counter {counter_name}"))?;
         // No chunking if no start or end provided.
         if self.start == 0 {
             if self.args.min_cs_db_id != 0 {
