@@ -68,7 +68,7 @@ pub fn init_working_copy(
     if !sparse_profiles.is_empty() {
         let mut sparse_contents: Vec<u8> = Vec::new();
         for profile in &sparse_profiles {
-            write!(&mut sparse_contents, "%include {}\n", profile)
+            write!(&mut sparse_contents, "%include {profile}\n")
                 .io_context("error generating sparse contents")?;
         }
         atomic_write(&repo.dot_hg_path().join("sparse"), |f| {
@@ -122,11 +122,10 @@ fn run_eden_clone_command(clone_command: &mut Command) -> Result<()> {
         // On Windows, users frequently hit clone errors caused by EdenFS not being installed.
         if cfg!(windows) && !binary_path.exists() {
             format!(
-                "failed to execute {:?}: edenfs binary not found at {:?}.",
-                clone_command, binary_path
+                "failed to execute {clone_command:?}: edenfs binary not found at {binary_path:?}."
             )
         } else {
-            format!("failed to execute {:?}", clone_command)
+            format!("failed to execute {clone_command:?}")
         }
     })?;
 
@@ -520,16 +519,12 @@ fn streaming_clone_inner(
     // Validate that the actual bytes written match the expected sizes from metadata
     if index_bytes_written != expected_index_size {
         bail!(
-            "Streaming clone index size mismatch: expected {} bytes, but wrote {} bytes",
-            expected_index_size,
-            index_bytes_written
+            "Streaming clone index size mismatch: expected {expected_index_size} bytes, but wrote {index_bytes_written} bytes"
         );
     }
     if data_bytes_written != expected_data_size {
         bail!(
-            "Streaming clone data size mismatch: expected {} bytes, but wrote {} bytes",
-            expected_data_size,
-            data_bytes_written
+            "Streaming clone data size mismatch: expected {expected_data_size} bytes, but wrote {data_bytes_written} bytes"
         );
     }
 
