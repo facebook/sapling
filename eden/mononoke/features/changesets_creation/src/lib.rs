@@ -82,7 +82,7 @@ pub async fn save_changesets(
                 if exists {
                     Ok(())
                 } else {
-                    Err(anyhow!("Commit {} does not exist in the repo", p))
+                    Err(anyhow!("Commit {p} does not exist in the repo"))
                 }
             }
         })
