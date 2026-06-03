@@ -257,7 +257,7 @@ impl Display for ConfigSet {
                         writeln!(f, "{}={}", key, value.replace('\n', "\n "))?;
                     } else {
                         // None indicates the value was unset.
-                        writeln!(f, "%unset {}", key)?;
+                        writeln!(f, "%unset {key}")?;
                     }
                 }
             }
@@ -491,7 +491,7 @@ impl ConfigSet {
         let insts = match parse(&buf) {
             Ok(insts) => insts,
             Err(error) => {
-                return errors.push(Error::ParseFile(path.to_path_buf(), format!("{}", error)));
+                return errors.push(Error::ParseFile(path.to_path_buf(), format!("{error}")));
             }
         };
 
@@ -780,7 +780,7 @@ pub(crate) mod tests {
             &"".into(),
         );
 
-        assert_eq!(format!("{:?}", errors), "[]");
+        assert_eq!(format!("{errors:?}"), "[]");
         assert_eq!(cfg.get("a=b", "c"), Some("d = e".into()));
         assert_eq!(cfg.get("a=b", "a"), None);
         assert_eq!(cfg.get("a=b", "# a"), None);
@@ -1057,7 +1057,7 @@ space_list=value1.a value1.b
 ",
             &"".into(),
         );
-        assert!(errors.is_empty(), "cfg.parse had errors {:?}", errors);
+        assert!(errors.is_empty(), "cfg.parse had errors {errors:?}");
 
         let serialized = cfg.to_string();
         assert_eq!(
@@ -1081,7 +1081,7 @@ space_list=value1.a value1.b
         // Verify it round trips
         let mut cfg2 = ConfigSet::new();
         let errors = cfg2.parse(serialized, &"".into());
-        assert!(errors.is_empty(), "cfg2.parse had errors {:?}", errors);
+        assert!(errors.is_empty(), "cfg2.parse had errors {errors:?}");
         assert_eq!(cfg.sections(), cfg2.sections());
     }
 
