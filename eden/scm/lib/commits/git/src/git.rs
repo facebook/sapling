@@ -281,7 +281,7 @@ impl GitSegmentedCommits {
                 ["refs", "remotetags", name] => {
                     // origin/v1 (name) => origin/tags/v1 (remotename in metalog)
                     let remotename = match name.split_once('/') {
-                        Some((remote, name)) => format!("{}/tags/{}", remote, name),
+                        Some((remote, name)) => format!("{remote}/tags/{name}"),
                         None => continue,
                     };
                     let should_import_to_dag = match existing_remotenames.get(&remotename) {
@@ -441,8 +441,8 @@ impl GitSegmentedCommits {
                 state.update_remotenames(metalog, RefName::try_from(name)?, ref_value)?;
             } else if let Some(rest) = ref_name.strip_prefix("refs/remotetags/") {
                 let name = match rest.split_once('/') {
-                    Some((remote, name)) => format!("{}/tags/{}", remote, name),
-                    None => bail!("illformed ref_name: {}", ref_name),
+                    Some((remote, name)) => format!("{remote}/tags/{name}"),
+                    None => bail!("illformed ref_name: {ref_name}"),
                 };
                 state.update_remotenames(metalog, RefName::try_from(name)?, ref_value)?;
             } else if ref_name.starts_with("refs/visibleheads/") {
@@ -485,7 +485,7 @@ impl GitSegmentedCommits {
         }
 
         let mut opts = metalog::CommitOptions::default();
-        let message = format!("sync from git refs: {:?}", ref_names);
+        let message = format!("sync from git refs: {ref_names:?}");
         opts.message = &message;
         metalog.commit(opts)?;
 
@@ -579,15 +579,15 @@ impl GitSegmentedCommits {
             for (name, optional_id) in find_changes(&old_remotenames, &new_remotenames) {
                 let ref_name = match name.split_once("/tags/") {
                     Some((remote, tag)) if !remote.contains('/') => {
-                        format!("refs/remotetags/{}/{}", remote, tag)
+                        format!("refs/remotetags/{remote}/{tag}")
                     }
-                    _ => format!("refs/remotes/{}", name),
+                    _ => format!("refs/remotes/{name}"),
                 };
                 tracing::trace!(ref_name=&ref_name, id=?optional_id, "updating remotename ref");
                 ref_to_change.insert(ref_name, optional_id);
             }
             for (name, optional_id) in find_changes(&old_bookmarks, &new_bookmarks) {
-                let ref_name = format!("refs/heads/{}", name);
+                let ref_name = format!("refs/heads/{name}");
                 tracing::trace!(ref_name=&ref_name, id=?optional_id, "updating bookmark ref");
                 ref_to_change.insert(ref_name, optional_id);
             }
@@ -612,7 +612,7 @@ impl GitSegmentedCommits {
                         ));
                     }
                     None => {
-                        update_ref_stdin.push_str(&format!("delete {}\0\0", name));
+                        update_ref_stdin.push_str(&format!("delete {name}\0\0"));
                     }
                 }
             }
@@ -704,10 +704,10 @@ impl AppendCommits for GitSegmentedCommits {
         let null_rev = self.dag.vertex_id(null).await?;
         let wdir_rev = self.dag.vertex_id(wdir).await?;
         if Group::VIRTUAL.min_id() != null_rev {
-            bail!("unexpected null rev: {:?}", null_rev);
+            bail!("unexpected null rev: {null_rev:?}");
         }
         if Group::VIRTUAL.min_id() + 1 != wdir_rev {
-            bail!("unexpected wdir rev: {:?}", wdir_rev);
+            bail!("unexpected wdir rev: {wdir_rev:?}");
         }
         Ok(())
     }
