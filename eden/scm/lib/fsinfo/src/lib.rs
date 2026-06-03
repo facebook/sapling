@@ -55,7 +55,7 @@ impl fmt::Display for FsType {
             FsType::NFS => write!(f, "NFS"),
             FsType::FUSE => write!(f, "FUSE"),
             FsType::TMPFS => write!(f, "tmpfs"),
-            FsType::Unknown(fstype) => write!(f, "Unknown({})", fstype),
+            FsType::Unknown(fstype) => write!(f, "Unknown({fstype})"),
         }
     }
 }
@@ -295,7 +295,7 @@ mod linux {
                 libc::REISERFS_SUPER_MAGIC => FsType::Unknown("reiserfs".to_string()),
                 libc::SMB_SUPER_MAGIC => FsType::Unknown("smb".to_string()),
                 libc::USBDEVICE_SUPER_MAGIC => FsType::Unknown("usbdevice".to_string()),
-                _ => FsType::Unknown(format!("{:#X}", f_type)),
+                _ => FsType::Unknown(format!("{f_type:#X}")),
             }
         }
     }
@@ -315,7 +315,7 @@ mod linux {
                         if name == "ntfs" {
                             return Ok(FsType::NTFS);
                         } else {
-                            return Ok(FsType::Unknown(format!("fuse.{}", name)));
+                            return Ok(FsType::Unknown(format!("fuse.{name}")));
                         }
                     }
                 }
@@ -328,7 +328,7 @@ mod linux {
     fn find_udev_properties(major_minor: &str) -> HashMap<String, String> {
         // The path is found by stracing `blkid`.
         // To do this "properly", consider https://docs.rs/udev/0.3.0/udev/struct.Device.html
-        let path = format!("/run/udev/data/b{}", major_minor);
+        let path = format!("/run/udev/data/b{major_minor}");
         let mut result = HashMap::new();
         for line in std::fs::read_to_string(path).unwrap_or_default().lines() {
             if line.contains('=') {
@@ -344,7 +344,7 @@ mod linux {
         path.symlink_metadata().ok().map(|m| {
             let st_dev = m.st_dev();
             let (major, minor) = (libc::major(st_dev), libc::minor(st_dev));
-            format!("{}:{}", major, minor)
+            format!("{major}:{minor}")
         })
     }
 
@@ -417,5 +417,5 @@ pub fn fstype(path: impl AsRef<Path>) -> Result<FsType> {
         path
     };
 
-    fstype_imp(path).with_context(|| format!("Cannot determine filesystem type for {:?}", path))
+    fstype_imp(path).with_context(|| format!("Cannot determine filesystem type for {path:?}"))
 }
