@@ -26,6 +26,7 @@ use super::types::BackfillChildParams;
 use super::types::BackfillChildResult;
 use super::types::BackfillDisplayData;
 use super::types::BoundaryDerivationStatus;
+use super::types::RepoDetailRow;
 use super::types::RepoDisplayData;
 use super::types::RepoStatus;
 
@@ -532,6 +533,59 @@ fn print_type_breakdown_table(
             row_cells.push(Cell::new(&format_number(count)));
         }
         table.add_row(Row::new(row_cells));
+    }
+
+    table.printstd();
+    println!("{}", "━".repeat(80));
+}
+
+/// Display a per-repo table showing progress for each repository in a multi-repo backfill.
+pub(super) fn display_repo_detail_table(rows: &mut [RepoDetailRow]) {
+    fn status_sort_key(status: &RepoStatus) -> u8 {
+        match status {
+            RepoStatus::Failed => 0,
+            RepoStatus::InProgress => 1,
+            RepoStatus::NotStarted => 2,
+            RepoStatus::Completed => 3,
+        }
+    }
+
+    rows.sort_by(|a, b| {
+        status_sort_key(&a.status)
+            .cmp(&status_sort_key(&b.status))
+            .then_with(|| {
+                let a_name = a.repo_name.as_deref().unwrap_or("");
+                let b_name = b.repo_name.as_deref().unwrap_or("");
+                a_name.cmp(b_name)
+            })
+            .then_with(|| a.repo_id.cmp(&b.repo_id))
+    });
+
+    println!();
+    println!("Per-Repository Details:");
+    println!("{}", "━".repeat(80));
+
+    let mut table = Table::new();
+    table.set_format(*format::consts::FORMAT_NO_LINESEP_WITH_TITLE);
+
+    table.set_titles(Row::new(vec![
+        Cell::new("Repository"),
+        Cell::new("Status"),
+        Cell::new("Derived"),
+        Cell::new("Total"),
+    ]));
+
+    for row in rows.iter() {
+        let repo_label = match &row.repo_name {
+            Some(name) => format!("{} ({})", name, row.repo_id),
+            None => row.repo_id.to_string(),
+        };
+        table.add_row(Row::new(vec![
+            Cell::new(&repo_label),
+            Cell::new(&row.status.to_string()),
+            Cell::new(&format_number(row.derived)),
+            Cell::new(&format_number(row.total)),
+        ]));
     }
 
     table.printstd();

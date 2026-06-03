@@ -167,6 +167,14 @@ pub(super) struct BackfillChildDisplayData {
     pub boundary_derivation_status: Option<BoundaryDerivationStatus>,
 }
 
+pub(super) struct RepoDetailRow {
+    pub repo_id: i64,
+    pub repo_name: Option<String>,
+    pub status: RepoStatus,
+    pub derived: usize,
+    pub total: usize,
+}
+
 /// Counts of child requests grouped by their effective state. All four
 /// counts together describe a backfill's progress without exposing the raw
 /// `RequestStatus` enum to callers that just want to render a status.

@@ -225,6 +225,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             .collect();
         return backfill_status(
             &ctx,
+            &app,
             sql_queue,
             blobstore,
             repo_names,
