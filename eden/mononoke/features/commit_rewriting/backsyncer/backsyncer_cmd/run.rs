@@ -347,8 +347,7 @@ fn extract_cs_id_from_sync_outcome(
         Some(NotSyncCandidate(_)) => Ok(None),
         Some(EquivalentWorkingCopyAncestor(cs_id, _)) => Ok(Some(cs_id)),
         None => Err(format_err!(
-            "sync outcome is not available for {}",
-            source_cs_id
+            "sync outcome is not available for {source_cs_id}"
         )),
     }
 }

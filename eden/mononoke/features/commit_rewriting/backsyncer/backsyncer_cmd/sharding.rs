@@ -51,11 +51,10 @@ impl RepoShardedProcess for BacksyncProcess {
             Some(repo_name) => repo_name,
             None => {
                 let details = format!(
-                    "Only source repo name {} provided, target repo name missing in {}",
-                    source_repo_name, repo
+                    "Only source repo name {source_repo_name} provided, target repo name missing in {repo}"
                 );
                 error!("{}", details);
-                bail!("{}", details)
+                bail!("{details}")
             }
         };
         info!(
@@ -72,8 +71,7 @@ impl RepoShardedProcess for BacksyncProcess {
             BacksyncProcessExecutor::new(self.ctx.clone(), self.app.clone(), repo_args).await?;
 
         let details = format!(
-            "Completed back syncer command setup from repo {} to repo {}",
-            source_repo_name, target_repo_name
+            "Completed back syncer command setup from repo {source_repo_name} to repo {target_repo_name}"
         );
         info!("{}", details);
         Ok(Arc::new(executor))
