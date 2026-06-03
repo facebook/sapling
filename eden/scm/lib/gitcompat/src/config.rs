@@ -136,8 +136,7 @@ fn translate_git_config_output(out: &str) -> (String, String) {
 
     if !global_user.is_empty() && !global_email.is_empty() {
         user_config.push_str(&format!(
-            "[ui]\n# from git config: user.name and user.email\nusername = {} <{}>\n",
-            global_user, global_email,
+            "[ui]\n# from git config: user.name and user.email\nusername = {global_user} <{global_email}>\n",
         ));
     }
 

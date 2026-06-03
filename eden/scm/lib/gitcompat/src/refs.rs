@@ -252,7 +252,7 @@ impl BareGit {
                 // Ignore non-utf8 names.
                 _ => continue,
             };
-            let name = format!("{}/{}", prefix, file_name);
+            let name = format!("{prefix}/{file_name}");
             let file_type = entry.file_type()?;
             if file_type.is_dir() {
                 self.populate_loose_directory_references(matcher, &name, insert)?;
@@ -318,7 +318,7 @@ impl ReferenceValue {
                 // But it can also have extra data, like: HEX_HASH\t\t'HEX_HASH'.
                 let first_word = content.split_ascii_whitespace().next().unwrap_or("");
                 let id = HgId::from_hex(first_word.as_bytes())
-                    .with_context(|| format!("Resolve Git reference: {:?}", content))?;
+                    .with_context(|| format!("Resolve Git reference: {content:?}"))?;
                 Self::Id(id)
             }
         };
@@ -352,7 +352,7 @@ mod tests {
             match self.list_references(matcher) {
                 Ok(refs) => refs
                     .into_iter()
-                    .map(|(k, v)| format!("{} {:?}", k, v))
+                    .map(|(k, v)| format!("{k} {v:?}"))
                     .collect(),
                 Err(e) => vec![e.to_string()],
             }
@@ -372,7 +372,7 @@ mod tests {
                         Some(id) => id.to_hex(),
                         None => "None".to_owned(),
                     };
-                    format!("{} => {}", name, resolved)
+                    format!("{name} => {resolved}")
                 }
                 None => "None".to_owned(),
             }
