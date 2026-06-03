@@ -95,7 +95,7 @@ fn get_blobconfig(
                         }
                     })
                     .with_context(|| {
-                        format!("could not find a blobstore with id {}", inner_blobstore_id)
+                        format!("could not find a blobstore with id {inner_blobstore_id}")
                     })?
             }
             _ => bail!("inner-blobstore-id can only be supplied for multiplexed blobstores"),
@@ -109,7 +109,7 @@ fn extract_repo_name_from_filename(filename: &str) -> &str {
     let re = Regex::new(r"repo(.*)\.store(\d*).part([0-9]+).keys.txt").unwrap();
     let caps = re
         .captures(filename)
-        .with_context(|| format!("Failed to capture lambda for filename {}", filename))
+        .with_context(|| format!("Failed to capture lambda for filename {filename}"))
         .unwrap();
     caps.get(1).map_or("", |m| m.as_str())
 }
@@ -118,7 +118,7 @@ fn extract_inner_store_id_from_filename(filename: &str) -> Option<u64> {
     let re = Regex::new(r"repo(.*)\.store(\d*).part([0-9]+).keys.txt").unwrap();
     let caps = re
         .captures(filename)
-        .with_context(|| format!("Failed to capture lambda for filename {}", filename))
+        .with_context(|| format!("Failed to capture lambda for filename {filename}"))
         .unwrap();
     let inner_blobstore_id_str = caps.get(2).map_or("", |m| m.as_str());
     inner_blobstore_id_str.parse::<u64>().ok()

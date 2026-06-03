@@ -110,11 +110,11 @@ async fn fetch_blobs<T: Blobstore>(
             let blob = blobstore
                 .get(ctx, key)
                 .await?
-                .ok_or_else(|| anyhow!("Blob {} not in store", key))?
+                .ok_or_else(|| anyhow!("Blob {key} not in store"))?
                 .into_bytes();
             let pack_key = key
                 .strip_prefix(repo_prefix)
-                .ok_or_else(|| anyhow!("Could not strip {} from {}", repo_prefix, key))?;
+                .ok_or_else(|| anyhow!("Could not strip {repo_prefix} from {key}"))?;
             Result::<_>::Ok((pack_key.to_string(), blob))
         })
         .collect();
@@ -274,7 +274,7 @@ pub async fn repack_keys<T: Blobstore>(
                 let put_futs: FuturesUnordered<_> = single_compressed
                     .into_iter()
                     .map(|(key, uncompressed_size, value)| {
-                        let key = format!("{}{}", repo_prefix, key);
+                        let key = format!("{repo_prefix}{key}");
                         let mut scuba = scuba.clone();
                         scuba.add(BLOBSTORE_KEY, key.as_str());
                         scuba.add(UNCOMPRESSED_SIZE, uncompressed_size);
