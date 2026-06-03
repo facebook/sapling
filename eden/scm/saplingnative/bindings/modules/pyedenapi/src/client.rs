@@ -475,7 +475,7 @@ py_class!(pub class client |py| {
                 let cs_id = data.0.cs_id;
                 fetch_snapshot_with_cache(api, data.0, cache)
                     .await
-                    .with_context(|| format_err!("Failed to find snapshot {}", cs_id))
+                    .with_context(|| format_err!("Failed to find snapshot {cs_id}"))
             })
         })
         .map_pyerr(py)?
