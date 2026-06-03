@@ -350,7 +350,7 @@ mod tests {
         command_map.insert("foobar".to_string(), 1);
 
         if let Err(err) = expand_prefix(&command_map, "fo") {
-            let msg = format!("{}", err);
+            let msg = format!("{err}");
             assert_eq!(msg, "command \'fo\' is ambiguous");
         } else {
             panic!()
@@ -364,7 +364,7 @@ mod tests {
         command_map.insert("foobar".to_string(), 1);
 
         if let Err(err) = expand_prefix(&command_map, "fo") {
-            let msg = format!("{}", err);
+            let msg = format!("{err}");
             assert_eq!(msg, "command \'fo\' is ambiguous");
         } else {
             panic!()
@@ -378,7 +378,7 @@ mod tests {
         command_map.insert("foo".to_string(), 1);
 
         if let Err(err) = expand_prefix(&command_map, "fo") {
-            let msg = format!("{}", err);
+            let msg = format!("{err}");
             assert_eq!(msg, "command \'fo\' is ambiguous");
         } else {
             panic!()
@@ -424,7 +424,7 @@ mod tests {
         cfg.insert("log".to_string(), "foo".to_string());
 
         if let Err(err) = expand_aliases(|x| cfg.get(x), &["foo"]) {
-            let msg = format!("{}", err);
+            let msg = format!("{err}");
             assert_eq!(msg, "circular alias: foo");
         } else {
             panic!()
@@ -513,7 +513,7 @@ mod tests {
     fn test_expand_shell_alias() {
         let expand = |alias: &str, mut args: Vec<&str>| -> String {
             let mut cfg = BTreeMap::new();
-            cfg.insert("aliasname", format!("!{}", alias));
+            cfg.insert("aliasname", format!("!{alias}"));
             args.insert(0, "aliasname");
             let args = expand_aliases(|x| cfg.get(x), &args).unwrap().0;
             // args = ["debugrunshell", "--cmd=command", ...]

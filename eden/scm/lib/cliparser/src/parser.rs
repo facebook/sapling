@@ -131,7 +131,7 @@ impl From<Value> for i64 {
     fn from(v: Value) -> Self {
         match v {
             Value::Int(i) => i.unwrap_or_default(),
-            _ => panic!("programming error:  {:?} was converted to i64", v),
+            _ => panic!("programming error:  {v:?} was converted to i64"),
         }
     }
 }
@@ -140,7 +140,7 @@ impl From<Value> for Option<i64> {
     fn from(v: Value) -> Self {
         match v {
             Value::Int(i) => i,
-            _ => panic!("programming error:  {:?} was converted to Option<i64>", v),
+            _ => panic!("programming error:  {v:?} was converted to Option<i64>"),
         }
     }
 }
@@ -149,7 +149,7 @@ impl From<Value> for String {
     fn from(v: Value) -> Self {
         match v {
             Value::Str(s) => s.unwrap_or_default(),
-            _ => panic!("programming error:  {:?} was converted to String", v),
+            _ => panic!("programming error:  {v:?} was converted to String"),
         }
     }
 }
@@ -158,10 +158,7 @@ impl From<Value> for Option<String> {
     fn from(v: Value) -> Self {
         match v {
             Value::Str(s) => s,
-            _ => panic!(
-                "programming error:  {:?} was converted to Option<String>",
-                v
-            ),
+            _ => panic!("programming error:  {v:?} was converted to Option<String>"),
         }
     }
 }
@@ -170,7 +167,7 @@ impl From<Value> for bool {
     fn from(v: Value) -> Self {
         match v {
             Value::Bool(b) => b.unwrap_or(false),
-            _ => panic!("programming error:  {:?} was converted to bool", v),
+            _ => panic!("programming error:  {v:?} was converted to bool"),
         }
     }
 }
@@ -179,7 +176,7 @@ impl From<Value> for Option<bool> {
     fn from(v: Value) -> Self {
         match v {
             Value::Bool(b) => b,
-            _ => panic!("programming error:  {:?} was converted to bool", v),
+            _ => panic!("programming error:  {v:?} was converted to bool"),
         }
     }
 }
@@ -188,7 +185,7 @@ impl From<Value> for Vec<String> {
     fn from(v: Value) -> Self {
         match v {
             Value::List(vec) => vec,
-            _ => panic!("programming error:  {:?} was converted to Vec<String>", v),
+            _ => panic!("programming error:  {v:?} was converted to Vec<String>"),
         }
     }
 }
