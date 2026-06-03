@@ -414,7 +414,7 @@ impl fmt::Debug for ProgressBar {
         let (pos, total) = self.position_total();
         write!(f, "[{} {}/{} {}", self.topic(), pos, total, self.unit())?;
         if let Some(message) = self.message() {
-            write!(f, " {}", message)?;
+            write!(f, " {message}")?;
         }
         Ok(())
     }
