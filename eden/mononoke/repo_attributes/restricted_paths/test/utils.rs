@@ -960,18 +960,14 @@ impl RestrictedPathsTestData {
 
                 assert!(
                     !auth_errors.is_empty(),
-                    "Scenario {}: expected RestrictedPathsAuthorizationError for operation '{}' but got none.",
-                    scenario_idx,
-                    op,
+                    "Scenario {scenario_idx}: expected RestrictedPathsAuthorizationError for operation '{op}' but got none.",
                 )
             }
         } else {
             // When enforcement is NOT expected, no errors should have occurred
             assert!(
                 auth_errors.is_empty(),
-                "Scenario {}: expected access to succeed but got authorization errors: {:#?}",
-                scenario_idx,
-                auth_errors
+                "Scenario {scenario_idx}: expected access to succeed but got authorization errors: {auth_errors:#?}"
             );
         }
 
@@ -1010,8 +1006,8 @@ impl RestrictedPathsTestData {
             // can produce entries in non-deterministic order.
             let mut expected_sorted = expected_scuba_logs.clone();
             let mut actual_sorted = scuba_logs.clone();
-            expected_sorted.sort_by(|a, b| format!("{:?}", a).cmp(&format!("{:?}", b)));
-            actual_sorted.sort_by(|a, b| format!("{:?}", a).cmp(&format!("{:?}", b)));
+            expected_sorted.sort_by(|a, b| format!("{a:?}").cmp(&format!("{b:?}")));
+            actual_sorted.sort_by(|a, b| format!("{a:?}").cmp(&format!("{b:?}")));
             assert_eq!(expected_sorted, actual_sorted);
         }
         #[cfg(not(fbcode_build))]
@@ -1051,8 +1047,8 @@ impl RestrictedPathsTestData {
             commit_ctx = commit_ctx.add_file(path.as_str(), file_content.to_string());
         }
         for (root, acl) in &self.acl_manifest_restricted_paths {
-            let slacl_path = format!("{}/.slacl", root);
-            let slacl_content = format!("repo_region_acl = \"{}\"\n", acl);
+            let slacl_path = format!("{root}/.slacl");
+            let slacl_content = format!("repo_region_acl = \"{acl}\"\n");
             commit_ctx = commit_ctx.add_file(slacl_path.as_str(), slacl_content);
         }
         commit_ctx.commit().await
@@ -1153,7 +1149,7 @@ fn setup_test_acls_with_groups(
         .map(|(region_name, usernames)| {
             let users = usernames
                 .into_iter()
-                .map(|username| MononokeIdentity::from_str(&format!("USER:{}", username)))
+                .map(|username| MononokeIdentity::from_str(&format!("USER:{username}")))
                 .collect::<Result<MononokeIdentitySet, _>>()?;
             Ok((
                 region_name.to_string(),
@@ -1330,7 +1326,7 @@ fn deserialize_scuba_log_file(
         .map(|line| {
             serde_json::from_str::<serde_json::Value>(&line)
                 .map_err(anyhow::Error::from)
-                .with_context(|| format!("Failed to parse line: {}", line))
+                .with_context(|| format!("Failed to parse line: {line}"))
                 .map(|json| {
                     // Scuba groups the logs by type (e.g. int, normal), so
                     // let's remove those and flatten the sample into a single
