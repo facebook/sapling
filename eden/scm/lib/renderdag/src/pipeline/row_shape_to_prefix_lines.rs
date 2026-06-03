@@ -5,4 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+pub mod ascii;
+pub mod ascii_large;
 pub mod box_drawing;

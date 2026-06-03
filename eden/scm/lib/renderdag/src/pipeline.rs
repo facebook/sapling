@@ -28,8 +28,6 @@
 //!   Step 2 result (since the commit graph is not changing), and only update
 //!   the message part later.
 
-#![allow(dead_code)]
-
 pub mod graph_to_row_shape;
 pub mod prefix_lines_to_text;
 pub mod row_shape_to_prefix_lines;

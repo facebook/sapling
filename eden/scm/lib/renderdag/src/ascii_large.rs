@@ -8,21 +8,20 @@
 use std::marker::PhantomData;
 
 use super::output::OutputRendererOptions;
-use super::output::OutputRendererState;
 use super::render::Ancestor;
 use super::render::GraphRow;
-use super::render::LinkLine;
-use super::render::NodeLine;
-use super::render::PadLine;
 use super::render::Renderer;
-use crate::pad::pad_lines;
+use crate::pipeline::prefix_lines_to_text::PrefixLinesToText;
+use crate::pipeline::row_shape_to_prefix_lines::ascii_large::AsciiLargePrefixLineRenderer;
+use crate::pipeline::types::GraphRowShape;
 
 pub struct AsciiLargeRenderer<N, R>
 where
     R: Renderer<N, Output = GraphRow<N>> + Sized,
 {
     inner: R,
-    state: OutputRendererState,
+    prefix_lines: AsciiLargePrefixLineRenderer,
+    text: PrefixLinesToText,
     _phantom: PhantomData<N>,
 }
 
@@ -33,7 +32,8 @@ where
     pub(crate) fn new(inner: R) -> Self {
         AsciiLargeRenderer {
             inner,
-            state: OutputRendererState::default(),
+            prefix_lines: AsciiLargePrefixLineRenderer::new(),
+            text: PrefixLinesToText::new(),
             _phantom: PhantomData,
         }
     }
@@ -71,174 +71,26 @@ where
         message: String,
     ) -> String {
         let line = self.inner.next_row(node, parents, glyph, message);
-        let mut out = String::new();
-        let mut message_lines = pad_lines(line.message.lines(), self.options().min_row_height);
-        let has_term_row = line.term_line.is_some();
-        self.state.begin_row(&mut out, line.separator_line);
-
-        // Render the nodeline
-        let mut node_line = String::new();
-        for (i, entry) in line.node_line.iter().enumerate() {
-            match entry {
-                NodeLine::Node => {
-                    if i > 0 {
-                        node_line.push(' ');
-                    }
-                    node_line.push_str(&line.glyph);
-                    node_line.push(' ');
-                }
-                NodeLine::Parent => node_line.push_str(if i > 0 { " | " } else { "| " }),
-                NodeLine::Ancestor => node_line.push_str(if i > 0 { " . " } else { ". " }),
-                NodeLine::Blank => node_line.push_str(if i > 0 { "   " } else { "  " }),
-            }
-        }
-        self.state
-            .push_line_with_message(&mut out, node_line, message_lines.next());
-
-        // Render the link line
-        if let Some(link_row) = line.link_line {
-            let mut top_link_line = String::new();
-            let mut bot_link_line = String::new();
-            for (i, cur) in link_row.iter().enumerate() {
-                // Top left
-                if i > 0 {
-                    if cur.intersects(LinkLine::LEFT_MERGE_PARENT) {
-                        top_link_line.push('/');
-                    } else if cur.intersects(LinkLine::LEFT_MERGE_ANCESTOR) {
-                        top_link_line.push('.');
-                    } else if cur.intersects(LinkLine::HORIZ_PARENT) {
-                        top_link_line.push('_');
-                    } else if cur.intersects(LinkLine::HORIZ_ANCESTOR) {
-                        top_link_line.push('.');
-                    } else {
-                        top_link_line.push(' ');
-                    }
-                }
-
-                // Top center
-                if cur.intersects(LinkLine::VERT_PARENT) {
-                    top_link_line.push('|');
-                } else if cur.intersects(LinkLine::VERT_ANCESTOR) {
-                    top_link_line.push('.');
-                } else if cur.intersects(LinkLine::ANY_MERGE) {
-                    top_link_line.push(' ');
-                } else if cur.intersects(LinkLine::HORIZ_PARENT) {
-                    top_link_line.push('_');
-                } else if cur.intersects(LinkLine::HORIZ_ANCESTOR) {
-                    top_link_line.push('.');
-                } else {
-                    top_link_line.push(' ');
-                }
-
-                // Top right
-                if cur.intersects(LinkLine::RIGHT_MERGE_PARENT) {
-                    top_link_line.push('\\');
-                } else if cur.intersects(LinkLine::RIGHT_MERGE_ANCESTOR) {
-                    top_link_line.push('.');
-                } else if cur.intersects(LinkLine::HORIZ_PARENT) {
-                    top_link_line.push('_');
-                } else if cur.intersects(LinkLine::HORIZ_ANCESTOR) {
-                    top_link_line.push('.');
-                } else {
-                    top_link_line.push(' ');
-                }
-
-                // Bottom left
-                if i > 0 {
-                    if cur.intersects(LinkLine::LEFT_FORK_PARENT) {
-                        bot_link_line.push('\\');
-                    } else if cur.intersects(LinkLine::LEFT_FORK_ANCESTOR) {
-                        bot_link_line.push('.');
-                    } else {
-                        bot_link_line.push(' ');
-                    }
-                }
-
-                // Bottom center
-                if cur.intersects(LinkLine::VERT_PARENT) {
-                    bot_link_line.push('|');
-                } else if cur.intersects(LinkLine::VERT_ANCESTOR) {
-                    bot_link_line.push('.');
-                } else {
-                    bot_link_line.push(' ');
-                }
-
-                // Bottom Right
-                if cur.intersects(LinkLine::RIGHT_FORK_PARENT) {
-                    bot_link_line.push('/');
-                } else if cur.intersects(LinkLine::RIGHT_FORK_ANCESTOR) {
-                    bot_link_line.push('.');
-                } else {
-                    bot_link_line.push(' ');
-                }
-            }
-            self.state
-                .push_line_with_message(&mut out, top_link_line, message_lines.next());
-            self.state
-                .push_line_with_message(&mut out, bot_link_line, message_lines.next());
-        }
-
-        // Render the term line
-        if let Some(term_row) = line.term_line {
-            let term_strs = ["| ", "~ "];
-            for term_str in term_strs.iter() {
-                let mut term_line = String::new();
-                for (i, term) in term_row.iter().enumerate() {
-                    if i > 0 {
-                        term_line.push(' ');
-                    }
-                    if *term {
-                        term_line.push_str(term_str);
-                    } else {
-                        term_line.push_str(match line.pad_lines[i] {
-                            PadLine::Parent => "| ",
-                            PadLine::Ancestor => ". ",
-                            PadLine::Blank => "  ",
-                        });
-                    }
-                }
-                self.state
-                    .push_line_with_message(&mut out, term_line, message_lines.next());
-            }
-        }
-
-        let mut base_pad_line = String::new();
-        for (i, entry) in line.pad_lines.iter().enumerate() {
-            base_pad_line.push_str(match entry {
-                PadLine::Parent => {
-                    if i > 0 {
-                        " | "
-                    } else {
-                        "| "
-                    }
-                }
-                PadLine::Ancestor => {
-                    if i > 0 {
-                        " . "
-                    } else {
-                        ". "
-                    }
-                }
-                PadLine::Blank => {
-                    if i > 0 {
-                        "   "
-                    } else {
-                        "  "
-                    }
-                }
-            });
-        }
-
-        // Render any pad lines
-        if !self
-            .state
-            .push_pad_lines(&mut out, &base_pad_line, message_lines)
-            && has_term_row
-        {
-            self.state.queue_pad_line(base_pad_line);
-        }
-
-        out
+        let glyph = line.glyph;
+        let message = line.message;
+        let separator_line = line.separator_line;
+        let row_shape = GraphRowShape {
+            node: line.node,
+            merge: line.merge,
+            separator_line,
+            node_line: line.node_line,
+            link_line: line.link_line,
+            term_line: line.term_line,
+            pad_lines: line.pad_lines,
+        };
+        let prefix_lines = self.prefix_lines.next_prefix_lines(&row_shape);
+        self.text.next_text(
+            prefix_lines,
+            separator_line,
+            &glyph,
+            &message,
+            self.options().min_row_height,
+        )
     }
 
     fn output_options_mut(&mut self) -> &mut OutputRendererOptions {

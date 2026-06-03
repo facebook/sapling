@@ -8,21 +8,20 @@
 use std::marker::PhantomData;
 
 use super::output::OutputRendererOptions;
-use super::output::OutputRendererState;
 use super::render::Ancestor;
 use super::render::GraphRow;
-use super::render::LinkLine;
-use super::render::NodeLine;
-use super::render::PadLine;
 use super::render::Renderer;
-use crate::pad::pad_lines;
+use crate::pipeline::prefix_lines_to_text::PrefixLinesToText;
+use crate::pipeline::row_shape_to_prefix_lines::ascii::AsciiPrefixLineRenderer;
+use crate::pipeline::types::GraphRowShape;
 
 pub struct AsciiRenderer<N, R>
 where
     R: Renderer<N, Output = GraphRow<N>> + Sized,
 {
     inner: R,
-    state: OutputRendererState,
+    prefix_lines: AsciiPrefixLineRenderer,
+    text: PrefixLinesToText,
     _phantom: PhantomData<N>,
 }
 
@@ -33,7 +32,8 @@ where
     pub(crate) fn new(inner: R) -> Self {
         AsciiRenderer {
             inner,
-            state: OutputRendererState::default(),
+            prefix_lines: AsciiPrefixLineRenderer::new(),
+            text: PrefixLinesToText::new(),
             _phantom: PhantomData,
         }
     }
@@ -69,129 +69,26 @@ where
         message: String,
     ) -> String {
         let line = self.inner.next_row(node, parents, glyph, message);
-        let mut out = String::new();
-        let mut message_lines = pad_lines(line.message.lines(), self.options().min_row_height);
-        let has_term_row = line.term_line.is_some();
-        self.state.begin_row(&mut out, line.separator_line);
-
-        // Render the nodeline
-        let mut node_line = String::new();
-        for entry in line.node_line.iter() {
-            match entry {
-                NodeLine::Node => {
-                    node_line.push_str(&line.glyph);
-                    node_line.push(' ');
-                }
-                NodeLine::Parent => node_line.push_str("| "),
-                NodeLine::Ancestor => node_line.push_str(". "),
-                NodeLine::Blank => node_line.push_str("  "),
-            }
-        }
-        self.state
-            .push_line_with_message(&mut out, node_line, message_lines.next());
-
-        // Render the link line
-        if let Some(link_row) = line.link_line {
-            let mut link_line = String::new();
-            let any_horizontal = link_row
-                .iter()
-                .any(|cur| cur.intersects(LinkLine::HORIZONTAL));
-            let mut iter = link_row
-                .iter()
-                .copied()
-                .chain(std::iter::once(LinkLine::empty()))
-                .peekable();
-            while let Some(cur) = iter.next() {
-                let next = match iter.peek() {
-                    Some(&v) => v,
-                    None => break,
-                };
-                // Draw the parent/ancestor line.
-                if cur.intersects(LinkLine::HORIZONTAL) {
-                    if cur.intersects(LinkLine::CHILD | LinkLine::ANY_FORK_OR_MERGE) {
-                        link_line.push('+');
-                    } else {
-                        link_line.push('-');
-                    }
-                } else if cur.intersects(LinkLine::VERTICAL) {
-                    if cur.intersects(LinkLine::ANY_FORK_OR_MERGE) && any_horizontal {
-                        link_line.push('+');
-                    } else if cur.intersects(LinkLine::VERT_PARENT) {
-                        link_line.push('|');
-                    } else {
-                        link_line.push('.');
-                    }
-                } else if cur.intersects(LinkLine::ANY_MERGE) && any_horizontal {
-                    link_line.push('\'');
-                } else if cur.intersects(LinkLine::ANY_FORK) && any_horizontal {
-                    link_line.push('.');
-                } else {
-                    link_line.push(' ');
-                }
-
-                // Draw the connecting line.
-                if cur.intersects(LinkLine::HORIZONTAL) {
-                    link_line.push('-');
-                } else if cur.intersects(LinkLine::RIGHT_MERGE) {
-                    if next.intersects(LinkLine::LEFT_FORK) && !any_horizontal {
-                        link_line.push('\\');
-                    } else {
-                        link_line.push('-');
-                    }
-                } else if cur.intersects(LinkLine::RIGHT_FORK) {
-                    if next.intersects(LinkLine::LEFT_MERGE) && !any_horizontal {
-                        link_line.push('/');
-                    } else {
-                        link_line.push('-');
-                    }
-                } else {
-                    link_line.push(' ');
-                }
-            }
-            self.state
-                .push_line_with_message(&mut out, link_line, message_lines.next());
-        }
-
-        // Render the term line
-        if let Some(term_row) = line.term_line {
-            let term_strs = ["| ", "~ "];
-            for term_str in term_strs.iter() {
-                let mut term_line = String::new();
-                for (i, term) in term_row.iter().enumerate() {
-                    if *term {
-                        term_line.push_str(term_str);
-                    } else {
-                        term_line.push_str(match line.pad_lines[i] {
-                            PadLine::Parent => "| ",
-                            PadLine::Ancestor => ". ",
-                            PadLine::Blank => "  ",
-                        });
-                    }
-                }
-                self.state
-                    .push_line_with_message(&mut out, term_line, message_lines.next());
-            }
-        }
-
-        let mut base_pad_line = String::new();
-        for entry in line.pad_lines.iter() {
-            base_pad_line.push_str(match entry {
-                PadLine::Parent => "| ",
-                PadLine::Ancestor => ". ",
-                PadLine::Blank => "  ",
-            });
-        }
-
-        // Render any pad lines
-        if !self
-            .state
-            .push_pad_lines(&mut out, &base_pad_line, message_lines)
-            && has_term_row
-        {
-            self.state.queue_pad_line(base_pad_line);
-        }
-
-        out
+        let glyph = line.glyph;
+        let message = line.message;
+        let separator_line = line.separator_line;
+        let row_shape = GraphRowShape {
+            node: line.node,
+            merge: line.merge,
+            separator_line,
+            node_line: line.node_line,
+            link_line: line.link_line,
+            term_line: line.term_line,
+            pad_lines: line.pad_lines,
+        };
+        let prefix_lines = self.prefix_lines.next_prefix_lines(&row_shape);
+        self.text.next_text(
+            prefix_lines,
+            separator_line,
+            &glyph,
+            &message,
+            self.options().min_row_height,
+        )
     }
 
     fn output_options_mut(&mut self) -> &mut OutputRendererOptions {
