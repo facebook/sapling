@@ -177,8 +177,7 @@ fn test_rate_limit_window_too_large() {
     let err_msg = result.expect_err("expected error").to_string();
     assert!(
         err_msg.contains("exceeds maximum"),
-        "Expected 'exceeds maximum' in error: {}",
-        err_msg
+        "Expected 'exceeds maximum' in error: {err_msg}"
     );
 }
 
@@ -663,7 +662,7 @@ async fn test_under_all_limits_accepted(fb: FacebookInit) -> Result<()> {
     // Use commit message tag for eligibility (primary production path)
     let draft = CreateCommitContext::new(ctx, repo, vec![tip])
         .add_file("users/alice/draft.txt", "draft")
-        .set_message(format!("eligible commit {}", ELIGIBLE_TAG))
+        .set_message(format!("eligible commit {ELIGIBLE_TAG}"))
         .set_author(ALICE)
         .set_author_date(recent_date())
         .commit()
@@ -703,7 +702,7 @@ async fn test_most_restrictive_hook_fails_first(fb: FacebookInit) -> Result<()> 
 
     let draft = CreateCommitContext::new(ctx, repo, vec![tip])
         .add_file("users/alice/draft.txt", "draft")
-        .set_message(format!("eligible commit {}", ELIGIBLE_TAG))
+        .set_message(format!("eligible commit {ELIGIBLE_TAG}"))
         .set_author(ALICE)
         .set_author_date(recent_date())
         .commit()
@@ -744,8 +743,8 @@ async fn test_large_stack_all_hooks_reject(fb: FacebookInit) -> Result<()> {
     let mut last_cs_id = None;
     for i in 0..5 {
         let cs = CreateCommitContext::new(ctx, repo, vec![parent])
-            .add_file(format!("users/alice/stack_{}.txt", i).as_str(), "x")
-            .set_message(format!("stack commit {} {}", i, ELIGIBLE_TAG))
+            .add_file(format!("users/alice/stack_{i}.txt").as_str(), "x")
+            .set_message(format!("stack commit {i} {ELIGIBLE_TAG}"))
             .set_author(ALICE)
             .commit()
             .await?;
@@ -787,7 +786,7 @@ async fn test_eligible_commit_outside_scoped_directory(fb: FacebookInit) -> Resu
 
     let draft = CreateCommitContext::new(ctx, repo, vec![tip])
         .add_file("fbcode/server/new.txt", "new")
-        .set_message(format!("eligible commit {}", ELIGIBLE_TAG))
+        .set_message(format!("eligible commit {ELIGIBLE_TAG}"))
         .set_author(ALICE)
         .set_author_date(recent_date())
         .commit()
@@ -825,7 +824,7 @@ async fn test_different_user_not_blocked_by_per_user_limit(fb: FacebookInit) -> 
 
     let alice_draft = CreateCommitContext::new(ctx, repo, vec![tip])
         .add_file("fbcode/alice_new.txt", "x")
-        .set_message(format!("alice commit {}", ELIGIBLE_TAG))
+        .set_message(format!("alice commit {ELIGIBLE_TAG}"))
         .set_author(ALICE)
         .set_author_date(recent_date())
         .commit()
@@ -847,7 +846,7 @@ async fn test_different_user_not_blocked_by_per_user_limit(fb: FacebookInit) -> 
 
     let bob_draft = CreateCommitContext::new(ctx, repo, vec![tip])
         .add_file("fbcode/bob_new.txt", "x")
-        .set_message(format!("bob commit {}", ELIGIBLE_TAG))
+        .set_message(format!("bob commit {ELIGIBLE_TAG}"))
         .set_author(BOB)
         .set_author_date(recent_date())
         .commit()
@@ -882,7 +881,7 @@ async fn test_new_bookmark_no_ancestors(fb: FacebookInit) -> Result<()> {
 
     let root = CreateCommitContext::new_root(ctx, repo)
         .add_file("users/alice/first.txt", "first")
-        .set_message(format!("first commit {}", ELIGIBLE_TAG))
+        .set_message(format!("first commit {ELIGIBLE_TAG}"))
         .set_author(ALICE)
         .set_author_date(recent_date())
         .commit()
@@ -909,7 +908,7 @@ async fn test_check_all_commit_rate_limits_with_no_rules(fb: FacebookInit) -> Re
     let bm = BookmarkKey::new("main")?;
     let cs_id = CreateCommitContext::new_root(ctx, repo)
         .add_file("users/alice/first.txt", "first")
-        .set_message(format!("first commit {}", ELIGIBLE_TAG))
+        .set_message(format!("first commit {ELIGIBLE_TAG}"))
         .set_author(ALICE)
         .set_author_date(recent_date())
         .commit()
@@ -941,7 +940,7 @@ async fn test_new_bookmark_does_not_count_draft_ancestors(fb: FacebookInit) -> R
 
     let draft = CreateCommitContext::new(ctx, repo, vec![tip])
         .add_file("users/alice/new.txt", "new")
-        .set_message(format!("new commit {}", ELIGIBLE_TAG))
+        .set_message(format!("new commit {ELIGIBLE_TAG}"))
         .set_author(ALICE)
         .set_author_date(recent_date())
         .commit()
@@ -972,7 +971,7 @@ async fn test_different_name_vs_email_uses_email(fb: FacebookInit) -> Result<()>
     // Since "robert" has 0 prior commits, per-user count is 0 < 6 → Allowed.
     let draft = CreateCommitContext::new(ctx, repo, vec![tip])
         .add_file("fbcode/server/new.txt", "data")
-        .set_message(format!("commit by bob/robert {}", ELIGIBLE_TAG))
+        .set_message(format!("commit by bob/robert {ELIGIBLE_TAG}"))
         .set_author("bob <robert@meta.com>")
         .set_author_date(recent_date())
         .commit()
@@ -1015,7 +1014,7 @@ async fn test_non_standard_author_tracked_per_user(fb: FacebookInit) -> Result<(
     let sandcastle_author = "twsvcscm@ed77-8a84.twshared2276.01.snb3.tw.fbinfra.net";
     let draft = CreateCommitContext::new(ctx, repo, vec![tip])
         .add_file("fbcode/server/sandcastle.txt", "data")
-        .set_message(format!("sandcastle commit {}", ELIGIBLE_TAG))
+        .set_message(format!("sandcastle commit {ELIGIBLE_TAG}"))
         .set_author(sandcastle_author)
         .set_author_date(recent_date())
         .commit()
@@ -1060,7 +1059,7 @@ async fn test_non_standard_author_jk_on_tracked(fb: FacebookInit) -> Result<()> 
     let bare_author = "twsvcscm";
     let draft = CreateCommitContext::new(ctx, repo, vec![tip])
         .add_file("fbcode/server/sandcastle.txt", "data")
-        .set_message(format!("sandcastle commit {}", ELIGIBLE_TAG))
+        .set_message(format!("sandcastle commit {ELIGIBLE_TAG}"))
         .set_author(bare_author)
         .set_author_date(recent_date())
         .commit()
@@ -1099,21 +1098,21 @@ async fn test_draft_stack_bypass_prevention(fb: FacebookInit) -> Result<()> {
 
     let draft_1 = CreateCommitContext::new(ctx, repo, vec![tip])
         .add_file("users/alice/stack_1.txt", "1")
-        .set_message(format!("stack 1 {}", ELIGIBLE_TAG))
+        .set_message(format!("stack 1 {ELIGIBLE_TAG}"))
         .set_author(ALICE)
         .set_author_date(recent_date())
         .commit()
         .await?;
     let draft_2 = CreateCommitContext::new(ctx, repo, vec![draft_1])
         .add_file("users/alice/stack_2.txt", "2")
-        .set_message(format!("stack 2 {}", ELIGIBLE_TAG))
+        .set_message(format!("stack 2 {ELIGIBLE_TAG}"))
         .set_author(ALICE)
         .set_author_date(recent_date())
         .commit()
         .await?;
     let draft_3 = CreateCommitContext::new(ctx, repo, vec![draft_2])
         .add_file("users/alice/stack_3.txt", "3")
-        .set_message(format!("stack 3 {}", ELIGIBLE_TAG))
+        .set_message(format!("stack 3 {ELIGIBLE_TAG}"))
         .set_author(ALICE)
         .set_author_date(recent_date())
         .commit()
