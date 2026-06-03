@@ -128,7 +128,7 @@ impl<Derivable: BonsaiDerivable> DerivedDataScuba<Derivable> {
     ) {
         let (tag, error_str) = match error {
             None => (DERIVATION_END, None),
-            Some(error) => (FAILED_DERIVATION, Some(format!("{:#}", error))),
+            Some(error) => (FAILED_DERIVATION, Some(format!("{error:#}"))),
         };
 
         let mut ctx_scuba = ctx.scuba().clone();
@@ -162,7 +162,7 @@ impl<Derivable: BonsaiDerivable> DerivedDataScuba<Derivable> {
     ) {
         let (tag, error_str) = match error {
             None => (DERIVATION_END_BATCH, None),
-            Some(error) => (FAILED_DERIVATION_BATCH, Some(format!("{:#}", error))),
+            Some(error) => (FAILED_DERIVATION_BATCH, Some(format!("{error:#}"))),
         };
 
         let mut ctx_scuba = ctx.scuba().clone();
@@ -213,14 +213,14 @@ impl<Derivable: BonsaiDerivable> DerivedDataScuba<Derivable> {
     ) {
         let (tag, error_str) = match error {
             None => (INSERTED_MAPPING, None),
-            Some(error) => (FAILED_INSERTING_MAPPING, Some(format!("{:#}", error))),
+            Some(error) => (FAILED_INSERTING_MAPPING, Some(format!("{error:#}"))),
         };
 
         ctx.perf_counters().insert_perf_counters(&mut self.scuba);
 
         if let Some(value) = value {
             // Limit how much we log to scuba.
-            let value = format!("{:1000?}", value);
+            let value = format!("{value:1000?}");
             self.scuba.add("mapping_value", value);
         }
 

@@ -566,8 +566,7 @@ impl DerivedDataManager {
                     derived_data_scuba.log_remote_derivation_end(
                         ctx,
                         Some(format!(
-                            "Remote derivation timed out after {:?}",
-                            overall_timeout
+                            "Remote derivation timed out after {overall_timeout:?}"
                         )),
                     );
                     break DerivationError::Timeout(Derivable::NAME, overall_timeout);
@@ -626,7 +625,7 @@ impl DerivedDataManager {
                     Err(e) => {
                         if attempt >= RETRY_ATTEMPTS_LIMIT {
                             derived_data_scuba
-                                .log_remote_derivation_end(ctx, Some(format!("{:#}", e)));
+                                .log_remote_derivation_end(ctx, Some(format!("{e:#}")));
                             break DerivationError::Failed(Derivable::NAME, attempt, e);
                         }
                         attempt += 1;
@@ -782,7 +781,7 @@ impl DerivedDataManager {
             for bonsai in bonsais.iter() {
                 let csid = bonsai.get_changeset_id();
                 if ancestors.contains_key(&csid) {
-                    return Err(anyhow!("batch not in topological order at {}", csid).into());
+                    return Err(anyhow!("batch not in topological order at {csid}").into());
                 }
                 for parent in bonsai.parents() {
                     if !seen.contains(&parent) {
@@ -1097,9 +1096,7 @@ impl DerivedDataManager {
                             .get(&csid)
                             .ok_or_else(|| {
                                 DerivationError::from(anyhow!(
-                                    "missing dependency stage output for path {}, changeset {}",
-                                    dep_path,
-                                    csid,
+                                    "missing dependency stage output for path {dep_path}, changeset {csid}",
                                 ))
                             })?;
                         dependency_outputs
@@ -1208,7 +1205,7 @@ impl DerivedDataManager {
 
         let actual_output = match stage_outputs.get(&csid) {
             Some(output) => output,
-            None => return Err(anyhow!("Stage output not found for changeset {}", csid).into()),
+            None => return Err(anyhow!("Stage output not found for changeset {csid}").into()),
         };
 
         // Fetch normal derived value
