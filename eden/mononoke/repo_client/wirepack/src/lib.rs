@@ -88,7 +88,7 @@ impl WirePackPartProcessor for TreemanifestPartProcessor {
     fn history_meta(&mut self, path: &RepoPath, entry_count: u32) -> Result<Option<Self::Data>> {
         replace_or_fail_if_exists(&mut self.path, path.clone())?;
         if entry_count != 1 {
-            let msg = format!("expected exactly one history entry, got: {}", entry_count);
+            let msg = format!("expected exactly one history entry, got: {entry_count}");
             return Err(ErrorKind::MalformedTreemanifestPart(msg).into());
         }
         Ok(None)
@@ -106,7 +106,7 @@ impl WirePackPartProcessor for TreemanifestPartProcessor {
             let msg = format!("unexpected path: {:?} != {:?}", path, self.path);
             Err(ErrorKind::MalformedTreemanifestPart(msg).into())
         } else if entry_count != 1 {
-            let msg = format!("expected exactly one data entry, got: {}", entry_count);
+            let msg = format!("expected exactly one data entry, got: {entry_count}");
             Err(ErrorKind::MalformedTreemanifestPart(msg).into())
         } else {
             Ok(None)
@@ -138,7 +138,7 @@ impl WirePackPartProcessor for TreemanifestPartProcessor {
 fn replace_or_fail_if_exists<T: Debug>(existing: &mut Option<T>, new_value: T) -> Result<()> {
     let existing = existing.replace(new_value);
     if existing.is_some() {
-        let msg = format!("{:?} was already set", existing);
+        let msg = format!("{existing:?} was already set");
         Err(ErrorKind::MalformedTreemanifestPart(msg).into())
     } else {
         Ok(())
@@ -147,7 +147,7 @@ fn replace_or_fail_if_exists<T: Debug>(existing: &mut Option<T>, new_value: T) -
 
 fn unwrap_field<T: Clone>(field: &mut Option<T>, field_name: &str) -> Result<T> {
     field.take().ok_or_else(|| {
-        let msg = format!("{} is not set", field_name);
+        let msg = format!("{field_name} is not set");
         ErrorKind::MalformedTreemanifestPart(msg).into()
     })
 }
