@@ -166,7 +166,7 @@ py_class!(pub class PyRustIO |py| {
             _ => {
                 return Err(PyErr::new::<exc::ValueError, _>(
                     py,
-                    format!("invalid whence: {}", whence),
+                    format!("invalid whence: {whence}"),
                 ));
             }
         };

@@ -279,7 +279,7 @@ py_class!(pub class BufIO |py| {
             0 => std::io::SeekFrom::Start(offset.try_into().map_pyerr(py)?),
             1 => std::io::SeekFrom::Current(offset),
             2 => std::io::SeekFrom::End(offset),
-            _ => panic!("bad whence: {}", whence),
+            _ => panic!("bad whence: {whence}"),
         }).map_pyerr(py)
     }
 

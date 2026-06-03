@@ -313,7 +313,7 @@ fn parse_update_flag(flags: &str) -> anyhow::Result<UpdateFlag> {
         "" => Ok(UpdateFlag::Regular),
         "l" => Ok(UpdateFlag::Symlink),
         "x" => Ok(UpdateFlag::Executable),
-        _ => Err(anyhow::format_err!("unknown vfs update flags: {:?}", flags)),
+        _ => Err(anyhow::format_err!("unknown vfs update flags: {flags:?}")),
     }
 }
 
