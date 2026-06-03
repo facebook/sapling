@@ -78,7 +78,7 @@ impl OutputFiles {
         file.write_all(key.as_bytes()).await?;
         file.write_all(b"\n").await?;
 
-        res.with_context(|| format!("failed to copy {}", key))?;
+        res.with_context(|| format!("failed to copy {key}"))?;
 
         Ok(())
     }
@@ -163,9 +163,7 @@ pub async fn copy_keys(app: MononokeApp, args: BlobstoreCopyKeysArgs) -> Result<
                 }
                 None => {
                     return Err(anyhow!(
-                        "key {} doesn't start with prefix {}",
-                        line,
-                        source_repo_prefix
+                        "key {line} doesn't start with prefix {source_repo_prefix}"
                     ));
                 }
             }

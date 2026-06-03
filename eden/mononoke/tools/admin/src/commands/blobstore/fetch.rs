@@ -216,7 +216,7 @@ impl Decoded {
 
     fn try_debug<T: std::fmt::Debug, E: std::fmt::Display>(data: Result<T, E>) -> Decoded {
         match data {
-            Ok(data) => Decoded::Display(format!("{:#?}", data)),
+            Ok(data) => Decoded::Display(format!("{data:#?}")),
             Err(err) => Decoded::Fail(err.to_string()),
         }
     }
@@ -246,7 +246,7 @@ async fn decode(
         DecodeAs::Changeset => Decoded::try_debug(BonsaiChangeset::from_bytes(data.as_raw_bytes())),
         DecodeAs::Content => match FileContents::from_encoded_bytes(data.into_raw_bytes()) {
             Ok(FileContents::Bytes(data)) => Decoded::Hexdump(data),
-            Ok(FileContents::Chunked(chunked)) => Decoded::Display(format!("{:#?}", chunked)),
+            Ok(FileContents::Chunked(chunked)) => Decoded::Display(format!("{chunked:#?}")),
             Err(err) => Decoded::Fail(err.to_string()),
         },
         DecodeAs::ContentChunk => match ContentChunk::from_encoded_bytes(data.into_raw_bytes()) {
@@ -421,13 +421,13 @@ pub async fn fetch(
                 let bytes = value.as_raw_bytes().clone();
                 match decode(ctx, blobstore, &fetch_args.key, value, fetch_args.decode_as).await {
                     Decoded::Display(decoded) => {
-                        writeln!(std::io::stdout(), "{}", decoded)?;
+                        writeln!(std::io::stdout(), "{decoded}")?;
                     }
                     Decoded::Hexdump(data) => {
                         hexdump(std::io::stdout(), data)?;
                     }
                     Decoded::Fail(err) => {
-                        writeln!(std::io::stderr(), "Failed to decode: {}", err)?;
+                        writeln!(std::io::stderr(), "Failed to decode: {err}")?;
                         // Fall back to dumping as raw hex
                         hexdump(std::io::stdout(), bytes)?;
                     }
