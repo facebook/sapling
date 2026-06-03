@@ -112,7 +112,7 @@ impl Error for CommandError {
 }
 
 fn os_str_to_naive_quoted_str(s: &OsStr) -> String {
-    let debug_format = format!("{:?}", s);
+    let debug_format = format!("{s:?}");
     if debug_format.len() == s.len() + 2
         && debug_format.split_ascii_whitespace().take(2).count() == 1
     {
@@ -152,13 +152,13 @@ impl CommandError {
             {
                 #[cfg(unix)]
                 match std::os::unix::process::ExitStatusExt::signal(exit) {
-                    Some(sig) => self.title = format!("Command terminated by signal {}", sig),
+                    Some(sig) => self.title = format!("Command terminated by signal {sig}"),
                     None => {}
                 }
             }
             Some(code) => {
                 if code != 0 {
-                    self.title = format!("Command exited with code {}", code);
+                    self.title = format!("Command exited with code {code}");
                 }
             }
         }
