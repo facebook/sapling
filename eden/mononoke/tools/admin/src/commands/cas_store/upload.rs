@@ -89,7 +89,7 @@ pub async fn cas_store_upload(
 
     let mut path = None;
     if let Some(ref spath) = args.path {
-        path = Some(MPath::new(spath).with_context(|| anyhow!("Invalid path: {}", spath))?);
+        path = Some(MPath::new(spath).with_context(|| anyhow!("Invalid path: {spath}"))?);
     }
 
     // Derive augmented manifest for this changeset if not yet derived.
