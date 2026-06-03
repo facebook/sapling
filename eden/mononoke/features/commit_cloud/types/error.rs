@@ -38,8 +38,8 @@ pub enum CommitCloudError {
 impl std::fmt::Display for CommitCloudError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            CommitCloudError::UserError(e) => write!(f, "{}", e),
-            CommitCloudError::InternalError(e) => write!(f, "{}", e),
+            CommitCloudError::UserError(e) => write!(f, "{e}"),
+            CommitCloudError::InternalError(e) => write!(f, "{e}"),
         }
     }
 }

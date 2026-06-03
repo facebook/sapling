@@ -41,7 +41,7 @@ impl TryFrom<CommitIdentityScheme> for ChangesetScheme {
         let res = match scheme {
             CommitIdentityScheme::HG => ChangesetScheme::Hg,
             CommitIdentityScheme::GIT => ChangesetScheme::Git,
-            _ => anyhow::bail!("commit cloud: repo has unsupported scheme: {:?}", scheme),
+            _ => anyhow::bail!("commit cloud: repo has unsupported scheme: {scheme:?}"),
         };
         Ok(res)
     }
