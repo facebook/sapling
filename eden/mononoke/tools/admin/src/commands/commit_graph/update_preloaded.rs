@@ -89,7 +89,7 @@ async fn try_fetch_chunk(
             Err(err) => match sql_retries {
                 0 => return Err(err),
                 _ => {
-                    println!("{:?}", err);
+                    println!("{err:?}");
                     println!("Retrying fetching changeset edges");
 
                     sql_retries -= 1;
@@ -144,10 +144,7 @@ pub(super) async fn update_preloaded(
         .with_context(|| format!("Failure to fetch max commit id for repo {}", repo.id.name()))?
         .unwrap_or(0);
 
-    println!(
-        "Updating with changesets having sql ids between {} and {} inclusive",
-        start_id, end_id
-    );
+    println!("Updating with changesets having sql ids between {start_id} and {end_id} inclusive");
 
     let mut extendable_preloaded_edges =
         ExtendablePreloadedEdges::from_preloaded_edges(preloaded_edges);

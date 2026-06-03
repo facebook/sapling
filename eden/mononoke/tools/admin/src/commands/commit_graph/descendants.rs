@@ -33,7 +33,7 @@ pub async fn descendants(ctx: &CoreContext, repo: &Repo, args: DescendantsArgs) 
     let descendants = repo.commit_graph().descendants(ctx, cs_ids).await?;
 
     for descendant in descendants {
-        println!("{}", descendant);
+        println!("{descendant}");
     }
 
     Ok(())

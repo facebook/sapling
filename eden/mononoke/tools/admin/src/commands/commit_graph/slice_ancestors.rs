@@ -83,7 +83,7 @@ pub async fn slice_ancestors(
             gen_group.value() + args.slice_size
         );
         for cs_id in cs_ids {
-            print!(" {}", cs_id);
+            print!(" {cs_id}");
         }
         println!();
     }

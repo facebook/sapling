@@ -41,7 +41,7 @@ pub async fn common_base(ctx: &CoreContext, repo: &Repo, args: CommonBaseArgs) -
         .await?;
 
     for cs_id in common_base_cs_ids {
-        println!("{}", cs_id);
+        println!("{cs_id}");
     }
 
     Ok(())

@@ -59,7 +59,7 @@ pub async fn segments(ctx: &CoreContext, repo: &Repo, args: SegmentsArgs) -> Res
     };
 
     for segment in segments {
-        println!("{}", segment);
+        println!("{segment}");
     }
 
     Ok(())

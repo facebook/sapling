@@ -47,7 +47,7 @@ pub async fn is_ancestor(ctx: &CoreContext, repo: &Repo, args: IsAncestorArgs) -
         .try_timed()
         .await?;
 
-    println!("{}", is_ancestor);
+    println!("{is_ancestor}");
     debug!("is-ancestor query finished in {:?}", stats);
     debug!(
         "sql reads from replicas: {:?}. sql reads from master: {:?}",

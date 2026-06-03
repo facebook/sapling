@@ -100,7 +100,7 @@ pub async fn ancestors_difference(
             .try_buffered(1000)
             .try_for_each(|(ancestor, parents)| {
                 let row = renderer.next_row(ancestor.clone(), parents, "o".to_string(), ancestor);
-                print!("{}", row);
+                print!("{row}");
                 future::ok(())
             })
             .await?;

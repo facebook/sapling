@@ -35,7 +35,7 @@ pub async fn range_stream(ctx: &CoreContext, repo: &Repo, args: RangeStreamArgs)
     let mut range_stream = repo.commit_graph().range_stream(ctx, start, end).await?;
 
     while let Some(cs_id) = range_stream.next().await {
-        println!("{}", cs_id);
+        println!("{cs_id}");
     }
 
     Ok(())

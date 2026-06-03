@@ -26,7 +26,7 @@ pub async fn children(ctx: &CoreContext, repo: &Repo, args: ChildrenArgs) -> Res
     let children = repo.commit_graph().changeset_children(ctx, cs_id).await?;
 
     for child in children {
-        println!("{}", child);
+        println!("{child}");
     }
 
     Ok(())
