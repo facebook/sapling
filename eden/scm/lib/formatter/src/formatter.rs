@@ -154,7 +154,7 @@ impl ListFormatter for JsonFormatter {
             self.first_item_formatted = true;
             ""
         };
-        write!(self.writer, "{}\n", prev_separator)?;
+        write!(self.writer, "{prev_separator}\n")?;
         item.format_json(self.writer.as_mut())?;
         Ok(())
     }
