@@ -279,12 +279,7 @@ impl HookManager {
         if checker.is_member(identity_set).await {
             Ok(BypassAuthorizationResult::Bypassed(bypass_reason))
         } else {
-            let group_name = hook
-                .get_config()
-                .bypass
-                .as_ref()
-                .and_then(|b| b.permission_group())
-                .unwrap_or("unknown");
+            let group_name = hook.get_bypass_permission_group().unwrap_or("unknown");
             Ok(BypassAuthorizationResult::Unauthorized(
                 group_name.to_string(),
             ))
@@ -450,6 +445,9 @@ impl HookManager {
             {
                 BypassAuthorizationResult::Bypassed(bypass_reason) => {
                     scuba.add("bypass_reason", bypass_reason);
+                    if let Some(group) = hook.get_bypass_permission_group() {
+                        scuba.add("bypass_permission_group", group);
+                    }
                     scuba.log();
                     continue;
                 }
@@ -542,7 +540,12 @@ impl HookManager {
                     .await?
                 {
                     BypassAuthorizationResult::Bypassed(bypass_reason) => {
-                        log_bypassed_changeset(&scuba, cs, &bypass_reason);
+                        log_bypassed_changeset(
+                            &scuba,
+                            cs,
+                            &bypass_reason,
+                            hook.get_bypass_permission_group(),
+                        );
                     }
                     BypassAuthorizationResult::Unauthorized(group_name) => {
                         unauthorized_outcomes.push(HookOutcome::ChangesetHook(
@@ -649,10 +652,14 @@ fn log_bypassed_changeset(
     scuba: &MononokeScubaSampleBuilder,
     cs: &BonsaiChangeset,
     bypass_reason: &str,
+    bypass_permission_group: Option<&str>,
 ) {
     cloned!(mut scuba);
     scuba.add("hash", cs.get_changeset_id().to_string());
     scuba.add("bypass_reason", bypass_reason.to_string());
+    if let Some(group) = bypass_permission_group {
+        scuba.add("bypass_permission_group", group.to_string());
+    }
     scuba.log();
 }
 
@@ -860,6 +867,16 @@ impl Hook {
             | Self::Changeset(_, _, checker)
             | Self::File(_, _, checker) => checker.as_ref(),
         }
+    }
+
+    /// The permission group that restricts who is allowed to bypass this hook,
+    /// if one is configured. Logged whenever a bypass succeeds so we can tell
+    /// when a bypass was performed by a member of the restricting group.
+    pub(crate) fn get_bypass_permission_group(&self) -> Option<&str> {
+        self.get_config()
+            .bypass
+            .as_ref()
+            .and_then(|bypass| bypass.permission_group())
     }
 
     pub fn get_futures_for_bookmark_hooks<'a: 'cs, 'cs>(
