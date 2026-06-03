@@ -301,7 +301,7 @@ fn profile_contents_from_repo(
 
     match result {
         Ok(res) => set_matcher_promise_result(promise, res),
-        Err(e) => set_matcher_promise_error(promise, format!("Failed to get filter: {:?}", e)),
+        Err(e) => set_matcher_promise_error(promise, format!("Failed to get filter: {e:?}")),
     }
 }
 
@@ -319,7 +319,7 @@ fn _profile_contents_from_repo(
 
     let filter = filter_gen
         .get_filter_from_bytes(id)
-        .with_context(|| anyhow!("failed to interpret bytes as valid filter: {:?}", id))?;
+        .with_context(|| anyhow!("failed to interpret bytes as valid filter: {id:?}"))?;
 
     // Create the tree manifest for the root tree of the repo
     let tree_manifest = match repo.tree_resolver()?.get(&filter.commit_id) {
@@ -357,11 +357,11 @@ fn _profile_contents_from_repo(
                 repo_store.clone(),
                 &HashMap::new(),
             )
-            .with_context(|| format!("fetching content for filter: {}", path))?
+            .with_context(|| format!("fetching content for filter: {path}"))?
             {
                 filters.push(entry_bytes)
             } else {
-                return Err(anyhow!("{:?} is not a valid filter file", path));
+                return Err(anyhow!("{path:?} is not a valid filter file"));
             }
         }
 
