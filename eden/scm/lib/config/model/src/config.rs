@@ -142,7 +142,7 @@ impl<T: Config> ConfigExt for T {}
 
 impl Config for BTreeMap<&str, &str> {
     fn keys(&self, section: &str) -> Vec<Text> {
-        let prefix = format!("{}.", section);
+        let prefix = format!("{section}.");
         BTreeMap::keys(self)
             .filter_map(|k| k.strip_prefix(&prefix).map(|k| k.to_string().into()))
             .collect()
@@ -161,7 +161,7 @@ impl Config for BTreeMap<&str, &str> {
     }
 
     fn get_considering_unset(&self, section: &str, name: &str) -> Option<Option<Text>> {
-        let key: &str = &format!("{}.{}", section, name);
+        let key: &str = &format!("{section}.{name}");
         BTreeMap::get(self, &key).map(|v| Some(v.to_string().into()))
     }
 
@@ -183,7 +183,7 @@ impl Config for BTreeMap<&str, &str> {
 
 impl Config for BTreeMap<String, String> {
     fn keys(&self, section: &str) -> Vec<Text> {
-        let prefix = format!("{}.", section);
+        let prefix = format!("{section}.");
         BTreeMap::keys(self)
             .filter_map(|k| k.strip_prefix(&prefix).map(|k| k.to_string().into()))
             .collect()
@@ -202,7 +202,7 @@ impl Config for BTreeMap<String, String> {
     }
 
     fn get_considering_unset(&self, section: &str, name: &str) -> Option<Option<Text>> {
-        BTreeMap::get(self, &format!("{}.{}", section, name)).map(|v| Some(v.clone().into()))
+        BTreeMap::get(self, &format!("{section}.{name}")).map(|v| Some(v.clone().into()))
     }
 
     fn get_sources(&self, section: &str, name: &str) -> Cow<'_, [ValueSource]> {

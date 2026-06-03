@@ -70,7 +70,7 @@ pub struct Errors(pub Vec<Error>);
 impl fmt::Display for Errors {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for error in self.0.iter() {
-            write!(f, "{}\n", error)?;
+            write!(f, "{error}\n")?;
         }
         Ok(())
     }

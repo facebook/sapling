@@ -41,7 +41,7 @@ impl FromConfigValue for bool {
         match value.as_ref() {
             "1" | "yes" | "true" | "on" | "always" => Ok(true),
             "0" | "no" | "false" | "off" | "never" => Ok(false),
-            _ => Err(Error::Convert(format!("invalid bool: {}", value))),
+            _ => Err(Error::Convert(format!("invalid bool: {value}"))),
         }
     }
 }
@@ -182,8 +182,7 @@ impl FromConfigValue for ByteCount {
                 let number: f64 = number_str.parse()?;
                 if number < 0.0 {
                     return Err(Error::Convert(format!(
-                        "byte size '{:?}' cannot be negative",
-                        value
+                        "byte size '{value:?}' cannot be negative"
                     )));
                 }
                 let unit = *unit as f64;
@@ -192,8 +191,7 @@ impl FromConfigValue for ByteCount {
         }
 
         Err(Error::Convert(format!(
-            "'{:?}' cannot be parsed as a byte size",
-            value
+            "'{value:?}' cannot be parsed as a byte size"
         )))
     }
 }
@@ -215,14 +213,14 @@ impl fmt::Display for ByteCount {
         } else if bytes >= KB {
             (bytes as f64 / KB as f64, "KB")
         } else {
-            return write!(f, "{} bytes", bytes);
+            return write!(f, "{bytes} bytes");
         };
 
         // Show decimal only if there's a fractional part
         if value.fract() == 0.0 {
             write!(f, "{} {}", value as u64, unit)
         } else {
-            write!(f, "{:.1} {}", value, unit)
+            write!(f, "{value:.1} {unit}")
         }
     }
 }
