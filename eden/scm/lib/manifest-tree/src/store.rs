@@ -580,7 +580,7 @@ fn parse_hg_flag(flag_byte: Option<&u8>) -> Result<Flag> {
         Some(b'x') => Flag::File(FileType::Executable),
         Some(b'l') => Flag::File(FileType::Symlink),
         Some(b't') => Flag::Directory,
-        Some(bad_flag) => return Err(format_err!("invalid flag {}", bad_flag)),
+        Some(bad_flag) => return Err(format_err!("invalid flag {bad_flag}")),
     };
     Ok(flag)
 }

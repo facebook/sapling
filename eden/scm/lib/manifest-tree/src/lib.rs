@@ -434,7 +434,7 @@ impl fmt::Debug for TreeManifest {
         ) -> fmt::Result {
             for (component, link) in children {
                 write_indent(f, indent)?;
-                write!(f, "{} ", component)?;
+                write!(f, "{component} ")?;
                 write_links(f, link, indent + 1)?;
             }
             Ok(())
@@ -836,7 +836,7 @@ impl TreeManifest {
     pub fn register_diff_graft(&mut self, from: &RepoPath, to: &RepoPath) -> Result<()> {
         for (_, existing) in self.diff_grafts.iter() {
             if to.starts_with(existing, true) || existing.starts_with(to, true) {
-                bail!("overlapping graft destinations {} and {}", existing, to);
+                bail!("overlapping graft destinations {existing} and {to}");
             }
         }
         self.diff_grafts.push((from.to_owned(), to.to_owned()));
@@ -1172,7 +1172,7 @@ mod tests {
             Leaf(file_metadata) => file_metadata.hgid,
             Durable(entry) => entry.hgid,
             Ephemeral(_) => {
-                panic!("Asked for hgid on path {} but found ephemeral hgid.", path)
+                panic!("Asked for hgid on path {path} but found ephemeral hgid.")
             }
         }
     }
@@ -1217,7 +1217,7 @@ mod tests {
             tree.insert(repo_path_buf("foo/bar/error"), make_meta("40"))
                 .unwrap_err()
                 .chain()
-                .map(|e| format!("{}", e))
+                .map(|e| format!("{e}"))
                 .collect::<Vec<_>>(),
             vec![
                 "failure inserting 'foo/bar/error' in manifest",
@@ -1228,7 +1228,7 @@ mod tests {
             tree.insert(repo_path_buf("foo"), make_meta("50"))
                 .unwrap_err()
                 .chain()
-                .map(|e| format!("{}", e))
+                .map(|e| format!("{e}"))
                 .collect::<Vec<_>>(),
             vec![
                 "failure inserting 'foo' in manifest",
@@ -1721,7 +1721,7 @@ mod tests {
             .unwrap();
 
         let mut output = String::new();
-        write!(output, "{:?}", tree).unwrap();
+        write!(output, "{tree:?}").unwrap();
         assert_eq!(
             output,
             "Root (Ephemeral)\n\

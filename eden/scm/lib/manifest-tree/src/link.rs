@@ -200,7 +200,7 @@ impl LinkData {
     ) -> Result<&mut BTreeMap<PathComponentBuf, Link>> {
         loop {
             match self {
-                Leaf(_) => bail!("Path {} is a file but a directory was expected.", parent),
+                Leaf(_) => bail!("Path {parent} is a file but a directory was expected."),
                 Ephemeral(links) => return Ok(links),
                 &mut Durable(ref entry) => {
                     let durable_links = entry.materialize_links(store, parent)?;

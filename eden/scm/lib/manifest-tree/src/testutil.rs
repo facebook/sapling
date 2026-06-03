@@ -315,7 +315,7 @@ pub fn get_hgid(tree: &TreeManifest, path: &RepoPath) -> HgId {
         Leaf(file_metadata) => file_metadata.hgid,
         Durable(entry) => entry.hgid,
         Ephemeral(_) => {
-            panic!("Asked for hgid on path {} but found ephemeral hgid.", path)
+            panic!("Asked for hgid on path {path} but found ephemeral hgid.")
         }
     }
 }
