@@ -88,7 +88,7 @@ fn resolve_target<'a, 'input>(
                         .iter()
                         .all(|(k, v)| n.attribute(k.as_str()) == Some(v.as_str()))
             })
-            .ok_or_else(|| anyhow::anyhow!("no <{}> matching {:?}", name, conditions))?;
+            .ok_or_else(|| anyhow::anyhow!("no <{name}> matching {conditions:?}"))?;
     }
     Ok(current)
 }
@@ -119,7 +119,7 @@ fn resolve_set_attribute(
         let pos = opening_tag_end(src, node)?;
         Ok(Replace {
             range: pos..pos,
-            data: format!(" {}=\"{}\"", attr_name, attr_value),
+            data: format!(" {attr_name}=\"{attr_value}\""),
         })
     }
 }
@@ -184,10 +184,10 @@ fn resolve_add_child(
 
     let attr_str = attrs
         .iter()
-        .map(|(k, v)| format!("{}=\"{}\"", k, v))
+        .map(|(k, v)| format!("{k}=\"{v}\""))
         .collect::<Vec<_>>()
         .join(" ");
-    let child_elem = format!("<{} {}/>", tag, attr_str);
+    let child_elem = format!("<{tag} {attr_str}/>");
 
     if is_self_closing(src, node) {
         // Convert self-closing to open/close form and insert the child
@@ -195,10 +195,7 @@ fn resolve_add_child(
         let node_name = node.tag_name().name();
         Ok(Replace {
             range: tag_end..node_range.end,
-            data: format!(
-                ">\n{}{}\n{}</{}>",
-                child_indent, child_elem, node_indent, node_name
-            ),
+            data: format!(">\n{child_indent}{child_elem}\n{node_indent}</{node_name}>"),
         })
     } else {
         // Insert before the closing tag
@@ -213,13 +210,13 @@ fn resolve_add_child(
                 let close_line_start = node_range.start + offset + 1;
                 Ok(Replace {
                     range: close_line_start..close_line_start,
-                    data: format!("{}{}\n", child_indent, child_elem),
+                    data: format!("{child_indent}{child_elem}\n"),
                 })
             }
             // When the opening tag and the closing tag are at the same line
             None => Ok(Replace {
                 range: close_tag_start..close_tag_start,
-                data: format!("\n{}{}\n{}", child_indent, child_elem, node_indent),
+                data: format!("\n{child_indent}{child_elem}\n{node_indent}"),
             }),
         }
     }

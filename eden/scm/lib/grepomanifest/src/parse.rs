@@ -35,7 +35,7 @@ pub fn parse_manifest(data: &[u8]) -> Result<Manifest> {
             "remote" => {
                 let (name, remote) = parse_remote(&element)?;
                 if manifest.remotes.contains_key(&name) {
-                    bail!("duplicate remote name: {}", name);
+                    bail!("duplicate remote name: {name}");
                 }
                 manifest.remotes.insert(name, remote);
             }
