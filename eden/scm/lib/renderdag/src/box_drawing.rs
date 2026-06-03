@@ -336,21 +336,75 @@ mod tests {
             
             o  A"#
         );
+
+        assert_eq!(
+            render(&TestFixture {
+                missing: &["C"],
+                ..test_fixtures::BASIC_DISCONNECTED
+            }),
+            r#"
+            o  D
+            │
+            ~
+            
+            o  B
+            
+            o  A"#
+        );
     }
 
     #[test]
     fn basic_disconnected_min_row_height_1() {
-        let mut renderer = GraphRowRenderer::new()
-            .output()
-            .with_min_row_height(1)
-            .build_box_drawing();
+        let get_renderer = || {
+            GraphRowRenderer::new()
+                .output()
+                .with_min_row_height(1)
+                .build_box_drawing()
+        };
+        let render = |t| render_string(t, &mut get_renderer());
         assert_eq!(
-            render_string(&test_fixtures::BASIC_DISCONNECTED, &mut renderer),
+            render(&test_fixtures::BASIC_DISCONNECTED),
             r#"
             o  D
             o  C
             
             o  B
+            
+            o  A"#
+        );
+
+        // Suboptimal: extra blank line is unnecessary after "~".
+        // Suboptimal: "|" is not necessary.
+        assert_eq!(
+            render(&TestFixture {
+                missing: &["C"],
+                ..test_fixtures::BASIC_DISCONNECTED
+            }),
+            r#"
+            o  D
+            │
+            ~
+            
+            
+            o  B
+            
+            o  A"#
+        );
+
+        // Suboptimal: extra blank line is unnecessary for C and B.
+        assert_eq!(
+            render(&TestFixture {
+                messages: &[("C", "\n\n"), ("B", "\n")],
+                ..test_fixtures::BASIC_DISCONNECTED
+            }),
+            r#"
+            o  D
+            o  C
+            
+            
+            
+            o  B
+            
             
             o  A"#
         );

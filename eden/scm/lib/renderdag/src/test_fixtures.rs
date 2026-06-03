@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#[derive(Copy, Clone, Default)]
 pub(crate) struct TestFixture {
     pub(crate) dag: &'static str,
     pub(crate) messages: &'static [(&'static str, &'static str)],
