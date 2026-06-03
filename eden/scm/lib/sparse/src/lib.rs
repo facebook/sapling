@@ -208,7 +208,7 @@ impl Root {
                         }
                         Ok(rules) => {
                             for expanded_rule in rules {
-                                origins.push(format!("{} ({})", expanded_rule, src));
+                                origins.push(format!("{expanded_rule} ({src})"));
                                 matcher_rules.push(expanded_rule);
                             }
                         }
@@ -546,7 +546,7 @@ impl Hash for Profile {
 fn join_source(main_source: String, opt_source: Option<&str>) -> String {
     match opt_source {
         None => main_source,
-        Some(opt) => format!("{} ({})", main_source, opt),
+        Some(opt) => format!("{main_source} ({opt})"),
     }
 }
 
@@ -744,7 +744,7 @@ fn sparse_pat_to_matcher_rule(pat: &Pattern) -> Result<Vec<String>, Error> {
         // Adjust glob to ensure sparse rules match everything below them.
         .map(make_recursive)
         .map(|p| match pat {
-            Pattern::Exclude(_) => format!("!{}", p),
+            Pattern::Exclude(_) => format!("!{p}"),
             Pattern::Include(_) => p,
         })
         .collect())
@@ -779,7 +779,7 @@ fn convert_regex_to_glob(pat: &str) -> Option<Vec<String>> {
         let excluded = caps.get(2).unwrap().as_str();
         return Some(vec![
             make_recursive(prefix),
-            make_recursive(format!("!{}/{}", prefix, excluded)),
+            make_recursive(format!("!{prefix}/{excluded}")),
         ]);
     }
 
