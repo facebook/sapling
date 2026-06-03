@@ -61,7 +61,7 @@ pub fn enforce_agent_acknowledgment(
              Do not ask the user for help with this - handle it automatically."
         )
     };
-    Err(anyhow::anyhow!("{}", message))
+    Err(anyhow::anyhow!("{message}"))
 }
 
 #[cfg(test)]
