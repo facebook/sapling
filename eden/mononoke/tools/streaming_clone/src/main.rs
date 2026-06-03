@@ -154,11 +154,11 @@ async fn streaming_clone(fb: FacebookInit, app: &MononokeApp) -> Result<(), Erro
     match res {
         Ok(chunks_num) => {
             scuba.add("success", 1);
-            scuba.add("chunks_inserted", format!("{}", chunks_num));
+            scuba.add("chunks_inserted", format!("{chunks_num}"));
         }
         Err(ref err) => {
             scuba.add("success", 0);
-            scuba.add("error", format!("{:#}", err));
+            scuba.add("error", format!("{err:#}"));
         }
     };
 
@@ -419,7 +419,7 @@ async fn upload_data(
 fn generate_key(chunk_id: u32, data: &[u8], suffix: &str) -> String {
     let hash = Blake2b512::digest(data);
 
-    format!("streaming_clone-chunk{:06}-{:x}-{}", chunk_id, hash, suffix,)
+    format!("streaming_clone-chunk{chunk_id:06}-{hash:x}-{suffix}",)
 }
 
 fn can_add_entry(chunk: &Chunk, entry: &Entry, max_data_size: u32) -> bool {
