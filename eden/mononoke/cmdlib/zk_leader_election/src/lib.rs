@@ -70,8 +70,7 @@ pub trait LeaderElection {
                     .await
                     .with_context(|| {
                         format!(
-                            "Failed to become leader using lock {} against prod ZkServerGuard",
-                            path
+                            "Failed to become leader using lock {path} against prod ZkServerGuard"
                         )
                     })?,
                 ))
