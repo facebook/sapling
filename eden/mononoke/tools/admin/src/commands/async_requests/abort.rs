@@ -108,7 +108,7 @@ pub async fn abort_by_root_id(
         .fail_new_requests_by_root_id(ctx, &root_row_id)
         .await
         .context("batch-failing new requests")?;
-    println!("{} pending requests failed", failed_count);
+    println!("{failed_count} pending requests failed");
 
     // Get remaining requests for this root to abort in-progress ones.
     let entries = queue
@@ -132,10 +132,7 @@ pub async fn abort_by_root_id(
         }
     }
 
-    println!(
-        "{} in-progress requests aborted, {} already completed (skipped)",
-        aborted, skipped
-    );
+    println!("{aborted} in-progress requests aborted, {skipped} already completed (skipped)");
 
     Ok(())
 }

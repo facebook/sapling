@@ -92,7 +92,7 @@ pub async fn submit_request(
         _ => bail!("method {} not supported in submit", args.method),
     }?;
 
-    println!("Submitted with token: {}", token);
+    println!("Submitted with token: {token}");
 
     Ok(())
 }
