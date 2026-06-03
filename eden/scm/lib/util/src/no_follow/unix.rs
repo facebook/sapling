@@ -541,7 +541,7 @@ fn leaf_cstring(name: &OsStr) -> io::Result<CString> {
     if name.as_bytes().contains(&b'/') {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
-            format!("path component contains a separator: {:?}", name),
+            format!("path component contains a separator: {name:?}"),
         ));
     }
     component_cstring(name)
@@ -551,7 +551,7 @@ fn split_parent_leaf(path: &Path) -> io::Result<(&Path, CString)> {
     let leaf = path.file_name().ok_or_else(|| {
         io::Error::new(
             io::ErrorKind::InvalidInput,
-            format!("path must name a file or directory: {:?}", path),
+            format!("path must name a file or directory: {path:?}"),
         )
     })?;
     let parent = path.parent().unwrap_or_else(|| Path::new(""));
@@ -589,7 +589,7 @@ fn open_dir_no_follow(dir: BorrowedFd<'_>, rel_path: &OsStr) -> io::Result<Owned
     let rel_path = CString::new(rel_path.as_bytes()).map_err(|_| {
         io::Error::new(
             io::ErrorKind::InvalidInput,
-            format!("relative path contains a NUL byte: {:?}", rel_path),
+            format!("relative path contains a NUL byte: {rel_path:?}"),
         )
     })?;
     open_dir_no_follow_cstring(dir, &rel_path)
@@ -1232,7 +1232,7 @@ fn path_cstring(path: &Path) -> io::Result<CString> {
     CString::new(path.as_os_str().as_bytes()).map_err(|_| {
         io::Error::new(
             io::ErrorKind::InvalidInput,
-            format!("path contains a NUL byte: {:?}", path),
+            format!("path contains a NUL byte: {path:?}"),
         )
     })
 }
@@ -1241,7 +1241,7 @@ fn component_cstring(component: &OsStr) -> io::Result<CString> {
     CString::new(component.as_bytes()).map_err(|_| {
         io::Error::new(
             io::ErrorKind::InvalidInput,
-            format!("path component contains a NUL byte: {:?}", component),
+            format!("path component contains a NUL byte: {component:?}"),
         )
     })
 }

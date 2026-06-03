@@ -1107,7 +1107,7 @@ fn openat_no_follow_rejects_invalid_components() -> io::Result<()> {
             super::unix::openat_no_follow(root.as_fd(), &path, libc::O_RDONLY | libc::O_CLOEXEC, 0);
         if fd >= 0 {
             drop(unsafe { OwnedFd::from_raw_fd(fd) });
-            panic!("openat_no_follow unexpectedly accepted {:?}", path);
+            panic!("openat_no_follow unexpectedly accepted {path:?}");
         }
     }
 
@@ -1476,8 +1476,7 @@ fn assert_no_atomic_temp_files(dir: &Path) -> io::Result<()> {
         let name = entry?.file_name();
         assert!(
             !name.to_string_lossy().starts_with(".no-follow-atomic."),
-            "temporary file should be cleaned up: {:?}",
-            name
+            "temporary file should be cleaned up: {name:?}"
         );
     }
     Ok(())

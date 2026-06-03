@@ -70,7 +70,7 @@ impl FromStr for OpenFlags {
                 _ => {
                     return Err(io::Error::new(
                         io::ErrorKind::InvalidInput,
-                        format!("unknown no-follow open mode: {:?}", mode),
+                        format!("unknown no-follow open mode: {mode:?}"),
                     ));
                 }
             }
