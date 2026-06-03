@@ -46,7 +46,7 @@ async fn setup(args: &Args, client: &Client) -> Result<(), Error> {
             }
         },
         Err(e) => {
-            bail!("Got error creating log group: {}", e);
+            bail!("Got error creating log group: {e}");
         }
     };
 
@@ -65,7 +65,7 @@ async fn setup(args: &Args, client: &Client) -> Result<(), Error> {
             }
         },
         Err(e) => {
-            bail!("Got error creating log stream: {}", e);
+            bail!("Got error creating log stream: {e}");
         }
     };
 
@@ -87,7 +87,7 @@ async fn tail(args: &Args, f: Stdin, client: &Client) -> Result<(), Error> {
             Ok(n) => n,
             Err(e) => match e.kind() {
                 std::io::ErrorKind::Interrupted => continue,
-                _ => bail!("Error reading line: {}", e),
+                _ => bail!("Error reading line: {e}"),
             },
         };
         if num_bytes == 0 {
@@ -98,7 +98,7 @@ async fn tail(args: &Args, f: Stdin, client: &Client) -> Result<(), Error> {
 
         processed += 1;
         if processed % 100 == 0 {
-            println!("Scuba: processed {} lines", processed);
+            println!("Scuba: processed {processed} lines");
         }
 
         let event = entry_to_event(line)?;
