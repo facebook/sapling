@@ -694,16 +694,16 @@ impl Client {
         let mut url = self.build_url(paths::UPLOAD_FILE)?;
         match item {
             AnyFileContentId::ContentId(id) => {
-                url = url.join("content_id/")?.join(&format!("{}", id))?;
+                url = url.join("content_id/")?.join(&format!("{id}"))?;
             }
             AnyFileContentId::Sha1(id) => {
-                url = url.join("sha1/")?.join(&format!("{}", id))?;
+                url = url.join("sha1/")?.join(&format!("{id}"))?;
             }
             AnyFileContentId::Sha256(id) => {
-                url = url.join("sha256/")?.join(&format!("{}", id))?;
+                url = url.join("sha256/")?.join(&format!("{id}"))?;
             }
             AnyFileContentId::SeededBlake3(id) => {
-                url = url.join("seeded_blake3/")?.join(&format!("{}", id))?;
+                url = url.join("seeded_blake3/")?.join(&format!("{id}"))?;
             }
         }
 

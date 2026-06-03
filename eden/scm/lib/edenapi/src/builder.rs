@@ -265,7 +265,7 @@ impl HttpClientBuilder {
             x => {
                 return Err(SaplingRemoteApiError::BadConfig(ConfigError::Invalid(
                     "edenapi.http-version".into(),
-                    anyhow!("invalid http version {}", x),
+                    anyhow!("invalid http version {x}"),
                 )));
             }
         });
@@ -495,7 +495,7 @@ fn get_config<T: FromConfigValue>(
 ) -> Result<Option<T>, ConfigError> {
     config
         .get_opt::<T>(section, name)
-        .map_err(|e| ConfigError::Invalid(format!("{}.{}", section, name), e.into()))
+        .map_err(|e| ConfigError::Invalid(format!("{section}.{name}"), e.into()))
 }
 
 fn get_required_config<T: FromConfigValue>(
@@ -504,7 +504,7 @@ fn get_required_config<T: FromConfigValue>(
     name: &str,
 ) -> Result<T, ConfigError> {
     get_config::<T>(config, section, name)?
-        .ok_or_else(|| ConfigError::Missing(format!("{}.{}", section, name)))
+        .ok_or_else(|| ConfigError::Missing(format!("{section}.{name}")))
 }
 
 /// Configuration for a `Client`. Essentially has the same fields as a
