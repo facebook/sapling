@@ -44,7 +44,7 @@ pub fn run(ctx: ReqCtx<DebugRunlogOpts>, repo: &Repo) -> Result<u8> {
             Ok((entry, running)) => (entry, running),
             Err(err) => {
                 // Unlikely, but it is possible to have incomplete Json files.
-                write!(stderr, "Error reading runlog entry: {:?}\n", err)?;
+                write!(stderr, "Error reading runlog entry: {err:?}\n")?;
                 continue;
             }
         };
@@ -55,7 +55,7 @@ pub fn run(ctx: ReqCtx<DebugRunlogOpts>, repo: &Repo) -> Result<u8> {
 
         match format {
             Format::Text => {
-                write!(stdout, "{:#?}\n", entry)?;
+                write!(stdout, "{entry:#?}\n")?;
             }
             Format::Json => {
                 serde_json::to_writer(&mut stdout, &entry)?;
