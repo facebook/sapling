@@ -268,7 +268,7 @@ fn to_env_vars(
     let args = serde_json::to_value(kwargs)?;
     let map = match args {
         Value::Object(map) => map,
-        _ => bail!("shell hook args is not a map: {}", args),
+        _ => bail!("shell hook args is not a map: {args}"),
     };
     Ok(map.into_iter().map(|(k, v)| {
         let env_name = format!("HG_{}", k.to_uppercase());
@@ -548,7 +548,7 @@ mod test {
                         Some(v) => v.as_str(),
                         None => "(unset)",
                     };
-                    format!("{}={}", k, v)
+                    format!("{k}={v}")
                 })
                 .collect()
         };
