@@ -20,7 +20,7 @@ impl ErrorFormatter for LfsErrorFormatter {
     type Body = Vec<u8>;
 
     fn format(&self, error: &Error, state: &State) -> Result<(Self::Body, Mime), Error> {
-        let message = format!("{:#}", error);
+        let message = format!("{error:#}");
 
         let res = ResponseError {
             message,
