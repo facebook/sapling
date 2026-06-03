@@ -390,7 +390,7 @@ async fn test_shadow_config_errors_are_returned(fb: FacebookInit) -> Result<()> 
         Err(err) => err,
     };
 
-    assert!(format!("{:#}", err).contains("config lookup failed"));
+    assert!(format!("{err:#}").contains("config lookup failed"));
     assert_eq!(samples.len(), 1);
     let sample = &samples[0];
     assert!(
