@@ -112,10 +112,7 @@ pub(super) async fn compute(ctx: &CoreContext, repo: &Arc<Repo>, args: ComputeAr
                             .position(|csid| csid == *r_csid)
                             .ok_or_else(|| {
                                 anyhow!(
-                                    "commit {} path {} has copy-from with invalid parent {}",
-                                    csid,
-                                    path,
-                                    r_csid,
+                                    "commit {csid} path {path} has copy-from with invalid parent {r_csid}",
                                 )
                             })?;
                         let r_unode_id =
@@ -163,7 +160,7 @@ pub(super) async fn compute(ctx: &CoreContext, repo: &Arc<Repo>, args: ComputeAr
     .await?
     .ok_or_else(|| anyhow!("cycle found"))??;
     let annotate = blame_hg_annotate(ctx.clone(), repo, content, blame, line_number).await?;
-    println!("{}", annotate);
+    println!("{annotate}");
     Ok(())
 }
 
@@ -184,9 +181,9 @@ async fn find_leaf(
         .clone()
         .find_entry(ctx, repo.repo_blobstore().clone(), path.clone().into())
         .await?;
-    let entry = entry_opt.ok_or_else(|| anyhow!("No such path: {}", path))?;
+    let entry = entry_opt.ok_or_else(|| anyhow!("No such path: {path}"))?;
     match entry.into_leaf() {
-        None => Err(anyhow!("Blame is not available for directories: {}", path)),
+        None => Err(anyhow!("Blame is not available for directories: {path}")),
         Some(file_unode_id) => Ok(file_unode_id),
     }
 }
