@@ -171,7 +171,7 @@ impl Renderer {
                 // This abuses API little bit by supplying random counter into IoSample, need to fix later
                 IoSample::from_io_bytes(counter.value() as _, 0)
             };
-            let visible_name = format!("{:.<32}", name);
+            let visible_name = format!("{name:.<32}");
             let time_series =
                 IoTimeSeries::new_with_mode(visible_name, "", TimeSeriesMode::ValueNoUnit);
             let task =
