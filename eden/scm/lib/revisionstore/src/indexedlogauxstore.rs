@@ -72,7 +72,7 @@ fn deserialize(bytes: Bytes) -> Result<Option<(HgId, FileAuxData)>> {
 
     let version = cur.read_u8()?;
     if version > 2 {
-        bail!("unsupported auxstore entry version {}", version);
+        bail!("unsupported auxstore entry version {version}");
     }
 
     if version == 0 {

@@ -50,7 +50,7 @@ fn deserialize(bytes: Bytes) -> Result<(HgId, TreeAuxData)> {
     let hgid = cur.read_hgid()?;
     let version = cur.read_u8()?;
     if version > 0 {
-        bail!("unsupported treeauxstore entry version {}", version);
+        bail!("unsupported treeauxstore entry version {version}");
     }
     let mut bytes = [0u8; Blake3::len()];
     cur.read_exact(&mut bytes)?;

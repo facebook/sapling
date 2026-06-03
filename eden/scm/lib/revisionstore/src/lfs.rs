@@ -445,7 +445,7 @@ impl LfsIndexedLogBlobsStore {
         // Verify content integrity at write time to allow avoiding read time check.
         let apparent_hash = &ContentHash::sha256(&data).unwrap_sha256();
         if apparent_hash != hash {
-            bail!("content hash mismatch: {} != {}", hash, apparent_hash);
+            bail!("content hash mismatch: {hash} != {apparent_hash}");
         }
 
         let chunks = LfsIndexedLogBlobsStore::chunk(data, self.chunk_size);
@@ -588,7 +588,7 @@ impl LfsBlobsStore {
         match self {
             LfsBlobsStore::Loose(path, _) => {
                 let path = LfsBlobsStore::path(path, hash);
-                remove_file(path).with_context(|| format!("Cannot remove LFS blob {}", hash))?;
+                remove_file(path).with_context(|| format!("Cannot remove LFS blob {hash}"))?;
             }
 
             _ => {}
@@ -1110,7 +1110,7 @@ impl LfsPointersEntry {
             } else if let Some(suffix) = line.strip_prefix(LFS_POINTER_X_IS_BINARY) {
                 is_binary = suffix.parse::<u8>()? == 1;
             } else {
-                bail!("unknown metadata: {}", line);
+                bail!("unknown metadata: {line}");
             }
         }
 
@@ -1200,7 +1200,7 @@ impl LfsRemote {
             Ok(Self::File(file))
         } else {
             if !["http", "https"].contains(&url.scheme()) {
-                bail!("Unsupported url: {}", url);
+                bail!("Unsupported url: {url}");
             }
 
             let user_agent = config.get_or("experimental", "lfs.user-agent", || {
@@ -1241,7 +1241,7 @@ impl LfsRemote {
                         HttpVersion::V2
                     }
                 }
-                x => bail!("Unsupported http_version: {}", x),
+                x => bail!("Unsupported http_version: {x}"),
             };
 
             let low_speed_grace_period =
@@ -1454,11 +1454,11 @@ impl LfsRemote {
                         for code in seen_error_codes {
                             // Record that we saw this error code, but it went away on retry.
                             hg_metrics::increment_counter(
-                                format!("lfs.transient_error.{}.{}", method, code),
+                                format!("lfs.transient_error.{method}.{code}"),
                                 1,
                             );
                         }
-                        hg_metrics::increment_counter(format!("lfs.success.{}", method), 1);
+                        hg_metrics::increment_counter(format!("lfs.success.{method}"), 1);
                         return Ok(res);
                     }
                     Err(error) => error,
@@ -1500,15 +1500,12 @@ impl LfsRemote {
                 }
 
                 if seen_error_codes.is_empty() {
-                    hg_metrics::increment_counter(format!("lfs.fatal_error.{}.other", method), 1);
+                    hg_metrics::increment_counter(format!("lfs.fatal_error.{method}.other"), 1);
                 }
 
                 for code in seen_error_codes {
                     // Record that we saw this error code and ended up failing.
-                    hg_metrics::increment_counter(
-                        format!("lfs.fatal_error.{}.{}", method, code),
-                        1,
-                    );
+                    hg_metrics::increment_counter(format!("lfs.fatal_error.{method}.{code}"), 1);
                 }
 
                 return Err(LfsFetchError { url, method, error });
@@ -1617,7 +1614,7 @@ impl LfsRemote {
 
         while chunk_start < file_end {
             let chunk_end = std::cmp::min(file_end, chunk_start + chunk_increment);
-            let range = format!("bytes={}-{}", chunk_start, chunk_end);
+            let range = format!("bytes={chunk_start}-{chunk_end}");
 
             let chunk_res = LfsRemote::send_with_retry(
                 fctx.clone(),
@@ -1977,7 +1974,7 @@ fn move_blob(hash: &Sha256, size: u64, from: &LfsStore, to: &LfsStore) -> Result
         let blob = from
             .blobs
             .get(hash, size)?
-            .ok_or_else(|| format_err!("Cannot find blob for {}", hash))?;
+            .ok_or_else(|| format_err!("Cannot find blob for {hash}"))?;
 
         to.blobs.add(hash, blob.into_bytes())?;
         from.blobs.remove(hash)?;
@@ -1989,9 +1986,9 @@ fn move_blob(hash: &Sha256, size: u64, from: &LfsStore, to: &LfsStore) -> Result
             }
             Ok(())
         })()
-        .with_context(|| format!("Cannot move pointer for {}", hash))
+        .with_context(|| format!("Cannot move pointer for {hash}"))
     })()
-    .with_context(|| format!("Cannot move blob {}", hash))
+    .with_context(|| format!("Cannot move blob {hash}"))
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]

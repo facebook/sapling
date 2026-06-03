@@ -51,7 +51,7 @@ impl std::fmt::Display for Advice {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.0 {
             None => Ok(()),
-            Some(advice) => write!(f, "Advice: {}", advice),
+            Some(advice) => write!(f, "Advice: {advice}"),
         }
     }
 }

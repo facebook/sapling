@@ -395,7 +395,7 @@ pub(crate) fn setconfig(
     name: &str,
     value: &str,
 ) {
-    config.insert(format!("{}.{}", section, name), value.to_string());
+    config.insert(format!("{section}.{name}"), value.to_string());
 }
 
 #[cfg(test)]
@@ -578,7 +578,7 @@ mod lfs_mocks {
         set("lfs.use-client-certs", "false");
         set(
             "experimental.lfs.user-agent",
-            &format!("mercurial/revisionstore/unittests/{}", agent_suffix),
+            &format!("mercurial/revisionstore/unittests/{agent_suffix}"),
         );
         set("lfs.threshold", "4");
         set("remotefilelog.lfs", "true");

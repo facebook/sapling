@@ -172,7 +172,7 @@ pub fn check_run_once(store_path: impl AsRef<Path>, key: &str, cutoff: HgTime) -
     }
 
     let marker_path = store_path.as_ref().join(RUN_ONCE_FILENAME);
-    let line = format!("\n{}\n", key);
+    let line = format!("\n{key}\n");
     let marked = match read_to_string(&marker_path) {
         Ok(contents) => contents.contains(&line),
         // If the file doesn't exist, it hasn't run yet.
@@ -187,7 +187,7 @@ pub fn check_run_once(store_path: impl AsRef<Path>, key: &str, cutoff: HgTime) -
             .append(true)
             .open(marker_path)
             .unwrap();
-        return write!(fp, "{}", line).is_ok();
+        return write!(fp, "{line}").is_ok();
     }
 
     false
