@@ -336,7 +336,7 @@ async fn create_hg_changeset_part(
                         .into_iter()
                         .map(|bcs_id| {
                             let hg_cs_id = mapping.get(&bcs_id).ok_or_else(|| {
-                                anyhow::format_err!("cs_id was missing from mapping: {:?}", bcs_id)
+                                anyhow::format_err!("cs_id was missing from mapping: {bcs_id:?}")
                             })?;
                             Ok((*hg_cs_id, bcs_id))
                         })
