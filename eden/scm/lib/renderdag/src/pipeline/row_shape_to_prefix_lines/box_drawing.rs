@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::marker::PhantomData;
+
 use crate::pipeline::types::GraphRowShape;
 use crate::pipeline::types::LinkLine;
 use crate::pipeline::types::NodeLine;
@@ -56,34 +58,62 @@ const DEC_GLYPHS: [&str; glyph::COUNT] = [
     "~ ",
 ];
 
-/// Converts abstract row shapes into box-drawing graph prefix lines.
-pub struct BoxDrawingPrefixLineRenderer {
-    glyphs: &'static [&'static str; glyph::COUNT],
+/// Glyph table used by box-drawing prefix line renderers.
+pub trait BoxDrawingGlyphSet {
+    /// The glyph table for this box-drawing style.
+    const GLYPHS: &'static [&'static str; glyph::COUNT];
 }
 
-impl BoxDrawingPrefixLineRenderer {
-    /// Create a renderer that uses curved box-drawing glyphs.
+/// Curved box-drawing glyphs.
+pub enum Curved {}
+
+/// Square box-drawing glyphs.
+pub enum Square {}
+
+/// DEC special graphics glyphs.
+pub enum DecGraphics {}
+
+impl BoxDrawingGlyphSet for Curved {
+    const GLYPHS: &'static [&'static str; glyph::COUNT] = &CURVED_GLYPHS;
+}
+
+impl BoxDrawingGlyphSet for Square {
+    const GLYPHS: &'static [&'static str; glyph::COUNT] = &SQUARE_GLYPHS;
+}
+
+impl BoxDrawingGlyphSet for DecGraphics {
+    const GLYPHS: &'static [&'static str; glyph::COUNT] = &DEC_GLYPHS;
+}
+
+/// Converts abstract row shapes into box-drawing graph prefix lines.
+pub struct BoxDrawingPrefixLineRenderer<G = Curved> {
+    _glyphs: PhantomData<G>,
+}
+
+impl<G> BoxDrawingPrefixLineRenderer<G>
+where
+    G: BoxDrawingGlyphSet,
+{
+    /// Create a renderer that uses the glyph set from `G`.
     pub fn new() -> Self {
         Self {
-            glyphs: &CURVED_GLYPHS,
+            _glyphs: PhantomData,
         }
     }
 
     /// Use square box-drawing glyphs.
-    pub fn with_square_glyphs(mut self) -> Self {
-        self.glyphs = &SQUARE_GLYPHS;
-        self
+    pub fn with_square_glyphs(self) -> BoxDrawingPrefixLineRenderer<Square> {
+        BoxDrawingPrefixLineRenderer::new()
     }
 
     /// Use DEC special graphics glyphs.
-    pub fn with_dec_graphics_glyphs(mut self) -> Self {
-        self.glyphs = &DEC_GLYPHS;
-        self
+    pub fn with_dec_graphics_glyphs(self) -> BoxDrawingPrefixLineRenderer<DecGraphics> {
+        BoxDrawingPrefixLineRenderer::new()
     }
 
     /// Convert the next graph row shape into prefix lines.
     pub fn next_prefix_lines<N>(&mut self, line: &GraphRowShape<N>) -> Vec<PrefixLine> {
-        let glyphs = self.glyphs;
+        let glyphs = G::GLYPHS;
         let mut lines = Vec::new();
 
         // Render the nodeline
@@ -222,7 +252,10 @@ impl BoxDrawingPrefixLineRenderer {
     }
 }
 
-impl Default for BoxDrawingPrefixLineRenderer {
+impl<G> Default for BoxDrawingPrefixLineRenderer<G>
+where
+    G: BoxDrawingGlyphSet,
+{
     fn default() -> Self {
         Self::new()
     }

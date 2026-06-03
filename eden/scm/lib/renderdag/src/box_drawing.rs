@@ -12,20 +12,24 @@ use super::render::Ancestor;
 use super::render::GraphRow;
 use super::render::Renderer;
 use crate::pipeline::prefix_lines_to_text::PrefixLinesToText;
+use crate::pipeline::row_shape_to_prefix_lines::box_drawing::BoxDrawingGlyphSet;
 use crate::pipeline::row_shape_to_prefix_lines::box_drawing::BoxDrawingPrefixLineRenderer;
+use crate::pipeline::row_shape_to_prefix_lines::box_drawing::Curved;
+use crate::pipeline::row_shape_to_prefix_lines::box_drawing::DecGraphics;
+use crate::pipeline::row_shape_to_prefix_lines::box_drawing::Square;
 use crate::pipeline::types::GraphRowShape;
 
-pub struct BoxDrawingRenderer<N, R>
+pub struct BoxDrawingRenderer<N, R, G = Curved>
 where
     R: Renderer<N, Output = GraphRow<N>> + Sized,
 {
     inner: R,
-    prefix_lines: BoxDrawingPrefixLineRenderer,
+    prefix_lines: BoxDrawingPrefixLineRenderer<G>,
     text: PrefixLinesToText,
     _phantom: PhantomData<N>,
 }
 
-impl<N, R> BoxDrawingRenderer<N, R>
+impl<N, R> BoxDrawingRenderer<N, R, Curved>
 where
     R: Renderer<N, Output = GraphRow<N>> + Sized,
 {
@@ -37,15 +41,29 @@ where
             _phantom: PhantomData,
         }
     }
+}
 
-    pub fn with_square_glyphs(mut self) -> Self {
-        self.prefix_lines = self.prefix_lines.with_square_glyphs();
-        self
+impl<N, R, G> BoxDrawingRenderer<N, R, G>
+where
+    R: Renderer<N, Output = GraphRow<N>> + Sized,
+    G: BoxDrawingGlyphSet,
+{
+    pub fn with_square_glyphs(self) -> BoxDrawingRenderer<N, R, Square> {
+        BoxDrawingRenderer {
+            inner: self.inner,
+            prefix_lines: self.prefix_lines.with_square_glyphs(),
+            text: self.text,
+            _phantom: PhantomData,
+        }
     }
 
-    pub fn with_dec_graphics_glyphs(mut self) -> Self {
-        self.prefix_lines = self.prefix_lines.with_dec_graphics_glyphs();
-        self
+    pub fn with_dec_graphics_glyphs(self) -> BoxDrawingRenderer<N, R, DecGraphics> {
+        BoxDrawingRenderer {
+            inner: self.inner,
+            prefix_lines: self.prefix_lines.with_dec_graphics_glyphs(),
+            text: self.text,
+            _phantom: PhantomData,
+        }
     }
 
     fn options(&self) -> &OutputRendererOptions {
@@ -53,10 +71,11 @@ where
     }
 }
 
-impl<N, R> Renderer<N> for BoxDrawingRenderer<N, R>
+impl<N, R, G> Renderer<N> for BoxDrawingRenderer<N, R, G>
 where
     N: Clone + Eq,
     R: Renderer<N, Output = GraphRow<N>> + Sized,
+    G: BoxDrawingGlyphSet,
 {
     type Output = String;
 
