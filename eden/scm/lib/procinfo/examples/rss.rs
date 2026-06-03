@@ -7,12 +7,12 @@
 
 fn main() {
     let bytes = std::env::args().map(|a| a.parse().unwrap_or(0)).sum();
-    println!("Allocating {} bytes", bytes);
+    println!("Allocating {bytes} bytes");
     let _vec = vec![3u8; bytes];
     {
-        println!("Allocating another {} bytes", bytes);
+        println!("Allocating another {bytes} bytes");
         let _vec = vec![7u8; bytes];
-        println!("Releasing {} bytes", bytes);
+        println!("Releasing {bytes} bytes");
     }
     println!(
         "Max RSS: {} bytes (expected: around {} bytes)",
