@@ -34,7 +34,7 @@ pub fn control_point(name: &str) {
             }
         })();
         if let Err(e) = result {
-            panic!("control-point({:?}) failed: {:?}", name, e);
+            panic!("control-point({name:?}) failed: {e:?}");
         }
     }
 }
@@ -60,10 +60,7 @@ fn execute(name: &str, instruction: &str, args: Map<String, Value>) -> Result<()
                     if let Some((instruction, _args)) = read_instruction(name)? {
                         current_instruction = instruction.to_string();
                     } else {
-                        bail!(
-                            "missing instruction for currently waiting {:?} control-point",
-                            name
-                        );
+                        bail!("missing instruction for currently waiting {name:?} control-point");
                     }
 
                     continue;
@@ -80,9 +77,7 @@ fn execute(name: &str, instruction: &str, args: Map<String, Value>) -> Result<()
                 }
                 _ => {
                     bail!(
-                        "unknown control-point instruction {:?} with arguments {:?}",
-                        instruction,
-                        args
+                        "unknown control-point instruction {instruction:?} with arguments {args:?}"
                     );
                 }
             };
@@ -100,29 +95,27 @@ fn read_instruction(name: &str) -> Result<Option<(String, Map<String, Value>)>> 
     let contents = fs::read_to_string(env::var(FILE_NAME_ENV).unwrap())?;
     let mut instructions = match serde_json::from_str(&contents)? {
         Value::Object(map) => map,
-        _ => bail!("invalid control-point instruction contents {:?}", contents),
+        _ => bail!("invalid control-point instruction contents {contents:?}"),
     };
 
     Ok(match instructions.remove(name) {
         Some(Value::Array(instruction)) => {
             let len = instruction.len();
             if len != 1 && len != 2 {
-                bail!("invalid control-point instruction {:?}", instruction);
+                bail!("invalid control-point instruction {instruction:?}");
             }
             let mut iter = instruction.into_iter();
             let (name, args) = match (iter.next(), iter.next()) {
                 (Some(Value::String(name)), None) => (name, Map::new()),
                 (Some(Value::String(name)), Some(Value::Object(map))) => (name, map),
-                (first, second) => bail!(
-                    "invalid control-point instructions {:?} & {:?}",
-                    first,
-                    second
-                ),
+                (first, second) => {
+                    bail!("invalid control-point instructions {first:?} & {second:?}")
+                }
             };
 
             Some((name, args))
         }
-        Some(other) => bail!("invalid control-point non-array instruction {:?}", other),
+        Some(other) => bail!("invalid control-point non-array instruction {other:?}"),
         None => None,
     })
 }
@@ -140,7 +133,7 @@ pub fn wait(file: &Path, name: &str, timeout: &Duration) -> Result<()> {
     let now = std::time::Instant::now();
     loop {
         if now.elapsed() > *timeout {
-            bail!("waited too long for control-point {:?} in {:?}", name, file);
+            bail!("waited too long for control-point {name:?} in {file:?}");
         }
         if !file.exists() {
             std::thread::sleep(Duration::from_millis(1));
@@ -149,7 +142,7 @@ pub fn wait(file: &Path, name: &str, timeout: &Duration) -> Result<()> {
         let contents = fs::read_to_string(file)?;
         let map = match serde_json::from_str(&contents) {
             Ok(Value::Object(map)) => map,
-            _ => bail!("invalid json map in control-point response {:?}", contents),
+            _ => bail!("invalid json map in control-point response {contents:?}"),
         };
         if let Some(value) = map.get(name) {
             if value == "processing" {
