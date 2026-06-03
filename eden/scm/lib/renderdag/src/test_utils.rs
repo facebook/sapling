@@ -120,7 +120,7 @@ pub(crate) fn render_string_with_order(
             .collect();
         let name = &node;
         let message = match messages.get(name.as_str()) {
-            Some(message) => format!("{}\n{}", name, message),
+            Some(message) => format!("{name}\n{message}"),
             None => name.clone(),
         };
         let width = renderer.width(Some(&node), Some(&parents));
@@ -133,9 +133,7 @@ pub(crate) fn render_string_with_order(
         assert_eq!(
             row_indent.width() as u64,
             width,
-            "indent '{}' for row for {} is the wrong width",
-            row_indent,
-            name
+            "indent '{row_indent}' for row for {name} is the wrong width"
         );
 
         out.push_str(&row);
@@ -145,7 +143,7 @@ pub(crate) fn render_string_with_order(
         "\n{}",
         out.trim_end()
             .lines()
-            .map(|l| format!("            {}", l))
+            .map(|l| format!("            {l}"))
             .collect::<Vec<_>>()
             .join("\n")
     )
