@@ -21,23 +21,73 @@ pub struct OutputRendererOptions {
     pub stagger_consecutive_disconnected_nodes: bool,
 }
 
+/// Common stateful string line output utilities shared by ASCII and box-drawing
+/// renderers.
 #[derive(Default)]
 pub(crate) struct OutputRendererState {
-    pub(crate) extra_pad_line: Option<String>,
+    queued_pad_line: Option<String>,
     last_line_is_blank: bool,
 }
 
 impl OutputRendererState {
-    pub(crate) fn push_line(&mut self, out: &mut String, line: &str) {
+    pub(crate) fn begin_row(&mut self, out: &mut String, separator_line: bool) {
+        self.flush_queued_pad_line(out);
+        if separator_line {
+            self.maybe_push_separator_line(out);
+        }
+    }
+
+    pub(crate) fn push_line_with_message(
+        &mut self,
+        out: &mut String,
+        mut line: String,
+        message: Option<&str>,
+    ) {
+        if let Some(message) = message {
+            line.push(' ');
+            line.push_str(message);
+        }
+        self.push_line(out, &line);
+    }
+
+    pub(crate) fn push_pad_lines<'a>(
+        &mut self,
+        out: &mut String,
+        base_pad_line: &str,
+        message_lines: impl Iterator<Item = &'a str>,
+    ) -> bool {
+        let mut emitted = false;
+        for message in message_lines {
+            let mut pad_line = String::with_capacity(base_pad_line.len() + message.len() + 1);
+            pad_line.push_str(base_pad_line);
+            pad_line.push(' ');
+            pad_line.push_str(message);
+            self.push_line(out, &pad_line);
+            emitted = true;
+        }
+        emitted
+    }
+
+    pub(crate) fn queue_pad_line(&mut self, pad_line: String) {
+        self.queued_pad_line = Some(pad_line);
+    }
+
+    fn push_line(&mut self, out: &mut String, line: &str) {
         out.push_str(line.trim_end());
         out.push('\n');
         self.last_line_is_blank = line.trim_end().is_empty();
     }
 
-    pub(crate) fn mabye_push_blank_line(&mut self, out: &mut String) {
+    fn maybe_push_separator_line(&mut self, out: &mut String) {
         if !self.last_line_is_blank {
             out.push('\n');
             self.last_line_is_blank = true;
+        }
+    }
+
+    fn flush_queued_pad_line(&mut self, out: &mut String) {
+        if let Some(pad_line) = self.queued_pad_line.take() {
+            self.push_line(out, &pad_line);
         }
     }
 }

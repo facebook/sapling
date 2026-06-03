@@ -73,16 +73,8 @@ where
         let line = self.inner.next_row(node, parents, glyph, message);
         let mut out = String::new();
         let mut message_lines = pad_lines(line.message.lines(), self.options().min_row_height);
-        let mut need_extra_pad_line = false;
-
-        // Render the previous extra pad line
-        if let Some(extra_pad_line) = self.state.extra_pad_line.take() {
-            self.state.push_line(&mut out, &extra_pad_line);
-        }
-
-        if line.separator_line {
-            self.state.mabye_push_blank_line(&mut out);
-        }
+        let has_term_row = line.term_line.is_some();
+        self.state.begin_row(&mut out, line.separator_line);
 
         // Render the nodeline
         let mut node_line = String::new();
@@ -100,11 +92,8 @@ where
                 NodeLine::Blank => node_line.push_str(if i > 0 { "   " } else { "  " }),
             }
         }
-        if let Some(msg) = message_lines.next() {
-            node_line.push(' ');
-            node_line.push_str(msg);
-        }
-        self.state.push_line(&mut out, &node_line);
+        self.state
+            .push_line_with_message(&mut out, node_line, message_lines.next());
 
         // Render the link line
         if let Some(link_row) = line.link_line {
@@ -183,16 +172,10 @@ where
                     bot_link_line.push(' ');
                 }
             }
-            if let Some(msg) = message_lines.next() {
-                top_link_line.push(' ');
-                top_link_line.push_str(msg);
-            }
-            if let Some(msg) = message_lines.next() {
-                bot_link_line.push(' ');
-                bot_link_line.push_str(msg);
-            }
-            self.state.push_line(&mut out, &top_link_line);
-            self.state.push_line(&mut out, &bot_link_line);
+            self.state
+                .push_line_with_message(&mut out, top_link_line, message_lines.next());
+            self.state
+                .push_line_with_message(&mut out, bot_link_line, message_lines.next());
         }
 
         // Render the term line
@@ -214,13 +197,9 @@ where
                         });
                     }
                 }
-                if let Some(msg) = message_lines.next() {
-                    term_line.push(' ');
-                    term_line.push_str(msg);
-                }
-                self.state.push_line(&mut out, &term_line);
+                self.state
+                    .push_line_with_message(&mut out, term_line, message_lines.next());
             }
-            need_extra_pad_line = true;
         }
 
         let mut base_pad_line = String::new();
@@ -251,16 +230,12 @@ where
         }
 
         // Render any pad lines
-        for msg in message_lines {
-            let mut pad_line = base_pad_line.clone();
-            pad_line.push(' ');
-            pad_line.push_str(msg);
-            self.state.push_line(&mut out, &pad_line);
-            need_extra_pad_line = false;
-        }
-
-        if need_extra_pad_line {
-            self.state.extra_pad_line = Some(base_pad_line);
+        if !self
+            .state
+            .push_pad_lines(&mut out, &base_pad_line, message_lines)
+            && has_term_row
+        {
+            self.state.queue_pad_line(base_pad_line);
         }
 
         out
