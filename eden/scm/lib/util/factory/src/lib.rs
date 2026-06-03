@@ -225,7 +225,7 @@ impl fmt::Display for ErrorContext {
             )?;
         }
         if let Some(name) = self.error_func_name {
-            write!(f, ", {:?} reported error", name)?;
+            write!(f, ", {name:?} reported error")?;
         } else {
             write!(f, ", no registered functions were available")?;
         }
