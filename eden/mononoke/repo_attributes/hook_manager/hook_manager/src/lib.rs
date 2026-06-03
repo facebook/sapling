@@ -237,6 +237,8 @@ pub trait BookmarkHook: Send + Sync {
         scuba.add("changeset_id", to.get_changeset_id().to_string());
         scuba.add("author", to.author().to_string());
         scuba.add("type", "bookmark");
+        scuba.add("push_authored_by", format!("{push_authored_by:?}"));
+
         log_execution_stats(ctx, scuba, stats, &mut result, log_only);
         result.map_err(|e| e.context(format!("while executing hook {hook_name}")))
     }
@@ -296,6 +298,8 @@ pub trait ChangesetHook: Send + Sync {
         scuba.add("changeset_id", changeset.get_changeset_id().to_string());
         scuba.add("author", changeset.author().to_string());
         scuba.add("type", "changeset");
+        scuba.add("push_authored_by", format!("{push_authored_by:?}"));
+
         log_execution_stats(ctx, scuba, stats, &mut result, log_only);
         result.map_err(|e| e.context(format!("while executing hook {hook_name}")))
     }
