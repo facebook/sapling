@@ -239,7 +239,7 @@ pub fn compresshc(data: &[u8]) -> Result<Vec<u8>> {
 fn check_error(result: i32) -> Result<i32> {
     if result < 0 {
         return Err(LZ4Error::Generic {
-            message: format!("lz4 failed with error '{:?}'", result),
+            message: format!("lz4 failed with error '{result:?}'"),
         });
     }
 
