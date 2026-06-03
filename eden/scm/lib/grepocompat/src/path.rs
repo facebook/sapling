@@ -44,7 +44,7 @@ mod tests {
         let translator = GrepoPathTranslator;
         let path: &RepoPath = "vendor/a".try_into().unwrap();
         let encoded = translator.encode_file(path).unwrap();
-        assert_eq!(encoded.as_str(), format!("vendor/a{}", SUFFIX));
+        assert_eq!(encoded.as_str(), format!("vendor/a{SUFFIX}"));
     }
 
     #[test]

@@ -33,7 +33,7 @@ pub fn synthesize_grepo_projects(
     let repo_xml_path: &RepoPath = "static/static.xml".try_into()?;
     let metadata = match manifest.get(repo_xml_path)? {
         Some(FsNodeMetadata::File(metadata)) => metadata,
-        _ => anyhow::bail!("repo manifest xml not found at {} in tree", repo_xml_path),
+        _ => anyhow::bail!("repo manifest xml not found at {repo_xml_path} in tree"),
     };
     let xml_data = file_store
         .get_content(FetchContext::default(), repo_xml_path, metadata.hgid)?
