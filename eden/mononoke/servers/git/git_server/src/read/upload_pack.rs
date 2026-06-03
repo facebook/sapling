@@ -485,7 +485,7 @@ bundle.bundle_{}.creationtoken={}"#,
                     out.extend_from_slice(&blo[..])
                 }
                 Err(err) => {
-                    state.put(BundleUriOutcome::Error(format!("{:?}", err)));
+                    state.put(BundleUriOutcome::Error(format!("{err:?}")));
                 }
             }
         } else {
@@ -660,11 +660,11 @@ pub async fn fetch(
                 Ok(_) => anyhow::Ok(()),
                 Err(e) => {
                     STATS::packfile_read_error.add_value(1);
-                    scuba.add(MononokeGitScubaKey::PackfileReadError, format!("{:?}", e));
+                    scuba.add(MononokeGitScubaKey::PackfileReadError, format!("{e:?}"));
                     scuba.add("log_tag", "Packfile Read Error");
                     scuba.unsampled();
                     scuba.log();
-                    error_writer.send(format!("{:?}", e)).await?;
+                    error_writer.send(format!("{e:?}")).await?;
                     Ok(())
                 }
             }
@@ -685,7 +685,7 @@ async fn git_fetch_message(_request_context: &RepositoryRequestContext) -> Resul
 async fn git_error_message(
     error: &anyhow::Error,
 ) -> Result<impl TryIntoResponse + use<>, HttpError> {
-    let error_message = format!("{:?}", error);
+    let error_message = format!("{error:?}");
     let mut buf = Vec::with_capacity(error_message.len());
     write_error_channel(error_message.as_ref(), &mut buf)
         .await

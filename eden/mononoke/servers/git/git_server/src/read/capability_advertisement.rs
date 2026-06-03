@@ -107,11 +107,7 @@ async fn advertise_capability(
 
     let mut output = Vec::new();
 
-    write_text_packetline(
-        format!("# service={}", service_type).as_bytes(),
-        &mut output,
-    )
-    .await?;
+    write_text_packetline(format!("# service={service_type}").as_bytes(), &mut output).await?;
     flush_to_write(&mut output).await?;
     match (service_type, protocol_version) {
         (Service::GitUploadPack, GitProtocolVersion::V1) => {
@@ -138,7 +134,7 @@ async fn read_advertisement(
     use_bundle_uri: bool,
     bundle_trusted_only: bool,
 ) -> Result<(), Error> {
-    write_text_packetline(format!("version {}", VERSION).as_bytes(), output).await?;
+    write_text_packetline(format!("version {VERSION}").as_bytes(), output).await?;
     for capability in UPLOAD_PACK_CAPABILITIES {
         write_text_packetline(capability.as_bytes(), output).await?;
     }
@@ -179,7 +175,7 @@ async fn read_advertisement_v1(
         Ok(Some(head_ref)) => {
             let target_ref = head_ref.ref_name_with_type();
             if let Some(target) = refs_map.get(&target_ref) {
-                capabilities.push(format!("symref=HEAD:{}", target_ref));
+                capabilities.push(format!("symref=HEAD:{target_ref}"));
                 refs_map.insert("HEAD".to_string(), RefTarget::Plain(*target.id()));
             }
         }
@@ -197,7 +193,7 @@ async fn read_advertisement_v1(
         Some((ref_name, target)) => {
             let first_ref_line = ref_line(ref_name.as_str(), &target);
             write_text_packetline(
-                format!("{}\0{}", first_ref_line, capabilities_str).as_bytes(),
+                format!("{first_ref_line}\0{capabilities_str}").as_bytes(),
                 output,
             )
             .await?;
@@ -241,7 +237,7 @@ async fn write_advertisement(
         Some((ref_name, target)) => {
             let first_ref_line = ref_line(ref_name.as_str(), &target);
             write_text_packetline(
-                format!("{}\0{}", first_ref_line, RECEIVE_PACK_CAPABILITIES).as_bytes(),
+                format!("{first_ref_line}\0{RECEIVE_PACK_CAPABILITIES}").as_bytes(),
                 output,
             )
             .await?;
