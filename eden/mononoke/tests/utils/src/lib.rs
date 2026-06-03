@@ -191,11 +191,7 @@ pub async fn list_working_copy_with_types(
         let s = match maybe_content {
             Some(s) => s,
             None => {
-                return Err(format_err!(
-                    "cannot fetch content for {} {}",
-                    path,
-                    content_id
-                ));
+                return Err(format_err!("cannot fetch content for {path} {content_id}"));
             }
         };
         let bytes = s
@@ -794,14 +790,14 @@ pub async fn resolve_cs_id(
                 .bonsai_hg_mapping()
                 .get_bonsai_from_hg(ctx, hg_cs_id)
                 .await?;
-            maybe_cs_id.ok_or_else(|| format_err!("{} not found", hg_cs_id))
+            maybe_cs_id.ok_or_else(|| format_err!("{hg_cs_id} not found"))
         }
         Bookmark(bookmark) => {
             let maybe_cs_id = repo
                 .bookmarks()
                 .get(ctx.clone(), &bookmark, bookmarks::Freshness::MostRecent)
                 .await?;
-            maybe_cs_id.ok_or_else(|| format_err!("{} not found", bookmark))
+            maybe_cs_id.ok_or_else(|| format_err!("{bookmark} not found"))
         }
         String(hash_or_bookmark) => {
             if let Ok(name) = BookmarkKey::new(hash_or_bookmark.clone()) {
@@ -828,8 +824,7 @@ pub async fn resolve_cs_id(
                 return Ok(cs_id);
             }
             Err(format_err!(
-                "invalid (hash|bookmark) or does not exist in this repository: {}",
-                hash_or_bookmark
+                "invalid (hash|bookmark) or does not exist in this repository: {hash_or_bookmark}"
             ))
         }
     }

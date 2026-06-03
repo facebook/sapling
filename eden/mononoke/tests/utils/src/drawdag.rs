@@ -144,7 +144,7 @@ impl Action {
     fn new(spec: &str) -> Result<Self> {
         if let Some((key, args)) = spec.trim().split_once(':') {
             let args = ActionArg::parse_args(args)
-                .with_context(|| format!("Failed to parse args for '{}'", key))?;
+                .with_context(|| format!("Failed to parse args for '{key}'"))?;
             match (key, args.as_slice()) {
                 ("default_files", [enabled]) => Ok(Action::DefaultFiles {
                     enabled: enabled.to_string()?.parse()?,
@@ -210,7 +210,7 @@ impl Action {
                         } else if let Ok(lfs) = arg_str.parse::<GitLfs>() {
                             git_lfs = lfs;
                         } else {
-                            return Err(anyhow!("Unknown modify parameter: {}", arg_str));
+                            return Err(anyhow!("Unknown modify parameter: {arg_str}"));
                         }
                     }
 
@@ -264,7 +264,7 @@ impl Action {
                         } else if let Ok(lfs) = arg_str.parse::<GitLfs>() {
                             git_lfs = lfs;
                         } else {
-                            return Err(anyhow!("Unknown copy parameter: {}", arg_str));
+                            return Err(anyhow!("Unknown copy parameter: {arg_str}"));
                         }
                     }
 
@@ -284,10 +284,10 @@ impl Action {
                         },
                     ))
                 }
-                _ => Err(anyhow!("Invalid spec for key: {}", key)),
+                _ => Err(anyhow!("Invalid spec for key: {key}")),
             }
         } else {
-            Err(anyhow!("Invalid spec: {}", spec))
+            Err(anyhow!("Invalid spec: {spec}"))
         }
     }
 }
@@ -356,7 +356,7 @@ impl ActionArg {
                         'b' => arg.push('\u{08}'),
                         '"' => arg.push('"'),
                         'x' => arg.push_hex(&mut iter)?,
-                        esc => return Err(anyhow!("Unexpected escape sequence: '\\{}'", esc)),
+                        esc => return Err(anyhow!("Unexpected escape sequence: '\\{esc}'")),
                     },
                     ch => arg.push(ch),
                 }
@@ -380,7 +380,7 @@ impl ActionArg {
                             arg.push_hex(&mut iter)?;
                         }
                     }
-                    ch => return Err(anyhow!("Unexpected character: '{}'", ch)),
+                    ch => return Err(anyhow!("Unexpected character: '{ch}'")),
                 }
             }
         }
@@ -562,12 +562,12 @@ pub async fn extend_from_dag_with_actions<'a, R: Repo>(
         for (bookmark, name) in bookmarks {
             let target = commits
                 .get(&name)
-                .ok_or_else(|| anyhow!("No commit {} for bookmark {}", name, bookmark))?;
+                .ok_or_else(|| anyhow!("No commit {name} for bookmark {bookmark}"))?;
             let old_value = repo
                 .bookmarks()
                 .get(ctx.clone(), &bookmark, bookmarks::Freshness::MostRecent)
                 .await
-                .with_context(|| format!("Failed to resolve bookmark '{}'", bookmark))?;
+                .with_context(|| format!("Failed to resolve bookmark '{bookmark}'"))?;
             // It's better to update/create rather than force_set which doesn't
             // save the old cid to the bookmark update log. (So it looks like
             // creation but it's update)
@@ -611,7 +611,7 @@ pub async fn extend_from_dag_with_changes<'a, R: Repo>(
 
     for (name, id) in existing {
         if !dag.contains_key(&name) {
-            return Err(anyhow!("graph does not contain {}", name));
+            return Err(anyhow!("graph does not contain {name}"));
         }
         committed.insert(name, id);
     }
