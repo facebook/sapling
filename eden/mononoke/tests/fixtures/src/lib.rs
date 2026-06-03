@@ -964,9 +964,7 @@ mod test {
             assert_eq!(
                 cs_parents.iter().copied().collect::<BTreeSet<_>>(),
                 parents,
-                "{name} ({cs_id}) parents mismatch: {:?} != {:?}",
-                cs_parents,
-                parents
+                "{name} ({cs_id}) parents mismatch: {cs_parents:?} != {parents:?}"
             );
         }
 
