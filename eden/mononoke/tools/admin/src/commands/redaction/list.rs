@@ -99,7 +99,7 @@ pub(super) async fn paths_for_content_keys(
         processed += 1;
         if processed % 100_000 == 0 {
             if paths.is_empty() {
-                println!("Processed files: {}/{}", processed, file_count);
+                println!("Processed files: {processed}/{file_count}");
             } else {
                 println!(
                     "Processed files: {}/{} ({} found so far)",
@@ -141,7 +141,7 @@ pub async fn list(
     let redacted_map = redacted_blobs.redacted();
     let keys = redacted_map.keys().cloned().collect();
 
-    println!("Searching for redacted paths in {}", cs_id);
+    println!("Searching for redacted paths in {cs_id}");
     let mut redacted_paths = paths_for_content_keys(ctx, &repo, cs_id, &keys).await?;
     println!("Found {} redacted paths", redacted_paths.len());
 

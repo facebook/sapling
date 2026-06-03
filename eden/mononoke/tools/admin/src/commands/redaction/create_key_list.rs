@@ -130,7 +130,7 @@ pub async fn fetch_key_list(
         })?;
         for key in key_list.keys {
             output
-                .write(format!("{}\n", key).as_bytes())
+                .write(format!("{key}\n").as_bytes())
                 .with_context(|| {
                     format!(
                         "Failed to write to output file '{}'",
@@ -140,7 +140,7 @@ pub async fn fetch_key_list(
         }
     } else {
         for key in key_list.keys {
-            println!("{}", key);
+            println!("{key}");
         }
     }
     Ok(())
@@ -217,12 +217,12 @@ async fn content_keys_for_paths(
     let mut missing_paths = 0;
     for path in paths.iter() {
         if !path_content_keys.contains_key(path) {
-            eprintln!("Missing file: {}", path);
+            eprintln!("Missing file: {path}");
             missing_paths += 1;
         }
     }
     if missing_paths > 0 {
-        bail!("Failed to find {} files in this commit", missing_paths);
+        bail!("Failed to find {missing_paths} files in this commit");
     }
 
     Ok(path_content_keys.into_values().collect())

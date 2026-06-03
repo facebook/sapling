@@ -69,11 +69,11 @@ async fn ensure_eks_kubeconfig() -> Result<(), String> {
     )
     .await
     .map_err(|_| "cloud eks update-kubeconfig timed out".to_string())?
-    .map_err(|e| format!("Failed to run cloud CLI: {}", e))?;
+    .map_err(|e| format!("Failed to run cloud CLI: {e}"))?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("cloud eks update-kubeconfig failed: {}", stderr));
+        return Err(format!("cloud eks update-kubeconfig failed: {stderr}"));
     }
 
     Ok(())
@@ -89,11 +89,11 @@ async fn discover_aws_pod() -> Result<String, String> {
     )
     .await
     .map_err(|_| "kubectl pod discovery timed out".to_string())?
-    .map_err(|e| format!("Failed to run kubectl: {}", e))?;
+    .map_err(|e| format!("Failed to run kubectl: {e}"))?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("kubectl get pods failed: {}", stderr));
+        return Err(format!("kubectl get pods failed: {stderr}"));
     }
 
     let pod_name = String::from_utf8_lossy(&output.stdout).trim().to_string();
@@ -122,22 +122,22 @@ fn is_repo_not_found(stderr: &str, stdout: &str) -> bool {
 }
 
 pub async fn sync_to_aws(keys: &[String], key_list_id: RedactionKeyListId, repo_name: &str) {
-    let shadow_repo = format!("{}_shadow", repo_name);
+    let shadow_repo = format!("{repo_name}_shadow");
     eprintln!("\nChecking if sync to AWS is required...");
 
     let pod_name = match discover_aws_pod().await {
         Ok(pod) => {
-            eprintln!("  → Discovered pod: {}", pod);
+            eprintln!("  → Discovered pod: {pod}");
             pod
         }
         Err(e) => {
-            eprintln!("  → Warning: Failed to discover AWS pod ({})", e);
+            eprintln!("  → Warning: Failed to discover AWS pod ({e})");
             eprintln!("  → {}", build_manual_instructions(keys, &shadow_repo));
             return;
         }
     };
 
-    eprintln!("  → Syncing keylist to {} on AWS...", shadow_repo);
+    eprintln!("  → Syncing keylist to {shadow_repo} on AWS...");
 
     let cmd_args = build_exec_cmd(&pod_name, &shadow_repo, keys);
 
@@ -155,14 +155,11 @@ pub async fn sync_to_aws(keys: &[String], key_list_id: RedactionKeyListId, repo_
             } else {
                 let stderr = String::from_utf8_lossy(&output.stderr);
                 if is_repo_not_found(&stderr, &stdout) {
-                    eprintln!(
-                        "  → No AWS shadow repo '{}' found. Skipping sync.",
-                        shadow_repo
-                    );
+                    eprintln!("  → No AWS shadow repo '{shadow_repo}' found. Skipping sync.");
                 } else {
                     eprintln!("  → Warning: AWS sync completed but could not verify ID match");
                     eprintln!("  → Remote output: {}", stdout.trim());
-                    eprintln!("  → Expected ID: {}", key_list_id);
+                    eprintln!("  → Expected ID: {key_list_id}");
                 }
             }
         }
@@ -170,24 +167,18 @@ pub async fn sync_to_aws(keys: &[String], key_list_id: RedactionKeyListId, repo_
             let stderr = String::from_utf8_lossy(&output.stderr);
             let stdout = String::from_utf8_lossy(&output.stdout);
             if is_repo_not_found(&stderr, &stdout) {
-                eprintln!(
-                    "  → No AWS shadow repo '{}' found. Skipping sync.",
-                    shadow_repo
-                );
+                eprintln!("  → No AWS shadow repo '{shadow_repo}' found. Skipping sync.");
             } else {
                 eprintln!("  → Warning: kubectl exec failed: {}", stderr.trim());
                 eprintln!("  → {}", build_manual_instructions(keys, &shadow_repo));
             }
         }
         Ok(Err(e)) => {
-            eprintln!("  → Warning: Failed to run kubectl: {}", e);
+            eprintln!("  → Warning: Failed to run kubectl: {e}");
             eprintln!("  → {}", build_manual_instructions(keys, &shadow_repo));
         }
         Err(_) => {
-            eprintln!(
-                "  → Warning: kubectl exec timed out after {:?}",
-                KUBECTL_EXEC_TIMEOUT
-            );
+            eprintln!("  → Warning: kubectl exec timed out after {KUBECTL_EXEC_TIMEOUT:?}");
             eprintln!("  → {}", build_manual_instructions(keys, &shadow_repo));
         }
     }
