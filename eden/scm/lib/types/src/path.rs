@@ -134,7 +134,7 @@ impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match self {
             ParseError::ValidationError(path, validation_error) => {
-                write!(f, "Failed to validate {:?}. {}", path, validation_error)
+                write!(f, "Failed to validate {path:?}. {validation_error}")
             }
             ParseError::InvalidUtf8(bytes, utf8_error) => write!(
                 f,
@@ -143,7 +143,7 @@ impl fmt::Display for ParseError {
                 utf8_error
             ),
             ParseError::InvalidUnicode(lossy_string) => {
-                write!(f, "Failed to parse 'unicode' string {:?}", lossy_string)
+                write!(f, "Failed to parse 'unicode' string {lossy_string:?}")
             }
         }
     }

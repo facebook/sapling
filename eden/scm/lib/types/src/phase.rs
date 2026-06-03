@@ -51,7 +51,7 @@ impl FromStr for Phase {
         match s {
             "public" => Ok(Self::Public),
             "draft" => Ok(Self::Draft),
-            _ => Err(format!("unknown phase: {}", s)),
+            _ => Err(format!("unknown phase: {s}")),
         }
     }
 }

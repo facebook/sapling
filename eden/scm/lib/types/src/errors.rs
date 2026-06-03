@@ -95,7 +95,7 @@ mod tests {
         assert!(network.source().unwrap().is::<io::Error>());
         assert!(is_network_error(&network));
 
-        assert_eq!(format!("{}", network), "Network Error: other error");
+        assert_eq!(format!("{network}"), "Network Error: other error");
 
         let with_context = network.context("hello");
         assert!(is_network_error(&with_context));

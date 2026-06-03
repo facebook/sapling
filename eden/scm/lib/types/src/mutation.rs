@@ -90,7 +90,7 @@ impl MutationEntry {
                 EntryFormat::FloatDate
             }
             5 => EntryFormat::Latest,
-            v => return Err(anyhow!("unsupported mutation entry version: {}", v)),
+            v => return Err(anyhow!("unsupported mutation entry version: {v}")),
         };
         let succ = r.read_node()?;
         let pred_count = r.read_vlq()?;
