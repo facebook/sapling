@@ -74,6 +74,30 @@ inline void PrintTo(
 }
 } // namespace std
 
+/**
+ * Parameterized fixture: runs every checkout test once with the futures
+ * implementation (`useCoroutines=false`) and once with the coroutine
+ * implementation (`useCoroutines=true`). Mirrors the pattern in
+ * `DiffTestParam`.
+ *
+ * Tests opt into the coroutine variant for any `TestMount` they
+ * construct by calling `applyParam(mount)` immediately after
+ * construction (free helpers take a `bool useCoroutines` and call
+ * `enableCoroutinesConfig(mount)` themselves — same shape as
+ * `DiffTest`'s `useCoroutines_` constructor parameter).
+ */
+class CheckoutTest : public ::testing::TestWithParam<bool> {
+ protected:
+  /// Apply the parameterized coroutine variant config (if `GetParam()`)
+  /// to the given mount via the existing `enableCoroutinesConfig`
+  /// bundle (which includes `enable-phase7`).
+  void applyParam(TestMount& mount) const {
+    if (GetParam()) {
+      enableCoroutinesConfig(mount);
+    }
+  }
+};
+
 namespace {
 
 bool isExecutable([[maybe_unused]] int perms) {
@@ -260,11 +284,15 @@ void checkFileChangeJournalEntries(
 void testAddFile(
     folly::StringPiece newFilePath,
     LoadBehavior loadType,
-    int perms = 0644) {
+    int perms = 0644,
+    bool useCoroutines = false) {
   auto builder1 = FakeTreeBuilder();
   builder1.setFile("src/main.c", "int main() { return 0; }\n");
   builder1.setFile("src/test/test.c", "testy tests");
   TestMount testMount{builder1};
+  if (useCoroutines) {
+    enableCoroutinesConfig(testMount);
+  }
 
   // Prepare a second tree, by starting with builder1 then adding the new file
   auto builder2 = builder1.clone();
@@ -303,29 +331,35 @@ void testAddFile(
   EXPECT_FILE_INODE(newInode, "this is the new file contents\n", perms);
 }
 
-void runAddFileTests(folly::StringPiece path) {
+void runAddFileTests(folly::StringPiece path, bool useCoroutines) {
   for (auto loadType : kAddLoadTypes) {
     SCOPED_TRACE(fmt::format("add {} load type {}", path, loadType));
-    testAddFile(path, loadType);
-    testAddFile(path, loadType, 0755);
+    testAddFile(path, loadType, /*perms=*/0644, useCoroutines);
+    testAddFile(path, loadType, 0755, useCoroutines);
   }
 }
 
-TEST(Checkout, addFile) {
+TEST_P(CheckoutTest, addFile) {
   // Test with file names that will be at the beginning of the directory,
   // in the middle of the directory, and at the end of the directory.
   // (The directory entries are processed in sorted order.)
-  runAddFileTests("src/aaa.c");
-  runAddFileTests("src/ppp.c");
-  runAddFileTests("src/zzz.c");
+  runAddFileTests("src/aaa.c", GetParam());
+  runAddFileTests("src/ppp.c", GetParam());
+  runAddFileTests("src/zzz.c", GetParam());
 }
 
-void testRemoveFile(folly::StringPiece filePath, LoadBehavior loadType) {
+void testRemoveFile(
+    folly::StringPiece filePath,
+    LoadBehavior loadType,
+    bool useCoroutines) {
   auto builder1 = FakeTreeBuilder();
   builder1.setFile("src/main.c", "int main() { return 0; }\n");
   builder1.setFile("src/test/test.c", "testy tests");
   builder1.setFile(filePath, "this file will be removed\n");
   TestMount testMount{builder1};
+  if (useCoroutines) {
+    enableCoroutinesConfig(testMount);
+  }
 
   // Prepare a second tree, by starting with builder1 then removing the desired
   // file
@@ -360,21 +394,21 @@ void testRemoveFile(folly::StringPiece filePath, LoadBehavior loadType) {
   EXPECT_THROW_ERRNO(testMount.getInode(filePath), ENOENT);
 }
 
-void runRemoveFileTests(folly::StringPiece path) {
+void runRemoveFileTests(folly::StringPiece path, bool useCoroutines) {
   // Modify just the file contents, but not the permissions
   for (auto loadType : kAllLoadTypes) {
     SCOPED_TRACE(fmt::format("remove {} load type {}", path, loadType));
-    testRemoveFile(path, loadType);
+    testRemoveFile(path, loadType, useCoroutines);
   }
 }
 
-TEST(Checkout, removeFile) {
+TEST_P(CheckoutTest, removeFile) {
   // Test with file names that will be at the beginning of the directory,
   // in the middle of the directory, and at the end of the directory.
   // (The directory entries are processed in sorted order.)
-  runRemoveFileTests("src/aaa.c");
-  runRemoveFileTests("src/ppp.c");
-  runRemoveFileTests("src/zzz.c");
+  runRemoveFileTests("src/aaa.c", GetParam());
+  runRemoveFileTests("src/ppp.c", GetParam());
+  runRemoveFileTests("src/zzz.c", GetParam());
 }
 
 void testModifyFile(
@@ -383,7 +417,8 @@ void testModifyFile(
     folly::StringPiece contents1,
     int perms1,
     folly::StringPiece contents2,
-    int perms2) {
+    int perms2,
+    bool useCoroutines) {
   auto builder1 = FakeTreeBuilder();
   builder1.setFile("readme.txt", "just filling out the tree\n");
   builder1.setFile("a/test.txt", "test contents\n");
@@ -391,6 +426,9 @@ void testModifyFile(
   builder1.setFile("a/b/tttt.c", "this is tttt.c\n");
   builder1.setFile(path, contents1, isExecutable(perms1));
   TestMount testMount{builder1};
+  if (useCoroutines) {
+    enableCoroutinesConfig(testMount);
+  }
   testMount.getClock().advance(9876min);
 
   // Prepare the second tree
@@ -457,7 +495,7 @@ void testModifyFile(
   EXPECT_FILE_INODE(postInode, contents2, perms2);
 }
 
-void runModifyFileTests(folly::StringPiece path) {
+void runModifyFileTests(folly::StringPiece path, bool useCoroutines) {
   // Modify just the file contents, but not the permissions
   for (auto loadType : kAllLoadTypes) {
     SCOPED_TRACE(
@@ -468,14 +506,16 @@ void runModifyFileTests(folly::StringPiece path) {
         "contents v1",
         0644,
         "updated file contents\nextra stuff\n",
-        0644);
+        0644,
+        useCoroutines);
   }
 
   // Modify just the permissions, but not the contents
   for (auto loadType : kAllLoadTypes) {
     SCOPED_TRACE(
         fmt::format("mode change, path {} load type {}", path, loadType));
-    testModifyFile(path, loadType, "unchanged", 0755, "unchanged", 0644);
+    testModifyFile(
+        path, loadType, "unchanged", 0755, "unchanged", 0644, useCoroutines);
   }
 
   // Modify the contents and the permissions
@@ -484,29 +524,36 @@ void runModifyFileTests(folly::StringPiece path) {
         fmt::format(
             "contents+mode change, path {} load type {}", path, loadType));
     testModifyFile(
-        path, loadType, "contents v1", 0644, "executable contents", 0755);
+        path,
+        loadType,
+        "contents v1",
+        0644,
+        "executable contents",
+        0755,
+        useCoroutines);
   }
 }
 
 // Test with file names that will be at the beginning of the directory,
 // in the middle of the directory, and at the end of the directory.
 
-TEST(Checkout, modifyFileBeginning) {
-  runModifyFileTests("a/b/aaa.txt");
+TEST_P(CheckoutTest, modifyFileBeginning) {
+  runModifyFileTests("a/b/aaa.txt", GetParam());
 }
 
-TEST(Checkout, modifyFileMiddle) {
-  runModifyFileTests("a/b/mmm.txt");
+TEST_P(CheckoutTest, modifyFileMiddle) {
+  runModifyFileTests("a/b/mmm.txt", GetParam());
 }
 
-TEST(Checkout, modifyFileEnd) {
-  runModifyFileTests("a/b/zzz.txt");
+TEST_P(CheckoutTest, modifyFileEnd) {
+  runModifyFileTests("a/b/zzz.txt", GetParam());
 }
 
 // Test performing a checkout with a modified file where the ObjectStore data is
 // not immediately ready even though the inode is loaded.
-TEST(Checkout, modifyLoadedButNotReadyFileWithConflict) {
+TEST_P(CheckoutTest, modifyLoadedButNotReadyFileWithConflict) {
   TestMount mount;
+  applyParam(mount);
   auto backingStore = mount.getBackingStore();
 
   auto builder1 = FakeTreeBuilder();
@@ -582,7 +629,8 @@ void testModifyConflict(
     folly::StringPiece currentContents,
     int currentPerms,
     folly::StringPiece contents2,
-    int perms2) {
+    int perms2,
+    bool useCoroutines) {
   // Prepare the tree to represent the current inode state
   auto workingDirBuilder = FakeTreeBuilder();
   workingDirBuilder.setFile("readme.txt", "just filling out the tree\n");
@@ -591,6 +639,9 @@ void testModifyConflict(
   workingDirBuilder.setFile("a/b/tttt.c", "this is tttt.c\n");
   workingDirBuilder.setFile(path, currentContents, isExecutable(currentPerms));
   TestMount testMount{workingDirBuilder};
+  if (useCoroutines) {
+    enableCoroutinesConfig(testMount);
+  }
 
   // Prepare the "before" tree
   auto builder1 = workingDirBuilder.clone();
@@ -686,7 +737,7 @@ void testModifyConflict(
   }
 }
 
-void runModifyConflictTests(CheckoutMode checkoutMode) {
+void runModifyConflictTests(CheckoutMode checkoutMode, bool useCoroutines) {
   // Try with three separate path names, one that sorts first in the directory,
   // one in the middle, and one that sorts last.  This helps ensure that we
   // exercise all code paths in TreeInode::computeCheckoutActions()
@@ -707,24 +758,25 @@ void runModifyConflictTests(CheckoutMode checkoutMode) {
           "current file contents.txt",
           0644,
           "new file contents.txt",
-          0644);
+          0644,
+          useCoroutines);
     }
   }
 }
 
-TEST(Checkout, modifyConflictNormal) {
-  runModifyConflictTests(CheckoutMode::NORMAL);
+TEST_P(CheckoutTest, modifyConflictNormal) {
+  runModifyConflictTests(CheckoutMode::NORMAL, GetParam());
 }
 
-TEST(Checkout, modifyConflictDryRun) {
-  runModifyConflictTests(CheckoutMode::DRY_RUN);
+TEST_P(CheckoutTest, modifyConflictDryRun) {
+  runModifyConflictTests(CheckoutMode::DRY_RUN, GetParam());
 }
 
-TEST(Checkout, modifyConflictForce) {
-  runModifyConflictTests(CheckoutMode::FORCE);
+TEST_P(CheckoutTest, modifyConflictForce) {
+  runModifyConflictTests(CheckoutMode::FORCE, GetParam());
 }
 
-TEST(Checkout, modifyThenRevert) {
+TEST_P(CheckoutTest, modifyThenRevert) {
   // Prepare a "before" tree
   auto srcBuilder = FakeTreeBuilder();
   srcBuilder.setFile("readme.txt", "just filling out the tree\n");
@@ -732,6 +784,7 @@ TEST(Checkout, modifyThenRevert) {
   srcBuilder.setFile("a/test.txt", "test contents\n");
   srcBuilder.setFile("a/xyz.txt", "bar\n");
   TestMount testMount{srcBuilder};
+  applyParam(testMount);
   auto originalCommit = testMount.getEdenMount()->getCheckedOutRootId();
 
   // Modify a file.
@@ -782,10 +835,11 @@ TEST(Checkout, modifyThenRevert) {
 #endif
 }
 
-TEST(Checkout, modifyThenCheckoutRevisionWithoutFile) {
+TEST_P(CheckoutTest, modifyThenCheckoutRevisionWithoutFile) {
   auto builder1 = FakeTreeBuilder();
   builder1.setFile("src/main.c", "// Some code.\n");
   TestMount testMount{RootId{"1"}, builder1};
+  applyParam(testMount);
 
   auto builder2 = builder1.clone();
   builder2.setFile("src/test.c", "// Unit test.\n");
@@ -833,10 +887,11 @@ TEST(Checkout, modifyThenCheckoutRevisionWithoutFile) {
   checkFileChangeJournalEntries(expected_journal, testMount);
 }
 
-TEST(Checkout, createUntrackedFileAndCheckoutAsTrackedFile) {
+TEST_P(CheckoutTest, createUntrackedFileAndCheckoutAsTrackedFile) {
   auto builder1 = FakeTreeBuilder();
   builder1.setFile("src/main.c", "// Some code.\n");
   TestMount testMount{RootId{"1"}, builder1};
+  applyParam(testMount);
 
   auto builder2 = builder1.clone();
   builder2.setFile("src/test.c", "// Unit test.\n");
@@ -896,12 +951,13 @@ TEST(Checkout, createUntrackedFileAndCheckoutAsTrackedFile) {
  * exercises the case where the code must traverse into an untracked directory
  * and mark its contents UNTRACKED_ADDED, as appropriate.
  */
-TEST(
-    Checkout,
+TEST_P(
+    CheckoutTest,
     createUntrackedFileAsOnlyDirectoryEntryAndCheckoutAsTrackedFile) {
   auto builder1 = FakeTreeBuilder();
   builder1.setFile("src/main.c", "// Some code.\n");
   TestMount testMount{RootId("1"), builder1};
+  applyParam(testMount);
 
   auto builder2 = builder1.clone();
   builder2.setFile("src/test/test.c", "// Unit test.\n");
@@ -960,11 +1016,17 @@ TEST(
   checkFileChangeJournalEntries(expected_journal, testMount);
 }
 
-void testAddSubdirectory(folly::StringPiece newDirPath, LoadBehavior loadType) {
+void testAddSubdirectory(
+    folly::StringPiece newDirPath,
+    LoadBehavior loadType,
+    bool useCoroutines) {
   auto builder1 = FakeTreeBuilder();
   builder1.setFile("src/main.c", "int main() { return 0; }\n");
   builder1.setFile("src/test/test.c", "testy tests");
   TestMount testMount{builder1};
+  if (useCoroutines) {
+    enableCoroutinesConfig(testMount);
+  }
 
   // Prepare a second tree, by starting with builder1 then adding
   // the new directory
@@ -1004,18 +1066,18 @@ void testAddSubdirectory(folly::StringPiece newDirPath, LoadBehavior loadType) {
       0644);
 }
 
-TEST(Checkout, addSubdirectory) {
+TEST_P(CheckoutTest, addSubdirectory) {
   // Test with multiple paths to exercise the case where the modification is at
   // the start of the directory listing, at the end, and in the middle.
   for (const auto& path : {"src/aaa", "src/ppp", "src/zzz"}) {
     for (auto loadType : kAddLoadTypes) {
       SCOPED_TRACE(fmt::format("path {} load type {}", path, loadType));
-      testAddSubdirectory(path, loadType);
+      testAddSubdirectory(path, loadType, GetParam());
     }
   }
 }
 
-void testRemoveSubdirectory(LoadBehavior loadType) {
+void testRemoveSubdirectory(LoadBehavior loadType, bool useCoroutines) {
   // Build the destination source control tree first
   auto destBuilder = FakeTreeBuilder();
   destBuilder.setFile("src/main.c", "int main() { return 0; }\n");
@@ -1030,6 +1092,9 @@ void testRemoveSubdirectory(LoadBehavior loadType) {
   srcBuilder.setFile(path + "include/file1.h"_relpath, "header\n");
 
   TestMount testMount{srcBuilder};
+  if (useCoroutines) {
+    enableCoroutinesConfig(testMount);
+  }
   destBuilder.finalize(testMount.getBackingStore(), true);
   auto commit2 = testMount.getBackingStore()->putCommit("2", destBuilder);
   commit2->setReady();
@@ -1062,17 +1127,18 @@ void testRemoveSubdirectory(LoadBehavior loadType) {
 }
 
 // Remove a subdirectory with no conflicts or untracked files left behind
-TEST(Checkout, removeSubdirectorySimple) {
+TEST_P(CheckoutTest, removeSubdirectorySimple) {
   for (auto loadType : kAllLoadTypes) {
     SCOPED_TRACE(fmt::format(" load type {}", loadType));
-    testRemoveSubdirectory(loadType);
+    testRemoveSubdirectory(loadType, GetParam());
   }
 }
 
-TEST(Checkout, checkoutModifiesDirectoryDuringLoad) {
+TEST_P(CheckoutTest, checkoutModifiesDirectoryDuringLoad) {
   auto builder1 = FakeTreeBuilder{};
   builder1.setFile("dir/sub/file.txt", "contents");
   TestMount testMount{builder1, false};
+  applyParam(testMount);
   builder1.setReady("");
   builder1.setReady("dir");
 
@@ -1121,10 +1187,11 @@ TEST(Checkout, checkoutModifiesDirectoryDuringLoad) {
       1, inode->lockContentsRead()->entries.count("differentfile.txt"_pc));
 }
 
-TEST(Checkout, checkoutCaseChanged) {
+TEST_P(CheckoutTest, checkoutCaseChanged) {
   auto builder1 = FakeTreeBuilder{};
   builder1.setFile("root", "root");
   TestMount testMount{builder1};
+  applyParam(testMount);
 
   auto lowerBuilder = builder1.clone();
   lowerBuilder.setFile("dir/file1", "lower one");
@@ -1182,10 +1249,11 @@ TEST(Checkout, checkoutCaseChanged) {
 }
 
 #ifndef _WIN32
-TEST(Checkout, checkoutRemovingDirectoryDeletesOverlayFile) {
+TEST_P(CheckoutTest, checkoutRemovingDirectoryDeletesOverlayFile) {
   auto builder1 = FakeTreeBuilder{};
   builder1.setFile("dir/sub/file.txt", "contents");
   TestMount testMount{builder1};
+  applyParam(testMount);
 
   // Prepare a second commit, removing dir/sub.
   auto builder2 = FakeTreeBuilder{};
@@ -1230,7 +1298,7 @@ TEST(Checkout, checkoutRemovingDirectoryDeletesOverlayFile) {
   EXPECT_FALSE(testMount.hasMetadata(fileInodeNumber));
 }
 
-TEST(Checkout, checkoutUpdatesUnlinkedStatusForLoadedTrees) {
+TEST_P(CheckoutTest, checkoutUpdatesUnlinkedStatusForLoadedTrees) {
   // This test is designed to stress the logic in
   // TreeInode::processCheckoutEntry that decides whether it's necessary to load
   // a TreeInode in order to continue.  It tests that unlinked status is
@@ -1239,6 +1307,7 @@ TEST(Checkout, checkoutUpdatesUnlinkedStatusForLoadedTrees) {
   auto builder1 = FakeTreeBuilder{};
   builder1.setFile("dir/sub/file.txt", "contents");
   TestMount testMount{builder1};
+  applyParam(testMount);
 
   // Prepare a second commit, removing dir/sub.
   auto builder2 = FakeTreeBuilder{};
@@ -1287,10 +1356,11 @@ TEST(Checkout, checkoutUpdatesUnlinkedStatusForLoadedTrees) {
   EXPECT_FALSE(dirContents->isMaterialized());
 }
 
-TEST(Checkout, checkoutRemembersInodeNumbersAfterCheckoutAndTakeover) {
+TEST_P(CheckoutTest, checkoutRemembersInodeNumbersAfterCheckoutAndTakeover) {
   auto builder1 = FakeTreeBuilder{};
   builder1.setFile("dir/sub/file1.txt", "contents1");
   TestMount testMount{builder1};
+  applyParam(testMount);
 
   // Prepare a second commit, changing dir/sub.
   auto builder2 = FakeTreeBuilder{};
@@ -1365,10 +1435,14 @@ std::vector<SetPathObjectIdObjectAndPath> getObjects(
 void runTestSetPathObjectId(
     folly::StringPiece file,
     folly::StringPiece pathToSet,
-    RelativePathPiece expectedFile) {
+    RelativePathPiece expectedFile,
+    bool useCoroutines) {
   auto builder1 = FakeTreeBuilder{};
   builder1.setFile("dir/dir2/dir3/file.txt", "contents");
   TestMount testMount{builder1, false};
+  if (useCoroutines) {
+    enableCoroutinesConfig(testMount);
+  }
   builder1.setReady("");
   builder1.setReady("dir");
   builder1.setReady("dir/dir2");
@@ -1405,45 +1479,51 @@ void runTestSetPathObjectId(
       testMount.getFileInode(expectedFile), "differentcontents", 0644);
 }
 
-TEST(Checkout, testSetPathObjectIdSimple) {
+TEST_P(CheckoutTest, testSetPathObjectIdSimple) {
   runTestSetPathObjectId(
       "differentdir/differentfile.txt",
       "dir",
-      "dir/differentdir/differentfile.txt"_relpath);
+      "dir/differentdir/differentfile.txt"_relpath,
+      GetParam());
 }
 
-TEST(Checkout, testSetPathObjectIdNewDir) {
+TEST_P(CheckoutTest, testSetPathObjectIdNewDir) {
   runTestSetPathObjectId(
       "differentdir/differentfile.txt",
       "dir2",
-      "dir2/differentdir/differentfile.txt"_relpath);
+      "dir2/differentdir/differentfile.txt"_relpath,
+      GetParam());
 }
 
-TEST(Checkout, testSetPathObjectIdSetOnRoot) {
+TEST_P(CheckoutTest, testSetPathObjectIdSetOnRoot) {
   runTestSetPathObjectId(
       "differentdir/differentfile.txt",
       "",
-      "differentdir/differentfile.txt"_relpath);
+      "differentdir/differentfile.txt"_relpath,
+      GetParam());
 }
 
-TEST(Checkout, testSetPathObjectIdMultipleLevelFolder) {
+TEST_P(CheckoutTest, testSetPathObjectIdMultipleLevelFolder) {
   runTestSetPathObjectId(
       "differentdir/differentfile.txt",
       "dir/dir2/dir3",
-      "dir/dir2/dir3/differentdir/differentfile.txt"_relpath);
+      "dir/dir2/dir3/differentdir/differentfile.txt"_relpath,
+      GetParam());
 }
 
-TEST(Checkout, testSetPathObjectIdMultipleLevelFolderAndNewDir) {
+TEST_P(CheckoutTest, testSetPathObjectIdMultipleLevelFolderAndNewDir) {
   runTestSetPathObjectId(
       "differentdir/differentfile.txt",
       "dir/dir2/dir4",
-      "dir/dir2/dir4/differentdir/differentfile.txt"_relpath);
+      "dir/dir2/dir4/differentdir/differentfile.txt"_relpath,
+      GetParam());
 }
 
-TEST(Checkout, testSetPathObjectIdConflict) {
+TEST_P(CheckoutTest, testSetPathObjectIdConflict) {
   auto builder1 = FakeTreeBuilder{};
   builder1.setFile("dir/dir2/dir3/file.txt", "contents");
   TestMount testMount{builder1, false};
+  applyParam(testMount);
   builder1.setReady("");
   builder1.setReady("dir");
   builder1.setReady("dir/dir2");
@@ -1487,8 +1567,9 @@ TEST(Checkout, testSetPathObjectIdConflict) {
           Dtype::REGULAR)));
 }
 
-TEST(Checkout, testSetPathObjectIdLastCheckoutTime) {
+TEST_P(CheckoutTest, testSetPathObjectIdLastCheckoutTime) {
   TestMount testMount;
+  applyParam(testMount);
   auto builder1 = FakeTreeBuilder();
   builder1.setFile("dir/file.txt", "contents");
   builder1.finalize(testMount.getBackingStore(), true);
@@ -1578,10 +1659,11 @@ TEST(Checkout, testSetPathObjectIdLastCheckoutTime) {
   EXPECT_EQ(nsec2.count(), stFile2.mtime.toTimespec().tv_nsec);
 }
 
-TEST(Checkout, testSetPathObjectIdCheckoutSingleFile) {
+TEST_P(CheckoutTest, testSetPathObjectIdCheckoutSingleFile) {
   // Start with an empty mount
   auto builder1 = FakeTreeBuilder{};
   TestMount testMount{builder1, false};
+  applyParam(testMount);
 
   std::string contents = "content";
   testMount.getBackingStore()->putBlob(ObjectId{"2"}, contents)->setReady();
@@ -1606,10 +1688,11 @@ TEST(Checkout, testSetPathObjectIdCheckoutSingleFile) {
   EXPECT_FILE_INODE(testMount.getFileInode(path), contents, 0644);
 }
 
-TEST(Checkout, testSetPathObjectIdCheckoutMultipleFiles) {
+TEST_P(CheckoutTest, testSetPathObjectIdCheckoutMultipleFiles) {
   // Start with an empty mount
   auto builder1 = FakeTreeBuilder{};
   TestMount testMount{builder1, false};
+  applyParam(testMount);
 
   std::string contents = "content";
   std::string contents2 = "content";
@@ -1770,10 +1853,11 @@ TYPED_TEST(
 }
 #endif
 
-TEST(Checkout, diffFailsOnInProgressCheckout) {
+TEST_P(CheckoutTest, diffFailsOnInProgressCheckout) {
   auto builder1 = FakeTreeBuilder();
   builder1.setFile("src/main.c", "// Some code.\n");
   TestMount testMount{RootId{"1"}, builder1};
+  applyParam(testMount);
   testMount.getServerState()->getFaultInjector().injectBlock("checkout", ".*");
 
   // Block checkout so the checkout is "in progress"
@@ -1818,11 +1902,14 @@ TEST(Checkout, diffFailsOnInProgressCheckout) {
   EXPECT_NO_THROW(std::move(diff2).get());
 }
 
-TEST(Checkout, conflict_when_directory_containing_modified_file_is_removed) {
+TEST_P(
+    CheckoutTest,
+    conflict_when_directory_containing_modified_file_is_removed) {
   auto builder1 = FakeTreeBuilder{};
   builder1.setFile("d1/sub/one.txt", "one");
   builder1.setFile("d2/two.txt", "two");
   TestMount testMount{builder1};
+  applyParam(testMount);
 
   // Prepare a second tree without one directory.
   auto builder2 = FakeTreeBuilder{};
@@ -1856,10 +1943,11 @@ TEST(Checkout, conflict_when_directory_containing_modified_file_is_removed) {
   }
 }
 
-TEST(Checkout, checkoutFailsOnInProgressCheckout) {
+TEST_P(CheckoutTest, checkoutFailsOnInProgressCheckout) {
   auto builder1 = FakeTreeBuilder();
   builder1.setFile("src/main.c", "// Some code.\n");
   TestMount testMount{RootId("1"), builder1};
+  applyParam(testMount);
   testMount.getServerState()->getFaultInjector().injectBlock("checkout", ".*");
 
   auto builder2 = builder1.clone();
@@ -1915,8 +2003,11 @@ TEST(Checkout, checkoutFailsOnInProgressCheckout) {
   EXPECT_NO_THROW(std::move(checkout2).get());
 }
 
-TEST(Checkout, changing_hash_scheme_does_not_conflict_if_contents_are_same) {
+TEST_P(
+    CheckoutTest,
+    changing_hash_scheme_does_not_conflict_if_contents_are_same) {
   TestMount mount;
+  applyParam(mount);
   auto backingStore = mount.getBackingStore();
 
   folly::ByteRange contents = folly::StringPiece{"test contents\n"};
@@ -2010,8 +2101,9 @@ class FakePrjfsChannel final : public PrjfsChannel {
   ActionMap actions_;
 };
 
-TEST(Checkout, concurrent_crawl_during_checkout) {
+TEST_P(CheckoutTest, concurrent_crawl_during_checkout) {
   TestMount mount;
+  applyParam(mount);
   auto backingStore = mount.getBackingStore();
 
   auto builder1 = FakeTreeBuilder();
@@ -2056,8 +2148,9 @@ TEST(Checkout, concurrent_crawl_during_checkout) {
   mount.getEdenMount()->getPrjfsChannel()->unmount({}).get();
 }
 
-TEST(Checkout, concurrent_file_to_directory_during_checkout) {
+TEST_P(CheckoutTest, concurrent_file_to_directory_during_checkout) {
   TestMount mount;
+  applyParam(mount);
   auto backingStore = mount.getBackingStore();
 
   auto builder1 = FakeTreeBuilder();
@@ -2111,8 +2204,9 @@ TEST(Checkout, concurrent_file_to_directory_during_checkout) {
   mount.getEdenMount()->getPrjfsChannel()->unmount({}).get();
 }
 
-TEST(Checkout, concurrent_new_file_during_checkout) {
+TEST_P(CheckoutTest, concurrent_new_file_during_checkout) {
   TestMount mount;
+  applyParam(mount);
   auto backingStore = mount.getBackingStore();
 
   auto builder1 = FakeTreeBuilder();
@@ -2167,8 +2261,9 @@ TEST(Checkout, concurrent_new_file_during_checkout) {
   mount.getEdenMount()->getPrjfsChannel()->unmount({}).get();
 }
 
-TEST(Checkout, concurrent_recreation_during_checkout) {
+TEST_P(CheckoutTest, concurrent_recreation_during_checkout) {
   TestMount mount;
+  applyParam(mount);
   auto backingStore = mount.getBackingStore();
 
   auto builder1 = FakeTreeBuilder();
@@ -2247,7 +2342,7 @@ TEST(Checkout, concurrent_recreation_during_checkout) {
 
 #ifndef _WIN32
 
-TEST(Checkout, overlayWritesDuringCheckout) {
+TEST_P(CheckoutTest, overlayWritesDuringCheckout) {
   // To trigger the N+1 overlay write problem, subdirectories must change
   // materialization state during checkout. If they stay materialized,
   // they don't trigger an overlay write for their parent.
@@ -2263,6 +2358,7 @@ TEST(Checkout, overlayWritesDuringCheckout) {
   builder1.setFile("parent/sub4/file4.txt", "original4\n");
   builder1.setFile("parent/sub5/file5.txt", "original5\n");
   TestMount testMount{builder1};
+  applyParam(testMount);
 
   // Materialize each subdirectory by modifying its file
   testMount.overwriteFile("parent/sub1/file1.txt", "local1\n");
@@ -2344,12 +2440,13 @@ TEST(Checkout, overlayWritesDuringCheckout) {
       testMount.getFileInode("parent/sub5/file5.txt"), "modified5\n", 0644);
 }
 
-TEST(Checkout, backgroundOverlayCleanupDuringCheckout) {
+TEST_P(CheckoutTest, backgroundOverlayCleanupDuringCheckout) {
   // Verify that overlay data for unloaded directories is cleaned up
   // asynchronously by the GC thread during checkout.
   auto builder1 = FakeTreeBuilder{};
   builder1.setFile("dir/sub/file.txt", "contents");
   TestMount testMount{builder1};
+  applyParam(testMount);
   testMount.updateEdenConfig(
       {{"experimental:background-overlay-cleanup-during-checkout", "true"}});
 
@@ -2509,12 +2606,13 @@ TEST(Checkout, forceCheckoutReplacesLoadedRestrictedTreeWithFile) {
  * tracked directory, matching git's behavior of overwriting ignored files.
  */
 #ifndef _WIN32
-TEST(Checkout, ignoredSymlinkReplacedByDirectoryInDestination) {
+TEST_P(CheckoutTest, ignoredSymlinkReplacedByDirectoryInDestination) {
   // Commit 1: has a .gitignore ignoring "src/link"
   auto builder1 = FakeTreeBuilder();
   builder1.setFile("src/main.c", "// Some code.\n");
   builder1.setFile("src/.gitignore", "link\n");
   TestMount testMount{RootId{"1"}, builder1};
+  applyParam(testMount);
 
   // Commit 2: adds "src/link/" as a tracked directory with a file inside.
   // The symlink name is NOT tracked in commit 1, only as a directory in
@@ -2579,3 +2677,11 @@ TEST(Checkout, ignoredSymlinkReplacedByDirectoryInDestination) {
 //   - remove file, with modify conflict
 //   - remove file, with remove conflict
 //   - remove file, with a parent directory replaced with a file/symlink
+
+INSTANTIATE_TEST_SUITE_P(
+    CheckoutTestVariants,
+    CheckoutTest,
+    ::testing::Values(false, true),
+    [](const ::testing::TestParamInfo<bool>& info) {
+      return info.param ? "Coroutines" : "Futures";
+    });
