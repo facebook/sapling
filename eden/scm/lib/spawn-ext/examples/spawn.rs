@@ -15,13 +15,13 @@ fn main() {
     let exe_path = std::env::current_exe().unwrap();
     if std::env::args().len() == 1 {
         let pid = process::id();
-        println!("parent pid: {}", pid);
+        println!("parent pid: {pid}");
         let mut cmd = Command::new(exe_path);
         let clock = SystemTime::now();
         cmd.arg("child").avoid_inherit_handles().new_session();
         println!("avoid_inherit_handles took: {:?}", clock.elapsed().unwrap());
         let child_pid = cmd.arg("child").spawn_detached().unwrap().id();
-        println!("child pid: {}", child_pid);
+        println!("child pid: {child_pid}");
         println!("spawn took: {:?}", clock.elapsed().unwrap());
         println!("Both processes are sleeping.");
         println!();
@@ -29,10 +29,7 @@ fn main() {
             println!("On Windows, use Process Hacker to check handles.");
             println!("Inheritable handles are highlighted in cyan.");
         } else {
-            println!(
-                "On Linux, use 'ls -l /proc/{{{},{}}}/fd/' to check fds.",
-                pid, child_pid
-            );
+            println!("On Linux, use 'ls -l /proc/{{{pid},{child_pid}}}/fd/' to check fds.");
         }
         println!();
         println!("The child should not have more file handles than the parent.");
