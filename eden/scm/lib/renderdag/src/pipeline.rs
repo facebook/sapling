@@ -30,4 +30,5 @@
 
 #![allow(dead_code)]
 
+pub mod graph_to_row_shape;
 pub mod types;
