@@ -44,7 +44,7 @@ where
     T: std::fmt::Display,
 {
     result
-        .map_err(|e| PyErr::new::<exc::RuntimeError, _>(py, format!("{}", e)))
+        .map_err(|e| PyErr::new::<exc::RuntimeError, _>(py, format!("{e}")))
         .map(|buf| PyBytes::new(py, &buf))
 }
 
