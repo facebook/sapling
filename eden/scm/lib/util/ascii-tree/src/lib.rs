@@ -67,7 +67,7 @@ mod tests {
             }
             let desc = Desc;
             let out = tree.render_ascii_rows(&opts, &desc);
-            format!("\n{}", out)
+            format!("\n{out}")
         };
 
         assert_eq!(

@@ -55,7 +55,7 @@ impl fmt::Display for Rows {
                         // Separator
                         write!(f, " ")?;
                     }
-                    write!(f, "{}", content)?;
+                    write!(f, "{content}")?;
                 }
             }
             write!(f, "\n")?;
