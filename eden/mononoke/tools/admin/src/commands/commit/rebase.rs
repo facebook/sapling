@@ -51,12 +51,12 @@ pub async fn rebase(ctx: &CoreContext, repo: &Repo, rebase_args: CommitRebaseArg
         let mut dest = dest;
         for csid in csids {
             let rebased = rebase_single_changeset(ctx, repo, csid, dest).await?;
-            println!("{}", rebased);
+            println!("{rebased}");
             dest = rebased;
         }
     } else {
         let rebased = rebase_single_changeset(ctx, repo, source, dest).await?;
-        println!("{}", rebased);
+        println!("{rebased}");
     }
 
     Ok(())

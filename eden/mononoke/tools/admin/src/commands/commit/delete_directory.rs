@@ -112,7 +112,7 @@ pub async fn delete_directory(
     let cs_id = bcs.get_changeset_id();
     save_changesets(ctx, repo, vec![bcs]).await?;
 
-    println!("{}", cs_id);
+    println!("{cs_id}");
 
     Ok(())
 }

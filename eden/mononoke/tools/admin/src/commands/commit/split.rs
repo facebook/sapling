@@ -119,10 +119,7 @@ async fn split_commit(
             )
             .await?;
             parent = Some(cs_id);
-            println!(
-                "{} size: {} files: {}",
-                cs_id, current_file_size, num_of_files
-            );
+            println!("{cs_id} size: {current_file_size} files: {num_of_files}");
             current_file_changes.clear();
             current_file_size = 0;
             result.extend(parent);
@@ -148,10 +145,7 @@ async fn split_commit(
         )
         .await?;
         result.push(cs_id);
-        println!(
-            "{} size: {} files: {}",
-            cs_id, current_file_size, num_of_files
-        );
+        println!("{cs_id} size: {current_file_size} files: {num_of_files}");
     }
 
     Ok(result)
@@ -170,8 +164,7 @@ fn modify_file_change_parent(
                     (from_path.clone(), parent)
                 } else {
                     bail!(
-                        "invalid bonsai changeset - it's a root commit, but has copy info for {}",
-                        path
+                        "invalid bonsai changeset - it's a root commit, but has copy info for {path}"
                     );
                 };
 
