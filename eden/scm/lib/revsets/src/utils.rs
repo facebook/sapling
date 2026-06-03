@@ -211,7 +211,7 @@ fn local_hash_prefix_lookup(args: &LookupArgs) -> Result<Option<HgId>> {
     .into_iter()
     .map(|v| {
         Ok(HgId::from_byte_array(v.0.into_vec().try_into().map_err(
-            |v| anyhow!("unexpected vertex name length: {:?}", v),
+            |v| anyhow!("unexpected vertex name length: {v:?}"),
         )?))
     })
     .collect::<Result<Vec<_>>>()?;
@@ -288,7 +288,7 @@ fn resolve_revnum(args: &LookupArgs) -> Result<Option<HgId>> {
                 name.0
                     .into_vec()
                     .try_into()
-                    .map_err(|v| anyhow!("unexpected vertex name length: {:?}", v))?,
+                    .map_err(|v| anyhow!("unexpected vertex name length: {v:?}"))?,
             )
         }
     };
