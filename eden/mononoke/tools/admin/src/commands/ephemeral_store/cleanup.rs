@@ -72,8 +72,7 @@ pub async fn clean_bubbles(
                 async move {
                     let count = repo.repo_ephemeral_store.delete_bubble(&ctx, id).await?;
                     println!(
-                        "Cleaned up bubble {} and deleted {} blob keys contained in it",
-                        id, count
+                        "Cleaned up bubble {id} and deleted {count} blob keys contained in it"
                     );
                     anyhow::Ok(())
                 }
@@ -85,7 +84,7 @@ pub async fn clean_bubbles(
         println!(
             "Executing cleanup in dry-run mode. The following bubbles were fetched for deletion:"
         );
-        println!("{:?}", expired_bubbles);
+        println!("{expired_bubbles:?}");
     }
     Ok(())
 }

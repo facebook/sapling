@@ -39,7 +39,7 @@ pub async fn bubble_info(
             .repo_ephemeral_store
             .bubble_from_changeset(ctx, &ChangesetId::from_str(id)?)
             .await?
-            .ok_or_else(|| anyhow!("No bubble exists for changeset ID {}", id)),
+            .ok_or_else(|| anyhow!("No bubble exists for changeset ID {id}")),
         (Some(id), _) => Ok(*id),
         (_, _) => Err(anyhow!(
             "Need to provide either changeset ID or bubble ID as input"
