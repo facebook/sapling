@@ -152,7 +152,7 @@ impl FilterArgs {
         };
         size.parse::<u64>()
             .map(|size| size * multiplier)
-            .with_context(|| format!("Invalid blob size {:?}", size))
+            .with_context(|| format!("Invalid blob size {size:?}"))
     }
 
     fn parse_from_spec(data: String) -> Result<Self> {
@@ -171,7 +171,7 @@ impl FilterArgs {
         for filter in filter_set {
             if let Some(object_type) = filter.strip_prefix(Self::OBJECT_TYPE_PREFIX) {
                 let object_kind = Kind::from_bytes(object_type.as_bytes())
-                    .with_context(|| format!("Invalid object type {:?}", object_type))?;
+                    .with_context(|| format!("Invalid object type {object_type:?}"))?;
                 // Git has this weird behavior if you specify multiple allowed object types
                 // it just honors the first one it comes across. And no, there is no mention
                 // of it in the docs. Found this out through code reading and trail-and-error :)
@@ -185,17 +185,13 @@ impl FilterArgs {
                 } else if let Some(blob_limit) = blob_size.strip_prefix(Self::SIZE_LIMIT) {
                     filter_args.max_blob_size = Self::parse_size(blob_limit)?;
                 } else {
-                    bail!(
-                        "Invalid blob size {:?} in filter spec {}",
-                        blob_size,
-                        filter
-                    );
+                    bail!("Invalid blob size {blob_size:?} in filter spec {filter}");
                 }
             }
             if let Some(tree_depth) = filter.strip_prefix(Self::TREE_PREFIX) {
                 let max_depth = tree_depth
                     .parse::<u64>()
-                    .with_context(|| format!("Invalid tree depth {:?}", tree_depth))?;
+                    .with_context(|| format!("Invalid tree depth {tree_depth:?}"))?;
                 filter_args.max_tree_depth = max_depth;
             }
         }
@@ -216,10 +212,7 @@ impl FilterArgs {
 
 pub fn parse_oid(data: &[u8], oid_type: &[u8]) -> Result<ObjectId> {
     ObjectId::from_hex(data).with_context(|| {
-        format!(
-            "Invalid {:?}object id {:?} received during fetch request",
-            oid_type, data
-        )
+        format!("Invalid {oid_type:?}object id {data:?} received during fetch request")
     })
 }
 
@@ -290,14 +283,13 @@ impl FetchArgs {
                     let depth = bytes_to_str(depth, "depth", "deepen")?.parse::<u32>();
                     fetch_args.deepen = Some(depth.clone().with_context(|| {
                         format!(
-                            "Invalid depth {:?} received during fetch command args parsing",
-                            depth
+                            "Invalid depth {depth:?} received during fetch command args parsing"
                         )
                     })?);
                 } else if let Some(time_depth) = data.strip_prefix(DEEPEN_SINCE_PREFIX) {
                     let time_depth = bytes_to_str(time_depth, "depth", "deepen since")?.to_owned();
                     let parsed_time = time_depth.as_str().parse::<usize>()
-                        .with_context(|| format!("Invalid time {:?} received for deepen since during fetch command args parsing", time_depth))?;
+                        .with_context(|| format!("Invalid time {time_depth:?} received for deepen since during fetch command args parsing"))?;
                     fetch_args.deepen_since = Some(parsed_time);
                 } else if let Some(deepen_not_ref) = data.strip_prefix(DEEPEN_NOT_PREFIX) {
                     let deepen_not_ref =
@@ -334,10 +326,7 @@ impl FetchArgs {
                     };
                 }
             } else {
-                bail!(
-                    "Unexpected token {:?} in packetline during fetch command args parsing",
-                    token
-                );
+                bail!("Unexpected token {token:?} in packetline during fetch command args parsing");
             };
         }
         fetch_args.wants.sort();

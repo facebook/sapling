@@ -51,10 +51,7 @@ impl LsRefsArgs {
                 let data = data.trim();
                 if let Some(ref_type) = data.strip_prefix(REF_PREFIX) {
                     let prefix = String::from_utf8(ref_type.to_vec()).with_context(|| {
-                        format!(
-                            "Invalid ref-prefix argument {:?} for ls-refs command",
-                            ref_type
-                        )
+                        format!("Invalid ref-prefix argument {ref_type:?} for ls-refs command")
                     })?;
                     ls_ref_args.ref_prefixes.push(prefix);
                 } else {
@@ -62,13 +59,12 @@ impl LsRefsArgs {
                         SYMREFS => ls_ref_args.symrefs = true,
                         UNBORN => ls_ref_args.unborn = true,
                         PEEL => ls_ref_args.peel = true,
-                        _ => anyhow::bail!("Unknown argument {:?} for ls-refs command", data),
+                        _ => anyhow::bail!("Unknown argument {data:?} for ls-refs command"),
                     };
                 }
             } else {
                 anyhow::bail!(
-                    "Unexpected token {:?} in packetline during ls-refs command args parsing",
-                    token
+                    "Unexpected token {token:?} in packetline during ls-refs command args parsing"
                 );
             }
         }
