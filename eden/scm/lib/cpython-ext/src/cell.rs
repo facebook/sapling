@@ -60,7 +60,7 @@ impl PyCell {
         let inner = Box::new(data) as BoxedAny;
         let fmt = |obj: &BoxedAny| {
             let obj = obj.as_ref().downcast_ref::<T>().unwrap(); // does not fail
-            format!("{:?}", obj)
+            format!("{obj:?}")
         };
         let export = |obj: &BoxedAny, py: Python| {
             let obj = obj.as_ref().downcast_ref::<T>().unwrap(); // does not fail

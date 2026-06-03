@@ -119,7 +119,7 @@ impl<T, E: Into<Error>> ResultPyErrExt<T> for Result<T, E> {
 
             // Nothing matches. Fallback to RuntimeError.
             // Hopefully this is not really used.
-            cpython::PyErr::new::<exc::RuntimeError, _>(py, format!("{:?}", e))
+            cpython::PyErr::new::<exc::RuntimeError, _>(py, format!("{e:?}"))
         })
     }
 }
@@ -176,10 +176,10 @@ impl fmt::Display for PyErr {
                 .repr(py)
                 .map(|s| s.to_string_lossy(py).to_string())
                 .unwrap_or_else(|_| "<error in repr>".into());
-            write!(f, "{}", repr)?;
+            write!(f, "{repr}")?;
             if std::env::var("RUST_BACKTRACE").is_ok() {
                 if let Ok(s) = format_py_error(py, &self.inner) {
-                    write!(f, "\n{}", s)?;
+                    write!(f, "\n{s}")?;
                 }
             }
         } else {
@@ -191,7 +191,7 @@ impl fmt::Display for PyErr {
 
 impl fmt::Debug for PyErr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self)
+        write!(f, "{self}")
     }
 }
 

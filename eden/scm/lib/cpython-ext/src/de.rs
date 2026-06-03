@@ -338,7 +338,7 @@ impl<'de, 'a, 'gil> de::EnumAccess<'de> for &'a mut Deserializer<'gil> {
             if items.len() != 1 {
                 let repr = self.obj.repr(self.py)?;
                 let repr = repr.to_string_lossy(self.py);
-                let msg = format!("dict for enum should only contain 1 item: {}", repr);
+                let msg = format!("dict for enum should only contain 1 item: {repr}");
                 return Err(PyErr::new::<exc::ValueError, _>(self.py, msg).into());
             }
             let (key, value) = items.into_iter().next().unwrap();
