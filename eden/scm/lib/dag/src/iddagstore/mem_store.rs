@@ -421,7 +421,7 @@ impl<'de> Deserialize<'de> for MemStore {
                 let mut store = MemStore::new();
                 while let Some(segment) = access.next_element()? {
                     store.insert_segment(segment).map_err(|e| {
-                        A::Error::custom(format!("failed to deserialize IdDagStore: {} ", e))
+                        A::Error::custom(format!("failed to deserialize IdDagStore: {e} "))
                     })?;
                 }
                 Ok(store)
