@@ -32,6 +32,8 @@
 #include <folly/Subprocess.h> // @manual
 #endif
 #include <folly/chrono/Conv.h>
+#include <folly/coro/Invoke.h>
+#include <folly/coro/Task.h>
 #include <folly/executors/CPUThreadPoolExecutor.h>
 #include <folly/executors/thread_factory/NamedThreadFactory.h>
 #include <folly/io/async/AsyncSignalHandler.h>
@@ -2474,6 +2476,75 @@ ImmediateFuture<CheckoutResult> EdenServer::checkOutRevision(
 
   return std::move(checkoutFuture).ensure([mountHandle] {});
 }
+
+folly::coro::now_task<CheckoutResult> EdenServer::co_checkOutRevision(
+    AbsolutePathPiece mountPath,
+    std::string& rootId,
+    std::optional<folly::StringPiece> rootHgManifest,
+    const ObjectFetchContextPtr& fetchContext,
+    StringPiece callerName,
+    CheckoutMode checkoutMode) {
+  auto mountHandle = getMount(mountPath);
+  auto& edenMount = mountHandle.getEdenMount();
+  auto root = edenMount.getObjectStore()->parseRootId(rootId);
+  if (rootHgManifest.has_value()) {
+    // The hg client has told us what the root manifest is.
+    //
+    // This is useful when a commit has just been created.  We won't be able to
+    // ask the import helper to map the commit to its root manifest because it
+    // won't know about the new commit until it reopens the repo.  Instead,
+    // import the manifest for this commit directly.
+    auto rootManifest = hash20FromThrift(rootHgManifest.value());
+    co_await edenMount.getObjectStore()
+        ->getBackingStore()
+        ->importManifestForRoot(root, rootManifest, fetchContext)
+        .semi();
+  }
+
+  bool isNfs = edenMount.isNfsdChannel();
+
+  // the +1 is so we count the current checkout that hasn't quite started yet
+  getServerState()->getNotifier()->signalCheckout(
+      enumerateInProgressCheckouts() + 1);
+
+  // Helper that runs the checkout body. Extracted into a Task so it can
+  // either be scheduled on the dedicated checkout executor (when
+  // `thriftUseCheckoutExecutor_=true`) or run inline on the current
+  // executor.
+  //
+  // Captures are explicit (no [&]) so the lambda owns mountHandle and
+  // doesn't alias stack locals if the Task is later detached.
+  auto checkoutBody =
+      [mountHandle,
+       root,
+       fetchContext = fetchContext.copy(),
+       callerName = callerName.str(),
+       checkoutMode]() mutable -> folly::coro::Task<CheckoutResult> {
+    co_return co_await mountHandle.getEdenMount()
+        .checkout(
+            mountHandle.getRootInode(),
+            root,
+            fetchContext,
+            callerName,
+            checkoutMode)
+        .semi();
+  };
+
+  CheckoutResult result;
+  if (thriftUseCheckoutExecutor_) {
+    fetchContext->setDetachedExecutor(checkoutRevisionExecutor_.get());
+    // Pin the checkout body to the dedicated executor to isolate long
+    // checkouts from thrift worker thread starvation.
+    result = co_await folly::coro::co_withExecutor(
+        checkoutRevisionExecutor_.get(), checkoutBody());
+  } else {
+    result = co_await checkoutBody();
+  }
+
+  co_return finishCheckoutPostProcessing(
+      this, std::move(result), checkoutMode, isNfs, AbsolutePath{mountPath});
+}
+
 shared_ptr<BackingStore> EdenServer::getBackingStore(
     BackingStoreType type,
     StringPiece name,
