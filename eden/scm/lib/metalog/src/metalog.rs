@@ -979,9 +979,7 @@ mod tests {
 
         assert!(
             post_compact_root_size < pre_compact_root_size,
-            "roots size should be smaller after compaction, before: {}, after: {}",
-            pre_compact_root_size,
-            post_compact_root_size
+            "roots size should be smaller after compaction, before: {pre_compact_root_size}, after: {post_compact_root_size}"
         );
         assert!(
             post_compact_blob_size < pre_compact_blob_size,

@@ -114,7 +114,7 @@ impl MetaLog {
                     .blobs
                     .read()
                     .get(*value_id)?
-                    .ok_or_else(|| self.error(format!("cannot read {:?}", value_id)))?;
+                    .ok_or_else(|| self.error(format!("cannot read {value_id:?}")))?;
                 let git_blob_id = payload.blob(&value);
                 blob_id_map.insert(*value_id, git_blob_id);
             }
@@ -203,7 +203,7 @@ impl FastImportPayload {
         let id = self.next_id();
         let payload = &mut self.payload;
         payload.extend_from_slice(b"blob\n");
-        payload.extend_from_slice(format!("mark :{}\n", id).as_bytes());
+        payload.extend_from_slice(format!("mark :{id}\n").as_bytes());
         payload.extend_from_slice(format!("data {}\n", data.len()).as_bytes());
         payload.extend_from_slice(data);
         payload.push(b'\n');
@@ -232,7 +232,7 @@ impl FastImportPayload {
             .map(|(path, blob_id)| format!("M 100644 :{} {}\n", blob_id.0, path))
             .collect::<Vec<_>>()
             .concat();
-        let when = format!("{} +0000", timestamp);
+        let when = format!("{timestamp} +0000");
         let commit_payload = format!(
             concat!(
                 "commit refs/heads/main\n",
