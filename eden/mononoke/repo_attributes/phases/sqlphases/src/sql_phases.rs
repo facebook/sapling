@@ -371,7 +371,7 @@ pub async fn mark_reachable_as_public(
     //       first public changeset is found we assume that all ancestors of it have
     //       already been marked as public.
     let mut unmarked: Vec<_> = unmarked.into_iter().collect();
-    unmarked.sort_by(|l, r| l.1.cmp(&r.1));
+    unmarked.sort_by_key(|l| l.1);
 
     let mut result = vec![];
     for chunk in unmarked.chunks(100) {
