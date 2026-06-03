@@ -285,8 +285,7 @@ mod tests {
 
         fn retry_error(&self, attempt: usize, input: &[I]) -> E {
             error(format!(
-                "give up after {} attempts for input {:?}",
-                attempt, input
+                "give up after {attempt} attempts for input {input:?}"
             ))
         }
     }
@@ -321,8 +320,7 @@ mod tests {
 
         fn retry_error(&self, attempt: usize, input: &[I]) -> E {
             error(format!(
-                "give up after {} attempts for input {:?}",
-                attempt, input
+                "give up after {attempt} attempts for input {input:?}"
             ))
         }
     }
