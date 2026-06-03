@@ -21,7 +21,7 @@ mod unix_tests {
         let verbose = std::env::var("VERBOSE").is_ok();
         for i in 10..30 {
             if verbose {
-                eprintln!("Testing RLIMIT_NOFILE = {}", i);
+                eprintln!("Testing RLIMIT_NOFILE = {i}");
             }
             set_rlimit_nofile(i);
             test_multithread_sync()
@@ -85,7 +85,7 @@ mod unix_tests {
                                 eprintln!(
                                     " thread {}: {}",
                                     i,
-                                    format!("{:?}", err)
+                                    format!("{err:?}")
                                         .replace("\n\n", "\n")
                                         .replace('\n', "\n  ")
                                 )
