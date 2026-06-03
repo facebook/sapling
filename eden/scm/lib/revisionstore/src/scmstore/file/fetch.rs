@@ -319,7 +319,7 @@ impl FetchState {
                         self.metrics.aux.store(loc).err(1);
                         errors += 1;
                         if error.is_none() {
-                            error.replace(format!("{}: {}", key, err));
+                            error.replace(format!("{key}: {err}"));
                         }
                         self.errors.keyed_error(key.clone(), err)
                     }
@@ -409,7 +409,7 @@ impl FetchState {
                         self.metrics.lfs.store(loc).err(1);
                         error_count += 1;
                         if first_error.is_none() {
-                            first_error.replace(format!("{}: {}", key, err));
+                            first_error.replace(format!("{key}: {err}"));
                         }
                         self.errors.keyed_error(key.clone(), err);
                         None
@@ -644,7 +644,7 @@ impl FetchState {
                     Err(err) => {
                         errors += 1;
                         if error.is_none() {
-                            error.replace(format!("{}: {}", key, err));
+                            error.replace(format!("{key}: {err}"));
                         }
                         self.errors.keyed_error(key, NetworkError::wrap(err))
                     }
@@ -785,7 +785,7 @@ impl FetchState {
                             keyed_errors.push(((*key).clone(), error.clone().into()));
                         }
                     } else {
-                        other_errors.push(anyhow!("invalid other lfs error: {:?}", error));
+                        other_errors.push(anyhow!("invalid other lfs error: {error:?}"));
                     }
                 },
             )
@@ -813,7 +813,7 @@ impl FetchState {
                             keyed_errors.push(((*key).clone(), error.clone().into()));
                         }
                     } else {
-                        other_errors.push(anyhow!("invalid other lfs error: {:?}", error));
+                        other_errors.push(anyhow!("invalid other lfs error: {error:?}"));
                     }
                 },
             );
