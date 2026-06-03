@@ -288,6 +288,19 @@ bitflags! {
 }
 
 /// An output graph row.
+///
+/// This "Row" contains a "node" and its surrounding edges. It does not define
+/// precisely how many lines this row should have. Lines characters are abstract
+/// so the actual rendering logic (svg, box drawing, etc) can decide what to
+/// use.
+///
+/// ```plain
+///  o      F                // node line
+///  ├─┬─╮  long message 1   // link line
+///  ╷ │ ~  long message 2   // term line
+///  ╷ │    long message 3   // pad line
+///  ╷ │    long message 4   // pad line
+/// ```
 #[derive(Debug)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub struct GraphRow<N> {
