@@ -44,7 +44,7 @@ impl Qps {
 
         let current_region_long = short_to_long_region_mapping
             .get(&current_region_short)
-            .ok_or_else(|| anyhow!("No such region {}", current_region_short))?
+            .ok_or_else(|| anyhow!("No such region {current_region_short}"))?
             .to_string();
 
         Ok(Self {
@@ -60,7 +60,7 @@ impl Qps {
         let region_long = self
             .short_to_long_region_mapping
             .get(region)
-            .ok_or_else(|| anyhow!("No such region {}", region))?;
+            .ok_or_else(|| anyhow!("No such region {region}"))?;
 
         for ctr in config.counters_configs.iter() {
             let ctr = Counter::new(
