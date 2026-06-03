@@ -237,21 +237,84 @@ mod tests {
             
             o  A"#
         );
+
+        // Suboptimal: extra blank line after C is unnecessary.
+        assert_eq!(
+            render(&TestFixture {
+                messages: &[("C", "line 1\nline 2\n")],
+                ..test_fixtures::BASIC_DISCONNECTED
+            }),
+            r#"
+            o  D
+            o  C
+               line 1
+               line 2
+            
+            o  B
+            
+            o  A"#
+        );
     }
 
     #[test]
-    fn basic_disconnected_min_row_height_1_staggered() {
-        let mut renderer = GraphRowRenderer::new()
-            .output()
-            .with_min_row_height(1)
-            .with_stagger_consecutive_disconnected_nodes(true)
-            .build_box_drawing();
+    fn basic_disconnected_min_row_height_0() {
+        // jj-vcs sets min row height 0.
+        let get_renderer = || {
+            GraphRowRenderer::new()
+                .output()
+                .with_min_row_height(0)
+                .build_box_drawing()
+        };
+        let render = |t| render_string(t, &mut get_renderer());
+        // Suboptimal: no spaces
         assert_eq!(
-            render_string(&test_fixtures::BASIC_DISCONNECTED, &mut renderer),
+            render(&test_fixtures::BASIC_DISCONNECTED),
+            r#"
+            o  D
+            o  C
+            o  B
+            o  A"#
+        );
+    }
+
+    #[test]
+    fn basic_disconnected_staggered() {
+        let get_renderer = |n| {
+            GraphRowRenderer::new()
+                .output()
+                .with_min_row_height(n)
+                .with_stagger_consecutive_disconnected_nodes(true)
+                .build_box_drawing()
+        };
+        // Suboptimal: staggered isn't used.
+        assert_eq!(
+            render_string(&test_fixtures::BASIC_DISCONNECTED, &mut get_renderer(0)),
+            r#"
+            o  D
+            o  C
+            o  B
+            o  A"#
+        );
+
+        assert_eq!(
+            render_string(&test_fixtures::BASIC_DISCONNECTED, &mut get_renderer(1)),
             r#"
             o  D
             o  C
               o  B
+            o  A"#
+        );
+
+        // Should not move "B" to a separate column.
+        assert_eq!(
+            render_string(&test_fixtures::BASIC_DISCONNECTED, &mut get_renderer(2)),
+            r#"
+            o  D
+            │
+            o  C
+            
+            o  B
+            
             o  A"#
         );
     }
