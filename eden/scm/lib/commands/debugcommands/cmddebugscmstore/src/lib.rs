@@ -172,7 +172,7 @@ fn fetch_files(
 
             let (found, missing, _errors) = fetch_result.consume();
             for (_, file) in found.into_iter() {
-                let _ = write!(stdout, "Successfully fetched file: {:#?}\n", file);
+                let _ = write!(stdout, "Successfully fetched file: {file:#?}\n");
             }
 
             missing
@@ -251,7 +251,7 @@ fn fetch_trees(
             let mut file_aux = tree.file_aux_iter()?.collect::<Result<Vec<_>>>()?;
             file_aux.sort_by_key(|a| a.0);
             for entry in file_aux {
-                writeln!(stdout, "  {:?}", entry)?;
+                writeln!(stdout, "  {entry:?}")?;
             }
         }
     } else {
@@ -259,10 +259,10 @@ fn fetch_trees(
 
         let (found, missing, _errors) = fetch_result.consume();
         for complete in found.into_iter() {
-            write!(stdout, "Successfully fetched tree: {:#?}\n", complete)?;
+            write!(stdout, "Successfully fetched tree: {complete:#?}\n")?;
         }
         for incomplete in missing.into_iter() {
-            write!(stdout, "Failed to fetch tree: {:#?}\n", incomplete)?;
+            write!(stdout, "Failed to fetch tree: {incomplete:#?}\n")?;
         }
     }
 
