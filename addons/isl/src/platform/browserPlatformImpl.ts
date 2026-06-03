@@ -107,10 +107,24 @@ export const makeBrowserLikePlatformImpl = (platformName: PlatformName): Platfor
 
     clipboardCopy: browserClipboardCopy,
 
-    theme: themeOverride && {
-      getTheme: () => themeOverride,
-      onDidChangeTheme: () => ({dispose: () => {}}),
-    },
+    theme: themeOverride
+      ? {
+          getTheme: () => themeOverride,
+          onDidChangeTheme: () => ({dispose: () => {}}),
+        }
+      : typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+        ? (() => {
+            const mql = window.matchMedia('(prefers-color-scheme: dark)');
+            return {
+              getTheme: () => (mql.matches ? 'dark' : 'light'),
+              onDidChangeTheme(callback: (theme: 'dark' | 'light') => unknown) {
+                const handler = (e: MediaQueryListEvent) => callback(e.matches ? 'dark' : 'light');
+                mql.addEventListener('change', handler);
+                return {dispose: () => mql.removeEventListener('change', handler)};
+              },
+            };
+          })()
+        : undefined,
 
     messageBus: new LocalWebSocketEventBus(
       process.env.NODE_ENV === 'development'
