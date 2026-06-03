@@ -47,7 +47,7 @@ impl fmt::Display for LfsMethod {
             Self::Batch => "batch",
             Self::GitBlob => "git_blob_upload",
         };
-        write!(f, "{}", name)
+        write!(f, "{name}")
     }
 }
 
