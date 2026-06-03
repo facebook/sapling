@@ -181,7 +181,7 @@ impl fmt::Display for Error {
         if !self.inner.sources.is_empty() {
             lines.push(format!("Caused by {} errors:", self.inner.sources.len()));
             for source in &self.inner.sources {
-                lines.push(indent(format!("{}", source), 2, '-'));
+                lines.push(indent(format!("{source}"), 2, '-'));
             }
         }
         write!(f, "{}", lines.join("\n"))
@@ -200,7 +200,7 @@ impl fmt::Debug for Error {
         if !self.inner.sources.is_empty() {
             lines.push(format!("Caused by {} errors:", self.inner.sources.len()));
             for source in &self.inner.sources {
-                lines.push(indent(format!("{:?}", source), 2, '-'));
+                lines.push(indent(format!("{source:?}"), 2, '-'));
             }
         }
         write!(f, "{}", lines.join("\n"))

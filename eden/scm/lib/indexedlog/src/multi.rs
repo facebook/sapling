@@ -378,14 +378,14 @@ impl OpenOptionsRepair for OpenOptions {
         for (name, opts) in self.name_open_options.iter() {
             let fspath = path.join(name);
             if !fspath.exists() {
-                out += &format!("Skipping non-existed Log {}\n", name);
+                out += &format!("Skipping non-existed Log {name}\n");
                 continue;
             }
-            out += &format!("Repairing Log {}\n", name);
+            out += &format!("Repairing Log {name}\n");
             out += &indent(&opts.open_options_repair(&fspath)?);
             let log = opts.open(&fspath)?;
             let len = log.meta.primary_len;
-            out += &format!("Log {} has valid length {} after repair\n", name, len);
+            out += &format!("Log {name} has valid length {len} after repair\n");
             repaired_log_metas.insert(*name, log.meta);
         }
 
@@ -421,8 +421,7 @@ impl OpenOptionsRepair for OpenOptions {
                                 .collect::<Vec<_>>()
                                 .join(", ");
                             out += &format!(
-                                "Found valid MultiMeta after {} invalid entries: {}\n",
-                                invalid_count, mmeta_desc
+                                "Found valid MultiMeta after {invalid_count} invalid entries: {mmeta_desc}\n"
                             );
                         }
                         selected_meta = Some(mmeta);
@@ -461,7 +460,7 @@ impl OpenOptionsRepair for OpenOptions {
                 Some(repaired_log_meta) => &*log_meta != repaired_log_meta,
             };
             if should_invalidate_indexes {
-                out += &format!("Invalidated indexes in log '{}'\n", name);
+                out += &format!("Invalidated indexes in log '{name}'\n");
                 log_meta.indexes.clear();
                 should_write_new_meta_entry = true;
             }
@@ -502,7 +501,7 @@ fn multi_meta_log_path(dir: &Path) -> PathBuf {
 /// Indent lines by 2 spaces.
 fn indent(s: &str) -> String {
     s.lines()
-        .map(|l| format!("  {}\n", l))
+        .map(|l| format!("  {l}\n"))
         .collect::<Vec<_>>()
         .concat()
 }
@@ -523,8 +522,7 @@ impl MultiMeta {
         let format_version: usize = reader.read_vlq()?;
         if format_version != 0 {
             return Err(io::Error::other(format!(
-                "MultiMeta format {} is unsupported",
-                format_version
+                "MultiMeta format {format_version} is unsupported"
             )));
         }
         let count: usize = reader.read_vlq()?;
