@@ -60,6 +60,6 @@ static UNCOMPRESS_SOURCE: Lazy<String> = Lazy::new(|| {
     let bytes = zstdelta::apply(b"", compiled::COMPRESSED_SOURCE).unwrap();
     match String::from_utf8(bytes) {
         Ok(s) => s,
-        Err(e) => panic!("uncompressed source code is not valid utf-8: {}", e),
+        Err(e) => panic!("uncompressed source code is not valid utf-8: {e}"),
     }
 });
