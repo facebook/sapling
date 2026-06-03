@@ -27,11 +27,7 @@ pub fn parse_acl_file(content: &FileContents) -> Result<RestrictedPathsAclFile> 
 
     let version = raw.version.unwrap_or(SUPPORTED_VERSION);
     if version != SUPPORTED_VERSION {
-        bail!(
-            "Unsupported ACL file version: {} (expected {})",
-            version,
-            SUPPORTED_VERSION,
-        );
+        bail!("Unsupported ACL file version: {version} (expected {SUPPORTED_VERSION})",);
     }
 
     let repo_region_acl: MononokeIdentity = raw.repo_region_acl.parse()?;
