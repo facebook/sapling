@@ -496,9 +496,11 @@ async fn load_per_repo_commit_counts(
         *repo_derived.entry(repo_id).or_default() += count;
     }
 
-    // Load total public commit counts from the phases table
+    // Load total public commit counts and repo names from the phases table.
+    // We get repo names here (from RepoIdentity) rather than relying on the
+    // caller's repo_names map, which may not include all repos.
     let repo_ids: Vec<i64> = repo_status_map.keys().copied().collect();
-    let repo_totals: HashMap<i64, u64> = stream::iter(repo_ids.iter())
+    let repo_info: HashMap<i64, (String, u64)> = stream::iter(repo_ids.iter())
         .map(|repo_id| async move {
             let repo_id_i32 = match i32::try_from(*repo_id) {
                 Ok(id) => id,
@@ -515,6 +517,7 @@ async fn load_per_repo_commit_counts(
                     return None;
                 }
             };
+            let name = phase_repo.repo_identity().name().to_string();
             let count = match phase_repo
                 .phases()
                 .count_all_public(ctx, RepositoryId::new(repo_id_i32))
@@ -529,7 +532,7 @@ async fn load_per_repo_commit_counts(
                     return None;
                 }
             };
-            Some((*repo_id, count))
+            Some((*repo_id, (name, count)))
         })
         .buffer_unordered(PARAMS_LOAD_CONCURRENCY)
         .filter_map(|x| async move { x })
@@ -540,12 +543,17 @@ async fn load_per_repo_commit_counts(
         .iter()
         .map(|(repo_id, statuses)| {
             let status = RepoStatus::from_child_counts(ChildCounts::from_status_map(statuses));
-            let repo_name = i32::try_from(*repo_id)
-                .ok()
-                .and_then(|id| repo_names.get(&RepositoryId::new(id)))
-                .cloned();
+            let (repo_name, total) = match repo_info.get(repo_id) {
+                Some((name, count)) => (Some(name.clone()), *count as usize),
+                None => (
+                    i32::try_from(*repo_id)
+                        .ok()
+                        .and_then(|id| repo_names.get(&RepositoryId::new(id)))
+                        .cloned(),
+                    0,
+                ),
+            };
             let derived = *repo_derived.get(repo_id).unwrap_or(&0) as usize;
-            let total = repo_totals.get(repo_id).copied().unwrap_or(0) as usize;
             RepoDetailRow {
                 repo_id: *repo_id,
                 repo_name,
