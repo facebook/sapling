@@ -40,7 +40,7 @@ pub async fn list_ancestors(
         .take(list_ancestors_args.limit);
 
     while let Some(cs_id) = ancestors.try_next().await? {
-        println!("{}", cs_id);
+        println!("{cs_id}");
     }
 
     Ok(())
