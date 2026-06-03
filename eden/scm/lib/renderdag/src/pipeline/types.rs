@@ -132,7 +132,7 @@ impl PrefixLineKind {
 }
 
 /// Converts graph row shapes into prefix lines.
-pub trait PrefixLineRenderer {
+pub trait PrefixLineRenderer<N> {
     /// Convert the next graph row shape into prefix lines.
-    fn next_prefix_lines<N>(&mut self, row_shape: &GraphRowShape<N>) -> Vec<PrefixLine>;
+    fn next_prefix_lines(&mut self, row_shape: &GraphRowShape<N>) -> Vec<PrefixLine>;
 }

@@ -27,7 +27,7 @@ pub struct GraphTextRenderer<N, P = BoxDrawingPrefixLineRenderer> {
 impl<N, P> GraphTextRenderer<N, P>
 where
     N: Clone + Eq,
-    P: Default + PrefixLineRenderer,
+    P: Default + PrefixLineRenderer<N>,
 {
     /// Create a text renderer with default options and prefix renderer.
     pub fn new() -> Self {
@@ -38,7 +38,7 @@ where
 impl<N, P> GraphTextRenderer<N, P>
 where
     N: Clone + Eq,
-    P: PrefixLineRenderer,
+    P: PrefixLineRenderer<N>,
 {
     /// Create a text renderer with a custom prefix renderer.
     pub fn with_prefix_lines(prefix_lines: P) -> Self {
@@ -105,7 +105,7 @@ where
 impl<N, P> Default for GraphTextRenderer<N, P>
 where
     N: Clone + Eq,
-    P: Default + PrefixLineRenderer,
+    P: Default + PrefixLineRenderer<N>,
 {
     fn default() -> Self {
         Self::new()

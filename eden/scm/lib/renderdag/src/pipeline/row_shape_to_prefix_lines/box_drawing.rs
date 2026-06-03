@@ -113,9 +113,9 @@ where
     }
 }
 
-impl<G: BoxDrawingGlyphSet> PrefixLineRenderer for BoxDrawingPrefixLineRenderer<G> {
+impl<G: BoxDrawingGlyphSet, N> PrefixLineRenderer<N> for BoxDrawingPrefixLineRenderer<G> {
     /// Convert the next graph row shape into prefix lines.
-    fn next_prefix_lines<N>(&mut self, line: &GraphRowShape<N>) -> Vec<PrefixLine> {
+    fn next_prefix_lines(&mut self, line: &GraphRowShape<N>) -> Vec<PrefixLine> {
         let glyphs = G::GLYPHS;
         let mut lines = Vec::new();
 

@@ -25,9 +25,9 @@ impl AsciiPrefixLineRenderer {
     }
 }
 
-impl PrefixLineRenderer for AsciiPrefixLineRenderer {
+impl<N> PrefixLineRenderer<N> for AsciiPrefixLineRenderer {
     /// Convert the next graph row shape into prefix lines.
-    fn next_prefix_lines<N>(&mut self, line: &GraphRowShape<N>) -> Vec<PrefixLine> {
+    fn next_prefix_lines(&mut self, line: &GraphRowShape<N>) -> Vec<PrefixLine> {
         let mut lines = Vec::new();
 
         // Render the nodeline
