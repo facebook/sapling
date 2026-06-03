@@ -996,18 +996,13 @@ EdenServiceHandler::co_checkOutRevisionImpl(
   hash.reset();
 
   auto mountPath = absolutePathFromThrift(*mountPoint);
-  // Bridge to the existing futures-based EdenServer::checkOutRevision via
-  // .semi(). Subsequent diffs in the stack will replace this bridge with a
-  // direct `co_await server_->co_checkOutRevision(...)`.
-  auto result = co_await server_
-                    ->checkOutRevision(
-                        mountPath,
-                        parsedId,
-                        params->hgRootManifest().to_optional(),
-                        fetchContext,
-                        helper->getFunctionName(),
-                        checkoutMode)
-                    .semi();
+  auto result = co_await server_->co_checkOutRevision(
+      mountPath,
+      parsedId,
+      params->hgRootManifest().to_optional(),
+      fetchContext,
+      helper->getFunctionName(),
+      checkoutMode);
   co_return std::make_unique<std::vector<CheckoutConflict>>(
       std::move(result.conflicts));
 }
