@@ -53,7 +53,7 @@ impl fmt::Display for GitMethod {
             Self::BundleURI => "bundle-uri",
             Self::CloneBundle => "clone_bundle",
         };
-        write!(f, "{}", name)
+        write!(f, "{name}")
     }
 }
 
@@ -77,7 +77,7 @@ impl fmt::Display for GitMethodVariant {
             Self::Shallow => "shallow",
             Self::Standard => "standard",
         };
-        write!(f, "{}", name)
+        write!(f, "{name}")
     }
 }
 
@@ -177,7 +177,7 @@ impl PushValidationErrors {
 impl Display for PushValidationErrors {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for (ref_name, error) in &self.ref_with_errors {
-            write!(f, "{} => {}\n", ref_name, error)?;
+            write!(f, "{ref_name} => {error}\n")?;
         }
         Ok(())
     }
