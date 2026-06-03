@@ -54,41 +54,50 @@ class Client:
                 # original order
                 self._mocked_responses.reverse()
 
+        self._ui = ui
+        self._repodir = repodir
+        self._app_id = None
         self._host = None
         self._user = None
         self._oauth = None
         self._catslocation = None
         self._cats = None
+
         # phabricator.use-unix-socket is escape hatch in case something breaks.
-        unix_socket_path = ui.configbool(
+        self._unix_socket_path = ui.configbool(
             "phabricator", "use-unix-socket", default=True
         ) and ui.config("auth_proxy", "unix_socket_path")
 
         # TODO: remove this force_arcrc safety check when sl release has soaked
         # for a while.
-        force_arcrc = ui.configbool("phabricator", "force_arcrc", False)
-        if not unix_socket_path or force_arcrc:
-            self._applyarcconfig(
-                arcconfig.loadforpath(repodir), ui.config("phabricator", "arcrc_host")
-            )
-
+        self._force_arcrc = ui.configbool("phabricator", "force_arcrc", False)
         if not self._mock:
-            app_id = ui.config("phabricator", "graphql_app_id")
+            self._app_id = ui.config("phabricator", "graphql_app_id")
             self._host = ui.config("phabricator", "graphql_host")
-            if app_id is None or self._host is None:
-                raise GraphQLConfigError(
-                    "GraphQL unavailable because of missing configuration"
-                )
 
-            self._client = phabricator_graphql_client.PhabricatorGraphQLClient(
-                phabricator_graphql_client_urllib.PhabricatorGraphQLClientRequests(
-                    unix_socket_proxy=unix_socket_path, ui=ui
-                ),
-                app_id if unix_socket_path else None,
-                self._oauth,
-                self._cats,
-                self._host,
+            self._client = self._get_phab_client()
+
+    def _get_phab_client(self):
+        if not self._unix_socket_path or self._force_arcrc:
+            self._applyarcconfig(
+                arcconfig.loadforpath(self._repodir),
+                self._ui.config("phabricator", "arcrc_host"),
             )
+
+        if self._app_id is None or self._host is None:
+            raise GraphQLConfigError(
+                "GraphQL unavailable because of missing configuration"
+            )
+
+        return phabricator_graphql_client.PhabricatorGraphQLClient(
+            phabricator_graphql_client_urllib.PhabricatorGraphQLClientRequests(
+                unix_socket_proxy=self._unix_socket_path, ui=self._ui
+            ),
+            self._app_id if self._unix_socket_path else None,
+            self._oauth,
+            self._cats,
+            self._host,
+        )
 
     def _applyarcconfig(self, config, defaultarcrchost):
         arcrchost = config.get("graphql_uri", None)
