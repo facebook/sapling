@@ -164,7 +164,7 @@ impl MergeState {
 
     pub fn insert(&mut self, path: RepoPathBuf, data: Vec<String>) -> Result<()> {
         if data.is_empty() {
-            bail!("invalid empty merge data for {}", path);
+            bail!("invalid empty merge data for {path}");
         }
 
         self.files.insert(
@@ -282,9 +282,7 @@ impl MergeState {
                         }
                         _ => {
                             bail!(
-                                "subtree merge should have two paths and an optional from-url: {} {:?}",
-                                first,
-                                rest
+                                "subtree merge should have two paths and an optional from-url: {first} {rest:?}"
                             );
                         }
                     };
@@ -303,7 +301,7 @@ impl MergeState {
                     let (first, mut rest) = split_strings(record_data)?;
 
                     if rest.len() % 2 != 0 {
-                        bail!("odd number of extras for {}: {:?}", first, rest);
+                        bail!("odd number of extras for {first}: {rest:?}");
                     }
 
                     let path: RepoPathBuf = first.try_into().context("extra file path")?;
@@ -467,15 +465,13 @@ impl std::fmt::Debug for MergeState {
                     None => {
                         writeln!(
                             f,
-                            "  from_commit: {}, from: {}, to: {}",
-                            from_commit, from_path, to_path
+                            "  from_commit: {from_commit}, from: {from_path}, to: {to_path}"
                         )?;
                     }
                     Some(url) => {
                         writeln!(
                             f,
-                            "  from_commit: {}, from: {}, to: {}, url: {}",
-                            from_commit, from_path, to_path, url
+                            "  from_commit: {from_commit}, from: {from_path}, to: {to_path}, url: {url}"
                         )?;
                     }
                 }
@@ -564,7 +560,7 @@ impl std::fmt::Debug for MergeState {
         }
 
         for (t, d) in &self.unsupported_records {
-            writeln!(f, r#"unsupported record "{}" (data {:?})"#, t, d)?;
+            writeln!(f, r#"unsupported record "{t}" (data {d:?})"#)?;
         }
 
         Ok(())
@@ -676,7 +672,7 @@ impl ConflictState {
             "pr" => Self::ResolvedPath,
             "u" => Self::Unresolved,
             "r" => Self::Resolved,
-            _ => bail!("unknown merge record state '{}'", name),
+            _ => bail!("unknown merge record state '{name}'"),
         })
     }
 
