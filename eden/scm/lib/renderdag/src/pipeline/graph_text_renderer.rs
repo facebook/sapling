@@ -18,30 +18,34 @@ use crate::pipeline::types::PrefixLineRenderer;
 /// This keeps the individual pipeline stages available for callers that need
 /// to cache or replace one stage, while keeping the common streaming text path
 /// short.
-pub struct GraphTextRenderer<N, P = BoxDrawingPrefixLineRenderer> {
+pub struct GraphTextRenderer<N> {
     row_shaper: GraphRowShaper<N>,
-    prefix_lines: P,
+    // Use trait object instead of a type parameter to make runtime switch easier.
+    prefix_lines: Box<dyn PrefixLineRenderer<N> + Send + Sync + 'static>,
     text: PrefixLinesToText,
 }
 
-impl<N, P> GraphTextRenderer<N, P>
+impl<N> GraphTextRenderer<N>
 where
     N: Clone + Eq,
-    P: Default + PrefixLineRenderer<N>,
 {
     /// Create a text renderer with default options and prefix renderer.
-    pub fn new() -> Self {
-        Self::with_prefix_lines(P::default())
+    pub fn new<P>() -> Self
+    where
+        P: PrefixLineRenderer<N> + Default + Send + Sync + 'static,
+    {
+        Self::with_prefix_lines(Box::new(P::default()))
     }
 }
 
-impl<N, P> GraphTextRenderer<N, P>
+impl<N> GraphTextRenderer<N>
 where
     N: Clone + Eq,
-    P: PrefixLineRenderer<N>,
 {
     /// Create a text renderer with a custom prefix renderer.
-    pub fn with_prefix_lines(prefix_lines: P) -> Self {
+    pub fn with_prefix_lines(
+        prefix_lines: Box<dyn PrefixLineRenderer<N> + Send + Sync + 'static>,
+    ) -> Self {
         Self {
             row_shaper: GraphRowShaper::new(),
             prefix_lines,
@@ -102,12 +106,11 @@ where
     }
 }
 
-impl<N, P> Default for GraphTextRenderer<N, P>
+impl<N> Default for GraphTextRenderer<N>
 where
     N: Clone + Eq,
-    P: Default + PrefixLineRenderer<N>,
 {
     fn default() -> Self {
-        Self::new()
+        Self::new::<BoxDrawingPrefixLineRenderer>()
     }
 }

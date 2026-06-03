@@ -41,6 +41,7 @@ pub use self::prefix_lines_to_text::PrefixLinesToText;
 pub use self::row_shape_to_prefix_lines::ascii::AsciiPrefixLineRenderer as Ascii;
 pub use self::row_shape_to_prefix_lines::ascii_large::AsciiLargePrefixLineRenderer as AsciiLarge;
 pub use self::row_shape_to_prefix_lines::box_drawing::BoxDrawingPrefixLineRenderer as BoxDrawing;
+pub use self::types::PrefixLineRenderer;
 
 #[cfg(test)]
 mod tests {
@@ -48,12 +49,25 @@ mod tests {
 
     #[test]
     fn test_graph_text_renderer_example() {
-        let mut renderer = GraphTextRenderer::<&'static str, BoxDrawing>::new().configure(|o| {
+        let mut renderer = GraphTextRenderer::<&'static str>::default().configure(|o| {
             o.min_row_height = 0;
         });
         assert_eq!(
             renderer.next_text("A", vec![], "x", "commit 1"),
             "x  commit 1\n"
         );
+    }
+
+    #[test]
+    fn test_deciding_format_at_runtime() {
+        use row_shape_to_prefix_lines::box_drawing::Square;
+        for i in 0..=1 {
+            let prefix_lines = match i {
+                0 => Box::new(BoxDrawing::<Square>::new())
+                    as Box<dyn PrefixLineRenderer<&'static str> + Send + Sync + 'static>,
+                _ => Box::new(AsciiLarge) as Box<_>,
+            };
+            let _ = GraphTextRenderer::<&'static str>::with_prefix_lines(prefix_lines);
+        }
     }
 }
