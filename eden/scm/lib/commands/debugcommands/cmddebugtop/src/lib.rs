@@ -45,7 +45,7 @@ pub fn run(ctx: ReqCtx<DebugTopOpts>, repo: &Repo) -> Result<u8> {
     let mut table_generator = match TableGenerator::new(ctx.opts.columns, reap_delay) {
         Err(unexpected_columns) => {
             for column in unexpected_columns.iter() {
-                write!(stderr, "Error: column \"{}\" was not expected\n", column)?;
+                write!(stderr, "Error: column \"{column}\" was not expected\n")?;
             }
             return Ok(22);
         }
@@ -70,12 +70,10 @@ pub fn run(ctx: ReqCtx<DebugTopOpts>, repo: &Repo) -> Result<u8> {
         };
 
         if !running_in_tty {
-            write!(stdout, "{}\n", rows)?;
+            write!(stdout, "{rows}\n")?;
             break;
         }
-        ctx.core
-            .io
-            .set_progress_str(format!("{}\n", rows).as_str())?;
+        ctx.core.io.set_progress_str(format!("{rows}\n").as_str())?;
         sleep(Duration::from_millis(refresh_rate));
     }
 
