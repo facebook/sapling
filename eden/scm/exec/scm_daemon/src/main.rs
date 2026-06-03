@@ -120,7 +120,7 @@ fn check_nice() -> Result<()> {
     {
         let nice = unsafe { libc::nice(0) };
         if nice > 0 {
-            bail!("refuse to run on low priority (nice = {})", nice)
+            bail!("refuse to run on low priority (nice = {nice})")
         }
     }
 
