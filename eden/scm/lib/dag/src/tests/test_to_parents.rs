@@ -62,7 +62,7 @@ async fn dump_to_parents(names: &'static str, dag: &TestDag) -> String {
     let mut output = Vec::new();
     for name in names {
         let parents = parents.parent_names(name.clone()).await.unwrap();
-        output.push(format!("{:?} -> {:?}", name, parents));
+        output.push(format!("{name:?} -> {parents:?}"));
     }
     output.join("; ")
 }

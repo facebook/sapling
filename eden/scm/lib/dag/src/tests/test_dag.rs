@@ -169,11 +169,7 @@ impl TestDag {
             self.validate().await;
         }
         let problems = self.dag.check_segments().await.unwrap();
-        assert!(
-            problems.is_empty(),
-            "problems after drawdag: {:?}",
-            problems
-        );
+        assert!(problems.is_empty(), "problems after drawdag: {problems:?}");
         let master_heads = master_heads
             .iter()
             .map(|s| Vertex::copy_from(s.as_bytes()))
@@ -314,7 +310,7 @@ impl TestDag {
         let set = Set::from_static_names(names.split(' ').map(|s| s.into()));
         self.dag.strip(&set).await.unwrap();
         let problems = self.dag.check_segments().await.unwrap();
-        assert!(problems.is_empty(), "problems after strip: {:?}", problems);
+        assert!(problems.is_empty(), "problems after strip: {problems:?}");
     }
 
     /// Remote protocol used to resolve Id <-> Vertex remotely using the test dag
@@ -338,7 +334,7 @@ impl TestDag {
             crate::dag::debug_segments_by_level_group(&self.dag.dag, &self.dag.map, level, group);
         lines
             .iter()
-            .map(|l| format!("\n        {}", l))
+            .map(|l| format!("\n        {l}"))
             .collect::<Vec<String>>()
             .concat()
     }
@@ -385,12 +381,12 @@ impl TestDag {
             local_ids
                 .into_iter()
                 .zip(local_vertexes)
-                .map(|(i, v)| format!("{:?}->{:?}", i, v))
+                .map(|(i, v)| format!("{i:?}->{v:?}"))
                 .collect::<Vec<_>>()
                 .join(" ")
         };
 
-        format!("{}{}\n{}", all_str, iddag_state, idmap_state)
+        format!("{all_str}{iddag_state}\n{idmap_state}")
     }
 
     #[cfg(test)]
@@ -419,7 +415,7 @@ impl TestDag {
                 let segment_highs: HashSet<Id> =
                     segments.iter().map(|s| s.high().unwrap()).collect();
                 for id in span_iter(*span) {
-                    let id_str = format!("{:?}", id);
+                    let id_str = format!("{id:?}");
                     if segment_ids.contains(&id) {
                         output += &id_str
                     } else {

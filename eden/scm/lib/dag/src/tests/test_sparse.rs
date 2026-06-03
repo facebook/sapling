@@ -684,8 +684,7 @@ async fn test_resolve_mixed_result() {
                 r#"
                     A-B-C-D-G-H-I-J
                        \   /
-                        E-F   # master: {}"#,
-                master
+                        E-F   # master: {master}"#
             ))
         })
         .collect();

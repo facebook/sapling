@@ -70,10 +70,10 @@ impl TestDag {
             let len = vertexes.len();
             total += len * step;
             count += len;
-            lines.push(format!("{:4} |{:3}: {:?}", step, len, vertexes));
+            lines.push(format!("{step:4} |{len:3}: {vertexes:?}"));
         }
         let avg = total as f32 / count as f32;
-        lines.push(format!("Average: {:.2}", avg));
+        lines.push(format!("Average: {avg:.2}"));
         lines
     }
 }

@@ -143,7 +143,7 @@ async fn test_reinsert_then_create_higher_level() {
     dag.drawdag("Z", &[]);
     for i in 1..=10 {
         let ascii = match i {
-            1 | 3 | 4 => format!("A{i}", i = i),
+            1 | 3 | 4 => format!("A{i}"),
             _ => format!("Z-A{i} A{p}-A{i}", p = i - 1, i = i),
         };
         dag.drawdag(&ascii, &[]);
