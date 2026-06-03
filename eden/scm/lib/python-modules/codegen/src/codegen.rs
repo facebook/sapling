@@ -92,12 +92,10 @@ fn generate_code_py(py: Python, sys_path: Option<&Path>) -> PyResult<String> {
     let mut generated_lines = Vec::<String>::new();
     generated_lines.push(format!("// {}enerated by python-modules/codegen.", "@g"));
     generated_lines.push(format!(
-        "pub static VERSION_MAJOR: usize = {};",
-        version_major
+        "pub static VERSION_MAJOR: usize = {version_major};"
     ));
     generated_lines.push(format!(
-        "pub static VERSION_MINOR: usize = {};",
-        version_minor
+        "pub static VERSION_MINOR: usize = {version_minor};"
     ));
     generated_lines.push("pub static MODULES: ::phf::Map<&'static str, (&'static str, &'static [u8], bool, usize, usize, bool)> = ::phf::phf_map! {".to_string());
     let mut source_offset = 0;
@@ -162,7 +160,7 @@ impl ModuleInfo {
 fn escape_bytes(bytes: &[u8]) -> String {
     bytes
         .iter()
-        .map(|b| format!(r"\x{:02x}", b))
+        .map(|b| format!(r"\x{b:02x}"))
         .collect::<Vec<String>>()
         .concat()
 }
