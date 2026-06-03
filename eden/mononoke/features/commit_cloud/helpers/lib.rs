@@ -60,7 +60,7 @@ pub fn decorate_workspace_name_to_valid_acl_name(name: &str) -> String {
 
 pub fn make_workspace_acl_name(workspace: &str, reponame: &str) -> String {
     if is_valid_acl_name(workspace) {
-        format!("{}/{}", reponame, workspace)
+        format!("{reponame}/{workspace}")
     } else {
         format!(
             "{}/{}",
