@@ -276,7 +276,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         .get(ctx.clone(), &bookmark, bookmarks::Freshness::MostRecent)
         .await?;
     let bookmark_val =
-        maybe_bookmark_val.ok_or_else(|| format_err!("{} bookmark is not set", bookmark))?;
+        maybe_bookmark_val.ok_or_else(|| format_err!("{bookmark} bookmark is not set"))?;
     info!(
         "Previous bookmark value {}. Waiting for it to catch up.",
         bookmark_val
@@ -427,7 +427,7 @@ async fn move_bookmark<'a>(
     )?;
     let res = txn.commit().await?.is_some();
     if !res {
-        return Err(anyhow!("failed to move {} to {}", bookmark, new_value));
+        return Err(anyhow!("failed to move {bookmark} to {new_value}"));
     }
     Ok(new_value)
 }

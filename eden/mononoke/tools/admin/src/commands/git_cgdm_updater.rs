@@ -264,7 +264,7 @@ async fn update_cgdm(
                 .repo_derived_data()
                 .fetch_derived_direct::<RootGitDeltaManifestV3Id>(ctx, *cs_id)
                 .await?
-                .ok_or_else(|| anyhow!("No git delta manifest for {}", cs_id))?;
+                .ok_or_else(|| anyhow!("No git delta manifest for {cs_id}"))?;
 
             match gdm {
                 GitDeltaManifestV3::Inlined(entries) => {
@@ -280,7 +280,7 @@ async fn update_cgdm(
         .buffered(1024)
         .try_collect::<HashMap<_, _>>()
         .await?;
-    println!("[{}] Finished calculating GDM sizes", repo_name);
+    println!("[{repo_name}] Finished calculating GDM sizes");
 
     // Go through the new commits and for each either create a new component
     // or add them to one of their parent components if possible
@@ -294,11 +294,11 @@ async fn update_cgdm(
 
         let gdm_size = *gdm_sizes
             .get(&cs_id)
-            .ok_or_else(|| anyhow!("Can't find GDM size for {}", cs_id))?;
+            .ok_or_else(|| anyhow!("Can't find GDM size for {cs_id}"))?;
 
         let parents = all_parents
             .get(&cs_id)
-            .ok_or_else(|| anyhow!("Can't find parents for {}", cs_id))?
+            .ok_or_else(|| anyhow!("Can't find parents for {cs_id}"))?
             .clone();
         let max_parent_component_id = parents
             .iter()
@@ -420,7 +420,7 @@ async fn update_cgdm(
                         .repo_derived_data()
                         .fetch_derived_direct::<RootGitDeltaManifestV3Id>(ctx, *cs_id)
                         .await?
-                        .ok_or_else(|| anyhow!("No git delta manifest for {}", cs_id))?;
+                        .ok_or_else(|| anyhow!("No git delta manifest for {cs_id}"))?;
 
                     anyhow::Ok(gdm.into_entries(ctx, repo.repo_blobstore()))
                 })
@@ -459,10 +459,7 @@ async fn update_cgdm(
         component_info.cgdm_commits_id = Some(cgdm_commits_id);
     }
 
-    println!(
-        "[{}] Saving updated CGDMComponents to blobstore key '{}'",
-        repo_name, blobstore_key,
-    );
+    println!("[{repo_name}] Saving updated CGDMComponents to blobstore key '{blobstore_key}'",);
 
     let mapping_bytes = BlobstoreBytes::from_bytes(cgdm_components.into_bytes());
     // Write the CGDMComponents mapping blob to both the immutable and mutable blobstores.
@@ -475,7 +472,7 @@ async fn update_cgdm(
             .put(ctx, blobstore_key, mapping_bytes),
     )?;
 
-    println!("[{}] CGDM update complete", repo_name,);
+    println!("[{repo_name}] CGDM update complete",);
 
     Ok(())
 }

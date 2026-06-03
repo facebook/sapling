@@ -69,10 +69,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         Err(e) => match e.downcast_ref::<EphemeralBlobstoreError>() {
             // If this repo does not have an ephemeral store, then this is a no-op
             Some(EphemeralBlobstoreError::NoEphemeralBlobstore(repo_id)) => {
-                println!(
-                    "Ephemeral store doesn't exist for repo {}, exiting.",
-                    repo_id
-                );
+                println!("Ephemeral store doesn't exist for repo {repo_id}, exiting.");
                 Ok(())
             }
             // For any other error, return as-is

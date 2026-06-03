@@ -65,7 +65,7 @@ fn extract_repo_id_from_key(key: &str) -> Result<RepositoryId, Error> {
     let re = Regex::new(r".*repo([0-9]+)..*")?;
     let caps = re
         .captures(key)
-        .with_context(|| format!("Failed to capture lambda for key {}", key))?;
+        .with_context(|| format!("Failed to capture lambda for key {key}"))?;
     let repo_id_str = caps.get(1).map_or("", |m| m.as_str());
     RepositoryId::from_str(repo_id_str)
 }
@@ -74,7 +74,7 @@ fn extract_blobstore_key_from(key: &str) -> Result<String, Error> {
     let re = Regex::new(r".*(repo[0-9]+..*)")?;
     let caps = re
         .captures(key)
-        .with_context(|| format!("Failed to capture lambda for key {}", key))?;
+        .with_context(|| format!("Failed to capture lambda for key {key}"))?;
     let blobstore_key = caps.get(1).map_or("", |m| m.as_str());
     Ok(blobstore_key.to_string())
 }
@@ -82,11 +82,7 @@ fn extract_blobstore_key_from(key: &str) -> Result<String, Error> {
 fn sanitise_check(key: &str, sanitise_regex: &str) -> Result<()> {
     let re = Regex::new(sanitise_regex).unwrap();
     if !re.is_match(key) {
-        bail!(
-            "Key {} does not match the sanitise checking regex {}",
-            key,
-            sanitise_regex
-        );
+        bail!("Key {key} does not match the sanitise checking regex {sanitise_regex}");
     }
     Ok(())
 }
@@ -100,7 +96,7 @@ fn lines_from_file(filename: impl AsRef<Path>) -> Vec<String> {
 }
 
 fn log_errors(key: &str, msg: &str) {
-    println!("key: {}, error message: {}", key, msg)
+    println!("key: {key}, error message: {msg}")
 }
 
 async fn unlink_the_key_from_blobstore(
@@ -118,7 +114,7 @@ async fn unlink_the_key_from_blobstore(
         sanitise_check(&blobstore_key, sanitise_regex)?;
 
         if dry_run {
-            println!("\tUnlink key: {}", key);
+            println!("\tUnlink key: {key}");
             return Ok(());
         }
 
@@ -141,7 +137,7 @@ async fn unlink_the_key_from_blobstore(
                 // Instead, log the error to a file and continue.
                 log_errors(key, "no blobstore contains this key.");
             } else {
-                bail!(err.context(format!("Failed to unlink key {}", blobstore_key)));
+                bail!(err.context(format!("Failed to unlink key {blobstore_key}")));
             }
         }
     } else {
@@ -202,7 +198,7 @@ impl BlobstoreBulkUnlinker {
 
         for key in &keys_list {
             if let Err(e) = self.add_new_blobstores(key).await {
-                log_errors(key, format!("{}", e).as_str());
+                log_errors(key, format!("{e}").as_str());
             }
         }
 

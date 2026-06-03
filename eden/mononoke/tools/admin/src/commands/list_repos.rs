@@ -51,7 +51,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
                 continue;
             }
         }
-        println!("{} {}", repo_id, repo_name);
+        println!("{repo_id} {repo_name}");
     }
 
     Ok(())

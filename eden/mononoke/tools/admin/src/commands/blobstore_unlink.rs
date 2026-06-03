@@ -59,7 +59,7 @@ pub fn get_blobconfig(
                         }
                     })
                     .ok_or_else(|| {
-                        format_err!("could not find a blobstore with id {}", inner_blobstore_id)
+                        format_err!("could not find a blobstore with id {inner_blobstore_id}")
                     })
             }
             _ => Err(format_err!(

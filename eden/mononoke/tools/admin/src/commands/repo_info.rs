@@ -65,7 +65,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             bookmarks::Freshness::MostRecent,
         )
         .await
-        .with_context(|| format!("Failed to resolve main bookmark ({})", main_bookmark))?
+        .with_context(|| format!("Failed to resolve main bookmark ({main_bookmark})"))?
         .as_ref()
         .map(ToString::to_string);
     println!(

@@ -102,11 +102,11 @@ async fn list(_ctx: &CoreContext, repo: &Repo, args: ListArgs) -> Result<()> {
         .sorted_by_key(|(vn, _)| vn.clone())
     {
         if args.with_contents {
-            println!("{}:", version_name);
+            println!("{version_name}:");
             print_commit_sync_config(commit_sync_config, "  ");
             println!("\n");
         } else {
-            println!("{}", version_name);
+            println!("{version_name}");
         }
     }
 
@@ -132,12 +132,12 @@ async fn common(_ctx: &CoreContext, repo: &Repo) -> Result<()> {
         .into_iter()
         .sorted_by_key(|(small_repo_id, _)| *small_repo_id)
     {
-        println!("small repo: {}", small_repo_id);
+        println!("small repo: {small_repo_id}");
         println!("  bookmark prefix: {}", small_repo_config.bookmark_prefix);
         if !small_repo_config.common_pushrebase_bookmarks_map.is_empty() {
             println!("  common pushrebase bookmarks map:");
             for (k, v) in small_repo_config.common_pushrebase_bookmarks_map.iter() {
-                println!("    {} => {}", k, v);
+                println!("    {k} => {v}");
             }
         }
     }
@@ -160,19 +160,19 @@ fn print_commit_sync_config(csc: CommitSyncConfig, line_prefix: &str) {
         .into_iter()
         .sorted_by_key(|(small_repo_id, _)| *small_repo_id)
     {
-        println!("{}small repo: {}", line_prefix, small_repo_id);
+        println!("{line_prefix}small repo: {small_repo_id}");
         println!(
             "{}  default action: {:?}",
             line_prefix, small_repo_config.default_action
         );
         if !small_repo_config.map.is_empty() {
-            println!("{}  prefix map:", line_prefix);
+            println!("{line_prefix}  prefix map:");
             for (from, to) in small_repo_config
                 .map
                 .into_iter()
                 .sorted_by_key(|(from, _)| from.clone())
             {
-                println!("{}    {}->{}", line_prefix, from, to);
+                println!("{line_prefix}    {from}->{to}");
             }
         }
         let submodule_config = &small_repo_config.submodule_config;
@@ -182,21 +182,18 @@ fn print_commit_sync_config(csc: CommitSyncConfig, line_prefix: &str) {
         );
         let file_prefix = &submodule_config.submodule_metadata_file_prefix;
         if file_prefix != DEFAULT_GIT_SUBMODULE_METADATA_FILE_PREFIX {
-            println!(
-                "{}  submodule metadata file prefix: {:?}",
-                line_prefix, file_prefix
-            );
+            println!("{line_prefix}  submodule metadata file prefix: {file_prefix:?}");
         }
         if !submodule_config.submodule_dependencies.is_empty() {
-            println!("{}  submodule dependencies:", line_prefix);
+            println!("{line_prefix}  submodule dependencies:");
             for (path, repo_id) in submodule_config.submodule_dependencies.iter() {
-                println!("{}    {} => {}", line_prefix, path, repo_id);
+                println!("{line_prefix}    {path} => {repo_id}");
             }
         }
         if !submodule_config.dangling_submodule_pointers.is_empty() {
-            println!("{}  dangling submodule pointers:", line_prefix);
+            println!("{line_prefix}  dangling submodule pointers:");
             for pointer in submodule_config.dangling_submodule_pointers.iter() {
-                println!("{}    {}", line_prefix, pointer);
+                println!("{line_prefix}    {pointer}");
             }
         }
     }

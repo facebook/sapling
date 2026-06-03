@@ -132,7 +132,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
                 .repo_ephemeral_store()
                 .open_bubble(&ctx, bubble_id)
                 .await
-                .with_context(|| format!("Failed to open bubble {}", bubble_id))?;
+                .with_context(|| format!("Failed to open bubble {bubble_id}"))?;
             bubble.wrap_repo_blobstore(repo.repo_blobstore().clone())
         }
     };
@@ -142,16 +142,16 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             let cs = changeset_id
                 .load(&ctx, &blobstore)
                 .await
-                .with_context(|| format!("Failed to load changeset {}", changeset_id))?;
+                .with_context(|| format!("Failed to load changeset {changeset_id}"))?;
             let display_cs =
                 DisplayChangeset::try_from(&cs).context("Failed to display changeset")?;
 
             if args.json {
                 let json_cs =
                     serde_json::to_string(&display_cs).context("Failed to convert to JSON")?;
-                println!("{}", json_cs);
+                println!("{json_cs}");
             } else {
-                println!("{}", display_cs);
+                println!("{display_cs}");
             }
         }
 
@@ -162,7 +162,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
                     .get_hg_from_bonsai(&ctx, changeset_id)
                     .await
                     .context("Failed to get corresponding Hg changeset")?
-                    .ok_or_else(|| anyhow!("No Hg changeset for {}", changeset_id))?;
+                    .ok_or_else(|| anyhow!("No Hg changeset for {changeset_id}"))?;
                 display_hg_entry(&ctx, &blobstore, hg_changeset_id, path).await?;
             }
             ManifestKind::ContentManifest => {
@@ -182,7 +182,7 @@ async fn display_content_info(
     let metadata = filestore::get_metadata(blobstore, ctx, fetch_key)
         .await
         .context("Failed to load metadata")?
-        .ok_or_else(|| anyhow!("Content for file {} not found", fetch_key))?;
+        .ok_or_else(|| anyhow!("Content for file {fetch_key} not found"))?;
     writeln!(std::io::stdout(), "Size: {}", metadata.total_size)?;
     writeln!(std::io::stdout(), "Content-Id: {}", metadata.content_id)?;
     writeln!(std::io::stdout(), "Sha1: {}", metadata.sha1)?;
@@ -226,11 +226,11 @@ async fn display_fsnode(
     let entry = if path.is_empty() {
         Entry::Tree(root_manifest_id)
     } else {
-        let mpath = MPath::new(path).with_context(|| format!("Invalid path: {}", path))?;
+        let mpath = MPath::new(path).with_context(|| format!("Invalid path: {path}"))?;
         root_manifest_id
             .find_entry(ctx.clone(), blobstore.clone(), mpath)
             .await?
-            .ok_or_else(|| anyhow!("Path does not exist: {}", path))?
+            .ok_or_else(|| anyhow!("Path does not exist: {path}"))?
     };
     match entry {
         Entry::Leaf(leaf) => {
@@ -272,13 +272,13 @@ async fn display_hg_entry(
     let entry = if path.is_empty() {
         Entry::Tree(hg_cs.manifestid())
     } else {
-        let mpath = MPath::new(path).with_context(|| format!("Invalid path: {}", path))?;
+        let mpath = MPath::new(path).with_context(|| format!("Invalid path: {path}"))?;
         hg_cs
             .manifestid()
             .find_entry(ctx.clone(), blobstore.clone(), mpath)
             .await
             .context("Failed to traverse manifest")?
-            .ok_or_else(|| anyhow!("Path does not exist: {}", path))?
+            .ok_or_else(|| anyhow!("Path does not exist: {path}"))?
     };
     match entry {
         Entry::Leaf((file_type, id)) => {
@@ -286,7 +286,7 @@ async fn display_hg_entry(
                 .load(ctx, blobstore)
                 .await
                 .context("Failed to load envelope")?;
-            writeln!(std::io::stdout(), "File-Type: {}", file_type)?;
+            writeln!(std::io::stdout(), "File-Type: {file_type}")?;
             display_content_info(ctx, blobstore, &envelope.content_id().into()).await?;
         }
         Entry::Tree(id) => {

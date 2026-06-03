@@ -57,7 +57,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         .into_iter()
         .collect::<BTreeMap<_, _>>();
     for component in components {
-        println!("{:?}", component);
+        println!("{component:?}");
     }
 
     Ok(())
