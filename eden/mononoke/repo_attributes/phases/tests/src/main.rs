@@ -318,7 +318,7 @@ async fn test_mark_reachable_as_public(fb: FacebookInit) -> Result<()> {
                         .bonsai_hg_mapping()
                         .get_bonsai_from_hg(ctx, HgChangesetId::from_str(hgcs)?)
                         .await?
-                        .ok_or_else(|| format_err!("Invalid hgcs: {}", hgcs))?;
+                        .ok_or_else(|| format_err!("Invalid hgcs: {hgcs}"))?;
                     Result::<_, Error>::Ok(bcs)
                 }
             })
