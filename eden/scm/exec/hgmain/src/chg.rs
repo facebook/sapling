@@ -218,7 +218,7 @@ pub fn maybe_call_chg(args: &[String]) {
     }
 
     if chgdebug {
-        eprintln!("chg: debug: using chg: {}, because {}", should_use, reason);
+        eprintln!("chg: debug: using chg: {should_use}, because {reason}");
     }
 
     if !should_use {

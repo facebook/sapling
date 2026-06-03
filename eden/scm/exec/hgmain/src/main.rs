@@ -160,7 +160,7 @@ pub fn drop_root(user: &str, group: &str) {
     let cgroup = CString::new(group.as_bytes()).unwrap();
     let libc_group = unsafe { libc::getgrnam(cgroup.as_ptr()) };
     if libc_group.is_null() {
-        panic!("bad group '{}'", group);
+        panic!("bad group '{group}'");
     }
     if unsafe { libc::setgid((*libc_group).gr_gid) } != 0 {
         panic!(
@@ -173,7 +173,7 @@ pub fn drop_root(user: &str, group: &str) {
     let cuser = CString::new(user.as_bytes()).unwrap();
     let libc_user = unsafe { libc::getpwnam(cuser.as_ptr()) };
     if libc_user.is_null() {
-        panic!("bad user '{}'", user);
+        panic!("bad user '{user}'");
     }
     if unsafe { libc::setuid((*libc_user).pw_uid) } != 0 {
         panic!(
@@ -192,5 +192,5 @@ pub fn drop_root(user: &str, group: &str) {
     // TODO: Audit that the environment access only happens in single-threaded code.
     unsafe { std::env::set_var("USER", user) };
 
-    eprintln!("switched user/group to {}/{}", user, group);
+    eprintln!("switched user/group to {user}/{group}");
 }
