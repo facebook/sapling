@@ -287,7 +287,7 @@ pub fn parent_pid(pid: u32) -> u32 {
 
     #[cfg(target_os = "linux")]
     {
-        if let Ok(content) = std::fs::read_to_string(format!("/proc/{}/status", pid)) {
+        if let Ok(content) = std::fs::read_to_string(format!("/proc/{pid}/status")) {
             let prefix = "PPid:";
             for line in content.lines() {
                 if let Some(suffix) = line.strip_prefix(prefix) {
@@ -322,7 +322,7 @@ pub fn exe_name(pid: u32) -> String {
 
     #[cfg(target_os = "linux")]
     {
-        if let Ok(path) = std::fs::read_link(format!("/proc/{}/exe", pid)) {
+        if let Ok(path) = std::fs::read_link(format!("/proc/{pid}/exe")) {
             return path.into_os_string().to_string_lossy().into_owned();
         }
     }
