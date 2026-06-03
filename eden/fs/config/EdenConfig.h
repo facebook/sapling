@@ -1947,6 +1947,15 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Controls whether EdenFS uses phase 7 coroutine implementations
+   * (the checkOutRevision thrift endpoint).
+   */
+  ConfigSetting<bool> enableCoroutinesPhase7{
+      "coroutines:enable-phase7",
+      false,
+      this};
+
+  /**
    * Controls whether EdenFS uses getDigestHash coroutine implementations
    */
   ConfigSetting<bool> enableCoroutinesPhase11{
