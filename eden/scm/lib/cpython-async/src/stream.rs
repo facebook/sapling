@@ -260,7 +260,7 @@ mod tests {
 
         let err = stream.next().await.unwrap().unwrap_err();
         with_py(|_py| {
-            assert!(format!("{}", err).contains("dislike this number"));
+            assert!(format!("{err}").contains("dislike this number"));
         });
 
         // The traceback includes the nested (3) functions.
