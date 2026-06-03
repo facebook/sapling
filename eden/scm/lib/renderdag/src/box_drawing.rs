@@ -75,7 +75,6 @@ where
     R: Renderer<N, Output = GraphRow<N>> + Sized,
 {
     inner: R,
-    options: OutputRendererOptions,
     state: OutputRendererState,
     glyphs: &'static [&'static str; glyph::COUNT],
     _phantom: PhantomData<N>,
@@ -85,10 +84,9 @@ impl<N, R> BoxDrawingRenderer<N, R>
 where
     R: Renderer<N, Output = GraphRow<N>> + Sized,
 {
-    pub(crate) fn new(inner: R, options: OutputRendererOptions) -> Self {
+    pub(crate) fn new(inner: R) -> Self {
         BoxDrawingRenderer {
             inner,
-            options,
             state: OutputRendererState::default(),
             glyphs: &CURVED_GLYPHS,
             _phantom: PhantomData,
@@ -103,6 +101,10 @@ where
     pub fn with_dec_graphics_glyphs(mut self) -> Self {
         self.glyphs = &DEC_GLYPHS;
         self
+    }
+
+    fn options(&self) -> &OutputRendererOptions {
+        self.inner.output_options()
     }
 }
 
@@ -134,7 +136,7 @@ where
         let glyphs = self.glyphs;
         let line = self.inner.next_row(node, parents, glyph, message);
         let mut out = String::new();
-        let mut message_lines = pad_lines(line.message.lines(), self.options.min_row_height);
+        let mut message_lines = pad_lines(line.message.lines(), self.options().min_row_height);
         let mut need_extra_pad_line = false;
 
         // Render the previous extra pad line
@@ -290,6 +292,14 @@ where
         }
 
         out
+    }
+
+    fn output_options_mut(&mut self) -> &mut OutputRendererOptions {
+        self.inner.output_options_mut()
+    }
+
+    fn output_options(&self) -> &OutputRendererOptions {
+        self.inner.output_options()
     }
 }
 

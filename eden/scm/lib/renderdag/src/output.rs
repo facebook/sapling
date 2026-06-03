@@ -15,8 +15,10 @@ use super::render::Renderer;
 
 pub(crate) const DEFAULT_MIN_ROW_HEIGHT: usize = 2;
 
-pub(crate) struct OutputRendererOptions {
-    pub(crate) min_row_height: usize,
+#[derive(Clone, Copy, Debug)]
+pub struct OutputRendererOptions {
+    pub min_row_height: usize,
+    pub stagger_consecutive_disconnected_nodes: bool,
 }
 
 #[derive(Default)]
@@ -45,8 +47,16 @@ where
     R: Renderer<N, Output = GraphRow<N>> + Sized,
 {
     inner: R,
-    options: OutputRendererOptions,
     _phantom: PhantomData<N>,
+}
+
+impl Default for OutputRendererOptions {
+    fn default() -> Self {
+        Self {
+            min_row_height: DEFAULT_MIN_ROW_HEIGHT,
+            stagger_consecutive_disconnected_nodes: false,
+        }
+    }
 }
 
 impl<N, R> OutputRendererBuilder<N, R>
@@ -56,33 +66,36 @@ where
     pub fn new(inner: R) -> Self {
         OutputRendererBuilder {
             inner,
-            options: OutputRendererOptions {
-                min_row_height: DEFAULT_MIN_ROW_HEIGHT,
-            },
             _phantom: PhantomData,
         }
     }
 
+    pub fn with_options(mut self, options: OutputRendererOptions) -> Self {
+        *self.inner.output_options_mut() = options;
+        self
+    }
+
     pub fn with_min_row_height(mut self, min_row_height: usize) -> Self {
-        self.options.min_row_height = min_row_height;
-        self.inner.set_min_row_height(min_row_height);
+        self.inner.output_options_mut().min_row_height = min_row_height;
         self
     }
 
     pub fn with_stagger_consecutive_disconnected_nodes(mut self, stagger: bool) -> Self {
-        self.inner.set_stagger_disconnected_nodes(stagger);
+        self.inner
+            .output_options_mut()
+            .stagger_consecutive_disconnected_nodes = stagger;
         self
     }
 
     pub fn build_ascii(self) -> AsciiRenderer<N, R> {
-        AsciiRenderer::new(self.inner, self.options)
+        AsciiRenderer::new(self.inner)
     }
 
     pub fn build_ascii_large(self) -> AsciiLargeRenderer<N, R> {
-        AsciiLargeRenderer::new(self.inner, self.options)
+        AsciiLargeRenderer::new(self.inner)
     }
 
     pub fn build_box_drawing(self) -> BoxDrawingRenderer<N, R> {
-        BoxDrawingRenderer::new(self.inner, self.options)
+        BoxDrawingRenderer::new(self.inner)
     }
 }

@@ -22,7 +22,6 @@ where
     R: Renderer<N, Output = GraphRow<N>> + Sized,
 {
     inner: R,
-    options: OutputRendererOptions,
     state: OutputRendererState,
     _phantom: PhantomData<N>,
 }
@@ -31,13 +30,16 @@ impl<N, R> AsciiRenderer<N, R>
 where
     R: Renderer<N, Output = GraphRow<N>> + Sized,
 {
-    pub(crate) fn new(inner: R, options: OutputRendererOptions) -> Self {
+    pub(crate) fn new(inner: R) -> Self {
         AsciiRenderer {
             inner,
-            options,
             state: OutputRendererState::default(),
             _phantom: PhantomData,
         }
+    }
+
+    fn options(&self) -> &OutputRendererOptions {
+        self.inner.output_options()
     }
 }
 
@@ -68,7 +70,7 @@ where
     ) -> String {
         let line = self.inner.next_row(node, parents, glyph, message);
         let mut out = String::new();
-        let mut message_lines = pad_lines(line.message.lines(), self.options.min_row_height);
+        let mut message_lines = pad_lines(line.message.lines(), self.options().min_row_height);
         let mut need_extra_pad_line = false;
 
         // Render the previous extra pad line
@@ -212,6 +214,14 @@ where
         }
 
         out
+    }
+
+    fn output_options_mut(&mut self) -> &mut OutputRendererOptions {
+        self.inner.output_options_mut()
+    }
+
+    fn output_options(&self) -> &OutputRendererOptions {
+        self.inner.output_options()
     }
 }
 

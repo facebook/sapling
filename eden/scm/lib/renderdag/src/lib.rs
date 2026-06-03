@@ -23,6 +23,7 @@ mod test_utils;
 pub use self::ascii::AsciiRenderer;
 pub use self::ascii_large::AsciiLargeRenderer;
 pub use self::box_drawing::BoxDrawingRenderer;
+pub use self::output::OutputRendererOptions;
 pub use self::render::Ancestor;
 pub use self::render::GraphRow;
 pub use self::render::GraphRowRenderer;

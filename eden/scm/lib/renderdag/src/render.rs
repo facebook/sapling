@@ -14,21 +14,14 @@ use serde::Serialize;
 
 use super::column::Column;
 use super::column::ColumnsExt;
-use super::output::DEFAULT_MIN_ROW_HEIGHT;
 use super::output::OutputRendererBuilder;
+use super::output::OutputRendererOptions;
 
 pub trait Renderer<N> {
     type Output;
 
     // Returns the width of the graph line, possibly including another node.
     fn width(&self, new_node: Option<&N>, new_parents: Option<&Vec<Ancestor<N>>>) -> u64;
-
-    // Set the minimum rendered row height.
-    fn set_min_row_height(&mut self, _min_row_height: usize) {}
-
-    // Set whether disconnected consecutive nodes should be staggered into
-    // different columns instead of separated by a blank line.
-    fn set_stagger_disconnected_nodes(&mut self, _stagger: bool) {}
 
     // Reserve a column for the given node.
     fn reserve(&mut self, node: N);
@@ -41,6 +34,12 @@ pub trait Renderer<N> {
         glyph: String,
         message: String,
     ) -> Self::Output;
+
+    // Set the output options.
+    fn output_options_mut(&mut self) -> &mut OutputRendererOptions;
+
+    // Get the output options.
+    fn output_options(&self) -> &OutputRendererOptions;
 }
 
 /// Renderer for a DAG.
@@ -54,8 +53,7 @@ pub struct GraphRowRenderer<N> {
     // row, we must track what column the previous node is in so that either
     // vertical or horizontal space can be added to indicate that the next node
     // is not connected to the previous node.
-    min_row_height: usize,
-    stagger_disconnected_nodes: bool,
+    output_options: OutputRendererOptions,
     previous_node_column: Option<usize>,
 }
 
@@ -342,8 +340,7 @@ where
     pub fn new() -> Self {
         GraphRowRenderer {
             columns: Vec::new(),
-            min_row_height: DEFAULT_MIN_ROW_HEIGHT,
-            stagger_disconnected_nodes: false,
+            output_options: Default::default(),
             previous_node_column: None,
         }
     }
@@ -372,7 +369,9 @@ where
             // space for the node, then adding the new node would create
             // a new column.
             if self.columns.find(node).is_none() {
-                if self.min_row_height == 1 && self.stagger_disconnected_nodes {
+                if self.output_options.min_row_height == 1
+                    && self.output_options.stagger_consecutive_disconnected_nodes
+                {
                     if let Some(previous_node_column) = self.previous_node_column {
                         if self.columns.get(previous_node_column) == Some(&Column::Empty) {
                             // Dense stagger mode cannot use the previous node's column for an
@@ -411,14 +410,6 @@ where
         width as u64
     }
 
-    fn set_min_row_height(&mut self, min_row_height: usize) {
-        self.min_row_height = min_row_height;
-    }
-
-    fn set_stagger_disconnected_nodes(&mut self, stagger: bool) {
-        self.stagger_disconnected_nodes = stagger;
-    }
-
     fn reserve(&mut self, node: N) {
         if self.columns.find(&node).is_none() {
             if let Some(index) = self.columns.first_empty() {
@@ -439,7 +430,9 @@ where
         // Find a column for this node.
         let existing_column = self.columns.find(&node);
         let column = existing_column.unwrap_or_else(|| {
-            if self.min_row_height == 1 && self.stagger_disconnected_nodes {
+            if self.output_options.min_row_height == 1
+                && self.output_options.stagger_consecutive_disconnected_nodes
+            {
                 if let Some(index) = self.columns.iter().enumerate().find_map(|(index, column)| {
                     (*column == Column::Empty && Some(index) != self.previous_node_column)
                         .then_some(index)
@@ -513,8 +506,8 @@ where
         }
 
         let separator_line = existing_column.is_none()
-            && self.min_row_height == 1
-            && !self.stagger_disconnected_nodes
+            && self.output_options.min_row_height == 1
+            && !self.output_options.stagger_consecutive_disconnected_nodes
             && Some(column) == self.previous_node_column
             && !need_term_line;
 
@@ -624,5 +617,15 @@ where
             pad_lines,
             separator_line,
         }
+    }
+
+    // Set the output options.
+    fn output_options_mut(&mut self) -> &mut OutputRendererOptions {
+        &mut self.output_options
+    }
+
+    // Get the output options.
+    fn output_options(&self) -> &OutputRendererOptions {
+        &self.output_options
     }
 }
