@@ -38,7 +38,7 @@ pub fn unit_phrase(unit: &str, pos: u64, total: u64) -> String {
 
 pub fn human_bytes(bytes: u64) -> String {
     if bytes < 5000 {
-        format!("{}B", bytes)
+        format!("{bytes}B")
     } else if bytes < 5_000_000 {
         format!("{}KB", bytes / 1000)
     } else if bytes < 5_000_000_000 {
@@ -55,15 +55,15 @@ pub fn human_duration(d: Duration) -> String {
     if total_secs >= 3600 {
         let hours = total_secs / 3600;
         let mins = (total_secs % 3600) / 60;
-        format!("{}h{}m", hours, mins)
+        format!("{hours}h{mins}m")
     } else if total_secs >= 60 {
         let mins = total_secs / 60;
         let secs = total_secs % 60;
-        format!("{}m{}s", mins, secs)
+        format!("{mins}m{secs}s")
     } else {
         let sec = d.as_secs_f64();
         if sec < 10_f64 {
-            format!("{:.1}s", sec)
+            format!("{sec:.1}s")
         } else {
             format!("{}s", sec.round())
         }

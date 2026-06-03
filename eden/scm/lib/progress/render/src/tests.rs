@@ -81,7 +81,7 @@ fn example() -> Registry {
             bar.increase_position(5000);
             reg.register_progress_bar(&bar);
             if i == 1 {
-                let message = format!("./foo/{}/文件名", topic);
+                let message = format!("./foo/{topic}/文件名");
                 bar.set_message(message);
             }
         }

@@ -383,7 +383,7 @@ mod test {
         let output = inner(bars, 0, 0);
 
         if !output.is_empty() {
-            format!("\n{}\n", output)
+            format!("\n{output}\n")
         } else {
             output
         }

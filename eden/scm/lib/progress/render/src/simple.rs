@@ -63,7 +63,7 @@ pub(crate) fn render_time_series(
         phrases.push(format!("{:>1$}", model.topic(), topic_pad));
 
         let ascii = ascii_time_series(model);
-        phrases.push(format!("[{}]", ascii));
+        phrases.push(format!("[{ascii}]"));
 
         let speed = match model.mode() {
             TimeSeriesMode::BytesSpeed => {
@@ -79,14 +79,14 @@ pub(crate) fn render_time_series(
         let count = model.count();
         if count > 1 {
             let unit = model.count_unit();
-            phrases.push(format!("{} {}", count, unit));
+            phrases.push(format!("{count} {unit}"));
         }
 
         match model.mode() {
             TimeSeriesMode::BytesSpeed => {
                 let total = human_rx_tx_total(model.input_bytes(), model.output_bytes());
                 if !total.is_empty() {
-                    phrases.push(format!("total {}", total));
+                    phrases.push(format!("total {total}"));
                 }
             }
             _ => {}
@@ -203,7 +203,7 @@ pub(crate) fn render_cache_stats(
             );
             if miss > 0 {
                 let miss_rate = (miss * 100) / (total.max(1));
-                line += &format!(" ({}% miss)", miss_rate);
+                line += &format!(" ({miss_rate}% miss)");
             }
             lines.push(line);
         }
