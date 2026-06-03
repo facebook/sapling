@@ -1186,7 +1186,7 @@ fn detect_symlink_support(root: &Path) -> bool {
             std::process::id(),
             CHECKLINK_COUNTER.fetch_add(1, Ordering::Relaxed)
         ));
-        match symlink_file("target", &link_path) {
+        match symlink_file(Path::new("target"), &link_path) {
             Ok(()) => {
                 let _ = std::fs::remove_file(&link_path);
                 return true;
