@@ -68,7 +68,7 @@ pub(super) async fn find_new(ctx: &CoreContext, repo: &Repo, args: FindNewArgs) 
         .await?;
 
     if let Some(case_conflict) = maybe_case_conflict {
-        println!("Found new case conflict: {:?}", case_conflict);
+        println!("Found new case conflict: {case_conflict:?}");
         debug!("Finished in {:?}", stats.completion_time);
     } else {
         println!("No new case conflicts found");
