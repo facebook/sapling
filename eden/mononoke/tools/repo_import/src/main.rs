@@ -281,7 +281,7 @@ async fn find_mapping_version(
         .bookmarks()
         .get(ctx.clone(), dest_bookmark, bookmarks::Freshness::MostRecent)
         .await?
-        .ok_or_else(|| format_err!("{} not found", dest_bookmark))?;
+        .ok_or_else(|| format_err!("{dest_bookmark} not found"))?;
 
     wait_until_backsynced_and_return_version(ctx, large_to_small_syncer, bookmark_val).await
 }
@@ -437,7 +437,7 @@ async fn move_bookmark(
     if maybe_old_csid.is_none() {
         transaction.create(bookmark, old_csid.clone(), BookmarkUpdateReason::ManualMove)?;
         if transaction.commit().await?.is_none() {
-            return Err(format_err!("Logical failure while creating {:?}", bookmark));
+            return Err(format_err!("Logical failure while creating {bookmark:?}"));
         }
         info!("Created bookmark {:?} pointing to {}", bookmark, old_csid);
     }
@@ -466,7 +466,7 @@ async fn move_bookmark(
         )?;
 
         if transaction.commit().await?.is_none() {
-            return Err(format_err!("Logical failure while setting {:?}", bookmark));
+            return Err(format_err!("Logical failure while setting {bookmark:?}"));
         }
         info!("Set bookmark {:?} to point to {:?}", bookmark, curr_csid);
 
@@ -563,8 +563,7 @@ async fn merge_imported_commit(
         Some(id) => id,
         None => {
             return Err(format_err!(
-                "Couldn't extract changeset id from bookmark: {}",
-                dest_bookmark
+                "Couldn't extract changeset id from bookmark: {dest_bookmark}"
             ));
         }
     };
@@ -579,8 +578,7 @@ async fn merge_imported_commit(
 
     if !intersection.is_empty() {
         return Err(format_err!(
-            "There are paths present in both parents: {:?} ...",
-            intersection
+            "There are paths present in both parents: {intersection:?} ..."
         ));
     }
 
@@ -693,7 +691,7 @@ async fn check_dependent_systems(
 }
 
 async fn phabricator_commit_check(call_sign: &str, hg_csid: &HgChangesetId) -> Result<bool, Error> {
-    let commit_id = format!("r{}{}", call_sign, hg_csid);
+    let commit_id = format!("r{call_sign}{hg_csid}");
     let query = "query($commit: String!) {
                     differential_commit_query(query_params:{commits:[$commit]}) {
                         results {
@@ -760,8 +758,7 @@ fn sort_bcs(shifted_bcs: &[BonsaiChangeset]) -> Result<Vec<BonsaiChangeset>, Err
             Some(&bcs) => sorted_bcs.push(bcs.clone()),
             _ => {
                 return Err(format_err!(
-                    "Could not find mapping for changeset id {}",
-                    csid
+                    "Could not find mapping for changeset id {csid}"
                 ));
             }
         }
@@ -798,8 +795,7 @@ async fn get_large_repo_config_if_pushredirected(
             Ok(config) => config,
             Err(e) => {
                 return Err(format_err!(
-                    "Failed to fetch common commit sync config: {:#}",
-                    e
+                    "Failed to fetch common commit sync config: {e:#}"
                 ));
             }
         };
@@ -839,9 +835,7 @@ where
         commit_sync_data
             .rename_bookmark(importing_bookmark).await?
             .ok_or_else(|| format_err!(
-        "Bookmark {:?} unexpectedly dropped in {:?} when trying to generate large_importing_bookmark",
-        importing_bookmark,
-        commit_sync_data
+        "Bookmark {importing_bookmark:?} unexpectedly dropped in {commit_sync_data:?} when trying to generate large_importing_bookmark"
     ))?;
     info!(
         "Set large repo's importing bookmark to {}",
@@ -851,9 +845,7 @@ where
         .rename_bookmark(dest_bookmark).await?
         .ok_or_else(|| {
             format_err!(
-        "Bookmark {:?} unexpectedly dropped in {:?} when trying to generate large_dest_bookmark",
-        dest_bookmark,
-        commit_sync_data
+        "Bookmark {dest_bookmark:?} unexpectedly dropped in {commit_sync_data:?} when trying to generate large_dest_bookmark"
     )
         })?;
     info!(
@@ -877,7 +869,7 @@ fn get_config_by_repoid(
     // (only present in the per-tier RepoSpec manifest) resolve correctly.
     app.configs()
         .get_or_load_repo_config_by_id(repo_id.id())
-        .with_context(|| format!("unknown repoid {:?}", repo_id))
+        .with_context(|| format!("unknown repoid {repo_id:?}"))
 }
 
 async fn get_pushredirected_vars(
@@ -1536,7 +1528,7 @@ async fn check_megarepo_large_repo_import_requirements(
         .bookmarks()
         .get(ctx.clone(), dest_bookmark, bookmarks::Freshness::MostRecent)
         .await?
-        .ok_or_else(|| anyhow!("Bookmark not found: {}", dest_bookmark))?;
+        .ok_or_else(|| anyhow!("Bookmark not found: {dest_bookmark}"))?;
     if let Some(version) = repo
         .synced_commit_mapping()
         .get_large_repo_commit_version(ctx, repo.repo_identity().id(), dest_cs_id)
@@ -1545,7 +1537,7 @@ async fn check_megarepo_large_repo_import_requirements(
         let commit_sync_config = live_commit_sync_config
             .get_commit_sync_config_by_version_if_exists(repo.repo_identity().id(), &version)
             .await?
-            .ok_or_else(|| anyhow!("Couldn't find commit sync config version {}", version))?;
+            .ok_or_else(|| anyhow!("Couldn't find commit sync config version {version}"))?;
         for (small_repo_id, small_repo_config) in commit_sync_config.small_repos.iter() {
             match &small_repo_config.default_action {
                 DefaultSmallToLargeCommitSyncPathAction::Preserve => {
@@ -1560,10 +1552,7 @@ async fn check_megarepo_large_repo_import_requirements(
                         || prefix.is_prefix_of(dest_path_prefix)
                     {
                         return Err(anyhow!(
-                            "Small repo {} default prefix {} overlaps with import destination {}",
-                            small_repo_id,
-                            prefix,
-                            dest_path_prefix
+                            "Small repo {small_repo_id} default prefix {prefix} overlaps with import destination {dest_path_prefix}"
                         ));
                     }
                 }
@@ -1574,11 +1563,7 @@ async fn check_megarepo_large_repo_import_requirements(
                     || large_repo_prefix.is_prefix_of(dest_path_prefix)
                 {
                     return Err(anyhow!(
-                        "Small repo {} mapped prefix {} -> {} overlaps with import destination {}",
-                        small_repo_id,
-                        small_repo_prefix,
-                        large_repo_prefix,
-                        dest_path_prefix
+                        "Small repo {small_repo_id} mapped prefix {small_repo_prefix} -> {large_repo_prefix} overlaps with import destination {dest_path_prefix}"
                     ));
                 }
             }

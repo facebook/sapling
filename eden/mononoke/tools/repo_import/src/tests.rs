@@ -392,7 +392,7 @@ mod tests {
             repoid: RepositoryId::new(id),
             ..Default::default()
         };
-        repos.insert(format!("repo{}", id), repo_config);
+        repos.insert(format!("repo{id}"), repo_config);
     }
 
     /*
