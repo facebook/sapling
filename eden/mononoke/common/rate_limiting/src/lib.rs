@@ -297,7 +297,7 @@ impl LoadShedLimit {
                     .map(|v| v as i64);
                 (
                     format!(
-                        "Ods key:{entity} entity:{key} reduce:{reduce:?} transform:{transform:?}"
+                        "Ods key:{key} entity:{entity} reduce:{reduce:?} transform:{transform:?}"
                     ),
                     value,
                     false,
