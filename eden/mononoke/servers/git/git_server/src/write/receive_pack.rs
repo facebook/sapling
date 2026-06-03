@@ -248,12 +248,12 @@ async fn push(
                 "Push".to_string(),
             ),
             Err(e) => {
-                let err_msg = format!("{:?}", e);
+                let err_msg = format!("{e:?}");
                 if err_msg.contains("find_file_changes") && err_msg.contains("status: 404") {
                     return reject_push_with_message(
                         state,
                         &ref_updates,
-                        format!("LFS files missing in Git LFS server. Please upload before pushing. Error:\n {}", err_msg),
+                        format!("LFS files missing in Git LFS server. Please upload before pushing. Error:\n {err_msg}"),
                         true /* with_unpack_error */
                     )
                     .await;
@@ -545,7 +545,7 @@ async fn reject_push_with_message(
     let mut output = vec![];
     let error_message = packetline_truncated_string(error_message);
     if with_unpack_error {
-        let unpack_error = format!("unpack {}", error_message);
+        let unpack_error = format!("unpack {error_message}");
         write_text_packetline(unpack_error.as_bytes(), &mut output).await?;
     } else {
         write_text_packetline(PACK_OK, &mut output).await?;

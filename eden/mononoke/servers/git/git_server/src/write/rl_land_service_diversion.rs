@@ -159,7 +159,7 @@ pub async fn check_emergency_push(
     let checker = acl_provider
         .group(EMERGENCY_PUSH_ACL)
         .await
-        .with_context(|| format!("Failed to load ACL '{}'", EMERGENCY_PUSH_ACL))?;
+        .with_context(|| format!("Failed to load ACL '{EMERGENCY_PUSH_ACL}'"))?;
 
     if checker.is_member(identities).await {
         info!(
@@ -389,8 +389,7 @@ pub async fn divert_to_rl_land_service(
                 }
             }
             return Err(e).context(format!(
-                "RL Land Service submitLand failed for repo {}",
-                repo_name
+                "RL Land Service submitLand failed for repo {repo_name}"
             ));
         }
     };
@@ -417,10 +416,7 @@ pub async fn divert_to_rl_land_service(
             .getLandStatus(&status_request)
             .await
             .with_context(|| {
-                format!(
-                    "RL Land Service getLandStatus failed for repo {}",
-                    repo_name
-                )
+                format!("RL Land Service getLandStatus failed for repo {repo_name}")
             })?;
 
         match status_response.status {
@@ -445,8 +441,7 @@ pub async fn divert_to_rl_land_service(
                     }
                     Some(LandResult::UnknownField(_)) | None => {
                         let err_str = format!(
-                            "RL Land Service completed without result for repo {}",
-                            repo_name
+                            "RL Land Service completed without result for repo {repo_name}"
                         );
                         diverted_refs
                             .into_iter()
@@ -462,8 +457,7 @@ pub async fn divert_to_rl_land_service(
             LandStatus::QUEUED | LandStatus::PROCESSING | LandStatus::UNKNOWN => {
                 if Instant::now() > deadline {
                     let err_str = format!(
-                        "RL Land Service timed out after {}s for repo {}",
-                        timeout_secs, repo_name
+                        "RL Land Service timed out after {timeout_secs}s for repo {repo_name}"
                     );
                     let diverted_results = diverted_refs
                         .into_iter()
@@ -477,10 +471,8 @@ pub async fn divert_to_rl_land_service(
                 tokio::time::sleep(Duration::from_secs(poll_interval_secs)).await;
             }
             _ => {
-                let err_str = format!(
-                    "RL Land Service returned unexpected status for repo {}",
-                    repo_name
-                );
+                let err_str =
+                    format!("RL Land Service returned unexpected status for repo {repo_name}");
                 let diverted_results = diverted_refs
                     .into_iter()
                     .map(|r| (r, Err(anyhow::anyhow!(err_str.clone()))))
