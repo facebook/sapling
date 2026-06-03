@@ -594,7 +594,7 @@ impl IO {
             Err(e) => match e.kind() {
                 std::io::ErrorKind::NotFound => {
                     if let Some(err) = inner.error.as_mut() {
-                        writeln!(err, "missing pager command '{}', skipping pager", pager_cmd)?;
+                        writeln!(err, "missing pager command '{pager_cmd}', skipping pager")?;
                     }
 
                     return Ok(());
