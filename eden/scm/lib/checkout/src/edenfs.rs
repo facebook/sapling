@@ -148,17 +148,13 @@ fn actionmap_from_eden_conflicts(
                             )?;
                         } else {
                             bail!(
-                                "{}: local file conflicts with a directory in the destination commit",
-                                conflict_path
+                                "{conflict_path}: local file conflicts with a directory in the destination commit"
                             );
                         }
                         None
                     }
                     None => {
-                        bail!(
-                            "file metadata for {} not found at destination commit",
-                            conflict_path
-                        );
+                        bail!("file metadata for {conflict_path} not found at destination commit");
                     }
                 }
             }
@@ -171,12 +167,10 @@ fn actionmap_from_eden_conflicts(
                 let conflict_path = conflict.path.as_repo_path();
                 modified.push(conflict_path.to_owned());
                 let old_meta = source_manifest.get_file(conflict_path)?.context(format!(
-                    "file metadata for {} not found at source commit",
-                    conflict_path
+                    "file metadata for {conflict_path} not found at source commit"
                 ))?;
                 let new_meta = target_manifest.get_file(conflict_path)?.context(format!(
-                    "file metadata for {} not found at target commit",
-                    conflict_path
+                    "file metadata for {conflict_path} not found at target commit"
                 ))?;
                 changed_metadata_to_action(old_meta, new_meta)
             }
@@ -352,7 +346,7 @@ fn edenfs_noconflict_checkout(
     let apply_result = plan.apply_store(repo.file_store()?.as_ref())?;
     for (path, err) in apply_result.remove_failed {
         ctx.logger
-            .warn(format!("update failed to remove {}: {:#}!\n", path, err));
+            .warn(format!("update failed to remove {path}: {err:#}!\n"));
     }
 
     Ok(())

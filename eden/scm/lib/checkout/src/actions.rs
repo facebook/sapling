@@ -187,7 +187,7 @@ impl fmt::Display for ActionMap {
             match action {
                 Action::Update(up) => write!(f, "up {}=>{}\n", path, up.to.hgid)?,
                 Action::UpdateExec(x) => write!(f, "{} {}\n", if *x { "+x" } else { "-x" }, path)?,
-                Action::Remove => write!(f, "rm {}\n", path)?,
+                Action::Remove => write!(f, "rm {path}\n")?,
             }
         }
         Ok(())

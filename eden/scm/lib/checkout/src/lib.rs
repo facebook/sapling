@@ -179,7 +179,7 @@ impl Checkout {
     pub fn from_config(vfs: VFS, config: &dyn Config) -> Result<Self> {
         let concurrency = config
             .get_opt("nativecheckout", "concurrency")
-            .map_err(|e| format_err!("Failed to parse nativecheckout.concurrency: {}", e))?;
+            .map_err(|e| format_err!("Failed to parse nativecheckout.concurrency: {e}"))?;
         let concurrency = concurrency.unwrap_or(DEFAULT_CONCURRENCY);
         Ok(Self { vfs, concurrency })
     }
@@ -334,7 +334,7 @@ impl CheckoutPlan {
 
             let action = actions
                 .get(&key.path)
-                .ok_or_else(|| format_err!("Storage returned unknown key {}", key))?;
+                .ok_or_else(|| format_err!("Storage returned unknown key {key}"))?;
             let flag = type_to_flag(&action.file_type);
 
             work_tx
@@ -533,10 +533,9 @@ impl CheckoutPlan {
                 let repo_path = file.as_repo_path();
                 let hgid = match manifest.get_file(repo_path)? {
                     Some(m) => m.hgid,
-                    None => bail!(
-                        "{} not found in manifest when checking for unknown files",
-                        repo_path
-                    ),
+                    None => {
+                        bail!("{repo_path} not found in manifest when checking for unknown files")
+                    }
                 };
                 let key = Key::new(file.clone(), hgid);
                 check_content.push(key);
@@ -926,7 +925,7 @@ impl AsRef<RepoPath> for UpdateMetaAction {
 impl fmt::Display for CheckoutPlan {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for r in &self.remove {
-            writeln!(f, "rm {}", r)?;
+            writeln!(f, "rm {r}")?;
         }
         for (p, u) in &self.update_content {
             match u {
@@ -1338,7 +1337,7 @@ pub fn filesystem_checkout(
 
     for (path, err) in apply_result.remove_failed {
         ctx.logger
-            .warn(format!("update failed to remove {}: {:#}!\n", path, err));
+            .warn(format!("update failed to remove {path}: {err:#}!\n"));
     }
 
     // 5. Update the treestate parents, dirstate
@@ -1820,7 +1819,7 @@ mod test {
 
     fn print_tree(t: &[(RepoPathBuf, FileMetadata)]) {
         for (path, meta) in t {
-            eprintln!("{} [{:?}]", path, meta);
+            eprintln!("{path} [{meta:?}]");
         }
     }
 
@@ -1847,7 +1846,7 @@ mod test {
             let expected_meta = if let Some(m) = expected.remove(&rel_path) {
                 m
             } else {
-                bail!("Checkout created unexpected file {}", rel_path);
+                bail!("Checkout created unexpected file {rel_path}");
             };
             assert_metadata(&expected_meta, &dir)?;
         }

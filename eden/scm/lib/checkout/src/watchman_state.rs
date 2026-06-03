@@ -102,7 +102,7 @@ impl WatchmanStateChange {
             })
         })()
         .unwrap_or_else(|err| {
-            span.record("err", format!("{:?}", err));
+            span.record("err", format!("{err:?}"));
             Self::default()
         })
     }

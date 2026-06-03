@@ -170,11 +170,10 @@ impl<M: Manifest> MergeResult<M> {
                         Some(FsNodeMetadata::File(m)) => m,
                         Some(FsNodeMetadata::Directory(_)) => {
                             bail!(
-                                "Failed to apply to manifest: {} is a directory, expected file",
-                                file
+                                "Failed to apply to manifest: {file} is a directory, expected file"
                             )
                         }
-                        None => bail!("Failed to apply to manifest: {} not found", file),
+                        None => bail!("Failed to apply to manifest: {file} not found"),
                     };
 
                     assert!(meta.file_type != FileType::Symlink);
