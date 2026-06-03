@@ -25,7 +25,7 @@ impl Middleware for ResponseContentTypeMiddleware {
             state.try_borrow::<Service>(),
             state.try_borrow::<ResponseType>(),
         ) {
-            let content_type_header = format!("application/x-{}-{}", service_type, response_type);
+            let content_type_header = format!("application/x-{service_type}-{response_type}");
             response.headers_mut().insert(
                 CONTENT_TYPE,
                 HeaderValue::from_str(&content_type_header).unwrap(),
