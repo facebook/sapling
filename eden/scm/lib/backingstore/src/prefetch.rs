@@ -1083,9 +1083,7 @@ mod test {
         for exp_hgid in &expected_file_hgids {
             assert!(
                 fetches.iter().any(|f| f.hgid == *exp_hgid),
-                "expected hgid {:?} in fetches {:?}",
-                exp_hgid,
-                fetches
+                "expected hgid {exp_hgid:?} in fetches {fetches:?}"
             );
         }
 
@@ -1131,9 +1129,7 @@ mod test {
         for exp_hgid in &expected_file_hgids {
             assert!(
                 fetches.iter().any(|f| f.hgid == *exp_hgid),
-                "expected hgid {:?} in fetches {:?}",
-                exp_hgid,
-                fetches
+                "expected hgid {exp_hgid:?} in fetches {fetches:?}"
             );
         }
 

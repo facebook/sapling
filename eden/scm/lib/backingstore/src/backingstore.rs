@@ -906,7 +906,7 @@ impl LocalRemoteImpl<Arc<dyn TreeEntry>> for Arc<dyn TreeStore> {
         {
             Some(Ok((_key, tree))) => Ok(tree),
             Some(Err(e)) => Err(e),
-            None => Err(anyhow::format_err!("{}@{}: not found remotely", path, id)),
+            None => Err(anyhow::format_err!("{path}@{id}: not found remotely")),
         }
     }
     fn get_batch_iter(

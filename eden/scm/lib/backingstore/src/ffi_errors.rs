@@ -149,7 +149,7 @@ fn classify_backingstore_error(err: &Error) -> (BackingStoreErrorKind, Option<i3
 /// Translate anyhow errors from the backinstore
 /// to SaplingBackingStoreError in C++ for EdenFS to consume
 pub(crate) fn into_backingstore_err(err: Error) -> UniquePtr<SaplingBackingStoreError> {
-    let msg = format!("{:?}", err);
+    let msg = format!("{err:?}");
     let (kind, code) = classify_backingstore_error(&err);
 
     match code {
@@ -229,13 +229,11 @@ mod tests {
             let (kind, code) = extract_remote_api_error(&err);
             assert_eq!(
                 kind, expected_kind,
-                "{} should map to the expected kind {:?}",
-                name, expected_kind
+                "{name} should map to the expected kind {expected_kind:?}"
             );
             assert_eq!(
                 code, expected_code,
-                "{} should have code {:?}",
-                name, expected_code
+                "{name} should have code {expected_code:?}"
             );
         }
     }
@@ -303,13 +301,11 @@ mod tests {
             let (kind, code) = extract_lfs_error(&err);
             assert_eq!(
                 kind, expected_kind,
-                "{} should map to the expected kind {:?}",
-                name, expected_kind
+                "{name} should map to the expected kind {expected_kind:?}"
             );
             assert_eq!(
                 code, expected_code,
-                "{} should have code {:?}",
-                name, expected_code
+                "{name} should have code {expected_code:?}"
             );
         }
     }

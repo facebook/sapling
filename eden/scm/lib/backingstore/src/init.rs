@@ -47,7 +47,7 @@ pub fn backingstore_global_init() {
             maybe_add_scuba_logger!(subscriber);
 
             if let Err(e) = tracing::subscriber::set_global_default(subscriber) {
-                eprintln!("Failed to set rust tracing subscriber: {:?}", e);
+                eprintln!("Failed to set rust tracing subscriber: {e:?}");
             }
         } else {
             let subscriber = Registry::default();
@@ -55,7 +55,7 @@ pub fn backingstore_global_init() {
             maybe_add_scuba_logger!(subscriber);
 
             if let Err(e) = tracing::subscriber::set_global_default(subscriber) {
-                eprintln!("Failed to set rust tracing subscriber: {:?}", e);
+                eprintln!("Failed to set rust tracing subscriber: {e:?}");
             }
         }
 
