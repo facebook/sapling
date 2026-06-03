@@ -178,7 +178,7 @@ impl CacheUpdater {
         let mut cache = self
             .cache
             .write()
-            .map_err(|e| anyhow::anyhow!("Failed to acquire cache write lock: {}", e))?;
+            .map_err(|e| anyhow::anyhow!("Failed to acquire cache write lock: {e}"))?;
         *cache = new_cache;
 
         Ok(())

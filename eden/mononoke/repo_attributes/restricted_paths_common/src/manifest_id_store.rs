@@ -385,7 +385,7 @@ impl Display for ManifestId {
 
 impl fmt::Debug for ManifestId {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "ManifestId({})", self)
+        write!(fmt, "ManifestId({self})")
     }
 }
 
@@ -474,7 +474,7 @@ impl OptionalTryFromRowField for ManifestId {
 
 fn fmt_path_bytes(path: &PathBytes, f: &mut fmt::Formatter) -> fmt::Result {
     match std::str::from_utf8(&path.0) {
-        Ok(path_str) => write!(f, "\"{}\"", path_str),
+        Ok(path_str) => write!(f, "\"{path_str}\""),
         Err(_) => write!(f, "PathBytes({:?})", path.0),
     }
 }
