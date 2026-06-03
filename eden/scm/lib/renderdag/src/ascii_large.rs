@@ -78,7 +78,7 @@ where
             self.state.push_line(&mut out, &extra_pad_line);
         }
 
-        if line.blank_line_before {
+        if line.separator_line {
             self.state.mabye_push_blank_line(&mut out);
         }
 

@@ -295,6 +295,7 @@ bitflags! {
 /// use.
 ///
 /// ```plain
+///                          // separator line
 ///  o      F                // node line
 ///  ├─┬─╮  long message 1   // link line
 ///  ╷ │ ~  long message 2   // term line
@@ -316,6 +317,9 @@ pub struct GraphRow<N> {
     /// True if this row is for a merge commit.
     pub merge: bool,
 
+    /// True if this row needs a blank-line separator from the previous row.
+    pub separator_line: bool,
+
     /// The node columns for this row.
     pub node_line: Vec<NodeLine>,
 
@@ -328,9 +332,6 @@ pub struct GraphRow<N> {
 
     /// The pad columns for this row.
     pub pad_lines: Vec<PadLine>,
-
-    /// True if this row needs a blank-line separator from the previous row.
-    pub blank_line_before: bool,
 }
 
 impl<N> GraphRowRenderer<N>
@@ -511,7 +512,7 @@ where
             }
         }
 
-        let blank_line_before = existing_column.is_none()
+        let separator_line = existing_column.is_none()
             && self.min_row_height == 1
             && !self.stagger_disconnected_nodes
             && Some(column) == self.previous_node_column
@@ -621,7 +622,7 @@ where
             link_line,
             term_line,
             pad_lines,
-            blank_line_before,
+            separator_line,
         }
     }
 }
