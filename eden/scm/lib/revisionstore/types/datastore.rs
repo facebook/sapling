@@ -123,9 +123,7 @@ impl InternalMetadata {
                     .filter(|&end| end <= buf.len())
                     .ok_or_else(|| {
                         anyhow::anyhow!(
-                            "acl children indices length {} exceeds buffer at offset {}",
-                            value_len,
-                            value_start
+                            "acl children indices length {value_len} exceeds buffer at offset {value_start}"
                         )
                     })?;
                 let vlq_data = &buf[value_start..value_end];
@@ -150,7 +148,7 @@ impl InternalMetadata {
                     let buf = cur.get_ref();
                     size = Some(bin_to_u64(&buf[value_start..value_start + value_len]));
                 }
-                _ => anyhow::bail!("invalid metadata format '{:?}'", key),
+                _ => anyhow::bail!("invalid metadata format '{key:?}'"),
             }
 
             cur.set_position((value_start + value_len) as u64);
