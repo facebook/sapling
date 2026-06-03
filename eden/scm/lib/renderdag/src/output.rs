@@ -22,16 +22,21 @@ pub(crate) struct OutputRendererOptions {
 #[derive(Default)]
 pub(crate) struct OutputRendererState {
     pub(crate) extra_pad_line: Option<String>,
+    last_line_is_blank: bool,
 }
 
 impl OutputRendererState {
     pub(crate) fn push_line(&mut self, out: &mut String, line: &str) {
         out.push_str(line.trim_end());
         out.push('\n');
+        self.last_line_is_blank = line.trim_end().is_empty();
     }
 
     pub(crate) fn mabye_push_blank_line(&mut self, out: &mut String) {
-        out.push('\n');
+        if !self.last_line_is_blank {
+            out.push('\n');
+            self.last_line_is_blank = true;
+        }
     }
 }
 

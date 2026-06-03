@@ -316,7 +316,7 @@ pub struct GraphRow<N> {
     /// The pad columns for this row.
     pub pad_lines: Vec<PadLine>,
 
-    /// True if a blank line should be rendered before this row.
+    /// True if this row needs a blank-line separator from the previous row.
     pub blank_line_before: bool,
 }
 
@@ -424,9 +424,8 @@ where
     ) -> GraphRow<N> {
         // Find a column for this node.
         let existing_column = self.columns.find(&node);
-        let mut blank_line_before = false;
         let column = existing_column.unwrap_or_else(|| {
-            let column = if self.min_row_height == 1 && self.stagger_disconnected_nodes {
+            if self.min_row_height == 1 && self.stagger_disconnected_nodes {
                 if let Some(index) = self.columns.iter().enumerate().find_map(|(index, column)| {
                     (*column == Column::Empty && Some(index) != self.previous_node_column)
                         .then_some(index)
@@ -442,11 +441,7 @@ where
                 self.columns
                     .first_empty()
                     .unwrap_or_else(|| self.columns.new_empty())
-            };
-            blank_line_before = self.min_row_height == 1
-                && !self.stagger_disconnected_nodes
-                && Some(column) == self.previous_node_column;
-            column
+            }
         });
         self.columns[column] = Column::Empty;
 
@@ -502,6 +497,12 @@ where
                 need_term_line = true;
             }
         }
+
+        let blank_line_before = existing_column.is_none()
+            && self.min_row_height == 1
+            && !self.stagger_disconnected_nodes
+            && Some(column) == self.previous_node_column
+            && !need_term_line;
 
         // Check if we can move the parent to the current column.
         if parents.len() == 1 {

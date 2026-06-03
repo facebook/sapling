@@ -381,13 +381,11 @@ mod tests {
             │
             ~
             
-            
             o  B
             
             o  A"#
         );
 
-        // Suboptimal: extra blank line is unnecessary for C and B.
         assert_eq!(
             render(&TestFixture {
                 messages: &[("C", "\n\n"), ("B", "\n")],
@@ -398,9 +396,7 @@ mod tests {
             o  C
             
             
-            
             o  B
-            
             
             o  A"#
         );
