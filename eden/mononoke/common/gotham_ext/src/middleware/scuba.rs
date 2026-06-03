@@ -114,6 +114,14 @@ pub enum HttpScubaKey {
     XFBNetworkType,
     /// Whether identities contain AGENT taint
     LikelyAgentic,
+    /// The client's unix username, derived from its USER identity, if any.
+    UnixUsername,
+    /// A unique ID identifying the client session.
+    SessionUuid,
+    /// Tupperware job handle of the client, if any.
+    ClientTwJob,
+    /// Tupperware task handle of the client, if any.
+    ClientTwTask,
 }
 
 impl AsRef<str> for HttpScubaKey {
@@ -154,6 +162,10 @@ impl AsRef<str> for HttpScubaKey {
             XFBGitWrapper => "git_wrapper",
             XFBNetworkType => "fb_network_type",
             LikelyAgentic => "likely_agentic",
+            UnixUsername => "unix_username",
+            SessionUuid => "session_uuid",
+            ClientTwJob => "client_tw_job",
+            ClientTwTask => "client_tw_task",
         }
     }
 }
@@ -330,6 +342,16 @@ fn populate_scuba(scuba: &mut MononokeScubaSampleBuilder, state: &mut State) {
         scuba.add(HttpScubaKey::ClientIdentities, identities);
         scuba.add(HttpScubaKey::ClientIdentitiesTyped, identities_typed);
 
+        // The EdenAPI path does not call MononokeScubaSampleBuilder::add_metadata,
+        // so the metadata-derived columns below are populated here by hand to
+        // match the wireproto path. Column names are kept for compatibility with
+        // historical logging.
+        scuba.add(HttpScubaKey::SessionUuid, metadata.session_id().to_string());
+
+        if let Some(unix_name) = metadata.unix_name() {
+            scuba.add(HttpScubaKey::UnixUsername, unix_name);
+        }
+
         let sandcastle_alias = metadata.sandcastle_alias();
         scuba.add(HttpScubaKey::SandcastleAlias, sandcastle_alias);
 
@@ -344,6 +366,12 @@ fn populate_scuba(scuba: &mut MononokeScubaSampleBuilder, state: &mut State) {
 
         let client_atlas_env_id = metadata.clientinfo_atlas_env_id();
         scuba.add(HttpScubaKey::ClientAtlasEnvId, client_atlas_env_id);
+
+        let client_tw_job = metadata.clientinfo_tw_job();
+        scuba.add(HttpScubaKey::ClientTwJob, client_tw_job);
+
+        let client_tw_task = metadata.clientinfo_tw_task();
+        scuba.add(HttpScubaKey::ClientTwTask, client_tw_task);
 
         let fetch_cause = metadata.fetch_cause();
         scuba.add(HttpScubaKey::FetchCause, fetch_cause);
