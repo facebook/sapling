@@ -80,10 +80,8 @@ impl RemoteCache {
     }
 
     fn create_key_gen(backing_store_name: &str, backing_store_params: &str) -> Result<KeyGen> {
-        let key_prefix = format!(
-            "scm.mononoke.filenodes.{}.{}",
-            backing_store_name, backing_store_params,
-        );
+        let key_prefix =
+            format!("scm.mononoke.filenodes.{backing_store_name}.{backing_store_params}",);
 
         let sitever = justknobs::get_as::<u32>("scm/mononoke_memcache_sitevers:filenodes", None);
 
