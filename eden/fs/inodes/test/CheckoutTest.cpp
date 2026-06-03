@@ -1902,6 +1902,55 @@ TEST_P(CheckoutTest, diffFailsOnInProgressCheckout) {
   EXPECT_NO_THROW(std::move(diff2).get());
 }
 
+TEST_P(CheckoutTest, droppedCheckoutFutureRestoresParentStateOnError) {
+  auto builder1 = FakeTreeBuilder();
+  builder1.setFile("src/main.c", "// Some code.\n");
+  TestMount testMount{RootId{"1"}, builder1};
+  applyParam(testMount);
+  testMount.getServerState()->getFaultInjector().injectBlock("checkout", ".*");
+
+  auto executor = testMount.getServerExecutor().get();
+  {
+    auto checkout = testMount.getEdenMount()
+                        ->checkout(
+                            testMount.getRootInode(),
+                            RootId{"1"},
+                            ObjectFetchContext::getNullContext(),
+                            __func__)
+                        .semi()
+                        .via(executor);
+    testMount.drainServerExecutor();
+    ASSERT_TRUE(testMount.getServerState()->getFaultInjector().waitUntilBlocked(
+        "checkout", 5s));
+    EXPECT_FALSE(checkout.isReady());
+  }
+
+  testMount.getServerState()->getFaultInjector().unblockWithError(
+      "checkout",
+      ".*",
+      folly::make_exception_wrapper<std::runtime_error>("dropped checkout"));
+  testMount.drainServerExecutor();
+  testMount.getServerState()->getFaultInjector().removeFault("checkout", ".*");
+
+  auto recoveryCheckout = testMount.getEdenMount()
+                              ->checkout(
+                                  testMount.getRootInode(),
+                                  RootId{"1"},
+                                  ObjectFetchContext::getNullContext(),
+                                  __func__)
+                              .semi()
+                              .via(executor);
+  testMount.drainServerExecutor();
+  EXPECT_NO_THROW(std::move(recoveryCheckout).getVia(executor));
+
+  auto diff = testMount.getEdenMount()->diff(
+      testMount.getRootInode(),
+      RootId{"1"},
+      folly::CancellationToken{},
+      ObjectFetchContext::getNullContext());
+  EXPECT_NO_THROW(std::move(diff).get());
+}
+
 TEST_P(
     CheckoutTest,
     conflict_when_directory_containing_modified_file_is_removed) {

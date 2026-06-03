@@ -1520,6 +1520,178 @@ constexpr const char* interruptedCheckoutAdvice =
     "a previous checkout was interrupted - please run `sl go {0}` to resume it"
     ".\nIf there are conflicts, run `sl go --clean {0}` to discard changes, or `sl go --merge {0}` to merge.";
 
+struct EdenMount::CheckoutInProgressGuard {
+  CheckoutInProgressGuard(
+      EdenMount& mount,
+      std::shared_ptr<CheckoutContext> ctx,
+      RootId oldParent,
+      RootId snapshotId,
+      ParentCommitState::CheckoutState oldState)
+      : mount_{&mount},
+        ctx_{std::move(ctx)},
+        oldParent_{std::move(oldParent)},
+        snapshotId_{std::move(snapshotId)},
+        oldState_{std::move(oldState)} {}
+
+  CheckoutInProgressGuard(CheckoutInProgressGuard&& other) noexcept
+      : mount_{other.mount_},
+        ctx_{std::move(other.ctx_)},
+        oldParent_{std::move(other.oldParent_)},
+        snapshotId_{std::move(other.snapshotId_)},
+        oldState_{std::move(other.oldState_)} {
+    other.mount_ = nullptr;
+  }
+
+  CheckoutInProgressGuard& operator=(CheckoutInProgressGuard&&) = delete;
+  CheckoutInProgressGuard(const CheckoutInProgressGuard&) = delete;
+  CheckoutInProgressGuard& operator=(const CheckoutInProgressGuard&) = delete;
+
+  ~CheckoutInProgressGuard() {
+    if (mount_ != nullptr) {
+      // A dropped continuation is treated like a failed checkout.
+      applyResetState(mount_, /*hadException=*/true);
+    }
+  }
+
+  folly::Try<std::vector<CheckoutConflict>> finish(
+      folly::Try<std::vector<CheckoutConflict>>&& res) {
+    XCHECK(mount_ != nullptr);
+    auto mount = mount_;
+    mount_ = nullptr;
+    if (applyResetState(mount, res.hasException())) {
+      return folly::Try<std::vector<CheckoutConflict>>{
+          newEdenError(res.exception())};
+    }
+    return std::move(res);
+  }
+
+ private:
+  // Resets parentState_ out of CheckoutInProgress: restores the prior state for
+  // dry runs, leaves the mount interrupted on a propagated error, or clears the
+  // state otherwise. Returns true when the mount was left interrupted due to a
+  // propagated error, so the caller can surface that error to the user.
+  bool applyResetState(EdenMount* mount, bool hadException) {
+    bool propagateErrors = mount->getServerState()
+                               ->getReloadableConfig()
+                               ->getEdenConfig()
+                               ->propagateCheckoutErrors.getValue();
+
+    auto parentLock = mount->parentState_.wlock();
+    XCHECK(
+        std::holds_alternative<ParentCommitState::CheckoutInProgress>(
+            parentLock->checkoutState));
+    if (ctx_->isDryRun()) {
+      // Restore the prior state (possibly InterruptedCheckout) for dry runs.
+      parentLock->checkoutState = oldState_;
+      return false;
+    } else if (propagateErrors && hadException) {
+      parentLock->checkoutState = ParentCommitState::InterruptedCheckout{
+          oldParent_,
+          snapshotId_,
+      };
+      return true;
+    } else {
+      parentLock->checkoutState = ParentCommitState::NoOngoingCheckout{};
+      return false;
+    }
+  }
+
+  EdenMount* mount_;
+  std::shared_ptr<CheckoutContext> ctx_;
+  RootId oldParent_;
+  RootId snapshotId_;
+  ParentCommitState::CheckoutState oldState_;
+};
+
+/**
+ * State produced by `beginCheckout` and consumed by `checkout`.
+ *
+ * `firstFaultCheck` holds the result of `serverState_->getFaultInjector()
+ * .checkAsync("checkout", ...)` registered EAGERLY when
+ * `beginCheckout` runs. The fault handler must be registered
+ * synchronously during the call so a subsequent `FaultInjector::unblock()`
+ * finds it; registering it only on first await would break tests that block +
+ * unblock the "checkout" fault around an outstanding checkout
+ * (`checkoutFailsOnInProgressCheckout`, `diffFailsOnInProgressCheckout`).
+ */
+struct EdenMount::CheckoutSetup {
+  std::shared_ptr<CheckoutContext> ctx;
+  RootId oldParent;
+  ParentCommitState::CheckoutState oldState;
+  // Default-initialized to a ready future. `beginCheckout` overwrites this with
+  // the real eagerly-registered fault check.
+  ImmediateFuture<folly::Unit> firstFaultCheck{std::in_place};
+};
+
+folly::Try<EdenMount::CheckoutSetup> EdenMount::beginCheckout(
+    const RootId& snapshotId,
+    const ObjectFetchContextPtr& fetchContext,
+    folly::StringPiece thriftMethodCaller,
+    CheckoutMode checkoutMode) {
+  CheckoutSetup setup;
+  setup.oldState = ParentCommitState::NoOngoingCheckout{};
+  auto progressTracker = std::make_shared<std::atomic<uint64_t>>(0);
+
+  // Scope the parentState_ wlock tightly: validate state, mutate to
+  // CheckoutInProgress, then release. Holding the wlock across the
+  // checkAsync call below would, under fault injection, block every
+  // parentState_ reader.
+  {
+    auto parentLock = parentState_.wlock();
+    if (parentLock->isCheckoutInProgressOrInterrupted()) {
+      if (std::holds_alternative<ParentCommitState::CheckoutInProgress>(
+              parentLock->checkoutState)) {
+        return folly::Try<CheckoutSetup>{newEdenError(
+            EdenErrorType::CHECKOUT_IN_PROGRESS,
+            "another checkout operation is still in progress")};
+      } else {
+        auto& interruptedCheckout =
+            std::get<ParentCommitState::InterruptedCheckout>(
+                parentLock->checkoutState);
+        if (objectStore_->compareRootsById(
+                interruptedCheckout.toCommit, snapshotId) !=
+            ObjectComparison::Identical) {
+          return folly::Try<CheckoutSetup>{newEdenError(
+              EdenErrorType::CHECKOUT_IN_PROGRESS,
+              fmt::format(
+                  interruptedCheckoutAdvice,
+                  folly::hexlify(objectStore_->renderRootId(
+                      interruptedCheckout.toCommit))))};
+        } else {
+          setup.oldParent = interruptedCheckout.fromCommit;
+          setup.oldState = interruptedCheckout;
+        }
+      }
+    } else {
+      setup.oldParent = parentLock->workingCopyParentRootId;
+    }
+    // Set checkoutInProgress and release the lock. An alternative way of
+    // achieving the same would be to hold the lock during the checkout
+    // operation, but this might lead to deadlocks on Windows due to callbacks
+    // needing to access the parent commit to service callbacks.
+    parentLock->checkoutState =
+        ParentCommitState::CheckoutInProgress{progressTracker};
+    setup.ctx = std::make_shared<CheckoutContext>(
+        this,
+        checkoutMode,
+        fetchContext->getClientPid(),
+        thriftMethodCaller,
+        progressTracker,
+        fetchContext->getRequestInfo(),
+        fetchContext->getCancellationToken());
+    setup.ctx->getFetchContext()->setDetachedExecutor(
+        fetchContext->getDetachedExecutor());
+  } // parentState_ wlock released here.
+
+  // Eagerly register the first fault check so unblock() can find it.
+  // See struct comment for details. Done OUTSIDE the wlock scope so
+  // fault injection (which can block this call) doesn't block
+  // parentState_ readers.
+  setup.firstFaultCheck =
+      serverState_->getFaultInjector().checkAsync("checkout", getPath().view());
+  return folly::Try<CheckoutSetup>{std::move(setup)};
+}
+
 ImmediateFuture<CheckoutResult> EdenMount::checkout(
     TreeInodePtr rootInode,
     const RootId& snapshotId,
@@ -1529,64 +1701,17 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
   const folly::stop_watch<> stopWatch;
   auto checkoutTimes = std::make_shared<CheckoutTimes>();
 
-  ParentCommitState::CheckoutState oldState =
-      ParentCommitState::NoOngoingCheckout{};
-  std::shared_ptr<CheckoutContext> ctx;
-  RootId oldParent;
-  {
-    auto parentLock = parentState_.wlock();
-    if (parentLock->isCheckoutInProgressOrInterrupted()) {
-      if (std::holds_alternative<ParentCommitState::CheckoutInProgress>(
-              parentLock->checkoutState)) {
-        // Another update is already pending, we should bail.
-        // TODO: Report the pid of the client that requested the first checkout
-        // operation in this error
-        return makeFuture<CheckoutResult>(newEdenError(
-            EdenErrorType::CHECKOUT_IN_PROGRESS,
-            "another checkout operation is still in progress"));
-      } else {
-        auto& interruptedCheckout =
-            std::get<ParentCommitState::InterruptedCheckout>(
-                parentLock->checkoutState);
-        if (objectStore_->compareRootsById(
-                interruptedCheckout.toCommit, snapshotId) !=
-            ObjectComparison::Identical) {
-          return makeFuture<CheckoutResult>(newEdenError(
-              EdenErrorType::CHECKOUT_IN_PROGRESS,
-              fmt::format(
-                  interruptedCheckoutAdvice,
-                  folly::hexlify(objectStore_->renderRootId(
-                      interruptedCheckout.toCommit)))));
-        } else {
-          oldParent = interruptedCheckout.fromCommit;
-          oldState = interruptedCheckout;
-        }
-      }
-    } else {
-      oldParent = parentLock->workingCopyParentRootId;
-    }
-    // Set checkoutInProgress and release the lock. An alternative way of
-    // achieving the same would be to hold the lock during the checkout
-    // operation, but this might lead to deadlocks on Windows due to callbacks
-    // needing to access the parent commit to service callbacks.
-    auto progressTracker = std::make_shared<std::atomic<uint64_t>>(0);
-    parentLock->checkoutState =
-        ParentCommitState::CheckoutInProgress{progressTracker};
-    ctx = std::make_shared<CheckoutContext>(
-        this,
-        checkoutMode,
-        fetchContext->getClientPid(),
-        thriftMethodCaller,
-        progressTracker,
-        fetchContext->getRequestInfo(),
-        fetchContext->getCancellationToken());
-
-    // Propagate the detached executor from the incoming fetch context to the
-    // CheckoutContext's fetch context so async operations use the same
-    // executor.
-    ctx->getFetchContext()->setDetachedExecutor(
-        fetchContext->getDetachedExecutor());
+  auto setupTry =
+      beginCheckout(snapshotId, fetchContext, thriftMethodCaller, checkoutMode);
+  if (setupTry.hasException()) {
+    return makeFuture<CheckoutResult>(std::move(setupTry).exception());
   }
+  auto setup = std::move(setupTry).value();
+  auto ctx = std::move(setup.ctx);
+  RootId oldParent = std::move(setup.oldParent);
+  ParentCommitState::CheckoutState oldState = std::move(setup.oldState);
+  ImmediateFuture<folly::Unit> firstFaultCheck =
+      std::move(setup.firstFaultCheck);
 
   XLOGF(
       DBG1,
@@ -1608,8 +1733,7 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
   using RootTreeTuple = std::
       tuple<ObjectStore::GetRootTreeResult, ObjectStore::GetRootTreeResult>;
 
-  return serverState_->getFaultInjector()
-      .checkAsync("checkout", getPath().view())
+  return std::move(firstFaultCheck)
       .thenValue([this, ctx, parent1Id = oldParent, snapshotId](auto&&) {
         XLOG(DBG7, "Checkout: getRoots");
         auto fromTreeFuture =
@@ -1734,40 +1858,11 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
         // Complete the checkout
         return ctx->finish(snapshotId);
       })
-      .thenTry([this, ctx, oldState, oldParent, snapshotId](
-                   folly::Try<std::vector<CheckoutConflict>>&& res) {
-        bool propagateErrors = this->getServerState()
-                                   ->getReloadableConfig()
-                                   ->getEdenConfig()
-                                   ->propagateCheckoutErrors.getValue();
-
-        // Checkout completed, make sure to always reset
-        // the checkoutInProgress flag!
-        auto parentLock = parentState_.wlock();
-        XCHECK(
-            std::holds_alternative<ParentCommitState::CheckoutInProgress>(
-                parentLock->checkoutState));
-        if (ctx->isDryRun()) {
-          // In the case where a past checkout was interrupted, we need to
-          // make sure that future checkout operations will properly attempt
-          // to resume it, thus restore the checkoutState to what it was
-          // prior to the DRY_RUN checkout.
-          parentLock->checkoutState = oldState;
-        } else if (propagateErrors && res.hasException()) {
-          // If we have an error and are propagating errors, leave the mount in
-          // the interrupted checkout state instead of pretending like the
-          // checkout succeeded.
-          parentLock->checkoutState = ParentCommitState::InterruptedCheckout{
-              oldParent,
-              snapshotId,
-          };
-          return folly::Try<std::vector<CheckoutConflict>>{
-              newEdenError(res.exception())};
-        } else {
-          // If the checkout was successful, clear out the checkoutState.
-          parentLock->checkoutState = ParentCommitState::NoOngoingCheckout{};
-        }
-        return std::move(res);
+      .thenTry([checkoutGuard =
+                    CheckoutInProgressGuard{
+                        *this, ctx, oldParent, snapshotId, oldState}](
+                   folly::Try<std::vector<CheckoutConflict>>&& res) mutable {
+        return checkoutGuard.finish(std::move(res));
       })
       .thenValue(
           [this,

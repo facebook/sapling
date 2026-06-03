@@ -817,6 +817,23 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
       folly::StringPiece thriftMethodCaller,
       CheckoutMode checkoutMode = CheckoutMode::NORMAL);
 
+ private:
+  struct CheckoutInProgressGuard;
+  struct CheckoutSetup;
+
+  /**
+   * Validate parent state, mark `CheckoutInProgress`, build the
+   * `CheckoutContext`, and return the prepared state.
+   * The parent-state lock is held only while validating and updating
+   * `parentState_`.
+   */
+  folly::Try<CheckoutSetup> beginCheckout(
+      const RootId& snapshotId,
+      const ObjectFetchContextPtr& fetchContext,
+      folly::StringPiece thriftMethodCaller,
+      CheckoutMode checkoutMode);
+
+ public:
   /**
    * Chown the repository to the given uid and gid
    */
