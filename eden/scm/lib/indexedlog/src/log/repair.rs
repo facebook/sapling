@@ -50,12 +50,12 @@ impl OpenOptions {
 
         let result: crate::Result<_> = (|| {
             if !dir.exists() {
-                return Ok(format!("{:?} does not exist. Nothing to repair.\n", dir));
+                return Ok(format!("{dir:?} does not exist. Nothing to repair.\n"));
             }
 
             let lock = ScopedDirLock::new(dir)?;
             let mut message = RepairMessage::new(dir);
-            message += &format!("Processing IndexedLog: {:?}\n", dir);
+            message += &format!("Processing IndexedLog: {dir:?}\n");
 
             let primary_path = dir.join(PRIMARY_FILE);
             let meta_path = dir.join(META_FILE);
@@ -162,10 +162,7 @@ impl OpenOptions {
             assert!(valid_len <= log.meta.primary_len);
 
             if valid_len == log.meta.primary_len {
-                message += &format!(
-                    "Verified {} entries, {} bytes in log\n",
-                    entry_count, valid_len
-                );
+                message += &format!("Verified {entry_count} entries, {valid_len} bytes in log\n");
             } else {
                 message += &format!(
                     "Verified first {} entries, {} of {} bytes in log\n",
@@ -206,7 +203,7 @@ impl OpenOptions {
                         };
                         reader.consume(len);
                     }
-                    message += &format!("Backed up corrupted log to {:?}\n", backup_path);
+                    message += &format!("Backed up corrupted log to {backup_path:?}\n");
                     Ok(())
                 })()
                 .context("while trying to backup corrupted log")?;
@@ -222,7 +219,7 @@ impl OpenOptions {
                 log.meta
                     .write_file(&meta_path, log.open_options.fsync)
                     .context("while trying to update metadata with verified log length")?;
-                message += &format!("Reset log size to {}\n", valid_len);
+                message += &format!("Reset log size to {valid_len}\n");
             }
 
             // Also rebuild corrupted indexes.
@@ -236,7 +233,7 @@ impl OpenOptions {
             Ok(message.into_string())
         })();
 
-        result.context(|| format!("in log::OpenOptions::repair({:?})", dir))
+        result.context(|| format!("in log::OpenOptions::repair({dir:?})"))
     }
 }
 
@@ -292,6 +289,6 @@ impl OpenOptions {
             Ok(())
         })();
 
-        result.context(|| format!("in log::OpenOptions::delete_content({:?})", dir))
+        result.context(|| format!("in log::OpenOptions::delete_content({dir:?})"))
     }
 }

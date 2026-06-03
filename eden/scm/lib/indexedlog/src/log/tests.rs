@@ -302,7 +302,7 @@ fn test_fmt_debug() -> crate::Result<()> {
         log.append(entry)?;
     }
     assert_eq!(
-        format!("\n{:?}", log),
+        format!("\n{log:?}"),
         // @lint-ignore-every SPELL
         r#"
 # Entry 1:
@@ -781,21 +781,19 @@ fn test_sync_fast_paths() {
             log2.sync().unwrap();
             log1.sync().unwrap();
 
-            let s = format!("(choices = {} {})", choice1, choice2);
+            let s = format!("(choices = {choice1} {choice2})");
             assert_eq!(
                 log1.lookup_range(0, ..).unwrap().count(),
                 count,
-                "log1 index is incomplete {}",
-                s
+                "log1 index is incomplete {s}"
             );
             assert_eq!(
                 log2.lookup_range(0, ..).unwrap().count(),
                 count,
-                "log2 index is incomplete {}",
-                s
+                "log2 index is incomplete {s}"
             );
-            assert_eq!(log1.iter().count(), count, "log1 log is incomplete {}", s);
-            assert_eq!(log2.iter().count(), count, "log2 log is incomplete {}", s);
+            assert_eq!(log1.iter().count(), count, "log1 log is incomplete {s}");
+            assert_eq!(log2.iter().count(), count, "log2 log is incomplete {s}");
         }
     }
 }
@@ -848,7 +846,7 @@ fn test_rebuild_indexes() {
         let index = index::OpenOptions::new()
             .open(dir.path().join("index2-key"))
             .unwrap();
-        format!("{:?}", index)
+        format!("{index:?}")
     };
 
     let dump1 = dump_index();
@@ -1054,7 +1052,7 @@ fn test_repair_and_delete_content() {
     };
     let verify_corrupted = || {
         let err = count().unwrap_err();
-        assert!(err.is_corruption(), "not a corruption:\n {:?}", err);
+        assert!(err.is_corruption(), "not a corruption:\n {err:?}");
     };
     let try_trigger_sigbus = || {
         // Check no SIGBUS

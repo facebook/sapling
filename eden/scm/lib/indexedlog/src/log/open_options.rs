@@ -509,7 +509,7 @@ impl IndexOutput {
                         let mut err = crate::Error::programming(msg);
                         // If the data is short, add its content to error message.
                         if data.len() < 128 {
-                            err = err.message(format!("Data = {:?}", data))
+                            err = err.message(format!("Data = {data:?}"))
                         }
                         err
                     })?,
@@ -548,7 +548,7 @@ impl fmt::Debug for OpenOptions {
             Some(ref _buf) => "Some(_)",
             None => "None",
         };
-        write!(f, "flush_filter: {} }}", flush_filter_desc)?;
+        write!(f, "flush_filter: {flush_filter_desc} }}")?;
         Ok(())
     }
 }
