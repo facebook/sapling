@@ -22,8 +22,8 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures::try_join;
 use futures_watchdog::WatchdogExt;
-use hooks::HookExecution;
 use hooks::HookOutcome;
+use hooks::HookResult;
 use itertools::Either;
 use mononoke_api::BookmarkKey;
 use mononoke_api::CandidateSelectionHintArgs;
@@ -1258,15 +1258,15 @@ impl SourceControlServiceImpl {
                 HookOutcome::ChangesetHook(id, exec) => (id.hook_name, exec),
             };
 
-            match execution {
-                HookExecution::Accepted => {
+            match execution.result {
+                HookResult::Accepted => {
                     outcomes_map.entry(name).or_insert_with(|| {
                         thrift::HookOutcome::accepted(thrift::HookOutcomeAccepted {
                             ..Default::default()
                         })
                     });
                 }
-                HookExecution::Rejected(rej) => {
+                HookResult::Rejected(rej) => {
                     let rejection = thrift::HookOutcomeRejected {
                         description: rej.description.to_string(),
                         long_description: rej.long_description,

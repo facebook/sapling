@@ -63,23 +63,23 @@ impl FileHook for NoInsecureFilenames {
         push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
         if push_authored_by.service() {
-            return Ok(HookExecution::Accepted);
+            return Ok(HookExecution::accepted());
         }
         if change.is_none() {
-            return Ok(HookExecution::Accepted);
+            return Ok(HookExecution::accepted());
         }
 
         let path = path.to_string();
         let lower_path = path.to_lowercase();
         if self.illegal_regex.is_match(&lower_path) {
-            return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+            return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
                 "Illegal filename",
                 format!("ABORT: Illegal filename: {path:?}"),
             )));
         }
 
         if self.insecure_lower_regex.is_match(&lower_path) {
-            return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+            return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
                 "Illegal insecure name",
                 format!("ABORT: Illegal insecure name: {path:?}"),
             )));
@@ -87,12 +87,12 @@ impl FileHook for NoInsecureFilenames {
 
         for insecure_regex in &self.insecure_regex {
             if insecure_regex.is_match(&path) {
-                return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+                return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
                     "Illegal insecure name",
                     format!("ABORT: Illegal insecure name: {path:?}"),
                 )));
             }
         }
-        Ok(HookExecution::Accepted)
+        Ok(HookExecution::accepted())
     }
 }

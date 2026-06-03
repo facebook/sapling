@@ -57,17 +57,17 @@ impl BookmarkHook for BlockNewBookmarkCreationsByNameHook {
     ) -> Result<HookExecution, Error> {
         let bookmark_state = hook_repo.get_bookmark_state(ctx, bookmark).await?;
         if !bookmark_state.is_new() {
-            return Ok(HookExecution::Accepted);
+            return Ok(HookExecution::accepted());
         }
 
         if self.config.blocked_bookmarks.is_match(bookmark.as_str()) {
             if let Some(message) = &self.config.message {
-                return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+                return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
                     "Bookmark creation is restricted in this repository.",
                     message.clone(),
                 )));
             } else {
-                return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+                return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
                     "Bookmark creation is restricted in this repository.",
                     format!(
                         "Creation of bookmark \"{}\" was blocked because it matched the '{}' regular expression",
@@ -77,6 +77,6 @@ impl BookmarkHook for BlockNewBookmarkCreationsByNameHook {
                 )));
             }
         }
-        Ok(HookExecution::Accepted)
+        Ok(HookExecution::accepted())
     }
 }

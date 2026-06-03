@@ -145,11 +145,11 @@ impl ChangesetHook for LimitDirectorySizeHook {
         push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution> {
         if push_authored_by.service() {
-            return Ok(HookExecution::Accepted);
+            return Ok(HookExecution::accepted());
         }
         if cross_repo_push_source == CrossRepoPushSource::PushRedirected {
             // For push-redirected commits, we rely on running source-repo hooks
-            return Ok(HookExecution::Accepted);
+            return Ok(HookExecution::accepted());
         }
 
         let source_changeset_id = changeset.get_changeset_id();
@@ -157,7 +157,7 @@ impl ChangesetHook for LimitDirectorySizeHook {
             Ok(changeset_id) => changeset_id,
             _ => {
                 // Ignore roots and merges
-                return Ok(HookExecution::Accepted);
+                return Ok(HookExecution::accepted());
             }
         };
 
@@ -243,7 +243,7 @@ impl ChangesetHook for LimitDirectorySizeHook {
                                 let next_growth_limit =
                                     parent_size.div_ceil(growth_limit) * growth_limit;
                                 if source_size > next_growth_limit {
-                                    return Ok(HookExecution::Rejected(
+                                    return Ok(HookExecution::rejected(
                                         HookRejectionInfo::new_long(
                                             "Directory too large",
                                             self.config
@@ -268,7 +268,7 @@ impl ChangesetHook for LimitDirectorySizeHook {
                             continue;
                         }
                     }
-                    return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+                    return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
                         "Directory too large",
                         self.config
                             .too_large_directory_message
@@ -282,7 +282,7 @@ impl ChangesetHook for LimitDirectorySizeHook {
             }
         }
 
-        Ok(HookExecution::Accepted)
+        Ok(HookExecution::accepted())
     }
 }
 
@@ -297,6 +297,7 @@ mod test {
     use mononoke_macros::mononoke;
 
     use super::*;
+    use crate::HookResult;
 
     /// Create default test config that each test can customize.
     fn make_test_config() -> LimitDirectorySizeConfig {
@@ -316,11 +317,11 @@ mod test {
     }
 
     fn assert_rejected(hook_execution: HookExecution, desc: &str) {
-        match hook_execution {
-            HookExecution::Rejected(info) => {
+        match hook_execution.result {
+            HookResult::Rejected(info) => {
                 assert_eq!(info.long_description, desc);
             }
-            HookExecution::Accepted => {
+            HookResult::Accepted => {
                 panic!("should be rejected");
             }
         };
@@ -373,7 +374,7 @@ mod test {
                 PushAuthoredBy::User,
             )
             .await?;
-        assert_eq!(hook_execution, HookExecution::Accepted);
+        assert_eq!(hook_execution, HookExecution::accepted());
         let hook_execution = hook
             .run(
                 ctx,
@@ -384,7 +385,7 @@ mod test {
                 PushAuthoredBy::User,
             )
             .await?;
-        assert_eq!(hook_execution, HookExecution::Accepted);
+        assert_eq!(hook_execution, HookExecution::accepted());
 
         // Directory size limit enabled
         let mut config = make_test_config();
@@ -400,7 +401,7 @@ mod test {
                 PushAuthoredBy::User,
             )
             .await?;
-        assert_eq!(hook_execution, HookExecution::Accepted);
+        assert_eq!(hook_execution, HookExecution::accepted());
         let hook_execution = hook
             .run(
                 ctx,
@@ -461,7 +462,7 @@ mod test {
                 PushAuthoredBy::User,
             )
             .await?;
-        assert_eq!(hook_execution, HookExecution::Accepted);
+        assert_eq!(hook_execution, HookExecution::accepted());
         let hook_execution = hook
             .run(
                 ctx,
@@ -472,7 +473,7 @@ mod test {
                 PushAuthoredBy::User,
             )
             .await?;
-        assert_eq!(hook_execution, HookExecution::Accepted);
+        assert_eq!(hook_execution, HookExecution::accepted());
 
         // Directory size limit and oversize directories with growth limit
         // enabled.
@@ -502,7 +503,7 @@ mod test {
                 PushAuthoredBy::User,
             )
             .await?;
-        assert_eq!(hook_execution, HookExecution::Accepted);
+        assert_eq!(hook_execution, HookExecution::accepted());
         let hook_execution = hook
             .run(
                 ctx,
@@ -524,7 +525,7 @@ mod test {
                 PushAuthoredBy::User,
             )
             .await?;
-        assert_eq!(hook_execution, HookExecution::Accepted);
+        assert_eq!(hook_execution, HookExecution::accepted());
         let hook_execution = hook
             .run(
                 ctx,
@@ -535,7 +536,7 @@ mod test {
                 PushAuthoredBy::User,
             )
             .await?;
-        assert_eq!(hook_execution, HookExecution::Accepted);
+        assert_eq!(hook_execution, HookExecution::accepted());
 
         // Ignore paths.
         let mut config = make_test_config();
@@ -552,7 +553,7 @@ mod test {
                 PushAuthoredBy::User,
             )
             .await?;
-        assert_eq!(hook_execution, HookExecution::Accepted);
+        assert_eq!(hook_execution, HookExecution::accepted());
 
         // Override raises limit.
         let mut config = make_test_config();
@@ -572,7 +573,7 @@ mod test {
                 PushAuthoredBy::User,
             )
             .await?;
-        assert_eq!(hook_execution, HookExecution::Accepted);
+        assert_eq!(hook_execution, HookExecution::accepted());
         let hook_execution = hook
             .run(
                 ctx,
@@ -583,7 +584,7 @@ mod test {
                 PushAuthoredBy::User,
             )
             .await?;
-        assert_eq!(hook_execution, HookExecution::Accepted);
+        assert_eq!(hook_execution, HookExecution::accepted());
 
         // Override lowers limit.
         // Base=10, override dir1 to 3 -> dir1 with 5 entries rejected.
@@ -625,7 +626,7 @@ mod test {
                 PushAuthoredBy::User,
             )
             .await?;
-        assert_eq!(hook_execution, HookExecution::Accepted);
+        assert_eq!(hook_execution, HookExecution::accepted());
 
         // Multiple overlapping overrides error.
         let mut config = make_test_config();

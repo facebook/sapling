@@ -95,11 +95,11 @@ impl ChangesetHook for LimitCommitSizeHook {
         push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution> {
         if push_authored_by.service() {
-            return Ok(HookExecution::Accepted);
+            return Ok(HookExecution::accepted());
         }
         if cross_repo_push_source == CrossRepoPushSource::PushRedirected {
             // For push-redirected commits, we rely on running source-repo hooks
-            return Ok(HookExecution::Accepted);
+            return Ok(HookExecution::accepted());
         }
 
         let mut commit_size_limit = self.config.commit_size_limit;
@@ -142,7 +142,7 @@ impl ChangesetHook for LimitCommitSizeHook {
 
         if let Some(changed_files_limit) = self.config.changed_files_limit {
             if changed_files > changed_files_limit {
-                return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+                return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
                     "Commit too large",
                     self.config
                         .too_many_files_message
@@ -154,7 +154,7 @@ impl ChangesetHook for LimitCommitSizeHook {
 
         if let Some(commit_size_limit) = commit_size_limit {
             if commit_size > commit_size_limit {
-                return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+                return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
                     "Commit too large",
                     self.config
                         .too_large_message
@@ -164,7 +164,7 @@ impl ChangesetHook for LimitCommitSizeHook {
             }
         }
 
-        Ok(HookExecution::Accepted)
+        Ok(HookExecution::accepted())
     }
 }
 
@@ -181,6 +181,7 @@ mod test {
     use tests_utils::CreateCommitContext;
 
     use super::*;
+    use crate::HookResult;
 
     /// Create default test config that each test can customize.
     fn make_test_config() -> LimitCommitSizeConfig {
@@ -223,7 +224,7 @@ mod test {
                 PushAuthoredBy::User,
             )
             .await?;
-        assert_eq!(hook_execution, HookExecution::Accepted);
+        assert_eq!(hook_execution, HookExecution::accepted());
 
         let mut config = make_test_config();
         config.commit_size_limit = Some(3);
@@ -239,7 +240,7 @@ mod test {
                 PushAuthoredBy::User,
             )
             .await?;
-        assert_eq!(hook_execution, HookExecution::Accepted);
+        assert_eq!(hook_execution, HookExecution::accepted());
 
         let mut config = make_test_config();
         config.commit_size_limit = Some(3);
@@ -255,11 +256,11 @@ mod test {
                 PushAuthoredBy::User,
             )
             .await?;
-        match hook_execution {
-            HookExecution::Rejected(info) => {
+        match hook_execution.result {
+            HookResult::Rejected(info) => {
                 assert_eq!(info.long_description, "Too many files: 3 > 1.");
             }
-            HookExecution::Accepted => {
+            HookResult::Accepted => {
                 return Err(anyhow!("should be rejected"));
             }
         };
@@ -278,11 +279,11 @@ mod test {
                 PushAuthoredBy::User,
             )
             .await?;
-        match hook_execution {
-            HookExecution::Rejected(info) => {
+        match hook_execution.result {
+            HookResult::Rejected(info) => {
                 assert_eq!(info.long_description, "Commit too large: 3 > 1.");
             }
-            HookExecution::Accepted => {
+            HookResult::Accepted => {
                 return Err(anyhow!("should be rejected"));
             }
         };
@@ -324,7 +325,7 @@ mod test {
                 PushAuthoredBy::User,
             )
             .await?;
-        assert_eq!(hook_execution, HookExecution::Accepted);
+        assert_eq!(hook_execution, HookExecution::accepted());
 
         let mut config = make_test_config();
         config.commit_size_limit = Some(100);
@@ -340,11 +341,11 @@ mod test {
                 PushAuthoredBy::User,
             )
             .await?;
-        match hook_execution {
-            HookExecution::Rejected(info) => {
+        match hook_execution.result {
+            HookResult::Rejected(info) => {
                 assert_eq!(info.long_description, "Too many files: 2 > 1.");
             }
-            HookExecution::Accepted => {
+            HookResult::Accepted => {
                 return Err(anyhow!("should be rejected"));
             }
         };
@@ -386,7 +387,7 @@ mod test {
             )
             .await?;
         // override max size is 3 bytes which is enough for 3 bytes commit
-        assert_eq!(hook_execution, HookExecution::Accepted);
+        assert_eq!(hook_execution, HookExecution::accepted());
 
         Ok(())
     }
@@ -427,11 +428,11 @@ mod test {
             )
             .await?;
         // override max size is 2 bytes, but commit has 3 in total
-        match hook_execution {
-            HookExecution::Rejected(info) => {
+        match hook_execution.result {
+            HookResult::Rejected(info) => {
                 assert_eq!(info.long_description, "Commit too large: 3 > 2.");
             }
-            HookExecution::Accepted => {
+            HookResult::Accepted => {
                 return Err(anyhow!("should be rejected"));
             }
         };
@@ -476,13 +477,13 @@ mod test {
             )
             .await?;
 
-        match hook_execution {
-            HookExecution::Rejected(_) => {
+        match hook_execution.result {
+            HookResult::Rejected(_) => {
                 return Err(anyhow!(
                     "files in ignored_dir should not count towards limit"
                 ));
             }
-            HookExecution::Accepted => {}
+            HookResult::Accepted => {}
         };
 
         Ok(())

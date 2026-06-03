@@ -57,7 +57,7 @@ impl ChangesetHook for BlockMixedUsersChangesHook {
         push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution> {
         if push_authored_by.service() {
-            return Ok(HookExecution::Accepted);
+            return Ok(HookExecution::accepted());
         }
 
         let mut has_users_changes = false;
@@ -71,7 +71,7 @@ impl ChangesetHook for BlockMixedUsersChangesHook {
             }
 
             if has_users_changes && has_non_users_changes {
-                return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+                return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
                     "Mixed users/ and non-users/ changes",
                     format!(
                         "Your commit contains changes in {0} and non-{0}, making this commit unrevertable by anyone but you. This adds friction to incident resolution, so we encourage you to split the {0} changes into a separate diff.",
@@ -81,7 +81,7 @@ impl ChangesetHook for BlockMixedUsersChangesHook {
             }
         }
 
-        Ok(HookExecution::Accepted)
+        Ok(HookExecution::accepted())
     }
 }
 
@@ -138,7 +138,7 @@ mod test {
 
         let bcs = cs_id.load(ctx, &repo.repo_blobstore).await?;
         let result = run_hook(ctx, repo, &bcs, default_config(), PushAuthoredBy::User).await?;
-        assert_eq!(result, HookExecution::Accepted);
+        assert_eq!(result, HookExecution::accepted());
         Ok(())
     }
 
@@ -156,7 +156,7 @@ mod test {
 
         let bcs = cs_id.load(ctx, &repo.repo_blobstore).await?;
         let result = run_hook(ctx, repo, &bcs, default_config(), PushAuthoredBy::User).await?;
-        assert_eq!(result, HookExecution::Accepted);
+        assert_eq!(result, HookExecution::accepted());
         Ok(())
     }
 
@@ -174,7 +174,7 @@ mod test {
 
         let bcs = cs_id.load(ctx, &repo.repo_blobstore).await?;
         let result = run_hook(ctx, repo, &bcs, default_config(), PushAuthoredBy::User).await?;
-        assert!(matches!(result, HookExecution::Rejected(_)));
+        assert!(result.is_rejected());
         Ok(())
     }
 
@@ -192,7 +192,7 @@ mod test {
 
         let bcs = cs_id.load(ctx, &repo.repo_blobstore).await?;
         let result = run_hook(ctx, repo, &bcs, default_config(), PushAuthoredBy::Service).await?;
-        assert_eq!(result, HookExecution::Accepted);
+        assert_eq!(result, HookExecution::accepted());
         Ok(())
     }
 
@@ -206,7 +206,7 @@ mod test {
 
         let bcs = cs_id.load(ctx, &repo.repo_blobstore).await?;
         let result = run_hook(ctx, repo, &bcs, default_config(), PushAuthoredBy::User).await?;
-        assert_eq!(result, HookExecution::Accepted);
+        assert_eq!(result, HookExecution::accepted());
         Ok(())
     }
 
@@ -229,7 +229,7 @@ mod test {
 
         let bcs = cs_id.load(ctx, &repo.repo_blobstore).await?;
         let result = run_hook(ctx, repo, &bcs, default_config(), PushAuthoredBy::User).await?;
-        assert!(matches!(result, HookExecution::Rejected(_)));
+        assert!(result.is_rejected());
         Ok(())
     }
 
@@ -251,7 +251,7 @@ mod test {
 
         let bcs = cs_id.load(ctx, &repo.repo_blobstore).await?;
         let result = run_hook(ctx, repo, &bcs, config, PushAuthoredBy::User).await?;
-        assert!(matches!(result, HookExecution::Rejected(_)));
+        assert!(result.is_rejected());
         Ok(())
     }
 }

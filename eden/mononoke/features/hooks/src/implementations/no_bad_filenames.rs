@@ -83,7 +83,7 @@ impl FileHook for NoBadFilenamesHook {
         push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution> {
         if push_authored_by.service() || change.is_none() {
-            return Ok(HookExecution::Accepted);
+            return Ok(HookExecution::accepted());
         }
 
         let path = path.to_string();
@@ -93,9 +93,9 @@ impl FileHook for NoBadFilenamesHook {
             if let Some(ref allow) = self.config.allowlist_regex
                 && allow.is_match(&path)
             {
-                Ok(HookExecution::Accepted)
+                Ok(HookExecution::accepted())
             } else {
-                Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+                Ok(HookExecution::rejected(HookRejectionInfo::new_long(
                     "Illegal filename",
                     self.config
                         .illegal_filename_message
@@ -104,7 +104,7 @@ impl FileHook for NoBadFilenamesHook {
                 )))
             }
         } else {
-            Ok(HookExecution::Accepted)
+            Ok(HookExecution::accepted())
         }
     }
 }
@@ -122,6 +122,7 @@ mod test {
     use tests_utils::CreateCommitContext;
 
     use super::*;
+    use crate::HookResult;
 
     // Regex for filenames that are almost never supposed to be committed. It matches any
     // occurrence of backticks, pipes, and colon characters. It also matches tilde characters,
@@ -168,7 +169,7 @@ mod test {
                     PushAuthoredBy::User,
                 )
                 .await?;
-            assert_eq!(hook_execution, HookExecution::Accepted);
+            assert_eq!(hook_execution, HookExecution::accepted());
         }
         Ok(())
     }
@@ -206,9 +207,9 @@ mod test {
                     PushAuthoredBy::User,
                 )
                 .await?;
-            match hook_execution {
-                HookExecution::Accepted => return Err(anyhow!("should be rejected")),
-                HookExecution::Rejected(info) => {
+            match hook_execution.result {
+                HookResult::Accepted => return Err(anyhow!("should be rejected")),
+                HookResult::Rejected(info) => {
                     assert_eq!(
                         info.long_description,
                         "Filename: '${filename}' and Pattern '${illegal_pattern}'."
@@ -251,7 +252,7 @@ mod test {
                     PushAuthoredBy::User,
                 )
                 .await?;
-            assert_eq!(hook_execution, HookExecution::Accepted);
+            assert_eq!(hook_execution, HookExecution::accepted());
         }
         Ok(())
     }
@@ -287,7 +288,7 @@ mod test {
                     PushAuthoredBy::User,
                 )
                 .await?;
-            assert_eq!(hook_execution, HookExecution::Accepted);
+            assert_eq!(hook_execution, HookExecution::accepted());
         }
         Ok(())
     }
@@ -320,9 +321,9 @@ mod test {
                     PushAuthoredBy::User,
                 )
                 .await?;
-            match hook_execution {
-                HookExecution::Accepted => return Err(anyhow!("should be rejected")),
-                HookExecution::Rejected(info) => {
+            match hook_execution.result {
+                HookResult::Accepted => return Err(anyhow!("should be rejected")),
+                HookResult::Rejected(info) => {
                     assert_eq!(
                         info.long_description,
                         "Filename: '${filename}' and Pattern '${illegal_pattern}'."
@@ -364,7 +365,7 @@ mod test {
                     PushAuthoredBy::User,
                 )
                 .await?;
-            assert_eq!(hook_execution, HookExecution::Accepted);
+            assert_eq!(hook_execution, HookExecution::accepted());
         }
         Ok(())
     }

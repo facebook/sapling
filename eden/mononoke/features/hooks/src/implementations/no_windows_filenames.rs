@@ -69,7 +69,7 @@ impl NoWindowsFilenamesHook {
             .context("Error while creating bad windows path element regex")?;
         for element in path {
             if bad_windows_path_element.is_match(element.as_ref()) {
-                return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+                return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
                     "Illegal windows filename",
                     self.config
                         .illegal_filename_message
@@ -78,7 +78,7 @@ impl NoWindowsFilenamesHook {
                 )));
             }
         }
-        Ok(HookExecution::Accepted)
+        Ok(HookExecution::accepted())
     }
 }
 
@@ -94,21 +94,21 @@ impl FileHook for NoWindowsFilenamesHook {
         push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution> {
         if push_authored_by.service() {
-            return Ok(HookExecution::Accepted);
+            return Ok(HookExecution::accepted());
         }
         if cross_repo_push_source == CrossRepoPushSource::PushRedirected {
             // For push-redirected pushes we rely on the hook
             // running in the original repo
-            return Ok(HookExecution::Accepted);
+            return Ok(HookExecution::accepted());
         }
 
         if change.is_none() {
-            return Ok(HookExecution::Accepted);
+            return Ok(HookExecution::accepted());
         }
 
         if let Some(allowed_paths) = &self.config.allowed_paths {
             if allowed_paths.is_match(&path.to_vec()) {
-                return Ok(HookExecution::Accepted);
+                return Ok(HookExecution::accepted());
             }
         }
 
@@ -123,6 +123,7 @@ mod test {
     use mononoke_macros::mononoke;
 
     use super::*;
+    use crate::HookResult;
 
     fn check_path(path: &str) -> bool {
         let hook = NoWindowsFilenamesHook::with_config(NoWindowsFilenamesConfig {
@@ -132,9 +133,10 @@ mod test {
         match hook
             .check_path_for_bad_elements(&NonRootMPath::new(path).unwrap())
             .unwrap()
+            .result
         {
-            HookExecution::Accepted => true,
-            HookExecution::Rejected(_) => false,
+            HookResult::Accepted => true,
+            HookResult::Rejected(_) => false,
         }
     }
 

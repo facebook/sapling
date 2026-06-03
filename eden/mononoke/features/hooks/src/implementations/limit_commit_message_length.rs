@@ -58,7 +58,7 @@ impl ChangesetHook for LimitCommitMessageLengthHook {
         push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
         if push_authored_by.service() {
-            return Ok(HookExecution::Accepted);
+            return Ok(HookExecution::accepted());
         }
         let message = changeset.message();
         let len = message.len();
@@ -72,7 +72,7 @@ impl ChangesetHook for LimitCommitMessageLengthHook {
                     .unwrap_or(DEFAULT_TITLE_LENGTH),
             );
 
-            HookExecution::Rejected(HookRejectionInfo::new_long(
+            HookExecution::rejected(HookRejectionInfo::new_long(
                 "Commit message too long",
                 format!(
                     "Commit message length for '{}' ({}) exceeds length limit (>= {})",
@@ -80,7 +80,7 @@ impl ChangesetHook for LimitCommitMessageLengthHook {
                 ),
             ))
         } else {
-            HookExecution::Accepted
+            HookExecution::accepted()
         };
 
         Ok(execution)

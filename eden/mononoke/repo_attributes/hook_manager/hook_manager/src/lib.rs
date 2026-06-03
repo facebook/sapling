@@ -35,6 +35,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::NonRootMPath;
 use mononoke_types::hash::GitSha1;
+use scuba::ScubaValue;
 use scuba_ext::MononokeScubaSampleBuilder;
 
 pub use crate::errors::HookManagerError;
@@ -138,16 +139,19 @@ fn log_execution_stats(
     ctx.perf_counters().insert_perf_counters(&mut scuba);
 
     match result.as_mut() {
-        Ok(outcome) => match outcome.get_execution() {
-            HookExecution::Accepted => {
+        Ok(outcome) => match &outcome.get_execution().result {
+            HookResult::Accepted => {
                 // Nothing to do
             }
-            HookExecution::Rejected(info) if log_only => {
+            HookResult::Rejected(info) if log_only => {
                 scuba.add("log_only_rejection", info.long_description.clone());
-                // Convert to accepted as we are only logging.
-                outcome.set_execution(HookExecution::Accepted);
+                // Convert to accepted as we are only logging, but preserve any
+                // `extra_logs` the hook produced so they still reach the
+                // `extra_logs` column emitted below.
+                let extra_logs = outcome.get_execution().extra_logs.clone();
+                outcome.set_execution(HookExecution::accepted_with_logs(extra_logs));
             }
-            HookExecution::Rejected(info) => {
+            HookResult::Rejected(info) => {
                 failed_hooks = 1;
                 errorcode = 1;
                 stderr = Some(info.long_description.clone());
@@ -159,6 +163,14 @@ fn log_execution_stats(
             scuba.add("internal_failure", true);
         }
     };
+
+    // Emit the `extra_logs` column (a normvector) when the hook produced any.
+    // Done via a non-mutating read after the `as_mut` block above closes.
+    if let Ok(outcome) = result.as_ref() {
+        if let Some(v) = extra_logs_scuba_value(&outcome.get_execution().extra_logs) {
+            scuba.add("extra_logs", v);
+        }
+    }
 
     if let Some(stderr) = stderr {
         scuba.add("stderr", stderr);
@@ -411,10 +423,7 @@ impl fmt::Display for HookOutcome {
 
 impl HookOutcome {
     pub fn is_rejection(&self) -> bool {
-        match self.get_execution() {
-            HookExecution::Accepted => false,
-            HookExecution::Rejected(_) => true,
-        }
+        self.get_execution().is_rejected()
     }
 
     pub fn is_accept(&self) -> bool {
@@ -462,21 +471,49 @@ impl HookOutcome {
     }
 
     pub fn into_rejection(self) -> Option<HookRejection> {
+        // Note: `extra_logs` are intentionally dropped here (matched via `..`).
+        // They are consumed earlier by `log_execution_stats` (which runs inside
+        // `run_hook` before any `into_rejection` consumer), so a `HookRejection`
+        // only needs to carry the rejection reason.
         match self {
-            HookOutcome::BookmarkHook(_, HookExecution::Accepted)
-            | HookOutcome::ChangesetHook(_, HookExecution::Accepted)
-            | HookOutcome::FileHook(_, HookExecution::Accepted) => None,
+            HookOutcome::BookmarkHook(
+                _,
+                HookExecution {
+                    result: HookResult::Accepted,
+                    ..
+                },
+            )
+            | HookOutcome::ChangesetHook(
+                _,
+                HookExecution {
+                    result: HookResult::Accepted,
+                    ..
+                },
+            )
+            | HookOutcome::FileHook(
+                _,
+                HookExecution {
+                    result: HookResult::Accepted,
+                    ..
+                },
+            ) => None,
             HookOutcome::BookmarkHook(
                 BookmarkHookExecutionId {
                     cs_id,
                     bookmark_name: _,
                     hook_name,
                 },
-                HookExecution::Rejected(reason),
+                HookExecution {
+                    result: HookResult::Rejected(reason),
+                    ..
+                },
             )
             | HookOutcome::ChangesetHook(
                 ChangesetHookExecutionId { cs_id, hook_name },
-                HookExecution::Rejected(reason),
+                HookExecution {
+                    result: HookResult::Rejected(reason),
+                    ..
+                },
             )
             | HookOutcome::FileHook(
                 FileHookExecutionId {
@@ -484,7 +521,10 @@ impl HookOutcome {
                     hook_name,
                     path: _,
                 },
-                HookExecution::Rejected(reason),
+                HookExecution {
+                    result: HookResult::Rejected(reason),
+                    ..
+                },
             ) => Some(HookRejection {
                 hook_name,
                 cs_id,
@@ -507,11 +547,79 @@ pub struct HookRejection {
     pub reason: HookRejectionInfo,
 }
 
-/// Result of executing a hook.
+/// Result of executing a hook (renamed from the old `HookExecution` enum).
 #[derive(Clone, Debug, PartialEq)]
-pub enum HookExecution {
+pub enum HookResult {
     Accepted,
     Rejected(HookRejectionInfo),
+}
+
+/// Full outcome of one hook run: the result plus any extra diagnostic log
+/// lines the hook chose to emit (surfaced in Scuba for debugging).
+#[derive(Clone, Debug, PartialEq)]
+pub struct HookExecution {
+    pub result: HookResult,
+    pub extra_logs: Vec<String>,
+}
+
+impl HookExecution {
+    /// An accepted execution with no extra logs.
+    pub fn accepted() -> Self {
+        Self {
+            result: HookResult::Accepted,
+            extra_logs: vec![],
+        }
+    }
+
+    /// A rejected execution with no extra logs.
+    pub fn rejected(info: HookRejectionInfo) -> Self {
+        Self {
+            result: HookResult::Rejected(info),
+            extra_logs: vec![],
+        }
+    }
+
+    /// An accepted execution carrying extra diagnostic log lines.
+    pub fn accepted_with_logs(extra_logs: Vec<String>) -> Self {
+        Self {
+            result: HookResult::Accepted,
+            extra_logs,
+        }
+    }
+
+    /// A rejected execution carrying extra diagnostic log lines.
+    pub fn rejected_with_logs(info: HookRejectionInfo, extra_logs: Vec<String>) -> Self {
+        Self {
+            result: HookResult::Rejected(info),
+            extra_logs,
+        }
+    }
+
+    /// True if this execution accepted the changeset.
+    pub fn is_accepted(&self) -> bool {
+        matches!(self.result, HookResult::Accepted)
+    }
+
+    /// True if this execution rejected the changeset.
+    pub fn is_rejected(&self) -> bool {
+        !self.is_accepted()
+    }
+
+    /// Borrow the rejection reason, if this execution rejected.
+    pub(crate) fn rejection_info(&self) -> Option<&HookRejectionInfo> {
+        match &self.result {
+            HookResult::Rejected(info) => Some(info),
+            HookResult::Accepted => None,
+        }
+    }
+
+    /// True if this execution rejected for a reason satisfying `predicate`.
+    pub fn is_rejected_with_reason(
+        &self,
+        predicate: impl FnOnce(&HookRejectionInfo) -> bool,
+    ) -> bool {
+        self.rejection_info().is_some_and(predicate)
+    }
 }
 
 impl From<HookOutcome> for HookExecution {
@@ -524,12 +632,30 @@ impl From<HookOutcome> for HookExecution {
     }
 }
 
-impl fmt::Display for HookExecution {
+impl fmt::Display for HookResult {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            HookExecution::Accepted => write!(f, "Accepted"),
-            HookExecution::Rejected(reason) => write!(f, "Rejected: {}", reason.long_description),
+            HookResult::Accepted => write!(f, "Accepted"),
+            HookResult::Rejected(reason) => write!(f, "Rejected: {}", reason.long_description),
         }
+    }
+}
+
+impl fmt::Display for HookExecution {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // `extra_logs` are intentionally not shown; user-facing output is the
+        // result only (unchanged from before this struct existed).
+        write!(f, "{}", self.result)
+    }
+}
+
+/// Build the `extra_logs` Scuba value, or `None` when there are no logs.
+/// Always a normvector (list) — never a joined string (see design §D4).
+pub(crate) fn extra_logs_scuba_value(logs: &[String]) -> Option<ScubaValue> {
+    if logs.is_empty() {
+        None
+    } else {
+        Some(ScubaValue::from(logs.to_vec()))
     }
 }
 

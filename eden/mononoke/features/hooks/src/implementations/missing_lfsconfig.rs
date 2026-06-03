@@ -55,7 +55,7 @@ impl ChangesetHook for MissingLFSConfigHook {
             .await?;
 
         if !lfsconfig_file.is_empty() {
-            return Ok(HookExecution::Accepted);
+            return Ok(HookExecution::accepted());
         }
 
         let adding_lfsconfig = changeset
@@ -63,13 +63,13 @@ impl ChangesetHook for MissingLFSConfigHook {
             .any(|(path, _)| *path == lfsconfig_path);
 
         if adding_lfsconfig {
-            return Ok(HookExecution::Accepted);
+            return Ok(HookExecution::accepted());
         }
 
         for (_, change) in changeset.file_changes() {
             if let Some(git_lfs) = change.git_lfs() {
                 if git_lfs.is_lfs_pointer() {
-                    return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+                    return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
                         "This commit add an LFS pointer but there is no .lfsconfig in this repository.",
                         "You need to add a properly defined .lfsconfig at the root directory of the repository prior to pushing.".to_string(),
                     )));
@@ -77,6 +77,6 @@ impl ChangesetHook for MissingLFSConfigHook {
             }
         }
 
-        Ok(HookExecution::Accepted)
+        Ok(HookExecution::accepted())
     }
 }

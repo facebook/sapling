@@ -72,7 +72,7 @@ impl FileHook for BlockContentPatternHook {
         push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution> {
         if push_authored_by.service() {
-            return Ok(HookExecution::Accepted);
+            return Ok(HookExecution::accepted());
         }
         let path = path.to_string();
 
@@ -82,7 +82,7 @@ impl FileHook for BlockContentPatternHook {
             .iter()
             .any(|regex| regex.is_match(&path))
         {
-            return Ok(HookExecution::Accepted);
+            return Ok(HookExecution::accepted());
         }
 
         if let Some(change) = change {
@@ -93,7 +93,7 @@ impl FileHook for BlockContentPatternHook {
                         let mut message = String::new();
                         caps.expand(&self.config.message, &mut message);
                         write!(message, ": {path}")?;
-                        return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+                        return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
                             "File contains blocked pattern",
                             message,
                         )));
@@ -101,7 +101,7 @@ impl FileHook for BlockContentPatternHook {
                 }
             }
         }
-        Ok(HookExecution::Accepted)
+        Ok(HookExecution::accepted())
     }
 }
 
@@ -157,7 +157,7 @@ mod tests {
                 PushAuthoredBy::User,
             )
             .await?,
-            vec![("A".try_into()?, HookExecution::Accepted),]
+            vec![("A".try_into()?, HookExecution::accepted()),]
         );
         assert_eq!(
             test_file_hook(
@@ -170,10 +170,10 @@ mod tests {
             )
             .await?,
             vec![
-                ("B".try_into()?, HookExecution::Accepted),
+                ("B".try_into()?, HookExecution::accepted()),
                 (
                     "file".try_into()?,
-                    HookExecution::Rejected(HookRejectionInfo {
+                    HookExecution::rejected(HookRejectionInfo {
                         description: "File contains blocked pattern".into(),
                         long_description: "disallowed marker: %block_commit%: file".into(),
                     })
@@ -191,10 +191,10 @@ mod tests {
             )
             .await?,
             vec![
-                ("C".try_into()?, HookExecution::Accepted),
+                ("C".try_into()?, HookExecution::accepted()),
                 (
                     "file".try_into()?,
-                    HookExecution::Rejected(HookRejectionInfo {
+                    HookExecution::rejected(HookRejectionInfo {
                         description: "File contains blocked pattern".into(),
                         long_description: "disallowed marker: %PREVENT_COMMIT%: file".into(),
                     })
@@ -213,10 +213,10 @@ mod tests {
             )
             .await?,
             vec![
-                ("F".try_into()?, HookExecution::Accepted),
+                ("F".try_into()?, HookExecution::accepted()),
                 (
                     "file".try_into()?,
-                    HookExecution::Rejected(HookRejectionInfo {
+                    HookExecution::rejected(HookRejectionInfo {
                         description: "File contains blocked pattern".into(),
                         long_description: "disallowed marker: \r\n: file".into(),
                     })
@@ -236,7 +236,7 @@ mod tests {
                 PushAuthoredBy::User,
             )
             .await?,
-            vec![("D".try_into()?, HookExecution::Accepted)],
+            vec![("D".try_into()?, HookExecution::accepted())],
         );
 
         // Test ignore_path_regexes: E is allowed because the modified file
@@ -252,8 +252,8 @@ mod tests {
             )
             .await?,
             vec![
-                ("E".try_into()?, HookExecution::Accepted),
-                ("allowed_file".try_into()?, HookExecution::Accepted),
+                ("E".try_into()?, HookExecution::accepted()),
+                ("allowed_file".try_into()?, HookExecution::accepted()),
             ],
         );
 
@@ -298,7 +298,7 @@ mod tests {
                 PushAuthoredBy::User,
             )
             .await?,
-            vec![("A".try_into()?, HookExecution::Accepted),]
+            vec![("A".try_into()?, HookExecution::accepted()),]
         );
         assert_eq!(
             test_file_hook(
@@ -311,10 +311,10 @@ mod tests {
             )
             .await?,
             vec![
-                ("B".try_into()?, HookExecution::Accepted),
+                ("B".try_into()?, HookExecution::accepted()),
                 (
                     "file".try_into()?,
-                    HookExecution::Rejected(HookRejectionInfo {
+                    HookExecution::rejected(HookRejectionInfo {
                         description: "File contains blocked pattern".into(),
                         long_description: "Conflict marker found: {<<<<<<< }: file".into(),
                     })
@@ -332,10 +332,10 @@ mod tests {
             )
             .await?,
             vec![
-                ("C".try_into()?, HookExecution::Accepted),
+                ("C".try_into()?, HookExecution::accepted()),
                 (
                     "file".try_into()?,
-                    HookExecution::Rejected(HookRejectionInfo {
+                    HookExecution::rejected(HookRejectionInfo {
                         description: "File contains blocked pattern".into(),
                         long_description: "Conflict marker found: {>>>>>>> }: file".into(),
                     })
@@ -355,7 +355,7 @@ mod tests {
                 PushAuthoredBy::User,
             )
             .await?,
-            vec![("D".try_into()?, HookExecution::Accepted)],
+            vec![("D".try_into()?, HookExecution::accepted())],
         );
 
         // Test ignore_path_regexes: E is allowed because the modified file
@@ -371,8 +371,8 @@ mod tests {
             )
             .await?,
             vec![
-                ("E".try_into()?, HookExecution::Accepted),
-                ("allowed_file.md".try_into()?, HookExecution::Accepted),
+                ("E".try_into()?, HookExecution::accepted()),
+                ("allowed_file.md".try_into()?, HookExecution::accepted()),
             ],
         );
 

@@ -73,16 +73,16 @@ impl ChangesetHook for BlockUncleanMergeCommitsHook {
         _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
         if bookmark.is_tag() {
-            return Ok(HookExecution::Accepted);
+            return Ok(HookExecution::accepted());
         }
 
         if !changeset.is_merge() {
-            return Ok(HookExecution::Accepted);
+            return Ok(HookExecution::accepted());
         }
 
         let fail_msg = if let Some(regex) = &self.config.only_check_branches_matching_regex {
             if !regex.is_match(bookmark.as_str()) {
-                return Ok(HookExecution::Accepted);
+                return Ok(HookExecution::accepted());
             } else {
                 format!(
                     "The bookmark matching regex {regex} can't have merge commits with conflicts, even if they have been resolved"
@@ -137,14 +137,14 @@ impl ChangesetHook for BlockUncleanMergeCommitsHook {
             )
             .await?
             {
-                return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+                return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
                     "Merge commits with conflicts, even if resolved are not allowed. If you think this is a false-positive, please add '@allow-unclean-merges' as a standalone line to the commit message",
                     fail_msg,
                 )));
             }
         }
 
-        Ok(HookExecution::Accepted)
+        Ok(HookExecution::accepted())
     }
 }
 

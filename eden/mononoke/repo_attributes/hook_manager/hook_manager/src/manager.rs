@@ -618,7 +618,7 @@ impl HookManager {
 }
 
 fn unauthorized_bypass_rejection(group_name: &str) -> HookExecution {
-    HookExecution::Rejected(HookRejectionInfo::new_long(
+    HookExecution::rejected(HookRejectionInfo::new_long(
         "Hook bypass not authorized",
         format!(
             "You are not a member of group '{group_name}'. \

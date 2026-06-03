@@ -63,17 +63,17 @@ impl ChangesetHook for BlockCommitMessagePatternHook {
         push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution> {
         if push_authored_by.service() {
-            return Ok(HookExecution::Accepted);
+            return Ok(HookExecution::accepted());
         }
         if let Some(caps) = self.config.pattern.captures(changeset.message()) {
             let mut message = String::new();
             caps.expand(&self.config.message, &mut message);
-            return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+            return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
                 "Commit message contains blocked pattern",
                 message,
             )));
         }
-        Ok(HookExecution::Accepted)
+        Ok(HookExecution::accepted())
     }
 }
 
@@ -126,7 +126,7 @@ mod tests {
                 PushAuthoredBy::User,
             )
             .await?,
-            HookExecution::Accepted,
+            HookExecution::accepted(),
         );
         assert_eq!(
             test_changeset_hook(
@@ -139,7 +139,7 @@ mod tests {
                 PushAuthoredBy::User,
             )
             .await?,
-            HookExecution::Rejected(HookRejectionInfo {
+            HookExecution::rejected(HookRejectionInfo {
                 description: "Commit message contains blocked pattern".into(),
                 long_description: "disallowed marker: %block_commit%".into(),
             }),
@@ -155,7 +155,7 @@ mod tests {
                 PushAuthoredBy::User,
             )
             .await?,
-            HookExecution::Rejected(HookRejectionInfo {
+            HookExecution::rejected(HookRejectionInfo {
                 description: "Commit message contains blocked pattern".into(),
                 long_description: "disallowed marker: %PREVENT_COMMIT%".into(),
             }),

@@ -58,7 +58,7 @@ impl FileHook for BlockFilesHook {
         push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution> {
         if push_authored_by.service() {
-            return Ok(HookExecution::Accepted);
+            return Ok(HookExecution::accepted());
         }
 
         block_unacceptable_patterns(&self.config, path, cross_repo_push_source, change)
@@ -66,7 +66,7 @@ impl FileHook for BlockFilesHook {
 }
 
 fn rejection<'a, 'b>(path: &'a String, pattern: &'b Regex) -> HookExecution {
-    HookExecution::Rejected(HookRejectionInfo::new_long(
+    HookExecution::rejected(HookRejectionInfo::new_long(
         "Blocked filename matched name pattern",
         format!(
             "Blocked filename '{path}' matched name pattern '{pattern}'. Rename or remove this file and try again."
@@ -91,7 +91,7 @@ fn block_unacceptable_patterns<'a, 'b>(
     }
     if change.is_none() {
         // It is acceptable to delete any file
-        return Ok(HookExecution::Accepted);
+        return Ok(HookExecution::accepted());
     }
 
     for pattern in &config.block_patterns {
@@ -100,7 +100,7 @@ fn block_unacceptable_patterns<'a, 'b>(
         }
     }
 
-    Ok(HookExecution::Accepted)
+    Ok(HookExecution::accepted())
 }
 
 #[cfg(test)]
@@ -140,7 +140,7 @@ mod test {
             Some(&basic_change()),
         )
         .unwrap();
-        assert!(matches!(r, HookExecution::Rejected(_)));
+        assert!(r.is_rejected());
 
         let r = block_unacceptable_patterns(
             &config,
@@ -149,7 +149,7 @@ mod test {
             Some(&basic_change()),
         )
         .unwrap();
-        assert!(matches!(r, HookExecution::Rejected(_)));
+        assert!(r.is_rejected());
     }
 
     #[mononoke::test]
@@ -163,7 +163,7 @@ mod test {
             Some(&basic_change()),
         )
         .unwrap();
-        assert!(matches!(r, HookExecution::Rejected(_)));
+        assert!(r.is_rejected());
 
         let r = block_unacceptable_patterns(
             &config,
@@ -172,7 +172,7 @@ mod test {
             Some(&basic_change()),
         )
         .unwrap();
-        assert!(matches!(r, HookExecution::Accepted));
+        assert!(r.is_accepted());
     }
 
     #[mononoke::test]
@@ -182,7 +182,7 @@ mod test {
         let r =
             block_unacceptable_patterns(&config, &mp, CrossRepoPushSource::NativeToThisRepo, None)
                 .unwrap();
-        assert!(matches!(r, HookExecution::Rejected(_)));
+        assert!(r.is_rejected());
 
         let r = block_unacceptable_patterns(
             &config,
@@ -191,7 +191,7 @@ mod test {
             Some(&basic_change()),
         )
         .unwrap();
-        assert!(matches!(r, HookExecution::Accepted));
+        assert!(r.is_accepted());
     }
 
     #[mononoke::test]
@@ -205,7 +205,7 @@ mod test {
             Some(&basic_change()),
         )
         .unwrap();
-        assert!(matches!(r, HookExecution::Accepted));
+        assert!(r.is_accepted());
 
         let r = block_unacceptable_patterns(
             &config,
@@ -214,6 +214,6 @@ mod test {
             Some(&basic_change()),
         )
         .unwrap();
-        assert!(matches!(r, HookExecution::Accepted));
+        assert!(r.is_accepted());
     }
 }

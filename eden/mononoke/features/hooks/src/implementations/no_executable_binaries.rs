@@ -74,7 +74,7 @@ impl FileHook for NoExecutableBinariesHook {
                 let allowed_mpath = NonRootMPath::new(allowed_path)
                     .with_context(|| anyhow!("{allowed_path} is an invalid path"))?;
                 if allowed_mpath.is_prefix_of(path) {
-                    return Ok(HookExecution::Accepted);
+                    return Ok(HookExecution::accepted());
                 }
             }
         }
@@ -82,13 +82,13 @@ impl FileHook for NoExecutableBinariesHook {
             Some(basic_fc) => {
                 if basic_fc.file_type() != FileType::Executable {
                     // Not an executable, so passes hook right away
-                    return Ok(HookExecution::Accepted);
+                    return Ok(HookExecution::accepted());
                 };
                 (basic_fc.content_id(), basic_fc.size())
             }
             _ => {
                 // File change is not committed, so passes hook
-                return Ok(HookExecution::Accepted);
+                return Ok(HookExecution::accepted());
             }
         };
 
@@ -104,18 +104,18 @@ impl FileHook for NoExecutableBinariesHook {
 
         if is_allow_listed_file {
             // Allow-listed file
-            return Ok(HookExecution::Accepted);
+            return Ok(HookExecution::accepted());
         }
 
         if content_metadata.is_binary || self.config.block_all_executables.unwrap_or(false) {
-            return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+            return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
                 "Illegal executable file",
                 self.config
                     .illegal_executable_binary_message
                     .replace("${filename}", &path.to_string()),
             )));
         }
-        Ok(HookExecution::Accepted)
+        Ok(HookExecution::accepted())
     }
 }
 
@@ -137,6 +137,7 @@ mod test {
     use tests_utils::CreateCommitContext;
 
     use super::*;
+    use crate::HookResult;
 
     /// Create default test config that each test can customize.
     fn make_test_config() -> NoExecutableBinariesConfig {
@@ -191,9 +192,9 @@ mod test {
                 )
                 .await?;
 
-            match hook_execution {
-                HookExecution::Accepted => assert!(valid_files.contains(path.to_string().as_str())),
-                HookExecution::Rejected(info) => {
+            match hook_execution.result {
+                HookResult::Accepted => assert!(valid_files.contains(path.to_string().as_str())),
+                HookResult::Rejected(info) => {
                     let expected_info_msg = illegal_files
                         .get(path.to_string().as_str())
                         .ok_or(anyhow!("Unexpected rejected file"))?;

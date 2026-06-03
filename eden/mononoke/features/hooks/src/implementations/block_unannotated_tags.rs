@@ -41,11 +41,11 @@ impl BookmarkHook for BlockUnannotatedTagsHook {
         _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
         if !bookmark.is_tag() {
-            return Ok(HookExecution::Accepted);
+            return Ok(HookExecution::accepted());
         }
 
         if let TagType::LightweightTag = hook_repo.get_tag_type(ctx, bookmark).await? {
-            return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+            return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
                 "Git unannotated tags are not allowed in this repository.",
                 format!(
                     "The un-annotated tag \"{}\" is not allowed in this repository.\nUse 'git tag [ -a | -s ]' for tags you want to propagate.",
@@ -53,6 +53,6 @@ impl BookmarkHook for BlockUnannotatedTagsHook {
                 ),
             )));
         }
-        Ok(HookExecution::Accepted)
+        Ok(HookExecution::accepted())
     }
 }

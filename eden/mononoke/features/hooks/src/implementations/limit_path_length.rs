@@ -61,11 +61,11 @@ impl FileHook for LimitPathLengthHook {
         push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
         if push_authored_by.service() {
-            return Ok(HookExecution::Accepted);
+            return Ok(HookExecution::accepted());
         }
         if change.is_none() {
             // You can always delete paths
-            return Ok(HookExecution::Accepted);
+            return Ok(HookExecution::accepted());
         }
 
         // Encode file in mercurial encoding to make sure mercurial can accept those files
@@ -77,7 +77,7 @@ impl FileHook for LimitPathLengthHook {
         let len = path.len();
 
         let execution = if len >= self.config.length_limit {
-            HookExecution::Rejected(HookRejectionInfo::new_long(
+            HookExecution::rejected(HookRejectionInfo::new_long(
                 "Path too long",
                 format!(
                     "Path length for '{}' ({}) exceeds length limit (>= {})",
@@ -85,7 +85,7 @@ impl FileHook for LimitPathLengthHook {
                 ),
             ))
         } else {
-            HookExecution::Accepted
+            HookExecution::accepted()
         };
 
         Ok(execution)
@@ -111,7 +111,7 @@ fn check_path(path: &NonRootMPath) -> Result<Option<HookExecution>, Error> {
 
     for component in encoded_index_path.iter() {
         if component.len() > MAX_PATH_COMPONENT_LIMIT {
-            return Ok(Some(HookExecution::Rejected(HookRejectionInfo::new_long(
+            return Ok(Some(HookExecution::rejected(HookRejectionInfo::new_long(
                 "Path component too long",
                 format!(
                     "Path component length for {:?} ({}) exceeds length limit (>= {})",

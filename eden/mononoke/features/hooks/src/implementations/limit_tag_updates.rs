@@ -40,14 +40,14 @@ impl BookmarkHook for LimitTagUpdatesHook {
         _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
         if !bookmark.is_tag() {
-            return Ok(HookExecution::Accepted);
+            return Ok(HookExecution::accepted());
         }
 
         let bookmark_state = hook_repo.get_bookmark_state(ctx, bookmark).await?;
         if bookmark_state.is_new() {
-            return Ok(HookExecution::Accepted);
+            return Ok(HookExecution::accepted());
         }
-        Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+        Ok(HookExecution::rejected(HookRejectionInfo::new_long(
             "Modification of already existing tags is not allowed in this repository.",
             format!("Commit edits a tag {}", bookmark.as_str(),),
         )))

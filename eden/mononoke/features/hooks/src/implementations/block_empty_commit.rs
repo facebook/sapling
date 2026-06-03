@@ -39,15 +39,15 @@ impl ChangesetHook for BlockEmptyCommit {
         push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
         if push_authored_by.service() {
-            return Ok(HookExecution::Accepted);
+            return Ok(HookExecution::accepted());
         }
         if changeset.file_changes_map().is_empty() {
-            Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+            Ok(HookExecution::rejected(HookRejectionInfo::new_long(
                 "Empty commit is not allowed",
                 "You must include file changes in your commit for it to land".to_string(),
             )))
         } else {
-            Ok(HookExecution::Accepted)
+            Ok(HookExecution::accepted())
         }
     }
 }

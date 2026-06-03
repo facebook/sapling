@@ -75,12 +75,12 @@ impl ChangesetHook for FindFilesChangesetHook {
 
         match res {
             Ok(contents) => Ok(match contents.get(&path) {
-                Some(PathContent::File(_)) => HookExecution::Accepted,
-                _ => HookExecution::Rejected(HookRejectionInfo::new("there is no such file")),
+                Some(PathContent::File(_)) => HookExecution::accepted(),
+                _ => HookExecution::rejected(HookRejectionInfo::new("there is no such file")),
             }),
             Err(err) => {
                 if err.to_string().contains("Bookmark master does not exist") {
-                    return Ok(HookExecution::Rejected(HookRejectionInfo::new(
+                    return Ok(HookExecution::rejected(HookRejectionInfo::new(
                         "no master bookmark found",
                     )));
                 }
@@ -128,12 +128,12 @@ impl ChangesetHook for FileChangesChangesetHook {
         }?;
 
         if added != self.added || changed != self.changed || removed != self.removed {
-            return Ok(HookExecution::Rejected(HookRejectionInfo::new(
+            return Ok(HookExecution::rejected(HookRejectionInfo::new(
                 "Wrong number of added, changed or removed files",
             )));
         }
 
-        Ok(HookExecution::Accepted)
+        Ok(HookExecution::accepted())
     }
 }
 
@@ -160,12 +160,12 @@ impl ChangesetHook for LatestChangesChangesetHook {
         for (path, linknode) in self.0.iter() {
             let found_linknode = res.get(path).map(|info| info.changeset_id());
             if linknode.as_ref() != found_linknode {
-                return Ok(HookExecution::Rejected(HookRejectionInfo::new(
+                return Ok(HookExecution::rejected(HookRejectionInfo::new(
                     "found linknode doesn't match the expected one",
                 )));
             }
         }
-        Ok(HookExecution::Accepted)
+        Ok(HookExecution::accepted())
     }
 }
 
@@ -206,7 +206,7 @@ async fn test_cs_find_content_hook_with_blob_store(fb: FacebookInit) -> Result<(
     };
     let regexes = hashmap! {};
     let expected = hashmap! {
-        hook_name1.clone() => HookExecution::Rejected(HookRejectionInfo::new("no master bookmark found")),
+        hook_name1.clone() => HookExecution::rejected(HookRejectionInfo::new("no master bookmark found")),
     };
 
     run_changeset_hooks_with_mgr(
@@ -240,8 +240,8 @@ async fn test_cs_find_content_hook_with_blob_store(fb: FacebookInit) -> Result<(
     };
     let regexes = hashmap! {};
     let expected = hashmap! {
-        hook_name1 => HookExecution::Accepted,
-        hook_name2 => HookExecution::Rejected(HookRejectionInfo::new("there is no such file")),
+        hook_name1 => HookExecution::accepted(),
+        hook_name2 => HookExecution::rejected(HookRejectionInfo::new("there is no such file")),
     };
     run_changeset_hooks_with_mgr(
         ctx,
@@ -297,7 +297,7 @@ async fn test_cs_file_changes_hook_with_blob_store(fb: FacebookInit) -> Result<(
     };
     let regexes = hashmap! {};
     let expected = hashmap! {
-        hook_name => HookExecution::Accepted,
+        hook_name => HookExecution::accepted(),
     };
     run_changeset_hooks_with_mgr(
         ctx,
@@ -337,7 +337,7 @@ async fn test_cs_latest_changes_hook_with_blob_store(fb: FacebookInit) -> Result
     };
     let regexes = hashmap! {};
     let expected = hashmap! {
-        hook_name => HookExecution::Accepted,
+        hook_name => HookExecution::accepted(),
     };
     run_changeset_hooks_with_mgr(
         ctx,

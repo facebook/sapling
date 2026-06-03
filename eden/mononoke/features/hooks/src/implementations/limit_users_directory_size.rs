@@ -108,7 +108,7 @@ impl ChangesetHook for LimitUsersDirectorySizeHook {
             .collect();
 
         if depth2_paths.is_empty() {
-            return Ok(HookExecution::Accepted);
+            return Ok(HookExecution::accepted());
         }
 
         let cs_id = changeset.get_changeset_id();
@@ -157,7 +157,7 @@ impl ChangesetHook for LimitUsersDirectorySizeHook {
             return Ok(rejection);
         }
 
-        Ok(HookExecution::Accepted)
+        Ok(HookExecution::accepted())
     }
 }
 
@@ -204,7 +204,7 @@ async fn check_dir_size(
             .join("/");
         let size_mb = size / (1024 * 1024);
         let limit_mb = limit / (1024 * 1024);
-        return Ok(Some(HookExecution::Rejected(HookRejectionInfo::new_long(
+        return Ok(Some(HookExecution::rejected(HookRejectionInfo::new_long(
             "Directory too large",
             format!(
                 "Directory '{path}' is {size} bytes ({size_mb} MB), which exceeds the \
@@ -229,6 +229,7 @@ mod test {
     use tests_utils::CreateCommitContext;
 
     use super::*;
+    use crate::HookResult;
 
     fn make_test_config() -> LimitUsersDirectorySizeConfig {
         LimitUsersDirectorySizeConfig {
@@ -272,7 +273,7 @@ mod test {
 
         let config = make_test_config();
         let result = run_hook(ctx, &hook_repo, config, &bcs).await?;
-        assert_eq!(result, HookExecution::Accepted);
+        assert_eq!(result, HookExecution::accepted());
 
         Ok(())
     }
@@ -295,7 +296,7 @@ mod test {
 
         let config = make_test_config();
         let result = run_hook(ctx, &hook_repo, config, &bcs).await?;
-        let info = assert_matches!(result, HookExecution::Rejected(info) => info);
+        let info = assert_matches!(result.result, HookResult::Rejected(info) => info);
         assert!(
             info.long_description.contains("prefix/a/b"),
             "Expected path prefix/a/b in rejection message, got: {}",
@@ -324,7 +325,7 @@ mod test {
 
         let config = make_test_config();
         let result = run_hook(ctx, &hook_repo, config, &bcs).await?;
-        let info = assert_matches!(result, HookExecution::Rejected(info) => info);
+        let info = assert_matches!(result.result, HookResult::Rejected(info) => info);
         assert!(
             info.long_description.contains("prefix/a/b"),
             "Should check depth-2 dir 'b' recursively, got: {}",
@@ -352,7 +353,7 @@ mod test {
 
         let config = make_test_config();
         let result = run_hook(ctx, &hook_repo, config, &bcs).await?;
-        assert_eq!(result, HookExecution::Accepted);
+        assert_eq!(result, HookExecution::accepted());
 
         Ok(())
     }
@@ -375,7 +376,7 @@ mod test {
 
         let config = make_test_config();
         let result = run_hook(ctx, &hook_repo, config, &bcs).await?;
-        let info = assert_matches!(result, HookExecution::Rejected(info) => info);
+        let info = assert_matches!(result.result, HookResult::Rejected(info) => info);
         assert!(
             info.long_description.contains("big_dir"),
             "Should reject the oversized dir, got: {}",
@@ -414,7 +415,7 @@ mod test {
                 PushAuthoredBy::Service,
             )
             .await?;
-        assert_matches!(result, HookExecution::Rejected(_));
+        assert_matches!(result.result, HookResult::Rejected(_));
 
         // Push-redirected should also still be rejected
         let result = hook
@@ -427,7 +428,7 @@ mod test {
                 PushAuthoredBy::User,
             )
             .await?;
-        assert_matches!(result, HookExecution::Rejected(_));
+        assert_matches!(result.result, HookResult::Rejected(_));
 
         Ok(())
     }
@@ -450,7 +451,7 @@ mod test {
 
         let config = make_test_config();
         let result = run_hook(ctx, &hook_repo, config, &bcs1).await?;
-        assert_eq!(result, HookExecution::Accepted);
+        assert_eq!(result, HookExecution::accepted());
 
         // Second commit: adds another file, pushing total over 500 bytes
         let cs_id2 = CreateCommitContext::new(ctx, repo, vec![cs_id1])
@@ -462,7 +463,7 @@ mod test {
 
         let config = make_test_config();
         let result = run_hook(ctx, &hook_repo, config, &bcs2).await?;
-        let info = assert_matches!(result, HookExecution::Rejected(info) => info);
+        let info = assert_matches!(result.result, HookResult::Rejected(info) => info);
         assert!(
             info.long_description.contains("prefix/a/b"),
             "Expected path prefix/a/b in rejection message, got: {}",
@@ -493,7 +494,7 @@ mod test {
 
         let config = make_test_config();
         let result = run_hook(ctx, &hook_repo, config, &bcs).await?;
-        assert_eq!(result, HookExecution::Accepted);
+        assert_eq!(result, HookExecution::accepted());
 
         Ok(())
     }
@@ -516,7 +517,7 @@ mod test {
 
         let config = make_test_config();
         let result = run_hook(ctx, &hook_repo, config, &bcs1).await?;
-        assert_eq!(result, HookExecution::Accepted);
+        assert_eq!(result, HookExecution::accepted());
 
         // Update the same file to 401 bytes. Total directory size should be
         // 401 (not 400 + 401 = 801), so it should still be accepted.
@@ -530,7 +531,7 @@ mod test {
 
         let config = make_test_config();
         let result = run_hook(ctx, &hook_repo, config, &bcs2).await?;
-        assert_eq!(result, HookExecution::Accepted);
+        assert_eq!(result, HookExecution::accepted());
 
         Ok(())
     }

@@ -66,10 +66,10 @@ impl ChangesetHook for RequireCommitMessagePatternHook {
         push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
         if push_authored_by.service() {
-            return Ok(HookExecution::Accepted);
+            return Ok(HookExecution::accepted());
         }
         if self.config.pattern.is_match(changeset.message()) {
-            return Ok(HookExecution::Accepted);
+            return Ok(HookExecution::accepted());
         }
 
         if changeset.file_changes().any(|(path, _)| {
@@ -78,12 +78,12 @@ impl ChangesetHook for RequireCommitMessagePatternHook {
                 .iter()
                 .any(|re| re.is_match(&path.to_string()))
         }) {
-            Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+            Ok(HookExecution::rejected(HookRejectionInfo::new_long(
                 "Commit message is missing information",
                 self.config.message.clone(),
             )))
         } else {
-            Ok(HookExecution::Accepted)
+            Ok(HookExecution::accepted())
         }
     }
 }

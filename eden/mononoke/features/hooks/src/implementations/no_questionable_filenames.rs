@@ -82,15 +82,15 @@ impl FileHook for NoQuestionableFilenames {
         push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution> {
         if push_authored_by.service() {
-            return Ok(HookExecution::Accepted);
+            return Ok(HookExecution::accepted());
         }
         if cross_repo_push_source == CrossRepoPushSource::PushRedirected {
             // For push-redirected pushes we rely on the hook
             // running in the original repo
-            return Ok(HookExecution::Accepted);
+            return Ok(HookExecution::accepted());
         }
         if change.is_none() {
-            return Ok(HookExecution::Accepted);
+            return Ok(HookExecution::accepted());
         }
 
         let path = path.to_string();
@@ -98,7 +98,7 @@ impl FileHook for NoQuestionableFilenames {
             match self.allowlist_for_braces {
                 Some(ref allow) if allow.is_match(&path) => {}
                 _ => {
-                    return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+                    return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
                         "Illegal filename",
                         format!(
                             "ABORT: Illegal filename: {path:?}. The file name cannot include brace(s).",
@@ -112,7 +112,7 @@ impl FileHook for NoQuestionableFilenames {
             match self.allowlist_for_cmd_line {
                 Some(ref allow) if allow.is_match(&path) => {}
                 _ => {
-                    return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+                    return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
                         "Illegal filename",
                         format!(
                             "ABORT: Illegal filename: {path}. The file name cannot include spaces, apostrophes or start with hyphens."
@@ -122,6 +122,6 @@ impl FileHook for NoQuestionableFilenames {
             }
         }
 
-        Ok(HookExecution::Accepted)
+        Ok(HookExecution::accepted())
     }
 }

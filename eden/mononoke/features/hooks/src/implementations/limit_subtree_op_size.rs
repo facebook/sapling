@@ -79,11 +79,11 @@ impl ChangesetHook for LimitSubtreeOpSizeHook {
         push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution> {
         if push_authored_by.service() {
-            return Ok(HookExecution::Accepted);
+            return Ok(HookExecution::accepted());
         }
         if cross_repo_push_source == CrossRepoPushSource::PushRedirected {
             // For push-redirected commits, we rely on running source-repo hooks
-            return Ok(HookExecution::Accepted);
+            return Ok(HookExecution::accepted());
         }
 
         for (path, change) in changeset.subtree_changes() {
@@ -116,7 +116,7 @@ impl ChangesetHook for LimitSubtreeOpSizeHook {
                     };
 
                     if source_count > source_file_count_limit {
-                        return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+                        return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
                             "Subtree source is too large",
                             self.config
                                 .too_many_files_rejection_message
@@ -132,7 +132,7 @@ impl ChangesetHook for LimitSubtreeOpSizeHook {
 
             if let Some(dest_min_path_depth) = self.config.dest_min_path_depth {
                 if path.num_components() < dest_min_path_depth {
-                    return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+                    return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
                         "Subtree destination is too shallow",
                         self.config
                             .dest_too_shallow_rejection_message
@@ -143,6 +143,6 @@ impl ChangesetHook for LimitSubtreeOpSizeHook {
             }
         }
 
-        Ok(HookExecution::Accepted)
+        Ok(HookExecution::accepted())
     }
 }

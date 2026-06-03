@@ -57,7 +57,7 @@ impl ChangesetHook for BlockMergeCommitsHook {
         _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
         if !changeset.is_merge() {
-            return Ok(HookExecution::Accepted);
+            return Ok(HookExecution::accepted());
         }
 
         let is_bypass_tag = if let Some(tag) = &self.config.commit_message_bypass_tag {
@@ -80,19 +80,19 @@ impl ChangesetHook for BlockMergeCommitsHook {
             is_nonbypassable_repository,
             is_nonbypassable_bookmark,
         ) {
-            (true, true, _) => Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+            (true, true, _) => Ok(HookExecution::rejected(HookRejectionInfo::new_long(
                 "Merge commit is not allowed in this repository despite the bypass tag in commit message",
                 "This repository can't have merge commits".to_string(),
             ))),
-            (true, false, true) => Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+            (true, false, true) => Ok(HookExecution::rejected(HookRejectionInfo::new_long(
                 "Merge commit is not allowed on this bookmark despite the bypass tag in commit message",
                 "This bookmark can't have merge commits".to_string(),
             ))),
-            (false, _, _) => Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+            (false, _, _) => Ok(HookExecution::rejected(HookRejectionInfo::new_long(
                 "Merge commit is not allowed",
                 "You must not commit merge commits".to_string(),
             ))),
-            (true, false, false) => Ok(HookExecution::Accepted),
+            (true, false, false) => Ok(HookExecution::accepted()),
         }
     }
 }

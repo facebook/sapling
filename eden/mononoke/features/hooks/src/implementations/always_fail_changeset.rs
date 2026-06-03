@@ -59,7 +59,7 @@ impl ChangesetHook for AlwaysFailChangeset {
             .message
             .clone()
             .unwrap_or("This hook always fails".to_string());
-        Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+        Ok(HookExecution::rejected(HookRejectionInfo::new_long(
             "Always fail hook",
             msg,
         )))

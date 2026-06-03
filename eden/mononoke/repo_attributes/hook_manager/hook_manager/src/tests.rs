@@ -85,7 +85,7 @@ impl ChangesetHook for FnChangesetHook {
 }
 
 fn always_accepting_changeset_hook() -> Box<dyn ChangesetHook> {
-    let f: fn() -> HookExecution = || HookExecution::Accepted;
+    let f: fn() -> HookExecution = || HookExecution::accepted();
     Box::new(FnChangesetHook::new(f))
 }
 
@@ -122,7 +122,7 @@ impl ChangesetHook for ContentIdMatchingChangesetHook {
             }
         }
 
-        Ok(HookExecution::Accepted)
+        Ok(HookExecution::accepted())
     }
 }
 
@@ -161,7 +161,7 @@ impl FileHook for FnFileHook {
 }
 
 fn always_accepting_file_hook() -> Box<dyn FileHook> {
-    let f: fn() -> HookExecution = || HookExecution::Accepted;
+    let f: fn() -> HookExecution = || HookExecution::accepted();
     Box::new(FnFileHook::new(f))
 }
 
@@ -187,7 +187,7 @@ impl FileHook for PathMatchingFileHook {
         _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
         Ok(if self.paths.contains(path) {
-            HookExecution::Accepted
+            HookExecution::accepted()
         } else {
             default_rejection()
         })
@@ -215,7 +215,7 @@ impl FileHook for ContentIdMatchingFileHook {
         _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
         if change.map(|change| change.content_id()) == self.expected_content_id {
-            Ok(HookExecution::Accepted)
+            Ok(HookExecution::accepted())
         } else {
             Ok(default_rejection())
         }
@@ -249,7 +249,7 @@ impl FileHook for IsSymLinkMatchingFileHook {
             None => false,
         };
         Ok(if self.is_symlink == is_symlink {
-            HookExecution::Accepted
+            HookExecution::accepted()
         } else {
             default_rejection()
         })
@@ -297,7 +297,7 @@ async fn setup_hook_manager(
 }
 
 fn default_rejection() -> HookExecution {
-    HookExecution::Rejected(HookRejectionInfo::new_long("desc", "long_desc".to_string()))
+    HookExecution::rejected(HookRejectionInfo::new_long("desc", "long_desc".to_string()))
 }
 
 fn to_mpath(string: &str) -> NonRootMPath {
@@ -397,7 +397,7 @@ async fn test_changeset_hook_accepted(fb: FacebookInit) {
     };
     let regexes = hashmap! {};
     let expected = hashmap! {
-        "hook1".to_string() => HookExecution::Accepted
+        "hook1".to_string() => HookExecution::accepted()
     };
     run_changeset_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected).await;
 }
@@ -433,9 +433,9 @@ async fn test_changeset_hook_mix(fb: FacebookInit) {
         "b.*".to_string() => vec!["hook3".to_string()],
     };
     let expected = hashmap! {
-        "hook1".to_string() => HookExecution::Accepted,
+        "hook1".to_string() => HookExecution::accepted(),
         "hook2".to_string() => default_rejection(),
-        "hook3".to_string() => HookExecution::Accepted,
+        "hook3".to_string() => HookExecution::accepted(),
     };
     run_changeset_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected).await;
 }
@@ -470,7 +470,7 @@ async fn test_changeset_hook_content_id(fb: FacebookInit) {
         "b.*".to_string() => vec!["hook2".to_string(), "hook3".to_string()]
     };
     let expected = hashmap! {
-        "hook1".to_string() => HookExecution::Accepted,
+        "hook1".to_string() => HookExecution::accepted(),
         "hook2".to_string() => default_rejection(),
         "hook3".to_string() => default_rejection(),
     };
@@ -489,9 +489,9 @@ async fn test_file_hook_accepted(fb: FacebookInit) {
     let regexes = hashmap! {};
     let expected = hashmap! {
         "hook1".to_string() => hashmap! {
-            "dir1/subdir1/subsubdir1/file_1".to_string() => HookExecution::Accepted,
-            "dir1/subdir1/subsubdir2/file_1".to_string() => HookExecution::Accepted,
-            "dir1/subdir1/subsubdir2/file_2".to_string() => HookExecution::Accepted,
+            "dir1/subdir1/subsubdir1/file_1".to_string() => HookExecution::accepted(),
+            "dir1/subdir1/subsubdir2/file_1".to_string() => HookExecution::accepted(),
+            "dir1/subdir1/subsubdir2/file_2".to_string() => HookExecution::accepted(),
         }
     };
     run_file_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected).await;
@@ -537,9 +537,9 @@ async fn test_file_hook_mix(fb: FacebookInit) {
             "dir1/subdir1/subsubdir2/file_2".to_string() => default_rejection(),
         },
         "hook2".to_string() => hashmap! {
-            "dir1/subdir1/subsubdir1/file_1".to_string() => HookExecution::Accepted,
-            "dir1/subdir1/subsubdir2/file_1".to_string() => HookExecution::Accepted,
-            "dir1/subdir1/subsubdir2/file_2".to_string() => HookExecution::Accepted,
+            "dir1/subdir1/subsubdir1/file_1".to_string() => HookExecution::accepted(),
+            "dir1/subdir1/subsubdir2/file_1".to_string() => HookExecution::accepted(),
+            "dir1/subdir1/subsubdir2/file_2".to_string() => HookExecution::accepted(),
         }
     };
     run_file_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected).await;
@@ -562,8 +562,8 @@ async fn test_file_hooks_paths(fb: FacebookInit) {
     let expected = hashmap! {
         "hook1".to_string() => hashmap! {
             "dir1/subdir1/subsubdir1/file_1".to_string() => default_rejection(),
-            "dir1/subdir1/subsubdir2/file_1".to_string() => HookExecution::Accepted,
-            "dir1/subdir1/subsubdir2/file_2".to_string() => HookExecution::Accepted,
+            "dir1/subdir1/subsubdir2/file_1".to_string() => HookExecution::accepted(),
+            "dir1/subdir1/subsubdir2/file_2".to_string() => HookExecution::accepted(),
         }
     };
     run_file_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected).await;
@@ -590,11 +590,11 @@ async fn test_file_hooks_paths_mix(fb: FacebookInit) {
     let expected = hashmap! {
         "hook1".to_string() => hashmap! {
             "dir1/subdir1/subsubdir1/file_1".to_string() => default_rejection(),
-            "dir1/subdir1/subsubdir2/file_1".to_string() => HookExecution::Accepted,
-            "dir1/subdir1/subsubdir2/file_2".to_string() => HookExecution::Accepted,
+            "dir1/subdir1/subsubdir2/file_1".to_string() => HookExecution::accepted(),
+            "dir1/subdir1/subsubdir2/file_2".to_string() => HookExecution::accepted(),
         },
         "hook2".to_string() => hashmap! {
-            "dir1/subdir1/subsubdir1/file_1".to_string() => HookExecution::Accepted,
+            "dir1/subdir1/subsubdir1/file_1".to_string() => HookExecution::accepted(),
             "dir1/subdir1/subsubdir2/file_1".to_string() => default_rejection(),
             "dir1/subdir1/subsubdir2/file_2".to_string() => default_rejection(),
         }
@@ -618,19 +618,19 @@ async fn test_file_hook_content_id(fb: FacebookInit) {
     };
     let expected = hashmap! {
         "hook1".to_string() => hashmap! {
-            "dir1/subdir1/subsubdir1/file_1".to_string() => HookExecution::Accepted,
+            "dir1/subdir1/subsubdir1/file_1".to_string() => HookExecution::accepted(),
             "dir1/subdir1/subsubdir2/file_1".to_string() => default_rejection(),
             "dir1/subdir1/subsubdir2/file_2".to_string() => default_rejection(),
         },
         "hook2".to_string() => hashmap! {
             "dir1/subdir1/subsubdir1/file_1".to_string() => default_rejection(),
-            "dir1/subdir1/subsubdir2/file_1".to_string() => HookExecution::Accepted,
+            "dir1/subdir1/subsubdir2/file_1".to_string() => HookExecution::accepted(),
             "dir1/subdir1/subsubdir2/file_2".to_string() => default_rejection(),
         },
         "hook3".to_string() => hashmap! {
             "dir1/subdir1/subsubdir1/file_1".to_string() => default_rejection(),
             "dir1/subdir1/subsubdir2/file_1".to_string() => default_rejection(),
-            "dir1/subdir1/subsubdir2/file_2".to_string() => HookExecution::Accepted,
+            "dir1/subdir1/subsubdir2/file_2".to_string() => HookExecution::accepted(),
         },
     };
     run_file_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected).await;
@@ -651,14 +651,14 @@ async fn test_file_hook_is_symlink(fb: FacebookInit) {
     };
     let expected = hashmap! {
         "hook1".to_string() => hashmap! {
-            "dir1/subdir1/subsubdir1/file_1".to_string() => HookExecution::Accepted,
+            "dir1/subdir1/subsubdir1/file_1".to_string() => HookExecution::accepted(),
             "dir1/subdir1/subsubdir2/file_1".to_string() => default_rejection(),
             "dir1/subdir1/subsubdir2/file_2".to_string() => default_rejection(),
         },
         "hook2".to_string() => hashmap! {
             "dir1/subdir1/subsubdir1/file_1".to_string() => default_rejection(),
-            "dir1/subdir1/subsubdir2/file_1".to_string() => HookExecution::Accepted,
-            "dir1/subdir1/subsubdir2/file_2".to_string() => HookExecution::Accepted,
+            "dir1/subdir1/subsubdir2/file_1".to_string() => HookExecution::accepted(),
+            "dir1/subdir1/subsubdir2/file_2".to_string() => HookExecution::accepted(),
         },
     };
     run_file_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected).await;
@@ -996,7 +996,7 @@ fn assert_hook_rejected(outcomes: &[HookOutcome]) {
         outcomes.len(),
     );
     assert!(
-        matches!(outcomes[0].get_execution(), HookExecution::Rejected(_)),
+        outcomes[0].get_execution().is_rejected(),
         "expected the hook to reject, got {:?}",
         outcomes[0].get_execution(),
     );

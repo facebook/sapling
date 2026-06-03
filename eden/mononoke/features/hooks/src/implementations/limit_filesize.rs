@@ -96,23 +96,23 @@ impl FileHook for LimitFilesize {
         push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution> {
         if push_authored_by.service() {
-            return Ok(HookExecution::Accepted);
+            return Ok(HookExecution::accepted());
         }
         if cross_repo_push_source == CrossRepoPushSource::PushRedirected {
             // For push-redirected commits, we rely on running source-repo hooks
-            return Ok(HookExecution::Accepted);
+            return Ok(HookExecution::accepted());
         }
 
         let path = path.to_string();
         let change = match change {
             Some(c) => c,
-            None => return Ok(HookExecution::Accepted),
+            None => return Ok(HookExecution::accepted()),
         };
 
         if change.git_lfs().is_lfs_pointer() {
             // LFS pointers are not stored in the repo, so for now they don't count towards the limit
             // We might want to revise this policy in the future.
-            return Ok(HookExecution::Accepted);
+            return Ok(HookExecution::accepted());
         }
 
         let len = hook_repo
@@ -124,11 +124,11 @@ impl FileHook for LimitFilesize {
                 continue;
             }
             match maybe_limit {
-                None => return Ok(HookExecution::Accepted),
-                Some(limit) if len <= *limit => return Ok(HookExecution::Accepted),
+                None => return Ok(HookExecution::accepted()),
+                Some(limit) if len <= *limit => return Ok(HookExecution::accepted()),
                 Some(limit) => {
                     let ratio = len as f64 / *limit as f64;
-                    return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+                    return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
                         "File too large",
                         format!(
                             "File size limit is {limit} bytes. You tried to push file {path} that is over the limit \
@@ -157,6 +157,6 @@ impl FileHook for LimitFilesize {
                 }
             }
         }
-        Ok(HookExecution::Accepted)
+        Ok(HookExecution::accepted())
     }
 }

@@ -169,14 +169,14 @@ impl FileHook for BlockInvalidSymlinksHook {
             .iter()
             .any(|regex| regex.is_match(&path))
         {
-            return Ok(HookExecution::Accepted);
+            return Ok(HookExecution::accepted());
         }
 
         match change {
             Some(change) if change.file_type() == FileType::Symlink => {
                 let max_size = self.config.max_size.unwrap_or(DEFAULT_MAX_SYMLINK_SIZE);
                 if change.size() > max_size {
-                    return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+                    return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
                         "symlink too long",
                         format!(
                             "symlink '{}' contents are too long ({} > {})",
@@ -188,7 +188,7 @@ impl FileHook for BlockInvalidSymlinksHook {
                 }
 
                 if !self.config.allow_empty && change.size() == 0 {
-                    return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+                    return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
                         "symlink is empty",
                         format!("symlink '{path}' has no contents"),
                     )));
@@ -196,12 +196,12 @@ impl FileHook for BlockInvalidSymlinksHook {
 
                 if let Some(text) = hook_repo.get_file_bytes(ctx, change.content_id()).await? {
                     if !self.config.allow_newlines && text.contains(&b'\n') {
-                        return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+                        return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
                             "symlink contains newline",
                             format!("symlink '{path}' contents contain a newline character"),
                         )));
                     } else if !self.config.allow_nulls && text.contains(&b'\0') {
-                        return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+                        return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
                             "symlink contains null byte",
                             format!("symlink '{path}' contents contain a null byte"),
                         )));
@@ -230,7 +230,7 @@ impl FileHook for BlockInvalidSymlinksHook {
                             );
                         } else {
                             // Blocking mode: reject absolute symlinks
-                            return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+                            return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
                                 "symlink uses absolute path",
                                 format!(
                                     "symlink '{path}' points to an absolute path which will break builds. \
@@ -265,7 +265,7 @@ impl FileHook for BlockInvalidSymlinksHook {
                                         message,
                                     );
                                 } else {
-                                    return Ok(HookExecution::Rejected(
+                                    return Ok(HookExecution::rejected(
                                         HookRejectionInfo::new_long(
                                             "symlink escapes containment root",
                                             message,
@@ -277,9 +277,9 @@ impl FileHook for BlockInvalidSymlinksHook {
                     }
                 }
 
-                Ok(HookExecution::Accepted)
+                Ok(HookExecution::accepted())
             }
-            _ => Ok(HookExecution::Accepted),
+            _ => Ok(HookExecution::accepted()),
         }
     }
 }
@@ -368,7 +368,7 @@ mod tests {
                 PushAuthoredBy::User,
             )
             .await?,
-            vec![("A".try_into()?, HookExecution::Accepted)]
+            vec![("A".try_into()?, HookExecution::accepted())]
         );
 
         // Empty symlink
@@ -384,7 +384,7 @@ mod tests {
             .await?,
             vec![(
                 "B".try_into()?,
-                HookExecution::Rejected(HookRejectionInfo {
+                HookExecution::rejected(HookRejectionInfo {
                     description: "symlink is empty".into(),
                     long_description: "symlink 'B' has no contents".into(),
                 }),
@@ -400,7 +400,7 @@ mod tests {
                 PushAuthoredBy::User,
             )
             .await?,
-            vec![("B".try_into()?, HookExecution::Accepted)],
+            vec![("B".try_into()?, HookExecution::accepted())],
         );
 
         // Large symlink
@@ -416,7 +416,7 @@ mod tests {
             .await?,
             vec![(
                 "C".try_into()?,
-                HookExecution::Rejected(HookRejectionInfo {
+                HookExecution::rejected(HookRejectionInfo {
                     description: "symlink too long".into(),
                     long_description: "symlink 'C' contents are too long (1025 > 1024)".into(),
                 }),
@@ -432,7 +432,7 @@ mod tests {
                 PushAuthoredBy::User,
             )
             .await?,
-            vec![("C".try_into()?, HookExecution::Accepted)],
+            vec![("C".try_into()?, HookExecution::accepted())],
         );
         assert_eq!(
             test_file_hook(
@@ -444,7 +444,7 @@ mod tests {
                 PushAuthoredBy::User,
             )
             .await?,
-            vec![("C".try_into()?, HookExecution::Accepted)],
+            vec![("C".try_into()?, HookExecution::accepted())],
         );
 
         // Newline
@@ -460,7 +460,7 @@ mod tests {
             .await?,
             vec![(
                 "D".try_into()?,
-                HookExecution::Rejected(HookRejectionInfo {
+                HookExecution::rejected(HookRejectionInfo {
                     description: "symlink contains newline".into(),
                     long_description: "symlink 'D' contents contain a newline character".into(),
                 }),
@@ -476,7 +476,7 @@ mod tests {
                 PushAuthoredBy::User,
             )
             .await?,
-            vec![("D".try_into()?, HookExecution::Accepted)],
+            vec![("D".try_into()?, HookExecution::accepted())],
         );
 
         // Null byte
@@ -492,7 +492,7 @@ mod tests {
             .await?,
             vec![(
                 "E".try_into()?,
-                HookExecution::Rejected(HookRejectionInfo {
+                HookExecution::rejected(HookRejectionInfo {
                     description: "symlink contains null byte".into(),
                     long_description: "symlink 'E' contents contain a null byte".into(),
                 }),
@@ -508,7 +508,7 @@ mod tests {
                 PushAuthoredBy::User,
             )
             .await?,
-            vec![("E".try_into()?, HookExecution::Accepted)],
+            vec![("E".try_into()?, HookExecution::accepted())],
         );
 
         Ok(())
@@ -571,7 +571,7 @@ mod tests {
         assert!(
             results.contains(&(
                 "www/foo/link".try_into()?,
-                HookExecution::Rejected(HookRejectionInfo {
+                HookExecution::rejected(HookRejectionInfo {
                     description: "symlink uses absolute path".into(),
                     long_description:
                         "symlink 'www/foo/link' points to an absolute path which will break builds. \
@@ -593,7 +593,7 @@ mod tests {
         )
         .await?;
         assert!(
-            results.contains(&("www/bar/link".try_into()?, HookExecution::Accepted)),
+            results.contains(&("www/bar/link".try_into()?, HookExecution::accepted())),
             "relative symlink should be accepted, got: {results:?}"
         );
 
@@ -608,7 +608,7 @@ mod tests {
         )
         .await?;
         assert!(
-            results.contains(&("ignored/link".try_into()?, HookExecution::Accepted)),
+            results.contains(&("ignored/link".try_into()?, HookExecution::accepted())),
             "absolute symlink in ignored path should be accepted, got: {results:?}"
         );
 
@@ -625,7 +625,7 @@ mod tests {
         assert!(
             results.contains(&(
                 "www/win/link".try_into()?,
-                HookExecution::Rejected(HookRejectionInfo {
+                HookExecution::rejected(HookRejectionInfo {
                     description: "symlink uses absolute path".into(),
                     long_description:
                         "symlink 'www/win/link' points to an absolute path which will break builds. \
@@ -649,7 +649,7 @@ mod tests {
         assert!(
             results.contains(&(
                 "www/unc/link".try_into()?,
-                HookExecution::Rejected(HookRejectionInfo {
+                HookExecution::rejected(HookRejectionInfo {
                     description: "symlink uses absolute path".into(),
                     long_description:
                         "symlink 'www/unc/link' points to an absolute path which will break builds. \
@@ -673,7 +673,7 @@ mod tests {
         assert!(
             results.contains(&(
                 "www/foo/link".try_into()?,
-                HookExecution::Rejected(HookRejectionInfo {
+                HookExecution::rejected(HookRejectionInfo {
                     description: "symlink uses absolute path".into(),
                     long_description:
                         "symlink 'www/foo/link' points to an absolute path which will break builds. \
@@ -695,7 +695,7 @@ mod tests {
         )
         .await?;
         assert!(
-            results.contains(&("fbcode/link".try_into()?, HookExecution::Accepted)),
+            results.contains(&("fbcode/link".try_into()?, HookExecution::accepted())),
             "absolute symlink outside www/ should be accepted with path regex, got: {results:?}"
         );
 
@@ -865,11 +865,12 @@ mod tests {
         )
         .await?;
         assert!(
-            results.iter().any(|(p, e)| p.to_string() == "www/a/b/c/link.py"
-                && matches!(
-                    e,
-                    HookExecution::Rejected(info) if info.description == "symlink escapes containment root"
-                )),
+            results
+                .iter()
+                .any(|(p, e)| p.to_string() == "www/a/b/c/link.py"
+                    && e.is_rejected_with_reason(
+                        |info| info.description == "symlink escapes containment root"
+                    )),
             "escaping relative symlink should be rejected, got: {results:?}"
         );
 
@@ -884,7 +885,7 @@ mod tests {
         )
         .await?;
         assert!(
-            results.contains(&("www/a/b/link".try_into()?, HookExecution::Accepted)),
+            results.contains(&("www/a/b/link".try_into()?, HookExecution::accepted())),
             "in-tree relative symlink should be accepted, got: {results:?}"
         );
 
@@ -899,7 +900,7 @@ mod tests {
         )
         .await?;
         assert!(
-            results.contains(&("other/foo/link".try_into()?, HookExecution::Accepted)),
+            results.contains(&("other/foo/link".try_into()?, HookExecution::accepted())),
             "non-matching path should be accepted, got: {results:?}"
         );
 
@@ -914,7 +915,7 @@ mod tests {
         )
         .await?;
         assert!(
-            results.contains(&("www/ignored/link".try_into()?, HookExecution::Accepted)),
+            results.contains(&("www/ignored/link".try_into()?, HookExecution::accepted())),
             "ignored path should be accepted, got: {results:?}"
         );
 
@@ -930,7 +931,7 @@ mod tests {
         )
         .await?;
         assert!(
-            results.contains(&("www/abs/link".try_into()?, HookExecution::Accepted)),
+            results.contains(&("www/abs/link".try_into()?, HookExecution::accepted())),
             "absolute symlink should fall through this check, got: {results:?}"
         );
 
@@ -946,9 +947,8 @@ mod tests {
         .await?;
         assert!(
             results.iter().any(|(p, e)| p.to_string() == "www/x/link"
-                && matches!(
-                    e,
-                    HookExecution::Rejected(info) if info.description == "symlink escapes containment root"
+                && e.is_rejected_with_reason(
+                    |info| info.description == "symlink escapes containment root"
                 )),
             "symlink escaping above repo root should be rejected, got: {results:?}"
         );
@@ -964,7 +964,7 @@ mod tests {
         )
         .await?;
         assert!(
-            results.contains(&("www/safe/link".try_into()?, HookExecution::Accepted)),
+            results.contains(&("www/safe/link".try_into()?, HookExecution::accepted())),
             "same-directory symlink should be accepted, got: {results:?}"
         );
 
@@ -979,7 +979,7 @@ mod tests {
         )
         .await?;
         assert!(
-            results.contains(&("www/a/b/c/link.py".try_into()?, HookExecution::Accepted,)),
+            results.contains(&("www/a/b/c/link.py".try_into()?, HookExecution::accepted(),)),
             "dry-run mode should accept escaping symlink, got: {results:?}"
         );
 

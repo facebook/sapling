@@ -34,7 +34,7 @@ Split the work into 3 commits on a stack:
 - New file `implementations/<hook_name>.rs` with:
   - Config struct with `#[derive(Deserialize, Clone, Debug)]`
   - Hook struct with `new(config: &HookConfig)` and `with_config(config: Config)`
-  - No-op `run()` that returns `Ok(HookExecution::Accepted)`
+  - No-op `run()` that returns `Ok(HookExecution::accepted())` (`HookExecution` is a struct wrapping a `HookResult` plus `extra_logs`; build it with the `accepted()` / `rejected(info)` constructors)
 - `implementations.rs`: add `mod <hook_name>;` line only (NOT the match arm)
 - No tests, no BUCK/Cargo changes (skeleton has minimal imports)
 
