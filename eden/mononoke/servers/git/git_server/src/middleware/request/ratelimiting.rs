@@ -107,8 +107,7 @@ impl Middleware for UploadPackRateLimitingMiddleware {
                     main_client_id,
                     metadata.identities(),
                     format!(
-                        "Upload pack request rejected due to load shedding / rate limiting: {:?}",
-                        err
+                        "Upload pack request rejected due to load shedding / rate limiting: {err:?}"
                     ),
                     status,
                     user_agent,
@@ -124,8 +123,7 @@ impl Middleware for UploadPackRateLimitingMiddleware {
                         .status(status)
                         .body(
                             format!(
-                                "Upload pack request rejected due to load shedding / rate limiting: {:?}",
-                                err
+                                "Upload pack request rejected due to load shedding / rate limiting: {err:?}"
                             )
                             .into_body(),
                         )

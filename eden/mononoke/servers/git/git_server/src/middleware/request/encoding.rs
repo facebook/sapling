@@ -74,7 +74,7 @@ impl Middleware for RequestContentEncodingMiddleware {
                 return Some(
                     Response::builder()
                         .status(StatusCode::BAD_REQUEST)
-                        .body(format!("Unsupported Content-Encoding: {}", encoding).into_body())
+                        .body(format!("Unsupported Content-Encoding: {encoding}").into_body())
                         .expect("Failed to build a response"),
                 );
             }
@@ -82,7 +82,7 @@ impl Middleware for RequestContentEncodingMiddleware {
                 return Some(
                     Response::builder()
                         .status(StatusCode::INTERNAL_SERVER_ERROR)
-                        .body(format!("Error decoding request body: {:?}", err).into_body())
+                        .body(format!("Error decoding request body: {err:?}").into_body())
                         .expect("Failed to build a response"),
                 );
             }
