@@ -161,10 +161,10 @@ impl AppendCommits for OnDiskCommits {
         let null_rev = self.dag.vertex_id(null).await?;
         let wdir_rev = self.dag.vertex_id(wdir).await?;
         if Group::VIRTUAL.min_id() != null_rev {
-            bail!("unexpected null rev: {:?}", null_rev);
+            bail!("unexpected null rev: {null_rev:?}");
         }
         if Group::VIRTUAL.min_id() + 1 != wdir_rev {
-            bail!("unexpected wdir rev: {:?}", wdir_rev);
+            bail!("unexpected wdir rev: {wdir_rev:?}");
         }
         tracing::trace!(null_rev=?null_rev, wdir_rev=?wdir_rev, dag_version=?self.dag.dag_version(), "updated virtual revs");
         Ok(())

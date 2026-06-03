@@ -8,9 +8,9 @@
 use dag::Vertex;
 
 pub fn test_only(name: &str) -> anyhow::Error {
-    anyhow::format_err!("{} should only be used in tests", name)
+    anyhow::format_err!("{name} should only be used in tests")
 }
 
 pub fn hash_mismatch(a: &Vertex, b: &Vertex) -> anyhow::Error {
-    anyhow::format_err!("hash mismatch: {:?} != {:?}", a, b)
+    anyhow::format_err!("hash mismatch: {a:?} != {b:?}")
 }

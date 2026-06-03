@@ -108,8 +108,7 @@ impl RemoteIdConvertProtocol for SaplingRemoteApiProtocol {
             for name in names {
                 if self.disabled_names.contains(&name) {
                     let msg = format!(
-                        "Resolving {:?} is disabled via {}",
-                        name, EDENSCM_DISABLE_REMOTE_RESOLVE
+                        "Resolving {name:?} is disabled via {EDENSCM_DISABLE_REMOTE_RESOLVE}"
                     );
                     return Err(dag::errors::BackendError::Generic(msg).into());
                 }
@@ -124,8 +123,7 @@ impl RemoteIdConvertProtocol for SaplingRemoteApiProtocol {
                     let current = self.remote_name_current.fetch_add(1, SeqCst);
                     if current >= threshold {
                         let msg = format!(
-                            "Resolving name {:?} exceeds threshold {} set by {}",
-                            name, threshold, EDENSCM_REMOTE_NAME_THRESHOLD
+                            "Resolving name {name:?} exceeds threshold {threshold} set by {EDENSCM_REMOTE_NAME_THRESHOLD}"
                         );
                         return Err(dag::errors::BackendError::Generic(msg).into());
                     }
@@ -163,8 +161,7 @@ impl RemoteIdConvertProtocol for SaplingRemoteApiProtocol {
             let current = self.remote_id_current.fetch_add(1, SeqCst);
             if current >= threshold {
                 let msg = format!(
-                    "Resolving id exceeds threshold {} set by {}",
-                    threshold, EDENSCM_REMOTE_ID_THRESHOLD
+                    "Resolving id exceeds threshold {threshold} set by {EDENSCM_REMOTE_ID_THRESHOLD}"
                 );
                 return Err(dag::errors::BackendError::Generic(msg).into());
             }
@@ -547,7 +544,7 @@ impl HybridResolver<Vertex, Bytes, anyhow::Error> for Resolver {
     }
 
     fn retry_error(&self, _attempt: usize, input: &[Vertex]) -> anyhow::Error {
-        anyhow::format_err!("cannot resolve {:?} remotely", input)
+        anyhow::format_err!("cannot resolve {input:?} remotely")
     }
 }
 

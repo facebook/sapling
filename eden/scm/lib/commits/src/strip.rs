@@ -70,7 +70,7 @@ pub(crate) fn racy_unsafe_move_files(src_dir: &Path, dst_dir: &Path) -> Result<(
     let backup_dir = {
         let mut epoch = 0;
         loop {
-            let dir = dst_dir.join(format!("old.{}", epoch));
+            let dir = dst_dir.join(format!("old.{epoch}"));
             if dir.exists() {
                 epoch += 1;
             } else {
