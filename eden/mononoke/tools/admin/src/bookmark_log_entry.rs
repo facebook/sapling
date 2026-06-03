@@ -76,15 +76,15 @@ impl BookmarkLogEntry {
 impl fmt::Display for BookmarkLogEntry {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         if let Some(bundle_id) = self.bundle_id {
-            write!(fmt, "{} ", bundle_id)?;
+            write!(fmt, "{bundle_id} ")?;
         }
         write!(fmt, "({})", self.bookmark)?;
         match self.ids.as_slice() {
             [] => {}
-            [(_, id)] => write!(fmt, " {}", id)?,
+            [(_, id)] => write!(fmt, " {id}")?,
             ids => {
                 for (scheme, id) in ids {
-                    write!(fmt, " {}={}", scheme, id)?;
+                    write!(fmt, " {scheme}={id}")?;
                 }
             }
         }
