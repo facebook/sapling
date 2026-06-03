@@ -639,8 +639,7 @@ impl SourceControlServiceImpl {
             }
             thrift::TreeSpecifier::UnknownField(id) => {
                 return Err(scs_errors::invalid_request(format!(
-                    "tree specifier type not supported: {}",
-                    id
+                    "tree specifier type not supported: {id}"
                 ))
                 .into());
             }
@@ -692,8 +691,7 @@ impl SourceControlServiceImpl {
             }
             thrift::FileSpecifier::UnknownField(id) => {
                 return Err(scs_errors::invalid_request(format!(
-                    "file specifier type not supported: {}",
-                    id
+                    "file specifier type not supported: {id}"
                 ))
                 .into());
             }
@@ -1783,8 +1781,7 @@ mod tests {
         for id_type in client_identifier_structs::consts::REQUEST_PRIMARY_IDENTITY_TYPES.iter() {
             assert!(
                 is_kcb_covered(id_type),
-                "Expected '{}' to be covered by KCB",
-                id_type
+                "Expected '{id_type}' to be covered by KCB"
             );
         }
     }

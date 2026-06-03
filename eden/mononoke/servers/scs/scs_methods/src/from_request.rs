@@ -59,10 +59,7 @@ pub trait FromRequest<T: ?Sized> {
 impl FromRequest<str> for BookmarkKey {
     fn from_request(bookmark: &str) -> Result<BookmarkKey, thrift::RequestError> {
         BookmarkKey::new(bookmark).map_err(|e| {
-            scs_errors::invalid_request(format!(
-                "failed parsing bookmark out of {}: {:?}",
-                bookmark, e
-            ))
+            scs_errors::invalid_request(format!("failed parsing bookmark out of {bookmark}: {e:?}"))
         })
     }
 }
@@ -76,8 +73,7 @@ impl FromRequest<thrift::BookmarkKindRestrictions> for BookmarkKindRestrictions 
             &thrift::BookmarkKindRestrictions::ONLY_SCRATCH => Ok(Self::OnlyScratch),
             &thrift::BookmarkKindRestrictions::ONLY_PUBLISHING => Ok(Self::OnlyPublishing),
             other => Err(scs_errors::invalid_request(format!(
-                "Unknown BookmarkKindRestrictions: {}",
-                other
+                "Unknown BookmarkKindRestrictions: {other}"
             ))),
         }
     }
@@ -111,7 +107,7 @@ impl FromRequest<thrift::CandidateSelectionHint> for CandidateSelectionHintArgs 
                 Ok(CandidateSelectionHintArgs::Exact(changeset_specifier))
             }
             thrift::CandidateSelectionHint::UnknownField(f) => Err(scs_errors::invalid_request(
-                format!("unsupported candidate selection hint: {:?}", f),
+                format!("unsupported candidate selection hint: {f:?}"),
             )),
         }
     }
@@ -144,7 +140,7 @@ impl FromRequest<thrift::CommitId> for ChangesetSpecifier {
             }
             thrift::CommitId::globalrev(rev) => {
                 let rev = Globalrev::new((*rev).try_into().map_err(|_| {
-                    scs_errors::invalid_request(format!("cannot parse globalrev {} to u64", rev))
+                    scs_errors::invalid_request(format!("cannot parse globalrev {rev} to u64"))
                 })?);
                 Ok(ChangesetSpecifier::Globalrev(rev))
             }
@@ -161,7 +157,7 @@ impl FromRequest<thrift::CommitId> for ChangesetSpecifier {
             }
             thrift::CommitId::svnrev(rev) => {
                 let rev = Svnrev::new((*rev).try_into().map_err(|_| {
-                    scs_errors::invalid_request(format!("cannot parse svn revision {} to u64", rev))
+                    scs_errors::invalid_request(format!("cannot parse svn revision {rev} to u64"))
                 })?);
                 Ok(ChangesetSpecifier::Svnrev(rev))
             }
@@ -201,8 +197,7 @@ impl FromRequest<thrift::CopyInfo> for CopyInfo {
             thrift::CopyInfo::COPY => Ok(CopyInfo::Copy),
             thrift::CopyInfo::MOVE => Ok(CopyInfo::Move),
             val => Err(scs_errors::invalid_request(format!(
-                "unsupported copy info ({})",
-                val
+                "unsupported copy info ({val})"
             ))),
         }
     }
@@ -263,8 +258,7 @@ impl FromRequest<thrift::CommitIdentityScheme> for CommitIdentityScheme {
             thrift::CommitIdentityScheme::HG => Ok(CommitIdentityScheme::HG),
             thrift::CommitIdentityScheme::GIT => Ok(CommitIdentityScheme::GIT),
             _ => Err(scs_errors::invalid_request(format!(
-                "unsupported identity scheme: {}",
-                scheme
+                "unsupported identity scheme: {scheme}"
             ))),
         }
     }
@@ -336,8 +330,7 @@ impl FromRequest<thrift::RepoCreateCommitParamsFileType> for FileType {
             thrift::RepoCreateCommitParamsFileType::LINK => Ok(FileType::Symlink),
             thrift::RepoCreateCommitParamsFileType::GIT_SUBMODULE => Ok(FileType::GitSubmodule),
             val => Err(scs_errors::invalid_request(format!(
-                "unsupported file type ({})",
-                val
+                "unsupported file type ({val})"
             ))),
         }
     }
@@ -407,8 +400,7 @@ impl FromRequest<thrift::CreateCommitChecks> for CreateChangesetChecks {
         let reject_fix = |mode: &thrift::CreateCommitCheckMode, field: &str| {
             if *mode == thrift::CreateCommitCheckMode::FIX {
                 Err(scs_errors::invalid_request(format!(
-                    "FIX mode is not supported for '{}'; only CHECK and SKIP are valid",
-                    field,
+                    "FIX mode is not supported for '{field}'; only CHECK and SKIP are valid",
                 )))
             } else {
                 Ok(())
@@ -444,8 +436,7 @@ impl FromRequest<thrift::CreateCommitCheckMode> for CreateChangesetCheckMode {
             thrift::CreateCommitCheckMode::CHECK => Ok(CreateChangesetCheckMode::Check),
             thrift::CreateCommitCheckMode::FIX => Ok(CreateChangesetCheckMode::Fix),
             val => Err(scs_errors::invalid_request(format!(
-                "unsupported create commit check mode ({})",
-                val
+                "unsupported create commit check mode ({val})"
             ))),
         }
     }
@@ -482,11 +473,11 @@ where
 {
     if range.contains(&value) {
         T::try_from(value).map_err(|e| {
-            let msg = format!("failed to convert {} ({}): {}", name, value, e);
+            let msg = format!("failed to convert {name} ({value}): {e}");
             scs_errors::internal_error(msg).into()
         })
     } else {
-        let msg = format!("{} ({}) out of range ({:?})", name, value, range);
+        let msg = format!("{name} ({value}) out of range ({range:?})");
         Err(scs_errors::invalid_request(msg).into())
     }
 }
@@ -498,7 +489,7 @@ pub(crate) fn validate_timestamp(
     match ts {
         None | Some(0) => Ok(None),
         Some(ts) if ts < 0 => {
-            Err(scs_errors::invalid_request(format!("{} ({}) cannot be negative", name, ts)).into())
+            Err(scs_errors::invalid_request(format!("{name} ({ts}) cannot be negative")).into())
         }
         Some(ts) => Ok(Some(ts)),
     }

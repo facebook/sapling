@@ -76,7 +76,7 @@ impl SpecifierExt for thrift::TreeSpecifier {
                 tree_id.repo.name,
                 hex_string(&tree_id.id)
             ),
-            thrift::TreeSpecifier::UnknownField(n) => format!("unknown tree specifier type {}", n),
+            thrift::TreeSpecifier::UnknownField(n) => format!("unknown tree specifier type {n}"),
         }
     }
 
@@ -124,7 +124,7 @@ impl SpecifierExt for thrift::FileSpecifier {
                 hash.repo.name,
                 hex_string(&hash.content_hash),
             ),
-            thrift::FileSpecifier::UnknownField(n) => format!("unknown file specifier type {}", n),
+            thrift::FileSpecifier::UnknownField(n) => format!("unknown file specifier type {n}"),
         }
     }
 

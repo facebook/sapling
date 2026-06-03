@@ -34,7 +34,7 @@ pub(crate) async fn enqueue<P: ThriftParams>(
             .await
             .map(|res| res.into_thrift())
             .map_err(|e| {
-                scs_errors::internal_error(format!("Failed to enqueue the request: {}", e)).into()
+                scs_errors::internal_error(format!("Failed to enqueue the request: {e}")).into()
             }),
         None => Err(async_requests_disabled()),
     }
@@ -49,11 +49,9 @@ pub(crate) async fn poll<T: Token>(
         Some(queue) => match queue.poll(ctx, token).await {
             Ok(res) => Ok(res),
             Err(e) => match e {
-                PollError::Poll(err) => Err(scs_errors::poll_error(format!(
-                    "Failed to poll the results: {}",
-                    err
-                ))
-                .into()),
+                PollError::Poll(err) => {
+                    Err(scs_errors::poll_error(format!("Failed to poll the results: {err}")).into())
+                }
                 PollError::Fatal(err) => Err(err.into()),
             },
         },

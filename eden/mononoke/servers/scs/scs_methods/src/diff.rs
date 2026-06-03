@@ -143,10 +143,10 @@ fn convert_diff_service_error<E: DiffServiceError + std::fmt::Debug>(e: E) -> Se
                 .into()
             }
             diff_service_if::RequestErrorReason::UnknownField(_) => {
-                scs_errors::internal_error(format!("diff service error: {:#?}", e)).into()
+                scs_errors::internal_error(format!("diff service error: {e:#?}")).into()
             }
         },
-        None => scs_errors::internal_error(format!("diff service error: {:#?}", e)).into(),
+        None => scs_errors::internal_error(format!("diff service error: {e:#?}")).into(),
     }
 }
 
@@ -169,16 +169,14 @@ impl<'a> DiffRouter<'a> {
             Some(RemoteDiffConfig::HostPort(host_port)) => {
                 DiffServiceClient::from_host_port(self.fb, host_port.clone()).map_err(|e| {
                     format!(
-                        "Failed to create diff service client from host:port '{}': {}",
-                        host_port, e
+                        "Failed to create diff service client from host:port '{host_port}': {e}"
                     )
                 })
             }
             Some(RemoteDiffConfig::SmcTier(smc_tier)) => {
                 DiffServiceClient::from_tier_name(self.fb, smc_tier.clone()).map_err(|e| {
                     format!(
-                        "Failed to create diff service client from SMC tier '{}': {}",
-                        smc_tier, e
+                        "Failed to create diff service client from SMC tier '{smc_tier}': {e}"
                     )
                 })
             }
@@ -190,8 +188,7 @@ impl<'a> DiffRouter<'a> {
                 )
                 .map_err(|e| {
                     format!(
-                        "Failed to create diff service client from ShardManager tier '{}': {}",
-                        sm_tier, e
+                        "Failed to create diff service client from ShardManager tier '{sm_tier}': {e}"
                     )
                 })
             }
@@ -199,8 +196,7 @@ impl<'a> DiffRouter<'a> {
                 // Fallback to default Service Manager discovery
                 DiffServiceClient::new_with_sm(self.fb, repo_name.to_string()).map_err(|e| {
                     format!(
-                        "Failed to create diff service client for repo '{}': {}",
-                        repo_name, e
+                        "Failed to create diff service client for repo '{repo_name}': {e}"
                     )
                 })
             }
@@ -584,8 +580,7 @@ impl<'a> DiffRouter<'a> {
                             Ok(mononoke_api::FileType::GitSubmodule)
                         }
                         unknown => Err(scs_errors::internal_error(format!(
-                            "Unknown file type from diff service: {:?}",
-                            unknown
+                            "Unknown file type from diff service: {unknown:?}"
                         ))
                         .into()),
                     }
@@ -614,8 +609,7 @@ impl<'a> DiffRouter<'a> {
                             Ok(mononoke_api::FileContentType::LfsPointer)
                         }
                         unknown => Err(scs_errors::internal_error(format!(
-                            "Unknown content type from diff service: {:?}",
-                            unknown
+                            "Unknown content type from diff service: {unknown:?}"
                         ))
                         .into()),
                     }
@@ -641,8 +635,7 @@ impl<'a> DiffRouter<'a> {
                             Ok(mononoke_api::FileGeneratedStatus::NotGenerated)
                         }
                         unknown => Err(scs_errors::internal_error(format!(
-                            "Unknown generated status from diff service: {:?}",
-                            unknown
+                            "Unknown generated status from diff service: {unknown:?}"
                         ))
                         .into()),
                     }

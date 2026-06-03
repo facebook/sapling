@@ -160,8 +160,7 @@ pub(crate) async fn collect_history(
             Ok(thrift::History::commit_ids(commit_ids))
         }
         other_format => Err(scs_errors::invalid_request(format!(
-            "unsupported history format {}",
-            other_format
+            "unsupported history format {other_format}"
         ))
         .into()),
     }
