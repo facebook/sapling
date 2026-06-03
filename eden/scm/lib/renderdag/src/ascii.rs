@@ -14,6 +14,7 @@ use super::render::Renderer;
 use crate::pipeline::prefix_lines_to_text::PrefixLinesToText;
 use crate::pipeline::row_shape_to_prefix_lines::ascii::AsciiPrefixLineRenderer;
 use crate::pipeline::types::GraphRowShape;
+use crate::pipeline::types::PrefixLineRenderer;
 
 pub struct AsciiRenderer<N, R>
 where

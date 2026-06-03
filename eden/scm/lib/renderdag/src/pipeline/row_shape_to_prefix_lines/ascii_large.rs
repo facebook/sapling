@@ -12,6 +12,7 @@ use crate::pipeline::types::PadLine;
 use crate::pipeline::types::PrefixLine;
 use crate::pipeline::types::PrefixLineKind;
 use crate::pipeline::types::PrefixLinePart;
+use crate::pipeline::types::PrefixLineRenderer;
 
 /// Converts abstract row shapes into large ASCII graph prefix lines.
 #[derive(Default)]
@@ -22,9 +23,11 @@ impl AsciiLargePrefixLineRenderer {
     pub fn new() -> Self {
         Self
     }
+}
 
+impl PrefixLineRenderer for AsciiLargePrefixLineRenderer {
     /// Convert the next graph row shape into prefix lines.
-    pub fn next_prefix_lines<N>(&mut self, line: &GraphRowShape<N>) -> Vec<PrefixLine> {
+    fn next_prefix_lines<N>(&mut self, line: &GraphRowShape<N>) -> Vec<PrefixLine> {
         let mut lines = Vec::new();
 
         // Render the nodeline

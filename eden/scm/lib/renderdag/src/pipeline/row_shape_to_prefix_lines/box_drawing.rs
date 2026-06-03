@@ -14,6 +14,7 @@ use crate::pipeline::types::PadLine;
 use crate::pipeline::types::PrefixLine;
 use crate::pipeline::types::PrefixLineKind;
 use crate::pipeline::types::PrefixLinePart;
+use crate::pipeline::types::PrefixLineRenderer;
 
 mod glyph {
     pub(super) const SPACE: usize = 0;
@@ -110,9 +111,11 @@ where
     pub fn with_dec_graphics_glyphs(self) -> BoxDrawingPrefixLineRenderer<DecGraphics> {
         BoxDrawingPrefixLineRenderer::new()
     }
+}
 
+impl<G: BoxDrawingGlyphSet> PrefixLineRenderer for BoxDrawingPrefixLineRenderer<G> {
     /// Convert the next graph row shape into prefix lines.
-    pub fn next_prefix_lines<N>(&mut self, line: &GraphRowShape<N>) -> Vec<PrefixLine> {
+    fn next_prefix_lines<N>(&mut self, line: &GraphRowShape<N>) -> Vec<PrefixLine> {
         let glyphs = G::GLYPHS;
         let mut lines = Vec::new();
 

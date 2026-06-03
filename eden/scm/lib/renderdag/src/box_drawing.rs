@@ -18,6 +18,7 @@ use crate::pipeline::row_shape_to_prefix_lines::box_drawing::Curved;
 use crate::pipeline::row_shape_to_prefix_lines::box_drawing::DecGraphics;
 use crate::pipeline::row_shape_to_prefix_lines::box_drawing::Square;
 use crate::pipeline::types::GraphRowShape;
+use crate::pipeline::types::PrefixLineRenderer;
 
 pub struct BoxDrawingRenderer<N, R, G = Curved>
 where
