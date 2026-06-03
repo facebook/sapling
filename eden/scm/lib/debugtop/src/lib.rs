@@ -143,7 +143,7 @@ impl TableGenerator {
 
 fn top_status_entry(exit_code: &Option<i32>) -> String {
     match exit_code {
-        Some(code) => format!("EXITED ({})", code),
+        Some(code) => format!("EXITED ({code})"),
         None => "RUNNING".to_string(),
     }
 }
@@ -162,9 +162,9 @@ fn top_time_entry(time_spent: chrono::Duration) -> String {
     };
     let units_spent = milliseconds_spent as f64 / millis_in_unit as f64;
     if units_spent < 10_f64 {
-        format!("{:.1}{}", units_spent, unit_str)
+        format!("{units_spent:.1}{unit_str}")
     } else {
-        format!("{:.0}{}", units_spent, unit_str)
+        format!("{units_spent:.0}{unit_str}")
     }
 }
 
@@ -191,7 +191,7 @@ fn network_entry(time_spent: chrono::Duration, bytes_transferred: usize) -> Stri
     } else {
         (rate / 1e3, "k")
     };
-    format!("{:.1} {}b/s", rate, prefix)
+    format!("{rate:.1} {prefix}b/s")
 }
 
 #[cfg(test)]
