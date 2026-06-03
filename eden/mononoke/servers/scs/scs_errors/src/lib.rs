@@ -64,10 +64,10 @@ pub trait LoggableError {
 impl LoggableError for ServiceError {
     fn status_and_description(&self) -> (Status, String) {
         match self {
-            Self::Request(err) => (Status::RequestError, format!("{:?}", err)),
-            Self::Internal(err) => (Status::InternalError, format!("{:?}", err)),
-            Self::Overload(err) => (Status::OverloadError, format!("{:?}", err)),
-            Self::Poll(err) => (Status::PollError, format!("{:?}", err)),
+            Self::Request(err) => (Status::RequestError, format!("{err:?}")),
+            Self::Internal(err) => (Status::InternalError, format!("{err:?}")),
+            Self::Overload(err) => (Status::OverloadError, format!("{err:?}")),
+            Self::Poll(err) => (Status::PollError, format!("{err:?}")),
         }
     }
 }
@@ -76,7 +76,7 @@ impl ServiceError {
     pub fn context(self, context: &str) -> Self {
         match self {
             Self::Request(thrift::RequestError { kind, reason, .. }) => {
-                let reason = format!("{}: {}", context, reason);
+                let reason = format!("{context}: {reason}");
                 Self::Request(thrift::RequestError {
                     kind,
                     reason,
@@ -89,7 +89,7 @@ impl ServiceError {
                 source_chain,
                 ..
             }) => {
-                let reason = format!("{}: {}", context, reason);
+                let reason = format!("{context}: {reason}");
                 Self::Internal(thrift::InternalError {
                     reason,
                     backtrace,
@@ -98,14 +98,14 @@ impl ServiceError {
                 })
             }
             Self::Overload(thrift::OverloadError { reason, .. }) => {
-                let reason = format!("{}: {}", context, reason);
+                let reason = format!("{context}: {reason}");
                 Self::Overload(thrift::OverloadError {
                     reason,
                     ..Default::default()
                 })
             }
             Self::Poll(thrift::PollError { reason, .. }) => {
-                let reason = format!("{}: {}", context, reason);
+                let reason = format!("{context}: {reason}");
                 Self::Poll(thrift::PollError {
                     reason,
                     ..Default::default()
@@ -158,7 +158,7 @@ impl From<MegarepoError> for ServiceError {
         match e {
             MegarepoError::RequestError(e) => Self::Request(thrift::RequestError {
                 kind: thrift::RequestErrorKind::INVALID_REQUEST,
-                reason: format!("{}", e),
+                reason: format!("{e}"),
                 ..Default::default()
             }),
             MegarepoError::InternalError(error) => {
@@ -190,7 +190,7 @@ impl From<AsyncRequestsError> for ServiceError {
         match e {
             AsyncRequestsError::RequestError(e) => Self::Request(thrift::RequestError {
                 kind: thrift::RequestErrorKind::INVALID_REQUEST,
-                reason: format!("{}", e),
+                reason: format!("{e}"),
                 ..Default::default()
             }),
             AsyncRequestsError::InternalError(error) => {
@@ -295,7 +295,7 @@ impl From<MononokeError> for ServiceError {
                 })
             }
             MononokeError::InternalError(error) => {
-                let reason = format!("{:#}", error);
+                let reason = format!("{error:#}");
                 let backtrace = match error.backtrace().status() {
                     BacktraceStatus::Captured => Some(error.backtrace().to_string()),
                     _ => None,
@@ -465,7 +465,7 @@ pub fn internal_error(error: impl ToString) -> thrift::InternalError {
 pub fn repo_not_found(repo: String) -> thrift::RequestError {
     thrift::RequestError {
         kind: thrift::RequestErrorKind::REPO_NOT_FOUND,
-        reason: format!("repo not found ({})", repo),
+        reason: format!("repo not found ({repo})"),
         ..Default::default()
     }
 }
@@ -473,7 +473,7 @@ pub fn repo_not_found(repo: String) -> thrift::RequestError {
 pub fn commit_not_found(commit: String) -> thrift::RequestError {
     thrift::RequestError {
         kind: thrift::RequestErrorKind::COMMIT_NOT_FOUND,
-        reason: format!("commit not found ({})", commit),
+        reason: format!("commit not found ({commit})"),
         ..Default::default()
     }
 }
@@ -481,7 +481,7 @@ pub fn commit_not_found(commit: String) -> thrift::RequestError {
 pub fn file_not_found(file: String) -> thrift::RequestError {
     thrift::RequestError {
         kind: thrift::RequestErrorKind::FILE_NOT_FOUND,
-        reason: format!("file not found ({})", file),
+        reason: format!("file not found ({file})"),
         ..Default::default()
     }
 }
@@ -489,7 +489,7 @@ pub fn file_not_found(file: String) -> thrift::RequestError {
 pub fn tree_not_found(tree: String) -> thrift::RequestError {
     thrift::RequestError {
         kind: thrift::RequestErrorKind::TREE_NOT_FOUND,
-        reason: format!("tree not found ({})", tree),
+        reason: format!("tree not found ({tree})"),
         ..Default::default()
     }
 }
@@ -498,8 +498,7 @@ pub fn limit_too_low(limit: usize) -> thrift::RequestError {
     thrift::RequestError {
         kind: thrift::RequestErrorKind::INVALID_REQUEST,
         reason: format!(
-            "the limit param value of {} is not enough for the method to make any progress",
-            limit,
+            "the limit param value of {limit} is not enough for the method to make any progress",
         ),
         ..Default::default()
     }
