@@ -16,7 +16,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::OnceLock;
-use std::sync::atomic::AtomicBool;
+use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 
 use anyhow::Context;
@@ -34,6 +34,7 @@ use util::no_follow::LiteMetadata;
 use util::no_follow::NoFollowRoot;
 use util::no_follow::OpenFlags;
 use util::no_follow::normalize_not_directory;
+use util::path::symlink_file;
 
 use crate::pathauditor::PathAuditor;
 
@@ -124,7 +125,9 @@ struct Inner {
     // initialization.
     no_follow: OnceLock<NoFollowRoot>,
     auditor: PathAuditor,
-    supports_symlinks: AtomicBool,
+    // For unknown (or undecided, e.g. fuse) fstype, lazily initialized to delay
+    // or avoid real detection temp file side effect.
+    supports_symlinks: OnceLock<bool>,
     supports_executables: bool,
     case_sensitive: bool,
     /// Whether to automatically blow away conflicting paths/directories in order to successfully
@@ -176,8 +179,8 @@ impl VFS {
         let fs_type = fstype(&root)
             .map_err(normalize_not_directory_anyhow)
             .with_context(|| format!("can't construct a VFS for {:?}", root))?;
-        let supports_symlinks = AtomicBool::new(!cfg!(windows));
         let supports_executables = supports_executables(&fs_type);
+        let known_symlink_support = known_symlink_support(&fs_type);
         let case_sensitive =
             case_sensitive(&root, &fs_type).map_err(normalize_not_directory_anyhow)?;
         let no_follow = OnceLock::new();
@@ -188,7 +191,9 @@ impl VFS {
                 root,
                 no_follow,
                 auditor,
-                supports_symlinks,
+                supports_symlinks: known_symlink_support
+                    .map(OnceLock::from)
+                    .unwrap_or_default(),
                 supports_executables,
                 case_sensitive,
                 overwrite_path_conflicts,
@@ -243,7 +248,13 @@ impl VFS {
                 root: root.clone(),
                 no_follow: OnceLock::from(no_follow),
                 auditor: PathAuditor::new(&root, self.inner.case_sensitive),
-                supports_symlinks: AtomicBool::new(self.supports_symlinks()),
+                supports_symlinks: self
+                    .inner
+                    .supports_symlinks
+                    .get()
+                    .copied()
+                    .map(OnceLock::from)
+                    .unwrap_or_default(),
                 supports_executables: self.inner.supports_executables,
                 case_sensitive: self.inner.case_sensitive,
                 overwrite_path_conflicts: self.inner.overwrite_path_conflicts,
@@ -699,11 +710,14 @@ impl VFS {
     }
 
     pub fn supports_symlinks(&self) -> bool {
-        self.inner.supports_symlinks.load(Ordering::Acquire)
+        *self
+            .inner
+            .supports_symlinks
+            .get_or_init(|| detect_symlink_support(self.root()))
     }
 
     pub fn set_supports_symlinks(&self, value: bool) {
-        self.inner.supports_symlinks.store(value, Ordering::Release)
+        let _ = self.inner.supports_symlinks.set(value);
     }
 
     pub fn supports_executables(&self) -> bool {
@@ -1157,6 +1171,50 @@ fn supports_executables(_fs_type: &FsType) -> bool {
     // Previously only NTFS was explicitly handled, causing false "modified"
     // reports on other filesystems like ReFS (used by Dev Drives).
     !cfg!(windows)
+}
+
+fn detect_symlink_support(root: &Path) -> bool {
+    static CHECKLINK_COUNTER: AtomicUsize = AtomicUsize::new(0);
+
+    if std::env::var_os("SL_DEBUG_DISABLE_SYMLINKS").is_some() {
+        return false;
+    }
+
+    loop {
+        let link_path = root.join(format!(
+            "sl-checklink-{}-{}",
+            std::process::id(),
+            CHECKLINK_COUNTER.fetch_add(1, Ordering::Relaxed)
+        ));
+        match symlink_file("target", &link_path) {
+            Ok(()) => {
+                let _ = std::fs::remove_file(&link_path);
+                return true;
+            }
+            Err(err) if err.kind() == ErrorKind::AlreadyExists => continue,
+            Err(_) => return false,
+        }
+    }
+}
+
+fn known_symlink_support(fs_type: &FsType) -> Option<bool> {
+    // Keep this table in sync with sapling.fscap's symlink entries. Known
+    // filesystems avoid probe files, which matters for virtual filesystems like
+    // EdenFS where writes can invalidate status caches.
+    match *fs_type {
+        FsType::APFS
+        | FsType::BTRFS
+        | FsType::EDENFS
+        | FsType::EXT4
+        | FsType::HFS
+        | FsType::NTFS
+        | FsType::TMPFS
+        | FsType::UFS
+        | FsType::XFS
+        | FsType::ZFS => Some(true),
+        // Certain fs, like fuse, might or might not support symlink.
+        _ => None,
+    }
 }
 
 /// determines whether FS located at root is case sensitive
