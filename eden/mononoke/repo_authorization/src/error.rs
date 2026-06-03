@@ -42,30 +42,23 @@ impl fmt::Display for DeniedAction {
             DeniedAction::RepoMetadataRead => f.write_str("Repo metadata read access"),
             DeniedAction::PathRead(csid, path) => {
                 if path.is_root() {
-                    write!(f, "Repo read access for root of changeset {}", csid)
+                    write!(f, "Repo read access for root of changeset {csid}")
                 } else {
-                    write!(
-                        f,
-                        "Repo read access for path '{}' in changeset {}",
-                        path, csid
-                    )
+                    write!(f, "Repo read access for path '{path}' in changeset {csid}")
                 }
             }
-            DeniedAction::RepoWrite(op) => write!(f, "Repo write access for {:?}", op),
-            DeniedAction::PathWrite(path) => write!(f, "Repo write access to path '{}'", path),
+            DeniedAction::RepoWrite(op) => write!(f, "Repo write access for {op:?}"),
+            DeniedAction::PathWrite(path) => write!(f, "Repo write access to path '{path}'"),
             DeniedAction::BookmarkModification(bookmark) => {
-                write!(f, "Modification of bookmark '{}'", bookmark)
+                write!(f, "Modification of bookmark '{bookmark}'")
             }
             DeniedAction::OverrideGitMapping => f.write_str("Overriding of Git mapping"),
             DeniedAction::GitImportOperation => {
                 f.write_str("Access for Git-import related operations")
             }
             DeniedAction::CommitCloudOperation(action, workspace_acl) => f.write_str(
-                format!(
-                    "Access for Commit Cloud operation {} for workspace {}",
-                    action, workspace_acl
-                )
-                .as_str(),
+                format!("Access for Commit Cloud operation {action} for workspace {workspace_acl}")
+                    .as_str(),
             ),
             DeniedAction::CreateRepo => f.write_str("Repository creation"),
             DeniedAction::MirrorUpload => f.write_str("Mirror upload"),
@@ -90,7 +83,7 @@ impl fmt::Display for PermissionDenied {
         )?;
         let mut delim = "";
         for id in self.identities.iter() {
-            write!(f, "{}{}", delim, id)?;
+            write!(f, "{delim}{id}")?;
             delim = ", ";
         }
         f.write_str("]")
