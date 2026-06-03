@@ -84,7 +84,7 @@ impl KeyStore for GitStore {
         let id = self.write_obj(kind, &data)?;
         if let Some(forced_id) = opts.forced_id {
             if forced_id.as_ref() != &id {
-                anyhow::bail!("hash mismatch when writing {}@{}", path, forced_id);
+                anyhow::bail!("hash mismatch when writing {path}@{forced_id}");
             }
         }
         Ok(id)
