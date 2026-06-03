@@ -20,6 +20,8 @@ mod test_fixtures;
 #[cfg(test)]
 mod test_utils;
 
+pub mod pipeline;
+
 pub use self::ascii::AsciiRenderer;
 pub use self::ascii_large::AsciiLargeRenderer;
 pub use self::box_drawing::BoxDrawingRenderer;
