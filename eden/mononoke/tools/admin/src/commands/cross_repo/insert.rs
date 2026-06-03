@@ -129,7 +129,7 @@ async fn insert_rewritten(
 
     let mapping_version = CommitSyncConfigVersion(args.version_name);
     if !commit_sync_data.version_exists(&mapping_version).await? {
-        return Err(anyhow!("{} version does not exist", mapping_version));
+        return Err(anyhow!("{mapping_version} version does not exist"));
     }
 
     let mapping_entry = if small_repo_id == source_repo.repo_identity().id() {
@@ -183,7 +183,7 @@ async fn insert_equivalent_working_copy(
 
     let mapping_version = CommitSyncConfigVersion(args.version_name);
     if !commit_sync_data.version_exists(&mapping_version).await? {
-        return Err(anyhow!("{} version does not exist", mapping_version));
+        return Err(anyhow!("{mapping_version} version does not exist"));
     }
 
     let mapping_entry = if small_repo_id == source_repo.repo_identity().id() {
@@ -232,7 +232,7 @@ async fn insert_not_sync_candidate(
     let maybe_mapping_version = if let Some(version_name) = args.version_name {
         let mapping_version = CommitSyncConfigVersion(version_name);
         if !commit_sync_data.version_exists(&mapping_version).await? {
-            return Err(anyhow!("{} version does not exist", mapping_version));
+            return Err(anyhow!("{mapping_version} version does not exist"));
         }
         Some(mapping_version)
     } else {

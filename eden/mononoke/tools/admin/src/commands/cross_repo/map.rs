@@ -41,10 +41,10 @@ pub async fn map(
         .await?;
     match plural_commit_sync_outcome {
         Some(plural_commit_sync_outcome) => {
-            println!("{:?}", plural_commit_sync_outcome);
+            println!("{plural_commit_sync_outcome:?}");
         }
         None => {
-            println!("{} is not remapped", source_cs_id);
+            println!("{source_cs_id} is not remapped");
         }
     }
 

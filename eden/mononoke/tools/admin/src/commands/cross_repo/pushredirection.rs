@@ -194,7 +194,7 @@ async fn pushredirection_change_mapping_version(
 
     let mapping_version = CommitSyncConfigVersion(args.version_name);
     if !commit_sync_data.version_exists(&mapping_version).await? {
-        return Err(anyhow!("{} version does not exist", mapping_version));
+        return Err(anyhow!("{mapping_version} version does not exist"));
     }
 
     let author = args.author;
@@ -204,9 +204,7 @@ async fn pushredirection_change_mapping_version(
         |date| DateTime::from_rfc3339(date.as_str()),
     )?;
 
-    let oncall_msg_part = args
-        .oncall
-        .map(|o| format!("\n\nOncall Short Name: {}\n", o));
+    let oncall_msg_part = args.oncall.map(|o| format!("\n\nOncall Short Name: {o}\n"));
 
     let commit_msg = format!(
         "Changing synced mapping version to {} for {}->{} sync{}",
@@ -225,7 +223,7 @@ async fn pushredirection_change_mapping_version(
     let small_bookmark = commit_sync_data
         .rename_bookmark(&large_bookmark)
         .await?
-        .ok_or_else(|| anyhow!("{} bookmark doesn't remap to small repo", large_bookmark))?;
+        .ok_or_else(|| anyhow!("{large_bookmark} bookmark doesn't remap to small repo"))?;
 
     let large_bookmark_value = get_bookmark_value(ctx, large_repo, &large_bookmark).await?;
     let small_bookmark_value = get_bookmark_value(ctx, small_repo, &small_bookmark).await?;
@@ -284,7 +282,7 @@ async fn pushredirection_change_mapping_version(
     .await?;
 
     let rewritten_small_cs_id = maybe_rewritten_small_cs_id
-        .ok_or_else(|| anyhow!("{} was rewritten into non-existent commit", large_cs_id))?;
+        .ok_or_else(|| anyhow!("{large_cs_id} was rewritten into non-existent commit"))?;
 
     let large_repo_bookmark_move = move_bookmark(
         ctx,
