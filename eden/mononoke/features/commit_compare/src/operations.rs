@@ -146,9 +146,8 @@ pub async fn commit_compare<R: crate::Repo>(
             let diff_count = diff.len();
             if diff_count > max_paths {
                 return Err(MononokeError::InvalidRequest(format!(
-                    "commit_compare: unordered diff has {} entries, exceeding maximum {}. \
+                    "commit_compare: unordered diff has {diff_count} entries, exceeding maximum {max_paths}. \
                      Use ordered_params with pagination instead.",
-                    diff_count, max_paths,
                 ))
                 .into());
             }
@@ -185,8 +184,7 @@ pub async fn commit_compare<R: crate::Repo>(
                 .map(|after| {
                     MPath::try_from(after).map_err(|e| {
                         MononokeError::InvalidRequest(format!(
-                            "invalid continuation path '{}': {}",
-                            after, e
+                            "invalid continuation path '{after}': {e}"
                         ))
                     })
                 })
