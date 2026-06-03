@@ -1862,11 +1862,17 @@ TEST_P(CheckoutTest, diffFailsOnInProgressCheckout) {
 
   // Block checkout so the checkout is "in progress"
   auto executor = testMount.getServerExecutor().get();
-  auto checkoutTo1 = testMount.getEdenMount()->checkout(
-      testMount.getRootInode(),
-      RootId{"1"},
-      ObjectFetchContext::getNullContext(),
-      __func__);
+  auto checkoutTo1 = testMount.getEdenMount()
+                         ->checkout(
+                             testMount.getRootInode(),
+                             RootId{"1"},
+                             ObjectFetchContext::getNullContext(),
+                             __func__)
+                         .semi()
+                         .via(executor);
+  testMount.drainServerExecutor();
+  ASSERT_TRUE(testMount.getServerState()->getFaultInjector().waitUntilBlocked(
+      "checkout", 5s));
   EXPECT_FALSE(checkoutTo1.isReady());
 
   // Call getStatus and make sure it fails.
@@ -1889,8 +1895,7 @@ TEST_P(CheckoutTest, diffFailsOnInProgressCheckout) {
   // Unblock checkout
   testMount.getServerState()->getFaultInjector().unblock("checkout", ".*");
 
-  auto waitedCheckoutTo1 =
-      std::move(checkoutTo1).semi().via(executor).waitVia(executor);
+  auto waitedCheckoutTo1 = std::move(checkoutTo1).waitVia(executor);
   EXPECT_TRUE(waitedCheckoutTo1.isReady());
 
   // Try to diff again just to make sure we don't block again.
@@ -2007,11 +2012,17 @@ TEST_P(CheckoutTest, checkoutFailsOnInProgressCheckout) {
 
   // Block checkout so the checkout is "in progress"
   auto executor = testMount.getServerExecutor().get();
-  auto checkout1 = testMount.getEdenMount()->checkout(
-      testMount.getRootInode(),
-      RootId{"2"},
-      ObjectFetchContext::getNullContext(),
-      __func__);
+  auto checkout1 = testMount.getEdenMount()
+                       ->checkout(
+                           testMount.getRootInode(),
+                           RootId{"2"},
+                           ObjectFetchContext::getNullContext(),
+                           __func__)
+                       .semi()
+                       .via(executor);
+  testMount.drainServerExecutor();
+  ASSERT_TRUE(testMount.getServerState()->getFaultInjector().waitUntilBlocked(
+      "checkout", 5s));
   EXPECT_FALSE(checkout1.isReady());
 
   // Run another checkout and make sure it fails
@@ -2035,7 +2046,7 @@ TEST_P(CheckoutTest, checkoutFailsOnInProgressCheckout) {
   // Unblock original checkout and make sure it completes
   testMount.getServerState()->getFaultInjector().unblock("checkout", ".*");
 
-  EXPECT_NO_THROW(std::move(checkout1).semi().via(executor).getVia(executor));
+  EXPECT_NO_THROW(std::move(checkout1).getVia(executor));
 
   // Try to checkout again just to make sure we don't block again.
   testMount.getServerState()->getFaultInjector().removeFault("checkout", ".*");
