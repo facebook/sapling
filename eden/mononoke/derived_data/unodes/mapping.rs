@@ -80,7 +80,7 @@ pub fn format_key(derivation_ctx: &DerivationContext, changeset_id: ChangesetId)
         UnodeVersion::V2 => "derived_root_unode_v2.",
     };
     let key_prefix = derivation_ctx.mapping_key_prefix::<RootUnodeManifestId>();
-    format!("{}{}{}", root_prefix, key_prefix, changeset_id)
+    format!("{root_prefix}{key_prefix}{changeset_id}")
 }
 
 #[async_trait]
@@ -182,7 +182,7 @@ impl BonsaiDerivable for RootUnodeManifestId {
                         .map(|mf_id| *mf_id.manifest_unode_id()),
                 )
                 .await
-                .with_context(|| format!("failed deriving stack of {:?} to {:?}", first, last,))?;
+                .with_context(|| format!("failed deriving stack of {first:?} to {last:?}",))?;
 
                 res.extend(derived.into_iter().map(|(csid, mf_id)| (csid, Self(mf_id))));
             }
@@ -389,7 +389,7 @@ mod test {
             .unwrap();
 
         for (cs_id, hg_cs_id, unode_id) in commits_desc_to_anc.into_iter().rev() {
-            println!("{} {}", cs_id, hg_cs_id);
+            println!("{cs_id} {hg_cs_id}");
             println!("{:?} {:?}", batch_derived.get(&cs_id), Some(&unode_id));
             assert_eq!(batch_derived.get(&cs_id), Some(&unode_id));
         }

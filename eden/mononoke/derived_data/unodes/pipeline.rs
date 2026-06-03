@@ -74,9 +74,7 @@ impl PipelineDerivable for RootUnodeManifestId {
                     let output = results
                         .get(&parent_csid)
                         .or_else(|| parents.get(&parent_csid))
-                        .ok_or_else(|| {
-                            anyhow!("missing stage output for parent {}", parent_csid)
-                        })?;
+                        .ok_or_else(|| anyhow!("missing stage output for parent {parent_csid}"))?;
                     Ok(output.clone())
                 })
                 .collect::<Result<Vec<_>>>()?
@@ -160,9 +158,7 @@ impl PipelineDerivable for RootUnodeManifestId {
             if use_normal_mapping {
                 let Some(Entry::Tree(mf_unode_id)) = output else {
                     return Err(anyhow!(
-                        "terminal stage output for {} should be Some(Entry::Tree), got {:?}",
-                        cs_id,
-                        output,
+                        "terminal stage output for {cs_id} should be Some(Entry::Tree), got {output:?}",
                     ));
                 };
                 let key = format_key(derivation, cs_id);
@@ -240,9 +236,7 @@ impl PipelineDerivable for RootUnodeManifestId {
                             unodes_thrift::UnodeStageOutput::empty(_) => None,
                             unodes_thrift::UnodeStageOutput::UnknownField(x) => {
                                 return Err(anyhow!(
-                                    "unknown UnodeStageOutput variant {} for {}",
-                                    x,
-                                    cs_id
+                                    "unknown UnodeStageOutput variant {x} for {cs_id}"
                                 ));
                             }
                         };
