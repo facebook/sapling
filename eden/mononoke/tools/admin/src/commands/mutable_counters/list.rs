@@ -16,7 +16,7 @@ pub async fn list(ctx: &CoreContext, repo: &Repo) -> Result<()> {
     let counters = mutable_counters.get_all_counters(ctx).await?;
 
     for (name, value) in counters {
-        println!("{:<30}={}", name, value);
+        println!("{name:<30}={value}");
     }
 
     Ok(())

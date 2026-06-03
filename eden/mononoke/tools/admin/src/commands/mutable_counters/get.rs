@@ -23,6 +23,6 @@ pub async fn get(ctx: &CoreContext, repo: &Repo, get_args: GetArgs) -> Result<()
     let maybe_value = mutable_counters
         .get_counter(ctx, get_args.counter_name.as_ref())
         .await?;
-    println!("{:?}", maybe_value);
+    println!("{maybe_value:?}");
     Ok(())
 }
