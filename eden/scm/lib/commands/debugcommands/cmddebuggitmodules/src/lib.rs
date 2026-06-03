@@ -29,10 +29,10 @@ pub fn run(ctx: ReqCtx<DebugGitModulesOpts>, repo: &Repo, wc: &WorkingCopy) -> R
 
     if ctx.opts.json {
         let jstring = serde_json::to_string(&gitmodules)?;
-        write!(ctx.io().output(), "{}", jstring)?;
+        write!(ctx.io().output(), "{jstring}")?;
     } else {
         for m in gitmodules {
-            write!(ctx.io().output(), "{}", m)?;
+            write!(ctx.io().output(), "{m}")?;
         }
     }
 
