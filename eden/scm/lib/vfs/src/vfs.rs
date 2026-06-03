@@ -110,7 +110,7 @@ fn normalize_not_directory_anyhow(err: anyhow::Error) -> anyhow::Error {
 fn path_component_from_dir_entry(name: std::ffi::OsString) -> Result<PathComponentBuf> {
     let name = name
         .into_string()
-        .map_err(|name| anyhow::format_err!("directory entry is not UTF-8: {:?}", name))?;
+        .map_err(|name| anyhow::format_err!("directory entry is not UTF-8: {name:?}"))?;
     Ok(PathComponentBuf::from_string(name)?)
 }
 
@@ -178,7 +178,7 @@ impl VFS {
     fn new_inner(root: PathBuf, overwrite_path_conflicts: bool) -> Result<Self> {
         let fs_type = fstype(&root)
             .map_err(normalize_not_directory_anyhow)
-            .with_context(|| format!("can't construct a VFS for {:?}", root))?;
+            .with_context(|| format!("can't construct a VFS for {root:?}"))?;
         let supports_executables = supports_executables(&fs_type);
         let known_symlink_support = known_symlink_support(&fs_type);
         let case_sensitive =
@@ -333,7 +333,7 @@ impl VFS {
             Err(err) if flags.creates_file() => {
                 let err = anyhow::Error::from(err);
                 self.clear_conflicts(path).with_context(|| {
-                    format!("can't clear conflicts after handling error \"{:#}\"", err)
+                    format!("can't clear conflicts after handling error \"{err:#}\"")
                 })?;
                 let file = self.no_follow()?.open_file(path, flags, mode)?;
                 reset_open_file_permissions(&file, flags, mode)?;
@@ -411,7 +411,7 @@ impl VFS {
                     .into());
                 }
                 self.no_follow()?.remove_dir_all(&prefix).with_context(|| {
-                    format!("can't remove conflicting directory {:?}", conflict_path)
+                    format!("can't remove conflicting directory {conflict_path:?}")
                 })?;
                 break;
             }
@@ -479,7 +479,7 @@ impl VFS {
     /// is the symlink destination for these.
     fn plain_symlink_file(&self, link_name: &RepoPath, link_dest: &Path) -> Result<()> {
         let link_dest = match link_dest.to_str() {
-            None => bail!("not a valid UTF-8 path: {:?}", link_dest),
+            None => bail!("not a valid UTF-8 path: {link_dest:?}"),
             Some(s) => s,
         };
 
@@ -544,7 +544,7 @@ impl VFS {
                 // failures not due to a conflicting file would show up here again, so let's not worry
                 // about it.
                 self.clear_conflicts(path).with_context(|| {
-                    format!("can't clear conflicts after handling error \"{:#}\"", e)
+                    format!("can't clear conflicts after handling error \"{e:#}\"")
                 })?;
 
                 self.write_inner(path, data, flag)
