@@ -50,7 +50,7 @@ pub async fn summary(
     let derivation_queue = repo
         .repo_derivation_queues()
         .queue(config_name)
-        .ok_or_else(|| anyhow!("Missing derivation queue for config {}", config_name))?;
+        .ok_or_else(|| anyhow!("Missing derivation queue for config {config_name}"))?;
 
     let summary = derivation_queue.summary(ctx).await?;
 
@@ -134,7 +134,7 @@ async fn print_table(
             };
             let type_cell = match item.stage_payload() {
                 Some(payload) => format!("{} (stage: {})", dd_type, payload.path()),
-                None => format!("{}", dd_type),
+                None => format!("{dd_type}"),
             };
             let mut row = row![
                 format!(

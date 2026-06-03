@@ -68,7 +68,7 @@ pub async fn enqueue(
     let derivation_queue = repo
         .repo_derivation_queues()
         .queue(config_name)
-        .ok_or_else(|| anyhow!("Missing derivation queue for config {}", config_name))?;
+        .ok_or_else(|| anyhow!("Missing derivation queue for config {config_name}"))?;
 
     let ddm = derivation_queue.derived_data_manager();
     let derived_data_type = args.derived_data_args.resolve_type()?;

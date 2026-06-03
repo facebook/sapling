@@ -40,7 +40,7 @@ pub async fn nuke(ctx: &CoreContext, repo: &Repo, config_name: &str, args: NukeA
     let derivation_queue = repo
         .repo_derivation_queues()
         .queue(config_name)
-        .ok_or_else(|| anyhow!("Missing derivation queue for config {}", config_name))?;
+        .ok_or_else(|| anyhow!("Missing derivation queue for config {config_name}"))?;
 
     let repo_name = repo.repo_identity().name();
     info!(
