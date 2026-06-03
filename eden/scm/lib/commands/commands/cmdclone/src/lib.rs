@@ -271,7 +271,7 @@ fn run_non_eden(
 
     let target_rev = match get_update_target(&logger, &repo, &ctx.opts)? {
         Some((id, name)) => {
-            logger.info(format!("Checking out '{}'", name));
+            logger.info(format!("Checking out '{name}'"));
 
             logger.verbose(|| {
                 format!(
@@ -340,7 +340,7 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>) -> Result<u8> {
             deprecate(
                 &config,
                 option_config,
-                format!("the {} option has been deprecated", option_name),
+                format!("the {option_name} option has been deprecated"),
             )?;
         }
     }
@@ -410,7 +410,7 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>) -> Result<u8> {
     let reponame = match config.get_opt::<String>("remotefilelog", "reponame")? {
         // This gets the reponame from the --configfile config.
         Some(c) => {
-            logger.verbose(|| format!("Repo name is {} from config", c));
+            logger.verbose(|| format!("Repo name is {c} from config"));
             c
         }
         None => match source.repo_name() {
@@ -565,7 +565,7 @@ fn clone_metadata(
     let mut repo_config_file_content = includes.into_iter().fold(String::new(), |mut out, file| {
         use std::fmt::Write;
 
-        let _ = write!(out, "%include {}\n", file);
+        let _ = write!(out, "%include {file}\n");
         out
     });
 
@@ -663,7 +663,7 @@ fn clone_metadata(
                 &mut commits.write(),
                 bookmark_names,
             )?;
-            logger.verbose(|| format!("Pulled bookmarks {:?}", bookmark_ids));
+            logger.verbose(|| format!("Pulled bookmarks {bookmark_ids:?}"));
 
             if repo
                 .config()
@@ -802,8 +802,7 @@ fn get_update_target(
         Some(id) => Ok(Some((id, main_bookmark))),
         None => {
             logger.info(format!(
-                "Server has no '{}' bookmark - trying tip.",
-                main_bookmark,
+                "Server has no '{main_bookmark}' bookmark - trying tip.",
             ));
 
             if let Some(tip) = repo.resolve_commit_opt("tip")? {
