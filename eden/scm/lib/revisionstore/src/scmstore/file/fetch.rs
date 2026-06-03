@@ -220,7 +220,7 @@ impl FetchState {
                         self.metrics.indexedlog.store(loc).err(1);
                         errors += 1;
                         if error.is_none() {
-                            error.replace(format!("{}: {}", key, err));
+                            error.replace(format!("{key}: {err}"));
                         }
                         self.errors.keyed_error(key.clone(), err);
                     }
