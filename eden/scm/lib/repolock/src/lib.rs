@@ -688,7 +688,7 @@ mod tests {
             let _lock = locker.lock_store()?;
             match locker.lock_working_copy(wc_tmp.path().to_path_buf()) {
                 Err(LockError::OutOfOrder(_)) => {}
-                result => panic!("wlock should be required before lock: {:?}", result),
+                result => panic!("wlock should be required before lock: {result:?}"),
             };
         }
 
