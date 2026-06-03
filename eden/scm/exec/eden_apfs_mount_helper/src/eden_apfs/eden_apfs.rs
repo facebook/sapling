@@ -159,7 +159,7 @@ impl MountTable {
     pub fn parse_system_mount_table<T: SystemCommand>(mount: &T) -> Result<Self> {
         let output = mount.run_unprivileged(&[])?;
         if !output.status.success() {
-            bail!("failed to execute mount: {:#?}", output);
+            bail!("failed to execute mount: {output:#?}");
         }
         Ok(Self::parse_mount_table_text(&String::from_utf8(
             output.stdout,
@@ -223,7 +223,7 @@ impl<T: SystemCommand> ApfsUtil<T> {
             .diskutil
             .run_unprivileged(&["apfs", "list", "-plist"])?;
         if !output.status.success() {
-            anyhow::bail!("failed to execute diskutil list: {:#?}", output);
+            anyhow::bail!("failed to execute diskutil list: {output:#?}");
         }
         Ok(parse_plist::<Containers>(&String::from_utf8(output.stdout)?)?.containers)
     }
@@ -309,7 +309,7 @@ impl<T: SystemCommand> ApfsUtil<T> {
             }
             Ok(())
         } else {
-            bail!("Did not find a volume named {}", volume_name);
+            bail!("Did not find a volume named {volume_name}");
         }
     }
 
@@ -356,7 +356,7 @@ impl<T: SystemCommand> ApfsUtil<T> {
                 }
             }
         }
-        bail!("Did not find a volume mounted on {}", mount_point);
+        bail!("Did not find a volume mounted on {mount_point}");
     }
 }
 
@@ -406,7 +406,7 @@ pub fn geteuid() -> u32 {
 
 pub fn canonicalize_mount_point_path(mount_point: &str) -> Result<String> {
     let canon = std::fs::canonicalize(mount_point)
-        .with_context(|| format!("canonicalizing path {}", mount_point))?;
+        .with_context(|| format!("canonicalizing path {mount_point}"))?;
     canon
         .to_str()
         .ok_or_else(|| anyhow!("path {} somehow isn't unicode on macOS", canon.display()))
@@ -435,7 +435,7 @@ pub fn encode_mount_point_as_volume_name<P: AsRef<Path>>(mount_point: P) -> Stri
 
     if full_volume_name.chars().count() > 127 {
         let hashed_mount = encode_canonicalized_path(&mount_point);
-        return format!("edenfs:{}", hashed_mount);
+        return format!("edenfs:{hashed_mount}");
     }
 
     full_volume_name
