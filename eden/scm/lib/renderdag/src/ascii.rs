@@ -8,6 +8,7 @@
 use std::marker::PhantomData;
 
 use super::output::OutputRendererOptions;
+use super::output::OutputRendererState;
 use super::render::Ancestor;
 use super::render::GraphRow;
 use super::render::LinkLine;
@@ -22,7 +23,7 @@ where
 {
     inner: R,
     options: OutputRendererOptions,
-    extra_pad_line: Option<String>,
+    state: OutputRendererState,
     _phantom: PhantomData<N>,
 }
 
@@ -34,7 +35,7 @@ where
         AsciiRenderer {
             inner,
             options,
-            extra_pad_line: None,
+            state: OutputRendererState::default(),
             _phantom: PhantomData,
         }
     }
@@ -71,13 +72,12 @@ where
         let mut need_extra_pad_line = false;
 
         // Render the previous extra pad line
-        if let Some(extra_pad_line) = self.extra_pad_line.take() {
-            out.push_str(extra_pad_line.trim_end());
-            out.push('\n');
+        if let Some(extra_pad_line) = self.state.extra_pad_line.take() {
+            self.state.push_line(&mut out, &extra_pad_line);
         }
 
         if line.blank_line_before {
-            out.push('\n');
+            self.state.mabye_push_blank_line(&mut out);
         }
 
         // Render the nodeline
@@ -97,8 +97,7 @@ where
             node_line.push(' ');
             node_line.push_str(msg);
         }
-        out.push_str(node_line.trim_end());
-        out.push('\n');
+        self.state.push_line(&mut out, &node_line);
 
         // Render the link line
         if let Some(link_row) = line.link_line {
@@ -162,8 +161,7 @@ where
                 link_line.push(' ');
                 link_line.push_str(msg);
             }
-            out.push_str(link_line.trim_end());
-            out.push('\n');
+            self.state.push_line(&mut out, &link_line);
         }
 
         // Render the term line
@@ -186,8 +184,7 @@ where
                     term_line.push(' ');
                     term_line.push_str(msg);
                 }
-                out.push_str(term_line.trim_end());
-                out.push('\n');
+                self.state.push_line(&mut out, &term_line);
             }
             need_extra_pad_line = true;
         }
@@ -206,13 +203,12 @@ where
             let mut pad_line = base_pad_line.clone();
             pad_line.push(' ');
             pad_line.push_str(msg);
-            out.push_str(pad_line.trim_end());
-            out.push('\n');
+            self.state.push_line(&mut out, &pad_line);
             need_extra_pad_line = false;
         }
 
         if need_extra_pad_line {
-            self.extra_pad_line = Some(base_pad_line);
+            self.state.extra_pad_line = Some(base_pad_line);
         }
 
         out

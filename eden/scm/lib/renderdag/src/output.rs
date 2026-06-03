@@ -19,6 +19,22 @@ pub(crate) struct OutputRendererOptions {
     pub(crate) min_row_height: usize,
 }
 
+#[derive(Default)]
+pub(crate) struct OutputRendererState {
+    pub(crate) extra_pad_line: Option<String>,
+}
+
+impl OutputRendererState {
+    pub(crate) fn push_line(&mut self, out: &mut String, line: &str) {
+        out.push_str(line.trim_end());
+        out.push('\n');
+    }
+
+    pub(crate) fn mabye_push_blank_line(&mut self, out: &mut String) {
+        out.push('\n');
+    }
+}
+
 pub struct OutputRendererBuilder<N, R>
 where
     R: Renderer<N, Output = GraphRow<N>> + Sized,
