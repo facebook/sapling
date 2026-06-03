@@ -69,7 +69,7 @@ macro_rules! check_status {
 fn frozen_module(cname: &'static [u8]) -> ffi::_frozen {
     let name = std::str::from_utf8(cname).unwrap().trim_end_matches('\0');
     let module = match python_modules::find_module(name) {
-        None => panic!("module {} should be included", name),
+        None => panic!("module {name} should be included"),
         Some(v) => v,
     };
     let code = module.byte_code();
