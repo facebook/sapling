@@ -928,6 +928,16 @@ EdenServiceHandler::semifuture_checkOutRevision(
     std::unique_ptr<std::string> hash,
     CheckoutMode checkoutMode,
     std::unique_ptr<CheckOutRevisionParams> params) {
+  return semifuture_checkOutRevisionImpl(
+      std::move(mountPoint), std::move(hash), checkoutMode, std::move(params));
+}
+
+folly::SemiFuture<std::unique_ptr<std::vector<CheckoutConflict>>>
+EdenServiceHandler::semifuture_checkOutRevisionImpl(
+    std::unique_ptr<std::string> mountPoint,
+    std::unique_ptr<std::string> hash,
+    CheckoutMode checkoutMode,
+    std::unique_ptr<CheckOutRevisionParams> params) {
   auto rootIdOptions = params->rootIdOptions().ensure();
   auto requestContext = getRequestContext();
   auto helper = INSTRUMENT_THRIFT_CALL_WITH_CANCELLATION(

@@ -172,6 +172,13 @@ class EdenServiceHandler
       CheckoutMode checkoutMode,
       std::unique_ptr<CheckOutRevisionParams> params) override;
 
+  folly::SemiFuture<std::unique_ptr<std::vector<CheckoutConflict>>>
+  semifuture_checkOutRevisionImpl(
+      std::unique_ptr<std::string> mountPoint,
+      std::unique_ptr<std::string> hash,
+      CheckoutMode checkoutMode,
+      std::unique_ptr<CheckOutRevisionParams> params);
+
   folly::SemiFuture<folly::Unit> semifuture_resetParentCommits(
       std::unique_ptr<std::string> mountPoint,
       std::unique_ptr<WorkingDirectoryParents> parents,
