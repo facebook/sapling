@@ -100,7 +100,7 @@ impl fmt::Debug for Vertex {
         } else {
             // Do not use hex if it looks like an ASCII identifier.
             match std::str::from_utf8(self.as_ref()) {
-                Ok(s) => write!(f, "{}", s),
+                Ok(s) => write!(f, "{s}"),
                 Err(_) => write!(f, "{}", self.to_hex()),
             }
         }
@@ -248,7 +248,7 @@ impl fmt::Display for Id {
 
 impl fmt::Debug for Id {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self)
+        write!(f, "{self}")
     }
 }
 
