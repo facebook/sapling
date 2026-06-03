@@ -179,6 +179,18 @@ class EdenServiceHandler
       CheckoutMode checkoutMode,
       std::unique_ptr<CheckOutRevisionParams> params);
 
+  /**
+   * Coroutine implementation of `checkOutRevision`. Selected by
+   * `EdenConfig::enableCoroutinesPhase7`.
+   */
+  folly::coro::now_task<std::unique_ptr<std::vector<CheckoutConflict>>>
+  co_checkOutRevisionImpl(
+      apache::thrift::Cpp2RequestContext* requestContext,
+      std::unique_ptr<std::string> mountPoint,
+      std::unique_ptr<std::string> hash,
+      CheckoutMode checkoutMode,
+      std::unique_ptr<CheckOutRevisionParams> params);
+
   folly::SemiFuture<folly::Unit> semifuture_resetParentCommits(
       std::unique_ptr<std::string> mountPoint,
       std::unique_ptr<WorkingDirectoryParents> parents,
