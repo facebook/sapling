@@ -214,7 +214,7 @@ impl SnapshotFileCache {
 
         let store = store_options
             .rotated(cache_dir)
-            .with_context(|| format!("Failed to open snapshot cache at {:?}", cache_dir))?;
+            .with_context(|| format!("Failed to open snapshot cache at {cache_dir:?}"))?;
 
         Ok(Self { store, config })
     }
@@ -258,10 +258,7 @@ impl SnapshotFileCache {
         entry.extend_from_slice(content);
 
         self.store.append(&entry).with_context(|| {
-            format!(
-                "Failed to store content in cache (ContentId: {})",
-                content_id
-            )
+            format!("Failed to store content in cache (ContentId: {content_id})")
         })?;
 
         debug!(
@@ -278,12 +275,7 @@ impl SnapshotFileCache {
         let store_read = self.store.read();
         store_read
             .contains(0, content_id.as_ref())
-            .with_context(|| {
-                format!(
-                    "Failed to check if ContentId {} exists in cache",
-                    content_id
-                )
-            })
+            .with_context(|| format!("Failed to check if ContentId {content_id} exists in cache"))
     }
 
     /// Retrieve cache item from the cache by ContentId
@@ -291,11 +283,11 @@ impl SnapshotFileCache {
         let store_read = self.store.read();
         let lookup_result = store_read
             .lookup(0, content_id.as_ref())
-            .with_context(|| format!("Failed to lookup ContentId {} in cache", content_id))?;
+            .with_context(|| format!("Failed to lookup ContentId {content_id} in cache"))?;
 
         for entry_result in lookup_result {
             let entry = entry_result.with_context(|| {
-                format!("Failed to read cache entry for ContentId {}", content_id)
+                format!("Failed to read cache entry for ContentId {content_id}")
             })?;
 
             if entry.len() < entry_header_size() {

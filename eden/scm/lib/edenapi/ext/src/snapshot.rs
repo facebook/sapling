@@ -330,7 +330,7 @@ pub async fn upload_snapshot_with_cache(
         // rel_path is relative to the repo root
         .map(|(rel_path, file_type, tracked)| -> anyhow::Result<_> {
             load_files(&root, rel_path.clone(), file_type, tracked)
-                .with_context(|| anyhow::anyhow!("Failed to load file {}", rel_path))
+                .with_context(|| anyhow::anyhow!("Failed to load file {rel_path}"))
         })
         // Ignore IO errors for files that can't be read as regular files:
         // - NotFound: transient files that disappeared between status and snapshot
@@ -413,10 +413,7 @@ pub async fn upload_snapshot_with_cache(
             let upload_token = file_content_tokens
                 .get(&cid)
                 .with_context(|| {
-                    format_err!(
-                        "unexpected error: upload token is missing for ContentId({})",
-                        cid
-                    )
+                    format_err!("unexpected error: upload token is missing for ContentId({cid})")
                 })?
                 .clone();
             let change = if tracked == Tracked {

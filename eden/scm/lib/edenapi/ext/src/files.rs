@@ -89,13 +89,13 @@ async fn on_disk_optimization(
                         let bytes = match file_type {
                             FileType::Executable | FileType::Regular => {
                                 if is_symlink {
-                                    bail!("File '{}' is a symlink", rel_path)
+                                    bail!("File '{rel_path}' is a symlink")
                                 }
                                 Bytes::from_owner(tokio::fs::read(abs_path).await?)
                             }
                             FileType::Symlink => {
                                 if !is_symlink {
-                                    bail!("File '{}' is not a symlink", rel_path)
+                                    bail!("File '{rel_path}' is not a symlink")
                                 }
                                 let link = tokio::fs::read_link(abs_path).await?;
                                 let to = link.to_str().context("invalid path")?.as_bytes();
