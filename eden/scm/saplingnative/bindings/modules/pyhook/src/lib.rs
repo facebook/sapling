@@ -117,7 +117,7 @@ fn get_callable(
 ) -> PyResult<PyObject> {
     match spec.rsplit_once(':') {
         Some((left, func_name)) => {
-            let module_name = format!("slhook_{}", hook_name);
+            let module_name = format!("slhook_{hook_name}");
             let module = match left.strip_prefix("base64:") {
                 Some(source_base64) => {
                     let source = BASE64.decode(source_base64).map_pyerr(py)?;
@@ -143,7 +143,7 @@ fn get_callable(
                 None => {
                     return Err(PyErr::new::<ImportError, _>(
                         py,
-                        format!("invalid python hook: {}", spec),
+                        format!("invalid python hook: {spec}"),
                     ));
                 }
             };
