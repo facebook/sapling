@@ -55,7 +55,7 @@ impl Ord for Span {
 
 impl Span {
     pub fn new(low: Id, high: Id) -> Self {
-        assert!(low <= high, "low {:?} <= high {:?}", low, high);
+        assert!(low <= high, "low {low:?} <= high {high:?}");
         Self { low, high }
     }
 
@@ -96,8 +96,7 @@ impl SpanSet {
             if i > 0 {
                 assert!(
                     span.high + 1 < self.spans[i - 1].low,
-                    "spans are not in DESC order or has mergeable adjacent spans (around #{})",
-                    i
+                    "spans are not in DESC order or has mergeable adjacent spans (around #{i})"
                 );
             }
         }
