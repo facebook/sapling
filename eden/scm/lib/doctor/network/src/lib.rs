@@ -101,7 +101,7 @@ impl Diagnosis {
                 "Please check your internet connection (failed external connectivity test)."
                     .to_string()
             }
-            Self::BadConfig(msg) => format!("Invalid config: {}", msg),
+            Self::BadConfig(msg) => format!("Invalid config: {msg}"),
             Self::AuthProxyProblem(_) => {
                 let mut msg = "Local auth proxy problem.".to_string();
                 if let Some(help) = config.get("help", "auth-proxy-help") {
@@ -150,15 +150,15 @@ fn diagnose_http_error(config: &dyn Config, err: &HttpError) -> String {
             // We weren't able to diagnose a particular cert problem,
             // so give a generic TLS message. Include the error since
             // it may have something more useful.
-            format!("TLS error - please check your certificates.\n\n{}", err),
+            format!("TLS error - please check your certificates.\n\n{err}"),
             "tlshelp",
         ),
-        HttpError::InvalidCert(err, _) => maybe_append_help(format!("{}", err), "tlsauthhelp"),
-        HttpError::MissingCerts(err) => maybe_append_help(format!("{}", err), "tlsauthhelp"),
+        HttpError::InvalidCert(err, _) => maybe_append_help(format!("{err}"), "tlsauthhelp"),
+        HttpError::MissingCerts(err) => maybe_append_help(format!("{err}"), "tlsauthhelp"),
         HttpError::RequestFailure(HttpClientError::Curl(err)) => diagnose_curl_error(err),
 
         HttpError::Config(err) => err.to_string(),
-        HttpError::RequestFailure(_) => format!("{}", err),
+        HttpError::RequestFailure(_) => format!("{err}"),
     }
 }
 
@@ -166,7 +166,7 @@ fn diagnose_curl_error(err: &curl::Error) -> String {
     if err.is_operation_timedout() {
         "Network timeout. Please check your connection.".to_string()
     } else {
-        format!("{}", err)
+        format!("{err}")
     }
 }
 
@@ -178,9 +178,9 @@ fn diagnose_unexpected_response(res: &HttpResponse) -> String {
         _ => {
             let mut header_hints = vec![];
             if let Some(x2p_error_type) = header_value(&res.headers, "x-x2pagentd-error-type") {
-                let mut hint = format!("x2pagentd: {}", x2p_error_type);
+                let mut hint = format!("x2pagentd: {x2p_error_type}");
                 if let Some(x2p_msg) = header_value(&res.headers, "x-x2pagentd-error-msg") {
-                    hint = format!("{} ({})", hint, x2p_msg);
+                    hint = format!("{hint} ({x2p_msg})");
                 }
                 header_hints.push(hint);
             }
@@ -189,7 +189,7 @@ fn diagnose_unexpected_response(res: &HttpResponse) -> String {
                 if let Some(advice_type) = n.as_str().strip_prefix("x-fb-validated-x2pauth-advice-")
                 {
                     if let Ok(v) = v.to_str() {
-                        header_hints.push(format!("x2p auth {}: {}", advice_type, v));
+                        header_hints.push(format!("x2p auth {advice_type}: {v}"));
                     }
                 }
             }
@@ -199,7 +199,7 @@ fn diagnose_unexpected_response(res: &HttpResponse) -> String {
                 res.status,
                 header_hints
                     .iter()
-                    .map(|h| format!("\n\t{}", h))
+                    .map(|h| format!("\n\t{h}"))
                     .collect::<Vec<String>>()
                     .join(""),
             )
@@ -237,7 +237,7 @@ impl Doctor {
 
         let sock_addrs: Vec<SocketAddr> = match url.host() {
             None => {
-                return Err(HostError::Config(format!("url {} has no host", url)));
+                return Err(HostError::Config(format!("url {url} has no host")));
             }
             Some(Host::Domain(host)) => {
                 // Let tests stub out host check results.
@@ -247,7 +247,7 @@ impl Doctor {
                     return Ok(());
                 }
 
-                match (self.dns_lookup)(&format!("{}:{}", host, port)) {
+                match (self.dns_lookup)(&format!("{host}:{port}")) {
                     Err(err) => return Err(HostError::DNS(err)),
                     Ok(addrs) => addrs.collect(),
                 }
@@ -385,7 +385,7 @@ impl Doctor {
                 .unwrap_or_default();
 
             if url.scheme() == "https" && hc.cert_path.is_none() {
-                return Err(HttpError::Config(format!("no auth section for {}", url)));
+                return Err(HttpError::Config(format!("no auth section for {url}")));
             }
         }
 
@@ -442,22 +442,18 @@ fn config_url(
     default: Option<&str>,
 ) -> Result<Url, Diagnosis> {
     let url: String = match (config.get_nonempty_opt(section, field), default) {
-        (Err(err), _) => return Err(Diagnosis::BadConfig(format!("config error: {}", err))),
+        (Err(err), _) => return Err(Diagnosis::BadConfig(format!("config error: {err}"))),
         (Ok(Some(url)), _) => url,
         (Ok(None), Some(default)) => default.to_string(),
         (Ok(None), None) => {
             return Err(Diagnosis::BadConfig(format!(
-                "no config for {}.{}",
-                section, field
+                "no config for {section}.{field}"
             )));
         }
     };
 
     match Url::parse(&url) {
-        Err(err) => Err(Diagnosis::BadConfig(format!(
-            "invalid url {}: {}",
-            url, err
-        ))),
+        Err(err) => Err(Diagnosis::BadConfig(format!("invalid url {url}: {err}"))),
         Ok(url) => Ok(url),
     }
 }
