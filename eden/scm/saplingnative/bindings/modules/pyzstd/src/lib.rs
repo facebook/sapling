@@ -48,7 +48,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 /// Convert `io::Result<Vec<u8>>` to a `PyResult<PyBytes>`.
 fn convert(py: Python, result: io::Result<Vec<u8>>) -> PyResult<PyBytes> {
     result
-        .map_err(|e| PyErr::new::<exc::RuntimeError, _>(py, format!("{}", e)))
+        .map_err(|e| PyErr::new::<exc::RuntimeError, _>(py, format!("{e}")))
         .map(|buf| PyBytes::new(py, &buf))
 }
 
