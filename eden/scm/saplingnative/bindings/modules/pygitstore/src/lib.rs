@@ -69,7 +69,7 @@ fn str_to_object_type(py: Python, kind: &str) -> PyResult<ObjectType> {
         Some(v) => Ok(v),
         None => Err(PyErr::new::<exc::ValueError, _>(
             py,
-            format!("invalid kind: {}", kind),
+            format!("invalid kind: {kind}"),
         )),
     }
 }
