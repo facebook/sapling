@@ -46,7 +46,7 @@ pub(crate) fn str_succ(s: &str) -> String {
             }
             chars.into_iter().collect()
         }
-        None => format!("{}1", s),
+        None => format!("{s}1"),
     }
 }
 

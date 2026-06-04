@@ -221,9 +221,7 @@ pub fn parse(text: &str) -> BTreeMap<String, BTreeSet<String>> {
                         assert!(
                             parent.len() < name.len()
                                 || (parent.len() == name.len() && parent < name),
-                            "empty range: {:?} to {:?}",
-                            parent,
-                            name
+                            "empty range: {parent:?} to {name:?}"
                         );
 
                         let mut current: String = parent.clone();
@@ -238,9 +236,7 @@ pub fn parse(text: &str) -> BTreeMap<String, BTreeSet<String>> {
                             assert!(
                                 next.len() < name.len()
                                     || (next.len() == name.len() && next < name),
-                                "mismatched range endpoints: {:?} to {:?}",
-                                parent,
-                                name
+                                "mismatched range endpoints: {parent:?} to {name:?}"
                             );
 
                             current = next;
@@ -319,11 +315,8 @@ mod tests {
                 .into_iter()
                 .map(|p| String::from_utf8(p.into_vec()).unwrap())
                 .collect();
-            self.log += &format!(
-                "{}: {{ parents: {:?}, name: {} }}\n",
-                new_id, parents_str, name
-            );
-            format!("{}", new_id).as_bytes().to_vec().into_boxed_slice()
+            self.log += &format!("{new_id}: {{ parents: {parents_str:?}, name: {name} }}\n");
+            format!("{new_id}").as_bytes().to_vec().into_boxed_slice()
         }
     }
 
@@ -340,7 +333,7 @@ mod tests {
             .into_iter()
             .map(|(k, vs)| {
                 let vs = vs.into_iter().collect::<Vec<_>>().join(", ");
-                format!("{} -> [{}]", k, vs)
+                format!("{k} -> [{vs}]")
             })
             .collect()
     }
