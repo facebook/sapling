@@ -12,7 +12,7 @@ fn main() {
     if let Some(ipc) = nodeipc::get_singleton() {
         ipc.send("HELLO FROM CHILD").unwrap();
         while let Some(message) = ipc.recv::<Value>().unwrap() {
-            println!("[Child] Got message from parent: {:?}", message);
+            println!("[Child] Got message from parent: {message:?}");
             if message.as_str() == Some("BYE") {
                 break;
             } else {

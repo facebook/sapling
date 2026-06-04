@@ -40,7 +40,7 @@ fn child_main() {
     maybe_init_winsock();
 
     let message: Option<String> = ipc.recv().unwrap();
-    println!("Child: got message {:?}", message);
+    println!("Child: got message {message:?}");
 
     let payload = ipc.recv_fd_vec().unwrap();
     println!("Child: got sendfd payload {:?}", &payload);
@@ -50,10 +50,10 @@ fn child_main() {
         if fd.is_null() {
             continue;
         }
-        println!("Child: writing \"something\\n\" to fd {:?}", fd);
+        println!("Child: writing \"something\\n\" to fd {fd:?}");
         let mut fd = unsafe { FileDescriptor::from_raw_file_descriptor(fd) };
         if let Err(e) = fd.write_all(b"something\n") {
-            println!("Child: write failed: {:?}", e);
+            println!("Child: write failed: {e:?}");
         }
         // Do not make FileDescriptor close the handle. We might still need it for `println!`.
         mem::forget(fd);
@@ -67,7 +67,7 @@ fn child_main() {
         println!("Child: has IPC singleton");
         ipc.send("HELLO FROM CHILD").unwrap();
         while let Some(message) = ipc.recv::<Value>().unwrap() {
-            println!("Child: Got message: {:?}", message);
+            println!("Child: Got message: {message:?}");
             if message.as_str() == Some("BYE") {
                 break;
             } else {
@@ -80,12 +80,12 @@ fn child_main() {
 
     let mut stdin = std::io::stdin();
     let stdin_is_terminal = stdin.is_terminal();
-    println!("Child: stdin.is_terminal: {}", stdin_is_terminal);
+    println!("Child: stdin.is_terminal: {stdin_is_terminal}");
     if !stdin_is_terminal {
         println!("Child: reading from stdin");
         let mut content = String::new();
         stdin.read_to_string(&mut content).unwrap();
-        println!("Child: got: {:?}", content);
+        println!("Child: got: {content:?}");
     }
 }
 
