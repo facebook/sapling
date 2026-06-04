@@ -45,7 +45,7 @@ pub async fn metadata(
         .await
         .context("Failed to get metadata from filestore")?;
 
-    println!("{:#?}", metadata);
+    println!("{metadata:#?}");
 
     Ok(())
 }
