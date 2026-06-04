@@ -117,7 +117,7 @@ impl<'a> Tree<'a> {
                     .or_insert_with(|| Either::A(Tree::default()));
                 match v {
                     Either::A(v) => v.modify_path(rest),
-                    Either::B(v) => panic!("modify_path: expect tree, got file {:?}", v),
+                    Either::B(v) => panic!("modify_path: expect tree, got file {v:?}"),
                 };
             }
             None => {

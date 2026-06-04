@@ -48,7 +48,7 @@ fn debug_tree_with_indent(
                 )?;
                 if abbrev_files {
                     let file_count = count_files(provider, subtree_id);
-                    write!(out, " files={}", file_count)?;
+                    write!(out, " files={file_count}")?;
                 }
                 out.write_char('\n')?;
                 if depth > 0 {
