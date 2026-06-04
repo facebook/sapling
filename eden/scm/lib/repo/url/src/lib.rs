@@ -178,7 +178,7 @@ impl Display for RepoUrl {
 
 impl FromConfig for RepoUrl {
     fn try_from_str_with_config(c: &dyn Config, s: &str) -> configmodel::Result<Self> {
-        Self::from_str(c, s).map_err(|err| configmodel::Error::Convert(format!("{:?}", err)))
+        Self::from_str(c, s).map_err(|err| configmodel::Error::Convert(format!("{err:?}")))
     }
 }
 
