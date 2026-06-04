@@ -62,6 +62,7 @@ struct Inner {
     treestore: Arc<dyn TreeStore>,
     repo: Arc<Repo>,
     mount_path: PathBuf,
+    eden_client_dir: Option<PathBuf>,
 
     // We store these so we can maintain them when reloading ourself.
     extra_configs: Vec<PinnedConfig>,
@@ -131,6 +132,29 @@ impl BackingStore {
         mount: impl AsRef<Path>,
         extra_configs: &[String],
     ) -> Result<Self> {
+        Self::new_with_config_inner(root.as_ref(), mount.as_ref(), None, extra_configs)
+    }
+
+    pub fn new_with_config_and_client_dir(
+        root: impl AsRef<Path>,
+        mount: impl AsRef<Path>,
+        eden_client_dir: impl AsRef<Path>,
+        extra_configs: &[String],
+    ) -> Result<Self> {
+        Self::new_with_config_inner(
+            root.as_ref(),
+            mount.as_ref(),
+            Some(eden_client_dir.as_ref()),
+            extra_configs,
+        )
+    }
+
+    fn new_with_config_inner(
+        root: &Path,
+        mount: &Path,
+        eden_client_dir: Option<&Path>,
+        extra_configs: &[String],
+    ) -> Result<Self> {
         let extra_configs = extra_configs
             .iter()
             .map(|c| PinnedConfig::Raw(c.to_string().into(), "backingstore".into()))
@@ -140,8 +164,9 @@ impl BackingStore {
 
         Ok(Self {
             inner: ArcSwap::new(Arc::new(Self::new_inner(
-                root.as_ref(),
-                mount.as_ref(),
+                root,
+                mount,
+                eden_client_dir,
                 &extra_configs,
                 touch_file_mtime(),
                 parent_hint.clone(),
@@ -154,6 +179,7 @@ impl BackingStore {
     fn new_inner(
         root: &Path,
         mount: &Path,
+        eden_client_dir: Option<&Path>,
         extra_configs: &[PinnedConfig],
         touch_file_mtime: Option<SystemTime>,
         parent_hint: Arc<RwLock<Option<String>>>,
@@ -248,9 +274,9 @@ impl BackingStore {
         }
 
         walk_detector.set_root(Some(mount.to_path_buf()));
-        if config.get_or("backingstore", "enable-walk-metadata-persistence", || true)? {
-            if let Some(path) = walk_metadata_persistence_path(mount) {
-                walk_detector.set_persistence_path(path);
+        if config.get_or("backingstore", "walk-metadata-persistence", || true)? {
+            if let Some(eden_client_dir) = eden_client_dir {
+                walk_detector.set_persistence_path(walk_metadata_persistence_path(eden_client_dir));
                 walk_detector.load_persisted_metadata();
             } else {
                 walk_detector.clear_persistence_path();
@@ -300,6 +326,7 @@ impl BackingStore {
             filestore,
             repo,
             mount_path: mount.to_path_buf(),
+            eden_client_dir: eden_client_dir.map(Path::to_path_buf),
             extra_configs: extra_configs.to_vec(),
             create_time: Instant::now(),
             touch_file_mtime,
@@ -602,6 +629,7 @@ impl BackingStore {
             match Self::new_inner(
                 inner.repo.path(),
                 &inner.mount_path,
+                inner.eden_client_dir.as_deref(),
                 &inner.extra_configs,
                 new_mtime,
                 self.parent_hint.clone(),
@@ -672,6 +700,7 @@ impl Inner {
             treestore: self.treestore.clone(),
             repo: self.repo.clone(),
             mount_path: self.mount_path.clone(),
+            eden_client_dir: self.eden_client_dir.clone(),
             extra_configs: self.extra_configs.clone(),
 
             touch_file_mtime,
@@ -704,31 +733,8 @@ impl Inner {
     }
 }
 
-fn walk_metadata_persistence_path(mount: &Path) -> Option<PathBuf> {
-    let ident = match identity::sniff_dir(mount) {
-        Ok(Some(ident)) => ident,
-        Ok(None) => {
-            tracing::warn!(
-                ?mount,
-                "disabling walk metadata persistence: mount is not a recognized repo"
-            );
-            return None;
-        }
-        Err(e) => {
-            tracing::warn!(
-                ?e,
-                ?mount,
-                "disabling walk metadata persistence: error resolving mount repo identity"
-            );
-            return None;
-        }
-    };
-
-    Some(
-        ident
-            .resolve_full_dot_dir(mount)
-            .join("walk_detector_metadata.jsonl"),
-    )
+fn walk_metadata_persistence_path(eden_client_dir: &Path) -> PathBuf {
+    eden_client_dir.join("walk_detector_metadata.jsonl")
 }
 
 fn touch_file_mtime() -> Option<SystemTime> {
@@ -977,5 +983,23 @@ impl Drop for BackingStore {
     fn drop(&mut self) {
         // Make sure that all the data that was fetched is written to the hgcache.
         self.flush();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+
+    use super::*;
+
+    #[test]
+    fn test_walk_metadata_persistence_path_uses_eden_client_dir() {
+        let mount = Path::new("/eden/mount/repo");
+        let eden_client_dir = Path::new("/home/user/.eden/clients/repo");
+
+        let path = walk_metadata_persistence_path(eden_client_dir);
+
+        assert_eq!(path, eden_client_dir.join("walk_detector_metadata.jsonl"));
+        assert!(!path.starts_with(mount));
     }
 }

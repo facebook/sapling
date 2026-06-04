@@ -180,6 +180,7 @@ class SaplingBackingStore final
   SaplingBackingStore(
       AbsolutePathPiece repository,
       AbsolutePathPiece mount,
+      AbsolutePathPiece clientDirectory,
       CaseSensitivity caseSensitive,
       EdenStatsPtr stats,
       UnboundedQueueExecutor* serverThreadPool,
@@ -199,6 +200,7 @@ class SaplingBackingStore final
   SaplingBackingStore(
       AbsolutePathPiece repository,
       AbsolutePathPiece mount,
+      AbsolutePathPiece clientDirectory,
       CaseSensitivity caseSensitive,
       EdenStatsPtr stats,
       folly::Executor* executor,

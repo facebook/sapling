@@ -265,6 +265,7 @@ pub(crate) mod ffi {
         pub fn sapling_backingstore_new(
             repository: &str,
             mount: &str,
+            eden_client_dir: &str,
             walk_mode: &str,
         ) -> Result<Box<BackingStore>>;
 
@@ -460,6 +461,7 @@ macro_rules! resolve_result {
 pub fn sapling_backingstore_new(
     repository: &str,
     mount: &str,
+    eden_client_dir: &str,
     walk_mode: &str,
 ) -> Result<Box<BackingStore>> {
     super::init::backingstore_global_init();
@@ -472,7 +474,12 @@ pub fn sapling_backingstore_new(
         extra_sapling_configs.push(format!("backingstore.walk-mode={v}"));
     }
 
-    let store = BackingStore::new_with_config(repository, mount, &extra_sapling_configs)?;
+    let store = BackingStore::new_with_config_and_client_dir(
+        repository,
+        mount,
+        eden_client_dir,
+        &extra_sapling_configs,
+    )?;
     Ok(Box::new(store))
 }
 

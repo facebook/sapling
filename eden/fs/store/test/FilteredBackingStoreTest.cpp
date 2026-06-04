@@ -63,6 +63,7 @@ const char kTestFilter8[] = "V1:this/filter/is/very/nested";
 struct TestRepo {
   folly::test::TemporaryDirectory testDir{"eden_filtered_backing_store_test"};
   AbsolutePath testPath = canonicalPath(testDir.path().string());
+  AbsolutePath clientPath = testPath + "client"_pc;
   HgRepo repo{testPath + "repo"_pc};
   RootId commit1;
   Hash20 manifest1;
@@ -161,6 +162,7 @@ struct SaplingFilteredBackingStoreTest : FilteredBackingStoreTestBase {
       std::make_shared<SaplingBackingStore>(
           repo.path(),
           repo.path(),
+          clientPath,
           kPathMapDefaultCaseSensitive,
           stats.copy(),
           &executor_,

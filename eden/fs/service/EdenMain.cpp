@@ -16,9 +16,7 @@
 #include <folly/Conv.h>
 #include <folly/MapUtil.h>
 #include <folly/String.h>
-#include <folly/executors/FunctionScheduler.h>
 #include <folly/init/Init.h>
-#include <folly/logging/Init.h>
 #include <folly/logging/LogConfigParser.h>
 #include <folly/logging/xlog.h>
 #include <folly/portability/Unistd.h>
@@ -187,6 +185,7 @@ std::shared_ptr<SaplingBackingStore> createSaplingBackingStore(
   return std::make_shared<SaplingBackingStore>(
       repoPath,
       config.getMountPath(),
+      config.getClientDirectory(),
       config.getCaseSensitive(),
       params.sharedStats.copy(),
       params.serverState->getThreadPool().get(),
