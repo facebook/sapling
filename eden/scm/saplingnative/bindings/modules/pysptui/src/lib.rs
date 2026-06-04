@@ -181,15 +181,15 @@ py_class!(class sptui |py| {
                 None
             } else if let Ok(name) = binding.extract::<String>(py) {
                 Some(Binding::parse(name, Vec::new()).map_err(|e| {
-                    PyErr::new::<exc::ValueError, _>(py, format!("Invalid binding: {}", e))
+                    PyErr::new::<exc::ValueError, _>(py, format!("Invalid binding: {e}"))
                 })?)
             } else if let Ok((name, params)) = binding.extract::<(String, Vec<String>)>(py) {
                 Some(Binding::parse(name, params).map_err(|e| {
-                    PyErr::new::<exc::ValueError, _>(py, format!("Invalid binding: {}", e))
+                    PyErr::new::<exc::ValueError, _>(py, format!("Invalid binding: {e}"))
                 })?)
             } else if let Ok((cat, desc, callback)) = binding.extract::<(String, String, PyObject)>(py) {
                 let cat = parse_category(&cat).ok_or_else(|| {
-                    PyErr::new::<exc::ValueError, _>(py, format!("Invalid category '{}'", cat))
+                    PyErr::new::<exc::ValueError, _>(py, format!("Invalid category '{cat}'"))
                 })?;
                 Some(Binding::custom(cat, desc, move |f| {
                     if f == file_index {
@@ -215,13 +215,13 @@ py_class!(class sptui |py| {
                     }
                 };
                 let mods = Modifiers::from_bits(mods.into()).ok_or_else(|| {
-                    PyErr::new::<exc::ValueError, _>(py, format!("Invalid modifiers '0x{:x}'", mods))
+                    PyErr::new::<exc::ValueError, _>(py, format!("Invalid modifiers '0x{mods:x}'"))
                 })?;
                 let keycode = if key.chars().count() == 1 {
                     KeyCode::Char(key.chars().next().unwrap())
                 } else {
                     parse_keycode(&key).ok_or_else(|| {
-                        PyErr::new::<exc::ValueError, _>(py, format!("Invalid key '{}'", key))
+                        PyErr::new::<exc::ValueError, _>(py, format!("Invalid key '{key}'"))
                     })?
                 };
                 if hidden {
