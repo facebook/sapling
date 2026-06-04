@@ -32,50 +32,50 @@ py_class!(class nodemap |py| {
 
     def __new__(_cls, path: &PyPath) -> PyResult<nodemap> {
         let nodemap = NodeMap::open(path)
-            .map_err(|e| PyErr::new::<exc::RuntimeError, _>(py, format!("{}", e)))?;
+            .map_err(|e| PyErr::new::<exc::RuntimeError, _>(py, format!("{e}")))?;
         nodemap::create_instance(py, RefCell::new(nodemap))
     }
 
     def add(&self, first: &PyBytes, second: &PyBytes) -> PyResult<PyNone> {
         let first = Node::from_slice(first.data(py))
-            .map_err(|e| PyErr::new::<exc::ValueError, _>(py, format!("{}", e)))?;
+            .map_err(|e| PyErr::new::<exc::ValueError, _>(py, format!("{e}")))?;
         let second = Node::from_slice(second.data(py))
-            .map_err(|e| PyErr::new::<exc::ValueError, _>(py, format!("{}", e)))?;
+            .map_err(|e| PyErr::new::<exc::ValueError, _>(py, format!("{e}")))?;
 
         let cell = self.log(py);
         let mut log = cell.borrow_mut();
         log.add(&first, &second)
-            .map_err(|e| PyErr::new::<exc::RuntimeError, _>(py, format!("{}", e)))?;
+            .map_err(|e| PyErr::new::<exc::RuntimeError, _>(py, format!("{e}")))?;
 
         Ok(PyNone)
     }
 
     def flush(&self) -> PyResult<PyNone> {
         self.log(py).borrow_mut().flush()
-            .map_err(|e| PyErr::new::<exc::RuntimeError, _>(py, format!("{}", e)))?;
+            .map_err(|e| PyErr::new::<exc::RuntimeError, _>(py, format!("{e}")))?;
         Ok(PyNone)
     }
 
     def lookupbyfirst(&self, first: &PyBytes) -> PyResult<PyObject> {
         let first = Node::from_slice(first.data(py))
-            .map_err(|e| PyErr::new::<exc::ValueError, _>(py, format!("{}", e)))?;
+            .map_err(|e| PyErr::new::<exc::ValueError, _>(py, format!("{e}")))?;
         Ok(self.log(py).borrow().lookup_by_first(&first)
-            .map_err(|e| PyErr::new::<exc::RuntimeError, _>(py, format!("{}", e)))?
+            .map_err(|e| PyErr::new::<exc::RuntimeError, _>(py, format!("{e}")))?
             .map_or(py.None(), |node| PyBytes::new(py, node.as_ref()).into_object()))
     }
 
     def lookupbysecond(&self, second: &PyBytes) -> PyResult<PyObject> {
         let second = Node::from_slice(second.data(py))
-            .map_err(|e| PyErr::new::<exc::ValueError, _>(py, format!("{}", e)))?;
+            .map_err(|e| PyErr::new::<exc::ValueError, _>(py, format!("{e}")))?;
         Ok(self.log(py).borrow().lookup_by_second(&second)
-            .map_err(|e| PyErr::new::<exc::RuntimeError, _>(py, format!("{}", e)))?
+            .map_err(|e| PyErr::new::<exc::RuntimeError, _>(py, format!("{e}")))?
             .map_or(py.None(), |node| PyBytes::new(py, node.as_ref()).into_object()))
     }
 
     def items(&self) -> PyResult<Vec<(PyBytes, PyBytes)>> {
         let log = self.log(py).borrow();
         let iter = log.iter()
-            .map_err(|e|  PyErr::new::<exc::RuntimeError, _>(py, format!("{}", e)))?;
+            .map_err(|e|  PyErr::new::<exc::RuntimeError, _>(py, format!("{e}")))?;
         let keys = iter
             .map(|result| result.map(|keys| {
                 let (first, second) = keys;
@@ -83,7 +83,7 @@ py_class!(class nodemap |py| {
                  PyBytes::new(py, second.as_ref()))
             }))
             .collect::<Result<Vec<_>, _>>()
-            .map_err(|e|  PyErr::new::<exc::RuntimeError, _>(py, format!("{}", e)))?;
+            .map_err(|e|  PyErr::new::<exc::RuntimeError, _>(py, format!("{e}")))?;
         Ok(keys)
     }
 
