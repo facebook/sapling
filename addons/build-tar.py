@@ -84,6 +84,31 @@ def copy_writable(src, dst, *, follow_symlinks=True):
         os.chmod(dst, 0o666)
 
 
+def shim_node_on_path(node: str, tmp=None) -> None:
+    """Ensure a plain `node` executable is resolvable on PATH.
+
+    yarn's child build steps (vite/rollup) shell out to bare `node`. The
+    checked-in Windows binary is named `node-win-x64.exe`, so putting its
+    directory on PATH is not enough -- there is no `node.exe` there. Materialize
+    a correctly-named `node.exe` in a private bin dir and prepend it to PATH. A
+    hardlink avoids duplicating the binary; fall back to a copy across volumes.
+    No-op when `node` already has the expected name (e.g. POSIX `node`).
+    """
+    expected = "node.exe" if os.name == "nt" else "node"
+    node = os.path.realpath(node)
+    if os.path.basename(node) == expected:
+        bindir = os.path.dirname(node)
+    else:
+        bindir = tempfile.mkdtemp(prefix="node-bin", dir=tmp)
+        atexit.register(lambda: rm_rf(bindir))
+        dst = os.path.join(bindir, expected)
+        try:
+            os.link(node, dst)
+        except OSError:
+            shutil.copy(node, dst)
+    os.environ["PATH"] = bindir + os.pathsep + os.environ["PATH"]
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Creates a tarball of built ISL source."
@@ -99,6 +124,11 @@ def main():
         "--yarn",
         default="",
         help="Path to yarn executable.",
+    )
+    parser.add_argument(
+        "--node",
+        default="",
+        help="Path to a node executable to run --yarn with (optional).",
     )
     parser.add_argument(
         "--yarn-offline-mirror",
@@ -122,6 +152,13 @@ def main():
     yarn = realpath_args(
         shlex.split(args.yarn or os.getenv("YARN") or "yarn", posix=False)
     )
+    # Optional explicit interpreter: Windows passes the node binary here (rather
+    # than packing it into --yarn, so neither path is split on spaces) and we
+    # also expose `node` on PATH for yarn's child build steps.
+    if args.node:
+        node = realpath_args([args.node])[0]
+        yarn = [node] + yarn
+        shim_node_on_path(node, args.tmp)
 
     src = args.src or "."
     out = args.output
@@ -135,7 +172,10 @@ def main():
         shutil.copytree(
             src, tmp_src_path, dirs_exist_ok=True, copy_function=copy_writable
         )
-        src = tmp_src_path
+        # Realpath the build dir: harmless on all platforms, needed on Windows
+        # where the buck-out EdenFS redirection otherwise trips tools that
+        # realpath their inputs (e.g. vite emits cross-view asset paths).
+        src = os.path.realpath(tmp_src_path)
 
     src_join = functools.partial(os.path.join, src)
 
