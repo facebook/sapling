@@ -58,7 +58,7 @@ fn get_blobconfig(
                         }
                     })
                     .with_context(|| {
-                        format!("could not find a blobstore with id {}", inner_blobstore_id)
+                        format!("could not find a blobstore with id {inner_blobstore_id}")
                     })?
             }
             _ => bail!("inner-blobstore-id can only be supplied for multiplexed blobstores"),
