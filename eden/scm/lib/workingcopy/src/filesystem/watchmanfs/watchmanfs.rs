@@ -486,14 +486,12 @@ fn warn_about_fresh_instance(
     match (old_pid, new_pid) {
         (Some(old_pid), Some(new_pid)) if old_pid != new_pid => {
             lgr.warn(format!(
-                "warning: watchman has recently restarted (old pid {}, new pid {}) - operation will be slower than usual",
-                old_pid, new_pid
+                "warning: watchman has recently restarted (old pid {old_pid}, new pid {new_pid}) - operation will be slower than usual"
             ));
         }
         (None, Some(new_pid)) => {
             lgr.warn(format!(
-                "warning: watchman has recently started (pid {}) - operation will be slower than usual",
-                new_pid
+                "warning: watchman has recently started (pid {new_pid}) - operation will be slower than usual"
             ));
         }
         _ => {
