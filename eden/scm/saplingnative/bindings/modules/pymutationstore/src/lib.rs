@@ -69,7 +69,7 @@ fn unbundle(py: Python, data: PyBytes) -> PyResult<Vec<mutationentry>> {
     if version != BUNDLE_FORMAT_VERSION {
         return Err(PyErr::new::<exc::IOError, _>(
             py,
-            format!("Unsupported mutation format: {}", version),
+            format!("Unsupported mutation format: {version}"),
         ));
     }
     let count = cursor.read_vlq().map_pyerr(py)?;
