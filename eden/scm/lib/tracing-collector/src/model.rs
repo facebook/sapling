@@ -737,7 +737,7 @@ impl TracingData {
         }
 
         // Sort by timestamp.
-        eventus.sort_by(|e1, e2| e1.timestamp.cmp(&e2.timestamp));
+        eventus.sort_by_key(|e1| e1.timestamp);
 
         TracingData {
             start,
