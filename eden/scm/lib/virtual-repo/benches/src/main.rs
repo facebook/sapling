@@ -74,7 +74,7 @@ fn main() {
             },
         );
         if let Some(stat_str) = stat_str.get() {
-            eprintln!("{}", stat_str);
+            eprintln!("{stat_str}");
         }
     }
 }
