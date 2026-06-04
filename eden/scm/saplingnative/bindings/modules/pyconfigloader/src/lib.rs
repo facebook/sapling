@@ -352,5 +352,5 @@ fn parselist(py: Python, value: String) -> PyResult<Vec<PyString>> {
 }
 
 fn errors_to_str_vec(errors: Vec<configloader::error::Error>) -> Vec<String> {
-    errors.into_iter().map(|err| format!("{}", err)).collect()
+    errors.into_iter().map(|err| format!("{err}")).collect()
 }
