@@ -169,8 +169,7 @@ impl ISLSpawnOptions {
                 let err = serde_json::from_str::<ISLSpawnOptionsError>(&stdout);
                 match err {
                     Err(_) => Err(anyhow::anyhow!(
-                        "Invalid response from ISL server: {}",
-                        stdout
+                        "Invalid response from ISL server: {stdout}"
                     )),
                     Ok(err) => Err(anyhow::anyhow!(err.error)),
                 }
