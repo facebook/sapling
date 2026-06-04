@@ -228,7 +228,7 @@ impl HookManager {
         let jk_enabled = justknobs::eval(
             "scm/mononoke:enable_hook_bypass_permission_groups",
             None,
-            None,
+            Some(self.repo_name.as_str()),
         );
         if !jk_enabled {
             return Ok(BypassAuthorizationResult::Bypassed(bypass_reason));
