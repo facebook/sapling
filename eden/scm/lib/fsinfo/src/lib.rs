@@ -320,6 +320,11 @@ mod linux {
                     }
                 }
             }
+        } else if result == FsType::NFS {
+            // edenfs can also be NFS on Linux (e.g. in integration tests)
+            if path.join(".eden").is_dir() {
+                return Ok(FsType::EDENFS);
+            }
         }
         Ok(result)
     }
