@@ -67,7 +67,7 @@ mod test {
 
         let err = res.unwrap_err();
         assert_eq!(
-            format!("{}", err),
+            format!("{err}"),
             "flibbertigibbet: error flimflamming file: '/tmp/foo': entity already exists"
         );
     }

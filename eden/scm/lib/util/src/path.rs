@@ -211,8 +211,7 @@ pub fn absolute(path: impl AsRef<Path>) -> io::Result<PathBuf> {
 
     if !path.is_absolute() {
         return Err(io::Error::other(format!(
-            "cannot get absolute path from {:?}",
-            path
+            "cannot get absolute path from {path:?}"
         )));
     }
 
@@ -429,7 +428,7 @@ fn resolve_symlinks(path: &Path) -> anyhow::Result<PathBuf> {
     use anyhow::bail;
     fn inner(path: PathBuf, seen: &mut HashSet<PathBuf>) -> anyhow::Result<PathBuf> {
         if seen.contains(&path) {
-            bail!("symlink cycle containing {:?}", path);
+            bail!("symlink cycle containing {path:?}");
         }
 
         seen.insert(path.clone());
@@ -443,7 +442,7 @@ fn resolve_symlinks(path: &Path) -> anyhow::Result<PathBuf> {
 
             // Unexpected error reading file.
             Err(err) => add_stat_context(
-                Err(err).context(format!("statting {:?}", path)),
+                Err(err).context(format!("statting {path:?}")),
                 path.parent(),
             ),
         }
@@ -452,7 +451,7 @@ fn resolve_symlinks(path: &Path) -> anyhow::Result<PathBuf> {
     let mut seen = HashSet::new();
     let mut res = inner(path.to_path_buf(), &mut seen);
     if seen.len() > 1 {
-        res = res.with_context(|| format!("traversing symlinks from {:?}", path));
+        res = res.with_context(|| format!("traversing symlinks from {path:?}"));
     }
     res
 }
@@ -473,7 +472,7 @@ fn create_dir_with_mode(path: &Path, mode: u32) -> anyhow::Result<()> {
     match path.metadata() {
         Ok(md) if md.is_file() => {
             return Err(anyhow!(io::Error::from(ErrorKind::AlreadyExists)))
-                .context(format!("path exists as a file: {:?}", path));
+                .context(format!("path exists as a file: {path:?}"));
         }
         Ok(md) => {
             // Symlinks were resolved above - assume is_dir.
@@ -487,7 +486,7 @@ fn create_dir_with_mode(path: &Path, mode: u32) -> anyhow::Result<()> {
         Err(err) if err.kind() == io::ErrorKind::NotFound => {}
         Err(err) => {
             return add_stat_context(
-                Err(err).context(format!("error statting {:?}", path)),
+                Err(err).context(format!("error statting {path:?}")),
                 path.parent(),
             );
         }
@@ -496,17 +495,17 @@ fn create_dir_with_mode(path: &Path, mode: u32) -> anyhow::Result<()> {
     let parent = path.parent().ok_or_else(|| {
         io::Error::new(
             ErrorKind::NotFound,
-            format!("`{:?}` does not have a parent directory", path),
+            format!("`{path:?}` does not have a parent directory"),
         )
     })?;
 
     let parent = resolve_symlinks(parent)?;
 
     let temp = add_stat_context(tempfile::TempDir::new_in(&parent), Some(&parent))
-        .with_context(|| format!("creating temp dir in {:?}", parent))?;
+        .with_context(|| format!("creating temp dir in {parent:?}"))?;
 
     fs::set_permissions(&temp, Permissions::from_mode(mode))
-        .with_context(|| format!("setting permissions on temp dir {:?}", temp))?;
+        .with_context(|| format!("setting permissions on temp dir {temp:?}"))?;
 
     let temp = temp.keep();
     if let Err(e) = fs::rename(&temp, &path) {
@@ -927,7 +926,7 @@ mod tests {
             assert!(is_io_error_kind(&err, io::ErrorKind::PermissionDenied));
 
             // Make sure we give parent dir's info in error.
-            assert!(format!("{:?}", err).contains(&format!("stat({:?}) = ", path)));
+            assert!(format!("{err:?}").contains(&format!("stat({path:?}) = ")));
 
             Ok(())
         }

@@ -28,7 +28,7 @@ pub fn escape_non_utf8(mut input: &[u8]) -> String {
         input = &input[valid_len..];
 
         for b in &input[..invalid_len] {
-            write!(output, r"\x{:X}", b).unwrap();
+            write!(output, r"\x{b:X}").unwrap();
         }
         input = &input[invalid_len..]
     }

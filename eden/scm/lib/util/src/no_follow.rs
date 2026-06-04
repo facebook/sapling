@@ -96,10 +96,7 @@ impl<'a> TryFrom<&'a PathBuf> for CheckedRelPath<'a> {
 }
 
 fn invalid_path(path: &Path, message: &str) -> io::Error {
-    io::Error::new(
-        io::ErrorKind::InvalidInput,
-        format!("{message}: {:?}", path),
-    )
+    io::Error::new(io::ErrorKind::InvalidInput, format!("{message}: {path:?}"))
 }
 
 fn reject_ntfs_ads_component(path: &Path, component: &OsStr) -> io::Result<()> {
