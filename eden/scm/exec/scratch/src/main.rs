@@ -94,7 +94,7 @@ struct Config {
 fn home_dir() -> String {
     let home = dirs::home_dir().expect("resolved HOME dir");
     home.to_str()
-        .unwrap_or_else(|| panic!("HOME dir {:?} was not representable as UTF-8", home))
+        .unwrap_or_else(|| panic!("HOME dir {home:?} was not representable as UTF-8"))
         .into()
 }
 
@@ -189,10 +189,10 @@ impl Config {
                 // up in T31633485.
                 // If there is a /data/users/<owner> dir, then we
                 // use that to hold the scratch dir.
-                let local = format!("/data/users/{}", owner);
+                let local = format!("/data/users/{owner}");
                 if let Ok(meta) = fs::metadata(&local) {
                     if meta.is_dir() {
-                        return format!("{}/scratch", local);
+                        return format!("{local}/scratch");
                     }
                 }
                 // Otherwise use their home dir
@@ -271,7 +271,7 @@ fn main() {
     match run() {
         Ok(()) => {}
         Err(err) => {
-            eprintln!("scratch failed: {}", err);
+            eprintln!("scratch failed: {err}");
             std::process::exit(1)
         }
     }
@@ -331,7 +331,7 @@ impl PasswordEntry {
         let pw = unsafe { libc::getpwuid(uid) };
         if pw.is_null() {
             let err = std::io::Error::last_os_error();
-            bail!("getpwuid({}) failed: {}", uid, err);
+            bail!("getpwuid({uid}) failed: {err}");
         }
         Self::from_password(pw)
     }
@@ -344,7 +344,7 @@ impl PasswordEntry {
         let pw = unsafe { libc::getpwnam(user_cstr.as_ptr()) };
         if pw.is_null() {
             let err = std::io::Error::last_os_error();
-            bail!("getpwnam({}) failed: {}", unixname, err);
+            bail!("getpwnam({unixname}) failed: {err}");
         }
 
         Self::from_password(pw)
@@ -433,7 +433,7 @@ fn scratch_root(config: &Config, path: &Path, encoder: &dyn Fn(&str) -> String) 
 
     root.push(encoder(
         path.to_str()
-            .ok_or(format_err!("{:?} cannot be converted to utf8", path))?,
+            .ok_or(format_err!("{path:?} cannot be converted to utf8"))?,
     ));
     Ok(root)
 }
@@ -506,7 +506,7 @@ fn path_command(
     // back to the cwd.
     let path = match path {
         Some(path) => fs::canonicalize(path)
-            .map_err(|e| format_err!("unable to canonicalize path: {}: {}", path, e))?,
+            .map_err(|e| format_err!("unable to canonicalize path: {path}: {e}"))?,
         None => env::current_dir()?,
     };
 
@@ -529,7 +529,7 @@ fn path_command(
             if valid_curdir(subdir.as_ref()) {
                 result.push(subdir);
             } else {
-                bail!("subdir path contains parent component: {:?}", subdir);
+                bail!("subdir path contains parent component: {subdir:?}");
             }
         } else {
             result.push(encoder(subdir));
