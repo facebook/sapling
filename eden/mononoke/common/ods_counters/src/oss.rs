@@ -13,6 +13,7 @@ use fbinit::FacebookInit;
 use tokio::time::Duration;
 
 use crate::CounterManager;
+use crate::DesiredCountersProvider;
 
 #[derive(Clone)]
 pub struct OdsCounterManager {}
@@ -47,6 +48,7 @@ impl CounterManager for OdsCounterManager {
 
 pub async fn periodic_fetch_counter(
     _manager: Arc<RwLock<OdsCounterManager>>,
+    _desired_counters: DesiredCountersProvider,
     _interval_duration: Duration,
 ) {
 }

@@ -25,6 +25,7 @@ use tokio::time::Duration;
 use tokio::time::interval;
 
 use crate::CounterManager;
+use crate::DesiredCountersProvider;
 use crate::OdsCounterKey;
 
 const ODS_STALENESS_THRESHOLD: TimeDelta = TimeDelta::seconds(60);
@@ -135,14 +136,30 @@ async fn fetch_counter(
         .ok()
 }
 
+fn reconcile_counters(
+    manager: &Arc<RwLock<OdsCounterManager>>,
+    desired_counters: &DesiredCountersProvider,
+) {
+    let desired = desired_counters();
+
+    let mut manager = manager.write().expect("Poisoned lock");
+    manager.counters.retain(|key, _| desired.contains(key));
+    for key in desired {
+        manager.counters.entry(key).or_insert((Utc::now(), None));
+    }
+}
+
 pub async fn periodic_fetch_counter(
     manager: Arc<RwLock<OdsCounterManager>>,
+    desired_counters: DesiredCountersProvider,
     interval_duration: Duration,
 ) {
     let mut interval = interval(interval_duration);
 
     loop {
         interval.tick().await;
+
+        reconcile_counters(&manager, &desired_counters);
 
         // Acquire the read guard once to get the keys
         let (fb, keys) = {
@@ -308,6 +325,7 @@ impl OdsQuery {
 #[cfg(test)]
 mod test {
 
+    use std::collections::HashSet;
     use std::sync::Arc;
 
     use configerator_structs_rapido_if_clients::Rapido;
@@ -442,7 +460,19 @@ mod test {
 
         let clone = manager.clone();
 
-        mononoke::spawn_task(periodic_fetch_counter(clone, Duration::from_secs(1)));
+        let provider: DesiredCountersProvider = Box::new(|| {
+            HashSet::from([OdsCounterKey {
+                entity: "entity".to_string(),
+                key: "key".to_string(),
+                reduce: None,
+                transform: None,
+            }])
+        });
+        mononoke::spawn_task(periodic_fetch_counter(
+            clone,
+            provider,
+            Duration::from_secs(1),
+        ));
 
         // Wait for the counter to be fetched
         tokio::time::sleep(Duration::from_secs(2)).await;
@@ -463,6 +493,97 @@ mod test {
             let (second_timestamp, value) = values.unwrap();
             assert_eq!(second_timestamp.timestamp(), timestamp.timestamp());
             assert_eq!(*value, Some(5.0));
+        }
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_reconcile_counters_dynamic(fb: FacebookInit) {
+        let manager = Arc::new(RwLock::new(OdsCounterManager {
+            fb,
+            counters: HashMap::new(),
+        }));
+
+        let key_a = OdsCounterKey {
+            entity: "entity_a".to_string(),
+            key: "key_a".to_string(),
+            reduce: None,
+            transform: None,
+        };
+        let key_b = OdsCounterKey {
+            entity: "entity_b".to_string(),
+            key: "key_b".to_string(),
+            reduce: None,
+            transform: None,
+        };
+
+        // Start with a single counter A.
+        let provider_a: DesiredCountersProvider = Box::new({
+            let key_a = key_a.clone();
+            move || HashSet::from([key_a.clone()])
+        });
+        reconcile_counters(&manager, &provider_a);
+
+        {
+            let manager = manager.read().unwrap();
+            assert_eq!(
+                manager.counters.len(),
+                1,
+                "Only counter A should be present"
+            );
+            assert!(manager.counters.contains_key(&key_a));
+        }
+
+        // Give A a cached value to prove it survives the next reconcile.
+        {
+            manager
+                .write()
+                .unwrap()
+                .counters
+                .insert(key_a.clone(), (Utc::now(), Some(42.0)));
+        }
+
+        // Reconcile against a new set: A stays, B is added.
+        let provider_ab: DesiredCountersProvider = Box::new({
+            let key_a = key_a.clone();
+            let key_b = key_b.clone();
+            move || HashSet::from([key_a.clone(), key_b.clone()])
+        });
+        reconcile_counters(&manager, &provider_ab);
+
+        {
+            let manager = manager.read().unwrap();
+            assert_eq!(
+                manager.counters.len(),
+                2,
+                "Counters A and B should be present"
+            );
+            assert_eq!(
+                manager.counters.get(&key_a).unwrap().1,
+                Some(42.0),
+                "Existing counter A's cached value must be preserved across reconcile"
+            );
+            assert_eq!(
+                manager.counters.get(&key_b).unwrap().1,
+                None,
+                "Newly added counter B starts with no value"
+            );
+        }
+
+        // Reconcile against a set that drops A and keeps B.
+        let provider_b: DesiredCountersProvider = Box::new({
+            let key_b = key_b.clone();
+            move || HashSet::from([key_b.clone()])
+        });
+        reconcile_counters(&manager, &provider_b);
+
+        {
+            let manager = manager.read().unwrap();
+            assert_eq!(manager.counters.len(), 1, "Only counter B should remain");
+            assert!(
+                !manager.counters.contains_key(&key_a),
+                "Removed counter A should be dropped"
+            );
+            assert!(manager.counters.contains_key(&key_b));
         }
     }
 }

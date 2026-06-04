@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::Hash;
 use std::hash::Hasher;
@@ -22,6 +23,8 @@ use client_memory::global_client_memory_registry;
 use fbinit::FacebookInit;
 use mononoke_macros::mononoke;
 use ods_counters::CounterManager;
+use ods_counters::DesiredCountersProvider;
+use ods_counters::OdsCounterKey;
 use ods_counters::OdsCounterManager;
 use ods_counters::periodic_fetch_counter;
 use permission_checker::MononokeIdentitySet;
@@ -104,22 +107,9 @@ impl RateLimitEnvironment {
         config: ConfigHandle<MononokeRateLimitConfig>,
         counter_manager: Arc<RwLock<OdsCounterManager>>,
     ) -> Self {
-        for limit in &config.get().load_shed_limits {
-            match &limit.raw_config.load_shedding_metric {
-                LoadSheddingMetric::external_ods_counter(counter) => {
-                    counter_manager.write().expect("Poisoned lock").add_counter(
-                        counter.entity.clone(),
-                        counter.key.clone(),
-                        counter.reduce.clone(),
-                        counter.transform.clone(),
-                    )
-                }
-                _ => {}
-            };
-        }
-
         mononoke::spawn_task(periodic_fetch_counter(
             counter_manager.clone(),
+            desired_ods_counters_provider(config.clone()),
             Duration::from_mins(1),
         ));
 
@@ -138,22 +128,9 @@ impl RateLimitEnvironment {
         counter_manager: Arc<RwLock<OdsCounterManager>>,
         runtime: tokio::runtime::Handle,
     ) -> Self {
-        for limit in &config.get().load_shed_limits {
-            match &limit.raw_config.load_shedding_metric {
-                LoadSheddingMetric::external_ods_counter(counter) => {
-                    counter_manager.write().expect("Poisoned lock").add_counter(
-                        counter.entity.clone(),
-                        counter.key.clone(),
-                        counter.reduce.clone(),
-                        counter.transform.clone(),
-                    )
-                }
-                _ => {}
-            };
-        }
-
         runtime.spawn(periodic_fetch_counter(
             counter_manager.clone(),
+            desired_ods_counters_provider(config.clone()),
             Duration::from_mins(1),
         ));
 
@@ -175,6 +152,27 @@ impl RateLimitEnvironment {
             self.counter_manager.clone(),
         )
     }
+}
+
+fn desired_ods_counters_provider(
+    config: ConfigHandle<MononokeRateLimitConfig>,
+) -> DesiredCountersProvider {
+    Box::new(move || {
+        config
+            .get()
+            .load_shed_limits
+            .iter()
+            .filter_map(|limit| match &limit.raw_config.load_shedding_metric {
+                LoadSheddingMetric::external_ods_counter(counter) => Some(OdsCounterKey {
+                    entity: counter.entity.clone(),
+                    key: counter.key.clone(),
+                    reduce: counter.reduce.clone(),
+                    transform: counter.transform.clone(),
+                }),
+                _ => None,
+            })
+            .collect::<HashSet<OdsCounterKey>>()
+    })
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]
