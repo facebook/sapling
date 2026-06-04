@@ -23,12 +23,12 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "progress"].join(".");
     let m = PyModule::new(py, &name)?;
 
-    let model_mod = PyModule::new(py, &format!("{}.model", name))?;
+    let model_mod = PyModule::new(py, &format!("{name}.model"))?;
     model_mod.add_class::<model::ProgressBar>(py)?;
     model_mod.add_class::<model::CacheStats>(py)?;
     m.add(py, "model", model_mod)?;
 
-    let render_mod = PyModule::new(py, &format!("{}.render", name))?;
+    let render_mod = PyModule::new(py, &format!("{name}.render"))?;
     use render::*;
     render_mod.add(py, "simple", py_fn!(py, simple()))?;
     render_mod.add(py, "step", py_fn!(py, step()))?;
