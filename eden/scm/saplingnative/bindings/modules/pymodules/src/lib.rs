@@ -35,8 +35,7 @@ fn bytecode_compatibility_check(py: Python) -> PyResult<()> {
         if compiled != current {
             // This is a serious fatal error.
             panic!(
-                "Compiled bytecode version ({:?}) does not match the current interpreter ({:?})",
-                compiled, current
+                "Compiled bytecode version ({compiled:?}) does not match the current interpreter ({current:?})"
             );
         }
     }
@@ -137,7 +136,7 @@ py_class!(pub class BindingsModuleFinder |py| {
         let info = match python_modules::find_module(&name) {
             Some(info) => info,
             None => {
-                let msg = format!("BindingsModuleFinder cannot load {}", name);
+                let msg = format!("BindingsModuleFinder cannot load {name}");
                 return Err(PyErr::new::<exc::ImportError, _>(py, msg));
             }
         };
