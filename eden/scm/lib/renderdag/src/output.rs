@@ -26,15 +26,20 @@ pub struct OutputRendererOptions {
 #[derive(Default)]
 pub(crate) struct OutputRendererState {
     queued_pad_line: Option<String>,
-    last_line_is_blank: bool,
+    /// If > 1, no need for an extra separator for the next row.
+    /// Separator is only needed for adjacent single-line node lines.
+    /// If there are link, pad, term, or other kinds of node lines,
+    /// no need to draw separator.
+    row_height: usize,
 }
 
 impl OutputRendererState {
     pub(crate) fn begin_row(&mut self, out: &mut String, separator_line: bool) {
         self.flush_queued_pad_line(out);
-        if separator_line {
-            self.maybe_push_separator_line(out);
+        if separator_line && self.row_height == 1 {
+            self.push_line(out, "");
         }
+        self.row_height = 0;
     }
 
     pub(crate) fn push_line_with_message(
@@ -75,14 +80,7 @@ impl OutputRendererState {
     fn push_line(&mut self, out: &mut String, line: &str) {
         out.push_str(line.trim_end());
         out.push('\n');
-        self.last_line_is_blank = line.trim_end().is_empty();
-    }
-
-    fn maybe_push_separator_line(&mut self, out: &mut String) {
-        if !self.last_line_is_blank {
-            out.push('\n');
-            self.last_line_is_blank = true;
-        }
+        self.row_height = self.row_height.saturating_add(1);
     }
 
     fn flush_queued_pad_line(&mut self, out: &mut String) {
