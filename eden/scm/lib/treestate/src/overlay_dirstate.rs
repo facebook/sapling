@@ -238,8 +238,7 @@ fn serialize_entry(mut dirstate: impl Write, path: &[u8], state: &FileStateV2) -
             (b'?', MERGE_NOT_APPLICABLE)
         } else {
             return Err(anyhow!(
-                "Unhandled treestate -> dirstate conversion ({:?})",
-                s
+                "Unhandled treestate -> dirstate conversion ({s:?})"
             ));
         }
     };
@@ -332,7 +331,7 @@ fn deserialize_entry(mut dirstate: impl Read) -> Result<Option<(Box<[u8]>, FileS
     }
 
     if header != DIRSTATE_HEADER {
-        return Err(anyhow!("Unexpected header value: {}", header));
+        return Err(anyhow!("Unexpected header value: {header}"));
     }
 
     let state_char = dirstate.read_u8()?;
