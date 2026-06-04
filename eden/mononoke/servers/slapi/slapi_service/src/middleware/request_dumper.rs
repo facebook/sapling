@@ -147,7 +147,7 @@ impl RequestDumper {
         R: std::fmt::Debug,
     {
         if self.should_log_deserialized() {
-            self.logger.add("request", format!("{:?}", request));
+            self.logger.add("request", format!("{request:?}"));
         }
     }
 
