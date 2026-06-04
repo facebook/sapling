@@ -26,5 +26,5 @@ fn failpoint(py: Python, name: &str) -> PyResult<PyNone> {
 }
 
 fn fail_error(name: &str) -> io::Error {
-    io::Error::other(format!("failpoint '{}' set by FAILPOINTS", name))
+    io::Error::other(format!("failpoint '{name}' set by FAILPOINTS"))
 }
