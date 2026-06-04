@@ -1,4 +1,5 @@
 load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
+load("@fbsource//tools/target_determinator/macros:ci.bzl", "ci")
 load("//fbpkg:fbpkg.bzl", "fbpkg")
 
 oncall("scm_server_treehugger")
@@ -25,5 +26,29 @@ fbpkg.builder(
     ),
     path_actions = {
         "merge_resolution_blame_checker": ":merge_resolution_blame_checker",
+    },
+)
+
+python_binary(
+    name = "canary_shard_pin",
+    srcs = ["canary_shard_pin.py"],
+    # Transitive SM/polyglot deps don't build under dev-rust-oss; drop that mode
+    # from CI (the target builds fine in the default/opt modes).
+    labels = ci.remove_labels(ci.mode("fbcode//mode/dev-rust-oss")),
+    main_function = "eden.mononoke.scripts.canary_shard_pin.main",
+    deps = [
+        "//libfb/py/shardmanager:structs",
+        "//libfb/py/shardmanager/client_factory:smclient",
+        "//shardmanager/smcli:param",
+    ],
+)
+
+fbpkg.builder(
+    name = "mononoke.canary_shard_pin",
+    buck_opts = fbpkg.buck_opts(
+        mode = "opt",
+    ),
+    path_actions = {
+        "canary_shard_pin": ":canary_shard_pin",
     },
 )
