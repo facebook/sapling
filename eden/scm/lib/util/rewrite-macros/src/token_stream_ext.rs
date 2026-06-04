@@ -335,7 +335,7 @@ mod tests {
     }
 
     fn display(items: &[Item]) -> String {
-        format!("{:?}", items)
+        format!("{items:?}")
             .replace("Item(\"", "")
             .replace("\")", "")
     }

@@ -53,11 +53,11 @@ impl fmt::Debug for TokenInfo {
             }
             TokenInfo::Atom(t) => {
                 let s = TokenStream::from(t.clone()).to_string();
-                write!(f, "{:?}", s)
+                write!(f, "{s:?}")
             }
             TokenInfo::Atoms(ts) => {
                 let s = TokenStream::from_iter(ts.iter().cloned()).to_string();
-                write!(f, "{:?}", s)
+                write!(f, "{s:?}")
             }
         }
     }
