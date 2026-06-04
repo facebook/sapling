@@ -425,7 +425,7 @@ impl TreeState {
         (1..).map_while(|i| match self.metadata() {
             Err(err) => Some(Err(err)),
             Ok(metadata) => metadata
-                .get(&format!("p{}", i))
+                .get(&format!("p{i}"))
                 .map(|parent_hash| HgId::from_str(parent_hash).map_err(|e| e.into())),
         })
     }
