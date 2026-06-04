@@ -89,8 +89,7 @@ pub(crate) fn set_clock(ts: &mut TreeState, clock: Clock) -> Result<()> {
     let clock_string = match clock {
         Clock::Spec(ClockSpec::StringClock(string)) => Ok(string),
         clock => Err(anyhow!(
-            "Watchman implementation only handles opaque string type. Got the following clock instead: {:?}",
-            clock
+            "Watchman implementation only handles opaque string type. Got the following clock instead: {clock:?}"
         )),
     }?;
 
