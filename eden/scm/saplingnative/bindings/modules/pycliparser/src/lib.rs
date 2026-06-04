@@ -224,7 +224,7 @@ fn parse(
 }
 
 fn map_to_python_err(py: Python, err: ParseError) -> PyErr {
-    let msg = format!("{}", err);
+    let msg = format!("{err}");
     match err {
         ParseError::OptionNotRecognized { option_name } => {
             PyErr::new::<exceptions::OptionNotRecognized, _>(py, (msg, option_name))
