@@ -349,7 +349,7 @@ fn deserialize_entry(mut dirstate: impl Read) -> Result<Option<(Box<[u8]>, FileS
         b'r' => StateFlags::EXIST_P1,
         b'a' => StateFlags::EXIST_NEXT,
         b'?' => StateFlags::empty(),
-        s => return Err(anyhow!("Unexpected state: {}", s)),
+        s => return Err(anyhow!("Unexpected state: {s}")),
     };
 
     let path = read_path(&mut dirstate, size)?;
