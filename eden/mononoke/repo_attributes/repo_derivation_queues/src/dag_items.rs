@@ -131,7 +131,7 @@ impl DagItemId {
                 Some((base, stage_hex)) => (
                     base,
                     Some(MPathHash::from_str(stage_hex).with_context(|| {
-                        format!("While parsing stage hash from suffix {}", suffix)
+                        format!("While parsing stage hash from suffix {suffix}")
                     })?),
                 ),
                 None => (suffix, None),
@@ -139,13 +139,13 @@ impl DagItemId {
 
         let (data_type_str, cs_id_str) = base_suffix
             .rsplit_once('_')
-            .ok_or_else(|| anyhow!("Invalid DagItemId suffix format: {}", suffix))?;
+            .ok_or_else(|| anyhow!("Invalid DagItemId suffix format: {suffix}"))?;
 
         let derived_data_type = data_type_str
             .parse::<DerivableType>()
-            .with_context(|| format!("While parsing DerivableType from suffix {}", suffix))?;
+            .with_context(|| format!("While parsing DerivableType from suffix {suffix}"))?;
         let root_cs_id = ChangesetId::from_str(cs_id_str)
-            .with_context(|| format!("While parsing ChangesetId from suffix {}", suffix))?;
+            .with_context(|| format!("While parsing ChangesetId from suffix {suffix}"))?;
 
         Ok(Self {
             repo_id,
@@ -235,7 +235,7 @@ impl DagItemInfo {
                 .bubble_id
                 .map(|bubble_id| {
                     BubbleId::try_from(bubble_id)
-                        .map_err(|_| anyhow!("Invalid bubble id {}", bubble_id))
+                        .map_err(|_| anyhow!("Invalid bubble id {bubble_id}"))
                 })
                 .transpose()?,
             enqueue_timestamp: dag_item_info.enqueue_timestamp.map(Timestamp::from_thrift),
@@ -408,7 +408,7 @@ impl TryFrom<&str> for DagItemId {
                 let repo_id = repo_id_str.parse::<RepositoryId>()?;
                 Self::from_suffix(suffix, repo_id, config_name.to_string())
             }
-            _ => Err(anyhow!("Couldn't parse {} into DagItemId", path)),
+            _ => Err(anyhow!("Couldn't parse {path} into DagItemId")),
         }
     }
 }

@@ -144,10 +144,7 @@ pub async fn build_underived_batched_graph<'a>(
                 while let Some(item) = cur_item {
                     if failed_attempt >= max_failed_attempts {
                         return Err(anyhow!(
-                            "Couldn't enqueue item {:?} into zeus after {} attempts. Last err: {:?}",
-                            item,
-                            failed_attempt,
-                            err_msg,
+                            "Couldn't enqueue item {item:?} into zeus after {failed_attempt} attempts. Last err: {err_msg:?}",
                         ));
                     } else if failed_attempt > 0 {
                         let backoff_time = Duration::from_millis(failed_attempt * failed_attempt * 100);
@@ -204,7 +201,7 @@ pub async fn build_underived_batched_graph<'a>(
                                 match underived_batch.pop() {
                                     // All changesets in the batch were derived
                                     None => {
-                                        let err_msg_str = format!("Failed to enqueue with error: {}, but the data was derived", e);
+                                        let err_msg_str = format!("Failed to enqueue with error: {e}, but the data was derived");
                                         debug!("{}", err_msg_str);
                                         err_msg = Some(err_msg_str);
                                         // derived, update ready watch and return no dependency
@@ -216,7 +213,7 @@ pub async fn build_underived_batched_graph<'a>(
                                     Some(root_cs_id) if root_cs_id == item.root_cs_id() => {
                                         // return same item for enqueue and increment failures count
                                         failed_attempt += 1;
-                                        let err_msg_str = format!("Failed to enqueue into DAG: {}", e);
+                                        let err_msg_str = format!("Failed to enqueue into DAG: {e}");
                                         error!("{}", err_msg_str);
                                         err_msg = Some(err_msg_str);
                                         Some(item)
