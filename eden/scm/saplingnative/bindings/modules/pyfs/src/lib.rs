@@ -22,7 +22,7 @@ fn canonicalize(py: Python, path: &str) -> PyResult<String> {
     match canonical_path.to_str() {
         Some(s) => Ok(s.to_string()),
         None => {
-            let message = format!("canonicalized({}) is non-utf-8", path);
+            let message = format!("canonicalized({path}) is non-utf-8");
             Err(PyErr::new::<exc::ValueError, _>(py, message))
         }
     }
