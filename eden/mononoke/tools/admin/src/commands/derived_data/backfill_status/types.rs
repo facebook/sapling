@@ -58,7 +58,7 @@ impl std::fmt::Display for RepoStatus {
             RepoStatus::Completed => "completed",
             RepoStatus::Failed => "failed",
         };
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 

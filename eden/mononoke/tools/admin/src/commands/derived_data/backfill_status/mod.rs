@@ -168,7 +168,7 @@ async fn list_backfills(
         .context("fetching recent backfills")?;
 
     if backfills.is_empty() {
-        println!("No backfills found in the last {} days", lookback_days);
+        println!("No backfills found in the last {lookback_days} days");
         return Ok(());
     }
 
@@ -568,7 +568,7 @@ async fn load_per_repo_commit_counts(
 fn format_changeset_id(bytes: &[u8]) -> String {
     ChangesetId::from_bytes(bytes)
         .map(|cs_id| cs_id.to_string())
-        .unwrap_or_else(|e| format!("<invalid changeset id: {}>", e))
+        .unwrap_or_else(|e| format!("<invalid changeset id: {e}>"))
 }
 
 fn parse_changeset_id(bytes: &[u8]) -> Result<ChangesetId> {
@@ -647,7 +647,7 @@ async fn load_child_result(
         }
         (_, ThriftAsynchronousRequestResult::error(error)) => {
             Ok(Some(BackfillChildResult::Error {
-                message: format!("{:?}", error),
+                message: format!("{error:?}"),
             }))
         }
         (request_type, result) => bail!(
@@ -690,7 +690,7 @@ async fn load_boundary_derivation_status(
         Ok(repo_id) => RepositoryId::new(repo_id),
         Err(_) => {
             return Ok(Some(BoundaryDerivationStatus::NotChecked {
-                reason: format!("request repo id {} is out of range", repo_id),
+                reason: format!("request repo id {repo_id} is out of range"),
             }));
         }
     };
@@ -710,7 +710,7 @@ async fn load_boundary_derivation_status(
             let manager = repo
                 .repo_derived_data()
                 .manager_for_config(config_name)
-                .with_context(|| format!("loading derived data config {}", config_name))?;
+                .with_context(|| format!("loading derived data config {config_name}"))?;
             manager_with_all_types(manager)
         }
         None => default_manager
@@ -718,7 +718,7 @@ async fn load_boundary_derivation_status(
             .context("derived data manager unavailable for boundary derived status")?,
     };
     let derived_data_type = DerivableType::from_name(derived_data_type)
-        .with_context(|| format!("resolving derived data type {}", derived_data_type))?;
+        .with_context(|| format!("resolving derived data type {derived_data_type}"))?;
     let not_derived =
         BulkDerivation::pending(&manager, ctx, boundary_cs_ids, None, derived_data_type)
             .await

@@ -59,7 +59,7 @@ fn format_repo(repo_id: i64, repo_names: &HashMap<RepositoryId, String>) -> Stri
         .ok()
         .and_then(|id| repo_names.get(&RepositoryId::new(id)));
     match name {
-        Some(name) => format!("{} ({})", name, repo_id),
+        Some(name) => format!("{name} ({repo_id})"),
         None => repo_id.to_string(),
     }
 }
@@ -102,11 +102,11 @@ pub(super) fn format_duration(duration: &Duration) -> String {
     let seconds = total_secs % 60;
 
     if hours > 0 {
-        format!("{}h {}m", hours, minutes)
+        format!("{hours}h {minutes}m")
     } else if minutes > 0 {
-        format!("{}m {}s", minutes, seconds)
+        format!("{minutes}m {seconds}s")
     } else {
-        format!("{}s", seconds)
+        format!("{seconds}s")
     }
 }
 
@@ -267,7 +267,7 @@ pub(super) fn display_repo_detail(data: &RepoDisplayData) {
     println!();
 
     println!("Repo Details:");
-    println!("  Repo:              {}", repo_label);
+    println!("  Repo:              {repo_label}");
     println!("  Overall Status:    {}", data.overall_status);
     println!(
         "  Derived Data Type: {}",
@@ -370,13 +370,13 @@ pub(super) fn display_child_request_detail(
         } => {
             println!("Derive Boundaries Params:");
             println!("  Repo:              {}", format_repo(*repo_id, repo_names));
-            println!("  Derived Data Type: {}", derived_data_type);
+            println!("  Derived Data Type: {derived_data_type}");
             println!(
                 "  Config Name:       {}",
                 format_optional_str(config_name.as_deref())
             );
-            println!("  Concurrency:       {}", concurrency);
-            println!("  Use Predecessor:   {}", use_predecessor_derivation);
+            println!("  Concurrency:       {concurrency}");
+            println!("  Use Predecessor:   {use_predecessor_derivation}");
             println!(
                 "  Boundary Count:    {}",
                 format_number(boundary_cs_ids.len())
@@ -401,13 +401,13 @@ pub(super) fn display_child_request_detail(
                         );
                     }
                     BoundaryDerivationStatus::NotChecked { reason } => {
-                        println!("  Derived Check:     not checked ({})", reason);
+                        println!("  Derived Check:     not checked ({reason})");
                     }
                 }
             }
             println!("  Boundary Changesets:");
             for cs_id in boundary_cs_ids {
-                println!("    {}", cs_id);
+                println!("    {cs_id}");
             }
         }
         BackfillChildParams::DeriveSlice {
@@ -418,7 +418,7 @@ pub(super) fn display_child_request_detail(
         } => {
             println!("Derive Slice Params:");
             println!("  Repo:              {}", format_repo(*repo_id, repo_names));
-            println!("  Derived Data Type: {}", derived_data_type);
+            println!("  Derived Data Type: {derived_data_type}");
             println!(
                 "  Config Name:       {}",
                 format_optional_str(config_name.as_deref())
@@ -444,14 +444,14 @@ pub(super) fn display_child_request_detail(
                 derived_count,
                 error_message,
             } => {
-                println!("  Derived Count:     {}", derived_count);
+                println!("  Derived Count:     {derived_count}");
                 println!(
                     "  Error Message:     {}",
                     format_optional_str(error_message.as_deref())
                 );
             }
             BackfillChildResult::Error { message } => {
-                println!("  Error Message:     {}", message);
+                println!("  Error Message:     {message}");
             }
         }
     }
@@ -488,10 +488,7 @@ fn print_timing_section(
         );
     }
     if requests_per_hour > 0.0 {
-        println!(
-            "  Completion Rate:     {:.0} requests/hour",
-            requests_per_hour
-        );
+        println!("  Completion Rate:     {requests_per_hour:.0} requests/hour");
     }
     if let Some(est) = estimated_remaining {
         println!("  Est. Remaining:      ~{}", format_duration(est));
