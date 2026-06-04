@@ -184,7 +184,7 @@ impl<T: ToKeys + HgIdDataStore + ?Sized> IterableHgIdDataStorePyExt for T {
             let res = py.allow_threads(|| self.get(StoreKey::hgid(key.clone())))?;
             let data = match res {
                 StoreResult::Found(data) => data,
-                StoreResult::NotFound(_) => return Err(format_err!("Key {:?} not found", key)),
+                StoreResult::NotFound(_) => return Err(format_err!("Key {key:?} not found")),
             };
             let delta = Delta {
                 data: data.into(),

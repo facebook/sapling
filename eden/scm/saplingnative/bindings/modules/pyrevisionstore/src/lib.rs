@@ -535,7 +535,7 @@ py_class!(pub class filescmstore |py| {
         // TODO(meyer): FileStoreFetch should have utility methods to various consumer cases like this (get complete, get missing, transform to Result<EntireBatch>, transform to iterator of Result<IndividualFetch>, etc)
         // For now we just error with the first incomplete key, passing on the last recorded error if any are available.
         if let Some((key, err)) = missing.into_iter().next() {
-            return Err(err.context(format!("failed to fetch {}, received error", key))).map_pyerr(py);
+            return Err(err.context(format!("failed to fetch {key}, received error"))).map_pyerr(py);
         }
         for (key, storefile) in found.into_iter() {
             let key_tuple = from_key_to_tuple(py, &key).into_object();
@@ -615,7 +615,7 @@ py_class!(pub class filescmstore |py| {
                     results.append(py, key_tuple.into_object());
                 }
                 StoreKey::Content(_, _) => {
-                    return Err(anyhow!("Unsupported key: {:?}", key)).map_pyerr(py);
+                    return Err(anyhow!("Unsupported key: {key:?}")).map_pyerr(py);
                 }
             }
         }

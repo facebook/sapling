@@ -129,5 +129,5 @@ pub fn to_metadata(py: Python, meta: &PyDict) -> PyResult<Metadata> {
 }
 
 pub fn key_error(py: Python, key: &StoreKey) -> PyErr {
-    PyErr::new::<exc::KeyError, _>(py, format!("Key not found {:?}", key))
+    PyErr::new::<exc::KeyError, _>(py, format!("Key not found {key:?}"))
 }
