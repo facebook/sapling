@@ -123,8 +123,7 @@ py_class!(pub class treemanifest |py| {
             Ok(value) => value,
             Err(_) => {
                 let msg = format!(
-                    "cannot find file '{}' in manifest",
-                    path,
+                    "cannot find file '{path}' in manifest",
                 );
                 return Err(PyErr::new::<exc::KeyError, _>(py, msg))
             }
@@ -132,7 +131,7 @@ py_class!(pub class treemanifest |py| {
         let tree = self.underlying(py).read();
         match tree.get_file(repo_path).map_pyerr(py)? {
             None => {
-                let msg = format!("cannot find file '{}' in manifest", repo_path);
+                let msg = format!("cannot find file '{repo_path}' in manifest");
                 Err(PyErr::new::<exc::KeyError, _>(py, msg))
             }
             Some(file_metadata) => file_metadata_to_py_tuple(py, &file_metadata),
@@ -565,7 +564,7 @@ py_class!(pub class treemanifest |py| {
         let tree = self.underlying(py).read();
         match tree.get_file(repo_path).map_pyerr(py)? {
             Some(file_metadata) => Ok(node_to_pybytes(py, file_metadata.hgid)),
-            None => Err(PyErr::new::<exc::KeyError, _>(py, format!("file {} not found", path))),
+            None => Err(PyErr::new::<exc::KeyError, _>(py, format!("file {path} not found"))),
         }
     }
 
@@ -656,8 +655,7 @@ py_class!(pub class treemanifest |py| {
                 py,
                 format!(
                     "Error finalizing manifest. Invalid state: \
-                    expecting deletion commands for the following paths: {:?}",
-                    pending_delete
+                    expecting deletion commands for the following paths: {pending_delete:?}"
                 )
             ));
         }
@@ -796,7 +794,7 @@ fn insert(
         manifest_tree::InsertErrorCause::DirectoryExistsForPath => {
             let files: Vec<File> = tree
                 .files(TreeMatcher::from_rules(
-                    [format!("{}/**", path)].iter(),
+                    [format!("{path}/**")].iter(),
                     true, // case_sensitive=true
                 )?)
                 .collect::<Result<_>>()?;
