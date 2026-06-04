@@ -387,8 +387,8 @@ impl MononokeAppBuilder {
 
         let remote_diff_options = remote_diff_args.into();
 
-        let acl_provider =
-            create_acl_provider(self.fb, &acl_args).context("Failed to create ACL provider")?;
+        let acl_provider = create_acl_provider(self.fb, &acl_args, runtime)
+            .context("Failed to create ACL provider")?;
 
         let commit_graph_options = commit_graph_args.into();
 
@@ -544,12 +544,42 @@ fn init_just_knobs_worker(
     }
 }
 
-fn create_acl_provider(fb: FacebookInit, acl_args: &AclArgs) -> Result<Arc<dyn AclProvider>> {
-    let acl_provider = match &acl_args.acl_file {
-        Some(acl_file) => InternalAclProvider::from_file(acl_file).with_context(|| {
-            format!("Failed to load ACLs from '{}'", acl_file.to_string_lossy())
-        })?,
-        None => DefaultAclProvider::new(fb)?,
-    };
-    Ok(acl_provider)
+#[cfg(fbcode_build)]
+fn create_acl_provider(
+    fb: FacebookInit,
+    acl_args: &AclArgs,
+    runtime: &Runtime,
+) -> Result<Arc<dyn AclProvider>> {
+    if let Some(acl_file) = &acl_args.acl_file {
+        return InternalAclProvider::from_file(acl_file)
+            .with_context(|| format!("Failed to load ACLs from '{}'", acl_file.to_string_lossy()));
+    }
+    if acl_args.access_checker_enabled {
+        let raw = acl_args.access_checker_verifier.as_str();
+        let (id_type, id_data) = raw.split_once(':').with_context(|| {
+            format!("Invalid --access-checker-verifier value '{raw}': expected '<type>:<data>'")
+        })?;
+        let verifier = infrasec_authorization::Identity {
+            id_type: id_type.to_string(),
+            id_data: id_data.to_string(),
+            ..Default::default()
+        };
+        return runtime
+            .block_on(permission_checker::AccessCheckerProvider::new(fb, verifier))
+            .context("Failed to create AccessCheckerProvider");
+    }
+    DefaultAclProvider::new(fb).context("Failed to create DefaultAclProvider")
+}
+
+#[cfg(not(fbcode_build))]
+fn create_acl_provider(
+    fb: FacebookInit,
+    acl_args: &AclArgs,
+    _runtime: &Runtime,
+) -> Result<Arc<dyn AclProvider>> {
+    if let Some(acl_file) = &acl_args.acl_file {
+        return InternalAclProvider::from_file(acl_file)
+            .with_context(|| format!("Failed to load ACLs from '{}'", acl_file.to_string_lossy()));
+    }
+    DefaultAclProvider::new(fb).context("Failed to create DefaultAclProvider")
 }
