@@ -444,7 +444,7 @@ impl fmt::Debug for DebugDeltaTree {
             &self.id.to_hex()[..6],
         )?;
         for child in self.children.iter() {
-            write!(f, "{:?}", child)?;
+            write!(f, "{child:?}")?;
         }
         Ok(())
     }
@@ -708,7 +708,7 @@ mod tests {
         }
 
         let tree = zstore.debug_delta_tree().unwrap();
-        format!("\n{:?}", tree)
+        format!("\n{tree:?}")
     }
 
     #[test]
@@ -716,7 +716,7 @@ mod tests {
         let noise = generate_noise(4000);
         // Similar contents. This ensures that delta will be used.
         let contents: Vec<Vec<u8>> = (0..50)
-            .map(|i| format!("{}{}{}", noise, i, noise).as_bytes().to_vec())
+            .map(|i| format!("{noise}{i}{noise}").as_bytes().to_vec())
             .collect();
 
         // Test that the delta trees effectively limit the max
