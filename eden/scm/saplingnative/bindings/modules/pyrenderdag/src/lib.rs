@@ -77,7 +77,7 @@ fn convert_parents(py: Python, parents: Vec<(String, PyNode)>) -> PyResult<Vec<A
             "M" => Ok(Ancestor::Anonymous),
             _ => Err(PyErr::new::<exc::ValueError, _>(
                 py,
-                format!("unknown parent type: {}", kind),
+                format!("unknown parent type: {kind}"),
             )),
         })
         .collect()
