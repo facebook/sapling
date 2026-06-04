@@ -120,8 +120,7 @@ impl GitCommitFields {
             } else {
                 ensure!(
                     !result.committer.is_empty(),
-                    "bogus line in git commit: {}",
-                    line
+                    "bogus line in git commit: {line}"
                 );
             }
             last_pos = pos + 1;
@@ -258,7 +257,7 @@ fn parse_name_date(line: Text) -> Result<(Text, HgTime)> {
     let offset = {
         // +HHMM or -HHMM
         let tz_str = parts.next().context("missing timezone")?;
-        ensure!(tz_str.len() == 5, "invalid git timezone: {}", tz_str);
+        ensure!(tz_str.len() == 5, "invalid git timezone: {tz_str}");
         // Git's "-0700" = Hg's "25200"
         let sign = if tz_str.starts_with('-') { 1 } else { -1 };
         let hours = tz_str[1..3].parse::<i32>()?;
@@ -316,12 +315,11 @@ fn write_extra(name: &str, value: &str, out: &mut String) -> Result<()> {
     let bad_extra_names = ["parent", "tree"];
     ensure!(
         !name.contains("\n") && !name.contains(" ") && bad_extra_names.iter().all(|&n| n != name),
-        "invalid extra: {:?}",
-        name
+        "invalid extra: {name:?}"
     );
     out.push_str(name);
     let empty = write_multi_line(value, " ", out)?;
-    ensure!(!empty, "empty commit extra: {}", name);
+    ensure!(!empty, "empty commit extra: {name}");
     out.push('\n');
     Ok(())
 }
@@ -343,9 +341,9 @@ fn write_git_tz(tz_seconds: i32, out: &mut String) -> Result<()> {
     let sign = if tz_seconds <= 0 { '+' } else { '-' };
     out.push(sign);
     let hh = tz_seconds.abs() / 3600;
-    write!(out, "{:02}", hh)?;
+    write!(out, "{hh:02}")?;
     let mm = (tz_seconds.abs() % 3600) / 60;
-    write!(out, "{:02}", mm)?;
+    write!(out, "{mm:02}")?;
     Ok(())
 }
 

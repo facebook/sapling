@@ -61,7 +61,7 @@ pub fn parse_copy_from_hg_file_metadata(data: &[u8]) -> Result<Option<Key>> {
         } else if line.starts_with(b"copyrev: ") {
             hgid = Some(HgId::from_str(str::from_utf8(&line[9..])?)?);
         } else {
-            bail!("Unknown metadata in data: {:?}", line);
+            bail!("Unknown metadata in data: {line:?}");
         }
     }
 

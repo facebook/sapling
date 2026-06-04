@@ -44,7 +44,7 @@ pub fn git_sha1_serialize_write(
     let size = raw_text.len();
     out.write_all(kind.as_bytes())?;
     out.write_all(b" ")?;
-    write!(out, "{}", size)?;
+    write!(out, "{size}")?;
     out.write_all(b"\0")?;
     out.write_all(raw_text)?;
     Ok(())

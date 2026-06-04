@@ -26,15 +26,14 @@ pub(crate) fn normalize_email_user(
     format: SerializationFormat,
 ) -> Result<Cow<'_, str>> {
     let name = name.trim();
-    ensure!(!name.is_empty(), "invalid name (empty): {:?}", name);
+    ensure!(!name.is_empty(), "invalid name (empty): {name:?}");
 
     let invalid_bytes = [b'\0', b'\n', b'\r'];
     ensure!(
         invalid_bytes
             .iter()
             .all(|&b| memchr(b, name.as_bytes()).is_none()),
-        "invalid name (special character): {:?}",
-        name
+        "invalid name (special character): {name:?}"
     );
 
     let left_bracket_pos = memchr(b'<', name.as_bytes());
@@ -42,7 +41,7 @@ pub(crate) fn normalize_email_user(
 
     let normalized_name = match (left_bracket_pos, right_bracket_pos, format) {
         (None, None, SerializationFormat::Hg) => Cow::Borrowed(name),
-        (None, None, SerializationFormat::Git) => Cow::Owned(format!("{} <>", name)),
+        (None, None, SerializationFormat::Git) => Cow::Owned(format!("{name} <>")),
         (Some(p1), Some(p2), _)
             if p1 < p2
                 && memchr(b'<', &name.as_bytes()[p1 + 1..]).is_none()
@@ -50,13 +49,11 @@ pub(crate) fn normalize_email_user(
         {
             ensure!(
                 p1 > 0 || matches!(format, SerializationFormat::Hg),
-                "invalid name (empty user): {:?}",
-                name
+                "invalid name (empty user): {name:?}"
             );
             ensure!(
                 p2 + 1 == name.len(),
-                "invalid name (content after email): {:?}",
-                name
+                "invalid name (content after email): {name:?}"
             );
             let user = name[..p1].trim();
             let email = name[p1 + 1..p2].trim();
@@ -64,12 +61,12 @@ pub(crate) fn normalize_email_user(
                 // use `name` as-is
                 Cow::Borrowed(name)
             } else if user.is_empty() {
-                Cow::Owned(format!("<{}>", email))
+                Cow::Owned(format!("<{email}>"))
             } else {
-                Cow::Owned(format!("{} <{}>", user, email))
+                Cow::Owned(format!("{user} <{email}>"))
             }
         }
-        _ => bail!("invalid name (mismatched brackets): {:?}", name),
+        _ => bail!("invalid name (mismatched brackets): {name:?}"),
     };
 
     Ok(normalized_name)
@@ -129,8 +126,8 @@ pub(crate) mod tests {
         fn normalize_email_user_to_str(name: &str, format: SerializationFormat) -> String {
             match normalize_email_user(name, format) {
                 Err(e) => format!("Err({})", e.to_string().split(':').next().unwrap()),
-                Ok(Cow::Borrowed(v)) => format!("Borrowed({})", v),
-                Ok(Cow::Owned(v)) => format!("Owned({})", v),
+                Ok(Cow::Borrowed(v)) => format!("Borrowed({v})"),
+                Ok(Cow::Owned(v)) => format!("Owned({v})"),
             }
         }
         fn t(name: &str) -> String {
