@@ -62,7 +62,7 @@ pub struct CommandArgs {
 
 fn print_name_hash_pairs(pairs: impl IntoIterator<Item = (String, impl Display)>) -> Result<()> {
     for (name, id) in pairs.into_iter() {
-        writeln!(std::io::stdout(), "{}={}", name, id)?;
+        writeln!(std::io::stdout(), "{name}={id}")?;
     }
     Ok(())
 }
@@ -97,7 +97,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
                 commits
                     .get(&name)
                     .cloned()
-                    .ok_or_else(|| anyhow!("No commit found for {}", name))
+                    .ok_or_else(|| anyhow!("No commit found for {name}"))
             })
             .collect::<Result<Vec<_>>>()?;
 
@@ -121,7 +121,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             .map(|(name, id)| {
                 mapping
                     .get(&id)
-                    .ok_or_else(|| anyhow!("Couldn't translate {}={} to hg", name, id))
+                    .ok_or_else(|| anyhow!("Couldn't translate {name}={id} to hg"))
                     .map(|hg_id| (name, hg_id))
             })
             .collect::<Result<Vec<_>>>()?;

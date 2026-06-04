@@ -100,10 +100,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         .await
         .context("Failed to derive Mercurial changeset")?
         .hg_changeset_id();
-    println!(
-        "Created bonsai changeset {} for Hg changeset {}",
-        bcs_id, hg_cs
-    );
+    println!("Created bonsai changeset {bcs_id} for Hg changeset {hg_cs}");
     Ok(())
 }
 

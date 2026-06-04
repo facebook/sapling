@@ -121,7 +121,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             let storage_config = storage_configs
                 .storage
                 .get(storage_id)
-                .ok_or_else(|| anyhow!("Storage config not found for ID: {}", storage_id))?;
+                .ok_or_else(|| anyhow!("Storage config not found for ID: {storage_id}"))?;
 
             // Extract queue_db and multiplex_id from MultiplexedWal config
             let (queue_db, multiplex_id) = match &storage_config.blobstore {
@@ -132,8 +132,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
                 } => (queue_db, *multiplex_id),
                 _ => {
                     return Err(anyhow!(
-                        "Storage config for '{}' is not MultiplexedWal",
-                        storage_id
+                        "Storage config for '{storage_id}' is not MultiplexedWal"
                     ));
                 }
             };
@@ -260,10 +259,7 @@ fn delete_blobs(target_dir: &Path, blob_keys: &[(String, u64)]) -> Result<()> {
 
     for (key, _) in blob_keys {
         // Try both with and without "blob-" prefix
-        let paths = [
-            target_dir.join(format!("blob-{}", key)),
-            target_dir.join(key),
-        ];
+        let paths = [target_dir.join(format!("blob-{key}")), target_dir.join(key)];
 
         for path in &paths {
             if path.exists() {
