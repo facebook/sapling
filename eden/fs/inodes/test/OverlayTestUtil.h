@@ -57,4 +57,24 @@ inline ErrorLogger makeTestErrorLogger() {
   return ErrorLogger{nullptr, {}, nullptr};
 }
 
+// Friend of Overlay so tests can drive the private WAL compaction path
+// directly and inject a deterministic RNG (the production default uses
+// folly::Random::rand32()).
+class OverlayTestHelper {
+ public:
+  static void maybeCompactWal(
+      Overlay& overlay,
+      InodeNumber parent,
+      const DirContents& content,
+      uint64_t walFileSizeBytes = 0) {
+    overlay.maybeCompactWal(parent, content, walFileSizeBytes);
+  }
+
+  static void setWalCompactionRng(
+      Overlay& overlay,
+      std::function<uint32_t()> rng) {
+    overlay.walCompactionRng_ = std::move(rng);
+  }
+};
+
 } // namespace facebook::eden

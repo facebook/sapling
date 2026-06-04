@@ -166,11 +166,13 @@ class FsFileContentStore : public FileContentStore {
   static WalPath getWalPath(InodeNumber inodeNumber);
 
   /**
-   * Append a WAL entry for the given directory inode. Writes the entryLen
-   * prefix plus the payload in a single write() call. For ADD, entry must
-   * be non-null and contains the child's overlay data. For REMOVE and
-   * MATERIALIZE, entry must be nullptr — passing a non-null entry is a
-   * caller bug and is XCHECK'd.
+   * Append a single WAL entry for `parent`. Returns the new on-disk WAL
+   * file size in bytes after the append; used by the Overlay's
+   * compaction threshold as a heuristic upper bound on replay cost.
+   *
+   * For ADD, `entry` must be non-null and contains the child's overlay
+   * data. For REMOVE and MATERIALIZE, `entry` must be nullptr —
+   * passing a non-null entry is a caller bug and is XCHECK'd.
    *
    * Concurrency: the caller must serialize all calls for a given parent
    * inode (the Overlay layer holds the parent TreeInode's contents lock,
@@ -180,7 +182,7 @@ class FsFileContentStore : public FileContentStore {
    * drop a successful neighbor's write. Calls for different parents are
    * safe — each opens its own fd against a distinct WAL file.
    */
-  void appendWalEntry(
+  uint64_t appendWalEntry(
       InodeNumber parent,
       WalOpType op,
       PathComponentPiece childName,
@@ -444,12 +446,12 @@ class FsInodeCatalog : public InodeCatalog {
 
   std::optional<fsck::InodeInfo> loadInodeInfo(InodeNumber number) override;
 
-  void appendWalEntry(
+  uint64_t appendWalEntry(
       InodeNumber parent,
       WalOpType op,
       PathComponentPiece childName,
       const overlay::OverlayEntry* entry) override {
-    core_->appendWalEntry(parent, op, childName, entry);
+    return core_->appendWalEntry(parent, op, childName, entry);
   }
 
   bool hasWal(InodeNumber parent) override {

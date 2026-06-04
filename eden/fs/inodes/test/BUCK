@@ -358,6 +358,7 @@ cpp_unittest(
         ":overlay_test_util",
         "//eden/common/testharness:temp_file",
         "//eden/common/utils:process",
+        "//eden/common/utils:utils",
         "//eden/fs/inodes:inodes",
         "//eden/fs/inodes/fscatalog:fsinodecatalog",
         "//eden/fs/model:testutil",

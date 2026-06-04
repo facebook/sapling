@@ -2262,14 +2262,17 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * Hard upper bound on the inline-compaction threshold, regardless of
-   * directory size. Caps the worst-case time spent serializing a
-   * directory under the parent `TreeInode::contents_` lock during a
-   * compaction rewrite. Snapshot at Overlay construction.
+   * Hard upper bound on the inline-compaction WAL byte size, regardless
+   * of directory size. Caps the worst-case work the inline compaction
+   * has to do under the parent `TreeInode::contents_` lock. Snapshot at
+   * Overlay construction.
+   *
+   * Default 5 MB ≈ 100k typical WAL entries (each entry is ~50 bytes),
+   * which benchmarks at ~225 ms total replay + compact time inline.
    */
-  ConfigSetting<size_t> overlayWalCompactionCap{
-      "overlay:wal-compaction-cap",
-      100'000,
+  ConfigSetting<uint64_t> overlayWalCompactionByteCap{
+      "overlay:wal-compaction-byte-cap",
+      5'000'000,
       this};
 
   // [clone]

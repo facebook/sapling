@@ -18,6 +18,7 @@
 #include <array>
 #include <atomic>
 #include <condition_variable>
+#include <functional>
 #include <optional>
 #include <thread>
 #include <unordered_map>
@@ -410,42 +411,32 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
     return inodeCatalog_->supportsWal();
   }
 
-  friend class WalGuardTest_useWalRequiresFlagAndLegacyCatalog_Test;
-  friend class WalGuardTest_canHaveWalFilesIgnoresFlag_Test;
-  friend class WalCompactionTest_belowThresholdRetainsWal_Test;
-  friend class WalCompactionTest_exceedsThresholdTriggersFullSave_Test;
-  friend class WalCompactionTest_largeBaseSizeScalesThreshold_Test;
-  friend class WalCompactionTest_nonWalCatalogDoesNotTrackCompaction_Test;
-  friend class WalCompactionTest_thresholdIsCappedForLargeDirectories_Test;
-  friend class WalCompactionTest_recompactsAfterReset_Test;
+  friend class OverlayTestHelper;
 
   /**
-   * Increment the per-parent WAL entry counter and, if it crosses the
-   * inline-compaction threshold, rewrite the parent directory file from
-   * `content` and clear the WAL.
+   * Inline compaction with a hard byte cap. On each call:
+   *   - If `walFileSizeBytes >= walCompactionByteCap_`, compact
+   *     unconditionally.
+   *   - Else roll 1-in-`walCompactionMultiplier_ * max(content.size(), 10)`
+   *     and compact on a hit.
    *
-   * Threshold is `min(walCompactionMultiplier_ * max(content.size() - count,
-   * 10), walCompactionCap_)`. For tiny directories the floor of 10 keeps a
-   * small constant overhead; for larger directories the threshold scales with
-   * the base size so the amortized rewrite cost stays O(1) per WAL append. The
-   * cap bounds the worst-case latency of the compaction itself: without it, a
-   * million-entry directory could let the WAL grow to ~3M entries before the
-   * inline rewrite stalls every other op on the directory.
+   * The hard byte cap is a real upper bound on the on-disk WAL size; the
+   * probabilistic roll keeps the typical-case compaction rate
+   * proportional to directory size with no per-inode state.
    *
-   * Compaction is intentionally inline (rather than on a background
-   * thread) — the existing `saveOverlayDir` path also runs synchronously
-   * under the parent contents lock, so a WAL write's worst case matches
-   * pre-WAL behavior while its expected case is O(1). A background
-   * compactor would need to coordinate with mutators on the same lock
-   * and offers no asymptotic improvement.
+   * Inline (not background) by design: the existing `saveOverlayDir`
+   * path also runs synchronously under the contents lock, so the worst
+   * case matches pre-WAL behavior.
    *
-   * Callers must hold the parent TreeInode's contents lock so that
-   * `content` is consistent with the WAL file on disk.
+   * Caller must hold the parent TreeInode's contents lock.
    */
-  void maybeCompactWal(InodeNumber parent, const DirContents& content);
+  void maybeCompactWal(
+      InodeNumber parent,
+      const DirContents& content,
+      uint64_t walFileSizeBytes);
 
   /**
-   * Append a WAL entry and immediately bump the compaction counter. This
+   * Append a WAL entry and immediately roll for inline compaction. This
    * is the single entry point used by every WAL-using fast path in
    * Overlay (`addChild`, `removeChild`, `renameChild`, `materializeChild`).
    * Bundling the two steps in one call ensures the compaction trigger
@@ -623,11 +614,19 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
 
   bool useWal_{false};
   size_t walCompactionMultiplier_{3};
-  size_t walCompactionCap_{100'000};
+  uint64_t walCompactionByteCap_{5'000'000};
 
   /**
-   * Drop any WAL state for `parent` after a full directory rewrite or
-   * removal. Idempotent (safe to call when no WAL exists). No-op for
+   * RNG used by `maybeCompactWal` to roll for inline compaction.
+   * Production default uses `folly::Random::rand32()`. Tests inject a
+   * deterministic generator via `OverlayTestHelper` so threshold checks
+   * become reproducible.
+   */
+  std::function<uint32_t()> walCompactionRng_;
+
+  /**
+   * Drop the on-disk WAL file for `parent` after a full directory rewrite
+   * or removal. Idempotent (safe to call when no WAL exists). No-op for
    * catalog types that never have WAL files on disk.
    */
   void clearWalAfterFullWrite(InodeNumber parent);
@@ -647,39 +646,6 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
    * mutates `dir`.
    */
   void mergeWalIntoOverlayDir(InodeNumber parent, overlay::OverlayDir& dir);
-
-  /**
-   * Sharded in-memory count of WAL entries per directory inode, used to
-   * trigger inline compaction. Sharding by inode-number prevents the
-   * shared mutex from becoming a global bottleneck during parallel
-   * checkout (where every TreeInode mutation contends).
-   *
-   * Intentionally a process-global structure rather than a member on
-   * `TreeInode` / `DirContents`: the WAL append path runs under the
-   * parent's contents lock, so storing the counter on the inode would
-   * either piggyback on that lock (forcing the counter increment into
-   * the same critical section) or require an additional per-inode
-   * mutex just for this counter. The sharded global keeps the counter
-   * update to a leaf-level lock acquisition that can be released
-   * before saveOverlayDir runs. Counters are inserted on append and erased on
-   * full rewrite or removal via clearWalAfterFullWrite.
-   *
-   * Does not need to survive restart — on load, WAL files are replayed
-   * and compacted immediately.
-   */
-  static constexpr size_t kWalEntryCountsShards = 64;
-  std::array<
-      folly::Synchronized<folly::F14FastMap<InodeNumber, size_t>>,
-      kWalEntryCountsShards>
-      walEntryCountsShards_;
-
-  /**
-   * Pick the shard for a given inode number.
-   */
-  folly::Synchronized<folly::F14FastMap<InodeNumber, size_t>>&
-  walEntryCountsShard(InodeNumber inode) {
-    return walEntryCountsShards_[inode.get() % kWalEntryCountsShards];
-  }
 };
 
 constexpr InodeCatalogType kDefaultInodeCatalogType =

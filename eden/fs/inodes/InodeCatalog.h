@@ -314,8 +314,10 @@ class InodeCatalog {
    * `MATERIALIZE`, `entry` must be nullptr. The caller is responsible
    * for serializing calls for a given parent (the Overlay holds the
    * parent `TreeInode`'s contents lock).
+   *
+   * Returns the new on-disk WAL file size (in bytes) after the append.
    */
-  virtual void appendWalEntry(
+  virtual uint64_t appendWalEntry(
       InodeNumber /* parent */,
       WalOpType /* op */,
       PathComponentPiece /* childName */,

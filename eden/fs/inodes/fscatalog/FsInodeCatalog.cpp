@@ -560,7 +560,7 @@ WalPath FsFileContentStore::getWalPath(InodeNumber inodeNumber) {
   return walPath;
 }
 
-void FsFileContentStore::appendWalEntry(
+uint64_t FsFileContentStore::appendWalEntry(
     InodeNumber parent,
     WalOpType op,
     PathComponentPiece childName,
@@ -713,6 +713,8 @@ void FsFileContentStore::appendWalEntry(
             totalSize,
             truncErrno));
   }
+
+  return static_cast<uint64_t>(sizeBefore) + static_cast<uint64_t>(written);
 }
 
 bool FsFileContentStore::hasWal(InodeNumber parent) {
