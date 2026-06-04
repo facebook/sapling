@@ -24,6 +24,15 @@ pub use oss::OdsCounterManager;
 #[cfg(not(fbcode_build))]
 pub use oss::periodic_fetch_counter;
 
+/// Identifies an ODS counter.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct OdsCounterKey {
+    pub entity: String,
+    pub key: String,
+    pub reduce: Option<String>,
+    pub transform: Option<String>,
+}
+
 #[async_trait]
 pub trait CounterManager {
     fn add_counter(
