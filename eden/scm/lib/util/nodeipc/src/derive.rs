@@ -66,7 +66,7 @@ impl<T: HasIpc + Call> Serve for T {
                     ipc.send(IpcMessage::Return(ReturnArgs(value)))?;
                 }
                 IpcMessage::Return(ReturnArgs(ret)) => {
-                    anyhow::bail!("Unmatched return {:?}", ret);
+                    anyhow::bail!("Unmatched return {ret:?}");
                 }
             }
         }
