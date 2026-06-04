@@ -148,7 +148,7 @@ py_class!(pub class repo |py| {
     def storage_format(&self) -> PyResult<String> {
         let repo_ref = self.inner(py).read();
         let format = repo_ref.storage_format();
-        let lower_case = format!("{:?}", format).to_lowercase();
+        let lower_case = format!("{format:?}").to_lowercase();
         Ok(lower_case)
     }
 
