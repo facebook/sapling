@@ -67,7 +67,7 @@ py_class!(pub class idmap |py| {
                     return Err(PyErr::new::<exc::ValueError, _>(py, msg));
                 }
             } else {
-                return Err(PyErr::new::<exc::ValueError, _>(py, format!("invalid id: {}", id)));
+                return Err(PyErr::new::<exc::ValueError, _>(py, format!("invalid id: {id}")));
             }
         }
         if iter.next().is_some() {
