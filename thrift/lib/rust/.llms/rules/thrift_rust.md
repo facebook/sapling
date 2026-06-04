@@ -39,6 +39,7 @@ oncalls:
 | File | Purpose |
 |------|---------|
 | `src/lib.rs` | Crate root, public re-exports, `ThriftEnum` trait |
+| `src/clap.rs` | `ThriftEnumValueParser` — clap `TypedValueParser` for Thrift enums |
 | `src/protocol.rs` | `Protocol`, `ProtocolReader`, `ProtocolWriter` traits |
 | `src/binary_protocol.rs` | `BinaryProtocol` implementation |
 | `src/compact_protocol.rs` | `CompactProtocol` implementation |
