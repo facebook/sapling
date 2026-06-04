@@ -70,10 +70,10 @@ fn format_warnings(by_acl: &BTreeMap<String, BTreeSet<String>>, url_template: &s
             None => continue,
         };
 
-        let mut line = format!("  '{}'", first);
+        let mut line = format!("  '{first}'");
         let remaining = paths.len() - 1;
         if remaining > 0 {
-            line.push_str(&format!(" [and {} more]", remaining));
+            line.push_str(&format!(" [and {remaining} more]"));
         }
 
         if remaining > 0 {
@@ -84,9 +84,9 @@ fn format_warnings(by_acl: &BTreeMap<String, BTreeSet<String>>, url_template: &s
 
         if !url_template.is_empty() {
             let url = url_template.replace("{acl}", acl);
-            line.push_str(&format!(" by ACL '{}' - request access at {}", acl, url));
+            line.push_str(&format!(" by ACL '{acl}' - request access at {url}"));
         } else {
-            line.push_str(&format!(" by ACL '{}'", acl));
+            line.push_str(&format!(" by ACL '{acl}'"));
         }
 
         line.push('\n');

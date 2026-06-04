@@ -125,8 +125,7 @@ impl Hooks {
             } else {
                 let _ = writeln!(
                     self.io.error(),
-                    "WARNING: not running python hooks {:?}",
-                    python_names
+                    "WARNING: not running python hooks {python_names:?}"
                 );
             }
         }

@@ -74,9 +74,9 @@ pub fn print_error(
     if let Some(e) = err.downcast_ref::<types::errors::PermissionDenied>() {
         if let Some(config) = config {
             let msg = crate::acl::format_permission_denied_error(e, config);
-            let _ = io.write_err(format!("abort: {}\n", msg));
+            let _ = io.write_err(format!("abort: {msg}\n"));
         } else {
-            let _ = io.write_err(format!("abort: {}\n", e));
+            let _ = io.write_err(format!("abort: {e}\n"));
         }
         return;
     }
@@ -92,7 +92,7 @@ pub fn print_error(
         let _ = io.write_err(format!("{cli_name}: {err}:\n"));
         for possibility in possibilities {
             // UX: Colorize the output once `io` can output colors.
-            let _ = io.write_err(format!("     {}\n", possibility));
+            let _ = io.write_err(format!("     {possibility}\n"));
         }
     } else {
         #[cfg(feature = "eden")]
@@ -108,9 +108,9 @@ pub fn print_error(
         // output for unexpected errors. Today we can't make that distinction though, so for now we
         // print it in the user-friendly way.
         if traceback {
-            let _ = io.write_err(format!("abort: {:?}\n", err));
+            let _ = io.write_err(format!("abort: {err:?}\n"));
         } else {
-            let _ = io.write_err(format!("abort: {:#}\n", err));
+            let _ = io.write_err(format!("abort: {err:#}\n"));
         }
     }
 }
@@ -198,7 +198,7 @@ mod tests {
     fn test_status_error_msg() {
         // Construct error and parameters
         let error_msg = "cannot compute status while a checkout is currently in progress";
-        let expected_error = format!("abort: {}\n", error_msg);
+        let expected_error = format!("abort: {error_msg}\n");
 
         let error: anyhow::Error = eden_clients::errors::GetScmStatusV2Error::ex(eden::EdenError {
             message: error_msg.to_string(),
