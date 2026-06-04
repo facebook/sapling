@@ -30,8 +30,8 @@ fn test_stress_concurrent_profilers() {
     eprint!("{}", "\n".repeat(jobs));
     fn eprint_at(line_no: usize, message: String) {
         // Go up, clear, write, go down.
-        let s = format!("\x1b[{}A\r\x1b[K{}\x1b[{}B\r", line_no, message, line_no);
-        eprint!("{}", s);
+        let s = format!("\x1b[{line_no}A\r\x1b[K{message}\x1b[{line_no}B\r");
+        eprint!("{s}");
     }
 
     let handles: Vec<_> = (0..jobs)
@@ -148,7 +148,6 @@ fn test_profiler_drop_is_fast() {
     let elapsed = start.elapsed();
     assert!(
         elapsed < Duration::from_secs(2),
-        "drop took {:?}, expected < 2s",
-        elapsed,
+        "drop took {elapsed:?}, expected < 2s",
     );
 }
