@@ -77,11 +77,11 @@ impl TcpReceiverService {
             .ok()
             .unwrap_or("unknown".into());
 
-        info!("Received {} command", command_name);
+        info!("Received {command_name} command");
 
         match actions.get(&((command.0).0)) {
             Some(action) => action(),
-            None => info!("No actions found for {}", command_name),
+            None => info!("No actions found for {command_name}"),
         }
 
         Ok(())

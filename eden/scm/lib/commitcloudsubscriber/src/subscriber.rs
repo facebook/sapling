@@ -118,8 +118,7 @@ impl WorkspaceSubscriberService {
             Box::new(
                 move || match sender.lock().send(CommitCloudRestartSubscriptions) {
                     Err(err) => error!(
-                        "Send CommitCloudRestartSubscriptions via mpsc::channel failed, reason: {}",
-                        err
+                        "Send CommitCloudRestartSubscriptions via mpsc::channel failed, reason: {err}"
                     ),
                     Ok(_) => {
                         info!("Restart subscriptions can take a while because it is graceful");
@@ -134,8 +133,7 @@ impl WorkspaceSubscriberService {
             Box::new(
                 move || match sender.lock().send(CommitCloudCancelSubscriptions) {
                     Err(err) => error!(
-                        "Send CommitCloudCancelSubscriptions via mpsc::channel failed with {}",
-                        err
+                        "Send CommitCloudCancelSubscriptions via mpsc::channel failed with {err}"
                     ),
                     Ok(_) => {
                         info!("Cancel subscriptions can take a while because it is graceful");
@@ -150,8 +148,7 @@ impl WorkspaceSubscriberService {
             Box::new(
                 move || match sender.lock().send(CommitCloudStartSubscriptions) {
                     Err(err) => error!(
-                        "Send CommitCloudStartSubscriptions via mpsc::channel failed with {}",
-                        err
+                        "Send CommitCloudStartSubscriptions via mpsc::channel failed with {err}"
                     ),
                     Ok(_) => {
                         info!("Starting subscriptions.");
@@ -204,8 +201,8 @@ impl WorkspaceSubscriberService {
                         continue;
                     }
                     Err(e) => {
-                        error!("Receive from mpsc::channel failed with {}", e);
-                        bail!("Receive and wait on mpsc::channel failed with {}", e);
+                        error!("Receive from mpsc::channel failed with {e}");
+                        bail!("Receive and wait on mpsc::channel failed with {e}");
                     }
                 }
             }
@@ -278,7 +275,7 @@ impl WorkspaceSubscriberService {
         let body = response.text().await?;
         let parsed_body: Value = serde_json::from_str(&body)?;
         if let Some(err) = parsed_body.get("error") {
-            error!("{}: unexpected error: {}", sid, err);
+            error!("{sid}: unexpected error: {err}");
             return Err(ErrorKind::PollingUpdatesServerError(err.to_string()).into());
         }
         let cursor = parsed_body
@@ -287,11 +284,11 @@ impl WorkspaceSubscriberService {
 
         match parsed_body.get("payload").and_then(|v| v.as_array()) {
             Some(payloads) if payloads.is_empty() => {
-                debug!("{}: Success, received an empty payload", sid);
+                debug!("{sid}: Success, received an empty payload");
                 Ok((None, cursor))
             }
             Some(payloads) => {
-                info!("{}: Success, received non empty payload!", sid);
+                info!("{sid}: Success, received non empty payload!");
                 let maybe_notification: Option<Notification> = payloads
                     .iter()
                     .filter_map(|v| {
@@ -314,7 +311,7 @@ impl WorkspaceSubscriberService {
                 Ok((maybe_notification, cursor))
             }
             _ => {
-                error!("{}: payload is missing", sid);
+                error!("{sid}: payload is missing");
                 Err(ErrorKind::PollingUpdatesPayloadError.into())
             }
         }
@@ -406,7 +403,7 @@ impl WorkspaceSubscriberService {
                                 cloudsync_retries,
                                 version,
                                 workspace,
-                                format!("scm_daemon: {}", reason),
+                                format!("scm_daemon: {reason}"),
                             );
                         });
                     }
@@ -416,7 +413,7 @@ impl WorkspaceSubscriberService {
             if interrupt.load(Ordering::Relaxed) {
                 return;
             }
-            info!("{} Start polling updates...", sid);
+            info!("{sid} Start polling updates...");
 
             let client = match Client::builder()
                 .http2_keep_alive_while_idle(true)
@@ -426,8 +423,7 @@ impl WorkspaceSubscriberService {
                 Ok(client) => client,
                 Err(err) => {
                     error!(
-                        "{} Cancelling this task due to unexpected error with connection builder that should never happen (we just configure few options): {}...",
-                        sid, err
+                        "{sid} Cancelling this task due to unexpected error with connection builder that should never happen (we just configure few options): {err}..."
                     );
                     interrupt.store(true, Ordering::Relaxed);
                     return;
@@ -443,8 +439,7 @@ impl WorkspaceSubscriberService {
                     match util::read_or_generate_access_token(&user_token_path) {
                         Err(err) => {
                             error!(
-                                "{} Cancelling this task due to unexpected error with token creation: {}...",
-                                sid, err
+                                "{sid} Cancelling this task due to unexpected error with token creation: {err}..."
                             );
                             interrupt.store(true, Ordering::Relaxed);
                             return;
@@ -487,13 +482,13 @@ impl WorkspaceSubscriberService {
                             Some(&ErrorKind::PollingUpdatesUnauthorizedError)
                         ) =>
                     {
-                        info!("{} Access token is probably expired, retrying...", sid);
+                        info!("{sid} Access token is probably expired, retrying...");
                         // clean up the token and try again
                         access_token = None;
                         continue;
                     }
                     Err(err) => {
-                        error!("{} Polling updates failed with {}", sid, err);
+                        error!("{sid} Polling updates failed with {err}");
                         long_sleep_after_fail = true;
                         // sleep longer before trying again
                         tokio::time::sleep(Duration::from_secs(POLLING_ERROR_DELAY_SEC)).await;

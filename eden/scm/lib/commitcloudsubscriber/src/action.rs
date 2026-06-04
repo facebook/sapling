@@ -87,7 +87,7 @@ impl CloudSyncTrigger {
                     .into());
                 }
             } else {
-                info!("{} Cloud Sync was successful", sid);
+                info!("{sid} Cloud Sync was successful");
                 return Ok(());
             }
         }

@@ -51,7 +51,7 @@ pub fn read_subscriptions(joined_pool_path: &Path) -> Result<HashMap<Subscriptio
             info!("No active subscribers");
             return Ok(HashMap::new());
         }
-        error!("{}", e);
+        error!("{e}");
     }
 
     let paths = paths?
@@ -207,10 +207,7 @@ pub fn read_or_generate_access_token(user_token_path: &Option<PathBuf>) -> Resul
     // These tokens generation work differently for Icebreaker and InternGraph
     let from_prod = hostcaps::is_prod();
     let clicat_tool = if from_prod { "clicat" } else { "corp_clicat" };
-    info!(
-        "Token Lookup: generating a CAT token via {} ...",
-        clicat_tool
-    );
+    info!("Token Lookup: generating a CAT token via {clicat_tool} ...");
     let token_timeout_seconds = 1200;
     let payload = base64::engine::general_purpose::STANDARD
         .encode(json!({"app":COMMIT_CLOUD_APP_ID, "x2p": !from_prod}).to_string());
@@ -231,9 +228,9 @@ pub fn read_or_generate_access_token(user_token_path: &Option<PathBuf>) -> Resul
     match output {
         Err(e) => {
             if let io::ErrorKind::NotFound = e.kind() {
-                info!("`{}` executable is not found", clicat_tool);
+                info!("`{clicat_tool}` executable is not found");
             } else {
-                error!("`{}` failed: {}", clicat_tool, e)
+                error!("`{clicat_tool}` failed: {e}")
             }
         }
         Ok(output) => {
