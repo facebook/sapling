@@ -517,6 +517,21 @@ impl SaplingRemoteApiHandler for CheckManifestPermissionHandler {
                                 .to_string()
                         });
 
+                    for check in &restriction_checks {
+                        repo.ctx()
+                            .scuba()
+                            .clone()
+                            .add(
+                                "restricted_path_acl",
+                                check.restriction_info().repo_region_acl.clone(),
+                            )
+                            .add("has_restricted_path_acl_access", check.has_acl_access())
+                            .add("is_allowlisted_tooling", check.is_allowlisted_tooling())
+                            .add("is_rollout_allowlisted", check.is_rollout_allowlisted())
+                            .add("has_restricted_path_access", check.has_authorization())
+                            .log_with_msg("Checked manifest permission", None);
+                    }
+
                     Ok(CheckManifestPermissionResponse {
                         manifest_id,
                         has_access,

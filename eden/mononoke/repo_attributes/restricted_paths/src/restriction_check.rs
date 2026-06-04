@@ -207,6 +207,21 @@ impl ManifestRestrictionCheckResult {
     pub fn has_authorization(&self) -> bool {
         self.authorization.has_authorization()
     }
+
+    /// Whether the caller has direct read access to the matching path ACL.
+    pub fn has_acl_access(&self) -> bool {
+        self.authorization.has_acl_access()
+    }
+
+    /// Whether the caller is in the tooling allowlist group.
+    pub fn is_allowlisted_tooling(&self) -> bool {
+        self.authorization.is_allowlisted_tooling()
+    }
+
+    /// Whether the caller is in the rollout allowlist group.
+    pub fn is_rollout_allowlisted(&self) -> bool {
+        self.authorization.is_rollout_allowlisted()
+    }
 }
 
 /// Result returned by one restriction source fetch.
