@@ -745,7 +745,7 @@ impl WorkingCopy {
                 let copied_path = state
                     .copied
                     .clone()
-                    .ok_or_else(|| anyhow!("Invalid treestate entry for {}: missing copied from path on file with COPIED flag", path))
+                    .ok_or_else(|| anyhow!("Invalid treestate entry for {path}: missing copied from path on file with COPIED flag"))
                     .map(|p| p.into_vec())
                     .and_then(|p| RepoPathBuf::from_utf8(p).map_err(|e| anyhow!(e)))?;
 

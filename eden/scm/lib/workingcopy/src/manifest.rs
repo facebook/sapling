@@ -236,11 +236,11 @@ mod tests {
         let mut config: BTreeMap<String, String> = BTreeMap::new();
         config.insert(
             "commit.file-size-limit".to_string(),
-            format!("{}b", soft_limit),
+            format!("{soft_limit}b"),
         );
         config.insert(
             "devel.hard-file-size-limit".to_string(),
-            format!("{}b", hard_limit),
+            format!("{hard_limit}b"),
         );
         let io = IO::new("".as_bytes(), Vec::new(), Some(Vec::new()));
         CoreContext::new(Arc::new(config), io, Vec::new())
@@ -743,7 +743,7 @@ mod tests {
             "\x01\ncopy: original\ncopyrev: {}\n\x01\n",
             hgid("10").to_hex()
         );
-        let expected_content = format!("{}new content", expected_metadata);
+        let expected_content = format!("{expected_metadata}new content");
         let expected_hgid = format_util::hg_sha1_digest(
             expected_content.as_bytes(),
             HgId::null_id(),
