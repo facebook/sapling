@@ -554,21 +554,39 @@ fn create_acl_provider(
         return InternalAclProvider::from_file(acl_file)
             .with_context(|| format!("Failed to load ACLs from '{}'", acl_file.to_string_lossy()));
     }
+    if acl_args.access_checker_shadow_enabled {
+        let verifier = parse_access_checker_verifier(acl_args)?;
+        let primary = DefaultAclProvider::new(fb).context("Failed to create DefaultAclProvider")?;
+        let shadow = runtime
+            .block_on(permission_checker::AccessCheckerProvider::new(fb, verifier))
+            .context("Failed to create AccessCheckerProvider for shadow mode")?;
+        return Ok(permission_checker::ShadowAclProvider::new(
+            fb,
+            primary,
+            shadow,
+            acl_args.access_checker_shadow_sample_rate,
+        ));
+    }
     if acl_args.access_checker_enabled {
-        let raw = acl_args.access_checker_verifier.as_str();
-        let (id_type, id_data) = raw.split_once(':').with_context(|| {
-            format!("Invalid --access-checker-verifier value '{raw}': expected '<type>:<data>'")
-        })?;
-        let verifier = infrasec_authorization::Identity {
-            id_type: id_type.to_string(),
-            id_data: id_data.to_string(),
-            ..Default::default()
-        };
+        let verifier = parse_access_checker_verifier(acl_args)?;
         return runtime
             .block_on(permission_checker::AccessCheckerProvider::new(fb, verifier))
             .context("Failed to create AccessCheckerProvider");
     }
     DefaultAclProvider::new(fb).context("Failed to create DefaultAclProvider")
+}
+
+#[cfg(fbcode_build)]
+fn parse_access_checker_verifier(acl_args: &AclArgs) -> Result<infrasec_authorization::Identity> {
+    let raw = acl_args.access_checker_verifier.as_str();
+    let (id_type, id_data) = raw.split_once(':').with_context(|| {
+        format!("Invalid --access-checker-verifier value '{raw}': expected '<type>:<data>'")
+    })?;
+    Ok(infrasec_authorization::Identity {
+        id_type: id_type.to_string(),
+        id_data: id_data.to_string(),
+        ..Default::default()
+    })
 }
 
 #[cfg(not(fbcode_build))]
