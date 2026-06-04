@@ -70,7 +70,7 @@ impl StringPattern {
         let raw_pattern = re.as_str();
         // match_re is used for the Python "match" API, which aligns the start, but not the end.
         // (Rust regex does not have such equivalent).
-        let match_re = Regex::new(&format!(r"\A{}", raw_pattern)).map_pyerr(py)?;
+        let match_re = Regex::new(&format!(r"\A{raw_pattern}")).map_pyerr(py)?;
         let raw_pattern = raw_pattern.to_owned();
         Self::create_instance(py, re, match_re, raw_pattern)
     }
@@ -173,7 +173,7 @@ py_class!(class BytesPattern |py| {
     def compile(s: &str) -> PyResult<Self> {
         let re = BinaryRegex::new(s).map_pyerr(py)?;
         // For Python "match" API - only search the beginning.
-        let match_re = BinaryRegex::new(&format!(r"\A{}", s)).map_pyerr(py)?;
+        let match_re = BinaryRegex::new(&format!(r"\A{s}")).map_pyerr(py)?;
         let raw_pattern = s.to_string();
         Self::create_instance(py, re, match_re, raw_pattern)
     }
