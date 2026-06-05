@@ -1,5 +1,5 @@
 #chg-compatible
-#debugruntest-incompatible
+#require no-eden
 
 test for old histedit issue #6:
 editing a changeset without any actual change would corrupt the repository
@@ -31,9 +31,14 @@ editing a changeset without any actual change would corrupt the repository
   > {
   >     # generate an editor script for selecting changesets to be edited
   >     choice=$1  # changesets that should be edited (using sed line ranges)
+  >     if [ "${choice}" = "1,2" ]; then
+  >         sedscript="-e '1s:^pick:edit:' -e '2s:^pick:edit:'"
+  >     else
+  >         sedscript="'${choice}s:^pick:edit:'"
+  >     fi
   >     cat <<EOF | sed 's:^....::'
   >     # editing the rules, replacing 'pick' with 'edit' for the chosen lines
-  >     sed '${choice}s:^pick:edit:' "\$1" > "\${1}.tmp"
+  >     sed ${sedscript} "\$1" > "\${1}.tmp"
   >     mv "\${1}.tmp" "\$1"
   >     # displaying the resulting rules, minus comments and empty lines
   >     sed '/^#/d;/^$/d;s:^:| :' "\$1" >&2
@@ -62,7 +67,10 @@ editing a changeset without any actual change would corrupt the repository
 
   $ graphlog ()
   > {
-  >     comment="${1:-log}"
+  >     comment="$1"
+  >     if [ -z "${comment}" ]; then
+  >         comment="log"
+  >     fi
   >     echo % "${comment}"
   >     sl log -G --template '{node} \"{desc|firstline}\"\n'
   > }
