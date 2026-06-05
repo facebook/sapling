@@ -1,5 +1,4 @@
 #chg-compatible
-#debugruntest-incompatible
 
 
   $ eagerepo
@@ -62,7 +61,7 @@ Testing on-failure=prompt
   > [ui]
   > interactive=1
   > EOS
-  $ cat <<EOS | sl rebase -s 'desc(c)' -d 'desc(d)' --tool false
+  $ cat <<EOS | sl rebase -s 'desc(c)' -d 'desc(d)' --tool false 2>&1
   > y
   > n
   > EOS
@@ -83,7 +82,7 @@ Testing on-failure=prompt
   $ sl rebase --abort
   rebase aborted
 
-  $ cat <<EOS | sl rebase -s 'desc(c)' -d 'desc(d)' --tool false
+  $ cat <<EOS | sl rebase -s 'desc(c)' -d 'desc(d)' --tool false 2>&1
   > a
   > EOS
   rebasing 1f28a51c3c9b "c"
@@ -107,7 +106,7 @@ Check that successful tool with failed post-check halts the merge
   > [merge-tools]
   > true.check=changed
   > EOS
-  $ cat <<EOS | sl rebase -s 'desc(c)' -d 'desc(d)' --tool true
+  $ cat <<EOS | sl rebase -s 'desc(c)' -d 'desc(d)' --tool true 2>&1
   > y
   > n
   > n
