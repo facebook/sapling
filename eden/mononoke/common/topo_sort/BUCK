@@ -9,6 +9,5 @@ rust_library(
         "fbsource//third-party/rust:maplit",
         "//eden/mononoke/common/mononoke_macros:mononoke_macros",
     ],
-    deps = [
-    ],
+    deps = [],
 )

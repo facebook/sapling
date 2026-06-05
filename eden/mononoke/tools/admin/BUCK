@@ -9,18 +9,26 @@ rust_binary(
     srcs = glob([
         "src/**/*.rs",
     ]),
-    autocargo = {"cargo_toml_config": {
-        "dependencies_override": {"dependencies": {
-            "gix-hash": {"features": ["sha1"]},
-            "sapling-dag-types": {"features": [
-                "for-tests",
-            ]},
-        }},
-        "extra_buck_dependencies": {"dependencies": [
-            "//eden/scm/lib/dag:dag",
-            "//eden/scm/lib/dag/dag-types:dag-types",
-        ]},
-    }},
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "gix-hash": {"features": ["sha1"]},
+                    "sapling-dag-types": {
+                        "features": [
+                            "for-tests",
+                        ]
+                    },
+                }
+            },
+            "extra_buck_dependencies": {
+                "dependencies": [
+                    "//eden/scm/lib/dag:dag",
+                    "//eden/scm/lib/dag/dag-types:dag-types",
+                ]
+            },
+        }
+    },
     labels = [
         ci.heavyweight(),
     ],
@@ -163,12 +171,17 @@ rust_binary(
         "//eden/mononoke/servers/slapi/slapi_server/context:context",
         "//eden/scm/lib/renderdag:renderdag",
         "//thrift/lib/rust:fbthrift",
-    ] + ([] if rust_oss.is_oss_build() else [
-        "fbsource//third-party/rust:serde",
-        "//eden/mononoke/blobstore:blobstore_factory",
-        "//eden/mononoke/blobstore:fileblob",
-        "//eden/mononoke/blobstore:redactedblobstore",
-        "//eden/mononoke/repo_attributes/bonsai_blob_mapping:bonsai_blob_mapping",
-        "//eden/mononoke/repo_attributes/deletion_log:deletion_log",
-    ]),
+    ]
+    + (
+        []
+        if rust_oss.is_oss_build()
+        else [
+            "fbsource//third-party/rust:serde",
+            "//eden/mononoke/blobstore:blobstore_factory",
+            "//eden/mononoke/blobstore:fileblob",
+            "//eden/mononoke/blobstore:redactedblobstore",
+            "//eden/mononoke/repo_attributes/bonsai_blob_mapping:bonsai_blob_mapping",
+            "//eden/mononoke/repo_attributes/deletion_log:deletion_log",
+        ]
+    ),
 )

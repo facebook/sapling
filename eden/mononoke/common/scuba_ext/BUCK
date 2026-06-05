@@ -21,10 +21,15 @@ rust_library(
         "//eden/mononoke/common/rust/justknobs_ext:justknobs",
         "//eden/mononoke/common/scribe_ext:scribe_ext",
         "//eden/scm/lib/clientinfo:clientinfo",
-    ] + ([] if rust_oss.is_oss_build() else [
-        # fbcode-only deps for schematized_logging module
-        "//common/rust/build_info:build_info",
-        "//common/rust/fbwhoami:fbwhoami",
-        "//common/rust/shed/hostname:hostname",
-    ]),
+    ]
+    + (
+        []
+        if rust_oss.is_oss_build()
+        else [
+            # fbcode-only deps for schematized_logging module
+            "//common/rust/build_info:build_info",
+            "//common/rust/fbwhoami:fbwhoami",
+            "//common/rust/shed/hostname:hostname",
+        ]
+    ),
 )

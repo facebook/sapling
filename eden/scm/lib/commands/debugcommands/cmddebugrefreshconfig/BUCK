@@ -27,8 +27,11 @@ rust_library(
     deps = [
         "//eden/scm/lib/clidispatch:clidispatch",
         "//eden/scm/lib/commands/cmdutil:cmdutil",
-    ] + (
-        [] if rust_oss.is_oss_build() else [
+    ]
+    + (
+        []
+        if rust_oss.is_oss_build()
+        else [
             "//eden/scm/lib/config/loader:configloader",
             "//eden/scm/lib/repo/repo-minimal-info:repo-minimal-info",
         ]

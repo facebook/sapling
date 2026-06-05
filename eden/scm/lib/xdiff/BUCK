@@ -36,7 +36,8 @@ cram_test(
     name = "tests",
     srcs = glob([
         "tests/*.t",
-    ]) + [
+    ])
+    + [
         "tests/setup.sh",
     ],
     compatible_with = [

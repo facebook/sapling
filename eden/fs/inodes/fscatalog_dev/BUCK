@@ -4,16 +4,14 @@ oncall("scm_client_infra")
 
 cpp_library(
     name = "fsinodecatalog_dev",
-    srcs =
-        [
-            "FsInodeCatalogDev.cpp",
-            "InodePathDev.cpp",
-        ],
-    headers =
-        [
-            "FsInodeCatalogDev.h",
-            "InodePathDev.h",
-        ],
+    srcs = [
+        "FsInodeCatalogDev.cpp",
+        "InodePathDev.cpp",
+    ],
+    headers = [
+        "FsInodeCatalogDev.h",
+        "InodePathDev.h",
+    ],
     deps = [
         "//eden/common/utils:file_utils",
         "//eden/common/utils:throw",

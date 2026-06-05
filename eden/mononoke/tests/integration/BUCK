@@ -51,7 +51,9 @@ python_binary(
         "fbsource//third-party/pypi/click:click",
         "//eden/mononoke/tests/integration/facebook:lib_buck",
         "//libfb/py:log",
-    ] if rust_oss.is_oss_build() else [
+    ]
+    if rust_oss.is_oss_build()
+    else [
         "fbsource//third-party/pypi/click:click",
         "//eden/mononoke/tests/integration/facebook:lib_buck",
         "//eden/mononoke/tests/integration/facebook:lib_runner",
@@ -143,17 +145,17 @@ dott_test(
     name = "lfs",
     # These tests have been vetted to run well without network access. Please investigate any failure thoroughly before disabling.
     disable_all_network_access_target = True,
-    dott_files =
+    dott_files = [
+        "test-push-protocol-lfs.t",
+    ]
+    + glob(
         [
-            "test-push-protocol-lfs.t",
-        ] + glob(
-            [
-                "test-infinitepush-*lfs.t",
-                "test-lfs*.t",
-                "test-remotefilelog-lfs*.t",
-            ],
-            exclude = ["test-lfs-server*.t"],
-        ),
+            "test-infinitepush-*lfs.t",
+            "test-lfs*.t",
+            "test-remotefilelog-lfs*.t",
+        ],
+        exclude = ["test-lfs-server*.t"],
+    ),
     deps = [
         "//eden/mononoke:mononoke",
         "//eden/mononoke/servers/lfs/lfs_server:lfs_server",
@@ -163,10 +165,9 @@ dott_test(
 
 dott_test(
     name = "microwave",
-    dott_files =
-        [
-            "test-cache-warmup-microwave.t",
-        ],
+    dott_files = [
+        "test-cache-warmup-microwave.t",
+    ],
     deps = [
         "//eden/mononoke:mononoke",
         "//eden/mononoke/features/microwave:builder",

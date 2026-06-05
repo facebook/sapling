@@ -13,33 +13,42 @@ rust_library(
         "fbsource//third-party/rust:tokio",
         "//common/rust/shed/facet:facet",
         "//eden/mononoke/features/repo_update_logger:repo_update_logger",
-    ] + ([] if rust_oss.is_oss_build() else [
-        "//eden/mononoke/metaconfig:metaconfig_types",
-        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
-        "//common/rust/shed/fbinit:fbinit",
-        "//common/rust/shed/stats:stats",
-        "//eden/mononoke/common/rust/justknobs_ext:justknobs",
-        "//common/rust/scribe/consumer:scribe_api_consumer",
-        "//common/rust/shed/cloned:cloned",
-        "fbsource//third-party/rust:bytes",
-        "fbsource//third-party/rust:dashmap",
-        "fbcode//dsi/logger/thrift_schemas/mononoke_git_content_ref:mononoke_git_content_ref_logger_schema-rust",
-        "fbcode//dsi/logger/thrift_schemas/mononoke_bookmark:mononoke_bookmark_logger_schema-rust",
-        "fbcode//dsi/logger/rust/deserializer:deserializer",
-    ]),
+    ]
+    + (
+        []
+        if rust_oss.is_oss_build()
+        else [
+            "//eden/mononoke/metaconfig:metaconfig_types",
+            "//eden/mononoke/common/mononoke_macros:mononoke_macros",
+            "//common/rust/shed/fbinit:fbinit",
+            "//common/rust/shed/stats:stats",
+            "//eden/mononoke/common/rust/justknobs_ext:justknobs",
+            "//common/rust/scribe/consumer:scribe_api_consumer",
+            "//common/rust/shed/cloned:cloned",
+            "fbsource//third-party/rust:bytes",
+            "fbsource//third-party/rust:dashmap",
+            "fbcode//dsi/logger/thrift_schemas/mononoke_git_content_ref:mononoke_git_content_ref_logger_schema-rust",
+            "fbcode//dsi/logger/thrift_schemas/mononoke_bookmark:mononoke_bookmark_logger_schema-rust",
+            "fbcode//dsi/logger/rust/deserializer:deserializer",
+        ]
+    ),
 )
 
 rust_unittest(
     name = "repo_event_publisher_test",
     srcs = glob(["test/**/*.rs"]),
     crate = "repo_event_publisher_test",
-    deps = ([] if rust_oss.is_oss_build() else [
-        ":repo_event_publisher",
-        "//eden/mononoke/features/repo_update_logger:repo_update_logger",
-        "fbsource//third-party/rust:anyhow",
-        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
-        "//common/rust/shed/fbinit:fbinit",
-        "//common/rust/shed/fbinit:fbinit-tokio",
-        "//common/rust/scribe/api:scribe_api",
-    ]),
+    deps = (
+        []
+        if rust_oss.is_oss_build()
+        else [
+            ":repo_event_publisher",
+            "//eden/mononoke/features/repo_update_logger:repo_update_logger",
+            "fbsource//third-party/rust:anyhow",
+            "//eden/mononoke/common/mononoke_macros:mononoke_macros",
+            "//common/rust/shed/fbinit:fbinit",
+            "//common/rust/shed/fbinit:fbinit-tokio",
+            "//common/rust/scribe/api:scribe_api",
+        ]
+    ),
 )

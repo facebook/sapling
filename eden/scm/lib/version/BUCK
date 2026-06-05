@@ -8,12 +8,12 @@ buck_genrule(
     out = "constants.rs",
     # Restricting commands doesn't work on Windows.
     bypass_restricted_cmd = True,
-    cmd = "$(exe //eden/scm:gen_version_py_bin) --version '%s' --release '%s' --revision '%s' $OUT" %
-          (
-              read_config("build_info", "package_version", ""),
-              read_config("build_info", "package_release", ""),
-              read_config("build_info", "revision", ""),
-          ),
+    cmd = "$(exe //eden/scm:gen_version_py_bin) --version '%s' --release '%s' --revision '%s' $OUT"
+    % (
+        read_config("build_info", "package_version", ""),
+        read_config("build_info", "package_release", ""),
+        read_config("build_info", "revision", ""),
+    ),
 )
 
 rust_library(

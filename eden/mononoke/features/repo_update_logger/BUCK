@@ -5,9 +5,11 @@ oncall("scm_server_treehugger")
 rust_library(
     name = "repo_update_logger",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {
-        "dependencies_override": {"dependencies": {"gix-hash": {"features": ["sha1"]}}},
-    }},
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {"dependencies": {"gix-hash": {"features": ["sha1"]}}},
+        }
+    },
     test_deps = [
         "fbsource//third-party/rust:maplit",
         "//common/rust/shed/facet:facet",

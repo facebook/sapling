@@ -6,14 +6,20 @@ oncall("scm_server_treehugger")
 rust_library(
     name = "scs_methods",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {
-        "dependencies_override": {"dependencies": {"gix-hash": {"features": ["sha1"]}}},
-    }},
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {"dependencies": {"gix-hash": {"features": ["sha1"]}}},
+        }
+    },
     crate_root = "src/lib.rs",
-    named_deps = ({} if rust_oss.is_oss_build() else {
-        "MononokeScsRequest_ods3_types": "//eden/mononoke/facebook/ods3_schemas:MononokeScsRequest_ods3-rust",
-        "client_identifier_structs": "//core_infra_security/thrift_authentication_module:client_identifier_structs-rust",
-    }),
+    named_deps = (
+        {}
+        if rust_oss.is_oss_build()
+        else {
+            "MononokeScsRequest_ods3_types": "//eden/mononoke/facebook/ods3_schemas:MononokeScsRequest_ods3-rust",
+            "client_identifier_structs": "//core_infra_security/thrift_authentication_module:client_identifier_structs-rust",
+        }
+    ),
     test_deps = [
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//eden/mononoke/common/sql_construct:sql_construct",
@@ -110,9 +116,14 @@ rust_library(
         "//infrasec/authorization/if:if-service-rust-srclients",
         "//infrasec/authorization/review:review-thrift-rust",
         "//login/if:login_objects_thrift-rust",
-    ] + ([] if rust_oss.is_oss_build() else [
-        "fbsource//third-party/rust:lazy_static",
-        "//eden/mononoke/facebook/ods3_schemas:MononokeScsRequest_ods3-rs_bindings",
-        "//common/rust/configo:configo",
-    ]),
+    ]
+    + (
+        []
+        if rust_oss.is_oss_build()
+        else [
+            "fbsource//third-party/rust:lazy_static",
+            "//eden/mononoke/facebook/ods3_schemas:MononokeScsRequest_ods3-rs_bindings",
+            "//common/rust/configo:configo",
+        ]
+    ),
 )

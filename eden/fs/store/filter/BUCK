@@ -60,11 +60,13 @@ cpp_library(
     deps = select({
         "DEFAULT": [],
         "ovr_config//os:windows": ["fbsource//third-party/rust:cxx"],
-    }) + [
+    })
+    + [
         "//eden/fs/model:model",
         "//eden/fs/service:thrift_util",
         "//folly/futures:core",
-    ] + select({
+    ]
+    + select({
         "DEFAULT": [],
         "ovr_config//os:windows": ["fbsource//third-party/rust:cxx"],
     }),

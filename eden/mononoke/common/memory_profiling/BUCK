@@ -6,15 +6,22 @@ oncall("scm_server_treehugger")
 rust_library(
     name = "memory_profiling",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {
-        "dependencies_override": {"dependencies": {"jemalloc_pprof": {"optional": True}}},
-    }},
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {"dependencies": {"jemalloc_pprof": {"optional": True}}},
+        }
+    },
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:http",
         "//eden/mononoke/common/gotham_ext:gotham_ext",
         "//eden/mononoke/common/permission_checker:permission_checker",
-    ] + ([] if rust_oss.is_oss_build() else [
-        "fbsource//third-party/rust:jemalloc_pprof",
-    ]),
+    ]
+    + (
+        []
+        if rust_oss.is_oss_build()
+        else [
+            "fbsource//third-party/rust:jemalloc_pprof",
+        ]
+    ),
 )

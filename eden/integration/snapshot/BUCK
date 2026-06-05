@@ -13,7 +13,8 @@ python_library(
         "inode_metadata.py",
         "snapshot.py",
         "verify.py",
-    ] + glob(["types/*.py"]),
+    ]
+    + glob(["types/*.py"]),
     deps = [
         "//eden/integration/lib:lib",
         "//eden/test_support:py",

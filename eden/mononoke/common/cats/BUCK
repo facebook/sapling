@@ -14,9 +14,14 @@ rust_library(
         "//eden/mononoke/common/permission_checker:permission_checker",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//login/if:login_objects_thrift-rust",
-    ] + ([] if rust_oss.is_oss_build() else [
-        "fbsource//third-party/rust:anyhow",
-        "fbsource//third-party/rust:tracing",
-        "//eden/scm/lib/cats/constants:cats_constants",
-    ]),
+    ]
+    + (
+        []
+        if rust_oss.is_oss_build()
+        else [
+            "fbsource//third-party/rust:anyhow",
+            "fbsource//third-party/rust:tracing",
+            "//eden/scm/lib/cats/constants:cats_constants",
+        ]
+    ),
 )

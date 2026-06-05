@@ -10,10 +10,7 @@ oncall("scm_client_infra")
 buck_genrule(
     name = "eden",
     out = "eden-stamp",
-    cmd = "echo $(location //eden/fs/cli:edenfsctl) " +
-          "$(location //eden/fs/service:edenfs) " +
-          "$(location //eden/fs/service:edenfs_privhelper) " +
-          "> $OUT",
+    cmd = "echo $(location //eden/fs/cli:edenfsctl) " + "$(location //eden/fs/service:edenfs) " + "$(location //eden/fs/service:edenfs_privhelper) " + "> $OUT",
     compatible_with = [
         "ovr_config//os:linux",
         "ovr_config//os:macos",
@@ -32,7 +29,6 @@ fbpkg.builder(
     compatible_with = [
         "ovr_config//os:linux",
     ],
-
     # This is doing (almost) the same as the historical EdenFS packaging config
     # (https://fburl.com/code/lmpy7mvj).
     # For the config we cannot do with fbpkg.builder (e.g. set mode for a binary) we

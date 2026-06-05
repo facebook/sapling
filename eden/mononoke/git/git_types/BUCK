@@ -8,9 +8,11 @@ rust_library(
         "src/**/*.rs",
         "test_data/**/*.txt",
     ]),
-    autocargo = {"cargo_toml_config": {
-        "dependencies_override": {"dependencies": {"gix-hash": {"features": ["sha1"]}}},
-    }},
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {"dependencies": {"gix-hash": {"features": ["sha1"]}}},
+        }
+    },
     test_deps = [
         "fbsource//third-party/rust:async-compression",
         "fbsource//third-party/rust:futures-util",

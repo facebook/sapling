@@ -6,33 +6,40 @@ oncall("scm_server_treehugger")
 rust_library(
     name = "repo_metadata",
     srcs = glob(["src/**/*.rs"]),
-    deps = ([
-        "fbsource//third-party/rust:anyhow",
-        "fbsource//third-party/rust:bytes",
-        "fbsource//third-party/rust:either",
-        "fbsource//third-party/rust:futures",
-        "fbsource//third-party/rust:clap",
-        "//eden/mononoke/common/rust/justknobs_ext:justknobs",
-        "//eden/mononoke/repo_attributes/repo_blobstore:repo_blobstore",
-        "//eden/mononoke/blobstore:blobstore",
-        "//eden/mononoke/repo_attributes/bookmarks:bookmarks",
-        "//eden/mononoke/common/dedupmap:dedupmap",
-        "//eden/mononoke/derived_data:blame",
-        "//eden/mononoke/derived_data:changeset_info",
-        "//eden/mononoke/derived_data/content_manifest_derivation:content_manifest_derivation",
-        "//eden/mononoke/derived_data:fsnodes",
-        "//eden/mononoke/repo_attributes/filestore:filestore",
-        "//eden/mononoke/manifest:manifest",
-        "//eden/mononoke/metaconfig:metaconfig_types",
-        "//eden/mononoke/mononoke_types:mononoke_types",
-        "//eden/mononoke/repo_attributes/repo_derived_data:repo_derived_data",
-        "//eden/mononoke/repo_attributes/repo_derivation_queues/if:derivation_queue_thrift-rust",
-        "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
-        "//eden/mononoke/repo_attributes/repo_metadata_checkpoint:repo_metadata_checkpoint",
-        "//eden/mononoke/servers/slapi/slapi_server/context:context",
-        "//eden/mononoke/derived_data:unodes",
-    ] + ([] if rust_oss.is_oss_build() else [
-        "//dsi/logger/configs/SCMRepoMetadataV2FullLoggerConfig:s_c_m_repo_metadata_v2_full_rust_logger",
-        "//dsi/logger/configs/SCMRepoMetadataV2LoggerConfig:s_c_m_repo_metadata_v2_rust_logger",
-    ])),
+    deps = (
+        [
+            "fbsource//third-party/rust:anyhow",
+            "fbsource//third-party/rust:bytes",
+            "fbsource//third-party/rust:clap",
+            "fbsource//third-party/rust:either",
+            "fbsource//third-party/rust:futures",
+            "//eden/mononoke/blobstore:blobstore",
+            "//eden/mononoke/common/dedupmap:dedupmap",
+            "//eden/mononoke/common/rust/justknobs_ext:justknobs",
+            "//eden/mononoke/derived_data:blame",
+            "//eden/mononoke/derived_data:changeset_info",
+            "//eden/mononoke/derived_data:fsnodes",
+            "//eden/mononoke/derived_data:unodes",
+            "//eden/mononoke/derived_data/content_manifest_derivation:content_manifest_derivation",
+            "//eden/mononoke/manifest:manifest",
+            "//eden/mononoke/metaconfig:metaconfig_types",
+            "//eden/mononoke/mononoke_types:mononoke_types",
+            "//eden/mononoke/repo_attributes/bookmarks:bookmarks",
+            "//eden/mononoke/repo_attributes/filestore:filestore",
+            "//eden/mononoke/repo_attributes/repo_blobstore:repo_blobstore",
+            "//eden/mononoke/repo_attributes/repo_derivation_queues/if:derivation_queue_thrift-rust",
+            "//eden/mononoke/repo_attributes/repo_derived_data:repo_derived_data",
+            "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
+            "//eden/mononoke/repo_attributes/repo_metadata_checkpoint:repo_metadata_checkpoint",
+            "//eden/mononoke/servers/slapi/slapi_server/context:context",
+        ]
+        + (
+            []
+            if rust_oss.is_oss_build()
+            else [
+                "//dsi/logger/configs/SCMRepoMetadataV2FullLoggerConfig:s_c_m_repo_metadata_v2_full_rust_logger",
+                "//dsi/logger/configs/SCMRepoMetadataV2LoggerConfig:s_c_m_repo_metadata_v2_rust_logger",
+            ]
+        )
+    ),
 )

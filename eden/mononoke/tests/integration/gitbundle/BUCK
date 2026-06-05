@@ -7,10 +7,9 @@ oncall("scm_server_treehugger")
 
 dott_test(
     name = "gitbundle",
-    dott_files =
-        glob([
-            "*.t",
-        ]),
+    dott_files = glob([
+        "*.t",
+    ]),
     deps = [
         "//eden/mononoke:mononoke",
         "//eden/mononoke/git/gitimport:gitimport",

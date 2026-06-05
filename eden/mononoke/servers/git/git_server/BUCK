@@ -6,12 +6,18 @@ oncall("scm_server_treehugger")
 rust_binary(
     name = "git_server",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {
-        "dependencies_override": {"dependencies": {"gix-hash": {"features": ["sha1"]}}},
-    }},
-    named_deps = ({} if rust_oss.is_oss_build() else {
-        "MononokeGitRequest_ods3_types": "//eden/mononoke/facebook/ods3_schemas:MononokeGitRequest_ods3-rust",
-    }),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {"dependencies": {"gix-hash": {"features": ["sha1"]}}},
+        }
+    },
+    named_deps = (
+        {}
+        if rust_oss.is_oss_build()
+        else {
+            "MononokeGitRequest_ods3_types": "//eden/mononoke/facebook/ods3_schemas:MononokeGitRequest_ods3-rust",
+        }
+    ),
     test_deps = [
         "//eden/mononoke/common/mononoke_macros:mononoke_macros",
     ],
@@ -92,12 +98,17 @@ rust_binary(
         "//eden/scm/lib/clientinfo:clientinfo",
         "//eden/scm/lib/edenapi/types:edenapi_types",
         "//eden/scm/lib/repo/url:repourl",
-    ] + ([] if rust_oss.is_oss_build() else [
-        "fbsource//third-party/rust:hex",
-        "fbsource//third-party/rust:lazy_static",
-        "//eden/mononoke/common/facebook/thrift_client:thrift_client",
-        "//eden/mononoke/facebook/ods3_schemas:MononokeGitRequest_ods3-rs_bindings",
-        "//scm/grepo/if:aosp_service-rust-clients",
-        "//scm/grepo/if:aosp_service-rust-services",
-    ]),
+    ]
+    + (
+        []
+        if rust_oss.is_oss_build()
+        else [
+            "fbsource//third-party/rust:hex",
+            "fbsource//third-party/rust:lazy_static",
+            "//eden/mononoke/common/facebook/thrift_client:thrift_client",
+            "//eden/mononoke/facebook/ods3_schemas:MononokeGitRequest_ods3-rs_bindings",
+            "//scm/grepo/if:aosp_service-rust-clients",
+            "//scm/grepo/if:aosp_service-rust-services",
+        ]
+    ),
 )

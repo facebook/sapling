@@ -5,6 +5,5 @@ oncall("scm_server_treehugger")
 rust_library(
     name = "uniqueheap",
     srcs = glob(["src/**/*.rs"]),
-    deps = [
-    ],
+    deps = [],
 )

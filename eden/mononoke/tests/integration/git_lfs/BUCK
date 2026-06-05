@@ -9,10 +9,9 @@ dott_test(
     name = "git_lfs",
     # These tests have been vetted to run well without network access. Please investigate any failure thoroughly before disabling.
     disable_all_network_access_target = True,
-    dott_files =
-        glob([
-            "*.t",
-        ]),
+    dott_files = glob([
+        "*.t",
+    ]),
     deps = [
         "//eden/mononoke/servers/git/git_server:git_server",
         "//eden/mononoke/servers/lfs/lfs_server:lfs_server",

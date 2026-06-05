@@ -162,8 +162,8 @@ audit_dependencies_test(
         # glog supports a GOOGLE_log_dir environment variable. I have
         # been unable to use it to trigger a write to a root-owned
         # directory, but ideally we wouldn't link with glog at all.
-        #"//third-party-buck/.*/build/glog:glog",
-        #"fbsource//third-party/glog/.*",
+        # "//third-party-buck/.*/build/glog:glog",
+        # "fbsource//third-party/glog/.*",
     ],
     compatible_with = [
         "ovr_config//os:linux",

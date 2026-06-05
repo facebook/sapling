@@ -7,12 +7,11 @@ oncall("scm_server_treehugger")
 
 dott_test(
     name = "hooks",
-    dott_files =
-        glob(
-            [
-                "*.t",
-            ],
-        ),
+    dott_files = glob(
+        [
+            "*.t",
+        ],
+    ),
     deps = [
         "//eden/mononoke:mononoke",
         "//eden/mononoke/tools/testtool:testtool",

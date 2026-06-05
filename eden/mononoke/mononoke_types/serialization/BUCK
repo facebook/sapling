@@ -15,10 +15,7 @@ thrift_library(
         "fbsource//third-party/rust:smallvec",
         "//common/rust/shed/sorted_vector_map:sorted_vector_map",
     ],
-    thrift_srcs = {
-        thrift_file: []
-        for thrift_file in glob(["*.thrift"])
-    },
+    thrift_srcs = {thrift_file: [] for thrift_file in glob(["*.thrift"])},
     # The Thrift definitions are private and only used for serialization and for mononoke-internal
     # thrift services -- do not allow other code to use them, except for other private Thrift code.
     # THIS IS NOT A PUBLIC SOURCE CONTROL API AND THERE IS NO GUARANTEE OF BACKWARDS COMPATIBILITY.

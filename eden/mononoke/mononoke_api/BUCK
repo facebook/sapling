@@ -6,16 +6,24 @@ oncall("scm_server_treehugger")
 rust_library(
     name = "mononoke_api",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {
-        "dependencies_override": {"dependencies": {
-            "gix-hash": {"features": ["sha1"]},
-            "sapling-sparse": {"features": ["async"]},
-        }},
-        "extra_buck_dependencies": {"dependencies": ["//eden/scm/lib/sparse:sparse"]},
-    }},
-    named_deps = ({} if rust_oss.is_oss_build() else {
-        "MononokeApiStats_ods3_types": "//eden/mononoke/facebook/ods3_schemas:MononokeApiStats_ods3-rust",
-    }),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "gix-hash": {"features": ["sha1"]},
+                    "sapling-sparse": {"features": ["async"]},
+                }
+            },
+            "extra_buck_dependencies": {"dependencies": ["//eden/scm/lib/sparse:sparse"]},
+        }
+    },
+    named_deps = (
+        {}
+        if rust_oss.is_oss_build()
+        else {
+            "MononokeApiStats_ods3_types": "//eden/mononoke/facebook/ods3_schemas:MononokeApiStats_ods3-rust",
+        }
+    ),
     test_deps = [
         "fbsource//third-party/rust:assert_matches",
         "fbsource//third-party/rust:gix-object",
@@ -151,8 +159,13 @@ rust_library(
         "//eden/scm/lib/sparse:sparse-async",
         "//eden/scm/lib/types:types",
         "//eden/scm/lib/xdiff:xdiff",
-    ] + ([] if rust_oss.is_oss_build() else [
-        "fbsource//third-party/rust:lazy_static",
-        "//eden/mononoke/facebook/ods3_schemas:MononokeApiStats_ods3-rs_bindings",
-    ]),
+    ]
+    + (
+        []
+        if rust_oss.is_oss_build()
+        else [
+            "fbsource//third-party/rust:lazy_static",
+            "//eden/mononoke/facebook/ods3_schemas:MononokeApiStats_ods3-rs_bindings",
+        ]
+    ),
 )

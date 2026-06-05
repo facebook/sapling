@@ -5,9 +5,11 @@ oncall("scm_server_treehugger")
 rust_library(
     name = "import_direct",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {
-        "dependencies_override": {"dependencies": {"gix-hash": {"features": ["sha1"]}}},
-    }},
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {"dependencies": {"gix-hash": {"features": ["sha1"]}}},
+        }
+    },
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",

@@ -36,7 +36,8 @@ rust_library(
                     "serde_json",
                     "serde",
                     "serde_urlencoded",
-                ] + ([] if rust_oss.is_oss_build() else ["base64"]),
+                ]
+                + ([] if rust_oss.is_oss_build() else ["base64"]),
                 "sl_oss": [],
             },
             "lib": {"name": "configloader"},
@@ -57,61 +58,68 @@ rust_library(
         "fbsource//third-party/rust:once_cell",
         "fbsource//third-party/rust:tempfile",
         "//eden/scm/lib/util/testutil:testutil",
-    ] + (
-        [] if rust_oss.is_oss_build() else [
+    ]
+    + (
+        []
+        if rust_oss.is_oss_build()
+        else [
             "fbsource//third-party/rust:tempfile",
         ]
     ),
     deps = [
-               "fbsource//third-party/rust:anyhow",
-               "fbsource//third-party/rust:tracing",
-               "//eden/scm/lib/config/model:configmodel",
-               "//eden/scm/lib/config/set:configset",
-               "//eden/scm/lib/config/static:staticconfig",
-               "//eden/scm/lib/config/union:unionconfig",
-               "//eden/scm/lib/gitcompat:gitcompat",
-               "//eden/scm/lib/identity:identity",
-               "//eden/scm/lib/minibytes:minibytes",
-               "//eden/scm/lib/repo/repo-minimal-info:repo-minimal-info",
-               "//eden/scm/lib/repo/url:repourl",
-               "//eden/scm/lib/util/hgplain:hgplain",
-           ] + (
-               [] if rust_oss.is_oss_build() else [
-                   "//devx_www/cross_env_session_id:cross_env_session_id",
-                   "fbsource//third-party/rust:base64",
-                   "fbsource//third-party/rust:dirs",
-                   "fbsource//third-party/rust:faccess",
-                   "fbsource//third-party/rust:filetime",
-                   "fbsource//third-party/rust:hostname",
-                   "fbsource//third-party/rust:parking_lot",
-                   "fbsource//third-party/rust:regex",
-                   "fbsource//third-party/rust:serde",
-                   "fbsource//third-party/rust:serde_json",
-                   "fbsource//third-party/rust:serde_urlencoded",
-                   "fbsource//third-party/rust:url",
-                   "//common/rust/fbwhoami:fbwhoami",
-                   "//common/rust/shed/hostcaps:hostcaps",
-                   "//eden/scm/lib/metrics:metrics",
-                   "//eden/scm/lib/config/remote-loader:remote-loader",
-                   "//eden/scm/lib/hgtime:hgtime",
-                   "//eden/scm/lib/http-client:http-client",
-                   "//eden/scm/lib/spawn-ext:spawn-ext",
-                   "//eden/scm/lib/types:types",
-                   "//eden/scm/lib/util:util",
-                   "//eden/scm/lib/version:rust_version",
-               ] + select({
-                   "DEFAULT": [],
-                   "ovr_config//os:linux": [
-                       "fbsource//third-party/rust:libc",
-                   ],
-               })
-           ) +
-           select({
-               "DEFAULT": [],
-               "ovr_config//os:linux": [
-                   "//devinfra/lib/rust/platform_cats_reader:platform_cats_reader",
-               ],
-           }),
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/config/set:configset",
+        "//eden/scm/lib/config/static:staticconfig",
+        "//eden/scm/lib/config/union:unionconfig",
+        "//eden/scm/lib/gitcompat:gitcompat",
+        "//eden/scm/lib/identity:identity",
+        "//eden/scm/lib/minibytes:minibytes",
+        "//eden/scm/lib/repo/repo-minimal-info:repo-minimal-info",
+        "//eden/scm/lib/repo/url:repourl",
+        "//eden/scm/lib/util/hgplain:hgplain",
+    ]
+    + (
+        []
+        if rust_oss.is_oss_build()
+        else [
+            "//devx_www/cross_env_session_id:cross_env_session_id",
+            "fbsource//third-party/rust:base64",
+            "fbsource//third-party/rust:dirs",
+            "fbsource//third-party/rust:faccess",
+            "fbsource//third-party/rust:filetime",
+            "fbsource//third-party/rust:hostname",
+            "fbsource//third-party/rust:parking_lot",
+            "fbsource//third-party/rust:regex",
+            "fbsource//third-party/rust:serde",
+            "fbsource//third-party/rust:serde_json",
+            "fbsource//third-party/rust:serde_urlencoded",
+            "fbsource//third-party/rust:url",
+            "//common/rust/fbwhoami:fbwhoami",
+            "//common/rust/shed/hostcaps:hostcaps",
+            "//eden/scm/lib/metrics:metrics",
+            "//eden/scm/lib/config/remote-loader:remote-loader",
+            "//eden/scm/lib/hgtime:hgtime",
+            "//eden/scm/lib/http-client:http-client",
+            "//eden/scm/lib/spawn-ext:spawn-ext",
+            "//eden/scm/lib/types:types",
+            "//eden/scm/lib/util:util",
+            "//eden/scm/lib/version:rust_version",
+        ]
+        + select({
+            "DEFAULT": [],
+            "ovr_config//os:linux": [
+                "fbsource//third-party/rust:libc",
+            ],
+        })
+    )
+    + select({
+        "DEFAULT": [],
+        "ovr_config//os:linux": [
+            "//devinfra/lib/rust/platform_cats_reader:platform_cats_reader",
+        ],
+    }),
 )
 
 rust_binary(

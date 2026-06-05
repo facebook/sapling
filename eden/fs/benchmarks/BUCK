@@ -19,32 +19,40 @@ cpp_library(
 rust_binary(
     name = "benchmarks",
     srcs = ["benchmarks.rs"],
-    autocargo = {"cargo_toml_config": {"dependencies_override": {
-        "dependencies": {
-            "criterion": {
-                "features": [
-                    "async_tokio",
-                    "csv_output",
-                ],
-                "version": "0.5.1",
-            },
-            "rand": {
-                "features": ["small_rng"],
-                "version": "0.9",
-            },
-        },
-        "target": {
-            "'cfg(target_os = \"linux\")'": {"dependencies": {"libc": {"version": "0.2.139"}}},
-            "'cfg(target_os = \"macos\")'": {"dependencies": {"libc": {"version": "0.2.139"}}},
-            "'cfg(target_os = \"windows\")'": {"dependencies": {"winapi": {
-                "features": [
-                    "everything",
-                    "std",
-                ],
-                "version": "0.3",
-            }}},
-        },
-    }}},
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "criterion": {
+                        "features": [
+                            "async_tokio",
+                            "csv_output",
+                        ],
+                        "version": "0.5.1",
+                    },
+                    "rand": {
+                        "features": ["small_rng"],
+                        "version": "0.9",
+                    },
+                },
+                "target": {
+                    "'cfg(target_os = \"linux\")'": {"dependencies": {"libc": {"version": "0.2.139"}}},
+                    "'cfg(target_os = \"macos\")'": {"dependencies": {"libc": {"version": "0.2.139"}}},
+                    "'cfg(target_os = \"windows\")'": {
+                        "dependencies": {
+                            "winapi": {
+                                "features": [
+                                    "everything",
+                                    "std",
+                                ],
+                                "version": "0.3",
+                            }
+                        }
+                    },
+                },
+            }
+        }
+    },
     deps = [
         "fbsource//third-party/rust:criterion",
         "fbsource//third-party/rust:rand",

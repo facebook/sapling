@@ -6,9 +6,13 @@ oncall("scm_server_treehugger")
 rust_library(
     name = "repo_factory",
     srcs = glob(["src/**/*.rs"]),
-    named_deps = ({} if rust_oss.is_oss_build() else {
-        "MononokeRepoFactoryStats_ods3_types": "//eden/mononoke/facebook/ods3_schemas:MononokeRepoFactoryStats_ods3-rust",
-    }),
+    named_deps = (
+        {}
+        if rust_oss.is_oss_build()
+        else {
+            "MononokeRepoFactoryStats_ods3_types": "//eden/mononoke/facebook/ods3_schemas:MononokeRepoFactoryStats_ods3-rust",
+        }
+    ),
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:parking_lot",
@@ -100,10 +104,15 @@ rust_library(
         "//eden/mononoke/servers/slapi/slapi_server/context:context",
         "//eden/mononoke/servers/slapi/wireproto_handler:wireproto_handler",
         "//eden/scm/lib/clientinfo:clientinfo",
-    ] + ([] if rust_oss.is_oss_build() else [
-        "fbsource//third-party/rust:lazy_static",
-        "//eden/mononoke/facebook/ods3_schemas:MononokeRepoFactoryStats_ods3-rs_bindings",
-    ]),
+    ]
+    + (
+        []
+        if rust_oss.is_oss_build()
+        else [
+            "fbsource//third-party/rust:lazy_static",
+            "//eden/mononoke/facebook/ods3_schemas:MononokeRepoFactoryStats_ods3-rs_bindings",
+        ]
+    ),
 )
 
 rust_library(

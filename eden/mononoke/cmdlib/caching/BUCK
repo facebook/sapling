@@ -11,8 +11,13 @@ rust_library(
         "//common/rust/shed/fbinit:fbinit",
         "//eden/mononoke/cmdlib:arg_extensions",
         "//eden/mononoke/cmdlib:environment",
-    ] + ([] if rust_oss.is_oss_build() else [
-        "fbsource//third-party/rust:anyhow",
-        "//common/rust/shed/cachelib_stub:cachelib",
-    ]),
+    ]
+    + (
+        []
+        if rust_oss.is_oss_build()
+        else [
+            "fbsource//third-party/rust:anyhow",
+            "//common/rust/shed/cachelib_stub:cachelib",
+        ]
+    ),
 )

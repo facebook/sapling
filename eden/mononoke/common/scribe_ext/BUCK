@@ -9,9 +9,14 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "//common/rust/shed/fbinit:fbinit",
-    ] + ([] if rust_oss.is_oss_build() else [
-        # buildifier: keep sorted
-        "//common/rust/scribe:scribe",
-        "//common/rust/shed/scuba_stub:scuba",
-    ]),
+    ]
+    + (
+        []
+        if rust_oss.is_oss_build()
+        else [
+            # buildifier: keep sorted
+            "//common/rust/scribe:scribe",
+            "//common/rust/shed/scuba_stub:scuba",
+        ]
+    ),
 )

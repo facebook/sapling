@@ -10,9 +10,14 @@ rust_binary(
         "fbsource//third-party/rust:tempfile",
         "//eden/mononoke/common/mononoke_macros:mononoke_macros",
     ],
-    deps = ([] if rust_oss.is_oss_build() else [
-        "//crypto/cat/rust:cryptocat",
-    ]) + [
+    deps = (
+        []
+        if rust_oss.is_oss_build()
+        else [
+            "//crypto/cat/rust:cryptocat",
+        ]
+    )
+    + [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:clap",

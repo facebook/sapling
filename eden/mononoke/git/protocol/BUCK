@@ -5,9 +5,11 @@ oncall("scm_server_treehugger")
 rust_library(
     name = "protocol",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {
-        "dependencies_override": {"dependencies": {"gix-hash": {"features": ["sha1"]}}},
-    }},
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {"dependencies": {"gix-hash": {"features": ["sha1"]}}},
+        }
+    },
     unittests = True,
     deps = [
         "fbsource//third-party/rust:anyhow",

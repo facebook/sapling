@@ -9,10 +9,9 @@ dott_test(
     name = "modern_sync",
     # These tests have been vetted to run well without network access. Please investigate any failure thoroughly before disabling.
     disable_all_network_access_target = True,
-    dott_files =
-        glob([
-            "*.t",
-        ]),
+    dott_files = glob([
+        "*.t",
+    ]),
     deps = [
         "//eden/mononoke:mononoke",
         "//eden/mononoke/jobs/modern_sync:mononoke_modern_sync_job",

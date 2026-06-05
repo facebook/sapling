@@ -9,19 +9,18 @@ dott_test(
     name = "server",
     # These tests have been vetted to run well without network access. Please investigate any failure thoroughly before disabling.
     disable_all_network_access_target = True,
-    dott_files =
-        glob(
-            [
-                "*.t",
-            ],
-            exclude = [
-                # Pessimistic locking requires MySQL (SQLite deadlocks
-                # because LockedBookmarkTransaction holds the single
-                # shared connection during rebase).
-                "test-pushrebase-pessimistic-locking.t",
-                "test-pushrebase-pessimistic-locking-stack.t",
-            ],
-        ),
+    dott_files = glob(
+        [
+            "*.t",
+        ],
+        exclude = [
+            # Pessimistic locking requires MySQL (SQLite deadlocks
+            # because LockedBookmarkTransaction holds the single
+            # shared connection during rebase).
+            "test-pushrebase-pessimistic-locking.t",
+            "test-pushrebase-pessimistic-locking-stack.t",
+        ],
+    ),
     deps = [
         "//eden/mononoke:mononoke",
         # TODO: This is required for test-getpackv2-multibyte-filenames.t, as
@@ -40,17 +39,16 @@ dott_test(
     name = "server-mysql",
     # These tests have been vetted to run well without network access. Please investigate any failure thoroughly before disabling.
     disable_all_network_access_target = True,
-    dott_files =
-        [
-            "test-infinitepush-mutation.t",
-            "test-pushrebase.t",
-            "test-pushrebase-per-bookmark-locking.t",
-            "test-pushrebase-per-bookmark-locking-conflict.t",
-            "test-pushrebase-per-bookmark-locking-shadow.t",
-            "test-pushrebase-per-bookmark-locking-stack.t",
-            "test-server-init.t",
-            "test-server-lookup.t",
-        ],
+    dott_files = [
+        "test-infinitepush-mutation.t",
+        "test-pushrebase.t",
+        "test-pushrebase-per-bookmark-locking.t",
+        "test-pushrebase-per-bookmark-locking-conflict.t",
+        "test-pushrebase-per-bookmark-locking-shadow.t",
+        "test-pushrebase-per-bookmark-locking-stack.t",
+        "test-server-init.t",
+        "test-server-lookup.t",
+    ],
     use_mysql = True,
     deps = [
         "//eden/mononoke:mononoke",
@@ -64,11 +62,10 @@ dott_test(
 dott_test(
     name = "server-mysql-pessimistic",
     disable_all_network_access_target = True,
-    dott_files =
-        [
-            "test-pushrebase-pessimistic-locking.t",
-            "test-pushrebase-pessimistic-locking-stack.t",
-        ],
+    dott_files = [
+        "test-pushrebase-pessimistic-locking.t",
+        "test-pushrebase-pessimistic-locking-stack.t",
+    ],
     rust_allow_oss_build = False,
     use_mysql = True,
     deps = [

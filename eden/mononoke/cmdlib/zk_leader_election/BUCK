@@ -10,7 +10,12 @@ rust_library(
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",
         "//common/rust/zkserverguard_helper:zkserverguard_helper",
-    ] + ([] if rust_oss.is_oss_build() else [
-        "fbsource//third-party/rust:tracing",
-    ]),
+    ]
+    + (
+        []
+        if rust_oss.is_oss_build()
+        else [
+            "fbsource//third-party/rust:tracing",
+        ]
+    ),
 )

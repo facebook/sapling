@@ -5,18 +5,16 @@ oncall("scm_client_infra")
 
 cpp_library(
     name = "fsinodecatalog",
-    srcs =
-        [
-            "EphemeralFsInodeCatalog.cpp",
-            "FsInodeCatalog.cpp",
-            "InodePath.cpp",
-        ],
-    headers =
-        [
-            "EphemeralFsInodeCatalog.h",
-            "FsInodeCatalog.h",
-            "InodePath.h",
-        ],
+    srcs = [
+        "EphemeralFsInodeCatalog.cpp",
+        "FsInodeCatalog.cpp",
+        "InodePath.cpp",
+    ],
+    headers = [
+        "EphemeralFsInodeCatalog.h",
+        "FsInodeCatalog.h",
+        "InodePath.h",
+    ],
     deps = [
         "//eden/common/utils:file_utils",
         "//eden/common/utils:throw",

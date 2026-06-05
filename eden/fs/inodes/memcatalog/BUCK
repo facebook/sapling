@@ -4,14 +4,12 @@ oncall("scm_client_infra")
 
 cpp_library(
     name = "meminodecatalog",
-    srcs =
-        [
-            "MemInodeCatalog.cpp",
-        ],
-    headers =
-        [
-            "MemInodeCatalog.h",
-        ],
+    srcs = [
+        "MemInodeCatalog.cpp",
+    ],
+    headers = [
+        "MemInodeCatalog.h",
+    ],
     deps = [
         "//eden/fs/inodes/sqlitecatalog:sqliteinodecatalog",
     ],

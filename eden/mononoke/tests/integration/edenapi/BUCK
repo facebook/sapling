@@ -20,11 +20,10 @@ dott_test(
     name = "edenapi",
     # These tests have been vetted to run well without network access. Please investigate any failure thoroughly before disabling.
     disable_all_network_access_target = True,
-    dott_files =
-        glob(
-            ["*.t"],
-            exclude = OSS_EXCLUDED_TESTS if rust_oss.is_oss_build() else NETWORK_EXCLUDED_TESTS,
-        ),
+    dott_files = glob(
+        ["*.t"],
+        exclude = OSS_EXCLUDED_TESTS if rust_oss.is_oss_build() else NETWORK_EXCLUDED_TESTS,
+    ),
     deps = [
         "//eden/mononoke:mononoke",
         "//eden/mononoke/git/gitimport:gitimport",

@@ -12,33 +12,40 @@ rust_binary(
     labels = [
         ci.heavyweight(),
     ],
-    deps = ([
-        "fbsource//third-party/rust:anyhow",
-        "fbsource//third-party/rust:async-trait",
-        "fbsource//third-party/rust:clap",
-        "fbsource//third-party/rust:futures",
-        "fbsource//third-party/rust:openssl",
-        "fbsource//third-party/rust:tracing",
-        "//common/rust/shed/cloned:cloned",
-        "//common/rust/shed/fbinit:fbinit",
-        "//common/rust/shed/secure_utils:secure_utils",
-        "//eden/mononoke/features/cache_warmup:cache_warmup",
-        "//eden/mononoke/cmdlib:cmdlib_logging",
-        "//eden/mononoke/cmdlib:environment",
-        "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
-        "//eden/mononoke/cmdlib/sharding:executor_lib",
-        "//eden/mononoke/cmdlib/sharding_ext:sharding_ext",
-        "//eden/mononoke/common/scuba_ext:scuba_ext",
-        "//eden/mononoke/metaconfig:metaconfig_types",
-        "//eden/mononoke/mononoke_api:mononoke_api",
-        "//eden/mononoke/servers/slapi/slapi_server/repo_listener:repo_listener",
-        "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
-        "//eden/scm/lib/clientinfo:clientinfo",
-        "fbsource//third-party/rust:tokio",
-        "//eden/mononoke/common/cats:cats",
-    ] + ([] if rust_oss.is_oss_build() else [
-        "//eden/mononoke/features/pushrebase:pushrebase_client",
-    ])),
+    deps = (
+        [
+            "fbsource//third-party/rust:anyhow",
+            "fbsource//third-party/rust:async-trait",
+            "fbsource//third-party/rust:clap",
+            "fbsource//third-party/rust:futures",
+            "fbsource//third-party/rust:openssl",
+            "fbsource//third-party/rust:tokio",
+            "fbsource//third-party/rust:tracing",
+            "//common/rust/shed/cloned:cloned",
+            "//common/rust/shed/fbinit:fbinit",
+            "//common/rust/shed/secure_utils:secure_utils",
+            "//eden/mononoke/cmdlib:cmdlib_logging",
+            "//eden/mononoke/cmdlib:environment",
+            "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
+            "//eden/mononoke/cmdlib/sharding:executor_lib",
+            "//eden/mononoke/cmdlib/sharding_ext:sharding_ext",
+            "//eden/mononoke/common/cats:cats",
+            "//eden/mononoke/common/scuba_ext:scuba_ext",
+            "//eden/mononoke/features/cache_warmup:cache_warmup",
+            "//eden/mononoke/metaconfig:metaconfig_types",
+            "//eden/mononoke/mononoke_api:mononoke_api",
+            "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
+            "//eden/mononoke/servers/slapi/slapi_server/repo_listener:repo_listener",
+            "//eden/scm/lib/clientinfo:clientinfo",
+        ]
+        + (
+            []
+            if rust_oss.is_oss_build()
+            else [
+                "//eden/mononoke/features/pushrebase:pushrebase_client",
+            ]
+        )
+    ),
 )
 
 tokio_dependency_test(
