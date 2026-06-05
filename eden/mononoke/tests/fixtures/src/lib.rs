@@ -871,6 +871,277 @@ impl TestRepoFixture for ManyDiamonds {
     }
 }
 
+/// A rich fixture spanning multiple nested directories: `top1`, `top2/nested1`,
+/// and `top2/nested2`, a repo-root file, an intra-directory copy, a
+/// cross-directory copy, a replace-directory-with-a-file, and a merge touching
+/// multiple directories. The chain is long enough that `batch_size=3` yields
+/// multiple batches.
+pub struct NestedDirectories;
+
+#[async_trait]
+impl TestRepoFixture for NestedDirectories {
+    const REPO_NAME: &'static str = "nested_directories";
+
+    const DAG: &'static str = r#"
+        # default_files: false
+        # author: * "author"
+        # bookmark: J master
+
+        J        # message: J "Merge side branch, touch top2 and top1"
+        |\       # modify: J "top2/nested2/page2" "page2 merged\n"
+        | \      # modify: J "top1/lib/util" "util merged\n"
+        |  \
+        H   I    # message: H "Replace top1/sub dir with a file"
+        |   |    # modify: H "top1/sub" "now a file\n"
+        |   |    # message: I "Side branch: add top2/nested1/core and root marker"
+        |   |    # modify: I "top2/nested1/core" "nested1 core\n"
+        |   |    # modify: I "root_marker" "marker\n"
+        |  /
+        | /
+        G        # message: G "Cross-stage copy top2/nested2 -> top1"
+        |        # copy: G "top1/copied_from_nested2" "page1\n" F "top2/nested2/page1"
+        |
+        F        # message: F "Intra-stage copy within top2/nested2"
+        |        # copy: F "top2/nested2/page1_copy" "page1\n" E "top2/nested2/page1"
+        |
+        E        # message: E "Add top2/nested2"
+        |        # modify: E "top2/nested2/page1" "page1\n"
+        |        # modify: E "top2/nested2/page2" "page2\n"
+        |
+        D        # message: D "Add top2/nested1"
+        |        # modify: D "top2/nested1/helpers" "helpers\n"
+        |
+        C        # message: C "Add top1/sub dir"
+        |        # modify: C "top1/sub/a" "a\n"
+        |        # modify: C "top1/sub/b" "b\n"
+        |
+        B        # message: B "Add top1/lib"
+        |        # modify: B "top1/lib/util" "util\n"
+        |
+        A        # message: A "Root file and top1 file"
+                 # modify: A "root_file" "root\n"
+                 # modify: A "top1/main" "main\n"
+    "#;
+}
+
+/// A nested-directory fixture whose tip commit carries a manifest-altering
+/// subtree copy from one top-level directory into another, so it is classified
+/// as a `Global` chokepoint. drawdag cannot express subtree changes, so the base
+/// graph is built via `extend_from_dag_with_actions` and the chokepoint commit
+/// is constructed imperatively.
+///
+/// The tip commit also modifies a file under the copy SOURCE stage (`top2`) in
+/// addition to the subtree copy. This forces the terminal `""` merge to consume
+/// the corrupted source-stage intermediate, so the source-stage subtree-copy
+/// divergence propagates all the way to the terminal `""` stage (reader-visible
+/// at the canonical mapping) instead of being masked by the terminal merge
+/// reusing the parent's correct `top2` subtree.
+pub struct NestedSubtreeCopy;
+
+#[async_trait]
+impl TestRepoFixture for NestedSubtreeCopy {
+    const REPO_NAME: &'static str = "nested_subtree_copy";
+
+    async fn init_repo(
+        fb: FacebookInit,
+        repo: &impl Repo,
+    ) -> Result<(
+        BTreeMap<String, ChangesetId>,
+        BTreeMap<String, BTreeSet<String>>,
+    )> {
+        use std::collections::HashMap;
+
+        use changesets_creation::save_changesets;
+        use futures::FutureExt;
+        use justknobs::test_helpers::JustKnobsInMemory;
+        use justknobs::test_helpers::KnobVal;
+        use justknobs::test_helpers::with_just_knobs_async;
+        use mononoke_types::MPath;
+        use mononoke_types::subtree_change::SubtreeChange;
+        use tests_utils::CreateCommitContext;
+
+        let ctx = CoreContext::test_mock(fb);
+
+        let dag = r#"
+            # default_files: false
+            # author: * "author"
+
+            D    # message: D "Add top2/nested2"
+            |    # modify: D "top2/nested2/page" "page\n"
+            |
+            C    # message: C "Add top2/nested1"
+            |    # modify: C "top2/nested1/helpers" "helpers\n"
+            |
+            B    # message: B "Add top1/lib"
+            |    # modify: B "top1/lib/util" "util\n"
+            |
+            A    # message: A "Add top1/main"
+                 # modify: A "top1/main" "main\n"
+        "#;
+        let (mut commits, mut dag) = extend_from_dag_with_actions(&ctx, repo, dag).await?;
+
+        // Tip commit E: subtree-copy of `top2/` into `top1/from_top2`. The
+        // source spans the `top2` stage while the dest is under `top1`, so the
+        // barrier is meaningfully cross-stage. Manifest-altering subtree changes
+        // require both knobs enabled at save time.
+        let parent = commits["D"];
+        // Besides the subtree copy, E also modifies a file under the copy SOURCE
+        // stage (`top2`). This forces the terminal `""` merge to consume the
+        // corrupted source-stage intermediate, propagating the divergence to the
+        // reader-visible terminal stage instead of letting the terminal merge
+        // reuse the parent's correct `top2` subtree.
+        let mut bcs_e = CreateCommitContext::new(&ctx, repo, vec![parent])
+            .set_message("E")
+            .add_file("top1/marker", "marker\n")
+            .add_file("top2/nested1/changed_at_e", "changed at E\n")
+            .create_commit_object()
+            .await?;
+        bcs_e.subtree_changes = vec![(
+            MPath::new("top1/from_top2")?,
+            SubtreeChange::copy(MPath::new("top2")?, parent),
+        )]
+        .into_iter()
+        .collect();
+        let bcs_e = bcs_e.freeze()?;
+        let e = bcs_e.get_changeset_id();
+        with_just_knobs_async(
+            JustKnobsInMemory::new(HashMap::from([
+                (
+                    "scm/mononoke:enable_subtree_changes".to_string(),
+                    KnobVal::Bool(true),
+                ),
+                (
+                    "scm/mononoke:enable_manifest_altering_subtree_changes".to_string(),
+                    KnobVal::Bool(true),
+                ),
+            ])),
+            async { save_changesets(&ctx, repo, vec![bcs_e]).await }.boxed(),
+        )
+        .await?;
+
+        let mut txn = repo.bookmarks().create_transaction(ctx.clone());
+        txn.force_set(
+            &BookmarkKey::new("master")?,
+            e,
+            BookmarkUpdateReason::TestMove,
+        )?;
+        txn.commit().await?;
+
+        commits.insert("E".to_string(), e);
+        commits.insert("master".to_string(), e);
+        dag.insert("E".to_string(), BTreeSet::from(["D".to_string()]));
+        Ok((commits, dag))
+    }
+}
+
+/// A nested-directory fixture whose tip commit carries a manifest-altering
+/// subtree copy whose DEST is a strict ANCESTOR of a deeper pipeline stage.
+///
+/// Pipeline layout: `top1` is split into a nested `top1/sub` stage, `top2` is a
+/// sibling stage. The tip commit copies the whole `top2` subtree onto `top1`
+/// (cross-stage, so it is a `Global` chokepoint). The replacement path `top1` is
+/// a strict ancestor of the `top1/sub` stage, so that deeper stage's content
+/// must become the `sub` sub-slice of the replacement (`top2/sub`), not its
+/// stale parent. `top2` deliberately contains its own `sub/` subdirectory with
+/// different content so the resolved sub-slice is non-trivial and the divergence
+/// is reader-visible. drawdag cannot express subtree changes, so the base graph
+/// is built via `extend_from_dag_with_actions` and the tip is built imperatively.
+pub struct NestedAncestorSubtreeCopy;
+
+#[async_trait]
+impl TestRepoFixture for NestedAncestorSubtreeCopy {
+    const REPO_NAME: &'static str = "nested_ancestor_subtree_copy";
+
+    async fn init_repo(
+        fb: FacebookInit,
+        repo: &impl Repo,
+    ) -> Result<(
+        BTreeMap<String, ChangesetId>,
+        BTreeMap<String, BTreeSet<String>>,
+    )> {
+        use std::collections::HashMap;
+
+        use changesets_creation::save_changesets;
+        use futures::FutureExt;
+        use justknobs::test_helpers::JustKnobsInMemory;
+        use justknobs::test_helpers::KnobVal;
+        use justknobs::test_helpers::with_just_knobs_async;
+        use mononoke_types::MPath;
+        use mononoke_types::subtree_change::SubtreeChange;
+        use tests_utils::CreateCommitContext;
+
+        let ctx = CoreContext::test_mock(fb);
+
+        // `top1` has a nested `sub/` directory (its own pipeline stage). `top2`
+        // also has a `sub/` directory with different content so the subtree copy
+        // meaningfully rewrites the `top1/sub` region.
+        let dag = r#"
+            # default_files: false
+            # author: * "author"
+
+            D    # message: D "Add top2/sub"
+            |    # modify: D "top2/sub/a" "a-from-top2\n"
+            |    # modify: D "top2/page" "page\n"
+            |
+            C    # message: C "Add top1/sub"
+            |    # modify: C "top1/sub/a" "a-orig\n"
+            |
+            B    # message: B "Add top1/lib"
+            |    # modify: B "top1/lib/util" "util\n"
+            |
+            A    # message: A "Add top1/main"
+                 # modify: A "top1/main" "main\n"
+        "#;
+        let (mut commits, mut dag) = extend_from_dag_with_actions(&ctx, repo, dag).await?;
+
+        // Tip commit E: subtree-copy of `top2/` onto `top1`. The dest `top1` is a
+        // strict ancestor of the `top1/sub` stage, so that deeper stage must
+        // reflect `top2/sub` after the copy. E also adds a file under the copy
+        // source stage (`top2`) so the divergence is exercised broadly.
+        let parent = commits["D"];
+        let mut bcs_e = CreateCommitContext::new(&ctx, repo, vec![parent])
+            .set_message("E")
+            .add_file("top2/marker", "marker\n")
+            .create_commit_object()
+            .await?;
+        bcs_e.subtree_changes = vec![(
+            MPath::new("top1")?,
+            SubtreeChange::copy(MPath::new("top2")?, parent),
+        )]
+        .into_iter()
+        .collect();
+        let bcs_e = bcs_e.freeze()?;
+        let e = bcs_e.get_changeset_id();
+        with_just_knobs_async(
+            JustKnobsInMemory::new(HashMap::from([
+                (
+                    "scm/mononoke:enable_subtree_changes".to_string(),
+                    KnobVal::Bool(true),
+                ),
+                (
+                    "scm/mononoke:enable_manifest_altering_subtree_changes".to_string(),
+                    KnobVal::Bool(true),
+                ),
+            ])),
+            async { save_changesets(&ctx, repo, vec![bcs_e]).await }.boxed(),
+        )
+        .await?;
+
+        let mut txn = repo.bookmarks().create_transaction(ctx.clone());
+        txn.force_set(
+            &BookmarkKey::new("master")?,
+            e,
+            BookmarkUpdateReason::TestMove,
+        )?;
+        txn.commit().await?;
+
+        commits.insert("E".to_string(), e);
+        commits.insert("master".to_string(), e);
+        dag.insert("E".to_string(), BTreeSet::from(["D".to_string()]));
+        Ok((commits, dag))
+    }
+}
+
 pub fn json_config_minimal() -> String {
     r#"
     {
