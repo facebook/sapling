@@ -107,7 +107,17 @@ def wrapexe(exepath: str, env_override: Optional[Dict[str, str]] = None):
         args = [exepath] + env.args[1:]
         procenv = env.getexportedenv()
         if env_override:
-            procenv.update(env_override)
+            for key, value in env_override.items():
+                if key == "PATH" and procenv.get("PATH"):
+                    paths = procenv[key].split(os.pathsep)
+                    paths.extend(
+                        path
+                        for path in value.split(os.pathsep)
+                        if path and path not in paths
+                    )
+                    procenv[key] = os.pathsep.join(paths)
+                else:
+                    procenv[key] = value
         p = subprocess.Popen(
             args,
             stdin=subprocess.PIPE,

@@ -1,4 +1,4 @@
-#debugruntest-incompatible
+#inprocess-hg-incompatible
 
   $ newext crash <<EOF
   > from sapling import registrar

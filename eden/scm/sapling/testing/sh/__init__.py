@@ -149,6 +149,10 @@ Redirect:
     ''
     >>> t('(echo 1 1>&2; ) 2>/dev/null')
     ''
+    >>> t('echo 1 2>&1')
+    '1\n'
+    >>> t('echo 1 > a 2>&1; cat a')
+    '1\n'
     >>> t('A=1; ( A=2; echo 1 && echo 2; ) > a; cat a; echo $A')
     '1\n2\n1\n'
     >>> t('A=1; { A=2; echo 1 && echo $A; } > a; cat a; echo $A')

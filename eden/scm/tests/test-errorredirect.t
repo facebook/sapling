@@ -1,5 +1,5 @@
 #chg-compatible
-#debugruntest-incompatible
+#inprocess-hg-incompatible
 
   $ eagerepo
   $ newext crash <<EOF
@@ -46,9 +46,7 @@ If the script is terminated by SIGTERM (Ctrl+C), do not print the trace
   [255]
 
 If the script cannot be executed (not found in PATH), print the trace
-  $ hash SCRIPT-DOES-NOT-EXIST 2>/dev/null && exit 80
-  [1]
-  $ sl crash --config errorredirect.script='SCRIPT-DOES-NOT-EXIST' 2>&1 | grep '^[IT]'
+  $ sl crash --config errorredirect.script="$TESTTMP/SCRIPT-DOES-NOT-EXIST" 2>&1 | grep '^[IT]'
   Traceback (most recent call last):
 
 Traces are logged in blackbox

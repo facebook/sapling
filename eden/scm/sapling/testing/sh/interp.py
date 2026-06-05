@@ -395,8 +395,12 @@ def interpdupwrite(v, env: Env) -> InterpResult:
         pass
     elif (fd, destfd) == (2, 1) and env.stdout:
         env.stderr = env.stdout
+    elif (fd, destfd) == (2, 1) and env.stdout is None:
+        pass
     elif (fd, destfd) == (1, 2) and env.stderr:
         env.stdout = env.stderr
+    elif (fd, destfd) == (1, 2) and env.stderr is None:
+        pass
     else:
         raise NotImplementedError(
             f"dup {fd} -> {destfd} while fd {destfd} is not already redirected"
