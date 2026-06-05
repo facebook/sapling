@@ -237,7 +237,7 @@ impl HookManager {
         let use_client_identities = justknobs::eval(
             "scm/mononoke:check_hook_bypass_permission_group_with_client_identities",
             None,
-            None,
+            Some(self.repo_name.as_str()),
         );
 
         if !use_client_identities {
