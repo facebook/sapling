@@ -135,6 +135,37 @@ fn parse_stage_path(path: &str) -> Result<MPath> {
 pub async fn verify_pipeline_matches_canonical<F: PipelineTestFixture + Send>(
     fb: FacebookInit,
 ) -> Result<()> {
+    // No pipeline boundary: the pipeline derives (and we verify) every commit.
+    verify_pipeline_matches_canonical_impl::<F>(fb, vec![]).await
+}
+
+/// Like `verify_pipeline_matches_canonical`, but a prefix of the graph (the
+/// ancestors of `boundary_label`, inclusive) is derived ONLY canonically and is
+/// excluded from the pipeline run. The pipeline derives just the descendants of
+/// the boundary, so the first pipeline batch's parents are canonical-only and
+/// the manager must bridge them via `extract_stage_output_from_derived`. This
+/// exercises the transitionary path that `verify_pipeline_matches_canonical`
+/// never hits (there every ancestor has a stored pipeline stage output).
+pub async fn verify_pipeline_matches_canonical_with_canonical_ancestors<
+    F: PipelineTestFixture + Send,
+>(
+    fb: FacebookInit,
+    boundary_label: &str,
+) -> Result<()> {
+    let (_repo, commits, _dag) = F::get_repo_and_dag::<TestRepo>(fb).await;
+    let boundary = *commits.get(boundary_label).ok_or_else(|| {
+        anyhow!(
+            "fixture {} has no commit labelled {boundary_label}",
+            F::REPO_NAME,
+        )
+    })?;
+    verify_pipeline_matches_canonical_impl::<F>(fb, vec![boundary]).await
+}
+
+async fn verify_pipeline_matches_canonical_impl<F: PipelineTestFixture + Send>(
+    fb: FacebookInit,
+    pipeline_boundary: Vec<ChangesetId>,
+) -> Result<()> {
     let ctx = &CoreContext::test_mock(fb);
     let (repo, commits, _dag) = F::get_repo_and_dag::<TestRepo>(fb).await;
     let manager = repo.repo_derived_data().manager();
@@ -146,7 +177,10 @@ pub async fn verify_pipeline_matches_canonical<F: PipelineTestFixture + Send>(
 
     let config = pipeline_config_from_stages(F::pipeline_stages())?;
 
-    // All commits as ancestors of head, oldest first.
+    // All commits as ancestors of head, oldest first. Every commit is derived
+    // canonically (so boundary commits have a canonical value for the manager
+    // to extract a stage output from); only the pipeline run and verification
+    // are scoped to the descendants of `pipeline_boundary`.
     let mut all_commits = repo
         .commit_graph()
         .ancestors_difference(ctx, vec![head], vec![])
@@ -156,7 +190,15 @@ pub async fn verify_pipeline_matches_canonical<F: PipelineTestFixture + Send>(
     // Subtree-change derivation reads the knobs that gate manifest-altering
     // subtree changes; enable them for both canonical derivation and the
     // pipeline run. Harmless for fixtures without subtree changes.
-    let run = run_derivation_and_verification::<F>(ctx, &repo, manager, &config, &all_commits);
+    let run = run_derivation_and_verification::<F>(
+        ctx,
+        &repo,
+        manager,
+        &config,
+        &all_commits,
+        head,
+        pipeline_boundary,
+    );
     with_just_knobs_async(
         JustKnobsInMemory::new(HashMap::from([
             (
@@ -179,21 +221,32 @@ async fn run_derivation_and_verification<F: PipelineTestFixture + Send>(
     manager: &DerivedDataManager,
     config: &DerivationPipelineConfig,
     all_commits: &[ChangesetId],
+    head: ChangesetId,
+    pipeline_boundary: Vec<ChangesetId>,
 ) -> Result<()> {
-    let head = *all_commits
-        .last()
-        .ok_or_else(|| anyhow!("fixture {} has no commits", F::REPO_NAME))?;
-
     // Derive canonically for every type and commit.
     manager
         .derive_bulk_locally(ctx, all_commits, None, &PIPELINE_TYPES, None)
         .await
         .map_err(anyhow::Error::from)?;
 
-    // Plan batches: topological slices split at chokepoints.
+    // Plan batches: topological slices split at chokepoints. With a non-empty
+    // `pipeline_boundary` (passed as `common`), only descendants of the boundary
+    // are planned, so the boundary commits remain canonical-only parents.
+    let pipeline_commits: BTreeSet<ChangesetId> = repo
+        .commit_graph()
+        .ancestors_difference(ctx, vec![head], pipeline_boundary.clone())
+        .await?
+        .into_iter()
+        .collect();
     let batches: Vec<Vec<_>> = repo
         .commit_graph()
-        .ancestors_difference_segment_slices(ctx, vec![head], vec![], PIPELINE_BATCH_SIZE)
+        .ancestors_difference_segment_slices(
+            ctx,
+            vec![head],
+            pipeline_boundary,
+            PIPELINE_BATCH_SIZE,
+        )
         .await?
         .try_collect()
         .await?;
@@ -248,8 +301,13 @@ async fn run_derivation_and_verification<F: PipelineTestFixture + Send>(
         }
     }
 
-    // Assert pipeline output matches canonical for every commit/type/stage.
+    // Assert pipeline output matches canonical for every pipeline-derived
+    // commit/type/stage. The boundary and its ancestors are canonical-only
+    // (no pipeline stage outputs), so they are excluded here.
     for &cs_id in all_commits {
+        if !pipeline_commits.contains(&cs_id) {
+            continue;
+        }
         for stage_path in &sorted_stages {
             for derivable_type in PIPELINE_TYPES {
                 let matches = BulkDerivation::verify_stage_output(
@@ -328,5 +386,21 @@ mod tests {
     #[mononoke::fbinit_test]
     async fn test_pipeline_matches_canonical_ancestor_subtree_copy(fb: FacebookInit) -> Result<()> {
         verify_pipeline_matches_canonical::<NestedAncestorSubtreeCopy>(fb).await
+    }
+
+    // Boundary commit `D` is derived canonically only; the pipeline derives just
+    // its descendants (E, F, G, H, I, J). The first pipeline batch's parents
+    // include `D`, which has no pipeline stage output, so the manager must bridge
+    // it via `extract_stage_output_from_derived`. The bridge is genuinely used:
+    // `D` introduced `top2/nested1`, and the descendants leave that subtree
+    // unchanged (they work in `top2/nested2`, `top1`, and the root), so the
+    // `top2`/`top2/nested1` stage outputs of the children are inherited from
+    // `D`'s canonical value rather than recomputed from a stored pipeline stage.
+    #[mononoke::fbinit_test]
+    async fn test_pipeline_matches_canonical_with_canonical_ancestors(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        verify_pipeline_matches_canonical_with_canonical_ancestors::<NestedDirectories>(fb, "D")
+            .await
     }
 }
