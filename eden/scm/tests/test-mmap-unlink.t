@@ -1,5 +1,4 @@
 #chg-compatible
-#debugruntest-incompatible
 
   $ eagerepo
   $ cat <<EOF > mmap-unlink.py
@@ -18,5 +17,5 @@
   > EOF
 
   $ sl debugpython -- ./mmap-unlink.py
-  $ ls
+  $ ls mmap-unlink.py
   mmap-unlink.py

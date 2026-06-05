@@ -347,8 +347,11 @@ def _sl_impl(stdin: BinaryIO, stdout: BinaryIO, stderr: BinaryIO, env: Env) -> i
             return hg_external(stdin=stdin, stdout=stdout, stderr=stderr, env=env)
 
     # debugpython won't work - emulate Py_Main instead
-    if env.args[1:3] == ["debugpython", "--"]:
-        env.args = [env.args[0]] + env.args[3:]
+    if env.args[1:2] == ["debugpython"]:
+        if env.args[2:3] == ["--"]:
+            env.args = [env.args[0]] + env.args[3:]
+        else:
+            env.args = [env.args[0]] + env.args[2:]
         args = env.args[1:]
         return python(args, stdin, stdout, stderr, env)
 

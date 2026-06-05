@@ -1,5 +1,4 @@
 #chg-compatible
-#debugruntest-incompatible
 
   $ configure modern
   $ enable undo
@@ -39,4 +38,3 @@ Undo itself does not crash
   cannot undo: undo history is corrupted
   hint[undo-corrupt]: undo history is corrupted
   (try deleting $TESTTMP/repo1/.sl/undolog to recover)
-
