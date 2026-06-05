@@ -96,6 +96,10 @@ def interpvec(trees, env: Env, onerror=OnError.RAISE) -> InterpResult:
                 else:
                     assert onerror == OnError.WARN_CONTINUE
         else:
+            if env.drainsideout:
+                sideout = env.popsideout()
+                if sideout:
+                    res = res.chain(InterpResult(out=sideout))
             res = res.chain(nextres)
     return res
 
@@ -203,9 +207,18 @@ def interpargs(trees, env: Env) -> List[str]:
 
 
 def interpsubst(v, env: Env) -> InterpResult:
+    origenv = env
     env = env.nested(Scope.SHELL)
+    env.sideout = []
+    env.drainsideout = False
     env.stdout = BufIO()
+    stderr = None
+    if env.stderr is None:
+        stderr = env.stderr = BufIO()
     res = interp(v, env)
+    origenv.emitsideout(env.popsideout())
+    if stderr is not None:
+        origenv.emitsideout(stderr.getvalue().decode())
     # pyre-fixme[16]: `Optional` has no attribute `getvalue`.
     res.out += env.stdout.getvalue().decode()
     res.out = res.out.rstrip()
@@ -288,8 +301,7 @@ def interppipe(v, env: Env) -> InterpResult:
         if origenv.stderr is None:
             res.out = res.out + err.decode()
         else:
-            # pyre-fixme[61]: `out` is undefined, or not always defined.
-            origenv.stderr.write(out)
+            origenv.stderr.write(err)
     return res
 
 

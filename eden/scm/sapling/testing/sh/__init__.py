@@ -195,6 +195,12 @@ Command substitution:
 
     >>> t('echo `echo foo` $(echo bar $(echo baz))')
     'foo bar baz\n'
+    >>> t('A=$(echo out; echo err >&2); echo "A=$A"')
+    'err\nA=out\n'
+    >>> t('A=$(echo out | (cat; echo err >&2)); echo "A=$A"')
+    'err\nA=out\n'
+    >>> t('A=$(echo $(echo err >&2)); echo "A=$A"')
+    'err\nA=\n'
     >>> t('''cat > a << EOF
     ... a
     ... $(echo b)

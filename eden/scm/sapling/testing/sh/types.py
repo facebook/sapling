@@ -116,6 +116,24 @@ class Env:
     # background jobs
     jobs: List[Tuple[threading.Thread, BufIO]] = field(default_factory=list)
 
+    # Unredirected output produced while expanding words, such as stderr from
+    # command substitutions. It should be emitted by the containing command
+    # list, not folded into the expanded word.
+    sideout: List[str] = field(default_factory=list)
+
+    # Whether interpvec should drain sideout into its result. Command
+    # substitution disables this while it collects side output to bubble out to
+    # its caller.
+    drainsideout: bool = True
+
+    def emitsideout(self, out: str) -> None:
+        self.sideout.append(out)
+
+    def popsideout(self) -> str:
+        out = "".join(self.sideout)
+        self.sideout.clear()
+        return out
+
     def getenv(self, name: str, alt: str = "") -> str:
         if name == "PWD":
             return self.fs.cwd()
@@ -205,6 +223,8 @@ class Env:
            cmdtable: forked  | shared   | shared   | shared
                args: reset   | forked   | shared   | shared
                jobs: reset   | shared   | shared   | shared
+             sideout: shared  | shared   | shared   | shared
+         drainsideout: shared  | shared   | shared   | shared
         """
         fs = self.fs.clone(unsharecwd=(scope >= Scope.SHELL))
         exportedenvvars = self.exportedenvvars
@@ -240,6 +260,8 @@ class Env:
             cmdtable=cmdtable,
             args=args,
             jobs=jobs,
+            sideout=self.sideout,
+            drainsideout=self.drainsideout,
             parent=self,
         )
 
