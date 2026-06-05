@@ -1,4 +1,4 @@
-#require git no-eden gpg gpg2
+#require git no-eden gpg no-windows
 
   $ . $TESTDIR/git.sh
 
@@ -36,4 +36,3 @@ Verify signature after metaedit:
   $ git verify-commit $(sl log -r. -T '{node}')
   ...
   gpg: Good signature from "Test User <test@example.com>" [ultimate]
-

@@ -1,6 +1,5 @@
 #chg-compatible
-#require git gpg2 no-windows
-#debugruntest-incompatible
+#require git gpg no-eden no-windows
 
   $ . $TESTDIR/git.sh
   $ setconfig diff.git=true ui.allowemptycommit=true
@@ -36,7 +35,7 @@ Create a GPG key and configure signing.
 
   $ export HGUSER="Test User <testuser@example.com>"
   $ gpg --batch --passphrase '' --yes --quick-gen-key "$HGUSER" rsa2048 default 2>/dev/null
-  $ KEYID=$(gpg --list-secret-keys --keyid-format LONG --no-auto-check-trustdb | grep -oP '^sec\s+ rsa2048/\K(\w+)')
+  $ KEYID=$(gpg --list-secret-keys --keyid-format LONG --no-auto-check-trustdb | grep '^sec' | grep -o 'rsa2048/[0-9A-Fa-f][0-9A-Fa-f]*' | sed 's|rsa2048/||')
   gpg: please do a --check-trustdb
   $ sl config --local gpg.key "$KEYID"
   updated config in $TESTTMP/repo1/.sl/config

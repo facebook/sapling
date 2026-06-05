@@ -78,7 +78,6 @@ checkexe("dd")
 checkexe("diff")
 checkexe("echo")
 checkexe("env")
-checkexe("gpg")
 checkexe("gunzip")
 checkexe("gzip")
 checkexe("mkfifo")
@@ -370,8 +369,8 @@ def has_rmcwd():
             pass
 
 
-@check("gpg2", "gpg client v2")
-def has_gpg2():
+@check("gpg", "gpg client v2", exe=True)
+def has_gpg():
     return matchoutput("gpg --version 2>&1", rb"GnuPG[^0-9]+2\.")
 
 
