@@ -1,5 +1,5 @@
 #chg-compatible
-#debugruntest-incompatible
+#require no-eden
 
   $ . "$TESTDIR/library.sh"
 
@@ -43,7 +43,7 @@
 
   $ clearcache
   $ sl pull
-  pulling from ssh://user@dummy/master
+  pulling from (ssh://user@dummy/|test:)master (re)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
   imported commit graph for 1 commit (1 segment)
   prefetching file contents
