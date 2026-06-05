@@ -32,8 +32,14 @@ Simple command:
     ':\n'
     >>> t('echo ssh://host/repo?read_copy')
     'ssh://host/repo?read_copy\n'
+    >>> t('echo file{0,1,2} dir{a,b}/x')
+    'file0 file1 file2 dira/x dirb/x\n'
+    >>> t('echo "{a,b}"')
+    '{a,b}\n'
     >>> t("printf 'a\\nb\\n' | grep -E 'a|c'")
     'a\n'
+    >>> t('dirname file dir/file /file')
+    '.\ndir\n/\n'
 
 Expanding envvar:
 
@@ -407,7 +413,7 @@ basename and dirname
     >>> t('basename a b/c/d')
     'a\nd\n'
     >>> t('dirname a b/c/d')
-    'a\nb/c\n'
+    '.\nb/c\n'
 
 Commands on OS filesystem:
 

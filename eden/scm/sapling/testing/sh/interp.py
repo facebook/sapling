@@ -185,25 +185,47 @@ def interpargs(trees, env: Env) -> List[str]:
                 res.out = home + res.out[1:]
                 # emulate $HOME expansion
                 res.quoted = res.quoted or "$"
-        # Expand globs.
-        if res.quoted in {"$", None} and "*" in res.out:
-            matched = env.fs.glob(res.out)
-            if matched:
-                args += matched
-                continue
-        # Expand space-separated words, or handle quotes.
-        # note about shlex.split:
-        # input       | shlex.split(posix=True) | shlex.split(posix=False)
-        # r'C:\Users' | ['C:Users']             | [r'C:\Users']
-        # '"a  b"'    | ['a  b']                | ['"a  b"']
-        if res.quoted in {'"', "'"}:
-            args.append(res.out)
-        elif res.quoted in {"`", "$"}:
-            args += shlex.split(res.out, posix=False)
-        else:
-            assert res.quoted is None, f"unsupported {res.quoted=}"
-            args += shlex.split(res.out)
+        words = [res.out]
+        if res.quoted is None:
+            words = _braceexpand(res.out)
+        for word in words:
+            args.extend(_splitargword(word, res.quoted, env))
     return args
+
+
+def _braceexpand(word: str) -> List[str]:
+    if "'" in word or '"' in word:
+        return [word]
+    match = re.search(r"\{([^{}]*,[^{}]*)\}", word)
+    if match is None:
+        return [word]
+    prefix = word[: match.start()]
+    suffix = word[match.end() :]
+    expanded = []
+    for part in match.group(1).split(","):
+        for rest in _braceexpand(suffix):
+            expanded.append(prefix + part + rest)
+    return expanded
+
+
+def _splitargword(word: str, quoted: Optional[str], env: Env) -> List[str]:
+    # Expand globs.
+    if quoted in {"$", None} and "*" in word:
+        matched = env.fs.glob(word)
+        if matched:
+            return matched
+    # Expand space-separated words, or handle quotes.
+    # note about shlex.split:
+    # input       | shlex.split(posix=True) | shlex.split(posix=False)
+    # r'C:\Users' | ['C:Users']             | [r'C:\Users']
+    # '"a  b"'    | ['a  b']                | ['"a  b"']
+    if quoted in {'"', "'"}:
+        return [word]
+    elif quoted in {"`", "$"}:
+        return shlex.split(word, posix=False)
+    else:
+        assert quoted is None, f"unsupported {quoted=}"
+        return shlex.split(word)
 
 
 def interpsubst(v, env: Env) -> InterpResult:

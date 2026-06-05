@@ -209,6 +209,7 @@ The revlog backend does not need segmented data.
   
 Note revlog2 uses hgcommits for trees and files, so we need to restore it.
 
+  $ rm -rf .sl/store/hgcommits
   $ mv .sl/store/hgcommits{.bak,}
 
 To doublewrite:

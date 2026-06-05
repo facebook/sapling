@@ -173,7 +173,12 @@ def base64(
 
 @command
 def dirname(args: List[str]) -> str:
-    return "".join(arg.rsplit("/", 1)[0] + "\n" for arg in args)
+    def dirnameone(arg: str) -> str:
+        if "/" not in arg:
+            return "."
+        return arg.rsplit("/", 1)[0] or "/"
+
+    return "".join(dirnameone(arg) + "\n" for arg in args)
 
 
 @command
