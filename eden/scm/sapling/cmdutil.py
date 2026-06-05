@@ -3197,14 +3197,20 @@ def getgraphlogrevs(repo, pats, opts):
         if not (revs.isdescending() or revs.istopo()):
             revs.sort(reverse=True)
     if limit is not None:
-        limitedrevs = []
-        for idx, rev in enumerate(revs):
-            if idx >= limit:
-                break
-            limitedrevs.append(rev)
-        revs = smartset.baseset(limitedrevs, repo=repo)
+        revs = _limitlogrevs(repo, revs, limit)
 
     return revs, expr, filematcher
+
+
+def _limitlogrevs(repo, revs, limit):
+    limitedrevs = []
+    reviter = revs.iterrev()
+    for _i in range(limit):
+        try:
+            limitedrevs.append(next(reviter))
+        except StopIteration:
+            break
+    return smartset.baseset(limitedrevs, repo=repo)
 
 
 def getlogrevs(repo, pats, opts):
@@ -3231,12 +3237,7 @@ def getlogrevs(repo, pats, opts):
             revs = repo.revs(expr) & revs
             revs.sort(reverse=True)
     if limit is not None:
-        limitedrevs = []
-        for idx, r in enumerate(revs):
-            if limit <= idx:
-                break
-            limitedrevs.append(r)
-        revs = smartset.baseset(limitedrevs, repo=repo)
+        revs = _limitlogrevs(repo, revs, limit)
 
     return revs, expr, filematcher
 
@@ -4882,7 +4883,7 @@ def buildcommittemplate(repo, ctx, ref, summaryfooter=""):
         t.t.cache.update({"summaryfooter": summaryfooter})
 
     # load extra aliases based on changed files
-    # Note: this feature allows executing arbitary templates controlled by the
+    # Note: this feature allows executing arbitrary templates controlled by the
     # repo content. Do not enable for untrusted repos!
     if repo.ui.configbool("experimental", "local-committemplate"):
         localtemplate = localcommittemplate(repo, ctx)

@@ -934,7 +934,7 @@ class filteredset(abstractsmartset):
         return x in self._subset and self._condition(x)
 
     def iterrev(self):
-        return self._iterfilter(self._subset)
+        return self._iterfilter(self._subset.iterrev())
 
     def _progressmodel(self):
         """Return the Rust ProgressBar model.
@@ -1217,10 +1217,10 @@ class addset(abstractsmartset):
                 return iter(self._genlist)
 
             def arbitraryordergen():
-                for r in self._r1:
+                for r in self._r1.iterrev():
                     yield r
                 inr1 = self._r1.__contains__
-                for r in self._r2:
+                for r in self._r2.iterrev():
                     if not inr1(r):
                         yield r
 
@@ -1239,14 +1239,14 @@ class addset(abstractsmartset):
         iter1 = getattr(self._r1, attr)
         if iter1 is None:
             # let's avoid side effect (not sure it matters)
-            iter1 = iter(sorted(self._r1, reverse=not self._ascending))
+            iter1 = iter(sorted(self._r1.iterrev(), reverse=not self._ascending))
         else:
             iter1 = iter1()
         # get iterator for _r2
         iter2 = getattr(self._r2, attr)
         if iter2 is None:
             # let's avoid side effect (not sure it matters)
-            iter2 = iter(sorted(self._r2, reverse=not self._ascending))
+            iter2 = iter(sorted(self._r2.iterrev(), reverse=not self._ascending))
         else:
             iter2 = iter2()
         return _iterordered(self._ascending, iter1, iter2)

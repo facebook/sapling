@@ -34,16 +34,14 @@ def _prefetchtextstream(repo, ctxstream):
         nodes = [_rewritenone(c.node()) for c in ctxbatch]
         texts = repo.changelog.inner.getcommitrawtextlist(nodes)
         for ctx, text in zip(ctxbatch, texts):
+            count += 1
+            if is_agent and max_count and count > max_count:
+                raise error.Abort(
+                    _("revset query scanned over %d commits") % max_count,
+                    hint=_("run '@prog@ help agent performance' for guidance."),
+                )
             ctx._text = text
             yield ctx
-
-        # over count is fine, so we don't waste already fetched commits
-        count += batch_size
-        if is_agent and max_count and count > max_count:
-            raise error.Abort(
-                _("revset query scanned over %d commits") % max_count,
-                hint=_("run '@prog@ help agent performance' for guidance."),
-            )
 
 
 def _rewritenone(n):
