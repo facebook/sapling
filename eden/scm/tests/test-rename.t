@@ -1,5 +1,5 @@
 #chg-compatible
-#debugruntest-incompatible
+#require no-eden
 
   $ configure modernclient
   $ newclientrepo repo
@@ -280,13 +280,9 @@ overwrite existing files (d2/b)
   R d1/a
   R d1/ba
   R d1/d11/a1
-  $ diff -u d1/b d2/b
-  --- d1/b	* (glob)
-  +++ d2/b	* (glob)
-  @@ * (glob)
-  -d1/b
-  +d2/b
-  [1]
+  $ cat d1/b d2/b
+  d1/b
+  d2/b
   $ sl goto -C tip
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm d2/a d2/ba d2/d11/a1
@@ -653,4 +649,3 @@ check illegal path components
   (hint: consider using --cwd to change working directory)
   [255]
   $ sl status -C
-
