@@ -589,6 +589,15 @@
   files:       a f
   description:
   a
+
+# log --removed with --limit should not keep scanning after limit is satisfied
+
+  $ echo limit-target > limit-target
+  $ sl ci -Aqm limit-target
+  $ CODING_AGENT_METADATA=id=test_agent sl --config agent.max-commit-fetch-count=4 --config experimental.commit-fetch-batch-size=2 --config experimental.pathhistory=false log --removed -l 1 limit-target -T '{desc}\n'
+  abort: revset query scanned over 4 commits
+  (run 'sl help agent performance' for guidance.)
+  [255]
   $ cd ..
 
 # log --follow tests
