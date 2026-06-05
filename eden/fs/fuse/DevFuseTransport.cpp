@@ -20,7 +20,7 @@
 namespace facebook::eden {
 
 const char* DevFuseTransport::getName() const {
-  return "devfuse";
+  return kDevFuseTransportName;
 }
 
 size_t DevFuseTransport::getWorkerThreadCount(size_t defaultThreadCount) const {

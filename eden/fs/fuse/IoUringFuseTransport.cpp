@@ -805,7 +805,7 @@ size_t IoUringFuseTransport::getConfiguredQueueCount(
 #endif
 
 const char* IoUringFuseTransport::getName() const {
-  return "io_uring";
+  return kIoUringFuseTransportName;
 }
 
 size_t IoUringFuseTransport::getWorkerThreadCount(

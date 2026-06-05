@@ -3071,6 +3071,7 @@ folly::Future<folly::Unit> EdenMount::takeoverFuse(
     beginMount().setValue();
 
     auto channel = makeFuseChannel(this, std::move(takeoverData.fd));
+    channel->logTakeoverTransportMismatch(takeoverData.connInfo);
     auto fuseReadyFuture = channel->takeoverReadyFuture();
     auto fuseCompleteFuture =
         channel->initializeFromTakeover(takeoverData.connInfo);

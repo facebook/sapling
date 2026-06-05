@@ -17,6 +17,9 @@
 
 namespace facebook::eden {
 
+inline constexpr const char* kDevFuseTransportName = "devfuse";
+inline constexpr const char* kIoUringFuseTransportName = "io_uring";
+
 class FuseChannel;
 
 class FuseTransport {

@@ -368,6 +368,8 @@ class FuseChannel final : public FsChannel {
   }
 
   const char* getTransportName() const;
+  const char* getDesiredTransportName() const;
+  void logTakeoverTransportMismatch(const fuse_init_out& connInfo) const;
   bool usesIoUringTransport() const;
   size_t getTransportBufferSize() const {
     return bufferSize_;

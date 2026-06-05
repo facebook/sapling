@@ -31,6 +31,7 @@
 #include "eden/fs/fuse/FuseDirList.h"
 #include "eden/fs/fuse/FuseDispatcher.h"
 #include "eden/fs/fuse/FuseRequestContext.h"
+#include "eden/fs/fuse/FuseTransport.h"
 #include "eden/fs/fuse/IoUringFuseTransport.h"
 #include "eden/fs/privhelper/PrivHelper.h"
 #include "eden/fs/telemetry/EdenErrorInfoBuilder.h"
@@ -708,6 +709,18 @@ uint64_t fuseInitFlags(const fuse_init_out& connInfo) {
   return flags;
 }
 
+// fuse:use-io-uring config only gates whether we request FUSE_OVER_IO_URING
+// during FUSE_INIT. After init, including takeover, the transport must follow
+// the capability that was actually negotiated for this FUSE connection.
+bool negotiatedIoUringTransport(const fuse_init_out& connInfo) {
+#if EDEN_HAVE_FUSE_IO_URING
+  return (fuseInitFlags(connInfo) & FUSE_OVER_IO_URING) != 0;
+#else
+  (void)connInfo;
+  return false;
+#endif
+}
+
 void sigusr2Handler(int /* signum */) {
   // Do nothing.
   // The purpose of this signal is only to interrupt the blocking read() calls
@@ -1053,6 +1066,34 @@ const char* FuseChannel::getTransportName() const {
   return transport_ ? transport_->getName() : "unknown";
 }
 
+const char* FuseChannel::getDesiredTransportName() const {
+#if EDEN_HAVE_FUSE_IO_URING
+  if (useIoUring_ && isKernelAllowedForIoUring(getRunningKernelRelease())) {
+    return kIoUringFuseTransportName;
+  }
+#endif
+  return kDevFuseTransportName;
+}
+
+void FuseChannel::logTakeoverTransportMismatch(
+    const fuse_init_out& connInfo) const {
+  const char* inheritedTransport = negotiatedIoUringTransport(connInfo)
+      ? kIoUringFuseTransportName
+      : kDevFuseTransportName;
+  const char* desiredTransport = getDesiredTransportName();
+  if (folly::StringPiece{inheritedTransport} == desiredTransport) {
+    return;
+  }
+
+  XLOGF(
+      WARN,
+      "FUSE transport config changed for mount \"{}\": configured transport is {}, but the existing FUSE connection negotiated {}. Graceful restart will preserve the existing {} transport; run a full EdenFS restart to apply the new transport config.",
+      mountPath_,
+      desiredTransport,
+      inheritedTransport,
+      inheritedTransport);
+}
+
 void FuseChannel::dispatchRequestFromTransport(
     const fuse_in_header& header,
     folly::ByteRange arg,
@@ -1126,20 +1167,6 @@ void FuseChannel::maybeSetFuseReadAhead() {
         });
   }
 }
-
-namespace {
-// fuse:use-io-uring config only gates whether we request FUSE_OVER_IO_URING
-// during FUSE_INIT. After init, including takeover, the transport must follow
-// the capability that was actually negotiated for this FUSE connection.
-bool negotiatedIoUringTransport(const fuse_init_out& connInfo) {
-#if EDEN_HAVE_FUSE_IO_URING
-  return (fuseInitFlags(connInfo) & FUSE_OVER_IO_URING) != 0;
-#else
-  (void)connInfo;
-  return false;
-#endif
-}
-} // namespace
 
 FuseChannel::StopFuture FuseChannel::initializeFromTakeover(
     fuse_init_out connInfo) {
