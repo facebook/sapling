@@ -1,5 +1,5 @@
-#chg-compatible
-#debugruntest-incompatible
+#chg-incompatible
+#inprocess-hg-incompatible
 
   $ configure modernclient
   $ newclientrepo
@@ -10,8 +10,8 @@
   $ sl st --no-root-relative --quiet --pager=never -I ''
   $ sl files --prin -X abc -X def || true
 
-  >>> import json
-  >>> with open(r"$TESTTMP/sample", mode="rb") as f:
+  >>> import json, os
+  >>> with open(os.path.join(os.environ["TESTTMP"], "sample"), mode="rb") as f:
   ...     data = f.read()
   >>> record_count = 0
   >>> for record in data.strip(b"\0").split(b"\0"):
