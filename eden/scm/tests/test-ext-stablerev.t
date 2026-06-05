@@ -1,4 +1,3 @@
-#debugruntest-incompatible
   $ configure modernclient
   $ newclientrepo
   $ enable stablerev
@@ -17,21 +16,21 @@
 
 If the script doesn't return anything, an abort is raised:
   $ cat << 'EOF' > stable.py
-  > #!/usr/bin/env fbpython
+  > #!/usr/bin/env python
   > EOF
   $ chmod +x stable.py
-  $ setconfig stablerev.script="fbpython stable.py"
+  $ setconfig stablerev.script="python stable.py"
   $ sl log -r "getstablerev()" --debug
-  Executing script: fbpython stable.py
+  Executing script: python stable.py
   setting current working directory to: $TESTTMP/repo1
   script stdout:
   
-  abort: stable rev returned by script (fbpython stable.py) was empty
+  abort: stable rev returned by script (python stable.py) was empty
   [255]
 
 Make the script return something:
   $ cat << 'EOF' > stable.py
-  > #!/usr/bin/env fbpython
+  > #!/usr/bin/env python
   > print("B")
   > EOF
   $ sl log -r "getstablerev()"
@@ -39,7 +38,7 @@ Make the script return something:
 
 Change the script, change the result:
   $ cat << 'EOF' > stable.py
-  > #!/usr/bin/env fbpython
+  > #!/usr/bin/env python
   > print("C")
   > EOF
   $ sl log -r "getstablerev()"
@@ -54,7 +53,7 @@ The script is always run relative to repo root:
 
 JSON is also supported:
   $ cat << 'EOF' > stable.py
-  > #!/usr/bin/env fbpython
+  > #!/usr/bin/env python
   > print('{\"node\": \"D\"}')
   > EOF
   $ sl log -r "getstablerev()"
@@ -62,16 +61,16 @@ JSON is also supported:
 
 Invalid JSON aborts:
   $ cat << 'EOF' > stable.py
-  > #!/usr/bin/env fbpython
+  > #!/usr/bin/env python
   > print('{node\": \"D\"}')
   > EOF
   $ sl log -r "getstablerev()"
-  abort: stable rev returned by script (fbpython stable.py) was invalid
+  abort: stable rev returned by script (python stable.py) was invalid
   [255]
 
 An alias can be used for simplicity:
   $ cat << 'EOF' > stable.py
-  > #!/usr/bin/env fbpython
+  > #!/usr/bin/env python
   > print("A")
   > EOF
   $ setconfig revsetalias.stable="getstablerev()"
@@ -80,12 +79,12 @@ An alias can be used for simplicity:
 
 Check that stables template keyword works:
   $ cat << 'EOF' > stables.py
-  > #!/usr/bin/env fbpython
+  > #!/usr/bin/env python
   > import sys
   > print('{{\"{nodeid}\": [\"stable1\",\"stable2\"]}}'.format(nodeid=sys.argv[1]))
   > EOF
   $ chmod +x stables.py
-  $ setconfig "stablerev.stablesscript=fbpython stables.py {nodeid}"
+  $ setconfig "stablerev.stablesscript=python stables.py {nodeid}"
   $ sl log -r "D" --template "{stables}"
   stable1 stable2 (no-eol)
 
@@ -110,7 +109,7 @@ Make another repo with "E" (9bc730a19041):
 
 What if the stable commit isn't present locally?
   $ cat << 'EOF' > stable.py
-  > #!/usr/bin/env fbpython
+  > #!/usr/bin/env python
   > print("9bc730a19041")
   > EOF
   $ sl log -r stable
@@ -130,7 +129,7 @@ The revset can be configured to automatically pull in this case:
 
 But it might not exist even after pulling:
   $ cat << 'EOF' > stable.py
-  > #!/usr/bin/env fbpython
+  > #!/usr/bin/env python
   > print("abcdef123")
   > EOF
   $ sl log -r stable
@@ -163,7 +162,7 @@ But they can be made optional or required:
 
 Try making the script return different locations
   $ cat << 'EOF' > stable.py
-  > #!/usr/bin/env fbpython
+  > #!/usr/bin/env python
   > import os
   > if os.getenv("TARGET") == "foo":
   >   print('D')

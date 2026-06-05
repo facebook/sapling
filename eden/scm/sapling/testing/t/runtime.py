@@ -10,6 +10,7 @@ from __future__ import annotations
 import io
 import os
 import re
+import shlex
 import shutil
 import sys
 import tempfile
@@ -334,7 +335,13 @@ class TestTmp:
         if export:
             self.shenv.exportenv(name)
 
-    def requireexe(self, name: str, fullpath: Optional[str] = None, symlink=False):
+    def requireexe(
+        self,
+        name: str,
+        fullpath: Optional[str] = None,
+        symlink=False,
+        allow_fullpath=True,
+    ):
         """require an external binary
         Returns a full path to the location of the binary, or a shim binary.
         """
@@ -360,9 +367,12 @@ class TestTmp:
             fullpath = os.path.realpath(fullpath)
         # add a function for sheval
         orig_path = os.pathsep.join([str(self.path / "bin"), self._origpathenv])
-        for allowed in (name, fullpath):
-            # Allow shell to run the short name (e.g. "hg") or the fullpath (e.g.
-            # "/some/long/path/build-dir/hg").
+        allowed_names = [name]
+        if allow_fullpath:
+            # Allow shell to run the fullpath (e.g.
+            # "/some/long/path/build-dir/hg") as an alias.
+            allowed_names.append(fullpath)
+        for allowed in allowed_names:
             self.shenv.cmdtable[allowed] = shext.wrapexe(
                 fullpath, env_override={"PATH": orig_path}
             )
@@ -376,22 +386,25 @@ class TestTmp:
         #   unlike /bin having everything. Less risk about allowing
         #   undeclared dependencies.
         # On *nix, write a shim in $TESTTMP/bin for os.system.
-        if os.name == "nt":
+        if os.name == "nt" and not symlink:
             current_path = self.shenv.getenv("PATH")
             next_path = os.pathsep.join((current_path, os.path.dirname(fullpath)))
             self.shenv.setenv("PATH", next_path)
             return fullpath
         else:
             self.path.joinpath("bin").mkdir(exist_ok=True)
-            destpath = self.path / "bin" / name
+            destname = name
+            if os.name == "nt" and not destname.lower().endswith(".exe"):
+                destname = f"{destname}.exe"
+            destpath = self.path / "bin" / destname
             if symlink:
                 os.symlink(fullpath, destpath)
             else:
                 script = "\n".join(
                     [
                         "#!/bin/sh",
-                        f"export PATH={repr(orig_path)}",
-                        f'exec {fullpath} "$@"',
+                        f"export PATH={shlex.quote(orig_path)}",
+                        f'exec {shlex.quote(fullpath)} "$@"',
                     ]
                 )
                 destpath.write_text(script)

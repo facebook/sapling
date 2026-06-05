@@ -22,6 +22,10 @@ from ..t.shext import shellenv
 
 
 def testsetup(t: TestTmp):
+    # `sys.executable` can be the Sapling binary. A symlink named `python`
+    # uses Sapling's argv0 dispatch to run `debugpython --` for subprocesses,
+    # while `allow_fullpath=False` preserves full-path Sapling invocations.
+    t.requireexe("python", sys.executable, symlink=True, allow_fullpath=False)
     t.command(python)
     t.setenv("PYTHON", "python")
     t.pyenv["assertCovered"] = CoverageChecker
