@@ -1,6 +1,6 @@
-#chg-compatible
+#chg-incompatible
+#inprocess-hg-incompatible
 #require no-fsmonitor no-eden
-#debugruntest-incompatible
 
 Setup. SCM_SAMPLING_FILEPATH needs to be cleared as some environments may
 have it set.
@@ -53,6 +53,8 @@ logged
   > EOF
   $ LOGDIR=$TESTTMP/logs
   $ mkdir $LOGDIR
+  >>> import os
+  >>> LOGDIR = os.path.join(os.environ["TESTTMP"], "logs")
   $ echo "logcommit=$TESTTMP/logcommit.py" >> $HGRCPATH
   $ echo "[sampling]" >> $HGRCPATH
   $ echo "filepath = $LOGDIR/samplingpath.txt" >> $HGRCPATH
@@ -66,7 +68,8 @@ Do a couple of commits.  We expect to log two messages per call to repo.commit.
   atexit handler executed
   atexit handler executed
   >>> import json
-  >>> with open("$LOGDIR/samplingpath.txt") as f:
+  >>> sample_path = os.path.join(LOGDIR, "samplingpath.txt")
+  >>> with open(sample_path) as f:
   ...     data = f.read()
   >>> for record in data.strip("\0").split("\0"):
   ...     parsedrecord = json.loads(record)
@@ -94,7 +97,8 @@ Test topdir logging:
   $ sl files c > /dev/null
   atexit handler executed
   >>> from sapling import json
-  >>> with open("$LOGDIR/samplingpath.txt") as f:
+  >>> sample_path = os.path.join(LOGDIR, "samplingpath.txt")
+  >>> with open(sample_path) as f:
   ...     data = f.read().strip("\0").split("\0")
   >>> print([json.loads(d)["data"]["topdir"] for d in data if "topdir" in d])
   ['a_topdir']
@@ -107,7 +111,8 @@ Test env-var logging:
   $ sl files c > /dev/null
   atexit handler executed
   >>> import json, pprint
-  >>> with open("$LOGDIR/samplingpath.txt") as f:
+  >>> sample_path = os.path.join(LOGDIR, "samplingpath.txt")
+  >>> with open(sample_path) as f:
   ...     data = f.read().strip("\0").split("\0")
   >>> for jsonstr in data:
   ...     entry = json.loads(jsonstr)
@@ -124,7 +129,8 @@ Test rust traces make it to sampling file as well:
   $ sl debugshell -c "from sapling import tracing; tracing.info('msg', target='from_rust', hi='there')"
   atexit handler executed
   >>> import json
-  >>> with open("$LOGDIR/samplingpath.txt") as f:
+  >>> sample_path = os.path.join(LOGDIR, "samplingpath.txt")
+  >>> with open(sample_path) as f:
   ...     data = f.read().strip("\0").split("\0")
   >>> for entry in data:
   ...     parsed = json.loads(entry)
@@ -155,7 +161,8 @@ Test command_duration is logged when ctrl-c'd:
   > EOF
   $ wait
   >>> import json
-  >>> with open("$LOGDIR/samplingpath.txt") as f:
+  >>> sample_path = os.path.join(LOGDIR, "samplingpath.txt")
+  >>> with open(sample_path) as f:
   ...     data = f.read().strip("\0").split("\0")
   >>> for entry in data:
   ...     parsed = json.loads(entry)
@@ -219,10 +226,10 @@ Metrics is logged to blackbox:
   .
   atexit handler executed
   $ sl blackbox --no-timestamp --no-sid --pattern '{"legacy_log":{"service":"metrics"}}' | grep foo
+  [legacy][metrics] {"metrics":*,"test":{"bar":2,"foo":{"a":1,"b":5}}}} (glob)
+  [legacy][metrics] {"metrics":*,"test":{"bar":2,"foo":{"a":1,"b":5}}}} (glob)
+  [legacy][metrics] {"metrics":*,"test":{"bar":2,"foo":{"a":1,"b":5}}}} (glob)
   atexit handler executed
-  [legacy][metrics] {"metrics":*,"test":{"bar":2,"foo":{"a":1,"b":5}}}} (glob)
-  [legacy][metrics] {"metrics":*,"test":{"bar":2,"foo":{"a":1,"b":5}}}} (glob)
-  [legacy][metrics] {"metrics":*,"test":{"bar":2,"foo":{"a":1,"b":5}}}} (glob)
 
 Invalid format strings don't crash Mercurial
 
