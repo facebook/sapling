@@ -1,5 +1,5 @@
 #chg-compatible
-#debugruntest-incompatible
+#require no-eden
   $ configure modernclient
 
   $ . "$TESTDIR/library.sh"
@@ -64,6 +64,7 @@ Case 1: fastlog service calls fails or times out
   > path = /intern/conduit/
   > [phabricator]
   > arcrc_host = https://phabricator.intern.facebook.com/api/
+  > use-unix-socket = False
   > graphql_host = http://none_such.intern.facebook.com:$CONDUIT_PORT
   > default_timeout = 60
   > graphql_app_id = 1234

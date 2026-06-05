@@ -1241,7 +1241,8 @@ def curl(args: List[str], stdout: BinaryIO) -> int:
     if url is None:
         raise RuntimeError("curl requires a URL")
     request = urllib.request.Request(url, method=method)
-    with urllib.request.urlopen(request) as response:
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    with opener.open(request) as response:
         stdout.write(response.read())
     return 0
 
