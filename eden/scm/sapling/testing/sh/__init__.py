@@ -333,6 +333,13 @@ grep:
     >>> t('seq 20 | grep -B 2 -C 3 2')
     '1\n2\n3\n4\n5\n10\n11\n12\n13\n14\n15\n18\n19\n20\n'
 
+sed:
+
+    >>> t("printf 'a\\n#b\\n\\nc\\n' | sed '/^#/d;/^$/d;s:^:| :'")
+    '| a\n| c\n'
+    >>> t("printf 'keep\\ndrop\\ndrop\\n' | sed '/^drop/,$d'")
+    'keep\n'
+
 sort
 
     >>> t('for i in c a b; do echo $i; done | sort')

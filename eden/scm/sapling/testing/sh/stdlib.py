@@ -466,27 +466,85 @@ def sed(args: List[str], stdin: BinaryIO, stdout: BinaryIO, fs: ShellFS) -> str:
         out = fs.open(paths[0], "wb")
 
     for script in scripts:
-        # line range selection
-        if script[0] == "$":
-            # last line
-            linerange = slice(len(lines) - 1, len(lines))
-            script = script[1:]
-        elif script[0].isdigit():
-            # single line
-            linenostr = "".join(ch.isdigit() and ch or " " for ch in script).split(
-                " ", 1
-            )[0]
-            lineno = int(linenostr)
-            script = script[len(linenostr) :]
-            linerange = slice(lineno - 1, lineno)
-        else:
-            # everything
-            linerange = slice(0, len(lines))
-        # apply the script
-        lines[linerange] = _sedscript(script, lines[linerange])
+        for command in _sedcommands(script):
+            lines = _runsedcommand(command, lines)
 
     # pyre-fixme[7]: Expected `str` but got implicit return value of `None`.
     out.write("".join(lines).encode())
+
+
+def _sedcommands(script: str) -> List[str]:
+    """split a sed script into commands
+
+    This intentionally implements only enough parsing to avoid splitting
+    semicolons inside a substitute expression.
+    """
+    commands = []
+    command_start = 0
+    substitute_delimiter: Optional[str] = None
+    substitute_delimiter_count = 0
+    escaped = False
+    for i, ch in enumerate(script):
+        if escaped:
+            escaped = False
+            continue
+        if ch == "\\":
+            escaped = True
+            continue
+        if substitute_delimiter is not None:
+            if ch == substitute_delimiter:
+                substitute_delimiter_count += 1
+                if substitute_delimiter_count == 3:
+                    substitute_delimiter = None
+            continue
+        if ch == "s" and i == command_start and i + 1 < len(script):
+            substitute_delimiter = script[i + 1]
+            substitute_delimiter_count = 0
+            continue
+        if ch == ";":
+            command = script[command_start:i]
+            if command:
+                commands.append(command)
+            command_start = i + 1
+    command = script[command_start:]
+    if command:
+        commands.append(command)
+    return commands
+
+
+def _runsedcommand(script: str, lines: List[str]) -> List[str]:
+    """run a single sed command on lines"""
+    # line range selection
+    if script[0] == "$":
+        # last line
+        start = len(lines) - 1
+        end = len(lines)
+        script = script[1:]
+    elif script[0].isdigit():
+        # single line
+        linenostr = "".join(ch.isdigit() and ch or " " for ch in script).split(" ", 1)[
+            0
+        ]
+        lineno = int(linenostr)
+        start = lineno - 1
+        end = lineno
+        script = script[len(linenostr) :]
+    elif script.startswith("/"):
+        range_match = re.match(r"/((?:\\.|[^/])*)/,\$([^;]*)\Z", script)
+        if range_match is not None:
+            pat, command = range_match.groups()
+            patre = re.compile(pat)
+            for start, line in enumerate(lines):
+                if patre.search(line):
+                    return lines[:start] + _sedscript(command, lines[start:])
+            return lines
+        start = 0
+        end = len(lines)
+    else:
+        start = 0
+        end = len(lines)
+
+    return lines[:start] + _sedscript(script, lines[start:end]) + lines[end:]
 
 
 def _sedscript(script: str, lines: List[str]) -> List[str]:
