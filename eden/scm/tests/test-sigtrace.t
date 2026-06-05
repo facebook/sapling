@@ -1,4 +1,4 @@
-#debugruntest-incompatible
+#inprocess-hg-incompatible
 
   $ eagerepo
   $ newext signal <<EOF
@@ -39,7 +39,6 @@ Test the signal config option
   $ echo 'signal=INVALIDSIGNAL' >> $HGRCPATH
   $ echo 'memsignal=INVALIDSIGNAL' >> $HGRCPATH
   $ sl signal USR1 || false
-  * (glob)
   [1]
   $ ls $TESTTMP/dump-*.log || false
   ls: * (glob)
