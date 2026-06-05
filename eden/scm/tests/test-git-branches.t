@@ -1,6 +1,5 @@
 #chg-compatible
 #require git
-#debugruntest-incompatible
 
   $ eagerepo
   $ . $TESTDIR/git.sh

@@ -1,4 +1,3 @@
-#debugruntest-incompatible
   $ configure modernclient
 
 Make sure "goto" and "update" hooks support each other:

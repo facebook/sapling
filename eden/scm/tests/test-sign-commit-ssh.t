@@ -1,6 +1,5 @@
 #chg-compatible
 #require git ssh-keygen no-windows
-#debugruntest-incompatible
 
   $ . $TESTDIR/git.sh
   $ setconfig diff.git=true ui.allowemptycommit=true
@@ -64,4 +63,3 @@ Test SSH error with a bad key path.
   abort: signing key file not found: /nonexistent/bad_key
   (ensure signing.key points to a valid SSH private key file)
   [255]
-

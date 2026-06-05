@@ -1,5 +1,4 @@
 #chg-compatible
-#debugruntest-incompatible
 
   $ configure modernclient
 

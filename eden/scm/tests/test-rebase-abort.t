@@ -1,5 +1,4 @@
 #chg-compatible
-#debugruntest-incompatible
 
   $ eagerepo
   $ configure mutation-norecord
@@ -451,4 +450,3 @@ commit will cause merge conflict on rebase
   $ sl rebase --abort
   rebase aborted
   $ cd ..
-

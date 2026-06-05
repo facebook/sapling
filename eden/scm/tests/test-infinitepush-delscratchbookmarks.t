@@ -1,5 +1,5 @@
 #chg-compatible
-#debugruntest-incompatible
+#require no-eden
 
   $ configure dummyssh
   $ enable commitcloud
@@ -187,4 +187,3 @@ Delete all the things !
   $ sl book -a
   no bookmarks set
      remote/master             ac312cb08db5
-

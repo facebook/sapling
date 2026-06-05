@@ -1,5 +1,4 @@
 #chg-compatible
-#debugruntest-incompatible
 
   $ eagerepo
 Fsmonitor makes the size numbers less predicatable.

@@ -1,7 +1,5 @@
 #modern-config-incompatible
 
-#debugruntest-incompatible
-
 #require no-eden
 
 #chg-compatible

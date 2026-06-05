@@ -1,5 +1,4 @@
 #chg-compatible
-#debugruntest-incompatible
 
   $ remove() {
   >     sl rm $@
@@ -9,7 +8,7 @@
   > import os
   > paths = []
   > for root, dirs, files in os.walk("."):
-  >     dirs[:] = [d for d in dirs if d != ".sl"]
+  >     dirs[:] = [d for d in dirs if d not in {".sl", ".eden"}]
   >     paths.extend(os.path.join(root, name) for name in files)
   > for path in sorted(paths):
   >     print(path)

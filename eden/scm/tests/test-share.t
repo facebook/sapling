@@ -1,7 +1,6 @@
 #chg-compatible
-#debugruntest-incompatible
 
-#require killdaemons
+#require killdaemons no-eden
 
   $ enable share
 

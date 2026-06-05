@@ -1,5 +1,4 @@
 #chg-compatible
-#debugruntest-incompatible
 
   $ configure mutation-norecord
   $ . "$TESTDIR/library.sh"
