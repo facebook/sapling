@@ -1,5 +1,4 @@
 #chg-compatible
-#debugruntest-incompatible
 
   $ eagerepo
 
@@ -31,7 +30,7 @@ Make sure to enable tracking
   [255]
 
 Tests 'sl pull --rebase' rebases from the active tracking bookmark onto the appropriate remote changes.
-  $ setglobalconfig extensions.rebase=
+  $ enable rebase
   $ cd ../remoterepo
 
 Create remote changes
