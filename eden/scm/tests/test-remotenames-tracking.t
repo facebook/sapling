@@ -1,5 +1,6 @@
 #chg-compatible
-#debugruntest-incompatible
+#inprocess-hg-incompatible
+#require no-eden
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig ui.ignorerevnum=true
 
@@ -15,7 +16,10 @@ Make sure we don't fail when rebase doesn't exist
   unknown command 'rebase'
   (use 'sl help' to get help)
   [255]
-  $ setglobalconfig extensions.rebase=
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > rebase=
+  > EOF
 
 Create a tracking bookmark
 
@@ -44,7 +48,7 @@ Create a tracking bookmark
   $ sl book -v
      a                         fdceb0e57656
    * b                         dea4e1d2ca0e            [a: 1 ahead, 1 behind]
-  $ sl rebase --tool :fail
+  $ sl rebase -d a --tool :fail
   rebasing dea4e1d2ca0e "b" (b)
   unresolved conflicts (see sl resolve, then sl rebase --continue)
   [1]
@@ -112,7 +116,7 @@ Test push with explicit default path
 
 Test that we don't try to push if tracking bookmark isn't a remote bookmark
 
-  $ setglobalconfig remotenames.forceto=true
+  $ setconfig remotenames.forceto=true
   $ sl book c -t foo
   $ sl push
   abort: must specify --to when pushing
@@ -122,7 +126,7 @@ Test that we don't try to push if tracking bookmark isn't a remote bookmark
 Test renaming a remote and tracking
 
   $ sl dbsh -c "with repo.lock(), repo.transaction('tr'): repo.svfs.writeutf8('remotenames', '')"
-  $ setglobalconfig remotenames.rename.default=remote
+  $ setconfig remotenames.rename.default=remote
   $ sl pull
   pulling from test:repo1
   $ sl book c -t remote/a
