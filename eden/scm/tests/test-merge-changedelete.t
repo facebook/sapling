@@ -1,5 +1,5 @@
 #chg-compatible
-#debugruntest-incompatible
+#require no-eden
 
 
 Tests for change/delete conflicts, including:
@@ -642,10 +642,12 @@ invocations.)
   >         ref="$TESTTMP/$tool.status"
   >         sl resolve --unmark --all
   >         sl resolve --tool ":$tool" --all --config ui.interactive=True
-  >         status > "$TESTTMP/compare.status" 2>&1
+  >         status 2>&1 | tee "$TESTTMP/compare.status" >/dev/null
   >         echo '--- diff of status ---'
-  >         if cmp "$TESTTMP/$tool.status" "$TESTTMP/compare.status" || diff -U8 "$TESTTMP/$tool.status" "$TESTTMP/compare.status"; then
+  >         if cmp "$TESTTMP/$tool.status" "$TESTTMP/compare.status"; then
   >             echo '(status identical)'
+  >         else
+  >             diff -u "$TESTTMP/$tool.status" "$TESTTMP/compare.status"
   >         fi
   >         lasttool="$tool"
   >         echo
@@ -1106,4 +1108,3 @@ Take p1 (contents "bar\n"):
   $ sl st
   $ cat file
   bar
-
