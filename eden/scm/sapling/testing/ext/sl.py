@@ -25,6 +25,57 @@ from ..t.shext import shellenv, wrap, wrapexe
 from .python import python
 
 
+class _UiOutput:
+    """Binary output wrapper for a ui object passed as rawsystem(out=...)."""
+
+    def __init__(self, ui):
+        self._ui = ui
+
+    @property
+    def closed(self) -> bool:
+        return False
+
+    def write(self, data) -> int:
+        if isinstance(data, str):
+            self._ui.write(data)
+            return len(data)
+        data = bytes(data)
+        self._ui.writebytes(data)
+        return len(data)
+
+    def flush(self) -> None:
+        self._ui.flush()
+
+    def readable(self) -> bool:
+        return False
+
+    def writable(self) -> bool:
+        return True
+
+    def seekable(self) -> bool:
+        return False
+
+    def isatty(self) -> bool:
+        return False
+
+    def close(self) -> None:
+        pass
+
+
+def _wrap_system_output(out):
+    if (
+        out is not None
+        and out.__class__.__module__ == "sapling.ui"
+        and out.__class__.__name__ == "ui"
+    ):
+        # ui.system(..., subproc=True) passes the ui object itself as
+        # rawsystem(out=...) so subprocess output is captured by the active
+        # ui buffer. debugruntest's nested in-process commands need binary-ish
+        # IO instead, so write through ui.writebytes() to keep that capture.
+        return _UiOutput(out)
+    return out
+
+
 def testsetup(t: TestTmp):
     _checkenvironment()
 
@@ -387,6 +438,7 @@ def _rawsystem(
 ):
     # use testing.sh.interpcode to run the command
     env = shenv.nested(Scope.SHELL)
+    out = _wrap_system_output(out)
     env.stdin = stdin
     env.stdout = out or stdout
     env.stderr = out or stderr
