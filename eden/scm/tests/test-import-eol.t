@@ -1,5 +1,4 @@
 #chg-compatible
-#debugruntest-incompatible
 
 
   $ cat > makepatch.py <<'EOF'
@@ -131,10 +130,10 @@ auto EOL on new file or source without any EOL
 
 Test --eol and binary patches
 
-  $ printf "a\x00\nb\r\nd" > b
+  $ printf "a\0\nb\r\nd" > b
   $ sl ci -Am addb
   adding b
-  $ printf "a\x00\nc\r\nd" > b
+  $ printf "a\0\nc\r\nd" > b
   $ sl diff --git > bin.diff
   $ sl revert --no-backup b
 
