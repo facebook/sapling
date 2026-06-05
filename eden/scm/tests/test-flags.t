@@ -1,7 +1,6 @@
 #chg-compatible
-#debugruntest-incompatible
 
-#require execbit
+#require execbit no-eden
 
   $ configure modernclient
 
@@ -16,7 +15,8 @@
   $ newclientrepo test3 test1_server book
 
   $ newclientrepo test2 test1_server book
-  $ chmod +x a
+  $ chmod u+x a
+  $ chmod g+x a
   $ sl ci -m "chmod +x a"
   $ sl push -q -r . --to book2 --create
 
