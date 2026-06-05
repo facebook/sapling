@@ -1,21 +1,19 @@
 #chg-compatible
-#debugruntest-incompatible
 
-#require execbit
+#require execbit version-control
 
   $ eagerepo
-  $ . "$TESTDIR/helpers-testrepo.sh"
-  $ cd "`dirname "$TESTDIR"`"
+  $ sl-source-files '**' > "$TESTTMP/filelist"
 
-  $ testrepohg files . > "$TESTTMP/filelist"
-
-  $ python << EOF
+  $ $PYTHON << EOF
   > import os, stat
+  > source_root = os.path.dirname(os.environ["TESTDIR"])
   > for path in open(os.path.join(os.environ["TESTTMP"], "filelist")).read().splitlines():
   >     if path.startswith("fb/") or path.startswith("tests/sapling"):
   >         continue
-  >     content = open(path, "rb").read()
-  >     isexec = bool(stat.S_IEXEC & os.stat(path).st_mode)
+  >     fullpath = os.path.join(source_root, path)
+  >     content = open(fullpath, "rb").read()
+  >     isexec = bool(stat.S_IEXEC & os.stat(fullpath).st_mode)
   >     ispy = path.endswith(".py")
   >     issh = path.endswith(".sh")
   >     isrs = path.endswith(".rs")

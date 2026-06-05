@@ -1,12 +1,12 @@
 #chg-compatible
 
-#require test-repo no-eden
+#require version-control no-eden
 
   $ eagerepo
-  $ . "$TESTDIR/helpers-testrepo.sh"
   $ cd "$TESTDIR"/..
+  warning: no longer inside TESTTMP
 
-  $ testrepohg files . > $TESTTMP/filelist
-  $ PYTHONPATH= ./contrib/fix-code.py --dry-run `cat $TESTTMP/filelist`
+  $ sl-source-files '**' > $TESTTMP/filelist
+  $ PYTHONPATH= $PYTHON "$TESTDIR/../contrib/fix-code.py" --dry-run `cat $TESTTMP/filelist`
 # In case the above list is not empty, run 'contrib/fix-code.py FILE...' to
 # fix them.

@@ -1,9 +1,8 @@
 #chg-compatible
 
-#require test-repo normal-layout no-eden
+#require version-control normal-layout no-eden
 
   $ eagerepo
-  $ . "$TESTDIR/helpers-testrepo.sh"
   $ enable amend undo
   $ cat <<'EOF' > scanhelptopics.py
   > from __future__ import absolute_import, print_function
@@ -14,7 +13,8 @@
   >     msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
   > topics = set()
   > topicre = re.compile(r':prog:`help ([a-z0-9\-.]+)`')
-  > for fname in sys.argv:
+  > paths = sys.argv[1:] or [line.strip() for line in sys.stdin]
+  > for fname in paths:
   >     with open(fname) as f:
   >         topics.update(m.group(1) for m in topicre.finditer(f.read()))
   > for s in sorted(topics):
@@ -24,9 +24,6 @@
   $ cd "$TESTDIR"/..
 
 Check if ":prog:`help TOPIC`" is valid:
-(use "xargs -n1 -t" to see which help commands are executed)
-
-  $ NPROC=`sl debugpython -- -c 'import multiprocessing; print(str(multiprocessing.cpu_count()))'`
-  $ testrepohg files 'glob:sapling/**/*.py' \
+  $ sl-source-files 'sapling/**/*.py' \
   > | sed 's|\\|/|g' \
-  > | xargs $PYTHON "$TESTTMP/scanhelptopics.py" > $TESTTMP/topics
+  > | $PYTHON "$TESTTMP/scanhelptopics.py" > $TESTTMP/topics

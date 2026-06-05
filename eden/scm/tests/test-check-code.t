@@ -1,19 +1,31 @@
 #chg-compatible
 
-#require test-repo no-eden
+#require version-control no-eden
 
   $ eagerepo
-  $ . "$TESTDIR/helpers-testrepo.sh"
   $ cd "$TESTDIR"/..
+  warning: no longer inside TESTTMP
 
 New errors are not allowed. Warnings are strongly discouraged.
 (The writing "no-che?k-code" is for not skipping this file when checking.)
 
-  $ testrepohg files . | grep -Ev "^(sapling/ext/extlib/pywatchman|lib/cdatapack|lib/third-party|sapling/thirdparty|fb|newdoc|tests|sapling/templates/static|i18n|slides|.*\\.(bin|bindag|hg|pdf|jpg)$)" \
+  $ sl-source-files '**' | $PYTHON -c 'import re, sys; exclude = re.compile(r"^(build\.py|lib/virtual-repo/virtual-tree/src/serialized/create_example\.py|sapling/ext/extlib/pywatchman|lib/cdatapack|lib/third-party|sapling/thirdparty|fb|newdoc|tests|sapling/templates/static|i18n|slides|.*\.(bin|bindag|hg|pdf|jpg)$)"); [sys.stdout.write(path) for path in sys.stdin if not exclude.search(path.rstrip("\n").replace("\\", "/"))]' \
   > | sed 's-\\-/-g' > $TESTTMP/files.txt
 
-  $ NPROC=`sl debugpython -- -c 'import multiprocessing; print(str(multiprocessing.cpu_count()))'`
-  $ cat $TESTTMP/files.txt | PYTHONPATH= xargs -n64 -P $NPROC contrib/check-code.py --warnings --per-file=0 | LC_ALL=C sort
+  $ PYTHONPATH= $PYTHON << EOF | LC_ALL=C sort
+  > import os
+  > import subprocess
+  > import sys
+  > files = open(os.path.join(os.environ["TESTTMP"], "files.txt")).read().splitlines()
+  > env = os.environ.copy()
+  > env["PYTHONPATH"] = ""
+  > for i in range(0, len(files), 64):
+  >     subprocess.run(
+  >         [sys.executable, "contrib/check-code.py", "--warnings", "--per-file=0"] + files[i : i + 64],
+  >         check=True,
+  >         env=env,
+  >     )
+  > EOF
   Skipping sapling/commands/eden.py it has no-che?k-code (glob)
   Skipping sapling/ext/globalrevs.py it has no-che?k-code (glob)
   Skipping sapling/httpclient/__init__.py it has no-che?k-code (glob)
@@ -35,4 +47,3 @@ New errors are not allowed. Warnings are strongly discouraged.
   ...         print('commands in debugcommands.py not sorted; first differing '
   ...               'command is %s; expected %s' % (commands[i], command))
   ...         break
-

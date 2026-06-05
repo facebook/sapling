@@ -20,7 +20,6 @@ import glob
 import os
 import re
 import sys
-from distutils.version import LooseVersion
 
 
 HAVE_FB = os.path.exists(
@@ -88,6 +87,14 @@ def fixpaths(paths):
 _crateversions = {}  # {crate: version} pinned by Cargo.lock
 
 
+def crateversionkey(version):
+    """Return a sort key for Cargo package versions."""
+    main, _, _build = version.partition("+")
+    core, prerelease_sep, prerelease = main.partition("-")
+    numbers = tuple(int(part) for part in core.split("."))
+    return numbers, prerelease_sep == "", prerelease
+
+
 def crateversion(crate):
     """Read Cargo.lock to find out the version to use. Return the version.
     For example, crateversion("libc") might return a string '2.1'.
@@ -119,9 +126,9 @@ def crateversion(crate):
                             value = value.lstrip('"').rstrip('"')
                             # Pick the latest version
                             oldversion = _crateversions.get(currentcrate, None)
-                            if not oldversion or LooseVersion(
+                            if not oldversion or crateversionkey(
                                 oldversion
-                            ) < LooseVersion(value):
+                            ) < crateversionkey(value):
                                 _crateversions[currentcrate] = value
     return _crateversions.get(crate, "*")
 

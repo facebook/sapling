@@ -306,6 +306,7 @@ def has_hardlink():
 
 
 @check("hardlink-whitelisted", "hardlinks on whitelisted filesystems")
+# @lint-ignore BIASEDTERMPY legacy hghave feature name
 def has_hardlink_whitelisted():
     from sapling import fscap, util
 
@@ -393,6 +394,15 @@ def has_outer_repo():
     return not matchoutput("hg root 2>&1", rb"abort: no repository found", True)
 
 
+@check("version-control", "version-controlled source tree")
+def has_version_control():
+    try:
+        with open(os.devnull, "wb") as devnull:
+            return subprocess.call(["hg", "root"], stdout=devnull, stderr=devnull) == 0
+    except OSError:
+        return False
+
+
 @check("windows", "Windows")
 def has_windows():
     return os.name == "nt"
@@ -405,15 +415,6 @@ def has_system_sh():
 
 @check("serve", "platform and python can manage 'hg serve -d'")
 def has_serve():
-    return True
-
-
-@check("test-repo", "running tests from repository")
-def has_test_repo():
-    # This used to check for the existence of a .hg folder to ensure a repo (so
-    # it can run `hg files`). Internally, we'll always have a repo, and
-    # externally we'll likely use git to publish so we'll need another solution
-    # there anyways.
     return True
 
 
