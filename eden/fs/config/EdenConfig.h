@@ -848,6 +848,16 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Whether `eden restart --graceful` should fall back to a full restart when
+   * the current FUSE transport config differs from the transport negotiated by
+   * the running mounts.
+   */
+  ConfigSetting<bool> fuseRestartOnTransportMismatch{
+      "fuse:restart-on-transport-mismatch",
+      false,
+      this};
+
+  /**
    * The io_uring queue depth to use when the FUSE io_uring transport is
    * enabled. Match libfuse's current default.
    */

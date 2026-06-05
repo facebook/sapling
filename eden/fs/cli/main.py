@@ -2921,13 +2921,6 @@ class RestartCmd(Subcmd):
     def _graceful_restart(self, instance: EdenInstance) -> int:
         print("Performing a graceful restart...")
 
-        # Clean up legacyephemeral checkouts before the takeover attempt. With this decision, there
-        # is a tradeoff for the case of unsuccessful takeover and old daemon recovery: The old
-        # daemon will not be able to recover the legacy ephemeral checkouts. Due to the
-        # nature of these checkouts, the tradeoff is acceptable considering the complexity of
-        # getting the recovery logic right for this edge case.
-        remove_legacyephemeral_checkouts(instance, ui.get_output())
-
         with instance.get_telemetry_logger().new_sample(
             "graceful_restart"
         ) as telemetry_sample:
@@ -2936,6 +2929,53 @@ class RestartCmd(Subcmd):
             )
             telemetry_sample.add_string("eden_dir", eden_dir_normalized)
             telemetry_sample.add_bool("is_default_config_dir", is_default_config_dir)
+            if config_mod.is_fuse_transport_mismatch_restart_enabled(instance):
+                transport_mismatches = config_mod.get_fuse_transport_mismatches(
+                    instance
+                )
+            else:
+                transport_mismatches = []
+
+            if transport_mismatches:
+                print(
+                    "FUSE transport config changed; performing a full restart instead of graceful restart."
+                )
+                for mismatch in transport_mismatches:
+                    print(
+                        f"  {mismatch.mount}: running {mismatch.active_transport}, configured {mismatch.desired_transport}"
+                    )
+                health = instance.check_health()
+                edenfs_pid = health.pid
+                if edenfs_pid is None:
+                    telemetry_sample.fail(
+                        "FUSE transport mismatch required full restart, but EdenFS was not running"
+                    )
+                    return self._start(instance)
+
+                status = self._full_restart(
+                    instance,
+                    edenfs_pid,
+                    self.args.migrate_to,
+                    self.args.prompt,
+                    self.args.allow_root,
+                )
+                instance.log_sample(
+                    "full_restart",
+                    success=status == 0,
+                    triggered_by="fuse_transport_mismatch",
+                )
+                if status != 0:
+                    telemetry_sample.fail(
+                        "FUSE transport mismatch fallback full restart failed"
+                    )
+                return status
+
+            # Clean up legacyephemeral checkouts before the takeover attempt. With this decision, there
+            # is a tradeoff for the case of unsuccessful takeover and old daemon recovery: The old
+            # daemon will not be able to recover the legacy ephemeral checkouts. Due to the
+            # nature of these checkouts, the tradeoff is acceptable considering the complexity of
+            # getting the recovery logic right for this edge case.
+            remove_legacyephemeral_checkouts(instance, ui.get_output())
 
             # The status here is returned by the exit status of the startup
             # logger. If this is successful, we will ensure the new process

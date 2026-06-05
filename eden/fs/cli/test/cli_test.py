@@ -10,9 +10,9 @@ import argparse
 import os
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
-from eden.fs.cli import main as main_mod
+from eden.fs.cli import config as config_mod, main as main_mod, telemetry
 from eden.fs.cli.config import (
     CheckoutConfig,
     DEFAULT_REVISION,
@@ -145,6 +145,88 @@ class GlobalOptionEnvDefaultsTest(unittest.TestCase):
             args = self.parse_args("--config-dir", "$EDEN_TEST_BASE/cfg", "--version")
 
         self.assertEqual(args.config_dir, "/expanded/base/cfg")
+
+
+class RestartTest(unittest.TestCase):
+    def make_restart_cmd(self) -> main_mod.RestartCmd:
+        restart_cmd = main_mod.RestartCmd(argparse.ArgumentParser())
+        restart_cmd.args = argparse.Namespace(
+            allow_root=False,
+            daemon_binary=None,
+            migrate_to=None,
+            preserved_vars=None,
+            prompt=False,
+        )
+        return restart_cmd
+
+    def test_graceful_restart_falls_back_on_transport_mismatch(self) -> None:
+        restart_cmd = self.make_restart_cmd()
+        instance = MagicMock()
+        instance.state_dir = Path("/home/test/.eden")
+        instance.get_telemetry_logger.return_value = telemetry.NullTelemetryLogger()
+        instance.check_health.return_value = MagicMock(pid=1234)
+        mismatch = config_mod.FuseTransportMismatch(
+            mount=Path("/mnt/eden"),
+            active_transport="devfuse",
+            desired_transport="io_uring",
+        )
+
+        with (
+            patch.object(
+                config_mod,
+                "get_fuse_transport_mismatches",
+                return_value=[mismatch],
+            ),
+            patch.object(
+                config_mod,
+                "is_fuse_transport_mismatch_restart_enabled",
+                return_value=True,
+            ),
+            patch.object(main_mod, "remove_legacyephemeral_checkouts") as remove_legacy,
+            patch.object(restart_cmd, "_full_restart", return_value=0) as full_restart,
+        ):
+            self.assertEqual(0, restart_cmd._graceful_restart(instance))
+
+        remove_legacy.assert_not_called()
+        full_restart.assert_called_once_with(
+            instance,
+            1234,
+            None,
+            False,
+            False,
+        )
+        instance.log_sample.assert_called_once_with(
+            "full_restart",
+            success=True,
+            triggered_by="fuse_transport_mismatch",
+        )
+
+    def test_graceful_restart_skips_transport_check_when_disabled(self) -> None:
+        restart_cmd = self.make_restart_cmd()
+        instance = MagicMock()
+        instance.get_telemetry_logger.return_value = telemetry.NullTelemetryLogger()
+
+        with (
+            patch.object(
+                config_mod,
+                "is_fuse_transport_mismatch_restart_enabled",
+                return_value=False,
+            ),
+            patch.object(
+                config_mod,
+                "get_fuse_transport_mismatches",
+                side_effect=AssertionError("transport mismatch check should be gated"),
+            ) as get_mismatches,
+            patch.object(main_mod, "remove_legacyephemeral_checkouts"),
+            patch.object(
+                main_mod.daemon,
+                "gracefully_restart_edenfs_service",
+                return_value=0,
+            ),
+        ):
+            self.assertEqual(0, restart_cmd._graceful_restart(instance))
+
+        get_mismatches.assert_not_called()
 
 
 class ListTest(unittest.TestCase):

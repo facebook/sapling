@@ -292,6 +292,8 @@ class AbstractEdenInstance:
 
     def get_checkouts(self) -> List["EdenCheckout"]: ...
 
+    def get_mounts(self) -> Dict[Path, ListMountInfo]: ...
+
 
 class EdenInstance(AbstractEdenInstance):
     """This class contains information about a particular edenfs instance.
@@ -1881,6 +1883,19 @@ def parse_snapshot_component(buf: bytes, scm_type: str) -> Tuple[str, Optional[b
 
 _MIGRATE_EXISTING_TO_NFS = "core.migrate_existing_to_nfs"
 _MIGRATE_EXISTING_TO_NFS_ALL_MACOS = "core.migrate_existing_to_nfs_all_macos"
+_FUSE_USE_IO_URING = "fuse.use-io-uring"
+_FUSE_IO_URING_KERNEL_RELEASE_REGEX = "fuse.io-uring-kernel-release-regex"
+_FUSE_RESTART_ON_TRANSPORT_MISMATCH = "fuse.restart-on-transport-mismatch"
+_DEFAULT_FUSE_IO_URING_KERNEL_RELEASE_REGEX = r"^6\.13\."
+
+FUSE_TRANSPORT_DEVFUSE = "devfuse"
+FUSE_TRANSPORT_IO_URING = "io_uring"
+
+
+class FuseTransportMismatch(typing.NamedTuple):
+    mount: Path
+    active_transport: str
+    desired_transport: str
 
 
 # Fuse is still not functional on Ventura, so users will need to use NFS on
@@ -1901,6 +1916,67 @@ def should_migrate_mount_protocol_to_nfs(instance: AbstractEdenInstance) -> bool
         return instance.get_config_bool(_MIGRATE_EXISTING_TO_NFS, default=False)
 
     return False
+
+
+def is_fuse_transport_mismatch_restart_enabled(
+    instance: AbstractEdenInstance,
+) -> bool:
+    return sys.platform == "linux" and instance.get_config_bool(
+        _FUSE_RESTART_ON_TRANSPORT_MISMATCH, default=False
+    )
+
+
+def get_desired_fuse_transport(instance: AbstractEdenInstance) -> Optional[str]:
+    if sys.platform != "linux":
+        return None
+
+    if not instance.get_config_bool(_FUSE_USE_IO_URING, default=False):
+        return FUSE_TRANSPORT_DEVFUSE
+
+    kernel_release_regex = instance.get_config_value(
+        _FUSE_IO_URING_KERNEL_RELEASE_REGEX,
+        default=_DEFAULT_FUSE_IO_URING_KERNEL_RELEASE_REGEX,
+    )
+    if not kernel_release_regex:
+        return FUSE_TRANSPORT_DEVFUSE
+
+    try:
+        if re.search(kernel_release_regex, os.uname().release) is not None:
+            return FUSE_TRANSPORT_IO_URING
+    except re.error as ex:
+        log.warning(
+            "Invalid FUSE io_uring kernel release regex %r: %s",
+            kernel_release_regex,
+            ex,
+        )
+
+    return FUSE_TRANSPORT_DEVFUSE
+
+
+def get_fuse_transport_mismatches(
+    instance: AbstractEdenInstance,
+) -> List[FuseTransportMismatch]:
+    if sys.platform != "linux":
+        return []
+
+    desired_transport = get_desired_fuse_transport(instance)
+    if desired_transport is None:
+        return []
+
+    mismatches: List[FuseTransportMismatch] = []
+    for mount_info in instance.get_mounts().values():
+        active_transport = mount_info.fuse_transport
+        if active_transport is None:
+            continue
+        if active_transport != desired_transport:
+            mismatches.append(
+                FuseTransportMismatch(
+                    mount=mount_info.path,
+                    active_transport=active_transport,
+                    desired_transport=desired_transport,
+                )
+            )
+    return mismatches
 
 
 _MIGRATE_EXISTING_TO_IN_MEMORY_CATALOG = "core.migrate_existing_to_in_memory_catalog"
