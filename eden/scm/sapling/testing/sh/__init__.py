@@ -30,6 +30,8 @@ Simple command:
     '(100) (no-eol)\n'
     >>> t('echo :')
     ':\n'
+    >>> t("printf 'a\\nb\\n' | grep -E 'a|c'")
+    'a\n'
 
 Expanding envvar:
 

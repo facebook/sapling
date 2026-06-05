@@ -1103,6 +1103,9 @@ def grep(args: List[str], arg0: str, stdin: BinaryIO, fs: ShellFS, stdout: Binar
         elif flag == "-e":
             extended = True
             arg0 = "egrep"
+        elif flag == "-E" or flag == "--extended-regexp":
+            extended = True
+            arg0 = "egrep"
         elif flag == "-o":
             only = True
         elif flag == "-q" or flag == "--quiet" or flag == "--silent":

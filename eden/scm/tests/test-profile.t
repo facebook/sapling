@@ -1,4 +1,3 @@
-#debugruntest-incompatible
   $ eagerepo
 test --time
 

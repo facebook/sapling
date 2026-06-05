@@ -12,6 +12,7 @@
 import collections
 import dis
 import inspect
+import runpy
 import sys
 import traceback
 from typing import BinaryIO, List
@@ -41,23 +42,46 @@ def python(
         # python << EOF ... EOF
         code = stdin.read()
     elif args[0] == "-c":
+        if len(args) < 2:
+            stderr.write(b"python: option -c requires an argument\n")
+            return 1
         code = args[1]
+    elif args[0] == "-m":
+        if len(args) < 2:
+            stderr.write(b"python: option -m requires an argument\n")
+            return 1
+        code = None
     else:
         # python a.py arg1 arg2 ...
         filename = args[0]
         with env.fs.open(args[0], "rb") as f:
             code = f.read()
-    env.args = args
+    env.args = args[1:] if args and args[0] == "-m" else args
     # pyre-fixme[7]: Expected `int` but got implicit return value of `None`.
     with shellenv(env, stdin=stdin, stdout=stdout, stderr=stderr):
-        # pyre-fixme[6]: For 2nd param expected `Union[_PathLike[typing.Any], bytes,
-        #  str]` but got `Union[List[str], str]`.
-        code = compile(code, args and args[0] or "<stdin>", "exec")
         try:
-            globals = {"__name__": "__main__"}
-            if filename is not None:
-                globals["__file__"] = filename
-            exec(code, globals)
+            if args and args[0] == "-m":
+                module = sys.modules.pop(args[1], None)
+                try:
+                    try:
+                        runpy.run_module(args[1], run_name="__main__", alter_sys=True)
+                    except AttributeError as e:
+                        if module is None or not hasattr(module, "main"):
+                            raise
+                        if getattr(e, "name", None) != "get_code":
+                            raise
+                        raise SystemExit(module.main())
+                finally:
+                    if module is not None:
+                        sys.modules[args[1]] = module
+            else:
+                # pyre-fixme[6]: For 2nd param expected `Union[_PathLike[typing.Any], bytes,
+                #  str]` but got `Union[List[str], str]`.
+                code = compile(code, args and args[0] or "<stdin>", "exec")
+                globals = {"__name__": "__main__"}
+                if filename is not None:
+                    globals["__file__"] = filename
+                exec(code, globals)
         except SystemExit as e:
             # pyre-fixme[7]: Expected `int` but got `Union[None, int, str]`.
             return e.code

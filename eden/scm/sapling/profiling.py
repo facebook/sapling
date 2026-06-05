@@ -213,7 +213,7 @@ class profile:
             return
         if profiler not in ("ls", "stat", "flame"):
             # try load profiler from extension with the same name
-            proffn = _loadprofiler(self._ui, profiler)
+            proffn = _loadprofiler(self._ui, profiler) if profiler else None
             if proffn is None:
                 self._ui.warn(_("unrecognized profiler '%s' - ignored\n") % profiler)
                 profiler = "noop"
