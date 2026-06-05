@@ -1,6 +1,7 @@
 #testcases normalcheckout nativecheckout
 #chg-compatible
-#debugruntest-incompatible
+#inprocess-hg-incompatible
+#require no-eden
   $ configure modernclient
   $ enable sparse
   $ setconfig commands.update.check=none
