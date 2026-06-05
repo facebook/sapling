@@ -1,6 +1,12 @@
-#debugruntest-incompatible
 #chg-compatible
+#inprocess-hg-incompatible
 #require no-eden no-windows
+
+  $ cat >> $HGRCPATH <<EOF
+  > [globalrevs]
+  > scmquerylookup=True
+  > edenapilookup=False
+  > EOF
 
 Start up translation service.
  
@@ -17,6 +23,7 @@ Start up translation service.
   >  }
   > }
   > EOF
+  $ setconfig phabricator.use-unix-socket=False
 
 Basic functionality.
 
@@ -235,6 +242,7 @@ Make sure that globalrevs work
   abort: unknown revision 'rWWWHGaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'!
   [255]
 
+  $ curl -s -X PUT http://localhost:$CONDUIT_PORT/basic/GLOBAL_REV/basic/hg/5000/b5dd6b876215cbea8d0cd6c093bf6c0326bb40ab
   $ sl up -q rWWW5000
   $ sl up -q rWWWHGb5dd6b876215cbea8d0cd6c093bf6c0326bb40ab
 
@@ -244,21 +252,21 @@ Make sure that the `globalrevs.scmquerylookup` configuration works as expected.
 - Set the configurations to ensure we are using the ScmQuery lookup for
 globalrevs.
 
-  $ setconfig globalrevs.scmquerylookup=True phabricator.graphql_host=https://nonesuch.intern.facebook.com
+  $ curl -s -X DELETE http://localhost:$CONDUIT_PORT/basic/GLOBAL_REV/basic/hg/5000/b5dd6b876215cbea8d0cd6c093bf6c0326bb40ab
+  $ sl up -q null
+  $ setconfig phabricator.graphql_host=https://nonesuch.intern.facebook.com
 
 - Test that if the ScmQuery lookup throws an exception, we are still able to
 fallback to the slow lookup path.
 
-  $ sl up -q m5000
-  *DeprecationWarning: ssl.PROTOCOL_TLS is deprecated (glob) (?)
-  *ssl_context = ssl.SSLContext(ssl_options.pop("ssl_version", ssl.PROTOCOL_TLS)) (glob) (?)
-  failed to lookup globalrev 5000 from scmquery: * (glob)
-  failed to lookup globalrev 5000 from scmquery: * (glob)
-  failed to lookup globalrev 5000 from scmquery: * (glob)
+  $ sl up -q m5000 2>&1 | grep 'failed to lookup globalrev 5000 from scmquery' > /dev/null
+  $ sl log -r . -T '{globalrev}\n'
+  5000
 
 - Fix the conduit configurations so that we can mock ScmQuery lookups.
 
   $ setconfig phabricator.graphql_host=http://localhost:$CONDUIT_PORT
+  $ sl up -q null
 
 - Test that the lookup fails because ScmQuery returns no hash corresponding to
 the globalrev 5000.
