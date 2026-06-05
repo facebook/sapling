@@ -1,5 +1,3 @@
-#debugruntest-incompatible
-(debugruntest fails under buck for some reason)
 #chg-compatible
 
 Test histedit extension: Fold commands
