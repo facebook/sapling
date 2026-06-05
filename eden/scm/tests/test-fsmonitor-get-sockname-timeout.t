@@ -1,4 +1,3 @@
-#debugruntest-incompatible
 #require fsmonitor no-windows
 
   $ enable fsmonitor hgevents
