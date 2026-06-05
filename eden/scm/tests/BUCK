@@ -25,7 +25,7 @@ RUN_TEST_PY_FILES = [
     "default_hgrc.py",
 ]
 
-TEST_FILES = [f for f in glob(["**/*"]) if f not in RUN_TEST_PY_FILES and f not in OTHER_FILES]
+TEST_FILES = [f for f in glob(["**/*"]) if f not in OTHER_FILES]
 
 buck_filegroup(
     name = "test_files",

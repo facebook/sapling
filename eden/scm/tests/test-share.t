@@ -336,5 +336,4 @@ test unshare relshared repo
 
 Explicitly kill daemons to let the test exit on Windows
 
-  $ killdaemons.py
-
+  $ $PYTHON $TESTDIR/killdaemons.py

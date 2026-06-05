@@ -32,18 +32,17 @@ def python(
 ) -> int:
     # cannot use 'hg debugpython - ...' - it is one-time (Py_Main -> Py_Finalize)
     # emulate Py_Main instead
+    filename = None
     if not args:
         # python << EOF ... EOF
         code = stdin.read()
-        globals = {"__name__": "__main__"}
     elif args[0] == "-c":
         code = args[1]
-        globals = {"__name__": "__main__"}
     else:
         # python a.py arg1 arg2 ...
+        filename = args[0]
         with env.fs.open(args[0], "rb") as f:
             code = f.read()
-        globals = {"__name__": "__main__", "__file__": args[0]}
     env.args = args
     # pyre-fixme[7]: Expected `int` but got implicit return value of `None`.
     with shellenv(env, stdin=stdin, stdout=stdout, stderr=stderr):
@@ -51,6 +50,9 @@ def python(
         #  str]` but got `Union[List[str], str]`.
         code = compile(code, args and args[0] or "<stdin>", "exec")
         try:
+            globals = {"__name__": "__main__"}
+            if filename is not None:
+                globals["__file__"] = filename
             exec(code, globals)
         except SystemExit as e:
             # pyre-fixme[7]: Expected `int` but got `Union[None, int, str]`.

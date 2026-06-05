@@ -92,6 +92,21 @@ Test output:
   
   # Ran 1 tests, 0 skipped, 0 failed.
 
+Nested tests keep $TESTDIR and $RUNTESTDIR separate:
+
+  $ mkdir nested
+  $ cat > nested/test-runtestdir.t << 'EOF'
+  >   $ [ -f "$TESTDIR/test-runtestdir.t" ] && echo testdir-ok
+  >   testdir-ok
+  >   $ [ -f "$RUNTESTDIR/tinit.sh" ] && echo runtestdir-ok
+  >   runtestdir-ok
+  >   $ [ "$TESTDIR" = "$RUNTESTDIR" ] || echo separate
+  >   separate
+  > EOF
+
+  $ sl debugruntest nested/test-runtestdir.t
+  # Ran 1 tests, 0 skipped, 0 failed.
+
   $ sl debugruntest -j1 test-*.t test-foo.t test-bar.t
   test-assert.t ----------------------------------------------------------------
      1 >>> assert False

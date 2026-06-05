@@ -29,15 +29,16 @@ def testsetup(t: TestTmp):
     _checkenvironment()
 
     testdir = t.getenv("TESTDIR")
+    runtestdir = _get_runtestdir(t)
     environ_before_test = os.environ.copy()
     source_root = os.path.dirname(testdir)
 
     # consider run-tests.py --watchman
     use_watchman = os.getenv("HGFSMONITOR_TESTS") == "1"
 
-    # extra hgrc fixup via $TESTDIR/features.py
+    # extra hgrc fixup via $RUNTESTDIR/features.py
     testfile = t.getenv("TESTFILE")
-    featurespy = os.path.join(testdir, "features.py")
+    featurespy = os.path.join(runtestdir, "features.py")
 
     inprocesshg = True
     modernconfigs = True
@@ -49,7 +50,7 @@ def testsetup(t: TestTmp):
         if "#modern-config-incompatible" in content:
             modernconfigs = False
 
-    hgrc = _get_hgrc(testdir, use_watchman, str(t.path), modernconfigs)
+    hgrc = _get_hgrc(runtestdir, use_watchman, str(t.path), modernconfigs)
 
     hgrcpath = t.path / "config"
     hgrcpath.write_bytes(hgrc.encode())
@@ -63,8 +64,8 @@ def testsetup(t: TestTmp):
                 testname = os.path.basename(testfile)
                 setup(testname, str(hgrcpath))
 
-    # the 'f' utility in $TESTDIR/f
-    fpath = os.path.join(testdir, "f")
+    # the 'f' utility in $RUNTESTDIR/f
+    fpath = os.path.join(runtestdir, "f")
     if os.path.exists(fpath):
         fmain = None
 
@@ -111,6 +112,7 @@ def testsetup(t: TestTmp):
         "LC_ALL": "en_US.UTF-8",
         "LOCALIP": "127.0.0.1",
         "RUST_BACKTRACE": "0",
+        "RUNTESTDIR": runtestdir,
         "SL_CONFIG_PATH": str(hgrcpath),
         # Normalize TERM to avoid control sequence variations.
         # We use a non-existent terminal to avoid any terminfo dependency.
@@ -141,8 +143,7 @@ def testsetup(t: TestTmp):
     for k, v in environ.items():
         t.setenv(k, v)
 
-    # source tinit.sh
-    tinitpath = os.path.join(testdir, "tinit.sh")
+    tinitpath = os.path.join(runtestdir, "tinit.sh")
     if os.path.exists(tinitpath):
         with open(tinitpath, "rb") as f:
             t.sheval(f.read().decode())
@@ -199,7 +200,10 @@ def testsetup(t: TestTmp):
 
 
 def _register_source_files_command(
-    t: TestTmp, source_root: str, base_environ: dict[str, str], hgpath: str
+    t: TestTmp,
+    source_root: str,
+    base_environ: dict[str, str],
+    hgpath: str,
 ) -> None:
     def sl_source_files(args, stdout, stderr) -> int:
         if _invalid_source_files_arg(args):
@@ -372,6 +376,10 @@ def _setupmodernclient(t: TestTmp):
     t.setenv("DUMMYSSH_STABLE_ORDER", 1)
     # for commitcloud
     t.setenv("COMMITCLOUD", 1)
+
+
+def _get_runtestdir(t: TestTmp) -> str:
+    return os.path.abspath(t.getenv("RUNTESTDIR") or t.getenv("TESTDIR"))
 
 
 def _rawsystem(

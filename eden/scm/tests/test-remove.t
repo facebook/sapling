@@ -5,8 +5,15 @@
   >     sl rm $@
   >     echo "exit code: $?"
   >     sl st
-  >     # do not use ls -R, which recurses in .sl subdirs on Mac OS X 10.5
-  >     find . -name .sl -prune -o -type f -print | sort
+  >     $PYTHON <<'PY'
+  > import os
+  > paths = []
+  > for root, dirs, files in os.walk("."):
+  >     dirs[:] = [d for d in dirs if d != ".sl"]
+  >     paths.extend(os.path.join(root, name) for name in files)
+  > for path in sorted(paths):
+  >     print(path)
+  > PY
   >     sl up -C .
   > }
 

@@ -636,6 +636,18 @@ def read(args: List[str], stdin: BinaryIO, env: Env) -> int:
 
 
 @command
+def umask(args: List[str]) -> int:
+    import os
+
+    if not args:
+        oldmask = os.umask(0)
+        os.umask(oldmask)
+        return 0
+    os.umask(int(args[0], 8))
+    return 0
+
+
+@command
 def source(args: List[str], env: Env):
     # pyre-fixme[9]: env has type `Env`; used as `Optional[Env]`.
     env = env.parent
@@ -858,6 +870,7 @@ def ls(args: List[str], stdout: BinaryIO, stderr: BinaryIO, fs: ShellFS):
 
     listall = False
     listlong = False
+    recursive = False
     entries = []
     paths_given = False
     for arg in args:
@@ -865,6 +878,8 @@ def ls(args: List[str], stdout: BinaryIO, stderr: BinaryIO, fs: ShellFS):
             listall = True
         elif arg == "-l":
             listlong = True
+        elif arg == "-R":
+            recursive = True
         elif arg.startswith("-"):
             raise NotImplementedError(f"ls with flag {arg}")
         else:
@@ -883,8 +898,6 @@ def ls(args: List[str], stdout: BinaryIO, stderr: BinaryIO, fs: ShellFS):
     if not paths_given:
         entries = [("", listdir("", listall=listall))]
 
-    entries = sorted(entries)
-
     def format_entry(dir: str, entry: str) -> str:
         if listlong:
             full_path = PurePosixPath(dir, entry)
@@ -895,6 +908,38 @@ def ls(args: List[str], stdout: BinaryIO, stderr: BinaryIO, fs: ShellFS):
             return ls_mode + "\n"
         else:
             return f"{entry}\n"
+
+    if recursive:
+
+        def format_child_display(parent_display: str, entry: str) -> str:
+            if parent_display == ".":
+                return f"./{entry}"
+            return str(PurePosixPath(parent_display, entry))
+
+        def collect_recursive(path: str, display: str) -> List[str]:
+            direntries = sorted(listdir(path, listall=listall))
+            lines = [f"{display}:\n"]
+            for entry in direntries:
+                lines.append(format_entry(path, entry))
+            for entry in direntries:
+                childpath = str(PurePosixPath(path, entry))
+                if fs.isdir(childpath):
+                    lines.append("\n")
+                    lines.extend(
+                        collect_recursive(
+                            childpath, format_child_display(display, entry)
+                        )
+                    )
+            return lines
+
+        lines = []
+        for dir, direntries in sorted(entries):
+            display = dir or "."
+            lines.extend(collect_recursive(dir, display))
+        stdout.write("".join(lines).encode())
+        return 0
+
+    entries = sorted(entries)
 
     lines = [
         format_entry(dir, entry)
@@ -1008,6 +1053,7 @@ def grep(args: List[str], arg0: str, stdin: BinaryIO, fs: ShellFS, stdout: Binar
 
     inverse = False
     only = False
+    quiet = False
     extended = arg0 == "egrep"
     before = 0
     after = 0
@@ -1021,6 +1067,8 @@ def grep(args: List[str], arg0: str, stdin: BinaryIO, fs: ShellFS, stdout: Binar
             arg0 = "egrep"
         elif flag == "-o":
             only = True
+        elif flag == "-q" or flag == "--quiet" or flag == "--silent":
+            quiet = True
         elif flag == "-A" or flag == "--after-context":
             after = expect_arg(int, args, flag)
         elif flag == "-B" or flag == "--before-context":
@@ -1059,9 +1107,89 @@ def grep(args: List[str], arg0: str, stdin: BinaryIO, fs: ShellFS, stdout: Binar
                 for j in range(i + 1, min(i + 1 + after, len(lines))):
                     out_lines.add(j)
         out = "".join(lines[i] for i in sorted(out_lines))
-    stdout.write(out.encode())
+    if not quiet:
+        stdout.write(out.encode())
     if not out:
         return 1
+
+
+@command
+def dd(args: List[str], fs: ShellFS) -> int:
+    settings = {}
+    for arg in args:
+        if "=" not in arg:
+            raise NotImplementedError(f"dd {arg}")
+        key, value = arg.split("=", 1)
+        settings[key] = value
+    if settings.get("if") != "/dev/zero":
+        raise NotImplementedError(f"dd if={settings.get('if')}")
+    outpath = settings["of"]
+    size = int(settings.get("bs", "512")) * int(settings.get("count", "1"))
+    with fs.open(outpath, "wb") as f:
+        f.write(b"\0" * size)
+    return 0
+
+
+@command
+def diff(args: List[str], stdout: BinaryIO, fs: ShellFS) -> int:
+    import difflib
+
+    unified = False
+    if args and args[0] == "-u":
+        unified = True
+        args = args[1:]
+    if len(args) != 2:
+        raise NotImplementedError(f"diff {args}")
+    leftpath, rightpath = args
+    with fs.open(leftpath, "rb") as f:
+        left = f.read().decode(errors="replace").splitlines(keepends=True)
+    with fs.open(rightpath, "rb") as f:
+        right = f.read().decode(errors="replace").splitlines(keepends=True)
+    if left == right:
+        return 0
+    if unified:
+        stdout.write(
+            "".join(
+                difflib.unified_diff(left, right, fromfile=leftpath, tofile=rightpath)
+            ).encode()
+        )
+    return 1
+
+
+@command
+def kill(args: List[str]) -> int:
+    if args and args[0] == "-TERM":
+        return 0
+    raise NotImplementedError(f"kill {args}")
+
+
+@command
+def curl(args: List[str], stdout: BinaryIO) -> int:
+    import urllib.request
+
+    method = "GET"
+    url = None
+    i = 0
+    while i < len(args):
+        arg = args[i]
+        if arg == "-s":
+            pass
+        elif arg == "-X":
+            i += 1
+            if i == len(args):
+                raise RuntimeError("curl -X requires an argument")
+            method = args[i]
+        elif arg.startswith("http://") or arg.startswith("https://"):
+            url = arg
+        else:
+            raise NotImplementedError(f"curl {arg}")
+        i += 1
+    if url is None:
+        raise RuntimeError("curl requires a URL")
+    request = urllib.request.Request(url, method=method)
+    with urllib.request.urlopen(request) as response:
+        stdout.write(response.read())
+    return 0
 
 
 @command
@@ -1117,6 +1245,13 @@ def find(args: List[str], fs: ShellFS):
                 appendfilter(lambda p: (fs.stat(p).st_mode & mode) == mode)
             else:
                 raise NotImplementedError(f"find -perm {modestr}")
+        elif arg == "-name":
+            patstr = args[i]
+            i += 1
+
+            from fnmatch import fnmatch
+
+            appendfilter(lambda p, pat=patstr: fnmatch(PurePosixPath(p).name, pat))
         elif arg == "-not":
             negate = True
         elif arg == "-wholename":

@@ -332,6 +332,10 @@ grep:
     '1\n2\n3\n4\n9\n10\n11\n12\n13\n14\n17\n18\n19\n20\n'
     >>> t('seq 20 | grep -B 2 -C 3 2')
     '1\n2\n3\n4\n5\n10\n11\n12\n13\n14\n15\n18\n19\n20\n'
+    >>> t('seq 3 | grep -q 2; echo $?')
+    '0\n'
+    >>> t('seq 3 | grep -q 4; echo $?')
+    '1\n'
 
 sed:
 
@@ -427,6 +431,23 @@ tee:
 
     >>> f('echo a b | tee d e; cat d e')
     'a b\na b\na b\n'
+
+ls -R:
+
+    >>> f('mkdir -p a/b; touch z a/y a/b/x; ls -R | grep -v ":"')
+    'a\nz\n\nb\ny\n\nx\n'
+
+diff:
+
+    >>> f('echo a > x; diff x x; echo $?')
+    '0\n'
+    >>> f('echo a > x; echo b > y; diff -u x y')
+    '--- x\n+++ y\n@@ -1 +1 @@\n-a\n+b\n[1]\n'
+
+dd:
+
+    >>> f('dd if=/dev/zero of=zeros bs=3 count=2; wc -c zeros')
+    '6\n'
 
 test:
 

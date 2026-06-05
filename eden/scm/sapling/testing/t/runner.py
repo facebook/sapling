@@ -379,6 +379,7 @@ def rundoctest(testid: TestId, mismatchcb: Callable[[Mismatch], None]):
 def runttest(testid: TestId, exts: List[str], mismatchcb: Callable[[Mismatch], None]):
     path = Path(testid.path)
     testdir = path.parent
+    runtestdir = _get_runtestdir()
     exts = exts[:]
     try:
         tcode = path.read_bytes().decode()
@@ -428,18 +429,19 @@ from sapling.testing.t.runtime import TestTmp
 
 TESTFILE = {repr(str(path))}
 TESTDIR = {repr(str(testdir))}
+RUNTESTDIR = {repr(runtestdir)}
 
 def _run_once(testcase=None):
     t = TestTmp(tmpprefix={repr(path.name)}, testcase=testcase)
     t.setenv("TESTFILE", TESTFILE)
     t.setenv("TESTDIR", TESTDIR)
     t.setenv("DEBUGRUNTEST_ENABLED", "1")
-    t.setenv("RUNTESTDIR", TESTDIR)  # compatibility: path of run-tests.py
+    t.setenv("RUNTESTDIR", RUNTESTDIR)
 
     for exe in {sorted(exeneeded)}:
         t.requireexe(exe)
 
-    sys.path += [TESTDIR, str(t.path)]
+    sys.path += [TESTDIR, RUNTESTDIR, str(t.path)]
 
 {extcode}
 
@@ -467,6 +469,23 @@ def _run_once(testcase=None):
     compiled = compile(pycode, str(pypath), "exec")
     pyenv = {"mismatchcb": mismatchcb}
     exec(compiled, pyenv)
+
+
+def _get_runtestdir() -> str:
+    for name in ("RUNTESTDIR", "SL_DEBUGRUNTEST_DIR"):
+        value = os.getenv(name)
+        if value:
+            return os.path.abspath(value)
+
+    modulefile = globals().get("__file__")
+    if isinstance(modulefile, str) and not modulefile.startswith(("static:", "<")):
+        sourcepath = Path(modulefile).resolve()
+        if len(sourcepath.parents) > 3:
+            candidate = sourcepath.parents[3] / "tests"
+            if (candidate / "tinit.sh").exists():
+                return str(candidate)
+
+    return os.path.abspath(os.getcwd())
 
 
 class filelinesdict(collections.defaultdict):
