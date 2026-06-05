@@ -1,6 +1,6 @@
 #chg-compatible
-#require no-fsmonitor
-#debugruntest-incompatible
+#inprocess-hg-incompatible
+#require no-fsmonitor no-eden
 
   $ setconfig alias.ssl:doc="show a graph of your commits and associated Diff information"
 Short help:
@@ -39,14 +39,26 @@ Short help:
   Commit changes and modify commits:
   
    commit        save all pending changes or specified files in a new commit
+   amend         meld pending changes into the current commit
+   metaedit      edit commit message and other metadata
   
   Rearrange commits:
   
    graft         copy commits from a different location
+   hide          hide commits and their descendants
+   unhide        unhide commits and their ancestors
+  
+  Work with stacks of commits:
+  
+   previous      check out an ancestor commit
+   next          check out a descendant commit
+   split         split a commit into smaller commits
+   fold          combine multiple commits into a single commit
   
   Undo changes:
   
    uncommit      uncommit part or all of the current commit
+   unamend       undo the last amend operation on the current commit
   
   Other commands:
   
@@ -97,14 +109,26 @@ Short help:
   Commit changes and modify commits:
   
    commit        save all pending changes or specified files in a new commit
+   amend         meld pending changes into the current commit
+   metaedit      edit commit message and other metadata
   
   Rearrange commits:
   
    graft         copy commits from a different location
+   hide          hide commits and their descendants
+   unhide        unhide commits and their ancestors
+  
+  Work with stacks of commits:
+  
+   previous      check out an ancestor commit
+   next          check out a descendant commit
+   split         split a commit into smaller commits
+   fold          combine multiple commits into a single commit
   
   Undo changes:
   
    uncommit      uncommit part or all of the current commit
+   unamend       undo the last amend operation on the current commit
   
   Other commands:
   
@@ -155,14 +179,26 @@ Short help:
   Commit changes and modify commits:
   
    commit        save all pending changes or specified files in a new commit
+   amend         meld pending changes into the current commit
+   metaedit      edit commit message and other metadata
   
   Rearrange commits:
   
    graft         copy commits from a different location
+   hide          hide commits and their descendants
+   unhide        unhide commits and their ancestors
+  
+  Work with stacks of commits:
+  
+   previous      check out an ancestor commit
+   next          check out a descendant commit
+   split         split a commit into smaller commits
+   fold          combine multiple commits into a single commit
   
   Undo changes:
   
    uncommit      uncommit part or all of the current commit
+   unamend       undo the last amend operation on the current commit
   
   Other commands:
   
@@ -213,14 +249,26 @@ Short help:
   Commit changes and modify commits:
   
    commit        save all pending changes or specified files in a new commit
+   amend         meld pending changes into the current commit
+   metaedit      edit commit message and other metadata
   
   Rearrange commits:
   
    graft         copy commits from a different location
+   hide          hide commits and their descendants
+   unhide        unhide commits and their ancestors
+  
+  Work with stacks of commits:
+  
+   previous      check out an ancestor commit
+   next          check out a descendant commit
+   split         split a commit into smaller commits
+   fold          combine multiple commits into a single commit
   
   Undo changes:
   
    uncommit      uncommit part or all of the current commit
+   unamend       undo the last amend operation on the current commit
   
   Other commands:
   
@@ -278,6 +326,8 @@ Test extension help:
   
       Enabled extensions:
   
+       amend         extends the existing commit amend functionality
+       commitcloud   back up and sync changesets via the cloud
        conflictinfo
        eden          accelerated sl functionality in Eden checkouts (eden !)
        debugshell    a python shell with repo, changelog & manifest objects
@@ -300,14 +350,12 @@ Test extension help:
       Disabled extensions:
   
        absorb        apply working directory changes to changesets
-       amend         extends the existing commit amend functionality
        arcdiff       (no help text available)
        blackbox      log repository events to a blackbox for debugging
        chistedit
        clienttelemetry
                      provide information about the client in server telemetry
        clonebundles  advertise pre-generated bundles to seed clones
-       commitcloud   back up and sync changesets via the cloud
        crdump        (no help text available)
        debugnetwork  test network connections to the server
        dialect       replace terms with more widely used equivalents
@@ -870,14 +918,26 @@ Test that default list of commands omits extension commands
   Commit changes and modify commits:
   
    commit        save all pending changes or specified files in a new commit
+   amend         meld pending changes into the current commit
+   metaedit      edit commit message and other metadata
   
   Rearrange commits:
   
    graft         copy commits from a different location
+   hide          hide commits and their descendants
+   unhide        unhide commits and their ancestors
+  
+  Work with stacks of commits:
+  
+   previous      check out an ancestor commit
+   next          check out a descendant commit
+   split         split a commit into smaller commits
+   fold          combine multiple commits into a single commit
   
   Undo changes:
   
    uncommit      uncommit part or all of the current commit
+   unamend       undo the last amend operation on the current commit
   
   Other commands:
   
@@ -1025,7 +1085,15 @@ Show nested definitions
   
 Separate sections from subsections
 
-  $ sl help config.format | grep -E '^    ("|-)|^\s*$' | uniq
+  >>> import os, re, subprocess
+  >>> hg = os.environ["HGEXECUTABLEPATH"]
+  >>> out = subprocess.check_output([hg, "help", "config.format"], text=True)
+  >>> previous = None
+  >>> for line in out.splitlines():
+  ...     if re.match(r'    ("|-)|^\s*$', line):
+  ...         if line != previous:
+  ...             print(line)
+  ...         previous = line
       "format"
       --------
   
@@ -1562,5 +1630,6 @@ Compression engines listed in `sl help bundlespec`
 Test usage of section marks in help documents
 
   $ cd "$TESTDIR"/../doc
+  warning: no longer inside TESTTMP (?)
   $ sl debugpython -- check-seclevel.py
 #endif
