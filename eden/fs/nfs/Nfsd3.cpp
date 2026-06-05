@@ -2594,18 +2594,27 @@ void Nfsd3::invalidate(
                               source,
                               stats = std::move(stats)]() mutable {
     XLOGF(DBG9, "Invalidating: {} mode: {}", path.c_str(), mode);
-    if (chmod(path.c_str(), mode) == 0) {
+    const auto chmodResult = chmod(path.c_str(), mode);
+    const auto error = errno;
+    if (chmodResult == 0) {
       incrementNfsGcInvalidationCounter(
           stats, source, &NfsStats::nfsInvalidationGcSuccess);
       XLOGF(DBG9, "Finished invalidating: {}", path.c_str());
       if (onSuccess) {
         onSuccess();
       }
-    } else if (errno == ENOENT) {
+    } else if (error == ENOENT) {
       incrementNfsGcInvalidationCounter(
           stats, source, &NfsStats::nfsInvalidationGcEnoent);
       // ENOENT is expected after removing files.
       XLOGF(DBG9, "Finished invalidating (no longer exists): {}", path.c_str());
+    } else if (error == EACCES) {
+      incrementNfsGcInvalidationCounter(
+          stats, source, &NfsStats::nfsInvalidationGcFailure);
+      // Restricted directories can reject the synthetic chmod used to
+      // invalidate the NFS client cache.
+      XLOGF(
+          DBG9, "Finished invalidating (permission denied): {}", path.c_str());
     } else {
       incrementNfsGcInvalidationCounter(
           stats, source, &NfsStats::nfsInvalidationGcFailure);
@@ -2614,7 +2623,7 @@ void Nfsd3::invalidate(
           "Error invalidating path {} to mode {} using chmod: {}",
           path,
           mode,
-          folly::errnoStr(errno));
+          folly::errnoStr(error));
     }
   });
 }
