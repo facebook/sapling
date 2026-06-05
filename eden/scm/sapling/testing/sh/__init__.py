@@ -30,6 +30,8 @@ Simple command:
     '(100) (no-eol)\n'
     >>> t('echo :')
     ':\n'
+    >>> t('echo ssh://host/repo?read_copy')
+    'ssh://host/repo?read_copy\n'
     >>> t("printf 'a\\nb\\n' | grep -E 'a|c'")
     'a\n'
 

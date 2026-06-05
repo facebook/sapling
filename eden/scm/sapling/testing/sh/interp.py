@@ -546,7 +546,7 @@ INTERP_TYPE_TABLE = {
     "Param": interp,
     "Subst": interpsubst,
     "StarWord": partial(interpfixed, "*"),
-    "QuestionWord": None,
+    "QuestionWord": partial(interpfixed, "?"),
     "SquareOpen": partial(interpfixed, "["),
     "SquareClose": partial(interpfixed, "]"),
     "Tilde": partial(interpfixed, "~"),
