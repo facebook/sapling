@@ -1,5 +1,4 @@
 #chg-compatible
-#debugruntest-incompatible
 
   $ setconfig devel.segmented-changelog-rev-compat=true
 Push merge commits from a treeonly shallow repo to a hybrid treemanifest server
