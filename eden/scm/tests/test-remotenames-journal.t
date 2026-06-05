@@ -1,11 +1,10 @@
 #chg-compatible
-#debugruntest-incompatible
 
 Tests for the journal extension integration with remotenames.
 
 Skip if journal is not available in mercurial
 
-  $ sl help -e journal &>/dev/null || exit 80
+  $ sl help -e journal > /dev/null 2>&1 || exit 80
 
   $ eagerepo
   $ enable journal
@@ -55,4 +54,3 @@ Test second remotebookmark has not been clobbered or has moved since clone
   $ sl journal remote/bmwillnotmove
   previous locations of 'remote/bmwillnotmove':
   94cf1ae9e2c8  pull -q -B bmwillnotmove
-
