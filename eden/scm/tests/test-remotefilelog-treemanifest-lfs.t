@@ -1,6 +1,4 @@
 #chg-compatible
-#debugruntest-incompatible
-
 
   $ . "$TESTDIR/library.sh"
 
@@ -15,12 +13,7 @@
   $ sl book master
   $ cd ..
 
-  $ hgcloneshallow ssh://user@dummy/master shallow
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
-  fetching lazy changelog
-  populating main commit graph
-  updating to tip
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hgcloneshallow ssh://user@dummy/master shallow -q
 
   $ cd shallow
   $ setconfig treemanifest.sendtrees=True
