@@ -1,5 +1,4 @@
 #chg-compatible
-#debugruntest-incompatible
 
 Set up extension and repos
 
@@ -55,7 +54,7 @@ Test that config allows anonymous heads to be pushed
 
 Test that forceto works
 
-  $ setglobalconfig remotenames.forceto=true
+  $ setconfig remotenames.forceto=true
   $ sl push
   abort: must specify --to when pushing
   (see configuration option remotenames.forceto)
@@ -188,6 +187,7 @@ Test that rebasing and pushing works as expected
   $ echo "c" >> a
   $ sl resolve --mark a
   (no more unresolved files)
+  continue: sl rebase --continue
   $ sl --config extensions.rebase= rebase --continue
   rebasing cc61aa6be3dc "c" (headc)
   $ sl log -G -T '{desc} {bookmarks} {remotebookmarks}\n'
