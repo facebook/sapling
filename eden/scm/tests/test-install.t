@@ -1,4 +1,4 @@
-#debugruntest-incompatible
+#inprocess-hg-incompatible
   $ eagerepo
 sl debuginstall
   $ sl debuginstall 2>&1 | grep -v 'checking Python version ' | grep -v 'checking Python lib '
