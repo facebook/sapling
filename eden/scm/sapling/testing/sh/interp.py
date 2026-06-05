@@ -367,7 +367,12 @@ def interpredirect(v, env: Env, mode: str, defaultfd: int = 0) -> InterpResult:
     fd = v[0]
     if fd is None:
         fd = defaultfd
-    path = interp(v[1], env).out
+    res = interp(v[1], env)
+    path = res.out
+    if not res.quoted and (path == "~" or path.startswith("~/")):
+        home = env.getenv("HOME")
+        if home:
+            path = home + path[1:]
     f = env.fs.open(path, mode)
     if fd == 0:
         env.stdin = f

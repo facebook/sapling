@@ -139,6 +139,10 @@ Redirect:
 
     >>> t('echo 1 >/dev/null')
     ''
+    >>> t('HOME=.; echo 1 > ~/.arcrc; cat ./.arcrc')
+    '1\n'
+    >>> t('HOME=.; echo 1 > "~/literal"; cat "~/literal"')
+    '1\n'
     >>> t('echo 1 > a; echo 2 > a; echo 3 >> a; cat a; cat < a')
     '2\n3\n2\n3\n'
     >>> t('echo 1 > a; > a; cat a')
