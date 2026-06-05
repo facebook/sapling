@@ -284,6 +284,49 @@ where
         return Ok(None);
     }
 
+    // Re-root every subtree replacement into this stage's coordinate space. A
+    // replacement at path `P` relates to the stage `prefix` `S` in one of three
+    // ways:
+    //   - `S` is a prefix of `P` (P == S or P under S): the replacement lands
+    //     inside this stage. Keep it, stripping `S` to get a stage-relative path.
+    //   - `P` is a strict ancestor of `S` (the replacement covers this stage from
+    //     above): this stage's content is the sub-slice of the replacement at the
+    //     remaining path `S` relative to `P`. Resolve that sub-path inside each
+    //     replacement entry and place the resolved entries at the stage root.
+    //   - otherwise (disjoint): the replacement does not affect this stage. Drop it.
+    // `MPath::remove_prefix_component` collapses a non-matching path to
+    // `MPath::ROOT` rather than dropping it, so an unguarded `.map(...)` would
+    // wrongly graft disjoint replacements at the stage root; the three-way split
+    // below avoids that. Canonical derivation runs with `prefix == MPath::ROOT`,
+    // which is a prefix of every path and has no strict ancestor, so it always
+    // takes the first branch and its output is unchanged; only non-root
+    // pipeline-stage prefixes exercise the ancestor and disjoint branches.
+    let mut parent_replacements: Vec<(MPath, Option<Vec<Entry<TreeId, Leaf>>>)> = Vec::new();
+    for r in subtree_changes {
+        if prefix.is_prefix_of(&r.path) {
+            parent_replacements.push((
+                r.path.remove_prefix_component(&prefix),
+                Some(r.replacements),
+            ));
+        } else if r.path.is_prefix_of(&prefix) {
+            // Strict ancestor (equality is covered by the branch above). Descend
+            // each replacement entry by the sub-path from `r.path` down to `prefix`.
+            // Resolve entries concurrently while preserving `r.replacements` order
+            // (parent order is significant in the merge below).
+            let sub_path = prefix.remove_prefix_component(&r.path);
+            let resolved: Vec<Entry<TreeId, Leaf>> = future::try_join_all(
+                r.replacements
+                    .into_iter()
+                    .map(|entry| resolve_subpath_in_entry(&ctx, &store, entry, &sub_path)),
+            )
+            .await?
+            .into_iter()
+            .flatten()
+            .collect();
+            parent_replacements.push((MPath::ROOT, Some(resolved)));
+        }
+    }
+
     bounded_traversal::bounded_traversal(
         256,
         MergeNode {
@@ -298,12 +341,7 @@ where
                 }),
             ),
             parents: parents.into_iter().collect(),
-            parent_replacements: PathTree::from_iter(subtree_changes.into_iter().map(|r| {
-                (
-                    r.path.remove_prefix_component(&prefix),
-                    Some(r.replacements),
-                )
-            })),
+            parent_replacements: PathTree::from_iter(parent_replacements),
             // Strip prefix from known_entries keys.
             known_entries: PathTree::from_iter(known_entries.into_iter().map(
                 |(path, maybe_entry)| (path.remove_prefix_component(&prefix), Some(maybe_entry)),
@@ -392,6 +430,39 @@ where
     )
     .map_ok(|result: Option<_>| result.map(|(_, _, entry)| entry))
     .await
+}
+
+/// Resolve `sub_path` inside `entry`, returning the entry that lives at that
+/// relative path (or `None` if it does not exist). An empty `sub_path` resolves
+/// to `entry` itself. A non-empty `sub_path` can only descend into a tree; a leaf
+/// has no subentries, so it resolves to `None`. Used to project an ancestor
+/// subtree replacement down into a deeper pipeline stage.
+async fn resolve_subpath_in_entry<TreeId, Leaf, Store>(
+    ctx: &CoreContext,
+    store: &Store,
+    entry: Entry<TreeId, Leaf>,
+    sub_path: &MPath,
+) -> Result<Option<Entry<TreeId, Leaf>>>
+where
+    Store: Sync + Send,
+    Leaf: Send + Clone,
+    TreeId: StoreLoadable<Store> + Send + Clone,
+    TreeId::Value: Manifest<Store, TreeId = TreeId, Leaf = Leaf> + Send + Sync,
+{
+    let mut current = entry;
+    for element in sub_path {
+        let tree_id = match current {
+            Entry::Tree(tree_id) => tree_id,
+            // A leaf cannot be descended into for a non-empty sub-path.
+            Entry::Leaf(_) => return Ok(None),
+        };
+        let manifest = tree_id.load(ctx, store).await?;
+        match manifest.lookup(ctx, store, element).await? {
+            Some(next) => current = next,
+            None => return Ok(None),
+        }
+    }
+    Ok(Some(current))
 }
 
 // Change is isomorphic to Option, but it makes it easier to understand merge logic

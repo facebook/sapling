@@ -320,31 +320,11 @@ mod tests {
         verify_pipeline_matches_canonical::<NestedDirectories>(fb).await
     }
 
-    // Disjoint subtree-copy divergence: for a subtree copy whose dest is in a
-    // different stage than its source, `derive_manifest_inner` grafts the
-    // out-of-prefix subtree parent_replacement onto the source stage's root,
-    // because `MPath::remove_prefix_component` collapses a non-matching path to
-    // `MPath::ROOT` instead of dropping it. The tip commit also modifies a file
-    // under the source stage, so the terminal "" merge consumes the corrupted
-    // source-stage intermediate and the divergence reaches the terminal "" stage
-    // (reader-visible at the canonical mapping), not just the source stage.
-    // `#[ignore]`d because pipeline output diverges from canonical; the assertion
-    // is deliberately left strict.
-    #[ignore]
     #[mononoke::fbinit_test]
     async fn test_pipeline_matches_canonical_subtree_copy(fb: FacebookInit) -> Result<()> {
         verify_pipeline_matches_canonical::<NestedSubtreeCopy>(fb).await
     }
 
-    // Strict-ancestor subtree-copy divergence: the tip commit copies the whole
-    // `top2` subtree onto `top1`, whose dest path is a strict ancestor of the
-    // deeper `top1/sub` stage, so that stage's content must become the `sub`
-    // sub-slice of the replacement (`top2/sub`). `derive_manifest_inner` drops any
-    // replacement whose path is not under the stage prefix, so the `top1/sub`
-    // stage ignores the copy and derives from its stale parent, diverging from
-    // canonical for all four manifest types. `#[ignore]`d because pipeline output
-    // diverges from canonical; the assertion is deliberately left strict.
-    #[ignore]
     #[mononoke::fbinit_test]
     async fn test_pipeline_matches_canonical_ancestor_subtree_copy(fb: FacebookInit) -> Result<()> {
         verify_pipeline_matches_canonical::<NestedAncestorSubtreeCopy>(fb).await
