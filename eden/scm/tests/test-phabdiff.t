@@ -1,5 +1,4 @@
 #chg-compatible
-#debugruntest-incompatible
 
   $ eagerepo
   $ enable fbcodereview
@@ -97,5 +96,5 @@ Check sl backout template listing the diff properly
   $ sl log -l 1 --template "{phabdiff}\n"
   D98765
   $ sl backout -r . -m "Some default message to avoid the interactive editor" -q
-  $ sl log -l 1 --template '{desc}' | grep "Original Phabricator Diff"
-  Original Phabricator Diff: D98765
+  $ sl log -l 1 --template '{desc}' | grep -q "Original Phabricator Diff: D98765" && echo found
+  found
