@@ -60,9 +60,11 @@ use mononoke_api_hg::HgRepoContext;
 use mononoke_api_hg::HgTreeContext;
 use mononoke_types::MPath;
 use mononoke_types::MPathElement;
+use permission_checker::MononokeIdentitySetExt;
 use rate_limiting::Metric;
 use rate_limiting::Scope;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_identity::RepoIdentityRef;
 use serde::Deserialize;
 use stats::define_stats;
 use stats::prelude::TimeseriesStatic;
@@ -521,6 +523,24 @@ impl SaplingRemoteApiHandler for CheckManifestPermissionHandler {
                         repo.ctx()
                             .scuba()
                             .clone()
+                            .add("repo", repo.repo().repo_identity().name())
+                            .add("edenapi_method", "check_manifest_permission")
+                            .add_opt(
+                                "edenapi_user",
+                                repo.ctx()
+                                    .metadata()
+                                    .identities()
+                                    .username()
+                                    .map(ToString::to_string),
+                            )
+                            .add(
+                                "unix_username",
+                                repo.ctx()
+                                    .metadata()
+                                    .identities()
+                                    .username()
+                                    .map(ToString::to_string),
+                            )
                             .add(
                                 "restricted_path_acl",
                                 check.restriction_info().repo_region_acl.clone(),
