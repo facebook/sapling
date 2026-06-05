@@ -452,6 +452,35 @@ def seq(args: List[str]) -> str:
 
 
 @command
+def expr(args: List[str], stderr: BinaryIO):
+    if len(args) == 1:
+        return f"{args[0]}\n"
+    if len(args) != 3:
+        raise NotImplementedError(f"expr {args=}")
+
+    try:
+        lhs = int(args[0])
+        rhs = int(args[2])
+    except ValueError:
+        stderr.write(b"expr: non-integer argument\n")
+        return 2
+    op = args[1]
+    if op == "+":
+        result = lhs + rhs
+    elif op == "-":
+        result = lhs - rhs
+    elif op == "*":
+        result = lhs * rhs
+    elif op == "/":
+        result = lhs // rhs
+    elif op == "%":
+        result = lhs % rhs
+    else:
+        raise NotImplementedError(f"expr operator {op}")
+    return f"{result}\n"
+
+
+@command
 def sed(args: List[str], stdin: BinaryIO, stdout: BinaryIO, fs: ShellFS) -> str:
     scripts = []
     paths = []
