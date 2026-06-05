@@ -1,5 +1,5 @@
 #chg-compatible
-#debugruntest-incompatible
+#inprocess-hg-incompatible
 
   $ eagerepo
 Set up repository
