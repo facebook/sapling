@@ -1,12 +1,11 @@
 #chg-compatible
-#debugruntest-incompatible
+#require no-eden
 
 Test that when lazy changelog is used, and the server strips some lazy portion
 that is already present in the client-side, the client can still behave
 gracefully.
 
   $ configure modern
-  $ shorttraceback
   $ setconfig ui.ssh=false
 
 Prepare repo:
@@ -64,14 +63,18 @@ Lookup commits that are removed:
   $ echo $E
   9bc730a19041f9ec7cb33c626e811aa233efb18c
 
-  $ sl log -r $D -T '{desc}\n' --config devel.collapse-traceback=0
+  $ sl log -r $D -T '{desc}\n' --config devel.collapse-traceback=0 > log.out 2>&1; [ $? -ne 0 ] && echo failed
+  failed
+  $ grep 'error.HttpError: 9bc730a19041f9ec7cb33c626e811aa233efb18c cannot be found' log.out
   error.HttpError: 9bc730a19041f9ec7cb33c626e811aa233efb18c cannot be found
-  [255]
 
 Pull from the new server:
 
-  $ sl pull
+  $ sl pull > pull.out 2>&1; [ $? -ne 0 ] && echo failed
+  failed
+  $ grep 'pulling from test:e2' pull.out
   pulling from test:e2
+  $ grep 'failed to get fast pull data (9bc730a19041f9ec7cb33c626e811aa233efb18c cannot be found), using fallback path' pull.out
   failed to get fast pull data (9bc730a19041f9ec7cb33c626e811aa233efb18c cannot be found), using fallback path
+  $ grep 'error.HttpError: 9bc730a19041f9ec7cb33c626e811aa233efb18c cannot be found' pull.out
   error.HttpError: 9bc730a19041f9ec7cb33c626e811aa233efb18c cannot be found
-  [255]
