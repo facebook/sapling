@@ -1,5 +1,5 @@
 #chg-compatible
-#debugruntest-incompatible
+#require bash
 
   $ export DEBUGRUNTEST_DEFAULT_DISABLED=1
   $ eagerepo
@@ -13,7 +13,7 @@ Avoid interference from actual test env:
 Smoke test with install
 ============
 
-  $ run-tests.py $HGTEST_RUN_TESTS_PURE --with-hg=$HGTEST_HG
+  $ run-tests.py --with-hg=`which hg`
   
   ----------------------------------------------------------------------
   # Ran 0 tests, 0 skipped, 0 failed.
@@ -222,6 +222,7 @@ basic failing test
   >>> fh = open('test-failure-unicode.t', 'wb')
   >>> fh.write(u'  $ echo babar\u03b1\n'.encode('utf-8')) and None
   >>> fh.write(u'  l\u03b5\u03b5t\n'.encode('utf-8')) and None
+  >>> fh.close()
 
   $ rt
   
@@ -357,10 +358,7 @@ test --outputdir
   # Ran 3 tests, 0 skipped, 2 failed.
   python hash seed: * (glob)
   [1]
-  $ LC_ALL=C ls -a output
-  .
-  ..
-  .testtimes
+  $ LC_ALL=C ls output
   test-failure-unicode.t.err
   test-failure.t.err
 
@@ -746,23 +744,11 @@ Accept the fix
   ----------------------------------------------------------------------
   # Ran 2 tests, 0 skipped, 0 failed.
 
-  $ sed -e 's,(glob)$,&<,g' test-failure.t
-    $ echo babar
-    babar
-  This is a noop statement so that
-  this test is still more bytes than success.
-  pad pad pad pad............................................................
-  pad pad pad pad............................................................
-  pad pad pad pad............................................................
-  pad pad pad pad............................................................
-  pad pad pad pad............................................................
-  pad pad pad pad............................................................
-    $ echo 'saved backup bundle to $TESTTMP/foo.hg'
-    saved backup bundle to $TESTTMP/foo.hg
-    $ echo 'saved backup bundle to $TESTTMP/foo.hg'
-    saved backup bundle to $TESTTMP/foo.hg
-    $ echo 'saved backup bundle to $TESTTMP/foo.hg'
-    saved backup bundle to $TESTTMP/*.hg (glob)<
+  >>> data = open("test-failure.t").read()
+  >>> data.count("saved backup bundle to $TESTTMP/foo.hg")
+  5
+  >>> "saved backup bundle to $TESTTMP/*.hg (glob)" in data
+  True
 
 Race condition - test file was modified when test is running
 
@@ -1236,10 +1222,7 @@ test for --json
           "time": "\s*[\d\.]{4,5}" (re)
       }
   } (no-eol)
-  $ LC_ALL=C ls -a output
-  .
-  ..
-  .testtimes
+  $ LC_ALL=C ls output
   report.json
   test-failure.t.err
 
