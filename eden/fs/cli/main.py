@@ -2917,6 +2917,23 @@ class RestartCmd(Subcmd):
             normalized = normalized[len(home) + 1 :]
         return normalized, is_default_config_dir
 
+    @staticmethod
+    def _get_fuse_transport_mismatch_direction(
+        transport_mismatches: Sequence[config_mod.FuseTransportMismatch],
+    ) -> str:
+        def get_transport_name(transports: Set[str]) -> str:
+            if len(transports) == 1:
+                return next(iter(transports))
+            return "mixed"
+
+        active_transport = get_transport_name(
+            {mismatch.active_transport for mismatch in transport_mismatches}
+        )
+        desired_transport = get_transport_name(
+            {mismatch.desired_transport for mismatch in transport_mismatches}
+        )
+        return f"{active_transport}_to_{desired_transport}"
+
     # pyrefly: ignore [bad-return]
     def _graceful_restart(self, instance: EdenInstance) -> int:
         print("Performing a graceful restart...")
@@ -2937,6 +2954,11 @@ class RestartCmd(Subcmd):
                 transport_mismatches = []
 
             if transport_mismatches:
+                telemetry_sample.add_string("reason", "fuse_transport_mismatch")
+                telemetry_sample.add_string(
+                    "transport_name",
+                    self._get_fuse_transport_mismatch_direction(transport_mismatches),
+                )
                 print(
                     "FUSE transport config changed; performing a full restart instead of graceful restart."
                 )

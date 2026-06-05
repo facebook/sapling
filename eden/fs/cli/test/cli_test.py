@@ -159,11 +159,17 @@ class RestartTest(unittest.TestCase):
         )
         return restart_cmd
 
+    def make_telemetry_logger(self) -> telemetry.TestTelemetryLogger:
+        telemetry_logger = telemetry.TestTelemetryLogger()
+        telemetry_logger.samples = []
+        return telemetry_logger
+
     def test_graceful_restart_falls_back_on_transport_mismatch(self) -> None:
         restart_cmd = self.make_restart_cmd()
+        telemetry_logger = self.make_telemetry_logger()
         instance = MagicMock()
         instance.state_dir = Path("/home/test/.eden")
-        instance.get_telemetry_logger.return_value = telemetry.NullTelemetryLogger()
+        instance.get_telemetry_logger.return_value = telemetry_logger
         instance.check_health.return_value = MagicMock(pid=1234)
         mismatch = config_mod.FuseTransportMismatch(
             mount=Path("/mnt/eden"),
@@ -200,11 +206,20 @@ class RestartTest(unittest.TestCase):
             success=True,
             triggered_by="fuse_transport_mismatch",
         )
+        self.assertEqual(1, len(telemetry_logger.samples))
+        telemetry_sample = telemetry_logger.samples[0]
+        self.assertEqual("fuse_transport_mismatch", telemetry_sample.strings["reason"])
+        self.assertEqual(
+            "devfuse_to_io_uring",
+            telemetry_sample.strings["transport_name"],
+        )
 
     def test_graceful_restart_skips_transport_check_when_disabled(self) -> None:
         restart_cmd = self.make_restart_cmd()
+        telemetry_logger = self.make_telemetry_logger()
         instance = MagicMock()
-        instance.get_telemetry_logger.return_value = telemetry.NullTelemetryLogger()
+        instance.state_dir = Path("/home/test/.eden")
+        instance.get_telemetry_logger.return_value = telemetry_logger
 
         with (
             patch.object(
@@ -227,6 +242,10 @@ class RestartTest(unittest.TestCase):
             self.assertEqual(0, restart_cmd._graceful_restart(instance))
 
         get_mismatches.assert_not_called()
+        self.assertEqual(1, len(telemetry_logger.samples))
+        telemetry_sample = telemetry_logger.samples[0]
+        self.assertNotIn("reason", telemetry_sample.strings)
+        self.assertNotIn("transport_name", telemetry_sample.strings)
 
 
 class ListTest(unittest.TestCase):
