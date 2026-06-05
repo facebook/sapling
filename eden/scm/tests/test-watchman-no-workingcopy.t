@@ -1,8 +1,5 @@
 #require fsmonitor no-windows
 
-TODO: something with "while ! grep"
-#debugruntest-incompatible
-
   $ setconfig experimental.fsmonitor.transaction_notify=true
 
   $ newclientrepo

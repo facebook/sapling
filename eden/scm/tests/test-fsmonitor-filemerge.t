@@ -1,5 +1,4 @@
 #require fsmonitor
-#debugruntest-incompatible
 
 (Run this test using HGFSMONITOR_TESTS=1)
 

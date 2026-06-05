@@ -1,8 +1,7 @@
-#debugruntest-incompatible
 (the Python watchman client seems to have some issues under debugruntest on Windows)
 #chg-compatible
 
-#require fsmonitor
+#require fsmonitor no-windows
 
   $ configure modernclient
   $ setconfig checkout.use-rust=true
