@@ -132,6 +132,8 @@ Case:
 
     >>> t('case g in\n f)\n true\n;;\n g)\n false\n;;\n esac')
     '[1]\n'
+    >>> t('case Sapling-1 in\n Mercurial*)\n echo no\n;;\n Sapling*)\n echo yes\n;;\n esac')
+    'yes\n'
 
 Redirect:
 
@@ -305,6 +307,11 @@ exit:
     >>> t('a() { echo 1; exit 2; echo 3; }; a; echo 4')
     '1\n[2]\n'
 
+exec:
+
+    >>> t('exec echo hi')
+    'hi\n'
+
 shift:
 
     >>> t('a() { echo $1 $#; shift; echo $1 $#; }; a 1 2 3')
@@ -336,6 +343,8 @@ grep:
     '0\n'
     >>> t('seq 3 | grep -q 4; echo $?')
     '1\n'
+    >>> t('echo abc > a; echo def > b; grep -o "[ad]" a b')
+    'a:a\nb:d\n'
 
 sed:
 
@@ -483,6 +492,13 @@ pwd == $PWD
 
     >>> f('[ "$(pwd)" = "$PWD" ] && echo pwd match')
     'pwd match\n'
+
+which:
+
+    >>> f('mkdir bin; touch bin/tool; PATH=bin which tool')
+    'bin/tool\n'
+    >>> f('which missing; echo $?')
+    '1\n'
 
 wc -l:
 

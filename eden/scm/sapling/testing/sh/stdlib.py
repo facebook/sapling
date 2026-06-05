@@ -22,7 +22,15 @@ from pathlib import PurePosixPath
 from typing import BinaryIO, Callable, Dict, Iterator, List, Optional, Tuple
 
 from .bufio import BufIO
-from .types import Env, InterpResult, Scope, ShellExit, ShellFS, ShellReturn
+from .types import (
+    _commandnotfound,
+    Env,
+    InterpResult,
+    Scope,
+    ShellExit,
+    ShellFS,
+    ShellReturn,
+)
 
 cmdtable = {}
 SKIP_PYTHON_LOOKUP = True
@@ -710,6 +718,20 @@ def exit(args: List[str], arg0: str):
         raise ShellExit(code)
 
 
+def _exec(env: Env) -> InterpResult:
+    args = env.args[1:]
+    if not args:
+        return InterpResult()
+    env.args = args
+    command = env.cmdtable.get(args[0])
+    if command is None:
+        return _commandnotfound(env)
+    return command(env)
+
+
+cmdtable["exec"] = _exec
+
+
 @command
 def shift(env: Env, args: List[str]):
     env = env.parentscope(Scope.FUNCTION)
@@ -1037,6 +1059,22 @@ def pwd(fs: ShellFS):
 
 
 @command
+def which(args: List[str], env: Env, fs: ShellFS, stdout: BinaryIO) -> int:
+    path = env.getenv("PATH")
+    paths = path.split(":") if path else []
+    exitcode = 0
+    for arg in args:
+        for path in paths:
+            candidate = str(PurePosixPath(path, arg))
+            if fs.isfile(candidate):
+                stdout.write(f"{candidate}\n".encode())
+                break
+        else:
+            exitcode = 1
+    return exitcode
+
+
+@command
 def grep(args: List[str], arg0: str, stdin: BinaryIO, fs: ShellFS, stdout: BinaryIO):
     def expect_arg(typ, args, flag):
         try:
@@ -1091,22 +1129,38 @@ def grep(args: List[str], arg0: str, stdin: BinaryIO, fs: ShellFS, stdout: Binar
 
     pat = re.compile(patstr)
     paths = args[1:]
-    lines = [l.decode() for l in _lines(fs, paths, stdin)]
-    line_matches = [(l, pat.search(l)) for l in lines]
+    path_lines = []
+    if paths:
+        for path in paths:
+            path_lines.extend((path, l.decode()) for l in _lines(fs, [path], stdin))
+    else:
+        path_lines = [("", l.decode()) for l in _lines(fs, paths, stdin)]
+    line_matches = [(path, l, pat.search(l)) for path, l in path_lines]
     if only:
+        show_path = len(paths) > 1
         out = "".join(
-            f"{m.group()}\n" for l, m in line_matches if m and bool(m) != inverse
+            f"{path}:{m.group()}\n" if show_path else f"{m.group()}\n"
+            for path, _line, m in line_matches
+            if m and bool(m) != inverse
         )
     else:
         out_lines = set()
-        for i, (l, m) in enumerate(line_matches):
+        for i, (_path, _line, m) in enumerate(line_matches):
             if bool(m) != inverse:
                 for j in range(max(0, i - before), i):
                     out_lines.add(j)
                 out_lines.add(i)
-                for j in range(i + 1, min(i + 1 + after, len(lines))):
+                for j in range(i + 1, min(i + 1 + after, len(line_matches))):
                     out_lines.add(j)
-        out = "".join(lines[i] for i in sorted(out_lines))
+        show_path = len(paths) > 1
+        output = []
+        for i in sorted(out_lines):
+            path, line, _match = line_matches[i]
+            if show_path:
+                output.append(f"{path}:{line}")
+            else:
+                output.append(line)
+        out = "".join(output)
     if not quiet:
         stdout.write(out.encode())
     if not out:

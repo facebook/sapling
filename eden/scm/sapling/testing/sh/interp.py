@@ -8,6 +8,7 @@
 See module-level doc for examples.
 """
 
+import fnmatch
 import functools
 import re
 import shlex
@@ -353,8 +354,7 @@ def interpcompound(v, env: Env) -> InterpResult:
         for arm in arms:
             pats = arm["patterns"]
             for pat in pats:
-                # NOTE: not a real pattern match
-                if interp(pat, env).out.strip() == word:
+                if fnmatch.fnmatch(word, interp(pat, env).out.strip()):
                     body = arm["body"]
                     return interpvec(body, env)
         return InterpResult()
