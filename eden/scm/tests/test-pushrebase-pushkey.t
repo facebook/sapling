@@ -1,9 +1,11 @@
-#debugruntest-incompatible
+#inprocess-hg-incompatible
   $ setconfig devel.legacy.exchange=bookmarks
 
 Setup
 
   $ configure dummyssh
+We are testing legacy pushrebase - we need legacy hg server.
+  $ rm $TESTTMP/.eagerepo
   $ enable pushrebase
 
   $ cat >> "$TESTTMP/hook.py" << EOF
@@ -38,7 +40,7 @@ Set up client repository
 Set up the client to commit on the server-side when a push happens. This simulates a race.
 
   $ cd "$TESTTMP/client"
-  $ set config extensions.pushrebase=
+  $ setconfig extensions.pushrebase=
 
   $ cat >> $TESTTMP/wrapper.py << 'EOF'
   > import os
