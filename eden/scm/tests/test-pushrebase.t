@@ -1,10 +1,11 @@
 #chg-compatible
-#debugruntest-incompatible
+#require no-eden
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig checkout.use-rust=true
 
 TODO: configure mutation
   $ configure dummyssh
+  $ rm $TESTTMP/.eagerepo
 
 Setup
 
@@ -544,26 +545,63 @@ Test pushing bookmark with no new commit
 Test that hooks are fired with the correct variables
 
   $ newserver hookserver
+  $ cat > $TESTTMP/printenvhook.py <<'EOF'
+  > def _hook(name, *args, **kwargs):
+  >     ui = kwargs.pop("ui", None)
+  >     hooktype = kwargs.pop("hooktype", name)
+  >     kwargs.pop("repo", None)
+  >     if ui is None:
+  >         ui = args[0]
+  >     assert hooktype == name
+  >     env = {"HG_HOOKNAME": name, "HG_HOOKTYPE": hooktype}
+  >     for key, value in kwargs.items():
+  >         if callable(value):
+  >             value = value()
+  >         if isinstance(value, bool):
+  >             value = "1" if value else "0"
+  >         elif isinstance(value, bytes):
+  >             value = value.decode()
+  >         else:
+  >             value = str(value)
+  >         env["HG_" + key.upper()] = value
+  >     vars = ["%s=%s" % (key, env[key]) for key in sorted(env) if env[key]]
+  >     msg = "%s hook: %s\n" % (name, " ".join(vars))
+  >     try:
+  >         ui.write_err(msg)
+  >     except TypeError:
+  >         ui.write_err(msg.encode())
+  > 
+  > def changegroup(*args, **kwargs): _hook("changegroup", *args, **kwargs)
+  > def outgoing(*args, **kwargs): _hook("outgoing", *args, **kwargs)
+  > def prechangegroup(*args, **kwargs): _hook("prechangegroup", *args, **kwargs)
+  > def preoutgoing(*args, **kwargs): _hook("preoutgoing", *args, **kwargs)
+  > def pretxnchangegroup(*args, **kwargs): _hook("pretxnchangegroup", *args, **kwargs)
+  > def txnclose(*args, **kwargs): _hook("txnclose", *args, **kwargs)
+  > def pretxnclose(*args, **kwargs): _hook("pretxnclose", *args, **kwargs)
+  > def prepushkey(*args, **kwargs): _hook("prepushkey", *args, **kwargs)
+  > EOF
   $ cat >> .sl/config <<EOF
   > [hooks]
-  > changegroup = python "$RUNTESTDIR/printenv.py" changegroup
-  > outgoing = python "$RUNTESTDIR/printenv.py" outgoing
-  > prechangegroup = python "$RUNTESTDIR/printenv.py" prechangegroup
-  > preoutgoing = python "$RUNTESTDIR/printenv.py" preoutgoing
-  > pretxnchangegroup = python "$RUNTESTDIR/printenv.py" pretxnchangegroup
-  > txnclose = python "$RUNTESTDIR/printenv.py" txnclose
-  > pretxnclose = python "$RUNTESTDIR/printenv.py" pretxnclose
-  > prepushkey = python "$RUNTESTDIR/printenv.py" prepushkey
+  > changegroup = python:$TESTTMP/printenvhook.py:changegroup
+  > outgoing = python:$TESTTMP/printenvhook.py:outgoing
+  > prechangegroup = python:$TESTTMP/printenvhook.py:prechangegroup
+  > preoutgoing = python:$TESTTMP/printenvhook.py:preoutgoing
+  > pretxnchangegroup = python:$TESTTMP/printenvhook.py:pretxnchangegroup
+  > txnclose = python:$TESTTMP/printenvhook.py:txnclose
+  > pretxnclose = python:$TESTTMP/printenvhook.py:pretxnclose
+  > prepushkey = python:$TESTTMP/printenvhook.py:prepushkey
+  > [experimental]
+  > run-python-hooks-via-pyhook=False
   > [extensions]
   > pushrebase=
   > EOF
   $ touch file && sl ci -Aqm initial
   pretxnclose hook: HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_TXNID=TXN:$ID$ HG_TXNNAME=update-visibility
   txnclose hook: HG_HOOKNAME=txnclose HG_HOOKTYPE=txnclose HG_TXNID=TXN:$ID$ HG_TXNNAME=update-visibility
-  pretxnclose hook: HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_PENDING=$TESTTMP/hookserver HG_PENDING_METALOG={"$TESTTMP/hookserver/.sl/store/metalog": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"} HG_PHASES_MOVED=1 HG_SHAREDPENDING=$TESTTMP/hookserver HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
+  pretxnclose hook: HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_PHASES_MOVED=1 HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
   txnclose hook: HG_HOOKNAME=txnclose HG_HOOKTYPE=txnclose HG_PHASES_MOVED=1 HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
   $ sl bookmark main
-  pretxnclose hook: HG_BOOKMARK_MOVED=1 HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_PENDING=$TESTTMP/hookserver HG_SHAREDPENDING=$TESTTMP/hookserver HG_TXNID=TXN:$ID$ HG_TXNNAME=bookmark
+  pretxnclose hook: HG_BOOKMARK_MOVED=1 HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_TXNID=TXN:$ID$ HG_TXNNAME=bookmark
   txnclose hook: HG_BOOKMARK_MOVED=1 HG_HOOKNAME=txnclose HG_HOOKTYPE=txnclose HG_TXNID=TXN:* HG_TXNNAME=bookmark (glob)
   $ cd ../
 
@@ -587,9 +625,9 @@ Test that hooks are fired with the correct variables
   remote:     11be4ca7f3f4  second
   remote:     a5e72ac0df88  last
   remote: prechangegroup hook: HG_BUNDLE2=1 HG_HOOKNAME=prechangegroup HG_HOOKTYPE=prechangegroup HG_SOURCE=serve HG_TXNID=TXN:$ID$ HG_URL=* (glob)
-  remote: pretxnchangegroup hook: HG_BUNDLE2=1 HG_HOOKNAME=pretxnchangegroup HG_HOOKTYPE=pretxnchangegroup HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_NODE_LAST=a5e72ac0df8881afef34132987e8ae78d2e6cb13 HG_PENDING=$TESTTMP/hookserver HG_PENDING_METALOG={"$TESTTMP/hookserver/.sl/store/metalog": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"} HG_SHAREDPENDING=$TESTTMP/hookserver HG_SOURCE=serve HG_TXNID=TXN:$ID$ HG_URL=* (glob)
-  remote: prepushkey hook: HG_BUNDLE2=1 HG_HOOKNAME=prepushkey HG_HOOKTYPE=prepushkey HG_KEY=main HG_NAMESPACE=bookmarks HG_NEW=a5e72ac0df8881afef34132987e8ae78d2e6cb13 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_OLD=e95be919ac60f0c114075e32a0a4301afabadb60 HG_PENDING=$TESTTMP/hookserver HG_PENDING_METALOG={"$TESTTMP/hookserver/.sl/store/metalog": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"} HG_PHASES_MOVED=1 HG_SHAREDPENDING=$TESTTMP/hookserver HG_SOURCE=serve HG_TXNID=TXN:$ID$ HG_URL=* (glob)
-  remote: pretxnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_PENDING=$TESTTMP/hookserver HG_PENDING_METALOG={"$TESTTMP/hookserver/.sl/store/metalog": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"} HG_PHASES_MOVED=1 HG_SHAREDPENDING=$TESTTMP/hookserver HG_SOURCE=serve HG_TXNID=TXN:$ID$ HG_TXNNAME=serve HG_URL=* (glob)
+  remote: pretxnchangegroup hook: HG_BUNDLE2=1 HG_HOOKNAME=pretxnchangegroup HG_HOOKTYPE=pretxnchangegroup HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_NODE_LAST=a5e72ac0df8881afef34132987e8ae78d2e6cb13 HG_PENDING=$TESTTMP/hookserver HG_SOURCE=serve HG_TXNID=TXN:$ID$ HG_URL=* (glob)
+  remote: prepushkey hook: HG_BUNDLE2=1 HG_HOOKNAME=prepushkey HG_HOOKTYPE=prepushkey HG_KEY=main HG_NAMESPACE=bookmarks HG_NEW=a5e72ac0df8881afef34132987e8ae78d2e6cb13 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_OLD=e95be919ac60f0c114075e32a0a4301afabadb60 HG_PHASES_MOVED=1 HG_SOURCE=serve HG_TXNID=TXN:$ID$ HG_URL=* (glob)
+  remote: pretxnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_PHASES_MOVED=1 HG_SOURCE=serve HG_TXNID=TXN:$ID$ HG_TXNNAME=serve HG_URL=* (glob)
   remote: txnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_HOOKNAME=txnclose HG_HOOKTYPE=txnclose HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_PHASES_MOVED=1 HG_SOURCE=serve HG_TXNID=TXN:$ID$ HG_TXNNAME=serve HG_URL=* (glob)
   remote: changegroup hook: HG_BUNDLE2=1 HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_NODE_LAST=a5e72ac0df8881afef34132987e8ae78d2e6cb13 HG_SOURCE=serve HG_TXNID=TXN:$ID$ HG_URL=* (glob)
 
@@ -647,11 +685,7 @@ Test date rewriting
   $ sl book main
   $ cd ..
 
-  $ sl clone ssh://user@dummy/rewritedate rewritedateclient
-  fetching lazy changelog
-  populating main commit graph
-  updating to tip
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ sl clone -q ssh://user@dummy/rewritedate rewritedateclient
   $ cd rewritedateclient
   $ cat >> .sl/config <<EOF
   > [extensions]
@@ -781,11 +815,7 @@ Test force pushes
   $ echo a > a && sl commit -Aqm a
   $ cd ..
 
-  $ sl clone ssh://user@dummy/forcepushserver forcepushclient
-  fetching lazy changelog
-  populating main commit graph
-  updating to tip
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ sl clone -q ssh://user@dummy/forcepushserver forcepushclient
   $ cd forcepushserver
   $ echo a >> a && sl commit -Aqm aa
 
@@ -863,11 +893,11 @@ phase is updated correctly with the marker information.
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ sl up tip -q
   $ log --hidden
-  x  a2 [draft:045279cde9f0]
+  @  a2 [public:722505d780e3] BOOK
   │
-  │ @  a2 [public:722505d780e3] BOOK
-  │ │
-  │ o  b [public:d2ae7f538514]
+  o  b [public:d2ae7f538514]
+  │
+  │ x  a2 [draft:045279cde9f0]
   ├─╯
   o  a [public:cb9a9f314b8b]
   
