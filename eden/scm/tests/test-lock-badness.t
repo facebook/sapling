@@ -1,5 +1,5 @@
 #chg-compatible
-#debugruntest-incompatible
+#inprocess-hg-incompatible
 
 #require unix-permissions no-root no-windows no-eden
 
@@ -58,16 +58,26 @@ One process waiting for another for a significant period of time (longer than th
   $ cat > hooks.py << EOF
   > import time
   > def sleeplong(**x):
-  >     import os
-  >     os.system("touch sleeping")
+  >     open("sleeping", "w").close()
   >     time.sleep(2)
   > EOF
   $ echo b > b/b
-  $ sl -R b ci -A -m b --config hooks.precommit="python:`pwd`/hooks.py:sleeplong" > stdout &
+  $ sl -R b ci -A -m b --config hooks.precommit="python:`pwd`/hooks.py:sleeplong" > stdout 2>stderr &
 Wait until bg process has entered critical section.
-  $ while [ ! -f sleeping ]; do sleep 0.01; done
+  $ python << EOF
+  > import os
+  > import sys
+  > import time
+  > deadline = time.time() + 10
+  > while not os.path.exists("sleeping"):
+  >     if time.time() >= deadline:
+  >         print("timed out waiting for precommit hook", file=sys.stderr)
+  >         break
+  >     time.sleep(0.01)
+  > EOF
   $ LOG=repolock=warn sl -R b up -q --config ui.timeout.warn=0 . > preup-stdout 2>preup-stderr
   $ wait
+  $ cat stderr
   $ cat preup-stdout
   $ grep repolock preup-stderr | head -1
    WARN repolock: lock contended name="wlock" contents="*" (glob)
