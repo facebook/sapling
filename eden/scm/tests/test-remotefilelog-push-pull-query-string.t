@@ -1,5 +1,3 @@
-#chg-compatible
-
   $ . "$TESTDIR/library.sh"
 
   $ sl init repo

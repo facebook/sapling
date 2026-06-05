@@ -1322,16 +1322,16 @@ def find(args: List[str], fs: ShellFS):
         elif arg.startswith("-"):
             raise NotImplementedError(f"find {arg}")
         elif arg == ".":
-            findpaths.append("")
+            findpaths.append(".")
         else:
             findpaths.append(arg)
 
     outpaths = []
     for findpath in findpaths:
         fs.chdir(origcwd)
-        if findpath:
+        if findpath and findpath != ".":
             fs.chdir(findpath)
-        prefix = findpath and f"{findpath}/" or ""
+        prefix = "./" if findpath == "." else findpath and f"{findpath}/" or ""
         paths = [f"{prefix}{p}" for p in fs.glob("**/*")]
         fs.chdir(origcwd)
         paths = [p for p in paths if all(f(p) for f in filters)]

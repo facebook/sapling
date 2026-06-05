@@ -48,10 +48,10 @@ Sapling should be able to clone the repo
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd sl-main
   $ find .
-  mod
-  mod/sub
-  mod/sub/A
-  mod/sub/mod
-  mod/sub/mod/doc
-  mod/sub/mod/doc/A
-  mod/sub/mod/doc/B
+  ./mod
+  ./mod/sub
+  ./mod/sub/A
+  ./mod/sub/mod
+  ./mod/sub/mod/doc
+  ./mod/sub/mod/doc/A
+  ./mod/sub/mod/doc/B

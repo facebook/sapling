@@ -142,12 +142,12 @@ issue 4481: revert across case only renames
   removing a/B/c/D/E
   adding a/B/c/D/e
   $ find . | sort
-  a
-  a/B
-  a/B/c
-  a/B/c/D
-  a/B/c/D/e
-  a/B/c/D/e.orig
+  ./a
+  ./a/B
+  ./a/B/c
+  ./a/B/c/D
+  ./a/B/c/D/e
+  ./a/B/c/D/e.orig
 
 Make sure we can keep removed and untracked file separate.
   $ newclientrepo

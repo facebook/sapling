@@ -51,24 +51,24 @@ Test behavior when checking out across directory case change:
   > EOS
   $ sl go -q $B
   $ find .
-  dir
-  dir/FILE
+  ./dir
+  ./dir/FILE
   $ sl go -q $A
   $ find .
-  dir
-  dir/file
+  ./dir
+  ./dir/file
   $ sl mv -q dir temp
   $ sl mv -q temp DIR
   $ sl commit -qm uppercase
   $ find .
-  DIR
-  DIR/file
+  ./DIR
+  ./DIR/file
 #if no-eden
 TODO(sggutier): EdenFS behaves differently here too, the goto fails
   $ sl go -q '.^'
   $ find .
-  dir
-  dir/file
+  ./dir
+  ./dir/file
   $ sl go -q 'desc(uppercase)'
 Checkout across the same change, but this time there is an untracked
 file in the directory. This time the directory is not made lowercase,
@@ -76,9 +76,9 @@ since it is not deleted due to the presence of the untracked file.
   $ touch dir/untracked
   $ sl go -q '.^'
   $ find .
-  DIR
-  DIR/file
-  DIR/untracked
+  ./DIR
+  ./DIR/file
+  ./DIR/untracked
 This mismatch occurs because the directory is "DIR" in the treestate when "status" is run
 at the beginning of the above "go" operation, so fsmonitor records in treestate as
 "DIR/untracked". We don't have a process to update "DIR/untracked" to "dir/untracked" to
@@ -98,8 +98,8 @@ Sparse profile rules are case sensitive:
   $ sl commit -Aqm foo
   $ sl sparse include included
   $ find .
-  included
-  included/file
+  ./included
+  ./included/file
   $ sl sparse reset
   $ sl sparse include INCLUDED
   $ find .

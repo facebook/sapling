@@ -32,9 +32,9 @@ Don't attempt to fetch 19d1f9c4 - it is restricted
   [1]
 
   $ find .
-  A
-  regular
-  regular/file.txt
+  ./A
+  ./regular
+  ./regular/file.txt
 
 Give a specific message when referencing a restricted file:
   $ sl cat restricted/secret.txt

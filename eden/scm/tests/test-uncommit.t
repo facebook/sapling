@@ -434,4 +434,4 @@ and we have a pending removal of the copied file.
   $ sl uncommit
   $ sl st
   $ find .
-  foo
+  ./foo

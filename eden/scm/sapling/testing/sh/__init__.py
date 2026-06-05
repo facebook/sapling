@@ -497,14 +497,14 @@ find:
     ... find . -not -wholename '**/b/**' -type f
     ... ''').strip())
     find files:
-    a/b/d
-    d/e
+    ./a/b/d
+    ./d/e
     find ../d:
     ../d/b
     ../d/b/z
     ../d/e
     find with patterns:
-    d/e
+    ./d/e
 
 pwd == $PWD
 
