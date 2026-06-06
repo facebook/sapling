@@ -33,7 +33,7 @@ git_types = { version = "0.1.0", path = "../git_types" }
 gix-actor = "0.41.0"
 gix-hash = { version = "0.25.0", features = ["sha1"] }
 gix-object = "0.60.0"
-http = "1.4.0"
+http = "1.4.1"
 http-body-util = "0.1.0"
 hyper-openssl = { version = "0.10", features = ["client-legacy", "tokio"] }
 hyper-proxy2 = { version = "0.1", features = ["rustls"], default-features = false }

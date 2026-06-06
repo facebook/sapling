@@ -15,7 +15,7 @@ bookmarks_cache = { version = "0.1.0", path = "../../../../repo_attributes/bookm
 bytes = { version = "1.11.1", features = ["serde"] }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cats = { version = "0.1.0", path = "../../../../common/cats" }
-chrono = { version = "0.4.44", features = ["clock", "serde", "std"], default-features = false }
+chrono = { version = "0.4.45", features = ["clock", "serde", "std"], default-features = false }
 connection_security_checker = { version = "0.1.0", path = "../../../../common/connection_security_checker" }
 context = { version = "0.1.0", path = "../context" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
@@ -26,10 +26,10 @@ futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimen
 gotham_ext = { version = "0.1.0", path = "../../../../common/gotham_ext" }
 hgproto = { version = "0.1.0", path = "../../../../common/hgproto" }
 hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-http = "1.4.0"
+http = "1.4.1"
 http-body = "1.0.1"
 http-body-util = "0.1.0"
-hyper = { version = "1.9.0", features = ["client", "http1", "http2"] }
+hyper = { version = "1.10.1", features = ["client", "http1", "http2"] }
 hyper-util = { version = "0.1.20", features = ["client-legacy", "http1", "http2", "server-auto", "service", "tokio"] }
 justknobs = { version = "0.1.0", path = "../../../../common/rust/justknobs_ext" }
 lazy_static = "1.5"

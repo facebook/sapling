@@ -14,7 +14,7 @@ name = "vfs"
 
 [dependencies]
 anyhow = "1.0.102"
-bitflags = { version = "2.11.1", features = ["serde", "std"], default-features = false }
+bitflags = { version = "2.13.0", features = ["serde", "std"], default-features = false }
 blob = { version = "0.1.0", path = "../blob" }
 dashmap = { version = "6.1.0", features = ["rayon", "serde"] }
 flume = "0.11.1"
