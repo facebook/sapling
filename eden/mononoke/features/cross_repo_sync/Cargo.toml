@@ -28,7 +28,7 @@ content_manifest_derivation = { version = "0.1.0", path = "../../derived_data/co
 context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context" }
 dbbookmarks = { version = "0.1.0", path = "../../repo_attributes/bookmarks/dbbookmarks" }
 derivation_queue_thrift = { version = "0.1.0", path = "../../repo_attributes/repo_derivation_queues/if" }
-either = "1.5"
+either = "1.16.0"
 environment = { version = "0.1.0", path = "../../cmdlib/environment" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

@@ -16,7 +16,7 @@ bonsai_hg_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_hg
 bonsai_svnrev_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_svnrev_mapping" }
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
 context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context" }
-either = "1.5"
+either = "1.16.0"
 ephemeral_blobstore = { version = "0.1.0", path = "../../blobstore/ephemeral_blobstore" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 futures-util = { version = "0.3.30", features = ["compat"] }

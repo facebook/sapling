@@ -27,7 +27,7 @@ connection_security_checker = { version = "0.1.0", path = "../../../common/conne
 context = { version = "0.1.0", path = "../../slapi/slapi_server/context" }
 dedupmap = { version = "0.1.0", path = "../../../common/dedupmap" }
 derived_data_manager = { version = "0.1.0", path = "../../../derived_data/manager" }
-either = "1.5"
+either = "1.16.0"
 environment = { version = "0.1.0", path = "../../../cmdlib/environment" }
 ephemeral_blobstore = { version = "0.1.0", path = "../../../blobstore/ephemeral_blobstore" }
 faster-hex = "0.6.1"

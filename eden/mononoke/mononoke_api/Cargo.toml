@@ -49,7 +49,7 @@ derived_data = { version = "0.1.0", path = "../derived_data" }
 derived_data_manager = { version = "0.1.0", path = "../derived_data/manager" }
 diff = { version = "0.1.0", path = "../features/diff" }
 directory_branch_cluster_manifest = { version = "0.1.0", path = "../derived_data/directory_branch_cluster_manifest" }
-either = "1.5"
+either = "1.16.0"
 ephemeral_blobstore = { version = "0.1.0", path = "../blobstore/ephemeral_blobstore" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filenodes = { version = "0.1.0", path = "../repo_attributes/filenodes" }
