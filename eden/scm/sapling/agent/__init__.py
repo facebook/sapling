@@ -4,3 +4,5 @@
 # GNU General Public License version 2.
 
 from .agent_instructions import get_agent_instructions
+
+__all__ = ["get_agent_instructions"]
