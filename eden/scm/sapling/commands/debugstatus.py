@@ -3,7 +3,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-from .. import error
 from ..i18n import _, _x
 from .cmdtable import command
 
