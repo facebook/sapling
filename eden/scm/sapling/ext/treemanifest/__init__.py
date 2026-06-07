@@ -98,7 +98,6 @@ from ..remotefilelog import (
     wirepack,
 )
 from ..remotefilelog.contentstore import unioncontentstore
-from ..remotefilelog.datapack import memdatapack
 from ..remotefilelog.historypack import memhistorypack
 from ..remotefilelog.metadatastore import unionmetadatastore
 
