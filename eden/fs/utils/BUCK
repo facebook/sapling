@@ -324,3 +324,14 @@ cpp_library(
     name = "statmount",
     headers = ["Statmount.h"],
 )
+
+cpp_library(
+    name = "mount_info_table",
+    srcs = ["MountInfoTable.cpp"],
+    headers = ["MountInfoTable.h"],
+    deps = [
+        ":statmount",
+        "//folly/logging:logging",
+    ],
+    exported_deps = ["//folly:expected"],
+)

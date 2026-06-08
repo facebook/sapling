@@ -24,7 +24,7 @@
 #include "eden/common/utils/ErrnoUtils.h"
 #include "eden/common/utils/FSDetect.h"
 #include "eden/common/utils/Throw.h"
-#include "eden/fs/privhelper/MountInfoTable.h"
+#include "eden/fs/utils/MountInfoTable.h"
 
 #ifdef __linux__
 #include <sys/statfs.h>
@@ -40,7 +40,9 @@ namespace {
  */
 bool isOldEdenMount(const std::string& mountPoint) {
 #ifdef __linux__
-  auto result = getMountInfoForPath(mountPoint.c_str());
+  MountInfoOptions options;
+  options.includeMountSource = true;
+  auto result = getMountInfoForPath(mountPoint.c_str(), options);
   if (result.hasError()) {
     XLOGF(
         WARN,
@@ -176,7 +178,7 @@ SanityCheckResult PrivHelperServer::cleanupStaleBindMounts(
   std::sort(
       staleMounts.begin(),
       staleMounts.end(),
-      [](const MountInfo& a, const MountInfo& b) {
+      [](const MountTableEntry& a, const MountTableEntry& b) {
         return a.mountPoint > b.mountPoint;
       });
 

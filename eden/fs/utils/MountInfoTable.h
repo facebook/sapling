@@ -8,6 +8,7 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -17,12 +18,16 @@ namespace facebook::eden {
 
 #ifdef __linux__
 
-struct MountInfo {
+struct MountTableEntry {
   uint32_t devMajor{};
   uint32_t devMinor{};
   std::string mountPoint;
   std::string mountSource;
   std::string fsType;
+};
+
+struct MountInfoOptions {
+  bool includeMountSource{false};
 };
 
 /**
@@ -32,8 +37,9 @@ struct MountInfo {
  * - The syscalls fail for any other reason
  * Returns nullopt (success with no value) if no mount matches the path.
  */
-folly::Expected<std::optional<MountInfo>, int> getMountInfoForPath(
-    const char* path);
+folly::Expected<std::optional<MountTableEntry>, int> getMountInfoForPath(
+    const char* path,
+    MountInfoOptions options = {});
 
 /**
  * Return all mounts whose mount point starts with the given prefix.
@@ -41,8 +47,9 @@ folly::Expected<std::optional<MountInfo>, int> getMountInfoForPath(
  * - The syscalls are not supported (ENOSYS on older kernels)
  * - The syscalls fail for any other reason
  */
-folly::Expected<std::vector<MountInfo>, int> getMountsUnderPath(
-    const std::string& prefix);
+folly::Expected<std::vector<MountTableEntry>, int> getMountsUnderPath(
+    const std::string& prefix,
+    MountInfoOptions options = {});
 
 #endif
 

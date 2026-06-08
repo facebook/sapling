@@ -91,6 +91,7 @@ struct mnt_id_req {
 #define STATMOUNT_FS_TYPE 0x00000020U /* Want/got fs_type */
 #define STATMOUNT_MNT_NS_ID 0x00000040U /* Want/got mnt_ns_id */
 #define STATMOUNT_MNT_OPTS 0x00000080U /* Want/got mnt_opts */
+#define STATMOUNT_SB_SOURCE 0x00000200U /* Want/got sb_source */
 
 /*
  * Special @mnt_id values that can be passed to listmount
@@ -98,6 +99,10 @@ struct mnt_id_req {
 #define LSMT_ROOT 0xffffffffffffffff /* root mount */
 
 #endif /* STATMOUNT_MNT_BASIC */
+
+#ifndef STATMOUNT_SB_SOURCE
+#define STATMOUNT_SB_SOURCE 0x00000200U /* Want/got sb_source */
+#endif
 
 #ifndef __NR_statmount
 #define __NR_statmount 457

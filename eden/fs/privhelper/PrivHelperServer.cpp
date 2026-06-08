@@ -38,9 +38,9 @@
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/SysctlUtil.h"
 #include "eden/common/utils/Throw.h"
-#include "eden/fs/privhelper/MountInfoTable.h"
 #include "eden/fs/privhelper/NfsMountRpc.h"
 #include "eden/fs/privhelper/priority/ProcessPriority.h"
+#include "eden/fs/utils/MountInfoTable.h"
 
 #ifdef __APPLE__
 #include <CoreFoundation/CoreFoundation.h> // @manual

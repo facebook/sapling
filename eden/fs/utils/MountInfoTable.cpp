@@ -7,7 +7,7 @@
 
 #ifndef _WIN32
 
-#include "eden/fs/privhelper/MountInfoTable.h"
+#include "eden/fs/utils/MountInfoTable.h"
 
 #ifdef __linux__
 
@@ -15,24 +15,23 @@
 
 #include <unistd.h>
 #include <cerrno>
-#include <cstring>
 
 #include "eden/fs/utils/Statmount.h"
-
-// STATMOUNT_SB_SOURCE was added in Linux 6.11; define locally if missing.
-#ifndef STATMOUNT_SB_SOURCE
-#define STATMOUNT_SB_SOURCE 0x00000100U
-#endif
 
 namespace facebook::eden {
 
 namespace {
 
-constexpr uint64_t kStatmountMask = STATMOUNT_SB_BASIC | STATMOUNT_MNT_POINT |
-    STATMOUNT_FS_TYPE | STATMOUNT_SB_SOURCE;
-
 constexpr size_t kStatmountBufSize = 4096;
 constexpr size_t kListmountBufSize = 1024;
+
+uint64_t getStatmountMask(MountInfoOptions options) {
+  auto mask = STATMOUNT_SB_BASIC | STATMOUNT_MNT_POINT | STATMOUNT_FS_TYPE;
+  if (options.includeMountSource) {
+    mask |= STATMOUNT_SB_SOURCE;
+  }
+  return mask;
+}
 
 /**
  * Call listmount(2) to enumerate all mount IDs under LSMT_ROOT.
@@ -40,25 +39,40 @@ constexpr size_t kListmountBufSize = 1024;
  * or the errno from the failed syscall).
  */
 folly::Expected<std::vector<uint64_t>, int> listAllMountIds() {
-  std::vector<uint64_t> ids(kListmountBufSize);
   struct mnt_id_req req{};
   req.size = MNT_ID_REQ_SIZE_VER0;
   req.mnt_id = LSMT_ROOT;
   req.param = 0;
 
-  long ret = syscall(__NR_listmount, &req, ids.data(), ids.size(), 0);
-  if (ret < 0) {
-    return folly::makeUnexpected(errno);
-  }
+  std::vector<uint64_t> ids;
+  std::vector<uint64_t> page(kListmountBufSize);
+  while (true) {
+    auto lastRequestedMountId = req.param;
+    long ret = syscall(__NR_listmount, &req, page.data(), page.size(), 0);
+    if (ret < 0) {
+      return folly::makeUnexpected(errno);
+    }
 
-  if (static_cast<size_t>(ret) == kListmountBufSize) {
-    XLOGF(
-        WARN,
-        "listmount(2) returned exactly {} entries; results may be truncated",
-        kListmountBufSize);
-  }
+    auto numReturned = static_cast<size_t>(ret);
+    size_t numAdded = 0;
+    for (size_t index = 0; index < numReturned; ++index) {
+      auto mountId = page[index];
+      if (mountId == lastRequestedMountId) {
+        continue;
+      }
+      ids.push_back(mountId);
+      ++numAdded;
+    }
 
-  ids.resize(static_cast<size_t>(ret));
+    if (numReturned < kListmountBufSize) {
+      break;
+    }
+
+    req.param = page[numReturned - 1];
+    if (numAdded == 0 || req.param == lastRequestedMountId) {
+      return folly::makeUnexpected(ELOOP);
+    }
+  }
   return ids;
 }
 
@@ -67,7 +81,9 @@ folly::Expected<std::vector<uint64_t>, int> listAllMountIds() {
  * Returns an error code on failure (ENOSYS for unsupported kernels,
  * or the errno from the failed syscall).
  */
-folly::Expected<MountInfo, int> statmountById(uint64_t mntId) {
+folly::Expected<MountTableEntry, int> statmountById(
+    uint64_t mntId,
+    MountInfoOptions options) {
   // Allocate buffer for statmount result including variable-length strings
   std::vector<char> buf(kStatmountBufSize);
   auto* sm = reinterpret_cast<struct statmount*>(buf.data());
@@ -75,7 +91,7 @@ folly::Expected<MountInfo, int> statmountById(uint64_t mntId) {
   struct mnt_id_req req{};
   req.size = MNT_ID_REQ_SIZE_VER0;
   req.mnt_id = mntId;
-  req.param = kStatmountMask;
+  req.param = getStatmountMask(options);
 
   long ret = syscall(__NR_statmount, &req, sm, buf.size(), 0);
   if (ret < 0) {
@@ -92,7 +108,7 @@ folly::Expected<MountInfo, int> statmountById(uint64_t mntId) {
     }
   }
 
-  MountInfo info;
+  MountTableEntry info;
   info.devMajor = sm->sb_dev_major;
   info.devMinor = sm->sb_dev_minor;
 
@@ -111,15 +127,16 @@ folly::Expected<MountInfo, int> statmountById(uint64_t mntId) {
 
 } // namespace
 
-folly::Expected<std::optional<MountInfo>, int> getMountInfoForPath(
-    const char* path) {
+folly::Expected<std::optional<MountTableEntry>, int> getMountInfoForPath(
+    const char* path,
+    MountInfoOptions options) {
   auto idsResult = listAllMountIds();
   if (idsResult.hasError()) {
     return folly::makeUnexpected(idsResult.error());
   }
 
   for (auto id : idsResult.value()) {
-    auto infoResult = statmountById(id);
+    auto infoResult = statmountById(id, options);
     if (infoResult.hasError()) {
       return folly::makeUnexpected(infoResult.error());
     }
@@ -130,9 +147,10 @@ folly::Expected<std::optional<MountInfo>, int> getMountInfoForPath(
   return std::nullopt;
 }
 
-folly::Expected<std::vector<MountInfo>, int> getMountsUnderPath(
-    const std::string& prefix) {
-  std::vector<MountInfo> result;
+folly::Expected<std::vector<MountTableEntry>, int> getMountsUnderPath(
+    const std::string& prefix,
+    MountInfoOptions options) {
+  std::vector<MountTableEntry> result;
   std::string prefixWithSlash = prefix + "/";
 
   auto idsResult = listAllMountIds();
@@ -141,7 +159,7 @@ folly::Expected<std::vector<MountInfo>, int> getMountsUnderPath(
   }
 
   for (auto id : idsResult.value()) {
-    auto infoResult = statmountById(id);
+    auto infoResult = statmountById(id, options);
     if (infoResult.hasError()) {
       return folly::makeUnexpected(infoResult.error());
     }
