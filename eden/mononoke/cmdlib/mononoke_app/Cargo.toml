@@ -60,7 +60,7 @@ services = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 shutdown_timeout = { version = "0.1.0", path = "shutdown_timeout" }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-strum = { version = "0.27.1", features = ["derive"] }
+strum = { version = "0.28.0", features = ["derive"] }
 tls = { version = "0.1.0", path = "tls" }
 tokio = { version = "1.52.3", features = ["full", "test-util", "tracing"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

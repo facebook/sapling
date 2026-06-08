@@ -55,7 +55,7 @@ pretty_assertions = { version = "1.4.1", features = ["alloc"], default-features 
 repo_blobstore = { version = "0.1.0", path = "../repo_blobstore" }
 repo_identity = { version = "0.1.0", path = "../repo_identity" }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
-strum = { version = "0.27.1", features = ["derive"] }
+strum = { version = "0.28.0", features = ["derive"] }
 tempfile = "3.27.0"
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }

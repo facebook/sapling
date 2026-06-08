@@ -37,7 +37,7 @@ repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 shared_error = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-strum = { version = "0.27.1", features = ["derive"] }
+strum = { version = "0.28.0", features = ["derive"] }
 thiserror = "2.0.18"
 three_way_merge = { version = "0.1.0", path = "../../common/three_way_merge" }
 tokio = { version = "1.52.3", features = ["full", "test-util", "tracing"] }
