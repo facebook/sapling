@@ -15,7 +15,7 @@ name = "worktree"
 [dependencies]
 anyhow = "1.0.102"
 blake2 = "0.10"
-chrono = { version = "0.4.44", features = ["clock", "serde", "std"], default-features = false }
+chrono = { version = "0.4.45", features = ["clock", "serde", "std"], default-features = false }
 fs-err = { version = "3.3.0", features = ["tokio"] }
 sapling-util = { version = "0.1.0", path = "../util" }
 serde = { version = "1.0.219", features = ["derive", "rc"] }

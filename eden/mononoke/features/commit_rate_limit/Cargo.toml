@@ -15,7 +15,7 @@ doctest = false
 anyhow = "1.0.102"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bookmarks = { version = "0.1.0", path = "../../repo_attributes/bookmarks" }
-chrono = { version = "0.4.44", features = ["clock", "serde", "std"], default-features = false }
+chrono = { version = "0.4.45", features = ["clock", "serde", "std"], default-features = false }
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
 commit_rate_limit_config = { version = "0.1.0", path = "../../repo_attributes/commit_rate_limit" }
 context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context" }
