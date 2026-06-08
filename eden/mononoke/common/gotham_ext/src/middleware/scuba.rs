@@ -85,6 +85,8 @@ pub enum HttpScubaKey {
     ClientAtlas,
     /// Atlas environment ID, if any.
     ClientAtlasEnvId,
+    /// Whether running on Atlas for reinforcement learning (RL) use cases.
+    ClientAtlasRl,
     /// A unique ID identifying this request.
     RequestId,
     /// How long it took to send headers.
@@ -148,6 +150,7 @@ impl AsRef<str> for HttpScubaKey {
             SandcastleVCS => "sandcastle_vcs",
             ClientAtlas => "client_atlas",
             ClientAtlasEnvId => "client_atlas_env_id",
+            ClientAtlasRl => "client_atlas_rl",
             RequestId => "request_id",
             HeadersDurationMs => "headers_duration_ms",
             DurationMs => "duration_ms",
@@ -366,6 +369,9 @@ fn populate_scuba(scuba: &mut MononokeScubaSampleBuilder, state: &mut State) {
 
         let client_atlas_env_id = metadata.clientinfo_atlas_env_id();
         scuba.add(HttpScubaKey::ClientAtlasEnvId, client_atlas_env_id);
+
+        let client_atlas_rl = metadata.clientinfo_atlas_rl();
+        scuba.add(HttpScubaKey::ClientAtlasRl, client_atlas_rl);
 
         let client_tw_job = metadata.clientinfo_tw_job();
         scuba.add(HttpScubaKey::ClientTwJob, client_tw_job);

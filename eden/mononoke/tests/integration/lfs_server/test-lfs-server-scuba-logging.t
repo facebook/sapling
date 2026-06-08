@@ -76,6 +76,7 @@
     "normal": {
       "client_atlas": null,
       "client_atlas_env_id": null,
+      "client_atlas_rl": null,
       "client_correlator": "*", (glob)
       "client_entry_point": "sapling",
       "client_hostname": "localhost*", (glob)
@@ -145,6 +146,7 @@
     "normal": {
       "client_atlas": null,
       "client_atlas_env_id": null,
+      "client_atlas_rl": null,
       "client_correlator": "*", (glob)
       "client_entry_point": "sapling",
       "client_hostname": "localhost*", (glob)
@@ -220,6 +222,7 @@
       "batch_order": "*", (glob)
       "client_atlas": null,
       "client_atlas_env_id": null,
+      "client_atlas_rl": null,
       "client_correlator": "*", (glob)
       "client_entry_point": "sapling",
       "client_hostname": "localhost*", (glob)
@@ -295,6 +298,7 @@
     "normal": {
       "client_atlas": null,
       "client_atlas_env_id": null,
+      "client_atlas_rl": null,
       "client_correlator": "*", (glob)
       "client_entry_point": "sapling",
       "client_hostname": "localhost*", (glob)
@@ -359,6 +363,7 @@
     "normal": {
       "client_atlas": null,
       "client_atlas_env_id": null,
+      "client_atlas_rl": null,
       "client_correlator": "*", (glob)
       "client_entry_point": "curl_test",
       "client_hostname": "localhost*", (glob)

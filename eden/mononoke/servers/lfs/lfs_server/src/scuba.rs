@@ -66,6 +66,7 @@ pub enum LfsScubaKey {
     ClientTwTask,
     ClientAtlas,
     ClientAtlasEnvId,
+    ClientAtlasRl,
     /// Fetch cause
     FetchCause,
     /// Whether or not the client attempted to fetch from CAS.
@@ -107,6 +108,7 @@ impl AsRef<str> for LfsScubaKey {
             ClientTwTask => "client_tw_task",
             ClientAtlas => "client_atlas",
             ClientAtlasEnvId => "client_atlas_env_id",
+            ClientAtlasRl => "client_atlas_rl",
             FetchCause => "fetch_cause",
             FetchFromCASAttempted => "fetch_from_cas_attempted",
             CompressionBypassReason => "compression_bypass_reason",
@@ -211,6 +213,8 @@ impl ScubaHandler for LfsScubaHandler {
             scuba.add_opt(LfsScubaKey::ClientAtlas, client_info.fb.is_atlas());
 
             scuba.add_opt(LfsScubaKey::ClientAtlasEnvId, client_info.fb.atlas_env_id());
+
+            scuba.add_opt(LfsScubaKey::ClientAtlasRl, client_info.fb.is_atlas_rl());
         }
 
         scuba.add_opt(LfsScubaKey::FetchCause, self.fetch_cause);

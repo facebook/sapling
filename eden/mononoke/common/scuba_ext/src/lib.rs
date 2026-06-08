@@ -338,6 +338,8 @@ impl MononokeScubaSampleBuilder {
             .add_opt("client_atlas", metadata.clientinfo_atlas());
         self.inner
             .add_opt("client_atlas_env_id", metadata.clientinfo_atlas_env_id());
+        self.inner
+            .add_opt("client_atlas_rl", metadata.clientinfo_atlas_rl());
 
         self.inner.add_opt("fetch_cause", metadata.fetch_cause());
         self.inner.add(

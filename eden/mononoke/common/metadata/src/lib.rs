@@ -287,6 +287,10 @@ impl Metadata {
         self.client_info.as_ref().and_then(|ci| ci.fb.is_atlas())
     }
 
+    pub fn clientinfo_atlas_rl(&self) -> Option<bool> {
+        self.client_info.as_ref().and_then(|ci| ci.fb.is_atlas_rl())
+    }
+
     pub fn clientinfo_atlas_env_id(&self) -> Option<&str> {
         self.client_info
             .as_ref()
