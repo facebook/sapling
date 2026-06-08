@@ -37,6 +37,8 @@ use edenapi_types::BlameResult;
 use edenapi_types::BookmarkKind;
 use edenapi_types::BubbleUploadProperties;
 use edenapi_types::CacheableSnapshot;
+use edenapi_types::CheckManifestPermissionRequest;
+use edenapi_types::CheckManifestPermissionResponse;
 use edenapi_types::CloudShareWorkspaceRequest;
 use edenapi_types::CloudShareWorkspaceResponse;
 use edenapi_types::CommitGraphEntry;
@@ -628,6 +630,36 @@ py_class!(pub class client |py| {
             .map_pyerr(py)?
             .entries;
         Ok(blames.map_ok(Serde).map_err(Into::into).into())
+    }
+
+    /// check_manifest_permission(manifest_ids) -> Iterable[response]
+    ///
+    /// Check whether the caller can access the given manifest tree IDs.
+    /// `manifest_ids` is a list of 20-byte Hg tree IDs.
+    ///
+    /// Each result has `manifest_id`, `has_access`, and `request_acl` fields.
+    /// `request_acl` is set when access is denied and the server knows which
+    /// ACL should be requested to get access.
+    ///
+    /// Example:
+    ///     >>> list(api.check_manifest_permission([bin('ba0d94471251487f1ce5e77e7efdd6aaccc7f5fe')]))
+    ///     [{'manifest_id': b'\xba\r\x94G\x12QH\x7f\x1c\xe5\xe7~~\xfd\xd6\xaa\xcc\xc7\xf5\xfe',
+    ///       'has_access': False,
+    ///       'request_acl': 'REPO_REGION:repos/...'}]
+    def check_manifest_permission(
+        &self,
+        manifest_ids: Serde<Vec<HgId>>,
+    ) -> PyResult<TStream<anyhow::Result<Serde<CheckManifestPermissionResponse>>>> {
+        let api = self.inner(py).as_ref();
+        let request = CheckManifestPermissionRequest {
+            manifest_ids: manifest_ids.0,
+        };
+        let entries = py
+            .allow_threads(|| block_unless_interrupted(api.check_manifest_permission(request)))
+            .map_pyerr(py)?
+            .map_pyerr(py)?
+            .entries;
+        Ok(entries.map_ok(Serde).map_err(Into::into).into())
     }
 
     def cloudworkspace(&self, workspace: String, reponame : String)
