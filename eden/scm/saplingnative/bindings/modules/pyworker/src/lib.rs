@@ -448,11 +448,7 @@ mod tests {
 
         let file_type = symlink_metadata(&file)?.file_type();
 
-        if cfg!(windows) {
-            assert!(file_type.is_file());
-        } else {
-            assert!(file_type.is_symlink());
-        }
+        assert!(file_type.is_symlink());
 
         Ok(())
     }
