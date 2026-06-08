@@ -44,6 +44,10 @@ impl FbClientInfo {
         None
     }
 
+    pub fn is_atlas_rl(&self) -> Option<bool> {
+        None
+    }
+
     pub fn atlas_env_id(&self) -> Option<&str> {
         None
     }

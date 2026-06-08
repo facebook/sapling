@@ -34,6 +34,8 @@ pub struct FbClientInfo {
     #[serde(skip_serializing_if = "Option::is_none")]
     atlas: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    atlas_rl: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     atlas_env_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     faas_job_name: Option<String>,
@@ -68,6 +70,10 @@ impl FbClientInfo {
         self.atlas
     }
 
+    pub fn is_atlas_rl(&self) -> Option<bool> {
+        self.atlas_rl
+    }
+
     pub fn atlas_env_id(&self) -> Option<&str> {
         self.atlas_env_id.as_deref()
     }
@@ -75,6 +81,16 @@ impl FbClientInfo {
     pub fn faas_job_name(&self) -> Option<&str> {
         self.faas_job_name.as_deref()
     }
+}
+
+/// Detect an Atlas-style boolean env var the same way as the config loader's
+/// `platform_helpers::is_atlas`/`is_atlas_rl` (set to "1" means true). Returns
+/// `None` when unset so the field stays absent for non-Atlas clients. We can't
+/// reuse those helpers directly: they live in `configloader`, and clientinfo ->
+/// configloader would be a dependency cycle (configloader -> http-client ->
+/// clientinfo).
+fn atlas_env_flag(name: &str) -> Option<bool> {
+    std::env::var_os(name).map(|v| v == "1")
 }
 
 fn get_tw_job_handle() -> Option<String> {
@@ -95,7 +111,9 @@ pub fn get_fb_client_info() -> FbClientInfo {
         sandcastle_alias: var("SANDCASTLE_ALIAS").ok(),
         sandcastle_type: var("SANDCASTLE_TYPE").ok(),
         sandcastle_vcs: var("SANDCASTLE_VCS").ok(),
-        atlas: var("ATLAS").ok().and_then(|s| s.parse().ok()),
+        atlas: atlas_env_flag("ATLAS"),
+        // TODO(liubovd): migrate to the atlaswhoami file once it is ready.
+        atlas_rl: atlas_env_flag("ATLAS_RL"),
         atlas_env_id: var("ATLAS_ENV_ID").ok(),
         faas_job_name: var("FAAS_JOB_NAME").ok(),
     }
