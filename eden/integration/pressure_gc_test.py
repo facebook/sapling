@@ -6,6 +6,7 @@
 
 # pyre-strict
 
+import asyncio
 import os
 import sys
 import time
@@ -145,3 +146,46 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
 
         # Everything should still be readable
         self.read_all()
+
+    async def test_active_invalidation_loses_bind_redirection(self) -> None:
+        if sys.platform != "linux":
+            self.skipTest("active FUSE invalidation is Linux-only")
+
+        repo_path = "generated-output"
+        self.eden.run_cmd("redirect", "add", "--mount", self.mount, repo_path, "bind")
+
+        redirection_path = os.path.join(self.mount, repo_path)
+        mount_stat = os.stat(self.mount)
+
+        def assert_bind_mounted() -> None:
+            self.assertNotEqual(mount_stat.st_dev, os.stat(redirection_path).st_dev)
+
+        def load_gc_candidate() -> None:
+            self.assertEqual("0\n", self.read_file("a/0"))
+
+        async def invalidate_until_gc_runs() -> None:
+            deadline = time.monotonic() + 5
+            while True:
+                invalidated = await self.invalidate("")
+                if invalidated > 0:
+                    return
+                if time.monotonic() >= deadline:
+                    self.fail("pressure GC did not invalidate the bind redirection")
+                await asyncio.sleep(0.1)
+
+        assert_bind_mounted()
+        load_gc_candidate()
+        await invalidate_until_gc_runs()
+        # FIXME: dev is no longer the bind mount!
+        self.assertEqual(mount_stat.st_dev, os.stat(redirection_path).st_dev)
+
+        self.eden.run_cmd("redirect", "fixup", "--mount", self.mount)
+        assert_bind_mounted()
+
+        self.eden.graceful_restart()
+        assert_bind_mounted()
+
+        load_gc_candidate()
+        await invalidate_until_gc_runs()
+        # FIXME: dev is no longer the bind mount after graceful restart either.
+        self.assertEqual(mount_stat.st_dev, os.stat(redirection_path).st_dev)
