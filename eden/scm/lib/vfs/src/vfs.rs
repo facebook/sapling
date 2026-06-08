@@ -10,8 +10,6 @@ use std::fs::Metadata;
 use std::io;
 use std::io::ErrorKind;
 use std::io::Read;
-#[cfg(unix)]
-use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -78,27 +76,6 @@ impl std::fmt::Display for ClearConflictError {
 }
 
 impl std::error::Error for ClearConflictError {}
-
-fn reset_open_file_permissions(file: &File, flags: OpenFlags, mode: u32) -> io::Result<()> {
-    if !flags.intersects(OpenFlags::TRUNCATE | OpenFlags::CREATE_NEW) {
-        return Ok(());
-    }
-
-    // Legacy vfs.py write paths unlink and recreate the destination before
-    // opening it, so writes reset the mode even when the file already exists.
-    // Apply umask here to preserve normal file creation permissions.
-    set_file_permissions(file, util::file::apply_umask(mode))
-}
-
-#[cfg(unix)]
-fn set_file_permissions(file: &File, mode: u32) -> io::Result<()> {
-    file.set_permissions(std::fs::Permissions::from_mode(mode))
-}
-
-#[cfg(windows)]
-fn set_file_permissions(_file: &File, _mode: u32) -> io::Result<()> {
-    Ok(())
-}
 
 fn normalize_not_directory_anyhow(err: anyhow::Error) -> anyhow::Error {
     match err.downcast::<io::Error>() {
@@ -327,21 +304,35 @@ impl VFS {
     }
 
     /// Open the regular file at `path` without following symlinks.
+    /// `mode` is only used for newly created files.
     pub fn open(&self, path: &RepoPath, flags: OpenFlags, mode: u32) -> Result<File> {
         self.inner.auditor.audit_components(path)?;
-        match self.no_follow()?.open_file(path, flags, mode) {
-            Ok(file) => {
-                reset_open_file_permissions(&file, flags, mode)?;
-                Ok(file)
+        let mode = util::file::apply_umask(mode);
+        let no_follow = self.no_follow()?;
+
+        if flags.contains(OpenFlags::CREATE | OpenFlags::TRUNCATE) {
+            if let Ok(metadata) = no_follow.symlink_metadata(Some(path)) {
+                let should_remove = (metadata.is_file()
+                    && (metadata.mode() & 0o777) != (mode & 0o777))
+                    || metadata.is_symlink();
+                if should_remove {
+                    match no_follow.remove_file(path) {
+                        Ok(()) => {}
+                        Err(err) if err.kind() == ErrorKind::NotFound => {}
+                        Err(err) => return Err(err.into()),
+                    }
+                }
             }
+        }
+
+        match no_follow.open_file(path, flags, mode) {
+            Ok(file) => Ok(file),
             Err(err) if flags.creates_file() => {
                 let err = anyhow::Error::from(err);
                 self.clear_conflicts(path).with_context(|| {
                     format!("can't clear conflicts after handling error \"{err:#}\"")
                 })?;
-                let file = self.no_follow()?.open_file(path, flags, mode)?;
-                reset_open_file_permissions(&file, flags, mode)?;
-                Ok(file)
+                Ok(no_follow.open_file(path, flags, mode)?)
             }
             Err(err) => Err(err.into()),
         }
@@ -1362,6 +1353,8 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn test_open_truncate_resets_existing_file_mode() {
+        use std::os::unix::fs::PermissionsExt;
+
         let tmp = tempfile::tempdir().unwrap();
         let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
         let path = RepoPath::from_str("file").unwrap();
@@ -1383,6 +1376,38 @@ mod tests {
             fs::metadata(vfs.join(path)).unwrap().permissions().mode() & 0o777,
             util::file::apply_umask(0o644)
         );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_open_truncate_preserves_existing_file_with_same_mode() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let tmp = tempfile::tempdir().unwrap();
+        let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
+        let path = RepoPath::from_str("file").unwrap();
+        vfs.write(path, Blob::from_static(b"old"), UpdateFlag::Regular)
+            .unwrap();
+        fs::set_permissions(
+            vfs.join(path),
+            fs::Permissions::from_mode(util::file::apply_umask(0o644)),
+        )
+        .unwrap();
+        let mut old_file = fs::File::open(vfs.join(path)).unwrap();
+
+        let mut file = vfs
+            .open(
+                path,
+                OpenFlags::WRITE | OpenFlags::CREATE | OpenFlags::TRUNCATE,
+                0o644,
+            )
+            .unwrap();
+        file.write_all(b"new").unwrap();
+        drop(file);
+
+        let mut content = Vec::new();
+        old_file.read_to_end(&mut content).unwrap();
+        assert_eq!(content, b"new");
     }
 
     #[cfg(unix)]
