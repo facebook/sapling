@@ -9,7 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.102"
-aws-config = "1.8.16"
+aws-config = "1.8.18"
 aws-sdk-cloudwatchlogs = "1.131.0"
 clap = { version = "4.6.0", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 serde = { version = "1.0.219", features = ["derive", "rc"] }
