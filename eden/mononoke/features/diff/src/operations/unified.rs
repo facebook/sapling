@@ -19,8 +19,11 @@ use crate::types::UnifiedDiff;
 use crate::types::UnifiedDiffOpts;
 use crate::utils::content::DiffFileOpts;
 use crate::utils::content::LoadDiffFileResult;
+use crate::utils::content::LoadedDiffFileKind;
 use crate::utils::content::load_diff_file;
 use crate::utils::whitespace::strip_horizontal_whitespace;
+
+const LFS_NON_TEXT_SENTINEL: &str = "Git LFS: none (non-text content omitted)\n";
 
 /// Compute unified diff between two inputs.
 ///
@@ -38,7 +41,7 @@ pub async fn unified(
         omit_content: options.omit_content,
     };
 
-    let (base_result, other_result) = try_join!(
+    let (mut base_result, mut other_result) = try_join!(
         async {
             if let Some((base_input, base_repo)) = base_pair {
                 let default_path =
@@ -48,6 +51,7 @@ pub async fn unified(
                 Ok(LoadDiffFileResult {
                     diff_file: None,
                     is_binary: false,
+                    kind: LoadedDiffFileKind::Other,
                 })
             }
         },
@@ -60,12 +64,16 @@ pub async fn unified(
                 Ok(LoadDiffFileResult {
                     diff_file: None,
                     is_binary: false,
+                    kind: LoadedDiffFileKind::Other,
                 })
             }
         }
     )?;
 
-    let is_binary = base_result.is_binary || other_result.is_binary;
+    let rendered_lfs_non_text_sentinel =
+        render_lfs_non_text_sentinel(&mut base_result, &mut other_result);
+
+    let has_binary_input = base_result.is_binary || other_result.is_binary;
 
     let (base_file, other_file) = (base_result.diff_file, other_result.diff_file);
 
@@ -73,14 +81,15 @@ pub async fn unified(
         return Err(DiffError::empty_inputs());
     }
 
-    let (base_file, other_file) = if !is_binary && options.ignore_whitespace {
-        (
-            base_file.map(strip_whitespace_from_diff_file),
-            other_file.map(strip_whitespace_from_diff_file),
-        )
-    } else {
-        (base_file, other_file)
-    };
+    let (base_file, other_file) =
+        if !has_binary_input && !rendered_lfs_non_text_sentinel && options.ignore_whitespace {
+            (
+                base_file.map(strip_whitespace_from_diff_file),
+                other_file.map(strip_whitespace_from_diff_file),
+            )
+        } else {
+            (base_file, other_file)
+        };
 
     let xdiff_opts = xdiff::DiffOpts::from(options);
     let raw_diff =
@@ -90,7 +99,7 @@ pub async fn unified(
 
     Ok(UnifiedDiff {
         raw_diff,
-        is_binary,
+        is_binary: has_binary_input && !rendered_lfs_non_text_sentinel,
     })
 }
 
@@ -98,6 +107,29 @@ fn to_non_root_path(path: &str) -> Result<NonRootMPath, DiffError> {
     let mpath = MPath::new(path)?;
     let non_root_mpath = NonRootMPath::try_from(mpath)?;
     Ok(non_root_mpath)
+}
+
+/// When a path flips between non-text content and an LFS pointer, replace the
+/// non-text side's contents with a short textual sentinel so the diff surfaces
+/// the LFS state transition instead of dumping raw bytes. Returns whether the
+/// sentinel was rendered.
+fn render_lfs_non_text_sentinel(
+    base: &mut LoadDiffFileResult,
+    other: &mut LoadDiffFileResult,
+) -> bool {
+    let non_text_side = match (base.kind, other.kind) {
+        (LoadedDiffFileKind::NonText, LoadedDiffFileKind::LfsPointer) => Some(base),
+        (LoadedDiffFileKind::LfsPointer, LoadedDiffFileKind::NonText) => Some(other),
+        _ => None,
+    };
+
+    if let Some(file) = non_text_side.and_then(|side| side.diff_file.as_mut()) {
+        file.contents =
+            xdiff::FileContent::Inline(Bytes::from_static(LFS_NON_TEXT_SENTINEL.as_bytes()));
+        true
+    } else {
+        false
+    }
 }
 
 /// Strip horizontal whitespace from inline content in a DiffFile
@@ -864,6 +896,176 @@ mod tests {
             "is_binary should be true when base is binary"
         );
 
+        Ok(())
+    }
+
+    /// When: compute the unified diff for `path` across two changesets with
+    /// `inspect_lfs_pointers = false`, so the LFS side renders as pointer text
+    /// and the flip becomes a `NonText` vs `LfsPointer` pairing.
+    async fn when_unified_diff_without_inspecting_pointers(
+        ctx: &CoreContext,
+        repo: &BasicTestRepo,
+        base_cs: mononoke_types::ChangesetId,
+        other_cs: mononoke_types::ChangesetId,
+        path: &str,
+    ) -> Result<UnifiedDiff, DiffError> {
+        let base_input = DiffSingleInput::ChangesetPath(DiffInputChangesetPath {
+            changeset_id: base_cs,
+            path: to_non_root_path(path)?,
+            replacement_path: None,
+        });
+        let other_input = DiffSingleInput::ChangesetPath(DiffInputChangesetPath {
+            changeset_id: other_cs,
+            path: to_non_root_path(path)?,
+            replacement_path: None,
+        });
+
+        let options = UnifiedDiffOpts {
+            context: 3,
+            copy_info: DiffCopyInfo::None,
+            file_type: DiffFileType::Regular,
+            inspect_lfs_pointers: false,
+            omit_content: false,
+            ignore_whitespace: false,
+        };
+
+        unified(
+            ctx,
+            Some((base_input, repo)),
+            Some((other_input, repo)),
+            options,
+        )
+        .await
+    }
+
+    /// Then: the non-text side is replaced by the sentinel (no raw bytes leak)
+    /// and the flip is not reported as binary. `sentinel_on_minus` is true when
+    /// the base (`-`) side is the non-text one (enabling LFS), false otherwise.
+    fn then_flip_is_rendered_as_sentinel(diff: &UnifiedDiff, sentinel_on_minus: bool) {
+        let diff_str = String::from_utf8_lossy(&diff.raw_diff);
+
+        assert!(!diff.is_binary, "LFS flip reported as binary: {diff_str}");
+        assert!(
+            !diff_str.contains("raw binary here"),
+            "raw content leaked into diff: {diff_str}"
+        );
+        assert!(!diff_str.contains('\u{0}'), "NUL byte leaked: {diff_str}");
+
+        let sentinel = "Git LFS: none (non-text content omitted)";
+        let pointer = "version https://git-lfs.github.com/spec/v1";
+        if sentinel_on_minus {
+            assert!(diff_str.contains(&format!("-{sentinel}")), "{diff_str}");
+            assert!(diff_str.contains(&format!("+{pointer}")), "{diff_str}");
+        } else {
+            assert!(diff_str.contains(&format!("+{sentinel}")), "{diff_str}");
+            assert!(diff_str.contains(&format!("-{pointer}")), "{diff_str}");
+        }
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_unified_lfs_flip_binary_to_pointer(fb: FacebookInit) -> Result<(), DiffError> {
+        use mononoke_types::FileType;
+        use mononoke_types::GitLfs;
+
+        // Given: a path that is raw binary content (NUL byte, so non-text) in the
+        // base commit and an LFS pointer to the same bytes in the other commit.
+        let ctx = CoreContext::test_mock(fb);
+        let repo = init_test_repo_with_lfs(&ctx).await?;
+        let shared = b"\x00raw binary here".to_vec();
+        let base_cs = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("flip.bin", shared.clone())
+            .commit()
+            .await?;
+        let other_cs = CreateCommitContext::new(&ctx, &repo, vec![base_cs])
+            .add_file_with_type_and_lfs(
+                "flip.bin",
+                shared,
+                FileType::Regular,
+                GitLfs::canonical_pointer(),
+            )
+            .commit()
+            .await?;
+
+        // When: we diff the flip without inspecting LFS pointers.
+        let diff = when_unified_diff_without_inspecting_pointers(
+            &ctx, &repo, base_cs, other_cs, "flip.bin",
+        )
+        .await?;
+
+        // Then: the raw binary side (`-`, enabling LFS) shows the sentinel.
+        then_flip_is_rendered_as_sentinel(&diff, /* sentinel_on_minus */ true);
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_unified_lfs_flip_pointer_to_binary(fb: FacebookInit) -> Result<(), DiffError> {
+        use mononoke_types::FileType;
+        use mononoke_types::GitLfs;
+
+        // Given: the reverse direction -- an LFS pointer in the base commit and
+        // raw binary content in the other. Exercises the `(LfsPointer, NonText)`
+        // match arm.
+        let ctx = CoreContext::test_mock(fb);
+        let repo = init_test_repo_with_lfs(&ctx).await?;
+        let shared = b"\x00raw binary here".to_vec();
+        let base_cs = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file_with_type_and_lfs(
+                "flip.bin",
+                shared.clone(),
+                FileType::Regular,
+                GitLfs::canonical_pointer(),
+            )
+            .commit()
+            .await?;
+        let other_cs = CreateCommitContext::new(&ctx, &repo, vec![base_cs])
+            .add_file("flip.bin", shared)
+            .commit()
+            .await?;
+
+        // When: we diff the flip without inspecting LFS pointers.
+        let diff = when_unified_diff_without_inspecting_pointers(
+            &ctx, &repo, base_cs, other_cs, "flip.bin",
+        )
+        .await?;
+
+        // Then: the raw binary side (`+`, disabling LFS) shows the sentinel.
+        then_flip_is_rendered_as_sentinel(&diff, /* sentinel_on_minus */ false);
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_unified_lfs_flip_nonutf8_to_pointer(fb: FacebookInit) -> Result<(), DiffError> {
+        use mononoke_types::FileType;
+        use mononoke_types::GitLfs;
+
+        // Given: a raw side with no NUL byte but invalid UTF-8 (leading 0xFF), so
+        // it is classified non-text via `is_utf8` rather than the NUL-based
+        // binary check -- the case the legacy NUL-only check would have leaked.
+        let ctx = CoreContext::test_mock(fb);
+        let repo = init_test_repo_with_lfs(&ctx).await?;
+        let shared = b"\xffraw binary here".to_vec();
+        let base_cs = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("flip.bin", shared.clone())
+            .commit()
+            .await?;
+        let other_cs = CreateCommitContext::new(&ctx, &repo, vec![base_cs])
+            .add_file_with_type_and_lfs(
+                "flip.bin",
+                shared,
+                FileType::Regular,
+                GitLfs::canonical_pointer(),
+            )
+            .commit()
+            .await?;
+
+        // When: we diff the flip without inspecting LFS pointers.
+        let diff = when_unified_diff_without_inspecting_pointers(
+            &ctx, &repo, base_cs, other_cs, "flip.bin",
+        )
+        .await?;
+
+        // Then: the non-UTF-8 side (`-`, enabling LFS) shows the sentinel.
+        then_flip_is_rendered_as_sentinel(&diff, /* sentinel_on_minus */ true);
         Ok(())
     }
 }

@@ -36,12 +36,12 @@ use crate::types::DiffSingleInput;
 use crate::types::LfsPointer;
 use crate::types::Repo;
 
-/// Result of content loading — distinguishes between loaded text content
+/// Result of content loading — distinguishes between loaded content
 /// and binary files that were detected via metadata without loading content.
 #[derive(Debug, Clone)]
 pub enum LoadResult {
     /// File content was loaded into memory.
-    Content(Bytes),
+    Content { bytes: Bytes, is_utf8: bool },
     /// File is binary (detected from ContentMetadataV2.is_binary).
     /// Content was NOT loaded — no RSS impact.
     Binary,
@@ -51,7 +51,7 @@ impl LoadResult {
     /// Extract content bytes, returning `None` for binary files.
     pub fn into_content(self) -> Option<Bytes> {
         match self {
-            LoadResult::Content(bytes) => Some(bytes),
+            LoadResult::Content { bytes, .. } => Some(bytes),
             LoadResult::Binary => None,
         }
     }
@@ -91,7 +91,10 @@ pub async fn load_content(
             if is_binary(&content) {
                 return Ok(Some(LoadResult::Binary));
             } else {
-                return Ok(Some(LoadResult::Content(content)));
+                return Ok(Some(LoadResult::Content {
+                    bytes: content,
+                    is_utf8: true,
+                }));
             }
         }
     };
@@ -125,7 +128,10 @@ pub async fn load_content(
         // to use the streaming version.
         // Use fetch_concat_opt which returns Option<Bytes> to properly handle missing content
         match filestore::fetch_concat_opt(blobstore, ctx, &fetch_key).await {
-            Ok(Some(bytes)) => Ok(Some(LoadResult::Content(bytes))),
+            Ok(Some(bytes)) => Ok(Some(LoadResult::Content {
+                bytes,
+                is_utf8: metadata.is_utf8,
+            })),
             Ok(None) => {
                 // Content not found - this is a client error
                 Err(DiffError::content_not_found(content_id))
@@ -391,9 +397,30 @@ pub struct DiffFileOpts {
     pub omit_content: bool,
 }
 
+/// Classifies how a loaded diff side should be treated when deciding whether
+/// to render the LFS non-text sentinel (see `render_lfs_non_text_sentinel`).
+///
+/// Named by content category: `LfsPointer` and `NonText` are the two cases the
+/// sentinel logic acts on; `Other` is the residual.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum LoadedDiffFileKind {
+    /// Content that is neither an LFS pointer nor non-text, and so needs no
+    /// LFS-flip handling: UTF-8 text, submodules, omitted content, or an
+    /// absent side.
+    Other,
+    /// An LFS pointer rendered as inline pointer text (pointers were not
+    /// inspected, e.g. a renormalize diff).
+    LfsPointer,
+    /// Non-text raw content loaded inline: binary (contains a NUL byte) or
+    /// otherwise invalid UTF-8. Deliberately broader than "binary" so the
+    /// invalid-UTF-8-without-NUL case is also covered.
+    NonText,
+}
+
 pub struct LoadDiffFileResult {
     pub diff_file: Option<xdiff::DiffFile<String, Bytes>>,
     pub is_binary: bool,
+    pub kind: LoadedDiffFileKind,
 }
 
 pub async fn load_diff_file(
@@ -414,6 +441,7 @@ pub async fn load_diff_file(
                 file_type: options.file_type.into(),
             }),
             is_binary: binary,
+            kind: LoadedDiffFileKind::Other,
         });
     }
 
@@ -421,12 +449,12 @@ pub async fn load_diff_file(
         extract_input_data(ctx, repo, &input, default_path).await?;
 
     if let Some(id) = content_id {
-        let (contents, is_binary) = if options.file_type == DiffFileType::GitSubmodule {
+        let (contents, is_binary, kind) = if options.file_type == DiffFileType::GitSubmodule {
             // Handle Git submodule: load commit hash regardless of omit_content.
             // Submodule entries are 20-byte SHA1 hashes that may trigger is_binary
             // (null bytes in raw hash), so bypass the binary check by fetching directly.
             let commit_hash_bytes = match load_content(ctx, repo, input).await? {
-                Some(LoadResult::Content(bytes)) => bytes,
+                Some(LoadResult::Content { bytes, .. }) => bytes,
                 Some(LoadResult::Binary) => {
                     // Submodule hash is 20 bytes — no OOM risk, fetch directly
                     let blobstore = repo.repo_blobstore();
@@ -453,7 +481,11 @@ pub async fn load_diff_file(
             let commit_hash = GitSha1::from_bytes(commit_hash_bytes)
                 .with_context(|| format!("Invalid commit hash for submodule at {path}"))?
                 .to_string();
-            (xdiff::FileContent::Submodule { commit_hash }, false)
+            (
+                xdiff::FileContent::Submodule { commit_hash },
+                false,
+                LoadedDiffFileKind::Other,
+            )
         } else if options.omit_content {
             (
                 xdiff::FileContent::Omitted {
@@ -461,28 +493,36 @@ pub async fn load_diff_file(
                     git_lfs_pointer: lfs_pointer.as_ref().map(lfs_pointer_text).transpose()?,
                 },
                 false,
+                LoadedDiffFileKind::Other,
             )
         } else if !options.inspect_lfs_pointers
             && let Some(lfs) = lfs_pointer
         {
-            // Surface the pointer text to xdiff as `Inline`. xdiff then
-            // walks its standard text/binary branch: text raw → unified
-            // diff between pointer text and content (matches `git add
-            // --renormalize`); binary raw → `Binary file X has changed`
-            // (matches `git diff --no-textconv`). For both-sides-pointer
-            // diffs this matches the legacy `Omitted{Some(text)}` output
-            // byte-for-byte.
+            // Surface the pointer text to xdiff as `Inline` so normal text
+            // renormalize diffs compare raw text with pointer text.
             let pointer_text = lfs_pointer_text(&lfs)?;
-            (xdiff::FileContent::Inline(Bytes::from(pointer_text)), false)
+            (
+                xdiff::FileContent::Inline(Bytes::from(pointer_text)),
+                false,
+                LoadedDiffFileKind::LfsPointer,
+            )
         } else {
             match load_content(ctx, repo, input).await? {
-                Some(LoadResult::Content(bytes)) => (xdiff::FileContent::Inline(bytes), false),
+                Some(LoadResult::Content { bytes, is_utf8 }) => {
+                    let kind = if is_utf8 {
+                        LoadedDiffFileKind::Other
+                    } else {
+                        LoadedDiffFileKind::NonText
+                    };
+                    (xdiff::FileContent::Inline(bytes), false, kind)
+                }
                 Some(LoadResult::Binary) => (
                     xdiff::FileContent::Omitted {
                         content_hash: format!("{id:?}"),
                         git_lfs_pointer: None,
                     },
                     true,
+                    LoadedDiffFileKind::NonText,
                 ),
                 None => {
                     return Err(DiffError::Internal(anyhow::anyhow!(
@@ -499,11 +539,13 @@ pub async fn load_diff_file(
                 file_type: options.file_type.into(),
             }),
             is_binary,
+            kind,
         })
     } else {
         Ok(LoadDiffFileResult {
             diff_file: None,
             is_binary: false,
+            kind: LoadedDiffFileKind::Other,
         })
     }
 }
@@ -576,7 +618,7 @@ mod tests {
 
         let result = load_content(&ctx, &repo, input).await?;
         assert!(
-            matches!(&result, Some(LoadResult::Content(bytes)) if bytes.as_ref() == b"hello world\n"),
+            matches!(&result, Some(LoadResult::Content { bytes, .. }) if bytes.as_ref() == b"hello world\n"),
             "Expected Some(LoadResult::Content) with text content, got {result:?}"
         );
         Ok(())
