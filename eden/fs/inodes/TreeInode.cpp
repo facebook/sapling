@@ -8,9 +8,10 @@
 #include "eden/fs/inodes/TreeInode.h"
 
 #include <boost/polymorphic_cast.hpp>
+#include <folly/CppAttributes.h>
 #include <folly/FileUtil.h>
+#include <folly/MapUtil.h>
 #include <folly/chrono/Conv.h>
-#include <folly/container/F14Map.h>
 #include <folly/coro/Collect.h>
 #include <folly/coro/CurrentExecutor.h>
 #include <folly/coro/Invoke.h>
@@ -18,6 +19,7 @@
 #include <folly/io/async/EventBase.h>
 #include <folly/logging/xlog.h>
 #include <sys/stat.h>
+#include <cstring>
 #include <vector>
 
 #include "eden/common/telemetry/Tracing.h"
@@ -56,6 +58,9 @@
 #include "eden/fs/nfs/NfsDirList.h"
 #include "eden/fs/nfs/Nfsd3.h"
 #include "eden/fs/nfs/NfsdRpc.h"
+#ifdef __linux__
+#include "eden/fs/utils/MountInfoTable.h"
+#endif
 #include "eden/fs/prjfs/Enumerator.h"
 #include "eden/fs/prjfs/PrjfsChannel.h"
 #include "eden/fs/service/ThriftUtil.h"
@@ -81,6 +86,54 @@ using std::unique_ptr;
 using std::vector;
 
 namespace facebook::eden {
+
+#ifndef _WIN32
+struct GcBarrierTrie {
+  GcBarrierTrie() : children{kPathMapDefaultCaseSensitive} {}
+
+  const GcBarrierTrie* FOLLY_NULLABLE getChild(PathComponentPiece name) const {
+    auto child = folly::get_ptr(children, name);
+    return child ? child->get() : nullptr;
+  }
+
+  GcBarrierTrie* getOrCreateChild(PathComponentPiece name) {
+    auto child = folly::get_ptr(children, name);
+    if (child) {
+      return child->get();
+    }
+    auto [iter, inserted] =
+        children.emplace(name, std::make_unique<GcBarrierTrie>());
+    (void)inserted;
+    return iter->second.get();
+  }
+
+  void add(RelativePathPiece path) {
+    auto* node = this;
+    for (auto component : path.components()) {
+      node = node->getOrCreateChild(component);
+    }
+    node->isMountRoot = true;
+  }
+
+  bool isMountRoot{false};
+  PathMap<std::unique_ptr<GcBarrierTrie>> children;
+
+  const GcBarrierTrie* FOLLY_NULLABLE
+  getDescendant(RelativePathPiece path) const {
+    auto* node = this;
+    for (auto component : path.components()) {
+      if (node->isMountRoot) {
+        return node;
+      }
+      node = node->getChild(component);
+      if (!node) {
+        return nullptr;
+      }
+    }
+    return node;
+  }
+};
+#endif
 
 namespace {
 static constexpr PathComponentPiece kIgnoreFilename{".gitignore"};
@@ -5660,11 +5713,13 @@ size_t TreeInode::unloadChildrenUnreferencedByFs(bool mustPersistInodeNumbers) {
 }
 
 namespace {
-ImmediateFuture<std::vector<TreeInodePtr>> getLoadedOrRememberedTreeChildren(
+using NamedTreeInode = std::pair<PathComponent, TreeInodePtr>;
+
+ImmediateFuture<std::vector<NamedTreeInode>> getLoadedOrRememberedTreeChildren(
     TreeInode* self,
     InodeMap* const inodeMap,
     const ObjectFetchContextPtr& context) {
-  std::vector<ImmediateFuture<TreeInodePtr>> res;
+  std::vector<ImmediateFuture<NamedTreeInode>> res;
   std::vector<PathComponent> toLoad;
   {
     auto contents = self->getContentsUnchecked().rlock();
@@ -5674,7 +5729,8 @@ ImmediateFuture<std::vector<TreeInodePtr>> getLoadedOrRememberedTreeChildren(
       }
 
       if (auto treePtr = entry.second.asTreePtrOrNull()) {
-        res.emplace_back(std::move(treePtr));
+        res.emplace_back(
+            std::make_pair(PathComponent{entry.first}, std::move(treePtr)));
         continue;
       }
 
@@ -5691,8 +5747,11 @@ ImmediateFuture<std::vector<TreeInodePtr>> getLoadedOrRememberedTreeChildren(
 
   // TODO(xavierd): We could use VirtualInode here to avoid loading inodes
   // unnecessarily.
-  for (auto& name : toLoad) {
-    res.push_back(self->getOrLoadChildTree(name, context));
+  for (const auto& name : toLoad) {
+    res.push_back(self->getOrLoadChildTree(name, context)
+                      .thenValue([name](TreeInodePtr tree) {
+                        return std::make_pair(name, std::move(tree));
+                      }));
   }
   return collectAllSafe(std::move(res));
 }
@@ -5718,8 +5777,9 @@ bool shouldCancelGC(
  * Applies the given processor function to each child tree.
  */
 template <typename Func>
-ImmediateFuture<
-    std::vector<typename std::invoke_result_t<Func, TreeInodePtr>::value_type>>
+ImmediateFuture<std::vector<
+    typename std::invoke_result_t<Func, PathComponentPiece, TreeInodePtr>::
+        value_type>>
 processTreeChildren(
     TreeInode* self,
     InodeMap* inodeMap,
@@ -5729,9 +5789,9 @@ processTreeChildren(
   return getLoadedOrRememberedTreeChildren(self, inodeMap, context)
       .thenValue([childProcessor = std::forward<Func>(childProcessor),
                   cancellationToken](
-                     const std::vector<TreeInodePtr>& treeChildren) mutable {
-        using ResultType =
-            typename std::invoke_result_t<Func, TreeInodePtr>::value_type;
+                     const std::vector<NamedTreeInode>& treeChildren) mutable {
+        using ResultType = typename std::
+            invoke_result_t<Func, PathComponentPiece, TreeInodePtr>::value_type;
 
         // Check for cancellation before processing children
         if (shouldCancelGC(cancellationToken)) {
@@ -5741,8 +5801,8 @@ processTreeChildren(
 
         std::vector<ImmediateFuture<ResultType>> futures;
         futures.reserve(treeChildren.size());
-        for (auto& tree : treeChildren) {
-          futures.push_back(childProcessor(tree));
+        for (auto& [name, tree] : treeChildren) {
+          futures.push_back(childProcessor(name.piece(), tree));
         }
 
         // Check for cancellation after processing children
@@ -5802,6 +5862,38 @@ TreeInode::handleChildrenNotAccessedRecently(
 }
 
 #ifndef _WIN32
+namespace {
+folly::Expected<std::shared_ptr<GcBarrierTrie>, int> getGcBarrierTrie(
+    EdenMount* mount) {
+  auto gcBarrier = std::make_shared<GcBarrierTrie>();
+  for (const auto& vcsDirectory :
+       mount->getEdenConfig()->vcsDirectories.getValue()) {
+    gcBarrier->add(vcsDirectory);
+  }
+
+#ifdef __linux__
+  const auto& mountPath = mount->getPath().asString();
+  auto mountedPaths = getMountsUnderPath(mountPath);
+  if (mountedPaths.hasError()) {
+    return folly::makeUnexpected(mountedPaths.error());
+  }
+
+  auto mountPathPrefix = mountPath + "/";
+  for (const auto& mountedPath : mountedPaths.value()) {
+    if (mountedPath.mountPoint.compare(
+            0, mountPathPrefix.size(), mountPathPrefix) != 0) {
+      continue;
+    }
+    gcBarrier->add(
+        RelativePathPiece{
+            mountedPath.mountPoint.substr(mountPathPrefix.size())});
+  }
+#endif
+
+  return gcBarrier;
+}
+} // namespace
+
 ImmediateFuture<uint64_t> TreeInode::invalidateChildrenNotAccessedRecentlyFuse(
     std::chrono::system_clock::time_point cutoff,
     const ObjectFetchContextPtr& context,
@@ -5833,11 +5925,34 @@ ImmediateFuture<uint64_t> TreeInode::invalidateChildrenNotAccessedRecentlyFuse(
     }
   }
 
+  auto gcBarrier = getGcBarrierTrie(getMount());
+  if (gcBarrier.hasError()) {
+    XLOGF(
+        WARN,
+        "Skipping active FUSE GC for {} because mount table enumeration failed: {} ({})",
+        getMount()->getPath(),
+        gcBarrier.error(),
+        std::strerror(gcBarrier.error()));
+    return ImmediateFuture<uint64_t>{0ULL};
+  }
+
+  auto path = getPath();
+  if (!path.has_value()) {
+    XLOGF(
+        DBG4,
+        "Skipping active FUSE GC for unlinked tree inode {}",
+        getLogPath());
+    return ImmediateFuture<uint64_t>{0ULL};
+  }
+  auto* currentGcBarrier = gcBarrier.value()->getDescendant(*path);
+
   return invalidateChildrenNotAccessedRecentlyFuseImpl(
              cutoff,
              collapseCutoff,
              context,
              cancellationToken,
+             gcBarrier.value(),
+             currentGcBarrier,
              /*isRoot=*/true)
       .thenValue([](std::pair<uint64_t, bool> result) { return result.first; });
 }
@@ -5848,9 +5963,16 @@ TreeInode::invalidateChildrenNotAccessedRecentlyFuseImpl(
     std::chrono::system_clock::time_point collapseCutoff,
     const ObjectFetchContextPtr& context,
     const folly::CancellationToken& cancellationToken,
+    const std::shared_ptr<const GcBarrierTrie>& gcBarrier,
+    const GcBarrierTrie* FOLLY_NULLABLE currentGcBarrier,
     bool isRoot) {
   if (shouldCancelGC(cancellationToken, getMount())) {
     return std::make_pair(uint64_t{0}, false);
+  }
+  if (currentGcBarrier != nullptr) {
+    if (currentGcBarrier->isMountRoot) {
+      return std::make_pair(uint64_t{0}, false);
+    }
   }
 
   // First, recursively process child tree inodes (bottom-up invalidation).
@@ -5861,38 +5983,51 @@ TreeInode::invalidateChildrenNotAccessedRecentlyFuseImpl(
              cancellationToken,
              [cutoff,
               collapseCutoff,
+              gcBarrier,
+              currentGcBarrier,
               context = context.copy(),
-              cancellationToken](TreeInodePtr tree) {
-               auto nodeId = tree->getNodeId();
+              cancellationToken](PathComponentPiece name, TreeInodePtr tree) {
+               const GcBarrierTrie* FOLLY_NULLABLE childGcBarrier = nullptr;
+               if (currentGcBarrier != nullptr) {
+                 childGcBarrier = currentGcBarrier->getChild(name);
+               }
                return tree
                    ->invalidateChildrenNotAccessedRecentlyFuseImpl(
                        cutoff,
                        collapseCutoff,
                        context,
                        cancellationToken,
+                       gcBarrier,
+                       childGcBarrier,
                        /*isRoot=*/false)
-                   .thenValue([nodeId](std::pair<uint64_t, bool> result) {
-                     return std::make_pair(nodeId, result);
+                   .thenValue([name = PathComponent{name}](
+                                  std::pair<uint64_t, bool> result) mutable {
+                     return std::make_pair(std::move(name), result);
                    });
              })
       .thenValue([self = inodePtrFromThis(),
                   cutoff,
                   collapseCutoff,
                   cancellationToken,
+                  gcBarrier,
+                  currentGcBarrier,
                   isRoot](
                      const std::vector<
-                         std::pair<InodeNumber, std::pair<uint64_t, bool>>>&
+                         std::pair<PathComponent, std::pair<uint64_t, bool>>>&
                          childResults) {
+        // Keep the trie alive while this continuation uses raw pointers into
+        // it.
+        (void)gcBarrier;
         if (shouldCancelGC(cancellationToken)) {
           return std::make_pair(uint64_t{0}, false);
         }
 
         uint64_t numInvalidated = 0;
-        folly::F14FastMap<InodeNumber, bool> childAllStale;
+        PathMap<bool> childAllStale{kPathMapDefaultCaseSensitive};
         childAllStale.reserve(childResults.size());
-        for (const auto& [inodeNumber, result] : childResults) {
+        for (const auto& [name, result] : childResults) {
           numInvalidated += result.first;
-          childAllStale.emplace(inodeNumber, result.second);
+          childAllStale.emplace(name, result.second);
         }
 
         auto* fuseChannel = self->getMount()->getFuseChannel();
@@ -5925,13 +6060,22 @@ TreeInode::invalidateChildrenNotAccessedRecentlyFuseImpl(
             return std::make_pair(uint64_t{0}, false);
           }
 
+          const GcBarrierTrie* FOLLY_NULLABLE childGcBarrier = nullptr;
+          if (currentGcBarrier != nullptr) {
+            childGcBarrier = currentGcBarrier->getChild(entry.first.piece());
+          }
+          if (childGcBarrier) {
+            allStale = false;
+            continue;
+          }
+
           // The collapse cutoff is intentionally more aggressive than the
           // direct invalidation cutoff. A recently read file can stop being a
           // collapse blocker before it is old enough to invalidate by name.
           bool entryIsStaleForCollapse = false;
           bool entryShouldInvalidate = false;
           if (entry.second.isDirectory()) {
-            auto childResult = childAllStale.find(entryInode->getNodeId());
+            auto childResult = childAllStale.find(entry.first.piece());
             entryIsStaleForCollapse =
                 childResult != childAllStale.end() && childResult->second;
             entryShouldInvalidate = entryIsStaleForCollapse;
@@ -6014,7 +6158,7 @@ TreeInode::invalidateChildrenNotMaterializedNFS(
              context,
              cancellationToken,
              [cutoff, context = context.copy(), cancellationToken](
-                 TreeInodePtr tree) {
+                 PathComponentPiece /*name*/, TreeInodePtr tree) {
                return tree->invalidateChildrenNotMaterializedNFS(
                    cutoff, context, cancellationToken);
              })
@@ -6144,7 +6288,7 @@ TreeInode::invalidateChildrenNotMaterializedPrjFS(
              context,
              cancellationToken,
              [cutoff, context = context.copy(), cancellationToken](
-                 TreeInodePtr tree) {
+                 PathComponentPiece /*name*/, TreeInodePtr tree) {
                return tree->invalidateChildrenNotMaterializedPrjFS(
                    cutoff, context, cancellationToken);
              })

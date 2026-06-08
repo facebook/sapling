@@ -202,6 +202,7 @@ cpp_library(
             "//eden/fs/inodes/lmdbcatalog:buffered_lmdb_inode_catalog",
             "//eden/fs/inodes/lmdbcatalog:lmdb_file_content_store",
             "//eden/fs/inodes/lmdbcatalog:lmdb_inode_catalog",
+            "//eden/fs/utils:mount_info_table",
         ],
         "ovr_config//os:macos": [
             "//eden/fs/inodes/fscatalog:fsinodecatalog",
@@ -251,6 +252,7 @@ cpp_library(
         "//eden/fs/utils:mini_tracer",
         "//eden/fs/utils:static_assert",
         "//folly:cancellation_token",
+        "//folly:cpp_attributes",
         "//folly:exception_wrapper",
         "//folly:expected",
         "//folly:fbvector",

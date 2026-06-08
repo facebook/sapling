@@ -8,13 +8,16 @@
 #pragma once
 
 #include <folly/CancellationToken.h>
+#include <folly/CppAttributes.h>
 #include <folly/File.h>
 #include <folly/Function.h>
 #include <folly/Portability.h>
 #include <folly/Synchronized.h>
 #include <folly/coro/safe/NowTask.h>
 #include <chrono>
+#include <memory>
 #include <optional>
+#include <vector>
 #include "eden/common/utils/FileOffset.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/fuse/Invalidation.h"
@@ -47,6 +50,9 @@ class TreeEntry;
 class TreeInodeDebugInfo;
 class PrjfsDirEntry;
 class VirtualInode;
+#ifndef _WIN32
+struct GcBarrierTrie;
+#endif
 
 constexpr folly::StringPiece kDotEdenName{".eden"};
 
@@ -766,6 +772,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       std::chrono::system_clock::time_point collapseCutoff,
       const ObjectFetchContextPtr& context,
       const folly::CancellationToken& cancellationToken,
+      const std::shared_ptr<const GcBarrierTrie>& gcBarrier,
+      const GcBarrierTrie* FOLLY_NULLABLE currentGcBarrier,
       bool isRoot);
 #endif
 

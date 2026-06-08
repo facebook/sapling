@@ -147,11 +147,11 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
         # Everything should still be readable
         self.read_all()
 
-    async def test_active_invalidation_loses_bind_redirection(self) -> None:
+    async def test_active_invalidation_preserves_bind_redirection(self) -> None:
         if sys.platform != "linux":
             self.skipTest("active FUSE invalidation is Linux-only")
 
-        repo_path = "generated-output"
+        repo_path = "a/generated-output"
         self.eden.run_cmd("redirect", "add", "--mount", self.mount, repo_path, "bind")
 
         redirection_path = os.path.join(self.mount, repo_path)
@@ -166,7 +166,7 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
         async def invalidate_until_gc_runs() -> None:
             deadline = time.monotonic() + 5
             while True:
-                invalidated = await self.invalidate("")
+                invalidated = await self.invalidate("a")
                 if invalidated > 0:
                     return
                 if time.monotonic() >= deadline:
@@ -176,8 +176,8 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
         assert_bind_mounted()
         load_gc_candidate()
         await invalidate_until_gc_runs()
-        # FIXME: dev is no longer the bind mount!
-        self.assertEqual(mount_stat.st_dev, os.stat(redirection_path).st_dev)
+        # This is the test: redirection is still on a separate device.
+        self.assertNotEqual(mount_stat.st_dev, os.stat(redirection_path).st_dev)
 
         self.eden.run_cmd("redirect", "fixup", "--mount", self.mount)
         assert_bind_mounted()
@@ -187,5 +187,4 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
 
         load_gc_candidate()
         await invalidate_until_gc_runs()
-        # FIXME: dev is no longer the bind mount after graceful restart either.
-        self.assertEqual(mount_stat.st_dev, os.stat(redirection_path).st_dev)
+        assert_bind_mounted()
