@@ -175,3 +175,35 @@ impl<W: WeakSlice> WeakBuffers<W> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #[cfg(unix)]
+    #[test]
+    fn find_region_checks_change_detector_when_log_buffer_lock_is_busy() {
+        use crate::change_detect::SharedChangeDetector;
+        use crate::lock::DirLockOptions;
+        use crate::lock::ScopedDirLock;
+
+        let dir = tempfile::tempdir().unwrap();
+        let opts = DirLockOptions {
+            exclusive: false,
+            non_blocking: false,
+            file_name: "rlock",
+        };
+        let lock = ScopedDirLock::new_with_options(dir.path(), &opts).unwrap();
+        let mmap = lock.shared_mmap_mut(std::mem::size_of::<u64>()).unwrap();
+        let addr = mmap.as_ptr() as usize;
+
+        let _detector = SharedChangeDetector::new(mmap);
+
+        let _log_buffers = super::BUFFERS.lock().unwrap();
+        // FIXME: find_region should still check change_detect::BUFFERS when
+        // BUFFERS is locked so the SIGBUS handler can recover rlock mmaps. Flip
+        // this to Some(true) when the lock-contention bug is fixed.
+        assert_eq!(
+            super::find_region(addr).map(|(_start, _end, writable)| writable),
+            None
+        );
+    }
+}
