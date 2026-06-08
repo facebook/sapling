@@ -18,5 +18,5 @@ sapling-progress-model = { version = "0.1.0", path = "../model" }
 serde = { version = "1.0.219", features = ["derive", "rc"] }
 termwiz = { git = "https://github.com/wezterm/wezterm.git", rev = "05343b387085842b434d267f91b6b0ec157e4331", features = ["use_serde", "widgets"], default-features = false }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
-unicode-segmentation = "1.13.2"
+unicode-segmentation = "1.13.3"
 unicode-width = "0.1.14"
