@@ -17,6 +17,8 @@ use crate::client::Client;
 use crate::client::EdenFsClient;
 use crate::methods::EdenThriftMethod;
 
+pub const ENABLE_XPLATLOGGER_EVENTS_CONFIG_KEY: &str = "telemetry:enable-xplatlogger-events";
+
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum ConfigSourceType {
     Default = 0,
@@ -63,6 +65,16 @@ pub struct ConfigData {
     pub values: BTreeMap<String, ConfigValue>,
 }
 
+impl ConfigData {
+    pub fn get_bool(&self, key: &str) -> Option<bool> {
+        match self.values.get(key)?.parsed_value.as_str() {
+            "true" | "1" => Some(true),
+            "false" | "0" => Some(false),
+            _ => None,
+        }
+    }
+}
+
 impl From<thrift_types::edenfs_config::EdenConfigData> for ConfigData {
     fn from(from: thrift_types::edenfs_config::EdenConfigData) -> Self {
         Self {
@@ -83,5 +95,24 @@ impl EdenFsClient {
             .with_context(|| "failed to get default eden config data")
             .map(|config_data| config_data.into())
             .map_err(EdenFsError::from)
+    }
+
+    pub async fn get_enable_xplatlogger_events(&self) -> bool {
+        match self.get_config_default().await {
+            Ok(config) => {
+                let enabled = config
+                    .get_bool(ENABLE_XPLATLOGGER_EVENTS_CONFIG_KEY)
+                    .unwrap_or(false);
+                tracing::debug!(enabled, "read edenfs_events XplatLogger config from daemon");
+                enabled
+            }
+            Err(error) => {
+                tracing::debug!(
+                    ?error,
+                    "failed to read edenfs_events XplatLogger config; using legacy logger"
+                );
+                false
+            }
+        }
     }
 }

@@ -65,6 +65,20 @@ pub(crate) fn get_edenfs_instance() -> &'static EdenFsInstance {
         .expect("EdenFsInstance is not initialized")
 }
 
+#[cfg(fbcode_build)]
+pub(crate) async fn send_sample_with_config(
+    data_set: &'static str,
+    xplat_logger_config: edenfs_telemetry::XplatLoggerConfig,
+    sample: edenfs_telemetry::EdenSample,
+) {
+    let xplat_logger_config = get_edenfs_instance()
+        .get_client()
+        .get_enable_xplatlogger_events()
+        .await
+        .then_some(xplat_logger_config);
+    edenfs_telemetry::send_with_config(data_set, sample, xplat_logger_config);
+}
+
 fn init_edenfs_instance(
     config_dir: PathBuf,
     etc_eden_dir: PathBuf,
