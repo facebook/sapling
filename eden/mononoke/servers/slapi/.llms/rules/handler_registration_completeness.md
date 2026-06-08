@@ -43,7 +43,8 @@ impl SaplingRemoteApiHandler for StreamingCloneHandler {
 
 **GOOD (all four locations updated):**
 1. Enum variant added to `SaplingRemoteApiMethod` + `Display` impl
-2. ODS histogram + arm in `log_stats`
+2. ODS `quantile_stat` declaration in `define_stats!` + arm in `log_stats`
+   (do NOT use the deprecated `histogram` macro -- wrong tail percentiles)
 3. `Handlers::setup::<NewHandler>(route)` in `build_router`
 4. `extract_in_band_error` implemented if response embeds errors
 
@@ -51,3 +52,4 @@ impl SaplingRemoteApiHandler for StreamingCloneHandler {
 
 - **D90503346**: StreamingCloneHandler was never registered in `build_router`. Masked by `#[allow(dead_code)]` on the struct.
 - **D90988392**: ListBookmarkPatterns correctly added all four pieces.
+- **D107104769**: Migrated `*_duration_ms` to `quantile_stat`; old `histogram` p99 was 2-3× too high.
