@@ -83,15 +83,20 @@ pub(crate) fn track_mmap_buffer(bytes: &Bytes) {
 /// Does not block. Returns `None` when unable to take the lock.
 #[cfg(unix)]
 pub(crate) fn find_region(addr: usize) -> Option<(usize, usize, bool)> {
-    let locked = BUFFERS.try_lock().ok()?;
-    if let Some((start, end)) = locked.find_region(addr) {
-        return Some((start, end, false));
+    if let Ok(locked) = BUFFERS.try_lock() {
+        if let Some((start, end)) = locked.find_region(addr) {
+            return Some((start, end, false));
+        }
     }
+
     // Also check the change_detect mmap buffers.
-    let locked = crate::change_detect::BUFFERS.try_lock().ok()?;
-    locked
-        .find_region(addr)
-        .map(|(start, end)| (start, end, true))
+    if let Ok(locked) = crate::change_detect::BUFFERS.try_lock() {
+        if let Some((start, end)) = locked.find_region(addr) {
+            return Some((start, end, true));
+        }
+    }
+
+    None
 }
 
 impl<W: WeakSlice> WeakBuffers<W> {
@@ -198,12 +203,11 @@ mod tests {
         let _detector = SharedChangeDetector::new(mmap);
 
         let _log_buffers = super::BUFFERS.lock().unwrap();
-        // FIXME: find_region should still check change_detect::BUFFERS when
-        // BUFFERS is locked so the SIGBUS handler can recover rlock mmaps. Flip
-        // this to Some(true) when the lock-contention bug is fixed.
+        // Holding BUFFERS must not prevent the SIGBUS handler from finding
+        // rlock mmaps tracked by change_detect::BUFFERS.
         assert_eq!(
             super::find_region(addr).map(|(_start, _end, writable)| writable),
-            None
+            Some(true)
         );
     }
 }
