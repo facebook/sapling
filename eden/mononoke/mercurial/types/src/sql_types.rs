@@ -9,7 +9,6 @@
 
 use sql::mysql_async::FromValueError;
 use sql::mysql_async::Value;
-use sql::mysql_async::prelude::ConvIr;
 use sql::mysql_async::prelude::FromValue;
 
 use crate::HgChangesetId;
@@ -46,8 +45,10 @@ impl FromNodeHash for HgChangesetId {
     }
 }
 
-impl<T: FromNodeHash> ConvIr<T> for HgNodeHash {
-    fn new(v: Value) -> FromValueResult<Self> {
+impl TryFrom<Value> for HgNodeHash {
+    type Error = FromValueError;
+
+    fn try_from(v: Value) -> FromValueResult<Self> {
         match v {
             Value::Bytes(bytes) => {
                 HgNodeHash::from_bytes(&bytes).map_err(move |_| FromValueError(Value::Bytes(bytes)))
@@ -55,13 +56,17 @@ impl<T: FromNodeHash> ConvIr<T> for HgNodeHash {
             v => Err(FromValueError(v)),
         }
     }
+}
 
-    fn commit(self) -> T {
-        T::from_nodehash(self)
+impl From<HgNodeHash> for HgFileNodeId {
+    fn from(x: HgNodeHash) -> HgFileNodeId {
+        HgFileNodeId::from_nodehash(x)
     }
+}
 
-    fn rollback(self) -> Value {
-        Value::Bytes(self.0.as_ref().into())
+impl From<HgNodeHash> for HgChangesetId {
+    fn from(x: HgNodeHash) -> HgChangesetId {
+        HgChangesetId::from_nodehash(x)
     }
 }
 

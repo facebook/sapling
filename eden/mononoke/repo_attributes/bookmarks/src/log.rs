@@ -28,7 +28,6 @@ use mononoke_types::Timestamp;
 use sql::mysql;
 use sql::mysql_async::FromValueError;
 use sql::mysql_async::Value;
-use sql::mysql_async::prelude::ConvIr;
 use sql::mysql_async::prelude::FromValue;
 
 /// An id in the BookmarkUpdateLog
@@ -212,8 +211,9 @@ impl std::fmt::Display for BookmarkUpdateReason {
     }
 }
 
-impl ConvIr<BookmarkUpdateReason> for BookmarkUpdateReason {
-    fn new(v: Value) -> Result<Self, FromValueError> {
+impl TryFrom<Value> for BookmarkUpdateReason {
+    type Error = FromValueError;
+    fn try_from(v: Value) -> Result<Self, FromValueError> {
         use BookmarkUpdateReason::*;
 
         match v {
@@ -228,14 +228,6 @@ impl ConvIr<BookmarkUpdateReason> for BookmarkUpdateReason {
             Value::Bytes(ref b) if b == b"multirepoland" => Ok(MultiRepoLand),
             v => Err(FromValueError(v)),
         }
-    }
-
-    fn commit(self) -> BookmarkUpdateReason {
-        self
-    }
-
-    fn rollback(self) -> Value {
-        self.into()
     }
 }
 

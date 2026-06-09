@@ -13,7 +13,6 @@ use sql::mysql;
 use sql::mysql_async::FromValueError;
 use sql::mysql_async::Value;
 use sql::mysql_async::from_value_opt;
-use sql::mysql_async::prelude::ConvIr;
 use sql::mysql_async::prelude::FromValue;
 use strum::Display as StrumDisplay;
 use strum::EnumString;
@@ -84,20 +83,16 @@ impl FromValue for GitSourceOfTruth {
     type Intermediate = GitSourceOfTruth;
 }
 
-impl ConvIr<RowId> for RowId {
-    fn new(v: Value) -> Result<Self, FromValueError> {
+impl TryFrom<Value> for RowId {
+    type Error = FromValueError;
+    fn try_from(v: Value) -> Result<Self, FromValueError> {
         Ok(RowId(from_value_opt(v)?))
-    }
-    fn commit(self) -> Self {
-        self
-    }
-    fn rollback(self) -> Value {
-        self.into()
     }
 }
 
-impl ConvIr<RepositoryName> for RepositoryName {
-    fn new(v: Value) -> Result<Self, FromValueError> {
+impl TryFrom<Value> for RepositoryName {
+    type Error = FromValueError;
+    fn try_from(v: Value) -> Result<Self, FromValueError> {
         match v {
             Value::Bytes(bytes) => match String::from_utf8(bytes) {
                 Ok(s) => Ok(RepositoryName(s)),
@@ -108,18 +103,11 @@ impl ConvIr<RepositoryName> for RepositoryName {
             v => Err(FromValueError(v)),
         }
     }
-
-    fn commit(self) -> Self {
-        self
-    }
-
-    fn rollback(self) -> Value {
-        self.into()
-    }
 }
 
-impl ConvIr<GitSourceOfTruth> for GitSourceOfTruth {
-    fn new(v: Value) -> Result<Self, FromValueError> {
+impl TryFrom<Value> for GitSourceOfTruth {
+    type Error = FromValueError;
+    fn try_from(v: Value) -> Result<Self, FromValueError> {
         match v {
             Value::Bytes(bytes) => match String::from_utf8(bytes) {
                 Ok(s) => Ok(GitSourceOfTruth::from_str(&s)
@@ -130,13 +118,6 @@ impl ConvIr<GitSourceOfTruth> for GitSourceOfTruth {
             },
             v => Err(FromValueError(v)),
         }
-    }
-
-    fn commit(self) -> Self {
-        self
-    }
-    fn rollback(self) -> Value {
-        self.into()
     }
 }
 

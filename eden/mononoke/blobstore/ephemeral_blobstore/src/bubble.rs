@@ -49,7 +49,6 @@ use serde::Deserialize;
 use serde::Serialize;
 use sql::mysql_async::FromValueError;
 use sql::mysql_async::Value;
-use sql::mysql_async::prelude::ConvIr;
 use sql::mysql_async::prelude::FromValue;
 use sql::sql_common::mysql::OptionalTryFromRowField;
 use sql::sql_common::mysql::RowField;
@@ -126,8 +125,10 @@ impl From<BubbleId> for i64 {
     }
 }
 
-impl ConvIr<BubbleId> for BubbleId {
-    fn new(v: Value) -> Result<Self, FromValueError> {
+impl TryFrom<Value> for BubbleId {
+    type Error = FromValueError;
+
+    fn try_from(v: Value) -> Result<Self, FromValueError> {
         let from_u64 = |id, v| match NonZeroU64::new(id) {
             Some(id) => Ok(BubbleId(id)),
             None => Err(FromValueError(v)),
@@ -137,14 +138,6 @@ impl ConvIr<BubbleId> for BubbleId {
             Value::Int(id) => from_u64(id as u64, v),
             v => Err(FromValueError(v)),
         }
-    }
-
-    fn commit(self) -> BubbleId {
-        self
-    }
-
-    fn rollback(self) -> Value {
-        self.into()
     }
 }
 
@@ -224,21 +217,15 @@ impl From<ExpiryStatus> for Value {
     }
 }
 
-impl ConvIr<ExpiryStatus> for ExpiryStatus {
-    fn new(v: Value) -> Result<Self, FromValueError> {
+impl TryFrom<Value> for ExpiryStatus {
+    type Error = FromValueError;
+
+    fn try_from(v: Value) -> Result<Self, FromValueError> {
         match v {
             Value::Int(1) => Ok(ExpiryStatus::Expired),
             Value::Int(0) => Ok(ExpiryStatus::Active),
             v => Err(FromValueError(v)),
         }
-    }
-
-    fn commit(self) -> ExpiryStatus {
-        self
-    }
-
-    fn rollback(self) -> Value {
-        self.into()
     }
 }
 

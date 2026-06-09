@@ -41,9 +41,7 @@ use mononoke_types::PrefixTrie;
 use mononoke_types::RepositoryId;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::path::MPath;
-use mysql_common::value::convert::ConvIr;
 use mysql_common::value::convert::FromValue;
-use mysql_common::value::convert::ParseIr;
 use parking_lot::RwLock;
 use permission_checker::MononokeIdentity;
 use regex::Regex;
@@ -1229,7 +1227,7 @@ pub struct LfsParams {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd, Deserialize)]
 #[derive(From, Into, mysql::OptTryFromRowField)]
 pub struct BlobstoreId(u64);
-sql::proxy_conv_ir!(BlobstoreId, ParseIr<u64>, u64);
+sql::proxy_conv_ir!(BlobstoreId, u64);
 
 impl BlobstoreId {
     /// Construct blobstore from integer
@@ -1254,7 +1252,7 @@ impl From<BlobstoreId> for ScubaValue {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
 #[derive(From, Into, mysql::OptTryFromRowField)]
 pub struct MultiplexId(i32);
-sql::proxy_conv_ir!(MultiplexId, ParseIr<i32>, i32);
+sql::proxy_conv_ir!(MultiplexId, i32);
 
 impl MultiplexId {
     /// Construct a MultiplexId from an i32.
@@ -1819,8 +1817,10 @@ impl From<CommitSyncConfigVersion> for Value {
     }
 }
 
-impl ConvIr<CommitSyncConfigVersion> for CommitSyncConfigVersion {
-    fn new(v: Value) -> Result<Self, FromValueError> {
+impl TryFrom<Value> for CommitSyncConfigVersion {
+    type Error = FromValueError;
+
+    fn try_from(v: Value) -> Result<Self, FromValueError> {
         match v {
             Value::Bytes(bytes) => match String::from_utf8(bytes) {
                 Ok(s) => Ok(CommitSyncConfigVersion(s)),
@@ -1830,14 +1830,6 @@ impl ConvIr<CommitSyncConfigVersion> for CommitSyncConfigVersion {
             },
             v => Err(FromValueError(v)),
         }
-    }
-
-    fn commit(self) -> CommitSyncConfigVersion {
-        self
-    }
-
-    fn rollback(self) -> Value {
-        self.into()
     }
 }
 

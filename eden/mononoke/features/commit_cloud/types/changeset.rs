@@ -13,7 +13,6 @@ use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::sha1_hash::Sha1;
-use mysql_common::value::convert::ConvIr;
 use mysql_common::value::convert::FromValue;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
@@ -40,8 +39,9 @@ impl From<CloudChangesetId> for Value {
     }
 }
 
-impl ConvIr<CloudChangesetId> for CloudChangesetId {
-    fn new(v: Value) -> Result<Self, FromValueError> {
+impl TryFrom<Value> for CloudChangesetId {
+    type Error = FromValueError;
+    fn try_from(v: Value) -> Result<Self, FromValueError> {
         match v {
             Value::Bytes(bytes) => match std::str::from_utf8(&bytes) {
                 Ok(s) => Sha1::from_str(s)
@@ -51,14 +51,6 @@ impl ConvIr<CloudChangesetId> for CloudChangesetId {
             },
             v => Err(FromValueError(v)),
         }
-    }
-
-    fn commit(self) -> CloudChangesetId {
-        self
-    }
-
-    fn rollback(self) -> Value {
-        self.into()
     }
 }
 

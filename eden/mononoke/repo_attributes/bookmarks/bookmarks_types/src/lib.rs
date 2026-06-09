@@ -23,7 +23,6 @@ use quickcheck_arbitrary_derive::Arbitrary;
 use sql::mysql;
 use sql::mysql_async::FromValueError;
 use sql::mysql_async::Value;
-use sql::mysql_async::prelude::ConvIr;
 use sql::mysql_async::prelude::FromValue;
 
 /// This enum represents how fresh you want results to be. MostRecent will go to the master, so you
@@ -263,22 +262,16 @@ impl From<BookmarkName> for Value {
     }
 }
 
-impl ConvIr<BookmarkName> for BookmarkName {
-    fn new(v: Value) -> Result<Self, FromValueError> {
+impl TryFrom<Value> for BookmarkName {
+    type Error = FromValueError;
+
+    fn try_from(v: Value) -> Result<Self, FromValueError> {
         match v {
             Value::Bytes(bytes) => AsciiString::from_ascii(bytes)
                 .map_err(|err| FromValueError(Value::Bytes(err.into_source())))
                 .map(BookmarkName::new_ascii),
             v => Err(FromValueError(v)),
         }
-    }
-
-    fn commit(self) -> BookmarkName {
-        self
-    }
-
-    fn rollback(self) -> Value {
-        self.into()
     }
 }
 
@@ -347,8 +340,10 @@ const SCRATCH_KIND: &[u8] = b"scratch";
 const PUBLISHING_KIND: &[u8] = b"publishing";
 const PULL_DEFAULT_KIND: &[u8] = b"pull_default";
 
-impl ConvIr<BookmarkKind> for BookmarkKind {
-    fn new(v: Value) -> Result<Self, FromValueError> {
+impl TryFrom<Value> for BookmarkKind {
+    type Error = FromValueError;
+
+    fn try_from(v: Value) -> Result<Self, FromValueError> {
         use BookmarkKind::*;
 
         match v {
@@ -357,14 +352,6 @@ impl ConvIr<BookmarkKind> for BookmarkKind {
             Value::Bytes(ref b) if b == PULL_DEFAULT_KIND => Ok(PullDefaultPublishing),
             v => Err(FromValueError(v)),
         }
-    }
-
-    fn commit(self) -> BookmarkKind {
-        self
-    }
-
-    fn rollback(self) -> Value {
-        self.into()
     }
 }
 
@@ -439,8 +426,10 @@ impl From<BookmarkCategory> for Value {
     }
 }
 
-impl ConvIr<BookmarkCategory> for BookmarkCategory {
-    fn new(v: Value) -> Result<Self, FromValueError> {
+impl TryFrom<Value> for BookmarkCategory {
+    type Error = FromValueError;
+
+    fn try_from(v: Value) -> Result<Self, FromValueError> {
         use BookmarkCategory::*;
 
         match v {
@@ -449,14 +438,6 @@ impl ConvIr<BookmarkCategory> for BookmarkCategory {
             Value::Bytes(ref b) if b == NOTE_CATEGORY => Ok(Note),
             v => Err(FromValueError(v)),
         }
-    }
-
-    fn commit(self) -> BookmarkCategory {
-        self
-    }
-
-    fn rollback(self) -> Value {
-        self.into()
     }
 }
 

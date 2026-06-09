@@ -13,7 +13,6 @@ use sql::mysql;
 use sql::mysql_async::FromValueError;
 use sql::mysql_async::Value;
 use sql::mysql_async::from_value_opt;
-use sql::mysql_async::prelude::ConvIr;
 use sql::mysql_async::prelude::FromValue;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -33,15 +32,10 @@ impl std::fmt::Display for RowId {
     }
 }
 
-impl ConvIr<RowId> for RowId {
-    fn new(v: Value) -> Result<Self, FromValueError> {
+impl TryFrom<Value> for RowId {
+    type Error = FromValueError;
+    fn try_from(v: Value) -> Result<Self, FromValueError> {
         Ok(RowId(from_value_opt(v)?))
-    }
-    fn commit(self) -> Self {
-        self
-    }
-    fn rollback(self) -> Value {
-        self.into()
     }
 }
 

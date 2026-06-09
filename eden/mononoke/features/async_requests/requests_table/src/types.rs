@@ -12,7 +12,6 @@ use sql::mysql;
 use sql::mysql_async::FromValueError;
 use sql::mysql_async::Value;
 use sql::mysql_async::from_value_opt;
-use sql::mysql_async::prelude::ConvIr;
 use sql::mysql_async::prelude::FromValue;
 
 #[derive(
@@ -40,15 +39,10 @@ impl std::fmt::Display for RowId {
     }
 }
 
-impl ConvIr<RowId> for RowId {
-    fn new(v: Value) -> Result<Self, FromValueError> {
+impl TryFrom<Value> for RowId {
+    type Error = FromValueError;
+    fn try_from(v: Value) -> Result<Self, FromValueError> {
         Ok(RowId(from_value_opt(v)?))
-    }
-    fn commit(self) -> Self {
-        self
-    }
-    fn rollback(self) -> Value {
-        self.into()
     }
 }
 
@@ -73,8 +67,9 @@ macro_rules! mysql_string_newtype {
             }
         }
 
-        impl ConvIr<$ty> for $ty {
-            fn new(v: Value) -> Result<Self, FromValueError> {
+        impl TryFrom<Value> for $ty {
+            type Error = FromValueError;
+            fn try_from(v: Value) -> Result<Self, FromValueError> {
                 match v {
                     Value::Bytes(bytes) => match String::from_utf8(bytes) {
                         Ok(s) => Ok($ty(s)),
@@ -84,14 +79,6 @@ macro_rules! mysql_string_newtype {
                     },
                     v => Err(FromValueError(v)),
                 }
-            }
-
-            fn commit(self) -> $ty {
-                self
-            }
-
-            fn rollback(self) -> Value {
-                self.into()
             }
         }
 
@@ -149,8 +136,9 @@ impl std::fmt::Display for RequestStatus {
     }
 }
 
-impl ConvIr<RequestStatus> for RequestStatus {
-    fn new(v: Value) -> Result<Self, FromValueError> {
+impl TryFrom<Value> for RequestStatus {
+    type Error = FromValueError;
+    fn try_from(v: Value) -> Result<Self, FromValueError> {
         use RequestStatus::*;
 
         match v {
@@ -161,14 +149,6 @@ impl ConvIr<RequestStatus> for RequestStatus {
             Value::Bytes(ref b) if b == b"failed" => Ok(Failed),
             v => Err(FromValueError(v)),
         }
-    }
-
-    fn commit(self) -> RequestStatus {
-        self
-    }
-
-    fn rollback(self) -> Value {
-        self.into()
     }
 }
 

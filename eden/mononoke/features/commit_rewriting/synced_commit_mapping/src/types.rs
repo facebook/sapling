@@ -10,7 +10,6 @@ use std::collections::HashMap;
 use ::sql::mysql;
 use ::sql::mysql_async::FromValueError;
 use ::sql::mysql_async::Value;
-use ::sql::mysql_async::prelude::ConvIr;
 use ::sql::mysql_async::prelude::FromValue;
 use anyhow::Error;
 use anyhow::anyhow;
@@ -71,8 +70,10 @@ impl SyncedCommitSourceRepo {
     }
 }
 
-impl ConvIr<SyncedCommitSourceRepo> for SyncedCommitSourceRepo {
-    fn new(v: Value) -> Result<Self, FromValueError> {
+impl TryFrom<Value> for SyncedCommitSourceRepo {
+    type Error = FromValueError;
+
+    fn try_from(v: Value) -> Result<Self, FromValueError> {
         use SyncedCommitSourceRepo::*;
 
         match v {
@@ -80,14 +81,6 @@ impl ConvIr<SyncedCommitSourceRepo> for SyncedCommitSourceRepo {
             Value::Bytes(ref b) if b == b"small" => Ok(Small),
             v => Err(FromValueError(v)),
         }
-    }
-
-    fn commit(self) -> SyncedCommitSourceRepo {
-        self
-    }
-
-    fn rollback(self) -> Value {
-        self.into()
     }
 }
 

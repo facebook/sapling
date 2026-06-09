@@ -31,7 +31,6 @@ mod types {
     use sql::mysql;
     use sql::mysql_async::FromValueError;
     use sql::mysql_async::Value;
-    use sql::mysql_async::prelude::ConvIr;
     use sql::mysql_async::prelude::FromValue;
 
     type FromValueResult<T> = Result<T, FromValueError>;
@@ -53,8 +52,9 @@ mod types {
         }
     }
 
-    impl ConvIr<ChunkingMethod> for ChunkingMethod {
-        fn new(v: Value) -> FromValueResult<Self> {
+    impl TryFrom<Value> for ChunkingMethod {
+        type Error = FromValueError;
+        fn try_from(v: Value) -> FromValueResult<Self> {
             match v {
                 // Note that every value repeats 3 times - integer, unsigned, string - because MySQL can convert to
                 // any of those for a response. We normally see UInt, but we want this to be safe against
@@ -76,14 +76,6 @@ mod types {
                 | v @ Value::Int(..)
                 | v @ Value::UInt(..) => Err(FromValueError(v)),
             }
-        }
-
-        fn commit(self) -> ChunkingMethod {
-            self
-        }
-
-        fn rollback(self) -> Value {
-            self.into()
         }
     }
 

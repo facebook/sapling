@@ -14,9 +14,7 @@ use mononoke_types::hash;
 use mononoke_types::path::MPath;
 use mononoke_types::path_bytes_from_mpath;
 use sql::mysql;
-use sql::mysql_async::FromValueError;
 use sql::mysql_async::Value;
-use sql::mysql_async::prelude::ConvIr;
 use sql::mysql_async::prelude::FromValue;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -36,17 +34,9 @@ impl PathHashBytes {
     }
 }
 
-impl ConvIr<PathHashBytes> for Vec<u8> {
-    fn new(v: Value) -> Result<Self, FromValueError> {
-        Self::from_value_opt(v)
-    }
-
-    fn commit(self) -> PathHashBytes {
-        PathHashBytes(self)
-    }
-
-    fn rollback(self) -> Value {
-        self.into()
+impl From<Vec<u8>> for PathHashBytes {
+    fn from(x: Vec<u8>) -> PathHashBytes {
+        PathHashBytes(x)
     }
 }
 
@@ -74,17 +64,9 @@ impl std::fmt::Display for PathHashBytes {
 #[derive(bincode::Encode, bincode::Decode)]
 pub struct PathBytes(pub Vec<u8>);
 
-impl ConvIr<PathBytes> for Vec<u8> {
-    fn new(v: Value) -> Result<Self, FromValueError> {
-        Self::from_value_opt(v)
-    }
-
-    fn commit(self) -> PathBytes {
-        PathBytes(self)
-    }
-
-    fn rollback(self) -> Value {
-        self.into()
+impl From<Vec<u8>> for PathBytes {
+    fn from(x: Vec<u8>) -> PathBytes {
+        PathBytes(x)
     }
 }
 

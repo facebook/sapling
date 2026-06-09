@@ -27,7 +27,6 @@ use phases::Phases;
 use sql::mysql;
 use sql::mysql_async::FromValueError;
 use sql::mysql_async::Value;
-use sql::mysql_async::prelude::ConvIr;
 use sql::mysql_async::prelude::FromValue;
 use stats::define_stats;
 use stats::prelude::*;
@@ -88,8 +87,10 @@ impl FromValue for SqlPhase {
     type Intermediate = SqlPhase;
 }
 
-impl ConvIr<SqlPhase> for SqlPhase {
-    fn new(v: Value) -> Result<Self, FromValueError> {
+impl TryFrom<Value> for SqlPhase {
+    type Error = FromValueError;
+
+    fn try_from(v: Value) -> Result<Self, FromValueError> {
         match v {
             Value::Bytes(bytes) => AsciiString::from_ascii(bytes)
                 .map_err(|err| FromValueError(Value::Bytes(err.into_source())))
@@ -100,14 +101,6 @@ impl ConvIr<SqlPhase> for SqlPhase {
                 }),
             v => Err(FromValueError(v)),
         }
-    }
-
-    fn commit(self) -> SqlPhase {
-        self
-    }
-
-    fn rollback(self) -> Value {
-        self.into()
     }
 }
 
