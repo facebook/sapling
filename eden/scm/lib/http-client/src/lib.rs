@@ -38,6 +38,9 @@
 
 #![allow(dead_code)]
 
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+
 mod claimer;
 mod client;
 mod dispatcher;
@@ -82,6 +85,20 @@ pub use response::Response;
 pub use stats::Stats;
 pub use stream::CborStream;
 
+// Set during Sapling atexit so late cleanup paths do not start new curl work.
+static SHUTTING_DOWN: AtomicBool = AtomicBool::new(false);
+
+pub fn init() {
+    // Sapling can run multiple commands in one process, so a new HTTP client
+    // marks the HTTP layer usable again after a previous command's atexit.
+    SHUTTING_DOWN.store(false, Ordering::Release);
+    init_openssl();
+}
+
+pub fn shutdown() {
+    SHUTTING_DOWN.store(true, Ordering::Release);
+}
+
 pub(crate) fn init_openssl() {
     // Force openssl to initialize to to work around openssl bug
     // https://github.com/openssl/openssl/issues/6214. Initializing openssl explicitly
@@ -89,6 +106,14 @@ pub(crate) fn init_openssl() {
     // (but not shutting down openssl). If we don't explicitly innitialize, curl
     // initializes openssl without OPENSSL_INIT_NO_ATEXIT and we get the race conditions.
     openssl::init();
+}
+
+pub(crate) fn check_not_shutting_down() -> Result<(), HttpClientError> {
+    if SHUTTING_DOWN.load(Ordering::Acquire) {
+        Err(anyhow::anyhow!("http client is shutting down").into())
+    } else {
+        Ok(())
+    }
 }
 
 /// The only Easy2 type used by this crate.

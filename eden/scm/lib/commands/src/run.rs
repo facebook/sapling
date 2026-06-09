@@ -1061,6 +1061,14 @@ fn setup_atexit(start_time: StartTime) {
         }),
     )
     .queued();
+
+    atexit::AtExit::new(
+        "http client shutdown",
+        Box::new(move || {
+            hg_http::shutdown();
+        }),
+    )
+    .queued();
 }
 
 /// Returns bool whether the async ctlrc handler has started (i.e. we are probably exiting soon).

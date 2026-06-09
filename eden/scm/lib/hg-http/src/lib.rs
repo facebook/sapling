@@ -152,6 +152,10 @@ pub fn enable_insecure_mode() {
     INSECURE_MODE.store(true, Relaxed);
 }
 
+pub fn shutdown() {
+    http_client::shutdown();
+}
+
 /// Setup progress reporting to the main progress registry for the lifetime of
 /// this process.
 pub fn enable_progress_reporting() {
