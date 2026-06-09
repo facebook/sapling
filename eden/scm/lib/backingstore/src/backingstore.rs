@@ -87,6 +87,7 @@ struct Inner {
 
     prefetch_send: flume::Sender<()>,
     walk_mode: WalkMode,
+    restricted_tree_mode: RestrictedTreeMode,
     walk_detector: walkdetector::Detector,
 }
 
@@ -108,6 +109,26 @@ impl FromStr for WalkMode {
             "monitor" => Ok(Self::Monitor),
             "prefetch" => Ok(Self::Prefetch),
             _ => Ok(Self::Off),
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+enum RestrictedTreeMode {
+    Disabled,
+    Logged,
+    Enforced,
+}
+
+impl RestrictedTreeMode {
+    fn from_config(config: &dyn Config) -> Self {
+        match config
+            .get("experimental", "restricted-tree-mode")
+            .as_deref()
+        {
+            Some("logged") => Self::Logged,
+            Some("enforced") => Self::Enforced,
+            _ => Self::Disabled,
         }
     }
 }
@@ -242,6 +263,7 @@ impl BackingStore {
                 .unwrap_or_default()
                 .as_ref(),
         )?;
+        let restricted_tree_mode = RestrictedTreeMode::from_config(config.as_ref());
 
         let repo = Arc::new(repo);
 
@@ -340,6 +362,7 @@ impl BackingStore {
                 .unwrap_or(Duration::from_mins(5)),
             prefetch_send,
             walk_mode,
+            restricted_tree_mode,
             walk_detector,
         })
     }
@@ -475,12 +498,17 @@ impl BackingStore {
     pub fn check_permission(&self, manifest_id: &[u8]) -> Result<bool> {
         use edenapi::types::CheckManifestPermissionRequest;
 
+        let inner = self.maybe_reload();
+        if inner.restricted_tree_mode == RestrictedTreeMode::Disabled {
+            return Ok(true);
+        }
+
         let id = HgId::from_slice(manifest_id)?;
         let request = CheckManifestPermissionRequest {
             manifest_ids: vec![id],
         };
         let response = BlockingResponse::from_async(
-            self.maybe_reload()
+            inner
                 .repo
                 .eden_api()
                 .map_err(|err| err.tag_network())?
@@ -488,6 +516,16 @@ impl BackingStore {
         )?;
         for entry in response.entries {
             if entry.manifest_id == id {
+                if inner.restricted_tree_mode == RestrictedTreeMode::Logged {
+                    if !entry.has_access {
+                        tracing::info!(
+                            hgid = %id,
+                            acl = entry.request_acl.as_deref().unwrap_or("unknown-acl"),
+                            "restricted tree detected (logged mode, not enforcing)"
+                        );
+                    }
+                    return Ok(true);
+                }
                 return Ok(entry.has_access);
             }
         }
@@ -712,6 +750,7 @@ impl Inner {
 
             prefetch_send: self.prefetch_send.clone(),
             walk_mode: self.walk_mode,
+            restricted_tree_mode: self.restricted_tree_mode,
             walk_detector: self.walk_detector.clone(),
         }
     }

@@ -85,6 +85,72 @@ std::shared_ptr<EdenFsEventsLogger> makeTestEdenFsEventsLogger(
       stats.copy());
 }
 
+RootId addRestrictedTreeCommit(TestRepo& testRepo) {
+  testRepo.repo.mkdir("restricted");
+  testRepo.repo.writeFile("restricted/.slacl", "acl config\n");
+  testRepo.repo.writeFile("restricted/secret.txt", "secret content\n");
+  testRepo.repo.hg("add", "restricted/.slacl", "restricted/secret.txt");
+  return testRepo.repo.commit("Add restricted tree");
+}
+
+bool checkRestrictedTreePermission(std::optional<folly::StringPiece> mode) {
+  TestRepo testRepo;
+  auto restrictedCommit = addRestrictedTreeCommit(testRepo);
+
+  if (mode.has_value()) {
+    auto config = std::string{"[experimental]\nrestricted-tree-mode = "};
+    config += mode->str();
+    config += "\n";
+    testRepo.repo.appendToHgrc(config);
+  }
+
+  auto testEdenConfig = EdenConfig::createTestEdenConfig();
+  testEdenConfig->restrictedTreeTtlSeconds.setValue(
+      0, ConfigSourceType::UserConfig, true);
+  auto edenConfig = std::make_shared<ReloadableConfig>(testEdenConfig);
+  auto stats = makeRefPtr<EdenStats>();
+  FaultInjector faultInjector{/*enabled=*/false};
+  folly::InlineExecutor executor = folly::InlineExecutor::instance();
+  ErrorLogger noopErrorLogger{nullptr, {}, nullptr};
+  auto backingStore = std::make_shared<SaplingBackingStore>(
+      testRepo.repo.path(),
+      testRepo.repo.path(),
+      testRepo.clientPath,
+      kPathMapDefaultCaseSensitive,
+      stats.copy(),
+      &executor,
+      edenConfig,
+      std::make_unique<SaplingBackingStoreOptions>(),
+      makeTestEdenFsEventsLogger(edenConfig, stats),
+      /*errorLogger=*/noopErrorLogger,
+      std::make_unique<BackingStoreLogger>(),
+      &faultInjector);
+  auto objectStore = ObjectStore::create(
+      backingStore,
+      TreeCache::create(edenConfig, stats.copy()),
+      stats.copy(),
+      nullptr,
+      nullptr,
+      edenConfig,
+      CaseSensitivity::Sensitive);
+
+  auto rootTree =
+      objectStore
+          ->getRootTree(restrictedCommit, ObjectFetchContext::getNullContext())
+          .get(kTestTimeout);
+  for (const auto& [name, entry] : *rootTree.tree) {
+    if (name == "restricted"_pc) {
+      return objectStore
+          ->checkPermissionIfExpired(
+              entry.getObjectId(), std::chrono::steady_clock::now())
+          .get(kTestTimeout);
+    }
+  }
+
+  ADD_FAILURE() << "restricted tree entry not found";
+  return false;
+}
+
 struct SaplingBackingStoreTestBase : TestRepo, ::testing::Test {
   std::shared_ptr<EdenConfig> testEdenConfig =
       EdenConfig::createTestEdenConfig();
@@ -201,6 +267,14 @@ TEST_F(
                   ->checkPermissionIfExpired(
                       idWithPath, std::chrono::steady_clock::now())
                   .get(kTestTimeout));
+}
+
+TEST(
+    SaplingBackingStoreCheckPermission,
+    restrictedTreeModeControlsPermissionRecheck) {
+  EXPECT_TRUE(checkRestrictedTreePermission(std::nullopt));
+  EXPECT_TRUE(checkRestrictedTreePermission("logged"));
+  EXPECT_FALSE(checkRestrictedTreePermission("enforced"));
 }
 
 TEST_F(
