@@ -15,13 +15,6 @@ rust_library(
         # Allow only existing use cases
         "//devai/config/loader_rs/...",
         "//devai/devmate_client/...",
-        # trajectory_insights uses SCS to fetch the bytes of source
-        # files at the commit of a Phabricator diff version so it can
-        # populate `code_snippet` for inline review comments without an
-        # attached Suggest Edit (the diff hunk text otherwise lives in
-        # Everstore and isn't directly Hive-queryable). See
-        # `fbcode/devai/trajectory_insights/src/file_snippets.rs`.
-        "//devai/trajectory_insights/...",
         "//atlas/lib/rust/capabilities/...",
         "//vscode_native/...",
     ],
