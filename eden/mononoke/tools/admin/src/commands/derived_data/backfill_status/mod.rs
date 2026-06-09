@@ -61,6 +61,7 @@ use self::types::BackfillChildDisplayData;
 use self::types::BackfillChildParams;
 use self::types::BackfillChildResult;
 use self::types::BackfillDisplayData;
+use self::types::BackfillSettings;
 use self::types::BoundaryDerivationStatus;
 use self::types::ChildCounts;
 use self::types::RepoDetailRow;
@@ -152,6 +153,35 @@ async fn load_derived_data_type(
     }
 }
 
+/// Load the root `DeriveBackfillParams` blob and extract both the derived data
+/// type and the settings the backfill was enqueued with. Returns `(None, None)`
+/// if the blob can't be loaded or the params are not a backfill.
+async fn load_backfill_params_info(
+    ctx: &CoreContext,
+    blobstore: &Arc<dyn Blobstore>,
+    args_blobstore_key: &BlobstoreKey,
+) -> (Option<String>, Option<BackfillSettings>) {
+    let Ok(params) =
+        AsynchronousRequestParams::load_from_key(ctx, blobstore, &args_blobstore_key.0).await
+    else {
+        return (None, None);
+    };
+    match params.thrift() {
+        ThriftAsynchronousRequestParams::derive_backfill_params(p) => (
+            Some(p.derived_data_type.clone()),
+            Some(BackfillSettings {
+                slice_size: p.slice_size,
+                boundaries_concurrency: p.boundaries_concurrency,
+                num_boundary_requests: p.num_boundary_requests,
+                rederive: p.rederive,
+                reslice: p.reslice,
+                config_name: p.config_name.clone(),
+            }),
+        ),
+        _ => (None, None),
+    }
+}
+
 async fn list_backfills(
     ctx: &CoreContext,
     queue: &impl LongRunningRequestsQueue,
@@ -240,7 +270,8 @@ async fn show_backfill_detail(
             }
         };
 
-    let derived_data_type = load_derived_data_type(ctx, blobstore, &args_blobstore_key).await;
+    let (derived_data_type, settings) =
+        load_backfill_params_info(ctx, blobstore, &args_blobstore_key).await;
 
     // Step 2: Get aggregated stats
     let stats_by_status = queue
@@ -322,6 +353,7 @@ async fn show_backfill_detail(
         aggregate_status,
         request_type: request_type.to_string(),
         derived_data_type,
+        settings,
         total_requests,
         status_counts,
         type_breakdown,

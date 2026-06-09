@@ -25,6 +25,7 @@ use super::types::BackfillChildDisplayData;
 use super::types::BackfillChildParams;
 use super::types::BackfillChildResult;
 use super::types::BackfillDisplayData;
+use super::types::BackfillSettings;
 use super::types::BoundaryDerivationStatus;
 use super::types::RepoDetailRow;
 use super::types::RepoDisplayData;
@@ -196,6 +197,10 @@ pub(super) fn display_multi_repo_summary(
         data.derived_data_type.as_deref().unwrap_or("-")
     );
     println!();
+
+    if let Some(settings) = &data.settings {
+        print_settings_section(settings);
+    }
 
     println!("Overall Progress:");
     println!("  Total Repos:         {}", format_number(total_repos));
@@ -473,6 +478,29 @@ fn print_progress_section(total_requests: usize, status_counts: &[(RequestStatus
     println!();
 }
 
+fn print_settings_section(settings: &BackfillSettings) {
+    println!("Settings:");
+    println!(
+        "  Slice Size:           {}",
+        format_number(settings.slice_size.max(0) as usize)
+    );
+    println!(
+        "  Boundaries Concurrency: {}",
+        settings.boundaries_concurrency
+    );
+    println!(
+        "  Num Boundary Requests:  {}",
+        settings.num_boundary_requests
+    );
+    println!("  Rederive:             {}", settings.rederive);
+    println!("  Reslice:              {}", settings.reslice);
+    println!(
+        "  Config Name:          {}",
+        format_optional_str(settings.config_name.as_deref())
+    );
+    println!();
+}
+
 fn print_timing_section(
     elapsed_time: &Duration,
     avg_duration: Option<&Duration>,
@@ -619,6 +647,10 @@ pub(super) fn display_single_repo_detail(
         data.derived_data_type.as_deref().unwrap_or("-")
     );
     println!();
+
+    if let Some(settings) = &data.settings {
+        print_settings_section(settings);
+    }
 
     print_progress_section(data.total_requests, &data.status_counts);
     print_timing_section(

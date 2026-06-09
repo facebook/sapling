@@ -82,6 +82,18 @@ impl TimingStats {
     }
 }
 
+/// Settings the backfill was enqueued with, decoded from the root request's
+/// `DeriveBackfillParams` blob. These are the knobs passed to
+/// `backfill-enqueue` (slice size, concurrency, etc.).
+pub(super) struct BackfillSettings {
+    pub slice_size: i64,
+    pub boundaries_concurrency: i32,
+    pub num_boundary_requests: i32,
+    pub rederive: bool,
+    pub reslice: bool,
+    pub config_name: Option<String>,
+}
+
 /// Common display data for backfill status views
 pub(super) struct BackfillDisplayData {
     pub request_id: RowId,
@@ -90,6 +102,7 @@ pub(super) struct BackfillDisplayData {
     pub aggregate_status: RepoStatus,
     pub request_type: String,
     pub derived_data_type: Option<String>,
+    pub settings: Option<BackfillSettings>,
     pub total_requests: usize,
     pub status_counts: Vec<(RequestStatus, usize)>,
     pub type_breakdown: Vec<(String, Vec<(RequestStatus, usize)>)>,
