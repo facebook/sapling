@@ -27,7 +27,7 @@ gotham = "0.8"
 gotham_derive = "0.8"
 gotham_ext = { version = "0.1.0", path = "../../../common/gotham_ext" }
 hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-http = "1.4.1"
+http = "1.4.0"
 http-body = "1.0.1"
 http-body-util = "0.1.0"
 hyper-openssl = { version = "0.10", features = ["client-legacy", "tokio"] }

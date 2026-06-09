@@ -35,7 +35,7 @@ gotham_derive = "0.8"
 gotham_ext = { version = "0.1.0", path = "../../../common/gotham_ext" }
 hex = { version = "0.4.3", features = ["alloc"] }
 hooks = { version = "0.1.0", path = "../../../features/hooks" }
-http = "1.4.1"
+http = "1.4.0"
 http-body-util = "0.1.0"
 itertools = "0.14.0"
 justknobs = { version = "0.1.0", path = "../../../common/rust/justknobs_ext" }
