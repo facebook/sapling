@@ -742,6 +742,7 @@ impl Request {
 
         let handler = create_handler(self.ctx);
 
+        crate::init_openssl();
         let mut easy = Easy2H::new(handler);
 
         easy.url(url.as_str())?;

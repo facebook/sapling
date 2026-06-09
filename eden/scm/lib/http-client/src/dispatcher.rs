@@ -122,12 +122,14 @@ struct WorkerMulti {
 
 impl WorkerMulti {
     fn new() -> Self {
+        crate::init_openssl();
         Self {
             multi: Multi::new(),
         }
     }
 
     fn reset(&mut self) {
+        crate::init_openssl();
         self.multi = Multi::new();
     }
 

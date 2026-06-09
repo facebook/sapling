@@ -82,5 +82,14 @@ pub use response::Response;
 pub use stats::Stats;
 pub use stream::CborStream;
 
+pub(crate) fn init_openssl() {
+    // Force openssl to initialize to to work around openssl bug
+    // https://github.com/openssl/openssl/issues/6214. Initializing openssl explicitly
+    // causes openssl to use OPENSSL_INIT_NO_ATEXIT which avoids shutdown race conditions
+    // (but not shutting down openssl). If we don't explicitly innitialize, curl
+    // initializes openssl without OPENSSL_INIT_NO_ATEXIT and we get the race conditions.
+    openssl::init();
+}
+
 /// The only Easy2 type used by this crate.
 pub(crate) type Easy2H = Easy2<Box<dyn HandlerExt>>;

@@ -154,6 +154,7 @@ impl HttpClient {
     }
 
     pub fn from_config(config: Config) -> Self {
+        crate::init_openssl();
         let claimer = RequestClaimer::new(config.limit_requests, config.max_concurrent_requests);
         let dispatcher = if config.http_worker_threads == 0 {
             spawn_blocking_dispatcher()

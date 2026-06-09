@@ -141,6 +141,7 @@ struct PoolEntry {
 
 impl PoolEntry {
     fn new() -> Self {
+        crate::init_openssl();
         Self {
             multi: Multi::new(),
             priority: 0,
