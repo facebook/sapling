@@ -342,6 +342,14 @@ pub trait TreeEntry: Send + Sync + 'static {
     fn permission_denied_children(
         &self,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(PathComponentBuf, HgId, String)>>> {
+        self.filter_permission_denied(self.children_with_acls()?)
+    }
+
+    /// Filter caller-selected `has_acl` directory children to those denied permission when fetched.
+    fn filter_permission_denied(
+        &self,
+        _children_with_acl: Vec<(PathComponentBuf, HgId)>,
+    ) -> anyhow::Result<BoxIterator<anyhow::Result<(PathComponentBuf, HgId, String)>>> {
         Ok(Box::new(std::iter::empty()))
     }
 

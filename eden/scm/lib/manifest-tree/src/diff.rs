@@ -226,7 +226,11 @@ fn run_diff_worker(
                     let mut v = Vec::new();
                     if let Durable(entry) = dir.link.as_ref() {
                         if !entry.links_initialized() && !entry.is_permission_denied() {
-                            v.push(entry);
+                            v.push(bfs::PrefetchTree {
+                                path: dir.path.as_repo_path(),
+                                entry,
+                                subtree_matches_everything: false,
+                            });
                         }
                     }
                     v
@@ -235,12 +239,20 @@ fn run_diff_worker(
                     let mut v = Vec::new();
                     if let Durable(entry) = left.link.as_ref() {
                         if !entry.links_initialized() && !entry.is_permission_denied() {
-                            v.push(entry);
+                            v.push(bfs::PrefetchTree {
+                                path: left.path.as_repo_path(),
+                                entry,
+                                subtree_matches_everything: false,
+                            });
                         }
                     }
                     if let Durable(entry) = right.link.as_ref() {
                         if !entry.links_initialized() && !entry.is_permission_denied() {
-                            v.push(entry);
+                            v.push(bfs::PrefetchTree {
+                                path: right.path.as_repo_path(),
+                                entry,
+                                subtree_matches_everything: false,
+                            });
                         }
                     }
                     v
@@ -249,7 +261,7 @@ fn run_diff_worker(
             .collect();
         ctx.progress_bar
             .increase_position(durable_entries.len() as u64);
-        if let Err(err) = bfs::prefetch_trees(&ctx.store, durable_entries) {
+        if let Err(err) = bfs::prefetch_trees(&ctx.store, durable_entries, ctx.matcher.as_ref()) {
             if ctx.result_send.send_error(err).is_err() {
                 continue 'outer;
             }

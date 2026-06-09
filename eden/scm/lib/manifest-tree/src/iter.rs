@@ -90,10 +90,20 @@ fn run_worker(work_recv: Receiver<IterWork>, work_send: WeakSender<IterWork>) ->
         // Batch-prefetch uninitialized durable entries.
         if let Err(e) = bfs::prefetch_trees(
             &ctx.store,
-            work.iter().filter_map(|(_, link, _)| match link.as_ref() {
-                Durable(entry) if !entry.is_permission_denied() => Some(entry),
-                _ => None,
-            }),
+            work.iter()
+                .filter_map(
+                    |(path, link, subtree_matches_everything)| match link.as_ref() {
+                        Durable(entry) if !entry.is_permission_denied() => {
+                            Some(bfs::PrefetchTree {
+                                path: path.as_repo_path(),
+                                entry,
+                                subtree_matches_everything: *subtree_matches_everything,
+                            })
+                        }
+                        _ => None,
+                    },
+                ),
+            ctx.matcher.as_ref(),
         ) {
             if ctx
                 .result_send

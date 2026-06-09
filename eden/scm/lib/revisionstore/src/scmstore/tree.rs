@@ -1161,15 +1161,15 @@ impl TreeEntry for ScmStoreTreeEntry {
         Ok(self.tree.aux_data())
     }
 
-    fn permission_denied_children(
+    fn filter_permission_denied(
         &self,
+        children_with_acl: Vec<(PathComponentBuf, HgId)>,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(PathComponentBuf, HgId, String)>>> {
         let acl_checker = match &self.acl_checker {
             Some(c) => c.clone(),
             None => return Ok(Box::new(std::iter::empty())),
         };
 
-        let children_with_acl = self.tree.children_with_acl()?;
         if children_with_acl.is_empty() {
             return Ok(Box::new(std::iter::empty()));
         }
