@@ -14,7 +14,7 @@ name = "treestate"
 
 [dependencies]
 anyhow = "1.0.102"
-bitflags = { version = "2.11.1", features = ["serde", "std"], default-features = false }
+bitflags = { version = "2.13.0", features = ["serde", "std"], default-features = false }
 byteorder = "1.5"
 fs-err = { version = "3.3.0", features = ["tokio"] }
 sapling-atomicfile = { version = "0.1.0", path = "../atomicfile" }
