@@ -159,7 +159,7 @@ def run_tests_target(name = None, watchman = False, eden = False, mononoke = Fal
         ENV["HGTEST_MONONOKE_SERVER"] = "$(location //eden/mononoke:mononoke)"
         ENV["HGTEST_GET_FREE_SOCKET"] = "$(location //eden/mononoke/tests/integration:get_free_socket)"
         ENV["TEST_FIXTURES"] = "$(location //eden/mononoke/tests/integration:test_fixtures)"
-        ENV["JUST_KNOBS_DEFAULTS"] = "$(location //eden/mononoke/common/mononoke_macros:just_knobs_defaults)"
+        ENV["JUST_KNOBS_DEFAULTS"] = "$(location //eden/mononoke/common/mononoke_macros:test_just_knobs)"
         ENV["FB_TEST_FIXTURES"] = "$(location //eden/mononoke/tests/integration/facebook:facebook_test_fixtures)"
         resources["//eden/mononoke/tests/integration/certs/facebook:test_certs"] = "certs"
         resources["//eden/mononoke/tests/integration:get_free_socket"] = "get_free_socket.par"

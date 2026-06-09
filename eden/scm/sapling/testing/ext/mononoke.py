@@ -1507,7 +1507,7 @@ def setup_environment_variables(stderr: BinaryIO, fs: ShellFS, env: Env) -> int:
     mononoke_just_knobs_overrides_path = f"{local_configerator_path}/just_knobs.json"
     env.setenv("MONONOKE_JUST_KNOBS_OVERRIDES_PATH", mononoke_just_knobs_overrides_path)
     fs.cp(
-        f"{just_knobs_defaults}/just_knobs_defaults/just_knobs.json",
+        f"{just_knobs_defaults}/test_just_knobs/just_knobs.json",
         mononoke_just_knobs_overrides_path,
     )
 
