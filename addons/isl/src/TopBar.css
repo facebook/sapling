@@ -28,3 +28,12 @@
   flex-grow: 1;
   flex-wrap: wrap;
 }
+
+.fetching-data-indicator {
+  align-items: center;
+  display: inline-flex;
+  flex: 0 0 16px;
+  height: 16px;
+  justify-content: center;
+  width: 16px;
+}

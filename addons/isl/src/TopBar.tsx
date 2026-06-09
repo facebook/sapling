@@ -66,10 +66,9 @@ export function TopBar() {
 
 function FetchingDataIndicator() {
   const isFetching = useAtomValue(isFetchingCommits);
-  if (!isFetching) {
-    return null;
-  }
-  return <Icon icon="loading" />;
+  return (
+    <span className="fetching-data-indicator">{isFetching ? <Icon icon="loading" /> : null}</span>
+  );
 }
 
 function RefreshButton() {
