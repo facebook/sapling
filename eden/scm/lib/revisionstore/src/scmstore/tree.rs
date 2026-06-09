@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Duration;
 use std::time::Instant;
 
 use ::metrics::Counter;
@@ -37,6 +38,7 @@ use flume::bounded;
 use flume::unbounded;
 use metrics::TREE_STORE_FETCH_METRICS;
 use minibytes::Bytes;
+use moka::sync::Cache;
 use once_cell::sync::OnceCell;
 use progress_model::AggregatingProgressBar;
 use progress_model::ProgressBar;
@@ -101,6 +103,23 @@ pub enum RestrictedTreeMode {
 }
 
 static TREESTORE_FLUSH_COUNT: Counter = Counter::new_counter("scmstore.tree.flush");
+const ACL_CHECK_CACHE_TTL: Duration = Duration::from_secs(60);
+const ACL_CHECK_CACHE_MAX_ENTRIES: u64 = 4096;
+
+pub(crate) type AclCheckCache = Cache<HgId, AclCheckResult>;
+
+#[derive(Clone)]
+pub(crate) enum AclCheckResult {
+    Allowed,
+    Denied(String),
+}
+
+pub(crate) fn new_acl_check_cache() -> AclCheckCache {
+    Cache::builder()
+        .max_capacity(ACL_CHECK_CACHE_MAX_ENTRIES)
+        .time_to_live(ACL_CHECK_CACHE_TTL)
+        .build()
+}
 
 #[derive(Debug, Clone)]
 pub struct TreeEntryWithAux {
@@ -168,6 +187,8 @@ pub struct TreeStore {
     pub(crate) verify_hash: bool,
 
     pub restricted_tree_mode: RestrictedTreeMode,
+
+    pub(crate) acl_check_cache: AclCheckCache,
 
     pub(crate) permission_denied_paths:
         Option<Arc<parking_lot::Mutex<VecDeque<::types::errors::PermissionDenied>>>>,
@@ -262,21 +283,41 @@ impl TreeStore {
         }
         let edenapi = self.edenapi.clone()?;
         let mode = self.restricted_tree_mode;
+        let acl_check_cache = self.acl_check_cache.clone();
         Some(Arc::new(
             move |children_with_acl: Vec<(PathComponentBuf, HgId)>| {
-                let manifest_ids: Vec<HgId> =
-                    children_with_acl.iter().map(|(_, hgid)| *hgid).collect();
-                let request = CheckManifestPermissionRequest { manifest_ids };
-                let response = edenapi.check_manifest_permission_blocking(request)?;
                 let mut denied_map: HashMap<HgId, String> = HashMap::new();
-                for resp in response.entries {
-                    if !resp.has_access {
-                        let acl = resp
-                            .request_acl
-                            .unwrap_or_else(|| "unknown-acl".to_string());
-                        denied_map.insert(resp.manifest_id, acl);
+
+                let manifest_ids = children_with_acl
+                    .iter()
+                    .filter_map(|(_, hgid)| match acl_check_cache.get(hgid) {
+                        Some(AclCheckResult::Denied(acl)) => {
+                            denied_map.insert(*hgid, acl);
+                            None
+                        }
+                        Some(AclCheckResult::Allowed) => None,
+                        None => Some(*hgid),
+                    })
+                    .collect::<Vec<_>>();
+
+                if !manifest_ids.is_empty() {
+                    let request = CheckManifestPermissionRequest { manifest_ids };
+                    let response = edenapi.check_manifest_permission_blocking(request)?;
+
+                    for resp in response.entries {
+                        let result = if resp.has_access {
+                            AclCheckResult::Allowed
+                        } else {
+                            let acl = resp
+                                .request_acl
+                                .unwrap_or_else(|| "unknown-acl".to_string());
+                            denied_map.insert(resp.manifest_id, acl.clone());
+                            AclCheckResult::Denied(acl)
+                        };
+                        acl_check_cache.insert(resp.manifest_id, result);
                     }
                 }
+
                 if mode == RestrictedTreeMode::Logged {
                     for (path, hgid) in &children_with_acl {
                         if let Some(acl) = denied_map.get(hgid) {
@@ -640,6 +681,7 @@ impl TreeStore {
             unbounded_queue: false,
             verify_hash: true,
             restricted_tree_mode: RestrictedTreeMode::Disabled,
+            acl_check_cache: new_acl_check_cache(),
             permission_denied_paths: Default::default(),
             max_fetch_count: Default::default(),
         }
@@ -721,6 +763,7 @@ impl TreeStore {
             unbounded_queue: self.unbounded_queue,
             verify_hash: self.verify_hash,
             restricted_tree_mode: self.restricted_tree_mode,
+            acl_check_cache: self.acl_check_cache.clone(),
             permission_denied_paths: self.permission_denied_paths.clone(),
             max_fetch_count: self.max_fetch_count.clone(),
         }

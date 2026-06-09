@@ -38,6 +38,7 @@ use crate::scmstore::fetch::MaxFetchCount;
 use crate::scmstore::file::FileStoreMetrics;
 use crate::scmstore::tree::RestrictedTreeMode;
 use crate::scmstore::tree::TreeMetadataMode;
+use crate::scmstore::tree::new_acl_check_cache;
 use crate::util::RUN_ONCE_FILENAME;
 use crate::util::check_run_once;
 use crate::util::get_cache_path;
@@ -717,6 +718,7 @@ impl<'a> TreeStoreBuilder<'a> {
                 .get_or_default("experimental", "unbounded-scmstore-queue")?,
             verify_hash,
             restricted_tree_mode,
+            acl_check_cache: new_acl_check_cache(),
             permission_denied_paths: self.permission_denied_paths,
             max_fetch_count: self.max_fetch_count,
         })

@@ -135,13 +135,6 @@ Rebase: ACL checks are repeated for the same restricted tree
   $ newclientrepo client6 server6
   $ sl go -q $D
 
-FIXME: this should only check permissions for the restricted tree once.
+The restricted tree is checked once and reused from the in-process ACL cache.
   $ SL_LOG=eagerepo::api=debug sl rebase -r $B::$D -d $E 2>&1 | $PYTHON -c 'import sys; print("".join(line for line in sys.stdin if "check_manifest_permission" in line), end="")'
-  DEBUG eagerepo::api: check_manifest_permission d4ef899346f65d1984b2a14db0f44f42df35d2d4
-  DEBUG eagerepo::api: check_manifest_permission d4ef899346f65d1984b2a14db0f44f42df35d2d4
-  DEBUG eagerepo::api: check_manifest_permission d4ef899346f65d1984b2a14db0f44f42df35d2d4
-  DEBUG eagerepo::api: check_manifest_permission d4ef899346f65d1984b2a14db0f44f42df35d2d4
-  DEBUG eagerepo::api: check_manifest_permission d4ef899346f65d1984b2a14db0f44f42df35d2d4
-  DEBUG eagerepo::api: check_manifest_permission d4ef899346f65d1984b2a14db0f44f42df35d2d4
-  DEBUG eagerepo::api: check_manifest_permission d4ef899346f65d1984b2a14db0f44f42df35d2d4
   DEBUG eagerepo::api: check_manifest_permission d4ef899346f65d1984b2a14db0f44f42df35d2d4
