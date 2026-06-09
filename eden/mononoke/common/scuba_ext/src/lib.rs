@@ -21,11 +21,9 @@ use futures_stats::StreamStats;
 use futures_stats::TryStreamStats;
 use memory::MemoryStats;
 use metadata::Metadata;
-use nonzero_ext::nonzero;
 use observability::ObservabilityContext;
 use observability::ScubaLoggingDecisionFields;
 pub use observability::ScubaVerbosityLevel;
-use permission_checker::MononokeIdentitySetExt;
 pub use sampling::Sampling;
 #[cfg(fbcode_build)]
 pub use schematized_logging::CommonMetadata;
@@ -361,15 +359,6 @@ impl MononokeScubaSampleBuilder {
         self.inner
             .add("fetch_from_cas_attempted", fetch_from_cas_attempted);
         self
-    }
-
-    pub fn sample_for_identities(&mut self, identities: &impl MononokeIdentitySetExt) {
-        // Details of quicksand traffic aren't particularly interesting because all Quicksand tasks are
-        // doing effectively the same thing at the same time. If we need real-time debugging, we can
-        // always rely on updating the verbosity in real time.
-        if identities.is_quicksand() {
-            self.sampled_unless_verbose(nonzero!(100u64));
-        }
     }
 
     pub fn log_with_msg<S: Into<Option<String>>>(&mut self, log_tag: &str, msg: S) {

@@ -12,7 +12,6 @@ rust_library(
         "//common/rust/shed/fbinit:fbinit",
         "//eden/mononoke/common/async_limiter:async_limiter",
         "//eden/mononoke/common/metadata:metadata",
-        "//eden/mononoke/common/permission_checker:permission_checker",
         "//eden/mononoke/common/rate_limiting:rate_limiting",
         "//eden/mononoke/common/rust/sql_ext/sql_query_telemetry:sql_query_telemetry",
         "//eden/mononoke/common/scribe_ext:scribe_ext",

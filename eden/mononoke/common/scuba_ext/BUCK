@@ -8,7 +8,6 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     deps = [
         "fbsource//third-party/rust:anyhow",
-        "fbsource//third-party/rust:nonzero_ext",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/futures_stats:futures_stats",
         "//common/rust/shed/sampling:sampling",
@@ -17,7 +16,6 @@ rust_library(
         "//eden/mononoke/common/memory:memory",
         "//eden/mononoke/common/metadata:metadata",
         "//eden/mononoke/common/observability:observability",
-        "//eden/mononoke/common/permission_checker:permission_checker",
         "//eden/mononoke/common/rust/justknobs_ext:justknobs",
         "//eden/mononoke/common/scribe_ext:scribe_ext",
         "//eden/scm/lib/clientinfo:clientinfo",

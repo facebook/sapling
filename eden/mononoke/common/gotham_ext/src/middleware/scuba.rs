@@ -339,7 +339,6 @@ fn populate_scuba(scuba: &mut MononokeScubaSampleBuilder, state: &mut State) {
             scuba.add_client_request_info(client_info);
         }
         let identities = metadata.identities();
-        scuba.sample_for_identities(identities);
         let identities_typed: Vec<_> = identities.iter().map(|i| i.to_typed_string()).collect();
         let identities: Vec<_> = identities.iter().map(|i| i.to_string()).collect();
         scuba.add(HttpScubaKey::ClientIdentities, identities);

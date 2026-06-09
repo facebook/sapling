@@ -93,10 +93,6 @@ impl MononokeIdentity {
 }
 
 impl MononokeIdentitySetExt for MononokeIdentitySet {
-    fn is_quicksand(&self) -> bool {
-        false
-    }
-
     fn likely_an_agent(&self) -> bool {
         false
     }

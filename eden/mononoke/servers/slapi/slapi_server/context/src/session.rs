@@ -11,7 +11,6 @@ use async_limiter::AsyncLimiter;
 use clientinfo::ClientInfo;
 use fbinit::FacebookInit;
 use metadata::Metadata;
-use permission_checker::MononokeIdentitySetExt;
 use rate_limiting::BoxRateLimiter;
 use rate_limiting::LoadCost;
 use rate_limiting::LoadShedResult;
@@ -176,10 +175,6 @@ impl SessionContainer {
             }
             None => Ok(()),
         }
-    }
-
-    pub fn is_quicksand(&self) -> bool {
-        self.metadata().identities().is_quicksand()
     }
 
     pub fn is_readonly(&self) -> bool {

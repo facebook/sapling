@@ -98,7 +98,6 @@ pub async fn request_handler(
         scuba.add("config_store_last_updated_at", config_info.last_updated_at);
     }
     scuba.add_metadata(&metadata);
-    scuba.sample_for_identities(metadata.identities());
 
     let rate_limiter = rate_limiter.map(|r| r.get_rate_limiter());
     if let Some(ref rate_limiter) = rate_limiter {
