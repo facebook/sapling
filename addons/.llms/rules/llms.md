@@ -29,7 +29,7 @@ eden/addons/
 | Run server tests         | `cd isl-server && yarn test`         |
 | Run integration tests    | `cd isl && yarn integration`         |
 | Format code              | `arc f -a`                           |
-| Lint                     | `cd isl && yarn eslint`              |
+| Lint                     | `yarn lint`                          |
 
 **Prettier config:** single quotes, 2-space indent, 100 print width, trailing commas, no bracket spacing. Imports are auto-organized via `prettier-plugin-organize-imports`.
 
