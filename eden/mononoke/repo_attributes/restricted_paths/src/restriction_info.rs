@@ -358,6 +358,16 @@ async fn is_restricted_manifest_from_config(
     manifest_id: &ManifestId,
     manifest_type: &ManifestType,
 ) -> Result<bool> {
+    // The config source can only restrict a manifest when there are configured
+    // `path_acls`. For repos with none, skip the manifest-id store entirely --
+    // otherwise every per-child augmented-tree lookup falls through to a
+    // `SelectPathsByManifestId` SQL query, which at fleet QPS caused a SQL storm
+    // (S672712 / T248658346). Mirrors the enforcement path's
+    // `config_manifest_may_restrict` guard in lib.rs.
+    if restricted_paths.config().is_empty() {
+        return Ok(false);
+    }
+
     Ok(!get_manifest_restricted_paths_from_config(
         restricted_paths,
         ctx,
