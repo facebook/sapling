@@ -1521,8 +1521,7 @@ class EdenCheckout:
 
         if checkout_config.predictive_prefetch_num_dirs:
             config_data["predictive-prefetch"]["predictive-prefetch-num-dirs"] = (
-                # pyrefly: ignore [bad-typed-dict-key]
-                checkout_config.predictive_prefetch_num_dirs
+                checkout_config.predictive_prefetch_num_dirs  # pyrefly: ignore [bad-assignment, bad-typed-dict-key]
             )
 
         util.write_file_atomically(
