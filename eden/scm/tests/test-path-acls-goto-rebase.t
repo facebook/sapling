@@ -112,3 +112,36 @@ Rebase: two commits where only the second touches a restricted path
   rebasing 5f76ba0bb512 "C"
   abort: path 'dir' is restricted by ACL 'some-acl'
   [255]
+
+Rebase: ACL checks are repeated for the same restricted tree
+
+  $ newserver server6
+  $ drawdag << 'EOS'
+  > E  # E/dir/.slacl = acl config
+  >    # E/dir/file.txt = destination content
+  >    # E/other.txt = original
+  > |
+  > | D  # D/other.txt = stack change 3
+  > | |
+  > | C  # C/other.txt = stack change 2
+  > | |
+  > | B  # B/other.txt = stack change 1
+  > |/
+  > A  # A/dir/file.txt = original
+  >    # A/other.txt = original
+  > EOS
+
+  $ cd
+  $ newclientrepo client6 server6
+  $ sl go -q $D
+
+FIXME: this should only check permissions for the restricted tree once.
+  $ SL_LOG=eagerepo::api=debug sl rebase -r $B::$D -d $E 2>&1 | $PYTHON -c 'import sys; print("".join(line for line in sys.stdin if "check_manifest_permission" in line), end="")'
+  DEBUG eagerepo::api: check_manifest_permission d4ef899346f65d1984b2a14db0f44f42df35d2d4
+  DEBUG eagerepo::api: check_manifest_permission d4ef899346f65d1984b2a14db0f44f42df35d2d4
+  DEBUG eagerepo::api: check_manifest_permission d4ef899346f65d1984b2a14db0f44f42df35d2d4
+  DEBUG eagerepo::api: check_manifest_permission d4ef899346f65d1984b2a14db0f44f42df35d2d4
+  DEBUG eagerepo::api: check_manifest_permission d4ef899346f65d1984b2a14db0f44f42df35d2d4
+  DEBUG eagerepo::api: check_manifest_permission d4ef899346f65d1984b2a14db0f44f42df35d2d4
+  DEBUG eagerepo::api: check_manifest_permission d4ef899346f65d1984b2a14db0f44f42df35d2d4
+  DEBUG eagerepo::api: check_manifest_permission d4ef899346f65d1984b2a14db0f44f42df35d2d4
