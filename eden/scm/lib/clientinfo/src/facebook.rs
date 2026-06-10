@@ -7,6 +7,8 @@
 
 use std::env::var;
 
+use atlas_whoami::AtlasWhoAmI;
+use atlas_whoami::Purpose;
 use cross_env_session_id::CrossEnvironmentSessionId;
 use serde::Deserialize;
 use serde::Serialize;
@@ -84,13 +86,21 @@ impl FbClientInfo {
 }
 
 /// Detect an Atlas-style boolean env var the same way as the config loader's
-/// `platform_helpers::is_atlas`/`is_atlas_rl` (set to "1" means true). Returns
-/// `None` when unset so the field stays absent for non-Atlas clients. We can't
-/// reuse those helpers directly: they live in `configloader`, and clientinfo ->
-/// configloader would be a dependency cycle (configloader -> http-client ->
-/// clientinfo).
+/// `platform_helpers::is_atlas` (set to "1" means true). Returns `None` when
+/// unset so the field stays absent for non-Atlas clients. We can't reuse that
+/// helper directly: it lives in `configloader`, and clientinfo -> configloader
+/// would be a dependency cycle (configloader -> http-client -> clientinfo).
 fn atlas_env_flag(name: &str) -> Option<bool> {
     std::env::var_os(name).map(|v| v == "1")
+}
+
+/// Whether this is a reinforcement-learning Atlas container, read from the
+/// `/etc/atlaswhoami` identity file written by the Atlas preparer. `None` when
+/// there is no whoami file (non-Atlas client) or no purpose recorded, mirroring
+/// the absent-field behaviour of the other optional fields.
+fn atlas_rl_from_whoami() -> Option<bool> {
+    let purpose = AtlasWhoAmI::get().ok()?.purpose?;
+    Some(purpose == Purpose::ReinforcementLearning)
 }
 
 fn get_tw_job_handle() -> Option<String> {
@@ -112,8 +122,7 @@ pub fn get_fb_client_info() -> FbClientInfo {
         sandcastle_type: var("SANDCASTLE_TYPE").ok(),
         sandcastle_vcs: var("SANDCASTLE_VCS").ok(),
         atlas: atlas_env_flag("ATLAS"),
-        // TODO(liubovd): migrate to the atlaswhoami file once it is ready.
-        atlas_rl: atlas_env_flag("ATLAS_RL"),
+        atlas_rl: atlas_rl_from_whoami(),
         atlas_env_id: var("ATLAS_ENV_ID").ok(),
         faas_job_name: var("FAAS_JOB_NAME").ok(),
     }

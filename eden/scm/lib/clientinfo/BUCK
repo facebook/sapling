@@ -32,6 +32,7 @@ rust_library(
         []
         if rust_oss.is_oss_build()
         else [
+            "//atlas/lib/rust/whoami:atlas_whoami",
             "//devx_www/cross_env_session_id:cross_env_session_id",
         ]
     ),
