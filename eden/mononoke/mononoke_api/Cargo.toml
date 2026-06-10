@@ -64,7 +64,7 @@ git_ref_content_mapping = { version = "0.1.0", path = "../repo_attributes/git_re
 git_source_of_truth = { version = "0.1.0", path = "../repo_attributes/git_source_of_truth" }
 git_symbolic_refs = { version = "0.1.0", path = "../repo_attributes/git_symbolic_refs" }
 git_types = { version = "0.1.0", path = "../git/git_types" }
-gix-hash = { version = "0.25.0", features = ["sha1"] }
+gix-hash = { version = "0.25.1", features = ["sha1"] }
 history_traversal = { version = "0.1.0", path = "../features/history_traversal" }
 hook_manager = { version = "0.1.0", path = "../repo_attributes/hook_manager/hook_manager" }
 hooks = { version = "0.1.0", path = "../features/hooks" }

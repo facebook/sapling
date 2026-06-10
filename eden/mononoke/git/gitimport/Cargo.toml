@@ -25,7 +25,7 @@ filestore = { version = "0.1.0", path = "../../repo_attributes/filestore" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 git_ref_content_mapping = { version = "0.1.0", path = "../../repo_attributes/git_ref_content_mapping" }
 git_symbolic_refs = { version = "0.1.0", path = "../../repo_attributes/git_symbolic_refs" }
-gix-hash = { version = "0.25.0", features = ["sha1"] }
+gix-hash = { version = "0.25.1", features = ["sha1"] }
 import_direct = { version = "0.1.0", path = "../import_direct" }
 import_tools = { version = "0.1.0", path = "../import_tools" }
 libc = "0.2.186"
