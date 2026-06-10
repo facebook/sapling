@@ -1512,6 +1512,7 @@ function gitimport() {
     --tls-private-key "$TEST_CERTDIR/client0.key" \
     --tls-certificate "$TEST_CERTDIR/client0.crt" \
     --tracing-test-format \
+    --persist-partial-mappings \
     "$@"
 }
 

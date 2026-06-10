@@ -278,6 +278,12 @@ struct GitimportArgs {
     /// imports.
     #[clap(long)]
     cleanup_mononoke_bookmarks: bool,
+    /// On failure, persist `bonsai_git_mapping` rows for commits already
+    /// fully processed so retries can resume incrementally. Also surfaces
+    /// the real underlying error to Scuba instead of the SendError
+    /// cascade. See `GitimportPreferences::persist_partial_mappings`.
+    #[clap(long)]
+    persist_partial_mappings: bool,
 }
 
 #[derive(Subcommand)]
@@ -456,6 +462,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         allow_content_refs: args.allow_content_refs,
         backfill_derivation,
         lfs,
+        persist_partial_mappings: args.persist_partial_mappings,
         ..Default::default()
     };
 

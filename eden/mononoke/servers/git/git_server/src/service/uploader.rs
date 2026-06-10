@@ -213,7 +213,7 @@ async fn process_tags<Uploader: GitUploader>(
         if let Some(tag_metadata) = tags.get_mut(oid) {
             // Only update the tag name based on the ref name if we are sure they refer to the same tag
             // If they refer to the same tag, the names would either be identical or the ref name would
-            // would atleast end with the tag object name in case of namespaced tags
+            // would at least end with the tag object name in case of namespaced tags
             if ref_name.ends_with(tag_metadata.name.as_str()) {
                 tag_metadata.name = ref_name;
             } else {
@@ -355,6 +355,7 @@ pub async fn upload_objects(
     ref_updates: &[RefUpdate],
     lfs: GitImportLfs,
     concurrency: usize,
+    persist_partial_mappings: bool,
 ) -> Result<(RefMap, Vec<RefUpdate>)> {
     let repo_name = repo.repo_identity().name().to_string();
     let uploader = Arc::new(DirectUploader::with_arc(
@@ -368,6 +369,7 @@ pub async fn upload_objects(
         ]),
         concurrency,
         lfs,
+        persist_partial_mappings,
         ..Default::default()
     };
     let acc = GitimportAccumulator::from_roots(HashMap::new());

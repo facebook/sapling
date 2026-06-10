@@ -92,6 +92,8 @@ pub struct GitServerContextInner {
     acl_provider: Arc<dyn AclProvider>,
     // Optional address (host:port) for the RL Land Service
     multi_repo_land_service_address: Option<String>,
+    // See `GitimportPreferences::persist_partial_mappings`.
+    persist_partial_mappings: bool,
 }
 
 impl GitServerContextInner {
@@ -104,6 +106,7 @@ impl GitServerContextInner {
         tls_args: Option<TLSArgs>,
         acl_provider: Arc<dyn AclProvider>,
         multi_repo_land_service_address: Option<String>,
+        persist_partial_mappings: bool,
     ) -> Self {
         Self {
             repos,
@@ -114,6 +117,7 @@ impl GitServerContextInner {
             tls_args,
             acl_provider,
             multi_repo_land_service_address,
+            persist_partial_mappings,
         }
     }
 }
@@ -135,6 +139,7 @@ impl GitServerContext {
         tls_args: Option<TLSArgs>,
         acl_provider: Arc<dyn AclProvider>,
         multi_repo_land_service_address: Option<String>,
+        persist_partial_mappings: bool,
     ) -> Self {
         let inner = Arc::new(RwLock::new(GitServerContextInner::new(
             repos,
@@ -145,8 +150,16 @@ impl GitServerContext {
             tls_args,
             acl_provider,
             multi_repo_land_service_address,
+            persist_partial_mappings,
         )));
         Self { inner, fb }
+    }
+
+    pub fn persist_partial_mappings(&self) -> bool {
+        self.inner
+            .read()
+            .expect("poisoned lock in git server context")
+            .persist_partial_mappings
     }
 
     pub fn fb(&self) -> fbinit::FacebookInit {

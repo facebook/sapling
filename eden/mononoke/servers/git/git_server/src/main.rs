@@ -208,6 +208,13 @@ struct GitServerArgs {
     /// shadow traffic, preventing forwarding loops.
     #[clap(long, default_value_t = false)]
     shadow_tier: bool,
+    /// On per-push gitimport failure, persist `bonsai_git_mapping` rows
+    /// for commits already fully processed so retries can resume
+    /// incrementally. Also surfaces the real underlying error to Scuba
+    /// instead of the SendError cascade. See
+    /// `GitimportPreferences::persist_partial_mappings`.
+    #[clap(long, default_value_t = false)]
+    persist_partial_mappings: bool,
 }
 
 #[derive(Clone)]
@@ -400,6 +407,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 tls_args,
                 acl_provider.clone(),
                 args.multi_repo_land_service_address,
+                args.persist_partial_mappings,
             );
 
             let router = build_router(git_server_context);

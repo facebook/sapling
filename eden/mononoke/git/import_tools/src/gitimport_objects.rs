@@ -207,6 +207,12 @@ pub struct GitimportPreferences {
     pub lfs: GitImportLfs,
     pub git_command_path: PathBuf,
     pub backfill_derivation: BackfillDerivation,
+    /// On producer failure, await consumers so they flush partial work
+    /// (commits already fully processed get their `bonsai_git_mapping`
+    /// persisted). Lets retries resume from the failing commit instead of
+    /// re-importing the whole range. Also surfaces the consumer's real
+    /// error to Scuba instead of the producer's SendError cascade.
+    pub persist_partial_mappings: bool,
 }
 
 impl Default for GitimportPreferences {
@@ -220,6 +226,7 @@ impl Default for GitimportPreferences {
             backfill_derivation: BackfillDerivation::No,
             stream_for_changed_trees: true,
             allow_content_refs: false,
+            persist_partial_mappings: false,
         }
     }
 }

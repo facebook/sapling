@@ -238,6 +238,7 @@ async fn push(
             &ref_updates,
             lfs,
             concurrency,
+            git_ctx.persist_partial_mappings(),
         )
         .try_timed()
         .await;
