@@ -36,7 +36,7 @@ git_source_of_truth = { version = "0.1.0", path = "../repo_attributes/git_source
 hgproto = { version = "0.1.0", path = "../common/hgproto" }
 hook_manager = { version = "0.1.0", path = "../repo_attributes/hook_manager/hook_manager" }
 hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-justknobs = { version = "0.1.0", path = "../common/rust/justknobs_ext" }
+justknobs_ext = { version = "0.1.0", path = "../common/rust/justknobs_ext" }
 maplit = "1.0"
 mercurial_bundles = { version = "0.1.0", path = "../mercurial/bundles" }
 mercurial_derivation = { version = "0.1.0", path = "../derived_data/mercurial_derivation" }

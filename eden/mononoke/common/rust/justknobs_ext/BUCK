@@ -5,7 +5,10 @@ oncall("scm_server_treehugger")
 rust_library(
     name = "justknobs",
     srcs = glob(["src/*.rs"]),
-    autocargo = {"cargo_toml_dir": "."},
+    autocargo = {
+        "cargo_toml_config": {"package": {"name": "justknobs_ext"}},
+        "cargo_toml_dir": ".",
+    },
     compatible_with = [
         "ovr_config//os:linux",
     ],

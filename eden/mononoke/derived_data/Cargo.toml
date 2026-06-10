@@ -16,7 +16,7 @@ derived_data_manager = { version = "0.1.0", path = "manager" }
 filestore = { version = "0.1.0", path = "../repo_attributes/filestore" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 itertools = "0.14.0"
-justknobs = { version = "0.1.0", path = "../common/rust/justknobs_ext" }
+justknobs_ext = { version = "0.1.0", path = "../common/rust/justknobs_ext" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived_data" }

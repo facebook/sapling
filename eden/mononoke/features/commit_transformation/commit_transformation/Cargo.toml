@@ -40,7 +40,7 @@ futures = { version = "0.3.31", features = ["async-await", "compat"] }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 git_types = { version = "0.1.0", path = "../../../git/git_types" }
 itertools = "0.14.0"
-justknobs = { version = "0.1.0", path = "../../../common/rust/justknobs_ext" }
+justknobs_ext = { version = "0.1.0", path = "../../../common/rust/justknobs_ext" }
 manifest = { version = "0.1.0", path = "../../../manifest" }
 maplit = "1.0"
 megarepo_configs = { version = "0.1.0", path = "../../../megarepo_api/if/megarepo_configs" }

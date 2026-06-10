@@ -49,7 +49,7 @@ git_symbolic_refs = { version = "0.1.0", path = "../repo_attributes/git_symbolic
 git_types = { version = "0.1.0", path = "../git/git_types" }
 hook_manager = { version = "0.1.0", path = "../repo_attributes/hook_manager/hook_manager" }
 hooks = { version = "0.1.0", path = "../features/hooks" }
-justknobs = { version = "0.1.0", path = "../common/rust/justknobs_ext" }
+justknobs_ext = { version = "0.1.0", path = "../common/rust/justknobs_ext" }
 lazy_static = "1.5"
 live_commit_sync_config = { version = "0.1.0", path = "../features/commit_rewriting/live_commit_sync_config" }
 memcache = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

@@ -43,7 +43,7 @@ http = "=1.4.0"
 http-body-util = "0.1.0"
 import_direct = { version = "0.1.0", path = "../../../git/import_direct" }
 import_tools = { version = "0.1.0", path = "../../../git/import_tools" }
-justknobs = { version = "0.1.0", path = "../../../common/rust/justknobs_ext" }
+justknobs_ext = { version = "0.1.0", path = "../../../common/rust/justknobs_ext" }
 lazy_static = "1.5"
 memory_profiling = { version = "0.1.0", path = "../../../common/memory_profiling" }
 metaconfig_parser = { version = "0.1.0", path = "../../../metaconfig/parser" }

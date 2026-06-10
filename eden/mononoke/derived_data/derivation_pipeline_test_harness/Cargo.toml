@@ -22,7 +22,7 @@ fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rus
 filestore = { version = "0.1.0", path = "../../repo_attributes/filestore" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
-justknobs = { version = "0.1.0", path = "../../common/rust/justknobs_ext" }
+justknobs_ext = { version = "0.1.0", path = "../../common/rust/justknobs_ext" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 repo_blobstore = { version = "0.1.0", path = "../../repo_attributes/repo_blobstore" }

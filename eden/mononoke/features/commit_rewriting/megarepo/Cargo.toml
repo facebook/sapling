@@ -20,7 +20,7 @@ derivation_queue_thrift = { version = "0.1.0", path = "../../../repo_attributes/
 fsnodes = { version = "0.1.0", path = "../../../derived_data/fsnodes" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 itertools = "0.14.0"
-justknobs = { version = "0.1.0", path = "../../../common/rust/justknobs_ext" }
+justknobs_ext = { version = "0.1.0", path = "../../../common/rust/justknobs_ext" }
 manifest = { version = "0.1.0", path = "../../../manifest" }
 mercurial_derivation = { version = "0.1.0", path = "../../../derived_data/mercurial_derivation" }
 mercurial_types = { version = "0.1.0", path = "../../../mercurial/types" }

@@ -18,7 +18,7 @@ derivation_queue_thrift = { version = "0.1.0", path = "../../repo_attributes/rep
 filestore = { version = "0.1.0", path = "../../repo_attributes/filestore" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
-justknobs = { version = "0.1.0", path = "../rust/justknobs_ext" }
+justknobs_ext = { version = "0.1.0", path = "../rust/justknobs_ext" }
 manifest = { version = "0.1.0", path = "../../manifest" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 regex = "1.12.3"

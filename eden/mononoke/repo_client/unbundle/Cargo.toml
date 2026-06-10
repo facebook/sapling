@@ -29,7 +29,7 @@ futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimen
 getbundle_response = { version = "0.1.0", path = "../getbundle_response" }
 hook_manager = { version = "0.1.0", path = "../../repo_attributes/hook_manager/hook_manager" }
 hooks = { version = "0.1.0", path = "../../features/hooks" }
-justknobs = { version = "0.1.0", path = "../../common/rust/justknobs_ext" }
+justknobs_ext = { version = "0.1.0", path = "../../common/rust/justknobs_ext" }
 lazy_static = "1.5"
 live_commit_sync_config = { version = "0.1.0", path = "../../features/commit_rewriting/live_commit_sync_config" }
 manifest = { version = "0.1.0", path = "../../manifest" }
