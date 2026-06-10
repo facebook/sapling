@@ -138,11 +138,12 @@ impl AsyncMethodRequestWorker {
     ) -> Result<Self, Error> {
         let name = {
             let tw_job_cluster = std::env::var("TW_JOB_CLUSTER");
+            let tw_job_user = std::env::var("TW_JOB_USER");
             let tw_job_name = std::env::var("TW_JOB_NAME");
             let tw_task_id = std::env::var("TW_TASK_ID");
-            match (tw_job_cluster, tw_job_name, tw_task_id) {
-                (Ok(tw_job_cluster), Ok(tw_job_name), Ok(tw_task_id)) => {
-                    format!("{tw_job_cluster}/{tw_job_name}/{tw_task_id}")
+            match (tw_job_cluster, tw_job_user, tw_job_name, tw_task_id) {
+                (Ok(tw_job_cluster), Ok(tw_job_user), Ok(tw_job_name), Ok(tw_task_id)) => {
+                    format!("{tw_job_cluster}/{tw_job_user}/{tw_job_name}/{tw_task_id}")
                 }
                 _ => format!(
                     "async_requests_worker/{}",
