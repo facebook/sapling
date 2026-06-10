@@ -13,6 +13,7 @@ use async_requests::types::RowId;
 use async_requests_types_thrift::AsynchronousRequestResult as ThriftAsynchronousRequestResult;
 use context::CoreContext;
 use futures_stats::FutureStats;
+use mononoke_types::RepositoryId;
 use source_control::AsyncRequestError;
 use stats::define_stats;
 use stats::prelude::*;
@@ -114,6 +115,23 @@ pub(crate) fn log_result(
         scuba.add("error", error.as_str());
     }
     scuba.log_with_msg("Request complete", None);
+}
+
+pub(crate) fn log_repo_load_failure(
+    ctx: &CoreContext,
+    repo_id: Option<RepositoryId>,
+    error: &Error,
+) {
+    let mut scuba = ctx.scuba().clone();
+
+    scuba.unsampled();
+    scuba.add("status", "REPO_LOAD_ERROR");
+    scuba.add("error", format!("{error:?}"));
+
+    scuba.log_with_msg(
+        "Failed to load repo",
+        repo_id.map(|rid| format!("repo id: {}", rid.id())),
+    );
 }
 
 /// Log a retriable error, i.e. one that failed because of internal worker issues and will be retried.
