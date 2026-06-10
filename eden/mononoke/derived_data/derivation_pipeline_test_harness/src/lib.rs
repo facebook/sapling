@@ -172,7 +172,7 @@ async fn verify_pipeline_matches_canonical_impl<F: PipelineTestFixture + Send>(
 
     let head = *commits
         .get("master")
-        .or_else(|| commits.get("J"))
+        .or_else(|| commits.get("Q"))
         .ok_or_else(|| anyhow!("fixture {} has no master bookmark head", F::REPO_NAME))?;
 
     let config = pipeline_config_from_stages(F::pipeline_stages())?;
@@ -343,11 +343,12 @@ mod tests {
     impl PipelineTestFixture for NestedDirectories {
         fn pipeline_stages() -> Vec<(&'static str, Vec<&'static str>)> {
             vec![
-                ("", vec!["top1", "top2"]),
+                ("", vec!["top1", "top2", "top3"]),
                 ("top1", vec![]),
                 ("top2", vec!["nested1", "nested2"]),
                 ("top2/nested1", vec![]),
                 ("top2/nested2", vec![]),
+                ("top3", vec![]),
             ]
         }
     }
@@ -389,12 +390,12 @@ mod tests {
     }
 
     // Boundary commit `D` is derived canonically only; the pipeline derives just
-    // its descendants (E, F, G, H, I, J). The first pipeline batch's parents
-    // include `D`, which has no pipeline stage output, so the manager must bridge
-    // it via `extract_stage_output_from_derived`. The bridge is genuinely used:
-    // `D` introduced `top2/nested1`, and the descendants leave that subtree
-    // unchanged (they work in `top2/nested2`, `top1`, and the root), so the
-    // `top2`/`top2/nested1` stage outputs of the children are inherited from
+    // its descendants (E, F, G, H, I, J, K, L, M, N, R, O, P, Q). The first pipeline batch's
+    // parents include `D`, which has no pipeline stage output, so the manager must
+    // bridge it via `extract_stage_output_from_derived`. The bridge is genuinely
+    // used: `D` introduced `top2/nested1`, and the descendants leave that subtree
+    // unchanged (they work in `top2/nested2`, `top1`, `top3`, and the root), so
+    // the `top2`/`top2/nested1` stage outputs of the children are inherited from
     // `D`'s canonical value rather than recomputed from a stored pipeline stage.
     #[mononoke::fbinit_test]
     async fn test_pipeline_matches_canonical_with_canonical_ancestors(

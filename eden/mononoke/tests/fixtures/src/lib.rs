@@ -875,7 +875,14 @@ impl TestRepoFixture for ManyDiamonds {
 /// and `top2/nested2`, a repo-root file, an intra-directory copy, a
 /// cross-directory copy, a replace-directory-with-a-file, and a merge touching
 /// multiple directories. The chain is long enough that `batch_size=3` yields
-/// multiple batches.
+/// multiple batches. The `top3` tail cycles a top-level stage through every
+/// `StageOutput` shape: directory -> file (implicit delete of children) ->
+/// directory (file copied under the recreated dir) -> deleted (absent) ->
+/// directory again. The `top3` tail also exercises `copy_from` across that
+/// dir/file lifecycle: an intra-stage copy within `top3`, a file at the stage
+/// root copied from a parent whose stage output is itself a file, a file under
+/// `top3` copied from the stage-root path of a parent whose stage output is a
+/// file, and a cross-stage copy into `top3`.
 pub struct NestedDirectories;
 
 #[async_trait]
@@ -885,8 +892,34 @@ impl TestRepoFixture for NestedDirectories {
     const DAG: &'static str = r#"
         # default_files: false
         # author: * "author"
-        # bookmark: J master
+        # bookmark: Q master
 
+        Q        # message: Q "Cross-stage copy into top3"
+        |        # copy: Q "top3/imported" "page1\n" P "top2/nested2/page1"
+        |
+        P        # message: P "top3 becomes a directory again"
+        |        # modify: P "top3/c" "c\n"
+        |
+        O        # message: O "Delete top3, leaving it absent"
+        |        # delete: O "top3"
+        |
+        R        # message: R "Recreate top3 dir, copying former top3 file into it"
+        |        # delete: R "top3"
+        |        # copy: R "top3/restored" "copied file\n" N "top3"
+        |
+        N        # message: N "Copy top3 file from parent's top3 file"
+        |        # copy: N "top3" "copied file\n" M "top3"
+        |
+        M        # message: M "Replace top3 dir with a file (implicit delete of children)"
+        |        # modify: M "top3" "now a file\n"
+        |
+        L        # message: L "Intra-stage copy within top3"
+        |        # copy: L "top3/a_copy" "a\n" K "top3/a"
+        |
+        K        # message: K "Add top3 directory"
+        |        # modify: K "top3/a" "a\n"
+        |        # modify: K "top3/b" "b\n"
+        |
         J        # message: J "Merge side branch, touch top2 and top1"
         |\       # modify: J "top2/nested2/page2" "page2 merged\n"
         | \      # modify: J "top1/lib/util" "util merged\n"
