@@ -27,7 +27,7 @@ smallvec = { version = "1.15", default-features = false }
 terminfo = "0.9"
 termwiz = { git = "https://github.com/wezterm/wezterm.git", rev = "05343b387085842b434d267f91b6b0ec157e4331", default-features = false }
 thiserror = "2.0.18"
-toml = { version = "0.9.12", features = ["preserve_order"], optional = true }
+toml = { version = "1.1.2", features = ["preserve_order"], optional = true }
 unicode-segmentation = "1.13.3"
 unicode-width = "0.1.14"
 vec_map = "0.8"
