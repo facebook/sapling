@@ -27,7 +27,7 @@ futures = { version = "0.3.31", features = ["async-await", "compat"] }
 futures_watchdog = { version = "0.1.0", path = "../../common/futures_watchdog" }
 git_delta = { version = "0.1.0", path = "../../third_party/git_delta" }
 git_types_thrift = { version = "0.1.0", path = "if" }
-gix-actor = "0.41.0"
+gix-actor = "0.41.1"
 gix-hash = { version = "0.25.0", features = ["sha1"] }
 gix-object = "0.60.0"
 gix-pack = "0.70.0"
