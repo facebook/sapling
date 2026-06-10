@@ -405,6 +405,21 @@ Only show documented aliases:
   $ sl help goto | grep '^aliases:'
   aliases: go
 
+Rust-only commands expose Rust aliases in help:
+
+  $ sl debuglfsreceive --help | grep '^aliases:'
+  aliases: debuglfsrecv
+
+Commands implemented in both Rust and Python keep Python aliases in help:
+
+  $ sl config --help | grep '^aliases:'
+  aliases: conf
+
+  $ sl showconfig --help
+  unknown command 'showconfig'
+  (use 'sl help' to get help)
+  [255]
+
 Verify that extension keywords appear in help templates
 
   $ sl help --config extensions.fbcodereview= templating|grep phabdiff > /dev/null

@@ -63,6 +63,10 @@ impl CommandDefinition {
         &self.doc
     }
 
+    pub fn aliases(&self) -> &str {
+        &self.aliases
+    }
+
     pub fn func(&self) -> &CommandFunc {
         &self.func
     }

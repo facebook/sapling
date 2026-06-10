@@ -214,11 +214,19 @@ class command(_funcregistrarbase):
 
         name = "|".join(nameparts)
 
+        rustname = None
         if primaryname in self._table:
-            # This is for compat w/ Rust. Rust is expected to not
-            # include aliases for commands that exist in Rust and
-            # Python because Python aliases take precedence.
-            self._table[name] = self._table.pop(primaryname)
+            rustname = primaryname
+        else:
+            for candidatename in self._table:
+                if candidatename.split("|", 1)[0] == primaryname:
+                    rustname = candidatename
+                    break
+
+        if rustname is not None:
+            # This is for compat w/ Rust. If the command exists in Rust and
+            # Python, Python aliases take precedence.
+            self._table[name] = self._table.pop(rustname)
 
         func.norepo = norepo
         func.optionalrepo = optionalrepo
