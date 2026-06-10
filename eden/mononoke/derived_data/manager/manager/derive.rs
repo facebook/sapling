@@ -964,9 +964,10 @@ impl DerivedDataManager {
     /// Parent stage outputs are fetched for parents outside the batch;
     /// the trait implementation handles ordering within the batch.
     ///
-    /// NOTE: This method does not currently support types that have derived
-    /// data dependencies (i.e., types whose `Derivable::Dependencies::iter()`
-    /// returns a non-empty iterator).
+    /// Types with cross-type derived-data dependencies are supported; the
+    /// dependency data must already be derived for the batch (the derivation
+    /// pipeline co-manages dependencies in the same pipeline so they are
+    /// derived in lockstep).
     pub async fn derive_stage_batch<Derivable>(
         &self,
         ctx: &CoreContext,
@@ -987,13 +988,6 @@ impl DerivedDataManager {
 
         async {
             self.check_enabled::<Derivable>()?;
-
-            if Derivable::Dependencies::iter().next().is_some() {
-                return Err(anyhow!(
-                    "derive_stage_batch does not support types with derived data dependencies, but {} has dependencies",
-                    Derivable::NAME,
-                ).into());
-            }
 
             let mut derivation_ctx = self.derivation_context(None);
             derivation_ctx.enable_write_batching();
@@ -1186,8 +1180,8 @@ impl DerivedDataManager {
         Ok(outputs.contains_key(&csid))
     }
 
-    /// Verify that a stage output matches the expected output extracted from the
-    /// normal derived value.
+    /// Verify that a stage output is consistent with the canonical derived
+    /// value, delegating to the type's `verify_stage` implementation.
     pub async fn verify_stage_output<Derivable>(
         &self,
         ctx: &CoreContext,
@@ -1198,31 +1192,7 @@ impl DerivedDataManager {
         Derivable: PipelineDerivable,
     {
         let derivation_ctx = self.derivation_context(None);
-
-        // Fetch actual stage output
-        let stage_outputs =
-            Derivable::fetch_stage_outputs(ctx, &derivation_ctx, stage_path, vec![csid]).await?;
-
-        let actual_output = match stage_outputs.get(&csid) {
-            Some(output) => output,
-            None => return Err(anyhow!("Stage output not found for changeset {csid}").into()),
-        };
-
-        // Fetch normal derived value
-        let derived = derivation_ctx
-            .fetch_dependency::<Derivable>(ctx, csid)
-            .await?;
-
-        // Extract expected stage output from derived value
-        let expected_output = Derivable::extract_stage_output_from_derived(
-            ctx,
-            &derivation_ctx,
-            &derived,
-            stage_path,
-        )
-        .await?;
-
-        Ok(*actual_output == expected_output)
+        Ok(Derivable::verify_stage(ctx, &derivation_ctx, csid, stage_path).await?)
     }
 
     /// Fetch derived data for a changeset if it has previously been derived.
