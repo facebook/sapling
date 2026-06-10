@@ -45,7 +45,10 @@ pub struct BlameV2Id(FileUnodeId);
 
 impl BlameV2Id {
     pub fn blobstore_key(&self) -> String {
-        format!("blame_v2.{}", self.0.blobstore_key())
+        self.blobstore_key_with_prefix("")
+    }
+    pub fn blobstore_key_with_prefix(&self, prefix: &str) -> String {
+        format!("{prefix}blame_v2.{}", self.0.blobstore_key())
     }
     pub fn sampling_fingerprint(&self) -> u64 {
         self.0.sampling_fingerprint()
@@ -110,12 +113,49 @@ pub async fn store_blame<'a, B: KeyedBlobstore>(
     file_unode_id: FileUnodeId,
     blame: BlameV2,
 ) -> Result<BlameV2Id> {
+    store_blame_with_prefix(ctx, blobstore, file_unode_id, blame, "").await
+}
+
+/// Store blame under a key namespace prefix.  An empty prefix matches the
+/// canonical content-addressed key used by `store_blame`.
+pub async fn store_blame_with_prefix<'a, B: KeyedBlobstore>(
+    ctx: &'a CoreContext,
+    blobstore: &'a B,
+    file_unode_id: FileUnodeId,
+    blame: BlameV2,
+    prefix: &str,
+) -> Result<BlameV2Id> {
     let blame_t = blame.into_thrift();
     let data = compact_protocol::serialize(&blame_t);
     let data = BlobstoreBytes::from_bytes(data);
     let blame_id = BlameV2Id::from(file_unode_id);
-    blobstore.put(ctx, blame_id.blobstore_key(), data).await?;
+    blobstore
+        .put(ctx, blame_id.blobstore_key_with_prefix(prefix), data)
+        .await?;
     Ok(blame_id)
+}
+
+/// Load blame for a file unode under a key namespace prefix, returning `None`
+/// when the key is absent.  An empty prefix matches the canonical key.
+pub async fn load_blame_with_prefix<'a, B: KeyedBlobstore>(
+    ctx: &'a CoreContext,
+    blobstore: &'a B,
+    file_unode_id: FileUnodeId,
+    prefix: &str,
+) -> Result<Option<BlameV2>, Error> {
+    let blobstore_key = BlameV2Id::from(file_unode_id).blobstore_key_with_prefix(prefix);
+    let bytes = blobstore
+        .get(ctx, &blobstore_key)
+        .watched()
+        .with_max_poll(blobstore::BLOBSTORE_MAX_POLL_TIME_MS)
+        .await?;
+    match bytes {
+        None => Ok(None),
+        Some(bytes) => {
+            let blame_t = compact_protocol::deserialize(bytes.as_raw_bytes().as_ref())?;
+            Ok(Some(BlameV2::from_thrift(blame_t)?))
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, Error)]

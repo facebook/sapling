@@ -32,6 +32,8 @@ mod pipeline;
 
 pub use mapping::RootUnodeManifestId;
 pub use mapping::format_key;
+pub use pipeline::find_stage_unode_rename_sources;
+pub use pipeline::resolve_parent_stage_outputs;
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {
@@ -143,6 +145,7 @@ impl UnodeRenameSources {
 /// rename in the parent changesets.
 ///
 /// Pre-condition: RootUnodeManifestId has been derived for this bonsai
+// Stage-scoped variant for the derivation pipeline lives in `pipeline::find_stage_unode_rename_sources`.
 pub async fn find_unode_rename_sources(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,

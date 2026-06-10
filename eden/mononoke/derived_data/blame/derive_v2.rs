@@ -31,7 +31,8 @@ use mononoke_types::blame_v2::BlameParent;
 use mononoke_types::blame_v2::BlameParentId;
 use mononoke_types::blame_v2::BlameV2;
 use mononoke_types::blame_v2::BlameV2Id;
-use mononoke_types::blame_v2::store_blame;
+use mononoke_types::blame_v2::load_blame_with_prefix;
+use mononoke_types::blame_v2::store_blame_with_prefix;
 use unodes::RootUnodeManifestId;
 use unodes::UnodeRenameSource;
 use unodes::UnodeRenameSources;
@@ -89,6 +90,7 @@ pub(crate) async fn derive_blame_v2(
                     path,
                     file_unode,
                     filesize_limit,
+                    "",
                 )
                 .await
             })
@@ -102,7 +104,11 @@ pub(crate) async fn derive_blame_v2(
     Ok(())
 }
 
-async fn create_blame_v2(
+/// Compute and store blame for a single file.  `renames` is the rename map for
+/// the changeset; the source for `path` (if any) is looked up internally.
+/// `blame_key_prefix` namespaces the stored blame blob and the parent blame
+/// reads (empty for the canonical key).
+pub(crate) async fn create_blame_v2(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
     blobstore: &Arc<dyn KeyedBlobstore>,
@@ -111,6 +117,7 @@ async fn create_blame_v2(
     path: NonRootMPath,
     file_unode_id: FileUnodeId,
     filesize_limit: u64,
+    blame_key_prefix: &str,
 ) -> Result<BlameV2Id, Error> {
     let file_unode = file_unode_id.load(ctx, blobstore).await?;
 
@@ -126,6 +133,7 @@ async fn create_blame_v2(
             },
             path.clone(),
             filesize_limit,
+            blame_key_prefix,
         ));
     }
     if let Some(source) = renames.get(&path) {
@@ -146,6 +154,7 @@ async fn create_blame_v2(
                     },
                     source.from_path.clone(),
                     filesize_limit,
+                    blame_key_prefix,
                 ));
             }
             UnodeRenameSource::SubtreeCopy(copy) => {
@@ -159,6 +168,7 @@ async fn create_blame_v2(
                         .into_optional_non_root_path()
                         .ok_or_else(|| anyhow!("Copy source must be a file"))?,
                     filesize_limit,
+                    blame_key_prefix,
                 ));
             }
             UnodeRenameSource::SubtreeMerge(merge) => {
@@ -173,6 +183,7 @@ async fn create_blame_v2(
                         .into_optional_non_root_path()
                         .ok_or_else(|| anyhow!("Merge source must be a file"))?,
                     filesize_limit,
+                    blame_key_prefix,
                 ));
             }
         }
@@ -191,7 +202,7 @@ async fn create_blame_v2(
         FetchOutcome::Fetched(content) => BlameV2::new(csid, path, content, blame_parents)?,
     };
 
-    store_blame(ctx, &blobstore, file_unode_id, blame).await
+    store_blame_with_prefix(ctx, &blobstore, file_unode_id, blame, blame_key_prefix).await
 }
 
 enum BlameParentSource {
@@ -214,6 +225,7 @@ async fn fetch_blame_parent(
     parent_info: BlameParentSource,
     path: NonRootMPath,
     filesize_limit: u64,
+    blame_key_prefix: &str,
 ) -> Result<Option<BlameParent<Bytes>>, Error> {
     let (parent, unode_id) = match parent_info {
         BlameParentSource::ChangesetParent {
@@ -242,9 +254,28 @@ async fn fetch_blame_parent(
 
     let (content, blame) = future::try_join(
         fetch_content_for_blame_with_limit(ctx, blobstore, unode_id, filesize_limit),
-        BlameV2Id::from(unode_id).load(ctx, blobstore).err_into(),
+        load_blame_with_prefix(ctx, blobstore, unode_id, blame_key_prefix),
     )
     .await?;
+
+    // Fall back to the canonical key for ancestors derived without the pipeline
+    // prefix, mirroring `create_new_batch_with_prefix`.
+    let blame = match blame {
+        Some(blame) => Some(blame),
+        None if !blame_key_prefix.is_empty() => {
+            load_blame_with_prefix(ctx, blobstore, unode_id, "").await?
+        }
+        None => None,
+    };
+
+    // Parent blame must exist (canonical and namespaced parents are derived
+    // before children); a missing blob is an invariant violation.
+    let blame = blame.ok_or_else(|| {
+        anyhow!(
+            "blame parent missing for {parent}:{path} unode {unode_id} (prefix {blame_key_prefix:?})",
+            parent = csid_for_error(&parent),
+        )
+    })?;
 
     Ok(Some(BlameParent::new(
         parent,
@@ -252,4 +283,11 @@ async fn fetch_blame_parent(
         content.into_bytes().ok(),
         blame,
     )))
+}
+
+fn csid_for_error(parent: &BlameParentId<ChangesetId>) -> String {
+    match parent {
+        BlameParentId::ChangesetParent(index) => format!("parent#{index}"),
+        BlameParentId::ReplacementParent(csid) => csid.to_string(),
+    }
 }

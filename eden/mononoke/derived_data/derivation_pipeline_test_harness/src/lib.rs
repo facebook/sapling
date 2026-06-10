@@ -64,10 +64,11 @@ pub struct TestRepo(
     FilestoreConfig,
 );
 
-/// The four pipeline-derivable types verified by the harness.
-const PIPELINE_TYPES: [DerivableType; 4] = [
+/// The pipeline-derivable types verified by the harness.
+const PIPELINE_TYPES: [DerivableType; 5] = [
     DerivableType::Fsnodes,
     DerivableType::Unodes,
+    DerivableType::BlameV2,
     DerivableType::SkeletonManifests,
     DerivableType::SkeletonManifestsV2,
 ];
@@ -120,6 +121,31 @@ pub fn pipeline_config_from_stages(
     };
     config.validate()?;
     Ok(config)
+}
+
+/// Topologically sort `PIPELINE_TYPES` so every type's dependencies (restricted
+/// to the managed set) come before it.
+fn topo_sort_pipeline_types(manager: &DerivedDataManager) -> Vec<DerivableType> {
+    let managed: BTreeSet<DerivableType> = PIPELINE_TYPES.into_iter().collect();
+    let mut sorted: Vec<DerivableType> = Vec::with_capacity(PIPELINE_TYPES.len());
+    let mut placed: BTreeSet<DerivableType> = BTreeSet::new();
+    while sorted.len() < PIPELINE_TYPES.len() {
+        for &derivable_type in &PIPELINE_TYPES {
+            if placed.contains(&derivable_type) {
+                continue;
+            }
+            let deps_ready = manager
+                .dependency_types(derivable_type)
+                .into_iter()
+                .filter(|dep| managed.contains(dep))
+                .all(|dep| placed.contains(&dep));
+            if deps_ready {
+                sorted.push(derivable_type);
+                placed.insert(derivable_type);
+            }
+        }
+    }
+    sorted
 }
 
 fn parse_stage_path(path: &str) -> Result<MPath> {
@@ -267,6 +293,10 @@ async fn run_derivation_and_verification<F: PipelineTestFixture + Send>(
             .then_with(|| a.cmp(b))
     });
 
+    // Each type's dependencies (within the managed set) must be derived before
+    // it, mirroring the deepest-stage-first ordering above.
+    let sorted_types = topo_sort_pipeline_types(manager);
+
     // Execute the pipeline synchronously in dependency-and-ancestor order so
     // every required input is already stored before it is read.
     for batch in &batches {
@@ -287,7 +317,7 @@ async fn run_derivation_and_verification<F: PipelineTestFixture + Send>(
                 path: stage_path.clone(),
                 deps,
             });
-            for derivable_type in PIPELINE_TYPES {
+            for &derivable_type in &sorted_types {
                 let variant = derivable_type.into_pipeline_derivable_variant()?;
                 bulk_derivation::derive_stage_batch(
                     manager,

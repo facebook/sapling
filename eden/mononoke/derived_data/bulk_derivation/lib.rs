@@ -136,8 +136,8 @@ pub trait BulkDerivation {
         stage_path: &MPath,
     ) -> Result<bool, DerivationError>;
 
-    /// Verify that a stage output matches the expected output extracted from
-    /// the normal derived value.
+    /// Verify that a stage output is consistent with the canonical derived
+    /// value.
     async fn verify_stage_output(
         &self,
         ctx: &CoreContext,
@@ -538,6 +538,10 @@ pub async fn derive_stage_batch(
             ddm.derive_stage_batch::<RootSkeletonManifestId>(ctx, csids, payload)
                 .await
         }
+        PipelineDerivableVariant::BlameV2 => {
+            ddm.derive_stage_batch::<RootBlameV2>(ctx, csids, payload)
+                .await
+        }
     }
 }
 
@@ -565,6 +569,10 @@ pub async fn is_stage_derived(
             ddm.is_stage_derived::<RootSkeletonManifestId>(ctx, csid, stage_path)
                 .await
         }
+        PipelineDerivableVariant::BlameV2 => {
+            ddm.is_stage_derived::<RootBlameV2>(ctx, csid, stage_path)
+                .await
+        }
     }
 }
 
@@ -590,6 +598,10 @@ pub async fn verify_stage_output(
         }
         PipelineDerivableVariant::SkeletonManifests => {
             ddm.verify_stage_output::<RootSkeletonManifestId>(ctx, csid, stage_path)
+                .await
+        }
+        PipelineDerivableVariant::BlameV2 => {
+            ddm.verify_stage_output::<RootBlameV2>(ctx, csid, stage_path)
                 .await
         }
     }

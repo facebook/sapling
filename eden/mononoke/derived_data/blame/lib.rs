@@ -14,9 +14,12 @@ mod derive_v3;
 mod fetch;
 mod mapping_v2;
 mod mapping_v3;
+mod pipeline_v2;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_pipeline_v2;
 
 use anyhow::Error;
 use blobstore::Loadable;
