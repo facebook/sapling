@@ -108,6 +108,7 @@ class Repository:
 
         full_path = self.get_path(path)
         if isinstance(contents, str):
+            # pyrefly: ignore [bad-assignment]
             contents = contents.encode()
 
         with open(full_path, "wb") as f:
