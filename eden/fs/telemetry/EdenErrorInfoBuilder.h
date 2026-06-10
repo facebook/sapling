@@ -23,6 +23,10 @@ class EdenErrorInfoBuilder {
   EdenErrorInfoBuilder& withMountPoint(std::string mountPoint);
   EdenErrorInfoBuilder& withInode(std::optional<uint64_t> inode);
   EdenErrorInfoBuilder& withFilePath(std::string filePath);
+  EdenErrorInfoBuilder& withRepoName(std::string repoName);
+  EdenErrorInfoBuilder& withFetchType(FetchType fetchType);
+  EdenErrorInfoBuilder& withFetchType(std::string fetchType);
+  EdenErrorInfoBuilder& withIsDogfoodingHost(bool isDogfoodingHost);
   EdenErrorInfoBuilder& withErrorCode(int64_t code);
   EdenErrorInfoBuilder& withErrorName(std::string name);
   EdenErrorInfoBuilder& withMountStatus(std::string status);
@@ -46,6 +50,9 @@ class EdenErrorInfoBuilder {
   bool hasCapturedTrace_ = false;
   SourceInfo sourceInfo_;
   std::optional<std::string> clientCommandName_;
+  std::optional<std::string> repoName_;
+  std::optional<std::string> fetchType_;
+  std::optional<bool> isDogfoodingHost_;
   std::optional<uint64_t> inode_;
   std::optional<std::string> filePath_;
   std::optional<std::string> mountPoint_;

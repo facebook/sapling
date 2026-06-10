@@ -54,6 +54,15 @@ struct DaemonError : public TypelessEvent {
     if (info.clientCommandName.has_value()) {
       extrasObj["client_command_name"] = *info.clientCommandName;
     }
+    if (info.repoName.has_value()) {
+      extrasObj["repo_name"] = *info.repoName;
+    }
+    if (info.fetchType.has_value()) {
+      extrasObj["fetch_type"] = *info.fetchType;
+    }
+    if (info.isDogfoodingHost.has_value()) {
+      extrasObj["is_dogfooding_host"] = *info.isDogfoodingHost;
+    }
     if (!extrasObj.empty()) {
       event.addString("extras", folly::toJson(extrasObj));
     }

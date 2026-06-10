@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <string_view>
 
 #include "eden/fs/telemetry/EdenComponent.h"
 
@@ -17,6 +18,23 @@ namespace facebook::eden {
 
 class EdenErrorInfoBuilder;
 class ErrorArg;
+
+// Type of object being fetched from the backing store when an error occurred.
+enum class FetchType { Blob, Tree, BlobAux, TreeAux };
+
+constexpr std::string_view fetchTypeToString(FetchType fetchType) {
+  switch (fetchType) {
+    case FetchType::Blob:
+      return "blob";
+    case FetchType::Tree:
+      return "tree";
+    case FetchType::BlobAux:
+      return "blob_aux";
+    case FetchType::TreeAux:
+      return "tree_aux";
+  }
+  return "unknown";
+}
 
 struct SourceInfo {
   const char* file;
@@ -48,6 +66,9 @@ class EdenErrorInfo {
   // Fields below are serialized into the "extras" JSON column in Scuba
   // (not their own dedicated columns). See DaemonError::populate().
   std::optional<std::string> clientCommandName;
+  std::optional<std::string> repoName;
+  std::optional<std::string> fetchType;
+  std::optional<bool> isDogfoodingHost;
 
   // Per-component factory methods.
   // Return an EdenErrorInfoBuilder for optional chaining (withMountPoint, etc.)
