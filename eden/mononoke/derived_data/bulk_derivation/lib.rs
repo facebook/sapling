@@ -546,6 +546,10 @@ pub async fn derive_stage_batch(
             ddm.derive_stage_batch::<RootFastlog>(ctx, csids, payload)
                 .await
         }
+        PipelineDerivableVariant::AclManifests => {
+            ddm.derive_stage_batch::<RootAclManifestId>(ctx, csids, payload)
+                .await
+        }
     }
 }
 
@@ -581,6 +585,10 @@ pub async fn is_stage_derived(
             ddm.is_stage_derived::<RootFastlog>(ctx, csid, stage_path)
                 .await
         }
+        PipelineDerivableVariant::AclManifests => {
+            ddm.is_stage_derived::<RootAclManifestId>(ctx, csid, stage_path)
+                .await
+        }
     }
 }
 
@@ -614,6 +622,10 @@ pub async fn verify_stage_output(
         }
         PipelineDerivableVariant::Fastlog => {
             ddm.verify_stage_output::<RootFastlog>(ctx, csid, stage_path)
+                .await
+        }
+        PipelineDerivableVariant::AclManifests => {
+            ddm.verify_stage_output::<RootAclManifestId>(ctx, csid, stage_path)
                 .await
         }
     }

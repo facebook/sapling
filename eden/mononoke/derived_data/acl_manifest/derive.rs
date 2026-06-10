@@ -33,6 +33,7 @@ use manifest::PathOrPrefix;
 use manifest::TreeInfo;
 use manifest::TreeInfoSubentries;
 use manifest::derive_manifest;
+use manifest::derive_manifest_with_known_entries;
 use metaconfig_types::RestrictedPathsAclFile;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangeset;
@@ -60,7 +61,7 @@ use crate::RootAclManifestId;
 
 /// Explicit ACL file change type.
 #[derive(Clone, Debug)]
-enum AclFileChange {
+pub(crate) enum AclFileChange {
     AddOrModify(ContentId),
     Delete,
 }
@@ -100,8 +101,15 @@ pub(crate) async fn derive_single(
     let parent_ids: Vec<AclManifestId> = parents.iter().map(|p| p.0).collect();
 
     // Collect .slacl file changes (explicit + implicit deletes).
-    let changes =
-        get_acl_file_changes(ctx, blobstore, &bonsai, &parent_ids, &acl_file_name).await?;
+    let changes = get_acl_file_changes(
+        ctx,
+        blobstore,
+        &bonsai,
+        &parent_ids,
+        &acl_file_name,
+        &MPath::ROOT,
+    )
+    .await?;
 
     // Get subtree changes (for subtree copies/merges).
     let subtree_changes =
@@ -217,6 +225,54 @@ pub(crate) async fn derive_from_scratch(
 // Core derivation via derive_manifest
 // ---------------------------------------------------------------------------
 
+type AclLeaf = AclManifestRestriction;
+type AclLeafChange = RestrictedPathsAclFile;
+type AclTreeId = AclManifestId;
+type AclCtx = AclManifestNodeInfo;
+
+/// The `create_tree` callback for `derive_manifest`: build an `AclManifest`
+/// node from the subentries produced by the traversal.
+fn acl_create_tree_callback(
+    ctx: CoreContext,
+    blobstore: Arc<dyn KeyedBlobstore>,
+    acl_file_bytes: Vec<u8>,
+) -> impl Fn(
+    TreeInfo<AclTreeId, AclLeaf, AclCtx, LoadableShardedMapV2Node<AclManifestEntry>>,
+) -> futures::future::BoxFuture<'static, Result<(AclCtx, AclTreeId)>>
++ Clone {
+    move |info| {
+        cloned!(ctx, blobstore, acl_file_bytes);
+        Box::pin(async move {
+            create_acl_manifest(ctx, blobstore, &acl_file_bytes, info.subentries).await
+        })
+    }
+}
+
+/// The `create_leaf` callback for `derive_manifest`: store the parsed `.slacl`
+/// file as an entry blob and return its restriction.
+fn acl_create_leaf_callback(
+    ctx: CoreContext,
+    blobstore: Arc<dyn KeyedBlobstore>,
+) -> impl Fn(
+    LeafInfo<AclLeaf, AclLeafChange>,
+) -> futures::future::BoxFuture<'static, Result<(AclCtx, AclLeaf)>>
++ Clone {
+    move |leaf_info| {
+        cloned!(ctx, blobstore);
+        Box::pin(async move {
+            let acl_file = match leaf_info.change {
+                Some(acl_file) => acl_file,
+                None => {
+                    anyhow::bail!("ACL file leaf with no change and no parents")
+                }
+            };
+            let entry_blob_id = store_acl_entry_from_acl_file(&ctx, &blobstore, &acl_file).await?;
+            let restriction = AclManifestRestriction { entry_blob_id };
+            Ok((AclManifestNodeInfo::default(), restriction))
+        })
+    }
+}
+
 async fn inner_derive(
     ctx: &CoreContext,
     blobstore: &Arc<dyn KeyedBlobstore>,
@@ -225,11 +281,6 @@ async fn inner_derive(
     subtree_changes: Vec<ManifestParentReplacement<AclManifestId, AclManifestRestriction>>,
     acl_file_name: &str,
 ) -> Result<Option<AclManifestId>> {
-    type Leaf = AclManifestRestriction;
-    type LeafChange = RestrictedPathsAclFile;
-    type TreeId = AclManifestId;
-    type Ctx = AclManifestNodeInfo;
-
     let acl_file_bytes: Vec<u8> = acl_file_name.as_bytes().to_vec();
 
     derive_manifest(
@@ -238,33 +289,38 @@ async fn inner_derive(
         parents,
         changes,
         subtree_changes,
-        {
-            cloned!(ctx, blobstore, acl_file_bytes);
-            move |info: TreeInfo<TreeId, Leaf, Ctx, LoadableShardedMapV2Node<AclManifestEntry>>| {
-                cloned!(ctx, blobstore, acl_file_bytes);
-                async move {
-                    create_acl_manifest(ctx, blobstore, &acl_file_bytes, info.subentries).await
-                }
-            }
-        },
-        {
-            cloned!(ctx, blobstore);
-            move |leaf_info: LeafInfo<Leaf, LeafChange>| {
-                cloned!(ctx, blobstore);
-                async move {
-                    let acl_file = match leaf_info.change {
-                        Some(acl_file) => acl_file,
-                        None => {
-                            anyhow::bail!("ACL file leaf with no change and no parents")
-                        }
-                    };
-                    let entry_blob_id =
-                        store_acl_entry_from_acl_file(&ctx, &blobstore, &acl_file).await?;
-                    let restriction = AclManifestRestriction { entry_blob_id };
-                    Ok((AclManifestNodeInfo::default(), restriction))
-                }
-            }
-        },
+        acl_create_tree_callback(ctx.clone(), blobstore.clone(), acl_file_bytes),
+        acl_create_leaf_callback(ctx.clone(), blobstore.clone()),
+    )
+    .await
+}
+
+/// Derive the raw AclManifest entry for a single bonsai changeset at a given
+/// `stage_path`, reusing already-derived subtree entries via `known_entries`.
+/// Returns the entry produced by `derive_manifest_with_known_entries`
+/// directly, without the None/tree extraction.
+pub(crate) async fn derive_acl_manifest_entry(
+    ctx: &CoreContext,
+    blobstore: &Arc<dyn KeyedBlobstore>,
+    parents: Vec<Entry<AclManifestId, AclManifestRestriction>>,
+    changes: Vec<(NonRootMPath, Option<RestrictedPathsAclFile>)>,
+    subtree_changes: Vec<ManifestParentReplacement<AclManifestId, AclManifestRestriction>>,
+    known_entries: HashMap<MPath, Option<Entry<AclManifestId, AclManifestRestriction>>>,
+    stage_path: MPath,
+    acl_file_name: &str,
+) -> Result<Option<Entry<AclManifestId, AclManifestRestriction>>> {
+    let acl_file_bytes: Vec<u8> = acl_file_name.as_bytes().to_vec();
+
+    derive_manifest_with_known_entries(
+        ctx.clone(),
+        blobstore.clone(),
+        parents,
+        changes,
+        subtree_changes,
+        known_entries,
+        stage_path,
+        acl_create_tree_callback(ctx.clone(), blobstore.clone(), acl_file_bytes),
+        acl_create_leaf_callback(ctx.clone(), blobstore.clone()),
     )
     .await
 }
@@ -401,12 +457,18 @@ async fn convert_manifest_entry(
 ///
 /// Implicit deletes occur when a non-ACL file addition replaces a directory
 /// that contained `.slacl` files in a parent manifest.
-async fn get_acl_file_changes(
+///
+/// `stage_path` is the manifest path the supplied `parent_ids` are rooted at
+/// (`MPath::ROOT` for canonical derivation). Returned change paths are always
+/// absolute; only the parent lookup for implicit deletes is done relative to
+/// `stage_path`.
+pub(crate) async fn get_acl_file_changes(
     ctx: &CoreContext,
     blobstore: &Arc<dyn KeyedBlobstore>,
     bonsai: &BonsaiChangeset,
     parent_ids: &[AclManifestId],
     acl_file_name: &str,
+    stage_path: &MPath,
 ) -> Result<Vec<(NonRootMPath, AclFileChange)>> {
     let acl_file_bytes = acl_file_name.as_bytes();
 
@@ -424,11 +486,17 @@ async fn get_acl_file_changes(
         .collect();
 
     // Implicit deletes: file additions (non-ACL) that replace directories
-    // containing .slacl files in parent manifests.
+    // containing .slacl files in parent manifests. The parent manifests are
+    // rooted at `stage_path`, so prefixes are made relative to it (and only
+    // those under the stage are relevant); resolved leaves are re-prefixed back
+    // to absolute paths.
+    let stage_prefix = stage_path.clone();
     let addition_prefixes: Vec<PathOrPrefix> = bonsai
         .file_changes()
         .filter(|(path, change)| change.is_changed() && path.basename().as_ref() != acl_file_bytes)
-        .map(|(path, _)| PathOrPrefix::Prefix(MPath::from(path.clone())))
+        .map(|(path, _)| MPath::from(path.clone()))
+        .filter(|abs_path| stage_prefix.is_prefix_of(abs_path))
+        .map(|abs_path| PathOrPrefix::Prefix(abs_path.remove_prefix_component(stage_prefix.iter())))
         .collect();
 
     let implicit_deletes: Vec<(NonRootMPath, AclFileChange)> =
@@ -438,15 +506,21 @@ async fn get_acl_file_changes(
             // Check each parent manifest for .slacl leaves under replaced paths.
             let all_implicit: HashSet<NonRootMPath> = stream::iter(parent_ids.iter())
                 .then(|parent_id| {
-                    cloned!(ctx, blobstore);
+                    cloned!(ctx, blobstore, stage_prefix);
                     let prefixes = addition_prefixes.clone();
                     async move {
                         parent_id
                             .find_entries(ctx, blobstore, prefixes)
-                            .try_filter_map(|(path, entry)| async move {
-                                match entry {
-                                    Entry::Leaf(_) => Ok(NonRootMPath::try_from(path).ok()),
-                                    Entry::Tree(_) => Ok(None),
+                            .try_filter_map(|(rel_path, entry)| {
+                                cloned!(stage_prefix);
+                                async move {
+                                    match entry {
+                                        Entry::Leaf(_) => Ok(NonRootMPath::try_from(
+                                            stage_prefix.join(rel_path.iter()),
+                                        )
+                                        .ok()),
+                                        Entry::Tree(_) => Ok(None),
+                                    }
                                 }
                             })
                             .try_collect::<Vec<_>>()
@@ -472,7 +546,7 @@ async fn get_acl_file_changes(
 }
 
 /// Collect subtree changes for subtree copies/merges.
-async fn get_acl_manifest_subtree_changes(
+pub(crate) async fn get_acl_manifest_subtree_changes(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
     bonsai: &BonsaiChangeset,
@@ -516,7 +590,7 @@ async fn get_acl_manifest_subtree_changes(
 // Helpers
 // ---------------------------------------------------------------------------
 
-async fn prepare_acl_file_changes(
+pub(crate) async fn prepare_acl_file_changes(
     ctx: &CoreContext,
     blobstore: &Arc<dyn KeyedBlobstore>,
     changes: Vec<(NonRootMPath, AclFileChange)>,
@@ -623,7 +697,7 @@ async fn resolve_content_id_via_fsnode(
     }
 }
 
-async fn empty_root_acl_manifest_id(
+pub(crate) async fn empty_root_acl_manifest_id(
     ctx: &CoreContext,
     blobstore: &Arc<dyn KeyedBlobstore>,
 ) -> Result<RootAclManifestId> {

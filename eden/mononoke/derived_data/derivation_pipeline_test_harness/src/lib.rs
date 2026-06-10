@@ -65,13 +65,14 @@ pub struct TestRepo(
 );
 
 /// The pipeline-derivable types verified by the harness.
-const PIPELINE_TYPES: [DerivableType; 6] = [
+const PIPELINE_TYPES: [DerivableType; 7] = [
     DerivableType::Fsnodes,
     DerivableType::Unodes,
     DerivableType::Fastlog,
     DerivableType::BlameV2,
     DerivableType::SkeletonManifests,
     DerivableType::SkeletonManifestsV2,
+    DerivableType::AclManifests,
 ];
 
 const PIPELINE_BATCH_SIZE: u64 = 3;
@@ -364,6 +365,7 @@ async fn run_derivation_and_verification<F: PipelineTestFixture + Send>(
 
 #[cfg(test)]
 mod tests {
+    use fixtures::AclNestedDirectories;
     use fixtures::NestedAncestorSubtreeCopy;
     use fixtures::NestedDirectories;
     use fixtures::NestedSubtreeCopy;
@@ -380,6 +382,17 @@ mod tests {
                 ("top2/nested1", vec![]),
                 ("top2/nested2", vec![]),
                 ("top3", vec![]),
+            ]
+        }
+    }
+
+    impl PipelineTestFixture for AclNestedDirectories {
+        fn pipeline_stages() -> Vec<(&'static str, Vec<&'static str>)> {
+            vec![
+                ("", vec!["top1", "top2"]),
+                ("top1", vec!["sub"]),
+                ("top1/sub", vec![]),
+                ("top2", vec![]),
             ]
         }
     }
@@ -408,6 +421,23 @@ mod tests {
     #[mononoke::fbinit_test]
     async fn test_pipeline_matches_canonical(fb: FacebookInit) -> Result<()> {
         verify_pipeline_matches_canonical::<NestedDirectories>(fb).await
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_pipeline_matches_canonical_acl(fb: FacebookInit) -> Result<()> {
+        verify_pipeline_matches_canonical::<AclNestedDirectories>(fb).await
+    }
+
+    // Boundary commit `E` is derived canonically only; the pipeline derives just
+    // its descendants. The first pipeline batch's parents include `E`, which has
+    // no pipeline stage output, so the manager bridges it via
+    // `extract_stage_output_from_derived`.
+    #[mononoke::fbinit_test]
+    async fn test_pipeline_matches_canonical_acl_with_canonical_ancestors(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        verify_pipeline_matches_canonical_with_canonical_ancestors::<AclNestedDirectories>(fb, "E")
+            .await
     }
 
     #[mononoke::fbinit_test]

@@ -1175,6 +1175,160 @@ impl TestRepoFixture for NestedAncestorSubtreeCopy {
     }
 }
 
+/// `.slacl` ACL file content (TOML), used by `AclNestedDirectories`.
+const ACL_PROJECT1: &[u8] = b"repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=project1\"\n";
+const ACL_PROJECT2: &[u8] = b"repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=project2\"\n";
+const ACL_PROJECT1_WITH_GROUP: &[u8] = b"repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=project1\"\npermission_request_group = \"GROUP:my_group\"\n";
+
+/// A nested-directory fixture exercising the `.slacl` (AclManifest) derivation
+/// path: `.slacl` files at the root and several nested levels, interspersed with
+/// normal files, plus a `.slacl` modify, delete, implicit-delete, copy carrying
+/// a `.slacl`, and a merge touching both top-level dirs. Built imperatively
+/// because `.slacl` content is TOML that drawdag cannot express inline. Reused
+/// for HgAugmentedManifest (which depends on AclManifest), so keep it general.
+pub struct AclNestedDirectories;
+
+#[async_trait]
+impl TestRepoFixture for AclNestedDirectories {
+    const REPO_NAME: &'static str = "acl_nested_directories";
+
+    async fn init_repo(
+        fb: FacebookInit,
+        repo: &impl Repo,
+    ) -> Result<(
+        BTreeMap<String, ChangesetId>,
+        BTreeMap<String, BTreeSet<String>>,
+    )> {
+        use tests_utils::CreateCommitContext;
+
+        let ctx = CoreContext::test_mock(fb);
+        let mut commits: BTreeMap<String, ChangesetId> = BTreeMap::new();
+        let mut dag: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+
+        // A: root marker + root `.slacl`; top1 with its own `.slacl`.
+        let a = CreateCommitContext::new_root(&ctx, repo)
+            .set_message("A")
+            .add_file("root_file", "root\n")
+            .add_file(".slacl", ACL_PROJECT1)
+            .add_file("top1/main", "main\n")
+            .add_file("top1/.slacl", ACL_PROJECT2)
+            .commit()
+            .await?;
+
+        // B: nested `top1/lib/.slacl` (with permission group).
+        let b = CreateCommitContext::new(&ctx, repo, vec![a])
+            .set_message("B")
+            .add_file("top1/lib/util", "util\n")
+            .add_file("top1/lib/.slacl", ACL_PROJECT1_WITH_GROUP)
+            .commit()
+            .await?;
+
+        // C: nested `top1/sub/.slacl`.
+        let c = CreateCommitContext::new(&ctx, repo, vec![b])
+            .set_message("C")
+            .add_file("top1/sub/a", "a\n")
+            .add_file("top1/sub/.slacl", ACL_PROJECT2)
+            .commit()
+            .await?;
+
+        // D: second top-level dir with a nested `.slacl`.
+        let d = CreateCommitContext::new(&ctx, repo, vec![c])
+            .set_message("D")
+            .add_file("top2/nested2/page1", "page1\n")
+            .add_file("top2/nested2/.slacl", ACL_PROJECT1)
+            .commit()
+            .await?;
+
+        // E: MODIFY an existing `.slacl` (top1) and add a normal file.
+        let e = CreateCommitContext::new(&ctx, repo, vec![d])
+            .set_message("E")
+            .add_file("top1/.slacl", ACL_PROJECT1)
+            .add_file("top2/normal", "normal\n")
+            .commit()
+            .await?;
+
+        // F: DELETE a `.slacl` (top1/sub) and a copy that carries a `.slacl`
+        // from top2/nested2 into top1/copied.
+        let f = CreateCommitContext::new(&ctx, repo, vec![e])
+            .set_message("F")
+            .delete_file("top1/sub/.slacl")
+            .add_file_with_copy_info(
+                "top1/copied/.slacl",
+                ACL_PROJECT1,
+                (e, "top2/nested2/.slacl"),
+            )
+            .add_file_with_copy_info("top1/copied/page1", "page1\n", (e, "top2/nested2/page1"))
+            .commit()
+            .await?;
+
+        // G: IMPLICIT delete — replace the `top1/lib` directory (which holds a
+        // `.slacl`) with a normal file at the same path. Bonsai semantics
+        // implicitly delete the directory's contents.
+        let g = CreateCommitContext::new(&ctx, repo, vec![f])
+            .set_message("G")
+            .add_file("top1/lib", "now a file\n")
+            .commit()
+            .await?;
+
+        // I: side branch off E adding a `.slacl` under top2/nested1.
+        let i = CreateCommitContext::new(&ctx, repo, vec![e])
+            .set_message("I")
+            .add_file("top2/nested1/core", "core\n")
+            .add_file("top2/nested1/.slacl", ACL_PROJECT2)
+            .commit()
+            .await?;
+
+        // J: MERGE of G and I touching files in both top-level dirs. `top1/lib`
+        // is a file in G (implicit delete) but a directory in I (inherited from
+        // E), so the merge explicitly resolves it to G's file form.
+        let j = CreateCommitContext::new(&ctx, repo, vec![g, i])
+            .set_message("J")
+            .add_file("top1/lib", "now a file\n")
+            .add_file("top1/main", "main merged\n")
+            .add_file("top2/nested2/page1", "page1 merged\n")
+            .commit()
+            .await?;
+
+        let mut txn = repo.bookmarks().create_transaction(ctx.clone());
+        txn.force_set(
+            &BookmarkKey::new("master")?,
+            j,
+            BookmarkUpdateReason::TestMove,
+        )?;
+        txn.commit().await?;
+
+        for (label, cs_id) in [
+            ("A", a),
+            ("B", b),
+            ("C", c),
+            ("D", d),
+            ("E", e),
+            ("F", f),
+            ("G", g),
+            ("I", i),
+            ("J", j),
+        ] {
+            commits.insert(label.to_string(), cs_id);
+        }
+        commits.insert("master".to_string(), j);
+
+        dag.insert("A".to_string(), BTreeSet::new());
+        dag.insert("B".to_string(), BTreeSet::from(["A".to_string()]));
+        dag.insert("C".to_string(), BTreeSet::from(["B".to_string()]));
+        dag.insert("D".to_string(), BTreeSet::from(["C".to_string()]));
+        dag.insert("E".to_string(), BTreeSet::from(["D".to_string()]));
+        dag.insert("F".to_string(), BTreeSet::from(["E".to_string()]));
+        dag.insert("G".to_string(), BTreeSet::from(["F".to_string()]));
+        dag.insert("I".to_string(), BTreeSet::from(["E".to_string()]));
+        dag.insert(
+            "J".to_string(),
+            BTreeSet::from(["G".to_string(), "I".to_string()]),
+        );
+
+        Ok((commits, dag))
+    }
+}
+
 pub fn json_config_minimal() -> String {
     r#"
     {

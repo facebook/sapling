@@ -7,6 +7,7 @@
 
 mod derive;
 mod mapping;
+mod pipeline;
 
 pub use mapping::RootAclManifestId;
 

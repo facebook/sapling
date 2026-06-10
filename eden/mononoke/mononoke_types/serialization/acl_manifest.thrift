@@ -93,3 +93,11 @@ struct AclManifestEntryBlob {
   /// Defaults to repo_region_acl if not set.
   2: optional string permission_request_group;
 }
+
+struct AclManifestStageOutputEmpty {}
+
+union AclManifestStageOutput {
+  1: id.AclManifestId acl_manifest_id;
+  2: AclManifestStageOutputEmpty empty;
+  3: AclManifestRestriction acl_file;
+}
