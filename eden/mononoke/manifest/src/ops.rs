@@ -693,6 +693,29 @@ where
         .map_ok(|(path, entry, _)| (path, entry))
 }
 
+/// Like `find_intersection_of_diffs`, but `recurse_pruner` gates recursion into
+/// subtrees in both the parented and parentless branches; rejected subtrees are
+/// never loaded. The pruner only sees trees, so it cannot filter emitted leaf
+/// entries -- callers that must exclude leaf-valued paths have to post-filter.
+pub fn find_intersection_of_diffs_pruned<TreeId, Leaf, Store, RecursePruner>(
+    ctx: CoreContext,
+    store: Store,
+    mf_id: TreeId,
+    diff_against: Vec<TreeId>,
+    recurse_pruner: RecursePruner,
+) -> impl Stream<Item = Result<(MPath, Entry<TreeId, Leaf>), Error>> + 'static
+where
+    Store: Sync + Send + Clone + 'static,
+    TreeId: StoreLoadable<Store> + Clone + Send + Sync + Eq + Unpin + 'static,
+    <TreeId as StoreLoadable<Store>>::Value:
+        Manifest<Store, TreeId = TreeId, Leaf = Leaf> + Send + Sync,
+    Leaf: Clone + Send + Eq + Unpin + 'static,
+    RecursePruner: Fn(&Diff<TreeId>) -> bool + Clone + Send + Sync + 'static,
+{
+    find_intersection_of_diffs_and_parents_pruned(ctx, store, mf_id, diff_against, recurse_pruner)
+        .map_ok(|(path, entry, _)| (path, entry))
+}
+
 /// Like `find_intersection_of_diffs` but for each returned entry it also returns diff_against
 /// entries with the same path.
 pub fn find_intersection_of_diffs_and_parents<TreeId, Leaf, Store>(
@@ -708,11 +731,39 @@ where
         Manifest<Store, TreeId = TreeId, Leaf = Leaf> + Send + Sync,
     Leaf: Clone + Send + Eq + Unpin + 'static,
 {
+    find_intersection_of_diffs_and_parents_pruned(ctx, store, mf_id, diff_against, |_| true)
+}
+
+/// Like `find_intersection_of_diffs_and_parents`, but prunes subtrees for which
+/// `recurse_pruner` returns false.
+pub fn find_intersection_of_diffs_and_parents_pruned<TreeId, Leaf, Store, RecursePruner>(
+    ctx: CoreContext,
+    store: Store,
+    mf_id: TreeId,
+    diff_against: Vec<TreeId>,
+    recurse_pruner: RecursePruner,
+) -> impl Stream<Item = Result<(MPath, Entry<TreeId, Leaf>, Vec<Entry<TreeId, Leaf>>), Error>> + 'static
+where
+    Store: Sync + Send + Clone + 'static,
+    TreeId: StoreLoadable<Store> + Clone + Send + Sync + Eq + Unpin + 'static,
+    <TreeId as StoreLoadable<Store>>::Value:
+        Manifest<Store, TreeId = TreeId, Leaf = Leaf> + Send + Sync,
+    Leaf: Clone + Send + Eq + Unpin + 'static,
+    RecursePruner: Fn(&Diff<TreeId>) -> bool + Clone + Send + Sync + 'static,
+{
     match diff_against.first().cloned() {
         Some(parent) => async move {
             mononoke::spawn_task(async move {
                 let mut new_entries = Vec::new();
-                let mut parent_diff = parent.diff(ctx.clone(), store.clone(), mf_id);
+                let mut parent_diff = parent.filtered_diff(
+                    ctx.clone(),
+                    store.clone(),
+                    mf_id,
+                    store.clone(),
+                    Some,
+                    recurse_pruner,
+                    Default::default(),
+                );
                 while let Some(diff_entry) = parent_diff.try_next().await? {
                     match diff_entry {
                         Diff::Added(path, entry) => new_entries.push((path, entry, vec![])),
@@ -760,10 +811,20 @@ where
         }
         .try_flatten_stream()
         .right_stream(),
-        None => mf_id
-            .list_all_entries(ctx, store)
-            .map_ok(|(path, entry)| (path, entry, vec![]))
-            .left_stream(),
+        None => {
+            let recurse_pruner = recurse_pruner.clone();
+            mf_id
+                .find_entries_filtered(
+                    ctx,
+                    store,
+                    vec![PathOrPrefix::Prefix(MPath::ROOT)],
+                    move |path: &MPath, tree_id| {
+                        recurse_pruner(&Diff::Added(path.clone(), tree_id))
+                    },
+                )
+                .map_ok(|(path, entry)| (path, entry, vec![]))
+                .left_stream()
+        }
     }
 }
 
