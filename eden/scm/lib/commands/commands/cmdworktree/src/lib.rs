@@ -85,7 +85,7 @@ pub(crate) fn require_group(repo: &Repo) -> Result<CurrentGroup> {
 }
 
 pub fn aliases() -> &'static str {
-    "worktree"
+    "worktree|work|wk|wt"
 }
 
 pub fn doc() -> &'static str {
