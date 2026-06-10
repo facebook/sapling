@@ -53,6 +53,7 @@ use tracing::warn;
 use self::display::BackfillListRow;
 use self::display::display_backfill_list;
 use self::display::display_child_request_detail;
+use self::display::display_child_request_table;
 use self::display::display_multi_repo_summary;
 use self::display::display_repo_detail;
 use self::display::display_repo_detail_table;
@@ -64,6 +65,7 @@ use self::types::BackfillDisplayData;
 use self::types::BackfillSettings;
 use self::types::BoundaryDerivationStatus;
 use self::types::ChildCounts;
+use self::types::ChildRequestRow;
 use self::types::RepoDetailRow;
 use self::types::RepoDisplayData;
 use self::types::RepoStatus;
@@ -94,7 +96,9 @@ pub(super) struct BackfillStatusArgs {
     #[clap(long, default_value = "7")]
     lookback: i64,
 
-    /// Show per-repository progress details for multi-repo backfills
+    /// Show per-request progress details: a per-repository table for
+    /// multi-repo backfills, or a per-child-request table for single
+    /// (large) repo backfills.
     #[clap(long)]
     detailed: bool,
 }
@@ -378,6 +382,11 @@ async fn show_backfill_detail(
     if is_single_repo {
         let repo_id = unique_repos.iter().next().map(|r| r.id() as i64);
         display_single_repo_detail(&data, repo_id, repo_names);
+
+        if detailed {
+            let (mut child_rows, new_count) = load_child_request_rows(ctx, queue, row_id).await?;
+            display_child_request_table(&mut child_rows, new_count);
+        }
     } else if let Some(r) = repo {
         let drilldown_repo_id = r.repo_identity().id().id() as i64;
         show_repo_detail(ctx, queue, blobstore, repo_names, row_id, drilldown_repo_id).await?;
@@ -595,6 +604,41 @@ async fn load_per_repo_commit_counts(
             }
         })
         .collect())
+}
+
+/// Load all child requests of a backfill for the single-repo detailed view.
+///
+/// Returns the rows to render (every request that has been claimed or has
+/// progressed past `new`) along with the count of `new` requests, which are
+/// elided from the table: a large repo backfill can have thousands of them
+/// sitting in the queue, so we just report the count rather than listing each.
+async fn load_child_request_rows(
+    ctx: &CoreContext,
+    queue: &impl LongRunningRequestsQueue,
+    row_id: &RowId,
+) -> Result<(Vec<ChildRequestRow>, usize)> {
+    let entries = queue
+        .get_requests_by_root_id(ctx, row_id)
+        .await
+        .context("fetching child entries for detailed view")?;
+
+    let new_count = entries
+        .iter()
+        .filter(|entry| entry.status == RequestStatus::New)
+        .count();
+
+    let rows = entries
+        .iter()
+        .filter(|entry| entry.status != RequestStatus::New)
+        .map(|entry| ChildRequestRow {
+            id: entry.id.0,
+            request_type: entry.request_type.0.clone(),
+            status: entry.status,
+            claimed_by: entry.claimed_by.as_ref().map(|c| c.0.clone()),
+        })
+        .collect();
+
+    Ok((rows, new_count))
 }
 
 fn format_changeset_id(bytes: &[u8]) -> String {

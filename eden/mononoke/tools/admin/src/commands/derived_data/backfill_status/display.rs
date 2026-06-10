@@ -27,6 +27,7 @@ use super::types::BackfillChildResult;
 use super::types::BackfillDisplayData;
 use super::types::BackfillSettings;
 use super::types::BoundaryDerivationStatus;
+use super::types::ChildRequestRow;
 use super::types::RepoDetailRow;
 use super::types::RepoDisplayData;
 use super::types::RepoStatus;
@@ -615,6 +616,63 @@ pub(super) fn display_repo_detail_table(rows: &mut [RepoDetailRow]) {
 
     table.printstd();
     println!("{}", "━".repeat(80));
+}
+
+/// Display a per-child-request table for a single (large) repo backfill.
+///
+/// Large repo backfills fan out into thousands of `derive_slice` /
+/// `derive_boundaries` child requests. Most of them sit in the `new` state
+/// waiting to be claimed, so we elide those and just report their count,
+/// showing a row per request that has actually been picked up by a worker
+/// (along with which worker claimed it, from the `claimed_by` column).
+pub(super) fn display_child_request_table(rows: &mut [ChildRequestRow], new_count: usize) {
+    fn status_sort_key(status: RequestStatus) -> u8 {
+        match status {
+            RequestStatus::Failed => 0,
+            RequestStatus::InProgress => 1,
+            RequestStatus::New => 2,
+            RequestStatus::Ready | RequestStatus::Polled => 3,
+        }
+    }
+
+    rows.sort_by(|a, b| {
+        status_sort_key(a.status)
+            .cmp(&status_sort_key(b.status))
+            .then_with(|| a.id.cmp(&b.id))
+    });
+
+    println!();
+    println!("Child Requests:");
+    println!("{}", "━".repeat(80));
+
+    let mut table = Table::new();
+    table.set_format(*format::consts::FORMAT_NO_LINESEP_WITH_TITLE);
+
+    table.set_titles(Row::new(vec![
+        Cell::new("Request ID"),
+        Cell::new("Type"),
+        Cell::new("Status"),
+        Cell::new("Claimed By"),
+    ]));
+
+    for row in rows.iter() {
+        table.add_row(Row::new(vec![
+            Cell::new(&row.id.to_string()),
+            Cell::new(&row.request_type),
+            Cell::new(status_label(row.status)),
+            Cell::new(row.claimed_by.as_deref().unwrap_or("-")),
+        ]));
+    }
+
+    table.printstd();
+    println!("{}", "━".repeat(80));
+    if new_count > 0 {
+        println!(
+            "... and {} not-yet-started (new) request{} not shown",
+            format_number(new_count),
+            if new_count == 1 { "" } else { "s" }
+        );
+    }
 }
 
 /// Display detailed progress for a single-repo backfill

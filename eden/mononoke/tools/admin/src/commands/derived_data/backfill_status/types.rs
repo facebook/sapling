@@ -188,6 +188,15 @@ pub(super) struct RepoDetailRow {
     pub total: usize,
 }
 
+/// A single child request (derive_boundaries / derive_slice) of a backfill,
+/// rendered as a row in the single-repo detailed view.
+pub(super) struct ChildRequestRow {
+    pub id: u64,
+    pub request_type: String,
+    pub status: RequestStatus,
+    pub claimed_by: Option<String>,
+}
+
 /// Counts of child requests grouped by their effective state. All four
 /// counts together describe a backfill's progress without exposing the raw
 /// `RequestStatus` enum to callers that just want to render a status.
