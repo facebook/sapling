@@ -172,12 +172,20 @@ pub async fn bonsai_git_mappings_by_bonsai(
     repo: &impl Repo,
     cs_ids: Vec<ChangesetId>,
 ) -> Result<FxHashMap<ChangesetId, ObjectId>> {
+    if cs_ids.is_empty() {
+        return Ok(FxHashMap::default());
+    }
     // Get the Git shas corresponding to the Bonsai commits
     let bonsai_git_mappings = git_to_bonsai(ctx, repo, cs_ids.clone()).await?;
     let unmapped_bonsais = cs_ids
         .into_iter()
         .filter(|cs_id| !bonsai_git_mappings.contains_key(cs_id))
         .collect::<Vec<_>>();
+    // In the common case (all commits already derived), skip the derive and
+    // second mapping lookup entirely.
+    if unmapped_bonsais.is_empty() {
+        return Ok(bonsai_git_mappings);
+    }
     repo.repo_derived_data()
         .manager()
         .derive_bulk_locally(
