@@ -203,7 +203,7 @@ Show aliases with -v
   version
   web isl
   whereami
-  worktree wk wt
+  worktree wt
 
 Show an error if we use --options with an ambiguous abbreviation
   $ sl debugcomplete --options s
