@@ -332,12 +332,20 @@ where
         MergeNode {
             name: None,
             changes: PathTree::from_iter(
-                // Strip prefix to get relative paths. remove_prefix_component
-                // returns None for paths not under the prefix, filtering them out.
+                // Keep changes under `prefix` (re-rooted to a stage-relative path)
+                // and changes landing exactly at `prefix` (the stage root itself,
+                // keyed at `MPath::ROOT` so the merge handles it as a leaf/None
+                // change on the current path); drop disjoint changes. Using
+                // `MPath::is_prefix_of` covers both `P` under `prefix` and
+                // `P == prefix`, matching the `known_entries` re-rooting above.
                 changes.into_iter().filter_map(|(mpath, change)| {
-                    mpath
-                        .remove_prefix_component(&prefix)
-                        .map(|stripped| (stripped, Some(Change::from(change))))
+                    let mpath = MPath::from(mpath);
+                    prefix.is_prefix_of(&mpath).then(|| {
+                        (
+                            mpath.remove_prefix_component(&prefix),
+                            Some(Change::from(change)),
+                        )
+                    })
                 }),
             ),
             parents: parents.into_iter().collect(),
