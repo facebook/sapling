@@ -542,6 +542,10 @@ pub async fn derive_stage_batch(
             ddm.derive_stage_batch::<RootBlameV2>(ctx, csids, payload)
                 .await
         }
+        PipelineDerivableVariant::Fastlog => {
+            ddm.derive_stage_batch::<RootFastlog>(ctx, csids, payload)
+                .await
+        }
     }
 }
 
@@ -573,6 +577,10 @@ pub async fn is_stage_derived(
             ddm.is_stage_derived::<RootBlameV2>(ctx, csid, stage_path)
                 .await
         }
+        PipelineDerivableVariant::Fastlog => {
+            ddm.is_stage_derived::<RootFastlog>(ctx, csid, stage_path)
+                .await
+        }
     }
 }
 
@@ -602,6 +610,10 @@ pub async fn verify_stage_output(
         }
         PipelineDerivableVariant::BlameV2 => {
             ddm.verify_stage_output::<RootBlameV2>(ctx, csid, stage_path)
+                .await
+        }
+        PipelineDerivableVariant::Fastlog => {
+            ddm.verify_stage_output::<RootFastlog>(ctx, csid, stage_path)
                 .await
         }
     }

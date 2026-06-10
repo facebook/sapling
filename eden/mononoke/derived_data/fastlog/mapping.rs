@@ -12,8 +12,6 @@ use anyhow::Result;
 use anyhow::anyhow;
 use async_trait::async_trait;
 use blobstore::BlobstoreBytes;
-use blobstore::KeyedBlobstore;
-use blobstore::Loadable;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data_manager::BonsaiDerivable;
@@ -33,6 +31,7 @@ use thiserror::Error;
 use unodes::RootUnodeManifestId;
 
 use crate::fastlog_impl::create_new_batch;
+use crate::fastlog_impl::fetch_unode_parents;
 use crate::fastlog_impl::save_fastlog_batch_by_unode_id;
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
@@ -169,32 +168,6 @@ impl BonsaiDerivable for RootFastlog {
     }
 }
 
-async fn fetch_unode_parents<B: KeyedBlobstore>(
-    ctx: &CoreContext,
-    blobstore: &B,
-    unode_entry: Entry<ManifestUnodeId, FileUnodeId>,
-) -> Result<Vec<Entry<ManifestUnodeId, FileUnodeId>>, Error> {
-    let res = match unode_entry {
-        Entry::Tree(tree_id) => {
-            let tree = tree_id.load(ctx, blobstore).await?;
-            tree.parents()
-                .clone()
-                .into_iter()
-                .map(Entry::Tree)
-                .collect()
-        }
-        Entry::Leaf(leaf_id) => {
-            let leaf = leaf_id.load(ctx, blobstore).await?;
-            leaf.parents()
-                .clone()
-                .into_iter()
-                .map(Entry::Leaf)
-                .collect()
-        }
-    };
-    Ok(res)
-}
-
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeMap;
@@ -203,6 +176,7 @@ mod tests {
     use std::str::FromStr;
     use std::sync::Arc;
 
+    use blobstore::Loadable;
     use bonsai_hg_mapping::BonsaiHgMapping;
     use bookmarks::BookmarkKey;
     use bookmarks::Bookmarks;

@@ -13,6 +13,7 @@ use std::sync::Arc;
 use anyhow::Error;
 use blobstore::BlobstoreBytes;
 use blobstore::KeyedBlobstore;
+use blobstore::Loadable;
 use context::CoreContext;
 use futures::future::try_join_all;
 use manifest::Entry;
@@ -32,9 +33,34 @@ pub(crate) async fn create_new_batch(
     unode_parents: Vec<Entry<ManifestUnodeId, FileUnodeId>>,
     linknode: ChangesetId,
 ) -> Result<FastlogBatch, Error> {
+    create_new_batch_with_prefix(ctx, blobstore, unode_parents, linknode, "").await
+}
+
+/// Like `create_new_batch`, but reads parent batches under `key_prefix` first,
+/// falling back to the canonical (empty-prefix) key when not present. The
+/// fallback lets a pipeline-prefixed child chain onto an ancestor that was
+/// derived canonically.
+pub(crate) async fn create_new_batch_with_prefix(
+    ctx: &CoreContext,
+    blobstore: &Arc<dyn KeyedBlobstore>,
+    unode_parents: Vec<Entry<ManifestUnodeId, FileUnodeId>>,
+    linknode: ChangesetId,
+    key_prefix: &str,
+) -> Result<FastlogBatch, Error> {
     let parent_batches = try_join_all(unode_parents.clone().into_iter().map({
         move |entry| async move {
-            let maybe_batch = fetch_fastlog_batch_by_unode_id(ctx, blobstore, &entry).await?;
+            let maybe_batch =
+                fetch_fastlog_batch_by_unode_id_with_prefix(ctx, blobstore, &entry, key_prefix)
+                    .await?;
+            let maybe_batch = match maybe_batch {
+                Some(batch) => Some(batch),
+                // Fall back to the canonical key for ancestors derived without
+                // the pipeline prefix.
+                None if !key_prefix.is_empty() => {
+                    fetch_fastlog_batch_by_unode_id_with_prefix(ctx, blobstore, &entry, "").await?
+                }
+                None => None,
+            };
             maybe_batch.ok_or_else(|| Error::from(ErrorKind::NotFound(entry)))
         }
     }))
@@ -163,7 +189,16 @@ pub async fn fetch_fastlog_batch_by_unode_id<B: KeyedBlobstore>(
     blobstore: &B,
     unode_entry: &Entry<ManifestUnodeId, FileUnodeId>,
 ) -> Result<Option<FastlogBatch>, Error> {
-    let fastlog_batch_key = unode_entry_to_fastlog_batch_key(unode_entry);
+    fetch_fastlog_batch_by_unode_id_with_prefix(ctx, blobstore, unode_entry, "").await
+}
+
+pub async fn fetch_fastlog_batch_by_unode_id_with_prefix<B: KeyedBlobstore>(
+    ctx: &CoreContext,
+    blobstore: &B,
+    unode_entry: &Entry<ManifestUnodeId, FileUnodeId>,
+    key_prefix: &str,
+) -> Result<Option<FastlogBatch>, Error> {
+    let fastlog_batch_key = unode_entry_to_fastlog_batch_key_with_prefix(unode_entry, key_prefix);
 
     let maybe_bytes = blobstore.get(ctx, &fastlog_batch_key).await?;
 
@@ -179,7 +214,17 @@ pub(crate) async fn save_fastlog_batch_by_unode_id<B: KeyedBlobstore>(
     unode_entry: Entry<ManifestUnodeId, FileUnodeId>,
     batch: FastlogBatch,
 ) -> Result<(), Error> {
-    let fastlog_batch_key = unode_entry_to_fastlog_batch_key(&unode_entry);
+    save_fastlog_batch_by_unode_id_with_prefix(ctx, blobstore, unode_entry, batch, "").await
+}
+
+pub(crate) async fn save_fastlog_batch_by_unode_id_with_prefix<B: KeyedBlobstore>(
+    ctx: &CoreContext,
+    blobstore: &B,
+    unode_entry: Entry<ManifestUnodeId, FileUnodeId>,
+    batch: FastlogBatch,
+    key_prefix: &str,
+) -> Result<(), Error> {
+    let fastlog_batch_key = unode_entry_to_fastlog_batch_key_with_prefix(&unode_entry, key_prefix);
     let serialized = batch.into_bytes();
 
     blobstore
@@ -194,11 +239,44 @@ pub(crate) async fn save_fastlog_batch_by_unode_id<B: KeyedBlobstore>(
 pub fn unode_entry_to_fastlog_batch_key(
     unode_entry: &Entry<ManifestUnodeId, FileUnodeId>,
 ) -> String {
+    unode_entry_to_fastlog_batch_key_with_prefix(unode_entry, "")
+}
+
+pub fn unode_entry_to_fastlog_batch_key_with_prefix(
+    unode_entry: &Entry<ManifestUnodeId, FileUnodeId>,
+    key_prefix: &str,
+) -> String {
     let key_part = match unode_entry {
         Entry::Leaf(file_unode_id) => format!("fileunode.{file_unode_id}"),
         Entry::Tree(mf_unode_id) => format!("manifestunode.{mf_unode_id}"),
     };
-    format!("fastlogbatch.{key_part}")
+    format!("{key_prefix}fastlogbatch.{key_part}")
+}
+
+pub(crate) async fn fetch_unode_parents<B: KeyedBlobstore>(
+    ctx: &CoreContext,
+    blobstore: &B,
+    unode_entry: Entry<ManifestUnodeId, FileUnodeId>,
+) -> Result<Vec<Entry<ManifestUnodeId, FileUnodeId>>, Error> {
+    let res = match unode_entry {
+        Entry::Tree(tree_id) => {
+            let tree = tree_id.load(ctx, blobstore).await?;
+            tree.parents()
+                .clone()
+                .into_iter()
+                .map(Entry::Tree)
+                .collect()
+        }
+        Entry::Leaf(leaf_id) => {
+            let leaf = leaf_id.load(ctx, blobstore).await?;
+            leaf.parents()
+                .clone()
+                .into_iter()
+                .map(Entry::Leaf)
+                .collect()
+        }
+    };
+    Ok(res)
 }
 
 pub async fn fetch_flattened<B: KeyedBlobstore>(

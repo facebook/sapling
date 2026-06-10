@@ -24,6 +24,7 @@
 /// that was created or modified in this commit.
 mod fastlog_impl;
 mod mapping;
+mod pipeline;
 
 pub use fastlog_impl::fetch_fastlog_batch_by_unode_id;
 pub use fastlog_impl::fetch_flattened;

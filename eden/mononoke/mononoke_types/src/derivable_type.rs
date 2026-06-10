@@ -90,6 +90,7 @@ pub enum PipelineDerivableVariant {
     SkeletonManifests,
     SkeletonManifestsV2,
     BlameV2,
+    Fastlog,
 }
 
 impl DerivableType {
@@ -255,6 +256,7 @@ impl DerivableType {
             DerivableType::SkeletonManifests => Ok(PipelineDerivableVariant::SkeletonManifests),
             DerivableType::SkeletonManifestsV2 => Ok(PipelineDerivableVariant::SkeletonManifestsV2),
             DerivableType::BlameV2 => Ok(PipelineDerivableVariant::BlameV2),
+            DerivableType::Fastlog => Ok(PipelineDerivableVariant::Fastlog),
             _ => bail!("{} does not support derivation pipeline", self.name()),
         }
     }
@@ -268,6 +270,7 @@ impl PipelineDerivableVariant {
             PipelineDerivableVariant::SkeletonManifests => DerivableType::SkeletonManifests,
             PipelineDerivableVariant::SkeletonManifestsV2 => DerivableType::SkeletonManifestsV2,
             PipelineDerivableVariant::BlameV2 => DerivableType::BlameV2,
+            PipelineDerivableVariant::Fastlog => DerivableType::Fastlog,
         }
     }
 }
