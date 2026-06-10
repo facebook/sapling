@@ -34,7 +34,7 @@ git_types = { version = "0.1.0", path = "../../../git/git_types" }
 gix-hash = { version = "0.25.1", features = ["sha1"] }
 gix-object = "0.60.0"
 gix-packetline = { version = "0.21.4", features = ["blocking-io"] }
-gix-transport = "0.57.0"
+gix-transport = "0.57.1"
 gotham = "0.8"
 gotham_derive = "0.8"
 gotham_ext = { version = "0.1.0", path = "../../../common/gotham_ext" }
