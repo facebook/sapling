@@ -12,7 +12,6 @@ import os
 import stat
 import subprocess
 import sys
-import unittest
 from typing import Set
 
 from .lib import testcase
