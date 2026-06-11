@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ThemeColor} from './theme';
+import type {ThemePreference} from './theme';
 import type {PreferredSubmitCommand} from './types';
 
 import {Button} from 'isl-components/Button';
@@ -57,7 +57,7 @@ import platform from './platform';
 import {irrelevantCwdDisplayModeAtom} from './repositoryData';
 import {renderCompactAtom, useZoomShortcut, zoomUISettingAtom} from './responsive';
 import {mainCommandName, repositoryInfo} from './serverAPIState';
-import {themeState, useThemeShortcut} from './theme';
+import {themePreferenceState, useThemeShortcut} from './theme';
 
 import {Internal} from './Internal';
 import './SettingsTooltip.css';
@@ -91,7 +91,7 @@ function SettingsDropdown({
   dismiss: () => unknown;
   showShortcutsHelp: () => unknown;
 }) {
-  const [theme, setTheme] = useAtom(themeState);
+  const [themePreference, setThemePreference] = useAtom(themePreferenceState);
   const [repoInfo, setRepoInfo] = useAtom(repositoryInfo);
   const runOperation = useRunOperation();
   const [showDiffNumber, setShowDiffNumber] = useAtom(showDiffNumberConfig);
@@ -119,10 +119,11 @@ function SettingsDropdown({
               [
                 {value: 'light', name: 'Light'},
                 {value: 'dark', name: 'Dark'},
-              ] as Array<{value: ThemeColor; name: string}>
+                {value: 'system', name: 'System'},
+              ] as Array<{value: ThemePreference; name: string}>
             }
-            value={theme}
-            onChange={event => setTheme(event.currentTarget.value as ThemeColor)}
+            value={themePreference}
+            onChange={event => setThemePreference(event.currentTarget.value as ThemePreference)}
           />
           <div style={{marginTop: 'var(--pad)'}}>
             <Subtle>
