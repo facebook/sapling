@@ -1420,6 +1420,7 @@ impl Convert for RawRestrictedPathsConfig {
                         })
                         .collect::<Result<Vec<_>>>()?,
                     machine_tiers: raw.machine_tiers.unwrap_or_default(),
+                    build_rules: raw.build_rules.unwrap_or_default(),
                 })
             })
             .collect::<Result<Vec<_>>>()?;

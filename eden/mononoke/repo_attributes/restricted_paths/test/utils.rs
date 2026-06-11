@@ -1134,6 +1134,10 @@ impl EnforcementConditionSetBuilder {
             require_client_request_flag: self.require_client_request_flag,
             restriction_acls: self.restriction_acls,
             machine_tiers: self.machine_tiers,
+            // `build_rules` matches on the server's own `build_info` build rule,
+            // which can't be set from a unit test (it's a link-time constant), so
+            // tests leave it empty. Coverage lives in the `.t` integration test.
+            build_rules: Vec::new(),
         }
     }
 }

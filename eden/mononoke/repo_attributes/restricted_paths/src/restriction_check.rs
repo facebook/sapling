@@ -16,6 +16,8 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
+#[cfg(all(fbcode_build, target_os = "linux"))]
+use build_info::BuildInfo;
 use context::CoreContext;
 use futures::FutureExt;
 use futures::StreamExt;
@@ -708,6 +710,7 @@ pub(crate) fn pre_filter_condition_sets<'a>(
         .map(|cri| cri.entry_point.to_string());
     let server_side_tenting = ctx.session().server_side_tenting();
     let client_machine_tier = ctx.metadata().machine_tier();
+    let server_build_rule = server_build_rule();
 
     let candidates = condition_sets
         .iter()
@@ -731,8 +734,12 @@ pub(crate) fn pre_filter_condition_sets<'a>(
                 || client_machine_tier
                     .is_some_and(|tier| set.machine_tiers.iter().any(|c| c == tier));
 
+            let build_rule_matches = set.build_rules.is_empty()
+                || server_build_rule.is_some_and(|rule| set.build_rules.iter().any(|c| c == rule));
+
             entry_point_matches
                 && machine_tier_matches
+                && build_rule_matches
                 && (!set.require_client_request_flag || server_side_tenting)
         })
         .collect::<Vec<_>>();
@@ -754,6 +761,23 @@ fn condition_set_has_active_filter(set: &EnforcementConditionSet) -> bool {
         || set.require_client_request_flag
         || !set.restriction_acls.is_empty()
         || !set.machine_tiers.is_empty()
+        || !set.build_rules.is_empty()
+}
+
+/// The build rule of the running server binary (the Buck target it was built
+/// from), as exposed by `build_info` and logged to scuba by
+/// `add_common_server_data`. Returns `None` outside fbcode Linux builds: the
+/// Meta-internal `build_info` crate is unavailable in OSS builds, and its build
+/// rule symbol is only populated on Linux.
+fn server_build_rule() -> Option<&'static str> {
+    #[cfg(all(fbcode_build, target_os = "linux"))]
+    {
+        Some(BuildInfo::get_rule())
+    }
+    #[cfg(not(all(fbcode_build, target_os = "linux")))]
+    {
+        None
+    }
 }
 
 pub(crate) fn condition_sets_match_restriction_acls(

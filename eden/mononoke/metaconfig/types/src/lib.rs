@@ -2532,6 +2532,11 @@ pub struct EnforcementConditionSet {
     /// Machine tiers (MACHINE_TIER identity values) that trigger enforcement.
     /// Empty = don't filter on this dimension.
     pub machine_tiers: Vec<String>,
+    /// Server build rules (the running binary's `build_info` build rule) that
+    /// trigger enforcement. Empty = don't filter on this dimension. Match = the
+    /// server's own build_rule (the value `add_common_server_data` logs to scuba)
+    /// appears in this list.
+    pub build_rules: Vec<String>,
 }
 
 /// Configuration for restricted paths and their associated ACLs

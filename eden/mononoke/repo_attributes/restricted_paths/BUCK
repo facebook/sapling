@@ -59,6 +59,16 @@ rust_library(
             # fbcode-only dep for schematized logger (CommonServerData/CommonMetadata from scuba_ext)
             "//dsi/logger/configs/MononokeRestrictedPathsAccessLoggerConfig:mononoke_restricted_paths_access_rust_logger",
         ]
+        + select({
+            "DEFAULT": [],
+            # build_info (the server's own build_rule) is fbcode-only and only
+            # populated on Linux — matching the
+            # `#[cfg(all(fbcode_build, target_os = "linux"))]` gating in
+            # restriction_check.rs. Excluded from OSS builds (no build_info crate).
+            "ovr_config//os:linux": [
+                "//common/rust/build_info:build_info",
+            ],
+        })
     ),
 )
 
