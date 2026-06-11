@@ -57,24 +57,35 @@ pub(crate) trait SelectionErrorExt {
     fn handle_selection_error(self, repo: &thrift::RepoSpecifier) -> Error;
 }
 
+// Return a friendly "repo does not exist" error if `self` is a ServiceRouter
+// selection error for a nonexistent domain. Shared by both impl macros below.
+macro_rules! return_if_selection_error {
+    ($self:ident, $type:ident, $repo:ident) => {
+        if let $type::ThriftError(ref err) = $self {
+            if let Some(err) = err.downcast_ref::<srclient::TServiceRouterException>() {
+                if err.is_selection_error()
+                    && err.error_reason() == srclient::ErrorReason::SELECTION_NONEXISTENT_DOMAIN
+                {
+                    return match $repo.name.strip_suffix(".git") {
+                        Some(stripped) => anyhow::anyhow!(
+                            "repo does not exist: {}. Try removing the .git suffix (i.e. -R {})",
+                            $repo.name,
+                            stripped
+                        ),
+                        None => anyhow::anyhow!("repo does not exist: {}", $repo.name),
+                    };
+                }
+            }
+        }
+    };
+}
+
 macro_rules! impl_handle_selection_error {
     ($type: ident) => {
         impl SelectionErrorExt for $type {
             #[cfg(not(any(target_os = "macos", target_os = "windows")))]
             fn handle_selection_error(self, repo: &thrift::RepoSpecifier) -> Error {
-                if let $type::ThriftError(ref err) = self {
-                    if let Some(err) = err.downcast_ref::<srclient::TServiceRouterException>() {
-                        if err.is_selection_error()
-                            && err.error_reason() == srclient::ErrorReason::SELECTION_NONEXISTENT_DOMAIN
-                        {
-                            if let Some(possible_repo_name) = repo.name.strip_suffix(".git") {
-                                return anyhow::anyhow!("repo does not exist: {}. Try removing the .git suffix (i.e. -R {})", repo.name, possible_repo_name);
-                            } else {
-                                return anyhow::anyhow!("repo does not exist: {}", repo.name);
-                            };
-                        }
-                    }
-                }
+                return_if_selection_error!(self, $type, repo);
                 self.into()
             }
 
