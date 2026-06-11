@@ -31,13 +31,12 @@ use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
 use permission_checker::AclProvider;
 use permission_checker::MononokeIdentity;
+use permission_checker::PermissionCheckerBuilder;
 use tokio::task::JoinHandle;
 
 use crate::ManifestId;
 use crate::ManifestType;
 use crate::RestrictedPaths;
-use crate::access_log::has_read_access_to_repo_region_acls;
-use crate::access_log::is_part_of_group;
 use crate::restriction_info;
 use crate::restriction_info::ManifestRestrictionInfo;
 use crate::restriction_info::PathRestrictionInfo;
@@ -546,6 +545,56 @@ pub(crate) enum PreFilterResult<'a> {
 pub(crate) enum PreFilterVariant {
     Definite,
     NeedsFetch,
+}
+
+/// Check if the caller has read access to every repo region ACL in `acls`
+/// (conjunctive evaluation). For nested restrictions (e.g. `/secret` plus
+/// `/secret/inner`), the caller must satisfy the inner ACL even when they
+/// already satisfy the outer one — otherwise being a member of an outer ACL
+/// would silently bypass an inner restriction.
+///
+/// Runs checks concurrently and short-circuits on the first deny or error.
+pub(crate) async fn has_read_access_to_repo_region_acls(
+    ctx: &CoreContext,
+    acl_provider: &Arc<dyn AclProvider>,
+    acls: &[&MononokeIdentity],
+) -> Result<bool> {
+    if acls.is_empty() {
+        return Ok(true);
+    }
+
+    let identities = ctx.metadata().identities();
+    stream::iter(acls.iter().copied())
+        .map(|acl| async move {
+            let checker = acl_provider
+                .repo_region_acl(acl.id_data())
+                .await
+                .with_context(|| {
+                    format!("Failed to create PermissionChecker for {}", acl.id_data())
+                })?;
+            let permission_checker = PermissionCheckerBuilder::new().allow(checker).build();
+            anyhow::Ok(permission_checker.check_set(identities, &["read"]).await)
+        })
+        .boxed()
+        .buffer_unordered(acls.len())
+        .try_all(futures::future::ready)
+        .await
+}
+
+/// Check if the caller is a member of the given group.
+pub(crate) async fn is_part_of_group(
+    ctx: &CoreContext,
+    acl_provider: &Arc<dyn AclProvider>,
+    group_name: &str,
+) -> Result<bool> {
+    let membership_checker = acl_provider
+        .group(group_name)
+        .await
+        .with_context(|| format!("Failed to get membership checker for group {group_name}"))?;
+
+    Ok(membership_checker
+        .is_member(ctx.metadata().identities())
+        .await)
 }
 
 /// Evaluate ACL and allowlist authorization for a restricted-path access.

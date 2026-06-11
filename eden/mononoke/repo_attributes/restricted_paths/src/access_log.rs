@@ -13,9 +13,6 @@ use std::sync::Arc;
 use anyhow::Context;
 use anyhow::Result;
 use context::CoreContext;
-use futures::StreamExt;
-use futures::TryStreamExt;
-use futures::stream;
 use metaconfig_types::AclManifestMode;
 use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
@@ -23,7 +20,6 @@ use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use permission_checker::AclProvider;
 use permission_checker::MononokeIdentity;
-use permission_checker::PermissionCheckerBuilder;
 use scuba_ext::MononokeScubaSampleBuilder;
 use serde_json::Value;
 use serde_json::json;
@@ -110,56 +106,6 @@ impl SourceComparisonLogContext {
             scuba.add("shadow_mismatch_detail", shadow_mismatch_detail);
         }
     }
-}
-
-/// Check if the caller has read access to every repo region ACL in `acls`
-/// (conjunctive evaluation). For nested restrictions (e.g. `/secret` plus
-/// `/secret/inner`), the caller must satisfy the inner ACL even when they
-/// already satisfy the outer one — otherwise being a member of an outer ACL
-/// would silently bypass an inner restriction.
-///
-/// Runs checks concurrently and short-circuits on the first deny or error.
-pub(crate) async fn has_read_access_to_repo_region_acls(
-    ctx: &CoreContext,
-    acl_provider: &Arc<dyn AclProvider>,
-    acls: &[&MononokeIdentity],
-) -> Result<bool> {
-    if acls.is_empty() {
-        return Ok(true);
-    }
-
-    let identities = ctx.metadata().identities();
-    stream::iter(acls.iter().copied())
-        .map(|acl| async move {
-            let checker = acl_provider
-                .repo_region_acl(acl.id_data())
-                .await
-                .with_context(|| {
-                    format!("Failed to create PermissionChecker for {}", acl.id_data())
-                })?;
-            let permission_checker = PermissionCheckerBuilder::new().allow(checker).build();
-            anyhow::Ok(permission_checker.check_set(identities, &["read"]).await)
-        })
-        .boxed()
-        .buffer_unordered(acls.len())
-        .try_all(futures::future::ready)
-        .await
-}
-
-/// Check if the caller is a member of the given group.
-pub async fn is_part_of_group(
-    ctx: &CoreContext,
-    acl_provider: &Arc<dyn AclProvider>,
-    group_name: &str,
-) -> Result<bool> {
-    let membership_checker = acl_provider
-        .group(group_name)
-        .await
-        .with_context(|| format!("Failed to get membership checker for group {group_name}"))?;
-
-    Ok(membership_checker
-        .is_member(ctx.metadata().identities())
-        .await)
 }
 
 pub(crate) async fn log_source_comparison_access_by_manifest_if_restricted(
