@@ -33,6 +33,7 @@ export type PlatformName =
   | 'chromelike_app'
   | 'visualStudio'
   | 'obsidian'
+  | 'agentHome'
   | 'tui';
 
 export type AbsolutePath = string;

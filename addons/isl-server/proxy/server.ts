@@ -223,6 +223,9 @@ export function startServer({
         case 'obsidian':
           platformImpl = (await import('../platform/obsidianServerPlatform')).platform;
           break;
+        case 'agentHome':
+          platformImpl = (await import('../platform/agentHomeServerPlatform')).platform;
+          break;
         default:
         case undefined:
           platformImpl = makeBrowserServerPlatform(extraCwds);

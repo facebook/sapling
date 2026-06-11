@@ -291,6 +291,7 @@ const validPlatforms: Array<PlatformName> = [
   'chromelike_app',
   'visualStudio',
   'obsidian',
+  'agentHome',
 ];
 function isValidCustomPlatform(name: string): name is PlatformName {
   return validPlatforms.includes(name as PlatformName);
