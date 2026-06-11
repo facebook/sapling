@@ -15,6 +15,8 @@ use commit_cloud::ctx::CommitCloudContext;
 use commit_cloud_helpers::make_workspace_acl_name;
 #[cfg(fbcode_build)]
 use commit_cloud_intern_utils::acl_check::infer_workspace_identity;
+#[cfg(fbcode_build)]
+use commit_cloud_intern_utils::acl_check::requester_is_manager_of_departed_owner;
 use context::CoreContext;
 use metaconfig_types::RepoConfigRef;
 use mononoke_types::BonsaiChangeset;
@@ -824,6 +826,41 @@ impl AuthorizationContext {
                     }
                     Err(_) | Ok(None) => (),
                 }
+
+                #[cfg(fbcode_build)]
+                {
+                    // Fallback: allow the direct manager of a departed workspace
+                    // owner to recover the report's Commit Cloud workspace. Gated
+                    // by a default-off, per-repo JustKnob killswitch. We read it
+                    // via the Mononoke justknobs facade, which surfaces a read
+                    // failure loudly rather than silently defaulting on; a knob
+                    // that evaluates to false falls through to deny (fail closed).
+                    if justknobs::eval(
+                        "scm/mononoke:commitcloud_manager_access",
+                        None,
+                        Some(&cc_ctx.reponame),
+                    ) {
+                        match requester_is_manager_of_departed_owner(
+                            ctx.fb,
+                            &cc_ctx.workspace,
+                            ctx.metadata().identities(),
+                            repo.commit_cloud().config.mocked_employees.clone(),
+                        )
+                        .await
+                        {
+                            Ok(true) => {
+                                ctx.scuba().clone().log_with_msg(
+                                    "commit cloud ACL check success",
+                                    Some(format!("manager of departed owner (action: {action})")),
+                                );
+                                return AuthorizationCheckOutcome::from_permitted(true);
+                            }
+                            // Not a manager, or resolution failed: fall through to deny.
+                            Ok(false) | Err(_) => {}
+                        }
+                    }
+                }
+
                 ctx.scuba().clone().log_with_msg(
                     "commit cloud ACL check failed",
                     Some(format!(

@@ -14,6 +14,7 @@ bookmarks = { version = "0.1.0", path = "../repo_attributes/bookmarks" }
 commit_cloud = { version = "0.1.0", path = "../features/commit_cloud" }
 commit_cloud_helpers = { version = "0.1.0", path = "../features/commit_cloud/helpers" }
 context = { version = "0.1.0", path = "../servers/slapi/slapi_server/context" }
+justknobs_ext = { version = "0.1.0", path = "../common/rust/justknobs_ext" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 permission_checker = { version = "0.1.0", path = "../common/permission_checker" }
@@ -28,7 +29,6 @@ facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
-justknobs_ext = { version = "0.1.0", path = "../common/rust/justknobs_ext" }
 maplit = "1.0"
 mononoke_macros = { version = "0.1.0", path = "../common/mononoke_macros" }
 test_repo_factory = { version = "0.1.0", path = "../repo_factory/test_repo_factory" }
