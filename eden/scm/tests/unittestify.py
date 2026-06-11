@@ -3,7 +3,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# pyre-unsafe
+# pyre-strict
 
 # Translate run-tests.py tests to Python standard unittests
 
@@ -17,23 +17,24 @@ import shutil
 import subprocess
 import sys
 import unittest
+from typing import Callable, Dict, Generator, List, Optional, Tuple
 
 
-hgpath = os.environ.get("HGTEST_HG")
-pythonbinpath = os.environ.get("HGTEST_PYTHON", "python3")
-watchman = os.environ.get("HGTEST_WATCHMAN")
-mononoke_server = os.environ.get("HGTEST_MONONOKE_SERVER")
-dummyssh = os.environ.get("HGTEST_DUMMYSSH")
-get_free_socket = os.environ.get("HGTEST_GET_FREE_SOCKET")
+hgpath: Optional[str] = os.environ.get("HGTEST_HG")
+pythonbinpath: str = os.environ.get("HGTEST_PYTHON", "python3")
+watchman: Optional[str] = os.environ.get("HGTEST_WATCHMAN")
+mononoke_server: Optional[str] = os.environ.get("HGTEST_MONONOKE_SERVER")
+dummyssh: Optional[str] = os.environ.get("HGTEST_DUMMYSSH")
+get_free_socket: Optional[str] = os.environ.get("HGTEST_GET_FREE_SOCKET")
 # We want to make the one below a hard requirement for running tests
-run_tests_py = os.environ["HGTEST_RUN_TESTS_PY"]
+run_tests_py: str = os.environ["HGTEST_RUN_TESTS_PY"]
 
 
 if watchman is not None and not os.path.exists(str(watchman)):
     watchman = None
 
 try:
-    shlex_quote = shlex.quote  # Python 3.3 and up
+    shlex_quote: Callable[[str], str] = shlex.quote  # Python 3.3 and up
 except AttributeError:
     # pyre-fixme[9]: shlex_quote has type `(s: str) -> str`; used as `(seq:
     #  Sequence[str]) -> str`.
@@ -43,7 +44,7 @@ except AttributeError:
 
 
 @contextlib.contextmanager
-def chdir(path):
+def chdir(path: str) -> Generator[None, None, None]:
     oldpwd = os.getcwd()
     try:
         os.chdir(path)
@@ -52,7 +53,9 @@ def chdir(path):
         os.chdir(oldpwd)
 
 
-def prepareargsenv(runtestsdir, port=None):
+def prepareargsenv(
+    runtestsdir: str, port: Optional[int] = None
+) -> Tuple[List[str], Dict[str, str]]:
     """return (args, env) for running run-tests.py"""
     env = os.environ.copy()
     # We need Python to run .par files on Windows
@@ -99,8 +102,8 @@ def prepareargsenv(runtestsdir, port=None):
     return args, env
 
 
-def gettestmethod(name, port):
-    def runsingletest(self):
+def gettestmethod(name: str, port: int) -> Callable[["hgtests"], None]:
+    def runsingletest(self: "hgtests") -> None:
         sys.tracebacklimit = 1000  # Unhide stacktraces.
         reportskips = os.getenv("HGTEST_REPORT_SKIPS")
         with chdir(self._runtests_dir):
@@ -136,8 +139,10 @@ def gettestmethod(name, port):
 
 
 class hgtests(unittest.TestCase):
+    _runtests_dir: str = ""
+
     @classmethod
-    def collecttests(cls, path):
+    def collecttests(cls, path: str) -> None:
         """scan tests in path and add them as test methods"""
         if os.environ.get("HGTEST_IGNORE_INCLUDED") == "1":
             included = None
