@@ -2,8 +2,10 @@
 name: edenfs-systemd-triage
 description: Triage systemd-managed EdenFS issues on Linux devservers and OnDemands. Use when investigating EdenFS service failures, unexpected restarts, systemctl errors, edenfs_upgrade/edenfs_restarter problems, or when a user reports EdenFS is down on a systemd-enabled host. Also use when someone asks how systemd-managed EdenFS works, how to monitor it, or how to check its health. Use when asked to build a timeline of EdenFS lifecycle events, show edenfs restart history, or understand how edenfs reached its current state. Trigger on mentions of edenfs systemd, edenfs@ service, edenfs_upgrade timer, edenfs auto-restart, eden status --debug, systemctl edenfs, edenfs lifecycle management, edenfs timeline, edenfs restart history, or "what happened to edenfs".
 allowed-tools: [Read, Bash, Agent]
-oncalls:
-  - 'scm_client_infra'
+metadata:
+  oncalls:
+    - 'scm_client_infra'
+  strict: true
 ---
 
 # EdenFS Systemd Triage

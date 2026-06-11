@@ -1,8 +1,11 @@
 ---
+name: write-hook
 description: Create a Mononoke server-side hook with 3-diff split (tests, wiring, implementation), unit tests, and integration tests
-oncalls: ['scm_server_infra']
-apply_to_user_prompt: '.*(write|create|add|new|implement).*(mononoke\s+)?hook.*'
-apply_to_regex: 'eden/mononoke/features/hooks/src/implementations/.*\.rs$'
+metadata:
+  oncalls: ['scm_server_infra']
+  strict: true
+  apply_to_path: 'eden/mononoke/features/hooks/src/implementations/.*\.rs$'
+  apply_to_user_prompt: '.*(write|create|add|new|implement).*(mononoke\s+)?hook.*'
 ---
 
 # Write a Mononoke Hook
