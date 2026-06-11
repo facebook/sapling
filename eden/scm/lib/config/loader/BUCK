@@ -84,7 +84,7 @@ rust_library(
         []
         if rust_oss.is_oss_build()
         else [
-            "//atlas/lib/rust/whoami:atlas_whoami",
+            "//atlas/whoami/rust:atlas_whoami",
             "//devx_www/cross_env_session_id:cross_env_session_id",
             "fbsource//third-party/rust:base64",
             "fbsource//third-party/rust:dirs",
