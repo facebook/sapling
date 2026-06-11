@@ -475,9 +475,20 @@ impl CommitCloud {
             );
         }
 
+        // Stamp both the workspace owner and the sharer (e.g. a manager
+        // recovering a departed report's workspace) onto the new ACL so the
+        // sharer also becomes a maintainer and retains access afterwards.
+        let acl_identities = ctx
+            .owner
+            .iter()
+            .flatten()
+            .chain(self.ctx.metadata().identities().iter())
+            .cloned()
+            .collect();
+
         match self
             .acl_provider
-            .commitcloud_workspace_acl(&acl_name, &ctx.owner)
+            .commitcloud_workspace_acl(&acl_name, &Some(acl_identities))
             .await
         {
             Err(e) => bail!(
