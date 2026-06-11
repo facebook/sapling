@@ -3,7 +3,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# pyre-unsafe
+# pyre-strict
 
 """single place to control features used by tests
 
@@ -74,7 +74,7 @@ ignorerevnumincompatiblelist = """
 """
 
 
-def setup(testname, hgrcpath):
+def setup(testname: str, hgrcpath: str) -> None:
     # Disable mutation.record to maintain commit hashes.
     with open(hgrcpath, "a") as f:
         f.write("\n[mutation]\nrecord=False\n")
