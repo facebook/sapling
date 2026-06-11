@@ -554,7 +554,7 @@ pub(crate) enum PreFilterVariant {
 /// would silently bypass an inner restriction.
 ///
 /// Runs checks concurrently and short-circuits on the first deny or error.
-pub(crate) async fn has_read_access_to_repo_region_acls(
+pub(crate) async fn has_read_access_to_repo_region(
     ctx: &CoreContext,
     acl_provider: &Arc<dyn AclProvider>,
     acls: &[&MononokeIdentity],
@@ -612,7 +612,7 @@ pub(crate) async fn check_authorization(
         rollout_allowlist_group,
     )
     .await?;
-    let has_acl_access = has_read_access_to_repo_region_acls(ctx, acl_provider, acls).await?;
+    let has_acl_access = has_read_access_to_repo_region(ctx, acl_provider, acls).await?;
     Ok(allowlist_authorization.into_authorization_check_result(has_acl_access))
 }
 
@@ -1167,6 +1167,6 @@ async fn check_restriction_authorization_with_acl(
     allowlist_authorization: AllowlistAuthorization,
 ) -> Result<AuthorizationCheckResult> {
     let has_acl_access =
-        has_read_access_to_repo_region_acls(ctx, restricted_paths.acl_provider(), &[acl]).await?;
+        has_read_access_to_repo_region(ctx, restricted_paths.acl_provider(), &[acl]).await?;
     Ok(allowlist_authorization.into_authorization_check_result(has_acl_access))
 }
