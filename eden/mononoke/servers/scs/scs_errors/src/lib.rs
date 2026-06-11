@@ -325,33 +325,29 @@ impl From<DerivationError> for ServiceError {
 }
 
 macro_rules! impl_into_thrift_error {
-    // new-style poll methods can return a Poll error
-    (poll $t:ty) => {
+    // Shared body. Only the Poll arm differs between the forms below.
+    (@impl $t:ty, |$pe:ident| $poll:expr) => {
         impl From<ServiceError> for $t {
             fn from(e: ServiceError) -> Self {
                 match e {
                     ServiceError::Request(e) => e.into(),
                     ServiceError::Internal(e) => e.into(),
                     ServiceError::Overload(e) => e.into(),
-                    ServiceError::Poll(e) => e.into(),
+                    ServiceError::Poll($pe) => $poll,
                 }
             }
         }
     };
 
+    // new-style poll methods can return a Poll error
+    (poll $t:ty) => {
+        impl_into_thrift_error!(@impl $t, |e| e.into());
+    };
+
     // Old-style poll methods can't distinguish between a Poll error and an Internal error, so let's do our best.
     // This also works just fine for non-poll methods that won't be returning `ServiceError::Poll` anyway.
     ($t:ty) => {
-        impl From<ServiceError> for $t {
-            fn from(e: ServiceError) -> Self {
-                match e {
-                    ServiceError::Request(e) => e.into(),
-                    ServiceError::Internal(e) => e.into(),
-                    ServiceError::Overload(e) => e.into(),
-                    ServiceError::Poll(e) => internal_error(format!("poll error: {}", e)).into(), // this shouldn't happen
-                }
-            }
-        }
+        impl_into_thrift_error!(@impl $t, |e| internal_error(format!("poll error: {}", e)).into()); // this shouldn't happen
     };
 }
 
