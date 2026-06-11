@@ -13,6 +13,7 @@ use derived_data_manager::DerivationError;
 use git_types::GitError;
 use megarepo_error::MegarepoError;
 use mononoke_api::MononokeError;
+use restricted_paths::RestrictedPathAccess;
 use source_control as thrift;
 use source_control_services::errors::source_control_service as service;
 
@@ -22,6 +23,7 @@ pub enum ServiceError {
     Internal(thrift::InternalError),
     Overload(thrift::OverloadError),
     Poll(thrift::PollError),
+    RestrictedPathsAuthorization(thrift::RestrictedPathsAuthorizationError),
 }
 
 impl From<thrift::RequestError> for ServiceError {
@@ -68,6 +70,8 @@ impl LoggableError for ServiceError {
             Self::Internal(err) => (Status::InternalError, format!("{err:?}")),
             Self::Overload(err) => (Status::OverloadError, format!("{err:?}")),
             Self::Poll(err) => (Status::PollError, format!("{err:?}")),
+            // A denied request is a client-fault, logged as a request-class error.
+            Self::RestrictedPathsAuthorization(err) => (Status::RequestError, format!("{err:?}")),
         }
     }
 }
@@ -108,6 +112,20 @@ impl ServiceError {
                 let reason = format!("{context}: {reason}");
                 Self::Poll(thrift::PollError {
                     reason,
+                    ..Default::default()
+                })
+            }
+            Self::RestrictedPathsAuthorization(thrift::RestrictedPathsAuthorizationError {
+                reason,
+                access,
+                permission_request_group,
+                ..
+            }) => {
+                let reason = format!("{context}: {reason}");
+                Self::RestrictedPathsAuthorization(thrift::RestrictedPathsAuthorizationError {
+                    reason,
+                    access,
+                    permission_request_group,
                     ..Default::default()
                 })
             }
@@ -224,6 +242,11 @@ impl From<ServiceError> for AsyncRequestsError {
             ServiceError::Internal(e) => Self::internal(e),
             ServiceError::Overload(e) => Self::internal(e),
             ServiceError::Poll(e) => Self::internal(e), // FIXME
+            // The async-requests error union has no typed authz arm, so flatten
+            // to RequestError{PERMISSION_DENIED}.
+            ServiceError::RestrictedPathsAuthorization(e) => {
+                Self::request(restricted_paths_authz_to_request_error(e))
+            }
         }
     }
 }
@@ -258,10 +281,21 @@ impl From<MononokeError> for ServiceError {
                 reason: error.to_string(),
                 ..Default::default()
             }),
-            error @ MononokeError::RestrictedPathsAuthorizationError(_) => {
-                Self::Request(thrift::RequestError {
-                    kind: thrift::RequestErrorKind::PERMISSION_DENIED,
-                    reason: error.to_string(),
+            MononokeError::RestrictedPathsAuthorizationError(err) => {
+                let reason = err.to_string();
+                let access = match err.access() {
+                    RestrictedPathAccess::Path(path) => {
+                        thrift::RestrictedPathAccess::path(path.to_string())
+                    }
+                    RestrictedPathAccess::Manifest(manifest_id) => {
+                        thrift::RestrictedPathAccess::manifest_id(manifest_id.to_string())
+                    }
+                };
+                let permission_request_group = err.permission_request_group().id_data().to_string();
+                Self::RestrictedPathsAuthorization(thrift::RestrictedPathsAuthorizationError {
+                    reason,
+                    access,
+                    permission_request_group,
                     ..Default::default()
                 })
             }
@@ -325,8 +359,8 @@ impl From<DerivationError> for ServiceError {
 }
 
 macro_rules! impl_into_thrift_error {
-    // Shared body. Only the Poll arm differs between the forms below.
-    (@impl $t:ty, |$pe:ident| $poll:expr) => {
+    // Shared body. Only the Poll and authz arms differ between the forms below.
+    (@impl $t:ty, |$pe:ident| $poll:expr, |$ae:ident| $authz:expr) => {
         impl From<ServiceError> for $t {
             fn from(e: ServiceError) -> Self {
                 match e {
@@ -334,20 +368,36 @@ macro_rules! impl_into_thrift_error {
                     ServiceError::Internal(e) => e.into(),
                     ServiceError::Overload(e) => e.into(),
                     ServiceError::Poll($pe) => $poll,
+                    ServiceError::RestrictedPathsAuthorization($ae) => $authz,
                 }
             }
         }
     };
 
+    // restricted_paths form: the method declared `RestrictedPathsAuthorizationError`
+    // in its thrift `throws`, so its generated `*Exn` exposes a named-variant
+    // constructor (generated `*Exn` types have no blanket `From<exception>`). Using
+    // it makes registering a non-subset method with the `restricted_paths` form a
+    // compile error. Precedent: `RepoLandStackExn::hook_rejections(...)`.
+    (restricted_paths $t:ty) => {
+        impl_into_thrift_error!(@impl $t,
+            |e| internal_error(format!("poll error: {e}")).into(), // shouldn't happen
+            |e| <$t>::restricted_paths_authorization_error(e));
+    };
+
     // new-style poll methods can return a Poll error
     (poll $t:ty) => {
-        impl_into_thrift_error!(@impl $t, |e| e.into());
+        impl_into_thrift_error!(@impl $t,
+            |e| e.into(),
+            |e| restricted_paths_authz_to_request_error(e).into());
     };
 
     // Old-style poll methods can't distinguish between a Poll error and an Internal error, so let's do our best.
     // This also works just fine for non-poll methods that won't be returning `ServiceError::Poll` anyway.
     ($t:ty) => {
-        impl_into_thrift_error!(@impl $t, |e| internal_error(format!("poll error: {}", e)).into()); // this shouldn't happen
+        impl_into_thrift_error!(@impl $t,
+            |e| internal_error(format!("poll error: {e}")).into(), // shouldn't happen
+            |e| restricted_paths_authz_to_request_error(e).into());
     };
 }
 
@@ -370,13 +420,13 @@ impl_into_thrift_error!(service::RepoStackGitBundleStoreExn);
 impl_into_thrift_error!(service::RepoPrepareCommitsExn);
 impl_into_thrift_error!(service::RepoUploadFileContentExn);
 impl_into_thrift_error!(service::CommitCommonBaseWithExn);
-impl_into_thrift_error!(service::CommitFileDiffsExn);
+impl_into_thrift_error!(restricted_paths service::CommitFileDiffsExn);
 impl_into_thrift_error!(service::CommitLookupExn);
 impl_into_thrift_error!(service::CommitLookupPushrebaseHistoryExn);
 impl_into_thrift_error!(service::CommitInfoExn);
 impl_into_thrift_error!(service::CommitGenerationExn);
 impl_into_thrift_error!(service::CommitFingerprintExn);
-impl_into_thrift_error!(service::CommitCompareExn);
+impl_into_thrift_error!(restricted_paths service::CommitCompareExn);
 impl_into_thrift_error!(service::CommitIsAncestorOfExn);
 impl_into_thrift_error!(service::CommitFilterAncestorsExn);
 impl_into_thrift_error!(service::CommitIsPublicExn);
@@ -397,23 +447,23 @@ impl_into_thrift_error!(service::CommitListDescendantBookmarksExn);
 impl_into_thrift_error!(service::CommitRunHooksExn);
 impl_into_thrift_error!(service::CommitRateLimitCheckExn);
 impl_into_thrift_error!(service::CommitSubtreeChangesExn);
-impl_into_thrift_error!(service::CommitPathExistsExn);
-impl_into_thrift_error!(service::CommitPathInfoExn);
-impl_into_thrift_error!(service::CommitMultiplePathInfoExn);
-impl_into_thrift_error!(service::CommitPathBlameExn);
-impl_into_thrift_error!(service::CommitPathHistoryExn);
-impl_into_thrift_error!(service::CommitPathLastChangedExn);
-impl_into_thrift_error!(service::CommitMultiplePathLastChangedExn);
+impl_into_thrift_error!(restricted_paths service::CommitPathExistsExn);
+impl_into_thrift_error!(restricted_paths service::CommitPathInfoExn);
+impl_into_thrift_error!(restricted_paths service::CommitMultiplePathInfoExn);
+impl_into_thrift_error!(restricted_paths service::CommitPathBlameExn);
+impl_into_thrift_error!(restricted_paths service::CommitPathHistoryExn);
+impl_into_thrift_error!(restricted_paths service::CommitPathLastChangedExn);
+impl_into_thrift_error!(restricted_paths service::CommitMultiplePathLastChangedExn);
 impl_into_thrift_error!(service::CommitSparseProfileDeltaAsyncExn);
 impl_into_thrift_error!(poll service::CommitSparseProfileDeltaPollExn);
 impl_into_thrift_error!(service::CommitSparseProfileSizeAsyncExn);
 impl_into_thrift_error!(poll service::CommitSparseProfileSizePollExn);
-impl_into_thrift_error!(service::TreeExistsExn);
-impl_into_thrift_error!(service::TreeListExn);
-impl_into_thrift_error!(service::FileExistsExn);
-impl_into_thrift_error!(service::FileInfoExn);
-impl_into_thrift_error!(service::FileContentChunkExn);
-impl_into_thrift_error!(service::FileDiffExn);
+impl_into_thrift_error!(restricted_paths service::TreeExistsExn);
+impl_into_thrift_error!(restricted_paths service::TreeListExn);
+impl_into_thrift_error!(restricted_paths service::FileExistsExn);
+impl_into_thrift_error!(restricted_paths service::FileInfoExn);
+impl_into_thrift_error!(restricted_paths service::FileContentChunkExn);
+impl_into_thrift_error!(restricted_paths service::FileDiffExn);
 impl_into_thrift_error!(service::CommitLookupXrepoExn);
 impl_into_thrift_error!(service::CreateReposExn);
 impl_into_thrift_error!(service::CreateReposPollExn);
@@ -445,6 +495,21 @@ pub fn invalid_request(reason: impl ToString) -> thrift::RequestError {
     thrift::RequestError {
         kind: thrift::RequestErrorKind::INVALID_REQUEST,
         reason: reason.to_string(),
+        ..Default::default()
+    }
+}
+
+/// Flatten a typed authorization denial into a `RequestError{PERMISSION_DENIED}`.
+///
+/// Used by methods that do not declare `RestrictedPathsAuthorizationError` in
+/// their thrift `throws` (non-subset and poll methods), preserving the
+/// pre-existing flattened behavior.
+fn restricted_paths_authz_to_request_error(
+    e: thrift::RestrictedPathsAuthorizationError,
+) -> thrift::RequestError {
+    thrift::RequestError {
+        kind: thrift::RequestErrorKind::PERMISSION_DENIED,
+        reason: e.reason,
         ..Default::default()
     }
 }
