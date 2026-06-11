@@ -75,6 +75,10 @@ impl RestrictedPathsAuthorizationError {
         &self.permission_request_group
     }
 
+    pub fn access(&self) -> &RestrictedPathAccess {
+        &self.access
+    }
+
     pub fn is_manifest_access(&self) -> bool {
         matches!(&self.access, RestrictedPathAccess::Manifest(_))
     }

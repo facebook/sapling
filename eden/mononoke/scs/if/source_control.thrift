@@ -3203,6 +3203,21 @@ stateful client exception HookRejectionsException {
   2: list<HookRejection> rejections;
 }
 
+/// Identifies the restricted resource that an authorization check denied:
+/// either a path, or a manifest id (as a hex string).
+union RestrictedPathAccess {
+  1: string path;
+  2: string manifest_id;
+}
+
+stateful client exception RestrictedPathsAuthorizationError {
+  @thrift.ExceptionMessage
+  1: string reason;
+  2: RestrictedPathAccess access;
+  /// Group name only, e.g. "gradient_source_control".
+  3: string permission_request_group;
+}
+
 /// Service Definition
 
 @rust.RequestContext
@@ -3418,6 +3433,7 @@ service SourceControlService extends fb303_core.BaseService {
     1: RequestError request_error,
     2: InternalError internal_error,
     3: OverloadError overload_error,
+    4: RestrictedPathsAuthorizationError restricted_paths_authorization_error,
   );
 
   /// Returns the raw changed paths recorded in a Bonsai
@@ -3568,6 +3584,7 @@ service SourceControlService extends fb303_core.BaseService {
     1: RequestError request_error,
     2: InternalError internal_error,
     3: OverloadError overload_error,
+    4: RestrictedPathsAuthorizationError restricted_paths_authorization_error,
   );
 
   /// Find files within the commit that match criteria.
@@ -3696,6 +3713,7 @@ service SourceControlService extends fb303_core.BaseService {
     1: RequestError request_error,
     2: InternalError internal_error,
     3: OverloadError overload_error,
+    4: RestrictedPathsAuthorizationError restricted_paths_authorization_error,
   );
 
   /// Get information about a path in a commit.
@@ -3706,6 +3724,7 @@ service SourceControlService extends fb303_core.BaseService {
     1: RequestError request_error,
     2: InternalError internal_error,
     3: OverloadError overload_error,
+    4: RestrictedPathsAuthorizationError restricted_paths_authorization_error,
   );
 
   /// Get information about multiple paths in a commit.
@@ -3716,6 +3735,7 @@ service SourceControlService extends fb303_core.BaseService {
     1: RequestError request_error,
     2: InternalError internal_error,
     3: OverloadError overload_error,
+    4: RestrictedPathsAuthorizationError restricted_paths_authorization_error,
   );
 
   CommitPathBlameResponse commit_path_blame(
@@ -3725,6 +3745,7 @@ service SourceControlService extends fb303_core.BaseService {
     1: RequestError request_error,
     2: InternalError internal_error,
     3: OverloadError overload_error,
+    4: RestrictedPathsAuthorizationError restricted_paths_authorization_error,
   );
 
   CommitPathHistoryResponse commit_path_history(
@@ -3734,6 +3755,7 @@ service SourceControlService extends fb303_core.BaseService {
     1: RequestError request_error,
     2: InternalError internal_error,
     3: OverloadError overload_error,
+    4: RestrictedPathsAuthorizationError restricted_paths_authorization_error,
   );
 
   CommitPathLastChangedResponse commit_path_last_changed(
@@ -3743,6 +3765,7 @@ service SourceControlService extends fb303_core.BaseService {
     1: RequestError request_error,
     2: InternalError internal_error,
     3: OverloadError overload_error,
+    4: RestrictedPathsAuthorizationError restricted_paths_authorization_error,
   );
 
   CommitMultiplePathLastChangedResponse commit_multiple_path_last_changed(
@@ -3752,6 +3775,7 @@ service SourceControlService extends fb303_core.BaseService {
     1: RequestError request_error,
     2: InternalError internal_error,
     3: OverloadError overload_error,
+    4: RestrictedPathsAuthorizationError restricted_paths_authorization_error,
   );
 
   /// Path Restriction Methods
@@ -3844,6 +3868,7 @@ service SourceControlService extends fb303_core.BaseService {
     1: RequestError request_error,
     2: InternalError internal_error,
     3: OverloadError overload_error,
+    4: RestrictedPathsAuthorizationError restricted_paths_authorization_error,
   );
 
   /// List the contents of a directory.
@@ -3854,6 +3879,7 @@ service SourceControlService extends fb303_core.BaseService {
     1: RequestError request_error,
     2: InternalError internal_error,
     3: OverloadError overload_error,
+    4: RestrictedPathsAuthorizationError restricted_paths_authorization_error,
   );
 
   /// File Methods
@@ -3864,6 +3890,7 @@ service SourceControlService extends fb303_core.BaseService {
     1: RequestError request_error,
     2: InternalError internal_error,
     3: OverloadError overload_error,
+    4: RestrictedPathsAuthorizationError restricted_paths_authorization_error,
   );
 
   /// Get information about a file.
@@ -3871,6 +3898,7 @@ service SourceControlService extends fb303_core.BaseService {
     1: RequestError request_error,
     2: InternalError internal_error,
     3: OverloadError overload_error,
+    4: RestrictedPathsAuthorizationError restricted_paths_authorization_error,
   );
 
   /// Get a chunk of a file's content.
@@ -3881,6 +3909,7 @@ service SourceControlService extends fb303_core.BaseService {
     1: RequestError request_error,
     2: InternalError internal_error,
     3: OverloadError overload_error,
+    4: RestrictedPathsAuthorizationError restricted_paths_authorization_error,
   );
 
   /// Compare a file with another file.
@@ -3891,6 +3920,7 @@ service SourceControlService extends fb303_core.BaseService {
     1: RequestError request_error,
     2: InternalError internal_error,
     3: OverloadError overload_error,
+    4: RestrictedPathsAuthorizationError restricted_paths_authorization_error,
   );
 
   /// Cross-Repo Methods
