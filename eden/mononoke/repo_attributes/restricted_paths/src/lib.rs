@@ -1025,6 +1025,7 @@ mod tests {
             enforcement_enabled: RestrictedPathsConfig::default().enforcement_enabled,
             tooling_allowlist_group: None,
             rollout_allowlist_group: None,
+            admin_bypass_group: None,
             acl_file_name: RestrictedPathsConfig::default().acl_file_name,
             acl_manifest_mode: RestrictedPathsConfig::default().acl_manifest_mode,
         };
@@ -1050,6 +1051,7 @@ mod tests {
             enforcement_enabled: RestrictedPathsConfig::default().enforcement_enabled,
             tooling_allowlist_group: None,
             rollout_allowlist_group: None,
+            admin_bypass_group: None,
             acl_file_name: RestrictedPathsConfig::default().acl_file_name,
             acl_manifest_mode: RestrictedPathsConfig::default().acl_manifest_mode,
         };

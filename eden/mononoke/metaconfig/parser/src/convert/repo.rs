@@ -1401,6 +1401,16 @@ impl Convert for RawRestrictedPathsConfig {
         // rollout_allowlist_group is used for tooling allowed during rollout
         let rollout_allowlist_group = self.rollout_allowlist_acl;
 
+        // admin_bypass_group is an optional group identity used for membership
+        // checking when bypassing Path ACL enforcement.
+        let admin_bypass_group = self
+            .admin_bypass_group
+            .map(|group| {
+                MononokeIdentity::from_str(&group)
+                    .with_context(|| format!("Failed to parse admin_bypass_group `{group}`"))
+            })
+            .transpose()?;
+
         let enforcement_condition_sets = self
             .enforcement_condition_sets
             .unwrap_or_default()
@@ -1432,6 +1442,7 @@ impl Convert for RawRestrictedPathsConfig {
             soft_path_acls,
             tooling_allowlist_group,
             rollout_allowlist_group,
+            admin_bypass_group,
             acl_file_name: self
                 .acl_file_name
                 .unwrap_or(RestrictedPathsConfig::default().acl_file_name.to_string()),

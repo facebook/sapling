@@ -2556,6 +2556,11 @@ pub struct RestrictedPathsConfig {
     /// Group name for tooling that is allowlisted during rollout for all restricted paths.
     /// Used during rollout for tooling that will likely be permanently allowlisted.
     pub rollout_allowlist_group: Option<String>,
+    /// Group identity whose members may bypass all Path ACL enforcement — both
+    /// read access to restricted paths and maintainer-gated `.slacl`
+    /// modifications. Intended for admins fighting SEVs or debugging issues.
+    /// `None` disables the bypass.
+    pub admin_bypass_group: Option<MononokeIdentity>,
     /// Name of the ACL files (default: ".slacl")
     pub acl_file_name: String,
     /// Condition sets for conditional enforcement. OR across sets, AND within.
@@ -2578,6 +2583,7 @@ impl Default for RestrictedPathsConfig {
             soft_path_acls: Vec::new(),
             tooling_allowlist_group: None,
             rollout_allowlist_group: None,
+            admin_bypass_group: None,
             acl_file_name: DEFAULT_ACL_FILE_NAME.to_string(),
             enforcement_condition_sets: Vec::new(),
             enforcement_enabled: false,
