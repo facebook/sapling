@@ -204,7 +204,40 @@ void moveDetachedMount(
   checkUnixError(rc, "failed to attach detached mount over `", mountPath, "`");
 }
 
+int linuxUnmountFlags(UnmountOptions options, bool noFollow) {
+  int umountFlags = (noFollow ? UMOUNT_NOFOLLOW : 0) | MNT_DETACH;
+
+  // Only "force" is checked because as this is implemented, we only plan to
+  // add "--no-force" as an option. The other options are not checked until
+  // we need to support valid use cases for them.
+  if (!options.detach || options.expire) {
+    XLOGF(
+        DFATAL,
+        "Unsupported unmount option provided: 'detach'{}",
+        options.detach);
+  }
+  if (options.expire) {
+    XLOGF(
+        DFATAL,
+        "Unsupported unmount option provided: 'expire'{}",
+        options.expire);
+  }
+  if (options.force) {
+    umountFlags |= MNT_FORCE;
+  }
+  return umountFlags;
+}
+
 #endif
+
+void logUnmountError(const char* mountPath, int errnum) {
+  // EINVAL simply means the path is no longer mounted. This can happen if it
+  // was already manually unmounted by a separate process.
+  if (errnum != EINVAL) {
+    XLOGF(
+        WARNING, "error unmounting {}: {}", mountPath, folly::errnoStr(errnum));
+  }
+}
 
 } // namespace
 
@@ -233,6 +266,46 @@ void PrivHelperServer::registerMountPoint(
   XLOGF(DBG2, "Registered mount root `{}` from existing mount fd", mountPath);
   mountPoints_.erase(mountPath);
   mountPoints_.emplace(mountPath, std::move(registeredMount));
+}
+
+void PrivHelperServer::unmountRegisteredMount(
+    const std::string& mountPath,
+    const RegisteredMount& registeredMount,
+    UnmountOptions options) {
+#ifdef __APPLE__
+  (void)registeredMount;
+#else
+  if (useModernMountApi()) {
+    const auto procFdPath =
+        fmt::format("/proc/self/fd/{}", registeredMount.rootFd.fd());
+    struct stat st{};
+    // This probes procfs support for an already-open fd before using that fd
+    // path for umount2().
+    //
+    // @lint-ignore CLANGTIDY facebook-hte-BadCall-stat
+    if (stat(procFdPath.c_str(), &st) == 0) {
+      XLOGF(
+          DBG2,
+          "Unmounting registered mount `{}` through `{}`",
+          mountPath,
+          procFdPath);
+      const auto rc =
+          umount2(procFdPath.c_str(), linuxUnmountFlags(options, false));
+      if (rc != 0) {
+        logUnmountError(mountPath.c_str(), errno);
+      }
+      return;
+    }
+
+    XLOGF(
+        DBG2,
+        "failed to stat {}; falling back to path-based unmount for {}: {}",
+        procFdPath,
+        mountPath,
+        folly::errnoStr(errno));
+  }
+#endif
+  unmount(mountPath.c_str(), options);
 }
 
 folly::File PrivHelperServer::openBindMountTarget(
@@ -1319,40 +1392,11 @@ void PrivHelperServer::unmount(
   // a more flexible behavior if needed.
   //
   // In the future it might be nice to provide more smarter unmount options.
-  int umountFlags = UMOUNT_NOFOLLOW | MNT_DETACH;
-
-  // Only "force" is checked because as this is implemented, we only plan to
-  // add "--no-force" as an option. The other options are not checked until
-  // we need to support valid use cases for them.
-  if (!options.detach || options.expire) {
-    XLOGF(
-        DFATAL,
-        "Unsupported unmount option provided: 'detach'{}",
-        options.detach);
-  }
-  if (options.expire) {
-    XLOGF(
-        DFATAL,
-        "Unsupported unmount option provided: 'expire'{}",
-        options.expire);
-  }
-  if (options.force) {
-    umountFlags |= MNT_FORCE;
-  }
+  const auto umountFlags = linuxUnmountFlags(options, true);
   const auto rc = umount2(mountPath, umountFlags);
 #endif
   if (rc != 0) {
-    const int errnum = errno;
-    // EINVAL simply means the path is no longer mounted.
-    // This can happen if it was already manually unmounted by a
-    // separate process.
-    if (errnum != EINVAL) {
-      XLOGF(
-          WARNING,
-          "error unmounting {}: {}",
-          mountPath,
-          folly::errnoStr(errnum));
-    }
+    logUnmountError(mountPath, errno);
   }
 }
 
@@ -1481,7 +1525,7 @@ UnixSocket::Message PrivHelperServer::processUnmountMsg(Cursor& cursor) {
     throwf<std::domain_error>("No FUSE mount found for {}", mountPath);
   }
 
-  unmount(mountPath.c_str(), options);
+  unmountRegisteredMount(mountPath, it->second, options);
   mountPoints_.erase(it);
   return makeResponse();
 }
@@ -1496,7 +1540,7 @@ UnixSocket::Message PrivHelperServer::processNfsUnmountMsg(Cursor& cursor) {
     throwf<std::domain_error>("No NFS mount found for {}", mountPath);
   }
 
-  unmount(mountPath.c_str(), {});
+  unmountRegisteredMount(mountPath, it->second, {});
   mountPoints_.erase(it);
   return makeResponse();
 }
@@ -2106,7 +2150,7 @@ void PrivHelperServer::cleanupMountPoints() {
   for (const auto& entry : mountPoints_) {
     const auto& mountPoint = entry.first;
     try {
-      unmount(mountPoint.c_str(), {});
+      unmountRegisteredMount(mountPoint, entry.second, {});
     } catch (const std::exception& ex) {
       XLOGF(
           ERR,

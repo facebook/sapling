@@ -132,6 +132,10 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   void registerMountPoint(
       const std::string& mountPath,
       RegisteredMount registeredMount);
+  void unmountRegisteredMount(
+      const std::string& mountPath,
+      const RegisteredMount& registeredMount,
+      UnmountOptions options);
 
   UnixSocket::Message processSetDaemonTimeout(
       folly::io::Cursor& cursor,
