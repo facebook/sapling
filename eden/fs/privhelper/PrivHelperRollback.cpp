@@ -8,6 +8,10 @@
 #include "eden/fs/privhelper/PrivHelperRollback.h"
 
 #ifndef _WIN32
+#include <cstdio>
+#ifdef __linux__
+#include <sys/utsname.h>
+#endif
 #include <folly/String.h>
 #include <folly/logging/xlog.h>
 #include <sys/stat.h>
@@ -27,6 +31,10 @@ bool disablePrivHelperHardening() {
 namespace {
 
 constexpr const char* kEdenSystemConfigDir{"/etc/eden"};
+#ifdef __linux__
+constexpr unsigned kMinPrivHelperHardeningKernelMajor{5};
+constexpr unsigned kMinPrivHelperHardeningKernelMinor{8};
+#endif
 
 bool isRootControlledPath(const char* path, mode_t fileType) {
   struct stat st{};
@@ -54,9 +62,54 @@ bool isRootControlledPath(const char* path, mode_t fileType) {
   return true;
 }
 
+#ifdef __linux__
+bool isLinuxKernelTooOldForPrivHelperHardening() {
+  struct utsname name{};
+  if (uname(&name) != 0) {
+    XLOGF(
+        WARNING,
+        "Cannot inspect Linux kernel version for privhelper hardening: {}",
+        folly::errnoStr(errno));
+    return false;
+  }
+
+  unsigned major{0};
+  unsigned minor{0};
+  if (sscanf(name.release, "%u.%u", &major, &minor) != 2) {
+    XLOGF(
+        WARNING,
+        "Cannot parse Linux kernel version `{}` for privhelper hardening",
+        name.release);
+    return false;
+  }
+
+  if (major > kMinPrivHelperHardeningKernelMajor ||
+      (major == kMinPrivHelperHardeningKernelMajor &&
+       minor >= kMinPrivHelperHardeningKernelMinor)) {
+    return false;
+  }
+
+  XLOGF(
+      WARNING,
+      "Disabling privhelper hardening because Linux kernel {} is older than {}.{}",
+      name.release,
+      kMinPrivHelperHardeningKernelMajor,
+      kMinPrivHelperHardeningKernelMinor);
+  return true;
+}
+#endif
+
 } // namespace
 
 bool disablePrivHelperHardening() {
+#ifdef __linux__
+  // The hardened mount flow uses Linux syscalls through faccessat2, which was
+  // added in 5.8. Older kernels must use the legacy path-based flow.
+  if (isLinuxKernelTooOldForPrivHelperHardening()) {
+    return true;
+  }
+#endif
+
   // This is an emergency host-local rollback knob, so only root-controlled
   // filesystem state may disable the fd-based target checks.
   return isRootControlledPath(kEdenSystemConfigDir, S_IFDIR) &&
