@@ -39,7 +39,6 @@ use manifest::ManifestOps;
 use manifest::PathOrPrefix;
 use mercurial_types::HgAugmentedManifestId;
 use mercurial_types::HgChangesetId;
-use mercurial_types::HgManifestId;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::DerivableUntopologicallyVariant;
@@ -297,17 +296,6 @@ fn get_hg_changeset_derivation_options(
     }
 }
 
-/// Whether to skip writing HG manifest blobs during augmented manifest derivation.
-/// When enabled, HG manifest blobs are dropped from the write cache before flush,
-/// relying on reconstruction from augmented manifests for subsequent reads.
-fn should_skip_hgmanifest_writes(repo_name: &str) -> Result<bool> {
-    Ok(justknobs::eval(
-        "scm/mononoke:hgmanifest_skip_writes",
-        None,
-        Some(repo_name),
-    ))
-}
-
 async fn get_subtree_change_sources(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
@@ -455,110 +443,6 @@ pub fn format_key(derivation_ctx: &DerivationContext, cs_id: ChangesetId) -> Str
     format!("{root_prefix}{key_prefix}{cs_id}")
 }
 
-/// Gets the HgManifestId for a commit, optionally deriving the HgChangeset inline.
-///
-/// Checks for the HgChangesetId in the following order:
-/// 1. The `known_hg_cs` map (batch-internal cache of already-derived changesets)
-/// 2. The persisted mapping (SQL via fetch_derived)
-/// 3. Derives inline if not found anywhere
-///
-/// Returns the manifest ID and optionally the inline-derived MappedHgChangesetId
-/// (so the caller can track it for subsequent commits in the same batch).
-async fn get_manifest_id(
-    ctx: &CoreContext,
-    derivation_ctx: &DerivationContext,
-    bonsai: &BonsaiChangeset,
-    known_hg_cs: Option<&HashMap<ChangesetId, MappedHgChangesetId>>,
-) -> Result<(HgManifestId, Option<MappedHgChangesetId>)> {
-    let csid = bonsai.get_changeset_id();
-    let blobstore = derivation_ctx.blobstore();
-
-    // Check batch-internal cache first.
-    if let Some(hg_cs) = known_hg_cs.and_then(|m| m.get(&csid)) {
-        let manifestid = hg_cs
-            .hg_changeset_id()
-            .load(ctx, blobstore)
-            .await?
-            .manifestid();
-        return Ok((manifestid, None));
-    }
-
-    // Check persisted mapping (SQL).
-    if let Some(hg_cs) = derivation_ctx
-        .fetch_derived::<MappedHgChangesetId>(ctx, csid)
-        .await?
-    {
-        let manifestid = hg_cs
-            .hg_changeset_id()
-            .load(ctx, blobstore)
-            .await?
-            .manifestid();
-        return Ok((manifestid, None));
-    }
-
-    // Not found — derive HgChangeset inline.
-    let parents: Vec<_> = bonsai.parents().collect();
-    let mut hg_parents = Vec::with_capacity(parents.len());
-    for parent in &parents {
-        if let Some(hg_cs) = known_hg_cs.and_then(|m| m.get(parent)) {
-            hg_parents.push(hg_cs.clone());
-        } else if let Some(hg_cs) = derivation_ctx
-            .fetch_derived::<MappedHgChangesetId>(ctx, *parent)
-            .await?
-        {
-            hg_parents.push(hg_cs);
-        }
-    }
-    anyhow::ensure!(
-        hg_parents.len() == parents.len(),
-        "Tried to derive MappedHgChangesetId for {}, but {} of {} parents were not ready",
-        csid,
-        parents.len() - hg_parents.len(),
-        parents.len()
-    );
-
-    let empty = HashMap::new();
-    let mapping = known_hg_cs.unwrap_or(&empty);
-    let subtree_change_sources =
-        get_subtree_change_sources(ctx, derivation_ctx, bonsai, mapping).await?;
-    let derivation_opts = get_hg_changeset_derivation_options(derivation_ctx);
-    let (derived, manifestid) = crate::derive_hg_changeset::derive_from_parents(
-        ctx,
-        derivation_ctx.blobstore(),
-        bonsai.clone(),
-        hg_parents,
-        subtree_change_sources,
-        &derivation_opts,
-        derivation_ctx.restricted_paths(),
-    )
-    .await?;
-    Ok((manifestid, Some(derived)))
-}
-
-/// Store a MappedHgChangesetId mapping to SQL (BonsaiHgMapping).
-///
-/// This is a direct SQL write (not through the blobstore write cache), so it's
-/// immediately persistent and visible to subsequent batch segments and other
-/// processes.
-async fn store_hg_cs_mapping(
-    ctx: &CoreContext,
-    derivation_ctx: &DerivationContext,
-    cs_id: ChangesetId,
-    hg_cs: &MappedHgChangesetId,
-) -> Result<()> {
-    derivation_ctx
-        .bonsai_hg_mapping()?
-        .add(
-            ctx,
-            BonsaiHgMappingEntry {
-                hg_cs_id: hg_cs.hg_changeset_id(),
-                bcs_id: cs_id,
-            },
-        )
-        .await?;
-    Ok(())
-}
-
 #[async_trait]
 impl BonsaiDerivable for RootHgAugmentedManifestId {
     const VARIANT: DerivableType = DerivableType::HgAugmentedManifests;
@@ -582,20 +466,28 @@ impl BonsaiDerivable for RootHgAugmentedManifestId {
 
         let csid = bonsai.get_changeset_id();
 
+        // Wrap the dependency fetch and envelope load into one future so the
+        // manifest id is resolved concurrently with the content metadata and
+        // acl_root fetches, matching the pre-cleanup concurrency.
+        let hg_manifest_id_fut = async {
+            let hg_cs = derivation_ctx
+                .fetch_dependency::<MappedHgChangesetId>(ctx, csid)
+                .await?;
+            anyhow::Ok(
+                hg_cs
+                    .hg_changeset_id()
+                    .load(ctx, blobstore)
+                    .await?
+                    .manifestid(),
+            )
+        };
         let acl_root_fut = derivation_ctx.fetch_dependency::<RootAclManifestId>(ctx, csid);
 
-        let ((hg_manifest_id, derived_hg_cs), content_metadata, acl_root) = future::try_join3(
-            get_manifest_id(ctx, derivation_ctx, &bonsai, None),
-            content_metadata_fut,
-            acl_root_fut,
-        )
-        .await?;
+        let (hg_manifest_id, content_metadata, acl_root) =
+            future::try_join3(hg_manifest_id_fut, content_metadata_fut, acl_root_fut).await?;
 
         let acl_root_overlay = crate::derive_hg_augmented_manifest::normalize_acl_root(&acl_root)?;
 
-        // Derive augmented manifests before flushing. The HgManifest blobs
-        // are still in the MemWritesBlobstore write cache, so augmented
-        // manifest derivation can read them directly via .load().
         let parents = parents
             .into_iter()
             .map(|parent| parent.hg_augmented_manifest_id())
@@ -612,18 +504,6 @@ impl BonsaiDerivable for RootHgAugmentedManifestId {
             )
             .await?;
 
-        // If we inline-derived a HgChangeset, flush blobs to persistent
-        // storage. When skipping HgManifest writes, remove those blobs
-        // from the write cache first — augmented manifests have already
-        // been derived above and no longer need them.
-        if let Some(hg_cs) = derived_hg_cs {
-            if should_skip_hgmanifest_writes(derivation_ctx.repo_name())? {
-                derivation_ctx.remove_write_cache_by_prefix("hgmanifest.");
-            }
-            derivation_ctx.flush(ctx).await?;
-            store_hg_cs_mapping(ctx, derivation_ctx, csid, &hg_cs).await?;
-        }
-
         Ok(Self(root_hg_aug_mfid))
     }
 
@@ -634,7 +514,6 @@ impl BonsaiDerivable for RootHgAugmentedManifestId {
     ) -> Result<HashMap<ChangesetId, Self>> {
         let blobstore = derivation_ctx.blobstore();
         let mut res: HashMap<ChangesetId, Self> = HashMap::new();
-        let mut hg_cs_map: HashMap<ChangesetId, MappedHgChangesetId> = HashMap::new();
 
         for bonsai in &bonsais {
             let csid = bonsai.get_changeset_id();
@@ -645,21 +524,29 @@ impl BonsaiDerivable for RootHgAugmentedManifestId {
                 .collect::<HashSet<_>>();
             let content_metadata_fut = prefetch_content_metadata(ctx, blobstore, content_ids);
 
+            // Wrap the dependency fetch and envelope load into one future so
+            // the manifest id is resolved concurrently with the content
+            // metadata and acl_root fetches, matching the pre-cleanup
+            // concurrency.
+            let hg_manifest_id_fut = async {
+                let hg_cs = derivation_ctx
+                    .fetch_dependency::<MappedHgChangesetId>(ctx, csid)
+                    .await?;
+                anyhow::Ok(
+                    hg_cs
+                        .hg_changeset_id()
+                        .load(ctx, blobstore)
+                        .await?
+                        .manifestid(),
+                )
+            };
             let acl_root_fut = derivation_ctx.fetch_dependency::<RootAclManifestId>(ctx, csid);
 
-            let ((hg_manifest_id, derived_hg_cs), content_metadata, acl_root) = future::try_join3(
-                get_manifest_id(ctx, derivation_ctx, bonsai, Some(&hg_cs_map)),
-                content_metadata_fut,
-                acl_root_fut,
-            )
-            .await?;
+            let (hg_manifest_id, content_metadata, acl_root) =
+                future::try_join3(hg_manifest_id_fut, content_metadata_fut, acl_root_fut).await?;
 
             let acl_root_overlay =
                 crate::derive_hg_augmented_manifest::normalize_acl_root(&acl_root)?;
-
-            if let Some(hg_cs) = derived_hg_cs {
-                hg_cs_map.insert(csid, hg_cs);
-            }
 
             let parents: Vec<_> = derivation_ctx
                 .fetch_unknown_parents::<Self>(ctx, Some(&res), bonsai)
@@ -681,20 +568,6 @@ impl BonsaiDerivable for RootHgAugmentedManifestId {
 
             res.insert(csid, Self(root));
         }
-
-        if should_skip_hgmanifest_writes(derivation_ctx.repo_name())? {
-            // Remove HgManifest blobs from the write cache before flushing.
-            // The augmented manifest is a superset of HgManifest data, so these
-            // blobs can be reconstructed from it later if needed (see the
-            // reconstruction layer in fetch_manifest_envelope_opt). Skipping
-            // these writes reduces PUTs by ~33% for augmented manifest derivation.
-            derivation_ctx.remove_write_cache_by_prefix("hgmanifest.");
-        }
-
-        // Flush all blob writes BEFORE storing SQL mappings.
-        // This ensures that HgChangeset blobs are in persistent storage
-        // before their SQL mappings become visible to other processes.
-        derivation_ctx.flush(ctx).await?;
 
         Ok(res)
     }
@@ -801,7 +674,6 @@ impl DerivableUntopologically for RootHgAugmentedManifestId {
 
 #[cfg(test)]
 mod test {
-    use blobstore::Loadable;
     use bonsai_hg_mapping::BonsaiHgMapping;
     use bookmarks::BookmarkKey;
     use bookmarks::Bookmarks;
@@ -825,12 +697,8 @@ mod test {
     use fixtures::UnsharedMergeUneven;
     use futures::Future;
     use futures::TryStreamExt;
-    use justknobs::test_helpers::JustKnobsInMemory;
-    use justknobs::test_helpers::KnobVal;
-    use justknobs::test_helpers::override_just_knobs;
     use mononoke_macros::mononoke;
     use repo_blobstore::RepoBlobstore;
-    use repo_blobstore::RepoBlobstoreRef;
     use repo_derived_data::RepoDerivedData;
     use repo_derived_data::RepoDerivedDataRef;
     use repo_identity::RepoIdentity;
@@ -918,73 +786,6 @@ mod test {
         for (cs_id, hg_cs_id) in commits_desc_to_anc.into_iter().rev() {
             println!("{} {} {:?}", cs_id, hg_cs_id, batch_derived.get(&cs_id));
             assert_eq!(batch_derived.get(&cs_id).map(|x| x.0), Some(hg_cs_id));
-        }
-
-        Ok(())
-    }
-
-    /// Like `verify_repo`, but derives `RootHgAugmentedManifestId`.
-    /// When the skip-writes knob is active, this exercises the
-    /// write-skipping path and verifies that HgManifest blobs can
-    /// still be read through the reconstruction layer.
-    async fn verify_repo_aug<F, Fut>(fb: FacebookInit, repo_func: F) -> Result<()>
-    where
-        F: Fn() -> Fut,
-        Fut: Future<Output = TestRepo>,
-    {
-        let ctx = CoreContext::test_mock(fb);
-        let repo: TestRepo = repo_func().await;
-        println!("Processing {} (augmented)", repo.repo_identity.name());
-        borrowed!(ctx, repo);
-
-        let commits_desc_to_anc =
-            all_commits_descendants_to_ancestors(ctx.clone(), repo.clone()).await?;
-
-        // Recreate repo from scratch and derive augmented manifests.
-        let repo = repo_func().await;
-        let csids = commits_desc_to_anc
-            .clone()
-            .into_iter()
-            .rev()
-            .map(|(cs_id, _)| cs_id)
-            .collect::<Vec<_>>();
-        let manager = repo.repo_derived_data().manager();
-
-        // HgChangesets must be derived first (dependency of RootHgAugmentedManifestId).
-        manager
-            .derive_exactly_batch::<MappedHgChangesetId>(ctx, csids.clone(), None)
-            .await?;
-
-        // RootAclManifestId is a batch dependency of RootHgAugmentedManifestId
-        manager
-            .derive_exactly_batch::<RootAclManifestId>(ctx, csids.clone(), None)
-            .await?;
-
-        manager
-            .derive_exactly_batch::<RootHgAugmentedManifestId>(ctx, csids.clone(), None)
-            .await?;
-
-        // Verify HgChangesets match the expected values and that manifests
-        // are readable through the reconstruction layer.
-        let hg_cs_derived = manager
-            .fetch_derived_batch::<MappedHgChangesetId>(ctx, csids, None)
-            .await?;
-        for (cs_id, expected_hg_cs_id) in commits_desc_to_anc.into_iter().rev() {
-            let hg_cs = hg_cs_derived
-                .get(&cs_id)
-                .unwrap_or_else(|| panic!("HgChangeset not derived for {cs_id}"));
-            assert_eq!(
-                hg_cs.hg_changeset_id(),
-                expected_hg_cs_id,
-                "HgChangeset mismatch for {cs_id}",
-            );
-
-            // Load the manifest — goes through reconstruction when blobs
-            // were skipped.
-            let hg_changeset =
-                Loadable::load(&hg_cs.hg_changeset_id(), ctx, repo.repo_blobstore()).await?;
-            let _manifest =
-                Loadable::load(&hg_changeset.manifestid(), ctx, repo.repo_blobstore()).await?;
         }
 
         Ok(())
@@ -1139,25 +940,6 @@ mod test {
         })
         .await?;
 
-        Ok(())
-    }
-
-    #[mononoke::fbinit_test]
-    async fn test_batch_derive_skip_hgmanifest_writes(fb: FacebookInit) -> Result<()> {
-        override_just_knobs(JustKnobsInMemory::new(HashMap::from([(
-            "scm/mononoke:hgmanifest_skip_writes".to_string(),
-            KnobVal::Bool(true),
-        )])));
-        verify_repo_aug(fb, || Linear::get_repo::<TestRepo>(fb)).await?;
-        verify_repo_aug(fb, || BranchEven::get_repo::<TestRepo>(fb)).await?;
-        verify_repo_aug(fb, || BranchUneven::get_repo::<TestRepo>(fb)).await?;
-        verify_repo_aug(fb, || BranchWide::get_repo::<TestRepo>(fb)).await?;
-        verify_repo_aug(fb, || ManyDiamonds::get_repo::<TestRepo>(fb)).await?;
-        verify_repo_aug(fb, || ManyFilesDirs::get_repo::<TestRepo>(fb)).await?;
-        verify_repo_aug(fb, || MergeEven::get_repo::<TestRepo>(fb)).await?;
-        verify_repo_aug(fb, || MergeUneven::get_repo::<TestRepo>(fb)).await?;
-        verify_repo_aug(fb, || UnsharedMergeEven::get_repo::<TestRepo>(fb)).await?;
-        verify_repo_aug(fb, || UnsharedMergeUneven::get_repo::<TestRepo>(fb)).await?;
         Ok(())
     }
 }

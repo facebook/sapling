@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
 use std::sync::Arc;
 
 use acl_manifest::RootAclManifestId;
@@ -15,9 +14,6 @@ use cacheblob::MemWritesKeyedBlobstore;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::stream::TryStreamExt;
-use justknobs::test_helpers::JustKnobsInMemory;
-use justknobs::test_helpers::KnobVal;
-use justknobs::test_helpers::override_just_knobs;
 use manifest::Entry;
 use manifest::ManifestOps;
 use mercurial_derivation::DeriveHgChangeset;
@@ -397,84 +393,6 @@ async fn test_augmented_manifest_derive_heads(fb: FacebookInit) -> Result<()> {
             .load(&ctx, repo.repo_blobstore())
             .await?
             .manifestid();
-
-        compare_manifests(&ctx, &repo, hg_manifest_id, aug.hg_augmented_manifest_id()).await?;
-    }
-
-    Ok(())
-}
-
-/// Test that augmented manifest derivation works correctly when
-/// hgmanifest_skip_writes=true, verifying that HgManifest blobs remain
-/// loadable and augmented manifests match.
-#[mononoke::fbinit_test]
-async fn test_augmented_manifest_skip_writes(fb: FacebookInit) -> Result<()> {
-    override_just_knobs(JustKnobsInMemory::new(HashMap::from([(
-        "scm/mononoke:hgmanifest_skip_writes".to_string(),
-        KnobVal::Bool(true),
-    )])));
-
-    let ctx = CoreContext::test_mock(fb);
-    let repo: Repo = test_repo_factory::build_empty(fb).await?;
-
-    let root = CreateCommitContext::new_root(&ctx, &repo)
-        .add_file("dir/file_a", "content_a")
-        .add_file("dir/file_b", "content_b")
-        .add_file("other/file_c", "content_c")
-        .commit()
-        .await?;
-
-    let child = CreateCommitContext::new(&ctx, &repo, vec![root])
-        .add_file("dir/file_a", "updated_a")
-        .add_file("new/file_d", "content_d")
-        .commit()
-        .await?;
-
-    let grandchild = CreateCommitContext::new(&ctx, &repo, vec![child])
-        .add_file("other/file_c", "updated_c")
-        .commit()
-        .await?;
-
-    let manager = repo.repo_derived_data().manager();
-
-    // HgChangesets must be derived first (dependency of RootHgAugmentedManifestId).
-    manager
-        .derive_exactly_batch::<MappedHgChangesetId>(&ctx, vec![root, child, grandchild], None)
-        .await?;
-
-    // Pre-derive RootAclManifestId (batch dependency of RootHgAugmentedManifestId)
-    manager
-        .derive_exactly_batch::<RootAclManifestId>(&ctx, vec![root, child, grandchild], None)
-        .await?;
-
-    manager
-        .derive_exactly_batch::<RootHgAugmentedManifestId>(
-            &ctx,
-            vec![root, child, grandchild],
-            None,
-        )
-        .await?;
-
-    for cs_id in [root, child, grandchild] {
-        let aug = manager
-            .fetch_derived::<RootHgAugmentedManifestId>(&ctx, cs_id, None)
-            .await?
-            .unwrap_or_else(|| panic!("Missing RootHgAugmentedManifestId for {cs_id}"));
-
-        let hg_cs_id = repo.derive_hg_changeset(&ctx, cs_id).await?;
-        let hg_manifest_id = hg_cs_id
-            .load(&ctx, repo.repo_blobstore())
-            .await?
-            .manifestid();
-
-        // HgManifest blobs are loadable via the reconstruction layer.
-        let _root_mf = hg_manifest_id.load(&ctx, repo.repo_blobstore()).await?;
-
-        let entries: Vec<_> = hg_manifest_id
-            .list_all_entries(ctx.clone(), repo.repo_blobstore().clone())
-            .try_collect()
-            .await?;
-        assert!(!entries.is_empty());
 
         compare_manifests(&ctx, &repo, hg_manifest_id, aug.hg_augmented_manifest_id()).await?;
     }
