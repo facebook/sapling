@@ -3,12 +3,7 @@
 name: Mononoke Linux
 
 on:
-  push:
-    branches:
-    - main
-  pull_request:
-    branches:
-    - main
+  workflow_dispatch
 
 permissions:
   contents: read  #  to fetch code (actions/checkout)
