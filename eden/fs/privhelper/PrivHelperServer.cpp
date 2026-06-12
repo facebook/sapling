@@ -34,7 +34,6 @@
 #include <sys/types.h>
 #include <chrono>
 #include <csignal>
-#include <set>
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/SysctlUtil.h"
 #include "eden/common/utils/Throw.h"
@@ -67,6 +66,33 @@ namespace facebook::eden {
 // Constants
 static constexpr folly::StringPiece kFamBinaryPath{
     "/usr/local/libexec/eden/edenfs_fam/SCMFileAccessMonitor.app/Contents/MacOS/SCMFileAccessMonitor"};
+
+namespace {
+
+#ifndef __APPLE__
+constexpr int kRegisteredMountRootOpenFlags = O_PATH | O_DIRECTORY | O_CLOEXEC;
+#endif
+
+} // namespace
+
+PrivHelperServer::RegisteredMount PrivHelperServer::openRegisteredMount(
+    const std::string& mountPath) {
+#ifdef __APPLE__
+  (void)mountPath;
+  return RegisteredMount{};
+#else
+  const auto rootFd = open(mountPath.c_str(), kRegisteredMountRootOpenFlags);
+  checkUnixError(
+      rootFd, "failed to open registered mount root `", mountPath, "`");
+  XLOGF(DBG2, "Opened registered mount root `{}` by fd", mountPath);
+  return RegisteredMount{folly::File{rootFd, /*ownsFd=*/true}};
+#endif
+}
+
+void PrivHelperServer::registerMountPoint(const std::string& mountPath) {
+  mountPoints_.erase(mountPath);
+  mountPoints_.emplace(mountPath, openRegisteredMount(mountPath));
+}
 
 PrivHelperServer::PrivHelperServer() = default;
 
@@ -1041,7 +1067,7 @@ UnixSocket::Message PrivHelperServer::processTakeoverStartupMsg(
       /*isHardMount=*/false,
       /*performBindMountCleanup=*/false);
 
-  mountPoints_.insert(mountPath);
+  registerMountPoint(mountPath);
   auto response = makeResponse();
   response.data.unshare();
   folly::io::Appender appender(&response.data, 0);
@@ -1059,7 +1085,7 @@ UnixSocket::Message PrivHelperServer::processMountMsg(Cursor& cursor) {
   auto sanityResult = sanityCheckMountPoint(mountPath);
 
   auto fuseDev = fuseMount(mountPath.c_str(), readOnly, vfsType.c_str());
-  mountPoints_.insert(mountPath);
+  registerMountPoint(mountPath);
 
   auto response = makeResponse(std::move(fuseDev));
   response.data.unshare();
@@ -1078,7 +1104,7 @@ UnixSocket::Message PrivHelperServer::processMountNfsMsg(Cursor& cursor) {
       sanityCheckMountPoint(mountPath, /*isNFS=*/true, !options.useSoftMount);
 
   nfsMount(mountPath, std::move(options));
-  mountPoints_.insert(mountPath);
+  registerMountPoint(mountPath);
 
   auto response = makeResponse();
   response.data.unshare();
@@ -1099,7 +1125,7 @@ UnixSocket::Message PrivHelperServer::processUnmountMsg(Cursor& cursor) {
   }
 
   unmount(mountPath.c_str(), options);
-  mountPoints_.erase(mountPath);
+  mountPoints_.erase(it);
   return makeResponse();
 }
 
@@ -1114,7 +1140,7 @@ UnixSocket::Message PrivHelperServer::processNfsUnmountMsg(Cursor& cursor) {
   }
 
   unmount(mountPath.c_str(), {});
-  mountPoints_.erase(mountPath);
+  mountPoints_.erase(it);
   return makeResponse();
 }
 
@@ -1129,12 +1155,13 @@ UnixSocket::Message PrivHelperServer::processTakeoverShutdownMsg(
     throwf<std::domain_error>("No mount found for {}", mountPath);
   }
 
-  mountPoints_.erase(mountPath);
+  mountPoints_.erase(it);
   return makeResponse();
 }
 
 std::string PrivHelperServer::findMatchingMountPrefix(folly::StringPiece path) {
-  for (const auto& mountPoint : mountPoints_) {
+  for (const auto& entry : mountPoints_) {
+    const auto& mountPoint = entry.first;
     if (boost::starts_with(path, mountPoint + "/")) {
       return mountPoint;
     }
@@ -1623,7 +1650,8 @@ void PrivHelperServer::receiveError(
 }
 
 void PrivHelperServer::cleanupMountPoints() {
-  for (const auto& mountPoint : mountPoints_) {
+  for (const auto& entry : mountPoints_) {
+    const auto& mountPoint = entry.first;
     try {
       unmount(mountPoint.c_str(), {});
     } catch (const std::exception& ex) {

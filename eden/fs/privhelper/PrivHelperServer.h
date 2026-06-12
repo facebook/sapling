@@ -8,9 +8,12 @@
 #pragma once
 
 #include <eden/common/utils/SpawnedProcess.h>
+#ifndef __APPLE__
+#include <folly/File.h>
+#endif
 #include <sys/types.h>
 #include <limits>
-#include <set>
+#include <map>
 #include <string>
 #include <unordered_map>
 #include "eden/common/utils/UnixSocket.h"
@@ -109,6 +112,13 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
       folly::io::Cursor& cursor,
       UnixSocket::Message& request);
   std::string findMatchingMountPrefix(folly::StringPiece path);
+  struct RegisteredMount {
+#ifndef __APPLE__
+    folly::File rootFd;
+#endif
+  };
+  RegisteredMount openRegisteredMount(const std::string& mountPath);
+  void registerMountPoint(const std::string& mountPath);
 
   UnixSocket::Message processSetDaemonTimeout(
       folly::io::Cursor& cursor,
@@ -179,7 +189,7 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
 
   // The privhelper server only has a single thread,
   // so we don't need to lock the following state
-  std::set<std::string> mountPoints_;
+  std::map<std::string, RegisteredMount> mountPoints_;
 };
 
 } // namespace facebook::eden
