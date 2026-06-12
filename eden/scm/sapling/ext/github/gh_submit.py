@@ -355,6 +355,20 @@ async def update_pull_request(
         return Ok(result.unwrap()["data"]["updatePullRequest"]["pullRequest"]["id"])
 
 
+async def add_comment(hostname: str, subject_id: str, body: str) -> Result[str, str]:
+    """Adds a comment to an issue or pull request, returning the comment node ID."""
+    params: Dict[str, _Params] = {
+        "query": query.GRAPHQL_ADD_COMMENT,
+        "subjectId": subject_id,
+        "body": body,
+    }
+    result = await gh_cli.make_request(params, hostname=hostname)
+    if result.is_err():
+        return Err(result.unwrap_err())
+    else:
+        return Ok(result.unwrap()["data"]["addComment"]["commentEdge"]["node"]["id"])
+
+
 async def create_branch(
     *, hostname: str, repo_id: str, branch_name: str, oid: str
 ) -> Result[str, str]:

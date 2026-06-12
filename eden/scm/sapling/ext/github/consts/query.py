@@ -81,6 +81,18 @@ mutation ($pullRequestId: ID!, $title: String!, $body: String!, $base: String!) 
 }
 """
 
+GRAPHQL_ADD_COMMENT = """
+mutation ($subjectId: ID!, $body: String!) {
+  addComment(input: {subjectId: $subjectId, body: $body}) {
+    commentEdge {
+      node {
+        id
+      }
+    }
+  }
+}
+"""
+
 GRAPHQL_CREATE_BRANCH = """
 mutation ($repositoryId: ID!, $name: String!, $oid: GitObjectID!) {
   createRef(input: {repositoryId: $repositoryId, name: $name, oid: $oid}) {
