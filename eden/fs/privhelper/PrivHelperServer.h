@@ -117,8 +117,21 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
     folly::File rootFd;
 #endif
   };
+#ifndef __APPLE__
+  struct FuseMountResult {
+    folly::File fuseDev;
+    RegisteredMount registeredMount;
+  };
+  struct CheckedMountPoint {
+    folly::File targetFd;
+    SanityCheckResult sanityResult;
+  };
+#endif
   RegisteredMount openRegisteredMount(const std::string& mountPath);
   void registerMountPoint(const std::string& mountPath);
+  void registerMountPoint(
+      const std::string& mountPath,
+      RegisteredMount registeredMount);
 
   UnixSocket::Message processSetDaemonTimeout(
       folly::io::Cursor& cursor,
@@ -166,6 +179,13 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
       bool isNFS = false,
       bool isHardMount = false,
       bool performBindMountCleanup = true);
+#ifndef __APPLE__
+  CheckedMountPoint openAndSanityCheckMountPoint(
+      const std::string& mountPoint,
+      bool isNFS = false,
+      bool isHardMount = false,
+      bool performBindMountCleanup = true);
+#endif
 
   // These methods are virtual so we can override them during unit tests
   virtual folly::File
@@ -178,6 +198,18 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
       const char* clientPath,
       const char* mountPath,
       folly::StringPiece mountRoot);
+  virtual bool useModernMountApi() const;
+#ifndef __APPLE__
+  FuseMountResult fuseMountByFd(
+      folly::File targetFd,
+      const char* mountPath,
+      bool readOnly,
+      const char* vfsType);
+  RegisteredMount nfsMountByFd(
+      folly::File targetFd,
+      const std::string& mountPath,
+      const NFSMountOptions& options);
+#endif
 
  protected:
   folly::File openBindMountTarget(

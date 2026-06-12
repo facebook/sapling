@@ -228,6 +228,10 @@ class PrivHelperThreadedTestServer : public PrivHelperServer {
     std::move(future).get(1s);
   }
 
+  bool useModernMountApi() const override {
+    return false;
+  }
+
   void setLogFile(folly::File logFile) override {
     auto data = data_.wlock();
     data->logFiles.push_back(std::move(logFile));

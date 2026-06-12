@@ -12,6 +12,7 @@
 
 #include "eden/fs/privhelper/PrivHelperServer.h"
 
+#include <fcntl.h>
 #include <folly/Conv.h>
 #include <folly/File.h>
 #include <folly/FileUtil.h>
@@ -27,12 +28,26 @@
 #include "eden/fs/utils/MountInfoTable.h"
 
 #ifdef __linux__
+
 #include <sys/statfs.h>
+
 #endif
 
 namespace facebook::eden {
 
 namespace {
+
+#ifdef __linux__
+#ifndef SYS_faccessat2
+#ifdef __NR_faccessat2
+#define SYS_faccessat2 __NR_faccessat2
+#elif defined(__x86_64__) || defined(__aarch64__)
+#define SYS_faccessat2 439
+#else
+#error "faccessat2 syscall number is required"
+#endif
+#endif
+#endif
 
 /**
  * Determines whether the given mountPoint is contained in the mount table
@@ -94,10 +109,12 @@ bool isErrorSafeToIgnore(int err, bool isNFS, const std::string& mountPoint) {
  * This is copied from fusermount.c:
  * https://github.com/libfuse/libfuse/blob/master/util/fusermount.c#L990
  */
-void sanityCheckFs(const std::string& mountPoint) {
+void sanityCheckFs(const std::string& mountPoint, int mountPointFd = -1) {
 #ifndef __APPLE__
   struct statfs fsBuf;
-  if (statfs(mountPoint.c_str(), &fsBuf) < 0) {
+  const auto rc = mountPointFd >= 0 ? fstatfs(mountPointFd, &fsBuf)
+                                    : statfs(mountPoint.c_str(), &fsBuf);
+  if (rc < 0) {
     auto err = errno;
     throwf<std::domain_error>(
         "statfs failed for: {}: {}", mountPoint, folly::errnoStr(err));
@@ -149,7 +166,69 @@ void sanityCheckFs(const std::string& mountPoint) {
       "Cannot mount over filesystem type: {}", fsBuf.f_type);
 #else
   (void)mountPoint;
+  (void)mountPointFd;
 #endif
+}
+
+#ifdef __linux__
+folly::File openCheckedMountTarget(const std::string& mountPoint) {
+  const auto fd = open(mountPoint.c_str(), O_PATH | O_DIRECTORY | O_CLOEXEC);
+  if (fd < 0) {
+    auto err = errno;
+    throwf<std::domain_error>(
+        "User:{} cannot open {}: {}",
+        getuid(),
+        mountPoint,
+        folly::errnoStr(err));
+  }
+  return folly::File{fd, /*ownsFd=*/true};
+}
+
+void checkMountPointWriteAccess(
+    const std::string& mountPoint,
+    int mountPointFd) {
+  const auto rc = static_cast<int>(
+      syscall(SYS_faccessat2, mountPointFd, "", W_OK, AT_EMPTY_PATH));
+  if (rc == 0) {
+    return;
+  }
+
+  const auto err = errno;
+  throwf<std::domain_error>(
+      "User:{} doesn't have write access to {}: {}",
+      getuid(),
+      mountPoint,
+      folly::errnoStr(err));
+}
+#endif
+
+void sanityCheckOpenedMountPoint(
+    const std::string& mountPoint,
+    int mountPointFd,
+    uid_t uid) {
+  struct stat st{};
+  if (fstat(mountPointFd, &st) < 0) {
+    auto err = errno;
+    throwf<std::domain_error>(
+        "User:{} cannot stat {}: {}",
+        getuid(),
+        mountPoint,
+        folly::errnoStr(err));
+  }
+
+  if (!S_ISDIR(st.st_mode)) {
+    throwf<std::domain_error>("{} isn't a directory", mountPoint);
+  }
+
+  if (st.st_uid != uid) {
+    throwf<std::domain_error>(
+        "User:{} isn't the owner of: {}", uid, mountPoint);
+  }
+
+#ifdef __linux__
+  checkMountPointWriteAccess(mountPoint, mountPointFd);
+#endif
+  sanityCheckFs(mountPoint, mountPointFd);
 }
 } // namespace
 
@@ -347,8 +426,6 @@ SanityCheckResult PrivHelperServer::sanityCheckMountPoint(
         folly::errnoStr(err));
   }
 
-  // At this point, any stat errors are not due to a stale mount.
-  struct stat st{};
   folly::File file;
   try {
     file = folly::File(mountPoint.c_str(), O_RDONLY);
@@ -359,27 +436,40 @@ SanityCheckResult PrivHelperServer::sanityCheckMountPoint(
         mountPoint,
         folly::errnoStr(e.code().value()));
   }
-  if (fstat(file.fd(), &st) < 0) {
-    auto err = errno;
-    throwf<std::domain_error>(
-        "User:{} cannot stat {}: {}",
-        getuid(),
-        mountPoint,
-        folly::errnoStr(err));
-  }
-
-  if (!S_ISDIR(st.st_mode)) {
-    throwf<std::domain_error>("{} isn't a directory", mountPoint);
-  }
-
-  if (st.st_uid != uid_) {
-    throwf<std::domain_error>(
-        "User:{} isn't the owner of: {}", uid_, mountPoint);
-  }
-
-  sanityCheckFs(mountPoint);
+  sanityCheckOpenedMountPoint(mountPoint, file.fd(), uid_);
   return result;
 }
+
+#ifndef __APPLE__
+PrivHelperServer::CheckedMountPoint
+PrivHelperServer::openAndSanityCheckMountPoint(
+    const std::string& mountPoint,
+    bool isNFS,
+    bool isHardMount,
+    bool performBindMountCleanup) {
+  XLOGF(INFO, "Sanity checking mount {}", mountPoint);
+  if (getuid() == 0) {
+    XLOG(INFO, "Skipping sanity check for root user.");
+    auto targetFd = openCheckedMountTarget(mountPoint);
+    return CheckedMountPoint{std::move(targetFd), SanityCheckResult{}};
+  }
+
+  SanityCheckResult result{};
+  if (performBindMountCleanup) {
+    // Clean up any stale bind mounts under this checkout before proceeding.
+    // Skipped on the takeover path so live redirections (e.g. buck-out) that
+    // the kernel preserves across a graceful restart are not detached.
+    result = cleanupStaleBindMounts(mountPoint);
+  }
+
+  result.staleCheckoutMountUnmounted =
+      detectAndUnmountStaleMount(mountPoint, isNFS, isHardMount);
+
+  auto targetFd = openCheckedMountTarget(mountPoint);
+  sanityCheckOpenedMountPoint(mountPoint, targetFd.fd(), uid_);
+  return CheckedMountPoint{std::move(targetFd), result};
+}
+#endif
 } // namespace facebook::eden
 
 #endif
