@@ -178,7 +178,6 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
       const char* clientPath,
       const char* mountPath,
       folly::StringPiece mountRoot);
-  virtual void bindUnmount(const char* mountPath);
 
  protected:
   folly::File openBindMountTarget(
@@ -186,6 +185,8 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
       folly::StringPiece mountPath);
 
  private:
+  virtual void insecureBindUnmount(const char* mountPath);
+  virtual void bindUnmount(const char* mountPath, folly::StringPiece mountRoot);
   virtual void setLogFile(folly::File logFile);
   virtual void setDaemonTimeout(std::chrono::nanoseconds duration);
   virtual void setMemoryPriorityForProcess(pid_t pid, int priority);

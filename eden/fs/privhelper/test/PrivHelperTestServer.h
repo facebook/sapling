@@ -53,7 +53,9 @@ class PrivHelperTestServer : public PrivHelperServer {
       const char* clientPath,
       const char* mountPath,
       folly::StringPiece mountRoot) override;
-  void bindUnmount(const char* mountPath) override;
+  void insecureBindUnmount(const char* mountPath) override;
+  void bindUnmount(const char* mountPath, folly::StringPiece mountRoot)
+      override;
   std::string getPathToBindMountMarker(folly::StringPiece mountPath) const;
 
   /** @return true if the marker file exists with the specified contents. */

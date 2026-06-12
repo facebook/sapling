@@ -16,6 +16,7 @@
 #include <folly/testing/TestUtil.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <atomic>
 #include <chrono>
 #include <unordered_map>
 
@@ -211,7 +212,18 @@ class PrivHelperThreadedTestServer : public PrivHelperServer {
     std::move(future).get(1s);
   }
 
-  void bindUnmount(const char* mountPath) override {
+  void insecureBindUnmount(const char* mountPath) override {
+    auto future = getResultFuture(data_.wlock()->bindUnmountResults, mountPath);
+    std::move(future).get(1s);
+  }
+
+  void bindUnmount(const char* mountPath, folly::StringPiece mountRoot)
+      override {
+#ifndef __APPLE__
+    static_cast<void>(openBindMountTarget(mountRoot, mountPath));
+#else
+    (void)mountRoot;
+#endif
     auto future = getResultFuture(data_.wlock()->bindUnmountResults, mountPath);
     std::move(future).get(1s);
   }
@@ -222,6 +234,24 @@ class PrivHelperThreadedTestServer : public PrivHelperServer {
   }
 
   folly::Synchronized<Data> data_;
+};
+
+class PrivHelperFdUnmountTestServer : public PrivHelperServer {
+ public:
+  bool insecureBindUnmountCalled() const {
+    return insecureBindUnmountCalled_.load();
+  }
+
+ private:
+  void unmount(const char* /* mountPath */, UnmountOptions /* options */)
+      override {}
+
+  void insecureBindUnmount(const char* /* mountPath */) override {
+    insecureBindUnmountCalled_.store(true);
+    throw std::runtime_error("unexpected path-based bind unmount fallback");
+  }
+
+  std::atomic<bool> insecureBindUnmountCalled_{false};
 };
 
 class PrivHelperTest : public ::testing::Test {
@@ -254,6 +284,36 @@ class PrivHelperTest : public ::testing::Test {
 
   std::unique_ptr<PrivHelper> client_;
   PrivHelperThreadedTestServer server_;
+  std::thread serverThread_;
+  EventBaseThread clientIoThread_;
+};
+
+class PrivHelperFdUnmountTest : public ::testing::Test {
+ protected:
+  void SetUp() override {
+    File clientConn;
+    File serverConn;
+    PrivHelperConn::createConnPair(clientConn, serverConn);
+
+    serverThread_ =
+        std::thread([this, conn = std::move(serverConn)]() mutable noexcept {
+          server_.initPartial(std::move(conn), getuid(), getgid());
+          server_.run();
+        });
+    client_ = createTestPrivHelper(std::move(clientConn));
+    clientIoThread_.getEventBase()->runInEventBaseThreadAndWait(
+        [&] { client_->attachEventBase(clientIoThread_.getEventBase()); });
+  }
+
+  ~PrivHelperFdUnmountTest() override {
+    client_.reset();
+    if (serverThread_.joinable()) {
+      serverThread_.join();
+    }
+  }
+
+  std::unique_ptr<PrivHelper> client_;
+  PrivHelperFdUnmountTestServer server_;
   std::thread serverThread_;
   EventBaseThread clientIoThread_;
 };
@@ -534,6 +594,12 @@ TEST_F(PrivHelperTest, bindMountRejectsEscapedMountPath) {
       std::exception,
       "Invalid cross-device link");
 
+  server_.setBindUnmountResult(escapedPath).setValue();
+  EXPECT_THROW_RE(
+      client_->bindUnMount(escapedPath).get(1s),
+      std::exception,
+      "Invalid cross-device link");
+
 #endif
 }
 
@@ -558,6 +624,12 @@ TEST_F(PrivHelperTest, bindMountRejectsSymlinkComponent) {
   server_.setBindMountResult(symlinkPath).setValue();
   EXPECT_THROW_RE(
       client_->bindMount(source.path().string(), symlinkPath).get(1s),
+      std::exception,
+      "Too many levels of symbolic links");
+
+  server_.setBindUnmountResult(symlinkPath).setValue();
+  EXPECT_THROW_RE(
+      client_->bindUnMount(symlinkPath).get(1s),
       std::exception,
       "Too many levels of symbolic links");
 
@@ -588,6 +660,12 @@ TEST_F(PrivHelperTest, bindMountRejectsSymlinkHiddenByDotDot) {
   server_.setBindMountResult(symlinkDotDotPath).setValue();
   EXPECT_THROW_RE(
       client_->bindMount(source.path().string(), symlinkDotDotPath).get(1s),
+      std::exception,
+      "Too many levels of symbolic links");
+
+  server_.setBindUnmountResult(symlinkDotDotPath).setValue();
+  EXPECT_THROW_RE(
+      client_->bindUnMount(symlinkDotDotPath).get(1s),
       std::exception,
       "Too many levels of symbolic links");
 
@@ -651,6 +729,27 @@ TEST_F(
       client_->bindMount(source.path().string(), bindPath).get(1s),
       std::exception,
       "No such file or directory");
+#endif
+}
+
+TEST_F(
+    PrivHelperFdUnmountTest,
+    bindUnmountDoesNotFallBackAfterProcFdUnmountFailure) {
+#ifdef __APPLE__
+  GTEST_SKIP() << "Linux-specific procfd bind unmount validation";
+#else
+  auto mountRoot = makeTempDir("mount-root");
+  boost::filesystem::create_directory(mountRoot.path() / "registered");
+  boost::filesystem::create_directory(
+      mountRoot.path() / "registered" / "not-mounted");
+
+  const auto registeredPath = (mountRoot.path() / "registered").string();
+  const auto notMountedPath = registeredPath + "/not-mounted";
+
+  client_->takeoverStartup(registeredPath, {}).get(1s);
+
+  EXPECT_THROW(client_->bindUnMount(notMountedPath).get(1s), std::exception);
+  EXPECT_FALSE(server_.insecureBindUnmountCalled());
 #endif
 }
 

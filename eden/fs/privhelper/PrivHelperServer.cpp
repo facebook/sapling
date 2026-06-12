@@ -1319,9 +1319,24 @@ UnixSocket::Message PrivHelperServer::processBindUnMountMsg(Cursor& cursor) {
   // findMatchingMountPrefix will throw if mountPath doesn't match
   // any known mount.  We perform this check so that we're not a
   // vector for arbitrarily unmounting things.
-  findMatchingMountPrefix(mountPath);
+  auto mountRoot = findMatchingMountPrefix(mountPath);
 
-  bindUnmount(mountPath.c_str());
+#ifndef __APPLE__
+  if (!disablePrivHelperHardening()) {
+    bindUnmount(mountPath.c_str(), mountRoot);
+    return makeResponse();
+  }
+#endif
+
+#ifndef __APPLE__
+  XLOGF(
+      WARNING,
+      "Using legacy path-based bind unmount for `{}` because `{}` is present",
+      mountPath,
+      kDisablePrivHelperHardeningPath);
+#endif
+  // The rollback marker intentionally restores the old path-based behavior.
+  insecureBindUnmount(mountPath.c_str());
 
   return makeResponse();
 }
@@ -1559,15 +1574,20 @@ folly::Expected<unsigned long, int> getFSID(const char* path) {
   }
   return folly::makeExpected<int>(data.f_fsid);
 }
-} // namespace
 
-void PrivHelperServer::bindUnmount(const char* mountPath) {
-  // Check the current filesystem information for this path,
-  // so we can confirm that it has been unmounted afterwards.
-  const auto origFSID = getFSID(mountPath);
+#ifndef __APPLE__
+folly::Expected<unsigned long, int> getFSID(int fd) {
+  struct statvfs data{};
+  if (fstatvfs(fd, &data) != 0) {
+    return folly::makeUnexpected(errno);
+  }
+  return folly::makeExpected<int>(data.f_fsid);
+}
+#endif
 
-  unmount(mountPath, {});
-
+void waitForUnmount(
+    const char* mountPath,
+    folly::Expected<unsigned long, int> origFSID) {
   // Empirically, the unmount may not be complete when umount2() returns.
   // To work around this, we repeatedly invoke statvfs() on the bind mount
   // until it fails or returns a different filesystem ID.
@@ -1595,6 +1615,69 @@ void PrivHelperServer::bindUnmount(const char* mountPath) {
     }
     sched_yield();
   }
+}
+
+#ifndef __APPLE__
+bool bindUnmountByFd(const folly::File& targetFd, const char* mountPath) {
+  const auto procFdPath = fmt::format("/proc/self/fd/{}", targetFd.fd());
+  // umount2() still takes a path, but this procfs path refers to the already
+  // open target fd. Do not pass UMOUNT_NOFOLLOW here: the procfd magic link is
+  // the mechanism that converts the fd back to a kernel path for umount2().
+  struct stat st{};
+  // This probes procfs support for an already-open fd before deciding whether
+  // to use the explicit legacy fallback.
+  //
+  // @lint-ignore CLANGTIDY facebook-hte-BadCall-stat
+  if (stat(procFdPath.c_str(), &st) != 0) {
+    XLOGF(
+        DBG2,
+        "failed to stat {}; falling back to path-based unmount for {}: {}",
+        procFdPath,
+        mountPath,
+        folly::errnoStr(errno));
+    return false;
+  }
+
+  XLOGF(DBG2, "Unmounting bind mount `{}` through `{}`", mountPath, procFdPath);
+  const auto rc = umount2(procFdPath.c_str(), MNT_DETACH);
+  checkUnixError(
+      rc,
+      "failed to unmount bind mount `",
+      mountPath,
+      "` through `",
+      procFdPath,
+      "`");
+  return true;
+}
+#endif
+} // namespace
+
+void PrivHelperServer::insecureBindUnmount(const char* mountPath) {
+  // Check the current filesystem information for this path,
+  // so we can confirm that it has been unmounted afterwards.
+  const auto origFSID = getFSID(mountPath);
+
+  unmount(mountPath, {});
+  waitForUnmount(mountPath, origFSID);
+}
+
+void PrivHelperServer::bindUnmount(
+    const char* mountPath,
+    folly::StringPiece mountRoot) {
+#ifndef __APPLE__
+  auto targetFd = openBindMountTarget(mountRoot, mountPath);
+  const auto origFSID = getFSID(targetFd.fd());
+  if (bindUnmountByFd(targetFd, mountPath)) {
+    // The privileged unmount already used targetFd. This best-effort
+    // completion check still stats mountPath because targetFd keeps reporting
+    // the detached filesystem until the fd is closed.
+    waitForUnmount(mountPath, origFSID);
+    return;
+  }
+#else
+  (void)mountRoot;
+#endif
+  insecureBindUnmount(mountPath);
 }
 
 void PrivHelperServer::run() {
