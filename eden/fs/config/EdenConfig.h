@@ -2420,7 +2420,7 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<std::string> doctorMinimumKernelVersion{
       "doctor:minimum-kernel-version",
-      "4.11.3-67",
+      "5.12",
       this};
 
   /**
