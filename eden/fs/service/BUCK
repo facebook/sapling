@@ -124,6 +124,7 @@ cpp_binary(
     deps = [
         "//eden/common/utils:user_info",
         "//eden/fs/privhelper:flags",
+        "//eden/fs/privhelper:rollback",
         "//eden/fs/privhelper:server",
         "//folly:exception",
         "//folly:file",
@@ -131,6 +132,7 @@ cpp_binary(
         "//folly/init:init",
         "//folly/logging:init",
         "//folly/logging:logging",
+        "//folly/portability:unistd",
     ],
 )
 
