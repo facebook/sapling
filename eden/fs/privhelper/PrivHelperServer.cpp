@@ -9,6 +9,7 @@
 
 #include "eden/fs/privhelper/PrivHelperServer.h"
 #include "eden/fs/privhelper/PrivHelperConn.h"
+#include "eden/fs/privhelper/PrivHelperRollback.h"
 
 #include <boost/algorithm/string/predicate.hpp>
 #include <fcntl.h>
@@ -28,9 +29,15 @@
 #include <folly/logging/xlog.h>
 #include <folly/portability/Unistd.h>
 #include <folly/system/ThreadName.h>
+#ifndef __APPLE__
+#include <linux/openat2.h>
+#endif
 #include <sys/mount.h>
 #include <sys/stat.h>
 #include <sys/statvfs.h>
+#ifndef __APPLE__
+#include <sys/syscall.h>
+#endif
 #include <sys/types.h>
 #include <chrono>
 #include <csignal>
@@ -73,6 +80,34 @@ namespace {
 constexpr int kRegisteredMountRootOpenFlags = O_PATH | O_DIRECTORY | O_CLOEXEC;
 #endif
 
+#ifndef __APPLE__
+#ifndef OPEN_TREE_CLONE
+#define OPEN_TREE_CLONE 1
+#endif
+#ifndef OPEN_TREE_CLOEXEC
+#define OPEN_TREE_CLOEXEC O_CLOEXEC
+#endif
+#ifndef MOVE_MOUNT_F_EMPTY_PATH
+#define MOVE_MOUNT_F_EMPTY_PATH 0x00000004
+#endif
+#ifndef MOVE_MOUNT_T_EMPTY_PATH
+#define MOVE_MOUNT_T_EMPTY_PATH 0x00000040
+#endif
+
+std::string bindMountTargetSuffix(
+    folly::StringPiece mountRoot,
+    folly::StringPiece mountPath) {
+  auto suffix = mountPath.subpiece(mountRoot.size());
+  if (suffix.empty()) {
+    return ".";
+  }
+  XCHECK_EQ('/', suffix.front());
+  suffix.advance(1);
+  return suffix.empty() ? "." : suffix.str();
+}
+
+#endif
+
 } // namespace
 
 PrivHelperServer::RegisteredMount PrivHelperServer::openRegisteredMount(
@@ -92,6 +127,38 @@ PrivHelperServer::RegisteredMount PrivHelperServer::openRegisteredMount(
 void PrivHelperServer::registerMountPoint(const std::string& mountPath) {
   mountPoints_.erase(mountPath);
   mountPoints_.emplace(mountPath, openRegisteredMount(mountPath));
+}
+
+folly::File PrivHelperServer::openBindMountTarget(
+    folly::StringPiece mountRoot,
+    folly::StringPiece mountPath) {
+#ifdef __APPLE__
+  (void)mountRoot;
+  (void)mountPath;
+  throw std::runtime_error("this system does not support bind mounts");
+#else
+  const auto mountPoint = mountPoints_.find(mountRoot.str());
+  if (mountPoint == mountPoints_.end()) {
+    throwf<std::domain_error>("No FUSE mount found for {}", mountRoot);
+  }
+
+  const auto suffix = bindMountTargetSuffix(mountRoot, mountPath);
+  struct open_how targetHow{};
+  targetHow.flags = O_PATH | O_DIRECTORY | O_CLOEXEC;
+  // Resolve the target relative to the registered mount root in the same
+  // kernel operation that returns the fd. This rejects ".." escapes and
+  // symlink components without a separate check-then-open window.
+  targetHow.resolve = RESOLVE_BENEATH | RESOLVE_NO_SYMLINKS;
+  auto targetFdNum = static_cast<int>(syscall(
+      SYS_openat2,
+      mountPoint->second.rootFd.fd(),
+      suffix.c_str(),
+      &targetHow,
+      sizeof(targetHow)));
+  checkUnixError(
+      targetFdNum, "failed to open bind mount target `", mountPath, "`");
+  return folly::File{targetFdNum, /*ownsFd=*/true};
+#endif
 }
 
 PrivHelperServer::PrivHelperServer() = default;
@@ -966,7 +1033,7 @@ void PrivHelperServer::nfsMount(
 #endif
 }
 
-void PrivHelperServer::bindMount(
+void PrivHelperServer::insecureBindMount(
     const char* clientPath,
     const char* mountPath) {
 #ifdef __APPLE__
@@ -974,10 +1041,57 @@ void PrivHelperServer::bindMount(
   (void)mountPath;
   throw std::runtime_error("this system does not support bind mounts");
 #else
+  // This path is kept only for the root-controlled rollback marker. mount(2)
+  // resolves mountPath by string, so it cannot close the target-path race.
   const int rc =
       mount(clientPath, mountPath, /*type*/ nullptr, MS_BIND, /*data*/ nullptr);
   checkUnixError(
       rc, "failed to bind mount `", clientPath, "` over `", mountPath, "`");
+#endif
+}
+
+void PrivHelperServer::bindMount(
+    const char* clientPath,
+    const char* mountPath,
+    folly::StringPiece mountRoot) {
+#ifdef __APPLE__
+  (void)clientPath;
+  (void)mountPath;
+  (void)mountRoot;
+  throw std::runtime_error("this system does not support bind mounts");
+#else
+  auto targetFd = openBindMountTarget(mountRoot, mountPath);
+  XLOGF(
+      DBG2,
+      "Moving detached bind mount from `{}` to `{}` by fd",
+      clientPath,
+      mountPath);
+
+  // Clone the source mount into a detached tree, then attach it to the target
+  // fd. The target path is not re-resolved by string during the attach.
+  auto treeFdNum = static_cast<int>(syscall(
+      SYS_open_tree,
+      AT_FDCWD,
+      clientPath,
+      OPEN_TREE_CLONE | OPEN_TREE_CLOEXEC));
+  checkUnixError(
+      treeFdNum, "failed to clone bind mount source `", clientPath, "`");
+  folly::File treeFd{treeFdNum, /*ownsFd=*/true};
+
+  const auto rc = static_cast<int>(syscall(
+      SYS_move_mount,
+      treeFd.fd(),
+      "",
+      targetFd.fd(),
+      "",
+      MOVE_MOUNT_F_EMPTY_PATH | MOVE_MOUNT_T_EMPTY_PATH));
+  checkUnixError(
+      rc,
+      "failed to move detached bind mount `",
+      clientPath,
+      "` over `",
+      mountPath,
+      "`");
 #endif
 }
 
@@ -1178,9 +1292,22 @@ UnixSocket::Message PrivHelperServer::processBindMountMsg(Cursor& cursor) {
   // findMatchingMountPrefix will throw if mountPath doesn't match
   // any known mount.  We perform this check so that we're not a
   // vector for mounting things in arbitrary places.
-  auto key = findMatchingMountPrefix(mountPath);
+  auto mountRoot = findMatchingMountPrefix(mountPath);
 
-  bindMount(clientPath.c_str(), mountPath.c_str());
+#ifndef __APPLE__
+  if (disablePrivHelperHardening()) {
+    XLOGF(
+        WARNING,
+        "Using legacy path-based bind mount for `{}` because `{}` is present",
+        mountPath,
+        kDisablePrivHelperHardeningPath);
+    // The rollback marker intentionally restores the old path-based behavior.
+    insecureBindMount(clientPath.c_str(), mountPath.c_str());
+    return makeResponse();
+  }
+#endif
+
+  bindMount(clientPath.c_str(), mountPath.c_str(), mountRoot);
   return makeResponse();
 }
 

@@ -28,6 +28,16 @@ cpp_library(
 )
 
 cpp_library(
+    name = "rollback",
+    srcs = ["PrivHelperRollback.cpp"],
+    headers = ["PrivHelperRollback.h"],
+    deps = [
+        "//folly:string",
+        "//folly/logging:logging",
+    ],
+)
+
+cpp_library(
     name = "conn",
     srcs = ["PrivHelperConn.cpp"],
     headers = ["PrivHelperConn.h"],
@@ -65,6 +75,7 @@ cpp_library(
     ],
     deps = [
         ":nfs_rpc",
+        ":rollback",
         "//eden/common/utils:errno_utils",
         "//eden/common/utils:fsdetect",
         "//eden/common/utils:path",

@@ -173,8 +173,19 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   virtual void nfsMount(std::string mountPath, NFSMountOptions options);
   virtual void unmount(const char* mountPath, UnmountOptions options);
   // Both clientPath and mountPath must be existing directories.
-  virtual void bindMount(const char* clientPath, const char* mountPath);
+  virtual void insecureBindMount(const char* clientPath, const char* mountPath);
+  virtual void bindMount(
+      const char* clientPath,
+      const char* mountPath,
+      folly::StringPiece mountRoot);
   virtual void bindUnmount(const char* mountPath);
+
+ protected:
+  folly::File openBindMountTarget(
+      folly::StringPiece mountRoot,
+      folly::StringPiece mountPath);
+
+ private:
   virtual void setLogFile(folly::File logFile);
   virtual void setDaemonTimeout(std::chrono::nanoseconds duration);
   virtual void setMemoryPriorityForProcess(pid_t pid, int priority);

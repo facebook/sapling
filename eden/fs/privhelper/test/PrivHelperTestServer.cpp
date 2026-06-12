@@ -72,7 +72,7 @@ string PrivHelperTestServer::getPathToMountMarker(StringPiece mountPath) const {
 
 // Bind mounts.
 
-void PrivHelperTestServer::bindMount(
+void PrivHelperTestServer::insecureBindMount(
     const char* /*clientPath*/,
     const char* mountPath) {
   // Create a single file named "bind-mounted" and write "bind-mounted" into it.
@@ -84,6 +84,13 @@ void PrivHelperTestServer::bindMount(
   auto fileInMountPath = getPathToBindMountMarker(mountPath);
   folly::writeFile(StringPiece{"bind-mounted"}, fileInMountPath.c_str());
   allBindMounts_.push_back(fileInMountPath);
+}
+
+void PrivHelperTestServer::bindMount(
+    const char* clientPath,
+    const char* mountPath,
+    folly::StringPiece /*mountRoot*/) {
+  insecureBindMount(clientPath, mountPath);
 }
 
 void PrivHelperTestServer::bindUnmount(const char* mountPath) {
