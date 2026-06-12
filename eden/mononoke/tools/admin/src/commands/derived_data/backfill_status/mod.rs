@@ -28,8 +28,27 @@ use bulk_derivation::BulkDerivation;
 use clap::Args;
 use context::CoreContext;
 use derived_data_manager::DerivedDataManager;
+// Tupperware log reading is FB-internal only; keep it out of OSS builds.
+#[cfg(fbcode_build)]
+use fbinit::FacebookInit;
 use futures::stream;
 use futures::stream::StreamExt;
+#[cfg(fbcode_build)]
+use log_reader::GetSessionRequest;
+#[cfg(fbcode_build)]
+use log_reader::LineContentFilter;
+#[cfg(fbcode_build)]
+use log_reader::LogDirection;
+#[cfg(fbcode_build)]
+use log_reader::LogFilter;
+#[cfg(fbcode_build)]
+use log_reader::ReadLogLinesRequest;
+#[cfg(fbcode_build)]
+use log_reader::SourceIdentity;
+#[cfg(fbcode_build)]
+use log_reader::TaskIdentity;
+#[cfg(fbcode_build)]
+use log_reader_srclients::make_LogReader_srclient;
 use mononoke_app::MononokeApp;
 use mononoke_app::args::RepoArgs;
 use mononoke_types::ChangesetId;
@@ -49,6 +68,8 @@ use requests_table::RowId;
 use requests_table::SqlLongRunningRequestsQueue;
 use strum::IntoEnumIterator;
 use tracing::warn;
+#[cfg(fbcode_build)]
+use tupperware_api_common::JobHandle;
 
 use self::display::BackfillListRow;
 use self::display::display_backfill_list;
@@ -58,6 +79,8 @@ use self::display::display_multi_repo_summary;
 use self::display::display_repo_detail;
 use self::display::display_repo_detail_table;
 use self::display::display_single_repo_detail;
+#[cfg(fbcode_build)]
+use self::display::format_timestamp;
 use self::types::BackfillChildDisplayData;
 use self::types::BackfillChildParams;
 use self::types::BackfillChildResult;
@@ -96,11 +119,19 @@ pub(super) struct BackfillStatusArgs {
     #[clap(long, default_value = "7")]
     lookback: i64,
 
-    /// Show per-request progress details: a per-repository table for
-    /// multi-repo backfills, or a per-child-request table for single
-    /// (large) repo backfills.
+    /// Show extra details:
+    /// - root of a multi-repo backfill: a per-repository table
+    /// - root of a single (large) repo backfill: a per-child-request table
+    /// - an individual child request: the claiming worker's Tupperware logs
+    ///   over that request's processing window
     #[clap(long)]
     detailed: bool,
+
+    /// Max number of worker log lines to show (the tail) for an individual
+    /// child request under --detailed. If more lines exist in the window, a
+    /// `tw log` command to see them all is printed.
+    #[clap(long, default_value_t = 100)]
+    max_log_lines: usize,
 }
 
 pub(super) async fn backfill_status(
@@ -131,6 +162,7 @@ pub(super) async fn backfill_status(
                 repo,
                 manager,
                 args.detailed,
+                args.max_log_lines,
             )
             .await?;
         }
@@ -255,6 +287,7 @@ async fn show_backfill_detail(
     repo: Option<&Repo>,
     manager: Option<&DerivedDataManager>,
     detailed: bool,
+    max_log_lines: usize,
 ) -> Result<()> {
     // Step 1: Verify the backfill exists
     let root_entry = queue
@@ -267,7 +300,15 @@ async fn show_backfill_detail(
             Some(entry) => entry,
             None => {
                 show_backfill_child_request_detail(
-                    ctx, queue, blobstore, repo_names, row_id, repo, manager,
+                    ctx,
+                    queue,
+                    blobstore,
+                    repo_names,
+                    row_id,
+                    repo,
+                    manager,
+                    detailed,
+                    max_log_lines,
                 )
                 .await?;
                 return Ok(());
@@ -641,6 +682,250 @@ async fn load_child_request_rows(
     Ok((rows, new_count))
 }
 
+/// SMC tier serving Tupperware task logs (same backend as the `tw log` CLI).
+#[cfg(fbcode_build)]
+const TW_LOG_READER_TIER: &str = "tupperware.log_reader";
+/// Max bytes to pull per `readLogLines` round-trip.
+#[cfg(fbcode_build)]
+const WORKER_LOG_READ_RESPONSE_SIZE: i32 = 4 * 1024 * 1024;
+/// Lines matching this are noise we don't want when debugging a backfill
+/// child request; filtered out server-side via an inverted `LineContentFilter`.
+#[cfg(fbcode_build)]
+const WORKER_LOG_EXCLUDE_PATTERN: &str = r"\[warm_bookmarks_cache\]";
+/// Pad the processing window on both ends to catch setup/teardown lines.
+#[cfg(fbcode_build)]
+const WORKER_LOG_WINDOW_BUFFER_SECS: i64 = 30;
+
+/// The TW `user` component the async-requests backfill worker runs as. Used to
+/// repair legacy handles that are missing it (see `parse_tw_task_handle`).
+#[cfg(fbcode_build)]
+const BACKFILL_WORKER_TW_USER: &str = "mononoke";
+
+/// Split a `claimed_by` value into a Tupperware job handle (`cluster/user/name`)
+/// and task id (e.g. `tsp_prn/mononoke/backfill_worker/31`).
+///
+/// Workaround: handles written before D108147656 are missing the `user`
+/// component, so they look like `tsp_prn/backfill_worker/31`
+/// (`cluster/name/task`) instead of `tsp_prn/mononoke/backfill_worker/31`
+/// (`cluster/user/name/task`). The LogReader rejects the former with
+/// "Handle must take the form cluster/user/name", so when we see a 2-component
+/// (`cluster/name`) job handle we re-insert the default `mononoke` user. This
+/// can be dropped once all stale db rows have aged out.
+#[cfg(fbcode_build)]
+fn parse_tw_task_handle(handle: &str) -> Option<(String, i32)> {
+    let (job_handle, task) = handle.rsplit_once('/')?;
+    let task_id = task.parse::<i32>().ok()?;
+
+    let job_handle = match job_handle.split('/').collect::<Vec<_>>().as_slice() {
+        [cluster, name] => format!("{cluster}/{BACKFILL_WORKER_TW_USER}/{name}"),
+        _ => job_handle.to_string(),
+    };
+    Some((job_handle, task_id))
+}
+
+/// Fetch up to `max_lines` of the most recent `stderr` for a single child
+/// request over `[start_ts, end_ts]` (epoch seconds), dropping
+/// `warm_bookmarks_cache` noise server-side.
+///
+/// Returns the chronological tail plus a `truncated` flag that is true when more
+/// (older) lines exist in the window than were returned. Since LogReader streams
+/// lines newest-first, we stop reading as soon as we have enough for the tail
+/// rather than loading the whole window.
+#[cfg(fbcode_build)]
+async fn fetch_worker_logs(
+    fb: FacebookInit,
+    job_handle: &str,
+    task_id: i32,
+    start_ts: i64,
+    end_ts: i64,
+    max_lines: usize,
+) -> Result<(Vec<String>, bool)> {
+    let client = make_LogReader_srclient!(fb, tiername = TW_LOG_READER_TIER)?;
+
+    let source_id = SourceIdentity::taskId(TaskIdentity {
+        jobHandle: JobHandle {
+            handle: job_handle.to_string(),
+            ..Default::default()
+        },
+        taskID: task_id,
+        ..Default::default()
+    });
+
+    let session = client
+        .getSession(&GetSessionRequest {
+            sourceId: source_id,
+            filePath: "stderr".to_string(),
+            timestamp: Some(end_ts),
+            filter: Some(LogFilter {
+                startTimestamp: Some(start_ts),
+                endTimestamp: Some(end_ts),
+                // `invertMatch` keeps only lines that do NOT match the pattern,
+                // so this filters warm_bookmarks_cache lines out.
+                lineContentFilters: Some(vec![LineContentFilter {
+                    pattern: WORKER_LOG_EXCLUDE_PATTERN.to_string(),
+                    invertMatch: true,
+                    ..Default::default()
+                }]),
+                ..Default::default()
+            }),
+            ..Default::default()
+        })
+        .await
+        .context("opening log reader session")?
+        .session;
+
+    // Read BACKWARD from `end_ts` toward `start_ts` (how historical windows are
+    // read — FORWARD is for live tailing and from `end_ts` would read past the
+    // window and return nothing). Each response is a chunk going further back in
+    // time, so we stop once we've gathered enough for the tail, then reverse the
+    // chunk order to restore chronological output.
+    let mut next_session = Some(session);
+    let mut batches: Vec<Vec<String>> = Vec::new();
+    let mut collected = 0usize;
+    let mut truncated = false;
+    while let Some(session) = next_session {
+        let resp = client
+            .readLogLines(&ReadLogLinesRequest {
+                session,
+                direction: LogDirection::BACKWARD,
+                responseSizeBytes: WORKER_LOG_READ_RESPONSE_SIZE,
+                ..Default::default()
+            })
+            .await
+            .context("reading log lines")?;
+        let batch: Vec<String> = resp
+            .lines
+            .into_iter()
+            .map(|l| String::from_utf8_lossy(&l.line).trim_end().to_string())
+            .collect();
+        collected += batch.len();
+        batches.push(batch);
+        next_session = resp.session;
+
+        if collected >= max_lines {
+            // Enough for the tail. Anything still unread, or the surplus we'll
+            // trim below, is older than the tail and counts as omitted.
+            truncated = next_session.is_some() || collected > max_lines;
+            break;
+        }
+    }
+
+    batches.reverse();
+    let mut lines: Vec<String> = batches.into_iter().flatten().collect();
+    if lines.len() > max_lines {
+        lines.drain(0..lines.len() - max_lines);
+    }
+    Ok((lines, truncated))
+}
+
+/// Print the claiming worker's Tupperware logs for a single child request,
+/// scoped to that request's processing window. Best-effort: a failure to fetch
+/// the logs is reported inline rather than aborting the status command.
+#[cfg(fbcode_build)]
+async fn show_worker_logs_for_entry(
+    ctx: &CoreContext,
+    entry: &LongRunningRequestEntry,
+    max_log_lines: usize,
+) -> Result<()> {
+    println!();
+    println!("Worker Logs:");
+    println!("{}", "━".repeat(80));
+
+    let Some(claimed_by) = entry.claimed_by.as_ref().map(|c| c.0.as_str()) else {
+        println!("  Request has not been claimed by a worker yet — no logs to show.");
+        println!("{}", "━".repeat(80));
+        return Ok(());
+    };
+
+    let Some((job_handle, task_id)) = parse_tw_task_handle(claimed_by) else {
+        println!("  Could not parse worker task handle from '{claimed_by}'.");
+        println!("{}", "━".repeat(80));
+        return Ok(());
+    };
+
+    let Some(start_secs) = entry
+        .started_processing_at
+        .as_ref()
+        .map(|t| t.timestamp_seconds())
+    else {
+        println!("  No processing window recorded for this request yet.");
+        println!("{}", "━".repeat(80));
+        return Ok(());
+    };
+    // End at the request's terminal timestamp if it has one, else "now" for a
+    // still-running request.
+    let end_secs = entry
+        .failed_at
+        .as_ref()
+        .or(entry.ready_at.as_ref())
+        .map(|t| t.timestamp_seconds())
+        .unwrap_or_else(|| Timestamp::now().timestamp_seconds());
+
+    let start_ts = start_secs - WORKER_LOG_WINDOW_BUFFER_SECS;
+    let end_ts = end_secs + WORKER_LOG_WINDOW_BUFFER_SECS;
+
+    println!("  Worker:  {claimed_by}");
+    println!(
+        "  Window:  {} → {}",
+        format_timestamp(&Timestamp::from_timestamp_secs(start_secs)),
+        format_timestamp(&Timestamp::from_timestamp_secs(end_secs)),
+    );
+    println!("  File:    stderr (excluding warm_bookmarks_cache)");
+    println!();
+
+    match fetch_worker_logs(
+        ctx.fb,
+        &job_handle,
+        task_id,
+        start_ts,
+        end_ts,
+        max_log_lines,
+    )
+    .await
+    {
+        Ok((lines, _)) if lines.is_empty() => {
+            println!("  (no log lines in window — may be GC'd, or all filtered out)");
+        }
+        Ok((lines, truncated)) => {
+            if truncated {
+                println!(
+                    "  (showing the last {} lines; earlier lines in this window omitted)",
+                    lines.len()
+                );
+                println!();
+            }
+            for line in &lines {
+                println!("  {line}");
+            }
+            if truncated {
+                println!("{}", "━".repeat(80));
+                println!("To see the full window, run:");
+                println!(
+                    "    tw log {job_handle}/{task_id} -s \"{}\" -e \"{}\" -p \"{}\" -v",
+                    format_timestamp(&Timestamp::from_timestamp_secs(start_ts)),
+                    format_timestamp(&Timestamp::from_timestamp_secs(end_ts)),
+                    WORKER_LOG_EXCLUDE_PATTERN,
+                );
+            }
+        }
+        Err(e) => println!("  (failed to fetch worker logs: {e:#})"),
+    }
+    println!("{}", "━".repeat(80));
+    Ok(())
+}
+
+/// OSS builds can't reach Tupperware's log reader service.
+#[cfg(not(fbcode_build))]
+async fn show_worker_logs_for_entry(
+    _ctx: &CoreContext,
+    _entry: &LongRunningRequestEntry,
+    _max_log_lines: usize,
+) -> Result<()> {
+    println!();
+    println!("Worker logs are only available in fbcode builds.");
+    Ok(())
+}
+
 fn format_changeset_id(bytes: &[u8]) -> String {
     ChangesetId::from_bytes(bytes)
         .map(|cs_id| cs_id.to_string())
@@ -815,6 +1100,8 @@ async fn show_backfill_child_request_detail(
     row_id: &RowId,
     repo: Option<&Repo>,
     manager: Option<&DerivedDataManager>,
+    detailed: bool,
+    max_log_lines: usize,
 ) -> Result<()> {
     let entry = queue
         .get_request_entry_by_id(ctx, row_id)
@@ -838,15 +1125,18 @@ async fn show_backfill_child_request_detail(
     let boundary_derivation_status =
         load_boundary_derivation_status(ctx, repo, manager, &params).await?;
 
-    display_child_request_detail(
-        &BackfillChildDisplayData {
-            entry,
-            params,
-            result,
-            boundary_derivation_status,
-        },
-        repo_names,
-    );
+    let data = BackfillChildDisplayData {
+        entry,
+        params,
+        result,
+        boundary_derivation_status,
+    };
+    display_child_request_detail(&data, repo_names);
+
+    // With --detailed, also pull the claiming worker's logs for this request.
+    if detailed {
+        show_worker_logs_for_entry(ctx, &data.entry, max_log_lines).await?;
+    }
 
     Ok(())
 }

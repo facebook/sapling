@@ -182,6 +182,10 @@ rust_binary(
             "//eden/mononoke/blobstore:redactedblobstore",
             "//eden/mononoke/repo_attributes/bonsai_blob_mapping:bonsai_blob_mapping",
             "//eden/mononoke/repo_attributes/deletion_log:deletion_log",
+            # Tupperware log reader (for `backfill-status --detailed` worker logs).
+            "//tupperware/api/if:common-rust",
+            "//tupperware/front_end/log_reader/if:log_reader-rust",
+            "//tupperware/front_end/log_reader/if:log_reader-rust-srclients",
         ]
     ),
 )
