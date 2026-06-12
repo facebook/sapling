@@ -42,6 +42,7 @@ use futures::future::BoxFuture;
 use futures::future::try_join3;
 use futures::stream;
 use futures::try_join;
+use futures_stats::FutureStats;
 use futures_stats::TimedTryFutureExt;
 use git_symbolic_refs::GitSymbolicRefsEntry;
 pub use git_types::git_lfs::LfsPointerData;
@@ -56,6 +57,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
 use scuba_ext::FutureStatsScubaExt;
+use scuba_ext::MononokeScubaSampleBuilder;
 use sorted_vector_map::SortedVectorMap;
 use tokio::io::AsyncBufReadExt;
 use tokio::io::BufReader;
@@ -670,36 +672,47 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
         // Await consumers so they flush their in-flight batch and persist
         // mapping rows for commits that made it through before the
         // failure. Also surfaces the consumer's real error instead of the
-        // producer's "Receiver dropped..." SendError cascade.
+        // producer's "Receiver dropped..." SendError cascade — see
+        // `prefer_deepest_error` for the preference rationale.
         let producer_result = producer.try_timed().await;
         drop(bonsai_sender);
-        let bonsai_join = bonsai_creator
+        let bonsai_outer = bonsai_creator
             .try_timed()
             .await
             .context("Error while running bonsai_creator for commits");
-        let finalize_join = batch_finalizer
+        let finalize_outer = batch_finalizer
             .try_timed()
             .await
             .context("Error while running finalize_batch for commits");
-        bonsai_join?
-            .log_future_stats(
-                scuba.clone(),
-                "Completed Bonsai Changeset creation for all commits",
-                "Import".to_string(),
-            )
-            .context("Panic while running bonsai_creator for commits")?;
-        finalize_join?
-            .log_future_stats(
-                scuba.clone(),
-                "Completed Finalize Batch for all commits",
-                "Import".to_string(),
-            )
-            .context("Panic while running finalize_batch for commits")?;
-        producer_result?.log_future_stats(
-            scuba.clone(),
-            "Uploaded Content Blob, Git Blob, Commits and Trees for all commits",
-            "Import".to_string(),
+
+        let finalize_res = peel_joined(
+            finalize_outer,
+            &scuba,
+            "Completed Finalize Batch for all commits",
+            "Panic while running finalize_batch for commits",
         );
+        let bonsai_res = peel_joined(
+            bonsai_outer,
+            &scuba,
+            "Completed Bonsai Changeset creation for all commits",
+            "Panic while running bonsai_creator for commits",
+        );
+        // `producer` is a plain async block (not a `JoinHandle`), so its
+        // `try_timed` shape is `Result<(FutureStats, ()), Error>` — no
+        // inner Result to peel.
+        let producer_res: Result<(), Error> = match producer_result {
+            Ok(tuple) => {
+                tuple.log_future_stats(
+                    scuba.clone(),
+                    "Uploaded Content Blob, Git Blob, Commits and Trees for all commits",
+                    "Import".to_string(),
+                );
+                Ok(())
+            }
+            Err(e) => Err(e),
+        };
+
+        prefer_deepest_error(finalize_res, bonsai_res, producer_res)?;
     } else {
         producer.try_timed().await?.log_future_stats(
             scuba.clone(),
@@ -737,6 +750,43 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
         anyhow::anyhow!("Expected only one strong reference to GitimportAccumulator at this point")
     })?;
     Ok(acc.into_inner())
+}
+
+/// Peel `Result<(FutureStats, Result<R, Error>), Error>` (the shape returned by
+/// `JoinHandle::try_timed().await.context(...)`) to `Result<R, Error>`, logging
+/// the labeled stats entry on the way through. `log_future_stats` is
+/// implemented on the `(FutureStats, T)` tuple — the tuple must be kept intact
+/// when invoking the trait method.
+fn peel_joined<R>(
+    joined: Result<(FutureStats, Result<R, Error>), Error>,
+    scuba: &MononokeScubaSampleBuilder,
+    label: &'static str,
+    panic_context: &'static str,
+) -> Result<R, Error> {
+    let tuple = joined?;
+    let inner = tuple.log_future_stats(scuba.clone(), label, "Import".to_string());
+    inner.context(panic_context)
+}
+
+/// Prefer the deepest consumer's error from a 3-stage pipeline.
+///
+/// When a downstream consumer fails, upstream stages typically also fail with
+/// cascaded `Receiver dropped while sending ...` SendErrors. Those cascades
+/// are consequences, not causes — the downstream's error is the real root
+/// cause. Preference order: `finalize` > `bonsai` > `producer`.
+///
+/// If any of these is an `Err`, return it (deepest wins). If all are `Ok`,
+/// return `Ok(())`.
+fn prefer_deepest_error(
+    finalize: Result<(), Error>,
+    bonsai: Result<(), Error>,
+    producer: Result<(), Error>,
+) -> Result<(), Error> {
+    finalize
+        .err()
+        .or(bonsai.err())
+        .or(producer.err())
+        .map_or(Ok(()), Err)
 }
 
 /// Enum for the different types of targets for a Git ref
@@ -1018,4 +1068,62 @@ pub async fn import_tree_as_single_bonsai_changeset<Uploader: GitUploader>(
                 })
         })
         .await
+}
+
+#[cfg(test)]
+mod tests {
+    use anyhow::anyhow;
+
+    use super::prefer_deepest_error;
+
+    // The bug `prefer_deepest_error` fixes: when batch_finalizer fails first,
+    // the SendError cascades up through bonsai_creator and producer. Before
+    // this helper, the sequential `?` evaluation returned the bonsai cascade
+    // (masking the real finalize error). Asserts the deepest error wins.
+    #[test]
+    fn finalize_wins_over_cascaded_send_errors() {
+        let result = prefer_deepest_error(
+            Err(anyhow!("real root cause from batch_finalizer")),
+            Err(anyhow!(
+                "Receiver dropped while sending Vec<(bonsai_id, git_sha1)>"
+            )),
+            Err(anyhow!(
+                "Receiver dropped while sending Vec<(ExtractedCommit, FileChanges)>"
+            )),
+        );
+        let err = result.expect_err("expected Err — all three results were Err");
+        assert_eq!(
+            err.to_string(),
+            "real root cause from batch_finalizer",
+            "expected finalize's error to win, not a cascaded SendError",
+        );
+    }
+
+    #[test]
+    fn bonsai_wins_when_finalize_ok() {
+        let result = prefer_deepest_error(
+            Ok(()),
+            Err(anyhow!("bonsai-specific failure")),
+            Err(anyhow!("Receiver dropped while sending ...")),
+        );
+        assert_eq!(
+            result.expect_err("expected Err").to_string(),
+            "bonsai-specific failure",
+        );
+    }
+
+    #[test]
+    fn producer_wins_when_only_producer_fails() {
+        let result = prefer_deepest_error(Ok(()), Ok(()), Err(anyhow!("producer-side error")));
+        assert_eq!(
+            result.expect_err("expected Err").to_string(),
+            "producer-side error",
+        );
+    }
+
+    #[test]
+    fn all_ok_returns_ok() {
+        let result = prefer_deepest_error(Ok(()), Ok(()), Ok(()));
+        assert!(result.is_ok(), "all three Ok should return Ok");
+    }
 }
