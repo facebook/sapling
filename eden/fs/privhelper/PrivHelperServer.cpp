@@ -603,6 +603,53 @@ folly::File mountMacFuse(
 
 #ifndef __APPLE__
 namespace {
+folly::File openLinuxFuseDevice() {
+  // We manually call open() here rather than using the folly::File()
+  // constructor just so we can emit a slightly more helpful message on error.
+  const char* devName = "/dev/fuse";
+  const int fd = folly::openNoInt(devName, O_RDWR | O_CLOEXEC);
+  if (fd < 0) {
+    if (errno == ENODEV || errno == ENOENT) {
+      throwSystemError(
+          "failed to open ",
+          devName,
+          ": make sure the fuse kernel module is loaded");
+    } else {
+      throwSystemError("failed to open ", devName);
+    }
+  }
+  return folly::File{fd, /*ownsFd=*/true};
+}
+
+std::string makeLinuxNfsMountOptions(const NFSMountOptions& options) {
+  // Since each mount point will have its own NFS server, we need to manually
+  // specify it.
+  folly::StringPiece noReaddirplusStr = ",nordirplus,";
+  if (options.useReaddirplus) {
+    noReaddirplusStr = ",";
+  }
+
+  // Check if we should use a soft or hard mount.
+  // https://linux.die.net/man/5/nfs
+  folly::StringPiece softOptionStr = "hard";
+  if (options.useSoftMount) {
+    softOptionStr = "soft";
+  }
+
+  return fmt::format(
+      "addr={},vers=3,proto=tcp,port={},mountvers=3,mountproto=tcp,mountport={},"
+      "noresvport,nolock{}{},retrans={},timeo={},rsize={},wsize={}",
+      options.nfsdAddr.getAddressStr(),
+      options.nfsdAddr.getPort(),
+      options.mountdAddr.getPort(),
+      noReaddirplusStr,
+      softOptionStr,
+      options.retransmitAttempts,
+      options.retransmitTimeoutTenthSeconds,
+      options.readIOSize,
+      options.writeIOSize);
+}
+
 /**
  * Configure FUSE read-ahead by writing to
  * /sys/class/bdi/{major}:{minor}/read_ahead_kb
@@ -661,21 +708,7 @@ folly::File PrivHelperServer::fuseMount(
     return mountOSXFuse(mountPath, readOnly, fuseTimeout_, useDevEdenFs_);
   }
 #else
-  // We manually call open() here rather than using the folly::File()
-  // constructor just so we can emit a slightly more helpful message on error.
-  const char* devName = "/dev/fuse";
-  const int fd = folly::openNoInt(devName, O_RDWR | O_CLOEXEC);
-  if (fd < 0) {
-    if (errno == ENODEV || errno == ENOENT) {
-      throwSystemError(
-          "failed to open ",
-          devName,
-          ": make sure the fuse kernel module is loaded");
-    } else {
-      throwSystemError("failed to open ", devName);
-    }
-  }
-  folly::File fuseDev(fd, true);
+  auto fuseDev = openLinuxFuseDevice();
 
   // Prepare the flags and options to pass to mount(2).
   // We currently don't allow these to be customized by the unprivileged
@@ -988,33 +1021,7 @@ void PrivHelperServer::nfsMount(
             options.mountdAddr.describe(),
             options.nfsdAddr.describe()));
   }
-  // Prepare the flags and options to pass to mount(2).
-  // Since each mount point will have its own NFS server, we need to manually
-  // specify it.
-  folly::StringPiece noReaddirplusStr = ",nordirplus,";
-  if (options.useReaddirplus) {
-    noReaddirplusStr = ",";
-  }
-
-  // Check if we should use a soft or hard mount.
-  // https://linux.die.net/man/5/nfs
-  folly::StringPiece softOptionStr = "hard";
-  if (options.useSoftMount) {
-    softOptionStr = "soft";
-  }
-
-  auto mountOpts = fmt::format(
-      "addr={},vers=3,proto=tcp,port={},mountvers=3,mountproto=tcp,mountport={},"
-      "noresvport,nolock{}{},retrans={},timeo={},rsize={},wsize={}",
-      options.nfsdAddr.getAddressStr(),
-      options.nfsdAddr.getPort(),
-      options.mountdAddr.getPort(),
-      noReaddirplusStr,
-      softOptionStr,
-      options.retransmitAttempts,
-      options.retransmitTimeoutTenthSeconds,
-      options.readIOSize,
-      options.writeIOSize);
+  auto mountOpts = makeLinuxNfsMountOptions(options);
 
   // The mount flags.
   // We do not use MS_NODEV.  MS_NODEV prevents mount points from being created
