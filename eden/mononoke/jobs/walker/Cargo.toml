@@ -35,7 +35,7 @@ derivation_queue_thrift = { version = "0.1.0", path = "../../repo_attributes/rep
 derive_more = { version = "1.0.0", features = ["full"] }
 derived_data_manager = { version = "0.1.0", path = "../../derived_data/manager" }
 executor_lib = { version = "0.1.0", path = "../../cmdlib/sharding" }
-facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main", features = ["impl_never_type"] }
 fastlog = { version = "0.1.0", path = "../../derived_data/fastlog" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filenodes = { version = "0.1.0", path = "../../repo_attributes/filenodes" }

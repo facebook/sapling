@@ -14,7 +14,7 @@ bookmarks_types = { version = "0.1.0", path = "bookmarks_types" }
 clap = { version = "4.6.0", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context" }
 derive_more = { version = "1.0.0", features = ["full"] }
-facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main", features = ["impl_never_type"] }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 justknobs_ext = { version = "0.1.0", path = "../../common/rust/justknobs_ext" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }

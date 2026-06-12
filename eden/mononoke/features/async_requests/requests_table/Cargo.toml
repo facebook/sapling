@@ -12,7 +12,7 @@ anyhow = "1.0.102"
 async-trait = "0.1.86"
 async_requests_types = { version = "0.1.0", path = "../types" }
 context = { version = "0.1.0", path = "../../../servers/slapi/slapi_server/context" }
-facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main", features = ["impl_never_type"] }
 metaconfig_types = { version = "0.1.0", path = "../../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

@@ -20,7 +20,7 @@ bytes = { version = "1.11.1", features = ["serde"] }
 caching_ext = { version = "0.1.0", path = "../../../common/rust/caching_ext" }
 context = { version = "0.1.0", path = "../../../servers/slapi/slapi_server/context" }
 dashmap = { version = "6.2.1", features = ["rayon", "serde"] }
-facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main", features = ["impl_never_type"] }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 itertools = "0.14.0"

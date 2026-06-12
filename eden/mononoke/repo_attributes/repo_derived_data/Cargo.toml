@@ -18,7 +18,7 @@ derivation_queue_thrift = { version = "0.1.0", path = "../repo_derivation_queues
 derived_data_manager = { version = "0.1.0", path = "../../derived_data/manager" }
 derived_data_remote = { version = "0.1.0", path = "../../derived_data/remote" }
 ephemeral_blobstore = { version = "0.1.0", path = "../../blobstore/ephemeral_blobstore" }
-facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main", features = ["impl_never_type"] }
 filenodes = { version = "0.1.0", path = "../filenodes" }
 filestore = { version = "0.1.0", path = "../filestore" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }

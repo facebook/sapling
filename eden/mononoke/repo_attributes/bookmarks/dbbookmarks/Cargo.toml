@@ -17,7 +17,7 @@ async-trait = "0.1.86"
 bookmarks = { version = "0.1.0", path = ".." }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../../../servers/slapi/slapi_server/context" }
-facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main", features = ["impl_never_type"] }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 futures_watchdog = { version = "0.1.0", path = "../../../common/futures_watchdog" }
 justknobs_ext = { version = "0.1.0", path = "../../../common/rust/justknobs_ext" }
