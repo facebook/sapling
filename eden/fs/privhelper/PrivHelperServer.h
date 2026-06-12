@@ -173,10 +173,11 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
    * if the user doesn't have access to the mount point.
    *
    * When performBindMountCleanup is true (the default), stale redirection
-   * bind mounts under the checkout are detached before the sanity check.
-   * The takeover path passes false because the kernel preserves legitimate
-   * bind mounts (e.g. Sapling redirections like buck-out) across a graceful
-   * restart, and running cleanup there would unmount live user state.
+   * bind mounts under the checkout are detached after the checkout path passes
+   * the ownership and access checks. The takeover path passes false because
+   * the kernel preserves legitimate bind mounts (e.g. Sapling redirections like
+   * buck-out) across a graceful restart, and running cleanup there would
+   * unmount live user state.
    */
   SanityCheckResult sanityCheckMountPoint(
       const std::string& mountPoint,

@@ -407,13 +407,6 @@ SanityCheckResult PrivHelperServer::sanityCheckMountPoint(
   }
 
   SanityCheckResult result{};
-  if (performBindMountCleanup) {
-    // Clean up any stale bind mounts under this checkout before proceeding.
-    // Skipped on the takeover path so live redirections (e.g. buck-out) that
-    // the kernel preserves across a graceful restart are not detached.
-    result = cleanupStaleBindMounts(mountPoint);
-  }
-
   result.staleCheckoutMountUnmounted =
       detectAndUnmountStaleMount(mountPoint, isNFS, isHardMount);
 
@@ -437,6 +430,17 @@ SanityCheckResult PrivHelperServer::sanityCheckMountPoint(
         folly::errnoStr(e.code().value()));
   }
   sanityCheckOpenedMountPoint(mountPoint, file.fd(), uid_);
+  if (performBindMountCleanup) {
+    // Only clean up mounts under a checkout after the checkout path itself has
+    // passed the ownership and access checks.
+    auto cleanupResult = cleanupStaleBindMounts(mountPoint);
+    result.staleRedirectionMountsFound =
+        cleanupResult.staleRedirectionMountsFound;
+    result.staleRedirectionMountsSucceeded =
+        cleanupResult.staleRedirectionMountsSucceeded;
+    result.staleRedirectionMountsFailed =
+        cleanupResult.staleRedirectionMountsFailed;
+  }
   return result;
 }
 
@@ -455,18 +459,22 @@ PrivHelperServer::openAndSanityCheckMountPoint(
   }
 
   SanityCheckResult result{};
-  if (performBindMountCleanup) {
-    // Clean up any stale bind mounts under this checkout before proceeding.
-    // Skipped on the takeover path so live redirections (e.g. buck-out) that
-    // the kernel preserves across a graceful restart are not detached.
-    result = cleanupStaleBindMounts(mountPoint);
-  }
-
   result.staleCheckoutMountUnmounted =
       detectAndUnmountStaleMount(mountPoint, isNFS, isHardMount);
 
   auto targetFd = openCheckedMountTarget(mountPoint);
   sanityCheckOpenedMountPoint(mountPoint, targetFd.fd(), uid_);
+  if (performBindMountCleanup) {
+    // Only clean up mounts under a checkout after the checkout path itself has
+    // passed the ownership and access checks.
+    auto cleanupResult = cleanupStaleBindMounts(mountPoint);
+    result.staleRedirectionMountsFound =
+        cleanupResult.staleRedirectionMountsFound;
+    result.staleRedirectionMountsSucceeded =
+        cleanupResult.staleRedirectionMountsSucceeded;
+    result.staleRedirectionMountsFailed =
+        cleanupResult.staleRedirectionMountsFailed;
+  }
   return CheckedMountPoint{std::move(targetFd), result};
 }
 #endif
