@@ -23,6 +23,7 @@ bindgen-cli = { git = "https://github.com/jsgf/rust-bindgen", rev = "4d385d21c16
 c2pa = { git = "https://github.com/peekmoar/c2pa-rs", rev = "6bcd530a0b681d828e1b07430058c13427fe8bb1" }
 cxx = { git = "https://github.com/facebookexperimental/cxx.git", rev = "d98f6c434f8e6a018533c31a7a4cf7cdc7252210" }
 cxx-build = { git = "https://github.com/facebookexperimental/cxx.git", rev = "d98f6c434f8e6a018533c31a7a4cf7cdc7252210" }
+gimli = { git = "https://github.com/gimli-rs/gimli.git", rev = "ebad63b48e960270b8d8d0dec74f5b2e54cad13f" }
 imgui = { git = "https://github.com/imgui-rs/imgui-rs.git", rev = "2abba18c08fb5e70c699ba7992342e7ff8573b09" }
 imgui-sys = { git = "https://github.com/imgui-rs/imgui-rs.git", rev = "2abba18c08fb5e70c699ba7992342e7ff8573b09" }
 k = { git = "https://github.com/prnthp-meta/k", rev = "f06b504c563a4763dbf2d47366b868f67d5c9dd2" }
