@@ -40,10 +40,24 @@ struct PythonREPL {
 impl PythonSysConfig {
     pub fn new() -> Self {
         println!("cargo:rerun-if-env-changed=PYTHON_SYS_EXECUTABLE");
-        let python = match env::var_os("PYTHON_SYS_EXECUTABLE") {
+        println!("cargo:rerun-if-env-changed=PYO3_PYTHON");
+        let python_cpython = env::var_os("PYTHON_SYS_EXECUTABLE");
+        let python_pyo3 = env::var_os("PYO3_PYTHON");
+        // We will mix use rust-cpython and pyo3. If they are targeting different pythons, it's
+        // likely going to be a disaster.
+        assert_eq!(
+            python_cpython, python_pyo3,
+            concat!(
+                "PYO3_PYTHON (used by pyo3) and PYTHON_SYS_EXECUTABLE (used by rust-cpython) are inconsistent. ",
+                "This is not supported and might cause issues."
+            )
+        );
+        let python = match python_pyo3 {
             Some(python) => python,
             None => {
-                println!("cargo:warning=PYTHON_SYS_EXECUTABLE is recommended at build time");
+                println!(
+                    "cargo:warning=PYO3_PYTHON or PYTHON_SYS_EXECUTABLE is recommended at build time"
+                );
                 OsString::from("python3")
             }
         };

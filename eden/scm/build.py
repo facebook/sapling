@@ -418,7 +418,7 @@ def cargo_env(args):
         getdeps_install = env.get("GETDEPS_INSTALL_DIR")
         if getdeps_install and "THRIFT" not in env:
             env["THRIFT"] = str(Path(getdeps_install) / "fbthrift/bin/thrift1")
-    env["PYTHON_SYS_EXECUTABLE"] = args.python
+    env["PYTHON_SYS_EXECUTABLE"] = env["PYO3_PYTHON"] = args.python
     env["SAPLING_VERSION"] = args.version
     env["SAPLING_VERSION_HASH"] = version_hash(args.version)
     env["LIB_DIRS"] = str((OUT / "temp").resolve())
