@@ -17,7 +17,7 @@
     "immutable": "^4.3.0",
     "isl-server": "0.0.0",
     "jotai": "^2.6.2",
-    "js-yaml": "^4.1.0",
+    "js-yaml": "^4.2.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "shared": "0.1.0",
