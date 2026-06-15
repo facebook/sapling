@@ -189,9 +189,7 @@ pub struct MononokeRateLimitConfig {
 #[derive(Debug, Clone, PartialEq)]
 pub struct RateLimit {
     pub body: RateLimitBody,
-    #[allow(dead_code)]
     pub target: Option<Target>,
-    #[allow(dead_code)]
     pub fci_metric: FciMetric,
 }
 
