@@ -49,7 +49,7 @@ def exec_compatible_with_target():
 
     return select_with("ovr_config//os/constraints:", os_list) + select_with("ovr_config//cpu/constraints:", cpu_list)
 
-def rust_python_library(deps = None, include_python_sys = False, include_cpython = True, **kwargs):
+def rust_python_library(deps = None, include_python_sys = False, include_cpython = True, pyo3 = False, **kwargs):
     # Python 3 target
     kwargs3 = dict(kwargs)
 
@@ -65,6 +65,8 @@ def rust_python_library(deps = None, include_python_sys = False, include_cpython
         cpython["features"] = cpython.get("features") or ["python3-sys"]
     if include_python_sys:
         deps3.append("fbsource//third-party/rust:python3-sys")
+    if pyo3:
+        deps3.append("fbsource//third-party/rust:pyo3")
 
     kwargs3["name"] = kwargs["name"]
     kwargs3["crate"] = kwargs["name"].replace("-", "_")

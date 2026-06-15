@@ -14,12 +14,11 @@ use std::sync::LazyLock;
 use ffi::Py_DECREF;
 use ffi::Py_IsInitialized;
 use ffi::Py_Main;
-use ffi::PyEval_InitThreads;
 use ffi::PyUnicode_AsWideCharString;
 use ffi::PyUnicode_FromString;
 use libc::c_int;
 use libc::wchar_t;
-use python3_sys as ffi;
+use pyo3::ffi;
 
 type PyChar = wchar_t;
 
@@ -61,7 +60,6 @@ macro_rules! check_status {
                 ffi::PyConfig_Clear(&mut config);
             }
             ffi::Py_ExitStatusException(status);
-            unreachable!();
         }
     };
 }
@@ -126,7 +124,7 @@ static EXTRA_FROZEN_MODULES: LazyLock<ForceSend<[ffi::_frozen; 5]>> = LazyLock::
 #[allow(unexpected_cfgs)]
 pub fn py_initialize(args: &[String], sapling_home: Option<&String>) {
     unsafe {
-        let mut pre_config = ffi::PyPreConfig::default();
+        let mut pre_config = std::mem::zeroed::<ffi::PyPreConfig>();
         ffi::PyPreConfig_InitPythonConfig(&mut pre_config);
 
         pre_config.parse_argv = 0;
@@ -134,7 +132,7 @@ pub fn py_initialize(args: &[String], sapling_home: Option<&String>) {
 
         check_status!(ffi::Py_PreInitialize(&pre_config), None);
 
-        let mut config = ffi::PyConfig::default();
+        let mut config = std::mem::zeroed::<ffi::PyConfig>();
 
         // Ideally we could use PyConfig_InitIsolatedConfig, but we rely on some
         // of the vanilla initialization logic to find the std lib, at least.
@@ -227,8 +225,9 @@ pub fn py_is_initialized() -> bool {
     unsafe { Py_IsInitialized() != 0 }
 }
 
+#[allow(deprecated)]
 pub fn py_init_threads() {
     unsafe {
-        PyEval_InitThreads();
+        ffi::PyEval_InitThreads();
     }
 }
