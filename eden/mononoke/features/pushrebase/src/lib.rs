@@ -325,6 +325,18 @@ pub async fn do_pushrebase_bonsai(
     pushed: &HashSet<BonsaiChangeset>,
     prepushrebase_hooks: &[Box<dyn PushrebaseHook>],
 ) -> Result<PushrebaseOutcome, PushrebaseError> {
+    // Tag every Scuba sample emitted during this pushrebase with the QE
+    // arm derived from the per-request merge-resolution override, so the
+    // MR QE readout can bucket completion, dry-run, and merge-failure
+    // samples by arm without a cross-table join. `bypass` covers
+    // out-of-experiment traffic and the JK default. Rebinding `ctx` here
+    // means every downstream `ctx.scuba()` clone inherits the field.
+    let ctx = ctx.with_mutated_scuba(|mut scuba| {
+        scuba.add("mr_qe_arm", config.merge_resolution_override.qe_arm_str());
+        scuba
+    });
+    let ctx = &ctx;
+
     let PushrebaseRequestIndex {
         changed_files: client_cf,
         changesets: client_bcs,

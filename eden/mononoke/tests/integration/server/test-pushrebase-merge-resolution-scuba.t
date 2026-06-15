@@ -89,3 +89,30 @@
 -- Sanity: not_needed samples report zero counts.
   $ jq -r 'select(.normal.log_tag == "pushrebase_complete" and .normal.mr_outcome == "not_needed") | .int.mr_resolved_files_count' "$TESTTMP/scuba.json" | sort -u
   0
+
+-- The pushes above carried no MERGE_RESOLUTION_OVERRIDE pushvar, so they
+-- defer to the JK and are labeled `bypass` (out-of-experiment / not an
+-- assigned QE arm) on the `mr_qe_arm` column.
+  $ jq -r 'select(.normal.log_tag == "pushrebase_complete") | .normal.mr_qe_arm' "$TESTTMP/scuba.json" | sort -u
+  bypass
+
+-- Exercise the QE arm labels end-to-end via the pushvar. A clean
+-- (non-conflicting) push with MERGE_RESOLUTION_OVERRIDE=true is the
+-- treatment arm -> mr_qe_arm=test; =false is the control arm ->
+-- mr_qe_arm=control. Both land because there is no conflict.
+  $ hg up -q master_bookmark
+  $ echo test_arm_line >> shared.txt
+  $ hg ci -m "client: append (test arm)"
+  $ hg push -r . --to master_bookmark -q --pushvar MERGE_RESOLUTION_OVERRIDE=true
+
+  $ hg up -q master_bookmark
+  $ echo control_arm_line >> shared.txt
+  $ hg ci -m "client: append (control arm)"
+  $ hg push -r . --to master_bookmark -q --pushvar MERGE_RESOLUTION_OVERRIDE=false
+
+-- Cumulative arm distribution: the 3 override-free pushes are `bypass`,
+-- plus one `test` and one `control` from the pushvar-driven pushes.
+  $ jq -r 'select(.normal.log_tag == "pushrebase_complete") | .normal.mr_qe_arm' "$TESTTMP/scuba.json" | sort | uniq -c | awk '{print $2": "$1}'
+  bypass: 3
+  control: 1
+  test: 1

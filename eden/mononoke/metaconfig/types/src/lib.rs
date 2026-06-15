@@ -1065,6 +1065,22 @@ impl MergeResolutionOverride {
             _ => Self::UseJk,
         }
     }
+
+    /// Stable Scuba label for the `mr_qe_arm` column, identifying which QE
+    /// arm a request was assigned to: `ForceOn` -> `"test"`, `ForceOff` ->
+    /// `"control"`, `UseJk` -> `"bypass"`. `"bypass"` covers both
+    /// out-of-experiment traffic and any path that does not honor the
+    /// per-request override (e.g. batched pushrebase), so `test`/`control`
+    /// rows always reflect lands that actually received their assigned
+    /// treatment. Never rename these literals without coordinating with the
+    /// QE readout/dashboards that bucket on `mr_qe_arm`.
+    pub fn qe_arm_str(&self) -> &'static str {
+        match self {
+            Self::ForceOn => "test",
+            Self::ForceOff => "control",
+            Self::UseJk => "bypass",
+        }
+    }
 }
 
 #[cfg(test)]
@@ -1125,6 +1141,13 @@ mod merge_resolution_override_tests {
             MergeResolutionOverride::from_pushvar_value(Some(b"\xff\xfe")),
             MergeResolutionOverride::UseJk,
         );
+    }
+
+    #[test]
+    fn qe_arm_str_maps_each_variant() {
+        assert_eq!(MergeResolutionOverride::ForceOn.qe_arm_str(), "test");
+        assert_eq!(MergeResolutionOverride::ForceOff.qe_arm_str(), "control");
+        assert_eq!(MergeResolutionOverride::UseJk.qe_arm_str(), "bypass");
     }
 }
 
