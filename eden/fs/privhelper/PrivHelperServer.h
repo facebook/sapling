@@ -222,6 +222,18 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
       folly::StringPiece mountPath);
 
  private:
+#ifndef __APPLE__
+  enum class BindUnmountResult {
+    Unmounted,
+    AlreadyUnmounted,
+    ProcFdUnavailable,
+  };
+
+  BindUnmountResult bindUnmountByFd(
+      const folly::File& targetFd,
+      const char* mountPath);
+  virtual int umountBindMountByFd(const char* procFdPath);
+#endif
   virtual void insecureBindUnmount(const char* mountPath);
   virtual void bindUnmount(const char* mountPath, folly::StringPiece mountRoot);
   virtual void setLogFile(folly::File logFile);

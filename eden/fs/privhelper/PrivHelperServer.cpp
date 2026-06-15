@@ -1904,8 +1904,16 @@ void waitForUnmount(
   }
 }
 
+} // namespace
+
 #ifndef __APPLE__
-bool bindUnmountByFd(const folly::File& targetFd, const char* mountPath) {
+int PrivHelperServer::umountBindMountByFd(const char* procFdPath) {
+  return umount2(procFdPath, MNT_DETACH);
+}
+
+PrivHelperServer::BindUnmountResult PrivHelperServer::bindUnmountByFd(
+    const folly::File& targetFd,
+    const char* mountPath) {
   const auto procFdPath = fmt::format("/proc/self/fd/{}", targetFd.fd());
   // umount2() still takes a path, but this procfs path refers to the already
   // open target fd. Do not pass UMOUNT_NOFOLLOW here: the procfd magic link is
@@ -1922,11 +1930,15 @@ bool bindUnmountByFd(const folly::File& targetFd, const char* mountPath) {
         procFdPath,
         mountPath,
         folly::errnoStr(errno));
-    return false;
+    return BindUnmountResult::ProcFdUnavailable;
   }
 
   XLOGF(DBG2, "Unmounting bind mount `{}` through `{}`", mountPath, procFdPath);
-  const auto rc = umount2(procFdPath.c_str(), MNT_DETACH);
+  const auto rc = umountBindMountByFd(procFdPath.c_str());
+  if (rc != 0 && errno == EINVAL) {
+    XLOGF(DBG2, "Bind mount `{}` is already unmounted", mountPath);
+    return BindUnmountResult::AlreadyUnmounted;
+  }
   checkUnixError(
       rc,
       "failed to unmount bind mount `",
@@ -1934,10 +1946,9 @@ bool bindUnmountByFd(const folly::File& targetFd, const char* mountPath) {
       "` through `",
       procFdPath,
       "`");
-  return true;
+  return BindUnmountResult::Unmounted;
 }
 #endif
-} // namespace
 
 void PrivHelperServer::insecureBindUnmount(const char* mountPath) {
   // Check the current filesystem information for this path,
@@ -1954,11 +1965,15 @@ void PrivHelperServer::bindUnmount(
 #ifndef __APPLE__
   auto targetFd = openBindMountTarget(mountRoot, mountPath);
   const auto origFSID = getFSID(targetFd.fd());
-  if (bindUnmountByFd(targetFd, mountPath)) {
+  const auto unmountResult = bindUnmountByFd(targetFd, mountPath);
+  if (unmountResult == BindUnmountResult::Unmounted) {
     // The privileged unmount already used targetFd. This best-effort
     // completion check still stats mountPath because targetFd keeps reporting
     // the detached filesystem until the fd is closed.
     waitForUnmount(mountPath, origFSID);
+    return;
+  }
+  if (unmountResult == BindUnmountResult::AlreadyUnmounted) {
     return;
   }
 #else

@@ -255,6 +255,13 @@ class PrivHelperFdUnmountTestServer : public PrivHelperServer {
     throw std::runtime_error("unexpected path-based bind unmount fallback");
   }
 
+#ifndef __APPLE__
+  int umountBindMountByFd(const char* /* procFdPath */) override {
+    errno = EINVAL;
+    return -1;
+  }
+#endif
+
   std::atomic<bool> insecureBindUnmountCalled_{false};
 };
 
@@ -736,9 +743,7 @@ TEST_F(
 #endif
 }
 
-TEST_F(
-    PrivHelperFdUnmountTest,
-    bindUnmountDoesNotFallBackAfterProcFdUnmountFailure) {
+TEST_F(PrivHelperFdUnmountTest, bindUnmountAllowsAlreadyUnmountedTarget) {
 #ifdef __APPLE__
   GTEST_SKIP() << "Linux-specific procfd bind unmount validation";
 #else
@@ -752,7 +757,7 @@ TEST_F(
 
   client_->takeoverStartup(registeredPath, {}).get(1s);
 
-  EXPECT_THROW(client_->bindUnMount(notMountedPath).get(1s), std::exception);
+  client_->bindUnMount(notMountedPath).get(1s);
   EXPECT_FALSE(server_.insecureBindUnmountCalled());
 #endif
 }
