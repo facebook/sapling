@@ -281,7 +281,6 @@ members = [
   "features/repo_update_logger",
   "git/bundle_uri",
   "git/check_git_wc",
-  "git/git-pool",
   "git/git_env",
   "git/git_types",
   "git/git_types/if",
