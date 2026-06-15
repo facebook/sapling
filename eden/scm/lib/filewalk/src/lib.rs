@@ -40,6 +40,12 @@ pub struct FileResult {
     pub file_type: FileType,
 }
 
+impl FileResult {
+    pub fn is_symlink(&self) -> bool {
+        matches!(self.file_type, FileType::Symlink)
+    }
+}
+
 /// FirstError helps propagate the first error seen in parallel operations.
 ///
 /// It provides a "has_error" method to aid in cancellation. The caller can

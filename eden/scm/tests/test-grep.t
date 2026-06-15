@@ -331,6 +331,23 @@ Test grep skips binary files:
   $ sl grep match
   text_file:text match
 
+#if symlink
+Test grep skips symlink blobs:
+  $ newclientrepo symlink-test
+  $ echo 'target content' > target_file
+  $ ln -s target_file sym_link
+  $ sl add target_file sym_link
+  $ sl commit -qm 'add symlink'
+  $ sl grep target_file
+  [1]
+  $ sl grep -l target_file
+  [1]
+  $ sl grep -T json target_file
+  []
+  $ sl grep 'target content'
+  target_file:target content
+#endif
+
 Test grep with --include filters by file pattern:
   $ newclientrepo include-test
   $ mkdir -p src lib

@@ -308,6 +308,10 @@ impl<'a> RelativizeOnce<'a> {
     }
 }
 
+fn should_grep_file(file_result: &filewalk::FileResult) -> bool {
+    !file_result.is_symlink()
+}
+
 /// A grepper that searches file contents for matches using the plain text printer.
 pub(crate) struct Grepper<'a, W: Write> {
     regex_matcher: RegexMatcher,
@@ -1014,6 +1018,10 @@ pub(crate) fn run_standard_grep_with_writer<W: Write>(
         }
 
         for file_result in file_batch {
+            if !should_grep_file(&file_result) {
+                continue;
+            }
+
             if let Err(e) = grepper.grep_file(&file_result.path, &file_result.data) {
                 first_error.send_error(e.into());
                 break;
@@ -1068,6 +1076,10 @@ pub(crate) fn run_summary_grep_with_writer<W: Write>(
         }
 
         for file_result in file_batch {
+            if !should_grep_file(&file_result) {
+                continue;
+            }
+
             if let Err(e) = grepper.grep_file(&file_result.path, &file_result.data) {
                 first_error.send_error(e.into());
                 break;
@@ -1153,6 +1165,10 @@ pub(crate) fn grep_files_json(
         }
 
         for file_result in file_batch {
+            if !should_grep_file(&file_result) {
+                continue;
+            }
+
             let display_path = RelativizeOnce::new(relativizer, &file_result.path);
 
             if files_only {
