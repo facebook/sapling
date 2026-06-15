@@ -9,6 +9,8 @@
 
 #include "eden/fs/fuse/FuseRequestContext.h"
 
+#include <cerrno>
+
 #include <folly/logging/xlog.h>
 
 #include "eden/common/telemetry/RequestMetricsScope.h"
@@ -16,12 +18,21 @@
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/notifications/Notifier.h"
 #include "eden/fs/telemetry/EdenErrorInfoBuilder.h"
-#include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/ErrorLogger.h"
 
 using namespace folly;
 
 namespace facebook::eden {
+
+namespace {
+// Returns true if a FUSE errno is an unexpected error worth logging to
+// perfpipe_edenfs_errors.
+constexpr bool shouldLogFuseError(int errnum) {
+  return errnum == EIO || errnum == ENOSPC || errnum == EROFS ||
+      errnum == EDQUOT || errnum == ENOMEM || errnum == ENFILE ||
+      errnum == EMFILE;
+}
+} // namespace
 
 FuseRequestContext::FuseRequestContext(
     FuseChannel* channel,
@@ -59,9 +70,14 @@ void FuseRequestContext::systemErrorHandler(
     errnum = err.code().value();
   }
   XLOG(DBG5, folly::exceptionStr(err));
-  channel_->getErrorLogger().log(
-      EdenErrorInfo::fuse(err, fuseHeader_.nodeid, channel_->getMountPath())
-          .withErrorCode(errnum));
+  if (shouldLogFuseError(errnum)) {
+    channel_->getErrorLogger().log(
+        EdenErrorInfo::fuse(
+            ErrorArg::fromExceptionWithoutTrace(err),
+            fuseHeader_.nodeid,
+            channel_->getMountPath())
+            .withErrorCode(errnum));
+  }
   replyError(errnum);
   if (notifier) {
     notifier->showNetworkNotification(err);
@@ -73,7 +89,10 @@ void FuseRequestContext::genericErrorHandler(
     Notifier* FOLLY_NULLABLE notifier) {
   XLOG(DBG5, folly::exceptionStr(err));
   channel_->getErrorLogger().log(
-      EdenErrorInfo::fuse(err, fuseHeader_.nodeid, channel_->getMountPath()));
+      EdenErrorInfo::fuse(
+          ErrorArg::fromExceptionWithoutTrace(err),
+          fuseHeader_.nodeid,
+          channel_->getMountPath()));
   replyError(EIO);
   if (notifier) {
     notifier->showNetworkNotification(err);

@@ -16,13 +16,18 @@
 #include <sys/utsname.h>
 #endif
 #include <cerrno>
+#include <system_error>
 
+#include "eden/common/telemetry/SessionInfo.h"
 #include "eden/common/utils/CaseSensitivity.h"
 #include "eden/common/utils/EnumValue.h"
 #include "eden/common/utils/ProcessInfoCache.h"
+#include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/fuse/FuseDispatcher.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/ErrorLogger.h"
+#include "eden/fs/telemetry/test/CapturingScribeLogger.h"
 #include "eden/fs/testharness/FakeFuse.h"
 #include "eden/fs/testharness/TestDispatcher.h"
 
@@ -89,7 +94,8 @@ class FuseChannelTest : public ::testing::Test {
         std::make_shared<ProcessInfoCache>(),
         /*fsEventLogger=*/nullptr,
         /*edenFsEventsLogger=*/nullptr,
-        /*errorLogger=*/noopErrorLogger_,
+        /*errorLogger=*/
+        errorLoggerOverride_ ? *errorLoggerOverride_ : noopErrorLogger_,
         std::chrono::seconds(60),
         /*notifications=*/nullptr,
         CaseSensitivity::Sensitive,
@@ -147,6 +153,15 @@ class FuseChannelTest : public ::testing::Test {
   FakeFuse fuse_;
   EdenStatsPtr stats_ = makeRefPtr<EdenStats>();
   ErrorLogger noopErrorLogger_{nullptr, {}, nullptr};
+  // Error-logging tests inject capturingErrorLogger_ via errorLoggerOverride_
+  // so they can inspect what got logged to perfpipe_edenfs_errors.
+  std::shared_ptr<CapturingScribeLogger> scribe_ =
+      std::make_shared<CapturingScribeLogger>();
+  std::shared_ptr<EdenConfig> edenConfig_ = EdenConfig::createTestEdenConfig();
+  std::shared_ptr<ReloadableConfig> reloadableConfig_ =
+      std::make_shared<ReloadableConfig>(edenConfig_);
+  ErrorLogger capturingErrorLogger_{scribe_, SessionInfo{}, reloadableConfig_};
+  ErrorLogger* errorLoggerOverride_ = nullptr;
   TestDispatcher* dispatcher_;
   AbsolutePath mountPath_{canonicalPath("/fake/mount/path")};
 };
@@ -510,6 +525,42 @@ TEST_F(FuseChannelTest, testDestroyWithPendingRequests) {
   // is done.
   EXPECT_TRUE(completeFuture.isReady());
   std::move(completeFuture).get(kTimeout);
+}
+
+TEST_F(FuseChannelTest, unexpectedErrnoIsLogged) {
+  // EIO is a genuine failure, so it should be logged to perfpipe_edenfs_errors.
+  edenConfig_->enableErrorLogging.setValue(true, ConfigSourceType::UserConfig);
+  errorLoggerOverride_ = &capturingErrorLogger_;
+  auto channel = createChannel();
+  performInit(channel.get());
+
+  auto id = fuse_.sendLookup(FUSE_ROOT_ID, "foo");
+  auto req = dispatcher_->waitForLookup(id);
+  req.promise.setException(
+      std::system_error(EIO, std::generic_category(), "injected I/O error"));
+  auto received = fuse_.recvResponse();
+  EXPECT_EQ(id, received.header.unique);
+  EXPECT_NE(0, received.header.error);
+
+  EXPECT_EQ(1, scribe_->messages().size());
+}
+
+TEST_F(FuseChannelTest, expectedErrnoIsNotLogged) {
+  // ENOENT is a normal, expected FUSE response, so it should NOT be logged.
+  edenConfig_->enableErrorLogging.setValue(true, ConfigSourceType::UserConfig);
+  errorLoggerOverride_ = &capturingErrorLogger_;
+  auto channel = createChannel();
+  performInit(channel.get());
+
+  auto id = fuse_.sendLookup(FUSE_ROOT_ID, "foo");
+  auto req = dispatcher_->waitForLookup(id);
+  req.promise.setException(
+      std::system_error(ENOENT, std::generic_category(), "no such file"));
+  auto received = fuse_.recvResponse();
+  EXPECT_EQ(id, received.header.unique);
+  EXPECT_NE(0, received.header.error);
+
+  EXPECT_TRUE(scribe_->messages().empty());
 }
 
 TEST_F(FuseChannelTest, interruptLookups) {
