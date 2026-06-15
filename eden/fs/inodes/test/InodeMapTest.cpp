@@ -11,12 +11,17 @@
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
 
+#include "eden/common/telemetry/SessionInfo.h"
 #include "eden/common/utils/Bug.h"
+#include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/store/ObjectFetchContext.h"
+#include "eden/fs/telemetry/ErrorLogger.h"
+#include "eden/fs/telemetry/test/CapturingScribeLogger.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestMount.h"
 #include "eden/fs/testharness/TestUtil.h"
@@ -828,4 +833,43 @@ TEST(InodeMap, totalInodeCountFastMatchesInodeCounts) {
 
   EXPECT_EQ(getTotalFromCounts(), inodeMap->getTotalInodeCountFast());
   EXPECT_LT(inodeMap->getTotalInodeCountFast(), countBeforeForget);
+}
+
+TEST(InodeMap, inodeLoadFailureLogsError) {
+  auto scribe = std::make_shared<CapturingScribeLogger>();
+  auto config = EdenConfig::createTestEdenConfig();
+  config->enableErrorLogging.setValue(true, ConfigSourceType::UserConfig);
+  auto reloadableConfig = std::make_shared<ReloadableConfig>(config);
+  auto errorLogger =
+      std::make_shared<ErrorLogger>(scribe, SessionInfo{}, reloadableConfig);
+
+  auto builder = FakeTreeBuilder();
+  builder.setFile("src/main.c", "int main() { return 0; }\n");
+  TestMount testMount{
+      builder,
+      /*startReady=*/false,
+      /*enableActivityBuffer=*/true,
+      kPathMapDefaultCaseSensitive,
+      errorLogger};
+
+  auto rootInode = testMount.getEdenMount()->getRootInode();
+  auto srcFuture =
+      rootInode->getOrLoadChild("src"_pc, ObjectFetchContext::getNullContext())
+          .semi()
+          .via(testMount.getServerExecutor().get());
+  testMount.drainServerExecutor();
+  EXPECT_FALSE(srcFuture.isReady());
+
+  builder.triggerError(
+      "src", std::domain_error("rejecting lookup for src tree"));
+  testMount.drainServerExecutor();
+  ASSERT_TRUE(srcFuture.isReady());
+  EXPECT_THROW(std::move(srcFuture).get(), std::domain_error);
+
+  ASSERT_EQ(scribe->messages().size(), 1);
+  const auto& msg = scribe->messages()[0];
+  EXPECT_NE(msg.find("object_store"), std::string::npos)
+      << "Should contain component, got: " << msg;
+  EXPECT_NE(msg.find("inode_loading_failed"), std::string::npos)
+      << "Should contain error_type, got: " << msg;
 }

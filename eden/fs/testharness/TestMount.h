@@ -39,6 +39,7 @@ namespace facebook::eden {
 class BlobCache;
 class TreeCache;
 class CheckoutConfig;
+class ErrorLogger;
 class FakeBackingStore;
 class FakeFuse;
 class FakePrivHelper;
@@ -86,7 +87,8 @@ class TestMount {
    */
   TestMount(
       bool enableActivityBuffer = true,
-      CaseSensitivity caseSensitivity = kPathMapDefaultCaseSensitive);
+      CaseSensitivity caseSensitivity = kPathMapDefaultCaseSensitive,
+      std::shared_ptr<ErrorLogger> errorLogger = nullptr);
 
   /**
    * Create a new TestMount
@@ -110,7 +112,8 @@ class TestMount {
       FakeTreeBuilder& rootBuilder,
       bool startReady = true,
       bool enableActivityBuffer = true,
-      CaseSensitivity caseSensitivity = kPathMapDefaultCaseSensitive);
+      CaseSensitivity caseSensitivity = kPathMapDefaultCaseSensitive,
+      std::shared_ptr<ErrorLogger> errorLogger = nullptr);
   explicit TestMount(
       FakeTreeBuilder&& rootBuilder,
       bool enableActivityBuffer = true,
@@ -438,6 +441,7 @@ class TestMount {
    */
   std::atomic<uint64_t> commitNumber_{1};
 
+  std::shared_ptr<ErrorLogger> errorLogger_;
   std::shared_ptr<FakeClock> clock_ = std::make_shared<FakeClock>();
   std::shared_ptr<FakePrivHelper> privHelper_;
 

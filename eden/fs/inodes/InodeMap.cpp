@@ -19,12 +19,16 @@
 #include "eden/common/utils/TimeUtil.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
+#include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/ParentInodeInfo.h"
+#include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/telemetry/EdenErrorInfoBuilder.h"
 #include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/EdenStats.h"
+#include "eden/fs/telemetry/ErrorLogger.h"
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/utils/NotImplemented.h"
 
@@ -218,6 +222,11 @@ void InodeMap::initializeFromTakeover(
           "inode number {} has a negative numFsReferences number",
           *entry.inodeNumber());
       XLOG(ERR, message);
+      mount_->getServerState()->getErrorLogger().log(
+          EdenErrorInfo::takeover(message)
+              .withInode(*entry.inodeNumber())
+              .withMountPoint(mount_->getPath().asString())
+              .withErrorType("takeover_negative_refcount"));
       throw std::runtime_error(message);
     }
 
@@ -547,6 +556,13 @@ InodeMap::PromiseVector InodeMap::inodeLoadComplete(InodeBase* inode) {
   } catch (...) {
     auto ew = folly::exception_wrapper{std::current_exception()};
     XLOGF(ERR, "error marking inode {} loaded: {}", number, ew.what());
+    ew.with_exception([&](const std::exception& e) {
+      mount_->getServerState()->getErrorLogger().log(
+          EdenErrorInfo::objectStore(e)
+              .withInode(number.getRawValue())
+              .withMountPoint(mount_->getPath().asString())
+              .withErrorType("inode_load_complete_failed"));
+    });
     for (auto& promise : promises) {
       promise.setException(ew);
     }
@@ -577,6 +593,13 @@ void InodeMap::inodeLoadFailed(
   // This data will help us understand the impact of X2P errors on EdenFS.
   edenFsEventsLogger_->logEvent(
       InodeLoadingFailed{errStr.toStdString(), number.getRawValue()});
+  ex.with_exception([&](const std::exception& e) {
+    mount_->getServerState()->getErrorLogger().log(
+        EdenErrorInfo::objectStore(ErrorArg::fromExceptionWithoutTrace(e))
+            .withInode(number.getRawValue())
+            .withMountPoint(mount_->getPath().asString())
+            .withErrorType("inode_loading_failed"));
+  });
   stats_->increment(&InodeMapStats::lookupInodeError, promises.size());
 }
 
@@ -1209,6 +1232,10 @@ optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
           inode->getNodeId(),
           inode->getLogPath(),
           folly::exceptionStr(ex));
+      mount_->getServerState()->getErrorLogger().log(
+          EdenErrorInfo::overlay(ex, inode->getNodeId().getRawValue())
+              .withMountPoint(mount_->getPath().asString())
+              .withErrorType("overlay_unload_failed"));
     }
   }
 

@@ -80,8 +80,12 @@ bool TestMountFile::operator==(const TestMountFile& other) const {
       type == other.type;
 }
 
-TestMount::TestMount(bool enableActivityBuffer, CaseSensitivity caseSensitivity)
-    : privHelper_{make_shared<FakePrivHelper>()},
+TestMount::TestMount(
+    bool enableActivityBuffer,
+    CaseSensitivity caseSensitivity,
+    std::shared_ptr<ErrorLogger> errorLogger)
+    : errorLogger_{std::move(errorLogger)},
+      privHelper_{make_shared<FakePrivHelper>()},
       serverExecutor_{make_shared<folly::ManualExecutor>()} {
   // Initialize the temporary directory.
   // This sets both testDir_ and config_.
@@ -125,7 +129,8 @@ TestMount::TestMount(bool enableActivityBuffer, CaseSensitivity caseSensitivity)
       make_shared<ProcessInfoCache>(),
       make_shared<NullStructuredLogger>(),
       make_shared<NullStructuredLogger>(),
-      make_shared<ErrorLogger>(nullptr, SessionInfo{}, nullptr),
+      errorLogger_ ? errorLogger_
+                   : make_shared<ErrorLogger>(nullptr, SessionInfo{}, nullptr),
       make_shared<NullScribeLogger>(),
       reloadableConfig,
       *edenConfig_,
@@ -141,8 +146,9 @@ TestMount::TestMount(
     FakeTreeBuilder& rootBuilder,
     bool startReady,
     bool enableActivityBuffer,
-    CaseSensitivity caseSensitivity)
-    : TestMount(enableActivityBuffer, caseSensitivity) {
+    CaseSensitivity caseSensitivity,
+    std::shared_ptr<ErrorLogger> errorLogger)
+    : TestMount(enableActivityBuffer, caseSensitivity, std::move(errorLogger)) {
   // Create treeCache
   edenConfig_ = EdenConfig::createTestEdenConfig();
 
