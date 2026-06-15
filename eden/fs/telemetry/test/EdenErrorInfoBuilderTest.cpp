@@ -14,7 +14,12 @@
 #include <folly/CPortability.h>
 
 #include "eden/common/telemetry/DynamicEvent.h"
+#include "eden/common/telemetry/SessionInfo.h"
+#include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/telemetry/DaemonError.h"
+#include "eden/fs/telemetry/ErrorLogger.h"
+#include "eden/fs/telemetry/test/CapturingScribeLogger.h"
 
 #include "eden/fs/telemetry/ErrorArg.h"
 #include "eden/fs/telemetry/ThrowTraceCapture.h"
@@ -152,6 +157,24 @@ TEST(EdenErrorInfoTest, SparseFieldsSerializedIntoExtrasJsonColumn) {
   ASSERT_NE(thriftIt, thriftDe.getStringMap().end());
   EXPECT_NE(thriftIt->second.find("client_command_name"), std::string::npos);
   EXPECT_NE(thriftIt->second.find("mount"), std::string::npos);
+}
+
+TEST(EdenErrorInfoTest, ThriftErrorLoggedThroughErrorLogger) {
+  auto scribe = std::make_shared<CapturingScribeLogger>();
+  auto config = EdenConfig::createTestEdenConfig();
+  config->enableErrorLogging.setValue(true, ConfigSourceType::UserConfig);
+  auto reloadableConfig = std::make_shared<ReloadableConfig>(config);
+  ErrorLogger errorLogger{scribe, SessionInfo{}, reloadableConfig};
+
+  std::runtime_error ex("mount not found");
+  errorLogger.log(EdenErrorInfo::thrift(ex, "unmount"));
+
+  ASSERT_EQ(scribe->messages().size(), 1);
+  const auto& msg = scribe->messages()[0];
+  EXPECT_NE(msg.find("thrift"), std::string::npos)
+      << "Should contain component, got: " << msg;
+  EXPECT_NE(msg.find("unmount"), std::string::npos)
+      << "Should contain client_command_name in extras, got: " << msg;
 }
 
 TEST(EdenErrorInfoTest, SymbolizationIsDeferredUntilCreate) {

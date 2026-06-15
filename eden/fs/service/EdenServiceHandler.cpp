@@ -863,8 +863,13 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_mount(
                return server_
                    ->mount(std::move(initialConfig), *argument->readOnly())
                    .unit();
-             }).thenError([](const folly::exception_wrapper& ex) {
+             }).thenError([this](const folly::exception_wrapper& ex) {
                XLOGF(ERR, "Error: {}", ex.what());
+               ex.with_exception([&](const std::exception& e) {
+                 server_->getServerState()->getErrorLogger().log(
+                     EdenErrorInfo::thrift(
+                         ErrorArg::fromExceptionWithoutTrace(e), "mount"));
+               });
                throw newEdenError(ex);
              }))
       .semi();
@@ -878,7 +883,12 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_unmount(
              makeImmediateFutureWith([&]() mutable {
                auto mountPath = absolutePathFromThrift(*mountPoint);
                return server_->unmount(mountPath, UnmountOptions{});
-             }).thenError([](const folly::exception_wrapper& ex) {
+             }).thenError([this](const folly::exception_wrapper& ex) {
+               ex.with_exception([&](const std::exception& e) {
+                 server_->getServerState()->getErrorLogger().log(
+                     EdenErrorInfo::thrift(
+                         ErrorArg::fromExceptionWithoutTrace(e), "unmount"));
+               });
                throw newEdenError(ex);
              }))
       .semi();
@@ -895,7 +905,12 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_unmountV2(
                    absolutePathFromThrift(*unmountArg->mountId()->mountPoint());
                return server_->unmount(
                    mountPath, UnmountOptions{.force = *unmountArg->useForce()});
-             }).thenError([](const folly::exception_wrapper& ex) {
+             }).thenError([this](const folly::exception_wrapper& ex) {
+               ex.with_exception([&](const std::exception& e) {
+                 server_->getServerState()->getErrorLogger().log(
+                     EdenErrorInfo::thrift(
+                         ErrorArg::fromExceptionWithoutTrace(e), "unmount"));
+               });
                throw newEdenError(ex);
              }))
       .semi();
@@ -2907,6 +2922,10 @@ void EdenServiceHandler::sync_changesSinceV2(
             XLOG(
                 DFATAL,
                 "FileChangeJournalDetal::isPath1Valid should never be false");
+            server_->getServerState()->getErrorLogger().log(
+                EdenErrorInfo::thrift(
+                    "FileChangeJournalDelta::isPath1Valid should never be false",
+                    "changesSince"));
           }
 
           // Even though we picked up toSequence previously, if there was a
