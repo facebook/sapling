@@ -2,7 +2,7 @@
 #require no-eden
 
 Tests for the pytoolsim automerge file type, used by the checked-in toolsim
-manifest genai/msl/rl/projects/toolsim/simulated_apps/cli_name_map_generated.py.
+manifest genai/msl/rl/projects/toolsim/scripts/serve_simulators_host/cli_name_map_generated.py.
 That file is generated from per-tool toolsim.toml markers (one per CLI dir), so
 two engineers adding two different tools each insert an alphabetically-sorted
 entry into the same `CLI_TO_SIM_TOOL_NAME` dict and `CONFIGURED_TOOLS` tuple.
