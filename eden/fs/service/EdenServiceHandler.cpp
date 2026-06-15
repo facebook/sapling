@@ -1615,10 +1615,25 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_addBindMount(
   auto fut = mountHandle.getEdenMount().ensureDirectoryExists(
       repoPath, helper->getFetchContext());
   return std::move(fut)
-      .thenValue([privHelper,
+      .thenValue([self = shared_from_this(),
+                  privHelper,
                   target = absolutePathFromThrift(*targetPath),
-                  pathInMountDir = absRepoPath.copy()](TreeInodePtr) {
-        return privHelper->bindMount(target.view(), pathInMountDir.view());
+                  pathInMountDir = absRepoPath.copy(),
+                  mountPath = mountHandle.getEdenMount().getPath().asString(),
+                  filePath = absRepoPath.asString()](TreeInodePtr) {
+        return privHelper->bindMount(target.view(), pathInMountDir.view())
+            .thenError([self, mountPath, filePath](
+                           const folly::exception_wrapper& ex) {
+              ex.with_exception([&](const std::exception& e) {
+                self->server_->getServerState()->getErrorLogger().log(
+                    EdenErrorInfo::privhelper(
+                        ErrorArg::fromExceptionWithoutTrace(e))
+                        .withMountPoint(mountPath)
+                        .withFilePath(filePath)
+                        .withErrorType("bind_mount"));
+              });
+              throw newEdenError(ex);
+            });
       })
       .ensure([mountHandle, helper = std::move(helper)] {})
       .semi();
@@ -1632,8 +1647,25 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_removeBindMount(
 
   auto repoPath = RelativePathPiece{*repoPathStr};
   auto absRepoPath = mountHandle.getEdenMount().getPath() + repoPath;
-  return server_->getServerState()->getPrivHelper()->bindUnMount(
-      absRepoPath.view());
+  return server_->getServerState()
+      ->getPrivHelper()
+      ->bindUnMount(absRepoPath.view())
+      .thenError([this,
+                  self = shared_from_this(),
+                  mountPath = mountHandle.getEdenMount().getPath().asString(),
+                  filePath = absRepoPath.asString()](
+                     const folly::exception_wrapper& ex) {
+        ex.with_exception([&](const std::exception& e) {
+          server_->getServerState()->getErrorLogger().log(
+              EdenErrorInfo::privhelper(ErrorArg::fromExceptionWithoutTrace(e))
+                  .withMountPoint(mountPath)
+                  .withFilePath(filePath)
+                  .withErrorType("bind_unmount"));
+        });
+        throw newEdenError(ex);
+      })
+      .ensure([mountHandle, helper = std::move(helper)] {})
+      .semi();
 }
 
 void EdenServiceHandler::getCurrentJournalPosition(
