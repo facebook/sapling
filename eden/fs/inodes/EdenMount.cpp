@@ -63,7 +63,9 @@
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/StatsFetchContext.h"
 #include "eden/fs/store/TreeLookupProcessor.h"
+#include "eden/fs/telemetry/EdenErrorInfoBuilder.h"
 #include "eden/fs/telemetry/EdenFsEventsLogger.h"
+#include "eden/fs/telemetry/ErrorLogger.h"
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/EdenError.h"
@@ -1559,6 +1561,12 @@ struct EdenMount::CheckoutInProgressGuard {
     auto mount = mount_;
     mount_ = nullptr;
     if (applyResetState(mount, res.hasException())) {
+      res.exception().with_exception([&](const std::exception& ex) {
+        mount->getServerState()->getErrorLogger().log(
+            EdenErrorInfo::objectStore(ErrorArg::fromExceptionWithoutTrace(ex))
+                .withMountPoint(mount->getPath().asString())
+                .withErrorType("checkout_update_error"));
+      });
       return folly::Try<std::vector<CheckoutConflict>>{
           newEdenError(res.exception())};
     }

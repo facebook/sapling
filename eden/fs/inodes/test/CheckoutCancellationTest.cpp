@@ -11,13 +11,18 @@
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
 
+#include "eden/common/telemetry/SessionInfo.h"
 #include "eden/common/utils/FaultInjector.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/RefPtr.h"
+#include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/ParentCommit.h"
+#include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/store/ObjectFetchContext.h"
+#include "eden/fs/telemetry/ErrorLogger.h"
+#include "eden/fs/telemetry/test/CapturingScribeLogger.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestMount.h"
@@ -274,6 +279,69 @@ TEST_P(CheckoutCancellationTest, CancellationAtInodeCheckoutStage) {
 
   EXPECT_FALSE(testMount.hasFileAt("file2.txt"))
       << "file2.txt should have been removed";
+}
+
+TEST_F(CheckoutCancellationTest, CancelledCheckoutLogsError) {
+  auto scribe = std::make_shared<CapturingScribeLogger>();
+  auto config = EdenConfig::createTestEdenConfig();
+  config->enableErrorLogging.setValue(true, ConfigSourceType::UserConfig);
+  auto reloadableConfig = std::make_shared<ReloadableConfig>(config);
+  auto errorLogger =
+      std::make_shared<ErrorLogger>(scribe, SessionInfo{}, reloadableConfig);
+
+  auto builder1 = FakeTreeBuilder();
+  builder1.setFile("file1.txt", "content1\n");
+  TestMount testMount{
+      builder1, true, true, kPathMapDefaultCaseSensitive, errorLogger};
+
+  auto builder2 = builder1.clone();
+  builder2.replaceFile("file1.txt", "modified\n");
+  builder2.finalize(testMount.getBackingStore(), true);
+  auto commit2 = testMount.getBackingStore()->putCommit(RootId{"2"}, builder2);
+  commit2->setReady();
+
+  testMount.updateEdenConfig(
+      {{"experimental:propagate-checkout-errors", "true"}});
+
+  folly::CancellationSource cancelSource;
+  auto cancellationToken = cancelSource.getToken();
+
+  testMount.getServerState()->getFaultInjector().injectBlockWithCancel(
+      "checkout", ".*", cancellationToken, std::chrono::milliseconds{5000}, 0);
+
+  auto executor = testMount.getServerExecutor().get();
+  testMount.drainServerExecutor();
+
+  auto checkoutFuture = testMount.getEdenMount()
+                            ->checkout(
+                                testMount.getRootInode(),
+                                RootId{"2"},
+                                ObjectFetchContext::getNullContext(),
+                                __func__)
+                            .semi()
+                            .via(executor);
+  testMount.drainServerExecutor();
+
+  cancelSource.requestCancellation();
+
+  auto deadline =
+      std::chrono::steady_clock::now() + std::chrono::milliseconds(100);
+  while (!checkoutFuture.isReady() &&
+         std::chrono::steady_clock::now() < deadline) {
+    testMount.drainServerExecutor();
+  }
+
+  EXPECT_TRUE(checkoutFuture.isReady());
+  EXPECT_ANY_THROW(std::move(checkoutFuture).get());
+
+  ASSERT_GE(scribe->messages().size(), 1);
+  const auto& msg = scribe->messages()[0];
+  EXPECT_NE(msg.find("object_store"), std::string::npos)
+      << "Should contain component, got: " << msg;
+  EXPECT_NE(msg.find("checkout_update_error"), std::string::npos)
+      << "Should contain error_type, got: " << msg;
+
+  testMount.getServerState()->getFaultInjector().removeFault("checkout", ".*");
 }
 
 INSTANTIATE_TEST_SUITE_P(
