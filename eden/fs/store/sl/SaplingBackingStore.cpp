@@ -45,8 +45,10 @@
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/sl/SaplingImportRequest.h"
 #include "eden/fs/store/sl/SaplingObjectId.h"
+#include "eden/fs/telemetry/EdenErrorInfoBuilder.h"
 #include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/EdenStats.h"
+#include "eden/fs/telemetry/ErrorLogger.h"
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/utils/StaticAssert.h"
 #ifdef EDEN_HAVE_SERVER_OBSERVER
@@ -414,6 +416,7 @@ void SaplingBackingStore::getBlobBatch(
               requests.size(),
               content.exception().what().toStdString());
 
+          logFetchMiss(content.exception(), "blob");
           if (edenFsEventsLogger_) {
             edenFsEventsLogger_->logEvent(
                 FetchMiss{
@@ -564,6 +567,7 @@ void SaplingBackingStore::getTreeBatch(
           requests.size(),
           content.exception().what().toStdString());
       stats_->increment(&SaplingBackingStoreStats::fetchTreeFailure);
+      logFetchMiss(content.exception(), "tree");
       if (dogfoodingHost()) {
         stats_->increment(
             &SaplingBackingStoreStats::fetchTreeFailureDogfooding);
@@ -856,6 +860,7 @@ void SaplingBackingStore::getTreeAuxDataBatch(
         }
 
         if (auxTry.hasException()) {
+          logFetchMiss(auxTry.exception(), "tree_aux");
           if (edenFsEventsLogger_) {
             edenFsEventsLogger_->logEvent(
                 FetchMiss{
@@ -942,6 +947,7 @@ void SaplingBackingStore::getBlobAuxDataBatch(
         }
 
         if (auxTry.hasException()) {
+          logFetchMiss(auxTry.exception(), "blob_aux");
           if (fetch_mode != sapling::FetchMode::RemoteOnly) {
             if (edenFsEventsLogger_) {
               edenFsEventsLogger_->logEvent(
@@ -1965,6 +1971,11 @@ std::optional<Hash20> SaplingBackingStore::getManifestNode(
         "Error while getting manifest node={} from backingstore: {}",
         folly::hexlify(node),
         error.what());
+    errorLogger_.log(
+        EdenErrorInfo::backingStore(error)
+            .withRepoName(repoName_)
+            .withIsDogfoodingHost(dogfoodingHost())
+            .withErrorType("manifest_resolution_failure"));
     return std::nullopt;
   }
 }
@@ -2686,6 +2697,19 @@ void SaplingBackingStore::flush() {
 
 bool SaplingBackingStore::dogfoodingHost() {
   return sapling_dogfooding_host(*store_.get());
+}
+
+void SaplingBackingStore::logFetchMiss(
+    const folly::exception_wrapper& ex,
+    folly::StringPiece fetchType) {
+  ex.with_exception([&](const std::exception& e) {
+    errorLogger_.log(
+        EdenErrorInfo::backingStore(ErrorArg::fromExceptionWithoutTrace(e))
+            .withRepoName(repoName_)
+            .withFetchType(fetchType.str())
+            .withIsDogfoodingHost(dogfoodingHost())
+            .withErrorType("fetch_miss"));
+  });
 }
 
 } // namespace facebook::eden

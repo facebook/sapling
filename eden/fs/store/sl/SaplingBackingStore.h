@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <folly/ExceptionWrapper.h>
 #include <folly/Function.h>
 #include <folly/Range.h>
 #include <folly/Synchronized.h>
@@ -673,6 +674,15 @@ class SaplingBackingStore final
       const ObjectFetchContext& context,
       folly::Range<SlOidView*> slOids,
       ObjectFetchContext::ObjectType type);
+
+  /**
+   * Logs a backing store fetch miss to the structured error logger, tagged with
+   * the given fetch type (e.g. "blob", "tree", "blob_aux"). Only invoked on the
+   * cold failure path.
+   */
+  void logFetchMiss(
+      const folly::exception_wrapper& ex,
+      folly::StringPiece fetchType);
 
  private:
   /**

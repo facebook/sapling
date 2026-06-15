@@ -26,4 +26,10 @@ ErrorArg::ErrorArg(std::string message) : message(std::move(message)) {}
 
 ErrorArg::ErrorArg(const char* message) : message(message) {}
 
+ErrorArg ErrorArg::fromExceptionWithoutTrace(const std::exception& ex) {
+  ErrorArg arg{ex};
+  arg.hasCapturedTrace = false;
+  return arg;
+}
+
 } // namespace facebook::eden

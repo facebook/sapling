@@ -26,6 +26,7 @@ cpp_unittest(
     deps = [
         "fbsource//third-party/googletest:gmock",
         "fbsource//third-party/googletest:gtest",
+        "//eden/common/telemetry:log_info",
         "//eden/common/telemetry:structured_logger",
         "//eden/common/telemetry:telemetry",
         "//eden/common/utils:fault_injector",
@@ -44,6 +45,7 @@ cpp_unittest(
         "//eden/fs/telemetry:error_logger",
         "//eden/fs/telemetry:stats",
         "//eden/fs/telemetry:structured_logger",
+        "//eden/fs/telemetry/test:capturing_scribe_logger",
         "//eden/fs/testharness:hg_repo",
         "//eden/fs/testharness:test_config_source",
         "//eden/scm/lib/backingstore:sapling_native_backingstore",

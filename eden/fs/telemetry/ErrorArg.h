@@ -25,6 +25,13 @@ class ErrorArg {
   ErrorArg(std::string message);
   ErrorArg(const char* message);
 
+  // Builds an ErrorArg from an exception WITHOUT marking a captured throw-site
+  // trace. Use this when the exception is handled away from its throw site
+  // (e.g. visited from a folly::Try / exception_wrapper rather than an inline
+  // catch), where the thread-local throw-trace does not belong to this
+  // exception and would otherwise be misattributed.
+  static ErrorArg fromExceptionWithoutTrace(const std::exception& ex);
+
   std::string message;
   // Numeric errno from std::system_error (e.g. ENOENT=2, EACCES=13).
   std::optional<int64_t> errorCode;

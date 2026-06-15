@@ -19,6 +19,7 @@
 #include <optional>
 
 #include "eden/common/telemetry/NullStructuredLogger.h"
+#include "eden/common/telemetry/SessionInfo.h"
 #include "eden/common/utils/FaultInjector.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
@@ -31,6 +32,7 @@
 #include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/ErrorLogger.h"
+#include "eden/fs/telemetry/test/CapturingScribeLogger.h"
 #include "eden/fs/testharness/HgRepo.h"
 #include "eden/fs/testharness/TestConfigSource.h"
 #include "eden/scm/lib/backingstore/include/SaplingBackingStoreError.h"
@@ -906,6 +908,50 @@ TEST_F(
   // shared_from_this() capture, this assertion will fail, catching a
   // use-after-free regression.
   EXPECT_GT(queuedBackingStore.use_count(), baselineUseCount);
+}
+
+struct SaplingBackingStoreErrorLoggingTest : SaplingBackingStoreTestBase {
+  FaultInjector faultInjector{/*enabled=*/false};
+  folly::InlineExecutor executor = folly::InlineExecutor::instance();
+  std::shared_ptr<CapturingScribeLogger> scribe =
+      std::make_shared<CapturingScribeLogger>();
+  std::shared_ptr<ReloadableConfig> errorLoggerConfig{
+      std::make_shared<ReloadableConfig>(testEdenConfig)};
+  ErrorLogger errorLogger{scribe, SessionInfo{}, errorLoggerConfig};
+
+  SaplingBackingStoreErrorLoggingTest() {
+    testEdenConfig->enableErrorLogging.setValue(
+        true, ConfigSourceType::UserConfig);
+  }
+
+  std::shared_ptr<SaplingBackingStore> queuedBackingStore =
+      std::make_shared<SaplingBackingStore>(
+          repo.path(),
+          repo.path(),
+          clientPath,
+          kPathMapDefaultCaseSensitive,
+          stats.copy(),
+          &executor,
+          edenConfig,
+          std::make_unique<SaplingBackingStoreOptions>(),
+          makeTestEdenFsEventsLogger(edenConfig, stats),
+          /*errorLogger=*/errorLogger,
+          std::make_unique<BackingStoreLogger>(),
+          &faultInjector);
+};
+
+TEST_F(SaplingBackingStoreErrorLoggingTest, manifestResolutionFailureIsLogged) {
+  auto bogusCommit =
+      ObjectId::fromHex("deadbeefdeadbeefdeadbeefdeadbeefdeadbeef");
+  auto result = queuedBackingStore->getManifestNode(bogusCommit);
+  EXPECT_FALSE(result.has_value());
+
+  ASSERT_EQ(scribe->messages().size(), 1);
+  const auto& msg = scribe->messages()[0];
+  EXPECT_NE(msg.find("backing_store"), std::string::npos)
+      << "Should contain component, got: " << msg;
+  EXPECT_NE(msg.find("manifest_resolution_failure"), std::string::npos)
+      << "Should contain error_type, got: " << msg;
 }
 
 } // namespace facebook::eden

@@ -60,6 +60,7 @@ cpp_library(
         "//eden/common/utils:utils",
         "//eden/fs/config:config",
         "//eden/fs/service:thrift_util",
+        "//eden/fs/telemetry:error_info",
         "//eden/fs/telemetry:log_info",
         "//eden/fs/telemetry:stats",
         "//eden/fs/telemetry:structured_logger",
@@ -90,6 +91,7 @@ cpp_library(
         "//eden/scm/lib/backingstore:backingstore",  # @manual
         "//eden/scm/lib/backingstore:backingstore@header",  # @manual
         "//eden/scm/lib/backingstore:sapling_native_backingstore",
+        "//folly:exception_wrapper",
         "//folly:function",
         "//folly:range",
         "//folly:synchronized",
