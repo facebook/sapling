@@ -129,7 +129,7 @@ def validate_message_change(repo, old_desc, new_desc):
         else:
             choice = repo.ui.promptchoice(
                 _(
-                    "commit message drops phabircator diff number 'D%s', proceed (Yn)? $$ &Yes $$ &No"
+                    "commit message drops phabricator diff number 'D%s', proceed (Yn)? $$ &Yes $$ &No"
                 )
                 % old_rev,
                 default=0,

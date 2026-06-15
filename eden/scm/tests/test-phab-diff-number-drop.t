@@ -28,7 +28,7 @@ Interactive user choosing No should abort (amend):
   $ sl amend --config ui.interactive=true -m "drop diff number" <<EOF
   > n
   > EOF
-  commit message drops phabircator diff number 'D12345', proceed (Yn)?  n
+  commit message drops phabricator diff number 'D12345', proceed (Yn)?  n
   abort: aborted by user
   [255]
 
@@ -37,7 +37,7 @@ Interactive user choosing No should abort (metaedit):
   $ sl metaedit --config ui.interactive=true -m "drop diff number" <<EOF
   > n
   > EOF
-  commit message drops phabircator diff number 'D12345', proceed (Yn)?  n
+  commit message drops phabricator diff number 'D12345', proceed (Yn)?  n
   abort: aborted by user
   [255]
 
@@ -46,7 +46,7 @@ Interactive user choosing Yes should proceed (amend):
   $ sl amend --config ui.interactive=true -m "drop diff number via amend" <<EOF
   > y
   > EOF
-  commit message drops phabircator diff number 'D12345', proceed (Yn)?  y
+  commit message drops phabricator diff number 'D12345', proceed (Yn)?  y
   5a4d097da8bb -> 78d316c8be37 "drop diff number via amend"
 
 Restore diff number for next test:
@@ -59,7 +59,7 @@ Interactive user choosing Yes should proceed (metaedit):
   $ sl metaedit --config ui.interactive=true -m "drop diff number via metaedit" <<EOF
   > y
   > EOF
-  commit message drops phabircator diff number 'D12345', proceed (Yn)?  y
+  commit message drops phabricator diff number 'D12345', proceed (Yn)?  y
   9ea48f174b42 -> 8f89e739bba4 "drop diff number via metaedit"
 
 Non-interactive defaults to Yes (amend):
@@ -70,7 +70,7 @@ Restore diff number:
   8f89e739bba4 -> f6c732d5b9eb "restored again"
 
   $ sl amend -m "non-interactive drop"
-  commit message drops phabircator diff number 'D12345', proceed (Yn)?  y
+  commit message drops phabricator diff number 'D12345', proceed (Yn)?  y
   f6c732d5b9eb -> cad5328c7ead "non-interactive drop"
 
 Amend -m preserving Differential Revision should succeed:
