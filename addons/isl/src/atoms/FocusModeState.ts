@@ -5,9 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// Note: we intentionally don't persist focus mode, so each time you open ISL,
+import {localStorageBackedAtom} from '../jotaiUtils';
 
-import {atom} from 'jotai';
-
-// you see all your commits and can choose to focus from that point onward.
-export const focusMode = atom(false);
+export const focusMode = localStorageBackedAtom<boolean>('isl.focus-mode', false);

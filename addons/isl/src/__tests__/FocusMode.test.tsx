@@ -39,6 +39,7 @@ describe('focus mode', () => {
   ];
 
   beforeEach(() => {
+    localStorage.removeItem('isl.focus-mode');
     resetTestMessages();
     render(<App />);
 
@@ -124,6 +125,18 @@ describe('focus mode', () => {
     expect(screen.queryByText('Commit A')).not.toBeInTheDocument();
     expect(screen.queryByText('Commit B')).not.toBeInTheDocument();
     expect(screen.queryByText('Commit C')).not.toBeInTheDocument();
+  });
+
+  it('persists focus mode state to localStorage', () => {
+    expect(localStorage.getItem('isl.focus-mode')).toBeNull();
+
+    toggleFocusMode();
+    expect(screen.getByTestId('focus-mode-toggle').dataset.focusMode).toEqual('true');
+    expect(localStorage.getItem('isl.focus-mode')).toBe('true');
+
+    toggleFocusMode();
+    expect(screen.getByTestId('focus-mode-toggle').dataset.focusMode).toEqual('false');
+    expect(localStorage.getItem('isl.focus-mode')).toBe('false');
   });
 
   it('lets you drag and drop rebase commits outside the focus stack', () => {

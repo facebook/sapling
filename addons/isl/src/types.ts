@@ -1018,6 +1018,7 @@ export type LocalStorageName =
   | 'isl.partial-abort'
   | 'isl.smart-actions-order'
   | 'isl.ai-code-review-selected-option'
+  | 'isl.focus-mode'
   // The keys below are prefixes, with further dynamic keys appended afterwards
   | 'isl.edited-commit-messages:'
   | 'isl.first-pass-comments:';
