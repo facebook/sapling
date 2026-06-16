@@ -2560,6 +2560,10 @@ pub struct EnforcementConditionSet {
     /// server's own build_rule (the value `add_common_server_data` logs to scuba)
     /// appears in this list.
     pub build_rules: Vec<String>,
+    /// Regexes evaluated against each caller identity's `"TYPE:value"` form.
+    /// Empty = don't filter on this dimension. Substring semantics
+    /// (`Regex::is_match`). Invalid regexes are rejected at config parse time.
+    pub client_identity_regexes: Vec<ComparableRegex>,
 }
 
 /// Configuration for restricted paths and their associated ACLs

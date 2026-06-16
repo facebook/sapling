@@ -1138,6 +1138,7 @@ impl EnforcementConditionSetBuilder {
             // which can't be set from a unit test (it's a link-time constant), so
             // tests leave it empty. Coverage lives in the `.t` integration test.
             build_rules: Vec::new(),
+            client_identity_regexes: Vec::new(),
         }
     }
 }

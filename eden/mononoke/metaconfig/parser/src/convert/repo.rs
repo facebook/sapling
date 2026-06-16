@@ -1431,6 +1431,16 @@ impl Convert for RawRestrictedPathsConfig {
                         .collect::<Result<Vec<_>>>()?,
                     machine_tiers: raw.machine_tiers.unwrap_or_default(),
                     build_rules: raw.build_rules.unwrap_or_default(),
+                    client_identity_regexes: raw
+                        .client_identity_regexes
+                        .unwrap_or_default()
+                        .into_iter()
+                        .map(|pattern| {
+                            ComparableRegex::new(&pattern).with_context(|| {
+                                format!("parsing client_identity_regex `{pattern}`")
+                            })
+                        })
+                        .collect::<Result<Vec<_>>>()?,
                 })
             })
             .collect::<Result<Vec<_>>>()?;
@@ -1543,6 +1553,43 @@ mod tests {
         let msg = format!("{err:#}");
         assert!(
             msg.contains("restriction_acl `bogus`"),
+            "error should contain offending value: {msg}"
+        );
+    }
+
+    #[mononoke::test]
+    fn test_parse_client_identity_regexes_passthrough() {
+        let raw_set = RawEnforcementConditionSet {
+            client_identity_regexes: Some(vec!["^USER:foo$".to_string()]),
+            ..Default::default()
+        };
+        let mut raw = empty_raw_restricted_paths_config();
+        raw.enforcement_condition_sets = Some(vec![raw_set]);
+        let cfg: RestrictedPathsConfig = raw.convert().unwrap();
+        assert_eq!(cfg.enforcement_condition_sets.len(), 1);
+        let regexes = &cfg.enforcement_condition_sets[0].client_identity_regexes;
+        assert_eq!(regexes.len(), 1, "expected exactly one compiled regex");
+        assert_eq!(regexes[0].as_str(), "^USER:foo$");
+        assert!(
+            regexes[0].is_match("USER:foo"),
+            "compiled regex should match the canonical identity Display form",
+        );
+    }
+
+    #[mononoke::test]
+    fn test_parse_client_identity_regexes_invalid_value_errors_with_value_in_message() {
+        let raw_set = RawEnforcementConditionSet {
+            client_identity_regexes: Some(vec!["[".to_string()]),
+            ..Default::default()
+        };
+        let mut raw = empty_raw_restricted_paths_config();
+        raw.enforcement_condition_sets = Some(vec![raw_set]);
+
+        let result: Result<RestrictedPathsConfig> = raw.convert();
+        let err = result.unwrap_err();
+        let msg = format!("{err:#}");
+        assert!(
+            msg.contains("client_identity_regex `[`"),
             "error should contain offending value: {msg}"
         );
     }
