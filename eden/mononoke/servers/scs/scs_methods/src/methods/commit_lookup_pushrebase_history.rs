@@ -15,7 +15,6 @@ use mononoke_api::Mononoke;
 use mononoke_api::Repo;
 use mononoke_api::RepoContext;
 use mononoke_types::ChangesetId;
-use phases::PhasesRef;
 use pushrebase_mutation_mapping::PushrebaseMutationMappingRef;
 use source_control as thrift;
 use synced_commit_mapping::SyncedCommitSourceRepo;
@@ -96,14 +95,8 @@ impl RepoChangesetsPushrebaseHistory {
     async fn ensure_head_is_public(&self) -> Result<(), scs_errors::ServiceError> {
         let RepoChangeset(repo_name, bcs_id) = &self.head;
         let repo = self.repo(repo_name).await?;
-        let is_public = repo
-            .repo()
-            .phases()
-            .get_cached_public(&self.ctx, vec![*bcs_id])
-            .await
-            .map_err(scs_errors::internal_error)?
-            .contains(bcs_id);
-        if !is_public {
+        let changeset = repo.changeset_from_existing_id(*bcs_id);
+        if !changeset.is_public().await? {
             return Err(scs_errors::invalid_request(format!(
                 "changeset {bcs_id} is not public, and only public commits could be pushrebased",
             ))

@@ -49,7 +49,6 @@ use mononoke_api::XRepoLookupSyncBehaviour;
 use mononoke_api_hg::RepoContextHgExt;
 use mononoke_macros::mononoke;
 use mononoke_types::path::MPath;
-use phases::PhasesRef;
 use scs_errors::ServiceErrorResultExt;
 use source_control as thrift;
 
@@ -765,15 +764,8 @@ impl SourceControlServiceImpl {
         commit: thrift::CommitSpecifier,
         _params: thrift::CommitIsPublicParams,
     ) -> Result<bool, scs_errors::ServiceError> {
-        let (repo_ctx, changeset) = self.repo_changeset(ctx.clone(), &commit).await?;
-        let public = repo_ctx
-            .repo()
-            .phases()
-            .get_cached_public(&ctx, vec![changeset.id()])
-            .await
-            .map_err(|_| scs_errors::internal_error("failed to query commit phase"))?;
-
-        Ok(!public.is_empty())
+        let (_repo_ctx, changeset) = self.repo_changeset(ctx, &commit).await?;
+        Ok(changeset.is_public().await?)
     }
 
     /// Diff two commits

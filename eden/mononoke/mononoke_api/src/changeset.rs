@@ -79,6 +79,7 @@ use mononoke_types::directory_branch_cluster_manifest::DirectoryBranchClusterMan
 use mononoke_types::path::MPath;
 use mononoke_types::skeleton_manifest_v2::SkeletonManifestV2;
 use mutable_renames::MutableRenamesArc;
+use phases::PhasesRef;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataArc;
@@ -983,6 +984,17 @@ impl<R: MononokeRepo> ChangesetContext<R> {
     /// Query the root directory in the repository at this changeset revision.
     pub async fn root(&self) -> Result<ChangesetPathContentContext<R>, MononokeError> {
         ChangesetPathContentContext::new(self.clone(), None).await
+    }
+
+    /// Returns `true` if this changeset is public (landed and reachable from a public bookmark).
+    pub async fn is_public(&self) -> Result<bool, MononokeError> {
+        let public = self
+            .repo_ctx()
+            .repo()
+            .phases()
+            .get_cached_public(self.ctx(), vec![self.id])
+            .await?;
+        Ok(public.contains(&self.id))
     }
 
     /// Query a path within the repository. This could be a file or a
