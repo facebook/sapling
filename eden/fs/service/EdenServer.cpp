@@ -1488,10 +1488,20 @@ Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
           &TakeoverStats::receive, takeoverReceiveWatch.elapsed());
     };
     auto edenConfig = serverState_->getEdenConfig();
-    takeoverData = takeoverMounts(
-        takeoverPath,
-        getTakeoverTimeoutSeconds(*edenConfig),
-        shouldThrowDuringTakeover(*edenConfig));
+    try {
+      takeoverData = takeoverMounts(
+          takeoverPath,
+          getTakeoverTimeoutSeconds(*edenConfig),
+          shouldThrowDuringTakeover(*edenConfig));
+    } catch (...) {
+      auto ew = folly::exception_wrapper{std::current_exception()};
+      ew.with_exception([&](const std::exception& ex) {
+        serverState_->getErrorLogger().log(
+            EdenErrorInfo::takeover(ErrorArg::fromExceptionWithoutTrace(ex))
+                .withErrorType("takeover_receive_failed"));
+      });
+      ew.throw_exception();
+    }
     serverState_->getStats()->increment(&TakeoverStats::receiveSuccess);
     logger->log(
         "Received takeover information for ",
@@ -1630,7 +1640,9 @@ std::vector<ImmediateFuture<Unit>> EdenServer::prepareMountsTakeover(
               std::move(initialConfig), false, [](auto) {}, std::move(info));
         })
             .thenTry(
-                [logger, mountPath = info.mountPath](
+                [logger,
+                 serverState = serverState_,
+                 mountPath = info.mountPath](
                     folly::Try<std::shared_ptr<EdenMount>>&& result)
                     -> ImmediateFuture<folly::Unit> {
                   if (result.hasValue()) {
@@ -1643,6 +1655,14 @@ std::vector<ImmediateFuture<Unit>> EdenServer::prepareMountsTakeover(
                         mountPath,
                         ": ",
                         result.exception().what());
+                    result.exception().with_exception(
+                        [&](const std::exception& ex) {
+                          serverState->getErrorLogger().log(
+                              EdenErrorInfo::takeover(
+                                  ErrorArg::fromExceptionWithoutTrace(ex))
+                                  .withMountPoint(mountPath.asString())
+                                  .withErrorType("takeover_remount_failed"));
+                        });
                     return makeImmediateFuture<Unit>(
                         std::move(result).exception());
                   }
