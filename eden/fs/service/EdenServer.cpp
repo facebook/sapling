@@ -1066,7 +1066,8 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover(
               EdenErrorInfo::takeover(ex)
                   .withMountPoint(std::string(mountPath.view()))
                   .withMountStatus(
-                      fmt::format("{}", info.edenMount->getState())));
+                      fmt::format("{}", info.edenMount->getState()))
+                  .withErrorType("takeover_shutdown_failed"));
         });
         futures.push_back(
             makeFuture<optional<TakeoverData::MountInfo>>(std::move(ew)));
@@ -1102,7 +1103,10 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover(
                 result.exception().what());
             result.exception().with_exception([&](const std::exception& ex) {
               serverState->getErrorLogger().log(
-                  EdenErrorInfo::takeover(ex).withMountPoint(path.asString()));
+                  EdenErrorInfo::takeover(
+                      ErrorArg::fromExceptionWithoutTrace(ex))
+                      .withMountPoint(path.asString())
+                      .withErrorType("takeover_shutdown_failed"));
             });
             continue;
           }
