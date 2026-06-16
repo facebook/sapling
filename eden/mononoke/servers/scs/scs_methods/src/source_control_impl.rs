@@ -349,21 +349,20 @@ impl SourceControlServiceImpl {
             .as_ref()
             .and_then(|ci| serde_json::from_str(ci).ok());
 
-        let is_trusted = self
-            .identity_proxy_checker
-            .check_if_trusted(&tls_identities)
-            .await;
-
-        if is_trusted {
-            if let (
-                Some(forwarded_authenticated_identities_thrift),
-                Some(forwarded_ip),
-                Some(forwarded_port),
-            ) = (
-                header(FORWARDED_AUTHENTICATED_IDENTITIES_THRIFT_HEADER)?,
-                header(FORWARDED_CLIENT_IP_HEADER)?,
-                header(FORWARDED_CLIENT_PORT_HEADER)?,
-            ) {
+        if let (
+            Some(forwarded_authenticated_identities_thrift),
+            Some(forwarded_ip),
+            Some(forwarded_port),
+        ) = (
+            header(FORWARDED_AUTHENTICATED_IDENTITIES_THRIFT_HEADER)?,
+            header(FORWARDED_CLIENT_IP_HEADER)?,
+            header(FORWARDED_CLIENT_PORT_HEADER)?,
+        ) {
+            let is_trusted = self
+                .identity_proxy_checker
+                .check_if_trusted(&tls_identities)
+                .await;
+            if is_trusted {
                 let mut header_identities: MononokeIdentitySet =
                     MononokeIdentity::try_from_thrift_compact_encoded(
                         forwarded_authenticated_identities_thrift.as_str(),
