@@ -39,10 +39,6 @@ use edenfs_client::redirect::get_effective_redirs_for_mount;
 use edenfs_client::redirect::try_add_redirection;
 use edenfs_client::utils::expand_path_or_cwd;
 use edenfs_client::utils::remove_trailing_slash;
-#[cfg(fbcode_build)]
-use edenfs_telemetry::EDEN_EVENTS_SCUBA;
-#[cfg(fbcode_build)]
-use edenfs_telemetry::send;
 use hg_util::path::expand_path;
 use tabular::Table;
 use tabular::row;
@@ -224,6 +220,8 @@ impl RedirectCmd {
             force_remount_bind_mounts,
             strict,
             force,
+            #[cfg(fbcode_build)]
+            crate::get_enable_xplatlogger_events(),
         )
         .await
         .with_context(|| {
@@ -441,7 +439,7 @@ impl RedirectCmd {
                         &redir.source,
                         &e.to_string(),
                     );
-                    send(EDEN_EVENTS_SCUBA.to_string(), sample);
+                    crate::send_edenfs_event(sample);
                 }
             }
         }
@@ -578,6 +576,8 @@ impl RedirectCmd {
 #[async_trait]
 impl Subcommand for RedirectCmd {
     async fn run(&self) -> Result<ExitCode> {
+        #[cfg(fbcode_build)]
+        crate::init_enable_xplatlogger_events().await;
         match self {
             Self::List { mount, json } => self.list(mount.to_owned(), *json).await,
             Self::Add {

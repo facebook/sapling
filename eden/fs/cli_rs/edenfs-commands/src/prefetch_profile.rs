@@ -22,10 +22,6 @@ use edenfs_client::checkout::CheckoutConfig;
 use edenfs_client::checkout::PrefetchProfilesResult;
 use edenfs_client::checkout::find_checkout;
 use edenfs_client::utils::expand_path_or_cwd;
-#[cfg(fbcode_build)]
-use edenfs_telemetry::EDEN_EVENTS_SCUBA;
-#[cfg(fbcode_build)]
-use edenfs_telemetry::send;
 use hg_util::path::expand_path;
 
 use crate::ExitCode;
@@ -295,13 +291,13 @@ impl PrefetchProfileCmd {
         match result {
             Ok(_) => {
                 #[cfg(fbcode_build)]
-                send(EDEN_EVENTS_SCUBA.to_string(), sample);
+                crate::send_edenfs_event(sample);
             }
             Err(e) => {
                 #[cfg(fbcode_build)]
                 {
                     sample.fail(&e.to_string());
-                    send(EDEN_EVENTS_SCUBA.to_string(), sample);
+                    crate::send_edenfs_event(sample);
                 }
                 return Err(anyhow::Error::new(e));
             }
@@ -338,12 +334,12 @@ impl PrefetchProfileCmd {
             #[cfg(fbcode_build)]
             {
                 sample.fail(&e.to_string());
-                send(EDEN_EVENTS_SCUBA.to_string(), sample);
+                crate::send_edenfs_event(sample);
             }
             return Err(anyhow::Error::new(e));
         }
         #[cfg(fbcode_build)]
-        send(EDEN_EVENTS_SCUBA.to_string(), sample);
+        crate::send_edenfs_event(sample);
 
         Ok(0)
     }
@@ -375,12 +371,12 @@ impl PrefetchProfileCmd {
             #[cfg(fbcode_build)]
             {
                 sample.fail(&e.to_string());
-                send(EDEN_EVENTS_SCUBA.to_string(), sample);
+                crate::send_edenfs_event(sample);
             }
             return Err(anyhow::Error::new(e));
         }
         #[cfg(fbcode_build)]
-        send(EDEN_EVENTS_SCUBA.to_string(), sample);
+        crate::send_edenfs_event(sample);
         Ok(0)
     }
 
@@ -405,12 +401,12 @@ impl PrefetchProfileCmd {
             #[cfg(fbcode_build)]
             {
                 sample.fail(&e.to_string());
-                send(EDEN_EVENTS_SCUBA.to_string(), sample);
+                crate::send_edenfs_event(sample);
             }
             return Err(anyhow::Error::new(e));
         }
         #[cfg(fbcode_build)]
-        send(EDEN_EVENTS_SCUBA.to_string(), sample);
+        crate::send_edenfs_event(sample);
         Ok(0)
     }
 
@@ -588,6 +584,8 @@ impl PrefetchProfileCmd {
 #[async_trait]
 impl Subcommand for PrefetchProfileCmd {
     async fn run(&self) -> Result<ExitCode> {
+        #[cfg(fbcode_build)]
+        crate::init_enable_xplatlogger_events().await;
         match self {
             Self::Finish { output_path } => self.finish(output_path).await,
             Self::Record {} => self.record().await,

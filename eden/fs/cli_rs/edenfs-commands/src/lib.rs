@@ -58,6 +58,8 @@ const HOME_DIR_ENV_VAR: &str = "EDENFSCTL_HOME_DIR";
 
 // We create a single EdenFsInstance when starting up
 static EDENFS_INSTANCE: OnceLock<EdenFsInstance> = OnceLock::new();
+#[cfg(fbcode_build)]
+static ENABLE_XPLATLOGGER_EVENTS: OnceLock<bool> = OnceLock::new();
 
 pub(crate) fn get_edenfs_instance() -> &'static EdenFsInstance {
     EDENFS_INSTANCE
@@ -66,17 +68,25 @@ pub(crate) fn get_edenfs_instance() -> &'static EdenFsInstance {
 }
 
 #[cfg(fbcode_build)]
-pub(crate) async fn send_sample_with_config(
-    data_set: &'static str,
-    xplat_logger_config: edenfs_telemetry::XplatLoggerConfig,
-    sample: edenfs_telemetry::EdenSample,
-) {
-    let xplat_logger_config = get_edenfs_instance()
+pub(crate) fn send_edenfs_event(sample: edenfs_telemetry::EdenSample) {
+    edenfs_telemetry::send_edenfs_event(sample, get_enable_xplatlogger_events());
+}
+
+#[cfg(fbcode_build)]
+pub(crate) fn get_enable_xplatlogger_events() -> bool {
+    ENABLE_XPLATLOGGER_EVENTS.get().copied().unwrap_or(false)
+}
+
+#[cfg(fbcode_build)]
+pub(crate) async fn init_enable_xplatlogger_events() {
+    let enabled = get_edenfs_instance()
         .get_client()
         .get_enable_xplatlogger_events()
-        .await
-        .then_some(xplat_logger_config);
-    edenfs_telemetry::send_with_config(data_set, sample, xplat_logger_config);
+        .await;
+
+    if ENABLE_XPLATLOGGER_EVENTS.set(enabled).is_err() {
+        tracing::debug!("edenfs_events XplatLogger config already initialized");
+    }
 }
 
 fn init_edenfs_instance(

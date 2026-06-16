@@ -75,6 +75,8 @@ pub struct RemoveCmd {
 #[async_trait]
 impl Subcommand for RemoveCmd {
     async fn run(&self) -> Result<ExitCode> {
+        #[cfg(fbcode_build)]
+        crate::init_enable_xplatlogger_events().await;
         if self.skip_prompt && self.no {
             return Err(anyhow!(
                 "Both '-y' and '-n' are provided. This is not supported.\nExiting."

@@ -84,6 +84,8 @@ impl PrefetchCmd {
 #[async_trait]
 impl crate::Subcommand for PrefetchCmd {
     async fn run(&self) -> Result<ExitCode> {
+        #[cfg(fbcode_build)]
+        crate::init_enable_xplatlogger_events().await;
         let instance = get_edenfs_instance();
         let client = instance.get_client();
         let (mount_point, search_root) = self.common.get_mount_point_and_search_root()?;
@@ -115,14 +117,14 @@ impl crate::Subcommand for PrefetchCmd {
         {
             Ok(r) => {
                 sample.add_bool("success", true);
-                Ok(r)
+                r
             }
             Err(e) => {
                 sample.add_bool("success", false);
                 sample.add_string("error", format!("{e:#}").as_str());
-                Err(e)
+                return Err(e.into());
             }
-        }?;
+        };
 
         // NOTE: Is the really still needed? We should not be falling back at all anymore.
         sample.add_bool("prefetchV2_fallback", false);
@@ -155,7 +157,8 @@ impl crate::Subcommand for PrefetchCmd {
             }
         }
 
-        edenfs_telemetry::send(edenfs_telemetry::EDEN_EVENTS_SCUBA.to_string(), sample);
+        #[cfg(fbcode_build)]
+        crate::send_edenfs_event(sample);
         Ok(0)
     }
 }

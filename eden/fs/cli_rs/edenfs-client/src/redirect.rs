@@ -22,10 +22,6 @@ use async_recursion::async_recursion;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_error::ResultExt;
-#[cfg(fbcode_build)]
-use edenfs_telemetry::EDEN_EVENTS_SCUBA;
-#[cfg(fbcode_build)]
-use edenfs_telemetry::send;
 use edenfs_utils::metadata::MetadataExt;
 use edenfs_utils::remove_symlink;
 use hg_util::path::absolute;
@@ -350,6 +346,13 @@ impl Redirection {
 
     pub fn expand_target_abspath(
         &self,
+        #[cfg_attr(
+            not(target_os = "macos"),
+            expect(
+                unused_variables,
+                reason = "instance is only used on macOS for APFS bind redirection detection"
+            )
+        )]
         instance: &EdenFsInstance,
         checkout: &EdenFsCheckout,
     ) -> Result<Option<PathBuf>> {
@@ -1493,6 +1496,7 @@ pub async fn try_add_redirection(
     force_remount_bind_mounts: bool,
     strict: bool,
     force: bool,
+    #[cfg(fbcode_build)] enable_xplatlogger_events: bool,
 ) -> Result<i32> {
     // Get only the explicitly configured entries for the purposes of the
     // add command, so that we avoid writing out any of the effective list
@@ -1579,7 +1583,7 @@ pub async fn try_add_redirection(
                     &redir.repo_path.to_string_lossy(),
                     &checkout.path().to_string_lossy(),
                 );
-                send(EDEN_EVENTS_SCUBA.to_string(), sample);
+                edenfs_telemetry::send_edenfs_event(sample, enable_xplatlogger_events);
             }
         } else {
             eprintln!(

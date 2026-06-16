@@ -14,10 +14,6 @@ use std::time::Duration;
 use anyhow::Result;
 use crossterm::style::Stylize;
 use dialoguer::Confirm;
-#[cfg(fbcode_build)]
-use edenfs_telemetry::EDEN_EVENTS_SCUBA;
-#[cfg(fbcode_build)]
-use edenfs_telemetry::send;
 use io::IO;
 use termlogger::TermLogger;
 
@@ -79,7 +75,7 @@ impl PathType {
         #[cfg(fbcode_build)]
         {
             let sample = edenfs_telemetry::remove::build(&self.to_string());
-            send(EDEN_EVENTS_SCUBA.to_string(), sample);
+            crate::send_edenfs_event(sample);
         }
 
         match self {
