@@ -293,15 +293,6 @@ function mononoke_testtool {
     "$@"
 }
 
-function mononoke_backfill_bonsai_blob_mapping {
-  GLOG_minloglevel=5 "$MONONOKE_BACKFILL_BONSAI_BLOB_MAPPING" \
-    "${CACHE_ARGS[@]}" \
-    "${COMMON_ARGS[@]}" \
-    --mononoke-config-path "$TESTTMP"/mononoke-config \
-    --tracing-test-format \
-    "$@"
-}
-
 function repo_metadata_logger {
   GLOG_minloglevel=5 "$REPO_METADATA_LOGGER" \
     "${CACHE_ARGS[@]}" \
