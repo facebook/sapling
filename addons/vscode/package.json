@@ -247,6 +247,12 @@
         "command": "sapling.debug.interpret-file-as-comments",
         "title": "Debug: Load file as inline comments JSON",
         "enablement": "sapling.isDev"
+      },
+      {
+        "command": "sapling.open-multi-diff-file-head",
+        "title": "%sapling.open-multi-diff-file-head-command%",
+        "category": "%sapling.command-category%",
+        "icon": "$(file-symlink-file)"
       }
     ],
     "keybindings": [
@@ -332,6 +338,13 @@
           "command": "sapling.open-isl",
           "group": "navigation",
           "when": "scmProvider == sapling"
+        }
+      ],
+      "multiDiffEditor/resource/title": [
+        {
+          "command": "sapling.open-multi-diff-file-head",
+          "group": "navigation@1",
+          "when": "resourceScheme == sapling-comparison-committed"
         }
       ]
     }

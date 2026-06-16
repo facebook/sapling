@@ -37,6 +37,7 @@ export interface Platform {
   revealInFileExplorer?(path: RepoRelativePath): void;
   revealInExplorerView?(path: RepoRelativePath): void;
   openDiff?(path: RepoRelativePath, comparison: Comparison): void;
+  openFileAtRevset?(path: RepoRelativePath, revset: string): void;
   openExternalLink(url: string): void;
   clipboardCopy(text: string, html?: string): void;
   chooseFile?(title: string, multi: boolean): Promise<Array<File>>;

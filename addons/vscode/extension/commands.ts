@@ -25,8 +25,15 @@ import {
   labelForComparison,
 } from 'shared/Comparison';
 import * as vscode from 'vscode';
-import {encodeDeletedFileUri} from './DeletedFileContentProvider';
-import {encodeSaplingDiffUri} from './DiffContentProvider';
+import {
+  DELETED_FILE_DIFF_VIEW_PROVIDER_SCHEME,
+  encodeDeletedFileUri,
+} from './DeletedFileContentProvider';
+import {
+  decodeSaplingDiffUri,
+  encodeSaplingDiffUri,
+  SAPLING_DIFF_PROVIDER_SCHEME,
+} from './DiffContentProvider';
 import {shouldOpenBeside} from './config';
 import {t} from './i18n';
 
@@ -69,7 +76,64 @@ export const vscodeCommands = {
     }
     return runOperation(this, repo, new RevertOperation([path]));
   }),
+
+  // Open the working-copy / head version of a file row in VS Code's native multi-diff
+  // editor. Only contributed for committed comparisons: there the editor's built-in
+  // "Open File" button opens the read-only in-diff version, so this provides access to the
+  // editable working-copy file. (For uncommitted comparisons the built-in button already
+  // opens the working copy, so no extra button is needed.)
+  ['sapling.open-multi-diff-file-head']: async (arg: MultiDiffResourceArg) => {
+    const modified = modifiedUriFromMultiDiffArg(arg);
+    if (modified == null) {
+      vscode.window.showErrorMessage(t(`No file found`));
+      return;
+    }
+    const fileUri = workingCopyUriForModifiedUri(modified);
+    if (!(await fileExists(fileUri))) {
+      vscode.window.showInformationMessage(t(`This file does not exist in the working copy`));
+      return;
+    }
+    return openInPreferredColumn(fileUri);
+  },
 };
+
+/**
+ * Argument shape passed to commands invoked from the `multiDiffEditor/resource/title`
+ * menu. The Meta VS Code build (T223719719) passes a 2-element array
+ * `[modifiedUri ?? originalUri, modifiedUri]`; upstream passes a single `vscode.Uri`.
+ * Handle both defensively.
+ */
+type MultiDiffResourceArg =
+  | vscode.Uri
+  | [vscode.Uri | undefined, vscode.Uri | undefined]
+  | undefined;
+
+function modifiedUriFromMultiDiffArg(arg: MultiDiffResourceArg): vscode.Uri | undefined {
+  if (arg == null) {
+    return undefined;
+  }
+  if (Array.isArray(arg)) {
+    return arg[1] ?? arg[0];
+  }
+  return arg;
+}
+
+/** Recover the working-copy `file://` URI from a multi-diff editor's modified resource URI. */
+function workingCopyUriForModifiedUri(uri: vscode.Uri): vscode.Uri {
+  if (uri.scheme === SAPLING_DIFF_PROVIDER_SCHEME) {
+    return decodeSaplingDiffUri(uri).originalUri;
+  }
+  if (uri.scheme === DELETED_FILE_DIFF_VIEW_PROVIDER_SCHEME) {
+    return uri.with({scheme: 'file', query: ''});
+  }
+  return uri;
+}
+
+function openInPreferredColumn(uri: vscode.Uri): Thenable<unknown> {
+  return vscode.window.showTextDocument(uri, {
+    viewColumn: shouldOpenBeside() ? vscode.ViewColumn.Beside : undefined,
+  });
+}
 
 type surveyMetaData = {
   diffId: string | undefined;

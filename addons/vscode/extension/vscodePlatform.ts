@@ -24,7 +24,8 @@ import {arraysEqual} from 'isl/src/utils';
 import * as pathModule from 'node:path';
 import * as vscode from 'vscode';
 import {executeVSCodeCommand} from './commands';
-import {PERSISTED_STORAGE_KEY_PREFIX} from './config';
+import {PERSISTED_STORAGE_KEY_PREFIX, shouldOpenBeside} from './config';
+import {encodeSaplingDiffUri} from './DiffContentProvider';
 import {t} from './i18n';
 import {Internal} from './Internal';
 import {openFileInRepo} from './openFile';
@@ -106,6 +107,17 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
           const path: AbsolutePath = pathModule.join(repo.info.repoRoot, message.path);
           const uri = vscode.Uri.file(path);
           executeVSCodeCommand('sapling.open-file-diff', uri, message.comparison);
+          break;
+        }
+        case 'platform/openFileAtRevset': {
+          if (repo == null) {
+            break;
+          }
+          const path: AbsolutePath = pathModule.join(repo.info.repoRoot, message.path);
+          const uri = encodeSaplingDiffUri(vscode.Uri.file(path), message.revset);
+          vscode.window.showTextDocument(uri, {
+            viewColumn: shouldOpenBeside() ? vscode.ViewColumn.Beside : undefined,
+          });
           break;
         }
         case 'platform/revealInFileExplorer': {

@@ -9,8 +9,8 @@ import type {ChangedFile} from 'isl/src/types';
 import * as path from 'path';
 import type {Comparison} from 'shared/Comparison';
 import {
-  ComparisonType,
   beforeRevsetForComparison,
+  comparisonIsAgainstHead,
   comparisonStringKey,
   currRevsetForComparison,
   labelForComparison,
@@ -22,6 +22,8 @@ import {encodeSaplingDiffUri} from './DiffContentProvider';
 import {t} from './i18n';
 
 const OPEN_MULTI_DIFF_EDITOR_COMMAND = '_workbench.openMultiDiffEditor';
+const MULTI_DIFF_COMPARISON_SCHEME = 'sapling-comparison';
+const MULTI_DIFF_COMMITTED_COMPARISON_SCHEME = 'sapling-comparison-committed';
 
 export const hasMultiDiffEditorSupport = lazyInit(async () => {
   try {
@@ -60,10 +62,7 @@ export async function openMultiDiffEditor(
 
   // For uncommitted/head/stack changes, the right side is the working copy (editable)
   // For committed changes, both sides are read-only from specific revisions
-  const isWorkingCopyComparison =
-    comparison.type === ComparisonType.UncommittedChanges ||
-    comparison.type === ComparisonType.HeadChanges ||
-    comparison.type === ComparisonType.StackChanges;
+  const isWorkingCopyComparison = comparisonIsAgainstHead(comparison);
 
   const resources = files.map(file => {
     const fileUri = vscode.Uri.file(path.join(repoRoot, file.path));
@@ -99,8 +98,12 @@ export async function openMultiDiffEditor(
 
   // Include repoRoot so each repo gets its own multi-diff tab, and use
   // comparisonStringKey so different comparisons of the same type don't collide.
+  // Use a distinct scheme for committed comparisons so per-file toolbar buttons can be
+  // gated to committed-style comparisons via `resourceScheme` in their `when` clauses.
   const multiDiffSourceUri = vscode.Uri.from({
-    scheme: 'sapling-comparison',
+    scheme: comparisonIsAgainstHead(comparison)
+      ? MULTI_DIFF_COMPARISON_SCHEME
+      : MULTI_DIFF_COMMITTED_COMPARISON_SCHEME,
     path: `${repoRoot}/${comparisonStringKey(comparison)}`,
   });
 

@@ -282,3 +282,57 @@ describe('open-file-diff', () => {
     );
   });
 });
+
+describe('multi-diff editor resource open commands', () => {
+  const openHead = vscodeCommands['sapling.open-multi-diff-file-head'];
+
+  const repoRoot = '/repo/root';
+  const fileUri = vscode.Uri.file(`${repoRoot}/path/to/file`);
+  const mockShowTextDocument = vscode.window.showTextDocument as jest.MockedFunction<
+    typeof vscode.window.showTextDocument
+  >;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockShouldOpenBeside.mockReturnValue(false);
+  });
+
+  describe('open-multi-diff-file-head', () => {
+    it('decodes a sapling-diff URI to the working-copy file URI', async () => {
+      mockFsAccess.mockResolvedValue(undefined); // file exists
+      const modifiedUri = encodeSaplingDiffUri(fileUri, 'abc123');
+      await openHead([modifiedUri, modifiedUri]);
+
+      expect(mockShowTextDocument).toHaveBeenCalledTimes(1);
+      const [openedUri, opts] = mockShowTextDocument.mock.calls[0];
+      expect((openedUri as vscode.Uri).toString()).toBe(fileUri.toString());
+      expect(opts).toEqual({viewColumn: undefined});
+    });
+
+    it('decodes a deleted-file URI to the working-copy file URI', async () => {
+      mockFsAccess.mockResolvedValue(undefined); // file exists
+      const deletedUri = encodeDeletedFileUri(fileUri);
+      await openHead([deletedUri, deletedUri]);
+
+      expect(mockShowTextDocument).toHaveBeenCalledTimes(1);
+      const [openedUri, opts] = mockShowTextDocument.mock.calls[0];
+      expect((openedUri as vscode.Uri).toString()).toBe(fileUri.toString());
+      expect(opts).toEqual({viewColumn: undefined});
+    });
+
+    it('opens a raw file URI as-is', async () => {
+      mockFsAccess.mockResolvedValue(undefined); // file exists
+      await openHead([fileUri, fileUri]);
+
+      expect(mockShowTextDocument).toHaveBeenCalledWith(fileUri, {viewColumn: undefined});
+    });
+
+    it('does not open when the working-copy file does not exist', async () => {
+      mockFsAccess.mockRejectedValue(new Error('File not found'));
+      const modifiedUri = encodeSaplingDiffUri(fileUri, 'abc123');
+      await openHead([modifiedUri, modifiedUri]);
+
+      expect(mockShowTextDocument).not.toHaveBeenCalled();
+    });
+  });
+});

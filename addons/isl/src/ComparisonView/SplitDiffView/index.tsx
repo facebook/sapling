@@ -15,6 +15,7 @@ import {Button} from 'isl-components/Button';
 import {Icon} from 'isl-components/Icon';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useState} from 'react';
+import {comparisonIsAgainstHead, currRevsetForComparison} from 'shared/Comparison';
 import {generatedStatusDescription} from '../../GeneratedFile';
 import {T, t} from '../../i18n';
 import platform from '../../platform';
@@ -70,6 +71,20 @@ export function SplitDiffView({
           </Button>
         </Tooltip>
       )}
+      {!isSubmodule &&
+        platform.openFileAtRevset != null &&
+        !comparisonIsAgainstHead(ctx.id.comparison) && (
+          <Tooltip title={t('Open the version shown in this diff')} placement={'bottom'}>
+            <Button
+              icon
+              className="split-diff-view-file-header-open-revision-button"
+              onClick={() => {
+                platform.openFileAtRevset?.(path, currRevsetForComparison(ctx.id.comparison));
+              }}>
+              <Icon icon="git-commit" />
+            </Button>
+          </Tooltip>
+        )}
       {!isSubmodule && (
         <Tooltip title={t('Open file')} placement={'bottom'}>
           <Button

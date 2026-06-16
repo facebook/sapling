@@ -32,5 +32,6 @@
   "settings.isl.inlineSignalsRenderMode.enumDescriptions.inset": "Render inline signals as inset webviews with rich controls.",
   "settings.isl.inlineSignalsRenderMode.enumDescriptions.diagnostics": "Render inline signals as standard VS Code diagnostics and squiggles.",
   "sapling.open-comments-command": "Open Code Review Comments Panel",
-  "sapling.toggle-inline-comments-command": "Toggle Show/Hide Inline Code Review Comments"
+  "sapling.toggle-inline-comments-command": "Toggle Show/Hide Inline Code Review Comments",
+  "sapling.open-multi-diff-file-head-command": "Open Working Copy File"
 }

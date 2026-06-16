@@ -13,6 +13,7 @@ import type {
 } from 'isl/src/types';
 
 import * as vscode from 'vscode';
+import {encodeSaplingDiffUri} from '../DiffContentProvider';
 import {getVSCodePlatform} from '../vscodePlatform';
 
 jest.mock('isl-server/src/Repository', () => ({
@@ -163,5 +164,63 @@ describe('platform/subscribeToVSCodeConfig', () => {
       expect.stringContaining('error handling message'),
     );
     expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(expect.stringContaining('boom'));
+  });
+});
+
+describe('platform/openFileAtRevset', () => {
+  const mockExtensionContext = {
+    globalState: {update: jest.fn()},
+  } as unknown as vscode.ExtensionContext;
+
+  const repoRoot = '/path/to/repo';
+  const mockRepo = {info: {repoRoot}} as never;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('opens the in-diff version via a read-only sapling-diff URI', async () => {
+    const platform = getVSCodePlatform(mockExtensionContext);
+    const message: PlatformSpecificClientToServerMessages = {
+      type: 'platform/openFileAtRevset',
+      path: 'src/file.ts',
+      revset: 'abc123',
+    };
+
+    await platform.handleMessageFromClient.call(
+      platform,
+      mockRepo,
+      mockCtx,
+      message,
+      jest.fn() as (msg: ServerToClientMessage) => void,
+      jest.fn(),
+      jest.fn(),
+    );
+
+    const expectedUri = encodeSaplingDiffUri(vscode.Uri.file(`${repoRoot}/src/file.ts`), 'abc123');
+    expect(vscode.window.showTextDocument).toHaveBeenCalledWith(expectedUri, {
+      viewColumn: undefined,
+    });
+  });
+
+  it('does nothing when there is no repo', async () => {
+    const platform = getVSCodePlatform(mockExtensionContext);
+    const message: PlatformSpecificClientToServerMessages = {
+      type: 'platform/openFileAtRevset',
+      path: 'src/file.ts',
+      revset: 'abc123',
+    };
+
+    await platform.handleMessageFromClient.call(
+      platform,
+      undefined,
+      mockCtx,
+      message,
+      jest.fn() as (msg: ServerToClientMessage) => void,
+      jest.fn(),
+      jest.fn(),
+    );
+
+    expect(vscode.window.showTextDocument).not.toHaveBeenCalled();
   });
 });
