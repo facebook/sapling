@@ -43,6 +43,8 @@ use super::HgRepoContext;
 const USE_RESTRICTED_PATHS_FOR_AUGMENTED_TREE_ACL_METADATA: &str =
     "scm/mononoke:use_restricted_paths_for_augmented_tree_acl_metadata";
 
+const DENY_ORIGINAL_HG_MANIFEST: &str = "scm/mononoke:deny_original_hg_manifest";
+
 #[derive(Clone)]
 pub struct HgTreeContext<R> {
     #[allow(dead_code)]
@@ -70,6 +72,19 @@ impl<R: MononokeRepo> HgTreeContext<R> {
         manifest_id: HgManifestId,
     ) -> Result<Option<Self>, MononokeError> {
         let ctx = repo_ctx.ctx();
+
+        // Killswitch (T271591213): tented repos must never fall back to the
+        // original (non-augmented) Hg manifest, which lacks Path ACL
+        // restriction metadata. When the JK is enabled for the repo, refuse
+        // the request instead of serving the unprotected manifest.
+        let repo_name = repo_ctx.repo().repo_identity().name();
+        if justknobs::eval(DENY_ORIGINAL_HG_MANIFEST, None, Some(repo_name)) {
+            return Err(MononokeError::InvalidRequest(format!(
+                "original (non-augmented) Hg manifest is disabled for repo {repo_name}; \
+                 request augmented manifests (aux data) instead"
+            )));
+        }
+
         let blobstore = repo_ctx.repo().repo_blobstore();
         let envelope = fetch_manifest_envelope_opt(ctx, blobstore, manifest_id).await?;
 
