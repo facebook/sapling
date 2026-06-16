@@ -53,6 +53,7 @@ rust_binary(
         "fbsource//third-party/rust:gix-object",
         "fbsource//third-party/rust:itertools",
         "fbsource//third-party/rust:maplit",
+        "fbsource//third-party/rust:num-format",
         "fbsource//third-party/rust:prettytable-rs",
         "fbsource//third-party/rust:regex",
         "fbsource//third-party/rust:serde_json",

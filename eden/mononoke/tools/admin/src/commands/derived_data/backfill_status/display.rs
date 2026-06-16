@@ -8,12 +8,16 @@
 #![allow(dead_code)]
 
 use std::collections::HashMap;
+use std::sync::LazyLock;
 use std::time::Duration;
 
 use chrono::DateTime;
 use chrono::Utc;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
+use num_format::Buffer;
+use num_format::CustomFormat;
+use num_format::Grouping;
 use prettytable::Cell;
 use prettytable::Row;
 use prettytable::Table;
@@ -40,6 +44,9 @@ pub(super) struct BackfillListRow {
     pub aggregate_status: RepoStatus,
     pub has_failed_requests: bool,
     pub repo_count: i64,
+    /// Distinct repo ids for this backfill, used to render repo names in the
+    /// "Repos" column. May be empty if they couldn't be loaded.
+    pub repo_ids: Vec<i64>,
     pub derived_data_type: Option<String>,
 }
 
@@ -112,21 +119,89 @@ pub(super) fn format_duration(duration: &Duration) -> String {
     }
 }
 
-/// Format a large number with thousands separators
+/// Underscore-separated digit grouping, e.g. 18893 -> "18_893". `num_format`
+/// also supports locale-aware separators (e.g. `Locale::en` for commas); we use
+/// underscores throughout this view.
+static UNDERSCORE_FORMAT: LazyLock<CustomFormat> = LazyLock::new(|| {
+    CustomFormat::builder()
+        .grouping(Grouping::Standard)
+        .separator("_")
+        .build()
+        .expect("static underscore number format is valid")
+});
+
+/// Format a large number with `_` thousands separators, e.g. 18893 -> "18_893".
 pub(super) fn format_number(n: usize) -> String {
-    let s = n.to_string();
-    let mut result = String::with_capacity(s.len() + s.len() / 3);
-    for (i, c) in s.chars().enumerate() {
-        if i > 0 && (s.len() - i).is_multiple_of(3) {
-            result.push(',');
-        }
-        result.push(c);
-    }
-    result
+    let mut buf = Buffer::new();
+    buf.write_formatted(&n, &*UNDERSCORE_FORMAT);
+    buf.as_str().to_string()
 }
 
-/// Display a list of recent backfill jobs
-pub(super) fn display_backfill_list(backfills: &[BackfillListRow]) {
+/// Truncate `s` (by characters) to at most `max` display columns, appending an
+/// ellipsis if it had to be shortened.
+fn truncate_str(s: &str, max: usize) -> String {
+    if s.chars().count() <= max {
+        s.to_string()
+    } else {
+        let head: String = s.chars().take(max.saturating_sub(1)).collect();
+        format!("{head}…")
+    }
+}
+
+/// Render the "Repo Names" column for a backfill list row: the repo names,
+/// truncated to a reasonable width. Unknown ids fall back to `repo_id: <id>`.
+/// The repo count lives in its own column, so it isn't repeated here.
+fn format_repo_names_cell(repo_ids: &[i64], repo_names: &HashMap<i64, String>) -> String {
+    /// Max width of the names portion before we truncate with an ellipsis.
+    const MAX_NAMES_WIDTH: usize = 70;
+
+    let name_of = |repo_id: i64| -> String {
+        match repo_names.get(&repo_id) {
+            // Fall back to the id for unknown or empty names so we never render
+            // a blank entry.
+            Some(name) if !name.is_empty() => name.clone(),
+            _ => format!("repo_id: {}", format_number(repo_id.max(0) as usize)),
+        }
+    };
+
+    // Resolve and sort names for stable output.
+    let mut names: Vec<String> = repo_ids.iter().map(|id| name_of(*id)).collect();
+    names.sort();
+
+    match names.as_slice() {
+        [] => "-".to_string(),
+        [single] => truncate_str(single, MAX_NAMES_WIDTH),
+        _ => {
+            let mut shown: Vec<&str> = Vec::new();
+            let mut width = 0usize;
+            for name in &names {
+                let sep = if shown.is_empty() { 0 } else { ", ".len() };
+                if width + sep + name.chars().count() > MAX_NAMES_WIDTH {
+                    break;
+                }
+                width += sep + name.chars().count();
+                shown.push(name);
+            }
+            if shown.is_empty() {
+                // Even the first name doesn't fit — show a truncated version so
+                // the cell isn't blank.
+                truncate_str(&names[0], MAX_NAMES_WIDTH)
+            } else if shown.len() < names.len() {
+                format!("{}, …", shown.join(", "))
+            } else {
+                shown.join(", ")
+            }
+        }
+    }
+}
+
+/// Display a list of recent backfill jobs. `repo_names` maps repo id to name
+/// for every repo referenced in the list (config repos plus git repos resolved
+/// from the source-of-truth table).
+pub(super) fn display_backfill_list(
+    backfills: &[BackfillListRow],
+    repo_names: &HashMap<i64, String>,
+) {
     println!("\nAvailable Backfill Jobs (recent)");
     println!("{}", "━".repeat(80));
 
@@ -140,6 +215,7 @@ pub(super) fn display_backfill_list(backfills: &[BackfillListRow]) {
         Cell::new("Status"),
         Cell::new("Type"),
         Cell::new("Repos"),
+        Cell::new("Repo Names"),
     ]));
 
     for row in backfills {
@@ -154,7 +230,8 @@ pub(super) fn display_backfill_list(backfills: &[BackfillListRow]) {
             Cell::new(row.created_by.as_deref().unwrap_or("-")),
             Cell::new(&status),
             Cell::new(row.derived_data_type.as_deref().unwrap_or("-")),
-            Cell::new(&row.repo_count.to_string()),
+            Cell::new(&format_number(row.repo_count.max(0) as usize)),
+            Cell::new(&format_repo_names_cell(&row.repo_ids, repo_names)),
         ]));
     }
 
@@ -718,4 +795,49 @@ pub(super) fn display_single_repo_detail(
         data.estimated_remaining.as_ref(),
     );
     print_type_breakdown_table(&data.status_counts, &data.type_breakdown);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_format_number() {
+        assert_eq!(format_number(12345), "12_345");
+    }
+
+    #[test]
+    fn test_format_duration() {
+        // 12345s = 3h 25m 45s; shown as "{h}h {m}m" once hours are non-zero.
+        assert_eq!(format_duration(&Duration::from_secs(12345)), "3h 25m");
+    }
+
+    #[test]
+    fn test_format_timestamp() {
+        assert_eq!(
+            format_timestamp(&Timestamp::from_timestamp_secs(12345)),
+            "1970-01-01 03:25:45 UTC"
+        );
+    }
+
+    #[test]
+    fn test_truncate_str() {
+        // Shorter than the budget: unchanged.
+        assert_eq!(truncate_str("12345", 70), "12345");
+        // Longer than the budget: truncated to `max` columns with an ellipsis.
+        assert_eq!(truncate_str("12345", 4), "123…");
+    }
+
+    #[test]
+    fn test_format_repo_names_cell_single_unknown_id() {
+        // An id with no known name falls back to "repo_id: <grouped id>".
+        let names = HashMap::new();
+        assert_eq!(format_repo_names_cell(&[12345], &names), "repo_id: 12_345");
+    }
+
+    #[test]
+    fn test_format_repo_names_cell_single_known_name() {
+        let names = HashMap::from([(12345, "fbsource".to_string())]);
+        assert_eq!(format_repo_names_cell(&[12345], &names), "fbsource");
+    }
 }

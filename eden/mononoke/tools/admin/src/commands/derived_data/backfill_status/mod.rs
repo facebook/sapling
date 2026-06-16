@@ -33,6 +33,8 @@ use derived_data_manager::DerivedDataManager;
 use fbinit::FacebookInit;
 use futures::stream;
 use futures::stream::StreamExt;
+use git_source_of_truth::GitSourceOfTruthConfig;
+use git_source_of_truth::GitSourceOfTruthConfigRef;
 #[cfg(fbcode_build)]
 use log_reader::GetSessionRequest;
 #[cfg(fbcode_build)]
@@ -105,6 +107,17 @@ struct PhaseCountRepo {
     phases: dyn Phases,
 }
 
+/// Lightweight repo container for reading the (global) git source-of-truth
+/// config, used to resolve names for git repos that aren't in the loaded
+/// repo configs.
+#[facet::container]
+struct GitSotRepo {
+    #[facet]
+    repo_identity: RepoIdentity,
+    #[facet]
+    git_source_of_truth_config: dyn GitSourceOfTruthConfig,
+}
+
 /// How many backfills to load params for in parallel for the list view.
 const PARAMS_LOAD_CONCURRENCY: usize = 16;
 
@@ -147,7 +160,7 @@ pub(super) async fn backfill_status(
     match args.request_id {
         None => {
             // Mode 1: List recent backfills
-            list_backfills(ctx, &queue, &blobstore, args.lookback).await?;
+            list_backfills(ctx, app, &queue, &blobstore, &repo_names, args.lookback).await?;
         }
         Some(request_id) => {
             // Mode 2: Show detailed progress for a specific backfill
@@ -220,8 +233,10 @@ async fn load_backfill_params_info(
 
 async fn list_backfills(
     ctx: &CoreContext,
+    app: &MononokeApp,
     queue: &impl LongRunningRequestsQueue,
     blobstore: &Arc<dyn Blobstore>,
+    repo_names: &HashMap<RepositoryId, String>,
     lookback_days: i64,
 ) -> Result<()> {
     let now = Timestamp::now();
@@ -258,6 +273,23 @@ async fn list_backfills(
         } else {
             RepoStatus::from_root_and_children(entry.root_status, children)
         };
+        // The list query only gives a repo count; fetch the distinct repo ids so
+        // we can show repo names in the table.
+        let repo_ids = match queue.get_backfill_stats_by_repo(ctx, &entry.id).await {
+            Ok(stats) => {
+                let mut ids: Vec<i64> = stats
+                    .iter()
+                    .filter_map(|(repo_id, _, _)| repo_id.map(|r| r.id() as i64))
+                    .collect();
+                ids.sort_unstable();
+                ids.dedup();
+                ids
+            }
+            Err(e) => {
+                warn!("Failed to load repos for backfill {}: {:#}", entry.id.0, e);
+                Vec::new()
+            }
+        };
         BackfillListRow {
             request_id: entry.id,
             created_at: entry.created_at,
@@ -265,6 +297,7 @@ async fn list_backfills(
             aggregate_status,
             has_failed_requests,
             repo_count: entry.repo_count,
+            repo_ids,
             derived_data_type,
         }
     }))
@@ -272,9 +305,100 @@ async fn list_backfills(
     .collect()
     .await;
 
-    display_backfill_list(&rows);
+    // Resolve repo id -> name for every repo in the list. Names come from the
+    // loaded repo configs; git repos aren't in the prod config tier, so for any
+    // leftover ids fall back to the git source-of-truth table.
+    let resolved = resolve_repo_names(ctx, app, repo_names, &rows).await;
+
+    display_backfill_list(&rows, &resolved);
 
     Ok(())
+}
+
+/// Build an id -> name map covering every repo referenced by `rows`. Resolves
+/// from the loaded repo configs first, then falls back to the git
+/// source-of-truth table (which knows git repos absent from the config tier).
+async fn resolve_repo_names(
+    ctx: &CoreContext,
+    app: &MononokeApp,
+    repo_names: &HashMap<RepositoryId, String>,
+    rows: &[BackfillListRow],
+) -> HashMap<i64, String> {
+    let mut resolved: HashMap<i64, String> = HashMap::new();
+    let mut has_unresolved = false;
+    for row in rows {
+        for &repo_id in &row.repo_ids {
+            if resolved.contains_key(&repo_id) {
+                continue;
+            }
+            match i32::try_from(repo_id)
+                .ok()
+                .and_then(|id| repo_names.get(&RepositoryId::new(id)))
+            {
+                Some(name) => {
+                    resolved.insert(repo_id, name.clone());
+                }
+                None => has_unresolved = true,
+            }
+        }
+    }
+
+    if has_unresolved {
+        match load_git_repo_names(ctx, app, repo_names).await {
+            Ok(git_names) => {
+                for row in rows {
+                    for &repo_id in &row.repo_ids {
+                        if let std::collections::hash_map::Entry::Vacant(e) =
+                            resolved.entry(repo_id)
+                        {
+                            if let Some(name) = git_names.get(&repo_id) {
+                                e.insert(name.clone());
+                            }
+                        }
+                    }
+                }
+            }
+            Err(e) => warn!(
+                "Failed to load git repo names from source of truth: {:#}",
+                e
+            ),
+        }
+    }
+
+    resolved
+}
+
+/// Load id -> name for git repos from the source-of-truth table (git repos
+/// aren't in the prod config tier). Covers every SoT state so we resolve as many
+/// ids as possible. The git source-of-truth config is global, so we open it via
+/// any configured repo.
+async fn load_git_repo_names(
+    ctx: &CoreContext,
+    app: &MononokeApp,
+    repo_names: &HashMap<RepositoryId, String>,
+) -> Result<HashMap<i64, String>> {
+    let any_repo_id = repo_names
+        .keys()
+        .next()
+        .map(|repo_id| repo_id.id())
+        .context("no configured repo available to open git source-of-truth config")?;
+
+    let repo: GitSotRepo = app
+        .open_repo(&RepoArgs::from_repo_id(any_repo_id))
+        .await
+        .context("opening repo for git source-of-truth lookup")?;
+
+    let entries = repo
+        .git_source_of_truth_config()
+        .get_any(ctx)
+        .await
+        .context("listing git repos from source of truth")?;
+
+    Ok(entries
+        .into_iter()
+        .filter(|entry| !entry.repo_name.0.is_empty())
+        .map(|entry| (entry.repo_id.id() as i64, entry.repo_name.0))
+        .collect())
 }
 
 async fn show_backfill_detail(
