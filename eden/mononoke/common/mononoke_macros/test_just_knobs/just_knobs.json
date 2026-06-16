@@ -35,7 +35,6 @@
     "scm/mononoke:changeset_path_context_use_skeleton_manifest_v2": true,
     "scm/mononoke:case_conflicts_check_use_ccsm": true,
     "scm/mononoke:land_service_batching_enabled": false,
-    "scm/mononoke:land_service_enforce_proxy_trust": false,
     "scm/mononoke:enable_subtree_changes": true,
     "scm/mononoke:enable_manifest_altering_subtree_changes": false,
     "scm/mononoke:disable_xdb_blobstore_reads": false,
