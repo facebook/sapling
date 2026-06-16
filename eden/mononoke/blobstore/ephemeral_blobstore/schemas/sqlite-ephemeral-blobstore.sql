@@ -24,6 +24,15 @@ CREATE TABLE IF NOT EXISTS `ephemeral_bubble_changeset_mapping` (
     PRIMARY KEY (`repo_id`, `bubble_id`, `cs_id`)
 );
 
+CREATE TABLE IF NOT EXISTS `ephemeral_bubble_changeset_parents` (
+    `repo_id` INT NOT NULL,
+    `bubble_id` BIGINT UNSIGNED NOT NULL,
+    `cs_id` BINARY(32) NOT NULL,
+    `parent_index` INT NOT NULL,
+    `parent_cs_id` BINARY(32) NOT NULL,
+    PRIMARY KEY (`repo_id`, `bubble_id`, `cs_id`, `parent_index`)
+);
+
 CREATE TABLE IF NOT EXISTS 'ephemeral_bubble_labels' (
     `bubble_id` BIGINT UNSIGNED NOT NULL,
     `label` VARCHAR(255),

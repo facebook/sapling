@@ -213,6 +213,15 @@ mononoke_queries! {
         WHERE bubble_id IN (SELECT id FROM ephemeral_bubbles WHERE id = {id} AND expired)"
     }
 
+    write DeleteBubbleChangesetParents(
+        id: BubbleId,
+    ) {
+        none,
+        "DELETE
+        FROM ephemeral_bubble_changeset_parents
+        WHERE bubble_id IN (SELECT id FROM ephemeral_bubbles WHERE id = {id} AND expired)"
+    }
+
     write DeleteExpiredBubbleLabels(
         id: BubbleId,
     ) {
@@ -489,6 +498,14 @@ impl RepoEphemeralStoreInner {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
         DeleteBubbleChangesetMapping::query(
+            &self.connections.write_connection,
+            ctx.sql_query_telemetry(),
+            &bubble_id,
+        )
+        .await?;
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlWrites);
+        DeleteBubbleChangesetParents::query(
             &self.connections.write_connection,
             ctx.sql_query_telemetry(),
             &bubble_id,

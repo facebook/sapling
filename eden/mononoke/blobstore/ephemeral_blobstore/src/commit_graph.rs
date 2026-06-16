@@ -67,6 +67,32 @@ mononoke_queries! {
          (repo_id, cs_id, bubble_id, gen)
          VALUES {values}"
     }
+
+    write InsertChangesetParents(
+        values: (
+            repo_id: RepositoryId,
+            bubble_id: BubbleId,
+            cs_id: ChangesetId,
+            parent_index: u32,
+            parent_cs_id: ChangesetId,
+        )
+    ) {
+        insert_or_ignore,
+        "{insert_or_ignore} INTO ephemeral_bubble_changeset_parents
+         (repo_id, bubble_id, cs_id, parent_index, parent_cs_id)
+         VALUES {values}"
+    }
+
+    read SelectChangesetParents(
+        repo_id: RepositoryId,
+        bubble_id: BubbleId,
+        cs_id: ChangesetId,
+    ) -> (u32, ChangesetId) {
+        "SELECT parent_index, parent_cs_id
+         FROM ephemeral_bubble_changeset_parents
+         WHERE repo_id = {repo_id} AND bubble_id = {bubble_id} AND cs_id = {cs_id}
+         ORDER BY parent_index ASC"
+    }
 }
 
 /// A commit graph storage that allows fetching snapshot changesets, as well
@@ -136,17 +162,45 @@ impl EphemeralOnlyChangesetStorage {
     }
 
     async fn add(&self, ctx: &CoreContext, edges: &ChangesetEdges) -> Result<bool> {
-        let result = InsertChangeset::query(
-            &self.connections.write_connection,
-            ctx.sql_query_telemetry(),
+        let cs_id = edges.node().cs_id;
+        let parent_data: Vec<(u32, ChangesetId)> = edges
+            .parents::<Parents>()
+            .enumerate()
+            .map(|(idx, n)| (idx as u32, n.cs_id))
+            .collect();
+
+        let txn = self
+            .connections
+            .write_connection
+            .start_transaction(ctx.sql_query_telemetry())
+            .await?;
+
+        let (txn, result) = InsertChangeset::query_with_transaction(
+            txn,
             &[(
                 &self.repo_id,
-                &edges.node().cs_id,
+                &cs_id,
                 &self.bubble_id,
                 &edges.node().generation::<Parents>().value(),
             )],
         )
         .await?;
+
+        let txn = if parent_data.is_empty() {
+            txn
+        } else {
+            let parent_rows: Vec<_> = parent_data
+                .iter()
+                .map(|(idx, parent_cs_id)| {
+                    (&self.repo_id, &self.bubble_id, &cs_id, idx, parent_cs_id)
+                })
+                .collect();
+            let (txn, _) =
+                InsertChangesetParents::query_with_transaction(txn, parent_rows.as_slice()).await?;
+            txn
+        };
+
+        txn.commit().await?;
 
         Ok(result.last_insert_id().is_some())
     }
@@ -223,6 +277,25 @@ impl ParentsFetcher for EphemeralOnlyChangesetStorage {
         ctx: &CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Vec<ChangesetId>> {
+        // Fast path: parent edges are stored in SQL for any bubble changeset
+        // written after the parents table was introduced. This avoids loading
+        // the bonsai blob and mirrors how the production commit graph works.
+        let rows = SelectChangesetParents::query(
+            &self.connections.read_connection,
+            ctx.sql_query_telemetry(),
+            &self.repo_id,
+            &self.bubble_id,
+            &cs_id,
+        )
+        .await?;
+        if !rows.is_empty() {
+            return Ok(rows
+                .into_iter()
+                .map(|(_idx, parent_cs_id)| parent_cs_id)
+                .collect());
+        }
+        // Transition fallback for bubbles created before the parents table
+        // existed. Removed once such bubbles have aged out.
         let cs = cs_id
             .load(ctx, &self.repo_blobstore)
             .await
@@ -418,8 +491,208 @@ impl CommitGraphStorage for EphemeralCommitGraphStorage {
         _ctx: &CoreContext,
         _cs_id: ChangesetId,
     ) -> Result<Vec<ChangesetId>> {
-        // Implementing this requires storing parent information in the snapshot SQL tables, but
-        // there's no need for it currently as we don't support stacks of ephemeral changesets.
-        unimplemented!("Fetching changeset children is not implemented for ephemeral commit graph")
+        // The parents SQL table makes a fetch_children implementation possible
+        // in principle, but a bubble that predates the table would silently
+        // return an empty child set instead of failing, which could mislead
+        // callers. Fail loudly until we are confident the table is populated
+        // for all live bubbles.
+        Err(anyhow!(
+            "fetch_children is not supported on ephemeral commit graph storage"
+        ))
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::sync::Arc;
+    use std::time::Duration;
+
+    use blobstore::BlobstoreEnumerableWithUnlink;
+    use commit_graph_types::edges::ChangesetEdgesMut;
+    use commit_graph_types::edges::ChangesetNode;
+    use commit_graph_types::edges::ChangesetNodeParents;
+    use context::CoreContext;
+    use fbinit::FacebookInit;
+    use memblob::Memblob;
+    use metaconfig_types::BubbleDeletionMode;
+    use mononoke_macros::mononoke;
+    use mononoke_types::Generation;
+    use mononoke_types_mocks::changesetid::FIVES_CSID;
+    use mononoke_types_mocks::changesetid::ONES_CSID;
+    use mononoke_types_mocks::changesetid::THREES_CSID;
+    use mononoke_types_mocks::changesetid::TWOS_CSID;
+    use mononoke_types_mocks::repo::REPO_ZERO;
+    use repo_blobstore::RepoBlobstore;
+    use scuba_ext::MononokeScubaSampleBuilder;
+    use sql_construct::SqlConstruct;
+
+    use super::*;
+    use crate::Bubble;
+    use crate::RepoEphemeralStore;
+    use crate::builder::RepoEphemeralStoreBuilder;
+
+    fn bootstrap(fb: FacebookInit) -> Result<(CoreContext, RepoBlobstore, RepoEphemeralStore)> {
+        let ctx = CoreContext::test_mock(fb);
+        let blobstore = Arc::new(Memblob::default()) as Arc<dyn BlobstoreEnumerableWithUnlink>;
+        let repo_blobstore = RepoBlobstore::new(
+            Arc::new(Memblob::default()),
+            None,
+            REPO_ZERO,
+            MononokeScubaSampleBuilder::with_discard(),
+        );
+        let eph = RepoEphemeralStoreBuilder::with_sqlite_in_memory()?.build(
+            REPO_ZERO,
+            blobstore,
+            Duration::from_secs(30 * 24 * 3600),
+            Duration::from_secs(6 * 3600),
+            BubbleDeletionMode::MarkAndDelete,
+        );
+        Ok((ctx, repo_blobstore, eph))
+    }
+
+    fn ephemeral_only_storage(
+        bubble: &Bubble,
+        repo_blobstore: RepoBlobstore,
+    ) -> EphemeralOnlyChangesetStorage {
+        EphemeralOnlyChangesetStorage::new(
+            REPO_ZERO,
+            bubble.bubble_id(),
+            repo_blobstore,
+            bubble.sql_connections().clone(),
+        )
+    }
+
+    fn edges_with_parents(
+        cs_id: ChangesetId,
+        generation: u64,
+        parents: Vec<ChangesetId>,
+    ) -> ChangesetEdges {
+        let mk_node = |cs_id, r#gen| {
+            ChangesetNode::new(
+                cs_id,
+                Generation::new(r#gen),
+                Generation::new(r#gen),
+                0,
+                0,
+                0,
+            )
+        };
+        let parent_nodes: ChangesetNodeParents = parents
+            .into_iter()
+            .map(|p| mk_node(p, generation.saturating_sub(1)))
+            .collect();
+        ChangesetEdgesMut {
+            node: mk_node(cs_id, generation),
+            parents: parent_nodes,
+            subtree_sources: Vec::new(),
+            merge_ancestor_or_root: None,
+            skip_tree_parent: None,
+            skip_tree_skew_ancestor: None,
+            p1_linear_skew_ancestor: None,
+            subtree_or_merge_ancestor: None,
+            subtree_source_parent: None,
+            subtree_source_skew_ancestor: None,
+        }
+        .freeze()
+    }
+
+    #[mononoke::fbinit_test]
+    async fn fetch_parents_from_sql_for_multi_commit_bubble(fb: FacebookInit) -> Result<()> {
+        let (ctx, repo_blobstore, eph) = bootstrap(fb)?;
+        let bubble = eph.create_bubble(&ctx, None, vec![]).await?;
+        let storage = ephemeral_only_storage(&bubble, repo_blobstore);
+
+        // Two bubble changesets: D (parent C) and E (parent D), where D and E
+        // are bubble-owned and C is a "base" living outside the bubble.
+        let base_c = ONES_CSID;
+        let d = TWOS_CSID;
+        let e = THREES_CSID;
+
+        storage
+            .add(&ctx, &edges_with_parents(d, 5, vec![base_c]))
+            .await?;
+        storage
+            .add(&ctx, &edges_with_parents(e, 6, vec![d]))
+            .await?;
+
+        // Reads return parents from SQL — no bonsai blob ever gets loaded
+        // because none was written to the bubble blobstore.
+        assert_eq!(
+            storage.fetch_parents(&ctx, e).await?,
+            vec![d],
+            "E's parents should be [D] from the parents SQL table"
+        );
+        assert_eq!(
+            storage.fetch_parents(&ctx, d).await?,
+            vec![base_c],
+            "D's parents should be [base_c] from the parents SQL table"
+        );
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn fetch_parents_preserves_parent_order_for_merges(fb: FacebookInit) -> Result<()> {
+        let (ctx, repo_blobstore, eph) = bootstrap(fb)?;
+        let bubble = eph.create_bubble(&ctx, None, vec![]).await?;
+        let storage = ephemeral_only_storage(&bubble, repo_blobstore);
+
+        // Merge commit M with two parents, in order [P1, P2].
+        let p1 = ONES_CSID;
+        let p2 = TWOS_CSID;
+        let m = THREES_CSID;
+
+        storage
+            .add(&ctx, &edges_with_parents(m, 10, vec![p1, p2]))
+            .await?;
+
+        assert_eq!(
+            storage.fetch_parents(&ctx, m).await?,
+            vec![p1, p2],
+            "Merge parents must come back in p1, p2 order (preserved via parent_index)"
+        );
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn delete_bubble_clears_parents_table(fb: FacebookInit) -> Result<()> {
+        let (ctx, repo_blobstore, eph) = bootstrap(fb)?;
+        let bubble = eph.create_bubble(&ctx, None, vec![]).await?;
+        let bubble_id = bubble.bubble_id();
+        let storage = ephemeral_only_storage(&bubble, repo_blobstore);
+
+        let d = ONES_CSID;
+        let e = TWOS_CSID;
+        storage
+            .add(&ctx, &edges_with_parents(d, 1, vec![FIVES_CSID]))
+            .await?;
+        storage
+            .add(&ctx, &edges_with_parents(e, 2, vec![d]))
+            .await?;
+
+        // Sanity: parents are queryable before deletion.
+        assert_eq!(
+            storage.fetch_parents(&ctx, e).await?,
+            vec![d],
+            "parents should be readable before delete_bubble"
+        );
+
+        eph.delete_bubble(&ctx, bubble_id).await?;
+
+        // After deletion the parents rows for this bubble should be gone.
+        // Probe via the SQL query directly since the higher-level fetch is
+        // intentionally not implemented yet (returns Err).
+        let rows = SelectChangesetParents::query(
+            &storage.connections.read_connection,
+            ctx.sql_query_telemetry(),
+            &storage.repo_id,
+            &storage.bubble_id,
+            &e,
+        )
+        .await?;
+        assert!(
+            rows.is_empty(),
+            "parents rows for the deleted bubble should be gone"
+        );
+        Ok(())
     }
 }

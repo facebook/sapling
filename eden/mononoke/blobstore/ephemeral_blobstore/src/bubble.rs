@@ -388,6 +388,11 @@ impl Bubble {
         self.expires_at
     }
 
+    #[cfg(test)]
+    pub(crate) fn sql_connections(&self) -> &SqlConnections {
+        &self.connections
+    }
+
     pub async fn labels(&self) -> Result<Vec<String>> {
         self.labels
             .get_or_init(|| async { Ok(Vec::new()) })
