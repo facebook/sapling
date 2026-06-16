@@ -571,10 +571,22 @@ function populateAndSetISLWebview<W extends vscode.WebviewPanel | vscode.Webview
     vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ??
     process.cwd();
   mostRecentISLCwd = initialCwd;
+  let disposed = false;
 
   const disposeConnection = onClientConnection({
     postMessage(message: string) {
-      return panelOrView.webview.postMessage(message) as Promise<boolean>;
+      if (disposed) {
+        return Promise.resolve(false);
+      }
+      try {
+        return panelOrView.webview.postMessage(message) as Promise<boolean>;
+      } catch (err) {
+        if (disposed) {
+          logger.info('Ignoring message to disposed ISL webview');
+          return Promise.resolve(false);
+        }
+        throw err;
+      }
     },
     onDidReceiveMessage(handler) {
       return panelOrView.webview.onDidReceiveMessage(m => {
@@ -595,6 +607,7 @@ function populateAndSetISLWebview<W extends vscode.WebviewPanel | vscode.Webview
   });
 
   panelOrView.onDidDispose(() => {
+    disposed = true;
     if (isPanel(panelOrView)) {
       logger.info('Disposing ISL panel');
       if (islPanelOrViewResult?.panel === panelOrView) {

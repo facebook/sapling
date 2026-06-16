@@ -119,3 +119,49 @@ describe('platform/subscribeToAvailableCwds', () => {
     });
   });
 });
+
+describe('platform/subscribeToVSCodeConfig', () => {
+  const mockExtensionContext = {
+    globalState: {
+      update: jest.fn(),
+    },
+  } as unknown as vscode.ExtensionContext;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({
+      get: jest.fn().mockReturnValue('Auto'),
+    } as never);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('still reports other message handling errors', async () => {
+    const postMessage = jest.fn(() => {
+      throw new Error('boom');
+    });
+    const platform = getVSCodePlatform(mockExtensionContext);
+
+    const message: PlatformSpecificClientToServerMessages = {
+      type: 'platform/subscribeToVSCodeConfig',
+      config: 'sapling.comparisonPanelMode',
+    } as PlatformSpecificClientToServerMessages;
+
+    await platform.handleMessageFromClient.call(
+      platform,
+      undefined,
+      mockCtx,
+      message,
+      postMessage as (msg: ServerToClientMessage) => void,
+      jest.fn(),
+      jest.fn(),
+    );
+
+    expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
+      expect.stringContaining('error handling message'),
+    );
+    expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(expect.stringContaining('boom'));
+  });
+});
