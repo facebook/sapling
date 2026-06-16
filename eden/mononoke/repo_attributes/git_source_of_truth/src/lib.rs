@@ -104,6 +104,9 @@ pub trait GitSourceOfTruthConfig: Send + Sync {
     async fn get_locked(&self, _ctx: &CoreContext) -> Result<Vec<GitSourceOfTruthConfigEntry>>;
 
     async fn get_reserved(&self, _ctx: &CoreContext) -> Result<Vec<GitSourceOfTruthConfigEntry>>;
+
+    /// Get all entries, regardless of source-of-truth state, in a single query.
+    async fn get_any(&self, _ctx: &CoreContext) -> Result<Vec<GitSourceOfTruthConfigEntry>>;
 }
 
 #[derive(Clone)]
@@ -204,6 +207,10 @@ impl GitSourceOfTruthConfig for NoopGitSourceOfTruthConfig {
     }
 
     async fn get_reserved(&self, _ctx: &CoreContext) -> Result<Vec<GitSourceOfTruthConfigEntry>> {
+        Ok(vec![])
+    }
+
+    async fn get_any(&self, _ctx: &CoreContext) -> Result<Vec<GitSourceOfTruthConfigEntry>> {
         Ok(vec![])
     }
 }
@@ -412,6 +419,16 @@ impl GitSourceOfTruthConfig for TestGitSourceOfTruthConfig {
             .expect("poisoned lock")
             .values()
             .filter(|entry| entry.source_of_truth == GitSourceOfTruth::Reserved)
+            .cloned()
+            .collect())
+    }
+
+    async fn get_any(&self, _ctx: &CoreContext) -> Result<Vec<GitSourceOfTruthConfigEntry>> {
+        Ok(self
+            .entries
+            .lock()
+            .expect("poisoned lock")
+            .values()
             .cloned()
             .collect())
     }

@@ -81,6 +81,21 @@ mononoke_queries! {
          WHERE source_of_truth = {source_of_truth}"
     }
 
+    read GetAny() -> (
+        RowId,
+        RepositoryId,
+        RepositoryName,
+        GitSourceOfTruth,
+        Option<i64>,
+    ) {
+        "SELECT id,
+            repo_id,
+            repo_name,
+            source_of_truth,
+            mutation_id
+         FROM git_repositories_source_of_truth"
+    }
+
     write InsertOrUpdateRepo(repo_id: RepositoryId, repo_name: RepositoryName, source_of_truth: GitSourceOfTruth) {
         none,
         mysql("INSERT INTO git_repositories_source_of_truth (repo_id, repo_name, source_of_truth) VALUES ({repo_id}, {repo_name}, {source_of_truth}) ON DUPLICATE KEY UPDATE source_of_truth = {source_of_truth}")
@@ -386,6 +401,15 @@ impl GitSourceOfTruthConfig for SqlGitSourceOfTruthConfig {
             &self.connections.read_master_connection,
             ctx.sql_query_telemetry(),
             &GitSourceOfTruth::Reserved,
+        )
+        .await?;
+        Ok(rows.into_iter().map(row_to_entry).collect())
+    }
+
+    async fn get_any(&self, ctx: &CoreContext) -> Result<Vec<GitSourceOfTruthConfigEntry>> {
+        let rows = GetAny::query(
+            &self.connections.read_master_connection,
+            ctx.sql_query_telemetry(),
         )
         .await?;
         Ok(rows.into_iter().map(row_to_entry).collect())
