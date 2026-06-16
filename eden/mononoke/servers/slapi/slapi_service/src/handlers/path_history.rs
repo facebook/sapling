@@ -127,7 +127,12 @@ async fn fetch_history_for_path<R: MononokeRepo>(
     };
     let starting_cs = hgid_to_changeset(repo, flavour, starting_hgid).await?;
 
-    let changesets = starting_cs
+    let query_limit = match limit {
+        // Take one more so we know whether there's more results after the current request
+        Some(limit) => (limit as usize).saturating_add(1),
+        None => u32::MAX as usize,
+    };
+    let csids = starting_cs
         .path_with_history(
             to_mpath(&path)?
                 .into_optional_non_root_path()
@@ -139,19 +144,10 @@ async fn fetch_history_for_path<R: MononokeRepo>(
             ..Default::default()
         })
         .await?
+        .take(query_limit)
+        .map_ok(|cs| cs.id())
         .try_collect::<Vec<_>>()
         .await?;
-
-    let query_limit = match limit {
-        // Take one more so we know whether there's more results after the current request
-        Some(limit) => (limit as usize).saturating_add(1),
-        None => u32::MAX as usize,
-    };
-    let csids = changesets
-        .iter()
-        .take(query_limit)
-        .map(|cs| cs.id())
-        .collect::<Vec<_>>();
     let hgids = csids_to_hgids(repo, flavour, csids).await?;
 
     let mut entries: Vec<_> = hgids
