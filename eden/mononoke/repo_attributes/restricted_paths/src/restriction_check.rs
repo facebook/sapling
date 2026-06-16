@@ -548,21 +548,42 @@ pub(crate) enum PreFilterVariant {
 }
 
 /// Check if the caller has read access to every repo region ACL in `acls`
-/// (conjunctive evaluation). For nested restrictions (e.g. `/secret` plus
-/// `/secret/inner`), the caller must satisfy the inner ACL even when they
-/// already satisfy the outer one — otherwise being a member of an outer ACL
-/// would silently bypass an inner restriction.
+/// (conjunctive evaluation), or is a member of `admin_bypass_group`.
 ///
-/// Runs checks concurrently and short-circuits on the first deny or error.
+/// For nested restrictions (e.g. `/secret` plus `/secret/inner`), the caller
+/// must satisfy the inner ACL even when they already satisfy the outer one —
+/// otherwise being a member of an outer ACL would silently bypass an inner
+/// restriction. Members of `admin_bypass_group` (when one is configured) are
+/// granted access to every restricted path without per-ACL read access.
+///
+/// The bypass-group and per-ACL checks run concurrently and both always run to
+/// completion; access is granted if either succeeds, and an error in either
+/// fails closed.
 pub(crate) async fn has_read_access_to_repo_region(
     ctx: &CoreContext,
     acl_provider: &Arc<dyn AclProvider>,
     acls: &[&MononokeIdentity],
+    admin_bypass_group: Option<&MononokeIdentity>,
 ) -> Result<bool> {
     if acls.is_empty() {
         return Ok(true);
     }
 
+    let (in_bypass_group, has_acl_access) = futures::try_join!(
+        is_in_admin_bypass_group(ctx, acl_provider, admin_bypass_group),
+        has_read_access_to_repo_region_acls(ctx, acl_provider, acls),
+    )?;
+    Ok(in_bypass_group || has_acl_access)
+}
+
+/// Check that the caller has direct `read` access to every repo region ACL in
+/// `acls`. Runs checks concurrently and short-circuits on the first deny or
+/// error.
+async fn has_read_access_to_repo_region_acls(
+    ctx: &CoreContext,
+    acl_provider: &Arc<dyn AclProvider>,
+    acls: &[&MononokeIdentity],
+) -> Result<bool> {
     let identities = ctx.metadata().identities();
     stream::iter(acls.iter().copied())
         .map(|acl| async move {
@@ -579,6 +600,19 @@ pub(crate) async fn has_read_access_to_repo_region(
         .buffer_unordered(acls.len())
         .try_all(futures::future::ready)
         .await
+}
+
+/// Check whether the caller is a member of the admin bypass group, if one is
+/// configured. Returns `false` when no bypass group is set.
+async fn is_in_admin_bypass_group(
+    ctx: &CoreContext,
+    acl_provider: &Arc<dyn AclProvider>,
+    admin_bypass_group: Option<&MononokeIdentity>,
+) -> Result<bool> {
+    match admin_bypass_group {
+        Some(group) => is_part_of_group(ctx, acl_provider, group.id_data()).await,
+        None => Ok(false),
+    }
 }
 
 /// Check if the caller is a member of the given group.
@@ -604,6 +638,7 @@ pub(crate) async fn check_authorization(
     acls: &[&MononokeIdentity],
     tooling_allowlist_group: Option<&str>,
     rollout_allowlist_group: Option<&str>,
+    admin_bypass_group: Option<&MononokeIdentity>,
 ) -> Result<AuthorizationCheckResult> {
     let allowlist_authorization = check_allowlist_authorization(
         ctx,
@@ -612,7 +647,8 @@ pub(crate) async fn check_authorization(
         rollout_allowlist_group,
     )
     .await?;
-    let has_acl_access = has_read_access_to_repo_region(ctx, acl_provider, acls).await?;
+    let has_acl_access =
+        has_read_access_to_repo_region(ctx, acl_provider, acls, admin_bypass_group).await?;
     Ok(allowlist_authorization.into_authorization_check_result(has_acl_access))
 }
 
@@ -1166,7 +1202,12 @@ async fn check_restriction_authorization_with_acl(
     acl: &MononokeIdentity,
     allowlist_authorization: AllowlistAuthorization,
 ) -> Result<AuthorizationCheckResult> {
-    let has_acl_access =
-        has_read_access_to_repo_region(ctx, restricted_paths.acl_provider(), &[acl]).await?;
+    let has_acl_access = has_read_access_to_repo_region(
+        ctx,
+        restricted_paths.acl_provider(),
+        &[acl],
+        restricted_paths.config().admin_bypass_group.as_ref(),
+    )
+    .await?;
     Ok(allowlist_authorization.into_authorization_check_result(has_acl_access))
 }

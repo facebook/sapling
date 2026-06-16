@@ -390,6 +390,7 @@ impl RestrictedPaths {
             self.acl_provider.clone(),
             self.config().tooling_allowlist_group.as_deref(),
             self.config().rollout_allowlist_group.as_deref(),
+            self.config().admin_bypass_group.as_ref(),
             self.scuba.clone(),
             vec!["manifest_db".to_string()],
         )
@@ -458,6 +459,7 @@ impl RestrictedPaths {
             self.acl_provider.clone(),
             self.config().tooling_allowlist_group.as_deref(),
             self.config().rollout_allowlist_group.as_deref(),
+            self.config().admin_bypass_group.as_ref(),
             self.scuba.clone(),
             vec!["manifest_db".to_string()],
         )

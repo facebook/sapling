@@ -987,6 +987,7 @@ pub(crate) async fn log_access_to_restricted_path(
     acl_provider: Arc<dyn AclProvider>,
     tooling_allowlist_group: Option<&str>,
     rollout_allowlist_group: Option<&str>,
+    admin_bypass_group: Option<&MononokeIdentity>,
     scuba: MononokeScubaSampleBuilder,
     considered_restricted_by: Vec<String>,
 ) -> Result<RestrictionCheckResult> {
@@ -996,6 +997,7 @@ pub(crate) async fn log_access_to_restricted_path(
         &acls,
         tooling_allowlist_group,
         rollout_allowlist_group,
+        admin_bypass_group,
     )
     .await?;
 

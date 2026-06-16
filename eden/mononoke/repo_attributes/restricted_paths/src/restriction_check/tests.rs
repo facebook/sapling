@@ -12,9 +12,17 @@ use std::sync::atomic::Ordering;
 
 use anyhow::Context;
 use anyhow::Result;
+use context::CoreContext;
+use context::SessionContainer;
+use fbinit::FacebookInit;
+use metadata::Metadata;
 use mononoke_macros::mononoke;
 use mononoke_types::NonRootMPath;
+use permission_checker::AclProvider;
+use permission_checker::Acls;
+use permission_checker::InternalAclProvider;
 use permission_checker::MononokeIdentity;
+use permission_checker::MononokeIdentitySet;
 
 use super::AuthorizationCheckResult;
 use super::PathRestrictionCheckResult;
@@ -111,6 +119,70 @@ async fn test_authoritative_source_enforcement_outcome_preserves_error_semantics
     Ok(())
 }
 
+// What it tests: a member of the admin bypass group is granted read access to a
+// repo region ACL even without direct `read` access on it.
+// Expected: has_read_access_to_repo_region returns true via the bypass group.
+#[mononoke::fbinit_test]
+async fn test_has_read_access_admin_bypass_group_member_is_granted(fb: FacebookInit) -> Result<()> {
+    let acl_provider = admin_bypass_acl_provider()?;
+    // carol is only in the bypass group, with no direct read access.
+    let ctx = ctx_with_identities(fb, &["USER:carol"])?;
+    let acl = MononokeIdentity::from_str("REPO_REGION:repos/hg/fbsource/=project1")?;
+    let bypass_group = MononokeIdentity::from_str("GROUP:path_acls_admin_bypass")?;
+
+    let has_access =
+        super::has_read_access_to_repo_region(&ctx, &acl_provider, &[&acl], Some(&bypass_group))
+            .await?;
+
+    assert!(
+        has_access,
+        "bypass-group member should be granted read access without per-ACL read",
+    );
+    Ok(())
+}
+
+// What it tests: a caller with neither read access nor bypass-group membership
+// is denied even when a bypass group is configured.
+// Expected: has_read_access_to_repo_region returns false.
+#[mononoke::fbinit_test]
+async fn test_has_read_access_non_member_without_acl_is_denied(fb: FacebookInit) -> Result<()> {
+    let acl_provider = admin_bypass_acl_provider()?;
+    // bob has neither read access nor bypass-group membership.
+    let ctx = ctx_with_identities(fb, &["USER:bob"])?;
+    let acl = MononokeIdentity::from_str("REPO_REGION:repos/hg/fbsource/=project1")?;
+    let bypass_group = MononokeIdentity::from_str("GROUP:path_acls_admin_bypass")?;
+
+    let has_access =
+        super::has_read_access_to_repo_region(&ctx, &acl_provider, &[&acl], Some(&bypass_group))
+            .await?;
+
+    assert!(
+        !has_access,
+        "caller without read access or bypass membership should be denied",
+    );
+    Ok(())
+}
+
+// What it tests: with no bypass group configured, read access still falls back
+// to direct per-ACL `read` access.
+// Expected: a user with direct read access is granted; the bypass path is inert.
+#[mononoke::fbinit_test]
+async fn test_has_read_access_without_bypass_group_uses_acl_read(fb: FacebookInit) -> Result<()> {
+    let acl_provider = admin_bypass_acl_provider()?;
+    // alice has direct read access on project1.
+    let ctx = ctx_with_identities(fb, &["USER:alice"])?;
+    let acl = MononokeIdentity::from_str("REPO_REGION:repos/hg/fbsource/=project1")?;
+
+    let has_access =
+        super::has_read_access_to_repo_region(&ctx, &acl_provider, &[&acl], None).await?;
+
+    assert!(
+        has_access,
+        "user with direct ACL read access should be granted when no bypass group is configured",
+    );
+    Ok(())
+}
+
 fn path_restriction_check() -> Result<PathRestrictionCheckResult> {
     path_restriction_check_with("restricted", "REPO_REGION:test_acl", true)
 }
@@ -130,4 +202,40 @@ fn path_restriction_check_with(
         AuthorizationCheckResult::new(has_acl_access, false, false),
         acl,
     ))
+}
+
+/// Build an `InternalAclProvider` for the bypass-group access tests:
+/// `alice` has direct `read` access on `project1`, while `carol` is only a
+/// member of the `path_acls_admin_bypass` group. `bob` has neither.
+fn admin_bypass_acl_provider() -> Result<Arc<dyn AclProvider>> {
+    let acls: Acls = serde_json::from_str(
+        r#"
+        {
+            "repo_regions": {
+                "repos/hg/fbsource/=project1": {
+                    "actions": {
+                        "read": ["USER:alice"]
+                    }
+                }
+            },
+            "groups": {
+                "path_acls_admin_bypass": ["USER:carol"]
+            }
+        }
+        "#,
+    )?;
+    Ok(InternalAclProvider::new(acls))
+}
+
+/// Build a test `CoreContext` whose caller presents the given identities.
+fn ctx_with_identities(fb: FacebookInit, ids: &[&str]) -> Result<CoreContext> {
+    let identities = ids
+        .iter()
+        .map(|id| id.parse())
+        .collect::<Result<MononokeIdentitySet>>()?;
+    let metadata = Metadata::default().set_identities(identities);
+    let session = SessionContainer::builder(fb)
+        .metadata(Arc::new(metadata))
+        .build();
+    Ok(CoreContext::test_mock_session(session))
 }
