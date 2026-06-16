@@ -821,10 +821,18 @@ pub(crate) fn pre_filter_condition_sets<'a>(
 
             let build_rule_matches = set.build_rules.is_empty()
                 || server_build_rule.is_some_and(|rule| set.build_rules.iter().any(|c| c == rule));
+            let identity_regex_matches = set.client_identity_regexes.is_empty()
+                || ctx.metadata().identities().iter().any(|identity| {
+                    let identity_str = identity.to_string();
+                    set.client_identity_regexes
+                        .iter()
+                        .any(|re| re.is_match(&identity_str))
+                });
 
             entry_point_matches
                 && machine_tier_matches
                 && build_rule_matches
+                && identity_regex_matches
                 && (!set.require_client_request_flag || server_side_tenting)
         })
         .collect::<Vec<_>>();
@@ -847,6 +855,7 @@ fn condition_set_has_active_filter(set: &EnforcementConditionSet) -> bool {
         || !set.restriction_acls.is_empty()
         || !set.machine_tiers.is_empty()
         || !set.build_rules.is_empty()
+        || !set.client_identity_regexes.is_empty()
 }
 
 /// The build rule of the running server binary (the Buck target it was built

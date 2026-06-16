@@ -727,6 +727,144 @@ async fn machine_tier_mismatch_does_not_trigger_enforcement(fb: FacebookInit) ->
     Ok(())
 }
 
+// What it tests: condition set whose `client_identity_regexes` matches the
+// caller's default USER identity.
+// Expected: filter matches, so unauthorized access is enforced.
+#[mononoke::fbinit_test]
+async fn client_identity_regex_matches_caller_identity_triggers_enforcement(
+    fb: FacebookInit,
+) -> Result<()> {
+    let restricted_acl = MononokeIdentity::from_str("REPO_REGION:restricted_acl")?;
+    let was_denied = RestrictedPathsTestDataBuilder::new()
+        .with_restricted_paths(vec![(NonRootMPath::new("restricted/dir")?, restricted_acl)])
+        .build(fb)
+        .await?
+        .observe_path_enforcement(
+            NonRootMPath::new("restricted/dir/file")?,
+            &[EnforcementConditionSetBuilder::new()
+                .with_client_identity_regexes(["^USER:myusername0$"])
+                .build()],
+        )
+        .await?;
+
+    assert!(
+        was_denied,
+        "caller USER `myusername0` matches `^USER:myusername0$`, so enforcement should fire"
+    );
+    Ok(())
+}
+
+// What it tests: condition set whose `client_identity_regexes` does not match
+// any caller identity.
+// Expected: filter does not match, so unauthorized access is not enforced.
+#[mononoke::fbinit_test]
+async fn client_identity_regex_mismatch_does_not_trigger_enforcement(
+    fb: FacebookInit,
+) -> Result<()> {
+    let restricted_acl = MononokeIdentity::from_str("REPO_REGION:restricted_acl")?;
+    let was_denied = RestrictedPathsTestDataBuilder::new()
+        .with_restricted_paths(vec![(NonRootMPath::new("restricted/dir")?, restricted_acl)])
+        .build(fb)
+        .await?
+        .observe_path_enforcement(
+            NonRootMPath::new("restricted/dir/file")?,
+            &[EnforcementConditionSetBuilder::new()
+                .with_client_identity_regexes(["^USER:nonexistent$"])
+                .build()],
+        )
+        .await?;
+
+    assert!(
+        !was_denied,
+        "caller USER `myusername0` does not match `^USER:nonexistent$`, so enforcement should not fire"
+    );
+    Ok(())
+}
+
+// What it tests: any-of semantics across regex list and any-of semantics across
+// caller identities. The caller carries both USER and MACHINE_TIER; the
+// condition set has one regex that does not match and one that matches the
+// MACHINE_TIER identity.
+// Expected: filter matches via the second regex, so enforcement fires.
+#[mononoke::fbinit_test]
+async fn any_regex_matches_any_identity_triggers_enforcement(fb: FacebookInit) -> Result<()> {
+    let restricted_acl = MononokeIdentity::from_str("REPO_REGION:restricted_acl")?;
+    let was_denied = RestrictedPathsTestDataBuilder::new()
+        .with_restricted_paths(vec![(NonRootMPath::new("restricted/dir")?, restricted_acl)])
+        .with_machine_tier("devvm")
+        .build(fb)
+        .await?
+        .observe_path_enforcement(
+            NonRootMPath::new("restricted/dir/file")?,
+            &[EnforcementConditionSetBuilder::new()
+                .with_client_identity_regexes(["^USER:nonexistent$", "^MACHINE_TIER:devvm$"])
+                .build()],
+        )
+        .await?;
+
+    assert!(
+        was_denied,
+        "caller MACHINE_TIER `devvm` matches the second regex, so enforcement should fire"
+    );
+    Ok(())
+}
+
+// What it tests: empty `client_identity_regexes` does not gate enforcement when
+// another filter (here, `restriction_acls`) is active and matches the access.
+// Expected: enforcement fires based on the restriction_acl match alone.
+#[mononoke::fbinit_test]
+async fn empty_client_identity_regexes_does_not_gate_when_other_filter_fires(
+    fb: FacebookInit,
+) -> Result<()> {
+    let restricted_acl = MononokeIdentity::from_str("REPO_REGION:restricted_acl")?;
+    let was_denied = RestrictedPathsTestDataBuilder::new()
+        .with_restricted_paths(vec![(
+            NonRootMPath::new("restricted/dir")?,
+            restricted_acl.clone(),
+        )])
+        .build(fb)
+        .await?
+        .observe_path_enforcement(
+            NonRootMPath::new("restricted/dir/file")?,
+            &[EnforcementConditionSetBuilder::new()
+                .with_restriction_acls([restricted_acl])
+                .build()],
+        )
+        .await?;
+
+    assert!(
+        was_denied,
+        "empty client_identity_regexes should not gate; matching restriction_acl decides"
+    );
+    Ok(())
+}
+
+// What it tests: a condition set with empty `client_identity_regexes` and no
+// other active filter (everything default) should not trigger enforcement.
+// Expected: `condition_set_has_active_filter` returns false → set dropped at
+// the gate → no enforcement.
+#[mononoke::fbinit_test]
+async fn empty_client_identity_regexes_with_no_other_filter_does_not_enforce(
+    fb: FacebookInit,
+) -> Result<()> {
+    let restricted_acl = MononokeIdentity::from_str("REPO_REGION:restricted_acl")?;
+    let was_denied = RestrictedPathsTestDataBuilder::new()
+        .with_restricted_paths(vec![(NonRootMPath::new("restricted/dir")?, restricted_acl)])
+        .build(fb)
+        .await?
+        .observe_path_enforcement(
+            NonRootMPath::new("restricted/dir/file")?,
+            &[EnforcementConditionSetBuilder::new().build()],
+        )
+        .await?;
+
+    assert!(
+        !was_denied,
+        "condition set with no active filter (default) should be dropped, so no enforcement"
+    );
+    Ok(())
+}
+
 // What it tests: enforcement should not depend on the access-log JK once
 // source fetches are spawned for enforcement independently from logging.
 // Expected: disabling `enabled_restricted_paths_access_logging` still denies

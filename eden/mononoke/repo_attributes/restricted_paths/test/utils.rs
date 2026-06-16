@@ -33,6 +33,7 @@ use mercurial_derivation::RootHgAugmentedManifestId;
 use mercurial_derivation::derive_hg_changeset::DeriveHgChangeset;
 use mercurial_types::HgAugmentedManifestId;
 use metaconfig_types::AclManifestMode;
+use metaconfig_types::ComparableRegex;
 use metaconfig_types::EnforcementConditionSet;
 use metaconfig_types::RestrictedPathsConfig;
 use metadata::Metadata;
@@ -1081,6 +1082,7 @@ pub(crate) struct EnforcementConditionSetBuilder {
     require_client_request_flag: bool,
     restriction_acls: Vec<MononokeIdentity>,
     machine_tiers: Vec<String>,
+    client_identity_regexes: Vec<ComparableRegex>,
 }
 
 impl EnforcementConditionSetBuilder {
@@ -1127,6 +1129,18 @@ impl EnforcementConditionSetBuilder {
         self
     }
 
+    pub(crate) fn with_client_identity_regexes<I, S>(mut self, patterns: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<str>,
+    {
+        self.client_identity_regexes = patterns
+            .into_iter()
+            .map(|s| ComparableRegex::new(s.as_ref()).expect("test regex must be valid"))
+            .collect();
+        self
+    }
+
     pub(crate) fn build(self) -> EnforcementConditionSet {
         EnforcementConditionSet {
             always_enabled: self.always_enabled,
@@ -1138,7 +1152,7 @@ impl EnforcementConditionSetBuilder {
             // which can't be set from a unit test (it's a link-time constant), so
             // tests leave it empty. Coverage lives in the `.t` integration test.
             build_rules: Vec::new(),
-            client_identity_regexes: Vec::new(),
+            client_identity_regexes: self.client_identity_regexes,
         }
     }
 }
