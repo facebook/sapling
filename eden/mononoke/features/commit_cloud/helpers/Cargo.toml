@@ -11,7 +11,7 @@ license = "GPLv2+"
 path = "lib.rs"
 
 [dependencies]
-regex = "1.12.3"
+regex = "1.12.4"
 
 [dev-dependencies]
 mononoke_macros = { version = "0.1.0", path = "../../../common/mononoke_macros" }
