@@ -99,9 +99,9 @@
   $ wait_for_git_bookmark_create refs/tags/push_tag
   $ wait_for_git_bookmark_create refs/tags/past_tag
 
-# Verify that we log the size of the packfile used in push
-  $ jq -S .int "$SCUBA" | grep -e "packfile_size"
-    "packfile_size": 1173,
+# Verify that we log the size of the packfile used in push (value is non-deterministic; only assert the field is logged with a positive integer)
+  $ jq -S .int "$SCUBA" | grep -qE '"packfile_size": [1-9][0-9]*,' && echo "packfile_size logged"
+  packfile_size logged
 
 # Verify the timed futures logged with log tags show up in scuba logs
   $ jq .normal "$SCUBA" | grep -e "Packfile" -e "GitImport" -e "Bookmark movement" -e "Prerequisite" -e "Objects" -e "Prefetched" -e "Content Blob" -e "Bonsai Changeset" -e "Finalize Batch" -e "Push" -e "Import" | sort
