@@ -57,8 +57,8 @@ pub trait HgMutationStore: Send + Sync {
             .all_predecessors_by_changeset(ctx, changeset_ids)
             .await?;
         Ok(entries_by_changeset
-            .into_iter()
-            .flat_map(|(_, entries)| entries)
+            .into_values()
+            .flatten()
             // Collect into a hashset since the preds for different
             // successors might overlap due to fold and split.
             .collect::<HashSet<_>>()
