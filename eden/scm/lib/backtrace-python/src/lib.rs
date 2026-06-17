@@ -53,7 +53,7 @@ pub fn init() {
 }
 
 /// Information about whether the Python frame resolution is supported or not.
-/// All fields must be `true` to indicate support.
+/// All fields must be `true`, and `!is_arch_translated()` to indicate support.
 #[derive(Clone, Copy, Debug)]
 pub struct SupportedInfo {
     /// Whether the (OS, architecture) combination is supported.
@@ -66,7 +66,7 @@ pub struct SupportedInfo {
 
 impl SupportedInfo {
     pub fn is_supported(&self) -> bool {
-        self.os_arch && self.c_evalframe
+        self.os_arch && self.c_evalframe && !self.is_arch_translated()
     }
 
     fn new() -> Self {
@@ -75,6 +75,39 @@ impl SupportedInfo {
                 && offsets::OFFSET_SP_CODE.is_some()
                 && offsets::OFFSET_SP_LINE_NO.is_some(),
             c_evalframe: evalframe_sys::resolve_frame_is_supported(),
+        }
+    }
+
+    /// Returns true if the current process is under arch translation.
+    /// Translation could destablize stack offsets, which break the
+    /// approach of stack scanning used by this crate.
+    pub fn is_arch_translated(&self) -> bool {
+        // Check macOS Rosetta translation.
+        // https://developer.apple.com/documentation/apple-silicon/about-the-rosetta-translation-environment
+        #[cfg(target_os = "macos")]
+        {
+            let mut ret: libc::c_int = 0;
+            let mut size = std::mem::size_of_val(&ret);
+            let name = b"sysctl.proc_translated\0";
+
+            let status = unsafe {
+                // SAFETY: `name` is NUL-terminated, `ret` and `size` point to
+                // valid writable storage for the expected `int` result, and no
+                // new value is being set.
+                libc::sysctlbyname(
+                    name.as_ptr() as *const libc::c_char,
+                    &mut ret as *mut _ as *mut libc::c_void,
+                    &mut size,
+                    std::ptr::null_mut(),
+                    0,
+                )
+            };
+            status == 0 && ret == 1
+        }
+        // Consider adding Windows check too (IsWow64Process2).
+        #[cfg(not(target_os = "macos"))]
+        {
+            false
         }
     }
 }

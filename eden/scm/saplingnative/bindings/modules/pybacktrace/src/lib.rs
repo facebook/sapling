@@ -19,6 +19,8 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let info_mod = PyModule::new(py, &format!("{name}.SUPPORTED_INFO"))?;
     info_mod.add(py, "os_arch", info.os_arch)?;
     info_mod.add(py, "c_evalframe", info.c_evalframe)?;
+    info_mod.add(py, "is_supported", py_fn!(py, is_supported()))?;
+    info_mod.add(py, "is_arch_translated", py_fn!(py, is_arch_translated()))?;
 
     m.add(py, "SUPPORTED_INFO", info_mod)?;
     m.add(py, "OFFSET_IP", backtrace_python::offsets::OFFSET_IP)?;
@@ -54,4 +56,12 @@ fn backtrace_py(_py: Python, mut skip: usize) -> PyResult<Vec<String>> {
         true
     });
     Ok(frames)
+}
+
+fn is_arch_translated(_py: Python) -> PyResult<bool> {
+    Ok(backtrace_python::SUPPORTED_INFO.is_arch_translated())
+}
+
+fn is_supported(_py: Python) -> PyResult<bool> {
+    Ok(backtrace_python::SUPPORTED_INFO.is_supported())
 }

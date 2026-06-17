@@ -6,7 +6,7 @@ Can only test if supported:
 
     import bindings
     SUPPORTED_INFO = bindings.backtrace.SUPPORTED_INFO
-    if not SUPPORTED_INFO.os_arch or not SUPPORTED_INFO.c_evalframe:
+    if not SUPPORTED_INFO.is_supported():
         $ exit 80
 
 Test getting backtrace:
