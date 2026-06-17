@@ -24,6 +24,7 @@ pub use checker::PermissionChecker;
 pub use checker::PermissionCheckerBuilder;
 #[cfg(fbcode_build)]
 pub use facebook::AccessCheckerProvider;
+pub use identity::ClientCategory;
 pub use identity::MononokeIdentity;
 pub use identity::MononokeIdentitySet;
 pub use identity::MononokeIdentitySetExt;

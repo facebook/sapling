@@ -16,6 +16,7 @@ use async_trait::async_trait;
 use itertools::Itertools;
 use openssl::x509::X509;
 
+use crate::identity::ClientCategory;
 use crate::identity::MononokeIdentity;
 use crate::identity::MononokeIdentitySet;
 use crate::identity::MononokeIdentitySetExt;
@@ -115,6 +116,10 @@ impl MononokeIdentitySetExt for MononokeIdentitySet {
 
     fn main_client_identity(&self, _sandcastle_alias: Option<&str>) -> String {
         String::from("PLACEHOLDER_CLIENT_IDENTITY")
+    }
+
+    fn client_category(&self) -> ClientCategory {
+        ClientCategory::Unknown
     }
 
     fn to_string(&self) -> String {

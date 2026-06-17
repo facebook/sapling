@@ -21,6 +21,8 @@ use http::Uri;
 use http::header;
 use http::header::AsHeaderName;
 use http::header::HeaderMap;
+use permission_checker::ClientCategory;
+use permission_checker::MononokeIdentitySetExt;
 use scopeguard::ScopeGuard;
 use scuba_ext::MononokeScubaSampleBuilder;
 use scuba_ext::ScubaValue;
@@ -124,6 +126,8 @@ pub enum HttpScubaKey {
     ClientTwJob,
     /// Tupperware task handle of the client, if any.
     ClientTwTask,
+    /// Coarse client category derived from the identity set.
+    ClientCategory,
 }
 
 impl AsRef<str> for HttpScubaKey {
@@ -169,6 +173,7 @@ impl AsRef<str> for HttpScubaKey {
             SessionUuid => "session_uuid",
             ClientTwJob => "client_tw_job",
             ClientTwTask => "client_tw_task",
+            ClientCategory => "client_category",
         }
     }
 }
@@ -339,6 +344,10 @@ fn populate_scuba(scuba: &mut MononokeScubaSampleBuilder, state: &mut State) {
             scuba.add_client_request_info(client_info);
         }
         let identities = metadata.identities();
+        scuba.add(
+            HttpScubaKey::ClientCategory,
+            identities.client_category().as_str(),
+        );
         let identities_typed: Vec<_> = identities.iter().map(|i| i.to_typed_string()).collect();
         let identities: Vec<_> = identities.iter().map(|i| i.to_string()).collect();
         scuba.add(HttpScubaKey::ClientIdentities, identities);
@@ -394,6 +403,11 @@ fn populate_scuba(scuba: &mut MononokeScubaSampleBuilder, state: &mut State) {
         if let Some(revproxy_region) = metadata.revproxy_region().as_deref() {
             scuba.add("source_region", revproxy_region);
         }
+    } else {
+        scuba.add(
+            HttpScubaKey::ClientCategory,
+            ClientCategory::Unknown.as_str(),
+        );
     }
 
     if let Some(config_version) = ConfigInfo::try_borrow_from(state) {

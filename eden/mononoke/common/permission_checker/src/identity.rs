@@ -214,7 +214,29 @@ pub trait MononokeIdentitySetExt {
     fn identity_type_filtered_concat(&self, id_type: &str) -> Option<String>;
     fn main_client_identity(&self, sandcastle_alias: Option<&str>) -> String;
 
+    /// Classify this identity set into a coarse [`ClientCategory`] for
+    /// rate-limit policy and Scuba logging.
+    fn client_category(&self) -> ClientCategory;
+
     fn to_string(&self) -> String;
+}
+
+/// Coarse client categories derived from the identity set.
+///
+/// Used as a per-request Scuba dimension and (eventually) the key for
+/// per-category rate-limit allowances. Rules live in the `fbcode_build`
+/// impl of [`MononokeIdentitySetExt::client_category`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ClientCategory {
+    Unknown,
+}
+
+impl ClientCategory {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Unknown => "unknown",
+        }
+    }
 }
 
 #[cfg(test)]

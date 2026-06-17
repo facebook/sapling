@@ -17,6 +17,7 @@ use http::Response;
 use http::StatusCode;
 use http::Uri;
 use maplit::hashmap;
+use permission_checker::MononokeIdentitySetExt;
 use rate_limiting::Metric;
 use rate_limiting::RateLimitStatus;
 use tracing::debug;
@@ -71,6 +72,7 @@ impl Middleware for ThrottleMiddleware {
         })?;
 
         let identities = state.try_borrow::<MetadataState>()?.metadata().identities();
+        let client_category = identities.client_category().as_str();
         let metadata = state.try_borrow::<MetadataState>()?.metadata();
         let atlas = metadata.clientinfo_atlas();
 
@@ -97,7 +99,10 @@ impl Middleware for ThrottleMiddleware {
             1.0,
             limit,
             enforced,
-            hashmap! {"client_main_id" => client_main_id.as_str() },
+            hashmap! {
+                "client_main_id" => client_main_id.as_str(),
+                "client_category" => client_category,
+            },
         )
         .await
         {
