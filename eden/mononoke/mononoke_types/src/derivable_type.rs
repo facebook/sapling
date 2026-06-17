@@ -93,6 +93,7 @@ pub enum PipelineDerivableVariant {
     Fastlog,
     AclManifests,
     HgChangesets,
+    HgAugmentedManifests,
 }
 
 impl DerivableType {
@@ -261,6 +262,9 @@ impl DerivableType {
             DerivableType::Fastlog => Ok(PipelineDerivableVariant::Fastlog),
             DerivableType::AclManifests => Ok(PipelineDerivableVariant::AclManifests),
             DerivableType::HgChangesets => Ok(PipelineDerivableVariant::HgChangesets),
+            DerivableType::HgAugmentedManifests => {
+                Ok(PipelineDerivableVariant::HgAugmentedManifests)
+            }
             _ => bail!("{} does not support derivation pipeline", self.name()),
         }
     }
@@ -277,6 +281,7 @@ impl PipelineDerivableVariant {
             PipelineDerivableVariant::Fastlog => DerivableType::Fastlog,
             PipelineDerivableVariant::AclManifests => DerivableType::AclManifests,
             PipelineDerivableVariant::HgChangesets => DerivableType::HgChangesets,
+            PipelineDerivableVariant::HgAugmentedManifests => DerivableType::HgAugmentedManifests,
         }
     }
 }

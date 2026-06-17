@@ -156,3 +156,19 @@ union HgManifestStageOutput {
   3: HgManifestStageOutputEmpty empty;
   4: HgManifestStageTerminal terminal;
 }
+
+// Per-stage output of the RootHgAugmentedManifestId derivation pipeline.
+//
+// Mirrors fsnodes_thrift::FsnodeStageOutput: the two non-empty arms reuse
+// HgAugmentedManifestEntry's thrift (a DirectoryNode at a tree stage, a
+// FileNode when the stage root is a file); `empty` means nothing exists at
+// the stage path.
+
+@rust.Exhaustive
+struct HgAugmentedManifestStageOutputEmpty {}
+
+union HgAugmentedManifestStageOutput {
+  1: HgAugmentedDirectoryNode directory;
+  2: HgAugmentedFileLeaf file;
+  3: HgAugmentedManifestStageOutputEmpty empty;
+}

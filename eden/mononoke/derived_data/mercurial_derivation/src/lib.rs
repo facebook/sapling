@@ -6,6 +6,7 @@
  */
 
 mod acl_overlay_manifest;
+mod augmented_pipeline;
 pub mod derive_hg_augmented_manifest;
 pub mod derive_hg_changeset;
 pub mod derive_hg_manifest;

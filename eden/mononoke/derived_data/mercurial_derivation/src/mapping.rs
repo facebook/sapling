@@ -408,6 +408,10 @@ async fn track_all_restricted_paths(
 pub struct RootHgAugmentedManifestId(HgAugmentedManifestId);
 
 impl RootHgAugmentedManifestId {
+    pub(crate) fn new(hg_augmented_manifest_id: HgAugmentedManifestId) -> Self {
+        RootHgAugmentedManifestId(hg_augmented_manifest_id)
+    }
+
     pub fn hg_augmented_manifest_id(&self) -> HgAugmentedManifestId {
         self.0
     }

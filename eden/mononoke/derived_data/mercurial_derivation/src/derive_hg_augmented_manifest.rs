@@ -46,6 +46,7 @@ use mercurial_types::sharded_augmented_manifest::HgAugmentedFileLeafNode;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::ContentMetadataV2;
+use mononoke_types::FileType;
 use mononoke_types::MPath;
 use mononoke_types::MPathElement;
 use mononoke_types::MPathElementPrefix;
@@ -68,6 +69,11 @@ use crate::acl_overlay_manifest::AclOverlayHgManifestId;
 use crate::derive_hg_manifest::ParentIndex;
 
 /// Derive an HgAugmentedManifestId from an HgManifestId and parents.
+///
+/// Canonical wrapper around [`derive_from_hg_manifest_and_parents_staged`]:
+/// derives the whole tree starting at the root (always a tree) with no known
+/// entries. With `stage_path == MPath::ROOT` and empty `known_entries`, the
+/// staged core is byte-identical to the original hand-rolled traversal.
 pub async fn derive_from_hg_manifest_and_parents(
     ctx: &CoreContext,
     blobstore: &(impl KeyedBlobstore + 'static),
@@ -77,19 +83,108 @@ pub async fn derive_from_hg_manifest_and_parents(
     restricted_paths: &RestrictedPathsConfigBased,
     acl_root_overlay: Option<AclManifestId>,
 ) -> Result<HgAugmentedManifestId> {
+    let entry = derive_from_hg_manifest_and_parents_staged(
+        ctx,
+        blobstore,
+        MPath::ROOT,
+        Entry::Tree(hg_manifest_id),
+        parents.into_iter().map(Some).collect(),
+        HashMap::new(),
+        content_metadata_cache,
+        restricted_paths,
+        acl_root_overlay,
+    )
+    .await?;
+    match entry {
+        Some(HgAugmentedManifestEntry::DirectoryNode(dir)) => {
+            Ok(HgAugmentedManifestId::new(dir.treenode))
+        }
+        _ => bail!("root augmented manifest entry must be a directory"),
+    }
+}
+
+/// Stage-scoped core of augmented manifest derivation.
+///
+/// Derives the augmented manifest subtree rooted at `stage_path`, returning the
+/// entry at that path (a `DirectoryNode` for trees, a `FileNode` when the stage
+/// root is a file, or `None` when nothing exists at the stage path).
+///
+/// `parents` are the parent augmented subtrees at `stage_path` (positional,
+/// bonsai-parent order; `None` for parents with nothing there). `known_entries`
+/// holds already-derived child-stage outputs keyed by absolute path; when the
+/// traversal reaches one of those paths it reuses the entry instead of
+/// recursing -- the same short-circuit the manifest crate's
+/// `derive_manifest_with_known_entries` performs. This is byte-identical because
+/// each known entry is content-addressed.
+///
+/// `hg_entry` is the stage-root entry from the hg manifest: a tree to traverse,
+/// or a leaf when the stage path resolves to a file in this commit.
+pub async fn derive_from_hg_manifest_and_parents_staged(
+    ctx: &CoreContext,
+    blobstore: &(impl KeyedBlobstore + 'static),
+    stage_path: MPath,
+    hg_entry: Entry<HgManifestId, (FileType, HgFileNodeId)>,
+    parents: Vec<Option<HgAugmentedManifestId>>,
+    known_entries: HashMap<MPath, Option<HgAugmentedManifestEntry>>,
+    content_metadata_cache: &HashMap<ContentId, ContentMetadataV2>,
+    restricted_paths: &RestrictedPathsConfigBased,
+    acl_overlay: Option<AclManifestId>,
+) -> Result<Option<HgAugmentedManifestEntry>> {
+    // The stage root may itself be a file (a configured stage path that resolves
+    // to a file in this commit). There is no tree to traverse, so build the
+    // single augmented leaf and return it.
+    let hg_manifest_id = match hg_entry {
+        Entry::Leaf((file_type, filenode_id)) => {
+            let leaf = build_augmented_file_leaf(
+                ctx,
+                blobstore,
+                content_metadata_cache,
+                file_type,
+                filenode_id,
+            )
+            .await?;
+            return Ok(Some(HgAugmentedManifestEntry::FileNode(leaf)));
+        }
+        Entry::Tree(hg_manifest_id) => hg_manifest_id,
+    };
+
     let restricted_paths_enabled = justknobs::eval(
         "scm/mononoke:enabled_restricted_paths_access_logging",
         None, // hashing
         // Adding a switch value to be able to disable writes only
         Some("hg_augmented_manifest_write"),
     );
-    let parents = parents.into_iter().map(Some).collect::<Vec<_>>();
-    let (_, root, _, _) = bounded_traversal::bounded_traversal(
+    let stage_path = &stage_path;
+    // Already-derived child-stage subtrees, keyed by absolute path. When the
+    // traversal reaches one of these paths it reuses the entry instead of
+    // recursing, at any depth.
+    let known_entries = &known_entries;
+
+    let root = bounded_traversal::bounded_traversal(
         256,
-        (MPath::ROOT, None, hg_manifest_id, parents, acl_root_overlay),
+        (stage_path.clone(), None, hg_manifest_id, parents, acl_overlay),
         |(parent_path, name, hg_manifest_id, parents, acl_overlay): (MPath, Option<MPathElement>, _, _, _)| {
             async move {
+                // At the traversal root, `name` is None and this is the stage
+                // path itself (`join_element(None)` returns the parent path).
                 let path = parent_path.join_element(name.as_ref());
+                // Short-circuit a subtree already derived in an earlier stage:
+                // emit it directly without loading, diffing, or recursing. Only
+                // directories are reached here -- files are handled as leaves by
+                // the parent and rebuilt identically, and a `None` known entry is
+                // never reached because that path is absent from the hg manifest.
+                if let Some(Some(HgAugmentedManifestEntry::DirectoryNode(dir))) =
+                    known_entries.get(&path)
+                {
+                    let children: Vec<(
+                        MPath,
+                        Option<MPathElement>,
+                        HgManifestId,
+                        Vec<Option<HgAugmentedManifestId>>,
+                        Option<AclManifestId>,
+                    )> = Vec::new();
+                    return anyhow::Ok((Either::Left((name, dir.clone())), children));
+                }
                 let (hg_manifest, parents) = future::try_join(
                     hg_manifest_id.load(ctx, blobstore),
                     future::try_join_all(parents.iter().map(|p| async move {
@@ -132,16 +227,25 @@ pub async fn derive_from_hg_manifest_and_parents(
 
                 while let Some(diff) = diff.try_next().await? {
                     match diff {
-                        ManifestComparison::New(elem, entry) => match entry {
-                            Entry::Tree(id) => {
-                                let child_acl = child_acl_map.get(&elem).copied();
-                                children.push((path.clone(), Some(elem), id, Vec::new(), child_acl));
+                        ManifestComparison::New(elem, entry) => {
+                            match entry {
+                                Entry::Tree(id) => {
+                                    let child_acl = child_acl_map.get(&elem).copied();
+                                    children.push((
+                                        path.clone(),
+                                        Some(elem),
+                                        id,
+                                        Vec::new(),
+                                        child_acl,
+                                    ));
+                                }
+                                Entry::Leaf((file_type, filenode)) => {
+                                    new_subentries.push((elem, file_type, filenode));
+                                }
                             }
-                            Entry::Leaf((file_type, filenode)) => {
-                                new_subentries.push((elem, file_type, filenode));
-                            }
-                        },
-                        ManifestComparison::Changed(elem, entry, _parent_entries) => match entry {
+                        }
+                        ManifestComparison::Changed(elem, entry, _parent_entries) => {
+                            match entry {
                             Entry::Tree(id) => {
                                 let child_parents = {
                                     let elem = &elem;
@@ -182,7 +286,8 @@ pub async fn derive_from_hg_manifest_and_parents(
                             Entry::Leaf((file_type, filenode)) => {
                                 new_subentries.push((elem, file_type, filenode));
                             }
-                        },
+                            }
+                        }
                         ManifestComparison::Same(elem, _entry, _parent_entries, index) => {
                             path_elems_to_fetch_from_aug_parents
                                 .get_mut(index)
@@ -195,9 +300,9 @@ pub async fn derive_from_hg_manifest_and_parents(
                         }
                         ManifestComparison::ManyNew(prefix, entries) => {
                             for (suffix, entry) in entries {
+                                let elem = prefix.clone().join_into_element(suffix)?;
                                 match entry {
                                     Entry::Tree(id) => {
-                                        let elem = prefix.clone().join_into_element(suffix)?;
                                         let child_acl = child_acl_map.get(&elem).copied();
                                         children.push((
                                             path.clone(),
@@ -208,11 +313,7 @@ pub async fn derive_from_hg_manifest_and_parents(
                                         ));
                                     }
                                     Entry::Leaf((file_type, filenode)) => {
-                                        new_subentries.push((
-                                            prefix.clone().join_into_element(suffix)?,
-                                            file_type,
-                                            filenode,
-                                        ));
+                                        new_subentries.push((elem, file_type, filenode));
                                     }
                                 }
                             }
@@ -279,7 +380,7 @@ pub async fn derive_from_hg_manifest_and_parents(
                     .await?;
 
                 anyhow::Ok((
-                    (
+                    Either::Right((
                         path,
                         name,
                         hg_manifest,
@@ -287,13 +388,13 @@ pub async fn derive_from_hg_manifest_and_parents(
                         reused_subentries_and_partial_maps,
                         child_acl_map,
                         acl_overlay,
-                    ),
+                    )),
                     children,
                 ))
             }
             .boxed()
         },
-        |(path, name, hg_manifest, new_subentries, reused_subentries_and_partial_maps, child_acl_map, acl_overlay),
+        |out,
          children: bounded_traversal::Iter<(
             Option<MPathElement>,
             HgAugmentedManifestId,
@@ -301,30 +402,34 @@ pub async fn derive_from_hg_manifest_and_parents(
             u64,
         )>| {
             async move {
+                // A short-circuited known subtree: emit it directly. The parent
+                // applies its own child_acl_map to the directory pointer, so this
+                // subtree's own acl is not needed here.
+                let (path, name, hg_manifest, new_subentries, reused_subentries_and_partial_maps, child_acl_map, acl_overlay) =
+                    match out {
+                        Either::Left((name, dir)) => {
+                            return Ok((
+                                name,
+                                HgAugmentedManifestId::new(dir.treenode),
+                                dir.augmented_manifest_id,
+                                dir.augmented_manifest_size,
+                            ));
+                        }
+                        Either::Right(state) => state,
+                    };
                 let mut subentries = TrieMap::default();
                 let new_subentries = stream::iter(new_subentries)
                     .map(|(elem, file_type, filenode_id)| {
                         anyhow::Ok(async move {
-                            let filenode = filenode_id.load(ctx, blobstore).await?;
-                            let content_id = filenode.content_id();
-                            let metadata =
-                                get_metadata(ctx, blobstore, content_metadata_cache, content_id)
-                                    .await?;
-                            Ok((
-                                elem,
-                                HgAugmentedManifestEntry::FileNode(HgAugmentedFileLeafNode {
-                                    file_type,
-                                    filenode: filenode_id.into_nodehash(),
-                                    total_size: metadata.total_size,
-                                    content_blake3: metadata.seeded_blake3,
-                                    content_sha1: metadata.sha1,
-                                    file_header_metadata: if filenode.metadata().is_empty() {
-                                        None
-                                    } else {
-                                        Some(filenode.metadata().clone())
-                                    },
-                                }),
-                            ))
+                            let leaf = build_augmented_file_leaf(
+                                ctx,
+                                blobstore,
+                                content_metadata_cache,
+                                file_type,
+                                filenode_id,
+                            )
+                            .await?;
+                            Ok((elem, HgAugmentedManifestEntry::FileNode(leaf)))
                         })
                     })
                     .try_buffered(100)
@@ -373,9 +478,11 @@ pub async fn derive_from_hg_manifest_and_parents(
                     acl_manifest_directory_id: acl_overlay,
                 };
 
-                // Enforce root invariant: root pointer must never be
-                // Some(canonical_empty_acl_manifest_id)
-                if name.is_none() {
+                // Enforce root invariant: the repo-root pointer must never be
+                // Some(canonical_empty_acl_manifest_id). Only the true repo root
+                // (stage root at MPath::ROOT) is subject to this; a non-root
+                // stage root is an interior directory.
+                if name.is_none() && stage_path.is_root() {
                     assert_root_acl_pointer_invariant(
                         &augmented_manifest.acl_manifest_directory_id,
                     )?;
@@ -426,7 +533,47 @@ pub async fn derive_from_hg_manifest_and_parents(
         },
     )
     .await?;
-    Ok(root)
+    let (_, hg_augmented_manifest_id, augmented_manifest_id, augmented_manifest_size) = root;
+    Ok(Some(HgAugmentedManifestEntry::DirectoryNode(
+        HgAugmentedDirectoryNode {
+            treenode: hg_augmented_manifest_id.into_nodehash(),
+            augmented_manifest_id,
+            augmented_manifest_size,
+            acl_manifest_directory_id: acl_overlay,
+        },
+    )))
+}
+
+/// Build the augmented file leaf for a single filenode, attaching content
+/// blake3, sha1, and size from metadata (the prefetched cache, falling back to
+/// the filestore).
+async fn build_augmented_file_leaf(
+    ctx: &CoreContext,
+    blobstore: &impl KeyedBlobstore,
+    content_metadata_cache: &HashMap<ContentId, ContentMetadataV2>,
+    file_type: FileType,
+    filenode_id: HgFileNodeId,
+) -> Result<HgAugmentedFileLeafNode> {
+    let filenode = filenode_id.load(ctx, blobstore).await?;
+    let metadata = get_metadata(
+        ctx,
+        blobstore,
+        content_metadata_cache,
+        filenode.content_id(),
+    )
+    .await?;
+    Ok(HgAugmentedFileLeafNode {
+        file_type,
+        filenode: filenode_id.into_nodehash(),
+        total_size: metadata.total_size,
+        content_blake3: metadata.seeded_blake3,
+        content_sha1: metadata.sha1,
+        file_header_metadata: if filenode.metadata().is_empty() {
+            None
+        } else {
+            Some(filenode.metadata().clone())
+        },
+    })
 }
 
 async fn get_metadata<'a>(

@@ -87,7 +87,7 @@ fn untraced_manifest_id(
 /// Strip the `Traced` wrappers from a stage-output entry. Used at stage
 /// boundaries before handing entries to `get_manifest_entry_from_bonsai`,
 /// which re-assigns `ParentIndex` by bonsai-parent position.
-fn untrace_entry(
+pub(crate) fn untrace_entry(
     entry: Entry<Traced<ParentIndex, HgManifestId>, Traced<ParentIndex, (FileType, HgFileNodeId)>>,
 ) -> Entry<HgManifestId, (FileType, HgFileNodeId)> {
     match entry {

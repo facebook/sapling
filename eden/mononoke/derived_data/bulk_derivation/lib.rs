@@ -554,6 +554,10 @@ pub async fn derive_stage_batch(
             ddm.derive_stage_batch::<MappedHgChangesetId>(ctx, csids, payload)
                 .await
         }
+        PipelineDerivableVariant::HgAugmentedManifests => {
+            ddm.derive_stage_batch::<RootHgAugmentedManifestId>(ctx, csids, payload)
+                .await
+        }
     }
 }
 
@@ -597,6 +601,10 @@ pub async fn is_stage_derived(
             ddm.is_stage_derived::<MappedHgChangesetId>(ctx, csid, stage_path)
                 .await
         }
+        PipelineDerivableVariant::HgAugmentedManifests => {
+            ddm.is_stage_derived::<RootHgAugmentedManifestId>(ctx, csid, stage_path)
+                .await
+        }
     }
 }
 
@@ -638,6 +646,10 @@ pub async fn verify_stage_output(
         }
         PipelineDerivableVariant::HgChangesets => {
             ddm.verify_stage_output::<MappedHgChangesetId>(ctx, csid, stage_path)
+                .await
+        }
+        PipelineDerivableVariant::HgAugmentedManifests => {
+            ddm.verify_stage_output::<RootHgAugmentedManifestId>(ctx, csid, stage_path)
                 .await
         }
     }
