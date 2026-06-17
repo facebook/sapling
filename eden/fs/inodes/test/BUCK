@@ -32,6 +32,7 @@ cpp_unittest(
         "//folly/chrono:conv",
         "//folly/container:array",
         "//folly/executors:manual_executor",
+        "//folly/portability:unistd",
         "//folly/test:test_utils",
     ],
 )

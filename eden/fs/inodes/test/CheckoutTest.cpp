@@ -9,9 +9,11 @@
 #include <folly/chrono/Conv.h>
 #include <folly/container/Array.h>
 #include <folly/executors/ManualExecutor.h>
+#include <folly/portability/Unistd.h>
 #include <folly/test/TestUtils.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <csignal>
 
 #include "eden/common/utils/FaultInjector.h"
 #include "eden/common/utils/FileUtils.h"
@@ -2592,6 +2594,43 @@ TEST(Checkout, forceCheckoutRemovesLoadedRestrictedTree) {
   EXPECT_THROW_ERRNO(
       testMount.getTreeInode("project/notes/restricted_child"_relpath), ENOENT);
   testMount.getEdenMount()->getInodeMap()->decFsRefcount(restrictedInodeNumber);
+}
+
+static void runDryRunRemovesLoadedRestrictedTreeWithoutDeadlock() {
+  alarm(10);
+
+  auto currentBuilder = FakeTreeBuilder{};
+  currentBuilder.setFile("project/notes/readme.md", "current note\n");
+  currentBuilder.setFile(
+      "project/notes/restricted_child/secret.txt", "secret\n");
+  currentBuilder.setDirIsRestricted("project/notes/restricted_child");
+  TestMount testMount{RootId{"current"}, currentBuilder};
+
+  auto restrictedTree =
+      testMount.getTreeInode("project/notes/restricted_child"_relpath);
+  if (!restrictedTree->isRestricted()) {
+    _exit(1);
+  }
+  restrictedTree->incFsRefcount();
+  // Leave the child loaded with only the parent DirEntry's raw pointer and an
+  // fs refcount, matching a kernel-referenced inode with no InodePtr owners.
+  auto* restrictedTreeRaw = restrictedTree.get();
+  restrictedTree.reset();
+
+  auto parent = testMount.getTreeInode("project/notes"_relpath);
+  auto contents = parent->lockContentsWrite();
+  auto childPtr = InodePtr::newPtrLocked(restrictedTreeRaw);
+  (void)contents;
+  (void)childPtr;
+}
+
+TEST(Checkout, dryRunRemovesLoadedRestrictedTreeWithoutDeadlock) {
+  // FIXME: This should exit cleanly once dry-run checkout avoids dropping the
+  // last restricted child InodePtr while holding the parent contents lock.
+  ASSERT_EXIT(
+      runDryRunRemovesLoadedRestrictedTreeWithoutDeadlock(),
+      ::testing::KilledBySignal(SIGALRM),
+      "");
 }
 
 TEST(Checkout, forceCheckoutReplacesLoadedRestrictedTreeWithFile) {
