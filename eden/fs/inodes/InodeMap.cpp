@@ -1085,6 +1085,19 @@ bool InodeMap::isInodeLoadedOrRemembered(InodeNumber ino) const {
       members->loadedInodes_.contains(ino);
 }
 
+bool InodeMap::onLinkedInodeUnreferenced(InodeBase* inode) {
+  auto data = data_.wlock();
+  if (data->shutdownPromise.has_value() || inode->isUnlinked()) {
+    return false;
+  }
+
+  // Linked inodes are kept loaded below, so they do not need ParentInodeInfo.
+  // Avoid acquiring the parent contents lock here: the last InodePtr may be
+  // dropped by code already holding that same lock.
+  inode->decPtrAcquireCount();
+  return true;
+}
+
 void InodeMap::onInodeUnreferenced(
     InodeBase* inode,
     ParentInodeInfo&& parentInfo) {

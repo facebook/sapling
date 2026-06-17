@@ -2618,18 +2618,19 @@ static void runDryRunRemovesLoadedRestrictedTreeWithoutDeadlock() {
   restrictedTree.reset();
 
   auto parent = testMount.getTreeInode("project/notes"_relpath);
-  auto contents = parent->lockContentsWrite();
-  auto childPtr = InodePtr::newPtrLocked(restrictedTreeRaw);
-  (void)contents;
-  (void)childPtr;
+  {
+    auto contents = parent->lockContentsWrite();
+    auto childPtr = InodePtr::newPtrLocked(restrictedTreeRaw);
+    (void)contents;
+    (void)childPtr;
+  }
+  _exit(0);
 }
 
 TEST(Checkout, dryRunRemovesLoadedRestrictedTreeWithoutDeadlock) {
-  // FIXME: This should exit cleanly once dry-run checkout avoids dropping the
-  // last restricted child InodePtr while holding the parent contents lock.
   ASSERT_EXIT(
       runDryRunRemovesLoadedRestrictedTreeWithoutDeadlock(),
-      ::testing::KilledBySignal(SIGALRM),
+      ::testing::ExitedWithCode(0),
       "");
 }
 

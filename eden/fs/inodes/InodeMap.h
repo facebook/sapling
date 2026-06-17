@@ -305,6 +305,7 @@ class InodeMap {
    * This is an internal API that should not be called by most users.
    */
   void onInodeUnreferenced(InodeBase* inode, ParentInodeInfo&& parentInfo);
+  bool onLinkedInodeUnreferenced(InodeBase* inode);
 
   /**
    * Acquire the InodeMap lock while performing Inode unloading.

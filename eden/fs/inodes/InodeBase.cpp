@@ -302,8 +302,12 @@ void InodeBase::onPtrRefZero() const {
   // We could perhaps just make incrementPtrRef() and decrementPtrRef()
   // non-const instead.  InodePtr objects always point to non-const InodeBase
   // objects; we do not currently ever use pointer-to-const InodePtrs.
-  getMount()->getInodeMap()->onInodeUnreferenced(
-      const_cast<InodeBase*>(this), getParentInfo());
+  auto* inodeMap = getMount()->getInodeMap();
+  auto* inode = const_cast<InodeBase*>(this);
+  if (inodeMap->onLinkedInodeUnreferenced(inode)) {
+    return;
+  }
+  inodeMap->onInodeUnreferenced(inode, getParentInfo());
 }
 
 ParentInodeInfo InodeBase::getParentInfo() const {
