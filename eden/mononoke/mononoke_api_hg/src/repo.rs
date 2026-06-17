@@ -684,8 +684,10 @@ impl<R: MononokeRepo> HgRepoContext<R> {
     > {
         let ctx = self.ctx().clone();
         let repo = self.repo().clone();
-        let bonsai_common = self.convert_changeset_ids(common).await?;
-        let bonsai_heads = self.convert_changeset_ids(heads).await?;
+        let (bonsai_common, bonsai_heads) = try_join!(
+            self.convert_changeset_ids(common),
+            self.convert_changeset_ids(heads),
+        )?;
         debug!("Streaming Commit Graph...");
         let commit_graph_stream = self
             .repo_ctx()
@@ -725,6 +727,10 @@ impl<R: MononokeRepo> HgRepoContext<R> {
         let heads_vec: Vec<_> = heads.to_vec();
 
         debug!("Calculating Commit Graph...");
+        let (bonsai_common, bonsai_heads) = try_join!(
+            self.convert_changeset_ids(common),
+            self.convert_changeset_ids(heads),
+        )?;
         let (draft_commits, missing_commits) = try_join!(
             find_new_draft_commits_and_derive_filenodes_for_public_roots(
                 &ctx,
@@ -733,15 +739,11 @@ impl<R: MononokeRepo> HgRepoContext<R> {
                 &heads_vec,
                 phases
             ),
-            {
-                let bonsai_common = self.convert_changeset_ids(common).await?;
-                let bonsai_heads = self.convert_changeset_ids(heads).await?;
-                self.repo_ctx().repo().commit_graph().ancestors_difference(
-                    &ctx,
-                    bonsai_heads,
-                    bonsai_common,
-                )
-            }
+            self.repo_ctx().repo().commit_graph().ancestors_difference(
+                &ctx,
+                bonsai_heads,
+                bonsai_common,
+            )
         )?;
 
         let cs_parent_mapping = stream::iter(missing_commits.clone())
