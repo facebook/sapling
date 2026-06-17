@@ -16,10 +16,13 @@ mod queue;
 pub use queue::AsyncMethodRequestQueue;
 pub use queue::ClaimedBy;
 pub use queue::DequeuedRequest;
+pub use queue::OrphanScanBatch;
 pub use queue::PollError;
 pub use queue::QueueRepoFilter;
 pub use queue::QueueRequestTypeFilter;
 pub use queue::RequestId;
+pub use queue::RowId;
+pub use requests_table::LongRunningRequestEntry;
 
 pub mod tokens {
     pub use crate::types::DeriveBackfillRepoToken;

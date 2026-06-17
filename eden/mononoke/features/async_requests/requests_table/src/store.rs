@@ -630,6 +630,15 @@ mononoke_queries! {
         "
     }
 
+    write MarkReadyRequestsFailed(failed_at: Timestamp, >list ids: RowId) {
+        none,
+        "
+        UPDATE long_running_request_queue
+        SET status = 'failed', failed_at = {failed_at}
+        WHERE status = 'ready' AND id IN {ids}
+        "
+    }
+
     write MarkRequestAsNewForRetry(id: RowId, request_type: RequestType, num_retries: u8) {
         none,
         "
@@ -834,6 +843,67 @@ mononoke_queries! {
             inprogress_last_updated_at > {last_update_newer_than} OR
             (status = 'new' AND created_at > {last_update_newer_than})
         )")
+    }
+
+    read ListReadyRequestsAfterId(after_id: RowId, limit: usize) -> (
+        RowId,
+        RequestType,
+        Option<RepositoryId>,
+        BlobstoreKey,
+        Option<BlobstoreKey>,
+        Timestamp,
+        Option<Timestamp>,
+        Option<Timestamp>,
+        Option<Timestamp>,
+        Option<Timestamp>,
+        RequestStatus,
+        Option<ClaimedBy>,
+        Option<u8>,
+        Option<Timestamp>,
+        Option<RowId>,
+        Option<String>,
+    ) {
+        mysql("SELECT id,
+            request_type,
+            repo_id,
+            args_blobstore_key,
+            result_blobstore_key,
+            created_at,
+            started_processing_at,
+            inprogress_last_updated_at,
+            ready_at,
+            polled_at,
+            status,
+            claimed_by,
+            num_retries,
+            failed_at,
+            root_request_id,
+            created_by
+        FROM long_running_request_queue
+        FORCE INDEX (PRIMARY)
+        WHERE status = 'ready' AND id > {after_id}
+        ORDER BY id ASC
+        LIMIT {limit}")
+        sqlite("SELECT id,
+            request_type,
+            repo_id,
+            args_blobstore_key,
+            result_blobstore_key,
+            created_at,
+            started_processing_at,
+            inprogress_last_updated_at,
+            ready_at,
+            polled_at,
+            status,
+            claimed_by,
+            num_retries,
+            failed_at,
+            root_request_id,
+            created_by
+        FROM long_running_request_queue
+        WHERE status = 'ready' AND id > {after_id}
+        ORDER BY id ASC
+        LIMIT {limit}")
     }
 
     read GetQueueLengthForRepos(>list repo_ids: RepositoryId) -> (
@@ -1644,6 +1714,41 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
         .map(row_to_entry)
         .collect();
         Ok(entries)
+    }
+
+    async fn list_ready_requests_after_id(
+        &self,
+        ctx: &CoreContext,
+        after_id: &RowId,
+        limit: usize,
+    ) -> Result<Vec<LongRunningRequestEntry>> {
+        let entries = ListReadyRequestsAfterId::query(
+            &self.connections.read_connection,
+            ctx.sql_query_telemetry(),
+            after_id,
+            &limit,
+        )
+        .await
+        .context("listing ready requests after id")?
+        .into_iter()
+        .map(row_to_entry)
+        .collect();
+        Ok(entries)
+    }
+
+    async fn mark_ready_requests_failed(&self, ctx: &CoreContext, ids: &[RowId]) -> Result<u64> {
+        if ids.is_empty() {
+            return Ok(0);
+        }
+        let res = MarkReadyRequestsFailed::query(
+            &self.connections.write_connection,
+            ctx.sql_query_telemetry(),
+            &Timestamp::now(),
+            ids,
+        )
+        .await
+        .context("marking ready requests as failed")?;
+        Ok(res.affected_rows())
     }
 
     async fn get_queue_stats(

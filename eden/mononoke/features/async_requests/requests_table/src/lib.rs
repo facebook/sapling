@@ -198,6 +198,29 @@ pub trait LongRunningRequestsQueue: Send + Sync {
         last_update_newer_than: Option<&Timestamp>,
     ) -> Result<Vec<LongRunningRequestEntry>>;
 
+    /// List one page of requests in the `ready` state with `id` strictly
+    /// greater than `after_id`, ordered by `id` ascending, up to `limit` rows.
+    ///
+    /// This is keyset pagination over the primary key: callers page through
+    /// all `ready` requests by passing the largest `id` from the previous page
+    /// as `after_id` (starting from `RowId(0)`). It is intended for scans such
+    /// as orphan detection, where a single bounded query per batch keeps the
+    /// load on the DB predictable. Only `ready` requests are returned because
+    /// those are the ones whose params blob is expected to still exist and
+    /// worth checking; in-flight (`new`/`inprogress`) requests are skipped.
+    async fn list_ready_requests_after_id(
+        &self,
+        ctx: &CoreContext,
+        after_id: &RowId,
+        limit: usize,
+    ) -> Result<Vec<LongRunningRequestEntry>>;
+
+    /// Mark the given requests as `failed`. Only rows still in the `ready`
+    /// state are affected; the guard keeps this safe to run concurrently with
+    /// other queue activity and idempotent on re-runs. Returns the number of
+    /// rows actually updated.
+    async fn mark_ready_requests_failed(&self, ctx: &CoreContext, ids: &[RowId]) -> Result<u64>;
+
     /// Retrieve stats on the queue, filtered by repo.
     /// If `exclude_backfill` is true, derived data backfill request types
     /// (derive_boundaries, derive_slice, derive_backfill, derive_backfill_repo)

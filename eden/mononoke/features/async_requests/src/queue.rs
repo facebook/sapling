@@ -63,6 +63,22 @@ pub struct DequeuedRequest {
     pub created_by: Option<String>,
 }
 
+/// One page of an orphan scan (see [`AsyncMethodRequestQueue::list_orphan_requests`]).
+///
+/// An "orphan" is a queue row whose serialized params blob
+/// (`args_blobstore_key`) is no longer present in the blobstore, so the
+/// request can never be processed or shown.
+pub struct OrphanScanBatch {
+    /// Rows in this batch whose params blob is missing from the blobstore.
+    pub orphans: Vec<LongRunningRequestEntry>,
+    /// The largest `id` scanned in this batch, to be passed as the cursor for
+    /// the next batch. `None` if the batch was empty (i.e. the scan is done).
+    pub last_scanned_id: Option<RowId>,
+    /// Total number of rows scanned in this batch (orphan or not). When this is
+    /// less than the requested batch size, the scan has reached the end.
+    pub scanned: usize,
+}
+
 /// JustKnob for maximum concurrent requests across all workers.
 /// The switch/entity determines the limit: types in a concurrency group
 /// share a switch (and thus a limit), while ungrouped types use their
@@ -643,6 +659,80 @@ impl AsyncMethodRequestQueue {
                 )>>()
                 .await)
         }
+    }
+
+    /// Scan one batch of `ready` requests for "orphans": rows whose params
+    /// blob (`args_blobstore_key`) is missing from the blobstore.
+    ///
+    /// Only `ready` requests are considered, since those are the ones expected
+    /// to have a persisted params blob; in-flight (`new`/`inprogress`) requests
+    /// are skipped, which keeps the candidate set (and the number of blobstore
+    /// lookups) small.
+    ///
+    /// This fetches up to `batch_size` `ready` rows with `id` greater than
+    /// `after_id` (pass `None` to start from the beginning) in a single DB
+    /// query, then checks blob presence for each with up to `concurrency`
+    /// concurrent blobstore lookups. Callers page through all `ready` requests
+    /// by feeding [`OrphanScanBatch::last_scanned_id`] back in as `after_id`
+    /// until a batch scans fewer than `batch_size` rows.
+    ///
+    /// A blob whose presence cannot be determined (e.g. a transient blobstore
+    /// error) is treated as a hard error rather than reported as an orphan, so
+    /// that a flaky lookup never produces a false positive.
+    pub async fn list_orphan_requests(
+        &self,
+        ctx: &CoreContext,
+        after_id: Option<RowId>,
+        batch_size: usize,
+        concurrency: usize,
+    ) -> Result<OrphanScanBatch, Error> {
+        let after_id = after_id.unwrap_or(RowId(0));
+        let entries = self
+            .table
+            .list_ready_requests_after_id(ctx, &after_id, batch_size)
+            .await
+            .context("listing request candidates from the DB")?;
+
+        let scanned = entries.len();
+        let last_scanned_id = entries.last().map(|entry| entry.id.clone());
+
+        let orphans = stream::iter(entries)
+            .map(|entry| async {
+                let key = &entry.args_blobstore_key.0;
+                let present = self
+                    .blobstore
+                    .is_present(ctx, key)
+                    .await
+                    .with_context(|| format!("checking blob presence for {key}"))?
+                    .fail_if_unsure()
+                    .with_context(|| format!("indeterminate blob presence for {key}"))?;
+                Ok::<_, Error>((!present).then_some(entry))
+            })
+            .buffer_unordered(concurrency)
+            .try_collect::<Vec<_>>()
+            .await?
+            .into_iter()
+            .flatten()
+            .collect();
+
+        Ok(OrphanScanBatch {
+            orphans,
+            last_scanned_id,
+            scanned,
+        })
+    }
+
+    /// Mark the given requests as `failed`, but only those still in the
+    /// `ready` state. Returns the number of rows actually updated.
+    pub async fn mark_requests_failed(
+        &self,
+        ctx: &CoreContext,
+        ids: &[RowId],
+    ) -> Result<u64, Error> {
+        self.table
+            .mark_ready_requests_failed(ctx, ids)
+            .await
+            .context("marking requests as failed")
     }
 
     pub async fn get_request_by_id(
