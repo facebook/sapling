@@ -1507,27 +1507,78 @@ function gitimport() {
     "$@"
 }
 
+function _setup_meta_git_exec_path() {
+  # Set up GIT_EXEC_PATH in a test-scoped temp dir with all helpers from
+  # the Meta-built git. Uses $TESTTMP to avoid mutating the shared Buck
+  # output directory. Called once per test; symlinks persist for the run.
+  local exec_path="$1"
+  mkdir -p "$exec_path"
+  # Main git binary
+  ln -sf "$META_GIT_CLIENT" "$exec_path/git"
+  # Remote helpers (ln -sf is idempotent)
+  [[ -n "${META_GIT_REMOTE_HTTP:-}" ]] && {
+    ln -sf "$META_GIT_REMOTE_HTTP" "$exec_path/git-remote-http"
+    ln -sf "$META_GIT_REMOTE_HTTP" "$exec_path/git-remote-https"
+    ln -sf "$META_GIT_REMOTE_HTTP" "$exec_path/git-remote-ftp"
+    ln -sf "$META_GIT_REMOTE_HTTP" "$exec_path/git-remote-ftps"
+  }
+  [[ -n "${META_GIT_HTTP_BACKEND:-}" ]] && ln -sf "$META_GIT_HTTP_BACKEND" "$exec_path/git-http-backend"
+  [[ -n "${META_GIT_SH_I18N_ENVSUBST:-}" ]] && ln -sf "$META_GIT_SH_I18N_ENVSUBST" "$exec_path/git-sh-i18n--envsubst"
+  # Shell scripts
+  [[ -n "${META_GIT_SH_SETUP:-}" ]] && ln -sf "$META_GIT_SH_SETUP" "$exec_path/git-sh-setup"
+  [[ -n "${META_GIT_SH_I18N:-}" ]] && ln -sf "$META_GIT_SH_I18N" "$exec_path/git-sh-i18n"
+  [[ -n "${META_GIT_SUBMODULE:-}" ]] && ln -sf "$META_GIT_SUBMODULE" "$exec_path/git-submodule"
+  # Also symlink git-lfs from system PATH so LFS operations work
+  local system_lfs
+  system_lfs="$(type -P git-lfs 2>/dev/null || true)"
+  [[ -n "$system_lfs" ]] && ln -sf "$system_lfs" "$exec_path/git-lfs"
+}
+
+# Set up Meta git exec path once when library.sh is sourced.
+# $TESTTMP is always set by the test runner before library.sh is sourced.
+_META_GIT_EXEC_PATH=""
+if [[ -n "${META_GIT_CLIENT:-}" && -x "${META_GIT_CLIENT}" ]]; then
+  _META_GIT_EXEC_PATH="${TESTTMP}/meta-git-exec"
+  _setup_meta_git_exec_path "$_META_GIT_EXEC_PATH"
+  export PATH="${_META_GIT_EXEC_PATH}:${PATH}"
+  export GIT_TERMINAL_PROMPT=0
+fi
+
 function git() {
   local date name email
   date="01/01/0000 00:00 +0000"
   name="mononoke"
   email="mononoke@mononoke"
 
-  if ! command git config --get uploadpack.allowFilter > /dev/null; then
-    # Need this option in global config for filtering to work
-    # It has to be global unfortunately
-    GIT_AUTHOR_NAME="$name" \
-    GIT_AUTHOR_EMAIL="$email" \
-    command git config --global uploadpack.allowFilter true > /dev/null
+  local git_bin="git"
+  if [[ -n "${META_GIT_CLIENT:-}" && -x "${META_GIT_CLIENT}" ]]; then
+    git_bin="$META_GIT_CLIENT"
   fi
 
-  GIT_COMMITTER_DATE="${GIT_COMMITTER_DATE:-$date}" \
-  GIT_COMMITTER_NAME="$name" \
-  GIT_COMMITTER_EMAIL="$email" \
-  GIT_AUTHOR_DATE="${GIT_AUTHOR_DATE:-$date}" \
-  GIT_AUTHOR_NAME="$name" \
-  GIT_AUTHOR_EMAIL="$email" \
-  command git -c transfer.bundleURI=false -c init.defaultBranch=master_bookmark -c protocol.file.allow=always -c commit.recordPredecessor=false "$@"
+  if ! command "$git_bin" config --get uploadpack.allowFilter > /dev/null; then
+    GIT_AUTHOR_NAME="$name" \
+    GIT_AUTHOR_EMAIL="$email" \
+    command "$git_bin" config --global uploadpack.allowFilter true > /dev/null
+  fi
+
+  if [[ -n "$_META_GIT_EXEC_PATH" ]]; then
+    GIT_EXEC_PATH="$_META_GIT_EXEC_PATH" \
+    GIT_COMMITTER_DATE="${GIT_COMMITTER_DATE:-$date}" \
+    GIT_COMMITTER_NAME="$name" \
+    GIT_COMMITTER_EMAIL="$email" \
+    GIT_AUTHOR_DATE="${GIT_AUTHOR_DATE:-$date}" \
+    GIT_AUTHOR_NAME="$name" \
+    GIT_AUTHOR_EMAIL="$email" \
+    command "$git_bin" -c transfer.bundleURI=false -c init.defaultBranch=master_bookmark -c protocol.file.allow=always -c commit.recordPredecessor=true "$@"
+  else
+    GIT_COMMITTER_DATE="${GIT_COMMITTER_DATE:-$date}" \
+    GIT_COMMITTER_NAME="$name" \
+    GIT_COMMITTER_EMAIL="$email" \
+    GIT_AUTHOR_DATE="${GIT_AUTHOR_DATE:-$date}" \
+    GIT_AUTHOR_NAME="$name" \
+    GIT_AUTHOR_EMAIL="$email" \
+    command git -c transfer.bundleURI=false -c init.defaultBranch=master_bookmark -c protocol.file.allow=always -c commit.recordPredecessor=false "$@"
+  fi
 }
 
 function git_set_only_author() {
@@ -1535,10 +1586,22 @@ function git_set_only_author() {
   date="01/01/0000 00:00 +0000"
   name="mononoke"
   email="mononoke@mononoke"
-  GIT_AUTHOR_DATE="$date" \
-  GIT_AUTHOR_NAME="$name" \
-  GIT_AUTHOR_EMAIL="$email" \
-  command git -c init.defaultBranch=master_bookmark -c protocol.file.allow=always -c commit.recordPredecessor=false "$@"
+  local git_bin="git"
+  if [[ -n "${META_GIT_CLIENT:-}" && -x "${META_GIT_CLIENT}" ]]; then
+    git_bin="$META_GIT_CLIENT"
+  fi
+  if [[ -n "$_META_GIT_EXEC_PATH" ]]; then
+    GIT_EXEC_PATH="$_META_GIT_EXEC_PATH" \
+    GIT_AUTHOR_DATE="$date" \
+    GIT_AUTHOR_NAME="$name" \
+    GIT_AUTHOR_EMAIL="$email" \
+    command "$git_bin" -c init.defaultBranch=master_bookmark -c protocol.file.allow=always -c commit.recordPredecessor=true "$@"
+  else
+    GIT_AUTHOR_DATE="$date" \
+    GIT_AUTHOR_NAME="$name" \
+    GIT_AUTHOR_EMAIL="$email" \
+    command git -c init.defaultBranch=master_bookmark -c protocol.file.allow=always -c commit.recordPredecessor=false "$@"
+  fi
 }
 
 function summarize_scuba_json() {

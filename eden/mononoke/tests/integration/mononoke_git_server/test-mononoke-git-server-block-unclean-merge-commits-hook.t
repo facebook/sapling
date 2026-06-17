@@ -403,7 +403,7 @@
   $ (cat "${TESTTMP}/.file1"; echo "last line") > file1
   $ git add .
   $ git commit --amend -m "master_bookmark commit"
-  [master_bookmark 97232a1] master_bookmark commit
+  [master_bookmark 1d40ab0] master_bookmark commit
    Date: Sat Jan 1 00:00:00 2000 +0000
    1 file changed, 1 insertion(+)
   $ git checkout branch1
@@ -411,14 +411,14 @@
   $ (echo "first line"; cat "${TESTTMP}/.file1") > file1
   $ git add .
   $ git commit --amend -m "branch1 commit"
-  [branch1 b73b0f5] branch1 commit
+  [branch1 89675bf] branch1 commit
    Date: Sat Jan 1 00:00:00 2000 +0000
    1 file changed, 1 insertion(+)
   $ git checkout master_bookmark -q
   $ git_client push --all
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
-     97532dd..b73b0f5  branch1 -> branch1
-     97532dd..97232a1  master_bookmark -> master_bookmark
+     97532dd..89675bf  branch1 -> branch1
+     97532dd..1d40ab0  master_bookmark -> master_bookmark
   $ git merge branch1
   Auto-merging file1
   Merge made by the 'ort' strategy.
@@ -427,10 +427,10 @@
   $ git show --pretty='' . | wc
         0       0       0
   $ showgitrepo
-  *   db1eb8d (HEAD -> master_bookmark) Merge branch 'branch1' into master_bookmark
+  *   b1a16fc (HEAD -> master_bookmark) Merge branch 'branch1' into master_bookmark
   |\  
-  | * b73b0f5 (origin/branch1, branch1) branch1 commit
-  * | 97232a1 (origin/master_bookmark, origin/HEAD) master_bookmark commit
+  | * 89675bf (origin/branch1, branch1) branch1 commit
+  * | 1d40ab0 (origin/master_bookmark, origin/HEAD) master_bookmark commit
   |/  
   * 97532dd base commit
   *   e6c1afb Resolve merge conflict by taking changes from one of the parents as they are
@@ -468,7 +468,7 @@
   $ git_client push origin master_bookmark
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
    ! [remote rejected] master_bookmark -> master_bookmark (hooks failed:
-    block_unclean_merge_commits for db1eb8dcc8ac7919a7da931a9b527275472c96b7: The bookmark matching regex master_bookmark can't have merge commits with conflicts, even if they have been resolved
+    block_unclean_merge_commits for b1a16fcc22837d28c9820e448270100c8fa42eea: The bookmark matching regex master_bookmark can't have merge commits with conflicts, even if they have been resolved
   
   For more information about hooks and bypassing, refer https://fburl.com/wiki/mb4wtk1j)
   error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
@@ -478,11 +478,11 @@
 # Case with deletion where in one parent the file is deleted and in the other it has not been touched since the LCA
   $ git_client -c http.extraHeader="x-git-allow-unclean-merges: 1" push --all
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
-     97232a1..db1eb8d  master_bookmark -> master_bookmark
+     1d40ab0..b1a16fc  master_bookmark -> master_bookmark
   $ git checkout branch1
   Switched to branch 'branch1'
   $ git merge master_bookmark
-  Updating b73b0f5..db1eb8d
+  Updating 89675bf..b1a16fc
   Fast-forward
    file1 | 1 +
    1 file changed, 1 insertion(+)
@@ -490,20 +490,20 @@
   $ git commit -qam "base commit"
   $ git checkout master_bookmark -q
   $ git merge branch1
-  Updating db1eb8d..b6b8fd0
+  Updating b1a16fc..2649521
   Fast-forward
    file1 | 45 +--------------------------------------------
    1 file changed, 1 insertion(+), 44 deletions(-)
   $ git_client push --all
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
-     b73b0f5..b6b8fd0  branch1 -> branch1
-     db1eb8d..b6b8fd0  master_bookmark -> master_bookmark
+     89675bf..2649521  branch1 -> branch1
+     b1a16fc..2649521  master_bookmark -> master_bookmark
   $ showgitrepo
-  * b6b8fd0 (HEAD -> master_bookmark, origin/master_bookmark, origin/branch1, origin/HEAD, branch1) base commit
-  *   db1eb8d Merge branch 'branch1' into master_bookmark
+  * 2649521 (HEAD -> master_bookmark, origin/master_bookmark, origin/branch1, origin/HEAD, branch1) base commit
+  *   b1a16fc Merge branch 'branch1' into master_bookmark
   |\  
-  | * b73b0f5 branch1 commit
-  * | 97232a1 master_bookmark commit
+  | * 89675bf branch1 commit
+  * | 1d40ab0 master_bookmark commit
   |/  
   * 97532dd base commit
   *   e6c1afb Resolve merge conflict by taking changes from one of the parents as they are
@@ -543,7 +543,7 @@
   $ echo abcd > file3
   $ git add .
   $ git commit --amend -m "master_bookmark commit"
-  [master_bookmark e1f85f9] master_bookmark commit
+  [master_bookmark 1b03da5] master_bookmark commit
    Date: Sat Jan 1 00:00:00 2000 +0000
    1 file changed, 1 insertion(+)
    create mode 100644 file3
@@ -552,15 +552,15 @@
   $ rm file1
   $ git add .
   $ git commit --amend -m "branch1 commit"
-  [branch1 72c4b2c] branch1 commit
+  [branch1 4c236f5] branch1 commit
    Date: Sat Jan 1 00:00:00 2000 +0000
    1 file changed, 1 deletion(-)
    delete mode 100644 file1
   $ git checkout master_bookmark -q
   $ git_client push --all
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
-     b6b8fd0..72c4b2c  branch1 -> branch1
-     b6b8fd0..e1f85f9  master_bookmark -> master_bookmark
+     2649521..4c236f5  branch1 -> branch1
+     2649521..1b03da5  master_bookmark -> master_bookmark
   $ git merge branch1
   Merge made by the 'ort' strategy.
    file1 | 1 -
@@ -569,16 +569,16 @@
   $ git show --pretty='' . | wc
         0       0       0
   $ showgitrepo
-  *   102e40a (HEAD -> master_bookmark) Merge branch 'branch1' into master_bookmark
+  *   13085bc (HEAD -> master_bookmark) Merge branch 'branch1' into master_bookmark
   |\  
-  | * 72c4b2c (origin/branch1, branch1) branch1 commit
-  * | e1f85f9 (origin/master_bookmark, origin/HEAD) master_bookmark commit
+  | * 4c236f5 (origin/branch1, branch1) branch1 commit
+  * | 1b03da5 (origin/master_bookmark, origin/HEAD) master_bookmark commit
   |/  
-  * b6b8fd0 base commit
-  *   db1eb8d Merge branch 'branch1' into master_bookmark
+  * 2649521 base commit
+  *   b1a16fc Merge branch 'branch1' into master_bookmark
   |\  
-  | * b73b0f5 branch1 commit
-  * | 97232a1 master_bookmark commit
+  | * 89675bf branch1 commit
+  * | 1d40ab0 master_bookmark commit
   |/  
   * 97532dd base commit
   *   e6c1afb Resolve merge conflict by taking changes from one of the parents as they are
@@ -615,5 +615,5 @@
 # This should succeed. file1 is different in both parents but one did not touch it since LCA
   $ git_client push origin master_bookmark
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
-     e1f85f9..102e40a  master_bookmark -> master_bookmark
+     1b03da5..13085bc  master_bookmark -> master_bookmark
 

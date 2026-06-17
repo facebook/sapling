@@ -21,13 +21,20 @@ NETWORK_EXCLUDED_TESTS = [
     "test-mononoke-git-server-with-gclone.t",
 ]
 
-# Tests that use the Meta-built git client (separate target to avoid
-# adding the git binary build dep to all other tests)
+# Tests that must run against the Meta-built git client. This includes the
+# predecessor-tracking tests as well as amend-based tests whose expected commit
+# hashes depend on `commit.recordPredecessor` (which only the Meta git client
+# supports). They live in a separate non-OSS target so they always run with the
+# Meta git binary; running them under OSS/system git would produce the old
+# (no-predecessor) hashes and fail.
 META_GIT_CLIENT_TESTS = [
     "test-mononoke-git-server-push-predecessor-amend.t",
     "test-mononoke-git-server-push-predecessor-cherry-pick.t",
     "test-mononoke-git-server-push-predecessor-combined.t",
     "test-mononoke-git-server-push-predecessor-rebase.t",
+    "test-mononoke-git-server-block-accidental-new-bookmark-creation.t",
+    "test-mononoke-git-server-block-unclean-merge-commits-hook.t",
+    "test-mononoke-git-server-missing-lfsconfig-hook.t",
 ]
 
 dott_test(
@@ -51,6 +58,13 @@ dott_test(
         []
         if rust_oss.is_oss_build()
         else [
+            "fbsource//third-party/git/v2.53.0:git",
+            "fbsource//third-party/git/v2.53.0:git-http-backend",
+            "fbsource//third-party/git/v2.53.0:git-remote-http",
+            "fbsource//third-party/git/v2.53.0:git-sh-i18n--envsubst",
+            "fbsource//third-party/git/v2.53.0:git_sh_i18n",
+            "fbsource//third-party/git/v2.53.0:git_sh_setup",
+            "fbsource//third-party/git/v2.53.0:git_submodule",
             "//eden/mononoke/clients/facebook/multi_repo_land_service_client:multi_repo_land_service_client_cli",
             "//eden/mononoke/clients/scsc:scsc",
             "//eden/mononoke/facebook/mock_rl_land_service:mock_rl_land_service",
@@ -66,6 +80,13 @@ dott_test(
     dott_files = NETWORK_EXCLUDED_TESTS,
     rust_allow_oss_build = False,
     deps = [
+        "fbsource//third-party/git/v2.53.0:git",
+        "fbsource//third-party/git/v2.53.0:git-http-backend",
+        "fbsource//third-party/git/v2.53.0:git-remote-http",
+        "fbsource//third-party/git/v2.53.0:git-sh-i18n--envsubst",
+        "fbsource//third-party/git/v2.53.0:git_sh_i18n",
+        "fbsource//third-party/git/v2.53.0:git_sh_setup",
+        "fbsource//third-party/git/v2.53.0:git_submodule",
         "//eden/mononoke:mononoke",
         "//eden/mononoke/clients/facebook/multi_repo_land_service_client:multi_repo_land_service_client_cli",
         "//eden/mononoke/clients/scsc:scsc",
@@ -91,10 +112,17 @@ dott_test(
     rust_allow_oss_build = False,
     deps = [
         "fbsource//third-party/git/v2.53.0:git",
+        "fbsource//third-party/git/v2.53.0:git-http-backend",
+        "fbsource//third-party/git/v2.53.0:git-remote-http",
+        "fbsource//third-party/git/v2.53.0:git-sh-i18n--envsubst",
+        "fbsource//third-party/git/v2.53.0:git_sh_i18n",
+        "fbsource//third-party/git/v2.53.0:git_sh_setup",
+        "fbsource//third-party/git/v2.53.0:git_submodule",
         "//eden/mononoke:mononoke",
         "//eden/mononoke/clients/scsc:scsc",
         "//eden/mononoke/git/gitimport:gitimport",
         "//eden/mononoke/servers/git/git_server:git_server",
+        "//eden/mononoke/servers/lfs/lfs_server:lfs_server",
         "//eden/mononoke/servers/scs/scs_server:scs_server",
         "//eden/mononoke/tools/admin:admin",
         "//eden/mononoke/tools/testtool:testtool",

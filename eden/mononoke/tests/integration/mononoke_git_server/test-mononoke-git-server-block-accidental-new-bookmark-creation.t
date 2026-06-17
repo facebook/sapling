@@ -85,7 +85,7 @@
 
 # change commit message
   $ git commit --amend -m "@new-branch: brand_new_branch and rest of the message here"
-  [brand_new_branch 691e02c] @new-branch: brand_new_branch and rest of the message here
+  [brand_new_branch f93e202] @new-branch: brand_new_branch and rest of the message here
    Date: Sat Jan 1 00:00:00 2000 +0000
    1 file changed, 1 insertion(+)
 
@@ -99,7 +99,7 @@
   Switched to a new branch 'brand_new_branch2'
   $ echo append >> new_file
   $ git commit -a --amend -m "$(echo -e "better change\n\nSummary:\n@new-branch: brand_new_branch2\nand rest of the message here")"
-  [brand_new_branch2 8c3df9f] better change
+  [brand_new_branch2 1ffd6a1] better change
    Date: Sat Jan 1 00:00:00 2000 +0000
    1 file changed, 2 insertions(+)
   $ git show -s --format=%B HEAD

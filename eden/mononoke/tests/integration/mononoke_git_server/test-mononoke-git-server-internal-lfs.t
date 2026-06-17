@@ -38,9 +38,11 @@
 # Start a Mononoke LFS server with NO upstream. It only accepts client uploads
 # into repo "repo"'s blobstore. The Scuba log gives us a per-request record we
 # can later inspect to prove the git server stayed off the HTTP path.
+# Use --tls so the server binds to `localhost` (reachable in the
+# disable-all-network-access sandbox) rather than $LOCALIP (which is not).
   $ LFS_LOG="${TESTTMP}/lfs.log"
   $ SCUBA_LFS="${TESTTMP}/scuba_lfs.json"
-  $ LFS_URL="$(lfs_server --log "$LFS_LOG" --scuba-log-file "$SCUBA_LFS")/repo"
+  $ LFS_URL="$(lfs_server --tls --log "$LFS_LOG" --scuba-log-file "$SCUBA_LFS")/repo"
 
 # Start mononoke_git_service with --internal-lfs and NO --upstream-lfs-server.
 # The git server resolves pointers from the local filestore only.
@@ -58,6 +60,13 @@
 # sends the commit (containing only the pointer) to mononoke_git_service, which
 # resolves the pointer from the *same* blobstore.
   $ cd $REPONAME
+# Point git-lfs at the TLS LFS server and give it the client cert + identity
+# header it needs to authenticate (mirrors configure_lfs_client_with_mononoke_server).
+  $ git config --local lfs.url "$LFS_URL"
+  $ git config --local http.sslCAInfo "$TEST_CERTDIR/root-ca.crt"
+  $ git config --local http.sslCert "$TEST_CERTDIR/client0.crt"
+  $ git config --local http.sslKey "$TEST_CERTDIR/client0.key"
+  $ git config --local http.extraHeader "x-client-info: {\"request_info\": {\"entry_point\": \"CurlTest\", \"correlator\": \"test\"}}"
   $ echo "contents of LFS file resolved via internal filestore" > large_file
   $ git lfs track large_file
   Tracking "large_file"
@@ -181,6 +190,13 @@
   $ rm -rf "$REPONAME"
   $ GIT_LFS_SKIP_SMUDGE=1 quiet git_client clone --config "lfs.url=$LFS_URL" "$CLONE_URL"
   $ cd $REPONAME
+# Re-apply the LFS client auth config in the fresh clone so `git lfs pull` below
+# can reach the TLS LFS server.
+  $ git config --local lfs.url "$LFS_URL"
+  $ git config --local http.sslCAInfo "$TEST_CERTDIR/root-ca.crt"
+  $ git config --local http.sslCert "$TEST_CERTDIR/client0.crt"
+  $ git config --local http.sslKey "$TEST_CERTDIR/client0.key"
+  $ git config --local http.extraHeader "x-client-info: {\"request_info\": {\"entry_point\": \"CurlTest\", \"correlator\": \"test\"}}"
   $ cat large_file
   version https://git-lfs.github.com/spec/v1
   oid sha256:79f9e0f42c2fb07686f85ace2668024f867f8b65d04c572bd0f1b4a39c56cb4a

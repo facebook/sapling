@@ -61,7 +61,7 @@
   $ git commit --amend -aqm "new LFS change with .lfsconfig"
   $ quiet git_client push origin master_bookmark
   $ mononoke_admin fetch -R repo -B heads/master_bookmark
-  BonsaiChangesetId: f43135737efc212651cdf8ab6fadb217305ac4d274e269673522198f6b57b53b
+  BonsaiChangesetId: 765c84910d32767184531fd40da3cd716760b1baf9b60eb48e39de4c0673d40c
   Author: mononoke <mononoke@mononoke>
   Message: new LFS change with .lfsconfig
   
@@ -79,7 +79,7 @@
   $ git commit -aqm "new commit with regular file"
   $ git_client push origin master_bookmark
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
-     c665d3d..02afe80  master_bookmark -> master_bookmark
+     df66c0a..0cb4b85  master_bookmark -> master_bookmark
 
 # Add another LFS file
   $ echo "contents of another LFS file that will be uploaded to legacy server" > another_large_file
@@ -90,7 +90,7 @@
   $ git_client push origin master_bookmark
   Uploading LFS objects: 100% (1/1), 68 B | 0 B/s, done. (?)
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
-     02afe80..72162d7  master_bookmark -> master_bookmark
+     0cb4b85..3120d89  master_bookmark -> master_bookmark
 
 # Add a regular commit to the repo but through a new branch
   $ git checkout -b regular_branch
