@@ -782,11 +782,24 @@ class transactional(abc.ABC):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        primary = exc_val
         try:
             if exc_type is None:
                 self.close()
+        except BaseException as ex:
+            primary = ex
+            raise
         finally:
-            self.release()
+            try:
+                self.release()
+            except BaseException as releaseex:
+                if primary is None:
+                    raise
+                # Keep release/rollback failures visible without masking the
+                # transaction body's exception, or a close() exception.
+                if hasattr(primary, "__context__"):
+                    releaseex.__context__ = primary.__context__
+                    primary.__context__ = releaseex
 
 
 class refcell:

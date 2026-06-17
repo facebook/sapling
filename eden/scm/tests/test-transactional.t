@@ -33,14 +33,14 @@
   >         pass
   > EOF
 
-The release failure masks the primary transaction body exception.
+The primary transaction body exception is reported when release also fails.
 
   $ sl --config extensions.transactionalext=$TESTTMP/transactionalext.py transactional-body-abort
-  abort: journal.dirstate
+  abort: primary abort
   [255]
 
-The release failure masks the close exception.
+The close exception is reported when release also fails.
 
   $ sl --config extensions.transactionalext=$TESTTMP/transactionalext.py transactional-close-abort
-  abort: journal.dirstate
+  abort: close abort
   [255]
