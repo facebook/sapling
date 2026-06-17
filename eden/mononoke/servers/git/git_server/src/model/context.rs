@@ -15,11 +15,13 @@ use gotham::state::State;
 use gotham_derive::StateData;
 use gotham_ext::middleware::request_context::RequestContext;
 use metaconfig_parser::RepoConfigs;
+use metaconfig_types::RepoConfigRef;
 use mononoke_api::Mononoke;
 use mononoke_app::args::TLSArgs;
 use mononoke_repos::MononokeRepos;
 use permission_checker::AclProvider;
 use repo_authorization::AuthorizationContext;
+use repo_identity::RepoIdentityRef;
 use repo_permission_checker::RepoPermissionCheckerRef;
 use stats::prelude::*;
 
@@ -332,19 +334,37 @@ impl GitServerContext {
 
 async fn acl_check(
     ctx: &CoreContext,
-    repo: &impl RepoPermissionCheckerRef,
+    repo: &(impl RepoPermissionCheckerRef + RepoIdentityRef + RepoConfigRef),
     enforce_authorization: bool,
     method: GitMethod,
 ) -> Result<(), GitServerContextErrorKind> {
     let authz = AuthorizationContext::new_non_draft(ctx);
-    let acl_check = if method.is_read_only() {
-        authz.check_full_repo_read(ctx, repo).await
+    let (action, acl_check) = if method.is_read_only() {
+        ("read", authz.check_full_repo_read(ctx, repo).await)
     } else {
-        authz.check_full_repo_draft(ctx, repo).await
+        ("draft", authz.check_full_repo_draft(ctx, repo).await)
     };
 
     if acl_check.is_denied() && enforce_authorization {
-        Err(GitServerContextErrorKind::Forbidden)
+        // Tell the caller which identities were rejected on the ACL.
+        let identities = ctx
+            .metadata()
+            .identities()
+            .iter()
+            .map(|id| id.to_string())
+            .collect::<Vec<_>>()
+            .join(", ");
+        let err = match repo.repo_config().hipster_acl.as_deref() {
+            Some(acl) => GitServerContextErrorKind::ForbiddenByAcl {
+                identities,
+                acl: acl.to_string(),
+                action,
+            },
+            None => GitServerContextErrorKind::ForbiddenNoAcl {
+                repo_name: repo.repo_identity().name().to_string(),
+            },
+        };
+        Err(err)
     } else {
         Ok(())
     }

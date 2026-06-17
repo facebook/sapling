@@ -40,6 +40,6 @@
 # Attempt to Clone the Git repo from Mononoke as "localhost" who does NOT have read access. This should fail with 403 unauthorized error
   $ git_client_as localhost clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
   Cloning into 'repo'...
-  remote: Operation not permitted
+  remote: Operation not permitted: identities [*] do not have 'read' access on ACL REPO:default. To request access, visit https://www.internalfb.com/amp/ACL/REPO:default (glob)
   fatal: unable to access 'https://*/repos/git/ro/repo.git/': The requested URL returned error: 403 (glob)
   [128]
