@@ -118,3 +118,41 @@ struct HgAugmentedManifestEnvelope {
   // HgAugmentedManifest data
   8: HgAugmentedManifest augmented_manifest;
 }
+
+// Per-stage output of the MappedHgChangesetId derivation pipeline.
+//
+// Mirrors fsnodes_thrift::FsnodeStageOutput but adds a `terminal` variant
+// for the root-stage output that carries both the HgChangesetId and the
+// root HgManifestId so descendants can hash their envelopes without a
+// secondary bonsai_hg_mapping lookup for in-batch parents.
+
+@rust.Exhaustive
+struct HgManifestStageOutputEmpty {}
+
+@rust.Exhaustive
+struct HgManifestStageTree {
+  1: HgNodeHash manifest_id;
+}
+
+@rust.Exhaustive
+struct HgManifestStageLeaf {
+  1: bonsai.FileType file_type;
+  2: HgNodeHash filenode_id;
+}
+
+// Carries both the terminal stage's HgChangesetId and the manifest entry
+// at the stage's path (the root manifest, when the terminal stage is at
+// MPath::ROOT), so the terminal-stage parent's hg_cs_id is recoverable
+// for envelope hashing of in-batch descendants.
+@rust.Exhaustive
+struct HgManifestStageTerminal {
+  1: HgNodeHash hg_cs_id;
+  2: HgNodeHash manifest_id;
+}
+
+union HgManifestStageOutput {
+  1: HgManifestStageTree tree;
+  2: HgManifestStageLeaf leaf;
+  3: HgManifestStageOutputEmpty empty;
+  4: HgManifestStageTerminal terminal;
+}

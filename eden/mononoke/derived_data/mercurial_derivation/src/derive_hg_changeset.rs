@@ -28,8 +28,10 @@ use futures::future;
 use futures::future::try_join;
 use futures::future::try_join_all;
 use futures::stream;
+use manifest::Entry;
 use manifest::ManifestChanges;
 use manifest::ManifestOps;
+use manifest::Traced;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
@@ -50,12 +52,14 @@ use mononoke_types::FileChange;
 use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
 use mononoke_types::TrackedFileChange;
+use mononoke_types::path::MPath;
 use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataRef;
 use restricted_paths_common::ArcRestrictedPathsConfigBased;
 use stats::prelude::*;
 
-use crate::derive_hg_manifest::derive_hg_manifest;
+use crate::derive_hg_manifest::ParentIndex;
+use crate::derive_hg_manifest::derive_hg_manifest_with_known_entries;
 use crate::derive_hg_manifest::derive_simple_hg_manifest_stack_without_copy_info;
 use crate::mapping::HgChangesetDeriveOptions;
 use crate::mapping::MappedHgChangesetId;
@@ -201,6 +205,8 @@ async fn resolve_paths(
     }
 }
 
+/// Root-stage wrapper around `get_manifest_entry_from_bonsai` that returns the
+/// root `HgManifestId` directly. Used by the non-pipelined derivation path.
 pub async fn get_manifest_from_bonsai(
     ctx: CoreContext,
     blobstore: Arc<dyn KeyedBlobstore>,
@@ -209,14 +215,93 @@ pub async fn get_manifest_from_bonsai(
     parent_manifests: Vec<HgManifestId>,
     subtree_changes: Option<&HgSubtreeChanges>,
 ) -> Result<HgManifestId, Error> {
+    let parent_entries: Vec<Option<Entry<HgManifestId, (FileType, HgFileNodeId)>>> =
+        parent_manifests
+            .into_iter()
+            .map(|m| Some(Entry::Tree(m)))
+            .collect();
+    let entry = get_manifest_entry_from_bonsai(
+        ctx,
+        blobstore,
+        restricted_paths,
+        bcs,
+        parent_entries,
+        subtree_changes,
+        MPath::ROOT,
+        HashMap::new(),
+        HashMap::new(),
+    )
+    .await?;
+    // At the root stage, the widened primitive always returns Some(Entry::Tree(_))
+    // (synthesizing an empty root manifest when all files are deleted).
+    entry
+        .and_then(|e| e.into_tree())
+        .ok_or_else(|| anyhow!("root manifest derivation produced no tree entry"))
+        .map(|t| t.into_untraced())
+}
+
+/// Derive a Mercurial manifest entry at `stage_path` from a bonsai changeset.
+///
+/// `parent_entries` are entries already at `stage_path` in bonsai-parent
+/// order — `parent_entries[i]` corresponds to `bcs.parents().nth(i)`. At the
+/// root stage callers pass `Entry::Tree(root_manifest_id)` for each parent
+/// (see `get_manifest_from_bonsai`); at a non-root stage the pipeline forwards
+/// the producing stage's outputs. `Entry::Leaf` or absent parents contribute
+/// no sub-manifest for filenode lookup but their positional slot is preserved.
+///
+/// With `stage_path == MPath::ROOT` and empty `known_entries`, this is the
+/// non-pipelined derivation. At a non-root `stage_path`, a `copy_from` whose
+/// source path lies outside `stage_path` is resolved from
+/// `cross_stage_copy_sources`, keyed by destination path: the caller looks up
+/// the source filenode in the parent's full root manifest (available at
+/// chokepoints) and supplies it here so the destination filenode hashes
+/// identically to the non-pipelined derivation.
+pub async fn get_manifest_entry_from_bonsai(
+    ctx: CoreContext,
+    blobstore: Arc<dyn KeyedBlobstore>,
+    restricted_paths: ArcRestrictedPathsConfigBased,
+    bcs: BonsaiChangeset,
+    parent_entries: Vec<Option<Entry<HgManifestId, (FileType, HgFileNodeId)>>>,
+    subtree_changes: Option<&HgSubtreeChanges>,
+    stage_path: MPath,
+    known_entries: HashMap<
+        MPath,
+        Option<
+            Entry<Traced<ParentIndex, HgManifestId>, Traced<ParentIndex, (FileType, HgFileNodeId)>>,
+        >,
+    >,
+    cross_stage_copy_sources: HashMap<NonRootMPath, (NonRootMPath, HgFileNodeId)>,
+) -> Result<
+    Option<Entry<Traced<ParentIndex, HgManifestId>, Traced<ParentIndex, (FileType, HgFileNodeId)>>>,
+    Error,
+> {
     // NOTE: We ignore further parents beyond p1 and p2 for the purposed of tracking copy info
     // or filenode parents. This is because hg supports just 2 parents at most, so we track
     // copy info & filenode parents relative to the first 2 parents, then ignore other parents.
 
-    let (manifest_p1, manifest_p2) = {
-        let mut manifests = parent_manifests.iter();
-        (manifests.next().copied(), manifests.next().copied())
-    };
+    // manifest_p1/manifest_p2 are the first two bonsai parents' Tree entries at
+    // stage_path. Leaf or absent parents contribute None — no sub-manifest to
+    // look up filenodes in. Positional alignment with bcs.parents() is preserved
+    // because parent_entries is indexed by bonsai-parent slot, not filtered.
+    let manifest_p1 = parent_entries.first().and_then(|e| match e {
+        Some(Entry::Tree(m)) => Some(*m),
+        Some(Entry::Leaf(_)) | None => None,
+    });
+    let manifest_p2 = parent_entries.get(1).and_then(|e| match e {
+        Some(Entry::Tree(m)) => Some(*m),
+        Some(Entry::Leaf(_)) | None => None,
+    });
+
+    // Stage-root leaf filenodes: the parents' stage output when the stage root
+    // is itself a file, used to resolve a copy whose source is the stage root.
+    let leaf_p1 = parent_entries.first().and_then(|e| match e {
+        Some(Entry::Leaf((_ft, filenode))) => Some(*filenode),
+        Some(Entry::Tree(_)) | None => None,
+    });
+    let leaf_p2 = parent_entries.get(1).and_then(|e| match e {
+        Some(Entry::Leaf((_ft, filenode))) => Some(*filenode),
+        Some(Entry::Tree(_)) | None => None,
+    });
 
     let (p1, p2) = {
         let mut parents = bcs.parents();
@@ -225,8 +310,14 @@ pub async fn get_manifest_from_bonsai(
         (p1, p2)
     };
 
+    // Filter file changes to those at or under stage_path. `is_prefix_of`
+    // keeps both descendants and a change landing exactly at stage_path (e.g.
+    // replacing the stage-root directory with a file, or deleting it), which
+    // `remove_prefix_component` would drop since it only strips strict
+    // prefixes. At root this is a no-op (every NonRootMPath is under MPath::ROOT).
     let file_changes = bcs
         .file_changes()
+        .filter(|(path, _)| stage_path.is_prefix_of(*path))
         .map(|(path, fc)| {
             Ok((
                 path.clone(),
@@ -241,24 +332,44 @@ pub async fn get_manifest_from_bonsai(
         })
         .collect::<Result<Vec<_>, Error>>()?;
 
-    // paths *modified* by changeset or *copied from parents*
+    // paths *modified* by changeset or *copied from p1/p2*, expressed
+    // relative to stage_path so they can be looked up inside the parents'
+    // subtree manifests via `find_entries`. At root the strip is the identity.
     let mut p1_paths = Vec::new();
     let mut p2_paths = Vec::new();
     for (path, file_change) in file_changes.iter() {
-        match file_change {
-            Some(file_change) => {
-                if let Some((copy_path, bcsid)) = file_change.copy_from() {
-                    if Some(bcsid) == p1.as_ref() {
-                        p1_paths.push(copy_path.clone());
+        let Some(file_change) = file_change else {
+            continue;
+        };
+
+        // Resolve copy_from sources for real parents (p1/p2). Copies from
+        // step-parents in an octopus merge are not propagated to hg copy
+        // info even in the non-pipelined path (see `store_file_change`),
+        // so we drop them here. Cross-stage copies (source outside
+        // stage_path) are resolved from `cross_stage_copy_sources` later,
+        // so they don't contribute to the in-stage subtree lookups here.
+        if let Some((copy_path, bcsid)) = file_change.copy_from() {
+            let is_p1 = Some(bcsid) == p1.as_ref();
+            let is_p2 = Some(bcsid) == p2.as_ref();
+            if is_p1 || is_p2 {
+                if let Some(rel) = copy_path.remove_prefix_component(&stage_path) {
+                    if is_p1 {
+                        p1_paths.push(rel.clone());
                     }
-                    if Some(bcsid) == p2.as_ref() {
-                        p2_paths.push(copy_path.clone());
+                    if is_p2 {
+                        p2_paths.push(rel);
                     }
-                };
-                p1_paths.push(path.clone());
-                p2_paths.push(path.clone());
+                }
             }
-            None => {}
+        }
+
+        // The destination path itself, looked up in both parents' subtrees
+        // for filenode-parent reuse (and the "copied-over-existing-file"
+        // case). A change landing exactly at stage_path strips to the stage
+        // root, which has no in-subtree filenode parent to resolve, so skip it.
+        if let Some(rel) = path.remove_prefix_component(&stage_path) {
+            p1_paths.push(rel.clone());
+            p2_paths.push(rel);
         }
     }
 
@@ -271,6 +382,7 @@ pub async fn get_manifest_from_bonsai(
         resolve_paths(ctx.clone(), blobstore.clone(), manifest_p2, p2_paths),
     )
     .await?;
+    // p1s/p2s keys are paths relative to stage_path.
 
     let file_changes: Vec<_> = file_changes
         .into_iter()
@@ -278,21 +390,46 @@ pub async fn get_manifest_from_bonsai(
         .collect();
     let changes: Vec<_> = stream::iter(file_changes)
         .map_ok({
-            cloned!(ctx, blobstore);
+            cloned!(ctx, blobstore, stage_path);
             move |(path, file_change)| match file_change {
                 None => future::ok((path, None)).left_future(),
                 Some(file_change) => {
+                    // Same-stage p1/p2 copies resolve from the in-stage
+                    // subtree lookups; cross-stage p1/p2 copies resolve from
+                    // the pre-resolved `cross_stage_copy_sources` map (keyed
+                    // by destination path). Step-parent copies are dropped,
+                    // matching the non-pipelined behavior.
                     let copy_from = file_change.copy_from().and_then(|(copy_path, bcsid)| {
-                        if Some(bcsid) == p1.as_ref() {
-                            p1s.get(copy_path).map(|id| (copy_path.clone(), *id))
+                        let (parent_subtree, parent_leaf) = if Some(bcsid) == p1.as_ref() {
+                            (&p1s, leaf_p1)
                         } else if Some(bcsid) == p2.as_ref() {
-                            p2s.get(copy_path).map(|id| (copy_path.clone(), *id))
+                            (&p2s, leaf_p2)
                         } else {
-                            None
+                            return None;
+                        };
+                        match copy_path.remove_prefix_component(&stage_path) {
+                            // Source strictly under the stage: resolve in the parent's stage subtree.
+                            Some(copy_rel) => parent_subtree
+                                .get(&copy_rel)
+                                .map(|id| (copy_path.clone(), *id)),
+                            // Source is the stage root: take the copy parent's stage-output leaf
+                            // (the parent terminal isn't guaranteed derived here).
+                            None if MPath::from(copy_path.clone()) == stage_path => {
+                                parent_leaf.map(|filenode| (copy_path.clone(), filenode))
+                            }
+                            // Source strictly outside the stage: resolved by the caller's map.
+                            None => cross_stage_copy_sources.get(&path).cloned(),
                         }
                     });
-                    let p1 = p1s.get(&path).cloned();
-                    let p2 = p2s.get(&path).cloned();
+                    // A change landing exactly at stage_path is the parent's
+                    // stage-root file (when that output is a leaf), so its
+                    // filenode parent is the stage-root leaf; otherwise look up
+                    // the stage-relative path in the parent subtree.
+                    let path_rel = path.remove_prefix_component(&stage_path);
+                    let (p1, p2) = match path_rel.as_ref() {
+                        Some(rel) => (p1s.get(rel).cloned(), p2s.get(rel).cloned()),
+                        None => (leaf_p1, leaf_p2),
+                    };
                     cloned!(ctx, blobstore);
                     let spawned = mononoke::spawn_task(async move {
                         let entry = store_file_change(
@@ -315,17 +452,17 @@ pub async fn get_manifest_from_bonsai(
         .try_collect()
         .await?;
 
-    let manifest_id = derive_hg_manifest(
+    derive_hg_manifest_with_known_entries(
         ctx.clone(),
         blobstore,
         restricted_paths,
-        parent_manifests,
+        parent_entries,
         changes,
         subtree_changes,
+        stage_path,
+        known_entries,
     )
-    .await?;
-
-    Ok(manifest_id)
+    .await
 }
 
 pub(crate) async fn derive_from_parents(
@@ -449,7 +586,7 @@ pub async fn derive_simple_hg_changeset_stack_without_copy_info(
     Ok(res)
 }
 
-async fn generate_hg_changeset(
+pub(crate) async fn generate_hg_changeset(
     ctx: &CoreContext,
     blobstore: &Arc<dyn KeyedBlobstore>,
     bcs: BonsaiChangeset,
@@ -579,5 +716,526 @@ impl<Repo: RepoDerivedDataRef + Send + Sync> DeriveHgChangeset for Repo {
         cs_id: ChangesetId,
     ) -> Result<HgChangesetId, Error> {
         derive_hg_changeset(ctx, self.repo_derived_data(), cs_id).await
+    }
+}
+
+#[cfg(test)]
+mod pipeline_equivalence_tests {
+    //! Byte-for-byte equivalence tests between `get_manifest_from_bonsai`
+    //! (non-pipelined, root-only) and chained `get_manifest_entry_from_bonsai`
+    //! calls (pipelined, per-subtree stages then assembled at root via
+    //! `known_entries`). The mercurial filenode hash includes the parent
+    //! filenodes by ancestry, so any divergence in copy-from handling,
+    //! parent indexing, or sub-manifest derivation produces a different
+    //! `HgManifestId` and fails the assertion.
+    use bonsai_hg_mapping::BonsaiHgMapping;
+    use bookmarks::Bookmarks;
+    use commit_graph::CommitGraph;
+    use commit_graph::CommitGraphWriter;
+    use fbinit::FacebookInit;
+    use filestore::FilestoreConfig;
+    use manifest::Entry as ManifestEntry;
+    use manifest::ManifestOps;
+    use mononoke_macros::mononoke;
+    use repo_blobstore::RepoBlobstore;
+    use repo_blobstore::RepoBlobstoreRef;
+    use repo_derived_data::RepoDerivedData;
+    use repo_derived_data::RepoDerivedDataRef;
+    use repo_identity::RepoIdentity;
+    use tests_utils::CreateCommitContext;
+
+    use super::*;
+    use crate::DeriveHgChangeset;
+
+    #[derive(Clone)]
+    #[facet::container]
+    struct TestRepo {
+        #[facet]
+        bonsai_hg_mapping: dyn BonsaiHgMapping,
+        #[facet]
+        bookmarks: dyn Bookmarks,
+        #[facet]
+        repo_blobstore: RepoBlobstore,
+        #[facet]
+        repo_derived_data: RepoDerivedData,
+        #[facet]
+        filestore_config: FilestoreConfig,
+        #[facet]
+        commit_graph: CommitGraph,
+        #[facet]
+        commit_graph_writer: dyn CommitGraphWriter,
+        #[facet]
+        repo_identity: RepoIdentity,
+    }
+
+    /// Look up the parent's entry at a path. Returns `None` if absent.
+    async fn parent_subtree_at(
+        ctx: &CoreContext,
+        blobstore: &RepoBlobstore,
+        parent_root: HgManifestId,
+        path: MPath,
+    ) -> Result<Option<ManifestEntry<HgManifestId, (FileType, HgFileNodeId)>>, Error> {
+        parent_root
+            .find_entry(ctx.clone(), blobstore.clone(), path)
+            .await
+    }
+
+    /// Derive the non-pipelined root `HgManifestId` for `child_cs_id` given
+    /// the parent's already-derived root manifest.
+    async fn derive_root_non_pipelined(
+        ctx: &CoreContext,
+        repo: &TestRepo,
+        child_cs_id: ChangesetId,
+        parent_root_manifest: HgManifestId,
+    ) -> Result<HgManifestId, Error> {
+        let bcs = child_cs_id.load(ctx, repo.repo_blobstore()).await?;
+        let restricted_paths = repo
+            .repo_derived_data()
+            .manager()
+            .derivation_context(None)
+            .restricted_paths();
+        get_manifest_from_bonsai(
+            ctx.clone(),
+            std::sync::Arc::new(repo.repo_blobstore().clone()),
+            restricted_paths,
+            bcs,
+            vec![parent_root_manifest],
+            None,
+        )
+        .await
+    }
+
+    async fn stage_entry(
+        ctx: &CoreContext,
+        repo: &TestRepo,
+        child_cs_id: ChangesetId,
+        parent_entries: Vec<Option<ManifestEntry<HgManifestId, (FileType, HgFileNodeId)>>>,
+        stage_path: MPath,
+        known_entries: HashMap<
+            MPath,
+            Option<
+                ManifestEntry<
+                    Traced<ParentIndex, HgManifestId>,
+                    Traced<ParentIndex, (FileType, HgFileNodeId)>,
+                >,
+            >,
+        >,
+    ) -> Result<
+        Option<
+            ManifestEntry<
+                Traced<ParentIndex, HgManifestId>,
+                Traced<ParentIndex, (FileType, HgFileNodeId)>,
+            >,
+        >,
+        Error,
+    > {
+        let bcs = child_cs_id.load(ctx, repo.repo_blobstore()).await?;
+        let restricted_paths = repo
+            .repo_derived_data()
+            .manager()
+            .derivation_context(None)
+            .restricted_paths();
+        get_manifest_entry_from_bonsai(
+            ctx.clone(),
+            std::sync::Arc::new(repo.repo_blobstore().clone()),
+            restricted_paths,
+            bcs,
+            parent_entries,
+            None,
+            stage_path,
+            known_entries,
+            HashMap::new(),
+        )
+        .await
+    }
+
+    /// Like `stage_entry`, but supplies a `cross_stage_copy_sources` map so a
+    /// sub-stage can resolve copies whose source lies outside its subtree.
+    async fn stage_entry_with_cross_stage_sources(
+        ctx: &CoreContext,
+        repo: &TestRepo,
+        child_cs_id: ChangesetId,
+        parent_entries: Vec<Option<ManifestEntry<HgManifestId, (FileType, HgFileNodeId)>>>,
+        stage_path: MPath,
+        cross_stage_copy_sources: HashMap<NonRootMPath, (NonRootMPath, HgFileNodeId)>,
+    ) -> Result<
+        Option<
+            ManifestEntry<
+                Traced<ParentIndex, HgManifestId>,
+                Traced<ParentIndex, (FileType, HgFileNodeId)>,
+            >,
+        >,
+        Error,
+    > {
+        let bcs = child_cs_id.load(ctx, repo.repo_blobstore()).await?;
+        let restricted_paths = repo
+            .repo_derived_data()
+            .manager()
+            .derivation_context(None)
+            .restricted_paths();
+        get_manifest_entry_from_bonsai(
+            ctx.clone(),
+            std::sync::Arc::new(repo.repo_blobstore().clone()),
+            restricted_paths,
+            bcs,
+            parent_entries,
+            None,
+            stage_path,
+            HashMap::new(),
+            cross_stage_copy_sources,
+        )
+        .await
+    }
+
+    /// Get the parent's already-derived root `HgManifestId` (deriving on
+    /// demand via the standard path).
+    async fn parent_root_manifest(
+        ctx: &CoreContext,
+        repo: &TestRepo,
+        parent_cs_id: ChangesetId,
+    ) -> Result<HgManifestId, Error> {
+        let hg_cs_id = repo.derive_hg_changeset(ctx, parent_cs_id).await?;
+        Ok(hg_cs_id
+            .load(ctx, repo.repo_blobstore())
+            .await?
+            .manifestid())
+    }
+
+    /// Independent stages: derive `dir1/` and `dir2/` separately, then assemble
+    /// at the root via `known_entries`. The root manifest id from the pipelined
+    /// assembly must match the non-pipelined root derivation byte-for-byte.
+    /// This is the primary regression test for the parent-entry-type bug (#1) —
+    /// before the fix, the pipeline impl passed subtree manifests to a function
+    /// that did `find_entry(stage_path)` on them, silently dropping all parents.
+    #[mononoke::fbinit_test]
+    async fn test_pipeline_independent_dirs(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+
+        let parent = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("dir1/a", "a1")
+            .add_file("dir1/b", "b1")
+            .add_file("dir2/c", "c1")
+            .commit()
+            .await?;
+        let child = CreateCommitContext::new(&ctx, &repo, vec![parent])
+            .add_file("dir1/a", "a2")
+            .add_file("dir2/c", "c2")
+            .add_file("dir3/d", "d1")
+            .commit()
+            .await?;
+
+        let parent_root = parent_root_manifest(&ctx, &repo, parent).await?;
+        let expected_root = derive_root_non_pipelined(&ctx, &repo, child, parent_root).await?;
+
+        let dir1 = MPath::new("dir1")?;
+        let parent_dir1 =
+            parent_subtree_at(&ctx, repo.repo_blobstore(), parent_root, dir1.clone()).await?;
+        let dir1_entry = stage_entry(
+            &ctx,
+            &repo,
+            child,
+            vec![parent_dir1],
+            dir1.clone(),
+            HashMap::new(),
+        )
+        .await?;
+
+        let dir2 = MPath::new("dir2")?;
+        let parent_dir2 =
+            parent_subtree_at(&ctx, repo.repo_blobstore(), parent_root, dir2.clone()).await?;
+        let dir2_entry = stage_entry(
+            &ctx,
+            &repo,
+            child,
+            vec![parent_dir2],
+            dir2.clone(),
+            HashMap::new(),
+        )
+        .await?;
+
+        // dir3/ isn't pre-derived — root traversal computes it itself,
+        // mirroring the case where a stage config doesn't cover every subtree.
+        let known: HashMap<_, _> = vec![(dir1, dir1_entry), (dir2, dir2_entry)]
+            .into_iter()
+            .collect();
+        let root_entry = stage_entry(
+            &ctx,
+            &repo,
+            child,
+            vec![Some(ManifestEntry::Tree(parent_root))],
+            MPath::ROOT,
+            known,
+        )
+        .await?
+        .expect("root stage should produce an entry");
+        let pipelined_root = root_entry
+            .into_tree()
+            .expect("root entry should be a Tree")
+            .into_untraced();
+
+        assert_eq!(
+            pipelined_root, expected_root,
+            "pipelined root manifest id must match non-pipelined byte-for-byte",
+        );
+        Ok(())
+    }
+
+    /// Nested stages: derive `dir1/sub/`, then `dir1/` using its `known_entries`,
+    /// then root using its `known_entries`. Verifies recursion through multiple
+    /// sub-stages preserves filenode hashes.
+    #[mononoke::fbinit_test]
+    async fn test_pipeline_nested_dirs(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+
+        let parent = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("dir1/sub/x", "x1")
+            .add_file("dir1/sub/y", "y1")
+            .add_file("dir1/top", "t1")
+            .commit()
+            .await?;
+        let child = CreateCommitContext::new(&ctx, &repo, vec![parent])
+            .add_file("dir1/sub/x", "x2")
+            .add_file("dir1/top", "t2")
+            .commit()
+            .await?;
+
+        let parent_root = parent_root_manifest(&ctx, &repo, parent).await?;
+        let expected_root = derive_root_non_pipelined(&ctx, &repo, child, parent_root).await?;
+
+        let inner = MPath::new("dir1/sub")?;
+        let parent_inner =
+            parent_subtree_at(&ctx, repo.repo_blobstore(), parent_root, inner.clone()).await?;
+        let inner_entry = stage_entry(
+            &ctx,
+            &repo,
+            child,
+            vec![parent_inner],
+            inner.clone(),
+            HashMap::new(),
+        )
+        .await?;
+
+        let dir1 = MPath::new("dir1")?;
+        let parent_dir1 =
+            parent_subtree_at(&ctx, repo.repo_blobstore(), parent_root, dir1.clone()).await?;
+        let dir1_known: HashMap<_, _> = vec![(inner, inner_entry)].into_iter().collect();
+        let dir1_entry = stage_entry(
+            &ctx,
+            &repo,
+            child,
+            vec![parent_dir1],
+            dir1.clone(),
+            dir1_known,
+        )
+        .await?;
+
+        let root_known: HashMap<_, _> = vec![(dir1, dir1_entry)].into_iter().collect();
+        let root_entry = stage_entry(
+            &ctx,
+            &repo,
+            child,
+            vec![Some(ManifestEntry::Tree(parent_root))],
+            MPath::ROOT,
+            root_known,
+        )
+        .await?
+        .expect("root stage should produce an entry");
+        let pipelined_root = root_entry
+            .into_tree()
+            .expect("root entry should be a Tree")
+            .into_untraced();
+
+        assert_eq!(
+            pipelined_root, expected_root,
+            "nested-stage pipelined root must match non-pipelined byte-for-byte",
+        );
+        Ok(())
+    }
+
+    /// Cross-stage `copy_from`: a file is copied into `dir1/` from a source
+    /// outside `dir1/`. The sub-stage at `dir1/` resolves the source filenode
+    /// from `cross_stage_copy_sources` (which the pipeline pre-resolves from the
+    /// parent's full root manifest), then assembles the root. The pipelined root
+    /// must match the non-pipelined root byte-for-byte — the copied file's
+    /// filenode carries the cross-stage source, so any divergence in the
+    /// resolved source filenode changes the hash.
+    #[mononoke::fbinit_test]
+    async fn test_pipeline_cross_stage_copy_matches(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+
+        let parent = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("outside/src", "payload")
+            .add_file("dir1/keep", "keep")
+            .commit()
+            .await?;
+        let child = CreateCommitContext::new(&ctx, &repo, vec![parent])
+            .add_file_with_copy_info("dir1/copied", "payload", (parent, "outside/src"))
+            .commit()
+            .await?;
+
+        let parent_root = parent_root_manifest(&ctx, &repo, parent).await?;
+        let expected_root = derive_root_non_pipelined(&ctx, &repo, child, parent_root).await?;
+
+        // Resolve the cross-stage copy source from the parent's full root
+        // manifest, mirroring what the pipeline does at a chokepoint.
+        let copy_path = NonRootMPath::new("outside/src")?;
+        let source_entry = parent_root
+            .find_entry(
+                ctx.clone(),
+                repo.repo_blobstore().clone(),
+                MPath::from(copy_path.clone()),
+            )
+            .await?
+            .expect("cross-stage copy source must exist in parent root");
+        let (_ft, source_filenode) = source_entry
+            .into_leaf()
+            .expect("cross-stage copy source must be a file");
+        let cross_stage_sources: HashMap<NonRootMPath, (NonRootMPath, HgFileNodeId)> = vec![(
+            NonRootMPath::new("dir1/copied")?,
+            (copy_path, source_filenode),
+        )]
+        .into_iter()
+        .collect();
+
+        let dir1 = MPath::new("dir1")?;
+        let parent_dir1 =
+            parent_subtree_at(&ctx, repo.repo_blobstore(), parent_root, dir1.clone()).await?;
+        let dir1_entry = stage_entry_with_cross_stage_sources(
+            &ctx,
+            &repo,
+            child,
+            vec![parent_dir1],
+            dir1.clone(),
+            cross_stage_sources,
+        )
+        .await?;
+
+        let root_known: HashMap<_, _> = vec![(dir1, dir1_entry)].into_iter().collect();
+        let root_entry = stage_entry(
+            &ctx,
+            &repo,
+            child,
+            vec![Some(ManifestEntry::Tree(parent_root))],
+            MPath::ROOT,
+            root_known,
+        )
+        .await?
+        .expect("root stage should produce an entry");
+        let pipelined_root = root_entry
+            .into_tree()
+            .expect("root entry should be a Tree")
+            .into_untraced();
+
+        assert_eq!(
+            pipelined_root, expected_root,
+            "cross-stage copy pipelined root must match non-pipelined byte-for-byte",
+        );
+        Ok(())
+    }
+
+    /// Step-parent cross-stage `copy_from` (a path-out-of-stage source
+    /// referencing a 3rd+ parent of an octopus merge) must NOT trigger
+    /// the cross-stage bail. The non-pipelined path silently drops
+    /// step-parent copy info (it isn't propagated to hg copy metadata —
+    /// see `store_file_change`), so the pipelined sub-stage must do the
+    /// same and produce the same `HgManifestId` byte-for-byte.
+    #[mononoke::fbinit_test]
+    async fn test_pipeline_step_parent_cross_stage_copy_ok(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+
+        // Octopus merge fixture: 3 parents. p3 is the step-parent that
+        // contains the cross-stage copy source.
+        let p1 = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("dir1/keep_p1", "p1")
+            .commit()
+            .await?;
+        let p2 = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("dir1/keep_p2", "p2")
+            .commit()
+            .await?;
+        let p3 = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("outside/payload", "payload")
+            .commit()
+            .await?;
+        // Merge with copy_from referencing p3 (a step-parent for hg purposes)
+        // and a source path outside dir1/.
+        let merge = CreateCommitContext::new(&ctx, &repo, vec![p1, p2, p3])
+            .add_file_with_copy_info("dir1/from_step_parent", "payload", (p3, "outside/payload"))
+            .commit()
+            .await?;
+
+        // Derive parent root manifests via the standard path so we can
+        // compare against the non-pipelined derivation.
+        let p1_root = parent_root_manifest(&ctx, &repo, p1).await?;
+        let p2_root = parent_root_manifest(&ctx, &repo, p2).await?;
+        let _p3_root = parent_root_manifest(&ctx, &repo, p3).await?;
+
+        let bcs = merge.load(&ctx, repo.repo_blobstore()).await?;
+        let restricted_paths = repo
+            .repo_derived_data()
+            .manager()
+            .derivation_context(None)
+            .restricted_paths();
+        let expected_root = get_manifest_from_bonsai(
+            ctx.clone(),
+            std::sync::Arc::new(repo.repo_blobstore().clone()),
+            restricted_paths,
+            bcs,
+            // Non-pipelined takes root manifests in bonsai-parent order.
+            // p3 contributes no entry to dir1/ but its root manifest is
+            // still part of the parent list at root.
+            vec![
+                p1_root,
+                p2_root,
+                parent_root_manifest(&ctx, &repo, p3).await?,
+            ],
+            None,
+        )
+        .await?;
+
+        let dir1 = MPath::new("dir1")?;
+        let p1_dir1 = parent_subtree_at(&ctx, repo.repo_blobstore(), p1_root, dir1.clone()).await?;
+        let p2_dir1 = parent_subtree_at(&ctx, repo.repo_blobstore(), p2_root, dir1.clone()).await?;
+        // p3 has no dir1/, so it contributes None at this stage.
+        let dir1_entry = stage_entry(
+            &ctx,
+            &repo,
+            merge,
+            vec![p1_dir1, p2_dir1, None],
+            dir1.clone(),
+            HashMap::new(),
+        )
+        .await?;
+
+        let p3_root = parent_root_manifest(&ctx, &repo, p3).await?;
+        let root_known: HashMap<_, _> = vec![(dir1, dir1_entry)].into_iter().collect();
+        let root_entry = stage_entry(
+            &ctx,
+            &repo,
+            merge,
+            vec![
+                Some(ManifestEntry::Tree(p1_root)),
+                Some(ManifestEntry::Tree(p2_root)),
+                Some(ManifestEntry::Tree(p3_root)),
+            ],
+            MPath::ROOT,
+            root_known,
+        )
+        .await?
+        .expect("root stage should produce an entry");
+        let pipelined_root = root_entry
+            .into_tree()
+            .expect("root entry should be a Tree")
+            .into_untraced();
+
+        assert_eq!(
+            pipelined_root, expected_root,
+            "step-parent cross-stage copy must derive identically to non-pipelined",
+        );
+        Ok(())
     }
 }

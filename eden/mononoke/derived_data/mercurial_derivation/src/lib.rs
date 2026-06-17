@@ -10,9 +10,11 @@ pub mod derive_hg_augmented_manifest;
 pub mod derive_hg_changeset;
 pub mod derive_hg_manifest;
 mod mapping;
+pub mod pipeline;
 
 pub use derive_hg_changeset::DeriveHgChangeset;
 pub use derive_hg_changeset::derive_hg_changeset;
+pub use derive_hg_changeset::get_manifest_entry_from_bonsai;
 pub use derive_hg_changeset::get_manifest_from_bonsai;
 pub use derive_hg_manifest::derive_hg_manifest;
 pub use mapping::MappedHgChangesetId;

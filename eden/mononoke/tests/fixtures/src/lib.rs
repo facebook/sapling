@@ -957,6 +957,88 @@ impl TestRepoFixture for NestedDirectories {
     "#;
 }
 
+/// Reproduces the cross-stage copy-source divergence between the canonical and
+/// pipelined HgChangeset derivation paths, covering both error branches of
+/// `resolve_cross_stage_copy_sources`.
+///
+/// The tip commit `Q` carries two cross-stage copies, both with DESTINATIONS
+/// under `top2` and SOURCES outside `top2` (so both route through
+/// `resolve_cross_stage_copy_sources` at the `top2` stage):
+///   - `top2/imported` copied from the DIRECTORY `top1` in parent `P` — the
+///     source resolves to a TREE, not a file (the not-a-file branch).
+///   - `top2/ghost_copy` copied from `no_such_path` in parent `P` — the source
+///     does not exist (the not-found branch).
+///
+/// The canonical path (`resolve_paths` in `derive_hg_changeset.rs`) silently
+/// drops both via `into_leaf()?` inside `try_filter_map`, deriving the
+/// destination files with no copy metadata, and derivation succeeds. The
+/// pipeline path (`resolve_cross_stage_copy_sources`) must match this
+/// drop-on-absent / drop-on-non-file behavior to stay byte-identical to
+/// canonical.
+pub struct CrossStageDirectoryCopy;
+
+#[async_trait]
+impl TestRepoFixture for CrossStageDirectoryCopy {
+    const REPO_NAME: &'static str = "cross_stage_directory_copy";
+
+    const DAG: &'static str = r#"
+        # default_files: false
+        # author: * "author"
+        # bookmark: Q master
+
+        Q        # message: Q "Cross-stage copies of a directory source and a missing source into top2"
+        |        # copy: Q "top2/imported" "data\n" P "top1"
+        |        # copy: Q "top2/ghost_copy" "data2\n" P "no_such_path"
+        |
+        P        # message: P "Create top1 directory and a top2 file"
+                 # modify: P "top1/main" "main\n"
+                 # modify: P "top2/existing" "x\n"
+    "#;
+}
+
+/// Exercises the SUCCESS path of cross-stage copy-source resolution: a real
+/// file copied across a stage boundary, complementing `CrossStageDirectoryCopy`
+/// which only covers the drop-on-non-file and drop-on-absent branches.
+///
+/// Tip commit `Q` copies the real file `top1/main` (in parent `P`, outside the
+/// `top2` stage) to `top2/copied`. At the `top2` stage the pipeline must resolve
+/// the source filenode from the parent's root manifest, producing output
+/// byte-identical to canonical derivation.
+pub struct CrossStageFileCopy;
+
+#[async_trait]
+impl TestRepoFixture for CrossStageFileCopy {
+    const REPO_NAME: &'static str = "cross_stage_file_copy";
+
+    const DAG: &'static str = r#"
+        # default_files: false
+        # author: * "author"
+        # bookmark: Q master
+
+        Q        # message: Q "Cross-stage copy of a real file source into top2"
+        |        # copy: Q "top2/copied" "main\n" P "top1/main"
+        |
+        P        # message: P "Create top1 and top2 files"
+                 # modify: P "top1/main" "main\n"
+                 # modify: P "top2/existing" "x\n"
+    "#;
+
+    // Intentionally skip the default hg-changeset derivation: the pipeline-first
+    // harness test relies on canonical hg (`bonsai_hg_mapping`) being absent
+    // until the harness derives it, so it can exercise the pipeline-ahead-of-
+    // canonical path in `resolve_cross_stage_copy_sources`.
+    async fn init_repo(
+        fb: FacebookInit,
+        repo: &impl Repo,
+    ) -> Result<(
+        BTreeMap<String, ChangesetId>,
+        BTreeMap<String, BTreeSet<String>>,
+    )> {
+        let ctx = CoreContext::test_mock(fb);
+        extend_from_dag_with_actions(&ctx, repo, Self::DAG).await
+    }
+}
+
 /// A nested-directory fixture whose tip commit carries a manifest-altering
 /// subtree copy from one top-level directory into another, so it is classified
 /// as a `Global` chokepoint. drawdag cannot express subtree changes, so the base

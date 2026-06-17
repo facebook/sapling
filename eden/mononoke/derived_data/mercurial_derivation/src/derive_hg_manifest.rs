@@ -25,7 +25,7 @@ use manifest::LeafInfo;
 use manifest::ManifestChanges;
 use manifest::Traced;
 use manifest::TreeInfo;
-use manifest::derive_manifest;
+use manifest::derive_manifest_with_known_entries;
 use manifest::derive_manifests_for_simple_stack_of_commits;
 use manifest::flatten_subentries;
 use mercurial_types::HgFileNodeId;
@@ -53,7 +53,7 @@ use tracing::warn;
 use crate::derive_hg_changeset::store_file_change;
 
 #[derive(Copy, Clone, Debug, Hash, Eq, PartialEq)]
-pub(crate) struct ParentIndex(pub(crate) usize);
+pub struct ParentIndex(pub usize);
 
 pub async fn derive_simple_hg_manifest_stack_without_copy_info(
     ctx: CoreContext,
@@ -137,7 +137,12 @@ pub async fn derive_simple_hg_manifest_stack_without_copy_info(
         .collect())
 }
 
-/// Derive mercurial manifest from parent manifests and bonsai file changes.
+/// Derive the root mercurial manifest from parent root manifests and bonsai
+/// file changes.
+///
+/// This is the non-pipelined derivation: it forwards to
+/// `derive_hg_manifest_with_known_entries` at the root stage with no known
+/// entries and returns the resulting root `HgManifestId`.
 pub async fn derive_hg_manifest(
     ctx: CoreContext,
     blobstore: Arc<dyn KeyedBlobstore>,
@@ -146,10 +151,71 @@ pub async fn derive_hg_manifest(
     changes: impl IntoIterator<Item = (NonRootMPath, Option<(FileType, HgFileNodeId)>)> + 'static,
     subtree_changes: Option<&HgSubtreeChanges>,
 ) -> Result<HgManifestId, Error> {
-    let parents: Vec<_> = parents
+    let entry = derive_hg_manifest_with_known_entries(
+        ctx,
+        blobstore,
+        restricted_paths,
+        parents.into_iter().map(|m| Some(Entry::Tree(m))),
+        changes,
+        subtree_changes,
+        MPath::ROOT,
+        HashMap::new(),
+    )
+    .await?;
+    entry
+        .and_then(|e| e.into_tree())
+        .map(|t| t.into_untraced())
+        .ok_or_else(|| format_err!("root manifest derivation produced no tree entry"))
+}
+
+/// Derive mercurial manifest from parent manifest entries at `stage_path`
+/// and bonsai file changes.
+///
+/// `parents` are entries already located at `stage_path`, in bonsai-parent
+/// order — `parents[i]` corresponds to `bcs.parents().nth(i)`. `None`
+/// signals that this parent has nothing at `stage_path` (neither a tree
+/// nor a leaf) and contributes no sub-manifest to the bounded traversal.
+/// `Some(Entry::Leaf(_))` is forwarded so `derive_manifest_with_known_entries`
+/// can detect the file-replacing-directory case at `stage_path`. Positional
+/// slots are preserved so the `Traced<ParentIndex, _>` tag on each forwarded
+/// parent matches the bonsai parent index.
+///
+/// At the root stage, callers pass `Some(Entry::Tree(root_manifest_id))` for
+/// every parent (no `None`); with `stage_path == MPath::ROOT` and empty
+/// `known_entries` this is the non-pipelined derivation as before.
+pub(crate) async fn derive_hg_manifest_with_known_entries(
+    ctx: CoreContext,
+    blobstore: Arc<dyn KeyedBlobstore>,
+    restricted_paths: ArcRestrictedPathsConfigBased,
+    parents: impl IntoIterator<Item = Option<Entry<HgManifestId, (FileType, HgFileNodeId)>>>,
+    changes: impl IntoIterator<Item = (NonRootMPath, Option<(FileType, HgFileNodeId)>)> + 'static,
+    subtree_changes: Option<&HgSubtreeChanges>,
+    stage_path: MPath,
+    known_entries: HashMap<
+        MPath,
+        Option<
+            Entry<Traced<ParentIndex, HgManifestId>, Traced<ParentIndex, (FileType, HgFileNodeId)>>,
+        >,
+    >,
+) -> Result<
+    Option<Entry<Traced<ParentIndex, HgManifestId>, Traced<ParentIndex, (FileType, HgFileNodeId)>>>,
+    Error,
+> {
+    // Preserve positional alignment with bonsai parents: tag each forwarded
+    // entry with ParentIndex(i) where i is the bonsai-parent slot. Skip None
+    // slots — absent parents contribute nothing to the bounded traversal, and
+    // we have no entry to tag for them.
+    let parents: Vec<
+        Entry<Traced<ParentIndex, HgManifestId>, Traced<ParentIndex, (FileType, HgFileNodeId)>>,
+    > = parents
         .into_iter()
         .enumerate()
-        .map(|(i, m)| Traced::assign(ParentIndex(i), m))
+        .filter_map(|(i, opt)| {
+            opt.map(|entry| match entry {
+                Entry::Tree(m) => Entry::Tree(Traced::assign(ParentIndex(i), m)),
+                Entry::Leaf(l) => Entry::Leaf(Traced::assign(ParentIndex(i), l)),
+            })
+        })
         .collect();
 
     let subtree_changes = match subtree_changes {
@@ -162,12 +228,14 @@ pub async fn derive_hg_manifest(
         None => Vec::new(),
     };
 
-    let tree_id = derive_manifest(
+    let entry = derive_manifest_with_known_entries(
         ctx.clone(),
         blobstore.clone(),
         parents.clone(),
         changes,
         subtree_changes,
+        known_entries,
+        stage_path.clone(),
         {
             cloned!(ctx, blobstore, restricted_paths);
             move |tree_info| {
@@ -186,19 +254,31 @@ pub async fn derive_hg_manifest(
     )
     .await?;
 
-    match tree_id {
-        Some(traced_tree_id) => Ok(traced_tree_id.into_untraced()),
-        None => {
-            // All files have been deleted, generate empty **root** manifest
+    match entry {
+        Some(entry) => Ok(Some(entry)),
+        None if stage_path == MPath::ROOT => {
+            // All files have been deleted, generate empty **root** manifest.
+            // Only synthesized at the root stage — non-root stages return
+            // None to signal "this subtree is absent from this commit".
+            // At the root stage all parents must be Trees (root manifests
+            // are never leaves), so filtering here drops nothing in practice.
+            let tree_parents: Vec<_> = parents
+                .into_iter()
+                .filter_map(|e| match e {
+                    Entry::Tree(t) => Some(t),
+                    Entry::Leaf(_) => None,
+                })
+                .collect();
             let tree_info = TreeInfo {
                 path: MPath::ROOT,
-                parents,
+                parents: tree_parents,
                 subentries: Default::default(),
             };
             let (_, traced_tree_id) =
                 create_hg_manifest(ctx, blobstore, tree_info, restricted_paths).await?;
-            Ok(traced_tree_id.into_untraced())
+            Ok(Some(Entry::Tree(traced_tree_id)))
         }
+        None => Ok(None),
     }
 }
 

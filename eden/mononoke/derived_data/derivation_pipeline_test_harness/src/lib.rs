@@ -20,6 +20,7 @@ use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::BookmarkKey;
 use bookmarks::Bookmarks;
+use bookmarks::BookmarksRef;
 use bulk_derivation::BulkDerivation;
 use commit_graph::CommitGraph;
 use commit_graph::CommitGraphRef;
@@ -65,7 +66,7 @@ pub struct TestRepo(
 );
 
 /// The pipeline-derivable types verified by the harness.
-const PIPELINE_TYPES: [DerivableType; 7] = [
+const PIPELINE_TYPES: [DerivableType; 8] = [
     DerivableType::Fsnodes,
     DerivableType::Unodes,
     DerivableType::Fastlog,
@@ -73,6 +74,7 @@ const PIPELINE_TYPES: [DerivableType; 7] = [
     DerivableType::SkeletonManifests,
     DerivableType::SkeletonManifestsV2,
     DerivableType::AclManifests,
+    DerivableType::HgChangesets,
 ];
 
 const PIPELINE_BATCH_SIZE: u64 = 3;
@@ -125,14 +127,14 @@ pub fn pipeline_config_from_stages(
     Ok(config)
 }
 
-/// Topologically sort `PIPELINE_TYPES` so every type's dependencies (restricted
-/// to the managed set) come before it.
-fn topo_sort_pipeline_types(manager: &DerivedDataManager) -> Vec<DerivableType> {
-    let managed: BTreeSet<DerivableType> = PIPELINE_TYPES.into_iter().collect();
-    let mut sorted: Vec<DerivableType> = Vec::with_capacity(PIPELINE_TYPES.len());
+/// Topologically sort `types` so every type's dependencies (restricted to the
+/// given set) come before it.
+fn topo_sort_types(manager: &DerivedDataManager, types: &[DerivableType]) -> Vec<DerivableType> {
+    let managed: BTreeSet<DerivableType> = types.iter().copied().collect();
+    let mut sorted: Vec<DerivableType> = Vec::with_capacity(types.len());
     let mut placed: BTreeSet<DerivableType> = BTreeSet::new();
-    while sorted.len() < PIPELINE_TYPES.len() {
-        for &derivable_type in &PIPELINE_TYPES {
+    while sorted.len() < types.len() {
+        for &derivable_type in types {
             if placed.contains(&derivable_type) {
                 continue;
             }
@@ -195,13 +197,18 @@ async fn verify_pipeline_matches_canonical_impl<F: PipelineTestFixture + Send>(
     pipeline_boundary: Vec<ChangesetId>,
 ) -> Result<()> {
     let ctx = &CoreContext::test_mock(fb);
-    let (repo, commits, _dag) = F::get_repo_and_dag::<TestRepo>(fb).await;
+    let (repo, _commits, _dag) = F::get_repo_and_dag::<TestRepo>(fb).await;
     let manager = repo.repo_derived_data().manager();
 
-    let head = *commits
-        .get("master")
-        .or_else(|| commits.get("Q"))
-        .ok_or_else(|| anyhow!("fixture {} has no master bookmark head", F::REPO_NAME))?;
+    let head = repo
+        .bookmarks()
+        .get(
+            ctx.clone(),
+            &BookmarkKey::new("master")?,
+            bookmarks::Freshness::MostRecent,
+        )
+        .await?
+        .ok_or_else(|| anyhow!("fixture {} has no master bookmark", F::REPO_NAME))?;
 
     let config = pipeline_config_from_stages(F::pipeline_stages())?;
 
@@ -243,24 +250,89 @@ async fn verify_pipeline_matches_canonical_impl<F: PipelineTestFixture + Send>(
     .await
 }
 
-async fn run_derivation_and_verification<F: PipelineTestFixture + Send>(
+/// Like `verify_pipeline_matches_canonical`, but runs the full pipeline
+/// derivation BEFORE any canonical derivation, then derives canonical and
+/// verifies byte-equality. The canonical-first entry points populate every
+/// canonical artifact (e.g. `bonsai_hg_mapping`) before the pipeline runs, so a
+/// pipeline code path that reads a canonical artifact for an ancestor silently
+/// succeeds. Running pipeline-first reproduces the production "pipeline ahead of
+/// canonical" state where such a read would instead fail.
+///
+/// Scoped to the full graph (no canonical-only boundary): every parent is
+/// pipeline-derived in an earlier batch, so the pipeline is self-sufficient.
+///
+/// `types` selects which types to derive and verify pipeline-first. Restrict it
+/// to types whose pipeline derivation is self-sufficient (e.g. `HgChangesets`);
+/// types with cross-type dependencies that read canonical data (e.g. `BlameV2`
+/// reading `Unodes`) are not yet safe to run pipeline-first.
+pub async fn verify_pipeline_first_then_canonical<F: PipelineTestFixture + Send>(
+    fb: FacebookInit,
+    types: &[DerivableType],
+) -> Result<()> {
+    let ctx = &CoreContext::test_mock(fb);
+    let (repo, commits, _dag) = F::get_repo_and_dag::<TestRepo>(fb).await;
+    let manager = repo.repo_derived_data().manager();
+
+    let head = *commits
+        .get("master")
+        .or_else(|| commits.get("Q"))
+        .ok_or_else(|| anyhow!("fixture {} has no master bookmark head", F::REPO_NAME))?;
+
+    let config = pipeline_config_from_stages(F::pipeline_stages())?;
+
+    let mut all_commits = repo
+        .commit_graph()
+        .ancestors_difference(ctx, vec![head], vec![])
+        .await?;
+    all_commits.reverse();
+
+    let run = run_pipeline_first_then_canonical::<F>(
+        ctx,
+        &repo,
+        manager,
+        &config,
+        types,
+        &all_commits,
+        head,
+    );
+    with_just_knobs_async(
+        JustKnobsInMemory::new(HashMap::from([
+            (
+                "scm/mononoke:enable_subtree_changes".to_string(),
+                KnobVal::Bool(true),
+            ),
+            (
+                "scm/mononoke:enable_manifest_altering_subtree_changes".to_string(),
+                KnobVal::Bool(true),
+            ),
+        ])),
+        run.boxed(),
+    )
+    .await
+}
+
+/// The planned, payload-agnostic pipeline work: batches (split at chokepoints),
+/// the stages in deepest-first (dependency) order, the types in dependency
+/// order, and the set of commits the pipeline derives (and we verify).
+struct PipelinePlan {
+    batches: Vec<derivation_pipeline_utils::Batch>,
+    sorted_stages: Vec<MPath>,
+    sorted_types: Vec<DerivableType>,
+    pipeline_commits: BTreeSet<ChangesetId>,
+}
+
+/// Plan batches: topological slices split at chokepoints. With a non-empty
+/// `pipeline_boundary` (passed as `common`), only descendants of the boundary
+/// are planned, so the boundary commits remain canonical-only parents.
+async fn plan_pipeline(
     ctx: &CoreContext,
     repo: &TestRepo,
     manager: &DerivedDataManager,
     config: &DerivationPipelineConfig,
-    all_commits: &[ChangesetId],
+    types: &[DerivableType],
     head: ChangesetId,
     pipeline_boundary: Vec<ChangesetId>,
-) -> Result<()> {
-    // Derive canonically for every type and commit.
-    manager
-        .derive_bulk_locally(ctx, all_commits, None, &PIPELINE_TYPES, None)
-        .await
-        .map_err(anyhow::Error::from)?;
-
-    // Plan batches: topological slices split at chokepoints. With a non-empty
-    // `pipeline_boundary` (passed as `common`), only descendants of the boundary
-    // are planned, so the boundary commits remain canonical-only parents.
+) -> Result<PipelinePlan> {
     let pipeline_commits: BTreeSet<ChangesetId> = repo
         .commit_graph()
         .ancestors_difference(ctx, vec![head], pipeline_boundary.clone())
@@ -294,15 +366,27 @@ async fn run_derivation_and_verification<F: PipelineTestFixture + Send>(
             .cmp(&a.num_components())
             .then_with(|| a.cmp(b))
     });
-
     // Each type's dependencies (within the managed set) must be derived before
     // it, mirroring the deepest-stage-first ordering above.
-    let sorted_types = topo_sort_pipeline_types(manager);
+    let sorted_types = topo_sort_types(manager, types);
+    Ok(PipelinePlan {
+        batches,
+        sorted_stages,
+        sorted_types,
+        pipeline_commits,
+    })
+}
 
-    // Execute the pipeline synchronously in dependency-and-ancestor order so
-    // every required input is already stored before it is read.
-    for batch in &batches {
-        for stage_path in &sorted_stages {
+/// Execute the pipeline synchronously in dependency-and-ancestor order so every
+/// required input is already stored before it is read.
+async fn run_pipeline(
+    manager: &DerivedDataManager,
+    ctx: &CoreContext,
+    config: &DerivationPipelineConfig,
+    plan: &PipelinePlan,
+) -> Result<()> {
+    for batch in &plan.batches {
+        for stage_path in &plan.sorted_stages {
             let stage_config = &config.stages[stage_path];
             let deps: Vec<MPathElement> = stage_config
                 .dependencies
@@ -319,7 +403,7 @@ async fn run_derivation_and_verification<F: PipelineTestFixture + Send>(
                 path: stage_path.clone(),
                 deps,
             });
-            for &derivable_type in &sorted_types {
+            for &derivable_type in &plan.sorted_types {
                 let variant = derivable_type.into_pipeline_derivable_variant()?;
                 bulk_derivation::derive_stage_batch(
                     manager,
@@ -332,16 +416,24 @@ async fn run_derivation_and_verification<F: PipelineTestFixture + Send>(
             }
         }
     }
+    Ok(())
+}
 
-    // Assert pipeline output matches canonical for every pipeline-derived
-    // commit/type/stage. The boundary and its ancestors are canonical-only
-    // (no pipeline stage outputs), so they are excluded here.
+/// Assert pipeline output matches canonical for every pipeline-derived
+/// commit/type/stage. Commits outside `plan.pipeline_commits` (a canonical-only
+/// boundary and its ancestors) have no pipeline stage outputs and are skipped.
+async fn verify_pipeline_output<F: PipelineTestFixture>(
+    manager: &DerivedDataManager,
+    ctx: &CoreContext,
+    all_commits: &[ChangesetId],
+    plan: &PipelinePlan,
+) -> Result<()> {
     for &cs_id in all_commits {
-        if !pipeline_commits.contains(&cs_id) {
+        if !plan.pipeline_commits.contains(&cs_id) {
             continue;
         }
-        for stage_path in &sorted_stages {
-            for derivable_type in PIPELINE_TYPES {
+        for stage_path in &plan.sorted_stages {
+            for &derivable_type in &plan.sorted_types {
                 let matches = BulkDerivation::verify_stage_output(
                     manager,
                     ctx,
@@ -359,19 +451,92 @@ async fn run_derivation_and_verification<F: PipelineTestFixture + Send>(
             }
         }
     }
-
     Ok(())
+}
+
+async fn run_derivation_and_verification<F: PipelineTestFixture + Send>(
+    ctx: &CoreContext,
+    repo: &TestRepo,
+    manager: &DerivedDataManager,
+    config: &DerivationPipelineConfig,
+    all_commits: &[ChangesetId],
+    head: ChangesetId,
+    pipeline_boundary: Vec<ChangesetId>,
+) -> Result<()> {
+    // Derive canonically for every type and commit.
+    manager
+        .derive_bulk_locally(ctx, all_commits, None, &PIPELINE_TYPES, None)
+        .await
+        .map_err(anyhow::Error::from)?;
+
+    let plan = plan_pipeline(
+        ctx,
+        repo,
+        manager,
+        config,
+        &PIPELINE_TYPES,
+        head,
+        pipeline_boundary,
+    )
+    .await?;
+    run_pipeline(manager, ctx, config, &plan).await?;
+    verify_pipeline_output::<F>(manager, ctx, all_commits, &plan).await
+}
+
+/// Run the full pipeline before any canonical derivation, then derive canonical
+/// and verify. See `verify_pipeline_first_then_canonical`.
+async fn run_pipeline_first_then_canonical<F: PipelineTestFixture + Send>(
+    ctx: &CoreContext,
+    repo: &TestRepo,
+    manager: &DerivedDataManager,
+    config: &DerivationPipelineConfig,
+    types: &[DerivableType],
+    all_commits: &[ChangesetId],
+    head: ChangesetId,
+) -> Result<()> {
+    // Plan and run the pipeline BEFORE deriving canonical. Over the full graph
+    // every parent is pipeline-derived in an earlier batch, so no canonical data
+    // is required for the pipeline to complete.
+    let plan = plan_pipeline(ctx, repo, manager, config, types, head, vec![]).await?;
+    run_pipeline(manager, ctx, config, &plan).await?;
+
+    // Now derive canonical for the selected types, then verify byte-equality.
+    manager
+        .derive_bulk_locally(ctx, all_commits, None, types, None)
+        .await
+        .map_err(anyhow::Error::from)?;
+    verify_pipeline_output::<F>(manager, ctx, all_commits, &plan).await
 }
 
 #[cfg(test)]
 mod tests {
     use fixtures::AclNestedDirectories;
+    use fixtures::CrossStageDirectoryCopy;
+    use fixtures::CrossStageFileCopy;
     use fixtures::NestedAncestorSubtreeCopy;
     use fixtures::NestedDirectories;
     use fixtures::NestedSubtreeCopy;
     use mononoke_macros::mononoke;
 
     use super::*;
+
+    /// Types verified pipeline-first (pipeline derived before any canonical
+    /// derivation; see `verify_pipeline_first_then_canonical`). A type belongs
+    /// here only if its pipeline derivation never reads canonical data that the
+    /// pipeline-ahead-of-canonical state would leave absent.
+    ///
+    /// `HgChangesets` qualifies: its only canonical read is the cross-stage
+    /// copy-source parent's hg, now resolved from the pipeline terminal stage
+    /// output (canonical fallback only for genuinely pre-pipeline parents).
+    ///
+    /// Excluded for now: `BlameV2` and `Fastlog` resolve their `Unodes`
+    /// dependency from canonical derived data. That is safe in production because
+    /// `Unodes` has been fully canonically derived (prod mapping) for a long
+    /// time, so it is never absent there — but it makes them fail the artificial
+    /// pipeline-first harness that withholds canonical. Add a type here once its
+    /// pipeline derivation is self-sufficient for every dependency still in the
+    /// transitionary state.
+    const PIPELINE_FIRST_TYPES: [DerivableType; 1] = [DerivableType::HgChangesets];
 
     impl PipelineTestFixture for NestedDirectories {
         fn pipeline_stages() -> Vec<(&'static str, Vec<&'static str>)> {
@@ -398,6 +563,26 @@ mod tests {
     }
 
     impl PipelineTestFixture for NestedSubtreeCopy {
+        fn pipeline_stages() -> Vec<(&'static str, Vec<&'static str>)> {
+            vec![
+                ("", vec!["top1", "top2"]),
+                ("top1", vec![]),
+                ("top2", vec![]),
+            ]
+        }
+    }
+
+    impl PipelineTestFixture for CrossStageDirectoryCopy {
+        fn pipeline_stages() -> Vec<(&'static str, Vec<&'static str>)> {
+            vec![
+                ("", vec!["top1", "top2"]),
+                ("top1", vec![]),
+                ("top2", vec![]),
+            ]
+        }
+    }
+
+    impl PipelineTestFixture for CrossStageFileCopy {
         fn pipeline_stages() -> Vec<(&'static str, Vec<&'static str>)> {
             vec![
                 ("", vec!["top1", "top2"]),
@@ -448,6 +633,31 @@ mod tests {
     #[mononoke::fbinit_test]
     async fn test_pipeline_matches_canonical_ancestor_subtree_copy(fb: FacebookInit) -> Result<()> {
         verify_pipeline_matches_canonical::<NestedAncestorSubtreeCopy>(fb).await
+    }
+
+    // Regression coverage for cross-stage copy-source resolution: the tip commit
+    // carries copies whose `copy_from` sources are a directory and a missing path
+    // outside the destination's stage. Both canonical and pipeline drop the bogus
+    // copies in `resolve_cross_stage_copy_sources`, staying byte-identical.
+    #[mononoke::fbinit_test]
+    async fn test_pipeline_cross_stage_directory_copy(fb: FacebookInit) -> Result<()> {
+        verify_pipeline_matches_canonical::<CrossStageDirectoryCopy>(fb).await
+    }
+
+    // Success path of cross-stage copy resolution: a real file copied across a
+    // stage boundary, canonical-first.
+    #[mononoke::fbinit_test]
+    async fn test_pipeline_cross_stage_file_copy(fb: FacebookInit) -> Result<()> {
+        verify_pipeline_matches_canonical::<CrossStageFileCopy>(fb).await
+    }
+
+    // Pipeline-first: derives the pipeline before any canonical derivation, so a
+    // cross-stage copy whose source parent is not yet canonically derived must
+    // still resolve. Regression guard for the `bonsai_hg_mapping` dependency in
+    // `resolve_cross_stage_copy_sources`. Scoped to `PIPELINE_FIRST_TYPES`.
+    #[mononoke::fbinit_test]
+    async fn test_pipeline_first_cross_stage_file_copy(fb: FacebookInit) -> Result<()> {
+        verify_pipeline_first_then_canonical::<CrossStageFileCopy>(fb, &PIPELINE_FIRST_TYPES).await
     }
 
     // Boundary commit `D` is derived canonically only; the pipeline derives just

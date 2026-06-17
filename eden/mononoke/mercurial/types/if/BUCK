@@ -17,6 +17,8 @@ thrift_library(
     # The Thrift definitions are private and only used for serialization -- do
     # not allow other code to use them.
     visibility = [
+        "//eden/mononoke/derived_data/mercurial_derivation:mercurial_derivation",
+        "//eden/mononoke/derived_data/mercurial_derivation:mercurial_derivation-unittest",
         "//eden/mononoke/derived_data/remote/if:",
         "//eden/mononoke/features/microwave/if:",
         "//eden/mononoke/mercurial:mercurial_types",

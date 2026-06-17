@@ -296,7 +296,7 @@ fn get_hg_changeset_derivation_options(
     }
 }
 
-async fn get_subtree_change_sources(
+pub(crate) async fn get_subtree_change_sources(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
     bonsai: &BonsaiChangeset,

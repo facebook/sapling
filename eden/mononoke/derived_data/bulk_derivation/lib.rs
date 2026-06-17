@@ -550,6 +550,10 @@ pub async fn derive_stage_batch(
             ddm.derive_stage_batch::<RootAclManifestId>(ctx, csids, payload)
                 .await
         }
+        PipelineDerivableVariant::HgChangesets => {
+            ddm.derive_stage_batch::<MappedHgChangesetId>(ctx, csids, payload)
+                .await
+        }
     }
 }
 
@@ -589,6 +593,10 @@ pub async fn is_stage_derived(
             ddm.is_stage_derived::<RootAclManifestId>(ctx, csid, stage_path)
                 .await
         }
+        PipelineDerivableVariant::HgChangesets => {
+            ddm.is_stage_derived::<MappedHgChangesetId>(ctx, csid, stage_path)
+                .await
+        }
     }
 }
 
@@ -626,6 +634,10 @@ pub async fn verify_stage_output(
         }
         PipelineDerivableVariant::AclManifests => {
             ddm.verify_stage_output::<RootAclManifestId>(ctx, csid, stage_path)
+                .await
+        }
+        PipelineDerivableVariant::HgChangesets => {
+            ddm.verify_stage_output::<MappedHgChangesetId>(ctx, csid, stage_path)
                 .await
         }
     }
