@@ -317,8 +317,8 @@ impl SourceControlServiceImpl {
         let parent_commit_ids = if option_include_parent {
             let changeset_parents = repo.many_changeset_parents(csids.clone()).watched().await?;
             let all_parent_csids = changeset_parents
-                .iter()
-                .flat_map(|(_, parents)| parents)
+                .values()
+                .flatten()
                 .collect::<HashSet<_>>()
                 .into_iter()
                 .copied()
