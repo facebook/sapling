@@ -213,6 +213,8 @@ pub use crate::token::UploadTokenMetadata;
 pub use crate::token::UploadTokenSignature;
 pub use crate::tree::CheckManifestPermissionRequest;
 pub use crate::tree::CheckManifestPermissionResponse;
+pub use crate::tree::CheckPathPermissionAclEntry;
+pub use crate::tree::CheckPathPermissionData;
 pub use crate::tree::CheckPathPermissionRequest;
 pub use crate::tree::CheckPathPermissionResponse;
 pub use crate::tree::TreeAttributes;

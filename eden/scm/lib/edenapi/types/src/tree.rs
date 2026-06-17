@@ -29,6 +29,7 @@ use crate::FileAuxData;
 use crate::FileMetadata;
 use crate::InvalidHgId;
 use crate::SaplingRemoteApiServerError;
+use crate::ServerError;
 use crate::Sha1;
 use crate::UploadToken;
 use crate::hash::check_hash;
@@ -438,16 +439,45 @@ pub struct CheckPathPermissionRequest {
 #[auto_wire]
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct CheckPathPermissionAclEntry {
+    #[id(1)]
+    pub restriction_root: RepoPathBuf,
+    #[id(2)]
+    pub repo_region_acl: String,
+    /// Permission request group to show users for this restriction.
+    #[id(3)]
+    #[no_default]
+    pub permission_request_group: String,
+}
+
+#[auto_wire]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct CheckPathPermissionData {
+    /// Whether the caller has access to this path.
+    #[id(1)]
+    pub has_access: bool,
+    /// Per-restriction ACL data covering this path.
+    #[id(2)]
+    pub restriction_entries: Vec<CheckPathPermissionAclEntry>,
+}
+
+#[auto_wire]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct CheckPathPermissionResponse {
     #[id(1)]
     pub path: RepoPathBuf,
-    /// Whether the caller has access to this path.
     #[id(2)]
-    pub has_access: bool,
-    /// ACLs to request access through (one per restriction covering this path).
-    #[id(3)]
-    pub request_acls: Vec<String>,
-    /// Repo region ACLs that govern access to this path.
-    #[id(4)]
-    pub repo_region_acls: Vec<String>,
+    #[no_default]
+    pub result: Result<CheckPathPermissionData, ServerError>,
+}
+
+impl CheckPathPermissionResponse {
+    pub fn from_result(
+        path: RepoPathBuf,
+        result: Result<CheckPathPermissionData, ServerError>,
+    ) -> Self {
+        Self { path, result }
+    }
 }

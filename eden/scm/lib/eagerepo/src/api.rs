@@ -37,6 +37,7 @@ use edenapi::types::BookmarkEntry;
 use edenapi::types::BookmarkKind;
 use edenapi::types::CheckManifestPermissionRequest;
 use edenapi::types::CheckManifestPermissionResponse;
+use edenapi::types::CheckPathPermissionData;
 use edenapi::types::CheckPathPermissionRequest;
 use edenapi::types::CheckPathPermissionResponse;
 use edenapi::types::CommitGraphEntry;
@@ -1255,12 +1256,13 @@ impl SaplingRemoteApi for EagerRepo {
             .paths
             .into_iter()
             .map(|path| {
-                Ok(CheckPathPermissionResponse {
+                Ok(CheckPathPermissionResponse::from_result(
                     path,
-                    has_access: true,
-                    request_acls: Vec::new(),
-                    repo_region_acls: Vec::new(),
-                })
+                    Ok(CheckPathPermissionData {
+                        has_access: true,
+                        restriction_entries: Vec::new(),
+                    }),
+                ))
             })
             .collect::<Vec<_>>();
 

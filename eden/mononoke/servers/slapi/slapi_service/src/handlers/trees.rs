@@ -14,11 +14,14 @@ use edenapi_types::AnyId;
 use edenapi_types::Batch;
 use edenapi_types::CheckManifestPermissionRequest;
 use edenapi_types::CheckManifestPermissionResponse;
+use edenapi_types::CheckPathPermissionAclEntry;
+use edenapi_types::CheckPathPermissionData;
 use edenapi_types::CheckPathPermissionRequest;
 use edenapi_types::CheckPathPermissionResponse;
 use edenapi_types::FileAuxData;
 use edenapi_types::SaplingRemoteApiServerError;
 use edenapi_types::SaplingRemoteApiServerErrorKind;
+use edenapi_types::ServerError;
 use edenapi_types::TreeAttributes;
 use edenapi_types::TreeAuxData;
 use edenapi_types::TreeChildEntry;
@@ -83,6 +86,7 @@ use crate::middleware::request_dumper::RequestDumper;
 use crate::utils::custom_cbor_stream;
 use crate::utils::get_repo;
 use crate::utils::parse_wire_request;
+use crate::utils::to_hg_path_nonroot;
 
 define_stats! {
     prefix = "mononoke.trees";
@@ -591,38 +595,60 @@ impl SaplingRemoteApiHandler for CheckPathPermissionHandler {
             .map(move |path| {
                 let cs = cs.clone();
                 async move {
-                    let mpath = MPath::new(path.as_str().as_bytes())
-                        .with_context(|| format!("Invalid path: {path}"))?;
-                    let restriction_ctx = cs
-                        .path_restriction(mpath)
-                        .await
-                        .with_context(|| format!("Failed to check path restriction: {path}"))?;
-                    let restriction_infos = restriction_ctx.restriction_info(true).await?;
+                    let result = async {
+                        let mpath = MPath::new(path.as_str().as_bytes())
+                            .with_context(|| format!("Invalid path: {path}"))?;
+                        let restriction_ctx = cs
+                            .path_restriction(mpath)
+                            .await
+                            .with_context(|| format!("Failed to check path restriction: {path}"))?;
+                        let restriction_infos = restriction_ctx.restriction_info(true).await?;
 
-                    let has_access = restriction_infos
-                        .iter()
-                        .all(|info| info.has_access.unwrap_or(false));
+                        let restriction_entries = restriction_infos
+                            .iter()
+                            .map(|info| {
+                                let restriction_root = to_hg_path_nonroot(info.restriction_root())
+                                    .with_context(|| {
+                                        format!(
+                                            "Invalid restriction root: {}",
+                                            info.restriction_root()
+                                        )
+                                    })?;
+                                Ok(CheckPathPermissionAclEntry {
+                                    restriction_root,
+                                    repo_region_acl: info.repo_region_acl().to_string(),
+                                    permission_request_group: info
+                                        .permission_request_group()
+                                        .to_string(),
+                                })
+                            })
+                            .collect::<anyhow::Result<Vec<_>>>()?;
 
-                    let permission_request_groups = restriction_infos
-                        .iter()
-                        .map(|info| info.permission_request_group().to_string())
-                        .collect();
+                        let has_access = restriction_infos
+                            .iter()
+                            .all(|info| info.has_access.unwrap_or(false));
 
-                    let repo_region_acls = restriction_infos
-                        .iter()
-                        .map(|info| info.repo_region_acl().to_string())
-                        .collect();
+                        Ok::<_, anyhow::Error>(CheckPathPermissionData {
+                            has_access,
+                            restriction_entries,
+                        })
+                    }
+                    .await
+                    .map_err(|err| ServerError::generic(format!("{err:#}")));
 
-                    Ok(CheckPathPermissionResponse {
-                        path,
-                        has_access,
-                        request_acls: permission_request_groups,
-                        repo_region_acls,
-                    })
+                    Ok(CheckPathPermissionResponse::from_result(path, result))
                 }
             })
             .buffer_unordered(20)
             .boxed())
+    }
+
+    fn extract_in_band_error(response: &Self::Response) -> Option<anyhow::Error> {
+        response
+            .result
+            .as_ref()
+            .err()
+            .map(|err| anyhow::format_err!("{err:?}"))
     }
 }
 
