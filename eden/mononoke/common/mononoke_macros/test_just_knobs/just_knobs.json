@@ -111,6 +111,7 @@
     "scm/mononoke:create_repos_use_repo_spec": true,
     "scm/mononoke:scs_alert_on_methods": false,
     "scm/mononoke:commit_metadata_scraper_skipped_repos": false,
+    "scm/mononoke:commit_metadata_scraper_identity_from_local_cert": false,
     "scm/mononoke:check_hook_bypass_permission_group_with_client_identities": true
   },
   "ints": {
