@@ -2721,6 +2721,49 @@ TEST_P(CheckoutTest, checkoutToRestrictedTreeConflictsOnModifiedTrackedFile) {
           Dtype::REGULAR)));
 }
 
+TEST_P(
+    CheckoutTest,
+    checkoutToRestrictedTreeWithConflictStillRestrictsModifiedTrackedFile) {
+  auto currentBuilder = FakeTreeBuilder{};
+  currentBuilder.setFile("regular/file.txt", "base\n");
+  TestMount testMount{RootId{"current"}, currentBuilder};
+  applyParam(testMount);
+
+  auto targetBuilder = currentBuilder.clone();
+  targetBuilder.replaceFile("regular/file.txt", "target\n");
+  targetBuilder.setDirIsRestricted("regular");
+  targetBuilder.finalize(testMount.getBackingStore(), true);
+  auto targetCommit =
+      testMount.getBackingStore()->putCommit(RootId{"target"}, targetBuilder);
+  targetCommit->setReady();
+
+  testMount.overwriteFile("regular/file.txt", "local\n");
+
+  auto executor = testMount.getServerExecutor().get();
+  auto checkoutResult = testMount.getEdenMount()
+                            ->checkout(
+                                testMount.getRootInode(),
+                                RootId{"target"},
+                                ObjectFetchContext::getNullContext(),
+                                __func__,
+                                CheckoutMode::NORMAL)
+                            .semi()
+                            .via(executor)
+                            .waitVia(executor);
+  ASSERT_TRUE(checkoutResult.isReady());
+
+  EXPECT_THAT(
+      std::move(checkoutResult).get().conflicts,
+      UnorderedElementsAre(makeConflict(
+          ConflictType::MODIFIED_REMOVED,
+          "regular/file.txt",
+          "",
+          Dtype::REGULAR)));
+  // FIXME: A regular checkout should not apply the restriction when the
+  // recursive checkout reported a non-force conflict.
+  EXPECT_TRUE(testMount.getTreeInode("regular"_relpath)->isRestricted());
+}
+
 #endif
 
 /*
