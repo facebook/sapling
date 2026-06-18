@@ -387,7 +387,6 @@ mod tests {
             flush_on_drop: false,
             format: SerializationFormat::Hg,
             progress_bar: progress_model::AggregatingProgressBar::new("", ""),
-            unbounded_queue: false,
             lfs_buffer_in_memory: false,
             max_fetch_count: Default::default(),
         })

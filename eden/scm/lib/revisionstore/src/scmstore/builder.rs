@@ -359,10 +359,6 @@ impl<'a> FileStoreBuilder<'a> {
 
             progress_bar: AggregatingProgressBar::new("fetching from ScmStore", "files"),
 
-            unbounded_queue: self
-                .config
-                .get_or_default("experimental", "unbounded-scmstore-queue")?,
-
             lfs_buffer_in_memory: self
                 .config
                 .get_or_default("experimental", "lfs-buffer-in-memory")?,
@@ -713,9 +709,6 @@ impl<'a> TreeStoreBuilder<'a> {
             flush_on_drop: true,
             format,
             progress_bar: AggregatingProgressBar::new("fetching from ScmStore", "trees"),
-            unbounded_queue: self
-                .config
-                .get_or_default("experimental", "unbounded-scmstore-queue")?,
             verify_hash,
             restricted_tree_mode,
             acl_check_cache: new_acl_check_cache(),

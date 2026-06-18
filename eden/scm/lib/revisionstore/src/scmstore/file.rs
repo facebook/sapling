@@ -25,7 +25,6 @@ use anyhow::bail;
 use anyhow::ensure;
 use blob::Blob;
 use flume::bounded;
-use flume::unbounded;
 use metrics::FILE_STORE_FETCH_METRICS;
 use minibytes::Bytes;
 use parking_lot::Mutex;
@@ -105,9 +104,6 @@ pub struct FileStore {
     // This bar "aggregates" across concurrent uses of this FileStore from different
     // threads (so that only a single progress bar shows up to the user).
     pub(crate) progress_bar: Arc<AggregatingProgressBar>,
-
-    // Temporary escape hatch to disable bounding of queue.
-    pub(crate) unbounded_queue: bool,
 
     // Temporary escape hatch to disable streaming of LFS data to caches.
     pub(crate) lfs_buffer_in_memory: bool,
@@ -195,14 +191,9 @@ impl FileStore {
 
         let bar = self.progress_bar.create_or_extend_local(0);
 
-        let (found_tx, found_rx) = if self.unbounded_queue {
-            // Escape hatch in case something goes wrong with bounding.
-            unbounded()
-        } else {
-            // Bound channel size so we don't use unlimited memory queueing up file content
-            // when the consumer is consuming slower than we are fetching.
-            bounded(RESULT_QUEUE_SIZE)
-        };
+        // Bound channel size so we don't use unlimited memory queueing up file content
+        // when the consumer is consuming slower than we are fetching.
+        let (found_tx, found_rx) = bounded(RESULT_QUEUE_SIZE);
 
         let indexedlog_cache = self.indexedlog_cache.clone();
 
@@ -555,8 +546,6 @@ impl FileStore {
 
             progress_bar: AggregatingProgressBar::new("", ""),
 
-            unbounded_queue: false,
-
             lfs_buffer_in_memory: false,
 
             max_fetch_count: Default::default(),
@@ -605,8 +594,6 @@ impl FileStore {
             format: self.format(),
 
             progress_bar: self.progress_bar.clone(),
-
-            unbounded_queue: self.unbounded_queue,
 
             lfs_buffer_in_memory: self.lfs_buffer_in_memory,
 

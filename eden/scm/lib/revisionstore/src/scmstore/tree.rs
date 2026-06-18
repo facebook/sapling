@@ -35,7 +35,6 @@ use edenapi_types::FileAuxData;
 use edenapi_types::TreeAuxData;
 use fetch::FetchState;
 use flume::bounded;
-use flume::unbounded;
 use metrics::TREE_STORE_FETCH_METRICS;
 use minibytes::Bytes;
 use moka::sync::Cache;
@@ -181,9 +180,6 @@ pub struct TreeStore {
     // This bar "aggregates" across concurrent uses of this TreeStore from different
     // threads (so that only a single progress bar shows up to the user).
     pub(crate) progress_bar: Arc<AggregatingProgressBar>,
-
-    // Temporary escape hatch to disable bounding of queue.
-    pub(crate) unbounded_queue: bool,
 
     pub(crate) verify_hash: bool,
 
@@ -365,14 +361,9 @@ impl TreeStore {
 
         let bar = self.progress_bar.create_or_extend_local(0);
 
-        let (found_tx, found_rx) = if self.unbounded_queue {
-            // Escape hatch in case something goes wrong with bounding.
-            unbounded()
-        } else {
-            // Bound channel size so we don't use unlimited memory queueing up file content
-            // when the consumer is consuming slower than we are fetching.
-            bounded(RESULT_QUEUE_SIZE)
-        };
+        // Bound channel size so we don't use unlimited memory queueing up file content
+        // when the consumer is consuming slower than we are fetching.
+        let (found_tx, found_rx) = bounded(RESULT_QUEUE_SIZE);
 
         let indexedlog_cache = self.indexedlog_cache.clone();
         let aux_cache = self.filestore.as_ref().and_then(|fs| fs.aux_cache.clone());
@@ -679,7 +670,6 @@ impl TreeStore {
             prefetch_tree_parents: false,
             format: SerializationFormat::Hg,
             progress_bar: AggregatingProgressBar::new("", ""),
-            unbounded_queue: false,
             verify_hash: true,
             restricted_tree_mode: RestrictedTreeMode::Disabled,
             acl_check_cache: new_acl_check_cache(),
@@ -761,7 +751,6 @@ impl TreeStore {
             prefetch_tree_parents: false,
             format: self.format(),
             progress_bar: self.progress_bar.clone(),
-            unbounded_queue: self.unbounded_queue,
             verify_hash: self.verify_hash,
             restricted_tree_mode: self.restricted_tree_mode,
             acl_check_cache: self.acl_check_cache.clone(),
