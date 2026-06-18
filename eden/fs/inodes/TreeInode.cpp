@@ -4169,7 +4169,8 @@ folly::coro::now_task<folly::Unit> TreeInode::co_computeDiff(
 ImmediateFuture<CheckoutSubtreeResult> TreeInode::checkout(
     CheckoutContext* ctx,
     std::shared_ptr<const Tree> fromTree,
-    std::shared_ptr<const Tree> toTree) {
+    std::shared_ptr<const Tree> toTree,
+    bool reportLocalOnlyAsConflicts) {
   XLOGF(
       DBG4,
       "checkout: starting update of {}: {} --> {}",
@@ -4202,7 +4203,8 @@ ImmediateFuture<CheckoutSubtreeResult> TreeInode::checkout(
       actions,
       pendingLoads,
       shouldInvalidateDirectory,
-      hadConflicts);
+      hadConflicts,
+      reportLocalOnlyAsConflicts);
 
   // Wire up the callbacks for any pending inode loads we started
   for (auto& load : pendingLoads) {
@@ -4379,7 +4381,8 @@ void TreeInode::computeCheckoutActions(
     vector<std::shared_ptr<CheckoutAction>>& actions,
     vector<IncompleteInodeLoad>& pendingLoads,
     bool& wasDirectoryListModified,
-    bool& hadConflicts) {
+    bool& hadConflicts,
+    bool reportLocalOnlyAsConflicts) {
   auto computeActionsSpan = ctx->createSpan("computeCheckoutActions");
 
   // Grab the contents_ lock for the duration of this function. Checkout is an
@@ -4389,7 +4392,7 @@ void TreeInode::computeCheckoutActions(
   // If we are the same as some known source control Tree, check to see if we
   // can quickly tell if we have nothing to do for this checkout operation and
   // can return early.
-  if (contents->treeId.has_value() &&
+  if (!reportLocalOnlyAsConflicts && contents->treeId.has_value() &&
       canShortCircuitCheckout(
           ctx, contents->treeId.value(), isRestricted(), fromTree, toTree)) {
     // If any child is restricted, take the slow path so
@@ -4501,7 +4504,8 @@ void TreeInode::computeCheckoutActions(
     }
   };
 
-  if (getMount()->getEdenConfig()->batchCheckoutDirMutations.getValue()) {
+  if (getMount()->getEdenConfig()->batchCheckoutDirMutations.getValue() &&
+      !reportLocalOnlyAsConflicts) {
     PathMapMutator<DirEntry> mutator(std::move(contents->entries));
     try {
       diffLoop(mutator);
@@ -4513,6 +4517,24 @@ void TreeInode::computeCheckoutActions(
     contents->entries = DirContents(mutator.finalize());
   } else {
     diffLoop(contents->entries);
+    if (reportLocalOnlyAsConflicts) {
+      auto existsInTree = [](const Tree* tree, PathComponentPiece name) {
+        return tree && tree->find(name) != tree->cend();
+      };
+
+      for (auto it = contents->entries.begin(); it != contents->entries.end();
+           ++it) {
+        if (existsInTree(fromTree, it->first) ||
+            existsInTree(toTree, it->first)) {
+          continue;
+        }
+        auto action =
+            processLocalOnlyCheckoutEntry(ctx, it, pendingLoads, hadConflicts);
+        if (action) {
+          actions.push_back(std::move(action));
+        }
+      }
+    }
   }
 }
 
@@ -4548,6 +4570,35 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
     }
   }
   return ret;
+}
+
+std::shared_ptr<CheckoutAction> TreeInode::processLocalOnlyCheckoutEntry(
+    CheckoutContext* ctx,
+    DirContents::iterator it,
+    std::vector<IncompleteInodeLoad>& pendingLoads,
+    bool& hadConflicts) {
+  auto& name = it->first;
+  auto& entry = it->second;
+
+  if (auto* child = entry.getInode()) {
+    if (child->isDir()) {
+      auto childPtr = entry.getInodePtr();
+      return std::make_shared<CheckoutAction>(ctx, name, std::move(childPtr));
+    }
+    ctx->addConflict(ConflictType::UNTRACKED_ADDED, child);
+    hadConflicts = true;
+    return nullptr;
+  }
+
+  if (entry.isDirectory()) {
+    auto inodeFuture =
+        loadChildLocked(name, entry, pendingLoads, ctx->getFetchContext());
+    return std::make_shared<CheckoutAction>(ctx, name, std::move(inodeFuture));
+  }
+
+  ctx->addConflict(ConflictType::UNTRACKED_ADDED, this, name, entry.getDtype());
+  hadConflicts = true;
+  return nullptr;
 }
 
 namespace {
@@ -5084,9 +5135,11 @@ ImmediateFuture<CheckoutActionResult> TreeInode::checkoutUpdateEntry(
 
   // If we are going from a directory to a directory, all we need to do
   // is call checkout().
-  if (newTree) {
+  if (newScmEntry && newScmEntry->second.isTree()) {
     XCHECK(newScmEntry.has_value());
-    XCHECK(newScmEntry->second.isTree());
+    if (!newScmEntry->second.isRestricted()) {
+      XCHECK(newTree);
+    }
 
     if (getMount()->getCheckoutConfig()->getCaseSensitive() ==
             CaseSensitivity::Insensitive &&
@@ -5097,8 +5150,8 @@ ImmediateFuture<CheckoutActionResult> TreeInode::checkoutUpdateEntry(
       // new name.
     } else {
       const auto& replacementEntry = *newScmEntry;
-      bool newRestricted =
-          newTree->isRestricted() || replacementEntry.second.isRestricted();
+      bool newRestricted = replacementEntry.second.isRestricted() ||
+          (newTree && newTree->isRestricted());
 
       bool oldRestricted = false;
       {
@@ -5110,6 +5163,10 @@ ImmediateFuture<CheckoutActionResult> TreeInode::checkoutUpdateEntry(
       }
 
       if (newRestricted == oldRestricted) {
+        if (newRestricted && !newTree) {
+          return CheckoutActionResult{InvalidationRequired::No};
+        }
+
         // Ordinary dir->dir checkout still recurses in place. Checkout only
         // models the limited mode changes implied by SCM entry kinds; broader
         // permission-only updates would need a separate invalidation path,
@@ -5150,10 +5207,15 @@ ImmediateFuture<CheckoutActionResult> TreeInode::checkoutUpdateEntry(
           newRestricted);
       std::shared_ptr<const Tree> checkoutToTree;
       if (!newRestricted) {
+        XCHECK(newTree);
         checkoutToTree = std::move(newTree);
       }
       return treeInode
-          ->checkout(ctx, std::move(oldTree), std::move(checkoutToTree))
+          ->checkout(
+              ctx,
+              std::move(oldTree),
+              std::move(checkoutToTree),
+              /*reportLocalOnlyAsConflicts=*/newRestricted)
           .thenValue(
               [ctx,
                parentInode = inodePtrFromThis(),

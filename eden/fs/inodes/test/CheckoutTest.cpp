@@ -2762,6 +2762,68 @@ TEST_P(
   EXPECT_FALSE(testMount.getTreeInode("regular"_relpath)->isRestricted());
 }
 
+TEST_P(CheckoutTest, checkoutToRestrictedTreeConflictsOnUntrackedFile) {
+  auto currentBuilder = FakeTreeBuilder{};
+  currentBuilder.setFile("existing/file.txt", "base\n");
+  TestMount testMount{RootId{"current"}, currentBuilder};
+  applyParam(testMount);
+
+  auto targetBuilder = currentBuilder.clone();
+  targetBuilder.setFile("local_only_restricted/server.txt", "target\n");
+  targetBuilder.setDirIsRestricted("local_only_restricted");
+  targetBuilder.finalize(testMount.getBackingStore(), true);
+  auto targetCommit =
+      testMount.getBackingStore()->putCommit(RootId{"target"}, targetBuilder);
+  targetCommit->setReady();
+
+  testMount.mkdir("local_only_restricted");
+  testMount.addFile("local_only_restricted/local.txt", "local\n");
+
+  auto executor = testMount.getServerExecutor().get();
+  auto dryRunResult = testMount.getEdenMount()
+                          ->checkout(
+                              testMount.getRootInode(),
+                              RootId{"target"},
+                              ObjectFetchContext::getNullContext(),
+                              __func__,
+                              CheckoutMode::DRY_RUN)
+                          .semi()
+                          .via(executor)
+                          .waitVia(executor);
+  ASSERT_TRUE(dryRunResult.isReady());
+  EXPECT_THAT(
+      std::move(dryRunResult).get().conflicts,
+      UnorderedElementsAre(makeConflict(
+          ConflictType::UNTRACKED_ADDED,
+          "local_only_restricted/local.txt",
+          "",
+          Dtype::REGULAR)));
+  EXPECT_FALSE(
+      testMount.getTreeInode("local_only_restricted"_relpath)->isRestricted());
+
+  auto checkoutResult = testMount.getEdenMount()
+                            ->checkout(
+                                testMount.getRootInode(),
+                                RootId{"target"},
+                                ObjectFetchContext::getNullContext(),
+                                __func__,
+                                CheckoutMode::NORMAL)
+                            .semi()
+                            .via(executor)
+                            .waitVia(executor);
+  ASSERT_TRUE(checkoutResult.isReady());
+
+  EXPECT_THAT(
+      std::move(checkoutResult).get().conflicts,
+      UnorderedElementsAre(makeConflict(
+          ConflictType::UNTRACKED_ADDED,
+          "local_only_restricted/local.txt",
+          "",
+          Dtype::REGULAR)));
+  EXPECT_FALSE(
+      testMount.getTreeInode("local_only_restricted"_relpath)->isRestricted());
+}
+
 #endif
 
 /*

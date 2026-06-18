@@ -411,20 +411,21 @@ class _RestrictedTreeTestMethods(_MethodsBase, metaclass=abc.ABCMeta):
     def test_checkout_restricted_tree_addition_over_untracked_file(
         self,
     ) -> None:
-        """Current behavior: non-force checkout applies the restriction over a
-        local-only file when the restricted directory is new in the target."""
+        """Non-force checkout should preserve local-only files when their
+        parent becomes restricted."""
         self.repo.hg("update", self.initial_commit)
 
         local_dir, local_file = self._create_local_only_restricted_file()
 
-        self.repo.hg("update", self.added_restricted_commit)
-
         if self.expect_restricted:
-            with self.assertRaises(OSError) as ctx:
-                os.listdir(local_dir)
-            self.assertEqual(ctx.exception.errno, errno.EACCES)
-            self._assert_known_restricted_contents_shutdown_timeout()
+            with self.assertRaises(hgrepo.HgError):
+                self.repo.hg("update", self.added_restricted_commit)
+
+            self.assertEqual(["local.txt"], sorted(os.listdir(local_dir)))
+            with open(local_file, "r") as f:
+                self.assertEqual("local content", f.read())
         else:
+            self.repo.hg("update", self.added_restricted_commit)
             with open(local_file, "r") as f:
                 self.assertEqual("local content", f.read())
 
@@ -445,6 +446,7 @@ class _RestrictedTreeTestMethods(_MethodsBase, metaclass=abc.ABCMeta):
             self.assertEqual(ctx.exception.errno, errno.EACCES)
             self._assert_known_restricted_contents_shutdown_timeout()
         else:
+            self.repo.hg("update", self.added_restricted_commit)
             with open(local_file, "r") as f:
                 self.assertEqual("local content", f.read())
 

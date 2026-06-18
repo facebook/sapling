@@ -501,7 +501,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   [[nodiscard]] ImmediateFuture<CheckoutSubtreeResult> checkout(
       CheckoutContext* ctx,
       std::shared_ptr<const Tree> fromTree,
-      std::shared_ptr<const Tree> toTree);
+      std::shared_ptr<const Tree> toTree,
+      bool reportLocalOnlyAsConflicts = false);
 
   /**
    * Update this directory when a child entry is materialized.
@@ -1099,7 +1100,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       std::vector<std::shared_ptr<CheckoutAction>>& actions,
       std::vector<IncompleteInodeLoad>& pendingLoads,
       bool& wasDirectoryListModified,
-      bool& hadConflicts);
+      bool& hadConflicts,
+      bool reportLocalOnlyAsConflicts);
 
   /**
    * Sets wasDirectoryListModified true if this checkout entry operation has
@@ -1118,6 +1120,12 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       const Tree::value_type* newScmEntry,
       std::vector<IncompleteInodeLoad>& pendingLoads,
       bool& wasDirectoryListModified,
+      bool& hadConflicts);
+
+  std::shared_ptr<CheckoutAction> processLocalOnlyCheckoutEntry(
+      CheckoutContext* ctx,
+      DirContents::iterator it,
+      std::vector<IncompleteInodeLoad>& pendingLoads,
       bool& hadConflicts);
 
   template <typename Contents>

@@ -62,6 +62,16 @@ class CheckoutAction : public std::enable_shared_from_this<CheckoutAction> {
       InodePtr&& inode);
 
   /**
+   * Create a CheckoutAction for an entry that exists only in the local
+   * filesystem. Used when a restricted checkout makes local-only contents
+   * conflict with the destination placeholder.
+   */
+  CheckoutAction(
+      CheckoutContext* ctx,
+      PathComponentPiece localEntryName,
+      InodePtr&& inode);
+
+  /**
    * Create a CheckoutAction where the Inode object in question is not loaded
    * yet.
    *
@@ -82,6 +92,13 @@ class CheckoutAction : public std::enable_shared_from_this<CheckoutAction> {
             oldScmEntry,
             newScmEntry,
             std::move(inodeFuture)) {}
+
+  template <typename InodePtrType>
+  CheckoutAction(
+      CheckoutContext* ctx,
+      PathComponentPiece localEntryName,
+      ImmediateFuture<InodePtrType> inodeFuture)
+      : CheckoutAction(INTERNAL, ctx, localEntryName, std::move(inodeFuture)) {}
 
   /*
    * CheckoutAction does not allow copying or moving.
@@ -117,6 +134,11 @@ class CheckoutAction : public std::enable_shared_from_this<CheckoutAction> {
       CheckoutContext* ctx,
       const Tree::value_type* oldScmEntry,
       const Tree::value_type* newScmEntry,
+      ImmediateFuture<InodePtr> inodeFuture);
+  CheckoutAction(
+      InternalConstructor,
+      CheckoutContext* ctx,
+      PathComponentPiece localEntryName,
       ImmediateFuture<InodePtr> inodeFuture);
 
   void setOldTree(std::shared_ptr<const Tree> tree);
@@ -185,6 +207,10 @@ class CheckoutAction : public std::enable_shared_from_this<CheckoutAction> {
    * a new blob, and not bother loading the blob data itself.
    */
   InodePtr inode_;
+  /**
+   * The local-only entry name when this action has no old or new SCM entry.
+   */
+  std::optional<PathComponent> localEntryName_;
   std::shared_ptr<const Tree> oldTree_;
   std::optional<Hash20> oldBlobSha1_;
   std::shared_ptr<const Tree> newTree_;

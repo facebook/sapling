@@ -38,6 +38,14 @@ CheckoutAction::CheckoutAction(
 }
 
 CheckoutAction::CheckoutAction(
+    CheckoutContext* ctx,
+    PathComponentPiece localEntryName,
+    InodePtr&& inode)
+    : ctx_(ctx),
+      inode_(std::move(inode)),
+      localEntryName_(PathComponent{localEntryName}) {}
+
+CheckoutAction::CheckoutAction(
     InternalConstructor,
     CheckoutContext* ctx,
     const Tree::value_type* oldScmEntry,
@@ -53,12 +61,26 @@ CheckoutAction::CheckoutAction(
   }
 }
 
+CheckoutAction::CheckoutAction(
+    InternalConstructor,
+    CheckoutContext* ctx,
+    PathComponentPiece localEntryName,
+    ImmediateFuture<InodePtr> inodeFuture)
+    : ctx_(ctx),
+      inodeFuture_(std::move(inodeFuture)),
+      localEntryName_(PathComponent{localEntryName}) {}
+
 CheckoutAction::~CheckoutAction() = default;
 
 PathComponentPiece CheckoutAction::getEntryName() const {
-  XDCHECK(oldScmEntry_.has_value() || newScmEntry_.has_value());
-  return oldScmEntry_.has_value() ? oldScmEntry_.value().first
-                                  : newScmEntry_.value().first;
+  if (oldScmEntry_.has_value()) {
+    return oldScmEntry_.value().first;
+  }
+  if (newScmEntry_.has_value()) {
+    return newScmEntry_.value().first;
+  }
+  XDCHECK(localEntryName_.has_value());
+  return localEntryName_.value();
 }
 
 ImmediateFuture<CheckoutActionResult> CheckoutAction::run(
@@ -102,18 +124,22 @@ ImmediateFuture<CheckoutActionResult> CheckoutAction::run(
     if (newScmEntry_.has_value()) {
       const auto& newEntry = newScmEntry_.value();
       if (newEntry.second.isTree()) {
-        auto getTreeSpan = ctx->createSpan("getTree");
-        loadFutures.emplace_back(
-            store
-                ->getTree(newEntry.second.getObjectId(), ctx->getFetchContext())
-                .thenValue(
-                    [self = shared_from_this(), span = std::move(getTreeSpan)](
-                        std::shared_ptr<const Tree> newTree) mutable {
-                      self->setNewTree(std::move(newTree));
-                    })
-                .thenError([self = shared_from_this()](exception_wrapper&& ew) {
-                  self->error("error getting new tree", std::move(ew));
-                }));
+        if (!newEntry.second.isRestricted()) {
+          auto getTreeSpan = ctx->createSpan("getTree");
+          loadFutures.emplace_back(
+              store
+                  ->getTree(
+                      newEntry.second.getObjectId(), ctx->getFetchContext())
+                  .thenValue([self = shared_from_this(),
+                              span = std::move(getTreeSpan)](
+                                 std::shared_ptr<const Tree> newTree) mutable {
+                    self->setNewTree(std::move(newTree));
+                  })
+                  .thenError(
+                      [self = shared_from_this()](exception_wrapper&& ew) {
+                        self->error("error getting new tree", std::move(ew));
+                      }));
+        }
       } else {
         // We don't actually compare the new blob to anything, so we don't need
         // to fetch it. This just marks that the new inode will be a file.
@@ -224,6 +250,25 @@ ImmediateFuture<CheckoutActionResult> CheckoutAction::doAction() {
               InvalidationRequired::No, /*hadConflicts=*/true};
         }
 
+        if (!self->oldScmEntry_ && !self->newScmEntry_) {
+          auto treeInode = self->inode_.asTreePtrOrNull();
+          if (!treeInode) {
+            return CheckoutActionResult{
+                InvalidationRequired::No, conflictWasAddedToCtx};
+          }
+          return treeInode
+              ->checkout(
+                  self->ctx_,
+                  nullptr,
+                  nullptr,
+                  /*reportLocalOnlyAsConflicts=*/true)
+              .thenValue([conflictWasAddedToCtx](CheckoutSubtreeResult result) {
+                result.hadConflicts |= conflictWasAddedToCtx;
+                return CheckoutActionResult{
+                    InvalidationRequired::No, result.hadConflicts};
+              });
+        }
+
         // Call TreeInode::checkoutUpdateEntry() to actually do the work.
         //
         // Note that we are moving most of our state into the
@@ -301,8 +346,14 @@ ImmediateFuture<bool> CheckoutAction::hasConflict() {
 
   XDCHECK(!oldScmEntry_) << "Both oldTree_ and oldBlob_ are nullptr, "
                             "so this file should not have an oldScmEntry_.";
-  XDCHECK(newScmEntry_) << "If there is no oldScmEntry_, then there must be a "
-                           "newScmEntry_.";
+
+  if (!newScmEntry_) {
+    if (inode_.asTreePtrOrNull()) {
+      return false;
+    }
+    ctx_->addConflict(ConflictType::UNTRACKED_ADDED, inode_.get());
+    return true;
+  }
 
   auto localIsFile = inode_.asFilePtrOrNull() != nullptr;
   if (localIsFile) {
