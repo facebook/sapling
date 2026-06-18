@@ -65,6 +65,7 @@ impl LocalFrom<edenfs::ConflictType> for ConflictType {
             edenfs::ConflictType::MISSING_REMOVED => ConflictType::MissingRemoved,
             edenfs::ConflictType::MODIFIED_MODIFIED => ConflictType::ModifiedModified,
             edenfs::ConflictType::DIRECTORY_NOT_EMPTY => ConflictType::DirectoryNotEmpty,
+            edenfs::ConflictType::VISIBLE_RESTRICTED => ConflictType::VisibleRestricted,
             _ => panic!("unexpected ConflictType: {conflict_type}"),
         }
     }

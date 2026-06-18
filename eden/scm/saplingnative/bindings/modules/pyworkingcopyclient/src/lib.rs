@@ -48,7 +48,7 @@ py_class!(pub class WorkingCopyClient |py| {
     /// checkout(config, node, tree_node, mode: 'NORMAL' | 'FORCE' | 'DRY_RUN')
     ///   -> [{'path': str, 'conflict_type': 'ERROR' | 'MODIFIED_REMOVED' | ..., 'message': str}]
     /// All conflict types: "ERROR", "MODIFIED_REMOVED", "UNTRACKED_ADDED", "REMOVED_MODIFIED",
-    /// "MISSING_REMOVED", "MODIFIED_MODIFIED", "DIRECTORY_NOT_EMPTY".
+    /// "MISSING_REMOVED", "MODIFIED_MODIFIED", "DIRECTORY_NOT_EMPTY", "VISIBLE_RESTRICTED".
     def checkout(&self, config: PyConfig, node: Serde<HgId>, tree_node: Serde<HgId>, mode: Serde<CheckoutMode>) -> PyResult<Serde<Vec<CheckoutConflict>>> {
         let inner = self.inner(py);
         let config = &config.get_cfg(py);

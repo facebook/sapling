@@ -234,6 +234,10 @@ def _determine_actions_for_conflicts(repo, src, conflicts, wctx, destctx):
             action_type = mergemod.ACTION_CHANGED_DELETED
             action = (path, None, path, False, src.node())
             prompt = "prompt changed/deleted"
+        elif conflict_type == "VISIBLE_RESTRICTED":
+            action_type = mergemod.ACTION_MERGE
+            action = (path, path, None, False, src.node())
+            prompt = "both created"
         elif conflict_type == "UNTRACKED_ADDED":
             dest_manifest = destctx.manifest()
             if dest_manifest.lookup(path) is None:

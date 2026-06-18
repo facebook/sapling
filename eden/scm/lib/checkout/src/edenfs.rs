@@ -95,6 +95,12 @@ fn actionmap_from_eden_conflicts(
                 abort_on_eden_conflict_error(config, vec![conflict.clone()])?;
                 None
             }
+            ConflictType::VisibleRestricted => {
+                return Err(CheckoutConflictsError {
+                    conflicts: vec![conflict.path.clone()],
+                }
+                .into());
+            }
             ConflictType::UntrackedAdded | ConflictType::RemovedModified => {
                 let conflict_path = conflict.path.as_repo_path();
                 let mut is_ignored = false;

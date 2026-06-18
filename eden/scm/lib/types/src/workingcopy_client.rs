@@ -54,6 +54,9 @@ pub enum ConflictType {
     /// A directory was supposed to be removed or replaced with a file,
     /// but it contains untracked files preventing us from updating it.
     DirectoryNotEmpty,
+    /// A path would become restricted by the destination checkout while local
+    /// state at that path remains visible and must be reported as a conflict.
+    VisibleRestricted,
 }
 
 // edenfs::CheckoutConflict
