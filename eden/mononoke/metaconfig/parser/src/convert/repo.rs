@@ -1406,7 +1406,7 @@ impl Convert for RawRestrictedPathsConfig {
         let admin_bypass_group = self
             .admin_bypass_group
             .map(|group| {
-                MononokeIdentity::from_str(&group)
+                MononokeIdentity::from_str(format!("GROUP:{group}").as_str())
                     .with_context(|| format!("Failed to parse admin_bypass_group `{group}`"))
             })
             .transpose()?;
