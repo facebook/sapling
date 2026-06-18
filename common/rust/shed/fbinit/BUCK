@@ -43,9 +43,14 @@ rust_library(
     unittests = False,
     deps = [
         ":fbinit_macros",
-    ] + ([
-        "fbsource//third-party/rust:quickcheck",
-    ] if rust_oss.is_oss_build() else []),
+    ]
+    + (
+        [
+            "fbsource//third-party/rust:quickcheck",
+        ]
+        if rust_oss.is_oss_build()
+        else []
+    ),
 )
 
 rust_library(
@@ -108,10 +113,15 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:tokio",
-    ] + ([] if rust_oss.is_oss_build() else select({
-        "DEFAULT": [],
-        "ovr_config//os:linux": [
-            "//common/rust/folly:request_context_tokio",
-        ],
-    })),
+    ]
+    + (
+        []
+        if rust_oss.is_oss_build()
+        else select({
+            "DEFAULT": [],
+            "ovr_config//os:linux": [
+                "//common/rust/folly:request_context_tokio",
+            ],
+        })
+    ),
 )
