@@ -24,11 +24,15 @@ rust_library(
         "src/**/*.rs",
         "test_just_knobs/**/*.json",
     ]),
+    test_deps = [
+        "fbsource//third-party/rust:tracing-subscriber",
+    ],
     deps = [
         "fbsource//third-party/rust:tokio",
         "fbsource//third-party/rust:tracing",
         ":mononoke_proc_macros",
         "//eden/mononoke/common/rust/justknobs_ext:justknobs",
+        "//eden/mononoke/common/rust/request_context_ext:request_context_ext",
     ],
 )
 
