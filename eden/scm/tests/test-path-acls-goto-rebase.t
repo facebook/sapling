@@ -1,3 +1,13 @@
+#testcases rustcheckout pythoncheckout
+
+#if rustcheckout
+  $ setconfig checkout.use-rust=true
+#endif
+
+#if pythoncheckout
+  $ setconfig checkout.use-rust=false
+#endif
+
   $ setconfig scmstore.fetch-tree-aux-data=true
   $ setconfig scmstore.tree-metadata-mode=always
   $ setconfig experimental.restricted-tree-mode=enforced
@@ -43,7 +53,12 @@ Goto: local modifications to a file that becomes restricted
   $ echo 'local change' > dir/file.txt
 #if eden
   $ sl go -q $B
-  abort: path 'dir' is restricted by ACL 'some-acl'
+  abort: 1 conflicting file changes: (rustcheckout !)
+   dir/file.txt (rustcheckout !)
+  (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them) (rustcheckout !)
+  abort: conflicting changes: (pythoncheckout !)
+    dir/file.txt (pythoncheckout !)
+  (commit or goto --clean to discard changes) (pythoncheckout !)
   [255]
 #else
   $ sl go -q $B

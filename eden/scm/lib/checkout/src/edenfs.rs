@@ -39,6 +39,7 @@ use treestate::filestate::StateFlags;
 use types::HgId;
 #[cfg(feature = "eden")]
 use types::RepoPath;
+use types::errors::PermissionDenied;
 use types::workingcopy_client::CheckoutConflict;
 use types::workingcopy_client::CheckoutMode;
 use types::workingcopy_client::ConflictType;
@@ -50,6 +51,7 @@ use workingcopy::workingcopy::WorkingCopy;
 
 use crate::ActionMap;
 use crate::Checkout;
+use crate::CheckoutConflictsError;
 use crate::CheckoutPlan;
 use crate::actions::Action;
 use crate::actions::UpdateAction;
@@ -128,7 +130,17 @@ fn actionmap_from_eden_conflicts(
                         removed.push(conflict_path.to_owned());
                     }
                 }
-                match target_manifest.get(conflict_path)? {
+                let target = match target_manifest.get(conflict_path) {
+                    Ok(target) => target,
+                    Err(err) if err.downcast_ref::<PermissionDenied>().is_some() => {
+                        return Err(CheckoutConflictsError {
+                            conflicts: vec![conflict.path.clone()],
+                        }
+                        .into());
+                    }
+                    Err(err) => return Err(err),
+                };
+                match target {
                     Some(FsNodeMetadata::File(meta)) => {
                         Some(Action::Update(UpdateAction::new(None, meta)))
                     }
@@ -169,9 +181,19 @@ fn actionmap_from_eden_conflicts(
                 let old_meta = source_manifest.get_file(conflict_path)?.context(format!(
                     "file metadata for {conflict_path} not found at source commit"
                 ))?;
-                let new_meta = target_manifest.get_file(conflict_path)?.context(format!(
-                    "file metadata for {conflict_path} not found at target commit"
-                ))?;
+                let new_meta = match target_manifest.get_file(conflict_path) {
+                    Ok(Some(meta)) => meta,
+                    Ok(None) => {
+                        bail!("file metadata for {conflict_path} not found at target commit")
+                    }
+                    Err(err) if err.downcast_ref::<PermissionDenied>().is_some() => {
+                        return Err(CheckoutConflictsError {
+                            conflicts: vec![conflict.path.clone()],
+                        }
+                        .into());
+                    }
+                    Err(err) => return Err(err),
+                };
                 changed_metadata_to_action(old_meta, new_meta)
             }
             ConflictType::MissingRemoved => {

@@ -57,6 +57,7 @@ use types::Key;
 use types::RepoPath;
 use types::RepoPathBuf;
 use types::errors::KeyedError;
+use types::errors::PermissionDenied;
 use types::hgid::MF_ADDED_NODE_ID;
 use types::hgid::MF_MODIFIED_NODE_ID;
 use types::hgid::MF_UNTRACKED_NODE_ID;
@@ -488,6 +489,7 @@ impl CheckoutPlan {
         }
 
         let mut check_content = vec![];
+        let mut paths = Vec::new();
 
         let bar = ProgressBar::new_adhoc("Checking untracked", unknown.len() as u64, "files");
 
@@ -531,9 +533,14 @@ impl CheckoutPlan {
 
             if unknown && matches!(vfs.is_file(file), Ok(true)) {
                 let repo_path = file.as_repo_path();
-                let hgid = match manifest.get_file(repo_path)? {
-                    Some(m) => m.hgid,
-                    None => {
+                let hgid = match manifest.get_file(repo_path) {
+                    Err(err) if err.downcast_ref::<PermissionDenied>().is_some() => {
+                        paths.push(file.clone());
+                        continue;
+                    }
+                    Err(err) => return Err(err),
+                    Ok(Some(m)) => m.hgid,
+                    Ok(None) => {
                         bail!("{repo_path} not found in manifest when checking for unknown files")
                     }
                 };
@@ -551,7 +558,6 @@ impl CheckoutPlan {
             return Ok(unknowns);
         }
 
-        let mut paths = Vec::new();
         for entry in store.get_content_iter(
             FetchContext::new_with_cause(FetchCause::SaplingCheckout),
             check_content,

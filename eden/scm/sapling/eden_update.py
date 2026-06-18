@@ -235,7 +235,12 @@ def _determine_actions_for_conflicts(repo, src, conflicts, wctx, destctx):
             action = (path, None, path, False, src.node())
             prompt = "prompt changed/deleted"
         elif conflict_type == "UNTRACKED_ADDED":
-            if destctx.hasdir(path):
+            dest_manifest = destctx.manifest()
+            if dest_manifest.lookup(path) is None:
+                action_type = mergemod.ACTION_MERGE
+                action = (path, path, None, False, src.node())
+                prompt = "both created"
+            elif destctx.hasdir(path):
                 # The conflict path is a directory in the destination (e.g.
                 # an untracked file/symlink being replaced by a tracked
                 # directory). EdenFS handles directory creation itself.
@@ -264,11 +269,11 @@ def _determine_actions_for_conflicts(repo, src, conflicts, wctx, destctx):
                 #  - if the file is ignored in the wctx, but tracked in the dest,
                 #    we can just take the remote version.
                 action_type = mergemod.ACTION_GET
-                action = (path, destctx.manifest().flags(path), False)
+                action = (path, dest_manifest.flags(path), False)
                 prompt = "remote created"
             else:
-                # In core Mercurial, this is the case where the file does not exist
-                # in the manifest of the common ancestor for the merge.
+                # In core Mercurial, this is the case where the file does not
+                # exist in the manifest of the common ancestor for the merge.
                 # TODO(mbolin): Check for the "both renamed from " case in
                 # manifestmerge(), which is the other possibility when the file
                 # does not exist in the manifest of the common ancestor for the
