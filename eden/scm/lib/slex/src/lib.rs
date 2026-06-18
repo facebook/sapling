@@ -5,16 +5,71 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-//! Sync execution primitives for Sapling.
+//! Sync work scheduling primitives for Sapling.
 //!
-//! Sapling is mostly synchronous Rust, but several latency-sensitive paths benefit from
-//! eagerly starting independent work before its result is needed. This crate centralizes
-//! the small amount of executor policy needed by those call sites.
+//! Sapling is mostly synchronous Rust, but several latency-sensitive paths benefit from doing
+//! independent work in the background or in parallel. This crate centralizes that policy so call
+//! sites do not each invent their own queues, thread thresholds, batching, and cancellation rules.
 //!
-//! [`background`] is for speculative or delayed-use work. It always submits the task
-//! immediately, then returns a [`Background`] handle whose `get` methods wait only if the
-//! task has already started elsewhere. If the task is still queued, `get` runs it inline
-//! instead of waiting behind busy workers.
+//! The core ideas are:
+//!
+//! - [`background`] is for speculative or delayed-use work. It always submits the task immediately,
+//!   then returns a [`Background`] handle whose `get` methods wait only if the task has already
+//!   started elsewhere. If the task is still queued, `get` runs it inline instead of waiting behind
+//!   busy workers.
+//! - [`Items`] is the common transport type. It is either immediately ready or a stream, so APIs can
+//!   return the cheap inline result for small/local work and transparently switch to streaming when
+//!   work is produced asynchronously.
+//! - `Items` transports batches, not individual values. Callers can still iterate item-by-item for
+//!   compatibility, but performance-sensitive pipelines should preserve batches with
+//!   [`Items::into_batches`].
+//! - [`Work`] starts inline and promotes to executor workers only after fan-out makes
+//!   parallelism worthwhile. This keeps small operations cheap without losing throughput for large
+//!   dynamic traversals.
+//! - `Items` composes: the output of one [`Work`] call can feed another.
+//! - `Items` error events are data: consumers decide whether `Err(E)` stops iteration. `Work`
+//!   callback errors and channel failures are control-plane failures and cancel the work set.
+//!
+//! Basic ready-vs-stream usage:
+//!
+//! ```rust
+//! # use slex::Items;
+//! let local: Items<i32> = Items::ready(vec![1, 2, 3]);
+//! let streamed: Items<i32> = Items::stream([Ok(vec![1, 2]), Ok(vec![3])].into_iter());
+//! ```
+//!
+//! Mapping work while allowing the executor to decide whether to stay inline:
+//!
+//! ```rust
+//! # use slex::{Items, Work, WorkOptions};
+//! let input: Items<i32> = Items::ready(vec![1, 2, 3]);
+//! let results = Work::map(WorkOptions::new(), input, |item| item * 2);
+//! ```
+//!
+//! Dynamic fan-out uses [`WorkShape::batch`] and [`WorkScope`] to publish results and submit more
+//! work from inside a worker:
+//!
+//! ```rust
+//! # use slex::{Items, Work, WorkOptions, WorkScope, WorkShape};
+//! let roots: Items<i32, ()> = Items::ready(vec![0]);
+//! let _results = Work::run(
+//!     WorkOptions::new(),
+//!     roots,
+//!     WorkShape::batch(|batch: Vec<i32>, scope: &mut WorkScope<'_, i32, i32, ()>| {
+//!         for item in batch {
+//!             scope.send_result([item]);
+//!             if item < 3 {
+//!                 scope.submit_work(item + 1);
+//!             }
+//!         }
+//!         Ok(())
+//!     }),
+//! );
+//! ```
+
+pub mod channel;
+mod items_writer;
+mod work;
 
 use std::panic;
 use std::panic::AssertUnwindSafe;
@@ -24,8 +79,20 @@ use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 
+pub use items_writer::ItemsWriter;
+pub use items_writer::ItemsWriterOptions;
 use parking_lot::Mutex;
+pub use slex_items::Batch;
+pub use slex_items::Items;
+pub use slex_items::ItemsBatches;
+pub use slex_items::ScopedItems;
 use tokio::task::JoinHandle;
+pub use work::Work;
+pub use work::WorkOptions;
+pub use work::WorkScope;
+pub use work::WorkShape;
+#[doc(hidden)]
+pub use work::WorkShapeImpl;
 
 struct LimitedSpawner {
     available: AtomicUsize,
@@ -38,10 +105,34 @@ impl LimitedSpawner {
         }
     }
 
-    fn maybe_spawn<T, J, F>(
+    fn maybe_spawn_one<T, J>(&'static self, min: usize, job: J) -> Option<JoinHandle<T>>
+    where
+        T: Send + 'static,
+        J: FnOnce() -> T + Send + 'static,
+    {
+        let (claimed, count) = self.claim_count(min, 1);
+        if count == 0 {
+            return None;
+        }
+        let permit = (claimed > 0).then_some(LimitedSpawnPermit { spawner: self });
+        Some(async_runtime::spawn_blocking(move || {
+            let _permit = permit;
+            job()
+        }))
+    }
+
+    fn claim_count(&self, min: usize, max: usize) -> (usize, usize) {
+        let max = max.max(min);
+        let claimed = self.claim(max);
+        // `min` workers are allowed to exceed the soft limit. Work uses this to guarantee forward
+        // progress when all permits are occupied; background uses it to start the primary worker.
+        (claimed, claimed.max(min).min(max))
+    }
+
+    fn spawn_claimed<T, J, F>(
         &'static self,
-        min: usize,
-        max: usize,
+        claimed: usize,
+        count: usize,
         mut make_job: F,
     ) -> Vec<JoinHandle<T>>
     where
@@ -49,11 +140,7 @@ impl LimitedSpawner {
         J: FnOnce() -> T + Send + 'static,
         F: FnMut() -> J,
     {
-        let max = max.max(min);
-        let claimed = self.claim(max);
-        // `min` workers are allowed to exceed the soft limit. Work uses this to guarantee forward
-        // progress when all permits are occupied; background uses it to start the primary worker.
-        (0..claimed.max(min).min(max))
+        (0..count)
             .map(|index| {
                 let permit = (index < claimed).then_some(LimitedSpawnPermit { spawner: self });
                 let job = make_job();
@@ -269,10 +356,10 @@ impl BackgroundExecutor {
 
     fn spawn_worker(&'static self, primary: bool) {
         let min = usize::from(primary);
-        self.spawner.maybe_spawn(min, 1, move || {
-            let receiver = self.receiver.clone();
-            move || self.run_worker(receiver, primary)
-        });
+        let receiver = self.receiver.clone();
+        let _ = self
+            .spawner
+            .maybe_spawn_one(min, move || self.run_worker(receiver, primary));
     }
 
     fn run_worker(&'static self, receiver: BackgroundReceiver, primary: bool) {
@@ -327,8 +414,14 @@ pub(crate) fn join_blocking<T>(handle: JoinHandle<T>) -> T {
     match result {
         Ok(value) => value,
         Err(err) if err.is_panic() => panic::resume_unwind(err.into_panic()),
-        Err(err) => panic!("slex task was cancelled: {err}"),
+        Err(err) => panic!("sapling executor task was cancelled: {err}"),
     }
+}
+
+const DEFAULT_MAX_WORKERS: usize = 8;
+
+pub(crate) fn default_max_workers() -> usize {
+    num_cpus::get().clamp(1, DEFAULT_MAX_WORKERS)
 }
 
 #[cfg(test)]
@@ -414,5 +507,126 @@ mod tests {
         });
 
         assert!(!receiver.recv_timeout(Duration::from_secs(1)).unwrap());
+    }
+
+    #[test]
+    fn items_ready_avoids_stream_setup() {
+        let batch: Items<i32> = Items::ready(vec![1, 2, 3]);
+        let items = batch.into_iter().collect::<Result<Vec<_>, _>>().unwrap();
+
+        assert_eq!(items, vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn items_ready_accepts_stack_collections() {
+        let batch: Items<i32> = Items::ready(&[1, 2, 3][..]);
+        let items = batch.into_iter().collect::<Result<Vec<_>, _>>().unwrap();
+
+        assert_eq!(items, vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn fallible_items_flatten_without_nested_result() {
+        let batch: Items<i32, &'static str> = Items::stream([Ok(vec![1]), Err("boom")].into_iter());
+        let mut iter = batch.into_iter();
+
+        assert_eq!(iter.next(), Some(Ok(1)));
+        assert_eq!(iter.next(), Some(Err("boom")));
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn item_stream_can_be_returned_as_boxed_item_iter() {
+        let batch: Items<i32, &'static str> =
+            Items::item_stream(vec![Ok(1), Err("boom")].into_iter());
+        let mut iter = Box::new(batch.into_iter());
+
+        assert_eq!(iter.next(), Some(Ok(1)));
+        assert_eq!(iter.next(), Some(Err("boom")));
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn item_stream_into_batches_yields_single_item_batches() {
+        let batch: Items<i32> = Items::item_stream((0..3).map(Ok));
+        let batches = batch.into_batches().collect::<Result<Vec<_>, _>>().unwrap();
+
+        assert_eq!(batches.len(), 3);
+        assert_eq!(batches[0].as_slice(), &[0]);
+        assert_eq!(batches[1].as_slice(), &[1]);
+        assert_eq!(batches[2].as_slice(), &[2]);
+    }
+
+    #[test]
+    fn item_stream_into_batches_preserves_fallible_items() {
+        let batch: Items<i32, &'static str> =
+            Items::item_stream(vec![Ok(1), Ok(2), Err("boom"), Ok(3)].into_iter());
+        let mut batches = batch.into_batches();
+
+        assert_eq!(batches.next().unwrap().unwrap().as_slice(), &[1]);
+        assert_eq!(batches.next().unwrap().unwrap().as_slice(), &[2]);
+        assert_eq!(batches.next(), Some(Err("boom")));
+        assert_eq!(batches.next().unwrap().unwrap().as_slice(), &[3]);
+    }
+
+    #[test]
+    fn items_writer_inline_finishes_as_ready_items() {
+        let mut writer = ItemsWriter::<i32>::inline();
+        assert!(writer.push_item(1));
+        assert!(writer.push_item(3));
+
+        assert_eq!(writer.finish_inline(), vec![1, 3]);
+    }
+
+    #[test]
+    fn items_writer_stream_flushes_batches() {
+        let options = ItemsWriterOptions::new().batch_items(2).queue_size(2);
+        let (mut writer, items) =
+            ItemsWriter::<i32>::stream_with_options::<std::convert::Infallible>(options);
+
+        assert!(writer.push_item(1));
+        assert!(writer.push_item(2));
+        assert!(writer.push_item(3));
+        assert!(writer.close());
+
+        let mut batches = items.into_batches().collect::<Vec<_>>();
+        assert_eq!(batches.len(), 2);
+        assert_eq!(batches.remove(0).unwrap().as_slice(), &[1, 2]);
+        assert_eq!(batches.remove(0).unwrap().as_slice(), &[3]);
+    }
+
+    #[test]
+    fn items_from_process_inline_returns_ready_items() {
+        let items = ItemsWriter::from_process(false, |writer| {
+            assert!(writer.push_item(1));
+            assert!(writer.push_item(2));
+        });
+
+        assert!(matches!(items.into_batches(), ItemsBatches::Ready(_)));
+    }
+
+    #[test]
+    fn items_from_process_inline_returns_expected_items() {
+        let items = ItemsWriter::from_process(false, |writer| {
+            assert!(writer.push_item(1));
+            assert!(writer.push_item(2));
+        });
+
+        assert_eq!(
+            items.into_iter().collect::<Result<Vec<_>, _>>().unwrap(),
+            vec![1, 2]
+        );
+    }
+
+    #[test]
+    fn items_from_process_spawn_returns_stream() {
+        let caller = thread::current().id();
+        let items = ItemsWriter::from_process(true, move |writer| {
+            assert!(writer.push_item(thread::current().id()));
+        });
+
+        let ids = items.into_iter().collect::<Result<Vec<_>, _>>().unwrap();
+        assert_eq!(ids.len(), 1);
+        assert_ne!(ids[0], caller);
     }
 }

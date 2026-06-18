@@ -1,3 +1,4 @@
+load("@fbsource//tools/build_defs:rust_binary.bzl", "rust_binary")
 load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
 
 oncall("sapling")
@@ -7,6 +8,17 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     autocargo = {
         "cargo_toml_config": {
+            "bench": [
+                {
+                    "harness": False,
+                    "name": "executor",
+                },
+            ],
+            "extra_buck_dependencies": {
+                "dev-dependencies": [
+                    "//eden/scm/lib/minibench:minibench",
+                ],
+            },
             "lib": {"name": "slex"},
             "package": {
                 "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
@@ -20,8 +32,23 @@ rust_library(
     crate_root = "src/lib.rs",
     deps = [
         "fbsource//third-party/rust:crossfire",
+        "fbsource//third-party/rust:num_cpus",
         "fbsource//third-party/rust:parking_lot",
         "fbsource//third-party/rust:tokio",
         "//eden/scm/lib/async-runtime:async-runtime",
+        "//eden/scm/lib/slex/items:slex_items",
+    ],
+)
+
+rust_binary(
+    name = "executor-benches",
+    srcs = ["benches/executor.rs"],
+    crate_root = "benches/executor.rs",
+    deps = [
+        "fbsource//third-party/rust:crossfire",
+        "fbsource//third-party/rust:flume",
+        "fbsource//third-party/rust:tokio",
+        ":slex",
+        "//eden/scm/lib/minibench:minibench",
     ],
 )
