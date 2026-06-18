@@ -25,6 +25,15 @@ class Blob;
 class CheckoutContext;
 class ObjectStore;
 
+struct CheckoutSubtreeResult {
+  bool hadConflicts{false};
+};
+
+struct CheckoutActionResult {
+  InvalidationRequired invalidationRequired{InvalidationRequired::No};
+  bool hadConflicts{false};
+};
+
 /**
  * A helper class representing an action that must be taken as part of a
  * checkout operation.
@@ -95,7 +104,7 @@ class CheckoutAction : public std::enable_shared_from_this<CheckoutAction> {
    * entries. Returns whether the caller is responsible for invalidating the
    * directory's inode cache in the kernel.
    */
-  [[nodiscard]] ImmediateFuture<InvalidationRequired> run(
+  [[nodiscard]] ImmediateFuture<CheckoutActionResult> run(
       CheckoutContext* ctx,
       ObjectStore* store);
 
@@ -125,7 +134,7 @@ class CheckoutAction : public std::enable_shared_from_this<CheckoutAction> {
    * Return whether the directory's contents have changed and the
    * inode's readdir cache must be flushed.
    */
-  [[nodiscard]] ImmediateFuture<InvalidationRequired> doAction();
+  [[nodiscard]] ImmediateFuture<CheckoutActionResult> doAction();
 
   /**
    * The context for the in-progress checkout operation.

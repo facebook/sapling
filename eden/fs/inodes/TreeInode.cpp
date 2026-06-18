@@ -4166,7 +4166,7 @@ folly::coro::now_task<folly::Unit> TreeInode::co_computeDiff(
   co_return folly::unit;
 }
 
-ImmediateFuture<Unit> TreeInode::checkout(
+ImmediateFuture<CheckoutSubtreeResult> TreeInode::checkout(
     CheckoutContext* ctx,
     std::shared_ptr<const Tree> fromTree,
     std::shared_ptr<const Tree> toTree) {
@@ -4190,6 +4190,7 @@ ImmediateFuture<Unit> TreeInode::checkout(
   // that is already a placeholder.
   bool shouldInvalidateDirectory =
       getMount()->getEdenConfig()->alwaysInvalidateDirectory.getValue();
+  bool hadConflicts = false;
 
   bool propagateErrors =
       getMount()->getEdenConfig()->propagateCheckoutErrors.getValue();
@@ -4200,7 +4201,8 @@ ImmediateFuture<Unit> TreeInode::checkout(
       toTree.get(),
       actions,
       pendingLoads,
-      shouldInvalidateDirectory);
+      shouldInvalidateDirectory,
+      hadConflicts);
 
   // Wire up the callbacks for any pending inode loads we started
   for (auto& load : pendingLoads) {
@@ -4208,7 +4210,7 @@ ImmediateFuture<Unit> TreeInode::checkout(
   }
 
   // Now start all of the checkout actions
-  std::vector<ImmediateFuture<InvalidationRequired>> actionFutures;
+  std::vector<ImmediateFuture<CheckoutActionResult>> actionFutures;
   actionFutures.reserve(actions.size());
   for (const auto& action : actions) {
     actionFutures.emplace_back(action->run(ctx, &getObjectStore()));
@@ -4230,16 +4232,19 @@ ImmediateFuture<Unit> TreeInode::checkout(
            toTree = std::move(toTree),
            actions = std::move(actions),
            shouldInvalidateDirectory,
-           propagateErrors](
-              vector<folly::Try<InvalidationRequired>> actionResults) mutable
-              -> ImmediateFuture<folly::Unit> {
+           propagateErrors,
+           hadConflicts](
+              vector<folly::Try<CheckoutActionResult>> actionResults) mutable
+              -> ImmediateFuture<CheckoutSubtreeResult> {
             // Record any errors that occurred
             size_t numErrors = 0;
             for (size_t n = 0; n < actionResults.size(); ++n) {
               auto& result = actionResults[n];
               if (!result.hasException()) {
+                hadConflicts |= result.value().hadConflicts;
                 shouldInvalidateDirectory |=
-                    (result.value() == InvalidationRequired::Yes);
+                    (result.value().invalidationRequired ==
+                     InvalidationRequired::Yes);
                 continue;
               }
 
@@ -4247,13 +4252,15 @@ ImmediateFuture<Unit> TreeInode::checkout(
                 // If propagating errors... propagate the error. This will cause
                 // the checkout operation to fail at the top level, and leave us
                 // in an interrupted checkout state.
-                return makeImmediateFuture<Unit>(result.exception());
+                return makeImmediateFuture<CheckoutSubtreeResult>(
+                    result.exception());
               } else {
                 // Not propagating errors - hide this error away as a
                 // "conflict". Sapling can see the error, but we pretend the
                 // checkout succeeded, which makes it hard if not impossible to
                 // recover properly.
                 ++numErrors;
+                hadConflicts = true;
                 ctx->addError(
                     self.get(), actions[n]->getEntryName(), result.exception());
               }
@@ -4288,17 +4295,21 @@ ImmediateFuture<Unit> TreeInode::checkout(
             }
 
             return std::move(invalidation)
-                .thenValue(
-                    [self, ctx, toTree = std::move(toTree), numErrors](auto&&) {
-                      // Update our state in the overlay
-                      self->saveOverlayPostCheckout(ctx, toTree.get());
+                .thenValue([self,
+                            ctx,
+                            toTree = std::move(toTree),
+                            numErrors,
+                            hadConflicts](auto&&) {
+                  // Update our state in the overlay
+                  self->saveOverlayPostCheckout(ctx, toTree.get());
 
-                      XLOGF(
-                          DBG4,
-                          "checkout: finished update of {}: {} errors",
-                          self->getLogPath(),
-                          numErrors);
-                    });
+                  XLOGF(
+                      DBG4,
+                      "checkout: finished update of {}: {} errors",
+                      self->getLogPath(),
+                      numErrors);
+                  return CheckoutSubtreeResult{hadConflicts};
+                });
           })
       .ensure([ctx] { ctx->increaseCheckoutCounter(1); });
 }
@@ -4367,7 +4378,8 @@ void TreeInode::computeCheckoutActions(
     const Tree* toTree,
     vector<std::shared_ptr<CheckoutAction>>& actions,
     vector<IncompleteInodeLoad>& pendingLoads,
-    bool& wasDirectoryListModified) {
+    bool& wasDirectoryListModified,
+    bool& hadConflicts) {
   auto computeActionsSpan = ctx->createSpan("computeCheckoutActions");
 
   // Grab the contents_ lock for the duration of this function. Checkout is an
@@ -4425,7 +4437,8 @@ void TreeInode::computeCheckoutActions(
             nullptr,
             &*newIter,
             pendingLoads,
-            wasDirectoryListModified);
+            wasDirectoryListModified,
+            hadConflicts);
         ++newIter;
       } else if (newIter == newEnd) {
         // This entry is present in the old tree but not the old one.
@@ -4436,7 +4449,8 @@ void TreeInode::computeCheckoutActions(
             &*oldIter,
             nullptr,
             pendingLoads,
-            wasDirectoryListModified);
+            wasDirectoryListModified,
+            hadConflicts);
         ++oldIter;
       } else {
         auto compare = comparePathPiece(
@@ -4452,7 +4466,8 @@ void TreeInode::computeCheckoutActions(
               &*oldIter,
               nullptr,
               pendingLoads,
-              wasDirectoryListModified);
+              wasDirectoryListModified,
+              hadConflicts);
           ++oldIter;
         } else if (compare == CompareResult::AFTER) {
           action = processCheckoutEntry(
@@ -4462,7 +4477,8 @@ void TreeInode::computeCheckoutActions(
               nullptr,
               &*newIter,
               pendingLoads,
-              wasDirectoryListModified);
+              wasDirectoryListModified,
+              hadConflicts);
           ++newIter;
         } else {
           action = processCheckoutEntry(
@@ -4472,7 +4488,8 @@ void TreeInode::computeCheckoutActions(
               &*oldIter,
               &*newIter,
               pendingLoads,
-              wasDirectoryListModified);
+              wasDirectoryListModified,
+              hadConflicts);
           ++oldIter;
           ++newIter;
         }
@@ -4507,7 +4524,8 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
     const Tree::value_type* oldScmEntry,
     const Tree::value_type* newScmEntry,
     std::vector<IncompleteInodeLoad>& pendingLoads,
-    bool& wasDirectoryListModified) {
+    bool& wasDirectoryListModified,
+    bool& hadConflicts) {
   auto ret = processCheckoutEntryImpl(
       ctx,
       state,
@@ -4515,7 +4533,8 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
       oldScmEntry,
       newScmEntry,
       pendingLoads,
-      wasDirectoryListModified);
+      wasDirectoryListModified,
+      hadConflicts);
   if (!ret) {
     const auto& name = oldScmEntry ? oldScmEntry->first : newScmEntry->first;
     if (auto it = contents.find(name); it != contents.end()) {
@@ -4600,7 +4619,8 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
     const Tree::value_type* oldScmEntry,
     const Tree::value_type* newScmEntry,
     vector<IncompleteInodeLoad>& pendingLoads,
-    bool& wasDirectoryListModified) {
+    bool& wasDirectoryListModified,
+    bool& hadConflicts) {
   XLOGF(
       DBG5,
       "processCheckoutEntryImpl({}): {} -> {}",
@@ -4647,7 +4667,8 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
         contents,
         oldScmEntry,
         newScmEntry,
-        wasDirectoryListModified);
+        wasDirectoryListModified,
+        hadConflicts);
   }
 
   auto& entry = it->second;
@@ -4670,6 +4691,7 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
           wasDirectoryListModified);
       if (success.hasException()) {
         ctx->addError(this, name, success.exception());
+        hadConflicts = true;
         return nullptr;
       }
       ctx->increaseCheckoutCounter(1 + descendants);
@@ -4752,6 +4774,7 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
 
     // Report the conflict, and then bail out if we aren't doing a force update
     ctx->addConflict(conflictType, this, name, entry.getDtype());
+    hadConflicts = true;
     if (!ctx->forceUpdate()) {
       return nullptr;
     }
@@ -4800,6 +4823,7 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
       }
     }
     ctx->addError(this, name, success.exception());
+    hadConflicts = true;
     return nullptr;
   }
 
@@ -4817,7 +4841,8 @@ std::shared_ptr<CheckoutAction> TreeInode::processAbsentCheckoutEntry(
     Contents& contents,
     const Tree::value_type* oldScmEntry,
     const Tree::value_type* newScmEntry,
-    bool& wasDirectoryListModified) {
+    bool& wasDirectoryListModified,
+    bool& hadConflicts) {
   const auto& name = oldScmEntry ? oldScmEntry->first : newScmEntry->first;
   const auto dtype = oldScmEntry ? oldScmEntry->second.getDtype()
                                  : newScmEntry->second.getDtype();
@@ -4844,10 +4869,12 @@ std::shared_ptr<CheckoutAction> TreeInode::processAbsentCheckoutEntry(
     // We can proceed, but we still flag this as a conflict.
     ctx->addConflict(
         ConflictType::MISSING_REMOVED, this, oldScmEntry->first, dtype);
+    hadConflicts = true;
   } else {
     // The file was removed locally, but modified in the new tree.
     ctx->addConflict(
         ConflictType::REMOVED_MODIFIED, this, oldScmEntry->first, dtype);
+    hadConflicts = true;
     if (ctx->forceUpdate()) {
       XDCHECK(!ctx->isDryRun());
       contentsUpdated = true;
@@ -4884,10 +4911,12 @@ std::shared_ptr<CheckoutAction> TreeInode::processAbsentCheckoutEntry(
           } else {
             ctx->addConflict(ConflictType::UNTRACKED_ADDED, this, name, dtype);
           }
+          hadConflicts = true;
           return nullptr;
         }
       }
       ctx->addError(this, name, success.exception());
+      hadConflicts = true;
     }
   }
 
@@ -4903,6 +4932,7 @@ template std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
     const Tree::value_type*,
     const Tree::value_type*,
     std::vector<IncompleteInodeLoad>&,
+    bool&,
     bool&);
 template std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
     CheckoutContext*,
@@ -4911,6 +4941,7 @@ template std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
     const Tree::value_type*,
     const Tree::value_type*,
     std::vector<IncompleteInodeLoad>&,
+    bool&,
     bool&);
 template std::shared_ptr<CheckoutAction> TreeInode::processAbsentCheckoutEntry(
     CheckoutContext*,
@@ -4918,6 +4949,7 @@ template std::shared_ptr<CheckoutAction> TreeInode::processAbsentCheckoutEntry(
     DirContents&,
     const Tree::value_type*,
     const Tree::value_type*,
+    bool&,
     bool&);
 
 template std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
@@ -4927,6 +4959,7 @@ template std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
     const Tree::value_type*,
     const Tree::value_type*,
     std::vector<IncompleteInodeLoad>&,
+    bool&,
     bool&);
 template std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
     CheckoutContext*,
@@ -4935,6 +4968,7 @@ template std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
     const Tree::value_type*,
     const Tree::value_type*,
     std::vector<IncompleteInodeLoad>&,
+    bool&,
     bool&);
 template std::shared_ptr<CheckoutAction> TreeInode::processAbsentCheckoutEntry(
     CheckoutContext*,
@@ -4942,6 +4976,7 @@ template std::shared_ptr<CheckoutAction> TreeInode::processAbsentCheckoutEntry(
     PathMapMutator<DirEntry>&,
     const Tree::value_type*,
     const Tree::value_type*,
+    bool&,
     bool&);
 
 namespace {
@@ -4953,7 +4988,7 @@ PathComponent getInodeName(CheckoutContext* ctx, const InodePtr& inode) {
 }
 } // namespace
 
-ImmediateFuture<InvalidationRequired> TreeInode::checkoutUpdateEntry(
+ImmediateFuture<CheckoutActionResult> TreeInode::checkoutUpdateEntry(
     CheckoutContext* ctx,
     PathComponentPiece name,
     InodePtr inode,
@@ -4968,7 +5003,7 @@ ImmediateFuture<InvalidationRequired> TreeInode::checkoutUpdateEntry(
     // If the target of the update is not a directory, then we know we do not
     // need to recurse into it, looking for more conflicts, so we can exit here.
     if (ctx->isDryRun()) {
-      return InvalidationRequired::No;
+      return CheckoutActionResult{InvalidationRequired::No};
     }
 
     std::optional<PathComponent> inodeName;
@@ -4980,12 +5015,12 @@ ImmediateFuture<InvalidationRequired> TreeInode::checkoutUpdateEntry(
       // at this name should still be the specified inode.
       auto it = contents->entries.find(name);
       if (it == contents->entries.end()) {
-        return EDEN_BUG_FUTURE(InvalidationRequired)
+        return EDEN_BUG_FUTURE(CheckoutActionResult)
             << "entry removed while holding rename lock during checkout: "
             << inode->getLogPath();
       }
       if (it->second.getInode() != inode.get()) {
-        return EDEN_BUG_FUTURE(InvalidationRequired)
+        return EDEN_BUG_FUTURE(CheckoutActionResult)
             << "entry changed while holding rename lock during checkout: "
             << inode->getLogPath();
       }
@@ -5019,11 +5054,13 @@ ImmediateFuture<InvalidationRequired> TreeInode::checkoutUpdateEntry(
                   it->first,
                   it->second.getDtype());
             }
-            return InvalidationRequired::No;
+            return CheckoutActionResult{
+                InvalidationRequired::No, /*hadConflicts=*/true};
           }
         }
         ctx->addError(this, it->first, success.exception());
-        return InvalidationRequired::No;
+        return CheckoutActionResult{
+            InvalidationRequired::No, /*hadConflicts=*/true};
       }
 
       // This is a file, so we can simply unlink it, and replace/remove the
@@ -5042,7 +5079,7 @@ ImmediateFuture<InvalidationRequired> TreeInode::checkoutUpdateEntry(
     // We don't save our own overlay data right now:
     // we'll wait to do that until the checkout operation finishes touching all
     // of our children in checkout().
-    return InvalidationRequired::Yes;
+    return CheckoutActionResult{InvalidationRequired::Yes};
   }
 
   // If we are going from a directory to a directory, all we need to do
@@ -5078,7 +5115,10 @@ ImmediateFuture<InvalidationRequired> TreeInode::checkoutUpdateEntry(
         // permission-only updates would need a separate invalidation path,
         // especially for NFS.
         return treeInode->checkout(ctx, std::move(oldTree), std::move(newTree))
-            .thenValue([](folly::Unit) { return InvalidationRequired::No; });
+            .thenValue([](CheckoutSubtreeResult result) {
+              return CheckoutActionResult{
+                  InvalidationRequired::No, result.hadConflicts};
+            });
       }
 
       auto currentName = getInodeName(ctx, treeInode);
@@ -5088,7 +5128,7 @@ ImmediateFuture<InvalidationRequired> TreeInode::checkoutUpdateEntry(
         if (it == contents->entries.end() ||
             it->second.getInode() != treeInode.get() ||
             it->second.isRestricted() != oldRestricted) {
-          return InvalidationRequired::No;
+          return CheckoutActionResult{InvalidationRequired::No};
         }
 
         auto invalidateResult = invalidateChannelEntryCache(
@@ -5096,7 +5136,8 @@ ImmediateFuture<InvalidationRequired> TreeInode::checkoutUpdateEntry(
         if (invalidateResult.hasException()) {
           ctx->addError(
               this, currentName.piece(), invalidateResult.exception());
-          return InvalidationRequired::No;
+          return CheckoutActionResult{
+              InvalidationRequired::No, /*hadConflicts=*/true};
         }
       }
 
@@ -5118,9 +5159,13 @@ ImmediateFuture<InvalidationRequired> TreeInode::checkoutUpdateEntry(
                parentInode = inodePtrFromThis(),
                treeInode,
                currentName = std::move(currentName),
-               newRestricted](auto&&) -> ImmediateFuture<InvalidationRequired> {
-                if (ctx->isDryRun()) {
-                  return InvalidationRequired::No;
+               newRestricted](CheckoutSubtreeResult result)
+                  -> ImmediateFuture<CheckoutActionResult> {
+                if (ctx->isDryRun() ||
+                    (newRestricted && result.hadConflicts &&
+                     !ctx->forceUpdate())) {
+                  return CheckoutActionResult{
+                      InvalidationRequired::No, result.hadConflicts};
                 }
 
                 treeInode->isRestricted_.store(
@@ -5130,10 +5175,12 @@ ImmediateFuture<InvalidationRequired> TreeInode::checkoutUpdateEntry(
                 auto it = contents->entries.find(currentName.piece());
                 if (it == contents->entries.end() ||
                     it->second.getInode() != treeInode.get()) {
-                  return InvalidationRequired::No;
+                  return CheckoutActionResult{
+                      InvalidationRequired::No, result.hadConflicts};
                 }
                 it->second.setRestricted(newRestricted);
-                return InvalidationRequired::Yes;
+                return CheckoutActionResult{
+                    InvalidationRequired::Yes, result.hadConflicts};
               });
     }
   }
@@ -5148,12 +5195,15 @@ ImmediateFuture<InvalidationRequired> TreeInode::checkoutUpdateEntry(
            newTree = std::move(newTree),
            parentInode = inodePtrFromThis(),
            treeInode,
-           newScmEntry = newScmEntry](
-              auto&&) mutable -> ImmediateFuture<InvalidationRequired> {
+           newScmEntry =
+               newScmEntry](CheckoutSubtreeResult checkoutResult) mutable
+              -> ImmediateFuture<CheckoutActionResult> {
+            auto hadConflicts = checkoutResult.hadConflicts;
             if (ctx->isDryRun()) {
               // If this is a dry run, simply report conflicts and don't update
               // or invalidate the inode.
-              return InvalidationRequired::No;
+              return CheckoutActionResult{
+                  InvalidationRequired::No, hadConflicts};
             }
 
             const auto& name = getInodeName(ctx, treeInode);
@@ -5197,12 +5247,16 @@ ImmediateFuture<InvalidationRequired> TreeInode::checkoutUpdateEntry(
                 // updating the directory itself to the newTree. This behavior
                 // is consistent with vanilla Mercurial.
                 return treeInode->checkout(ctx, nullptr, std::move(newTree))
-                    .thenValue(
-                        [](folly::Unit) { return InvalidationRequired::No; });
+                    .thenValue([hadConflicts](CheckoutSubtreeResult result) {
+                      return CheckoutActionResult{
+                          InvalidationRequired::No,
+                          hadConflicts || result.hadConflicts};
+                    });
               } else {
                 ctx->addConflict(
                     ConflictType::DIRECTORY_NOT_EMPTY, treeInode.get());
-                return InvalidationRequired::No;
+                return CheckoutActionResult{
+                    InvalidationRequired::No, /*hadConflicts=*/true};
               }
             }
 
@@ -5213,6 +5267,7 @@ ImmediateFuture<InvalidationRequired> TreeInode::checkoutUpdateEntry(
                     InvalidationRequired::No) != 0) {
               ctx->addConflict(
                   ConflictType::DIRECTORY_NOT_EMPTY, treeInode.get());
+              hadConflicts = true;
               // Since we've invalidated the entry, even if this fails we need
               // to make sure the directory is also invalidated, fallthrough.
             }
@@ -5220,7 +5275,8 @@ ImmediateFuture<InvalidationRequired> TreeInode::checkoutUpdateEntry(
             // If the entry does not exist at the new commit we can stop here.
             // no need to add anything back to our parent's contents.
             if (!newScmEntry) {
-              return InvalidationRequired::Yes;
+              return CheckoutActionResult{
+                  InvalidationRequired::Yes, hadConflicts};
             }
 
             // On case insensitive mounts, a change of casing would lead to a
@@ -5259,11 +5315,13 @@ ImmediateFuture<InvalidationRequired> TreeInode::checkoutUpdateEntry(
                       name,
                       "new file created with this name while checkout operation "
                       "was in progress"));
+              hadConflicts = true;
             }
 
             // Make sure that we invalidate the directory in
             // TreeInode::checkout.
-            return InvalidationRequired::Yes;
+            return CheckoutActionResult{
+                InvalidationRequired::Yes, hadConflicts};
           });
 }
 

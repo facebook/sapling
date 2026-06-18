@@ -2723,7 +2723,7 @@ TEST_P(CheckoutTest, checkoutToRestrictedTreeConflictsOnModifiedTrackedFile) {
 
 TEST_P(
     CheckoutTest,
-    checkoutToRestrictedTreeWithConflictStillRestrictsModifiedTrackedFile) {
+    checkoutToRestrictedTreeWithConflictDoesNotRestrictModifiedTrackedFile) {
   auto currentBuilder = FakeTreeBuilder{};
   currentBuilder.setFile("regular/file.txt", "base\n");
   TestMount testMount{RootId{"current"}, currentBuilder};
@@ -2759,9 +2759,7 @@ TEST_P(
           "regular/file.txt",
           "",
           Dtype::REGULAR)));
-  // FIXME: A regular checkout should not apply the restriction when the
-  // recursive checkout reported a non-force conflict.
-  EXPECT_TRUE(testMount.getTreeInode("regular"_relpath)->isRestricted());
+  EXPECT_FALSE(testMount.getTreeInode("regular"_relpath)->isRestricted());
 }
 
 #endif

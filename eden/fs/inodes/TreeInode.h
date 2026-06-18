@@ -21,6 +21,7 @@
 #include "eden/common/utils/FileOffset.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/fuse/Invalidation.h"
+#include "eden/fs/inodes/CheckoutAction.h"
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/inodes/Traverse.h"
@@ -497,7 +498,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * @return Returns a future that will be fulfilled once this tree and all of
    *     its children have been updated.
    */
-  [[nodiscard]] ImmediateFuture<folly::Unit> checkout(
+  [[nodiscard]] ImmediateFuture<CheckoutSubtreeResult> checkout(
       CheckoutContext* ctx,
       std::shared_ptr<const Tree> fromTree,
       std::shared_ptr<const Tree> toTree);
@@ -649,7 +650,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    *     This entry will refer to a tree if and only if the newTree parameter
    *     is non-null.
    */
-  [[nodiscard]] ImmediateFuture<InvalidationRequired> checkoutUpdateEntry(
+  [[nodiscard]] ImmediateFuture<CheckoutActionResult> checkoutUpdateEntry(
       CheckoutContext* ctx,
       PathComponentPiece name,
       InodePtr inode,
@@ -1097,7 +1098,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       const Tree* toTree,
       std::vector<std::shared_ptr<CheckoutAction>>& actions,
       std::vector<IncompleteInodeLoad>& pendingLoads,
-      bool& wasDirectoryListModified);
+      bool& wasDirectoryListModified,
+      bool& hadConflicts);
 
   /**
    * Sets wasDirectoryListModified true if this checkout entry operation has
@@ -1115,7 +1117,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       const Tree::value_type* oldScmEntry,
       const Tree::value_type* newScmEntry,
       std::vector<IncompleteInodeLoad>& pendingLoads,
-      bool& wasDirectoryListModified);
+      bool& wasDirectoryListModified,
+      bool& hadConflicts);
 
   template <typename Contents>
   std::shared_ptr<CheckoutAction> processCheckoutEntryImpl(
@@ -1125,7 +1128,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       const Tree::value_type* oldScmEntry,
       const Tree::value_type* newScmEntry,
       std::vector<IncompleteInodeLoad>& pendingLoads,
-      bool& wasDirectoryListModified);
+      bool& wasDirectoryListModified,
+      bool& hadConflicts);
 
   template <typename Contents>
   folly::Try<folly::Unit> removeOrReplaceCheckoutEntryLocked(
@@ -1144,7 +1148,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       Contents& contents,
       const Tree::value_type* oldScmEntry,
       const Tree::value_type* newScmEntry,
-      bool& wasDirectoryListModified);
+      bool& wasDirectoryListModified,
+      bool& hadConflicts);
 
   void saveOverlayPostCheckout(CheckoutContext* ctx, const Tree* tree);
 

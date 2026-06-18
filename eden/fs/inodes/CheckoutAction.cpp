@@ -61,7 +61,7 @@ PathComponentPiece CheckoutAction::getEntryName() const {
                                   : newScmEntry_.value().first;
 }
 
-ImmediateFuture<InvalidationRequired> CheckoutAction::run(
+ImmediateFuture<CheckoutActionResult> CheckoutAction::run(
     CheckoutContext* ctx,
     ObjectStore* store) {
   ctx->throwIfCanceled();
@@ -141,7 +141,7 @@ ImmediateFuture<InvalidationRequired> CheckoutAction::run(
   return collectAll(std::move(loadFutures))
       .thenValue(
           [self = shared_from_this()](
-              auto&&) -> ImmediateFuture<InvalidationRequired> {
+              auto&&) -> ImmediateFuture<CheckoutActionResult> {
             if (!self->errors_.empty()) {
               // If multiple errors occurred, we log them all, but only
               // propagate up the first one.  If necessary we could change this
@@ -153,7 +153,7 @@ ImmediateFuture<InvalidationRequired> CheckoutAction::run(
               for (const auto& ew : self->errors_) {
                 XLOGF(ERR, "CheckoutAction error: {}", folly::exceptionStr(ew));
               }
-              return makeImmediateFuture<InvalidationRequired>(
+              return makeImmediateFuture<CheckoutActionResult>(
                   self->errors_[0]);
             }
 
@@ -197,13 +197,13 @@ void CheckoutAction::error(
   errors_.push_back(std::move(ew));
 }
 
-ImmediateFuture<InvalidationRequired> CheckoutAction::doAction() {
+ImmediateFuture<CheckoutActionResult> CheckoutAction::doAction() {
   // All the data is ready and we're ready to go!
 
   // Check for conflicts first.
   return hasConflict().thenValue(
       [self = shared_from_this()](
-          bool conflictWasAddedToCtx) -> ImmediateFuture<InvalidationRequired> {
+          bool conflictWasAddedToCtx) -> ImmediateFuture<CheckoutActionResult> {
         // Note that even if we know we are not going to apply the changes, we
         // must still run hasConflict() first because we rely on its
         // side-effects.
@@ -220,7 +220,8 @@ ImmediateFuture<InvalidationRequired> CheckoutAction::doAction() {
           // really any other conflicts than this to report, even if we recurse.
           // Anything inside this directory is basically just untracked (or
           // possibly ignored) files.
-          return InvalidationRequired::No;
+          return CheckoutActionResult{
+              InvalidationRequired::No, /*hadConflicts=*/true};
         }
 
         // Call TreeInode::checkoutUpdateEntry() to actually do the work.
@@ -232,13 +233,18 @@ ImmediateFuture<InvalidationRequired> CheckoutAction::doAction() {
         // Therefore don't move these scm entries, to make sure we don't
         // invalidate the PathComponentPiece data.
         auto parent = self->inode_->getParent(self->ctx_->renameLock());
-        return parent->checkoutUpdateEntry(
-            self->ctx_,
-            self->getEntryName(),
-            std::move(self->inode_),
-            std::move(self->oldTree_),
-            std::move(self->newTree_),
-            self->newScmEntry_);
+        return parent
+            ->checkoutUpdateEntry(
+                self->ctx_,
+                self->getEntryName(),
+                std::move(self->inode_),
+                std::move(self->oldTree_),
+                std::move(self->newTree_),
+                self->newScmEntry_)
+            .thenValue([conflictWasAddedToCtx](CheckoutActionResult result) {
+              result.hadConflicts |= conflictWasAddedToCtx;
+              return result;
+            });
       });
 }
 
