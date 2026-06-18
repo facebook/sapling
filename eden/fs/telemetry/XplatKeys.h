@@ -221,4 +221,21 @@ inline constexpr std::string_view kStaleCheckoutMountUnmounted =
 
 // --- CheckoutUpdateError (uses kPath and kReason from common fields) ---
 
+// --- edenfs_errors category
+inline constexpr std::string_view kErrorsCategory{"perfpipe_edenfs_errors"};
+
+// --- edenfs_errors fields (match DaemonError::populate() keys exactly) ---
+inline constexpr std::string_view kComponent = "component";
+inline constexpr std::string_view kErrorMessage = "error_message";
+inline constexpr std::string_view kExceptionType = "exception_type";
+inline constexpr std::string_view kErrorCode = "error_code";
+inline constexpr std::string_view kErrorName = "error_name";
+inline constexpr std::string_view kStackTrace = "stack_trace";
+inline constexpr std::string_view kInode = "inode";
+inline constexpr std::string_view kFilePath = "file_path";
+inline constexpr std::string_view kMountPoint = "mount_point";
+inline constexpr std::string_view kMountStatus = "mount_status";
+inline constexpr std::string_view kErrorType = "error_type";
+inline constexpr std::string_view kExtras = "extras";
+
 } // namespace facebook::eden::xplat_keys
