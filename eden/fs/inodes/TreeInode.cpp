@@ -5107,7 +5107,12 @@ ImmediateFuture<InvalidationRequired> TreeInode::checkoutUpdateEntry(
           name,
           oldRestricted,
           newRestricted);
-      return treeInode->checkout(ctx, std::move(oldTree), std::move(newTree))
+      std::shared_ptr<const Tree> checkoutToTree;
+      if (!newRestricted) {
+        checkoutToTree = std::move(newTree);
+      }
+      return treeInode
+          ->checkout(ctx, std::move(oldTree), std::move(checkoutToTree))
           .thenValue(
               [ctx,
                parentInode = inodePtrFromThis(),

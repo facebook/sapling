@@ -2683,6 +2683,44 @@ TEST(Checkout, forceCheckoutReplacesLoadedRestrictedTreeWithFile) {
   testMount.getEdenMount()->getInodeMap()->decFsRefcount(restrictedInodeNumber);
 }
 
+TEST_P(CheckoutTest, checkoutToRestrictedTreeConflictsOnModifiedTrackedFile) {
+  auto currentBuilder = FakeTreeBuilder{};
+  currentBuilder.setFile("regular/file.txt", "base\n");
+  TestMount testMount{RootId{"current"}, currentBuilder};
+  applyParam(testMount);
+
+  auto targetBuilder = currentBuilder.clone();
+  targetBuilder.replaceFile("regular/file.txt", "target\n");
+  targetBuilder.setDirIsRestricted("regular");
+  targetBuilder.finalize(testMount.getBackingStore(), true);
+  auto targetCommit =
+      testMount.getBackingStore()->putCommit(RootId{"target"}, targetBuilder);
+  targetCommit->setReady();
+
+  testMount.overwriteFile("regular/file.txt", "local\n");
+
+  auto executor = testMount.getServerExecutor().get();
+  auto checkoutResult = testMount.getEdenMount()
+                            ->checkout(
+                                testMount.getRootInode(),
+                                RootId{"target"},
+                                ObjectFetchContext::getNullContext(),
+                                __func__,
+                                CheckoutMode::DRY_RUN)
+                            .semi()
+                            .via(executor)
+                            .waitVia(executor);
+  ASSERT_TRUE(checkoutResult.isReady());
+
+  EXPECT_THAT(
+      std::move(checkoutResult).get().conflicts,
+      UnorderedElementsAre(makeConflict(
+          ConflictType::MODIFIED_REMOVED,
+          "regular/file.txt",
+          "",
+          Dtype::REGULAR)));
+}
+
 #endif
 
 /*

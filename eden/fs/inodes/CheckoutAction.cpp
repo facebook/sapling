@@ -253,14 +253,6 @@ ImmediateFuture<bool> CheckoutAction::hasConflict() {
 
     // TODO: check for permissions changes
 
-    const auto newRestricted = (newTree_ && newTree_->isRestricted()) ||
-        (newScmEntry_ && newScmEntry_->second.isRestricted());
-    if (!treeInode->isRestricted() && newRestricted &&
-        treeInode->isMaterialized()) {
-      ctx_->addConflict(ConflictType::MODIFIED_MODIFIED, inode_.get());
-      return true;
-    }
-
     // We don't check if this tree is unmodified from the old tree or not here.
     // We simply apply the checkout to the tree in this case, so that we report
     // conflicts for individual leaf inodes that were modified, and not for the

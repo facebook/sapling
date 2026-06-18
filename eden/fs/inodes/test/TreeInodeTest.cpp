@@ -1304,22 +1304,15 @@ TEST_P(
   ASSERT_TRUE(checkoutResult.isReady());
   auto result = std::move(checkoutResult).get();
 
-  // Expect the pre-check to surface a single directory-level
-  // MODIFIED_MODIFIED conflict at acl_dir and to leave the subtree
-  // untouched (no recursive descent on the non-force path).
+  // Expect the pre-check to surface the modified tracked file inside the
+  // restricted destination as a file-level MODIFIED_REMOVED conflict.
   EXPECT_THAT(
       result.conflicts,
       ::testing::UnorderedElementsAre(makeConflict(
-          ConflictType::MODIFIED_MODIFIED, "acl_dir", "", Dtype::DIR)));
-
-  // Verify acl_dir is still unrestricted — the swap was skipped.
-  auto rootInode = testMount.getEdenMount()->getRootInode();
-  auto contents = rootInode->lockContentsRead();
-
-  auto aclIter = contents->entries.find("acl_dir"_pc);
-  ASSERT_NE(aclIter, contents->entries.end());
-  EXPECT_TRUE(aclIter->second.isDirectory());
-  EXPECT_FALSE(aclIter->second.isRestricted());
+          ConflictType::MODIFIED_REMOVED,
+          "acl_dir/file.txt",
+          "",
+          Dtype::REGULAR)));
 }
 
 TEST_P(
@@ -1360,7 +1353,10 @@ TEST_P(
   EXPECT_THAT(
       result.conflicts,
       ::testing::Contains(makeConflict(
-          ConflictType::MODIFIED_MODIFIED, "acl_dir", "", Dtype::DIR)));
+          ConflictType::MODIFIED_REMOVED,
+          "acl_dir/file.txt",
+          "",
+          Dtype::REGULAR)));
 
   // Verify acl_dir is now restricted — force mode drove the swap through.
   auto rootInode = testMount.getEdenMount()->getRootInode();
