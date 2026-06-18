@@ -19,7 +19,10 @@ use format_util::prepend_hg_file_metadata;
 use manifest::FileMetadata;
 use manifest::FileType;
 use manifest::Manifest;
-use rayon::prelude::*;
+use manifest_tree::TreeManifest;
+use slex::Items;
+use slex::Work;
+use slex::WorkOptions;
 use status::Status;
 use storemodel::FileStore;
 use storemodel::InsertOpts;
@@ -33,18 +36,23 @@ use vfs::VFS;
 
 use crate::metadata::Metadata;
 
+struct InsertFileWork {
+    path: RepoPathBuf,
+    copy_from: Option<RepoPathBuf>,
+}
+
 /// Applies uncommitted changes from status to a manifest.
 ///
 /// This function takes a base manifest and a Status instance (as returned by
 /// `WorkingCopy::status()`), reads file content from the VFS, computes file nodes
 /// by inserting into the file store, and updates the manifest.
-pub fn apply_status<M: Manifest, P: Manifest + Sync>(
+pub fn apply_status(
     ctx: &CoreContext,
-    manifest: &mut M,
+    manifest: &mut TreeManifest,
     status: &Status,
     vfs: &VFS,
     file_store: &Arc<dyn FileStore>,
-    parent_manifests: &[&P],
+    parent_manifests: &[&TreeManifest],
     mut copymap: HashMap<RepoPathBuf, RepoPathBuf>,
     include_unknown: bool,
 ) -> Result<()> {
@@ -64,7 +72,7 @@ pub fn apply_status<M: Manifest, P: Manifest + Sync>(
     }
 
     // Process added, modified, and optionally unknown files in parallel, then apply to manifest sequentially.
-    let paths_to_insert: Vec<_> = status
+    let work: Vec<_> = status
         .added()
         .chain(status.modified())
         .chain(
@@ -73,23 +81,45 @@ pub fn apply_status<M: Manifest, P: Manifest + Sync>(
                 .into_iter()
                 .flatten(),
         )
-        .map(|p| (p, copymap.remove(p)))
+        .map(|path| InsertFileWork {
+            path: path.clone(),
+            copy_from: copymap.remove(path),
+        })
         .collect();
-
-    let results: Vec<_> = paths_to_insert
-        .into_par_iter()
-        .map(|(path, copy_from)| -> Result<_> {
+    let vfs = vfs.clone();
+    let file_store = Arc::clone(file_store);
+    let parent_manifests = parent_manifests
+        .iter()
+        .map(|manifest| (*manifest).clone())
+        .collect::<Vec<_>>();
+    let results: Vec<_> = Work::try_map(
+        WorkOptions::new().inline_items(1),
+        Items::ready(work),
+        move |work: InsertFileWork| -> Result<_> {
+            let parents =
+                get_file_parents(&work.path, &parent_manifests, work.copy_from.is_some())?;
+            let copy_meta = if file_store.format() == SerializationFormat::Hg
+                && let Some(copy_source) = work.copy_from.as_ref()
+                && copy_source.as_repo_path() != work.path.as_repo_path()
+            {
+                get_copy_rev(copy_source, &parent_manifests)?
+                    .map(|copy_parent| Key::new(copy_source.clone(), copy_parent))
+            } else {
+                None
+            };
             let metadata = insert_file(
-                path,
-                vfs,
-                file_store,
-                copy_from,
-                parent_manifests,
+                &work.path,
+                &vfs,
+                &file_store,
+                parents,
+                copy_meta,
                 file_size_limit,
             )?;
-            Ok(((*path).clone(), metadata))
-        })
-        .collect::<Result<Vec<_>>>()?;
+            Ok((work.path, metadata))
+        },
+    )
+    .into_iter()
+    .collect::<Result<Vec<_>>>()?;
 
     for (path, metadata) in results {
         manifest.insert(path, metadata)?;
@@ -106,9 +136,9 @@ pub fn apply_status<M: Manifest, P: Manifest + Sync>(
 ///
 /// Returns a Vec of parent file nodes, one for each parent manifest.
 /// If the file doesn't exist in a parent manifest, NULL_ID is used.
-fn get_file_parents<P: Manifest>(
+fn get_file_parents(
     path: &RepoPath,
-    parent_manifests: &[&P],
+    parent_manifests: &[TreeManifest],
     is_copy: bool,
 ) -> Result<Vec<HgId>> {
     let mut parents: Vec<HgId> = parent_manifests
@@ -128,12 +158,12 @@ fn get_file_parents<P: Manifest>(
 /// Reads a file from VFS, inserts it into the file store, and returns the resulting FileMetadata.
 ///
 /// If copy_from is provided, embeds copy metadata into the file content for Hg format.
-fn insert_file<P: Manifest>(
+fn insert_file(
     path: &RepoPathBuf,
     vfs: &VFS,
     file_store: &Arc<dyn FileStore>,
-    copy_from: Option<RepoPathBuf>,
-    parent_manifests: &[&P],
+    parents: Vec<HgId>,
+    copy_meta: Option<Key>,
     file_size_limit: ByteCount,
 ) -> Result<FileMetadata> {
     let (content, fs_meta) = vfs.read_with_metadata(path)?;
@@ -160,18 +190,6 @@ fn insert_file<P: Manifest>(
         FileType::Regular
     };
 
-    let parents = get_file_parents(path, parent_manifests, copy_from.is_some())?;
-
-    let copy_meta = if file_store.format() == SerializationFormat::Hg
-        && let Some(copy_source) = copy_from
-        && copy_source.as_repo_path() != path.as_repo_path()
-    {
-        get_copy_rev(&copy_source, parent_manifests)?
-            .map(|copy_parent| Key::new(copy_source, copy_parent))
-    } else {
-        None
-    };
-
     let content = prepend_hg_file_metadata(content, copy_meta);
 
     // Insert the file into the store to compute its hgid.
@@ -191,10 +209,7 @@ fn insert_file<P: Manifest>(
 /// Gets the file node for the copy source from parent manifests.
 ///
 /// Looks in p1 first, then p2 if not found in p1 (for merge scenarios).
-fn get_copy_rev<P: Manifest>(
-    copy_source: &RepoPath,
-    parent_manifests: &[&P],
-) -> Result<Option<HgId>> {
+fn get_copy_rev(copy_source: &RepoPath, parent_manifests: &[TreeManifest]) -> Result<Option<HgId>> {
     for p in parent_manifests {
         if let Some(meta) = p.get_file(copy_source)? {
             return Ok(Some(meta.hgid));
@@ -518,7 +533,7 @@ mod tests {
 
         let parents = get_file_parents(
             repo_path("file"),
-            &[&parent1_manifest, &parent2_manifest],
+            &[parent1_manifest, parent2_manifest],
             false,
         )
         .unwrap();
@@ -535,7 +550,7 @@ mod tests {
         let tree_store = Arc::new(TestStore::new());
         let parent_manifest = make_tree_manifest(tree_store, &[("file", "10")]);
 
-        let parents = get_file_parents(repo_path("file"), &[&parent_manifest], true).unwrap();
+        let parents = get_file_parents(repo_path("file"), &[parent_manifest], true).unwrap();
 
         // For copies, first parent should be NULL_ID
         assert_eq!(parents.len(), 1);
