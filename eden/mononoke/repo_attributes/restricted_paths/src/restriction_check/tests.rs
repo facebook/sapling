@@ -119,66 +119,107 @@ async fn test_authoritative_source_enforcement_outcome_preserves_error_semantics
     Ok(())
 }
 
-// What it tests: a member of the admin bypass group is granted read access to a
-// repo region ACL even without direct `read` access on it.
-// Expected: has_read_access_to_repo_region returns true via the bypass group.
+// What it tests: a member of the admin bypass group is authorized, and the grant
+// is attributed to the bypass — not mislabeled as direct ACL read access.
+// Expected: is_admin_bypass is true, has_acl_access is false, and the caller is
+// authorized overall.
 #[mononoke::fbinit_test]
-async fn test_has_read_access_admin_bypass_group_member_is_granted(fb: FacebookInit) -> Result<()> {
+async fn test_admin_bypass_group_member_is_authorized_and_flagged(fb: FacebookInit) -> Result<()> {
     let acl_provider = admin_bypass_acl_provider()?;
     // carol is only in the bypass group, with no direct read access.
     let ctx = ctx_with_identities(fb, &["USER:carol"])?;
     let acl = MononokeIdentity::from_str("REPO_REGION:repos/hg/fbsource/=project1")?;
     let bypass_group = MononokeIdentity::from_str("GROUP:path_acls_admin_bypass")?;
 
-    let has_access =
-        super::has_read_access_to_repo_region(&ctx, &acl_provider, &[&acl], Some(&bypass_group))
-            .await?;
+    let authorization = super::check_authorization(
+        &ctx,
+        &acl_provider,
+        &[&acl],
+        None,
+        None,
+        Some(&bypass_group),
+    )
+    .await?;
 
     assert!(
-        has_access,
-        "bypass-group member should be granted read access without per-ACL read",
+        authorization.is_admin_bypass(),
+        "bypass-group member should be flagged as an admin bypass",
+    );
+    assert!(
+        !authorization.has_acl_access(),
+        "bypass grant must not be mislabeled as direct ACL read access",
+    );
+    assert!(
+        authorization.has_authorization(),
+        "bypass-group member should be authorized overall",
     );
     Ok(())
 }
 
 // What it tests: a caller with neither read access nor bypass-group membership
 // is denied even when a bypass group is configured.
-// Expected: has_read_access_to_repo_region returns false.
+// Expected: no authorization, and neither the ACL nor bypass flag is set.
 #[mononoke::fbinit_test]
-async fn test_has_read_access_non_member_without_acl_is_denied(fb: FacebookInit) -> Result<()> {
+async fn test_non_member_without_acl_is_denied(fb: FacebookInit) -> Result<()> {
     let acl_provider = admin_bypass_acl_provider()?;
     // bob has neither read access nor bypass-group membership.
     let ctx = ctx_with_identities(fb, &["USER:bob"])?;
     let acl = MononokeIdentity::from_str("REPO_REGION:repos/hg/fbsource/=project1")?;
     let bypass_group = MononokeIdentity::from_str("GROUP:path_acls_admin_bypass")?;
 
-    let has_access =
-        super::has_read_access_to_repo_region(&ctx, &acl_provider, &[&acl], Some(&bypass_group))
-            .await?;
+    let authorization = super::check_authorization(
+        &ctx,
+        &acl_provider,
+        &[&acl],
+        None,
+        None,
+        Some(&bypass_group),
+    )
+    .await?;
 
     assert!(
-        !has_access,
+        !authorization.has_authorization(),
         "caller without read access or bypass membership should be denied",
+    );
+    assert!(
+        !authorization.has_acl_access(),
+        "caller has no ACL read access"
+    );
+    assert!(
+        !authorization.is_admin_bypass(),
+        "caller is not in the bypass group"
     );
     Ok(())
 }
 
-// What it tests: with no bypass group configured, read access still falls back
-// to direct per-ACL `read` access.
-// Expected: a user with direct read access is granted; the bypass path is inert.
+// What it tests: a caller with direct ACL read access is authorized via the ACL,
+// not the bypass.
+// Expected: has_acl_access is true and is_admin_bypass is false.
 #[mononoke::fbinit_test]
-async fn test_has_read_access_without_bypass_group_uses_acl_read(fb: FacebookInit) -> Result<()> {
+async fn test_direct_acl_read_is_not_flagged_as_bypass(fb: FacebookInit) -> Result<()> {
     let acl_provider = admin_bypass_acl_provider()?;
-    // alice has direct read access on project1.
+    // alice has direct read access on project1 but is not in the bypass group.
     let ctx = ctx_with_identities(fb, &["USER:alice"])?;
     let acl = MononokeIdentity::from_str("REPO_REGION:repos/hg/fbsource/=project1")?;
+    let bypass_group = MononokeIdentity::from_str("GROUP:path_acls_admin_bypass")?;
 
-    let has_access =
-        super::has_read_access_to_repo_region(&ctx, &acl_provider, &[&acl], None).await?;
+    let authorization = super::check_authorization(
+        &ctx,
+        &acl_provider,
+        &[&acl],
+        None,
+        None,
+        Some(&bypass_group),
+    )
+    .await?;
 
     assert!(
-        has_access,
-        "user with direct ACL read access should be granted when no bypass group is configured",
+        authorization.has_acl_access(),
+        "user with direct ACL read access should be granted via the ACL",
+    );
+    assert!(
+        !authorization.is_admin_bypass(),
+        "a direct ACL reader must not be flagged as an admin bypass",
     );
     Ok(())
 }
@@ -199,7 +240,7 @@ fn path_restriction_check_with(
             repo_region_acl: acl.to_string(),
             permission_request_group: acl.clone(),
         },
-        AuthorizationCheckResult::new(has_acl_access, false, false),
+        AuthorizationCheckResult::new(has_acl_access, false, false, false),
         acl,
     ))
 }

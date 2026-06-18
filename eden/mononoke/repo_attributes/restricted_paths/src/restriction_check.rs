@@ -91,6 +91,10 @@ pub(crate) struct AuthorizationCheckResult {
     is_allowlisted_tooling: bool,
     /// Whether the caller is in the rollout allowlist group.
     is_rollout_allowlisted: bool,
+    /// Whether the caller is in the admin bypass group. Tracked separately from
+    /// `has_acl_access` so a bypass grant is distinguishable from genuine ACL
+    /// read access in the access logs.
+    is_admin_bypass: bool,
 }
 
 /// Allowlist authorization shared by every restriction in one source batch.
@@ -98,6 +102,7 @@ pub(crate) struct AuthorizationCheckResult {
 struct AllowlistAuthorization {
     is_allowlisted_tooling: bool,
     is_rollout_allowlisted: bool,
+    is_admin_bypass: bool,
 }
 
 impl AllowlistAuthorization {
@@ -106,6 +111,7 @@ impl AllowlistAuthorization {
             has_acl_access,
             is_allowlisted_tooling: self.is_allowlisted_tooling,
             is_rollout_allowlisted: self.is_rollout_allowlisted,
+            is_admin_bypass: self.is_admin_bypass,
         }
     }
 }
@@ -115,17 +121,23 @@ impl AuthorizationCheckResult {
         has_acl_access: bool,
         is_allowlisted_tooling: bool,
         is_rollout_allowlisted: bool,
+        is_admin_bypass: bool,
     ) -> Self {
         Self {
             has_acl_access,
             is_allowlisted_tooling,
             is_rollout_allowlisted,
+            is_admin_bypass,
         }
     }
 
-    /// Whether the caller has read authorization through ACLs or allowlists.
+    /// Whether the caller has read authorization through ACLs, allowlists, or
+    /// the admin bypass group.
     pub(crate) fn has_authorization(&self) -> bool {
-        self.has_acl_access || self.is_allowlisted_tooling || self.is_rollout_allowlisted
+        self.has_acl_access
+            || self.is_allowlisted_tooling
+            || self.is_rollout_allowlisted
+            || self.is_admin_bypass
     }
 
     pub(crate) fn has_acl_access(&self) -> bool {
@@ -138,6 +150,10 @@ impl AuthorizationCheckResult {
 
     pub(crate) fn is_rollout_allowlisted(&self) -> bool {
         self.is_rollout_allowlisted
+    }
+
+    pub(crate) fn is_admin_bypass(&self) -> bool {
+        self.is_admin_bypass
     }
 }
 
@@ -382,6 +398,9 @@ impl SourceRestrictionSummary {
         let is_rollout_allowlisted = checks
             .iter()
             .any(|check| check.authorization().is_rollout_allowlisted());
+        let is_admin_bypass = checks
+            .iter()
+            .any(|check| check.authorization().is_admin_bypass());
         let repo_region_acls = checks
             .iter()
             .map(|check| check.repo_region_identity().to_string())
@@ -397,6 +416,7 @@ impl SourceRestrictionSummary {
                 has_acl_access,
                 is_allowlisted_tooling,
                 is_rollout_allowlisted,
+                is_admin_bypass,
             ),
             repo_region_acls,
             restriction_roots,
@@ -417,6 +437,9 @@ impl SourceRestrictionSummary {
         let is_rollout_allowlisted = checks
             .iter()
             .any(|check| check.authorization().is_rollout_allowlisted());
+        let is_admin_bypass = checks
+            .iter()
+            .any(|check| check.authorization().is_admin_bypass());
         let repo_region_acls = checks
             .iter()
             .map(|check| check.repo_region_identity().to_string())
@@ -435,6 +458,7 @@ impl SourceRestrictionSummary {
                 has_acl_access,
                 is_allowlisted_tooling,
                 is_rollout_allowlisted,
+                is_admin_bypass,
             ),
             repo_region_acls,
             restriction_roots,
@@ -455,6 +479,10 @@ impl SourceRestrictionSummary {
 
     pub(crate) fn is_rollout_allowlisted(&self) -> bool {
         self.authorization.is_rollout_allowlisted()
+    }
+
+    pub(crate) fn is_admin_bypass(&self) -> bool {
+        self.authorization.is_admin_bypass()
     }
 
     pub(crate) fn repo_region_acls(&self) -> &[String] {
@@ -547,33 +575,24 @@ pub(crate) enum PreFilterVariant {
     NeedsFetch,
 }
 
-/// Check if the caller has read access to every repo region ACL in `acls`
-/// (conjunctive evaluation), or is a member of `admin_bypass_group`.
+/// Check if the caller has direct read access to every repo region ACL in
+/// `acls` (conjunctive evaluation).
 ///
 /// For nested restrictions (e.g. `/secret` plus `/secret/inner`), the caller
 /// must satisfy the inner ACL even when they already satisfy the outer one —
 /// otherwise being a member of an outer ACL would silently bypass an inner
-/// restriction. Members of `admin_bypass_group` (when one is configured) are
-/// granted access to every restricted path without per-ACL read access.
-///
-/// The bypass-group and per-ACL checks run concurrently and both always run to
-/// completion; access is granted if either succeeds, and an error in either
-/// fails closed.
+/// restriction. This checks ACL read access only; admin-bypass-group membership
+/// is evaluated separately (see [`check_allowlist_authorization`]) so a bypass
+/// grant stays distinguishable from genuine ACL read access in the access logs.
 pub(crate) async fn has_read_access_to_repo_region(
     ctx: &CoreContext,
     acl_provider: &Arc<dyn AclProvider>,
     acls: &[&MononokeIdentity],
-    admin_bypass_group: Option<&MononokeIdentity>,
 ) -> Result<bool> {
     if acls.is_empty() {
         return Ok(true);
     }
-
-    let (in_bypass_group, has_acl_access) = futures::try_join!(
-        is_in_admin_bypass_group(ctx, acl_provider, admin_bypass_group),
-        has_read_access_to_repo_region_acls(ctx, acl_provider, acls),
-    )?;
-    Ok(in_bypass_group || has_acl_access)
+    has_read_access_to_repo_region_acls(ctx, acl_provider, acls).await
 }
 
 /// Check that the caller has direct `read` access to every repo region ACL in
@@ -645,10 +664,10 @@ pub(crate) async fn check_authorization(
         acl_provider,
         tooling_allowlist_group,
         rollout_allowlist_group,
+        admin_bypass_group,
     )
     .await?;
-    let has_acl_access =
-        has_read_access_to_repo_region(ctx, acl_provider, acls, admin_bypass_group).await?;
+    let has_acl_access = has_read_access_to_repo_region(ctx, acl_provider, acls).await?;
     Ok(allowlist_authorization.into_authorization_check_result(has_acl_access))
 }
 
@@ -661,6 +680,7 @@ async fn check_restricted_paths_allowlist_authorization(
         restricted_paths.acl_provider(),
         restricted_paths.config().tooling_allowlist_group.as_deref(),
         restricted_paths.config().rollout_allowlist_group.as_deref(),
+        restricted_paths.config().admin_bypass_group.as_ref(),
     )
     .await
 }
@@ -670,14 +690,17 @@ async fn check_allowlist_authorization(
     acl_provider: &Arc<dyn AclProvider>,
     tooling_allowlist_group: Option<&str>,
     rollout_allowlist_group: Option<&str>,
+    admin_bypass_group: Option<&MononokeIdentity>,
 ) -> Result<AllowlistAuthorization> {
-    let (is_allowlisted_tooling, is_rollout_allowlisted) = tokio::try_join!(
+    let (is_allowlisted_tooling, is_rollout_allowlisted, is_admin_bypass) = tokio::try_join!(
         check_optional_allowlist_group(ctx, acl_provider, tooling_allowlist_group),
         check_optional_allowlist_group(ctx, acl_provider, rollout_allowlist_group),
+        is_in_admin_bypass_group(ctx, acl_provider, admin_bypass_group),
     )?;
     Ok(AllowlistAuthorization {
         is_allowlisted_tooling,
         is_rollout_allowlisted,
+        is_admin_bypass,
     })
 }
 
@@ -1211,12 +1234,7 @@ async fn check_restriction_authorization_with_acl(
     acl: &MononokeIdentity,
     allowlist_authorization: AllowlistAuthorization,
 ) -> Result<AuthorizationCheckResult> {
-    let has_acl_access = has_read_access_to_repo_region(
-        ctx,
-        restricted_paths.acl_provider(),
-        &[acl],
-        restricted_paths.config().admin_bypass_group.as_ref(),
-    )
-    .await?;
+    let has_acl_access =
+        has_read_access_to_repo_region(ctx, restricted_paths.acl_provider(), &[acl]).await?;
     Ok(allowlist_authorization.into_authorization_check_result(has_acl_access))
 }

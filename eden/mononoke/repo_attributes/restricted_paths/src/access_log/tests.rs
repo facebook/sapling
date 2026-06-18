@@ -599,7 +599,12 @@ fn error_result<T: SourceRestrictionCheck>(message: &str) -> SourceRestrictionRe
 }
 
 fn authorization_result(has_authorization: bool, has_acl_access: bool) -> AuthorizationCheckResult {
-    AuthorizationCheckResult::new(has_acl_access, has_authorization && !has_acl_access, false)
+    AuthorizationCheckResult::new(
+        has_acl_access,
+        has_authorization && !has_acl_access,
+        false,
+        false,
+    )
 }
 
 fn repo_region_acl(acl_name: &str) -> String {

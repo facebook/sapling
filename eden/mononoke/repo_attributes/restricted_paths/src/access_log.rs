@@ -57,6 +57,7 @@ struct LoggedAuthorization {
     has_authorization: bool,
     is_allowlisted_tooling: bool,
     is_rollout_allowlisted: bool,
+    is_admin_bypass: bool,
     has_acl_access: bool,
 }
 
@@ -345,6 +346,7 @@ pub(crate) fn log_source_results_to_scuba_with_enforcement<T: SourceRestrictionC
                         has_authorization: summary.has_authorization(),
                         is_allowlisted_tooling: summary.is_allowlisted_tooling(),
                         is_rollout_allowlisted: summary.is_rollout_allowlisted(),
+                        is_admin_bypass: summary.is_admin_bypass(),
                         has_acl_access: summary.has_acl_access(),
                     },
                     acls: restriction_acls.iter().collect(),
@@ -753,6 +755,7 @@ fn log_source_result_to_legacy_scuba(
                     has_authorization: summary.has_authorization(),
                     is_allowlisted_tooling: summary.is_allowlisted_tooling(),
                     is_rollout_allowlisted: summary.is_rollout_allowlisted(),
+                    is_admin_bypass: summary.is_admin_bypass(),
                     has_acl_access: summary.has_acl_access(),
                 },
                 acls: restriction_acl_refs,
@@ -827,6 +830,7 @@ mod schematized_logger {
         has_authorization: bool,
         is_allowlisted_tooling: bool,
         is_rollout_allowlisted: bool,
+        is_admin_bypass: bool,
         access_enforcement_enabled: Option<bool>,
         acls: &[&MononokeIdentity],
     ) -> Result<()> {
@@ -851,6 +855,7 @@ mod schematized_logger {
         logger.set_has_authorization(has_authorization.to_string());
         logger.set_is_allowlisted_tooling(is_allowlisted_tooling.to_string());
         logger.set_is_rollout_allowlisted(is_rollout_allowlisted.to_string());
+        logger.set_is_admin_bypass(is_admin_bypass);
         if let Some(value) = access_enforcement_enabled {
             logger.set_access_enforcement_enabled(value);
         }
@@ -1016,6 +1021,7 @@ pub(crate) async fn log_access_to_restricted_path(
                     has_authorization: authorization.has_authorization(),
                     is_allowlisted_tooling: authorization.is_allowlisted_tooling(),
                     is_rollout_allowlisted: authorization.is_rollout_allowlisted(),
+                    is_admin_bypass: authorization.is_admin_bypass(),
                     has_acl_access: authorization.has_acl_access(),
                 },
                 acls,
@@ -1075,6 +1081,7 @@ fn log_checked_access_to_restricted_path(
                 aggregate.authorization.has_authorization,
                 aggregate.authorization.is_allowlisted_tooling,
                 aggregate.authorization.is_rollout_allowlisted,
+                aggregate.authorization.is_admin_bypass,
                 log_data.access_enforcement_enabled,
                 &aggregate.acls,
             ) {
@@ -1122,6 +1129,7 @@ fn log_access_to_scuba(
             "is_rollout_allowlisted",
             aggregate.authorization.is_rollout_allowlisted,
         );
+        scuba.add("is_admin_bypass", aggregate.authorization.is_admin_bypass);
         scuba.add("has_acl_access", aggregate.authorization.has_acl_access);
         scuba.add(
             "acls",
