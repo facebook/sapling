@@ -22,6 +22,7 @@ use edenapi_types::BonsaiChangesetId as EdenapiBonsaiChangesetId;
 use edenapi_types::CommitId as EdenapiCommitId;
 use edenapi_types::ContentId as EdenapiContentId;
 use edenapi_types::FsnodeId as EdenapiFsnodeId;
+use mononoke_macros::mononoke;
 use sql::mysql;
 pub use tracing;
 
@@ -828,7 +829,7 @@ impl Loadable for FsnodeId {
 
         const LARGE_FSNODE_THRESHOLD: usize = 102_400;
         let ret = if len > LARGE_FSNODE_THRESHOLD {
-            tokio::task::spawn_blocking(move || {
+            mononoke::spawn_blocking(move || {
                 <Fsnode as BlobstoreValue>::from_blob(blob).map_err(LoadableError::Error)
             })
             .await

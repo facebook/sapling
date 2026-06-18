@@ -29,6 +29,7 @@ use futures::stream;
 use futures::stream::TryStreamExt;
 use itertools::EitherOrBoth;
 use manifest::ManifestOps;
+use mononoke_macros::mononoke;
 use mononoke_types::BasicFileChange;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangeset;
@@ -181,7 +182,7 @@ async fn find_best_candidate_by_partial_content_match(
                     _ => return Ok::<_, Error>(None),
                 };
 
-                let similarity = tokio::task::spawn_blocking({
+                let similarity = mononoke::spawn_blocking({
                     move || estimate_similarity(&dst_bytes, &src_bytes)
                 })
                 .await?;

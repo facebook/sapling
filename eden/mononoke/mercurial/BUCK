@@ -96,6 +96,7 @@ rust_library(
         "//common/rust/shed/stats:stats",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/common/futures_watchdog:futures_watchdog",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
         "//eden/mononoke/manifest:manifest",
         "//eden/mononoke/mercurial/types/if:mercurial-thrift-rust",
         "//eden/mononoke/mononoke_types:mononoke_types",

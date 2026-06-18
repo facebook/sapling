@@ -41,6 +41,7 @@ use gix_pack::data::decode::Error as PackError;
 use gix_pack::data::decode::entry::ResolvedBase;
 use gix_pack::data::input::Entry as InputEntry;
 use gix_pack::data::input::Error as InputError;
+use mononoke_macros::mononoke;
 use mononoke_types::hash::GitSha1;
 use rayon::iter::IntoParallelIterator;
 use rayon::iter::ParallelIterator;
@@ -303,7 +304,7 @@ async fn parse_stored_pack(
         )
     })?);
     // Verify that the packfile is valid
-    tokio::task::spawn_blocking({
+    mononoke::spawn_blocking({
         let pack_file = pack_file.clone();
         move || {
             pack_file
@@ -337,7 +338,7 @@ async fn parse_stored_pack(
     // Process all the entries. Weight is tracked inline inside
     // process_pack_entries using outcome.object_size from decode_entry —
     // zero extra passes or overhead beyond the decoding itself.
-    tokio::task::spawn_blocking({
+    mononoke::spawn_blocking({
         let pack_file = pack_file.clone();
         move || {
             let mut pack_entries =

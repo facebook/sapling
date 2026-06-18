@@ -8,6 +8,7 @@
 use bytes::Bytes;
 use context::CoreContext;
 use futures::try_join;
+use mononoke_macros::mononoke;
 
 use crate::error::DiffError;
 use crate::types::DiffSingleInput;
@@ -73,13 +74,12 @@ pub async fn hunks(
         other_content = strip_horizontal_whitespace(&other_content);
     }
 
-    let hunks =
-        tokio::task::spawn_blocking(move || xdiff::diff_hunks(&base_content, &other_content))
-            .await
-            .map_err(|e| DiffError::internal(anyhow::anyhow!("spawn_blocking failed: {e}")))?
-            .into_iter()
-            .map(HunkData::from)
-            .collect();
+    let hunks = mononoke::spawn_blocking(move || xdiff::diff_hunks(&base_content, &other_content))
+        .await
+        .map_err(|e| DiffError::internal(anyhow::anyhow!("spawn_blocking failed: {e}")))?
+        .into_iter()
+        .map(HunkData::from)
+        .collect();
 
     Ok(hunks)
 }

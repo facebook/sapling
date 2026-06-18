@@ -44,6 +44,7 @@ manifest = { version = "0.1.0", path = "../../manifest" }
 maplit = "1.0"
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
+mononoke_macros = { version = "0.1.0", path = "../../common/mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 permission_checker = { version = "0.1.0", path = "../../common/permission_checker" }
 regex = "1.12.4"
@@ -74,7 +75,6 @@ fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperiment
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 hook_manager_testlib = { version = "0.1.0", path = "../../repo_attributes/hook_manager/hook_manager_testlib" }
 metadata = { version = "0.1.0", path = "../../common/metadata" }
-mononoke_macros = { version = "0.1.0", path = "../../common/mononoke_macros" }
 mononoke_types-mocks = { version = "0.1.0", path = "../../mononoke_types/mocks" }
 pretty_assertions = { version = "1.4.1", features = ["alloc"], default-features = false }
 repo_permission_checker = { version = "0.1.0", path = "../../repo_attributes/repo_permission_checker" }

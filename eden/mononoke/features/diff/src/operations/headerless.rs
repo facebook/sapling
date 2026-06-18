@@ -8,6 +8,7 @@
 use bytes::Bytes;
 use context::CoreContext;
 use futures::try_join;
+use mononoke_macros::mononoke;
 
 use crate::error::DiffError;
 use crate::types::DiffSingleInput;
@@ -81,7 +82,7 @@ pub async fn headerless_unified(
 
     let xdiff_opts = xdiff::HeaderlessDiffOpts::from(options);
 
-    let raw_diff = tokio::task::spawn_blocking(move || {
+    let raw_diff = mononoke::spawn_blocking(move || {
         xdiff::diff_unified_headerless(&other_content, &base_content, xdiff_opts)
     })
     .await

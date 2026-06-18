@@ -25,6 +25,7 @@ use futures::stream::StreamExt;
 use futures_watchdog::WatchdogExt;
 use manifest::Entry;
 use manifest::Manifest;
+use mononoke_macros::mononoke;
 use mononoke_types::SortedVectorTrieMap;
 use sorted_vector_map::SortedVectorMap;
 
@@ -200,7 +201,7 @@ impl HgBlobManifest {
                         if envelope.contents().len() > MAX_SYNC_PARSE_SIZE {
                             // This manifest is large, so parsing may block
                             // the executor.  Parse it on a blocking thread.
-                            tokio::task::spawn_blocking(move || Ok(Some(Self::parse(envelope)?)))
+                            mononoke::spawn_blocking(move || Ok(Some(Self::parse(envelope)?)))
                                 .await?
                         } else {
                             Ok(Some(Self::parse(envelope)?))
