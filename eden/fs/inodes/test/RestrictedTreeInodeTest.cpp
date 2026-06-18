@@ -236,6 +236,38 @@ TEST(RestrictedTreeInode, lastChildReferenceUnderRestrictedParentBypassesAcl) {
       testMount.getEdenMount()->getInodeMap()->isInodeLoadedOrRemembered(
           childIno));
 }
+
+TEST(
+    RestrictedTreeInode,
+    lastChildReferenceUnderRestrictedParentWithLoadedEntryBypassesAcl) {
+  FakeTreeBuilder builder;
+  builder.setFile("dir/file.txt", "content");
+  TestMount testMount{builder};
+
+  auto restricted = makeRestrictedInode(testMount, "restricted"_pc);
+  auto child =
+      makeTreeInodeChildWithoutParentEntry(testMount, restricted, "child"_pc);
+  auto childIno = child->getNodeId();
+
+  {
+    auto contents = restricted->getContentsUnchecked().wlock();
+    auto [entry, inserted] =
+        contents->entries.emplace("child"_pc, S_IFDIR | 0755, childIno);
+    ASSERT_TRUE(inserted);
+    entry->second.setInode(child.get());
+  }
+
+  child->incFsRefcount();
+  EXPECT_NO_THROW(child.reset());
+  EXPECT_NO_THROW(
+      testMount.getEdenMount()->getInodeMap()->decFsRefcount(childIno, 1));
+
+  auto contents = restricted->getContentsUnchecked().rlock();
+  auto entry = contents->entries.find("child"_pc);
+  ASSERT_NE(entry, contents->entries.end());
+  EXPECT_NE(nullptr, entry->second.getInode());
+  EXPECT_EQ(childIno, entry->second.getInodeNumber());
+}
 #endif
 
 TEST(RestrictedTreeInode, unrestricted_treeInodeIsNotRestricted) {

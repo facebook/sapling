@@ -1121,6 +1121,7 @@ void InodeMap::onInodeUnreferenced(
   bool unloadNow = false;
   bool shuttingDown = data->shutdownPromise.has_value();
   bool mustPersistInodeNumbers = false;
+  bool parentEntryUnavailable = parentInfo.parentEntryUnavailable();
   XDCHECK(shuttingDown || inode != root_.get());
   if (shuttingDown) {
     // Check to see if this was the root inode that got unloaded.
@@ -1137,9 +1138,9 @@ void InodeMap::onInodeUnreferenced(
     // During shutdown we definitely want to persist inode numbers (by writing
     // directory to overlay).
     mustPersistInodeNumbers = true;
-  } else if (parentInfo.isUnlinked() && inode->getFsRefcount() == 0) {
-    // This inode has been unlinked and has no outstanding FS references.
-    // This inode can now be completely destroyed and forgotten about.
+  } else if (parentEntryUnavailable && inode->getFsRefcount() == 0) {
+    // This inode has no usable parent entry and no outstanding FS references.
+    // It can now be completely destroyed and forgotten about.
     unloadNow = true;
   } else {
     // In other cases:
@@ -1153,10 +1154,10 @@ void InodeMap::onInodeUnreferenced(
         inode,
         parentInfo.getParent().get(),
         parentInfo.getName(),
-        parentInfo.isUnlinked(),
+        parentEntryUnavailable,
         mustPersistInodeNumbers,
         data);
-    if (!parentInfo.isUnlinked()) {
+    if (!parentEntryUnavailable) {
       const auto& parentContents = parentInfo.getParentContents();
       auto it = parentContents->entries.find(parentInfo.getName());
       XCHECK(it != parentContents->entries.end());

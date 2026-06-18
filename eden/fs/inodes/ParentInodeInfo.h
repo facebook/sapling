@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <optional>
+
 #include <folly/Synchronized.h>
 
 #include "eden/common/utils/PathFuncs.h"
@@ -17,9 +19,12 @@ namespace facebook::eden {
 /**
  * ParentInodeInfo contains information about an InodeBase's parent.
  *
- * This object hold the lock on the parent TreeInode's contents for as long as
- * it exists.  This ensures that the Inode in question cannot be renamed or
- * unlinked while the ParentInodeInfo object exists.
+ * This object holds the lock on the parent TreeInode's contents for as long as
+ * it exists, unless the inode has no usable parent entry because it is the
+ * root, unlinked, or its restricted parent no longer has an in-memory entry
+ * pointing at it. Holding the parent contents lock ensures that the inode in
+ * question cannot be renamed or unlinked while the ParentInodeInfo object
+ * exists.
  *
  * Note that we intentionally hold the parent TreeInode's contents lock, and
  * not this Inode's location_ lock.  The location_ lock would also prevent
@@ -31,11 +36,13 @@ namespace facebook::eden {
  */
 class ParentInodeInfo {
  public:
+  using LockedParentContents = folly::Synchronized<TreeInodeState>::LockedPtr;
+
   ParentInodeInfo(
       PathComponentPiece name,
       TreeInodePtr parent,
       bool isUnlinked,
-      folly::Synchronized<TreeInodeState>::LockedPtr contents)
+      std::optional<LockedParentContents> contents)
       : name_(name),
         parent_(std::move(parent)),
         isUnlinked_(isUnlinked),
@@ -64,6 +71,16 @@ class ParentInodeInfo {
   }
 
   /**
+   * Returns true if this inode has no usable parent entry.
+   *
+   * This is true when the inode is unlinked, or when its parent exists but
+   * has no in-memory entry that needs to be cleared.
+   */
+  bool parentEntryUnavailable() const {
+    return isUnlinked_ || (parent_ && !parentContents_);
+  }
+
+  /**
    * Get the name of this inode inside its parent.
    *
    * For unlinked inodes this returns its name just before it was unlinked.
@@ -75,17 +92,16 @@ class ParentInodeInfo {
   /**
    * Get the locked contents of the parent inode.
    *
-   * This returns a null pointer if this is the root inode, or if this inode is
-   * unlinked.
+   * This must only be called when the inode has a usable parent entry.
    */
   const folly::Synchronized<TreeInodeState>::LockedPtr& getParentContents()
       const {
-    return parentContents_;
+    return *parentContents_;
   }
 
   void reset() {
     if (parentContents_) {
-      parentContents_.unlock();
+      parentContents_->unlock();
     }
   }
 
@@ -93,6 +109,6 @@ class ParentInodeInfo {
   PathComponent name_;
   TreeInodePtr parent_;
   bool isUnlinked_;
-  folly::Synchronized<TreeInodeState>::LockedPtr parentContents_;
+  std::optional<LockedParentContents> parentContents_;
 };
 } // namespace facebook::eden

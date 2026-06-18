@@ -336,7 +336,7 @@ ParentInodeInfo InodeBase::getParentInfo() const {
             "getParentInfo(): unlinked inode detected after {} tries",
             numTries);
         return ParentInodeInfo{
-            loc->name, loc->parent, loc->unlinked, ParentContentsPtr{}};
+            loc->name, loc->parent, loc->unlinked, std::nullopt};
       }
     }
 
@@ -347,10 +347,10 @@ ParentInodeInfo InodeBase::getParentInfo() const {
           PathComponentPiece{"", detail::SkipPathSanityCheck()},
           nullptr,
           false,
-          ParentContentsPtr{}};
+          std::nullopt};
     }
-    // Now grab our parent's contents lock.
-    auto parentContents = parent->lockContentsWrite();
+
+    auto parentContents = parent->getContentsUnchecked().wlock();
 
     // After acquiring our parent's contents lock we have to make sure it is
     // actually still our parent.  If it is we are done and can break out of
@@ -364,16 +364,39 @@ ParentInodeInfo InodeBase::getParentInfo() const {
             "getParentInfo(): file is newly unlinked on try {}",
             numTries);
         return ParentInodeInfo{
-            loc->name, loc->parent, loc->unlinked, ParentContentsPtr{}};
+            loc->name, loc->parent, loc->unlinked, std::nullopt};
       }
       if (loc->parent == parent) {
+        if (parent->isRestricted()) {
+          // Restricted parents cannot expose contents to callers, but this is
+          // internal inode cleanup. If the existing in-memory contents still
+          // contain a loaded entry for this inode, keep the lock so the caller
+          // can clear that raw pointer before freeing the inode. If checkout
+          // already removed the entry, treat it like an unavailable parent
+          // entry.
+          auto entry = parentContents->entries.find(loc->name);
+          if (entry == parentContents->entries.end() ||
+              entry->second.getInode() != this) {
+            XLOGF(
+                DBG9,
+                "getParentInfo() found restricted parent with no loaded child entry after {} tries",
+                numTries);
+            parentContents.unlock();
+            return ParentInodeInfo{
+                loc->name, loc->parent, loc->unlinked, std::nullopt};
+          }
+        }
+
         // Our parent is still the same.  We're done.
         XLOGF(
             DBG9,
             "getParentInfo() acquired parent lock after {} tries",
             numTries);
         return ParentInodeInfo{
-            loc->name, loc->parent, loc->unlinked, std::move(parentContents)};
+            loc->name,
+            loc->parent,
+            loc->unlinked,
+            std::optional<ParentContentsPtr>{std::move(parentContents)}};
       }
     }
     // Otherwise our parent changed, and we have to retry.

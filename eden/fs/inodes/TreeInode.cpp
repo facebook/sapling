@@ -5609,6 +5609,10 @@ size_t unloadChildrenIf(
     bool mustPersistInodeNumbers) {
   size_t unloadCount = 0;
 
+  if (self->isRestricted()) {
+    return unloadCount;
+  }
+
   // Recurse into children here. Children hold strong references to their
   // parent trees, so unloading children can cause the parent to become
   // unreferenced.
