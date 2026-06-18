@@ -1031,6 +1031,7 @@ class rebaseruntime:
         repo = self.repo
 
         # Collect list of relevant commits: source commits, their parents, and dest commits.
+        source_nodes = bindings.dag.nameset(self.destmap.node2node.keys())
         tofetch = bindings.dag.nameset(self.destmap.node2node.keys())
         tofetch += repo.changelog.dag.parents(tofetch)
         tofetch += self.destmap.node2node.values()
@@ -1048,10 +1049,10 @@ class rebaseruntime:
         else:
             matcher = matchmod.always(repo.root, "")
 
-        # Collect list of all directories touched by commits, and all commits' root tree nodes.
+        # Collect directories touched by source commits, and prefetch those paths
+        # across source, parent, and destination root tree nodes.
         all_files = set()
-        root_nodes = set()
-        for n in tofetch:
+        for n in source_nodes:
             ctx = repo[n]
             for fn in ctx.changeset().files or []:
                 if not matcher(fn):
@@ -1061,6 +1062,10 @@ class rebaseruntime:
                 # triggers all the same prefetching.
                 fn = os.path.dirname(fn)
                 all_files.add(f"{fn}/file" if fn else "file")
+
+        root_nodes = set()
+        for n in tofetch:
+            ctx = repo[n]
             root_nodes.add(ctx.manifestnode())
 
         # Prefetch all relevant trees across all commits. Note that this might overfetch

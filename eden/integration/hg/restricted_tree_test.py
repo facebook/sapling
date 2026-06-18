@@ -427,8 +427,8 @@ class _RestrictedTreeTestMethods(_MethodsBase, metaclass=abc.ABCMeta):
     def test_rebase_across_restricted_tree_addition_with_untracked_file(
         self,
     ) -> None:
-        """Current behavior: rebase either hits server ACL prefetch or applies
-        the restriction over a local-only file."""
+        """Rebase should avoid prefetching restricted trees and then apply the
+        checkout behavior for a local-only file under the restricted path."""
         self.repo.hg("update", self.initial_commit)
 
         local_dir, local_file = self._create_local_only_restricted_file()
@@ -437,25 +437,6 @@ class _RestrictedTreeTestMethods(_MethodsBase, metaclass=abc.ABCMeta):
         local_commit = self.repo.commit("Modify unrelated file.")
 
         if self.expect_restricted:
-            if (
-                self.enable_server_acl_enforcement
-                and not self.enable_restricted_tree_mode
-            ):
-                with self.assertRaises(hgrepo.HgError) as ctx:
-                    self.hg(
-                        "rebase",
-                        "--config",
-                        "rebase.experimental.inmemory=False",
-                        "-r",
-                        local_commit,
-                        "-d",
-                        self.added_restricted_commit,
-                    )
-                self.assertIn("restricted by ACL 'some-acl'", str(ctx.exception))
-                with open(local_file, "r") as f:
-                    self.assertEqual("local content", f.read())
-                return
-
             self.hg(
                 "rebase",
                 "--config",

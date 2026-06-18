@@ -158,9 +158,9 @@ Rebase: ACL checks are repeated for the same restricted tree
   $ newclientrepo client6 server6
   $ sl go -q $D
 
-The restricted tree is checked once and reused from the in-process ACL cache.
-  $ SL_LOG=eagerepo::api=debug sl rebase -r $B::$D -d $E 2>&1 | $PYTHON -c 'import sys; print("".join(line for line in sys.stdin if "check_manifest_permission" in line), end="")'
-  DEBUG eagerepo::api: check_manifest_permission d4ef899346f65d1984b2a14db0f44f42df35d2d4
+EdenFS rebase does not check the destination-only restricted tree; non-Eden checkout does.
+  $ SL_LOG=eagerepo::api=debug sl rebase -r $B::$D -d $E 2>&1 | grep check_manifest_permission || true
+  DEBUG eagerepo::api: check_manifest_permission d4ef899346f65d1984b2a14db0f44f42df35d2d4 (no-eden !)
 
 #if eden
 Rebase currently fetches a restricted sibling even when the rebased commit does not touch it
@@ -184,9 +184,6 @@ Rebase currently fetches a restricted sibling even when the rebased commit does 
   $ HGPLAIN=1 sl rebase -r $B -d $C
   pulling 'a116d452f6f62b9b5d16ef671076f296b39f9e81' from 'test:server7'
   rebasing 3bf8492ead1a "B"
-  warning: results may be incomplete due to path ACLs
-    'users/restricted_owner' is restricted by ACL 'some-acl'
-  [1]
   $ sl log -r . -T '{files}\n'
   users/active_user/note.txt
 #endif
