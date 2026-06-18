@@ -29,7 +29,7 @@ export function FocusModeToggle() {
 
   useCommand('ToggleFocusMode', toggleFocus);
 
-  const shortcut = <Kbd keycode={KeyCode.F} modifiers={[Modifier.ALT]} />;
+  const shortcut = <Kbd keycode={KeyCode.F} modifiers={[Modifier.ALT, Modifier.SHIFT]} />;
   return (
     <Tooltip
       placement="bottom"
