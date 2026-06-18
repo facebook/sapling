@@ -1,5 +1,3 @@
-#require no-eden
-
   $ setconfig scmstore.fetch-tree-aux-data=true
   $ setconfig scmstore.tree-metadata-mode=always
   $ setconfig experimental.restricted-tree-mode=enforced
@@ -20,10 +18,14 @@ Goto: check out a commit where a previously-unrestricted file becomes restricted
   $ cd
   $ newclientrepo client1 server1
   $ sl go -q $A
+#if no-eden
   $ sl go -q $B
   warning: results may be incomplete due to path ACLs
     'dir' is restricted by ACL 'some-acl'
   [1]
+#else
+  $ sl go -q $B
+#endif
 
 Goto: local modifications to a file that becomes restricted
 
@@ -39,6 +41,11 @@ Goto: local modifications to a file that becomes restricted
   $ newclientrepo client2 server2
   $ sl go -q $A
   $ echo 'local change' > dir/file.txt
+#if eden
+  $ sl go -q $B
+  abort: path 'dir' is restricted by ACL 'some-acl'
+  [255]
+#else
   $ sl go -q $B
   abort: 1 conflicting file changes:
    dir/file.txt
@@ -46,6 +53,7 @@ Goto: local modifications to a file that becomes restricted
   warning: results may be incomplete due to path ACLs
     'dir' is restricted by ACL 'some-acl'
   [255]
+#endif
 
 Rebase: commit modifies a file that is restricted in destination
 
