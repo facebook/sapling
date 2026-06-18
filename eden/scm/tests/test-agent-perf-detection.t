@@ -82,6 +82,30 @@ Test --date:
   (run 'sl help agent performance' for guidance.)
   [255]
 
+Tofix: Test prefetches is triggered for addset/filteredset, should abort when the max
+fetch count is reached:
+
+  $ sl log -r 'desc(A0) | desc(A5)' -T "{desc}\n" --config agent.max-commit-fetch-count=20
+  A01
+  A02
+  A03
+  A04
+  A05
+  A06
+  A07
+  A08
+  A09
+  A50
+  A51
+  A52
+  A53
+  A54
+  A55
+  A56
+  A57
+  A58
+  A59
+
 Disable the detection:
 
   $ sl log -r 'desc(A)' -T '{desc}\n' -l 8 --config agent.max-commit-fetch-count=0
