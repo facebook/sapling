@@ -45,7 +45,7 @@ fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rus
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filestore = { version = "0.1.0", path = "../filestore" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
-itertools = "0.14.0"
+itertools = "0.15.0"
 maplit = "1.0"
 mercurial_derivation = { version = "0.1.0", path = "../../derived_data/mercurial_derivation" }
 metadata = { version = "0.1.0", path = "../../common/metadata" }

@@ -76,7 +76,7 @@ git_types = { version = "0.1.0", path = "../../git/git_types" }
 gix-hash = { version = "0.25.1", features = ["sha1"] }
 gix-object = "0.60.0"
 history_manifest = { version = "0.1.0", path = "../../derived_data/history_manifest" }
-itertools = "0.14.0"
+itertools = "0.15.0"
 justknobs_ext = { version = "0.1.0", path = "../../common/rust/justknobs_ext" }
 live_commit_sync_config = { version = "0.1.0", path = "../../features/commit_rewriting/live_commit_sync_config" }
 manifest = { version = "0.1.0", path = "../../manifest" }

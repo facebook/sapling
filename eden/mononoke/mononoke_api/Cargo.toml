@@ -68,7 +68,7 @@ gix-hash = { version = "0.25.1", features = ["sha1"] }
 history_traversal = { version = "0.1.0", path = "../features/history_traversal" }
 hook_manager = { version = "0.1.0", path = "../repo_attributes/hook_manager/hook_manager" }
 hooks = { version = "0.1.0", path = "../features/hooks" }
-itertools = "0.14.0"
+itertools = "0.15.0"
 justknobs_ext = { version = "0.1.0", path = "../common/rust/justknobs_ext" }
 lazy_static = "1.5"
 live_commit_sync_config = { version = "0.1.0", path = "../features/commit_rewriting/live_commit_sync_config" }

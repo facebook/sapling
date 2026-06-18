@@ -23,7 +23,7 @@ dashmap = { version = "6.2.1", features = ["rayon", "serde"] }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main", features = ["impl_never_type"] }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-itertools = "0.14.0"
+itertools = "0.15.0"
 justknobs_ext = { version = "0.1.0", path = "../../../common/rust/justknobs_ext" }
 memcache = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 metaconfig_types = { version = "0.1.0", path = "../../../metaconfig/types" }

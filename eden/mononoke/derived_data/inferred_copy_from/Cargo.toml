@@ -22,7 +22,7 @@ derived_data_service_if = { version = "0.1.0", path = "../remote/if" }
 filestore = { version = "0.1.0", path = "../../repo_attributes/filestore" }
 fsnodes = { version = "0.1.0", path = "../fsnodes" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
-itertools = "0.14.0"
+itertools = "0.15.0"
 manifest = { version = "0.1.0", path = "../../manifest" }
 mononoke_macros = { version = "0.1.0", path = "../../common/mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }

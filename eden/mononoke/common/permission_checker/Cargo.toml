@@ -14,7 +14,7 @@ base64 = { version = "0.22.1", features = ["alloc"] }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
-itertools = "0.14.0"
+itertools = "0.15.0"
 maplit = "1.0"
 mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }
 openssl = "0.10.80"

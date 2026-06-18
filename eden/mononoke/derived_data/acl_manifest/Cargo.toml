@@ -23,7 +23,7 @@ fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbth
 filestore = { version = "0.1.0", path = "../../repo_attributes/filestore" }
 fsnodes = { version = "0.1.0", path = "../fsnodes" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
-itertools = "0.14.0"
+itertools = "0.15.0"
 justknobs_ext = { version = "0.1.0", path = "../../common/rust/justknobs_ext" }
 manifest = { version = "0.1.0", path = "../../manifest" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }

@@ -29,7 +29,7 @@ futures = { version = "0.3.31", features = ["async-await", "compat"] }
 futures_retry = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures_watchdog = { version = "0.1.0", path = "../../common/futures_watchdog" }
-itertools = "0.14.0"
+itertools = "0.15.0"
 mercurial_derivation = { version = "0.1.0", path = "../../derived_data/mercurial_derivation" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }

@@ -30,7 +30,7 @@ futures = { version = "0.3.31", features = ["async-await", "compat"] }
 futures_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 hooks = { version = "0.1.0", path = "../../../features/hooks" }
-itertools = "0.14.0"
+itertools = "0.15.0"
 justknobs_ext = { version = "0.1.0", path = "../../../common/rust/justknobs_ext" }
 metaconfig_types = { version = "0.1.0", path = "../../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
