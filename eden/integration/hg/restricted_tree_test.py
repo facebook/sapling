@@ -21,7 +21,7 @@ from eden.fs.service.eden.thrift_types import (
     SyncBehavior,
 )
 from eden.integration.hg.lib.hg_extension_test_base import EdenHgTestCase, hg_test
-from eden.integration.lib import hgrepo
+from eden.integration.lib import edenclient, hgrepo
 from eden.integration.lib.eagerrepo import EagerRepo
 
 
@@ -30,6 +30,7 @@ class _RestrictedTreeTestBase(EdenHgTestCase, metaclass=abc.ABCMeta):
 
     initial_commit: str = ""
     swapped_commit: str = ""
+    added_restricted_commit: str = ""
     # Subclasses flip this to False to disable client-side enforcement.
     enable_restricted_tree_mode: bool = True
     # Subclasses flip this to True to enable server-side PermissionDenied.
@@ -89,13 +90,21 @@ class _RestrictedTreeTestBase(EdenHgTestCase, metaclass=abc.ABCMeta):
         eager.write_file("regular/.slacl", "regular acl config")
         self.swapped_commit = eager.commit("Swap ACL state.")
 
-        # Pull both commits into the backing repo via SLAPI. ``fetch_edenapi``
+        # Added restricted commit: local_only_restricted/ does not exist in
+        # initial_commit, and is created as a restricted tree here. Tests create
+        # a local untracked directory at this path before checking this out.
+        eager.write_file("local_only_restricted/.slacl", "acl config")
+        eager.write_file("local_only_restricted/server.txt", "server content")
+        self.added_restricted_commit = eager.commit("Add restricted tree.")
+
+        # Pull the commits into the backing repo via SLAPI. ``fetch_edenapi``
         # populates ``indexedlog_cache`` with entries that include
         # ``acl_children_indices`` derived from ``has_acl`` on children.
         # Pulling by hash avoids needing a server bookmark (``master`` is on
         # the disallowed list anyway).
         repo.hg("pull", "-r", self.initial_commit)
         repo.hg("pull", "-r", self.swapped_commit)
+        repo.hg("pull", "-r", self.added_restricted_commit)
         repo.hg("update", self.initial_commit)
 
 
@@ -134,6 +143,39 @@ class _RestrictedTreeTestMethods(_MethodsBase, metaclass=abc.ABCMeta):
         else:
             with open(path, "r") as f:
                 f.read()  # should not raise
+
+    def _create_local_only_restricted_file(self) -> tuple[str, str]:
+        local_dir = os.path.join(self.mount, "local_only_restricted")
+        local_file = os.path.join(local_dir, "local.txt")
+        os.mkdir(local_dir)
+        with open(local_file, "w") as f:
+            f.write("local content")
+        return local_dir, local_file
+
+    def _shutdown_allowing_known_restricted_contents_timeout(self) -> None:
+        # FIXME: Checkout currently permits a restricted TreeInode to retain
+        # local child contents. Shutdown may time out while unloading that
+        # invalid state. Keep the timeout short so this regression test is
+        # cheap until checkout rejects or discards those local children
+        # correctly.
+        old_timeout = edenclient.EDENFS_STOP_TIMEOUT
+        setattr(edenclient, "EDENFS_STOP_TIMEOUT", 1)
+        try:
+            try:
+                self.eden.shutdown()
+            except Exception as ex:
+                self.assertRegex(
+                    str(ex),
+                    "edenfs did not shutdown within 1 seconds; had to send SIGKILL",
+                )
+        finally:
+            setattr(edenclient, "EDENFS_STOP_TIMEOUT", old_timeout)
+
+    def _assert_known_restricted_contents_shutdown_timeout(self) -> None:
+        # FIXME: Later fixes reject or discard the invalid local children
+        # before the tree becomes restricted. Until then, the current bad
+        # state may or may not reproduce the shutdown timeout locally.
+        self._shutdown_allowing_known_restricted_contents_timeout()
 
     def test_regular_dir_is_accessible(self) -> None:
         """Regular directories should always be fully accessible."""
@@ -365,6 +407,104 @@ class _RestrictedTreeTestMethods(_MethodsBase, metaclass=abc.ABCMeta):
         # Verify the subtree is now restricted (under expect_restricted) or
         # still accessible (under config-off).
         self._assert_dir_blocked(os.path.join(self.mount, "regular"))
+
+    def test_checkout_restricted_tree_addition_over_untracked_file(
+        self,
+    ) -> None:
+        """Current behavior: non-force checkout applies the restriction over a
+        local-only file when the restricted directory is new in the target."""
+        self.repo.hg("update", self.initial_commit)
+
+        local_dir, local_file = self._create_local_only_restricted_file()
+
+        self.repo.hg("update", self.added_restricted_commit)
+
+        if self.expect_restricted:
+            with self.assertRaises(OSError) as ctx:
+                os.listdir(local_dir)
+            self.assertEqual(ctx.exception.errno, errno.EACCES)
+            self._assert_known_restricted_contents_shutdown_timeout()
+        else:
+            with open(local_file, "r") as f:
+                self.assertEqual("local content", f.read())
+
+    def test_force_checkout_restricted_tree_addition_over_untracked_file(
+        self,
+    ) -> None:
+        """Current behavior: force checkout applies the restriction over a
+        local-only file when the restricted directory is new in the target."""
+        self.repo.hg("update", self.initial_commit)
+
+        local_dir, local_file = self._create_local_only_restricted_file()
+
+        self.repo.hg("update", "-C", self.added_restricted_commit)
+
+        if self.expect_restricted:
+            with self.assertRaises(OSError) as ctx:
+                os.listdir(local_dir)
+            self.assertEqual(ctx.exception.errno, errno.EACCES)
+            self._assert_known_restricted_contents_shutdown_timeout()
+        else:
+            with open(local_file, "r") as f:
+                self.assertEqual("local content", f.read())
+
+    def test_rebase_across_restricted_tree_addition_with_untracked_file(
+        self,
+    ) -> None:
+        """Current behavior: rebase either hits server ACL prefetch or applies
+        the restriction over a local-only file."""
+        self.repo.hg("update", self.initial_commit)
+
+        local_dir, local_file = self._create_local_only_restricted_file()
+
+        self.write_file("hello.txt", "local hello")
+        local_commit = self.repo.commit("Modify unrelated file.")
+
+        if self.expect_restricted:
+            if (
+                self.enable_server_acl_enforcement
+                and not self.enable_restricted_tree_mode
+            ):
+                with self.assertRaises(hgrepo.HgError) as ctx:
+                    self.hg(
+                        "rebase",
+                        "--config",
+                        "rebase.experimental.inmemory=False",
+                        "-r",
+                        local_commit,
+                        "-d",
+                        self.added_restricted_commit,
+                    )
+                self.assertIn("restricted by ACL 'some-acl'", str(ctx.exception))
+                with open(local_file, "r") as f:
+                    self.assertEqual("local content", f.read())
+                return
+
+            self.hg(
+                "rebase",
+                "--config",
+                "rebase.experimental.inmemory=False",
+                "-r",
+                local_commit,
+                "-d",
+                self.added_restricted_commit,
+            )
+            with self.assertRaises(OSError) as ctx:
+                os.listdir(local_dir)
+            self.assertEqual(ctx.exception.errno, errno.EACCES)
+            self._assert_known_restricted_contents_shutdown_timeout()
+        else:
+            self.hg(
+                "rebase",
+                "--config",
+                "rebase.experimental.inmemory=False",
+                "-r",
+                local_commit,
+                "-d",
+                self.added_restricted_commit,
+            )
+            with open(local_file, "r") as f:
+                self.assertEqual("local content", f.read())
 
     def test_checkout_roundtrip_restricted(self) -> None:
         self.repo.hg("update", self.initial_commit)
