@@ -18,17 +18,78 @@
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/telemetry/DaemonError.h"
+#include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/ErrorLogger.h"
 #include "eden/fs/telemetry/test/CapturingScribeLogger.h"
 
 #include "eden/fs/telemetry/ErrorArg.h"
 #include "eden/fs/telemetry/ThrowTraceCapture.h"
+#include "eden/fs/telemetry/XplatKeys.h"
+#include "eden/fs/telemetry/facebook/XplatLogger.h"
+
+#include <fb303/ServiceData.h>
+#include <fmt/core.h>
+#include <thrift/lib/cpp2/util/ScopedServerInterfaceThread.h>
+
+#include "scribe/api/producer/thrift/experimental/gen-cpp2/StructuredProducerService.h"
 
 using namespace facebook::eden;
 
 namespace {
 [[noreturn]] FOLLY_NOINLINE void throwRuntimeError() {
   throw std::runtime_error("fuse read failed");
+}
+
+using scribe::api::thrift::StructuredProducerService;
+using scribe::api::thrift::WriteStructuredMessagesRequest;
+using scribe::api::thrift::WriteStructuredMessagesResponse;
+
+// Minimal no-op ScribeD handler, only needed to build an in-process test
+// client for the FakeXplatLogger base. It is never actually invoked because
+// FakeXplatLogger overrides logEvent().
+struct NoopScribeDHandler
+    : apache::thrift::ServiceHandler<StructuredProducerService> {
+  void WriteStructuredMessages(
+      WriteStructuredMessagesResponse&,
+      std::unique_ptr<WriteStructuredMessagesRequest>) override {}
+};
+
+// XplatLogger that records logEvent() calls instead of sending them, so tests
+// can assert how ErrorLogger routes.
+class FakeXplatLogger : public XplatLogger {
+ public:
+  FakeXplatLogger()
+      : XplatLogger(
+            EdenTelemetryIdentity{},
+            makeRefPtr<EdenStats>(),
+            std::make_shared<ReloadableConfig>(
+                EdenConfig::createTestEdenConfig()),
+            std::move(*apache::thrift::makeTestClient<
+                      apache::thrift::Client<StructuredProducerService>>(
+                std::make_shared<NoopScribeDHandler>()))) {}
+
+  void logEvent(std::string_view category, const DynamicEvent& event) override {
+    ++callCount;
+    lastCategory = std::string{category};
+    if (auto it = event.getStringMap().find("component");
+        it != event.getStringMap().end()) {
+      lastComponent = it->second;
+    }
+  }
+
+  int callCount = 0;
+  std::string lastCategory;
+  std::string lastComponent;
+};
+
+int64_t getCounter(EdenStats& stats, std::string_view name) {
+  stats.flush();
+  try {
+    return facebook::fb303::ServiceData::get()->getCounter(
+        fmt::format("{}.sum", name));
+  } catch (...) {
+    return 0;
+  }
 }
 } // namespace
 
@@ -194,4 +255,48 @@ TEST(EdenErrorInfoTest, SymbolizationIsDeferredUntilCreate) {
     // After getThrowSiteStackTrace() consumed the trace, create()
     // should still work but without a throw-site trace section.
   }
+}
+
+TEST(EdenErrorInfoTest, RoutesToXplatLoggerWhenFlagEnabled) {
+  auto scribe = std::make_shared<CapturingScribeLogger>();
+  auto config = EdenConfig::createTestEdenConfig();
+  config->enableErrorLogging.setValue(true, ConfigSourceType::UserConfig);
+  config->enableXplatLoggerErrors.setValue(true, ConfigSourceType::UserConfig);
+  auto reloadableConfig = std::make_shared<ReloadableConfig>(config);
+  FakeXplatLogger xplatLogger;
+  auto stats = makeRefPtr<EdenStats>();
+  ErrorLogger errorLogger{
+      scribe, SessionInfo{}, reloadableConfig, &xplatLogger, stats.copy()};
+
+  auto before = getCounter(*stats, "telemetry.errors_via_xplat_logger");
+  std::runtime_error ex("mount not found");
+  errorLogger.log(EdenErrorInfo::thrift(ex, "unmount"));
+
+  // Routed to XplatLogger (Logger/Hive), not the legacy scribe path.
+  EXPECT_EQ(xplatLogger.callCount, 1);
+  EXPECT_EQ(xplatLogger.lastCategory, std::string{xplat_keys::kErrorsCategory});
+  EXPECT_EQ(xplatLogger.lastComponent, "thrift");
+  EXPECT_TRUE(scribe->messages().empty())
+      << "Legacy scribe path should be skipped when the flag is on";
+  EXPECT_EQ(
+      getCounter(*stats, "telemetry.errors_via_xplat_logger") - before, 1);
+}
+
+TEST(EdenErrorInfoTest, RoutesToScribeWhenFlagDisabled) {
+  auto scribe = std::make_shared<CapturingScribeLogger>();
+  auto config = EdenConfig::createTestEdenConfig();
+  config->enableErrorLogging.setValue(true, ConfigSourceType::UserConfig);
+  // enableXplatLoggerErrors stays at its default (false).
+  auto reloadableConfig = std::make_shared<ReloadableConfig>(config);
+  FakeXplatLogger xplatLogger;
+  auto stats = makeRefPtr<EdenStats>();
+  ErrorLogger errorLogger{
+      scribe, SessionInfo{}, reloadableConfig, &xplatLogger, stats.copy()};
+
+  std::runtime_error ex("mount not found");
+  errorLogger.log(EdenErrorInfo::thrift(ex, "unmount"));
+
+  // Legacy scribe path used; XplatLogger left untouched.
+  EXPECT_EQ(xplatLogger.callCount, 0);
+  ASSERT_EQ(scribe->messages().size(), 1);
 }

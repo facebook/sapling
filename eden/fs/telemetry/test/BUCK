@@ -138,14 +138,21 @@ cpp_unittest(
     ],
     supports_static_listing = False,
     deps = [
+        "fbsource//third-party/fmt:fmt",
         "fbsource//third-party/googletest:gtest",
         "//eden/common/telemetry:log_info",
         "//eden/fs/config:config",
         "//eden/fs/telemetry:error_info",
         "//eden/fs/telemetry:error_logger",
+        "//eden/fs/telemetry:stats",
         "//eden/fs/telemetry:throw_trace_capture",  # @manual needed for --wrap __cxa_throw linker flag
+        "//eden/fs/telemetry:xplat_keys",
+        "//eden/fs/telemetry/facebook:xplat_logger",
         "//eden/fs/telemetry/test:capturing_scribe_logger",
+        "//fb303:service_data",
         "//folly:c_portability",
+        "//scribe/api/producer/thrift/experimental:structured_producer-cpp2-services",
+        "//thrift/lib/cpp2/util:util",
     ],
 )
 

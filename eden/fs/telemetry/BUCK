@@ -133,9 +133,17 @@ cpp_library(
     deps = [
         ":error_info",
         ":stack_trace_uploader",
+        ":stats",
+        ":xplat_keys",
+        "//eden/common/telemetry:log_info",
+        "//eden/common/telemetry:structured_logger_factory",
         "//eden/fs/config:config",
+        "//eden/fs/telemetry/facebook:xplat_logger",  # @manual
     ],
-    exported_deps = [":structured_logger"],
+    exported_deps = [
+        ":structured_logger",
+        "//eden/common/utils:ref_ptr",
+    ],
 )
 
 cpp_library(

@@ -344,7 +344,8 @@ std::shared_ptr<ErrorLogger> makeErrorLogger(
     const EdenConfig& edenConfig,
     SessionInfo sessionInfo,
     std::shared_ptr<ReloadableConfig> config,
-    EdenStatsPtr edenStats) {
+    EdenStatsPtr edenStats,
+    XplatLogger* xplatLogger) {
   auto scribeBinary = edenConfig.scribeLogger.getValue();
   auto errorCategory = edenConfig.errorScribeCategory.getValue();
   std::shared_ptr<ScribeLogger> scribeLogger;
@@ -361,7 +362,11 @@ std::shared_ptr<ErrorLogger> makeErrorLogger(
     }
   }
   return std::make_shared<ErrorLogger>(
-      std::move(scribeLogger), std::move(sessionInfo), std::move(config));
+      std::move(scribeLogger),
+      std::move(sessionInfo),
+      std::move(config),
+      xplatLogger,
+      std::move(edenStats));
 }
 
 #ifndef _WIN32
@@ -570,14 +575,23 @@ EdenServer::EdenServer(
               edenConfig->notificationsScribeCategory.getValue(),
               sessionInfo,
               edenStats.copy())},
-      errorLogger_{
-          makeErrorLogger(*edenConfig, sessionInfo, config_, edenStats.copy())},
 #ifdef EDEN_HAVE_LOGGER
       xplatLogger_{std::make_unique<XplatLogger>(
           EdenTelemetryIdentity::fromSessionInfo(sessionInfo),
           edenStats.copy(),
           config_)},
 #endif
+      errorLogger_{makeErrorLogger(
+          *edenConfig,
+          sessionInfo,
+          config_,
+          edenStats.copy(),
+#ifdef EDEN_HAVE_LOGGER
+          xplatLogger_.get()
+#else
+          nullptr
+#endif
+              )},
       edenFsEventsLogger_{std::make_shared<EdenFsEventsLogger>(
           structuredLogger_,
 #ifdef EDEN_HAVE_LOGGER
@@ -780,6 +794,10 @@ void EdenServer::registerXplatTransforms() {
       std::string{xplat_keys::kEventsCategory},
       "GeneratedEdenfsEventsLoggerConfig",
       edenfsEventsTransform);
+  xplatLogger_->registerTransform(
+      std::string{xplat_keys::kErrorsCategory},
+      "GeneratedEdenfsErrorsLoggerConfig",
+      errorsTransform);
 }
 #endif
 

@@ -828,21 +828,22 @@ class EdenServer : private TakeoverHandler {
    */
   std::shared_ptr<StructuredLogger> notificationsStructuredLogger_;
 
+#ifdef EDEN_HAVE_LOGGER
+  /**
+   * Cross-platform structured logger for file access, events, and error
+   * telemetry. Owns the EdenTelemetryIdentity used for all log entries.
+   * Declared before errorLogger_ so it can be passed to it, and before
+   * serverState_ so it outlives InodeAccessLogger.
+   */
+  std::unique_ptr<XplatLogger> xplatLogger_;
+#endif
+
   /**
    * Structured logger for error telemetry. When scribe binary and
    * error category are configured, this is an ErrorLogger instance;
    * Always created; no-ops internally when scribe is not configured.
    */
   std::shared_ptr<ErrorLogger> errorLogger_;
-
-#ifdef EDEN_HAVE_LOGGER
-  /**
-   * Cross-platform structured logger for file access events.
-   * Owns the EdenTelemetryIdentity used for all log entries.
-   * Must be declared before serverState_ so it outlives InodeAccessLogger.
-   */
-  std::unique_ptr<XplatLogger> xplatLogger_;
-#endif
 
   /**
    * Events logger for telemetry, shared with WindowsNotifier.

@@ -1604,6 +1604,17 @@ class EdenConfig : private ConfigSettingManager {
       false,
       this};
 
+  /**
+   * Whether to enable XplatLogger for edenfs_errors telemetry. When enabled,
+   * structured errors are routed through XplatLogger to the
+   * GeneratedEdenfsErrorsLoggerConfig (Hive + Scuba) instead of the legacy
+   * Scribe -> perfpipe_edenfs_errors path.
+   */
+  ConfigSetting<bool> enableXplatLoggerErrors{
+      "telemetry:enable-xplatlogger-errors",
+      false,
+      this};
+
   // [experimental]
 
   /**
