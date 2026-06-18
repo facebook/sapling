@@ -59,6 +59,13 @@ type CommandDefinition = [Modifiers, KeyCode];
 
 type CommandMap<CommandName extends string> = Record<CommandName, CommandDefinition>;
 
+/** Called when a command is triggered via a keyboard shortcut (not programmatic dispatch). */
+type OnShortcutDispatch<CommandName extends string> = (info: {
+  command: CommandName;
+  key: string;
+  modifiers: number;
+}) => void;
+
 function isTargetTextInputElement(event: KeyboardEvent): boolean {
   return (
     event.target != null &&
@@ -77,7 +84,7 @@ class CommandDispatcher<CommandName extends string> extends (
   }
 ).EventTarget {
   private keydownListener: (event: KeyboardEvent) => void;
-  constructor(commands: CommandMap<CommandName>) {
+  constructor(commands: CommandMap<CommandName>, onDispatch?: OnShortcutDispatch<CommandName>) {
     super();
     const knownKeysWithCommands = new Set<KeyCode>();
     for (const cmdDef of Object.values(commands) as Array<CommandDefinition>) {
@@ -103,6 +110,7 @@ class CommandDispatcher<CommandName extends string> extends (
       >) {
         const [mods, key] = cmdAttrs;
         if (key === event.keyCode && collapseModifiersToNumber(mods) === modValue) {
+          onDispatch?.({command, key: event.key, modifiers: modValue});
           this.dispatchEvent(new Event(command));
           event.preventDefault();
           event.stopPropagation();
@@ -132,13 +140,14 @@ function collapseModifiersToNumber(mods: Modifiers): number {
  */
 export function makeCommandDispatcher<CommandName extends string>(
   commands: CommandMap<CommandName>,
+  onDispatch?: OnShortcutDispatch<CommandName>,
 ): [
   FunctionComponent<PropsWithChildren>,
   (command: CommandName, handler: () => void) => void,
   (command: CommandName) => void,
   CommandMap<CommandName>,
 ] {
-  const commandDispatcher = new CommandDispatcher(commands);
+  const commandDispatcher = new CommandDispatcher(commands, onDispatch);
   const Context = createContext(commandDispatcher);
 
   function useCommand(command: CommandName, handler: () => void) {

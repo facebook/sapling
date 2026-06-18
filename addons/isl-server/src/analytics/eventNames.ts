@@ -67,6 +67,7 @@ export type TrackEventName =
   | 'FillCommitMessage'
   | 'FocusChanged'
   | 'SetFocusMode'
+  | 'KeyboardShortcutUsed'
   | 'GettingStartedInteraction'
   | 'GetSuggestedReviewers'
   | 'GetAlertsCommand'

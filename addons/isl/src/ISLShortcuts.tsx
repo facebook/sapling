@@ -10,6 +10,7 @@ import {KeyCode, makeCommandDispatcher, Modifier} from 'isl-components/KeyboardS
 import {isMac} from 'isl-components/OperatingSystem';
 import {useMemo} from 'react';
 import {TypedEventEmitter} from 'shared/TypedEventEmitter';
+import {getTracker} from './analytics/globalTracker';
 import {t} from './i18n';
 import {useModal} from './useModal';
 
@@ -18,31 +19,36 @@ import './ISLShortcuts.css';
 const CMD = isMac ? Modifier.CMD : Modifier.CTRL;
 
 /* eslint-disable no-bitwise */
-export const [ISLCommandContext, useCommand, dispatchCommand, allCommands] = makeCommandDispatcher({
-  OpenShortcutHelp: [Modifier.SHIFT, KeyCode.QuestionMark],
-  ToggleSidebar: [CMD, KeyCode.Period],
-  OpenUncommittedChangesComparisonView: [CMD, KeyCode.SingleQuote],
-  OpenHeadChangesComparisonView: [[CMD, Modifier.SHIFT], KeyCode.SingleQuote],
-  Escape: [Modifier.NONE, KeyCode.Escape],
-  SelectUpwards: [Modifier.NONE, KeyCode.UpArrow],
-  SelectDownwards: [Modifier.NONE, KeyCode.DownArrow],
-  OpenDetails: [Modifier.NONE, KeyCode.RightArrow],
-  ContinueSelectionUpwards: [Modifier.SHIFT, KeyCode.UpArrow],
-  ContinueSelectionDownwards: [Modifier.SHIFT, KeyCode.DownArrow],
-  SelectAllCommits: [Modifier.ALT, KeyCode.A],
-  HideSelectedCommits: [Modifier.NONE, KeyCode.Backspace],
-  ZoomIn: [Modifier.ALT, KeyCode.Plus],
-  ZoomOut: [Modifier.ALT, KeyCode.Minus],
-  ToggleTheme: [Modifier.ALT, KeyCode.T],
-  ToggleShelvedChangesDropdown: [Modifier.ALT, KeyCode.S],
-  ToggleDownloadCommitsDropdown: [Modifier.ALT, KeyCode.D],
-  ToggleCwdDropdown: [Modifier.ALT, KeyCode.C],
-  ToggleBulkActionsDropdown: [Modifier.ALT, KeyCode.B],
-  ToggleFocusMode: [[Modifier.ALT, Modifier.SHIFT], KeyCode.F],
-  ToggleBookmarksManagerDropdown: [Modifier.ALT, KeyCode.M],
-  RebaseOntoCurrentStackBase: [Modifier.ALT, KeyCode.R],
-  ToggleFilterDropdown: [Modifier.CMD, KeyCode.F],
-});
+export const [ISLCommandContext, useCommand, dispatchCommand, allCommands] = makeCommandDispatcher(
+  {
+    OpenShortcutHelp: [Modifier.SHIFT, KeyCode.QuestionMark],
+    ToggleSidebar: [CMD, KeyCode.Period],
+    OpenUncommittedChangesComparisonView: [CMD, KeyCode.SingleQuote],
+    OpenHeadChangesComparisonView: [[CMD, Modifier.SHIFT], KeyCode.SingleQuote],
+    Escape: [Modifier.NONE, KeyCode.Escape],
+    SelectUpwards: [Modifier.NONE, KeyCode.UpArrow],
+    SelectDownwards: [Modifier.NONE, KeyCode.DownArrow],
+    OpenDetails: [Modifier.NONE, KeyCode.RightArrow],
+    ContinueSelectionUpwards: [Modifier.SHIFT, KeyCode.UpArrow],
+    ContinueSelectionDownwards: [Modifier.SHIFT, KeyCode.DownArrow],
+    SelectAllCommits: [Modifier.ALT, KeyCode.A],
+    HideSelectedCommits: [Modifier.NONE, KeyCode.Backspace],
+    ZoomIn: [Modifier.ALT, KeyCode.Plus],
+    ZoomOut: [Modifier.ALT, KeyCode.Minus],
+    ToggleTheme: [Modifier.ALT, KeyCode.T],
+    ToggleShelvedChangesDropdown: [Modifier.ALT, KeyCode.S],
+    ToggleDownloadCommitsDropdown: [Modifier.ALT, KeyCode.D],
+    ToggleCwdDropdown: [Modifier.ALT, KeyCode.C],
+    ToggleBulkActionsDropdown: [Modifier.ALT, KeyCode.B],
+    ToggleFocusMode: [[Modifier.ALT, Modifier.SHIFT], KeyCode.F],
+    ToggleBookmarksManagerDropdown: [Modifier.ALT, KeyCode.M],
+    RebaseOntoCurrentStackBase: [Modifier.ALT, KeyCode.R],
+    ToggleFilterDropdown: [Modifier.CMD, KeyCode.F],
+  },
+  ({command, key, modifiers}) => {
+    getTracker()?.track('KeyboardShortcutUsed', {extras: {command, key, modifiers}});
+  },
+);
 
 export type ISLCommandName = Parameters<typeof useCommand>[0];
 
