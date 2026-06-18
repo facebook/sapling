@@ -25,12 +25,6 @@ One more than the limit triggers the abort before the over-limit commit is
 yielded:
 
   $ sl log -r 'desc(A)' -T '{desc}\n' -l 7
-  A01
-  A02
-  A03
-  A04
-  A05
-  A06
   abort: revset query scanned over 6 commits
   (run 'sl help agent performance' for guidance.)
   [255]
@@ -41,12 +35,6 @@ Test --user:
   A99
   A98
   $ sl log --user test -T '{desc}\n' -l 7
-  A99
-  A98
-  A97
-  A96
-  A95
-  A94
   abort: revset query scanned over 6 commits
   (run 'sl help agent performance' for guidance.)
   [255]
@@ -57,12 +45,6 @@ Test --keyword:
   A99
   A98
   $ sl log --keyword A -T '{desc}\n' -l 7
-  A99
-  A98
-  A97
-  A96
-  A95
-  A94
   abort: revset query scanned over 6 commits
   (run 'sl help agent performance' for guidance.)
   [255]
@@ -72,17 +54,11 @@ Test --date:
   A99
   A98
   $ sl log --date '1970-01-01' -T '{desc}\n' -l 7
-  A99
-  A98
-  A97
-  A96
-  A95
-  A94
   abort: revset query scanned over 6 commits
   (run 'sl help agent performance' for guidance.)
   [255]
 
-Tofix: Test prefetches is triggered for addset/filteredset, should abort when the max
+Test prefetches is triggered for addset/filteredset, should abort when the max
 fetch count is reached:
 
   $ sl log -r 'desc(A0) | desc(A5)' -T "{desc}\n" --config agent.max-commit-fetch-count=20
@@ -94,17 +70,9 @@ fetch count is reached:
   A06
   A07
   A08
-  A09
-  A50
-  A51
-  A52
-  A53
-  A54
-  A55
-  A56
-  A57
-  A58
-  A59
+  abort: revset query scanned over 20 commits
+  (run 'sl help agent performance' for guidance.)
+  [255]
 
 Disable the detection:
 
