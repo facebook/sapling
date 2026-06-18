@@ -7,8 +7,6 @@
 
 //! Implement traits from other crates.
 
-use std::sync::Arc;
-
 use async_trait::async_trait;
 use blob::Blob;
 use storemodel::BoxIterator;
@@ -17,7 +15,7 @@ use storemodel::InsertOpts;
 use storemodel::KeyStore;
 use storemodel::Kind;
 use storemodel::SerializationFormat;
-use storemodel::TreeEntry;
+use storemodel::TreeFetchItems;
 use storemodel::TreeStore;
 use types::FetchContext;
 use types::HgId;
@@ -121,11 +119,7 @@ impl TreeStore for GitStore {
         Box::new(self.clone())
     }
 
-    fn get_tree_iter(
-        &self,
-        _fctx: FetchContext,
-        keys: Vec<Key>,
-    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Arc<dyn TreeEntry>)>>> {
+    fn get_tree_iter(&self, _fctx: FetchContext, keys: Vec<Key>) -> anyhow::Result<TreeFetchItems> {
         // Bulk fetch from remote first.
         if self.has_fetch_url() {
             let ids = keys.iter().map(|k| k.hgid).collect::<Vec<_>>();
@@ -144,6 +138,6 @@ impl TreeStore for GitStore {
                 )),
                 Ok(Some(data)) => Ok((k, data)),
             });
-        Ok(Box::new(iter))
+        Ok(TreeFetchItems::item_stream(iter))
     }
 }

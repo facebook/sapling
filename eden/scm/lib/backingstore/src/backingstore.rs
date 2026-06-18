@@ -947,6 +947,7 @@ impl LocalRemoteImpl<Arc<dyn TreeEntry>> for Arc<dyn TreeStore> {
     ) -> Result<Arc<dyn TreeEntry>> {
         match self
             .get_tree_iter(fctx, vec![Key::new(path.to_owned(), id)])?
+            .into_iter()
             .next()
         {
             Some(Ok((_key, tree))) => Ok(tree),
@@ -959,7 +960,7 @@ impl LocalRemoteImpl<Arc<dyn TreeEntry>> for Arc<dyn TreeStore> {
         fctx: FetchContext,
         keys: Vec<Key>,
     ) -> Result<BoxIterator<Result<(Key, Arc<dyn TreeEntry>)>>> {
-        self.get_tree_iter(fctx, keys)
+        Ok(Box::new(self.get_tree_iter(fctx, keys)?.into_iter()))
     }
 }
 

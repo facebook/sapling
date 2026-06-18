@@ -49,6 +49,7 @@ use storemodel::InsertOpts;
 use storemodel::KeyStore;
 use storemodel::SerializationFormat;
 use storemodel::TreeEntry;
+use storemodel::TreeFetchItems;
 use storemodel::basic_parse_tree;
 use types::AuxData;
 
@@ -1202,11 +1203,7 @@ impl storemodel::TreeStore for TreeStore {
         self.get_local_tree_direct(id)
     }
 
-    fn get_tree_iter(
-        &self,
-        fctx: FetchContext,
-        keys: Vec<Key>,
-    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Arc<dyn TreeEntry>)>>> {
+    fn get_tree_iter(&self, fctx: FetchContext, keys: Vec<Key>) -> anyhow::Result<TreeFetchItems> {
         // TreeAttributes::CONTENT means at least the content attribute is requested.
         // In practice, files/trees aux data may be requested as well, but we don't know that here as it depends on the configs.
         let fetched = self.fetch_batch(fctx, keys.into_iter(), TreeAttributes::CONTENT);
@@ -1223,7 +1220,7 @@ impl storemodel::TreeStore for TreeStore {
                     scm_entry.acl_checker = acl_checker.clone();
                     Ok((key, Arc::new(scm_entry) as Arc<dyn TreeEntry>))
                 });
-        Ok(Box::new(iter))
+        Ok(TreeFetchItems::item_stream(iter))
     }
 
     fn get_tree_aux_data_iter(

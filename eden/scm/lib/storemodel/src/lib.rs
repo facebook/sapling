@@ -39,6 +39,7 @@ use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
 use serde::Deserialize;
 use serde::Serialize;
+use slex_items::Items;
 pub use types;
 use types::FetchContext;
 use types::HgId;
@@ -56,6 +57,9 @@ pub type BoxIterator<T> = Box<dyn Iterator<Item = T> + Send + 'static>;
 
 /// Boxed dynamic iterator with lifetime.
 pub type BoxRefIterator<'a, T> = Box<dyn Iterator<Item = T> + Send + 'a>;
+
+pub type TreeFetch = (Key, Arc<dyn TreeEntry>);
+pub type TreeFetchItems = Items<TreeFetch, anyhow::Error>;
 
 /// A store where content is indexed by "(path, hash)", aka "Key".
 pub trait KeyStore: Send + Sync {
@@ -395,11 +399,7 @@ pub trait TreeStore: KeyStore {
     /// List trees with optional auxiliary metadata.
     ///
     /// Currently mainly used by EdenFS.
-    fn get_tree_iter(
-        &self,
-        _fctx: FetchContext,
-        keys: Vec<Key>,
-    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Arc<dyn TreeEntry>)>>> {
+    fn get_tree_iter(&self, _fctx: FetchContext, keys: Vec<Key>) -> anyhow::Result<TreeFetchItems> {
         let store = self.clone_tree_store();
         let iter = keys
             .into_iter()
@@ -412,7 +412,7 @@ pub trait TreeStore: KeyStore {
                 )),
                 Ok(Some(data)) => Ok((k, data)),
             });
-        Ok(Box::new(iter))
+        Ok(TreeFetchItems::item_stream(iter))
     }
 
     /// Fetch a single tree with full metadata.
@@ -428,7 +428,7 @@ pub trait TreeStore: KeyStore {
             return Ok(tree);
         }
         let key = Key::new(path.to_owned(), id);
-        match self.get_tree_iter(fctx, vec![key])?.next() {
+        match self.get_tree_iter(fctx, vec![key])?.into_iter().next() {
             Some(Ok((_, tree))) => Ok(tree),
             Some(Err(e)) => Err(e),
             None => Err(anyhow::format_err!("{path}@{id}: tree not found")),

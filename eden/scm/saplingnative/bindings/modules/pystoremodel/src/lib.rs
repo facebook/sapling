@@ -251,7 +251,7 @@ py_class!(pub class TreeStore |py| {
         let inner = self.inner(py);
         let fctx = FetchContext::new(fetch_mode.0);
         let iter = inner.get_tree_iter(fctx, keys.0.into_keys()).map_pyerr(py)?;
-        PyIter::new_custom(py, iter, |py, (key, entry)| {
+        PyIter::new_custom(py, iter.into_iter(), |py, (key, entry)| {
             Ok((Serde(key.into_compact_key()), TreeEntry::create_instance(py, entry)?).to_py_object(py).into_object())
         })
     }

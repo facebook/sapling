@@ -24,6 +24,7 @@ use storemodel::KeyStore;
 use storemodel::Kind;
 use storemodel::SerializationFormat;
 use storemodel::TreeEntry;
+use storemodel::TreeFetchItems;
 use types::FetchContext;
 use types::HgId;
 use types::Key;
@@ -253,11 +254,7 @@ impl KeyStore for TestStore {
 }
 
 impl TreeStore for TestStore {
-    fn get_tree_iter(
-        &self,
-        _fctx: FetchContext,
-        keys: Vec<Key>,
-    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Arc<dyn TreeEntry>)>>> {
+    fn get_tree_iter(&self, _fctx: FetchContext, keys: Vec<Key>) -> anyhow::Result<TreeFetchItems> {
         let mut inner = self.inner.write();
         inner
             .key_fetch_count
@@ -277,7 +274,7 @@ impl TreeStore for TestStore {
                 )),
                 Ok(Some(data)) => Ok((k, data)),
             });
-        Ok(Box::new(iter))
+        Ok(TreeFetchItems::item_stream(iter))
     }
 
     fn get_local_tree(

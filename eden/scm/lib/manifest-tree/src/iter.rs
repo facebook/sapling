@@ -440,7 +440,7 @@ mod tests {
             &self,
             fctx: FetchContext,
             keys: Vec<Key>,
-        ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Arc<dyn TreeEntry>)>>> {
+        ) -> anyhow::Result<storemodel::TreeFetchItems> {
             self.0.get_tree_iter(fctx, keys)
         }
 

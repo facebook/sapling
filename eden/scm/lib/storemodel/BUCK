@@ -31,6 +31,7 @@ rust_library(
         "//eden/scm/lib/edenapi/types:edenapi_types",
         "//eden/scm/lib/metalog:metalog",
         "//eden/scm/lib/minibytes:minibytes",
+        "//eden/scm/lib/slex/items:slex_items",
         "//eden/scm/lib/types:types",
         "//eden/scm/lib/util/factory:factory",
     ],

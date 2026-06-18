@@ -27,3 +27,4 @@ sapling-metalog = { version = "0.1.0", path = "../metalog" }
 sapling-minibytes = { version = "0.1.0", path = "../minibytes" }
 sapling-types = { version = "0.1.0", path = "../types" }
 serde = { version = "1.0.219", features = ["derive", "rc"] }
+slex-items = { version = "0.1.0", path = "../slex/items" }
