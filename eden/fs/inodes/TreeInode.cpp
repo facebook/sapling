@@ -4585,12 +4585,22 @@ std::shared_ptr<CheckoutAction> TreeInode::processLocalOnlyCheckoutEntry(
       auto childPtr = entry.getInodePtr();
       return std::make_shared<CheckoutAction>(ctx, name, std::move(childPtr));
     }
+    if (ctx->forceUpdate() && !ctx->isDryRun()) {
+      auto childPtr = entry.getInodePtr();
+      return std::make_shared<CheckoutAction>(ctx, name, std::move(childPtr));
+    }
     ctx->addConflict(ConflictType::UNTRACKED_ADDED, child);
     hadConflicts = true;
     return nullptr;
   }
 
   if (entry.isDirectory()) {
+    auto inodeFuture =
+        loadChildLocked(name, entry, pendingLoads, ctx->getFetchContext());
+    return std::make_shared<CheckoutAction>(ctx, name, std::move(inodeFuture));
+  }
+
+  if (ctx->forceUpdate() && !ctx->isDryRun()) {
     auto inodeFuture =
         loadChildLocked(name, entry, pendingLoads, ctx->getFetchContext());
     return std::make_shared<CheckoutAction>(ctx, name, std::move(inodeFuture));

@@ -152,31 +152,6 @@ class _RestrictedTreeTestMethods(_MethodsBase, metaclass=abc.ABCMeta):
             f.write("local content")
         return local_dir, local_file
 
-    def _shutdown_allowing_known_restricted_contents_timeout(self) -> None:
-        # FIXME: Checkout currently permits a restricted TreeInode to retain
-        # local child contents. Shutdown may time out while unloading that
-        # invalid state. Keep the timeout short so this regression test is
-        # cheap until checkout rejects or discards those local children
-        # correctly.
-        old_timeout = edenclient.EDENFS_STOP_TIMEOUT
-        setattr(edenclient, "EDENFS_STOP_TIMEOUT", 1)
-        try:
-            try:
-                self.eden.shutdown()
-            except Exception as ex:
-                self.assertRegex(
-                    str(ex),
-                    "edenfs did not shutdown within 1 seconds; had to send SIGKILL",
-                )
-        finally:
-            setattr(edenclient, "EDENFS_STOP_TIMEOUT", old_timeout)
-
-    def _assert_known_restricted_contents_shutdown_timeout(self) -> None:
-        # FIXME: Later fixes reject or discard the invalid local children
-        # before the tree becomes restricted. Until then, the current bad
-        # state may or may not reproduce the shutdown timeout locally.
-        self._shutdown_allowing_known_restricted_contents_timeout()
-
     def test_regular_dir_is_accessible(self) -> None:
         """Regular directories should always be fully accessible."""
         entries = sorted(os.listdir(os.path.join(self.mount, "regular")))
@@ -432,7 +407,7 @@ class _RestrictedTreeTestMethods(_MethodsBase, metaclass=abc.ABCMeta):
     def test_force_checkout_restricted_tree_addition_over_untracked_file(
         self,
     ) -> None:
-        """Current behavior: force checkout applies the restriction over a
+        """Force checkout applies the restriction over a
         local-only file when the restricted directory is new in the target."""
         self.repo.hg("update", self.initial_commit)
 
@@ -444,7 +419,6 @@ class _RestrictedTreeTestMethods(_MethodsBase, metaclass=abc.ABCMeta):
             with self.assertRaises(OSError) as ctx:
                 os.listdir(local_dir)
             self.assertEqual(ctx.exception.errno, errno.EACCES)
-            self._assert_known_restricted_contents_shutdown_timeout()
         else:
             self.repo.hg("update", self.added_restricted_commit)
             with open(local_file, "r") as f:
@@ -491,10 +465,7 @@ class _RestrictedTreeTestMethods(_MethodsBase, metaclass=abc.ABCMeta):
                 "-d",
                 self.added_restricted_commit,
             )
-            with self.assertRaises(OSError) as ctx:
-                os.listdir(local_dir)
-            self.assertEqual(ctx.exception.errno, errno.EACCES)
-            self._assert_known_restricted_contents_shutdown_timeout()
+            self._assert_dir_blocked(local_dir)
         else:
             self.hg(
                 "rebase",

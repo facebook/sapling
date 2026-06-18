@@ -252,6 +252,23 @@ ImmediateFuture<CheckoutActionResult> CheckoutAction::doAction() {
 
         if (!self->oldScmEntry_ && !self->newScmEntry_) {
           auto treeInode = self->inode_.asTreePtrOrNull();
+          if (self->ctx_->forceUpdate() && !self->ctx_->isDryRun() &&
+              !treeInode) {
+            auto parent = self->inode_->getParent(self->ctx_->renameLock());
+            return parent
+                ->checkoutUpdateEntry(
+                    self->ctx_,
+                    self->getEntryName(),
+                    std::move(self->inode_),
+                    nullptr,
+                    nullptr,
+                    std::nullopt)
+                .thenValue(
+                    [conflictWasAddedToCtx](CheckoutActionResult result) {
+                      result.hadConflicts |= conflictWasAddedToCtx;
+                      return result;
+                    });
+          }
           if (!treeInode) {
             return CheckoutActionResult{
                 InvalidationRequired::No, conflictWasAddedToCtx};
@@ -262,11 +279,30 @@ ImmediateFuture<CheckoutActionResult> CheckoutAction::doAction() {
                   nullptr,
                   nullptr,
                   /*reportLocalOnlyAsConflicts=*/true)
-              .thenValue([conflictWasAddedToCtx](CheckoutSubtreeResult result) {
-                result.hadConflicts |= conflictWasAddedToCtx;
-                return CheckoutActionResult{
-                    InvalidationRequired::No, result.hadConflicts};
-              });
+              .thenValue(
+                  [self, conflictWasAddedToCtx](CheckoutSubtreeResult result)
+                      -> ImmediateFuture<CheckoutActionResult> {
+                    result.hadConflicts |= conflictWasAddedToCtx;
+                    if (self->ctx_->forceUpdate() && !self->ctx_->isDryRun()) {
+                      auto parent =
+                          self->inode_->getParent(self->ctx_->renameLock());
+                      return parent
+                          ->checkoutUpdateEntry(
+                              self->ctx_,
+                              self->getEntryName(),
+                              std::move(self->inode_),
+                              nullptr,
+                              nullptr,
+                              std::nullopt)
+                          .thenValue([hadConflicts = result.hadConflicts](
+                                         CheckoutActionResult actionResult) {
+                            actionResult.hadConflicts |= hadConflicts;
+                            return actionResult;
+                          });
+                    }
+                    return CheckoutActionResult{
+                        InvalidationRequired::No, result.hadConflicts};
+                  });
         }
 
         // Call TreeInode::checkoutUpdateEntry() to actually do the work.
