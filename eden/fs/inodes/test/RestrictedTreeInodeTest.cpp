@@ -59,6 +59,23 @@ TreeInodePtr makeRestrictedInode(
   testMount.getEdenMount()->getInodeMap()->inodeCreated(inode);
   return inode;
 }
+
+TreeInodePtr makeTreeInodeChildWithoutParentEntry(
+    TestMount& testMount,
+    TreeInodePtr parent,
+    PathComponentPiece name) {
+  auto ino = testMount.getEdenMount()->getOverlay()->allocateInodeNumber();
+  auto inode = TreeInodePtr::makeNew(
+      ino,
+      parent,
+      name,
+      S_IFDIR | 0755,
+      std::nullopt,
+      DirContents{CaseSensitivity::Sensitive},
+      std::nullopt);
+  testMount.getEdenMount()->getInodeMap()->inodeCreated(inode);
+  return inode;
+}
 } // namespace
 
 TEST(RestrictedTreeInode, normalTreeInodeAllowsReaddir) {
@@ -194,6 +211,32 @@ TEST(RestrictedTreeInode, lockContentsWriteThrowsEACCES) {
 
   expectEacces([&] { restricted->lockContentsWrite(); });
 }
+
+#ifndef _WIN32
+TEST(RestrictedTreeInode, lastChildReferenceUnderRestrictedParentBypassesAcl) {
+  FakeTreeBuilder builder;
+  builder.setFile("dir/file.txt", "content");
+  TestMount testMount{builder};
+
+  auto restricted = makeRestrictedInode(testMount, "restricted"_pc);
+  auto child =
+      makeTreeInodeChildWithoutParentEntry(testMount, restricted, "child"_pc);
+  auto childIno = child->getNodeId();
+  child->incFsRefcount();
+
+  EXPECT_NO_THROW(child.reset());
+  EXPECT_NO_THROW(
+      testMount.getEdenMount()->getInodeMap()->decFsRefcount(childIno, 1));
+
+  // This synthetic child is still linked, so the InodeMap keeps it loaded via
+  // onLinkedInodeUnreferenced(). The regression covered here is that dropping
+  // the last references does not try to take the restricted parent's public
+  // contents lock and throw EACCES.
+  EXPECT_TRUE(
+      testMount.getEdenMount()->getInodeMap()->isInodeLoadedOrRemembered(
+          childIno));
+}
+#endif
 
 TEST(RestrictedTreeInode, unrestricted_treeInodeIsNotRestricted) {
   FakeTreeBuilder builder;
