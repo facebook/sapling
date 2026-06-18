@@ -1,6 +1,12 @@
 
 #require no-eden
 
+  $ setconfig scmstore.fetch-tree-aux-data=true
+  $ setconfig scmstore.tree-metadata-mode=always
+  $ setconfig experimental.restricted-tree-mode=enforced
+  $ setconfig slacl.server-acl-enforcement=true
+  $ enable rebase
+
   $ newserver server
   $ drawdag << 'EOS'
   > A  # A/regular/file.txt = regular content
@@ -10,10 +16,6 @@
 
   $ sl clone --config clone.use-rust=True --config format.use-eager-repo=false --config format.use-remotefilelog=true --config remotefilelog.reponame=client -q "test:server" "$TESTTMP/client"
   $ cd "$TESTTMP/client"
-  $ setconfig scmstore.fetch-tree-aux-data=true
-  $ setconfig scmstore.tree-metadata-mode=always
-  $ setconfig experimental.restricted-tree-mode=enforced
-  $ setconfig slacl.server-acl-enforcement=true
 
   $ sl debugmanifestdirs -qr $A
   19d1f9c4aa6e6b299fa6a863b253889df872ae0f restricted
@@ -91,10 +93,6 @@ Matcher-scoped BFS should not check ACLs under directories it will not visit:
 
   $ cd
   $ newclientrepo client2 server2
-  $ setconfig scmstore.fetch-tree-aux-data=true
-  $ setconfig scmstore.tree-metadata-mode=always
-  $ setconfig experimental.restricted-tree-mode=enforced
-  $ setconfig slacl.server-acl-enforcement=true
 
 No permission check is needed for `some_dir/secret` when only listing `some_dir/public.txt`.
   $ SL_LOG=eagerepo::api=debug sl files -r $A some_dir/public.txt 2>&1 | grep check_manifest_permission || true
