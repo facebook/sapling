@@ -10,20 +10,22 @@ use std::mem;
 use std::sync::Arc;
 
 use anyhow::Result;
-use anyhow::bail;
 use flume::Receiver;
 use flume::Sender;
-use flume::WeakSender;
 use flume::bounded;
 use manifest::DiffEntry;
 use manifest::DiffType;
 use manifest::DirDiffEntry;
-use once_cell::sync::Lazy;
 use pathmatcher::DirectoryMatch;
 use pathmatcher::Matcher;
 use progress_model::ActiveProgressBar;
 use progress_model::ProgressBar;
 use progress_model::Registry;
+use slex::Items;
+use slex::Work;
+use slex::WorkOptions;
+use slex::WorkScope;
+use slex::WorkShape;
 use types::PathComponentBuf;
 use types::RepoPath;
 use types::RepoPathBuf;
@@ -32,8 +34,6 @@ use crate::DirLink;
 use crate::Link;
 use crate::TreeManifest;
 use crate::bfs;
-use crate::bfs::BfsWork;
-use crate::bfs::Cancelable;
 use crate::link::Durable;
 use crate::link::Ephemeral;
 use crate::link::Leaf;
@@ -56,10 +56,6 @@ enum DiffWork {
     Single(DirLink, Side, bool),
     Changed(DirLink, DirLink),
 }
-
-type DiffWorkItem = BfsWork<DiffWork, DiffContext>;
-
-static DIFF_SENDER: Lazy<Sender<DiffWorkItem>> = Lazy::new(|| bfs::spawn_workers(run_diff_worker));
 
 impl DiffWork {
     fn process(
@@ -150,7 +146,7 @@ struct DiffContext {
     progress_bar: Arc<ProgressBar>,
 }
 
-impl Cancelable for DiffContext {
+impl DiffContext {
     fn canceled(&self) -> bool {
         self.result_send.is_disconnected()
     }
@@ -159,6 +155,7 @@ impl Cancelable for DiffContext {
 // Balance between large remote fetch batches and parallelism for CPU-intensive
 // tree deserialization. 1000 was faster than 100 and 5000 in testing.
 const BATCH_SIZE: usize = 1000;
+const RESULT_QUEUE_SIZE: usize = BATCH_SIZE;
 
 /// A parallel iterator over two trees.
 ///
@@ -171,7 +168,7 @@ pub(crate) fn diff<T>(
 ) -> Box<dyn Iterator<Item = Result<T>>>
 where
     ResultSender: From<Sender<Result<T>>>,
-    T: 'static,
+    T: Send + 'static,
 {
     let lroot = DirLink::from_root(&left.root).expect("tree root is not a directory");
     let rroot = DirLink::from_root(&right.root).expect("tree root is not a directory");
@@ -181,9 +178,6 @@ where
         return Box::new(std::iter::empty());
     }
 
-    // Bound this channel so we don't use up unlimited memory if we are diffing faster
-    // than caller is reading results.
-    const RESULT_QUEUE_SIZE: usize = 100_000;
     let (result_send, result_recv) = bounded::<Result<T>>(RESULT_QUEUE_SIZE);
 
     let progress_bar = ProgressBar::new("diffing manifest", 0, "trees");
@@ -197,12 +191,20 @@ where
         progress_bar: progress_bar.clone(),
     };
 
-    DIFF_SENDER
-        .send(BfsWork {
-            work: vec![DiffWork::Changed(lroot, rroot)],
-            ctx,
-        })
-        .unwrap();
+    let input: Items<DiffWork, anyhow::Error> = Items::ready(vec![DiffWork::Changed(lroot, rroot)]);
+    std::thread::spawn(move || {
+        let result = Work::run(
+            WorkOptions::new()
+                .max_workers(bfs::num_workers())
+                .inline_items(BATCH_SIZE),
+            input,
+            WorkShape::batch(move |batch, scope| run_diff_worker(batch, scope, &ctx)),
+        )
+        .drain();
+        if let Err(err) = result {
+            tracing::debug!(?err, "diff work set exited with error");
+        }
+    });
 
     Box::new(DiffIter {
         result_recv,
@@ -211,100 +213,89 @@ where
 }
 
 fn run_diff_worker(
-    work_recv: Receiver<DiffWorkItem>,
-    work_send: WeakSender<DiffWorkItem>,
+    work: Vec<DiffWork>,
+    scope: &mut WorkScope<'_, DiffWork, (), anyhow::Error>,
+    ctx: &DiffContext,
 ) -> Result<()> {
-    'outer: for BfsWork { work, ctx } in work_recv {
-        if ctx.canceled() {
-            continue;
-        }
+    if ctx.canceled() {
+        scope.cancel();
+        return Ok(());
+    }
 
-        let durable_entries: Vec<_> = work
-            .iter()
-            .flat_map(|item| match item {
-                DiffWork::Single(dir, _, _) => {
-                    let mut v = Vec::new();
-                    if let Durable(entry) = dir.link.as_ref() {
-                        if !entry.links_initialized() && !entry.is_permission_denied() {
-                            v.push(bfs::PrefetchTree {
-                                path: dir.path.as_repo_path(),
-                                entry,
-                                subtree_matches_everything: false,
-                            });
-                        }
+    let durable_entries: Vec<_> = work
+        .iter()
+        .flat_map(|item| match item {
+            DiffWork::Single(dir, _, _) => {
+                let mut v = Vec::new();
+                if let Durable(entry) = dir.link.as_ref() {
+                    if !entry.links_initialized() && !entry.is_permission_denied() {
+                        v.push(bfs::PrefetchTree {
+                            path: dir.path.as_repo_path(),
+                            entry,
+                            subtree_matches_everything: false,
+                        });
                     }
-                    v
                 }
-                DiffWork::Changed(left, right) => {
-                    let mut v = Vec::new();
-                    if let Durable(entry) = left.link.as_ref() {
-                        if !entry.links_initialized() && !entry.is_permission_denied() {
-                            v.push(bfs::PrefetchTree {
-                                path: left.path.as_repo_path(),
-                                entry,
-                                subtree_matches_everything: false,
-                            });
-                        }
+                v
+            }
+            DiffWork::Changed(left, right) => {
+                let mut v = Vec::new();
+                if let Durable(entry) = left.link.as_ref() {
+                    if !entry.links_initialized() && !entry.is_permission_denied() {
+                        v.push(bfs::PrefetchTree {
+                            path: left.path.as_repo_path(),
+                            entry,
+                            subtree_matches_everything: false,
+                        });
                     }
-                    if let Durable(entry) = right.link.as_ref() {
-                        if !entry.links_initialized() && !entry.is_permission_denied() {
-                            v.push(bfs::PrefetchTree {
-                                path: right.path.as_repo_path(),
-                                entry,
-                                subtree_matches_everything: false,
-                            });
-                        }
-                    }
-                    v
                 }
-            })
-            .collect();
-        ctx.progress_bar
-            .increase_position(durable_entries.len() as u64);
-        if let Err(err) = bfs::prefetch_trees(&ctx.store, durable_entries, ctx.matcher.as_ref()) {
+                if let Durable(entry) = right.link.as_ref() {
+                    if !entry.links_initialized() && !entry.is_permission_denied() {
+                        v.push(bfs::PrefetchTree {
+                            path: right.path.as_repo_path(),
+                            entry,
+                            subtree_matches_everything: false,
+                        });
+                    }
+                }
+                v
+            }
+        })
+        .collect();
+    ctx.progress_bar
+        .increase_position(durable_entries.len() as u64);
+    if let Err(err) = bfs::prefetch_trees(&ctx.store, durable_entries, ctx.matcher.as_ref()) {
+        if ctx.result_send.send_error(err).is_err() {
+            scope.cancel();
+        }
+        return Ok(());
+    }
+
+    let mut to_send = Vec::new();
+    for item in work {
+        let res = item.process(&ctx.store, &ctx.matcher, &mut to_send, &ctx.result_send);
+        if let Err(err) = res {
             if ctx.result_send.send_error(err).is_err() {
-                continue 'outer;
-            }
-            continue;
-        }
-
-        let mut to_send = Vec::new();
-        for item in work {
-            let res = item.process(&ctx.store, &ctx.matcher, &mut to_send, &ctx.result_send);
-            if let Err(err) = res {
-                if ctx.result_send.send_error(err).is_err() {
-                    continue 'outer;
-                }
-            }
-
-            if to_send.len() >= BATCH_SIZE {
-                if !bfs::try_send(
-                    &work_send,
-                    BfsWork {
-                        work: mem::take(&mut to_send),
-                        ctx: ctx.clone(),
-                    },
-                )? {
-                    continue 'outer;
-                }
+                scope.cancel();
+                return Ok(());
             }
         }
 
-        if !bfs::try_send(&work_send, BfsWork { work: to_send, ctx })? {
-            continue 'outer;
+        if !to_send.is_empty() && !scope.submit_work(mem::take(&mut to_send)) {
+            return Ok(());
         }
     }
 
-    bail!("work channel disconnected (receiver)")
+    Ok(())
 }
 
-struct DiffIter<T = DiffEntry> {
+struct DiffIter<T: Send + 'static = DiffEntry> {
     result_recv: Receiver<Result<T>>,
     #[allow(unused)]
     progress_bar: ActiveProgressBar,
 }
 
-impl<T> Iterator for DiffIter<T> {
+impl<T: Send + 'static> Iterator for DiffIter<T> {
     type Item = Result<T>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -612,7 +603,7 @@ mod tests {
         let store = Arc::new(TestStore::new());
         let tree = make_tree_manifest(store, &[("a", "1"), ("b/f", "2"), ("c", "3"), ("d/f", "4")]);
         let dir = DirLink::from_root(&tree.root).unwrap();
-        let (sender, receiver) = flume::unbounded::<Result<DiffEntry>>();
+        let (sender, receiver) = bounded::<Result<DiffEntry>>(RESULT_QUEUE_SIZE);
         let mut work = Vec::new();
         let sender = ResultSender::from(sender);
 

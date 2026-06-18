@@ -37,6 +37,7 @@ sapling-pathmatcher = { version = "0.1.0", path = "../pathmatcher" }
 sapling-progress-model = { version = "0.1.0", path = "../progress/model" }
 sapling-storemodel = { version = "0.1.0", path = "../storemodel" }
 sapling-types = { version = "0.1.0", path = "../types", features = ["for-tests"], default-features = false }
+slex = { version = "0.1.0", path = "../slex" }
 thiserror = "2.0.18"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 

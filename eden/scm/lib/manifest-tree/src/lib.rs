@@ -136,12 +136,9 @@ impl TreeManifest {
         DfsCursor::new(&self.store, RepoPathBuf::new(), &self.root)
     }
 
-    /// Returns a channel that receives batches of manifest entries.
-    /// This is useful when you need timeout-based batching on the receiving end.
-    pub fn iter<M: 'static + Matcher + Sync + Send>(
-        &self,
-        matcher: M,
-    ) -> flume::Receiver<Vec<Result<(RepoPathBuf, FsNodeMetadata)>>> {
+    /// Returns manifest entries using inline results for small traversals and streamed batches
+    /// after the traversal fans out.
+    pub fn iter<M: 'static + Matcher + Sync + Send>(&self, matcher: M) -> iter::BfsItems {
         iter::bfs_iter(self.store.clone(), &[&self.root], matcher)
     }
 }
@@ -340,16 +337,13 @@ impl Manifest for TreeManifest {
     ) -> Box<dyn Iterator<Item = Result<File>> + 'a> {
         let matcher = self.maybe_wrap_matcher(matcher);
         let iter = iter::bfs_iter(self.store.clone(), &[&self.root], matcher);
-        let files = iter
-            .into_iter()
-            .flatten()
-            .filter_map(move |result| match result {
-                Ok((path, FsNodeMetadata::File(metadata))) => {
-                    Some(self.maybe_decode_path(path).map(|p| File::new(p, metadata)))
-                }
-                Ok(_) => None,
-                Err(err) => Some(Err(err)),
-            });
+        let files = iter.into_iter().filter_map(move |result| match result {
+            Ok((path, FsNodeMetadata::File(metadata))) => {
+                Some(self.maybe_decode_path(path).map(|p| File::new(p, metadata)))
+            }
+            Ok(_) => None,
+            Err(err) => Some(Err(err)),
+        });
         Box::new(files)
     }
 
@@ -358,7 +352,6 @@ impl Manifest for TreeManifest {
         // PERF: the `bfs_iter()` can be optimized to avoid file path construction.
         iter::bfs_iter(self.store.clone(), &[&self.root], matcher)
             .into_iter()
-            .flatten()
             .try_fold(0, |acc, result| {
                 let (_, metadata) = result?;
                 if let FsNodeMetadata::File(_) = metadata {
@@ -381,7 +374,6 @@ impl Manifest for TreeManifest {
     ) -> Box<dyn Iterator<Item = Result<Directory>> + 'a> {
         let dirs = iter::bfs_iter(self.store.clone(), &[&self.root], matcher)
             .into_iter()
-            .flatten()
             .filter_map(|result| match result {
                 Ok((path, FsNodeMetadata::Directory(metadata))) => {
                     Some(Ok(Directory::new(path, metadata)))
@@ -1111,10 +1103,8 @@ pub fn prefetch(
     matcher: impl 'static + Matcher + Sync + Send,
 ) -> Result<()> {
     let links: Vec<Link> = mf_nodes.iter().map(|id| Link::durable(*id)).collect();
-    for batch in iter::bfs_iter(InnerStore::new(store), &links, matcher) {
-        for node in batch {
-            node?;
-        }
+    for node in iter::bfs_iter(InnerStore::new(store), &links, matcher) {
+        let _ = node?;
     }
     Ok(())
 }

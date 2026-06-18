@@ -7,34 +7,31 @@
 
 use std::borrow::Borrow;
 use std::collections::btree_map;
-use std::mem;
 use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use anyhow::bail;
-use flume::Receiver;
-use flume::Sender;
-use flume::WeakSender;
 use manifest::FsNodeMetadata;
-use once_cell::sync::Lazy;
 use pathmatcher::DirectoryMatch;
 use pathmatcher::Matcher;
+use slex::Items;
+use slex::Work;
+use slex::WorkOptions;
+use slex::WorkScope;
+use slex::WorkShape;
 use types::RepoPathBuf;
 
 use crate::bfs;
-use crate::bfs::BfsWork;
-use crate::bfs::Cancelable;
 use crate::link::Durable;
 use crate::link::Ephemeral;
 use crate::link::Leaf;
 use crate::link::Link;
 use crate::store::InnerStore;
 
-type IterWork = BfsWork<(RepoPathBuf, Link, bool), IterContext>;
-
-static BFS_ITER_SENDER: Lazy<Sender<IterWork>> = Lazy::new(|| bfs::spawn_workers(run_worker));
+type IterWork = (RepoPathBuf, Link, bool);
+type IterResult = (RepoPathBuf, FsNodeMetadata);
+pub(crate) type BfsItems = Items<IterResult, Error>;
 
 const BATCH_SIZE: usize = 5000;
 
@@ -42,189 +39,155 @@ pub fn bfs_iter<M: 'static + Matcher + Sync + Send>(
     store: InnerStore,
     roots: &[impl Borrow<Link>],
     matcher: M,
-) -> Receiver<Vec<Result<(RepoPathBuf, FsNodeMetadata)>>> {
-    // Bounded to apply backpressure.
-    const RESULT_QUEUE_SIZE: usize = 10_000;
-
-    let (result_send, result_recv) =
-        flume::bounded::<Vec<Result<(RepoPathBuf, FsNodeMetadata)>>>(RESULT_QUEUE_SIZE);
-
+) -> BfsItems {
     let ctx = IterContext {
-        result_send,
         store,
         matcher: Arc::new(matcher),
     };
 
-    BFS_ITER_SENDER
-        .send(BfsWork {
-            work: roots
-                .iter()
-                .map(|root| (RepoPathBuf::new(), root.borrow().thread_copy(), false))
-                .collect(),
-            ctx,
-        })
-        .unwrap();
+    let initial: Vec<IterWork> = roots
+        .iter()
+        .map(|root| (RepoPathBuf::new(), root.borrow().thread_copy(), false))
+        .collect();
+    let input: Items<IterWork, Error> = Items::ready(initial);
 
-    result_recv
+    Work::run(
+        WorkOptions::new()
+            .max_workers(bfs::num_workers())
+            .inline_items(BATCH_SIZE),
+        input,
+        WorkShape::batch(move |batch, scope| run_worker(batch, scope, &ctx)),
+    )
 }
 
 #[derive(Clone)]
 struct IterContext {
-    result_send: Sender<Vec<Result<(RepoPathBuf, FsNodeMetadata)>>>,
     matcher: Arc<dyn Matcher + Sync + Send>,
     store: InnerStore,
 }
 
-impl Cancelable for IterContext {
-    fn canceled(&self) -> bool {
-        self.result_send.is_disconnected()
+fn run_worker(
+    work: Vec<IterWork>,
+    scope: &mut WorkScope<'_, IterWork, IterResult, Error>,
+    ctx: &IterContext,
+) -> Result<()> {
+    if scope.is_canceled() {
+        scope.cancel();
+        return Ok(());
     }
-}
 
-fn run_worker(work_recv: Receiver<IterWork>, work_send: WeakSender<IterWork>) -> Result<()> {
-    'outer: for BfsWork { work, ctx } in work_recv {
-        if ctx.canceled() {
-            continue;
-        }
-
-        // Batch-prefetch uninitialized durable entries.
-        if let Err(e) = bfs::prefetch_trees(
-            &ctx.store,
-            work.iter()
-                .filter_map(
-                    |(path, link, subtree_matches_everything)| match link.as_ref() {
-                        Durable(entry) if !entry.is_permission_denied() => {
-                            Some(bfs::PrefetchTree {
-                                path: path.as_repo_path(),
-                                entry,
-                                subtree_matches_everything: *subtree_matches_everything,
-                            })
-                        }
-                        _ => None,
-                    },
-                ),
-            ctx.matcher.as_ref(),
-        ) {
-            if ctx
-                .result_send
-                .send(vec![Err(e).context("prefetch in bfs_iter")])
-                .is_err()
-            {
-                continue 'outer;
-            }
-            continue;
-        }
-
-        let mut results_to_send = Vec::<Result<(RepoPathBuf, FsNodeMetadata)>>::new();
-        let mut work_to_send = Vec::<(RepoPathBuf, Link, bool)>::new();
-        for (path, link, subtree_matches_everything) in work {
-            let hgid = match link.as_ref() {
-                Leaf(_) => continue,
-                Ephemeral(_) => None,
-                Durable(entry) => Some(entry.hgid),
-            };
-
-            results_to_send.push(Ok((path.clone(), FsNodeMetadata::Directory(hgid))));
-
-            let children = match link.as_ref() {
-                Leaf(_) => unreachable!(),
-                Ephemeral(children) => children,
-                Durable(entry) => {
-                    if let Some(err) = entry.permission_denied_error() {
-                        tracing::debug!(path = %path, hgid = %entry.hgid, "skipping permission-denied tree in bfs_iter");
-                        let mut err = err.clone();
-                        err.path = path.clone();
-                        ctx.store.record_permission_denied(err);
-                        continue;
-                    }
-                    match entry.materialize_links(&ctx.store, &path) {
-                        Ok(children) => children,
-                        Err(e) => {
-                            results_to_send.push(Err(e).context("materialize_links in bfs_iter"));
-                            continue;
-                        }
-                    }
-                }
-            };
-
-            for (component, link) in children.iter() {
-                let mut child_path = path.clone();
-                child_path.push(component.as_path_component());
-                let directory_match = if subtree_matches_everything {
-                    Some(DirectoryMatch::Everything)
-                } else {
-                    None
-                };
-
-                let should_enqueue = match link.as_ref() {
-                    Leaf(file_metadata) => {
-                        let is_match = if subtree_matches_everything {
-                            true
-                        } else {
-                            ctx.matcher.matches_file(&child_path).with_context(|| {
-                                format!("matches_file in bfs_iter for {child_path}")
-                            })?
-                        };
-                        if is_match {
-                            results_to_send
-                                .push(Ok((child_path, FsNodeMetadata::File(*file_metadata))));
-                        }
-                        false
-                    }
-                    Durable(_) | Ephemeral(_) => {
-                        let directory_match =
-                            match directory_match {
-                                Some(directory_match) => directory_match,
-                                None => ctx.matcher.matches_directory(&child_path).with_context(
-                                    || format!("matches_directory in bfs_iter for {child_path}"),
-                                )?,
-                            };
-                        match directory_match {
-                            DirectoryMatch::Nothing => false,
-                            DirectoryMatch::ShouldTraverse => {
-                                work_to_send.push((child_path, link.thread_copy(), false));
-                                true
-                            }
-                            DirectoryMatch::Everything => {
-                                work_to_send.push((child_path, link.thread_copy(), true));
-                                true
-                            }
-                        }
-                    }
-                };
-
-                if should_enqueue && work_to_send.len() >= BATCH_SIZE {
-                    if !bfs::try_send(
-                        &work_send,
-                        BfsWork {
-                            work: mem::take(&mut work_to_send),
-                            ctx: ctx.clone(),
-                        },
-                    )? {
-                        continue 'outer;
-                    }
-                }
-            }
-        }
-
-        if !results_to_send.is_empty() {
-            if ctx.result_send.send(results_to_send).is_err() {
-                continue 'outer;
-            }
-        }
-
-        if !bfs::try_send(
-            &work_send,
-            BfsWork {
-                work: work_to_send,
-                ctx,
+    // Batch-prefetch uninitialized durable entries.
+    if let Err(e) = bfs::prefetch_trees(
+        &ctx.store,
+        work.iter().filter_map(
+            |(path, link, subtree_matches_everything)| match link.as_ref() {
+                Durable(entry) if !entry.is_permission_denied() => Some(bfs::PrefetchTree {
+                    path: path.as_repo_path(),
+                    entry,
+                    subtree_matches_everything: *subtree_matches_everything,
+                }),
+                _ => None,
             },
-        )? {
-            continue 'outer;
+        ),
+        ctx.matcher.as_ref(),
+    ) {
+        return Err(e).context("prefetch in bfs_iter");
+    }
+
+    let mut results_to_send = Vec::<(RepoPathBuf, FsNodeMetadata)>::new();
+    for (path, link, subtree_matches_everything) in work {
+        let hgid = match &*link {
+            Leaf(_) => continue,
+            Ephemeral(_) => None,
+            Durable(entry) => Some(entry.hgid),
+        };
+
+        results_to_send.push((path.clone(), FsNodeMetadata::Directory(hgid)));
+
+        let children = match &*link {
+            Leaf(_) => unreachable!(),
+            Ephemeral(children) => children,
+            Durable(entry) => {
+                if let Some(err) = entry.permission_denied_error() {
+                    tracing::debug!(path = %path, hgid = %entry.hgid, "skipping permission-denied tree in bfs_iter");
+                    let mut err = err.clone();
+                    err.path = path.clone();
+                    ctx.store.record_permission_denied(err);
+                    continue;
+                }
+                match entry.materialize_links(&ctx.store, &path) {
+                    Ok(children) => children,
+                    Err(e) => {
+                        // A materialization failure makes the traversal incomplete, so stop after
+                        // publishing results already produced by this worker.
+                        if !results_to_send.is_empty()
+                            && !scope.send_result(std::mem::take(&mut results_to_send))
+                        {
+                            return Ok(());
+                        }
+                        return Err(e).context("materialize_links in bfs_iter");
+                    }
+                }
+            }
+        };
+
+        for (component, link) in children.iter() {
+            let mut child_path = path.clone();
+            child_path.push(component.as_path_component());
+            let directory_match = if subtree_matches_everything {
+                Some(DirectoryMatch::Everything)
+            } else {
+                None
+            };
+
+            match &**link {
+                Leaf(file_metadata) => {
+                    let is_match = if subtree_matches_everything {
+                        true
+                    } else {
+                        ctx.matcher
+                            .matches_file(&child_path)
+                            .with_context(|| format!("matches_file in bfs_iter for {child_path}"))?
+                    };
+                    if is_match {
+                        results_to_send.push((child_path, FsNodeMetadata::File(*file_metadata)));
+                    }
+                }
+                Durable(_) | Ephemeral(_) => {
+                    let directory_match = match directory_match {
+                        Some(directory_match) => directory_match,
+                        None => ctx
+                            .matcher
+                            .matches_directory(&child_path)
+                            .with_context(|| {
+                                format!("matches_directory in bfs_iter for {child_path}")
+                            })?,
+                    };
+                    match directory_match {
+                        DirectoryMatch::Nothing => {}
+                        DirectoryMatch::ShouldTraverse => {
+                            if !scope.submit_work((child_path, link.thread_copy(), false)) {
+                                return Ok(());
+                            }
+                        }
+                        DirectoryMatch::Everything => {
+                            if !scope.submit_work((child_path, link.thread_copy(), true)) {
+                                return Ok(());
+                            }
+                        }
+                    }
+                }
+            };
         }
     }
 
-    bail!("work channel disconnected (receiver)")
+    if !results_to_send.is_empty() {
+        if !scope.send_result(results_to_send) {
+            return Ok(());
+        }
+    }
+
+    Ok(())
 }
 
 /// The cursor is a utility for iterating over [`Link`]s. This structure is intended to be an
@@ -408,17 +371,83 @@ impl<'a> DfsCursor<'a> {
 mod tests {
     use std::sync::Arc;
 
+    use blob::Blob;
     use manifest::Manifest;
     use manifest::PersistOpts;
     use manifest::testutil::*;
     use pathmatcher::AlwaysMatcher;
     use pathmatcher::TreeMatcher;
+    use storemodel::BoxIterator;
+    use storemodel::KeyStore;
+    use storemodel::SerializationFormat;
+    use storemodel::TreeEntry;
+    use storemodel::TreeStore;
+    use types::FetchContext;
+    use types::HgId;
+    use types::Key;
+    use types::RepoPath;
     use types::testutil::*;
 
     use super::*;
     use crate::TreeManifest;
     use crate::prefetch;
     use crate::testutil::*;
+
+    #[derive(Clone)]
+    struct RemoteOnlyTreeStore(Arc<TestStore>);
+
+    impl KeyStore for RemoteOnlyTreeStore {
+        fn get_content_iter(
+            &self,
+            fctx: FetchContext,
+            keys: Vec<Key>,
+        ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Blob)>>> {
+            self.0.get_content_iter(fctx, keys)
+        }
+
+        fn get_local_content(&self, path: &RepoPath, hgid: HgId) -> anyhow::Result<Option<Blob>> {
+            self.0.get_local_content(path, hgid)
+        }
+
+        fn insert_data(
+            &self,
+            opts: storemodel::InsertOpts,
+            path: &RepoPath,
+            data: Blob,
+        ) -> anyhow::Result<HgId> {
+            self.0.insert_data(opts, path, data)
+        }
+
+        fn format(&self) -> SerializationFormat {
+            self.0.format()
+        }
+
+        fn clone_key_store(&self) -> Box<dyn KeyStore> {
+            Box::new(self.clone())
+        }
+    }
+
+    impl TreeStore for RemoteOnlyTreeStore {
+        fn get_local_tree(
+            &self,
+            _path: &RepoPath,
+            _hgid: HgId,
+        ) -> anyhow::Result<Option<Arc<dyn TreeEntry>>> {
+            Ok(None)
+        }
+
+        fn get_tree_iter(
+            &self,
+            fctx: FetchContext,
+            keys: Vec<Key>,
+        ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Arc<dyn TreeEntry>)>>> {
+            self.0.get_tree_iter(fctx, keys)
+        }
+
+        fn clone_tree_store(&self) -> Box<dyn TreeStore> {
+            Box::new(self.clone())
+        }
+    }
 
     #[test]
     fn test_items_empty() {
@@ -588,7 +617,7 @@ mod tests {
         let tree2_hgid = Manifest::persist(&mut tree2, PersistOpts { parents: &[] }).unwrap();
 
         prefetch(
-            store.clone(),
+            Arc::new(RemoteOnlyTreeStore(store.clone())),
             &[tree1_hgid, tree2_hgid],
             AlwaysMatcher::new(),
         )

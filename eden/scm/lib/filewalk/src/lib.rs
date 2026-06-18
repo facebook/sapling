@@ -202,41 +202,32 @@ pub fn walk_and_fetch<M: 'static + Matcher + Sync + Send>(
     let manifest_first_error = first_error.clone();
     handles.push(thread::spawn(move || {
         let run = || -> anyhow::Result<()> {
-            let file_node_rx = manifest.iter(matcher);
             let mut current_batch = Vec::new();
 
-            loop {
+            for result in manifest.iter(matcher) {
                 if manifest_first_error.has_error() {
                     break;
                 }
 
-                match file_node_rx.recv() {
-                    Ok(result_batch) => {
-                        for result in result_batch {
-                            let (path, metadata) = result?;
-                            if let FsNodeMetadata::File(file_meta) = metadata {
-                                current_batch.push((path, file_meta));
+                let (path, metadata) = result?;
+                if let FsNodeMetadata::File(file_meta) = metadata {
+                    current_batch.push((path, file_meta));
 
-                                if current_batch.len() >= FETCH_BATCH_SIZE {
-                                    if fetch_content_tx
-                                        .send(std::mem::take(&mut current_batch))
-                                        .is_err()
-                                    {
-                                        return Ok(());
-                                    }
-                                }
-                            }
+                    if current_batch.len() >= FETCH_BATCH_SIZE {
+                        if fetch_content_tx
+                            .send(std::mem::take(&mut current_batch))
+                            .is_err()
+                        {
+                            return Ok(());
                         }
-                    }
-                    Err(_) => {
-                        // Channel disconnected, flush remaining batch
-                        if !current_batch.is_empty() {
-                            let _ = fetch_content_tx.send(current_batch);
-                        }
-                        break;
                     }
                 }
             }
+
+            if !current_batch.is_empty() {
+                let _ = fetch_content_tx.send(current_batch);
+            }
+
             Ok(())
         };
 
