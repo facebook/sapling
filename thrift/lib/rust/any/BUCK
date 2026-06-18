@@ -14,7 +14,9 @@ thrift_rust_library(
         "fbsource//third-party/rust:base64",
         "//syx/artifact_builder/if/override:override-rust",
         "//thrift/lib/rust/any/tests/if:test_structs-rust",
-    ] if is_fbcode() else [],
+    ]
+    if is_fbcode()
+    else [],
     unittests = is_fbcode(),
     deps = [
         "fbsource//third-party/rust:anyhow",
