@@ -13,6 +13,7 @@ mod derive;
 mod derive_slice;
 mod exists;
 mod fetch;
+mod find_derivation_gaps;
 mod list_manifest;
 mod slice;
 mod verify_manifests;
@@ -60,6 +61,8 @@ use self::exists::ExistsArgs;
 use self::exists::exists;
 use self::fetch::FetchArgs;
 use self::fetch::fetch;
+use self::find_derivation_gaps::FindDerivationGapsArgs;
+use self::find_derivation_gaps::find_derivation_gaps;
 use self::list_manifest::ListManifestArgs;
 use self::list_manifest::list_manifest;
 use self::slice::SliceArgs;
@@ -161,6 +164,9 @@ enum DerivedDataSubcommand {
     Exists(ExistsArgs),
     /// Fetch previously derived data for the given commits
     Fetch(FetchArgs),
+    /// Walk back from a head sampling every Nth ancestor (by generation) and
+    /// flag any sampled commit that isn't derived for the given type
+    FindDerivationGaps(FindDerivationGapsArgs),
     /// List the contents of a manifest at a given path
     ListManifest(ListManifestArgs),
     /// Slice underived ancestors of given commits
@@ -270,6 +276,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         DerivedDataSubcommand::Exists(_)
         | DerivedDataSubcommand::Fetch(_)
         | DerivedDataSubcommand::CountUnderived(_)
+        | DerivedDataSubcommand::FindDerivationGaps(_)
         | DerivedDataSubcommand::VerifyManifests(_)
         | DerivedDataSubcommand::VerifyStageOutput(_)
         | DerivedDataSubcommand::ListManifest(_)
@@ -297,6 +304,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         DerivedDataSubcommand::Exists(_)
             | DerivedDataSubcommand::Fetch(_)
             | DerivedDataSubcommand::CountUnderived(_)
+            | DerivedDataSubcommand::FindDerivationGaps(_)
             | DerivedDataSubcommand::ListManifest(_)
             | DerivedDataSubcommand::Slice(_)
             | DerivedDataSubcommand::VerifyStageOutput(_)
@@ -320,6 +328,9 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         DerivedDataSubcommand::Fetch(args) => fetch(&ctx, &repo, &manager, args).await?,
         DerivedDataSubcommand::CountUnderived(args) => {
             count_underived(&ctx, &repo, &manager, args).await?
+        }
+        DerivedDataSubcommand::FindDerivationGaps(args) => {
+            find_derivation_gaps(&ctx, &repo, &manager, args).await?
         }
         DerivedDataSubcommand::VerifyManifests(args) => verify_manifests(&ctx, &repo, args).await?,
         DerivedDataSubcommand::ListManifest(args) => {
