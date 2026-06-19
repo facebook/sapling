@@ -194,6 +194,7 @@ pub async fn bonsai_git_mappings_by_bonsai(
             None,
             &[DerivableType::GitCommits],
             None,
+            None,
         )
         .await
         .context("Error while deriving GitCommit for Bonsai Changesets")?;

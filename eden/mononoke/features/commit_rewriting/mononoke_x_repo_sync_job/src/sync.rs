@@ -1047,7 +1047,14 @@ async fn derive_initial_import_batch<R: Repo>(
     large_repo
         .repo_derived_data()
         .manager()
-        .derive_bulk_locally(ctx, changesets_to_derive, None, &derived_data_types, None)
+        .derive_bulk_locally(
+            ctx,
+            changesets_to_derive,
+            None,
+            &derived_data_types,
+            None,
+            None,
+        )
         .await?;
 
     log_debug(

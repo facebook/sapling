@@ -466,7 +466,7 @@ async fn run_derivation_and_verification<F: PipelineTestFixture + Send>(
 ) -> Result<()> {
     // Derive canonically for every type and commit.
     manager
-        .derive_bulk_locally(ctx, all_commits, None, &PIPELINE_TYPES, None)
+        .derive_bulk_locally(ctx, all_commits, None, &PIPELINE_TYPES, None, None)
         .await
         .map_err(anyhow::Error::from)?;
 
@@ -503,7 +503,7 @@ async fn run_pipeline_first_then_canonical<F: PipelineTestFixture + Send>(
 
     // Now derive canonical for the selected types, then verify byte-equality.
     manager
-        .derive_bulk_locally(ctx, all_commits, None, types, None)
+        .derive_bulk_locally(ctx, all_commits, None, types, None, None)
         .await
         .map_err(anyhow::Error::from)?;
     verify_pipeline_output::<F>(manager, ctx, all_commits, &plan).await

@@ -64,6 +64,8 @@ pub trait BulkDerivation {
     /// Derive all the desired derived data types for all the desired csids
     ///
     /// If the dependent types or changesets are not derived yet, they will be derived now
+    ///
+    /// `override_concurrency` controls how many derived data types are derived in parallel (defaults to 10)
     async fn derive_bulk_locally(
         &self,
         ctx: &CoreContext,
@@ -71,6 +73,7 @@ pub trait BulkDerivation {
         rederivation: Option<Arc<dyn Rederivation>>,
         derived_data_types: &[DerivableType],
         override_batch_size: Option<u64>,
+        override_concurrency: Option<usize>,
     ) -> Result<(), SharedDerivationError>;
 
     /// Derive all the desired derived data types for all the desired csids
@@ -664,6 +667,7 @@ impl BulkDerivation for DerivedDataManager {
         rederivation: Option<Arc<dyn Rederivation>>,
         derived_data_types: &[DerivableType],
         override_batch_size: Option<u64>,
+        override_concurrency: Option<usize>,
     ) -> Result<(), SharedDerivationError> {
         let visited = VisitedDerivableTypesMap::default();
         stream::iter(derived_data_types)
@@ -690,7 +694,7 @@ impl BulkDerivation for DerivedDataManager {
                 }
             })
             .boxed()
-            .buffer_unordered(10)
+            .buffer_unordered(override_concurrency.unwrap_or(10).max(1))
             .try_collect::<Vec<_>>()
             .await?;
 

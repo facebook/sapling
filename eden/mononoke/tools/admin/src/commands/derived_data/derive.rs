@@ -155,6 +155,7 @@ pub(super) async fn derive(
                 Some(rederivation),
                 &derived_data_types,
                 args.batch_size,
+                None,
             )
             .try_timed()
             .await?;

@@ -214,6 +214,7 @@ pub(crate) async fn compute_derive_boundaries(
                             None, // rederivation
                             &[derived_data_type],
                             None, // override_batch_size
+                            None, // override_concurrency
                         )
                         .await
                         .map_err(|e| anyhow::anyhow!("{e}"))?;

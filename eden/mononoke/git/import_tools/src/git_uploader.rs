@@ -434,7 +434,7 @@ pub async fn finalize_batch(
         .collect::<Vec<_>>();
     repo.repo_derived_data()
         .manager()
-        .derive_bulk_locally(ctx, &csids, None, &non_git_types, Some(batch_size))
+        .derive_bulk_locally(ctx, &csids, None, &non_git_types, Some(batch_size), None)
         .await?;
 
     // Upload all bonsai git mappings.
@@ -465,7 +465,7 @@ pub async fn finalize_batch(
         .collect::<Vec<_>>();
     repo.repo_derived_data()
         .manager()
-        .derive_bulk_locally(ctx, &csids, None, &delta_manifests, Some(batch_size))
+        .derive_bulk_locally(ctx, &csids, None, &delta_manifests, Some(batch_size), None)
         .await?;
 
     Ok(ret)

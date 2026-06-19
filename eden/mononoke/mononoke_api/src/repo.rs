@@ -2073,6 +2073,7 @@ impl<R: RepoDerivedDataRef> RepoContext<R> {
                 rederivation,
                 derivable_types,
                 override_batch_size,
+                None,
             )
             .await?)
     }

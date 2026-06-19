@@ -781,6 +781,7 @@ pub(crate) async fn derive_all_enabled_types_for_repo(
             None,
             &enabled_types,
             None,
+            None,
         )
         .await?;
 
