@@ -25,7 +25,7 @@ gotham = "0.8"
 gotham_derive = "0.8"
 hex = { version = "0.4.3", features = ["alloc"] }
 hickory-resolver = { version = "0.26.1", features = ["system-config", "tokio"] }
-http = "=1.4.0"
+http = "1.4.1"
 http-body = "1.0.1"
 http-body-util = "0.1.0"
 hyper = { version = "1.10.1", features = ["client", "http1", "http2"] }
