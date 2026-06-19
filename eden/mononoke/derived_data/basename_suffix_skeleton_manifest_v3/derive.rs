@@ -21,12 +21,13 @@ use futures::stream;
 use itertools::Either;
 use manifest::BonsaiDiffFileChange;
 use manifest::Entry;
+use manifest::ImplicitDeletesAndExistingFiles;
 use manifest::LeafInfo;
 use manifest::TreeInfo;
 use manifest::TreeInfoSubentries;
 use manifest::bonsai_diff;
 use manifest::derive_manifest;
-use manifest::get_implicit_deletes;
+use manifest::get_implicit_deletes_and_existing_files;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::BssmV3DirectoryId;
@@ -97,21 +98,27 @@ async fn get_bssm_path_changes(
     // - Parent manifest has one file: c/a/b/c
     // - Bonsai changeset adds a file: b/a/b
     // - no implicit deletes.
-    let implicit_deletes = get_implicit_deletes(
+    let changed_paths = changes
+        .iter()
+        .flat_map(|(path, change)| change.map(|()| path))
+        .cloned()
+        .collect::<Vec<_>>();
+
+    let ImplicitDeletesAndExistingFiles {
+        implicit_deletes,
+        existing_files_in_all_parents,
+    } = get_implicit_deletes_and_existing_files(
         ctx,
         blobstore.clone(),
-        changes
-            .iter()
-            .flat_map(|(path, change)| change.map(|()| path))
-            .cloned()
-            .collect::<Vec<_>>(),
+        changed_paths,
         parent_skeleton_manifests,
     )
-    .try_collect::<Vec<_>>()
     .await?;
 
+    // Drop pure modifications: they don't change the skeleton structure.
     Ok(changes
         .into_iter()
+        .filter(|(path, change)| change.is_none() || !existing_files_in_all_parents.contains(path))
         .chain(implicit_deletes.into_iter().map(|path| (path, None)))
         .map(|(path, change)| (BssmPath::transform(path).into_raw(), change))
         .collect())
