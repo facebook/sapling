@@ -17,6 +17,7 @@ use futures::StreamExt;
 use futures::TryStreamExt;
 use futures::future;
 use futures::stream;
+use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
 
 use crate::Entry;
@@ -129,6 +130,98 @@ where
         })
 }
 
+/// The output of [`get_implicit_deletes_and_existing_files`].
+pub struct ImplicitDeletesAndExistingFiles {
+    /// See [`get_implicit_deletes`].
+    pub implicit_deletes: Vec<NonRootMPath>,
+    /// Input paths that are already a file in every parent.
+    pub existing_files_in_all_parents: HashSet<NonRootMPath>,
+}
+
+/// Like [`get_implicit_deletes`], but also reports which input paths are already
+/// a file in every parent. Both come from one `find_entries` per parent.
+pub async fn get_implicit_deletes_and_existing_files<ManifestId, Store, I, M, L>(
+    ctx: &CoreContext,
+    store: Store,
+    paths: I,
+    parents: M,
+) -> Result<ImplicitDeletesAndExistingFiles>
+where
+    ManifestId: Hash + Eq + StoreLoadable<Store> + Send + Sync + ManifestOps<Store> + 'static,
+    Store: Send + Sync + Clone + 'static,
+    <ManifestId as StoreLoadable<Store>>::Value:
+        Manifest<Store, TreeId = ManifestId, Leaf = L> + Send + Sync,
+    <<ManifestId as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf: Send + Copy + Eq,
+    I: IntoIterator<Item = NonRootMPath> + Clone,
+    M: IntoIterator<Item = ManifestId>,
+    L: Unpin,
+{
+    let per_parent: Vec<(HashSet<NonRootMPath>, Vec<NonRootMPath>)> = stream::iter(parents)
+        .map(|parent| {
+            cloned!(ctx, store, paths);
+            async move {
+                let entries: Vec<(MPath, Entry<ManifestId, L>)> = parent
+                    .find_entries(ctx.clone(), store.clone(), paths)
+                    .try_collect()
+                    .await?;
+
+                // Leaf -> already a file; tree -> replaced dir whose files are deleted.
+                let mut leaves = HashSet::new();
+                let mut replaced_dirs = Vec::new();
+                for (path, entry) in entries {
+                    let path: NonRootMPath = path.try_into()?;
+                    match entry {
+                        Entry::Leaf(_) => {
+                            leaves.insert(path);
+                        }
+                        Entry::Tree(tree_id) => replaced_dirs.push((path, tree_id)),
+                    }
+                }
+
+                let implicit_deletes: Vec<NonRootMPath> = stream::iter(replaced_dirs)
+                    .map(|(path, tree_id)| {
+                        cloned!(ctx, store);
+                        async move {
+                            tree_id
+                                .list_leaf_entries(ctx, store)
+                                .map_ok(move |(relative_path, _)| path.join(&relative_path))
+                                .try_collect::<Vec<_>>()
+                                .await
+                        }
+                    })
+                    .buffer_unordered(100)
+                    .try_concat()
+                    .await?;
+
+                anyhow::Ok((leaves, implicit_deletes))
+            }
+        })
+        .buffer_unordered(10)
+        .try_collect()
+        .await?;
+
+    let (leaf_sets, implicit_delete_lists): (Vec<_>, Vec<_>) = per_parent.into_iter().unzip();
+
+    // Dedup across parents.
+    let implicit_deletes = implicit_delete_lists
+        .into_iter()
+        .flatten()
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect();
+
+    // Leaf in every parent; empty for a root changeset (no parents).
+    let existing_files_in_all_parents = leaf_sets
+        .into_iter()
+        .reduce(|acc, leaves| acc.intersection(&leaves).cloned().collect())
+        .unwrap_or_default();
+
+    Ok(ImplicitDeletesAndExistingFiles {
+        implicit_deletes,
+        existing_files_in_all_parents,
+    })
+}
+
 #[cfg(test)]
 mod test {
     use std::fmt::Debug;
@@ -144,6 +237,7 @@ mod test {
     use super::*;
     use crate::tests::test_manifest::TestLeaf;
     use crate::tests::test_manifest::TestManifest;
+    use crate::tests::test_manifest::TestManifestId;
 
     fn ensure_unordered_eq<T: Debug + Hash + PartialEq + Eq, I: IntoIterator<Item = T>>(
         v1: I,
@@ -333,6 +427,119 @@ mod test {
                 NonRootMPath::new("p1/p9/p10")?,
             ],
         );
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_get_implicit_deletes_and_existing_files(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let store: Arc<dyn KeyedBlobstore> = Arc::new(KeyedMemblob::default());
+
+        // Leaf content doesn't affect classification, so reuse one leaf id.
+        let leaf_id = TestLeaf::new("x").store(&ctx, &store).await?;
+        let leaf = || Entry::Leaf((FileType::Regular, leaf_id));
+
+        let d_tree = TestManifest::new()
+            .insert("a", leaf())
+            .insert("b", leaf())
+            .store(&ctx, &store)
+            .await?;
+        let sub_tree = TestManifest::new()
+            .insert("x", leaf())
+            .insert("y", leaf())
+            .store(&ctx, &store)
+            .await?;
+        let other_tree = TestManifest::new()
+            .insert("z", leaf())
+            .store(&ctx, &store)
+            .await?;
+
+        // Parent 1:               Parent 2:
+        //   shared (leaf)           shared (leaf)
+        //   onlyp1 (leaf)           onlyp2 (leaf)
+        //   d/{a,b}                 d/{a,b}
+        //   sub/{x,y}               other/z
+        let root1 = TestManifest::new()
+            .insert("shared", leaf())
+            .insert("onlyp1", leaf())
+            .insert("d", Entry::Tree(d_tree))
+            .insert("sub", Entry::Tree(sub_tree))
+            .store(&ctx, &store)
+            .await?;
+        let root2 = TestManifest::new()
+            .insert("shared", leaf())
+            .insert("onlyp2", leaf())
+            .insert("d", Entry::Tree(d_tree))
+            .insert("other", Entry::Tree(other_tree))
+            .store(&ctx, &store)
+            .await?;
+
+        // Two parents: existing only if a file in both.
+        let classification = get_implicit_deletes_and_existing_files(
+            &ctx,
+            store.clone(),
+            vec![
+                NonRootMPath::new("d/a")?,
+                NonRootMPath::new("shared")?,
+                NonRootMPath::new("onlyp1")?,
+                NonRootMPath::new("onlyp2")?,
+                NonRootMPath::new("sub")?,
+                NonRootMPath::new("nonexistent")?,
+            ],
+            vec![root1, root2],
+        )
+        .await?;
+        ensure_unordered_eq(
+            classification
+                .existing_files_in_all_parents
+                .into_iter()
+                .collect::<Vec<_>>(),
+            vec![NonRootMPath::new("d/a")?, NonRootMPath::new("shared")?],
+        );
+        ensure_unordered_eq(
+            classification.implicit_deletes,
+            vec![NonRootMPath::new("sub/x")?, NonRootMPath::new("sub/y")?],
+        );
+
+        // Single parent: existing if a file in that parent.
+        let classification = get_implicit_deletes_and_existing_files(
+            &ctx,
+            store.clone(),
+            vec![
+                NonRootMPath::new("d/a")?,
+                NonRootMPath::new("onlyp1")?,
+                NonRootMPath::new("onlyp2")?,
+                NonRootMPath::new("sub")?,
+            ],
+            vec![root1],
+        )
+        .await?;
+        ensure_unordered_eq(
+            classification
+                .existing_files_in_all_parents
+                .into_iter()
+                .collect::<Vec<_>>(),
+            vec![NonRootMPath::new("d/a")?, NonRootMPath::new("onlyp1")?],
+        );
+        ensure_unordered_eq(
+            classification.implicit_deletes,
+            vec![NonRootMPath::new("sub/x")?, NonRootMPath::new("sub/y")?],
+        );
+
+        // No parents: nothing is an existing file.
+        let classification = get_implicit_deletes_and_existing_files(
+            &ctx,
+            store.clone(),
+            vec![NonRootMPath::new("d/a")?],
+            Vec::<TestManifestId>::new(),
+        )
+        .await?;
+        assert!(
+            classification.existing_files_in_all_parents.is_empty(),
+            "a root changeset has no parents, so no path can be an existing file"
+        );
+        assert!(classification.implicit_deletes.is_empty());
+
         Ok(())
     }
 }
