@@ -99,6 +99,7 @@ use mutable_renames::ArcMutableRenames;
 use mutable_renames::MutableRenames;
 use mutable_renames::SqlMutableRenamesStore;
 use newfilenodes::NewFilenodesBuilder;
+use permission_checker::AclProvider;
 use permission_checker::dummy::DummyAclProvider;
 use phases::ArcPhases;
 use pushrebase_mutation_mapping::ArcPushrebaseMutationMapping;
@@ -191,6 +192,7 @@ pub struct TestRepoFactory {
     permission_checker: Option<ArcRepoPermissionChecker>,
     filenodes_override: Option<Box<dyn Fn(ArcFilenodes) -> ArcFilenodes + Send + Sync>>,
     restricted_paths: Option<ArcRestrictedPaths>,
+    acl_provider: Option<Arc<dyn AclProvider>>,
     repo_derivation_queues: Option<ArcRepoDerivationQueues>,
 }
 
@@ -346,6 +348,7 @@ impl TestRepoFactory {
             bookmarks_cache: None,
             git_symbolic_refs: None,
             restricted_paths: None,
+            acl_provider: None,
             repo_derivation_queues: None,
         })
     }
@@ -382,6 +385,14 @@ impl TestRepoFactory {
     /// Set the restricted paths for repos built by this factory.
     pub fn with_restricted_paths(&mut self, restricted_paths: ArcRestrictedPaths) -> &mut Self {
         self.restricted_paths = Some(restricted_paths);
+        self
+    }
+
+    /// Use a custom ACL provider for the `restricted_paths` facet of repos built
+    /// by this factory. Ignored when an explicit `restricted_paths` is set via
+    /// [`Self::with_restricted_paths`].
+    pub fn with_acl_provider(&mut self, acl_provider: Arc<dyn AclProvider>) -> &mut Self {
+        self.acl_provider = Some(acl_provider);
         self
     }
 
@@ -791,7 +802,10 @@ impl TestRepoFactory {
             return Ok(restricted_paths.clone());
         }
 
-        let acl_provider = DummyAclProvider::new(self.fb)?;
+        let acl_provider = match &self.acl_provider {
+            Some(acl_provider) => acl_provider.clone(),
+            None => DummyAclProvider::new(self.fb)?,
+        };
 
         // Create scuba builder with discard for tests
         let scuba_builder = MononokeScubaSampleBuilder::with_discard();

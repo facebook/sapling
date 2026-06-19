@@ -592,16 +592,56 @@ pub(crate) async fn has_read_access_to_repo_region(
     if acls.is_empty() {
         return Ok(true);
     }
-    has_read_access_to_repo_region_acls(ctx, acl_provider, acls).await
+    has_repo_region_acls_for_action(ctx, acl_provider, acls, "read").await
 }
 
-/// Check that the caller has direct `read` access to every repo region ACL in
-/// `acls`. Runs checks concurrently and short-circuits on the first deny or
-/// error.
-async fn has_read_access_to_repo_region_acls(
+/// Check if the caller has maintainer access to every repo region ACL in `acls`
+/// (conjunctive evaluation), or is a member of `admin_bypass_group`.
+///
+/// Mirrors [`has_read_access_to_repo_region`] but checks the `maintainers`
+/// action instead of `read`. Used to gate `.slacl` ACL-file modifications while
+/// letting admins in `admin_bypass_group` through even when they do not maintain
+/// the affected ACL.
+pub async fn has_maintainer_access_to_repo_region(
     ctx: &CoreContext,
     acl_provider: &Arc<dyn AclProvider>,
     acls: &[&MononokeIdentity],
+    admin_bypass_group: Option<&MononokeIdentity>,
+) -> Result<bool> {
+    has_repo_region_access(ctx, acl_provider, acls, "maintainers", admin_bypass_group).await
+}
+
+/// Check whether the caller has `action` access to every repo region ACL in
+/// `acls`, or is a member of `admin_bypass_group`. An empty `acls` slice is
+/// unrestricted. The bypass-group and per-ACL checks run concurrently and both
+/// always run to completion; access is granted if either succeeds, and an error
+/// in either fails closed.
+async fn has_repo_region_access(
+    ctx: &CoreContext,
+    acl_provider: &Arc<dyn AclProvider>,
+    acls: &[&MononokeIdentity],
+    action: &str,
+    admin_bypass_group: Option<&MononokeIdentity>,
+) -> Result<bool> {
+    if acls.is_empty() {
+        return Ok(true);
+    }
+
+    let (in_bypass_group, has_acl_access) = futures::try_join!(
+        is_in_admin_bypass_group(ctx, acl_provider, admin_bypass_group),
+        has_repo_region_acls_for_action(ctx, acl_provider, acls, action),
+    )?;
+    Ok(in_bypass_group || has_acl_access)
+}
+
+/// Check that the caller has direct `action` access to every repo region ACL in
+/// `acls`. Runs checks concurrently and short-circuits on the first deny or
+/// error.
+async fn has_repo_region_acls_for_action(
+    ctx: &CoreContext,
+    acl_provider: &Arc<dyn AclProvider>,
+    acls: &[&MononokeIdentity],
+    action: &str,
 ) -> Result<bool> {
     let identities = ctx.metadata().identities();
     stream::iter(acls.iter().copied())
@@ -613,7 +653,7 @@ async fn has_read_access_to_repo_region_acls(
                     format!("Failed to create PermissionChecker for {}", acl.id_data())
                 })?;
             let permission_checker = PermissionCheckerBuilder::new().allow(checker).build();
-            anyhow::Ok(permission_checker.check_set(identities, &["read"]).await)
+            anyhow::Ok(permission_checker.check_set(identities, &[action]).await)
         })
         .boxed()
         .buffer_unordered(acls.len())

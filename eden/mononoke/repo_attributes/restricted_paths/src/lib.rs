@@ -29,6 +29,7 @@ use mononoke_types::DerivableType;
 use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
 use permission_checker::AclProvider;
+use permission_checker::MononokeIdentity;
 use repo_derived_data::ArcRepoDerivedData;
 pub use restricted_paths_common::*;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -44,6 +45,7 @@ pub use crate::restriction_check::RestrictionCheckResult;
 use crate::restriction_check::SharedFetchHandle;
 use crate::restriction_check::SourceRestrictionCheck;
 pub use crate::restriction_check::check_path_restriction_infos;
+pub use crate::restriction_check::has_maintainer_access_to_repo_region;
 pub use crate::restriction_info::ManifestRestrictionInfo;
 pub use crate::restriction_info::PathRestrictionInfo;
 
@@ -185,6 +187,26 @@ impl RestrictedPaths {
 
     pub fn acl_provider(&self) -> &Arc<dyn AclProvider> {
         &self.acl_provider
+    }
+
+    /// Check whether the caller has maintainer access to every repo region ACL
+    /// in `acls`, or is a member of the configured admin bypass group.
+    ///
+    /// Convenience over [`has_maintainer_access_to_repo_region`] that sources
+    /// the ACL provider and admin bypass group from this `RestrictedPaths`, so
+    /// callers cannot pass a mismatched provider or forget the bypass group.
+    pub async fn has_maintainer_access(
+        &self,
+        ctx: &CoreContext,
+        acls: &[&MononokeIdentity],
+    ) -> Result<bool> {
+        has_maintainer_access_to_repo_region(
+            ctx,
+            self.acl_provider(),
+            acls,
+            self.config().admin_bypass_group.as_ref(),
+        )
+        .await
     }
 
     // -----------------------------------------------------------------------
