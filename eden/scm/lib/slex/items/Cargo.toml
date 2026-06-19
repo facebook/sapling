@@ -10,4 +10,4 @@ repository = "https://github.com/facebook/sapling"
 license = "MIT"
 
 [dependencies]
-smallvec = { version = "1.15", default-features = false }
+smallvec = { version = "1.15.2", default-features = false }
