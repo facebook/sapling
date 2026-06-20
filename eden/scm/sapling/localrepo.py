@@ -1790,9 +1790,12 @@ class localrepository:
         txnid = "TXN:" + ha
         self.hook("pretxnopen", throw=True, txnname=desc, txnid=txnid)
 
+        # Lock-free transactions do not create fixed journal files.
         if not lockfree:
             self._writejournal(desc)
-        renames = [(vfs, x, undoname(x)) for vfs, x in self._journalfiles()]
+            renames = [(vfs, x, undoname(x)) for vfs, x in self._journalfiles()]
+        else:
+            renames = []
         if report:
             rp = report
         else:

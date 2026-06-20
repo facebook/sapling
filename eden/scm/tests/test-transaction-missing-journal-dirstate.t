@@ -38,5 +38,3 @@ Lock-free transaction close must not move another transaction's journals.
   $ touch $TESTTMP/go
   $ wait
   $ cat $TESTTMP/out
-  abort: $ENOENT$: $TESTTMP/repo/.sl/journal.dirstate (no-windows !)
-  abort: $TESTTMP\repo\.sl\journal.dirstate: $ENOENT$. (windows !)
