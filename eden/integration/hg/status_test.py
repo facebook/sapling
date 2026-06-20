@@ -23,7 +23,6 @@ from eden.fs.service.eden.thrift_types import (
     EdenErrorType,
     FaultDefinition,
     GetBlockedFaultsRequest,
-    GetCurrentSnapshotInfoRequest,
     GetScmStatusParams,
     MountId,
     RootIdOptions,
