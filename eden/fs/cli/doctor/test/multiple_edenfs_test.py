@@ -8,7 +8,6 @@
 
 import itertools
 import sys
-import unittest
 from typing import Optional, Tuple
 
 import eden.fs.cli.doctor as doctor
