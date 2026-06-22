@@ -50,29 +50,11 @@ fbcode_configured_alias(
 )
 
 fbcode_configured_alias(
-    name = "edenfsctl_real_macos_x86_64",
-    actual = "//eden/fs/cli:edenfsctl",
-    compatible_with = ["ovr_config//os:macos"],
-    default_target_platform = get_host_target_platform(use_minimal_xcode = True),
-    platform = "ovr_config//platform/macos:x86_64-fbsource-minimal",
-    visibility = [],
-)
-
-fbcode_configured_alias(
     name = "edenfs_config_manager_macos_arm64",
     actual = "//eden/fs/config/facebook:edenfs_config_manager",
     compatible_with = ["ovr_config//os:macos"],
     default_target_platform = get_host_target_platform(use_minimal_xcode = True),
     platform = "ovr_config//platform/macos:arm64-fbsource-minimal",
-    visibility = [],
-)
-
-fbcode_configured_alias(
-    name = "edenfs_config_manager_macos_x86_64",
-    actual = "//eden/fs/config/facebook:edenfs_config_manager",
-    compatible_with = ["ovr_config//os:macos"],
-    default_target_platform = get_host_target_platform(use_minimal_xcode = True),
-    platform = "ovr_config//platform/macos:x86_64-fbsource-minimal",
     visibility = [],
 )
 
@@ -97,15 +79,6 @@ fbcode_configured_alias(
     compatible_with = ["ovr_config//os:macos"],
     default_target_platform = get_host_target_platform(use_minimal_xcode = True),
     platform = "ovr_config//platform/macos:arm64-fbsource-minimal",
-    visibility = [],
-)
-
-fbcode_configured_alias(
-    name = "edenfs_restarter_macos_x86_64",
-    actual = "//eden/fs/facebook:edenfs_restarter",
-    compatible_with = ["ovr_config//os:macos"],
-    default_target_platform = get_host_target_platform(use_minimal_xcode = True),
-    platform = "ovr_config//platform/macos:x86_64-fbsource-minimal",
     visibility = [],
 )
 

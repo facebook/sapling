@@ -100,11 +100,8 @@ SYSTEMD_STATIC_TARGETS = {
 MAC_ONLY_TARGETS = {
     "//eden/fs:eden_apfs_mount_helper_universal": ("/usr/local/libexec/eden/eden_apfs_mount_helper", 0o04755),
     "//eden/fs:edenfs_config_manager_macos_arm64": ("/usr/local/libexec/eden/edenfs_config_manager.arm64", None),
-    "//eden/fs:edenfs_config_manager_macos_x86_64": ("/usr/local/libexec/eden/edenfs_config_manager.x86_64", None),
     "//eden/fs:edenfs_restarter_macos_arm64": ("/usr/local/libexec/eden/edenfs_restarter.arm64", None),
-    "//eden/fs:edenfs_restarter_macos_x86_64": ("/usr/local/libexec/eden/edenfs_restarter.x86_64", None),
     "//eden/fs:edenfsctl_real_macos_arm64": ("/usr/local/bin/edenfsctl.real.arm64", None),
-    "//eden/fs:edenfsctl_real_macos_x86_64": ("/usr/local/bin/edenfsctl.real.x86_64", None),
 }
 
 def _rpm_install(src, dst, mode = None):
