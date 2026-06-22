@@ -458,9 +458,11 @@ def run_soft_unmount_regression(env: EdenTestEnv, backing_repo: Path):
         run(["sudo", "umount", "-l", str(sftp_mount)])
 
         list_result = json.loads(_run_edenfsctl(test_env, "list", "--json").stdout)
-        state = list_result.get(str(mount_point), {}).get("state")
+        list_entry = list_result.get(str(mount_point), {})
+        state = list_entry.get("state")
         visible_after_unmount = is_eden_mounted(mount_point)
         print(f"After SFTP peer unmount: visible={visible_after_unmount} state={state}")
+        print(f"eden list entry: {json.dumps(list_entry, sort_keys=True)}")
         if visible_after_unmount or state != "RUNNING":
             raise RuntimeError(
                 "failed to reproduce stale RUNNING mount: "

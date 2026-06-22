@@ -655,6 +655,8 @@ pub struct EdenFsCheckout {
     fs_channel_type: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     fuse_transport: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    visible_in_daemon_namespace: Option<bool>,
     #[serde(skip)]
     pub(crate) redirections: Option<BTreeMap<PathBuf, RedirectionType>>,
     #[serde(skip)]
@@ -698,10 +700,17 @@ impl EdenFsCheckout {
             String::new()
         };
 
+        let visibility_str = if self.visible_in_daemon_namespace == Some(false) {
+            " (not visible in daemon namespace)"
+        } else {
+            ""
+        };
+
         format!(
-            "{}{}{}{}",
+            "{}{}{}{}{}",
             self.path.display(),
             state_str,
+            visibility_str,
             transport_str,
             suffix
         )
@@ -849,6 +858,7 @@ impl EdenFsCheckout {
             },
             fs_channel_type: thrift_mount.fsChannelType,
             fuse_transport: thrift_mount.fuseTransport,
+            visible_in_daemon_namespace: thrift_mount.visibleInDaemonNamespace,
             redirections: None,
             redirection_targets: None,
         })
@@ -863,6 +873,7 @@ impl EdenFsCheckout {
             backing_repo: Some(config.repository.path.clone()),
             fs_channel_type: None,
             fuse_transport: None,
+            visible_in_daemon_namespace: None,
             redirections: Some(config.redirections),
             redirection_targets: Some(config.redirection_targets),
         }
@@ -1401,8 +1412,10 @@ mod tests {
     use edenfs_error::ResultExt;
     use tempfile::TempDir;
     use tempfile::tempdir;
+    use thrift_types::edenfs::MountState;
 
     use crate::checkout::CheckoutConfig;
+    use crate::checkout::EdenFsCheckout;
     use crate::checkout::MOUNT_CONFIG;
     use crate::checkout::REPO_SOURCE;
     use crate::checkout::RedirectionType;
@@ -1496,6 +1509,32 @@ mod tests {
                 Err(_) => Ok(()),
             }
         }
+    }
+
+    #[test]
+    fn test_mount_visibility_display_and_json() {
+        let checkout = EdenFsCheckout {
+            path: PathBuf::from("/tmp/mount"),
+            data_dir: PathBuf::from("/tmp/client"),
+            state: Some(MountState::RUNNING),
+            configured: true,
+            backing_repo: None,
+            fs_channel_type: None,
+            fuse_transport: None,
+            visible_in_daemon_namespace: Some(false),
+            redirections: None,
+            redirection_targets: None,
+        };
+
+        assert_eq!(
+            "/tmp/mount (not visible in daemon namespace)",
+            checkout.display(false)
+        );
+        let value = serde_json::to_value(checkout).expect("failed to serialize checkout");
+        assert_eq!(
+            Some(&serde_json::Value::Bool(false)),
+            value.get("visible_in_daemon_namespace")
+        );
     }
 
     #[test]

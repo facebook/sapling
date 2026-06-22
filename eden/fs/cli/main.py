@@ -465,6 +465,10 @@ class ListCmd(Subcmd):
             else:
                 suffix = ""
 
+            visibility_str = ""
+            if mount_info.visible_in_daemon_namespace is False:
+                visibility_str = " (not visible in daemon namespace)"
+
             if mount_info.state is None:
                 state_str = " (not mounted)"
             elif mount_info.state == MountState.RUNNING:
@@ -484,7 +488,9 @@ class ListCmd(Subcmd):
                 else:
                     transport_str = f" ({mount_info.fs_channel_type})"
 
-            out.writeln(f"{path.as_posix()}{state_str}{transport_str}{suffix}")
+            out.writeln(
+                f"{path.as_posix()}{state_str}{visibility_str}{transport_str}{suffix}"
+            )
 
 
 @subcmd("clone", "Create a clone of a specific repo and check it out")

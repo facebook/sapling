@@ -243,6 +243,7 @@ class ListMountInfo(typing.NamedTuple):
     backing_repo: Optional[Path]
     fs_channel_type: Optional[str] = None
     fuse_transport: Optional[str] = None
+    visible_in_daemon_namespace: Optional[bool] = None
 
     def to_json_dict(self) -> Dict[str, Any]:
         if self.state is None:
@@ -264,6 +265,8 @@ class ListMountInfo(typing.NamedTuple):
             d["fs_channel_type"] = self.fs_channel_type
         if self.fuse_transport is not None:
             d["fuse_transport"] = self.fuse_transport
+        if self.visible_in_daemon_namespace is not None:
+            d["visible_in_daemon_namespace"] = self.visible_in_daemon_namespace
         return d
 
 
@@ -661,6 +664,7 @@ class EdenInstance(AbstractEdenInstance):
                 backing_repo=backing_repo,
                 fs_channel_type=thrift_mount.fsChannelType,
                 fuse_transport=thrift_mount.fuseTransport,
+                visible_in_daemon_namespace=thrift_mount.visibleInDaemonNamespace,
             )
 
         # Add all mount points listed in the config that were not reported

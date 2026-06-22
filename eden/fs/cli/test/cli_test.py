@@ -263,6 +263,7 @@ class ListTest(unittest.TestCase):
                 mountPoint=b"/data/users/johndoe/mercurial",
                 edenClientPath=b"/home/johndoe/.eden/clients/mercurial",
                 state=MountState.RUNNING,
+                visibleInDaemonNamespace=True,
             ),
             MountInfo(
                 mountPoint=b"/data/users/johndoe/git",
@@ -273,6 +274,7 @@ class ListTest(unittest.TestCase):
                 mountPoint=b"/data/users/johndoe/apache",
                 edenClientPath=b"/home/johndoe/.eden/clients/apache",
                 state=MountState.RUNNING,
+                visibleInDaemonNamespace=False,
             ),
             MountInfo(
                 mountPoint=b"/data/users/johndoe/configs",
@@ -445,7 +447,7 @@ class ListTest(unittest.TestCase):
         main_mod.ListCmd.print_mounts(normal_out, mounts)
         self.assertEqual(
             """\
-/data/users/johndoe/apache (unconfigured)
+/data/users/johndoe/apache (not visible in daemon namespace) (unconfigured)
 /data/users/johndoe/configs (INITIALIZING) (unconfigured)
 /data/users/johndoe/git (SHUTTING_DOWN)
 /data/users/johndoe/mercurial
@@ -465,7 +467,8 @@ class ListTest(unittest.TestCase):
     "backing_repo": null,
     "configured": false,
     "data_dir": "/home/johndoe/.eden/clients/apache",
-    "state": "RUNNING"
+    "state": "RUNNING",
+    "visible_in_daemon_namespace": false
   },
   "/data/users/johndoe/configs": {
     "backing_repo": null,
@@ -483,7 +486,8 @@ class ListTest(unittest.TestCase):
     "backing_repo": "/home/johndoe/.eden-backing-repos/mercurial",
     "configured": true,
     "data_dir": "/home/johndoe/.eden/clients/mercurial",
-    "state": "RUNNING"
+    "state": "RUNNING",
+    "visible_in_daemon_namespace": true
   },
   "/data/users/johndoe/other_repos/linux": {
     "backing_repo": "/home/johndoe/.eden-backing-repos/linux",
