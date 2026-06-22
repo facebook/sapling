@@ -139,7 +139,7 @@ fn rejection<'a, 'b>(path: &'a String, pattern: &'b LuaPattern) -> HookExecution
     HookExecution::rejected(HookRejectionInfo::new_long(
         "Denied filename matched name pattern",
         format!(
-            "Denied filename '{path}' matched name pattern '{pattern}'. Rename or remove this file and try again."
+            "Denied filename '{path}' matched deny pattern '{pattern}'. This path is protected and your change must not modify it. To fix this, revert your changes to '{path}' so that it no longer appears in your diff, then re-submit."
         ),
     ))
 }

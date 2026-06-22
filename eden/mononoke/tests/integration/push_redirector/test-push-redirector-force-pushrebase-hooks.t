@@ -86,7 +86,7 @@ Note that the node is from the small repo, even though the hook is in the large 
   pushing rev 94b4d63cb318 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark test_bookmark
   moving remote bookmark test_bookmark from ce81c7d38286 to 94b4d63cb318
   abort: server error: hooks failed:
-    deny_files for 45dacb440475146894aee9056c136bb72d64454729080e71d46b4dbee3afd233: Denied filename 'smallrepofolder/f/.git/HEAD' matched name pattern '/[.]git/'. Rename or remove this file and try again.
+    deny_files for 45dacb440475146894aee9056c136bb72d64454729080e71d46b4dbee3afd233: Denied filename 'smallrepofolder/f/.git/HEAD' matched deny pattern '/[.]git/'. This path is protected and your change must not modify it. To fix this, revert your changes to 'smallrepofolder/f/.git/HEAD' so that it no longer appears in your diff, then re-submit.
   [255]
 
 Create a commit in the large repo that triggers deny_files.  Since we haven't enabled the hook

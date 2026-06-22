@@ -80,7 +80,7 @@ buck-out directory is not allowed in the root
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     block_files for 2e29df6a828daec5228e2142b806345778776871: Blocked filename 'buck-out/file' matched name pattern '^buck-out/'. Rename or remove this file and try again.
+  remote:     block_files for 2e29df6a828daec5228e2142b806345778776871: Blocked filename 'buck-out/file' matched block pattern '^buck-out/'. This path is protected and your change must not modify it. To fix this, revert your changes to 'buck-out/file' so that it no longer appears in your diff, then re-submit.
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -95,7 +95,7 @@ buck-out directory is not allowed in any subdir
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     block_files for c2eff965c3d873332c55d7dc2d29a73e91f31ffd: Blocked filename 'dir/buck-out/file' matched name pattern '/buck-out/'. Rename or remove this file and try again.
+  remote:     block_files for c2eff965c3d873332c55d7dc2d29a73e91f31ffd: Blocked filename 'dir/buck-out/file' matched block pattern '/buck-out/'. This path is protected and your change must not modify it. To fix this, revert your changes to 'dir/buck-out/file' so that it no longer appears in your diff, then re-submit.
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -109,7 +109,7 @@ DO_NOT_COMMIT_THIS_FILE_OR_YOU_WILL_BE_FIRED does the needful
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     block_files for 21ab636d0b9f382939cb3740b6a93909729142b7: Blocked filename 'important_DO_NOT_COMMIT_THIS_FILE_OR_YOU_WILL_BE_FIRED.txt' matched name pattern 'DO_NOT_COMMIT_THIS_FILE_OR_YOU_WILL_BE_FIRED'. Rename or remove this file and try again.
+  remote:     block_files for 21ab636d0b9f382939cb3740b6a93909729142b7: Blocked filename 'important_DO_NOT_COMMIT_THIS_FILE_OR_YOU_WILL_BE_FIRED.txt' matched block pattern 'DO_NOT_COMMIT_THIS_FILE_OR_YOU_WILL_BE_FIRED'. This path is protected and your change must not modify it. To fix this, revert your changes to 'important_DO_NOT_COMMIT_THIS_FILE_OR_YOU_WILL_BE_FIRED.txt' so that it no longer appears in your diff, then re-submit.
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -124,7 +124,7 @@ Old fbmake leftovers cannot be committed
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     block_files for 1c764df4be5b9a7f42ba5f9f5e2e64faea60f180: Blocked filename 'fbcode/_bin/file' matched name pattern '^fbcode/_bin/'. Rename or remove this file and try again.
+  remote:     block_files for 1c764df4be5b9a7f42ba5f9f5e2e64faea60f180: Blocked filename 'fbcode/_bin/file' matched block pattern '^fbcode/_bin/'. This path is protected and your change must not modify it. To fix this, revert your changes to 'fbcode/_bin/file' so that it no longer appears in your diff, then re-submit.
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -136,10 +136,10 @@ Cannot nest project dirs badly
   > done
   $ hg ci -Aqm failure
   $ hg push -r . --to master_bookmark |& grep -P 'remote:\s+block_files for' | sort
-  remote:     block_files for 1e6669d90ee6a9825c530a8332bcb0edd3dfd4a3: Blocked filename 'fbandroid/fbandroid/files' matched name pattern '^fbandroid/fbandroid/'. Rename or remove this file and try again.
-  remote:     block_files for 1e6669d90ee6a9825c530a8332bcb0edd3dfd4a3: Blocked filename 'fbcode/fbcode/files' matched name pattern '^fbcode/fbcode/'. Rename or remove this file and try again.
-  remote:     block_files for 1e6669d90ee6a9825c530a8332bcb0edd3dfd4a3: Blocked filename 'fbobjc/fbobjc/files' matched name pattern '^fbobjc/fbobjc/'. Rename or remove this file and try again.
-  remote:     block_files for 1e6669d90ee6a9825c530a8332bcb0edd3dfd4a3: Blocked filename 'xplat/xplat/files' matched name pattern '^xplat/xplat/'. Rename or remove this file and try again.
+  remote:     block_files for 1e6669d90ee6a9825c530a8332bcb0edd3dfd4a3: Blocked filename 'fbandroid/fbandroid/files' matched block pattern '^fbandroid/fbandroid/'. This path is protected and your change must not modify it. To fix this, revert your changes to 'fbandroid/fbandroid/files' so that it no longer appears in your diff, then re-submit.
+  remote:     block_files for 1e6669d90ee6a9825c530a8332bcb0edd3dfd4a3: Blocked filename 'fbcode/fbcode/files' matched block pattern '^fbcode/fbcode/'. This path is protected and your change must not modify it. To fix this, revert your changes to 'fbcode/fbcode/files' so that it no longer appears in your diff, then re-submit.
+  remote:     block_files for 1e6669d90ee6a9825c530a8332bcb0edd3dfd4a3: Blocked filename 'fbobjc/fbobjc/files' matched block pattern '^fbobjc/fbobjc/'. This path is protected and your change must not modify it. To fix this, revert your changes to 'fbobjc/fbobjc/files' so that it no longer appears in your diff, then re-submit.
+  remote:     block_files for 1e6669d90ee6a9825c530a8332bcb0edd3dfd4a3: Blocked filename 'xplat/xplat/files' matched block pattern '^xplat/xplat/'. This path is protected and your change must not modify it. To fix this, revert your changes to 'xplat/xplat/files' so that it no longer appears in your diff, then re-submit.
 
 Cannot put crud in xplat
   $ hg up -q "min(all())"
@@ -149,9 +149,9 @@ Cannot put crud in xplat
   > done
   $ hg ci -Aqm failure
   $ hg push -r . --to master_bookmark |& grep -P 'remote:\s+block_files for' | sort
-  remote:     block_files for ca38f237040d417466fcc1048ec6254f1ffdfb35: Blocked filename 'xplat/fbandroid/files' matched name pattern '^xplat/fbandroid/'. Rename or remove this file and try again.
-  remote:     block_files for ca38f237040d417466fcc1048ec6254f1ffdfb35: Blocked filename 'xplat/fbcode/files' matched name pattern '^xplat/fbcode/'. Rename or remove this file and try again.
-  remote:     block_files for ca38f237040d417466fcc1048ec6254f1ffdfb35: Blocked filename 'xplat/fbobjc/files' matched name pattern '^xplat/fbobjc/'. Rename or remove this file and try again.
+  remote:     block_files for ca38f237040d417466fcc1048ec6254f1ffdfb35: Blocked filename 'xplat/fbandroid/files' matched block pattern '^xplat/fbandroid/'. This path is protected and your change must not modify it. To fix this, revert your changes to 'xplat/fbandroid/files' so that it no longer appears in your diff, then re-submit.
+  remote:     block_files for ca38f237040d417466fcc1048ec6254f1ffdfb35: Blocked filename 'xplat/fbcode/files' matched block pattern '^xplat/fbcode/'. This path is protected and your change must not modify it. To fix this, revert your changes to 'xplat/fbcode/files' so that it no longer appears in your diff, then re-submit.
+  remote:     block_files for ca38f237040d417466fcc1048ec6254f1ffdfb35: Blocked filename 'xplat/fbobjc/files' matched block pattern '^xplat/fbobjc/'. This path is protected and your change must not modify it. To fix this, revert your changes to 'xplat/fbobjc/files' so that it no longer appears in your diff, then re-submit.
 
 Owners files are disallowed
   $ hg up -C -q "min(all())"
@@ -165,7 +165,7 @@ Owners files are disallowed
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     block_files for 4fb5a8e3ae8f09634fbe63d0de903285ffe95471: Blocked filename 'OWNERS' matched name pattern '^OWNERS$'. Rename or remove this file and try again.
+  remote:     block_files for 4fb5a8e3ae8f09634fbe63d0de903285ffe95471: Blocked filename 'OWNERS' matched block pattern '^OWNERS$'. This path is protected and your change must not modify it. To fix this, revert your changes to 'OWNERS' so that it no longer appears in your diff, then re-submit.
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -181,7 +181,7 @@ Owners files are disallowed
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     block_files for 99177114cd07e745baa4c4470f0c5d80e63ab3e1: Blocked filename 'owners' matched name pattern '^owners$'. Rename or remove this file and try again.
+  remote:     block_files for 99177114cd07e745baa4c4470f0c5d80e63ab3e1: Blocked filename 'owners' matched block pattern '^owners$'. This path is protected and your change must not modify it. To fix this, revert your changes to 'owners' so that it no longer appears in your diff, then re-submit.
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -198,7 +198,7 @@ Owners files are disallowed
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     block_files for b742a1aa7e76a2a3183aa36d4e53831578493b97: Blocked filename 'dir/owners' matched name pattern '.*/owners$'. Rename or remove this file and try again.
+  remote:     block_files for b742a1aa7e76a2a3183aa36d4e53831578493b97: Blocked filename 'dir/owners' matched block pattern '.*/owners$'. This path is protected and your change must not modify it. To fix this, revert your changes to 'dir/owners' so that it no longer appears in your diff, then re-submit.
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -233,7 +233,7 @@ Cannot commit .git stuff into the repo (use testtool_drawdag since Sapling clien
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     block_files for 5fea2b84c7ef7f06a502b34b459bf2bd5b81cb4f: Blocked filename 'dir/.git/HEAD' matched name pattern '/\.git/'. Rename or remove this file and try again.
+  remote:     block_files for 5fea2b84c7ef7f06a502b34b459bf2bd5b81cb4f: Blocked filename 'dir/.git/HEAD' matched block pattern '/\.git/'. This path is protected and your change must not modify it. To fix this, revert your changes to 'dir/.git/HEAD' so that it no longer appears in your diff, then re-submit.
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -251,7 +251,7 @@ Cannot commit .git stuff into the repo root
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     block_files for 790507c0d885cdb408e4fa0e4274794f0d6024f5: Blocked filename '.git/HEAD' matched name pattern '^\.git/'. Rename or remove this file and try again.
+  remote:     block_files for 790507c0d885cdb408e4fa0e4274794f0d6024f5: Blocked filename '.git/HEAD' matched block pattern '^\.git/'. This path is protected and your change must not modify it. To fix this, revert your changes to '.git/HEAD' so that it no longer appears in your diff, then re-submit.
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -313,7 +313,7 @@ The dot in the [.]git hook pattern isn't a wildcard that matches any character
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     block_files for d3b5973e930bdf71e079b84f78a70bf747191279: Blocked filename 'dir/.watchmanconfig' matched name pattern '.*/\.watchmanconfig$'. Rename or remove this file and try again.
+  remote:     block_files for d3b5973e930bdf71e079b84f78a70bf747191279: Blocked filename 'dir/.watchmanconfig' matched block pattern '.*/\.watchmanconfig$'. This path is protected and your change must not modify it. To fix this, revert your changes to 'dir/.watchmanconfig' so that it no longer appears in your diff, then re-submit.
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -343,7 +343,7 @@ Pushing to experimental directories should not work
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     block_files for 212a10abff88450a2707b1d73b2e76c4fb1f2be6: Blocked filename 'fbcode/experimental/this_is_a_test/file' matched name pattern '^fbcode/experimental'. Rename or remove this file and try again.
+  remote:     block_files for 212a10abff88450a2707b1d73b2e76c4fb1f2be6: Blocked filename 'fbcode/experimental/this_is_a_test/file' matched block pattern '^fbcode/experimental'. This path is protected and your change must not modify it. To fix this, revert your changes to 'fbcode/experimental/this_is_a_test/file' so that it no longer appears in your diff, then re-submit.
   abort: unexpected EOL, expected netstring digit
   [255]
 

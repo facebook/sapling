@@ -80,7 +80,7 @@ To create a commit with `.git` in modified file path, use `debugdrawdag` to bypa
   edenapi: uploaded 1 changeset
   pushrebasing stack (ce81c7d38286, fecac23a9312] (1 commit) to remote bookmark master_bookmark
   abort: Server error: hooks failed:
-    deny_files for 8bd0a7cd107ee1da0f08efe9493d8ad68dcc7c2f6a3362e2ca71fd602518aa07: Denied filename 'smallrepofolder/f/.git/HEAD' matched name pattern '/[.]git/'. Rename or remove this file and try again.
+    deny_files for 8bd0a7cd107ee1da0f08efe9493d8ad68dcc7c2f6a3362e2ca71fd602518aa07: Denied filename 'smallrepofolder/f/.git/HEAD' matched deny pattern '/[.]git/'. This path is protected and your change must not modify it. To fix this, revert your changes to 'smallrepofolder/f/.git/HEAD' so that it no longer appears in your diff, then re-submit.
   [255]
 
 Let's check that disabling running pushredirected hooks work

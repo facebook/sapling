@@ -69,7 +69,7 @@ fn rejection<'a, 'b>(path: &'a String, pattern: &'b Regex) -> HookExecution {
     HookExecution::rejected(HookRejectionInfo::new_long(
         "Blocked filename matched name pattern",
         format!(
-            "Blocked filename '{path}' matched name pattern '{pattern}'. Rename or remove this file and try again."
+            "Blocked filename '{path}' matched block pattern '{pattern}'. This path is protected and your change must not modify it. To fix this, revert your changes to '{path}' so that it no longer appears in your diff, then re-submit."
         ),
     ))
 }
