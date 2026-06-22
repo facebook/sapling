@@ -42,6 +42,15 @@ folly::Expected<std::optional<MountTableEntry>, int> getMountInfoForPath(
     MountInfoOptions options = {});
 
 /**
+ * Return all mounts in the current mount namespace.
+ * Uses listmount(2)/statmount(2). Returns an error if:
+ * - The syscalls are not supported (ENOSYS on older kernels)
+ * - The syscalls fail for any other reason
+ */
+folly::Expected<std::vector<MountTableEntry>, int> getAllMounts(
+    MountInfoOptions options = {});
+
+/**
  * Return all mounts whose mount point starts with the given prefix.
  * Uses listmount(2)/statmount(2). Returns an error if:
  * - The syscalls are not supported (ENOSYS on older kernels)

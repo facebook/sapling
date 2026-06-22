@@ -147,25 +147,41 @@ folly::Expected<std::optional<MountTableEntry>, int> getMountInfoForPath(
   return std::nullopt;
 }
 
-folly::Expected<std::vector<MountTableEntry>, int> getMountsUnderPath(
-    const std::string& prefix,
+folly::Expected<std::vector<MountTableEntry>, int> getAllMounts(
     MountInfoOptions options) {
   std::vector<MountTableEntry> result;
-  std::string prefixWithSlash = prefix + "/";
 
   auto idsResult = listAllMountIds();
   if (idsResult.hasError()) {
     return folly::makeUnexpected(idsResult.error());
   }
 
+  result.reserve(idsResult.value().size());
   for (auto id : idsResult.value()) {
     auto infoResult = statmountById(id, options);
     if (infoResult.hasError()) {
       return folly::makeUnexpected(infoResult.error());
     }
-    if (infoResult.value().mountPoint.compare(
-            0, prefixWithSlash.size(), prefixWithSlash) == 0) {
-      result.push_back(std::move(infoResult.value()));
+    result.push_back(std::move(infoResult.value()));
+  }
+  return result;
+}
+
+folly::Expected<std::vector<MountTableEntry>, int> getMountsUnderPath(
+    const std::string& prefix,
+    MountInfoOptions options) {
+  std::vector<MountTableEntry> result;
+  std::string prefixWithSlash = prefix + "/";
+
+  auto mountsResult = getAllMounts(options);
+  if (mountsResult.hasError()) {
+    return folly::makeUnexpected(mountsResult.error());
+  }
+
+  for (auto& mount : mountsResult.value()) {
+    if (mount.mountPoint.compare(0, prefixWithSlash.size(), prefixWithSlash) ==
+        0) {
+      result.push_back(std::move(mount));
     }
   }
   return result;
