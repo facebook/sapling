@@ -28,7 +28,7 @@ oncalls:
 | `annotation/` | Thrift annotation support subcrate |
 | `conformance/` | Conformance test support subcrate |
 | `deterministic_hash/` | Deterministic hashing subcrate |
-| `dynamic/` | Dynamic Thrift values subcrate |
+| `dynamic/` | Dynamic Thrift values and runtime type system (`TypeSystem`, `TypeSystemBuilder`, `LayeredTypeSystem`, digest) |
 | `universal_name/` | Universal name resolution subcrate |
 | `test/` | Additional integration tests |
 | `public_autocargo/` | Open-source Cargo build configuration |
@@ -91,6 +91,7 @@ buck2 test fbcode//thrift/lib/rust/src/dep_tests/...
 # Subcrate tests
 buck2 test fbsource//xplat/thrift/lib/rust/any/...
 buck2 test fbsource//xplat/thrift/lib/rust/dynamic/...
+buck2 test fbcode//thrift/lib/rust/dynamic:thrift_type_system
 ```
 
 ## Documentation
