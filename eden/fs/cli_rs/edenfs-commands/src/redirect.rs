@@ -172,6 +172,31 @@ impl RedirectCmd {
         Ok(0)
     }
 
+    fn log_fixup_failure<E: std::fmt::Display>(checkout_path: &Path, redir: &Redirection, err: &E) {
+        eprintln!(
+            "Unable to {} redirection `{}`: {}",
+            if redir.redir_type == RedirectionType::Unknown {
+                "remove"
+            } else {
+                "apply"
+            },
+            redir.repo_path.display(),
+            err
+        );
+        #[cfg(fbcode_build)]
+        {
+            let sample = edenfs_telemetry::redirect::build_fixup_result(
+                checkout_path.to_string_lossy().as_ref(),
+                &redir.repo_path.to_string_lossy(),
+                &redir.redir_type.to_string(),
+                &redir.state.to_string(),
+                &redir.source,
+                &err.to_string(),
+            );
+            crate::send_edenfs_event(sample);
+        }
+    }
+
     async fn list(&self, mount: Option<PathBuf>, json: bool) -> Result<ExitCode> {
         let mount = match mount {
             Some(provided) => provided,
@@ -419,28 +444,24 @@ impl RedirectCmd {
             );
 
             if redir.redir_type == RedirectionType::Unknown {
-                tracing::debug!(?redir, "not fixing due to unknown redirection type");
+                // This is a mount we no longer have configuration for (e.g. a
+                // stale bind mount still present in the mount table, reported as
+                // an UnknownMount). There is nothing to re-apply, but we must
+                // still remove it. For known redirection types `apply` performs
+                // the removal via `remove_existing`, but since we skip `apply`
+                // for Unknown types we have to unmount it explicitly here.
+                if let Err(e) = redir
+                    .remove_existing(instance, &checkout, false, force, "fixup")
+                    .await
+                {
+                    Self::log_fixup_failure(&checkout.path(), redir, &e);
+                }
+                tracing::debug!(?redir, "not re-applying unknown redirection type");
                 continue;
             }
 
             if let Err(e) = redir.apply(instance, &checkout, force, "fixup").await {
-                eprintln!(
-                    "Unable to apply redirection `{}`: {}",
-                    redir.repo_path.display(),
-                    e
-                );
-                #[cfg(fbcode_build)]
-                {
-                    let sample = edenfs_telemetry::redirect::build_fixup_result(
-                        checkout.path().to_string_lossy().as_ref(),
-                        &redir.repo_path.to_string_lossy(),
-                        &redir.redir_type.to_string(),
-                        &redir.state.to_string(),
-                        &redir.source,
-                        &e.to_string(),
-                    );
-                    crate::send_edenfs_event(sample);
-                }
+                Self::log_fixup_failure(&checkout.path(), redir, &e);
             }
         }
 

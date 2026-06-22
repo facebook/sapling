@@ -93,7 +93,7 @@ class RedirectTest(unittest.TestCase, TemporaryDirectoryMixin):
         test_fixup_cmd = FixupCmd(mock_argument_parser)
         test_fixup_cmd.run(args)
 
-        mock_remove_existing.assert_called_once()
+        mock_remove_existing.assert_not_called()
         mock_apply.assert_called_once()
 
     @patch("eden.fs.cli.redirect.Redirection.apply")
@@ -165,8 +165,44 @@ class RedirectTest(unittest.TestCase, TemporaryDirectoryMixin):
         test_fixup_cmd = FixupCmd(mock_argument_parser)
         test_fixup_cmd.run(args)
 
-        mock_remove_existing.assert_called_once()
+        mock_remove_existing.assert_not_called()
         mock_apply.assert_called_once()
+
+    @patch("eden.fs.cli.redirect.Redirection.apply")
+    @patch("eden.fs.cli.redirect.Redirection.remove_existing")
+    @patch("eden.fs.cli.cmd_util.require_checkout")
+    @patch("eden.fs.cli.redirect.get_effective_redirections")
+    def test_fixup_unknown_mount(
+        self,
+        mock_get_effective_redirections: MagicMock,
+        mock_require_checkout: MagicMock,
+        mock_remove_existing: MagicMock,
+        mock_apply: MagicMock,
+    ) -> None:
+        temp_dir = self.make_temporary_directory()
+        repo_path = os.path.join(temp_dir, "test")
+        instance = FakeEdenInstance(temp_dir)
+        checkout = instance.create_test_mount("mount_dir")
+        eden_path = os.path.join(temp_dir, "mount_dir")
+        mock_require_checkout.return_value = (instance, checkout, eden_path)
+
+        mock_argument_parser = MagicMock(spec=argparse.ArgumentParser)
+        args = argparse.Namespace(mount=eden_path, only_repo_source=False)
+
+        redir = Redirection(
+            repo_path=Path(repo_path),
+            redir_type=RedirectionType.UNKNOWN,
+            target=None,
+            source="mount",
+            state=RedirectionState.UNKNOWN_MOUNT,
+        )
+        mock_get_effective_redirections.return_value = {repo_path: redir}
+
+        test_fixup_cmd = FixupCmd(mock_argument_parser)
+        test_fixup_cmd.run(args)
+
+        mock_remove_existing.assert_called_once()
+        mock_apply.assert_not_called()
 
     @patch("eden.fs.cli.redirect.is_bind_mount")
     @patch("eden.fs.cli.redirect.Redirection.remove_existing")

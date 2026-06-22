@@ -570,6 +570,60 @@ via-profile = "bind"
             ],
         )
 
+    async def test_fixup_unmounts_unknown_mount(self) -> None:
+        if sys.platform != "linux":
+            self.skipTest("Linux-specific privhelper bind mount validation")
+
+        # Create a bind mount that EdenFS is aware of but that is NOT present
+        # in the checkout's redirection configuration. This mimics a stale
+        # bind mount (e.g. a leftover buck-out) that shows up as an
+        # "unknown-mount".
+        repo_path = os.path.join("a", "unknown-mount")
+        redirection_path = os.path.join(self.mount, repo_path)
+        target = scratch_path(
+            self.mount,
+            os.path.join("edenfs", "redirections", repo_path),
+        )
+        os.makedirs(redirection_path, exist_ok=True)
+        os.makedirs(target, exist_ok=True)
+
+        async with self.get_async_thrift_client() as client:
+            await client.addBindMount(
+                self.mount.encode("utf-8"),
+                repo_path.encode("utf-8"),
+                target.encode("utf-8"),
+            )
+        self.assertNotEqual(
+            os.stat(self.mount).st_dev,
+            os.stat(redirection_path).st_dev,
+            msg="the unconfigured bind mount is on a different device",
+        )
+
+        def list_redirs() -> dict[str, dict[str, str]]:
+            output = self.eden.run_cmd(
+                "redirect", "list", "--json", "--mount", self.mount
+            )
+            return {r["repo_path"]: r for r in json.loads(output)}
+
+        # Since the bind mount is not configured, it is reported as an
+        # unknown-mount with an unknown type.
+        redirs = list_redirs()
+        self.assertIn(repo_path, redirs)
+        self.assertEqual(redirs[repo_path]["state"], "unknown-mount")
+        self.assertEqual(redirs[repo_path]["type"], "unknown")
+
+        # `fixup` must unmount the stale bind mount rather than leaving it
+        # behind. Before the fix, fixup printed "Fixing ..." but skipped the
+        # unmount for unknown redirection types, leaving the mount in place and
+        # exiting non-zero (which run_cmd would surface as an error).
+        self.eden.run_cmd("redirect", "fixup", "--mount", self.mount)
+
+        self.assertNotIn(
+            repo_path,
+            list_redirs(),
+            msg="fixup should have unmounted the unknown bind mount",
+        )
+
     def test_unmount_unmounts_things(self) -> None:
         profile_path = scratch_path(
             self.mount,
