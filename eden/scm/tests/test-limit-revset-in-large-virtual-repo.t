@@ -19,3 +19,13 @@ Large limit() slices stay lazy and should not timeout:
   100000
   abort: revset query scanned over 100000 commits
   (run 'sl help agent performance' for guidance.)
+
+Test contains is lazy and should not timeout:
+
+  $ sl log -r "public() & author(test)" -l 1
+  commit:      cc0000000000
+  user:        test <test@example.com>
+  date:        Thu Oct 23 23:44:51 2025 +0000
+  summary:     synthetic commit 1
+  $ CODING_AGENT_METADATA=id=test_agent sl log -r 'cc0000000000 & limit(public() & author(test), 10000000)' -T '{node}\n'
+  cc00000000000000000000000000000000000000

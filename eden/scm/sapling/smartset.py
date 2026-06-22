@@ -1062,29 +1062,108 @@ class slicedset(abstractsmartset):
     Fast smartsets override _slice() directly. This wrapper keeps limit()-style
     slicing lazy for filtered and combined sets that may need prefetch side
     effects while they are consumed.
+
+    Repeated membership checks should not replay the cached prefix (O(N) complexity):
+    >>> repo = util.refcell([])
+    >>> class ContainsProbe(int):
+    ...     eqs = 0
+    ...     def __eq__(self, other):
+    ...         type(self).eqs += 1
+    ...         return super().__eq__(other)
+    ...     __hash__ = int.__hash__
+    >>> xs = slicedset(
+    ...     baseset([ContainsProbe(i) for i in range(5)], repo=repo), 0, 5
+    ... )
+    >>> ContainsProbe(2) in xs
+    True
+    >>> ContainsProbe.eqs
+    3
+    >>> ContainsProbe.eqs = 0
+    >>> ContainsProbe(4) in xs
+    True
+    >>> ContainsProbe.eqs
+    2
+    >>> ContainsProbe.eqs = 0
+    >>> ContainsProbe(1) in xs
+    True
+    >>> ContainsProbe.eqs
+    1
     """
 
     def __init__(self, subset, start, stop):
         self._subset = subset
         self._start = start
         self._stop = stop
-        self._set = None
         self._reporef = getattr(subset, "_reporef", None)
+
+        # _cache preserves scan order for interleaved iterators; _cacheset makes
+        # repeated membership checks skip the already-scanned prefix.
+        self._cache = []
+        self._cacheset = set()
+        self._iter = None
+        self._set = None
 
     def _iteritems(self, it):
         return itertools.islice(it, self._start, max(self._start, self._stop))
 
     def _materialize(self):
         if self._set is None:
+            for _r in self._itercached():
+                pass
+        return self._set
+
+    def _setfromcache(self):
+        if self._set is None:
             self._set = baseset(
-                self._iteritems(iter(self._subset)),
+                self._cache,
                 datarepr=("slice=%d:%d %r", self._start, self._stop, self._subset),
                 repo=self.repo(),
             )
+            self._cacheset = None
         return self._set
 
+    def _nextitem(self):
+        if self._iter is None:
+            self._iter = self._iteritems(iter(self._subset))
+        try:
+            r = next(self._iter)
+        except StopIteration:
+            self._iter = None
+            self._setfromcache()
+            raise
+        self._cache.append(r)
+        self._cacheset.add(r)
+        return r
+
+    def _itercached(self):
+        pos = 0
+        while True:
+            if pos < len(self._cache):
+                yield self._cache[pos]
+                pos += 1
+            elif self._set is not None:
+                return
+            else:
+                try:
+                    r = self._nextitem()
+                except StopIteration:
+                    return
+                yield r
+                pos += 1
+
     def __contains__(self, x):
-        return x in self._materialize()
+        if self._set is not None:
+            return x in self._set
+        if x in self._cacheset:
+            return True
+        while self._set is None:
+            try:
+                r = self._nextitem()
+            except StopIteration:
+                return False
+            if r == x:
+                return True
+        return False
 
     def iterrev(self):
         if self._set is not None:
