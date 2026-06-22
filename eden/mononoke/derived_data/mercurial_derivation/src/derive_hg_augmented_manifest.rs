@@ -29,6 +29,7 @@ use futures::stream::TryStreamExt;
 use manifest::Entry;
 use manifest::ManifestComparison;
 use manifest::ManifestOps;
+use manifest::Span;
 use manifest::Traced;
 use manifest::derive_manifest_from_predecessor;
 use mercurial_types::HgAugmentedManifestEntry;
@@ -227,8 +228,8 @@ pub async fn derive_from_hg_manifest_and_parents_staged(
 
                 while let Some(diff) = diff.try_next().await? {
                     match diff {
-                        ManifestComparison::New(elem, entry) => {
-                            match entry {
+                        ManifestComparison::New(span) => {
+                            let mut handle_new = |elem: MPathElement, entry| match entry {
                                 Entry::Tree(id) => {
                                     let child_acl = child_acl_map.get(&elem).copied();
                                     children.push((
@@ -241,6 +242,15 @@ pub async fn derive_from_hg_manifest_and_parents_staged(
                                 }
                                 Entry::Leaf((file_type, filenode)) => {
                                     new_subentries.push((elem, file_type, filenode));
+                                }
+                            };
+                            match span {
+                                Span::Element(elem, entry) => handle_new(elem, entry),
+                                Span::Prefix(prefix, entries) => {
+                                    for (suffix, entry) in entries {
+                                        let elem = prefix.clone().join_into_element(suffix)?;
+                                        handle_new(elem, entry);
+                                    }
                                 }
                             }
                         }
@@ -288,7 +298,11 @@ pub async fn derive_from_hg_manifest_and_parents_staged(
                             }
                             }
                         }
-                        ManifestComparison::Same(elem, _entry, _parent_entries, index) => {
+                        ManifestComparison::Same(span, index) => {
+                            let key = match span {
+                                Span::Element(elem, _entry) => Either::Left(elem),
+                                Span::Prefix(prefix, _entries) => Either::Right(prefix),
+                            };
                             path_elems_to_fetch_from_aug_parents
                                 .get_mut(index)
                                 .ok_or_else(|| {
@@ -296,39 +310,9 @@ pub async fn derive_from_hg_manifest_and_parents_staged(
                                         "Cannot find corresponding parent {index} of {hg_manifest_id} (ManifestComparison::Same)"
                                     )
                                 })?
-                                .push(Either::Left(elem));
+                                .push(key);
                         }
-                        ManifestComparison::ManyNew(prefix, entries) => {
-                            for (suffix, entry) in entries {
-                                let elem = prefix.clone().join_into_element(suffix)?;
-                                match entry {
-                                    Entry::Tree(id) => {
-                                        let child_acl = child_acl_map.get(&elem).copied();
-                                        children.push((
-                                            path.clone(),
-                                            Some(elem),
-                                            id,
-                                            Vec::new(),
-                                            child_acl,
-                                        ));
-                                    }
-                                    Entry::Leaf((file_type, filenode)) => {
-                                        new_subentries.push((elem, file_type, filenode));
-                                    }
-                                }
-                            }
-                        }
-                        ManifestComparison::ManySame(prefix, _entries, _parent_entries, index) => {
-                            path_elems_to_fetch_from_aug_parents
-                                .get_mut(index)
-                                .ok_or_else(|| {
-                                    anyhow!(
-                                        "Cannot find corresponding parent {index} of {hg_manifest_id} (ManifestComparison::ManySame)"
-                                    )
-                                })?
-                                .push(Either::Right(prefix));
-                        }
-                        ManifestComparison::Removed(..) | ManifestComparison::ManyRemoved(..) => {
+                        ManifestComparison::Removed(_) => {
                             // Removed items are omitted.
                         }
                     }

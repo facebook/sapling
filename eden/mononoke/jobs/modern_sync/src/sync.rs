@@ -40,6 +40,7 @@ use futures::stream;
 use manifest::Comparison;
 use manifest::Entry;
 use manifest::ManifestOps;
+use manifest::Span;
 use manifest::compare_manifest_tree;
 use mercurial_derivation::derive_hg_changeset::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
@@ -834,10 +835,10 @@ async fn sort_manifest_changes(
 
     while let Some(mf) = comparison_stream.try_next().await? {
         match mf {
-            Comparison::New(_elem, entry) => {
+            Comparison::New(Span::Element(_elem, entry)) => {
                 process_new_entry(entry, &mut mf_ids, &mut file_ids, ctx, repo_blobstore).await?;
             }
-            Comparison::ManyNew(_path, _prefix, map) => {
+            Comparison::New(Span::Prefix(_prefix, map)) => {
                 for (_path, entry) in map {
                     process_new_entry(entry, &mut mf_ids, &mut file_ids, ctx, repo_blobstore)
                         .await?;
@@ -851,7 +852,6 @@ async fn sort_manifest_changes(
                     file_ids.push(nodeid);
                 }
             },
-
             _ => (),
         }
     }
