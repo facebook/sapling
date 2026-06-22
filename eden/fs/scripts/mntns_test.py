@@ -48,7 +48,14 @@ import tempfile
 import time
 from pathlib import Path
 
-run = functools.partial(subprocess.run, check=True, capture_output=True, text=True)
+run = functools.partial(
+    subprocess.run,
+    check=True,
+    capture_output=True,
+    stdin=subprocess.DEVNULL,
+    start_new_session=True,
+    text=True,
+)
 
 
 def build_binary(target, out=None):
@@ -87,7 +94,7 @@ def get_mount_propagation(path, ns_cmd_prefix=None):
     cmd = ["findmnt", "-n", "-o", "PROPAGATION", "--mountpoint", str(path)]
     if ns_cmd_prefix:
         cmd = ns_cmd_prefix + cmd
-    r = subprocess.run(cmd, check=False, capture_output=True, text=True)
+    r = run(cmd, check=False)
     return " ".join(r.stdout.split()) or None
 
 
@@ -149,6 +156,7 @@ class MountNamespace:
                 "cat",
             ],
             stdin=subprocess.PIPE,
+            start_new_session=True,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
@@ -159,10 +167,9 @@ class MountNamespace:
         while time.monotonic() < deadline:
             if self._proc.poll() is not None:
                 raise RuntimeError(f"unshare exited with code {self._proc.returncode}")
-            r = subprocess.run(
+            r = run(
                 ["sudo", "nsenter", f"--mount={self.ns_file}", "--", "true"],
                 check=False,
-                capture_output=True,
             )
             if r.returncode == 0:
                 return
@@ -179,10 +186,9 @@ class MountNamespace:
         if self._proc.stdin:
             self._proc.stdin.close()
         self._proc.wait()
-        subprocess.run(
+        run(
             ["sudo", "umount", str(self.ns_file)],
             check=False,
-            capture_output=True,
         )
 
 
@@ -274,10 +280,9 @@ class EdenTestEnv:
 
     def clean(self):
         self.stop()
-        subprocess.run(
+        run(
             ["sudo", "umount", "-l", str(self.mount_point)],
             check=False,
-            capture_output=True,
         )
         if not self.debug:
             for d in [self.state_dir, self.mount_point]:
@@ -292,7 +297,7 @@ def test_eden_in_parent(env: EdenTestEnv, child_ns: MountNamespace):
         env.clone()
         parent_prop = get_mount_propagation(env.mount_point)
         enter = child_ns.enter_cmd()
-        r = subprocess.run(
+        r = run(
             enter + ["test", "-d", str(env.mount_point / ".eden")],
             check=False,
         )
@@ -314,7 +319,7 @@ def test_eden_in_child(env: EdenTestEnv, child_ns: MountNamespace):
     result_file.unlink(missing_ok=True)
     child_prop_file.unlink(missing_ok=True)
 
-    subprocess.run(
+    run(
         child_ns.enter_cmd()
         + [
             sys.executable,
@@ -344,6 +349,156 @@ def test_eden_in_child(env: EdenTestEnv, child_ns: MountNamespace):
         env.stop()
 
 
+def _run_edenfsctl(env: EdenTestEnv, *args: str, check: bool = True):
+    return run(
+        env._edenfsctl_cmd(*args),
+        check=check,
+        env=env._env(),
+    )
+
+
+def _start_private_namespace_holder(mount_point: Path, ready_path: Path):
+    """Keep a reference to mount_point alive in a private mount namespace."""
+    cmd = f"cd {shlex.quote(str(mount_point))} && touch {shlex.quote(str(ready_path))} && exec cat"
+    proc = subprocess.Popen(
+        [
+            "sudo",
+            "unshare",
+            "--mount",
+            "--propagation",
+            "private",
+            "--",
+            "setpriv",
+            f"--reuid={os.getuid()}",
+            f"--regid={os.getgid()}",
+            "--init-groups",
+            "--",
+            "bash",
+            "-c",
+            cmd,
+        ],
+        stdin=subprocess.PIPE,
+        start_new_session=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+    deadline = time.monotonic() + 30
+    while time.monotonic() < deadline:
+        if proc.poll() is not None:
+            raise RuntimeError(
+                f"private namespace holder exited with code {proc.returncode}"
+            )
+        if ready_path.exists():
+            return proc
+        time.sleep(0.1)
+    _stop_private_namespace_holder(proc)
+    raise RuntimeError("private namespace holder did not become ready")
+
+
+def _stop_private_namespace_holder(proc):
+    if proc.poll() is not None:
+        return
+    if proc.stdin is not None:
+        proc.stdin.close()
+    try:
+        proc.wait(timeout=10)
+    except subprocess.TimeoutExpired:
+        run(["sudo", "kill", "-TERM", "--", f"-{proc.pid}"], check=False)
+        try:
+            proc.wait(timeout=10)
+            return
+        except subprocess.TimeoutExpired:
+            pass
+        run(["sudo", "kill", "-KILL", "--", f"-{proc.pid}"], check=False)
+        proc.wait(timeout=10)
+
+
+def run_soft_unmount_regression(env: EdenTestEnv, backing_repo: Path):
+    """Reproduce the SEV soft-unmount case.
+
+    This intentionally lives in this manual script instead of a Buck integration
+    test. The scenario needs mount namespace manipulation that is awkward to run
+    hermetically in CI.
+    """
+    test_base = env.base / "soft-unmount-regression"
+    test_base.mkdir(parents=True, exist_ok=True)
+    backing_repo_link = test_base / "backing_repo"
+    if not backing_repo_link.exists():
+        backing_repo_link.symlink_to(backing_repo)
+
+    mnt_parent = test_base / "mnt_parent"
+    sftp_parent = test_base / "sftp" / "user" / "mounts"
+    sftp_parent.mkdir(parents=True)
+    setup_fuse_propagation(mnt_parent, "shared")
+    run(["sudo", "mount", "--bind", str(mnt_parent), str(sftp_parent)])
+    run(["sudo", "mount", "--make-shared", str(sftp_parent)])
+
+    mount_point = mnt_parent / "checkout"
+    sftp_mount = sftp_parent / "checkout"
+    test_env = EdenTestEnv(
+        env.edenfsctl,
+        env.privhelper,
+        test_base,
+        mount_point=mount_point,
+        debug=env.debug,
+    )
+
+    holder = None
+    try:
+        test_env.start_daemon()
+        test_env.clone()
+        if not is_eden_mounted(mount_point):
+            raise RuntimeError(f"Eden mount is not visible at {mount_point}")
+        if not is_eden_mounted(sftp_mount):
+            raise RuntimeError(f"Eden mount is not visible at SFTP peer {sftp_mount}")
+
+        ready_path = test_base / "private_holder.ready"
+        holder = _start_private_namespace_holder(mount_point, ready_path)
+        run(["sudo", "umount", "-l", str(sftp_mount)])
+
+        list_result = json.loads(_run_edenfsctl(test_env, "list", "--json").stdout)
+        state = list_result.get(str(mount_point), {}).get("state")
+        visible_after_unmount = is_eden_mounted(mount_point)
+        print(f"After SFTP peer unmount: visible={visible_after_unmount} state={state}")
+        if visible_after_unmount or state != "RUNNING":
+            raise RuntimeError(
+                "failed to reproduce stale RUNNING mount: "
+                f"visible={visible_after_unmount} state={state}"
+            )
+
+        doctor = _run_edenfsctl(
+            test_env, "doctor", "--current-edenfs-only", "--fast", check=False
+        )
+        print(f"doctor exit={doctor.returncode}")
+
+        visible_after_doctor = is_eden_mounted(mount_point)
+        if visible_after_doctor:
+            raise RuntimeError("eden doctor unexpectedly repaired the missing mount")
+
+        mount = _run_edenfsctl(test_env, "mount", str(mount_point), check=False)
+        print(f"mount exit={mount.returncode}")
+        if mount.returncode == 0:
+            raise RuntimeError("eden mount unexpectedly repaired the missing mount")
+
+        restart = _run_edenfsctl(test_env, "restart", "--graceful", check=False)
+        print(f"restart --graceful exit={restart.returncode}")
+        if is_eden_mounted(mount_point):
+            raise RuntimeError(
+                "eden restart --graceful unexpectedly repaired the missing mount"
+            )
+        print("stale RUNNING mount reproduced")
+    finally:
+        if holder is not None:
+            _stop_private_namespace_holder(holder)
+        test_env.clean()
+        for path in [sftp_mount, mount_point, sftp_parent, mnt_parent]:
+            run(
+                ["sudo", "umount", "-l", str(path)],
+                check=False,
+            )
+
+
 # -- Child entry point (internal, run inside namespace) --
 
 
@@ -368,7 +523,7 @@ def _child_eden(base_str, edenfsctl, privhelper, mount_point_str, debug=False):
         (base / "child_sees").write_text(f"error: {e}")
 
 
-def main():
+def main():  # noqa: C901
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--edenfsctl",
@@ -392,6 +547,11 @@ def main():
         "--compare",
         metavar="FILE",
         help="Compare results against a baseline JSON (from --output)",
+    )
+    parser.add_argument(
+        "--soft-unmount-regression",
+        action="store_true",
+        help="Run only the manual soft-unmount regression scenario",
     )
     # Internal: child process entry point (run inside mount namespace)
     parser.add_argument(
@@ -428,6 +588,13 @@ def main():
 
         env = EdenTestEnv(edenfsctl, str(privhelper), base_dir, debug=debug)
         env.init_backing_repo()
+
+        if args.soft_unmount_regression:
+            run_soft_unmount_regression(
+                env,
+                env.backing_repo,
+            )
+            return
 
         ns_props = ["shared", "slave", "private"]
         fuse_props = ["shared", "slave", "private"]
@@ -468,10 +635,9 @@ def main():
             finally:
                 test_env.clean()
                 child_ns.close()
-                subprocess.run(
+                run(
                     ["sudo", "umount", "-l", str(mnt_parent)],
                     check=False,
-                    capture_output=True,
                 )
 
         try:
@@ -501,10 +667,9 @@ def main():
                             test_dir / "mnt_parent",
                             test_dir / "child_ns",
                         ]:
-                            subprocess.run(
+                            run(
                                 ["sudo", "umount", "-l", str(path)],
                                 check=False,
-                                capture_output=True,
                             )
 
         setup_w = 12 + 12 + 10  # NS Prop + FUSE Prop + Eden in
