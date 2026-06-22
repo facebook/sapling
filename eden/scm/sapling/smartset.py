@@ -923,6 +923,17 @@ class filteredset(abstractsmartset):
     def iterrev(self):
         return self._iterfilter(self._subset)
 
+    def iterctx(self):
+        # The default implementation in abstractsmartset.iterctx() wraps
+        # _iterctxnoprefetch() with prefetchfields(). For filteredset,
+        # _iterctxnoprefetch() already starts from self._subset.iterctx(), so
+        # subset prefetch has already been applied before the filter.
+        #
+        # Wrapping again here would apply the same prefetch after the filter.
+        # That extra prefetch batches the sparse filtered stream and can scan
+        # too far looking for a full batch before yielding the first match.
+        return self._iterctxnoprefetch()
+
     def _progressmodel(self):
         """Return the Rust ProgressBar model.
 
