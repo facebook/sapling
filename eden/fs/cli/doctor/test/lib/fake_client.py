@@ -59,6 +59,9 @@ class FakeClient:
         self._path_mount_state: Dict[bytes, Optional[MountState]] = defaultdict(
             _get_default_mount_state
         )
+        self._path_visible_in_daemon_namespace: Dict[bytes, Optional[bool]] = (
+            defaultdict(lambda: True)
+        )
 
         self._path_mount_inode_info: Dict[bytes, MountInodeInfo] = defaultdict(
             lambda: MountInodeInfo(
@@ -78,6 +81,11 @@ class FakeClient:
     def change_mount_state(self, path: Path, state: Optional[MountState]) -> None:
         """This function allows tests to change the reported state of mounts."""
         self._path_mount_state[os.fsencode(path)] = state
+
+    def change_visible_in_daemon_namespace(
+        self, path: Path, visible: Optional[bool]
+    ) -> None:
+        self._path_visible_in_daemon_namespace[os.fsencode(path)] = visible
 
     def set_mount_inode_info(
         self, path: Path, mount_inode_info: MountInodeInfo
@@ -100,6 +108,9 @@ class FakeClient:
                 mountPoint=mount.mount_point,
                 edenClientPath=os.fsencode(client_path),
                 state=mount_state,
+                visibleInDaemonNamespace=self._path_visible_in_daemon_namespace[
+                    mount.mount_point
+                ],
             )
             result.append(mount_info)
 

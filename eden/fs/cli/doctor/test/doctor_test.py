@@ -161,6 +161,53 @@ class DoctorTest(DoctorTestBase):
         )
         return fixer, out, checkout
 
+    def test_running_mount_not_visible_is_unmounted_before_remount(self) -> None:
+        instance = FakeEdenInstance(self.make_temporary_directory())
+        checkout = instance.create_test_mount("path1")
+        path = checkout.path
+        checkout_info = CheckoutInfo(
+            # pyre-fixme[6]: For 3rd param expected `EdenInstance` but got
+            # `FakeEdenInstance`.
+            instance,
+            path,
+            state=MountState.RUNNING,
+            backing_repo=checkout.get_backing_repo_path(),
+            running_state_dir=checkout.state_dir,
+            configured_state_dir=checkout.state_dir,
+            visible_in_daemon_namespace=False,
+        )
+
+        instance._fake_client.change_visible_in_daemon_namespace(path, None)
+        fixer, out = self.create_fixer(dry_run=False)
+        check_mount(
+            out,
+            fixer,
+            # pyre-fixme[6]: For 3rd param expected `EdenInstance` but got
+            # `FakeEdenInstance`.
+            instance,
+            checkout_info,
+            instance.mount_table,
+            check_watchman.WatchmanCheckInfo(set()),
+            [checkout_info],
+            set(),
+            set(),
+            FakeNetworkChecker(),
+            True,
+            True,
+        )
+
+        self.assertEqual(
+            f"""\
+<yellow>- Found problem:<reset>
+{path} is RUNNING in EdenFS state, but is not visible in EdenFS's mount namespace
+Unmounting and remounting {path}...<green>fixed<reset>
+
+""",
+            out.getvalue(),
+        )
+        self.assertEqual([(str(path), True, True)], instance.unmount_calls)
+        self.assertEqual([(str(path), False)], instance.mount_calls)
+
     @patch("eden.fs.cli.doctor.check_filesystems.check_inode_counts")
     @patch("eden.fs.cli.doctor.check_filesystems.check_using_nfs_path")
     @patch("eden.fs.cli.doctor.check_hg.check_hg")

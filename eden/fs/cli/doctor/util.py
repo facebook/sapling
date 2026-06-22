@@ -34,6 +34,7 @@ class CheckoutInfo:
         configured_state_dir: Optional[Path] = None,
         state: Optional[MountState] = None,
         mount_inode_info: Optional[MountInodeInfo] = None,
+        visible_in_daemon_namespace: Optional[bool] = None,
     ) -> None:
         self.instance = instance
         self.path = path
@@ -42,6 +43,7 @@ class CheckoutInfo:
         self.configured_state_dir = configured_state_dir
         self.state = state
         self.mount_inode_info = mount_inode_info
+        self.visible_in_daemon_namespace = visible_in_daemon_namespace
 
     def get_checkout(self) -> EdenCheckout:
         state_dir = (
@@ -252,6 +254,7 @@ def get_checkouts_info(instance: EdenInstance) -> Dict[Path, CheckoutInfo]:
                     running_state_dir=Path(os.fsdecode(mount.edenClientPath)),
                     state=mount.state,
                     mount_inode_info=mount_point_info.get(mount.mountPoint),
+                    visible_in_daemon_namespace=mount.visibleInDaemonNamespace,
                 )
                 checkouts[path] = checkout
 

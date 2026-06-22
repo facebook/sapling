@@ -95,6 +95,8 @@ class FakeEdenInstance(AbstractEdenInstance):
         self._hg_repo_by_path: Dict[Path, FakeHgRepo] = {}
         self.mount_table = FakeMountTable()
         self._next_dev_id = 10
+        self.mount_calls: List[Tuple[str, bool]] = []
+        self.unmount_calls: List[Tuple[str, bool, bool]] = []
 
         self._fake_client = FakeClient(self._eden_dir, self.mount_table)
 
@@ -269,6 +271,7 @@ class FakeEdenInstance(AbstractEdenInstance):
         return mount_points
 
     def mount(self, path: str, read_only: bool) -> int:
+        self.mount_calls.append((path, read_only))
         assert self._status in (
             fb303_status.ALIVE,
             fb303_status.STARTING,
@@ -276,6 +279,17 @@ class FakeEdenInstance(AbstractEdenInstance):
         )
         assert path in self._checkouts_by_path
         return 0
+
+    def unmount(
+        self, path: str, use_force: bool = True, unintentional_unmount: bool = False
+    ) -> None:
+        self.unmount_calls.append((path, use_force, unintentional_unmount))
+        assert self._status in (
+            fb303_status.ALIVE,
+            fb303_status.STARTING,
+            fb303_status.STOPPING,
+        )
+        assert path in self._checkouts_by_path
 
     def check_health(self) -> HealthStatus:
         return HealthStatus(self._status, pid=None, uptime=None, detail="")

@@ -474,22 +474,9 @@ def run_soft_unmount_regression(env: EdenTestEnv, backing_repo: Path):
         )
         print(f"doctor exit={doctor.returncode}")
 
-        visible_after_doctor = is_eden_mounted(mount_point)
-        if visible_after_doctor:
-            raise RuntimeError("eden doctor unexpectedly repaired the missing mount")
-
-        mount = _run_edenfsctl(test_env, "mount", str(mount_point), check=False)
-        print(f"mount exit={mount.returncode}")
-        if mount.returncode == 0:
-            raise RuntimeError("eden mount unexpectedly repaired the missing mount")
-
-        restart = _run_edenfsctl(test_env, "restart", "--graceful", check=False)
-        print(f"restart --graceful exit={restart.returncode}")
-        if is_eden_mounted(mount_point):
-            raise RuntimeError(
-                "eden restart --graceful unexpectedly repaired the missing mount"
-            )
-        print("stale RUNNING mount reproduced")
+        if not is_eden_mounted(mount_point):
+            raise RuntimeError("eden doctor did not repair the missing mount")
+        print("eden doctor repaired the missing mount")
     finally:
         if holder is not None:
             _stop_private_namespace_holder(holder)

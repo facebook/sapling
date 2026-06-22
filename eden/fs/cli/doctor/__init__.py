@@ -1057,6 +1057,10 @@ def check_running_mount(
         # Most of them rely on values from the configuration.
         return
 
+    if checkout_info.visible_in_daemon_namespace is False:
+        tracker.add_problem(RunningMountNotVisible(checkout_info))
+        return
+
     try:
         check_filesystems.check_inode_counts(tracker, instance, checkout_info)
     except Exception as ex:
@@ -1144,6 +1148,45 @@ the on-disk state in Eden's configuration file:
 Running `eden restart` will cause EdenFS to restart and use the data from the
 on-disk configuration."""
         super().__init__(msg, remediation)
+
+
+class RunningMountNotVisible(FixableProblem):
+    def __init__(self, checkout_info: CheckoutInfo) -> None:
+        self._instance = checkout_info.instance
+        self._mount_path = checkout_info.path
+
+    def description(self) -> str:
+        return (
+            f"{self._mount_path} is RUNNING in EdenFS state, but is not visible "
+            "in EdenFS's mount namespace"
+        )
+
+    def dry_run_msg(self) -> str:
+        return f"Would unmount and remount {self._mount_path}"
+
+    def start_msg(self) -> str:
+        return f"Unmounting and remounting {self._mount_path}"
+
+    def perform_fix(self) -> None:
+        self._instance.unmount(
+            str(self._mount_path),
+            use_force=True,
+            unintentional_unmount=True,
+        )
+        self._instance.mount(str(self._mount_path), False)
+
+    def check_fix(self) -> bool:
+        try:
+            with self._instance.get_thrift_client() as client:
+                for mount in client.listMounts():
+                    if Path(os.fsdecode(mount.mountPoint)) == self._mount_path:
+                        return (
+                            mount.state == MountState.RUNNING
+                            and mount.visibleInDaemonNamespace is not False
+                        )
+        except Exception:
+            return False
+        return False
 
 
 class CheckoutNotMounted(FixableProblem):
