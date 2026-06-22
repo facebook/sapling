@@ -11,6 +11,7 @@ import hashlib
 import os
 import re
 import subprocess
+import sys
 from errno import EINVAL, EISDIR, ENOENT
 from pathlib import Path
 from typing import Dict, List, Optional, Pattern, TypeVar, Union
@@ -245,6 +246,8 @@ class ThriftTest(testcase.EdenRepoTest):
         # Path.relative_to() will throw a ValueError if self.eden.eden_dir is not a
         # directory prefix of mount.edenClientPath
         Path(os.fsdecode(mount.edenClientPath)).relative_to(self.eden.eden_dir)
+        if sys.platform.startswith("linux"):
+            self.assertTrue(mount.visibleInDaemonNamespace)
 
     async def test_get_sha1(self) -> None:
         expected_sha1_for_hello = hashlib.sha1(b"hola\n").digest()

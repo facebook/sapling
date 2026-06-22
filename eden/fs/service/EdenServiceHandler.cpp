@@ -12,6 +12,7 @@
 #include <optional>
 #include <stdexcept>
 #include <typeinfo>
+#include <unordered_set>
 
 #include <fb303/ServiceData.h>
 #include <fmt/format.h>
@@ -103,6 +104,7 @@
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/EdenError.h"
 #include "eden/fs/utils/GlobMatcher.h"
+#include "eden/fs/utils/MountInfoTable.h"
 #include "eden/fs/utils/NotImplemented.h"
 #include "eden/fs/utils/ProcUtil.h"
 #include "eden/fs/utils/SourceLocation.h"
@@ -148,6 +150,27 @@ std::string logHash(StringPiece thriftArg) {
   } else {
     return folly::hexlify(thriftArg);
   }
+}
+
+std::optional<std::unordered_set<std::string>>
+getMountPointsVisibleInDaemonNamespace() {
+#ifdef __linux__
+  auto result = facebook::eden::getAllMounts();
+  if (result.hasError()) {
+    XLOGF(
+        WARN,
+        "Failed to read mount namespace visibility: {}",
+        folly::errnoStr(result.error()));
+    return std::nullopt;
+  }
+  std::unordered_set<std::string> mountPoints;
+  for (auto& mount : result.value()) {
+    mountPoints.insert(std::move(mount.mountPoint));
+  }
+  return mountPoints;
+#else
+  return std::nullopt;
+#endif
 }
 
 std::string logPosition(JournalPosition position) {
@@ -918,6 +941,7 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_unmountV2(
 
 void EdenServiceHandler::listMounts(std::vector<MountInfo>& results) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
+  auto visibleMountPoints = getMountPointsVisibleInDaemonNamespace();
   for (const auto& edenMount : server_->getAllMountPoints()) {
     MountInfo info;
     info.mountPoint() = absolutePathToThrift(edenMount->getPath());
@@ -932,6 +956,10 @@ void EdenServiceHandler::listMounts(std::vector<MountInfo>& results) {
         info.fuseTransport() = fuseChannel->getTransportName();
       }
 #endif
+    }
+    if (visibleMountPoints.has_value()) {
+      info.visibleInDaemonNamespace() =
+          visibleMountPoints->count(edenMount->getPath().asString()) != 0;
     }
     results.push_back(info);
   }
