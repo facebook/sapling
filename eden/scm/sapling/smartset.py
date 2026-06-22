@@ -232,20 +232,7 @@ class abstractsmartset:
     def _slice(self, start, stop):
         # sub classes may override this. start and stop must not be negative,
         # but start > stop is allowed, which should be an empty set.
-        ys = []
-        it = iter(self)
-        for x in range(start):
-            y = next(it, None)
-            if y is None:
-                break
-        for x in range(stop - start):
-            y = next(it, None)
-            if y is None:
-                break
-            ys.append(y)
-        return baseset(
-            ys, datarepr=("slice=%d:%d %r", start, stop, self), repo=self.repo()
-        )
+        return slicedset(self, start, stop)
 
     def prefetch(self, *fields):
         """return self with given fields marked as "need prefetch"
@@ -1060,6 +1047,124 @@ class filteredset(abstractsmartset):
         if s:
             xs.append(s)
         return "<%s %s>" % (type(self).__name__, ", ".join(xs))
+
+    def prefetch(self, *fields):
+        self._subset.prefetch(*fields)
+        return self
+
+    def prefetchfields(self):
+        return self._subset.prefetchfields()
+
+
+class slicedset(abstractsmartset):
+    """Lazy slice of a smartset.
+
+    Fast smartsets override _slice() directly. This wrapper keeps limit()-style
+    slicing lazy for filtered and combined sets that may need prefetch side
+    effects while they are consumed.
+    """
+
+    def __init__(self, subset, start, stop):
+        self._subset = subset
+        self._start = start
+        self._stop = stop
+        self._set = None
+        self._reporef = getattr(subset, "_reporef", None)
+
+    def _iteritems(self, it):
+        return itertools.islice(it, self._start, max(self._start, self._stop))
+
+    def _materialize(self):
+        if self._set is None:
+            self._set = baseset(
+                self._iteritems(iter(self._subset)),
+                datarepr=("slice=%d:%d %r", self._start, self._stop, self._subset),
+                repo=self.repo(),
+            )
+        return self._set
+
+    def __contains__(self, x):
+        return x in self._materialize()
+
+    def iterrev(self):
+        if self._set is not None:
+            return self._set.iterrev()
+        return self._iteritems(iter(self._subset))
+
+    def _iterctxnoprefetch(self):
+        if self._set is not None:
+            return self._set._iterctxnoprefetch()
+        return self._iteritems(self._subset.iterctx())
+
+    @property
+    def fastasc(self):
+        if self._set is not None:
+            return self._set.fastasc
+        return None
+
+    @property
+    def fastdesc(self):
+        if self._set is not None:
+            return self._set.fastdesc
+        return None
+
+    def __nonzero__(self):
+        for _r in self:
+            return True
+        return False
+
+    __bool__ = __nonzero__
+
+    def __len__(self):
+        return len(self._materialize())
+
+    def sort(self, reverse=False):
+        self._materialize().sort(reverse=reverse)
+
+    def reverse(self):
+        self._materialize().reverse()
+
+    def isascending(self):
+        if self._set is not None:
+            return self._set.isascending()
+        return self._subset.isascending()
+
+    def isdescending(self):
+        if self._set is not None:
+            return self._set.isdescending()
+        return self._subset.isdescending()
+
+    def istopo(self):
+        if self._set is not None:
+            return self._set.istopo()
+        return self._subset.istopo()
+
+    def first(self):
+        for x in self:
+            return x
+        return None
+
+    def last(self):
+        return self._materialize().last()
+
+    def _slice(self, start, stop):
+        if self._set is not None:
+            return self._set.slice(start, stop)
+        return slicedset(
+            self._subset,
+            self._start + start,
+            min(self._start + stop, self._stop),
+        )
+
+    def __repr__(self):
+        if self._set is not None:
+            return repr(self._set)
+        return "<%s slice=%d:%d %r>" % (
+            type(self).__name__,
+            self._start,
+            self._stop,
+            self._subset,
+        )
 
     def prefetch(self, *fields):
         self._subset.prefetch(*fields)

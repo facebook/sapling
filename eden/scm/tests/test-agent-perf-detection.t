@@ -25,6 +25,25 @@ One more than the limit triggers the abort before the over-limit commit is
 yielded:
 
   $ sl log -r 'desc(A)' -T '{desc}\n' -l 7
+  A01
+  A02
+  A03
+  A04
+  A05
+  A06
+  abort: revset query scanned over 6 commits
+  (run 'sl help agent performance' for guidance.)
+  [255]
+
+The limit() revset should also stream the limited set lazily:
+
+  $ sl log -r 'limit(desc(A), 7)' -T '{desc}\n'
+  A01
+  A02
+  A03
+  A04
+  A05
+  A06
   abort: revset query scanned over 6 commits
   (run 'sl help agent performance' for guidance.)
   [255]
@@ -35,6 +54,12 @@ Test --user:
   A99
   A98
   $ sl log --user test -T '{desc}\n' -l 7
+  A99
+  A98
+  A97
+  A96
+  A95
+  A94
   abort: revset query scanned over 6 commits
   (run 'sl help agent performance' for guidance.)
   [255]
@@ -45,6 +70,12 @@ Test --keyword:
   A99
   A98
   $ sl log --keyword A -T '{desc}\n' -l 7
+  A99
+  A98
+  A97
+  A96
+  A95
+  A94
   abort: revset query scanned over 6 commits
   (run 'sl help agent performance' for guidance.)
   [255]
@@ -54,6 +85,12 @@ Test --date:
   A99
   A98
   $ sl log --date '1970-01-01' -T '{desc}\n' -l 7
+  A99
+  A98
+  A97
+  A96
+  A95
+  A94
   abort: revset query scanned over 6 commits
   (run 'sl help agent performance' for guidance.)
   [255]

@@ -3197,20 +3197,9 @@ def getgraphlogrevs(repo, pats, opts):
         if not (revs.isdescending() or revs.istopo()):
             revs.sort(reverse=True)
     if limit is not None:
-        revs = _limitlogrevs(repo, revs, limit)
+        revs = revs.slice(0, limit)
 
     return revs, expr, filematcher
-
-
-def _limitlogrevs(repo, revs, limit):
-    limitedrevs = []
-    reviter = revs.iterrev()
-    for _i in range(limit):
-        try:
-            limitedrevs.append(next(reviter))
-        except StopIteration:
-            break
-    return smartset.baseset(limitedrevs, repo=repo)
 
 
 def getlogrevs(repo, pats, opts):
@@ -3237,8 +3226,7 @@ def getlogrevs(repo, pats, opts):
             revs = repo.revs(expr) & revs
             revs.sort(reverse=True)
     if limit is not None:
-        revs = _limitlogrevs(repo, revs, limit)
-
+        revs = revs.slice(0, limit)
     return revs, expr, filematcher
 
 
