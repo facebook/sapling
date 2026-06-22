@@ -728,6 +728,9 @@ fn should_set_nocache_for_identity_types(
         || path_id_types.iter().any(|id| !is_kcb_covered(id))
 }
 
+/// Dedicated Scuba dataset for SCS's server-side ACL-check decisions
+const SCS_ACL_CHECKS_SCUBA_TABLE: &str = "mononoke_scs_acl_checks";
+
 /// Checks if any ACL-deciding identity type on the RepoContext is not covered
 /// by KCB's REQUEST_PRIMARY_IDENTITY_TYPES, and if so, sets the nocache_thriftcache
 /// flag on the CoreContext. The thrift macro will then set the ThriftCache nocache
@@ -744,15 +747,51 @@ fn maybe_set_nocache_thriftcache(
         return Ok(());
     }
 
+    let repo_id_type = repo_ctx.repo_acl_deciding_identity_type();
     let path_id_types = repo_ctx.path_acl_deciding_identity_types();
-    if should_set_nocache_for_identity_types(
-        repo_ctx.repo_acl_deciding_identity_type(),
-        &path_id_types,
-    ) {
+    let is_cacheable = !should_set_nocache_for_identity_types(repo_id_type, &path_id_types);
+    if !is_cacheable {
         ctx.set_nocache_thriftcache();
     }
 
+    log_nocache_decision(ctx, repo_ctx, repo_id_type, &path_id_types, is_cacheable);
+
     Ok(())
+}
+
+/// Logs the server-side ACL-check decision
+fn log_nocache_decision(
+    ctx: &CoreContext,
+    repo_ctx: &RepoContext<Repo>,
+    repo_id_type: Option<&str>,
+    path_id_types: &[String],
+    is_cacheable: bool,
+) {
+    let mut scuba = match MononokeScubaSampleBuilder::new(ctx.fb, SCS_ACL_CHECKS_SCUBA_TABLE) {
+        Ok(scuba) => scuba,
+        Err(_) => return,
+    };
+    scuba.add_common_server_data();
+    scuba.add("repo_name", repo_ctx.name());
+    scuba.add("is_cacheable", is_cacheable);
+    scuba.add(
+        "repo_acl_deciding_identity_type",
+        repo_id_type.unwrap_or(""),
+    );
+    scuba.add("path_acl_deciding_identity_types", path_id_types.join(","));
+    let accessors = ctx
+        .metadata()
+        .identities()
+        .iter()
+        .map(|id| id.to_string())
+        .collect::<Vec<_>>()
+        .join(",");
+    scuba.add("accessors", accessors);
+    if let Some(client_info) = ctx.metadata().client_request_info() {
+        scuba.add("client_correlator", client_info.correlator.as_str());
+    }
+    scuba.add("session_id", ctx.metadata().session_id().to_string());
+    scuba.log();
 }
 
 fn log_start(ctx: &CoreContext, _method: &str) -> Option<MemoryStats> {
