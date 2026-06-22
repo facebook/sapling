@@ -6,6 +6,25 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
 
+Grant client0 full read+write access and client2 read-only access, so we can
+exercise the ACL behavior on the -B push. On the current wireproto path an
+identity with no access at all (client1) is rejected up front, but an identity
+that can read but not write (client2) still moves the bookmark -- the wireproto
+repo-write check is downgraded to log-only. Once -B is migrated to EdenApi the
+client2 case instead fails at the bookmark write.
+  $ cat >> "$ACL_FILE" << ACLS
+  > {
+  >   "repos": {
+  >     "default": {
+  >       "actions": {
+  >         "read": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA", "$CLIENT2_ID_TYPE:$CLIENT2_ID_DATA"],
+  >         "write": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA"]
+  >       }
+  >     }
+  >   }
+  > }
+  > ACLS
+
 setup configuration
   $ setup_common_config
   $ cd $TESTTMP
@@ -104,3 +123,13 @@ An identity not in the repo ACL (client1) cannot push to master_bookmark:
   remote:     Unauthorized access, permission denied
   abort: unexpected EOL, expected netstring digit
   [255]
+
+An identity with read but not write access (client2) still moves master_bookmark
+over wireproto: the repo-write check is downgraded to log-only on the unbundle
+path, so a read-only identity can move a publishing bookmark. After -B migrates
+to EdenApi this same push is denied at the bookmark write:
+  $ echo m3 > m3 && hg addremove -q && hg ci -qm m3
+  $ hg push -B master_bookmark --config auth.mononoke.cert="$TEST_CERTDIR/client2.crt" --config auth.mononoke.key="$TEST_CERTDIR/client2.key"
+  pushing to mono:repo
+  searching for changes
+  updating bookmark master_bookmark
