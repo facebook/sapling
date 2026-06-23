@@ -6,7 +6,7 @@
  */
 
 //! Linelog features that depend on `visit_with_ins_del_stacks`,
-//! including `flatten`, and `calculate_dep_map`.
+//! including `flatten`, and `calculate_dep_dag`.
 
 use std::mem::take;
 use std::sync::Arc;
@@ -140,7 +140,16 @@ impl<T> AbstractLineLog<T> {
     /// deletions) might be skipped incorrectly after `remap_revs`.
     /// Practically, LineLog might allow reorder cases that would be disallowed
     /// by traditional context-line dependencies.
-    pub(crate) fn calculate_dep_map(&self) -> NanoDag {
+    ///
+    /// This function intentionally does not use `self.dag` for edge check.
+    ///
+    /// The goal of this function is to expose linelog's internal implicit
+    /// dependencies (e.g. an outer block might cause an inner block to be
+    /// skipped, regardless of the two revs' relation in `self.dag`, initially
+    /// for performance considerations). So this function does not double check
+    /// if the edge is present in `self.dag` to report the linelog internal
+    /// dependencies honestly.
+    pub(crate) fn calculate_dep_dag(&self) -> NanoDag {
         // With the insertion and deletion stacks (see explanation in
         // visit_with_ins_del_stacks), when we see a new insertion block, or deletion
         // block, we add two dependencies:
@@ -181,8 +190,13 @@ impl<T> AbstractLineLog<T> {
         struct DepMapVisitor(NanoDag);
 
         impl DepMapVisitor {
-            fn add_edge(&mut self, parent: Rev, child: Rev) {
-                self.0 = take(&mut self.0).with_edge(parent, child);
+            fn maybe_add_edge(&mut self, parent: Rev, child: Rev) {
+                // This intentionally does not use the main dag.
+                // It does not assume or enforce linear history for linelog.
+                // See the outer docstring for context.
+                if parent < child {
+                    self.0 = take(&mut self.0).with_edge(parent, child);
+                }
             }
         }
 
@@ -190,15 +204,11 @@ impl<T> AbstractLineLog<T> {
             fn on_conditional_jump(&mut self, rev: Rev, ins_stack: &[Frame], del_stack: &[Frame]) {
                 // rev depends on the outer insertion (parent).
                 if let Some(parent) = ins_stack.last().filter(|f| !f.is_root()).map(|f| f.rev) {
-                    if rev > parent {
-                        self.add_edge(parent, rev);
-                    }
+                    self.maybe_add_edge(parent, rev);
                 }
                 // The outer deletion depends on rev (rev is the parent).
                 if let Some(child) = del_stack.last().map(|f| f.rev) {
-                    if child > rev {
-                        self.add_edge(rev, child);
-                    }
+                    self.maybe_add_edge(rev, child);
                 }
             }
         }
@@ -247,7 +257,7 @@ impl<T> AbstractLineLog<T> {
     /// is interested in.
     ///
     /// Typical use-cases include features that need to scan all (ever existed)
-    /// lines like flatten() and calculate_dep_map().
+    /// lines like flatten() and calculate_dep_dag().
     pub(crate) fn visit_with_ins_del_stacks(&self, visitor: &mut impl StackVisitor<T>) {
         // How does it work? First, insertions and deletions in linelog form
         // tree structures. For example:

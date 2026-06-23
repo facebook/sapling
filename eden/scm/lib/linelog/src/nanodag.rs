@@ -356,7 +356,7 @@ impl NanoDag {
     ///
     /// `constraints` is another DAG over the same old revision ids. Its edges
     /// are hard dependencies, typically from linelog textual dependencies
-    /// (`dep_map`). Every constraint edge must remain reachable in the returned
+    /// (`dep_dag`). Every constraint edge must remain reachable in the returned
     /// DAG. The proposed DAG may preserve a constraint as an indirect path. For
     /// example, a constraint edge `1 -> 3` is satisfied by proposed edges
     /// `1 -> 2 -> 3`.

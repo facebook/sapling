@@ -750,9 +750,15 @@ impl<T> AbstractLineLog<T> {
     ///
     /// Only includes revs explicitly appear in linelog instructions, i.e. revs
     /// that actually edit the lines.
-    pub fn dep_map(&self) -> &Arc<NanoDag> {
+    ///
+    /// Usually, the returned dag is a sub-dag of the main nanodag. However,
+    /// power users can bypass it (e.g. by unsetting the `ADD_EDGE` flag).
+    /// If the returned dag has an edge that is not in the main dag, then it
+    /// means the `checkout` operation on some revs might produce unwanted
+    /// result. See "invisible_edit_without_edge" test for an example.
+    pub fn dep_dag(&self) -> &Arc<NanoDag> {
         self.deps_map_cache
-            .get_or_init(|| Arc::new(self.calculate_dep_map()))
+            .get_or_init(|| Arc::new(self.calculate_dep_dag()))
     }
 }
 

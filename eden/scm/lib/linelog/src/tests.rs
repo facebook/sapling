@@ -207,10 +207,12 @@ fn test_a_lines_cache_does_not_cache_invisible_edit_without_edge() {
     // the parent edge.
     assert_eq!(cache_hit_before, cache_hit_after);
 
-    // linelog dep map, rev 1 depends on rev 0 (insert into rev 0 block)
-    assert_eq!(log.dep_map().to_string(), "0-1");
+    // linelog dep dag, rev 1 depends on rev 0 (insert into rev 0 block)
+    assert_eq!(log.dep_dag().to_string(), "0-1");
     // dag edges, rev 1 does not depend on rev 0
     assert_eq!(log.nanodag().to_string(), "{0,1}");
+    // Note that dep_dag is usually a subset of dag. If dep_dag has edges that
+    // dag does not have, it means the "invisible" problem can occur.
 }
 
 #[test]
@@ -395,12 +397,12 @@ fn test_remap_revs() {
 fn test_remap_revs_reorder_insertions() {
     let log = log_from_texts(&["a\n".into(), "a\nb\n".into(), "a\nb\nc\n".into()]);
 
-    let dep_map = log.dep_map();
+    let dep_dag = log.dep_dag();
     // Those append-only changes are considered independent.
     // Not depending on `0` - `0` used to be the "root" that other appends
     // depend on. But with non-linear (dag) linelog, `0` is no longer special.
     for rev in 1..=3 {
-        assert_eq!(dep_map.parents(rev), [], "rev={rev}");
+        assert_eq!(dep_dag.parents(rev), [], "rev={rev}");
     }
 
     let swapped = log.remap_revs(&|r| match r {
@@ -469,8 +471,8 @@ fn test_reorder_insertions(lines: &[&str], line_added_order: &[usize]) {
     let texts = build_texts(lines, line_added_order, &revs);
     let log = log_from_texts(&texts);
 
-    // Verify dep map.
-    let deps = log.dep_map();
+    // Verify dep dag.
+    let deps = log.dep_dag();
     assert!(
         deps.iter().all(|(_rev, deps)| deps.is_empty()),
         "order={line_added_order:?}"
@@ -566,7 +568,7 @@ fn test_non_linear_skipped_rev() {
         .edit_chunk(0, 0, 0, 0, vec!["a", "c"], flags)
         .edit_chunk(0, 1, 1, 2, vec!["b"], flags);
     assert_eq!(log.nanodag().to_string(), "{0-2,1}");
-    assert_eq!(log.dep_map().to_string(), "{0-2,1}");
+    assert_eq!(log.dep_dag().to_string(), "{0-2,1}");
     assert_eq!(log.checkout_text(0), "ac");
     assert_eq!(log.checkout_text(1), "");
     assert_eq!(log.checkout_text(2), "abc");
@@ -587,7 +589,7 @@ fn test_non_linear_merged_rev() {
         .with_dag_edge(2, 3)
         .with_dag_edge(1, 3);
     assert_eq!(log.nanodag().to_string(), "0-{1,2}-3");
-    assert_eq!(log.dep_map().to_string(), "{0-{1,2},3}");
+    assert_eq!(log.dep_dag().to_string(), "{0-{1,2},3}");
     assert_eq!(log.checkout_text(0), "acdf"); // rev 0, orig content
     assert_eq!(log.checkout_text(1), "bbcdf"); // rev 1 replaced "a" with "bb"
     assert_eq!(log.checkout_text(2), "aceef"); // rev 2 replaced "d" with "ee", without rev 1 "bb"
@@ -646,14 +648,14 @@ fn test_flatten() {
 }
 
 #[test]
-fn test_dep_map() {
+fn test_dep_dag() {
     let deps = |text_list: &[&str]| -> Arc<NanoDag> {
         let texts: Vec<String> = text_list
             .iter()
             .map(|t| t.chars().map(|c| format!("{c}\n")).collect::<String>())
             .collect();
         let log = log_from_texts(&texts);
-        log.dep_map().clone()
+        log.dep_dag().clone()
     };
 
     assert_eq!(deps(&[]).to_string(), "0");
@@ -678,7 +680,7 @@ fn test_dep_map() {
             0,
             1,
         );
-        assert_eq!(log.dep_map().to_string(), "0-1");
+        assert_eq!(log.dep_dag().to_string(), "0-1");
     }
 
     // Deletions.
@@ -870,7 +872,7 @@ fn test_block_shift_effectiveness() {
             let lines = expected_rev3_lines[a1..a1 + n].to_vec();
             let log = base.clone().edit_chunk(2, a1, a1, 3, lines, flags);
             assert_eq!(log.checkout_text(3), expected_rev3_text);
-            let dep = log.dep_map();
+            let dep = log.dep_dag();
             let dep = format!("DepMap({dep})");
             grouped.entry(dep).or_default().push(a1);
         }
@@ -916,7 +918,7 @@ fn test_block_shift_overflow() {
         let log = base
             .clone()
             .edit_chunk(1, a1, a1, 1, vec![""], EditFlags::default());
-        let dep = log.dep_map();
+        let dep = log.dep_dag();
         assert!(dep.iter().all(|(_rev, deps)| deps.is_empty()))
     }
 }
