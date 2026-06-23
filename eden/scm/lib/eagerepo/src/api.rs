@@ -1891,3 +1891,653 @@ fn debug_list<T>(keys: &[T], func: impl Fn(&T) -> String) -> String {
         msg
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use edenapi::SaplingRemoteApi;
+    use edenapi::types::AnyFileContentId;
+    use edenapi::types::AnyId;
+    use edenapi::types::Extra;
+    use edenapi::types::HgChangesetContent;
+    use edenapi::types::HgFilenodeData;
+    use edenapi::types::HgId;
+    use edenapi::types::Key;
+    use edenapi::types::Parents;
+    use edenapi::types::RepoPathBuf;
+    use edenapi::types::UploadToken;
+    use edenapi::types::UploadTokenData;
+    use minibytes::Bytes;
+    use sha1::Digest;
+    use storemodel::SerializationFormat;
+
+    use super::*;
+
+    fn compute_sha1(data: &[u8]) -> HgId {
+        let mut hasher = sha1::Sha1::new();
+        hasher.update(data);
+        let hash = hasher.finalize();
+        HgId::from_slice(&hash).unwrap()
+    }
+
+    fn hgid_to_content_sha1(id: HgId) -> AnyFileContentId {
+        AnyFileContentId::Sha1(edenapi_types::Sha1::from_byte_array(id.into_byte_array()))
+    }
+
+    // Invariant: data without the '\x01\n' prefix is never a rename
+    #[test]
+    fn test_extract_rename_no_prefix() {
+        assert_eq!(extract_rename(b"plain file content"), None);
+        assert_eq!(extract_rename(b""), None);
+        assert_eq!(extract_rename(b"\x01"), None);
+    }
+
+    // Invariant: '\x01\n' present but no closing '\x01\n' means malformed header, returns None
+    #[test]
+    fn test_extract_rename_no_closing_marker() {
+        let data = b"\x01\ncopy: foo\ncopyrev: aabbccdd";
+        assert_eq!(extract_rename(data), None);
+    }
+
+    // Invariant: header with 'copy:' but missing 'copyrev:' cannot construct a full Key
+    #[test]
+    fn test_extract_rename_copy_without_copyrev() {
+        let data = b"\x01\ncopy: foo/bar.txt\n\x01\nfile content";
+        assert_eq!(extract_rename(data), None);
+    }
+
+    // Invariant: both copy and copyrev present produce a valid Key with correct path and hgid
+    #[test]
+    fn test_extract_rename_valid() {
+        let hex = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        let data = format!("\x01\ncopy: foo/bar.txt\ncopyrev: {hex}\n\x01\nfile content");
+        let result = extract_rename(data.as_bytes()).unwrap();
+        assert_eq!(result.path.as_str(), "foo/bar.txt");
+        assert_eq!(result.hgid, HgId::from_hex(hex.as_bytes()).unwrap());
+    }
+
+    // Invariant: parser handles multiple header lines and only extracts copy/copyrev
+    #[test]
+    fn test_extract_rename_multiple_header_lines() {
+        let hex = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+        let data = format!(
+            "\x01\nother: ignored\ncopy: a/b.txt\nextra: stuff\ncopyrev: {hex}\n\x01\nbody"
+        );
+        let result = extract_rename(data.as_bytes()).unwrap();
+        assert_eq!(result.path.as_str(), "a/b.txt");
+        assert_eq!(result.hgid, HgId::from_hex(hex.as_bytes()).unwrap());
+    }
+
+    // Invariant: extras are sorted by key alphabetically before encoding
+    #[test]
+    fn test_changeset_to_text_extras_sorted() {
+        let cs = HgChangesetContent {
+            parents: Parents::default(),
+            manifestid: *HgId::null_id(),
+            user: b"user".to_vec(),
+            time: 1000,
+            tz: 0,
+            extras: vec![
+                Extra {
+                    key: b"zebra".to_vec(),
+                    value: b"z".to_vec(),
+                },
+                Extra {
+                    key: b"alpha".to_vec(),
+                    value: b"a".to_vec(),
+                },
+                Extra {
+                    key: b"middle".to_vec(),
+                    value: b"m".to_vec(),
+                },
+            ],
+            files: Vec::new(),
+            message: b"msg".to_vec(),
+        };
+        let text = changeset_to_text(cs).unwrap();
+        let text_str = String::from_utf8_lossy(&text);
+        let time_line = text_str.lines().nth(2).unwrap();
+        assert!(time_line.contains("alpha:a"));
+        assert!(time_line.contains("middle:m"));
+        assert!(time_line.contains("zebra:z"));
+        let alpha_pos = time_line.find("alpha:a").unwrap();
+        let middle_pos = time_line.find("middle:m").unwrap();
+        let zebra_pos = time_line.find("zebra:z").unwrap();
+        assert!(alpha_pos < middle_pos);
+        assert!(middle_pos < zebra_pos);
+    }
+
+    // Invariant: special characters in extras are escaped per Mercurial convention
+    #[test]
+    fn test_changeset_to_text_extras_escaped() {
+        let cs = HgChangesetContent {
+            parents: Parents::default(),
+            manifestid: *HgId::null_id(),
+            user: b"user".to_vec(),
+            time: 0,
+            tz: 0,
+            extras: vec![Extra {
+                key: b"key".to_vec(),
+                value: b"back\\slash\nnewline\rcarriage\0nul".to_vec(),
+            }],
+            files: Vec::new(),
+            message: b"msg".to_vec(),
+        };
+        let text = changeset_to_text(cs).unwrap();
+        let text_str = String::from_utf8_lossy(&text);
+        let time_line = text_str.lines().nth(2).unwrap();
+        assert!(time_line.contains(r"key:back\\slash\nnewline\rcarriage\0nul"));
+    }
+
+    // Invariant: extras entries are separated by NUL byte in the output
+    #[test]
+    fn test_changeset_to_text_extras_nul_separated() {
+        let cs = HgChangesetContent {
+            parents: Parents::default(),
+            manifestid: *HgId::null_id(),
+            user: b"user".to_vec(),
+            time: 0,
+            tz: 0,
+            extras: vec![
+                Extra {
+                    key: b"a".to_vec(),
+                    value: b"1".to_vec(),
+                },
+                Extra {
+                    key: b"b".to_vec(),
+                    value: b"2".to_vec(),
+                },
+            ],
+            files: Vec::new(),
+            message: b"msg".to_vec(),
+        };
+        let text = changeset_to_text(cs).unwrap();
+        let time_line_start = text.windows(3).position(|w| w == b"0 0").unwrap();
+        let newline_after = text[time_line_start..]
+            .iter()
+            .position(|&b| b == b'\n')
+            .unwrap();
+        let extras_region = &text[time_line_start..time_line_start + newline_after];
+        assert!(extras_region.contains(&0u8));
+    }
+
+    // Invariant: files list is sorted alphabetically in the output
+    #[test]
+    fn test_changeset_to_text_files_sorted() {
+        let cs = HgChangesetContent {
+            parents: Parents::default(),
+            manifestid: *HgId::null_id(),
+            user: b"user".to_vec(),
+            time: 0,
+            tz: 0,
+            extras: Vec::new(),
+            files: vec![
+                RepoPathBuf::from_string("z_file".to_string()).unwrap(),
+                RepoPathBuf::from_string("a_file".to_string()).unwrap(),
+                RepoPathBuf::from_string("m_file".to_string()).unwrap(),
+            ],
+            message: b"msg".to_vec(),
+        };
+        let text = changeset_to_text(cs).unwrap();
+        let text_str = String::from_utf8(text).unwrap();
+        let a_pos = text_str.find("a_file").unwrap();
+        let m_pos = text_str.find("m_file").unwrap();
+        let z_pos = text_str.find("z_file").unwrap();
+        assert!(a_pos < m_pos);
+        assert!(m_pos < z_pos);
+    }
+
+    // Invariant: empty extras produces no extras segment on the time line
+    #[test]
+    fn test_changeset_to_text_no_extras() {
+        let cs = HgChangesetContent {
+            parents: Parents::default(),
+            manifestid: *HgId::null_id(),
+            user: b"user".to_vec(),
+            time: 42,
+            tz: -3600,
+            extras: Vec::new(),
+            files: Vec::new(),
+            message: b"commit message".to_vec(),
+        };
+        let text = changeset_to_text(cs).unwrap();
+        let text_str = String::from_utf8(text).unwrap();
+        let time_line = text_str.lines().nth(2).unwrap();
+        assert_eq!(time_line, "42 -3600");
+    }
+
+    // Invariant: Hg format extracts p1/p2 from the first 40 bytes of serialized data
+    #[test]
+    fn test_sha1_blob_to_parents_body_hg() {
+        let p1 = HgId::from_hex(b"1111111111111111111111111111111111111111").unwrap();
+        let p2 = HgId::from_hex(b"2222222222222222222222222222222222222222").unwrap();
+        let body_content = b"file body here";
+
+        let mut blob = Vec::new();
+        blob.extend_from_slice(p1.as_ref());
+        blob.extend_from_slice(p2.as_ref());
+        blob.extend_from_slice(body_content);
+        let data = Bytes::from(blob);
+
+        let (parents, body) = sha1_blob_to_parents_body(&data, SerializationFormat::Hg).unwrap();
+        let (actual_p1, actual_p2) = parents.into_nodes();
+        assert_eq!(actual_p2, p1);
+        assert_eq!(actual_p1, p2);
+        assert_eq!(body.as_ref(), body_content);
+    }
+
+    // Invariant: Git format returns default (null) parents and extracts body after header
+    #[test]
+    fn test_sha1_blob_to_parents_body_git() {
+        let body_content = b"tree abc123\nauthor foo";
+        let header = format!("commit {}", body_content.len());
+        let mut blob = Vec::new();
+        blob.extend_from_slice(header.as_bytes());
+        blob.push(0);
+        blob.extend_from_slice(body_content);
+        let data = Bytes::from(blob);
+
+        let (parents, body) = sha1_blob_to_parents_body(&data, SerializationFormat::Git).unwrap();
+        assert_eq!(parents, Parents::default());
+        assert_eq!(body.as_ref(), body_content);
+    }
+
+    // Invariant: Hg format splits metadata from file content
+    #[test]
+    fn test_file_body_to_file_content_and_copy_from_hg() {
+        let meta = b"\x01\ncopy: orig.txt\ncopyrev: aaaa\n\x01\n";
+        let content = b"actual file content";
+        let mut full = Vec::new();
+        full.extend_from_slice(meta);
+        full.extend_from_slice(content);
+        let body = Bytes::from(full);
+
+        let (file_content, copy_from) =
+            file_body_to_file_content_and_copy_from(&body, SerializationFormat::Hg);
+        assert_eq!(file_content.as_ref(), content);
+        assert!(!copy_from.is_empty());
+    }
+
+    // Invariant: Git format returns body unchanged with empty metadata
+    #[test]
+    fn test_file_body_to_file_content_and_copy_from_git() {
+        let body = Bytes::from(&b"git blob content"[..]);
+        let (file_content, copy_from) =
+            file_body_to_file_content_and_copy_from(&body, SerializationFormat::Git);
+        assert_eq!(file_content.as_ref(), b"git blob content");
+        assert!(copy_from.is_empty());
+    }
+
+    // Invariant: set_bookmark rejects when both to and from are None
+    #[tokio::test]
+    async fn test_set_bookmark_both_none_is_bad_request() {
+        let dir = tempfile::tempdir().unwrap();
+        let repo = EagerRepo::open(dir.path()).unwrap();
+
+        let result =
+            SaplingRemoteApi::set_bookmark(&repo, "test".to_string(), None, None, HashMap::new())
+                .await;
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(format!("{err:?}").contains("BAD_REQUEST") || format!("{err:?}").contains("400"));
+    }
+
+    // Invariant: set_bookmark returns NOT_FOUND when from is specified but bookmark doesn't exist
+    #[tokio::test]
+    async fn test_set_bookmark_from_nonexistent_is_not_found() {
+        let dir = tempfile::tempdir().unwrap();
+        let repo = EagerRepo::open(dir.path()).unwrap();
+        let id = repo.add_commit(&[], b"A").await.unwrap();
+        repo.flush().await.unwrap();
+
+        let result = SaplingRemoteApi::set_bookmark(
+            &repo,
+            "missing".to_string(),
+            None,
+            Some(id),
+            HashMap::new(),
+        )
+        .await;
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(format!("{err:?}").contains("NOT_FOUND") || format!("{err:?}").contains("404"));
+    }
+
+    // Invariant: set_bookmark rejects when from differs from current bookmark value
+    #[tokio::test]
+    async fn test_set_bookmark_from_mismatch_is_bad_request() {
+        let dir = tempfile::tempdir().unwrap();
+        let repo = EagerRepo::open(dir.path()).unwrap();
+        let id1 = repo.add_commit(&[], b"A").await.unwrap();
+        let id2 = repo.add_commit(&[], b"B").await.unwrap();
+        repo.set_bookmark("bm", Some(id1)).unwrap();
+        repo.flush().await.unwrap();
+
+        let result = SaplingRemoteApi::set_bookmark(
+            &repo,
+            "bm".to_string(),
+            Some(id1),
+            Some(id2),
+            HashMap::new(),
+        )
+        .await;
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(format!("{err:?}").contains("BAD_REQUEST") || format!("{err:?}").contains("400"));
+    }
+
+    // Invariant: set_bookmark rejects creating a bookmark that already exists (no from specified)
+    #[tokio::test]
+    async fn test_set_bookmark_create_existing_is_bad_request() {
+        let dir = tempfile::tempdir().unwrap();
+        let repo = EagerRepo::open(dir.path()).unwrap();
+        let id1 = repo.add_commit(&[], b"A").await.unwrap();
+        let id2 = repo.add_commit(&[], b"B").await.unwrap();
+        repo.set_bookmark("bm", Some(id1)).unwrap();
+        repo.flush().await.unwrap();
+
+        let result = SaplingRemoteApi::set_bookmark(
+            &repo,
+            "bm".to_string(),
+            Some(id2),
+            None,
+            HashMap::new(),
+        )
+        .await;
+        assert!(result.is_err());
+    }
+
+    // Invariant: set_bookmark with to=None and valid from deletes the bookmark
+    #[tokio::test]
+    async fn test_set_bookmark_delete() {
+        let dir = tempfile::tempdir().unwrap();
+        let repo = EagerRepo::open(dir.path()).unwrap();
+        let id = repo.add_commit(&[], b"A").await.unwrap();
+        repo.set_bookmark("bm", Some(id)).unwrap();
+        repo.flush().await.unwrap();
+
+        let result =
+            SaplingRemoteApi::set_bookmark(&repo, "bm".to_string(), None, Some(id), HashMap::new())
+                .await;
+        assert!(result.is_ok());
+        let map = repo.get_bookmarks_map().unwrap();
+        assert!(!map.contains_key("bm"));
+    }
+
+    // Invariant: set_bookmark with to=Some(id) and no from creates a new bookmark
+    #[tokio::test]
+    async fn test_set_bookmark_create() {
+        let dir = tempfile::tempdir().unwrap();
+        let repo = EagerRepo::open(dir.path()).unwrap();
+        let id = repo.add_commit(&[], b"A").await.unwrap();
+        repo.flush().await.unwrap();
+
+        let result = SaplingRemoteApi::set_bookmark(
+            &repo,
+            "new_bm".to_string(),
+            Some(id),
+            None,
+            HashMap::new(),
+        )
+        .await;
+        assert!(result.is_ok());
+        let map = repo.get_bookmarks_map().unwrap();
+        assert_eq!(map.get("new_bm"), Some(&id));
+    }
+
+    // Invariant: pattern ending with '*' matches all bookmarks by prefix
+    #[tokio::test]
+    async fn test_list_bookmark_patterns_glob() {
+        let dir = tempfile::tempdir().unwrap();
+        let repo = EagerRepo::open(dir.path()).unwrap();
+        let id1 = repo.add_commit(&[], b"A").await.unwrap();
+        let id2 = repo.add_commit(&[], b"B").await.unwrap();
+        repo.set_bookmark("release/1.0", Some(id1)).unwrap();
+        repo.set_bookmark("release/2.0", Some(id2)).unwrap();
+        repo.set_bookmark("main", Some(id1)).unwrap();
+        repo.flush().await.unwrap();
+
+        let entries =
+            SaplingRemoteApi::list_bookmark_patterns(&repo, vec!["release/*".to_string()], vec![])
+                .await
+                .unwrap();
+        assert_eq!(entries.len(), 2);
+        let names: Vec<&str> = entries.iter().map(|e| e.bookmark.as_str()).collect();
+        assert!(names.contains(&"release/1.0"));
+        assert!(names.contains(&"release/2.0"));
+    }
+
+    // Invariant: exact pattern returns only the exact match or None if missing
+    #[tokio::test]
+    async fn test_list_bookmark_patterns_exact() {
+        let dir = tempfile::tempdir().unwrap();
+        let repo = EagerRepo::open(dir.path()).unwrap();
+        let id = repo.add_commit(&[], b"A").await.unwrap();
+        repo.set_bookmark("main", Some(id)).unwrap();
+        repo.flush().await.unwrap();
+
+        let entries = SaplingRemoteApi::list_bookmark_patterns(
+            &repo,
+            vec!["main".to_string(), "nonexistent".to_string()],
+            vec![],
+        )
+        .await
+        .unwrap();
+        assert_eq!(entries.len(), 2);
+        let main_entry = entries.iter().find(|e| e.bookmark == "main").unwrap();
+        assert_eq!(main_entry.hgid, Some(id));
+        let missing_entry = entries
+            .iter()
+            .find(|e| e.bookmark == "nonexistent")
+            .unwrap();
+        assert_eq!(missing_entry.hgid, None);
+    }
+
+    // Invariant: default Hg repo capabilities do not include 'git-format' or 'invalid-hash'
+    #[tokio::test]
+    async fn test_capabilities_hg_default() {
+        let dir = tempfile::tempdir().unwrap();
+        let repo = EagerRepo::open(dir.path()).unwrap();
+
+        let caps = SaplingRemoteApi::capabilities(&repo).await.unwrap();
+        assert!(caps.contains(&"segmented-changelog".to_string()));
+        assert!(caps.contains(&"sha1-only".to_string()));
+        assert!(!caps.contains(&"git-format".to_string()));
+        assert!(!caps.contains(&"invalid-hash".to_string()));
+    }
+
+    // Invariant: Git format repo adds 'git-format' capability
+    #[tokio::test]
+    async fn test_capabilities_git_format() {
+        let dir = tempfile::tempdir().unwrap();
+        let git_dir = dir.path().join("repo.git");
+        std::fs::create_dir_all(&git_dir).unwrap();
+        let repo = EagerRepo::open(&git_dir).unwrap();
+
+        let caps = SaplingRemoteApi::capabilities(&repo).await.unwrap();
+        assert!(caps.contains(&"git-format".to_string()));
+    }
+
+    // Invariant: when p2 < p1, upload_filenodes_batch swaps them before assembly
+    #[tokio::test]
+    async fn test_upload_filenodes_batch_parent_swap() {
+        let dir = tempfile::tempdir().unwrap();
+        let repo = EagerRepo::open(dir.path()).unwrap();
+
+        let content = b"file content";
+        let content_id = repo.add_sha1_blob(content).unwrap();
+        repo.flush().await.unwrap();
+
+        let p1 = HgId::from_hex(b"ffffffffffffffffffffffffffffffffffffffff").unwrap();
+        let p2 = HgId::from_hex(b"0000000000000000000000000000000000000001").unwrap();
+
+        let mut expected = Vec::new();
+        expected.extend_from_slice(p2.as_ref());
+        expected.extend_from_slice(p1.as_ref());
+        expected.extend_from_slice(content);
+
+        let expected_id = compute_sha1(&expected);
+
+        let token = UploadToken {
+            data: UploadTokenData {
+                id: AnyId::AnyFileContentId(hgid_to_content_sha1(content_id)),
+                bubble_id: None,
+                metadata: None,
+            },
+            signature: Default::default(),
+        };
+
+        let data = HgFilenodeData {
+            node_id: expected_id,
+            parents: Parents::new(p1, p2),
+            file_content_upload_token: token,
+            metadata: Vec::new(),
+        };
+
+        let resp = SaplingRemoteApi::upload_filenodes_batch(&repo, vec![data])
+            .await
+            .unwrap();
+        let entries: Vec<_> = resp.entries.collect::<Vec<_>>().await;
+        assert_eq!(entries.len(), 1);
+        assert!(entries[0].is_ok());
+    }
+
+    // Invariant: file body starting with '\x01\n' gets metadata header wrapper
+    #[tokio::test]
+    async fn test_upload_filenodes_batch_metadata_header_for_special_prefix() {
+        let dir = tempfile::tempdir().unwrap();
+        let repo = EagerRepo::open(dir.path()).unwrap();
+
+        let content = b"\x01\nsome content that starts with marker";
+        let content_id = repo.add_sha1_blob(content).unwrap();
+        repo.flush().await.unwrap();
+
+        let p1 = *HgId::null_id();
+        let p2 = *HgId::null_id();
+
+        let mut expected = Vec::new();
+        expected.extend_from_slice(p1.as_ref());
+        expected.extend_from_slice(p2.as_ref());
+        expected.extend_from_slice(b"\x01\n");
+        expected.extend_from_slice(b"\x01\n");
+        expected.extend_from_slice(content);
+
+        let expected_id = compute_sha1(&expected);
+
+        let token = UploadToken {
+            data: UploadTokenData {
+                id: AnyId::AnyFileContentId(hgid_to_content_sha1(content_id)),
+                bubble_id: None,
+                metadata: None,
+            },
+            signature: Default::default(),
+        };
+
+        let data = HgFilenodeData {
+            node_id: expected_id,
+            parents: Parents::new(p1, p2),
+            file_content_upload_token: token,
+            metadata: Vec::new(),
+        };
+
+        let resp = SaplingRemoteApi::upload_filenodes_batch(&repo, vec![data])
+            .await
+            .unwrap();
+        let entries: Vec<_> = resp.entries.collect::<Vec<_>>().await;
+        assert_eq!(entries.len(), 1);
+        assert!(entries[0].is_ok());
+    }
+
+    // Invariant: non-empty metadata triggers header insertion regardless of body content
+    #[tokio::test]
+    async fn test_upload_filenodes_batch_nonempty_metadata() {
+        let dir = tempfile::tempdir().unwrap();
+        let repo = EagerRepo::open(dir.path()).unwrap();
+
+        let content = b"normal content";
+        let content_id = repo.add_sha1_blob(content).unwrap();
+        repo.flush().await.unwrap();
+
+        let p1 = *HgId::null_id();
+        let p2 = *HgId::null_id();
+        let metadata = b"copy: orig.txt\ncopyrev: aa\n";
+
+        let mut expected = Vec::new();
+        expected.extend_from_slice(p1.as_ref());
+        expected.extend_from_slice(p2.as_ref());
+        expected.extend_from_slice(b"\x01\n");
+        expected.extend_from_slice(metadata);
+        expected.extend_from_slice(b"\x01\n");
+        expected.extend_from_slice(content);
+
+        let expected_id = compute_sha1(&expected);
+
+        let token = UploadToken {
+            data: UploadTokenData {
+                id: AnyId::AnyFileContentId(hgid_to_content_sha1(content_id)),
+                bubble_id: None,
+                metadata: None,
+            },
+            signature: Default::default(),
+        };
+
+        let data = HgFilenodeData {
+            node_id: expected_id,
+            parents: Parents::new(p1, p2),
+            file_content_upload_token: token,
+            metadata: metadata.to_vec(),
+        };
+
+        let resp = SaplingRemoteApi::upload_filenodes_batch(&repo, vec![data])
+            .await
+            .unwrap();
+        let entries: Vec<_> = resp.entries.collect::<Vec<_>>().await;
+        assert_eq!(entries.len(), 1);
+        assert!(entries[0].is_ok());
+    }
+
+    // Invariant: empty metadata + body not starting with '\x01\n' produces no header wrapper
+    #[tokio::test]
+    async fn test_upload_filenodes_batch_no_header() {
+        let dir = tempfile::tempdir().unwrap();
+        let repo = EagerRepo::open(dir.path()).unwrap();
+
+        let content = b"plain content no marker";
+        let content_id = repo.add_sha1_blob(content).unwrap();
+        repo.flush().await.unwrap();
+
+        let p1 = *HgId::null_id();
+        let p2 = *HgId::null_id();
+
+        let mut expected = Vec::new();
+        expected.extend_from_slice(p1.as_ref());
+        expected.extend_from_slice(p2.as_ref());
+        expected.extend_from_slice(content);
+
+        let expected_id = compute_sha1(&expected);
+
+        let token = UploadToken {
+            data: UploadTokenData {
+                id: AnyId::AnyFileContentId(hgid_to_content_sha1(content_id)),
+                bubble_id: None,
+                metadata: None,
+            },
+            signature: Default::default(),
+        };
+
+        let data = HgFilenodeData {
+            node_id: expected_id,
+            parents: Parents::new(p1, p2),
+            file_content_upload_token: token,
+            metadata: Vec::new(),
+        };
+
+        let resp = SaplingRemoteApi::upload_filenodes_batch(&repo, vec![data])
+            .await
+            .unwrap();
+        let entries: Vec<_> = resp.entries.collect::<Vec<_>>().await;
+        assert_eq!(entries.len(), 1);
+        assert!(entries[0].is_ok());
+    }
+}
