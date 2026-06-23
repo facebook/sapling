@@ -536,14 +536,10 @@ fn test_truncate() {
                 let expected = if rev < 1 { "" } else { &texts[rev - 1] };
                 assert_eq!(text, expected, "truncate={truncate_rev}, rev={rev}");
             } else {
-                let expected = if truncate_rev <= 1 {
-                    ""
-                } else {
-                    &texts[truncate_rev - 2]
-                };
+                let expected = "";
                 assert_eq!(
                     text,
-                    log.checkout_text(truncate_rev.saturating_sub(1)),
+                    truncated.checkout_text(rev),
                     "truncate={truncate_rev}, rev={rev}"
                 );
                 assert_eq!(text, expected, "truncate={truncate_rev}, rev={rev}");

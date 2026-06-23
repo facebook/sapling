@@ -741,10 +741,12 @@ impl<T> AbstractLineLog<T> {
                 }
             })
             .collect();
+        let dag = self.dag.truncate(rev);
 
         Self {
             code,
             max_rev,
+            dag,
             a_lines_cache: None,
             deps_map_cache: Default::default(),
             ..self
