@@ -14,7 +14,7 @@ from unittest.mock import patch
 
 import eden.fs.cli.doctor as doctor
 from eden.fs.cli.config import EdenInstance
-from eden.fs.cli.doctor.problem import ProblemBase, ProblemTracker
+from eden.fs.cli.doctor.problem import ProblemBase
 from eden.fs.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
 from eden.fs.cli.doctor.test.lib.fake_fs_util import FakeFsUtil
 from eden.fs.cli.doctor.test.lib.problem_collector import ProblemCollector
