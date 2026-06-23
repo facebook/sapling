@@ -396,8 +396,11 @@ fn test_remap_revs_reorder_insertions() {
     let log = log_from_texts(&["a\n".into(), "a\nb\n".into(), "a\nb\nc\n".into()]);
 
     let dep_map = log.dep_map();
+    // Those append-only changes are considered independent.
+    // Not depending on `0` - `0` used to be the "root" that other appends
+    // depend on. But with non-linear (dag) linelog, `0` is no longer special.
     for rev in 1..=3 {
-        assert_eq!(dep_map.parents(rev), &[0][..], "rev={rev}");
+        assert_eq!(dep_map.parents(rev), [], "rev={rev}");
     }
 
     let swapped = log.remap_revs(&|r| match r {
@@ -469,7 +472,7 @@ fn test_reorder_insertions(lines: &[&str], line_added_order: &[usize]) {
     // Verify dep map.
     let deps = log.dep_map();
     assert!(
-        deps.iter().all(|(rev, deps)| rev == 0 || deps == [0]),
+        deps.iter().all(|(_rev, deps)| deps.is_empty()),
         "order={line_added_order:?}"
     );
 
@@ -655,29 +658,46 @@ fn test_dep_map() {
 
     assert_eq!(deps(&[]).to_string(), "0");
 
-    // Insertions.
-    assert_eq!(deps(&["a"]).to_string(), "0-1");
+    // rev 1 introduces initial content, it is dependent-free.
+    assert_eq!(deps(&["a"]).to_string(), "{0,1}");
     // rev 2 "b" deletes "a" (rev 1) and adds "b", depends on rev 1.
-    assert_eq!(deps(&["a", "b"]).to_string(), "0-1-2");
+    assert_eq!(deps(&["a", "b"]).to_string(), "{0,1-2}");
     // rev 2 appends "b", do not depend on rev 1 (free to reorder).
-    assert_eq!(deps(&["a", "ab"]).to_string(), "0-{1,2}");
+    assert_eq!(deps(&["a", "ab"]).to_string(), "{0,1,2}");
     // rev 2 inserts "b", do not depend on rev 1 (free to reorder).
-    assert_eq!(deps(&["b", "ab"]).to_string(), "0-{1,2}");
+    assert_eq!(deps(&["b", "ab"]).to_string(), "{0,1,2}");
     // rev 3 inserts "b" or "c", next to rev 2, in the middle of rev 1, only depends on rev 1.
-    assert_eq!(deps(&["ad", "abd", "abcd"]).to_string(), "0-1-{2,3}");
-    assert_eq!(deps(&["ad", "acd", "abcd"]).to_string(), "0-1-{2,3}");
+    assert_eq!(deps(&["ad", "abd", "abcd"]).to_string(), "{0,1-{2,3}}");
+    assert_eq!(deps(&["ad", "acd", "abcd"]).to_string(), "{0,1-{2,3}}");
+
+    // rev 0 can still be depended on, if its content is not empty.
+    {
+        let log = record_text(
+            record_text(LineLog::default(), "a\nc\n", 0, 0),
+            "a\nb\nc\n",
+            0,
+            1,
+        );
+        assert_eq!(log.dep_map().to_string(), "0-1");
+    }
 
     // Deletions.
     // rev 2, 3, 4 each delects one character from "abcd", rev 1.
     // rev 2, 3, 4 do not depend on each other, but all depend on rev 1.
-    assert_eq!(deps(&["abcd", "abd", "ad", "a"]).to_string(), "0-1-{2,3,4}");
-    assert_eq!(deps(&["abcd", "acd", "ad", "d"]).to_string(), "0-1-{2,3,4}");
+    assert_eq!(
+        deps(&["abcd", "abd", "ad", "a"]).to_string(),
+        "{0,1-{2,3,4}}"
+    );
+    assert_eq!(
+        deps(&["abcd", "acd", "ad", "d"]).to_string(),
+        "{0,1-{2,3,4}}"
+    );
 
     // Multi-rev insertion, then delete.
     // rev 3 deletes both parts of rev 1, and rev 2, so depends on both.
-    assert_eq!(deps(&["abc", "abcdef", ""]).to_string(), "0-{1,2}-3",);
-    assert_eq!(deps(&["abc", "abcdef", "af"]).to_string(), "0-{1,2}-3");
-    assert_eq!(deps(&["abc", "abcdef", "cd"]).to_string(), "0-{1,2}-3");
+    assert_eq!(deps(&["abc", "abcdef", ""]).to_string(), "{0,1-3,2-3}",);
+    assert_eq!(deps(&["abc", "abcdef", "af"]).to_string(), "{0,1-3,2-3}");
+    assert_eq!(deps(&["abc", "abcdef", "cd"]).to_string(), "{0,1-3,2-3}");
 
     // Complex 9-rev scenario.
     let text_list = [
@@ -693,7 +713,7 @@ fn test_dep_map() {
         // rev 7: deletes "f" added by rev 6
         // rev 8: inserts "1" between "d" (rev 2) and "e" (rev 6), independent
         // rev 9: replace all, depends on [1, 2, 4, 6, 8]
-        "0-{1-{4,}-9,2-9,3-5,6-{7,9},8-9}",
+        "{0,1-{4,}-9,2-9,3-5,6-{7,9},8-9}",
     );
 }
 
@@ -861,9 +881,9 @@ fn test_block_shift_effectiveness() {
     assert_eq!(
         depends,
         [
-            "DepMap(0-{1,2,3}): [0, 5, 10]",
-            "DepMap(0-{1,2-3}): [6, 7, 8, 9]",
-            "DepMap(0-{1-3,2}): [1, 2, 3, 4]"
+            "DepMap({0,1,2,3}): [0, 5, 10]",
+            "DepMap({0,1,2-3}): [6, 7, 8, 9]",
+            "DepMap({0,1-3,2}): [1, 2, 3, 4]"
         ]
     );
 
@@ -872,7 +892,7 @@ fn test_block_shift_effectiveness() {
     let depends = calculate_depends(flags);
     assert_eq!(
         depends,
-        ["DepMap(0-{1,2,3}): [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]"]
+        ["DepMap({0,1,2,3}): [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]"]
     );
 
     // BLOCK_SHIFT is enabled by default.
@@ -897,7 +917,7 @@ fn test_block_shift_overflow() {
             .clone()
             .edit_chunk(1, a1, a1, 1, vec![""], EditFlags::default());
         let dep = log.dep_map();
-        assert!(dep.iter().all(|(rev, deps)| rev == 0 || deps == [0]))
+        assert!(dep.iter().all(|(_rev, deps)| deps.is_empty()))
     }
 }
 

@@ -26,9 +26,22 @@ pub struct FlattenLine<T> {
     pub revs: SmallRevs,
 }
 
+#[derive(Eq, PartialEq, Clone, Copy)]
 pub(crate) struct Frame {
     pub(crate) rev: Rev,
     end_pc: Pc,
+}
+
+impl Frame {
+    /// A "virtual" frame that serves as a placeholder, like a parent of everything.
+    const ROOT: Frame = Frame {
+        rev: 0,
+        end_pc: Pc::MAX,
+    };
+
+    fn is_root(&self) -> bool {
+        *self == Self::ROOT
+    }
 }
 
 /// Callbacks for `visit_with_ins_del_stacks`. All methods are no-ops by
@@ -176,7 +189,7 @@ impl<T> AbstractLineLog<T> {
         impl<T> StackVisitor<T> for DepMapVisitor {
             fn on_conditional_jump(&mut self, rev: Rev, ins_stack: &[Frame], del_stack: &[Frame]) {
                 // rev depends on the outer insertion (parent).
-                if let Some(parent) = ins_stack.last().map(|f| f.rev) {
+                if let Some(parent) = ins_stack.last().filter(|f| !f.is_root()).map(|f| f.rev) {
                     if rev > parent {
                         self.add_edge(parent, rev);
                     }
@@ -303,10 +316,7 @@ impl<T> AbstractLineLog<T> {
         // redundant as it can be inferred from JL, with an ins_stack. Note in the
         // original C implementation of LineLog the LINE rev can be different from
         // the JL rev, to deal with merges while maintaining a linear history.
-        let mut ins_stack = vec![Frame {
-            rev: 0,
-            end_pc: usize::MAX,
-        }];
+        let mut ins_stack = vec![Frame::ROOT];
         let mut del_stack: Vec<Frame> = Vec::new();
         let mut pc = 0;
         let mut patience = self.code.len() * 2;
