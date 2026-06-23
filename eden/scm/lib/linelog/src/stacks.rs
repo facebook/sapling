@@ -190,7 +190,7 @@ impl<T> AbstractLineLog<T> {
             }
         }
 
-        let mut visitor = DepMapVisitor(NanoDag::default());
+        let mut visitor = DepMapVisitor(NanoDag::default().truncate(self.dag.len()));
         self.visit_with_ins_del_stacks(&mut visitor);
         visitor.0
     }

@@ -584,7 +584,7 @@ fn test_non_linear_merged_rev() {
         .with_dag_edge(2, 3)
         .with_dag_edge(1, 3);
     assert_eq!(log.nanodag().to_string(), "0-{1,2}-3");
-    assert_eq!(log.dep_map().to_string(), "0-{1,2}");
+    assert_eq!(log.dep_map().to_string(), "{0-{1,2},3}");
     assert_eq!(log.checkout_text(0), "acdf"); // rev 0, orig content
     assert_eq!(log.checkout_text(1), "bbcdf"); // rev 1 replaced "a" with "bb"
     assert_eq!(log.checkout_text(2), "aceef"); // rev 2 replaced "d" with "ee", without rev 1 "bb"
@@ -653,7 +653,7 @@ fn test_dep_map() {
         log.dep_map().clone()
     };
 
-    assert_eq!(deps(&[]).to_string(), "");
+    assert_eq!(deps(&[]).to_string(), "0");
 
     // Insertions.
     assert_eq!(deps(&["a"]).to_string(), "0-1");
