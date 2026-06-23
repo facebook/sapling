@@ -23,7 +23,6 @@ use crate::small_revs::SmallRevs;
 /// See https://sapling-scm.com/docs/internals/linelog for details.
 pub struct AbstractLineLog<T> {
     pub(crate) code: ImVec<Inst<T>>,
-    pub(crate) max_rev: Rev,
     pub(crate) dag: NanoDag,
 
     a_lines_cache: Option<(Rev, ImVec<LineInfo<T>>)>,
@@ -46,7 +45,6 @@ impl<T> Clone for AbstractLineLog<T> {
     fn clone(&self) -> Self {
         Self {
             code: self.code.clone(),
-            max_rev: self.max_rev(),
             dag: self.dag.clone(),
             a_lines_cache: self.a_lines_cache.clone(),
             deps_map_cache: self.deps_map_cache.clone(),
@@ -113,7 +111,6 @@ impl<T> Default for AbstractLineLog<T> {
                 v.push_back(Inst::END);
                 v
             },
-            max_rev: 0,
             dag: NanoDag::default().with_edge(0, 0),
             a_lines_cache: None,
             deps_map_cache: OnceLock::new(),
@@ -125,14 +122,7 @@ impl<T> Default for AbstractLineLog<T> {
 impl<T> AbstractLineLog<T> {
     /// Get the maximum rev (inclusive).
     pub fn max_rev(&self) -> Rev {
-        assert_eq!(
-            self.max_rev,
-            self.dag.len().saturating_sub(1),
-            "max_rev {} does not match dag length {}",
-            self.max_rev,
-            self.dag.len()
-        );
-        self.max_rev
+        self.dag.len().saturating_sub(1)
     }
 
     /// Attach a `PerfStats` struct to analyse cache statistics.
@@ -192,7 +182,6 @@ impl<T: Default + PartialEq> AbstractLineLog<T> {
         flags: EditFlags,
     ) -> Self {
         let old_max_rev = self.max_rev();
-        let new_max_rev = old_max_rev.max(b_rev);
         assert!(
             a_rev <= old_max_rev,
             "a_rev {a_rev} must not be greater than max_rev {old_max_rev}"
@@ -215,16 +204,15 @@ impl<T: Default + PartialEq> AbstractLineLog<T> {
                 );
             };
             debug_assert!(this.dag.all().contains(b_rev));
-            this.edit_chunk_internal(a1, a2, b_rev, new_max_rev, b_lines, maybe_mut)
+            this.edit_chunk_internal(a1, a2, b_rev, b_lines, maybe_mut)
         })
     }
 
     /// Add an edge in the dag without changing the linelog instructions.
     /// See [`NanoDag::with_edge`].
     /// Panics if `a_rev` > `b_rev`.
-    /// Bumps `max_rev` if `b_rev` > `max_rev`.
+    /// Resizes the dag if `b_rev` is greater than the current `max_rev`.
     pub fn with_dag_edge(self, a_rev: Rev, b_rev: Rev) -> Self {
-        let max_rev = self.max_rev().max(b_rev);
         let mut a_lines_cache = self.a_lines_cache;
         let new_dag = self.dag.with_edge(a_rev, b_rev);
         if let Some((cached_rev, _)) = &a_lines_cache {
@@ -235,7 +223,6 @@ impl<T: Default + PartialEq> AbstractLineLog<T> {
         }
         Self {
             dag: new_dag,
-            max_rev,
             a_lines_cache,
             deps_map_cache: Default::default(),
             ..self
@@ -447,7 +434,6 @@ impl<T: Default + PartialEq> AbstractLineLog<T> {
         a1: LineIdx,
         a2: LineIdx,
         b_rev: Rev,
-        max_rev: Rev,
         b_lines: VecDeque<Arc<T>>,
         mut a_lines: MaybeMut<ImVec<LineInfo<T>>>,
     ) -> Self {
@@ -456,7 +442,6 @@ impl<T: Default + PartialEq> AbstractLineLog<T> {
 
         if a1 == a2 && b_lines.is_empty() {
             return Self {
-                max_rev,
                 dag: self.dag.with_edge(b_rev, b_rev),
                 ..self
             };
@@ -599,7 +584,6 @@ impl<T: Default + PartialEq> AbstractLineLog<T> {
 
         Self {
             code,
-            max_rev,
             a_lines_cache: None,
             deps_map_cache: Default::default(),
             ..self
@@ -716,7 +700,6 @@ impl<T> AbstractLineLog<T> {
 
         Self {
             code,
-            max_rev,
             dag: self.dag.truncate(max_rev + 1),
             a_lines_cache: None,
             deps_map_cache: Default::default(),
@@ -736,7 +719,6 @@ impl<T> AbstractLineLog<T> {
 
     /// Truncate linelog. Drop revs >= the given `rev`.
     pub fn truncate(self, rev: Rev) -> Self {
-        let mut max_rev = 0;
         let code = self
             .code
             .into_iter()
@@ -744,19 +726,13 @@ impl<T> AbstractLineLog<T> {
             .map(|(pc, inst)| match inst {
                 Inst::JGE(r, _) | Inst::LINE(r, _) if r >= rev => Inst::J(pc + 1),
                 Inst::JL(r, target) if r >= rev => Inst::J(target),
-                other => {
-                    if let Inst::JGE(r, _) | Inst::JL(r, _) | Inst::LINE(r, _) = &other {
-                        max_rev = max_rev.max(*r);
-                    }
-                    other
-                }
+                other => other,
             })
             .collect();
         let dag = self.dag.truncate(rev);
 
         Self {
             code,
-            max_rev,
             dag,
             a_lines_cache: None,
             deps_map_cache: Default::default(),
