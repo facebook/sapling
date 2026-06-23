@@ -147,6 +147,12 @@ impl LoggingArgs {
             // These are useful in production but noise in integration tests
             // where every foreground CLI command would emit them.
             builtins.push("mononoke_configs=WARN".parse()?);
+
+            // Suppress futures_watchdog "Slow poll()" warnings in test mode.
+            // The 500ms default poll threshold is borderline for blobstore and
+            // repo construction on loaded devservers/ondemand hosts, so these
+            // fire nondeterministically and break `.t` output comparisons.
+            builtins.push("futures_watchdog=ERROR".parse()?);
         }
 
         let filter = match std::env::var("RUST_LOG") {
