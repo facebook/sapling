@@ -351,16 +351,38 @@ impl<T: Default + PartialEq> AbstractLineLog<T> {
             }
         }
 
-        self.execute(&SmallRevs::from(rev), None)
+        self.execute(rev)
     }
 
     /// Checkout the lines that are visible in any of the given target revisions.
     pub fn checkout_revs_lines(&self, target_revs: &SmallRevs) -> ImVec<LineInfo<T>> {
-        let head_revs = self.dag.heads(target_revs);
-        let lines = self.execute(&head_revs, None);
-        let present_pc_set = lines.into_iter().map(|l| l.pc).collect::<HashSet<Pc>>();
-        let is_present = move |pc| present_pc_set.contains(&pc);
-        self.execute(target_revs, Some(Box::new(is_present)))
+        let get_insert_and_delete_revs = |target_revs: &SmallRevs| -> (SmallRevs, SmallRevs) {
+            // A line inserted in any target rev should be included, but a deletion
+            // only hides the line if it is effective in every target rev.
+            let mut insert_revs = SmallRevs::empty();
+            let mut delete_revs: Option<SmallRevs> = None;
+            for target_rev in target_revs.iter() {
+                let ancestors = self.dag.ancestors(target_rev);
+                insert_revs.union_with(ancestors);
+                match delete_revs.as_mut() {
+                    Some(delete_revs) => delete_revs.intersect_with(ancestors),
+                    None => delete_revs = Some(ancestors.clone()),
+                }
+            }
+            let delete_revs = delete_revs.unwrap_or_else(SmallRevs::empty);
+            (insert_revs, delete_revs)
+        };
+
+        let is_present = {
+            let head_revs = self.dag.heads(target_revs);
+            let (insert_revs, delete_revs) = get_insert_and_delete_revs(&head_revs);
+            let lines = self.execute_advanced(&insert_revs, &delete_revs, None);
+            let present_pc_set = lines.into_iter().map(|l| l.pc).collect::<HashSet<Pc>>();
+            move |pc| present_pc_set.contains(&pc)
+        };
+
+        let (insert_revs, delete_revs) = get_insert_and_delete_revs(target_revs);
+        self.execute_advanced(&insert_revs, &delete_revs, Some(Box::new(is_present)))
     }
 
     /// Prepare and update a_lines_cache for edit_chunk_internal
@@ -395,7 +417,7 @@ impl<T: Default + PartialEq> AbstractLineLog<T> {
             }
             _ => None,
         })
-        .unwrap_or_else(|| self.execute(&SmallRevs::from(a_rev), None));
+        .unwrap_or_else(|| self.execute(a_rev));
 
         // Can only update cache if there are no possible edits between a_rev and b_rev.
         // It could be a_rev == b_rev, or parents(b_rev) == [a_rev] && a_rev >= max_rev
@@ -414,10 +436,7 @@ impl<T: Default + PartialEq> AbstractLineLog<T> {
         if can_update_cache {
             #[cfg(debug_assertions)]
             {
-                let fresh_lines = result
-                    .clone()
-                    .with_perf_stats(None)
-                    .execute(&SmallRevs::from(b_rev), None);
+                let fresh_lines = result.clone().with_perf_stats(None).execute(b_rev);
                 assert!(fresh_lines == a_lines);
             }
             result.a_lines_cache = Some((b_rev, a_lines));
@@ -590,27 +609,10 @@ impl<T: Default + PartialEq> AbstractLineLog<T> {
         }
     }
 
-    // private because of `present`. no caching.
-    fn execute(
-        &self,
-        target_revs: &SmallRevs,
-        present: Option<Box<dyn Fn(Pc) -> bool>>,
-    ) -> ImVec<LineInfo<T>> {
-        // A line inserted in any target rev should be included, but a deletion
-        // only hides the line if it is effective in every target rev.
-        let mut insert_revs = SmallRevs::empty();
-        let mut delete_revs: Option<SmallRevs> = None;
-        for target_rev in target_revs.iter() {
-            let ancestors = self.dag.ancestors(target_rev);
-            insert_revs.union_with(ancestors);
-            match delete_revs.as_mut() {
-                Some(delete_revs) => delete_revs.intersect_with(ancestors),
-                None => delete_revs = Some(ancestors.clone()),
-            }
-        }
-        let delete_revs = delete_revs.unwrap_or_else(SmallRevs::empty);
-
-        self.execute_advanced(&insert_revs, &delete_revs, present)
+    // private, no caching.
+    fn execute(&self, rev: Rev) -> ImVec<LineInfo<T>> {
+        let revs = self.dag.ancestors(rev);
+        self.execute_advanced(revs, revs, None)
     }
 
     /// Advanced version of `execute` that takes insert_revs and delete_revs
