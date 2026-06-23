@@ -228,6 +228,7 @@ pub trait MononokeIdentitySetExt {
 /// impl of [`MononokeIdentitySetExt::client_category`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ClientCategory {
+    HealthCheck,
     InteractiveDev,
     DevEnv,
     CiSandcastle,
@@ -238,6 +239,7 @@ pub enum ClientCategory {
 impl ClientCategory {
     pub fn as_str(&self) -> &'static str {
         match self {
+            Self::HealthCheck => "health_check",
             Self::InteractiveDev => "interactive_dev",
             Self::DevEnv => "dev_env",
             Self::CiSandcastle => "ci_sandcastle",
