@@ -706,7 +706,7 @@ impl<T> AbstractLineLog<T> {
         Self {
             code,
             max_rev,
-            dag: self.dag.with_edge(max_rev, max_rev),
+            dag: self.dag.truncate(max_rev + 1),
             a_lines_cache: None,
             deps_map_cache: Default::default(),
             ..self

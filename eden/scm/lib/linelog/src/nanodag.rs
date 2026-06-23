@@ -316,10 +316,15 @@ impl NanoDag {
         }
     }
 
-    /// Keep only revs below `len`.
+    /// Resize the dag to `len`.
+    ///
+    /// If `len` is larger than the current length, append isolated revs with
+    /// no parents.
     pub fn truncate(mut self, len: usize) -> Self {
-        if len >= self.len() {
+        if len == self.len() {
             return self;
+        } else if len > self.len() {
+            return self.with_edge(len - 1, len - 1);
         }
 
         let parents = self.parents.slice(..len);
@@ -819,6 +824,25 @@ mod tests {
         let empty = truncated.truncate(0);
         assert_eq!(empty.parents(0), [].as_slice());
         assert_eq!(revs_vec(&empty.heads(&empty.all())), vec![]);
+    }
+
+    #[test]
+    fn test_truncate_can_extend_with_empty_revs() {
+        let dag = NanoDag::from_edges(2, &[(0, 1)]);
+        assert_eq!(revs_vec(dag.descendants(0)), vec![0, 1]);
+
+        let extended = dag.clone().truncate(4);
+
+        assert_eq!(dag.to_string(), "0-1");
+        assert!(dag.cache.get().is_some());
+        assert_eq!(extended.to_string(), "{0-1,2,3}");
+        assert_eq!(extended.parents(2), [].as_slice());
+        assert_eq!(extended.parents(3), [].as_slice());
+        assert!(extended.children(2).is_empty());
+        assert!(extended.children(3).is_empty());
+        assert_eq!(revs_vec(extended.ancestors(3)), vec![3]);
+        assert_eq!(revs_vec(extended.descendants(3)), vec![3]);
+        assert!(extended.cache.get().is_some());
     }
 
     #[test]
