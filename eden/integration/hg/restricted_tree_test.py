@@ -21,7 +21,7 @@ from eden.fs.service.eden.thrift_types import (
     SyncBehavior,
 )
 from eden.integration.hg.lib.hg_extension_test_base import EdenHgTestCase, hg_test
-from eden.integration.lib import edenclient, hgrepo
+from eden.integration.lib import hgrepo
 from eden.integration.lib.eagerrepo import EagerRepo
 
 
