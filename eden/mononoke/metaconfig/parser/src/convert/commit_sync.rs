@@ -98,7 +98,7 @@ fn validate_common_commit_sync_config(
         .collect();
 
     // No two small repos can have the bookmark prefix as prefix of another
-    for (first_prefix, second_prefix) in bookmark_prefixes.iter().tuple_combinations::<(_, _)>() {
+    for [first_prefix, second_prefix] in bookmark_prefixes.iter().array_combinations::<2>() {
         let fp = first_prefix.as_str();
         let sp = second_prefix.as_str();
         if fp.starts_with(sp) || sp.starts_with(fp) {
