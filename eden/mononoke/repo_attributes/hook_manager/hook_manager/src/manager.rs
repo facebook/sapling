@@ -308,7 +308,7 @@ impl HookManager {
             }
             None => {
                 // Fallback to pusher identities if author is unavailable
-                // or unparseable
+                // or unparsable
                 self.check_membership(hook, ctx.metadata().identities(), bypass_reason)
                     .await
             }
@@ -986,6 +986,17 @@ mod test {
 
         let r = get_bypassed_by_commit_msg_reason(Some(&bypass), "foo @mybypass bar");
         assert!(r.is_some());
+    }
+
+    #[mononoke::test]
+    fn test_extract_identity_from_bot_author() {
+        // FIXME: bot author "noreply+<FBID>@fb.com" should resolve to FBID:<FBID>,
+        // but the parser currently returns the whole local-part as a junk unixname.
+        let author = "CleanupArcCallConduit Bot <noreply+2796533067383049@fb.com>";
+        assert_eq!(
+            extract_unixname_from_author(author),
+            Some("noreply+2796533067383049"),
+        );
     }
 
     #[mononoke::test]
