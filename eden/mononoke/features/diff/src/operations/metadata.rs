@@ -6,12 +6,12 @@
  */
 
 use std::ops::Range;
+use std::sync::LazyLock;
 
 use anyhow::Context;
 use bytes::Bytes;
 use context::CoreContext;
 use futures::try_join;
-use lazy_static::lazy_static;
 use mononoke_types::ContentId;
 use mononoke_types::ContentMetadataV2;
 #[cfg(test)]
@@ -35,12 +35,10 @@ use crate::utils::whitespace::strip_horizontal_whitespace;
 
 // This logic comes from `mononoke_api/src/changeset_path_diff.rs`
 
-lazy_static! {
-    static ref BEGIN_MANUAL_SECTION_REGEX: Regex =
-        Regex::new(r"^(\s|[[:punct:]])*BEGIN MANUAL SECTION").unwrap();
-    static ref END_MANUAL_SECTION_REGEX: Regex =
-        Regex::new(r"^(\s|[[:punct:]])*END MANUAL SECTION").unwrap();
-}
+static BEGIN_MANUAL_SECTION_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^(\s|[[:punct:]])*BEGIN MANUAL SECTION").unwrap());
+static END_MANUAL_SECTION_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^(\s|[[:punct:]])*END MANUAL SECTION").unwrap());
 
 #[derive(Clone, Debug)]
 enum FileGeneratedSpan {

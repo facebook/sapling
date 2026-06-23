@@ -43,7 +43,6 @@ use hyper_util::rt::TokioExecutor;
 use hyper_util::rt::TokioIo;
 use hyper_util::server::conn::auto::Builder as ServerBuilder;
 use hyper_util::service::TowerToHyperService;
-use lazy_static::lazy_static;
 use metaconfig_types::CommonConfig;
 use metadata::Metadata;
 use mononoke_api::Mononoke;
@@ -103,9 +102,7 @@ impl<T> MononokeStream for T where T: AsyncRead + AsyncWrite + Unpin + Send + Sy
 
 const KEEP_ALIVE_INTERVAL: Duration = Duration::from_millis(5000);
 const CHUNK_SIZE: usize = 10000;
-lazy_static! {
-    static ref OPEN_CONNECTIONS: AtomicUsize = AtomicUsize::new(0);
-}
+static OPEN_CONNECTIONS: AtomicUsize = AtomicUsize::new(0);
 
 pub async fn wait_for_connections_closed() {
     loop {

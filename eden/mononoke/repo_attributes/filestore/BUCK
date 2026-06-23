@@ -10,7 +10,6 @@ rust_library(
     },
     test_deps = [
         "fbsource//third-party/rust:assert_matches",
-        "fbsource//third-party/rust:lazy_static",
         "fbsource//third-party/rust:quickcheck",
         "fbsource//third-party/rust:rand",
         "fbsource//third-party/rust:tokio",

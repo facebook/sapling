@@ -22,6 +22,7 @@ use std::path::PathBuf;
 use std::str;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::sync::LazyLock;
 use std::time::Duration;
 
 use anyhow::Context;
@@ -52,9 +53,8 @@ use sql::mysql;
 use sql::mysql_async::FromValueError;
 use sql::mysql_async::Value;
 
-lazy_static::lazy_static! {
-    static ref KNOWN_REGEXES: RwLock<HashMap<String, Arc<Regex>>> = RwLock::new(HashMap::new());
-}
+static KNOWN_REGEXES: LazyLock<RwLock<HashMap<String, Arc<Regex>>>> =
+    LazyLock::new(|| RwLock::new(HashMap::new()));
 
 /// A Regex that can be compared against other Regexes.
 ///

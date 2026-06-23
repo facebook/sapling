@@ -15,6 +15,8 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::ops::RangeBounds;
 use std::sync::Arc;
+#[cfg(fbcode_build)]
+use std::sync::LazyLock;
 use std::sync::RwLock;
 use std::time::Duration;
 
@@ -77,8 +79,6 @@ use git_types::MappedGitCommitId;
 use git_types::RootGitDeltaManifestV2Id;
 use inferred_copy_from::RootInferredCopyFromId;
 use itertools::Itertools;
-#[cfg(fbcode_build)]
-use lazy_static::lazy_static;
 use lock_ext::RwLockExt;
 use mercurial_derivation::MappedHgChangesetId;
 use mercurial_derivation::RootHgAugmentedManifestId;
@@ -106,10 +106,8 @@ pub use warmers::create_derived_data_warmer;
 pub use warmers::create_public_phase_warmer;
 
 #[cfg(fbcode_build)]
-lazy_static! {
-    static ref WBC_INSTRUMENT: Instrument_MononokeWarmBookmarkCacheStats =
-        Instrument_MononokeWarmBookmarkCacheStats::new();
-}
+static WBC_INSTRUMENT: LazyLock<Instrument_MononokeWarmBookmarkCacheStats> =
+    LazyLock::new(Instrument_MononokeWarmBookmarkCacheStats::new);
 
 define_stats! {
     prefix = "mononoke.warm_bookmarks_cache";

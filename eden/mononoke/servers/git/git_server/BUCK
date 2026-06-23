@@ -104,7 +104,6 @@ rust_binary(
         if rust_oss.is_oss_build()
         else [
             "fbsource//third-party/rust:hex",
-            "fbsource//third-party/rust:lazy_static",
             "//eden/mononoke/common/facebook/thrift_client:thrift_client",
             "//eden/mononoke/facebook/ods3_schemas:MononokeGitRequest_ods3-rs_bindings",
             "//scm/grepo/if:aosp_service-rust-clients",

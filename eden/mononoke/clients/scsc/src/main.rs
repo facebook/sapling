@@ -13,6 +13,7 @@ use std::env;
 use std::io::IsTerminal;
 use std::io::stderr;
 use std::process::ExitCode;
+use std::sync::LazyLock;
 
 use ansi_term::Colour;
 use base_app::BaseApp;
@@ -37,34 +38,33 @@ pub(crate) mod util;
 const SCSC_ADMIN_ENABLED_ENV: &str = "SCSC_ADMIN_ENABLED";
 const SCSC_PRINT_CORRELATOR_ENV: &str = "SCSC_PRINT_CORRELATOR";
 
-lazy_static::lazy_static! {
-    static ref SHORT_VERSION: String = {
-        #[cfg(target_os = "windows")]
-        {
-            String::from("for Windows")
-        }
-        #[cfg(not(target_os = "windows"))]
-        {
-            use build_info::BuildInfo;
-            format!(
-                "{}-{}",
-                BuildInfo::get_package_version(),
-                BuildInfo::get_package_release(),
-            )
-        }
-    };
-    static ref LONG_VERSION: String = {
-        #[cfg(target_os = "windows")]
-        {
-            String::from("(BuildInfo not available on Windows)")
-        }
-        #[cfg(not(target_os = "windows"))]
-        {
-            use build_info::BuildInfo;
-            format!("{BuildInfo:#?}")
-        }
-    };
-}
+static SHORT_VERSION: LazyLock<String> = LazyLock::new(|| {
+    #[cfg(target_os = "windows")]
+    {
+        String::from("for Windows")
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        use build_info::BuildInfo;
+        format!(
+            "{}-{}",
+            BuildInfo::get_package_version(),
+            BuildInfo::get_package_release(),
+        )
+    }
+});
+
+static LONG_VERSION: LazyLock<String> = LazyLock::new(|| {
+    #[cfg(target_os = "windows")]
+    {
+        String::from("(BuildInfo not available on Windows)")
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        use build_info::BuildInfo;
+        format!("{BuildInfo:#?}")
+    }
+});
 
 pub(crate) struct ScscApp {
     matches: ArgMatches,

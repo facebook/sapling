@@ -44,7 +44,6 @@ gix-hash = { version = "0.25.1", features = ["sha1"] }
 hooks = { version = "0.1.0", path = "../../../features/hooks" }
 itertools = "0.15.0"
 justknobs_ext = { version = "0.1.0", path = "../../../common/rust/justknobs_ext" }
-lazy_static = "1.5"
 maplit = "1.0"
 megarepo_api = { version = "0.1.0", path = "../../../megarepo_api" }
 megarepo_config = { version = "0.1.0", path = "../../../megarepo_api/megarepo_config" }

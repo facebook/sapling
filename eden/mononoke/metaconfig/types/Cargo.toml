@@ -15,7 +15,6 @@ bookmarks_types = { version = "0.1.0", path = "../../repo_attributes/bookmarks/b
 clap = { version = "4.6.0", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 derive_more = { version = "1.0.0", features = ["full"] }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main", features = ["impl_never_type"] }
-lazy_static = "1.5"
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 mysql_common = { version = "0.31.0", features = ["chrono", "default"] }
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }

@@ -7,9 +7,9 @@
 
 use std::fmt;
 use std::str::FromStr;
+use std::sync::LazyLock;
 
 use anyhow::Error;
-use lazy_static::lazy_static;
 use quickcheck_arbitrary_derive::Arbitrary;
 use regex::Regex;
 use serde_derive::Deserialize;
@@ -26,19 +26,19 @@ pub const EPH_ID_PREFIX: &str = "eph";
 pub const EPH_ID_SUFFIX: &str = ".";
 pub const EPH_ID_SUFFIX_PATTERN: &str = r"\.";
 
-lazy_static! {
-    /// Matches the repo prefix for repo-specific keys.
-    pub static ref REPO_PREFIX_REGEX: Regex = Regex::new(
-        format!(r"^{REPO_ID_PREFIX}(\d{{3}}\d+){REPO_ID_SUFFIX_PATTERN}"
-    ).as_str()).unwrap();
+/// Matches the repo prefix for repo-specific keys.
+pub static REPO_PREFIX_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(format!(r"^{REPO_ID_PREFIX}(\d{{3}}\d+){REPO_ID_SUFFIX_PATTERN}").as_str()).unwrap()
+});
 
-    /// Matches the ephemeral and repo prefix for repo-specific ephemeral
-    /// keys.
-    pub static ref EPH_REPO_PREFIX_REGEX: Regex = Regex::new(
-        format!(
-            r"^{EPH_ID_PREFIX}(\d+){EPH_ID_SUFFIX_PATTERN}{REPO_ID_PREFIX}(\d{{3}}\d+){REPO_ID_SUFFIX_PATTERN}",
-    ).as_str()).unwrap();
-}
+/// Matches the ephemeral and repo prefix for repo-specific ephemeral
+/// keys.
+pub static EPH_REPO_PREFIX_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+    format!(
+        r"^{EPH_ID_PREFIX}(\d+){EPH_ID_SUFFIX_PATTERN}{REPO_ID_PREFIX}(\d{{3}}\d+){REPO_ID_SUFFIX_PATTERN}",
+).as_str()).unwrap()
+});
 
 /// Represents a repository. This ID is used throughout storage.
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]

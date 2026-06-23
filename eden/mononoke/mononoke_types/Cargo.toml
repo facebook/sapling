@@ -35,7 +35,6 @@ gix-date = "0.15.4"
 gix-hash = { version = "0.25.1", features = ["sha1"] }
 gix-object = "0.60.0"
 itertools = "0.15.0"
-lazy_static = "1.5"
 lfs_protocol = { version = "0.1.0", path = "../common/lfs_protocol" }
 maplit = "1.0"
 mononoke_macros = { version = "0.1.0", path = "../common/mononoke_macros" }

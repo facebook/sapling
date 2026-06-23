@@ -19,7 +19,6 @@ fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 git_types = { version = "0.1.0", path = "../../git/git_types" }
 justknobs_ext = { version = "0.1.0", path = "../../common/rust/justknobs_ext" }
-lazy_static = "1.5"
 manifest = { version = "0.1.0", path = "../../manifest" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_macros = { version = "0.1.0", path = "../../common/mononoke_macros" }

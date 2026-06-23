@@ -47,7 +47,6 @@ rust_library(
         "fbsource//third-party/rust:hyper-util",
         "fbsource//third-party/rust:ipnetwork",
         "fbsource//third-party/rust:itertools",
-        "fbsource//third-party/rust:lazy_static",
         "fbsource//third-party/rust:maplit",
         "fbsource//third-party/rust:regex",
         "fbsource//third-party/rust:serde",

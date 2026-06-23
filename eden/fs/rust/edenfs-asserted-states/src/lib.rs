@@ -10,6 +10,7 @@ use std::fmt;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
+use std::sync::LazyLock;
 use std::time::Duration;
 use std::vec::Vec;
 
@@ -34,15 +35,12 @@ use futures::StreamExt;
 use futures::stream;
 use futures::stream::BoxStream;
 use itertools::Itertools;
-use lazy_static::lazy_static;
 use serde::Serialize;
 use spawn_ext::CommandExt;
 use util::lock::unsanitize_lock_name;
 
-lazy_static! {
-    pub(crate) static ref SCUBA_CLIENT: QueueingScubaLogger =
-        QueueingScubaLogger::new(create_logger("edenfs_client".to_string()), 1000);
-}
+pub(crate) static SCUBA_CLIENT: LazyLock<QueueingScubaLogger> =
+    LazyLock::new(|| QueueingScubaLogger::new(create_logger("edenfs_client".to_string()), 1000));
 
 fn get_sl_exe_path() -> String {
     // TODO: Standardize envvar SL

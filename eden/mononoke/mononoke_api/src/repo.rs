@@ -11,6 +11,8 @@ use std::fmt;
 use std::hash::Hash;
 use std::hash::Hasher;
 use std::sync::Arc;
+#[cfg(fbcode_build)]
+use std::sync::LazyLock;
 use std::sync::Mutex;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
@@ -109,8 +111,6 @@ use git_types::MappedGitCommitId;
 use hook_manager::manager::HookManager;
 use hook_manager::manager::HookManagerArc;
 use itertools::Itertools;
-#[cfg(fbcode_build)]
-use lazy_static::lazy_static;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use mercurial_derivation::MappedHgChangesetId;
 use mercurial_mutation::HgMutationStore;
@@ -196,10 +196,8 @@ pub mod update_submodule_expansion;
 pub use git::upload_non_blob_git_object;
 
 #[cfg(fbcode_build)]
-lazy_static! {
-    static ref API_STATS_INSTRUMENT: Instrument_MononokeApiStats =
-        Instrument_MononokeApiStats::new();
-}
+static API_STATS_INSTRUMENT: LazyLock<Instrument_MononokeApiStats> =
+    LazyLock::new(Instrument_MononokeApiStats::new);
 
 define_stats! {
     prefix = "mononoke.api";

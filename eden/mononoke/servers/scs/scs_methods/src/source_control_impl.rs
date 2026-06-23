@@ -11,6 +11,8 @@ use std::net::IpAddr;
 use std::num::NonZeroU64;
 use std::pin::Pin;
 use std::sync::Arc;
+#[cfg(fbcode_build)]
+use std::sync::LazyLock;
 use std::sync::OnceLock;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
@@ -50,8 +52,6 @@ use futures_stats::TryStreamStats;
 use futures_watchdog::WatchdogExt;
 use git_source_of_truth::GitSourceOfTruthConfig;
 use identity::Identity;
-#[cfg(fbcode_build)]
-use lazy_static::lazy_static;
 use login_objects_thrift::EnvironmentType;
 use megarepo_api::MegarepoApi;
 use memory::MemoryStats;
@@ -108,10 +108,8 @@ const PER_REQUEST_READ_QPS: usize = 4000;
 const PER_REQUEST_WRITE_QPS: usize = 4000;
 
 #[cfg(fbcode_build)]
-lazy_static! {
-    static ref SCS_REQUEST_STATS_INSTRUMENT: Instrument_MononokeScsRequest =
-        Instrument_MononokeScsRequest::new();
-}
+static SCS_REQUEST_STATS_INSTRUMENT: LazyLock<Instrument_MononokeScsRequest> =
+    LazyLock::new(Instrument_MononokeScsRequest::new);
 
 define_stats! {
     prefix = "mononoke.scs_server";

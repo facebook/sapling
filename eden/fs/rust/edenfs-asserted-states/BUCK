@@ -11,7 +11,6 @@ rust_library(
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:hex",
         "fbsource//third-party/rust:itertools",
-        "fbsource//third-party/rust:lazy_static",
         "fbsource//third-party/rust:serde",
         "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:tokio",

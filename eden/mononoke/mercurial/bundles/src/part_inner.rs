@@ -10,6 +10,7 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::str;
+use std::sync::LazyLock;
 
 use anyhow::Error;
 use anyhow::Result;
@@ -23,7 +24,6 @@ use futures::TryStreamExt;
 use futures::future;
 use futures::future::BoxFuture;
 use futures_ext::stream::FbStreamExt;
-use lazy_static::lazy_static;
 use maplit::hashset;
 use tokio::io::AsyncBufRead;
 use tokio_util::codec::Decoder;
@@ -43,42 +43,40 @@ use crate::wirepack;
 
 // --- Part parameters
 
-lazy_static! {
-    static ref KNOWN_PARAMS: HashMap<PartHeaderType, HashSet<&'static str>> = {
-        let mut m: HashMap<PartHeaderType, HashSet<&'static str>> = HashMap::new();
-        m.insert(
-            PartHeaderType::Changegroup,
-            hashset! {"version", "nbchanges", "treemanifest"},
-        );
-        m.insert(
-            PartHeaderType::B2xInfinitepush,
-            hashset! {
-            "pushbackbookmarks", "cgversion", "bookmark", "bookprevnode", "create", "force"},
-        );
-        m.insert(PartHeaderType::B2xInfinitepushBookmarks, hashset! {});
-        m.insert(PartHeaderType::B2xInfinitepushMutation, hashset! {});
-        m.insert(PartHeaderType::B2xCommonHeads, hashset! {});
-        m.insert(
-            PartHeaderType::B2xRebase,
-            hashset! {"onto", "newhead", "cgversion", "obsmarkerversions"},
-        );
-        m.insert(
-            PartHeaderType::B2xRebasePack,
-            hashset! {"version", "cache", "category"},
-        );
-        m.insert(
-            PartHeaderType::B2xTreegroup2,
-            hashset! {"version", "cache", "category"},
-        );
-        m.insert(PartHeaderType::Replycaps, hashset! {});
-        m.insert(
-            PartHeaderType::Pushkey,
-            hashset! { "namespace", "key", "old", "new" },
-        );
-        m.insert(PartHeaderType::Pushvars, hashset! {});
-        m
-    };
-}
+static KNOWN_PARAMS: LazyLock<HashMap<PartHeaderType, HashSet<&str>>> = LazyLock::new(|| {
+    let mut m: HashMap<PartHeaderType, HashSet<&'static str>> = HashMap::new();
+    m.insert(
+        PartHeaderType::Changegroup,
+        hashset! {"version", "nbchanges", "treemanifest"},
+    );
+    m.insert(
+        PartHeaderType::B2xInfinitepush,
+        hashset! {
+        "pushbackbookmarks", "cgversion", "bookmark", "bookprevnode", "create", "force"},
+    );
+    m.insert(PartHeaderType::B2xInfinitepushBookmarks, hashset! {});
+    m.insert(PartHeaderType::B2xInfinitepushMutation, hashset! {});
+    m.insert(PartHeaderType::B2xCommonHeads, hashset! {});
+    m.insert(
+        PartHeaderType::B2xRebase,
+        hashset! {"onto", "newhead", "cgversion", "obsmarkerversions"},
+    );
+    m.insert(
+        PartHeaderType::B2xRebasePack,
+        hashset! {"version", "cache", "category"},
+    );
+    m.insert(
+        PartHeaderType::B2xTreegroup2,
+        hashset! {"version", "cache", "category"},
+    );
+    m.insert(PartHeaderType::Replycaps, hashset! {});
+    m.insert(
+        PartHeaderType::Pushkey,
+        hashset! { "namespace", "key", "old", "new" },
+    );
+    m.insert(PartHeaderType::Pushvars, hashset! {});
+    m
+});
 
 pub fn validate_header(header: PartHeader) -> Result<Option<PartHeader>> {
     match KNOWN_PARAMS.get(header.part_type()) {

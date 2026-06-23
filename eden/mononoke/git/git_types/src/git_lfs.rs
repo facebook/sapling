@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::LazyLock;
+
 use anyhow::Result;
 use anyhow::anyhow;
 use blobstore::KeyedBlobstore;
@@ -12,7 +14,6 @@ use context::CoreContext;
 use filestore::FetchKey;
 use filestore::FilestoreConfig;
 use gix_hash::ObjectId;
-use lazy_static::lazy_static;
 use mononoke_types::BasicFileChange;
 use mononoke_types::hash;
 use mononoke_types::hash::RichGitSha1;
@@ -65,10 +66,9 @@ pub struct LfsPointerData {
     pub is_canonical: bool,
 }
 
-lazy_static! {
-    // Regex needs to match for the file to be attempted to be parsed as LFS.
-    static ref LFS_MATCHER_RE: Regex = Regex::new(r"git-media|hawser|git-lfs").unwrap();
-}
+// Regex needs to match for the file to be attempted to be parsed as LFS.
+static LFS_MATCHER_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"git-media|hawser|git-lfs").unwrap());
 
 /// We will not try to parse any file bigger then this.
 /// Any valid gitlfs metadata file should be smaller then this.

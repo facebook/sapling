@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::LazyLock;
+
 use anyhow::Error;
 use anyhow::Result;
 use assert_matches::assert_matches;
@@ -19,7 +21,6 @@ use futures::future;
 use futures::future::TryFutureExt;
 use futures::stream;
 use futures::stream::TryStreamExt;
-use lazy_static::lazy_static;
 use memblob::KeyedMemblob;
 use memblob::Memblob;
 use mononoke_macros::mononoke;
@@ -49,34 +50,43 @@ const DEFAULT_CONFIG: FilestoreConfig = FilestoreConfig {
     concurrency: 1,
 };
 
-lazy_static! {
-    static ref HELLO_WORLD_SHA1: hash::Sha1 = hash::Sha1::from_bytes([
+static HELLO_WORLD_SHA1: LazyLock<hash::Sha1> = LazyLock::new(|| {
+    hash::Sha1::from_bytes([
         0xb7, 0xe2, 0x3e, 0xc2, 0x9a, 0xf2, 0x2b, 0x0b, 0x4e, 0x41, 0xda, 0x31, 0xe8, 0x68, 0xd5,
-        0x72, 0x26, 0x12, 0x1c, 0x84
+        0x72, 0x26, 0x12, 0x1c, 0x84,
     ])
-    .unwrap();
-    static ref HELLO_WORLD_GIT_SHA1: hash::RichGitSha1 = hash::RichGitSha1::from_bytes(
+    .unwrap()
+});
+
+static HELLO_WORLD_GIT_SHA1: LazyLock<hash::RichGitSha1> = LazyLock::new(|| {
+    hash::RichGitSha1::from_bytes(
         [
             0x8c, 0x01, 0xd8, 0x9a, 0xe0, 0x63, 0x11, 0x83, 0x4e, 0xe4, 0xb1, 0xfa, 0xb2, 0xf0,
-            0x41, 0x4d, 0x35, 0xf0, 0x11, 0x02
+            0x41, 0x4d, 0x35, 0xf0, 0x11, 0x02,
         ],
         "blob",
-        HELLO_WORLD_LENGTH
+        HELLO_WORLD_LENGTH,
     )
-    .unwrap();
-    static ref HELLO_WORLD_SHA256: hash::Sha256 = hash::Sha256::from_bytes([
+    .unwrap()
+});
+
+static HELLO_WORLD_SHA256: LazyLock<hash::Sha256> = LazyLock::new(|| {
+    hash::Sha256::from_bytes([
         0x09, 0xca, 0x7e, 0x4e, 0xaa, 0x6e, 0x8a, 0xe9, 0xc7, 0xd2, 0x61, 0x16, 0x71, 0x29, 0x18,
         0x48, 0x83, 0x64, 0x4d, 0x07, 0xdf, 0xba, 0x7c, 0xbf, 0xbc, 0x4c, 0x8a, 0x2e, 0x08, 0x36,
         0x0d, 0x5b,
     ])
-    .unwrap();
-    static ref HELLO_WORLD_SEEDED_BLAKE3: hash::Blake3 = hash::Blake3::from_bytes([
+    .unwrap()
+});
+
+static HELLO_WORLD_SEEDED_BLAKE3: LazyLock<hash::Blake3> = LazyLock::new(|| {
+    hash::Blake3::from_bytes([
         0x85, 0x37, 0xf0, 0xe6, 0x1c, 0xaa, 0xa8, 0xf1, 0xac, 0xa4, 0xea, 0xc8, 0x9b, 0xb9, 0xf2,
         0x7b, 0xa2, 0x56, 0x2d, 0xbd, 0xd1, 0xb1, 0xa2, 0xd9, 0x87, 0x99, 0x9c, 0x37, 0xf1, 0x59,
-        0xbf, 0x18
+        0xbf, 0x18,
     ])
-    .unwrap();
-}
+    .unwrap()
+});
 
 #[mononoke::fbinit_test]
 async fn filestore_put_alias(fb: FacebookInit) -> Result<()> {

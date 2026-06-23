@@ -54,18 +54,17 @@ pub fn decode_varint(buf: &mut impl Read) -> Result<(u32, usize), std::io::Error
 mod tests {
     use std::collections::HashMap;
     use std::io::BufReader;
+    use std::sync::LazyLock;
 
-    use lazy_static::lazy_static;
-
-    lazy_static! {
-        // (unencoded int, (encoded bytes, encoded length))
-        static ref CASES: HashMap<u32, ([u8; VARINT_MAX_BYTES], usize)> = HashMap::from([
+    // (unencoded int, (encoded bytes, encoded length))
+    static CASES: LazyLock<HashMap<u32, ([u8; VARINT_MAX_BYTES], usize)>> = LazyLock::new(|| {
+        HashMap::from([
             (0, ([0x0, 0x0, 0x0, 0x0, 0x0], 1)),
             (1, ([0x1, 0x0, 0x0, 0x0, 0x0], 1)),
             (128, ([0x80, 0x1, 0x0, 0x0, 0x0], 2)),
             (u32::MAX, ([0xff, 0xff, 0xff, 0xff, 0x0f], 5)),
-        ]);
-    }
+        ])
+    });
 
     use super::*;
 

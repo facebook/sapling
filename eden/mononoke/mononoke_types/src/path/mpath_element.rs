@@ -5,10 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::LazyLock;
+
 use anyhow::Context as _;
 use anyhow::Result;
 use anyhow::bail;
-use lazy_static::lazy_static;
 use quickcheck::Arbitrary;
 use quickcheck::Gen;
 use regex::bytes::Regex as BytesRegex;
@@ -205,17 +206,19 @@ impl MPathElement {
     }
 }
 
-lazy_static! {
-    /// Regex for looking for invalid windows filenames
-    static ref INVALID_WINDOWS_FILENAME_REGEX: BytesRegex =
-        BytesRegex::new("^((?i)CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])([.][^.]*|)$")
-            .expect("invalid windows filename regex should be valid");
-    /// Valid characters for path components
-    static ref COMPONENT_CHARS: Vec<u8> = (2..b'\n')
+/// Regex for looking for invalid windows filenames
+static INVALID_WINDOWS_FILENAME_REGEX: LazyLock<BytesRegex> = LazyLock::new(|| {
+    BytesRegex::new("^((?i)CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])([.][^.]*|)$")
+        .expect("invalid windows filename regex should be valid")
+});
+
+/// Valid characters for path components
+static COMPONENT_CHARS: LazyLock<Vec<u8>> = LazyLock::new(|| {
+    (2..b'\n')
         .chain((b'\n' + 1)..b'/')
         .chain((b'/' + 1)..255)
-        .collect();
-}
+        .collect()
+});
 
 impl AsRef<[u8]> for MPathElement {
     #[inline]

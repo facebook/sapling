@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt::Display;
 use std::sync::Arc;
+use std::sync::LazyLock;
 
 use anyhow::Context;
 use anyhow::Error;
@@ -33,7 +34,6 @@ use futures::stream;
 use futures::stream::BoxStream;
 use futures::try_join;
 use hooks::HookRejectionInfo;
-use lazy_static::lazy_static;
 use mercurial_bundles::Bundle2Item;
 use mercurial_bundles::PartHeader;
 use mercurial_bundles::PartHeaderInner;
@@ -88,10 +88,8 @@ pub type UploadedHgChangesetIds = HashSet<HgChangesetId>;
 // Mercurial substitutes the `onto` parameter with this bookmark name when
 // the force pushrebase is done, so we need to look for it and make sure we
 // do the right thing here too.
-lazy_static! {
-    static ref DONOTREBASEBOOKMARK: BookmarkKey =
-        BookmarkKey::new("__pushrebase_donotrebase__").unwrap();
-}
+static DONOTREBASEBOOKMARK: LazyLock<BookmarkKey> =
+    LazyLock::new(|| BookmarkKey::new("__pushrebase_donotrebase__").unwrap());
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum NonFastForwardPolicy {

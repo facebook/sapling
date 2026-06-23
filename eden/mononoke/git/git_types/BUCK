@@ -43,7 +43,6 @@ rust_library(
         "fbsource//third-party/rust:gix-object",
         "fbsource//third-party/rust:gix-pack",
         "fbsource//third-party/rust:itertools",
-        "fbsource//third-party/rust:lazy_static",
         "fbsource//third-party/rust:ouroboros",
         "fbsource//third-party/rust:quickcheck",
         "fbsource//third-party/rust:regex",

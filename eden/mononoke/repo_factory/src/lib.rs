@@ -13,6 +13,8 @@ use std::future::Future;
 use std::hash::Hash;
 use std::num::NonZeroUsize;
 use std::sync::Arc;
+#[cfg(fbcode_build)]
+use std::sync::LazyLock;
 
 #[cfg(fbcode_build)]
 use MononokeRepoFactoryStats_ods3::Instrument_MononokeRepoFactoryStats;
@@ -132,8 +134,6 @@ use hook_manager::HookRepo;
 use hook_manager::manager::ArcHookManager;
 use hook_manager::manager::HookManager;
 use hooks::hook_loader::load_hooks;
-#[cfg(fbcode_build)]
-use lazy_static::lazy_static;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use memcache::KeyGen;
 use memcache::MemcacheClient;
@@ -250,10 +250,8 @@ use zeus_client::zeus_cpp_client::ZeusCppClient;
 const ZEUS_CLIENT_ID: &str = "mononoke";
 
 #[cfg(fbcode_build)]
-lazy_static! {
-    static ref REPO_FACTORY_INSTRUMENT: Instrument_MononokeRepoFactoryStats =
-        Instrument_MononokeRepoFactoryStats::new();
-}
+static REPO_FACTORY_INSTRUMENT: LazyLock<Instrument_MononokeRepoFactoryStats> =
+    LazyLock::new(Instrument_MononokeRepoFactoryStats::new);
 
 define_stats! {
     prefix = "mononoke.repo_factory";

@@ -6,6 +6,7 @@
  */
 
 use std::collections::HashSet;
+use std::sync::LazyLock;
 
 use anyhow::Context;
 use anyhow::Result;
@@ -24,7 +25,6 @@ use gotham_ext::middleware::request_context::RequestContext;
 use gotham_ext::state_ext::StateExt;
 use http::HeaderMap;
 use http::Response;
-use lazy_static::lazy_static;
 use scuba_ext::MononokeScubaSampleBuilder;
 use tracing::trace;
 use tracing::warn;
@@ -35,13 +35,11 @@ const UPLOAD_PATH: &str = "/upload/";
 const SAMPLE_RATIO: u64 = 1000;
 const SLOW_REQUEST_THRESHOLD_MS: i64 = 10000;
 
-lazy_static! {
-    static ref FILTERED_HEADERS: HashSet<&'static str> = {
-        let mut m = HashSet::new();
-        m.insert(X_AUTH_CATS_HEADER);
-        m
-    };
-}
+static FILTERED_HEADERS: LazyLock<HashSet<&str>> = LazyLock::new(|| {
+    let mut m = HashSet::new();
+    m.insert(X_AUTH_CATS_HEADER);
+    m
+});
 
 #[derive(Debug, StateData, Clone, PartialEq)]
 enum LogAction {

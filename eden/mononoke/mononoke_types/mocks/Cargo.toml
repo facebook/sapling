@@ -12,7 +12,6 @@ path = "lib.rs"
 
 [dependencies]
 chrono = { version = "0.4.45", features = ["clock", "serde", "std"], default-features = false }
-lazy_static = "1.5"
 mononoke_types = { version = "0.1.0", path = ".." }
 
 [dev-dependencies]

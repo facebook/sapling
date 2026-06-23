@@ -35,7 +35,6 @@ rust_library(
                         "package": "sapling-util",
                         "path": "../../../scm/lib/util",
                     },
-                    "lazy_static": {"version": "1.5"},
                     "libc": {"version": "0.2.139"},
                     "parking_lot": {
                         "features": ["send_guard"],
@@ -144,7 +143,6 @@ rust_library(
         "fbsource//third-party/rust:dunce",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:hex",
-        "fbsource//third-party/rust:lazy_static",
         "fbsource//third-party/rust:libc",
         "fbsource//third-party/rust:parking_lot",
         "fbsource//third-party/rust:pathdiff",

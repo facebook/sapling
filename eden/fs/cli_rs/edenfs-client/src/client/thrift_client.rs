@@ -10,6 +10,7 @@ use std::fmt::Display;
 use std::future::Future;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::sync::LazyLock;
 use std::time::Duration;
 use std::time::Instant;
 
@@ -24,7 +25,6 @@ use edenfs_telemetry::SampleLogger;
 use edenfs_telemetry::create_logger;
 use fbinit::FacebookInit;
 use futures_stats::TimedTryFutureExt;
-use lazy_static::lazy_static;
 use parking_lot::Mutex;
 use rand::RngExt as _;
 use rand::distr::Alphanumeric;
@@ -41,10 +41,8 @@ use crate::client::connector::StreamingEdenFsThriftClientFuture;
 use crate::methods::EdenThriftMethod;
 use crate::use_case::UseCase;
 
-lazy_static! {
-    pub(crate) static ref SCUBA_CLIENT: QueueingScubaLogger =
-        QueueingScubaLogger::new(create_logger("edenfs_client".to_string()), 1000);
-}
+pub(crate) static SCUBA_CLIENT: LazyLock<QueueingScubaLogger> =
+    LazyLock::new(|| QueueingScubaLogger::new(create_logger("edenfs_client".to_string()), 1000));
 
 // Number of attempts to make for a given Thrift request before giving up.
 const MAX_RETRY_ATTEMPTS: usize = 3;

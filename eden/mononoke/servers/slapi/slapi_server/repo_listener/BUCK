@@ -17,7 +17,6 @@ rust_library(
         "fbsource//third-party/rust:http-body-util",
         "fbsource//third-party/rust:hyper",
         "fbsource//third-party/rust:hyper-util",
-        "fbsource//third-party/rust:lazy_static",
         "fbsource//third-party/rust:openssl",
         "fbsource//third-party/rust:percent-encoding",
         "fbsource//third-party/rust:pin-project",

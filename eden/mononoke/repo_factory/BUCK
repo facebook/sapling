@@ -109,7 +109,6 @@ rust_library(
         []
         if rust_oss.is_oss_build()
         else [
-            "fbsource//third-party/rust:lazy_static",
             "//eden/mononoke/facebook/ods3_schemas:MononokeRepoFactoryStats_ods3-rs_bindings",
         ]
     ),

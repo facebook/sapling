@@ -300,11 +300,12 @@ impl SqlGitBundleMetadataStorage {
 
 #[cfg(test)]
 mod test {
+    use std::sync::LazyLock;
+
     use anyhow::Result;
     use context::CoreContext;
     use fbinit::FacebookInit;
     use itertools::Itertools;
-    use lazy_static::lazy_static;
     use mononoke_macros::mononoke;
     use mononoke_types::RepositoryId;
     use sql_construct::SqlConstruct;
@@ -312,8 +313,8 @@ mod test {
     use super::Bundle;
     use super::SqlGitBundleMetadataStorageBuilder;
 
-    lazy_static! {
-        static ref TEST_BUNDLE_LIST_2: [Bundle; 2] = [
+    static TEST_BUNDLE_LIST_2: LazyLock<[Bundle; 2]> = LazyLock::new(|| {
+        [
             Bundle {
                 in_bundle_list_order: 1,
                 handle: String::from("handle2137.1.1"),
@@ -326,8 +327,11 @@ mod test {
                 fingerprint: String::from("fingerprint2137.1.2"),
                 generation_start_timestamp: 0,
             },
-        ];
-        static ref TEST_BUNDLE_LIST_3: [Bundle; 3] = [
+        ]
+    });
+
+    static TEST_BUNDLE_LIST_3: LazyLock<[Bundle; 3]> = LazyLock::new(|| {
+        [
             Bundle {
                 in_bundle_list_order: 1,
                 handle: String::from("handle2137.2.1"),
@@ -346,8 +350,8 @@ mod test {
                 fingerprint: String::from("fingerprint2137.2.3"),
                 generation_start_timestamp: 0,
             },
-        ];
-    }
+        ]
+    });
 
     #[mononoke::fbinit_test]
     async fn test_no_bundles(fb: FacebookInit) -> Result<()> {
