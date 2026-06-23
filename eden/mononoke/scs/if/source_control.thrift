@@ -212,6 +212,33 @@ struct RepoInfo {
   4: optional string acl_name;
 }
 
+/// State of a Git repository's source-of-truth and provisioning lifecycle.
+/// Used by `git_repo_state` to surface the current SoT state for verification.
+enum GitRepoState {
+  /// Row exists with source_of_truth=Reserved and no mutation_id recorded. SCS may have crashed before reservation completed.
+  NOT_STARTED = 1,
+  /// Row exists with source_of_truth=Reserved and a mutation_id is in flight (create_repos has been called but the SoT flip hasn't happened yet).
+  IN_PROGRESS = 2,
+  /// Row exists with source_of_truth=Mononoke -- the repo is fully created and the SoT flip has completed.
+  CREATED = 3,
+  /// No row in git_repositories_source_of_truth for this repo.
+  UNKNOWN = 4,
+  /// Row exists but source_of_truth is not one of the expected states (e.g. Metagit or Locked, or a future SoT variant Rust doesn't recognize yet). Indicates either administrative action on the repo or version skew between Mononoke and the IDL.
+  INVALID = 5,
+}
+
+@rust.Exhaustive
+struct GitRepoStateParams {
+// Reserved for future extension.
+}
+
+@rust.Exhaustive
+struct GitRepoStateResponse {
+  1: GitRepoState state;
+  /// Set only when state == IN_PROGRESS; identifies the in-flight create_repos mutation.
+  2: optional string mutation_id;
+}
+
 struct CommitInfo {
   /// The IDs of the commit in the requested identity schemes.
   2: map<CommitIdentityScheme, CommitId> ids;
@@ -3251,6 +3278,19 @@ service SourceControlService extends fb303_core.BaseService {
 
   /// Get repo info
   RepoInfo repo_info(1: RepoSpecifier repo, 2: RepoInfoParams params) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
+
+  /// Get the current source-of-truth / provisioning state of a Git repo.
+  /// Reads git_repositories_source_of_truth directly; used by tooling such as
+  /// auto-create-aosp to verify that a repo has been successfully created in
+  /// Mononoke before performing follow-up actions.
+  GitRepoStateResponse git_repo_state(
+    1: RepoSpecifier repo,
+    2: GitRepoStateParams params,
+  ) throws (
     1: RequestError request_error,
     2: InternalError internal_error,
     3: OverloadError overload_error,
