@@ -718,8 +718,8 @@ impl<T> AbstractLineLog<T> {
     /// Original `r` (`r > rev`) will shift to `r + 1` in both the linelog
     /// instructions and the dag.
     pub fn insert_shift(self, rev: Rev) -> Self {
+        let dag = self.dag.clone().insert_shift(rev);
         let result = self.remap_revs(&|r| if r > rev { r + 1 } else { r });
-        let dag = result.dag.insert_shift(rev);
         Self { dag, ..result }
     }
 
