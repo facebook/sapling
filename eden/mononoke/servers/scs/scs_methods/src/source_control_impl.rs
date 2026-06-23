@@ -1383,6 +1383,11 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             params: thrift::RepoInfoParams,
         ) -> Result<thrift::RepoInfo, service::RepoInfoExn>;
 
+        async fn git_repo_state(
+            repo: thrift::RepoSpecifier,
+            params: thrift::GitRepoStateParams,
+        ) -> Result<thrift::GitRepoStateResponse, service::GitRepoStateExn>;
+
         async fn repo_resolve_bookmark(
             repo: thrift::RepoSpecifier,
             params: thrift::RepoResolveBookmarkParams,

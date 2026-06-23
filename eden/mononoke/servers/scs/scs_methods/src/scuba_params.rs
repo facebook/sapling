@@ -520,6 +520,8 @@ impl AddScubaParams for thrift::CommitRestrictedPathsChangesParams {}
 
 impl AddScubaParams for thrift::RepoInfoParams {}
 
+impl AddScubaParams for thrift::GitRepoStateParams {}
+
 impl AddScubaParams for thrift::CommitMultiplePathInfoParams {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("param_paths", self.paths.iter().collect::<ScubaValue>());
