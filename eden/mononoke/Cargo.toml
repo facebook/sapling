@@ -38,8 +38,8 @@ protobuf-build = { git = "https://github.com/fbsource/protobuf-build", rev = "ee
 quickcheck_async = { git = "https://github.com/markbt/quickcheck_async", rev = "76b13525ca93e0725e757f841fc6ccab8bae1913" }
 ratatui = { git = "https://github.com/fbsource/ratatui", rev = "e49703b568262fceffcb8b95456a47926ebabf33" }
 rinja = { git = "https://github.com/fbsource/askama", rev = "2fc6173c98034c148f46330fc39a006cf0b09efe" }
-riscv = { git = "https://github.com/rust-embedded/riscv", rev = "29e790c4528212fa1289768acd98d045a8021891" }
-riscv-types = { git = "https://github.com/rust-embedded/riscv", rev = "29e790c4528212fa1289768acd98d045a8021891" }
+riscv = { git = "https://github.com/rust-embedded/riscv", rev = "c2c9c7b77091a43b64bf0fd6a876c81a29438cf5" }
+riscv-types = { git = "https://github.com/rust-embedded/riscv", rev = "c2c9c7b77091a43b64bf0fd6a876c81a29438cf5" }
 rootcause = { git = "https://github.com/rootcause-rs/rootcause.git", rev = "5010b020a57786de6f18bad027560d54b73875b0" }
 rootcause-backtrace = { git = "https://github.com/rootcause-rs/rootcause.git", rev = "5010b020a57786de6f18bad027560d54b73875b0" }
 rust-stemmers = { git = "https://github.com/fbsource/rust-stemmers", rev = "3b2545218f76e797baecbf91fa1cbd2c0db60726" }
