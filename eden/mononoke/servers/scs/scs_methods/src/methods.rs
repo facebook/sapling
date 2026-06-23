@@ -25,6 +25,7 @@ pub mod commit_sparse_profile_info;
 pub(crate) mod create_repos;
 pub(crate) mod file;
 pub(crate) mod git;
+pub(crate) mod git_repo_state;
 pub(crate) mod megarepo;
 pub(crate) mod repo;
 pub(crate) mod tree;
