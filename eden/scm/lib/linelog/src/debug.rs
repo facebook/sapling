@@ -216,9 +216,11 @@ impl fmt::Display for NanoDag {
                 let mut children_vec = Vec::with_capacity(end + 1);
                 children_vec.push(dag.roots(&dag.all()).shift1());
                 for rev in 0..dag.parents.len() {
-                    let revs = match dag.children(rev) {
-                        Some(revs) => revs.shift1(),
-                        None => end_revs.clone(),
+                    let children = dag.children(rev);
+                    let revs = if children.is_empty() {
+                        end_revs.clone()
+                    } else {
+                        children.shift1()
                     };
                     children_vec.push(revs);
                 }

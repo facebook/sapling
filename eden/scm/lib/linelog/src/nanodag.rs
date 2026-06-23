@@ -71,16 +71,19 @@ impl NanoDag {
         self.parents.len()
     }
 
-    /// Get the parent revs of `rev`. Returns `None` if out of bound.
+    /// Get the parent revs of `rev`. Returns an empty slice if out of bound.
     /// Parent revs preserve insertion order.
-    pub fn parents(&self, rev: Rev) -> Option<&[Rev]> {
-        self.parents.get(rev).map(|v| v.as_ref())
+    pub fn parents(&self, rev: Rev) -> &[Rev] {
+        self.parents
+            .get(rev)
+            .map(|v| v.as_ref())
+            .unwrap_or_default()
     }
 
     /// Get the immediate children of rev.
-    /// Returns None if `rev` is unknown or has no children.
-    pub fn children(&self, rev: Rev) -> Option<&SmallRevs> {
-        self.children.get(&rev)
+    /// Returns an empty set if `rev` is unknown or has no children.
+    pub fn children(&self, rev: Rev) -> &SmallRevs {
+        self.children.get(&rev).unwrap_or_default()
     }
 
     /// Get all revs present in the dag.
@@ -91,12 +94,10 @@ impl NanoDag {
     /// Revs that has no children. O(revs) to O(revs * revs).
     pub fn heads(&self, revs: &SmallRevs) -> SmallRevs {
         revs.iter()
-            .filter(|rev| match self.children(*rev).cloned() {
-                Some(mut children_revs) => {
-                    children_revs.intersect_with(revs);
-                    children_revs.is_empty()
-                }
-                None => true,
+            .filter(|rev| {
+                let mut children_revs = self.children(*rev).clone();
+                children_revs.intersect_with(revs);
+                children_revs.is_empty()
             })
             .collect()
     }
@@ -104,47 +105,52 @@ impl NanoDag {
     /// Revs that has no parents. O(revs) to O(revs * revs).
     pub fn roots(&self, revs: &SmallRevs) -> SmallRevs {
         revs.iter()
-            .filter(|rev| match self.parents(*rev) {
-                Some(mut parents) => {
-                    let mut parent_revs = SmallRevs::from_iter(parents.iter().copied());
-                    parent_revs.intersect_with(revs);
-                    parent_revs.is_empty()
-                }
-                None => true,
+            .filter(|rev| {
+                let mut parent_revs = SmallRevs::from_iter(self.parents(*rev).iter().copied());
+                parent_revs.intersect_with(revs);
+                parent_revs.is_empty()
             })
             .collect()
     }
 
     /// Get the ancestor revs of `rev`, including `rev`.
-    pub fn ancestors(&self, rev: Rev) -> Option<&SmallRevs> {
+    /// Returns an empty set if `rev` is out of bound.
+    pub fn ancestors(&self, rev: Rev) -> &SmallRevs {
         self.walk_revs(rev, WalkKind::Ancestors)
     }
 
     /// Get the descendant revs of `rev`, including `rev`.
-    pub fn descendants(&self, rev: Rev) -> Option<&SmallRevs> {
+    /// Returns an empty set if `rev` is out of bound.
+    pub fn descendants(&self, rev: Rev) -> &SmallRevs {
         self.walk_revs(rev, WalkKind::Descendants)
     }
 
-    fn walk_revs(&self, rev: Rev, kind: WalkKind) -> Option<&SmallRevs> {
+    fn walk_revs(&self, rev: Rev, kind: WalkKind) -> &SmallRevs {
         if rev >= self.parents.len() {
-            return None;
+            return Default::default();
         }
         let cache = self.cache();
-        if let Some(revs) = cache.get(rev)?.revs_for_kind(kind).get() {
-            return Some(revs);
+        if let Some(revs) = cache[rev].revs_for_kind(kind).get() {
+            return revs;
         }
 
         let mut to_visit = vec![rev];
         while let Some(visit_rev) = to_visit.pop() {
-            if cache.get(visit_rev)?.revs_for_kind(kind).get().is_some() {
+            let Some(visit_cache) = cache.get(visit_rev) else {
+                return Default::default();
+            };
+            if visit_cache.revs_for_kind(kind).get().is_some() {
                 continue;
             }
 
             let mut visit_revs = SmallRevs::from(visit_rev);
             let mut revisit = false;
             {
-                let mut visit_related_rev = |related_rev: Rev| -> Option<()> {
-                    match cache.get(related_rev)?.revs_for_kind(kind).get() {
+                let mut visit_related_rev = |related_rev: Rev| -> bool {
+                    let Some(related_cache) = cache.get(related_rev) else {
+                        return false;
+                    };
+                    match related_cache.revs_for_kind(kind).get() {
                         None => {
                             if !revisit {
                                 to_visit.push(visit_rev);
@@ -156,19 +162,24 @@ impl NanoDag {
                             visit_revs.union_with(related_revs);
                         }
                     }
-                    Some(())
+                    true
                 };
 
                 match kind {
                     WalkKind::Ancestors => {
-                        for parent_rev in self.parents.get(visit_rev)? {
-                            visit_related_rev(*parent_rev)?;
+                        let Some(parents) = self.parents.get(visit_rev) else {
+                            return Default::default();
+                        };
+                        for parent_rev in parents {
+                            if !visit_related_rev(*parent_rev) {
+                                return Default::default();
+                            }
                         }
                     }
                     WalkKind::Descendants => {
-                        if let Some(children) = self.children(visit_rev) {
-                            for child_rev in children.iter() {
-                                visit_related_rev(child_rev)?;
+                        for child_rev in self.children(visit_rev).iter() {
+                            if !visit_related_rev(child_rev) {
+                                return Default::default();
                             }
                         }
                     }
@@ -176,14 +187,11 @@ impl NanoDag {
             }
 
             if !revisit {
-                cache
-                    .get(visit_rev)?
-                    .revs_for_kind(kind)
-                    .get_or_init(|| visit_revs);
+                visit_cache.revs_for_kind(kind).get_or_init(|| visit_revs);
             }
         }
 
-        cache.get(rev)?.revs_for_kind(kind).get()
+        cache[rev].revs_for_kind(kind).get().unwrap_or_default()
     }
 
     /// Test if `ancestor` is an ancestor of `descendant`.
@@ -201,10 +209,7 @@ impl NanoDag {
                 return false;
             }
         }
-        let Some(ancestors) = self.ancestors(descendant) else {
-            return false;
-        };
-        ancestors.contains(ancestor)
+        self.ancestors(descendant).contains(ancestor)
     }
 
     /// Insert a child-parent edge to the dag.
@@ -610,8 +615,8 @@ mod tests {
                 if parent >= child {
                     continue;
                 }
-                assert!(dag.parents(*child).unwrap().contains(parent));
-                assert!(dag.children(*parent).unwrap().contains(*child));
+                assert!(dag.parents(*child).contains(parent));
+                assert!(dag.children(*parent).contains(*child));
             }
             dag
         }
@@ -633,13 +638,13 @@ mod tests {
     }
 
     #[test]
-    fn test_empty_dag_queries_are_out_of_bound() {
+    fn test_empty_dag_queries_return_empty_defaults() {
         let dag = NanoDag::default();
 
-        assert_eq!(dag.parents(0), None);
-        assert_eq!(dag.children(0), None);
-        assert_eq!(dag.ancestors(0), None);
-        assert_eq!(dag.descendants(0), None);
+        assert_eq!(dag.parents(0), [].as_slice());
+        assert!(dag.children(0).is_empty());
+        assert!(dag.ancestors(0).is_empty());
+        assert!(dag.descendants(0).is_empty());
         assert_eq!(revs_vec(&dag.heads(&dag.all())), vec![]);
         assert_eq!(revs_vec(&dag.roots(&dag.all())), vec![]);
         assert!(!dag.is_ancestor(0, 0));
@@ -650,19 +655,16 @@ mod tests {
         // 0-{1-3,2-4}-5
         let dag = NanoDag::from_edges(6, &[(0, 1), (0, 2), (1, 3), (2, 4), (3, 5), (4, 5)]);
 
-        assert_eq!(dag.ancestors(5).map(revs_vec), Some(vec![0, 1, 2, 3, 4, 5]));
-        assert_eq!(
-            dag.descendants(0).map(revs_vec),
-            Some(vec![0, 1, 2, 3, 4, 5])
-        );
-        assert_eq!(dag.descendants(1).map(revs_vec), Some(vec![1, 3, 5]));
-        assert_eq!(dag.descendants(2).map(revs_vec), Some(vec![2, 4, 5]));
-        assert_eq!(dag.children(0).map(revs_vec), Some(vec![1, 2]));
-        assert_eq!(dag.children(1).map(revs_vec), Some(vec![3]));
-        assert_eq!(dag.children(2).map(revs_vec), Some(vec![4]));
-        assert_eq!(dag.children(3).map(revs_vec), Some(vec![5]));
-        assert_eq!(dag.children(4).map(revs_vec), Some(vec![5]));
-        assert_eq!(dag.children(5), None);
+        assert_eq!(revs_vec(dag.ancestors(5)), vec![0, 1, 2, 3, 4, 5]);
+        assert_eq!(revs_vec(dag.descendants(0)), vec![0, 1, 2, 3, 4, 5]);
+        assert_eq!(revs_vec(dag.descendants(1)), vec![1, 3, 5]);
+        assert_eq!(revs_vec(dag.descendants(2)), vec![2, 4, 5]);
+        assert_eq!(revs_vec(dag.children(0)), vec![1, 2]);
+        assert_eq!(revs_vec(dag.children(1)), vec![3]);
+        assert_eq!(revs_vec(dag.children(2)), vec![4]);
+        assert_eq!(revs_vec(dag.children(3)), vec![5]);
+        assert_eq!(revs_vec(dag.children(4)), vec![5]);
+        assert!(dag.children(5).is_empty());
         assert_eq!(revs_vec(&dag.heads(&dag.all())), vec![5]);
         assert_eq!(revs_vec(&dag.roots(&dag.all())), vec![0]);
 
@@ -699,16 +701,16 @@ mod tests {
     fn test_self_edge_resizes_dag_without_adding_parent() {
         let dag = NanoDag::default().with_edge(3, 3);
 
-        assert_eq!(dag.parents(0), Some([].as_slice()));
-        assert_eq!(dag.parents(1), Some([].as_slice()));
-        assert_eq!(dag.parents(2), Some([].as_slice()));
-        assert_eq!(dag.parents(3), Some([].as_slice()));
-        assert_eq!(dag.children(0), None);
-        assert_eq!(dag.children(3), None);
+        assert_eq!(dag.parents(0), [].as_slice());
+        assert_eq!(dag.parents(1), [].as_slice());
+        assert_eq!(dag.parents(2), [].as_slice());
+        assert_eq!(dag.parents(3), [].as_slice());
+        assert!(dag.children(0).is_empty());
+        assert!(dag.children(3).is_empty());
         assert_eq!(revs_vec(&dag.heads(&dag.all())), vec![0, 1, 2, 3]);
         assert_eq!(revs_vec(&dag.roots(&dag.all())), vec![0, 1, 2, 3]);
-        assert_eq!(dag.ancestors(3).map(revs_vec), Some(vec![3]));
-        assert_eq!(dag.descendants(3).map(revs_vec), Some(vec![3]));
+        assert_eq!(revs_vec(dag.ancestors(3)), vec![3]);
+        assert_eq!(revs_vec(dag.descendants(3)), vec![3]);
         assert!(dag.is_ancestor(3, 3));
     }
 
@@ -716,28 +718,28 @@ mod tests {
     fn test_sparse_child_slot_and_multiple_parents() {
         let dag = NanoDag::from_edges(4, &[(1, 3), (2, 3)]);
 
-        assert_eq!(dag.parents(0), Some([].as_slice()));
-        assert_eq!(dag.parents(1), Some([].as_slice()));
-        assert_eq!(dag.parents(2), Some([].as_slice()));
-        assert_eq!(dag.parents(3), Some([1, 2].as_slice()));
-        assert_eq!(dag.children(0), None);
-        assert_eq!(dag.children(1).map(revs_vec), Some(vec![3]));
-        assert_eq!(dag.children(2).map(revs_vec), Some(vec![3]));
-        assert_eq!(dag.children(3), None);
+        assert_eq!(dag.parents(0), [].as_slice());
+        assert_eq!(dag.parents(1), [].as_slice());
+        assert_eq!(dag.parents(2), [].as_slice());
+        assert_eq!(dag.parents(3), [1, 2].as_slice());
+        assert!(dag.children(0).is_empty());
+        assert_eq!(revs_vec(dag.children(1)), vec![3]);
+        assert_eq!(revs_vec(dag.children(2)), vec![3]);
+        assert!(dag.children(3).is_empty());
         assert_eq!(revs_vec(&dag.heads(&dag.all())), vec![0, 3]);
         assert_eq!(revs_vec(&dag.roots(&dag.all())), vec![0, 1, 2]);
-        assert_eq!(dag.ancestors(3).map(revs_vec), Some(vec![1, 2, 3]));
+        assert_eq!(revs_vec(dag.ancestors(3)), vec![1, 2, 3]);
     }
 
     #[test]
     fn test_duplicate_edge_preserves_existing_cache() {
         let dag = NanoDag::from_edges(3, &[(0, 1), (1, 2)]);
-        assert_eq!(dag.descendants(0).map(revs_vec), Some(vec![0, 1, 2]));
+        assert_eq!(revs_vec(dag.descendants(0)), vec![0, 1, 2]);
 
         let duplicated = dag.clone().with_edge(0, 1);
-        assert_eq!(duplicated.parents(1), Some([0].as_slice()));
-        assert_eq!(duplicated.children(0).map(revs_vec), Some(vec![1]));
-        assert_eq!(duplicated.descendants(0).map(revs_vec), Some(vec![0, 1, 2]));
+        assert_eq!(duplicated.parents(1), [0].as_slice());
+        assert_eq!(revs_vec(duplicated.children(0)), vec![1]);
+        assert_eq!(revs_vec(duplicated.descendants(0)), vec![0, 1, 2]);
         assert!(Arc::ptr_eq(
             dag.cache.get().expect("cache should be populated"),
             duplicated
@@ -750,17 +752,14 @@ mod tests {
     #[test]
     fn test_with_edge_invalidates_derived_cache_without_mutating_original() {
         let dag = NanoDag::from_edges(3, &[(0, 1), (1, 2)]);
-        assert_eq!(dag.descendants(0).map(revs_vec), Some(vec![0, 1, 2]));
+        assert_eq!(revs_vec(dag.descendants(0)), vec![0, 1, 2]);
 
         let extended = dag.clone().with_edge(2, 3);
-        assert_eq!(dag.descendants(0).map(revs_vec), Some(vec![0, 1, 2]));
-        assert_eq!(dag.children(2), None);
-        assert_eq!(
-            extended.descendants(0).map(revs_vec),
-            Some(vec![0, 1, 2, 3])
-        );
-        assert_eq!(extended.ancestors(3).map(revs_vec), Some(vec![0, 1, 2, 3]));
-        assert_eq!(extended.children(2).map(revs_vec), Some(vec![3]));
+        assert_eq!(revs_vec(dag.descendants(0)), vec![0, 1, 2]);
+        assert!(dag.children(2).is_empty());
+        assert_eq!(revs_vec(extended.descendants(0)), vec![0, 1, 2, 3]);
+        assert_eq!(revs_vec(extended.ancestors(3)), vec![0, 1, 2, 3]);
+        assert_eq!(revs_vec(extended.children(2)), vec![3]);
     }
 
     #[test]
@@ -791,7 +790,7 @@ mod tests {
     #[test]
     fn test_insert_invalidates_derived_cache_without_mutating_original() {
         let dag = NanoDag::from_edges(3, &[(0, 1), (1, 2)]);
-        assert_eq!(dag.descendants(0).map(revs_vec), Some(vec![0, 1, 2]));
+        assert_eq!(revs_vec(dag.descendants(0)), vec![0, 1, 2]);
 
         let inserted = dag.clone().insert_shift(1);
 
@@ -805,20 +804,20 @@ mod tests {
     fn test_truncate_removes_revs_and_rebuilds_children() {
         let dag = NanoDag::from_edges(5, &[(0, 1), (0, 2), (1, 3), (2, 3), (3, 4)]);
         assert_eq!(dag.to_string(), "0-{1,2}-3-4");
-        assert_eq!(dag.descendants(0).map(revs_vec), Some(vec![0, 1, 2, 3, 4]));
+        assert_eq!(revs_vec(dag.descendants(0)), vec![0, 1, 2, 3, 4]);
 
         let truncated = dag.clone().truncate(3);
 
         assert_eq!(dag.to_string(), "0-{1,2}-3-4");
         assert!(dag.cache.get().is_some());
         assert_eq!(truncated.to_string(), "0-{1,2}");
-        assert_eq!(truncated.parents(3), None);
-        assert_eq!(truncated.children(1), None);
-        assert_eq!(truncated.children(2), None);
+        assert_eq!(truncated.parents(3), [].as_slice());
+        assert!(truncated.children(1).is_empty());
+        assert!(truncated.children(2).is_empty());
         assert!(truncated.cache.get().is_none());
 
         let empty = truncated.truncate(0);
-        assert_eq!(empty.parents(0), None);
+        assert_eq!(empty.parents(0), [].as_slice());
         assert_eq!(revs_vec(&empty.heads(&empty.all())), vec![]);
     }
 
@@ -907,12 +906,12 @@ mod tests {
             .fold(&[1, 2].into_iter().collect())
             .expect("folding sibling revs should be valid");
 
-        assert_eq!(folded.parents(1), Some([0].as_slice()));
-        assert_eq!(folded.parents(2), Some([].as_slice()));
-        assert_eq!(folded.parents(3), Some([1].as_slice()));
-        assert_eq!(folded.children(0).map(revs_vec), Some(vec![1]));
-        assert_eq!(folded.children(1).map(revs_vec), Some(vec![3]));
-        assert_eq!(folded.children(2), None);
+        assert_eq!(folded.parents(1), [0].as_slice());
+        assert_eq!(folded.parents(2), [].as_slice());
+        assert_eq!(folded.parents(3), [1].as_slice());
+        assert_eq!(revs_vec(folded.children(0)), vec![1]);
+        assert_eq!(revs_vec(folded.children(1)), vec![3]);
+        assert!(folded.children(2).is_empty());
     }
 
     #[test]
@@ -956,12 +955,8 @@ mod tests {
                 (0..REV_COUNT).all(|descendant| {
                     let expected = reachable[ancestor].contains(descendant);
                     dag.is_ancestor(ancestor, descendant) == expected
-                        && dag
-                            .ancestors(descendant)
-                            .is_some_and(|revs| revs.contains(ancestor) == expected)
-                        && dag
-                            .descendants(ancestor)
-                            .is_some_and(|revs| revs.contains(descendant) == expected)
+                        && dag.ancestors(descendant).contains(ancestor) == expected
+                        && dag.descendants(ancestor).contains(descendant) == expected
                 })
             })
         }
