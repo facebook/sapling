@@ -107,7 +107,7 @@ impl<T> AbstractLineLog<T> {
             }
         }
 
-        let max_del_rev = self.max_rev + 1;
+        let max_del_rev = self.max_rev() + 1;
         let mut visitor = FlattenVisitor {
             result: Vec::new(),
             current_revs: SmallRevs::from_range(0..max_del_rev),

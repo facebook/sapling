@@ -46,7 +46,7 @@ impl<T> Clone for AbstractLineLog<T> {
     fn clone(&self) -> Self {
         Self {
             code: self.code.clone(),
-            max_rev: self.max_rev,
+            max_rev: self.max_rev(),
             dag: self.dag.clone(),
             a_lines_cache: self.a_lines_cache.clone(),
             deps_map_cache: self.deps_map_cache.clone(),
@@ -114,7 +114,7 @@ impl<T> Default for AbstractLineLog<T> {
                 v
             },
             max_rev: 0,
-            dag: Default::default(),
+            dag: NanoDag::default().with_edge(0, 0),
             a_lines_cache: None,
             deps_map_cache: OnceLock::new(),
             perf_stats: None,
@@ -125,6 +125,13 @@ impl<T> Default for AbstractLineLog<T> {
 impl<T> AbstractLineLog<T> {
     /// Get the maximum rev (inclusive).
     pub fn max_rev(&self) -> Rev {
+        assert_eq!(
+            self.max_rev,
+            self.dag.len().saturating_sub(1),
+            "max_rev {} does not match dag length {}",
+            self.max_rev,
+            self.dag.len()
+        );
         self.max_rev
     }
 
@@ -184,10 +191,11 @@ impl<T: Default + PartialEq> AbstractLineLog<T> {
         b_lines: Vec<T>,
         flags: EditFlags,
     ) -> Self {
+        let old_max_rev = self.max_rev();
+        let new_max_rev = old_max_rev.max(b_rev);
         assert!(
-            a_rev <= self.max_rev,
-            "a_rev {a_rev} must not be greater than max_rev {}",
-            self.max_rev
+            a_rev <= old_max_rev,
+            "a_rev {a_rev} must not be greater than max_rev {old_max_rev}"
         );
         // Resize dag to make b_rev valid rev, regardless of ADD_EDGE.
         self.dag = self.dag.with_edge(b_rev, b_rev);
@@ -195,7 +203,7 @@ impl<T: Default + PartialEq> AbstractLineLog<T> {
             self.dag = self.dag.with_edge(a_rev, b_rev);
         };
         let mut b_lines = b_lines.into_iter().map(Arc::new).collect::<VecDeque<_>>();
-        self.with_a_lines_cache(a_rev, b_rev, |this: Self, maybe_mut| {
+        self.with_a_lines_cache(a_rev, b_rev, old_max_rev, |this: Self, maybe_mut| {
             if flags.contains(EditFlags::BLOCK_SHIFT) {
                 const DEFAULT_SHIFT_THRESHOLD: usize = 5;
                 this.try_block_shift(
@@ -207,7 +215,7 @@ impl<T: Default + PartialEq> AbstractLineLog<T> {
                 );
             };
             debug_assert!(this.dag.all().contains(b_rev));
-            this.edit_chunk_internal(a1, a2, b_rev, b_lines, maybe_mut)
+            this.edit_chunk_internal(a1, a2, b_rev, new_max_rev, b_lines, maybe_mut)
         })
     }
 
@@ -216,6 +224,7 @@ impl<T: Default + PartialEq> AbstractLineLog<T> {
     /// Panics if `a_rev` > `b_rev`.
     /// Bumps `max_rev` if `b_rev` > `max_rev`.
     pub fn with_dag_edge(self, a_rev: Rev, b_rev: Rev) -> Self {
+        let max_rev = self.max_rev().max(b_rev);
         let mut a_lines_cache = self.a_lines_cache;
         let new_dag = self.dag.with_edge(a_rev, b_rev);
         if let Some((cached_rev, _)) = &a_lines_cache {
@@ -226,7 +235,7 @@ impl<T: Default + PartialEq> AbstractLineLog<T> {
         }
         Self {
             dag: new_dag,
-            max_rev: self.max_rev.max(b_rev),
+            max_rev,
             a_lines_cache,
             deps_map_cache: Default::default(),
             ..self
@@ -384,6 +393,7 @@ impl<T: Default + PartialEq> AbstractLineLog<T> {
         mut self,
         a_rev: Rev,
         b_rev: Rev,
+        old_max_rev: Rev,
         func: impl FnOnce(Self, MaybeMut<ImVec<LineInfo<T>>>) -> Self,
     ) -> Self {
         let cache = self.a_lines_cache.take();
@@ -405,7 +415,7 @@ impl<T: Default + PartialEq> AbstractLineLog<T> {
         // (a_rev is the last rev, no higher revs ever exist, and b_rev's only direct
         // parent is a_rev, so nothing can get in-between).
         let can_update_cache = a_rev == b_rev
-            || (self.dag.parents(b_rev) == [a_rev].as_slice() && a_rev == self.max_rev);
+            || (self.dag.parents(b_rev) == [a_rev].as_slice() && a_rev == old_max_rev);
         let maybe_a_lines: MaybeMut<_> = match can_update_cache {
             true => MaybeMut::Mut(&mut a_lines),
             false => MaybeMut::Ref(&a_lines),
@@ -437,6 +447,7 @@ impl<T: Default + PartialEq> AbstractLineLog<T> {
         a1: LineIdx,
         a2: LineIdx,
         b_rev: Rev,
+        max_rev: Rev,
         b_lines: VecDeque<Arc<T>>,
         mut a_lines: MaybeMut<ImVec<LineInfo<T>>>,
     ) -> Self {
@@ -445,7 +456,7 @@ impl<T: Default + PartialEq> AbstractLineLog<T> {
 
         if a1 == a2 && b_lines.is_empty() {
             return Self {
-                max_rev: self.max_rev.max(b_rev),
+                max_rev,
                 dag: self.dag.with_edge(b_rev, b_rev),
                 ..self
             };
@@ -588,7 +599,7 @@ impl<T: Default + PartialEq> AbstractLineLog<T> {
 
         Self {
             code,
-            max_rev: self.max_rev.max(b_rev),
+            max_rev,
             a_lines_cache: None,
             deps_map_cache: Default::default(),
             ..self
