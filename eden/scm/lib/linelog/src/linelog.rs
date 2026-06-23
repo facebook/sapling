@@ -596,10 +596,6 @@ impl<T: Default + PartialEq> AbstractLineLog<T> {
         target_revs: &SmallRevs,
         present: Option<Box<dyn Fn(Pc) -> bool>>,
     ) -> ImVec<LineInfo<T>> {
-        if let Some(stats) = self.perf_stats.as_ref() {
-            stats.execute.fetch_add(1, Ordering::Release);
-        }
-
         // A line inserted in any target rev should be included, but a deletion
         // only hides the line if it is effective in every target rev.
         let mut insert_revs = SmallRevs::empty();
@@ -613,6 +609,38 @@ impl<T: Default + PartialEq> AbstractLineLog<T> {
             }
         }
         let delete_revs = delete_revs.unwrap_or_else(SmallRevs::empty);
+
+        self.execute_advanced(&insert_revs, &delete_revs, present)
+    }
+
+    /// Advanced version of `execute` that takes insert_revs and delete_revs
+    /// explicitly.
+    ///
+    /// `insert_revs` decides insertion. `JL rev` jumps (skips insertion)
+    /// if `rev` is not in `insert_revs`. Skip jumping (do insert) if `rev`
+    /// is in `insert_revs`.
+    ///
+    /// `delete_revs` decides deletion. `JGE rev` jumps (deletes) if `rev`
+    /// is in `delete_revs`.
+    ///
+    /// Usually, `insert_revs` and `delete_revs` are the same. For example,
+    /// - When checking out a single `rev`,
+    ///   insert_revs = delete_revs = ancestors(rev)
+    /// - When showing a candidate merge of r1 and r2, (somewhat similar
+    ///   to a traditional 3-way merge, respects changes on one side)
+    ///   insert_revs = delete_revs = union(ancestors(r1), ancestors(r2))
+    ///
+    /// But `insert_revs` != `delete_revs` can be used in advanced cases,
+    /// for example, showing lines that ever existed in a range.
+    fn execute_advanced(
+        &self,
+        insert_revs: &SmallRevs,
+        delete_revs: &SmallRevs,
+        present: Option<Box<dyn Fn(Pc) -> bool>>,
+    ) -> ImVec<LineInfo<T>> {
+        if let Some(stats) = self.perf_stats.as_ref() {
+            stats.execute.fetch_add(1, Ordering::Release);
+        }
 
         let mut lines = ImVec::<LineInfo<T>>::new();
         let mut pc = 0;
