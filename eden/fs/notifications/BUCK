@@ -58,12 +58,10 @@ cpp_library(
     name = "windows_notifier",
     srcs = ["WindowsNotifier.cpp"],
     headers = ["WindowsNotifier.h"],
-    os_linker_flags = [
-        (
-            "windows",
-            ["$(location :WindowsNotifier.res)"],
-        ),
-    ],
+    exported_linker_flags = select({
+        "DEFAULT": [],
+        "ovr_config//os:windows": ["$(location :WindowsNotifier.res)"],
+    }),
     deps = [
         "fbsource//third-party/fmt:fmt",
         ":constants",
