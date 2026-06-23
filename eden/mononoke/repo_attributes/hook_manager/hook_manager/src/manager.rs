@@ -299,9 +299,16 @@ impl HookManager {
         changeset_author: Option<&str>,
         bypass_reason: String,
     ) -> Result<BypassAuthorizationResult> {
-        match changeset_author.and_then(extract_unixname_from_author) {
-            Some(unixname) => {
-                let author_identity = MononokeIdentity::from_legacy_type_data("USER", unixname);
+        // Killswitch to disable FBID parsing if it misbehaves on odd author strings.
+        let resolve_bot_fbid = justknobs::eval(
+            "scm/mononoke:resolve_bot_fbid_author_for_hook_bypass",
+            None,
+            Some(self.repo_name.as_str()),
+        );
+        match changeset_author
+            .and_then(|author| extract_identity_from_author(author, resolve_bot_fbid))
+        {
+            Some(author_identity) => {
                 let identity_set: MononokeIdentitySet = std::iter::once(author_identity).collect();
                 self.check_membership(hook, &identity_set, bypass_reason)
                     .await
@@ -628,9 +635,10 @@ fn unauthorized_bypass_rejection(group_name: &str) -> HookExecution {
     ))
 }
 
-/// Extract unixname from a changeset author string like "Name <user@host>".
-/// Uses the same regex as `parse_author_username` in the hooks crate.
-fn extract_unixname_from_author(author: &str) -> Option<&str> {
+/// Build a MononokeIdentity from a changeset author like "Name <user@host>".
+/// With `resolve_bot_fbid`, "noreply+<FBID>@fb.com" bot authors yield an FBID
+/// identity; everything else yields USER:<local-part>.
+fn extract_identity_from_author(author: &str, resolve_bot_fbid: bool) -> Option<MononokeIdentity> {
     use std::sync::LazyLock;
 
     use regex::RegexBuilder;
@@ -642,10 +650,25 @@ fn extract_unixname_from_author(author: &str) -> Option<&str> {
             .expect("valid regex")
     });
 
-    AUTHOR_RE
-        .captures(author)
-        .and_then(|caps| caps.get(1))
-        .map(|m| m.as_str())
+    let caps = AUTHOR_RE.captures(author)?;
+    let local_part = caps.get(1)?.as_str();
+    let host = caps.get(2)?.as_str();
+
+    let is_internal = matches!(host.to_ascii_lowercase().as_str(), "fb.com" | "meta.com");
+    // Codemod bots are Meiosis service users with no unixname; their FBID only
+    // reaches us via the "noreply+<FBID>" author local-part, so recover it here.
+    let fbid = if resolve_bot_fbid {
+        local_part
+            .strip_prefix("noreply+")
+            .filter(|rest| !rest.is_empty() && rest.bytes().all(|b| b.is_ascii_digit()))
+    } else {
+        None
+    };
+
+    Some(match fbid {
+        Some(fbid) if is_internal => MononokeIdentity::from_legacy_type_data("FBID", fbid),
+        _ => MononokeIdentity::from_legacy_type_data("USER", local_part),
+    })
 }
 
 fn log_bypassed_changeset(
@@ -989,13 +1012,72 @@ mod test {
     }
 
     #[mononoke::test]
-    fn test_extract_identity_from_bot_author() {
-        // FIXME: bot author "noreply+<FBID>@fb.com" should resolve to FBID:<FBID>,
-        // but the parser currently returns the whole local-part as a junk unixname.
-        let author = "CleanupArcCallConduit Bot <noreply+2796533067383049@fb.com>";
+    fn test_extract_identity_from_author() {
+        // Service-bot authors carry their FBID in the "noreply+<FBID>" local-part
+        // and, with the killswitch on, resolve to an FBID identity (the account
+        // added to bypass groups).
         assert_eq!(
-            extract_unixname_from_author(author),
-            Some("noreply+2796533067383049"),
+            extract_identity_from_author(
+                "CleanupArcCallConduit Bot <noreply+2796533067383049@fb.com>",
+                true,
+            ),
+            Some(MononokeIdentity::from_legacy_type_data(
+                "FBID",
+                "2796533067383049"
+            )),
+        );
+        assert_eq!(
+            extract_identity_from_author("Bot <noreply+123@meta.com>", true),
+            Some(MononokeIdentity::from_legacy_type_data("FBID", "123")),
+        );
+
+        // Human authors keep resolving to a USER identity from the unixname.
+        assert_eq!(
+            extract_identity_from_author("Jane Doe <jdoe@fb.com>", true),
+            Some(MononokeIdentity::from_legacy_type_data("USER", "jdoe")),
+        );
+
+        // A non-numeric "noreply+" suffix is not an FBID; fall back to USER.
+        assert_eq!(
+            extract_identity_from_author("Bot <noreply+abc@fb.com>", true),
+            Some(MononokeIdentity::from_legacy_type_data(
+                "USER",
+                "noreply+abc"
+            )),
+        );
+
+        // The FBID shape is only trusted on internal domains.
+        assert_eq!(
+            extract_identity_from_author("Bot <noreply+123@external.com>", true),
+            Some(MononokeIdentity::from_legacy_type_data(
+                "USER",
+                "noreply+123"
+            )),
+        );
+
+        // An unparsable author yields no identity (caller falls back to pusher).
+        assert_eq!(extract_identity_from_author("no-email-author", true), None);
+    }
+
+    #[mononoke::test]
+    fn test_extract_identity_from_author_killswitch_off() {
+        // With the killswitch off, the bot author keeps its pre-rollout (junk) USER
+        // identity from the whole local-part instead of resolving to its FBID.
+        assert_eq!(
+            extract_identity_from_author(
+                "CleanupArcCallConduit Bot <noreply+2796533067383049@fb.com>",
+                false,
+            ),
+            Some(MononokeIdentity::from_legacy_type_data(
+                "USER",
+                "noreply+2796533067383049"
+            )),
+        );
+
+        // Human authors are unaffected by the killswitch.
+        assert_eq!(
+            extract_identity_from_author("Jane Doe <jdoe@fb.com>", false),
+            Some(MononokeIdentity::from_legacy_type_data("USER", "jdoe")),
         );
     }
 

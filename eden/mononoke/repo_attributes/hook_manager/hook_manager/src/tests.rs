@@ -683,6 +683,10 @@ fn bypass_permission_groups_jk(
                     .to_string(),
                 justknobs::test_helpers::KnobVal::Bool(use_client_identities),
             ),
+            (
+                "scm/mononoke:resolve_bot_fbid_author_for_hook_bypass".to_string(),
+                justknobs::test_helpers::KnobVal::Bool(true),
+            ),
         ]
         .into(),
     )
