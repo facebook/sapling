@@ -167,4 +167,90 @@ mod tests {
         assert_eq!(resp.state, thrift::GitRepoState::NOT_STARTED);
         Ok(())
     }
+
+    #[mononoke::fbinit_test]
+    async fn row_missing_returns_unknown(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let config = TestGitSourceOfTruthConfig::new();
+        let resp = call(&ctx, &config, "nonexistent/repo").await?;
+        assert_eq!(resp.state, thrift::GitRepoState::UNKNOWN);
+        assert_eq!(resp.mutation_id, None);
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn reserved_with_mutation_returns_in_progress(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let config = TestGitSourceOfTruthConfig::new();
+        let name = RepositoryName("aosp/foo".to_string());
+        config
+            .insert_or_update_repo(
+                &ctx,
+                RepositoryId::new(1),
+                name.clone(),
+                GitSourceOfTruth::Reserved,
+            )
+            .await?;
+        config
+            .update_mutation_id_by_repo_names_for_reserved_repos(&ctx, &[name], 12345)
+            .await?;
+        let resp = call(&ctx, &config, "aosp/foo").await?;
+        assert_eq!(resp.state, thrift::GitRepoState::IN_PROGRESS);
+        assert_eq!(resp.mutation_id, Some("12345".to_string()));
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn mononoke_returns_created(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let config = TestGitSourceOfTruthConfig::new();
+        config
+            .insert_or_update_repo(
+                &ctx,
+                RepositoryId::new(1),
+                RepositoryName("aosp/foo".to_string()),
+                GitSourceOfTruth::Mononoke,
+            )
+            .await?;
+        let resp = call(&ctx, &config, "aosp/foo").await?;
+        assert_eq!(resp.state, thrift::GitRepoState::CREATED);
+        assert_eq!(resp.mutation_id, None);
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn metagit_returns_invalid(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let config = TestGitSourceOfTruthConfig::new();
+        config
+            .insert_or_update_repo(
+                &ctx,
+                RepositoryId::new(1),
+                RepositoryName("aosp/foo".to_string()),
+                GitSourceOfTruth::Metagit,
+            )
+            .await?;
+        let resp = call(&ctx, &config, "aosp/foo").await?;
+        assert_eq!(resp.state, thrift::GitRepoState::INVALID);
+        assert_eq!(resp.mutation_id, None);
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn locked_returns_invalid(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let config = TestGitSourceOfTruthConfig::new();
+        config
+            .insert_or_update_repo(
+                &ctx,
+                RepositoryId::new(1),
+                RepositoryName("aosp/foo".to_string()),
+                GitSourceOfTruth::Locked,
+            )
+            .await?;
+        let resp = call(&ctx, &config, "aosp/foo").await?;
+        assert_eq!(resp.state, thrift::GitRepoState::INVALID);
+        assert_eq!(resp.mutation_id, None);
+        Ok(())
+    }
 }
