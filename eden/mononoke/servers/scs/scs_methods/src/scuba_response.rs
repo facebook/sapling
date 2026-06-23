@@ -184,6 +184,8 @@ impl AddScubaResponse for thrift::CommitMultiplePathInfoResponse {}
 
 impl AddScubaResponse for thrift::CommitPathLastChangedResponse {}
 
+impl AddScubaResponse for thrift::CommitPathFirstChangedResponse {}
+
 impl AddScubaResponse for thrift::CommitMultiplePathLastChangedResponse {}
 
 impl AddScubaResponse for thrift::CommitSparseProfileDeltaResponse {}

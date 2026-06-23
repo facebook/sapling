@@ -405,6 +405,77 @@ pub async fn list_file_history<'a>(
     .boxed())
 }
 
+/// Find the first (oldest) changeset that introduced `path`, starting the walk
+/// from `cs_id`. This walks the fastlog data at *batch* granularity, so is
+/// O(number of fastlog batches) rather than O(number of changesets).
+///
+/// A changeset whose path-history parents are all in the batch and empty is a
+/// *root* — an introduction of the path. A changeset with an `Unknown` parent
+/// continues past the batch boundary and must be re-fetched to resolve it. A
+/// merge can diverge into several branches that each extend past the batch, so
+/// we explore *every* unresolved branch (a BFS over changesets, not a single
+/// linear walk) and only pick the oldest root once all branches have bottomed
+/// out. The oldest root (smallest generation number, with the changeset id as a
+/// stable tie-break) is returned.
+///
+/// Note: fastlog stores neither deletions nor history across them, so "first"
+/// means the oldest changeset of the path's *current contiguous existence* — not
+/// necessarily the very first time the path ever existed.
+pub async fn fetch_path_first_changeset(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    cs_id: ChangesetId,
+    path: MPath,
+) -> Result<Option<ChangesetId>, FastlogError> {
+    // BFS over the fastlog batches: `frontier` holds changesets whose batch we
+    // still need to fetch, `visited` guards against re-fetching (and against
+    // cycles), and `roots` accumulates every introduction we bottom out at.
+    let mut frontier = vec![cs_id];
+    let mut visited: HashSet<ChangesetId> = HashSet::new();
+    let mut roots: Vec<ChangesetId> = Vec::new();
+
+    while !frontier.is_empty() {
+        let to_fetch: Vec<ChangesetId> = frontier
+            .drain(..)
+            .filter(|csid| visited.insert(*csid))
+            .collect();
+
+        let path = &path;
+        let batches = stream::iter(to_fetch)
+            .map(|csid| async move { prefetch_fastlog_by_changeset(ctx, repo, csid, path).await })
+            .buffer_unordered(10)
+            .try_collect::<Vec<_>>()
+            .await?;
+
+        for (csid, parents) in batches.into_iter().flatten() {
+            if parents.is_empty() {
+                // No parents in the path's history: this changeset introduced it.
+                roots.push(csid);
+            } else if parents.iter().any(|p| matches!(p, FastlogParent::Unknown)) {
+                // The walk hit a batch boundary on at least one branch; re-fetch
+                // this changeset's batch to resolve the `Unknown` parent(s).
+                frontier.push(csid);
+            }
+        }
+    }
+
+    // Pick the oldest root. Look up the root generations concurrently and take
+    // the minimum (with the changeset id as a stable tie-break, since
+    // `(Generation, ChangesetId)` is `Ord`).
+    let commit_graph = repo.commit_graph();
+    let oldest = stream::iter(roots)
+        .map(|csid| async move {
+            let generation = commit_graph.changeset_generation(ctx, csid).await?;
+            Ok::<_, FastlogError>((generation, csid))
+        })
+        .buffer_unordered(10)
+        .try_collect::<Vec<_>>()
+        .await?
+        .into_iter()
+        .min();
+    Ok(oldest.map(|(_, csid)| csid))
+}
+
 #[async_trait]
 pub trait Visitor: Send + 'static {
     /// Filters out the changesets which should be pursued during BFS traversal of file history.
@@ -1317,6 +1388,86 @@ mod test {
             expected,
         )
         .await?;
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_fetch_path_first_changeset_merge_across_batches(
+        fb: FacebookInit,
+    ) -> Result<(), Error> {
+        // A merge where the path was introduced independently on two branches.
+        // The "short" branch introduces it just before the merge, so its root
+        // lands in the merge's first fastlog batch. The "long" branch introduces
+        // it far enough back that its (older) root sits past a batch boundary, on
+        // an `Unknown` parent. This is exactly the case a single-branch walk got
+        // wrong: stopping at the short branch's root without crossing into the
+        // long branch to find the genuinely-oldest introduction.
+        let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
+        let ctx = CoreContext::test_mock(fb);
+        let ctx = &ctx;
+
+        let filename = "shared";
+
+        // Long branch: a filler root, then the introduction of `filename` (so the
+        // introduction is not itself a root commit, giving it generation 2), then
+        // enough modifications to push that introduction well past a single
+        // fastlog batch (MAX_TOTAL_LEN == 110).
+        let long_root = CreateCommitContext::new_root(ctx, &repo)
+            .add_file("filler_long", "0")
+            .commit()
+            .await?;
+        let long_intro = CreateCommitContext::new(ctx, &repo, vec![long_root])
+            .add_file(filename, "long-0")
+            .commit()
+            .await?;
+        let mut long_top = long_intro;
+        for i in 1..150 {
+            long_top = CreateCommitContext::new(ctx, &repo, vec![long_top])
+                .add_file(filename, format!("long-{i}"))
+                .commit()
+                .await?;
+        }
+
+        // Short branch: several fillers (so its introduction has a *higher*
+        // generation than the long branch's), then `filename` just before the
+        // merge.
+        let mut short_top = CreateCommitContext::new_root(ctx, &repo)
+            .add_file("filler_short", "0")
+            .commit()
+            .await?;
+        for i in 1..4 {
+            short_top = CreateCommitContext::new(ctx, &repo, vec![short_top])
+                .add_file("filler_short", format!("{i}"))
+                .commit()
+                .await?;
+        }
+        let short_intro = CreateCommitContext::new(ctx, &repo, vec![short_top])
+            .add_file(filename, "short-0")
+            .commit()
+            .await?;
+        short_top = CreateCommitContext::new(ctx, &repo, vec![short_intro])
+            .add_file(filename, "short-1")
+            .commit()
+            .await?;
+
+        // Merge the two branches, resolving `filename`.
+        let merge = CreateCommitContext::new(ctx, &repo, vec![long_top, short_top])
+            .add_file(filename, "merged")
+            .commit()
+            .await?;
+
+        repo.repo_derived_data()
+            .derive::<RootFastlog>(ctx, merge, DerivationPriority::LOW)
+            .await?;
+
+        let first = fetch_path_first_changeset(ctx, &repo, merge, path(filename)?).await?;
+        assert_eq!(
+            first,
+            Some(long_intro),
+            "first changeset should be the older introduction on the long branch \
+             (generation 2), not the short branch's more recent introduction"
+        );
 
         Ok(())
     }

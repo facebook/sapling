@@ -437,6 +437,46 @@ async fn commit_path_history(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
+#[mononoke::fbinit_test]
+async fn commit_path_first_commit(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let (repo, changesets) = init_repo(&ctx).await?;
+
+    let cs = repo
+        .changeset(changesets["c2"])
+        .await?
+        .expect("changeset exists");
+
+    // The first commit of file "a" is its original introduction in "a1".
+    // (See the `commit_path_history` test: the history of "a" ends at "a1".)
+    let a_path = cs.path_with_history("a").await?;
+    let a_first = a_path.first_modified().await?;
+    assert_eq!(
+        a_first.map(|cs| cs.id()),
+        Some(changesets["a1"]),
+        "first commit of \"a\" should be a1"
+    );
+
+    // "renamed_aa" only exists from the rename onwards, so its first commit is
+    // "a2" (the commit that renamed "aa" to "renamed_aa"), not "a1".
+    let renamed_aa_path = cs.path_with_history("renamed_aa").await?;
+    let renamed_aa_first = renamed_aa_path.first_modified().await?;
+    assert_eq!(
+        renamed_aa_first.map(|cs| cs.id()),
+        Some(changesets["a2"]),
+        "first commit of \"renamed_aa\" should be the rename in a2"
+    );
+
+    // A path that never existed is an invalid request.
+    let missing_path = cs.path_with_history("does_not_exist").await?;
+    assert!(
+        missing_path.first_modified().await.is_err(),
+        "a path that never existed should error"
+    );
+
+    Ok(())
+}
+
 async fn assert_history(
     ctx: &CoreContext,
     commit_graph: &CommitGraph,

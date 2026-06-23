@@ -620,6 +620,32 @@ impl<R: MononokeRepo> ChangesetPathHistoryContext<R> {
         }
     }
 
+    /// Returns the first (oldest) changeset that introduced this path.
+    ///
+    /// We don't need to walk every changeset - we can just walk along the
+    /// fastlog batches to find the first changeset.  This finds the oldest
+    /// changeset of the path's current contiguous history (it does not follow
+    /// deletions).
+    pub async fn first_modified(&self) -> Result<Option<ChangesetContext<R>>, MononokeError> {
+        if self.unode_id().await?.is_none() {
+            return Err(MononokeError::InvalidRequest(format!(
+                "path '{}' does not exist in changeset {}",
+                self.path,
+                self.changeset.id(),
+            )));
+        }
+
+        let first = history_traversal::fetch_path_first_changeset(
+            self.changeset.ctx(),
+            self.repo_ctx().repo(),
+            self.changeset.id(),
+            self.path.clone(),
+        )
+        .await
+        .map_err(|error| MononokeError::from(Error::from(error)))?;
+        Ok(first.map(|cs_id| ChangesetContext::new(self.repo_ctx().clone(), cs_id)))
+    }
+
     /// Returns the last commit that deleted this path.  If something exists
     /// at this path, or nothing ever existed at this path, returns `None`.
     pub async fn last_deleted(&self) -> Result<Option<ChangesetContext<R>>, MononokeError> {

@@ -1809,6 +1809,11 @@ struct CommitPathLastChangedParams {
   1: set<CommitIdentityScheme> identity_schemes;
 }
 
+struct CommitPathFirstChangedParams {
+  /// Commit identity schemes to return.
+  1: set<CommitIdentityScheme> identity_schemes;
+}
+
 struct CommitMultiplePathLastChangedParams {
   /// List of paths to query.
   ///
@@ -2611,6 +2616,12 @@ struct CommitPathLastChange {
 struct CommitPathLastChangedResponse {
   /// The last change for this path.  Not present if the path never existed.
   1: optional CommitPathLastChange last_change;
+}
+
+struct CommitPathFirstChangedResponse {
+  /// The first (oldest) commit that introduced this path, in the requested
+  /// identity schemes.  Not present if the path has no discoverable history.
+  1: optional map<CommitIdentityScheme, CommitId> first_commit;
 }
 
 struct CommitMultiplePathLastChangedResponse {
@@ -3761,6 +3772,24 @@ service SourceControlService extends fb303_core.BaseService {
   CommitPathLastChangedResponse commit_path_last_changed(
     1: CommitPathSpecifier commit_path,
     2: CommitPathLastChangedParams params,
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+    4: RestrictedPathsAuthorizationError restricted_paths_authorization_error,
+  );
+
+  /// Get the first (oldest) commit that introduced a path.
+  ///
+  /// Returns the oldest commit in the path's current contiguous history (for
+  /// example, to find the original author of a file) without the caller having
+  /// to fetch and walk the path's entire history via `commit_path_history`.  If
+  /// the path was deleted and later re-added, this returns the commit that
+  /// re-added it, not the original introduction.  Errors if the path does not
+  /// exist at the specified commit.
+  CommitPathFirstChangedResponse commit_path_first_changed(
+    1: CommitPathSpecifier commit_path,
+    2: CommitPathFirstChangedParams params,
   ) throws (
     1: RequestError request_error,
     2: InternalError internal_error,

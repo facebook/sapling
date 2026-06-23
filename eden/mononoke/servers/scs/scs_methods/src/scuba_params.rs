@@ -532,6 +532,12 @@ impl AddScubaParams for thrift::CommitPathLastChangedParams {
     }
 }
 
+impl AddScubaParams for thrift::CommitPathFirstChangedParams {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        self.identity_schemes.add_scuba_params(scuba);
+    }
+}
+
 impl AddScubaParams for thrift::CommitMultiplePathLastChangedParams {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("param_paths", self.paths.iter().collect::<ScubaValue>());

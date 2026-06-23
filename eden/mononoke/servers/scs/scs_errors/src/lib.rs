@@ -453,6 +453,7 @@ impl_into_thrift_error!(restricted_paths service::CommitMultiplePathInfoExn);
 impl_into_thrift_error!(restricted_paths service::CommitPathBlameExn);
 impl_into_thrift_error!(restricted_paths service::CommitPathHistoryExn);
 impl_into_thrift_error!(restricted_paths service::CommitPathLastChangedExn);
+impl_into_thrift_error!(restricted_paths service::CommitPathFirstChangedExn);
 impl_into_thrift_error!(restricted_paths service::CommitMultiplePathLastChangedExn);
 impl_into_thrift_error!(service::CommitSparseProfileDeltaAsyncExn);
 impl_into_thrift_error!(poll service::CommitSparseProfileDeltaPollExn);

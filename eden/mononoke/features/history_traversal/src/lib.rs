@@ -30,6 +30,7 @@ pub use log::HistoryAcrossDeletions;
 pub use log::NextChangeset;
 pub use log::TraversalOrder;
 pub use log::Visitor;
+pub use log::fetch_path_first_changeset;
 pub use log::list_file_history;
 use mutable_renames::MutableRenamesRef;
 use repo_blobstore::RepoBlobstoreArc;

@@ -646,6 +646,26 @@ impl SourceControlServiceImpl {
         }
     }
 
+    pub(crate) async fn commit_path_first_changed(
+        &self,
+        ctx: CoreContext,
+        commit_path: thrift::CommitPathSpecifier,
+        params: thrift::CommitPathFirstChangedParams,
+    ) -> Result<thrift::CommitPathFirstChangedResponse, scs_errors::ServiceError> {
+        let (_repo, changeset) = self.repo_changeset(ctx, &commit_path.commit).await?;
+        let path = changeset.path_with_history(&commit_path.path).await?;
+        let first_commit = match path.first_modified().await? {
+            Some(first_modified) => {
+                Some(map_commit_identity(&first_modified, &params.identity_schemes).await?)
+            }
+            None => None,
+        };
+        Ok(thrift::CommitPathFirstChangedResponse {
+            first_commit,
+            ..Default::default()
+        })
+    }
+
     pub(crate) async fn commit_multiple_path_last_changed(
         &self,
         ctx: CoreContext,

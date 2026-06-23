@@ -1560,6 +1560,11 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             params: thrift::CommitPathLastChangedParams,
         ) -> Result<thrift::CommitPathLastChangedResponse, service::CommitPathLastChangedExn>;
 
+        async fn commit_path_first_changed(
+            commit_path: thrift::CommitPathSpecifier,
+            params: thrift::CommitPathFirstChangedParams,
+        ) -> Result<thrift::CommitPathFirstChangedResponse, service::CommitPathFirstChangedExn>;
+
         async fn commit_multiple_path_last_changed(
             commit_path: thrift::CommitSpecifier,
             params: thrift::CommitMultiplePathLastChangedParams,

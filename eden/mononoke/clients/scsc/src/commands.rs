@@ -33,6 +33,7 @@ base_app::subcommands! {
     mod lookup;
     mod ls;
     mod move_bookmark if "SCSC_WRITES_ENABLED";
+    mod path_first_commit;
     mod prepare_commits if "SCSC_WRITES_ENABLED";
     mod pushrebase_history;
     mod restricted_paths if "SCSC_ADMIN_ENABLED";
