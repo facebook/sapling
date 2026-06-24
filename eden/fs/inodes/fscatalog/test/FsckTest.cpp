@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
+#include <algorithm>
 #include <memory>
+#include <vector>
 
 #include <folly/Conv.h>
 #include <folly/FileUtil.h>
@@ -541,6 +543,60 @@ TEST_P(FsckTest, testBadFileData) {
   EXPECT_EQ(0, bytesRead);
 
   testOverlay->inodeCatalog()->close(checker.getNextInodeNumber());
+}
+
+TEST(FsckProgressTest, repairReportsSlowPhases) {
+  auto testOverlay = make_shared<TestOverlay>(InodeCatalogType::Legacy);
+  auto root = testOverlay->init();
+  SimpleOverlayLayout layout(root);
+
+  std::string badHeader(FsFileContentStore::kHeaderLength, 0x55);
+  testOverlay->corruptInodeHeader(layout.src_foo_testTxt.number(), badHeader);
+
+  InodeCatalog::LookupCallback lookup = [](auto&&, auto&&) {
+    return makeImmediateFuture<InodeCatalog::LookupCallbackValue>(
+        std::runtime_error("no lookup callback"));
+  };
+  OverlayChecker checker(
+      testOverlay->inodeCatalog(),
+      &testOverlay->fcs(),
+      std::nullopt,
+      lookup,
+      testOverlay->getTestConfig()->fsckNumErrorDiscoveryThreads.getValue());
+
+  std::vector<OverlayChecker::Progress> progressEvents;
+  checker.repairErrors([&](const OverlayChecker::Progress& progress) {
+    progressEvents.push_back(progress);
+  });
+
+  auto sawPhase = [&](OverlayChecker::Progress::Phase phase) {
+    return std::any_of(
+        progressEvents.begin(),
+        progressEvents.end(),
+        [phase](const auto& progress) { return progress.phase == phase; });
+  };
+  auto sawProgress = [&](OverlayChecker::Progress::Phase phase,
+                         uint16_t progress10Pct) {
+    return std::any_of(
+        progressEvents.begin(),
+        progressEvents.end(),
+        [phase, progress10Pct](const auto& progress) {
+          return progress.phase == phase &&
+              progress.progress10Pct.has_value() &&
+              *progress.progress10Pct == progress10Pct;
+        });
+  };
+
+  EXPECT_TRUE(sawPhase(OverlayChecker::Progress::Phase::RecoveringWal));
+  EXPECT_TRUE(sawProgress(OverlayChecker::Progress::Phase::Scanning, 0));
+  EXPECT_TRUE(sawProgress(OverlayChecker::Progress::Phase::ScanComplete, 10));
+  EXPECT_TRUE(sawProgress(OverlayChecker::Progress::Phase::Repairing, 0));
+  EXPECT_TRUE(sawProgress(OverlayChecker::Progress::Phase::Repairing, 10));
+  ASSERT_FALSE(progressEvents.empty());
+  EXPECT_EQ(
+      OverlayChecker::Progress::Phase::Complete, progressEvents.back().phase);
+  ASSERT_TRUE(progressEvents.back().progress10Pct.has_value());
+  EXPECT_EQ(10, *progressEvents.back().progress10Pct);
 }
 
 TEST_P(FsckTest, testTruncatedDirData) {

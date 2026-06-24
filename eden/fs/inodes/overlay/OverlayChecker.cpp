@@ -13,6 +13,7 @@
 #include <fcntl.h>
 #include <fmt/core.h>
 #include <folly/portability/Unistd.h>
+#include <algorithm>
 #include <ctime>
 
 #include <folly/Conv.h>
@@ -43,6 +44,26 @@ namespace facebook::eden {
 
 using fsck::InodeInfo;
 using fsck::InodeType;
+
+namespace {
+
+void reportProgress(
+    const OverlayChecker::ProgressCallback& progressCallback,
+    OverlayChecker::Progress::Phase phase,
+    std::optional<uint16_t> progress10Pct = std::nullopt) {
+  if (progressCallback) {
+    progressCallback(OverlayChecker::Progress{phase, progress10Pct});
+  }
+}
+
+uint16_t progress10Pct(size_t completed, size_t total) {
+  if (total == 0) {
+    return 10;
+  }
+  return static_cast<uint16_t>(std::min<size_t>(10, completed * 10 / total));
+}
+
+} // namespace
 
 struct OverlayChecker::Impl {
   InodeCatalog* const inodeCatalog;
@@ -880,9 +901,7 @@ void OverlayChecker::scanForErrors(
   pathCache_.clear();
   maxInodeNumber_ = kRootNodeId.get();
 
-  if (auto callback = progressCallback) {
-    callback(0);
-  }
+  reportProgress(progressCallback, Progress::Phase::Scanning, 0);
   readInodes(progressCallback);
   if (includeWalChildren) {
     scanForWalChildren();
@@ -890,6 +909,7 @@ void OverlayChecker::scanForErrors(
   linkInodeChildren();
   scanForParentErrors();
   checkNextInodeNumber();
+  reportProgress(progressCallback, Progress::Phase::ScanComplete, 10);
 
   if (errors_.empty()) {
     XLOGF(
@@ -907,10 +927,12 @@ void OverlayChecker::scanForErrors(
 
 optional<OverlayChecker::RepairResult> OverlayChecker::repairErrors(
     const ProgressCallback& progressCallback) {
+  reportProgress(progressCallback, Progress::Phase::RecoveringWal);
   recoverWalFiles();
   scanForErrors(progressCallback);
 
   if (errors_.empty()) {
+    reportProgress(progressCallback, Progress::Phase::Complete, 10);
     return std::nullopt;
   }
 
@@ -926,6 +948,8 @@ optional<OverlayChecker::RepairResult> OverlayChecker::repairErrors(
   constexpr size_t maxPrintedErrors = 50;
 
   size_t errnum = 0;
+  uint16_t repairProgress = 0;
+  reportProgress(progressCallback, Progress::Phase::Repairing, repairProgress);
   for (const auto& error : errors_) {
     ++errnum;
     auto description = error->getMessage(this);
@@ -953,6 +977,13 @@ optional<OverlayChecker::RepairResult> OverlayChecker::repairErrors(
           ": unexpected exception: ",
           folly::exceptionStr(ex));
     }
+
+    auto newRepairProgress = progress10Pct(errnum, result.totalErrors);
+    if (newRepairProgress > repairProgress) {
+      repairProgress = newRepairProgress;
+      reportProgress(
+          progressCallback, Progress::Phase::Repairing, repairProgress);
+    }
   }
 
   auto numUnfixed = result.totalErrors - result.fixedErrors;
@@ -970,6 +1001,7 @@ optional<OverlayChecker::RepairResult> OverlayChecker::repairErrors(
   }
   repair.log(finalMsg);
   XLOGF(INFO, "fsck:{}: {}", impl_->fcs->getLocalDir(), finalMsg);
+  reportProgress(progressCallback, Progress::Phase::Complete, 10);
 
   return result;
 }
@@ -1208,9 +1240,8 @@ void OverlayChecker::readInodes(const ProgressCallback& progressCallback) {
                 impl_->fcs->getLocalDir(),
                 progress,
                 impl_->inodes.size());
-            if (auto callback = progressCallback) {
-              callback(progress);
-            }
+            reportProgress(
+                progressCallback, Progress::Phase::Scanning, progress);
             progress10pct = progress;
           }
 

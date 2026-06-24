@@ -419,6 +419,11 @@ void Overlay::initOverlay(
     // Limit concurrent fsck operations to prevent OOM when many mounts
     // need fsck after ungraceful shutdown.
     if (fsckSemaphore_) {
+      if (progressCallback) {
+        progressCallback(
+            OverlayChecker::Progress{
+                OverlayChecker::Progress::Phase::WaitingForFsckSlot});
+      }
       if (preFsckSemaphoreCallback_) {
         preFsckSemaphoreCallback_();
       }
@@ -430,6 +435,11 @@ void Overlay::initOverlay(
           "Overlay {}: acquired fsck slot after {}ms",
           localDir_,
           waitTimer.elapsed().count());
+      if (progressCallback) {
+        progressCallback(
+            OverlayChecker::Progress{
+                OverlayChecker::Progress::Phase::FsckSlotAcquired});
+      }
     }
     SCOPE_EXIT {
       if (fsckSemaphore_) {

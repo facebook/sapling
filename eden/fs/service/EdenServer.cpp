@@ -18,6 +18,7 @@
 #include <memory>
 #include <sstream>
 #include <string>
+#include <string_view>
 
 #include "eden/fs/service/HeartbeatManager.h"
 
@@ -890,11 +891,33 @@ std::string clear_to_bottom() {
 }
 } // namespace cursor_helper
 
+std::string_view describeFsckProgressPhase(
+    OverlayChecker::Progress::Phase phase) {
+  switch (phase) {
+    case OverlayChecker::Progress::Phase::WaitingForFsckSlot:
+      return "waiting for fsck slot";
+    case OverlayChecker::Progress::Phase::FsckSlotAcquired:
+      return "acquired fsck slot";
+    case OverlayChecker::Progress::Phase::RecoveringWal:
+      return "recovering WAL files";
+    case OverlayChecker::Progress::Phase::Scanning:
+      return "scanning";
+    case OverlayChecker::Progress::Phase::ScanComplete:
+      return "finished scan";
+    case OverlayChecker::Progress::Phase::Repairing:
+      return "repairing";
+    case OverlayChecker::Progress::Phase::Complete:
+      return "complete";
+  }
+  return "unknown";
+}
+
 void EdenServer::ProgressManager::updateProgressState(
     size_t progressIndex,
-    uint16_t percent) {
+    const OverlayChecker::Progress& progress) {
   if (progressIndex < totalInProgress) {
-    progresses[progressIndex].fsckPercentComplete = percent;
+    progresses[progressIndex].fsckPhase = progress.phase;
+    progresses[progressIndex].fsckProgress10Pct = progress.progress10Pct;
     progresses[progressIndex].fsckStarted = true;
   }
 }
@@ -945,12 +968,19 @@ void EdenServer::ProgressManager::printProgresses(
       content += fmt::format("Remounting {}\n", it.mountPath);
       printedInProgress++;
     } else {
-      content += fmt::format(
-          "[{:21}] {:>3}%: fsck on {}{}",
-          std::string(it.fsckPercentComplete * 2, '=') + ">",
-          it.fsckPercentComplete * 10,
-          it.localDir,
-          "\n");
+      if (it.fsckProgress10Pct.has_value()) {
+        content += fmt::format(
+            "[{:21}] {:>3}%: fsck {} on {}\n",
+            std::string(*it.fsckProgress10Pct * 2, '=') + ">",
+            *it.fsckProgress10Pct * 10,
+            describeFsckProgressPhase(it.fsckPhase),
+            it.localDir);
+      } else {
+        content += fmt::format(
+            "fsck {} on {}\n",
+            describeFsckProgressPhase(it.fsckPhase),
+            it.localDir);
+      }
       printedInProgress++;
     }
     totalLinesPrinted++;
@@ -970,8 +1000,8 @@ void EdenServer::ProgressManager::printProgresses(
 void EdenServer::ProgressManager::manageProgress(
     const std::shared_ptr<StartupLogger>& logger,
     size_t progressIndex,
-    uint16_t percent) {
-  updateProgressState(progressIndex, percent);
+    const OverlayChecker::Progress& progress) {
+  updateProgressState(progressIndex, progress);
   printProgresses(logger);
 }
 size_t EdenServer::ProgressManager::registerEntry(

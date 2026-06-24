@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <cstdint>
+#include <functional>
 #include <memory>
 #include <optional>
 
@@ -52,7 +54,22 @@ class OverlayChecker {
     uint32_t fixedErrors{0};
   };
 
-  using ProgressCallback = std::function<void(uint16_t)>;
+  struct Progress {
+    enum class Phase : uint8_t {
+      WaitingForFsckSlot,
+      FsckSlotAcquired,
+      RecoveringWal,
+      Scanning,
+      ScanComplete,
+      Repairing,
+      Complete,
+    };
+
+    Phase phase;
+    std::optional<uint16_t> progress10Pct{std::nullopt};
+  };
+
+  using ProgressCallback = std::function<void(const Progress&)>;
 
   /**
    * Create a new OverlayChecker.

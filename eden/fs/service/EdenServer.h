@@ -921,7 +921,9 @@ class EdenServer : private TakeoverHandler {
   struct ProgressState {
     std::string mountPath;
     std::string localDir;
-    uint16_t fsckPercentComplete{0};
+    OverlayChecker::Progress::Phase fsckPhase{
+        OverlayChecker::Progress::Phase::Scanning};
+    std::optional<uint16_t> fsckProgress10Pct;
     bool mountFinished{false};
     bool mountFailed{false};
     bool fsckStarted{false};
@@ -946,7 +948,9 @@ class EdenServer : private TakeoverHandler {
      */
     size_t registerEntry(std::string&& mountPath, std::string&& localDir);
 
-    void updateProgressState(size_t processIndex, uint16_t percent);
+    void updateProgressState(
+        size_t processIndex,
+        const OverlayChecker::Progress& progress);
 
     /**
      * Print registered progress states to stdout
@@ -966,7 +970,7 @@ class EdenServer : private TakeoverHandler {
     void manageProgress(
         const std::shared_ptr<StartupLogger>& logger,
         size_t processIndex,
-        uint16_t percent);
+        const OverlayChecker::Progress& progress);
 
     /**
      * Mark mountFinished as true when a remounting progress is finished.
