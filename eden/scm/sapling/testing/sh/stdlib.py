@@ -17,6 +17,7 @@ import re
 import stat
 import sys
 import tarfile
+from contextlib import contextmanager
 from functools import wraps
 from pathlib import PurePosixPath
 from typing import BinaryIO, Callable, Dict, Iterator, List, Optional, Tuple
@@ -1007,56 +1008,115 @@ def ls(args: List[str], stdout: BinaryIO, stderr: BinaryIO, fs: ShellFS):
 
 
 @command
-def tar(args: List[str], fs: ShellFS):
-    supportedopts = ["C", "f", "x"]
-    expargs = []
-    for arg in args:
-        if arg.startswith("-"):
-            for subarg in arg[1:]:
-                expargs.append(f"-{subarg}")
-        else:
-            expargs.append(arg)
+def tar(
+    args: List[str],
+    stdin: BinaryIO,
+    stdout: BinaryIO,
+    fs: ShellFS,
+):
+    supportedopts = ["C", "f", "t", "x"]
 
     def parseargs(args: List[str]) -> Dict[str, Optional[str]]:
         argsdict: Dict[str, Optional[str]] = {}
         i = 0
         while i < len(args):
             arg = args[i]
-            if arg.startswith("-"):
-                val = None
-                if i + 1 < len(args) and not args[i + 1].startswith("-"):
-                    i += 1
-                    val = args[i]
-                argsdict[arg[1:]] = val
+            if i == 0 and not arg.startswith("-"):
+                for opt in arg:
+                    argsdict[opt] = None
+            elif arg == "-C":
+                if i + 1 >= len(args):
+                    raise RuntimeError("-C option must specify a directory")
+                argsdict["C"] = args[i + 1]
+                i += 1
+            elif arg.startswith("-") and arg != "-":
+                for opt in arg[1:]:
+                    argsdict[opt] = None
+            elif argsdict.get("f") is None:
+                argsdict["f"] = arg
+            else:
+                raise RuntimeError(f"unsupported arguments for tar: {args}")
             i += 1
         return argsdict
 
+    def parent_dirs(path: str) -> Iterator[str]:
+        parent = PurePosixPath(path).parent
+        if str(parent) == ".":
+            return
+        parts: List[str] = []
+        for part in parent.parts:
+            parts.append(part)
+            yield str(PurePosixPath(*parts))
+
+    def mkdirs(path: str):
+        for parent in parent_dirs(path):
+            fs.mkdir(parent)
+
+    @contextmanager
+    def open_tar(filename: str):
+        if filename == "-":
+            with tarfile.open(fileobj=stdin, mode="r|*") as tar:
+                yield tar
+        else:
+            with fs.open(filename, "rb") as source:
+                with tarfile.open(fileobj=source, mode="r:*") as tar:
+                    yield tar
+
+    def member_target_path(target: str, name: str) -> str:
+        path = PurePosixPath(name)
+        if path.is_absolute() or ".." in path.parts:
+            raise RuntimeError(f"tar member {name!r} escapes target directory")
+        return str(PurePosixPath(target, path))
+
+    def listtar(filename: str):
+        with open_tar(filename) as tar:
+            for member in tar:
+                stdout.write(f"{member.name}\n".encode())
+
     def extracttar(filename: str, target: Optional[str]):
         if target is None:
-            target = "./"
-        with tarfile.open(filename) as tar:
-            tar.extractall(target)
+            target = "."
+        with open_tar(filename) as tar:
+            for member in tar:
+                path = member_target_path(target, member.name)
+                if member.isdir():
+                    fs.mkdir(path)
+                elif member.issym():
+                    mkdirs(path)
+                    fs.symlink(member.linkname, path)
+                elif member.isfile():
+                    mkdirs(path)
+                    extracted = tar.extractfile(member)
+                    if extracted is None:
+                        continue
+                    with extracted, fs.open(path, "wb") as output:
+                        output.write(extracted.read())
+                    fs.chmod(path, member.mode)
+                else:
+                    raise NotImplementedError(f"tar member {member.name!r}")
 
-    opts = parseargs(expargs)
+    opts = parseargs(args)
     for opt in opts.keys():
         if opt not in supportedopts:
             raise NotImplementedError(f"tar with option {opt}")
 
-    if expargs[0] in {"-c", "-r", "-t", "-u"}:
-        raise NotImplementedError(f"tar with option {expargs[0]}")
-    elif expargs[0] == "-x":
+    filename = opts.pop("f", "")
+    if not filename:
+        raise RuntimeError("-f option must be specified for tar")
+
+    if "t" in opts:
+        opts.pop("t")
+        if opts:
+            raise RuntimeError(f"unsupported options for tar -t: {args}")
+        listtar(filename)
+    elif "x" in opts:
         opts.pop("x")
-        filename = opts.pop("f", "")
-        if not filename:
-            raise RuntimeError(f"-f option must be specified for tar -x")
-        target = None
-        if "C" in opts:
-            target = opts.pop("C")
-        if len(opts) > 0:
+        target = opts.pop("C", None)
+        if opts:
             raise RuntimeError(f"unsupported options for tar -x: {args}")
         extracttar(filename, target)
     else:
-        raise RuntimeError("first option for tar must be one of [-c, -r, -t, -u, -x]")
+        raise RuntimeError("tar must specify one of -t or -x")
 
 
 @command

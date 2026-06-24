@@ -420,11 +420,24 @@ basename and dirname
 Commands on OS filesystem:
 
     >>> from .osfs import OSFS
+    >>> import io
+    >>> import tarfile
     >>> import tempfile
     >>> def f(code):
     ...     with tempfile.TemporaryDirectory('.test-shinterp') as d:
     ...         fs = OSFS()
     ...         fs.chdir(d)
+    ...         env = Env(fs=fs, cmdtable=dict(stdlib.cmdtable))
+    ...         return sheval(code, env)
+    >>> def with_tar(code, name="dir/file"):
+    ...     with tempfile.TemporaryDirectory('.test-shinterp') as d:
+    ...         fs = OSFS()
+    ...         fs.chdir(d)
+    ...         with tarfile.open(fileobj=fs.open("archive.tar", "wb"), mode="w") as tar:
+    ...             data = b"content\n"
+    ...             info = tarfile.TarInfo(name)
+    ...             info.size = len(data)
+    ...             tar.addfile(info, io.BytesIO(data))
     ...         env = Env(fs=fs, cmdtable=dict(stdlib.cmdtable))
     ...         return sheval(code, env)
 
@@ -483,6 +496,27 @@ dd:
 
     >>> f('dd if=/dev/zero of=zeros bs=3 count=2; wc -c zeros')
     '6\n'
+
+tar:
+
+    >>> with_tar('tar tf archive.tar')
+    'dir/file\n'
+    >>> with_tar('cat archive.tar | tar tf -')
+    'dir/file\n'
+    >>> with_tar('mkdir output; tar xf archive.tar -C output; cat output/dir/file')
+    'content\n'
+    >>> with_tar('tar tf archive.tar -C output') # doctest: +ELLIPSIS
+    Traceback (most recent call last):
+    ...
+    RuntimeError: unsupported options for tar -t: ['tf', 'archive.tar', '-C', 'output']
+    >>> with_tar('mkdir output; tar xf archive.tar -C output', '../escape') # doctest: +ELLIPSIS
+    Traceback (most recent call last):
+    ...
+    RuntimeError: tar member '../escape' escapes target directory
+    >>> with_tar('mkdir output; tar xf archive.tar -C output', '/escape') # doctest: +ELLIPSIS
+    Traceback (most recent call last):
+    ...
+    RuntimeError: tar member '/escape' escapes target directory
 
 test:
 
