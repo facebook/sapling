@@ -13,6 +13,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -153,6 +154,7 @@ class EdenServer : private TakeoverHandler {
   using MountList = std::vector<std::shared_ptr<EdenMount>>;
   using MountAndRootInode =
       std::tuple<std::shared_ptr<EdenMount>, TreeInodePtr>;
+  using StartupProgressCallback = std::function<void(std::string_view)>;
 
   EdenServer(
       std::vector<std::string> originalCommandLine,
@@ -168,6 +170,8 @@ class EdenServer : private TakeoverHandler {
       std::string version = std::string{});
 
   virtual ~EdenServer();
+
+  void setStartupProgressCallback(StartupProgressCallback callback);
 
   /**
    * Get the server's current status.
@@ -937,6 +941,7 @@ class EdenServer : private TakeoverHandler {
   struct ProgressManager {
     static constexpr size_t kMaxProgressLines = 8;
     std::vector<ProgressState> progresses;
+    StartupProgressCallback startupProgressCallback;
 
     size_t totalLinesPrinted{0};
     size_t totalFinished{0};

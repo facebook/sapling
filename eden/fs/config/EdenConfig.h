@@ -1887,6 +1887,15 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * How long systemd should extend EdenFS startup timeout on each startup
+   * progress event. Set to 0 to disable startup timeout extension.
+   */
+  ConfigSetting<std::chrono::nanoseconds> systemdStartupTimeoutExtension{
+      "systemd:startup-timeout-extension",
+      std::chrono::minutes(5),
+      this};
+
+  /**
    * Whether to place EdenFS in a dedicated systemd cgroup via systemd-run.
    * Only used in the CLI, including here to get rid of warnings.
    */

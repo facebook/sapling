@@ -831,6 +831,10 @@ EdenServer::~EdenServer() {
 #endif
 }
 
+void EdenServer::setStartupProgressCallback(StartupProgressCallback callback) {
+  progressManager_->wlock()->startupProgressCallback = std::move(callback);
+}
+
 #ifdef __APPLE__
 std::optional<std::string> EdenServer::mapCounterNameForNFSStat(
     std::pair<std::string, std::string> nfsStatsCounter) {
@@ -910,6 +914,21 @@ std::string_view describeFsckProgressPhase(
       return "complete";
   }
   return "unknown";
+}
+
+std::string formatFsckProgressStatus(
+    OverlayChecker::Progress::Phase phase,
+    std::optional<uint16_t> progress10Pct,
+    std::string_view localDir) {
+  if (progress10Pct.has_value()) {
+    return fmt::format(
+        "fsck {} {}% on {}",
+        describeFsckProgressPhase(phase),
+        *progress10Pct * 10,
+        localDir);
+  }
+  return fmt::format(
+      "fsck {} on {}", describeFsckProgressPhase(phase), localDir);
 }
 
 void EdenServer::ProgressManager::updateProgressState(
@@ -1002,6 +1021,13 @@ void EdenServer::ProgressManager::manageProgress(
     size_t progressIndex,
     const OverlayChecker::Progress& progress) {
   updateProgressState(progressIndex, progress);
+  if (progressIndex < progresses.size() && startupProgressCallback) {
+    const auto& currentProgress = progresses[progressIndex];
+    startupProgressCallback(formatFsckProgressStatus(
+        currentProgress.fsckPhase,
+        currentProgress.fsckProgress10Pct,
+        currentProgress.localDir));
+  }
   printProgresses(logger);
 }
 size_t EdenServer::ProgressManager::registerEntry(

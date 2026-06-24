@@ -8,7 +8,10 @@
 #include "eden/fs/service/EdenMain.h"
 #include "eden/common/telemetry/SessionId.h"
 
+#include <chrono>
+#include <memory>
 #include <optional>
+#include <string_view>
 
 #include <fb303/FollyLoggingHandler.h>
 #include <fb303/TFunctionStatHandler.h>
@@ -119,6 +122,48 @@ std::optional<std::string> readCgroup() {
   }
   return std::nullopt;
 }
+#endif
+
+#ifdef EDEN_HAVE_SYSTEMD
+class SystemdStartupTimeoutExtender {
+ public:
+  explicit SystemdStartupTimeoutExtender(std::chrono::nanoseconds extension)
+      : extension_{extension} {}
+
+  void reportProgress(std::string_view status) {
+    auto now = std::chrono::steady_clock::now();
+    if (lastNotifyTime_.has_value() &&
+        now - *lastNotifyTime_ < kMinNotifyInterval) {
+      return;
+    }
+    lastNotifyTime_ = now;
+
+    auto extensionUsec =
+        std::chrono::duration_cast<std::chrono::microseconds>(extension_)
+            .count();
+    auto message =
+        fmt::format("EXTEND_TIMEOUT_USEC={}\nSTATUS={}", extensionUsec, status);
+    auto result = sd_notify(0, message.c_str());
+    if (result > 0) {
+      XLOGF(
+          DBG2,
+          "sent systemd startup timeout extension of {}us: {}",
+          extensionUsec,
+          status);
+    } else if (result < 0) {
+      XLOGF(
+          ERR,
+          "sd_notify EXTEND_TIMEOUT_USEC failed: {}",
+          folly::errnoStr(-result));
+    }
+  }
+
+ private:
+  static constexpr auto kMinNotifyInterval = std::chrono::seconds(5);
+
+  std::chrono::nanoseconds extension_;
+  std::optional<std::chrono::steady_clock::time_point> lastNotifyTime_;
+};
 #endif
 
 EdenStatsPtr getGlobalEdenStats() {
@@ -549,6 +594,11 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
     }
 #endif // __linux__
 
+#ifdef EDEN_HAVE_SYSTEMD
+    auto systemdStartupTimeoutExtension =
+        edenConfig->systemdStartupTimeoutExtension.getValue();
+#endif
+
     server.emplace(
         std::move(originalCommandLine),
         std::move(identity),
@@ -561,6 +611,18 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
         std::move(scribeLogger),
         std::move(startupStatusChannel),
         main.getEdenfsVersion());
+
+#ifdef EDEN_HAVE_SYSTEMD
+    if (systemdStartupTimeoutExtension > std::chrono::nanoseconds::zero()) {
+      auto startupTimeoutExtender =
+          std::make_shared<SystemdStartupTimeoutExtender>(
+              systemdStartupTimeoutExtension);
+      server->setStartupProgressCallback(
+          [startupTimeoutExtender](std::string_view status) {
+            startupTimeoutExtender->reportProgress(status);
+          });
+    }
+#endif
 
     main.prepare(server.value());
 
@@ -604,7 +666,8 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
         auto startTimeInSeconds =
             std::chrono::duration<double>{daemonStart.elapsed()}.count();
 #ifdef EDEN_HAVE_SYSTEMD
-        auto sdNotifyMsg = fmt::format("MAINPID={}\nREADY=1", getpid());
+        auto sdNotifyMsg =
+            fmt::format("MAINPID={}\nREADY=1\nSTATUS=", getpid());
         auto sdNotifyResult = sd_notify(0, sdNotifyMsg.c_str());
         if (sdNotifyResult > 0) {
           XLOGF(INFO, "notified systemd: MAINPID={}", getpid());
