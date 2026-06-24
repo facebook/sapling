@@ -142,6 +142,57 @@ Test --tar writes archive to stdout by default and uses --output as entry templa
   dir/file
   foo
 
+Test --binary-file-size-threshold replaces large binary files:
+
+  $ newserver server-binary
+  $ drawdag <<'EOS'
+  > A
+  > python:
+  > commit("A", files={
+  >     "large_binary": b85(b"abc\0def\n"),
+  >     "binary_link": b85(b"target\0name (symlink)"),
+  >     "large_text": "abcdef\n",
+  > })
+  > EOS
+
+  $ sl cat -R test:server-binary -r $A --binary-file-size-threshold 4 large_binary
+  This is a placeholder for a large binary file
+  
+  Original file path: large_binary
+  Original file id: * (glob)
+  Original file size: 8
+
+  $ sl cat -R test:server-binary -r $A --binary-file-size-threshold 4 binary_link
+  This is a placeholder for a large binary file
+  
+  Original file path: binary_link
+  Original file id: * (glob)
+  Original file size: 11
+
+  $ sl cat -R test:server-binary -r $A --binary-file-size-threshold 4 large_text
+  abcdef
+
+Test --binary-file-size-threshold applies to tar output:
+
+  $ rm -rf output filtered.tar
+  $ sl cat -R test:server-binary -r $A --binary-file-size-threshold 4 --tar --output 'export/%p' large_binary binary_link large_text > filtered.tar
+  $ mkdir output
+  $ tar xf filtered.tar -C output
+  $ cat output/export/large_binary
+  This is a placeholder for a large binary file
+  
+  Original file path: large_binary
+  Original file id: * (glob)
+  Original file size: 8
+  $ cat output/export/binary_link
+  This is a placeholder for a large binary file
+  
+  Original file path: binary_link
+  Original file id: * (glob)
+  Original file size: 11
+  $ cat output/export/large_text
+  abcdef
+
 Test --output with %% in directory name:
 
   $ rm -rf output

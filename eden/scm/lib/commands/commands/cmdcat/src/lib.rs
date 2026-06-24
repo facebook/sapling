@@ -53,6 +53,10 @@ define_flags! {
         /// write files and content to a tar archive
         tar: bool,
 
+        /// replace binary files at or above BYTES with placeholder content (EXPERIMENTAL)
+        #[argtype("BYTES")]
+        binary_file_size_threshold: Option<i64>,
+
         /// print the given revision
         #[short('r')]
         #[argtype("REV")]
@@ -287,7 +291,21 @@ pub fn run(ctx: ReqCtx<CatOpts>, repo: &CoreRepo) -> Result<u8> {
         Outputter::new_io(ctx.io().clone())
     };
 
-    let count = fetch_and_output(manifest, matcher, &file_store, outputter)?;
+    let binary_file_size_threshold = match ctx.opts.binary_file_size_threshold {
+        Some(threshold) if threshold < 0 => {
+            abort!("--binary-file-size-threshold must be non-negative");
+        }
+        Some(threshold) => Some(threshold as usize),
+        None => None,
+    };
+
+    let count = fetch_and_output(
+        manifest,
+        matcher,
+        &file_store,
+        outputter,
+        binary_file_size_threshold,
+    )?;
 
     Ok(if count > 0 { 0 } else { 1 })
 }
@@ -297,6 +315,7 @@ fn fetch_and_output<M: 'static + pathmatcher::Matcher + Sync + Send>(
     matcher: M,
     file_store: &Arc<dyn FileStore>,
     outputter: Outputter,
+    binary_file_size_threshold: Option<usize>,
 ) -> Result<usize> {
     let output_count = Arc::new(AtomicUsize::new(0));
 
@@ -339,6 +358,13 @@ fn fetch_and_output<M: 'static + pathmatcher::Matcher + Sync + Send>(
                             data,
                             file_type,
                         } = file_result;
+                        let (data, file_type) = filter_binary_file(
+                            &path,
+                            hgid,
+                            data,
+                            file_type,
+                            binary_file_size_threshold,
+                        )?;
                         outputter.output_file(&path, hgid, data, file_type)?;
                         output_count.fetch_add(1, Ordering::Relaxed);
                     }
@@ -363,6 +389,55 @@ fn fetch_and_output<M: 'static + pathmatcher::Matcher + Sync + Send>(
     first_error.wait()?;
 
     Ok(output_count.load(Ordering::Relaxed))
+}
+
+fn filter_binary_file(
+    path: &RepoPath,
+    hgid: HgId,
+    data: Blob,
+    file_type: FileType,
+    threshold: Option<usize>,
+) -> anyhow::Result<(Blob, FileType)> {
+    let Some(threshold) = threshold else {
+        return Ok((data, file_type));
+    };
+
+    if data.len() < threshold {
+        return Ok((data, file_type));
+    }
+
+    if blob_contains_nul(&data)? {
+        let placeholder = format!(
+            "This is a placeholder for a large binary file\n\nOriginal file path: {}\nOriginal file id: {}\nOriginal file size: {}\n",
+            path.as_str(),
+            hgid.to_hex(),
+            data.len(),
+        );
+        Ok((Blob::from(placeholder.into_bytes()), FileType::Regular))
+    } else {
+        Ok((data, file_type))
+    }
+}
+
+fn blob_contains_nul(data: &Blob) -> std::io::Result<bool> {
+    let mut contains_nul = false;
+    let result = data.each_chunk(|chunk| {
+        if chunk.contains(&0) {
+            contains_nul = true;
+            Err(std::io::Error::new(
+                std::io::ErrorKind::Interrupted,
+                "found NUL byte",
+            ))
+        } else {
+            Ok(())
+        }
+    });
+
+    if contains_nul {
+        Ok(true)
+    } else {
+        result.map(|()| false)
+    }
 }
 
 fn append_tar_entry(
