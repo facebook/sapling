@@ -1176,9 +1176,16 @@ pub struct Walk {
     // How many light/cached dir fetches we've observed under this walk.
     dir_reads: AtomicU64,
 
-    // Most commonly seen pid for this walk.
-    pid: AtomicU64,
-    pid_detail: OnceLock<String>,
+    // Most commonly seen pid for this walk. Wrapped in an Arc so it can be shared with the
+    // background thread that resolves pid_detail (see spawn_pid_detail_resolution).
+    pid: Arc<AtomicU64>,
+    // Human readable detail about the walking process (its ancestry). Resolved lazily on a
+    // background thread - the resolution can block, so it must not run on the calling (FS
+    // dispatch) thread. See spawn_pid_detail_resolution.
+    pid_detail: Arc<OnceLock<String>>,
+    // Set once we've kicked off background resolution of pid_detail, so we only ever spawn one
+    // resolver thread per walk.
+    pid_detail_resolving: AtomicBool,
 
     // When walk first started - used to estimate walk duration.
     start_time: AtomicInstant,
@@ -1252,14 +1259,28 @@ impl Walk {
             Ordering::AcqRel,
         );
 
-        if self.maybe_swap_pid(
-            other.pid.load(Ordering::Relaxed) as u32,
-            other.total_accesses(),
-        ) {
-            // If we took the other walk's pid, then also take its pid detail, if present.
-            if let Some(detail) = other.pid_detail.get() {
-                let _ = self.pid_detail.set(detail.to_string());
+        // If we are taking the other walk's pid and detail, first claim the pid-detail guard so a
+        // concurrent resolver cannot race in and later overwrite the pid with a detail from a
+        // different process. If the guard is already claimed, a resolution is in flight and
+        // `maybe_swap_pid` would reject the swap, so leave the existing pid/detail pair alone.
+        let other_pid = other.pid.load(Ordering::Relaxed) as u32;
+        let other_total_accesses = other.total_accesses();
+        if let Some(detail) = other.pid_detail.get() {
+            if self
+                .pid_detail_resolving
+                .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+                .is_ok()
+            {
+                if self.maybe_swap_pid_without_detail_guard(other_pid, other_total_accesses)
+                    || (other_pid > 0 && other_pid == self.pid())
+                {
+                    let _ = self.pid_detail.set(detail.to_string());
+                } else {
+                    self.pid_detail_resolving.store(false, Ordering::Release);
+                }
             }
+        } else {
+            self.maybe_swap_pid(other_pid, other_total_accesses);
         }
 
         // Take the earliest start time.
@@ -1308,11 +1329,15 @@ impl Walk {
     /// Probabilistically set self.pid=pid based on size of numerator relative to size of self.
     /// Returns whether we took the new pid.
     fn maybe_swap_pid(&self, pid: u32, numerator: u64) -> bool {
-        // If we already have pid detail filled in - don't swap to a new pid, lest they mismatch.
-        if self.pid_detail.get().is_some() {
+        // If pid detail is filled in or resolving, don't swap to a new pid, lest they mismatch.
+        if self.pid_detail.get().is_some() || self.pid_detail_resolving.load(Ordering::Acquire) {
             return false;
         }
 
+        self.maybe_swap_pid_without_detail_guard(pid, numerator)
+    }
+
+    fn maybe_swap_pid_without_detail_guard(&self, pid: u32, numerator: u64) -> bool {
         let current_pid = self.pid();
 
         // Don't swap to a 0 pid to favor having some pid info available.
@@ -1329,50 +1354,97 @@ impl Walk {
         }
     }
 
-    fn maybe_log_big_walk(&self, walk_root: &RepoPath, repo_root: Option<&Path>, path: &RepoPath) {
-        // Init the pid detail at the start of the walk. If we wait until the walk ends, the walking
-        // process may have exited. We init pid_detail before checking logged_start because it is
-        // possible that logged_start is true before pid_detail is set due to absorbing a logged
-        // walk.
-        self.pid_detail.get_or_init(|| {
-            let mut pid = self.pid();
+    /// Resolve `pid_detail` (and possibly `pid`) for this walk on a dedicated background thread.
+    ///
+    /// This MUST NOT run on the calling thread. On macOS EdenFS serves the working copy over NFS
+    /// and drives the walk detector from its NFS dispatch thread pool. Resolving the pid is
+    /// expensive: we scan every process's open files and call realpath() on a path that lives
+    /// inside the EdenFS mount. realpath() issues a filesystem request that must be serviced by the
+    /// NFS dispatch threads - the very threads that call into the walk detector. Doing this inline
+    /// (as it previously did, inside a OnceLock initializer) deadlocks the daemon: the calling
+    /// dispatch thread blocks in realpath() while initializing the OnceLock, every other dispatch
+    /// thread then blocks waiting on that OnceLock, and no thread is left to service the realpath()
+    /// request. Running the resolution on a separate thread keeps it off the dispatch threads (and
+    /// out of the walk detector lock) entirely.
+    fn spawn_pid_detail_resolution(&self, repo_root: Option<&Path>, path: &RepoPath) {
+        // Resolve at most once per walk. If resolution is already in flight or done, do nothing. We
+        // never clear this on success because the walk has its pid detail by then.
+        if self.pid_detail_resolving.swap(true, Ordering::AcqRel) {
+            return;
+        }
 
-            // In practice we don't get pid on mac since EdenFS uses NFS. If this file path crossed
-            // us into "big walk" territory, do an expensive lsof lookup to try to get the pid.
-            if pid == 0 {
-                if let Some(root) = repo_root {
-                    if let Some(full_path) = root.join(path.as_str()).to_str() {
+        let tracing_enabled =
+            tracing::enabled!(Level::INFO) || tracing::enabled!(target: "big_walk", Level::DEBUG);
+        if !tracing_enabled {
+            self.pid_detail_resolving.store(false, Ordering::Release);
+            return;
+        }
+
+        // Now that the resolving guard is set, future pid swaps are blocked. A caller that already
+        // passed the guard may still race with this best-effort telemetry update, so capture the pid
+        // as late as possible in the resolver thread.
+        let pid_atomic = Arc::clone(&self.pid);
+        let pid_detail = Arc::clone(&self.pid_detail);
+        let full_path =
+            repo_root.and_then(|root| root.join(path.as_str()).to_str().map(str::to_owned));
+
+        let spawned = std::thread::Builder::new()
+            .name("walkdet-pid".to_owned())
+            .spawn(move || {
+                let detail = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    let pid = pid_atomic.load(Ordering::Relaxed) as u32;
+                    let pid_was_zero_at_spawn = pid == 0;
+                    let pid = if pid_was_zero_at_spawn {
                         #[cfg(target_os = "macos")]
                         {
-                            pid =
-                                procinfo::macos::file_path_to_pid(std::path::Path::new(full_path));
+                            if let Some(full_path) = full_path {
+                                procinfo::macos::file_path_to_pid(std::path::Path::new(&full_path))
+                            } else {
+                                0
+                            }
                         }
 
                         #[cfg(not(target_os = "macos"))]
                         {
-                            // It would make sense to fall back to the "lsof" logic for other
-                            // platforms as well, but we currently only have it implemented for mac.
                             let _ = full_path;
-                            pid = 0;
+                            0
                         }
+                    } else {
+                        pid
+                    };
 
-                        if pid > 0 {
-                            self.pid.store(pid as u64, Ordering::Relaxed);
-                        }
+                    if pid_was_zero_at_spawn && pid > 0 {
+                        pid_atomic.store(pid as u64, Ordering::Relaxed);
                     }
-                }
-            }
 
-            // Short circuit procinfo call if we aren't going to log it.
-            let tracing_enabled = tracing::enabled!(Level::INFO)
-                || tracing::enabled!(target: "big_walk", Level::DEBUG);
+                    if pid > 0 {
+                        procinfo::ancestors(pid)
+                    } else {
+                        String::new()
+                    }
+                }))
+                .unwrap_or_else(|_| String::new());
 
-            if tracing_enabled && pid > 0 {
-                procinfo::ancestors(pid)
-            } else {
-                String::new()
-            }
-        });
+                let _ = pid_detail.set(detail);
+            });
+
+        // If we couldn't spawn the thread, clear the guard so a later access can retry. We don't
+        // fall back to resolving inline - that is exactly the path that can deadlock.
+        if let Err(err) = spawned {
+            tracing::warn!(
+                ?err,
+                "failed to spawn walkdetector pid detail resolver thread"
+            );
+            self.pid_detail_resolving.store(false, Ordering::Release);
+        }
+    }
+
+    fn maybe_log_big_walk(&self, walk_root: &RepoPath, repo_root: Option<&Path>, path: &RepoPath) {
+        // Kick off resolution of the pid detail at the start of the walk. If we wait until the walk
+        // ends, the walking process may have exited. We start resolution before checking
+        // logged_start because it is possible that logged_start is true before pid_detail is set due
+        // to absorbing a logged walk.
+        self.spawn_pid_detail_resolution(repo_root, path);
 
         if self.logged_start.swap(true, Ordering::AcqRel) {
             return;
