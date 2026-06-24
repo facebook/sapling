@@ -399,7 +399,7 @@ fn init_bindings_commands(py: Python, package: &str) -> PyResult<PyModule> {
             let old_io = IO::main();
             let io = IO::new(fin, fout, Some(ferr));
             io.set_main();
-            let result = Ok((run_command)(args, &io));
+            let result = Ok(py.allow_threads(|| (run_command)(args, &io)));
             if let (Ok(old_io), true) = (old_io, io.is_main()) {
                 old_io.set_main();
             }
@@ -407,7 +407,7 @@ fn init_bindings_commands(py: Python, package: &str) -> PyResult<PyModule> {
         } else {
             // Reuse the main IO.
             let io = IO::main().map_pyerr(py)?;
-            Ok((run_command)(args, &io))
+            Ok(py.allow_threads(|| (run_command)(args, &io)))
         }
     }
 

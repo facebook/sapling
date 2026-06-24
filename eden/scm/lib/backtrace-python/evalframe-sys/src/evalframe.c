@@ -177,6 +177,7 @@ Sapling_PyEvalFrameProbe(PyThreadState* tstate, PyFrame* f, int exc) {
 void sapling_cext_evalframe_set_mode(int mode) {
 #if HAS_SET_EVAL_FRAME_FUNC
   if (Py_IsInitialized()) {
+    PyGILState_STATE gil = PyGILState_Ensure();
     PyInterpreterState* interp = PyInterpreterState_Get();
     switch (mode) {
       case 1:
@@ -189,6 +190,7 @@ void sapling_cext_evalframe_set_mode(int mode) {
         _PyInterpreterState_SetEvalFrameFunc(interp, _PyEval_EvalFrameDefault);
         break;
     }
+    PyGILState_Release(gil);
   }
 #endif
 }
