@@ -9,7 +9,6 @@
 import os
 import subprocess
 import sys
-import time
 from collections import namedtuple
 from pathlib import Path
 from typing import Optional
