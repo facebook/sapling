@@ -14,6 +14,7 @@ use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 use std::thread;
 
+use anyhow::Context;
 use anyhow::anyhow;
 use anyhow::bail;
 use blob::Blob;
@@ -49,6 +50,9 @@ define_flags! {
         #[argtype("FORMAT")]
         output: Option<String>,
 
+        /// write files and content to a tar archive
+        tar: bool,
+
         /// print the given revision
         #[short('r')]
         #[argtype("REV")]
@@ -74,6 +78,12 @@ enum Outputter {
         vfs_result_rx: flume::Receiver<Result<Work, (Option<Work>, anyhow::Error)>>,
     },
     Io(Arc<Mutex<IO>>),
+    Tar {
+        output_template: String,
+        commit_id: HgId,
+        repo_name: Option<String>,
+        builder: Arc<Mutex<tar::Builder<Box<dyn Write + Send>>>>,
+    },
 }
 
 impl Clone for Outputter {
@@ -93,6 +103,17 @@ impl Clone for Outputter {
                 vfs_result_rx: vfs_result_rx.clone(),
             },
             Outputter::Io(io) => Outputter::Io(io.clone()),
+            Outputter::Tar {
+                output_template,
+                commit_id,
+                repo_name,
+                builder,
+            } => Outputter::Tar {
+                output_template: output_template.clone(),
+                commit_id: *commit_id,
+                repo_name: repo_name.clone(),
+                builder: builder.clone(),
+            },
         }
     }
 }
@@ -118,14 +139,34 @@ impl Outputter {
         Outputter::Io(Arc::new(Mutex::new(io)))
     }
 
-    fn fs_results(&self) -> Option<flume::Receiver<Result<Work, (Option<Work>, anyhow::Error)>>> {
-        match self {
-            Outputter::Disk { vfs_result_rx, .. } => Some(vfs_result_rx.clone()),
-            Outputter::Io(_) => None,
+    fn new_tar(
+        writer: impl Write + Send + 'static,
+        output_template: String,
+        commit_id: HgId,
+        repo_name: Option<String>,
+    ) -> Self {
+        Outputter::Tar {
+            output_template,
+            commit_id,
+            repo_name,
+            builder: Arc::new(Mutex::new(tar::Builder::new(Box::new(writer)))),
         }
     }
 
-    fn output_file(&self, path: &RepoPath, data: Blob, file_type: FileType) -> anyhow::Result<()> {
+    fn fs_results(&self) -> Option<flume::Receiver<Result<Work, (Option<Work>, anyhow::Error)>>> {
+        match self {
+            Outputter::Disk { vfs_result_rx, .. } => Some(vfs_result_rx.clone()),
+            Outputter::Io(_) | Outputter::Tar { .. } => None,
+        }
+    }
+
+    fn output_file(
+        &self,
+        path: &RepoPath,
+        hgid: HgId,
+        data: Blob,
+        file_type: FileType,
+    ) -> anyhow::Result<()> {
         match self {
             Outputter::Disk {
                 output_template,
@@ -155,6 +196,32 @@ impl Outputter {
                 data.each_chunk(|chunk| out.write_all(chunk))?;
                 Ok(())
             }
+            Outputter::Tar {
+                output_template,
+                commit_id,
+                repo_name,
+                builder,
+            } => {
+                let tar_path =
+                    make_output_filename(output_template, commit_id, path, repo_name.as_deref())?;
+                let mut builder = builder.lock();
+                append_tar_entry(&mut builder, path, &tar_path, hgid, data, file_type)?;
+                Ok(())
+            }
+        }
+    }
+
+    fn finish(&self) -> anyhow::Result<()> {
+        match self {
+            Outputter::Disk { .. } => Ok(()),
+            Outputter::Io(io) => {
+                io.lock().output().flush()?;
+                Ok(())
+            }
+            Outputter::Tar { builder, .. } => {
+                builder.lock().finish()?;
+                Ok(())
+            }
         }
     }
 }
@@ -170,8 +237,7 @@ pub fn run(ctx: ReqCtx<CatOpts>, repo: &CoreRepo) -> Result<u8> {
         "--template not supported"
     );
 
-    let output_template = match &ctx.opts.output {
-        Some(t) if t == "-" => None,
+    let output = match &ctx.opts.output {
         Some(t) if t.is_empty() => abort!("--output cannot be empty"),
         Some(t) => Some(t.to_string()),
         None => None,
@@ -199,7 +265,13 @@ pub fn run(ctx: ReqCtx<CatOpts>, repo: &CoreRepo) -> Result<u8> {
         matcher = Arc::new(IntersectMatcher::new(vec![matcher, sparse_matcher]));
     }
 
-    let outputter = if let Some(output_template) = output_template {
+    let outputter = if ctx.opts.tar {
+        let output_template = output
+            .filter(|t| t != "-")
+            .unwrap_or_else(|| "%p".to_string());
+        let repo_name = repo.repo_name().map(|s| s.to_string());
+        Outputter::new_tar(ctx.io().output(), output_template, commit_id, repo_name)
+    } else if let Some(output_template) = output.filter(|t| t != "-") {
         let repo_name = repo.repo_name().map(|s| s.to_string());
 
         // Split output template into prefix and relative template.
@@ -263,13 +335,15 @@ fn fetch_and_output<M: 'static + pathmatcher::Matcher + Sync + Send>(
 
                         let FileResult {
                             path,
+                            hgid,
                             data,
                             file_type,
                         } = file_result;
-                        outputter.output_file(&path, data, file_type)?;
+                        outputter.output_file(&path, hgid, data, file_type)?;
                         output_count.fetch_add(1, Ordering::Relaxed);
                     }
                 }
+                outputter.finish()?;
                 Ok(())
             };
 
@@ -289,6 +363,48 @@ fn fetch_and_output<M: 'static + pathmatcher::Matcher + Sync + Send>(
     first_error.wait()?;
 
     Ok(output_count.load(Ordering::Relaxed))
+}
+
+fn append_tar_entry(
+    builder: &mut tar::Builder<Box<dyn Write + Send>>,
+    path: &RepoPath,
+    tar_path: &str,
+    hgid: HgId,
+    data: Blob,
+    file_type: FileType,
+) -> anyhow::Result<()> {
+    match file_type {
+        FileType::Regular | FileType::Executable => {
+            let size = data.len();
+            let mut data = data.into_reader();
+            let mut header = tar::Header::new_gnu();
+            header.set_size(size as u64);
+            header.set_mode(if file_type == FileType::Executable {
+                0o755
+            } else {
+                0o644
+            });
+            builder.append_data(&mut header, Path::new(tar_path), &mut data)?;
+        }
+        FileType::Symlink => {
+            let target = data.into_vec();
+            let target = std::str::from_utf8(&target).with_context(|| {
+                format!(
+                    "invalid UTF-8 symlink target for {} (file id {}): {:?}",
+                    path.as_str(),
+                    hgid.to_hex(),
+                    target,
+                )
+            })?;
+            let mut header = tar::Header::new_gnu();
+            header.set_entry_type(tar::EntryType::Symlink);
+            header.set_size(0);
+            header.set_mode(0o777);
+            builder.append_link(&mut header, Path::new(tar_path), Path::new(target))?;
+        }
+        FileType::GitSubmodule => {}
+    }
+    Ok(())
 }
 
 /// Check if a string contains a format specifier (% followed by non-%).

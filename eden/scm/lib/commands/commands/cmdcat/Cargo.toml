@@ -24,3 +24,4 @@ sapling-repo = { version = "0.1.0", path = "../../../repo" }
 sapling-storemodel = { version = "0.1.0", path = "../../../storemodel" }
 sapling-types = { version = "0.1.0", path = "../../../types" }
 sapling-vfs = { version = "0.1.0", path = "../../../vfs" }
+tar = "0.4.46"

@@ -25,6 +25,7 @@ use manifest_tree::TreeManifest;
 use pathmatcher::Matcher;
 use storemodel::FileStore;
 use types::FetchContext;
+use types::HgId;
 use types::Key;
 use types::RepoPathBuf;
 
@@ -36,6 +37,7 @@ const RESULT_QUEUE_SIZE: usize = CONCURRENT_FETCHES * 8;
 /// A file result containing the path, content blob, and file type.
 pub struct FileResult {
     pub path: RepoPathBuf,
+    pub hgid: HgId,
     pub data: Blob,
     pub file_type: FileType,
 }
@@ -169,6 +171,7 @@ pub fn walk_and_fetch<M: 'static + Matcher + Sync + Send>(
 
                         result_batch.push(FileResult {
                             path: key.path,
+                            hgid: key.hgid,
                             data,
                             file_type: *file_type,
                         });

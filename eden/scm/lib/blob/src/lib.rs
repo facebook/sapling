@@ -7,6 +7,9 @@
 
 #![allow(unexpected_cfgs)]
 
+use std::io::Cursor;
+use std::io::Read;
+
 #[cfg(fbcode_build)]
 use bytes::Buf;
 pub use minibytes::Bytes;
@@ -46,6 +49,14 @@ impl Blob {
             Self::Bytes(bytes) => bytes.into(),
             #[cfg(fbcode_build)]
             Self::IOBuf(buf) => Vec::<u8>::from(buf),
+        }
+    }
+
+    pub fn into_reader(self) -> Box<dyn Read> {
+        match self {
+            Self::Bytes(bytes) => Box::new(Cursor::new(bytes)),
+            #[cfg(fbcode_build)]
+            Self::IOBuf(buf) => Box::new(buf.cursor().reader()),
         }
     }
 

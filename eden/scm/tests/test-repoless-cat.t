@@ -122,6 +122,26 @@ Test --output with absolute path:
   $ cat "$TESTTMP/output/foo"
   foo content
 
+Test --tar writes archive to stdout by default and uses --output as entry template:
+
+  $ sl cat -R test:server -r $B --tar foo dir/file | tar tf - | sort
+  dir/file
+  foo
+  $ rm -rf output
+  $ sl cat -R test:server -r $B --tar --output 'archive/%p' foo dir/file > output.tar
+  $ tar tf output.tar | sort
+  archive/dir/file
+  archive/foo
+  $ mkdir output
+  $ tar xf output.tar -C output
+  $ cat output/archive/foo
+  foo content
+  $ cat output/archive/dir/file
+  dir content
+  $ sl cat -R test:server -r $B --tar --output - foo dir/file | tar tf - | sort
+  dir/file
+  foo
+
 Test --output with %% in directory name:
 
   $ rm -rf output
@@ -152,7 +172,7 @@ Test we don't blow away existing directories:
   $ cat output/precious/file
   precious content
 
-#if no-windows
+#if unix-permissions symlink
 
 Test cat --output preserves executable and symlink metadata:
 
@@ -169,6 +189,34 @@ Test cat --output preserves executable and symlink metadata:
   l* link -> script (glob)
   -rw-r--r-- normal
   -rwxr-xr-x script
+
+Test cat --tar preserves executable and symlink metadata:
+
+  $ rm -rf output output.tar
+  $ sl cat -R test:server2 -r $A --tar script link normal > output.tar
+  $ tar tf output.tar | sort
+  link
+  normal
+  script
+  $ mkdir output
+  $ tar xf output.tar -C output
+  $ f output --recurse -MtmsB4
+  output: directory with 3 files, mode=755
+  output/link -> script: link, size=6
+  output/normal: file, size=15, mode=644, md5=d811
+  output/script: file, size=21, mode=755, md5=d604
+
+Test cat --tar reports invalid UTF-8 symlink targets with path and file id:
+
+  $ newserver server-invalid-link
+  $ drawdag <<'EOS'
+  > A
+  > python:
+  > commit("A", files={"badlink": b85(b"\xfftarget (symlink)")})
+  > EOS
+  $ sl cat -R test:server-invalid-link -r $A --tar badlink > output.tar
+  abort: invalid UTF-8 symlink target for badlink (file id *): [255, 116, 97, 114, 103, 101, 116]: invalid utf-8 sequence of 1 bytes from index 0 (glob)
+  [255]
 
 #endif
 
