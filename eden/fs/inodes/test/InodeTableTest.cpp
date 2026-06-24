@@ -10,6 +10,10 @@
 #include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/telemetry/EdenStats.h"
 
+#include <signal.h>
+#include <unistd.h>
+#include <system_error>
+
 #include <folly/chrono/Conv.h>
 #include <folly/test/TestUtils.h>
 #include <folly/testing/TestUtil.h>
@@ -171,6 +175,70 @@ TEST_F(InodeTableTest, setDefault) {
   EXPECT_EQ(14, inodeTable->setDefault(1_ino, 14));
   EXPECT_EQ(14, inodeTable->setDefault(1_ino, 16));
 }
+
+#if defined(__linux__) && defined(MADV_POPULATE_WRITE)
+TEST_F(InodeTableTest, modifyOrThrowHandlesUnavailableBackingPage) {
+  auto pageSize = sysconf(_SC_PAGESIZE);
+  ASSERT_GT(pageSize, 0);
+
+  const auto truncatedSize = static_cast<size_t>(pageSize);
+  const auto targetInodeNumber =
+      static_cast<uint64_t>(truncatedSize / sizeof(InodeTable<Int>::Entry) + 2);
+  ASSERT_GT(
+      (targetInodeNumber - 1) * sizeof(InodeTable<Int>::Entry), truncatedSize);
+  const auto targetInode = InodeNumber{targetInodeNumber};
+
+  auto inodeTable = InodeTable<Int>::open(tablePath, makeRefPtr<EdenStats>());
+  for (uint64_t ino = 1; ino <= targetInodeNumber; ++ino) {
+    inodeTable->set(InodeNumber{ino}, static_cast<int>(ino));
+  }
+
+  ASSERT_EQ(0, truncate(tablePath.c_str(), static_cast<off_t>(truncatedSize)));
+
+  EXPECT_EXIT(
+      {
+        signal(SIGBUS, SIG_DFL);
+        inodeTable->modifyOrThrow(
+            targetInode, [targetInodeNumber](auto& value) {
+              value = static_cast<int>(targetInodeNumber + 1);
+            });
+        _exit(0);
+      },
+      testing::KilledBySignal(SIGBUS),
+      "");
+  // FIXME: This should exit 0 after InodeTable pre-populates entries before
+  // writing and converts the bad mmap page into std::system_error.
+}
+
+TEST_F(InodeTableTest, freeInodeHandlesUnavailableBackingPage) {
+  auto pageSize = sysconf(_SC_PAGESIZE);
+  ASSERT_GT(pageSize, 0);
+
+  const auto truncatedSize = static_cast<size_t>(pageSize);
+  const auto targetInodeNumber =
+      static_cast<uint64_t>(truncatedSize / sizeof(InodeTable<Int>::Entry) + 2);
+  ASSERT_GT(
+      (targetInodeNumber - 1) * sizeof(InodeTable<Int>::Entry), truncatedSize);
+
+  auto inodeTable = InodeTable<Int>::open(tablePath, makeRefPtr<EdenStats>());
+  for (uint64_t ino = 1; ino <= targetInodeNumber; ++ino) {
+    inodeTable->set(InodeNumber{ino}, static_cast<int>(ino));
+  }
+
+  ASSERT_EQ(0, truncate(tablePath.c_str(), static_cast<off_t>(truncatedSize)));
+
+  EXPECT_EXIT(
+      {
+        signal(SIGBUS, SIG_DFL);
+        inodeTable->freeInode(1_ino);
+        _exit(0);
+      },
+      testing::KilledBySignal(SIGBUS),
+      "");
+  // FIXME: This should exit 0 after InodeTable pre-populates entries before
+  // compacting and converts the bad mmap page into std::system_error.
+}
+#endif
 
 // TEST(INodeTable, set) {}
 // TEST(INodeTable, getOrThrow) {}
