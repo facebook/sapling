@@ -321,8 +321,28 @@ async fn try_fetching_repo_acl(
     }
 }
 
+/// Build a Hipster ACL name for a repo, lowercased.
+///
+/// Hipster auto-lowercases ACL names on write (visible in `consumer.id_data`
+/// from `hipstercli getrawacl`). Mononoke's per-permission push-time check
+/// (e.g. the `BYPASS_ALL_HOOKS` pushvar check on `write_no_hooks`) is
+/// case-sensitive against the ACL name stored on the repo, so without
+/// normalization a repo whose name has uppercase characters ends up
+/// configured with an ACL name that no Hipster entry matches.
+///
+/// Concrete failure mode: XF-APAC/dreamwright-v2 mirror sync, 2026-06-24
+/// 16:44 UTC. The Mononoke repo was configured with
+/// `custom_acl_name="repos/git/XF-APAC"` but the actual Hipster entry was
+/// `repos/git/xf-apac`. Every `gitimport --bypass-all-hooks` push to it
+/// failed with "needs … write_no_hooks action on repo ACL" because the
+/// case-sensitive grant lookup missed. par-msl was unaffected only because
+/// its org slug was already lowercase.
+///
+/// Lowercasing here keeps Mononoke's stored ACL name byte-equal to what
+/// Hipster will return for the same logical ACL, for every tenant
+/// regardless of how their org slug is cased on github.com.
 fn make_full_acl_name_from_repo_name(repo_name: &str) -> String {
-    format!("repos/git/{repo_name}")
+    format!("repos/git/{}", repo_name.to_lowercase())
 }
 
 fn make_top_level_acl_name_from_repo_name(repo_name: &str) -> String {
@@ -332,8 +352,11 @@ fn make_top_level_acl_name_from_repo_name(repo_name: &str) -> String {
     // _IDENTITY_SUBDIR mapping in configerator/source/scm/mononoke/repos/generate_repo_index.py.
     // NOTE for future implementer: any logging added inside add_repo() must use debug! not info!
     // — info! in add_repo() breaks .t integration tests (project memory).
+    //
+    // Case normalization: see `make_full_acl_name_from_repo_name` docstring
+    // for the rationale (XF-APAC mirror sync SEV, 2026-06-24).
     let (top_level, _rest) = repo_name.split_once('/').unwrap_or((repo_name, ""));
-    format!("repos/git/{top_level}")
+    format!("repos/git/{}", top_level.to_lowercase())
 }
 
 #[cfg(fbcode_build)]
@@ -1351,6 +1374,56 @@ mod tests {
         assert_ne!(
             path1, path2,
             "Different repos should produce different paths"
+        );
+    }
+
+    #[mononoke::test]
+    fn test_make_top_level_acl_name_lowercases_uppercase_org() {
+        // Regression for the XF-APAC mirror sync failure on 2026-06-24:
+        // before this fix, the uppercase repo name flowed through verbatim
+        // to the ACL name on the Mononoke repo config, producing a
+        // case-mismatch with the lowercased Hipster ACL.
+        assert_eq!(
+            make_top_level_acl_name_from_repo_name("XF-APAC/dreamwright-v2"),
+            "repos/git/xf-apac",
+        );
+    }
+
+    #[mononoke::test]
+    fn test_make_top_level_acl_name_preserves_already_lowercase_org() {
+        // Existing tenants (par-msl) must keep producing the byte-equal
+        // ACL name they had before this fix — otherwise their repo
+        // configs would point at a different name than the live Hipster
+        // entries on the next config rewrite.
+        assert_eq!(
+            make_top_level_acl_name_from_repo_name("par-msl/risk-test"),
+            "repos/git/par-msl",
+        );
+    }
+
+    #[mononoke::test]
+    fn test_make_top_level_acl_name_no_slash() {
+        // Defensive: repo name without a slash falls back to using the
+        // whole name as the top-level (matches the pre-fix behavior
+        // shape), still lowercased.
+        assert_eq!(
+            make_top_level_acl_name_from_repo_name("Single-Segment"),
+            "repos/git/single-segment",
+        );
+    }
+
+    #[mononoke::test]
+    fn test_make_full_acl_name_lowercases() {
+        // Custom-ACL path (callers with `custom_acl.is_some()`) also goes
+        // through Hipster's lowercasing, so the full ACL name must be
+        // lowercased end-to-end.
+        assert_eq!(
+            make_full_acl_name_from_repo_name("XF-APAC/Dreamwright-V2"),
+            "repos/git/xf-apac/dreamwright-v2",
+        );
+        assert_eq!(
+            make_full_acl_name_from_repo_name("par-msl/risk-test"),
+            "repos/git/par-msl/risk-test",
         );
     }
 
