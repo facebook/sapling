@@ -1032,10 +1032,6 @@ impl<E: EdgeType> CommitGraphOps<E> {
                         base: segment.base,
                     });
 
-                    // The split head is a parent of the upcoming slice so
-                    // it's a boundary changeset.
-                    current_slice_boundaries.insert(split_head);
-
                     // Continue loop using the second part of the segment.
                     segment = ChangesetSegment {
                         head: segment.head,
@@ -1053,6 +1049,18 @@ impl<E: EdgeType> CommitGraphOps<E> {
                     });
                     current_slice_heads.clear();
                     current_slice_size = 0;
+
+                    // `split_head` is the parent of `split_base`, which is the base
+                    // of the second part and now begins the *upcoming* slice. It is
+                    // therefore a boundary of that upcoming slice, not the slice we
+                    // just flushed. Because we clear the second part's `parents`
+                    // above, the boundary-detection loop won't rediscover it, so we
+                    // record it here -- after the flush -- so it lands in the
+                    // upcoming slice's boundary set. Each slice's boundaries must
+                    // contain the parent of its base commit; otherwise a backfill
+                    // derive_slice would have no dependency on the request that
+                    // derives that parent and could run before it is derived.
+                    current_slice_boundaries.insert(split_head);
                 }
             }
         }

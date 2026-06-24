@@ -1773,10 +1773,8 @@ pub async fn test_segmented_slice_ancestors(
     )
     .await?;
 
-    // BUG:
-    // Each slice was attributed its own split-head (the *next* slice's parent),
-    // leaving the last slice with an empty boundary set and breaking backfill
-    // dependency wiring, even though the flattened union above is unaffected.
+    // Each slice is assigned the correct boundary: ("L", "L") depends on nothing,
+    // ("M", "M") depends on "L" and so onn.
     assert_segmented_slice_ancestors_with_per_slice_boundaries(
         &graph,
         &ctx,
@@ -1792,12 +1790,12 @@ pub async fn test_segmented_slice_ancestors(
             vec![("Q", "Q")],
         ],
         vec![
+            vec![],
             vec!["L"],
             vec!["M"],
             vec!["N"],
             vec!["O"],
             vec!["P"],
-            vec![],
         ],
     )
     .await?;
