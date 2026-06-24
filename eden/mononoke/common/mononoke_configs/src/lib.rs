@@ -77,6 +77,8 @@ define_stats! {
     merge_skipped_no_handle: timeseries(Average, Sum, Count),
     per_repo_refresh_count: timeseries(Average, Sum, Count),
     per_repo_refresh_failure_count: timeseries(Average, Sum, Count),
+    ensure_repo_handle_success_count: timeseries(Average, Sum, Count),
+    ensure_repo_handle_failure_count: timeseries(Average, Sum, Count),
 }
 
 /// Configuration provider and update notifier for all of Mononoke services
@@ -440,6 +442,85 @@ impl MononokeConfigs {
         Ok(())
     }
 
+    /// Idempotent best-effort subscription of a per-repo `ConfigHandle`.
+    /// No-op when already registered, when split-loading is off, or when
+    /// the repo is not in the manifest (legacy-only). Subscription
+    /// failure is the only `Err` path. Closes the gap that caused
+    /// S678887.
+    pub fn ensure_repo_config_handle(&self, repo_name: &str) -> Result<()> {
+        if self
+            .repo_handles
+            .read()
+            .map_err(|e| anyhow!("repo_handles lock poisoned: {e}"))?
+            .contains_key(repo_name)
+        {
+            return Ok(());
+        }
+
+        let Some(manifest_handle) = self.maybe_manifest_handle.as_ref() else {
+            return Ok(());
+        };
+        let manifest = manifest_handle.get();
+
+        let Some(entry) = manifest.repos.iter().find(|e| e.repo_name == repo_name) else {
+            return Ok(());
+        };
+
+        let config_store = self
+            .config_store
+            .as_ref()
+            .context("No config store available")?;
+
+        let handle = configerator_repo_spec_handle(&entry.config_path, config_store)
+            .inspect_err(|_| {
+                STATS::ensure_repo_handle_failure_count.add_value(1);
+            })
+            .with_context(|| {
+                format!(
+                    "ensure_repo_config_handle: failed to subscribe to repo {repo_name} \
+                     (config_path={})",
+                    entry.config_path
+                )
+            })?;
+        let watcher = handle.watcher();
+
+        // Check-under-write-lock: if a concurrent caller won the race,
+        // drop our handle — its configerator subscription cancels on Drop.
+        let inserted = {
+            let mut handles = self
+                .repo_handles
+                .write()
+                .map_err(|e| anyhow!("repo_handles lock poisoned: {e}"))?;
+            if handles.contains_key(repo_name) {
+                false
+            } else {
+                handles.insert(repo_name.to_owned(), handle);
+                true
+            }
+        };
+
+        if inserted {
+            STATS::ensure_repo_handle_success_count.add_value(1);
+            // Send Added AFTER insert so handle_per_repo_fire's still_present check passes.
+            match watcher {
+                Ok(w) => {
+                    if let Some(tx) = self.repo_handle_event_tx.as_ref() {
+                        if let Err(e) = tx.send(RepoHandleEvent::Added(repo_name.to_owned(), w)) {
+                            warn!("Failed to send Added event for {repo_name}: {e}");
+                        }
+                    }
+                }
+                Err(e) => {
+                    warn!(
+                        "Failed to create watcher for {repo_name}, per-repo hot-reload \
+                         disabled until restart: {e:?}"
+                    );
+                }
+            }
+        }
+        Ok(())
+    }
+
     /// Load a repo config on-demand. Checks the repo_configs cache first,
     /// falls back to loading from the TierManifest via ConfigHandle.
     ///
@@ -448,6 +529,10 @@ impl MononokeConfigs {
     /// so the expensive work — ConfigHandle subscription, RepoSpec parsing —
     /// happens once OUTSIDE the closure.
     pub fn get_or_load_repo_config(&self, repo_name: &str) -> Result<RepoConfig> {
+        // Subscribe per-repo handle before the cache lookup — otherwise the
+        // fast path returns a legacy-blob entry without ever subscribing,
+        // and a subsequent blob hot-reload silently drops the repo. S678887.
+        self.ensure_repo_config_handle(repo_name)?;
         // Fast path: lock-free read from cache (covers both legacy blob
         // and previously loaded split-config repos)
         if let Some(config) = self.repo_configs.load_full().repos.get(repo_name) {
@@ -508,6 +593,12 @@ impl MononokeConfigs {
         &self,
         repo_names: &[String],
     ) -> Result<Vec<(String, RepoConfig)>> {
+        // Subscribe per-repo handles up-front; the cached-fast-path loop
+        // below would otherwise skip subscription. S678887.
+        for name in repo_names {
+            self.ensure_repo_config_handle(name)?;
+        }
+
         // Step 1: Separate cached from missing
         let current = self.repo_configs.load_full();
         let mut results: Vec<(String, RepoConfig)> = Vec::new();
@@ -582,7 +673,10 @@ impl MononokeConfigs {
         // Fast path: O(1) lookup via repos_by_id index
         let current = self.repo_configs.load_full();
         if let Some((name, config)) = current.get_repo_config_by_raw_id(repo_id) {
-            return Ok((name.clone(), config.clone()));
+            let name = name.clone();
+            // See get_or_load_repo_config — S678887.
+            self.ensure_repo_config_handle(&name)?;
+            return Ok((name, config.clone()));
         }
 
         // Slow path: search manifest for repo_id.
@@ -614,5 +708,150 @@ impl Drop for MononokeConfigs {
         if let Some(liveness_updater) = self.maybe_liveness_updater.as_ref() {
             liveness_updater.abort();
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+
+    use cached_config::ModificationTime;
+    use cached_config::TestSource;
+    use metaconfig_types::CommonConfig;
+    use mononoke_macros::mononoke;
+    use repos::TierRepoEntry;
+
+    use super::*;
+
+    fn empty_configs() -> MononokeConfigs {
+        MononokeConfigs {
+            repo_configs: Arc::new(ArcSwap::from_pointee(RepoConfigs::new(
+                HashMap::new(),
+                CommonConfig::default(),
+            ))),
+            storage_configs: Arc::new(ArcSwap::from_pointee(StorageConfigs {
+                storage: HashMap::new(),
+            })),
+            update_receivers: Arc::new(ArcSwap::from_pointee(vec![])),
+            config_info: Arc::new(ArcSwap::from_pointee(None)),
+            maybe_config_updater: None,
+            maybe_liveness_updater: None,
+            maybe_config_handle: None,
+            maybe_manifest_handle: None,
+            repo_handles: Arc::new(RwLock::new(HashMap::new())),
+            config_store: None,
+            tier_name: None,
+            repo_handle_event_tx: None,
+        }
+    }
+
+    fn static_handle() -> ConfigHandle<RepoSpec> {
+        ConfigHandle::from_json("{}").expect("RepoSpec::default serializes as {}")
+    }
+
+    fn make_store(entries: &[(&str, &str)]) -> ConfigStore {
+        let source = TestSource::new();
+        for (path, content) in entries {
+            source.insert_config(path, content, ModificationTime::UnixTimestamp(0));
+        }
+        ConfigStore::new(Arc::new(source), Duration::from_secs(1), None)
+    }
+
+    fn configs_with_manifest(
+        manifest_path: &str,
+        entries: Vec<TierRepoEntry>,
+        extra_paths: &[(&str, &str)],
+    ) -> MononokeConfigs {
+        let manifest = TierManifest {
+            repos: entries,
+            ..Default::default()
+        };
+        let manifest_json = serde_json::to_string(&manifest).unwrap();
+
+        let mut all = vec![(manifest_path, manifest_json.as_str())];
+        all.extend_from_slice(extra_paths);
+        let store = make_store(&all);
+
+        let mut cfg = empty_configs();
+        cfg.maybe_manifest_handle = Some(
+            store
+                .get_config_handle::<TierManifest>(manifest_path.to_string())
+                .unwrap(),
+        );
+        cfg.config_store = Some(store);
+        cfg
+    }
+
+    #[mononoke::test]
+    fn test_ensure_repo_config_handle_no_manifest_returns_ok() {
+        let cfg = empty_configs();
+        assert!(cfg.ensure_repo_config_handle("any_repo").is_ok());
+        assert!(cfg.repo_handles.read().unwrap().is_empty());
+    }
+
+    #[mononoke::test]
+    fn test_ensure_repo_config_handle_idempotent_when_already_present() {
+        let cfg = empty_configs();
+        cfg.repo_handles
+            .write()
+            .unwrap()
+            .insert("existing".to_string(), static_handle());
+        assert!(cfg.ensure_repo_config_handle("existing").is_ok());
+        // Should not have created a duplicate or attempted manifest lookup.
+        assert_eq!(cfg.repo_handles.read().unwrap().len(), 1);
+    }
+
+    #[mononoke::test]
+    fn test_ensure_repo_config_handle_not_in_manifest_returns_ok() {
+        let cfg = configs_with_manifest(
+            "test/manifest",
+            vec![TierRepoEntry {
+                repo_name: "other_repo".to_string(),
+                ..Default::default()
+            }],
+            &[],
+        );
+        assert!(cfg.ensure_repo_config_handle("missing_repo").is_ok());
+        // Repo not in manifest -> no handle registered (legacy-only path).
+        assert!(
+            cfg.repo_handles
+                .read()
+                .unwrap()
+                .get("missing_repo")
+                .is_none()
+        );
+    }
+
+    #[mononoke::test]
+    fn test_ensure_repo_config_handle_registers_when_in_manifest() {
+        let repo_cfg_path = "test/repos/aosp_manifest";
+        let cfg = configs_with_manifest(
+            "test/manifest",
+            vec![TierRepoEntry {
+                repo_name: "aosp/manifest".to_string(),
+                repo_id: 42,
+                config_path: repo_cfg_path.to_string(),
+                is_deep_sharded: true,
+                ..Default::default()
+            }],
+            &[(repo_cfg_path, "{}")],
+        );
+
+        assert!(cfg.ensure_repo_config_handle("aosp/manifest").is_ok());
+        // Bug repro: deep-sharded repo in manifest gets a handle registered
+        // by ensure_repo_config_handle. This is the registration that S678887
+        // relied on but never happened because get_or_load_repo_config's
+        // fast path skipped it.
+        assert!(
+            cfg.repo_handles
+                .read()
+                .unwrap()
+                .get("aosp/manifest")
+                .is_some()
+        );
+
+        // Idempotency: second call is a no-op fast path.
+        assert!(cfg.ensure_repo_config_handle("aosp/manifest").is_ok());
+        assert_eq!(cfg.repo_handles.read().unwrap().len(), 1);
     }
 }

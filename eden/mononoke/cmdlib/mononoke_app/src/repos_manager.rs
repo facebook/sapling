@@ -171,9 +171,8 @@ impl<Repo> MononokeReposManager<Repo> {
     where
         Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
     {
-        // get_or_load_repo_config (called via repo_config) handles
-        // ConfigHandle subscription internally — no separate
-        // load_repo_config_handle call needed.
+        // get_or_load_repo_config (called via repo_config) subscribes the
+        // per-repo ConfigHandle internally.
         let repo_config = self.repo_config(repo_name)?;
         let repo_id = repo_config.repoid.id();
         let common_config = self.configs.repo_configs().common.clone();
