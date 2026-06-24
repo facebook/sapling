@@ -242,12 +242,5 @@ TEST_F(InodeTableTest, freeInodeHandlesUnavailableBackingPage) {
       testing::ExitedWithCode(0),
       "");
 }
-#endif
-
-// TEST(INodeTable, set) {}
-// TEST(INodeTable, getOrThrow) {}
-// TEST(INodeTable, getOptional) {}
-// TEST(INodeTable, modifyOrThrow) {}
-// TEST(INodeTable, freeInodes) {}
-
-#endif
+#endif // defined(__linux__) && defined(MADV_POPULATE_WRITE)
+#endif // !_WIN32
