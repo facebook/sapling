@@ -7,7 +7,6 @@
 # pyre-strict
 
 
-import os
 import shutil
 
 from eden.fs.cli.filesystem import FsUtil
