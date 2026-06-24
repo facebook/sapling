@@ -51,6 +51,10 @@ impl FbClientInfo {
     pub fn atlas_env_id(&self) -> Option<&str> {
         None
     }
+
+    pub fn faas_job_name(&self) -> Option<&str> {
+        None
+    }
 }
 
 pub fn get_fb_client_info() -> FbClientInfo {

@@ -297,6 +297,12 @@ impl Metadata {
             .and_then(|ci| ci.fb.atlas_env_id())
     }
 
+    pub fn clientinfo_faas_job_name(&self) -> Option<&str> {
+        self.client_info
+            .as_ref()
+            .and_then(|ci| ci.fb.faas_job_name())
+    }
+
     pub fn fetch_cause(&self) -> Option<&str> {
         self.fetch_cause.as_deref()
     }

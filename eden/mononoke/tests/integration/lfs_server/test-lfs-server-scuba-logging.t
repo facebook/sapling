@@ -80,6 +80,7 @@
       "client_category": "unknown",
       "client_correlator": "*", (glob)
       "client_entry_point": "sapling",
+      "client_faas_job_name": null,
       "client_hostname": "localhost*", (glob)
       "client_ip": "$LOCALIP",
       "client_main_id": "*", (glob)
@@ -151,6 +152,7 @@
       "client_category": "unknown",
       "client_correlator": "*", (glob)
       "client_entry_point": "sapling",
+      "client_faas_job_name": null,
       "client_hostname": "localhost*", (glob)
       "client_ip": "$LOCALIP",
       "client_main_id": "*", (glob)
@@ -228,6 +230,7 @@
       "client_category": "unknown",
       "client_correlator": "*", (glob)
       "client_entry_point": "sapling",
+      "client_faas_job_name": null,
       "client_hostname": "localhost*", (glob)
       "client_ip": "$LOCALIP",
       "client_main_id": "*", (glob)
@@ -305,6 +308,7 @@
       "client_category": "unknown",
       "client_correlator": "*", (glob)
       "client_entry_point": "sapling",
+      "client_faas_job_name": null,
       "client_hostname": "localhost*", (glob)
       "client_ip": "$LOCALIP",
       "client_main_id": "*", (glob)
@@ -371,6 +375,7 @@
       "client_category": "unknown",
       "client_correlator": "*", (glob)
       "client_entry_point": "curl_test",
+      "client_faas_job_name": null,
       "client_hostname": "localhost*", (glob)
       "client_ip": "$LOCALIP",
       "client_main_id": "*", (glob)

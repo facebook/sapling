@@ -975,6 +975,9 @@ mod schematized_logger {
         if let Some(ref env_id) = data.client_atlas_env_id {
             logger.set_client_atlas_env_id(env_id.clone());
         }
+        if let Some(ref faas_job_name) = data.client_faas_job_name {
+            logger.set_client_faas_job_name(faas_job_name.clone());
+        }
         if let Some(ref cause) = data.fetch_cause {
             logger.set_fetch_cause(cause.clone());
         }

@@ -135,6 +135,7 @@ pub struct CommonMetadata {
     pub client_tw_task: Option<String>,
     pub client_atlas: Option<String>,
     pub client_atlas_env_id: Option<String>,
+    pub client_faas_job_name: Option<String>,
     pub fetch_cause: Option<String>,
     pub fetch_from_cas_attempted: bool,
     // Client request info fields
@@ -205,6 +206,9 @@ impl CommonMetadata {
         }
         if let Some(client_atlas_env_id) = metadata.clientinfo_atlas_env_id() {
             data.client_atlas_env_id = Some(client_atlas_env_id.to_string());
+        }
+        if let Some(client_faas_job_name) = metadata.clientinfo_faas_job_name() {
+            data.client_faas_job_name = Some(client_faas_job_name.to_string());
         }
 
         // Fetch fields
