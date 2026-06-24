@@ -687,6 +687,60 @@ pub async fn assert_segmented_slice_ancestors(
     Ok(())
 }
 
+/// Like `assert_segmented_slice_ancestors`, but asserts the boundary changesets
+/// of each slice individually (one expected set per slice, in slice order),
+/// rather than the flattened union. This is what backfill depends on: each
+/// slice's boundaries must contain the parent of its base commit, so that the
+/// slice's derivation request depends on the request deriving that parent.
+pub async fn assert_segmented_slice_ancestors_with_per_slice_boundaries(
+    graph: &CommitGraph,
+    ctx: &CoreContext,
+    heads: Vec<&str>,
+    common: Vec<&str>,
+    slice_size: u64,
+    expected_slices: Vec<Vec<(&str, &str)>>,
+    expected_per_slice_boundaries: Vec<Vec<&str>>,
+) -> Result<()> {
+    let heads = heads.into_iter().map(name_cs_id).collect();
+    let common = common.into_iter().map(name_cs_id).collect();
+
+    let expected_slices: Vec<_> = expected_slices
+        .into_iter()
+        .map(|segments| SegmentedSliceDescription {
+            segments: segments
+                .into_iter()
+                .map(|(head, base)| SegmentDescription {
+                    head: name_cs_id(head),
+                    base: name_cs_id(base),
+                })
+                .collect(),
+        })
+        .collect();
+    let expected_per_slice_boundaries: Vec<BoundaryChangesets> = expected_per_slice_boundaries
+        .into_iter()
+        .map(|boundaries| boundaries.into_iter().map(name_cs_id).collect())
+        .collect();
+
+    let slices_with_boundaries = graph
+        .segmented_slice_ancestors(ctx, heads, common, slice_size)
+        .await?;
+
+    let slices: Vec<&SegmentedSliceDescription> =
+        slices_with_boundaries.iter().map(|s| &s.slice).collect();
+    let per_slice_boundaries: Vec<&BoundaryChangesets> = slices_with_boundaries
+        .iter()
+        .map(|s| &s.boundaries)
+        .collect();
+
+    assert_eq!(slices, expected_slices.iter().collect::<Vec<_>>());
+    assert_eq!(
+        per_slice_boundaries,
+        expected_per_slice_boundaries.iter().collect::<Vec<_>>()
+    );
+
+    Ok(())
+}
+
 pub async fn assert_children(
     graph: &CommitGraph,
     ctx: &CoreContext,
