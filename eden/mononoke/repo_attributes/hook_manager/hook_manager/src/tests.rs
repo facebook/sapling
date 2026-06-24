@@ -866,6 +866,36 @@ async fn test_pushvar_bypass_with_group_unauthorized(fb: FacebookInit) {
     assert_hook_rejected(&res);
 }
 
+/// What it tests: an unauthorized user attempts a bypass on a commit that the
+/// hook would have ACCEPTED. The bypass is moot (nothing to bypass), so the push
+/// ought to succeed.
+///
+/// FIXME(bypass): today the unauthorized-bypass check rejects the push *before*
+/// the hook runs, so a clean commit is blocked purely for attempting a bypass the
+/// user is not entitled to. This test pins that wrong behavior (a single
+/// "not a member of group" rejection); once the eager check is fixed it becomes
+/// `assert_hook_accepted(&res)` and the message assertion is removed.
+#[mononoke::fbinit_test]
+async fn test_unauthorized_bypass_with_accepting_hook(fb: FacebookInit) {
+    let res = BypassScenario {
+        hook: always_accepting_changeset_hook(),
+        checker: Some(NeverMember::new().into()),
+        ..Default::default()
+    }
+    .run(fb)
+    .await;
+    assert_eq!(res.len(), 1, "expected one outcome, got {res:?}");
+    let info = res[0]
+        .get_execution()
+        .rejection_info()
+        .expect("unauthorized bypass rejects today");
+    assert!(
+        info.long_description.contains("not a member of group"),
+        "expected today's unauthorized-bypass message, got {:?}",
+        info.long_description,
+    );
+}
+
 // =========================================================================
 // Author-based bypass permission group tests
 //
@@ -1006,20 +1036,21 @@ fn assert_hook_rejected(outcomes: &[HookOutcome]) {
     );
 }
 
-/// A single bypass-permission-group scenario. Registers one always-rejecting
-/// hook ("hook1") on bookmark "bm1" with `bypass_config` + `checker`, then runs
-/// it over `changeset` under the given JustKnobs and client identities, and
-/// returns the hook outcomes.
+/// A single bypass-permission-group scenario. Registers one changeset hook
+/// ("hook1", default: always-rejecting) on bookmark "bm1" with `bypass_config` +
+/// `checker`, then runs it over `changeset` under the given JustKnobs and client
+/// identities, and returns the hook outcomes.
 ///
 /// Construct it with struct-update syntax so each test overrides only the
 /// fields relevant to its scenario, e.g.
 /// `BypassScenario { checker: Some(AlwaysMember::new().into()), ..Default::default() }`.
 ///
-/// Defaults: a permission-group bypass config, no checker, a changeset carrying
-/// the bypass message, no pushvars, no client identities, the feature enabled,
-/// and the client-identities path selected.
+/// Defaults: a permission-group bypass config, an always-rejecting hook, no
+/// checker, a changeset carrying the bypass message, no pushvars, no client
+/// identities, the feature enabled, and the client-identities path selected.
 struct BypassScenario {
     bypass_config: HookConfig,
+    hook: Box<dyn ChangesetHook>,
     checker: Option<ArcMembershipChecker>,
     changeset: BonsaiChangeset,
     pushvars: Option<HashMap<String, bytes::Bytes>>,
@@ -1032,6 +1063,7 @@ impl Default for BypassScenario {
     fn default() -> Self {
         Self {
             bypass_config: bypass_config_with_group(),
+            hook: always_rejecting_changeset_hook(),
             checker: None,
             changeset: changeset_with_bypass_msg(),
             pushvars: None,
@@ -1050,12 +1082,7 @@ impl BypassScenario {
         };
 
         let mut hook_manager = setup_hook_manager(fb, hashmap! {}, hashmap! {}).await;
-        hook_manager.register_changeset_hook(
-            "hook1",
-            always_rejecting_changeset_hook(),
-            self.bypass_config,
-            self.checker,
-        );
+        hook_manager.register_changeset_hook("hook1", self.hook, self.bypass_config, self.checker);
         let bm = BookmarkKey::new("bm1").unwrap();
         hook_manager.set_hooks_for_bookmark(bm.clone().into(), vec!["hook1".to_string()]);
 
