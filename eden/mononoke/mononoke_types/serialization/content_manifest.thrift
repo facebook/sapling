@@ -71,3 +71,11 @@ struct ContentManifest {
   // Map of MPathElement -> ContentManifestEntry
   1: sharded_map.ShardedMapV2Node subentries;
 }
+
+struct ContentManifestStageOutputEmpty {}
+
+union ContentManifestStageOutput {
+  1: id.ContentManifestId content_manifest_id;
+  2: ContentManifestStageOutputEmpty empty;
+  3: ContentManifestFile content_manifest_file;
+}

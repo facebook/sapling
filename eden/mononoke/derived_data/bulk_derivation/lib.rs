@@ -561,6 +561,10 @@ pub async fn derive_stage_batch(
             ddm.derive_stage_batch::<RootHgAugmentedManifestId>(ctx, csids, payload)
                 .await
         }
+        PipelineDerivableVariant::ContentManifests => {
+            ddm.derive_stage_batch::<RootContentManifestId>(ctx, csids, payload)
+                .await
+        }
     }
 }
 
@@ -608,6 +612,10 @@ pub async fn is_stage_derived(
             ddm.is_stage_derived::<RootHgAugmentedManifestId>(ctx, csid, stage_path)
                 .await
         }
+        PipelineDerivableVariant::ContentManifests => {
+            ddm.is_stage_derived::<RootContentManifestId>(ctx, csid, stage_path)
+                .await
+        }
     }
 }
 
@@ -653,6 +661,10 @@ pub async fn verify_stage_output(
         }
         PipelineDerivableVariant::HgAugmentedManifests => {
             ddm.verify_stage_output::<RootHgAugmentedManifestId>(ctx, csid, stage_path)
+                .await
+        }
+        PipelineDerivableVariant::ContentManifests => {
+            ddm.verify_stage_output::<RootContentManifestId>(ctx, csid, stage_path)
                 .await
         }
     }

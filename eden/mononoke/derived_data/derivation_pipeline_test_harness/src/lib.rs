@@ -66,7 +66,7 @@ pub struct TestRepo(
 );
 
 /// The pipeline-derivable types verified by the harness.
-const PIPELINE_TYPES: [DerivableType; 9] = [
+const PIPELINE_TYPES: [DerivableType; 10] = [
     DerivableType::Fsnodes,
     DerivableType::Unodes,
     DerivableType::Fastlog,
@@ -76,6 +76,7 @@ const PIPELINE_TYPES: [DerivableType; 9] = [
     DerivableType::AclManifests,
     DerivableType::HgChangesets,
     DerivableType::HgAugmentedManifests,
+    DerivableType::ContentManifests,
 ];
 
 const PIPELINE_BATCH_SIZE: u64 = 3;

@@ -37,6 +37,10 @@ impl RootContentManifestId {
     pub fn into_content_manifest_id(self) -> ContentManifestId {
         self.0
     }
+
+    pub fn content_manifest_id(&self) -> ContentManifestId {
+        self.0
+    }
 }
 
 impl TryFrom<BlobstoreBytes> for RootContentManifestId {

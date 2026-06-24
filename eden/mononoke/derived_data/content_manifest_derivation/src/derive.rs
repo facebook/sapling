@@ -26,6 +26,7 @@ use manifest::ManifestOps;
 use manifest::ManifestParentReplacement;
 use manifest::TreeInfoSubentries;
 use manifest::derive_manifest;
+use manifest::derive_manifest_with_known_entries;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
@@ -279,6 +280,48 @@ pub(crate) async fn derive_content_manifest(
         Some(root) => Ok(root),
         None => Ok(empty_directory(ctx, blobstore).await?),
     }
+}
+
+/// Path-scoped content manifest derivation for one pipeline stage; mirrors `derive_content_manifest`.
+pub(crate) async fn derive_content_manifest_entry(
+    ctx: &CoreContext,
+    derivation_ctx: &DerivationContext,
+    parents: Vec<Entry<ContentManifestId, ContentManifestFile>>,
+    changes: Vec<(NonRootMPath, Option<ContentManifestFile>)>,
+    subtree_changes: Vec<ManifestParentReplacement<ContentManifestId, ContentManifestFile>>,
+    known_entries: HashMap<MPath, Option<Entry<ContentManifestId, ContentManifestFile>>>,
+    prefix: MPath,
+) -> Result<Option<Entry<ContentManifestId, ContentManifestFile>>> {
+    let blobstore = derivation_ctx.blobstore();
+    let restricted_paths = derivation_ctx.restricted_paths();
+    let derive_fut = derive_manifest_with_known_entries(
+        ctx.clone(),
+        blobstore.clone(),
+        parents,
+        changes,
+        subtree_changes,
+        known_entries,
+        prefix,
+        {
+            cloned!(blobstore, ctx, restricted_paths);
+            move |tree_info| {
+                cloned!(blobstore, ctx, restricted_paths);
+                async move {
+                    create_content_manifest_directory(
+                        ctx,
+                        blobstore,
+                        &tree_info.path,
+                        &restricted_paths,
+                        tree_info.subentries,
+                    )
+                    .await
+                }
+            }
+        },
+        create_content_manifest_file,
+    )
+    .boxed();
+    derive_fut.await
 }
 
 #[cfg(test)]

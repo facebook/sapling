@@ -94,6 +94,7 @@ pub enum PipelineDerivableVariant {
     AclManifests,
     HgChangesets,
     HgAugmentedManifests,
+    ContentManifests,
 }
 
 impl DerivableType {
@@ -265,6 +266,7 @@ impl DerivableType {
             DerivableType::HgAugmentedManifests => {
                 Ok(PipelineDerivableVariant::HgAugmentedManifests)
             }
+            DerivableType::ContentManifests => Ok(PipelineDerivableVariant::ContentManifests),
             _ => bail!("{} does not support derivation pipeline", self.name()),
         }
     }
@@ -282,6 +284,7 @@ impl PipelineDerivableVariant {
             PipelineDerivableVariant::AclManifests => DerivableType::AclManifests,
             PipelineDerivableVariant::HgChangesets => DerivableType::HgChangesets,
             PipelineDerivableVariant::HgAugmentedManifests => DerivableType::HgAugmentedManifests,
+            PipelineDerivableVariant::ContentManifests => DerivableType::ContentManifests,
         }
     }
 }

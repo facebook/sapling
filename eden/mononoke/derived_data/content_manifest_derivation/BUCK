@@ -40,5 +40,6 @@ rust_library(
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/repo_attributes/restricted_paths_common:restricted_paths_common",
         "//eden/mononoke/servers/slapi/slapi_server/context:context",
+        "//thrift/lib/rust:fbthrift",
     ],
 )
