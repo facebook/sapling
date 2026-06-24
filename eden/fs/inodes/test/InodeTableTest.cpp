@@ -198,16 +198,18 @@ TEST_F(InodeTableTest, modifyOrThrowHandlesUnavailableBackingPage) {
   EXPECT_EXIT(
       {
         signal(SIGBUS, SIG_DFL);
-        inodeTable->modifyOrThrow(
-            targetInode, [targetInodeNumber](auto& value) {
-              value = static_cast<int>(targetInodeNumber + 1);
-            });
-        _exit(0);
+        try {
+          inodeTable->modifyOrThrow(
+              targetInode, [targetInodeNumber](auto& value) {
+                value = static_cast<int>(targetInodeNumber + 1);
+              });
+          _exit(2);
+        } catch (const std::system_error&) {
+          _exit(0);
+        }
       },
-      testing::KilledBySignal(SIGBUS),
+      testing::ExitedWithCode(0),
       "");
-  // FIXME: This should exit 0 after InodeTable pre-populates entries before
-  // writing and converts the bad mmap page into std::system_error.
 }
 
 TEST_F(InodeTableTest, freeInodeHandlesUnavailableBackingPage) {
@@ -230,13 +232,15 @@ TEST_F(InodeTableTest, freeInodeHandlesUnavailableBackingPage) {
   EXPECT_EXIT(
       {
         signal(SIGBUS, SIG_DFL);
-        inodeTable->freeInode(1_ino);
-        _exit(0);
+        try {
+          inodeTable->freeInode(1_ino);
+          _exit(2);
+        } catch (const std::system_error&) {
+          _exit(0);
+        }
       },
-      testing::KilledBySignal(SIGBUS),
+      testing::ExitedWithCode(0),
       "");
-  // FIXME: This should exit 0 after InodeTable pre-populates entries before
-  // compacting and converts the bad mmap page into std::system_error.
 }
 #endif
 

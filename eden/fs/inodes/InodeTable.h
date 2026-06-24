@@ -190,6 +190,7 @@ class InodeTable {
     }
     auto index = iter->second;
     XCHECK_LT(index, state->storage.size());
+    state->storage.populateEntryForWrite(index);
     fn(state->storage[index].record);
     // TODO: maybe trigger a background msync
     return state->storage[index].record;
@@ -212,15 +213,20 @@ class InodeTable {
     }
 
     size_t indexToDelete = iter->second;
-    indices.erase(iter);
 
     XDCHECK_GT(storage.size(), 0ul);
     size_t lastIndex = storage.size() - 1;
 
     if (lastIndex != indexToDelete) {
+      storage.populateEntryForWrite(indexToDelete);
+      // The source entry must be faulted before reading it during compaction.
+      storage.populateEntryForWrite(lastIndex);
       auto lastInode = storage[lastIndex].inode;
+      indices.erase(iter);
       storage[indexToDelete] = storage[lastIndex];
       indices[lastInode] = indexToDelete;
+    } else {
+      indices.erase(iter);
     }
 
     storage.pop_back();
@@ -238,6 +244,7 @@ class InodeTable {
     for (auto& entry : state->indices) {
       const auto& inode = entry.first;
       auto index = entry.second;
+      state->storage.populateEntryForWrite(index);
       auto& record = state->storage[index].record;
       fn(inode, record);
     }
@@ -279,6 +286,7 @@ class InodeTable {
       auto iter = state->indices.find(ino);
       if (LIKELY(iter != state->indices.end())) {
         auto index = iter->second;
+        state->storage.populateEntryForWrite(index);
         return modify(state->storage[index].record);
       }
     }
@@ -292,6 +300,7 @@ class InodeTable {
     auto iter = state->indices.find(ino);
     if (UNLIKELY(iter != state->indices.end())) {
       auto index = iter->second;
+      state->storage.populateEntryForWrite(index);
       return modify(state->storage[index].record);
     }
 
