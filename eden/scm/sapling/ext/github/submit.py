@@ -8,7 +8,7 @@ import os
 import webbrowser
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, List, Optional, Tuple
+from typing import Any, List, Optional, Set, Tuple
 
 from sapling import error, formatter, git, hintutil, templatekw
 from sapling.context import changectx
@@ -128,6 +128,14 @@ class PullRequestParams:
     number: int
 
 
+@dataclass
+class PullRequestDeltaComment:
+    pr: PullRequestDetails
+    old_head_oid: str
+    new_head_oid: str
+    body: str
+
+
 async def get_partitions(ui, repo, store, filter) -> List[List[CommitData]]:
     commits_to_process = await asyncio.gather(
         *[derive_commit_data(node, repo, store) for node in repo.nodes(filter)]
@@ -168,31 +176,10 @@ async def update_commits_in_stack(
         return 0
     origin = get_push_origin(ui)
     use_placeholder_strategy = ui.configbool("github", "placeholder-strategy")
-    if use_placeholder_strategy:
-        params = await create_placeholder_strategy_params(
-            ui, partitions, github_repo, origin
-        )
-    else:
-        params = await create_serial_strategy_params(
-            ui, partitions, github_repo, origin
-        )
-
-    max_pull_requests_to_create = ui.configint("github", "max-prs-to-create", "5")
-    if (
-        max_pull_requests_to_create >= 0
-        and params.pull_requests_to_create
-        and len(params.pull_requests_to_create) > max_pull_requests_to_create
-    ):
-        raise error.Abort(
-            _(
-                "refused to create %d pull requests, max is %d\nif you want to create %d pull requests at once, run again with `--config github.max-prs-to-create=-1`"
-            )
-            % (
-                len(params.pull_requests_to_create),
-                max_pull_requests_to_create,
-                len(params.pull_requests_to_create),
-            )
-        )
+    params = await create_submit_strategy_params(
+        ui, partitions, github_repo, origin, use_placeholder_strategy
+    )
+    check_pull_request_creation_limit(ui, params)
 
     refs_to_update = params.refs_to_update
 
@@ -211,6 +198,98 @@ async def update_commits_in_stack(
         return 0
 
     repository = params.repository
+    delta_comments, repository = await prepare_pull_request_delta_comments(
+        ui, partitions, repository, origin, github_repo
+    )
+    if delta_comments:
+        await archive_delta_comment_heads(
+            delta_comments, ui, origin, none_throws(repository), get_gitdir
+        )
+
+    repository = await update_single_workflow_base_branches(
+        workflow, partitions, repository, origin, github_repo, ui
+    )
+
+    gitdir = get_gitdir()
+    git_push_args = ["push", "--force", origin] + refs_to_update
+    ui.status_err(_("pushing %d to %s\n") % (len(refs_to_update), origin))
+    run_git_command(git_push_args, gitdir)
+
+    repository = await create_pull_requests_after_push(
+        params,
+        use_placeholder_strategy,
+        workflow,
+        repository,
+        origin,
+        github_repo,
+        store,
+        ui,
+        is_draft,
+    )
+    repository = await rewrite_pull_request_bodies_and_archive_tip(
+        partitions, workflow, repository, origin, github_repo, ui, get_gitdir
+    )
+    await post_pull_request_delta_comments(delta_comments, repository, ui)
+
+    # Open pull requests in browser if --open flag was specified
+    if is_open:
+        open_pull_requests(partitions, ui)
+
+    return 0
+
+
+async def create_submit_strategy_params(
+    ui,
+    partitions: List[List[CommitData]],
+    github_repo: GitHubRepo,
+    origin: str,
+    use_placeholder_strategy: bool,
+):
+    if use_placeholder_strategy:
+        return await create_placeholder_strategy_params(
+            ui, partitions, github_repo, origin
+        )
+    return await create_serial_strategy_params(ui, partitions, github_repo, origin)
+
+
+def check_pull_request_creation_limit(ui, params) -> None:
+    max_pull_requests_to_create = ui.configint("github", "max-prs-to-create", "5")
+    if (
+        max_pull_requests_to_create >= 0
+        and params.pull_requests_to_create
+        and len(params.pull_requests_to_create) > max_pull_requests_to_create
+    ):
+        raise error.Abort(
+            _(
+                "refused to create %d pull requests, max is %d\nif you want to create %d pull requests at once, run again with `--config github.max-prs-to-create=-1`"
+            )
+            % (
+                len(params.pull_requests_to_create),
+                max_pull_requests_to_create,
+                len(params.pull_requests_to_create),
+            )
+        )
+
+
+async def update_single_workflow_base_branches(
+    workflow: SubmitWorkflow,
+    partitions: List[List[CommitData]],
+    repository: Optional[Repository],
+    origin: str,
+    github_repo: GitHubRepo,
+    ui,
+) -> Optional[Repository]:
+    if workflow != SubmitWorkflow.SINGLE:
+        return repository
+
+    existing_prs = [
+        p for p in partitions if p[0].pr and p[0].pr.state == PullRequestState.OPEN
+    ]
+    if not existing_prs:
+        return repository
+
+    if not repository:
+        repository = await get_repository_for_origin(origin, github_repo.hostname)
 
     # For the SINGLE workflow, we must update the base branch on existing PRs
     # BEFORE pushing the new branch contents. Otherwise, when commits are
@@ -218,64 +297,83 @@ async def update_commits_in_stack(
     # in its (old) base branch and auto-close the PR as "merged".
     #
     # See https://github.com/facebook/sapling/issues/1275
-    if workflow == SubmitWorkflow.SINGLE:
-        existing_prs = [
-            p for p in partitions if p[0].pr and p[0].pr.state == PullRequestState.OPEN
-        ]
-        if existing_prs:
-            if not repository:
-                repository = await get_repository_for_origin(
-                    origin, github_repo.hostname
-                )
-            # Update base branches on existing PRs before pushing.
-            # Process from bottom of stack to top so bases are set correctly.
-            for index in range(len(partitions)):
-                partition = partitions[index]
-                pr = partition[0].pr
-                if not pr or pr.state != PullRequestState.OPEN:
-                    continue
-                base = repository.get_base_branch()
-                if index < len(partitions) - 1:
-                    base = none_throws(partitions[index + 1][0].head_branch_name)
-                result = await gh_submit.update_pull_request(
-                    repository.hostname, pr.node_id, pr.title, pr.body, base
-                )
-                if result.is_err():
-                    ui.status_err(
-                        _("warning, updating base for #%d may not have succeeded: %s\n")
-                        % (pr.number, result.unwrap_err())
-                    )
-                else:
-                    ui.status_err(_("updated base for %s\n") % pr.url)
-
-    gitdir = get_gitdir()
-    git_push_args = ["push", "--force", origin] + refs_to_update
-    ui.status_err(_("pushing %d to %s\n") % (len(refs_to_update), origin))
-    run_git_command(git_push_args, gitdir)
-
-    if params.pull_requests_to_create:
-        if not repository:
-            repository = await get_repository_for_origin(origin, github_repo.hostname)
-        if use_placeholder_strategy:
-            assert isinstance(params, PlaceholderStrategyParams)
-            await create_pull_requests_from_placeholder_issues(
-                params.pull_requests_to_create,
-                workflow,
-                repository,
-                store,
-                ui,
-                is_draft,
+    #
+    # Update base branches on existing PRs before pushing.
+    # Process from bottom of stack to top so bases are set correctly.
+    for index in range(len(partitions)):
+        partition = partitions[index]
+        pr = partition[0].pr
+        if not pr or pr.state != PullRequestState.OPEN:
+            continue
+        base = repository.get_base_branch()
+        if index < len(partitions) - 1:
+            base = none_throws(partitions[index + 1][0].head_branch_name)
+        result = await gh_submit.update_pull_request(
+            repository.hostname, pr.node_id, pr.title, pr.body, base
+        )
+        if result.is_err():
+            ui.status_err(
+                _("warning, updating base for #%d may not have succeeded: %s\n")
+                % (pr.number, result.unwrap_err())
             )
         else:
-            assert isinstance(params, SerialStrategyParams)
-            await create_pull_requests_serially(
-                params.pull_requests_to_create,
-                workflow,
-                repository,
-                store,
-                ui,
-                is_draft,
-            )
+            ui.status_err(_("updated base for %s\n") % pr.url)
+
+    return repository
+
+
+async def create_pull_requests_after_push(
+    params,
+    use_placeholder_strategy: bool,
+    workflow: SubmitWorkflow,
+    repository: Optional[Repository],
+    origin: str,
+    github_repo: GitHubRepo,
+    store: PullRequestStore,
+    ui,
+    is_draft: bool,
+) -> Optional[Repository]:
+    if not params.pull_requests_to_create:
+        return repository
+
+    if not repository:
+        repository = await get_repository_for_origin(origin, github_repo.hostname)
+
+    if use_placeholder_strategy:
+        assert isinstance(params, PlaceholderStrategyParams)
+        await create_pull_requests_from_placeholder_issues(
+            params.pull_requests_to_create,
+            workflow,
+            repository,
+            store,
+            ui,
+            is_draft,
+        )
+    else:
+        assert isinstance(params, SerialStrategyParams)
+        await create_pull_requests_serially(
+            params.pull_requests_to_create,
+            workflow,
+            repository,
+            store,
+            ui,
+            is_draft,
+        )
+
+    return repository
+
+
+async def rewrite_pull_request_bodies_and_archive_tip(
+    partitions: List[List[CommitData]],
+    workflow: SubmitWorkflow,
+    repository: Optional[Repository],
+    origin: str,
+    github_repo: GitHubRepo,
+    ui,
+    get_gitdir,
+) -> Repository:
+    if not repository:
+        repository = await get_repository_for_origin(origin, github_repo.hostname)
 
     # Now that each pull request has a named branch pushed to GitHub, we can
     # create/update the pull request title and body, as appropriate.
@@ -285,9 +383,6 @@ async def update_commits_in_stack(
 
     # Add the head of the stack to the sapling-pr-archive branch.
     tip = hex(partitions[0][0].node)
-
-    if not repository:
-        repository = await get_repository_for_origin(origin, github_repo.hostname)
     rewrite_and_archive_requests = [
         rewrite_pull_request_body(
             partitions, index, workflow, pr_numbers_and_num_commits, repository, ui
@@ -303,15 +398,140 @@ async def update_commits_in_stack(
         )
     ]
     await asyncio.gather(*rewrite_and_archive_requests)
+    return repository
 
-    # Open pull requests in browser if --open flag was specified
-    if is_open:
-        pr_urls = [none_throws(p[0].pr).url for p in partitions if p[0].pr]
-        for url in pr_urls:
-            ui.status_err(_("opening %s\n") % url)
-            webbrowser.open(url)
 
-    return 0
+def open_pull_requests(partitions: List[List[CommitData]], ui) -> None:
+    pr_urls = [none_throws(p[0].pr).url for p in partitions if p[0].pr]
+    for url in pr_urls:
+        ui.status_err(_("opening %s\n") % url)
+        webbrowser.open(url)
+
+
+async def prepare_pull_request_delta_comments(
+    ui,
+    partitions: List[List[CommitData]],
+    repository: Optional[Repository],
+    origin: str,
+    github_repo: GitHubRepo,
+) -> Tuple[List[PullRequestDeltaComment], Optional[Repository]]:
+    if not ui.configbool("github", "pr-submit-comment-deltas"):
+        return [], repository
+
+    if not repository:
+        repository = await get_repository_for_origin(origin, github_repo.hostname)
+    return collect_pull_request_delta_comments(partitions, repository), repository
+
+
+def collect_pull_request_delta_comments(
+    partitions: List[List[CommitData]],
+    repository: Repository,
+) -> List[PullRequestDeltaComment]:
+    comments = []
+    for partition in partitions:
+        head_commit_data = partition[0]
+        pr = head_commit_data.pr
+        if not pr or pr.state != PullRequestState.OPEN:
+            continue
+
+        old_head_oid = pr.head_oid
+        new_head_oid = hex(head_commit_data.node)
+        if old_head_oid == new_head_oid:
+            continue
+
+        comments.append(
+            PullRequestDeltaComment(
+                pr=pr,
+                old_head_oid=old_head_oid,
+                new_head_oid=new_head_oid,
+                body=create_pull_request_delta_comment_body(
+                    repository, old_head_oid, new_head_oid
+                ),
+            )
+        )
+    return comments
+
+
+def create_pull_request_delta_comment_body(
+    repository: Repository, old_head_oid: str, new_head_oid: str
+) -> str:
+    owner, name = repository.get_upstream_owner_and_name()
+    compare_url = (
+        f"https://{repository.hostname}/{owner}/{name}/compare/"
+        f"{old_head_oid}..{new_head_oid}"
+    )
+    return "\n".join(
+        [
+            f"[//]: # (sapling-pr-delta old={old_head_oid} new={new_head_oid})",
+            "",
+            "Sapling updated this PR.",
+            "",
+            f"Review delta: {compare_url}",
+            f"Previous head: `{old_head_oid[:12]}`",
+            f"New head: `{new_head_oid[:12]}`",
+        ]
+    )
+
+
+async def archive_delta_comment_heads(
+    comments: List[PullRequestDeltaComment],
+    ui,
+    origin: str,
+    repository: Repository,
+    get_gitdir,
+) -> None:
+    # Add the old head commits to the sapling-pr-archive branch before pushing.
+    # Otherwise, compare links may depend on commits GitHub no longer considers
+    # reachable after the PR branches are force-pushed.
+    archived: Set[str] = set()
+    archive_mutations = 0
+    for comment in comments:
+        if comment.old_head_oid in archived:
+            continue
+        archived.add(comment.old_head_oid)
+        await maybe_sleep_between_github_mutations(archive_mutations)
+        archive_mutations += 1
+        try:
+            await add_commit_to_archives(
+                oid_to_archive=comment.old_head_oid,
+                ui=ui,
+                origin=origin,
+                repository=repository,
+                get_gitdir=get_gitdir,
+            )
+        except error.Abort as ex:
+            ui.status_err(
+                _("warning, could not archive %s for PR delta link: %s\n")
+                % (comment.old_head_oid, ex)
+            )
+
+
+async def maybe_sleep_between_github_mutations(previous_mutations: int) -> None:
+    if previous_mutations <= 0:
+        return
+
+    # GitHub recommends avoiding concurrent mutative requests and waiting at
+    # least one second between them to reduce secondary rate-limit failures.
+    # Open question: should `sl pr submit` have a shared limiter across all of
+    # its GitHub mutations instead of pacing only this optional feature?
+    await asyncio.sleep(1)
+
+
+async def post_pull_request_delta_comments(
+    comments: List[PullRequestDeltaComment], repository: Repository, ui
+) -> None:
+    for index, comment in enumerate(comments):
+        await maybe_sleep_between_github_mutations(index)
+        result = await gh_submit.add_comment(
+            repository.hostname, comment.pr.node_id, comment.body
+        )
+        if result.is_err():
+            ui.status_err(
+                _("warning, posting update delta for #%d may not have succeeded: %s\n")
+                % (comment.pr.number, result.unwrap_err())
+            )
+        else:
+            ui.status_err(_("posted update delta for %s\n") % comment.pr.url)
 
 
 async def rewrite_pull_request_body(
