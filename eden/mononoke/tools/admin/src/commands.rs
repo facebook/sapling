@@ -53,6 +53,7 @@ mononoke_app::subcommands! {
     mod list_repos;
     mod locking;
     mod megarepo;
+    mod modern_sync;
     mod mutable_counters;
     mod mutable_renames;
     mod phases;
