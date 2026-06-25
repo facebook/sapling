@@ -221,6 +221,13 @@ void maybeBackfillRestrictedDirEntry(
 
   // Normal parent metadata propagation happens on the tree-load path. This
   // only backfills stale or missing parent metadata after a child load.
+  XLOGF(
+      DBG1,
+      "Backfilling restricted tree entry for {} (inode {}, object id {})",
+      childTree->getLogPath(),
+      childTree->getNodeId(),
+      childTree->getObjectId() ? childTree->getObjectId()->toLogString()
+                               : "none");
   entry.setRestricted(true);
 }
 
@@ -401,6 +408,12 @@ ImmediateFuture<folly::Unit> TreeInode::transitionToUnrestricted(
           contents->treeId = tree->getObjectId();
         }
 
+        XLOGF(
+            DBG1,
+            "Transitioning restricted tree to unrestricted for {} (inode {}, object id {})",
+            self->getLogPath(),
+            self->getNodeId(),
+            tree->getObjectId().toLogString());
         self->isRestricted_.store(false, std::memory_order_relaxed);
 
         auto loc = self->getLocationInfo(renameLock);
@@ -5532,7 +5545,7 @@ ImmediateFuture<CheckoutActionResult> TreeInode::checkoutUpdateEntry(
 
       auto currentName = std::move(*prep.currentName);
       XLOGF(
-          DBG3,
+          DBG1,
           "checkoutUpdateEntry({}): restriction transition for {}: {} -> {}",
           getLogPath(),
           name,
