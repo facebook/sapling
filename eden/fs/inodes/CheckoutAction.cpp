@@ -465,7 +465,7 @@ ImmediateFuture<CheckoutActionResult> CheckoutAction::doAction() {
 }
 
 folly::coro::now_task<CheckoutActionResult> CheckoutAction::co_doAction() {
-  bool conflictWasAddedToCtx = co_await hasConflict().semi();
+  bool conflictWasAddedToCtx = co_await co_hasConflict();
 
   // Note that even if we know we are not going to apply the changes, we
   // must still run hasConflict() first because we rely on its side-effects.
@@ -634,5 +634,21 @@ bool CheckoutAction::classifyFileContentConflict(bool isSame) {
                                    : ConflictType::MODIFIED_REMOVED;
   ctx_->addConflict(conflictType, inode_.get());
   return true;
+}
+
+folly::coro::now_task<bool> CheckoutAction::co_hasConflict() {
+  if (auto syncResult = checkSyncConflict()) {
+    co_return *syncResult;
+  }
+
+  auto fileInode = inode_.asFilePtrOrNull();
+  bool isSame = co_await fileInode
+                    ->isSameAs(
+                        oldScmEntry_.value().second.getObjectId(),
+                        oldBlobSha1_.value(),
+                        oldScmEntry_.value().second.getType(),
+                        ctx_->getFetchContext())
+                    .semi();
+  co_return classifyFileContentConflict(isSame);
 }
 } // namespace facebook::eden

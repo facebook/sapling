@@ -156,6 +156,7 @@ class CheckoutAction : public std::enable_shared_from_this<CheckoutAction> {
   void allLoadsComplete() noexcept;
   bool ensureDataReady() noexcept;
   ImmediateFuture<bool> hasConflict();
+  folly::coro::now_task<bool> co_hasConflict();
 
   /**
    * Synchronous portion of `hasConflict()`. Handles the tree-side check,
