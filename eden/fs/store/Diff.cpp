@@ -8,6 +8,9 @@
 #include "eden/fs/store/Diff.h"
 
 #include <folly/Portability.h>
+#include <folly/coro/Collect.h>
+#include <folly/coro/Invoke.h>
+#include <folly/coro/Task.h>
 #include <folly/logging/xlog.h>
 #include <memory>
 #include <vector>
@@ -44,6 +47,16 @@ struct TreeAndId {
   static TreeAndId null() {
     return TreeAndId{nullptr, ObjectId{}};
   }
+};
+
+struct ChildTasks {
+  void add(RelativePath&& path, folly::coro::Task<Unit>&& task) {
+    paths.emplace_back(std::move(path));
+    tasks.emplace_back(std::move(task));
+  }
+
+  vector<RelativePath> paths;
+  vector<folly::coro::Task<Unit>> tasks;
 };
 
 struct ChildFutures {
@@ -345,6 +358,234 @@ ImmediateFuture<TreeAndId> getTreeAndId(DiffContext* context, ObjectId id) {
       });
 }
 
+// ---------------------------------------------------------------------------
+// Coroutine tree-diff state machine backing co_diffTrees /
+// co_diffAddedTree / co_diffRemovedTree.
+// ---------------------------------------------------------------------------
+
+folly::coro::now_task<Unit> co_diffTreesInternal(
+    DiffContext* context,
+    RelativePathPiece currentPath,
+    TreePtr scmTree,
+    TreePtr wdTree);
+
+folly::coro::Task<Unit> wrap_co_diffTreesByObjectId(
+    DiffContext* context,
+    RelativePath path,
+    ObjectId scmId,
+    ObjectId wdId) {
+  co_return co_await co_diffTrees(context, path.piece(), scmId, wdId);
+}
+
+folly::coro::Task<Unit>
+wrap_co_diffAddedTree(DiffContext* context, RelativePath path, ObjectId wdId) {
+  co_return co_await co_diffAddedTree(context, path.piece(), wdId);
+}
+
+folly::coro::Task<Unit> wrap_co_diffRemovedTree(
+    DiffContext* context,
+    RelativePath path,
+    ObjectId scmId) {
+  co_return co_await co_diffRemovedTree(context, path.piece(), scmId);
+}
+
+void co_processRemovedSide(
+    DiffContext* context,
+    ChildTasks& childTasks,
+    RelativePathPiece currentPath,
+    const Tree::value_type& scmEntry) {
+  // Skip ACL-restricted entries: diffing across an ACL placeholder
+  // would invent bogus removes from missing contents.
+  if (scmEntry.second.isRestricted()) {
+    XLOGF(
+        DBG7,
+        "skipping restricted entry in diff: {}",
+        currentPath + scmEntry.first);
+    return;
+  }
+  auto entryPath = currentPath + scmEntry.first;
+  context->callback->removedPath(entryPath, scmEntry.second.getDtype());
+  if (!scmEntry.second.isTree()) {
+    return;
+  }
+  auto childTask = wrap_co_diffRemovedTree(
+      context, entryPath.copy(), scmEntry.second.getObjectId());
+  childTasks.add(std::move(entryPath), std::move(childTask));
+}
+
+void co_processAddedSide(
+    DiffContext* context,
+    ChildTasks& childTasks,
+    RelativePathPiece currentPath,
+    const Tree::value_type& wdEntry) {
+  // Skip ACL-restricted entries: diffing across an ACL placeholder
+  // would invent bogus adds from missing contents.
+  if (wdEntry.second.isRestricted()) {
+    XLOGF(
+        DBG7,
+        "skipping restricted entry in diff: {}",
+        currentPath + wdEntry.first);
+    return;
+  }
+  auto entryPath = currentPath + wdEntry.first;
+  context->callback->addedPath(entryPath, wdEntry.second.getDtype());
+  if (wdEntry.second.isTree()) {
+    auto childTask = wrap_co_diffAddedTree(
+        context, entryPath.copy(), wdEntry.second.getObjectId());
+    childTasks.add(std::move(entryPath), std::move(childTask));
+  }
+}
+
+void co_processBothPresent(
+    DiffContext* context,
+    ChildTasks& childTasks,
+    RelativePathPiece currentPath,
+    const Tree::value_type& scmEntry,
+    const Tree::value_type& wdEntry) {
+  // Skip the subtree if either side is restricted. Once one side is
+  // an ACL placeholder, diffing it against the other side would invent
+  // bogus adds/removes from missing contents.
+  if (scmEntry.second.isRestricted() || wdEntry.second.isRestricted()) {
+    XLOGF(
+        DBG7,
+        "skipping restricted entry in diff: {}",
+        currentPath + scmEntry.first);
+    return;
+  }
+  auto entryPath = currentPath + scmEntry.first;
+  bool isTreeSCM = scmEntry.second.isTree();
+  bool isTreeWD = wdEntry.second.isTree();
+  if (isTreeSCM) {
+    if (isTreeWD) {
+      XDCHECK_EQ(scmEntry.second.getType(), wdEntry.second.getType());
+      if (context->store->areObjectsKnownIdentical(
+              scmEntry.second.getObjectId(), wdEntry.second.getObjectId())) {
+        return;
+      }
+      context->callback->modifiedPath(entryPath, wdEntry.second.getDtype());
+      auto childTask = wrap_co_diffTreesByObjectId(
+          context,
+          entryPath.copy(),
+          scmEntry.second.getObjectId(),
+          wdEntry.second.getObjectId());
+      childTasks.add(std::move(entryPath), std::move(childTask));
+    } else {
+      context->callback->addedPath(entryPath, wdEntry.second.getDtype());
+      context->callback->removedPath(entryPath, scmEntry.second.getDtype());
+      auto childTask = wrap_co_diffRemovedTree(
+          context, entryPath.copy(), scmEntry.second.getObjectId());
+      childTasks.add(std::move(entryPath), std::move(childTask));
+    }
+  } else {
+    if (isTreeWD) {
+      context->callback->removedPath(entryPath, scmEntry.second.getDtype());
+      context->callback->addedPath(entryPath, wdEntry.second.getDtype());
+      auto childTask = wrap_co_diffAddedTree(
+          context, entryPath.copy(), wdEntry.second.getObjectId());
+      childTasks.add(std::move(entryPath), std::move(childTask));
+    } else {
+      if (!compareTreeEntryType(
+              scmEntry.second.getType(), wdEntry.second.getType())) {
+        context->callback->modifiedPath(entryPath, wdEntry.second.getDtype());
+      } else {
+        // co_areBlobsEqual is a coroutine; wrap in co_invoke for movability.
+        auto childTask = folly::coro::co_invoke(
+            [context,
+             p = entryPath.copy(),
+             scmId = scmEntry.second.getObjectId(),
+             wdId = wdEntry.second.getObjectId(),
+             dtype = scmEntry.second.getDtype()]() -> folly::coro::Task<Unit> {
+              bool equal = co_await context->store->co_areBlobsEqual(
+                  scmId, wdId, context->getFetchContext());
+              if (!equal) {
+                context->callback->modifiedPath(p, dtype);
+              }
+              co_return folly::unit;
+            });
+        childTasks.add(std::move(entryPath), std::move(childTask));
+      }
+    }
+  }
+}
+
+folly::coro::now_task<Unit> co_waitOnResults(
+    DiffContext* context,
+    ChildTasks childTasks) {
+  XDCHECK_EQ(childTasks.paths.size(), childTasks.tasks.size());
+  auto results =
+      co_await folly::coro::collectAllTryRange(std::move(childTasks.tasks));
+  XDCHECK_EQ(childTasks.paths.size(), results.size());
+  for (size_t idx = 0; idx < results.size(); ++idx) {
+    if (!results[idx].hasException()) {
+      continue;
+    }
+    XLOGF(ERR, "error computing SCM diff for {}", childTasks.paths.at(idx));
+    context->callback->diffError(
+        childTasks.paths.at(idx), results[idx].exception());
+  }
+  co_return folly::unit;
+}
+
+folly::coro::now_task<Unit> co_computeTreeDiff(
+    DiffContext* context,
+    RelativePathPiece currentPath,
+    TreePtr scmTree,
+    TreePtr wdTree) {
+  ChildTasks childTasks;
+
+  Tree::container emptyEntries{kPathMapDefaultCaseSensitive};
+  auto scmIter = scmTree ? scmTree->cbegin() : emptyEntries.cbegin();
+  auto scmEnd = scmTree ? scmTree->cend() : emptyEntries.cend();
+  auto wdIter = wdTree ? wdTree->cbegin() : emptyEntries.cbegin();
+  auto wdEnd = wdTree ? wdTree->cend() : emptyEntries.cend();
+  while (true) {
+    if (scmIter == scmEnd) {
+      if (wdIter == wdEnd) {
+        break;
+      }
+      co_processAddedSide(context, childTasks, currentPath, *wdIter);
+      ++wdIter;
+    } else if (wdIter == wdEnd) {
+      co_processRemovedSide(context, childTasks, currentPath, *scmIter);
+      ++scmIter;
+    } else {
+      auto compare = comparePathPiece(
+          scmIter->first, wdIter->first, context->getCaseSensitive());
+      if (compare == CompareResult::BEFORE) {
+        co_processRemovedSide(context, childTasks, currentPath, *scmIter);
+        ++scmIter;
+      } else if (compare == CompareResult::AFTER) {
+        co_processAddedSide(context, childTasks, currentPath, *wdIter);
+        ++wdIter;
+      } else {
+        co_processBothPresent(
+            context, childTasks, currentPath, *scmIter, *wdIter);
+        ++scmIter;
+        ++wdIter;
+      }
+    }
+  }
+
+  co_await co_waitOnResults(context, std::move(childTasks));
+  co_return folly::unit;
+}
+
+folly::coro::now_task<Unit> co_diffTreesInternal(
+    DiffContext* context,
+    RelativePathPiece currentPath,
+    TreePtr scmTree,
+    TreePtr wdTree) {
+  if (context->isCancelled()) {
+    XLOGF(
+        DBG7,
+        "diff() on directory {} cancelled due to client request no longer being active",
+        currentPath);
+    co_return folly::unit;
+  }
+  co_return co_await co_computeTreeDiff(
+      context, currentPath, std::move(scmTree), std::move(wdTree));
+}
+
 } // namespace
 
 ImmediateFuture<Unit>
@@ -395,21 +636,44 @@ folly::coro::now_task<Unit> co_diffTrees(
     RelativePathPiece currentPath,
     ObjectId scmId,
     ObjectId wdId) {
-  co_return co_await diffTrees(context, currentPath, scmId, wdId).semi();
+  auto results = co_await folly::coro::collectAll(
+      folly::coro::co_invoke([context, scmId]() -> folly::coro::Task<TreePtr> {
+        co_return co_await context->store->co_getTree(
+            scmId, context->getFetchContext());
+      }),
+      folly::coro::co_invoke([context, wdId]() -> folly::coro::Task<TreePtr> {
+        co_return co_await context->store->co_getTree(
+            wdId, context->getFetchContext());
+      }));
+  auto& [scmTree, wdTree] = results;
+
+  if (scmTree && wdTree &&
+      context->store->areObjectsKnownIdentical(scmId, wdId)) {
+    co_return folly::unit;
+  }
+
+  co_return co_await co_diffTreesInternal(
+      context, currentPath, std::move(scmTree), std::move(wdTree));
 }
 
 folly::coro::now_task<Unit> co_diffAddedTree(
     DiffContext* context,
     RelativePathPiece currentPath,
     ObjectId wdId) {
-  co_return co_await diffAddedTree(context, currentPath, wdId).semi();
+  auto wdTree =
+      co_await context->store->co_getTree(wdId, context->getFetchContext());
+  co_return co_await co_diffTreesInternal(
+      context, currentPath, nullptr, std::move(wdTree));
 }
 
 folly::coro::now_task<Unit> co_diffRemovedTree(
     DiffContext* context,
     RelativePathPiece currentPath,
     ObjectId scmId) {
-  co_return co_await diffRemovedTree(context, currentPath, scmId).semi();
+  auto scmTree =
+      co_await context->store->co_getTree(scmId, context->getFetchContext());
+  co_return co_await co_diffTreesInternal(
+      context, currentPath, std::move(scmTree), nullptr);
 }
 
 } // namespace facebook::eden
