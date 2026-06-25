@@ -4139,18 +4139,21 @@ folly::coro::now_task<folly::Unit> TreeInode::co_computeDiff(
       ignore.get(),
       isIgnored);
 
-  std::vector<ImmediateFuture<Unit>> deferredFutures;
-  deferredFutures.reserve(deferredEntries.size());
+  std::vector<folly::coro::Task<folly::Unit>> deferredTasks;
+  deferredTasks.reserve(deferredEntries.size());
   for (auto& entry : deferredEntries) {
-    deferredFutures.push_back(entry->run());
+    deferredTasks.push_back(
+        folly::coro::co_invoke(
+            [entryPtr = entry.get()]() -> folly::coro::Task<folly::Unit> {
+              co_return co_await entryPtr->co_run();
+            }));
   }
 
   co_await getMount()->getServerState()->getFaultInjector().co_checkAsync(
       "TreeInode::computeDiff", currentPath.view());
 
-  // Bridge collectAll via .semi() — DeferredDiffEntry::run() is a virtual
-  // returning ImmediateFuture, can't migrate without changing the interface
-  auto results = co_await collectAll(std::move(deferredFutures)).semi();
+  auto results =
+      co_await folly::coro::collectAllTryRange(std::move(deferredTasks));
 
   // Call diffError() for any jobs that failed.
   for (size_t n = 0; n < results.size(); ++n) {

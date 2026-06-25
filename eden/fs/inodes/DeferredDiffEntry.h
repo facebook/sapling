@@ -9,6 +9,8 @@
 
 #include <memory>
 
+#include <folly/coro/safe/NowTask.h>
+
 #include "eden/common/utils/DirType.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/inodes/InodePtrFwd.h"
@@ -51,6 +53,8 @@ class DeferredDiffEntry {
   }
 
   [[nodiscard]] virtual ImmediateFuture<folly::Unit> run() = 0;
+
+  [[nodiscard]] virtual folly::coro::now_task<folly::Unit> co_run();
 
   static std::unique_ptr<DeferredDiffEntry> createUntrackedEntry(
       DiffContext* context,

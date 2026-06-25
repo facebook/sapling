@@ -8,6 +8,9 @@
 #include "eden/fs/inodes/DeferredDiffEntry.h"
 
 #include <folly/Unit.h>
+#include <folly/coro/Collect.h>
+#include <folly/coro/Invoke.h>
+#include <folly/coro/Task.h>
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
 #include "eden/common/utils/Bug.h"
@@ -28,6 +31,10 @@ using std::shared_ptr;
 using std::unique_ptr;
 
 namespace facebook::eden {
+
+folly::coro::now_task<folly::Unit> DeferredDiffEntry::co_run() {
+  co_return co_await run().semi();
+}
 
 namespace {
 
@@ -63,6 +70,22 @@ class UntrackedDiffEntry : public DeferredDiffEntry {
         });
   }
 
+  folly::coro::now_task<folly::Unit> co_run() override {
+    auto inode = co_await std::move(inodeFuture_).semi();
+    auto treeInode = inode.asTreePtrOrNull();
+    if (!treeInode.get()) {
+      throw EDEN_BUG_EXCEPTION()
+          << "UntrackedDiffEntry should only used with tree inodes";
+    }
+    co_await treeInode->co_diff(
+        context_,
+        getPath(),
+        std::vector<shared_ptr<const Tree>>{},
+        ignore_,
+        isIgnored_);
+    co_return folly::unit;
+  }
+
  private:
   const GitIgnoreStack* ignore_{nullptr};
   bool isIgnored_{false};
@@ -96,6 +119,16 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
         return runForScmBlob(inode);
       }
     });
+  }
+
+  folly::coro::now_task<folly::Unit> co_run() override {
+    auto inode = co_await std::move(inodeFuture_).semi();
+    if (scmEntries_[0].isTree()) {
+      co_await co_runForScmTree(inode);
+    } else {
+      co_await co_runForScmBlob(inode);
+    }
+    co_return folly::unit;
   }
 
  private:
@@ -164,6 +197,79 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
         .thenValue([this, fileInode = std::move(fileInode)](bool isSame) {
           reportIfFileModified(fileInode, isSame);
         });
+  }
+
+  folly::coro::now_task<folly::Unit> co_runForScmTree(const InodePtr& inode) {
+    XCHECK_GT(scmEntries_.size(), 0ull) << "scmEntries must have values";
+    auto treeInode = inode.asTreePtrOrNull();
+    if (!treeInode) {
+      auto scmId = reportTreeBecameFile(inode);
+      co_await diffRemovedTree(context_, getPath(), scmId).semi();
+      co_return folly::unit;
+    }
+
+    if (treeInode->isRestricted()) {
+      co_return folly::unit;
+    }
+
+    {
+      auto contents = treeInode->lockContentsRead();
+      if (!contents->isMaterialized()) {
+        auto maybeContentsId = checkNonMaterializedMatch(*contents);
+        if (!maybeContentsId) {
+          co_return folly::unit;
+        }
+        auto contentsId = *maybeContentsId;
+        contents.unlock();
+        co_await diffTrees(
+            context_, getPath(), scmEntries_[0].getObjectId(), contentsId)
+            .semi();
+        co_return folly::unit;
+      }
+    }
+
+    // Possibly modified directory. Load the trees in parallel via co_getTree.
+    std::vector<folly::coro::Task<shared_ptr<const Tree>>> fetches;
+    fetches.reserve(scmEntries_.size());
+    for (auto& scmEntry : scmEntries_) {
+      fetches.push_back(
+          folly::coro::co_invoke(
+              [store = context_->store,
+               id = scmEntry.getObjectId(),
+               ctx = context_->getFetchContext().copy()]()
+                  -> folly::coro::Task<shared_ptr<const Tree>> {
+                co_return co_await store->co_getTree(id, ctx);
+              }));
+    }
+    auto trees = co_await folly::coro::collectAllRange(std::move(fetches));
+    co_await treeInode->co_diff(
+        context_, getPath(), std::move(trees), ignore_, isIgnored_);
+    co_return folly::unit;
+  }
+
+  folly::coro::now_task<folly::Unit> co_runForScmBlob(const InodePtr& inode) {
+    XCHECK_GT(scmEntries_.size(), 0ull) << "scmEntries must have values";
+    auto fileInode = inode.asFilePtrOrNull();
+    if (!fileInode) {
+      auto treeInode = inode.asTreePtr();
+      if (!reportFileBecameTree(inode)) {
+        co_return folly::unit;
+      }
+      co_await treeInode->co_diff(
+          context_,
+          getPath(),
+          std::vector<shared_ptr<const Tree>>{},
+          ignore_,
+          isIgnored_);
+      co_return folly::unit;
+    }
+
+    bool isSame = co_await fileInode->co_isSameAs(
+        scmEntries_[0].getObjectId(),
+        scmEntries_[0].getType(),
+        context_->getFetchContext());
+    reportIfFileModified(fileInode, isSame);
+    co_return folly::unit;
   }
 
   // Sync callbacks for the "scm tree, working-copy file/symlink" case.
@@ -270,6 +376,20 @@ class ModifiedBlobDiffEntry : public DeferredDiffEntry {
         });
   }
 
+  folly::coro::now_task<folly::Unit> co_run() override {
+    bool equal = co_await context_->store
+                     ->areBlobsEqual(
+                         scmEntry_.getObjectId(),
+                         currentBlobId_,
+                         context_->getFetchContext())
+                     .semi();
+    if (!equal) {
+      XLOGF(DBG5, "modified file: {}", getPath());
+      context_->callback->modifiedPath(getPath(), currentDType_);
+    }
+    co_return folly::unit;
+  }
+
  private:
   TreeEntry scmEntry_;
   ObjectId currentBlobId_;
@@ -289,6 +409,11 @@ class ModifiedScmDiffEntry : public DeferredDiffEntry {
 
   ImmediateFuture<folly::Unit> run() override {
     return diffTrees(context_, getPath(), scmId_, wdId_);
+  }
+
+  folly::coro::now_task<folly::Unit> co_run() override {
+    co_await diffTrees(context_, getPath(), scmId_, wdId_).semi();
+    co_return folly::unit;
   }
 
  private:
