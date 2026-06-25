@@ -12,6 +12,7 @@
 #include <functional>
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -763,6 +764,9 @@ class EdenServer : private TakeoverHandler {
   std::shared_ptr<ReloadableConfig> config_;
 
   std::shared_ptr<folly::Synchronized<MountMap>> mountPoints_;
+  std::shared_ptr<folly::Synchronized<
+      std::unordered_map<std::string, std::set<std::string>>>>
+      emittedMountHealthIssues_;
 
 #ifndef _WIN32
   /**

@@ -182,16 +182,60 @@ using namespace facebook::eden;
 
 constexpr auto kMountHealthCheckTimeout = std::chrono::seconds{5};
 
+using EmittedMountHealthIssues =
+    folly::Synchronized<std::unordered_map<std::string, std::set<std::string>>>;
+
+bool shouldLogMountHealthIssue(
+    const std::shared_ptr<EmittedMountHealthIssues>& emittedMountHealthIssues,
+    const std::string& mountPath,
+    const std::string& reason) {
+  auto emittedIssues = emittedMountHealthIssues->wlock();
+  auto& emittedReasons = (*emittedIssues)[mountPath];
+  return emittedReasons.insert(reason).second;
+}
+
+void clearMountHealthIssues(
+    const std::shared_ptr<EmittedMountHealthIssues>& emittedMountHealthIssues,
+    const std::string& mountPath) {
+  auto emittedIssues = emittedMountHealthIssues->wlock();
+  emittedIssues->erase(mountPath);
+}
+
+void clearAllMountHealthIssues(
+    const std::shared_ptr<EmittedMountHealthIssues>& emittedMountHealthIssues) {
+  auto emittedIssues = emittedMountHealthIssues->wlock();
+  emittedIssues->clear();
+}
+
+void pruneMountHealthIssues(
+    const std::shared_ptr<EmittedMountHealthIssues>& emittedMountHealthIssues,
+    const std::unordered_set<std::string>& configuredMountPaths) {
+  auto emittedIssues = emittedMountHealthIssues->wlock();
+  for (auto it = emittedIssues->begin(); it != emittedIssues->end();) {
+    if (configuredMountPaths.find(it->first) == configuredMountPaths.end()) {
+      it = emittedIssues->erase(it);
+    } else {
+      ++it;
+    }
+  }
+}
+
 struct MountHealthIssueLogContext {
   MountHealthIssueLogContext(
       std::weak_ptr<EdenFsEventsLogger> edenFsEventsLogger,
+      std::shared_ptr<EmittedMountHealthIssues> emittedMountHealthIssues,
       std::string mountPath,
       std::string repoSource)
       : edenFsEventsLogger_{std::move(edenFsEventsLogger)},
+        emittedMountHealthIssues{std::move(emittedMountHealthIssues)},
         mountPath{std::move(mountPath)},
         repoSource{std::move(repoSource)} {}
 
   void log(std::string reason, std::string error) const {
+    if (!shouldLogMountHealthIssue(
+            emittedMountHealthIssues, mountPath, reason)) {
+      return;
+    }
     auto edenFsEventsLogger = edenFsEventsLogger_.lock();
     if (!edenFsEventsLogger) {
       return;
@@ -210,6 +254,7 @@ struct MountHealthIssueLogContext {
   }
 
   std::weak_ptr<EdenFsEventsLogger> edenFsEventsLogger_;
+  std::shared_ptr<EmittedMountHealthIssues> emittedMountHealthIssues;
   std::string mountPath;
   std::string repoSource;
 };
@@ -659,6 +704,7 @@ EdenServer::EdenServer(
       config_{std::make_shared<ReloadableConfig>(edenConfig)},
       mountPoints_{std::make_shared<folly::Synchronized<MountMap>>(
           MountMap{kPathMapDefaultCaseSensitive})},
+      emittedMountHealthIssues_{std::make_shared<EmittedMountHealthIssues>()},
       // Store a pointer to the EventBase that will be used to drive
       // the main thread.  The runServer() code will end up driving this
       // EventBase.
@@ -3442,8 +3488,10 @@ void EdenServer::scheduleRunningMountHealthCheck(
 
   auto started = make_shared<std::atomic_bool>(false);
   auto completed = make_shared<std::atomic_bool>(false);
+  auto emittedMountHealthIssues = emittedMountHealthIssues_;
   auto logContext = make_shared<const MountHealthIssueLogContext>(
       serverState_->getEdenFsEventsLogger(),
+      emittedMountHealthIssues,
       std::move(mountPathString),
       std::move(repoSource));
 
@@ -3463,7 +3511,10 @@ void EdenServer::scheduleRunningMountHealthCheck(
         return checkRunningEdenMountHealth(logContext->mountPath);
       })
       .thenTry(
-          [completed, logContext, runningMountHealthChecks](
+          [completed,
+           emittedMountHealthIssues,
+           logContext,
+           runningMountHealthChecks](
               folly::Try<std::optional<EdenMountHealthCheckIssue>>&& result) {
             const auto alreadyCompleted = completed->exchange(true);
             {
@@ -3482,6 +3533,8 @@ void EdenServer::scheduleRunningMountHealthCheck(
             }
             const auto& issue = result.value();
             if (!issue.has_value()) {
+              clearMountHealthIssues(
+                  emittedMountHealthIssues, logContext->mountPath);
               return;
             }
             logContext->log(
@@ -3504,11 +3557,19 @@ void EdenServer::accidentalUnmountRecovery() {
   }
 
   if (dirs.empty()) {
+    clearAllMountHealthIssues(emittedMountHealthIssues_);
     XLOGF(
         DBG5,
         "No mount points currently configured, skipping accidental unmount recovery.");
     return;
   }
+
+  std::unordered_set<std::string> configuredMountPaths;
+  for (const auto& client : dirs.items()) {
+    configuredMountPaths.insert(
+        std::string{canonicalPath(client.first.stringPiece()).view()});
+  }
+  pruneMountHealthIssues(emittedMountHealthIssues_, configuredMountPaths);
 
   const auto mountPoints = mountPoints_->rlock();
   for (const auto& client : dirs.items()) {
@@ -3518,6 +3579,8 @@ void EdenServer::accidentalUnmountRecovery() {
     if (it != mountPoints->end()) {
       scheduleRunningMountHealthCheck(mountPath, client.second.asString());
     } else {
+      clearMountHealthIssues(
+          emittedMountHealthIssues_, std::string{mountPath.view()});
       // This mount point is not currently mounted, but it was configured
       // in config.json.  This means that the client was unmounted.
       // We should attempt to remount it, if it is unmounted accidentally.
