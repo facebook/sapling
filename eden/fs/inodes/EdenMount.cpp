@@ -196,6 +196,23 @@ class EdenMount::JournalDiffCallback : public DiffCallback {
                        folly::Unit) { return diffContext->getStatsContext(); });
   }
 
+  [[nodiscard]] folly::coro::now_task<StatsFetchContext> co_performDiff(
+      EdenMount* mount,
+      TreeInodePtr rootInode,
+      std::vector<std::shared_ptr<const Tree>> rootTrees,
+      std::shared_ptr<CheckoutContext> ctx) {
+    auto diffContext = mount->createDiffContext(
+        this, folly::CancellationToken{}, ctx->getFetchContext());
+    auto rawContext = diffContext.get();
+    co_await rootInode->co_diff(
+        rawContext,
+        RelativePathPiece{},
+        std::move(rootTrees),
+        rawContext->getToplevelIgnore(),
+        false);
+    co_return diffContext->getStatsContext();
+  }
+
   /** moves the Unclean Path information out of this diff callback instance,
    * rendering it invalid */
   std::unordered_set<RelativePath> stealUncleanPaths() {
@@ -2184,11 +2201,8 @@ folly::coro::now_task<CheckoutResult> EdenMount::co_checkout(
         trees.push_back(toTreeRes.tree);
       }
       auto diffSpan = ctx->createSpan("performDiff");
-      // performDiff returns an ImmediateFuture; bridge it with .semi().
-      auto diffFetchContext =
-          co_await journalDiffCallback
-              ->performDiff(this, rootInode, std::move(trees), ctx)
-              .semi();
+      auto diffFetchContext = co_await journalDiffCallback->co_performDiff(
+          this, rootInode, std::move(trees), ctx);
       ctx->getStatsContext().merge(diffFetchContext);
     }
 
