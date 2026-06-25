@@ -158,6 +158,22 @@ class CheckoutAction : public std::enable_shared_from_this<CheckoutAction> {
   ImmediateFuture<bool> hasConflict();
 
   /**
+   * Synchronous portion of `hasConflict()`. Handles the tree-side check,
+   * the blob nullptr check, and the no-old-entry tail. Returns the final
+   * conflict result when no async work is required, or `std::nullopt` when
+   * the caller must perform the async `FileInode::isSameAs` check and then
+   * pass the result to `classifyFileContentConflict()`.
+   */
+  std::optional<bool> checkSyncConflict();
+
+  /**
+   * Classify the conflict (if any) given the result of
+   * `FileInode::isSameAs`. Returns true iff a conflict was added to the
+   * context.
+   */
+  bool classifyFileContentConflict(bool isSame);
+
+  /**
    * Return whether the directory's contents have changed and the
    * inode's readdir cache must be flushed.
    */

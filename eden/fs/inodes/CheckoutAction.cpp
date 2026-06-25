@@ -547,6 +547,24 @@ folly::coro::now_task<CheckoutActionResult> CheckoutAction::co_doAction() {
 }
 
 ImmediateFuture<bool> CheckoutAction::hasConflict() {
+  if (auto syncResult = checkSyncConflict()) {
+    return *syncResult;
+  }
+
+  // Async tail: compare file contents against the old source control entry.
+  auto fileInode = inode_.asFilePtrOrNull();
+  return fileInode
+      ->isSameAs(
+          oldScmEntry_.value().second.getObjectId(),
+          oldBlobSha1_.value(),
+          oldScmEntry_.value().second.getType(),
+          ctx_->getFetchContext())
+      .thenValue([self = shared_from_this()](bool isSame) {
+        return self->classifyFileContentConflict(isSame);
+      });
+}
+
+std::optional<bool> CheckoutAction::checkSyncConflict() {
   if (oldTree_) {
     auto treeInode = inode_.asTreePtrOrNull();
     if (!treeInode) {
@@ -570,31 +588,8 @@ ImmediateFuture<bool> CheckoutAction::hasConflict() {
       return true;
     }
 
-    // Check that the file contents are the same as the old source control entry
-    return fileInode
-        ->isSameAs(
-            oldScmEntry_.value().second.getObjectId(),
-            oldBlobSha1_.value(),
-            oldScmEntry_.value().second.getType(),
-            ctx_->getFetchContext())
-        .thenValue([self = shared_from_this()](bool isSame) {
-          if (isSame) {
-            // no conflict
-            return false;
-          }
-
-          // The file contents or mode bits are different:
-          // - If the file exists in the new tree but differs from what is
-          //   currently in the working copy, then this is a MODIFIED_MODIFIED
-          //   conflict.
-          // - If the file does not exist in the new tree, then this is a
-          //   MODIFIED_REMOVED conflict.
-          auto conflictType = self->newScmEntry_
-              ? ConflictType::MODIFIED_MODIFIED
-              : ConflictType::MODIFIED_REMOVED;
-          self->ctx_->addConflict(conflictType, self->inode_.get());
-          return true;
-        });
+    // Caller must perform the async FileInode::isSameAs check.
+    return std::nullopt;
   }
 
   XDCHECK(!oldScmEntry_) << "Both oldTree_ and oldBlob_ are nullptr, "
@@ -621,5 +616,23 @@ ImmediateFuture<bool> CheckoutAction::hasConflict() {
     // recurse into this directory to continue to look for conflicts.
     return false;
   }
+}
+
+bool CheckoutAction::classifyFileContentConflict(bool isSame) {
+  if (isSame) {
+    // no conflict
+    return false;
+  }
+
+  // The file contents or mode bits are different:
+  // - If the file exists in the new tree but differs from what is
+  //   currently in the working copy, then this is a MODIFIED_MODIFIED
+  //   conflict.
+  // - If the file does not exist in the new tree, then this is a
+  //   MODIFIED_REMOVED conflict.
+  auto conflictType = newScmEntry_ ? ConflictType::MODIFIED_MODIFIED
+                                   : ConflictType::MODIFIED_REMOVED;
+  ctx_->addConflict(conflictType, inode_.get());
+  return true;
 }
 } // namespace facebook::eden
