@@ -2280,7 +2280,7 @@ folly::coro::now_task<folly::Unit> EdenMount::co_flushInvalidations() {
   XLOG(DBG4, "waiting for inode invalidations to complete");
   auto ch = channel_.load();
   if (ch) {
-    co_await ch->completeInvalidations().semi();
+    co_await ch->co_completeInvalidations();
     XLOG(DBG4, "finished processing inode invalidations");
   }
   co_return folly::unit;

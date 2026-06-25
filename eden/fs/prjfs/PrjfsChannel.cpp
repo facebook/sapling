@@ -1753,6 +1753,11 @@ ImmediateFuture<folly::Unit> PrjfsChannel::completeInvalidations() {
   return folly::unit;
 }
 
+folly::coro::now_task<folly::Unit> PrjfsChannel::co_completeInvalidations() {
+  flushNegativePathCache();
+  co_return folly::unit;
+}
+
 void PrjfsChannel::flushNegativePathCache() {
   auto inner = getInner();
   if (!inner) {

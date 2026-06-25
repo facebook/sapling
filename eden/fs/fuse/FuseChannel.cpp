@@ -1331,6 +1331,21 @@ ImmediateFuture<folly::Unit> FuseChannel::completeInvalidations() {
   return result;
 }
 
+folly::coro::now_task<folly::Unit> FuseChannel::co_completeInvalidations() {
+  Promise<Unit> promise;
+  auto result = promise.getSemiFuture();
+  {
+    auto state = invalidationQueue_.lock();
+    if (state->stop) {
+      co_return folly::unit;
+    }
+    state->queue.emplace_back(std::move(promise));
+  }
+  invalidationCV_.notify_one();
+  co_await std::move(result);
+  co_return folly::unit;
+}
+
 /**
  * Send an element from the invalidation queue.
  *

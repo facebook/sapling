@@ -143,6 +143,9 @@ class FsChannel {
   [[nodiscard]] virtual ImmediateFuture<folly::Unit>
   completeInvalidations() = 0;
 
+  [[nodiscard]] virtual folly::coro::now_task<folly::Unit>
+  co_completeInvalidations() = 0;
+
   /**
    * Helper function to acquire a permit from the rate limiter. This will block
    * until a permit is available. This is a no-op if rate limiting is disabled.

@@ -2654,6 +2654,16 @@ ImmediateFuture<folly::Unit> Nfsd3::completeInvalidations() {
   return result;
 }
 
+folly::coro::now_task<folly::Unit> Nfsd3::co_completeInvalidations() {
+  folly::Promise<folly::Unit> promise;
+  auto result = promise.getSemiFuture();
+  invalidationExecutor_->add([promise = std::move(promise)]() mutable {
+    promise.setValue(folly::unit);
+  });
+  co_await std::move(result);
+  co_return folly::unit;
+}
+
 std::vector<Nfsd3::OutstandingRequest> Nfsd3::getOutstandingRequests() {
   std::vector<Nfsd3::OutstandingRequest> outstandingCalls;
 

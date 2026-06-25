@@ -266,6 +266,8 @@ class Nfsd3 final : public FsChannel {
    */
   ImmediateFuture<folly::Unit> completeInvalidations() override;
 
+  folly::coro::now_task<folly::Unit> co_completeInvalidations() override;
+
   uint32_t getProgramNumber();
 
   uint32_t getProgramVersion();

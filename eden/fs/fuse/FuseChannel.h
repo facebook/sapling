@@ -511,6 +511,9 @@ class FuseChannel final : public FsChannel {
    */
   [[nodiscard]] ImmediateFuture<folly::Unit> completeInvalidations() override;
 
+  [[nodiscard]] folly::coro::now_task<folly::Unit> co_completeInvalidations()
+      override;
+
   /**
    * Sends a reply to a kernel request that consists only of the error
    * status (no additional payload).

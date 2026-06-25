@@ -622,6 +622,8 @@ class PrjfsChannel : public FsChannel {
 
   ImmediateFuture<folly::Unit> completeInvalidations() override;
 
+  folly::coro::now_task<folly::Unit> co_completeInvalidations() override;
+
   void flushNegativePathCache();
 
   ProcessAccessLog& getProcessAccessLog() override {
