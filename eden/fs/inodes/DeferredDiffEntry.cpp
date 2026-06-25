@@ -103,25 +103,8 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
     XCHECK_GT(scmEntries_.size(), 0ull) << "scmEntries must have values";
     auto treeInode = inode.asTreePtrOrNull();
     if (!treeInode) {
-      // This is a Tree in the source control state, but a file or symlink
-      // in the current filesystem state.
-      // Report this file as untracked, and everything in the source control
-      // tree as removed.
-      if (isIgnored_) {
-        if (context_->listIgnored) {
-          XLOGF(DBG6, "directory --> ignored file: {}", getPath());
-          context_->callback->ignoredPath(getPath(), inode->getType());
-        }
-      } else {
-        XLOGF(DBG6, "directory --> untracked file: {}", getPath());
-        context_->callback->addedPath(getPath(), inode->getType());
-      }
-      // Since this is a file or symlink in the current filesystem state, but a
-      // Tree in the source control state, we have to record the files from the
-      // Tree as removed. We can delegate this work to the source control tree
-      // differ.
-      context_->callback->removedPath(getPath(), scmEntries_[0].getDtype());
-      return diffRemovedTree(context_, getPath(), scmEntries_[0].getObjectId());
+      auto scmId = reportTreeBecameFile(inode);
+      return diffRemovedTree(context_, getPath(), scmId);
     }
 
     if (treeInode->isRestricted()) {
@@ -131,19 +114,11 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
     {
       auto contents = treeInode->lockContentsRead();
       if (!contents->isMaterialized()) {
-        for (auto& scmEntry : scmEntries_) {
-          if (context_->store->areObjectsKnownIdentical(
-                  contents->treeId.value(), scmEntry.getObjectId())) {
-            // It did not change since it was loaded,
-            // and it matches the scmEntry we're diffing against.
-            return folly::unit;
-          }
+        auto maybeContentsId = checkNonMaterializedMatch(*contents);
+        if (!maybeContentsId) {
+          return folly::unit;
         }
-
-        // If it didn't exactly match any of the trees, then just diff with the
-        // first scmEntry.
-        context_->callback->modifiedPath(getPath(), scmEntries_[0].getDtype());
-        auto contentsId = contents->treeId.value();
+        auto contentsId = *maybeContentsId;
         contents.unlock();
         return diffTrees(
             context_, getPath(), scmEntries_[0].getObjectId(), contentsId);
@@ -169,16 +144,8 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
     XCHECK_GT(scmEntries_.size(), 0ull) << "scmEntries must have values";
     auto fileInode = inode.asFilePtrOrNull();
     if (!fileInode) {
-      // This is a file in the source control state, but a directory
-      // in the current filesystem state.
-      // Report this file as removed, and everything in the source control
-      // tree as untracked/ignored.
-      auto path = getPath();
-      XLOGF(DBG5, "removed file: {}", path);
-      context_->callback->removedPath(path, scmEntries_[0].getDtype());
-      context_->callback->addedPath(path, inode->getType());
       auto treeInode = inode.asTreePtr();
-      if (isIgnored_ && !context_->listIgnored) {
+      if (!reportFileBecameTree(inode)) {
         return folly::unit;
       }
       return treeInode->diff(
@@ -195,11 +162,78 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
         context_->getFetchContext());
     return std::move(isSameAsFut)
         .thenValue([this, fileInode = std::move(fileInode)](bool isSame) {
-          if (!isSame) {
-            XLOGF(DBG5, "modified file: {}", getPath());
-            context_->callback->modifiedPath(getPath(), fileInode->getType());
-          }
+          reportIfFileModified(fileInode, isSame);
         });
+  }
+
+  // Sync callbacks for the "scm tree, working-copy file/symlink" case.
+  // Returns the scmEntry's object id for the caller to feed into the
+  // async diffRemovedTree() tail.
+  ObjectId reportTreeBecameFile(const InodePtr& inode) {
+    // This is a Tree in the source control state, but a file or symlink
+    // in the current filesystem state.
+    // Report this file as untracked, and everything in the source control
+    // tree as removed.
+    if (isIgnored_) {
+      if (context_->listIgnored) {
+        XLOGF(DBG6, "directory --> ignored file: {}", getPath());
+        context_->callback->ignoredPath(getPath(), inode->getType());
+      }
+    } else {
+      XLOGF(DBG6, "directory --> untracked file: {}", getPath());
+      context_->callback->addedPath(getPath(), inode->getType());
+    }
+    // Since this is a file or symlink in the current filesystem state, but a
+    // Tree in the source control state, we have to record the files from the
+    // Tree as removed. We can delegate this work to the source control tree
+    // differ.
+    context_->callback->removedPath(getPath(), scmEntries_[0].getDtype());
+    return scmEntries_[0].getObjectId();
+  }
+
+  // Under the caller's contents lock, check if any scmEntry is known-
+  // identical to the non-materialized tree's id. Returns std::nullopt
+  // when a match is found (caller should return early, no diff needed),
+  // or the non-materialized tree's contentsId for the caller to feed
+  // into the async diffTrees() tail.
+  std::optional<ObjectId> checkNonMaterializedMatch(
+      const TreeInodeState& state) {
+    for (auto& scmEntry : scmEntries_) {
+      if (context_->store->areObjectsKnownIdentical(
+              state.treeId.value(), scmEntry.getObjectId())) {
+        // It did not change since it was loaded,
+        // and it matches the scmEntry we're diffing against.
+        return std::nullopt;
+      }
+    }
+    // If it didn't exactly match any of the trees, then just diff with the
+    // first scmEntry.
+    context_->callback->modifiedPath(getPath(), scmEntries_[0].getDtype());
+    return state.treeId.value();
+  }
+
+  // Sync callbacks for the "scm blob, working-copy tree" case. Returns
+  // true if the caller should still perform the async treeInode->diff()
+  // tail (false when ignored && !listIgnored).
+  bool reportFileBecameTree(const InodePtr& inode) {
+    // This is a file in the source control state, but a directory
+    // in the current filesystem state.
+    // Report this file as removed, and everything in the source control
+    // tree as untracked/ignored.
+    auto path = getPath();
+    XLOGF(DBG5, "removed file: {}", path);
+    context_->callback->removedPath(path, scmEntries_[0].getDtype());
+    context_->callback->addedPath(path, inode->getType());
+    return !(isIgnored_ && !context_->listIgnored);
+  }
+
+  // Sync post-isSameAs callback: emit modifiedPath if the file content
+  // differs from the scm entry.
+  void reportIfFileModified(const FileInodePtr& fileInode, bool isSame) {
+    if (!isSame) {
+      XLOGF(DBG5, "modified file: {}", getPath());
+      context_->callback->modifiedPath(getPath(), fileInode->getType());
+    }
   }
 
   const GitIgnoreStack* ignore_{nullptr};
