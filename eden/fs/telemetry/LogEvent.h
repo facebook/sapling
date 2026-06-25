@@ -750,6 +750,58 @@ struct AccidentalUnmountRecovery : public EdenFSEvent {
   }
 };
 
+struct EdenMountHealthIssue : public EdenFSEvent {
+  std::string source;
+  std::string reason;
+  std::string mount_path;
+  std::string checkout_path;
+  std::string path_type;
+  std::string repo_source;
+  std::string error;
+  bool attempted_repair = false;
+  bool success = false;
+
+  EdenMountHealthIssue(
+      std::string source,
+      std::string reason,
+      std::string mount_path,
+      std::string checkout_path,
+      std::string path_type,
+      std::string repo_source = "",
+      std::string error = "",
+      bool attempted_repair = false,
+      bool success = false)
+      : source(std::move(source)),
+        reason(std::move(reason)),
+        mount_path(std::move(mount_path)),
+        checkout_path(std::move(checkout_path)),
+        path_type(std::move(path_type)),
+        repo_source(std::move(repo_source)),
+        error(std::move(error)),
+        attempted_repair(attempted_repair),
+        success(success) {}
+
+  void populate(DynamicEvent& event) const override {
+    event.addString("source", source);
+    event.addString("reason", reason);
+    event.addString("mount_path", mount_path);
+    event.addString("checkout_path", checkout_path);
+    event.addString("path_type", path_type);
+    if (!repo_source.empty()) {
+      event.addString("repo_source", repo_source);
+    }
+    if (!error.empty()) {
+      event.addString("error", error);
+    }
+    event.addBool("attempted_repair", attempted_repair);
+    event.addBool("success", success);
+  }
+
+  const char* getType() const override {
+    return "eden_mount_health_issue";
+  }
+};
+
 struct SqliteIntegrityCheck : public EdenFSEvent {
   double duration = 0.0;
   int64_t numErrors = 0;

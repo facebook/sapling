@@ -61,6 +61,7 @@ inline constexpr std::string_view kClientCmdline = "client_cmdline";
 inline constexpr std::string_view kClientPid = "client_pid";
 inline constexpr std::string_view kIsTakeover = "is_takeover";
 inline constexpr std::string_view kRepoSource = "repo_source";
+inline constexpr std::string_view kError = "error";
 inline constexpr std::string_view kInterface = "interface";
 inline constexpr std::string_view kIno = "ino";
 inline constexpr std::string_view kActionType = "action_type";
@@ -167,6 +168,10 @@ inline constexpr std::string_view kDaemonDowntimeS = "daemon_downtime_s";
 
 // --- AccidentalUnmountRecovery ---
 inline constexpr std::string_view kRemountError = "remount_error";
+
+// --- EdenMountHealthIssue ---
+inline constexpr std::string_view kMountPath = "mount_path";
+inline constexpr std::string_view kPathType = "path_type";
 
 // --- SqliteIntegrityCheck ---
 inline constexpr std::string_view kNumErrors = "num_errors";
