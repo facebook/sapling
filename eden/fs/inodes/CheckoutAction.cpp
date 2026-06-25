@@ -319,7 +319,7 @@ folly::coro::now_task<CheckoutActionResult> CheckoutAction::co_run(
     errors_[0].throw_exception();
   }
 
-  co_return co_await doAction().semi();
+  co_return co_await co_doAction();
 }
 
 void CheckoutAction::setOldTree(std::shared_ptr<const Tree> tree) {
@@ -462,6 +462,90 @@ ImmediateFuture<CheckoutActionResult> CheckoutAction::doAction() {
               return result;
             });
       });
+}
+
+folly::coro::now_task<CheckoutActionResult> CheckoutAction::co_doAction() {
+  bool conflictWasAddedToCtx = co_await hasConflict().semi();
+
+  // Note that even if we know we are not going to apply the changes, we
+  // must still run hasConflict() first because we rely on its side-effects.
+  if (conflictWasAddedToCtx && !ctx_->forceUpdate()) {
+    // Since we aren't doing another checkoutUpdateEntry, the checkout
+    // from this inode won't be executed if it is a tree. In that case, we
+    // add that to our "completed" checkout for all of its descendants
+    auto treeInode = inode_.asTreeOrNull();
+    auto increase = treeInode ? treeInode->getInMemoryDescendants() : 0;
+    ctx_->increaseCheckoutCounter(1 + increase);
+    // We only report conflicts for files, not directories. The only
+    // possible conflict that can occur here if this inode is a TreeInode
+    // is that the old source control state was for a file. There aren't
+    // really any other conflicts than this to report, even if we recurse.
+    // Anything inside this directory is basically just untracked (or
+    // possibly ignored) files.
+    co_return CheckoutActionResult{
+        InvalidationRequired::No, /*hadConflicts=*/true};
+  }
+
+  if (!oldScmEntry_ && !newScmEntry_) {
+    auto treeInode = inode_.asTreePtrOrNull();
+    if (ctx_->forceUpdate() && !ctx_->isDryRun() && !treeInode) {
+      auto parent = inode_->getParent(ctx_->renameLock());
+      auto result = co_await parent
+                        ->checkoutUpdateEntry(
+                            ctx_,
+                            getEntryName(),
+                            std::move(inode_),
+                            nullptr,
+                            nullptr,
+                            std::nullopt)
+                        .semi();
+      result.hadConflicts |= conflictWasAddedToCtx;
+      co_return result;
+    }
+    if (!treeInode) {
+      co_return CheckoutActionResult{
+          InvalidationRequired::No, conflictWasAddedToCtx};
+    }
+    auto result = co_await treeInode->co_checkout(
+        ctx_, nullptr, nullptr, /*reportLocalOnlyAsConflicts=*/true);
+    bool hadConflicts = result.hadConflicts || conflictWasAddedToCtx;
+    if (ctx_->forceUpdate() && !ctx_->isDryRun()) {
+      auto parent = inode_->getParent(ctx_->renameLock());
+      auto actionResult = co_await parent
+                              ->checkoutUpdateEntry(
+                                  ctx_,
+                                  getEntryName(),
+                                  std::move(inode_),
+                                  nullptr,
+                                  nullptr,
+                                  std::nullopt)
+                              .semi();
+      actionResult.hadConflicts |= hadConflicts;
+      co_return actionResult;
+    }
+    co_return CheckoutActionResult{InvalidationRequired::No, hadConflicts};
+  }
+
+  // Call TreeInode::checkoutUpdateEntry() to actually do the work.
+  //
+  // Note that we are moving most of our state into the
+  // checkoutUpdateEntry() arguments.  We have to be slightly careful
+  // here: getEntryName() returns a PathComponentPiece that is pointing
+  // into a PathComponent owned either by oldScmEntry_ or newScmEntry_.
+  // Therefore don't move these scm entries, to make sure we don't
+  // invalidate the PathComponentPiece data.
+  auto parent = inode_->getParent(ctx_->renameLock());
+  auto result = co_await parent
+                    ->checkoutUpdateEntry(
+                        ctx_,
+                        getEntryName(),
+                        std::move(inode_),
+                        std::move(oldTree_),
+                        std::move(newTree_),
+                        newScmEntry_)
+                    .semi();
+  result.hadConflicts |= conflictWasAddedToCtx;
+  co_return result;
 }
 
 ImmediateFuture<bool> CheckoutAction::hasConflict() {

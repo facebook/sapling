@@ -164,6 +164,11 @@ class CheckoutAction : public std::enable_shared_from_this<CheckoutAction> {
   [[nodiscard]] ImmediateFuture<CheckoutActionResult> doAction();
 
   /**
+   * Coroutine implementation of `doAction`.
+   */
+  [[nodiscard]] folly::coro::now_task<CheckoutActionResult> co_doAction();
+
+  /**
    * The context for the in-progress checkout operation.
    */
   CheckoutContext* const ctx_{nullptr};
