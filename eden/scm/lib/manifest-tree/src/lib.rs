@@ -180,11 +180,6 @@ impl Manifest for TreeManifest {
         Ok(result)
     }
 
-    fn get_ignore_case(&self, path: &RepoPath) -> Result<Option<FsNodeMetadata>> {
-        let result = self.get_link(path)?.map(|link| link.to_fs_node());
-        Ok(result)
-    }
-
     fn get_file(&self, file_path: &RepoPath) -> Result<Option<FileMetadata>> {
         let path = self.maybe_encode_path(file_path)?;
         let result = self.get(&path)?.and_then(|fs_hgid| match fs_hgid {

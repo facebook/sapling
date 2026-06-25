@@ -488,10 +488,6 @@ inc
             }
         }
 
-        fn get_ignore_case(&self, path: &RepoPath) -> anyhow::Result<Option<FsNodeMetadata>> {
-            unimplemented!("get_ignore_case not implemented for StubCommit")
-        }
-
         fn list(&self, path: &RepoPath) -> anyhow::Result<manifest::List> {
             unimplemented!()
         }
