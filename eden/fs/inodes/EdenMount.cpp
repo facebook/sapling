@@ -12,7 +12,9 @@
 #include <folly/FBString.h>
 #include <folly/File.h>
 #include <folly/chrono/Conv.h>
+#include <folly/coro/Collect.h>
 #include <folly/coro/Invoke.h>
+#include <folly/coro/Task.h>
 #include <folly/coro/safe/NowTask.h>
 #include <folly/futures/Future.h>
 #include <folly/io/async/EventBase.h>
@@ -1897,6 +1899,29 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
     const ObjectFetchContextPtr& fetchContext,
     folly::StringPiece thriftMethodCaller,
     CheckoutMode checkoutMode) {
+  auto config = serverState_->getReloadableConfig()->getEdenConfig();
+  if (config->enableCoroutines.getValue() &&
+      config->enableCoroutinesPhase7.getValue()) {
+    return ImmediateFuture{
+        // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+        folly::coro::co_invoke(
+            [self = shared_from_this()](
+                TreeInodePtr ri,
+                RootId sid,
+                ObjectFetchContextPtr fc,
+                std::string caller,
+                CheckoutMode mode) -> folly::coro::Task<CheckoutResult> {
+              co_return co_await self->co_checkout(
+                  std::move(ri), sid, fc, caller, mode);
+            },
+            std::move(rootInode),
+            snapshotId,
+            fetchContext.copy(),
+            thriftMethodCaller.str(),
+            checkoutMode)
+            .semi()};
+  }
+
   const folly::stop_watch<> stopWatch;
   auto checkoutTimes = std::make_shared<CheckoutTimes>();
 
@@ -2082,6 +2107,143 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
                 journalDiffCallback.get(),
                 std::move(result));
           });
+}
+
+folly::coro::now_task<CheckoutResult> EdenMount::co_checkout(
+    TreeInodePtr rootInode,
+    const RootId& snapshotId,
+    const ObjectFetchContextPtr& fetchContext,
+    folly::StringPiece thriftMethodCaller,
+    CheckoutMode checkoutMode) {
+  auto setupTry =
+      beginCheckout(snapshotId, fetchContext, thriftMethodCaller, checkoutMode);
+  if (setupTry.hasException()) {
+    co_yield folly::coro::co_error(std::move(setupTry).exception());
+  }
+  auto setup = std::move(setupTry).value();
+  folly::stop_watch<> stopWatch{};
+  CheckoutTimes checkoutTimes{};
+
+  std::shared_ptr<CheckoutContext> ctx = std::move(setup.ctx);
+  RootId oldParent = std::move(setup.oldParent);
+  ParentCommitState::CheckoutState oldState = std::move(setup.oldState);
+  CheckoutInProgressGuard checkoutGuard{
+      *this, ctx, oldParent, snapshotId, oldState};
+  ImmediateFuture<folly::Unit> firstFaultCheck =
+      std::move(setup.firstFaultCheck);
+
+  XLOGF(
+      DBG1,
+      "starting checkout for {}: {} to {}",
+      this->getPath(),
+      objectStore_->displayRootId(oldParent),
+      objectStore_->displayRootId(snapshotId));
+
+  setLastCheckoutTime(EdenTimestamp{clock_->getRealtime()});
+  objectStore_->workingCopyParentHint(snapshotId);
+
+  auto journalDiffCallback = std::make_shared<JournalDiffCallback>();
+  bool resumingCheckout =
+      std::holds_alternative<ParentCommitState::InterruptedCheckout>(oldState);
+
+  // Capture the result of the inner checkout work (everything from
+  // acquireRenameLock through ctx->finish) so we can always reset the
+  // parent state below, on both the success and failure paths.
+  folly::Try<std::vector<CheckoutConflict>> conflictsResult;
+  try {
+    co_await std::move(firstFaultCheck).semi();
+
+    XLOG(DBG7, "Checkout: getRoots");
+    auto [fromTreeRes, toTreeRes] = co_await folly::coro::collectAll(
+        folly::coro::co_invoke(
+            [this,
+             oldParent,
+             ctx]() -> folly::coro::Task<ObjectStore::GetRootTreeResult> {
+              co_return co_await objectStore_->co_getRootTree(
+                  oldParent, ctx->getFetchContext());
+            }),
+        folly::coro::co_invoke(
+            [this,
+             snapshotId,
+             ctx]() -> folly::coro::Task<ObjectStore::GetRootTreeResult> {
+              co_return co_await objectStore_->co_getRootTree(
+                  snapshotId, ctx->getFetchContext());
+            }));
+
+    XLOG(DBG7, "Checkout: waitForPendingWrites");
+    co_await co_waitForPendingWrites();
+
+    checkoutTimes.didLookupTrees = stopWatch.elapsed();
+
+    XLOG(DBG7, "Checkout: performDiff");
+    if (!ctx->isDryRun()) {
+      ctx->throwIfCanceled();
+
+      auto trees = std::vector{fromTreeRes.tree};
+      if (resumingCheckout) {
+        trees.push_back(toTreeRes.tree);
+      }
+      auto diffSpan = ctx->createSpan("performDiff");
+      // performDiff returns an ImmediateFuture; bridge it with .semi().
+      auto diffFetchContext =
+          co_await journalDiffCallback
+              ->performDiff(this, rootInode, std::move(trees), ctx)
+              .semi();
+      ctx->getStatsContext().merge(diffFetchContext);
+    }
+
+    checkoutTimes.didDiff = stopWatch.elapsed();
+
+    {
+      auto renameLockSpan = ctx->createSpan("acquireRenameLock");
+      auto renameLock = acquireRenameLock();
+      ctx->start(
+          std::move(renameLock),
+          parentState_.wlock(),
+          snapshotId,
+          toTreeRes.tree);
+    }
+
+    checkoutTimes.didAcquireRenameLock = stopWatch.elapsed();
+
+    {
+      auto unloadSpan = ctx->createSpan("unloadChildrenUnreferencedByFs");
+      rootInode->unloadChildrenUnreferencedByFs(false);
+    }
+
+    co_await serverState_->getFaultInjector().co_checkAsync(
+        "inodeCheckout", getPath().view());
+    ctx->throwIfCanceled();
+
+    co_await rootInode->checkout(ctx.get(), fromTreeRes.tree, toTreeRes.tree)
+        .semi();
+
+    checkoutTimes.didCheckout = stopWatch.elapsed();
+
+    auto conflicts = co_await ctx->finish(snapshotId).semi();
+    conflictsResult =
+        folly::Try<std::vector<CheckoutConflict>>{std::move(conflicts)};
+  } catch (...) {
+    conflictsResult = folly::Try<std::vector<CheckoutConflict>>{
+        folly::exception_wrapper{std::current_exception()}};
+  }
+
+  conflictsResult = checkoutGuard.finish(std::move(conflictsResult));
+
+  auto finalResult = finalizeCheckout(
+      ctx,
+      checkoutMode,
+      checkoutTimes,
+      stopWatch,
+      oldParent,
+      snapshotId,
+      journalDiffCallback.get(),
+      std::move(conflictsResult));
+
+  if (finalResult.hasException()) {
+    finalResult.exception().throw_exception();
+  }
+  co_return std::move(finalResult).value();
 }
 
 void EdenMount::forgetStaleInodes() {

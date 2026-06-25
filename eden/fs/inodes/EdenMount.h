@@ -819,6 +819,22 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
       folly::StringPiece thriftMethodCaller,
       CheckoutMode checkoutMode = CheckoutMode::NORMAL);
 
+  /**
+   * Coroutine implementation of `checkout`.
+   *
+   * Same signature and semantics as `checkout`. Acquires the rename lock
+   * synchronously (uncontended in the common case) and `co_await`s every
+   * internal asynchronous step. `checkout` above remains available as a
+   * `co_invoke` bridge for callers that hold an `ImmediateFuture` (notably
+   * the unit tests in `eden/fs/inodes/test/CheckoutTest.cpp`).
+   */
+  folly::coro::now_task<CheckoutResult> co_checkout(
+      TreeInodePtr rootInode,
+      const RootId& snapshotId,
+      const ObjectFetchContextPtr& fetchContext,
+      folly::StringPiece thriftMethodCaller,
+      CheckoutMode checkoutMode = CheckoutMode::NORMAL);
+
  private:
   class JournalDiffCallback;
   struct CheckoutInProgressGuard;

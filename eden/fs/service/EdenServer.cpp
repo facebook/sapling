@@ -2618,14 +2618,12 @@ folly::coro::now_task<CheckoutResult> EdenServer::co_checkOutRevision(
        fetchContext = fetchContext.copy(),
        callerName = callerName.str(),
        checkoutMode]() mutable -> folly::coro::Task<CheckoutResult> {
-    co_return co_await mountHandle.getEdenMount()
-        .checkout(
-            mountHandle.getRootInode(),
-            root,
-            fetchContext,
-            callerName,
-            checkoutMode)
-        .semi();
+    co_return co_await mountHandle.getEdenMount().co_checkout(
+        mountHandle.getRootInode(),
+        root,
+        fetchContext,
+        callerName,
+        checkoutMode);
   };
 
   CheckoutResult result;
