@@ -2229,8 +2229,8 @@ folly::coro::now_task<CheckoutResult> EdenMount::co_checkout(
         "inodeCheckout", getPath().view());
     ctx->throwIfCanceled();
 
-    co_await rootInode->checkout(ctx.get(), fromTreeRes.tree, toTreeRes.tree)
-        .semi();
+    co_await rootInode->co_checkout(
+        ctx.get(), fromTreeRes.tree, toTreeRes.tree);
 
     checkoutTimes.didCheckout = stopWatch.elapsed();
 

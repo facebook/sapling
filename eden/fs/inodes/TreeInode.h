@@ -504,6 +504,12 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       std::shared_ptr<const Tree> toTree,
       bool reportLocalOnlyAsConflicts = false);
 
+  [[nodiscard]] folly::coro::now_task<CheckoutSubtreeResult> co_checkout(
+      CheckoutContext* ctx,
+      std::shared_ptr<const Tree> fromTree,
+      std::shared_ptr<const Tree> toTree,
+      bool reportLocalOnlyAsConflicts = false);
+
   /**
    * Update this directory when a child entry is materialized.
    *

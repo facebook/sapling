@@ -11,10 +11,12 @@
 #include <folly/CppAttributes.h>
 #include <folly/FileUtil.h>
 #include <folly/MapUtil.h>
+#include <folly/ScopeGuard.h>
 #include <folly/chrono/Conv.h>
 #include <folly/coro/Collect.h>
 #include <folly/coro/CurrentExecutor.h>
 #include <folly/coro/Invoke.h>
+#include <folly/coro/Task.h>
 #include <folly/futures/Future.h>
 #include <folly/io/async/EventBase.h>
 #include <folly/logging/xlog.h>
@@ -4360,6 +4362,93 @@ ImmediateFuture<CheckoutSubtreeResult> TreeInode::checkout(
                 });
           })
       .ensure([ctx] { ctx->increaseCheckoutCounter(1); });
+}
+
+folly::coro::now_task<CheckoutSubtreeResult> TreeInode::co_checkout(
+    CheckoutContext* ctx,
+    std::shared_ptr<const Tree> fromTree,
+    std::shared_ptr<const Tree> toTree,
+    bool reportLocalOnlyAsConflicts) {
+  XDCHECK(ctx->renameLock().owns_lock())
+      << "TreeInode::co_checkout invoked without rename lock held";
+
+  co_await folly::coro::co_reschedule_on_current_executor;
+
+  auto self = inodePtrFromThis();
+  auto setup = beginCheckout(ctx, fromTree, toTree, reportLocalOnlyAsConflicts);
+
+  SCOPE_EXIT {
+    ctx->increaseCheckoutCounter(1);
+  };
+
+  std::vector<folly::coro::Task<CheckoutActionResult>> actionTasks;
+  actionTasks.reserve(setup.actions.size());
+  for (const auto& action : setup.actions) {
+    actionTasks.push_back(
+        folly::coro::co_invoke(
+            [action, ctx, store = &getObjectStore()]()
+                -> folly::coro::Task<CheckoutActionResult> {
+              co_await folly::coro::co_reschedule_on_current_executor;
+              co_return co_await action->run(ctx, store).semi();
+            }));
+  }
+
+  auto faultCheckTask = folly::coro::co_invoke(
+      [self, ctx, logPath = getLogPath()]() -> folly::coro::Task<folly::Unit> {
+        co_await folly::coro::co_reschedule_on_current_executor;
+        co_await self->getMount()
+            ->getServerState()
+            ->getFaultInjector()
+            .co_checkAsync("TreeInode::checkout", logPath, ctx->isDryRun());
+        co_return folly::unit;
+      });
+
+  auto [faultCheckTry, actionResultsTry] = co_await folly::coro::collectAllTry(
+      std::move(faultCheckTask),
+      folly::coro::collectAllTryRange(std::move(actionTasks)));
+
+  if (faultCheckTry.hasException()) {
+    co_yield folly::coro::co_error(std::move(faultCheckTry).exception());
+  }
+
+  auto actionResults = std::move(actionResultsTry).value();
+
+  auto finalizeStateTry = self->processCheckoutActionResults(
+      ctx,
+      setup.actions,
+      setup.shouldInvalidateDirectory,
+      setup.propagateErrors,
+      setup.hadConflicts,
+      actionResults);
+  if (finalizeStateTry.hasException()) {
+    finalizeStateTry.exception().throw_exception();
+  }
+  auto finalizeState = std::move(finalizeStateTry).value();
+
+  if (finalizeState.shouldInvalidateDirectory) {
+    ImmediateFuture<folly::Unit> invalidation{folly::unit};
+    {
+      auto contents = self->contents_.wlock();
+      self->updateMtimeAndCtimeLocked(contents->entries, self->getNow());
+      invalidation = self->invalidateChannelDirCache(*contents);
+    }
+    auto invalidationResult =
+        co_await folly::coro::co_awaitTry(std::move(invalidation).semi());
+    if (invalidationResult.hasException()) {
+      auto location = self->getLocationInfo(ctx->renameLock());
+      ctx->addError(
+          location.parent.get(), location.name, invalidationResult.exception());
+    }
+  }
+
+  self->saveOverlayPostCheckout(ctx, toTree.get());
+  XLOGF(
+      DBG4,
+      "checkout: finished update of {}: {} errors",
+      self->getLogPath(),
+      finalizeState.numErrors);
+
+  co_return CheckoutSubtreeResult{finalizeState.hadConflicts};
 }
 
 bool TreeInode::canShortCircuitCheckout(
