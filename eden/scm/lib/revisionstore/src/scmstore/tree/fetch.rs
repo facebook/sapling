@@ -155,7 +155,16 @@ impl FetchState {
         for entry in response.entries {
             bar.increase_position(1);
 
-            let entry = entry?;
+            let entry = match entry {
+                Ok(entry) => entry,
+                Err(err) => {
+                    if let Some(key) = err.key.clone() {
+                        self.errors.keyed_error(key, err.into());
+                        continue;
+                    }
+                    return Err(err.into());
+                }
+            };
             let key = entry.key.clone();
             let entry = LazyTree::SaplingRemoteApi(entry, verify_hash, format);
 
@@ -175,7 +184,14 @@ impl FetchState {
             }
 
             if indexedlog_cache.is_some() {
-                if let Some(cache_entry) = entry.indexedlog_cache_entry(key.hgid)? {
+                let cache_entry = match entry.indexedlog_cache_entry(key.hgid) {
+                    Ok(cache_entry) => cache_entry,
+                    Err(err) => {
+                        self.errors.keyed_error(key, err);
+                        continue;
+                    }
+                };
+                if let Some(cache_entry) = cache_entry {
                     self.trees_to_cache.push((cache_entry.node(), cache_entry));
                     if self.trees_to_cache.len() >= TREE_BATCH_THRESHOLD {
                         self.flush_trees();

@@ -192,6 +192,9 @@ mod tests {
     use std::collections::BTreeMap;
     use std::str::FromStr;
 
+    use anyhow::Error;
+    use edenapi_types::SaplingRemoteApiServerError;
+    use edenapi_types::SaplingRemoteApiServerErrorKind;
     use edenapi_types::Sha1;
     use maplit::hashmap;
     use storemodel::SerializationFormat;
@@ -214,6 +217,35 @@ mod tests {
     use crate::scmstore::TreeStore;
     use crate::scmstore::tree::types::TreeAttributes;
     use crate::testutil::*;
+
+    fn permission_denied_error(key: &types::Key) -> SaplingRemoteApiServerError {
+        SaplingRemoteApiServerError {
+            err: SaplingRemoteApiServerErrorKind::PermissionDenied {
+                tree_id: key.hgid,
+                request_acl: "test-acl".to_string(),
+            },
+            key: Some(key.clone()),
+        }
+    }
+
+    fn has_permission_denied(err: &Error) -> bool {
+        err.chain().any(|err| {
+            matches!(
+                err.downcast_ref::<SaplingRemoteApiServerError>(),
+                Some(SaplingRemoteApiServerError {
+                    err: SaplingRemoteApiServerErrorKind::PermissionDenied { .. },
+                    ..
+                })
+            ) || matches!(
+                err.downcast_ref::<edenapi::SaplingRemoteApiError>(),
+                Some(edenapi::SaplingRemoteApiError::ServerError(server_err))
+                    if matches!(
+                        server_err.err,
+                        SaplingRemoteApiServerErrorKind::PermissionDenied { .. }
+                    )
+            )
+        })
+    }
 
     #[test]
     fn test_get_file() -> Result<()> {
@@ -439,6 +471,70 @@ mod tests {
         let (found, missing, _errors) = fetched.consume();
         assert_eq!(found.len(), 0);
         assert_eq!(missing.into_keys().collect::<Vec<_>>(), vec![k]);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_tree_keyed_server_error_does_not_propagate_to_missing_keys() -> Result<()> {
+        let denied_key = key("denied", "def6f29d7b61f9cb70b2f14f79cd5c43c38e21b2");
+        let missing_key = key("missing", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+
+        let client = FakeSaplingRemoteApi::new()
+            .tree_errors([(denied_key.clone(), permission_denied_error(&denied_key))])
+            .into_arc();
+        let remote_trees = SaplingRemoteApiRemoteStore::<Tree>::new(client);
+
+        let mut store = TreeStore::empty();
+        store.edenapi = Some(remote_trees);
+
+        let fetched = store.fetch_batch(
+            FetchContext::default(),
+            [denied_key.clone(), missing_key.clone()].into_iter(),
+            TreeAttributes::CONTENT,
+        );
+        let (found, missing, errors) = fetched.consume();
+
+        assert!(found.is_empty());
+        assert!(errors.is_empty());
+        assert!(has_permission_denied(
+            missing.get(&denied_key).expect("missing denied key")
+        ));
+        assert!(!has_permission_denied(
+            missing.get(&missing_key).expect("missing omitted key")
+        ));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_file_keyed_stream_error_does_not_propagate_to_missing_keys() -> Result<()> {
+        let denied_key = key("denied", "def6f29d7b61f9cb70b2f14f79cd5c43c38e21b2");
+        let missing_key = key("missing", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+
+        let client = FakeSaplingRemoteApi::new()
+            .file_errors([(denied_key.clone(), permission_denied_error(&denied_key))])
+            .into_arc();
+        let remote_files = SaplingRemoteApiRemoteStore::<File>::new(client);
+
+        let mut store = FileStore::empty();
+        store.edenapi = Some(remote_files);
+
+        let fetched = store.fetch(
+            FetchContext::default(),
+            [denied_key.clone(), missing_key.clone()],
+            FileAttributes::CONTENT,
+        );
+        let (found, missing, errors) = fetched.consume();
+
+        assert!(found.is_empty());
+        assert!(errors.is_empty());
+        assert!(has_permission_denied(
+            missing.get(&denied_key).expect("missing denied key")
+        ));
+        assert!(!has_permission_denied(
+            missing.get(&missing_key).expect("missing omitted key")
+        ));
 
         Ok(())
     }

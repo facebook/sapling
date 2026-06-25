@@ -15,6 +15,7 @@ use async_runtime::block_on;
 use async_runtime::spawn_blocking;
 use async_runtime::stream_to_iter;
 use blob::Blob;
+use edenapi::SaplingRemoteApiError;
 use edenapi_types::FileResponse;
 use edenapi_types::FileSpec;
 use flume::Sender;
@@ -604,10 +605,16 @@ impl FetchState {
             for res in results {
                 bar.increase_position(1);
 
-                // TODO(meyer): This outer SaplingRemoteApi error with no key sucks
-                let (key, res) = match res.map_err(|e| e.tag_network()) {
+                let (key, res) = match res {
                     Ok(result) => result,
                     Err(err) => {
+                        let key = sapling_remote_api_error_key(&err);
+                        let err = err.tag_network();
+                        if let Some(key) = key {
+                            fetching_keys.remove(&key);
+                            self.errors.keyed_error(key, err);
+                            continue;
+                        }
                         if unknown_error.is_none() {
                             unknown_error.replace(ClonableError::new(err));
                         }
@@ -943,6 +950,13 @@ impl FetchState {
             // Don't remove this entry from `pending`.
             true
         });
+    }
+}
+
+fn sapling_remote_api_error_key(err: &SaplingRemoteApiError) -> Option<Key> {
+    match err {
+        SaplingRemoteApiError::ServerError(err) => err.key.clone(),
+        _ => None,
     }
 }
 

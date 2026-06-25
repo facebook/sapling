@@ -204,7 +204,9 @@ impl LocalStore for FakeRemoteHistoryStore {
 #[derive(Default)]
 pub struct FakeSaplingRemoteApi {
     files: HashMap<Key, (Bytes, Option<u64>)>,
+    file_errors: HashMap<Key, SaplingRemoteApiServerError>,
     trees: HashMap<Key, Bytes>,
+    tree_errors: HashMap<Key, SaplingRemoteApiServerError>,
     history: HashMap<Key, NodeInfo>,
 }
 
@@ -230,8 +232,28 @@ impl FakeSaplingRemoteApi {
         Self { files, ..self }
     }
 
+    pub fn file_errors(
+        self,
+        file_errors: impl IntoIterator<Item = (Key, SaplingRemoteApiServerError)>,
+    ) -> Self {
+        Self {
+            file_errors: file_errors.into_iter().collect(),
+            ..self
+        }
+    }
+
     pub fn trees(self, trees: HashMap<Key, Bytes>) -> Self {
         Self { trees, ..self }
+    }
+
+    pub fn tree_errors(
+        self,
+        tree_errors: impl IntoIterator<Item = (Key, SaplingRemoteApiServerError)>,
+    ) -> Self {
+        Self {
+            tree_errors: tree_errors.into_iter().collect(),
+            ..self
+        }
     }
 
     pub fn history(self, history: HashMap<Key, NodeInfo>) -> Self {
@@ -244,10 +266,15 @@ impl FakeSaplingRemoteApi {
 
     fn get_files(
         map: &HashMap<Key, (Bytes, Option<u64>)>,
+        errors: &HashMap<Key, SaplingRemoteApiServerError>,
         reqs: impl Iterator<Item = FileSpec>,
     ) -> Result<Response<FileResponse>, SaplingRemoteApiError> {
         let entries = reqs
             .filter_map(|spec| {
+                if let Some(err) = errors.get(&spec.key) {
+                    return Some(Err(err.clone().into()));
+                }
+
                 let parents = Parents::default();
                 let mut entry = FileEntry::new(spec.key.clone(), parents);
 
@@ -286,12 +313,17 @@ impl FakeSaplingRemoteApi {
 
     fn get_trees(
         map: &HashMap<Key, Bytes>,
+        errors: &HashMap<Key, SaplingRemoteApiServerError>,
         keys: Vec<Key>,
     ) -> Result<Response<Result<TreeEntry, SaplingRemoteApiServerError>>, SaplingRemoteApiError>
     {
         let entries = keys
             .into_iter()
             .filter_map(|key| {
+                if let Some(err) = errors.get(&key) {
+                    return Some(Ok(Err(err.clone())));
+                }
+
                 let data = map.get(&key)?.clone();
                 let parents = Parents::default();
                 let data = data.to_vec().into();
@@ -322,6 +354,7 @@ impl SaplingRemoteApi for FakeSaplingRemoteApi {
     ) -> Result<Response<FileResponse>, SaplingRemoteApiError> {
         Self::get_files(
             &self.files,
+            &self.file_errors,
             keys.into_iter().map(|key| FileSpec {
                 key,
                 attrs: FileAttributes {
@@ -337,7 +370,7 @@ impl SaplingRemoteApi for FakeSaplingRemoteApi {
         _fctx: FetchContext,
         reqs: Vec<FileSpec>,
     ) -> Result<Response<FileResponse>, SaplingRemoteApiError> {
-        Self::get_files(&self.files, reqs.into_iter())
+        Self::get_files(&self.files, &self.file_errors, reqs.into_iter())
     }
 
     async fn history(
@@ -366,7 +399,7 @@ impl SaplingRemoteApi for FakeSaplingRemoteApi {
         _attrs: Option<TreeAttributes>,
     ) -> Result<Response<Result<TreeEntry, SaplingRemoteApiServerError>>, SaplingRemoteApiError>
     {
-        Self::get_trees(&self.trees, keys)
+        Self::get_trees(&self.trees, &self.tree_errors, keys)
     }
 }
 
