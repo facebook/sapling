@@ -33,13 +33,11 @@ mod linux_tests {
         // `status` points to valid writable memory for `waitpid`.
         let wait_result = unsafe { libc::waitpid(pid, &mut status, 0) };
         assert_eq!(wait_result, pid);
-        // FIXME: This should be `assert!(libc::WIFEXITED(status))` once no-op
-        // sync avoids touching an unchanged rlock change detector.
         assert!(
-            libc::WIFSIGNALED(status),
-            "expected child to terminate from SIGBUS, got status {status}",
+            libc::WIFEXITED(status),
+            "expected child to exit successfully, got status {status}",
         );
-        assert_eq!(libc::WTERMSIG(status), libc::SIGBUS);
+        assert_eq!(libc::WEXITSTATUS(status), 0);
     }
 
     fn truncated_rlock_noop_sync() {

@@ -611,7 +611,6 @@ impl Log {
                         tracing::error!(?err, "ignoring error loading meta");
                     }
                 }
-                self.update_change_detector_to_match_meta();
                 return Ok(self.meta.primary_len);
             }
 
