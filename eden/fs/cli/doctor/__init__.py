@@ -6,13 +6,15 @@
 
 # pyre-strict
 
+import errno
+import logging
 import os
 import shlex
 import sys
 from datetime import timedelta
 from pathlib import Path
 from textwrap import dedent
-from typing import Dict, List, Optional, Set
+from typing import Dict, Iterable, List, Optional, Set
 
 from eden.fs.cli import (
     config as config_mod,
@@ -111,6 +113,7 @@ except ImportError:
 # working_directory_was_stale may be set to True by the CLI main module
 # if the original working directory referred to a stale eden mount point.
 working_directory_was_stale = False
+log: logging.Logger = logging.getLogger(__name__)
 
 
 def get_reclone_msg(checkout_path: str) -> str:
@@ -350,6 +353,7 @@ class EdenDoctorChecker:
         except RuntimeError as ex:
             self.tracker.add_problem(EdenCheckoutInfosCorruption(ex))
             return
+        log_missing_eden_root_mount_health_issues(self.instance, checkouts.values())
         checked_backing_repos = set()
         checked_network_backing_repos = set()
 
@@ -967,6 +971,47 @@ def check_mount(
             )
         except Exception as ex:
             raise RuntimeError("Failed to check network for mount") from ex
+
+
+def log_missing_eden_root_mount_health_issues(
+    instance: EdenInstance, checkouts: Iterable[CheckoutInfo]
+) -> None:
+    # Windows stores Eden checkout metadata in .eden/config, not .eden/root.
+    if sys.platform == "win32":
+        return
+
+    for checkout in checkouts:
+        if checkout.state != MountState.RUNNING:
+            continue
+        if checkout.configured_state_dir is None:
+            continue
+
+        root_path = checkout.path / ".eden" / "root"
+        try:
+            os.readlink(root_path)
+        except OSError as ex:
+            # Only missing .eden/root should be reported as a health issue
+            if ex.errno != errno.ENOENT:
+                continue
+            checkout_path = str(checkout.path)
+            try:
+                instance.log_sample(
+                    "eden_mount_health_issue",
+                    source="doctor_startup",
+                    reason="missing_eden_root",
+                    mount_path=checkout_path,
+                    checkout_path=checkout_path,
+                    path_type="configured_checkout",
+                    error=str(ex),
+                    attempted_repair=False,
+                    success=False,
+                )
+            except Exception:
+                log.warning(
+                    "Failed to log missing .eden/root mount health telemetry for %s",
+                    checkout_path,
+                    exc_info=True,
+                )
 
 
 def check_starting_mount(

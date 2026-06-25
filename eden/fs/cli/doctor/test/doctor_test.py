@@ -14,6 +14,7 @@ import struct
 import subprocess
 import sys
 import typing
+import unittest
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 from unittest.mock import call, MagicMock, patch
@@ -614,6 +615,44 @@ For additional info see the wiki at {get_doctor_link()}
         self.assertEqual(len(fixer.problem_types), 1)
         self.assertEqual(fixer.num_fixed_problems, 0)
         self.assertEqual(fixer.num_manual_fixes, 1)
+
+    @unittest.skipIf(sys.platform == "win32", ".eden/root is Unix-only metadata")
+    def test_logs_missing_eden_root_for_running_configured_checkout(self) -> None:
+        instance = FakeEdenInstance(self.make_temporary_directory())
+        checkout = instance.create_test_mount("eden-mount")
+        checkout_info = CheckoutInfo(
+            # pyre-fixme[6]: For 1st param expected `EdenInstance` but got
+            # `FakeEdenInstance`.
+            instance,
+            checkout.path,
+            running_state_dir=checkout.state_dir,
+            configured_state_dir=checkout.state_dir,
+            state=MountState.RUNNING,
+        )
+
+        doctor.log_missing_eden_root_mount_health_issues(
+            typing.cast(EdenInstance, instance), [checkout_info]
+        )
+
+        checkout_path = str(checkout.path)
+        self.assertEqual(1, len(instance.logged_samples))
+        log_type, sample = instance.logged_samples[0]
+        self.assertEqual("eden_mount_health_issue", log_type)
+        self.assertEqual(
+            {
+                "source": "doctor_startup",
+                "reason": "missing_eden_root",
+                "mount_path": checkout_path,
+                "checkout_path": checkout_path,
+                "path_type": "configured_checkout",
+                "attempted_repair": False,
+                "success": False,
+            },
+            {key: sample[key] for key in sample if key != "error"},
+        )
+        self.assertIn(
+            str(checkout.path / ".eden" / "root"), typing.cast(str, sample["error"])
+        )
 
     @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
     # pyre-fixme[2]: Parameter must be annotated.
