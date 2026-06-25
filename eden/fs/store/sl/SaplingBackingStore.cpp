@@ -2050,6 +2050,14 @@ folly::Future<TreePtr> SaplingBackingStore::importTreeManifestImpl(
   return folly::makeFuture(std::move(tree));
 }
 
+folly::coro::now_task<TreePtr> SaplingBackingStore::co_importTreeManifestImpl(
+    Hash20 manifestNode,
+    const ObjectFetchContextPtr& context,
+    const ObjectFetchContext::ObjectType type) {
+  auto tree = importTreeManifestSync(manifestNode, context, type);
+  co_return std::move(tree).value();
+}
+
 folly::Try<TreePtr> SaplingBackingStore::getTreeFromBackingStore(
     const RelativePath& path,
     SlOidView slOid,
@@ -2651,10 +2659,8 @@ SaplingBackingStore::co_importManifestForRoot(
   // See importManifestForRoot for rationale.
   folly::stop_watch<std::chrono::milliseconds> watch;
   auto commitId = hashFromRootId(rootId);
-  TreePtr rootTree =
-      co_await importTreeManifestImpl(
-          manifestId, context, ObjectFetchContext::ObjectType::ManifestForRoot)
-          .semi();
+  TreePtr rootTree = co_await co_importTreeManifestImpl(
+      manifestId, context, ObjectFetchContext::ObjectType::ManifestForRoot);
   XLOGF(
       DBG3,
       "imported mercurial commit {} with manifest {} as tree {}",

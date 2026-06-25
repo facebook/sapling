@@ -392,6 +392,11 @@ class SaplingBackingStore final
       const ObjectFetchContextPtr& context,
       const ObjectFetchContext::ObjectType type);
 
+  folly::coro::now_task<TreePtr> co_importTreeManifestImpl(
+      Hash20 manifestNode,
+      const ObjectFetchContextPtr& context,
+      const ObjectFetchContext::ObjectType type);
+
   folly::Try<TreePtr> importTreeManifestSync(
       Hash20 manifestNode,
       const ObjectFetchContextPtr& context,
