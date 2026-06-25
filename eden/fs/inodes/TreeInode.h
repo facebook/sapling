@@ -50,6 +50,9 @@ class Tree;
 class TreeEntry;
 class TreeInodeDebugInfo;
 class PrjfsDirEntry;
+#ifdef _WIN32
+class PrjfsChannel;
+#endif
 class VirtualInode;
 #ifndef _WIN32
 struct GcBarrierTrie;
@@ -1239,6 +1242,34 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    */
   [[nodiscard]] ImmediateFuture<folly::Unit> invalidateChannelDirCache(
       TreeInodeState&);
+
+  /**
+   * Coroutine version of `invalidateChannelDirCache`.
+   *
+   * Split into two halves so the FUSE/NFS sync work and Windows path
+   * snapshot can be done under the caller's contents_ wlock, then the
+   * lock released before the Windows PrjFS dispatch runs on the
+   * invalidation thread pool.
+   */
+  struct InvalidationSnapshot {
+#ifdef _WIN32
+    PrjfsChannel* prjfsChannel{nullptr};
+    std::optional<RelativePath> windowsPath;
+#endif
+  };
+
+  /**
+   * Synchronous half: runs FUSE/NFS invalidation under the caller's
+   * contents_ wlock and returns a snapshot for the async tail.
+   */
+  [[nodiscard]] InvalidationSnapshot prepareInvalidateDirCache(TreeInodeState&);
+
+  /**
+   * Asynchronous half: runs the Windows PrjFS dispatch (no-op on
+   * non-Windows). Caller must have released the contents_ wlock first.
+   */
+  [[nodiscard]] folly::coro::now_task<folly::Unit> co_finishInvalidateDirCache(
+      InvalidationSnapshot snapshot);
 
   /**
    * Send a request to the kernel to invalidate its cache for the given child

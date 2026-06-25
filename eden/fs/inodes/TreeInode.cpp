@@ -4426,14 +4426,16 @@ folly::coro::now_task<CheckoutSubtreeResult> TreeInode::co_checkout(
   auto finalizeState = std::move(finalizeStateTry).value();
 
   if (finalizeState.shouldInvalidateDirectory) {
-    ImmediateFuture<folly::Unit> invalidation{folly::unit};
+    InvalidationSnapshot snapshot;
     {
       auto contents = self->contents_.wlock();
       self->updateMtimeAndCtimeLocked(contents->entries, self->getNow());
-      invalidation = self->invalidateChannelDirCache(*contents);
+      snapshot = self->prepareInvalidateDirCache(*contents);
     }
-    auto invalidationResult =
-        co_await folly::coro::co_awaitTry(std::move(invalidation).semi());
+    // Lock released; safe to await the async tail. On non-Windows builds
+    // co_finishInvalidateDirCache is a no-op coroutine.
+    auto invalidationResult = co_await folly::coro::co_awaitTry(
+        self->co_finishInvalidateDirCache(std::move(snapshot)));
     if (invalidationResult.hasException()) {
       auto location = self->getLocationInfo(ctx->renameLock());
       ctx->addError(
@@ -5853,6 +5855,56 @@ ImmediateFuture<folly::Unit> TreeInode::invalidateChannelDirCache(
 #endif
 
   return folly::unit;
+}
+
+TreeInode::InvalidationSnapshot TreeInode::prepareInvalidateDirCache(
+    TreeInodeState& state) {
+  InvalidationSnapshot snapshot;
+#ifndef _WIN32
+  // Linux: do the FUSE/NFS sync work inline. The caller holds the wlock
+  // which protects access to `state` for the NFS mode lookup.
+  if (auto* fuseChannel = getMount()->getFuseChannel()) {
+    fuseChannel->invalidateInode(getNodeId(), 0, 0);
+  } else if (auto* nfsdChannel = getMount()->getNfsdChannel()) {
+    const auto path = getPath();
+    if (path.has_value()) {
+      auto mode = getMetadataLocked(state.entries).mode;
+      nfsdChannel->invalidate(getMount()->getPath() + *path, mode);
+    }
+  }
+#else
+  (void)state;
+  if (auto* fsChannel = getMount()->getPrjfsChannel()) {
+    snapshot.prjfsChannel = fsChannel;
+    snapshot.windowsPath = getPath();
+  }
+#endif
+  return snapshot;
+}
+
+folly::coro::now_task<folly::Unit> TreeInode::co_finishInvalidateDirCache(
+    [[maybe_unused]] InvalidationSnapshot snapshot) {
+#ifdef _WIN32
+  if (snapshot.prjfsChannel && snapshot.windowsPath.has_value()) {
+    // Invalidation may block, so dispatch to the dedicated invalidation
+    // thread pool. `prjfsChannel` and `windowsPath` were captured in the
+    // snapshot under the caller's contents_ wlock, so the channel
+    // pointer does not need to be re-resolved after the suspension.
+    co_await folly::coro::co_withExecutor(
+        getMount()->getInvalidationThreadPool().get(),
+        folly::coro::co_invoke(
+            [fsChannel = snapshot.prjfsChannel,
+             path = std::move(
+                 *snapshot.windowsPath)]() -> folly::coro::Task<folly::Unit> {
+              auto result = fsChannel->addDirectoryPlaceholder(path);
+              if (result.hasException()) {
+                co_yield folly::coro::co_error(std::move(result).exception());
+              }
+              co_return folly::unit;
+            }));
+  }
+#endif
+  co_return folly::unit;
 }
 
 void TreeInode::saveOverlayPostCheckout(
