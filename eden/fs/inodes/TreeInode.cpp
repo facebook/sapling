@@ -5184,6 +5184,284 @@ PathComponent getInodeName(CheckoutContext* ctx, const InodePtr& inode) {
 }
 } // namespace
 
+struct TreeInode::RestrictionTransitionPrep {
+  // Tri-state result. On Abort, the caller returns
+  // CheckoutActionResult{InvalidationRequired::No, hadConflicts} (the helper
+  // may have already called ctx->addError). On Proceed, `currentName` is set
+  // and the caller must call finalizeRestrictionTransition.
+  enum class State { NoChange, Proceed, Abort };
+  State state{State::Abort};
+  std::optional<PathComponent> currentName;
+  bool oldRestricted{false};
+  bool hadConflicts{false};
+};
+
+struct TreeInode::DirectoryRemovalResult {
+  // If `caseInsensitiveDirRefreshTree` is set, the caller must recurse into
+  // treeInode->checkout(ctx, nullptr, refreshTree) instead of using
+  // `actionResult`, OR-ing `hadConflicts` into the recursion's result.
+  CheckoutActionResult actionResult{InvalidationRequired::No};
+  std::shared_ptr<const Tree> caseInsensitiveDirRefreshTree;
+  bool hadConflicts{false};
+};
+
+CheckoutActionResult TreeInode::replaceFileEntry(
+    CheckoutContext* ctx,
+    PathComponentPiece name,
+    const InodePtr& inode,
+    const std::optional<Tree::value_type>& newScmEntry) {
+  std::unique_ptr<InodeBase> deletedInode;
+  auto contents = lockContentsWrite();
+
+  // The CheckoutContext should be holding the rename lock, so the entry
+  // at this name should still be the specified inode.
+  auto it = contents->entries.find(name);
+  if (it == contents->entries.end()) {
+    EDEN_BUG() << "entry removed while holding rename lock during checkout: "
+               << inode->getLogPath();
+  }
+  if (it->second.getInode() != inode.get()) {
+    EDEN_BUG() << "entry changed while holding rename lock during checkout: "
+               << inode->getLogPath();
+  }
+
+  // Tell the OS to invalidate its cache for this entry. For case
+  // insensitive mounts, we need to invalidate the current name, hence
+  // using it->first instead of name.
+  auto success = invalidateChannelEntryCache(
+      *contents, it->first, it->second.getInodeNumber());
+  if (success.hasException()) {
+    getMount()->getServerState()->getEdenFsEventsLogger()->logEvent(
+        CheckoutUpdateError{
+            inode->getLogPath(), success.exception().what().toStdString()});
+    if (folly::kIsWindows) {
+      if (auto* exc = success.tryGetExceptionObject<std::system_error>();
+          exc && isEnotempty(*exc)) {
+        XLOGF(
+            DBG6,
+            "entry changed on disk from a file to a non-empty directory while checkout is in progress: {}",
+            inode->getLogPath());
+        if (newScmEntry) {
+          ctx->addConflict(
+              ConflictType::MODIFIED_MODIFIED,
+              this,
+              it->first,
+              it->second.getDtype());
+        } else {
+          ctx->addConflict(
+              ConflictType::MODIFIED_REMOVED,
+              this,
+              it->first,
+              it->second.getDtype());
+        }
+        return CheckoutActionResult{
+            InvalidationRequired::No, /*hadConflicts=*/true};
+      }
+    }
+    ctx->addError(this, it->first, success.exception());
+    return CheckoutActionResult{
+        InvalidationRequired::No, /*hadConflicts=*/true};
+  }
+
+  // This is a file, so we can simply unlink it, and replace/remove the
+  // entry as desired.
+  deletedInode = inode->markUnlinked(this, it->first, ctx->renameLock());
+  contents->entries.erase(it);
+
+  if (newScmEntry) {
+    auto [_it, inserted] = contents->entries.emplace(
+        newScmEntry->first,
+        dirEntryFromScmEntry(newScmEntry->second, getOverlay()));
+    XDCHECK(inserted);
+  }
+
+  // We don't save our own overlay data right now: we'll wait to do that
+  // until the checkout operation finishes touching all of our children in
+  // checkout().
+  return CheckoutActionResult{InvalidationRequired::Yes};
+}
+
+TreeInode::RestrictionTransitionPrep TreeInode::prepareRestrictionTransition(
+    CheckoutContext* ctx,
+    const TreeInodePtr& treeInode,
+    const Tree::value_type& replacementEntry,
+    bool newRestricted) {
+  bool oldRestricted = false;
+  {
+    auto contents = getContentsUnchecked().rlock();
+    auto it = contents->entries.find(replacementEntry.first);
+    if (it != contents->entries.end()) {
+      oldRestricted = it->second.isRestricted();
+    }
+  }
+
+  RestrictionTransitionPrep prep;
+  prep.oldRestricted = oldRestricted;
+  if (newRestricted == oldRestricted) {
+    prep.state = RestrictionTransitionPrep::State::NoChange;
+    return prep;
+  }
+
+  prep.currentName = getInodeName(ctx, treeInode);
+  if (!ctx->isDryRun()) {
+    auto contents = getContentsUnchecked().wlock();
+    auto it = contents->entries.find(prep.currentName->piece());
+    if (it == contents->entries.end() ||
+        it->second.getInode() != treeInode.get() ||
+        it->second.isRestricted() != oldRestricted) {
+      prep.state = RestrictionTransitionPrep::State::Abort;
+      return prep;
+    }
+
+    auto invalidateResult = invalidateChannelEntryCache(
+        *contents, prep.currentName->piece(), treeInode->getNodeId());
+    if (invalidateResult.hasException()) {
+      ctx->addError(
+          this, prep.currentName->piece(), invalidateResult.exception());
+      prep.state = RestrictionTransitionPrep::State::Abort;
+      prep.hadConflicts = true;
+      return prep;
+    }
+  }
+
+  prep.state = RestrictionTransitionPrep::State::Proceed;
+  return prep;
+}
+
+CheckoutActionResult TreeInode::finalizeRestrictionTransition(
+    CheckoutContext* ctx,
+    const TreeInodePtr& treeInode,
+    PathComponentPiece currentName,
+    bool newRestricted,
+    CheckoutSubtreeResult result) {
+  if (ctx->isDryRun() ||
+      (newRestricted && result.hadConflicts && !ctx->forceUpdate())) {
+    return CheckoutActionResult{InvalidationRequired::No, result.hadConflicts};
+  }
+
+  treeInode->isRestricted_.store(newRestricted, std::memory_order_relaxed);
+
+  auto contents = getContentsUnchecked().wlock();
+  auto it = contents->entries.find(currentName);
+  if (it == contents->entries.end() ||
+      it->second.getInode() != treeInode.get()) {
+    return CheckoutActionResult{InvalidationRequired::No, result.hadConflicts};
+  }
+  it->second.setRestricted(newRestricted);
+  return CheckoutActionResult{InvalidationRequired::Yes, result.hadConflicts};
+}
+
+TreeInode::DirectoryRemovalResult TreeInode::finalizeDirectoryRemoval(
+    CheckoutContext* ctx,
+    const TreeInodePtr& treeInode,
+    std::shared_ptr<const Tree> newTree,
+    const std::optional<Tree::value_type>& newScmEntry,
+    PathComponentPiece localName,
+    bool hadConflicts) {
+  DirectoryRemovalResult result;
+  result.hadConflicts = hadConflicts;
+
+  // Now we can attempt to delete treeInode!
+  // The ordering of invalidateChannelEntryCache and tryRemoveChild
+  // is important on Windows here. We need to attempt to clear the
+  // filesystem data before we delete the inode because the kernel is
+  // the source of truth. If invalidating fails, we do not want to
+  // actually delete the inode from eden's state. Note: On NFS and
+  // FUSE, EdenFS is the source of truth. So in theory one might want
+  // to change eden first and then FUSE or NFS. On FUSE this doesn't
+  // really matter, if we invalidated fuse and then removing in eden
+  // fails, its fine we did the extra invalidation. On NFS our
+  // invalidation relies on data changing in EdenFS and the kernel
+  // noticing and clearing its own caches. So we would really want
+  // tryRemoveChild to happen first. But thankfully
+  // invalidateChannelEntryCache doesn't do anything on NFS anyways.
+  // so it does not matter these are out of order.
+  if (invalidateChannelEntryCache(
+          *lockContentsWrite(), localName, treeInode->getNodeId())
+          .hasException()) {
+    if (newTree) {
+      XCHECK_EQ(
+          getMount()->getCheckoutConfig()->getCaseSensitive(),
+          CaseSensitivity::Insensitive);
+      XCHECK_NE(newScmEntry->first, localName);
+      // Because invalidateChannelEntryCache can only fail on Windows
+      // and PrjFS, the mount must be case-insensitive. Moreover,
+      // newScmEntry->first and name are different, so the case of
+      // the directory changed. Unfortunately, we couldn't remove the
+      // directory from the disk, and thus we are unable to actually
+      // change the case. This can be due to the directory containing
+      // an untracked file for instance. We can however fallback to
+      // updating the directory itself to the newTree. This behavior
+      // is consistent with vanilla Mercurial.
+      result.caseInsensitiveDirRefreshTree = std::move(newTree);
+      return result;
+    }
+    ctx->addConflict(ConflictType::DIRECTORY_NOT_EMPTY, treeInode.get());
+    result.hadConflicts = true;
+    result.actionResult =
+        CheckoutActionResult{InvalidationRequired::No, result.hadConflicts};
+    return result;
+  }
+
+  if (tryRemoveChild(
+          ctx->renameLock(), localName, treeInode, InvalidationRequired::No) !=
+      0) {
+    ctx->addConflict(ConflictType::DIRECTORY_NOT_EMPTY, treeInode.get());
+    result.hadConflicts = true;
+    // Since we've invalidated the entry, even if this fails we need
+    // to make sure the directory is also invalidated, fallthrough.
+  }
+
+  // If the entry does not exist at the new commit we can stop here.
+  // no need to add anything back to our parent's contents.
+  if (!newScmEntry) {
+    result.actionResult =
+        CheckoutActionResult{InvalidationRequired::Yes, result.hadConflicts};
+    return result;
+  }
+
+  // On case insensitive mounts, a change of casing would lead to a
+  // removal of this TreeInode followed by the insertion of the
+  // different cased TreeInode.
+  if (newScmEntry->second.isTree()) {
+    XDCHECK_EQ(
+        getMount()->getCheckoutConfig()->getCaseSensitive(),
+        CaseSensitivity::Insensitive);
+  }
+
+  bool inserted = false;
+  {
+    auto contents = lockContentsWrite();
+    auto ret = contents->entries.emplace(
+        newScmEntry->first,
+        dirEntryFromScmEntry(newScmEntry->second, getOverlay()));
+    inserted = ret.second;
+  }
+
+  if (!inserted) {
+    // Hmm.  Someone else already created a new entry in
+    // this location before we had a chance to add our new
+    // entry.  We don't block new file or directory
+    // creations during a checkout operation, so this is
+    // possible.  Just report an error in this case.
+    ctx->addError(
+        this,
+        localName,
+        InodeError(
+            EEXIST,
+            inodePtrFromThis(),
+            localName,
+            "new file created with this name while checkout operation "
+            "was in progress"));
+    result.hadConflicts = true;
+  }
+
+  // Make sure that we invalidate the directory in TreeInode::checkout.
+  result.actionResult =
+      CheckoutActionResult{InvalidationRequired::Yes, result.hadConflicts};
+  return result;
+}
+
 ImmediateFuture<CheckoutActionResult> TreeInode::checkoutUpdateEntry(
     CheckoutContext* ctx,
     PathComponentPiece name,
@@ -5201,81 +5479,7 @@ ImmediateFuture<CheckoutActionResult> TreeInode::checkoutUpdateEntry(
     if (ctx->isDryRun()) {
       return CheckoutActionResult{InvalidationRequired::No};
     }
-
-    std::optional<PathComponent> inodeName;
-    {
-      std::unique_ptr<InodeBase> deletedInode;
-      auto contents = lockContentsWrite();
-
-      // The CheckoutContext should be holding the rename lock, so the entry
-      // at this name should still be the specified inode.
-      auto it = contents->entries.find(name);
-      if (it == contents->entries.end()) {
-        return EDEN_BUG_FUTURE(CheckoutActionResult)
-            << "entry removed while holding rename lock during checkout: "
-            << inode->getLogPath();
-      }
-      if (it->second.getInode() != inode.get()) {
-        return EDEN_BUG_FUTURE(CheckoutActionResult)
-            << "entry changed while holding rename lock during checkout: "
-            << inode->getLogPath();
-      }
-
-      // Tell the OS to invalidate its cache for this entry. For case
-      // insensitive mounts, we need to invalidate the current name, hence
-      // using it->first instead of name.
-      auto success = invalidateChannelEntryCache(
-          *contents, it->first, it->second.getInodeNumber());
-      if (success.hasException()) {
-        getMount()->getServerState()->getEdenFsEventsLogger()->logEvent(
-            CheckoutUpdateError{
-                inode->getLogPath(), success.exception().what().toStdString()});
-        if (folly::kIsWindows) {
-          if (auto* exc = success.tryGetExceptionObject<std::system_error>();
-              exc && isEnotempty(*exc)) {
-            XLOGF(
-                DBG6,
-                "entry changed on disk from a file to a non-empty directory while checkout is in progress: {}",
-                inode->getLogPath());
-            if (newScmEntry) {
-              ctx->addConflict(
-                  ConflictType::MODIFIED_MODIFIED,
-                  this,
-                  it->first,
-                  it->second.getDtype());
-            } else {
-              ctx->addConflict(
-                  ConflictType::MODIFIED_REMOVED,
-                  this,
-                  it->first,
-                  it->second.getDtype());
-            }
-            return CheckoutActionResult{
-                InvalidationRequired::No, /*hadConflicts=*/true};
-          }
-        }
-        ctx->addError(this, it->first, success.exception());
-        return CheckoutActionResult{
-            InvalidationRequired::No, /*hadConflicts=*/true};
-      }
-
-      // This is a file, so we can simply unlink it, and replace/remove the
-      // entry as desired.
-      deletedInode = inode->markUnlinked(this, it->first, ctx->renameLock());
-      contents->entries.erase(it);
-
-      if (newScmEntry) {
-        auto [_it, inserted] = contents->entries.emplace(
-            newScmEntry->first,
-            dirEntryFromScmEntry(newScmEntry->second, getOverlay()));
-        XDCHECK(inserted);
-      }
-    }
-
-    // We don't save our own overlay data right now:
-    // we'll wait to do that until the checkout operation finishes touching all
-    // of our children in checkout().
-    return CheckoutActionResult{InvalidationRequired::Yes};
+    return replaceFileEntry(ctx, name, inode, newScmEntry);
   }
 
   // If we are going from a directory to a directory, all we need to do
@@ -5298,16 +5502,10 @@ ImmediateFuture<CheckoutActionResult> TreeInode::checkoutUpdateEntry(
       bool newRestricted = replacementEntry.second.isRestricted() ||
           (newTree && newTree->isRestricted());
 
-      bool oldRestricted = false;
-      {
-        auto contents = getContentsUnchecked().rlock();
-        auto it = contents->entries.find(replacementEntry.first);
-        if (it != contents->entries.end()) {
-          oldRestricted = it->second.isRestricted();
-        }
-      }
-
-      if (newRestricted == oldRestricted) {
+      auto prep = prepareRestrictionTransition(
+          ctx, treeInode, replacementEntry, newRestricted);
+      using PrepState = RestrictionTransitionPrep::State;
+      if (prep.state == PrepState::NoChange) {
         if (newRestricted && !newTree) {
           return CheckoutActionResult{InvalidationRequired::No};
         }
@@ -5322,33 +5520,18 @@ ImmediateFuture<CheckoutActionResult> TreeInode::checkoutUpdateEntry(
                   InvalidationRequired::No, result.hadConflicts};
             });
       }
-
-      auto currentName = getInodeName(ctx, treeInode);
-      if (!ctx->isDryRun()) {
-        auto contents = getContentsUnchecked().wlock();
-        auto it = contents->entries.find(currentName.piece());
-        if (it == contents->entries.end() ||
-            it->second.getInode() != treeInode.get() ||
-            it->second.isRestricted() != oldRestricted) {
-          return CheckoutActionResult{InvalidationRequired::No};
-        }
-
-        auto invalidateResult = invalidateChannelEntryCache(
-            *contents, currentName.piece(), treeInode->getNodeId());
-        if (invalidateResult.hasException()) {
-          ctx->addError(
-              this, currentName.piece(), invalidateResult.exception());
-          return CheckoutActionResult{
-              InvalidationRequired::No, /*hadConflicts=*/true};
-        }
+      if (prep.state == PrepState::Abort) {
+        return CheckoutActionResult{
+            InvalidationRequired::No, prep.hadConflicts};
       }
 
+      auto currentName = std::move(*prep.currentName);
       XLOGF(
           DBG3,
           "checkoutUpdateEntry({}): restriction transition for {}: {} -> {}",
           getLogPath(),
           name,
-          oldRestricted,
+          prep.oldRestricted,
           newRestricted);
       std::shared_ptr<const Tree> checkoutToTree;
       if (!newRestricted) {
@@ -5368,26 +5551,8 @@ ImmediateFuture<CheckoutActionResult> TreeInode::checkoutUpdateEntry(
                currentName = std::move(currentName),
                newRestricted](CheckoutSubtreeResult result)
                   -> ImmediateFuture<CheckoutActionResult> {
-                if (ctx->isDryRun() ||
-                    (newRestricted && result.hadConflicts &&
-                     !ctx->forceUpdate())) {
-                  return CheckoutActionResult{
-                      InvalidationRequired::No, result.hadConflicts};
-                }
-
-                treeInode->isRestricted_.store(
-                    newRestricted, std::memory_order_relaxed);
-
-                auto contents = parentInode->getContentsUnchecked().wlock();
-                auto it = contents->entries.find(currentName.piece());
-                if (it == contents->entries.end() ||
-                    it->second.getInode() != treeInode.get()) {
-                  return CheckoutActionResult{
-                      InvalidationRequired::No, result.hadConflicts};
-                }
-                it->second.setRestricted(newRestricted);
-                return CheckoutActionResult{
-                    InvalidationRequired::Yes, result.hadConflicts};
+                return parentInode->finalizeRestrictionTransition(
+                    ctx, treeInode, currentName.piece(), newRestricted, result);
               });
     }
   }
@@ -5413,122 +5578,28 @@ ImmediateFuture<CheckoutActionResult> TreeInode::checkoutUpdateEntry(
                   InvalidationRequired::No, hadConflicts};
             }
 
-            const auto& name = getInodeName(ctx, treeInode);
-
-            // Now we can attempt to delete treeInode!
-            // The ordering of invalidateChannelEntryCache and tryRemoveChild
-            // is important on Windows here. We need to attempt to clear the
-            // filesystem data before we delete the inode because the kernel is
-            // the source of truth. If invalidating fails, we do not want to
-            // actually delete the inode from eden's state. Note: On NFS and
-            // FUSE, EdenFS is the source of truth. So in theory one might want
-            // to change eden first and then FUSE or NFS. On FUSE this doesn't
-            // really matter, if we invalidated fuse and then removing in eden
-            // fails, its fine we did the extra invalidation. On NFS our
-            // invalidation relies on data changing in EdenFS and the kernel
-            // noticing and clearing its own caches. So we would really want
-            // tryRemoveChild to happen first. But thankfully
-            // invalidateChannelEntryCache doesn't do anything on NFS anyways.
-            // so it does not matter these are out of order.
-
-            if (parentInode
-                    ->invalidateChannelEntryCache(
-                        *parentInode->lockContentsWrite(),
-                        name,
-                        treeInode->getNodeId())
-                    .hasException()) {
-              if (newTree) {
-                XCHECK_EQ(
-                    parentInode->getMount()
-                        ->getCheckoutConfig()
-                        ->getCaseSensitive(),
-                    CaseSensitivity::Insensitive);
-                XCHECK_NE(newScmEntry->first, name);
-                // Because invalidateChannelEntryCache can only fail on Windows
-                // and PrjFS, the mount must be case-insensitive. Moreover,
-                // newScmEntry->first and name are different, so the case of
-                // the directory changed. Unfortunately, we couldn't remove the
-                // directory from the disk, and thus we are unable to actually
-                // change the case. This can be due to the directory containing
-                // an untracked file for instance. We can however fallback to
-                // updating the directory itself to the newTree. This behavior
-                // is consistent with vanilla Mercurial.
-                return treeInode->checkout(ctx, nullptr, std::move(newTree))
-                    .thenValue([hadConflicts](CheckoutSubtreeResult result) {
-                      return CheckoutActionResult{
-                          InvalidationRequired::No,
-                          hadConflicts || result.hadConflicts};
-                    });
-              } else {
-                ctx->addConflict(
-                    ConflictType::DIRECTORY_NOT_EMPTY, treeInode.get());
-                return CheckoutActionResult{
-                    InvalidationRequired::No, /*hadConflicts=*/true};
-              }
+            const auto& localName = getInodeName(ctx, treeInode);
+            auto result = parentInode->finalizeDirectoryRemoval(
+                ctx,
+                treeInode,
+                std::move(newTree),
+                newScmEntry,
+                localName,
+                hadConflicts);
+            if (result.caseInsensitiveDirRefreshTree) {
+              return treeInode
+                  ->checkout(
+                      ctx,
+                      nullptr,
+                      std::move(result.caseInsensitiveDirRefreshTree))
+                  .thenValue([hadConflicts = result.hadConflicts](
+                                 CheckoutSubtreeResult r) {
+                    return CheckoutActionResult{
+                        InvalidationRequired::No,
+                        hadConflicts || r.hadConflicts};
+                  });
             }
-
-            if (parentInode->tryRemoveChild(
-                    ctx->renameLock(),
-                    name,
-                    treeInode,
-                    InvalidationRequired::No) != 0) {
-              ctx->addConflict(
-                  ConflictType::DIRECTORY_NOT_EMPTY, treeInode.get());
-              hadConflicts = true;
-              // Since we've invalidated the entry, even if this fails we need
-              // to make sure the directory is also invalidated, fallthrough.
-            }
-
-            // If the entry does not exist at the new commit we can stop here.
-            // no need to add anything back to our parent's contents.
-            if (!newScmEntry) {
-              return CheckoutActionResult{
-                  InvalidationRequired::Yes, hadConflicts};
-            }
-
-            // On case insensitive mounts, a change of casing would lead to a
-            // removal of this TreeInode followed by the insertion of the
-            // different cased TreeInode.
-            if (newScmEntry->second.isTree()) {
-              XDCHECK_EQ(
-                  parentInode->getMount()
-                      ->getCheckoutConfig()
-                      ->getCaseSensitive(),
-                  CaseSensitivity::Insensitive);
-            }
-
-            bool inserted = false;
-            {
-              auto contents = parentInode->lockContentsWrite();
-              auto ret = contents->entries.emplace(
-                  newScmEntry->first,
-                  dirEntryFromScmEntry(
-                      newScmEntry->second, parentInode->getOverlay()));
-              inserted = ret.second;
-            }
-
-            if (!inserted) {
-              // Hmm.  Someone else already created a new entry in
-              // this location before we had a chance to add our new
-              // entry.  We don't block new file or directory
-              // creations during a checkout operation, so this is
-              // possible.  Just report an error in this case.
-              ctx->addError(
-                  parentInode.get(),
-                  name,
-                  InodeError(
-                      EEXIST,
-                      parentInode,
-                      name,
-                      "new file created with this name while checkout operation "
-                      "was in progress"));
-              hadConflicts = true;
-            }
-
-            // Make sure that we invalidate the directory in
-            // TreeInode::checkout.
-            return CheckoutActionResult{
-                InvalidationRequired::Yes, hadConflicts};
+            return result.actionResult;
           });
 }
 

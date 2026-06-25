@@ -694,6 +694,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   class IncompleteInodeLoad;
   struct CheckoutSetup;
   struct CheckoutFinalizeState;
+  struct RestrictionTransitionPrep;
+  struct DirectoryRemovalResult;
 
 #ifndef _WIN32
   InodeMetadata getMetadataLocked(const DirContents&) const;
@@ -714,6 +716,35 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       bool propagateErrors,
       bool hadConflicts,
       std::vector<folly::Try<CheckoutActionResult>>& actionResults);
+
+  // Synchronous helpers for checkoutUpdateEntry. The caller must hold the
+  // CheckoutContext's rename lock.
+  [[nodiscard]] CheckoutActionResult replaceFileEntry(
+      CheckoutContext* ctx,
+      PathComponentPiece name,
+      const InodePtr& inode,
+      const std::optional<Tree::value_type>& newScmEntry);
+
+  RestrictionTransitionPrep prepareRestrictionTransition(
+      CheckoutContext* ctx,
+      const TreeInodePtr& treeInode,
+      const Tree::value_type& replacementEntry,
+      bool newRestricted);
+
+  [[nodiscard]] CheckoutActionResult finalizeRestrictionTransition(
+      CheckoutContext* ctx,
+      const TreeInodePtr& treeInode,
+      PathComponentPiece currentName,
+      bool newRestricted,
+      CheckoutSubtreeResult result);
+
+  DirectoryRemovalResult finalizeDirectoryRemoval(
+      CheckoutContext* ctx,
+      const TreeInodePtr& treeInode,
+      std::shared_ptr<const Tree> newTree,
+      const std::optional<Tree::value_type>& newScmEntry,
+      PathComponentPiece localName,
+      bool hadConflicts);
 
   /**
    * The InodeMap is guaranteed to remain valid for at least the lifetime of
