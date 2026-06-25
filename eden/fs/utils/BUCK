@@ -335,3 +335,17 @@ cpp_library(
     ],
     exported_deps = ["//folly:expected"],
 )
+
+cpp_library(
+    name = "mount_health_check",
+    srcs = ["MountHealthCheck.cpp"],
+    headers = ["MountHealthCheck.h"],
+    deps = [
+        ":mount_info_table",
+        "//eden/common/utils:fsdetect",
+        "//folly:string",
+        "//folly/logging:logging",
+        "//folly/portability:sys_stat",
+        "//folly/portability:unistd",
+    ],
+)

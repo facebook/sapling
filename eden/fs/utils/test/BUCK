@@ -1,5 +1,6 @@
 load("@fbcode_macros//build_defs:cpp_benchmark.bzl", "cpp_benchmark")
 load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
+load("@fbsource//tools/build_defs/testinfra:network_access_utils.bzl", "network_access_utils")
 
 oncall("scm_client_infra")
 
@@ -139,6 +140,17 @@ cpp_unittest(
     supports_static_listing = False,
     deps = [
         "//eden/fs/utils:mini_tracer",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
+    name = "mount_health_check_test",
+    srcs = ["MountHealthCheckTest.cpp"],
+    network_access = network_access_utils.none(),
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/utils:mount_health_check",
         "//folly/portability:gtest",
     ],
 )
