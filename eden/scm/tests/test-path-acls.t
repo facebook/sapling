@@ -128,3 +128,67 @@ FIXME: This should also filter the restricted side and warn, not abort.
   $ sl diff --stat -r $B -r $A
   abort: path 'restricted' is restricted by ACL 'some-acl'
   [255]
+
+Backout of a commit that touches restricted and unrestricted paths:
+
+  $ newserver server4
+  $ drawdag << 'EOS'
+  > C
+  > |
+  > B
+  > |
+  > A
+  >   # C/restricted/.slacl = acl config
+  >   # B/public.txt = public v2
+  >   # B/restricted/secret.txt = secret v2
+  >   # A/public.txt = public v1
+  >   # A/restricted/secret.txt = secret v1
+  > EOS
+
+  $ cd
+  $ newclientrepo client4 server4
+  $ sl go -q $C
+  warning: results may be incomplete due to path ACLs
+    'restricted' is restricted by ACL 'some-acl'
+  [1]
+
+FIXME: should support a partial backout
+  $ sl backout -r $B
+  abort: path 'restricted' is restricted by ACL 'some-acl'
+  [255]
+  $ sl status
+  $ sl cat public.txt
+  public v2 (no-eol)
+
+Backout of a commit that touches restricted paths the user never had access to:
+
+  $ newserver server5
+  $ drawdag << 'EOS'
+  > B
+  > |
+  > A
+  >   # A/public.txt = public v1
+  >   # A/restricted/.slacl = acl config
+  >   # A/restricted/secret.txt = secret v1
+  >   # B/public.txt = public v2
+  >   # B/restricted/secret.txt = secret v2
+  > EOS
+
+  $ cd
+  $ newclientrepo client5 server5
+  $ sl go -q $B
+  warning: results may be incomplete due to path ACLs
+    'restricted' is restricted by ACL 'some-acl'
+  [1]
+
+FIXME: should support a partial backout
+  $ sl backout -r $B
+  removing B
+  reverting public.txt
+  abort: path 'restricted' is restricted by ACL 'some-acl'
+  [255]
+  $ sl status
+  M public.txt
+  R B
+  $ sl cat public.txt
+  public v2 (no-eol)
