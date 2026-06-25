@@ -22,7 +22,9 @@
 #include <cerrno>
 #include <cstring>
 #include <limits>
+#include <optional>
 #include <stdexcept>
+#include <string>
 #include <system_error>
 
 #include <fmt/core.h>
@@ -50,6 +52,50 @@ namespace {
 }
 
 #if EDEN_HAVE_FUSE_IO_URING
+enum class QueueSetupStep {
+  EventFd,
+  Setup,
+  RegisterFiles,
+};
+
+struct QueueSetupError {
+  QueueSetupStep step;
+  int errnum;
+};
+
+const char* getQueueSetupStepName(QueueSetupStep step) {
+  switch (step) {
+    case QueueSetupStep::EventFd:
+      return "eventfd";
+    case QueueSetupStep::Setup:
+      return "setup";
+    case QueueSetupStep::RegisterFiles:
+      return "register_files";
+  }
+  return "unknown";
+}
+
+const char* getQueueSetupFailureReason(int errnum) {
+  switch (errnum) {
+    case EPERM:
+    case EACCES:
+      return "blocked or disabled";
+    case ENOSYS:
+      return "unavailable or hidden by seccomp";
+    default:
+      return "failed availability probe";
+  }
+}
+
+std::string describeQueueSetupError(const QueueSetupError& error) {
+  return fmt::format(
+      "io_uring {} is {}: {} ({})",
+      getQueueSetupStepName(error.step),
+      getQueueSetupFailureReason(error.errnum),
+      std::generic_category().message(error.errnum),
+      error.errnum);
+}
+
 void prepareUringCmdSqe(
     io_uring_sqe& sqe,
     uint32_t cmdOp,
@@ -100,6 +146,67 @@ void pinThreadToCpu(size_t cpu, size_t cpuCount) {
         cpu,
         std::generic_category().message(savedErrno));
   }
+}
+
+std::optional<QueueSetupError> setupQueue(
+    uint32_t queueDepth,
+    int fuseFd,
+    int& eventFd,
+    io_uring& ring,
+    bool& ringInitialized) noexcept {
+  if (fuseFd < 0) {
+    return QueueSetupError{QueueSetupStep::RegisterFiles, EBADF};
+  }
+
+  eventFd = eventfd(0, EFD_CLOEXEC);
+  if (eventFd < 0) {
+    return QueueSetupError{QueueSetupStep::EventFd, errno};
+  }
+
+  io_uring_params params = {};
+  auto depth = static_cast<unsigned>(queueDepth + 1);
+  params.flags = IORING_SETUP_CQSIZE | IORING_SETUP_SQE128;
+  params.cq_entries = depth * 2;
+
+  auto rc = io_uring_queue_init_params(depth, &ring, &params);
+  if (rc != 0) {
+    return QueueSetupError{QueueSetupStep::Setup, -rc};
+  }
+  ringInitialized = true;
+
+  int files[1] = {fuseFd};
+  rc = io_uring_register_files(&ring, files, 1);
+  if (rc != 0) {
+    return QueueSetupError{QueueSetupStep::RegisterFiles, -rc};
+  }
+
+  return std::nullopt;
+}
+
+[[noreturn]] void throwIoUringSetupError(
+    const QueueSetupError& error,
+    size_t queueId) {
+  switch (error.step) {
+    case QueueSetupStep::EventFd:
+      throw std::system_error(
+          error.errnum,
+          std::generic_category(),
+          fmt::format(
+              "failed to create io_uring eventfd for queue {}", queueId));
+    case QueueSetupStep::Setup:
+      throw std::system_error(
+          error.errnum,
+          std::generic_category(),
+          fmt::format("failed to initialize io_uring queue {}", queueId));
+    case QueueSetupStep::RegisterFiles:
+      throw std::system_error(
+          error.errnum,
+          std::generic_category(),
+          fmt::format(
+              "failed to register /dev/fuse with io_uring queue {}", queueId));
+  }
+
+  XCHECK(false) << "unknown io_uring setup step";
 }
 #endif
 
@@ -191,6 +298,30 @@ void IoUringFuseTransport::RingQueue::reset() noexcept {
   }
 }
 
+std::optional<std::string> IoUringFuseTransport::getMaybeSetupError(
+    uint32_t queueDepth,
+    int fuseFd) {
+  int eventFd = -1;
+  io_uring ring = {};
+  bool ringInitialized = false;
+
+  auto maybeError =
+      setupQueue(queueDepth, fuseFd, eventFd, ring, ringInitialized);
+
+  // The preflight uses a temporary ring and fd; tear them down immediately.
+  if (ringInitialized) {
+    io_uring_queue_exit(&ring);
+  }
+  if (eventFd >= 0) {
+    (void)close(eventFd);
+  }
+
+  if (maybeError.has_value()) {
+    return describeQueueSetupError(*maybeError);
+  }
+  return std::nullopt;
+}
+
 void IoUringFuseTransport::initializeRingPool(
     size_t queueCount,
     size_t maxRequestPayloadSize) {
@@ -221,39 +352,10 @@ void IoUringFuseTransport::initializeSession(FuseChannel& channel) {
 }
 
 void IoUringFuseTransport::initializeQueue(RingQueue& queue, int fuseFd) const {
-  queue.eventFd = eventfd(0, EFD_CLOEXEC);
-  if (queue.eventFd < 0) {
-    const auto savedErrno = errno;
-    throw std::system_error(
-        savedErrno,
-        std::generic_category(),
-        fmt::format(
-            "failed to create io_uring eventfd for queue {}", queue.queueId));
-  }
-
-  io_uring_params params = {};
-  auto depth = static_cast<unsigned>(queueDepth_ + 1);
-  params.flags = IORING_SETUP_CQSIZE | IORING_SETUP_SQE128;
-  params.cq_entries = depth * 2;
-
-  auto rc = io_uring_queue_init_params(depth, &queue.ring, &params);
-  if (rc != 0) {
-    throw std::system_error(
-        -rc,
-        std::generic_category(),
-        fmt::format("failed to initialize io_uring queue {}", queue.queueId));
-  }
-  queue.ringInitialized = true;
-
-  int files[1] = {fuseFd};
-  rc = io_uring_register_files(&queue.ring, files, 1);
-  if (rc != 0) {
-    throw std::system_error(
-        -rc,
-        std::generic_category(),
-        fmt::format(
-            "failed to register /dev/fuse with io_uring queue {}",
-            queue.queueId));
+  auto maybeSetupError = setupQueue(
+      queueDepth_, fuseFd, queue.eventFd, queue.ring, queue.ringInitialized);
+  if (maybeSetupError.has_value()) {
+    throwIoUringSetupError(*maybeSetupError, queue.queueId);
   }
 }
 

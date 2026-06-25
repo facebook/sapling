@@ -16,6 +16,7 @@
 #include <cstdlib>
 #include <memory>
 #include <optional>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -54,6 +55,15 @@ class IoUringFuseTransport final : public FuseTransport {
       int errorCode) const override;
   void sendRawReply(FuseChannel& channel, const iovec iov[], size_t count)
       const override;
+
+#if EDEN_HAVE_FUSE_IO_URING
+  // Returns an error string if this process cannot set up the FUSE io_uring
+  // queue. Eden uses this before FUSE_INIT so it can fall back to devfuse when
+  // the current runtime blocks io_uring setup.
+  static std::optional<std::string> getMaybeSetupError(
+      uint32_t queueDepth,
+      int fuseFd);
+#endif
 
  private:
 #if EDEN_HAVE_FUSE_IO_URING

@@ -50,79 +50,6 @@ namespace facebook::eden {
 
 namespace {
 
-#if EDEN_HAVE_FUSE_IO_URING
-struct IoUringTransportAvailability {
-  bool allowed;
-  int errnum;
-  const char* operation;
-  const char* reason;
-};
-
-IoUringTransportAvailability makeIoUringAvailabilityResult(
-    const char* operation,
-    int errnum) {
-  switch (errnum) {
-    case 0:
-      return IoUringTransportAvailability{
-          /*allowed=*/true,
-          /*errnum=*/0,
-          /*operation=*/operation,
-          /*reason=*/"available",
-      };
-    case EPERM:
-    case EACCES:
-      return IoUringTransportAvailability{
-          /*allowed=*/false,
-          /*errnum=*/errnum,
-          /*operation=*/operation,
-          /*reason=*/"blocked or disabled",
-      };
-    case ENOSYS:
-      return IoUringTransportAvailability{
-          /*allowed=*/false,
-          /*errnum=*/errnum,
-          /*operation=*/operation,
-          /*reason=*/"unavailable or hidden by seccomp",
-      };
-    default:
-      return IoUringTransportAvailability{
-          /*allowed=*/false,
-          /*errnum=*/errnum,
-          /*operation=*/operation,
-          /*reason=*/"failed availability probe",
-      };
-  }
-}
-
-IoUringTransportAvailability checkIoUringTransportAvailability(
-    int fuseFd,
-    uint32_t queueDepth) {
-  if (fuseFd < 0) {
-    return makeIoUringAvailabilityResult("register_files", EBADF);
-  }
-
-  io_uring ring = {};
-  io_uring_params params = {};
-  auto depth = static_cast<unsigned>(queueDepth + 1);
-  params.flags = IORING_SETUP_CQSIZE | IORING_SETUP_SQE128;
-  params.cq_entries = depth * 2;
-
-  auto ret = io_uring_queue_init_params(depth, &ring, &params);
-  if (ret != 0) {
-    return makeIoUringAvailabilityResult("setup", -ret);
-  }
-
-  int files[1] = {fuseFd};
-  ret = io_uring_register_files(&ring, files, 1);
-  io_uring_queue_exit(&ring);
-  if (ret != 0) {
-    return makeIoUringAvailabilityResult("register_files", -ret);
-  }
-
-  return makeIoUringAvailabilityResult("transport", 0);
-}
-#endif
-
 /**
  * For most FUSE requests, the protocol is simple: an optional request
  * parameters struct followed by zero or more null-terminated strings. Provide
@@ -885,17 +812,14 @@ bool FuseChannel::isIoUringTransportAvailable() const {
       return;
     }
 
-    const auto availability = checkIoUringTransportAvailability(
-        getFuseDeviceFd(), ioUringQueueDepth_);
-    if (!availability.allowed) {
+    const auto setupError = IoUringFuseTransport::getMaybeSetupError(
+        ioUringQueueDepth_, getFuseDeviceFd());
+    if (setupError.has_value()) {
       XLOGF(
           WARN,
-          "Not negotiating FUSE io_uring on mount \"{}\": io_uring {} is {}: {} ({})",
+          "Not negotiating FUSE io_uring on mount \"{}\": {}",
           mountPath_,
-          availability.operation,
-          availability.reason,
-          folly::errnoStr(availability.errnum),
-          availability.errnum);
+          *setupError);
       return;
     }
 
