@@ -390,4 +390,26 @@ ImmediateFuture<Unit> diffRemovedTree(
       context, currentPath, getTreeAndId(context, scmId), TreeAndId::null());
 }
 
+folly::coro::now_task<Unit> co_diffTrees(
+    DiffContext* context,
+    RelativePathPiece currentPath,
+    ObjectId scmId,
+    ObjectId wdId) {
+  co_return co_await diffTrees(context, currentPath, scmId, wdId).semi();
+}
+
+folly::coro::now_task<Unit> co_diffAddedTree(
+    DiffContext* context,
+    RelativePathPiece currentPath,
+    ObjectId wdId) {
+  co_return co_await diffAddedTree(context, currentPath, wdId).semi();
+}
+
+folly::coro::now_task<Unit> co_diffRemovedTree(
+    DiffContext* context,
+    RelativePathPiece currentPath,
+    ObjectId scmId) {
+  co_return co_await diffRemovedTree(context, currentPath, scmId).semi();
+}
+
 } // namespace facebook::eden

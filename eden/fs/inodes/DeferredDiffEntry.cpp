@@ -204,7 +204,7 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
     auto treeInode = inode.asTreePtrOrNull();
     if (!treeInode) {
       auto scmId = reportTreeBecameFile(inode);
-      co_await diffRemovedTree(context_, getPath(), scmId).semi();
+      co_await co_diffRemovedTree(context_, getPath(), scmId);
       co_return folly::unit;
     }
 
@@ -221,9 +221,8 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
         }
         auto contentsId = *maybeContentsId;
         contents.unlock();
-        co_await diffTrees(
-            context_, getPath(), scmEntries_[0].getObjectId(), contentsId)
-            .semi();
+        co_await co_diffTrees(
+            context_, getPath(), scmEntries_[0].getObjectId(), contentsId);
         co_return folly::unit;
       }
     }
@@ -377,12 +376,8 @@ class ModifiedBlobDiffEntry : public DeferredDiffEntry {
   }
 
   folly::coro::now_task<folly::Unit> co_run() override {
-    bool equal = co_await context_->store
-                     ->areBlobsEqual(
-                         scmEntry_.getObjectId(),
-                         currentBlobId_,
-                         context_->getFetchContext())
-                     .semi();
+    bool equal = co_await context_->store->co_areBlobsEqual(
+        scmEntry_.getObjectId(), currentBlobId_, context_->getFetchContext());
     if (!equal) {
       XLOGF(DBG5, "modified file: {}", getPath());
       context_->callback->modifiedPath(getPath(), currentDType_);
@@ -412,7 +407,7 @@ class ModifiedScmDiffEntry : public DeferredDiffEntry {
   }
 
   folly::coro::now_task<folly::Unit> co_run() override {
-    co_await diffTrees(context_, getPath(), scmId_, wdId_).semi();
+    co_await co_diffTrees(context_, getPath(), scmId_, wdId_);
     co_return folly::unit;
   }
 
@@ -430,6 +425,11 @@ class AddedScmDiffEntry : public DeferredDiffEntry {
     return diffAddedTree(context_, getPath(), wdId_);
   }
 
+  folly::coro::now_task<folly::Unit> co_run() override {
+    co_await co_diffAddedTree(context_, getPath(), wdId_);
+    co_return folly::unit;
+  }
+
  private:
   ObjectId wdId_;
 };
@@ -441,6 +441,11 @@ class RemovedScmDiffEntry : public DeferredDiffEntry {
 
   ImmediateFuture<folly::Unit> run() override {
     return diffRemovedTree(context_, getPath(), scmId_);
+  }
+
+  folly::coro::now_task<folly::Unit> co_run() override {
+    co_await co_diffRemovedTree(context_, getPath(), scmId_);
+    co_return folly::unit;
   }
 
  private:

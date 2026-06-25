@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <folly/coro/safe/NowTask.h>
+
 #include "eden/common/utils/PathFuncs.h"
 
 namespace facebook::eden {
@@ -85,6 +87,22 @@ ImmediateFuture<folly::Unit> diffAddedTree(
  * DiffContext.
  */
 ImmediateFuture<folly::Unit> diffRemovedTree(
+    DiffContext* context,
+    RelativePathPiece currentPath,
+    ObjectId scmId);
+
+folly::coro::now_task<folly::Unit> co_diffTrees(
+    DiffContext* context,
+    RelativePathPiece currentPath,
+    ObjectId scmId,
+    ObjectId wdId);
+
+folly::coro::now_task<folly::Unit> co_diffAddedTree(
+    DiffContext* context,
+    RelativePathPiece currentPath,
+    ObjectId wdId);
+
+folly::coro::now_task<folly::Unit> co_diffRemovedTree(
     DiffContext* context,
     RelativePathPiece currentPath,
     ObjectId scmId);

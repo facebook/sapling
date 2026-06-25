@@ -8,7 +8,9 @@
 #include "eden/fs/store/ObjectStore.h"
 
 #include <folly/Conv.h>
+#include <folly/coro/Collect.h>
 #include <folly/coro/Invoke.h>
+#include <folly/coro/Task.h>
 #include <folly/futures/Future.h>
 #include <folly/io/IOBuf.h>
 
@@ -1027,6 +1029,26 @@ ImmediateFuture<bool> ObjectStore::areBlobsEqual(
       .thenValue([](const std::tuple<Hash20, Hash20>& sha1s) {
         return std::get<0>(sha1s) == std::get<1>(sha1s);
       });
+}
+
+folly::coro::now_task<bool> ObjectStore::co_areBlobsEqual(
+    const ObjectId& one,
+    const ObjectId& two,
+    const ObjectFetchContextPtr& context) const {
+  if (areObjectsKnownIdentical(one, two)) {
+    co_return true;
+  }
+  // Parallel SHA-1 fetches via co_getBlobSha1 (already a coroutine).
+  auto results = co_await folly::coro::collectAll(
+      folly::coro::co_invoke(
+          [this, one, ctx = context.copy()]() -> folly::coro::Task<Hash20> {
+            co_return co_await co_getBlobSha1(one, ctx);
+          }),
+      folly::coro::co_invoke(
+          [this, two, ctx = context.copy()]() -> folly::coro::Task<Hash20> {
+            co_return co_await co_getBlobSha1(two, ctx);
+          }));
+  co_return std::get<0>(results) == std::get<1>(results);
 }
 
 ImmediateFuture<BackingStore::GetGlobFilesResult> ObjectStore::getGlobFiles(

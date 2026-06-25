@@ -377,6 +377,11 @@ class ObjectStore : public IObjectStore,
       const ObjectId& two,
       const ObjectFetchContextPtr& context) const;
 
+  folly::coro::now_task<bool> co_areBlobsEqual(
+      const ObjectId& one,
+      const ObjectId& two,
+      const ObjectFetchContextPtr& context) const;
+
   /**
    * Get file paths matching the given globs
    */
