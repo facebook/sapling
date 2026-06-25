@@ -2234,7 +2234,7 @@ folly::coro::now_task<CheckoutResult> EdenMount::co_checkout(
 
     checkoutTimes.didCheckout = stopWatch.elapsed();
 
-    auto conflicts = co_await ctx->finish(snapshotId).semi();
+    auto conflicts = co_await ctx->co_finish(snapshotId);
     conflictsResult =
         folly::Try<std::vector<CheckoutConflict>>{std::move(conflicts)};
   } catch (...) {
@@ -2274,6 +2274,16 @@ ImmediateFuture<folly::Unit> EdenMount::flushInvalidations() {
   } else {
     return folly::unit;
   }
+}
+
+folly::coro::now_task<folly::Unit> EdenMount::co_flushInvalidations() {
+  XLOG(DBG4, "waiting for inode invalidations to complete");
+  auto ch = channel_.load();
+  if (ch) {
+    co_await ch->completeInvalidations().semi();
+    XLOG(DBG4, "finished processing inode invalidations");
+  }
+  co_return folly::unit;
 }
 
 #ifndef _WIN32

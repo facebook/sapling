@@ -1235,6 +1235,8 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    */
   [[nodiscard]] ImmediateFuture<folly::Unit> flushInvalidations();
 
+  [[nodiscard]] folly::coro::now_task<folly::Unit> co_flushInvalidations();
+
  private:
   friend class RenameLock;
   friend class SharedRenameLock;

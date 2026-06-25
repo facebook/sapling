@@ -110,6 +110,19 @@ ImmediateFuture<vector<CheckoutConflict>> CheckoutContext::flush() {
   return std::move(*conflicts_.wlock());
 }
 
+folly::coro::now_task<vector<CheckoutConflict>> CheckoutContext::co_finish(
+    const RootId& newSnapshot) {
+  finalizeBeforeFlush(newSnapshot);
+  co_return co_await co_flush();
+}
+
+folly::coro::now_task<vector<CheckoutConflict>> CheckoutContext::co_flush() {
+  if (!isDryRun()) {
+    co_await mount_->co_flushInvalidations();
+  }
+  co_return std::move(*conflicts_.wlock());
+}
+
 void CheckoutContext::finalizeBeforeFlush(const RootId& newSnapshot) {
   auto config = mount_->getCheckoutConfig();
 

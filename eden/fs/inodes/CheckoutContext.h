@@ -12,6 +12,7 @@
 
 #include <folly/Range.h>
 #include <folly/Synchronized.h>
+#include <folly/coro/safe/NowTask.h>
 #include <folly/stop_watch.h>
 
 #include "eden/common/utils/PathFuncs.h"
@@ -95,12 +96,17 @@ class CheckoutContext {
   ImmediateFuture<std::vector<CheckoutConflict>> finish(
       const RootId& newSnapshot);
 
+  folly::coro::now_task<std::vector<CheckoutConflict>> co_finish(
+      const RootId& newSnapshot);
+
   /**
    * Flush the invalidation if needed.
    *
    * Return the list of conflicts and errors.
    */
   ImmediateFuture<std::vector<CheckoutConflict>> flush();
+
+  folly::coro::now_task<std::vector<CheckoutConflict>> co_flush();
 
   void addConflict(ConflictType type, RelativePathPiece path, dtype_t dtype);
   void addConflict(
