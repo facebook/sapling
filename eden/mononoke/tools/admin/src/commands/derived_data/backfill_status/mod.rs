@@ -550,7 +550,7 @@ async fn show_backfill_detail(
 
         if detailed {
             let (mut child_rows, new_count) = load_child_request_rows(ctx, queue, row_id).await?;
-            display_child_request_table(&mut child_rows, new_count);
+            display_child_request_table(&mut child_rows, new_count, false, repo_names);
         }
     } else if let Some(r) = repo {
         let drilldown_repo_id = r.repo_identity().id().id() as i64;
@@ -648,6 +648,12 @@ async fn show_backfill_detail(
             )
             .await?;
             display_repo_detail_table(&mut detail_rows);
+
+            // Also show the per-child-request breakdown (as for single-repo
+            // backfills), with a Repo column so each request can be attributed
+            // to its repository.
+            let (mut child_rows, new_count) = load_child_request_rows(ctx, queue, row_id).await?;
+            display_child_request_table(&mut child_rows, new_count, true, repo_names);
         }
     }
 
@@ -797,6 +803,7 @@ async fn load_child_request_rows(
         .filter(|entry| entry.status != RequestStatus::New)
         .map(|entry| ChildRequestRow {
             id: entry.id.0,
+            repo_id: entry.repo_id.map(|r| r.id() as i64),
             request_type: entry.request_type.0.clone(),
             status: entry.status,
             claimed_by: entry.claimed_by.as_ref().map(|c| c.0.clone()),

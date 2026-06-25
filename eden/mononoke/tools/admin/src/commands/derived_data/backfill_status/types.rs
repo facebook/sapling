@@ -189,9 +189,12 @@ pub(super) struct RepoDetailRow {
 }
 
 /// A single child request (derive_boundaries / derive_slice) of a backfill,
-/// rendered as a row in the single-repo detailed view.
+/// rendered as a row in the detailed child-request view. `repo_id` is only
+/// rendered for multi-repo backfills, where it disambiguates which repository
+/// each child request belongs to.
 pub(super) struct ChildRequestRow {
     pub id: u64,
+    pub repo_id: Option<i64>,
     pub request_type: String,
     pub status: RequestStatus,
     pub claimed_by: Option<String>,

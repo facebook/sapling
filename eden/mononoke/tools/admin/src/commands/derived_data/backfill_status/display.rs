@@ -695,14 +695,23 @@ pub(super) fn display_repo_detail_table(rows: &mut [RepoDetailRow]) {
     println!("{}", "━".repeat(80));
 }
 
-/// Display a per-child-request table for a single (large) repo backfill.
+/// Display a per-child-request table for a backfill.
 ///
-/// Large repo backfills fan out into thousands of `derive_slice` /
+/// Large backfills fan out into thousands of `derive_slice` /
 /// `derive_boundaries` child requests. Most of them sit in the `new` state
 /// waiting to be claimed, so we elide those and just report their count,
 /// showing a row per request that has actually been picked up by a worker
 /// (along with which worker claimed it, from the `claimed_by` column).
-pub(super) fn display_child_request_table(rows: &mut [ChildRequestRow], new_count: usize) {
+///
+/// When `show_repo` is set (multi-repo backfills) a `Repo` column is added so
+/// each child request can be attributed to its repository; single-repo
+/// backfills omit it since every request belongs to the same repo.
+pub(super) fn display_child_request_table(
+    rows: &mut [ChildRequestRow],
+    new_count: usize,
+    show_repo: bool,
+    repo_names: &HashMap<RepositoryId, String>,
+) {
     fn status_sort_key(status: RequestStatus) -> u8 {
         match status {
             RequestStatus::Failed => 0,
@@ -715,6 +724,7 @@ pub(super) fn display_child_request_table(rows: &mut [ChildRequestRow], new_coun
     rows.sort_by(|a, b| {
         status_sort_key(a.status)
             .cmp(&status_sort_key(b.status))
+            .then_with(|| a.repo_id.cmp(&b.repo_id))
             .then_with(|| a.id.cmp(&b.id))
     });
 
@@ -725,20 +735,32 @@ pub(super) fn display_child_request_table(rows: &mut [ChildRequestRow], new_coun
     let mut table = Table::new();
     table.set_format(*format::consts::FORMAT_NO_LINESEP_WITH_TITLE);
 
-    table.set_titles(Row::new(vec![
-        Cell::new("Request ID"),
+    let mut titles = vec![Cell::new("Request ID")];
+    if show_repo {
+        titles.push(Cell::new("Repo"));
+    }
+    titles.extend([
         Cell::new("Type"),
         Cell::new("Status"),
         Cell::new("Claimed By"),
-    ]));
+    ]);
+    table.set_titles(Row::new(titles));
 
     for row in rows.iter() {
-        table.add_row(Row::new(vec![
-            Cell::new(&row.id.to_string()),
+        let mut cells = vec![Cell::new(&row.id.to_string())];
+        if show_repo {
+            let repo = row
+                .repo_id
+                .map(|id| format_repo(id, repo_names))
+                .unwrap_or_else(|| "-".to_string());
+            cells.push(Cell::new(&repo));
+        }
+        cells.extend([
             Cell::new(&row.request_type),
             Cell::new(status_label(row.status)),
             Cell::new(row.claimed_by.as_deref().unwrap_or("-")),
-        ]));
+        ]);
+        table.add_row(Row::new(cells));
     }
 
     table.printstd();
