@@ -16,6 +16,7 @@ use commit_id::IdentityScheme;
 use commit_id::print_commit_id;
 use context::CoreContext;
 use futures::stream::TryStreamExt;
+use metaconfig_types::RepoConfigRef;
 use repo_identity::RepoIdentityRef;
 
 use super::Repo;
@@ -36,6 +37,15 @@ pub async fn status(ctx: &CoreContext, repo: &Repo, args: StatusArgs) -> Result<
     let repo_name = repo.repo_identity().name();
     println!("Modern sync status for repo '{repo_name}'");
     println!();
+
+    // --- Enablement gate ---
+    // This is exactly what the sync job gates on (`sync.rs` / `sync_sharded.rs`
+    // bail with "No modern sync config found"). If there is no config, the repo
+    // is not mirrored to AWS, so there is nothing to compare.
+    if repo.repo_config().modern_sync_config.is_none() {
+        println!("Modern sync is NOT configured for this repo; nothing to compare.");
+        return Ok(());
+    }
 
     // --- bookmark (internal) ---
     println!("== {} ==", args.bookmark);
