@@ -5,7 +5,7 @@
   $ setconfig scmstore.tree-metadata-mode=always
   $ setconfig experimental.restricted-tree-mode=enforced
   $ setconfig slacl.server-acl-enforcement=true
-  $ enable rebase
+  $ enable rebase histedit
 
   $ newserver server
   $ drawdag << 'EOS'
@@ -273,5 +273,134 @@ present here because the restricted file names are not visible.
   $ sl status
   M public.txt
   R B
+  $ sl cat public.txt
+  public v2 (no-eol)
+
+Amend of a commit that touches restricted paths the user never had access to:
+
+  $ newserver server6
+  $ drawdag << 'EOS'
+  > B
+  > |
+  > A
+  >   # A/public.txt = public v1
+  >   # A/restricted/.slacl = acl config
+  >   # A/restricted/secret.txt = secret v1
+  >   # B/public.txt = public v2
+  >   # B/restricted/secret.txt = secret v2
+  > EOS
+
+  $ cd
+  $ newclientrepo client9 server6
+  $ sl go -q $B
+  warning: results may be incomplete due to path ACLs
+    'restricted' is restricted by ACL 'some-acl'
+  [1]
+  $ echo public v3 > public.txt
+
+FIXME: should preserve inaccessible committed files while amending visible changes.
+  $ sl amend
+  abort: path 'restricted' is restricted by ACL 'some-acl'
+  [255]
+  $ sl status
+  M public.txt
+  $ sl cat public.txt
+  public v2 (no-eol)
+
+Fold of commits when one touches restricted paths the user never had access to:
+
+  $ newserver server7
+  $ drawdag << 'EOS'
+  > C
+  > |
+  > B
+  > |
+  > A
+  >   # A/public.txt = public v1
+  >   # A/restricted/.slacl = acl config
+  >   # A/restricted/secret.txt = secret v1
+  >   # B/public.txt = public v2
+  >   # B/restricted/secret.txt = secret v2
+  >   # C/public.txt = public v3
+  > EOS
+
+  $ cd
+  $ newclientrepo client10 server7
+  $ sl go -q $C
+  warning: results may be incomplete due to path ACLs
+    'restricted' is restricted by ACL 'some-acl'
+  [1]
+
+FIXME: should fold visible changes while preserving inaccessible committed files.
+  $ sl fold --from .^ -m folded
+  abort: path 'restricted' is restricted by ACL 'some-acl'
+  [255]
+  $ sl status
+  $ sl cat public.txt
+  public v3 (no-eol)
+
+Histedit roll when one commit touches restricted paths the user never had access to:
+
+  $ newserver server8
+  $ drawdag << 'EOS'
+  > C
+  > |
+  > B
+  > |
+  > A
+  >   # A/public.txt = public v1
+  >   # A/restricted/.slacl = acl config
+  >   # A/restricted/secret.txt = secret v1
+  >   # B/public.txt = public v2
+  >   # B/restricted/secret.txt = secret v2
+  >   # C/public.txt = public v3
+  > EOS
+
+  $ cd
+  $ newclientrepo client11 server8
+  $ sl go -q $C
+  warning: results may be incomplete due to path ACLs
+    'restricted' is restricted by ACL 'some-acl'
+  [1]
+
+FIXME: should roll visible changes while preserving inaccessible committed files.
+  $ sl histedit $B --commands - << EOF
+  > pick $B
+  > roll $C
+  > EOF
+  abort: path 'restricted' is restricted by ACL 'some-acl'
+  [255]
+  $ sl status
+  M public.txt
+  A C
+  $ sl cat public.txt
+  public v2 (no-eol)
+
+Partial uncommit when preserving restricted paths the user never had access to:
+
+  $ newserver server9
+  $ drawdag << 'EOS'
+  > B
+  > |
+  > A
+  >   # A/public.txt = public v1
+  >   # A/restricted/.slacl = acl config
+  >   # A/restricted/secret.txt = secret v1
+  >   # B/public.txt = public v2
+  >   # B/restricted/secret.txt = secret v2
+  > EOS
+
+  $ cd
+  $ newclientrepo client12 server9
+  $ sl go -q $B
+  warning: results may be incomplete due to path ACLs
+    'restricted' is restricted by ACL 'some-acl'
+  [1]
+
+FIXME: should uncommit visible paths while preserving inaccessible committed files.
+  $ sl uncommit public.txt
+  abort: path 'restricted' is restricted by ACL 'some-acl'
+  [255]
+  $ sl status
   $ sl cat public.txt
   public v2 (no-eol)
