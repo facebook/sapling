@@ -15,6 +15,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include <folly/CancellationToken.h>
@@ -60,7 +61,7 @@ class ServerStream;
 
 namespace folly {
 class EventBase;
-}
+} // namespace folly
 
 namespace facebook::eden {
 
@@ -714,6 +715,11 @@ class EdenServer : private TakeoverHandler {
   // attempts to recover it.
   void accidentalUnmountRecovery();
 
+  // Checks a running mount point without blocking the main EventBase.
+  void scheduleRunningMountHealthCheck(
+      const AbsolutePath& mountPath,
+      std::string repoSource);
+
   // Detects when NFS backed repos are being crawled.
   void detectNfsCrawl();
 
@@ -918,6 +924,9 @@ class EdenServer : private TakeoverHandler {
    * thriftUsePrefetchExecutor_ is false.
    */
   std::shared_ptr<folly::Executor> prefetchFilesV2Executor_;
+
+  std::shared_ptr<folly::Synchronized<std::unordered_set<std::string>>>
+      runningMountHealthChecks_;
 
   /**
    * Remounting progress state.

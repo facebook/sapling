@@ -9,6 +9,7 @@
 
 #include <cpptoml.h>
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 
 #include <sys/stat.h>
@@ -16,6 +17,7 @@
 #include <functional>
 #include <iterator>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -26,6 +28,7 @@
 #include <fmt/core.h>
 #include <folly/Exception.h>
 #include <folly/FileUtil.h>
+#include <folly/Indestructible.h>
 #include <folly/SocketAddress.h>
 
 #include <folly/json/json.h>
@@ -37,6 +40,7 @@
 #include <folly/coro/Task.h>
 #include <folly/executors/CPUThreadPoolExecutor.h>
 #include <folly/executors/thread_factory/NamedThreadFactory.h>
+#include <folly/futures/Future.h>
 #include <folly/io/async/AsyncSignalHandler.h>
 #include <folly/io/async/HHWheelTimer.h>
 #include <folly/logging/xlog.h>
@@ -107,6 +111,7 @@
 #include "eden/fs/utils/EdenError.h"
 #include "eden/fs/utils/EdenTaskQueue.h"
 #include "eden/fs/utils/FsChannelTypes.h"
+#include "eden/fs/utils/MountHealthCheck.h"
 #include "eden/fs/utils/NfsSocket.h"
 #include "eden/fs/utils/NotImplemented.h"
 #include "eden/fs/utils/ProcUtil.h"
@@ -174,6 +179,100 @@ using namespace std::chrono_literals;
 namespace {
 
 using namespace facebook::eden;
+
+constexpr auto kMountHealthCheckTimeout = std::chrono::seconds{5};
+
+struct MountHealthIssueLogContext {
+  MountHealthIssueLogContext(
+      std::weak_ptr<EdenFsEventsLogger> edenFsEventsLogger,
+      std::string mountPath,
+      std::string repoSource)
+      : edenFsEventsLogger_{std::move(edenFsEventsLogger)},
+        mountPath{std::move(mountPath)},
+        repoSource{std::move(repoSource)} {}
+
+  void log(std::string reason, std::string error) const {
+    auto edenFsEventsLogger = edenFsEventsLogger_.lock();
+    if (!edenFsEventsLogger) {
+      return;
+    }
+    edenFsEventsLogger->logEvent(
+        EdenMountHealthIssue{
+            "daemon_periodic",
+            std::move(reason),
+            std::string{mountPath},
+            std::string{mountPath},
+            "configured_checkout",
+            std::string{repoSource},
+            std::move(error),
+            false,
+            false});
+  }
+
+  std::weak_ptr<EdenFsEventsLogger> edenFsEventsLogger_;
+  std::string mountPath;
+  std::string repoSource;
+};
+
+folly::CPUThreadPoolExecutor* getMountHealthCheckThreadPool() {
+  // Process-lifetime so a stuck filesystem syscall cannot make EdenServer
+  // teardown wait for the health-check worker thread.
+  static folly::Indestructible<folly::CPUThreadPoolExecutor> executor(
+      2, std::make_shared<folly::NamedThreadFactory>("MountHealthCheck"));
+  return executor.get();
+}
+
+void logMountHealthCheckTimeout(
+    const MountHealthIssueLogContext& logContext,
+    std::string error) {
+  try {
+    logContext.log(
+        std::string{edenMountHealthIssueReasonString(
+            EdenMountHealthIssueReason::DaemonRunningMountTimedOut)},
+        std::move(error));
+  } catch (const std::exception& ex) {
+    XLOGF(ERR, "EdenFS mount health timeout logging failed: {}", ex.what());
+  } catch (...) {
+    XLOG(ERR, "EdenFS mount health timeout logging failed");
+  }
+}
+
+void scheduleMountHealthCheckStartTimeout(
+    std::shared_ptr<std::atomic_bool> started,
+    std::shared_ptr<std::atomic_bool> completed,
+    std::shared_ptr<const MountHealthIssueLogContext> logContext) {
+  folly::futures::detachOnGlobalCPUExecutor(
+      folly::futures::sleep(kMountHealthCheckTimeout)
+          .deferValue([started = std::move(started),
+                       completed = std::move(completed),
+                       logContext = std::move(logContext)](auto&&) {
+            if (started->load(std::memory_order_acquire)) {
+              return;
+            }
+            if (completed->exchange(true)) {
+              return;
+            }
+            logMountHealthCheckTimeout(
+                *logContext,
+                "EdenFS mount health check did not start within timeout; "
+                "worker pool may be saturated");
+          }));
+}
+
+void scheduleMountHealthCheckRuntimeTimeout(
+    std::shared_ptr<std::atomic_bool> completed,
+    std::shared_ptr<const MountHealthIssueLogContext> logContext) {
+  folly::futures::detachOnGlobalCPUExecutor(
+      folly::futures::sleep(kMountHealthCheckTimeout)
+          .deferValue([completed = std::move(completed),
+                       logContext = std::move(logContext)](auto&&) {
+            if (completed->exchange(true)) {
+              return;
+            }
+            logMountHealthCheckTimeout(
+                *logContext, "EdenFS mount health check timed out");
+          }));
+}
 
 std::shared_ptr<Notifier> getPlatformNotifier(
     std::shared_ptr<ReloadableConfig> config,
@@ -655,6 +754,8 @@ EdenServer::EdenServer(
           edenConfig->prefetchOptimizations.getValue()},
       prefetchFilesV2Executor_{
           makePrefetchFilesV2Threads(thriftUsePrefetchExecutor_, edenConfig)},
+      runningMountHealthChecks_{std::make_shared<
+          folly::Synchronized<std::unordered_set<std::string>>>()},
       progressManager_{
           std::make_unique<folly::Synchronized<EdenServer::ProgressManager>>()},
       startupStatusChannel_{std::move(startupStatusChannel)},
@@ -3324,6 +3425,71 @@ bool EdenServer::isWorkingCopyGCRunningForAnyMount() const {
   return false;
 }
 
+void EdenServer::scheduleRunningMountHealthCheck(
+    const AbsolutePath& mountPath,
+    std::string repoSource) {
+  auto mountPathString = std::string{mountPath.view()};
+  auto runningMountHealthChecks = runningMountHealthChecks_;
+  {
+    auto runningChecks = runningMountHealthChecks->wlock();
+    if (!runningChecks->insert(mountPathString).second) {
+      return;
+    }
+  }
+  // Keep the mount marked in-flight until the worker returns. The timeout logs
+  // a stuck probe but cannot interrupt the blocked syscall; clearing this on
+  // timeout would let later ticks enqueue duplicate stuck probes.
+
+  auto started = make_shared<std::atomic_bool>(false);
+  auto completed = make_shared<std::atomic_bool>(false);
+  auto logContext = make_shared<const MountHealthIssueLogContext>(
+      serverState_->getEdenFsEventsLogger(),
+      std::move(mountPathString),
+      std::move(repoSource));
+
+  scheduleMountHealthCheckStartTimeout(started, completed, logContext);
+
+  // Run the potentially blocking filesystem probe on a dedicated pool. The
+  // runtime timeout is armed after the worker starts so executor queue delay
+  // and a hung EdenFS mount can be reported separately.
+  folly::via(
+      getMountHealthCheckThreadPool(),
+      [started, completed, logContext]() {
+        started->store(true, std::memory_order_release);
+        if (completed->load(std::memory_order_acquire)) {
+          return std::optional<EdenMountHealthCheckIssue>{};
+        }
+        scheduleMountHealthCheckRuntimeTimeout(completed, logContext);
+        return checkRunningEdenMountHealth(logContext->mountPath);
+      })
+      .thenTry(
+          [completed, logContext, runningMountHealthChecks](
+              folly::Try<std::optional<EdenMountHealthCheckIssue>>&& result) {
+            const auto alreadyCompleted = completed->exchange(true);
+            {
+              auto runningChecks = runningMountHealthChecks->wlock();
+              runningChecks->erase(logContext->mountPath);
+            }
+            if (alreadyCompleted) {
+              return;
+            }
+            if (result.hasException()) {
+              XLOGF(
+                  WARN,
+                  "EdenFS mount health check failed: {}",
+                  result.exception().what());
+              return;
+            }
+            const auto& issue = result.value();
+            if (!issue.has_value()) {
+              return;
+            }
+            logContext->log(
+                std::string{edenMountHealthIssueReasonString(issue->reason)},
+                issue->error);
+          });
+}
+
 void EdenServer::accidentalUnmountRecovery() {
   XLOGF(DBG5, "Performing accidental unmount recovery.");
   folly::dynamic dirs = folly::dynamic::object();
@@ -3349,7 +3515,9 @@ void EdenServer::accidentalUnmountRecovery() {
     auto mountPath = canonicalPath(client.first.stringPiece());
     const auto it = mountPoints->find(mountPath);
 
-    if (it == mountPoints->end()) {
+    if (it != mountPoints->end()) {
+      scheduleRunningMountHealthCheck(mountPath, client.second.asString());
+    } else {
       // This mount point is not currently mounted, but it was configured
       // in config.json.  This means that the client was unmounted.
       // We should attempt to remount it, if it is unmounted accidentally.
