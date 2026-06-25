@@ -59,6 +59,11 @@ class FilteredBackingStore
       const Hash20& manifest,
       const ObjectFetchContextPtr& context) override;
 
+  folly::coro::now_task<folly::Unit> co_importManifestForRoot(
+      const RootId& rootId,
+      const Hash20& manifest,
+      const ObjectFetchContextPtr& context) override;
+
   RootId parseRootId(folly::StringPiece rootId) override;
   std::string renderRootId(const RootId& rootId) override;
   std::string displayRootId(const RootId& rootId) override;

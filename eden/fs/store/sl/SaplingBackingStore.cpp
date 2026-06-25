@@ -2642,6 +2642,30 @@ ImmediateFuture<folly::Unit> SaplingBackingStore::importManifestForRoot(
       });
 }
 
+folly::coro::now_task<folly::Unit>
+SaplingBackingStore::co_importManifestForRoot(
+    const RootId& rootId,
+    const Hash20& manifestId,
+    const ObjectFetchContextPtr& context) {
+  auto self = shared_from_this();
+  // See importManifestForRoot for rationale.
+  folly::stop_watch<std::chrono::milliseconds> watch;
+  auto commitId = hashFromRootId(rootId);
+  TreePtr rootTree =
+      co_await importTreeManifestImpl(
+          manifestId, context, ObjectFetchContext::ObjectType::ManifestForRoot)
+          .semi();
+  XLOGF(
+      DBG3,
+      "imported mercurial commit {} with manifest {} as tree {}",
+      commitId,
+      manifestId,
+      rootTree->getObjectId());
+  self->stats_->addDuration(
+      &SaplingBackingStoreStats::importManifestForRoot, watch.elapsed());
+  co_return folly::unit;
+}
+
 void SaplingBackingStore::periodicManagementTask() {
   flush();
 }

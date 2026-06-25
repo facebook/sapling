@@ -305,6 +305,11 @@ class SaplingBackingStore final
       const Hash20& manifestId,
       const ObjectFetchContextPtr& context) override;
 
+  folly::coro::now_task<folly::Unit> co_importManifestForRoot(
+      const RootId& rootId,
+      const Hash20& manifestId,
+      const ObjectFetchContextPtr& context) override;
+
   void periodicManagementTask() override;
 
   std::optional<folly::StringPiece> getRepoName() override {

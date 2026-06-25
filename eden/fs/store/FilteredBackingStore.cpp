@@ -770,6 +770,16 @@ ImmediateFuture<folly::Unit> FilteredBackingStore::importManifestForRoot(
   return backingStore_->importManifestForRoot(parsedRootId, manifest, context);
 }
 
+folly::coro::now_task<folly::Unit>
+FilteredBackingStore::co_importManifestForRoot(
+    const RootId& rootId,
+    const Hash20& manifest,
+    const ObjectFetchContextPtr& context) {
+  auto [parsedRootId, _] = parseFilterIdFromRootId(rootId);
+  co_return co_await backingStore_->co_importManifestForRoot(
+      parsedRootId, manifest, context);
+}
+
 RootId FilteredBackingStore::parseRootId(folly::StringPiece rootId) {
   auto [startingRootId, filterId] =
       parseFilterIdFromRootId(RootId{rootId.toString()});

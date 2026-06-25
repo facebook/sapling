@@ -2595,8 +2595,7 @@ folly::coro::now_task<CheckoutResult> EdenServer::co_checkOutRevision(
     auto rootManifest = hash20FromThrift(rootHgManifest.value());
     co_await edenMount.getObjectStore()
         ->getBackingStore()
-        ->importManifestForRoot(root, rootManifest, fetchContext)
-        .semi();
+        ->co_importManifestForRoot(root, rootManifest, fetchContext);
   }
 
   bool isNfs = edenMount.isNfsdChannel();

@@ -198,6 +198,13 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
     return folly::unit;
   }
 
+  virtual folly::coro::now_task<folly::Unit> co_importManifestForRoot(
+      const RootId& rootId,
+      const Hash20& manifest,
+      const ObjectFetchContextPtr& context) {
+    co_return co_await importManifestForRoot(rootId, manifest, context).semi();
+  }
+
   /**
    * If supported, returns the name of the underlying repo. The result name is
    * primarily for logging and may not be unique.
