@@ -68,8 +68,8 @@ pub struct Repo {
 
 #[derive(Subcommand)]
 pub enum ModernSyncSubcommand {
-    /// Show prod-side modern sync state for a repo: the synced bookmark and its
-    /// latest movement.
+    /// Compare a repo's synced bookmark between the internal repo and its AWS
+    /// shadow, plus the latest bookmark movement on each side.
     Status(StatusArgs),
 }
 
