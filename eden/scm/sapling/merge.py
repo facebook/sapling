@@ -60,6 +60,7 @@ ACTION_FORGET = "f"
 ACTION_CREATED = "c"
 ACTION_CREATED_MERGE = "cm"
 ACTION_DELETED_CHANGED = "dc"
+ACTION_VISIBLE_RESTRICTED = "vr"
 ACTION_PATH_CONFLICT_RESOLVE = "pr"
 ACTION_PATH_CONFLICT = "p"
 ACTION_LOCAL_DIR_RENAME_GET = "dg"
@@ -398,7 +399,6 @@ class mergestate:
         )
         fcd = self._filectxorabsent(dnode, wctx, dfile)
         fco = self._filectxorabsent(onode, octx, ofile)
-        # TODO: move this to filectxorabsent
         fca = self._from_repo.filectx(afile, fileid=anode, changeid=actx)
         # "premerge" x flags
         flo = fco.flags()
@@ -425,7 +425,8 @@ class mergestate:
                     wctx[dfile].write(f.read(), flags)
                     f.close()
             else:
-                wctx[dfile].remove(ignoremissing=True)
+                if not fcd.isrestricted():
+                    wctx[dfile].remove(ignoremissing=True)
             while True:
                 try:
                     complete, r, deleted = filemerge.premerge(
@@ -489,10 +490,13 @@ class mergestate:
 
     def _filectxorabsent(self, node, ctx, f):
         assert len(node) == len(nullid)
-        if node == nullid:
-            return filemerge.absentfilectx(ctx, f)
-        else:
+        if node != nullid:
             return ctx[f]
+
+        if ctx.manifest().lookupfile(f) is None:
+            return filemerge.absentfilectx(ctx, f, restricted=True)
+
+        return filemerge.absentfilectx(ctx, f)
 
     def preresolve(self, dfile, wctx):
         """run premerge process for dfile
@@ -840,6 +844,7 @@ def checkpathconflicts(repo, wctx, mctx, actions):
     actions to record or handle the path conflict accordingly.
     """
     mf = wctx.manifest()
+    mctxmf = mctx.manifest()
 
     # The set of local files that conflict with a remote directory.
     localconflicts = set()
@@ -865,10 +870,11 @@ def checkpathconflicts(repo, wctx, mctx, actions):
             ACTION_DELETED_CHANGED,
             ACTION_MERGE,
             ACTION_CREATED_MERGE,
+            ACTION_VISIBLE_RESTRICTED,
         ):
             # This action may create a new local file.
             createdfiledirs.update(util.finddirs(f))
-            if mf.hasdir(f):
+            if mf.lookupdir(f):
                 # The file aliases a local directory.  This might be ok if all
                 # the files in the local directory are being deleted.  This
                 # will be checked once we know what all the deleted files are.
@@ -886,8 +892,8 @@ def checkpathconflicts(repo, wctx, mctx, actions):
 
     # Check all directories that contain created files for path conflicts.
     for p in createdfiledirs:
-        if p in mf:
-            if p in mctx:
+        if mf.lookupfile(p):
+            if mctxmf.lookupfile(p):
                 # A file is in a directory which aliases both a local
                 # and a remote file.  This is an internal inconsistency
                 # within the remote manifest.
@@ -901,6 +907,7 @@ def checkpathconflicts(repo, wctx, mctx, actions):
             ACTION_DELETED_CHANGED,
             ACTION_MERGE,
             ACTION_CREATED_MERGE,
+            ACTION_VISIBLE_RESTRICTED,
         ):
             # The file is in a directory which aliases a remote file.
             # This is an internal inconsistency within the remote
@@ -922,7 +929,11 @@ def checkpathconflicts(repo, wctx, mctx, actions):
             if f not in deletedfiles:
                 m, args, msg = actions[p]
                 pnew = util.safename(p, ctxname, wctx, set(actions.keys()))
-                if m in (ACTION_DELETED_CHANGED, ACTION_MERGE):
+                if m in (
+                    ACTION_DELETED_CHANGED,
+                    ACTION_MERGE,
+                    ACTION_VISIBLE_RESTRICTED,
+                ):
                     # Action was merge, just update target.
                     actions[pnew] = (m, args, msg)
                 elif m in (ACTION_CREATED, ACTION_CREATED_MERGE):
@@ -1105,8 +1116,12 @@ def manifestmerge(
         f2 = m2.ungraftedpath(f1) or f1
         fa = ma.ungraftedpath(f1) or f1
 
-        na = ma.get(fa)  # na is None when fa does not exist in ma
-        fla = ma.flags(fa)  # fla is '' when fa does not exist in ma
+        ancestor_file = ma.lookupfile(fa)
+        if ancestor_file:
+            na, fla = ancestor_file
+        else:
+            na = None
+            fla = ""
 
         subtree_copy_dest = subtreeutil.find_enclosing_dest(f1, subtree_branch_dests)
         allow_merge_subtree_copy = ui.configbool(
@@ -1128,7 +1143,7 @@ def manifestmerge(
                 hint=hint,
             )
         elif n1 and n2:  # file exists on both local and remote side
-            if fa not in ma:
+            if not ancestor_file:
                 fa = copy.get(f1, None)
                 if fa is not None:
                     actions[f1] = (
@@ -1179,7 +1194,14 @@ def manifestmerge(
             elif f1 in copy:
                 f1prev = copy[f1]
                 f2 = m2.ungraftedpath(f1prev) or f1prev
-                if f2 in m2:
+                remote_copy_source = m2.lookupfile(f2)
+                if remote_copy_source is None:
+                    actions[f1] = (
+                        ACTION_VISIBLE_RESTRICTED,
+                        (f1, None, f2, False, pa.node()),
+                        "prompt restricted",
+                    )
+                elif remote_copy_source:
                     actions[f1] = (
                         ACTION_MERGE,
                         (f1, f2, f2, False, pa.node()),
@@ -1193,9 +1215,15 @@ def manifestmerge(
                         (f1, None, f2, False, pa.node()),
                         "prompt changed/deleted copy source",
                     )
-            elif fa in ma:  # clean, a different, no remote
+            elif ancestor_file:  # clean, a different, no remote
                 if not files_equal(n1, na, wctx, pa, f1, fa):
-                    if acceptremote:
+                    if m2.lookupfile(f2) is None:
+                        actions[f1] = (
+                            ACTION_VISIBLE_RESTRICTED,
+                            (f1, None, fa, False, pa.node()),
+                            "prompt restricted",
+                        )
+                    elif acceptremote:
                         actions[f1] = (ACTION_REMOVE, None, "remote delete")
                     else:
                         actions[f1] = (
@@ -1210,13 +1238,26 @@ def manifestmerge(
                     actions[f1] = (ACTION_FORGET, None, "remote deleted")
                 else:
                     actions[f1] = (ACTION_REMOVE, None, "other deleted")
+            elif m2.lookupfile(f2) is None:
+                actions[f1] = (
+                    ACTION_VISIBLE_RESTRICTED,
+                    (f1, None, f2, False, pa.node()),
+                    "prompt restricted",
+                )
         elif n2:  # file exists only on remote side
             if handle_file_on_other_side(f1, diff, reverse_copies):
                 pass  # we'll deal with it on `elif n1` side
             elif f1 in copy:
                 f1prev = copy[f1]
                 f2prev = m2.ungraftedpath(f1prev) or f1prev
-                if f2prev in m2:
+                remote_copy_source = m2.lookupfile(f2prev)
+                if m1.lookupfile(f1) is None:
+                    actions[f1] = (
+                        ACTION_VISIBLE_RESTRICTED,
+                        (None, f2, f2prev, False, pa.node()),
+                        "prompt restricted",
+                    )
+                elif remote_copy_source:
                     actions[f1] = (
                         ACTION_MERGE,
                         (f1prev, f2, f2prev, False, pa.node()),
@@ -1228,30 +1269,43 @@ def manifestmerge(
                         (f1prev, f2, f2prev, True, pa.node()),
                         "remote moved from " + f2prev,
                     )
-            elif fa not in ma:
-                # local unknown, remote created: the logic is described by the
-                # following table:
-                #
-                # force  branchmerge  different  |  action
-                #   n         *           *      |   create
-                #   y         n           *      |   create
-                #   y         y           n      |   create
-                #   y         y           y      |   merge
-                #
-                # Checking whether the files are different is expensive, so we
-                # don't do that when we can avoid it.
-                if not force:
-                    actions[f1] = (ACTION_CREATED, (f2, fl2), "remote created")
-                elif not branchmerge:
-                    actions[f1] = (ACTION_CREATED, (f2, fl2), "remote created")
-                else:
+            elif not ancestor_file:
+                if m1.lookupfile(f1) is None:
                     actions[f1] = (
-                        ACTION_CREATED_MERGE,
-                        (f2, fl2, pa.node()),
-                        "remote created, get or merge",
+                        ACTION_VISIBLE_RESTRICTED,
+                        (None, f2, fa, False, pa.node()),
+                        "prompt restricted",
                     )
+                else:
+                    # local unknown, remote created: the logic is described by the
+                    # following table:
+                    #
+                    # force  branchmerge  different  |  action
+                    #   n         *           *      |   create
+                    #   y         n           *      |   create
+                    #   y         y           n      |   create
+                    #   y         y           y      |   merge
+                    #
+                    # Checking whether the files are different is expensive, so we
+                    # don't do that when we can avoid it.
+                    if not force:
+                        actions[f1] = (ACTION_CREATED, (f2, fl2), "remote created")
+                    elif not branchmerge:
+                        actions[f1] = (ACTION_CREATED, (f2, fl2), "remote created")
+                    else:
+                        actions[f1] = (
+                            ACTION_CREATED_MERGE,
+                            (f2, fl2, pa.node()),
+                            "remote created, get or merge",
+                        )
             elif not files_equal(n2, na, p2, pa, f2, fa):
-                if acceptremote:
+                if m1.lookupfile(f1) is None:
+                    actions[f1] = (
+                        ACTION_VISIBLE_RESTRICTED,
+                        (None, f2, fa, False, pa.node()),
+                        "prompt restricted",
+                    )
+                elif acceptremote:
                     actions[f1] = (
                         ACTION_CREATED,
                         (f2, fl2),
@@ -1578,13 +1632,19 @@ def applyupdates(
     for m, l in actions.items():
         l.sort()
 
+    def iter_merge_conflict_actions():
+        for action_type in (
+            ACTION_CHANGED_DELETED,
+            ACTION_DELETED_CHANGED,
+            ACTION_VISIBLE_RESTRICTED,
+            ACTION_MERGE,
+        ):
+            for f, args, msg in actions.get(action_type, ()):
+                yield action_type, f, args, msg
+
     # Prefetch content for files to be merged to avoid serial lookups.
     merge_prefetch = []
-    for f, args, msg in (
-        actions[ACTION_CHANGED_DELETED]
-        + actions[ACTION_DELETED_CHANGED]
-        + actions[ACTION_MERGE]
-    ):
+    for _action_type, f, args, msg in iter_merge_conflict_actions():
         f1, f2, fa, move, anc = args
         if f1 is not None:
             merge_prefetch.append(wctx[f1])
@@ -1612,21 +1672,24 @@ def applyupdates(
     # confused.
     extra_gets = []
 
-    # ACTION_CHANGED_DELETED and ACTION_DELETED_CHANGED actions are treated like
-    # other merge conflicts
+    # These actions are treated like other merge conflicts.
     mergeactions = []
-    for f, args, msg in (
-        actions[ACTION_CHANGED_DELETED]
-        + actions[ACTION_DELETED_CHANGED]
-        + actions[ACTION_MERGE]
-    ):
+    for action_type, f, args, msg in iter_merge_conflict_actions():
         f1, f2, fa, move, anc = args
-        if f1 is None:
+        restricted_side = None
+        if action_type == ACTION_VISIBLE_RESTRICTED:
+            restricted_side = "local" if f1 is None else "other"
+
+        if restricted_side == "local":
+            fcl = filemerge.absentfilectx(wctx, f, restricted=True)
+        elif f1 is None:
             fcl = filemerge.absentfilectx(wctx, fa)
         else:
             ui.debug(" preserving %s for resolve of %s\n" % (f1, f))
             fcl = wctx[f1]
-        if f2 is None:
+        if restricted_side == "other":
+            fco = filemerge.absentfilectx(mctx, f, restricted=True)
+        elif f2 is None:
             fco = filemerge.absentfilectx(mctx, fa)
         else:
             fco = mctx[f2]
@@ -1634,14 +1697,15 @@ def applyupdates(
         if fa in actx:
             fca = actx[fa]
         else:
-            # TODO: move to absentfilectx
-            fca = to_repo.filectx(f1, changeid=nullid, fileid=nullid)
+            fca = to_repo.filectx(fa or f1 or f2 or f, changeid=nullid, fileid=nullid)
         # Skip submodules for now
         if fcl.flags() == "m" or fco.flags() == "m":
             continue
 
-        # Whether local file and ancestor file differ in any way.
-        conflicting = (
+        # Whether local file and ancestor file differ in any way. Restricted
+        # sides still need to be surfaced to the user even when represented as
+        # absent, because we cannot safely apply the changed side there.
+        conflicting = action_type == ACTION_VISIBLE_RESTRICTED or (
             fca.cmp(fcl) or fca.flags() != fcl.flags() or fca.path() != fcl.path()
         )
 
@@ -1911,8 +1975,8 @@ def applyupdates(
                 try:
                     if wfctx.flags() == "m":
                         continue
-                except error.ManifestLookupError:
-                    # Cannot check the flags - ignore.
+                except (error.ManifestLookupError, error.PermissionDeniedError):
+                    # Cannot check the flags, so treat this as a regular file.
                     # This code path is hit by test-rebase-inmemory-conflicts.t.
                     pass
                 complete, r = ms.preresolve(f, wctx)
@@ -2529,6 +2593,7 @@ def _update(
                 ACTION_GET,
                 ACTION_CHANGED_DELETED,
                 ACTION_DELETED_CHANGED,
+                ACTION_VISIBLE_RESTRICTED,
                 ACTION_REMOVE,
                 ACTION_REMOVE_GET,
                 ACTION_DIR_RENAME_MOVE_LOCAL,

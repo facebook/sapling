@@ -13,6 +13,7 @@ import bindings
 from . import (
     eden_dirstate_serializer,
     EdenThriftClient,
+    error,
     localrepo,
     node,
     treestate,
@@ -153,7 +154,7 @@ class eden_dirstate_map(treestate.treestatemap):
 
         try:
             _node, flag = commitctx._fileinfo(path)
-        except KeyError:
+        except (KeyError, error.PermissionDeniedError):
             return default
 
         return (

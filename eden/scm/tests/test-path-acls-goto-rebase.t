@@ -88,8 +88,12 @@ Rebase: commit modifies a file that is restricted in destination
   $ sl rebase -r $B -d $C
   pulling '3af88752c97bb3f6651d0a57a3d16a696f28de48' from 'test:server3'
   rebasing c416137c0b61 "B"
-  abort: path 'dir' is restricted by ACL 'some-acl'
-  [255]
+  other [source] changed dir/file.txt which is restricted in local [dest]
+  (d)elete/drop this file, input (m)oved path, or leave (u)nresolved? u
+  unresolved conflicts (see sl resolve, then sl rebase --continue)
+  warning: results may be incomplete due to path ACLs
+    'dir' is restricted by ACL 'some-acl'
+  [1]
 
 Rebase: commit adds a file under a path that is restricted in destination
 
@@ -107,8 +111,12 @@ Rebase: commit adds a file under a path that is restricted in destination
   $ newclientrepo client4 server4
   $ sl go -q $B
   $ sl rebase -q -r $B -d $C
-  abort: path 'restricted' is restricted by ACL 'some-acl'
-  [255]
+  other [source] changed restricted/new.txt which is restricted in local [dest]
+  (d)elete/drop this file, input (m)oved path, or leave (u)nresolved? u
+  unresolved conflicts (see sl resolve, then sl rebase --continue)
+  warning: results may be incomplete due to path ACLs
+    'restricted' is restricted by ACL 'some-acl'
+  [1]
 
 Rebase: two commits where only the second touches a restricted path
 
@@ -133,8 +141,12 @@ Rebase: two commits where only the second touches a restricted path
   pulling '16e6c5ae0beee858c20c00828646da495a094d26' from 'test:server5'
   rebasing 01f209e23a69 "B"
   rebasing 5f76ba0bb512 "C"
-  abort: path 'dir' is restricted by ACL 'some-acl'
-  [255]
+  other [source] changed dir/file.txt which is restricted in local [dest]
+  (d)elete/drop this file, input (m)oved path, or leave (u)nresolved? u
+  unresolved conflicts (see sl resolve, then sl rebase --continue)
+  warning: results may be incomplete due to path ACLs
+    'dir' is restricted by ACL 'some-acl'
+  [1]
 
 Rebase: ACL checks are repeated for the same restricted tree
 

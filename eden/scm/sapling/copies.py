@@ -223,6 +223,7 @@ def mergecopies(repo, cdst, csrc, base):
     sourcecommitnum = 0
     sourcecommitlimit = repo.ui.configint("copytrace", "sourcecommitlimit")
     mdst = cdst.manifest()
+    morig_cdst = orig_cdst.manifest()
 
     if repo.ui.cmdname == "backout":
         # for `backout` operation, `base` is the commit we want to backout and
@@ -254,10 +255,11 @@ def mergecopies(repo, cdst, csrc, base):
                 cp[path] = src
 
     for dst, src in cp.items():
-        if src in orig_cdst or dst in orig_cdst:
+        if morig_cdst.lookupfile(src) or morig_cdst.lookupfile(dst):
             copies[dst] = src
 
     missingfiles = []
+    mbase = base.manifest()
     for src in changedfiles:
         # Fan out src file into the equivalent paths in dst.
         dst_files = msrc.graftedpaths(src) or [src]
@@ -266,7 +268,11 @@ def mergecopies(repo, cdst, csrc, base):
             # the base and present in the source.
             # Presence in the base is important to exclude added files, presence in the
             # source is important to exclude removed files.
-            if dst not in mdst and src in base and src in csrc:
+            if (
+                not mdst.lookupfile(dst)
+                and mbase.lookupfile(src)
+                and msrc.lookupfile(src)
+            ):
                 missingfiles.append((dst, src))
 
     repo.ui.metrics.inc("copytrace_missingfiles", len(missingfiles))

@@ -942,6 +942,10 @@ class basefilectx:
         expected to be True for all subclasses of absentfilectx."""
         return False
 
+    def isrestricted(self):
+        """whether this filectx represents a file hidden by path ACLs"""
+        return False
+
     _customcmp = False
 
     def cmp(self, fctx):
@@ -2097,8 +2101,10 @@ class workingctx(committablectx):
         )
 
         for f in status.deleted + status.removed:
-            if f in man:
+            try:
                 del man[f]
+            except error.PermissionDeniedError:
+                pass
 
         if not self.isinmemory() and git.isgitformat(self._repo):
             submodulestatus = git.submodulestatus(self)

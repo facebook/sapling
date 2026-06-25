@@ -2710,20 +2710,23 @@ def diffhunks(
 
     m1 = ctx1.manifest()
 
+    def visible_in_ctx1(f):
+        return bool(m1.lookupfile(f))
+
     modifiedset = set(modified)
     addedset = set(added)
     removedset = set(removed)
 
     for f in modified:
         f1 = m1.ungraftedpath(f) or f
-        if f1 not in ctx1:
+        if not visible_in_ctx1(f1):
             # Fix up added, since merged-in additions appear as
             # modifications during merges
             modifiedset.remove(f)
             addedset.add(f)
     for f in removed:
         f1 = m1.ungraftedpath(f) or f
-        if f1 not in ctx1:
+        if not visible_in_ctx1(f1):
             # Merged-in additions that are then removed are reported as removed.
             # They are not in ctx1, so We don't want to show them in the diff.
             removedset.remove(f)
@@ -3008,6 +3011,9 @@ def trydiff(
 
     m1 = ctx1.manifest()
 
+    def visible_in_ctx1(f):
+        return bool(m1.lookupfile(f))
+
     if copy is None:
         copy = {}
         if opts.git or opts.upgrade:
@@ -3033,7 +3039,7 @@ def trydiff(
     copy = {
         dst: src
         for (dst, src) in copy.items()
-        if (m1.ungraftedpath(src) or src) in ctx1
+        if visible_in_ctx1(m1.ungraftedpath(src) or src)
     }
 
     def gitindex(text):

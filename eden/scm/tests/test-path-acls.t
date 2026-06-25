@@ -124,10 +124,15 @@ the restricted side.
   warning: results may be incomplete due to path ACLs
     'restricted' is restricted by ACL 'some-acl'
   [1]
-FIXME: This should also filter the restricted side and warn, not abort.
   $ sl diff --stat -r $B -r $A
-  abort: path 'restricted' is restricted by ACL 'some-acl'
-  [255]
+   A                     |  1 +
+   B                     |  1 -
+   public.txt            |  2 +-
+   restricted/secret.txt |  1 +
+   4 files changed, 3 insertions(+), 2 deletions(-)
+  warning: results may be incomplete due to path ACLs
+    'restricted' is restricted by ACL 'some-acl'
+  [1]
 
 Backout of a commit that touches restricted and unrestricted paths:
 
@@ -152,13 +157,75 @@ Backout of a commit that touches restricted and unrestricted paths:
     'restricted' is restricted by ACL 'some-acl'
   [1]
 
-FIXME: should support a partial backout
-  $ sl backout -r $B
-  abort: path 'restricted' is restricted by ACL 'some-acl'
-  [255]
+  $ sl backout -r $B --config ui.interactive=True << 'EOF'
+  > u
+  > EOF
+  other changed restricted/secret.txt which is restricted in local
+  (d)elete/drop this file, input (m)oved path, or leave (u)nresolved? u
+  1 files updated, 0 files merged, 1 files removed, 1 files unresolved
+  use 'sl resolve' to retry unresolved file merges
+  warning: results may be incomplete due to path ACLs
+    'restricted' is restricted by ACL 'some-acl'
+  [1]
   $ sl status
+  M public.txt
+  R B
+  ! restricted/secret.txt
+  $ sl resolve --tool internal:local restricted/secret.txt
+  (no more unresolved files)
+  warning: results may be incomplete due to path ACLs
+    'restricted' is restricted by ACL 'some-acl'
+  [1]
   $ sl cat public.txt
   public v2 (no-eol)
+
+Restricted-path conflicts can be resolved by dropping the inaccessible path:
+
+  $ cd
+  $ newclientrepo client5 server4
+  $ sl go -q $C
+  warning: results may be incomplete due to path ACLs
+    'restricted' is restricted by ACL 'some-acl'
+  [1]
+  $ sl backout -r $B --config ui.interactive=True << 'EOF'
+  > d
+  > EOF
+  other changed restricted/secret.txt which is restricted in local
+  (d)elete/drop this file, input (m)oved path, or leave (u)nresolved? d
+  1 files updated, 1 files merged, 1 files removed, 0 files unresolved
+  changeset * backs out changeset * (glob)
+  warning: results may be incomplete due to path ACLs
+    'restricted' is restricted by ACL 'some-acl'
+  [1]
+  $ sl status
+  $ sl resolve -l
+  $ sl cat public.txt
+  public v1 (no-eol)
+
+Restricted-path conflicts can be resolved by moving the file to a visible path:
+
+  $ cd
+  $ newclientrepo client6 server4
+  $ sl go -q $C
+  warning: results may be incomplete due to path ACLs
+    'restricted' is restricted by ACL 'some-acl'
+  [1]
+  $ sl backout -r $B --config ui.interactive=True << 'EOF'
+  > m
+  > moved-secret.txt
+  > EOF
+  other changed restricted/secret.txt which is restricted in local
+  (d)elete/drop this file, input (m)oved path, or leave (u)nresolved? m
+  move path 'restricted/secret.txt' to [what path relative to repo root] ? moved-secret.txt
+  1 files updated, 1 files merged, 1 files removed, 0 files unresolved
+  changeset * backs out changeset * (glob)
+  warning: results may be incomplete due to path ACLs
+    'restricted' is restricted by ACL 'some-acl'
+  [1]
+  $ sl status
+  $ sl cat moved-secret.txt
+  secret v1 (no-eol)
+  $ sl resolve -l
 
 Backout of a commit that touches restricted paths the user never had access to:
 
@@ -175,13 +242,14 @@ Backout of a commit that touches restricted paths the user never had access to:
   > EOS
 
   $ cd
-  $ newclientrepo client5 server5
+  $ newclientrepo client7 server5
   $ sl go -q $B
   warning: results may be incomplete due to path ACLs
     'restricted' is restricted by ACL 'some-acl'
   [1]
 
-FIXME: should support a partial backout
+FIXME: should avoid leaving a partial backout. There is no per-file conflict to
+present here because the restricted file names are not visible.
   $ sl backout -r $B
   removing B
   reverting public.txt

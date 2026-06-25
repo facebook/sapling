@@ -519,7 +519,7 @@ def onetimeclientsetup(ui):
             prefetch = []
             mf1 = ctx1.manifest()
             for fname in modified + added + removed:
-                if fname in mf1:
+                if mf1.lookupfile(fname):
                     fnode = getfilectx(fname, ctx1).filenode()
                     # fnode can be None if it's a edited working ctx file
                     if fnode:

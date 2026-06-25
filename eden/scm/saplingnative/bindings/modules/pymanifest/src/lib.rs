@@ -179,6 +179,35 @@ py_class!(pub class treemanifest |py| {
         }
     }
 
+    /// Return file metadata tuple, absent/non-file (False), or restricted (None).
+    def lookupfile(&self, path: PyPathBuf) -> PyResult<PyObject> {
+        let repo_path = path.to_repo_path().map_pyerr(py)?;
+        let tree = self.underlying(py).read();
+        match tree.get_file(repo_path) {
+            Ok(Some(file_metadata)) => {
+                Ok(file_metadata_to_py_tuple(py, &file_metadata)?.to_py_object(py).into_object())
+            }
+            Ok(None) => Ok(py.False().into_object()),
+            Err(err) if err.is::<types::errors::PermissionDenied>() => Ok(py.None()),
+            Err(err) => Err(err).map_pyerr(py),
+        }
+    }
+
+    /// Return directory node, present without node (True), absent/non-dir (False), or restricted (None).
+    def lookupdir(&self, path: PyPathBuf) -> PyResult<PyObject> {
+        let repo_path = path.to_repo_path().map_pyerr(py)?;
+        let tree = self.underlying(py).read();
+        match tree.get(repo_path) {
+            Ok(Some(FsNodeMetadata::Directory(Some(node)))) => {
+                Ok(node_to_pybytes(py, node).into_object())
+            }
+            Ok(Some(FsNodeMetadata::Directory(None))) => Ok(py.True().into_object()),
+            Ok(Some(FsNodeMetadata::File(_))) | Ok(None) => Ok(py.False().into_object()),
+            Err(err) if err.is::<types::errors::PermissionDenied>() => Ok(py.None()),
+            Err(err) => Err(err).map_pyerr(py),
+        }
+    }
+
     /// Count the number of files that match the predicate passed to the function.
     def countfiles(&self, pymatcher: PyObject) -> PyResult<u64> {
         let tree = self.underlying(py);

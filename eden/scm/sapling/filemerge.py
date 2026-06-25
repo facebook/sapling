@@ -73,6 +73,18 @@ _otherchangedlocaldeletedmsg = _(
     "$$ &Changed $$ &Deleted $$ &Unresolved $$ &Renamed"
 )
 
+_localchangedotherrestrictedmsg = _(
+    "local%(l)s changed %(fd)s which other%(o)s is restricted\n"
+    "use (c)hanged version, leave (r)estricted, or leave (u)nresolved?"
+    "$$ &Changed $$ &Restricted $$ &Unresolved"
+)
+
+_otherchangedlocalrestrictedmsg = _(
+    "other%(o)s changed %(fd)s which is restricted in local%(l)s\n"
+    "(d)elete/drop this file, input (m)oved path, or leave (u)nresolved?"
+    "$$ &Delete $$ &Moved $$ &Unresolved"
+)
+
 
 class absentfilectx:
     """Represents a file that's ostensibly in a context but is actually not
@@ -81,9 +93,10 @@ class absentfilectx:
     This is here because it's very specific to the filemerge code for now --
     other code is likely going to break with the values this returns."""
 
-    def __init__(self, ctx, f):
+    def __init__(self, ctx, f, restricted=False):
         self._ctx = ctx
         self._f = f
+        self._restricted = restricted
 
     def path(self):
         return self._f
@@ -95,6 +108,9 @@ class absentfilectx:
         return None
 
     def filenode(self):
+        return nullid
+
+    def node(self):
         return nullid
 
     _customcmp = True
@@ -114,11 +130,17 @@ class absentfilectx:
     def changectx(self):
         return self._ctx
 
+    def ctx(self):
+        return self._ctx
+
     def isbinary(self):
         return False
 
     def isabsent(self):
         return True
+
+    def isrestricted(self):
+        return self._restricted
 
 
 def _findtool(ui, repo, tool):
@@ -371,7 +393,15 @@ def _iprompt(repo, mynode, orig, fcd, fco, fca, toolconf, labels=None):
     prompts["fa"] = " (as %s)" % fa if fa != fd else ""
 
     try:
-        if fco.isabsent():
+        if fco.isrestricted():
+            ui.metrics.inc("filemerge_prompt_otherrestricted", 1)
+            index = ui.promptchoice(_localchangedotherrestrictedmsg % prompts, 2)
+            choice = ["local", "other", "unresolved"][index]
+        elif fcd.isrestricted():
+            ui.metrics.inc("filemerge_prompt_localrestricted", 1)
+            index = ui.promptchoice(_otherchangedlocalrestrictedmsg % prompts, 2)
+            choice = ["local", "rename", "unresolved"][index]
+        elif fco.isabsent():
             ui.metrics.inc("filemerge_rename_otherdeleted", 1)
             index = ui.promptchoice(_localchangedotherdeletedmsg % prompts, 2)
             choice = ["local", "other", "unresolved"][index]
@@ -449,17 +479,63 @@ def _iprompt(repo, mynode, orig, fcd, fco, fca, toolconf, labels=None):
             return _ifail(repo, mynode, orig, fcd, fco, fca, toolconf, labels)
         elif choice == "rename":
             destctx = fcd.changectx()
-            # fcd most likely a working copy that does not have a commit hash.
-            # therefore 'mynode' is used for 'destnode', not fcd.node()
-            destpath = ui.prompt(
-                _(
-                    "path '%(fd)s' in commit %(srcnode)s was renamed to [what path relative to repo root] in commit %(destnode)s ?"
+            if fcd.isrestricted():
+                destpath = ui.prompt(
+                    _("move path '%(fd)s' to [what path relative to repo root] ?")
+                    % {"fd": fd},
+                    default="",
                 )
-                % {"fd": fd, "srcnode": short(fco.node()), "destnode": short(mynode)},
-                default="",
-            )
+            else:
+                # fcd most likely a working copy that does not have a commit hash.
+                # therefore 'mynode' is used for 'destnode', not fcd.node()
+                destpath = ui.prompt(
+                    _(
+                        "path '%(fd)s' in commit %(srcnode)s was renamed to [what path relative to repo root] in commit %(destnode)s ?"
+                    )
+                    % {
+                        "fd": fd,
+                        "srcnode": short(fco.node()),
+                        "destnode": short(mynode),
+                    },
+                    default="",
+                )
             # normalize absolute path to repo path
             destpath = pathutil.canonpath(repo.root, repo.root, destpath)
+            if fcd.isrestricted():
+                if not destpath:
+                    ui.warn(_("empty moved path - leave unresolved\n"))
+                    return _ifail(repo, mynode, orig, fcd, fco, fca, toolconf, labels)
+                destmanifest = destctx.manifest()
+                destfile = destmanifest.lookupfile(destpath)
+                if destfile is None:
+                    ui.warn(
+                        _("path '%s' is restricted - leave unresolved\n") % destpath
+                    )
+                    return _ifail(repo, mynode, orig, fcd, fco, fca, toolconf, labels)
+                elif destfile:
+                    fcd = destctx[destpath]
+                    raise error.RetryFileMerge(fcd=fcd)
+                else:
+                    destdir = destmanifest.lookupdir(destpath)
+                    if destdir is None:
+                        ui.warn(
+                            _("path '%s' is restricted - leave unresolved\n") % destpath
+                        )
+                        return _ifail(
+                            repo, mynode, orig, fcd, fco, fca, toolconf, labels
+                        )
+                    elif destdir:
+                        ui.warn(
+                            _("path '%s' is a directory - leave unresolved\n")
+                            % destpath
+                        )
+                        return _ifail(
+                            repo, mynode, orig, fcd, fco, fca, toolconf, labels
+                        )
+                    else:
+                        destctx[destpath].write(fco.data(), fco.flags())
+                        destctx.add([destpath], quiet=True)
+                        return 0, True
             if not destpath or destpath not in destctx:
                 ui.warn(
                     _(
@@ -561,7 +637,7 @@ def _ifail(repo, mynode, orig, fcd, fco, fca, toolconf, labels=None):
     branches, it marks them as unresolved. The resolve command must be
     used to resolve these conflicts."""
     # for change/delete conflicts write out the changed version, then fail
-    if fcd.isabsent():
+    if fcd.isabsent() and not fcd.isrestricted():
         _underlyingfctxifabsent(fcd).write(fco.data(), fco.flags())
     return 1, False
 

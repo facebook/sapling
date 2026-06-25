@@ -208,6 +208,7 @@ def _determine_actions_for_conflicts(repo, src, conflicts, wctx, destctx):
             mergemod.ACTION_PATH_CONFLICT_RESOLVE,
             mergemod.ACTION_REMOVE,
             mergemod.ACTION_REMOVE_GET,
+            mergemod.ACTION_VISIBLE_RESTRICTED,
         )
     }
 
@@ -235,15 +236,15 @@ def _determine_actions_for_conflicts(repo, src, conflicts, wctx, destctx):
             action = (path, None, path, False, src.node())
             prompt = "prompt changed/deleted"
         elif conflict_type == "VISIBLE_RESTRICTED":
-            action_type = mergemod.ACTION_MERGE
-            action = (path, path, None, False, src.node())
-            prompt = "both created"
+            action_type = mergemod.ACTION_VISIBLE_RESTRICTED
+            action = (path, None, path, False, src.node())
+            prompt = "prompt restricted"
         elif conflict_type == "UNTRACKED_ADDED":
             dest_manifest = destctx.manifest()
-            if dest_manifest.lookup(path) is None:
-                action_type = mergemod.ACTION_MERGE
-                action = (path, path, None, False, src.node())
-                prompt = "both created"
+            if dest_manifest.lookupfile(path) is None:
+                action_type = mergemod.ACTION_VISIBLE_RESTRICTED
+                action = (path, None, path, False, src.node())
+                prompt = "prompt restricted"
             elif destctx.hasdir(path):
                 # The conflict path is a directory in the destination (e.g.
                 # an untracked file/symlink being replaced by a tracked
