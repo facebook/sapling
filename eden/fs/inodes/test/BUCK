@@ -615,6 +615,24 @@ cpp_benchmark(
 )
 
 cpp_benchmark(
+    name = "checkout_benchmark",
+    srcs = ["CheckoutBenchmark.cpp"],
+    deps = [
+        "fbsource//third-party/fmt:fmt",
+        "//eden/common/utils:path",
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/model:model",
+        "//eden/fs/service:thrift-cpp2-types",
+        "//eden/fs/store:context",
+        "//eden/fs/store:store",
+        "//eden/fs/testharness:fake_backing_store_and_tree_builder",
+        "//eden/fs/testharness:test_mount",
+        "//folly:benchmark",
+        "//folly/init:init",
+    ],
+)
+
+cpp_benchmark(
     name = "overlay_benchmark",
     srcs = ["OverlayBenchmark.cpp"],
     deps = [
