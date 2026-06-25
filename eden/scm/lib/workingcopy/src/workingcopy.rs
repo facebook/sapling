@@ -658,7 +658,7 @@ impl WorkingCopy {
                 continue;
             }
 
-            let file_metadata = match manifest.get_file(path)? {
+            let file_metadata = match manifest.get_file_if_visible(path)? {
                 Some(md) => md,
                 None => continue,
             };

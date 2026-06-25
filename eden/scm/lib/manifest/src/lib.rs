@@ -24,6 +24,7 @@ use types::HgId;
 use types::PathComponentBuf;
 use types::RepoPath;
 use types::RepoPathBuf;
+use types::errors::PermissionDenied;
 pub use types::tree::FileType;
 
 /// Options for [`Manifest::persist`].
@@ -60,6 +61,24 @@ pub trait Manifest {
     /// returned.
     // TODO: add default implementation
     fn get(&self, path: &RepoPath) -> Result<Option<FsNodeMetadata>>;
+
+    /// Inspects the manifest for the given path, treating restricted paths as absent.
+    fn get_if_visible(&self, path: &RepoPath) -> Result<Option<FsNodeMetadata>> {
+        match self.get(path) {
+            Ok(result) => Ok(result),
+            Err(err) if err.is::<PermissionDenied>() => Ok(None),
+            Err(err) => Err(err),
+        }
+    }
+
+    /// Retrieve the FileMetadata associated with a path, treating restricted paths as absent.
+    fn get_file_if_visible(&self, file_path: &RepoPath) -> Result<Option<FileMetadata>> {
+        match self.get_file(file_path) {
+            Ok(result) => Ok(result),
+            Err(err) if err.is::<PermissionDenied>() => Ok(None),
+            Err(err) => Err(err),
+        }
+    }
 
     /// Lists the immediate contents of directory in a manifest (non-recursive).
     /// Given a path, the manifest will return:

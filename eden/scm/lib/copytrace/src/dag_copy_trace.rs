@@ -141,7 +141,7 @@ impl DagCopyTrace {
 
     async fn check_path(&self, target_commit: &Vertex, path: RepoPathBuf) -> Result<TraceResult> {
         let tree = self.vertex_to_tree_manifest(target_commit).await?;
-        if tree.get(&path)?.is_some() {
+        if tree.get_file_if_visible(&path)?.is_some() {
             Ok(TraceResult::Renamed(path))
         } else {
             Ok(TraceResult::NotFound)
@@ -173,7 +173,7 @@ impl CopyTrace for DagCopyTrace {
         tracing::debug!(?src, ?dst, ?src_path, "trace_rename");
 
         let msrc = self.vertex_to_tree_manifest(&src).await?;
-        if msrc.get(&src_path)?.is_none() {
+        if msrc.get_file_if_visible(&src_path)?.is_none() {
             tracing::debug!("src_path not found in src commit");
             return Ok(TraceResult::NotFound);
         }

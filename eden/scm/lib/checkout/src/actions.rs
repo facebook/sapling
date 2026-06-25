@@ -135,7 +135,7 @@ impl ActionMap {
             } else {
                 // By definition of xor matcher this means old_matcher.matches_file==true.
                 // Remove it if it existed before.
-                if old_manifest.get(&file.path)?.is_some() {
+                if old_manifest.get_file_if_visible(&file.path)?.is_some() {
                     self.map.insert(file.path, Action::Remove);
                 }
             }

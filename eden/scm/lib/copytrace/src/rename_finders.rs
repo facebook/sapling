@@ -536,7 +536,7 @@ impl RenameFinderInner {
     }
 
     fn get_key_from_path(&self, tree: &TreeManifest, path: &RepoPath) -> Result<Option<Key>> {
-        let key = match tree.get_file(path)? {
+        let key = match tree.get_file_if_visible(path)? {
             None => return Err(CopyTraceError::FileNotFound(path.to_owned()).into()),
             Some(file_metadata) => {
                 tracing::trace!(
