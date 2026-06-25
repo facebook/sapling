@@ -11,7 +11,7 @@ import logging
 import os
 import subprocess
 import sys
-from typing import List, Set, Tuple
+from typing import Any, Iterable, List, Optional, Set, Tuple, Union
 
 from eden.fs.cli import mtab
 from eden.fs.cli.doctor.problem import (
@@ -27,12 +27,17 @@ from eden.fs.cli.util import (
 
 
 def check_for_stale_mounts(
-    tracker: ProblemTracker, mount_table: mtab.MountTable
+    tracker: ProblemTracker,
+    mount_table: mtab.MountTable,
+    instance: Optional[Any] = None,
 ) -> None:
     sudo_perms = get_sudo_perms()
     [stale_mounts, hanging_mounts, unknown_status_mounts] = (
         get_all_stale_eden_mount_points(mount_table)
     )
+    if instance is not None:
+        _log_mount_health_issues(instance, stale_mounts, "stale_mount")
+        _log_mount_health_issues(instance, hanging_mounts, "hanging_mount")
     if stale_mounts:
         tracker.add_problem(StaleMountsFound(stale_mounts, mount_table, sudo_perms))
     if hanging_mounts:
@@ -41,6 +46,70 @@ def check_for_stale_mounts(
 
 def printable_bytes(b: bytes) -> str:
     return b.decode("utf-8", "backslashreplace")
+
+
+# Accept both mount-table paths, which are bytes, and configured checkout paths,
+# which are usually strings or pathlib.Path-like values.
+PathLike = Union[str, bytes, os.PathLike[str], os.PathLike[bytes]]
+
+
+def _normalize_mount_path(path: PathLike) -> bytes:
+    # Normalize paths for exact comparisons without touching the filesystem.
+    # fsdecode() converts bytes/PathLike values to str, normpath() collapses
+    # lexical components like "." and "..", abspath() makes relative paths
+    # absolute, and fsencode() returns bytes so mount-table and configured
+    # checkout paths use the same representation.
+    # NOTE: Avoid resolve(), realpath(), and stat-like calls here because
+    # stale or hanging mounts may fail or block.
+    return os.fsencode(os.path.abspath(os.path.normpath(os.fsdecode(path))))
+
+
+def _get_configured_mount_paths(instance: Any) -> Set[bytes]:
+    return {
+        _normalize_mount_path(mount_path) for mount_path in instance.get_mount_paths()
+    }
+
+
+def _log_mount_health_issues(
+    instance: Any, mount_paths: Iterable[bytes], reason: str
+) -> None:
+    log = logging.getLogger("eden.fs.cli.doctor.stale_mounts")
+    try:
+        configured_mounts = _get_configured_mount_paths(instance)
+    except Exception:
+        log.warning(
+            "Failed to read configured EdenFS checkouts for mount health telemetry",
+            exc_info=True,
+        )
+        configured_mounts = set()
+
+    for mount_path in mount_paths:
+        normalized_mount_path = _normalize_mount_path(mount_path)
+        mount_path_str = printable_bytes(normalized_mount_path)
+        path_type = (
+            "configured_checkout"
+            if normalized_mount_path in configured_mounts
+            else "unknown_eden_mount"
+        )
+        kwargs = {
+            "source": "doctor",
+            "reason": reason,
+            "mount_path": mount_path_str,
+            "path_type": path_type,
+            "attempted_repair": False,
+            "success": False,
+        }
+        if path_type == "configured_checkout":
+            kwargs["checkout_path"] = mount_path_str
+
+        try:
+            instance.log_sample("eden_mount_health_issue", **kwargs)
+        except Exception:
+            log.warning(
+                "Failed to log EdenFS mount health telemetry for %s",
+                mount_path_str,
+                exc_info=True,
+            )
 
 
 def get_sudo_perms() -> bool:

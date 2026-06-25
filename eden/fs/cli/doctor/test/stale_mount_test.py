@@ -14,8 +14,10 @@ from unittest.mock import MagicMock, patch
 import eden.fs.cli.doctor as doctor
 from eden.fs.cli.doctor import check_stale_mounts
 from eden.fs.cli.doctor.test.lib.fake_constants import FAKE_UID
+from eden.fs.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
 from eden.fs.cli.doctor.test.lib.fake_mount_table import FakeMountTable
 from eden.fs.cli.doctor.test.lib.testcase import DoctorTestBase
+from eden.fs.cli.test.lib.output import TestOutput
 
 
 class StaleMountsCheckTest(DoctorTestBase):
@@ -242,6 +244,36 @@ Unmounting 1 stale edenfs mount...<green>fixed<reset>
         self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
         self.assertEqual([b"/mnt/stale1"], self.mount_table.unmount_lazy_calls)
         self.assertEqual([], self.mount_table.unmount_force_calls)
+
+    @patch("eden.fs.cli.doctor.check_stale_mounts.get_sudo_perms")
+    def test_logs_configured_stale_mount(self, mock_get_sudo_perms: MagicMock) -> None:
+        mock_get_sudo_perms.return_value = True
+        instance = FakeEdenInstance(self.make_temporary_directory())
+        checkout = instance.create_test_mount("configured")
+        mount_table = instance.mount_table
+        mount_table.fail_access(str(checkout.path / ".eden"), errno.ENOTCONN)
+        fixer = doctor.ProblemFixer(instance, TestOutput())
+
+        check_stale_mounts.check_for_stale_mounts(fixer, mount_table, instance)
+
+        checkout_path = str(checkout.path)
+        self.assertEqual(
+            [
+                (
+                    "eden_mount_health_issue",
+                    {
+                        "source": "doctor",
+                        "reason": "stale_mount",
+                        "mount_path": checkout_path,
+                        "path_type": "configured_checkout",
+                        "attempted_repair": False,
+                        "success": False,
+                        "checkout_path": checkout_path,
+                    },
+                )
+            ],
+            instance.logged_samples,
+        )
 
     def test_does_not_unmount_other_users_mounts(self) -> None:
         self.mount_table.add_mount("/mnt/stale1", uid=FAKE_UID + 1)

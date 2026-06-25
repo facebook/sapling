@@ -295,7 +295,9 @@ class EdenDoctorChecker:
             return
 
         if self.run_system_wide_checks:
-            check_stale_mounts.check_for_stale_mounts(self.tracker, self.mount_table)
+            check_stale_mounts.check_for_stale_mounts(
+                self.tracker, self.mount_table, self.instance
+            )
             check_filesystems.check_disk_usage(
                 self.tracker,
                 list(configured_mounts),
@@ -358,7 +360,9 @@ class EdenDoctorChecker:
 
         if self.run_system_wide_checks:
             check_filesystems.check_eden_directory(self.tracker, self.instance)
-            check_stale_mounts.check_for_stale_mounts(self.tracker, self.mount_table)
+            check_stale_mounts.check_for_stale_mounts(
+                self.tracker, self.mount_table, self.instance
+            )
             check_filesystems.check_disk_usage(
                 self.tracker,
                 list(self.instance.get_mount_paths()),

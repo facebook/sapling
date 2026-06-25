@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Dict, Generator, Iterable, List, NamedTuple, Optional, Tuple, Union
 
 import eden.dirstate
-from eden.fs.cli import mtab, version as version_mod
+from eden.fs.cli import mtab, telemetry, version as version_mod
 from eden.fs.cli.config import (
     AbstractEdenInstance,
     CheckoutConfig,
@@ -97,6 +97,7 @@ class FakeEdenInstance(AbstractEdenInstance):
         self._next_dev_id = 10
         self.mount_calls: List[Tuple[str, bool]] = []
         self.unmount_calls: List[Tuple[str, bool, bool]] = []
+        self.logged_samples: List[Tuple[str, Dict[str, telemetry.TelemetryTypes]]] = []
 
         self._fake_client = FakeClient(self._eden_dir, self.mount_table)
 
@@ -342,8 +343,8 @@ class FakeEdenInstance(AbstractEdenInstance):
         fake_repo.commit_checker = bad_commit_checker
         return fake_repo
 
-    def log_sample(self, log_type: str, **kwargs: Union[bool, int, str, float]) -> None:
-        pass
+    def log_sample(self, log_type: str, **kwargs: telemetry.TelemetryTypes) -> None:
+        self.logged_samples.append((log_type, kwargs))
 
     def get_running_version_parts(self) -> Tuple[str, str]:
         return (
