@@ -18,5 +18,5 @@ stats_traits = { version = "0.1.0", path = "traits" }
 tokio = { version = "1.52.3", features = ["full", "test-util", "tracing"] }
 tokio-stream = { version = "0.1.18", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
 
-[lints]
-rust = { unexpected_cfgs = { check-cfg = ["cfg(fbcode_build)"], level = "warn" } }
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(fbcode_build)"]}

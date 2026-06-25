@@ -14,5 +14,5 @@ license = "MIT OR Apache-2.0"
 anyhow = "1.0.102"
 real_hostname = { package = "hostname", version = "0.4.2" }
 
-[lints]
-rust = { unexpected_cfgs = { check-cfg = ["cfg(conda_build)", "cfg(fbcode_build)"], level = "warn" } }
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(conda_build)", "cfg(fbcode_build)"]}

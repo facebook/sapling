@@ -16,5 +16,5 @@ path = "src/bin/test.rs"
 [dependencies]
 derive_more = { version = "1.0.0", features = ["full"] }
 
-[lints]
-rust = { unexpected_cfgs = { check-cfg = ["cfg(fbcode_build)"], level = "warn" } }
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(fbcode_build)"]}
