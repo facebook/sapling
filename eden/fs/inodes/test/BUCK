@@ -683,3 +683,20 @@ cpp_unittest(
         "//eden/fs/testharness:test_mount",
     ],
 )
+
+cpp_benchmark(
+    name = "rename_mutex_benchmark",
+    srcs = ["RenameMutexBenchmark.cpp"],
+    deps = [
+        "fbsource//third-party/benchmark:benchmark",
+        "//folly:shared_mutex",
+        "//folly:synchronized",
+        "//folly/coro:baton",
+        "//folly/coro:blocking_wait",
+        "//folly/coro:invoke",
+        "//folly/coro:mutex",
+        "//folly/coro:shared_mutex",
+        "//folly/coro:task",
+        "//folly/executors:cpu_thread_pool_executor",
+    ],
+)
