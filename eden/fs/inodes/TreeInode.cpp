@@ -422,6 +422,21 @@ ImmediateFuture<folly::Unit> TreeInode::transitionToUnrestricted(
           auto it = parentContents->entries.find(loc.name);
           if (it != parentContents->entries.end()) {
             it->second.setRestricted(false);
+            // The parent DirEntry carries the persisted restricted bit used to
+            // reload this child after restart. Self-healing the child inode is
+            // not enough; rewrite the parent overlay entry so the old
+            // restriction does not come back on the next mount.
+            try {
+              loc.parent->saveOverlayDir(
+                  parentContents->entries, parentContents->isMaterialized());
+            } catch (const std::exception& ex) {
+              XLOGF(
+                  WARN,
+                  "failed to persist unrestricted parent overlay entry for {} (inode {}): {}",
+                  loc.name,
+                  self->getNodeId(),
+                  folly::exceptionStr(ex));
+            }
           }
         }
 

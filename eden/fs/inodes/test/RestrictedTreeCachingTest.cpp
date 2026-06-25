@@ -204,7 +204,7 @@ TEST_F(
 
 TEST_F(
     RestrictedTreeCachingTest,
-    restrictedInode_statTransitionLeavesParentOverlayRestricted) {
+    restrictedInode_statTransitionUpdatesParentOverlay) {
   FakeTreeBuilder builder;
   builder.setFile("restricted/secret.txt", "secret content");
   builder.setDirIsRestricted("restricted");
@@ -227,10 +227,7 @@ TEST_F(
   auto it = rootOverlay.find("restricted"_pc);
   ASSERT_NE(it, rootOverlay.end());
 
-  // FIXME: transitionToUnrestricted() clears the in-memory parent entry but
-  // leaves the persisted overlay entry restricted. A restart can reload this
-  // stale bit and make the child appear restricted again.
-  EXPECT_TRUE(it->second.isRestricted());
+  EXPECT_FALSE(it->second.isRestricted());
 }
 
 // --- Checkout tests ---
