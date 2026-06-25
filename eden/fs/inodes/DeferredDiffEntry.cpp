@@ -32,10 +32,6 @@ using std::unique_ptr;
 
 namespace facebook::eden {
 
-folly::coro::now_task<folly::Unit> DeferredDiffEntry::co_run() {
-  co_return co_await run().semi();
-}
-
 namespace {
 
 class UntrackedDiffEntry : public DeferredDiffEntry {

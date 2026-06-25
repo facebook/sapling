@@ -54,7 +54,7 @@ class DeferredDiffEntry {
 
   [[nodiscard]] virtual ImmediateFuture<folly::Unit> run() = 0;
 
-  [[nodiscard]] virtual folly::coro::now_task<folly::Unit> co_run();
+  [[nodiscard]] virtual folly::coro::now_task<folly::Unit> co_run() = 0;
 
   static std::unique_ptr<DeferredDiffEntry> createUntrackedEntry(
       DiffContext* context,
