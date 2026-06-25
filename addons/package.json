@@ -26,7 +26,8 @@
     "picomatch": ">=4.0.4",
     "rollup": ">=4.59.0",
     "tmp": ">=0.2.4",
-    "yaml": ">=2.8.3"
+    "yaml": ">=2.8.3",
+    "lodash": "4.18.1"
   },
   "scripts": {
     "lint": "oxlint -c .oxlintrc.json --react-plugin --import-plugin isl/src isl-server/src shared components vscode/extension vscode/webview textmate/src",
