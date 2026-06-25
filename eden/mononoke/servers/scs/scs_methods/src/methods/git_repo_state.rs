@@ -15,7 +15,6 @@ use source_control as thrift;
 use stats::prelude::*;
 
 use crate::source_control_impl::SourceControlServiceImpl;
-use crate::specifiers::SpecifierExt;
 
 define_stats! {
     prefix = "mononoke.scs.git_repo_state";
@@ -33,24 +32,9 @@ impl SourceControlServiceImpl {
         repo: thrift::RepoSpecifier,
         _params: thrift::GitRepoStateParams,
     ) -> Result<thrift::GitRepoStateResponse, ServiceError> {
-        // Validate that `repo.name` is a configured repo before reading SoT.
-        // Two reasons:
-        //   1. Without this, a typo'd name silently returns UNKNOWN, identical
-        //      to "row genuinely missing" — defeating the verification purpose.
-        //   2. Without this, the endpoint becomes a recon signal: an attacker
-        //      could probe SoT state for arbitrary names. Validating against
-        //      configerator restricts callers to repos that exist as configs.
-        //
-        // Note: we route through `self.configs.get_or_load_repo_config` (same
-        // pattern as `repo_info` at methods/repo.rs:71-74) rather than
-        // `self.repo(...)`, because the latter requires the repo to be loaded
-        // into MononokeRepos — which is exactly what NOT_STARTED / IN_PROGRESS
-        // repos are NOT. See design final §B.1.
-        let _repo_config = self
-            .configs
-            .get_or_load_repo_config(repo.name.as_str())
-            .map_err(|_| scs_errors::repo_not_found(repo.description()))?;
-
+        // Direct SoT table query — no repo config / facet lookup. The endpoint
+        // exists to report on repos not yet visible elsewhere (just-created,
+        // NOT_STARTED, IN_PROGRESS); UNKNOWN is the typed signal for missing rows.
         git_repo_state_impl(&ctx, &*self.git_source_of_truth_config, repo.name).await
     }
 }
