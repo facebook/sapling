@@ -1250,6 +1250,120 @@ TEST_P(CheckoutTest, checkoutCaseChanged) {
   }
 }
 
+TEST_P(CheckoutTest, checkoutCaseChangedTreeInsensitive) {
+  auto builder1 = FakeTreeBuilder{};
+  builder1.setFile("root", "root");
+  builder1.setFile("dir/file1", "lower one");
+  builder1.setFile("dir/file2", "lower two");
+  TestMount testMount{builder1, true, true, CaseSensitivity::Insensitive};
+  applyParam(testMount);
+
+  // Same content, directory renamed to a different case (DIR/FILE1,
+  // DIR/FILE2). On a case-insensitive mount this is a case-rename of the
+  // existing directory.
+  auto upperBuilder = FakeTreeBuilder{};
+  upperBuilder.setFile("root", "root");
+  upperBuilder.setFile("DIR/FILE1", "lower one");
+  upperBuilder.setFile("DIR/FILE2", "lower two");
+  upperBuilder.finalize(testMount.getBackingStore(), true);
+  auto upperCommit = testMount.getBackingStore()->putCommit("2", upperBuilder);
+  upperCommit->setReady();
+
+  auto executor = testMount.getServerExecutor().get();
+  auto checkoutResult = testMount.getEdenMount()
+                            ->checkout(
+                                testMount.getRootInode(),
+                                RootId{"2"},
+                                ObjectFetchContext::getNullContext(),
+                                __func__)
+                            .semi()
+                            .via(executor)
+                            .getVia(executor);
+  EXPECT_EQ(checkoutResult.conflicts.size(), 0);
+
+  EXPECT_FILE_INODE(
+      testMount.getFileInode("DIR/FILE1"_relpath), "lower one", 0644);
+  EXPECT_FILE_INODE(
+      testMount.getFileInode("DIR/FILE2"_relpath), "lower two", 0644);
+  EXPECT_EQ(
+      *testMount.getFileInode("DIR/FILE1"_relpath)->getPath(),
+      "DIR/FILE1"_relpath);
+  // Old-case access still resolves on case-insensitive mounts.
+  EXPECT_FILE_INODE(
+      testMount.getFileInode("dir/file1"_relpath), "lower one", 0644);
+}
+
+TEST_P(CheckoutTest, checkoutCaseChangedTreeToFileInsensitive) {
+  auto builder1 = FakeTreeBuilder{};
+  builder1.setFile("root", "root");
+  builder1.setFile("dir/file1", "lower one");
+  TestMount testMount{builder1, true, true, CaseSensitivity::Insensitive};
+  applyParam(testMount);
+
+  // Build a "to" commit where `dir/` is replaced by a file named `DIR`
+  // (different case). On a case-insensitive mount the existing `dir/`
+  // tree must be unlinked and the file added at the new case.
+  auto toBuilder = FakeTreeBuilder{};
+  toBuilder.setFile("root", "root");
+  toBuilder.setFile("DIR", "now a file");
+  toBuilder.finalize(testMount.getBackingStore(), true);
+  auto toCommit = testMount.getBackingStore()->putCommit("2", toBuilder);
+  toCommit->setReady();
+
+  auto executor = testMount.getServerExecutor().get();
+  auto checkoutResult = testMount.getEdenMount()
+                            ->checkout(
+                                testMount.getRootInode(),
+                                RootId{"2"},
+                                ObjectFetchContext::getNullContext(),
+                                __func__)
+                            .semi()
+                            .via(executor)
+                            .getVia(executor);
+  EXPECT_EQ(checkoutResult.conflicts.size(), 0);
+
+  EXPECT_FILE_INODE(testMount.getFileInode("DIR"_relpath), "now a file", 0644);
+  // Old name resolves to the same inode on case-insensitive mounts.
+  EXPECT_FILE_INODE(testMount.getFileInode("dir"_relpath), "now a file", 0644);
+}
+
+TEST_P(CheckoutTest, checkoutCaseChangedTreeNotEmptyInsensitive) {
+  auto builder1 = FakeTreeBuilder{};
+  builder1.setFile("root", "root");
+  builder1.setFile("dir/file1", "lower one");
+  TestMount testMount{builder1, true, true, CaseSensitivity::Insensitive};
+  applyParam(testMount);
+
+  // Materialize the directory by creating an UNTRACKED file inside it.
+  // This file is not in any commit; the case-rename below must navigate
+  // its presence without losing data.
+  testMount.addFile("dir/untracked.txt", "untracked");
+
+  auto upperBuilder = FakeTreeBuilder{};
+  upperBuilder.setFile("root", "root");
+  upperBuilder.setFile("DIR/file1", "lower one");
+  upperBuilder.finalize(testMount.getBackingStore(), true);
+  auto upperCommit = testMount.getBackingStore()->putCommit("2", upperBuilder);
+  upperCommit->setReady();
+
+  auto executor = testMount.getServerExecutor().get();
+  auto checkoutResult = testMount.getEdenMount()
+                            ->checkout(
+                                testMount.getRootInode(),
+                                RootId{"2"},
+                                ObjectFetchContext::getNullContext(),
+                                __func__)
+                            .semi()
+                            .via(executor)
+                            .getVia(executor);
+  // Don't assert on conflict shape — varies by platform/dispatcher.
+  (void)checkoutResult;
+
+  // Untracked file survives the case rename.
+  EXPECT_FILE_INODE(
+      testMount.getFileInode("dir/untracked.txt"_relpath), "untracked", 0644);
+}
+
 #ifndef _WIN32
 TEST_P(CheckoutTest, checkoutRemovingDirectoryDeletesOverlayFile) {
   auto builder1 = FakeTreeBuilder{};
@@ -2926,3 +3040,52 @@ INSTANTIATE_TEST_SUITE_P(
     [](const ::testing::TestParamInfo<bool>& info) {
       return info.param ? "Coroutines" : "Futures";
     });
+
+TEST_P(CheckoutTest, restrictedDirEntryInsertedOnFileToDirReplace) {
+  auto builder1 = FakeTreeBuilder{};
+  builder1.setFile("dir/foo", "file contents");
+
+  auto builder2 = FakeTreeBuilder{};
+  builder2.setFile("dir/foo/inside.txt", "inside contents");
+  builder2.setDirIsRestricted("dir/foo");
+
+  TestMount testMount{builder1};
+  applyParam(testMount);
+
+  builder2.finalize(testMount.getBackingStore(), /*setReady=*/true);
+  auto commit2 = testMount.getBackingStore()->putCommit(RootId{"2"}, builder2);
+  commit2->setReady();
+
+  // Pre-condition.
+  auto dir = testMount.getTreeInode("dir"_relpath);
+  {
+    auto contents = dir->lockContentsRead();
+    auto it = contents->entries.find("foo"_pc);
+    ASSERT_NE(it, contents->entries.end());
+    EXPECT_FALSE(it->second.isRestricted())
+        << "pre-condition: builder1 entry should not be restricted";
+  }
+
+  auto executor = testMount.getServerExecutor().get();
+  auto checkoutFuture = testMount.getEdenMount()
+                            ->checkout(
+                                testMount.getRootInode(),
+                                RootId{"2"},
+                                ObjectFetchContext::getNullContext(),
+                                __func__)
+                            .semi()
+                            .via(executor);
+  testMount.drainServerExecutor();
+  ASSERT_TRUE(checkoutFuture.isReady());
+  auto result = std::move(checkoutFuture).get();
+  EXPECT_EQ(0, result.conflicts.size());
+
+  // Post-condition.
+  {
+    auto contents = dir->lockContentsRead();
+    auto it = contents->entries.find("foo"_pc);
+    ASSERT_NE(it, contents->entries.end());
+    EXPECT_TRUE(it->second.isRestricted())
+        << "inserted entry must inherit scmEntry.isRestricted()";
+  }
+}

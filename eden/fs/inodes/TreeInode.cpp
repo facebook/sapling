@@ -5603,6 +5603,107 @@ ImmediateFuture<CheckoutActionResult> TreeInode::checkoutUpdateEntry(
           });
 }
 
+folly::coro::now_task<CheckoutActionResult> TreeInode::co_checkoutUpdateEntry(
+    CheckoutContext* ctx,
+    PathComponentPiece name,
+    InodePtr inode,
+    std::shared_ptr<const Tree> oldTree,
+    std::shared_ptr<const Tree> newTree,
+    const std::optional<Tree::value_type>& newScmEntry) {
+  // Invariant: caller holds the exclusive rename lock via `ctx`. Recursive
+  // `treeInode->co_checkout(...)` calls below must inherit it from `ctx`.
+  XDCHECK(ctx->renameLock().owns_lock())
+      << "TreeInode::co_checkoutUpdateEntry invoked without rename lock held";
+
+  auto treeInode = inode.asTreePtrOrNull();
+  if (!treeInode) {
+    ctx->increaseCheckoutCounter(1);
+    if (ctx->isDryRun()) {
+      co_return CheckoutActionResult{InvalidationRequired::No};
+    }
+    co_return replaceFileEntry(ctx, name, inode, newScmEntry);
+  }
+
+  if (newScmEntry && newScmEntry->second.isTree()) {
+    XCHECK(newScmEntry.has_value());
+    if (!newScmEntry->second.isRestricted()) {
+      XCHECK(newTree);
+    }
+
+    if (getMount()->getCheckoutConfig()->getCaseSensitive() ==
+            CaseSensitivity::Insensitive &&
+        newScmEntry->first != getInodeName(ctx, treeInode)) {
+      // Case insensitive name change — fall through to remove-and-readd.
+    } else {
+      const auto& replacementEntry = *newScmEntry;
+      bool newRestricted = replacementEntry.second.isRestricted() ||
+          (newTree && newTree->isRestricted());
+
+      auto prep = prepareRestrictionTransition(
+          ctx, treeInode, replacementEntry, newRestricted);
+      using PrepState = RestrictionTransitionPrep::State;
+      if (prep.state == PrepState::NoChange) {
+        if (newRestricted && !newTree) {
+          co_return CheckoutActionResult{InvalidationRequired::No};
+        }
+        // Ordinary dir->dir checkout still recurses in place.
+        auto result = co_await treeInode->co_checkout(
+            ctx, std::move(oldTree), std::move(newTree));
+        co_return CheckoutActionResult{
+            InvalidationRequired::No, result.hadConflicts};
+      }
+      if (prep.state == PrepState::Abort) {
+        co_return CheckoutActionResult{
+            InvalidationRequired::No, prep.hadConflicts};
+      }
+
+      auto currentName = std::move(*prep.currentName);
+      XLOGF(
+          DBG3,
+          "co_checkoutUpdateEntry({}): restriction transition for {}: {} -> {}",
+          getLogPath(),
+          name,
+          prep.oldRestricted,
+          newRestricted);
+
+      std::shared_ptr<const Tree> checkoutToTree;
+      if (!newRestricted) {
+        XCHECK(newTree);
+        checkoutToTree = std::move(newTree);
+      }
+      auto result = co_await treeInode->co_checkout(
+          ctx,
+          std::move(oldTree),
+          std::move(checkoutToTree),
+          /*reportLocalOnlyAsConflicts=*/newRestricted);
+
+      co_return finalizeRestrictionTransition(
+          ctx, treeInode, currentName.piece(), newRestricted, result);
+    }
+  }
+
+  // Need to remove this directory (and possibly replace with a file or a
+  // case-renamed directory). First recursively unlink everything in it.
+  auto checkoutResult =
+      co_await treeInode->co_checkout(ctx, std::move(oldTree), nullptr);
+  auto hadConflicts = checkoutResult.hadConflicts;
+
+  if (ctx->isDryRun()) {
+    co_return CheckoutActionResult{InvalidationRequired::No, hadConflicts};
+  }
+
+  const auto& localName = getInodeName(ctx, treeInode);
+  auto result = finalizeDirectoryRemoval(
+      ctx, treeInode, std::move(newTree), newScmEntry, localName, hadConflicts);
+  if (result.caseInsensitiveDirRefreshTree) {
+    auto refreshResult = co_await treeInode->co_checkout(
+        ctx, nullptr, std::move(result.caseInsensitiveDirRefreshTree));
+    co_return CheckoutActionResult{
+        InvalidationRequired::No, hadConflicts || refreshResult.hadConflicts};
+  }
+  co_return result.actionResult;
+}
+
 #ifdef _WIN32
 namespace {
 /**

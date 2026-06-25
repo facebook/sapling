@@ -535,15 +535,13 @@ folly::coro::now_task<CheckoutActionResult> CheckoutAction::co_doAction() {
   // Therefore don't move these scm entries, to make sure we don't
   // invalidate the PathComponentPiece data.
   auto parent = inode_->getParent(ctx_->renameLock());
-  auto result = co_await parent
-                    ->checkoutUpdateEntry(
-                        ctx_,
-                        getEntryName(),
-                        std::move(inode_),
-                        std::move(oldTree_),
-                        std::move(newTree_),
-                        newScmEntry_)
-                    .semi();
+  auto result = co_await parent->co_checkoutUpdateEntry(
+      ctx_,
+      getEntryName(),
+      std::move(inode_),
+      std::move(oldTree_),
+      std::move(newTree_),
+      newScmEntry_);
   result.hadConflicts |= conflictWasAddedToCtx;
   co_return result;
 }

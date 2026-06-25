@@ -665,6 +665,15 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       std::shared_ptr<const Tree> newTree,
       const std::optional<Tree::value_type>& newScmEntry);
 
+  [[nodiscard]] folly::coro::now_task<CheckoutActionResult>
+  co_checkoutUpdateEntry(
+      CheckoutContext* ctx,
+      PathComponentPiece name,
+      InodePtr inode,
+      std::shared_ptr<const Tree> oldTree,
+      std::shared_ptr<const Tree> newTree,
+      const std::optional<Tree::value_type>& newScmEntry);
+
   /**
    * Returns a copy of this inode's metadata.
    */
