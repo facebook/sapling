@@ -202,6 +202,37 @@ TEST_F(
   EXPECT_EQ(children[0].first, "secret.txt"_pc);
 }
 
+TEST_F(
+    RestrictedTreeCachingTest,
+    restrictedInode_statTransitionLeavesParentOverlayRestricted) {
+  FakeTreeBuilder builder;
+  builder.setFile("restricted/secret.txt", "secret content");
+  builder.setDirIsRestricted("restricted");
+  initMountWithTtl(builder, 0);
+
+  auto restrictedObjectId = getRestrictedTreeObjectId(builder);
+  auto* backingStore = testMount_->getBackingStore().get();
+  backingStore->setCheckPermissionResult(restrictedObjectId, true);
+
+  auto restrictedInode = testMount_->getTreeInode("restricted"_relpath);
+  ASSERT_TRUE(restrictedInode->isRestricted());
+
+  auto context = ObjectFetchContext::getNullContext();
+  restrictedInode->stat(context).get();
+  ASSERT_FALSE(restrictedInode->isRestricted());
+
+  auto rootInode = testMount_->getEdenMount()->getRootInode();
+  auto rootOverlay = testMount_->getEdenMount()->getOverlay()->loadOverlayDir(
+      rootInode->getNodeId());
+  auto it = rootOverlay.find("restricted"_pc);
+  ASSERT_NE(it, rootOverlay.end());
+
+  // FIXME: transitionToUnrestricted() clears the in-memory parent entry but
+  // leaves the persisted overlay entry restricted. A restart can reload this
+  // stale bit and make the child appear restricted again.
+  EXPECT_TRUE(it->second.isRestricted());
+}
+
 // --- Checkout tests ---
 
 TEST_F(
