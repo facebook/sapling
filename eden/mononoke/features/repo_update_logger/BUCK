@@ -28,7 +28,6 @@ rust_library(
         "fbsource//third-party/rust:chrono",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:gix-hash",
-        "fbsource//third-party/rust:once_cell",
         "fbsource//third-party/rust:regex",
         "fbsource//third-party/rust:serde",
         "fbsource//third-party/rust:serde_derive",

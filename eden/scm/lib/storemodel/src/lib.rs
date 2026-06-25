@@ -20,11 +20,14 @@
 //! Traits can be combined later. For example, reading file content, metadata,
 //! and history should probably be 3 different traits.
 
+#![feature(once_cell_try)]
+
 use std::any::Any;
 use std::any::type_name;
 use std::borrow::Cow;
 use std::path::Path;
 use std::sync::Arc;
+use std::sync::OnceLock;
 
 use async_trait::async_trait;
 use blob::Blob;
@@ -35,7 +38,6 @@ pub use futures;
 use metalog::MetaLog;
 pub use minibytes;
 pub use minibytes::Bytes;
-use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
 use serde::Deserialize;
 use serde::Serialize;
@@ -638,7 +640,7 @@ pub fn basic_parse_tree(
     format: SerializationFormat,
 ) -> anyhow::Result<Arc<dyn TreeEntry>> {
     // Only call `call_constructor` once to avoid overhead in `factory`.
-    static TREE_PARSER: OnceCell<StaticSerializedTreeParseFunc> = OnceCell::new();
+    static TREE_PARSER: OnceLock<StaticSerializedTreeParseFunc> = OnceLock::new();
     let parse = TREE_PARSER
         .get_or_try_init(|| factory::call_constructor::<(), StaticSerializedTreeParseFunc>(&()))?;
     parse(data, format)
@@ -650,7 +652,7 @@ pub fn basic_serialize_tree(
     format: SerializationFormat,
 ) -> anyhow::Result<Bytes> {
     // Only call `call_constructor` once to avoid overhead in `factory`.
-    static TREE_SERIALIZER: OnceCell<StaticSerializeTreeFunc> = OnceCell::new();
+    static TREE_SERIALIZER: OnceLock<StaticSerializeTreeFunc> = OnceLock::new();
     let serialize = TREE_SERIALIZER
         .get_or_try_init(|| factory::call_constructor::<(), StaticSerializeTreeFunc>(&()))?;
     serialize(items, format)

@@ -7,6 +7,7 @@
 
 use std::collections::BTreeSet;
 use std::num::NonZeroU64;
+use std::sync::LazyLock;
 
 use anyhow::Error;
 use anyhow::Result;
@@ -36,7 +37,6 @@ use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 use mononoke_types::Globalrev;
 use mononoke_types::NonRootMPath;
-use once_cell::sync::Lazy;
 use permission_checker::MononokeIdentitySet;
 use phases::PhasesRef;
 use regex::Regex;
@@ -91,7 +91,7 @@ impl CommitInfo {
 }
 
 pub fn extract_differential_revision(message: &str) -> Option<&str> {
-    static RE: Lazy<Regex> = Lazy::new(|| {
+    static RE: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(r"(?m)^Differential Revision: [^\n]*/D([0-9]+)")
             .expect("Failed to compile differential revision regex")
     });

@@ -7,6 +7,8 @@
 
 //! Utilities interacting with store serialization formats (git or hg).
 
+#![feature(once_cell_try)]
+
 use anyhow::Result;
 pub use minibytes::Bytes;
 use minibytes::Text;

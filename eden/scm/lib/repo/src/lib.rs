@@ -6,6 +6,7 @@
  */
 
 #![allow(dead_code)]
+#![feature(once_cell_try)]
 
 pub mod constants;
 pub mod core_repo;

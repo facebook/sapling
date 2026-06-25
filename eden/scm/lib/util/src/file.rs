@@ -7,6 +7,7 @@
 
 use std::io;
 use std::path::Path;
+use std::sync::LazyLock;
 
 use ::metrics::Counter;
 use fs::File;
@@ -16,11 +17,10 @@ use fs_err as fs;
 use nix::unistd::Uid;
 #[cfg(unix)]
 use nix::unistd::User;
-use once_cell::sync::Lazy;
 
 use crate::errors::IOContext;
 
-static MAX_IO_RETRIES: Lazy<u32> = Lazy::new(|| {
+static MAX_IO_RETRIES: LazyLock<u32> = LazyLock::new(|| {
     std::env::var("SL_IO_RETRIES")
         .ok()
         .and_then(|s| s.parse::<u32>().ok())
@@ -30,7 +30,7 @@ static MAX_IO_RETRIES: Lazy<u32> = Lazy::new(|| {
 static FILE_UTIL_RETRY_SUCCESS: Counter = Counter::new_counter("util.file_retry_success");
 static FILE_UTIL_RETRY_FAILURE: Counter = Counter::new_counter("util.file_retry_failure");
 
-pub(crate) static UMASK: Lazy<u32> = Lazy::new(|| {
+pub(crate) static UMASK: LazyLock<u32> = LazyLock::new(|| {
     #[cfg(unix)]
     unsafe {
         let umask = libc::umask(0);

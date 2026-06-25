@@ -7,10 +7,10 @@
 
 use std::fmt;
 use std::sync::Arc;
+use std::sync::LazyLock;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering::AcqRel;
 
-use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use regex::Regex;
 use tracing::Callsite;
@@ -165,8 +165,8 @@ fn normalize(s: &str) -> String {
     IDENTIFIER_RE.replace_all(s, "_").replace('"', "")
 }
 
-static THREAD_LOCK: Lazy<Mutex<()>> = Lazy::new(Default::default);
-static IDENTIFIER_RE: Lazy<Regex> = Lazy::new(|| {
+static THREAD_LOCK: LazyLock<Mutex<()>> = LazyLock::new(Default::default);
+static IDENTIFIER_RE: LazyLock<Regex> = LazyLock::new(|| {
     // tracing_core::callsite::Identifier is Debug-printed using "Identifier({:p})"
     // on a dyn Callsite.
     //

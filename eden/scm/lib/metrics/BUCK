@@ -32,7 +32,6 @@ rust_library(
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:fastrand",
         "fbsource//third-party/rust:futures",
-        "fbsource//third-party/rust:once_cell",
         "fbsource//third-party/rust:parking_lot",
     ]
     + (

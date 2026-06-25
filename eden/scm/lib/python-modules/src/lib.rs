@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 
 // compiled.rs is generated.
 #[path = "compiled.rs"]
@@ -56,7 +56,7 @@ impl ModuleInfo {
     }
 }
 
-static UNCOMPRESS_SOURCE: Lazy<String> = Lazy::new(|| {
+static UNCOMPRESS_SOURCE: LazyLock<String> = LazyLock::new(|| {
     let bytes = zstdelta::apply(b"", compiled::COMPRESSED_SOURCE).unwrap();
     match String::from_utf8(bytes) {
         Ok(s) => s,

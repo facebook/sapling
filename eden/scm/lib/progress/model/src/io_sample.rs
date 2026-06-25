@@ -6,14 +6,13 @@
  */
 
 use std::fmt;
+use std::sync::LazyLock;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering::Relaxed;
 use std::time::Duration;
 use std::time::Instant;
 
-use once_cell::sync::Lazy;
-
-static INSTANT_START: Lazy<Instant> = Lazy::new(Instant::now);
+static INSTANT_START: LazyLock<Instant> = LazyLock::new(Instant::now);
 
 #[derive(Clone, Debug)]
 pub struct IoSample {

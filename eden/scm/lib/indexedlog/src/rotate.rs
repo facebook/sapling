@@ -13,13 +13,13 @@ use std::io;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::sync::OnceLock;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 use std::sync::atomic::Ordering::SeqCst;
 
 use minibytes::Bytes;
-use once_cell::sync::OnceCell;
 use tracing::debug;
 use tracing::debug_span;
 use tracing::info;
@@ -53,7 +53,7 @@ static ROTATE_COUNT: Counter = Counter::new_counter("indexedlog.rotate");
 pub struct RotateLog {
     dir: Option<PathBuf>,
     open_options: OpenOptions,
-    logs: Vec<OnceCell<Log>>,
+    logs: Vec<OnceLock<Log>>,
     // Logical length of `logs`. It can be smaller than `logs.len()` if some Log
     // fails to load.
     logs_len: AtomicUsize,
@@ -786,7 +786,7 @@ impl RotateLog {
         self.sync()
     }
 
-    fn set_logs(&mut self, latest: u8, logs: Vec<OnceCell<Log>>) {
+    fn set_logs(&mut self, latest: u8, logs: Vec<OnceLock<Log>>) {
         // This is relative to the primary log, so clear it out when logs changed.
         self.next_btrfs_size_check.take();
 
@@ -973,8 +973,8 @@ impl Drop for ConsistentReadGuard {
 }
 
 /// Wrap `Log` in a `OnceCell`.
-fn create_log_cell(log: Log) -> OnceCell<Log> {
-    let cell = OnceCell::new();
+fn create_log_cell(log: Log) -> OnceLock<Log> {
+    let cell = OnceLock::new();
     cell.set(log)
         .expect("cell is empty so cell.set cannot fail");
     cell
@@ -1154,7 +1154,7 @@ fn read_logs(
     dir: &Path,
     open_options: &OpenOptions,
     latest: u8,
-) -> crate::Result<Vec<OnceCell<Log>>> {
+) -> crate::Result<Vec<OnceLock<Log>>> {
     let mut logs = Vec::with_capacity(open_options.max_log_count as usize);
 
     // Make sure the first log (latest) can be loaded.
@@ -1171,7 +1171,7 @@ fn read_logs(
         if !log_path.is_dir() {
             break;
         }
-        logs.push(OnceCell::new());
+        logs.push(OnceLock::new());
     }
     trace!(
         name = "RotateLog::read_logs",
@@ -1185,7 +1185,7 @@ fn read_logs(
 fn read_latest_and_logs(
     dir: &Path,
     open_options: &OpenOptions,
-) -> crate::Result<(u8, Vec<OnceCell<Log>>)> {
+) -> crate::Result<(u8, Vec<OnceLock<Log>>)> {
     let latest = read_latest(dir)?;
     Ok((latest, read_logs(dir, open_options, latest)?))
 }

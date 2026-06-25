@@ -8,11 +8,11 @@
 use std::cell::RefCell;
 use std::fmt::Debug;
 use std::sync::Arc;
+use std::sync::LazyLock;
 use std::sync::Weak;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 
-use once_cell::sync::Lazy;
 use parking_lot::Condvar;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
@@ -132,7 +132,7 @@ impl_model! {
 impl Registry {
     /// The "main" progress registry in this process.
     pub fn main() -> &'static Self {
-        static REGISTRY: Lazy<Registry> = Lazy::new(|| {
+        static REGISTRY: LazyLock<Registry> = LazyLock::new(|| {
             tracing::debug!("main progress Registry initialized");
             Registry::default()
         });

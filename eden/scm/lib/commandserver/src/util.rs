@@ -10,21 +10,21 @@
 use std::fs;
 use std::io;
 use std::path::PathBuf;
+use std::sync::LazyLock;
 
 use anyhow::Context;
 use fn_error_context::context;
-use once_cell::sync::Lazy;
 
 // The socket directory and prefix contain identity and version
 // so we can have multiple servers running with different
 // identities. or versions, and we don't need to check versions
 // and invalidate servers manually.
-static SOCKET_DIR_NAME: Lazy<String> = Lazy::new(|| {
+static SOCKET_DIR_NAME: LazyLock<String> = LazyLock::new(|| {
     let cli_name = identity::default().cli_name();
     format!("{cli_name}-cmdserver")
 });
 
-static PREFIX: Lazy<String> = Lazy::new(|| {
+static PREFIX: LazyLock<String> = LazyLock::new(|| {
     let short_version: &str =
         match version::VERSION.rsplit_once(|ch: char| !ch.is_ascii_alphanumeric()) {
             Some((_, rest)) => rest,

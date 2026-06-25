@@ -9,6 +9,7 @@ use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::ops::Deref;
 use std::sync::Arc;
+use std::sync::OnceLock;
 
 use anyhow::Context;
 use anyhow::Result;
@@ -17,7 +18,6 @@ use anyhow::bail;
 use manifest::File;
 use manifest::FileMetadata;
 use manifest::FsNodeMetadata;
-use once_cell::sync::OnceCell;
 use types::HgId;
 use types::PathComponentBuf;
 use types::RepoPath;
@@ -88,8 +88,8 @@ pub enum MaybeLinks {
 /// The inner structure of a durable link.
 pub struct DurableEntry {
     pub hgid: HgId,
-    pub links: OnceCell<MaybeLinks>,
-    tree_entry: OnceCell<Arc<dyn storemodel::TreeEntry>>,
+    pub links: OnceLock<MaybeLinks>,
+    tree_entry: OnceLock<Arc<dyn storemodel::TreeEntry>>,
 }
 
 impl std::fmt::Debug for DurableEntry {
@@ -114,12 +114,12 @@ impl Link {
 
     pub fn durable_permission_denied(err: types::errors::PermissionDenied) -> Link {
         let hgid = err.hgid;
-        let links = OnceCell::new();
+        let links = OnceLock::new();
         links.set(MaybeLinks::PermissionDenied(err)).unwrap();
         Link::new(LinkData::Durable(Arc::new(DurableEntry {
             hgid,
             links,
-            tree_entry: OnceCell::new(),
+            tree_entry: OnceLock::new(),
         })))
     }
 
@@ -215,16 +215,16 @@ impl DurableEntry {
     pub fn new(hgid: HgId) -> Self {
         DurableEntry {
             hgid,
-            links: OnceCell::new(),
-            tree_entry: OnceCell::new(),
+            links: OnceLock::new(),
+            tree_entry: OnceLock::new(),
         }
     }
 
-    pub fn with_links(hgid: HgId, links: OnceCell<MaybeLinks>) -> Self {
+    pub fn with_links(hgid: HgId, links: OnceLock<MaybeLinks>) -> Self {
         DurableEntry {
             hgid,
             links,
-            tree_entry: OnceCell::new(),
+            tree_entry: OnceLock::new(),
         }
     }
 

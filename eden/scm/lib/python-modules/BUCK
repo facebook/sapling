@@ -39,7 +39,6 @@ rust_library(
     },
     mapped_srcs = {":gen=compiled.rs": "src/compiled.rs"},
     deps = [
-        "fbsource//third-party/rust:once_cell",
         "fbsource//third-party/rust:phf",
         "//eden/scm/lib/zstdelta:zstdelta",
     ],

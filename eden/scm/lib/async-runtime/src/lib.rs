@@ -23,19 +23,19 @@
 //!
 //! TODO(T74221415): monitoring, signal handling
 use std::io::Error;
+use std::sync::LazyLock;
 
 use futures::future::Future;
 use futures::stream::BoxStream;
 use futures::stream::Stream;
 use futures::stream::StreamExt;
-use once_cell::sync::Lazy;
 use tokio::runtime::Builder as RuntimeBuilder;
 use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
 /// `block_in_place(f)` is similar to `spawn_blocking(f).await?` but `f` can use references.
 pub use tokio::task::block_in_place;
 
-static RUNTIME: Lazy<Runtime> = Lazy::new(|| {
+static RUNTIME: LazyLock<Runtime> = LazyLock::new(|| {
     let nproc = num_cpus::get();
     RuntimeBuilder::new_multi_thread()
         .worker_threads(nproc.min(8))

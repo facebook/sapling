@@ -9,11 +9,11 @@ use std::borrow::Cow;
 use std::fs::symlink_metadata;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::LazyLock;
 
 use anyhow::Result;
 use bitflags::bitflags;
 use dashmap::DashMap;
-use once_cell::sync::Lazy;
 use types::RepoPath;
 use types::RepoPathBuf;
 
@@ -29,14 +29,14 @@ pub struct PathAuditor {
     audited: DashMap<RepoPathBuf, ()>,
 }
 
-static WINDOWS_SHORTNAME_ALIASES: Lazy<WordSet> = Lazy::new(|| {
+static WINDOWS_SHORTNAME_ALIASES: LazyLock<WordSet> = LazyLock::new(|| {
     let words = identity::sniff_idents()
         .map(|i| i.sniff_dot_dir.trim_start_matches('.'))
         .collect();
     WordSet::new(words)
 });
 
-static INVALID_COMPONENTS: Lazy<WordSet> = Lazy::new(|| {
+static INVALID_COMPONENTS: LazyLock<WordSet> = LazyLock::new(|| {
     let components: [&'static str; 2] = [".", ".."];
     let words = components
         .into_iter()

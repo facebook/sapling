@@ -7,6 +7,8 @@
 
 //! Cross-platform utilities for process related logic, like waiting or killing.
 
+#![cfg_attr(windows, feature(once_cell_try))]
+
 use std::io;
 use std::time::Duration;
 use std::time::Instant;
@@ -241,10 +243,8 @@ pub use win32::ProcessGroup;
 pub fn terminate_pid_tree_on_exit(pid: u32) -> io::Result<()> {
     #[cfg(windows)]
     {
-        // not std OncCell: get_or_try_init is still nightly.
-        // https://github.com/rust-lang/rust/issues/109737
-        use once_cell::sync::OnceCell;
-        static GROUP: OnceCell<ProcessGroup> = OnceCell::new();
+        use std::sync::OnceLock;
+        static GROUP: OnceLock<ProcessGroup> = OnceLock::new();
         let group = GROUP.get_or_try_init(|| -> io::Result<ProcessGroup> {
             let g = ProcessGroup::new()?;
             g.terminate_on_close()?;

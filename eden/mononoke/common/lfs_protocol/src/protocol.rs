@@ -11,6 +11,7 @@ use std::fmt::Debug;
 use std::fmt::Display;
 use std::mem;
 use std::str::FromStr;
+use std::sync::LazyLock;
 
 use anyhow::Error;
 use anyhow::Result;
@@ -19,7 +20,6 @@ use faster_hex::hex_decode;
 use faster_hex::hex_string;
 use http::Uri;
 use mime::Mime;
-use once_cell::sync::Lazy;
 use quickcheck::Arbitrary;
 use quickcheck::Gen;
 use serde::Deserialize;
@@ -30,7 +30,8 @@ use crate::str_serialized;
 // This module provides types conforming to the Git-LFS protocol specification:
 // https://github.com/git-lfs/git-lfs/blob/master/docs/api/batch.md
 
-static GIT_LFS_MIME: Lazy<Mime> = Lazy::new(|| "application/vnd.git-lfs+json".parse().unwrap());
+static GIT_LFS_MIME: LazyLock<Mime> =
+    LazyLock::new(|| "application/vnd.git-lfs+json".parse().unwrap());
 
 pub fn git_lfs_mime() -> Mime {
     GIT_LFS_MIME.clone()

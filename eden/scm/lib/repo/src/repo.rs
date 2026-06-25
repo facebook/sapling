@@ -11,6 +11,7 @@ use std::ops::Deref;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::sync::OnceLock;
 
 use anyhow::Result;
 use commits_trait::DagCommits;
@@ -28,7 +29,6 @@ use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
 use metalog::MetaLog;
 use metalog::RefName;
-use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
 use pathmatcher::DynMatcher;
 use repo_minimal_info::RepoMinimalInfo;
@@ -70,18 +70,18 @@ pub struct Repo {
     info: RepoMinimalInfo,
     config: Arc<dyn Config>,
     repo_name: Option<String>,
-    metalog: OnceCell<Arc<RwLock<MetaLog>>>,
-    eden_api: OnceCell<(LazyCapabilities, Arc<dyn SaplingRemoteApi>)>,
-    dag_commits: OnceCell<Arc<RwLock<Box<dyn DagCommits + Send + 'static>>>>,
-    file_store: OnceCell<Arc<dyn FileStore>>,
-    file_scm_store: OnceCell<Arc<scmstore::FileStore>>,
-    tree_store: OnceCell<Arc<dyn TreeStore>>,
-    tree_scm_store: OnceCell<Arc<scmstore::TreeStore>>,
+    metalog: OnceLock<Arc<RwLock<MetaLog>>>,
+    eden_api: OnceLock<(LazyCapabilities, Arc<dyn SaplingRemoteApi>)>,
+    dag_commits: OnceLock<Arc<RwLock<Box<dyn DagCommits + Send + 'static>>>>,
+    file_store: OnceLock<Arc<dyn FileStore>>,
+    file_scm_store: OnceLock<Arc<scmstore::FileStore>>,
+    tree_store: OnceLock<Arc<dyn TreeStore>>,
+    tree_scm_store: OnceLock<Arc<scmstore::TreeStore>>,
     #[cfg(feature = "wdir")]
-    working_copy: OnceCell<Arc<RwLock<WorkingCopy>>>,
+    working_copy: OnceLock<Arc<RwLock<WorkingCopy>>>,
     eager_store: Option<EagerRepoStore>,
     locker: Arc<RepoLocker>,
-    tree_resolver: OnceCell<Arc<dyn ReadTreeManifest>>,
+    tree_resolver: OnceLock<Arc<dyn ReadTreeManifest>>,
     permission_denied_paths: Option<context::PermissionDeniedPaths>,
     // Working copy p1 at repo load time. This is normally what "." revset should resolve
     // to (i.e. we don't want to lazily load p1 since it can be changing).

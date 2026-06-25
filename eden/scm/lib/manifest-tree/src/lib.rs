@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#![feature(once_cell_try)]
+
 mod acl_metrics;
 mod bfs;
 mod diff;
@@ -22,6 +24,7 @@ use std::collections::HashSet;
 use std::collections::btree_map::Entry;
 use std::fmt;
 use std::sync::Arc;
+use std::sync::OnceLock;
 
 use anyhow::Result;
 use anyhow::bail;
@@ -36,7 +39,6 @@ use manifest::List;
 pub use manifest::Manifest;
 use manifest::PersistOpts;
 use minibytes::Bytes;
-use once_cell::sync::OnceCell;
 use pathmatcher::Matcher;
 pub use store::Flag;
 use storemodel::InsertOpts;
@@ -651,7 +653,7 @@ fn finalize_trees<P: ParentTreeTracker>(
 
     let acl_children_indices = migrate_acl_children(p1_tree_entry.as_ref(), &entry);
 
-    let cell = OnceCell::new();
+    let cell = OnceLock::new();
     // TODO: remove clone
     cell.set(MaybeLinks::Links(links.clone())).unwrap();
 

@@ -7,11 +7,11 @@
 
 //! A center place to call `init` from various crates.
 
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 
 /// Register constructors.
 pub fn init() {
-    static REGISTERED: Lazy<()> = Lazy::new(|| {
+    static REGISTERED: LazyLock<()> = LazyLock::new(|| {
         // File, tree stores.
         #[cfg(feature = "git")]
         gitstore::init();

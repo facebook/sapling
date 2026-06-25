@@ -11,6 +11,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::sync::LazyLock;
 
 use anyhow::Context;
 use anyhow::Result;
@@ -27,7 +28,6 @@ use manifest::FsNodeMetadata;
 use manifest::Manifest;
 use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
-use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use pathmatcher::DynMatcher;
 use pathmatcher::GitignoreMatcher;
@@ -815,8 +815,8 @@ impl WorkingCopy {
 
 // Example:
 // error.EdenError: error computing status: requested parent commit is out-of-date: requested 71060cd2999820e7c1e8cb85a48ef045b1ae79b4, but current parent commit is 01f208e3ffbfa4c32985e9247f26567bf2ec4683. Try running `eden doctor` to remediate
-static EDENFS_STATUS_ERROR_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"current parent commit is ([^.]*)\.").unwrap());
+static EDENFS_STATUS_ERROR_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"current parent commit is ([^.]*)\.").unwrap());
 
 fn parse_edenfs_status_error(errmsg: &str) -> Option<HgId> {
     let caps = EDENFS_STATUS_ERROR_RE.captures(errmsg)?;

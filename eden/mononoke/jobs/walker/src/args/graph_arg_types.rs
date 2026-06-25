@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::hash::Hash;
 use std::str::FromStr;
+use std::sync::LazyLock;
 
 use anyhow::Context as _;
 use anyhow::Error;
@@ -16,7 +17,6 @@ use anyhow::format_err;
 use derived_data_manager::derivable::BonsaiDerivable;
 use filenodes_derivation::FilenodesOnlyPublic;
 use mercurial_derivation::MappedHgChangesetId;
-use once_cell::sync::Lazy;
 use strum::IntoEnumIterator;
 
 use crate::detail::graph::EdgeType;
@@ -56,7 +56,7 @@ const HG_DERIVED_TYPES: &[&str] = &[MappedHgChangesetId::NAME, FilenodesOnlyPubl
 
 const DERIVED_PREFIX: &str = "derived_";
 
-static DERIVED_DATA_NODE_TYPES: Lazy<HashMap<String, Vec<NodeType>>> = Lazy::new(|| {
+static DERIVED_DATA_NODE_TYPES: LazyLock<HashMap<String, Vec<NodeType>>> = LazyLock::new(|| {
     let mut m: HashMap<String, Vec<NodeType>> = HashMap::new();
     for t in NodeType::iter() {
         if let Some(derived_data_type) = t.derived_data_type() {

@@ -7,6 +7,7 @@
 
 use std::collections::HashSet;
 use std::env;
+use std::sync::LazyLock;
 use std::sync::Weak;
 use std::thread;
 use std::time::Duration;
@@ -14,7 +15,6 @@ use std::time::Instant;
 
 use metrics::Counter;
 use metrics::Registry;
-use once_cell::sync::Lazy;
 use progress_model::IoSample;
 use progress_model::IoTimeSeries;
 use progress_model::Registry as ProgressRegistry;
@@ -131,7 +131,7 @@ impl Renderer {
         use std::fmt::Write;
 
         const LINE_LENGTH: usize = 120;
-        static STARTED: Lazy<Instant> = Lazy::new(Instant::now);
+        static STARTED: LazyLock<Instant> = LazyLock::new(Instant::now);
 
         let started = *STARTED;
         if metrics.is_empty() {

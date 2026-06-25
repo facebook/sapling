@@ -377,8 +377,7 @@ pub(crate) fn get_deleted_inserted_spans(
 pub(crate) mod tests {
     use std::fmt;
     use std::ops::Deref;
-
-    use once_cell::sync::Lazy;
+    use std::sync::LazyLock;
 
     use super::*;
     use crate::tests::dbg;
@@ -386,13 +385,13 @@ pub(crate) mod tests {
 
     //  0--1--2--3--4--5--10--11--12--13--N0--N1--N2--N5--N6
     //         \-6-7-8--9-/-----------------\-N3--N4--/
-    static LEVEL0_HEAD2: Lazy<Segment> =
-        Lazy::new(|| Segment::new(SegmentFlags::HAS_ROOT, 0 as Level, Id(0), Id(2), &[]));
-    static LEVEL0_HEAD5: Lazy<Segment> =
-        Lazy::new(|| Segment::new(SegmentFlags::ONLY_HEAD, 0 as Level, Id(3), Id(5), &[Id(2)]));
-    static LEVEL0_HEAD9: Lazy<Segment> =
-        Lazy::new(|| Segment::new(SegmentFlags::empty(), 0 as Level, Id(6), Id(9), &[Id(2)]));
-    static LEVEL0_HEAD13: Lazy<Segment> = Lazy::new(|| {
+    static LEVEL0_HEAD2: LazyLock<Segment> =
+        LazyLock::new(|| Segment::new(SegmentFlags::HAS_ROOT, 0 as Level, Id(0), Id(2), &[]));
+    static LEVEL0_HEAD5: LazyLock<Segment> =
+        LazyLock::new(|| Segment::new(SegmentFlags::ONLY_HEAD, 0 as Level, Id(3), Id(5), &[Id(2)]));
+    static LEVEL0_HEAD9: LazyLock<Segment> =
+        LazyLock::new(|| Segment::new(SegmentFlags::empty(), 0 as Level, Id(6), Id(9), &[Id(2)]));
+    static LEVEL0_HEAD13: LazyLock<Segment> = LazyLock::new(|| {
         Segment::new(
             SegmentFlags::empty(),
             0 as Level,
@@ -402,7 +401,7 @@ pub(crate) mod tests {
         )
     });
 
-    static MERGED_LEVEL0_HEAD5: Lazy<Segment> = Lazy::new(|| {
+    static MERGED_LEVEL0_HEAD5: LazyLock<Segment> = LazyLock::new(|| {
         Segment::new(
             SegmentFlags::HAS_ROOT | SegmentFlags::ONLY_HEAD,
             0 as Level,
@@ -412,9 +411,10 @@ pub(crate) mod tests {
         )
     });
 
-    static LEVEL0_HEADN2: Lazy<Segment> =
-        Lazy::new(|| Segment::new(SegmentFlags::empty(), 0 as Level, nid(0), nid(2), &[Id(13)]));
-    static LEVEL0_HEADN4: Lazy<Segment> = Lazy::new(|| {
+    static LEVEL0_HEADN2: LazyLock<Segment> = LazyLock::new(|| {
+        Segment::new(SegmentFlags::empty(), 0 as Level, nid(0), nid(2), &[Id(13)])
+    });
+    static LEVEL0_HEADN4: LazyLock<Segment> = LazyLock::new(|| {
         Segment::new(
             SegmentFlags::empty(),
             0 as Level,
@@ -423,7 +423,7 @@ pub(crate) mod tests {
             &[nid(0), Id(9)],
         )
     });
-    static LEVEL0_HEADN6: Lazy<Segment> = Lazy::new(|| {
+    static LEVEL0_HEADN6: LazyLock<Segment> = LazyLock::new(|| {
         Segment::new(
             SegmentFlags::empty(),
             0 as Level,
@@ -433,9 +433,9 @@ pub(crate) mod tests {
         )
     });
 
-    static LEVEL1_HEAD13: Lazy<Segment> =
-        Lazy::new(|| Segment::new(SegmentFlags::HAS_ROOT, 1 as Level, Id(0), Id(13), &[]));
-    static LEVEL1_HEADN6: Lazy<Segment> = Lazy::new(|| {
+    static LEVEL1_HEAD13: LazyLock<Segment> =
+        LazyLock::new(|| Segment::new(SegmentFlags::HAS_ROOT, 1 as Level, Id(0), Id(13), &[]));
+    static LEVEL1_HEADN6: LazyLock<Segment> = LazyLock::new(|| {
         Segment::new(
             SegmentFlags::HAS_ROOT,
             1 as Level,

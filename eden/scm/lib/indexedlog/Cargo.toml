@@ -36,7 +36,6 @@ harness = false
 [dependencies]
 byteorder = "1.5"
 memmap2 = "0.9.10"
-once_cell = "1.21.4"
 rand = "0.10.1"
 sapling-atomicfile = { version = "0.1.0", path = "../atomicfile" }
 sapling-configmodel = { version = "0.1.0", path = "../config/model", optional = true }

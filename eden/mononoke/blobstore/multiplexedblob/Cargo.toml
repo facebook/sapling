@@ -19,7 +19,6 @@ futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimen
 itertools = "0.15.0"
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-once_cell = "1.21.4"
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 strum = { version = "0.28.0", features = ["derive"] }
 thiserror = "2.0.18"

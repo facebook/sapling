@@ -13,6 +13,7 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::hash::Hasher;
 use std::ops::Deref;
+use std::sync::LazyLock;
 
 use ::serde::Deserialize;
 use ::serde::Serialize;
@@ -24,7 +25,6 @@ use cpython::Python;
 use cpython::PythonObjectDowncastError;
 use cpython::PythonObjectWithTypeObject;
 use cpython::*;
-use once_cell::sync::Lazy;
 use parking_lot::RwLock;
 
 /// Wrapper type. Converts between pure Rust bytes-like types and PyBytes.
@@ -134,8 +134,8 @@ impl<T: Clone> Clone for Serde<T> {
 /// to Box<T> (type decided by TypeId).
 ///
 /// The key of the map is (input Python type, output Rust type).
-static CONVERT_FUNC_BY_TYPE: Lazy<RwLock<HashMap<(PyTypeId, TypeId), ExtractPyObjectFunc>>> =
-    Lazy::new(|| Default::default());
+static CONVERT_FUNC_BY_TYPE: LazyLock<RwLock<HashMap<(PyTypeId, TypeId), ExtractPyObjectFunc>>> =
+    LazyLock::new(|| Default::default());
 
 type ExtractPyObjectFunc =
     Box<dyn (Fn(Python, &PyObject) -> Box<dyn Any + Send + Sync>) + Send + Sync>;

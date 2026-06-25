@@ -12,6 +12,7 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::LazyLock;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::AcqRel;
 use std::time::Duration;
@@ -26,7 +27,6 @@ use curl_sys::CURLoption;
 use http::header;
 use lru_cache::LruCache;
 use maplit::hashmap;
-use once_cell::sync::Lazy;
 use openssl::pkcs12::Pkcs12;
 use openssl::pkey::PKey;
 use openssl::x509::X509;
@@ -202,13 +202,13 @@ pub struct Request {
     http_no_proxy: Option<String>,
 }
 
-static REQUEST_CREATION_LISTENERS: Lazy<RwLock<RequestCreationEventListeners>> =
-    Lazy::new(Default::default);
+static REQUEST_CREATION_LISTENERS: LazyLock<RwLock<RequestCreationEventListeners>> =
+    LazyLock::new(Default::default);
 
 // Attempt to use HTTP/2 by default. Will fall back to HTTP/1.1
 // if version negotiation with the server fails or if the binary
 // is built against some Curl version that doesn't have HTTP/2 available
-static DEFAULT_HTTP_VERSION: Lazy<HttpVersion> = Lazy::new(|| {
+static DEFAULT_HTTP_VERSION: LazyLock<HttpVersion> = LazyLock::new(|| {
     if curl::Version::get().feature_http2() {
         HttpVersion::V2
     } else {
@@ -973,8 +973,8 @@ struct PemCacheKey {
     pub key_mtime: Option<SystemTime>,
 }
 
-static PEM_CONVERT_CACHE: Lazy<Mutex<LruCache<PemCacheKey, Vec<u8>>>> =
-    Lazy::new(|| Mutex::new(LruCache::new(10)));
+static PEM_CONVERT_CACHE: LazyLock<Mutex<LruCache<PemCacheKey, Vec<u8>>>> =
+    LazyLock::new(|| Mutex::new(LruCache::new(10)));
 
 /// Convert a PEM-formatted X.509 certificate chain and private key into a
 /// PKCS#12 archive, which can then be directly passed to libcurl using

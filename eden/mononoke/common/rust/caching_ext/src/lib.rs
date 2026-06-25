@@ -38,10 +38,6 @@ pub use crate::factory::CacheHandlerFactory;
 pub use crate::memcache_utils::MemcacheHandler;
 pub use crate::mock_store::MockStoreStats;
 
-pub mod macro_reexport {
-    pub use once_cell;
-}
-
 define_stats_struct! {
     CacheStats("mononoke.cache.{}", label: String),
 
@@ -61,9 +57,8 @@ define_stats_struct! {
 macro_rules! impl_singleton_stats {
     ( $name:literal ) => {
         fn stats(&self) -> &$crate::CacheStats {
-            use $crate::macro_reexport::once_cell::sync::Lazy;
-            static STATS: Lazy<$crate::CacheStats> =
-                Lazy::new(|| $crate::CacheStats::new(String::from($name)));
+            static STATS: std::sync::LazyLock<$crate::CacheStats> =
+                std::sync::LazyLock::new(|| $crate::CacheStats::new(String::from($name)));
             &*STATS
         }
     };

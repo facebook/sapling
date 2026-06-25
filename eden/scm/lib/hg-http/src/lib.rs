@@ -11,6 +11,7 @@
 //! paths, error handling, etc.
 
 use std::collections::HashSet;
+use std::sync::LazyLock;
 use std::sync::Once;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicUsize;
@@ -24,7 +25,6 @@ use hg_metrics::increment_counter;
 use http_client::HttpClient;
 use http_client::Request;
 use http_client::Stats;
-use once_cell::sync::Lazy;
 use progress_model::AggregatingProgressBar;
 use progress_model::IoSample;
 use progress_model::IoTimeSeries;
@@ -159,11 +159,11 @@ pub fn shutdown() {
 /// Setup progress reporting to the main progress registry for the lifetime of
 /// this process.
 pub fn enable_progress_reporting() {
-    let _state = Lazy::force(&PROGRESS_REPORTING_STATE);
+    let _state = LazyLock::force(&PROGRESS_REPORTING_STATE);
 }
 
 /// State for progress reporting. Lazily initialized.
-static PROGRESS_REPORTING_STATE: Lazy<()> = Lazy::new(|| {
+static PROGRESS_REPORTING_STATE: LazyLock<()> = LazyLock::new(|| {
     let trees_bar = AggregatingProgressBar::new("downloading", "bytes");
     let files_bar = AggregatingProgressBar::new("downloading", "bytes");
     let lfs_bar = AggregatingProgressBar::new("downloading", "bytes");

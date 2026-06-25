@@ -14,8 +14,8 @@ use std::io;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::sync::Arc;
+use std::sync::LazyLock;
 
-use once_cell::sync::Lazy;
 use pathmatcher::DirectoryMatch;
 use pathmatcher::DynMatcher;
 use pathmatcher::IntersectMatcher;
@@ -760,15 +760,17 @@ fn make_recursive(p: impl Into<String>) -> String {
 }
 
 // Match patterns like "foo/(?!bar/)" which mean "include foo/ except foo/bar/".
-static EXCLUDE_DIR_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"^\^?([\w._/]+)/\(\?!([\w._/]+)\)$").unwrap());
+static EXCLUDE_DIR_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^\^?([\w._/]+)/\(\?!([\w._/]+)\)$").unwrap());
 
 // Match patterns like "foo/(?:.*/)?bar(?:/|$)".
-static ANY_DIR_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"^\^?([\w._/]+)/\(\?:\.\*/\)\?([\w._]+)(\(\?:/\|\$\))?$").unwrap());
+static ANY_DIR_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^\^?([\w._/]+)/\(\?:\.\*/\)\?([\w._]+)(\(\?:/\|\$\))?$").unwrap()
+});
 
 // Match patterns like "foo/\..*/ to match dotfiles.
-static DOT_FILES_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\^?([\w._/]+)/\\.\.\*$").unwrap());
+static DOT_FILES_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^\^?([\w._/]+)/\\.\.\*$").unwrap());
 
 // Attempt to convert given regex pattern to glob(s). Only certain
 // cases are handled to give best effort support for checking out

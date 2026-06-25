@@ -9,8 +9,8 @@ use std::collections::HashMap;
 use std::env;
 use std::ffi::OsStr;
 use std::ffi::OsString;
+use std::sync::LazyLock;
 
-use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use parking_lot::MutexGuard;
 
@@ -69,7 +69,7 @@ pub struct EnvLock<'a> {
     _guard: MutexGuard<'a, ()>,
 }
 
-static ENV_LOCK: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
+static ENV_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
 
 /// Lock the environment and return an object that allows setting env
 /// vars, undoing env changes when the object goes out of scope. This

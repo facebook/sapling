@@ -6,8 +6,8 @@
  */
 
 use std::collections::HashSet;
+use std::sync::LazyLock;
 
-use once_cell::sync::Lazy;
 use parking_lot::RwLock;
 
 use crate::StaticBox;
@@ -62,5 +62,5 @@ impl Intern for Option<&str> {
 }
 
 /// Collection of interned strings.
-pub(crate) static INTERNED_STRINGS: Lazy<RwLock<HashSet<StaticBox<String>>>> =
-    Lazy::new(Default::default);
+pub(crate) static INTERNED_STRINGS: LazyLock<RwLock<HashSet<StaticBox<String>>>> =
+    LazyLock::new(Default::default);

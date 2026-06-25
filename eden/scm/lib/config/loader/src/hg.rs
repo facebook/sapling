@@ -1076,19 +1076,19 @@ pub fn read_repo_name_from_disk(shared_dot_hg_path: &Path) -> io::Result<String>
 #[cfg(test)]
 mod tests {
     use std::io::Write;
+    use std::sync::LazyLock;
 
-    use once_cell::sync::Lazy;
     use tempfile::TempDir;
     use testutil::envs::lock_env;
 
     use super::*;
 
-    static CONFIG_ENV_VAR: Lazy<&str> =
-        Lazy::new(|| identity::default().env_name_static("CONFIG").unwrap());
-    static HGPLAIN: Lazy<&str> =
-        Lazy::new(|| identity::default().env_name_static("PLAIN").unwrap());
-    static HGPLAINEXCEPT: Lazy<&str> =
-        Lazy::new(|| identity::default().env_name_static("PLAINEXCEPT").unwrap());
+    static CONFIG_ENV_VAR: LazyLock<&str> =
+        LazyLock::new(|| identity::default().env_name_static("CONFIG").unwrap());
+    static HGPLAIN: LazyLock<&str> =
+        LazyLock::new(|| identity::default().env_name_static("PLAIN").unwrap());
+    static HGPLAINEXCEPT: LazyLock<&str> =
+        LazyLock::new(|| identity::default().env_name_static("PLAINEXCEPT").unwrap());
 
     fn write_file(path: PathBuf, content: &str) {
         fs::create_dir_all(path.parent().unwrap()).unwrap();

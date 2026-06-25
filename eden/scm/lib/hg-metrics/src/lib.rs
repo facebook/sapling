@@ -7,10 +7,10 @@
 
 use std::borrow::Borrow;
 use std::collections::HashMap;
+use std::sync::LazyLock;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
 
-use once_cell::sync::Lazy;
 use parking_lot::RwLock;
 
 pub fn increment_counter(key: impl Key, value: u64) {
@@ -32,7 +32,7 @@ pub fn reset() {
 pub trait Key: Into<String> + Borrow<str> {}
 impl<T> Key for T where T: Into<String> + Borrow<str> {}
 
-pub static METRICS: Lazy<Metrics> = Lazy::new(Metrics::new);
+pub static METRICS: LazyLock<Metrics> = LazyLock::new(Metrics::new);
 
 pub struct Metrics {
     counters: RwLock<HashMap<String, AtomicU64>>,
@@ -127,7 +127,7 @@ mod tests {
 
     #[test]
     fn test_increment_on_many_threads() {
-        static MY_METRICS: Lazy<Metrics> = Lazy::new(Metrics::new);
+        static MY_METRICS: LazyLock<Metrics> = LazyLock::new(Metrics::new);
         let handle = thread::spawn(move || {
             for _i in 0..10000 {
                 MY_METRICS.increment_counter("key", 2);

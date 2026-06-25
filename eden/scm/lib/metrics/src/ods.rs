@@ -6,12 +6,12 @@
  */
 
 use std::sync::Arc;
+use std::sync::OnceLock;
 
 use obc_lib::AggValue;
 use obc_lib::OBCBumper as _;
 use obc_lib::obc_client::OBCClient;
 use obc_lib::obc_client::OBCClientOptions;
-use once_cell::sync::OnceCell;
 use sysutil::hostname;
 
 struct OBCClientWrapper {
@@ -46,7 +46,7 @@ impl OBCClientWrapper {
     }
 }
 
-static OBC_CLIENT: OnceCell<OBCClientWrapper> = OnceCell::new();
+static OBC_CLIENT: OnceLock<OBCClientWrapper> = OnceLock::new();
 
 pub(crate) type Counter = stats_traits::stat_types::BoxSingletonCounter;
 

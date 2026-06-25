@@ -7,6 +7,7 @@
 
 use std::collections::HashSet;
 use std::sync::Arc;
+use std::sync::OnceLock;
 
 use anyhow::anyhow;
 use async_runtime::block_on;
@@ -15,7 +16,6 @@ use eagerepo::EagerRepo;
 use edenapi::Builder;
 use edenapi::SaplingRemoteApi;
 use edenapi::SaplingRemoteApiError;
-use once_cell::sync::OnceCell;
 use repourl::RepoUrl;
 use storemodel::StoreInfo;
 
@@ -25,7 +25,7 @@ type Capabilities = HashSet<String>;
 
 #[derive(Debug, Default, Clone)]
 pub struct LazyCapabilities {
-    caps: Arc<OnceCell<Capabilities>>,
+    caps: Arc<OnceLock<Capabilities>>,
 }
 
 impl LazyCapabilities {
@@ -38,7 +38,7 @@ impl LazyCapabilities {
     }
 }
 
-pub type OnceSlapi = OnceCell<(LazyCapabilities, Arc<dyn SaplingRemoteApi>)>;
+pub type OnceSlapi = OnceLock<(LazyCapabilities, Arc<dyn SaplingRemoteApi>)>;
 
 /// Force construct the SaplingRemoteAPI client, caching the result in the provided OnceCell.
 /// This bypasses checks about whether SaplingRemoteAPI should be used or not.

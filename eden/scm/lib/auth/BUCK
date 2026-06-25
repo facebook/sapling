@@ -28,7 +28,6 @@ rust_library(
     },
     crate_root = "src/lib.rs",
     test_deps = [
-        "fbsource//third-party/rust:once_cell",
         "//eden/scm/lib/config/static:staticconfig",
     ],
     test_srcs = glob(["src/test_certs/*.pem"]),

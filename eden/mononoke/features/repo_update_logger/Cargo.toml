@@ -28,7 +28,6 @@ hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 logger_ext = { version = "0.1.0", path = "../../common/logger_ext" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-once_cell = "1.21.4"
 permission_checker = { version = "0.1.0", path = "../../common/permission_checker" }
 phases = { version = "0.1.0", path = "../../repo_attributes/phases" }
 regex = "1.12.4"

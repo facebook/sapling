@@ -22,5 +22,4 @@ libc = "0.2.186"
 libc = "0.2.186"
 
 [target.'cfg(target_os = "windows")'.dependencies]
-once_cell = "1.21.4"
 winapi = { version = "0.3", features = ["everything", "std"] }

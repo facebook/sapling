@@ -7,6 +7,7 @@
 
 //! cbor.rs - Utilities for working with CBOR data in HTTP requests and responses.
 use std::pin::Pin;
+use std::sync::LazyLock;
 
 use anyhow::Context;
 use anyhow::Error;
@@ -28,7 +29,6 @@ use gotham_ext::response::ResponseTryStreamExt;
 use gotham_ext::response::StreamBody;
 use gotham_ext::response::TryIntoResponse;
 use mime::Mime;
-use once_cell::sync::Lazy;
 use pin_project::pin_project;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -36,7 +36,7 @@ use serde::de::DeserializeOwned;
 use super::get_request_body;
 use crate::errors::ErrorKind;
 
-static CBOR_MIME: Lazy<Mime> = Lazy::new(|| "application/cbor".parse().unwrap());
+static CBOR_MIME: LazyLock<Mime> = LazyLock::new(|| "application/cbor".parse().unwrap());
 
 pub fn cbor_mime() -> Mime {
     CBOR_MIME.clone()

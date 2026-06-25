@@ -9,6 +9,7 @@
 
 use std::collections::BTreeMap;
 use std::fmt;
+use std::sync::LazyLock;
 
 pub use anyhow::Error;
 pub use anyhow::Result;
@@ -21,7 +22,6 @@ use cpython::PyModule;
 use cpython::PyResult;
 use cpython::Python;
 use cpython::exc;
-use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 
 use crate::PythonKeepAlive;
@@ -89,8 +89,8 @@ pub trait AnyhowResultExt<T> {
 
 pub type AnyhowErrorIntoPyErrFunc = fn(Python, &anyhow::Error) -> Option<cpython::PyErr>;
 
-static INTO_PYERR_FUNC_LIST: Lazy<Mutex<BTreeMap<&'static str, AnyhowErrorIntoPyErrFunc>>> =
-    Lazy::new(|| Default::default());
+static INTO_PYERR_FUNC_LIST: LazyLock<Mutex<BTreeMap<&'static str, AnyhowErrorIntoPyErrFunc>>> =
+    LazyLock::new(|| Default::default());
 
 /// Register a function to convert [`anyhow::Error`] to [`PyErr`].
 /// For multiple functions, those with smaller name are executed first.

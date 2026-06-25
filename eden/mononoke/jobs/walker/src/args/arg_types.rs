@@ -6,9 +6,9 @@
  */
 
 use std::collections::HashSet;
+use std::sync::LazyLock;
 
 use clap::ValueEnum;
-use once_cell::sync::Lazy;
 use strum::AsRefStr;
 use strum::EnumString;
 use strum::IntoEnumIterator;
@@ -72,7 +72,7 @@ pub const DEFAULT_INTERNED_TYPES: &[InternedTypeArg] = &[
 ];
 
 // clap doesn't allow to pass typed default values for some reason, let's convert them
-pub static DEFAULT_INTERNED_TYPES_STR: Lazy<Vec<&'static str>> = Lazy::new(|| {
+pub static DEFAULT_INTERNED_TYPES_STR: LazyLock<Vec<&'static str>> = LazyLock::new(|| {
     DEFAULT_INTERNED_TYPES
         .iter()
         .map(|int_type| int_type.as_ref())

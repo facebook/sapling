@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::sync::OnceLock;
 use std::time::Duration;
 use std::time::Instant;
 
@@ -38,7 +39,6 @@ use flume::bounded;
 use metrics::TREE_STORE_FETCH_METRICS;
 use minibytes::Bytes;
 use moka::sync::Cache;
-use once_cell::sync::OnceCell;
 use progress_model::AggregatingProgressBar;
 use progress_model::ProgressBar;
 use progress_model::Registry;
@@ -241,7 +241,7 @@ impl TreeStore {
                         },
                         self.format(),
                     ),
-                    basic_tree_entry: OnceCell::new(),
+                    basic_tree_entry: OnceLock::new(),
                     acl_checker: self.create_acl_checker(),
                 });
                 Ok(Some(res))
@@ -1082,7 +1082,7 @@ type AclChecker = Arc<
 struct ScmStoreTreeEntry {
     tree: LazyTree,
     // The "basic" version of `TreeEntry` that does not have aux data.
-    basic_tree_entry: OnceCell<Arc<dyn TreeEntry>>,
+    basic_tree_entry: OnceLock<Arc<dyn TreeEntry>>,
     // Deferred ACL checker callback. Called at permission_denied_children() time.
     acl_checker: Option<AclChecker>,
 }
@@ -1099,7 +1099,7 @@ impl From<LazyTree> for ScmStoreTreeEntry {
     fn from(tree: LazyTree) -> Self {
         ScmStoreTreeEntry {
             tree,
-            basic_tree_entry: OnceCell::new(),
+            basic_tree_entry: OnceLock::new(),
             acl_checker: None,
         }
     }

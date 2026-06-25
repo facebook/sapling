@@ -38,7 +38,6 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:globset",
-        "fbsource//third-party/rust:once_cell",
         "fbsource//third-party/rust:regex",
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tracing",
@@ -74,7 +73,6 @@ rust_library(
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:globset",
-        "fbsource//third-party/rust:once_cell",
         "fbsource//third-party/rust:regex",
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tokio",

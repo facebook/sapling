@@ -8,6 +8,7 @@
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
+use std::sync::OnceLock;
 
 use anyhow::Result;
 use anyhow::anyhow;
@@ -21,7 +22,6 @@ use edenapi::SaplingRemoteApiError;
 use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
 use metalog::MetaLog;
-use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
 use pathmatcher::DynMatcher;
 use repourl::RepoUrl;
@@ -47,9 +47,9 @@ pub struct SlapiRepo {
     config: Arc<dyn Config>,
     repo_name: String,
     eden_api: OnceSlapi,
-    file_store: OnceCell<Arc<dyn FileStore>>,
-    tree_store: OnceCell<Arc<dyn TreeStore>>,
-    tree_resolver: OnceCell<Arc<dyn ReadTreeManifest + Send + Sync>>,
+    file_store: OnceLock<Arc<dyn FileStore>>,
+    tree_store: OnceLock<Arc<dyn TreeStore>>,
+    tree_resolver: OnceLock<Arc<dyn ReadTreeManifest + Send + Sync>>,
 }
 
 impl SlapiRepo {

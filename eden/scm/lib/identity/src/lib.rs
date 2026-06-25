@@ -13,12 +13,12 @@ use std::fs::read_link;
 use std::io;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::LazyLock;
 
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use derivative::Derivative;
-use once_cell::sync::Lazy;
 use parking_lot::RwLock;
 
 pub mod dotgit;
@@ -527,7 +527,7 @@ pub mod idents {
 
 static EXTRA_SNIFF_IDENTS: &[Identity] = &[SL_GIT, SL_GITREPO];
 
-static DEFAULT: Lazy<RwLock<Identity>> = Lazy::new(|| RwLock::new(compute_default()));
+static DEFAULT: LazyLock<RwLock<Identity>> = LazyLock::new(|| RwLock::new(compute_default()));
 
 pub use idents::all;
 

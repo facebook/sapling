@@ -175,9 +175,10 @@ fn parse_valid_date_range(cert: &[u8]) -> Result<(DateTime<Utc>, DateTime<Utc>),
 
 #[cfg(test)]
 mod tests {
+    use std::sync::LazyLock;
+
     use anyhow::Result;
     use chrono::offset::TimeZone;
-    use once_cell::sync::Lazy;
 
     use super::*;
 
@@ -187,24 +188,24 @@ mod tests {
     const COMBINED: &[u8] = include_bytes!("test_certs/combined.pem");
 
     // CERT_1 is valid from 2020-12-09 22:39:13 UTC to 2020-12-10 22:39:13 UTC.
-    static CERT_1_NOT_BEFORE: Lazy<DateTime<Utc>> =
-        Lazy::new(|| Utc.with_ymd_and_hms(2020, 12, 9, 22, 39, 13).unwrap());
-    static CERT_1_NOT_AFTER: Lazy<DateTime<Utc>> =
-        Lazy::new(|| Utc.with_ymd_and_hms(2020, 12, 10, 22, 39, 13).unwrap());
+    static CERT_1_NOT_BEFORE: LazyLock<DateTime<Utc>> =
+        LazyLock::new(|| Utc.with_ymd_and_hms(2020, 12, 9, 22, 39, 13).unwrap());
+    static CERT_1_NOT_AFTER: LazyLock<DateTime<Utc>> =
+        LazyLock::new(|| Utc.with_ymd_and_hms(2020, 12, 10, 22, 39, 13).unwrap());
 
     // CERT_2 is valid from  2020-12-09 22:40:23 UTC to 2020-12-11 22:40:23 UTC.
-    static CERT_2_NOT_BEFORE: Lazy<DateTime<Utc>> =
-        Lazy::new(|| Utc.with_ymd_and_hms(2020, 12, 9, 22, 40, 23).unwrap());
-    static CERT_2_NOT_AFTER: Lazy<DateTime<Utc>> =
-        Lazy::new(|| Utc.with_ymd_and_hms(2020, 12, 11, 22, 40, 23).unwrap());
+    static CERT_2_NOT_BEFORE: LazyLock<DateTime<Utc>> =
+        LazyLock::new(|| Utc.with_ymd_and_hms(2020, 12, 9, 22, 40, 23).unwrap());
+    static CERT_2_NOT_AFTER: LazyLock<DateTime<Utc>> =
+        LazyLock::new(|| Utc.with_ymd_and_hms(2020, 12, 11, 22, 40, 23).unwrap());
 
     // Both CERT_1 and CERT_1 are valid on this date.
-    static CERT_1_VALID_DATE: Lazy<DateTime<Utc>> =
-        Lazy::new(|| Utc.with_ymd_and_hms(2020, 12, 10, 0, 0, 0).unwrap());
+    static CERT_1_VALID_DATE: LazyLock<DateTime<Utc>> =
+        LazyLock::new(|| Utc.with_ymd_and_hms(2020, 12, 10, 0, 0, 0).unwrap());
 
     // On this date, CERT_2 is valid but CERT_1 is not.
-    static CERT_2_VALID_DATE: Lazy<DateTime<Utc>> =
-        Lazy::new(|| Utc.with_ymd_and_hms(2020, 12, 11, 0, 0, 0).unwrap());
+    static CERT_2_VALID_DATE: LazyLock<DateTime<Utc>> =
+        LazyLock::new(|| Utc.with_ymd_and_hms(2020, 12, 11, 0, 0, 0).unwrap());
 
     #[test]
     fn test_date_parsing() -> Result<()> {

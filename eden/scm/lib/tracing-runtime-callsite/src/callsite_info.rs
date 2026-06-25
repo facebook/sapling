@@ -6,8 +6,8 @@
  */
 
 use std::collections::HashMap;
+use std::sync::LazyLock;
 
-use once_cell::sync::Lazy;
 use parking_lot::RwLock;
 use tracing::Level;
 use tracing::metadata::Kind;
@@ -55,7 +55,7 @@ pub trait KindType: Send + Sync + Unpin + 'static {
 }
 
 pub type CallsiteKey = (usize, usize);
-type LazyMap<K> = Lazy<RwLock<HashMap<CallsiteKey, StaticBox<RuntimeCallsite<K>>>>>;
+type LazyMap<K> = LazyLock<RwLock<HashMap<CallsiteKey, StaticBox<RuntimeCallsite<K>>>>>;
 
 /// The "Event" kind.
 #[derive(Copy, Clone, Debug)]
@@ -86,7 +86,7 @@ impl KindType for SpanKindType {
 }
 
 /// Collection of dynamically allocated Callsites for spans.
-static DYNAMIC_SPAN_CALLSITES: LazyMap<SpanKindType> = Lazy::new(Default::default);
+static DYNAMIC_SPAN_CALLSITES: LazyMap<SpanKindType> = LazyLock::new(Default::default);
 
 /// Collection of dynamically allocated Callsites for events.
-static DYNAMIC_EVENT_CALLSITES: LazyMap<EventKindType> = Lazy::new(Default::default);
+static DYNAMIC_EVENT_CALLSITES: LazyMap<EventKindType> = LazyLock::new(Default::default);

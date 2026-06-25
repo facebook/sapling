@@ -7,10 +7,10 @@
 
 use std::env::var;
 use std::fmt::Display;
+use std::sync::LazyLock;
 
 use anyhow::Result;
 use anyhow::anyhow;
-use once_cell::sync::Lazy;
 use rand::RngExt as _;
 use rand::distr::Alphanumeric;
 use rand::rng;
@@ -26,7 +26,8 @@ const DEFAULT_CLIENT_ENTRY_POINT_SAPLING: ClientEntryPoint = ClientEntryPoint::S
 const DEFAULT_CLIENT_ENTRY_POINT_EDENFS: ClientEntryPoint = ClientEntryPoint::EdenFs;
 
 // The global static ClientRequestInfo
-pub static CLIENT_REQUEST_INFO: Lazy<ClientRequestInfo> = Lazy::new(new_client_request_info);
+pub static CLIENT_REQUEST_INFO: LazyLock<ClientRequestInfo> =
+    LazyLock::new(new_client_request_info);
 
 /// Get a copy of the global static ClientRequestInfo
 pub fn get_client_request_info() -> ClientRequestInfo {

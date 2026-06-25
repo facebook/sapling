@@ -6,6 +6,7 @@
  */
 
 use std::str::FromStr;
+use std::sync::LazyLock;
 
 use anyhow::Context;
 use anyhow::Error;
@@ -76,8 +77,8 @@ pub struct DownloadParamsSha256 {
 }
 
 fn parse_range(header: &str) -> Result<Range, Error> {
-    static RE: once_cell::sync::Lazy<regex::Regex> =
-        once_cell::sync::Lazy::new(|| regex::Regex::new(r"bytes=(\d+)-(\d+)").unwrap());
+    static RE: LazyLock<regex::Regex> =
+        LazyLock::new(|| regex::Regex::new(r"bytes=(\d+)-(\d+)").unwrap());
 
     let caps = RE
         .captures(header)

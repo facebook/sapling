@@ -16,7 +16,6 @@ rust_library(
         "fbsource//third-party/rust:faster-hex",
         "fbsource//third-party/rust:http",
         "fbsource//third-party/rust:mime",
-        "fbsource//third-party/rust:once_cell",
         "fbsource//third-party/rust:quickcheck",
         "fbsource//third-party/rust:serde",
     ],

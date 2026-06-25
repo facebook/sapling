@@ -20,7 +20,6 @@ rust_library(
         "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:itertools",
-        "fbsource//third-party/rust:once_cell",
         "//common/rust/shed/cachelib_stub:cachelib",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/memcache_stub:memcache",

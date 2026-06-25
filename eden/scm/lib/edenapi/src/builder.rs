@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::sync::LazyLock;
 use std::time::Duration;
 
 use anyhow::Context;
@@ -20,7 +21,6 @@ use configmodel::convert::FromConfigValue;
 use http_client::Encoding;
 use http_client::HttpVersion;
 use http_client::MinTransferSpeed;
-use once_cell::sync::Lazy;
 use parking_lot::RwLock;
 use url::Url;
 
@@ -30,7 +30,7 @@ use crate::errors::ConfigError;
 use crate::errors::SaplingRemoteApiError;
 
 /// External function that constructs other kinds of `SaplingRemoteApi` from config.
-static CUSTOM_BUILD_FUNCS: Lazy<
+static CUSTOM_BUILD_FUNCS: LazyLock<
     RwLock<
         Vec<
             Box<
@@ -44,7 +44,7 @@ static CUSTOM_BUILD_FUNCS: Lazy<
             >,
         >,
     >,
-> = Lazy::new(Default::default);
+> = LazyLock::new(Default::default);
 
 /// Builder for creating new SaplingRemoteAPI clients.
 pub struct Builder<'a> {

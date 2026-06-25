@@ -13,5 +13,4 @@ license = "MIT"
 name = "hg_metrics"
 
 [dependencies]
-once_cell = "1.21.4"
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }

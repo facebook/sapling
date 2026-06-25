@@ -6,17 +6,17 @@
  */
 
 use std::str;
+use std::sync::LazyLock;
 
 use http::header::HeaderName;
 use http::header::HeaderValue;
 use http::status::StatusCode;
 use http::version::Version;
-use once_cell::sync::Lazy;
 use regex::Regex;
 use thiserror::Error;
 
-static STATUS_REGEX: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"(?i)HTTP/([0-9.]+) ([0-9]+)").unwrap());
+static STATUS_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)HTTP/([0-9.]+) ([0-9]+)").unwrap());
 
 /// A parsed header line.
 ///

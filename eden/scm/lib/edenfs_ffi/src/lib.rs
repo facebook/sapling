@@ -8,6 +8,7 @@
 use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::LazyLock;
 use std::thread;
 use std::time::Duration;
 use std::time::Instant;
@@ -20,7 +21,6 @@ use cxx::UniquePtr;
 use cxxerror::Result;
 use filters::filter::FilterGenerator;
 use metrics::Counter;
-use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use pathmatcher::AlwaysMatcher;
 use pathmatcher::DirectoryMatch;
@@ -42,7 +42,7 @@ struct CachedObjects {
     filter_gen: FilterGenerator,
 }
 
-static OBJECT_CACHE: Lazy<Mutex<HashMap<PathBuf, CachedObjects>>> = Lazy::new(|| {
+static OBJECT_CACHE: LazyLock<Mutex<HashMap<PathBuf, CachedObjects>>> = LazyLock::new(|| {
     let map = Mutex::new(HashMap::new());
 
     // Start the cleanup thread that checks for evictions every ~15 seconds

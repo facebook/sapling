@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt;
 use std::sync::Arc;
+use std::sync::LazyLock;
 use std::sync::atomic::AtomicUsize;
 use std::time::Duration;
 
@@ -26,7 +27,6 @@ use futures::stream::FuturesUnordered;
 use futures::stream::TryStreamExt;
 use metaconfig_types::BlobstoreId;
 use mononoke_types::Timestamp;
-use once_cell::sync::Lazy;
 use scuba_ext::MononokeScubaSampleBuilder;
 use strum::EnumString;
 use strum::IntoStaticStr;
@@ -36,8 +36,8 @@ use tracing::warn;
 
 use crate::base::inner_put;
 
-static HEAL_MAX_BACKLOG: Lazy<Duration> =
-    Lazy::new(|| Duration::from_secs(ChronoDuration::days(7).num_seconds() as u64));
+static HEAL_MAX_BACKLOG: LazyLock<Duration> =
+    LazyLock::new(|| Duration::from_secs(ChronoDuration::days(7).num_seconds() as u64));
 
 /// What to do when the ScrubBlobstore finds a problem
 #[derive(

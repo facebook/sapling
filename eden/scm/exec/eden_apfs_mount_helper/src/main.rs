@@ -17,6 +17,7 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::process::Stdio;
 use std::str;
+use std::sync::LazyLock;
 use std::time::Duration;
 
 use anyhow::Context;
@@ -25,7 +26,6 @@ use anyhow::anyhow;
 use anyhow::bail;
 use clap::Parser;
 use eden_apfs::*;
-use once_cell::sync::Lazy;
 #[cfg(target_os = "macos")]
 use serde::*;
 
@@ -35,7 +35,8 @@ mod facebook;
 const MOUNT_APFS: &str = "/sbin/mount_apfs";
 const MAX_ADDVOLUME_RETRY: u64 = 3;
 
-static MOUNT: Lazy<SystemCommandImpl> = Lazy::new(|| SystemCommandImpl(PathBuf::from(MOUNT_PATH)));
+static MOUNT: LazyLock<SystemCommandImpl> =
+    LazyLock::new(|| SystemCommandImpl(PathBuf::from(MOUNT_PATH)));
 
 #[derive(Parser, Debug)]
 enum Opt {

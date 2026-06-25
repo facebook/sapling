@@ -16,7 +16,6 @@
 //! configs, use `configset::ConfigSet`.
 
 #![allow(unexpected_cfgs)]
-#![cfg_attr(fbcode_build, feature(once_cell_try))]
 
 pub mod hg;
 

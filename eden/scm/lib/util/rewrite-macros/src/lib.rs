@@ -104,19 +104,18 @@ pub fn demomo(
 }
 
 /// Fill boilerplate of a cached field.
-/// The callsite needs to define `OnceCell<Arc<_>>` field. For example:
+/// The callsite needs to define `OnceLock<Arc<_>>` field. For example:
 ///
 /// ```
 /// use std::io::Result;
 /// use std::path::PathBuf;
 /// use std::sync::Arc;
-///
-/// use once_cell::sync::OnceCell;
+/// use std::sync::OnceLock;
 ///
 /// struct FileReader {
 ///     path: PathBuf,
 ///     // Define this field before using `#[cached_field]`!
-///     content: OnceCell<Arc<String>>,
+///     content: OnceLock<Arc<String>>,
 /// }
 ///
 /// impl FileReader {
@@ -153,11 +152,11 @@ pub fn demomo(
 /// # use std::path::PathBuf;
 /// # use std::sync::Arc;
 ///
-/// # use once_cell::sync::OnceCell;
+/// # use std::sync::OnceLock;
 ///
 /// # struct FileReader {
 /// #     path: PathBuf,
-/// #     content: OnceCell<Arc<RwLock<String>>>,
+/// #     content: OnceLock<Arc<RwLock<String>>>,
 /// # }
 ///
 /// # impl FileReader {
@@ -204,7 +203,7 @@ pub fn demomo(
 /// # use std::path::PathBuf;
 /// # use std::sync::Arc;
 ///
-/// # use once_cell::sync::OnceCell;
+/// # use std::sync::OnceLock;
 ///
 /// # impl FileReader {
 /// #     pub fn new(path: PathBuf) -> Self {
@@ -218,7 +217,7 @@ pub fn demomo(
 ///
 /// struct FileReader {
 ///     path: PathBuf,
-///     content: OnceCell<Arc<RwLock<String>>>,
+///     content: OnceLock<Arc<RwLock<String>>>,
 ///     backup: RwLock<Option<Arc<RwLock<String>>>>,
 /// }
 ///

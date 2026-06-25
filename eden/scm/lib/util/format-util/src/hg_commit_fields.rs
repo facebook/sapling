@@ -7,12 +7,12 @@
 
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
+use std::sync::OnceLock;
 
 use anyhow::Context as _;
 use anyhow::Result;
 use anyhow::bail;
 use minibytes::Text;
-use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use types::Id20;
 use types::RepoPath;
@@ -28,7 +28,7 @@ use crate::utils::write_multi_line;
 /// Holds the Hg commit text. Fields can be lazily parsed.
 pub struct HgCommitLazyFields {
     text: Text,
-    fields: OnceCell<Box<HgCommitFields>>,
+    fields: OnceLock<Box<HgCommitFields>>,
 }
 
 /// Fields of a hg commit. Enough information to serialize to text.

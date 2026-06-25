@@ -14,6 +14,7 @@ use std::ops::DerefMut;
 use std::process::Command;
 use std::process::Stdio;
 use std::sync::Arc;
+use std::sync::LazyLock;
 use std::sync::Weak;
 use std::thread::spawn;
 use std::time::Duration;
@@ -22,7 +23,6 @@ use std::time::Instant;
 pub use buf::BufIO;
 use configmodel::Config;
 use configmodel::ConfigExt;
-use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use parking_lot::MutexGuard;
 use parking_lot::RwLock;
@@ -123,7 +123,7 @@ struct IOState {
 ///
 /// Use `IO::set_main()` to set the main IO, and `IO::main()`
 /// to obtain the "main" `IO`.
-static MAIN_IO_REF: Lazy<RwLock<Option<Weak<Inner>>>> = Lazy::new(Default::default);
+static MAIN_IO_REF: LazyLock<RwLock<Option<Weak<Inner>>>> = LazyLock::new(Default::default);
 
 fn colors_disabled_via_env() -> bool {
     hgplain::is_plain(Some("color")) || std::env::var("TERM").ok().as_deref() == Some("dumb")

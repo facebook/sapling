@@ -9,6 +9,7 @@ use std::io::Cursor;
 use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::OnceLock;
 
 use anyhow::Result;
 use anyhow::anyhow;
@@ -25,7 +26,6 @@ use indexedlog::log::IndexOutput;
 use lz4_pyframe::compress;
 use lz4_pyframe::decompress;
 use minibytes::Bytes;
-use once_cell::sync::OnceCell;
 use revisionstore_types::InternalMetadata;
 use storemodel::SerializationFormat;
 use tracing::warn;
@@ -68,7 +68,7 @@ pub struct Entry {
     metadata: Metadata,
     acl_children_indices: Option<Vec<u32>>,
 
-    content: OnceCell<Bytes>,
+    content: OnceLock<Bytes>,
     compressed_content: Option<Bytes>,
 }
 
@@ -90,7 +90,7 @@ impl Entry {
             node,
             metadata,
             acl_children_indices: None,
-            content: OnceCell::with_value(content),
+            content: OnceLock::from(content),
             compressed_content: None,
         }
     }
@@ -125,9 +125,9 @@ impl Entry {
         let body = bytes.slice_to_bytes(body);
 
         let (content, compressed_content) = if metadata.uncompressed {
-            (OnceCell::with_value(body), None)
+            (OnceLock::from(body), None)
         } else {
-            (OnceCell::new(), Some(body))
+            (OnceLock::new(), Some(body))
         };
 
         Ok(Entry {

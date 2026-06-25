@@ -12,6 +12,7 @@ use std::fs::create_dir_all;
 use std::future::ready;
 use std::num::NonZeroU64;
 use std::sync::Arc;
+use std::sync::LazyLock;
 use std::sync::atomic::AtomicI64;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
@@ -141,7 +142,6 @@ use metrics::Counter;
 use metrics::EntranceGuard;
 use minibytes::Bytes as RawBytes;
 use minibytes::Bytes;
-use once_cell::sync::Lazy;
 use parking_lot::Once;
 use progress_model::ProgressBar;
 use repourl::encode_repo_name;
@@ -173,8 +173,8 @@ const MAX_ERROR_MSG_LEN: usize = 500;
 static REQUESTS_INFLIGHT: Counter = Counter::new_counter("edenapi.req_inflight");
 static FILES_ATTRS_INFLIGHT: Counter = Counter::new_counter("edenapi.files_attrs_inflight");
 
-pub static RECENT_DOGFOODING_REQUESTS: Lazy<ExpiringBool> =
-    Lazy::new(|| ExpiringBool::new(Duration::from_secs(5)));
+pub static RECENT_DOGFOODING_REQUESTS: LazyLock<ExpiringBool> =
+    LazyLock::new(|| ExpiringBool::new(Duration::from_secs(5)));
 
 pub mod paths {
     pub const ALTER_SNAPSHOT: &str = "snapshot/alter";

@@ -8,17 +8,17 @@
 use std::ffi::OsString;
 use std::path::Path;
 use std::sync::Arc;
+use std::sync::OnceLock;
 use std::time::Duration;
 
 use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
-use once_cell::sync::OnceCell;
 use tokio::time::timeout;
 
 pub struct DeferredWatchmanClient {
     config: Arc<dyn Config>,
-    watchman_client: OnceCell<Arc<watchman_client::Client>>,
+    watchman_client: OnceLock<Arc<watchman_client::Client>>,
 }
 
 // Defer connection attempt to watchman until necessary.

@@ -18,7 +18,6 @@ rust_library(
         },
     },
     deps = [
-        "fbsource//third-party/rust:once_cell",
         "fbsource//third-party/rust:parking_lot",
         "fbsource//third-party/rust:pipe",
         "fbsource//third-party/rust:terminal_size",

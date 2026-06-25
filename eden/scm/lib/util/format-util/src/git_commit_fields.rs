@@ -7,13 +7,13 @@
 
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
+use std::sync::OnceLock;
 
 use anyhow::Context as _;
 use anyhow::Result;
 use anyhow::bail;
 use anyhow::ensure;
 use minibytes::Text;
-use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use types::Id20;
 use types::SerializationFormat;
@@ -31,7 +31,7 @@ use crate::utils::write_multi_line;
 /// Holds the Git commit text. Fields can be lazily fields.
 pub struct GitCommitLazyFields {
     text: Text,
-    fields: OnceCell<Box<GitCommitFields>>,
+    fields: OnceLock<Box<GitCommitFields>>,
 }
 
 /// Fields of a git commit. Enough information to serialize to text.

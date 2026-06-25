@@ -7,6 +7,7 @@
 
 //! edenfsctl top
 
+use std::sync::LazyLock;
 use std::sync::RwLock;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
@@ -15,7 +16,6 @@ use std::time::Duration;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
-use once_cell::sync::Lazy;
 use termwiz::Error;
 use termwiz::caps::Capabilities;
 use termwiz::color::ColorAttribute;
@@ -64,7 +64,8 @@ enum Pages {
 // cycle, and it will cause errors to render anything to a widget of zero size.
 // Disclaimer: this is a hack. Ideally termwiz would manage visible and hidden
 // widgets.
-static OBSERVED_ACTIVE_PAGE: Lazy<RwLock<Pages>> = Lazy::new(|| RwLock::new(Pages::MainPage));
+static OBSERVED_ACTIVE_PAGE: LazyLock<RwLock<Pages>> =
+    LazyLock::new(|| RwLock::new(Pages::MainPage));
 
 struct EdenTopHeader {}
 

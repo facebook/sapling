@@ -5,13 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#![feature(once_cell_try)]
+
 use std::collections::HashMap;
+use std::sync::LazyLock;
+use std::sync::OnceLock;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 
 use futures::Future;
-use once_cell::sync::Lazy;
-use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
 
 #[cfg_attr(not(feature = "ods"), path = "dummy_ods.rs")]
@@ -21,7 +23,7 @@ pub mod ods;
 // ODS is updated 0.1% of the time, and otherwise every 60s via EdenFS backingstore flush task.
 pub struct Counter {
     name: &'static str,
-    counter: OnceCell<Inner>,
+    counter: OnceLock<Inner>,
     gauge: bool,
 }
 
@@ -41,7 +43,7 @@ impl Counter {
         // Unfortunately we can't check name this here because of const restriction
         Self {
             name,
-            counter: OnceCell::new(),
+            counter: OnceLock::new(),
             gauge: false,
         }
     }
@@ -151,7 +153,7 @@ pub struct Registry {
 
 impl Registry {
     pub fn global() -> &'static Self {
-        static REGISTRY: Lazy<Registry> = Lazy::new(Registry::default);
+        static REGISTRY: LazyLock<Registry> = LazyLock::new(Registry::default);
         &REGISTRY
     }
 
