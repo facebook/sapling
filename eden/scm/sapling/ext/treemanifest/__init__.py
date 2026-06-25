@@ -426,8 +426,11 @@ class treemanifestlog:
         Goes through the Rust tree resolver chain by default.
         Overridden by bundlemanifestlog to use the Python datastore.
         """
-        return self._repo._rsrepo.manifest_by_root_id(
-            node if node is not None else nullid
+        return _apply_pymanifest_config(
+            self._repo,
+            self._repo._rsrepo.manifest_by_root_id(
+                node if node is not None else nullid
+            ),
         )
 
     @util.propertycache
@@ -539,6 +542,13 @@ class treemanifestlog:
         return None
 
 
+def _apply_pymanifest_config(repo, tree):
+    regex = repo.ui.config("experimental", "slacl-ignore-permission-denied-regex")
+    if regex:
+        tree.set_ignore_permission_denied_regex(regex)
+    return tree
+
+
 def _buildtree_from_store(manifestlog, node=None):
     """Create a tree manifest from the Python datastore.
 
@@ -557,9 +567,10 @@ def _buildtree_from_store(manifestlog, node=None):
         store = store._store
     initfn = rustmanifest.treemanifest
     if node is not None and node != nullid:
-        return initfn(store, node)
+        tree = initfn(store, node)
     else:
-        return initfn(store)
+        tree = initfn(store)
+    return _apply_pymanifest_config(manifestlog._repo, tree)
 
 
 def _finalize(manifestlog, tree, p1node=None, p2node=None):

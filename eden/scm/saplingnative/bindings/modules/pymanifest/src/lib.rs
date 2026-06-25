@@ -41,6 +41,7 @@ use pathmatcher::Matcher;
 use pathmatcher::TreeMatcher;
 use pypathmatcher::extract_matcher;
 use pypathmatcher::extract_option_matcher;
+use regex::Regex;
 use types::Node;
 use types::RepoPathBuf;
 
@@ -84,6 +85,7 @@ impl treemanifest {
             py,
             Arc::new(RwLock::new(underlying)),
             RefCell::new(HashSet::new()),
+            RefCell::new(None),
         )
     }
 }
@@ -91,6 +93,7 @@ impl treemanifest {
 py_class!(pub class treemanifest |py| {
     data underlying: Arc<RwLock<TreeManifest>>;
     data pending_delete: RefCell<HashSet<RepoPathBuf>>;
+    data ignore_permission_denied_regex: RefCell<Option<Regex>>;
 
     def __new__(
         _cls,
@@ -110,8 +113,16 @@ py_class!(pub class treemanifest |py| {
         treemanifest::create_instance(
             py,
             Arc::new(RwLock::new(self.underlying(py).read().clone())),
-            self.pending_delete(py).clone()
+            self.pending_delete(py).clone(),
+            self.ignore_permission_denied_regex(py).clone()
         )
+    }
+
+    def set_ignore_permission_denied_regex(&self, pattern: String) -> PyResult<PyNone> {
+        let regex = Regex::new(&pattern)
+            .map_err(|err| PyErr::new::<exc::ValueError, _>(py, err.to_string()))?;
+        self.ignore_permission_denied_regex(py).replace(Some(regex));
+        Ok(PyNone)
     }
 
     /// Returns (node, flag) for a given `path` in the manifest.
@@ -128,8 +139,7 @@ py_class!(pub class treemanifest |py| {
                 return Err(PyErr::new::<exc::KeyError, _>(py, msg))
             }
         };
-        let tree = self.underlying(py).read();
-        match tree.get_file(repo_path).map_pyerr(py)? {
+        match manifest_get_file(py, self, repo_path)? {
             None => {
                 let msg = format!("cannot find file '{repo_path}' in manifest");
                 Err(PyErr::new::<exc::KeyError, _>(py, msg))
@@ -140,28 +150,21 @@ py_class!(pub class treemanifest |py| {
 
     def get(&self, path: PyPathBuf, default: Option<PyBytes> = None) -> PyResult<Option<PyBytes>> {
         let repo_path = path.to_repo_path().map_pyerr(py)?;
-        let tree = self.underlying(py).read();
-        let result = tree
-            .get_file(repo_path)
-            .map_pyerr(py)?
+        let result = manifest_get_file(py, self, repo_path)?
             .map(|file_metadata| node_to_pybytes(py, file_metadata.hgid));
         Ok(result.or(default))
     }
 
     def flags(&self, path: PyPathBuf, default: Option<PyString> = None) -> PyResult<PyString> {
         let repo_path = path.to_repo_path().map_pyerr(py)?;
-        let tree = self.underlying(py).read();
-        let result = tree
-            .get_file(repo_path)
-            .map_pyerr(py)?
+        let result = manifest_get_file(py, self, repo_path)?
             .map(|file_metadata| file_type_to_pystring(py, file_metadata.file_type));
         Ok(result.or(default).unwrap_or_else(|| PyString::new(py, "")))
     }
 
     def hasdir(&self, path: PyPathBuf) -> PyResult<bool> {
         let repo_path = path.to_repo_path().map_pyerr(py)?;
-        let tree = self.underlying(py).read();
-        let result = match tree.get(repo_path).map_pyerr(py)? {
+        let result = match manifest_get(py, self, repo_path)? {
             Some(FsNodeMetadata::Directory(_)) => true,
             _ => false
         };
@@ -171,10 +174,16 @@ py_class!(pub class treemanifest |py| {
     /// Return path is present (True), absent (False), or restricted (None).
     def lookup(&self, path: PyPathBuf) -> PyResult<Option<bool>> {
         let repo_path = path.to_repo_path().map_pyerr(py)?;
-        let tree = self.underlying(py).read();
-        match tree.get(repo_path) {
+        let result = self.underlying(py).read().get(repo_path);
+        match result {
             Ok(entry) => Ok(Some(entry.is_some())),
-            Err(err) if err.is::<types::errors::PermissionDenied>() => Ok(None),
+            Err(err) if err.is::<types::errors::PermissionDenied>() => {
+                if should_ignore_permission_denied(py, self)? {
+                    Ok(Some(false))
+                } else {
+                    Ok(None)
+                }
+            }
             Err(err) => Err(err).map_pyerr(py),
         }
     }
@@ -347,7 +356,7 @@ py_class!(pub class treemanifest |py| {
         let tree = self.underlying(py);
         let repo_path_buf = path.to_repo_path_buf().map_pyerr(py)?;
         let file_type = pystring_to_file_type(py, flag)?;
-        let file_metadata = match tree.read().get_file(&repo_path_buf).map_pyerr(py)? {
+        let file_metadata = match manifest_get_file(py, self, &repo_path_buf)? {
             None => {
                 let msg = "cannot setflag on file that is not in manifest";
                 return Err(PyErr::new::<exc::KeyError, _>(py, msg));
@@ -561,7 +570,7 @@ py_class!(pub class treemanifest |py| {
         let tree = self.underlying(py);
         let repo_path_buf = path.to_repo_path_buf().map_pyerr(py)?;
         let node = pybytes_to_node(py, binnode)?;
-        let file_metadata = match tree.read().get_file(&repo_path_buf).map_pyerr(py)? {
+        let file_metadata = match manifest_get_file(py, self, &repo_path_buf)? {
             None => FileMetadata::new(node, FileType::Regular),
             Some(mut file_metadata) => {
                 file_metadata.hgid = node;
@@ -590,8 +599,7 @@ py_class!(pub class treemanifest |py| {
 
     def __getitem__(&self, path: PyPathBuf) -> PyResult<PyBytes> {
         let repo_path = path.to_repo_path().map_pyerr(py)?;
-        let tree = self.underlying(py).read();
-        match tree.get_file(repo_path).map_pyerr(py)? {
+        match manifest_get_file(py, self, repo_path)? {
             Some(file_metadata) => Ok(node_to_pybytes(py, file_metadata.hgid)),
             None => Err(PyErr::new::<exc::KeyError, _>(py, format!("file {path} not found"))),
         }
@@ -620,8 +628,7 @@ py_class!(pub class treemanifest |py| {
 
     def __contains__(&self, path: PyPathBuf) -> PyResult<bool> {
         let repo_path = path.to_repo_path().map_pyerr(py)?;
-        let tree = self.underlying(py).read();
-        match tree.get_file(repo_path).map_pyerr(py)? {
+        match manifest_get_file(py, self, repo_path)? {
             Some(_) => Ok(true),
             None => Ok(false),
         }
@@ -704,13 +711,28 @@ py_class!(pub class treemanifest |py| {
     }
 
     @classmethod def applydiffgrafts(_cls, m1: &treemanifest, m2: &treemanifest) -> PyResult<(Self, Self)> {
+        let ignore_permission_denied_regex = m1
+            .ignore_permission_denied_regex(py)
+            .borrow()
+            .clone()
+            .or_else(|| m2.ignore_permission_denied_regex(py).borrow().clone());
         let (m1, m2) = apply_diff_grafts(
             &m1.underlying(py).read(),
             &m2.underlying(py).read(),
         ).map_pyerr(py)?;
         Ok((
-            Self::create_instance(py, Arc::new(RwLock::new(m1)), Default::default())?,
-            Self::create_instance(py, Arc::new(RwLock::new(m2)), Default::default())?,
+            Self::create_instance(
+                py,
+                Arc::new(RwLock::new(m1)),
+                Default::default(),
+                RefCell::new(ignore_permission_denied_regex.clone())
+            )?,
+            Self::create_instance(
+                py,
+                Arc::new(RwLock::new(m2)),
+                Default::default(),
+                RefCell::new(ignore_permission_denied_regex)
+            )?,
         ))
     }
 
@@ -798,7 +820,66 @@ fn test_treemanifest(py: Python) -> PyResult<treemanifest> {
         py,
         Arc::new(RwLock::new(manifest)),
         RefCell::new(HashSet::new()),
+        RefCell::new(None),
     )
+}
+
+fn manifest_get(
+    py: Python,
+    manifest: &treemanifest,
+    path: &types::RepoPath,
+) -> PyResult<Option<FsNodeMetadata>> {
+    let result = manifest.underlying(py).read().get(path);
+    match result {
+        Ok(entry) => Ok(entry),
+        Err(err) if err.is::<types::errors::PermissionDenied>() => {
+            if should_ignore_permission_denied(py, manifest)? {
+                Ok(None)
+            } else {
+                Err(err).map_pyerr(py)
+            }
+        }
+        Err(err) => Err(err).map_pyerr(py),
+    }
+}
+
+fn manifest_get_file(
+    py: Python,
+    manifest: &treemanifest,
+    path: &types::RepoPath,
+) -> PyResult<Option<FileMetadata>> {
+    let result = manifest.underlying(py).read().get_file(path);
+    match result {
+        Ok(entry) => Ok(entry),
+        Err(err) if err.is::<types::errors::PermissionDenied>() => {
+            if should_ignore_permission_denied(py, manifest)? {
+                Ok(None)
+            } else {
+                Err(err).map_pyerr(py)
+            }
+        }
+        Err(err) => Err(err).map_pyerr(py),
+    }
+}
+
+fn should_ignore_permission_denied(py: Python, manifest: &treemanifest) -> PyResult<bool> {
+    let regex = manifest.ignore_permission_denied_regex(py).borrow().clone();
+    let Some(regex) = regex else {
+        return Ok(false);
+    };
+    let stack = format_python_stack(py)?;
+    Ok(regex.is_match(&stack))
+}
+
+fn format_python_stack(py: Python) -> PyResult<String> {
+    let traceback = PyModule::import(py, "traceback")?;
+    let py_message = traceback.call(py, "format_stack", NoArgs, None)?;
+    let py_lines = PyList::extract(py, &py_message)?;
+    let lines: Vec<String> = py_lines
+        .iter(py)
+        .map(|l| l.extract::<String>(py).unwrap_or_default())
+        .collect();
+    Ok(lines.join(""))
 }
 
 fn insert(

@@ -10,6 +10,7 @@ anyhow = "1.0.102"
 cpython = { version = "0.7.2", features = ["python3-sys"], default-features = false }
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }
 pypathmatcher = { version = "0.1.0", path = "../pypathmatcher" }
+regex = "1.12.4"
 sapling-cpython-ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
 sapling-manifest = { version = "0.1.0", path = "../../../../lib/manifest" }
 sapling-manifest-tree = { version = "0.1.0", path = "../../../../lib/manifest-tree" }

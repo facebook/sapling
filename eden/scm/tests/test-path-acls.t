@@ -56,6 +56,21 @@ Doesn't having warning since it uses dirstate to walk.
     'restricted' is restricted by ACL 'some-acl'
   [1]
 
+Experimental fallback can treat matching Python manifest lookups as not found:
+  $ cat > check_manifest_get.py <<'PY'
+  > from sapling import error, hg, ui as uimod
+  > repo = hg.repository(uimod.ui.load(), ".")
+  > try:
+  >     print(repo["."].manifest().get("restricted/secret.txt", b"missing"))
+  > except error.PermissionDeniedError:
+  >     print("permission denied")
+  > PY
+  $ sl debugpython -- check_manifest_get.py
+  permission denied
+  $ setconfig experimental.slacl-ignore-permission-denied-regex=check_manifest_get.py
+  $ sl debugpython -- check_manifest_get.py
+  b'missing'
+
 Make sure root tree has acl indices populated in cache
   $ sl debugscmstore -r $A '' --mode=tree | grep -A 4 acl_children_indices
                           acl_children_indices: Some(
