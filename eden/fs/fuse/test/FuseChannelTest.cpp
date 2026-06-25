@@ -6,6 +6,7 @@
  */
 
 #include "eden/fs/fuse/FuseChannel.h"
+#include "eden/fs/fuse/FuseTransport.h"
 #include "eden/fs/fuse/IoUringFuseTransport.h"
 
 #include <folly/Random.h>
@@ -255,6 +256,12 @@ TEST_F(FuseChannelTest, testInitNegotiatesIoUringOnlyOnAllowedKernel) {
       /*fuseMaxPages=*/0,
       /*useIoUring=*/true,
       /*ioUringKernelReleaseRegex=*/"^" + getRunningKernelReleaseForTest());
+  if (folly::StringPiece{channel->getDesiredTransportName()} !=
+      kIoUringFuseTransportName) {
+    GTEST_SKIP()
+        << "FUSE io_uring transport is not available in this test environment";
+  }
+
   auto completeFuture = performInit(
       channel.get(),
       FUSE_KERNEL_VERSION,

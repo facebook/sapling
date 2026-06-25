@@ -18,6 +18,7 @@
 #if EDEN_HAVE_FUSE_IO_URING
 #include <sys/utsname.h>
 #endif
+#include <cerrno>
 #include <chrono>
 #include <csignal>
 #include <exception>
@@ -48,6 +49,79 @@ using std::string;
 namespace facebook::eden {
 
 namespace {
+
+#if EDEN_HAVE_FUSE_IO_URING
+struct IoUringTransportAvailability {
+  bool allowed;
+  int errnum;
+  const char* operation;
+  const char* reason;
+};
+
+IoUringTransportAvailability makeIoUringAvailabilityResult(
+    const char* operation,
+    int errnum) {
+  switch (errnum) {
+    case 0:
+      return IoUringTransportAvailability{
+          /*allowed=*/true,
+          /*errnum=*/0,
+          /*operation=*/operation,
+          /*reason=*/"available",
+      };
+    case EPERM:
+    case EACCES:
+      return IoUringTransportAvailability{
+          /*allowed=*/false,
+          /*errnum=*/errnum,
+          /*operation=*/operation,
+          /*reason=*/"blocked or disabled",
+      };
+    case ENOSYS:
+      return IoUringTransportAvailability{
+          /*allowed=*/false,
+          /*errnum=*/errnum,
+          /*operation=*/operation,
+          /*reason=*/"unavailable or hidden by seccomp",
+      };
+    default:
+      return IoUringTransportAvailability{
+          /*allowed=*/false,
+          /*errnum=*/errnum,
+          /*operation=*/operation,
+          /*reason=*/"failed availability probe",
+      };
+  }
+}
+
+IoUringTransportAvailability checkIoUringTransportAvailability(
+    int fuseFd,
+    uint32_t queueDepth) {
+  if (fuseFd < 0) {
+    return makeIoUringAvailabilityResult("register_files", EBADF);
+  }
+
+  io_uring ring = {};
+  io_uring_params params = {};
+  auto depth = static_cast<unsigned>(queueDepth + 1);
+  params.flags = IORING_SETUP_CQSIZE | IORING_SETUP_SQE128;
+  params.cq_entries = depth * 2;
+
+  auto ret = io_uring_queue_init_params(depth, &ring, &params);
+  if (ret != 0) {
+    return makeIoUringAvailabilityResult("setup", -ret);
+  }
+
+  int files[1] = {fuseFd};
+  ret = io_uring_register_files(&ring, files, 1);
+  io_uring_queue_exit(&ring);
+  if (ret != 0) {
+    return makeIoUringAvailabilityResult("register_files", -ret);
+  }
+
+  return makeIoUringAvailabilityResult("transport", 0);
+}
+#endif
 
 /**
  * For most FUSE requests, the protocol is simple: an optional request
@@ -775,23 +849,60 @@ ProcessAccessLog::AccessType fuseOpcodeAccessType(uint32_t opcode) {
 }
 
 #if EDEN_HAVE_FUSE_IO_URING
-bool FuseChannel::isKernelAllowedForIoUring(
-    folly::StringPiece kernelRelease) const {
-  if (ioUringKernelReleaseRegex_.empty()) {
-    return false;
-  }
+bool FuseChannel::isIoUringTransportAvailable() const {
+  folly::call_once(ioUringTransportAvailabilityInitFlag_, [this] {
+    if (!useIoUring_) {
+      return;
+    }
 
-  re2::RE2 regex{ioUringKernelReleaseRegex_};
-  if (!regex.ok()) {
-    XLOGF(
-        WARN,
-        "Not negotiating FUSE io_uring because kernel release regex \"{}\" is invalid: {}",
-        ioUringKernelReleaseRegex_,
-        regex.error());
-    return false;
-  }
+    if (ioUringKernelReleaseRegex_.empty()) {
+      XLOGF(
+          WARN,
+          "Not negotiating FUSE io_uring on mount \"{}\": no kernel release regex is configured",
+          mountPath_);
+      return;
+    }
 
-  return re2::RE2::PartialMatch(kernelRelease.str(), regex);
+    re2::RE2 regex{ioUringKernelReleaseRegex_};
+    if (!regex.ok()) {
+      XLOGF(
+          WARN,
+          "Not negotiating FUSE io_uring on mount \"{}\": kernel release regex \"{}\" is invalid: {}",
+          mountPath_,
+          ioUringKernelReleaseRegex_,
+          regex.error());
+      return;
+    }
+
+    const auto kernelRelease = getRunningKernelRelease();
+    if (!re2::RE2::PartialMatch(kernelRelease, regex)) {
+      XLOGF(
+          WARN,
+          "Not negotiating FUSE io_uring on mount \"{}\": kernel release \"{}\" does not match configured regex \"{}\"",
+          mountPath_,
+          kernelRelease,
+          ioUringKernelReleaseRegex_);
+      return;
+    }
+
+    const auto availability = checkIoUringTransportAvailability(
+        getFuseDeviceFd(), ioUringQueueDepth_);
+    if (!availability.allowed) {
+      XLOGF(
+          WARN,
+          "Not negotiating FUSE io_uring on mount \"{}\": io_uring {} is {}: {} ({})",
+          mountPath_,
+          availability.operation,
+          availability.reason,
+          folly::errnoStr(availability.errnum),
+          availability.errnum);
+      return;
+    }
+
+    ioUringTransportAvailable_ = true;
+  });
+
+  return ioUringTransportAvailable_;
 }
 #endif
 
@@ -1068,7 +1179,7 @@ const char* FuseChannel::getTransportName() const {
 
 const char* FuseChannel::getDesiredTransportName() const {
 #if EDEN_HAVE_FUSE_IO_URING
-  if (useIoUring_ && isKernelAllowedForIoUring(getRunningKernelRelease())) {
+  if (isIoUringTransportAvailable()) {
     return kIoUringFuseTransportName;
   }
 #endif
@@ -1941,18 +2052,8 @@ void FuseChannel::readInitPacket() {
 
   // Only return the capabilities the kernel supports.
 #if EDEN_HAVE_FUSE_IO_URING
-  if (useIoUring_) {
-    const auto kernelRelease = getRunningKernelRelease();
-    if (isKernelAllowedForIoUring(kernelRelease)) {
-      want |= FUSE_OVER_IO_URING;
-    } else {
-      XLOGF(
-          DBG1,
-          "Not negotiating FUSE io_uring on mount \"{}\": kernel release \"{}\" does not match configured regex \"{}\"",
-          mountPath_,
-          kernelRelease,
-          ioUringKernelReleaseRegex_);
-    }
+  if (isIoUringTransportAvailable()) {
+    want |= FUSE_OVER_IO_URING;
   }
 #else
   (void)useIoUring_;

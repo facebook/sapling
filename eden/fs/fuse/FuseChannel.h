@@ -885,7 +885,7 @@ class FuseChannel final : public FsChannel {
 
  private:
 #if EDEN_HAVE_FUSE_IO_URING
-  bool isKernelAllowedForIoUring(folly::StringPiece kernelRelease) const;
+  bool isIoUringTransportAvailable() const;
 #endif
 
   void setThreadSigmask();
@@ -1001,6 +1001,10 @@ class FuseChannel final : public FsChannel {
   bool useIoUring_{false};
   std::string ioUringKernelReleaseRegex_;
   uint32_t ioUringQueueDepth_{8};
+#if EDEN_HAVE_FUSE_IO_URING
+  mutable folly::once_flag ioUringTransportAvailabilityInitFlag_;
+  mutable bool ioUringTransportAvailable_{false};
+#endif
 
   /*
    * connInfo_ is modified during the initialization process,
