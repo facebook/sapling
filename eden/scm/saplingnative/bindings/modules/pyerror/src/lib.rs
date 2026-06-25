@@ -8,6 +8,8 @@
 use cpython::*;
 use cpython_ext::error;
 
+const ACL_ERROR_TARGET: &str = "acl_error";
+
 py_exception!(error, CertificateError);
 py_exception!(error, CheckoutConflictsError);
 py_exception!(error, CommitLookupError, exc::KeyError);
@@ -75,6 +77,38 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     register_error_handlers();
 
     Ok(m)
+}
+
+fn format_python_stack(py: Python) -> PyResult<String> {
+    let traceback = PyModule::import(py, "traceback")?;
+    let py_message = traceback.call(py, "format_stack", NoArgs, None)?;
+    let py_lines = PyList::extract(py, &py_message)?;
+    let lines: Vec<String> = py_lines
+        .iter(py)
+        .map(|l| l.extract::<String>(py).unwrap_or_default())
+        .collect();
+    Ok(lines.join(""))
+}
+
+fn log_permission_denied_binding(py: Python, e: &types::errors::PermissionDenied) {
+    match format_python_stack(py) {
+        Ok(python_stack) => {
+            let _ = sampling::log!(
+                target: ACL_ERROR_TARGET,
+                path = e.path.to_string(),
+                hgid = e.hgid.to_string(),
+                request_acl = &e.request_acl,
+                python_stack = python_stack
+            );
+        }
+        Err(err) => {
+            tracing::warn!(
+                target: ACL_ERROR_TARGET,
+                stack_error = ?err,
+                "failed to format Python stack"
+            );
+        }
+    }
 }
 
 fn register_error_handlers() {
@@ -198,6 +232,7 @@ fn register_error_handlers() {
             specific_error_handler(py, &e.0)
                 .or_else(|| Some(PyErr::new::<HttpError, _>(py, e.0.to_string())))
         } else if let Some(e) = e.downcast_ref::<types::errors::PermissionDenied>() {
+            log_permission_denied_binding(py, e);
             Some(PyErr::new::<PermissionDeniedError, _>(
                 py,
                 (
@@ -237,4 +272,49 @@ fn register_error_handlers() {
 
     error::register("010-specific", specific_error_handler);
     error::register("999-fallback", fallback_error_handler);
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeMap;
+    use std::sync::Arc;
+
+    use types::HgId;
+    use types::RepoPathBuf;
+
+    use super::*;
+
+    #[test]
+    fn test_permission_denied_binding_logging_samples_python_stack() {
+        let output_file =
+            std::env::temp_dir().join(format!("pyerror-acl-sampling-{}", std::process::id()));
+        let _ = std::fs::remove_file(&output_file);
+        let output_file_str = output_file.to_string_lossy();
+        let config = BTreeMap::from([
+            ("sampling.filepath", output_file_str.as_ref()),
+            ("sampling.key.acl_error", "acl_error"),
+        ]);
+        sampling::CONFIG
+            .set(Some(Arc::new(
+                sampling::SamplingConfig::new(&config).unwrap(),
+            )))
+            .ok();
+
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+        let err = types::errors::PermissionDenied {
+            path: RepoPathBuf::from_string("restricted".to_string()).unwrap(),
+            hgid: HgId::from_hex(b"1111111111111111111111111111111111111111").unwrap(),
+            request_acl: "some-acl".to_string(),
+        };
+
+        log_permission_denied_binding(py, &err);
+        sampling::flush();
+
+        let sample = std::fs::read_to_string(&output_file).unwrap();
+        assert!(sample.contains(r#""category":"acl_error""#));
+        assert!(sample.contains(r#""path":"restricted""#));
+        assert!(sample.contains(r#""request_acl":"some-acl""#));
+        assert!(sample.contains(r#""python_stack":"#));
+    }
 }
