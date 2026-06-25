@@ -7,6 +7,9 @@
 
 #include "eden/fs/inodes/CheckoutAction.h"
 
+#include <folly/coro/Collect.h>
+#include <folly/coro/Invoke.h>
+#include <folly/coro/Task.h>
 #include <folly/logging/xlog.h>
 
 #include "eden/fs/inodes/CheckoutContext.h"
@@ -185,6 +188,138 @@ ImmediateFuture<CheckoutActionResult> CheckoutAction::run(
 
             return self->doAction();
           });
+}
+
+folly::coro::now_task<CheckoutActionResult> CheckoutAction::co_run(
+    CheckoutContext* ctx,
+    ObjectStore* store) {
+  ctx->throwIfCanceled();
+
+  std::vector<folly::coro::Task<folly::Unit>> loadTasks;
+  try {
+    auto self = shared_from_this();
+
+    if (oldScmEntry_.has_value()) {
+      const auto& oldEntry = oldScmEntry_.value();
+      if (oldEntry.second.isTree()) {
+        auto getTreeSpan = ctx->createSpan("getTree");
+        loadTasks.push_back(
+            folly::coro::co_invoke(
+                [self,
+                 store,
+                 id = oldEntry.second.getObjectId(),
+                 ctx,
+                 span = std::move(
+                     getTreeSpan)]() mutable -> folly::coro::Task<folly::Unit> {
+                  co_await folly::coro::co_reschedule_on_current_executor;
+                  try {
+                    auto tree =
+                        co_await store->co_getTree(id, ctx->getFetchContext());
+                    self->setOldTree(std::move(tree));
+                  } catch (const std::exception&) {
+                    self->error(
+                        "error getting old tree",
+                        folly::exception_wrapper{std::current_exception()});
+                  }
+                  co_return folly::unit;
+                }));
+      } else {
+        loadTasks.push_back(
+            folly::coro::co_invoke(
+                [self, store, id = oldEntry.second.getObjectId(), ctx]()
+                    -> folly::coro::Task<folly::Unit> {
+                  co_await folly::coro::co_reschedule_on_current_executor;
+                  try {
+                    auto sha1 = co_await store->co_getBlobSha1(
+                        id, ctx->getFetchContext());
+                    self->setOldBlob(std::move(sha1));
+                  } catch (const std::exception&) {
+                    self->error(
+                        "error getting old blob Sha1",
+                        folly::exception_wrapper{std::current_exception()});
+                  }
+                  co_return folly::unit;
+                }));
+      }
+    }
+
+    if (newScmEntry_.has_value()) {
+      const auto& newEntry = newScmEntry_.value();
+      if (newEntry.second.isTree()) {
+        auto getTreeSpan = ctx->createSpan("getTree");
+        loadTasks.push_back(
+            folly::coro::co_invoke(
+                [self,
+                 store,
+                 id = newEntry.second.getObjectId(),
+                 ctx,
+                 span = std::move(
+                     getTreeSpan)]() mutable -> folly::coro::Task<folly::Unit> {
+                  co_await folly::coro::co_reschedule_on_current_executor;
+                  try {
+                    auto tree =
+                        co_await store->co_getTree(id, ctx->getFetchContext());
+                    self->setNewTree(std::move(tree));
+                  } catch (const std::exception&) {
+                    self->error(
+                        "error getting new tree",
+                        folly::exception_wrapper{std::current_exception()});
+                  }
+                  co_return folly::unit;
+                }));
+      } else {
+        // We don't actually compare the new blob to anything, so we don't
+        // need to fetch it. This just marks that the new inode will be a
+        // file.
+        setNewBlob();
+      }
+    }
+
+    if (!inode_) {
+      XCHECK(inodeFuture_.valid());
+      loadTasks.push_back(
+          folly::coro::co_invoke(
+              [self, future = std::move(inodeFuture_)]() mutable
+                  -> folly::coro::Task<folly::Unit> {
+                co_await folly::coro::co_reschedule_on_current_executor;
+                try {
+                  auto inode = co_await std::move(future).semi();
+                  self->setInode(std::move(inode));
+                } catch (const std::exception&) {
+                  self->error(
+                      "error getting inode",
+                      folly::exception_wrapper{std::current_exception()});
+                }
+                co_return folly::unit;
+              }));
+    }
+  } catch (const std::exception&) {
+    error(
+        "error preparing to load data for checkout action",
+        folly::exception_wrapper{std::current_exception()});
+  }
+
+  auto loadResults =
+      co_await folly::coro::collectAllTryRange(std::move(loadTasks));
+  for (auto& tryResult : loadResults) {
+    if (tryResult.hasException()) {
+      error(
+          "error loading data for checkout action",
+          std::move(tryResult.exception()));
+    }
+  }
+
+  if (!errors_.empty()) {
+    XLOG(
+        ERR,
+        "multiple errors while attempting to load data for checkout action:");
+    for (const auto& ew : errors_) {
+      XLOGF(ERR, "CheckoutAction error: {}", folly::exceptionStr(ew));
+    }
+    errors_[0].throw_exception();
+  }
+
+  co_return co_await doAction().semi();
 }
 
 void CheckoutAction::setOldTree(std::shared_ptr<const Tree> tree) {

@@ -4389,7 +4389,7 @@ folly::coro::now_task<CheckoutSubtreeResult> TreeInode::co_checkout(
             [action, ctx, store = &getObjectStore()]()
                 -> folly::coro::Task<CheckoutActionResult> {
               co_await folly::coro::co_reschedule_on_current_executor;
-              co_return co_await action->run(ctx, store).semi();
+              co_return co_await action->co_run(ctx, store);
             }));
   }
 

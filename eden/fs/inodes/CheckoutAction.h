@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <folly/coro/safe/NowTask.h>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -122,6 +123,10 @@ class CheckoutAction : public std::enable_shared_from_this<CheckoutAction> {
    * directory's inode cache in the kernel.
    */
   [[nodiscard]] ImmediateFuture<CheckoutActionResult> run(
+      CheckoutContext* ctx,
+      ObjectStore* store);
+
+  [[nodiscard]] folly::coro::now_task<CheckoutActionResult> co_run(
       CheckoutContext* ctx,
       ObjectStore* store);
 
