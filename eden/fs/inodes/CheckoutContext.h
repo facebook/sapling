@@ -167,6 +167,8 @@ class CheckoutContext {
   }
 
  private:
+  void finalizeBeforeFlush(const RootId& newSnapshot);
+
   CheckoutMode checkoutMode_;
   EdenMount* const mount_;
   RenameLock renameLock_;

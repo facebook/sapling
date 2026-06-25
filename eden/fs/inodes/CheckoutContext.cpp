@@ -88,6 +88,29 @@ void CheckoutContext::start(
 
 ImmediateFuture<vector<CheckoutConflict>> CheckoutContext::finish(
     const RootId& newSnapshot) {
+  finalizeBeforeFlush(newSnapshot);
+  return flush();
+}
+
+ImmediateFuture<vector<CheckoutConflict>> CheckoutContext::flush() {
+  if (!isDryRun()) {
+    // If we have a FUSE channel, flush all invalidations we sent to the kernel
+    // as part of the checkout operation.  This will ensure that other processes
+    // will see up-to-date data once we return.
+    //
+    // We do this after releasing the rename lock since some of the invalidation
+    // operations may be blocked waiting on FUSE unlink() and rename()
+    // operations complete.
+    return mount_->flushInvalidations().thenValue(
+        [this](auto&&) { return std::move(*conflicts_.wlock()); });
+  }
+
+  // Return conflicts_ via a move operation.  We don't need them any more, and
+  // can give ownership directly to our caller.
+  return std::move(*conflicts_.wlock());
+}
+
+void CheckoutContext::finalizeBeforeFlush(const RootId& newSnapshot) {
   auto config = mount_->getCheckoutConfig();
 
   auto parentCommit = config->getParentCommit();
@@ -108,26 +131,6 @@ ImmediateFuture<vector<CheckoutConflict>> CheckoutContext::finish(
   // Release the rename lock.
   // This allows any filesystem unlink() or rename() operations to proceed.
   renameLock_.unlock();
-
-  return flush();
-}
-
-ImmediateFuture<vector<CheckoutConflict>> CheckoutContext::flush() {
-  if (!isDryRun()) {
-    // If we have a FUSE channel, flush all invalidations we sent to the kernel
-    // as part of the checkout operation.  This will ensure that other processes
-    // will see up-to-date data once we return.
-    //
-    // We do this after releasing the rename lock since some of the invalidation
-    // operations may be blocked waiting on FUSE unlink() and rename()
-    // operations complete.
-    return mount_->flushInvalidations().thenValue(
-        [this](auto&&) { return std::move(*conflicts_.wlock()); });
-  }
-
-  // Return conflicts_ via a move operation.  We don't need them any more, and
-  // can give ownership directly to our caller.
-  return std::move(*conflicts_.wlock());
 }
 
 void CheckoutContext::addConflict(
