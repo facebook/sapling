@@ -18,6 +18,8 @@ use commit_id::print_commit_id;
 use context::CoreContext;
 use futures::stream::TryStreamExt;
 use metaconfig_types::RepoConfigRef;
+use mononoke_types::ChangesetId;
+use mononoke_types::DateTime;
 use repo_identity::RepoIdentityRef;
 use tokio::process::Command;
 
@@ -40,6 +42,10 @@ const AWS_NAMESPACE: &str = "mononoke-prod";
 const AWS_K8S_NAMESPACE: &str = "default";
 const AWS_DEPLOYMENT: &str = "mononoke-server";
 const AWS_CONTAINER: &str = "server";
+
+// How many recent prod bookmark moves to scan when locating the AWS shadow's
+// current changeset to time how far behind it is.
+const BEHIND_LOOKBACK: u32 = 1000;
 
 #[derive(Args)]
 pub struct StatusArgs {
@@ -78,7 +84,15 @@ pub async fn status(ctx: &CoreContext, repo: &Repo, args: StatusArgs) -> Result<
         Some(cs_id) => print_commit_id(ctx, repo, BONSAI, cs_id).await?,
         None => println!("(not set)"),
     }
-    print_aws_value(kubeconfig_ok, &shadow_repo, &["get", &bookmark]).await;
+    let aws_master = print_aws_value(kubeconfig_ok, &shadow_repo, &["get", &bookmark]).await;
+    print_behind(
+        ctx,
+        repo,
+        &args.bookmark,
+        internal_master,
+        aws_master.as_deref(),
+    )
+    .await?;
     println!();
 
     // --- latest movement (internal vs AWS) ---
@@ -132,6 +146,87 @@ async fn print_internal_latest_movement(
         }
     }
     Ok(())
+}
+
+/// Print how far the AWS shadow's bookmark is behind the internal repo.
+///
+/// We use the server-assigned `bookmark_update_log` timestamps (monotonic), not
+/// a changeset's client-provided author date which can be skewed. The gap is
+/// between when the internal repo last moved the bookmark and when it moved the
+/// bookmark onto the changeset the shadow currently points at.
+async fn print_behind(
+    ctx: &CoreContext,
+    repo: &Repo,
+    bookmark: &BookmarkKey,
+    internal_master: Option<ChangesetId>,
+    aws_master_raw: Option<&str>,
+) -> Result<()> {
+    let aws_master = aws_master_raw.and_then(|s| s.parse::<ChangesetId>().ok());
+    let (Some(internal_master), Some(aws_master)) = (internal_master, aws_master) else {
+        println!("  behind:   unknown (missing a bookmark value)");
+        return Ok(());
+    };
+    if internal_master == aws_master {
+        println!("  behind:   in sync");
+        return Ok(());
+    }
+
+    // Newest-first list of recent moves of this bookmark, with server timestamps.
+    let entries: Vec<_> = repo
+        .bookmark_update_log()
+        .list_bookmark_log_entries(
+            ctx.clone(),
+            bookmark.clone(),
+            BEHIND_LOOKBACK,
+            None,
+            Freshness::MostRecent,
+        )
+        .try_collect()
+        .await
+        .context("Failed to list bookmark log entries")?;
+
+    let internal_secs = entries
+        .first()
+        .map(|(_, _, _, ts)| DateTime::from(*ts).timestamp_secs());
+    let aws_secs = entries
+        .iter()
+        .find(|(_, cs_id, _, _)| *cs_id == Some(aws_master))
+        .map(|(_, _, _, ts)| DateTime::from(*ts).timestamp_secs());
+
+    match (internal_secs, aws_secs) {
+        (Some(now), Some(then)) if now >= then => {
+            println!(
+                "  behind:   AWS is {} behind prod",
+                human_duration(now - then)
+            )
+        }
+        (Some(now), Some(then)) => println!(
+            "  behind:   AWS bookmark is {} newer than prod (?)",
+            human_duration(then - now)
+        ),
+        (Some(_), None) => println!(
+            "  behind:   AWS changeset not in the last {BEHIND_LOOKBACK} prod moves (very stale or diverged)"
+        ),
+        _ => println!("  behind:   unknown (no bookmark history)"),
+    }
+    Ok(())
+}
+
+/// Render a non-negative duration in seconds as a coarse "Xd Yh" / "Xh Ym" string.
+fn human_duration(secs: i64) -> String {
+    let days = secs / 86400;
+    let hours = (secs % 86400) / 3600;
+    let mins = (secs % 3600) / 60;
+    let seconds = secs % 60;
+    if days > 0 {
+        format!("{days}d {hours}h")
+    } else if hours > 0 {
+        format!("{hours}h {mins}m")
+    } else if mins > 0 {
+        format!("{mins}m {seconds}s")
+    } else {
+        format!("{seconds}s")
+    }
 }
 
 /// Point kubectl at the AWS shadow cluster. Returns false (and prints a note) if
