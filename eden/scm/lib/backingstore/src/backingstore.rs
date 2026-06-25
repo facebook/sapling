@@ -34,6 +34,7 @@ use metrics::ods;
 use parking_lot::RwLock;
 use repo::RepoMinimalInfo;
 use repo::repo::Repo;
+use revisionstore::scmstore::KeyFetchError;
 use smallvec::SmallVec;
 use storemodel::BoxIterator;
 use storemodel::FileAuxData;
@@ -46,7 +47,10 @@ use types::FetchContext;
 use types::HgId;
 use types::Key;
 use types::RepoPath;
+use types::errors::KeyedError;
 
+use crate::ffi::ffi::BackingStoreErrorKind;
+use crate::ffi_errors::classify_backingstore_error;
 use crate::prefetch;
 use crate::prefetch::prefetch_manager;
 
@@ -851,7 +855,10 @@ where
                     for entry in iter {
                         let (key, data) = match entry {
                             Err(e) => {
-                                errors.push(e);
+                                match handle_keyed_fetch_error(&mut key_to_index, &resolve, e) {
+                                    Ok(()) => continue,
+                                    Err(e) => errors.push(e),
+                                }
                                 continue;
                             }
                             Ok(v) => v,
@@ -897,6 +904,54 @@ where
                 }
             }
         }
+    }
+}
+
+fn handle_keyed_fetch_error<OutputType, F>(
+    key_to_index: &mut HashMap<Key, SmallVec<[usize; 1]>>,
+    resolve: &F,
+    err: anyhow::Error,
+) -> std::result::Result<(), anyhow::Error>
+where
+    F: Fn(usize, Result<Option<OutputType>>),
+{
+    let key_fetch_error = err.downcast::<KeyFetchError>()?;
+
+    let KeyFetchError::KeyedError(KeyedError(key, err)) = key_fetch_error else {
+        return Err(key_fetch_error.into());
+    };
+
+    let Some(indices) = key_to_index.remove(&key) else {
+        tracing::debug!(%key, ?err, "ignoring fetch error for key outside backingstore batch");
+        return Ok(());
+    };
+
+    let error = SharedKeyedError {
+        key,
+        source: Arc::new(err),
+    };
+    for index in indices {
+        resolve(index, Err(error.clone().into()));
+    }
+
+    Ok(())
+}
+
+#[derive(Debug, Clone)]
+struct SharedKeyedError {
+    key: Key,
+    source: Arc<anyhow::Error>,
+}
+
+impl fmt::Display for SharedKeyedError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "key fetch failed {}: {:#}", self.key, self.source)
+    }
+}
+
+impl std::error::Error for SharedKeyedError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        Some(self.source.as_ref().as_ref())
     }
 }
 
@@ -1005,7 +1060,17 @@ impl fmt::Display for ErrorCollection {
 
 impl std::error::Error for ErrorCollection {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        self.0.first().map(|e| e.as_ref())
+        let source = self.0.first()?;
+
+        // PermissionDenied is key-specific. If one slips through as a loose
+        // batch iterator error, do not let missing unrelated keys inherit that
+        // classification. Other loose errors, such as network failures, may
+        // still be meaningful batch-wide causes and should remain visible.
+        if classify_backingstore_error(source).0 == BackingStoreErrorKind::PermissionDenied {
+            None
+        } else {
+            Some(source.as_ref())
+        }
     }
 }
 
@@ -1028,7 +1093,14 @@ impl Drop for BackingStore {
 
 #[cfg(test)]
 mod tests {
+    use std::cell::RefCell;
+    use std::fmt;
     use std::path::Path;
+
+    use edenapi::types::SaplingRemoteApiServerError;
+    use edenapi::types::SaplingRemoteApiServerErrorKind;
+    use types::RepoPathBuf;
+    use types::fetch_mode::FetchMode;
 
     use super::*;
 
@@ -1041,5 +1113,166 @@ mod tests {
 
         assert_eq!(path, eden_client_dir.join("walk_detector_metadata.jsonl"));
         assert!(!path.starts_with(mount));
+    }
+
+    struct MissingBatchStore;
+
+    impl LocalRemoteImpl<u8> for MissingBatchStore {
+        fn get_local_single(&self, _path: &RepoPath, _id: HgId) -> Result<Option<u8>> {
+            Ok(None)
+        }
+
+        fn get_single(&self, _fctx: FetchContext, _path: &RepoPath, _id: HgId) -> Result<u8> {
+            unreachable!("test only exercises batch fetches")
+        }
+
+        fn get_batch_iter(
+            &self,
+            _fctx: FetchContext,
+            _keys: Vec<Key>,
+        ) -> Result<BoxIterator<Result<(Key, u8)>>> {
+            let permission_denied = SaplingRemoteApiServerError {
+                err: SaplingRemoteApiServerErrorKind::PermissionDenied {
+                    tree_id: *HgId::null_id(),
+                    request_acl: "test-acl".to_string(),
+                },
+                key: None,
+            };
+            Ok(Box::new(std::iter::once(Err(permission_denied.into()))))
+        }
+    }
+
+    struct KeyedErrorBatchStore {
+        denied_key: Key,
+    }
+
+    impl LocalRemoteImpl<u8> for KeyedErrorBatchStore {
+        fn get_local_single(&self, _path: &RepoPath, _id: HgId) -> Result<Option<u8>> {
+            Ok(None)
+        }
+
+        fn get_single(&self, _fctx: FetchContext, _path: &RepoPath, _id: HgId) -> Result<u8> {
+            unreachable!("test only exercises batch fetches")
+        }
+
+        fn get_batch_iter(
+            &self,
+            _fctx: FetchContext,
+            _keys: Vec<Key>,
+        ) -> Result<BoxIterator<Result<(Key, u8)>>> {
+            let permission_denied = SaplingRemoteApiServerError {
+                err: SaplingRemoteApiServerErrorKind::PermissionDenied {
+                    tree_id: self.denied_key.hgid,
+                    request_acl: "test-acl".to_string(),
+                },
+                key: Some(self.denied_key.clone()),
+            };
+            Ok(Box::new(std::iter::once(Err(KeyFetchError::KeyedError(
+                KeyedError(self.denied_key.clone(), permission_denied.into()),
+            )
+            .into()))))
+        }
+    }
+
+    #[test]
+    fn test_batch_missing_key_error_does_not_inherit_permission_denied_source() {
+        let store = MissingBatchStore;
+        let missing_key = Key::new(
+            RepoPathBuf::from_string("missing".to_string()).unwrap(),
+            HgId::from_hex(b"1111111111111111111111111111111111111111").unwrap(),
+        );
+        let results = RefCell::new(Vec::new());
+
+        store.batch_with_callback(
+            FetchContext::new(FetchMode::AllowRemote),
+            vec![missing_key],
+            |_, result| results.borrow_mut().push(result),
+        );
+
+        let error = results
+            .into_inner()
+            .pop()
+            .expect("callback should be called for the missing key")
+            .expect_err("missing key should receive an error");
+        assert!(
+            error
+                .chain()
+                .all(|err| err.downcast_ref::<SaplingRemoteApiServerError>().is_none()),
+            "missing-key batch errors must not inherit unrelated PermissionDenied causes: {error:?}"
+        );
+    }
+
+    #[test]
+    fn test_batch_keyed_error_is_reported_only_for_that_key() {
+        let denied_key = Key::new(
+            RepoPathBuf::from_string("denied".to_string()).unwrap(),
+            HgId::from_hex(b"1111111111111111111111111111111111111111").unwrap(),
+        );
+        let missing_key = Key::new(
+            RepoPathBuf::from_string("missing".to_string()).unwrap(),
+            HgId::from_hex(b"2222222222222222222222222222222222222222").unwrap(),
+        );
+        let store = KeyedErrorBatchStore {
+            denied_key: denied_key.clone(),
+        };
+        let results = RefCell::new(Vec::new());
+
+        store.batch_with_callback(
+            FetchContext::new(FetchMode::AllowRemote),
+            vec![denied_key, missing_key],
+            |idx, result| results.borrow_mut().push((idx, result)),
+        );
+
+        let results = results.into_inner();
+        let denied_error = results
+            .iter()
+            .find(|(idx, _)| *idx == 0)
+            .expect("denied key should receive an error")
+            .1
+            .as_ref()
+            .expect_err("denied key should receive an error");
+        assert!(
+            denied_error
+                .chain()
+                .any(|err| err.downcast_ref::<SaplingRemoteApiServerError>().is_some()),
+            "denied key should keep its PermissionDenied cause: {denied_error:?}"
+        );
+
+        let missing_error = results
+            .iter()
+            .find(|(idx, _)| *idx == 1)
+            .expect("missing key should receive an error")
+            .1
+            .as_ref()
+            .expect_err("missing key should receive an error");
+        assert!(
+            missing_error
+                .chain()
+                .all(|err| err.downcast_ref::<SaplingRemoteApiServerError>().is_none()),
+            "missing key must not inherit keyed PermissionDenied causes: {missing_error:?}"
+        );
+    }
+
+    #[derive(Debug)]
+    struct TestNetworkError;
+
+    impl fmt::Display for TestNetworkError {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.write_str("test network error")
+        }
+    }
+
+    impl std::error::Error for TestNetworkError {}
+
+    #[test]
+    fn test_batch_missing_key_error_preserves_non_permission_denied_source() {
+        let collection = ErrorCollection(Arc::new(vec![TestNetworkError.into()]));
+
+        let source = std::error::Error::source(&collection)
+            .expect("non-PermissionDenied source should be preserved");
+        assert!(
+            source.downcast_ref::<TestNetworkError>().is_some(),
+            "non-PermissionDenied source should remain visible: {source:?}"
+        );
     }
 }

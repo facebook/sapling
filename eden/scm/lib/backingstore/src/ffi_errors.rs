@@ -122,7 +122,7 @@ fn extract_indexedlog_error(err: &indexedlog::Error) -> BackingStoreErrorKind {
     }
 }
 
-fn classify_backingstore_error(err: &Error) -> (BackingStoreErrorKind, Option<i32>) {
+pub(crate) fn classify_backingstore_error(err: &Error) -> (BackingStoreErrorKind, Option<i32>) {
     let mut kind = BackingStoreErrorKind::Generic;
     let mut code: Option<i32> = None;
     // Per-key batch tree fetches surface SaplingRemoteApiServerError directly,
