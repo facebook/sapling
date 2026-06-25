@@ -96,3 +96,35 @@ Matcher-scoped BFS should not check ACLs under directories it will not visit:
 
 No permission check is needed for `some_dir/secret` when only listing `some_dir/public.txt`.
   $ SL_LOG=eagerepo::api=debug sl files -r $A some_dir/public.txt 2>&1 | grep check_manifest_permission || true
+
+Diff stat from restricted to unrestricted currently aborts instead of filtering
+the restricted side.
+
+  $ newserver server3
+  $ drawdag << 'EOS'
+  > B  # B/public.txt = public v2
+  >    # B/restricted/.slacl = acl config
+  >    # B/restricted/secret.txt = secret v2
+  > |
+  > A  # A/public.txt = public v1
+  >    # A/restricted/secret.txt = secret v1
+  > EOS
+
+  $ cd
+  $ newclientrepo client3 server3
+  $ sl go -q $A
+
+  $ sl diff --stat -r $A -r $B
+  pulling '9ca8bdfec14241f36077c849d46b93e38afd340c' from 'test:server3'
+   A                     |  1 -
+   B                     |  1 +
+   public.txt            |  2 +-
+   restricted/secret.txt |  1 -
+   4 files changed, 2 insertions(+), 3 deletions(-)
+  warning: results may be incomplete due to path ACLs
+    'restricted' is restricted by ACL 'some-acl'
+  [1]
+FIXME: This should also filter the restricted side and warn, not abort.
+  $ sl diff --stat -r $B -r $A
+  abort: path 'restricted' is restricted by ACL 'some-acl'
+  [255]
