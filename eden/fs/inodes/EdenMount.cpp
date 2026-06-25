@@ -1700,6 +1700,197 @@ folly::Try<EdenMount::CheckoutSetup> EdenMount::beginCheckout(
   return folly::Try<CheckoutSetup>{std::move(setup)};
 }
 
+folly::Try<CheckoutResult> EdenMount::finalizeCheckout(
+    const std::shared_ptr<CheckoutContext>& ctx,
+    CheckoutMode checkoutMode,
+    const CheckoutTimes& checkoutTimes,
+    const folly::stop_watch<>& stopWatch,
+    const RootId& oldParent,
+    const RootId& snapshotId,
+    JournalDiffCallback* journalDiffCallback,
+    folly::Try<std::vector<CheckoutConflict>>&& conflictsResult) {
+  auto result = [&]() -> folly::Try<CheckoutResult> {
+    try {
+      if (conflictsResult.hasException()) {
+        return folly::Try<CheckoutResult>{conflictsResult.exception()};
+      }
+
+      CheckoutResult checkoutResult;
+      checkoutResult.times = checkoutTimes;
+      checkoutResult.times.didFinish = stopWatch.elapsed();
+      checkoutResult.conflicts = std::move(conflictsResult).value();
+      if (ctx->isDryRun()) {
+        // This is a dry run, so all we need to do is tell the caller
+        // about the conflicts: we should not modify any files or add
+        // any entries to the journal.
+        return folly::Try<CheckoutResult>{std::move(checkoutResult)};
+      }
+
+      {
+        auto journalSpan = ctx->createSpan("journalUpdate");
+
+        // Write a journal entry
+        //
+        // Note that we do not call journalDiffCallback->performDiff() a
+        // second time here to compute the files that are now different
+        // from the new state.  The checkout operation will only touch
+        // files that are changed between fromTree and toTree.
+        //
+        // Any files that are unclean after the checkout operation must
+        // have either been unclean before it started, or different
+        // between the two trees.  Therefore the JournalDelta already
+        // includes information that these files changed.
+        auto uncleanPaths = journalDiffCallback->stealUncleanPaths();
+        journal_->recordUncleanPaths(
+            oldParent, snapshotId, std::move(uncleanPaths));
+
+        // Record journal entries for file changes caused by
+        // a force checkout. Do this here after the checkout finishes
+        // in case there are any errors during the checkout.
+        if (checkoutMode == CheckoutMode::FORCE) {
+          for (const auto& conflict : checkoutResult.conflicts) {
+            switch (conflict.type().value()) {
+              case ConflictType::ERROR:
+                // Ignore
+                break;
+              case ConflictType::MODIFIED_REMOVED:
+                journal_->recordRemoved(
+                    RelativePathPiece(conflict.path().value()),
+                    static_cast<dtype_t>(conflict.dtype().value()));
+                break;
+              case ConflictType::UNTRACKED_ADDED:
+                // An untracked file in current differs from a tracked
+                // file inside the target commit. Basically a modify
+                journal_->recordChanged(
+                    RelativePathPiece(conflict.path().value()),
+                    static_cast<dtype_t>(conflict.dtype().value()));
+                break;
+              case ConflictType::REMOVED_MODIFIED:
+                // Not sure if the created is required
+                journal_->recordCreated(
+                    RelativePathPiece(conflict.path().value()),
+                    static_cast<dtype_t>(conflict.dtype().value()));
+                journal_->recordChanged(
+                    RelativePathPiece(conflict.path().value()),
+                    static_cast<dtype_t>(conflict.dtype().value()));
+                break;
+              case ConflictType::MISSING_REMOVED:
+                // By the comment in MISSING_REMOVED, the file should
+                // have already been removed from the filesystem so it
+                // should already be recorded
+                break;
+              case ConflictType::MODIFIED_MODIFIED:
+                journal_->recordChanged(
+                    RelativePathPiece(conflict.path().value()),
+                    static_cast<dtype_t>(conflict.dtype().value()));
+                break;
+              case ConflictType::DIRECTORY_NOT_EMPTY:
+                // Ignore
+                break;
+              default:
+                // Ignore
+                break;
+            }
+          }
+        }
+      }
+
+      return folly::Try<CheckoutResult>{std::move(checkoutResult)};
+    } catch (const std::exception&) {
+      return folly::Try<CheckoutResult>{
+          folly::exception_wrapper{std::current_exception()}};
+    }
+  }();
+
+  auto fetchStats = ctx->getStatsContext().computeStatistics();
+  auto inodeCounts = getInodeMap()->getInodeCounts();
+
+  XLOGF(
+      DBG1,
+      "{}checkout for {} from {} to {} accessed {} trees ({}% chr), {} blobs ({}% chr), and {} metadata ({}% chr).",
+      result.hasValue() ? "" : "failed ",
+      this->getPath(),
+      objectStore_->displayRootId(oldParent),
+      objectStore_->displayRootId(snapshotId),
+      fetchStats.tree.accessCount,
+      fetchStats.tree.cacheHitRate,
+      fetchStats.blob.accessCount,
+      fetchStats.blob.cacheHitRate,
+      fetchStats.blobAuxData.accessCount,
+      fetchStats.blobAuxData.cacheHitRate);
+
+  auto checkoutTimeInSeconds =
+      std::chrono::duration<double>{stopWatch.elapsed()};
+
+  uint64_t numConflicts = 0;
+  if (result.hasValue()) {
+    auto& conflicts = result.value().conflicts;
+    numConflicts = conflicts.size();
+
+    if (!ctx->isDryRun()) {
+      const auto maxConflictsToPrint =
+          getEdenConfig()->numConflictsToLog.getValue();
+      uint64_t printedConflicts = 0ull;
+      for (const auto& conflict : conflicts) {
+        if (printedConflicts == maxConflictsToPrint) {
+          XLOGF(
+              DBG2,
+              "And {} more checkout conflicts",
+              (numConflicts - printedConflicts));
+          break;
+        }
+        XLOGF(
+            DBG2,
+            "Checkout conflict on: {} of type {} with dtype {}",
+            conflict,
+            conflict.type().value(),
+            static_cast<int>(conflict.dtype().value()));
+        printedConflicts++;
+      }
+    }
+  }
+
+  // Don't log aux data fetches, because our backends don't yet support
+  // fetching aux data directly. We expect tree fetches to eventually
+  // return aux data for their entries.
+  auto finishedCheckout = FinishedCheckout{
+      getCheckoutModeString(checkoutMode).str(),
+      checkoutTimeInSeconds.count(),
+      result.hasValue(),
+      fetchStats.tree.fetchCount,
+      fetchStats.blob.fetchCount,
+      fetchStats.blobAuxData.fetchCount,
+      fetchStats.tree.accessCount,
+      fetchStats.blob.accessCount,
+      fetchStats.blobAuxData.accessCount,
+      numConflicts,
+      inodeCounts.treeCount + inodeCounts.fileCount,
+      inodeCounts.unloadedInodeCount,
+      inodeCounts.periodicLinkedUnloadInodeCount,
+      inodeCounts.periodicUnlinkedUnloadInodeCount};
+  if (result.hasValue()) {
+    finishedCheckout.populateCheckoutDurations(
+        std::chrono::duration_cast<std::chrono::microseconds>(
+            result.value().times.didLookupTrees)
+            .count(),
+        std::chrono::duration_cast<std::chrono::microseconds>(
+            result.value().times.didDiff)
+            .count(),
+        std::chrono::duration_cast<std::chrono::microseconds>(
+            result.value().times.didAcquireRenameLock)
+            .count(),
+        std::chrono::duration_cast<std::chrono::microseconds>(
+            result.value().times.didCheckout)
+            .count(),
+        std::chrono::duration_cast<std::chrono::microseconds>(
+            result.value().times.didFinish)
+            .count());
+  }
+  this->serverState_->getEdenFsEventsLogger()->logEvent(finishedCheckout);
+
+  return result;
+}
+
 ImmediateFuture<CheckoutResult> EdenMount::checkout(
     TreeInodePtr rootInode,
     const RootId& snapshotId,
@@ -1872,7 +2063,7 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
                    folly::Try<std::vector<CheckoutConflict>>&& res) mutable {
         return checkoutGuard.finish(std::move(res));
       })
-      .thenValue(
+      .thenTry(
           [this,
            ctx,
            checkoutMode,
@@ -1880,180 +2071,17 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
            stopWatch,
            oldParent,
            snapshotId,
-           journalDiffCallback](std::vector<CheckoutConflict>&& conflicts) {
-            checkoutTimes->didFinish = stopWatch.elapsed();
-
-            CheckoutResult result;
-            result.times = *checkoutTimes;
-            result.conflicts = std::move(conflicts);
-            if (ctx->isDryRun()) {
-              // This is a dry run, so all we need to do is tell the caller
-              // about the conflicts: we should not modify any files or add
-              // any entries to the journal.
-              return result;
-            }
-
-            {
-              auto journalSpan = ctx->createSpan("journalUpdate");
-
-              // Write a journal entry
-              //
-              // Note that we do not call journalDiffCallback->performDiff() a
-              // second time here to compute the files that are now different
-              // from the new state.  The checkout operation will only touch
-              // files that are changed between fromTree and toTree.
-              //
-              // Any files that are unclean after the checkout operation must
-              // have either been unclean before it started, or different
-              // between the two trees.  Therefore the JournalDelta already
-              // includes information that these files changed.
-              auto uncleanPaths = journalDiffCallback->stealUncleanPaths();
-              journal_->recordUncleanPaths(
-                  oldParent, snapshotId, std::move(uncleanPaths));
-
-              // Record journal entries for file changes caused by
-              // a force checkout. Do this here after the checkout finishes
-              // in case there are any errors during the checkout.
-              if (checkoutMode == CheckoutMode::FORCE) {
-                for (const auto& conflict : result.conflicts) {
-                  switch (conflict.type().value()) {
-                    case ConflictType::ERROR:
-                      // Ignore
-                      break;
-                    case ConflictType::MODIFIED_REMOVED:
-                      journal_->recordRemoved(
-                          RelativePathPiece(conflict.path().value()),
-                          static_cast<dtype_t>(conflict.dtype().value()));
-                      break;
-                    case ConflictType::UNTRACKED_ADDED:
-                      // An untracked file in current differs from a tracked
-                      // file inside the target commit. Basically a modify
-                      journal_->recordChanged(
-                          RelativePathPiece(conflict.path().value()),
-                          static_cast<dtype_t>(conflict.dtype().value()));
-                      break;
-                    case ConflictType::REMOVED_MODIFIED:
-                      // Not sure if the created is required
-                      journal_->recordCreated(
-                          RelativePathPiece(conflict.path().value()),
-                          static_cast<dtype_t>(conflict.dtype().value()));
-                      journal_->recordChanged(
-                          RelativePathPiece(conflict.path().value()),
-                          static_cast<dtype_t>(conflict.dtype().value()));
-                      break;
-                    case ConflictType::MISSING_REMOVED:
-                      // By the comment in MISSING_REMOVED, the file should
-                      // have already been removed from the filesystem so it
-                      // should already be recorded
-                      break;
-                    case ConflictType::MODIFIED_MODIFIED:
-                      journal_->recordChanged(
-                          RelativePathPiece(conflict.path().value()),
-                          static_cast<dtype_t>(conflict.dtype().value()));
-                      break;
-                    case ConflictType::DIRECTORY_NOT_EMPTY:
-                      // Ignore
-                      break;
-                    default:
-                      // Ignore
-                      break;
-                  }
-                }
-              }
-            }
-
-            return result;
-          })
-      .thenTry([this, ctx, stopWatch, oldParent, snapshotId, checkoutMode](
-                   Try<CheckoutResult>&& result) {
-        auto fetchStats = ctx->getStatsContext().computeStatistics();
-        auto inodeCounts = getInodeMap()->getInodeCounts();
-
-        XLOGF(
-            DBG1,
-            "{}checkout for {} from {} to {} accessed {} trees ({}% chr), {} blobs ({}% chr), and {} metadata ({}% chr).",
-            result.hasValue() ? "" : "failed ",
-            this->getPath(),
-            objectStore_->displayRootId(oldParent),
-            objectStore_->displayRootId(snapshotId),
-            fetchStats.tree.accessCount,
-            fetchStats.tree.cacheHitRate,
-            fetchStats.blob.accessCount,
-            fetchStats.blob.cacheHitRate,
-            fetchStats.blobAuxData.accessCount,
-            fetchStats.blobAuxData.cacheHitRate);
-
-        auto checkoutTimeInSeconds =
-            std::chrono::duration<double>{stopWatch.elapsed()};
-
-        uint64_t numConflicts = 0;
-        if (result.hasValue()) {
-          auto& conflicts = result.value().conflicts;
-          numConflicts = conflicts.size();
-
-          if (!ctx->isDryRun()) {
-            const auto maxConflictsToPrint =
-                getEdenConfig()->numConflictsToLog.getValue();
-            uint64_t printedConflicts = 0ull;
-            for (const auto& conflict : conflicts) {
-              if (printedConflicts == maxConflictsToPrint) {
-                XLOGF(
-                    DBG2,
-                    "And {} more checkout conflicts",
-                    (numConflicts - printedConflicts));
-                break;
-              }
-              XLOGF(
-                  DBG2,
-                  "Checkout conflict on: {} of type {} with dtype {}",
-                  conflict,
-                  conflict.type().value(),
-                  static_cast<int>(conflict.dtype().value()));
-              printedConflicts++;
-            }
-          }
-        }
-
-        // Don't log aux data fetches, because our backends don't yet support
-        // fetching aux data directly. We expect tree fetches to eventually
-        // return aux data for their entries.
-        auto finishedCheckout = FinishedCheckout{
-            getCheckoutModeString(checkoutMode).str(),
-            checkoutTimeInSeconds.count(),
-            result.hasValue(),
-            fetchStats.tree.fetchCount,
-            fetchStats.blob.fetchCount,
-            fetchStats.blobAuxData.fetchCount,
-            fetchStats.tree.accessCount,
-            fetchStats.blob.accessCount,
-            fetchStats.blobAuxData.accessCount,
-            numConflicts,
-            inodeCounts.treeCount + inodeCounts.fileCount,
-            inodeCounts.unloadedInodeCount,
-            inodeCounts.periodicLinkedUnloadInodeCount,
-            inodeCounts.periodicUnlinkedUnloadInodeCount};
-        if (result.hasValue()) {
-          finishedCheckout.populateCheckoutDurations(
-              std::chrono::duration_cast<std::chrono::microseconds>(
-                  result.value().times.didLookupTrees)
-                  .count(),
-              std::chrono::duration_cast<std::chrono::microseconds>(
-                  result.value().times.didDiff)
-                  .count(),
-              std::chrono::duration_cast<std::chrono::microseconds>(
-                  result.value().times.didAcquireRenameLock)
-                  .count(),
-              std::chrono::duration_cast<std::chrono::microseconds>(
-                  result.value().times.didCheckout)
-                  .count(),
-              std::chrono::duration_cast<std::chrono::microseconds>(
-                  result.value().times.didFinish)
-                  .count());
-        }
-        this->serverState_->getEdenFsEventsLogger()->logEvent(finishedCheckout);
-
-        return std::move(result);
-      });
+           journalDiffCallback](Try<std::vector<CheckoutConflict>>&& result) {
+            return finalizeCheckout(
+                ctx,
+                checkoutMode,
+                *checkoutTimes,
+                stopWatch,
+                oldParent,
+                snapshotId,
+                journalDiffCallback.get(),
+                std::move(result));
+          });
 }
 
 void EdenMount::forgetStaleInodes() {

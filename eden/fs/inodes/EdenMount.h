@@ -19,6 +19,7 @@
 #include <folly/futures/Promise.h>
 #include <folly/futures/SharedPromise.h>
 #include <folly/logging/Logger.h>
+#include <folly/stop_watch.h>
 #include <gflags/gflags.h>
 #include <chrono>
 #include <cstdint>
@@ -73,6 +74,7 @@ class BindMount;
 class BlobCache;
 class CheckoutConfig;
 class CheckoutConflict;
+class CheckoutContext;
 class Clock;
 class DiffContext;
 class EdenConfig;
@@ -818,6 +820,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
       CheckoutMode checkoutMode = CheckoutMode::NORMAL);
 
  private:
+  class JournalDiffCallback;
   struct CheckoutInProgressGuard;
   struct CheckoutSetup;
 
@@ -832,6 +835,16 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
       const ObjectFetchContextPtr& fetchContext,
       folly::StringPiece thriftMethodCaller,
       CheckoutMode checkoutMode);
+
+  folly::Try<CheckoutResult> finalizeCheckout(
+      const std::shared_ptr<CheckoutContext>& ctx,
+      CheckoutMode checkoutMode,
+      const CheckoutTimes& checkoutTimes,
+      const folly::stop_watch<>& stopWatch,
+      const RootId& oldParent,
+      const RootId& snapshotId,
+      JournalDiffCallback* journalDiffCallback,
+      folly::Try<std::vector<CheckoutConflict>>&& conflictsResult);
 
  public:
   /**
@@ -1209,7 +1222,6 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
  private:
   friend class RenameLock;
   friend class SharedRenameLock;
-  class JournalDiffCallback;
 
   /**
    * Convert a FsChannelPtr (unique_ptr with FsChannelDeleter) to a
