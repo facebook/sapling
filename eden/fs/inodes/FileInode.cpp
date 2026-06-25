@@ -12,6 +12,8 @@
 
 #include <folly/coro/Collect.h>
 #include <folly/coro/Invoke.h>
+#include <folly/coro/Task.h>
+#include <folly/coro/safe/NowTask.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <folly/io/async/EventBase.h>
@@ -779,6 +781,78 @@ ImmediateFuture<bool> FileInode::isSameAs(
           return std::get<0>(ids) == std::get<1>(ids);
         }
       });
+}
+
+// Slow path: fetch SHA-1 (cached on the inode or computed from the backing
+// blob) and compare against the expected value.
+folly::coro::now_task<bool> co_isSameAsSlowImpl(
+    FileInode* self,
+    Hash20 expectedBlobSha1,
+    ObjectFetchContextPtr fetchContext) {
+  auto try_ = co_await folly::coro::co_awaitTry(self->co_getSha1(fetchContext));
+  if (try_.hasException()) {
+    XLOGF(DBG2, "Assuming changed: {}", try_.exception());
+    co_return false;
+  }
+  co_return std::move(try_).value() == expectedBlobSha1;
+}
+
+folly::coro::now_task<bool> FileInode::co_isSameAs(
+    const ObjectId& id,
+    const Blob& blob,
+    TreeEntryType entryType,
+    const ObjectFetchContextPtr& fetchContext) {
+  auto result = isSameAsFast(id, entryType);
+  if (result.has_value()) {
+    co_return result.value();
+  }
+  co_return co_await co_isSameAsSlowImpl(
+      this, Hash20::sha1(blob.getContents()), fetchContext.copy());
+}
+
+folly::coro::now_task<bool> FileInode::co_isSameAs(
+    const ObjectId& blobID,
+    const Hash20& blobSha1,
+    TreeEntryType entryType,
+    const ObjectFetchContextPtr& fetchContext) {
+  auto result = isSameAsFast(blobID, entryType);
+  if (result.has_value()) {
+    co_return result.value();
+  }
+  co_return co_await co_isSameAsSlowImpl(this, blobSha1, fetchContext.copy());
+}
+
+folly::coro::now_task<bool> FileInode::co_isSameAs(
+    const ObjectId& blobID,
+    TreeEntryType entryType,
+    const ObjectFetchContextPtr& fetchContext) {
+  auto result = isSameAsFast(blobID, entryType);
+  if (result.has_value()) {
+    co_return result.value();
+  }
+
+  // Run the SHA-1 fetches in parallel via folly::coro::collectAllTry.
+  auto results = co_await folly::coro::collectAllTry(
+      folly::coro::co_invoke(
+          [self = this,
+           fetchContext = fetchContext.copy()]() -> folly::coro::Task<Hash20> {
+            co_return co_await self->co_getSha1(fetchContext);
+          }),
+      folly::coro::co_invoke(
+          [&store = getObjectStore(),
+           blobID,
+           fetchContext = fetchContext.copy()]() -> folly::coro::Task<Hash20> {
+            co_return co_await store.co_getBlobSha1(blobID, fetchContext);
+          }));
+  auto& [t1, t2] = results;
+  if (t1.hasException() || t2.hasException()) {
+    XLOGF(
+        DBG2,
+        "Assuming changed: {}",
+        t1.hasException() ? t1.exception() : t2.exception());
+    co_return false;
+  }
+  co_return t1.value() == t2.value();
 }
 
 #ifndef _WIN32

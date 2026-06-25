@@ -275,6 +275,21 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
       TreeEntryType entryType,
       const ObjectFetchContextPtr& fetchContext);
 
+  folly::coro::now_task<bool> co_isSameAs(
+      const ObjectId& blobID,
+      const Blob& blob,
+      TreeEntryType entryType,
+      const ObjectFetchContextPtr& fetchContext);
+  folly::coro::now_task<bool> co_isSameAs(
+      const ObjectId& blobID,
+      const Hash20& blobSha1,
+      TreeEntryType entryType,
+      const ObjectFetchContextPtr& fetchContext);
+  folly::coro::now_task<bool> co_isSameAs(
+      const ObjectId& blobID,
+      TreeEntryType entryType,
+      const ObjectFetchContextPtr& fetchContext);
+
   /**
    * Get the file mode_t value.
    */

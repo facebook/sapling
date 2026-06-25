@@ -642,13 +642,11 @@ folly::coro::now_task<bool> CheckoutAction::co_hasConflict() {
   }
 
   auto fileInode = inode_.asFilePtrOrNull();
-  bool isSame = co_await fileInode
-                    ->isSameAs(
-                        oldScmEntry_.value().second.getObjectId(),
-                        oldBlobSha1_.value(),
-                        oldScmEntry_.value().second.getType(),
-                        ctx_->getFetchContext())
-                    .semi();
+  bool isSame = co_await fileInode->co_isSameAs(
+      oldScmEntry_.value().second.getObjectId(),
+      oldBlobSha1_.value(),
+      oldScmEntry_.value().second.getType(),
+      ctx_->getFetchContext());
   co_return classifyFileContentConflict(isSame);
 }
 } // namespace facebook::eden
