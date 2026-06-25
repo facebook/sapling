@@ -686,12 +686,28 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
  private:
   class TreeRenameLocks;
   class IncompleteInodeLoad;
+  struct CheckoutSetup;
+  struct CheckoutFinalizeState;
 
 #ifndef _WIN32
   InodeMetadata getMetadataLocked(const DirContents&) const;
 #endif
 
   struct stat statWithCurrentRestrictionState() const;
+
+  CheckoutSetup beginCheckout(
+      CheckoutContext* ctx,
+      const std::shared_ptr<const Tree>& fromTree,
+      const std::shared_ptr<const Tree>& toTree,
+      bool reportLocalOnlyAsConflicts);
+
+  folly::Try<CheckoutFinalizeState> processCheckoutActionResults(
+      CheckoutContext* ctx,
+      const std::vector<std::shared_ptr<CheckoutAction>>& actions,
+      bool shouldInvalidateDirectory,
+      bool propagateErrors,
+      bool hadConflicts,
+      std::vector<folly::Try<CheckoutActionResult>>& actionResults);
 
   /**
    * The InodeMap is guaranteed to remain valid for at least the lifetime of

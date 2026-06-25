@@ -4166,10 +4166,24 @@ folly::coro::now_task<folly::Unit> TreeInode::co_computeDiff(
   co_return folly::unit;
 }
 
-ImmediateFuture<CheckoutSubtreeResult> TreeInode::checkout(
+struct TreeInode::CheckoutSetup {
+  std::optional<MiniTracer::Span> checkoutSpan;
+  std::vector<std::shared_ptr<CheckoutAction>> actions;
+  bool shouldInvalidateDirectory{false};
+  bool propagateErrors{false};
+  bool hadConflicts{false};
+};
+
+struct TreeInode::CheckoutFinalizeState {
+  bool shouldInvalidateDirectory{false};
+  size_t numErrors{0};
+  bool hadConflicts{false};
+};
+
+TreeInode::CheckoutSetup TreeInode::beginCheckout(
     CheckoutContext* ctx,
-    std::shared_ptr<const Tree> fromTree,
-    std::shared_ptr<const Tree> toTree,
+    const std::shared_ptr<const Tree>& fromTree,
+    const std::shared_ptr<const Tree>& toTree,
     bool reportLocalOnlyAsConflicts) {
   XLOGF(
       DBG4,
@@ -4178,32 +4192,31 @@ ImmediateFuture<CheckoutSubtreeResult> TreeInode::checkout(
       (fromTree ? fromTree->getObjectId().toLogString() : "<none>"),
       (toTree ? toTree->getObjectId().toLogString() : "<none>"));
 
-  auto checkoutSpan = ctx->createSpan("TreeInode::checkout");
+  CheckoutSetup setup;
+  setup.checkoutSpan = ctx->createSpan("TreeInode::checkout");
 
   ctx->throwIfCanceled();
 
-  std::vector<std::shared_ptr<CheckoutAction>> actions;
   std::vector<IncompleteInodeLoad> pendingLoads;
 
   // This default to true on Windows to always make sure that the directory is
   // a placeholder and is safe to be dematerialized. On Windows, adding a
   // placeholder to a directory is idempotent and won't fail on a directory
   // that is already a placeholder.
-  bool shouldInvalidateDirectory =
+  setup.shouldInvalidateDirectory =
       getMount()->getEdenConfig()->alwaysInvalidateDirectory.getValue();
-  bool hadConflicts = false;
 
-  bool propagateErrors =
+  setup.propagateErrors =
       getMount()->getEdenConfig()->propagateCheckoutErrors.getValue();
 
   computeCheckoutActions(
       ctx,
       fromTree.get(),
       toTree.get(),
-      actions,
+      setup.actions,
       pendingLoads,
-      shouldInvalidateDirectory,
-      hadConflicts,
+      setup.shouldInvalidateDirectory,
+      setup.hadConflicts,
       reportLocalOnlyAsConflicts);
 
   // Wire up the callbacks for any pending inode loads we started
@@ -4211,10 +4224,60 @@ ImmediateFuture<CheckoutSubtreeResult> TreeInode::checkout(
     load.finish();
   }
 
+  return setup;
+}
+
+folly::Try<TreeInode::CheckoutFinalizeState>
+TreeInode::processCheckoutActionResults(
+    CheckoutContext* ctx,
+    const std::vector<std::shared_ptr<CheckoutAction>>& actions,
+    bool shouldInvalidateDirectory,
+    bool propagateErrors,
+    bool hadConflicts,
+    std::vector<folly::Try<CheckoutActionResult>>& actionResults) {
+  CheckoutFinalizeState state;
+  state.shouldInvalidateDirectory = shouldInvalidateDirectory;
+  state.hadConflicts = hadConflicts;
+
+  // Record any errors that occurred
+  for (size_t n = 0; n < actionResults.size(); ++n) {
+    auto& result = actionResults[n];
+    if (!result.hasException()) {
+      state.hadConflicts |= result.value().hadConflicts;
+      state.shouldInvalidateDirectory |=
+          (result.value().invalidationRequired == InvalidationRequired::Yes);
+      continue;
+    }
+
+    if (propagateErrors) {
+      // If propagating errors... propagate the error. This will cause
+      // the checkout operation to fail at the top level, and leave us
+      // in an interrupted checkout state.
+      return folly::Try<CheckoutFinalizeState>{result.exception()};
+    } else {
+      // Not propagating errors - hide this error away as a "conflict".
+      // Sapling can see the error, but we pretend the checkout succeeded,
+      // which makes it hard if not impossible to recover properly.
+      ++state.numErrors;
+      state.hadConflicts = true;
+      ctx->addError(this, actions[n]->getEntryName(), result.exception());
+    }
+  }
+
+  return folly::Try<CheckoutFinalizeState>{state};
+}
+
+ImmediateFuture<CheckoutSubtreeResult> TreeInode::checkout(
+    CheckoutContext* ctx,
+    std::shared_ptr<const Tree> fromTree,
+    std::shared_ptr<const Tree> toTree,
+    bool reportLocalOnlyAsConflicts) {
+  auto setup = beginCheckout(ctx, fromTree, toTree, reportLocalOnlyAsConflicts);
+
   // Now start all of the checkout actions
   std::vector<ImmediateFuture<CheckoutActionResult>> actionFutures;
-  actionFutures.reserve(actions.size());
-  for (const auto& action : actions) {
+  actionFutures.reserve(setup.actions.size());
+  for (const auto& action : setup.actions) {
     actionFutures.emplace_back(action->run(ctx, &getObjectStore()));
   }
 
@@ -4232,44 +4295,27 @@ ImmediateFuture<CheckoutSubtreeResult> TreeInode::checkout(
           [ctx,
            self = inodePtrFromThis(),
            toTree = std::move(toTree),
-           actions = std::move(actions),
-           shouldInvalidateDirectory,
-           propagateErrors,
-           hadConflicts](
+           actions = std::move(setup.actions),
+           shouldInvalidateDirectory = setup.shouldInvalidateDirectory,
+           propagateErrors = setup.propagateErrors,
+           hadConflicts = setup.hadConflicts](
               vector<folly::Try<CheckoutActionResult>> actionResults) mutable
               -> ImmediateFuture<CheckoutSubtreeResult> {
-            // Record any errors that occurred
-            size_t numErrors = 0;
-            for (size_t n = 0; n < actionResults.size(); ++n) {
-              auto& result = actionResults[n];
-              if (!result.hasException()) {
-                hadConflicts |= result.value().hadConflicts;
-                shouldInvalidateDirectory |=
-                    (result.value().invalidationRequired ==
-                     InvalidationRequired::Yes);
-                continue;
-              }
-
-              if (propagateErrors) {
-                // If propagating errors... propagate the error. This will cause
-                // the checkout operation to fail at the top level, and leave us
-                // in an interrupted checkout state.
-                return makeImmediateFuture<CheckoutSubtreeResult>(
-                    result.exception());
-              } else {
-                // Not propagating errors - hide this error away as a
-                // "conflict". Sapling can see the error, but we pretend the
-                // checkout succeeded, which makes it hard if not impossible to
-                // recover properly.
-                ++numErrors;
-                hadConflicts = true;
-                ctx->addError(
-                    self.get(), actions[n]->getEntryName(), result.exception());
-              }
+            auto finalizeStateTry = self->processCheckoutActionResults(
+                ctx,
+                actions,
+                shouldInvalidateDirectory,
+                propagateErrors,
+                hadConflicts,
+                actionResults);
+            if (finalizeStateTry.hasException()) {
+              return makeImmediateFuture<CheckoutSubtreeResult>(
+                  finalizeStateTry.exception());
             }
+            auto finalizeState = std::move(finalizeStateTry).value();
 
             auto invalidation = ImmediateFuture<folly::Unit>{folly::unit};
-            if (shouldInvalidateDirectory) {
+            if (finalizeState.shouldInvalidateDirectory) {
               // TODO(xavierd): In theory, this should be done before running
               // the futures, while holding the contents lock all the way. The
               // reason is that we in theory need to rollback what was done in
@@ -4300,8 +4346,8 @@ ImmediateFuture<CheckoutSubtreeResult> TreeInode::checkout(
                 .thenValue([self,
                             ctx,
                             toTree = std::move(toTree),
-                            numErrors,
-                            hadConflicts](auto&&) {
+                            numErrors = finalizeState.numErrors,
+                            hadConflicts = finalizeState.hadConflicts](auto&&) {
                   // Update our state in the overlay
                   self->saveOverlayPostCheckout(ctx, toTree.get());
 
