@@ -116,3 +116,17 @@ rust_unittest(
         ],
     }),
 )
+
+rust_unittest(
+    name = "sigbus_truncate_rlock_noop_sync_test",
+    srcs = ["tests/sigbus_truncate_rlock_noop_sync.rs"],
+    crate_root = "tests/sigbus_truncate_rlock_noop_sync.rs",
+    deps = select({
+        "DEFAULT": [],
+        "ovr_config//os:linux": [
+            "fbsource//third-party/rust:libc",
+            "fbsource//third-party/rust:tempfile",
+            ":indexedlog",
+        ],
+    }),
+)
