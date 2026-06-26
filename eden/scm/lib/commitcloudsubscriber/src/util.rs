@@ -34,6 +34,23 @@ static SEC_IN_WEEK: u64 = 604800;
 /// https://developers.facebook.com/apps/184975892288525/dashboard/
 pub static COMMIT_CLOUD_APP_ID: u64 = 184975892288525u64;
 
+/// Configures `command` so spawning it does not flash a console window on
+/// Windows. The commit cloud subscriber runs as a background daemon, so without
+/// `CREATE_NO_WINDOW` every `hg cloud sync` and `clicat` invocation pops up a
+/// console window on the user's desktop, even while the machine is otherwise
+/// idle. No-op on other platforms.
+pub(crate) fn hide_console_window(command: &mut Command) {
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        // CREATE_NO_WINDOW: no console window is popped up for the child.
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        command.creation_flags(CREATE_NO_WINDOW);
+    }
+    #[cfg(not(windows))]
+    let _ = command;
+}
+
 /// Map from a subscription to list of repo roots
 pub fn read_subscriptions(joined_pool_path: &Path) -> Result<HashMap<Subscription, Vec<PathBuf>>> {
     let mut joined_pool_path = joined_pool_path.to_path_buf();
@@ -211,19 +228,20 @@ pub fn read_or_generate_access_token(user_token_path: &Option<PathBuf>) -> Resul
     let token_timeout_seconds = 1200;
     let payload = base64::engine::general_purpose::STANDARD
         .encode(json!({"app":COMMIT_CLOUD_APP_ID, "x2p": !from_prod}).to_string());
-    let output = Command::new(clicat_tool)
-        .args(vec![
-            "create",
-            "--verifier_type",
-            "SERVICE_IDENTITY",
-            "--verifier_id",
-            "interngraph",
-            "--token_timeout_seconds",
-            &token_timeout_seconds.to_string(),
-            "--payload",
-            &payload,
-        ])
-        .output();
+    let mut command = Command::new(clicat_tool);
+    command.args(vec![
+        "create",
+        "--verifier_type",
+        "SERVICE_IDENTITY",
+        "--verifier_id",
+        "interngraph",
+        "--token_timeout_seconds",
+        &token_timeout_seconds.to_string(),
+        "--payload",
+        &payload,
+    ]);
+    hide_console_window(&mut command);
+    let output = command.output();
 
     match output {
         Err(e) => {

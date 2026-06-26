@@ -36,7 +36,8 @@ impl CloudSyncTrigger {
         }
         for i in 0..retries {
             let now = Instant::now();
-            let child = Command::new("hg")
+            let mut command = Command::new("hg");
+            command
                 .current_dir(&path)
                 .env(identity::default().env_name("PLAIN").as_ref(), "hint")
                 .env("EDENSCM_LOG", "clienttelemetry=info")
@@ -48,8 +49,9 @@ impl CloudSyncTrigger {
                 .args(&workspace_args)
                 .args(vec!["--reason", &reason])
                 .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
-                .spawn()?; // do not retry if failed to start
+                .stderr(Stdio::piped());
+            crate::util::hide_console_window(&mut command);
+            let child = command.spawn()?; // do not retry if failed to start
 
             info!(
                 "{} Fire `hg cloud sync` attempt {}, spawned process id '{}'",
