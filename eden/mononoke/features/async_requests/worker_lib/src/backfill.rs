@@ -64,6 +64,18 @@ const JK_BACKFILL_CHUNK_RETRY_LIMIT: &str = "scm/mononoke:derived_data_backfill_
 const CHUNK_RETRY_BASE_BACKOFF: Duration = Duration::from_secs(1);
 const CHUNK_RETRY_MAX_BACKOFF: Duration = Duration::from_secs(30);
 
+/// JustKnob gating opportunistic boundary completion: when enabled, each
+/// boundary's predecessor derivation races against the boundary being derived
+/// by another task (e.g. a concurrent slice), so a slow predecessor derivation
+/// is abandoned as soon as it becomes redundant.
+const JK_BACKFILL_OPPORTUNISTIC_BOUNDARIES: &str =
+    "scm/mononoke:derived_data_backfill_opportunistic_boundary_completion";
+
+/// Poll interval for noticing that a boundary changeset has been derived by
+/// another task (e.g. a concurrently-running slice), so we can abandon its
+/// now-redundant predecessor derivation.
+const BOUNDARY_DERIVED_POLL_INTERVAL: Duration = Duration::from_secs(1);
+
 /// Get a DerivedDataManager with optional read/write throttling applied.
 /// If JustKnobs are not set or are zero, returns the manager unchanged.
 fn get_throttled_manager(manager: &DerivedDataManager) -> Result<DerivedDataManager> {
@@ -137,6 +149,27 @@ fn requires_serial_slice_processing(derived_data_type: DerivableType) -> bool {
         .is_err()
 }
 
+/// Resolves once `csid` has `derived_data_type` derived by any means, polling
+/// periodically. Used to race against predecessor derivation: if a concurrent
+/// slice derives the boundary first, we can abandon the slower
+/// `derive_from_predecessor` call. Transient lookup errors are ignored and
+/// retried, since predecessor derivation remains the guaranteed backstop.
+async fn wait_until_derived(
+    manager: &DerivedDataManager,
+    ctx: &CoreContext,
+    csid: ChangesetId,
+    derived_data_type: DerivableType,
+) {
+    loop {
+        tokio::time::sleep(BOUNDARY_DERIVED_POLL_INTERVAL).await;
+        if let Ok(true) =
+            BulkDerivation::is_derived(manager, ctx, csid, None, derived_data_type).await
+        {
+            return;
+        }
+    }
+}
+
 /// Compute derive_boundaries request - derives boundary changesets using predecessor derivation
 pub(crate) async fn compute_derive_boundaries(
     ctx: &CoreContext,
@@ -189,6 +222,7 @@ pub(crate) async fn compute_derive_boundaries(
     let manager = with_type_enabled(&manager, derived_data_type);
     let concurrency = params.concurrency.max(1) as usize;
     let use_predecessor = params.use_predecessor_derivation;
+    let opportunistic = justknobs::eval(JK_BACKFILL_OPPORTUNISTIC_BOUNDARIES, None, None);
 
     stream::iter(boundary_cs_ids)
         .map(Ok::<_, Error>)
@@ -198,14 +232,29 @@ pub(crate) async fn compute_derive_boundaries(
             let derived_count = derived_count.clone();
             async move {
                 if use_predecessor {
-                    BulkDerivation::unsafe_derive_untopologically(
+                    let derive = BulkDerivation::unsafe_derive_untopologically(
                         &manager,
                         &ctx,
                         csid,
                         None, // rederivation
                         derived_data_type,
-                    )
-                    .await?;
+                    );
+                    if opportunistic {
+                        // Race predecessor derivation against the boundary becoming
+                        // derived by another task (e.g. a concurrently-running slice
+                        // whose head is this boundary). Whichever happens first
+                        // satisfies the boundary; if it's derived elsewhere we drop
+                        // the now-redundant (and possibly slow) predecessor future.
+                        tokio::select! {
+                            biased;
+                            res = derive => {
+                                res?;
+                            }
+                            _ = wait_until_derived(&manager, &ctx, csid, derived_data_type) => {}
+                        }
+                    } else {
+                        derive.await?;
+                    }
                 } else {
                     manager
                         .derive_bulk_locally(
@@ -807,4 +856,79 @@ async fn process_repo_backfill(
         created_by,
     )
     .await
+}
+
+#[cfg(test)]
+mod tests {
+    use bonsai_hg_mapping::BonsaiHgMapping;
+    use bookmarks::Bookmarks;
+    use commit_graph::CommitGraph;
+    use commit_graph::CommitGraphWriter;
+    use context::CoreContext;
+    use derivation_queue_thrift::DerivationPriority;
+    use fbinit::FacebookInit;
+    use filestore::FilestoreConfig;
+    use fsnodes::RootFsnodeId;
+    use mononoke_macros::mononoke;
+    use repo_blobstore::RepoBlobstore;
+    use repo_derived_data::RepoDerivedData;
+    use repo_derived_data::RepoDerivedDataRef;
+    use repo_identity::RepoIdentity;
+    use tests_utils::CreateCommitContext;
+
+    use super::*;
+
+    #[facet::container]
+    struct TestRepo(
+        dyn BonsaiHgMapping,
+        dyn Bookmarks,
+        CommitGraph,
+        dyn CommitGraphWriter,
+        RepoDerivedData,
+        RepoBlobstore,
+        FilestoreConfig,
+        RepoIdentity,
+    );
+
+    /// `wait_until_derived` must observe a changeset transitioning to derived
+    /// (by any path) and resolve. This is the only non-trivial bit of the
+    /// opportunistic-boundary race: the `select!` itself is plumbing, but this
+    /// poll has to actually detect real derivation against a real manager.
+    #[mononoke::fbinit_test]
+    async fn wait_until_derived_resolves_after_derivation(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: TestRepo = test_repo_factory::build_empty(fb)
+            .await
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
+        let cs_id = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("a", "a")
+            .commit()
+            .await?;
+        let manager = repo.repo_derived_data().manager();
+
+        // Underived to begin with.
+        assert!(
+            !BulkDerivation::is_derived(manager, &ctx, cs_id, None, DerivableType::Fsnodes).await?,
+            "changeset should start underived",
+        );
+
+        // Derive concurrently with the waiter. The waiter must observe the
+        // transition and resolve; if it never did, this join would hang and the
+        // test would time out.
+        tokio::join!(
+            async {
+                repo.repo_derived_data()
+                    .derive::<RootFsnodeId>(&ctx, cs_id, DerivationPriority::LOW)
+                    .await
+                    .expect("derivation should succeed");
+            },
+            wait_until_derived(manager, &ctx, cs_id, DerivableType::Fsnodes),
+        );
+
+        assert!(
+            BulkDerivation::is_derived(manager, &ctx, cs_id, None, DerivableType::Fsnodes).await?,
+            "changeset should be derived after the waiter resolved",
+        );
+        Ok(())
+    }
 }

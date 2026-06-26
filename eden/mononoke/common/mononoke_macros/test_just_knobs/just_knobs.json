@@ -3,6 +3,7 @@
     "scm/mononoke:cross_repo_skip_backsyncing_ordinary_empty_commits": false,
     "scs/mononoke:defer_to_backsyncer_for_backsync": true,
     "scm/mononoke:dbcm_read_from_manifest": true,
+    "scm/mononoke:derived_data_backfill_opportunistic_boundary_completion": true,
     "scm/mononoke:derived_data_disable_derivation_workers": false,
     "scm/mononoke:derived_data_disable_remote_derivation": false,
     "scm/mononoke:derived_data_use_content_manifests": true,
