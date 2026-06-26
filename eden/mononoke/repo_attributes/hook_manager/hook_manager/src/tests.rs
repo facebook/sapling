@@ -951,6 +951,61 @@ async fn test_unauthorized_bypass_file_hook_emits_single_rejection(fb: FacebookI
     );
 }
 
+/// What it tests: an unauthorized user attempts a bypass on a commit the hook
+/// REJECTS. The hook's own rejection stands, annotated with a note that the
+/// bypass was ignored for lack of group membership.
+/// Expected: rejected, message carries both the hook reason and the bypass note.
+#[mononoke::fbinit_test]
+async fn test_unauthorized_bypass_with_rejecting_hook_is_annotated(fb: FacebookInit) {
+    let res = BypassScenario {
+        checker: Some(NeverMember::new().into()),
+        ..Default::default()
+    }
+    .run(fb)
+    .await;
+    assert_eq!(res.len(), 1, "expected one outcome, got {res:?}");
+    let info = res[0]
+        .get_execution()
+        .rejection_info()
+        .expect("hook rejected");
+    // The hook's own reason is preserved...
+    assert!(
+        info.long_description.contains("long_desc"),
+        "expected the hook's own reason, got {:?}",
+        info.long_description,
+    );
+    // ...and the unauthorized-bypass note is appended.
+    assert!(
+        info.long_description.contains("not a member of group"),
+        "expected the bypass note, got {:?}",
+        info.long_description,
+    );
+}
+
+/// What it tests: when no bypass is attempted (no bypass string in the commit),
+/// a plain hook rejection is NOT annotated with the bypass note.
+/// Expected: rejected, no bypass note.
+#[mononoke::fbinit_test]
+async fn test_no_bypass_rejection_is_not_annotated(fb: FacebookInit) {
+    let res = BypassScenario {
+        checker: Some(NeverMember::new().into()),
+        changeset: default_changeset(),
+        ..Default::default()
+    }
+    .run(fb)
+    .await;
+    assert_eq!(res.len(), 1, "expected one outcome, got {res:?}");
+    let info = res[0]
+        .get_execution()
+        .rejection_info()
+        .expect("hook rejected");
+    assert!(
+        !info.long_description.contains("bypass was ignored"),
+        "did not expect a bypass note, got {:?}",
+        info.long_description,
+    );
+}
+
 // =========================================================================
 // Author-based bypass permission group tests
 //

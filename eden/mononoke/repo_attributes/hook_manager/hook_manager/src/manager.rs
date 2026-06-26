@@ -49,7 +49,6 @@ use crate::CrossRepoPushSource;
 use crate::FileHook;
 use crate::HookExecution;
 use crate::HookOutcome;
-use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
 use crate::errors::HookManagerError;
@@ -594,7 +593,7 @@ impl HookManager {
     /// Apply bypasses to hook rejections via `check_bypass_authorization`. The
     /// permission group is consulted only here, so a push whose hooks pass never
     /// hits the group: an authorized (or group-less) bypass drops the rejection, an
-    /// unauthorized one is replaced with a "bypass not authorized" rejection.
+    /// unauthorized one keeps the hook's own rejection, annotated with a note.
     async fn apply_bypasses(
         &self,
         ctx: &CoreContext,
@@ -659,9 +658,7 @@ impl HookManager {
                 Some(BypassAuthorizationResult::Bypassed(_)) => {}
                 Some(BypassAuthorizationResult::Unauthorized(group)) => {
                     if first_rejection {
-                        let mut outcome = outcome;
-                        outcome.set_execution(unauthorized_bypass_rejection(group));
-                        result.push(outcome);
+                        result.push(annotate_unauthorized_rejection(outcome, group));
                     }
                 }
                 _ => result.push(outcome),
@@ -671,17 +668,20 @@ impl HookManager {
     }
 }
 
-/// Rejection shown when a bypass is attempted by someone outside the hook's
-/// permission group.
-fn unauthorized_bypass_rejection(group_name: &str) -> HookExecution {
-    HookExecution::rejected(HookRejectionInfo::new_long(
-        "Hook bypass not authorized",
-        format!(
-            "You are not a member of group '{group_name}'. Remove the bypass \
-             string/pushvar and let the hook execute normally, or request access \
-             to the group.",
-        ),
-    ))
+/// Append a note to a rejection telling the pusher their bypass was ignored
+/// because they are not in the permission group. The hook's own reason is kept.
+fn annotate_unauthorized_rejection(mut outcome: HookOutcome, group_name: &str) -> HookOutcome {
+    if let Some(info) = outcome.get_execution().rejection_info() {
+        let mut info = info.clone();
+        info.long_description = format!(
+            "{}\n\nNote: your hook bypass was ignored because you are not a member of \
+             group '{group_name}'. Request access to the group, or fix the issue above.",
+            info.long_description,
+        );
+        let extra_logs = outcome.get_execution().extra_logs.clone();
+        outcome.set_execution(HookExecution::rejected_with_logs(info, extra_logs));
+    }
+    outcome
 }
 
 /// Build a MononokeIdentity from a changeset author like "Name <user@host>".
