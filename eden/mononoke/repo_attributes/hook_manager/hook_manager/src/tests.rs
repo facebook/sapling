@@ -9,6 +9,8 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::hash_map::Entry;
 use std::sync::Arc;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
 
 use anyhow::Error;
 use async_trait::async_trait;
@@ -41,6 +43,7 @@ use permission_checker::AlwaysMember;
 use permission_checker::ArcMembershipChecker;
 use permission_checker::InternalAclProvider;
 use permission_checker::MemberAllowlist;
+use permission_checker::MembershipChecker;
 use permission_checker::MononokeIdentity;
 use permission_checker::MononokeIdentitySet;
 use permission_checker::NeverMember;
@@ -867,14 +870,9 @@ async fn test_pushvar_bypass_with_group_unauthorized(fb: FacebookInit) {
 }
 
 /// What it tests: an unauthorized user attempts a bypass on a commit that the
-/// hook would have ACCEPTED. The bypass is moot (nothing to bypass), so the push
-/// ought to succeed.
-///
-/// FIXME(bypass): today the unauthorized-bypass check rejects the push *before*
-/// the hook runs, so a clean commit is blocked purely for attempting a bypass the
-/// user is not entitled to. This test pins that wrong behavior (a single
-/// "not a member of group" rejection); once the eager check is fixed it becomes
-/// `assert_hook_accepted(&res)` and the message assertion is removed.
+/// hook would have ACCEPTED. The bypass is moot (nothing to bypass), so the hook
+/// runs and the push succeeds rather than being rejected for the bypass attempt.
+/// Expected: accepted.
 #[mononoke::fbinit_test]
 async fn test_unauthorized_bypass_with_accepting_hook(fb: FacebookInit) {
     let res = BypassScenario {
@@ -884,15 +882,72 @@ async fn test_unauthorized_bypass_with_accepting_hook(fb: FacebookInit) {
     }
     .run(fb)
     .await;
-    assert_eq!(res.len(), 1, "expected one outcome, got {res:?}");
-    let info = res[0]
-        .get_execution()
-        .rejection_info()
-        .expect("unauthorized bypass rejects today");
-    assert!(
-        info.long_description.contains("not a member of group"),
-        "expected today's unauthorized-bypass message, got {:?}",
-        info.long_description,
+    assert_hook_accepted(&res);
+}
+
+/// What it tests: when a hook accepts, the bypass permission group is never
+/// consulted even though a bypass token is present -- the membership check is
+/// reserved for hooks that actually reject.
+/// Expected: accepted, and the membership checker is consulted zero times.
+#[mononoke::fbinit_test]
+async fn test_accepting_hook_with_bypass_skips_group_check(fb: FacebookInit) {
+    let (checker, calls) = CountingMember::new(false);
+    let res = BypassScenario {
+        hook: always_accepting_changeset_hook(),
+        checker: Some(checker),
+        ..Default::default()
+    }
+    .run(fb)
+    .await;
+    assert_hook_accepted(&res);
+    assert_eq!(
+        calls.load(Ordering::SeqCst),
+        0,
+        "permission group must not be consulted when the hook accepts",
+    );
+}
+
+/// What it tests: a file hook that rejects several paths of one changeset under an
+/// unauthorized bypass checks the permission group exactly once (not once per
+/// rejected path) and emits exactly ONE rejection.
+#[mononoke::fbinit_test]
+async fn test_unauthorized_bypass_file_hook_emits_single_rejection(fb: FacebookInit) {
+    let ctx = ctx_with_identities(fb, &[]);
+    let (checker, calls) = CountingMember::new(false);
+    let mut hook_manager = setup_hook_manager(fb, hashmap! {}, hashmap! {}).await;
+    hook_manager.register_file_hook(
+        "hook1",
+        always_rejecting_file_hook(),
+        pushvar_bypass_config_with_group(),
+        Some(checker),
+    );
+    let bm = BookmarkKey::new("bm1").unwrap();
+    hook_manager.set_hooks_for_bookmark(bm.clone().into(), vec!["hook1".to_string()]);
+    // default_changeset touches 3 files; the file hook rejects each one.
+    let changesets = [default_changeset()];
+    let res = justknobs::test_helpers::with_just_knobs_async(
+        bypass_permission_groups_jk(true, true),
+        Box::pin(hook_manager.run_changesets_hooks_for_bookmark(
+            &ctx,
+            &changesets,
+            &bm,
+            Some(&bypass_pushvars()),
+            CrossRepoPushSource::NativeToThisRepo,
+            PushAuthoredBy::User,
+        )),
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        res.len(),
+        1,
+        "expected one unauthorized rejection per (hook, changeset), got {res:?}",
+    );
+    assert!(res[0].get_execution().is_rejected());
+    assert_eq!(
+        calls.load(Ordering::SeqCst),
+        1,
+        "membership must be checked once per (hook, changeset), not once per rejected path",
     );
 }
 
@@ -1002,6 +1057,33 @@ fn bypass_pushvars() -> HashMap<String, bytes::Bytes> {
     hashmap! { "BYPASS".to_string() => bytes::Bytes::from("true") }
 }
 
+/// A permission checker that records how many times it is consulted, so tests can
+/// assert the membership check ran the expected number of times.
+struct CountingMember {
+    is_member: bool,
+    calls: Arc<AtomicUsize>,
+}
+
+impl CountingMember {
+    /// Returns the checker plus a handle to read its call count.
+    fn new(is_member: bool) -> (ArcMembershipChecker, Arc<AtomicUsize>) {
+        let calls = Arc::new(AtomicUsize::new(0));
+        let checker: ArcMembershipChecker = Arc::new(Self {
+            is_member,
+            calls: calls.clone(),
+        });
+        (checker, calls)
+    }
+}
+
+#[async_trait]
+impl MembershipChecker for CountingMember {
+    async fn is_member(&self, _identities: &MononokeIdentitySet) -> bool {
+        self.calls.fetch_add(1, Ordering::SeqCst);
+        self.is_member
+    }
+}
+
 /// A `MemberAllowlist` permission checker admitting exactly the given unixnames
 /// (as `USER:<unixname>` identities). Pass an empty slice for a checker that
 /// admits no one (used to exercise the fail-closed path).
@@ -1018,6 +1100,22 @@ fn assert_bypassed(outcomes: &[HookOutcome]) {
     assert!(
         outcomes.is_empty(),
         "expected the bypass to be honored (hook skipped), got: {outcomes:?}",
+    );
+}
+
+/// Assert the hook ran and accepted (e.g. an unauthorized bypass was ignored but
+/// the hook had nothing to object to).
+fn assert_hook_accepted(outcomes: &[HookOutcome]) {
+    assert_eq!(
+        outcomes.len(),
+        1,
+        "expected the hook to run, got {} outcome(s)",
+        outcomes.len(),
+    );
+    assert!(
+        outcomes[0].get_execution().is_accepted(),
+        "expected the hook to accept, got {:?}",
+        outcomes[0].get_execution(),
     );
 }
 
