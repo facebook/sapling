@@ -549,12 +549,22 @@ async fn show_backfill_detail(
         display_single_repo_detail(&data, repo_id, repo_names);
 
         if detailed {
-            let (mut child_rows, new_count) = load_child_request_rows(ctx, queue, row_id).await?;
+            let (mut child_rows, new_count) =
+                load_child_request_rows(ctx, queue, row_id, None).await?;
             display_child_request_table(&mut child_rows, new_count, false, repo_names);
         }
     } else if let Some(r) = repo {
         let drilldown_repo_id = r.repo_identity().id().id() as i64;
-        show_repo_detail(ctx, queue, blobstore, repo_names, row_id, drilldown_repo_id).await?;
+        show_repo_detail(
+            ctx,
+            queue,
+            blobstore,
+            repo_names,
+            row_id,
+            drilldown_repo_id,
+            detailed,
+        )
+        .await?;
     } else {
         // Multi-repo backfill: show condensed view
         let total_repos = unique_repos.len();
@@ -652,7 +662,8 @@ async fn show_backfill_detail(
             // Also show the per-child-request breakdown (as for single-repo
             // backfills), with a Repo column so each request can be attributed
             // to its repository.
-            let (mut child_rows, new_count) = load_child_request_rows(ctx, queue, row_id).await?;
+            let (mut child_rows, new_count) =
+                load_child_request_rows(ctx, queue, row_id, None).await?;
             display_child_request_table(&mut child_rows, new_count, true, repo_names);
         }
     }
@@ -787,20 +798,28 @@ async fn load_child_request_rows(
     ctx: &CoreContext,
     queue: &impl LongRunningRequestsQueue,
     row_id: &RowId,
+    repo_filter: Option<i64>,
 ) -> Result<(Vec<ChildRequestRow>, usize)> {
     let entries = queue
         .get_requests_by_root_id(ctx, row_id)
         .await
         .context("fetching child entries for detailed view")?;
 
+    // When drilling into a single repo of a multi-repo backfill, keep only that
+    // repo's child requests; otherwise consider all of them.
+    let matches_repo = |entry_repo: Option<RepositoryId>| match repo_filter {
+        Some(repo_id) => entry_repo.map(|r| r.id() as i64) == Some(repo_id),
+        None => true,
+    };
+
     let new_count = entries
         .iter()
-        .filter(|entry| entry.status == RequestStatus::New)
+        .filter(|entry| entry.status == RequestStatus::New && matches_repo(entry.repo_id))
         .count();
 
     let rows = entries
         .iter()
-        .filter(|entry| entry.status != RequestStatus::New)
+        .filter(|entry| entry.status != RequestStatus::New && matches_repo(entry.repo_id))
         .map(|entry| ChildRequestRow {
             id: entry.id.0,
             repo_id: entry.repo_id.map(|r| r.id() as i64),
@@ -1279,6 +1298,7 @@ async fn show_repo_detail(
     repo_names: &HashMap<RepositoryId, String>,
     row_id: &RowId,
     repo_id: i64,
+    detailed: bool,
 ) -> Result<()> {
     // Verify the backfill exists
     let root_entry = queue
@@ -1354,6 +1374,15 @@ async fn show_repo_detail(
         status_counts,
         type_breakdown,
     });
+
+    if detailed {
+        // Show the per-child-request breakdown for this repo, matching the
+        // single-repo detailed view. Every request belongs to this repo, so the
+        // Repo column is omitted.
+        let (mut child_rows, new_count) =
+            load_child_request_rows(ctx, queue, row_id, Some(repo_id)).await?;
+        display_child_request_table(&mut child_rows, new_count, false, repo_names);
+    }
 
     Ok(())
 }
