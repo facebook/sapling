@@ -18,13 +18,13 @@ doc = false
 anyhow = "1.0.102"
 async-trait = "0.1.86"
 codegen_includer_proc_macro = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
+fbthrift = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 github_mirror__types = { package = "github_mirror", version = "0.1.0", path = ".." }
-rust = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
-rust_services = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
-thrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
-thrift_services = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
+rust = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
+rust_services = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
+thrift = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
+thrift_services = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [build-dependencies]

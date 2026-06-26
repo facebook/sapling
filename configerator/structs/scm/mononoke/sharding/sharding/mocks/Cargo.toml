@@ -18,7 +18,7 @@ doc = false
 anyhow = "1.0.102"
 async-trait = "0.1.86"
 codegen_includer_proc_macro = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
+fbthrift = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 processname = { version = "0.1.0", path = "../../processname" }
 processname_clients = { version = "0.1.0", path = "../../processname/clients" }
@@ -26,9 +26,9 @@ processname_mocks = { version = "0.1.0", path = "../../processname/mocks" }
 regions = { version = "0.1.0", path = "../../regions" }
 regions_clients = { version = "0.1.0", path = "../../regions/clients" }
 regions_mocks = { version = "0.1.0", path = "../../regions/mocks" }
-rust = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
-rust_clients = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
-rust_mocks = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
+rust = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
+rust_clients = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
+rust_mocks = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 sharding__clients = { package = "sharding_clients", version = "0.1.0", path = "../clients" }
 sharding__types = { package = "sharding", version = "0.1.0", path = ".." }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

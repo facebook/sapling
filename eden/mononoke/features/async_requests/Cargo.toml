@@ -14,7 +14,7 @@ async_requests_types = { version = "0.1.0", path = "types" }
 async_requests_types_thrift = { version = "0.1.0", path = "if" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context" }
-fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
+fbthrift = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 justknobs_ext = { version = "0.1.0", path = "../../common/rust/justknobs_ext" }
 megarepo_config = { version = "0.1.0", path = "../../megarepo_api/megarepo_config" }

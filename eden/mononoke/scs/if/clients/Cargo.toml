@@ -22,17 +22,17 @@ derived_data_type_if = { version = "0.1.0", path = "../../../derived_data/if" }
 derived_data_type_if_clients = { version = "0.1.0", path = "../../../derived_data/if/clients" }
 fb303_core = { version = "0.0.0", git = "https://github.com/facebook/fb303.git", branch = "main" }
 fb303_core_clients = { version = "0.0.0", git = "https://github.com/facebook/fb303.git", branch = "main" }
-fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
+fbthrift = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
-hack = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
-hack_clients = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
+hack = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
+hack_clients = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 megarepo_configs = { version = "0.1.0", path = "../../../megarepo_api/if/megarepo_configs" }
 megarepo_configs_clients = { version = "0.1.0", path = "../../../megarepo_api/if/megarepo_configs/clients" }
-rust = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
-rust_clients = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
+rust = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
+rust_clients = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 source_control__types = { package = "source_control", version = "0.1.0", path = ".." }
-thrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
-thrift_clients = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
+thrift = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
+thrift_clients = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [build-dependencies]
