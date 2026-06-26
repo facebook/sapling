@@ -58,7 +58,7 @@ thrift_rust_library(
     proc_macro = True,
     deps = [
         "fbsource//third-party/rust:quote",
-        "fbsource//third-party/rust:syn1",
+        "fbsource//third-party/rust:syn",
     ],
 )
 
