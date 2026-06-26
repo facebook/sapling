@@ -603,15 +603,7 @@ impl Client {
             return Ok(Response::empty());
         }
 
-        let mut attrs = attributes.clone().unwrap_or_default();
-        // Inject augmented trees attribute if configured.
-        attrs = TreeAttributes {
-            manifest_blob: attrs.manifest_blob,
-            parents: attrs.parents,
-            child_metadata: attrs.child_metadata,
-            augmented_trees: attrs.augmented_trees
-                || (self.config().augmented_trees && attrs.child_metadata),
-        };
+        let attrs = tree_attributes_with_config(attributes, self.config().augmented_trees);
 
         let try_route_consistently = self.config().try_route_consistently;
         let min_batch_size: Option<usize> = self.config().min_batch_size;
@@ -2271,6 +2263,19 @@ impl SaplingRemoteApi for Client {
     }
 }
 
+fn tree_attributes_with_config(
+    attributes: Option<TreeAttributes>,
+    force_augmented_trees: bool,
+) -> TreeAttributes {
+    let attributes = attributes.unwrap_or_default();
+
+    TreeAttributes {
+        child_metadata: attributes.child_metadata || force_augmented_trees,
+        augmented_trees: attributes.augmented_trees || force_augmented_trees,
+        ..attributes
+    }
+}
+
 /// Split up a collection of keys into batches of at most `batch_size`.
 fn split_into_batches<T>(
     keys: impl IntoIterator<Item = T>,
@@ -2366,6 +2371,8 @@ mod tests {
 
     use crate::builder::HttpClientBuilder;
     use crate::client::split_into_batches;
+    use crate::client::tree_attributes_with_config;
+    use crate::types::TreeAttributes;
 
     #[test]
     fn test_split_into_batches() -> Result<()> {
@@ -2411,6 +2418,76 @@ mod tests {
         assert_eq!(&url, &expected);
 
         Ok(())
+    }
+
+    #[test]
+    fn test_augmented_trees_config_attributes() {
+        let cases = [
+            (
+                "default request stays default when augmented config is off",
+                None,
+                false,
+                TreeAttributes::default(),
+            ),
+            (
+                "default request gets augmented trees and child metadata when augmented config is on",
+                None,
+                true,
+                TreeAttributes {
+                    child_metadata: true,
+                    augmented_trees: true,
+                    ..TreeAttributes::default()
+                },
+            ),
+            (
+                "explicit augmented request does not imply child metadata",
+                Some(TreeAttributes::augmented_trees()),
+                false,
+                TreeAttributes::augmented_trees(),
+            ),
+            (
+                "augmented config forces child metadata on explicit augmented request",
+                Some(TreeAttributes::augmented_trees()),
+                true,
+                TreeAttributes {
+                    child_metadata: true,
+                    ..TreeAttributes::augmented_trees()
+                },
+            ),
+            (
+                "explicit child metadata request preserves child metadata only when augmented config is off",
+                Some(TreeAttributes {
+                    child_metadata: true,
+                    ..TreeAttributes::default()
+                }),
+                false,
+                TreeAttributes {
+                    child_metadata: true,
+                    ..TreeAttributes::default()
+                },
+            ),
+            (
+                "augmented config forces augmented trees and child metadata on explicit child metadata request",
+                Some(TreeAttributes {
+                    child_metadata: true,
+                    ..TreeAttributes::default()
+                }),
+                true,
+                TreeAttributes {
+                    child_metadata: true,
+                    augmented_trees: true,
+                    ..TreeAttributes::default()
+                },
+            ),
+        ];
+
+        for (name, attributes, force_augmented_trees, expected) in cases {
+            assert_eq!(
+                tree_attributes_with_config(attributes, force_augmented_trees),
+                expected,
+                "{name}",
+            );
+        }
     }
 
     #[test]
