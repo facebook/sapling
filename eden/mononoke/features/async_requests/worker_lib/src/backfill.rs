@@ -394,7 +394,6 @@ pub(crate) async fn compute_derive_backfill_repo(
         derived_data_type,
         cs_ids,
         slice_size,
-        params.rederive,
         params.reslice,
         params.boundaries_concurrency,
         params.num_boundary_requests,
@@ -442,7 +441,6 @@ pub(crate) async fn compute_derive_backfill(
             let slice_size = params.slice_size;
             let boundaries_concurrency = params.boundaries_concurrency;
             let num_boundary_requests = params.num_boundary_requests;
-            let rederive = params.rederive;
             let reslice = params.reslice;
             let entry_repo_id = entry.repo_id;
             let cs_ids = entry.cs_ids.clone();
@@ -460,7 +458,6 @@ pub(crate) async fn compute_derive_backfill(
                     slice_size,
                     boundaries_concurrency,
                     num_boundary_requests,
-                    rederive,
                     config_name,
                     reslice,
                     ..Default::default()
@@ -498,7 +495,7 @@ pub(crate) async fn compute_derive_backfill(
 /// Computes segmented slices and their boundaries for a backfill operation.
 ///
 /// This function performs Phase 1 of the backfill process:
-/// 1. Filters out already-derived changesets (unless rederive/reslice is enabled)
+/// 1. Filters out already-derived changesets (unless reslice is enabled)
 /// 2. Computes the derived frontier to exclude already-processed ancestors
 /// 3. Calls segmented_slice_ancestors to partition the commit graph into processable slices
 ///
@@ -511,15 +508,13 @@ async fn compute_slices_and_boundaries(
     derived_data_type: DerivableType,
     cs_ids: Vec<ChangesetId>,
     slice_size: u64,
-    rederive: bool,
     reslice: bool,
     repo_id: &RepositoryId,
 ) -> Result<Vec<SegmentedSliceWithBoundaries>, AsyncRequestsError> {
     // Determine whether to filter out already-derived changesets.
-    // We skip filtering if:
-    // 1. reslice=true: treat all commits as underived for slicing purposes
-    // 2. rederive=true: force rederivation of all commits
-    let should_filter_derived = !reslice && !rederive;
+    // We skip filtering when reslice=true: treat all commits as underived for
+    // slicing purposes.
+    let should_filter_derived = !reslice;
 
     // Filter to only underived changesets (unless skip_filtering is set)
     let mut cs_ids = cs_ids;
@@ -760,7 +755,6 @@ async fn process_repo_backfill(
     derived_data_type: DerivableType,
     cs_ids: Vec<ChangesetId>,
     slice_size: u64,
-    rederive: bool,
     reslice: bool,
     boundaries_concurrency: i32,
     num_boundary_requests: i32,
@@ -789,7 +783,6 @@ async fn process_repo_backfill(
         derived_data_type,
         cs_ids,
         slice_size,
-        rederive,
         reslice,
         repo_id,
     )

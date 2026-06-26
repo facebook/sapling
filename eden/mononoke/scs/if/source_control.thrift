@@ -3091,6 +3091,9 @@ struct DeriveBackfillParams {
   2: list<DeriveBackfillRepoEntry> repo_entries;
   3: i64 slice_size;
   4: i32 boundaries_concurrency;
+  @thrift.Deprecated{
+    message = "rederive is unsupported for backfill and is ignored",
+  }
   5: bool rederive;
   6: optional string config_name;
   /// Whether to compute slices as if all commits were underived,
@@ -3127,6 +3130,9 @@ struct DeriveBackfillRepoParams {
   3: list<binary> cs_ids;
   4: i64 slice_size;
   5: i32 boundaries_concurrency;
+  @thrift.Deprecated{
+    message = "rederive is unsupported for backfill and is ignored",
+  }
   6: bool rederive;
   7: optional string config_name;
   8: bool reslice;

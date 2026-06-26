@@ -89,7 +89,6 @@ pub(super) struct BackfillSettings {
     pub slice_size: i64,
     pub boundaries_concurrency: i32,
     pub num_boundary_requests: i32,
-    pub rederive: bool,
     pub reslice: bool,
     pub config_name: Option<String>,
 }

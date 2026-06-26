@@ -570,7 +570,6 @@ fn print_settings_section(settings: &BackfillSettings) {
         "  Num Boundary Requests:  {}",
         settings.num_boundary_requests
     );
-    println!("  Rederive:             {}", settings.rederive);
     println!("  Reslice:              {}", settings.reslice);
     println!(
         "  Config Name:          {}",

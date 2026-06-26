@@ -222,7 +222,6 @@ async fn load_backfill_params_info(
                 slice_size: p.slice_size,
                 boundaries_concurrency: p.boundaries_concurrency,
                 num_boundary_requests: p.num_boundary_requests,
-                rederive: p.rederive,
                 reslice: p.reslice,
                 config_name: p.config_name.clone(),
             }),

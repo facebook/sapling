@@ -42,10 +42,6 @@ pub(super) struct BackfillEnqueueArgs {
     #[clap(long, default_value_t = 10)]
     num_boundary_requests: usize,
 
-    /// Whether to rederive already-derived changesets
-    #[clap(long)]
-    pub(crate) rederive: bool,
-
     /// Whether to compute slices as if all commits were underived
     #[clap(long)]
     reslice: bool,
@@ -73,10 +69,9 @@ pub(super) async fn backfill_enqueue(
             RepoArg::Id(id) => RepoArgs::from_repo_id(id.id()),
             RepoArg::Name(name) => RepoArgs::from_repo_name(name.clone()),
         };
-        let repo: Repo =
-            super::open_repo_for_derive(app, &repo_arg, args.rederive, bypass_redaction)
-                .await
-                .context("Failed to open repo")?;
+        let repo: Repo = super::open_repo_for_derive(app, &repo_arg, false, bypass_redaction)
+            .await
+            .context("Failed to open repo")?;
         let cs_ids = args.changeset_args.resolve_changesets(ctx, &repo).await?;
         let repo_id = repo.repo_identity().id();
         let cs_id_bytes: Vec<Vec<u8>> = cs_ids.iter().map(|cs| cs.as_ref().to_vec()).collect();
@@ -99,7 +94,6 @@ pub(super) async fn backfill_enqueue(
         slice_size: args.slice_size as i64,
         boundaries_concurrency: args.boundaries_concurrency,
         num_boundary_requests: args.num_boundary_requests as i32,
-        rederive: args.rederive,
         reslice: args.reslice,
         config_name: config_name.map(|s| s.to_string()),
         ..Default::default()
