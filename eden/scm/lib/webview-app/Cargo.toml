@@ -11,7 +11,6 @@ license = "MIT"
 
 [lib]
 name = "webview_app"
-edition = "2021"
 
 [dependencies]
 anyhow = "1.0.102"
