@@ -18,7 +18,6 @@ use maplit::btreemap;
 use mononoke_api::BookmarkInfo;
 use mononoke_api::ChangesetContext;
 use mononoke_api::ChangesetId;
-use mononoke_api::ChangesetPathContentContext;
 use mononoke_api::CopyInfo;
 use mononoke_api::FileContentType;
 use mononoke_api::FileGeneratedStatus;
@@ -57,13 +56,6 @@ pub(crate) trait IntoResponse<T> {
 }
 
 /// Asynchronously convert an item into a thrift type suitable for inclusion
-/// in a thrift response.
-#[async_trait]
-pub(crate) trait AsyncIntoResponse<T> {
-    async fn into_response(self) -> Result<T, scs_errors::ServiceError>;
-}
-
-/// Asynchronously convert an item into a thrift type suitable for inclusion
 /// in a thrift response, with additional data required for the conversion.
 #[async_trait]
 pub(crate) trait AsyncIntoResponseWith<T> {
@@ -75,16 +67,6 @@ pub(crate) trait AsyncIntoResponseWith<T> {
         self,
         additional: &Self::Additional,
     ) -> Result<T, scs_errors::ServiceError>;
-}
-
-#[async_trait]
-impl<T, A: AsyncIntoResponse<T> + Send> AsyncIntoResponse<Option<T>> for Option<A> {
-    async fn into_response(self) -> Result<Option<T>, scs_errors::ServiceError> {
-        match self {
-            Some(value) => Ok(Some(value.into_response().await?)),
-            None => Ok(None),
-        }
-    }
 }
 
 impl IntoResponse<thrift::EntryType> for FileType {
@@ -359,53 +341,6 @@ impl IntoResponse<thrift::WorkspaceInfo> for WorkspaceData {
             latest_timestamp: self.timestamp,
             ..Default::default()
         }
-    }
-}
-
-#[async_trait]
-impl AsyncIntoResponse<thrift::FilePathInfo> for &ChangesetPathContentContext<Repo> {
-    async fn into_response(self) -> Result<thrift::FilePathInfo, scs_errors::ServiceError> {
-        let (meta, type_) = try_join!(
-            async {
-                Ok::<_, scs_errors::ServiceError>(
-                    self.file()
-                        .await?
-                        .ok_or_else(|| scs_errors::internal_error("programming error: not a file"))?
-                        .metadata()
-                        .await?,
-                )
-            },
-            async {
-                Ok::<_, scs_errors::ServiceError>(
-                    self.file_type().await?.ok_or_else(|| {
-                        scs_errors::internal_error("programming error: not a file")
-                    })?,
-                )
-            },
-        )?;
-        Ok(thrift::FilePathInfo {
-            path: self.path().to_string(),
-            r#type: type_.into_response(),
-            info: meta.into_response(),
-            ..Default::default()
-        })
-    }
-}
-
-#[async_trait]
-impl AsyncIntoResponse<thrift::TreePathInfo> for &ChangesetPathContentContext<Repo> {
-    async fn into_response(self) -> Result<thrift::TreePathInfo, scs_errors::ServiceError> {
-        let tree = self
-            .tree()
-            .await?
-            .ok_or_else(|| scs_errors::internal_error("programming error: not a tree"))?;
-
-        let summary = (tree.id().clone(), tree.summary().await?);
-        Ok(thrift::TreePathInfo {
-            path: self.path().to_string(),
-            info: summary.into_response(),
-            ..Default::default()
-        })
     }
 }
 
