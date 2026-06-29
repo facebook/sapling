@@ -246,7 +246,7 @@ pub async fn fire_and_forget_submit_land(
         ..Default::default()
     };
 
-    let service = match client.get_service_client(None, Some(ctx)) {
+    let service = match client.get_service_client(Some(ctx)) {
         Ok(s) => s,
         Err(e) => {
             error!(
@@ -360,7 +360,7 @@ pub async fn divert_to_rl_land_service(
     );
 
     // Submit the land request.
-    let service = client.get_service_client(None, Some(ctx))?;
+    let service = client.get_service_client(Some(ctx))?;
     let submit_response = match service.submitLand(&request).await {
         Ok(resp) => resp,
         Err(e) => {
