@@ -1351,6 +1351,7 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover(
 
 void EdenServer::startPeriodicTasks() {
   auto config = serverState_->getReloadableConfig()->getEdenConfig();
+#ifdef EDEN_HAVE_OBC
   if (config->enableOBCOnEden.getValue()) {
     // Get the hostname without the ".facebook.com" suffix
     auto hostname = facebook::network::getLocalHost(/*stripFbDomain=*/true);
@@ -1368,6 +1369,7 @@ void EdenServer::startPeriodicTasks() {
     // Report memory usage stats once every 60 seconds
     memoryStatsTask_.updateInterval(60s);
   }
+#endif
   updatePeriodicTaskIntervals(*config);
 
 #ifndef _WIN32
@@ -3202,11 +3204,13 @@ void EdenServer::flushStatsNow() {
 }
 
 void EdenServer::reportMemoryStats() {
+#ifdef EDEN_HAVE_OBC
   auto memoryStats = facebook::eden::proc_util::readMemoryStats();
   if (memoryStats) {
     // Bump the OBC counters for the current memory usage
     memory_vm_rss_bytes_ += memoryStats->resident;
   }
+#endif
 }
 
 void EdenServer::refreshBackingStore() {

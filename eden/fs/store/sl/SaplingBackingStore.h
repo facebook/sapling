@@ -31,7 +31,9 @@
 #include "eden/fs/store/sl/SaplingImportRequestQueue.h"
 #include "eden/fs/telemetry/ActivityBuffer.h"
 #include "eden/scm/lib/backingstore/src/ffi.rs.h"
+#ifdef EDEN_HAVE_OBC
 #include "monitoring/obc/OBCPxx.h"
+#endif
 
 namespace sapling {
 using NodeId = facebook::eden::Hash20;
@@ -765,6 +767,7 @@ class SaplingBackingStore final
 
   EdenStatsPtr stats_;
 
+#ifdef EDEN_HAVE_OBC
   // This is used to avoid reading config in hot path of get request
   bool isOBCEnabled_ = false;
   // TODO: this is a prototype to test OBC API on eden
@@ -772,6 +775,7 @@ class SaplingBackingStore final
   monitoring::OBCP99P95P50 getBlobPerRepoLatencies_; // calculates p50, p95, p99
   monitoring::OBCP99P95P50 getTreePerRepoLatencies_; // calculates p50, p95, p99
   void initializeOBCCounters();
+#endif
 
   bool dogfoodingHost();
 

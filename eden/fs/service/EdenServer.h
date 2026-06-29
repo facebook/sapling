@@ -46,7 +46,9 @@
 #include "eden/fs/takeover/TakeoverHandler.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/IActivityRecorder.h"
+#ifdef EDEN_HAVE_OBC
 #include "monitoring/obc/OBCAvg.h"
+#endif
 
 DECLARE_bool(takeover);
 
@@ -607,8 +609,10 @@ class EdenServer : private TakeoverHandler {
   void startPeriodicTasks();
   void updatePeriodicTaskIntervals(const EdenConfig& config);
 
-  // calculates eden rss memory usage
+#ifdef EDEN_HAVE_OBC
+  // Calculates EdenFS RSS memory usage.
   monitoring::OBCAvg memory_vm_rss_bytes_;
+#endif
 
   /**
    * Schedule a call to unloadInodes() to happen after timeout
