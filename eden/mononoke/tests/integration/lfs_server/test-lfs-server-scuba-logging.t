@@ -74,6 +74,7 @@
       "time": * (glob)
     },
     "normal": {
+      "ci_purpose": null,
       "client_atlas": null,
       "client_atlas_env_id": null,
       "client_atlas_rl": null,
@@ -146,6 +147,7 @@
       "time": * (glob)
     },
     "normal": {
+      "ci_purpose": null,
       "client_atlas": null,
       "client_atlas_env_id": null,
       "client_atlas_rl": null,
@@ -224,6 +226,7 @@
     },
     "normal": {
       "batch_order": "*", (glob)
+      "ci_purpose": null,
       "client_atlas": null,
       "client_atlas_env_id": null,
       "client_atlas_rl": null,
@@ -302,6 +305,7 @@
       "time": * (glob)
     },
     "normal": {
+      "ci_purpose": null,
       "client_atlas": null,
       "client_atlas_env_id": null,
       "client_atlas_rl": null,
@@ -369,6 +373,7 @@
       "time": * (glob)
     },
     "normal": {
+      "ci_purpose": null,
       "client_atlas": null,
       "client_atlas_env_id": null,
       "client_atlas_rl": null,

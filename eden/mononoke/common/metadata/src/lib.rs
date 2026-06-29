@@ -257,6 +257,10 @@ impl Metadata {
             .and_then(|ci| ci.fb.sandcastle_alias())
     }
 
+    pub fn ci_purpose(&self) -> Option<&str> {
+        self.client_info.as_ref().and_then(|ci| ci.fb.ci_purpose())
+    }
+
     pub fn sandcastle_nonce(&self) -> Option<&str> {
         self.client_info
             .as_ref()

@@ -83,6 +83,8 @@ pub enum HttpScubaKey {
     SandcastleNonce,
     /// VCS type of the sandcastle job, if any.
     SandcastleVCS,
+    /// CI purpose of the sandcastle job, if any.
+    CiPurpose,
     /// Whether running on Atlas.
     ClientAtlas,
     /// Atlas environment ID, if any.
@@ -154,6 +156,7 @@ impl AsRef<str> for HttpScubaKey {
             SandcastleAlias => "sandcastle_alias",
             SandcastleNonce => "sandcastle_nonce",
             SandcastleVCS => "sandcastle_vcs",
+            CiPurpose => "ci_purpose",
             ClientAtlas => "client_atlas",
             ClientAtlasEnvId => "client_atlas_env_id",
             ClientAtlasRl => "client_atlas_rl",
@@ -374,6 +377,9 @@ fn populate_scuba(scuba: &mut MononokeScubaSampleBuilder, state: &mut State) {
 
         let sandcastle_vcs = metadata.sandcastle_vcs();
         scuba.add(HttpScubaKey::SandcastleVCS, sandcastle_vcs);
+
+        let ci_purpose = metadata.ci_purpose();
+        scuba.add(HttpScubaKey::CiPurpose, ci_purpose);
 
         let client_atlas = metadata.clientinfo_atlas();
         scuba.add(HttpScubaKey::ClientAtlas, client_atlas);

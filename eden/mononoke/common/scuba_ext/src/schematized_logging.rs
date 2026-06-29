@@ -130,6 +130,7 @@ pub struct CommonMetadata {
     pub sandcastle_alias: Option<String>,
     pub sandcastle_vcs: Option<String>,
     pub sandcastle_nonce: Option<String>,
+    pub ci_purpose: Option<String>,
     pub revproxy_region: Option<String>,
     pub client_tw_job: Option<String>,
     pub client_tw_task: Option<String>,
@@ -185,6 +186,9 @@ impl CommonMetadata {
         }
         if let Some(sandcastle_nonce) = metadata.sandcastle_nonce() {
             data.sandcastle_nonce = Some(sandcastle_nonce.to_string());
+        }
+        if let Some(ci_purpose) = metadata.ci_purpose() {
+            data.ci_purpose = Some(ci_purpose.to_string());
         }
 
         // Reverse proxy region

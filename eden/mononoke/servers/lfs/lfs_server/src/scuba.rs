@@ -62,6 +62,7 @@ pub enum LfsScubaKey {
     SandcastleAlias,
     SandcastleType,
     SandcastleVCS,
+    CiPurpose,
     ClientTwJob,
     ClientTwTask,
     ClientAtlas,
@@ -105,6 +106,7 @@ impl AsRef<str> for LfsScubaKey {
             SandcastleAlias => "sandcastle_alias",
             SandcastleType => "sandcastle_type",
             SandcastleVCS => "sandcastle_vcs",
+            CiPurpose => "ci_purpose",
             ClientTwJob => "client_tw_job",
             ClientTwTask => "client_tw_task",
             ClientAtlas => "client_atlas",
@@ -207,6 +209,8 @@ impl ScubaHandler for LfsScubaHandler {
             );
 
             scuba.add_opt(LfsScubaKey::SandcastleVCS, client_info.fb.sandcastle_vcs());
+
+            scuba.add_opt(LfsScubaKey::CiPurpose, client_info.fb.ci_purpose());
 
             scuba.add_opt(LfsScubaKey::ClientTwJob, client_info.fb.tw_job());
 

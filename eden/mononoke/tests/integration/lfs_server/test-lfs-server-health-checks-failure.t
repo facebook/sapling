@@ -54,6 +54,7 @@
       "time": * (glob)
     },
     "normal": {
+      "ci_purpose": null,
       "client_atlas": null,
       "client_atlas_env_id": null,
       "client_atlas_rl": null,
