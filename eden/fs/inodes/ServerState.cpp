@@ -24,7 +24,7 @@
 #include "eden/fs/telemetry/ErrorLogger.h"
 #include "eden/fs/telemetry/FileAccessStructuredLogger.h"
 #include "eden/fs/telemetry/FsEventLogger.h"
-#include "eden/fs/telemetry/facebook/XplatLogger.h"
+#include "eden/fs/telemetry/IXplatLogger.h"
 #include "eden/fs/utils/Clock.h"
 
 DEFINE_bool(
@@ -65,7 +65,7 @@ ServerState::ServerState(
     std::shared_ptr<Notifier> notifier,
     bool enableFaultDetection,
     std::shared_ptr<InodeAccessLogger> inodeAccessLogger,
-    XplatLogger* xplatLogger)
+    IXplatLogger* xplatLogger)
     : userInfo_{std::move(userInfo)},
       edenStats_{std::move(edenStats)},
       privHelper_{std::move(privHelper)},

@@ -16,9 +16,9 @@ namespace facebook::eden {
 
 class EdenErrorInfoBuilder;
 class EdenStats;
+class IXplatLogger;
 class ReloadableConfig;
 class ScribeLogger;
-class XplatLogger;
 
 using EdenStatsPtr = RefPtr<EdenStats>;
 
@@ -28,7 +28,7 @@ class ErrorLogger {
       std::shared_ptr<ScribeLogger> scribeLogger,
       SessionInfo sessionInfo,
       std::shared_ptr<ReloadableConfig> config,
-      XplatLogger* xplatLogger = nullptr,
+      IXplatLogger* xplatLogger = nullptr,
       EdenStatsPtr edenStats = nullptr);
 
   /**
@@ -64,7 +64,7 @@ class ErrorLogger {
   std::shared_ptr<ReloadableConfig> config_;
   // Not owned; outlives ErrorLogger (owned by EdenServer). May be null when
   // the XplatLogger is unavailable (e.g. EDEN_HAVE_LOGGER is off, or tests).
-  XplatLogger* xplatLogger_;
+  IXplatLogger* xplatLogger_;
   EdenStatsPtr edenStats_;
 };
 

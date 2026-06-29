@@ -60,6 +60,13 @@ cpp_library(
 )
 
 cpp_library(
+    name = "xplat_logger",
+    headers = [
+        "IXplatLogger.h",
+    ],
+)
+
+cpp_library(
     name = "scribe_logger",
     headers = [
         "IScribeLogger.h",
@@ -135,10 +142,10 @@ cpp_library(
         ":stack_trace_uploader",
         ":stats",
         ":xplat_keys",
+        ":xplat_logger",
         "//eden/common/telemetry:log_info",
         "//eden/common/telemetry:structured_logger_factory",
         "//eden/fs/config:config",
-        "//eden/fs/telemetry/facebook:xplat_logger",  # @manual
     ],
     exported_deps = [
         ":structured_logger",
@@ -229,6 +236,7 @@ cpp_library(
     deps = [
         ":stats",
         ":xplat_keys",
+        ":xplat_logger",
         "//eden/common/telemetry:structured_logger_factory",
         "//eden/fs/config:config",
     ],
@@ -237,6 +245,5 @@ cpp_library(
         "//eden/common/telemetry:scribe_logger",
         "//eden/common/telemetry:structured_logger",
         "//eden/common/utils:ref_ptr",
-        "//eden/fs/telemetry/facebook:xplat_logger",  # @manual
     ],
 )

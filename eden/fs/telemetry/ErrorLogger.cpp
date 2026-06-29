@@ -14,9 +14,9 @@
 #include "eden/fs/telemetry/DaemonError.h"
 #include "eden/fs/telemetry/EdenErrorInfoBuilder.h"
 #include "eden/fs/telemetry/EdenStats.h"
+#include "eden/fs/telemetry/IXplatLogger.h"
 #include "eden/fs/telemetry/StackTraceUploader.h"
 #include "eden/fs/telemetry/XplatKeys.h"
-#include "eden/fs/telemetry/facebook/XplatLogger.h"
 
 namespace facebook::eden {
 
@@ -24,7 +24,7 @@ ErrorLogger::ErrorLogger(
     std::shared_ptr<ScribeLogger> scribeLogger,
     SessionInfo sessionInfo,
     std::shared_ptr<ReloadableConfig> config,
-    XplatLogger* xplatLogger,
+    IXplatLogger* xplatLogger,
     EdenStatsPtr edenStats)
     : hasScribe_(scribeLogger != nullptr),
       structuredLogger_(std::move(scribeLogger), std::move(sessionInfo)),

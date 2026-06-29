@@ -24,8 +24,8 @@
 #include "eden/common/telemetry/DynamicEvent.h"
 #include "eden/common/telemetry/Stats.h"
 #include "eden/fs/telemetry/EdenStats.h"
+#include "eden/fs/telemetry/IXplatLogger.h"
 #include "eden/fs/telemetry/XplatKeys.h"
-#include "eden/fs/telemetry/facebook/XplatLogger.h"
 
 namespace facebook::eden {
 
@@ -43,7 +43,7 @@ InodeAccessLogger::InodeAccessLogger(
     std::shared_ptr<ReloadableConfig> reloadableConfig,
     std::shared_ptr<StructuredLogger> structuredLogger,
     EdenStatsPtr edenStats,
-    XplatLogger* xplatLogger)
+    IXplatLogger* xplatLogger)
     : reloadableConfig_{std::move(reloadableConfig)},
       structuredLogger_{std::move(structuredLogger)},
       edenStats_{std::move(edenStats)},

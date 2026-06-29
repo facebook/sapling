@@ -31,8 +31,8 @@ class EdenStats;
 class ErrorLogger;
 class FaultInjector;
 class FsEventLogger;
+class IXplatLogger;
 class IScribeLogger;
-class XplatLogger;
 class InodeAccessLogger;
 class NfsServer;
 class Notifier;
@@ -78,7 +78,7 @@ class ServerState {
       std::shared_ptr<Notifier> notifier,
       bool enableFaultInjection = false,
       std::shared_ptr<InodeAccessLogger> inodeAccessLogger = nullptr,
-      XplatLogger* xplatLogger = nullptr);
+      IXplatLogger* xplatLogger = nullptr);
   ~ServerState();
 
   /**

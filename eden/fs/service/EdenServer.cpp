@@ -101,6 +101,7 @@
 #include "eden/fs/telemetry/EdenStructuredLogger.h"
 #include "eden/fs/telemetry/ErrorLogger.h"
 #include "eden/fs/telemetry/IScribeLogger.h"
+#include "eden/fs/telemetry/IXplatLogger.h"
 #include "eden/fs/telemetry/LogEvent.h"
 #ifdef EDEN_HAVE_LOGGER
 #include "eden/fs/telemetry/facebook/XplatLogger.h" // @manual
@@ -490,7 +491,7 @@ std::shared_ptr<ErrorLogger> makeErrorLogger(
     SessionInfo sessionInfo,
     std::shared_ptr<ReloadableConfig> config,
     EdenStatsPtr edenStats,
-    XplatLogger* xplatLogger) {
+    IXplatLogger* xplatLogger) {
   auto scribeBinary = edenConfig.scribeLogger.getValue();
   auto errorCategory = edenConfig.errorScribeCategory.getValue();
   std::shared_ptr<ScribeLogger> scribeLogger;

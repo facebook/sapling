@@ -15,9 +15,9 @@
 namespace facebook::eden {
 
 class EdenStats;
+class IXplatLogger;
 class ReloadableConfig;
 class StructuredLogger;
-class XplatLogger;
 
 using EdenStatsPtr = RefPtr<EdenStats>;
 
@@ -37,7 +37,7 @@ class EdenFsEventsLogger {
  public:
   EdenFsEventsLogger(
       std::shared_ptr<StructuredLogger> structuredLogger,
-      XplatLogger* xplatLogger,
+      IXplatLogger* xplatLogger,
       std::shared_ptr<ReloadableConfig> reloadableConfig,
       EdenStatsPtr edenStats);
 
@@ -50,7 +50,7 @@ class EdenFsEventsLogger {
 
  private:
   std::shared_ptr<StructuredLogger> structuredLogger_;
-  XplatLogger* xplatLogger_;
+  IXplatLogger* xplatLogger_;
   std::shared_ptr<ReloadableConfig> reloadableConfig_;
   EdenStatsPtr edenStats_;
 };

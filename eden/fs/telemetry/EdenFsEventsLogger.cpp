@@ -13,14 +13,14 @@
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/telemetry/EdenStats.h"
+#include "eden/fs/telemetry/IXplatLogger.h"
 #include "eden/fs/telemetry/XplatKeys.h"
-#include "eden/fs/telemetry/facebook/XplatLogger.h"
 
 namespace facebook::eden {
 
 EdenFsEventsLogger::EdenFsEventsLogger(
     std::shared_ptr<StructuredLogger> structuredLogger,
-    XplatLogger* xplatLogger,
+    IXplatLogger* xplatLogger,
     std::shared_ptr<ReloadableConfig> reloadableConfig,
     EdenStatsPtr edenStats)
     : structuredLogger_(std::move(structuredLogger)),
