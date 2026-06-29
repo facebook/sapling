@@ -4,8 +4,10 @@
 
 | What | Path |
 |------|------|
-| Hook implementations | `fbcode/eden/mononoke/features/hooks/src/implementations/` |
-| Hook registration | `fbcode/eden/mononoke/features/hooks/src/implementations.rs` |
+| OSS hook implementations | `fbcode/eden/mononoke/features/hooks/src/implementations/` |
+| Facebook-only hook implementations | `fbcode/eden/mononoke/features/hooks/src/facebook/implementations/` |
+| OSS hook registration | `fbcode/eden/mononoke/features/hooks/src/implementations.rs` |
+| Facebook-only hook registration | `fbcode/eden/mononoke/features/hooks/src/facebook/implementations.rs` |
 | BUCK | `fbcode/eden/mononoke/features/hooks/BUCK` |
 | Cargo.toml | `fbcode/eden/mononoke/features/hooks/Cargo.toml` |
 | Autocargo Cargo.toml | `fbcode/eden/mononoke/public_autocargo/features/hooks/Cargo.toml` |
@@ -34,7 +36,7 @@ Split the work into 3 commits on a stack:
 - New file `implementations/<hook_name>.rs` with:
   - Config struct with `#[derive(Deserialize, Clone, Debug)]`
   - Hook struct with `new(config: &HookConfig)` and `with_config(config: Config)`
-  - No-op `run()` that returns `Ok(HookExecution::accepted())` (`HookExecution` is a struct wrapping a `HookResult` plus `extra_logs`; build it with the `accepted()` / `rejected(info)` constructors)
+  - No-op `run()` returning `Ok(HookExecution::accepted())`. `HookExecution` wraps a `HookResult` plus `extra_logs`; build with `accepted()` / `rejected(info)`, or `*_with_logs` variants to attach Scuba diagnostic lines.
 - `implementations.rs`: add `mod <hook_name>;` line only (NOT the match arm)
 - No tests, no BUCK/Cargo changes (skeleton has minimal imports)
 

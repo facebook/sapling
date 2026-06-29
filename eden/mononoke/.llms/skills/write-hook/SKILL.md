@@ -4,7 +4,7 @@ description: Create a Mononoke server-side hook with 3-diff split (tests, wiring
 metadata:
   oncalls: ['scm_server_infra']
   strict: true
-  apply_to_path: 'eden/mononoke/features/hooks/src/implementations/.*\.rs$'
+  apply_to_path: 'eden/mononoke/features/hooks/src/(facebook/)?implementations/.*\.rs$'
   apply_to_user_prompt: '.*(write|create|add|new|implement).*(mononoke\s+)?hook.*'
 ---
 
