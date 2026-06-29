@@ -550,6 +550,97 @@ impl DerivedDataManager {
             let mut derived_data_scuba = self.derived_data_scuba::<Derivable>(ctx);
             derived_data_scuba.add_changeset_id(csid);
 
+            // Streaming path: instead of the derive/poll long-poll loop, issue a
+            // single `derive_streaming` request whose terminal item is delivered
+            // when derivation completes. The stream rides one connection (one
+            // host) for its life, so there is no per-poll re-routing/fan-out, and
+            // no poll cadence. The wait is bounded here by `overall_timeout`, and
+            // the whole call is retried up to `RETRY_ATTEMPTS_LIMIT` times, just
+            // like the poll path.
+            if justknobs::eval(
+                "scm/mononoke:derived_data_use_streaming_derivation",
+                None,
+                Some(self.repo_name()),
+            ) {
+                let derivation_error = loop {
+                    if justknobs::eval(
+                        "scm/mononoke:derived_data_disable_remote_derivation",
+                        None,
+                        Some(self.repo_name()),
+                    ) {
+                        return Ok(None);
+                    }
+
+                    let elapsed = started.elapsed();
+                    if elapsed >= overall_timeout {
+                        derived_data_scuba.log_remote_derivation_end(
+                            ctx,
+                            Some(format!(
+                                "Remote derivation timed out after {overall_timeout:?}"
+                            )),
+                        );
+                        break DerivationError::Timeout(Derivable::NAME, overall_timeout);
+                    }
+
+                    // Fast path: someone derived it (here or elsewhere) already.
+                    if let Some(data) = self.fetch_derived(ctx, csid, rederivation.clone()).await? {
+                        return Ok(Some(data));
+                    }
+
+                    derived_data_scuba.log_remote_derivation_start(ctx);
+                    let remaining = overall_timeout.saturating_sub(elapsed);
+                    match tokio::time::timeout(remaining, client.derive_streaming(ctx, &request))
+                        .await
+                    {
+                        Ok(Ok(DeriveResponse { data, status })) => match (status, data) {
+                            (RequestStatus::SUCCESS, Some(data)) => {
+                                derived_data_scuba.log_remote_derivation_end(ctx, None);
+                                return Ok(Some(Derivable::from_thrift(data)?));
+                            }
+                            (RequestStatus::SUCCESS, None) => {
+                                derived_data_scuba.log_remote_derivation_end(
+                                    ctx,
+                                    Some("Request succeeded but derived data is None".to_string()),
+                                );
+                                return Ok(None);
+                            }
+                            // The streaming server only emits a SUCCESS terminal
+                            // item; any other status is unexpected.
+                            (status, _) => {
+                                derived_data_scuba.log_remote_derivation_end(
+                                    ctx,
+                                    Some(format!(
+                                        "Unexpected streaming response status: {status:?}"
+                                    )),
+                                );
+                                return Ok(None);
+                            }
+                        },
+                        // Retry on any error: stream/RPC failure or a derivation failure on the stream.
+                        Ok(Err(e)) => {
+                            if attempt >= RETRY_ATTEMPTS_LIMIT {
+                                derived_data_scuba
+                                    .log_remote_derivation_end(ctx, Some(format!("{e:#}")));
+                                break DerivationError::Failed(Derivable::NAME, attempt, e);
+                            }
+                            attempt += 1;
+                            tokio::time::sleep(retry_delay).await;
+                        }
+                        // Overall budget exhausted while waiting on the stream.
+                        Err(_elapsed) => {
+                            derived_data_scuba.log_remote_derivation_end(
+                                ctx,
+                                Some(format!(
+                                    "Remote derivation timed out after {overall_timeout:?}"
+                                )),
+                            );
+                            break DerivationError::Timeout(Derivable::NAME, overall_timeout);
+                        }
+                    }
+                };
+                return Err(derivation_error);
+            }
+
             // Try to perform remote derivation.  Capture the error so that we
             // can decide what to do.
             let derivation_error = loop {

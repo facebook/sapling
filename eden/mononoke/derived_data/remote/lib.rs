@@ -58,4 +58,12 @@ pub trait DerivationClient: Send + Sync {
         ctx: &CoreContext,
         request: &thrift::DeriveRequest,
     ) -> Result<thrift::DeriveResponse>;
+
+    /// Request derivation and wait for the terminal result over a server stream,
+    /// returning it as a single `DeriveResponse` (no poll loop).
+    async fn derive_streaming(
+        &self,
+        ctx: &CoreContext,
+        request: &thrift::DeriveRequest,
+    ) -> Result<thrift::DeriveResponse>;
 }

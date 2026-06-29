@@ -6,6 +6,7 @@
     "scm/mononoke:derived_data_backfill_opportunistic_boundary_completion": true,
     "scm/mononoke:derived_data_disable_derivation_workers": false,
     "scm/mononoke:derived_data_disable_remote_derivation": false,
+    "scm/mononoke:derived_data_use_streaming_derivation": true,
     "scm/mononoke:derived_data_use_content_manifests": true,
     "scm/mononoke:derived_data_use_store_mapping_batch": false,
     "scm/mononoke:derived_data_pipeline_terminal_stage_prod_mapping": false,

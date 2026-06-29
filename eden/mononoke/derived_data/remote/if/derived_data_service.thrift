@@ -292,4 +292,21 @@ service DerivedDataService extends fb303_core.BaseService {
     1: RequestError request_error,
     2: InternalError internal_error,
   );
+
+  /// Request derivation and receive the terminal result over a single
+  /// long-lived server stream, replacing the `derive`/`poll` long-poll loop.
+  /// The server waits on the derivation-completion watch with no request
+  /// timeout and yields exactly one terminal `DeriveResponse` (status SUCCESS)
+  /// when derivation completes, or throws on the stream if it fails. The wait
+  /// is bounded by the client, not the server. The derivation future runs
+  /// detached, so a client dropping the stream wastes no work.
+  stream<
+    DeriveResponse throws (
+      1: RequestError request_error,
+      2: InternalError internal_error,
+    )
+  > derive_streaming(1: DeriveRequest request) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+  );
 }
