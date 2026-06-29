@@ -280,7 +280,7 @@ fn enum_into_thrift(e: &ItemEnum) -> Result<TokenStream, Error> {
 
 fn find_thrift_attribute(s: Span, attrs: &[Attribute]) -> Result<&Attribute, Error> {
     for attr in attrs {
-        if attr.path.is_ident("thrift") {
+        if attr.path().is_ident("thrift") {
             return Ok(attr);
         }
     }
