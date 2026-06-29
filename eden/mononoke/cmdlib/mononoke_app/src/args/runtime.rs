@@ -18,4 +18,9 @@ pub struct RuntimeArgs {
     /// Stack size for worker threads in the Tokio runtime, in bytes
     #[clap(long, help_heading = "RUNTIME OPTIONS")]
     pub runtime_thread_stack_size: Option<usize>,
+    /// Install tokio hooks that propagate the ambient folly RequestContext across
+    /// spawn boundaries (Artillery trace continuity). Startup-only, so it's a CLI
+    /// flag rather than a JustKnob; default off.
+    #[clap(long, help_heading = "RUNTIME OPTIONS")]
+    pub enable_artillery_rctx_hooks: bool,
 }

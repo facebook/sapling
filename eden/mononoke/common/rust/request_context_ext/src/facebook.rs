@@ -30,3 +30,12 @@ impl CapturedRequestContext {
         out.expect("with_context always runs the closure unless func panics")
     }
 }
+
+/// Install tokio runtime hooks that propagate the ambient `folly::RequestContext`
+/// across `tokio::spawn` boundaries, so Artillery trace context survives task
+/// hops on the async runtime. Delegates to the shared `request_context_tokio`
+/// hooks; call once on the `tokio::runtime::Builder` before `build()`.
+pub fn install_request_context_hooks(builder: &mut tokio::runtime::Builder) {
+    use request_context_tokio::BuilderExt;
+    builder.install_request_context_hooks();
+}

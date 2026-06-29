@@ -20,5 +20,9 @@ mod oss;
 
 #[cfg(fbcode_build)]
 pub use facebook::CapturedRequestContext;
+#[cfg(fbcode_build)]
+pub use facebook::install_request_context_hooks;
 #[cfg(not(fbcode_build))]
 pub use oss::CapturedRequestContext;
+#[cfg(not(fbcode_build))]
+pub use oss::install_request_context_hooks;

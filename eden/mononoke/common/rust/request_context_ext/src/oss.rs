@@ -25,3 +25,6 @@ impl CapturedRequestContext {
         func()
     }
 }
+
+/// No-op in OSS builds — there is no `folly::RequestContext` to propagate.
+pub fn install_request_context_hooks(_builder: &mut tokio::runtime::Builder) {}

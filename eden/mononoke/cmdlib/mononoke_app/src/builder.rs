@@ -437,6 +437,13 @@ fn create_runtime(runtime_args: &RuntimeArgs) -> Result<Runtime> {
     if let Some(thread_stack_size) = runtime_args.runtime_thread_stack_size {
         builder.thread_stack_size(thread_stack_size);
     }
+    // Propagate the ambient folly RequestContext across tokio::spawn boundaries
+    // (Artillery trace continuity). In OSS this is a no-op. A startup-only CLI
+    // flag, not a JustKnob: the hooks are installed once when the runtime is
+    // built, so a runtime flip couldn't take effect without a restart.
+    if runtime_args.enable_artillery_rctx_hooks {
+        request_context_ext::install_request_context_hooks(&mut builder);
+    }
     let runtime = builder.build()?;
     Ok(runtime)
 }
