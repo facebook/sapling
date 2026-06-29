@@ -19,10 +19,6 @@ rust_library(
     },
     crate_root = "src/lib.rs",
     proc_macro = True,
-    rustc_flags = [
-        "--crate-type",
-        "proc-macro",
-    ],
     deps = [
         "fbsource//third-party/rust:indexmap",
         "//eden/scm/lib/config/hgrc-parser:hgrc-parser",

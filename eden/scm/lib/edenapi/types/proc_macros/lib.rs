@@ -5,8 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-extern crate proc_macro;
-
 use std::collections::HashSet;
 
 use proc_macro2::TokenStream;
@@ -54,19 +52,6 @@ pub fn auto_wire(
     .into()
 }
 
-struct Parenthesized<T>(T);
-impl<T> parse::Parse for Parenthesized<T>
-where
-    T: std::str::FromStr,
-    T::Err: std::fmt::Display,
-{
-    fn parse(input: parse::ParseStream) -> Result<Self> {
-        let content;
-        parenthesized!(content in input);
-        Ok(Self(content.parse::<LitInt>()?.base10_parse::<T>()?))
-    }
-}
-
 fn arbitrary_impl(wire_ident: &Ident, generics: &Generics) -> TokenStream {
     quote! {
         #[cfg(any(test, feature = "for-tests"))]
@@ -87,27 +72,22 @@ fn extract_id(
     let mut id = Vec::new();
     let mut other_attrs = Vec::new();
     for attr in attrs {
-        if attr.path.is_ident(ID) {
+        if attr.path().is_ident(ID) {
             id.push(attr);
-        } else if !attr.path.is_ident("default") {
+        } else if !attr.path().is_ident("default") {
             // Omit #[default] from the wire data structure when it is present
             // on a variant of the original data structure, because we do not
             // derive Default for the wire one.
             other_attrs.push(attr);
         }
     }
-    if id.len() != 1 {
+    let [id] = id.as_slice() else {
         return Err(Error::new(
             spanned.span(),
             "Must have exactly one attribute 'id'",
         ));
-    }
-    let id = id
-        .into_iter()
-        .next()
-        // never panics because of if above
-        .unwrap();
-    let id = parse2::<Parenthesized<u16>>(id.tokens)?.0;
+    };
+    let id: u16 = id.parse_args::<LitInt>()?.base10_parse()?;
     if !ids.insert(id) {
         return Err(Error::new(
             spanned.span(),
@@ -118,32 +98,31 @@ fn extract_id(
 }
 
 fn remove_id(attrs: &mut Vec<Attribute>) {
-    *attrs = std::mem::take(attrs)
-        .into_iter()
-        .filter(|attr| !attr.path.is_ident(ID))
-        .collect();
+    attrs.retain(|attr| !attr.path().is_ident(ID));
 }
 
 fn extract_no_default(attrs: &mut Vec<Attribute>) -> bool {
     let mut no_default = false;
-    attrs.retain(|a| match a.path.get_ident() {
-        Some(id) if *id == "no_default" => {
+    attrs.retain(|attr| {
+        if attr.path().is_ident("no_default") {
             no_default = true;
             false
+        } else {
+            true
         }
-        _ => true,
     });
     no_default
 }
 
 fn extract_wire_option(attrs: &mut Vec<Attribute>) -> bool {
     let mut wire_option = false;
-    attrs.retain(|a| match a.path.get_ident() {
-        Some(id) if *id == WIRE_OPTION => {
+    attrs.retain(|attr| {
+        if attr.path().is_ident(WIRE_OPTION) {
             wire_option = true;
             false
+        } else {
+            true
         }
-        _ => true,
     });
     wire_option
 }

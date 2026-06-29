@@ -33,10 +33,6 @@ rust_library(
         "fbsource//third-party/rust:tracing",
     ],
     proc_macro = True,
-    rustc_flags = [
-        "--crate-type",
-        "proc-macro",
-    ],
     deps = [
         "fbsource//third-party/rust:proc-macro2",
         "fbsource//third-party/rust:quote",

@@ -68,7 +68,7 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:proc-macro2",
         "fbsource//third-party/rust:quote",
-        "fbsource//third-party/rust:syn1",
+        "fbsource//third-party/rust:syn",
     ],
 )
 
