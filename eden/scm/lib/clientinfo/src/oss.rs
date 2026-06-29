@@ -40,6 +40,10 @@ impl FbClientInfo {
         None
     }
 
+    pub fn ci_purpose(&self) -> Option<&str> {
+        None
+    }
+
     pub fn is_atlas(&self) -> Option<bool> {
         None
     }

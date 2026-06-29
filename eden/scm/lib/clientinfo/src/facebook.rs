@@ -34,6 +34,8 @@ pub struct FbClientInfo {
     #[serde(skip_serializing_if = "Option::is_none")]
     sandcastle_vcs: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    ci_purpose: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     atlas: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     atlas_rl: Option<bool>,
@@ -66,6 +68,10 @@ impl FbClientInfo {
 
     pub fn sandcastle_vcs(&self) -> Option<&str> {
         self.sandcastle_vcs.as_deref()
+    }
+
+    pub fn ci_purpose(&self) -> Option<&str> {
+        self.ci_purpose.as_deref()
     }
 
     pub fn is_atlas(&self) -> Option<bool> {
@@ -121,6 +127,7 @@ pub fn get_fb_client_info() -> FbClientInfo {
         sandcastle_alias: var("SANDCASTLE_ALIAS").ok(),
         sandcastle_type: var("SANDCASTLE_TYPE").ok(),
         sandcastle_vcs: var("SANDCASTLE_VCS").ok(),
+        ci_purpose: var("CI_PURPOSE").ok(),
         atlas: atlas_env_flag("ATLAS"),
         atlas_rl: atlas_rl_from_whoami(),
         atlas_env_id: var("ATLAS_ENV_ID").ok(),
