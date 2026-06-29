@@ -675,13 +675,12 @@ def _pushdiscoveryphase(pushop):
 def _pushdiscoverybookmarks(pushop):
     ui = pushop.ui
     repo = pushop.repo
-    remote = pushop.remote
     ui.debug("checking for updated bookmarks\n")
     ancestors = ()
     if pushop.revs:
         revnums = list(map(repo.changelog.rev, pushop.revs))
         ancestors = repo.changelog.ancestors(revnums, inclusive=True)
-    remotebookmark = remote.listkeys("bookmarks")
+    remotebookmark = discovery._remotebookmarks(pushop)
 
     explicit = set(
         [repo._bookmarks.expandname(bookmark) for bookmark in pushop.bookmarks]

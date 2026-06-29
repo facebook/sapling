@@ -95,8 +95,5 @@ Check that a push which doesn't move a bookmark is allowed
   local heads: 1; remote heads: 1 (explicit: 0); initial common: 1
   all local heads known remotely
   checking for updated bookmarks
-  preparing listkeys for "bookmarks"
-  sending listkeys command
-  received listkey for "bookmarks": 57 bytes
   no changes found
   [1]

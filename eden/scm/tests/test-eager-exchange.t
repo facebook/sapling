@@ -54,8 +54,7 @@ Push:
   DEBUG eagerepo::api: bookmarks master
   DEBUG eagerepo::api: commit_known 178c10ffbc2f92d5407c14478ae9d9dea81f232e, 99dac869f01e09fe3d501fa645ea524af80d498f
   searching for changes
-  DEBUG eagerepo::api: bookmarks master
-  DEBUG sapling::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', '178c10ffbc2f92d5407c14478ae9d9dea81f232e')])
+  DEBUG eagerepo::api: list_bookmark_patterns *
   TRACE sapling::eagerpeer: adding   blob 35e7525ce3a48913275d7061dd9a867ffef1e34d
   TRACE sapling::eagerpeer: adding   tree d8dc55ad2b89cdc0f1ee969e5d79bd1eaddb5b43
   TRACE sapling::eagerpeer: adding commit 99dac869f01e09fe3d501fa645ea524af80d498f

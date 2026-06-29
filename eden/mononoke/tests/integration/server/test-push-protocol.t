@@ -185,9 +185,6 @@ push to Mononoke
   query 2; still undecided: 4, sample size is: 4
   2 total queries in 0.0000s
   checking for updated bookmarks
-  preparing listkeys for "bookmarks"
-  sending listkeys command
-  received listkey for "bookmarks": 57 bytes
   6 changesets found
   list of changesets:
   73a82cfa87dfc23097b4a429eac744ec99394b30

@@ -166,12 +166,28 @@ def findcommonoutgoing(
     return og
 
 
+def _remotebookmarks(pushop):
+    """Fetch the push target's PullDefaultPublishing bookmarks ({name: hexnode}).
+
+    Matches the legacy `remote.listkeys("bookmarks")`, which returns the
+    PullDefaultPublishing bookmarks for all names (not scoped to local bookmark
+    names). `listbookmarkpatterns(["*"])` with no `kinds` returns the same set
+    (per the pyedenapi binding: empty kinds -> PullDefaultPublishing only). Uses
+    SLAPI when the repo has it (so Mononoke pushes avoid wireproto `listkeys`),
+    falling back to the peer's `listkeys` otherwise (in-process or non-Mononoke).
+    """
+    edenapi = pushop.repo.nullableedenapi
+    if edenapi is not None:
+        fetchedbookmarks = edenapi.listbookmarkpatterns(["*"])
+        return {bm: n for (bm, n) in fetchedbookmarks.items() if n is not None}
+    return pushop.remote.listkeys("bookmarks")
+
+
 def _nowarnheads(pushop):
     # Compute newly pushed bookmarks. We don't warn about bookmarked heads.
     repo = pushop.repo
-    remote = pushop.remote
     localbookmarks = repo._bookmarks
-    remotebookmarks = remote.listkeys("bookmarks")
+    remotebookmarks = _remotebookmarks(pushop)
     bookmarkedheads = set()
 
     # internal config: bookmarks.pushing
