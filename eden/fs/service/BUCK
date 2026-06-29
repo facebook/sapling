@@ -624,6 +624,9 @@ make_rule_compatible_with(
     deps = [
         "//eden/fs/config:config_thrift_buck",
         "//fb303/thrift:fb303_core",
+        "//thrift/annotation:cpp",
+        "//thrift/annotation:rust",
+        "//thrift/annotation:thrift",
     ],
 )
 

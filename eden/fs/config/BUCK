@@ -107,4 +107,5 @@ make_rule_compatible_with(
     thrift_srcs = {
         "eden_config.thrift": [],
     },
+    deps = ["//thrift/annotation:thrift"],
 )
