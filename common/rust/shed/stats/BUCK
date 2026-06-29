@@ -2,6 +2,9 @@ load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
 
 oncall("autocargo")
 
+# Taken only when a binary opts into the `glue_mode[glue]` modifier.
+_GLUE_ONLY = "fbcode//hub_infra/build_defs/glue_mode:glue_mode[glue]"
+
 rust_library(
     name = "stats",
     srcs = glob([
@@ -12,7 +15,10 @@ rust_library(
             "lints": {
                 "rust": {
                     "unexpected_cfgs": {
-                        "check-cfg": ["cfg(fbcode_build)"],
+                        "check-cfg": [
+                            "cfg(fbcode_build)",
+                            'cfg(stats_backend, values("noop"))',
+                        ],
                         "level": "warn",
                     },
                 },
@@ -22,6 +28,12 @@ rust_library(
             },
         },
     },
+    # Pure-`glue` drops the C++ backend (sets the neutral `stats_backend="noop"`
+    # cfg the source reads); no modifier = unchanged.
+    rustc_flags = select({
+        "DEFAULT": [],
+        _GLUE_ONLY: ['--cfg=stats_backend="noop"'],
+    }),
     deps = [
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:tokio",
@@ -29,8 +41,10 @@ rust_library(
         ":stats_traits",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/perthread:perthread",
-        "//common/rust/shed/stats/facebook:stats_facebook",
-    ],
+    ] + select({
+        "DEFAULT": ["//common/rust/shed/stats/facebook:stats_facebook"],
+        _GLUE_ONLY: [],
+    }),
 )
 
 rust_library(

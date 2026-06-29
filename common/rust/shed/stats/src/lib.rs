@@ -90,11 +90,11 @@ pub fn create_stats_manager() -> BoxStatsManager {
 }
 
 fn get_default_stats_manager_factory() -> Box<dyn StatsManagerFactory + Send + Sync> {
-    #[cfg(fbcode_build)]
+    #[cfg(all(fbcode_build, not(stats_backend = "noop")))]
     {
         Box::new(::stats_facebook::ThreadLocalStatsFactory)
     }
-    #[cfg(not(fbcode_build))]
+    #[cfg(any(not(fbcode_build), stats_backend = "noop"))]
     {
         Box::new(crate::noop_stats::NoopStatsFactory)
     }
@@ -104,12 +104,12 @@ fn get_default_stats_manager_factory() -> Box<dyn StatsManagerFactory + Send + S
 /// You probably don't have to use this function, it is made public so that it
 /// might be used by the macros in this crate. It creates a new SingletonCounter.
 pub fn create_singleton_counter(name: String) -> BoxSingletonCounter {
-    #[cfg(fbcode_build)]
+    #[cfg(all(fbcode_build, not(stats_backend = "noop")))]
     {
         Box::new(::stats_facebook::singleton_counter::ServiceDataSingletonCounter::new(name))
     }
 
-    #[cfg(not(fbcode_build))]
+    #[cfg(any(not(fbcode_build), stats_backend = "noop"))]
     {
         let _ = name;
         Box::new(crate::noop_stats::Noop)
