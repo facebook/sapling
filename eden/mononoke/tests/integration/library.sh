@@ -578,6 +578,7 @@ function scs {
     BOOKMARK_CACHE_FLAG="--disable-bookmark-cache-warming"
   fi
 
+  # Disable overload load-shedding: its default mem counter counts page cache, so warm test hosts shed every request.
   rm -f "$TESTTMP/scs_server_addr.txt"
   GLOG_minloglevel=5 \
     THRIFT_TLS_SRV_CERT="$TEST_CERTDIR/localhost.crt" \
@@ -594,6 +595,7 @@ function scs {
     --bound-address-file "$TESTTMP/scs_server_addr.txt" \
     --scribe-logging-directory "$TESTTMP/scribe_logs" \
     --tracing-test-format \
+    --gflag boh_mem_util_counter= \
     $BOOKMARK_CACHE_FLAG \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" >> "$TESTTMP/scs_server.out" 2>&1 &
