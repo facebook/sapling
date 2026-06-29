@@ -73,6 +73,23 @@ setup repo-pull and repo-push
   $ COMMIT_B=$(hg log -r 'desc("add b")' -T '{node}')
   $ hg up -q $COMMIT_B
 
+Redact files from multiple commits using commit:path input
+  $ cat > "$TESTTMP/redaction_pairs" <<EOF
+  > $C:c
+  > $COMMIT_B:b
+  > EOF
+  $ mononoke_admin redaction create-key-list -R repo --input-file "$TESTTMP/redaction_pairs" --main-bookmark master_bookmark --force --output-file rs_pairs --skip-aws-sync
+  Checking redacted content doesn't exist in 'master_bookmark' bookmark
+  Redacted content in main bookmark: b content.blake2.21c519fe0eb401bc97888f270902935f858d0c5361211f892fd26ed9ce127ff9
+  Creating key list despite 1 files being redacted in the main bookmark (master_bookmark) (--force)
+  Redaction saved as: * (glob)
+  To finish the redaction process, you need to commit this id to scm/mononoke/redaction/redaction_sets.cconf in configerator
+
+  $ mononoke_admin redaction fetch-key-list -R repo $(cat rs_pairs) | sort
+  content.blake2.000a1a9b74aa3da71fcceb653a62cb6987ae440c2b5c3d7e5d08d7c526b1dca8
+  content.blake2.21c519fe0eb401bc97888f270902935f858d0c5361211f892fd26ed9ce127ff9
+  $ rm rs_pairs
+
 Redact file 'c' in commit '$C'
   $ mononoke_admin redaction create-key-list -R repo -i $C c --main-bookmark master_bookmark --output-file rs_0 --skip-aws-sync
   Checking redacted content doesn't exist in 'master_bookmark' bookmark

@@ -27,6 +27,8 @@ use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
 use derivation_queue_thrift::DerivationPriority;
 use fsnodes::RootFsnodeId;
+use futures::stream;
+use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use manifest::Entry;
 use manifest::ManifestOps;
@@ -44,14 +46,18 @@ use repo_derived_data::RepoDerivedDataRef;
 use super::Repo;
 use super::list::paths_for_content_keys;
 
+const COMMIT_LOOKUP_CONCURRENCY: usize = 10;
+
 #[derive(Args)]
 #[clap(group(ArgGroup::new("files-input=file").args(&["files", "input_file"]).required(true)))]
 pub struct RedactionCreateKeyListArgs {
     #[clap(flatten)]
     repo_args: RepoArgs,
 
+    /// Commit containing all files to redact. If omitted, --input-file must
+    /// contain one commit:path pair per line.
     #[clap(long, short = 'i')]
-    commit_id: String,
+    commit_id: Option<String>,
 
     /// Fail if any of the content to be redacted is reachable from this main
     /// bookmark unless --force is set.
@@ -63,7 +69,8 @@ pub struct RedactionCreateKeyListArgs {
     #[clap(long)]
     force: bool,
 
-    /// Name of a file with a list of filenames to redact.
+    /// Name of a file with a list of filenames to redact. Without --commit-id,
+    /// each line must be a commit:path pair.
     #[clap(long)]
     input_file: Option<PathBuf>,
 
@@ -178,6 +185,7 @@ async fn content_keys_for_paths(
     ctx: &CoreContext,
     repo: &Repo,
     cs_id: ChangesetId,
+    commit_label: &str,
     paths: Vec<NonRootMPath>,
 ) -> Result<HashSet<String>> {
     let use_content_manifests = justknobs::eval(
@@ -217,15 +225,52 @@ async fn content_keys_for_paths(
     let mut missing_paths = 0;
     for path in paths.iter() {
         if !path_content_keys.contains_key(path) {
-            eprintln!("Missing file: {path}");
+            eprintln!("Missing file in commit {commit_label}: {path}");
             missing_paths += 1;
         }
     }
     if missing_paths > 0 {
-        bail!("Failed to find {missing_paths} files in this commit");
+        bail!("Failed to find {missing_paths} files in commit {commit_label}");
     }
 
     Ok(path_content_keys.into_values().collect())
+}
+
+fn parse_commit_path_pair(line: &str, line_number: usize) -> Result<(String, NonRootMPath)> {
+    let (commit_id, path) = line
+        .split_once(':')
+        .ok_or_else(|| anyhow!("Invalid input line {line_number}: expected a commit:path pair"))?;
+    if commit_id.is_empty() {
+        bail!("Invalid input line {line_number}: commit is empty");
+    }
+    if path.is_empty() {
+        bail!("Invalid input line {line_number}: path is empty");
+    }
+    let path = NonRootMPath::new(path)
+        .with_context(|| format!("Invalid path on input line {line_number}"))?;
+    Ok((commit_id.to_string(), path))
+}
+
+async fn content_keys_for_commit_paths(
+    ctx: &CoreContext,
+    repo: &Repo,
+    paths_by_commit: HashMap<String, Vec<NonRootMPath>>,
+) -> Result<HashSet<String>> {
+    stream::iter(paths_by_commit)
+        .map(|(commit_id, paths)| async move {
+            let cs_id = parse_commit_id(ctx, repo, &commit_id)
+                .await
+                .with_context(|| format!("Failed to parse commit id '{commit_id}'"))?;
+            content_keys_for_paths(ctx, repo, cs_id, &commit_id, paths)
+                .await
+                .with_context(|| format!("Failed to find content keys in commit '{commit_id}'"))
+        })
+        .buffer_unordered(COMMIT_LOOKUP_CONCURRENCY)
+        .try_fold(HashSet::new(), |mut keys, commit_keys| async move {
+            keys.extend(commit_keys);
+            Ok(keys)
+        })
+        .await
 }
 
 pub async fn create_key_list_from_commit_files(
@@ -233,55 +278,68 @@ pub async fn create_key_list_from_commit_files(
     app: &MononokeApp,
     create_args: RedactionCreateKeyListArgs,
 ) -> Result<()> {
-    let mut files = create_args
-        .files
-        .iter()
-        .map(NonRootMPath::new)
-        .collect::<Result<Vec<_>>>()?;
-    if let Some(input_file) = create_args.input_file {
+    let RedactionCreateKeyListArgs {
+        repo_args,
+        commit_id,
+        main_bookmark,
+        force,
+        input_file,
+        output_file,
+        skip_aws_sync,
+        files,
+    } = create_args;
+
+    let mut paths_by_commit: HashMap<String, Vec<NonRootMPath>> = HashMap::new();
+    if let Some(commit_id) = commit_id {
+        let mut paths = files
+            .into_iter()
+            .map(NonRootMPath::new)
+            .collect::<Result<Vec<_>>>()?;
+        if let Some(input_file) = input_file {
+            let input_file =
+                BufReader::new(File::open(input_file).context("Failed to open input file")?);
+            for line in input_file.lines() {
+                paths.push(NonRootMPath::new(line?)?);
+            }
+        }
+        paths_by_commit.insert(commit_id, paths);
+    } else {
+        if !files.is_empty() {
+            bail!("--commit-id is required when passing FILE arguments");
+        }
+        let input_file = input_file
+            .ok_or_else(|| anyhow!("--input-file is required when --commit-id is omitted"))?;
         let input_file =
             BufReader::new(File::open(input_file).context("Failed to open input file")?);
-        for line in input_file.lines() {
-            files.push(NonRootMPath::new(line?)?);
+        for (line_number, line) in input_file.lines().enumerate() {
+            let (commit_id, path) = parse_commit_path_pair(&line?, line_number + 1)?;
+            paths_by_commit.entry(commit_id).or_default().push(path);
         }
     }
-    if files.is_empty() {
+    if paths_by_commit.values().all(Vec::is_empty) {
         bail!("No files to redact");
     }
     let repo: Repo = app
-        .open_repo(&create_args.repo_args)
+        .open_repo(&repo_args)
         .await
         .context("Failed to open repo")?;
 
-    let cs_id = parse_commit_id(ctx, &repo, &create_args.commit_id).await?;
+    let keys = content_keys_for_commit_paths(ctx, &repo, paths_by_commit).await?;
 
-    let keys = content_keys_for_paths(ctx, &repo, cs_id, files).await?;
-
-    println!(
-        "Checking redacted content doesn't exist in '{}' bookmark",
-        create_args.main_bookmark
-    );
+    println!("Checking redacted content doesn't exist in '{main_bookmark}' bookmark");
     let main_cs_id = repo
         .bookmarks()
         .get(
             ctx.clone(),
-            &create_args.main_bookmark,
+            &main_bookmark,
             bookmarks::Freshness::MostRecent,
         )
         .await?
-        .ok_or_else(|| {
-            anyhow!(
-                "Main bookmark '{}' does not exist",
-                create_args.main_bookmark
-            )
-        })?;
+        .ok_or_else(|| anyhow!("Main bookmark '{main_bookmark}' does not exist"))?;
     let main_redacted = paths_for_content_keys(ctx, &repo, main_cs_id, &keys).await?;
 
     if main_redacted.is_empty() {
-        println!(
-            "No files would be redacted in the main bookmark ({})",
-            create_args.main_bookmark
-        );
+        println!("No files would be redacted in the main bookmark ({main_bookmark})");
     } else {
         for (path, content_id) in main_redacted.iter() {
             println!(
@@ -290,17 +348,17 @@ pub async fn create_key_list_from_commit_files(
                 content_id.blobstore_key(),
             );
         }
-        if create_args.force {
+        if force {
             println!(
                 "Creating key list despite {} files being redacted in the main bookmark ({}) (--force)",
                 main_redacted.len(),
-                create_args.main_bookmark
+                main_bookmark
             );
         } else {
             bail!(
                 "Refusing to create key list because {} files would be redacted in the main bookmark ({})",
                 main_redacted.len(),
-                create_args.main_bookmark
+                main_bookmark
             );
         }
     }
@@ -308,10 +366,9 @@ pub async fn create_key_list_from_commit_files(
     let keys_vec: Vec<String> = keys.into_iter().collect();
     let keys_for_sync = keys_vec.clone();
 
-    let key_list_id =
-        create_key_list(ctx, app, keys_vec, create_args.output_file.as_deref()).await?;
+    let key_list_id = create_key_list(ctx, app, keys_vec, output_file.as_deref()).await?;
 
-    if !create_args.skip_aws_sync {
+    if !skip_aws_sync {
         super::aws_sync::sync_to_aws(&keys_for_sync, key_list_id, repo.repo_identity.name()).await;
     }
 
