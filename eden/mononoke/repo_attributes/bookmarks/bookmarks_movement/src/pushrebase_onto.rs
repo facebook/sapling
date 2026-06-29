@@ -16,6 +16,7 @@ use context::CoreContext;
 use futures_stats::TimedFutureExt;
 use hooks::CrossRepoPushSource;
 use hooks::HookManager;
+use metaconfig_types::LAND_INSTANCE_ID_PUSHVAR_KEY;
 use metaconfig_types::MergeResolutionOverride;
 use mononoke_types::BonsaiChangeset;
 use pushrebase_hook::PushrebaseHook;
@@ -130,6 +131,12 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
                 .and_then(|p| p.get(MergeResolutionOverride::PUSHVAR_KEY))
                 .map(|b| b.as_ref()),
         );
+        // Per-land key (same on every retry push) for the terminal-bounce readout.
+        flags.land_instance_id = self
+            .pushvars
+            .and_then(|p| p.get(LAND_INSTANCE_ID_PUSHVAR_KEY))
+            .and_then(|b| std::str::from_utf8(b.as_ref()).ok())
+            .map(str::to_owned);
 
         ctx.scuba()
             .clone()

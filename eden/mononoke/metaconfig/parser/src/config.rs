@@ -1492,6 +1492,7 @@ mod test {
                         merge_resolution_excluded_path_prefixes: Default::default(),
                         pessimistic_locking_bookmarks: Vec::new(),
                         merge_resolution_override: MergeResolutionOverride::UseJk,
+                        land_instance_id: None,
                     },
                     block_merges: false,
                     emit_obsmarkers: false,

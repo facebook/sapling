@@ -333,6 +333,10 @@ pub async fn do_pushrebase_bonsai(
     // means every downstream `ctx.scuba()` clone inherits the field.
     let ctx = ctx.with_mutated_scuba(|mut scuba| {
         scuba.add("mr_qe_arm", config.merge_resolution_override.qe_arm_str());
+        // Per-land key to roll a land's attempts up to a terminal outcome.
+        if let Some(land_instance_id) = config.land_instance_id.as_deref() {
+            scuba.add("land_instance_id", land_instance_id);
+        }
         scuba
     });
     let ctx = &ctx;

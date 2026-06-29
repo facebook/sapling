@@ -1028,7 +1028,12 @@ pub struct PushrebaseFlags {
     /// never loaded from configerator — set on a cloned `PushrebaseFlags`
     /// before the pushrebase call (mirrors `rewritedates`).
     pub merge_resolution_override: MergeResolutionOverride,
+    /// Per-request Sandcastle land instance id (`LAND_INSTANCE_ID` pushvar); stamped on Scuba to group a land's attempts. Observability only.
+    pub land_instance_id: Option<String>,
 }
+
+/// Pushvar key for the Sandcastle land instance id (see `PushrebaseFlags::land_instance_id`).
+pub const LAND_INSTANCE_ID_PUSHVAR_KEY: &str = "LAND_INSTANCE_ID";
 
 /// Per-request override for the `pushrebase_enable_merge_resolution` JustKnob.
 ///
@@ -1164,6 +1169,7 @@ impl Default for PushrebaseFlags {
             merge_resolution_excluded_path_prefixes: PrefixTrie::new(),
             pessimistic_locking_bookmarks: Vec::new(),
             merge_resolution_override: MergeResolutionOverride::UseJk,
+            land_instance_id: None,
         }
     }
 }
