@@ -175,7 +175,6 @@ python_library(
         "fbsource//third-party/pypi/filelock:filelock",
         "fbsource//third-party/pypi/psutil:psutil",
         "fbsource//third-party/pypi/toml:toml",
-        "fbsource//third-party/pypi/tqdm:tqdm",
         ":hostname",
         ":mp",
         ":proc_utils",

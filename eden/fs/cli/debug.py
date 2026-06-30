@@ -89,15 +89,6 @@ from thrift.python.exceptions import ApplicationError, ApplicationErrorType
 from thrift.python.serializer import Protocol, serialize as thrift_serialize
 from thrift.python.types import Struct as ThriftStruct
 
-try:
-    from tqdm import tqdm
-except ModuleNotFoundError:
-    # pyre-fixme[3]: Return type must be annotated.
-    # pyre-fixme[2]: Parameter must be annotated.
-    def tqmd(x):
-        return x
-
-
 from . import (
     cmd_util,
     rage as rage_mod,
