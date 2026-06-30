@@ -363,14 +363,17 @@ TEST(
   restrictedTree->setReady();
   auto restrictedTreeId = restrictedTree->get().getObjectId();
 
-  // Building the parent from a StoredTree* drops the child's restricted bit
-  // from the parent TreeEntry. This simulates the fail-open case where parent
-  // metadata is missing even though a direct child fetch still returns a
-  // restricted Tree. Cache that live result on the DirEntry so future lookups
-  // can short-circuit before fetching again.
-  auto* rootTree = backingStore->putTree({
-      {"restricted", restrictedTree},
-  });
+  // Build the parent entry directly so its metadata is missing even though a
+  // direct child fetch still returns a restricted Tree. Cache that live result
+  // on the DirEntry so future lookups can short-circuit before fetching again.
+  Tree::container rootEntries{kPathMapDefaultCaseSensitive};
+  rootEntries.emplace(
+      "restricted"_pc,
+      ObjectId{restrictedTreeId},
+      TreeEntryType::TREE,
+      /* isRestricted */ false,
+      /* hasACL */ std::nullopt);
+  auto* rootTree = backingStore->putTree(std::move(rootEntries));
   rootTree->setReady();
   backingStore->putCommit(RootId{"1"}, rootTree)->setReady();
   testMount.initialize(RootId{"1"});

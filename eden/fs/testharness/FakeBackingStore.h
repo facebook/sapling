@@ -12,6 +12,7 @@
 #include <gtest/gtest_prod.h>
 #include <initializer_list>
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 
@@ -126,7 +127,9 @@ class FakeBackingStore final : public BackingStore {
    */
   std::pair<StoredTree*, bool> maybePutTree(
       const std::initializer_list<TreeEntryData>& entries);
-  std::pair<StoredTree*, bool> maybePutTree(Tree::container entries);
+  std::pair<StoredTree*, bool> maybePutTree(
+      Tree::container entries,
+      std::optional<bool> hasACL = std::nullopt);
 
   /**
    * Add a mapping from a commit ID to a root tree id.
@@ -237,11 +240,13 @@ class FakeBackingStore final : public BackingStore {
   StoredTree* putTreeImpl(
       ObjectId id,
       Tree::container&& sortedEntries,
-      bool isRestricted = false);
+      bool isRestricted = false,
+      std::optional<bool> hasACL = std::nullopt);
   std::pair<StoredTree*, bool> maybePutTreeImpl(
       ObjectId id,
       Tree::container&& sortedEntries,
-      bool isRestricted = false);
+      bool isRestricted = false,
+      std::optional<bool> hasACL = std::nullopt);
 
   FRIEND_TEST(FakeBackingStoreTest, getNonExistent);
   FRIEND_TEST(FakeBackingStoreTest, getBlob);

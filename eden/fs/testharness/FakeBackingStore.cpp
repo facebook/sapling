@@ -434,9 +434,10 @@ std::pair<StoredTree*, bool> FakeBackingStore::maybePutTree(
 }
 
 std::pair<StoredTree*, bool> FakeBackingStore::maybePutTree(
-    Tree::container entries) {
+    Tree::container entries,
+    std::optional<bool> hasACL) {
   auto id = computeTreeId(entries);
-  return maybePutTreeImpl(id, std::move(entries));
+  return maybePutTreeImpl(id, std::move(entries), false, hasACL);
 }
 
 Tree::container FakeBackingStore::buildTreeEntries(
@@ -475,8 +476,10 @@ ObjectId FakeBackingStore::computeTreeId(const Tree::container& sortedEntries) {
 StoredTree* FakeBackingStore::putTreeImpl(
     ObjectId id,
     Tree::container&& sortedEntries,
-    bool isRestricted) {
-  auto ret = maybePutTreeImpl(id, std::move(sortedEntries), isRestricted);
+    bool isRestricted,
+    std::optional<bool> hasACL) {
+  auto ret =
+      maybePutTreeImpl(id, std::move(sortedEntries), isRestricted, hasACL);
   if (!ret.second) {
     throw std::domain_error(fmt::format("tree with id {} already exists", id));
   }
@@ -486,10 +489,14 @@ StoredTree* FakeBackingStore::putTreeImpl(
 std::pair<StoredTree*, bool> FakeBackingStore::maybePutTreeImpl(
     ObjectId id,
     Tree::container&& sortedEntries,
-    bool isRestricted) {
+    bool isRestricted,
+    std::optional<bool> hasACL) {
   auto tree = isRestricted
       ? Tree{Tree::Restricted{}, std::move(sortedEntries), id}
-      : Tree{std::move(sortedEntries), id};
+      : Tree{
+            std::move(sortedEntries),
+            id,
+            makeAclRootState(/*isRestricted=*/false, hasACL)};
   auto storedTree = make_unique<StoredTree>(std::move(tree));
 
   {

@@ -82,6 +82,62 @@ TEST(TreeInode, findEntryDifferencesWithSameEntriesReturnsNone) {
   EXPECT_FALSE(findEntryDifferences(dir, tree));
 }
 
+TEST(TreeInode, findEntryDifferencesIgnoresUnknownAclState) {
+  DirContents dir(CaseSensitivity::Sensitive);
+  dir.emplace(
+      "one"_pc,
+      DirEntry{
+          S_IFREG | 0644,
+          1_ino,
+          ObjectId{},
+          /*isRestricted=*/false,
+          std::nullopt});
+
+  Tree::container untrackedEntries{CaseSensitivity::Sensitive};
+  untrackedEntries.emplace(
+      "one"_pc,
+      ObjectId{},
+      TreeEntryType::REGULAR_FILE,
+      /*isRestricted=*/false,
+      /*hasACL=*/false);
+  Tree untrackedTree{std::move(untrackedEntries), testId};
+  EXPECT_FALSE(findEntryDifferences(dir, untrackedTree));
+
+  Tree::container aclEntries{CaseSensitivity::Sensitive};
+  aclEntries.emplace(
+      "one"_pc,
+      ObjectId{},
+      TreeEntryType::REGULAR_FILE,
+      /*isRestricted=*/false,
+      /*hasACL=*/true);
+  Tree aclTree{std::move(aclEntries), testId};
+  EXPECT_FALSE(findEntryDifferences(dir, aclTree));
+}
+
+TEST(TreeInode, findEntryDifferencesReportsKnownAclMismatch) {
+  DirContents dir(CaseSensitivity::Sensitive);
+  dir.emplace(
+      "one"_pc,
+      DirEntry{
+          S_IFREG | 0644,
+          1_ino,
+          ObjectId{},
+          /*isRestricted=*/false,
+          /*hasACL=*/false});
+  Tree::container entries{CaseSensitivity::Sensitive};
+  entries.emplace(
+      "one"_pc,
+      ObjectId{},
+      TreeEntryType::REGULAR_FILE,
+      /*isRestricted=*/false,
+      /*hasACL=*/true);
+  Tree tree{std::move(entries), testId};
+
+  auto differences = findEntryDifferences(dir, tree);
+  EXPECT_TRUE(differences);
+  EXPECT_EQ((std::vector<std::string>{"~ one"}), *differences);
+}
+
 TEST(TreeInode, findEntryDifferencesReturnsAdditionsAndSubtractions) {
   DirContents dir(CaseSensitivity::Sensitive);
   dir.emplace("one"_pc, makeDirEntry());
@@ -1006,6 +1062,60 @@ TEST(DirEntry, isRestrictedBitField) {
   mutableEntry.setRestricted(false);
   EXPECT_FALSE(mutableEntry.isRestricted());
 }
+
+TEST(DirEntry, aclRootStateCompatibilityHelpers) {
+  auto expectAclRootState = [](InodeNumber ino,
+                               const char* id,
+                               bool isRestricted,
+                               std::optional<bool> hasACL,
+                               AclRootState aclRootState,
+                               std::optional<bool> expectedHasACL) {
+    DirEntry entry(S_IFDIR | 0755, ino, ObjectId(id), isRestricted, hasACL);
+    EXPECT_EQ(entry.aclRootState(), aclRootState);
+    EXPECT_EQ(entry.hasACL(), expectedHasACL);
+    EXPECT_EQ(entry.isRestricted(), isRestricted);
+  };
+
+  expectAclRootState(
+      47_ino, "mno", false, std::nullopt, AclRootState::Unknown, std::nullopt);
+  expectAclRootState(48_ino, "pqr", false, false, AclRootState::NoAcl, false);
+  expectAclRootState(49_ino, "stu", false, true, AclRootState::AclRoot, true);
+  expectAclRootState(
+      50_ino, "vwx", true, true, AclRootState::RestrictedAclRoot, true);
+
+  DirEntry restricted(
+      S_IFDIR | 0755,
+      50_ino,
+      ObjectId("vwx"),
+      /*isRestricted=*/true,
+      /*hasACL=*/true);
+  EXPECT_EQ(restricted.aclRootState(), AclRootState::RestrictedAclRoot);
+  EXPECT_EQ(restricted.hasACL(), std::optional<bool>{true});
+  EXPECT_TRUE(restricted.isRestricted());
+
+  restricted.setRestricted(false);
+  EXPECT_EQ(restricted.aclRootState(), AclRootState::AclRoot);
+  EXPECT_EQ(restricted.hasACL(), std::optional<bool>{true});
+  EXPECT_FALSE(restricted.isRestricted());
+
+  DirEntry staleRestricted(
+      S_IFDIR | 0755,
+      51_ino,
+      ObjectId("yz0"),
+      /*isRestricted=*/true,
+      /*hasACL=*/true);
+  staleRestricted.setHasACL(false);
+  EXPECT_EQ(staleRestricted.aclRootState(), AclRootState::RestrictedAclRoot);
+  EXPECT_EQ(staleRestricted.hasACL(), std::optional<bool>{true});
+  EXPECT_TRUE(staleRestricted.isRestricted());
+
+  staleRestricted.setAclRootState(
+      makeAclRootState(/*isRestricted=*/false, /*hasACL=*/false));
+  EXPECT_EQ(staleRestricted.aclRootState(), AclRootState::NoAcl);
+  EXPECT_EQ(staleRestricted.hasACL(), std::optional<bool>{false});
+  EXPECT_FALSE(staleRestricted.isRestricted());
+}
+
 TEST_P(TreeInodeTestBase, childMaterializedSkipsOverlayWrite) {
   FakeTreeBuilder builder;
   builder.setFiles({
@@ -1127,6 +1237,43 @@ TEST_P(TreeInodeTestBase, childDematerializedSkipsOverlayWrite) {
 
 #endif // _WIN32
 
+namespace {
+StoredId* addReadyCommit(
+    TestMount& testMount,
+    const RootId& rootId,
+    FakeTreeBuilder& builder) {
+  builder.finalize(testMount.getBackingStore(), true);
+  auto* commit = testMount.getBackingStore()->putCommit(rootId, builder);
+  if (commit) {
+    commit->setReady();
+  }
+  return commit;
+}
+
+CheckoutResult checkoutTo(TestMount& testMount, RootId rootId) {
+  auto executor = testMount.getServerExecutor().get();
+  auto checkoutResult = testMount.getEdenMount()
+                            ->checkout(
+                                testMount.getRootInode(),
+                                std::move(rootId),
+                                ObjectFetchContext::getNullContext(),
+                                __func__)
+                            .semi()
+                            .via(executor);
+  testMount.drainServerExecutor();
+  return std::move(checkoutResult).get();
+}
+
+void expectAclDirState(TestMount& testMount, AclRootState expected) {
+  auto rootInode = testMount.getEdenMount()->getRootInode();
+  auto contents = rootInode->lockContentsRead();
+  auto aclIter = contents->entries.find("acl_dir"_pc);
+  ASSERT_NE(aclIter, contents->entries.end());
+  EXPECT_TRUE(aclIter->second.isDirectory());
+  EXPECT_EQ(aclIter->second.aclRootState(), expected);
+}
+} // namespace
+
 TEST_P(TreeInodeTestBase, checkoutPropagatesIsRestricted) {
   // Start with a tree that has no ACL directories.
   FakeTreeBuilder builder1;
@@ -1207,6 +1354,75 @@ TEST_P(TreeInodeTestBase, checkoutRemovesRestrictionWhenAclRemoved) {
   ASSERT_NE(aclIter, contents->entries.end());
   EXPECT_TRUE(aclIter->second.isDirectory());
   EXPECT_FALSE(aclIter->second.isRestricted());
+  EXPECT_EQ(aclIter->second.aclRootState(), AclRootState::NoAcl);
+}
+
+TEST_P(TreeInodeTestBase, checkoutClearsRestrictionButPreservesAclRoot) {
+  FakeTreeBuilder builder1;
+  builder1.setFile("src/main.c", "int main() { return 0; }\n");
+  builder1.setFile("acl_dir/file.txt", "acl content");
+  builder1.setDirIsRestricted("acl_dir");
+  TestMount testMount{builder1};
+  maybeEnableCoroutines(testMount);
+
+  FakeTreeBuilder builder2;
+  builder2.setFile("src/main.c", "int main() { return 0; }\n");
+  builder2.setFile("acl_dir/file.txt", "acl content modified");
+  builder2.setDirHasAcl("acl_dir");
+  builder2.finalize(testMount.getBackingStore(), true);
+  auto* commit2 = testMount.getBackingStore()->putCommit(RootId{"2"}, builder2);
+  if (commit2 == nullptr) {
+    ADD_FAILURE() << "failed to create target commit";
+    return;
+  }
+  commit2->setReady();
+
+  auto executor = testMount.getServerExecutor().get();
+  auto checkoutResult = testMount.getEdenMount()
+                            ->checkout(
+                                testMount.getRootInode(),
+                                RootId{"2"},
+                                ObjectFetchContext::getNullContext(),
+                                __func__)
+                            .semi()
+                            .via(executor);
+  testMount.drainServerExecutor();
+  ASSERT_TRUE(checkoutResult.isReady());
+  auto result = std::move(checkoutResult).get();
+  EXPECT_EQ(0, result.conflicts.size());
+
+  auto rootInode = testMount.getEdenMount()->getRootInode();
+  auto contents = rootInode->lockContentsRead();
+  auto aclIter = contents->entries.find("acl_dir"_pc);
+  ASSERT_NE(aclIter, contents->entries.end());
+  EXPECT_FALSE(aclIter->second.isRestricted());
+  EXPECT_EQ(aclIter->second.aclRootState(), AclRootState::AclRoot);
+}
+
+TEST_P(TreeInodeTestBase, checkoutIgnoresNonRestrictedAclRootMetadataChange) {
+  FakeTreeBuilder builder1;
+  builder1.setFile("src/main.c", "int main() { return 0; }\n");
+  builder1.setFile("acl_dir/file.txt", "acl content");
+  TestMount testMount{builder1};
+  maybeEnableCoroutines(testMount);
+
+  {
+    auto rootInode = testMount.getEdenMount()->getRootInode();
+    auto contents = rootInode->lockContentsWrite();
+    auto aclIter = contents->entries.find("acl_dir"_pc);
+    ASSERT_NE(aclIter, contents->entries.end());
+    aclIter->second.setAclRootState(AclRootState::AclRoot);
+  }
+  expectAclDirState(testMount, AclRootState::AclRoot);
+
+  FakeTreeBuilder builder2;
+  builder2.setFile("src/main.c", "int main() { return 0; }\n");
+  builder2.setFile("acl_dir/file.txt", "acl content");
+  ASSERT_NE(nullptr, addReadyCommit(testMount, RootId{"2"}, builder2));
+
+  auto result = checkoutTo(testMount, RootId{"2"});
+  EXPECT_EQ(0, result.conflicts.size());
+  expectAclDirState(testMount, AclRootState::AclRoot);
 }
 
 TEST_P(TreeInodeTestBase, checkoutAddsRestrictionWhenAclAdded) {
@@ -1217,10 +1433,8 @@ TEST_P(TreeInodeTestBase, checkoutAddsRestrictionWhenAclAdded) {
   TestMount testMount{builder1};
   maybeEnableCoroutines(testMount);
 
-  // Create a second commit where acl_dir has isRestricted set AND content
-  // changes. The checkout code intentionally does not compare isRestricted
-  // alone — it only processes entries where the tree content differs. So we
-  // must also change a file to trigger checkout processing of acl_dir.
+  // Create a second commit where acl_dir has isRestricted set and content
+  // changes.
   auto builder2 = builder1.clone();
   builder2.replaceFile("acl_dir/file.txt", "acl content modified");
   builder2.setDirIsRestricted("acl_dir");

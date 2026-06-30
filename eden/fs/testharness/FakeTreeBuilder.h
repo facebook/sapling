@@ -184,6 +184,24 @@ class FakeTreeBuilder {
   void setDirIsRestricted(RelativePathPiece path);
 
   /**
+   * Mark a directory entry as structurally under ACL without denying access.
+   * The directory must already exist.
+   */
+  void setDirHasAcl(folly::StringPiece path) {
+    setDirHasAcl(RelativePathPiece{path});
+  }
+  void setDirHasAcl(RelativePathPiece path);
+
+  /**
+   * Mark a directory entry's ACL metadata as unavailable.
+   * The directory must already exist.
+   */
+  void setDirHasAclUnknown(folly::StringPiece path) {
+    setDirHasAclUnknown(RelativePathPiece{path});
+  }
+  void setDirHasAclUnknown(RelativePathPiece path);
+
+  /**
    * Call setReady() on the StoredTree or StoredBlob at the given path.
    */
   void setReady(folly::StringPiece path) {
@@ -280,6 +298,7 @@ class FakeTreeBuilder {
     std::string contents;
     std::optional<ObjectId> objectId;
     bool isRestricted = false;
+    std::optional<bool> hasACL = false;
   };
 
   FakeTreeBuilder(FakeTreeBuilder const&) = delete;

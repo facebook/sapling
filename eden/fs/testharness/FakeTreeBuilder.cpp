@@ -58,6 +58,21 @@ void FakeTreeBuilder::setDirIsRestricted(RelativePathPiece path) {
   XCHECK(entry->type == TreeEntryType::TREE)
       << "setDirIsRestricted can only be called on directories";
   entry->isRestricted = true;
+  entry->hasACL = true;
+}
+
+void FakeTreeBuilder::setDirHasAcl(RelativePathPiece path) {
+  auto* entry = getEntry(path);
+  XCHECK(entry->type == TreeEntryType::TREE)
+      << "setDirHasAcl can only be called on directories";
+  entry->hasACL = true;
+}
+
+void FakeTreeBuilder::setDirHasAclUnknown(RelativePathPiece path) {
+  auto* entry = getEntry(path);
+  XCHECK(entry->type == TreeEntryType::TREE)
+      << "setDirHasAclUnknown can only be called on directories";
+  entry->hasACL = std::nullopt;
 }
 
 void FakeTreeBuilder::setFileImpl(
@@ -269,7 +284,9 @@ FakeTreeBuilder::EntryInfo::EntryInfo(TreeEntryType fileType) : type(fileType) {
 FakeTreeBuilder::EntryInfo::EntryInfo(ExplicitClone, const EntryInfo& orig)
     : type(orig.type),
       contents(orig.contents),
-      isRestricted(orig.isRestricted) {
+      objectId(orig.objectId),
+      isRestricted(orig.isRestricted),
+      hasACL(orig.hasACL) {
   if (orig.entries) {
     entries = make_unique<PathMap<EntryInfo>>(kPathMapDefaultCaseSensitive);
     for (const auto& e : *orig.entries) {
@@ -302,10 +319,18 @@ StoredTree* FakeTreeBuilder::EntryInfo::finalizeTree(
         std::nullopt,
         std::nullopt,
         std::nullopt,
-        entryInfo.isRestricted);
+        entryInfo.isRestricted,
+        entryInfo.hasACL);
   }
 
-  auto* storedTree = builder->store_->maybePutTree(treeEntries).first;
+  if (builder == nullptr || builder->store_ == nullptr) {
+    throw std::logic_error(
+        "FakeTreeBuilder::finalize requires a backing store");
+  }
+  auto* storedTree = builder->store_->maybePutTree(treeEntries, hasACL).first;
+  if (storedTree == nullptr) {
+    throw std::logic_error("FakeTreeBuilder::finalize failed to store tree");
+  }
   if (setReady) {
     storedTree->setReady();
   }

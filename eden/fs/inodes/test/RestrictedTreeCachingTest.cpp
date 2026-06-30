@@ -251,10 +251,6 @@ TEST_F(
   }
 
   // Create commit 2: different content in "foo", NOT restricted.
-  // Using different content ensures different ObjectIds, which prevents
-  // the checkout short-circuit at processCheckoutEntryImpl that only
-  // compares ObjectIds and types (not isRestricted flags) for unloaded
-  // inodes.
   FakeTreeBuilder builder2;
   builder2.setFile("foo/file.txt", "version2");
   builder2.finalize(testMount_->getBackingStore(), true);

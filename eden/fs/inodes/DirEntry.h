@@ -6,7 +6,9 @@
  */
 
 #pragma once
+#include <cstdint>
 #include <optional>
+#include <utility>
 
 #include "eden/common/utils/CaseSensitivity.h"
 #include "eden/common/utils/DirType.h"
@@ -14,6 +16,7 @@
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/model/ObjectId.h"
+#include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/utils/StaticAssert.h"
 
 namespace facebook::eden {
@@ -40,27 +43,46 @@ class DirEntry {
   /**
    * Create an id for a non-materialized entry.
    */
-  DirEntry(mode_t m, InodeNumber number, ObjectId id, bool isRestricted = false)
+  DirEntry(
+      mode_t m,
+      InodeNumber number,
+      ObjectId id,
+      bool isRestricted = false,
+      std::optional<bool> hasACL = std::nullopt)
+      : DirEntry{
+            m,
+            number,
+            std::move(id),
+            makeAclRootState(isRestricted, hasACL)} {}
+
+  DirEntry(mode_t m, InodeNumber number, ObjectId id, AclRootState state)
       : initialMode_{m},
         hasId_{true},
         hasInodePointer_{false},
-        isRestricted_{isRestricted ? 1u : 0u},
-        id_{id},
+        aclRootState_{static_cast<uint32_t>(state)},
+        id_{std::move(id)},
         inodeNumber_{number} {
-    XCHECK_EQ(m, m & 0x1fffffff);
+    XCHECK_EQ(m, m & kInitialModeMask);
     XDCHECK(number.hasValue());
   }
 
   /**
    * Create an id for a materialized entry.
    */
-  DirEntry(mode_t m, InodeNumber number, bool isRestricted = false)
+  DirEntry(
+      mode_t m,
+      InodeNumber number,
+      bool isRestricted = false,
+      std::optional<bool> hasACL = std::nullopt)
+      : DirEntry{m, number, makeAclRootState(isRestricted, hasACL)} {}
+
+  DirEntry(mode_t m, InodeNumber number, AclRootState state)
       : initialMode_{m},
         hasId_{false},
         hasInodePointer_{false},
-        isRestricted_{isRestricted ? 1u : 0u},
+        aclRootState_{static_cast<uint32_t>(state)},
         inodeNumber_{number} {
-    XCHECK_EQ(m, m & 0x1fffffff);
+    XCHECK_EQ(m, m & kInitialModeMask);
     XDCHECK(number.hasValue());
   }
 
@@ -199,7 +221,15 @@ class DirEntry {
   [[nodiscard]] InodeBase* clearInode();
 
   bool isRestricted() const {
-    return isRestricted_;
+    return aclRootState() == AclRootState::RestrictedAclRoot;
+  }
+
+  std::optional<bool> hasACL() const {
+    return hasACLFromAclRootState(aclRootState());
+  }
+
+  AclRootState aclRootState() const {
+    return static_cast<AclRootState>(aclRootState_);
   }
 
   /**
@@ -207,12 +237,22 @@ class DirEntry {
    * Used when parent metadata is stale or missing.
    */
   void setRestricted(bool isRestricted) {
-    isRestricted_ = isRestricted ? 1u : 0u;
+    setAclRootState(makeAclRootState(isRestricted, hasACL()));
+  }
+
+  void setHasACL(std::optional<bool> hasACL) {
+    setAclRootState(makeAclRootState(isRestricted(), hasACL));
+  }
+
+  void setAclRootState(AclRootState state) {
+    aclRootState_ = static_cast<uint32_t>(state);
   }
 
  private:
+  static constexpr uint32_t kInitialModeMask = 0x07ffffff;
+
   /**
-   * The initial entry type for this entry. Three bits are borrowed from the top
+   * The initial entry type for this entry. Five bits are borrowed from the top
    * so the entire struct fits in four words.
    *
    * TODO: This field is not updated when an inode's mode bits are changed.
@@ -220,7 +260,7 @@ class DirEntry {
    * Overlay Dir storage. After the InodeMetadataTable is in use for a while,
    * this should be replaced with dtype_t and the bitfields can go away.
    */
-  uint32_t initialMode_ : 29;
+  uint32_t initialMode_ : 27;
 
   /**
    * Whether the id_ field matches the contents from source control. If
@@ -235,9 +275,9 @@ class DirEntry {
   uint32_t hasInodePointer_ : 1;
 
   /**
-   * Whether this entry is restricted by ACLs.
+   * ACL root state for this entry.
    */
-  uint32_t isRestricted_ : 1;
+  uint32_t aclRootState_ : 2;
 
   /**
    * If the entry is not materialized, this contains the id

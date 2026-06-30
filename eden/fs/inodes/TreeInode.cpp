@@ -148,6 +148,39 @@ static inline PathComponent copyCanonicalInodeName(
     const DirContents::const_iterator& iter) {
   return PathComponent(iter->first);
 }
+
+std::optional<bool> preferKnownAclState(
+    std::optional<bool> preferred,
+    std::optional<bool> fallback) {
+  // Unknown metadata cannot erase a known state for the same tree.
+  return preferred.has_value() ? preferred : fallback;
+}
+
+bool aclStatesConflict(std::optional<bool> lhs, std::optional<bool> rhs) {
+  if (!lhs.has_value() || !rhs.has_value()) {
+    return false;
+  }
+  return *lhs != *rhs;
+}
+
+bool aclRootStateRequiresCheckoutWalk(
+    AclRootState current,
+    AclRootState target) {
+  return (current == AclRootState::RestrictedAclRoot) !=
+      (target == AclRootState::RestrictedAclRoot);
+}
+
+bool dirEntryMatchesTreeEntry(
+    const DirEntry& dirEntry,
+    const TreeEntry& treeEntry) {
+  return dirEntry.getInitialMode() ==
+      modeFromTreeEntryType(treeEntry.getType()) &&
+      dirEntry.isRestricted() == treeEntry.isRestricted() &&
+      !aclStatesConflict(dirEntry.hasACL(), treeEntry.hasACL()) &&
+      dirEntry.getObjectIdPtr() != nullptr &&
+      dirEntry.getObjectId().bytesEqual(treeEntry.getObjectId());
+}
+
 } // namespace
 
 /**
@@ -211,24 +244,26 @@ class TreeInode::IncompleteInodeLoad {
   Future<unique_ptr<InodeBase>> future_;
 };
 
-void maybeBackfillRestrictedDirEntry(
-    DirEntry& entry,
-    const InodeBase& childInode) {
-  auto* childTree = dynamic_cast<const TreeInode*>(&childInode);
-  if (!childTree || !childTree->isRestricted()) {
+void maybeBackfillAclDirEntry(DirEntry& entry, const InodeBase* childInode) {
+  auto* childTree = dynamic_cast<const TreeInode*>(childInode);
+  if (!childTree) {
     return;
   }
 
   // Normal parent metadata propagation happens on the tree-load path. This
   // only backfills stale or missing parent metadata after a child load.
-  XLOGF(
-      DBG1,
-      "Backfilling restricted tree entry for {} (inode {}, object id {})",
-      childTree->getLogPath(),
-      childTree->getNodeId(),
-      childTree->getObjectId() ? childTree->getObjectId()->toLogString()
-                               : "none");
-  entry.setRestricted(true);
+  entry.setAclRootState(makeAclRootState(
+      childTree->isRestricted(),
+      preferKnownAclState(childTree->hasACL(), entry.hasACL())));
+  if (childTree->isRestricted()) {
+    XLOGF(
+        DBG1,
+        "Backfilling restricted tree entry for {} (inode {}, object id {})",
+        childTree->getLogPath(),
+        childTree->getNodeId(),
+        childTree->getObjectId() ? childTree->getObjectId()->toLogString()
+                                 : "none");
+  }
 }
 
 TreeInode::TreeInode(
@@ -243,8 +278,13 @@ TreeInode::TreeInode(
           name,
           initialMode,
           std::nullopt,
-          saveDirFromTree(ino, tree.get(), parent->getMount()),
-          tree->getObjectId()) {}
+          [&] {
+            XCHECK(!tree->isRestricted());
+            return saveDirFromTree(ino, tree.get(), parent->getMount());
+          }(),
+          tree->getObjectId(),
+          /*isRestricted=*/false,
+          tree->hasACL()) {}
 
 TreeInode::TreeInode(
     InodeNumber ino,
@@ -254,10 +294,12 @@ TreeInode::TreeInode(
     const std::optional<InodeTimestamps>& initialTimestamps,
     DirContents&& dir,
     std::optional<ObjectId> treeId,
-    bool isRestricted)
+    bool isRestricted,
+    std::optional<bool> hasACL)
     : Base(ino, initialMode, initialTimestamps, parent, name),
       contents_(std::in_place, std::move(dir), std::move(treeId)),
-      isRestricted_(isRestricted),
+      aclRootState_{
+          static_cast<uint8_t>(makeAclRootState(isRestricted, hasACL))},
       lastPermissionCheck_(std::chrono::steady_clock::now()) {
   XDCHECK_NE(ino, kRootNodeId);
 }
@@ -266,13 +308,21 @@ TreeInode::TreeInode(EdenMount* mount, std::shared_ptr<const Tree>&& tree)
     : TreeInode(
           mount,
           saveDirFromTree(kRootNodeId, tree.get(), mount),
-          tree->getObjectId()) {}
+          tree->getObjectId(),
+          tree->isRestricted(),
+          tree->hasACL()) {}
 
 TreeInode::TreeInode(
     EdenMount* mount,
     DirContents&& dir,
-    std::optional<ObjectId> treeId)
-    : Base(mount), contents_(std::in_place, std::move(dir), treeId) {}
+    const std::optional<ObjectId>& treeId,
+    bool isRestricted,
+    std::optional<bool> hasACL)
+    : Base(mount),
+      contents_(std::in_place, std::move(dir), treeId),
+      aclRootState_{
+          static_cast<uint8_t>(makeAclRootState(isRestricted, hasACL))},
+      lastPermissionCheck_(std::chrono::steady_clock::now()) {}
 
 TreeInode::~TreeInode() = default;
 
@@ -331,7 +381,7 @@ void TreeInode::throwRestrictedAccess() const {
 
 ImmediateFuture<folly::Unit> TreeInode::recheckPermissionIfExpired(
     const ObjectFetchContextPtr& fetchContext) {
-  if (!isRestricted_.load(std::memory_order_relaxed)) {
+  if (!isRestricted()) {
     return folly::unit;
   }
 
@@ -352,7 +402,7 @@ ImmediateFuture<folly::Unit> TreeInode::recheckPermissionIfExpired(
             lastCheck, now, std::memory_order_relaxed)) {
       break;
     }
-    if (!isRestricted_.load(std::memory_order_relaxed)) {
+    if (!isRestricted()) {
       return folly::unit;
     }
   }
@@ -398,7 +448,7 @@ ImmediateFuture<folly::Unit> TreeInode::transitionToUnrestricted(
 
         {
           auto contents = self->getContentsUnchecked().wlock();
-          if (!self->isRestricted_.load(std::memory_order_relaxed)) {
+          if (!self->isRestricted()) {
             return; // already transitioned by concurrent recheck
           }
           if (contents->treeId != savedTreeId) {
@@ -414,14 +464,18 @@ ImmediateFuture<folly::Unit> TreeInode::transitionToUnrestricted(
             self->getLogPath(),
             self->getNodeId(),
             tree->getObjectId().toLogString());
-        self->isRestricted_.store(false, std::memory_order_relaxed);
+        self->setAclRootState(makeAclRootState(
+            /*isRestricted=*/false,
+            preferKnownAclState(tree->hasACL(), self->hasACL())));
 
         auto loc = self->getLocationInfo(renameLock);
         if (loc.parent && !loc.unlinked) {
           auto parentContents = loc.parent->getContentsUnchecked().wlock();
           auto it = parentContents->entries.find(loc.name);
           if (it != parentContents->entries.end()) {
-            it->second.setRestricted(false);
+            it->second.setAclRootState(makeAclRootState(
+                /*isRestricted=*/false,
+                preferKnownAclState(self->hasACL(), it->second.hasACL())));
             // The parent DirEntry carries the persisted restricted bit used to
             // reload this child after restart. Self-healing the child inode is
             // not enough; rewrite the parent overlay entry so the old
@@ -586,9 +640,10 @@ TreeInode::loadChild(
       // InodeMap::inodeLoadComplete() now, since we still have the
       // data_ lock.
       auto childInode = std::move(loadFuture).get();
-      maybeBackfillRestrictedDirEntry(entry, *childInode);
-      entry.setInode(childInode.get());
-      promises = getInodeMap()->inodeLoadComplete(childInode.get());
+      auto* childInodeRaw = CHECK_NOTNULL(childInode.get());
+      maybeBackfillAclDirEntry(entry, childInodeRaw);
+      entry.setInode(childInodeRaw);
+      promises = getInodeMap()->inodeLoadComplete(childInodeRaw);
       childInodePtr = InodePtr::takeOwnership(std::move(childInode));
     } else {
       inodeLoadFuture = std::move(loadFuture);
@@ -1324,7 +1379,7 @@ void TreeInode::inodeLoadComplete(
         auto childTreeId = childTree->getObjectId();
         if (childTreeId &&
             iter->second.getObjectId().bytesEqual(*childTreeId)) {
-          maybeBackfillRestrictedDirEntry(iter->second, *childInode);
+          maybeBackfillAclDirEntry(iter->second, childInode.get());
         }
       }
     }
@@ -1386,6 +1441,8 @@ static std::vector<std::string> computeEntryDifferences(
     auto it = tree.find(entry.first);
     if (it == tree.cend()) {
       differences.insert(fmt::format("- {}", entry.first));
+    } else if (!dirEntryMatchesTreeEntry(entry.second, it->second)) {
+      differences.insert(fmt::format("~ {}", entry.first));
     }
   }
   for (const auto& entry : tree) {
@@ -1405,7 +1462,8 @@ std::optional<std::vector<std::string>> findEntryDifferences(
   }
   for (const auto& entry : dir) {
     auto it = tree.find(entry.first);
-    if (it == tree.cend()) {
+    if (it == tree.cend() ||
+        !dirEntryMatchesTreeEntry(entry.second, it->second)) {
       return computeEntryDifferences(dir, tree);
     }
   }
@@ -1466,7 +1524,8 @@ ImmediateFuture<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
           std::nullopt,
           DirContents{caseSensitivity},
           entry.getObjectId(),
-          /*isRestricted=*/true);
+          /*isRestricted=*/true,
+          /*hasACL=*/true);
     }
 
     auto getTreeSpan = fetchContext->createSpan("getTree");
@@ -1483,6 +1542,7 @@ ImmediateFuture<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
              childName = PathComponent{name},
              treeId = entry.getObjectId(),
              entryMode = entry.getInitialMode(),
+             entryHasACL = entry.hasACL(),
              number = entry.getInodeNumber(),
              fetchContext = fetchContext.copy(),
              getTreeSpan = std::move(getTreeSpan),
@@ -1502,7 +1562,8 @@ ImmediateFuture<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
                     std::nullopt,
                     DirContents{caseSensitivity},
                     tree->getObjectId(),
-                    /*isRestricted=*/true);
+                    /*isRestricted=*/true,
+                    tree->hasACL());
                 return ImmediateFuture<unique_ptr<InodeBase>>{
                     std::move(restricted)};
               }
@@ -1515,6 +1576,7 @@ ImmediateFuture<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
                    childName = std::move(childName),
                    treeId,
                    entryMode,
+                   entryHasACL,
                    number,
                    tree = std::move(tree),
                    loadOverlayDirSpan = std::move(
@@ -1529,7 +1591,9 @@ ImmediateFuture<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
                     entryMode,
                     std::nullopt,
                     std::move(dir),
-                    treeId);
+                    treeId,
+                    /*isRestricted=*/false,
+                    preferKnownAclState(tree->hasACL(), entryHasACL));
               };
 
               return maybeAddAsyncPoint(std::move(loadOverlayDirFunc));
@@ -1544,6 +1608,8 @@ ImmediateFuture<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
        name = PathComponent{name},
        number = entry.getInodeNumber(),
        mode = entry.getInitialMode(),
+       isRestricted = entry.isRestricted(),
+       hasACL = entry.hasACL(),
        loadOverlayDirSpan =
            std::move(loadOverlayDirSpan)]() mutable -> unique_ptr<InodeBase> {
     auto overlayDir = self->loadOverlayDir(number);
@@ -1556,7 +1622,9 @@ ImmediateFuture<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
         mode,
         std::nullopt,
         std::move(overlayDir),
-        std::nullopt);
+        std::nullopt,
+        isRestricted,
+        hasACL);
   };
 
   return maybeAddAsyncPoint(std::move(createInodeFunc));
@@ -1715,7 +1783,8 @@ void TreeInode::childDematerialized(
     PathComponentPiece childName,
     ObjectId childScmId,
     bool writeOverlay,
-    bool isRestricted) {
+    bool isRestricted,
+    std::optional<bool> hasACL) {
   auto startTime = std::chrono::system_clock::now();
   bool wasAlreadyMaterialized = false;
   {
@@ -1740,19 +1809,21 @@ void TreeInode::childDematerialized(
     }
 
     auto& childEntry = iter->second;
+    const auto updatedAclRootState = makeAclRootState(
+        isRestricted, preferKnownAclState(hasACL, childEntry.hasACL()));
     // Should this call ObjectStore::areObjectsKnownIdentical? No, even if IDs
     // are compatible, we want to migrate our inode to the new ID scheme, which
     // requires writing it to the overlay.
     if (!childEntry.isMaterialized() &&
         childEntry.getObjectId().bytesEqual(childScmId) &&
-        childEntry.isRestricted() == isRestricted) {
+        childEntry.aclRootState() == updatedAclRootState) {
       // Nothing to do.  Our child's state and our own are both unchanged.
       return;
     }
 
     // Mark the child dematerialized.
     childEntry.setDematerialized(childScmId);
-    childEntry.setRestricted(isRestricted);
+    childEntry.setAclRootState(updatedAclRootState);
 
     // Mark us materialized!
     //
@@ -1848,7 +1919,8 @@ DirContents TreeInode::buildDirFromTree(
             modeFromTreeEntryType(treeEntry.second.getType()),
             InodeNumber{startInode.get() + inodeOffset++},
             treeEntry.second.getObjectId(),
-            treeEntry.second.isRestricted()});
+            treeEntry.second.isRestricted(),
+            treeEntry.second.hasACL()});
   }
 
   return DirContents{std::move(entries), caseSensitive};
@@ -4487,10 +4559,11 @@ folly::coro::now_task<CheckoutSubtreeResult> TreeInode::co_checkout(
 bool TreeInode::canShortCircuitCheckout(
     CheckoutContext* ctx,
     const ObjectId& treeId,
-    bool isRestricted,
+    AclRootState aclRootState,
     const Tree* fromTree,
     const Tree* toTree) {
-  if (toTree && isRestricted != toTree->isRestricted()) {
+  if (toTree &&
+      aclRootStateRequiresCheckoutWalk(aclRootState, toTree->aclRootState())) {
     return false;
   }
 
@@ -4562,17 +4635,22 @@ void TreeInode::computeCheckoutActions(
   // can return early.
   if (!reportLocalOnlyAsConflicts && contents->treeId.has_value() &&
       canShortCircuitCheckout(
-          ctx, contents->treeId.value(), isRestricted(), fromTree, toTree)) {
-    // If any child is restricted, take the slow path so
-    // processCheckoutEntryImpl can detect restricted→unrestricted transitions.
-    bool hasRestrictedChild = false;
-    for (auto& [name, entry] : contents->entries) {
-      if (entry.isRestricted()) {
-        hasRestrictedChild = true;
-        break;
+          ctx, contents->treeId.value(), aclRootState(), fromTree, toTree)) {
+    // Non-restriction ACL-root metadata does not need a checkout walk.
+    // Restricted placeholders are different because their children are hidden.
+    bool hasStaleChildAclRootState = false;
+    if (toTree) {
+      for (auto& [name, entry] : contents->entries) {
+        auto toEntry = toTree->find(name);
+        if (toEntry != toTree->end() &&
+            aclRootStateRequiresCheckoutWalk(
+                entry.aclRootState(), toEntry->second.aclRootState())) {
+          hasStaleChildAclRootState = true;
+          break;
+        }
       }
     }
-    if (!hasRestrictedChild) {
+    if (!hasStaleChildAclRootState) {
       ctx->increaseCheckoutCounter(this->getInMemoryDescendants());
       return;
     }
@@ -4789,7 +4867,8 @@ DirEntry dirEntryFromScmEntry(const TreeEntry& scmEntry, Overlay* overlay) {
       modeFromTreeEntryType(scmEntry.getType()),
       overlay->allocateInodeNumber(),
       scmEntry.getObjectId(),
-      scmEntry.isRestricted()};
+      scmEntry.isRestricted(),
+      scmEntry.hasACL()};
 }
 } // namespace
 
@@ -4861,6 +4940,9 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
   // At most one of oldScmEntry and newScmEntry may be null.
   XDCHECK(oldScmEntry || newScmEntry);
 
+  const bool scmEntryAclStateCanSkipCheckoutWalk = oldScmEntry && newScmEntry &&
+      !aclRootStateRequiresCheckoutWalk(oldScmEntry->second.aclRootState(),
+                                        newScmEntry->second.aclRootState());
   const bool scmEntriesMatch = oldScmEntry && newScmEntry &&
       // TODO: This is technically incorrect for files that go from SYMLINK to
       // REGULAR (or vice versa).
@@ -4868,8 +4950,7 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
       // On Windows: Filter executable type for comparison.
       compareTreeEntryType(oldScmEntry->second.getType(),
                            newScmEntry->second.getType()) &&
-      oldScmEntry->second.isRestricted() ==
-          newScmEntry->second.isRestricted() &&
+      scmEntryAclStateCanSkipCheckoutWalk &&
       getObjectStore().areObjectsKnownIdentical(
           oldScmEntry->second.getObjectId(), newScmEntry->second.getObjectId());
 
@@ -4882,7 +4963,12 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
   // Restricted placeholders are the exception: their children are hidden from
   // contents_, so an absent matching child still needs to be repopulated when
   // transitioning back to unrestricted.
+  const bool liveEntryAclStateCanSkipCheckoutWalk = !newScmEntry ||
+      it == contents.end() ||
+      !aclRootStateRequiresCheckoutWalk(
+          it->second.aclRootState(), newScmEntry->second.aclRootState());
   if (!ctx->forceUpdate() && scmEntriesMatch &&
+      liveEntryAclStateCanSkipCheckoutWalk &&
       (!isRestricted() || it != contents.end())) {
     // TODO: Should we perhaps fall through anyway to report conflicts for
     // locally modified files?
@@ -4963,7 +5049,8 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
     // On Windows: Filter executable type for comparison.
     if (compareTreeEntryType(
             oldScmEntry->second.getType(), newScmEntry->second.getType()) &&
-        entry.isRestricted() == newScmEntry->second.isRestricted()) {
+        !aclRootStateRequiresCheckoutWalk(
+            entry.aclRootState(), newScmEntry->second.aclRootState())) {
       // The inode already matches the checkout destination. So do nothing.
       return nullptr;
     }
@@ -5372,7 +5459,8 @@ CheckoutActionResult TreeInode::finalizeRestrictionTransition(
     return CheckoutActionResult{InvalidationRequired::No, result.hadConflicts};
   }
 
-  treeInode->isRestricted_.store(newRestricted, std::memory_order_relaxed);
+  treeInode->setRestricted(newRestricted);
+  auto newAclRootState = treeInode->aclRootState();
 
   auto contents = getContentsUnchecked().wlock();
   auto it = contents->entries.find(currentName);
@@ -5380,7 +5468,7 @@ CheckoutActionResult TreeInode::finalizeRestrictionTransition(
       it->second.getInode() != treeInode.get()) {
     return CheckoutActionResult{InvalidationRequired::No, result.hadConflicts};
   }
-  it->second.setRestricted(newRestricted);
+  it->second.setAclRootState(newAclRootState);
   return CheckoutActionResult{InvalidationRequired::Yes, result.hadConflicts};
 }
 
@@ -5676,6 +5764,20 @@ folly::coro::now_task<CheckoutActionResult> TreeInode::co_checkoutUpdateEntry(
           ctx, treeInode, replacementEntry, newRestricted);
       using PrepState = RestrictionTransitionPrep::State;
       if (prep.state == PrepState::NoChange) {
+        if (newRestricted && prep.oldRestricted) {
+          auto restrictedNewTree = newTree && newTree->isRestricted()
+              ? std::move(newTree)
+              : std::make_shared<Tree>(
+                    Tree::Restricted{},
+                    Tree::container{CHECK_NOTNULL(getMount())
+                                        ->getCheckoutConfig()
+                                        ->getCaseSensitive()},
+                    replacementEntry.second.getObjectId());
+          auto result = co_await treeInode->co_checkout(
+              ctx, std::move(oldTree), std::move(restrictedNewTree));
+          co_return CheckoutActionResult{
+              InvalidationRequired::No, result.hadConflicts};
+        }
         if (newRestricted && !newTree) {
           co_return CheckoutActionResult{InvalidationRequired::No};
         }
@@ -6003,6 +6105,8 @@ void TreeInode::saveOverlayPostCheckout(
             // The IDs refer to the same object, so we can dematerialize. Even
             // if the IDs don't match exactly, we'll silently migrate to the
             // new ID scheme here.
+            inodeIter->second.setHasACL(preferKnownAclState(
+                scmIter->second.hasACL(), inodeIter->second.hasACL()));
             break;
           case ObjectComparison::Different:
             // The objects differ, so we can't dematerialize.
@@ -6030,6 +6134,12 @@ void TreeInode::saveOverlayPostCheckout(
     };
 
     auto oldId = contents->treeId;
+    auto oldState = aclRootState();
+    auto newState = oldState;
+    if (tree) {
+      newState = makeAclRootState(
+          tree->isRestricted(), preferKnownAclState(tree->hasACL(), hasACL()));
+    }
     auto newId = tryToDematerialize();
     contents->treeId = newId;
     isMaterialized = contents->isMaterialized();
@@ -6043,6 +6153,7 @@ void TreeInode::saveOverlayPostCheckout(
     } else {
       stateChanged = true;
     }
+    stateChanged = stateChanged || oldState != newState;
 
     XLOGF(
         DBG4,
@@ -6056,7 +6167,7 @@ void TreeInode::saveOverlayPostCheckout(
     // Update the overlay to include the new entries, even if dematerialized.
     saveOverlayDir(contents->entries, isMaterialized);
     if (tree) {
-      isRestricted_.store(tree->isRestricted(), std::memory_order_relaxed);
+      setAclRootState(newState);
     }
   }
 
@@ -6083,12 +6194,16 @@ void TreeInode::saveOverlayPostCheckout(
         loc.parent->childMaterialized(
             ctx->renameLock(), loc.name, writeOverlay);
       } else {
+        if (tree == nullptr) {
+          return;
+        }
         loc.parent->childDematerialized(
             ctx->renameLock(),
             loc.name,
             tree->getObjectId(),
             writeOverlay,
-            tree->isRestricted());
+            tree->isRestricted(),
+            tree->hasACL());
       }
     }
   }
@@ -6927,7 +7042,7 @@ TreeInode::invalidateChildrenNotMaterializedPrjFS(
 }
 
 void TreeInode::updateAtime() {
-  if (FOLLY_UNLIKELY(isRestricted_)) {
+  if (FOLLY_UNLIKELY(isRestricted())) {
     return;
   }
   auto lock = lockContentsWrite();
@@ -6938,7 +7053,7 @@ void TreeInode::forceMetadataUpdate() {
   // Restricted inodes have synthetic zeroed metadata (from stat()), so
   // timestamp updates are meaningless. Silent skip also prevents EACCES
   // from propagating through the NFS invalidation Thrift path.
-  if (FOLLY_UNLIKELY(isRestricted_)) {
+  if (FOLLY_UNLIKELY(isRestricted())) {
     return;
   }
   auto contents = lockContentsWrite();

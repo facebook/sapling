@@ -98,7 +98,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   enum : int { WRONG_TYPE_ERRNO = ENOTDIR };
 
   /**
-   * Construct a TreeInode from a source control tree.
+   * Construct a TreeInode from an unrestricted source control tree.
    */
   TreeInode(
       InodeNumber ino,
@@ -119,7 +119,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       const std::optional<InodeTimestamps>& initialTimestamps,
       DirContents&& dir,
       std::optional<ObjectId> treeId,
-      bool isRestricted = false);
+      bool isRestricted = false,
+      std::optional<bool> hasACL = std::nullopt);
 
   /**
    * Construct the root TreeInode from a source control commit's root.
@@ -132,7 +133,9 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   TreeInode(
       EdenMount* mount,
       DirContents&& dir,
-      std::optional<ObjectId> treeId);
+      const std::optional<ObjectId>& treeId,
+      bool isRestricted = false,
+      std::optional<bool> hasACL = std::nullopt);
 
   ~TreeInode() override;
 
@@ -554,7 +557,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       PathComponentPiece childName,
       ObjectId childScmId,
       bool writeOverlay = true,
-      bool isRestricted = false);
+      bool isRestricted = false,
+      std::optional<bool> hasACL = std::nullopt);
 
   /**
    * Internal API only for use by InodeMap.
@@ -938,10 +942,35 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * Restricted directories deny access to their contents.
    */
   bool isRestricted() const {
-    return isRestricted_.load(std::memory_order_relaxed);
+    return aclRootState() == AclRootState::RestrictedAclRoot;
+  }
+
+  /**
+   * Returns true if this directory is structurally covered by an ACL root.
+   * Unlike isRestricted(), this is independent from the caller's access.
+   */
+  std::optional<bool> hasACL() const {
+    return hasACLFromAclRootState(aclRootState());
+  }
+
+  AclRootState aclRootState() const {
+    return static_cast<AclRootState>(
+        aclRootState_.load(std::memory_order_relaxed));
   }
 
  private:
+  void setAclRootState(AclRootState state) {
+    aclRootState_.store(static_cast<uint8_t>(state), std::memory_order_relaxed);
+  }
+
+  void setRestricted(bool isRestricted) {
+    setAclRootState(makeAclRootState(isRestricted, hasACL()));
+  }
+
+  void setHasACL(std::optional<bool> hasACL) {
+    setAclRootState(makeAclRootState(isRestricted(), hasACL));
+  }
+
   /**
    * Throws EACCES if this directory is restricted by a path ACL.
    * Called by guarded lock accessors before contents_ acquisition.
@@ -951,7 +980,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * after a permission check determines the user lacks access.
    */
   void checkAccess() const {
-    if (FOLLY_UNLIKELY(isRestricted_.load(std::memory_order_relaxed))) {
+    if (FOLLY_UNLIKELY(isRestricted())) {
       throwRestrictedAccess();
     }
   }
@@ -1155,7 +1184,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   static bool canShortCircuitCheckout(
       CheckoutContext* ctx,
       const ObjectId& treeId,
-      bool isRestricted,
+      AclRootState aclRootState,
       const Tree* fromTree,
       const Tree* toTree);
   void computeCheckoutActions(
@@ -1382,14 +1411,12 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   folly::Synchronized<TreeInodeState> contents_;
 
   /**
-   * True if this directory is restricted by a path ACL. When set,
-   * checkAccess() throws EACCES and stat() clears permission bits.
-   * Contents are empty — no tree data was fetched from the server.
-   *
-   * Derived from "has_acl" in the Sapling layer after a permission
-   * check confirms the user lacks access.
+   * Direct ACL root state for this directory. Restricted directories deny
+   * access to their contents; permitted directories are ACL roots the caller
+   * can read.
    */
-  std::atomic<bool> isRestricted_{false};
+  std::atomic<uint8_t> aclRootState_{
+      static_cast<uint8_t>(AclRootState::Unknown)};
 
   /**
    * Timestamp of the last permission recheck attempt for restricted inodes.
