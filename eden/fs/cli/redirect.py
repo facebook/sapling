@@ -24,7 +24,6 @@ from typing import Dict, Iterable, Optional, Set
 from thrift.python.exceptions import ApplicationError, ApplicationErrorType
 
 from . import cmd_util, configutil, mtab, subcmd as subcmd_mod, tabulate
-from .buck import stop_buckd_for_repo
 from .config import CheckoutConfig, EdenCheckout, EdenInstance, load_toml_config
 from .prompt import prompt_confirmation
 from .subcmd import Subcmd
