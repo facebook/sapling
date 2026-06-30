@@ -20,6 +20,7 @@
 #include "eden/fs/inodes/fscatalog/FsInodeCatalog.h"
 #include "eden/fs/inodes/fscatalog/InodePath.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
+#include "eden/fs/model/TreeEntry.h"
 
 using namespace facebook::eden;
 
@@ -79,6 +80,8 @@ constexpr size_t kNameLenSize = sizeof(uint16_t);
 constexpr size_t kModeSize = sizeof(int32_t);
 constexpr size_t kInodeNumberSize = sizeof(int64_t);
 constexpr size_t kHashLenSize = sizeof(uint8_t);
+constexpr size_t kIsRestrictedSize = sizeof(uint8_t);
+constexpr size_t kAclRootStateSize = sizeof(uint8_t);
 // 3-character names ("foo", "bar", ...) are used by the assertions below.
 constexpr size_t kTestNameSize = 3;
 
@@ -93,6 +96,16 @@ overlay::OverlayEntry
 makeEntryWithHash(int32_t mode, int64_t inodeNumber, std::string hash) {
   overlay::OverlayEntry entry = makeEntry(mode, inodeNumber);
   entry.hash() = std::move(hash);
+  return entry;
+}
+
+overlay::OverlayEntry makeEntryWithAclRootState(
+    int32_t mode,
+    int64_t inodeNumber,
+    AclRootState state) {
+  auto entry = makeEntry(mode, inodeNumber);
+  entry.isRestricted() = state == AclRootState::RestrictedAclRoot;
+  entry.aclRootState() = static_cast<int32_t>(state);
   return entry;
 }
 
@@ -119,6 +132,42 @@ int64_t readI64(const std::string& data, size_t offset) {
   int64_t v = 0;
   std::memcpy(&v, data.data() + offset, sizeof(v));
   return v;
+}
+
+void expectAclRootStateTail(
+    const std::string& data,
+    size_t& offset,
+    bool expectedIsRestricted,
+    AclRootState expectedState) {
+  EXPECT_EQ(expectedIsRestricted, static_cast<uint8_t>(data[offset]) != 0);
+  offset += kIsRestrictedSize;
+  EXPECT_EQ(
+      static_cast<uint8_t>(expectedState), static_cast<uint8_t>(data[offset]));
+  offset += kAclRootStateSize;
+}
+
+std::string makeOldFormatAddWalFrame(
+    folly::StringPiece name,
+    int32_t mode,
+    int64_t inodeNumber,
+    folly::StringPiece hash = {}) {
+  auto nameLen = static_cast<uint16_t>(name.size());
+  auto hashLen = static_cast<uint8_t>(hash.size());
+  uint32_t entryLen = sizeof(uint8_t) + sizeof(uint16_t) + nameLen +
+      sizeof(int32_t) + sizeof(int64_t) + sizeof(uint8_t) + hashLen;
+
+  std::string bytes;
+  bytes.reserve(sizeof(uint32_t) + entryLen);
+  bytes.append(reinterpret_cast<const char*>(&entryLen), sizeof(entryLen));
+  bytes.push_back(static_cast<char>(WalOpType::ADD));
+  bytes.append(reinterpret_cast<const char*>(&nameLen), sizeof(nameLen));
+  bytes.append(name.data(), name.size());
+  bytes.append(reinterpret_cast<const char*>(&mode), sizeof(mode));
+  bytes.append(
+      reinterpret_cast<const char*>(&inodeNumber), sizeof(inodeNumber));
+  bytes.push_back(static_cast<char>(hashLen));
+  bytes.append(hash.data(), hash.size());
+  return bytes;
 }
 
 // Write an arbitrary blob into the WAL file for `parent`, replacing any
@@ -163,6 +212,9 @@ TEST_F(FsInodeCatalogWalTest, appendWalEntry_writesAddEntryWithHash) {
   EXPECT_EQ(20, static_cast<uint8_t>(bytes[off]));
   off += kHashLenSize;
   EXPECT_EQ(std::string(20, '\xab'), bytes.substr(off, 20));
+  off += 20;
+  expectAclRootStateTail(bytes, off, false, AclRootState::Unknown);
+  EXPECT_EQ(off, bytes.size());
 }
 
 TEST_F(FsInodeCatalogWalTest, appendWalEntry_writesAddEntryWithoutHash) {
@@ -180,7 +232,27 @@ TEST_F(FsInodeCatalogWalTest, appendWalEntry_writesAddEntryWithoutHash) {
   size_t off = kEntryLenSize + kOpByteSize + kNameLenSize + kTestNameSize +
       kModeSize + kInodeNumberSize;
   EXPECT_EQ(0, static_cast<uint8_t>(bytes[off]));
-  EXPECT_EQ(off + kHashLenSize, bytes.size());
+  off += kHashLenSize;
+  expectAclRootStateTail(bytes, off, false, AclRootState::Unknown);
+  EXPECT_EQ(off, bytes.size());
+}
+
+TEST_F(FsInodeCatalogWalTest, appendWalEntry_writesAclRootState) {
+  const InodeNumber parent{9};
+  auto entry = makeEntryWithAclRootState(
+      S_IFDIR | 0755, 8, AclRootState::RestrictedAclRoot);
+  store_->appendWalEntry(
+      parent, WalOpType::ADD, PathComponentPiece{"acl"}, &entry);
+
+  auto bytes = readWal(parent);
+  ASSERT_GE(bytes.size(), kEntryLenSize);
+
+  size_t off = kEntryLenSize + kOpByteSize + kNameLenSize + kTestNameSize +
+      kModeSize + kInodeNumberSize;
+  EXPECT_EQ(0, static_cast<uint8_t>(bytes[off]));
+  off += kHashLenSize;
+  expectAclRootStateTail(bytes, off, true, AclRootState::RestrictedAclRoot);
+  EXPECT_EQ(off, bytes.size());
 }
 
 TEST_F(FsInodeCatalogWalTest, appendWalEntry_writesRemoveEntry) {
@@ -467,6 +539,35 @@ TEST_F(FsInodeCatalogWalTest, loadWalDelta_removeThenAddBecomesAdd) {
   EXPECT_EQ(99, *delta.at("x").entry.inodeNumber());
 }
 
+TEST_F(FsInodeCatalogWalTest, loadWalDelta_preservesAclRootState) {
+  const InodeNumber parent{309};
+  auto entry =
+      makeEntryWithAclRootState(S_IFDIR | 0755, 100, AclRootState::AclRoot);
+  store_->appendWalEntry(
+      parent, WalOpType::ADD, PathComponentPiece{"x"}, &entry);
+
+  auto delta = store_->loadWalDelta(parent).delta;
+  ASSERT_EQ(1u, delta.size());
+  const auto& loaded = delta.at("x").entry;
+  EXPECT_FALSE(*loaded.isRestricted());
+  EXPECT_EQ(
+      static_cast<int32_t>(AclRootState::AclRoot), *loaded.aclRootState());
+}
+
+TEST_F(FsInodeCatalogWalTest, loadWalDelta_acceptsLegacyAddWithoutAclTail) {
+  const InodeNumber parent{310};
+  ASSERT_NO_FATAL_FAILURE(writeRawWal(
+      testDir_, parent, makeOldFormatAddWalFrame("x", S_IFDIR | 0755, 100)));
+
+  auto delta = store_->loadWalDelta(parent).delta;
+  ASSERT_EQ(1u, delta.size());
+  const auto& loaded = delta.at("x").entry;
+  EXPECT_EQ(S_IFDIR | 0755, *loaded.mode());
+  EXPECT_EQ(100, *loaded.inodeNumber());
+  EXPECT_FALSE(*loaded.isRestricted());
+  EXPECT_FALSE(loaded.aclRootState().has_value());
+}
+
 TEST_F(
     FsInodeCatalogWalTest,
     loadWalDelta_caseInsensitiveRemoveThenAddPreservesAddCasing) {
@@ -613,6 +714,38 @@ TEST_F(FsInodeCatalogWalTest, replayWal_roundTripsAddRemoveMaterialize) {
   EXPECT_EQ(0100644, *b.mode());
   EXPECT_EQ(201, *b.inodeNumber());
   EXPECT_FALSE(b.hash().has_value());
+}
+
+TEST_F(FsInodeCatalogWalTest, replayWal_preservesAclRootState) {
+  const InodeNumber parent{109};
+  auto entry = makeEntryWithAclRootState(
+      S_IFDIR | 0755, 202, AclRootState::RestrictedAclRoot);
+  store_->appendWalEntry(
+      parent, WalOpType::ADD, PathComponentPiece{"x"}, &entry);
+
+  overlay::OverlayDir dir;
+  EXPECT_EQ(1u, store_->replayWal(parent, dir).rawEntriesParsed);
+  ASSERT_EQ(1u, dir.entries_ref()->count("x"));
+  const auto& loaded = dir.entries_ref()->at("x");
+  EXPECT_TRUE(*loaded.isRestricted());
+  EXPECT_EQ(
+      static_cast<int32_t>(AclRootState::RestrictedAclRoot),
+      *loaded.aclRootState());
+}
+
+TEST_F(FsInodeCatalogWalTest, replayWal_acceptsLegacyAddWithoutAclTail) {
+  const InodeNumber parent{110};
+  ASSERT_NO_FATAL_FAILURE(writeRawWal(
+      testDir_, parent, makeOldFormatAddWalFrame("x", S_IFDIR | 0755, 202)));
+
+  overlay::OverlayDir dir;
+  EXPECT_EQ(1u, store_->replayWal(parent, dir).rawEntriesParsed);
+  ASSERT_EQ(1u, dir.entries_ref()->count("x"));
+  const auto& loaded = dir.entries_ref()->at("x");
+  EXPECT_EQ(S_IFDIR | 0755, *loaded.mode());
+  EXPECT_EQ(202, *loaded.inodeNumber());
+  EXPECT_FALSE(*loaded.isRestricted());
+  EXPECT_FALSE(loaded.aclRootState().has_value());
 }
 
 TEST_F(FsInodeCatalogWalTest, replayWal_overwritesExistingDirEntries) {

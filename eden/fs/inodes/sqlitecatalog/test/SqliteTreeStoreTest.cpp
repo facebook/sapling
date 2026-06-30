@@ -16,6 +16,7 @@
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
 #include "eden/fs/model/Hash.h"
+#include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/sqlite/SqliteDatabase.h"
 #include "eden/fs/sqlite/SqliteStatement.h"
 
@@ -36,7 +37,8 @@ class SqliteTreeStoreTest : public ::testing::Test {
       std::optional<Hash20> hash = std::nullopt,
       dtype_t mode = dtype_t::Regular,
       std::optional<InodeNumber> inode = std::nullopt,
-      bool isRestricted = false) {
+      bool isRestricted = false,
+      std::optional<bool> hasACL = false) {
     overlay::OverlayEntry entry;
     entry.mode() = dtype_to_mode(mode);
 
@@ -51,6 +53,8 @@ class SqliteTreeStoreTest : public ::testing::Test {
     }
 
     entry.isRestricted() = isRestricted;
+    entry.aclRootState() =
+        static_cast<int32_t>(makeAclRootState(isRestricted, hasACL));
 
     return entry;
   }
@@ -71,6 +75,10 @@ void expect_entry(
   // the value doesn't exist.
   EXPECT_EQ(lhs.hash().value_unchecked(), rhs.hash().value_unchecked());
   EXPECT_EQ(*lhs.isRestricted(), *rhs.isRestricted());
+  EXPECT_EQ(lhs.aclRootState().has_value(), rhs.aclRootState().has_value());
+  if (lhs.aclRootState().has_value() && rhs.aclRootState().has_value()) {
+    EXPECT_EQ(*lhs.aclRootState(), *rhs.aclRootState());
+  }
 }
 
 void expect_entries(
@@ -82,6 +90,14 @@ void expect_entries(
     EXPECT_EQ(lhs->first, rhs->first);
     expect_entry(lhs->second, rhs->second);
   }
+}
+
+AclRootState getAclRootState(const overlay::OverlayEntry& entry) {
+  return static_cast<AclRootState>(*entry.aclRootState());
+}
+
+std::optional<bool> getHasACL(const overlay::OverlayEntry& entry) {
+  return hasACLFromAclRootState(getAclRootState(entry));
 }
 
 TEST_F(SqliteTreeStoreTest, testSaveLoadTree) {
@@ -101,6 +117,74 @@ TEST_F(SqliteTreeStoreTest, testSaveLoadTree) {
   auto restored = store_->loadTree(kRootNodeId);
   ASSERT_EQ(dir.entries()->size(), restored.entries()->size());
   expect_entries(*dir.entries(), *restored.entries());
+}
+
+TEST_F(SqliteTreeStoreTest, testSaveLoadTreePreservesAclMetadata) {
+  overlay::OverlayDir dir;
+  auto addEntry = [&](const char* name,
+                      const char* hash,
+                      bool isRestricted,
+                      std::optional<bool> hasACL) {
+    dir.entries()->emplace(
+        std::make_pair(
+            name,
+            makeEntry(
+                Hash20{hash},
+                dtype_t::Dir,
+                std::nullopt,
+                isRestricted,
+                hasACL)));
+  };
+
+  addEntry(
+      "restricted", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", true, true);
+  addEntry(
+      "visible_under_acl",
+      "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      false,
+      true);
+  addEntry(
+      "known_without_acl",
+      "cccccccccccccccccccccccccccccccccccccccc",
+      false,
+      false);
+
+  store_->saveTree(kRootNodeId, overlay::OverlayDir{dir});
+  auto restored = store_->loadTree(kRootNodeId);
+
+  auto expectEntry = [&](const char* name,
+                         bool isRestricted,
+                         AclRootState aclRootState,
+                         std::optional<bool> hasACL) {
+    const auto& entry = restored.entries()->at(name);
+    EXPECT_EQ(*entry.isRestricted(), isRestricted);
+    EXPECT_EQ(getAclRootState(entry), aclRootState);
+    EXPECT_EQ(getHasACL(entry), hasACL);
+  };
+
+  expectEntry("restricted", true, AclRootState::RestrictedAclRoot, true);
+  expectEntry("visible_under_acl", false, AclRootState::AclRoot, true);
+  expectEntry("known_without_acl", false, AclRootState::NoAcl, false);
+}
+
+TEST_F(SqliteTreeStoreTest, testSaveLoadTreePreservesUnknownAclMetadata) {
+  overlay::OverlayDir dir;
+  dir.entries()->emplace(
+      std::make_pair(
+          "unknown_acl",
+          makeEntry(
+              Hash20{"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+              dtype_t::Dir,
+              std::nullopt,
+              false,
+              std::nullopt)));
+
+  store_->saveTree(kRootNodeId, overlay::OverlayDir{dir});
+  auto restored = store_->loadTree(kRootNodeId);
+
+  const auto& unknownAcl = restored.entries()->at("unknown_acl");
+  EXPECT_EQ(getAclRootState(unknownAcl), AclRootState::Unknown);
+  EXPECT_FALSE(getHasACL(unknownAcl).has_value());
 }
 
 TEST_F(SqliteTreeStoreTest, testRecoverInodeEntryNumber) {
@@ -348,7 +432,10 @@ TEST_F(SqliteTreeStoreTest, testMigrationFromV1) {
   // Verify the migrated row loads with isRestricted = false
   auto loaded = migrated_store->loadTree(kRootNodeId);
   ASSERT_EQ(loaded.entries()->size(), 1);
-  EXPECT_FALSE(*loaded.entries()->at("old_entry").isRestricted());
+  const auto& oldEntry = loaded.entries()->at("old_entry");
+  EXPECT_FALSE(*oldEntry.isRestricted());
+  EXPECT_EQ(getAclRootState(oldEntry), AclRootState::Unknown);
+  EXPECT_FALSE(getHasACL(oldEntry).has_value());
 
   // Verify new restricted entries work on the migrated schema
   migrated_store->addChild(
@@ -404,6 +491,64 @@ TEST_F(SqliteTreeStoreTest, testMigrationFromPartiallyAppliedV1) {
   ASSERT_EQ(loaded.entries()->size(), 1);
   const auto& entry = loaded.entries()->at("restricted_entry");
   EXPECT_TRUE(*entry.isRestricted());
+  EXPECT_EQ(getAclRootState(entry), AclRootState::RestrictedAclRoot);
+}
+
+TEST_F(SqliteTreeStoreTest, testInvalidAclRootStateFallsBackToLegacyFlag) {
+  auto db = std::make_unique<SqliteDatabase>(SqliteDatabase::inMemory);
+  db->transaction([&](auto& txn) {
+    SqliteStatement(
+        txn,
+        "CREATE TABLE IF NOT EXISTS entries"
+        "("
+        "  parent INTEGER NOT NULL,"
+        "  name STRING NOT NULL,"
+        "  dtype INTEGER NOT NULL,"
+        "  inode INTEGER NOT NULL,"
+        "  sequence_id INTEGER NOT NULL,"
+        "  hash BLOB,"
+        "  is_restricted INTEGER NOT NULL DEFAULT 0,"
+        "  acl_root_state INTEGER,"
+        "  PRIMARY KEY (parent, name)"
+        ") WITHOUT ROWID")
+        .step();
+    SqliteStatement(txn, "PRAGMA user_version = 3").step();
+
+    auto insertEntry =
+        [&](folly::StringPiece name, uint64_t inode, bool isRestricted) {
+          auto insertStmt = SqliteStatement(
+              txn,
+              "INSERT INTO entries "
+              "(parent, name, dtype, inode, sequence_id, hash, is_restricted, "
+              "acl_root_state)"
+              " VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+          insertStmt.bind(1, kRootNodeId.get());
+          insertStmt.bind(2, name);
+          insertStmt.bind(3, static_cast<uint32_t>(dtype_t::Dir));
+          insertStmt.bind(4, inode);
+          insertStmt.bind(5, static_cast<uint64_t>(0));
+          insertStmt.bind(6, folly::ByteRange{});
+          insertStmt.bind(7, static_cast<uint64_t>(isRestricted ? 1 : 0));
+          insertStmt.bind(8, static_cast<uint64_t>(99));
+          insertStmt.step();
+        };
+
+    insertEntry("invalid_restricted", 2, true);
+    insertEntry("invalid_unrestricted", 3, false);
+  });
+
+  auto migratedStore = std::make_unique<SqliteTreeStore>(std::move(db));
+  migratedStore->createTableIfNonExisting();
+  migratedStore->loadCounters();
+
+  auto loaded = migratedStore->loadTree(kRootNodeId);
+  const auto& restricted = loaded.entries()->at("invalid_restricted");
+  EXPECT_TRUE(*restricted.isRestricted());
+  EXPECT_EQ(getAclRootState(restricted), AclRootState::RestrictedAclRoot);
+
+  const auto& unrestricted = loaded.entries()->at("invalid_unrestricted");
+  EXPECT_FALSE(*unrestricted.isRestricted());
+  EXPECT_EQ(getAclRootState(unrestricted), AclRootState::Unknown);
 }
 
 } // namespace facebook::eden

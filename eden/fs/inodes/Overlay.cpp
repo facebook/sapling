@@ -61,6 +61,20 @@ bool getOverlayEntryIsRestricted(const overlay::OverlayEntry& entry) {
       : false;
 }
 
+AclRootState getOverlayEntryAclRootState(const overlay::OverlayEntry& entry) {
+  if (auto state = entry.aclRootState()) {
+    if (auto aclRootState = aclRootStateFromInt(*state)) {
+      return *aclRootState;
+    }
+    XLOGF(
+        WARN,
+        "Invalid overlay ACL root state {}; falling back to legacy isRestricted",
+        *state);
+  }
+  return makeAclRootState(
+      getOverlayEntryIsRestricted(entry), std::optional<bool>{std::nullopt});
+}
+
 std::unique_ptr<InodeCatalog> makeInodeCatalog(
     AbsolutePathPiece localDir,
     InodeCatalogType inodeCatalogType,
@@ -573,17 +587,17 @@ bool Overlay::buildDirEntries(
       shouldRewriteOverlay = true;
     }
 
-    const bool isRestricted = getOverlayEntryIsRestricted(value);
+    const auto aclRootState = getOverlayEntryAclRootState(value);
     if (value.hash() && !value.hash()->empty()) {
       auto hash = ObjectId{folly::ByteRange{folly::StringPiece{*value.hash()}}};
       entries.emplace_back(
           PathComponent{name},
           DirEntry{
-              static_cast<mode_t>(*value.mode()), ino, hash, isRestricted});
+              static_cast<mode_t>(*value.mode()), ino, hash, aclRootState});
     } else {
       entries.emplace_back(
           PathComponent{name},
-          DirEntry{static_cast<mode_t>(*value.mode()), ino, isRestricted});
+          DirEntry{static_cast<mode_t>(*value.mode()), ino, aclRootState});
     }
   });
 
@@ -650,13 +664,13 @@ DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
         case WalOpType::ADD: {
           auto mode = static_cast<mode_t>(*walDelta.entry.mode());
           auto ino = InodeNumber::fromThrift(*walDelta.entry.inodeNumber());
-          const bool isRestricted = getOverlayEntryIsRestricted(walDelta.entry);
-          DirEntry entry{mode, ino, isRestricted};
+          const auto aclRootState = getOverlayEntryAclRootState(walDelta.entry);
+          DirEntry entry{mode, ino, aclRootState};
           if (walDelta.entry.hash().has_value() &&
               !walDelta.entry.hash()->empty()) {
             auto hash = ObjectId{
                 folly::ByteRange{folly::StringPiece{*walDelta.entry.hash()}}};
-            entry = DirEntry{mode, ino, hash, isRestricted};
+            entry = DirEntry{mode, ino, hash, aclRootState};
           }
           if (caseSensitive_ == CaseSensitivity::Sensitive) {
             // WAL key matches the stored key exactly — no rekey needed, so
@@ -716,6 +730,7 @@ overlay::OverlayEntry Overlay::serializeOverlayEntry(const DirEntry& ent) {
     entry.hash() = ent.getObjectId().asString();
   }
   entry.isRestricted() = ent.isRestricted();
+  entry.aclRootState() = static_cast<int32_t>(ent.aclRootState());
 
   return entry;
 }

@@ -33,6 +33,7 @@
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/Throw.h"
 #include "eden/fs/inodes/fscatalog/InodePath.h"
+#include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/utils/EdenError.h"
 
@@ -72,6 +73,28 @@ constexpr StringPiece kShardedTmpDirName{"sharded_tmp"};
 constexpr uint32_t kOverlayVersion = 1;
 constexpr size_t kInfoHeaderSize =
     kInfoHeaderMagic.size() + sizeof(kOverlayVersion);
+constexpr size_t kWalAclRootStateTailSize = sizeof(uint8_t) + sizeof(uint8_t);
+
+bool getWalEntryIsRestricted(const overlay::OverlayEntry& entry) {
+  return apache::thrift::is_non_optional_field_set_manually_or_by_serializer(
+             entry.isRestricted())
+      ? *entry.isRestricted()
+      : false;
+}
+
+AclRootState getWalEntryAclRootState(const overlay::OverlayEntry& entry) {
+  if (auto state = entry.aclRootState()) {
+    if (auto aclRootState = aclRootStateFromInt(*state)) {
+      return *aclRootState;
+    }
+    XLOGF(
+        WARN,
+        "Invalid WAL ACL root state {}; falling back to legacy isRestricted",
+        *state);
+  }
+  return makeAclRootState(
+      getWalEntryIsRestricted(entry), std::optional<bool>{std::nullopt});
+}
 
 static void doFormatSubdirPath(
     uint64_t inodeNum,
@@ -572,6 +595,7 @@ uint64_t FsFileContentStore::appendWalEntry(
   //   [name bytes]
   // For ADD, the payload additionally contains:
   //   [int32_t mode][int64_t inodeNumber][uint8_t hashLen][hash bytes]
+  //   [uint8_t isRestricted][uint8_t aclRootState]
   // entryLen covers everything after the entryLen field itself, and is
   // used during replay to detect torn writes.
   static_assert(
@@ -614,8 +638,8 @@ uint64_t FsFileContentStore::appendWalEntry(
 
   size_t payloadSize = sizeof(uint8_t) + sizeof(uint16_t) + nameLen;
   if (op == WalOpType::ADD) {
-    payloadSize +=
-        sizeof(int32_t) + sizeof(int64_t) + sizeof(uint8_t) + hashLen;
+    payloadSize += sizeof(int32_t) + sizeof(int64_t) + sizeof(uint8_t) +
+        hashLen + kWalAclRootStateTailSize;
   }
 
   size_t totalSize = sizeof(uint32_t) + payloadSize;
@@ -657,6 +681,16 @@ uint64_t FsFileContentStore::appendWalEntry(
           hashLen);
       offset += hashLen;
     }
+
+    auto aclRootState = getWalEntryAclRootState(*entry);
+    auto isRestricted =
+        static_cast<uint8_t>(aclRootState == AclRootState::RestrictedAclRoot);
+    memcpy(buf.data() + offset, &isRestricted, sizeof(uint8_t));
+    offset += sizeof(uint8_t);
+
+    auto aclRootStateValue = static_cast<uint8_t>(aclRootState);
+    memcpy(buf.data() + offset, &aclRootStateValue, sizeof(uint8_t));
+    offset += sizeof(uint8_t);
   }
 
   XCHECK_EQ(offset, totalSize);
@@ -853,6 +887,23 @@ LoadWalResult FsFileContentStore::loadWalDelta(
         if (hashLen > 0) {
           overlayEntry.hash() = std::string(
               reinterpret_cast<const char*>(entryData + entryOffset), hashLen);
+        }
+        entryOffset += hashLen;
+
+        auto remaining = entryLen - entryOffset;
+        if (remaining > 0) {
+          if (remaining != kWalAclRootStateTailSize) {
+            valid = false;
+            break;
+          }
+          auto isRestricted = entryData[entryOffset] != 0;
+          entryOffset += sizeof(uint8_t);
+
+          auto aclRootState = entryData[entryOffset];
+          entryOffset += sizeof(uint8_t);
+
+          overlayEntry.isRestricted() = isRestricted;
+          overlayEntry.aclRootState() = static_cast<int32_t>(aclRootState);
         }
 
         assignDelta(

@@ -8,12 +8,14 @@
 #include "eden/fs/inodes/sqlitecatalog/SqliteTreeStore.h"
 
 #include <folly/Range.h>
+#include <folly/logging/xlog.h>
 #include <folly/stop_watch.h>
 #include <array>
 #include <iterator>
 #include "eden/common/utils/DirType.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
+#include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/sqlite/PersistentSqliteStatement.h"
 #include "eden/fs/sqlite/SqliteStatement.h"
 #include "eden/fs/telemetry/EdenFsEventsLogger.h"
@@ -26,6 +28,10 @@ namespace {
 // SQLite table names
 constexpr folly::StringPiece kEntryTable = "entries";
 constexpr folly::StringPiece kMetadataTable = "metadata";
+constexpr uint32_t kAclRootStateUnknown =
+    static_cast<uint32_t>(AclRootState::Unknown);
+constexpr uint32_t kAclRootStateRestrictedAclRoot =
+    static_cast<uint32_t>(AclRootState::RestrictedAclRoot);
 
 // Filename of the tree overlay database
 constexpr PathComponentPiece kTreeStorePath =
@@ -36,7 +42,7 @@ constexpr auto kInitialNodeId = kRootNodeId.getRawValue() + 1;
 
 // Schema version of the SQLite database, every time we changes the schema we
 // must bump this number.
-constexpr uint32_t kSchemaVersion = 2;
+constexpr uint32_t kSchemaVersion = 3;
 
 // Maximum number of values when we do batch insertion
 constexpr size_t kBatchInsertSize = 8;
@@ -77,11 +83,62 @@ void addColumnIfMissing(
   }
 }
 
+uint32_t getSqliteAclRootState(const overlay::OverlayEntry& entry) {
+  if (auto state = entry.aclRootState()) {
+    if (auto aclRootState = aclRootStateFromInt(*state)) {
+      return static_cast<uint32_t>(*aclRootState);
+    }
+    XLOGF(
+        WARN,
+        "Invalid overlay ACL root state {}; falling back to legacy isRestricted",
+        *state);
+  }
+  return *entry.isRestricted() ? kAclRootStateRestrictedAclRoot
+                               : kAclRootStateUnknown;
+}
+
+void setLoadedAclRootState(
+    overlay::OverlayEntry& entry,
+    uint64_t rawState,
+    bool isRestricted) {
+  if (auto aclRootState = aclRootStateFromInt(static_cast<int64_t>(rawState))) {
+    entry.aclRootState() = static_cast<int32_t>(*aclRootState);
+    return;
+  }
+  XLOGF(
+      WARN,
+      "Invalid SQLite ACL root state {}; falling back to legacy is_restricted",
+      rawState);
+  entry.aclRootState() = static_cast<int32_t>(
+      makeAclRootState(isRestricted, std::optional<bool>{std::nullopt}));
+}
+
+void addLoadedEntry(overlay::OverlayDir& dir, SqliteStatement& query) {
+  auto name = query.columnBlob(0);
+  overlay::OverlayEntry entry;
+  entry.mode() = dtype_to_mode(static_cast<dtype_t>(query.columnUint64(1)));
+  entry.inodeNumber() = query.columnUint64(2);
+  entry.hash() = query.columnBlob(3).toString();
+  auto isRestricted = query.columnUint64(4) != 0;
+  entry.isRestricted() = isRestricted;
+  setLoadedAclRootState(entry, query.columnUint64(5), isRestricted);
+  dir.entries_ref()->emplace(std::make_pair(name, entry));
+}
+
 } // namespace
 
 struct SqliteTreeStore::StatementCache {
   explicit StatementCache(LockedSqliteConnection& db)
-      : selectTree{db, "SELECT name, dtype, inode, hash, is_restricted FROM ", kEntryTable, " WHERE parent = ? ORDER BY name"},
+      : selectTree{
+            db,
+            "SELECT name, dtype, inode, hash, is_restricted, "
+            "COALESCE(acl_root_state, CASE WHEN is_restricted != 0 THEN ",
+            kAclRootStateRestrictedAclRoot,
+            " ELSE ",
+            kAclRootStateUnknown,
+            " END) FROM ",
+            kEntryTable,
+            " WHERE parent = ? ORDER BY name"},
         selectAllParents{db, "SELECT DISTINCT parent FROM ", kEntryTable},
         countChildren{
             db,
@@ -94,8 +151,8 @@ struct SqliteTreeStore::StatementCache {
             db,
             "INSERT INTO ",
             kEntryTable,
-            " (parent, name, dtype, inode, sequence_id, hash, is_restricted) ",
-            " VALUES (?, ?, ?, ?, ?, ?, ?)"},
+            " (parent, name, dtype, inode, sequence_id, hash, is_restricted, acl_root_state) ",
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?)"},
         deleteChild{
             db,
             "DELETE FROM ",
@@ -132,11 +189,11 @@ struct SqliteTreeStore::StatementCache {
   PersistentSqliteStatement makeBatchInsert(
       LockedSqliteConnection& db,
       size_t size) {
-    constexpr folly::StringPiece values_fmt = "(?,?,?,?,?,?,?)";
+    constexpr folly::StringPiece values_fmt = "(?,?,?,?,?,?,?,?)";
     fmt::memory_buffer stmt_buffer;
     fmt::format_to(
         std::back_inserter(stmt_buffer),
-        "INSERT INTO {} (parent, name, dtype, inode, sequence_id, hash, is_restricted) VALUES ",
+        "INSERT INTO {} (parent, name, dtype, inode, sequence_id, hash, is_restricted, acl_root_state) VALUES ",
         kEntryTable);
 
     for (size_t i = 0; i < size; i++) {
@@ -282,16 +339,26 @@ std::unique_ptr<SqliteDatabase> SqliteTreeStore::takeDatabase() {
 void SqliteTreeStore::createTableIfNonExisting() {
   db_->transaction([&](auto& txn) {
     // Check current schema version and migrate if necessary
+    auto version = uint64_t{0};
     {
       auto versionStmt = SqliteStatement(txn, "PRAGMA user_version");
       versionStmt.step();
-      auto version = versionStmt.columnUint64(0);
+      version = versionStmt.columnUint64(0);
       if (version == 1) {
         addColumnIfMissing(
             txn,
             kEntryTable,
             "is_restricted",
             "is_restricted INTEGER NOT NULL DEFAULT 0");
+        version = 2;
+      }
+      if (version == 2) {
+        addColumnIfMissing(
+            txn, kEntryTable, "acl_root_state", "acl_root_state INTEGER");
+        version = 3;
+      } else if (version >= 3) {
+        addColumnIfMissing(
+            txn, kEntryTable, "acl_root_state", "acl_root_state INTEGER");
       }
     }
 
@@ -312,6 +379,7 @@ void SqliteTreeStore::createTableIfNonExisting() {
     sequence_id INTEGER NOT NULL,
     hash BLOB,
     is_restricted INTEGER NOT NULL DEFAULT 0,
+    acl_root_state INTEGER,
     PRIMARY KEY (parent, name)
 ) WITHOUT ROWID;
   )")
@@ -348,7 +416,8 @@ void SqliteTreeStore::createTableIfNonExisting() {
   )")
         .step();
 
-    SqliteStatement(txn, "PRAGMA user_version = ", kSchemaVersion).step();
+    const auto targetSchemaVersion = version == 0 ? kSchemaVersion : version;
+    SqliteStatement(txn, "PRAGMA user_version = ", targetSchemaVersion).step();
   });
 
   // We must initialize the statement after the tables are created. Otherwise it
@@ -469,14 +538,7 @@ overlay::OverlayDir SqliteTreeStore::loadTree(InodeNumber inode) {
     query->bind(1, inode.get());
 
     while (query->step()) {
-      auto name = query->columnBlob(0);
-      overlay::OverlayEntry entry;
-      entry.mode() =
-          dtype_to_mode(static_cast<dtype_t>(query->columnUint64(1)));
-      entry.inodeNumber() = query->columnUint64(2);
-      entry.hash() = query->columnBlob(3).toString();
-      entry.isRestricted() = query->columnUint64(4) != 0;
-      dir.entries_ref()->emplace(std::make_pair(name, entry));
+      addLoadedEntry(dir, *query);
     }
   });
 
@@ -492,14 +554,7 @@ overlay::OverlayDir SqliteTreeStore::loadAndRemoveTree(InodeNumber inode) {
     query->bind(1, inode.get());
 
     while (query->step()) {
-      auto name = query->columnBlob(0);
-      overlay::OverlayEntry entry;
-      entry.mode() =
-          dtype_to_mode(static_cast<dtype_t>(query->columnUint64(1)));
-      entry.inodeNumber() = query->columnUint64(2);
-      entry.hash() = query->columnBlob(3).toString();
-      entry.isRestricted() = query->columnUint64(4) != 0;
-      dir.entries_ref()->emplace(std::make_pair(name, entry));
+      addLoadedEntry(dir, *query);
     }
 
     auto deleteInode = cache_->deleteTree.get(txn);
@@ -622,7 +677,7 @@ void SqliteTreeStore::insertInodeEntry(
         entryHash->size()};
   }
 
-  auto start = index * 7; // Number of columns
+  auto start = index * 8; // Number of columns
   inserts.bind(start + 1, parent.get());
   inserts.bind(start + 2, name.view());
   inserts.bind(start + 3, dtype);
@@ -630,5 +685,6 @@ void SqliteTreeStore::insertInodeEntry(
   inserts.bind(start + 5, nextEntryId_++);
   inserts.bind(start + 6, hash);
   inserts.bind(start + 7, static_cast<uint32_t>(*entry.isRestricted()));
+  inserts.bind(start + 8, getSqliteAclRootState(entry));
 }
 } // namespace facebook::eden

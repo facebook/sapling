@@ -18,6 +18,7 @@ cpp_library(
     deps = [
         "//eden/common/utils:file_utils",
         "//eden/common/utils:throw",
+        "//eden/fs/model:model",
         "//eden/fs/service:thrift-cpp2-types",
         "//eden/fs/utils:eden_error",
         "//folly:conv",
