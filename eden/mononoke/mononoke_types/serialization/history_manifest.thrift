@@ -73,3 +73,12 @@ struct HistoryManifestDirectory {
   2: sharded_map.ShardedMapV2Node subentries;
   3: id.ChangesetId linknode;
 }
+
+struct HistoryManifestStageOutputEmpty {}
+
+union HistoryManifestStageOutput {
+  1: id.HistoryManifestFileId file_id;
+  2: id.HistoryManifestDirectoryId directory_id;
+  3: id.HistoryManifestDeletedNodeId deleted_node_id;
+  4: HistoryManifestStageOutputEmpty empty;
+}
