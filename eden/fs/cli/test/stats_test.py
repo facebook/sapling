@@ -11,7 +11,7 @@ from io import StringIO
 from typing import Optional
 
 from .. import stats_print
-from ..stats import DiagInfoCounters, get_counter_table, get_store_latency
+from ..stats import DiagInfoCounters, get_store_latency
 
 
 class StatsTest(unittest.TestCase):
