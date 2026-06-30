@@ -73,7 +73,14 @@ TEST_F(TreeBuilderTest, AddFileEntry) {
       0xf7, 0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff, 0x00};
 
   builder.add_entry_with_aux_data(
-      fileName, hgNode, entryType, fileSize, sha1Hash, blake3Hash, false);
+      fileName,
+      hgNode,
+      entryType,
+      fileSize,
+      sha1Hash,
+      blake3Hash,
+      false,
+      false);
 
   EXPECT_EQ(builder.num_files(), 1);
   EXPECT_EQ(builder.num_dirs(), 0);
@@ -107,7 +114,7 @@ TEST_F(TreeBuilderTest, AddDirectoryEntry) {
   TreeEntryType entryType = TreeEntryType::TREE;
 
   // Add the directory entry (we don't currently support dir aux data):
-  builder.add_entry(dirName, hgNode, entryType, false);
+  builder.add_entry(dirName, hgNode, entryType, false, true);
 
   EXPECT_EQ(builder.num_files(), 0);
   EXPECT_EQ(builder.num_dirs(), 1);
@@ -118,10 +125,37 @@ TEST_F(TreeBuilderTest, AddDirectoryEntry) {
   auto entry = tree->find(PathComponentPiece{"test_dir"})->second;
 
   EXPECT_EQ(entry.getType(), entryType);
+  EXPECT_EQ(entry.aclRootState(), AclRootState::AclRoot);
+  EXPECT_EQ(entry.hasACL(), true);
 
   SlOid parsedOid = facebook::eden::SlOid{entry.getObjectId()};
   EXPECT_EQ(parsedOid.node().getBytes(), folly::ByteRange{hgNode});
   EXPECT_EQ(parsedOid.path(), path_ + PathComponentPiece{"test_dir"});
+}
+
+TEST_F(TreeBuilderTest, AddDirectoryAclRootStates) {
+  TreeBuilder builder(oid_, caseSensitive_, objectIdFormat_);
+
+  std::array<uint8_t, 20> noAclNode = {0x01};
+  std::array<uint8_t, 20> permittedNode = {0x02};
+  std::array<uint8_t, 20> restrictedNode = {0x03};
+
+  builder.add_entry("no_acl", noAclNode, TreeEntryType::TREE, false, false);
+  builder.add_entry(
+      "permitted", permittedNode, TreeEntryType::TREE, false, true);
+  builder.add_entry(
+      "restricted", restrictedNode, TreeEntryType::TREE, true, true);
+
+  auto tree = builder.build();
+  EXPECT_EQ(
+      tree->find(PathComponentPiece{"no_acl"})->second.aclRootState(),
+      AclRootState::NoAcl);
+  EXPECT_EQ(
+      tree->find(PathComponentPiece{"permitted"})->second.aclRootState(),
+      AclRootState::AclRoot);
+  EXPECT_EQ(
+      tree->find(PathComponentPiece{"restricted"})->second.aclRootState(),
+      AclRootState::RestrictedAclRoot);
 }
 
 TEST_F(TreeBuilderTest, AddMultipleEntries) {
@@ -134,7 +168,8 @@ TEST_F(TreeBuilderTest, AddMultipleEntries) {
     std::array<uint8_t, 20> hgNode = {0};
     hgNode[0] = static_cast<uint8_t>(i);
 
-    builder.add_entry(fileNameStr, hgNode, TreeEntryType::REGULAR_FILE, false);
+    builder.add_entry(
+        fileNameStr, hgNode, TreeEntryType::REGULAR_FILE, false, false);
   }
 
   // Add multiple directory entries
@@ -144,7 +179,7 @@ TEST_F(TreeBuilderTest, AddMultipleEntries) {
     std::array<uint8_t, 20> hgNode = {0};
     hgNode[1] = static_cast<uint8_t>(i);
 
-    builder.add_entry(dirNameStr, hgNode, TreeEntryType::TREE, false);
+    builder.add_entry(dirNameStr, hgNode, TreeEntryType::TREE, false, false);
   }
 
   EXPECT_EQ(builder.num_files(), 3);

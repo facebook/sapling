@@ -222,9 +222,15 @@ TreePtr GitBackingStore::getTreeImpl(const ObjectId& id) {
     }
     auto entryHash = oid2Hash(git_tree_entry_id(gitEntry));
     auto name = PathComponentPiece{entryName};
-    entries.emplace(name, std::move(entryHash), fileType);
+    entries.emplace(
+        name,
+        std::move(entryHash),
+        fileType,
+        /*isRestricted=*/false,
+        /*hasACL=*/false);
   }
-  return std::make_shared<TreePtr::element_type>(std::move(entries), id);
+  return std::make_shared<TreePtr::element_type>(
+      std::move(entries), id, AclRootState::NoAcl);
 }
 
 folly::coro::now_task<BackingStore::GetTreeAuxResult>

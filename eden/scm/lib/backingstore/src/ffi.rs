@@ -25,6 +25,7 @@ use storemodel::TreeItemFlag;
 use types::FetchContext;
 use types::HgId;
 use types::Key;
+use types::PathComponentBuf;
 use types::RepoPath;
 use types::fetch_cause::FetchCause;
 use types::fetch_mode::FetchMode;
@@ -206,6 +207,7 @@ pub(crate) mod ffi {
             hg_node: &[u8; 20],
             ttype: TreeEntryType,
             is_restricted: bool,
+            has_acl: bool,
         );
 
         fn add_entry_with_aux_data(
@@ -217,6 +219,7 @@ pub(crate) mod ffi {
             sha1: &[u8; 20],
             blake3: &[u8; 32],
             is_restricted: bool,
+            has_acl: bool,
         );
 
         fn mark_missing(self: Pin<&mut TreeBuilder>);
@@ -510,28 +513,51 @@ pub fn sapling_backingstore_get_tree(
     ffi::GetTreeResult { error }
 }
 
-/// Build a set of restricted child directory HgIds from the tree's
-/// permission_denied_children(). Fail-open: if the initial call or
-/// individual entries error, log a warning and treat as unrestricted.
-fn build_restricted_set(tree: &dyn TreeEntry) -> HashSet<HgId> {
-    let iter = match tree.permission_denied_children() {
+/// Build a set of restricted child directory HgIds from known ACL children.
+/// Fail-open: if the initial check or individual entries error, log a warning
+/// and treat as unrestricted.
+fn build_restricted_set(
+    tree: &dyn TreeEntry,
+    children_with_acl: Vec<(PathComponentBuf, HgId)>,
+) -> HashSet<HgId> {
+    let iter = match tree.filter_permission_denied(children_with_acl) {
         Ok(iter) => iter,
         Err(e) => {
             tracing::warn!(
                 ?e,
-                "error calling permission_denied_children; treating all children as unrestricted (fail-open)"
+                "error checking restricted children; treating all children as unrestricted (fail-open)"
             );
             return HashSet::new();
         }
     };
-    iter.filter_map(|r| match r {
+
+    iter.filter_map(|entry| match entry {
         Ok((_, hgid, _)) => Some(hgid),
         Err(e) => {
-            tracing::warn!(?e, "error checking permission_denied_children");
+            tracing::warn!(
+                ?e,
+                "error checking restricted child; treating child as unrestricted (fail-open)"
+            );
             None
         }
     })
     .collect()
+}
+
+fn build_acl_sets(tree: &dyn TreeEntry) -> (HashSet<HgId>, HashSet<HgId>) {
+    let children_with_acl = match tree.children_with_acls() {
+        Ok(children) => children,
+        Err(e) => {
+            tracing::warn!(
+                ?e,
+                "error reading child ACL metadata; treating all children as unrestricted (fail-open)"
+            );
+            return (HashSet::new(), HashSet::new());
+        }
+    };
+    let child_has_acl = children_with_acl.iter().map(|(_, hgid)| *hgid).collect();
+    let restricted_set = build_restricted_set(tree, children_with_acl);
+    (child_has_acl, restricted_set)
 }
 
 // Convert the `TreeEntry` trait object into an EdenFS Tree by adding each entry to the TreeBuilder
@@ -540,18 +566,10 @@ fn add_tree_to_builder(
     mut builder: Pin<&mut ffi::TreeBuilder>,
     tree: Arc<dyn TreeEntry>,
 ) -> anyhow::Result<()> {
-    // TODO: Make the aux data available in `TreeEntry::iter()` so we don't have to do this HashMap business.
     let aux_map: HashMap<HgId, ScmStoreFileAuxData> =
         tree.file_aux_iter()?.collect::<anyhow::Result<_>>()?;
 
-    // Build a set of child directory IDs that the server denied access to
-    // (path ACL restriction). These are directories containing .slacl files.
-    //
-    // Naming mapping (B2): The Sapling layer uses "has_acl" / "permission_denied"
-    // to describe directories with access restrictions. EdenFS translates this
-    // to "is_restricted" / "isRestricted" to describe the access-denied behavior
-    // from the user's perspective.
-    let restricted_set: HashSet<HgId> = build_restricted_set(tree.as_ref());
+    let (child_has_acl, restricted_set) = build_acl_sets(tree.as_ref());
 
     // Pre-allocate the per-entry storage.
     if let Some(hint) = tree.size_hint() {
@@ -575,6 +593,7 @@ fn add_tree_to_builder(
 
         let is_restricted =
             matches!(flag, TreeItemFlag::Directory) && restricted_set.contains(&node);
+        let has_acl = matches!(flag, TreeItemFlag::Directory) && child_has_acl.contains(&node);
 
         if let Some(aux) = aux_map.get(&node) {
             builder.as_mut().add_entry_with_aux_data(
@@ -585,11 +604,16 @@ fn add_tree_to_builder(
                 aux.sha1.as_byte_array(),
                 aux.blake3.as_byte_array(),
                 is_restricted,
+                has_acl,
             );
         } else {
-            builder
-                .as_mut()
-                .add_entry(name.as_str(), node.as_byte_array(), ttype, is_restricted);
+            builder.as_mut().add_entry(
+                name.as_str(),
+                node.as_byte_array(),
+                ttype,
+                is_restricted,
+                has_acl,
+            );
         }
     }
 

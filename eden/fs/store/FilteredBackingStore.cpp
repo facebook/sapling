@@ -351,7 +351,8 @@ FilteredBackingStore::co_filterImpl(
         entry->second.getSize(),
         entry->second.getContentSha1(),
         entry->second.getContentBlake3(),
-        entry->second.isRestricted()};
+        entry->second.isRestricted(),
+        entry->second.hasACL()};
     pathMap.insert(std::pair{relPath.basename().copy(), std::move(treeEntry)});
   }
 

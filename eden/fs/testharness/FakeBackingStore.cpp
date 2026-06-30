@@ -378,7 +378,11 @@ FakeBackingStore::TreeEntryData::TreeEntryData(
     const Tree& tree)
     : entry{
           PathComponent{name},
-          TreeEntry{ObjectId{tree.getObjectId()}, TreeEntryType::TREE}} {}
+          TreeEntry{
+              ObjectId{tree.getObjectId()},
+              TreeEntryType::TREE,
+              tree.isRestricted(),
+              tree.hasACL()}} {}
 
 FakeBackingStore::TreeEntryData::TreeEntryData(
     folly::StringPiece name,
@@ -387,7 +391,9 @@ FakeBackingStore::TreeEntryData::TreeEntryData(
           PathComponent{name},
           TreeEntry{
               ObjectId{tree->get().getObjectId()},
-              TreeEntryType::TREE}} {}
+              TreeEntryType::TREE,
+              tree->get().isRestricted(),
+              tree->get().hasACL()}} {}
 
 StoredTree* FakeBackingStore::putTree(
     const std::initializer_list<TreeEntryData>& entryArgs) {

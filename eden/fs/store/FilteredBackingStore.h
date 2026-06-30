@@ -158,6 +158,7 @@ class FilteredBackingStore
   FRIEND_TEST(
       FakeSubstringFilteredBackingStoreTest,
       restrictedTreePreservedAfterFiltering);
+  FRIEND_TEST(FakeSubstringFilteredBackingStoreTest, treeEntryHasAclPreserved);
 
   ImmediateFuture<GetRootTreeResult> getRootTree(
       const RootId& rootId,

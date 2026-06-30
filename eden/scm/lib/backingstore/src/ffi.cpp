@@ -92,16 +92,14 @@ void TreeBuilder::add_entry(
     rust::Str name,
     const std::array<uint8_t, 20>& hg_node,
     facebook::eden::TreeEntryType ttype,
-    bool is_restricted) {
+    bool is_restricted,
+    bool has_acl) {
   emplace_entry(
       name,
       facebook::eden::TreeEntry{
           make_entry_oid(hg_node, name),
           ttype,
-          std::nullopt,
-          std::nullopt,
-          std::nullopt,
-          is_restricted,
+          facebook::eden::makeAclRootState(is_restricted, has_acl),
       });
 }
 
@@ -112,7 +110,8 @@ void TreeBuilder::add_entry_with_aux_data(
     const uint64_t size,
     const std::array<uint8_t, 20>& sha1,
     const std::array<uint8_t, 32>& blake3,
-    bool is_restricted) {
+    bool is_restricted,
+    bool has_acl) {
   emplace_entry(
       name,
       facebook::eden::TreeEntry{
@@ -121,7 +120,7 @@ void TreeBuilder::add_entry_with_aux_data(
           size,
           std::optional<facebook::eden::Hash20>(sha1),
           std::optional<facebook::eden::Hash32>(blake3),
-          is_restricted,
+          facebook::eden::makeAclRootState(is_restricted, has_acl),
       });
 }
 

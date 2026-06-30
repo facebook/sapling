@@ -479,6 +479,30 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, getTree) {
   EXPECT_EQ(treeOID, std::move(future5).get(0ms).tree->getObjectId());
 }
 
+TEST_F(FakeSubstringFilteredBackingStoreTest, treeEntryHasAclPreserved) {
+  Tree::container aclChildEntries{kPathMapDefaultCaseSensitive};
+  auto aclChildTree = Tree{
+      std::move(aclChildEntries), makeTestId("3004"), AclRootState::AclRoot};
+  auto rootId = makeTestId("3003");
+  auto filteredRootId =
+      FilteredObjectId(RelativePath{""}, kTestFilter1, rootId);
+  auto* rootDir = wrappedStore_->putTree(rootId, {{"acl_dir", aclChildTree}});
+  if (rootDir == nullptr) {
+    ADD_FAILURE() << "failed to create root tree";
+    return;
+  }
+
+  auto future = filteredStore_->getTree(
+      ObjectId{filteredRootId.getValue()},
+      ObjectFetchContext::getNullContext());
+  rootDir->trigger();
+  auto filteredTree = std::move(future).get(0ms).tree;
+  auto aclDir = filteredTree->find("acl_dir"_pc);
+
+  ASSERT_NE(aclDir, filteredTree->cend());
+  EXPECT_EQ(aclDir->second.hasACL(), std::optional<bool>{true});
+}
+
 TEST_F(FakeSubstringFilteredBackingStoreTest, getRootTree) {
   // Set up one commit with a root tree
   auto dir1Id = makeTestId("abc");
