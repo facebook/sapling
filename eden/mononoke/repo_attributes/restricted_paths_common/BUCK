@@ -8,6 +8,10 @@ rust_library(
         "src/**/*.rs",
         "schemas/**/*.sql",
     ]),
+    test_deps = [
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",

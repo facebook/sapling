@@ -140,6 +140,22 @@ pub trait RestrictedPathsManifestIdStore: Send + Sync {
         // TODO(T239041722): add limit
     ) -> Result<Vec<RestrictedPathManifestIdEntry>>;
 
+    /// Get all entries in this repo matching a manifest id, regardless of
+    /// manifest type. Returns the manifest type and path of each matching entry.
+    async fn get_all_paths_by_manifest_id(
+        &self,
+        ctx: &CoreContext,
+        manifest_id: &ManifestId,
+    ) -> Result<Vec<(ManifestType, NonRootMPath)>>;
+
+    /// Delete all entries in this repo matching a manifest id, regardless of
+    /// manifest type. Returns the number of rows deleted.
+    async fn delete_by_manifest_id(
+        &self,
+        ctx: &CoreContext,
+        manifest_id: &ManifestId,
+    ) -> Result<u64>;
+
     fn repo_id(&self) -> RepositoryId;
 }
 
@@ -184,6 +200,18 @@ mononoke_queries! {
          WHERE
             repo_id = {repo_id}
          "
+    }
+
+    read SelectByManifestId(
+        repo_id: RepositoryId,
+        manifest_id: ManifestId,
+    ) -> (ManifestType, NonRootMPath) {
+        "SELECT manifest_type, path FROM restricted_paths_manifest_ids WHERE repo_id = {repo_id} AND manifest_id = {manifest_id}"
+    }
+
+    write DeleteByManifestId(repo_id: RepositoryId, manifest_id: ManifestId) {
+        none,
+        "DELETE FROM restricted_paths_manifest_ids WHERE repo_id = {repo_id} AND manifest_id = {manifest_id}"
     }
 
 }
@@ -276,6 +304,38 @@ impl RestrictedPathsManifestIdStore for SqlRestrictedPathsManifestIdStore {
                 RestrictedPathManifestIdEntry::new(manifest_type, manifest_id, repo_path)
             })
             .collect::<Result<_>>()
+    }
+
+    async fn get_all_paths_by_manifest_id(
+        &self,
+        ctx: &CoreContext,
+        manifest_id: &ManifestId,
+    ) -> Result<Vec<(ManifestType, NonRootMPath)>> {
+        let rows = SelectByManifestId::query(
+            &self.connections.read_connection,
+            ctx.sql_query_telemetry(),
+            &self.repo_id,
+            manifest_id,
+        )
+        .await?;
+
+        Ok(rows)
+    }
+
+    async fn delete_by_manifest_id(
+        &self,
+        ctx: &CoreContext,
+        manifest_id: &ManifestId,
+    ) -> Result<u64> {
+        let result = DeleteByManifestId::query(
+            &self.connections.write_connection,
+            ctx.sql_query_telemetry(),
+            &self.repo_id,
+            manifest_id,
+        )
+        .await?;
+
+        Ok(result.affected_rows())
     }
 
     fn repo_id(&self) -> RepositoryId {
@@ -466,4 +526,120 @@ fn fmt_path_bytes(path: &PathBytes, f: &mut fmt::Formatter) -> fmt::Result {
 
 fn fmt_path_hash_bytes(path_hash: &PathHashBytes, f: &mut fmt::Formatter) -> fmt::Result {
     write!(f, "\"{}\"", hex::encode(&path_hash.0))
+}
+
+#[cfg(test)]
+mod tests {
+    use fbinit::FacebookInit;
+    use mononoke_macros::mononoke;
+
+    use super::*;
+
+    fn manifest_id_from(bytes: &[u8]) -> ManifestId {
+        ManifestId::new(SmallVec::from_slice(bytes))
+    }
+
+    fn entry(
+        manifest_type: ManifestType,
+        manifest_id: &ManifestId,
+        path: &str,
+    ) -> RestrictedPathManifestIdEntry {
+        RestrictedPathManifestIdEntry::new(
+            manifest_type,
+            manifest_id.clone(),
+            RepoPath::dir(NonRootMPath::new(path).expect("valid path"))
+                .expect("valid directory repo path"),
+        )
+        .expect("valid entry")
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_get_and_delete_by_manifest_id_per_repo(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+
+        // Build the first store via the builder so it owns an in-memory sqlite
+        // DB, then build a second store for a different repo that shares the
+        // SAME connections so both repos hit the same underlying DB. This lets
+        // us assert that the per-repo operations only touch their own repo.
+        let builder = SqlRestrictedPathsManifestIdStoreBuilder::with_sqlite_in_memory()?;
+        let connections = builder.connections.clone();
+        let store_repo1 = builder.with_repo_id(RepositoryId::new(1));
+        let store_repo2 = SqlRestrictedPathsManifestIdStore::new(RepositoryId::new(2), connections);
+
+        let shared_id = manifest_id_from(&[1u8; 32]);
+        let control_id = manifest_id_from(&[2u8; 32]);
+
+        // The same manifest id is stored in both repos under two manifest types.
+        store_repo1
+            .add_entry(&ctx, entry(ManifestType::Hg, &shared_id, "repo1/hg"))
+            .await?;
+        store_repo1
+            .add_entry(
+                &ctx,
+                entry(ManifestType::HgAugmented, &shared_id, "repo1/hg_aug"),
+            )
+            .await?;
+        store_repo2
+            .add_entry(&ctx, entry(ManifestType::Hg, &shared_id, "repo2/hg"))
+            .await?;
+        store_repo2
+            .add_entry(
+                &ctx,
+                entry(ManifestType::HgAugmented, &shared_id, "repo2/hg_aug"),
+            )
+            .await?;
+
+        // A control entry with a different manifest id must survive deletion.
+        store_repo1
+            .add_entry(&ctx, entry(ManifestType::Hg, &control_id, "repo1/control"))
+            .await?;
+
+        // (a) get_all_paths_by_manifest_id is scoped to the store's repo: repo1
+        // sees only its own two entries, not repo2's.
+        let found = store_repo1
+            .get_all_paths_by_manifest_id(&ctx, &shared_id)
+            .await?;
+        assert_eq!(
+            found.len(),
+            2,
+            "repo1 should only see its own two entries for the shared manifest id"
+        );
+
+        // (b) delete_by_manifest_id removes only repo1's two entries.
+        let deleted = store_repo1.delete_by_manifest_id(&ctx, &shared_id).await?;
+        assert_eq!(deleted, 2, "delete should remove only repo1's two entries");
+        assert!(
+            store_repo1
+                .get_all_paths_by_manifest_id(&ctx, &shared_id)
+                .await?
+                .is_empty(),
+            "no repo1 shared-id entries should remain after deletion"
+        );
+
+        // (c) repo2's entries for the same manifest id are untouched.
+        assert_eq!(
+            store_repo2
+                .get_all_paths_by_manifest_id(&ctx, &shared_id)
+                .await?
+                .len(),
+            2,
+            "repo2's entries must not be affected by deleting from repo1"
+        );
+
+        // (d) a second delete is a no-op.
+        let deleted_again = store_repo1.delete_by_manifest_id(&ctx, &shared_id).await?;
+        assert_eq!(deleted_again, 0, "second delete should affect no rows");
+
+        // (e) the control entry with a different id is untouched.
+        assert_eq!(
+            store_repo1
+                .get_all_paths_by_manifest_id(&ctx, &control_id)
+                .await?
+                .len(),
+            1,
+            "the control entry with a different manifest id should remain"
+        );
+
+        Ok(())
+    }
 }
