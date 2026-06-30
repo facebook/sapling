@@ -10,4 +10,33 @@
   flex-direction: column;
   padding: var(--pad);
   align-items: center;
+  gap: var(--pad);
+}
+
+.keyboard-shortcuts-menu td {
+  padding: var(--halfpad) var(--pad);
+  vertical-align: middle;
+}
+
+.keyboard-shortcut-binding {
+  display: flex;
+  align-items: center;
+  gap: var(--pad);
+}
+
+.keyboard-shortcut-actions {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.keyboard-shortcut-conflict {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--halfpad);
+  font-size: 90%;
+  opacity: 0.9;
+}
+
+.shortcut-capture {
+  font-style: italic;
 }

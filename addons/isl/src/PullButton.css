@@ -11,3 +11,15 @@
   align-items: center;
   gap: var(--pad);
 }
+
+.pull-tooltip-text {
+  /* Preserve the blank-line separators in the tooltip message. */
+  white-space: pre-line;
+}
+
+.pull-tooltip-shortcut {
+  display: flex;
+  align-items: center;
+  gap: var(--halfpad);
+  margin-top: var(--pad);
+}

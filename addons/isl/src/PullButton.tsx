@@ -10,11 +10,14 @@ import type {Operation} from './operations/Operation';
 import {Button} from 'isl-components/Button';
 import {ButtonDropdown} from 'isl-components/ButtonDropdown';
 import {Icon} from 'isl-components/Icon';
+import {Kbd} from 'isl-components/Kbd';
 import {DOCUMENTATION_DELAY, Tooltip} from 'isl-components/Tooltip';
 import {useAtom, useAtomValue} from 'jotai';
+import {useCallback} from 'react';
 import {fetchStableLocations} from './BookmarksData';
-import {Internal} from './Internal';
 import {t, T} from './i18n';
+import {Internal} from './Internal';
+import {effectiveCommandsAtom, useCommand, useKeyboardShortcutsEnabled} from './ISLShortcuts';
 import {configBackedAtom} from './jotaiUtils';
 import {PullOperation} from './operations/PullOperation';
 import {useRunOperation} from './operationsState';
@@ -73,8 +76,61 @@ export function PullButton() {
     tooltip += '\n\n' + t('Pull is already running.');
   }
 
+  // The shortcuts (and the rebind settings UI + tooltip hint) are gated behind a Gatekeeper
+  // killswitch so the whole feature can be disabled remotely if it misbehaves.
+  const keyboardShortcutsEnabled = useKeyboardShortcutsEnabled();
+
+  const arcPullOption = pullButtonOptions.find(option => option.id === 'arc pull');
+  const runPullOption = useCallback(
+    (option: PullButtonOption | undefined) => {
+      if (option == null) {
+        return; // Arc Pull is absent in OSS builds — no-op.
+      }
+      const optionDisabled =
+        (option.allowWithUncommittedChanges === false && hasUncommittedChanges) ||
+        (pendingOperation != null && option.isRunning(pendingOperation));
+      if (optionDisabled) {
+        return;
+      }
+      runOperation(option.getOperation());
+      fetchStableLocations();
+    },
+    [hasUncommittedChanges, pendingOperation, runOperation],
+  );
+  const handlePull = useCallback(() => {
+    if (keyboardShortcutsEnabled) {
+      runPullOption(DEFAULT_PULL_BUTTON);
+    }
+  }, [keyboardShortcutsEnabled, runPullOption]);
+  const handleArcPull = useCallback(() => {
+    if (keyboardShortcutsEnabled) {
+      runPullOption(arcPullOption);
+    }
+  }, [keyboardShortcutsEnabled, arcPullOption, runPullOption]);
+  useCommand('Pull', handlePull);
+  useCommand('ArcPull', handleArcPull);
+
+  // Hint the (override-aware) keyboard shortcut for the currently-selected choice in the tooltip.
+  const effectiveCommands = useAtomValue(effectiveCommandsAtom);
+  const [shortcutModifiers, shortcutKeyCode] =
+    effectiveCommands[currentChoice.id === 'arc pull' ? 'ArcPull' : 'Pull'];
+  const title = keyboardShortcutsEnabled ? (
+    <div className="pull-tooltip">
+      <div className="pull-tooltip-text">{tooltip}</div>
+      <div className="pull-tooltip-shortcut">
+        <T>Shortcut:</T>{' '}
+        <Kbd
+          modifiers={Array.isArray(shortcutModifiers) ? shortcutModifiers : [shortcutModifiers]}
+          keycode={shortcutKeyCode}
+        />
+      </div>
+    </div>
+  ) : (
+    tooltip
+  );
+
   return (
-    <Tooltip placement="bottom" delayMs={DOCUMENTATION_DELAY} title={tooltip}>
+    <Tooltip placement="bottom" delayMs={DOCUMENTATION_DELAY} title={title}>
       <div className="pull-info">
         {pullButtonOptions.length > 1 ? (
           <ButtonDropdown

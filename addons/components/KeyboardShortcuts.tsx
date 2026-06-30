@@ -84,15 +84,16 @@ class CommandDispatcher<CommandName extends string> extends (
   }
 ).EventTarget {
   private keydownListener: (event: KeyboardEvent) => void;
+  /** Current command -> key binding map. May be swapped at runtime via {@link updateCommands}. */
+  private commands: CommandMap<CommandName>;
+  /** Fast-path set of KeyCodes with at least one binding; recomputed whenever commands change. */
+  private knownKeysWithCommands: Set<KeyCode>;
   constructor(commands: CommandMap<CommandName>, onDispatch?: OnShortcutDispatch<CommandName>) {
     super();
-    const knownKeysWithCommands = new Set<KeyCode>();
-    for (const cmdDef of Object.values(commands) as Array<CommandDefinition>) {
-      const [, key] = cmdDef;
-      knownKeysWithCommands.add(key);
-    }
+    this.commands = commands;
+    this.knownKeysWithCommands = computeKnownKeys(commands);
     this.keydownListener = (event: KeyboardEvent) => {
-      if (!knownKeysWithCommands.has(event.keyCode)) {
+      if (!this.knownKeysWithCommands.has(event.keyCode)) {
         return;
       }
       if (isTargetTextInputElement(event)) {
@@ -105,7 +106,7 @@ class CommandDispatcher<CommandName extends string> extends (
         (event.altKey ? Modifier.ALT : 0) |
         (event.metaKey ? Modifier.CMD : 0);
 
-      for (const [command, cmdAttrs] of Object.entries(commands) as Array<
+      for (const [command, cmdAttrs] of Object.entries(this.commands) as Array<
         [CommandName, CommandDefinition]
       >) {
         const [mods, key] = cmdAttrs;
@@ -120,9 +121,29 @@ class CommandDispatcher<CommandName extends string> extends (
     };
     document.body.addEventListener('keydown', this.keydownListener);
   }
+
+  /**
+   * Replace the command -> key binding map at runtime (e.g. to apply user overrides).
+   * The single global keydown listener is preserved; only the binding source it reads is swapped.
+   */
+  updateCommands(commands: CommandMap<CommandName>) {
+    this.commands = commands;
+    this.knownKeysWithCommands = computeKnownKeys(commands);
+  }
 }
 
-function collapseModifiersToNumber(mods: Modifiers): number {
+function computeKnownKeys<CommandName extends string>(
+  commands: CommandMap<CommandName>,
+): Set<KeyCode> {
+  const knownKeysWithCommands = new Set<KeyCode>();
+  for (const cmdDef of Object.values(commands) as Array<CommandDefinition>) {
+    const [, key] = cmdDef;
+    knownKeysWithCommands.add(key);
+  }
+  return knownKeysWithCommands;
+}
+
+export function collapseModifiersToNumber(mods: Modifiers): number {
   return Array.isArray(mods) ? mods.reduce((acc, mod) => acc | mod, Modifier.NONE) : mods;
 }
 
@@ -146,6 +167,7 @@ export function makeCommandDispatcher<CommandName extends string>(
   (command: CommandName, handler: () => void) => void,
   (command: CommandName) => void,
   CommandMap<CommandName>,
+  (commands: CommandMap<CommandName>) => void,
 ] {
   const commandDispatcher = new CommandDispatcher(commands, onDispatch);
   const Context = createContext(commandDispatcher);
@@ -165,5 +187,6 @@ export function makeCommandDispatcher<CommandName extends string>(
     useCommand,
     (command: CommandName) => commandDispatcher.dispatchEvent(new Event(command)),
     commands,
+    (newCommands: CommandMap<CommandName>) => commandDispatcher.updateCommands(newCommands),
   ];
 }

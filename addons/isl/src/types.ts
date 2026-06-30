@@ -949,6 +949,7 @@ export const allConfigNames = [
   'isl.show-authored-diffs',
   'isl.auto-detect-commit-schema',
   'isl.focus-dot-on-repo-change',
+  'isl.keyboard-shortcut-overrides',
 ] as const;
 
 /** sl configs read by ISL */
@@ -982,6 +983,8 @@ export const settableConfigNames = [
   'amend.autorestack',
   'isl.show-authored-diffs',
   'worktree.enabled',
+  // Pure data (a map of command name -> [modifiers, keyCode]); no code-execution risk.
+  'isl.keyboard-shortcut-overrides',
 ] as const;
 
 /** sl configs written to by ISL */

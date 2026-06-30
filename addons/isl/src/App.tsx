@@ -21,7 +21,7 @@ import {ComparisonViewApp, ComparisonViewModal} from './ComparisonView/Compariso
 import {availableCwds, CwdSelections} from './CwdSelector';
 import {Drawers} from './Drawers';
 import {EmptyState} from './EmptyState';
-import {useCommand} from './ISLShortcuts';
+import {useApplyKeyboardShortcutOverrides, useCommand} from './ISLShortcuts';
 import {Internal} from './Internal';
 import {TopBar} from './TopBar';
 import {TopLevelAlerts} from './TopLevelAlert';
@@ -59,6 +59,7 @@ export default function App() {
 
   return (
     <AllProviders>
+      <ApplyKeyboardShortcutOverrides />
       {mode.mode === 'isl' ? (
         <>
           <NullStateOrDrawers />
@@ -69,6 +70,12 @@ export default function App() {
       )}
     </AllProviders>
   );
+}
+
+/** Applies persisted keyboard-shortcut overrides to the dispatcher. Renders nothing. */
+function ApplyKeyboardShortcutOverrides() {
+  useApplyKeyboardShortcutOverrides();
+  return null;
 }
 
 function ComparisonApp() {

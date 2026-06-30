@@ -207,6 +207,49 @@ describe('KeyboardShortcuts', () => {
     expect(value).toBe(2);
   });
 
+  it('supports updating bindings at runtime', () => {
+    const [ShortcutContext, useCommand, , , setCommands] = makeCommandDispatcher({
+      foo: [Modifier.ALT, KeyCode.One],
+    });
+
+    let value = 0;
+    function MyComponent() {
+      const onFoo = useCallback(() => {
+        value++;
+      }, []);
+      useCommand('foo', onFoo);
+      return <div>{value}</div>;
+    }
+    render(
+      <ShortcutContext>
+        <MyComponent />
+      </ShortcutContext>,
+    );
+
+    // default binding works
+    act(() => {
+      userEvent.type(document.body, '{alt}1');
+    });
+    expect(value).toBe(1);
+
+    // rebind foo to a different key
+    act(() => {
+      setCommands({foo: [Modifier.ALT, KeyCode.Two]});
+    });
+
+    // old binding no longer triggers
+    act(() => {
+      userEvent.type(document.body, '{alt}1');
+    });
+    expect(value).toBe(1);
+
+    // new binding triggers (the new keyCode must be added to the fast-path set)
+    act(() => {
+      userEvent.type(document.body, '{alt}2');
+    });
+    expect(value).toBe(2);
+  });
+
   it('allows explicitly dispatching commands', () => {
     const [ShortcutContext, useCommand, dispatchCommand] = makeCommandDispatcher({
       foo: [Modifier.CMD, KeyCode.One],
