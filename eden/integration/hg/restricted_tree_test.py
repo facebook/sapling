@@ -14,11 +14,19 @@ import stat
 from typing import TYPE_CHECKING
 
 from eden.fs.service.eden.thrift_types import (
+    AclEntry,
+    AclInfo,
+    AclInfoOrError,
+    AttributesRequestScope,
     DirListAttributeDataOrError,
+    FileAttributes,
+    GetAttributesFromFilesParams,
+    GetAttributesFromFilesResultV2,
     GetScmStatusParams,
     GlobParams,
     ReaddirParams,
     SyncBehavior,
+    UnderAclOrError,
 )
 from eden.integration.hg.lib.hg_extension_test_base import EdenHgTestCase, hg_test
 from eden.integration.lib import hgrepo
@@ -35,6 +43,8 @@ class _RestrictedTreeTestBase(EdenHgTestCase, metaclass=abc.ABCMeta):
     enable_restricted_tree_mode: bool = True
     # Subclasses flip this to True to enable server-side PermissionDenied.
     enable_server_acl_enforcement: bool = False
+    # Subclasses flip this to True when they exercise backing-store path ACLs.
+    enable_path_acl_lookup: bool = False
 
     def apply_hg_config_variant(self, hgrc: configparser.ConfigParser) -> None:
         super().apply_hg_config_variant(hgrc)
@@ -50,6 +60,10 @@ class _RestrictedTreeTestBase(EdenHgTestCase, metaclass=abc.ABCMeta):
             if not hgrc.has_section("scmstore"):
                 hgrc.add_section("scmstore")
             hgrc["scmstore"]["tree-metadata-mode"] = "always"
+        if self.enable_path_acl_lookup:
+            if not hgrc.has_section("backingstore"):
+                hgrc.add_section("backingstore")
+            hgrc["backingstore"]["enable-path-acl-lookup"] = "true"
         if not hgrc.has_section("slacl"):
             hgrc.add_section("slacl")
         # These settings apply only to the backing repo hgrc used by Sapling
@@ -116,6 +130,138 @@ if TYPE_CHECKING:
     _MethodsBase = _RestrictedTreeTestBase
 else:
     _MethodsBase = object
+
+
+class _RestrictedTreeAclAttributesTestMethods(_MethodsBase, metaclass=abc.ABCMeta):
+    async def _get_attributes_from_files(
+        self,
+        paths: list[bytes],
+        requested: int,
+        scope: AttributesRequestScope | None = None,
+    ) -> GetAttributesFromFilesResultV2:
+        async with self.get_async_thrift_client() as client:
+            return await client.getAttributesFromFilesV2(
+                GetAttributesFromFilesParams(
+                    mountPoint=self.mount_path_bytes,
+                    paths=paths,
+                    requestedAttributes=requested,
+                    sync=SyncBehavior(),
+                    scope=scope,
+                )
+            )
+
+    def _expected_under_acl(self, under_acl: bool) -> UnderAclOrError:
+        return UnderAclOrError(underAcl=under_acl)
+
+    def _expected_acl_info(
+        self, under_acl: bool, restriction_roots: list[str]
+    ) -> AclInfoOrError:
+        return AclInfoOrError(
+            aclInfo=AclInfo(
+                underAcl=under_acl,
+                acls=[
+                    AclEntry(
+                        restrictionRoot=root,
+                        repoRegionAcl="some-acl",
+                        requestAcl="some-acl",
+                    )
+                    for root in restriction_roots
+                ],
+            )
+        )
+
+    async def test_get_attributes_under_acl_only(self) -> None:
+        paths = [
+            b"restricted",
+            b"restricted/secret.txt",
+            b"parent/nested_restricted/deep.txt",
+            b"hello.txt",
+        ]
+        result = await self._get_attributes_from_files(paths, FileAttributes.UNDER_ACL)
+
+        self.assertEqual(4, len(result.res))
+        self.assertEqual(
+            self._expected_under_acl(True),
+            result.res[0].fileAttributeData.underAcl,
+        )
+        self.assertEqual(
+            self._expected_under_acl(True),
+            result.res[1].fileAttributeData.underAcl,
+        )
+        self.assertEqual(
+            self._expected_under_acl(True),
+            result.res[2].fileAttributeData.underAcl,
+        )
+        self.assertEqual(
+            self._expected_under_acl(False),
+            result.res[3].fileAttributeData.underAcl,
+        )
+
+    async def test_get_attributes_acls_only(self) -> None:
+        paths = [
+            b"restricted",
+            b"restricted/secret.txt",
+            b"parent/nested_restricted/deep.txt",
+            b"hello.txt",
+        ]
+        result = await self._get_attributes_from_files(paths, FileAttributes.ACLs)
+
+        self.assertEqual(4, len(result.res))
+        for entry in result.res:
+            self.assertIsNone(entry.fileAttributeData.underAcl)
+        self.assertEqual(
+            self._expected_acl_info(True, ["restricted"]),
+            result.res[0].fileAttributeData.aclInfo,
+        )
+        self.assertEqual(
+            self._expected_acl_info(True, ["restricted"]),
+            result.res[1].fileAttributeData.aclInfo,
+        )
+        self.assertEqual(
+            self._expected_acl_info(True, ["parent/nested_restricted"]),
+            result.res[2].fileAttributeData.aclInfo,
+        )
+        self.assertEqual(
+            self._expected_acl_info(False, []),
+            result.res[3].fileAttributeData.aclInfo,
+        )
+
+    async def test_get_attributes_acls_only_files_scope(self) -> None:
+        result = await self._get_attributes_from_files(
+            [b"restricted/secret.txt"],
+            FileAttributes.ACLs,
+            scope=AttributesRequestScope.FILES,
+        )
+
+        self.assertEqual(1, len(result.res))
+        self.assertEqual(
+            self._expected_acl_info(True, ["restricted"]),
+            result.res[0].fileAttributeData.aclInfo,
+        )
+
+    async def test_get_attributes_under_acl_and_acls(self) -> None:
+        requested = FileAttributes.UNDER_ACL | FileAttributes.ACLs
+
+        result = await self._get_attributes_from_files(
+            [b"restricted/secret.txt", b"hello.txt"], requested
+        )
+
+        self.assertEqual(
+            self._expected_under_acl(True),
+            result.res[0].fileAttributeData.underAcl,
+        )
+        self.assertEqual(
+            self._expected_acl_info(True, ["restricted"]),
+            result.res[0].fileAttributeData.aclInfo,
+        )
+        self.assertEqual(
+            self._expected_under_acl(False),
+            result.res[1].fileAttributeData.underAcl,
+        )
+        self.assertEqual(
+            self._expected_acl_info(False, []),
+            result.res[1].fileAttributeData.aclInfo,
+        )
 
 
 class _RestrictedTreeTestMethods(_MethodsBase, metaclass=abc.ABCMeta):
@@ -550,6 +696,16 @@ class RestrictedTreeTest(_RestrictedTreeTestMethods, _RestrictedTreeTestBase):
     """Client-side enforcement via has_acl metadata."""
 
     pass
+
+
+@hg_test
+# pyre-ignore[13]: T62487924
+class RestrictedTreeAclAttributesTest(
+    _RestrictedTreeAclAttributesTestMethods, _RestrictedTreeTestBase
+):
+    """getAttributesFromFilesV2 ACL attributes."""
+
+    enable_path_acl_lookup: bool = True
 
 
 @hg_test

@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <optional>
 #include <stdexcept>
+#include <system_error>
 #include <typeinfo>
 #include <unordered_set>
 
@@ -123,6 +124,9 @@ using namespace std::literals::string_view_literals;
 namespace {
 using namespace facebook::eden;
 
+constexpr auto kAclPathAttributes =
+    ENTRY_ATTRIBUTE_UNDER_ACL | ENTRY_ATTRIBUTE_ACLs;
+
 std::string getClientCmdline(
     const std::shared_ptr<ServerState>& serverState_,
     const ObjectFetchContextPtr& context_) {
@@ -140,6 +144,148 @@ std::string getClientCmdline(
     }
   }
   return client_cmdline;
+}
+
+bool isAclOnlyRequest(EntryAttributeFlags requestedAttributes) {
+  return requestedAttributes.containsAnyOf(kAclPathAttributes) &&
+      (requestedAttributes & kAclPathAttributes) == requestedAttributes;
+}
+
+bool isPermissionDenied(const folly::exception_wrapper& exception) {
+  bool permissionDenied = false;
+  exception.with_exception([&](const std::system_error& error) {
+    permissionDenied = error.code() == std::errc::permission_denied;
+  });
+  return permissionDenied;
+}
+
+void setPathAclLookupError(
+    EntryAttributes& attributes,
+    EntryAttributeFlags requestedAttributes,
+    const folly::exception_wrapper& exception) {
+  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_UNDER_ACL) &&
+      (!attributes.underAcl.has_value() ||
+       attributes.underAcl->hasException())) {
+    attributes.underAcl = folly::Try<bool>{exception};
+  }
+  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_ACLs)) {
+    attributes.aclInfo = folly::Try<EntryAclInfo>{exception};
+  }
+}
+
+folly::coro::Task<std::vector<folly::Try<EntryAttributes>>>
+co_fetchPathAclLookupsForAttributes(
+    std::shared_ptr<ObjectStore> objectStore,
+    RootId checkedOutRootId,
+    ObjectFetchContextPtr fetchContext,
+    std::vector<folly::Try<EntryAttributes>> allRes,
+    std::vector<std::string> paths,
+    EntryAttributeFlags reqBitmask) {
+  const auto aclOnlyRequest = isAclOnlyRequest(reqBitmask);
+  std::vector<size_t> aclPathIndices;
+  aclPathIndices.reserve(paths.size());
+
+  for (size_t i = 0; i < allRes.size(); ++i) {
+    auto& tryAttributes = allRes[i];
+    if (tryAttributes.hasException()) {
+      if (aclOnlyRequest && isPermissionDenied(tryAttributes.exception())) {
+        XLOGF(
+            WARN,
+            "ACL-only getAttributesFromFilesV2 request for {} hit permission denied while reading local metadata; falling back to path ACL lookup",
+            paths.at(i));
+        allRes[i] = folly::Try<EntryAttributes>{EntryAttributes{}};
+        aclPathIndices.push_back(i);
+      }
+      continue;
+    }
+
+    auto& attributes = tryAttributes.value();
+    if (attributes.underAcl.has_value()) {
+      if (attributes.underAcl->hasException()) {
+        if (reqBitmask.contains(ENTRY_ATTRIBUTE_ACLs)) {
+          attributes.aclInfo =
+              folly::Try<EntryAclInfo>{attributes.underAcl->exception()};
+        }
+        continue;
+      }
+      if (!attributes.underAcl->value()) {
+        if (reqBitmask.contains(ENTRY_ATTRIBUTE_ACLs)) {
+          attributes.aclInfo =
+              folly::Try<EntryAclInfo>{EntryAclInfo{/*underAcl=*/false, {}}};
+        }
+        continue;
+      }
+
+      if (!reqBitmask.contains(ENTRY_ATTRIBUTE_ACLs)) {
+        continue;
+      }
+
+      aclPathIndices.push_back(i);
+      continue;
+    }
+
+    if (reqBitmask.containsAnyOf(kAclPathAttributes)) {
+      aclPathIndices.push_back(i);
+    }
+  }
+
+  if (aclPathIndices.empty()) {
+    co_return allRes;
+  }
+
+  std::vector<std::string> lookupPaths;
+  lookupPaths.reserve(aclPathIndices.size());
+  for (auto index : aclPathIndices) {
+    lookupPaths.push_back(paths.at(index));
+  }
+
+  auto aclInfosTry = co_await co_awaitTry(
+      objectStore->co_getPathAcls(checkedOutRootId, lookupPaths, fetchContext));
+  if (aclInfosTry.hasException()) {
+    XLOGF(
+        WARN,
+        "getAttributesFromFilesV2 path ACL lookup failed for {} path(s): {}",
+        lookupPaths.size(),
+        folly::exceptionStr(aclInfosTry.exception()));
+    for (auto index : aclPathIndices) {
+      if (allRes.at(index).hasValue()) {
+        setPathAclLookupError(
+            allRes.at(index).value(), reqBitmask, aclInfosTry.exception());
+      }
+    }
+    co_return allRes;
+  }
+
+  auto aclInfos = std::move(aclInfosTry).value();
+  for (size_t offset = 0; offset < aclInfos.size(); ++offset) {
+    auto index = aclPathIndices.at(offset);
+    if (!allRes.at(index).hasValue()) {
+      continue;
+    }
+
+    auto& attributes = allRes.at(index).value();
+    if (aclInfos.at(offset).hasException()) {
+      XLOGF(
+          WARN,
+          "getAttributesFromFilesV2 path ACL lookup failed for {}: {}",
+          paths.at(index),
+          folly::exceptionStr(aclInfos.at(offset).exception()));
+      setPathAclLookupError(
+          attributes, reqBitmask, aclInfos.at(offset).exception());
+      continue;
+    }
+
+    auto acls = std::move(aclInfos.at(offset).value());
+    auto underAcl = !acls.empty();
+    if (reqBitmask.contains(ENTRY_ATTRIBUTE_UNDER_ACL)) {
+      attributes.underAcl = folly::Try<bool>{underAcl};
+    }
+    if (reqBitmask.contains(ENTRY_ATTRIBUTE_ACLs)) {
+      attributes.aclInfo =
+          folly::Try<EntryAclInfo>{EntryAclInfo{underAcl, std::move(acls)}};
+    }
+  }
+  co_return allRes;
 }
 
 std::string logHash(StringPiece thriftArg) {
@@ -4305,22 +4451,53 @@ EdenServiceHandler::getEntryAttributes(
     AttributesRequestScope reqScope,
     SyncBehavior sync,
     const ObjectFetchContextPtr& fetchContext) {
-  return waitForPendingWrites(edenMount, sync)
+  auto localReqBitmask = reqBitmask;
+  if (reqBitmask.contains(ENTRY_ATTRIBUTE_ACLs)) {
+    localReqBitmask |= ENTRY_ATTRIBUTE_UNDER_ACL;
+  }
+  auto waitFuture = waitForPendingWrites(edenMount, sync);
+  return std::move(waitFuture)
       .thenValue([this,
                   &edenMount,
-                  &paths,
+                  paths = paths,
                   fetchContext = fetchContext.copy(),
                   reqBitmask,
+                  localReqBitmask,
                   reqScope](auto&&) mutable {
         vector<ImmediateFuture<EntryAttributes>> futures;
         futures.reserve(paths.size());
         for (const auto& path : paths) {
           futures.emplace_back(getEntryAttributesForPath(
-              edenMount, reqBitmask, reqScope, path, fetchContext));
+              edenMount, localReqBitmask, reqScope, path, fetchContext));
         }
 
-        // Collect all futures into a single tuple
-        return facebook::eden::collectAll(std::move(futures));
+        auto objectStore = edenMount.getObjectStore();
+        auto checkedOutRootId = edenMount.getCheckedOutRootId();
+        return facebook::eden::collectAll(std::move(futures))
+            .thenValue(
+                [objectStore = std::move(objectStore),
+                 paths = std::move(paths),
+                 fetchContext = fetchContext.copy(),
+                 reqBitmask,
+                 checkedOutRootId = std::move(checkedOutRootId)](
+                    std::vector<folly::Try<EntryAttributes>> allRes) mutable
+                    -> ImmediateFuture<
+                        std::vector<folly::Try<EntryAttributes>>> {
+                  if (!reqBitmask.containsAnyOf(kAclPathAttributes)) {
+                    return allRes;
+                  }
+
+                  return ImmediateFuture<
+                      std::vector<folly::Try<EntryAttributes>>>{
+                      co_fetchPathAclLookupsForAttributes(
+                          objectStore,
+                          std::move(checkedOutRootId),
+                          fetchContext.copy(),
+                          std::move(allRes),
+                          std::move(paths),
+                          reqBitmask)
+                          .semi()};
+                });
       });
 }
 
@@ -4396,7 +4573,6 @@ EdenServiceHandler::semifuture_getAttributesFromFilesV2(
       toLogArg(paths));
   auto& fetchContext = helper->getFetchContext();
 
-  auto config = server_->getServerState()->getEdenConfig();
   auto entryAttributesFuture = getEntryAttributes(
       mountHandle.getEdenMount(),
       paths,
@@ -4424,11 +4600,7 @@ EdenServiceHandler::semifuture_getAttributesFromFilesV2(
                        }
                        return res;
                      }))
-      .ensure([mountHandle, params = std::move(params)]() {
-        // keeps the params memory around for the duration of the thrift call,
-        // so that we can safely use the paths by reference to avoid making
-        // copies.
-      })
+      .ensure([mountHandle, params = std::move(params)]() {})
       .semi();
 }
 
