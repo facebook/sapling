@@ -63,6 +63,7 @@ use metaconfig_types::MetadataLoggerConfig;
 use metaconfig_types::ModernSyncChannelConfig;
 use metaconfig_types::ModernSyncConfig;
 use metaconfig_types::MononokeCasSyncConfig;
+use metaconfig_types::PathRestrictionMetadata;
 use metaconfig_types::PushParams;
 use metaconfig_types::PushrebaseFlags;
 use metaconfig_types::PushrebaseParams;
@@ -1368,16 +1369,20 @@ impl Convert for RawRestrictedPathsConfig {
     type Output = RestrictedPathsConfig;
 
     fn convert(self) -> Result<Self::Output> {
-        let path_acls = self
+        let path_restriction_metadata = self
             .path_acls
             .into_iter()
             .map(|(path, acl)| {
                 let non_root_path = NonRootMPath::new(path.as_bytes())
                     .with_context(|| format!("Invalid path for restricted path config: {path}"))?;
+                let repo_region_acl = MononokeIdentity::from_str(&acl)
+                    .with_context(|| format!("Failed to parse MononokeIdentity for {path}"))?;
                 Ok((
                     non_root_path,
-                    MononokeIdentity::from_str(&acl)
-                        .with_context(|| format!("Failed to parse MononokeIdentity for {path}"))?,
+                    PathRestrictionMetadata {
+                        repo_region_acl,
+                        permission_request_group: None,
+                    },
                 ))
             })
             .collect::<Result<HashMap<_, _>>>()?;
@@ -1447,7 +1452,7 @@ impl Convert for RawRestrictedPathsConfig {
             .collect::<Result<Vec<_>>>()?;
 
         Ok(RestrictedPathsConfig {
-            path_acls,
+            path_restriction_metadata,
             use_manifest_id_cache,
             cache_update_interval_ms,
             soft_path_acls,

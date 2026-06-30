@@ -509,6 +509,7 @@ mod tests {
     use mercurial_types::HgAugmentedManifestEnvelope;
     use mercurial_types::NULL_HASH;
     use metaconfig_types::AclManifestMode;
+    use metaconfig_types::PathRestrictionMetadata;
     use metaconfig_types::RestrictedPathsConfig;
     use metadata::Metadata;
     use mononoke_api::repo::Repo;
@@ -662,12 +663,16 @@ mod tests {
     ) -> anyhow::Result<Repo> {
         let repo_id = RepositoryId::new(0);
 
-        let path_acls_map: HashMap<NonRootMPath, MononokeIdentity> = path_acls
+        let path_restriction_metadata: HashMap<NonRootMPath, PathRestrictionMetadata> = path_acls
             .into_iter()
             .map(|(path, acl_str)| {
                 (
                     NonRootMPath::new(path).expect("Failed to create NonRootMPath"),
-                    MononokeIdentity::from_str(acl_str).expect("Failed to parse MononokeIdentity"),
+                    PathRestrictionMetadata {
+                        repo_region_acl: MononokeIdentity::from_str(acl_str)
+                            .expect("Failed to parse MononokeIdentity"),
+                        permission_request_group: None,
+                    },
                 )
             })
             .collect();
@@ -679,7 +684,7 @@ mod tests {
         );
 
         let config = RestrictedPathsConfig {
-            path_acls: path_acls_map,
+            path_restriction_metadata,
             use_manifest_id_cache: false,
             cache_update_interval_ms: 5,
             acl_manifest_mode,

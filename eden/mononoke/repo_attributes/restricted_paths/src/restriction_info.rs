@@ -25,6 +25,7 @@ use mercurial_types::HgAugmentedManifestEnvelope;
 use mercurial_types::HgAugmentedManifestId;
 use mercurial_types::fetch_augmented_manifest_envelope_opt;
 use metaconfig_types::AclManifestMode;
+use metaconfig_types::PathRestrictionMetadata;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
@@ -77,8 +78,8 @@ pub(crate) fn get_path_restriction_root_info_from_config(
         .filter_map(|path| {
             restricted_paths
                 .config_based()
-                .get_acl_for_path(path)
-                .map(|acl| build_config_path_restriction_info(path.clone(), acl))
+                .get_metadata_for_path(path)
+                .map(|metadata| build_config_path_restriction_info(path.clone(), metadata))
         })
         .collect()
 }
@@ -101,14 +102,14 @@ pub(crate) fn find_restricted_descendants_from_config(
 ) -> Vec<PathRestrictionInfo> {
     let mut results: Vec<PathRestrictionInfo> = restricted_paths
         .config()
-        .path_acls
+        .path_restriction_metadata
         .iter()
         .filter(|(root, _)| {
             roots
                 .iter()
                 .any(|query_root| query_root.is_prefix_of(*root))
         })
-        .map(|(root, acl)| build_config_path_restriction_info(root.clone(), acl))
+        .map(|(root, metadata)| build_config_path_restriction_info(root.clone(), metadata))
         .collect();
     results.sort_by(|left, right| left.restriction_root.cmp(&right.restriction_root));
     results.dedup_by(|left, right| left.restriction_root == right.restriction_root);
@@ -491,14 +492,11 @@ pub(crate) async fn get_manifest_restriction_info_from_config(
         .filter_map(|path| {
             restricted_paths
                 .config_based()
-                .get_acl_for_path(&path)
-                .map(|acl| {
-                    let repo_region_acl = acl.to_string();
-                    ManifestRestrictionInfo {
-                        restriction_root: Some(path),
-                        permission_request_group: acl.clone(),
-                        repo_region_acl,
-                    }
+                .get_metadata_for_path(&path)
+                .map(|metadata| ManifestRestrictionInfo {
+                    restriction_root: Some(path),
+                    repo_region_acl: metadata.repo_region_acl.to_string(),
+                    permission_request_group: metadata.effective_permission_request_group(),
                 })
         })
         .collect())
@@ -601,10 +599,10 @@ fn get_config_path_restriction_info_for_path(
 ) -> Vec<PathRestrictionInfo> {
     restricted_paths
         .config()
-        .path_acls
+        .path_restriction_metadata
         .iter()
         .filter(|(prefix, _)| prefix.is_prefix_of(path))
-        .map(|(prefix, acl)| build_config_path_restriction_info(prefix.clone(), acl))
+        .map(|(prefix, metadata)| build_config_path_restriction_info(prefix.clone(), metadata))
         .collect()
 }
 
@@ -793,13 +791,12 @@ async fn load_path_restriction_info(
 
 fn build_config_path_restriction_info(
     restriction_root: NonRootMPath,
-    acl: &MononokeIdentity,
+    metadata: &PathRestrictionMetadata,
 ) -> PathRestrictionInfo {
-    let repo_region_acl = acl.to_string();
     PathRestrictionInfo {
         restriction_root,
-        permission_request_group: acl.clone(),
-        repo_region_acl,
+        repo_region_acl: metadata.repo_region_acl.to_string(),
+        permission_request_group: metadata.effective_permission_request_group(),
     }
 }
 

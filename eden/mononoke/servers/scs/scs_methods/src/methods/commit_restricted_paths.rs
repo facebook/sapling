@@ -198,6 +198,7 @@ mod tests {
     use context::CoreContext;
     use fbinit::FacebookInit;
     use metaconfig_types::AclManifestMode;
+    use metaconfig_types::PathRestrictionMetadata;
     use metaconfig_types::RestrictedPathsConfig;
     use mononoke_api::Repo;
     use mononoke_api::RepoContext;
@@ -298,10 +299,10 @@ mod tests {
         acl_manifest_mode: AclManifestMode,
     ) -> Result<ArcRestrictedPaths> {
         let repo_id = RepositoryId::new(0);
-        let path_acls_map = build_path_acls_map(path_acls)?;
+        let path_restriction_metadata = build_path_restriction_metadata(path_acls)?;
 
         let config = RestrictedPathsConfig {
-            path_acls: path_acls_map,
+            path_restriction_metadata,
             use_manifest_id_cache: false,
             cache_update_interval_ms: 100,
             acl_manifest_mode,
@@ -341,7 +342,7 @@ mod tests {
         let ctx = CoreContext::test_mock(fb);
         let repo_id = RepositoryId::new(0);
         let config = RestrictedPathsConfig {
-            path_acls: build_path_acls_map(config_path_acls)?,
+            path_restriction_metadata: build_path_restriction_metadata(config_path_acls)?,
             use_manifest_id_cache: false,
             cache_update_interval_ms: 100,
             acl_manifest_mode: AclManifestMode::Both,
@@ -401,17 +402,20 @@ mod tests {
         Ok(cs_ctx)
     }
 
-    fn build_path_acls_map(
+    fn build_path_restriction_metadata(
         path_acls: Vec<(&str, &str)>,
-    ) -> Result<HashMap<NonRootMPath, MononokeIdentity>> {
+    ) -> Result<HashMap<NonRootMPath, PathRestrictionMetadata>> {
         path_acls
             .into_iter()
             .map(|(path, acl_str)| {
                 Ok((
                     NonRootMPath::new(path)
                         .context("Failed to create NonRootMPath from test path")?,
-                    MononokeIdentity::from_str(acl_str)
-                        .context("Failed to parse MononokeIdentity from ACL string")?,
+                    PathRestrictionMetadata {
+                        repo_region_acl: MononokeIdentity::from_str(acl_str)
+                            .context("Failed to parse MononokeIdentity from ACL string")?,
+                        permission_request_group: None,
+                    },
                 ))
             })
             .collect()

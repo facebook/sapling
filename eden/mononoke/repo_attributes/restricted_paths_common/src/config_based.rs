@@ -12,6 +12,7 @@
 
 use std::sync::Arc;
 
+use metaconfig_types::PathRestrictionMetadata;
 use metaconfig_types::RestrictedPathsConfig;
 use mononoke_types::NonRootMPath;
 use permission_checker::MononokeIdentity;
@@ -57,32 +58,34 @@ impl RestrictedPathsConfigBased {
 
     /// Returns whether any restricted paths are configured for this repository.
     pub fn has_restricted_paths(&self) -> bool {
-        !self.config.path_acls.is_empty()
+        !self.config.path_restriction_metadata.is_empty()
     }
 
     /// Check if a path is itself a restriction root (exact match).
     /// Returns false for paths that are merely under a restriction root.
     pub fn is_restriction_root(&self, path: &NonRootMPath) -> bool {
-        self.get_acl_for_path(path).is_some()
+        self.get_metadata_for_path(path).is_some()
     }
 
-    /// Exact path match against config.path_acls.
+    /// Exact path match against the configured restriction metadata.
+    pub fn get_metadata_for_path(&self, path: &NonRootMPath) -> Option<&PathRestrictionMetadata> {
+        self.config.path_restriction_metadata.get(path)
+    }
+
+    /// REPO_REGION ACL for an exact restriction-root path.
     pub fn get_acl_for_path(&self, path: &NonRootMPath) -> Option<&MononokeIdentity> {
-        self.config
-            .path_acls
-            .iter()
-            .find(|(restricted_path_prefix, _)| *restricted_path_prefix == path)
-            .map(|(_, acl)| acl)
+        self.get_metadata_for_path(path)
+            .map(|metadata| &metadata.repo_region_acl)
     }
 
-    /// Prefix match against config.path_acls.
+    /// Prefix match against the configured restriction metadata.
     /// If `foo` is under ACL X, calling this with `foo/bar` will return `X`.
     pub fn get_acl_for_path_prefix(&self, path: &NonRootMPath) -> Option<&MononokeIdentity> {
         // TODO(T239041722): use SortedVectorMap to ensure a specific order
         self.config
-            .path_acls
+            .path_restriction_metadata
             .iter()
             .find(|(restricted_path_prefix, _)| restricted_path_prefix.is_prefix_of(path))
-            .map(|(_, acl)| acl)
+            .map(|(_, metadata)| &metadata.repo_region_acl)
     }
 }

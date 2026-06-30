@@ -25,6 +25,7 @@ use mercurial_types::HgAugmentedManifestEntry;
 use mercurial_types::HgAugmentedManifestEnvelope;
 use mercurial_types::HgAugmentedManifestId;
 use metaconfig_types::AclManifestMode;
+use metaconfig_types::PathRestrictionMetadata;
 use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
@@ -533,14 +534,22 @@ fn restricted_paths_for_repo_with_mode_and_path_acls(
         SqlRestrictedPathsManifestIdStoreBuilder::with_sqlite_in_memory()?
             .with_repo_id(RepositoryId::new(0)),
     );
-    let path_acls = path_acls
+    let path_restriction_metadata = path_acls
         .into_iter()
-        .map(|(path, acl)| Ok((NonRootMPath::new(path)?, acl.parse()?)))
+        .map(|(path, acl)| {
+            Ok((
+                NonRootMPath::new(path)?,
+                PathRestrictionMetadata {
+                    repo_region_acl: acl.parse()?,
+                    permission_request_group: None,
+                },
+            ))
+        })
         .collect::<Result<HashMap<_, _>>>()?;
     let config_based = Arc::new(RestrictedPathsConfigBased::new(
         RestrictedPathsConfig {
             acl_manifest_mode,
-            path_acls,
+            path_restriction_metadata,
             ..Default::default()
         },
         manifest_id_store,

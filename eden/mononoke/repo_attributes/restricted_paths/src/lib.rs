@@ -457,10 +457,10 @@ impl RestrictedPaths {
         // Find which restricted path roots match this path
         let (restricted_path_roots, matched_acls): (Vec<_>, Vec<_>) = self
             .config()
-            .path_acls
+            .path_restriction_metadata
             .iter()
             .filter(|(restricted_path_prefix, _)| restricted_path_prefix.is_prefix_of(&path))
-            .map(|(prefix, acl)| (prefix.clone(), acl))
+            .map(|(prefix, metadata)| (prefix.clone(), &metadata.repo_region_acl))
             .unzip();
 
         // If no restricted paths match, no need to log
@@ -514,7 +514,7 @@ pub async fn spawn_enforce_restricted_path_access<'a, 'b>(
     let config = restricted_paths.config();
     let effective_mode = effective_acl_manifest_mode(config.acl_manifest_mode, true);
     let config_path_may_restrict = config
-        .path_acls
+        .path_restriction_metadata
         .keys()
         .any(|prefix| prefix.is_prefix_of(&non_root_mpath));
     let access_data = access_log::RestrictedPathAccessData::FullPath {
@@ -992,7 +992,6 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
     use std::str::FromStr;
 
     use anyhow::Result;
@@ -1030,29 +1029,10 @@ mod tests {
 
     #[mononoke::fbinit_test]
     async fn test_with_config(fb: FacebookInit) -> Result<()> {
-        let mut path_acls = HashMap::new();
-        path_acls.insert(
-            NonRootMPath::new("restricted/dir")?,
-            MononokeIdentity::from_str("SERVICE_IDENTITY:restricted_acl")?,
-        );
-        path_acls.insert(
-            NonRootMPath::new("other/restricted")?,
-            MononokeIdentity::from_str("SERVICE_IDENTITY:other_acl")?,
-        );
-
-        let config = RestrictedPathsConfig {
-            path_acls,
-            use_manifest_id_cache: true,
-            cache_update_interval_ms: 100,
-            soft_path_acls: Vec::new(),
-            enforcement_condition_sets: Vec::new(),
-            enforcement_enabled: RestrictedPathsConfig::default().enforcement_enabled,
-            tooling_allowlist_group: None,
-            rollout_allowlist_group: None,
-            admin_bypass_group: None,
-            acl_file_name: RestrictedPathsConfig::default().acl_file_name,
-            acl_manifest_mode: RestrictedPathsConfig::default().acl_manifest_mode,
-        };
+        let config = RestrictedPathsConfigBuilder::new()
+            .with_path_acl_str("restricted/dir", "SERVICE_IDENTITY:restricted_acl")?
+            .with_path_acl_str("other/restricted", "SERVICE_IDENTITY:other_acl")?
+            .build();
 
         let repo_restricted_paths = build_test_restricted_paths(fb, config).await?;
 
@@ -1062,23 +1042,10 @@ mod tests {
 
     #[mononoke::fbinit_test]
     async fn test_path_matching(fb: FacebookInit) -> Result<()> {
-        let mut path_acls = HashMap::new();
         let restricted_acl = MononokeIdentity::from_str("SERVICE_IDENTITY:restricted_acl")?;
-        path_acls.insert(NonRootMPath::new("restricted/dir")?, restricted_acl.clone());
-
-        let config = RestrictedPathsConfig {
-            path_acls,
-            use_manifest_id_cache: true,
-            cache_update_interval_ms: 100,
-            soft_path_acls: Vec::new(),
-            enforcement_condition_sets: Vec::new(),
-            enforcement_enabled: RestrictedPathsConfig::default().enforcement_enabled,
-            tooling_allowlist_group: None,
-            rollout_allowlist_group: None,
-            admin_bypass_group: None,
-            acl_file_name: RestrictedPathsConfig::default().acl_file_name,
-            acl_manifest_mode: RestrictedPathsConfig::default().acl_manifest_mode,
-        };
+        let config = RestrictedPathsConfigBuilder::new()
+            .with_path_acl_str("restricted/dir", &restricted_acl.to_string())?
+            .build();
 
         let repo_restricted_paths = build_test_restricted_paths(fb, config).await?;
 

@@ -356,7 +356,7 @@ async fn track_all_restricted_paths(
     // Get the configured restricted paths
     let restricted_dirs: Vec<PathOrPrefix> = restricted_paths
         .config()
-        .path_acls
+        .path_restriction_metadata
         .keys()
         .map(|non_root_mpath| PathOrPrefix::Path(non_root_mpath.clone().into()))
         .collect();

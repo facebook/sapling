@@ -1194,18 +1194,17 @@ pub async fn check_config_path_restriction_infos(
 ) -> Result<Vec<PathRestrictionCheckResult>> {
     let restriction_info = restricted_paths
         .config()
-        .path_acls
+        .path_restriction_metadata
         .iter()
         .filter(|(prefix, _)| prefix.is_prefix_of(path))
-        .map(|(restriction_root, acl)| {
-            let repo_region_acl = acl.to_string();
+        .map(|(restriction_root, metadata)| {
             (
                 PathRestrictionInfo {
                     restriction_root: restriction_root.clone(),
-                    permission_request_group: acl.clone(),
-                    repo_region_acl,
+                    permission_request_group: metadata.effective_permission_request_group(),
+                    repo_region_acl: metadata.repo_region_acl.to_string(),
                 },
-                acl.clone(),
+                metadata.repo_region_acl.clone(),
             )
         })
         .collect::<Vec<_>>();

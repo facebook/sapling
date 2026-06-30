@@ -2572,11 +2572,34 @@ pub struct EnforcementConditionSet {
     pub client_identity_regexes: Vec<ComparableRegex>,
 }
 
+/// Restriction metadata for a single restricted path.
+///
+/// Supersedes the bare path -> ACL mapping that `path_acls` used to carry: it
+/// holds the REPO_REGION ACL and an optional permission-request group.
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct PathRestrictionMetadata {
+    /// REPO_REGION ACL protecting this path.
+    pub repo_region_acl: MononokeIdentity,
+    /// AMP group clients are redirected to when requesting access, instead of
+    /// exposing the REPO_REGION ACL. If `None`, defaults to `repo_region_acl`.
+    pub permission_request_group: Option<MononokeIdentity>,
+}
+
+impl PathRestrictionMetadata {
+    /// The permission-request group to surface to clients: the explicit group if
+    /// configured, otherwise the REPO_REGION ACL.
+    pub fn effective_permission_request_group(&self) -> MononokeIdentity {
+        self.permission_request_group
+            .clone()
+            .unwrap_or_else(|| self.repo_region_acl.clone())
+    }
+}
+
 /// Configuration for restricted paths and their associated ACLs
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct RestrictedPathsConfig {
-    /// Map from path prefixes to ACL names for restricted path restrictions
-    pub path_acls: HashMap<NonRootMPath, MononokeIdentity>,
+    /// Map from restricted path prefixes to their restriction metadata
+    pub path_restriction_metadata: HashMap<NonRootMPath, PathRestrictionMetadata>,
     /// Whether the in-memory cache of manifest ids should be used instead of
     /// directly querying the manifest id store DB
     pub use_manifest_id_cache: bool,
@@ -2610,7 +2633,7 @@ const DEFAULT_ACL_FILE_NAME: &str = ".slacl";
 impl Default for RestrictedPathsConfig {
     fn default() -> Self {
         Self {
-            path_acls: HashMap::new(),
+            path_restriction_metadata: HashMap::new(),
             use_manifest_id_cache: true,
             cache_update_interval_ms: 1000,
             soft_path_acls: Vec::new(),
@@ -2628,7 +2651,7 @@ impl Default for RestrictedPathsConfig {
 impl RestrictedPathsConfig {
     /// Checks if the config has any restricted paths
     pub fn is_empty(&self) -> bool {
-        self.path_acls.is_empty()
+        self.path_restriction_metadata.is_empty()
     }
 
     /// Get the ACL file name, defaulting to ".slacl"

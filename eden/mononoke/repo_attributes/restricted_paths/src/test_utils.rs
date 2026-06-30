@@ -11,6 +11,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use context::CoreContext;
 use fbinit::FacebookInit;
+use metaconfig_types::PathRestrictionMetadata;
 use mononoke_types::DerivableType;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepoPath;
@@ -53,9 +54,12 @@ impl RestrictedPathsConfigBuilder {
     }
 
     pub(crate) fn with_path_acl_str(mut self, path: &str, identity: &str) -> Result<Self> {
-        self.config.path_acls.insert(
+        self.config.path_restriction_metadata.insert(
             NonRootMPath::new(path)?,
-            MononokeIdentity::from_str(identity)?,
+            PathRestrictionMetadata {
+                repo_region_acl: MononokeIdentity::from_str(identity)?,
+                permission_request_group: None,
+            },
         );
         Ok(self)
     }
@@ -151,7 +155,7 @@ mod tests {
 
         assert!(config.use_manifest_id_cache);
         assert_eq!(config.cache_update_interval_ms, 100);
-        assert_eq!(config.path_acls.len(), 1);
+        assert_eq!(config.path_restriction_metadata.len(), 1);
         Ok(())
     }
 

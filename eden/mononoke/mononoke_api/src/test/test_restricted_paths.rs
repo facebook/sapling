@@ -13,6 +13,7 @@ use anyhow::Result;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use metaconfig_types::AclManifestMode;
+use metaconfig_types::PathRestrictionMetadata;
 use metaconfig_types::RestrictedPathsConfig;
 use mononoke_macros::mononoke;
 use mononoke_types::NonRootMPath;
@@ -1070,10 +1071,10 @@ async fn create_test_restricted_paths_with_mode(
     acl_manifest_mode: AclManifestMode,
 ) -> Result<Arc<RestrictedPaths>> {
     let repo_id = RepositoryId::new(0);
-    let path_acls_map = build_path_acls_map(path_acls)?;
+    let path_restriction_metadata = build_path_restriction_metadata(path_acls)?;
 
     let config = RestrictedPathsConfig {
-        path_acls: path_acls_map,
+        path_restriction_metadata,
         use_manifest_id_cache: false,
         cache_update_interval_ms: 100,
         acl_manifest_mode,
@@ -1114,7 +1115,7 @@ async fn create_both_mode_test_changeset(
     let ctx = CoreContext::test_mock(fb);
     let repo_id = RepositoryId::new(0);
     let config = RestrictedPathsConfig {
-        path_acls: build_path_acls_map(config_path_acls)?,
+        path_restriction_metadata: build_path_restriction_metadata(config_path_acls)?,
         use_manifest_id_cache: false,
         cache_update_interval_ms: 100,
         acl_manifest_mode: AclManifestMode::Both,
@@ -1162,15 +1163,18 @@ async fn create_both_mode_test_changeset(
     Ok((repo_ctx, cs_ctx))
 }
 
-fn build_path_acls_map(
+fn build_path_restriction_metadata(
     path_acls: Vec<(&str, &str)>,
-) -> Result<HashMap<NonRootMPath, MononokeIdentity>> {
+) -> Result<HashMap<NonRootMPath, PathRestrictionMetadata>> {
     path_acls
         .into_iter()
         .map(|(path, acl_str)| -> Result<_> {
             Ok((
                 NonRootMPath::new(path)?,
-                MononokeIdentity::from_str(acl_str)?,
+                PathRestrictionMetadata {
+                    repo_region_acl: MononokeIdentity::from_str(acl_str)?,
+                    permission_request_group: None,
+                },
             ))
         })
         .collect()

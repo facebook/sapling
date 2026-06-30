@@ -35,6 +35,7 @@ use mercurial_types::HgAugmentedManifestId;
 use metaconfig_types::AclManifestMode;
 use metaconfig_types::ComparableRegex;
 use metaconfig_types::EnforcementConditionSet;
+use metaconfig_types::PathRestrictionMetadata;
 use metaconfig_types::RestrictedPathsConfig;
 use metadata::Metadata;
 use mononoke_api::MononokeError;
@@ -1258,7 +1259,18 @@ async fn setup_test_repo(
     let acl_provider = InternalAclProvider::from_file(&acl_file)
         .with_context(|| format!("Failed to load ACLs from '{}'", acl_file.to_string_lossy()))?;
 
-    let path_acls = config_restricted_paths.into_iter().collect();
+    let path_restriction_metadata = config_restricted_paths
+        .into_iter()
+        .map(|(path, acl)| {
+            (
+                path,
+                PathRestrictionMetadata {
+                    repo_region_acl: acl,
+                    permission_request_group: None,
+                },
+            )
+        })
+        .collect();
 
     let manifest_id_store = Arc::new(
         SqlRestrictedPathsManifestIdStoreBuilder::with_sqlite_in_memory()
@@ -1267,7 +1279,7 @@ async fn setup_test_repo(
     );
 
     let config = RestrictedPathsConfig {
-        path_acls,
+        path_restriction_metadata,
         use_manifest_id_cache,
         cache_update_interval_ms,
         tooling_allowlist_group,
