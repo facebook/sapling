@@ -70,6 +70,8 @@ pub const TEST_CLIENT_MAIN_ID: &str = "user:myusername0";
 
 pub struct RestrictedPathsScenarioResult {
     pub scuba_logs: Vec<ScubaAccessLogSample>,
+    /// All entries present in the manifest-id store after the scenario ran.
+    pub manifest_id_store_entries: Vec<RestrictedPathManifestIdEntry>,
 }
 
 struct RestrictedPathsScenario {
@@ -93,6 +95,9 @@ pub struct RestrictedPathsTestData {
     enforcement_scenarios: Vec<(Vec<EnforcementConditionSet>, bool)>,
     /// Config-backed restrictions written into `RestrictedPathsConfig.path_acls`.
     config_restricted_paths: Vec<(NonRootMPath, MononokeIdentity)>,
+    /// When true, every config restricted path is marked `read_only` in its
+    /// `PathRestrictionMetadata`.
+    config_paths_read_only: bool,
     /// AclManifest-backed restrictions materialized as `.slacl` files.
     acl_manifest_restricted_paths: Vec<(NonRootMPath, MononokeIdentity)>,
     acl_manifest_mode: AclManifestMode,
@@ -105,6 +110,7 @@ pub struct RestrictedPathsTestData {
 #[derive(Clone)]
 pub struct RestrictedPathsTestDataBuilder {
     config_restricted_paths: Vec<(NonRootMPath, MononokeIdentity)>,
+    config_paths_read_only: bool,
     acl_manifest_restricted_paths: Vec<(NonRootMPath, MononokeIdentity)>,
     acl_manifest_mode: AclManifestMode,
     tooling_allowlist_group: Option<String>,
@@ -341,6 +347,7 @@ impl RestrictedPathsTestDataBuilder {
     pub fn new() -> Self {
         Self {
             config_restricted_paths: vec![],
+            config_paths_read_only: false,
             acl_manifest_restricted_paths: vec![],
             acl_manifest_mode: AclManifestMode::Disabled,
             tooling_allowlist_group: None,
@@ -370,6 +377,13 @@ impl RestrictedPathsTestDataBuilder {
         restricted_paths: Vec<(NonRootMPath, MononokeIdentity)>,
     ) -> Self {
         self.config_restricted_paths = restricted_paths;
+        self
+    }
+
+    /// Mark every config restricted path as `read_only` in its
+    /// `PathRestrictionMetadata`. Defaults to false.
+    pub fn with_config_paths_read_only(mut self, read_only: bool) -> Self {
+        self.config_paths_read_only = read_only;
         self
     }
 
@@ -534,6 +548,7 @@ impl RestrictedPathsTestDataBuilder {
             expected_scuba_logs: self.expected_scuba_logs,
             enforcement_scenarios: self.enforcement_scenarios,
             config_restricted_paths: self.config_restricted_paths,
+            config_paths_read_only: self.config_paths_read_only,
             acl_manifest_restricted_paths: self.acl_manifest_restricted_paths,
             acl_manifest_mode: self.acl_manifest_mode,
             repo_regions_config: self.repo_regions_config,
@@ -589,6 +604,13 @@ impl RestrictedPathsTestData {
         Ok(())
     }
 
+    /// Build a scenario repo without running derivation or access operations.
+    /// For tests that only inspect config-derived predicates such as
+    /// `may_have_restricted_paths`.
+    pub async fn build_repo_only(&self) -> Result<TestRepo> {
+        Ok(self.setup_scenario_repo(&[]).await?.repo)
+    }
+
     /// Runs the standard access scenario and returns the Scuba rows it emitted.
     pub async fn observe_restricted_paths_scenario(
         &self,
@@ -614,8 +636,16 @@ impl RestrictedPathsTestData {
             .await?;
         tokio::time::sleep(std::time::Duration::from_millis(200)).await;
 
+        let manifest_id_store_entries = scenario
+            .repo
+            .restricted_paths()
+            .config_based()
+            .manifest_id_store()
+            .get_all_entries(&self.ctx)
+            .await?;
         Ok(RestrictedPathsScenarioResult {
             scuba_logs: deserialize_scuba_log_file(&scenario.log_path)?,
+            manifest_id_store_entries,
         })
     }
 
@@ -645,8 +675,16 @@ impl RestrictedPathsTestData {
             .await?;
         tokio::time::sleep(std::time::Duration::from_millis(200)).await;
 
+        let manifest_id_store_entries = scenario
+            .repo
+            .restricted_paths()
+            .config_based()
+            .manifest_id_store()
+            .get_all_entries(&self.ctx)
+            .await?;
         Ok(RestrictedPathsScenarioResult {
             scuba_logs: deserialize_scuba_log_file(&scenario.log_path)?,
+            manifest_id_store_entries,
         })
     }
 
@@ -996,6 +1034,7 @@ impl RestrictedPathsTestData {
                     .sorted()
                     .collect::<Vec<_>>(),
                 manifest_id_store_entries
+                    .clone()
                     .into_iter()
                     .sorted()
                     .collect::<Vec<_>>()
@@ -1018,7 +1057,10 @@ impl RestrictedPathsTestData {
         println!(
             "Scenario {scenario_idx} finished SUCCESSFULLY with expect_enforcement: {expect_enforcement} and enforcement_condition_sets: {enforcement_condition_sets:#?}"
         );
-        Ok(RestrictedPathsScenarioResult { scuba_logs })
+        Ok(RestrictedPathsScenarioResult {
+            scuba_logs,
+            manifest_id_store_entries,
+        })
     }
 
     async fn setup_scenario_repo(
@@ -1031,6 +1073,7 @@ impl RestrictedPathsTestData {
         let repo = setup_test_repo(
             &self.ctx,
             self.config_restricted_paths.clone(),
+            self.config_paths_read_only,
             self.acl_manifest_mode,
             self.tooling_allowlist_group.clone(),
             acls,
@@ -1245,6 +1288,7 @@ fn setup_acl_file(acls: Acls) -> Result<std::path::PathBuf> {
 async fn setup_test_repo(
     ctx: &CoreContext,
     config_restricted_paths: Vec<(NonRootMPath, MononokeIdentity)>,
+    config_paths_read_only: bool,
     acl_manifest_mode: AclManifestMode,
     tooling_allowlist_group: Option<String>,
     acls: Acls,
@@ -1267,7 +1311,7 @@ async fn setup_test_repo(
                 PathRestrictionMetadata {
                     repo_region_acl: acl,
                     permission_request_group: None,
-                    read_only: false,
+                    read_only: config_paths_read_only,
                 },
             )
         })

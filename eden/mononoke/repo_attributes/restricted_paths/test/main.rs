@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
 use std::str::FromStr;
 
 use anyhow::Result;
@@ -1387,6 +1388,120 @@ async fn test_single_dir_restricted_and_unrestricted(fb: FacebookInit) -> Result
         .await?
         .run_restricted_paths_test()
         .await?;
+
+    Ok(())
+}
+
+// With every config restricted path flipped to read_only, derivation must not
+// record new manifest-id-store entries -- while the same writable paths still do.
+#[mononoke::fbinit_test]
+async fn test_read_only_config_paths_record_no_new_manifest_id_entries(
+    fb: FacebookInit,
+) -> Result<()> {
+    let restricted_paths = vec![(
+        NonRootMPath::new("restricted/dir")?,
+        MononokeIdentity::from_str("REPO_REGION:restricted_acl")?,
+    )];
+    // A file directly under the restricted root, so the directory is materialized
+    // in the derived manifests and is eligible for recording.
+    let file_path_changes = vec![("restricted/dir/a", None)];
+
+    // Baseline: writable config paths record one manifest-id-store entry per
+    // manifest type for the restricted root.
+    let writable = RestrictedPathsTestDataBuilder::new()
+        .with_config_restricted_paths(restricted_paths.clone())
+        .with_file_path_changes(file_path_changes.clone())
+        .build(fb)
+        .await?
+        .observe_restricted_paths_scenario(&[])
+        .await?;
+
+    let recorded_types: HashSet<ManifestType> = writable
+        .manifest_id_store_entries
+        .iter()
+        .map(|entry| entry.manifest_type.clone())
+        .collect();
+    assert_eq!(
+        recorded_types,
+        HashSet::from([
+            ManifestType::Hg,
+            ManifestType::HgAugmented,
+            ManifestType::Fsnode,
+            ManifestType::ContentManifest,
+        ]),
+        "writable restricted paths should record an entry for every manifest type, got {:?}",
+        writable.manifest_id_store_entries,
+    );
+
+    // Same fixture with every config path marked read_only: no new entries are
+    // recorded. The store stays empty because every recording site (the four
+    // per-entry derivation gates) consults read_only via
+    // should_record_manifest_id_entry.
+    let read_only = RestrictedPathsTestDataBuilder::new()
+        .with_config_restricted_paths(restricted_paths)
+        .with_config_paths_read_only(true)
+        .with_file_path_changes(file_path_changes)
+        .build(fb)
+        .await?
+        .observe_restricted_paths_scenario(&[])
+        .await?;
+    assert!(
+        read_only.manifest_id_store_entries.is_empty(),
+        "read_only restricted paths must not record new manifest-id entries, got {:?}",
+        read_only.manifest_id_store_entries,
+    );
+
+    Ok(())
+}
+
+// read_only gates derivation recording only; it must NOT change whether a repo
+// is considered to have restricted paths. With every config path read_only,
+// both may_have_restricted_paths and has_restricted_paths must stay true across
+// every AclManifest mode. (read_only is deliberately true here precisely to
+// prove these predicates ignore it.)
+#[mononoke::fbinit_test]
+async fn test_read_only_config_paths_still_count_as_restricted(fb: FacebookInit) -> Result<()> {
+    let restricted_paths = vec![
+        (
+            NonRootMPath::new("restricted/dir")?,
+            MononokeIdentity::from_str("REPO_REGION:restricted_acl")?,
+        ),
+        (
+            NonRootMPath::new("other/secret")?,
+            MononokeIdentity::from_str("REPO_REGION:other_acl")?,
+        ),
+    ];
+
+    for mode in [
+        AclManifestMode::Disabled,
+        AclManifestMode::Shadow,
+        AclManifestMode::Both,
+        AclManifestMode::Authoritative,
+    ] {
+        let repo = RestrictedPathsTestDataBuilder::new()
+            .with_config_restricted_paths(restricted_paths.clone())
+            .with_config_paths_read_only(true)
+            .with_acl_manifest_mode(mode)
+            .build(fb)
+            .await?
+            .build_repo_only()
+            .await?;
+
+        // `has_restricted_paths` is the load-bearing, read_only-agnostic check in
+        // every mode. `may_have_restricted_paths` additionally confirms no mode
+        // starts reporting the repo as unrestricted; it short-circuits on the
+        // mode for non-Disabled, so it is strongest in Disabled mode.
+        assert!(
+            repo.restricted_paths().may_have_restricted_paths(),
+            "may_have_restricted_paths must be true for read-only paths in mode {mode:?}",
+        );
+        assert!(
+            repo.restricted_paths()
+                .config_based()
+                .has_restricted_paths(),
+            "has_restricted_paths must be true for read-only paths in mode {mode:?}",
+        );
+    }
 
     Ok(())
 }
