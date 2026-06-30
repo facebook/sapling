@@ -1267,6 +1267,7 @@ async fn setup_test_repo(
                 PathRestrictionMetadata {
                     repo_region_acl: acl,
                     permission_request_group: None,
+                    read_only: false,
                 },
             )
         })

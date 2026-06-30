@@ -1174,6 +1174,7 @@ fn build_path_restriction_metadata(
                 PathRestrictionMetadata {
                     repo_region_acl: MononokeIdentity::from_str(acl_str)?,
                     permission_request_group: None,
+                    read_only: false,
                 },
             ))
         })

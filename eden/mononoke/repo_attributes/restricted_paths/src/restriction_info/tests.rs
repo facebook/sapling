@@ -542,6 +542,7 @@ fn restricted_paths_for_repo_with_mode_and_path_acls(
                 PathRestrictionMetadata {
                     repo_region_acl: acl.parse()?,
                     permission_request_group: None,
+                    read_only: false,
                 },
             ))
         })

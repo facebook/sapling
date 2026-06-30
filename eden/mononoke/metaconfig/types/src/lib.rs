@@ -2575,7 +2575,10 @@ pub struct EnforcementConditionSet {
 /// Restriction metadata for a single restricted path.
 ///
 /// Supersedes the bare path -> ACL mapping that `path_acls` used to carry: it
-/// holds the REPO_REGION ACL and an optional permission-request group.
+/// holds the REPO_REGION ACL, an optional permission-request group, and a
+/// `read_only` flag. When `read_only` is true, derivation stops recording new
+/// manifest-id-store entries for the path; enforcement on existing entries and
+/// config-based authorization are unaffected.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct PathRestrictionMetadata {
     /// REPO_REGION ACL protecting this path.
@@ -2583,6 +2586,8 @@ pub struct PathRestrictionMetadata {
     /// AMP group clients are redirected to when requesting access, instead of
     /// exposing the REPO_REGION ACL. If `None`, defaults to `repo_region_acl`.
     pub permission_request_group: Option<MononokeIdentity>,
+    /// When true, no new manifest-id-store entries are derived for this path.
+    pub read_only: bool,
 }
 
 impl PathRestrictionMetadata {

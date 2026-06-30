@@ -1400,6 +1400,7 @@ fn merge_path_restriction_metadata(
                 PathRestrictionMetadata {
                     repo_region_acl,
                     permission_request_group,
+                    read_only: raw.read_only.unwrap_or(false),
                 },
             ))
         })
@@ -1426,6 +1427,7 @@ fn merge_path_restriction_metadata(
                     PathRestrictionMetadata {
                         repo_region_acl: legacy_acl,
                         permission_request_group: None,
+                        read_only: false,
                     },
                 );
             }
@@ -1656,7 +1658,8 @@ mod tests {
     }
 
     /// What it tests: a legacy `path_acls` entry with no `path_restriction_metadata`.
-    /// Expected: it is folded into metadata with no explicit request group.
+    /// Expected: it is folded into metadata with no explicit request group and
+    /// `read_only = false`.
     #[mononoke::test]
     fn test_merge_path_acls_fallback_defaults() {
         let mut raw = empty_raw_restricted_paths_config();
@@ -1670,6 +1673,7 @@ mod tests {
         let md = cfg.path_restriction_metadata.get(&path).expect("entry");
         assert_eq!(md.repo_region_acl.to_string(), "REPO_REGION:acl1");
         assert_eq!(md.permission_request_group, None);
+        assert!(!md.read_only, "legacy path_acls entries are not read-only");
     }
 
     /// What it tests: a malformed `repo_region_acl` string in `path_acls`.
@@ -1716,7 +1720,7 @@ mod tests {
     }
 
     /// What it tests: a `path_restriction_metadata` entry with explicit request
-    /// group, no legacy `path_acls`.
+    /// group and `read_only = true`, no legacy `path_acls`.
     /// Expected: all explicit fields are preserved.
     #[mononoke::test]
     fn test_merge_metadata_only_explicit_fields() {
@@ -1724,7 +1728,7 @@ mod tests {
         raw.path_restriction_metadata = Some(
             [(
                 "foo".to_string(),
-                raw_metadata("REPO_REGION:acl1", Some("GROUP:reviewers"), None),
+                raw_metadata("REPO_REGION:acl1", Some("GROUP:reviewers"), Some(true)),
             )]
             .into_iter()
             .collect(),
@@ -1739,6 +1743,7 @@ mod tests {
             md.permission_request_group.as_ref().map(|i| i.to_string()),
             Some("GROUP:reviewers".to_string())
         );
+        assert!(md.read_only, "explicit read_only=true is honored");
     }
 
     /// What it tests: a path present in BOTH maps with the SAME repo_region_acl.
@@ -1752,7 +1757,7 @@ mod tests {
         raw.path_restriction_metadata = Some(
             [(
                 "foo".to_string(),
-                raw_metadata("REPO_REGION:acl1", Some("GROUP:reviewers"), None),
+                raw_metadata("REPO_REGION:acl1", Some("GROUP:reviewers"), Some(true)),
             )]
             .into_iter()
             .collect(),
@@ -1767,6 +1772,7 @@ mod tests {
             Some("GROUP:reviewers".to_string()),
             "new field wins on matching ACL"
         );
+        assert!(md.read_only);
     }
 
     /// What it tests: a path present in BOTH maps with DIFFERENT repo_region_acl.
@@ -1814,5 +1820,25 @@ mod tests {
             msg.contains("repo_region_acl") && msg.contains("foo"),
             "expected repo_region_acl parse error, got: {msg}"
         );
+    }
+
+    /// What it tests: `read_only` absent on a metadata entry.
+    /// Expected: it defaults to false.
+    #[mononoke::test]
+    fn test_merge_read_only_absent_defaults_false() {
+        let mut raw = empty_raw_restricted_paths_config();
+        raw.path_restriction_metadata = Some(
+            [(
+                "foo".to_string(),
+                raw_metadata("REPO_REGION:acl1", None, None),
+            )]
+            .into_iter()
+            .collect(),
+        );
+
+        let cfg = raw.convert().unwrap();
+
+        let path = NonRootMPath::new("foo").unwrap();
+        assert!(!cfg.path_restriction_metadata.get(&path).unwrap().read_only);
     }
 }

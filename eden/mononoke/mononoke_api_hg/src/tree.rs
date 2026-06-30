@@ -672,6 +672,7 @@ mod tests {
                         repo_region_acl: MononokeIdentity::from_str(acl_str)
                             .expect("Failed to parse MononokeIdentity"),
                         permission_request_group: None,
+                        read_only: false,
                     },
                 )
             })

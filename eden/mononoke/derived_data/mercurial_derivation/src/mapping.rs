@@ -353,12 +353,14 @@ async fn track_all_restricted_paths(
         return Ok(());
     }
 
-    // Get the configured restricted paths
+    // Get the configured restricted paths. Skip read-only roots: derivation must
+    // not record new manifest-id-store entries for them.
     let restricted_dirs: Vec<PathOrPrefix> = restricted_paths
         .config()
         .path_restriction_metadata
-        .keys()
-        .map(|non_root_mpath| PathOrPrefix::Path(non_root_mpath.clone().into()))
+        .iter()
+        .filter(|(_, metadata)| !metadata.read_only)
+        .map(|(non_root_mpath, _)| PathOrPrefix::Path(non_root_mpath.clone().into()))
         .collect();
 
     if restricted_dirs.is_empty() {
