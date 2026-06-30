@@ -1030,8 +1030,8 @@ mod tests {
     #[mononoke::fbinit_test]
     async fn test_with_config(fb: FacebookInit) -> Result<()> {
         let config = RestrictedPathsConfigBuilder::new()
-            .with_path_acl_str("restricted/dir", "SERVICE_IDENTITY:restricted_acl")?
-            .with_path_acl_str("other/restricted", "SERVICE_IDENTITY:other_acl")?
+            .with_path_restriction_metadata("restricted/dir", "SERVICE_IDENTITY:restricted_acl")?
+            .with_path_restriction_metadata("other/restricted", "SERVICE_IDENTITY:other_acl")?
             .build();
 
         let repo_restricted_paths = build_test_restricted_paths(fb, config).await?;
@@ -1044,7 +1044,7 @@ mod tests {
     async fn test_path_matching(fb: FacebookInit) -> Result<()> {
         let restricted_acl = MononokeIdentity::from_str("SERVICE_IDENTITY:restricted_acl")?;
         let config = RestrictedPathsConfigBuilder::new()
-            .with_path_acl_str("restricted/dir", &restricted_acl.to_string())?
+            .with_path_restriction_metadata("restricted/dir", &restricted_acl.to_string())?
             .build();
 
         let repo_restricted_paths = build_test_restricted_paths(fb, config).await?;
@@ -1191,7 +1191,7 @@ mod tests {
     #[mononoke::fbinit_test]
     async fn test_disabled_mode_keeps_config_authoritative_lookup(fb: FacebookInit) -> Result<()> {
         let config = RestrictedPathsConfigBuilder::new()
-            .with_path_acl_str("restricted/dir", "SERVICE_IDENTITY:restricted_acl")?
+            .with_path_restriction_metadata("restricted/dir", "SERVICE_IDENTITY:restricted_acl")?
             .build();
         let restricted_paths =
             build_test_restricted_paths_with_options(fb, config, DummyAclProvider::new(fb)?, false)

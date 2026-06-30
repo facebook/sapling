@@ -53,7 +53,11 @@ impl RestrictedPathsConfigBuilder {
         }
     }
 
-    pub(crate) fn with_path_acl_str(mut self, path: &str, identity: &str) -> Result<Self> {
+    pub(crate) fn with_path_restriction_metadata(
+        mut self,
+        path: &str,
+        identity: &str,
+    ) -> Result<Self> {
         self.config.path_restriction_metadata.insert(
             NonRootMPath::new(path)?,
             PathRestrictionMetadata {
@@ -150,7 +154,7 @@ mod tests {
     #[mononoke::test]
     fn test_restricted_paths_config_builder_sets_common_fields() -> Result<()> {
         let config = RestrictedPathsConfigBuilder::new()
-            .with_path_acl_str("restricted", "REPO_REGION:restricted_acl")?
+            .with_path_restriction_metadata("restricted", "REPO_REGION:restricted_acl")?
             .build();
 
         assert!(config.use_manifest_id_cache);
