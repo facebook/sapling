@@ -60,5 +60,6 @@ mononoke_app::subcommands! {
     mod raw_blobstore;
     mod redaction;
     mod repo_info;
+    mod restricted_paths;
     mod slow_bookmark_mover;
 }
