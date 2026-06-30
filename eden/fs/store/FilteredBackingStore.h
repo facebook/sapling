@@ -212,6 +212,12 @@ class FilteredBackingStore
       ObjectIdRange ids,
       const ObjectFetchContextPtr& context) override;
 
+  folly::coro::now_task<std::vector<folly::Try<std::vector<EntryAcl>>>>
+  co_getPathAcls(
+      const RootId& rootId,
+      const std::vector<std::string>& paths,
+      const ObjectFetchContextPtr& context) override;
+
   ImmediateFuture<GetGlobFilesResult> getGlobFiles(
       const RootId& id,
       const std::vector<std::string>& globs,

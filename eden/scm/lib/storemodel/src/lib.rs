@@ -50,6 +50,7 @@ use types::Key;
 use types::PathComponent;
 use types::PathComponentBuf;
 use types::RepoPath;
+use types::RepoPathBuf;
 pub use types::SerializationFormat;
 pub use types::tree::FileType;
 pub use types::tree::TreeItemFlag;
@@ -369,6 +370,20 @@ pub trait TreeEntry: Send + Sync + 'static {
     fn size_hint(&self) -> Option<usize>;
 }
 
+#[derive(Clone, Debug)]
+pub struct PathAclEntry {
+    pub restriction_root: RepoPathBuf,
+    pub repo_region_acl: String,
+    pub permission_request_group: String,
+}
+
+#[derive(Clone, Debug)]
+pub struct PathAclInfo {
+    pub path: RepoPathBuf,
+    pub entries: Vec<PathAclEntry>,
+    pub error: Option<String>,
+}
+
 /// The `TreeStore` is an abstraction layer for the tree manifest that decouples how or where the
 /// data is stored. This allows more easy iteration on serialization format. It also simplifies
 /// writing storage migration.
@@ -499,6 +514,21 @@ pub trait TreeStore: KeyStore {
             Some(Err(e)) => Err(e),
             Some(Ok((_k, aux))) => Ok(aux),
         }
+    }
+
+    /// Fetch path-based ACL metadata for repo-relative paths at a commit.
+    ///
+    /// Results are aligned with input paths. Implementations that can answer a
+    /// batch but fail individual paths should return per-path errors instead of
+    /// silently falling back to unknown data.
+    fn check_path_permissions(
+        &self,
+        _hg_cs_id: HgId,
+        _paths: Vec<RepoPathBuf>,
+    ) -> anyhow::Result<Vec<PathAclInfo>> {
+        Err(anyhow::format_err!(
+            "path ACL lookup unavailable: no permission backend configured"
+        ))
     }
 
     /// Similar to `KeyStore::insert_data` with `opts.kind` set to `Kind::Tree`.

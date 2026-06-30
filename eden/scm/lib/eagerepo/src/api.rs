@@ -37,6 +37,7 @@ use edenapi::types::BookmarkEntry;
 use edenapi::types::BookmarkKind;
 use edenapi::types::CheckManifestPermissionRequest;
 use edenapi::types::CheckManifestPermissionResponse;
+use edenapi::types::CheckPathPermissionAclEntry;
 use edenapi::types::CheckPathPermissionData;
 use edenapi::types::CheckPathPermissionRequest;
 use edenapi::types::CheckPathPermissionResponse;
@@ -100,6 +101,8 @@ use futures::stream::TryStreamExt;
 use http::StatusCode;
 use http::Version;
 use manifest::DiffType;
+use manifest::FsNodeMetadata;
+use manifest::List;
 use manifest::Manifest;
 use manifest::PersistOpts;
 use manifest_augmented_tree::AugmentedTreeWithDigest;
@@ -1245,22 +1248,45 @@ impl SaplingRemoteApi for EagerRepo {
         Ok(convert_to_response(res))
     }
 
-    async fn check_permission(
+    async fn check_path_permission(
         &self,
         request: CheckPathPermissionRequest,
     ) -> edenapi::Result<Response<CheckPathPermissionResponse>> {
-        debug!("check_permission {:?}", &request.paths);
+        debug!("check_path_permission {:?}", &request.paths);
         self.refresh_for_api()?;
 
+        let manifest = self.commit_to_manifest(request.hg_cs_id).await?;
         let values = request
             .paths
             .into_iter()
             .map(|path| {
+                let mut restriction_entries = Vec::new();
+                let ancestors = path.ancestors().collect::<Vec<_>>();
+                for ancestor in ancestors.into_iter().rev() {
+                    if ancestor.is_empty() {
+                        continue;
+                    }
+                    let has_slacl = match manifest.list(ancestor)? {
+                        List::Directory(children) => children.iter().any(|(name, metadata)| {
+                            name.as_str() == ".slacl" && matches!(metadata, FsNodeMetadata::File(_))
+                        }),
+                        List::File | List::NotFound => false,
+                    };
+                    if has_slacl {
+                        restriction_entries.push(CheckPathPermissionAclEntry {
+                            restriction_root: ancestor.to_owned(),
+                            repo_region_acl: crate::eager_repo::EAGER_PLACEHOLDER_ACL.to_string(),
+                            permission_request_group: crate::eager_repo::EAGER_PLACEHOLDER_ACL
+                                .to_string(),
+                        });
+                    }
+                }
+                let has_access = restriction_entries.is_empty();
                 Ok(CheckPathPermissionResponse::from_result(
                     path,
                     Ok(CheckPathPermissionData {
-                        has_access: true,
-                        restriction_entries: Vec::new(),
+                        has_access,
+                        restriction_entries,
                     }),
                 ))
             })
@@ -1903,7 +1929,6 @@ mod tests {
     use edenapi::types::HgChangesetContent;
     use edenapi::types::HgFilenodeData;
     use edenapi::types::HgId;
-    use edenapi::types::Key;
     use edenapi::types::Parents;
     use edenapi::types::RepoPathBuf;
     use edenapi::types::UploadToken;

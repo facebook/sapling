@@ -21,6 +21,7 @@
 #include "eden/fs/model/ObjectId.h"
 #include "eden/fs/model/RootId.h"
 #include "eden/fs/model/TreeAuxDataFwd.h"
+#include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/model/TreeFwd.h"
 #include "eden/fs/store/BackingStoreType.h"
 #include "eden/fs/store/ImportPriority.h"
@@ -340,6 +341,22 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
   virtual ImmediateFuture<bool> checkPermission(const ObjectId& manifestId) {
     (void)manifestId;
     return true;
+  }
+
+  /**
+   * Fetch rich ACL information for the given repo-relative paths at the
+   * specified checked-out root. Results are aligned with the input order.
+   */
+  virtual folly::coro::now_task<std::vector<folly::Try<std::vector<EntryAcl>>>>
+  co_getPathAcls(
+      const RootId& rootId,
+      const std::vector<std::string>& paths,
+      const ObjectFetchContextPtr& context) {
+    (void)rootId;
+    (void)paths;
+    (void)context;
+    co_yield folly::coro::co_error(
+        std::runtime_error("co_getPathAcls() not supported"));
   }
 
   /**

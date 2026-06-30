@@ -24,6 +24,7 @@ use ::types::Parents;
 use ::types::PathComponent;
 use ::types::PathComponentBuf;
 use ::types::RepoPath;
+use ::types::RepoPathBuf;
 use ::types::fetch_mode::FetchMode;
 use ::types::hgid::NULL_ID;
 use ::types::tree::TreeItemFlag;
@@ -32,6 +33,7 @@ use anyhow::anyhow;
 use anyhow::bail;
 use blob::Blob;
 use edenapi_types::CheckManifestPermissionRequest;
+use edenapi_types::CheckPathPermissionRequest;
 use edenapi_types::FileAuxData;
 use edenapi_types::TreeAuxData;
 use fetch::FetchState;
@@ -46,6 +48,8 @@ use storemodel::BoxIterator;
 use storemodel::BoxRefIterator;
 use storemodel::InsertOpts;
 use storemodel::KeyStore;
+use storemodel::PathAclEntry;
+use storemodel::PathAclInfo;
 use storemodel::SerializationFormat;
 use storemodel::TreeEntry;
 use storemodel::TreeFetchItems;
@@ -1240,6 +1244,66 @@ impl storemodel::TreeStore for TreeStore {
         id: HgId,
     ) -> anyhow::Result<Option<TreeAuxData>> {
         self.get_local_aux_direct(&id)
+    }
+
+    fn check_path_permissions(
+        &self,
+        hg_cs_id: HgId,
+        paths: Vec<RepoPathBuf>,
+    ) -> anyhow::Result<Vec<PathAclInfo>> {
+        let Some(slapi) = &self.edenapi else {
+            bail!("path ACL lookup unavailable: no EdenAPI client configured");
+        };
+
+        let request = CheckPathPermissionRequest {
+            hg_cs_id,
+            paths: paths.clone(),
+        };
+        let response_entries = slapi
+            .check_path_permission_blocking(request)
+            .map_err(|err| err.tag_network())?
+            .entries;
+        if response_entries.len() != paths.len() {
+            bail!(
+                "path ACL lookup returned {} result(s) for {} path(s)",
+                response_entries.len(),
+                paths.len()
+            );
+        }
+
+        paths
+            .into_iter()
+            .zip(response_entries)
+            .map(|(path, response)| {
+                if response.path != path {
+                    bail!(
+                        "path ACL lookup returned response for {} instead of {}",
+                        response.path,
+                        path
+                    );
+                }
+                Ok(match response.result {
+                    Ok(data) => PathAclInfo {
+                        path,
+                        entries: data
+                            .restriction_entries
+                            .into_iter()
+                            .map(|entry| PathAclEntry {
+                                restriction_root: entry.restriction_root,
+                                repo_region_acl: entry.repo_region_acl,
+                                permission_request_group: entry.permission_request_group,
+                            })
+                            .collect(),
+                        error: None,
+                    },
+                    Err(error) => PathAclInfo {
+                        path,
+                        entries: Vec::new(),
+                        error: Some(error.to_string()),
+                    },
+                })
+            })
+            .collect()
     }
 
     fn record_permission_denied(&self, err: ::types::errors::PermissionDenied) {

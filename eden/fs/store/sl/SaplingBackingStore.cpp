@@ -10,10 +10,12 @@
 #include <algorithm>
 #include <chrono>
 #include <stdexcept>
+#include <string>
 #include <thread>
 #include <utility>
 #include <variant>
 
+#include <fmt/format.h>
 #include <re2/re2.h>
 
 #include <folly/Executor.h>
@@ -280,7 +282,7 @@ void SaplingBackingStore::initializeOBCCounters() {
   getTreePerRepoLatencies_ = monitoring::OBCP99P95P50(
       monitoring::OdsCategoryId::ODS_EDEN,
       fmt::format("eden.store.sapling.fetch_tree_{}_us", repoName_),
-      {hostname});
+      {std::move(hostname)});
   isOBCEnabled_ = true;
 }
 #endif
@@ -2490,6 +2492,79 @@ ImmediateFuture<bool> SaplingBackingStore::checkPermission(
     return makeImmediateFuture<bool>(std::runtime_error(result.error->what()));
   }
   return result.has_access;
+}
+
+folly::coro::now_task<std::vector<folly::Try<std::vector<EntryAcl>>>>
+SaplingBackingStore::co_getPathAcls(
+    const RootId& rootId,
+    const std::vector<std::string>& paths,
+    const ObjectFetchContextPtr& context) {
+  auto self = shared_from_this();
+  // TODO(T272514471): Plumb ObjectFetchContext through the Sapling FFI so path
+  // ACL lookups are attributed in fetch traces like other backing-store calls.
+  (void)context;
+  co_await self->faultInjector_.co_checkAsync(
+      "SaplingBackingStore::getPathAcls", rootId.value());
+  co_return co_await folly::coro::co_withExecutor(
+      self->serverThreadPool_,
+      folly::coro::co_invoke(
+          [self, rootId = rootId, paths = std::vector<std::string>(paths)]()
+              -> folly::coro::Task<
+                  std::vector<folly::Try<std::vector<EntryAcl>>>> {
+            rust::Vec<rust::String> rustPaths;
+            rustPaths.reserve(paths.size());
+            std::copy(
+                paths.begin(), paths.end(), std::back_inserter(rustPaths));
+
+            auto result = sapling_backingstore_check_path_permissions(
+                *self->store_.get(),
+                rust::Str{rootId.value().data(), rootId.value().size()},
+                std::move(rustPaths));
+            if (result.error != nullptr) {
+              throw std::runtime_error(result.error->what());
+            }
+
+            std::vector<folly::Try<std::vector<EntryAcl>>> aclInfos;
+            aclInfos.reserve(paths.size());
+            if (result.data.size() != paths.size()) {
+              throw std::runtime_error(
+                  fmt::format(
+                      "path ACL lookup returned {} result(s) for {} path(s)",
+                      result.data.size(),
+                      paths.size()));
+            }
+
+            for (size_t index = 0; index < paths.size(); ++index) {
+              const auto& pathAclInfo = result.data[index];
+              std::string responsePath{pathAclInfo.path};
+              if (responsePath != paths[index]) {
+                throw std::runtime_error(
+                    fmt::format(
+                        "path ACL lookup returned response for {} at index {} instead of {}",
+                        responsePath,
+                        index,
+                        paths[index]));
+              }
+
+              std::string error{pathAclInfo.error};
+              if (!error.empty()) {
+                aclInfos.emplace_back(std::runtime_error(error));
+                continue;
+              }
+
+              std::vector<EntryAcl> entries;
+              entries.reserve(pathAclInfo.entries.size());
+              for (const auto& entry : pathAclInfo.entries) {
+                entries.push_back(
+                    EntryAcl{
+                        std::string{entry.restriction_root},
+                        std::string{entry.repo_region_acl},
+                        std::string{entry.permission_request_group}});
+              }
+              aclInfos.emplace_back(std::move(entries));
+            }
+            co_return aclInfos;
+          }));
 }
 
 void SaplingBackingStore::logBackingStoreFetch(

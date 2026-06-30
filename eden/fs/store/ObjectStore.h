@@ -407,6 +407,12 @@ class ObjectStore : public IObjectStore,
       const ObjectId& manifestId,
       std::chrono::steady_clock::time_point lastCheck) const;
 
+  folly::coro::now_task<std::vector<folly::Try<std::vector<EntryAcl>>>>
+  co_getPathAcls(
+      const RootId& rootId,
+      const std::vector<std::string>& paths,
+      const ObjectFetchContextPtr& context) const;
+
   /**
    * Get the BackingStore used by this ObjectStore
    */

@@ -553,7 +553,7 @@ pub trait SaplingRemoteApi: Send + Sync + 'static {
     }
 
     /// Check whether the caller has access to the given paths.
-    async fn check_permission(
+    async fn check_path_permission(
         &self,
         request: CheckPathPermissionRequest,
     ) -> Result<Response<CheckPathPermissionResponse>, SaplingRemoteApiError> {

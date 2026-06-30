@@ -222,8 +222,8 @@ pub mod paths {
     pub const UPLOAD_TREES: &str = "upload/trees";
     pub const UPLOAD_IDENTICAL_CHANGESET: &str = "upload/changesets/identical";
     pub const UPLOAD_FILE: &str = "upload/file/";
-    pub const CHECK_PERMISSION: &str = "check_permission";
     pub const CHECK_MANIFEST_PERMISSION: &str = "check_manifest_permission";
+    pub const CHECK_PATH_PERMISSION: &str = "check_path_permission";
 }
 
 #[derive(Clone)]
@@ -1078,15 +1078,18 @@ impl Client {
         self.fetch::<StreamingChangelogResponse>(vec![request])
     }
 
-    async fn check_permission_attempt(
+    async fn check_path_permission_attempt(
         &self,
         request: CheckPathPermissionRequest,
     ) -> Result<Response<CheckPathPermissionResponse>, SaplingRemoteApiError> {
-        tracing::info!("Checking permissions for {} path(s)", request.paths.len());
+        tracing::debug!(
+            "Checking path permissions for {} path(s)",
+            request.paths.len()
+        );
 
-        let url = self.build_url(paths::CHECK_PERMISSION)?;
+        let url = self.build_url(paths::CHECK_PATH_PERMISSION)?;
         let req = self
-            .configure_request(paths::CHECK_PERMISSION, self.inner.client.post(url))?
+            .configure_request(paths::CHECK_PATH_PERMISSION, self.inner.client.post(url))?
             .cbor(&request.to_wire())
             .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
 
@@ -2243,11 +2246,11 @@ impl SaplingRemoteApi for Client {
             .await
     }
 
-    async fn check_permission(
+    async fn check_path_permission(
         &self,
         request: CheckPathPermissionRequest,
     ) -> Result<Response<CheckPathPermissionResponse>, SaplingRemoteApiError> {
-        self.with_retry(|this| this.check_permission_attempt(request.clone()).boxed())
+        self.with_retry(|this| this.check_path_permission_attempt(request.clone()).boxed())
             .await
     }
 

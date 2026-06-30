@@ -39,6 +39,7 @@ use smallvec::SmallVec;
 use storemodel::BoxIterator;
 use storemodel::FileAuxData;
 use storemodel::FileStore;
+use storemodel::PathAclInfo;
 use storemodel::TreeAuxData;
 use storemodel::TreeEntry;
 use storemodel::TreeStore;
@@ -47,6 +48,7 @@ use types::FetchContext;
 use types::HgId;
 use types::Key;
 use types::RepoPath;
+use types::RepoPathBuf;
 use types::errors::KeyedError;
 
 use crate::ffi::ffi::BackingStoreErrorKind;
@@ -535,6 +537,22 @@ impl BackingStore {
         }
         // If no response for our ID, default to allowing access (fail-open)
         Ok(true)
+    }
+
+    #[instrument(level = "trace", skip(self, paths))]
+    pub fn check_path_permissions(
+        &self,
+        hg_cs_id: &str,
+        paths: Vec<String>,
+    ) -> Result<Vec<PathAclInfo>> {
+        let hg_cs_id = HgId::from_hex(hg_cs_id.as_bytes())?;
+        let path_bufs = paths
+            .into_iter()
+            .map(RepoPathBuf::from_string)
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        self.maybe_reload()
+            .treestore
+            .check_path_permissions(hg_cs_id, path_bufs)
     }
 
     #[instrument(level = "trace", skip(self))]

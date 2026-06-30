@@ -672,6 +672,11 @@ class SaplingBackingStore final
       const std::vector<std::string>& prefixes) override;
 
   ImmediateFuture<bool> checkPermission(const ObjectId& manifestId) override;
+  folly::coro::now_task<std::vector<folly::Try<std::vector<EntryAcl>>>>
+  co_getPathAcls(
+      const RootId& rootId,
+      const std::vector<std::string>& paths,
+      const ObjectFetchContextPtr& context) override;
 
   /**
    * The worker runloop function.

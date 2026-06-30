@@ -262,6 +262,23 @@ pub(crate) mod ffi {
         error: UniquePtr<SaplingBackingStoreError>,
     }
 
+    pub struct PathAclEntry {
+        restriction_root: String,
+        repo_region_acl: String,
+        permission_request_group: String,
+    }
+
+    pub struct PathAclInfo {
+        path: String,
+        error: String,
+        entries: Vec<PathAclEntry>,
+    }
+
+    pub struct GetPathAclInfosResult {
+        data: Vec<PathAclInfo>,
+        error: UniquePtr<SaplingBackingStoreError>,
+    }
+
     extern "Rust" {
         type BackingStore;
 
@@ -348,6 +365,12 @@ pub(crate) mod ffi {
             store: &BackingStore,
             manifest_id: &[u8],
         ) -> CheckPermissionResult;
+
+        pub fn sapling_backingstore_check_path_permissions(
+            store: &BackingStore,
+            hg_cs_id: &str,
+            paths: Vec<String>,
+        ) -> GetPathAclInfosResult;
 
         pub fn sapling_backingstore_witness_file_read(
             store: &BackingStore,
@@ -876,6 +899,92 @@ pub fn sapling_backingstore_check_permission(
         Err(e) => ffi::CheckPermissionResult {
             has_access: false,
             error: into_backingstore_err(e),
+        },
+    }
+}
+
+pub fn sapling_backingstore_check_path_permissions(
+    store: &BackingStore,
+    hg_cs_id: &str,
+    paths: Vec<String>,
+) -> ffi::GetPathAclInfosResult {
+    let requested_paths = paths.clone();
+    match store.check_path_permissions(hg_cs_id, paths) {
+        Ok(results) => {
+            let mut results = results.into_iter();
+            let mut data = Vec::with_capacity(requested_paths.len());
+            for requested_path in requested_paths {
+                let Some(result) = results.next() else {
+                    data.push(ffi::PathAclInfo {
+                        path: requested_path.clone(),
+                        error: format!("path ACL lookup returned no result for {requested_path}"),
+                        entries: Vec::new(),
+                    });
+                    continue;
+                };
+
+                let storemodel::PathAclInfo {
+                    path,
+                    entries,
+                    error,
+                } = result;
+                let response_path = path.to_string();
+                if response_path != requested_path {
+                    let error = format!(
+                        "path ACL lookup returned response for {response_path} instead of {requested_path}"
+                    );
+                    data.push(ffi::PathAclInfo {
+                        path: requested_path,
+                        error,
+                        entries: Vec::new(),
+                    });
+                    continue;
+                }
+
+                let Some(error) = error else {
+                    let entries = entries
+                        .into_iter()
+                        .map(|entry| ffi::PathAclEntry {
+                            restriction_root: entry.restriction_root.to_string(),
+                            repo_region_acl: entry.repo_region_acl,
+                            permission_request_group: entry.permission_request_group,
+                        })
+                        .collect();
+                    data.push(ffi::PathAclInfo {
+                        path: requested_path,
+                        error: String::new(),
+                        entries,
+                    });
+                    continue;
+                };
+
+                data.push(ffi::PathAclInfo {
+                    path: requested_path,
+                    error,
+                    entries: Vec::new(),
+                });
+            }
+
+            if let Some(extra) = results.next() {
+                let extra_count = 1 + results.count();
+                return ffi::GetPathAclInfosResult {
+                    data: Vec::new(),
+                    error: into_backingstore_err(anyhow!(
+                        "path ACL lookup returned {} extra result(s), starting with {}",
+                        extra_count,
+                        extra.path
+                    )),
+                };
+            }
+
+            ffi::GetPathAclInfosResult {
+                data,
+                error: UniquePtr::null(),
+            }
+        }
+        Err(error) => ffi::GetPathAclInfosResult {
+            data: Vec::new(),
+            error: into_backingstore_err(error),
         },
     }
 }

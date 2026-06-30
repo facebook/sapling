@@ -1117,4 +1117,12 @@ ImmediateFuture<bool> ObjectStore::checkPermissionIfExpired(
   return backingStore_->checkPermission(manifestId);
 }
 
+folly::coro::now_task<std::vector<folly::Try<std::vector<EntryAcl>>>>
+ObjectStore::co_getPathAcls(
+    const RootId& rootId,
+    const std::vector<std::string>& paths,
+    const ObjectFetchContextPtr& context) const {
+  co_return co_await backingStore_->co_getPathAcls(rootId, paths, context);
+}
+
 } // namespace facebook::eden
