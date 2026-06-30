@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <optional>
+
 #include "eden/common/utils/CaseSensitivity.h"
 #include "eden/common/utils/PathMap.h"
 #include "eden/fs/model/Hash.h"
@@ -38,13 +40,23 @@ class Tree {
    * mount case sensitivity, the caller is responsible for constructing a new
    * Tree with the case sensitivity flipped.
    */
-  explicit Tree(container entries, ObjectId id)
-      : id_{std::move(id)}, entries_{std::move(entries)} {}
-
-  explicit Tree(ObjectId id, container entries, TreeAuxDataPtr auxData)
+  explicit Tree(
+      container entries,
+      ObjectId id,
+      AclRootState state = AclRootState::Unknown)
       : id_{std::move(id)},
         entries_{std::move(entries)},
-        auxData_(std::move(auxData)) {}
+        aclRootState_{state} {}
+
+  explicit Tree(
+      ObjectId id,
+      container entries,
+      TreeAuxDataPtr auxData,
+      AclRootState state = AclRootState::Unknown)
+      : id_{std::move(id)},
+        entries_{std::move(entries)},
+        auxData_(std::move(auxData)),
+        aclRootState_{state} {}
 
   /**
    * Construct a restricted tree. This is an empty tree that indicates the
@@ -52,7 +64,9 @@ class Tree {
    */
   struct Restricted {};
   explicit Tree(Restricted, container entries, ObjectId id)
-      : id_{std::move(id)}, entries_{std::move(entries)}, isRestricted_{true} {}
+      : id_{std::move(id)},
+        entries_{std::move(entries)},
+        aclRootState_{AclRootState::RestrictedAclRoot} {}
 
   TreePtr withNewId(container entries, ObjectId newId) const;
 
@@ -115,7 +129,19 @@ class Tree {
    * access to via ACL restrictions.
    */
   bool isRestricted() const {
-    return isRestricted_;
+    return aclRootState_ == AclRootState::RestrictedAclRoot;
+  }
+
+  /**
+   * Returns true if this tree is structurally covered by an ACL root.
+   * This is independent from whether the caller currently has access.
+   */
+  std::optional<bool> hasACL() const {
+    return hasACLFromAclRootState(aclRootState_);
+  }
+
+  AclRootState aclRootState() const {
+    return aclRootState_;
   }
 
  private:
@@ -124,7 +150,7 @@ class Tree {
   ObjectId id_;
   container entries_;
   TreeAuxDataPtr auxData_;
-  bool isRestricted_{false};
+  AclRootState aclRootState_{AclRootState::Unknown};
 };
 
 } // namespace facebook::eden

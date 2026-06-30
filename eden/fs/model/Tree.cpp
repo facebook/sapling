@@ -14,12 +14,12 @@
 namespace facebook::eden {
 
 TreePtr Tree::withNewId(container entries, ObjectId newId) const {
-  if (isRestricted_) {
+  if (isRestricted()) {
     return std::make_shared<const Tree>(
         Restricted{}, std::move(entries), std::move(newId));
   }
   return std::make_shared<const Tree>(
-      std::move(newId), std::move(entries), auxData_);
+      std::move(newId), std::move(entries), auxData_, aclRootState_);
 }
 
 TreePtr Tree::withNewId(ObjectId newId) const {

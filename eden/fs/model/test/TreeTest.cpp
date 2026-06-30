@@ -112,4 +112,27 @@ TEST(Tree, withNewIdPreservesUnrestricted) {
   EXPECT_EQ(copy->getObjectId(), ObjectId("def456"));
 }
 
+TEST(Tree, aclRootStateCompatibilityHelpers) {
+  struct Case {
+    AclRootState aclRootState = AclRootState::Unknown;
+    std::optional<bool> expectedHasACL = std::nullopt;
+    bool expectedRestricted = false;
+  } cases[] = {
+      {AclRootState::Unknown, std::nullopt, false},
+      {AclRootState::NoAcl, false, false},
+      {AclRootState::AclRoot, true, false},
+      {AclRootState::RestrictedAclRoot, true, true},
+  };
+
+  for (const auto& testCase : cases) {
+    Tree tree{
+        Tree::container{CaseSensitivity::Sensitive},
+        ObjectId("abc123"),
+        testCase.aclRootState};
+    EXPECT_EQ(tree.aclRootState(), testCase.aclRootState);
+    EXPECT_EQ(tree.hasACL(), testCase.expectedHasACL);
+    EXPECT_EQ(tree.isRestricted(), testCase.expectedRestricted);
+  }
+}
+
 } // namespace facebook::eden

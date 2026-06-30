@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <iosfwd>
 #include <optional>
 #include <string>
@@ -33,6 +34,53 @@ enum class TreeEntryType : uint8_t {
   EXECUTABLE_FILE,
   SYMLINK,
 };
+
+enum class AclRootState : uint8_t {
+  Unknown = 0,
+  NoAcl = 1,
+  AclRoot = 2,
+  RestrictedAclRoot = 3,
+};
+
+inline std::optional<AclRootState> aclRootStateFromInt(int64_t value) {
+  switch (value) {
+    case 0:
+      return AclRootState::Unknown;
+    case 1:
+      return AclRootState::NoAcl;
+    case 2:
+      return AclRootState::AclRoot;
+    case 3:
+      return AclRootState::RestrictedAclRoot;
+    default:
+      return std::nullopt;
+  }
+}
+
+inline std::optional<bool> hasACLFromAclRootState(AclRootState state) {
+  switch (state) {
+    case AclRootState::Unknown:
+      return std::nullopt;
+    case AclRootState::NoAcl:
+      return false;
+    case AclRootState::AclRoot:
+    case AclRootState::RestrictedAclRoot:
+      return true;
+  }
+  return std::nullopt;
+}
+
+inline AclRootState makeAclRootState(
+    bool isRestricted,
+    std::optional<bool> hasACL) {
+  if (isRestricted) {
+    return AclRootState::RestrictedAclRoot;
+  }
+  if (!hasACL.has_value()) {
+    return AclRootState::Unknown;
+  }
+  return *hasACL ? AclRootState::AclRoot : AclRootState::NoAcl;
+}
 
 /**
  * A single ACL entry for a path. Each entry represents one restriction root
@@ -115,8 +163,17 @@ bool compareTreeEntryType(
 
 class TreeEntry {
  public:
-  explicit TreeEntry(ObjectId&& id, TreeEntryType type)
-      : type_(type), id_(std::move(id)) {}
+  explicit TreeEntry(
+      ObjectId&& id,
+      TreeEntryType type,
+      bool isRestricted = false,
+      std::optional<bool> hasACL = std::nullopt)
+      : type_(type),
+        id_(std::move(id)),
+        aclRootState_(makeAclRootState(isRestricted, hasACL)) {}
+
+  explicit TreeEntry(ObjectId&& id, TreeEntryType type, AclRootState state)
+      : type_(type), id_(std::move(id)), aclRootState_(state) {}
 
   explicit TreeEntry(
       ObjectId&& id,
@@ -124,13 +181,28 @@ class TreeEntry {
       std::optional<uint64_t> size,
       std::optional<Hash20> contentSha1,
       std::optional<Hash32> contentBlake3,
-      bool isRestricted = false)
+      bool isRestricted = false,
+      std::optional<bool> hasACL = std::nullopt)
       : type_(type),
         id_(std::move(id)),
         size_(size),
         contentSha1_(contentSha1),
         contentBlake3_(contentBlake3),
-        isRestricted_(isRestricted) {}
+        aclRootState_(makeAclRootState(isRestricted, hasACL)) {}
+
+  explicit TreeEntry(
+      ObjectId&& id,
+      TreeEntryType type,
+      std::optional<uint64_t> size,
+      std::optional<Hash20> contentSha1,
+      std::optional<Hash32> contentBlake3,
+      AclRootState state)
+      : type_(type),
+        id_(std::move(id)),
+        size_(size),
+        contentSha1_(contentSha1),
+        contentBlake3_(contentBlake3),
+        aclRootState_(state) {}
 
   const ObjectId& getObjectId() const {
     return id_;
@@ -176,7 +248,15 @@ class TreeEntry {
   }
 
   bool isRestricted() const {
-    return isRestricted_;
+    return aclRootState_ == AclRootState::RestrictedAclRoot;
+  }
+
+  std::optional<bool> hasACL() const {
+    return hasACLFromAclRootState(aclRootState_);
+  }
+
+  AclRootState aclRootState() const {
+    return aclRootState_;
   }
 
  private:
@@ -185,7 +265,7 @@ class TreeEntry {
   std::optional<uint64_t> size_;
   std::optional<Hash20> contentSha1_;
   std::optional<Hash32> contentBlake3_;
-  bool isRestricted_ = false;
+  AclRootState aclRootState_{AclRootState::Unknown};
 };
 
 } // namespace facebook::eden

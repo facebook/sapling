@@ -178,3 +178,35 @@ TEST(TreeEntry, isRestrictedSetTrue) {
       /*isRestricted=*/true);
   EXPECT_TRUE(entry.isRestricted());
 }
+
+TEST(TreeEntry, aclRootStateCompatibilityHelpers) {
+  struct Case {
+    const char* id = "";
+    bool isRestricted = false;
+    std::optional<bool> hasACL = std::nullopt;
+    AclRootState aclRootState = AclRootState::Unknown;
+    std::optional<bool> expectedHasACL = std::nullopt;
+  } cases[] = {
+      {"abc", false, std::nullopt, AclRootState::Unknown, std::nullopt},
+      {"def", false, false, AclRootState::NoAcl, false},
+      {"123", false, true, AclRootState::AclRoot, true},
+      {"456", true, true, AclRootState::RestrictedAclRoot, true},
+  };
+
+  for (const auto& testCase : cases) {
+    TreeEntry entry(
+        makeTestId(testCase.id),
+        TreeEntryType::TREE,
+        testCase.isRestricted,
+        testCase.hasACL);
+    EXPECT_EQ(entry.aclRootState(), testCase.aclRootState);
+    EXPECT_EQ(entry.hasACL(), testCase.expectedHasACL);
+    EXPECT_EQ(entry.isRestricted(), testCase.isRestricted);
+  }
+
+  EXPECT_EQ(aclRootStateFromInt(0), AclRootState::Unknown);
+  EXPECT_EQ(aclRootStateFromInt(1), AclRootState::NoAcl);
+  EXPECT_EQ(aclRootStateFromInt(2), AclRootState::AclRoot);
+  EXPECT_EQ(aclRootStateFromInt(3), AclRootState::RestrictedAclRoot);
+  EXPECT_EQ(aclRootStateFromInt(4), std::nullopt);
+}
