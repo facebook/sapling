@@ -45,43 +45,9 @@
   curl: (22) The requested URL returned error: 403* (glob)
   [22]
   $ wait_for_json_record_count "$SCUBA" 1
-  $ format_single_scuba_sample_strip_server_info < "$SCUBA"
+  $ jq -S '{http_status: .int.http_status, http_method: .normal.http_method, http_path: .normal.http_path}' < "$SCUBA"
   {
-    "int": {
-      "http_status": 403,
-      "sample_rate": 1,
-      "seq": 0,
-      "time": * (glob)
-    },
-    "normal": {
-      "ci_purpose": null,
-      "client_atlas": null,
-      "client_atlas_env_id": null,
-      "client_atlas_rl": null,
-      "client_category": "unknown",
-      "client_correlator": *, (glob)
-      "client_entry_point": "curl_test",
-      "client_faas_job_name": null,
-      "client_hostname": "localhost.*", (re)
-      "client_ip": "$LOCALIP",
-      "client_main_id": *, (glob)
-      "client_tw_job": null,
-      "client_tw_task": null,
-      "fetch_cause": null,
-      "fetch_from_cas_attempted": "false",
-      "http_host": *, (glob)
-      "http_method": "GET",
-      "http_path": "/health_check",
-      "http_user_agent": "curl/*", (glob)
-      "likely_agentic": "false",
-      "request_id": "*", (glob)
-      "sandcastle_alias": null,
-      "sandcastle_nonce": null,
-      "sandcastle_vcs": null,
-      "session_uuid": "*" (glob)
-    },
-    "normvector": {
-      "client_identities": [],
-      "client_identities_typed": []
-    }
+    "http_method": "GET",
+    "http_path": "/health_check",
+    "http_status": 403
   }

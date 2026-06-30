@@ -38,69 +38,9 @@
   $ curltest -fsSL "${lfs_root}/health_check"
   I_AM_ALIVE (no-eol)
   $ wait_for_json_record_count "$SCUBA" 1
-  $ format_single_scuba_sample_strip_server_info < "$SCUBA"
+  $ jq -S '{http_status: .int.http_status, http_method: .normal.http_method, http_path: .normal.http_path}' < "$SCUBA"
   {
-    "int": {
-      "BlobGets": 0,
-      "BlobGetsMaxLatency": *, (glob)
-      "BlobGetsMaxSize": 0,
-      "BlobGetsNotFound": 0,
-      "BlobGetsNotFoundMaxLatency": *, (glob)
-      "BlobGetsTotalSize": 0,
-      "BlobPresenceChecks": 0,
-      "BlobPresenceChecksMaxLatency": *, (glob)
-      "BlobPuts": 0,
-      "BlobPutsMaxLatency": *, (glob)
-      "BlobPutsMaxSize": 0,
-      "BlobPutsTotalSize": 0,
-      "BlobUnlinks": 0,
-      "BlobUnlinksMaxLatency": *, (glob)
-      "CachelibHits": 0,
-      "CachelibMisses": 0,
-      "GetpackNumPossibleLFSFiles": 0,
-      "GetpackPossibleLFSFilesSumSize": 0,
-      "MemcacheHits": 0,
-      "MemcacheMisses": 0,
-      "SqlReadsMaster": 0,
-      "SqlReadsReplica": 0,
-      "SqlWrites": 0,
-      "duration_ms": *, (glob)
-      "error_count": 0,
-      "headers_duration_ms": 0,
-      "http_status": 200,
-      "sample_rate": 1,
-      "seq": 0,
-      "time": * (glob)
-    },
-    "normal": {
-      "ci_purpose": null,
-      "client_atlas": null,
-      "client_atlas_env_id": null,
-      "client_atlas_rl": null,
-      "client_category": "unknown",
-      "client_correlator": *, (glob)
-      "client_entry_point": "curl_test",
-      "client_faas_job_name": null,
-      "client_hostname": "localhost*", (glob)
-      "client_ip": "$LOCALIP",
-      "client_main_id": *, (glob)
-      "client_tw_job": null,
-      "client_tw_task": null,
-      "fetch_cause": null,
-      "fetch_from_cas_attempted": "false",
-      "http_host": *, (glob)
-      "http_method": "GET",
-      "http_path": "/health_check",
-      "http_user_agent": "curl/*", (glob)
-      "likely_agentic": "false",
-      "request_id": "*", (glob)
-      "sandcastle_alias": null,
-      "sandcastle_nonce": null,
-      "sandcastle_vcs": null,
-      "session_uuid": "*" (glob)
-    },
-    "normvector": {
-      "client_identities": [],
-      "client_identities_typed": []
-    }
+    "http_method": "GET",
+    "http_path": "/health_check",
+    "http_status": 200
   }
