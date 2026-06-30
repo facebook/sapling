@@ -44,7 +44,6 @@ pub struct CachedBonsaiTagMapping {
     updater_task: JoinHandle<()>,
 }
 
-#[allow(dead_code)]
 impl CachedBonsaiTagMapping {
     pub async fn new(
         ctx: &CoreContext,

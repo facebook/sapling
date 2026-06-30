@@ -50,7 +50,6 @@ const MAX_CONCURRENCY: usize = 100;
 /// This prevents individual user directories from growing too large due
 /// to RADAR rollout, which creates per-user working directories under
 /// this path.
-#[allow(dead_code)]
 #[derive(Deserialize, Clone, Debug)]
 pub struct LimitUsersDirectorySizeConfig {
     /// Max allowed recursive size in bytes for any directory at depth 2
@@ -63,13 +62,11 @@ pub struct LimitUsersDirectorySizeConfig {
     path_prefix: String,
 }
 
-#[allow(dead_code)]
 #[derive(Clone, Debug)]
 pub struct LimitUsersDirectorySizeHook {
     config: LimitUsersDirectorySizeConfig,
 }
 
-#[allow(dead_code)]
 impl LimitUsersDirectorySizeHook {
     pub fn new(config: &HookConfig) -> Result<Self> {
         Self::with_config(config.parse_options()?)

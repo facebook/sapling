@@ -47,7 +47,6 @@ pub(crate) fn byte_count_iec(size: i64) -> String {
 
 /// Convert a byte count to a human-readable representation of the byte count
 /// using short suffixes.
-#[allow(dead_code)]
 pub(crate) fn byte_count_short(size: i64) -> String {
     byte_count(size, "", "", &["K", "M", "G", "T", "P", "E", "Z", "Y"])
 }

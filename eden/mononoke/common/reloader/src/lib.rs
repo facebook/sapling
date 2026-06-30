@@ -49,7 +49,6 @@ impl<R> Reloader<R> {
     }
 
     // Only used in tests
-    #[allow(dead_code)]
     pub async fn wait_for_update(&self) {
         self.notify.notified().await;
     }

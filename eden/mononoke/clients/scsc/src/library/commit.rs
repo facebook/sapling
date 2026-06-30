@@ -131,7 +131,6 @@ fn render_date(
     Ok(())
 }
 
-#[allow(dead_code)]
 pub(crate) fn render_commit_summary(
     commit: &CommitInfo,
     requested: &str,

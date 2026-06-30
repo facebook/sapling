@@ -137,7 +137,6 @@ impl BasicSpeedTracker {
         }
     }
 
-    #[allow(dead_code)]
     pub fn add_entry(&mut self) {
         self.add_entries(1)
     }

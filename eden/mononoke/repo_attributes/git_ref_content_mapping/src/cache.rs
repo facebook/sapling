@@ -40,7 +40,6 @@ pub struct CachedGitRefContentMapping {
     updater_task: JoinHandle<()>,
 }
 
-#[allow(dead_code)]
 impl CachedGitRefContentMapping {
     pub async fn new(
         ctx: &CoreContext,

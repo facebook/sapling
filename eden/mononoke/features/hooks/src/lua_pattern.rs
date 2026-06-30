@@ -154,7 +154,6 @@ impl LuaPattern {
         self.regex.is_match(s).unwrap_or(false)
     }
 
-    #[allow(dead_code)]
     pub fn get_regex(&self) -> &Regex {
         &self.regex
     }

@@ -147,7 +147,6 @@ async fn unlink_the_key_from_blobstore(
     Ok(())
 }
 
-#[allow(dead_code)]
 struct BlobstoreBulkUnlinker {
     app: MononokeApp,
     keys_dir: String,

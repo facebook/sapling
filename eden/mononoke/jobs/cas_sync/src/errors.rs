@@ -29,7 +29,6 @@ pub enum PipelineError {
         cause: Error,
     },
 
-    #[allow(dead_code)]
     #[error("error without tracking entry")]
     AnonymousError {
         #[source]
