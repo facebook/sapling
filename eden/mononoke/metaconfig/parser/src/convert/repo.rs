@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -129,6 +130,7 @@ use repos::RawMetadataCacheConfig;
 use repos::RawMetadataCacheUpdateMode;
 use repos::RawMetadataLoggerConfig;
 use repos::RawModernSyncConfig;
+use repos::RawPathRestrictionMetadata;
 use repos::RawPushParams;
 use repos::RawPushrebaseParams;
 use repos::RawPushrebaseRemoteMode;
@@ -1365,27 +1367,80 @@ fn parse_acl_manifest_mode(s: Option<&str>) -> Result<AclManifestMode> {
     }
 }
 
+/// Merge the legacy `path_acls` map and the new `path_restriction_metadata` map
+/// into a single typed map. The new field is authoritative: a legacy `path_acls`
+/// entry is folded in only when its path is absent from the new map. A path
+/// present in both with a *different* `repo_region_acl` fails config load
+/// (fail-closed) -- an intentional ACL change removes the legacy entry, leaving
+/// no overlap. A matching ACL lets the new entry win, keeping its explicit
+/// permission-request group.
+/// TODO(T277178795): delete this after deprecating path_acls field
+fn merge_path_restriction_metadata(
+    path_acls: BTreeMap<String, String>,
+    path_restriction_metadata: Option<BTreeMap<String, RawPathRestrictionMetadata>>,
+) -> Result<HashMap<NonRootMPath, PathRestrictionMetadata>> {
+    let mut merged = path_restriction_metadata
+        .unwrap_or_default()
+        .into_iter()
+        .map(|(path, raw)| {
+            let non_root_path = NonRootMPath::new(path.as_bytes())
+                .with_context(|| format!("Invalid path for restricted path config: {path}"))?;
+            let repo_region_acl = MononokeIdentity::from_str(&raw.repo_region_acl)
+                .with_context(|| format!("Failed to parse repo_region_acl for {path}"))?;
+            let permission_request_group = raw
+                .permission_request_group
+                .map(|group| {
+                    MononokeIdentity::from_str(&group).with_context(|| {
+                        format!("Failed to parse permission_request_group for {path}")
+                    })
+                })
+                .transpose()?;
+            Ok((
+                non_root_path,
+                PathRestrictionMetadata {
+                    repo_region_acl,
+                    permission_request_group,
+                },
+            ))
+        })
+        .collect::<Result<HashMap<NonRootMPath, PathRestrictionMetadata>>>()?;
+
+    for (path, acl) in path_acls {
+        let non_root_path = NonRootMPath::new(path.as_bytes())
+            .with_context(|| format!("Invalid path for restricted path config: {path}"))?;
+        let legacy_acl = MononokeIdentity::from_str(&acl)
+            .with_context(|| format!("Failed to parse MononokeIdentity for {path}"))?;
+        match merged.get(&non_root_path) {
+            Some(metadata) => {
+                if metadata.repo_region_acl != legacy_acl {
+                    bail!(
+                        "Divergent repo_region_acl for restricted path {path}: path_acls has `{}` but path_restriction_metadata has `{}`. Remove the path_acls entry to change the ACL.",
+                        legacy_acl,
+                        metadata.repo_region_acl
+                    );
+                }
+            }
+            None => {
+                merged.insert(
+                    non_root_path,
+                    PathRestrictionMetadata {
+                        repo_region_acl: legacy_acl,
+                        permission_request_group: None,
+                    },
+                );
+            }
+        }
+    }
+
+    Ok(merged)
+}
+
 impl Convert for RawRestrictedPathsConfig {
     type Output = RestrictedPathsConfig;
 
     fn convert(self) -> Result<Self::Output> {
-        let path_restriction_metadata = self
-            .path_acls
-            .into_iter()
-            .map(|(path, acl)| {
-                let non_root_path = NonRootMPath::new(path.as_bytes())
-                    .with_context(|| format!("Invalid path for restricted path config: {path}"))?;
-                let repo_region_acl = MononokeIdentity::from_str(&acl)
-                    .with_context(|| format!("Failed to parse MononokeIdentity for {path}"))?;
-                Ok((
-                    non_root_path,
-                    PathRestrictionMetadata {
-                        repo_region_acl,
-                        permission_request_group: None,
-                    },
-                ))
-            })
-            .collect::<Result<HashMap<_, _>>>()?;
+        let path_restriction_metadata =
+            merge_path_restriction_metadata(self.path_acls, self.path_restriction_metadata)?;
 
         let use_manifest_id_cache = self.use_manifest_id_cache.unwrap_or(true);
         let cache_update_interval_ms = self
@@ -1597,6 +1652,167 @@ mod tests {
         assert!(
             msg.contains("client_identity_regex `[`"),
             "error should contain offending value: {msg}"
+        );
+    }
+
+    /// What it tests: a legacy `path_acls` entry with no `path_restriction_metadata`.
+    /// Expected: it is folded into metadata with no explicit request group.
+    #[mononoke::test]
+    fn test_merge_path_acls_fallback_defaults() {
+        let mut raw = empty_raw_restricted_paths_config();
+        raw.path_acls = [("foo/bar".to_string(), "REPO_REGION:acl1".to_string())]
+            .into_iter()
+            .collect();
+
+        let cfg = raw.convert().unwrap();
+
+        let path = NonRootMPath::new("foo/bar").unwrap();
+        let md = cfg.path_restriction_metadata.get(&path).expect("entry");
+        assert_eq!(md.repo_region_acl.to_string(), "REPO_REGION:acl1");
+        assert_eq!(md.permission_request_group, None);
+    }
+
+    /// What it tests: a malformed `repo_region_acl` string in `path_acls`.
+    /// Expected: config load fails (fail-closed), not a silent drop.
+    #[mononoke::test]
+    fn test_merge_malformed_repo_region_acl_fails_closed_legacy() {
+        let mut raw = empty_raw_restricted_paths_config();
+        raw.path_acls = [("foo".to_string(), "not-an-identity".to_string())]
+            .into_iter()
+            .collect();
+
+        let err = raw.convert().unwrap_err();
+        let msg = format!("{err:#}");
+        assert!(
+            msg.contains("MononokeIdentity") && msg.contains("foo"),
+            "expected parse error, got: {msg}"
+        );
+    }
+
+    /// What it tests: a malformed path key in `path_acls`.
+    /// Expected: config load fails (fail-closed).
+    #[mononoke::test]
+    fn test_merge_malformed_path_key_fails_closed() {
+        let mut raw = empty_raw_restricted_paths_config();
+        raw.path_acls = [("".to_string(), "REPO_REGION:acl1".to_string())]
+            .into_iter()
+            .collect();
+
+        let err = raw.convert().unwrap_err();
+        assert!(format!("{err:#}").contains("Invalid path"));
+    }
+
+    fn raw_metadata(
+        repo_region_acl: &str,
+        permission_request_group: Option<&str>,
+        read_only: Option<bool>,
+    ) -> RawPathRestrictionMetadata {
+        RawPathRestrictionMetadata {
+            repo_region_acl: repo_region_acl.to_string(),
+            permission_request_group: permission_request_group.map(|s| s.to_string()),
+            read_only,
+            ..Default::default()
+        }
+    }
+
+    /// What it tests: a `path_restriction_metadata` entry with explicit request
+    /// group, no legacy `path_acls`.
+    /// Expected: all explicit fields are preserved.
+    #[mononoke::test]
+    fn test_merge_metadata_only_explicit_fields() {
+        let mut raw = empty_raw_restricted_paths_config();
+        raw.path_restriction_metadata = Some(
+            [(
+                "foo".to_string(),
+                raw_metadata("REPO_REGION:acl1", Some("GROUP:reviewers"), None),
+            )]
+            .into_iter()
+            .collect(),
+        );
+
+        let cfg = raw.convert().unwrap();
+
+        let path = NonRootMPath::new("foo").unwrap();
+        let md = cfg.path_restriction_metadata.get(&path).expect("entry");
+        assert_eq!(md.repo_region_acl.to_string(), "REPO_REGION:acl1");
+        assert_eq!(
+            md.permission_request_group.as_ref().map(|i| i.to_string()),
+            Some("GROUP:reviewers".to_string())
+        );
+    }
+
+    /// What it tests: a path present in BOTH maps with the SAME repo_region_acl.
+    /// Expected: the new field wins, keeping its explicit request group.
+    #[mononoke::test]
+    fn test_merge_overlap_matching_acl_new_field_wins() {
+        let mut raw = empty_raw_restricted_paths_config();
+        raw.path_acls = [("foo".to_string(), "REPO_REGION:acl1".to_string())]
+            .into_iter()
+            .collect();
+        raw.path_restriction_metadata = Some(
+            [(
+                "foo".to_string(),
+                raw_metadata("REPO_REGION:acl1", Some("GROUP:reviewers"), None),
+            )]
+            .into_iter()
+            .collect(),
+        );
+
+        let cfg = raw.convert().unwrap();
+
+        let path = NonRootMPath::new("foo").unwrap();
+        let md = cfg.path_restriction_metadata.get(&path).unwrap();
+        assert_eq!(
+            md.permission_request_group.as_ref().map(|i| i.to_string()),
+            Some("GROUP:reviewers".to_string()),
+            "new field wins on matching ACL"
+        );
+    }
+
+    /// What it tests: a path present in BOTH maps with DIFFERENT repo_region_acl.
+    /// Expected: config load fails closed with a contextual error.
+    #[mononoke::test]
+    fn test_merge_overlap_divergent_acl_fails_closed() {
+        let mut raw = empty_raw_restricted_paths_config();
+        raw.path_acls = [("foo".to_string(), "REPO_REGION:legacy".to_string())]
+            .into_iter()
+            .collect();
+        raw.path_restriction_metadata = Some(
+            [(
+                "foo".to_string(),
+                raw_metadata("REPO_REGION:new", None, None),
+            )]
+            .into_iter()
+            .collect(),
+        );
+
+        let err = raw.convert().unwrap_err();
+        let msg = format!("{err:#}");
+        assert!(
+            msg.contains("Divergent repo_region_acl") && msg.contains("foo"),
+            "expected divergent-acl fail-closed error, got: {msg}"
+        );
+    }
+
+    /// What it tests: a malformed `repo_region_acl` string in new-field metadata.
+    /// Expected: config load fails (fail-closed), not a silent drop.
+    #[mononoke::test]
+    fn test_merge_malformed_repo_region_acl_fails_closed() {
+        let mut raw = empty_raw_restricted_paths_config();
+        raw.path_restriction_metadata = Some(
+            [(
+                "foo".to_string(),
+                raw_metadata("not-an-identity", None, None),
+            )]
+            .into_iter()
+            .collect(),
+        );
+
+        let err = raw.convert().unwrap_err();
+        let msg = format!("{err:#}");
+        assert!(
+            msg.contains("repo_region_acl") && msg.contains("foo"),
+            "expected repo_region_acl parse error, got: {msg}"
         );
     }
 }
