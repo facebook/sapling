@@ -659,6 +659,12 @@ async fn has_repo_region_acls_for_action(
         .buffer_unordered(acls.len())
         .try_all(futures::future::ready)
         .await
+        .inspect_err(|err| {
+            ctx.scuba().clone().log_with_msg(
+                "Failed repo region ACL check",
+                format!("ACLs: {acls:?}. Action {action}. Exception: {err:#?}"),
+            );
+        })
 }
 
 /// Check whether the caller is a member of the admin bypass group, if one is
@@ -683,7 +689,13 @@ pub(crate) async fn is_part_of_group(
     let membership_checker = acl_provider
         .group(group_name)
         .await
-        .with_context(|| format!("Failed to get membership checker for group {group_name}"))?;
+        .with_context(|| format!("Failed to get membership checker for group {group_name}"))
+        .inspect_err(|err| {
+            ctx.scuba().clone().log_with_msg(
+                "Failed to get membership checker for group",
+                format!("Group: {group_name}. Exception: {err:#?}"),
+            );
+        })?;
 
     Ok(membership_checker
         .is_member(ctx.metadata().identities())
