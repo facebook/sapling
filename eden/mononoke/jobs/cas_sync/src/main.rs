@@ -7,8 +7,6 @@
 
 //! Mononoke -> cas sync job
 
-#![feature(auto_traits)]
-
 use std::sync::Arc;
 use std::time::Duration;
 

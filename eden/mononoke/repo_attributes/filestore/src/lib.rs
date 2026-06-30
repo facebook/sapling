@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![feature(never_type)]
 #![type_length_limit = "2000000"]
 
 use anyhow::Error;
