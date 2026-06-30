@@ -239,6 +239,10 @@ impl ManifestRestrictionCheckResult {
     pub fn is_rollout_allowlisted(&self) -> bool {
         self.authorization.is_rollout_allowlisted()
     }
+
+    pub fn is_admin_bypass(&self) -> bool {
+        self.authorization.is_admin_bypass()
+    }
 }
 
 /// Result returned by one restriction source fetch.

@@ -553,6 +553,7 @@ impl SaplingRemoteApiHandler for CheckManifestPermissionHandler {
                             .add("is_allowlisted_tooling", check.is_allowlisted_tooling())
                             .add("is_rollout_allowlisted", check.is_rollout_allowlisted())
                             .add("has_restricted_path_access", check.has_authorization())
+                            .add("is_admin_bypass", check.is_admin_bypass())
                             .log_with_msg("Checked manifest permission", None);
                     }
 
