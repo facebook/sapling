@@ -407,8 +407,8 @@ async fn create_hg_manifest(
     // Track restricted paths by storing manifest IDs for directories that match restricted path prefixes
     if restricted_paths_enabled {
         if let path @ RepoPath::DirectoryPath(non_root_path) = &path {
-            let is_restricted = restricted_paths.is_restriction_root(non_root_path);
-            if is_restricted {
+            let should_record = restricted_paths.should_record_manifest_id_entry(non_root_path);
+            if should_record {
                 let entry = RestrictedPathManifestIdEntry::new(
                     ManifestType::Hg,
                     mfid.to_string().into(),

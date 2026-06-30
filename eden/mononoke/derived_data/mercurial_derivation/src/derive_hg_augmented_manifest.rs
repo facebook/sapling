@@ -486,9 +486,9 @@ pub async fn derive_from_hg_manifest_and_parents_staged(
 
                 if restricted_paths_enabled {
                     if let Some(non_root_path) = path.clone().into_optional_non_root_path() {
-                        let is_restricted = restricted_paths
-                            .is_restriction_root(&non_root_path);
-                        if is_restricted {
+                        let should_record = restricted_paths
+                            .should_record_manifest_id_entry(&non_root_path);
+                        if should_record {
                             let entry = RestrictedPathManifestIdEntry::new(
                                 ManifestType::HgAugmented,
                                 hg_augmented_manifest_id.to_string().into(),

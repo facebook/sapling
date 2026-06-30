@@ -388,8 +388,8 @@ async fn create_fsnode(
     let path = &tree_info.path;
     if restricted_paths_enabled {
         if let Some(non_root_path) = path.clone().into_optional_non_root_path() {
-            let is_restricted = restricted_paths.is_restriction_root(&non_root_path);
-            if is_restricted {
+            let should_record = restricted_paths.should_record_manifest_id_entry(&non_root_path);
+            if should_record {
                 let entry = RestrictedPathManifestIdEntry::new(
                     ManifestType::Fsnode,
                     ManifestId::from(&fsnode_id.blake2().into_inner()),

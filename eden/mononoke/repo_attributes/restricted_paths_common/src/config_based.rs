@@ -88,4 +88,11 @@ impl RestrictedPathsConfigBased {
             .find(|(restricted_path_prefix, _)| restricted_path_prefix.is_prefix_of(path))
             .map(|(_, metadata)| &metadata.repo_region_acl)
     }
+
+    /// Whether derivation should record a new manifest-id-store entry for this
+    /// path.
+    pub fn should_record_manifest_id_entry(&self, path: &NonRootMPath) -> bool {
+        // TODO(T277178795): rely on `read_only` from PathRestrictionMetadata
+        self.get_metadata_for_path(path).is_some()
+    }
 }
