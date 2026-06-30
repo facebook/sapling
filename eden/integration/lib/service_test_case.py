@@ -8,7 +8,6 @@
 
 import abc
 import pathlib
-import sys
 import typing
 import unittest
 from typing import Optional, Type
