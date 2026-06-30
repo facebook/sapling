@@ -16,12 +16,14 @@ namespace facebook::eden {
 
 folly::coro::Task<EntryAttributes> coFetchEntryAttributesFromVI(
     VirtualInode v,
+    std::optional<bool> ancestorUnderAcl,
     EntryAttributeFlags reqAttrs,
     RelativePath sub,
     std::shared_ptr<ObjectStore> store,
     timespec checkoutTime,
     ObjectFetchContextPtr ctx) {
   co_await folly::coro::co_reschedule_on_current_executor;
+  v.inheritAclFromAncestor(ancestorUnderAcl);
   co_return co_await v.co_getEntryAttributes(
       reqAttrs, sub, store, checkoutTime, ctx);
 }
@@ -29,6 +31,8 @@ folly::coro::Task<EntryAttributes> coFetchEntryAttributesFromVI(
 folly::coro::Task<EntryAttributes> coFetchTreeEntryAttributes(
     ObjectId oid,
     mode_t mode,
+    std::optional<bool> hasACL,
+    std::optional<bool> ancestorUnderAcl,
     EntryAttributeFlags reqAttrs,
     RelativePath sub,
     std::shared_ptr<ObjectStore> store,
@@ -37,12 +41,15 @@ folly::coro::Task<EntryAttributes> coFetchTreeEntryAttributes(
   co_await folly::coro::co_reschedule_on_current_executor;
   auto t = co_await store->co_getTree(oid, ctx);
   VirtualInode v{std::move(t), mode};
+  v.setHasACL(hasACL);
+  v.inheritAclFromAncestor(ancestorUnderAcl);
   co_return co_await v.co_getEntryAttributes(
       reqAttrs, sub, store, checkoutTime, ctx);
 }
 
 folly::coro::Task<EntryAttributes> coFetchLoadedInodeEntryAttributes(
     folly::SemiFuture<InodePtr> loadFut,
+    std::optional<bool> ancestorUnderAcl,
     EntryAttributeFlags reqAttrs,
     RelativePath sub,
     std::shared_ptr<ObjectStore> store,
@@ -50,6 +57,7 @@ folly::coro::Task<EntryAttributes> coFetchLoadedInodeEntryAttributes(
     ObjectFetchContextPtr ctx) {
   auto inode = co_await std::move(loadFut);
   VirtualInode v{std::move(inode)};
+  v.inheritAclFromAncestor(ancestorUnderAcl);
   co_return co_await v.co_getEntryAttributes(
       reqAttrs, sub, store, checkoutTime, ctx);
 }

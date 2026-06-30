@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <optional>
+
 #include "eden/common/utils/DirType.h"
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/model/ObjectId.h"
@@ -35,7 +37,7 @@ class UnmaterializedUnloadedBlobDirEntry {
       : objectId_(entry.getObjectId()),
         dtype_(entry.getDtype()),
         initialMode_(entry.getInitialMode()),
-        isRestricted_(entry.isRestricted()) {}
+        aclRootState_(entry.aclRootState()) {}
 
   UnmaterializedUnloadedBlobDirEntry(
       const UnmaterializedUnloadedBlobDirEntry&) = default;
@@ -67,14 +69,18 @@ class UnmaterializedUnloadedBlobDirEntry {
   }
 
   bool isRestricted() const {
-    return isRestricted_;
+    return aclRootState_ == AclRootState::RestrictedAclRoot;
+  }
+
+  std::optional<bool> hasACL() const {
+    return hasACLFromAclRootState(aclRootState_);
   }
 
  private:
   ObjectId objectId_;
   dtype_t dtype_;
   mode_t initialMode_;
-  bool isRestricted_ = false;
+  AclRootState aclRootState_{AclRootState::Unknown};
 };
 
 } // namespace facebook::eden

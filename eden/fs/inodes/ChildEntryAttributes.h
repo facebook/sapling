@@ -11,6 +11,7 @@
 #include <folly/futures/Future.h>
 #include <sys/types.h>
 #include <memory>
+#include <optional>
 
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/inodes/InodePtrFwd.h"
@@ -45,6 +46,7 @@ class ObjectStore;
  */
 folly::coro::Task<EntryAttributes> coFetchEntryAttributesFromVI(
     VirtualInode v,
+    std::optional<bool> ancestorUnderAcl,
     EntryAttributeFlags reqAttrs,
     RelativePath sub,
     std::shared_ptr<ObjectStore> store,
@@ -58,6 +60,8 @@ folly::coro::Task<EntryAttributes> coFetchEntryAttributesFromVI(
 folly::coro::Task<EntryAttributes> coFetchTreeEntryAttributes(
     ObjectId oid,
     mode_t mode,
+    std::optional<bool> hasACL,
+    std::optional<bool> ancestorUnderAcl,
     EntryAttributeFlags reqAttrs,
     RelativePath sub,
     std::shared_ptr<ObjectStore> store,
@@ -69,6 +73,7 @@ folly::coro::Task<EntryAttributes> coFetchTreeEntryAttributes(
  */
 folly::coro::Task<EntryAttributes> coFetchLoadedInodeEntryAttributes(
     folly::SemiFuture<InodePtr> loadFut,
+    std::optional<bool> ancestorUnderAcl,
     EntryAttributeFlags reqAttrs,
     RelativePath sub,
     std::shared_ptr<ObjectStore> store,

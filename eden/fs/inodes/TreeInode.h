@@ -223,7 +223,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       RelativePath path,
       const std::shared_ptr<ObjectStore>& objectStore,
       timespec lastCheckoutTime,
-      const ObjectFetchContextPtr& context);
+      const ObjectFetchContextPtr& context,
+      std::optional<bool> ancestorUnderAcl = std::nullopt);
 
   /**
    * Get the inode object for a child of this directory.
@@ -1361,6 +1362,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   struct PendingDirFetch {
     ObjectId treeId;
     mode_t mode{};
+    std::optional<bool> hasACL{std::nullopt};
   };
 
   std::optional<VirtualInode> rlockCheckChild(

@@ -39,6 +39,7 @@
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/fuse/FuseDirList.h"
+#include "eden/fs/inodes/AclState.h"
 #include "eden/fs/inodes/CheckoutAction.h"
 #include "eden/fs/inodes/CheckoutContext.h"
 #include "eden/fs/inodes/ChildEntryAttributes.h"
@@ -595,9 +596,11 @@ std::optional<ImmediateFuture<VirtualInode>> TreeInode::rlockGetOrFindChild(
     // the id
     return getObjectStore()
         .getTree(entry.getObjectId(), context)
-        .thenValue([mode = entry.getInitialMode()](
+        .thenValue([mode = entry.getInitialMode(), hasACL = entry.hasACL()](
                        std::shared_ptr<const Tree>&& tree) {
-          return VirtualInode(std::move(tree), mode);
+          auto virtualInode = VirtualInode(std::move(tree), mode);
+          virtualInode.setHasACL(hasACL);
+          return virtualInode;
         });
   }
   // This is a file, return the DirEntry if this was the last
@@ -758,7 +761,8 @@ std::optional<VirtualInode> TreeInode::rlockCheckChild(
           entry.getInitialMode(),
           contents.entries.getCaseSensitivity());
     }
-    dirFetch = PendingDirFetch{entry.getObjectId(), entry.getInitialMode()};
+    dirFetch = PendingDirFetch{
+        entry.getObjectId(), entry.getInitialMode(), entry.hasACL()};
     return std::nullopt;
   }
   return VirtualInode{UnmaterializedUnloadedBlobDirEntry(entry)};
@@ -830,7 +834,9 @@ folly::coro::now_task<VirtualInode> TreeInode::co_getOrFindChild(
   // All locks released before suspension
   if (dirFetch.has_value()) {
     auto tree = co_await getObjectStore().co_getTree(dirFetch->treeId, context);
-    co_return VirtualInode(std::move(tree), dirFetch->mode);
+    auto virtualInode = VirtualInode(std::move(tree), dirFetch->mode);
+    virtualInode.setHasACL(dirFetch->hasACL);
+    co_return virtualInode;
   }
 
   auto inode = co_await std::move(loadFuture);
@@ -953,7 +959,9 @@ TreeInode::co_getChildren(
                     -> folly::coro::Task<VirtualInode> {
                   co_await folly::coro::co_reschedule_on_current_executor;
                   auto tree = co_await s->co_getTree(fetch.treeId, ctx);
-                  co_return VirtualInode{std::move(tree), fetch.mode};
+                  auto virtualInode = VirtualInode{std::move(tree), fetch.mode};
+                  virtualInode.setHasACL(fetch.hasACL);
+                  co_return virtualInode;
                 },
                 store,
                 *dirFetch,
@@ -997,7 +1005,8 @@ TreeInode::co_getChildrenAttributes(
     RelativePath path,
     const std::shared_ptr<ObjectStore>& objectStore,
     timespec lastCheckoutTime,
-    const ObjectFetchContextPtr& context) {
+    const ObjectFetchContextPtr& context,
+    std::optional<bool> ancestorUnderAcl) {
   auto self = inodePtrFromThis();
 
   if (FOLLY_UNLIKELY(isRestricted())) {
@@ -1022,6 +1031,10 @@ TreeInode::co_getChildrenAttributes(
     names.reserve(contents->entries.size());
     tasks.reserve(contents->entries.size());
     inodeLoadCleanUps.reserve(contents->entries.size());
+    auto adjusted = adjustRootAclState(
+        getNodeId() == kRootNodeId, ancestorUnderAcl, hasACL());
+    auto thisUnderAcl =
+        mergeAncestorAclState(adjusted.ancestorUnderAcl, adjusted.hasACL);
 
     for (const auto& [name, _entry] : contents->entries) {
       auto subPath = path + name;
@@ -1032,6 +1045,7 @@ TreeInode::co_getChildrenAttributes(
       if (sync.has_value()) {
         tasks.emplace_back(coFetchEntryAttributesFromVI(
             std::move(*sync),
+            thisUnderAcl,
             requestedAttributes,
             std::move(subPath),
             objectStore,
@@ -1041,6 +1055,8 @@ TreeInode::co_getChildrenAttributes(
         tasks.emplace_back(coFetchTreeEntryAttributes(
             dirFetch->treeId,
             dirFetch->mode,
+            dirFetch->hasACL,
+            thisUnderAcl,
             requestedAttributes,
             std::move(subPath),
             objectStore,
@@ -1052,6 +1068,7 @@ TreeInode::co_getChildrenAttributes(
         inodeLoadCleanUps.emplace_back(name, std::move(childResult.second));
         tasks.emplace_back(coFetchLoadedInodeEntryAttributes(
             std::move(childResult.first),
+            thisUnderAcl,
             requestedAttributes,
             std::move(subPath),
             objectStore,

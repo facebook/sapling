@@ -10,6 +10,7 @@
 #include "eden/common/utils/Match.h"
 #include "eden/common/utils/StatTimes.h"
 #include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/inodes/AclState.h"
 #include "eden/fs/inodes/ChildEntryAttributes.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeError.h"
@@ -25,6 +26,112 @@
 #include <folly/coro/Invoke.h>
 
 namespace facebook::eden {
+
+namespace {
+std::optional<bool> preferKnownAclState(
+    std::optional<bool> preferred,
+    std::optional<bool> fallback) {
+  // Unknown metadata cannot erase a known state for the same tree.
+  return preferred.has_value() ? preferred : fallback;
+}
+
+std::optional<bool> extractHasACLState(const InodePtr& inode) {
+  if (inode->getType() != dtype_t::Dir) {
+    return false;
+  }
+  auto treePtr = inode.asTreePtrOrNull();
+  if (!treePtr) {
+    return std::nullopt;
+  }
+  return treePtr->hasACL();
+}
+
+void populateUnderAclAttribute(
+    EntryAttributes& attributes,
+    EntryAttributeFlags requestedAttributes,
+    std::optional<bool> underAcl) {
+  if (!requestedAttributes.contains(ENTRY_ATTRIBUTE_UNDER_ACL)) {
+    return;
+  }
+  if (underAcl.has_value()) {
+    attributes.underAcl = folly::Try<bool>{*underAcl};
+  }
+}
+
+void populateAclInfoFromLocalAclState(
+    EntryAttributes& attributes,
+    EntryAttributeFlags requestedAttributes,
+    std::optional<bool> underAcl) {
+  if (!requestedAttributes.contains(ENTRY_ATTRIBUTE_ACLs)) {
+    return;
+  }
+  // Local inode metadata only proves the known-negative case. When underAcl
+  // is true, the specific ACL entries still require a backing-store lookup.
+  if (underAcl == false) {
+    attributes.aclInfo = folly::Try<EntryAclInfo>{EntryAclInfo{false, {}}};
+  }
+}
+
+bool shouldPopulateLocalAclAttributes(
+    const std::shared_ptr<ObjectStore>& objectStore) {
+  return objectStore->getEdenConfig()
+      ->enableLocalUnderAclComputation.getValue();
+}
+
+void populateLocalAclAttributes(
+    EntryAttributes& attributes,
+    EntryAttributeFlags requestedAttributes,
+    std::optional<bool> underAcl,
+    bool enabled) {
+  if (!enabled) {
+    return;
+  }
+  populateUnderAclAttribute(attributes, requestedAttributes, underAcl);
+  populateAclInfoFromLocalAclState(attributes, requestedAttributes, underAcl);
+}
+} // namespace
+
+VirtualInode::VirtualInode(InodePtr value)
+    : variant_(std::move(value)),
+      hasACL_(extractHasACLState(std::get<InodePtr>(variant_))) {
+  auto adjusted = adjustRootAclState(
+      std::get<InodePtr>(variant_)->getNodeId() == kRootNodeId,
+      ancestorUnderAcl_,
+      hasACL_);
+  ancestorUnderAcl_ = adjusted.ancestorUnderAcl;
+  hasACL_ = adjusted.hasACL;
+}
+
+VirtualInode::VirtualInode(UnmaterializedUnloadedBlobDirEntry value)
+    : variant_(std::move(value)),
+      hasACL_(std::get<UnmaterializedUnloadedBlobDirEntry>(variant_).hasACL()) {
+}
+
+VirtualInode::VirtualInode(TreePtr value, mode_t mode)
+    : variant_(std::move(value)),
+      treeMode_(mode),
+      hasACL_(std::get<TreePtr>(variant_)->hasACL()) {}
+
+VirtualInode::VirtualInode(TreeEntry value) {
+  XCHECK(!value.isTree())
+      << "TreeEntries which represent a tree should be resolved to a tree "
+      << "before being constructed into VirtualInode";
+  hasACL_ = value.hasACL();
+  variant_ = std::move(value);
+}
+
+std::optional<bool> VirtualInode::isUnderAcl() const {
+  return mergeAncestorAclState(ancestorUnderAcl_, hasACL_);
+}
+
+void VirtualInode::setHasACL(std::optional<bool> hasACL) {
+  hasACL_ = preferKnownAclState(hasACL, hasACL_);
+}
+
+void VirtualInode::inheritAclFromAncestor(
+    std::optional<bool> ancestorUnderAcl) {
+  ancestorUnderAcl_ = ancestorUnderAcl;
+}
 
 VirtualInode VirtualInode::makeRestricted(
     const TreeEntry& entry,
@@ -623,6 +730,13 @@ folly::coro::now_task<EntryAttributes> co_getEntryAttributesForNonFile(
     isMat = vi.isMaterialized();
   }
 
+  auto underAcl = vi.isUnderAcl();
+  populateLocalAclAttributes(
+      attributes,
+      requestedAttributes,
+      underAcl,
+      shouldPopulateLocalAclAttributes(objectStore));
+
   populateInvalidNonFileAttributes(
       attributes,
       requestedAttributes,
@@ -702,6 +816,12 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
   } else {
     isMat = isMaterialized();
   }
+
+  populateLocalAclAttributes(
+      attributes,
+      requestedAttributes,
+      isUnderAcl(),
+      shouldPopulateLocalAclAttributes(objectStore));
 
   // Fill in any attributes that may be invalid for NonFile types
   populateInvalidNonFileAttributes(
@@ -881,7 +1001,9 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
       .thenValue(
           [requestedAttributes,
            entryObjectId = std::move(objectId),
-           filePath = RelativePath{path}](
+           underAcl = isUnderAcl(),
+           enableLocalUnderAclComputation =
+               shouldPopulateLocalAclAttributes(objectStore)](
               std::tuple<
                   std::optional<folly::Try<std::optional<TreeEntryType>>>,
                   std::optional<folly::Try<BlobAuxData>>,
@@ -899,6 +1021,12 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
               attributes.objectId =
                   folly::Try<std::optional<ObjectId>>{std::move(entryObjectId)};
             }
+
+            populateLocalAclAttributes(
+                attributes,
+                requestedAttributes,
+                underAcl,
+                enableLocalUnderAclComputation);
 
             if (blobAuxTry.has_value()) {
               populateBlobAuxAttributes(
@@ -1024,6 +1152,12 @@ folly::coro::now_task<EntryAttributes> VirtualInode::co_getEntryAttributes(
   if (requestedAttributes.contains(ENTRY_ATTRIBUTE_OBJECT_ID)) {
     attributes.objectId = folly::Try<std::optional<ObjectId>>{getObjectId()};
   }
+
+  populateLocalAclAttributes(
+      attributes,
+      requestedAttributes,
+      isUnderAcl(),
+      shouldPopulateLocalAclAttributes(objectStore));
 
   if (blobAuxTry.has_value()) {
     populateBlobAuxAttributes(attributes, requestedAttributes, *blobAuxTry);
@@ -1174,6 +1308,32 @@ folly::coro::now_task<struct stat> VirtualInode::co_stat(
 }
 
 namespace {
+VirtualInode applyAncestorAcl(
+    VirtualInode child,
+    std::optional<bool> ancestorUnderAcl) {
+  child.inheritAclFromAncestor(ancestorUnderAcl);
+  return child;
+}
+
+ImmediateFuture<VirtualInode> applyAncestorAcl(
+    ImmediateFuture<VirtualInode> childFuture,
+    std::optional<bool> ancestorUnderAcl) {
+  return std::move(childFuture)
+      .thenValue([ancestorUnderAcl](VirtualInode child) {
+        child.inheritAclFromAncestor(ancestorUnderAcl);
+        return child;
+      });
+}
+
+folly::Try<VirtualInode> applyAncestorAcl(
+    folly::Try<VirtualInode> child,
+    std::optional<bool> ancestorUnderAcl) {
+  if (child.hasValue()) {
+    child.value().inheritAclFromAncestor(ancestorUnderAcl);
+  }
+  return child;
+}
+
 /**
  * Helper function for getChildren when the current node is a Tree.
  */
@@ -1198,9 +1358,11 @@ getChildrenHelper(
         result.emplace_back(
             child.first,
             objectStore->getTree(treeEntry->getObjectId(), fetchContext)
-                .thenValue([mode = modeFromTreeEntryType(treeEntry->getType())](
-                               TreePtr tree) {
-                  return VirtualInode{std::move(tree), mode};
+                .thenValue([mode = modeFromTreeEntryType(treeEntry->getType()),
+                            hasACL = treeEntry->hasACL()](TreePtr tree) {
+                  auto virtualInode = VirtualInode{std::move(tree), mode};
+                  virtualInode.setHasACL(hasACL);
+                  return virtualInode;
                 }));
       }
     } else {
@@ -1245,16 +1407,20 @@ co_getChildrenHelper(
                 [](ObjectId oid,
                    mode_t mode,
                    std::shared_ptr<ObjectStore> store,
-                   ObjectFetchContextPtr ctx)
+                   ObjectFetchContextPtr ctx,
+                   std::optional<bool> hasACL)
                     -> folly::coro::Task<VirtualInode> {
                   co_await folly::coro::co_reschedule_on_current_executor;
                   auto childTree = co_await store->co_getTree(oid, ctx);
-                  co_return VirtualInode{std::move(childTree), mode};
+                  auto virtualInode = VirtualInode{std::move(childTree), mode};
+                  virtualInode.setHasACL(hasACL);
+                  co_return virtualInode;
                 },
                 treeEntry->getObjectId(),
                 modeFromTreeEntryType(treeEntry->getType()),
                 objectStore,
-                fetchContext.copy()));
+                fetchContext.copy(),
+                treeEntry->hasACL()));
       }
     } else {
       result.emplace_back(
@@ -1295,9 +1461,14 @@ VirtualInode::getChildren(
   return match(
       variant_,
       [&](const InodePtr& inode) {
+        auto children = inode.asTreePtr()->getChildren(fetchContext, false);
+        for (auto& child : children) {
+          child.second =
+              applyAncestorAcl(std::move(child.second), isUnderAcl());
+        }
         return folly::Try<std::vector<
             std::pair<PathComponent, ImmediateFuture<VirtualInode>>>>{
-            inode.asTreePtr()->getChildren(fetchContext, false)};
+            std::move(children)};
       },
       [&](const TreePtr& tree) {
         if (tree->isRestricted()) {
@@ -1305,9 +1476,14 @@ VirtualInode::getChildren(
               std::pair<PathComponent, ImmediateFuture<VirtualInode>>>>{
               PathError(EACCES, path)};
         }
+        auto children = getChildrenHelper(tree, objectStore, fetchContext);
+        for (auto& child : children) {
+          child.second =
+              applyAncestorAcl(std::move(child.second), isUnderAcl());
+        }
         return folly::Try<std::vector<
             std::pair<PathComponent, ImmediateFuture<VirtualInode>>>>{
-            getChildrenHelper(tree, objectStore, fetchContext)};
+            std::move(children)};
       },
       [&](const UnmaterializedUnloadedBlobDirEntry&) { return notDirectory(); },
       [&](const TreeEntry&) { return notDirectory(); });
@@ -1327,14 +1503,23 @@ VirtualInode::co_getChildren(
       std::variant_size_v<detail::VariantVirtualInode> == 4,
       "New variant type added to VariantVirtualInode - update co_getChildren");
   if (auto* inode = std::get_if<InodePtr>(&variant_)) {
-    co_return co_await inode->asTreePtr()->co_getChildren(
+    auto children = co_await inode->asTreePtr()->co_getChildren(
         fetchContext, /*loadInodes=*/false);
+    for (auto& child : children) {
+      child.second = applyAncestorAcl(std::move(child.second), isUnderAcl());
+    }
+    co_return children;
   } else if (auto* tree = std::get_if<TreePtr>(&variant_)) {
     // Restricted unloaded tree denies enumeration outright.
     if ((*tree)->isRestricted()) {
       co_yield folly::coro::co_error(PathError(EACCES, path));
     }
-    co_return co_await co_getChildrenHelper(*tree, objectStore, fetchContext);
+    auto children =
+        co_await co_getChildrenHelper(*tree, objectStore, fetchContext);
+    for (auto& child : children) {
+      child.second = applyAncestorAcl(std::move(child.second), isUnderAcl());
+    }
+    co_return children;
   } else {
     // File variants (UnmaterializedUnloadedBlobDirEntry / TreeEntry) — the
     // !isDirectory() guard above has already returned ENOTDIR; this is a
@@ -1423,7 +1608,8 @@ VirtualInode::co_getChildrenAttributes(
         std::move(path),
         objectStore,
         lastCheckoutTime,
-        fetchContext);
+        fetchContext,
+        ancestorUnderAcl_);
   }
 
   // Past the !isDirectory() guard, the static_assert above pins the variant
@@ -1451,6 +1637,7 @@ VirtualInode::co_getChildrenAttributes(
         tasks.emplace_back(coFetchEntryAttributesFromVI(
             VirtualInode::makeRestricted(
                 treeEntry, (*tree)->getCaseSensitivity()),
+            isUnderAcl(),
             requestedAttributes,
             std::move(subPath),
             objectStore,
@@ -1460,6 +1647,8 @@ VirtualInode::co_getChildrenAttributes(
         tasks.emplace_back(coFetchTreeEntryAttributes(
             treeEntry.getObjectId(),
             modeFromTreeEntryType(treeEntry.getType()),
+            treeEntry.hasACL(),
+            isUnderAcl(),
             requestedAttributes,
             std::move(subPath),
             objectStore,
@@ -1469,6 +1658,7 @@ VirtualInode::co_getChildrenAttributes(
     } else {
       tasks.emplace_back(coFetchEntryAttributesFromVI(
           VirtualInode{treeEntry},
+          isUnderAcl(),
           requestedAttributes,
           std::move(subPath),
           objectStore,
@@ -1527,7 +1717,9 @@ folly::coro::now_task<VirtualInode> co_getOrFindChildHelper(
     auto treeResult = co_await objectStore->co_getTree(
         treeEntry->getObjectId(), fetchContext);
     auto mode = modeFromTreeEntryType(treeEntry->getType());
-    co_return VirtualInode{std::move(treeResult), mode};
+    auto virtualInode = VirtualInode{std::move(treeResult), mode};
+    virtualInode.setHasACL(treeEntry->hasACL());
+    co_return virtualInode;
   } else {
     // This is a file, return the TreeEntry for it
     co_return VirtualInode{*treeEntry};
@@ -1571,11 +1763,13 @@ folly::coro::now_task<VirtualInode> VirtualInode::co_getOrFindChild(
   // Use std::get_if instead of match to avoid potential issues with
   // coroutine lambdas and std::visit
   if (auto* inode = std::get_if<InodePtr>(&variant_)) {
-    co_return co_await inode->asTreePtr()->co_getOrFindChild(
+    auto child = co_await inode->asTreePtr()->co_getOrFindChild(
         childName, fetchContext, false);
+    co_return applyAncestorAcl(std::move(child), isUnderAcl());
   } else if (auto* tree = std::get_if<TreePtr>(&variant_)) {
-    co_return co_await co_getOrFindChildHelper(
+    auto child = co_await co_getOrFindChildHelper(
         *tree, childName, path, objectStore, fetchContext);
+    co_return applyAncestorAcl(std::move(child), isUnderAcl());
   } else {
     // These represent files in VirtualInode, and can't be descended
     co_yield folly::coro::co_error(PathError(

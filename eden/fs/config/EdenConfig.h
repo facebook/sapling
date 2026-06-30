@@ -2601,6 +2601,15 @@ class EdenConfig : private ConfigSettingManager {
       300,
       this};
 
+  /**
+   * Whether EdenFS should compute UNDER_ACL and local empty ACL info from
+   * source-control tree ACL metadata.
+   */
+  ConfigSetting<bool> enableLocalUnderAclComputation{
+      "acl:enable-local-under-acl-computation",
+      true,
+      this};
+
 // [facebook]
 // Facebook internal
 

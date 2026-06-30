@@ -9,6 +9,8 @@
 
 #include <sys/stat.h>
 
+#include <optional>
+
 #include <folly/coro/safe/NowTask.h>
 
 #include "eden/common/utils/ImmediateFuture.h"
@@ -45,20 +47,13 @@ using VariantVirtualInode = std::
  */
 class VirtualInode {
  public:
-  explicit VirtualInode(InodePtr value) : variant_(std::move(value)) {}
+  explicit VirtualInode(InodePtr value);
 
-  explicit VirtualInode(UnmaterializedUnloadedBlobDirEntry value)
-      : variant_(std::move(value)) {}
+  explicit VirtualInode(UnmaterializedUnloadedBlobDirEntry value);
 
-  explicit VirtualInode(TreePtr value, mode_t mode)
-      : variant_(std::move(value)), treeMode_(mode) {}
+  explicit VirtualInode(TreePtr value, mode_t mode);
 
-  explicit VirtualInode(TreeEntry value) {
-    XCHECK(!value.isTree())
-        << "TreeEntries which represent a tree should be resolved to a tree "
-        << "before being constructed into VirtualInode";
-    variant_ = std::move(value);
-  }
+  explicit VirtualInode(TreeEntry value);
 
   /**
    * Create a VirtualInode wrapping a restricted (ACL-denied) empty tree.
@@ -291,6 +286,16 @@ class VirtualInode {
       const std::shared_ptr<ObjectStore>& objectStore,
       const ObjectFetchContextPtr& fetchContext) const;
 
+  std::optional<bool> isUnderAcl() const;
+
+  std::optional<bool> hasACL() const {
+    return hasACL_;
+  }
+
+  void setHasACL(std::optional<bool> hasACL);
+
+  void inheritAclFromAncestor(std::optional<bool> ancestorUnderAcl);
+
  private:
   /**
    * Helper function for getChildrenAttributes
@@ -330,6 +335,8 @@ class VirtualInode {
    * here for return in the stat() call.
    */
   mode_t treeMode_{0};
+  std::optional<bool> hasACL_{std::nullopt};
+  std::optional<bool> ancestorUnderAcl_{std::nullopt};
 };
 
 } // namespace facebook::eden

@@ -101,6 +101,7 @@ cpp_library(
         "VirtualInode.cpp",
     ],
     headers = [
+        "AclState.h",
         "CacheHint.h",
         "CheckoutAction.h",
         "CheckoutContext.h",

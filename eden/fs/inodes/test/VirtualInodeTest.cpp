@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#include <algorithm>
+
 #include <folly/Exception.h>
 #include <folly/Random.h>
 #include <folly/coro/GtestHelpers.h>
@@ -992,6 +994,236 @@ TEST_P(VirtualInodeTestBase, getEntryAttributesDoesNotChangeState) {
     EXPECT_INODE_OR(virtualInode, *info.get());
   }
   VERIFY_TREE(VERIFY_DEFAULT ^ VERIFY_SHA1 ^ VERIFY_BLAKE3);
+}
+
+TEST_P(VirtualInodeTestBase, underAclTracksAclRootForDirectoryFileAndSymlink) {
+  FakeTreeBuilder builder;
+  builder.setFile("regular/file.txt", "regular");
+  builder.setFile("acl_dir/file.txt", "secret");
+  builder.setSymlink("acl_dir/link", "file.txt");
+  builder.setDirHasAcl("acl_dir");
+  auto mount = TestMount{builder};
+
+  auto getUnderAcl = [&](RelativePathPiece path) {
+    return mount.getVirtualInode(path)
+        .getEntryAttributes(
+            ENTRY_ATTRIBUTE_UNDER_ACL,
+            path,
+            mount.getEdenMount()->getObjectStore(),
+            mount.getEdenMount()->getLastCheckoutTime().toTimespec(),
+            ObjectFetchContext::getNullContext())
+        .get()
+        .underAcl->value();
+  };
+
+  EXPECT_FALSE(getUnderAcl(RelativePathPiece{"regular"}));
+  EXPECT_FALSE(getUnderAcl(RelativePathPiece{"regular/file.txt"}));
+  EXPECT_TRUE(getUnderAcl(RelativePathPiece{"acl_dir"}));
+  EXPECT_TRUE(getUnderAcl(RelativePathPiece{"acl_dir/file.txt"}));
+  EXPECT_TRUE(getUnderAcl(RelativePathPiece{"acl_dir/link"}));
+}
+
+CO_TEST(VirtualInodeTest, co_getChildrenAttributesPreservesInheritedUnderAcl) {
+  FakeTreeBuilder builder;
+  builder.setFile("acl_dir/nested/file.txt", "secret");
+  builder.setDirHasAcl("acl_dir");
+  auto mount = TestMount{builder};
+
+  mount.getTreeInode("acl_dir/nested");
+  auto nested = mount.getVirtualInode("acl_dir/nested");
+  auto edenMount = mount.getEdenMount();
+  auto results = co_await nested.co_getChildrenAttributes(
+      ENTRY_ATTRIBUTE_UNDER_ACL,
+      RelativePath{"acl_dir/nested"},
+      edenMount->getObjectStore(),
+      edenMount->getLastCheckoutTime().toTimespec(),
+      ObjectFetchContext::getNullContext());
+
+  auto it = std::find_if(results.begin(), results.end(), [](const auto& entry) {
+    return entry.first == PathComponentPiece{"file.txt"};
+  });
+  if (it == results.end()) {
+    ADD_FAILURE() << "file.txt missing from child attributes";
+    co_return;
+  }
+  if (!it->second.hasValue()) {
+    ADD_FAILURE() << it->second.exception().what();
+    co_return;
+  }
+  const auto& underAcl = it->second.value().underAcl;
+  if (!underAcl.has_value()) {
+    ADD_FAILURE() << "UNDER_ACL attribute missing";
+    co_return;
+  }
+  EXPECT_TRUE(underAcl->value());
+}
+
+TEST_P(VirtualInodeTestBase, localUnderAclComputationCanBeDisabled) {
+  FakeTreeBuilder builder;
+  builder.setFile("regular/file.txt", "regular");
+  builder.setFile("acl_dir/file.txt", "secret");
+  builder.setDirHasAcl("acl_dir");
+  auto mount = TestMount{builder};
+  maybeEnableCoroutines(mount);
+
+  auto getAttributes = [&](RelativePathPiece path) {
+    return mount.getVirtualInode(path)
+        .getEntryAttributes(
+            ENTRY_ATTRIBUTE_UNDER_ACL | ENTRY_ATTRIBUTE_ACLs,
+            path,
+            mount.getEdenMount()->getObjectStore(),
+            mount.getEdenMount()->getLastCheckoutTime().toTimespec(),
+            ObjectFetchContext::getNullContext())
+        .get();
+  };
+
+  auto regularAttributes = getAttributes(RelativePathPiece{"regular/file.txt"});
+  EXPECT_TRUE(regularAttributes.underAcl.has_value());
+  EXPECT_FALSE(regularAttributes.underAcl->value());
+  EXPECT_TRUE(regularAttributes.aclInfo.has_value());
+  EXPECT_FALSE(regularAttributes.aclInfo->value().underAcl);
+  EXPECT_TRUE(regularAttributes.aclInfo->value().acls.empty());
+
+  auto restrictedAttributes =
+      getAttributes(RelativePathPiece{"acl_dir/file.txt"});
+  EXPECT_TRUE(restrictedAttributes.underAcl.has_value());
+  EXPECT_TRUE(restrictedAttributes.underAcl->value());
+  EXPECT_FALSE(restrictedAttributes.aclInfo.has_value());
+
+  mount.updateEdenConfig({
+      {"acl:enable-local-under-acl-computation", "false"},
+  });
+
+  regularAttributes = getAttributes(RelativePathPiece{"regular/file.txt"});
+  EXPECT_FALSE(regularAttributes.underAcl.has_value());
+  EXPECT_FALSE(regularAttributes.aclInfo.has_value());
+
+  restrictedAttributes = getAttributes(RelativePathPiece{"acl_dir/file.txt"});
+  EXPECT_FALSE(restrictedAttributes.underAcl.has_value());
+}
+
+TEST_P(VirtualInodeTestBase, underAclUnavailableWhenAclMetadataIsUnknown) {
+  FakeTreeBuilder builder;
+  builder.setFile("unknown_acl/file.txt", "secret");
+  builder.setDirHasAclUnknown("unknown_acl");
+  auto mount = TestMount{builder};
+
+  auto getAttributes = [&](RelativePathPiece path) {
+    return mount.getVirtualInode(path)
+        .getEntryAttributes(
+            ENTRY_ATTRIBUTE_UNDER_ACL,
+            path,
+            mount.getEdenMount()->getObjectStore(),
+            mount.getEdenMount()->getLastCheckoutTime().toTimespec(),
+            ObjectFetchContext::getNullContext())
+        .get();
+  };
+
+  EXPECT_FALSE(
+      getAttributes(RelativePathPiece{"unknown_acl"}).underAcl.has_value());
+  EXPECT_FALSE(getAttributes(RelativePathPiece{"unknown_acl/file.txt"})
+                   .underAcl.has_value());
+}
+
+TEST(VirtualInodeTest, hasACLUsesKnownStateFromEitherTreeSource) {
+  auto makeVirtualInode = [](std::optional<bool> hasACL) {
+    return VirtualInode{
+        std::make_shared<const Tree>(
+            Tree::container{kPathMapDefaultCaseSensitive},
+            ObjectId{"aclstate"},
+            makeAclRootState(/*isRestricted=*/false, hasACL)),
+        S_IFDIR | 0755};
+  };
+
+  auto treeKnownFalse = makeVirtualInode(false);
+  treeKnownFalse.setHasACL(std::nullopt);
+  ASSERT_TRUE(treeKnownFalse.hasACL().has_value());
+  EXPECT_FALSE(*treeKnownFalse.hasACL());
+  EXPECT_FALSE(treeKnownFalse.isUnderAcl().has_value());
+  treeKnownFalse.inheritAclFromAncestor(false);
+  ASSERT_TRUE(treeKnownFalse.isUnderAcl().has_value());
+  EXPECT_FALSE(*treeKnownFalse.isUnderAcl());
+
+  auto entryKnownFalse = makeVirtualInode(std::nullopt);
+  entryKnownFalse.setHasACL(false);
+  ASSERT_TRUE(entryKnownFalse.hasACL().has_value());
+  EXPECT_FALSE(*entryKnownFalse.hasACL());
+  EXPECT_FALSE(entryKnownFalse.isUnderAcl().has_value());
+  entryKnownFalse.inheritAclFromAncestor(false);
+  ASSERT_TRUE(entryKnownFalse.isUnderAcl().has_value());
+  EXPECT_FALSE(*entryKnownFalse.isUnderAcl());
+}
+
+TEST(VirtualInodeTest, ancestorAclKeepsUnknownWhenChildAclStateIsUnknown) {
+  auto child = VirtualInode{
+      std::make_shared<const Tree>(
+          Tree::container{kPathMapDefaultCaseSensitive},
+          ObjectId{"aclstate"},
+          AclRootState::Unknown),
+      S_IFDIR | 0755};
+
+  child.inheritAclFromAncestor(false);
+  EXPECT_FALSE(child.isUnderAcl().has_value());
+
+  child.inheritAclFromAncestor(true);
+  ASSERT_TRUE(child.isUnderAcl().has_value());
+  EXPECT_TRUE(*child.isUnderAcl());
+}
+
+TEST(VirtualInodeTest, rootInodeHasKnownAncestorAclState) {
+  FakeTreeBuilder builder;
+  auto mount = TestMount{builder};
+  auto root =
+      VirtualInode{static_cast<InodePtr>(mount.getEdenMount()->getRootInode())};
+
+  ASSERT_TRUE(root.hasACL().has_value());
+  EXPECT_FALSE(*root.hasACL());
+  ASSERT_TRUE(root.isUnderAcl().has_value());
+  EXPECT_FALSE(*root.isUnderAcl());
+}
+
+CO_TEST(
+    VirtualInodeTest,
+    co_getChildrenAttributesTreatsUnknownRootAsKnownFalse) {
+  FakeTreeBuilder builder;
+  builder.setFile("regular.txt", "regular");
+  builder.setDirHasAclUnknown(RelativePathPiece{});
+  auto mount = TestMount{builder};
+  auto root =
+      VirtualInode{static_cast<InodePtr>(mount.getEdenMount()->getRootInode())};
+  auto edenMount = mount.getEdenMount();
+
+  auto results = co_await root.co_getChildrenAttributes(
+      ENTRY_ATTRIBUTE_UNDER_ACL | ENTRY_ATTRIBUTE_ACLs,
+      RelativePath{},
+      edenMount->getObjectStore(),
+      edenMount->getLastCheckoutTime().toTimespec(),
+      ObjectFetchContext::getNullContext());
+
+  auto it = std::find_if(results.begin(), results.end(), [](const auto& entry) {
+    return entry.first == "regular.txt"_pc;
+  });
+  if (it == results.end()) {
+    ADD_FAILURE() << "regular.txt missing from root child attributes";
+    co_return;
+  }
+  if (!it->second.hasValue()) {
+    ADD_FAILURE() << it->second.exception().what();
+    co_return;
+  }
+
+  const auto& attributes = it->second.value();
+  if (!attributes.underAcl.has_value()) {
+    ADD_FAILURE() << "UNDER_ACL attribute missing";
+    co_return;
+  }
+  EXPECT_FALSE(attributes.underAcl->value());
+  if (!attributes.aclInfo.has_value()) {
+    ADD_FAILURE() << "ACL info missing";
+    co_return;
+  }
+  EXPECT_FALSE(attributes.aclInfo->value().underAcl);
+  EXPECT_TRUE(attributes.aclInfo->value().acls.empty());
 }
 
 TEST_P(VirtualInodeTestBase, getEntryAttributesAttributeError) {

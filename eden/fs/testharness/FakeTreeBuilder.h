@@ -10,6 +10,7 @@
 #include <folly/ExceptionWrapper.h>
 #include <folly/Range.h>
 #include <memory>
+#include <optional>
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/PathMap.h"
 #include "eden/fs/model/TreeEntry.h"
