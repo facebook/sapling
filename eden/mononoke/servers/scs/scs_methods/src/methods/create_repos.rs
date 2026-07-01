@@ -101,6 +101,7 @@ fn initial_acl_grants(hipster_group: &str) -> Vec<AclPermissionChange> {
             "read",
             vec![
                 (AUTH_SET, "cocomatic_service_identities"),
+                (AUTH_SET, "coding_crewmates"),
                 (AUTH_SET, "svcscm_read_all"),
                 (AUTH_SET, "svnuser"),
                 (SERVICE_IDENTITY, "aosp_megarepo_service_identity"),
@@ -1424,6 +1425,30 @@ mod tests {
         assert_eq!(
             make_full_acl_name_from_repo_name("par-msl/risk-test"),
             "repos/git/par-msl/risk-test",
+        );
+    }
+
+    #[cfg(fbcode_build)]
+    #[mononoke::test]
+    fn test_initial_acl_grants_include_coding_crewmates_read() {
+        // Every newly-created per-repo Git ACL must grant read to
+        // AUTH_SET:coding_crewmates so all Meta engineers can clone the
+        // repo. Removing this grant would silently regress the eliminate
+        // -per-repo-onboarding-friction commitment made after the
+        // provide_gitimport_read_access.sh backfill; grep for that script
+        // name before deleting this assertion.
+        let grants = initial_acl_grants("some_hipster_group");
+        let read = grants
+            .iter()
+            .find(|g| g.action == "read")
+            .expect("initial_acl_grants must contain a read action");
+        let has_coding_crewmates = read
+            .entry_changes
+            .iter()
+            .any(|e| e.entry.id_type == AUTH_SET && e.entry.id_data == "coding_crewmates");
+        assert!(
+            has_coding_crewmates,
+            "initial_acl_grants read action must grant AUTH_SET:coding_crewmates",
         );
     }
 
