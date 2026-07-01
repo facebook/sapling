@@ -36,6 +36,7 @@ mononoke_app::subcommands! {
     mod changelog;
     mod commit;
     mod commit_graph;
+    mod config;
     mod convert;
     mod cross_repo;
     mod cross_repo_config;

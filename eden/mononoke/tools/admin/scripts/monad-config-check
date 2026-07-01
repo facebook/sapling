@@ -1,0 +1,75 @@
+#!/bin/bash
+# monad-config-check — wrapper around `mononoke_admin config check` that
+# sets up a local-configerator-path layout from the user's configerator
+# working copy, then invokes the subcommand.
+#
+# Why this wrapper:
+#   `mononoke_admin --local-configerator-path <dir>` expects files at
+#   `<dir>/<configerator-key>` (no extension), but a configerator
+#   working copy stores them at
+#   `<root>/materialized_configs/<key>.materialized_JSON`. This script
+#   builds a temp dir of symlinks in the expected layout and invokes
+#   mononoke_admin against it.
+#
+# Usage (from any configerator working copy, after `conf build`):
+#
+#   sl status | monad-config-check --stdin
+#   monad-config-check --repo aosp/manifest
+#   monad-config-check --from-changed-files /tmp/paths.txt
+#
+# Env overrides:
+#   MONONOKE_ADMIN_BIN   path to mononoke_admin binary (default: `mononoke_admin` on PATH)
+#   CONFIGERATOR_ROOT    configerator working-copy root (default: cwd if it contains materialized_configs/, else error)
+#   MONAD_CHECK_TIER     tier to load against (default: scs)
+
+set -euo pipefail
+
+ADMIN_BIN="${MONONOKE_ADMIN_BIN:-mononoke_admin}"
+TIER="${MONAD_CHECK_TIER:-scs}"
+
+# Resolve configerator root.
+if [[ -n "${CONFIGERATOR_ROOT:-}" ]]; then
+    ROOT="$CONFIGERATOR_ROOT"
+elif [[ -d "./materialized_configs" ]]; then
+    ROOT="$(pwd)"
+else
+    echo "error: not in a configerator working copy (no ./materialized_configs)." >&2
+    echo "       cd into your configerator checkout or set CONFIGERATOR_ROOT=<path>." >&2
+    exit 2
+fi
+
+if [[ ! -d "$ROOT/materialized_configs/scm/mononoke/repos/tiers" ]]; then
+    echo "error: $ROOT/materialized_configs/scm/mononoke/repos/tiers does not exist." >&2
+    echo "       Have you run \`conf build\` yet?" >&2
+    exit 2
+fi
+
+# Build the symlink layout under a temp dir. ConfigStore::file serves files
+# at <root>/<configerator-key>, so we strip the `.materialized_JSON` suffix
+# and drop the `materialized_configs/` prefix.
+TMPDIR="$(mktemp -d -t monad-config-check.XXXXXX)"
+trap 'rm -rf "$TMPDIR"' EXIT
+
+# Mirror everything under materialized_configs/scm/mononoke/. The
+# RepoFactory facet build reads from several paths beyond
+# repos/ (redaction sets, hooks, blobstore configs, etc.) — listing
+# them explicitly is fragile, so just symlink the whole subtree.
+# Cost: ~10k symlinks, ~3s on a warm cache.
+count=0
+src="$ROOT/materialized_configs/scm/mononoke"
+if [[ -d "$src" ]]; then
+    while IFS= read -r -d '' f; do
+        rel="${f#"$ROOT"/materialized_configs/}"
+        target="$TMPDIR/${rel%.materialized_JSON}"
+        mkdir -p "$(dirname "$target")"
+        ln -s "$f" "$target"
+        count=$((count + 1))
+    done < <(find "$src" -name "*.materialized_JSON" -print0)
+fi
+
+echo "monad-config-check: linked $count materialized configs from $ROOT to $TMPDIR" >&2
+
+exec "$ADMIN_BIN" \
+    --config-tier "$TIER" \
+    --local-configerator-path "$TMPDIR" \
+    config check "$@"
