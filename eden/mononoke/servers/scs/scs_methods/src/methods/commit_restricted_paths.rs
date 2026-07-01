@@ -89,6 +89,9 @@ pub(crate) async fn restricted_paths_access_impl(
                         .map(|info| thrift::PathRestrictionRoot {
                             path: info.restriction_root().to_string(),
                             acls: vec![info.repo_region_acl().to_string()],
+                            permission_request_group: Some(
+                                info.permission_request_group().id_data().to_string(),
+                            ),
                             ..Default::default()
                         })
                         .collect(),
@@ -157,6 +160,9 @@ pub(crate) async fn find_nested_restricted_roots(
                 path: info.restriction_root().to_string(),
                 acls: vec![info.repo_region_acl().to_string()],
                 has_access: if check_permissions { info.has_access } else { None },
+                permission_request_group: Some(
+                    info.permission_request_group().id_data().to_string(),
+                ),
                 ..Default::default()
             });
         }
@@ -437,32 +443,7 @@ mod tests {
     ) -> Result<ChangesetContext<Repo>> {
         let restricted_paths =
             create_test_restricted_paths_with_acl_provider(fb, path_acls, acl_provider).await?;
-        let ctx = CoreContext::test_mock(fb);
-
-        let repo: Repo = TestRepoFactory::new(fb)
-            .context("Failed to create TestRepoFactory")?
-            .with_restricted_paths(restricted_paths)
-            .build()
-            .await
-            .context("Failed to build test repo")?;
-
-        let root_cs_id = CreateCommitContext::new_root(&ctx, &repo)
-            .add_file("file.txt", "content")
-            .commit()
-            .await
-            .context("Failed to create root commit")?;
-
-        let repo_ctx = RepoContext::new_test(ctx.clone(), Arc::new(repo))
-            .await
-            .context("Failed to create test RepoContext")?;
-
-        let cs_ctx = repo_ctx
-            .changeset(root_cs_id)
-            .await
-            .context(format!("Failed to resolve changeset {root_cs_id}"))?
-            .ok_or_else(|| anyhow::anyhow!("Changeset {root_cs_id} not found"))?;
-
-        Ok(cs_ctx)
+        changeset_with_restricted_paths(fb, restricted_paths, "file.txt").await
     }
 
     // Tests for `restricted_paths_access_impl`
@@ -484,6 +465,12 @@ mod tests {
             .expect("Expected restriction root for 'restricted/dir'");
         assert_eq!(roots[0].path, "restricted/dir");
         assert_eq!(roots[0].acls, vec!["TIER:my-acl"]);
+        // No explicit permission_request_group configured, so it defaults to the
+        // repo_region_acl identity `TIER:my-acl`, surfaced as its data portion.
+        assert_eq!(
+            roots[0].permission_request_group,
+            Some("my-acl".to_string())
+        );
 
         Ok(())
     }
@@ -754,7 +741,7 @@ mod tests {
         let result = collect_nested_roots_with_options(cs_ctx, filter, false, false).await?;
         Ok(result
             .into_iter()
-            .map(|(path, acl, _has_access)| (path, acl))
+            .map(|(path, acl, _has_access, _prg)| (path, acl))
             .collect())
     }
 
@@ -763,7 +750,7 @@ mod tests {
         filter: BTreeSet<String>,
         check_permissions: bool,
         return_only_accessible: bool,
-    ) -> Result<Vec<(String, String, Option<bool>)>> {
+    ) -> Result<Vec<(String, String, Option<bool>, Option<String>)>> {
         use futures::TryStreamExt;
         use scs_errors::LoggableError;
 
@@ -775,6 +762,7 @@ mod tests {
                     item.path,
                     item.acls.into_iter().next().unwrap_or_default(),
                     item.has_access,
+                    item.permission_request_group,
                 )
             })
             .try_collect()
@@ -943,6 +931,8 @@ mod tests {
                 "restricted".to_string(),
                 "REPO_REGION:restricted-acl".to_string(),
                 Some(true),
+                // permission_request_group defaults to the repo_region_acl data portion.
+                Some("restricted-acl".to_string()),
             )]
         );
 
@@ -984,6 +974,8 @@ mod tests {
                 "restricted".to_string(),
                 "REPO_REGION:restricted-acl".to_string(),
                 None,
+                // permission_request_group is populated regardless of permission checks.
+                Some("restricted-acl".to_string()),
             )]
         );
 
@@ -1062,5 +1054,144 @@ mod tests {
             compute_path_coverage(vec![false]),
             thrift::PathCoverage::NONE
         );
+    }
+
+    /// What it tests: a restriction root configured with an explicit
+    /// `permission_request_group` (distinct from its `repo_region_acl`) surfaces the
+    /// configured group in both the access response and the find stream.
+    /// Expected: `permission_request_group` == Some("some_group") on both shapes,
+    /// proving the builders read the effective group and not `repo_region_acl`.
+    #[mononoke::fbinit_test]
+    async fn test_permission_request_group_uses_configured_group(fb: FacebookInit) -> Result<()> {
+        let cs_ctx = create_test_changeset_with_group(
+            fb,
+            "restricted",
+            "REPO_REGION:restricted-acl",
+            "GROUP:some_group",
+        )
+        .await?;
+
+        // access response (PathRestrictionRoot)
+        let paths = BTreeSet::from(["restricted/file.txt".to_string()]);
+        let response = restricted_paths_access_impl(&cs_ctx, paths, false)
+            .await
+            .map_err(|err| anyhow::anyhow!("{err:?}"))?;
+        let roots = response
+            .restriction_roots
+            .get("restricted/file.txt")
+            .ok_or_else(|| anyhow::anyhow!("expected restriction root for restricted/file.txt"))?;
+        assert_eq!(
+            roots[0].permission_request_group,
+            Some("some_group".to_string()),
+            "access response should surface the configured group, not repo_region_acl"
+        );
+
+        // find stream (CommitFindRestrictedPathsStreamItem)
+        let found =
+            collect_nested_roots_with_options(&cs_ctx, BTreeSet::new(), false, false).await?;
+        assert_eq!(
+            found,
+            vec![(
+                "restricted".to_string(),
+                "REPO_REGION:restricted-acl".to_string(),
+                None,
+                Some("some_group".to_string()),
+            )],
+            "find stream should surface the configured group"
+        );
+
+        Ok(())
+    }
+
+    /// Parse restriction metadata for a single root that pins an explicit
+    /// `permission_request_group` distinct from its `repo_region_acl`, so a test can
+    /// assert the response surfaces the configured group rather than the ACL fallback.
+    fn build_path_restriction_metadata_with_group(
+        path: &str,
+        acl: &str,
+        group: &str,
+    ) -> Result<HashMap<NonRootMPath, PathRestrictionMetadata>> {
+        Ok(HashMap::from([(
+            NonRootMPath::new(path).context("Failed to create NonRootMPath from test path")?,
+            PathRestrictionMetadata {
+                repo_region_acl: MononokeIdentity::from_str(acl)
+                    .context("Failed to parse repo_region_acl identity")?,
+                permission_request_group: Some(
+                    MononokeIdentity::from_str(group)
+                        .context("Failed to parse permission_request_group identity")?,
+                ),
+                read_only: false,
+            },
+        )]))
+    }
+
+    /// Build a ChangesetContext whose single restriction root carries an explicit
+    /// `permission_request_group`. Mirrors `create_test_changeset` but injects the
+    /// group so tests can distinguish the configured group from the ACL fallback.
+    async fn create_test_changeset_with_group(
+        fb: FacebookInit,
+        path: &str,
+        acl: &str,
+        group: &str,
+    ) -> Result<ChangesetContext<Repo>> {
+        let config = RestrictedPathsConfig {
+            path_restriction_metadata: build_path_restriction_metadata_with_group(
+                path, acl, group,
+            )?,
+            use_manifest_id_cache: false,
+            cache_update_interval_ms: 100,
+            acl_manifest_mode: AclManifestMode::Disabled,
+            ..Default::default()
+        };
+        let manifest_id_store = Arc::new(
+            SqlRestrictedPathsManifestIdStoreBuilder::with_sqlite_in_memory()?
+                .with_repo_id(RepositoryId::new(0)),
+        );
+        let config_based = Arc::new(RestrictedPathsConfigBased::new(
+            config,
+            manifest_id_store,
+            None,
+        ));
+        let derived_data_repo: Repo = TestRepoFactory::new(fb)?.build().await?;
+        let restricted_paths = Arc::new(RestrictedPaths::new(
+            config_based,
+            DummyAclProvider::new(fb)?,
+            MononokeScubaSampleBuilder::with_discard(),
+            derived_data_repo.repo_derived_data_arc(),
+        )?);
+
+        changeset_with_restricted_paths(fb, restricted_paths, format!("{path}/file.txt").as_str())
+            .await
+    }
+
+    /// Build a root-commit ChangesetContext for a repo wired with the given
+    /// restricted paths, adding `file_path` so the commit has content to query.
+    /// Shared by `create_test_changeset_with_acl_provider` and
+    /// `create_test_changeset_with_group`.
+    async fn changeset_with_restricted_paths(
+        fb: FacebookInit,
+        restricted_paths: ArcRestrictedPaths,
+        file_path: &str,
+    ) -> Result<ChangesetContext<Repo>> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: Repo = TestRepoFactory::new(fb)
+            .context("Failed to create TestRepoFactory")?
+            .with_restricted_paths(restricted_paths)
+            .build()
+            .await
+            .context("Failed to build test repo")?;
+        let root_cs_id = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file(file_path, "content")
+            .commit()
+            .await
+            .context("Failed to create root commit")?;
+        let repo_ctx = RepoContext::new_test(ctx.clone(), Arc::new(repo))
+            .await
+            .context("Failed to create test RepoContext")?;
+        repo_ctx
+            .changeset(root_cs_id)
+            .await
+            .context(format!("Failed to resolve changeset {root_cs_id}"))?
+            .ok_or_else(|| anyhow::anyhow!("Changeset {root_cs_id} not found"))
     }
 }
