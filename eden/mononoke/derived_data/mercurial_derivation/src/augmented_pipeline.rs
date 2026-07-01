@@ -16,9 +16,11 @@ use async_trait::async_trait;
 use blobstore::Loadable;
 use context::CoreContext;
 use derived_data::prefetch_content_metadata;
+use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivationContext;
 use derived_data_manager::DerivationStagePayload;
 use derived_data_manager::PipelineDerivable;
+use derived_data_manager::StageId;
 use fbthrift::compact_protocol;
 use futures::StreamExt;
 use futures::TryStreamExt;
@@ -159,7 +161,9 @@ impl PipelineDerivable for RootHgAugmentedManifestId {
         parents: HashMap<ChangesetId, Self::StageOutput>,
         dependency_outputs: HashMap<ChangesetId, HashMap<MPath, Self::StageOutput>>,
     ) -> Result<HashMap<ChangesetId, Self::StageOutput>> {
-        let DerivationStagePayload::Manifest(payload) = payload;
+        let DerivationStagePayload::Manifest(payload) = payload else {
+            anyhow::bail!("{} has no finalize derive", Self::NAME);
+        };
         let stage_path = &payload.path;
 
         // Cross-type inputs at this stage (same-stage edges guarantee they are
@@ -168,9 +172,11 @@ impl PipelineDerivable for RootHgAugmentedManifestId {
         // here; they flow from the parent augmented subtree's hg_node_id, exactly
         // as the traversal recovers them.
         let csids: Vec<ChangesetId> = bonsais.iter().map(|b| b.get_changeset_id()).collect();
+        let hg_stage = StageId::Manifest(stage_path.clone());
+        let acl_stage = StageId::Manifest(stage_path.clone());
         let (hg_outputs, acl_outputs) = futures::future::try_join(
-            MappedHgChangesetId::fetch_stage_outputs(ctx, derivation, stage_path, csids.clone()),
-            RootAclManifestId::fetch_stage_outputs(ctx, derivation, stage_path, csids),
+            MappedHgChangesetId::fetch_stage_outputs(ctx, derivation, &hg_stage, csids.clone()),
+            RootAclManifestId::fetch_stage_outputs(ctx, derivation, &acl_stage, csids),
         )
         .await?;
 
@@ -253,8 +259,11 @@ impl PipelineDerivable for RootHgAugmentedManifestId {
         ctx: &CoreContext,
         derivation: &DerivationContext,
         derived: &RootHgAugmentedManifestId,
-        stage_path: &MPath,
+        stage: &StageId,
     ) -> Result<Self::StageOutput> {
+        let StageId::Manifest(stage_path) = stage else {
+            anyhow::bail!("{} has no finalize stage", Self::NAME);
+        };
         extract_stage_entry(
             ctx,
             derivation,
@@ -267,9 +276,12 @@ impl PipelineDerivable for RootHgAugmentedManifestId {
     async fn store_stage_outputs(
         ctx: &CoreContext,
         derivation: &DerivationContext,
-        stage_path: &MPath,
+        stage: &StageId,
         outputs: HashMap<ChangesetId, Self::StageOutput>,
     ) -> Result<()> {
+        let StageId::Manifest(stage_path) = stage else {
+            anyhow::bail!("{} has no finalize stage", Self::NAME);
+        };
         let use_normal_mapping = use_normal_mapping(stage_path);
         let key_prefix = derivation.mapping_key_prefix::<RootHgAugmentedManifestId>();
 
@@ -321,9 +333,12 @@ impl PipelineDerivable for RootHgAugmentedManifestId {
     async fn fetch_stage_outputs(
         ctx: &CoreContext,
         derivation: &DerivationContext,
-        stage_path: &MPath,
+        stage: &StageId,
         cs_ids: Vec<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, Self::StageOutput>> {
+        let StageId::Manifest(stage_path) = stage else {
+            anyhow::bail!("{} has no finalize stage", Self::NAME);
+        };
         let use_normal_mapping = use_normal_mapping(stage_path);
         let key_prefix = derivation.mapping_key_prefix::<RootHgAugmentedManifestId>();
 

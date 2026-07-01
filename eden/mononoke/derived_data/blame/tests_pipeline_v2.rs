@@ -21,6 +21,7 @@ use derived_data_manager::DerivationContext;
 use derived_data_manager::DerivationStagePayload;
 use derived_data_manager::ManifestStagePayload;
 use derived_data_manager::PipelineDerivable;
+use derived_data_manager::StageId;
 use fbinit::FacebookInit;
 use filestore::FilestoreConfig;
 use futures::FutureExt;
@@ -350,7 +351,9 @@ async fn derive_unode_stage_outputs(
     payload: &DerivationStagePayload,
     chain: &[ChangesetId],
 ) -> Result<()> {
-    let DerivationStagePayload::Manifest(manifest_payload) = payload;
+    let DerivationStagePayload::Manifest(manifest_payload) = payload else {
+        panic!("derive_unode_stage_outputs only supports manifest stages");
+    };
     let stage_path = manifest_payload.path.clone();
     let mut unode_outputs: HashMap<
         ChangesetId,
@@ -371,8 +374,13 @@ async fn derive_unode_stage_outputs(
             HashMap::new(),
         )
         .await?;
-        RootUnodeManifestId::store_stage_outputs(ctx, derivation_ctx, &stage_path, out.clone())
-            .await?;
+        RootUnodeManifestId::store_stage_outputs(
+            ctx,
+            derivation_ctx,
+            &StageId::Manifest(stage_path.clone()),
+            out.clone(),
+        )
+        .await?;
         unode_outputs.extend(out);
     }
     Ok(())
@@ -451,7 +459,16 @@ async fn test_namespaced_equality_verifies(fb: FacebookInit) -> Result<()> {
 
     let verified = with_just_knobs_async(
         namespaced_test_knobs(),
-        async { RootBlameV2::verify_stage(ctx, &derivation_ctx, c2, &stage_path).await }.boxed(),
+        async {
+            RootBlameV2::verify_stage(
+                ctx,
+                &derivation_ctx,
+                c2,
+                &StageId::Manifest(stage_path.clone()),
+            )
+            .await
+        }
+        .boxed(),
     )
     .await?;
     assert!(
@@ -496,7 +513,16 @@ async fn test_namespaced_missing_fails(fb: FacebookInit) -> Result<()> {
 
     let verified = with_just_knobs_async(
         namespaced_test_knobs(),
-        async { RootBlameV2::verify_stage(ctx, &derivation_ctx, c1, &stage_path).await }.boxed(),
+        async {
+            RootBlameV2::verify_stage(
+                ctx,
+                &derivation_ctx,
+                c1,
+                &StageId::Manifest(stage_path.clone()),
+            )
+            .await
+        }
+        .boxed(),
     )
     .await?;
     assert!(
@@ -593,7 +619,16 @@ async fn test_subtree_copy_rename_resolution(fb: FacebookInit) -> Result<()> {
 
     let verified = with_just_knobs_async(
         namespaced_subtree_test_knobs(),
-        async { RootBlameV2::verify_stage(ctx, &derivation_ctx, c2, &stage_path).await }.boxed(),
+        async {
+            RootBlameV2::verify_stage(
+                ctx,
+                &derivation_ctx,
+                c2,
+                &StageId::Manifest(stage_path.clone()),
+            )
+            .await
+        }
+        .boxed(),
     )
     .await?;
     assert!(
@@ -701,7 +736,16 @@ async fn test_merge_with_dep_pruning(fb: FacebookInit) -> Result<()> {
 
     let verified = with_just_knobs_async(
         namespaced_test_knobs(),
-        async { RootBlameV2::verify_stage(ctx, &derivation_ctx, merge, &stage_path).await }.boxed(),
+        async {
+            RootBlameV2::verify_stage(
+                ctx,
+                &derivation_ctx,
+                merge,
+                &StageId::Manifest(stage_path.clone()),
+            )
+            .await
+        }
+        .boxed(),
     )
     .await?;
     assert!(
@@ -895,7 +939,16 @@ async fn test_cross_stage_copy_into_non_root_stage(fb: FacebookInit) -> Result<(
 
     let verified = with_just_knobs_async(
         namespaced_test_knobs(),
-        async { RootBlameV2::verify_stage(ctx, &derivation_ctx, c2, &stage_path).await }.boxed(),
+        async {
+            RootBlameV2::verify_stage(
+                ctx,
+                &derivation_ctx,
+                c2,
+                &StageId::Manifest(stage_path.clone()),
+            )
+            .await
+        }
+        .boxed(),
     )
     .await?;
     assert!(
@@ -969,7 +1022,16 @@ async fn test_non_root_stage_in_stage_copy(fb: FacebookInit) -> Result<()> {
     // re-prefixing and in-stage rename resolution, must match canonical.
     let verified = with_just_knobs_async(
         namespaced_test_knobs(),
-        async { RootBlameV2::verify_stage(ctx, &derivation_ctx, c2, &stage_path).await }.boxed(),
+        async {
+            RootBlameV2::verify_stage(
+                ctx,
+                &derivation_ctx,
+                c2,
+                &StageId::Manifest(stage_path.clone()),
+            )
+            .await
+        }
+        .boxed(),
     )
     .await?;
     assert!(
@@ -1010,13 +1072,19 @@ async fn test_prod_mapping_round_trip(fb: FacebookInit) -> Result<()> {
                 .await?;
 
             let outputs: HashMap<ChangesetId, ()> = HashMap::from([(c1, ())]);
-            RootBlameV2::store_stage_outputs(ctx, &derivation_ctx, &stage_path, outputs).await?;
+            RootBlameV2::store_stage_outputs(
+                ctx,
+                &derivation_ctx,
+                &StageId::Manifest(stage_path.clone()),
+                outputs,
+            )
+            .await?;
 
             // Round-trip: fetch_stage_outputs reads back the stored output.
             let fetched = RootBlameV2::fetch_stage_outputs(
                 ctx,
                 &derivation_ctx,
-                &stage_path,
+                &StageId::Manifest(stage_path.clone()),
                 vec![c1],
             )
             .await?;

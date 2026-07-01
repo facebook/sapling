@@ -19,6 +19,7 @@ use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivableType;
 use derived_data_manager::DerivationContext;
 use derived_data_manager::PipelineDerivable;
+use derived_data_manager::StageId;
 use derived_data_manager::dependencies;
 use derived_data_service_if as thrift;
 use futures::FutureExt;
@@ -210,7 +211,7 @@ pub async fn get_fsnode_subtree_changes(
                         let stage_outputs = RootFsnodeId::fetch_stage_outputs(
                             &ctx,
                             derivation_ctx,
-                            &MPath::ROOT,
+                            &StageId::Manifest(MPath::ROOT),
                             vec![from_cs_id],
                         )
                         .await?;

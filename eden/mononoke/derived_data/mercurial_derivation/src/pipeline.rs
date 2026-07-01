@@ -15,9 +15,11 @@ use async_trait::async_trait;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingEntry;
 use context::CoreContext;
+use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivationContext;
 use derived_data_manager::DerivationStagePayload;
 use derived_data_manager::PipelineDerivable;
+use derived_data_manager::StageId;
 use fbthrift::compact_protocol;
 use futures::StreamExt;
 use futures::TryStreamExt;
@@ -175,9 +177,13 @@ async fn resolve_cross_stage_copy_sources(
     // first, falling back to the canonical derived value for parents that have
     // no pipeline terminal output yet. Pre-flip the canonical fallback leans on
     // bonsai_hg_mapping exactly as the manager does; we never read it directly.
-    let mut terminal_outputs =
-        MappedHgChangesetId::fetch_stage_outputs(ctx, derivation, &MPath::ROOT, needed.clone())
-            .await?;
+    let mut terminal_outputs = MappedHgChangesetId::fetch_stage_outputs(
+        ctx,
+        derivation,
+        &StageId::Manifest(MPath::ROOT),
+        needed.clone(),
+    )
+    .await?;
     let missing: Vec<ChangesetId> = needed
         .iter()
         .copied()
@@ -197,7 +203,7 @@ async fn resolve_cross_stage_copy_sources(
                 ctx,
                 derivation,
                 &derived,
-                &MPath::ROOT,
+                &StageId::Manifest(MPath::ROOT),
             )
             .await?;
             Ok::<_, Error>((parent_csid, output))
@@ -300,7 +306,9 @@ impl PipelineDerivable for MappedHgChangesetId {
         parents: HashMap<ChangesetId, Self::StageOutput>,
         dependency_outputs: HashMap<ChangesetId, HashMap<MPath, Self::StageOutput>>,
     ) -> Result<HashMap<ChangesetId, Self::StageOutput>> {
-        let DerivationStagePayload::Manifest(payload) = payload;
+        let DerivationStagePayload::Manifest(payload) = payload else {
+            anyhow::bail!("{} has no finalize derive", Self::NAME);
+        };
         let cur_stage_path = &payload.path;
         let blobstore = derivation.blobstore();
         let derivation_opts = HgChangesetDeriveOptions {
@@ -464,8 +472,11 @@ impl PipelineDerivable for MappedHgChangesetId {
         ctx: &CoreContext,
         derivation: &DerivationContext,
         derived: &MappedHgChangesetId,
-        stage_path: &MPath,
+        stage: &StageId,
     ) -> Result<Self::StageOutput> {
+        let StageId::Manifest(stage_path) = stage else {
+            anyhow::bail!("{} has no finalize stage", Self::NAME);
+        };
         let hg_cs_id = derived.hg_changeset_id();
         let envelope = hg_cs_id.load(ctx, derivation.blobstore()).await?;
         let root_mfid = envelope.manifestid();
@@ -489,9 +500,12 @@ impl PipelineDerivable for MappedHgChangesetId {
     async fn store_stage_outputs(
         ctx: &CoreContext,
         derivation: &DerivationContext,
-        stage_path: &MPath,
+        stage: &StageId,
         outputs: HashMap<ChangesetId, Self::StageOutput>,
     ) -> Result<()> {
+        let StageId::Manifest(stage_path) = stage else {
+            anyhow::bail!("{} has no finalize stage", Self::NAME);
+        };
         let use_normal_mapping = stage_path.is_root()
             && justknobs::eval(
                 "scm/mononoke:derived_data_pipeline_terminal_stage_prod_mapping",
@@ -546,9 +560,12 @@ impl PipelineDerivable for MappedHgChangesetId {
     async fn fetch_stage_outputs(
         ctx: &CoreContext,
         derivation: &DerivationContext,
-        stage_path: &MPath,
+        stage: &StageId,
         cs_ids: Vec<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, Self::StageOutput>> {
+        let StageId::Manifest(stage_path) = stage else {
+            anyhow::bail!("{} has no finalize stage", Self::NAME);
+        };
         let use_normal_mapping = stage_path.is_root()
             && justknobs::eval(
                 "scm/mononoke:derived_data_pipeline_terminal_stage_prod_mapping",

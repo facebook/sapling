@@ -25,6 +25,7 @@ enum DerivationPriority {
 /// have to re-read the live config to translate `stage_id` into paths.
 union DerivationStagePayload {
   1: ManifestStagePayload manifest;
+  2: FinalizeStagePayload finalize;
 }
 
 /// Payload for a manifest-style derivation stage. `path` is the absolute path
@@ -39,6 +40,12 @@ struct ManifestStagePayload {
   1: path.MPath path;
   2: list<path.MPathElement> deps;
 }
+
+/// Payload for the finalize derivation stage. Empty for now so fields can be
+/// added in a later behavior diff without changing the union arm type. Never
+/// constructed yet.
+@rust.Exhaustive
+struct FinalizeStagePayload {}
 
 @rust.Exhaustive
 struct DagItemInfo {

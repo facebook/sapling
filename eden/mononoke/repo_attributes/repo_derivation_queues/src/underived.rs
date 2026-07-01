@@ -314,7 +314,7 @@ async fn deduplicate(
             vec![DagItemDep {
                 dag_item_id: existing.id().clone(),
                 head_cs_id: existing.head_cs_id(),
-                stage_path: existing.stage_payload().map(|p| p.path().clone()),
+                stage_path: existing.stage_payload().and_then(|p| p.path().cloned()),
             }],
             ctx.metadata().client_info(),
             rejected.info().priority(),

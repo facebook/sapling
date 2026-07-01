@@ -14,9 +14,11 @@ use anyhow::anyhow;
 use async_trait::async_trait;
 use blobstore::Loadable;
 use context::CoreContext;
+use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivationContext;
 use derived_data_manager::DerivationStagePayload;
 use derived_data_manager::PipelineDerivable;
+use derived_data_manager::StageId;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use futures::stream;
@@ -109,7 +111,9 @@ impl PipelineDerivable for RootBlameV2 {
         _parents: HashMap<ChangesetId, Self::StageOutput>,
         _dependency_outputs: HashMap<ChangesetId, HashMap<MPath, Self::StageOutput>>,
     ) -> Result<HashMap<ChangesetId, Self::StageOutput>> {
-        let DerivationStagePayload::Manifest(payload) = payload;
+        let DerivationStagePayload::Manifest(payload) = payload else {
+            anyhow::bail!("{} has no finalize derive", Self::NAME);
+        };
         let stage_path = &payload.path;
 
         // Dep paths are immediate children of S (the payload stores only the
@@ -139,9 +143,13 @@ impl PipelineDerivable for RootBlameV2 {
         all_csids.sort();
         all_csids.dedup();
 
-        let unode_outputs =
-            RootUnodeManifestId::fetch_stage_outputs(ctx, derivation, stage_path, all_csids)
-                .await?;
+        let unode_outputs = RootUnodeManifestId::fetch_stage_outputs(
+            ctx,
+            derivation,
+            &StageId::Manifest(stage_path.clone()),
+            all_csids,
+        )
+        .await?;
 
         let mut results = HashMap::new();
 
@@ -308,7 +316,7 @@ impl PipelineDerivable for RootBlameV2 {
         _ctx: &CoreContext,
         _derivation: &DerivationContext,
         _derived: &RootBlameV2,
-        _stage_path: &MPath,
+        _stage: &StageId,
     ) -> Result<Self::StageOutput> {
         Ok(())
     }
@@ -316,9 +324,12 @@ impl PipelineDerivable for RootBlameV2 {
     async fn store_stage_outputs(
         ctx: &CoreContext,
         derivation: &DerivationContext,
-        stage_path: &MPath,
+        stage: &StageId,
         outputs: HashMap<ChangesetId, Self::StageOutput>,
     ) -> Result<()> {
+        let StageId::Manifest(stage_path) = stage else {
+            anyhow::bail!("{} has no finalize stage", Self::NAME);
+        };
         let use_normal_mapping = use_normal_mapping(stage_path);
         let key_prefix = derivation.mapping_key_prefix::<RootBlameV2>();
 
@@ -331,7 +342,7 @@ impl PipelineDerivable for RootBlameV2 {
                 let unode_outputs = RootUnodeManifestId::fetch_stage_outputs(
                     ctx,
                     derivation,
-                    &MPath::ROOT,
+                    &StageId::Manifest(MPath::ROOT),
                     vec![cs_id],
                 )
                 .await?;
@@ -365,9 +376,12 @@ impl PipelineDerivable for RootBlameV2 {
     async fn fetch_stage_outputs(
         ctx: &CoreContext,
         derivation: &DerivationContext,
-        stage_path: &MPath,
+        stage: &StageId,
         cs_ids: Vec<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, Self::StageOutput>> {
+        let StageId::Manifest(stage_path) = stage else {
+            anyhow::bail!("{} has no finalize stage", Self::NAME);
+        };
         let use_normal_mapping = use_normal_mapping(stage_path);
         let key_prefix = derivation.mapping_key_prefix::<RootBlameV2>();
 
@@ -393,8 +407,11 @@ impl PipelineDerivable for RootBlameV2 {
         ctx: &CoreContext,
         derivation: &DerivationContext,
         csid: ChangesetId,
-        stage_path: &MPath,
+        stage: &StageId,
     ) -> Result<bool> {
+        let StageId::Manifest(stage_path) = stage else {
+            anyhow::bail!("{} has no finalize stage", Self::NAME);
+        };
         // Blame is verified once per commit at the root stage (which runs last,
         // so all stages' blame is present); non-root stages are no-ops.
         if !stage_path.is_root() {

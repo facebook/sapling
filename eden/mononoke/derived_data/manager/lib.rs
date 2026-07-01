@@ -27,3 +27,5 @@ pub use self::manager::derive::VisitedDerivableTypesMap;
 pub use self::manager::derive::VisitedDerivableTypesMapStatic;
 pub use self::stage_payload::DerivationStagePayload;
 pub use self::stage_payload::ManifestStagePayload;
+pub use self::stage_payload::StageId;
+pub use self::stage_payload::StageKey;

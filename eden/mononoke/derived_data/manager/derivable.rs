@@ -271,19 +271,19 @@ pub trait PipelineDerivable: BonsaiDerivable {
     ///
     /// Used by the manager during the transitionary period when parents
     /// were derived without derivation pipeline. The manager derives the
-    /// parent fully, then calls this to extract the subtree at `stage_path`.
+    /// parent fully, then calls this to extract the subtree at `stage`.
     async fn extract_stage_output_from_derived(
         ctx: &CoreContext,
         derivation: &DerivationContext,
         derived: &Self,
-        stage_path: &MPath,
+        stage: &crate::stage_payload::StageId,
     ) -> Result<Self::StageOutput>;
 
     /// Store stage outputs. Key format and storage are owned by the implementer.
     async fn store_stage_outputs(
         ctx: &CoreContext,
         derivation: &DerivationContext,
-        stage_path: &MPath,
+        stage: &crate::stage_payload::StageId,
         outputs: HashMap<ChangesetId, Self::StageOutput>,
     ) -> Result<()>;
 
@@ -291,11 +291,11 @@ pub trait PipelineDerivable: BonsaiDerivable {
     async fn fetch_stage_outputs(
         ctx: &CoreContext,
         derivation: &DerivationContext,
-        stage_path: &MPath,
+        stage: &crate::stage_payload::StageId,
         cs_ids: Vec<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, Self::StageOutput>>;
 
-    /// Verify that the stage output stored for `csid` at `stage_path` is
+    /// Verify that the stage output stored for `csid` at `stage` is
     /// consistent with the canonical (non-pipeline) derived value.
     ///
     /// The default implementation compares the stored stage output against the
@@ -304,17 +304,16 @@ pub trait PipelineDerivable: BonsaiDerivable {
         ctx: &CoreContext,
         derivation: &DerivationContext,
         csid: ChangesetId,
-        stage_path: &MPath,
+        stage: &crate::stage_payload::StageId,
     ) -> Result<bool> {
-        let stage_outputs =
-            Self::fetch_stage_outputs(ctx, derivation, stage_path, vec![csid]).await?;
+        let stage_outputs = Self::fetch_stage_outputs(ctx, derivation, stage, vec![csid]).await?;
         let actual_output = stage_outputs
             .get(&csid)
             .ok_or_else(|| anyhow::anyhow!("Stage output not found for changeset {csid}"))?;
 
         let derived = derivation.fetch_dependency::<Self>(ctx, csid).await?;
         let expected_output =
-            Self::extract_stage_output_from_derived(ctx, derivation, &derived, stage_path).await?;
+            Self::extract_stage_output_from_derived(ctx, derivation, &derived, stage).await?;
 
         Ok(*actual_output == expected_output)
     }

@@ -441,7 +441,7 @@ async fn verify_pipeline_output<F: PipelineTestFixture>(
                     ctx,
                     cs_id,
                     derivable_type,
-                    stage_path,
+                    &derived_data_manager::StageId::Manifest(stage_path.clone()),
                 )
                 .await?;
                 if !matches {

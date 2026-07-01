@@ -1068,14 +1068,35 @@ impl DerivedDataManager {
     where
         Derivable: PipelineDerivable,
     {
-        let stage_path = payload.path().clone();
-        let stage_path_display = stage_path.to_string();
-        let crate::stage_payload::DerivationStagePayload::Manifest(manifest_payload) = payload;
-        let dep_paths: Vec<MPath> = manifest_payload
-            .deps
-            .iter()
-            .map(|element| stage_path.join(std::iter::once(element)))
-            .collect();
+        // Map the payload to its stage identity and dependency stages. Both
+        // Manifest and Finalize are dispatched to the trait implementation; a
+        // type that does not support a given stage fails inside its own trait
+        // methods (fetch/derive/store), not here.
+        let (stage, dep_paths): (crate::stage_payload::StageId, Vec<MPath>) = match payload {
+            crate::stage_payload::DerivationStagePayload::Manifest(manifest_payload) => {
+                let stage_path = manifest_payload.path.clone();
+                let dep_paths = manifest_payload
+                    .deps
+                    .iter()
+                    .map(|element| stage_path.join(std::iter::once(element)))
+                    .collect();
+                (
+                    crate::stage_payload::StageId::Manifest(stage_path),
+                    dep_paths,
+                )
+            }
+            crate::stage_payload::DerivationStagePayload::Finalize => {
+                // The finalize stage typically depends on the root manifest
+                // stage output (e.g. hg changeset generation needs the root
+                // manifest id), so resolve it as a dependency — it lands in
+                // `dependency_outputs` keyed at `MPath::ROOT`.
+                (crate::stage_payload::StageId::Finalize, vec![MPath::ROOT])
+            }
+        };
+        let stage_display = match &stage {
+            crate::stage_payload::StageId::Manifest(path) => path.to_string(),
+            crate::stage_payload::StageId::Finalize => "finalize".to_string(),
+        };
 
         async {
             self.check_enabled::<Derivable>()?;
@@ -1085,7 +1106,7 @@ impl DerivedDataManager {
             let derivation_ctx_ref = &derivation_ctx;
 
             let mut derived_data_scuba = self.derived_data_scuba::<Derivable>(ctx);
-            derived_data_scuba.add_stage_id(&stage_path_display);
+            derived_data_scuba.add_stage_id(&stage_display);
 
             let ctx = ctx.clone_and_reset();
             let ctx = self.set_derivation_session_class(ctx)?;
@@ -1122,7 +1143,7 @@ impl DerivedDataManager {
                 let parent_fetch = Derivable::fetch_stage_outputs(
                     ctx,
                     derivation_ctx_ref,
-                    &stage_path,
+                    &stage,
                     external_parent_csids.clone(),
                 );
 
@@ -1130,7 +1151,7 @@ impl DerivedDataManager {
                     let outputs = Derivable::fetch_stage_outputs(
                         ctx,
                         derivation_ctx_ref,
-                        dep_path,
+                        &crate::stage_payload::StageId::Manifest(dep_path.clone()),
                         csids.clone(),
                     )
                     .await?;
@@ -1158,7 +1179,7 @@ impl DerivedDataManager {
                                     ctx,
                                     derivation_ctx_ref,
                                     &derived,
-                                    &stage_path,
+                                    &stage,
                                 )
                                 .await?;
                                 Ok::<_, Error>((parent_csid, stage_output))
@@ -1212,7 +1233,7 @@ impl DerivedDataManager {
                         format!(
                             "failed to derive {} stage '{}' batch",
                             Derivable::NAME,
-                            stage_path_display,
+                            stage_display,
                         )
                     })?;
                     (stats.completion_time, derived)
@@ -1225,13 +1246,18 @@ impl DerivedDataManager {
                 let mut store_ctx = self.derivation_context(None);
                 store_ctx.enable_write_batching();
 
-                Derivable::store_stage_outputs(ctx, &store_ctx, &stage_path, derived.clone())
-                    .await
-                    .with_context(|| {
+                Derivable::store_stage_outputs(
+                    ctx,
+                    &store_ctx,
+                    &stage,
+                    derived.clone(),
+                )
+                .await
+                .with_context(|| {
                         format!(
                             "failed to store {} stage '{}' outputs",
                             Derivable::NAME,
-                            stage_path_display,
+                            stage_display,
                         )
                     })?;
 
@@ -1250,7 +1276,7 @@ impl DerivedDataManager {
             "derive_stage",
             repo = %self.repo_name(),
             ddt = %Derivable::NAME,
-            stage = %stage_path_display,
+            stage = %stage_display,
         ))
         .await
     }
@@ -1260,14 +1286,14 @@ impl DerivedDataManager {
         &self,
         ctx: &CoreContext,
         csid: ChangesetId,
-        stage_path: &MPath,
+        stage: &crate::stage_payload::StageId,
     ) -> Result<bool, DerivationError>
     where
         Derivable: PipelineDerivable,
     {
         let derivation_ctx = self.derivation_context(None);
         let outputs =
-            Derivable::fetch_stage_outputs(ctx, &derivation_ctx, stage_path, vec![csid]).await?;
+            Derivable::fetch_stage_outputs(ctx, &derivation_ctx, stage, vec![csid]).await?;
         Ok(outputs.contains_key(&csid))
     }
 
@@ -1277,13 +1303,13 @@ impl DerivedDataManager {
         &self,
         ctx: &CoreContext,
         csid: ChangesetId,
-        stage_path: &MPath,
+        stage: &crate::stage_payload::StageId,
     ) -> Result<bool, DerivationError>
     where
         Derivable: PipelineDerivable,
     {
         let derivation_ctx = self.derivation_context(None);
-        Ok(Derivable::verify_stage(ctx, &derivation_ctx, csid, stage_path).await?)
+        Ok(Derivable::verify_stage(ctx, &derivation_ctx, csid, stage).await?)
     }
 
     /// Fetch derived data for a changeset if it has previously been derived.

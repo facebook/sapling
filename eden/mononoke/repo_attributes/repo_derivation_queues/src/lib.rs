@@ -25,7 +25,6 @@ use futures::future::BoxFuture;
 use futures::stream::BoxStream;
 use mononoke_types::ChangesetId;
 use mononoke_types::DerivableType;
-use mononoke_types::MPathHash;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
 use serde::Deserialize;
@@ -44,6 +43,8 @@ pub struct DerivationQueueArgs {
 
 pub use derived_data_manager::DerivationStagePayload;
 pub use derived_data_manager::ManifestStagePayload;
+pub use derived_data_manager::StageId;
+pub use derived_data_manager::StageKey;
 
 pub use crate::dag_items::DagItemDep;
 pub use crate::dag_items::DagItemId;
@@ -317,7 +318,7 @@ impl DerivationQueueSummaryItem {
         self.dag_item_info.priority()
     }
 
-    pub fn stage_id(&self) -> Option<&MPathHash> {
+    pub fn stage_id(&self) -> Option<&StageKey> {
         self.dag_item_id.stage_id.as_ref()
     }
 

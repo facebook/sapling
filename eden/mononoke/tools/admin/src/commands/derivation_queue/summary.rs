@@ -133,7 +133,10 @@ async fn print_table(
                 None => "-".to_string(),
             };
             let type_cell = match item.stage_payload() {
-                Some(payload) => format!("{} (stage: {})", dd_type, payload.path()),
+                Some(payload) => match payload.path() {
+                    Some(path) => format!("{dd_type} (stage: {path})"),
+                    None => format!("{dd_type} (stage: finalize)"),
+                },
                 None => format!("{dd_type}"),
             };
             let mut row = row![

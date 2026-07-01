@@ -12,9 +12,11 @@ use anyhow::Result;
 use anyhow::anyhow;
 use async_trait::async_trait;
 use context::CoreContext;
+use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivationContext;
 use derived_data_manager::DerivationStagePayload;
 use derived_data_manager::PipelineDerivable;
+use derived_data_manager::StageId;
 use fbthrift::compact_protocol;
 use futures::StreamExt;
 use futures::TryStreamExt;
@@ -62,7 +64,9 @@ impl PipelineDerivable for RootContentManifestId {
         parents: HashMap<ChangesetId, Self::StageOutput>,
         dependency_outputs: HashMap<ChangesetId, HashMap<MPath, Self::StageOutput>>,
     ) -> Result<HashMap<ChangesetId, Self::StageOutput>> {
-        let DerivationStagePayload::Manifest(payload) = payload;
+        let DerivationStagePayload::Manifest(payload) = payload else {
+            anyhow::bail!("{} has no finalize derive", Self::NAME);
+        };
         let stage_path = &payload.path;
 
         let blobstore = derivation.blobstore();
@@ -140,8 +144,11 @@ impl PipelineDerivable for RootContentManifestId {
         ctx: &CoreContext,
         derivation: &DerivationContext,
         derived: &RootContentManifestId,
-        stage_path: &MPath,
+        stage: &StageId,
     ) -> Result<Self::StageOutput> {
+        let StageId::Manifest(stage_path) = stage else {
+            anyhow::bail!("{} has no finalize stage", Self::NAME);
+        };
         Ok(derived
             .content_manifest_id()
             .find_entry(
@@ -155,9 +162,12 @@ impl PipelineDerivable for RootContentManifestId {
     async fn store_stage_outputs(
         ctx: &CoreContext,
         derivation: &DerivationContext,
-        stage_path: &MPath,
+        stage: &StageId,
         outputs: HashMap<ChangesetId, Self::StageOutput>,
     ) -> Result<()> {
+        let StageId::Manifest(stage_path) = stage else {
+            anyhow::bail!("{} has no finalize stage", Self::NAME);
+        };
         let use_normal_mapping = stage_path.is_root()
             && justknobs::eval(
                 "scm/mononoke:derived_data_pipeline_terminal_stage_prod_mapping",
@@ -213,9 +223,12 @@ impl PipelineDerivable for RootContentManifestId {
     async fn fetch_stage_outputs(
         ctx: &CoreContext,
         derivation: &DerivationContext,
-        stage_path: &MPath,
+        stage: &StageId,
         cs_ids: Vec<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, Self::StageOutput>> {
+        let StageId::Manifest(stage_path) = stage else {
+            anyhow::bail!("{} has no finalize stage", Self::NAME);
+        };
         let use_normal_mapping = stage_path.is_root()
             && justknobs::eval(
                 "scm/mononoke:derived_data_pipeline_terminal_stage_prod_mapping",

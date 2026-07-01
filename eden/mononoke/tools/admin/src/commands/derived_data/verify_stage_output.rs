@@ -11,6 +11,7 @@ use bulk_derivation::BulkDerivation;
 use clap::Args;
 use context::CoreContext;
 use derived_data_manager::DerivedDataManager;
+use derived_data_manager::StageId;
 use mononoke_app::args::ChangesetArgs;
 use mononoke_app::args::DerivedDataArgs;
 use mononoke_types::MPath;
@@ -59,7 +60,7 @@ pub(super) async fn verify_stage_output(
             ctx,
             cs_id,
             derived_data_type,
-            &args.stage_path,
+            &StageId::Manifest(args.stage_path.clone()),
         )
         .await
         {
