@@ -1,0 +1,68 @@
+#!/bin/bash
+# fbpkg_mock — a stand-in for `fbpkg`, used by the monad-admin-resolve tests.
+#
+# It answers the three subcommands the resolver calls, driven by fixture
+# files under $MOCK_DIR:
+#   fbpkg info <pkg>:prod   -> cat $MOCK_DIR/info_<pkg>.txt (empty if absent)
+#   fbpkg versions <pkg>    -> cat $MOCK_DIR/versions_<pkg>.txt
+#   fbpkg fetch <pkg>:<ver> -d <dest> -o
+#                           -> create <dest>/<pkg>/<ver>/admin (executable)
+#                              and append "<pkg>:<ver>" to $MOCK_DIR/fetch.log
+#
+# $MOCK_DIR must be exported by the test. Unknown invocations exit 0 empty.
+
+set -euo pipefail
+
+: "${MOCK_DIR:?fbpkg_mock requires MOCK_DIR}"
+
+cmd="${1:-}"
+shift || true
+
+# Map a package spec (mononoke.admin or mononoke.admin:prod) to a fixture key.
+pkg_key() {
+    local spec="$1"
+    echo "${spec%%:*}"
+}
+
+case "$cmd" in
+    info)
+        # args: <pkg>:prod
+        f="$MOCK_DIR/info_$(pkg_key "${1:-}").txt"
+        [[ -f "$f" ]] && cat "$f"
+        ;;
+    versions)
+        # args: <pkg> [--show-revision]
+        f="$MOCK_DIR/versions_$(pkg_key "${1:-}").txt"
+        [[ -f "$f" ]] && cat "$f"
+        ;;
+    fetch)
+        # args: <pkg>:<ver> -d <dest> -o
+        spec="${1:-}"; shift || true
+        dest=""
+        while [[ $# -gt 0 ]]; do
+            case "$1" in
+                -d) dest="${2:-}"; shift 2 ;;
+                -o|-x|--extract|--organize) shift ;;
+                *) shift ;;
+            esac
+        done
+        pkg="${spec%%:*}"
+        ver="${spec#*:}"
+        echo "$spec" >> "$MOCK_DIR/fetch.log"
+        if [[ -n "${MOCK_FETCH_FAIL:-}" ]]; then
+            echo "fbpkg_mock: simulated fetch failure for $spec" >&2
+            exit 1
+        fi
+        out="$dest/$pkg/$ver"
+        mkdir -p "$out"
+        printf '#!/bin/bash\necho mock-admin\n' > "$out/admin"
+        chmod +x "$out/admin"
+        ;;
+    list)
+        f="$MOCK_DIR/list.txt"
+        [[ -f "$f" ]] && cat "$f"
+        ;;
+    *)
+        : # unknown subcommand: succeed silently
+        ;;
+esac

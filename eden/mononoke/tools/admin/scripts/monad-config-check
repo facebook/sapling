@@ -11,21 +11,73 @@
 #   builds a temp dir of symlinks in the expected layout and invokes
 #   mononoke_admin against it.
 #
+# By default it validates against the `mononoke.admin` fbpkg matching the
+# OLDEST Mononoke config parser deployed in prod (via monad-admin-resolve),
+# so a config that would crash the oldest deployed server on hot-reload is
+# caught locally before `jf submit`. Pass `--local` (or set
+# MONAD_CHECK_LOCAL=1) to validate against the `mononoke_admin` on your PATH
+# instead — faster for local iteration, but only tells you it parses on
+# trunk.
+#
 # Usage (from any configerator working copy, after `conf build`):
 #
 #   sl status | monad-config-check --stdin
 #   monad-config-check --repo aosp/manifest
 #   monad-config-check --from-changed-files /tmp/paths.txt
+#   monad-config-check --local --repo aosp/manifest   # skip version match
 #
 # Env overrides:
-#   MONONOKE_ADMIN_BIN   path to mononoke_admin binary (default: `mononoke_admin` on PATH)
+#   MONONOKE_ADMIN_BIN   explicit mononoke_admin binary; when set, skips
+#                        version resolution and uses it verbatim
+#   MONAD_CHECK_LOCAL    =1 to validate against the PATH binary (same as --local)
 #   CONFIGERATOR_ROOT    configerator working-copy root (default: cwd if it contains materialized_configs/, else error)
 #   MONAD_CHECK_TIER     tier to load against (default: scs)
 
 set -euo pipefail
 
-ADMIN_BIN="${MONONOKE_ADMIN_BIN:-mononoke_admin}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+RESOLVER="$SCRIPT_DIR/monad-admin-resolve"
 TIER="${MONAD_CHECK_TIER:-scs}"
+
+# Pull `--local` out of the argument list before it reaches `config check`.
+LOCAL=0
+ARGS=()
+for a in "$@"; do
+    case "$a" in
+        --local) LOCAL=1 ;;
+        *) ARGS+=("$a") ;;
+    esac
+done
+set -- ${ARGS[@]+"${ARGS[@]}"}
+
+# Resolve which mononoke_admin binary to validate against.
+#   1. explicit MONONOKE_ADMIN_BIN wins
+#   2. --local / MONAD_CHECK_LOCAL=1 → PATH binary (fast, trunk-only)
+#   3. default → version-matched admin via monad-admin-resolve, with a loud
+#      fall back to the PATH binary if resolution fails (never hard-blocks)
+if [[ -n "${MONONOKE_ADMIN_BIN:-}" ]]; then
+    ADMIN_BIN="$MONONOKE_ADMIN_BIN"
+    echo "monad-config-check: using MONONOKE_ADMIN_BIN=$ADMIN_BIN" >&2
+elif [[ "$LOCAL" == "1" || "${MONAD_CHECK_LOCAL:-0}" == "1" ]]; then
+    ADMIN_BIN="mononoke_admin"
+    echo "monad-config-check: --local: validating against mononoke_admin on PATH (trunk, not oldest deployed prod)" >&2
+elif RESOLVED="$("$RESOLVER")" && "$RESOLVED" config check --help >/dev/null 2>&1; then
+    # The version-matched admin exists AND supports `config check`. (The
+    # subcommand shipped in D110083435; an admin older than that landing
+    # won't have it — see the probe fall-through below.)
+    ADMIN_BIN="$RESOLVED"
+    echo "monad-config-check: version-matched admin: $ADMIN_BIN" >&2
+elif [[ -n "${RESOLVED:-}" ]]; then
+    # Resolution succeeded but the matched admin predates the `config check`
+    # subcommand. Fall back to PATH. This self-heals once D110083435
+    # propagates to the oldest deployed Mononoke (then the matched admin has
+    # the subcommand).
+    ADMIN_BIN="mononoke_admin"
+    echo "monad-config-check: WARNING: version-matched admin ($RESOLVED) predates the 'config check' subcommand (D110083435); falling back to mononoke_admin on PATH, which validates against TRUNK, not the oldest deployed prod binary. This self-heals once D110083435 propagates. Pass --local to silence." >&2
+else
+    ADMIN_BIN="mononoke_admin"
+    echo "monad-config-check: WARNING: could not resolve the version-matched admin; falling back to mononoke_admin on PATH. This validates against TRUNK, not the oldest deployed prod binary. Pass --local to silence this warning." >&2
+fi
 
 # Resolve configerator root.
 if [[ -n "${CONFIGERATOR_ROOT:-}" ]]; then

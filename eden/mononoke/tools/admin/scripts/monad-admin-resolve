@@ -1,0 +1,196 @@
+#!/bin/bash
+# monad-admin-resolve — resolve and fetch the `mononoke.admin` fbpkg whose
+# code matches the OLDEST currently-deployed Mononoke config parser in
+# `:prod`, then print the absolute path to its `mononoke_admin` binary on
+# stdout.
+#
+# Why:
+#   `monad-config-check` otherwise validates configs against whatever
+#   `mononoke_admin` is on the user's PATH — their local trunk build.
+#   Mononoke config parsing is strict, so a config that parses on trunk can
+#   still crash the oldest binary still deployed in prod when it hot-reloads.
+#   Fetching the admin that matches the oldest deployed parser gives the
+#   real "will this crash prod on reload?" guarantee — the local, pre-submit
+#   mirror of the Sandcastle `mononoke-config-verifier` gate.
+#
+# Contract:
+#   On success: prints ONE line to stdout — the path to the admin binary.
+#   On ANY failure: prints a distinct WARNING to stderr and exits non-zero.
+#   The caller (monad-config-check) treats a non-zero exit as "fall back to
+#   the PATH binary" — resolution never hard-blocks a user.
+#
+# Design doc:
+#   configerator source/scm/mononoke/docs/plans/
+#   2026-07-01-path-c-version-matched-config-check-design.md
+
+set -euo pipefail
+
+# Long-lived config-parsing consumers whose deployed :prod code sets the
+# compatibility floor. This is an explicit allowlist rather than
+# `fbpkg list mononoke` + an ignore-list: it avoids gating on unrelated
+# mononoke.* tools and needs no maintenance as new tools appear.
+#
+# `mononoke.git_server` is intentionally absent — it carries no `:prod`
+# fbpkg tag (deployed via a different mechanism), so it cannot be resolved
+# here; server/scs/lfs give the oldest-deployed signal.
+CONSUMERS=(
+    mononoke.server
+    mononoke.scs_server
+    mononoke.lfs_server
+)
+
+ADMIN_PKG="mononoke.admin"
+
+# Match the Sandcastle mononoke-config-verifier window: ignore consumers
+# whose :prod build is older than this. Building/fetching that far back is
+# fragile and usually means an abandoned or pinned service.
+MAX_AGE_DAYS="${MONAD_CHECK_MAX_AGE_DAYS:-60}"
+
+CACHE_ROOT="${MONAD_CHECK_CACHE:-$HOME/.cache/monad-config-check}"
+
+warn() { echo "monad-admin-resolve: WARNING: $*" >&2; }
+note() { echo "monad-admin-resolve: $*" >&2; }
+
+# Convert "YYYY-MM-DD HH:MM:SS" to epoch seconds; empty string on failure.
+to_epoch() {
+    local ts="$1"
+    [[ -n "$ts" ]] || { echo ""; return 0; }
+    date -d "$ts" +%s 2>/dev/null || echo ""
+}
+
+# Pull a "Label:" value out of `fbpkg info` text, trimming fbpkg's trailing
+# whitespace padding. Timestamps contain colons, so match only the label at
+# line start and keep everything after the first colon.
+info_field() {
+    # $1 = info text, $2 = label (literal, no regex metachars)
+    printf '%s\n' "$1" \
+        | sed -n "s/^[[:space:]]*$2:[[:space:]]*//p" \
+        | head -1 \
+        | sed 's/[[:space:]]*$//'
+}
+
+# --- 1) oldest deployed consumer, by Build Repo Time (source-control time) --
+find_oldest_consumer_epoch() {
+    local now max_age_secs oldest_epoch="" oldest_pkg="" oldest_ts="" checked=0
+    now=$(date +%s)
+    max_age_secs=$(( MAX_AGE_DAYS * 86400 ))
+
+    local pkg info brt epoch age
+    for pkg in "${CONSUMERS[@]}"; do
+        info=$(fbpkg info "$pkg:prod" 2>/dev/null || true)
+        if [[ -z "$info" ]]; then
+            warn "no fbpkg info for $pkg:prod (skipping)"
+            continue
+        fi
+        brt=$(info_field "$info" "Build Repo Time")
+        if [[ -z "$brt" ]]; then
+            warn "$pkg:prod has no Build Repo Time (skipping)"
+            continue
+        fi
+        epoch=$(to_epoch "$brt")
+        if [[ -z "$epoch" ]]; then
+            warn "$pkg:prod unparseable Build Repo Time '$brt' (skipping)"
+            continue
+        fi
+        age=$(( now - epoch ))
+        if (( age > max_age_secs )); then
+            warn "$pkg:prod is $(( age / 86400 ))d old (> ${MAX_AGE_DAYS}d, skipping)"
+            continue
+        fi
+        checked=$(( checked + 1 ))
+        if [[ -z "$oldest_epoch" ]] || (( epoch < oldest_epoch )); then
+            oldest_epoch="$epoch"; oldest_pkg="$pkg"; oldest_ts="$brt"
+        fi
+    done
+
+    if [[ -z "$oldest_epoch" ]]; then
+        warn "could not determine oldest deployed parser from: ${CONSUMERS[*]}"
+        return 1
+    fi
+    note "oldest deployed parser = $oldest_pkg @ $oldest_ts (checked $checked)"
+    echo "$oldest_epoch"
+}
+
+# --- 2) newest admin version built at or before the target ------------------
+# `Created` (package build time) is always >= `Build Repo Time` (source
+# time), so picking the newest admin whose Created <= target guarantees that
+# admin's SOURCE is at or before the oldest deployed parser — conservative in
+# the safe direction, no per-version metadata calls needed.
+pick_admin_version() {
+    local target_epoch="$1"
+    local versions best_ver="" best_epoch="" oldest_ver="" oldest_epoch=""
+    versions=$(fbpkg versions "$ADMIN_PKG" 2>/dev/null || true)
+    if [[ -z "$versions" ]]; then
+        warn "fbpkg versions $ADMIN_PKG returned nothing"
+        return 1
+    fi
+
+    # Rows look like:
+    #   mononoke.admin:2016  <uuid>  2026-06-25 07:52:14  NEVER  False  <tags>
+    local line ver created cepoch
+    while IFS= read -r line; do
+        [[ "$line" == "$ADMIN_PKG:"* ]] || continue
+        ver=${line%%[[:space:]]*}      # mononoke.admin:2016
+        ver=${ver#"$ADMIN_PKG":}       # 2016
+        created=$(awk '{print $3" "$4}' <<< "$line")  # date + time columns
+        cepoch=$(to_epoch "$created")
+        [[ -n "$cepoch" ]] || continue
+
+        # Track the globally-oldest version as a last resort.
+        if [[ -z "$oldest_epoch" ]] || (( cepoch < oldest_epoch )); then
+            oldest_epoch="$cepoch"; oldest_ver="$ver"
+        fi
+        # Newest version at or before the target.
+        if (( cepoch <= target_epoch )); then
+            if [[ -z "$best_epoch" ]] || (( cepoch > best_epoch )); then
+                best_epoch="$cepoch"; best_ver="$ver"
+            fi
+        fi
+    done <<< "$versions"
+
+    if [[ -n "$best_ver" ]]; then
+        echo "$best_ver"
+        return 0
+    fi
+    if [[ -n "$oldest_ver" ]]; then
+        warn "no $ADMIN_PKG built at/before target; using oldest available ($ADMIN_PKG:$oldest_ver)"
+        echo "$oldest_ver"
+        return 0
+    fi
+    warn "no usable $ADMIN_PKG versions found"
+    return 1
+}
+
+# --- 3) fetch (cached) and return the binary path ---------------------------
+fetch_admin() {
+    local ver="$1"
+    # `fbpkg fetch -d <dest> -o` extracts to <dest>/<pkg>/<version>/.
+    local bin="$CACHE_ROOT/$ADMIN_PKG/$ver/admin"
+    if [[ -x "$bin" ]]; then
+        note "cache hit $ADMIN_PKG:$ver"
+    else
+        mkdir -p "$CACHE_ROOT"
+        note "fetching $ADMIN_PKG:$ver ..."
+        # Send fbpkg's stdout to stderr so it never pollutes our one stdout
+        # line (the binary path).
+        if ! fbpkg fetch "$ADMIN_PKG:$ver" -d "$CACHE_ROOT" -o >&2; then
+            warn "fbpkg fetch $ADMIN_PKG:$ver failed"
+            return 1
+        fi
+    fi
+    if [[ ! -x "$bin" ]]; then
+        warn "fetched $ADMIN_PKG:$ver but $bin is missing or not executable"
+        return 1
+    fi
+    echo "$bin"
+}
+
+main() {
+    local target_epoch admin_ver bin
+    target_epoch=$(find_oldest_consumer_epoch) || return 1
+    admin_ver=$(pick_admin_version "$target_epoch") || return 1
+    bin=$(fetch_admin "$admin_ver") || return 1
+    echo "$bin"
+}
+
+main "$@"
