@@ -690,6 +690,10 @@ fn bypass_permission_groups_jk(
                 "scm/mononoke:resolve_bot_fbid_author_for_hook_bypass".to_string(),
                 justknobs::test_helpers::KnobVal::Bool(true),
             ),
+            (
+                "scm/mononoke:resolve_unixname_from_employee_service_for_hook_bypass".to_string(),
+                justknobs::test_helpers::KnobVal::Bool(true),
+            ),
         ]
         .into(),
     )
@@ -1007,20 +1011,17 @@ async fn test_no_bypass_rejection_is_not_annotated(fb: FacebookInit) {
 }
 
 // =========================================================================
-// Author-based bypass permission group tests
+// Author-based bypass permission group tests (use_client_identities off)
 //
-// These verify that group membership is checked against the changeset
-// author's identity (USER:<unixname>), not the pusher's TLS cert identity.
+// These verify that group membership is checked against the changeset author's
+// identity (USER:<unixname>), not the pusher's TLS cert identity.
 // =========================================================================
 
-/// What it tests: on the changeset-author path (JK pinned off), membership is
-/// checked against the author's unixname; the author ("test") is in the
+/// What it tests: on the changeset-author path, the author ("test") is in the
 /// allowlist.
 /// Expected: bypassed.
 #[mononoke::fbinit_test]
 async fn test_bypass_checks_commit_author_not_pusher(fb: FacebookInit) {
-    // The changeset author "Test User <test@fb.com>" extracts to unixname
-    // "test", which is the only member of the allowlist.
     let res = BypassScenario {
         checker: Some(allowlist(&["test"])),
         jk_use_client_identities: false,
@@ -1031,8 +1032,8 @@ async fn test_bypass_checks_commit_author_not_pusher(fb: FacebookInit) {
     assert_bypassed(&res);
 }
 
-/// What it tests: on the changeset-author path (JK pinned off), an author
-/// ("test") not in the allowlist is denied.
+/// What it tests: on the changeset-author path, an author ("test") not in the
+/// allowlist is denied.
 /// Expected: hook runs (rejected).
 #[mononoke::fbinit_test]
 async fn test_bypass_rejects_when_author_not_in_allowlist(fb: FacebookInit) {
@@ -1047,18 +1048,14 @@ async fn test_bypass_rejects_when_author_not_in_allowlist(fb: FacebookInit) {
 }
 
 // =========================================================================
-// Client-identity-based bypass permission group tests
+// Client-identity-based bypass permission group tests (use_client_identities on)
 //
-// These verify that, on the default-on client-identities path, group
-// membership is checked against the pusher's client identities (from
-// ctx.metadata()), NOT the changeset author. Each test forces author/client
-// divergence to prove the dispatch uses client identities.
+// These verify that, on the client-identities path, group membership is checked
+// against the pusher's client identities, NOT the changeset author.
 // =========================================================================
 
-/// What it tests: on the default client-identities path, the client identity
-/// ("client_user") is in the allowlist while the author ("test") is NOT — so a
-/// bypass can only be granted via the client identity. Proves the client
-/// identity, not the author, is used.
+/// What it tests: the client identity ("client_user") is in the allowlist while
+/// the author ("test") is NOT, so the bypass is granted via the client identity.
 /// Expected: bypassed.
 #[mononoke::fbinit_test]
 async fn test_bypass_with_client_identities_authorized(fb: FacebookInit) {
@@ -1072,9 +1069,9 @@ async fn test_bypass_with_client_identities_authorized(fb: FacebookInit) {
     assert_bypassed(&res);
 }
 
-/// What it tests: on the default client-identities path, the allowlist contains
-/// the author's unixname ("test") but NOT the client identity ("client_user").
-/// Proves the author is ignored.
+/// What it tests: the allowlist contains the author's unixname ("test") but NOT
+/// the client identity ("client_user"), so on the client-identities path the
+/// author is ignored and the bypass is denied.
 /// Expected: hook runs (rejected).
 #[mononoke::fbinit_test]
 async fn test_bypass_with_client_identities_unauthorized_ignores_author(fb: FacebookInit) {
@@ -1088,8 +1085,8 @@ async fn test_bypass_with_client_identities_unauthorized_ignores_author(fb: Face
     assert_hook_rejected(&res);
 }
 
-/// What it tests: on the default client-identities path, a request with no
-/// client identities fails closed (a real checker admits no one).
+/// What it tests: on the client-identities path, a request with no client
+/// identities fails closed.
 /// Expected: hook runs (rejected).
 #[mononoke::fbinit_test]
 async fn test_bypass_with_empty_client_identities_fails_closed(fb: FacebookInit) {

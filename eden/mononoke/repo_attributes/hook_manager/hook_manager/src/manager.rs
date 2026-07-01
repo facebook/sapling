@@ -8,6 +8,7 @@
 use std::collections::HashMap;
 use std::str;
 use std::sync::Arc;
+use std::sync::LazyLock;
 
 use anyhow::Error;
 use anyhow::Result;
@@ -15,6 +16,10 @@ use bookmarks_types::BookmarkKey;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
+#[cfg(fbcode_build)]
+use employee_service::MononokeEmployeeService;
+#[cfg(fbcode_build)]
+use employee_service::prod::ProdEmployeeService;
 use fbinit::FacebookInit;
 use futures::Future;
 use futures::FutureExt;
@@ -70,6 +75,10 @@ pub struct HookManager {
     scuba: MononokeScubaSampleBuilder,
     all_hooks_bypassed: bool,
     scuba_bypassed_commits: MononokeScubaSampleBuilder,
+    /// Resolves a commit author's email to their canonical unixname. `None` on
+    /// the test/disabled-ACL path.
+    #[cfg(fbcode_build)]
+    employee_service: Option<Arc<dyn MononokeEmployeeService + Send + Sync>>,
 }
 
 enum BypassAuthorizationResult {
@@ -125,6 +134,15 @@ impl HookManager {
                 hook_manager_params.bypassed_commits_scuba_table,
             )?;
 
+        // No production services when ACL checks are disabled (test path).
+        #[cfg(fbcode_build)]
+        let employee_service: Option<Arc<dyn MononokeEmployeeService + Send + Sync>> =
+            if hook_manager_params.disable_acl_checker {
+                None
+            } else {
+                Some(Arc::new(ProdEmployeeService::new(fb)?))
+            };
+
         Ok(HookManager {
             repo_name,
             hooks,
@@ -138,6 +156,8 @@ impl HookManager {
             all_hooks_bypassed: hook_manager_params.all_hooks_bypassed,
             scuba_bypassed_commits,
             repo_permission_checker,
+            #[cfg(fbcode_build)]
+            employee_service,
         })
     }
 
@@ -156,6 +176,8 @@ impl HookManager {
             all_hooks_bypassed: false,
             scuba_bypassed_commits: MononokeScubaSampleBuilder::with_discard(),
             repo_permission_checker: Arc::new(NeverAllowRepoPermissionChecker {}),
+            #[cfg(fbcode_build)]
+            employee_service: None,
         }
     }
 
@@ -237,9 +259,7 @@ impl HookManager {
             None,
             Some(self.repo_name.as_str()),
         );
-
         if !use_client_identities {
-            // Bypass was triggered and JK is enabled — check permission group
             return self
                 .check_bypass_authorization_with_changeset_author(
                     hook,
@@ -250,8 +270,8 @@ impl HookManager {
                 .await;
         }
 
-        // Bypass triggered + JK enabled — check permission group against
-        // pusher's client identities. Missing identities fail closed (hook runs).
+        // Check the permission group against the pusher's client identities.
+        // Missing identities fail closed (the hook runs).
         self.check_membership(hook, ctx.metadata().identities(), bypass_reason)
             .await
     }
@@ -284,12 +304,14 @@ impl HookManager {
         }
     }
 
-    /// Check if the commit author (or pusher, as fallback) is a member of the
-    /// hook's bypass permission group.
-    ///
-    /// When `changeset_author` is parseable as `"Name <user@host>"`, group
-    /// membership is checked against the extracted unixname. Otherwise falls
-    /// back to the pusher's TLS cert identities.
+    /// Check the permission group against the commit author's identity, falling
+    /// back to the pusher's client identities when the author is missing or
+    /// unparsable. When the author's `USER:<local-part>` identity is not in the
+    /// group, resolve their canonical unixname via the EmployeeService (JK-gated)
+    /// and check that instead -- this handles authors whose email local-part
+    /// differs from their unixname. The re-check can only ever upgrade
+    /// `Unauthorized` -> `Bypassed`; on any miss or error the original decision
+    /// stands.
     async fn check_bypass_authorization_with_changeset_author(
         &self,
         hook: &Hook,
@@ -297,27 +319,71 @@ impl HookManager {
         changeset_author: Option<&str>,
         bypass_reason: String,
     ) -> Result<BypassAuthorizationResult> {
-        // Killswitch to disable FBID parsing if it misbehaves on odd author strings.
         let resolve_bot_fbid = justknobs::eval(
             "scm/mononoke:resolve_bot_fbid_author_for_hook_bypass",
             None,
             Some(self.repo_name.as_str()),
         );
-        match changeset_author
+        let author_identity = match changeset_author
             .and_then(|author| extract_identity_from_author(author, resolve_bot_fbid))
         {
-            Some(author_identity) => {
-                let identity_set: MononokeIdentitySet = std::iter::once(author_identity).collect();
-                self.check_membership(hook, &identity_set, bypass_reason)
-                    .await
-            }
+            Some(author_identity) => author_identity,
             None => {
-                // Fallback to pusher identities if author is unavailable
-                // or unparsable
-                self.check_membership(hook, ctx.metadata().identities(), bypass_reason)
-                    .await
+                return self
+                    .check_membership(hook, ctx.metadata().identities(), bypass_reason)
+                    .await;
+            }
+        };
+
+        let is_user = author_identity.id_type() == "USER";
+        let result = self
+            .check_membership(
+                hook,
+                &std::iter::once(author_identity).collect(),
+                bypass_reason.clone(),
+            )
+            .await?;
+
+        if matches!(result, BypassAuthorizationResult::Unauthorized(_))
+            && is_user
+            && justknobs::eval(
+                "scm/mononoke:resolve_unixname_from_employee_service_for_hook_bypass",
+                None,
+                Some(self.repo_name.as_str()),
+            )
+        {
+            if let Some(unixname) = self.resolve_author_unixname(changeset_author).await {
+                let identity = MononokeIdentity::from_legacy_type_data("USER", &unixname);
+                return self
+                    .check_membership(hook, &std::iter::once(identity).collect(), bypass_reason)
+                    .await;
             }
         }
+        Ok(result)
+    }
+
+    /// Resolve the commit author's canonical unixname from their email via the
+    /// EmployeeService. `None` on any miss/error (logged) so callers fail closed.
+    #[cfg(fbcode_build)]
+    async fn resolve_author_unixname(&self, author: Option<&str>) -> Option<String> {
+        let email = author_email(author?)?;
+        let service = self.employee_service.as_ref()?;
+        match service.email_to_unixname(&email).await {
+            Ok(unixname) => unixname,
+            Err(e) => {
+                tracing::warn!(
+                    "hook bypass: unixname resolution failed for author '{email}': {e:?}; \
+                     keeping unauthorized decision"
+                );
+                None
+            }
+        }
+    }
+
+    /// OSS builds have no EmployeeService, so the re-check is a no-op.
+    #[cfg(not(fbcode_build))]
+    async fn resolve_author_unixname(&self, _author: Option<&str>) -> Option<String> {
+        None
     }
 
     pub fn set_hooks_for_bookmark(&mut self, bookmark: BookmarkOrRegex, hooks: Vec<String>) {
@@ -687,21 +753,31 @@ fn annotate_unauthorized_rejection(mut outcome: HookOutcome, group_name: &str) -
     outcome
 }
 
+/// Matches a changeset author of the form `Name <local-part@host>`, capturing
+/// the local-part and host.
+static AUTHOR_RE: LazyLock<Regex> = LazyLock::new(|| {
+    regex::RegexBuilder::new(".*<(.+)@(.+)>")
+        .case_insensitive(true)
+        .build()
+        .expect("valid regex")
+});
+
+/// Extract the `local-part@host` email from a changeset author "Name <user@host>".
+/// Used to resolve the author's canonical unixname via the EmployeeService.
+#[cfg(fbcode_build)]
+fn author_email(author: &str) -> Option<String> {
+    let caps = AUTHOR_RE.captures(author)?;
+    Some(format!(
+        "{}@{}",
+        caps.get(1)?.as_str(),
+        caps.get(2)?.as_str()
+    ))
+}
+
 /// Build a MononokeIdentity from a changeset author like "Name <user@host>".
 /// With `resolve_bot_fbid`, "noreply+<FBID>@fb.com" bot authors yield an FBID
 /// identity; everything else yields USER:<local-part>.
 fn extract_identity_from_author(author: &str, resolve_bot_fbid: bool) -> Option<MononokeIdentity> {
-    use std::sync::LazyLock;
-
-    use regex::RegexBuilder;
-
-    static AUTHOR_RE: LazyLock<Regex> = LazyLock::new(|| {
-        RegexBuilder::new(".*<(.+)@(.+)>")
-            .case_insensitive(true)
-            .build()
-            .expect("valid regex")
-    });
-
     let caps = AUTHOR_RE.captures(author)?;
     let local_part = caps.get(1)?.as_str();
     let host = caps.get(2)?.as_str();

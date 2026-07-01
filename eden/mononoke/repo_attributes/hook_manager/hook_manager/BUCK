@@ -1,3 +1,4 @@
+load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
 load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
 
 oncall("scm_server_treehugger")
@@ -64,5 +65,15 @@ rust_library(
         "//eden/mononoke/repo_attributes/repo_permission_checker:repo_permission_checker",
         "//eden/mononoke/repo_attributes/restricted_paths:restricted_paths",
         "//eden/mononoke/servers/slapi/slapi_server/context:context",
-    ],
+    ]
+    + (
+        # Only used under #[cfg(fbcode_build)] to resolve a commit author's
+        # canonical unixname for the hook-bypass permission re-check, so keep it
+        # out of the OSS build/Cargo.toml.
+        []
+        if rust_oss.is_oss_build()
+        else [
+            "//eden/mononoke/facebook/employee_service:employee_service",
+        ]
+    ),
 )
