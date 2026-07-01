@@ -500,12 +500,28 @@ pub(crate) async fn derive_from_parents(
     )
     .await?;
 
+    let parent_hg_cs_ids: Vec<HgChangesetId> =
+        parents.iter().map(|p| p.get_changeset_id()).collect();
+    // Subtree copies make generate_hg_changeset drop the file list, so skip the diff then.
+    let files = if subtree_changes.as_ref().is_none_or(|s| s.copies.is_empty()) {
+        compute_changed_files(
+            ctx.clone(),
+            blobstore.clone(),
+            manifest_id,
+            parents.first().map(|p| p.manifestid()),
+            parents.get(1).map(|p| p.manifestid()),
+        )
+        .await?
+    } else {
+        Vec::new()
+    };
     let (hg_cs_id, _) = generate_hg_changeset(
         ctx,
         blobstore,
         bonsai,
         manifest_id,
-        parents,
+        parent_hg_cs_ids,
+        files,
         subtree_changes,
         options,
     )
@@ -577,8 +593,27 @@ pub async fn derive_simple_hg_changeset_stack_without_copy_info(
         let mf_id = mf_ids.get(&cs_id).ok_or_else(|| {
             anyhow!("not found manifest for {cs_id} but should have derived it in this function")
         })?;
-        let (hg_changeset_id, hg_cs) =
-            generate_hg_changeset(ctx, blobstore, bonsai, *mf_id, parents, None, options).await?;
+        let parent_hg_cs_ids: Vec<HgChangesetId> =
+            parents.iter().map(|p| p.get_changeset_id()).collect();
+        let files = compute_changed_files(
+            ctx.clone(),
+            blobstore.clone(),
+            *mf_id,
+            parents.first().map(|p| p.manifestid()),
+            parents.get(1).map(|p| p.manifestid()),
+        )
+        .await?;
+        let (hg_changeset_id, hg_cs) = generate_hg_changeset(
+            ctx,
+            blobstore,
+            bonsai,
+            *mf_id,
+            parent_hg_cs_ids,
+            files,
+            None,
+            options,
+        )
+        .await?;
         res.insert(cs_id, MappedHgChangesetId::new(hg_changeset_id));
         parents = vec![hg_cs];
     }
@@ -591,7 +626,8 @@ pub(crate) async fn generate_hg_changeset(
     blobstore: &Arc<dyn KeyedBlobstore>,
     bcs: BonsaiChangeset,
     manifest_id: HgManifestId,
-    parents: Vec<HgBlobChangeset>,
+    parents: Vec<HgChangesetId>,
+    files: Vec<NonRootMPath>,
     subtree_changes: Option<HgSubtreeChanges>,
     options: &HgChangesetDeriveOptions,
 ) -> Result<(HgChangesetId, HgBlobChangeset), Error> {
@@ -606,31 +642,16 @@ pub(crate) async fn generate_hg_changeset(
     let p1 = parents.next();
     let p2 = parents.next();
 
-    let p1_hash = p1.as_ref().map(|p1| p1.get_changeset_id());
-    let p2_hash = p2.as_ref().map(|p2| p2.get_changeset_id());
-
-    let mf_p1 = p1.map(|p| p.manifestid());
-    let mf_p2 = p2.map(|p| p.manifestid());
-
-    let hg_parents = HgParents::new(
-        p1_hash.map(|h| h.into_nodehash()),
-        p2_hash.map(|h| h.into_nodehash()),
-    );
+    let hg_parents = HgParents::new(p1.map(|h| h.into_nodehash()), p2.map(|h| h.into_nodehash()));
 
     // Keep a record of any parents for now (i.e. > 2 parents). We'll store those in extras.
     let step_parents = parents;
 
+    // The changed-file list is computed by the caller (in parallel for batches);
+    // a subtree copy keeps the commit-text file list empty.
     let files = if subtree_changes.as_ref().is_none_or(|s| s.copies.is_empty()) {
-        compute_changed_files(
-            ctx.clone(),
-            blobstore.clone(),
-            manifest_id.clone(),
-            mf_p1,
-            mf_p2,
-        )
-        .await?
+        files
     } else {
-        // Presence of a subtree copy means we keep the file list in the commit text empty.
         Vec::new()
     };
 
@@ -648,7 +669,7 @@ pub(crate) async fn generate_hg_changeset(
             .collect(),
         message: bcs.message().to_string(),
     };
-    metadata.record_step_parents(step_parents.map(|blob| blob.get_changeset_id()));
+    metadata.record_step_parents(step_parents);
     if options.set_committer_field {
         match (bcs.committer(), bcs.committer_date()) {
             (Some(committer), Some(date)) => {

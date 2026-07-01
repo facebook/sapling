@@ -26,10 +26,15 @@ pub(super) struct VerifyStageOutputArgs {
     #[clap(flatten)]
     derived_data_args: DerivedDataArgs,
 
-    /// Absolute path of the pipeline stage to verify (e.g. `""` for root,
-    /// `"fbcode"` for the fbcode subtree).
-    #[clap(long, value_parser = |s: &str| MPath::new(s.as_bytes()))]
-    stage_path: MPath,
+    /// Absolute path of the pipeline manifest stage to verify (e.g. `""` for
+    /// root, `"fbcode"` for the fbcode subtree). Mutually exclusive with
+    /// `--finalize`.
+    #[clap(long, value_parser = |s: &str| MPath::new(s.as_bytes()), conflicts_with = "finalize")]
+    stage_path: Option<MPath>,
+
+    /// Verify the finalize stage instead of a manifest stage.
+    #[clap(long)]
+    finalize: bool,
 }
 
 pub(super) async fn verify_stage_output(
@@ -47,22 +52,22 @@ pub(super) async fn verify_stage_output(
         .pipeline_config
         .as_ref()
         .ok_or_else(|| anyhow!("repo has no derivation pipeline config"))?;
-    if !pipeline_config.stages.contains_key(&args.stage_path) {
-        return Err(anyhow!(
-            "Pipeline config has no stage at path {}",
-            args.stage_path,
-        ));
-    }
+
+    let stage = if args.finalize {
+        StageId::Finalize
+    } else {
+        let stage_path = args
+            .stage_path
+            .ok_or_else(|| anyhow!("either --stage-path or --finalize is required"))?;
+        if !pipeline_config.stages.contains_key(&stage_path) {
+            return Err(anyhow!("Pipeline config has no stage at path {stage_path}"));
+        }
+        StageId::Manifest(stage_path)
+    };
 
     for cs_id in cs_ids {
-        match BulkDerivation::verify_stage_output(
-            manager,
-            ctx,
-            cs_id,
-            derived_data_type,
-            &StageId::Manifest(args.stage_path.clone()),
-        )
-        .await
+        match BulkDerivation::verify_stage_output(manager, ctx, cs_id, derived_data_type, &stage)
+            .await
         {
             Ok(true) => println!("{cs_id}: Match"),
             Ok(false) => println!("{cs_id}: Mismatch"),

@@ -417,6 +417,23 @@ async fn run_pipeline(
                 .await?;
             }
         }
+
+        // Drive the finalize stage for types that have one, after all manifest
+        // stages of the batch are stored.
+        for &derivable_type in &plan.sorted_types {
+            let variant = derivable_type.into_pipeline_derivable_variant()?;
+            if !bulk_derivation::pipeline_has_finalize(variant) {
+                continue;
+            }
+            bulk_derivation::derive_stage_batch(
+                manager,
+                ctx,
+                batch.commits.clone(),
+                &DerivationStagePayload::Finalize,
+                variant,
+            )
+            .await?;
+        }
     }
     Ok(())
 }
@@ -450,6 +467,28 @@ async fn verify_pipeline_output<F: PipelineTestFixture>(
                         F::REPO_NAME,
                     );
                 }
+            }
+        }
+
+        // Verify the finalize stage for types that have one.
+        for &derivable_type in &plan.sorted_types {
+            let variant = derivable_type.into_pipeline_derivable_variant()?;
+            if !bulk_derivation::pipeline_has_finalize(variant) {
+                continue;
+            }
+            let matches = BulkDerivation::verify_stage_output(
+                manager,
+                ctx,
+                cs_id,
+                derivable_type,
+                &derived_data_manager::StageId::Finalize,
+            )
+            .await?;
+            if !matches {
+                bail!(
+                    "pipeline finalize output diverged from canonical: fixture={} cs_id={cs_id} type={derivable_type:?}",
+                    F::REPO_NAME,
+                );
             }
         }
     }
