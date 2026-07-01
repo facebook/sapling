@@ -1252,3 +1252,97 @@ impl BypassScenario {
         .unwrap()
     }
 }
+
+/// The end-to-end scenario this stack exists for: an author whose commit email
+/// local-part (`jdoe`) differs from their unixname (`johndoe`) can bypass a
+/// group-gated hook when they are in the bypass group under their unixname,
+/// because the EmployeeService resolves the author email to the canonical
+/// unixname. EmployeeService is fbcode-only.
+#[cfg(fbcode_build)]
+#[mononoke::fbinit_test]
+async fn test_bypass_resolves_author_email_to_group_unixname(fb: FacebookInit) {
+    use employee_service::MononokeEmployee;
+    use employee_service::MononokeEmployeeService;
+    use employee_service::mock::MockEmployeeService;
+
+    // jdoe@example.com -> uid 7 -> unixname "johndoe".
+    let service: Arc<dyn MononokeEmployeeService + Send + Sync> =
+        Arc::new(MockEmployeeService::new_with_employees(vec![
+            MononokeEmployee {
+                unixname: "johndoe".to_string(),
+                uid: 7,
+                email: "jdoe@example.com".to_string(),
+                fbid: 0,
+                manager_fbid: 0,
+                is_employed: true,
+            },
+        ]));
+
+    let changeset = BonsaiChangesetMut {
+        author: "John Doe <jdoe@example.com>".to_string(),
+        author_date: DateTime::from_timestamp(1584887580, 0).expect("Getting timestamp"),
+        message: "This commit has @bypass_hook in the message".to_string(),
+        file_changes: sorted_vector_map! {
+            to_mpath("dir1/file.txt") => FileChange::tracked(ONES_CTID, FileType::Regular, 10, None, GitLfs::FullContent),
+        },
+        ..Default::default()
+    }
+    .freeze()
+    .expect("Created changeset");
+
+    let ctx = ctx_with_identities(fb, &[]);
+    let mut hook_manager = setup_hook_manager(fb, hashmap! {}, hashmap! {}).await;
+    hook_manager.set_employee_service_for_test(service);
+    // Group admits the unixname "johndoe", NOT the email local-part "jdoe".
+    hook_manager.register_changeset_hook(
+        "hook1",
+        always_rejecting_changeset_hook(),
+        bypass_config_with_group(),
+        Some(allowlist(&["johndoe"])),
+    );
+    let bm = BookmarkKey::new("bm1").unwrap();
+    hook_manager.set_hooks_for_bookmark(bm.clone().into(), vec!["hook1".to_string()]);
+
+    // Permission groups on, the changeset-author path selected, and the
+    // EmployeeService canonical-unixname resolution enabled. No client identities
+    // on the request, so the author's identity drives the check.
+    let jk = justknobs::test_helpers::JustKnobsInMemory::new(
+        [
+            (
+                "scm/mononoke:enable_hook_bypass_permission_groups".to_string(),
+                justknobs::test_helpers::KnobVal::Bool(true),
+            ),
+            (
+                "scm/mononoke:check_hook_bypass_permission_group_with_client_identities"
+                    .to_string(),
+                justknobs::test_helpers::KnobVal::Bool(false),
+            ),
+            (
+                "scm/mononoke:resolve_bot_fbid_author_for_hook_bypass".to_string(),
+                justknobs::test_helpers::KnobVal::Bool(true),
+            ),
+            (
+                "scm/mononoke:resolve_unixname_from_employee_service_for_hook_bypass".to_string(),
+                justknobs::test_helpers::KnobVal::Bool(true),
+            ),
+        ]
+        .into(),
+    );
+
+    let changesets = [changeset];
+    let outcomes = justknobs::test_helpers::with_just_knobs_async(
+        jk,
+        Box::pin(hook_manager.run_changesets_hooks_for_bookmark(
+            &ctx,
+            &changesets,
+            &bm,
+            None,
+            CrossRepoPushSource::NativeToThisRepo,
+            PushAuthoredBy::User,
+        )),
+    )
+    .await
+    .unwrap();
+
+    assert_bypassed(&outcomes);
+}

@@ -24,7 +24,16 @@ rust_library(
         "//eden/mononoke/repo_attributes/hook_manager/hook_manager_testlib:hook_manager_testlib",
         "//eden/mononoke/repo_factory:test_repo_factory",
         "//eden/mononoke/tests/utils:tests_utils",
-    ],
+    ]
+    + (
+        # The employee-service mock used by the bypass author-resolution test is
+        # fbcode-only; the test using it is gated on #[cfg(fbcode_build)].
+        []
+        if rust_oss.is_oss_build()
+        else [
+            "//eden/mononoke/facebook/employee_service:employee_service",
+        ]
+    ),
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",

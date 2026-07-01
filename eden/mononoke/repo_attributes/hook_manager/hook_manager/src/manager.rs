@@ -181,6 +181,16 @@ impl HookManager {
         }
     }
 
+    /// Test-only: inject a mock EmployeeService for the bypass canonical-unixname
+    /// resolution path.
+    #[cfg(all(test, fbcode_build))]
+    pub(crate) fn set_employee_service_for_test(
+        &mut self,
+        service: Arc<dyn MononokeEmployeeService + Send + Sync>,
+    ) {
+        self.employee_service = Some(service);
+    }
+
     pub fn register_bookmark_hook(
         &mut self,
         hook_name: &str,
