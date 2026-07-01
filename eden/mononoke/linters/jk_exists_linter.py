@@ -20,6 +20,7 @@ Output: newline-delimited JSON (LintMessage schema) on stdout.
 from __future__ import annotations
 
 import argparse
+import bisect
 import json
 import re
 import shutil
@@ -79,9 +80,20 @@ def extract_jk_references_regex(
         except OSError:
             continue
 
+        lines = content.split("\n")
+        # Offset of the first character of each line, so a match's position can
+        # be mapped back to its line number with a binary search instead of
+        # rescanning the file prefix for every match.
+        line_starts = [0]
+        for line in lines:
+            line_starts.append(line_starts[-1] + len(line) + 1)
+
         for m in JK_STRING_RE.finditer(content):
             jk_name = m.group(1)
-            line_no = content[: m.start()].count("\n") + 1
+            line_idx = bisect.bisect_right(line_starts, m.start()) - 1
+            if lines[line_idx].lstrip().startswith("//"):
+                continue
+            line_no = line_idx + 1
             key = (filepath, line_no, jk_name)
             if key not in seen:
                 seen.add(key)
