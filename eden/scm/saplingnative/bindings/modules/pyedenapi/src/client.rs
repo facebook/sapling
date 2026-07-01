@@ -39,6 +39,8 @@ use edenapi_types::BubbleUploadProperties;
 use edenapi_types::CacheableSnapshot;
 use edenapi_types::CheckManifestPermissionRequest;
 use edenapi_types::CheckManifestPermissionResponse;
+use edenapi_types::CheckPathPermissionRequest;
+use edenapi_types::CheckPathPermissionResponse;
 use edenapi_types::CloudShareWorkspaceRequest;
 use edenapi_types::CloudShareWorkspaceResponse;
 use edenapi_types::CommitGraphEntry;
@@ -656,6 +658,32 @@ py_class!(pub class client |py| {
         };
         let entries = py
             .allow_threads(|| block_unless_interrupted(api.check_manifest_permission(request)))
+            .map_pyerr(py)?
+            .map_pyerr(py)?
+            .entries;
+        Ok(entries.map_ok(Serde).map_err(Into::into).into())
+    }
+
+    /// check_path_permission(hg_cs_id, paths) -> Iterable[response]
+    ///
+    /// Check restricted-path metadata for the given paths at `hg_cs_id`.
+    /// `hg_cs_id` is a 20-byte changeset ID. `paths` is a list of repo-relative paths.
+    def check_path_permission(
+        &self,
+        hg_cs_id: Serde<HgId>,
+        paths: Vec<PyPathBuf>,
+    ) -> PyResult<TStream<anyhow::Result<Serde<CheckPathPermissionResponse>>>> {
+        let api = self.inner(py).as_ref();
+        let paths = paths
+            .into_iter()
+            .map(|path| to_path(py, &path))
+            .collect::<PyResult<Vec<_>>>()?;
+        let request = CheckPathPermissionRequest {
+            hg_cs_id: hg_cs_id.0,
+            paths,
+        };
+        let entries = py
+            .allow_threads(|| block_unless_interrupted(api.check_path_permission(request)))
             .map_pyerr(py)?
             .map_pyerr(py)?
             .entries;

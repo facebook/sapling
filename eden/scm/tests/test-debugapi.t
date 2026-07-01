@@ -86,6 +86,11 @@ Test APIs:
    {"hgid": bin("112478962961147124edd43549aedd1a335e44bf"),
     "known": {"Ok": True}}]
 
+  $ sl debugapi -e check_path_permission -i "b'$B'" -i '["A"]'
+  [{"path": "A",
+    "result": {"Ok": {"has_access": True,
+                      "restriction_entries": []}}}]
+
   $ sl debugapi -e trees  -i '[("", "41b34f08c1356f6ad068e9ab9b43d984245111aa")]' -i '{"manifest_blob": True, "parents": True, "child_metadata": True, "augmented_trees":True }'
   [{"key": {"node": bin("41b34f08c1356f6ad068e9ab9b43d984245111aa"),
             "path": ""},
