@@ -133,6 +133,7 @@ fn log_execution_stats(
     let mut errorcode = 0;
     let mut failed_hooks = 0;
     let mut stderr = None;
+    let mut outcome_kind = "accepted";
 
     scuba.add_common_server_data();
     scuba.add_metadata(ctx.metadata());
@@ -144,6 +145,7 @@ fn log_execution_stats(
                 // Nothing to do
             }
             HookResult::Rejected(info) if log_only => {
+                outcome_kind = "log_only_rejected";
                 scuba.add("log_only_rejection", info.long_description.clone());
                 // Convert to accepted as we are only logging, but preserve any
                 // `extra_logs` the hook produced so they still reach the
@@ -152,12 +154,14 @@ fn log_execution_stats(
                 outcome.set_execution(HookExecution::accepted_with_logs(extra_logs));
             }
             HookResult::Rejected(info) => {
+                outcome_kind = "rejected";
                 failed_hooks = 1;
                 errorcode = 1;
                 stderr = Some(info.long_description.clone());
             }
         },
         Err(e) => {
+            outcome_kind = "error";
             errorcode = 1;
             stderr = Some(format!("{e:?}"));
             scuba.add("internal_failure", true);
@@ -182,6 +186,7 @@ fn log_execution_stats(
         .add("total_time", elapsed)
         .add("errorcode", errorcode)
         .add("failed_hooks", failed_hooks)
+        .add("outcome", outcome_kind)
         .log();
 }
 
