@@ -68,6 +68,9 @@ pub fn build<R: Send + Sync + Clone + 'static>(
     is_shadow_tier: bool,
     tls_ca_path: Option<&Path>,
 ) -> Result<SaplingRemoteApi, Error> {
+    #[cfg(fbcode_build)]
+    crate::utils::rim_shadow::init();
+
     let ctx = ServerContext::new(mononoke, will_exit);
 
     let log_middleware = if test_friendly_logging {

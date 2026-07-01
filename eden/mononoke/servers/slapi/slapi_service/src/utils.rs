@@ -30,6 +30,8 @@ pub mod commit_cloud_types;
 pub mod convert;
 pub mod monitor;
 pub mod rate_limit;
+#[cfg(fbcode_build)]
+pub mod rim_shadow;
 
 pub use cbor::cbor_mime;
 pub use cbor::cbor_stream_filtered_errors;

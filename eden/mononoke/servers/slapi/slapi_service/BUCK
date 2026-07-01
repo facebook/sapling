@@ -11,6 +11,8 @@ rust_library(
         if rust_oss.is_oss_build()
         else {
             "MononokeSaplingApiRequest_ods3_types": "//eden/mononoke/facebook/ods3_schemas:MononokeSaplingApiRequest_ods3-rust",
+            "backend_if": "//configerator/structs/rim/if:backend_if-rust",
+            "rim_ligen": "//rim_dev/ligen:rim_ligen-rs_bindings",
         }
     ),
     test_deps = [

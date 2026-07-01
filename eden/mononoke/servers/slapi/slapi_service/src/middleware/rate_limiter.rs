@@ -76,6 +76,11 @@ impl Middleware for ThrottleMiddleware {
         let metadata = state.try_borrow::<MetadataState>()?.metadata();
         let atlas = metadata.clientinfo_atlas();
 
+        #[cfg(fbcode_build)]
+        if justknobs::eval("scm/mononoke:edenapi_qps_rim_shadow", None, None) {
+            crate::utils::rim_shadow::shadow_check(&ctx, client_category, &client_main_id).await;
+        }
+
         let limit = rate_limiter.find_rate_limit(
             Metric::EdenApiQps,
             Some(identities.clone()),
