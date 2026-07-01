@@ -678,7 +678,10 @@ fn annotate_unauthorized_rejection(mut outcome: HookOutcome, group_name: &str) -
              group '{group_name}'. Request access to the group, or fix the issue above.",
             info.long_description,
         );
-        let extra_logs = outcome.get_execution().extra_logs.clone();
+        let extra_logs = ["Unauthorized bypass rejected".to_string()]
+            .into_iter()
+            .chain(outcome.get_execution().extra_logs.clone())
+            .collect();
         outcome.set_execution(HookExecution::rejected_with_logs(info, extra_logs));
     }
     outcome
