@@ -157,6 +157,8 @@ impl PipelineDerivable for RootHgAugmentedManifestId {
     const PIPELINE_DERIVABLE_VARIANT: PipelineDerivableVariant =
         PipelineDerivableVariant::HgAugmentedManifests;
 
+    const HAS_FINALIZE: bool = false;
+
     type StageOutput = Option<HgAugmentedManifestEntry>;
 
     async fn derive_stage_batch(

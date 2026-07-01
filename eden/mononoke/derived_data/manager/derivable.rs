@@ -247,6 +247,11 @@ pub trait DerivableUntopologically: BonsaiDerivable {
 pub trait PipelineDerivable: BonsaiDerivable {
     const PIPELINE_DERIVABLE_VARIANT: PipelineDerivableVariant;
 
+    /// Whether this type has a finalize stage distinct from its terminal
+    /// manifest stage. No default — every implementor must decide. A type that
+    /// sets this `true` must implement the `Finalize` arms of the stage methods.
+    const HAS_FINALIZE: bool;
+
     type StageOutput: Send + Sync + Clone + Debug + PartialEq + 'static;
 
     /// Derive a batch of changesets for a specific stage.

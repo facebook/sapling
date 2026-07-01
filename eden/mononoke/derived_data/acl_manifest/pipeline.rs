@@ -55,6 +55,8 @@ impl PipelineDerivable for RootAclManifestId {
     const PIPELINE_DERIVABLE_VARIANT: PipelineDerivableVariant =
         PipelineDerivableVariant::AclManifests;
 
+    const HAS_FINALIZE: bool = false;
+
     type StageOutput = Option<Entry<AclManifestId, AclManifestRestriction>>;
 
     async fn derive_stage_batch(

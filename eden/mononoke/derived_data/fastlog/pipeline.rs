@@ -86,6 +86,8 @@ fn pipeline_fastlog_key_prefix() -> &'static str {
 impl PipelineDerivable for RootFastlog {
     const PIPELINE_DERIVABLE_VARIANT: PipelineDerivableVariant = PipelineDerivableVariant::Fastlog;
 
+    const HAS_FINALIZE: bool = false;
+
     type StageOutput = ();
 
     async fn derive_stage_batch(

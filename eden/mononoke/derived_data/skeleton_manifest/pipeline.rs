@@ -51,6 +51,8 @@ impl PipelineDerivable for RootSkeletonManifestId {
     const PIPELINE_DERIVABLE_VARIANT: PipelineDerivableVariant =
         PipelineDerivableVariant::SkeletonManifests;
 
+    const HAS_FINALIZE: bool = false;
+
     type StageOutput = Option<Entry<SkeletonManifestId, ()>>;
 
     async fn derive_stage_batch(

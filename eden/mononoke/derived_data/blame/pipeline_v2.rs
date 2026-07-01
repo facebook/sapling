@@ -101,6 +101,8 @@ pub(crate) fn is_chokepoint(bonsai: &BonsaiChangeset, stage_path: &MPath) -> boo
 impl PipelineDerivable for RootBlameV2 {
     const PIPELINE_DERIVABLE_VARIANT: PipelineDerivableVariant = PipelineDerivableVariant::BlameV2;
 
+    const HAS_FINALIZE: bool = false;
+
     type StageOutput = ();
 
     async fn derive_stage_batch(

@@ -28,6 +28,7 @@ use derived_data_manager::DerivableType;
 use derived_data_manager::DerivableUntopologically;
 use derived_data_manager::DerivationError;
 use derived_data_manager::DerivedDataManager;
+use derived_data_manager::PipelineDerivable;
 use derived_data_manager::Rederivation;
 use derived_data_manager::SharedDerivationError;
 use derived_data_manager::StageId;
@@ -664,6 +665,23 @@ pub async fn verify_stage_output(
             ddm.verify_stage_output::<RootContentManifestId>(ctx, csid, stage)
                 .await
         }
+    }
+}
+
+/// Whether the given pipeline type has a finalize stage (a step distinct from
+/// its terminal manifest stage). Currently only HgChangesets does.
+pub fn pipeline_has_finalize(variant: PipelineDerivableVariant) -> bool {
+    match variant {
+        PipelineDerivableVariant::Fsnodes => RootFsnodeId::HAS_FINALIZE,
+        PipelineDerivableVariant::Unodes => RootUnodeManifestId::HAS_FINALIZE,
+        PipelineDerivableVariant::SkeletonManifestsV2 => RootSkeletonManifestV2Id::HAS_FINALIZE,
+        PipelineDerivableVariant::SkeletonManifests => RootSkeletonManifestId::HAS_FINALIZE,
+        PipelineDerivableVariant::BlameV2 => RootBlameV2::HAS_FINALIZE,
+        PipelineDerivableVariant::Fastlog => RootFastlog::HAS_FINALIZE,
+        PipelineDerivableVariant::AclManifests => RootAclManifestId::HAS_FINALIZE,
+        PipelineDerivableVariant::HgChangesets => MappedHgChangesetId::HAS_FINALIZE,
+        PipelineDerivableVariant::HgAugmentedManifests => RootHgAugmentedManifestId::HAS_FINALIZE,
+        PipelineDerivableVariant::ContentManifests => RootContentManifestId::HAS_FINALIZE,
     }
 }
 

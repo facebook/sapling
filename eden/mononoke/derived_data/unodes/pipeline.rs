@@ -58,6 +58,8 @@ fn stage_blobstore_key(stage_path: &MPath, key_prefix: &str, cs_id: ChangesetId)
 impl PipelineDerivable for RootUnodeManifestId {
     const PIPELINE_DERIVABLE_VARIANT: PipelineDerivableVariant = PipelineDerivableVariant::Unodes;
 
+    const HAS_FINALIZE: bool = false;
+
     type StageOutput = Option<Entry<ManifestUnodeId, FileUnodeId>>;
 
     async fn derive_stage_batch(

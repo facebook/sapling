@@ -54,6 +54,8 @@ impl PipelineDerivable for RootContentManifestId {
     const PIPELINE_DERIVABLE_VARIANT: PipelineDerivableVariant =
         PipelineDerivableVariant::ContentManifests;
 
+    const HAS_FINALIZE: bool = false;
+
     type StageOutput = Option<Entry<ContentManifestId, ContentManifestFile>>;
 
     async fn derive_stage_batch(

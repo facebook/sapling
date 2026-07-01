@@ -296,6 +296,8 @@ impl PipelineDerivable for MappedHgChangesetId {
     const PIPELINE_DERIVABLE_VARIANT: PipelineDerivableVariant =
         PipelineDerivableVariant::HgChangesets;
 
+    const HAS_FINALIZE: bool = false;
+
     type StageOutput = HgStageOutput;
 
     async fn derive_stage_batch(
