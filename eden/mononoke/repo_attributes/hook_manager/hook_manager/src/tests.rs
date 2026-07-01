@@ -672,23 +672,14 @@ async fn test_file_hook_is_symlink(fb: FacebookInit) {
 // =========================================================================
 
 fn bypass_permission_groups_jk(
-    enabled: bool,
     use_client_identities: bool,
 ) -> justknobs::test_helpers::JustKnobsInMemory {
     justknobs::test_helpers::JustKnobsInMemory::new(
         [
             (
-                "scm/mononoke:enable_hook_bypass_permission_groups".to_string(),
-                justknobs::test_helpers::KnobVal::Bool(enabled),
-            ),
-            (
                 "scm/mononoke:check_hook_bypass_permission_group_with_client_identities"
                     .to_string(),
                 justknobs::test_helpers::KnobVal::Bool(use_client_identities),
-            ),
-            (
-                "scm/mononoke:resolve_bot_fbid_author_for_hook_bypass".to_string(),
-                justknobs::test_helpers::KnobVal::Bool(true),
             ),
             (
                 "scm/mononoke:resolve_unixname_from_employee_service_for_hook_bypass".to_string(),
@@ -811,21 +802,6 @@ async fn test_bypass_with_group_unauthorized_user(fb: FacebookInit) {
     assert_hook_rejected(&res);
 }
 
-/// What it tests: group configured + unauthorized user, but the feature JK is
-/// disabled → the bypass falls back to today's (ungated) behavior.
-/// Expected: bypassed.
-#[mononoke::fbinit_test]
-async fn test_bypass_with_group_jk_disabled(fb: FacebookInit) {
-    let res = BypassScenario {
-        checker: Some(NeverMember::new().into()),
-        jk_enabled: false,
-        ..Default::default()
-    }
-    .run(fb)
-    .await;
-    assert_bypassed(&res);
-}
-
 /// What it tests: group configured but no bypass string → the hook runs.
 /// Expected: hook runs (rejected).
 #[mononoke::fbinit_test]
@@ -932,7 +908,7 @@ async fn test_unauthorized_bypass_file_hook_emits_single_rejection(fb: FacebookI
     // default_changeset touches 3 files; the file hook rejects each one.
     let changesets = [default_changeset()];
     let res = justknobs::test_helpers::with_just_knobs_async(
-        bypass_permission_groups_jk(true, true),
+        bypass_permission_groups_jk(true),
         Box::pin(hook_manager.run_changesets_hooks_for_bookmark(
             &ctx,
             &changesets,
@@ -1220,7 +1196,7 @@ fn assert_hook_rejected(outcomes: &[HookOutcome]) {
 ///
 /// Defaults: a permission-group bypass config, an always-rejecting hook, no
 /// checker, a changeset carrying the bypass message, no pushvars, no client
-/// identities, the feature enabled, and the client-identities path selected.
+/// identities, and the client-identities path selected.
 struct BypassScenario {
     bypass_config: HookConfig,
     hook: Box<dyn ChangesetHook>,
@@ -1228,7 +1204,6 @@ struct BypassScenario {
     changeset: BonsaiChangeset,
     pushvars: Option<HashMap<String, bytes::Bytes>>,
     client_identities: Vec<String>,
-    jk_enabled: bool,
     jk_use_client_identities: bool,
 }
 
@@ -1241,7 +1216,6 @@ impl Default for BypassScenario {
             changeset: changeset_with_bypass_msg(),
             pushvars: None,
             client_identities: Vec::new(),
-            jk_enabled: true,
             jk_use_client_identities: true,
         }
     }
@@ -1261,7 +1235,7 @@ impl BypassScenario {
 
         let changesets = [self.changeset];
         justknobs::test_helpers::with_just_knobs_async(
-            bypass_permission_groups_jk(self.jk_enabled, self.jk_use_client_identities),
+            bypass_permission_groups_jk(self.jk_use_client_identities),
             Box::pin(hook_manager.run_changesets_hooks_for_bookmark(
                 &ctx,
                 &changesets,
@@ -1326,23 +1300,15 @@ async fn test_bypass_resolves_author_email_to_group_unixname(fb: FacebookInit) {
     let bm = BookmarkKey::new("bm1").unwrap();
     hook_manager.set_hooks_for_bookmark(bm.clone().into(), vec!["hook1".to_string()]);
 
-    // Permission groups on, the changeset-author path selected, and the
-    // EmployeeService canonical-unixname resolution enabled. No client identities
-    // on the request, so the author's identity drives the check.
+    // The changeset-author path selected, and the EmployeeService
+    // canonical-unixname resolution enabled. No client identities on the request,
+    // so the author's identity drives the check.
     let jk = justknobs::test_helpers::JustKnobsInMemory::new(
         [
-            (
-                "scm/mononoke:enable_hook_bypass_permission_groups".to_string(),
-                justknobs::test_helpers::KnobVal::Bool(true),
-            ),
             (
                 "scm/mononoke:check_hook_bypass_permission_group_with_client_identities"
                     .to_string(),
                 justknobs::test_helpers::KnobVal::Bool(false),
-            ),
-            (
-                "scm/mononoke:resolve_bot_fbid_author_for_hook_bypass".to_string(),
-                justknobs::test_helpers::KnobVal::Bool(true),
             ),
             (
                 "scm/mononoke:resolve_unixname_from_employee_service_for_hook_bypass".to_string(),

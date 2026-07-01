@@ -254,16 +254,6 @@ impl HookManager {
             None => return Ok(BypassAuthorizationResult::NoBypass),
         };
 
-        // Check JustKnob — if disabled, allow bypass without group check
-        let jk_enabled = justknobs::eval(
-            "scm/mononoke:enable_hook_bypass_permission_groups",
-            None,
-            Some(self.repo_name.as_str()),
-        );
-        if !jk_enabled {
-            return Ok(BypassAuthorizationResult::Bypassed(bypass_reason));
-        }
-
         let use_client_identities = justknobs::eval(
             "scm/mononoke:check_hook_bypass_permission_group_with_client_identities",
             None,
@@ -340,14 +330,7 @@ impl HookManager {
         changeset_author: Option<&str>,
         bypass_reason: String,
     ) -> Result<BypassAuthorizationResult> {
-        let resolve_bot_fbid = justknobs::eval(
-            "scm/mononoke:resolve_bot_fbid_author_for_hook_bypass",
-            None,
-            Some(self.repo_name.as_str()),
-        );
-        let author_identity = match changeset_author
-            .and_then(|author| extract_identity_from_author(author, resolve_bot_fbid))
-        {
+        let author_identity = match changeset_author.and_then(extract_identity_from_author) {
             Some(author_identity) => author_identity,
             None => {
                 return self
@@ -800,9 +783,9 @@ fn author_email(author: &str) -> Option<String> {
 }
 
 /// Build a MononokeIdentity from a changeset author like "Name <user@host>".
-/// With `resolve_bot_fbid`, "noreply+<FBID>@fb.com" bot authors yield an FBID
-/// identity; everything else yields USER:<local-part>.
-fn extract_identity_from_author(author: &str, resolve_bot_fbid: bool) -> Option<MononokeIdentity> {
+/// "noreply+<FBID>@fb.com" bot authors yield an FBID identity; everything else
+/// yields USER:<local-part>.
+fn extract_identity_from_author(author: &str) -> Option<MononokeIdentity> {
     let caps = AUTHOR_RE.captures(author)?;
     let local_part = caps.get(1)?.as_str();
     let host = caps.get(2)?.as_str();
@@ -810,13 +793,9 @@ fn extract_identity_from_author(author: &str, resolve_bot_fbid: bool) -> Option<
     let is_internal = matches!(host.to_ascii_lowercase().as_str(), "fb.com" | "meta.com");
     // Codemod bots are Meiosis service users with no unixname; their FBID only
     // reaches us via the "noreply+<FBID>" author local-part, so recover it here.
-    let fbid = if resolve_bot_fbid {
-        local_part
-            .strip_prefix("noreply+")
-            .filter(|rest| !rest.is_empty() && rest.bytes().all(|b| b.is_ascii_digit()))
-    } else {
-        None
-    };
+    let fbid = local_part
+        .strip_prefix("noreply+")
+        .filter(|rest| !rest.is_empty() && rest.bytes().all(|b| b.is_ascii_digit()));
 
     Some(match fbid {
         Some(fbid) if is_internal => MononokeIdentity::from_legacy_type_data("FBID", fbid),
@@ -1186,12 +1165,10 @@ mod test {
     #[mononoke::test]
     fn test_extract_identity_from_author() {
         // Service-bot authors carry their FBID in the "noreply+<FBID>" local-part
-        // and, with the killswitch on, resolve to an FBID identity (the account
-        // added to bypass groups).
+        // and resolve to an FBID identity (the account added to bypass groups).
         assert_eq!(
             extract_identity_from_author(
                 "CleanupArcCallConduit Bot <noreply+2796533067383049@fb.com>",
-                true,
             ),
             Some(MononokeIdentity::from_legacy_type_data(
                 "FBID",
@@ -1199,19 +1176,19 @@ mod test {
             )),
         );
         assert_eq!(
-            extract_identity_from_author("Bot <noreply+123@meta.com>", true),
+            extract_identity_from_author("Bot <noreply+123@meta.com>"),
             Some(MononokeIdentity::from_legacy_type_data("FBID", "123")),
         );
 
         // Human authors keep resolving to a USER identity from the unixname.
         assert_eq!(
-            extract_identity_from_author("Jane Doe <jdoe@fb.com>", true),
+            extract_identity_from_author("Jane Doe <jdoe@fb.com>"),
             Some(MononokeIdentity::from_legacy_type_data("USER", "jdoe")),
         );
 
         // A non-numeric "noreply+" suffix is not an FBID; fall back to USER.
         assert_eq!(
-            extract_identity_from_author("Bot <noreply+abc@fb.com>", true),
+            extract_identity_from_author("Bot <noreply+abc@fb.com>"),
             Some(MononokeIdentity::from_legacy_type_data(
                 "USER",
                 "noreply+abc"
@@ -1220,7 +1197,7 @@ mod test {
 
         // The FBID shape is only trusted on internal domains.
         assert_eq!(
-            extract_identity_from_author("Bot <noreply+123@external.com>", true),
+            extract_identity_from_author("Bot <noreply+123@external.com>"),
             Some(MononokeIdentity::from_legacy_type_data(
                 "USER",
                 "noreply+123"
@@ -1228,29 +1205,7 @@ mod test {
         );
 
         // An unparsable author yields no identity (caller falls back to pusher).
-        assert_eq!(extract_identity_from_author("no-email-author", true), None);
-    }
-
-    #[mononoke::test]
-    fn test_extract_identity_from_author_killswitch_off() {
-        // With the killswitch off, the bot author keeps its pre-rollout (junk) USER
-        // identity from the whole local-part instead of resolving to its FBID.
-        assert_eq!(
-            extract_identity_from_author(
-                "CleanupArcCallConduit Bot <noreply+2796533067383049@fb.com>",
-                false,
-            ),
-            Some(MononokeIdentity::from_legacy_type_data(
-                "USER",
-                "noreply+2796533067383049"
-            )),
-        );
-
-        // Human authors are unaffected by the killswitch.
-        assert_eq!(
-            extract_identity_from_author("Jane Doe <jdoe@fb.com>", false),
-            Some(MononokeIdentity::from_legacy_type_data("USER", "jdoe")),
-        );
+        assert_eq!(extract_identity_from_author("no-email-author"), None);
     }
 
     #[mononoke::test]
