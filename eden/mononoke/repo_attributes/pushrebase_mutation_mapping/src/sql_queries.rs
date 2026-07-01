@@ -101,10 +101,7 @@ impl SqlPushrebaseMutationMapping {
 
 #[derive(Clone)]
 pub struct SqlPushrebaseMutationMappingConnection {
-    #[allow(dead_code)]
-    write_connection: Connection,
-    read_connection: Connection,
-    read_master_connection: Connection,
+    connections: SqlConnections,
 }
 
 impl SqlPushrebaseMutationMappingConnection {
@@ -120,14 +117,23 @@ impl SqlPushrebaseMutationMappingConnection {
     ) -> Result<Vec<ChangesetId>> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        let mut ids =
-            get_prepushrebase_ids(ctx, &self.read_connection, repo_id, successor_bcs_id).await?;
+        let mut ids = get_prepushrebase_ids(
+            ctx,
+            &self.connections.read_connection,
+            repo_id,
+            successor_bcs_id,
+        )
+        .await?;
         if ids.is_empty() {
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::SqlReadsMaster);
-            ids =
-                get_prepushrebase_ids(ctx, &self.read_master_connection, repo_id, successor_bcs_id)
-                    .await?;
+            ids = get_prepushrebase_ids(
+                ctx,
+                &self.connections.read_master_connection,
+                repo_id,
+                successor_bcs_id,
+            )
+            .await?;
         }
         Ok(ids)
     }
@@ -139,14 +145,8 @@ impl SqlConstruct for SqlPushrebaseMutationMappingConnection {
     const CREATION_QUERY: &'static str =
         include_str!("../schemas/sqlite-pushrebase-mutation-mapping.sql");
 
-    // We don't need the connections because we never use them.
-    // But we need SqlConstruct to get our SQL tables created in tests.
     fn from_sql_connections(connections: SqlConnections) -> Self {
-        Self {
-            write_connection: connections.write_connection,
-            read_connection: connections.read_connection,
-            read_master_connection: connections.read_master_connection,
-        }
+        Self { connections }
     }
 }
 

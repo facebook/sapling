@@ -33,7 +33,7 @@ use memcache::KeyGen;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use phases::Phase;
-use sql_ext::Connection;
+use sql_ext::SqlConnections;
 use sql_ext::mononoke_queries;
 use stats::prelude::*;
 
@@ -69,10 +69,7 @@ impl Caches {
 /// Object that reads/writes to phases db
 #[derive(Clone)]
 pub struct SqlPhasesStore {
-    pub(crate) write_connection: Connection,
-    pub(crate) read_connection: Connection,
-    #[allow(dead_code)]
-    pub(crate) read_master_connection: Connection,
+    pub(crate) connections: SqlConnections,
     pub(crate) caches: Arc<Caches>,
 }
 
@@ -143,7 +140,12 @@ impl SqlPhasesStore {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
 
-        InsertPhase::query(&self.write_connection, ctx.sql_query_telemetry(), &phases).await?;
+        InsertPhase::query(
+            &self.connections.write_connection,
+            ctx.sql_query_telemetry(),
+            &phases,
+        )
+        .await?;
         {
             let ctx = (ctx, repoid, self);
             let phases = csids
@@ -164,9 +166,12 @@ impl SqlPhasesStore {
         STATS::list_all.add_value(1);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        let ans =
-            SelectAllPublic::query(&self.read_connection, ctx.sql_query_telemetry(), &repo_id)
-                .await?;
+        let ans = SelectAllPublic::query(
+            &self.connections.read_connection,
+            ctx.sql_query_telemetry(),
+            &repo_id,
+        )
+        .await?;
         Ok(ans.into_iter().map(|x| x.0).collect())
     }
 
@@ -175,8 +180,12 @@ impl SqlPhasesStore {
         ctx: &CoreContext,
         repo_id: RepositoryId,
     ) -> Result<u64, Error> {
-        let ans = CountAllPublic::query(&self.read_connection, ctx.sql_query_telemetry(), &repo_id)
-            .await?;
+        let ans = CountAllPublic::query(
+            &self.connections.read_connection,
+            ctx.sql_query_telemetry(),
+            &repo_id,
+        )
+        .await?;
         Ok(ans.first().map_or(0, |(count,)| *count))
     }
 }
@@ -244,7 +253,7 @@ impl KeyedEntityStore<ChangesetId, SqlPhase> for CacheRequest<'_> {
 
         // NOTE: We only track public phases in the DB.
         let public = SelectPhases::query(
-            &mapping.read_connection,
+            &mapping.connections.read_connection,
             (*ctx).sql_query_telemetry(),
             repo_id,
             &cs_ids,

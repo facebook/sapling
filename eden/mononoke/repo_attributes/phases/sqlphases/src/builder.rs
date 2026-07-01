@@ -18,7 +18,6 @@ use mononoke_types::RepositoryId;
 use phases::ArcPhases;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
-use sql_ext::Connection;
 use sql_ext::SqlConnections;
 
 use crate::sql_phases::HeadsFetcher;
@@ -35,9 +34,7 @@ const MC_SITEVER: u32 = 0;
 /// intended to be used by Repo factories.
 #[derive(Clone)]
 pub struct SqlPhasesBuilder {
-    write_connection: Connection,
-    read_connection: Connection,
-    read_master_connection: Connection,
+    connections: SqlConnections,
     caches: Arc<Caches>,
 }
 
@@ -65,9 +62,7 @@ impl SqlPhasesBuilder {
 
     fn phases_store(self) -> SqlPhasesStore {
         SqlPhasesStore {
-            write_connection: self.write_connection,
-            read_connection: self.read_connection,
-            read_master_connection: self.read_master_connection,
+            connections: self.connections,
             caches: self.caches,
         }
     }
@@ -81,9 +76,7 @@ impl SqlConstruct for SqlPhasesBuilder {
     fn from_sql_connections(connections: SqlConnections) -> Self {
         let caches = Arc::new(Caches::new(CacheHandlerFactory::Noop, Self::key_gen()));
         Self {
-            write_connection: connections.write_connection,
-            read_connection: connections.read_connection,
-            read_master_connection: connections.read_master_connection,
+            connections,
             caches,
         }
     }
