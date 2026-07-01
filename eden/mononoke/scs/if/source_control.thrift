@@ -897,6 +897,8 @@ struct PathRestrictionRoot {
   1: Path path;
   /// ACLs protecting this restriction root
   2: list<PathAcl> acls;
+  /// Group name to request for access, e.g. "gradient_source_control" (group name only).
+  3: optional string permission_request_group;
 }
 
 /// Method parameters structures
@@ -2682,6 +2684,8 @@ struct CommitFindRestrictedPathsStreamItem {
   /// Whether the caller has authorization to access this restriction root.
   /// Present only when permission checks were requested.
   3: optional bool has_access;
+  /// Group name to request for access, e.g. "gradient_source_control" (group name only).
+  4: optional string permission_request_group;
 }
 
 struct CommitRestrictedPathsChangesResponse {
