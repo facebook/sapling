@@ -80,11 +80,17 @@ fn parent_aug_id(entry: &HgAugmentedManifestEntry) -> Option<HgAugmentedManifest
 /// entry, or the entry is the canonical empty acl manifest; `Some(id)` otherwise.
 fn normalize_acl_stage(
     output: Option<&Option<Entry<AclManifestId, AclManifestRestriction>>>,
+    cs_id: ChangesetId,
+    stage_path: &MPath,
 ) -> Result<Option<AclManifestId>> {
     if !justknobs::eval("scm/mononoke:add_acl_manifest_pointer", None, None) {
         return Ok(None);
     }
-    let id = match output.and_then(|o| o.as_ref()) {
+    // With the JK on, a missing acl output is a broken invariant (an entry absent at this path is fine).
+    let acl_output = output.ok_or_else(|| {
+        anyhow!("missing AclManifests stage output for {cs_id} at stage {stage_path}")
+    })?;
+    let id = match acl_output.as_ref() {
         Some(Entry::Tree(id)) => *id,
         Some(Entry::Leaf(_)) | None => return Ok(None),
     };
@@ -185,10 +191,11 @@ impl PipelineDerivable for RootHgAugmentedManifestId {
         for bonsai in &bonsais {
             let cs_id = bonsai.get_changeset_id();
 
-            let hg_entry = hg_outputs
-                .get(&cs_id)
-                .and_then(|o| o.entry.clone())
-                .map(crate::pipeline::untrace_entry);
+            // Missing output is a broken invariant; an absent entry (None below) is the legitimate "nothing here" case.
+            let hg_output = hg_outputs.get(&cs_id).ok_or_else(|| {
+                anyhow!("missing HgChangesets stage output for {cs_id} at stage {stage_path}")
+            })?;
+            let hg_entry = hg_output.entry.clone().map(crate::pipeline::untrace_entry);
 
             let out = match hg_entry {
                 // Nothing at this stage path.
@@ -223,7 +230,8 @@ impl PipelineDerivable for RootHgAugmentedManifestId {
                             })
                             .unwrap_or_default();
 
-                    let acl_overlay = normalize_acl_stage(acl_outputs.get(&cs_id))?;
+                    let acl_overlay =
+                        normalize_acl_stage(acl_outputs.get(&cs_id), cs_id, stage_path)?;
 
                     // Content metadata for files changed under this stage path.
                     let content_ids: HashSet<_> = bonsai
