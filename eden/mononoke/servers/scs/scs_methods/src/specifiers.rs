@@ -22,6 +22,10 @@ pub trait SpecifierExt: Send + Sync {
     fn scuba_path(&self) -> Option<String> {
         None
     }
+
+    fn scuba_param_tree_specifier(&self) -> Option<String> {
+        None
+    }
 }
 
 impl SpecifierExt for thrift::RepoSpecifier {
@@ -100,6 +104,14 @@ impl SpecifierExt for thrift::TreeSpecifier {
         match self {
             thrift::TreeSpecifier::by_commit_path(commit_path) => commit_path.scuba_path(),
             thrift::TreeSpecifier::by_id(_tree_id) => None,
+            thrift::TreeSpecifier::UnknownField(_) => None,
+        }
+    }
+
+    fn scuba_param_tree_specifier(&self) -> Option<String> {
+        match self {
+            thrift::TreeSpecifier::by_commit_path(_) => None,
+            thrift::TreeSpecifier::by_id(tree_id) => Some(format!("TreeIdSpecifier({tree_id:?}")),
             thrift::TreeSpecifier::UnknownField(_) => None,
         }
     }

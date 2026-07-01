@@ -259,6 +259,9 @@ impl SourceControlServiceImpl {
             if let Some(path) = specifier.scuba_path() {
                 scuba.add("path", path);
             }
+            if let Some(tree_specifier) = specifier.scuba_param_tree_specifier() {
+                scuba.add("param_tree_specifier", tree_specifier);
+            }
         }
 
         if let Some(config_info) = self.configs.as_ref().config_info().as_ref() {
