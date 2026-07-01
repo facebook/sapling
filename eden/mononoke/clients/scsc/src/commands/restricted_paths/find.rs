@@ -16,6 +16,7 @@ use futures::TryStreamExt;
 use scs_client_raw::thrift;
 use serde::Serialize;
 
+use super::fmt_request_group;
 use crate::ScscApp;
 use crate::args::commit_id::resolve_commit_id;
 use crate::args::repo::RepoArgs;
@@ -46,6 +47,7 @@ struct FindOutput {
     path: String,
     acls: Vec<String>,
     has_access: Option<bool>,
+    permission_request_group: Option<String>,
 }
 
 impl Render for FindOutput {
@@ -59,9 +61,10 @@ impl Render for FindOutput {
         };
         writeln!(
             w,
-            "{} (ACLs: {}{})",
+            "{} (ACLs: {}{}{})",
             self.path,
             self.acls.join(", "),
+            fmt_request_group(self.permission_request_group.as_deref()),
             access
         )?;
         Ok(())
@@ -102,8 +105,63 @@ pub(super) async fn run(app: ScscApp, args: FindArgs) -> Result<()> {
             path: item.path,
             acls: item.acls,
             has_access: item.has_access,
+            permission_request_group: item.permission_request_group,
         })
         .map_err(Into::into);
 
     app.target.render(&(), response).await
+}
+
+#[cfg(test)]
+mod tests {
+    use mononoke_macros::mononoke;
+
+    use super::*;
+
+    fn render_to_string(output: &FindOutput) -> String {
+        let mut buf = Vec::new();
+        output.render(&(), &mut buf).expect("render should succeed");
+        String::from_utf8(buf).expect("output should be valid utf8")
+    }
+
+    /// What it tests: `FindOutput` includes the permission request group in both the
+    /// human-readable line and JSON when present, and omits the human segment (JSON
+    /// null) when absent — the defensive old-server path.
+    /// Expected: Some appends `, request group: g` before the access suffix; None omits it.
+    #[mononoke::test]
+    fn test_find_output_renders_request_group() {
+        let with_group = FindOutput {
+            path: "restricted".to_string(),
+            acls: vec!["REPO_REGION:restricted_acl".to_string()],
+            has_access: Some(false),
+            permission_request_group: Some("some_group".to_string()),
+        };
+        assert_eq!(
+            render_to_string(&with_group),
+            "restricted (ACLs: REPO_REGION:restricted_acl, request group: some_group, access: denied)\n"
+        );
+        assert!(
+            serde_json::to_string(&with_group)
+                .expect("json")
+                .contains("\"permission_request_group\":\"some_group\""),
+            "populated group should serialize as a string"
+        );
+
+        let without_group = FindOutput {
+            path: "restricted".to_string(),
+            acls: vec!["REPO_REGION:restricted_acl".to_string()],
+            has_access: None,
+            permission_request_group: None,
+        };
+        assert_eq!(
+            render_to_string(&without_group),
+            "restricted (ACLs: REPO_REGION:restricted_acl)\n"
+        );
+        assert!(
+            serde_json::to_string(&without_group)
+                .expect("json")
+                .contains("\"permission_request_group\":null"),
+            "absent group should serialize as null"
+        );
+    }
 }

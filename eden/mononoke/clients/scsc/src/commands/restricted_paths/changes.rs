@@ -18,6 +18,7 @@ use serde::Serialize;
 use super::PathRestrictionInfo;
 use super::convert_restriction_roots;
 use super::path_coverage_to_string;
+use super::render_restriction_root_line;
 use crate::ScscApp;
 use crate::args::commit_id::resolve_commit_id;
 use crate::args::repo::RepoArgs;
@@ -61,7 +62,7 @@ impl Render for ChangesOutput {
             for info in &self.restriction_roots {
                 writeln!(w, "  {}:", info.path)?;
                 for root in &info.roots {
-                    writeln!(w, "    {} (ACLs: {})", root.root_path, root.acls.join(", "))?;
+                    render_restriction_root_line(w, root)?;
                 }
             }
         }

@@ -11,6 +11,8 @@ mod access;
 mod changes;
 mod find;
 
+use std::io::Write;
+
 use anyhow::Result;
 use clap::Parser;
 use clap::Subcommand;
@@ -48,6 +50,7 @@ pub(super) struct PathRestrictionInfo {
 pub(super) struct RestrictionRootInfo {
     pub root_path: String,
     pub acls: Vec<String>,
+    pub permission_request_group: Option<String>,
 }
 
 // Helper functions
@@ -73,10 +76,37 @@ pub(super) fn convert_restriction_roots(
                 .map(|root| RestrictionRootInfo {
                     root_path: root.path,
                     acls: root.acls,
+                    permission_request_group: root.permission_request_group,
                 })
                 .collect(),
         })
         .collect()
+}
+
+/// Format the optional permission request group as a trailing display segment,
+/// e.g. `, request group: gradient_source_control`. Empty when absent (e.g. an old
+/// server that does not populate the field), so output differs only by the segment.
+pub(super) fn fmt_request_group(permission_request_group: Option<&str>) -> String {
+    match permission_request_group {
+        Some(group) => format!(", request group: {group}"),
+        None => String::new(),
+    }
+}
+
+/// Render a single restriction-root line shared by the `access` and `changes`
+/// subcommands so both surface the ACLs and request group in an identical format.
+pub(super) fn render_restriction_root_line(
+    w: &mut dyn Write,
+    root: &RestrictionRootInfo,
+) -> Result<()> {
+    writeln!(
+        w,
+        "    {} (ACLs: {}{})",
+        root.root_path,
+        root.acls.join(", "),
+        fmt_request_group(root.permission_request_group.as_deref()),
+    )?;
+    Ok(())
 }
 
 pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
@@ -84,5 +114,57 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         RestrictedPathsSubcommand::Access(args) => access::run(app, args).await,
         RestrictedPathsSubcommand::Find(args) => find::run(app, args).await,
         RestrictedPathsSubcommand::Changes(args) => changes::run(app, args).await,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use mononoke_macros::mononoke;
+
+    use super::*;
+
+    fn render_line(root: &RestrictionRootInfo) -> String {
+        let mut buf = Vec::new();
+        render_restriction_root_line(&mut buf, root).expect("render should succeed");
+        String::from_utf8(buf).expect("output should be valid utf8")
+    }
+
+    /// What it tests: the shared restriction-root line (used by `access` and
+    /// `changes`) includes the request group when present and omits the segment when
+    /// absent; JSON serialization emits the group string or null.
+    /// Expected: Some appends `, request group: g`; None omits it and JSON is null.
+    #[mononoke::test]
+    fn test_render_restriction_root_line_request_group() {
+        let with_group = RestrictionRootInfo {
+            root_path: "restricted".to_string(),
+            acls: vec!["REPO_REGION:restricted_acl".to_string()],
+            permission_request_group: Some("some_group".to_string()),
+        };
+        assert_eq!(
+            render_line(&with_group),
+            "    restricted (ACLs: REPO_REGION:restricted_acl, request group: some_group)\n"
+        );
+        assert!(
+            serde_json::to_string(&with_group)
+                .expect("json")
+                .contains("\"permission_request_group\":\"some_group\""),
+            "populated group should serialize as a string"
+        );
+
+        let without_group = RestrictionRootInfo {
+            root_path: "restricted".to_string(),
+            acls: vec!["REPO_REGION:restricted_acl".to_string()],
+            permission_request_group: None,
+        };
+        assert_eq!(
+            render_line(&without_group),
+            "    restricted (ACLs: REPO_REGION:restricted_acl)\n"
+        );
+        assert!(
+            serde_json::to_string(&without_group)
+                .expect("json")
+                .contains("\"permission_request_group\":null"),
+            "absent group should serialize as null"
+        );
     }
 }
