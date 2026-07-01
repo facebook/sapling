@@ -9,6 +9,7 @@
 
 #include "eden/fs/inodes/FuseDispatcherImpl.h"
 #include <folly/logging/xlog.h>
+#include <exception>
 
 #include "eden/common/utils/SystemError.h"
 #include "eden/fs/fuse/FuseDirList.h"
@@ -21,6 +22,7 @@
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/utils/Clock.h"
+#include "eden/fs/utils/LinuxKernelVersion.h"
 
 using namespace folly;
 using std::string;
@@ -52,6 +54,7 @@ FuseDispatcher::Attr attrForInodeWithCorruptOverlay(InodeNumber ino) noexcept {
   st.st_mode = S_IFREG;
   return FuseDispatcher::Attr{st, kBrokenInodeCacheSeconds};
 }
+
 } // namespace
 
 FuseDispatcherImpl::FuseDispatcherImpl(EdenMount* mount)
@@ -70,6 +73,33 @@ uint64_t FuseDispatcherImpl::computeTtl() const {
 }
 
 uint64_t FuseDispatcherImpl::computeNegativeEntryTtl() const {
+#ifdef __linux__
+  // Workaround Linux regression where INVAL_ENTRY cannot invalidate negative
+  // dentries by setting TTL to 0.
+  // First bad commit: c9ba789dad15ba65662bba17595c0aeaa0cfcf1c, included
+  // since 6.19.
+  // https://lore.kernel.org/linux-fsdevel/CAFbF8N7++zopZuEcsKRxBV_sgOGCbzCY0hOyMw1SiGAtuzGhyQ@mail.gmail.com/
+  // TODO: Check upstream fix version and disable the mitigation accordingly.
+  static const bool hasBrokenKernel = [] {
+    try {
+      auto version = getRunningLinuxKernelVersion();
+      if (version.major > 6 || (version.major == 6 && version.minor >= 19)) {
+        XLOG(INFO, "Mitigate kernel INVAL_ENTRY bug. Negative dentry TTL=0.");
+        return true;
+      }
+    } catch (const std::exception& ex) {
+      XLOGF(
+          WARN,
+          "Failed to detect kernel version for INVAL_ENTRY bug mitigation: {}",
+          ex.what());
+    }
+    return false;
+  }();
+  if (hasBrokenKernel) {
+    return 0;
+  }
+#endif
+
   return mount_->getEdenConfig()->fuseNegativeDcacheTtlSeconds.getValue();
 }
 
