@@ -149,33 +149,37 @@ pub async fn verify_working_copy_with_version<'a, R: Repo>(
 
     let (source_root_id, target_root_id): (compat::ContentManifestId, compat::ContentManifestId) =
         if use_content_manifests {
-            let source_id = source_repo
-                .repo_derived_data()
-                .derive::<RootContentManifestId>(ctx, source_hash.0, DerivationPriority::LOW)
-                .await?
-                .into_content_manifest_id()
-                .into();
-            let target_id = target_repo
-                .repo_derived_data()
-                .derive::<RootContentManifestId>(ctx, target_hash.0, DerivationPriority::LOW)
-                .await?
-                .into_content_manifest_id()
-                .into();
-            (source_id, target_id)
+            let (source_id, target_id) = future::try_join(
+                source_repo
+                    .repo_derived_data()
+                    .derive::<RootContentManifestId>(ctx, source_hash.0, DerivationPriority::LOW),
+                target_repo
+                    .repo_derived_data()
+                    .derive::<RootContentManifestId>(ctx, target_hash.0, DerivationPriority::LOW),
+            )
+            .await?;
+            (
+                source_id.into_content_manifest_id().into(),
+                target_id.into_content_manifest_id().into(),
+            )
         } else {
-            let source_id = source_repo
-                .repo_derived_data()
-                .derive::<RootFsnodeId>(ctx, source_hash.0, DerivationPriority::LOW)
-                .await?
-                .into_fsnode_id()
-                .into();
-            let target_id = target_repo
-                .repo_derived_data()
-                .derive::<RootFsnodeId>(ctx, target_hash.0, DerivationPriority::LOW)
-                .await?
-                .into_fsnode_id()
-                .into();
-            (source_id, target_id)
+            let (source_id, target_id) = future::try_join(
+                source_repo.repo_derived_data().derive::<RootFsnodeId>(
+                    ctx,
+                    source_hash.0,
+                    DerivationPriority::LOW,
+                ),
+                target_repo.repo_derived_data().derive::<RootFsnodeId>(
+                    ctx,
+                    target_hash.0,
+                    DerivationPriority::LOW,
+                ),
+            )
+            .await?;
+            (
+                source_id.into_fsnode_id().into(),
+                target_id.into_fsnode_id().into(),
+            )
         };
 
     let (small_root_id, large_root_id) = match direction {
