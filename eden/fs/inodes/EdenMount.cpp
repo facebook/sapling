@@ -21,7 +21,6 @@
 #include <folly/logging/Logger.h>
 #include <folly/logging/xlog.h>
 #include <folly/stop_watch.h>
-#include <folly/system/Pid.h>
 #include <folly/system/ThreadName.h>
 #include <gflags/gflags.h>
 
