@@ -32,6 +32,7 @@ cpp_library(
     srcs = ["PrivHelperRollback.cpp"],
     headers = ["PrivHelperRollback.h"],
     deps = [
+        "//eden/fs/utils:linux_kernel_version",
         "//folly:string",
         "//folly/logging:logging",
     ],

@@ -8,14 +8,12 @@
 #include "eden/fs/privhelper/PrivHelperRollback.h"
 
 #ifndef _WIN32
-#include <cstdio>
-#ifdef __linux__
-#include <sys/utsname.h>
-#endif
 #include <folly/String.h>
 #include <folly/logging/xlog.h>
 #include <sys/stat.h>
 #include <cerrno>
+
+#include "eden/fs/utils/LinuxKernelVersion.h"
 #endif
 
 namespace facebook::eden {
@@ -32,8 +30,7 @@ namespace {
 
 constexpr const char* kEdenSystemConfigDir{"/etc/eden"};
 #ifdef __linux__
-constexpr unsigned kMinPrivHelperHardeningKernelMajor{5};
-constexpr unsigned kMinPrivHelperHardeningKernelMinor{8};
+constexpr LinuxKernelVersion kMinPrivHelperHardeningKernelVersion{5, 8};
 #endif
 
 bool isRootControlledPath(const char* path, mode_t fileType) {
@@ -64,37 +61,30 @@ bool isRootControlledPath(const char* path, mode_t fileType) {
 
 #ifdef __linux__
 bool isLinuxKernelTooOldForPrivHelperHardening() {
-  struct utsname name{};
-  if (uname(&name) != 0) {
+  LinuxKernelVersion version;
+  try {
+    version = getRunningLinuxKernelVersion();
+  } catch (const std::exception& ex) {
     XLOGF(
         WARNING,
         "Cannot inspect Linux kernel version for privhelper hardening: {}",
-        folly::errnoStr(errno));
+        ex.what());
     return false;
   }
 
-  unsigned major{0};
-  unsigned minor{0};
-  if (sscanf(name.release, "%u.%u", &major, &minor) != 2) {
-    XLOGF(
-        WARNING,
-        "Cannot parse Linux kernel version `{}` for privhelper hardening",
-        name.release);
-    return false;
-  }
-
-  if (major > kMinPrivHelperHardeningKernelMajor ||
-      (major == kMinPrivHelperHardeningKernelMajor &&
-       minor >= kMinPrivHelperHardeningKernelMinor)) {
+  if (version.major > kMinPrivHelperHardeningKernelVersion.major ||
+      (version.major == kMinPrivHelperHardeningKernelVersion.major &&
+       version.minor >= kMinPrivHelperHardeningKernelVersion.minor)) {
     return false;
   }
 
   XLOGF(
       WARNING,
-      "Disabling privhelper hardening because Linux kernel {} is older than {}.{}",
-      name.release,
-      kMinPrivHelperHardeningKernelMajor,
-      kMinPrivHelperHardeningKernelMinor);
+      "Disabling privhelper hardening because Linux kernel {}.{} is older than {}.{}",
+      version.major,
+      version.minor,
+      kMinPrivHelperHardeningKernelVersion.major,
+      kMinPrivHelperHardeningKernelVersion.minor);
   return true;
 }
 #endif

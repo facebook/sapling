@@ -252,6 +252,15 @@ cpp_library(
 )
 
 cpp_library(
+    name = "linux_kernel_version",
+    srcs = ["LinuxKernelVersion.cpp"],
+    headers = ["LinuxKernelVersion.h"],
+    exported_deps = [
+        "//folly:range",
+    ],
+)
+
+cpp_library(
     name = "nfs_socket",
     srcs = ["NfsSocket.cpp"],
     headers = ["NfsSocket.h"],

@@ -145,6 +145,16 @@ cpp_unittest(
 )
 
 cpp_unittest(
+    name = "linux_kernel_version_test",
+    srcs = ["LinuxKernelVersionTest.cpp"],
+    network_access = network_access_utils.none(),
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/utils:linux_kernel_version",
+    ],
+)
+
+cpp_unittest(
     name = "mount_health_check_test",
     srcs = ["MountHealthCheckTest.cpp"],
     network_access = network_access_utils.none(),
