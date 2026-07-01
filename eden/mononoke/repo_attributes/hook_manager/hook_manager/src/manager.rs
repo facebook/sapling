@@ -269,21 +269,32 @@ impl HookManager {
             None,
             Some(self.repo_name.as_str()),
         );
-        if !use_client_identities {
-            return self
-                .check_bypass_authorization_with_changeset_author(
+
+        // On the client-identities path, check the pusher's request identities
+        // first; an authorized pusher wins outright. Otherwise (and always on the
+        // default path) fall through to the commit author, which includes the
+        // canonical unixname EmployeeService re-check. An empty identity set fails
+        // closed.
+        if use_client_identities {
+            let result = self
+                .check_bypass_group_membership(
                     hook,
-                    ctx,
-                    changeset_author,
-                    bypass_reason,
+                    ctx.metadata().identities(),
+                    bypass_reason.clone(),
                 )
-                .await;
+                .await?;
+            if matches!(result, BypassAuthorizationResult::Bypassed(_)) {
+                return Ok(result);
+            }
         }
 
-        // Check the permission group against the pusher's client identities.
-        // Missing identities fail closed (the hook runs).
-        self.check_membership(hook, ctx.metadata().identities(), bypass_reason)
-            .await
+        self.check_bypass_authorization_with_changeset_author(
+            hook,
+            ctx,
+            changeset_author,
+            bypass_reason,
+        )
+        .await
     }
 
     /// Check whether `identity_set` is a member of the hook's bypass permission
@@ -293,7 +304,7 @@ impl HookManager {
     /// allowed unconditionally (preserves pre-permission-group behavior). An
     /// empty `identity_set` fails closed: a real membership checker returns
     /// `false`, so the result is `Unauthorized` and the hook runs normally.
-    async fn check_membership(
+    async fn check_bypass_group_membership(
         &self,
         hook: &Hook,
         identity_set: &MononokeIdentitySet,
@@ -340,14 +351,14 @@ impl HookManager {
             Some(author_identity) => author_identity,
             None => {
                 return self
-                    .check_membership(hook, ctx.metadata().identities(), bypass_reason)
+                    .check_bypass_group_membership(hook, ctx.metadata().identities(), bypass_reason)
                     .await;
             }
         };
 
         let is_user = author_identity.id_type() == "USER";
         let result = self
-            .check_membership(
+            .check_bypass_group_membership(
                 hook,
                 &std::iter::once(author_identity).collect(),
                 bypass_reason.clone(),
@@ -365,7 +376,11 @@ impl HookManager {
             if let Some(unixname) = self.resolve_author_unixname(changeset_author).await {
                 let identity = MononokeIdentity::from_legacy_type_data("USER", &unixname);
                 return self
-                    .check_membership(hook, &std::iter::once(identity).collect(), bypass_reason)
+                    .check_bypass_group_membership(
+                        hook,
+                        &std::iter::once(identity).collect(),
+                        bypass_reason,
+                    )
                     .await;
             }
         }
