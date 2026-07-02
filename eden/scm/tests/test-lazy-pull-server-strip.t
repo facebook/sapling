@@ -1,4 +1,3 @@
-#chg-compatible
 #require no-eden
 
 Test that when lazy changelog is used, and the server strips some lazy portion

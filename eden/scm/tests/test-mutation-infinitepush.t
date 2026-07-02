@@ -1,4 +1,3 @@
-#chg-compatible
 #require bash no-eden
 
   $ enable amend rebase histedit fbhistedit

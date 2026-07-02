@@ -1,6 +1,5 @@
 #debugruntest-incompatible
 
-#chg-compatible
 #require bash no-eden
 
   $ configure mutation-norecord

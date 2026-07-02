@@ -96,8 +96,6 @@ overrides = {{}}
             {
                 "SCRATCH_CONFIG_PATH": str(scratch_config),
                 "INTEGRATION_TEST": "1",
-                # Just in case
-                "CHGDISABLE": "1",
             }
         )
 

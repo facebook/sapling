@@ -1,4 +1,3 @@
-#chg-compatible
 #require fsmonitor no-eden
 
 

@@ -1,4 +1,3 @@
-#chg-compatible
 
 #require killdaemons no-eden
 

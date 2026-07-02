@@ -1,4 +1,3 @@
-#chg-compatible
 #require git gpg no-eden no-windows
 
   $ . $TESTDIR/git.sh

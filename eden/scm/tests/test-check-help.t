@@ -1,4 +1,3 @@
-#chg-compatible
 
 #require version-control normal-layout no-eden
 

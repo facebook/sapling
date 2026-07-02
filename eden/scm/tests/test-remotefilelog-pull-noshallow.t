@@ -2,7 +2,6 @@
 
 #require no-eden
 
-#chg-compatible
 
 
   $ . "$TESTDIR/library.sh"

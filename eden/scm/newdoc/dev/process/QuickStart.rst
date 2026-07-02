@@ -13,7 +13,7 @@ You may want to create a script like ``~/bin/lhg`` on your ``$PATH``
 (``lhg`` == "local ``hg``") to facilitate running the dev version::
 
   #!/bin/bash
-  CHGDISABLE=1 ~/fbsource/fbcode/eden/scm/hg "$@"
+  ~/fbsource/fbcode/eden/scm/hg "$@"
 
 
 Test

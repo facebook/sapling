@@ -1,4 +1,3 @@
-#chg-compatible
 
   $ eagerepo
   $ setconfig remotenames.rename.default=

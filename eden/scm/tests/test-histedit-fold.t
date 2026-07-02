@@ -1,4 +1,3 @@
-#chg-compatible
 
 Test histedit extension: Fold commands
 ======================================

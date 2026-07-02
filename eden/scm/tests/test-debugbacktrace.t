@@ -1,5 +1,4 @@
 #inprocess-hg-incompatible
-#chg-incompatible
 #require lldb
 
 This test requires:

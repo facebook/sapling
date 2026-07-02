@@ -1,7 +1,6 @@
 
 #require no-eden
 
-#chg-compatible
   $ eagerepo
   $ configure mutation-norecord dummyssh
   $ enable rebase

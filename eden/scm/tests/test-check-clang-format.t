@@ -1,4 +1,3 @@
-#chg-compatible
 
 #require clang-format version-control no-eden
 

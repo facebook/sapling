@@ -1,4 +1,3 @@
-#chg-compatible
 #require no-eden
 
   $ configure modernclient

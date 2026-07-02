@@ -139,9 +139,6 @@ rechunkthreshold=1MB
 [bundle]
 reorder=auto
 
-[chgserver]
-idletimeout=3600
-
 [commands]
 update.check=noconflict
 

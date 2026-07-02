@@ -1,4 +1,3 @@
-#chg-compatible
 #require bash
 
   $ export DEBUGRUNTEST_DEFAULT_DISABLED=1

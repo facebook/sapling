@@ -1,4 +1,3 @@
-#chg-compatible
 #require git ssh-keygen no-windows
 
   $ . $TESTDIR/git.sh

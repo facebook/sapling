@@ -1,4 +1,3 @@
-#chg-compatible
 #require chg no-eden
 
 Use any random Python command - make sure we see tracing events.

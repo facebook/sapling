@@ -1,4 +1,3 @@
-#chg-compatible
 #require git no-windows no-eden
 
   $ eagerepo

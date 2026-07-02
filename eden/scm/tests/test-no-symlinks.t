@@ -3,7 +3,6 @@
 #require no-eden no-symlink
 
 TODO(debugruntest): this test fails on Mac
-#chg-compatible
 
 
 # The following (test) script was used to create the bundle:

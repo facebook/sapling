@@ -1,4 +1,3 @@
-#chg-compatible
 #require chg linux no-eden
 
   $ newclientrepo

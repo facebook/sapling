@@ -1,4 +1,3 @@
-#chg-compatible
 
   $ configure modern
   $ enable undo

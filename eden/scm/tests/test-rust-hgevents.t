@@ -1,5 +1,4 @@
 (the Python watchman client seems to have some issues under debugruntest on Windows)
-#chg-compatible
 
 #require fsmonitor no-windows
 

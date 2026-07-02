@@ -1,4 +1,3 @@
-#chg-incompatible
 #inprocess-hg-incompatible
 #require no-fsmonitor no-eden
 

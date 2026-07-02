@@ -1,4 +1,3 @@
-#chg-compatible
 
 #require execbit no-eden
 

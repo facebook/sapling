@@ -1,4 +1,3 @@
-#chg-compatible
 #require mononoke
 
   $ . "$TESTDIR/library.sh"

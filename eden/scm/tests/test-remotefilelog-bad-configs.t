@@ -1,4 +1,3 @@
-#chg-compatible
   $ configure modernclient
 
 no-check-code

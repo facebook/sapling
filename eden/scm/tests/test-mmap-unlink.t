@@ -1,4 +1,3 @@
-#chg-compatible
 
   $ eagerepo
   $ cat <<EOF > mmap-unlink.py

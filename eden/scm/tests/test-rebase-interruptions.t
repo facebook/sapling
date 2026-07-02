@@ -2,7 +2,6 @@
 
 #require no-eden
 
-#chg-compatible
 
 
   $ enable rebase

@@ -1,4 +1,3 @@
-#chg-compatible
 
   $ enable smartlog
 

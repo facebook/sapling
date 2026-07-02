@@ -1,4 +1,3 @@
-#chg-compatible
 #inprocess-hg-incompatible
 
 #require unix-permissions no-root no-windows no-eden

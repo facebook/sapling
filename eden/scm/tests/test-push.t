@@ -2,7 +2,6 @@
 
 #require no-eden
 
-#chg-compatible
 
 ==================================
 Basic testing for the push command

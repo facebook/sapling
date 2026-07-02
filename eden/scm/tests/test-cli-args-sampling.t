@@ -1,4 +1,3 @@
-#chg-incompatible
 #inprocess-hg-incompatible
 
   $ configure modernclient

@@ -1,4 +1,3 @@
-#chg-compatible
 #require no-eden
 
 test for old histedit issue #6:

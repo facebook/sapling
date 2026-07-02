@@ -1,4 +1,3 @@
-#chg-compatible
 #inprocess-hg-incompatible
 #require no-eden
   $ setconfig devel.segmented-changelog-rev-compat=true

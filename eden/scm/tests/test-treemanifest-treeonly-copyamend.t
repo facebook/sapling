@@ -1,4 +1,3 @@
-#chg-compatible
 
   $ configure mutation-norecord
   $ . "$TESTDIR/library.sh"

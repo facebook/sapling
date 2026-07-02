@@ -1,4 +1,3 @@
-#chg-compatible
 
 Set up extension and repos
 

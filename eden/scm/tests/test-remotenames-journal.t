@@ -1,4 +1,3 @@
-#chg-compatible
 
 Tests for the journal extension integration with remotenames.
 

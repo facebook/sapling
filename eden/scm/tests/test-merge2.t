@@ -1,4 +1,3 @@
-#chg-compatible
 
   $ eagerepo
   $ setconfig commands.update.check=none

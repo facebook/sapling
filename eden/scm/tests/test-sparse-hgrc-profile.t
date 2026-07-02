@@ -1,5 +1,4 @@
 #testcases normalcheckout nativecheckout
-#chg-compatible
 #inprocess-hg-incompatible
 #require no-eden
   $ configure modernclient

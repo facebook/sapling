@@ -1,4 +1,3 @@
-#chg-compatible
   $ setconfig devel.segmented-changelog-rev-compat=true
 
   $ eagerepo

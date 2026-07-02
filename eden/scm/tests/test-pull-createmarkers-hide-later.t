@@ -1,4 +1,3 @@
-#chg-compatible
 
 Setup
 

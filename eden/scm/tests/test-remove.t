@@ -1,4 +1,3 @@
-#chg-compatible
 
   $ remove() {
   >     sl rm $@

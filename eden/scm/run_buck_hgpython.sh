@@ -6,7 +6,5 @@
 hg_dir="$BUCK_DEFAULT_RUNTIME_RESOURCES/eden/scm"
 
 export hg=$(find $hg_dir -type l -print | head -n 1)
-CHGDISABLE="${CHGDISABLE-1}"
-export CHGDISABLE
 
 exec -a python3 "$hg" "$@"
