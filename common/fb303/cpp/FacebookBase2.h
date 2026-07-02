@@ -11,6 +11,9 @@
 
 #include <time.h>
 
+#include <memory>
+#include <vector>
+
 #include <common/fb303/if/gen-cpp2/FacebookService.h>
 #include <fb303/ServiceData.h>
 #include <folly/small_vector.h>
@@ -44,6 +47,14 @@ class FacebookBase2 : virtual public cpp2::FacebookServiceSvIf {
 
   void getCounters(std::map<std::string, int64_t>& _return) override {
     fbData->getCounters(_return);
+  }
+
+  void getSelectedCounters(
+      std::map<std::string, int64_t>& _return,
+      std::unique_ptr<std::vector<std::string>> keys) override {
+    if (keys) {
+      fbData->getSelectedCounters(_return, *keys);
+    }
   }
 
   int64_t aliveSince() override {
