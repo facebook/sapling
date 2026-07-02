@@ -45,8 +45,8 @@ fn main() {
     Config::from_env(GenContext::Mocks)
         .expect("Failed to instantiate thrift_compiler::Config")
         .base_path("../../../../../..")
-        .types_crate("microwave-if__types")
-        .clients_crate("microwave-if__clients")
+        .types_crate("microwave_if__types")
+        .clients_crate("microwave_if__clients")
         .run(["../microwave.thrift"])
         .expect("Failed while running thrift compilation");
 }

@@ -20,8 +20,8 @@ fn main() {
     Config::from_env(GenContext::Types)
         .expect("Failed to instantiate thrift_compiler::Config")
         .base_path("../../../../../..")
-        .types_crate("thrift-convert-test__types")
-        .clients_crate("thrift-convert-test__clients")
+        .types_crate("thrift_convert_test__types")
+        .clients_crate("thrift_convert_test__clients")
         .run(["thrift_convert_test.thrift"])
         .expect("Failed while running thrift compilation");
 }

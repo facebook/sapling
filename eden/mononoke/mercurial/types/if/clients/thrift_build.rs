@@ -44,8 +44,8 @@ fn main() {
     Config::from_env(GenContext::Clients)
         .expect("Failed to instantiate thrift_compiler::Config")
         .base_path("../../../../../..")
-        .types_crate("mercurial-thrift__types")
-        .clients_crate("mercurial-thrift__clients")
+        .types_crate("mercurial_thrift__types")
+        .clients_crate("mercurial_thrift__clients")
         .run(["../mercurial_thrift.thrift"])
         .expect("Failed while running thrift compilation");
 }

@@ -24,8 +24,8 @@ fn main() {
     Config::from_env(GenContext::Types)
         .expect("Failed to instantiate thrift_compiler::Config")
         .base_path("../../../..")
-        .types_crate("thrift-streaming__types")
-        .clients_crate("thrift-streaming__clients")
+        .types_crate("thrift_streaming__types")
+        .clients_crate("thrift_streaming__clients")
         .options("deprecated_default_enum_min_i32")
         .run(["../streamingeden.thrift"])
         .expect("Failed while running thrift compilation");

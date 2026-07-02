@@ -19,8 +19,8 @@ fn main() {
     Config::from_env(GenContext::Mocks)
         .expect("Failed to instantiate thrift_compiler::Config")
         .base_path("../../../../..")
-        .types_crate("memcache-lock-thrift__types")
-        .clients_crate("memcache-lock-thrift__clients")
+        .types_crate("memcache_lock_thrift__types")
+        .clients_crate("memcache_lock_thrift__clients")
         .run(["../memcache_lock.thrift"])
         .expect("Failed while running thrift compilation");
 }

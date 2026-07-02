@@ -20,8 +20,8 @@ fn main() {
     Config::from_env(GenContext::Clients)
         .expect("Failed to instantiate thrift_compiler::Config")
         .base_path("../../../../../..")
-        .types_crate("packblob-thrift__types")
-        .clients_crate("packblob-thrift__clients")
+        .types_crate("packblob_thrift__types")
+        .clients_crate("packblob_thrift__clients")
         .run(["../packblob.thrift"])
         .expect("Failed while running thrift compilation");
 }

@@ -44,8 +44,8 @@ fn main() {
     Config::from_env(GenContext::Services)
         .expect("Failed to instantiate thrift_compiler::Config")
         .base_path("../../../../../..")
-        .types_crate("git-types-thrift__types")
-        .clients_crate("git-types-thrift__clients")
+        .types_crate("git_types_thrift__types")
+        .clients_crate("git_types_thrift__clients")
         .options("default_enum_zero")
         .run(["../git_types_thrift.thrift"])
         .expect("Failed while running thrift compilation");

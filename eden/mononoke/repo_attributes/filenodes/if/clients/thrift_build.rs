@@ -45,8 +45,8 @@ fn main() {
     Config::from_env(GenContext::Clients)
         .expect("Failed to instantiate thrift_compiler::Config")
         .base_path("../../../../../..")
-        .types_crate("filenodes-if__types")
-        .clients_crate("filenodes-if__clients")
+        .types_crate("filenodes_if__types")
+        .clients_crate("filenodes_if__clients")
         .run(["../filenodes.thrift"])
         .expect("Failed while running thrift compilation");
 }

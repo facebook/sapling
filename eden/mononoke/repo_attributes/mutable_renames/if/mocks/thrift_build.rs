@@ -44,8 +44,8 @@ fn main() {
     Config::from_env(GenContext::Mocks)
         .expect("Failed to instantiate thrift_compiler::Config")
         .base_path("../../../../../..")
-        .types_crate("mutable-rename-thrift__types")
-        .clients_crate("mutable-rename-thrift__clients")
+        .types_crate("mutable_rename_thrift__types")
+        .clients_crate("mutable_rename_thrift__clients")
         .run(["../mutable_rename.thrift"])
         .expect("Failed while running thrift compilation");
 }
