@@ -367,3 +367,9 @@ Deleting from experimental directories should still be allowed
   adding manifests
   adding file changes
   updating bookmark master_bookmark
+
+Hooks skipped by an unconditional bypass are logged as their own per-hook row,
+carrying the hook name, type and bypass reason, with outcome "skipped".
+  $ jq < $TESTTMP/hooks-scuba.json -c 'select(.normal.outcome == "skipped") | [.normal.hook, .normal.type, .normal.outcome, .normal.bypass_reason]' | sort
+  ["block_files","file","skipped","bypass pushvar: TEST_BYPASS=true"]
+  ["block_files","file","skipped","bypass string: @bypass_block_files"]

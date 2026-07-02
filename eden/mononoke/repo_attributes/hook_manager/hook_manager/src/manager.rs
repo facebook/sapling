@@ -522,8 +522,8 @@ impl HookManager {
             // (bookmark hooks honor the pushvar bypass only). Group-gated bypasses
             // run and are resolved afterwards in `apply_bypasses`.
             if let Some(bypass_reason) = unconditional_bypass_reason(hook, maybe_pushvars, None) {
-                scuba.add("bypass_reason", bypass_reason);
-                scuba.log();
+                scuba.add("type", "bookmark");
+                log_skipped_hook(&scuba, to, &bypass_reason);
                 continue;
             }
 
@@ -603,7 +603,10 @@ impl HookManager {
                         match unconditional_bypass_reason(hook, maybe_pushvars, Some(cs.message()))
                         {
                             Some(reason) => {
-                                log_bypassed_changeset(&scuba, cs, &reason, None);
+                                let mut scuba = scuba.clone();
+                                scuba.add("hook", hook_name.to_string());
+                                scuba.add("type", hook.scuba_type());
+                                log_skipped_hook(&scuba, cs, &reason);
                                 false
                             }
                             None => true,
@@ -801,6 +804,20 @@ fn extract_identity_from_author(author: &str) -> Option<MononokeIdentity> {
         Some(fbid) if is_internal => MononokeIdentity::from_legacy_type_data("FBID", fbid),
         _ => MononokeIdentity::from_legacy_type_data("USER", local_part),
     })
+}
+
+/// Log a hook that was skipped before it ran because of an unconditional
+/// (permission-group-less) pushvar/commit-message bypass. The caller adds the
+/// `hook` and `type` columns; this records the changeset, author, the bypass
+/// reason, and `outcome=skipped` so the skip is a self-describing per-hook row.
+fn log_skipped_hook(scuba: &MononokeScubaSampleBuilder, cs: &BonsaiChangeset, bypass_reason: &str) {
+    cloned!(mut scuba);
+    scuba.add("changeset_id", cs.get_changeset_id().to_string());
+    scuba.add("hash", cs.get_changeset_id().to_string());
+    scuba.add("author", cs.author().to_string());
+    scuba.add("bypass_reason", bypass_reason.to_string());
+    scuba.add("outcome", "skipped");
+    scuba.log();
 }
 
 fn log_bypassed_changeset(
@@ -1040,6 +1057,16 @@ impl Hook {
             Self::Bookmark(_, _, checker)
             | Self::Changeset(_, _, checker)
             | Self::File(_, _, checker) => checker.as_ref(),
+        }
+    }
+
+    /// The `type` Scuba column value for this hook, matching what the per-hook
+    /// execution rows log ("bookmark"/"changeset"/"file").
+    pub(crate) fn scuba_type(&self) -> &'static str {
+        match self {
+            Self::Bookmark(..) => "bookmark",
+            Self::Changeset(..) => "changeset",
+            Self::File(..) => "file",
         }
     }
 
