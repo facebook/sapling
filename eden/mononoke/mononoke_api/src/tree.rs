@@ -24,8 +24,8 @@ use mononoke_types::fsnode::FsnodeSummary;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use repo_permission_checker::RepoPermissionCheckerRef;
-use restricted_paths::ManifestId;
 use restricted_paths::ManifestType;
+use restricted_paths::RestrictedManifestId;
 use restricted_paths::RestrictedPathsArc;
 
 use crate::errors::MononokeError;
@@ -114,7 +114,7 @@ impl<
                     Either::Left(cm_id) => cm_id.blake2().into_inner(),
                     Either::Right(fsnode_id) => fsnode_id.blake2().into_inner(),
                 };
-                let manifest_id = ManifestId::from(&blake2);
+                let manifest_id = RestrictedManifestId::from(&blake2);
                 let manifest_type = match &id {
                     Either::Left(_) => ManifestType::ContentManifest,
                     Either::Right(_) => ManifestType::Fsnode,

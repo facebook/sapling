@@ -6,7 +6,6 @@
  */
 
 use std::fmt;
-use std::fmt::Display;
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -22,7 +21,6 @@ use mononoke_types::RepositoryId;
 use path_hash::PathBytes;
 use path_hash::PathHash;
 use path_hash::PathHashBytes;
-use smallvec::SmallVec;
 use sql::mysql_async::FromValueError;
 use sql::mysql_async::Value;
 use sql::mysql_async::prelude::FromValue;
@@ -40,9 +38,7 @@ use strum::EnumString;
 
 type FromValueResult<T> = Result<T, FromValueError>;
 
-// Create a newtype wrapper for SmallVec<[u8; 32]> to implement SQL traits
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct ManifestId(SmallVec<[u8; 32]>);
+pub use mononoke_types::RestrictedManifestId;
 
 #[derive(
     Clone,
@@ -67,7 +63,7 @@ pub enum ManifestType {
 #[derivative(Debug)]
 pub struct RestrictedPathManifestIdEntry {
     pub manifest_type: ManifestType,
-    pub manifest_id: ManifestId,
+    pub manifest_id: RestrictedManifestId,
     #[derivative(Debug(format_with = "fmt_path_bytes"))]
     pub path: PathBytes,
     #[derivative(Debug(format_with = "fmt_path_hash_bytes"))]
@@ -78,7 +74,7 @@ pub struct RestrictedPathManifestIdEntry {
 impl RestrictedPathManifestIdEntry {
     pub fn new(
         manifest_type: ManifestType,
-        manifest_id: ManifestId,
+        manifest_id: RestrictedManifestId,
         repo_path: RepoPath,
     ) -> Result<Self> {
         // Ensure that only directory paths are stored
@@ -128,7 +124,7 @@ pub trait RestrictedPathsManifestIdStore: Send + Sync {
     async fn get_paths_by_manifest_id(
         &self,
         ctx: &CoreContext,
-        manifest_id: &ManifestId,
+        manifest_id: &RestrictedManifestId,
         manifest_type: &ManifestType,
         // TODO(T239041722): handle different paths with the same manifest id
     ) -> Result<Vec<NonRootMPath>>;
@@ -145,7 +141,7 @@ pub trait RestrictedPathsManifestIdStore: Send + Sync {
     async fn get_all_paths_by_manifest_id(
         &self,
         ctx: &CoreContext,
-        manifest_id: &ManifestId,
+        manifest_id: &RestrictedManifestId,
     ) -> Result<Vec<(ManifestType, NonRootMPath)>>;
 
     /// Delete all entries in this repo matching a manifest id, regardless of
@@ -153,7 +149,7 @@ pub trait RestrictedPathsManifestIdStore: Send + Sync {
     async fn delete_by_manifest_id(
         &self,
         ctx: &CoreContext,
-        manifest_id: &ManifestId,
+        manifest_id: &RestrictedManifestId,
     ) -> Result<u64>;
 
     fn repo_id(&self) -> RepositoryId;
@@ -163,7 +159,7 @@ mononoke_queries! {
     write InsertManifestIds(values: (
         repo_id: RepositoryId,
         manifest_type: ManifestType,
-        manifest_id: ManifestId,
+        manifest_id: RestrictedManifestId,
         path: PathBytes,
         path_hash: PathHashBytes,
     )) {
@@ -176,7 +172,7 @@ mononoke_queries! {
 
     read SelectPathsByManifestId(
         repo_id: RepositoryId,
-        manifest_id: ManifestId,
+        manifest_id: RestrictedManifestId,
         manifest_type: ManifestType,
     ) -> (NonRootMPath) {
         "SELECT DISTINCT
@@ -190,7 +186,7 @@ mononoke_queries! {
         "
     }
 
-    read SelectAllEntries(repo_id: RepositoryId) -> (ManifestType, ManifestId, NonRootMPath) {
+    read SelectAllEntries(repo_id: RepositoryId) -> (ManifestType, RestrictedManifestId, NonRootMPath) {
         "SELECT
             manifest_type,
             manifest_id,
@@ -204,12 +200,12 @@ mononoke_queries! {
 
     read SelectByManifestId(
         repo_id: RepositoryId,
-        manifest_id: ManifestId,
+        manifest_id: RestrictedManifestId,
     ) -> (ManifestType, NonRootMPath) {
         "SELECT manifest_type, path FROM restricted_paths_manifest_ids WHERE repo_id = {repo_id} AND manifest_id = {manifest_id}"
     }
 
-    write DeleteByManifestId(repo_id: RepositoryId, manifest_id: ManifestId) {
+    write DeleteByManifestId(repo_id: RepositoryId, manifest_id: RestrictedManifestId) {
         none,
         "DELETE FROM restricted_paths_manifest_ids WHERE repo_id = {repo_id} AND manifest_id = {manifest_id}"
     }
@@ -271,7 +267,7 @@ impl RestrictedPathsManifestIdStore for SqlRestrictedPathsManifestIdStore {
     async fn get_paths_by_manifest_id(
         &self,
         ctx: &CoreContext,
-        manifest_id: &ManifestId,
+        manifest_id: &RestrictedManifestId,
         manifest_type: &ManifestType,
     ) -> Result<Vec<NonRootMPath>> {
         let rows = SelectPathsByManifestId::query(
@@ -309,7 +305,7 @@ impl RestrictedPathsManifestIdStore for SqlRestrictedPathsManifestIdStore {
     async fn get_all_paths_by_manifest_id(
         &self,
         ctx: &CoreContext,
-        manifest_id: &ManifestId,
+        manifest_id: &RestrictedManifestId,
     ) -> Result<Vec<(ManifestType, NonRootMPath)>> {
         let rows = SelectByManifestId::query(
             &self.connections.read_connection,
@@ -325,7 +321,7 @@ impl RestrictedPathsManifestIdStore for SqlRestrictedPathsManifestIdStore {
     async fn delete_by_manifest_id(
         &self,
         ctx: &CoreContext,
-        manifest_id: &ManifestId,
+        manifest_id: &RestrictedManifestId,
     ) -> Result<u64> {
         let result = DeleteByManifestId::query(
             &self.connections.write_connection,
@@ -414,109 +410,6 @@ impl OptionalTryFromRowField for ManifestType {
     }
 }
 
-impl ManifestId {
-    pub fn new(data: SmallVec<[u8; 32]>) -> Self {
-        Self(data)
-    }
-
-    pub fn into_inner(self) -> SmallVec<[u8; 32]> {
-        self.0
-    }
-
-    pub fn as_inner(&self) -> &SmallVec<[u8; 32]> {
-        &self.0
-    }
-}
-
-impl Display for ManifestId {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        let st = hex::encode(&self.0);
-        st.fmt(fmt)
-    }
-}
-
-impl fmt::Debug for ManifestId {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "ManifestId({self})")
-    }
-}
-
-impl From<SmallVec<[u8; 32]>> for ManifestId {
-    fn from(data: SmallVec<[u8; 32]>) -> Self {
-        Self(data)
-    }
-}
-
-impl From<String> for ManifestId {
-    fn from(hex_str: String) -> Self {
-        match hex::decode(&hex_str) {
-            Ok(bytes) => {
-                let mut small_vec = SmallVec::new();
-                small_vec.extend_from_slice(&bytes);
-                Self(small_vec)
-            }
-            Err(_) => {
-                // Fallback: treat as raw bytes if hex decoding fails
-                let mut small_vec = SmallVec::new();
-                small_vec.extend_from_slice(hex_str.as_bytes());
-                Self(small_vec)
-            }
-        }
-    }
-}
-
-impl From<&str> for ManifestId {
-    fn from(hex_str: &str) -> Self {
-        hex_str.to_string().into()
-    }
-}
-
-impl From<ManifestId> for SmallVec<[u8; 32]> {
-    fn from(id: ManifestId) -> Self {
-        id.0
-    }
-}
-
-impl From<&[u8; 32]> for ManifestId {
-    fn from(bytes: &[u8; 32]) -> Self {
-        let mut small_vec = SmallVec::new();
-        small_vec.extend_from_slice(bytes);
-        ManifestId(small_vec)
-    }
-}
-
-// SQL conversion implementations for ManifestId
-impl From<ManifestId> for Value {
-    fn from(manifest_id: ManifestId) -> Self {
-        Value::Bytes(manifest_id.0.to_vec())
-    }
-}
-
-impl TryFrom<Value> for ManifestId {
-    type Error = FromValueError;
-    fn try_from(v: Value) -> FromValueResult<Self> {
-        match v {
-            Value::Bytes(bytes) => {
-                // Fallback: treat as raw bytes
-                let mut small_vec = SmallVec::new();
-                small_vec.extend_from_slice(&bytes);
-                Ok(ManifestId(small_vec))
-            }
-            v => Err(FromValueError(v)),
-        }
-    }
-}
-
-impl FromValue for ManifestId {
-    type Intermediate = ManifestId;
-}
-
-impl OptionalTryFromRowField for ManifestId {
-    fn try_from_opt(field: RowField) -> Result<Option<Self>, ValueError> {
-        opt_try_from_rowfield(field)
-    }
-}
-
 fn fmt_path_bytes(path: &PathBytes, f: &mut fmt::Formatter) -> fmt::Result {
     match std::str::from_utf8(&path.0) {
         Ok(path_str) => write!(f, "\"{path_str}\""),
@@ -532,16 +425,17 @@ fn fmt_path_hash_bytes(path_hash: &PathHashBytes, f: &mut fmt::Formatter) -> fmt
 mod tests {
     use fbinit::FacebookInit;
     use mononoke_macros::mononoke;
+    use smallvec::SmallVec;
 
     use super::*;
 
-    fn manifest_id_from(bytes: &[u8]) -> ManifestId {
-        ManifestId::new(SmallVec::from_slice(bytes))
+    fn manifest_id_from(bytes: &[u8]) -> RestrictedManifestId {
+        RestrictedManifestId::new(SmallVec::from_slice(bytes))
     }
 
     fn entry(
         manifest_type: ManifestType,
-        manifest_id: &ManifestId,
+        manifest_id: &RestrictedManifestId,
         path: &str,
     ) -> RestrictedPathManifestIdEntry {
         RestrictedPathManifestIdEntry::new(

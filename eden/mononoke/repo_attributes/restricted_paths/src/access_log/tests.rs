@@ -25,8 +25,8 @@ use serde_json::json;
 use super::RestrictedPathAccessData;
 use super::log_source_results_to_scuba;
 use super::restriction_check_result_for_source_results;
-use crate::ManifestId;
 use crate::ManifestType;
+use crate::RestrictedManifestId;
 use crate::restriction_check::AuthorizationCheckResult;
 use crate::restriction_check::ManifestRestrictionCheckResult;
 use crate::restriction_check::PathRestrictionCheckResult;
@@ -619,7 +619,7 @@ fn full_path_access_data() -> Result<RestrictedPathAccessData> {
 
 fn manifest_access_data(manifest_type: ManifestType) -> RestrictedPathAccessData {
     RestrictedPathAccessData::Manifest(
-        ManifestId::from("1111111111111111111111111111111111111111"),
+        RestrictedManifestId::from("1111111111111111111111111111111111111111"),
         manifest_type,
     )
 }

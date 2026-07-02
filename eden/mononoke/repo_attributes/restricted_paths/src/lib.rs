@@ -51,7 +51,7 @@ pub use crate::restriction_info::PathRestrictionInfo;
 
 #[derive(Clone, Debug)]
 pub enum RestrictedPathAccess {
-    Manifest(ManifestId),
+    Manifest(RestrictedManifestId),
     Path(MPath),
 }
 
@@ -99,7 +99,7 @@ impl std::fmt::Display for RestrictedPathAccess {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Manifest(manifest_id) => {
-                write!(f, "ManifestId({manifest_id})")
+                write!(f, "RestrictedManifestId({manifest_id})")
             }
             Self::Path(path) => write!(f, "{path}"),
         }
@@ -261,7 +261,7 @@ impl RestrictedPaths {
     pub async fn get_manifest_restriction_check(
         &self,
         ctx: &CoreContext,
-        manifest_id: &ManifestId,
+        manifest_id: &RestrictedManifestId,
         manifest_type: &ManifestType,
     ) -> Result<Vec<ManifestRestrictionCheckResult>> {
         restriction_check::get_manifest_restriction_check_for_current_behavior(
@@ -277,7 +277,7 @@ impl RestrictedPaths {
     pub async fn get_manifest_restriction_info(
         &self,
         ctx: &CoreContext,
-        manifest_id: &ManifestId,
+        manifest_id: &RestrictedManifestId,
         manifest_type: &ManifestType,
     ) -> Result<Vec<ManifestRestrictionInfo>> {
         restriction_info::get_manifest_restriction_info(self, ctx, manifest_id, manifest_type).await
@@ -315,7 +315,7 @@ impl RestrictedPaths {
     pub async fn is_restricted_manifest(
         &self,
         ctx: &CoreContext,
-        manifest_id: &ManifestId,
+        manifest_id: &RestrictedManifestId,
         manifest_type: &ManifestType,
         preloaded_is_restricted: bool,
     ) -> Result<bool> {
@@ -351,7 +351,7 @@ impl RestrictedPaths {
     pub async fn log_access_by_manifest_if_restricted(
         &self,
         ctx: &CoreContext,
-        manifest_id: ManifestId,
+        manifest_id: RestrictedManifestId,
         manifest_type: ManifestType,
         cs_id: Option<ChangesetId>,
     ) -> Result<RestrictionCheckResult> {
@@ -588,7 +588,7 @@ pub async fn spawn_enforce_restricted_path_access<'a, 'b>(
 pub async fn spawn_enforce_restricted_manifest_access<'a>(
     ctx: &'a CoreContext,
     restricted_paths: Arc<RestrictedPaths>,
-    manifest_id: ManifestId,
+    manifest_id: RestrictedManifestId,
     manifest_type: ManifestType,
     switch_value: &'a str,
     _cs_id: Option<ChangesetId>,

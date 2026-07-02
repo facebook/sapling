@@ -30,9 +30,9 @@ use mononoke_types::MPathElement;
 use mononoke_types::hash::Blake3;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
-use restricted_paths::ManifestId;
 use restricted_paths::ManifestRestrictionCheckResult;
 use restricted_paths::ManifestType;
+use restricted_paths::RestrictedManifestId;
 use restricted_paths::RestrictedPathsArc;
 use revisionstore_types::Metadata;
 
@@ -88,7 +88,7 @@ impl<R: MononokeRepo> HgTreeContext<R> {
         let blobstore = repo_ctx.repo().repo_blobstore();
         let envelope = fetch_manifest_envelope_opt(ctx, blobstore, manifest_id).await?;
 
-        let manifest_id = ManifestId::new(manifest_id.as_bytes().into());
+        let manifest_id = RestrictedManifestId::new(manifest_id.as_bytes().into());
         restricted_paths::spawn_enforce_restricted_manifest_access(
             ctx,
             repo_ctx.repo_ctx().repo().restricted_paths_arc().clone(),
@@ -132,7 +132,7 @@ impl<R: MononokeRepo> HgAugmentedTreeContext<R> {
         let envelope =
             fetch_augmented_manifest_envelope_opt(ctx, blobstore, augmented_manifest_id).await?;
 
-        let manifest_id = ManifestId::new(augmented_manifest_id.as_bytes().into());
+        let manifest_id = RestrictedManifestId::new(augmented_manifest_id.as_bytes().into());
         restricted_paths::spawn_enforce_restricted_manifest_access(
             ctx,
             repo_ctx.repo_ctx().repo().restricted_paths_arc().clone(),
@@ -443,7 +443,7 @@ impl<R: MononokeRepo> HgAugmentedTreeRestrictionContext<R> {
             return Ok(vec![]);
         }
 
-        let manifest_id_bytes = ManifestId::new(self.manifest_id.as_bytes().into());
+        let manifest_id_bytes = RestrictedManifestId::new(self.manifest_id.as_bytes().into());
         restricted_paths
             .get_manifest_restriction_check(
                 self.repo_ctx.ctx(),
@@ -461,7 +461,7 @@ impl<R: MononokeRepo> HgAugmentedTreeRestrictionContext<R> {
     ) -> Result<bool, MononokeError> {
         let restricted_paths = self.repo_ctx.repo().restricted_paths_arc();
 
-        let manifest_id_bytes = ManifestId::new(self.manifest_id.as_bytes().into());
+        let manifest_id_bytes = RestrictedManifestId::new(self.manifest_id.as_bytes().into());
         restricted_paths
             .is_restricted_manifest(
                 self.repo_ctx.ctx(),

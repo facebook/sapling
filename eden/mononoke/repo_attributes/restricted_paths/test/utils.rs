@@ -133,7 +133,7 @@ pub struct RestrictedPathsTestDataBuilder {
 pub struct ScubaAccessLogSample {
     repo_id: RepositoryId,
     restricted_paths: Vec<NonRootMPath>,
-    manifest_id: Option<ManifestId>,
+    manifest_id: Option<RestrictedManifestId>,
     manifest_type: Option<ManifestType>,
     full_path: Option<NonRootMPath>,
     client_identities: Vec<String>,
@@ -164,7 +164,7 @@ impl ScubaAccessLogSample {
         self.manifest_type.as_ref()
     }
 
-    pub fn manifest_id(&self) -> Option<&ManifestId> {
+    pub fn manifest_id(&self) -> Option<&RestrictedManifestId> {
         self.manifest_id.as_ref()
     }
 
@@ -197,7 +197,7 @@ impl ScubaAccessLogSample {
 pub struct ScubaAccessLogSampleBuilder {
     repo_id: Option<RepositoryId>,
     restricted_paths: Vec<NonRootMPath>,
-    manifest_id: Option<ManifestId>,
+    manifest_id: Option<RestrictedManifestId>,
     manifest_type: Option<ManifestType>,
     full_path: Option<NonRootMPath>,
     client_identities: Vec<String>,
@@ -249,7 +249,7 @@ impl ScubaAccessLogSampleBuilder {
         self
     }
 
-    pub fn with_manifest_id(mut self, manifest_id: ManifestId) -> Self {
+    pub fn with_manifest_id(mut self, manifest_id: RestrictedManifestId) -> Self {
         self.manifest_id = Some(manifest_id);
         self
     }
@@ -652,7 +652,7 @@ impl RestrictedPathsTestData {
     /// Calls manifest-based restricted paths logging directly and returns emitted Scuba rows.
     pub async fn observe_manifest_access(
         &self,
-        manifest_id: ManifestId,
+        manifest_id: RestrictedManifestId,
         manifest_type: ManifestType,
         cs_id: Option<ChangesetId>,
         enforcement_condition_sets: &[EnforcementConditionSet],
@@ -1436,7 +1436,7 @@ fn deserialize_scuba_log_file(
                     let manifest_id = flattened_log["manifest_id"]
                         .as_str()
                         .map(String::from)
-                        .map(ManifestId::from);
+                        .map(RestrictedManifestId::from);
 
                     let manifest_type = flattened_log["manifest_type"]
                         .as_str()

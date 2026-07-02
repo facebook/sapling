@@ -24,8 +24,8 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use sql_construct::SqlConstruct;
 use test_repo_factory::TestRepoFactory;
 
-use crate::ManifestId;
 use crate::ManifestType;
+use crate::RestrictedManifestId;
 use crate::RestrictedPathManifestIdEntry;
 use crate::RestrictedPaths;
 use crate::RestrictedPathsConfig;
@@ -129,7 +129,7 @@ pub(crate) async fn add_manifest_entry(
     ctx: &CoreContext,
     restricted_paths: &RestrictedPaths,
     manifest_type: ManifestType,
-    manifest_id: ManifestId,
+    manifest_id: RestrictedManifestId,
     path: &str,
 ) -> Result<()> {
     restricted_paths
@@ -173,7 +173,7 @@ mod tests {
         )
         .await?;
         let ctx = CoreContext::test_mock(fb);
-        let manifest_id = ManifestId::from("4444444444444444444444444444444444444444");
+        let manifest_id = RestrictedManifestId::from("4444444444444444444444444444444444444444");
 
         add_manifest_entry(
             &ctx,

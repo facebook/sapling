@@ -16,7 +16,7 @@ use clap::Subcommand;
 use mononoke_app::MononokeApp;
 use mononoke_app::args::RepoArgs;
 use repo_identity::RepoIdentity;
-use restricted_paths::ManifestId;
+use restricted_paths::RestrictedManifestId;
 use restricted_paths::RestrictedPathsManifestIdStore;
 use smallvec::SmallVec;
 
@@ -62,9 +62,9 @@ pub enum ManifestIdStoreSubcommand {
 /// Parse a manifest id from its hex representation.
 ///
 /// Accepts an optional `0x`/`0X` prefix. The bytes are decoded with strict hex
-/// parsing rather than `ManifestId::from(&str)`, whose fallback silently treats
+/// parsing rather than `RestrictedManifestId::from(&str)`, whose fallback silently treats
 /// invalid hex as raw ASCII bytes and would mask user mistakes.
-pub(crate) fn parse_manifest_id(s: &str) -> Result<ManifestId> {
+pub(crate) fn parse_manifest_id(s: &str) -> Result<RestrictedManifestId> {
     let hex_str = s
         .strip_prefix("0x")
         .or_else(|| s.strip_prefix("0X"))
@@ -76,7 +76,7 @@ pub(crate) fn parse_manifest_id(s: &str) -> Result<ManifestId> {
     if bytes.is_empty() {
         bail!("Empty manifest_id {s:?}: a manifest id must be a non-empty hex string");
     }
-    Ok(ManifestId::new(SmallVec::from_slice(&bytes)))
+    Ok(RestrictedManifestId::new(SmallVec::from_slice(&bytes)))
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {

@@ -657,8 +657,8 @@ impl SaplingRemoteApiHandler for CheckPathPermissionHandler {
 mod tests {
     use anyhow::Result;
     use mononoke_macros::mononoke;
-    use restricted_paths::ManifestId;
     use restricted_paths::PermissionRequestGroup;
+    use restricted_paths::RestrictedManifestId;
     use restricted_paths::RestrictedPathAccess;
     use restricted_paths::RestrictedPathsAuthorizationError;
     use types::HgId;
@@ -669,7 +669,7 @@ mod tests {
     fn test_tree_fetch_error_to_slapi_error_preserves_manifest_permission_denied() -> Result<()> {
         let key = test_key()?;
         let err = restricted_paths_error(
-            RestrictedPathAccess::Manifest(ManifestId::from(
+            RestrictedPathAccess::Manifest(RestrictedManifestId::from(
                 "1111111111111111111111111111111111111111",
             )),
             "REPO_REGION:test_acl",

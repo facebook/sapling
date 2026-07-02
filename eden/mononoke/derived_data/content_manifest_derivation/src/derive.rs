@@ -42,8 +42,8 @@ use mononoke_types::content_manifest::ContentManifestFile;
 use mononoke_types::content_manifest::ContentManifestRollupData;
 use mononoke_types::sharded_map_v2::LoadableShardedMapV2Node;
 use mononoke_types::sharded_map_v2::ShardedMapV2Node;
-use restricted_paths_common::ManifestId;
 use restricted_paths_common::ManifestType;
+use restricted_paths_common::RestrictedManifestId;
 use restricted_paths_common::RestrictedPathManifestIdEntry;
 use restricted_paths_common::RestrictedPathsConfigBased;
 
@@ -198,7 +198,7 @@ pub(crate) async fn create_content_manifest_directory(
             if should_record {
                 let entry = RestrictedPathManifestIdEntry::new(
                     ManifestType::ContentManifest,
-                    ManifestId::from(&id.blake2().into_inner()),
+                    RestrictedManifestId::from(&id.blake2().into_inner()),
                     RepoPath::DirectoryPath(non_root_path),
                 )?;
 

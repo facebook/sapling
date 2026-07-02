@@ -34,8 +34,8 @@ use permission_checker::MononokeIdentity;
 use permission_checker::PermissionCheckerBuilder;
 use tokio::task::JoinHandle;
 
-use crate::ManifestId;
 use crate::ManifestType;
+use crate::RestrictedManifestId;
 use crate::RestrictedPaths;
 use crate::restriction_info;
 use crate::restriction_info::ManifestRestrictionInfo;
@@ -811,7 +811,7 @@ pub(crate) async fn get_path_restriction_check(
 pub(crate) async fn get_manifest_restriction_check(
     restricted_paths: &RestrictedPaths,
     ctx: &CoreContext,
-    manifest_id: &ManifestId,
+    manifest_id: &RestrictedManifestId,
     manifest_type: &ManifestType,
     source: ManifestRestrictionSource,
 ) -> Result<Vec<ManifestRestrictionCheckResult>> {
@@ -844,7 +844,7 @@ pub(crate) async fn get_manifest_restriction_check(
 pub(crate) async fn get_manifest_restriction_check_for_current_behavior(
     restricted_paths: &RestrictedPaths,
     ctx: &CoreContext,
-    manifest_id: &ManifestId,
+    manifest_id: &RestrictedManifestId,
     manifest_type: &ManifestType,
 ) -> Result<Vec<ManifestRestrictionCheckResult>> {
     let restriction_info = restriction_info::get_manifest_restriction_info(
@@ -1127,7 +1127,7 @@ pub(crate) fn spawn_path_restriction_check(
 pub(crate) async fn check_manifest_restriction_from_source(
     ctx: &CoreContext,
     restricted_paths: &RestrictedPaths,
-    manifest_id: ManifestId,
+    manifest_id: RestrictedManifestId,
     manifest_type: ManifestType,
     source: ManifestRestrictionSource,
 ) -> Result<Vec<ManifestRestrictionCheckResult>> {
@@ -1138,7 +1138,7 @@ pub(crate) async fn check_manifest_restriction_from_source(
 pub(crate) fn spawn_manifest_restriction_check(
     ctx: &CoreContext,
     restricted_paths: Arc<RestrictedPaths>,
-    manifest_id: ManifestId,
+    manifest_id: RestrictedManifestId,
     manifest_type: ManifestType,
     source: ManifestRestrictionSource,
 ) -> SharedFetchHandle<ManifestRestrictionCheckResult> {

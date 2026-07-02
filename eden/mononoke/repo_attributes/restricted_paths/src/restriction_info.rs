@@ -36,9 +36,9 @@ use mononoke_types::acl_manifest::AclManifestRestriction;
 use mononoke_types::typed_hash::AclManifestId;
 use permission_checker::MononokeIdentity;
 
-use crate::ManifestId;
 use crate::ManifestType;
 use crate::PermissionRequestGroup;
+use crate::RestrictedManifestId;
 use crate::RestrictedPaths;
 
 #[cfg(test)]
@@ -183,7 +183,7 @@ pub(crate) async fn find_restricted_descendants_from_acl_manifest(
 pub(crate) async fn get_manifest_restricted_paths_from_config(
     restricted_paths: &RestrictedPaths,
     ctx: &CoreContext,
-    manifest_id: &ManifestId,
+    manifest_id: &RestrictedManifestId,
     manifest_type: &ManifestType,
 ) -> Result<Vec<NonRootMPath>> {
     if let Some(manifest_id_cache) = restricted_paths.config_based().manifest_id_cache() {
@@ -319,7 +319,7 @@ pub(crate) async fn is_restricted_path(
 pub async fn is_restricted_manifest(
     restricted_paths: &RestrictedPaths,
     ctx: &CoreContext,
-    manifest_id: &ManifestId,
+    manifest_id: &RestrictedManifestId,
     manifest_type: &ManifestType,
     preloaded_is_restricted: bool,
 ) -> Result<bool> {
@@ -356,7 +356,7 @@ pub async fn is_restricted_manifest(
 async fn is_restricted_manifest_from_config(
     restricted_paths: &RestrictedPaths,
     ctx: &CoreContext,
-    manifest_id: &ManifestId,
+    manifest_id: &RestrictedManifestId,
     manifest_type: &ManifestType,
 ) -> Result<bool> {
     // The config source can only restrict a manifest when there are configured
@@ -414,7 +414,7 @@ pub(crate) async fn find_restricted_descendants(
 pub(crate) async fn get_manifest_restriction_info(
     restricted_paths: &RestrictedPaths,
     ctx: &CoreContext,
-    manifest_id: &ManifestId,
+    manifest_id: &RestrictedManifestId,
     manifest_type: &ManifestType,
 ) -> Result<Vec<ManifestRestrictionInfo>> {
     let mode = restricted_paths.config().acl_manifest_mode;
@@ -477,7 +477,7 @@ pub(crate) async fn get_manifest_restriction_info(
 pub(crate) async fn get_manifest_restriction_info_from_config(
     restricted_paths: &RestrictedPaths,
     ctx: &CoreContext,
-    manifest_id: &ManifestId,
+    manifest_id: &RestrictedManifestId,
     manifest_type: &ManifestType,
 ) -> Result<Vec<ManifestRestrictionInfo>> {
     let paths = get_manifest_restricted_paths_from_config(
@@ -506,7 +506,7 @@ pub(crate) async fn get_manifest_restriction_info_from_config(
 pub(crate) async fn get_manifest_restriction_info_from_acl_manifest(
     restricted_paths: &RestrictedPaths,
     ctx: &CoreContext,
-    manifest_id: &ManifestId,
+    manifest_id: &RestrictedManifestId,
     manifest_type: &ManifestType,
 ) -> Result<Vec<ManifestRestrictionInfo>> {
     let Some(acl_manifest_directory_id) = load_acl_manifest_directory_id_from_manifest(
@@ -803,7 +803,7 @@ fn build_config_path_restriction_info(
 async fn load_acl_manifest_directory_id_from_manifest(
     restricted_paths: &RestrictedPaths,
     ctx: &CoreContext,
-    manifest_id: &ManifestId,
+    manifest_id: &RestrictedManifestId,
     manifest_type: &ManifestType,
 ) -> Result<Option<AclManifestId>> {
     let ManifestType::HgAugmented = manifest_type else {

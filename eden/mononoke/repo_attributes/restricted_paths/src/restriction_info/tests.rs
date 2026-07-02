@@ -51,8 +51,8 @@ use super::get_path_restriction_info_from_acl_manifest;
 use super::get_path_restriction_root_info_from_acl_manifest;
 use super::is_restricted_manifest;
 use super::union_manifest_restriction_info_with_config_precedence;
-use crate::ManifestId;
 use crate::ManifestType;
+use crate::RestrictedManifestId;
 use crate::RestrictedPathManifestIdEntry;
 use crate::RestrictedPaths;
 use crate::RestrictedPathsConfig;
@@ -80,7 +80,7 @@ struct AclManifestLookupFixture {
 struct ManifestLookupFixture {
     ctx: CoreContext,
     restricted_paths: RestrictedPaths,
-    manifest_id: ManifestId,
+    manifest_id: RestrictedManifestId,
     manifest_type: ManifestType,
 }
 
@@ -337,7 +337,7 @@ mod manifest_restriction_metadata {
         let err = is_restricted_manifest(
             &restricted_paths,
             &ctx,
-            &ManifestId::from("unsupported_manifest"),
+            &RestrictedManifestId::from("unsupported_manifest"),
             &ManifestType::Hg,
             false,
         )
@@ -358,7 +358,7 @@ mod manifest_restriction_metadata {
     async fn test_authoritative_uses_preloaded_acl_manifest_value(fb: FacebookInit) -> Result<()> {
         let (ctx, restricted_paths) =
             manifest_restriction_metadata_fixture(fb, AclManifestMode::Authoritative).await?;
-        let manifest_id = ManifestId::from("authoritative_manifest");
+        let manifest_id = RestrictedManifestId::from("authoritative_manifest");
         add_manifest_id_store_entry(&restricted_paths, &ctx, manifest_id.clone()).await?;
 
         assert!(
@@ -390,7 +390,7 @@ mod manifest_restriction_metadata {
     ) -> Result<()> {
         let (ctx, restricted_paths) =
             manifest_restriction_metadata_fixture(fb, AclManifestMode::Both).await?;
-        let manifest_id = ManifestId::from("both_manifest");
+        let manifest_id = RestrictedManifestId::from("both_manifest");
 
         assert!(
             is_restricted_manifest(
@@ -436,9 +436,12 @@ mod manifest_restriction_metadata {
         for (mode, manifest_id) in [
             (
                 AclManifestMode::Disabled,
-                ManifestId::from("disabled_manifest"),
+                RestrictedManifestId::from("disabled_manifest"),
             ),
-            (AclManifestMode::Shadow, ManifestId::from("shadow_manifest")),
+            (
+                AclManifestMode::Shadow,
+                RestrictedManifestId::from("shadow_manifest"),
+            ),
         ] {
             let (ctx, restricted_paths) = manifest_restriction_metadata_fixture(fb, mode).await?;
             add_manifest_id_store_entry(&restricted_paths, &ctx, manifest_id.clone()).await?;
@@ -582,7 +585,7 @@ async fn manifest_restriction_metadata_fixture(
 async fn add_manifest_id_store_entry(
     restricted_paths: &RestrictedPaths,
     ctx: &CoreContext,
-    manifest_id: ManifestId,
+    manifest_id: RestrictedManifestId,
 ) -> Result<()> {
     restricted_paths
         .config_based()
@@ -662,7 +665,9 @@ async fn load_hg_augmented_manifest_id_at_path(
     anyhow::bail!("path must have at least one segment")
 }
 
-fn manifest_id_from_hg_augmented_id(hg_augmented_manifest_id: HgAugmentedManifestId) -> ManifestId {
+fn manifest_id_from_hg_augmented_id(
+    hg_augmented_manifest_id: HgAugmentedManifestId,
+) -> RestrictedManifestId {
     hg_augmented_manifest_id.to_string().into()
 }
 

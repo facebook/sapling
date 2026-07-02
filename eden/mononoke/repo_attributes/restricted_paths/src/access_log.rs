@@ -24,8 +24,8 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use serde_json::Value;
 use serde_json::json;
 
-use crate::ManifestId;
 use crate::ManifestType;
+use crate::RestrictedManifestId;
 use crate::RestrictedPaths;
 use crate::restriction_check;
 use crate::restriction_check::ManifestRestrictionSource;
@@ -45,7 +45,7 @@ pub const ACCESS_LOG_SCUBA_TABLE: &str = "mononoke_restricted_paths_access_test"
 
 pub(crate) enum RestrictedPathAccessData {
     /// When the tree is accessed by manifest id
-    Manifest(ManifestId, ManifestType),
+    Manifest(RestrictedManifestId, ManifestType),
     /// When the tree is accessed by path
     FullPath { full_path: NonRootMPath },
 }
@@ -112,7 +112,7 @@ impl SourceComparisonLogContext {
 pub(crate) async fn log_source_comparison_access_by_manifest_if_restricted(
     restricted_paths: &RestrictedPaths,
     ctx: &CoreContext,
-    manifest_id: ManifestId,
+    manifest_id: RestrictedManifestId,
     manifest_type: ManifestType,
     acl_manifest_mode: AclManifestMode,
 ) -> Result<RestrictionCheckResult> {
