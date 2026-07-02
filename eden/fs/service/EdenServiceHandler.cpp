@@ -2585,8 +2585,11 @@ apache::thrift::ServerStream<InodeEvent> EdenServiceHandler::traceInodeEvents(
             ConvertInodeTraceEventToThriftInodeEvent(event, thriftEvent);
             try {
               auto relativePath = inodeMap->getPathForInode(event.ino);
-              thriftEvent.path() =
-                  relativePath ? relativePath->asString() : event.getPath();
+              if (relativePath) {
+                thriftEvent.path() = relativePath->asString();
+              } else {
+                thriftEvent.path() = event.getPath();
+              }
             } catch (const std::system_error& /* e */) {
               thriftEvent.path() = event.getPath();
             }
