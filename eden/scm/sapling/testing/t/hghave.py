@@ -179,11 +179,6 @@ def tempdir():
     return testtmp or tempfile.gettempdir()
 
 
-@check("chg", "running with chg")
-def has_chg():
-    return "CHGHG" in os.environ
-
-
 _zlibsamples = {
     b"c7667dad766d": "789c4b363733334f494c01522900160b036e",
     b"36a25358b7f16835db5a8e4ecc68328f42": "789c33364b34323536b548324f3"
@@ -494,8 +489,7 @@ def has_linuxormacos():
 
 @check("demandimport", "demandimport enabled")
 def has_demandimport():
-    # chg disables demandimport intentionally for performance wins.
-    return (not has_chg()) and os.environ.get("HGDEMANDIMPORT") != "disable"
+    return os.environ.get("HGDEMANDIMPORT") != "disable"
 
 
 @check("slow", "allow slow tests (use --allow-slow-tests)")

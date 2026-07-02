@@ -34,15 +34,7 @@ Commands can succeed without a stdin
   
 #endif
 
-#if devfull no-chg
-  $ sl status >/dev/full 2>&1
-  [255]
-
-  $ sl status ENOENT 2>/dev/full
-  [255]
-#endif
-
-#if devfull chg
+#if devfull
   $ sl status >/dev/full 2>&1
   [255]
 

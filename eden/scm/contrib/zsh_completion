@@ -884,7 +884,6 @@ _hg_cmd_serve() {
   '--prefix[prefix path to serve from]:directory:_files' \
   '(--name -n)'{-n+,--name=}'[name to show in web pages]:repository name:' \
   '--pid-file[name of file to write process ID to]:pid_file:_files' \
-  '--cmdserver[cmdserver mode]:mode:' \
   '(--templates -t)'{-t,--templates}'[web template directory]:template dir:_files -/' \
   '--style[web template style]:style' \
   '--stdio[for remote clients]' \

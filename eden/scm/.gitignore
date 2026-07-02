@@ -31,8 +31,6 @@ tests/htmlcov
 tests/getdb.sh
 tests/testutil/getdb.py
 __pycache__/
-contrib/chg/chg
-contrib/chg/libchg.a
 contrib/hgsh/hgsh
 contrib/vagrant/.vagrant
 contrib/docker/debian-*

@@ -131,7 +131,7 @@ Stripping from a transaction
    * (glob) (?)
    * (glob) (?)
 
-#if no-chg normal-layout no-fsmonitor
+#if normal-layout no-fsmonitor
   $ sl blackbox --no-timestamp --no-sid --pattern '{"legacy_log":{"service":"develwarn"}}' | grep develwarn
   [legacy][develwarn] devel-warn: "wlock" acquired after "lock" at: $TESTTMP/buggylocking.py:12 (buggylocking)
   [legacy][develwarn] devel-warn: "wlock" acquired after "lock" at: $TESTTMP/buggylocking.py:12 (buggylocking)
@@ -158,7 +158,7 @@ Test programming error failure:
   Traceback (most recent call last):
   *ProgrammingError: something went wrong (glob)
 
-#if bash no-chg
+#if bash
 Old style deprecation warning
 
   $ sl nouiwarning
@@ -170,4 +170,3 @@ Old style deprecation warning
 
   $ HGEMITWARNINGS= sl nouiwarning
 #endif
-

@@ -16,9 +16,8 @@ message and override some other config items.
     groups = devs, users
     # warning to show if the user is not a member of any of those groups
     warning = You are not a member of %s group. Consult IT department for help.
-    # if the user is not a member of any of those groups, override chgserver
-    # config to make chgserver exit earlier
-    overrides.chgserver.idletimeout = 2
+    # if the user is not a member of any of those groups, override another config
+    overrides.ui.timeout = 2
 """
 
 import os

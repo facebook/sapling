@@ -90,8 +90,7 @@ class request:
         # remember options pre-parsed by _earlyparseopts()
         self.earlyoptions = {}
 
-        # reposetups which run before extensions, useful for chg to pre-fill
-        # low-level repo state (for example, changelog) before extensions.
+        # reposetups which run before extensions.
         self.prereposetups = prereposetups or []
 
     def _runexithandlers(self):

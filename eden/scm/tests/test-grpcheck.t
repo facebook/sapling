@@ -29,7 +29,7 @@ mock os.getgroups and grp.getgrnam
   > [grpcheck]
   > groups = users, devs
   > warning = You should be in %s group.
-  > overrides.chgserver.idletimeout = 3
+  > overrides.ui.timeout = 3
   > overrides.ui.foo = bar
   > EOF
 
@@ -65,7 +65,7 @@ warning does not affect write action (commit)
 
 config overrides
 
-  $ HGPLAIN=1 sl config chgserver.idletimeout
+  $ HGPLAIN=1 sl config ui.timeout
   3
   $ cd .. # use repo ui
   $ HGPLAIN=1 sl config ui.foo

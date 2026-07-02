@@ -190,10 +190,6 @@ unlink = platform.unlink
 username = platform.username
 
 try:
-    recvfds = osutil.recvfds
-except AttributeError:
-    pass
-try:
     setprocname = osutil.setprocname
 except AttributeError:
     pass
@@ -1305,8 +1301,8 @@ def shellenviron(environ=None):
 def rawsystem(cmd, environ=None, cwd=None, out=None):
     """low-level shell command execution that lacks of bookkeepings.
 
-    Use 'ui.system' instead to get proper progress suspension,
-    and proper chg + ctty handling in common cases.
+    Use 'ui.system' instead to get proper progress suspension
+    and ctty handling in common cases.
 
     run with environment maybe modified, maybe in different dir.
 

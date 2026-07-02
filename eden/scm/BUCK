@@ -236,26 +236,6 @@ check_dependencies_test(
     target = ":sl",
 )
 
-cpp_library(
-    # @autodeps-skip
-    name = "chg",
-    srcs = [
-        "contrib/chg/chg.c",
-        "contrib/chg/hgclient.c",
-        "contrib/chg/procutil.c",
-        "contrib/chg/util.c",
-    ],
-    headers = [
-        "contrib/chg/hgclient.h",
-        "contrib/chg/procutil.h",
-        "contrib/chg/util.h",
-    ],
-    compatible_with = [
-        "ovr_config//os:linux",
-        "ovr_config//os:macos",
-    ],
-)
-
 buck_command_alias(
     name = "runhg",
     exe = ":hg",

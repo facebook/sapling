@@ -8,9 +8,8 @@
 
 Set up an extension to make sure remotefilelog clientsetup() runs
 unconditionally even if we have never used a local shallow repo.
-This mimics behavior when using remotefilelog with chg.  clientsetup() can be
-triggered due to a shallow repo, and then the code can later interact with
-non-shallow repositories.
+This mimics a clientsetup() call triggered due to a shallow repo followed by
+code that later interacts with non-shallow repositories.
 
   $ cat > setupremotefilelog.py << EOF
   > from sapling import extensions
@@ -47,9 +46,8 @@ the server supports our custom getfiles method.
   *getfile* (glob)
 
 Pull to the child repository.  Use our custom setupremotefilelog extension
-to ensure that remotefilelog.onetimeclientsetup() gets triggered.  (Without
-using chg it normally would not be run in this case since the local repository
-is not shallow.)
+to ensure that remotefilelog.onetimeclientsetup() gets triggered even though
+the local repository is not shallow.
 
   $ echo y > y
   $ sl commit -qAm y

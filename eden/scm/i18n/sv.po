@@ -11825,9 +11825,6 @@ msgstr ""
 "    För att låta servern välja ett ledigt portnummer att lyssna på, ange 0\n"
 "    som portnummer; då visar servern det portnummer som används."
 
-msgid "cannot use --stdio with --cmdserver"
-msgstr "kan inte använda --stdio med --cmdserver"
-
 #, python-format
 msgid "listening at http://%s%s/%s (bound to %s:%d)\n"
 msgstr "lyssnar på http://%s%s/%s (bunden till %s:%d)\n"

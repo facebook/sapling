@@ -1283,7 +1283,7 @@ def rungitnorepo(ui, args, gitdir=None, configs=None):
     cmd += cmdargs
     cmd = " ".join(util.shellquote(c) for c in cmd)
     tracing.debug("running %s\n" % cmd)
-    # use ui.system, which is compatible with chg, but goes through shell
+    # use ui.system, which goes through shell
     return ui.system(cmd)
 
 

@@ -159,7 +159,6 @@ Current directory removed:
   $ rm -rf $TESTTMP/repo1
 
 The output could be one of the following and something else:
- chg: abort: failed to getcwd (errno = *) (glob)
  abort: error getting current working directory: * (glob)
  sh: 0: getcwd() failed: $ENOENT$
 Since the exact behavior depends on the shell, only check it returns non-zero.

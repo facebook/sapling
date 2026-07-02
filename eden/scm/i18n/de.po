@@ -13924,9 +13924,6 @@ msgid ""
 "    number it uses."
 msgstr ""
 
-msgid "cannot use --stdio with --cmdserver"
-msgstr "--stdio und --cmdserver können nicht gleichzeitig verwendet werden"
-
 #, python-format
 msgid "listening at http://%s%s/%s (bound to %s:%d)\n"
 msgstr "Höre auf http://%s%s/%s (gebunden an %s:%d)\n"

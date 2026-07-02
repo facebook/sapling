@@ -1351,7 +1351,7 @@ class ui:
 
     def _runsystem(self, cmd, environ, cwd, out):
         """actually execute the given shell command (can be overridden by
-        extensions like chg)"""
+        extensions)"""
         if out is self.fout and not self._buffers:
             system = getattr(bindings.commands, "system", None)
             if system is not None:

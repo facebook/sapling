@@ -321,7 +321,7 @@ fn python_command_aliases(def: &CommandDefinition) -> String {
 }
 
 fn init_bindings_commands(py: Python, package: &str) -> PyResult<PyModule> {
-    // Called by chg or "-t.py" tests.
+    // Called by "-t.py" tests.
     fn run_py(
         py: Python,
         args: Vec<String>,

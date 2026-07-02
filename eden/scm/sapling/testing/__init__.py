@@ -66,9 +66,8 @@ Tests passing with `run-tests.py` and a real `bash` can fail with
   for the next command).  Sometimes it's possible to track down the side
   effects and fix it by gating with config options. If the fix is non-obvious,
   `#inprocess-hg-incompatible` can make a test run `hg` as external process -
-  trade performance for compatibility. `#inprocess-hg-incompatible` can be used
-  together with `#chg-compatible` to restore some performance using chg.
-  `#inprocess-hg-incompatible` disables in-process shell emulation.
+  trade performance for compatibility. `#inprocess-hg-incompatible` disables
+  in-process shell emulation.
   Commands run by `ui.system` will use the real system shell.
 
 - Python block `>>>` behavior is different.
@@ -185,11 +184,10 @@ interpreter and the `.t` runner are designed to not couple with Sapling.
 For example, `testing.t`:
 - Does not depend on anything in `sapling`.
 - Does not set test environment variables like `HGUSER`.
-- Does not handle business-logic related syntaxes like `#chg-compatible`.
+- Does not handle Sapling-specific test setup.
 
-However, for Sapling tests there are needs for setting `HGUSER`, respecting
-`#chg-compatible`, providing the right `hg` command, etc. This is done by
-the `testing.ext.hg` extension.
+However, Sapling tests need `HGUSER`, the right `hg` command, and other
+environment setup. This is done by the `testing.ext.hg` extension.
 
 An extension can have a `testsetup(t: TestTmp)` entry point to change the
 `TestTmp`. It can register functions (ex. `hg`), set environment variables,

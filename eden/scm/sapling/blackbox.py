@@ -5,20 +5,14 @@
 
 from bindings import blackbox as _blackbox
 
-from . import prefork
-
 events = _blackbox.events
 
 
 def init(*args, **opts):
-    if prefork.prefork:
-        return
     _blackbox.init(*args, **opts)
 
 
 def log(*args, **opts):
-    if prefork.prefork:
-        return
     _blackbox.log(*args, **opts)
 
 

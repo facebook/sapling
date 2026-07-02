@@ -10811,10 +10811,6 @@ msgstr ""
 "    angiv da portnummer 0; så vil serveren skrive det portnummer den\n"
 "    bruger."
 
-#, fuzzy
-msgid "cannot use --stdio with --cmdserver"
-msgstr "kan ikke bruge --exact og --move sammen"
-
 msgid "There is no Mercurial repository here (.hg not found)"
 msgstr "Der er intet Mercurial depot her (.hg ikke fundet)"
 

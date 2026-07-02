@@ -15,11 +15,11 @@ Edit supported features for all tests:
 
 Edit specified features for all tests:
 
-    $0 chg debugruntest
+    $0 debugruntest no-modern-config
 
 Edit features for selected tests:
 
-    $0 chg test-a.t test-b.t
+    $0 debugruntest test-a.t test-b.t
 """
 
 import glob
@@ -38,8 +38,6 @@ class Feature:
 
 
 FEATURES = [
-    Feature("chg", "#chg-compatible\n"),
-    Feature("no-chg", "#chg-incompatible\n"),
     Feature("debugruntest", "#debugruntest-compatible\n"),
     Feature("no-debugruntest", "#debugruntest-incompatible\n"),
     Feature("no-modern-config", "#modern-config-incompatible\n"),

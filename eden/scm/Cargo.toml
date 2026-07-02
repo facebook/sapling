@@ -72,7 +72,6 @@ members = [
   "lib/commands/debugcommands/cmddebugtop",
   "lib/commands/debugcommands/cmddebugwait",
   "lib/commands/debugcommands/cmddebugwalkdetector",
-  "lib/commandserver",
   "lib/commitcloudsubscriber",
   "lib/commits",
   "lib/commits/git",

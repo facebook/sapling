@@ -21,7 +21,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     )?;
 
     // The Rust library indirectly uses libc for timezone handling.
-    // Expose tzset() from libc so chg server can update timezone
+    // Expose tzset() from libc so embedded Python can update timezone
     // environments when $TZ gets changed.
     m.add(py, "tzset", py_fn!(py, pytzset()))?;
 

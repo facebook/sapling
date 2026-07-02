@@ -15,7 +15,7 @@ import os
 import sys
 import tempfile
 
-from . import chgserver, commandserver, error, util
+from . import commandserver, error, util
 from .i18n import _
 
 
@@ -118,7 +118,6 @@ def runservice(
 
 
 _cmdservicemap = {
-    "chgunix2": chgserver.chgunixservice,
     "pipe": commandserver.pipeservice,
     "unix": commandserver.unixforkingservice,
 }

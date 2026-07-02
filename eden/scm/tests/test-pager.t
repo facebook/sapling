@@ -186,9 +186,7 @@ even though stdout is no longer a tty.
   paged! 'summary:     modify a 8\n'
   paged! '\n'
 
-#if no-chg
-An invalid pager command name is reported sensibly if we don't have to
-use shell=True in the subprocess call:
+An invalid pager command name is reported sensibly:
   $ sl log --limit 3 --config pager.pager=/this-command-better-never-exist
   missing pager command '*/this-command-better-never-exist', skipping pager (glob)
   \x1b[0m\x1b[1m\x1b[93mcommit:      46106edeeb38\x1b[0m (esc)
@@ -206,8 +204,6 @@ use shell=True in the subprocess call:
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     modify a 8
   
-#endif
-
 A complicated pager command gets worse behavior. Bonus points if you can
 improve this.
   $ sl log --limit 3 \

@@ -14997,9 +14997,6 @@ msgstr ""
 "    указать 0 в качестве номера входящего порта; в этом случае он\n"
 "    напечатает выбранный порт."
 
-msgid "cannot use --stdio with --cmdserver"
-msgstr "нельзя использовать --stdio с --cmdserver"
-
 #, python-format
 msgid "listening at http://%s%s/%s (bound to %s:%d)\n"
 msgstr "слушаю по адресу http://%s%s/%s (привязан к %s:%d)\n"

@@ -14,8 +14,6 @@ from functools import partial
 
 import bindings
 
-from . import prefork
-
 # The Rust bindings (pytracing crate)
 _tracing = bindings.tracing
 
@@ -28,7 +26,7 @@ LEVEL_ERROR = _tracing.LEVEL_ERROR
 
 
 def disabletracing():
-    return prefork.prefork
+    return False
 
 
 # ---- instrument ----

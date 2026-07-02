@@ -146,7 +146,6 @@ def testsetup(t: TestTmp):
     ]
 
     environ = {
-        "CHGDISABLE": "0",
         "COLUMNS": "80",
         "DAEMON_PIDS": str(t.path / "daemon.pids"),
         "HGCOLORS": "16",
@@ -180,16 +179,6 @@ def testsetup(t: TestTmp):
         if watchman_sock:
             environ["WATCHMAN_SOCK"] = watchman_sock
             environ["HGFSMONITOR_TESTS"] = "1"
-
-    # prepare chg
-    with open(testfile, "rb") as f:
-        header = f.read(256)
-        usechg = b"#chg-compatible" in header
-    if usechg:
-        environ["CHGDISABLE"] = "never"
-        environ["CHGSOCKNAME"] = str(t.path / "chgserver")
-    else:
-        environ["CHGDISABLE"] = "1"
 
     for k, v in environ.items():
         t.setenv(k, v)
@@ -244,7 +233,6 @@ def testsetup(t: TestTmp):
         )
 
     # change the 'sl' and 'hg' shell commands to run inline without spawning
-    # (about 2x faster than chg)
     if run is not None and inprocesshg:
         t.command(sl)
         t.command(hg)
@@ -293,9 +281,7 @@ _checkedenvironment = False
 def _checkenvironment():
     """check the python global state is clean"""
     # - "sapling.dispatch" module is not yet imported. This happens if run via
-    #   'hg debugpython' with chg disabled, or via vanilla 'python' - okay.
-    # - "sapling.dispatch" module is imported, and ischgserver is True.
-    #   chgserver preimports modules but does not call uisetup()s, so it's okay.
+    #   'hg debugpython' or via vanilla 'python' - okay.
     # - "sapling.dispatch" module is imported. This is the regular "hg" command
     #   path. It's not okay since uisetup()s might be called and Python global
     #   state is no longer clean.

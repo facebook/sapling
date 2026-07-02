@@ -560,12 +560,6 @@ def getparser():
     )
 
     hgconf = parser.add_argument_group("Mercurial Configuration")
-    hgconf.add_argument("--chg", action="store_true", help="use chg to run tests")
-    hgconf.add_argument(
-        "--chg-sock-path",
-        default="",
-        help="connect to specified chg server address instead of creating a new server",
-    )
     hgconf.add_argument(
         "--watchman", action="store_true", help="shortcut for --with-watchman=watchman"
     )
@@ -714,8 +708,6 @@ def parseargs(args, parser):
                 % (" or ".join(exe_names), reporootdir)
             )
 
-    if options.chg and os.name == "nt":
-        parser.error("chg does not work on %s" % os.name)
     if options.watchman and options.with_watchman:
         parser.error(
             "--watchman does not work when --with-watchman is specified "
@@ -1088,8 +1080,6 @@ class Test(unittest.TestCase):
         shell=None,
         hgcommand=None,
         slowtimeout=None,
-        usechg=False,
-        chgsockpath=None,
         useipv6=False,
         watchman=None,
         options=None,
@@ -1150,8 +1140,6 @@ class Test(unittest.TestCase):
         self._extrarcpaths = extrarcpaths or []
         self._shell = shell
         self._hgcommand = hgcommand or "hg"
-        self._usechg = usechg
-        self._chgsockpath = chgsockpath
         self._useipv6 = useipv6
         self._watchman = watchman
         self._options = options
@@ -1165,13 +1153,6 @@ class Test(unittest.TestCase):
         self._testtmp = None
 
         self._refout = self.readrefout()
-
-        # Force enable chg if the test has '#chg-compatible' in its header.
-        # Force disable chg if the test has '#chg-incompatible' in its header.
-        if not usechg and self._refout and "#chg-compatible\n" in self._refout[:10]:
-            self._usechg = True
-        elif usechg and self._refout and "#chg-incompatible\n" in self._refout[:10]:
-            self._usechg = False
 
     def readrefout(self):
         """read reference output"""
@@ -1316,8 +1297,6 @@ class Test(unittest.TestCase):
             features.setup(self.name.split()[0], hgrcpath)
 
         vlog("# Test", self.name)
-        vlog("# chg in use: %s" % self._usechg)
-
         ret, out = self._run(env)
         self._finished = True
         self._ret = ret
@@ -1580,10 +1559,6 @@ class Test(unittest.TestCase):
         env["USERPROFILE"] = self._testtmp  # Windows
         # pyrefly: ignore [unsupported-operation]
         env["APPDATA"] = self._testtmp  # Windows
-        if self._usechg:
-            env["CHGDISABLE"] = "never"
-        else:
-            env["CHGDISABLE"] = "1"
         # This number should match portneeded in _getport
         for port in range(3):
             # This list should be parallel to _portmap in _getreplacements
@@ -1623,7 +1598,7 @@ class Test(unittest.TestCase):
             "HG HGPROF CDPATH GREP_OPTIONS http_proxy https_proxy no_proxy "
             + "HGPLAIN HGPLAINEXCEPT SL_AUTOMATION SL_AUTOMATION_EXCEPT "
             + "EDITOR VISUAL PAGER "
-            + "HTTP_PROXY HTTPS_PROXY NO_PROXY CHGDEBUG RUST_BACKTRACE RUST_LIB_BACKTRACE "
+            + "HTTP_PROXY HTTPS_PROXY NO_PROXY RUST_BACKTRACE RUST_LIB_BACKTRACE "
             + " EDENSCM_TRACE_LEVEL EDENSCM_TRACE_OUTPUT"
             + " EDENSCM_TRACE_PY TRACING_DATA_FAKE_CLOCK"
             + " EDENSCM_LOG LOG FAILPOINTS"
@@ -1650,9 +1625,6 @@ class Test(unittest.TestCase):
         for k in list(env.keys()):
             if k.startswith("HG_"):
                 del env[k]
-
-        # pyrefly: ignore [unsupported-operation]
-        env["CHGSOCKNAME"] = self._chgsockpath
 
         if self._watchman:
             env["WATCHMAN_SOCK"] = str(self._watchmanproc.socket)
@@ -2063,9 +2035,6 @@ class TTest(Test):
                     if not haveresult:
                         script = [b'echo "%s"\nexit 80\n' % _bytespath(message)]
                         break
-                # pyrefly: ignore [missing-attribute]
-                after.setdefault(pos, []).append(l)
-            elif l.startswith(b"#chg-"):
                 # pyrefly: ignore [missing-attribute]
                 after.setdefault(pos, []).append(l)
             elif l.startswith(b"#if"):
@@ -3719,16 +3688,6 @@ class TestRunner:
             vlog("# Using watchman", self._watchman)
         vlog("# Writing to directory", self._outputdir)
 
-        # pyrefly: ignore [missing-attribute]
-        if not self.options.chg_sock_path:
-            # When running many tests. Attempt to use a shared chg server for
-            # all tests to reduce chg server start overhead from O(tests) to
-            # O(1).
-            # `chgsockpath` is inside HGTMP, and will be cleaned up by
-            # self._cleanup().
-            # pyrefly: ignore [missing-attribute]
-            self.options.chg_sock_path = os.path.join(self._hgtmp, "chgserver")
-
         try:
             return self._runtests(testdescs) or 0
         finally:
@@ -3983,10 +3942,6 @@ class TestRunner:
             # pyrefly: ignore [missing-attribute]
             shell=self.options.shell,
             hgcommand=self._hgcommand,
-            # pyrefly: ignore [missing-attribute]
-            usechg=self.options.chg,
-            # pyrefly: ignore [missing-attribute]
-            chgsockpath=self.options.chg_sock_path,
             useipv6=useipv6,
             watchman=self._watchman,
             options=self.options,
