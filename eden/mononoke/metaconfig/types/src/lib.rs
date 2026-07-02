@@ -40,6 +40,7 @@ use mononoke_types::DerivableType;
 use mononoke_types::NonRootMPath;
 use mononoke_types::PrefixTrie;
 use mononoke_types::RepositoryId;
+use mononoke_types::RestrictedManifestId;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::path::MPath;
 use mysql_common::value::convert::FromValue;
@@ -2631,6 +2632,10 @@ pub struct RestrictedPathsConfig {
     pub enforcement_enabled: bool,
     /// 4-stage rollout state for AclManifest. Defaults to `Disabled`.
     pub acl_manifest_mode: AclManifestMode,
+    /// Manifest IDs to ignore for restricted-path manifest lookups and writes.
+    /// Type-agnostic: a content collision produces the same hash across manifest
+    /// types, so a single set covers all of them.
+    pub manifest_id_denylist: HashSet<RestrictedManifestId>,
 }
 
 const DEFAULT_ACL_FILE_NAME: &str = ".slacl";
@@ -2649,6 +2654,7 @@ impl Default for RestrictedPathsConfig {
             enforcement_condition_sets: Vec::new(),
             enforcement_enabled: false,
             acl_manifest_mode: AclManifestMode::Disabled,
+            manifest_id_denylist: HashSet::new(),
         }
     }
 }

@@ -93,6 +93,7 @@ use mononoke_types::DerivableType;
 use mononoke_types::NonRootMPath;
 use mononoke_types::PrefixTrie;
 use mononoke_types::RepositoryId;
+use mononoke_types::RestrictedManifestId;
 use mononoke_types::path::MPath;
 use permission_checker::MononokeIdentity;
 use repos::ModernSyncChannelConfig as RawModernSyncChannelConfig;
@@ -1508,6 +1509,17 @@ impl Convert for RawRestrictedPathsConfig {
             })
             .collect::<Result<Vec<_>>>()?;
 
+        let manifest_id_denylist = self
+            .manifest_id_denylist
+            .unwrap_or_default()
+            .into_iter()
+            .map(|manifest_id| {
+                RestrictedManifestId::from_hex(&manifest_id).with_context(|| {
+                    format!("parsing manifest_id_denylist manifest ID `{manifest_id}`")
+                })
+            })
+            .collect::<Result<HashSet<_>>>()?;
+
         Ok(RestrictedPathsConfig {
             path_restriction_metadata,
             use_manifest_id_cache,
@@ -1522,6 +1534,7 @@ impl Convert for RawRestrictedPathsConfig {
             enforcement_condition_sets,
             enforcement_enabled: self.enforcement_enabled.unwrap_or(false),
             acl_manifest_mode: parse_acl_manifest_mode(self.acl_manifest_mode.as_deref())?,
+            manifest_id_denylist,
         })
     }
 }
@@ -1617,6 +1630,31 @@ mod tests {
         assert!(
             msg.contains("restriction_acl `bogus`"),
             "error should contain offending value: {msg}"
+        );
+    }
+
+    #[mononoke::test]
+    fn test_parse_manifest_id_denylist() {
+        let mut raw = empty_raw_restricted_paths_config();
+        raw.manifest_id_denylist =
+            Some(vec!["7b3d1bdf060b697e2b3decc0a91788c5c24e5802".to_string()]);
+
+        let cfg: RestrictedPathsConfig = raw.convert().unwrap();
+        assert!(cfg.manifest_id_denylist.contains(
+            &RestrictedManifestId::from_hex("7b3d1bdf060b697e2b3decc0a91788c5c24e5802").unwrap()
+        ));
+    }
+
+    #[mononoke::test]
+    fn test_parse_manifest_id_denylist_rejects_invalid_hex() {
+        let mut raw = empty_raw_restricted_paths_config();
+        raw.manifest_id_denylist = Some(vec!["not-hex".to_string()]);
+
+        let err = raw.convert().unwrap_err();
+        let msg = format!("{err:#}");
+        assert!(
+            msg.contains("manifest_id_denylist manifest ID `not-hex`"),
+            "error should contain offending manifest ID: {msg}"
         );
     }
 
