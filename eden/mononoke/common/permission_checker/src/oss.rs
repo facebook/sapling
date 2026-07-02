@@ -114,6 +114,10 @@ impl MononokeIdentitySetExt for MononokeIdentitySet {
         None
     }
 
+    fn crewmate(&self) -> Option<&str> {
+        None
+    }
+
     fn main_client_identity(&self, _sandcastle_alias: Option<&str>) -> String {
         String::from("PLACEHOLDER_CLIENT_IDENTITY")
     }
