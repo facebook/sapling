@@ -10,7 +10,6 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::Result;
-use anyhow::bail;
 use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use borrowed::borrowed;
@@ -235,9 +234,6 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
             }
             let cur_subentries_to_update = modified_subentries.unwrap_or_default();
             let mf = match change.unwrap_or(DeletedManifestChangeType::RemoveIfNowEmpty) {
-                DeletedManifestChangeType::Reuse => {
-                    bail!("Reuse is implicit on batch derivation")
-                }
                 DeletedManifestChangeType::CreateDeleted => {
                     let mf = Manifest::copy_and_update_subentries(
                         ctx,

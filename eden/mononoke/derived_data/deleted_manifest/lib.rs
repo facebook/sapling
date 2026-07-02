@@ -12,6 +12,7 @@ mod derive_batch;
 mod mapping;
 mod mapping_v2;
 mod ops;
+mod pipeline;
 #[cfg(test)]
 pub mod test_utils;
 

@@ -44,6 +44,7 @@ use mononoke_types::MPathElement;
 use mononoke_types::ManifestUnodeId;
 use mononoke_types::NonRootMPath;
 use mononoke_types::deleted_manifest_common::DeletedManifestCommon;
+use mononoke_types::path::MPath;
 use mononoke_types::unode::ManifestUnode;
 use mononoke_types::unode::UnodeEntry;
 use multimap::MultiMap;
@@ -120,17 +121,23 @@ pub(crate) enum DeletedManifestChangeType {
     /// Path now exists, delete if it doesn't have any subentries that were
     /// previous deleted.
     RemoveIfNowEmpty,
-    /// No changes to the path which has a single parent, reuse the parent.
-    Reuse,
 }
 
+/// Per-node outcome produced by `do_unfold` and consumed by `do_create`. The
+/// `Option<Manifest>` payloads carry the parent node to copy subentries from
+/// before applying the remaining modifications.
 #[derive(Debug, Clone)]
-struct DeletedManifestChange<Manifest: DeletedManifestCommon> {
-    /// Which change happened.
-    change_type: DeletedManifestChangeType,
-    /// Parent to base on. Result should be equivalent to copying the subentries
-    /// of the parent and then applying the remaining modifications.
-    copy_subentries_from: Option<Manifest>,
+enum DeletedManifestChange<Manifest: DeletedManifestCommon> {
+    /// Child-stage boundary: emit this precomputed id (or `None`) directly,
+    /// short-circuiting the traversal. Only produced by staged derivation.
+    Known(Option<Manifest::Id>),
+    /// No change on a single-parent path: reuse the parent node wholesale.
+    Reuse(Manifest),
+    /// Path was deleted: create a node with its linknode set.
+    CreateDeleted(Option<Manifest>),
+    /// Path now exists: create a node without a linknode, dropped if it ends up
+    /// with no previously-deleted subentries.
+    RemoveIfNowEmpty(Option<Manifest>),
 }
 
 #[derive(Debug, Clone)]
@@ -140,6 +147,10 @@ struct DeletedManifestUnfoldNode<Manifest: DeletedManifestCommon> {
     parent_deleted_manifests: MultiMap<Manifest::Id, ChangesetId>,
     parent_unodes: MultiMap<UnodeEntry, ChangesetId>,
     current_unode: Option<UnodeEntry>,
+    /// Child-stage boundaries at or below this node. The tree value at a node is
+    /// `Some(id)` when that node itself is a boundary (short-circuit), else
+    /// `None`. Empty in canonical (whole-tree) derivation.
+    known_entries: PathTree<Option<Option<Manifest::Id>>>,
 }
 
 async fn get_changes_bonsai(
@@ -175,7 +186,9 @@ async fn get_changes_bonsai(
 }
 
 impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
-    /// Derives a Deleted Manifest for a single commit.
+    /// Derives a Deleted Manifest for a single commit (canonical, whole-tree).
+    /// Thin wrapper over `derive_subtree` seeded at the repo root with no
+    /// child-stage cutoffs.
     pub(crate) async fn derive(
         ctx: &CoreContext,
         blobstore: &Arc<dyn KeyedBlobstore>,
@@ -191,12 +204,57 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
             parents.iter().map(|(_, _, unode)| *unode),
         )
         .await?;
+        let cs_id = bonsai.get_changeset_id();
+        let parent_deleted_manifests = parents
+            .iter()
+            .map(|(cs_id, parent_mf_id, _)| (*parent_mf_id, *cs_id))
+            .collect();
+        let parent_unodes = parents
+            .iter()
+            .map(|(cs_id, _, parent_unode_id)| (UnodeEntry::Directory(*parent_unode_id), *cs_id))
+            .collect();
+        Self::derive_subtree(
+            ctx,
+            blobstore,
+            cs_id,
+            changes,
+            parent_deleted_manifests,
+            Some(UnodeEntry::Directory(current_unode)),
+            parent_unodes,
+            HashMap::new(),
+            true,
+        )
+        .await?
+        .ok_or_else(|| anyhow!("derive_subtree returned None despite materialize_empty_root"))
+    }
 
+    /// Shared traversal core for canonical and staged (pipeline) derivation.
+    ///
+    /// The traversal is seeded directly at a subtree: for canonical derivation
+    /// that subtree is the repo root; for pipeline derivation it is the stage
+    /// path, with inputs (`changes`, parent DMs, current/parent unodes) already
+    /// scoped to that subtree. `known_entries` (keyed relative to the subtree
+    /// root) cut off recursion at child-stage boundaries, substituting a
+    /// precomputed id; they are empty for canonical derivation. When the subtree
+    /// has no deletions the result is `None`, unless `materialize_empty_root` is
+    /// set (canonical derivation and the terminal stage), which then creates an
+    /// empty root manifest.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) async fn derive_subtree(
+        ctx: &CoreContext,
+        blobstore: &Arc<dyn KeyedBlobstore>,
+        cs_id: ChangesetId,
+        changes: PathTree<()>,
+        parent_deleted_manifests: MultiMap<Manifest::Id, ChangesetId>,
+        current_unode: Option<UnodeEntry>,
+        parent_unodes: MultiMap<UnodeEntry, ChangesetId>,
+        known_entries: HashMap<MPath, Option<Manifest::Id>>,
+        materialize_empty_root: bool,
+    ) -> Result<Option<Manifest::Id>, Error> {
         // Stream is used to batch writes to blobstore
         let (sender, receiver) = mpsc::unbounded();
         let created = Arc::new(Mutex::new(HashSet::new()));
         cloned!(blobstore, ctx);
-        let cs_id = bonsai.get_changeset_id().clone();
         let counters: Arc<DebugCounters> = Arc::new(Default::default());
 
         let f = async move {
@@ -206,17 +264,12 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
                 DeletedManifestUnfoldNode {
                     path_element: None,
                     changes,
-                    parent_deleted_manifests: parents
-                        .iter()
-                        .map(|(cs_id, parent_mf_id, _)| (*parent_mf_id, *cs_id))
-                        .collect(),
-                    current_unode: Some(UnodeEntry::Directory(current_unode)),
-                    parent_unodes: parents
-                        .iter()
-                        .map(|(cs_id, _, parent_unode_id)| {
-                            (UnodeEntry::Directory(*parent_unode_id), *cs_id)
-                        })
-                        .collect(),
+                    parent_deleted_manifests,
+                    current_unode,
+                    parent_unodes,
+                    known_entries: PathTree::from_iter(
+                        known_entries.into_iter().map(|(path, id)| (path, Some(id))),
+                    ),
                 },
                 // unfold
                 {
@@ -226,6 +279,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
                               parent_deleted_manifests,
                               parent_unodes,
                               current_unode,
+                              known_entries,
                           }| {
                         // -> ((Option<MPathElement>, DeletedManifestChange), Vec<UnfoldNode>)
                         async move {
@@ -236,6 +290,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
                                 parent_deleted_manifests,
                                 parent_unodes,
                                 current_unode,
+                                known_entries,
                                 counters,
                             )
                             .await?;
@@ -297,25 +352,24 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
             debug!("deleted manifest derivation perf counters {:?}", counters);
             debug_assert!(manifest_opt.0.is_none());
             match manifest_opt {
-                (_, Some(mf_id)) => Ok(mf_id),
-                (_, None) => {
-                    // there are no deleted files, need to create an empty root manifest
-                    match Manifest::copy_and_update_subentries(
+                (_, Some(mf_id)) => Ok(Some(mf_id)),
+                // No deletions in this subtree. Terminal stages and canonical
+                // derivation materialize an empty root; non-terminal stages
+                // return None (nothing to record here).
+                (_, None) if materialize_empty_root => {
+                    let mf = Manifest::copy_and_update_subentries(
                         ctx,
                         blobstore,
                         None,
                         None,
                         BTreeMap::new(),
                     )
-                    .await
-                    {
-                        Ok(mf) => {
-                            Self::save_manifest(mf, ctx, blobstore, sender.clone(), created.clone())
-                                .await
-                        }
-                        Err(err) => Err(err),
-                    }
+                    .await?;
+                    Self::save_manifest(mf, ctx, blobstore, sender.clone(), created.clone())
+                        .await
+                        .map(Some)
                 }
+                (_, None) => Ok(None),
             }
         };
 
@@ -328,6 +382,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
         handle.await?
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn do_unfold(
         ctx: &CoreContext,
         blobstore: &Arc<dyn KeyedBlobstore>,
@@ -335,6 +390,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
         parents_dm_ids: MultiMap<Manifest::Id, ChangesetId>,
         parents_unode_ids: MultiMap<UnodeEntry, ChangesetId>,
         current_unode_id: Option<UnodeEntry>,
+        known_entries: PathTree<Option<Option<Manifest::Id>>>,
         counters: &Arc<DebugCounters>,
     ) -> Result<
         (
@@ -343,6 +399,14 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
         ),
         Error,
     > {
+        let (known_value, known_subentries) = known_entries.deconstruct();
+
+        // This node is itself a child-stage boundary: emit its precomputed id and
+        // stop. The child stage already derived everything below here.
+        if let Some(known_id) = known_value {
+            return Ok((DeletedManifestChange::Known(known_id), vec![]));
+        }
+
         // We're assuming that the commits have hanful of parents in (in most
         // cases <= 2) and iterating over all of them won't be a problem.
         // (which is the case for all our current repos)
@@ -383,19 +447,26 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
             // be modified for reuse if there are any children.
             DeletedManifestChangeType::RemoveIfNowEmpty
         } else {
+            // The path exists in neither the current commit nor any parent, and
+            // no parent has it deleted: it never existed on this subtree, so
+            // there is nothing to record. Canonical whole-tree derivation never
+            // visits such a node (it only recurses where there is a change or a
+            // parent entry), but a staged seed for a stage whose subtree is
+            // absent in this commit is visited unconditionally; emit nothing so
+            // the two paths agree.
+            if parent_manifests.is_empty() && !path_exists_in_any_parent {
+                return Ok((DeletedManifestChange::RemoveIfNowEmpty(None), vec![]));
+            }
             // Path was deleted in some parent, now is still deleted. If
             // it didn't exist in any other parent we can reuse. If it did we
             // need to mark this commit as deletion and recurse.
             if parent_manifests.len() == 1 {
                 if let Some((parent, _parent_cs_ids)) = parent_manifests.first() {
                     if !path_exists_in_any_parent {
-                        return Ok((
-                            DeletedManifestChange {
-                                change_type: DeletedManifestChangeType::Reuse,
-                                copy_subentries_from: Some(parent.clone()),
-                            },
-                            vec![],
-                        ));
+                        // Stable, fully-deleted subtree: reuse the parent node
+                        // wholesale. Any child-stage boundary below is identical
+                        // in the parent (nothing changed), so reuse covers it.
+                        return Ok((DeletedManifestChange::Reuse(parent.clone()), vec![]));
                     }
                 }
             }
@@ -438,10 +509,30 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
                         parent_deleted_manifests: MultiMap::new(),
                         parent_unodes: MultiMap::new(),
                         current_unode: None,
+                        known_entries: PathTree::default(),
                     },
                 )
             })
             .collect::<BTreeMap<_, _>>();
+
+        // Distribute child-stage boundaries down to the children they belong to.
+        // Each child carries its slice of the boundary tree and self-identifies
+        // when the recursion reaches it (see the short-circuit at the top). A
+        // boundary child with no other reason to exist is created here so the
+        // pointer path is still materialized.
+        for (elem, subtree) in known_subentries {
+            recurse_entries
+                .entry(elem.clone())
+                .or_insert_with(|| DeletedManifestUnfoldNode {
+                    path_element: Some(elem),
+                    changes: Default::default(),
+                    parent_deleted_manifests: MultiMap::new(),
+                    parent_unodes: MultiMap::new(),
+                    current_unode: None,
+                    known_entries: PathTree::default(),
+                })
+                .known_entries = subtree;
+        }
 
         // Find intersections between parents manifests and unodes. Each such intersection means
         // that there's path that's deleted in one parent but still present in another parent.
@@ -472,6 +563,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
                                 parent_deleted_manifests: MultiMap::new(),
                                 parent_unodes: MultiMap::new(),
                                 current_unode: None,
+                                known_entries: PathTree::default(),
                             });
                     }
                     if deleted_mpath_elem <= unode_mpath_elem {
@@ -482,11 +574,19 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
                 }
             }
         }
+        // Build the outcome for this node from the earlier `change_type` decision
+        // and the optional parent to base subentries on. `Reuse` is only produced
+        // by the early return above, so it never reaches here.
+        let make_change = |copy_subentries_from: Option<Manifest>| match change_type {
+            DeletedManifestChangeType::CreateDeleted => {
+                DeletedManifestChange::CreateDeleted(copy_subentries_from)
+            }
+            DeletedManifestChangeType::RemoveIfNowEmpty => {
+                DeletedManifestChange::RemoveIfNowEmpty(copy_subentries_from)
+            }
+        };
         let fold_node = match parent_manifests.as_slice() {
-            [] => DeletedManifestChange {
-                change_type,
-                copy_subentries_from: None,
-            },
+            [] => make_change(None),
             [(parent, parent_cs_ids)] => {
                 // If there's one parent, we can "copy" its subentries
                 // and modify only a few fields. Important if we're doing few
@@ -501,10 +601,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
                     })
                     .await?;
 
-                DeletedManifestChange {
-                    change_type,
-                    copy_subentries_from: Some(parent.clone()),
-                }
+                make_change(Some(parent.clone()))
             }
             _ => {
                 // If there are multiple parents and they're different, we need to
@@ -521,6 +618,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
                                     parent_deleted_manifests: MultiMap::new(),
                                     parent_unodes: MultiMap::new(),
                                     current_unode: None,
+                                    known_entries: PathTree::default(),
                                 }
                             });
                             entry
@@ -530,10 +628,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
                         })
                         .await?;
                 }
-                DeletedManifestChange {
-                    change_type,
-                    copy_subentries_from: None,
-                }
+                make_change(None)
             }
         };
 
@@ -589,13 +684,15 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
         sender: mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>,
         created: Arc<Mutex<HashSet<String>>>,
     ) -> Result<Option<Manifest::Id>, Error> {
-        match change.change_type {
-            DeletedManifestChangeType::Reuse => Ok(change.copy_subentries_from.map(|mf| mf.id())),
-            DeletedManifestChangeType::CreateDeleted => Self::save_manifest(
+        match change {
+            // Child-stage boundary: return the precomputed id directly.
+            DeletedManifestChange::Known(id) => Ok(id),
+            DeletedManifestChange::Reuse(parent) => Ok(Some(parent.id())),
+            DeletedManifestChange::CreateDeleted(copy_subentries_from) => Self::save_manifest(
                 Manifest::copy_and_update_subentries(
                     ctx,
                     blobstore,
-                    change.copy_subentries_from,
+                    copy_subentries_from,
                     Some(cs_id),
                     subentries_to_update,
                 )
@@ -607,11 +704,11 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
             )
             .await
             .map(Some),
-            DeletedManifestChangeType::RemoveIfNowEmpty => {
+            DeletedManifestChange::RemoveIfNowEmpty(copy_subentries_from) => {
                 let manifest = Manifest::copy_and_update_subentries(
                     ctx,
                     blobstore,
-                    change.copy_subentries_from,
+                    copy_subentries_from,
                     None,
                     subentries_to_update,
                 )

@@ -566,6 +566,10 @@ pub async fn derive_stage_batch(
             ddm.derive_stage_batch::<RootContentManifestId>(ctx, csids, payload)
                 .await
         }
+        PipelineDerivableVariant::DeletedManifests => {
+            ddm.derive_stage_batch::<RootDeletedManifestV2Id>(ctx, csids, payload)
+                .await
+        }
     }
 }
 
@@ -612,6 +616,10 @@ pub async fn is_stage_derived(
         }
         PipelineDerivableVariant::ContentManifests => {
             ddm.is_stage_derived::<RootContentManifestId>(ctx, csid, stage)
+                .await
+        }
+        PipelineDerivableVariant::DeletedManifests => {
+            ddm.is_stage_derived::<RootDeletedManifestV2Id>(ctx, csid, stage)
                 .await
         }
     }
@@ -665,6 +673,10 @@ pub async fn verify_stage_output(
             ddm.verify_stage_output::<RootContentManifestId>(ctx, csid, stage)
                 .await
         }
+        PipelineDerivableVariant::DeletedManifests => {
+            ddm.verify_stage_output::<RootDeletedManifestV2Id>(ctx, csid, stage)
+                .await
+        }
     }
 }
 
@@ -682,6 +694,7 @@ pub fn pipeline_has_finalize(variant: PipelineDerivableVariant) -> bool {
         PipelineDerivableVariant::HgChangesets => MappedHgChangesetId::HAS_FINALIZE,
         PipelineDerivableVariant::HgAugmentedManifests => RootHgAugmentedManifestId::HAS_FINALIZE,
         PipelineDerivableVariant::ContentManifests => RootContentManifestId::HAS_FINALIZE,
+        PipelineDerivableVariant::DeletedManifests => RootDeletedManifestV2Id::HAS_FINALIZE,
     }
 }
 

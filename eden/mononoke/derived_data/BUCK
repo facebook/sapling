@@ -452,6 +452,7 @@ rust_library(
         "//common/rust/shed/cloned:cloned",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/common/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/common/rust/justknobs_ext:justknobs",
         "//eden/mononoke/derived_data:derived_data_manager",
         "//eden/mononoke/derived_data:unodes",
         "//eden/mononoke/derived_data/remote/if:derived_data_service_if-rust",
@@ -462,6 +463,7 @@ rust_library(
         "//eden/mononoke/repo_attributes/repo_derivation_queues/if:derivation_queue_thrift-rust",
         "//eden/mononoke/repo_attributes/repo_derived_data:repo_derived_data",
         "//eden/mononoke/servers/slapi/slapi_server/context:context",
+        "//thrift/lib/rust:fbthrift",
     ],
 )
 

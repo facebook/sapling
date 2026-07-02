@@ -1257,6 +1257,111 @@ impl TestRepoFixture for NestedAncestorSubtreeCopy {
     }
 }
 
+/// A subtree copy that REMOVES a deeper pipeline stage's subtree entirely.
+///
+/// `top1` has a nested `sub/` stage; `top2` deliberately has NO `sub`. The tip
+/// copies `top2` onto `top1`, so after the copy `top1/sub` no longer exists. At
+/// the `top1/sub` stage the current unode is absent while the parent had
+/// `top1/sub/a`, so the deleted manifest must record that deletion from the
+/// parent stage subtree alone — the deletion is a manifest-altering subtree
+/// effect, not listed in `file_changes`. drawdag cannot express subtree changes,
+/// so the base graph is built via `extend_from_dag_with_actions` and the tip is
+/// built imperatively.
+pub struct SubtreeCopyRemovesStage;
+
+#[async_trait]
+impl TestRepoFixture for SubtreeCopyRemovesStage {
+    const REPO_NAME: &'static str = "subtree_copy_removes_stage";
+
+    async fn init_repo(
+        fb: FacebookInit,
+        repo: &impl Repo,
+    ) -> Result<(
+        BTreeMap<String, ChangesetId>,
+        BTreeMap<String, BTreeSet<String>>,
+    )> {
+        use std::collections::HashMap;
+
+        use changesets_creation::save_changesets;
+        use futures::FutureExt;
+        use justknobs::test_helpers::JustKnobsInMemory;
+        use justknobs::test_helpers::KnobVal;
+        use justknobs::test_helpers::with_just_knobs_async;
+        use mononoke_types::MPath;
+        use mononoke_types::subtree_change::SubtreeChange;
+        use tests_utils::CreateCommitContext;
+
+        let ctx = CoreContext::test_mock(fb);
+
+        // `top1` has a nested `sub/` directory (its own pipeline stage). `top2`
+        // deliberately has NO `sub`, so copying it onto `top1` removes the
+        // `top1/sub` subtree entirely.
+        let dag = r#"
+            # default_files: false
+            # author: * "author"
+
+            D    # message: D "Add top2/page (top2 has no sub)"
+            |    # modify: D "top2/page" "page\n"
+            |
+            C    # message: C "Add top1/sub"
+            |    # modify: C "top1/sub/a" "a-orig\n"
+            |
+            B    # message: B "Add top1/lib"
+            |    # modify: B "top1/lib/util" "util\n"
+            |
+            A    # message: A "Add top1/main"
+                 # modify: A "top1/main" "main\n"
+        "#;
+        let (mut commits, mut dag) = extend_from_dag_with_actions(&ctx, repo, dag).await?;
+
+        // Tip commit E: subtree-copy of `top2/` onto `top1`. Since `top2` has no
+        // `sub`, the pre-existing `top1/sub` subtree is removed, so the
+        // `top1/sub` stage's current unode is absent while its parent had
+        // content.
+        let parent = commits["D"];
+        let mut bcs_e = CreateCommitContext::new(&ctx, repo, vec![parent])
+            .set_message("E")
+            .add_file("top2/marker", "marker\n")
+            .create_commit_object()
+            .await?;
+        bcs_e.subtree_changes = vec![(
+            MPath::new("top1")?,
+            SubtreeChange::copy(MPath::new("top2")?, parent),
+        )]
+        .into_iter()
+        .collect();
+        let bcs_e = bcs_e.freeze()?;
+        let e = bcs_e.get_changeset_id();
+        with_just_knobs_async(
+            JustKnobsInMemory::new(HashMap::from([
+                (
+                    "scm/mononoke:enable_subtree_changes".to_string(),
+                    KnobVal::Bool(true),
+                ),
+                (
+                    "scm/mononoke:enable_manifest_altering_subtree_changes".to_string(),
+                    KnobVal::Bool(true),
+                ),
+            ])),
+            async { save_changesets(&ctx, repo, vec![bcs_e]).await }.boxed(),
+        )
+        .await?;
+
+        let mut txn = repo.bookmarks().create_transaction(ctx.clone());
+        txn.force_set(
+            &BookmarkKey::new("master")?,
+            e,
+            BookmarkUpdateReason::TestMove,
+        )?;
+        txn.commit().await?;
+
+        commits.insert("E".to_string(), e);
+        commits.insert("master".to_string(), e);
+        dag.insert("E".to_string(), BTreeSet::from(["D".to_string()]));
+        Ok((commits, dag))
+    }
+}
+
 /// `.slacl` ACL file content (TOML), used by `AclNestedDirectories`.
 const ACL_PROJECT1: &[u8] = b"repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=project1\"\n";
 const ACL_PROJECT2: &[u8] = b"repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=project2\"\n";

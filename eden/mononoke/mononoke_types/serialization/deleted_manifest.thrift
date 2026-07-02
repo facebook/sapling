@@ -31,3 +31,13 @@ struct DeletedManifestV2 {
   // Map of MPathElement -> DeletedManifestV2Id
   2: sharded_map.ShardedMapNode subentries;
 }
+
+struct DeletedManifestStageOutputEmpty {}
+
+// Per-stage output for pipeline (multi-stage) derivation of DeletedManifestV2.
+// A deleted manifest node is homogeneous, so a stage subtree is a single
+// optional node id (`empty` means no deletions under the stage path).
+union DeletedManifestStageOutput {
+  1: id.DeletedManifestV2Id deleted_manifest_id;
+  2: DeletedManifestStageOutputEmpty empty;
+}

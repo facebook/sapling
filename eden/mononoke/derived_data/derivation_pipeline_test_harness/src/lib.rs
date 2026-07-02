@@ -66,7 +66,7 @@ pub struct TestRepo(
 );
 
 /// The pipeline-derivable types verified by the harness.
-const PIPELINE_TYPES: [DerivableType; 10] = [
+const PIPELINE_TYPES: [DerivableType; 11] = [
     DerivableType::Fsnodes,
     DerivableType::Unodes,
     DerivableType::Fastlog,
@@ -77,6 +77,7 @@ const PIPELINE_TYPES: [DerivableType; 10] = [
     DerivableType::HgChangesets,
     DerivableType::HgAugmentedManifests,
     DerivableType::ContentManifests,
+    DerivableType::DeletedManifests,
 ];
 
 const PIPELINE_BATCH_SIZE: u64 = 3;
@@ -557,6 +558,7 @@ mod tests {
     use fixtures::NestedAncestorSubtreeCopy;
     use fixtures::NestedDirectories;
     use fixtures::NestedSubtreeCopy;
+    use fixtures::SubtreeCopyRemovesStage;
     use mononoke_macros::mononoke;
 
     use super::*;
@@ -644,6 +646,17 @@ mod tests {
         }
     }
 
+    impl PipelineTestFixture for SubtreeCopyRemovesStage {
+        fn pipeline_stages() -> Vec<(&'static str, Vec<&'static str>)> {
+            vec![
+                ("", vec!["top1", "top2"]),
+                ("top1", vec!["sub"]),
+                ("top1/sub", vec![]),
+                ("top2", vec![]),
+            ]
+        }
+    }
+
     #[mononoke::fbinit_test]
     async fn test_pipeline_matches_canonical(fb: FacebookInit) -> Result<()> {
         verify_pipeline_matches_canonical::<NestedDirectories>(fb).await
@@ -674,6 +687,14 @@ mod tests {
     #[mononoke::fbinit_test]
     async fn test_pipeline_matches_canonical_ancestor_subtree_copy(fb: FacebookInit) -> Result<()> {
         verify_pipeline_matches_canonical::<NestedAncestorSubtreeCopy>(fb).await
+    }
+
+    // A subtree copy that removes a deeper stage's subtree entirely, exercising
+    // the stage-subtree-absent branch of the deleted-manifest subtree-op change
+    // set (`top1/sub` is deleted because the copied `top2` has no `sub`).
+    #[mononoke::fbinit_test]
+    async fn test_pipeline_subtree_copy_removes_stage(fb: FacebookInit) -> Result<()> {
+        verify_pipeline_matches_canonical::<SubtreeCopyRemovesStage>(fb).await
     }
 
     // Regression coverage for cross-stage copy-source resolution: the tip commit
