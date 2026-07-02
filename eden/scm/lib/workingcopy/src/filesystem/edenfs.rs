@@ -167,6 +167,9 @@ impl EdenFileSystem {
             let status_result = self.client.get_status(p1, include_ignored);
             let mut status_map = match status_result {
                 Ok(map) => {
+                    if let Some(checkout_start) = checkout_start_time.take() {
+                        log_checkout_wait_metric(checkout_start);
+                    }
                     tracing::info!("EdenFS status succeeded");
                     map
                 }
@@ -174,6 +177,7 @@ impl EdenFileSystem {
                     // Check if we've exceeded the checkout timeout
                     let checkout_start = checkout_start_time.get_or_insert_with(Instant::now);
                     if checkout_start.elapsed() >= checkout_timeout {
+                        log_checkout_wait_metric(*checkout_start);
                         tracing::warn!(
                             elapsed = ?checkout_start.elapsed(),
                             "timed out waiting for EdenFS checkout to complete"
@@ -190,7 +194,12 @@ impl EdenFileSystem {
                     std::thread::sleep(checkout_poll_interval);
                     continue;
                 }
-                Err(err) => return Err(err),
+                Err(err) => {
+                    if let Some(checkout_start) = checkout_start_time.take() {
+                        log_checkout_wait_metric(checkout_start);
+                    }
+                    return Err(err);
+                }
             };
 
             // Handle derace touch file regardless of whether we created it. We want to
@@ -331,6 +340,14 @@ fn is_checkout_in_progress_error(err: &anyhow::Error) -> bool {
     } else {
         false
     }
+}
+
+fn log_checkout_wait_metric(checkout_start: Instant) {
+    let checkout_wait_elapsed = checkout_start.elapsed();
+    tracing::debug!(
+        target: "status_info",
+        eden_checkout_wait_elapsed = checkout_wait_elapsed.as_millis(),
+    );
 }
 
 fn create_treestate(dot_dir: &std::path::Path, case_sensitive: bool) -> Result<TreeState> {
