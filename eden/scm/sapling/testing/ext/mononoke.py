@@ -444,7 +444,81 @@ def setup_configerator_configs(fs: ShellFS, env: Env) -> int:
     "verbose_sessions": [],
     "verbose_unixnames": [],
     "verbose_source_hostnames": []
-  }
+  },
+  "enabled_experiments_jk": [
+    {
+      "jk_name": "scm/mononoke:disable_blobstore_reads",
+      "switch_values": ["1", "2", "3", "4"],
+      "consistent_hashing": 1
+    },
+    {
+      "jk_name": "scm/mononoke:read_bookmarks_from_xdb_replica",
+      "switch_values": [],
+      "consistent_hashing": 2
+    },
+    {
+      "jk_name": "scm/mononoke:use_maybe_stale_freshness_for_bookmarks",
+      "switch_values": [
+        "mononoke_api::repo::git::get_bookmark_state",
+        "cache_warmup::do_cache_warmup"
+      ],
+      "consistent_hashing": 1
+    },
+    {
+      "jk_name": "scm/mononoke:remote_diff",
+      "switch_values": ["instagram-server", "www", "fbsource"],
+      "consistent_hashing": 1
+    },
+    {
+      "jk_name": "scm/mononoke:remote_diff_unary",
+      "switch_values": ["instagram-server", "www", "fbsource"],
+      "consistent_hashing": 1
+    },
+    {
+      "jk_name": "scm/mononoke:remote_commit_compare",
+      "switch_values": ["instagram-server", "www", "fbsource"],
+      "consistent_hashing": 1
+    },
+    {
+      "jk_name": "scm/mononoke:retry_query_from_replica_with_consistency_check",
+      "switch_values": [
+        "newfilenodes::reader",
+        "bonsai_hg_mapping",
+        "synced_commit_mapping.get_equivalent_working_copy"
+      ],
+      "consistent_hashing": 1
+    },
+    {
+      "jk_name": "scm/mononoke:enabled_restricted_paths_access_logging",
+      "switch_values": [
+        "hg_manifest_write",
+        "hg_tree_context_new_check_exists",
+        "changeset_path_context_new",
+        "changeset_path_content_context_new",
+        "changeset_path_history_context_new",
+        "hg_augmented_manifest_write",
+        "hg_augmented_tree_context_new_check_exists",
+        "fsnodes_write",
+        "fsnodes_new_check_exists"
+      ],
+      "consistent_hashing": 1
+    },
+    {
+      "jk_name": "scm/mononoke:use_restricted_paths_for_augmented_tree_acl_metadata",
+      "switch_values": ["xrepo_test_small", "notes", "fbsource"],
+      "consistent_hashing": 0
+    },
+    {
+      "jk_name": "scm/mononoke:rendezvous_bonsai_git_mapping",
+      "switch_values": [],
+      "consistent_hashing": 1
+    },
+    {
+      "jk_name": "scm/mononoke:rendezvous_bonsai_tag_mapping",
+      "switch_values": [],
+      "consistent_hashing": 1
+    }
+  ]
 }
 """
             )

@@ -876,7 +876,7 @@ mod facebook {
             shard_name: TEST_XDB_NAME.to_string(),
         };
 
-        let sql_query_tel = SqlQueryTelemetry::new(fb, Metadata::default());
+        let sql_query_tel = SqlQueryTelemetry::new(fb, Metadata::default(), None);
 
         // Clean up any leftover data from previous test runs.
         TupleListDeleteAll::query(&connection, sql_query_tel.clone()).await?;
@@ -1045,7 +1045,7 @@ mod facebook {
         let mut metadata = Metadata::default();
         metadata.add_client_info(client_info);
 
-        let sql_query_tel = SqlQueryTelemetry::new(fb, metadata);
+        let sql_query_tel = SqlQueryTelemetry::new(fb, metadata, None);
 
         Ok(TelemetryTestData {
             connections,

@@ -238,7 +238,7 @@ impl LoggingArgs {
         if self.with_dynamic_observability {
             Ok(ObservabilityContext::new(config_store)?)
         } else {
-            Ok(ObservabilityContext::new_static())
+            Ok(ObservabilityContext::new_static(config_store))
         }
     }
 

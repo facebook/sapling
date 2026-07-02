@@ -13,4 +13,5 @@ path = "sql_query_telemetry.rs"
 [dependencies]
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 metadata = { version = "0.1.0", path = "../../../metadata" }
+observability = { version = "0.1.0", path = "../../../observability" }
 sapling-clientinfo = { version = "0.1.0", path = "../../../../../scm/lib/clientinfo" }

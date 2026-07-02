@@ -841,7 +841,12 @@ mod schematized_logger {
         apply_server_data(&mut logger, &server_data);
 
         // Add metadata using shared struct
-        let metadata = CommonMetadata::from_metadata(ctx.metadata());
+        let observability_config = ctx
+            .scuba()
+            .observability_context()
+            .and_then(|octx| octx.observability_config());
+        let metadata =
+            CommonMetadata::from_metadata(ctx.metadata(), observability_config.as_deref());
         apply_metadata(&mut logger, &metadata);
 
         // Set core access fields

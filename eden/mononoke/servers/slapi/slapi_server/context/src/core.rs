@@ -159,7 +159,11 @@ impl CoreContext {
     pub fn sql_query_telemetry(&self) -> SqlQueryTelemetry {
         let fb = self.fb.clone();
         let metadata = self.metadata();
-        SqlQueryTelemetry::new(fb, metadata.clone())
+        SqlQueryTelemetry::new(
+            fb,
+            metadata.clone(),
+            self.scuba().observability_context().cloned(),
+        )
     }
 
     pub fn client_correlator(&self) -> Option<&str> {

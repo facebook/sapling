@@ -11,5 +11,8 @@ mod scuba;
 
 pub use context::ObservabilityContext;
 
+pub use crate::config::ConsistentHashingType;
+pub use crate::config::ExperimentJustKnob;
+pub use crate::config::ObservabilityConfig;
 pub use crate::config::ScubaVerbosityLevel;
 pub use crate::scuba::ScubaLoggingDecisionFields;

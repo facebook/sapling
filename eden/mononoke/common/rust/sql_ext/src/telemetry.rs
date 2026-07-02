@@ -902,9 +902,12 @@ mod facebook {
             log_entry.set_client_entry_point(client_info.entry_point.to_string());
             log_entry.set_client_correlator(client_info.correlator.clone());
 
-            let experiments = MononokeScubaSampleBuilder::get_enabled_experiments_jk(client_info);
-            if !experiments.is_empty() {
-                log_entry.set_enabled_experiments_jk(experiments);
+            if let Some(config) = sql_query_tel.observability_config() {
+                let experiments =
+                    MononokeScubaSampleBuilder::get_enabled_experiments_jk(&config, client_info);
+                if !experiments.is_empty() {
+                    log_entry.set_enabled_experiments_jk(experiments);
+                }
             }
         }
     }
@@ -912,7 +915,9 @@ mod facebook {
     /// Set metadata fields on the logger from metadata.
     fn set_metadata(log_entry: &mut MononokeXdbTelemetryLogger, sql_query_tel: &SqlQueryTelemetry) {
         let metadata = sql_query_tel.metadata();
-        let common_metadata = CommonMetadata::from_metadata(metadata);
+        let observability_config = sql_query_tel.observability_config();
+        let common_metadata =
+            CommonMetadata::from_metadata(metadata, observability_config.as_deref());
 
         // Apply common metadata fields
         apply_metadata(log_entry, &common_metadata);

@@ -9,9 +9,9 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:regex",
-        "fbsource//third-party/rust:serde",
         "//common/rust/shed/cached_config:cached_config",
         "//common/rust/shed/scuba_stub:scuba",
         "//configerator/structs/scm/mononoke/observability:observability_config-rust",
+        "//thrift/lib/rust:fbthrift",
     ],
 )

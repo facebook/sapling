@@ -666,7 +666,7 @@ async fn make_multiplexed_wal<'a>(
         mysql_options,
         readonly_storage.0,
     )?
-    .build(SqlQueryTelemetry::new(fb, Default::default()));
+    .build(SqlQueryTelemetry::new(fb, Default::default(), None));
     let wal_queue = Arc::new(sql_blob_wal);
 
     let blobstore = match &blobstore_options.scrub_options {
