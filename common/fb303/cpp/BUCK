@@ -8,6 +8,7 @@ cpp_library(
     headers = glob(["*.h"]),
     exported_deps = [
         "//common/fb303/if:fb303-cpp2-services",
+        "//fb303:service_data",
         "//folly:small_vector",
     ],
     exported_external_deps = [

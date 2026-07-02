@@ -12,6 +12,7 @@
 #include <time.h>
 
 #include <common/fb303/if/gen-cpp2/FacebookService.h>
+#include <fb303/ServiceData.h>
 #include <folly/small_vector.h>
 
 namespace folly {
@@ -40,6 +41,10 @@ class FacebookBase2 : virtual public cpp2::FacebookServiceSvIf {
   }
 
   void setEventBaseManager(folly::EventBaseManager*) {}
+
+  void getCounters(std::map<std::string, int64_t>& _return) override {
+    fbData->getCounters(_return);
+  }
 
   int64_t aliveSince() override {
     // crude implementation because QsfpCache depends on it
