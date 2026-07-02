@@ -57,6 +57,14 @@ class FacebookBase2 : virtual public cpp2::FacebookServiceSvIf {
     }
   }
 
+  void getRegexCounters(
+      std::map<std::string, int64_t>& _return,
+      std::unique_ptr<std::string> regex) override {
+    if (regex) {
+      fbData->getRegexCounters(_return, *regex);
+    }
+  }
+
   int64_t aliveSince() override {
     // crude implementation because QsfpCache depends on it
     return (uint64_t)startTime;
