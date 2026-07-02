@@ -51,6 +51,16 @@ service FacebookService {
   map<string, i64> getCounters();
 
   /**
+   * Gets the counters that match a given regex
+   */
+  map<string, i64> getRegexCounters(1: string regex);
+
+  /**
+   * Gets the values of the requested counters
+   */
+  map<string, i64> getSelectedCounters(1: list<string> keys);
+
+  /**
    * Suggest a shutdown to the server
    */
   oneway void shutdown();
