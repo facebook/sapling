@@ -49,36 +49,17 @@ def run(args, fin, fout, ferr, ctx, skipprehooks):
     if args is None:
         args = sys.argv
 
-    if args[1:2] == ["start-pfc-server"]:
-        # chgserver code path
+    from . import traceimport
 
-        from . import prefork
+    traceimport.enable()
 
-        # Set a global so other modules know we are about to fork. They may want
-        # to avoid doing/initializing certain things that are not fork safe.
-        prefork.prefork = True
+    # enable demandimport after enabling traceimport
+    from . import hgdemandimport
 
-        # no demandimport, since chgserver wants to preimport everything.
-        from . import dispatch
+    hgdemandimport.enable()
 
-        dispatch.runchgserver(args[2:])
-    else:
-        # non-chgserver code path
-        # - no chg in use: commands::run -> HgPython::run_hg -> here
-        # - chg client: chgserver.runcommand -> bindings.commands.run ->
-        #               commands::run -> HgPython::run_hg -> here
+    # demandimport has side effect on importing dispatch.
+    # so 'import dispatch' happens after demandimport
+    from . import dispatch
 
-        from . import traceimport
-
-        traceimport.enable()
-
-        # enable demandimport after enabling traceimport
-        from . import hgdemandimport
-
-        hgdemandimport.enable()
-
-        # demandimport has side effect on importing dispatch.
-        # so 'import dispatch' happens after demandimport
-        from . import dispatch
-
-        dispatch.run(args, fin, fout, ferr, ctx, skipprehooks)
+    dispatch.run(args, fin, fout, ferr, ctx, skipprehooks)

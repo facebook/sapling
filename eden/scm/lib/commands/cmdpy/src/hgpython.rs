@@ -9,22 +9,15 @@ use std::env;
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::OnceLock;
-use std::sync::RwLock;
-use std::sync::Weak;
 
 use clidispatch::command::CommandDefinition;
 use clidispatch::command::CommandTable;
 use clidispatch::io::IO;
-use commandserver::ipc::ClientIpc;
-use commandserver::ipc::CommandEnv;
-use commandserver::ipc::Server;
 use configmodel::Config;
 use cpython::*;
 use cpython_ext::PythonKeepAlive;
 use cpython_ext::ResultPyErrExt;
-use cpython_ext::convert::Serde;
 use cpython_ext::format_py_error;
-use nodeipc::NodeIpc;
 use pyio::WrappedIO;
 use pyio::wrap_pyio;
 use tracing::debug_span;
@@ -279,67 +272,12 @@ impl HgPython {
             // If Python is not initialized by us, it's expected that this
             // function does not call Py_Finalize.
             //
-            // If we call Py_Main, users like the Python testutil, or the Python
-            // chgserver will crash because Py_Main calls Py_Finalize.
+            // If we call Py_Main, users like the Python testutil will crash
+            // because Py_Main calls Py_Finalize.
             // Avoid that by just returning an error code.
             let _ = io.write_err("error: Py_Main cannot be used in this context\n");
             1
         }
-    }
-
-    /// Pre-import Python modules.
-    /// Returns after importing the modules.
-    pub fn pre_import_modules(&self) -> Result<(), cpython_ext::PyErr> {
-        // cpython_ext::PyErr can render traceback when RUST_BACKTRACE=1.
-        let gil = Python::acquire_gil();
-        let py = gil.python();
-        let dispatch = py.import("sapling.dispatch")?;
-        dispatch.call(py, "_preimportmodules", NoArgs, None)?;
-        Ok(())
-    }
-
-    /// Set `bindings.commands.system` to run a command via IPC.
-    pub fn setup_ui_system(&self, server: &Server) -> Result<(), cpython_ext::PyErr> {
-        static IPC: RwLock<Option<Weak<NodeIpc>>> = RwLock::new(None);
-
-        fn system(py: Python, env: Serde<CommandEnv>, cmd: String) -> PyResult<i32> {
-            let ipc = match &*IPC.read().unwrap() {
-                None => None,
-                Some(ipc) => Weak::upgrade(ipc),
-            };
-            let ipc = match ipc {
-                None => {
-                    return Err(PyErr::new::<exc::ValueError, _>(
-                        py,
-                        "cannot call system via dropped IPC",
-                    ));
-                }
-                Some(ipc) => ipc,
-            };
-
-            let ret = ClientIpc::system(&*ipc, env.0, cmd).map_pyerr(py)?;
-            Ok(ret)
-        }
-
-        let ipc = server.ipc_weakref();
-        *IPC.write().unwrap() = Some(ipc);
-
-        let gil = Python::acquire_gil();
-        let py = gil.python();
-
-        let sys = py.import("sys")?;
-        let sys_modules = PyDict::extract(py, &sys.get(py, "modules")?)?;
-        let bindings = sys_modules
-            .get_item(py, "bindings")
-            .expect("bindings should be initialized");
-        let bindings_commands = bindings.getattr(py, "commands")?;
-        bindings_commands.setattr(
-            py,
-            "system",
-            py_fn!(py, system(env: Serde<CommandEnv>, cmd: String)).into_py_object(py),
-        )?;
-
-        Ok(())
     }
 }
 

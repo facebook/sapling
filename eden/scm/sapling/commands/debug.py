@@ -2464,19 +2464,11 @@ def debugprocesstree(ui, *pids, **opts) -> None:
         parentchild.setdefault(ppid, []).append(pid)
 
     # Find out hg processes.
-    cmdre = util.re.compile(r"(^(.*[\\/])?(hg|sl)[ \.])|^pfc\[worker")
+    cmdre = util.re.compile(r"^(.*[\\/])?(hg|sl)[ \.]")
     if not pids:
         hgpids = {pid for pid, p in pidprocess.items() if cmdre.search(p["cmdline"])}
     else:
         hgpids = {pid for pid in pids if pid in pidprocess}
-        # Extend selection so if "pfc[worker/x]" is selected, also select "x"
-        chgpidre = util.re.compile(r"pfc\[worker/(\d+)\]")
-        for pid in list(hgpids):
-            match = chgpidre.match(pidprocess[pid]["cmdline"])
-            if match:
-                chgpid = match.group(1)
-                if chgpid in pidprocess:
-                    hgpids.add(chgpid)
 
     # Select all ancestors, and descendants of hg processes.
     # In revset language, that's "(::hgpids) + (hgpids::)"

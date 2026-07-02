@@ -156,10 +156,6 @@ hg_binary(
                     "sapling-clidispatch/sl_oss",
                     "commands/sl_oss",
                 ],
-                "with_chg": [
-                    "dirs",
-                    "sapling-identity",
-                ],
             },
             "package": {
                 "build": "build.rs",

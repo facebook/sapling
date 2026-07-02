@@ -28,7 +28,7 @@ import stat
 import time
 
 import bindings
-from sapling import dispatch, encoding, error, extensions, util
+from sapling import dispatch, error, extensions, util
 from sapling.i18n import _
 
 from . import service, util as ccutil, workspace
@@ -119,12 +119,8 @@ def _runcommand(orig, lui, repo, cmd, fullargs, *args):
     try:
         return orig(lui, repo, cmd, fullargs, *args)
     finally:
-        # For chg, do not wrap the "serve" runcommand call.  Otherwise, if
-        # autobackup is enabled for the repo, and a transaction was opened
-        # to modify the repo, start an automatic background backup.
         if (
-            "CHGINTERNALMARK" not in encoding.environ
-            and repo is not None
+            repo is not None
             and autobackupenabled(repo)
             and repo.metalog().root() != oldmetalogroot
             and not getattr(repo, "ignoreautobackup", False)

@@ -296,9 +296,9 @@ def _checkenvironment():
     #   'hg debugpython' with chg disabled, or via vanilla 'python' - okay.
     # - "sapling.dispatch" module is imported, and ischgserver is True.
     #   chgserver preimports modules but does not call uisetup()s, so it's okay.
-    # - "sapling.dispatch" module is imported, and ischgserver is False.
-    #   This is the regular "hg" command path. It's not okay since uisetup()s
-    #   might be called and Python global state is no longer clean.
+    # - "sapling.dispatch" module is imported. This is the regular "hg" command
+    #   path. It's not okay since uisetup()s might be called and Python global
+    #   state is no longer clean.
 
     # Only check the first time.
     global _checkedenvironment
@@ -307,7 +307,7 @@ def _checkenvironment():
     _checkedenvironment = True
 
     mod = sys.modules.get("sapling.dispatch")
-    if not (mod is None or mod.ischgserver):
+    if mod is not None:
         sys.stderr.write(
             "testing should not be run under regular sapling environment\n"
             "(ignore the above warning if you use `.t --direct` to run tests)\n"

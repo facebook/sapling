@@ -11,11 +11,6 @@ use std::sync::atomic::Ordering;
 
 use clidispatch::dispatch;
 
-#[cfg(all(feature = "with_chg", not(windows)))]
-mod chg;
-#[cfg(all(feature = "with_chg", not(windows)))]
-use chg::maybe_call_chg;
-
 #[cfg(windows)]
 mod windows;
 #[cfg(windows)]
@@ -95,26 +90,20 @@ fn main() {
         }
     }
 
-    match full_args.first().map(AsRef::<str>::as_ref) {
-        Some(name) => {
-            #[cfg(windows)]
-            let name = name.strip_suffix(".exe").unwrap_or(name);
-            if name.ends_with("python") || name.ends_with("python3") {
-                // Translate to the "debugpython" command.
-                // ex. "python foo.py" => "hg debugpython -- foo.py"
-                let debugpython_args = vec!["hg", "debugpython", "--"]
-                    .into_iter()
-                    .map(ToString::to_string)
-                    .chain(full_args.into_iter().skip(1))
-                    .collect::<Vec<String>>();
-                full_args = debugpython_args;
-            }
+    if let Some(name) = full_args.first().map(AsRef::<str>::as_ref) {
+        #[cfg(windows)]
+        let name = name.strip_suffix(".exe").unwrap_or(name);
+        if name.ends_with("python") || name.ends_with("python3") {
+            // Translate to the "debugpython" command.
+            // ex. "python foo.py" => "hg debugpython -- foo.py"
+            let debugpython_args = vec!["hg", "debugpython", "--"]
+                .into_iter()
+                .map(ToString::to_string)
+                .chain(full_args.into_iter().skip(1))
+                .collect::<Vec<String>>();
+            full_args = debugpython_args;
         }
-        _ => {}
     }
-
-    #[cfg(all(feature = "with_chg", not(windows)))]
-    maybe_call_chg(&full_args);
 
     #[cfg(windows)]
     disable_standard_handle_inheritability().unwrap();
@@ -130,10 +119,6 @@ fn main() {
 
     io.set_main();
 
-    // Note: if you're adding setup logic that creates threads,
-    // you might want to delay it for chg/pfc server's case.
-    // See D44048693 for example.
-
     let mut code = commands::run_command(full_args, &io);
     if io.flush().is_err() {
         if code == 0 {
@@ -142,7 +127,6 @@ fn main() {
     }
 
     tracing::debug!(target: "atexit", "calling atexit from main()");
-    tracing::debug!(target: "command_info", chg="off");
 
     // Run atexit handlers.
     atexit::drop_queued();

@@ -163,20 +163,6 @@ def allconfig(ui) -> List[str]:
     return result
 
 
-def usechginfo() -> str:
-    """FBONLY: Information about whether chg is enabled"""
-    files = {"system": "/etc/mercurial/usechg", "user": os.path.expanduser("~/.usechg")}
-    result = []
-    for name, path in files.items():
-        if os.path.exists(path):
-            with open(path) as f:
-                value = f.read().strip()
-        else:
-            value = "(not set)"
-        result.append("%s: %s" % (name, value))
-    return "\n".join(result)
-
-
 def rpminfo(ui) -> str:
     """FBONLY: Information about RPM packages"""
     result = set()
@@ -276,8 +262,7 @@ def readsigtraces(repo) -> str:
     names.sort(key=lambda name: -vfs.stat("sigtrace/%s" % name).st_mtime)
     result = ""
     for name in names:
-        # hg serve (non-forking commandserver) is used by emacsclient and
-        # can produce very long but boring traces. Skip them.
+        # `hg serve` can produce very long but boring traces. Skip them.
         if "serve" in name:
             continue
         content = vfs.tryread("sigtrace/%s" % name).decode(errors="replace")
@@ -447,7 +432,6 @@ def _makerage(ui, repo, **opts) -> str:
         (f"{prog} debugexpandpaths", lambda: hgcmd("debugexpandpaths")),
         (f"{prog} debuginstall", lambda: hgcmd("debuginstall")),
         (f"{prog} debugdetectissues", lambda: hgcmd("debugdetectissues")),
-        ("usechg", usechginfo),
         (
             "uptime",
             lambda: shcmd(

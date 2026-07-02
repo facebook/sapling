@@ -93,13 +93,9 @@ _pid = None
 
 
 def _runcommandwrapper(orig, lui, repo, cmd, fullargs, *args):
-    # For chg, do not wrap the "serve" runcommand call. Otherwise everything
-    # will be logged as side effects of a long "hg serve" command, no
-    # individual commands will be logged.
-    #
     # For debugrebuildchangelog, it is incompatible with undo. Running undo
     # logic might break it. So bypass undo in that case.
-    if "CHGINTERNALMARK" in encoding.environ or cmd == "debugrebuildchangelog":
+    if cmd == "debugrebuildchangelog":
         return orig(lui, repo, cmd, fullargs, *args)
 
     global _pid

@@ -176,7 +176,7 @@ def run(args, fin, fout, ferr, rctx: rscontext, skipprehooks: bool):
 
 
 def _preimportmodules():
-    """pre-import modules that are side-effect free (used by chg server)"""
+    """pre-import modules that are side-effect free"""
     extmods = []
     extprefix = "sapling.ext."
     modnames = sorted(bindings.modules.list())
@@ -223,28 +223,6 @@ def _preimportmodules():
         except (ImportError, AttributeError):
             # some extensions might fail to import due to incompatible OS.
             pass
-
-
-ischgserver = False
-
-
-def runchgserver(args):
-    """start the chg server, pre-import bundled extensions"""
-    global ischgserver
-    ischgserver = True
-    # Clean server - do not load any config files or repos.
-    _initstdio()
-    ui = uimod.ui.load()
-    repo = None
-    args = ["serve", "--cmdserver", "chgunix2"] + args
-    cmd, func, args, globalopts, cmdopts, _foundaliases = _parse(ui, args)
-    if not (cmd == "serve" and cmdopts["cmdserver"] == "chgunix2"):
-        raise error.ProgrammingError("runchgserver called without chg command")
-    from . import chgserver, server
-
-    _preimportmodules()
-    service = chgserver.chgunixservice(ui, repo, cmdopts)
-    server.runservice(cmdopts, initfn=service.init, runfn=service.run)
 
 
 def _initstdio():

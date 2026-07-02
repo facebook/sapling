@@ -103,7 +103,6 @@ def sl_binary(name, extra_deps = [], extra_features = [], **kwargs):
         srcs = glob(["exec/hgmain/src/**/*.rs"]),
         features = [
             "fb",
-            "with_chg",
         ]
         + extra_features,
         link_style = "static",
@@ -127,22 +126,10 @@ def sl_binary(name, extra_deps = [], extra_features = [], **kwargs):
         + select({
             "DEFAULT": [],
             "ovr_config//os:linux": [
-                "fbsource//third-party/rust:dirs",
                 "fbsource//third-party/rust:libc",
-                ":chg",
-                "//eden/scm/lib/config/model:configmodel",
-                "//eden/scm/lib/encoding:encoding",
-                "//eden/scm/lib/identity:identity",
-                "//eden/scm/lib/version:rust_version",
             ],
             "ovr_config//os:macos": [
-                "fbsource//third-party/rust:dirs",
                 "fbsource//third-party/rust:libc",
-                ":chg",
-                "//eden/scm/lib/config/model:configmodel",
-                "//eden/scm/lib/encoding:encoding",
-                "//eden/scm/lib/identity:identity",
-                "//eden/scm/lib/version:rust_version",
                 "//eden/scm/lib/webview-app:webview-app",
             ],
             "ovr_config//os:windows": [

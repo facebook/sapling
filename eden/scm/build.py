@@ -360,8 +360,6 @@ def cargo_features(mode):
     # eden: edenfs related features, requires Thrift
     # fb: (fbsource-only) fb-only features
     features = []
-    if os.name != "nt":
-        features.append("with_chg")
     if mode == "oss":
         features.append("sl_oss")
     elif mode == "fbsource":

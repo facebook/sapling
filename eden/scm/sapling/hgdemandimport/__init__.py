@@ -76,9 +76,5 @@ deactivated = demandimport.deactivated
 
 
 def enable():
-    # chg pre-imports modules so do not enable demandimport for it
-    if (
-        "CHGINTERNALMARK" not in os.environ
-        and os.environ.get("HGDEMANDIMPORT") != "disable"
-    ):
+    if os.environ.get("HGDEMANDIMPORT") != "disable":
         demandimport.enable()

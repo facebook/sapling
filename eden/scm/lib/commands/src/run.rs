@@ -36,8 +36,6 @@ use clidispatch::errors;
 use clidispatch::global_flags::HgGlobalOpts;
 use clidispatch::io::IO;
 use clidispatch::io::IsTty;
-use commandserver::ipc::Server;
-use configloader::config::ConfigSet;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use configmodel::Text;
@@ -75,25 +73,8 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
     // Ensure HgPython can initialize.
     crate::init();
 
-    // The pfcserver or commandserver do not want tracing or blackbox or ctrlc setup,
-    // or going through the Rust command table. Bypass them.
-    if let Some(arg1) = args.get(1).map(|s| s.as_ref()) {
-        match arg1 {
-            "start-pfc-server" => {
-                let config: Arc<dyn Config> = Arc::new(ConfigSet::new().named("pfc-server"));
-                return HgPython::new(&args).run_hg(args, io, &config, false);
-            }
-            "start-commandserver" => {
-                commandserver_serve(&args, io);
-                return 0;
-            }
-            _ => {}
-        }
-    }
-
     // Initialize NodeIpc:
     // - Before spawning threads, since unsetenv (3) is MT-unsafe.
-    // - After pfc-server, since we don't pfc-server to consume the IPC.
     // - Before debugpython, since it might be useful for Python logic.
     setup_nodeipc();
 
@@ -136,16 +117,9 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
     let scenario = failpoint::setup_fail_points();
     constructors::init();
 
-    // This is intended to be "process start". "exec/hgmain" seems to be
-    // a better place for it. However, chg makes it tricky. Because if hgmain
-    // decides to use chg, then there is no way to figure out which `blackbox`
-    // to write to, because the repo initialization logic happened in another
-    // process (a forked chg server).
-    //
-    // Having "run_command" here will make it logged by the forked chg server,
-    // which is a bit more desirable. Since run_command is very close to process
-    // start, it should reflect the duration of the command relatively
-    // accurately, at least for non-chg cases.
+    // This is intended to be "process start". Since run_command is very close
+    // to process start, it should reflect the duration of the command
+    // relatively accurately.
     let span = log_start(args.clone(), start_time);
 
     // Ad-hoc environment variable: EDENSCM_TRACE_OUTPUT. A more standard way
@@ -276,7 +250,7 @@ fn dispatch_command(
         .map_err(|err| errors::triage_error(config, err, command.map(|c| c.main_alias())))
     {
         Ok(exit_code) => exit_code as i32,
-        Err(err) => 'fallback: {
+        Err(err) => {
             let should_fallback = err.is::<errors::FallbackToPython>() ||
                 // XXX: Right now the Rust command table does not have all Python
                 // commands. Therefore Rust "UnknownCommand" needs a fallback.
@@ -296,20 +270,6 @@ fn dispatch_command(
                 // Change the current dir back to the original so it is not surprising to the Python
                 // code.
                 let _ = env::set_current_dir(cwd);
-
-                if !IS_COMMANDSERVER.load(Ordering::Acquire)
-                    && config
-                        .get_or_default::<bool>("commandserver", "enabled")
-                        .unwrap_or_default()
-                {
-                    // Attempt to connect to an existing command server.
-                    let args = dispatcher.args();
-                    if let Ok(ret) =
-                        commandserver::client::run_via_commandserver(args.to_vec(), config)
-                    {
-                        break 'fallback ret;
-                    }
-                }
 
                 // Init interpreter with unmodified args. This is so `sys.argv` in Python
                 // reflects what the user actually typed (we muck with the args in Rust
@@ -440,10 +400,8 @@ fn setup_tracing(global_opts: &Option<HgGlobalOpts>, io: &IO) -> Result<Arc<Mute
     // Setup TracingData singleton (currently owned by pytracing).
     {
         let mut data = pytracing::DATA.lock();
-        // Only recreate TracingData if pid has changed (ex. chgserver's case
-        // where it forks and runs commands - we want to log to different
-        // blackbox trace events).  This makes it possible to use multiple
-        // `run()`s in a single process
+        // Recreate TracingData if the process changed so multiple `run()`s in
+        // a single process log to the right blackbox trace events.
         if data.process_id() != unsafe { libc::getpid() } as u64 {
             *data.deref_mut() = TracingData::new();
         }
@@ -1126,41 +1084,4 @@ fn setup_ctrlc() -> Arc<AtomicBool> {
 fn setup_nodeipc() {
     // Trigger `Lazy` initialization.
     let _ = nodeipc::get_singleton();
-}
-
-// Useful to prevent a commandserver connecting to another commandserver.
-static IS_COMMANDSERVER: AtomicBool = AtomicBool::new(false);
-
-fn commandserver_serve(args: &[String], io: &IO) -> i32 {
-    IS_COMMANDSERVER.store(true, Ordering::Release);
-
-    #[cfg(unix)]
-    unsafe {
-        libc::setsid();
-    }
-
-    // Commandserver is not enabled. Okay to skip tracing setup here.
-    tracing::debug!("preparing commandserver");
-
-    let python = HgPython::new(args);
-    if let Err(e) = python.pre_import_modules() {
-        tracing::warn!("cannot pre-import modules:\n{:?}", &e);
-        return 1;
-    }
-
-    let run_func = |server: &Server, args: Vec<String>| -> i32 {
-        tracing::debug!("commandserver is about to run command: {:?}", &args);
-        if let Err(e) = python.setup_ui_system(server) {
-            tracing::warn!("cannot setup ui.system:\n{:?}", &e);
-        }
-        run_command(args, io)
-    };
-
-    tracing::debug!("commandserver is about to serve");
-    if let Err(e) = commandserver::server::serve_one_client(&run_func) {
-        tracing::warn!("cannot serve:\n{:?}", &e);
-        return 1;
-    }
-    tracing::debug!("commandserver is about to exit cleanly");
-    0
 }
