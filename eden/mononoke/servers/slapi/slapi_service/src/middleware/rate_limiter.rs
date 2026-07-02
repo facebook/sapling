@@ -111,7 +111,14 @@ impl Middleware for ThrottleMiddleware {
         )
         .await
         {
-            Ok(_) => None,
+            Ok(_) => {
+                #[cfg(fbcode_build)]
+                if justknobs::eval("scm/mononoke:edenapi_qps_rim_shadow", None, None) {
+                    crate::utils::rim_shadow::report_qps(&ctx, client_category, &client_main_id)
+                        .await;
+                }
+                None
+            }
             Err(response) => {
                 // Per-user rate limiting (counter keyed by client_main_id):
                 // always 429, this client specifically is the offender.

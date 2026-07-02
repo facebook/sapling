@@ -90,3 +90,42 @@ pub async fn shadow_check(ctx: &CoreContext, client_category: &str, client_main_
         }
     }
 }
+
+pub async fn report_qps(ctx: &CoreContext, client_category: &str, client_main_id: &str) {
+    let tenancy_path = vec![
+        "root".to_string(),
+        client_category.to_string(),
+        client_main_id.to_string(),
+    ];
+    let usage = HashMap::from([(RIM_RESOURCE_QPS.to_string(), 1.0)]);
+
+    let log = |tag: &str, detail: String| {
+        let mut scuba = ctx.scuba().clone();
+        scuba.add(
+            "rim_tenancy_path",
+            format!("root/{client_category}/{client_main_id}"),
+        );
+        scuba.log_with_msg(tag, detail);
+    };
+
+    match timeout(
+        RIM_ACQUIRE_TIMEOUT,
+        RimThinClient::report(MONONOKE_SERVER, tenancy_path, usage),
+    )
+    .await
+    {
+        Ok(Ok(result)) if !result.success() => {
+            log("RIM report non-success", format!("{:?}", result.status()));
+        }
+        Ok(Ok(_)) => {}
+        Ok(Err(e)) => {
+            log("RIM report error", e.to_string());
+        }
+        Err(_) => {
+            log(
+                "RIM report timeout",
+                format!("timeout after {RIM_ACQUIRE_TIMEOUT:?}"),
+            );
+        }
+    }
+}
