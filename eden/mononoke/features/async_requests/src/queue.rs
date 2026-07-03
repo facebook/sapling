@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 use std::time::Instant;
@@ -24,6 +25,7 @@ use mononoke_types::BlobstoreKey as BlobstoreKeyTrait;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
 use requests_table::BlobstoreKey;
+use requests_table::ChildCounts;
 pub use requests_table::ClaimedBy;
 use requests_table::LongRunningRequestEntry;
 use requests_table::LongRunningRequestsQueue;
@@ -31,6 +33,7 @@ pub use requests_table::QueueRepoFilter;
 pub use requests_table::QueueRequestTypeFilter;
 use requests_table::QueueStats;
 pub use requests_table::RequestId;
+use requests_table::RequestStatus;
 use requests_table::RequestType;
 pub use requests_table::RowId;
 use requests_table::SqlLongRunningRequestsQueue;
@@ -833,6 +836,39 @@ impl AsyncMethodRequestQueue {
         self.table
             .fail_new_requests_by_root_id(ctx, root_request_id)
             .await
+    }
+
+    /// Aggregate the child requests of a backfill (all rows sharing
+    /// `root_request_id`) into per-repo [`ChildCounts`]. Repos with any request
+    /// under the root appear as keys; a repo is still deriving as long as its
+    /// counts are [`ChildCounts::is_pending`]. Used by the backfill scheduler to
+    /// bound the number of repos in flight and to reconstruct its state after a
+    /// restart, without exposing raw request statuses to callers.
+    pub async fn get_backfill_child_counts_by_repo(
+        &self,
+        ctx: &CoreContext,
+        root_request_id: &RowId,
+    ) -> Result<HashMap<RepositoryId, ChildCounts>, Error> {
+        let rows = self
+            .table
+            .get_backfill_stats_by_repo(ctx, root_request_id)
+            .await?;
+
+        let mut per_repo: HashMap<RepositoryId, HashMap<RequestStatus, usize>> = HashMap::new();
+        for (repo_id, status, count) in rows {
+            if let Some(repo_id) = repo_id {
+                *per_repo
+                    .entry(repo_id)
+                    .or_default()
+                    .entry(status)
+                    .or_default() += count as usize;
+            }
+        }
+
+        Ok(per_repo
+            .into_iter()
+            .map(|(repo_id, statuses)| (repo_id, ChildCounts::from_status_map(&statuses)))
+            .collect())
     }
 
     pub async fn get_queue_stats(
