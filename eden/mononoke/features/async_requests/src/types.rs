@@ -859,6 +859,23 @@ fn render_target(target: &thrift::MegarepoTarget) -> String {
 }
 
 impl AsynchronousRequestParams {
+    /// Whether this request must run detached from the worker's data-execution
+    /// concurrency budget (`--jobs`).
+    ///
+    /// True only for the multi-repo backfill *scheduler*: a `DeriveBackfill`
+    /// with `repo_concurrency > 0`, which runs a long-lived poll loop and would
+    /// starve the requests it schedules if it held a normal execution slot
+    /// (deadlocking a single-executor worker). A `DeriveBackfill` with
+    /// `repo_concurrency == 0` takes the short-lived fan-out path and runs
+    /// inline like every other request, preserving the previous behavior.
+    pub fn is_long_running(&self) -> bool {
+        matches!(
+            &self.thrift,
+            ThriftAsynchronousRequestParams::derive_backfill_params(params)
+                if params.repo_concurrency > 0
+        )
+    }
+
     pub fn target(&self) -> Result<String, AsyncRequestsError> {
         match &self.thrift {
             ThriftAsynchronousRequestParams::megarepo_add_target_params(params) => {

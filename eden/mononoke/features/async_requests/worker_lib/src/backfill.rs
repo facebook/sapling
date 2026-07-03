@@ -460,8 +460,61 @@ pub(crate) async fn compute_derive_backfill_repo(
     })
 }
 
-/// Handles a DeriveBackfill request by iterating over repo_entries
-/// and enqueueing a DeriveBackfillRepo sub-request for each repo.
+/// Concurrency bound for enqueueing per-repo sub-requests in the
+/// "schedule everything at once" path. This only bounds cheap SQL inserts (not
+/// derivation), but avoids the previously unbounded fan-out.
+const REPO_ENQUEUE_CONCURRENCY: usize = 100;
+
+/// Enqueue a single `DeriveBackfillRepo` sub-request for `entry`, tying it to
+/// the backfill root so all of its descendant boundary/slice requests are
+/// tracked under `root_request_id`. Shared by the fan-out-all path and the
+/// concurrency-limited scheduler.
+pub(crate) async fn enqueue_repo_backfill(
+    ctx: &CoreContext,
+    queue: &AsyncMethodRequestQueue,
+    params: &thrift::DeriveBackfillParams,
+    entry: &thrift::DeriveBackfillRepoEntry,
+    root_request_id: &RowId,
+    created_by: Option<&str>,
+) -> Result<(), AsyncRequestsError> {
+    let repo_id = RepositoryId::new(
+        entry
+            .repo_id
+            .try_into()
+            .map_err(|e| AsyncRequestsError::request(anyhow::anyhow!("Invalid repo_id: {e}")))?,
+    );
+
+    let repo_params = thrift::DeriveBackfillRepoParams {
+        repo_id: entry.repo_id,
+        derived_data_type: params.derived_data_type.clone(),
+        cs_ids: entry.cs_ids.clone(),
+        slice_size: params.slice_size,
+        boundaries_concurrency: params.boundaries_concurrency,
+        num_boundary_requests: params.num_boundary_requests,
+        config_name: params.config_name.clone(),
+        reslice: params.reslice,
+        ..Default::default()
+    };
+
+    queue
+        .enqueue_with_root(
+            ctx,
+            Some(&repo_id),
+            repo_params,
+            root_request_id,
+            created_by,
+        )
+        .await
+        .map_err(AsyncRequestsError::internal)?;
+
+    Ok(())
+}
+
+/// Handles a DeriveBackfill request. With `repo_concurrency == 0` (the default)
+/// it enqueues a DeriveBackfillRepo sub-request for every repo at once. With
+/// `repo_concurrency > 0` (and fewer than that many repos would be trivial) it
+/// runs the sliding-window scheduler, keeping at most `repo_concurrency` repos
+/// deriving at a time.
 pub(crate) async fn compute_derive_backfill(
     ctx: &CoreContext,
     _mononoke: Arc<Mononoke<Repo>>,
@@ -480,59 +533,38 @@ pub(crate) async fn compute_derive_backfill(
     DerivableType::from_name(&params.derived_data_type).map_err(AsyncRequestsError::request)?;
 
     let total_sub_requests = params.repo_entries.len() as i64;
+    let created_by = created_by.as_deref();
 
-    stream::iter(&params.repo_entries)
-        .map(Ok::<_, AsyncRequestsError>)
-        .try_for_each_concurrent(Some(1000), |entry| {
-            let ctx = ctx.clone();
-            let derived_data_type = params.derived_data_type.clone();
-            let config_name = params.config_name.clone();
-            let slice_size = params.slice_size;
-            let boundaries_concurrency = params.boundaries_concurrency;
-            let num_boundary_requests = params.num_boundary_requests;
-            let reslice = params.reslice;
-            let entry_repo_id = entry.repo_id;
-            let cs_ids = entry.cs_ids.clone();
-            let root_request_id = root_request_id.clone();
-            let created_by = created_by.clone();
-            async move {
-                let repo_id = RepositoryId::new(entry_repo_id.try_into().map_err(|e| {
-                    AsyncRequestsError::request(anyhow::anyhow!("Invalid repo_id: {e}"))
-                })?);
-
-                let repo_params = thrift::DeriveBackfillRepoParams {
-                    repo_id: entry_repo_id,
-                    derived_data_type,
-                    cs_ids,
-                    slice_size,
-                    boundaries_concurrency,
-                    num_boundary_requests,
-                    config_name,
-                    reslice,
-                    ..Default::default()
-                };
-
-                queue
-                    .enqueue_with_root(
-                        &ctx,
-                        Some(&repo_id),
-                        repo_params,
-                        &root_request_id,
-                        created_by.as_deref(),
-                    )
-                    .await
-                    .map_err(AsyncRequestsError::internal)?;
-
-                Ok(())
-            }
-        })
+    if params.repo_concurrency > 0 && (params.repo_concurrency as usize) < params.repo_entries.len()
+    {
+        info!(
+            "DeriveBackfill scheduling {} repos with repo_concurrency={}",
+            params.repo_entries.len(),
+            params.repo_concurrency,
+        );
+        crate::backfill_scheduler::schedule_repo_backfills(
+            ctx,
+            queue,
+            &params,
+            &root_request_id,
+            created_by,
+            params.repo_concurrency as usize,
+        )
         .await?;
+    } else {
+        stream::iter(&params.repo_entries)
+            .map(Ok::<_, AsyncRequestsError>)
+            .try_for_each_concurrent(REPO_ENQUEUE_CONCURRENCY, |entry| {
+                enqueue_repo_backfill(ctx, queue, &params, entry, &root_request_id, created_by)
+            })
+            .await?;
 
-    info!(
-        "DeriveBackfill enqueued {} DeriveBackfillRepo sub-requests across {} repos",
-        total_sub_requests,
-        params.repo_entries.len(),
-    );
+        info!(
+            "DeriveBackfill enqueued {} DeriveBackfillRepo sub-requests across {} repos",
+            total_sub_requests,
+            params.repo_entries.len(),
+        );
+    }
 
     Ok(thrift::DeriveBackfillResponse {
         total_sub_requests,

@@ -201,17 +201,19 @@ impl RepoShardedProcessExecutor for AsyncMethodRequestWorker {
             .for_each_concurrent(Some(self.concurrency_limit), |dequeued| async move {
                 let worker = self.clone();
                 let ctx = CoreContext::clone(&self.ctx);
-                if let Err(e) = mononoke::spawn_task(worker.compute_and_mark_completed(
+                let run_detached = dequeued.params.is_long_running();
+                let handle = mononoke::spawn_task(worker.compute_and_mark_completed(
                     ctx,
                     dequeued.id,
                     dequeued.repo_id,
                     dequeued.params,
                     dequeued.root_request_id,
                     dequeued.created_by,
-                ))
-                .await
-                {
-                    warn!("Error spawning request: {:?}", e);
+                ));
+                if !run_detached {
+                    if let Err(e) = handle.await {
+                        warn!("Error spawning request: {:?}", e);
+                    }
                 }
             })
             .await;

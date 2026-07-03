@@ -6,6 +6,7 @@
  */
 
 pub mod backfill;
+pub mod backfill_scheduler;
 pub mod methods;
 pub mod scuba;
 pub mod stats;
