@@ -50,8 +50,8 @@ use super::get_manifest_restriction_info_from_acl_manifest;
 use super::get_path_restriction_info_from_acl_manifest;
 use super::get_path_restriction_root_info_from_acl_manifest;
 use super::is_restricted_manifest;
-use super::union_manifest_restriction_info_with_config_precedence;
-use super::union_path_restriction_info_with_config_precedence;
+use super::union_manifest_restriction_info_with_acl_manifest_precedence;
+use super::union_path_restriction_info_with_acl_manifest_precedence;
 use crate::ManifestType;
 use crate::RestrictedManifestId;
 use crate::RestrictedPathManifestIdEntry;
@@ -95,7 +95,7 @@ mod manifest_metadata_union {
         let first = manifest_restriction_info(None, "REPO_REGION:first")?;
         let second = manifest_restriction_info(None, "REPO_REGION:second")?;
 
-        let results = union_manifest_restriction_info_with_config_precedence(
+        let results = union_manifest_restriction_info_with_acl_manifest_precedence(
             vec![],
             vec![first.clone(), second.clone()],
         );
@@ -105,16 +105,16 @@ mod manifest_metadata_union {
     }
 
     #[mononoke::test]
-    fn test_config_wins_for_duplicate_known_root() -> Result<()> {
+    fn test_acl_manifest_wins_for_duplicate_known_root() -> Result<()> {
         let config = manifest_restriction_info(Some("shared"), "REPO_REGION:config")?;
         let acl_manifest = manifest_restriction_info(Some("shared"), "REPO_REGION:acl_manifest")?;
 
-        let results = union_manifest_restriction_info_with_config_precedence(
-            vec![config.clone()],
-            vec![acl_manifest],
+        let results = union_manifest_restriction_info_with_acl_manifest_precedence(
+            vec![config],
+            vec![acl_manifest.clone()],
         );
 
-        assert_eq!(results, vec![config]);
+        assert_eq!(results, vec![acl_manifest]);
         Ok(())
     }
 }
@@ -123,8 +123,7 @@ mod path_metadata_union {
     use super::*;
 
     #[mononoke::test]
-    fn test_config_wins_for_duplicate_root() -> Result<()> {
-        // FIXME: config currently wins for a duplicate restriction root; AclManifest should win.
+    fn test_acl_manifest_wins_for_duplicate_root() -> Result<()> {
         let root = NonRootMPath::new("shared")?;
         let config = PathRestrictionInfo {
             restriction_root: root.clone(),
@@ -137,15 +136,15 @@ mod path_metadata_union {
             permission_request_group: "REPO_REGION:acl_manifest".parse()?,
         };
 
-        let results = union_path_restriction_info_with_config_precedence(
-            vec![config.clone()],
-            vec![acl_manifest],
+        let results = union_path_restriction_info_with_acl_manifest_precedence(
+            vec![config],
+            vec![acl_manifest.clone()],
         );
 
         assert_eq!(
             results,
-            vec![config],
-            "config currently wins for a duplicate restriction root (to be flipped)"
+            vec![acl_manifest],
+            "AclManifest wins over config for a duplicate restriction root"
         );
         Ok(())
     }

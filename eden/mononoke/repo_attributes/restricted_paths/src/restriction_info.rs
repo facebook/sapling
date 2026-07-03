@@ -238,7 +238,7 @@ pub(crate) async fn get_path_restriction_root_info(
                 paths,
             )
             .await?;
-            Ok(union_path_restriction_info_with_config_precedence(
+            Ok(union_path_restriction_info_with_acl_manifest_precedence(
                 config,
                 acl_manifest,
             ))
@@ -270,7 +270,7 @@ pub(crate) async fn get_path_restriction_info(
             let acl_manifest =
                 get_path_restriction_info_from_acl_manifest(restricted_paths, ctx, cs_id, paths)
                     .await?;
-            Ok(union_path_restriction_info_with_config_precedence(
+            Ok(union_path_restriction_info_with_acl_manifest_precedence(
                 config,
                 acl_manifest,
             ))
@@ -397,7 +397,7 @@ pub(crate) async fn find_restricted_descendants(
             let acl_manifest =
                 find_restricted_descendants_from_acl_manifest(restricted_paths, ctx, cs_id, roots)
                     .await?;
-            Ok(union_path_restriction_info_with_config_precedence(
+            Ok(union_path_restriction_info_with_acl_manifest_precedence(
                 config,
                 acl_manifest,
             ))
@@ -456,10 +456,7 @@ pub(crate) async fn get_manifest_restriction_info(
                     manifest_type,
                 ),
             )?;
-            Ok(union_manifest_restriction_info_with_config_precedence(
-                config,
-                acl_manifest,
-            ))
+            Ok(union_manifest_restriction_info_with_acl_manifest_precedence(config, acl_manifest))
         }
         (AclManifestMode::Both, false) => {
             get_manifest_restriction_info_from_config(
@@ -535,18 +532,18 @@ pub(crate) async fn get_manifest_restriction_info_from_acl_manifest(
     }
 }
 
-fn union_path_restriction_info_with_config_precedence(
+fn union_path_restriction_info_with_acl_manifest_precedence(
     config: Vec<PathRestrictionInfo>,
     acl_manifest: Vec<PathRestrictionInfo>,
 ) -> Vec<PathRestrictionInfo> {
     // Metadata Both mode reports the union of both sources. For duplicate
-    // roots, config wins to preserve the existing metadata contract; Both
-    // enforcement still denies if either source denies.
-    acl_manifest
+    // roots, the AclManifest entry wins over config; Both enforcement still
+    // denies if either source denies.
+    config
         .into_iter()
         .map(|info| (info.restriction_root.clone(), info))
         .chain(
-            config
+            acl_manifest
                 .into_iter()
                 .map(|info| (info.restriction_root.clone(), info)),
         )
@@ -555,7 +552,7 @@ fn union_path_restriction_info_with_config_precedence(
         .collect()
 }
 
-fn union_manifest_restriction_info_with_config_precedence(
+fn union_manifest_restriction_info_with_acl_manifest_precedence(
     config: Vec<ManifestRestrictionInfo>,
     acl_manifest: Vec<ManifestRestrictionInfo>,
 ) -> Vec<ManifestRestrictionInfo> {
@@ -568,12 +565,12 @@ fn union_manifest_restriction_info_with_config_precedence(
 
     // Rootless manifest metadata cannot be safely deduplicated because there is
     // no restriction-root key to compare. Preserve those entries and only apply
-    // config precedence when both sources report a known root.
-    let rooted = rooted_acl_manifest
+    // AclManifest precedence when both sources report a known root.
+    let rooted = rooted_config
         .into_iter()
         .map(|info| (info.restriction_root.clone(), info))
         .chain(
-            rooted_config
+            rooted_acl_manifest
                 .into_iter()
                 .map(|info| (info.restriction_root.clone(), info)),
         )

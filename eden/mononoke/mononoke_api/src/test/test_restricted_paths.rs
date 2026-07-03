@@ -462,11 +462,11 @@ async fn test_batch_restriction_info_both_mode_acl_manifest_only_root(
     Ok(())
 }
 
-// What it tests: Both-mode path metadata should prefer config on
+// What it tests: Both-mode path metadata should prefer AclManifest on
 // same-root disagreement.
-// Expected: the config ACL is returned for the shared root.
+// Expected: the AclManifest ACL is returned for the shared root.
 #[mononoke::fbinit_test]
-async fn test_batch_restriction_info_both_mode_same_root_prefers_config(
+async fn test_batch_restriction_info_both_mode_same_root_prefers_acl_manifest(
     fb: FacebookInit,
 ) -> Result<()> {
     let (_repo_ctx, cs_ctx) = create_both_mode_test_changeset(
@@ -489,7 +489,7 @@ async fn test_batch_restriction_info_both_mode_same_root_prefers_config(
         .first()
         .ok_or_else(|| anyhow::anyhow!("expected same-root restriction"))?;
     assert_eq!(info.restriction_root(), &NonRootMPath::new("shared")?);
-    assert_eq!(info.repo_region_acl(), "REPO_REGION:config_acl");
+    assert_eq!(info.repo_region_acl(), "REPO_REGION:acl_manifest_acl");
 
     Ok(())
 }
