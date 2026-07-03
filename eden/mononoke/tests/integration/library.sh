@@ -595,6 +595,7 @@ function scs {
     --bound-address-file "$TESTTMP/scs_server_addr.txt" \
     --scribe-logging-directory "$TESTTMP/scribe_logs" \
     --tracing-test-format \
+    --runtime-thread-stack-size 8388608 \
     --gflag boh_mem_util_counter= \
     $BOOKMARK_CACHE_FLAG \
     "${CACHE_ARGS[@]}" \
