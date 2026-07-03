@@ -3105,6 +3105,11 @@ struct DeriveBackfillParams {
   7: bool reslice;
   /// Number of separate boundary derivation requests to create for parallelization.
   8: i32 num_boundary_requests;
+  /// Maximum number of repos to derive concurrently. The worker keeps at most
+  /// this many repos in flight at a time and schedules a new one as each repo's
+  /// derivation finishes. 0 (the default) means no limit: schedule all repos at
+  /// once, preserving the previous behavior.
+  9: i32 repo_concurrency;
 }
 
 /// Result for derive_backfill request
