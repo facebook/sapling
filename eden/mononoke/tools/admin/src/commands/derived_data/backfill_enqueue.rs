@@ -42,6 +42,12 @@ pub(super) struct BackfillEnqueueArgs {
     #[clap(long, default_value_t = 10)]
     num_boundary_requests: usize,
 
+    /// Maximum number of repos to derive concurrently. The worker keeps at most
+    /// this many repos in flight and schedules a new one as each repo finishes.
+    /// 0 (the default) means no limit: schedule all repos at once.
+    #[clap(long, default_value_t = 0)]
+    repo_concurrency: usize,
+
     /// Whether to compute slices as if all commits were underived
     #[clap(long)]
     reslice: bool,
@@ -96,6 +102,7 @@ pub(super) async fn backfill_enqueue(
         num_boundary_requests: args.num_boundary_requests as i32,
         reslice: args.reslice,
         config_name: config_name.map(|s| s.to_string()),
+        repo_concurrency: args.repo_concurrency as i32,
         ..Default::default()
     };
 

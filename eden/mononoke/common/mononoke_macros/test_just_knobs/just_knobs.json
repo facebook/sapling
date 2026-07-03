@@ -202,6 +202,7 @@
     "scm/mononoke:derived_data_backfill_segment_chunk_size": 20,
     "scm/mononoke:derived_data_backfill_chunk_retry_limit": 5,
     "scm/mononoke:async_requests_retry_limit": 3,
+    "scm/mononoke:async_requests_abandoned_request_threshold_secs": 300,
     "scm/mononoke:diff_service_default_input_estimate_mb": 10,
     "scm/mononoke:rl_land_poll_interval_secs": 1,
     "scm/mononoke:rl_land_timeout_secs": 600,

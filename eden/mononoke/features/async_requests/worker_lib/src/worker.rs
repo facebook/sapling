@@ -93,9 +93,13 @@ fn release_ondemand_repo_impl(
 }
 
 const DEQUEUE_STREAM_SLEEP_TIME: u64 = 1000;
-// Number of seconds after which inprogress request is considered abandoned
-// if it hasn't updated inprogress timestamp
-const ABANDONED_REQUEST_THRESHOLD_SECS: i64 = 5 * 60;
+// JustKnob controlling how many seconds an inprogress request may go without a
+// keep-alive update before another worker reclaims it as abandoned. Tunable at
+// runtime with no code push, and lowered by tests to exercise recovery quickly;
+// the default (300s) lives in `just_knobs.json`. Must stay well above
+// `KEEP_ALIVE_INTERVAL` so a healthy worker never reclaims its own requests.
+const JK_ABANDONED_REQUEST_THRESHOLD_SECS: &str =
+    "scm/mononoke:async_requests_abandoned_request_threshold_secs";
 const KEEP_ALIVE_INTERVAL: Duration = Duration::from_secs(10);
 const CONCURRENCY_LIMIT_BACKOFF_BASE: Duration = Duration::from_secs(15);
 const CONCURRENCY_LIMIT_BACKOFF_MAX_JITTER_SECS: u64 = 15;
@@ -241,13 +245,14 @@ impl AsyncMethodRequestWorker {
     ) -> impl Stream<Item = DequeuedRequest> + use<> {
         let claimed_by = ClaimedBy(self.name.clone());
         let sleep_time = Duration::from_millis(DEQUEUE_STREAM_SLEEP_TIME);
+        let abandoned_threshold_secs = justknobs::get(JK_ABANDONED_REQUEST_THRESHOLD_SECS, None);
         Self::request_stream_inner(
             ctx.clone(),
             claimed_by,
             queue,
             will_exit,
             sleep_time,
-            ABANDONED_REQUEST_THRESHOLD_SECS,
+            abandoned_threshold_secs,
         )
     }
 
@@ -611,6 +616,9 @@ mod test {
     use source_control as thrift;
 
     use super::*;
+
+    // A representative threshold for exercising `request_stream_inner` directly.
+    const ABANDONED_REQUEST_THRESHOLD_SECS: i64 = 5 * 60;
 
     #[mononoke::fbinit_test]
     async fn test_request_stream_simple(fb: FacebookInit) -> Result<(), Error> {
