@@ -12,5 +12,5 @@ futures = { version = "0.3.31", features = ["async-await", "compat"] }
 pin-project = "1.1.13"
 
 [dev-dependencies]
-bytes = { version = "1.11.1", features = ["serde"] }
+bytes = { version = "1.12.0", features = ["serde"] }
 tokio = { version = "1.52.3", features = ["full", "test-util", "tracing"] }

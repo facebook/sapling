@@ -19,7 +19,7 @@ path = "test/basic_test.rs"
 [dependencies]
 anyhow = "1.0.102"
 blob = { version = "0.1.0", path = "../../blob" }
-bytes = { version = "1.11.1", features = ["serde"] }
+bytes = { version = "1.12.0", features = ["serde"] }
 manifest-augmented-tree = { version = "0.1.0", path = "../../manifest-augmented-tree" }
 paste = "1.0.14"
 quickcheck = "1.1"
