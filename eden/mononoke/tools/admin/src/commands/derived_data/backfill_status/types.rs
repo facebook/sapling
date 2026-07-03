@@ -37,30 +37,12 @@ pub(super) struct TimingStats {
     pub estimated_remaining: Option<Duration>,
 }
 
-/// User-facing status for a backfill or repo, derived from raw request statuses.
-///
-/// The raw `RequestStatus::Ready` only means a request finished spawning
-/// children; the children may still be running. Aggregating across child
-/// statuses gives a status that matches what the user actually cares about.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(super) enum RepoStatus {
-    NotStarted,
-    InProgress,
-    Completed,
-    Failed,
-}
-
-impl std::fmt::Display for RepoStatus {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let s = match self {
-            RepoStatus::NotStarted => "new",
-            RepoStatus::InProgress => "inprogress",
-            RepoStatus::Completed => "completed",
-            RepoStatus::Failed => "failed",
-        };
-        write!(f, "{s}")
-    }
-}
+/// Backfill progress aggregation is shared with the worker-side scheduler, so
+/// `ChildCounts` and `RepoStatus` live in `requests_table` (both crates apply
+/// the same "is this repo still deriving?" rule). Re-exported here so existing
+/// `self::types::{RepoStatus, ChildCounts}` references keep resolving.
+pub(super) use requests_table::ChildCounts;
+pub(super) use requests_table::RepoStatus;
 
 /// Progress details for a specific repository
 pub(super) struct RepoProgress {
@@ -197,67 +179,4 @@ pub(super) struct ChildRequestRow {
     pub request_type: String,
     pub status: RequestStatus,
     pub claimed_by: Option<String>,
-}
-
-/// Counts of child requests grouped by their effective state. All four
-/// counts together describe a backfill's progress without exposing the raw
-/// `RequestStatus` enum to callers that just want to render a status.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub(super) struct ChildCounts {
-    pub new: u64,
-    pub inprogress: u64,
-    pub ready: u64,
-    pub failed: u64,
-}
-
-impl ChildCounts {
-    pub fn from_status_map(statuses: &HashMap<RequestStatus, usize>) -> Self {
-        let get = |s| *statuses.get(&s).unwrap_or(&0) as u64;
-        ChildCounts {
-            new: get(RequestStatus::New),
-            inprogress: get(RequestStatus::InProgress),
-            ready: get(RequestStatus::Ready) + get(RequestStatus::Polled),
-            failed: get(RequestStatus::Failed),
-        }
-    }
-
-    pub fn total(&self) -> u64 {
-        self.new + self.inprogress + self.ready + self.failed
-    }
-}
-
-impl RepoStatus {
-    /// Determine the overall status of a repo based on its child request counts.
-    ///
-    /// Used for per-repo aggregation where the "root" status is just the
-    /// children's status — there is no separate root request to factor in.
-    pub fn from_child_counts(counts: ChildCounts) -> Self {
-        if counts.failed > 0 {
-            RepoStatus::Failed
-        } else if counts.inprogress > 0 || (counts.ready > 0 && counts.new > 0) {
-            RepoStatus::InProgress
-        } else if counts.ready > 0 {
-            RepoStatus::Completed
-        } else {
-            RepoStatus::NotStarted
-        }
-    }
-
-    /// Determine the overall status of a backfill from the root request's
-    /// own status plus child counts. The root reaches `Ready` once it
-    /// finishes spawning child requests, even though the children may still
-    /// be running — so for a user-facing status we need to look across both.
-    pub fn from_root_and_children(root_status: RequestStatus, children: ChildCounts) -> Self {
-        if root_status == RequestStatus::Failed {
-            return RepoStatus::Failed;
-        }
-        let from_children = Self::from_child_counts(children);
-        match (from_children, root_status) {
-            // No children spawned yet but root is still spawning them.
-            (RepoStatus::NotStarted, RequestStatus::InProgress | RequestStatus::New) => {
-                RepoStatus::InProgress
-            }
-            (other, _) => other,
-        }
-    }
 }

@@ -13,9 +13,12 @@ use context::CoreContext;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
 
+mod backfill_progress;
 mod store;
 mod types;
 
+pub use crate::backfill_progress::ChildCounts;
+pub use crate::backfill_progress::RepoStatus;
 pub use crate::store::SqlLongRunningRequestsQueue;
 pub use crate::types::BlobstoreKey;
 pub use crate::types::ClaimedBy;
