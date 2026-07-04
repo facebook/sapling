@@ -26,7 +26,7 @@ itertools = "0.15.0"
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-rand = "0.10.1"
+rand = "0.10.2"
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 tokio = { version = "1.52.3", features = ["full", "test-util", "tracing"] }

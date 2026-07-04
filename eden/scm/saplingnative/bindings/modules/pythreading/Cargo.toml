@@ -7,4 +7,4 @@ edition = "2024"
 
 [dependencies]
 cpython = { version = "0.7.2", features = ["python3-sys"], default-features = false }
-rand = "0.10.1"
+rand = "0.10.2"

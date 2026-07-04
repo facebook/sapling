@@ -25,7 +25,7 @@ flume = "0.11.1"
 num_cpus = "1.16"
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }
 quickcheck = { version = "1.1", optional = true }
-rand = { version = "0.10.1", optional = true }
+rand = { version = "0.10.2", optional = true }
 sapling-edenapi_types = { version = "0.1.0", path = "../edenapi/types" }
 sapling-factory = { version = "0.1.0", path = "../util/factory" }
 sapling-format-util = { version = "0.1.0", path = "../util/format-util" }
@@ -43,7 +43,7 @@ tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 [dev-dependencies]
 ctor = "1.0.7"
 quickcheck = "1.1"
-rand = "0.10.1"
+rand = "0.10.2"
 rand_chacha = "0.10"
 sapling-dev-logger = { version = "0.1.0", path = "../dev-logger" }
 sapling-manifest = { version = "0.1.0", path = "../manifest" }

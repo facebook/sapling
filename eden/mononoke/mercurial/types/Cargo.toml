@@ -33,7 +33,7 @@ mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 percent-encoding = "2.1"
 quickcheck = "1.1"
 quickcheck_arbitrary_derive = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-rand = "0.10.1"
+rand = "0.10.2"
 rand_distr = "0.6"
 sapling-edenapi_types = { version = "0.1.0", path = "../../../scm/lib/edenapi/types" }
 sapling-types = { version = "0.1.0", path = "../../../scm/lib/types" }

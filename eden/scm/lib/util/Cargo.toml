@@ -19,7 +19,7 @@ bitflags = { version = "2.11.1", features = ["serde", "std"], default-features =
 dirs = "6.0"
 fn-error-context = "0.2"
 fs-err = { version = "3.3.0", features = ["tokio"] }
-rand = "0.10.1"
+rand = "0.10.2"
 sapling-atomicfile = { version = "0.1.0", path = "../atomicfile" }
 sapling-lazystr = { version = "0.1.0", path = "../lazystr" }
 sapling-metrics = { version = "0.1.0", path = "../metrics" }

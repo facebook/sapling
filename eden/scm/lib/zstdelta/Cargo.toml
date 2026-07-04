@@ -23,5 +23,5 @@ zstd-sys = { version = "2.0.16", features = ["experimental"], default-features =
 
 [dev-dependencies]
 quickcheck = "1.1"
-rand = "0.10.1"
+rand = "0.10.2"
 rand_chacha = "0.10"

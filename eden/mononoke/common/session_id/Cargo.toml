@@ -8,4 +8,4 @@ edition = "2024"
 license = "GPLv2+"
 
 [dependencies]
-rand = "0.10.1"
+rand = "0.10.2"

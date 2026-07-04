@@ -22,7 +22,7 @@ sapling-types = { version = "0.1.0", path = "../types" }
 sapling-vlqencoding = { version = "0.1.0", path = "../vlqencoding" }
 
 [dev-dependencies]
-rand = "0.10.1"
+rand = "0.10.2"
 rand_chacha = "0.10"
 sapling-drawdag = { version = "0.1.0", path = "../drawdag" }
 sapling-types = { version = "0.1.0", path = "../types", features = ["for-tests"], default-features = false }

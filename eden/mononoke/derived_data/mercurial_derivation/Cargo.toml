@@ -61,7 +61,7 @@ filenodes_derivation = { version = "0.1.0", path = "../filenodes_derivation" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 memblob = { version = "0.1.0", path = "../../blobstore/memblob" }
 mercurial_types-mocks = { version = "0.1.0", path = "../../mercurial/types/mocks" }
-rand = "0.10.1"
+rand = "0.10.2"
 rand_distr = "0.6"
 rand_xorshift = "0.5"
 repo_blobstore = { version = "0.1.0", path = "../../repo_attributes/repo_blobstore" }

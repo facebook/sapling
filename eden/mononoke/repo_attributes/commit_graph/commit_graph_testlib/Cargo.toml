@@ -19,7 +19,7 @@ in_memory_commit_graph_storage = { version = "0.1.0", path = "../in_memory_commi
 itertools = "0.15.0"
 maplit = "1.0"
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
-rand = "0.10.1"
+rand = "0.10.2"
 repo_identity = { version = "0.1.0", path = "../../repo_identity" }
 sapling-drawdag = { version = "0.1.0", path = "../../../../scm/lib/drawdag" }
 smallvec = { version = "1.15.2", features = ["impl_bincode", "serde", "specialization", "union", "write"] }

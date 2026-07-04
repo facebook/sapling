@@ -13,6 +13,6 @@ async-trait = "0.1.86"
 blobstore = { version = "0.1.0", path = ".." }
 context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-rand = "0.10.1"
+rand = "0.10.2"
 rand_distr = "0.6"
 tokio = { version = "1.52.3", features = ["full", "test-util", "tracing"] }
