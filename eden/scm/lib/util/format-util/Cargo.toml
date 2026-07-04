@@ -13,7 +13,7 @@ license = "MIT"
 name = "format_util"
 
 [dependencies]
-anyhow = "1.0.102"
+anyhow = "1.0.103"
 memchr = "2.8.2"
 sapling-hgtime = { version = "0.1.0", path = "../../hgtime" }
 sapling-minibytes = { version = "0.1.0", path = "../../minibytes" }

@@ -8,7 +8,7 @@ edition = "2024"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.102"
+anyhow = "1.0.103"
 hickory-resolver = { version = "0.26.1", features = ["system-config", "tokio"] }
 permission_checker = { version = "0.1.0", path = "../permission_checker" }
 sapling-clientinfo = { version = "0.1.0", path = "../../../scm/lib/clientinfo" }

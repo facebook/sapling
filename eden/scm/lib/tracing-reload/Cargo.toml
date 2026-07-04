@@ -13,6 +13,6 @@ license = "MIT"
 name = "tracing_reload"
 
 [dependencies]
-anyhow = "1.0.102"
+anyhow = "1.0.103"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 tracing-subscriber = { version = "0.3.23", features = ["chrono", "env-filter", "json", "local-time", "parking_lot", "registry"] }

@@ -8,7 +8,7 @@ edition = "2024"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.102"
+anyhow = "1.0.103"
 async-trait = "0.1.86"
 cache_warmup = { version = "0.1.0", path = "../../../features/cache_warmup" }
 cats = { version = "0.1.0", path = "../../../common/cats" }

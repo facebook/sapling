@@ -18,7 +18,7 @@ name = "bench"
 harness = false
 
 [dependencies]
-anyhow = "1.0.102"
+anyhow = "1.0.103"
 base64 = { version = "0.22.1", features = ["alloc"], optional = true }
 dirs = "6.0"
 faccess = "0.2.4"

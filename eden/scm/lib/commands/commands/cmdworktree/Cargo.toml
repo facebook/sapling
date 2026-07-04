@@ -10,7 +10,7 @@ repository = "https://github.com/facebook/sapling"
 license = "GPL-2.0-only"
 
 [dependencies]
-anyhow = "1.0.102"
+anyhow = "1.0.103"
 chrono = { version = "0.4.45", features = ["clock", "serde", "std"], default-features = false }
 cmdutil = { version = "0.1.0", path = "../../cmdutil" }
 flume = "0.11.1"

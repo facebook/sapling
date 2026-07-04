@@ -13,7 +13,7 @@ license = "MIT"
 name = "pathmatcher"
 
 [dependencies]
-anyhow = "1.0.102"
+anyhow = "1.0.103"
 bitflags = { version = "2.11.1", features = ["serde", "std"], default-features = false }
 fancy-regex = "0.16.2"
 fs-err = { version = "3.3.0", features = ["tokio"] }

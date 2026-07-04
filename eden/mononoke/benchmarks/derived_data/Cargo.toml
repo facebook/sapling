@@ -31,7 +31,7 @@ name = "benchmark_manifest_diff"
 path = "benchmark_manifest_diff.rs"
 
 [dependencies]
-anyhow = "1.0.102"
+anyhow = "1.0.103"
 async-trait = "0.1.86"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_hg_mapping" }

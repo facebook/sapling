@@ -13,7 +13,7 @@ path = "test/main.rs"
 
 [dependencies]
 acl_manifest = { version = "0.1.0", path = "../acl_manifest" }
-anyhow = "1.0.102"
+anyhow = "1.0.103"
 async-trait = "0.1.86"
 blobrepo_common = { version = "0.1.0", path = "../../blobrepo/common" }
 blobrepo_errors = { version = "0.1.0", path = "../../blobrepo/errors" }

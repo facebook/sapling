@@ -14,7 +14,7 @@ name = "edenfs_ffi"
 crate-type = ["lib", "staticlib"]
 
 [dependencies]
-anyhow = "1.0.102"
+anyhow = "1.0.103"
 cxx = "1.0.194"
 cxxerror = { version = "0.1.0", path = "cxxerror" }
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }

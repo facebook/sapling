@@ -13,5 +13,5 @@ license = "MIT"
 name = "ministate"
 
 [dependencies]
-anyhow = "1.0.102"
+anyhow = "1.0.103"
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }
