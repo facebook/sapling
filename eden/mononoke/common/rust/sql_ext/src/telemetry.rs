@@ -386,7 +386,6 @@ mod facebook {
     use mysql_client::MysqlError;
     use scuba_ext::CommonMetadata;
     use scuba_ext::CommonServerData;
-    use scuba_ext::MononokeScubaSampleBuilder;
     use sql::mysql::MysqlQueryTelemetry;
     use sql_query_telemetry::SqlQueryTelemetry;
     use stats::prelude::*;
@@ -902,9 +901,10 @@ mod facebook {
             log_entry.set_client_entry_point(client_info.entry_point.to_string());
             log_entry.set_client_correlator(client_info.correlator.clone());
 
-            if let Some(config) = sql_query_tel.observability_config() {
-                let experiments =
-                    MononokeScubaSampleBuilder::get_enabled_experiments_jk(&config, client_info);
+            if let Some(experiments) = sql_query_tel
+                .observability_context()
+                .and_then(|octx| octx.enabled_experiments_jk(client_info))
+            {
                 if !experiments.is_empty() {
                     log_entry.set_enabled_experiments_jk(experiments);
                 }
@@ -915,14 +915,12 @@ mod facebook {
     /// Set metadata fields on the logger from metadata.
     fn set_metadata(log_entry: &mut MononokeXdbTelemetryLogger, sql_query_tel: &SqlQueryTelemetry) {
         let metadata = sql_query_tel.metadata();
-        let observability_config = sql_query_tel.observability_config();
         let common_metadata =
-            CommonMetadata::from_metadata(metadata, observability_config.as_deref());
+            CommonMetadata::from_metadata(metadata, sql_query_tel.observability_context());
 
         // Apply common metadata fields
         apply_metadata(log_entry, &common_metadata);
 
-        // Set client request info (uses MononokeScubaSampleBuilder helper for experiments)
         set_client_request_info(log_entry, sql_query_tel);
 
         // Set common server data

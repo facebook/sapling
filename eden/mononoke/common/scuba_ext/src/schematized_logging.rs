@@ -16,9 +16,7 @@
 use std::env::var;
 
 use metadata::Metadata;
-use observability::ObservabilityConfig;
-
-use crate::MononokeScubaSampleBuilder;
+use observability::ObservabilityContext;
 
 /// Common server environment data.
 ///
@@ -151,7 +149,7 @@ impl CommonMetadata {
     /// Collect common metadata from a Metadata instance.
     pub fn from_metadata(
         metadata: &Metadata,
-        observability_config: Option<&ObservabilityConfig>,
+        observability_context: Option<&ObservabilityContext>,
     ) -> Self {
         let mut data = Self {
             session_uuid: metadata.session_id().to_string(),
@@ -231,8 +229,8 @@ impl CommonMetadata {
             }
             data.client_entry_point = Some(cri.entry_point.to_string());
             data.client_correlator = Some(cri.correlator.clone());
-            data.enabled_experiments_jk = observability_config
-                .map(|config| MononokeScubaSampleBuilder::get_enabled_experiments_jk(config, cri))
+            data.enabled_experiments_jk = observability_context
+                .and_then(|octx| octx.enabled_experiments_jk(cri))
                 .unwrap_or_default();
         }
 

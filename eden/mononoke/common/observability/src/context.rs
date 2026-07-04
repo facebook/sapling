@@ -11,7 +11,9 @@ use std::sync::Mutex;
 use anyhow::Error;
 use cached_config::ConfigHandle;
 use cached_config::ConfigStore;
+use clientinfo::ClientRequestInfo;
 
+use crate::config::ConsistentHashingType;
 use crate::config::ObservabilityConfig;
 use crate::config::ScubaVerbosityLevel;
 use crate::scuba::ScubaLoggingDecisionFields;
@@ -154,6 +156,41 @@ impl ObservabilityContext {
 
     pub fn observability_config(&self) -> Option<Arc<ObservabilityConfig>> {
         self.config_handle.as_ref().map(|handle| handle.get())
+    }
+
+    /// Evaluates the configured experiment JustKnobs and returns the enabled
+    /// `<jk>` / `<jk>::<switch>` entries, e.g.
+    /// `["scm/mononoke:my_feature", "scm/mononoke:my_feature::1"]`.
+    /// `None` when no config is loaded (the absent Scuba field is the signal).
+    pub fn enabled_experiments_jk(&self, client_info: &ClientRequestInfo) -> Option<Vec<String>> {
+        let config = self.observability_config()?;
+        Some(
+            config
+                .enabled_experiments_jk
+                .iter()
+                .flat_map(|jk| {
+                    let consistent_hashing = match jk.consistent_hashing {
+                        ConsistentHashingType::NoHashing => None,
+                        ConsistentHashingType::Correlator => Some(client_info.correlator.as_str()),
+                        ConsistentHashingType::MainId => client_info.main_id.as_deref(),
+                    };
+                    let jk_name = jk.jk_name.as_str();
+                    jk.switch_values
+                        .iter()
+                        .map(|s| Some(s.as_str()))
+                        // Also evaluate the JK with no switch.
+                        .chain(std::iter::once(None))
+                        .filter_map(move |opt_switch| {
+                            let enabled = justknobs::eval(jk_name, consistent_hashing, opt_switch);
+                            enabled.then(|| match opt_switch {
+                                Some(switch) => format!("{jk_name}::{switch}"),
+                                None => jk_name.to_string(),
+                            })
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .collect(),
+        )
     }
 
     pub fn should_log_scuba_sample(

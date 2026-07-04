@@ -5,12 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use std::sync::Arc;
-
 use clientinfo::ClientRequestInfo;
 use fbinit::FacebookInit;
 use metadata::Metadata;
-use observability::ObservabilityConfig;
 use observability::ObservabilityContext;
 
 /// Provides data and objects needed to log SQL query telemetry, e.g.
@@ -54,9 +51,7 @@ impl SqlQueryTelemetry {
         &self.metadata
     }
 
-    pub fn observability_config(&self) -> Option<Arc<ObservabilityConfig>> {
-        self.observability_context
-            .as_ref()
-            .and_then(|octx| octx.observability_config())
+    pub fn observability_context(&self) -> Option<&ObservabilityContext> {
+        self.observability_context.as_ref()
     }
 }

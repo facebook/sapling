@@ -21,8 +21,6 @@ use futures_stats::StreamStats;
 use futures_stats::TryStreamStats;
 use memory::MemoryStats;
 use metadata::Metadata;
-use observability::ConsistentHashingType;
-use observability::ObservabilityConfig;
 use observability::ObservabilityContext;
 use observability::ScubaLoggingDecisionFields;
 pub use observability::ScubaVerbosityLevel;
@@ -143,39 +141,6 @@ impl MononokeScubaSampleBuilder {
         self
     }
 
-    /// Returns the enabled JK entries, e.g.
-    /// `["scm/mononoke:my_feature", "scm/mononoke:my_feature::1"]`.
-    pub fn get_enabled_experiments_jk(
-        config: &ObservabilityConfig,
-        client_info: &ClientRequestInfo,
-    ) -> Vec<String> {
-        config
-            .enabled_experiments_jk
-            .iter()
-            .flat_map(|jk| {
-                let consistent_hashing = match jk.consistent_hashing {
-                    ConsistentHashingType::NoHashing => None,
-                    ConsistentHashingType::Correlator => Some(client_info.correlator.as_str()),
-                    ConsistentHashingType::MainId => client_info.main_id.as_deref(),
-                };
-                let jk_name = jk.jk_name.as_str();
-                jk.switch_values
-                    .iter()
-                    .map(|s| Some(s.as_str()))
-                    // Also evaluate the JK with no switch.
-                    .chain(std::iter::once(None))
-                    .filter_map(move |opt_switch| {
-                        let enabled = justknobs::eval(jk_name, consistent_hashing, opt_switch);
-                        enabled.then(|| match opt_switch {
-                            Some(switch) => format!("{jk_name}::{switch}"),
-                            None => jk_name.to_string(),
-                        })
-                    })
-                    .collect::<Vec<_>>()
-            })
-            .collect()
-    }
-
     pub fn add_client_request_info<'a>(&mut self, client_info: &'a ClientRequestInfo) -> &mut Self {
         self.inner
             .add_opt("client_main_id", client_info.main_id.as_deref());
@@ -185,14 +150,11 @@ impl MononokeScubaSampleBuilder {
             .add("client_correlator", client_info.correlator.as_str());
 
         // Needs the config from the context; without one there is nothing to log.
-        if let Some(config) = self
+        if let Some(jks) = self
             .observability_context()
-            .and_then(|octx| octx.observability_config())
+            .and_then(|octx| octx.enabled_experiments_jk(client_info))
         {
-            self.inner.add(
-                "enabled_experiments_jk",
-                Self::get_enabled_experiments_jk(&config, client_info),
-            );
+            self.inner.add("enabled_experiments_jk", jks);
         }
 
         self

@@ -16,7 +16,6 @@ rust_library(
         "//eden/mononoke/common/memory:memory",
         "//eden/mononoke/common/metadata:metadata",
         "//eden/mononoke/common/observability:observability",
-        "//eden/mononoke/common/rust/justknobs_ext:justknobs",
         "//eden/mononoke/common/scribe_ext:scribe_ext",
         "//eden/scm/lib/clientinfo:clientinfo",
     ]
