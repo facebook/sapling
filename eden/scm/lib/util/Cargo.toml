@@ -29,7 +29,7 @@ thiserror = "2.0.18"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
-memmap2 = "0.9.10"
+memmap2 = "0.9.11"
 tempfile = "3.27.0"
 
 [target.'cfg(target_os = "linux")'.dependencies]

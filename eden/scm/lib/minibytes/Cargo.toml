@@ -15,7 +15,7 @@ name = "minibytes"
 
 [dependencies]
 bytes = { version = "1.12.0", features = ["serde"], optional = true }
-memmap2 = { version = "0.9.10", optional = true }
+memmap2 = { version = "0.9.11", optional = true }
 serde = { version = "1.0.219", features = ["derive", "rc"] }
 
 [dev-dependencies]
