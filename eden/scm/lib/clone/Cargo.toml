@@ -14,7 +14,7 @@ name = "clone"
 
 [dependencies]
 anyhow = "1.0.103"
-fs-err = { version = "3.3.0", features = ["tokio"] }
+fs-err = { version = "3.3.1", features = ["tokio"] }
 sapling-async-runtime = { version = "0.1.0", path = "../async-runtime" }
 sapling-checkout = { version = "0.1.0", path = "../checkout" }
 sapling-configmodel = { version = "0.1.0", path = "../config/model", features = ["convert-path"] }

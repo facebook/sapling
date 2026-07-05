@@ -19,7 +19,7 @@ blob = { version = "0.1.0", path = "../blob" }
 byteorder = "1.5"
 flume = "0.11.1"
 fn-error-context = "0.2"
-fs-err = { version = "3.3.0", features = ["tokio"] }
+fs-err = { version = "3.3.1", features = ["tokio"] }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 http = "1.4.2"
 lfs_protocol = { version = "0.1.0", path = "../../../mononoke/common/lfs_protocol" }

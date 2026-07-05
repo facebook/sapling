@@ -15,7 +15,7 @@ name = "repostate"
 [dependencies]
 anyhow = "1.0.103"
 byteorder = "1.5"
-fs-err = { version = "3.3.0", features = ["tokio"] }
+fs-err = { version = "3.3.1", features = ["tokio"] }
 sapling-identity = { version = "0.1.0", path = "../../identity" }
 sapling-types = { version = "0.1.0", path = "../../types" }
 sapling-util = { version = "0.1.0", path = "../../util" }

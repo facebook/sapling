@@ -14,7 +14,7 @@ anyhow = "1.0.103"
 cmdpy = { version = "0.1.0", path = "../../cmdpy" }
 cmdutil = { version = "0.1.0", path = "../../cmdutil" }
 fail = { version = "0.5.1", features = ["failpoints"] }
-fs-err = { version = "3.3.0", features = ["tokio"] }
+fs-err = { version = "3.3.1", features = ["tokio"] }
 regex = "1.12.4"
 sapling-async-runtime = { version = "0.1.0", path = "../../../async-runtime" }
 sapling-atexit = { version = "0.1.0", path = "../../../util/atexit" }

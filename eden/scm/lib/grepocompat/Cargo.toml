@@ -14,7 +14,7 @@ name = "grepocompat"
 
 [dependencies]
 anyhow = "1.0.103"
-fs-err = { version = "3.3.0", features = ["tokio"] }
+fs-err = { version = "3.3.1", features = ["tokio"] }
 sapling-gitcompat = { version = "0.1.0", path = "../gitcompat" }
 sapling-grepomanifest = { version = "0.1.0", path = "../grepomanifest" }
 sapling-identity = { version = "0.1.0", path = "../identity" }

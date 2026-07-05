@@ -16,7 +16,7 @@ name = "global_profiler"
 
 [dependencies]
 anyhow = "1.0.103"
-fs-err = { version = "3.3.0", features = ["tokio"] }
+fs-err = { version = "3.3.1", features = ["tokio"] }
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }
 sapling-atexit = { version = "0.1.0", path = "../../util/atexit" }
 sapling-backtrace-python = { version = "0.1.0", path = "../../backtrace-python" }

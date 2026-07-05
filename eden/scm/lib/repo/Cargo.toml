@@ -15,7 +15,7 @@ name = "repo"
 [dependencies]
 anyhow = "1.0.103"
 fail = { version = "0.5.1", features = ["failpoints"] }
-fs-err = { version = "3.3.0", features = ["tokio"] }
+fs-err = { version = "3.3.1", features = ["tokio"] }
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }
 sapling-agentdetect = { version = "0.1.0", path = "../agentdetect" }
 sapling-async-runtime = { version = "0.1.0", path = "../async-runtime" }

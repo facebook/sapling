@@ -16,7 +16,7 @@ name = "treestate"
 anyhow = "1.0.103"
 bitflags = { version = "2.11.1", features = ["serde", "std"], default-features = false }
 byteorder = "1.5"
-fs-err = { version = "3.3.0", features = ["tokio"] }
+fs-err = { version = "3.3.1", features = ["tokio"] }
 sapling-atomicfile = { version = "0.1.0", path = "../atomicfile" }
 sapling-identity = { version = "0.1.0", path = "../identity" }
 sapling-repolock = { version = "0.1.0", path = "../repolock" }

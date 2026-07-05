@@ -18,7 +18,7 @@ anyhow = "1.0.103"
 bitflags = { version = "2.11.1", features = ["serde", "std"], default-features = false }
 dirs = "6.0"
 fn-error-context = "0.2"
-fs-err = { version = "3.3.0", features = ["tokio"] }
+fs-err = { version = "3.3.1", features = ["tokio"] }
 rand = "0.10.2"
 sapling-atomicfile = { version = "0.1.0", path = "../atomicfile" }
 sapling-lazystr = { version = "0.1.0", path = "../lazystr" }

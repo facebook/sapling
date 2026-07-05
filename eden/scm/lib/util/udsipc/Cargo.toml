@@ -15,7 +15,7 @@ name = "udsipc"
 [dependencies]
 anyhow = "1.0.103"
 fn-error-context = "0.2"
-fs-err = { version = "3.3.0", features = ["tokio"] }
+fs-err = { version = "3.3.1", features = ["tokio"] }
 sapling-nodeipc = { version = "0.1.0", path = "../nodeipc" }
 
 [target.'cfg(target_os = "windows")'.dependencies]

@@ -14,7 +14,7 @@ anyhow = "1.0.103"
 chrono = { version = "0.4.45", features = ["clock", "serde", "std"], default-features = false }
 cmdutil = { version = "0.1.0", path = "../../cmdutil" }
 flume = "0.11.1"
-fs-err = { version = "3.3.0", features = ["tokio"] }
+fs-err = { version = "3.3.1", features = ["tokio"] }
 sapling-clidispatch = { version = "0.1.0", path = "../../../clidispatch" }
 sapling-clone = { version = "0.1.0", path = "../../../clone" }
 sapling-edenfs-client = { version = "0.1.0", path = "../../../edenfs-client" }
