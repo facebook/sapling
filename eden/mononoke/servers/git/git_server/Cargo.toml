@@ -65,7 +65,7 @@ repo_blobstore = { version = "0.1.0", path = "../../../repo_attributes/repo_blob
 repo_identity = { version = "0.1.0", path = "../../../repo_attributes/repo_identity" }
 repo_permission_checker = { version = "0.1.0", path = "../../../repo_attributes/repo_permission_checker" }
 repo_update_logger = { version = "0.1.0", path = "../../../features/repo_update_logger" }
-rustc-hash = "2.1.2"
+rustc-hash = "2.1.3"
 sapling-clientinfo = { version = "0.1.0", path = "../../../../scm/lib/clientinfo" }
 sapling-edenapi_types = { version = "0.1.0", path = "../../../../scm/lib/edenapi/types" }
 sapling-repourl = { version = "0.1.0", path = "../../../../scm/lib/repo/url" }
