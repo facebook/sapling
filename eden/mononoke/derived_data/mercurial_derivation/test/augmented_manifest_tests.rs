@@ -3770,6 +3770,80 @@ async fn test_direct_derivation_subtree_copy_with_modify_and_delete_matches_exis
     result
 }
 
+/// Rebuilding a copied destination should reuse unchanged nested copied directories
+/// without loading their augmented envelopes.
+#[mononoke::fbinit_test]
+async fn test_direct_derivation_rebuilt_subtree_copy_reuses_nested_directory_without_loading_envelope(
+    fb: FacebookInit,
+) -> Result<()> {
+    // Given: a source tree with a nested directory, and a child that copies the
+    // tree while modifying/deleting only direct children of the destination.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let old_blobstore = MemWritesKeyedBlobstore::new(repo.repo_blobstore().clone());
+    let new_blobstore = MemWritesKeyedBlobstore::new(repo.repo_blobstore().clone());
+    let source = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("src/a.txt", "old a")
+        .add_file("src/b.txt", "old b")
+        .add_file("src/inner/deep.txt", "deep")
+        .commit()
+        .await?;
+    let child = save_bonsai_with_subtree_changes(
+        &ctx,
+        &repo,
+        vec![source],
+        vec![subtree_copy("dst", "src", source)?],
+        vec![("dst/a.txt", Some("new a")), ("dst/b.txt", None)],
+    )
+    .await?;
+    let old_source =
+        derive_existing_into_overlay(&ctx, &repo, &old_blobstore, source, vec![]).await?;
+    let new_source =
+        derive_into_overlay(&ctx, &repo, &new_blobstore, source, vec![], (None, None)).await?;
+    let denied_key = match new_source
+        .find_entry(ctx.clone(), new_blobstore.clone(), MPath::new("src/inner")?)
+        .await?
+        .context("source fixture must contain src/inner")?
+    {
+        Entry::Tree(inner_id) => inner_id.blobstore_key(),
+        Entry::Leaf(_) => panic!("src/inner must be a directory"),
+    };
+    let old_child =
+        derive_existing_into_overlay(&ctx, &repo, &old_blobstore, child, vec![old_source]).await?;
+    let denying_blobstore = DenyGetKeyedBlobstore::new(new_blobstore.clone(), denied_key.clone());
+    let subtree_source_augs = HashMap::from([(source, new_source)]);
+
+    // When: deriving the rebuilt subtree-copy destination while denying loads
+    // of the unchanged nested copied directory envelope.
+    let new_child = derive_into_overlay_with_subtrees(
+        &ctx,
+        &repo,
+        &denying_blobstore,
+        child,
+        vec![new_source],
+        (Some(source), None),
+        &subtree_source_augs,
+    )
+    .await
+    .with_context(|| {
+        format!(
+            "direct derivation should reuse the nested copied directory without loading {denied_key}"
+        )
+    })?;
+
+    // Then: direct derivation succeeds and still matches the HgManifest-based
+    // augmented manifest, proving the nested directory envelope was not needed.
+    assert_augmented_manifest_acl_parity(
+        &ctx,
+        &old_blobstore,
+        &new_blobstore,
+        old_child,
+        new_child,
+        "rebuilt subtree copy without nested envelope load",
+    )
+    .await
+}
+
 /// Exact subtree copy into restricted destination paths.
 #[mononoke::fbinit_test]
 async fn test_direct_derivation_subtree_copy_tracks_restricted_destination(
@@ -3894,6 +3968,93 @@ async fn test_direct_derivation_subtree_copy_rebuilt_dest_tracks_nested_restrict
                     .iter()
                     .any(|entry| entry.repo_path().is_ok_and(|path| path == expected_path)),
                 "expected an HgAugmented restricted-path entry for {expected_path:?}, got {entries:?}",
+            );
+
+            Ok(())
+        }
+        .boxed(),
+    )
+    .await
+}
+
+/// Restricted-path tracking for copied destinations runs after derivation and
+/// walks the final root to find restriction roots below the copy. That walk can
+/// need a reused nested copied envelope that derivation itself intentionally
+/// never loaded. Such an optional access-logging lookup must not fail the whole
+/// augmented-manifest derivation; tracking is best-effort and logs on failure.
+#[mononoke::fbinit_test]
+async fn test_direct_derivation_copied_restricted_tracking_survives_denied_nested_envelope(
+    fb: FacebookInit,
+) -> Result<()> {
+    with_just_knobs_async(
+        restricted_paths_access_logging_knobs(true),
+        async move {
+            // Given: `dst/inner/deeper` is a restriction root two levels under the
+            // copy destination, a source whose `src/inner` subtree the rebuilt copy
+            // reuses without loading, and a blobstore that denies loads of that
+            // reused nested envelope — the exact envelope the post-derivation
+            // tracking walk must traverse to reach `dst/inner/deeper`.
+            let ctx = CoreContext::test_mock(fb);
+            let repo = build_repo_with_restricted_path_config(
+                fb,
+                vec![NonRootMPath::new("dst/inner/deeper")?],
+            )
+            .await?;
+            let source = CreateCommitContext::new_root(&ctx, &repo)
+                .add_file("src/a.txt", "old a")
+                .add_file("src/b.txt", "old b")
+                .add_file("src/inner/deeper/deep.txt", "deep secret")
+                .commit()
+                .await?;
+            let child = save_bonsai_with_subtree_changes(
+                &ctx,
+                &repo,
+                vec![source],
+                vec![subtree_copy("dst", "src", source)?],
+                vec![("dst/a.txt", Some("new a")), ("dst/b.txt", None)],
+            )
+            .await?;
+            let blobstore = MemWritesKeyedBlobstore::new(repo.repo_blobstore().clone());
+            let source_aug =
+                derive_into_overlay(&ctx, &repo, &blobstore, source, vec![], (None, None)).await?;
+            let denied_key = match source_aug
+                .find_entry(ctx.clone(), blobstore.clone(), MPath::new("src/inner")?)
+                .await?
+                .context("source fixture must contain src/inner")?
+            {
+                Entry::Tree(inner_id) => inner_id.blobstore_key(),
+                Entry::Leaf(_) => panic!("src/inner must be a directory"),
+            };
+            let denying_blobstore =
+                DenyGetKeyedBlobstore::new(blobstore.clone(), denied_key.clone());
+            let subtree_source_augs = HashMap::from([(source, source_aug)]);
+
+            // When: deriving the rebuilt copy destination while the tracking walk
+            // would have to load the denied nested envelope.
+            let result = derive_into_overlay_with_subtrees(
+                &ctx,
+                &repo,
+                &denying_blobstore,
+                child,
+                vec![source_aug],
+                (Some(source), None),
+                &subtree_source_augs,
+            )
+            .await;
+
+            // Then: derivation succeeds, and the restriction root whose lookup
+            // failed is skipped rather than fatally propagated.
+            assert!(
+                result.is_ok(),
+                "copied restricted-path tracking must be best-effort; a denied nested envelope should not fail derivation, got {result:?}",
+            );
+            let entries = hg_augmented_restricted_path_entries(&ctx, &repo).await?;
+            let denied_path = RepoPath::dir("dst/inner/deeper")?;
+            assert!(
+                !entries
+                    .iter()
+                    .any(|entry| entry.repo_path().is_ok_and(|path| path == denied_path)),
+                "restriction root {denied_path:?} whose tracking lookup was denied should be skipped, got {entries:?}",
             );
 
             Ok(())

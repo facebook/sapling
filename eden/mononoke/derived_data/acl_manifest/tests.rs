@@ -409,6 +409,48 @@ async fn test_entry_blob_content_addressing(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
+/// Test content-addressing at the directory level: an identical nested subtree
+/// placed at two different paths should produce the same directory-node
+/// `AclManifestId`. This is the property the augmented-manifest copied-tree ACL
+/// re-stamp relies on -- a copied directory's stored ACL pointer equals what the
+/// destination overlay would compute, because the id is derived from
+/// `{restriction, subentries}` with no path baked in.
+#[mononoke::fbinit_test]
+async fn test_identical_subtree_has_same_directory_id_at_different_paths(
+    fb: FacebookInit,
+) -> Result<()> {
+    // Given: the same nested `.slacl` subtree under two different top-level dirs.
+    let result = setup_and_derive(
+        fb,
+        vec![vec![
+            Change::Add("alpha/inner/.slacl", SLACL_PROJECT1),
+            Change::Add("beta/inner/.slacl", SLACL_PROJECT1),
+        ]],
+    )
+    .await?;
+
+    // When: load the root's directory entries.
+    let mut entries = load_entries(&result.ctx, &result.repo, result.last_id().inner_id()).await?;
+    entries.sort_by(|(a, _), (b, _)| a.cmp(b));
+
+    // Then: the two waypoint directories are `alpha` and `beta`, and their
+    // directory-node AclManifestIds are equal despite the differing paths.
+    assert_eq!(
+        vec!["alpha".to_string(), "beta".to_string()],
+        entries
+            .iter()
+            .map(|(name, _)| String::from_utf8(name.as_ref().to_vec()))
+            .collect::<std::result::Result<Vec<_>, _>>()?,
+        "expected exactly the alpha and beta waypoint directories at the root"
+    );
+    assert_eq!(
+        entries[0].1.id, entries[1].1.id,
+        "identical subtree content should produce the same directory-node AclManifestId regardless of path"
+    );
+
+    Ok(())
+}
+
 // ---------------------------------------------------------------------------
 // Incremental derivation edge-case tests
 // ---------------------------------------------------------------------------
