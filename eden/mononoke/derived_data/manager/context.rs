@@ -155,6 +155,16 @@ impl DerivationContext {
         }
     }
 
+    pub(crate) fn with_replaced_restricted_paths(
+        &self,
+        restricted_paths: ArcRestrictedPathsConfigBased,
+    ) -> Self {
+        Self {
+            restricted_paths,
+            ..self.clone()
+        }
+    }
+
     #[allow(dead_code)]
     pub(crate) fn with_replaced_commit_derived_data_mapping(
         &self,

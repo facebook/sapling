@@ -21,28 +21,33 @@ use blobstore::Loadable;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarksRef;
 use bookmarks::Freshness;
-use cacheblob::MemWritesKeyedBlobstore;
+use cacheblob::MemWritesBlobstore;
 use clap::ArgGroup;
 use clap::Args;
 use commit_graph::CommitGraphArc;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
+use derived_data_manager::BonsaiDerivable;
+use derived_data_manager::DerivationContext;
 use derived_data_manager::DerivedDataManager;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use futures::future;
 use futures::stream::BoxStream;
-use mercurial_derivation::MappedHgChangesetId;
 use mercurial_derivation::RootHgAugmentedManifestId;
+use mercurial_derivation::RootHgAugmentedManifestV2Id;
 use mercurial_derivation::derive_hg_augmented_manifest::cached_acl_overlay_map;
 use mercurial_derivation::derive_hg_augmented_manifest::derive_augmented_manifest_from_bonsai_changeset;
 use mercurial_derivation::derive_hg_augmented_manifest::normalize_acl_root;
+use mercurial_derivation::derive_hg_augmented_manifest::subtree_copy_source_changesets;
 use mercurial_types::HgAugmentedManifestId;
 use mercurial_types::sharded_augmented_manifest::HgAugmentedManifestEntry;
 use mercurial_types::sharded_augmented_manifest::HgAugmentedManifestEnvelope;
+use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
 use mononoke_types::typed_hash::AclManifestId;
+use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use restricted_paths_common::ArcRestrictedPathsConfigBased;
 use restricted_paths_common::NoopRestrictedPathsManifestIdStore;
@@ -73,6 +78,13 @@ impl VerifyMismatch {
             expected: expected.into(),
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum VerifyOneOutcome {
+    Direct,
+    FullV2Fallback,
+    Mismatch(VerifyMismatch),
 }
 
 pub(crate) struct Verifier<'a> {
@@ -109,10 +121,50 @@ impl<'a> Verifier<'a> {
         }
     }
 
-    pub(crate) async fn verify_one(
-        &mut self,
-        cs_id: ChangesetId,
-    ) -> Result<Option<VerifyMismatch>> {
+    fn no_store_manager(&self) -> DerivedDataManager {
+        let mem_repo_blobstore = RepoBlobstore::new_with_wrapped_inner_blobstore(
+            self.repo.repo_blobstore().clone(),
+            |inner| Arc::new(MemWritesBlobstore::new(inner)),
+        );
+        self.manager
+            .with_replaced_blobstore(mem_repo_blobstore)
+            .with_replaced_restricted_paths(self.restricted_paths.clone())
+    }
+
+    async fn fetch_subtree_source_aug_roots(
+        &self,
+        derivation_ctx: &DerivationContext,
+        bonsai: &BonsaiChangeset,
+    ) -> Result<HashMap<ChangesetId, HgAugmentedManifestId>> {
+        let source_csids = subtree_copy_source_changesets(bonsai);
+        if source_csids.is_empty() {
+            return Ok(HashMap::new());
+        }
+
+        let source_roots = derivation_ctx
+            .fetch_derived_batch::<RootHgAugmentedManifestV2Id>(self.ctx, source_csids.clone())
+            .await
+            .with_context(|| {
+                format!(
+                    "fetching subtree source augmented roots for {}",
+                    bonsai.get_changeset_id()
+                )
+            })?;
+
+        let mut roots = HashMap::new();
+        for from_cs_id in source_csids {
+            let source_root = source_roots.get(&from_cs_id).ok_or_else(|| {
+                anyhow!(
+                    "Subtree copy source augmented manifest for changeset {from_cs_id} not found; \
+                     it must be derived before the changeset that copies from it",
+                )
+            })?;
+            roots.insert(from_cs_id, source_root.hg_augmented_manifest_id());
+        }
+        Ok(roots)
+    }
+
+    pub(crate) async fn verify_one(&mut self, cs_id: ChangesetId) -> Result<VerifyOneOutcome> {
         let bonsai = cs_id
             .load(self.ctx, self.repo.repo_blobstore())
             .await
@@ -126,67 +178,32 @@ impl<'a> Verifier<'a> {
             .fetch_required::<RootHgAugmentedManifestId>(cs_id)
             .await?;
 
-        // Use stored parent roots so each changeset is compared independently
-        // against persisted derived data.
-        let mut aug_parents = Vec::new();
-        for parent_cs_id in bonsai.parents() {
-            let parent = self
-                .fetch_required::<RootHgAugmentedManifestId>(parent_cs_id)
-                .await
-                .with_context(|| {
-                    format!("fetching stored parent augmented root {parent_cs_id} for {cs_id}")
-                })?;
-            aug_parents.push(parent.hg_augmented_manifest_id());
-        }
-
-        let mapped_hg = self.fetch_required::<MappedHgChangesetId>(cs_id).await?;
-        let expected_root = mapped_hg
-            .hg_changeset_id()
-            .load(self.ctx, self.repo.repo_blobstore())
-            .await
-            .with_context(|| format!("loading stored HgChangeset for {cs_id}"))?
-            .manifestid()
-            .into_nodehash();
-
         let acl_root = self.fetch_required::<RootAclManifestId>(cs_id).await?;
         let acl_overlay = normalize_acl_root(&acl_root)
             .with_context(|| format!("normalizing ACL root for {cs_id}"))?;
 
-        let mem = MemWritesKeyedBlobstore::new(self.repo.repo_blobstore().clone());
-        let acl_map = cached_acl_overlay_map(self.ctx, &mem, acl_overlay, &mut self.acl_cache)
-            .await
-            .with_context(|| format!("building ACL overlay map for {cs_id}"))?;
+        let no_store_manager = self.no_store_manager();
+        let no_store_derivation_ctx = no_store_manager.derivation_context(None);
+        let computed_blobstore = no_store_derivation_ctx.blobstore();
 
-        let parent_acl_paths = self.parent_acl_paths(&mem, cs_id, &bonsai).await?;
-        let source_aug_roots = self.subtree_source_aug_roots(cs_id, &bonsai).await?;
-
-        let computed = derive_augmented_manifest_from_bonsai_changeset(
+        let acl_map = cached_acl_overlay_map(
             self.ctx,
-            &mem,
-            &bonsai,
-            aug_parents,
-            &source_aug_roots,
-            Some(expected_root),
-            &self.restricted_paths,
+            computed_blobstore,
             acl_overlay,
             &mut self.acl_cache,
         )
         .await
-        .with_context(|| format!("directly deriving augmented manifest for {cs_id}"))?;
+        .with_context(|| format!("building ACL overlay map for {cs_id}"))?;
 
-        let env_computed = computed
-            .load(self.ctx, &mem)
-            .await
-            .with_context(|| format!("loading computed augmented manifest envelope for {cs_id}"))?;
+        let parent_acl_paths = self
+            .parent_acl_paths(computed_blobstore, cs_id, &bonsai)
+            .await?;
+
         let env_stored = existing
             .hg_augmented_manifest_id()
             .load(self.ctx, self.repo.repo_blobstore())
             .await
             .with_context(|| format!("loading stored augmented manifest envelope for {cs_id}"))?;
-
-        if let Some(mismatch) = compare_envelopes(cs_id, &env_computed, &env_stored) {
-            return Ok(Some(mismatch));
-        }
 
         // ACL pointer fields are not part of the augmented-manifest content
         // digest. Compare them over the sparse ACL overlay frontier for this
@@ -197,21 +214,129 @@ impl<'a> Verifier<'a> {
             .cloned()
             .chain(parent_acl_paths)
             .collect::<BTreeSet<_>>();
-        if let Some(mismatch) = compare_acl_pointers(
-            self.ctx,
-            &mem,
-            self.repo.repo_blobstore(),
-            cs_id,
-            &env_computed,
-            &env_stored,
-            all_acl_paths,
-        )
-        .await?
+
+        let stored_root_is_content_derived = env_stored.augmented_manifest.hg_node_id
+            == env_stored.augmented_manifest.computed_node_id;
+        let (computed, success_outcome) = if stored_root_is_content_derived {
+            (
+                self.derive_bonsai_direct_root(
+                    &no_store_derivation_ctx,
+                    computed_blobstore,
+                    &bonsai,
+                    acl_overlay,
+                )
+                .await?,
+                VerifyOneOutcome::Direct,
+            )
+        } else {
+            (
+                self.derive_v2_source_choice_root(&no_store_derivation_ctx, &bonsai)
+                    .await
+                    .with_context(|| {
+                        format!("deriving no-store v2 source-choice manifest for {cs_id}")
+                    })?,
+                VerifyOneOutcome::FullV2Fallback,
+            )
+        };
+
+        match self
+            .compare_computed_root_to_stored(
+                computed_blobstore,
+                cs_id,
+                computed,
+                &env_stored,
+                &all_acl_paths,
+            )
+            .await?
         {
+            None => Ok(success_outcome),
+            Some(mismatch) => Ok(VerifyOneOutcome::Mismatch(mismatch)),
+        }
+    }
+
+    async fn derive_bonsai_direct_root(
+        &self,
+        derivation_ctx: &DerivationContext,
+        computed_blobstore: &Arc<dyn KeyedBlobstore>,
+        bonsai: &BonsaiChangeset,
+        acl_overlay: Option<AclManifestId>,
+    ) -> Result<HgAugmentedManifestId> {
+        let cs_id = bonsai.get_changeset_id();
+        let aug_parents = derivation_ctx
+            .fetch_parents::<RootHgAugmentedManifestV2Id>(self.ctx, bonsai)
+            .await
+            .with_context(|| format!("fetching augmented parent roots for {cs_id}"))?
+            .into_iter()
+            .map(|p| p.hg_augmented_manifest_id())
+            .collect();
+        let source_aug_roots = if bonsai.has_subtree_changes() {
+            self.fetch_subtree_source_aug_roots(derivation_ctx, bonsai)
+                .await
+                .with_context(|| format!("fetching subtree source augmented roots for {cs_id}"))?
+        } else {
+            HashMap::new()
+        };
+        let restricted_paths = derivation_ctx.restricted_paths();
+        derive_augmented_manifest_from_bonsai_changeset(
+            self.ctx,
+            computed_blobstore,
+            bonsai,
+            aug_parents,
+            &source_aug_roots,
+            &restricted_paths,
+            acl_overlay,
+        )
+        .await
+        .with_context(|| format!("directly deriving Bonsai augmented manifest for {cs_id}"))
+    }
+
+    async fn derive_v2_source_choice_root(
+        &self,
+        derivation_ctx: &DerivationContext,
+        bonsai: &BonsaiChangeset,
+    ) -> Result<HgAugmentedManifestId> {
+        let cs_id = bonsai.get_changeset_id();
+        let mut source_choice = RootHgAugmentedManifestV2Id::derive_batch(
+            self.ctx,
+            derivation_ctx,
+            vec![bonsai.clone()],
+        )
+        .await?;
+        source_choice
+            .remove(&cs_id)
+            .map(|root| root.hg_augmented_manifest_id())
+            .ok_or_else(|| {
+                anyhow!("v2 source-choice did not derive augmented manifest for {cs_id}")
+            })
+    }
+
+    async fn compare_computed_root_to_stored(
+        &self,
+        computed_blobstore: &Arc<dyn KeyedBlobstore>,
+        cs_id: ChangesetId,
+        computed: HgAugmentedManifestId,
+        env_stored: &HgAugmentedManifestEnvelope,
+        all_acl_paths: &BTreeSet<MPath>,
+    ) -> Result<Option<VerifyMismatch>> {
+        let env_computed = computed
+            .load(self.ctx, computed_blobstore)
+            .await
+            .with_context(|| format!("loading computed augmented manifest envelope for {cs_id}"))?;
+
+        if let Some(mismatch) = compare_envelopes(cs_id, &env_computed, env_stored) {
             return Ok(Some(mismatch));
         }
 
-        Ok(None)
+        compare_acl_pointers(
+            self.ctx,
+            computed_blobstore,
+            self.repo.repo_blobstore(),
+            cs_id,
+            &env_computed,
+            env_stored,
+            all_acl_paths.clone(),
+        )
+        .await
     }
 
     async fn fetch_required<Derivable>(&self, cs_id: ChangesetId) -> Result<Derivable>
@@ -223,42 +348,6 @@ impl<'a> Verifier<'a> {
             .await
             .with_context(|| format!("fetching stored {} for {cs_id}", Derivable::NAME))?
             .ok_or_else(|| anyhow!("{} is not derived for {cs_id}", Derivable::NAME))
-    }
-
-    async fn subtree_source_aug_roots(
-        &self,
-        cs_id: ChangesetId,
-        bonsai: &mononoke_types::BonsaiChangeset,
-    ) -> Result<HashMap<ChangesetId, HgAugmentedManifestId>> {
-        let source_cs_ids = bonsai
-            .subtree_changes()
-            .into_iter()
-            .filter_map(|(_dest_path, change)| {
-                change
-                    .copy_source()
-                    .map(|(from_cs_id, _from_path)| from_cs_id)
-            })
-            .collect::<HashSet<_>>();
-
-        if source_cs_ids.is_empty() {
-            return Ok(HashMap::new());
-        }
-
-        let source_cs_ids = source_cs_ids.into_iter().collect::<Vec<_>>();
-        let fetched_sources = self
-            .manager
-            .fetch_derived_batch::<RootHgAugmentedManifestId>(self.ctx, source_cs_ids.clone(), None)
-            .await
-            .with_context(|| format!("fetching subtree source augmented roots for {cs_id}"))?;
-
-        let mut sources = HashMap::new();
-        for from_cs_id in source_cs_ids {
-            let source = fetched_sources.get(&from_cs_id).ok_or_else(|| {
-                anyhow!("subtree source augmented root {from_cs_id} is not derived for {cs_id}")
-            })?;
-            sources.insert(from_cs_id, source.hg_augmented_manifest_id());
-        }
-        Ok(sources)
     }
 
     async fn parent_acl_paths<Store>(
@@ -578,6 +667,13 @@ struct VerifyBatch {
     cs_ids: Vec<ChangesetId>,
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+struct VerifyBatchCounts {
+    processed: u64,
+    direct: u64,
+    full_v2_fallback: u64,
+}
+
 fn batch_changeset_stream(
     cs_ids: BoxStream<'static, Result<ChangesetId>>,
     batch_size: u64,
@@ -728,24 +824,29 @@ async fn verify_aug_direct_batch(
     repo: &Repo,
     manager: &DerivedDataManager,
     batch: VerifyBatch,
-) -> Result<(u64, u64)> {
+) -> Result<(u64, VerifyBatchCounts)> {
     let index = batch.index;
-    let size = u64::try_from(batch.cs_ids.len()).context("batch size does not fit in u64")?;
+    let mut counts = VerifyBatchCounts::default();
     let mut verifier = Verifier::new(ctx, repo, manager);
 
     for cs_id in batch.cs_ids {
-        if let Some(m) = verifier.verify_one(cs_id).await? {
-            return Err(anyhow!(
-                "MISMATCH at {}: {} diverges: computed={} expected={}",
-                m.cs_id,
-                m.field,
-                m.computed,
-                m.expected,
-            ));
+        counts.processed += 1;
+        match verifier.verify_one(cs_id).await? {
+            VerifyOneOutcome::Direct => counts.direct += 1,
+            VerifyOneOutcome::FullV2Fallback => counts.full_v2_fallback += 1,
+            VerifyOneOutcome::Mismatch(m) => {
+                return Err(anyhow!(
+                    "MISMATCH at {}: {} diverges: computed={} expected={}",
+                    m.cs_id,
+                    m.field,
+                    m.computed,
+                    m.expected,
+                ));
+            }
         }
     }
 
-    Ok((index, size))
+    Ok((index, counts))
 }
 
 pub(super) async fn verify_aug_direct(
@@ -779,23 +880,31 @@ pub(super) async fn verify_aug_direct(
     let concurrency =
         usize::try_from(args.concurrency).context("--concurrency value does not fit in usize")?;
     let mut processed = 0;
+    let mut direct = 0;
+    let mut full_v2_fallback = 0;
 
     batches
         .map_ok(|batch| verify_aug_direct_batch(ctx, repo, manager, batch))
         .try_buffer_unordered(concurrency)
-        .try_for_each(|(batch_index, batch_size)| {
-            processed += batch_size;
-            info!("progress: batch={batch_index} size={batch_size} processed={processed}");
+        .try_for_each(|(batch_index, counts)| {
+            processed += counts.processed;
+            direct += counts.direct;
+            full_v2_fallback += counts.full_v2_fallback;
+            info!(
+                "progress: batch={batch_index} size={} processed={processed} direct={direct} full-v2-fallback={full_v2_fallback}",
+                counts.processed,
+            );
             future::ready(Ok(()))
         })
         .await?;
 
-    println!("done: processed={processed}");
+    println!("done: processed={processed} direct={direct} full-v2-fallback={full_v2_fallback}");
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
     use std::collections::HashMap;
 
     use bonsai_git_mapping::BonsaiGitMapping;
@@ -803,10 +912,12 @@ mod tests {
     use bonsai_hg_mapping::BonsaiHgMapping;
     use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
     use bookmarks::Bookmarks;
+    use cacheblob::MemWritesKeyedBlobstore;
     use changesets_creation::save_changesets;
     use clap::Parser;
     use commit_graph::CommitGraph;
     use commit_graph::CommitGraphWriter;
+    use derived_data_manager::BonsaiDerivable;
     use fbinit::FacebookInit;
     use filenodes::Filenodes;
     use filestore::FilestoreConfig;
@@ -814,11 +925,23 @@ mod tests {
     use justknobs::test_helpers::JustKnobsInMemory;
     use justknobs::test_helpers::KnobVal;
     use justknobs::test_helpers::override_just_knobs;
+    use mercurial_derivation::MappedHgChangesetId;
+    use mercurial_derivation::RootHgAugmentedManifestV2Id;
     use mercurial_types::HgNodeHash;
+    use mercurial_types::HgParents;
+    use mercurial_types::blobs::ChangesetMetadata;
+    use mercurial_types::blobs::HgBlobChangeset;
+    use mercurial_types::blobs::HgChangesetContent;
+    use mercurial_types::blobs::UploadHgNodeHash;
+    use mercurial_types::blobs::UploadHgTreeEntry;
+    use mercurial_types::fetch_raw_manifest_bytes;
     use mercurial_types::sharded_augmented_manifest::HgAugmentedFileLeafNode;
     use mercurial_types::sharded_augmented_manifest::ShardedHgAugmentedManifest;
     use mononoke_macros::mononoke;
+    use mononoke_types::DateTime;
     use mononoke_types::FileType;
+    use mononoke_types::NonRootMPath;
+    use mononoke_types::RepoPath;
     use mononoke_types::hash::Blake2;
     use mononoke_types::hash::Blake3;
     use mononoke_types::hash::Sha1 as ContentSha1;
@@ -826,6 +949,7 @@ mod tests {
     use mononoke_types::sharded_map_v2::ShardedMapV2Node;
     use mononoke_types::subtree_change::SubtreeChange;
     use repo_blobstore::RepoBlobstore;
+    use repo_blobstore::RepoBlobstoreArc;
     use repo_derived_data::RepoDerivedData;
     use repo_derived_data::RepoDerivedDataRef;
     use repo_identity::RepoIdentity;
@@ -858,10 +982,7 @@ mod tests {
     }
 
     fn knob_overrides(extra: impl IntoIterator<Item = (&'static str, bool)>) -> JustKnobsInMemory {
-        let mut knobs = HashMap::from([(
-            "scm/mononoke:augmented_manifest_direct_derivation".to_string(),
-            KnobVal::Bool(false),
-        )]);
+        let mut knobs = HashMap::new();
         knobs.extend(
             extra
                 .into_iter()
@@ -886,6 +1007,201 @@ mod tests {
             .derive_exactly_batch::<RootHgAugmentedManifestId>(ctx, cs_ids.to_vec(), None)
             .await?;
         Ok(())
+    }
+
+    struct SuppliedRootFixture {
+        repo: TestRepo,
+        root: ChangesetId,
+        stored_aug: RootHgAugmentedManifestId,
+    }
+
+    async fn create_supplied_root_fixture(ctx: &CoreContext) -> Result<SuppliedRootFixture> {
+        let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
+        let root = CreateCommitContext::new_root(ctx, &repo)
+            .add_file("file.txt", b"one")
+            .commit()
+            .await?;
+
+        let stored_aug = {
+            let manager = repo.repo.repo_derived_data().manager();
+            manager
+                .derive_exactly_batch::<MappedHgChangesetId>(ctx, vec![root], None)
+                .await?;
+            manager
+                .derive_exactly_batch::<RootAclManifestId>(ctx, vec![root], None)
+                .await?;
+
+            let mapped_root = manager
+                .fetch_derived::<MappedHgChangesetId>(ctx, root, None)
+                .await?
+                .ok_or_else(|| anyhow!("missing MappedHgChangesetId for {root}"))?;
+            let original_hg_changeset = mapped_root
+                .hg_changeset_id()
+                .load(ctx, repo.repo.repo_blobstore())
+                .await?;
+            let original_manifest_id = original_hg_changeset.manifestid();
+            let raw_manifest =
+                fetch_raw_manifest_bytes(ctx, repo.repo.repo_blobstore(), original_manifest_id)
+                    .await?;
+
+            let supplied_manifest_hash = HgNodeHash::new(NodeSha1::from_byte_array([0xAB; 20]));
+            let upload = UploadHgTreeEntry {
+                upload_node_id: UploadHgNodeHash::Supplied(supplied_manifest_hash),
+                contents: raw_manifest.into_inner(),
+                p1: None,
+                p2: None,
+                path: RepoPath::root(),
+                computed_node_id: None,
+            };
+            let (supplied_manifest_id, upload_fut) =
+                upload.upload(ctx.clone(), repo.repo.repo_blobstore_arc())?;
+            upload_fut.await?;
+
+            repo.repo
+                .repo_blobstore()
+                .unlink(ctx, &mapped_root.hg_changeset_id().blobstore_key())
+                .await?;
+            let supplied_hg_changeset = HgBlobChangeset::new_with_id(
+                mapped_root.hg_changeset_id(),
+                HgChangesetContent::new_from_parts(
+                    HgParents::new(None, None),
+                    supplied_manifest_id,
+                    ChangesetMetadata {
+                        user: "test <test@example.com>".into(),
+                        time: DateTime::from_timestamp(0, 0).expect("valid timestamp"),
+                        extra: BTreeMap::new(),
+                        message: "supplied root manifest".into(),
+                    },
+                    vec![NonRootMPath::new("file.txt")?],
+                ),
+            );
+            supplied_hg_changeset
+                .save(ctx, repo.repo.repo_blobstore())
+                .await?;
+            manager
+                .derive_exactly_batch::<RootHgAugmentedManifestId>(ctx, vec![root], None)
+                .await?;
+            manager
+                .fetch_derived::<RootHgAugmentedManifestId>(ctx, root, None)
+                .await?
+                .ok_or_else(|| anyhow!("missing RootHgAugmentedManifestId for {root}"))?
+        };
+
+        Ok(SuppliedRootFixture {
+            repo,
+            root,
+            stored_aug,
+        })
+    }
+
+    struct OverwrittenRootMappingFixture {
+        repo: TestRepo,
+        second: ChangesetId,
+        root_aug: RootHgAugmentedManifestId,
+        correct_second_aug: RootHgAugmentedManifestId,
+    }
+
+    async fn create_overwritten_root_mapping_fixture(
+        ctx: &CoreContext,
+    ) -> Result<OverwrittenRootMappingFixture> {
+        let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
+        let root = CreateCommitContext::new_root(ctx, &repo)
+            .add_file("file.txt", b"one")
+            .commit()
+            .await?;
+        let second = CreateCommitContext::new(ctx, &repo, vec![root])
+            .add_file("file.txt", b"two")
+            .commit()
+            .await?;
+        derive_stored_aug(ctx, &repo.repo, &[root, second]).await?;
+
+        let (root_aug, correct_second_aug) = {
+            let manager = repo.repo.repo_derived_data().manager();
+            let derivation_ctx = manager.derivation_context(None);
+            let root_aug = manager
+                .fetch_derived::<RootHgAugmentedManifestId>(ctx, root, None)
+                .await?
+                .ok_or_else(|| anyhow!("missing RootHgAugmentedManifestId for {root}"))?;
+            let correct_second_aug = manager
+                .fetch_derived::<RootHgAugmentedManifestId>(ctx, second, None)
+                .await?
+                .ok_or_else(|| anyhow!("missing RootHgAugmentedManifestId for {second}"))?;
+            assert_ne!(
+                root_aug.hg_augmented_manifest_id(),
+                correct_second_aug.hg_augmented_manifest_id()
+            );
+            let second_mapping_key = format!(
+                "derived_root_hgaugmentedmanifest.{}{}",
+                derivation_ctx.mapping_key_prefix::<RootHgAugmentedManifestId>(),
+                second
+            );
+            derivation_ctx
+                .blobstore()
+                .unlink(ctx, &second_mapping_key)
+                .await?;
+            root_aug
+                .clone()
+                .store_mapping(ctx, &derivation_ctx, second)
+                .await?;
+            let overwritten_second_aug = manager
+                .fetch_derived::<RootHgAugmentedManifestId>(ctx, second, None)
+                .await?
+                .ok_or_else(|| {
+                    anyhow!("missing overwritten RootHgAugmentedManifestId for {second}")
+                })?;
+            assert_eq!(
+                overwritten_second_aug.hg_augmented_manifest_id(),
+                root_aug.hg_augmented_manifest_id()
+            );
+            (root_aug, correct_second_aug)
+        };
+
+        Ok(OverwrittenRootMappingFixture {
+            repo,
+            second,
+            root_aug,
+            correct_second_aug,
+        })
+    }
+
+    struct SubtreeCopyFixture {
+        repo: TestRepo,
+        source: ChangesetId,
+        child: ChangesetId,
+    }
+
+    async fn create_subtree_copy_fixture(ctx: &CoreContext) -> Result<SubtreeCopyFixture> {
+        let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
+        let source = CreateCommitContext::new_root(ctx, &repo)
+            .add_file("src/file.txt", b"one")
+            .commit()
+            .await?;
+        let parent = CreateCommitContext::new_root(ctx, &repo)
+            .add_file("base.txt", b"base")
+            .commit()
+            .await?;
+
+        let mut bonsai = CreateCommitContext::new(ctx, &repo, vec![parent])
+            .set_message("subtree copy only")
+            .create_commit_object()
+            .await?;
+        bonsai.subtree_changes = vec![(
+            MPath::new("dst")?,
+            SubtreeChange::copy(MPath::new("src")?, source),
+        )]
+        .into_iter()
+        .collect();
+        let bonsai = bonsai.freeze()?;
+        let child = bonsai.get_changeset_id();
+        save_changesets(ctx, &repo, vec![bonsai]).await?;
+
+        derive_stored_aug(ctx, &repo.repo, &[source, parent, child]).await?;
+
+        Ok(SubtreeCopyFixture {
+            repo,
+            source,
+            child,
+        })
     }
 
     fn test_changeset_id() -> ChangesetId {
@@ -951,6 +1267,45 @@ mod tests {
         assert!(error.to_string().contains(&format!(
             "is not in 1..={MAX_VERIFY_AUG_DIRECT_CONCURRENCY}"
         )));
+    }
+
+    #[mononoke::fbinit_test]
+    async fn with_replaced_restricted_paths_preserves_noop_store_for_verifier(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        // Given a derived-data manager and a verifier-style restricted-paths
+        // config with the same config but a no-op manifest-id store.
+        let ctx = CoreContext::test_mock(fb);
+        let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
+        let manager = repo.repo.repo_derived_data().manager();
+        let original_ctx = manager.derivation_context(None);
+        let original_restricted_paths = original_ctx.restricted_paths();
+        let noop_restricted_paths = std::sync::Arc::new(RestrictedPathsConfigBased::new(
+            original_restricted_paths.config().clone(),
+            std::sync::Arc::new(NoopRestrictedPathsManifestIdStore::new(
+                original_ctx.repo_id(),
+            )),
+            None,
+        ));
+
+        // When replacing restricted paths on a cloned manager.
+        let replaced_manager =
+            manager.with_replaced_restricted_paths(noop_restricted_paths.clone());
+
+        // Then the cloned manager uses the verifier's no-op restricted paths,
+        // while the original manager remains unchanged.
+        let replaced_restricted_paths =
+            replaced_manager.derivation_context(None).restricted_paths();
+        assert!(std::sync::Arc::ptr_eq(
+            &replaced_restricted_paths,
+            &noop_restricted_paths,
+        ));
+        let unchanged_restricted_paths = manager.derivation_context(None).restricted_paths();
+        assert!(std::sync::Arc::ptr_eq(
+            &unchanged_restricted_paths,
+            &original_restricted_paths,
+        ));
+        Ok(())
     }
 
     #[mononoke::fbinit_test]
@@ -1124,7 +1479,7 @@ mod tests {
         let outcome = verifier.verify_one(root).await?;
 
         // Then direct derivation matches the stored data, including ACL pointers.
-        assert_eq!(outcome, None);
+        assert_eq!(outcome, VerifyOneOutcome::Direct);
         Ok(())
     }
 
@@ -1213,13 +1568,215 @@ mod tests {
         let manager = repo.repo.repo_derived_data().manager();
         let mut verifier = Verifier::new(&ctx, &repo.repo, manager);
         for cs_id in cs_ids {
-            assert_eq!(verifier.verify_one(cs_id).await?, None);
+            assert_eq!(verifier.verify_one(cs_id).await?, VerifyOneOutcome::Direct);
         }
         Ok(())
     }
 
     #[mononoke::fbinit_test]
-    async fn verify_one_validates_subtree_copy_only_changeset(fb: FacebookInit) -> Result<()> {
+    async fn verify_one_forces_bonsai_direct_for_root_even_when_hg_mapping_exists(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        // Given a root changeset with stored old-path augmented data and an Hg
+        // mapping whose Hg changeset blob is no longer loadable.
+        override_just_knobs(knob_overrides([]));
+        let ctx = CoreContext::test_mock(fb);
+        let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
+        let root = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("file.txt", b"one")
+            .commit()
+            .await?;
+        derive_stored_aug(&ctx, &repo.repo, &[root]).await?;
+
+        let manager = repo.repo.repo_derived_data().manager();
+        let mapped_root = manager
+            .fetch_derived::<MappedHgChangesetId>(&ctx, root, None)
+            .await?
+            .ok_or_else(|| anyhow!("missing MappedHgChangesetId for {root}"))?;
+        let hg_changeset_key = mapped_root.hg_changeset_id().blobstore_key();
+        repo.repo
+            .repo_blobstore()
+            .unlink(&ctx, &hg_changeset_key)
+            .await?;
+        assert!(
+            repo.repo
+                .repo_blobstore()
+                .get(&ctx, &hg_changeset_key)
+                .await?
+                .is_none(),
+            "fixture should remove the mapped Hg changeset blob",
+        );
+
+        // When verifying the changeset.
+        let mut verifier = Verifier::new(&ctx, &repo.repo, manager);
+        let outcome = verifier.verify_one(root).await?;
+
+        // Then verification succeeds without using the mapped Hg changeset as
+        // the computed-side input.
+        assert_eq!(outcome, VerifyOneOutcome::Direct);
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn verify_one_accepts_v2_source_choice_when_bonsai_direct_mismatches_stored(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        // Given a mapped changeset whose canonical Hg manifest has a supplied
+        // root id that differs from the content-derived Bonsai root.
+        override_just_knobs(knob_overrides([]));
+        let ctx = CoreContext::test_mock(fb);
+        let fixture = create_supplied_root_fixture(&ctx).await?;
+        let manager = fixture.repo.repo.repo_derived_data().manager();
+        let stored_env = fixture
+            .stored_aug
+            .hg_augmented_manifest_id()
+            .load(&ctx, fixture.repo.repo.repo_blobstore())
+            .await?;
+
+        // When verifying the changeset through the forced Bonsai-direct verifier.
+        let mut verifier = Verifier::new(&ctx, &fixture.repo.repo, manager);
+        let outcome = verifier.verify_one(fixture.root).await?;
+
+        // Then verification succeeds through the full-v2 fallback because
+        // no-store v2 source-choice matches the stored mapped-Hg data.
+        assert_eq!(outcome, VerifyOneOutcome::FullV2Fallback);
+        let stored_after_verify = fixture
+            .stored_aug
+            .hg_augmented_manifest_id()
+            .load(&ctx, fixture.repo.repo.repo_blobstore())
+            .await?;
+        assert_eq!(stored_after_verify, stored_env);
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn verify_aug_direct_batch_counts_full_v2_fallback_as_success(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        // Given a mapped changeset whose stored augmented root follows the
+        // mapped-Hg source-choice path rather than pure Bonsai-direct output.
+        override_just_knobs(knob_overrides([]));
+        let ctx = CoreContext::test_mock(fb);
+        let fixture = create_supplied_root_fixture(&ctx).await?;
+        let manager = fixture.repo.repo.repo_derived_data().manager();
+
+        // When verifying a batch containing that changeset.
+        let (batch_index, counts) = verify_aug_direct_batch(
+            &ctx,
+            &fixture.repo.repo,
+            manager,
+            VerifyBatch {
+                index: 42,
+                cs_ids: vec![fixture.root],
+            },
+        )
+        .await?;
+
+        // Then the batch succeeds while surfacing that the changeset matched
+        // only through the full-v2 source-choice fallback.
+        assert_eq!(batch_index, 42);
+        assert_eq!(
+            counts,
+            VerifyBatchCounts {
+                processed: 1,
+                direct: 0,
+                full_v2_fallback: 1,
+            }
+        );
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn direct_v2_no_store_computation_ignores_current_root_mapping(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        // Given a linear repository with stored old-path augmented data, but
+        // the second commit's augmented-root mapping points to the first
+        // commit's valid augmented root.
+        override_just_knobs(knob_overrides([]));
+        let ctx = CoreContext::test_mock(fb);
+        let fixture = create_overwritten_root_mapping_fixture(&ctx).await?;
+        let second = fixture.second;
+        let manager = fixture.repo.repo.repo_derived_data().manager();
+        let verifier = Verifier::new(&ctx, &fixture.repo.repo, manager);
+        let no_store_manager = verifier.no_store_manager();
+        let no_store_derivation_ctx = no_store_manager.derivation_context(None);
+        let second_bonsai = second
+            .load(&ctx, fixture.repo.repo.repo_blobstore())
+            .await
+            .with_context(|| format!("loading second bonsai changeset {second}"))?;
+
+        // When computing the second commit's v2 augmented root directly with
+        // the no-store derivation context.
+        let computed = RootHgAugmentedManifestV2Id::derive_batch(
+            &ctx,
+            &no_store_derivation_ctx,
+            vec![second_bonsai],
+        )
+        .await?;
+        let computed_second = computed
+            .get(&second)
+            .ok_or_else(|| anyhow!("missing computed v2 augmented root for {second}"))?
+            .hg_augmented_manifest_id();
+
+        // Then the computation is independent of the current stored root
+        // mapping and does not repair that mapping in persistent storage.
+        assert_eq!(
+            computed_second,
+            fixture.correct_second_aug.hg_augmented_manifest_id()
+        );
+        assert_ne!(computed_second, fixture.root_aug.hg_augmented_manifest_id());
+        let stored_second_aug_after_compute = manager
+            .fetch_derived::<RootHgAugmentedManifestId>(&ctx, second, None)
+            .await?
+            .ok_or_else(|| anyhow!("missing RootHgAugmentedManifestId for {second}"))?;
+        assert_eq!(
+            stored_second_aug_after_compute.hg_augmented_manifest_id(),
+            fixture.root_aug.hg_augmented_manifest_id()
+        );
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn verify_one_reports_mismatch_instead_of_using_current_root_mapping_as_computed_result(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        // Given a linear repository with stored old-path derived data for both
+        // commits, but the second commit's augmented-root mapping points to
+        // the first commit's valid augmented root.
+        override_just_knobs(knob_overrides([]));
+        let ctx = CoreContext::test_mock(fb);
+        let fixture = create_overwritten_root_mapping_fixture(&ctx).await?;
+        let second = fixture.second;
+        let manager = fixture.repo.repo.repo_derived_data().manager();
+
+        // When verifying the changeset whose stored root mapping was replaced.
+        let mut verifier = Verifier::new(&ctx, &fixture.repo.repo, manager);
+        let outcome = verifier.verify_one(second).await?;
+
+        // Then the verifier reports the stored-root corruption instead of
+        // accepting the stored root as its computed result.
+        let mismatch = match outcome {
+            VerifyOneOutcome::Mismatch(mismatch) => mismatch,
+            outcome => {
+                return Err(anyhow!(
+                    "expected verifier to report overwritten root mapping for {second}, got {outcome:?}"
+                ));
+            }
+        };
+        assert_eq!(mismatch.cs_id, second);
+        assert_eq!(mismatch.field, "augmented_manifest_id (Blake3)");
+        assert_ne!(mismatch.computed, mismatch.expected);
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn verify_one_reports_direct_error_when_content_derived_root_missing_subtree_source_root(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        // Given a subtree-copy changeset with a content-derived stored root and
+        // a missing stored source augmented root mapping, while mapped-Hg data
+        // is available for full-v2 source-choice.
         override_just_knobs(knob_overrides([
             ("scm/mononoke:enable_subtree_changes", true),
             (
@@ -1228,31 +1785,108 @@ mod tests {
             ),
         ]));
         let ctx = CoreContext::test_mock(fb);
-        let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
-        let root = CreateCommitContext::new_root(&ctx, &repo)
-            .add_file("src/file.txt", b"one")
-            .commit()
-            .await?;
-
-        let mut bonsai = CreateCommitContext::new(&ctx, &repo, vec![root])
-            .set_message("subtree copy only")
-            .create_commit_object()
-            .await?;
-        bonsai.subtree_changes = vec![(
-            MPath::new("dst")?,
-            SubtreeChange::copy(MPath::new("src")?, root),
-        )]
-        .into_iter()
-        .collect();
-        let bonsai = bonsai.freeze()?;
-        let child = bonsai.get_changeset_id();
-        save_changesets(&ctx, &repo, vec![bonsai]).await?;
-
-        derive_stored_aug(&ctx, &repo.repo, &[root, child]).await?;
-
+        let fixture = create_subtree_copy_fixture(&ctx).await?;
+        let repo = &fixture.repo;
+        let source = fixture.source;
+        let child = fixture.child;
         let manager = repo.repo.repo_derived_data().manager();
+        let child_aug = manager
+            .fetch_derived::<RootHgAugmentedManifestId>(&ctx, child, None)
+            .await?
+            .ok_or_else(|| anyhow!("missing RootHgAugmentedManifestId for {child}"))?;
+        let child_env = child_aug
+            .hg_augmented_manifest_id()
+            .load(&ctx, repo.repo.repo_blobstore())
+            .await?;
+        assert_eq!(
+            child_env.augmented_manifest.hg_node_id, child_env.augmented_manifest.computed_node_id,
+            "fixture must use a content-derived stored child root",
+        );
+
+        let derivation_ctx = manager.derivation_context(None);
+        let source_mapping_key = format!(
+            "derived_root_hgaugmentedmanifest.{}{}",
+            derivation_ctx.mapping_key_prefix::<RootHgAugmentedManifestId>(),
+            source
+        );
+        derivation_ctx
+            .blobstore()
+            .unlink(&ctx, &source_mapping_key)
+            .await?;
+
+        // When verifying the subtree-copy child.
         let mut verifier = Verifier::new(&ctx, &repo.repo, manager);
-        assert_eq!(verifier.verify_one(child).await?, None);
+        let error = verifier
+            .verify_one(child)
+            .await
+            .expect_err("expected direct Bonsai missing-source-root failure");
+
+        // Then verification reports the forced Bonsai-direct failure instead
+        // of hiding it behind full-v2 source-choice fallback.
+        let error = format!("{error:#}");
+        assert!(
+            error.contains("fetching subtree source augmented roots")
+                && error.contains("Subtree copy source augmented manifest"),
+            "unexpected verifier error: {error}",
+        );
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn verify_one_forces_bonsai_direct_for_subtree_copy_using_stored_source_root(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        // Given a subtree-copy changeset whose source augmented root is already
+        // stored, and whose own mapped Hg changeset blob is no longer loadable.
+        override_just_knobs(knob_overrides([
+            ("scm/mononoke:enable_subtree_changes", true),
+            (
+                "scm/mononoke:enable_manifest_altering_subtree_changes",
+                true,
+            ),
+        ]));
+        let ctx = CoreContext::test_mock(fb);
+        let fixture = create_subtree_copy_fixture(&ctx).await?;
+        let repo = &fixture.repo;
+        let source = fixture.source;
+        let child = fixture.child;
+        let manager = repo.repo.repo_derived_data().manager();
+        let source_aug = manager
+            .fetch_derived::<RootHgAugmentedManifestId>(&ctx, source, None)
+            .await?
+            .ok_or_else(|| anyhow!("missing RootHgAugmentedManifestId for {source}"))?;
+
+        let mapped_child = manager
+            .fetch_derived::<MappedHgChangesetId>(&ctx, child, None)
+            .await?
+            .ok_or_else(|| anyhow!("missing MappedHgChangesetId for {child}"))?;
+        let hg_changeset_key = mapped_child.hg_changeset_id().blobstore_key();
+        repo.repo
+            .repo_blobstore()
+            .unlink(&ctx, &hg_changeset_key)
+            .await?;
+        assert!(
+            repo.repo
+                .repo_blobstore()
+                .get(&ctx, &hg_changeset_key)
+                .await?
+                .is_none(),
+            "fixture should remove the subtree child's mapped Hg changeset blob",
+        );
+
+        // When verifying the subtree-copy child.
+        let mut verifier = Verifier::new(&ctx, &repo.repo, manager);
+        let outcome = verifier.verify_one(child).await?;
+
+        // Then the verifier succeeds without using the child's mapped Hg
+        // changeset, while keeping the source augmented root as a stored
+        // boundary input.
+        assert_eq!(outcome, VerifyOneOutcome::Direct);
+        let source_aug_after = manager
+            .fetch_derived::<RootHgAugmentedManifestId>(&ctx, source, None)
+            .await?
+            .ok_or_else(|| anyhow!("missing RootHgAugmentedManifestId for {source}"))?;
+        assert_eq!(source_aug_after, source_aug);
         Ok(())
     }
 }

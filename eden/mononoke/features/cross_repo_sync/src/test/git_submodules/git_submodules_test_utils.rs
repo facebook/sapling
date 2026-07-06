@@ -551,6 +551,9 @@ pub(crate) fn submodule_repo_derived_data_types_config() -> HashMap<String, Deri
             ![
                 DerivableType::HgChangesets,
                 DerivableType::HgAugmentedManifests,
+                // Hg manifests cannot represent git submodules, so backsynced
+                // small-repo commits with GitSubmodule entries fail to derive.
+                DerivableType::HgAugmentedManifestsV2,
                 DerivableType::FileNodes,
             ]
             .contains(t)

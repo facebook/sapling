@@ -560,11 +560,18 @@ impl Convert for RawDerivedDataTypesConfig {
             .into_iter()
             .map(|ty| DerivableType::from_name(&ty))
             .collect::<Result<_>>()?;
-        let mapping_key_prefixes = self
+        let mapping_key_prefixes: HashMap<DerivableType, String> = self
             .mapping_key_prefixes
             .into_iter()
             .map(|(k, _v)| Ok((DerivableType::from_name(&k)?, _v)))
             .collect::<Result<_>>()?;
+        if mapping_key_prefixes.contains_key(&DerivableType::HgAugmentedManifestsV2) {
+            return Err(anyhow!(
+                "mapping_key_prefixes cannot contain hg_augmented_manifests_v2; \
+                 augmented manifests v2 shares the hg_augmented_manifests root mapping namespace, \
+                 so configure hg_augmented_manifests instead"
+            ));
+        }
         let unode_version = match self.unode_version {
             None => UnodeVersion::default(),
             Some(1) => return Err(anyhow!("unode version 1 has been deprecated")),
@@ -1555,6 +1562,33 @@ mod tests {
             stages: Default::default(),
             batch_size,
         }
+    }
+
+    #[mononoke::test]
+    fn test_parse_derived_data_types_config_rejects_hg_augmented_manifests_v2_mapping_key_prefix() {
+        // Given a derived-data config that tries to assign a distinct root
+        // mapping namespace to augmented manifests v2.
+        let raw = RawDerivedDataTypesConfig {
+            mapping_key_prefixes: std::collections::BTreeMap::from([(
+                "hg_augmented_manifests_v2".to_string(),
+                "v2-prefix.".to_string(),
+            )]),
+            ..Default::default()
+        };
+
+        // When converting the raw config into Mononoke's typed config.
+        let result: Result<DerivedDataTypesConfig> = raw.convert();
+
+        // Then parsing rejects the v2-specific prefix instead of silently
+        // ignoring it while v2 uses the v1 root mapping namespace.
+        let err = result.unwrap_err();
+        let msg = format!("{err:#}");
+        assert!(
+            msg.contains("hg_augmented_manifests_v2")
+                && msg.contains("shares the hg_augmented_manifests root mapping namespace")
+                && msg.contains("configure hg_augmented_manifests instead"),
+            "expected v2 augmented-manifest prefix rejection, got: {msg}",
+        );
     }
 
     #[mononoke::test]

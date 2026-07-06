@@ -9,13 +9,11 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
-use std::sync::Mutex;
 
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::bail;
-use anyhow::ensure;
 use blobstore::KeyedBlobstore;
 use blobstore::Storable;
 use blobstore::StoreLoadable;
@@ -51,8 +49,6 @@ use mercurial_types::HgNodeHash;
 use mercurial_types::HgParents;
 use mercurial_types::ShardedHgAugmentedManifest;
 use mercurial_types::blobs::ContentBlobMeta;
-use mercurial_types::blobs::File;
-use mercurial_types::blobs::HgBlobManifest;
 use mercurial_types::blobs::UploadHgFileContents;
 use mercurial_types::blobs::UploadHgFileEntry;
 use mercurial_types::blobs::UploadHgNodeHash;
@@ -61,6 +57,7 @@ use mercurial_types::calculate_hg_node_ids_multi;
 use mercurial_types::preloaded_augmented_manifest::serialize_manifest_entry;
 use mercurial_types::sharded_augmented_manifest::HgAugmentedDirectoryNode;
 use mercurial_types::sharded_augmented_manifest::HgAugmentedFileLeafNode;
+use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::ContentMetadataV2;
@@ -90,9 +87,6 @@ use tracing::warn;
 use crate::acl_overlay_manifest::AclOverlayHgManifestId;
 use crate::derive_hg_manifest::ParentIndex;
 use crate::derive_hg_manifest::hg_parents;
-
-/// Batch-local cache for full ACL overlay maps, keyed by ACL root id.
-pub type AclOverlayCache = HashMap<AclManifestId, Arc<HashMap<MPath, AclManifestId>>>;
 
 /// Derive an HgAugmentedManifestId from an HgManifestId and parents.
 ///
@@ -622,103 +616,6 @@ pub fn normalize_acl_root(
     }
 }
 
-#[derive(Clone)]
-struct CanonicalHgManifestLookup {
-    manifests: Arc<Mutex<HashMap<MPath, Arc<HgBlobManifest>>>>,
-}
-
-impl CanonicalHgManifestLookup {
-    async fn from_root_hg_node_id_override(
-        ctx: &CoreContext,
-        blobstore: &Arc<dyn KeyedBlobstore>,
-        root_hg_node_id_override: Option<HgNodeHash>,
-    ) -> Result<Option<Self>> {
-        let Some(root) = root_hg_node_id_override.map(HgManifestId::new) else {
-            return Ok(None);
-        };
-        if root == HgManifestId::new(mercurial_types::NULL_HASH) {
-            return Ok(None);
-        }
-
-        let Some(root_manifest) = HgBlobManifest::load(ctx, blobstore, root).await? else {
-            return Ok(None);
-        };
-        let manifests = HashMap::from([(MPath::ROOT, Arc::new(root_manifest))]);
-        Ok(Some(Self {
-            manifests: Arc::new(Mutex::new(manifests)),
-        }))
-    }
-
-    fn cached_manifest(&self, path: &MPath) -> Result<Option<Arc<HgBlobManifest>>> {
-        Ok(self
-            .manifests
-            .lock()
-            .map_err(|_| anyhow!("canonical HgManifest guide cache poisoned while reading {path}"))?
-            .get(path)
-            .cloned())
-    }
-
-    fn cache_manifest(&self, path: MPath, manifest: Arc<HgBlobManifest>) -> Result<()> {
-        self.manifests
-            .lock()
-            .map_err(|_| anyhow!("canonical HgManifest guide cache poisoned while caching {path}"))?
-            .insert(path, manifest);
-        Ok(())
-    }
-
-    async fn manifest_for_path(
-        &self,
-        ctx: &CoreContext,
-        blobstore: &Arc<dyn KeyedBlobstore>,
-        path: &MPath,
-    ) -> Result<Option<Arc<HgBlobManifest>>> {
-        if let Some(cached) = self.cached_manifest(path)? {
-            return Ok(Some(cached));
-        }
-
-        let mut current_path = MPath::ROOT;
-        let Some(mut current_manifest) = self.cached_manifest(&current_path)? else {
-            return Ok(None);
-        };
-
-        for elem in path {
-            let child_path = current_path.join_element(Some(elem));
-            let child_manifest = match self.cached_manifest(&child_path)? {
-                Some(cached) => Some(cached),
-                None => match current_manifest.content().files.get(elem) {
-                    Some(Entry::Tree(tree_id)) => {
-                        let manifest =
-                            Arc::new(tree_id.load(ctx, blobstore).await.with_context(|| {
-                                format!("loading canonical Hg manifest for {child_path}")
-                            })?);
-                        self.cache_manifest(child_path.clone(), manifest.clone())?;
-                        Some(manifest)
-                    }
-                    Some(Entry::Leaf(_)) | None => None,
-                },
-            };
-
-            let Some(child_manifest) = child_manifest else {
-                return Ok(None);
-            };
-            current_path = child_path;
-            current_manifest = child_manifest;
-        }
-
-        Ok(Some(current_manifest))
-    }
-}
-
-fn hg_manifest_matches_augmented_manifest(
-    hg_manifest: &HgBlobManifest,
-    manifest: &ShardedHgAugmentedManifest,
-) -> bool {
-    hg_manifest.node_id() == manifest.hg_node_id
-        && hg_manifest.p1() == manifest.p1
-        && hg_manifest.p2() == manifest.p2
-        && hg_manifest.computed_node_id() == manifest.computed_node_id
-}
-
 /// Pre-resolve copy-from source filenodes from parent augmented manifests.
 ///
 /// For each file change with copy_from metadata, looks up the source path
@@ -790,6 +687,20 @@ where
         .buffer_unordered(2)
         .try_concat()
         .await
+}
+
+pub fn subtree_copy_source_changesets(bonsai: &BonsaiChangeset) -> Vec<ChangesetId> {
+    let mut sources = Vec::new();
+    let mut seen_sources = HashSet::new();
+    for (_dest_path, change) in bonsai.subtree_changes() {
+        let Some((from_cs_id, _from_path)) = change.copy_source() else {
+            continue;
+        };
+        if seen_sources.insert(from_cs_id) {
+            sources.push(from_cs_id);
+        }
+    }
+    sources
 }
 
 /// Build manifest replacements for `SubtreeCopy` entries using already-derived
@@ -1002,31 +913,6 @@ fn expected_hg_copy_from(
         })
 }
 
-fn canonical_copy_from_matches_expected(
-    canonical_copy_from: &Option<(NonRootMPath, HgFileNodeId)>,
-    expected_copy_from: &Option<(NonRootMPath, HgFileNodeId)>,
-    change: &TrackedFileChange,
-    parents: &[Traced<ParentIndex, HgAugmentedFileLeafNode>],
-    filenode_id: HgFileNodeId,
-) -> bool {
-    if canonical_copy_from == expected_copy_from {
-        return true;
-    }
-    if canonical_copy_from.is_none() || expected_copy_from.is_some() || change.copy_from().is_some()
-    {
-        return false;
-    }
-
-    // A mode-only change can reuse a parent filenode whose filelog metadata
-    // records an earlier copy; Bonsai copy_from describes the current change.
-    let filenode = filenode_id.into_nodehash();
-    let (p1_leaf, p2_leaf) = hg_parents(parents);
-    [p1_leaf, p2_leaf]
-        .into_iter()
-        .flatten()
-        .any(|parent| parent.filenode == filenode)
-}
-
 /// Leaf callback for derive_manifest: creates an HgAugmentedFileLeafNode
 /// for a new or changed file.
 ///
@@ -1040,100 +926,11 @@ async fn create_augmented_leaf(
     content_metadata_cache: Arc<HashMap<ContentId, ContentMetadataV2>>,
     copy_from_filenodes: Arc<HashMap<(NonRootMPath, ChangesetId), HgFileNodeId>>,
     parent_bonsai_csids: (Option<ChangesetId>, Option<ChangesetId>),
-    canonical_hg_manifest_lookup: Option<CanonicalHgManifestLookup>,
     leaf_info: LeafInfo<Traced<ParentIndex, HgAugmentedFileLeafNode>, TrackedFileChange>,
 ) -> Result<(
     AugmentedDeriveContext,
     Traced<ParentIndex, HgAugmentedFileLeafNode>,
 )> {
-    if let Some(lookup) = canonical_hg_manifest_lookup.as_ref() {
-        let (dirname, basename) = leaf_info.path.split_dirname();
-        let dirname = dirname.map(MPath::from).unwrap_or(MPath::ROOT);
-        let (file_type, filenode_id) = lookup
-            .manifest_for_path(&ctx, &blobstore, &dirname)
-            .await?
-            .and_then(|manifest| manifest.content().files.get(basename).copied())
-            .and_then(Entry::into_leaf)
-            .with_context(|| {
-                format!(
-                    "canonical Hg manifest is missing expected file entry at {}",
-                    leaf_info.path
-                )
-            })?;
-        let filenode = filenode_id.load(&ctx, &blobstore).await?;
-        // For leaves-only parent conflicts (`change == None`), preserve the
-        // canonical Hg filenode exactly. This mirrors the old augmented-manifest
-        // path, which derives from an already-resolved HgManifest and treats it
-        // as the source of truth; Bonsai conflict validation happened when that
-        // HgManifest was produced. Explicit Bonsai file changes are still
-        // validated below because they provide content and copy metadata.
-        if let Some(change) = leaf_info.change.as_ref() {
-            ensure!(
-                file_type == change.file_type(),
-                "canonical Hg manifest file type mismatch at {}: manifest={file_type:?} bonsai={:?}",
-                leaf_info.path,
-                change.file_type(),
-            );
-            ensure!(
-                filenode.content_id() == change.content_id(),
-                "canonical Hg manifest content id mismatch at {}: manifest={} bonsai={}",
-                leaf_info.path,
-                filenode.content_id(),
-                change.content_id(),
-            );
-            ensure!(
-                filenode.content_size() == change.size(),
-                "canonical Hg manifest content size mismatch at {}: manifest={} bonsai={}",
-                leaf_info.path,
-                filenode.content_size(),
-                change.size(),
-            );
-            let canonical_copy_from =
-                File::extract_copied_from(filenode.metadata()).with_context(|| {
-                    format!(
-                        "extracting copy metadata from canonical Hg filenode at {}",
-                        leaf_info.path
-                    )
-                })?;
-            let expected_copy_from =
-                expected_hg_copy_from(copy_from_filenodes.as_ref(), parent_bonsai_csids, change);
-            ensure!(
-                canonical_copy_from_matches_expected(
-                    &canonical_copy_from,
-                    &expected_copy_from,
-                    change,
-                    &leaf_info.parents,
-                    filenode_id,
-                ),
-                "canonical Hg manifest copy metadata mismatch at {}: manifest={:?} expected={:?}",
-                leaf_info.path,
-                canonical_copy_from,
-                expected_copy_from,
-            );
-        }
-        let metadata = get_metadata(
-            &ctx,
-            &blobstore,
-            content_metadata_cache.as_ref(),
-            filenode.content_id(),
-        )
-        .await?;
-        let file_header_metadata = if filenode.metadata().is_empty() {
-            None
-        } else {
-            Some(filenode.metadata().clone())
-        };
-        let leaf = HgAugmentedFileLeafNode {
-            file_type,
-            filenode: filenode_id.into_nodehash(),
-            content_blake3: metadata.seeded_blake3,
-            content_sha1: metadata.sha1,
-            total_size: metadata.total_size,
-            file_header_metadata,
-        };
-        return Ok((AugmentedDeriveContext::Leaf, Traced::generate(leaf)));
-    }
-
     let change = match leaf_info.change {
         Some(change) => change,
         None => {
@@ -1767,21 +1564,8 @@ async fn resolve_copied_tree_placements(
     Ok(())
 }
 
-fn root_envelope_can_be_returned_as_is(
-    root_hg_node_id_override: Option<HgNodeHash>,
-    envelope: &HgAugmentedManifestEnvelope,
-) -> bool {
-    match root_hg_node_id_override {
-        Some(expected) => {
-            // With an override, the final root must use the supplied/canonical
-            // node id.
-            envelope.augmented_manifest.hg_node_id == expected
-        }
-        None => {
-            // Without an override, the final root must be content-derived.
-            envelope.augmented_manifest.hg_node_id == envelope.augmented_manifest.computed_node_id
-        }
-    }
+fn root_envelope_is_content_derived(envelope: &HgAugmentedManifestEnvelope) -> bool {
+    envelope.augmented_manifest.hg_node_id == envelope.augmented_manifest.computed_node_id
 }
 
 /// Given the fully-merged subentries for one tree node, attempt parent reuse
@@ -1793,8 +1577,6 @@ fn root_envelope_can_be_returned_as_is(
 async fn finalize_envelope(
     ctx: &CoreContext,
     blobstore: &Arc<dyn KeyedBlobstore>,
-    root_hg_node_id_override: Option<HgNodeHash>,
-    canonical_hg_manifest_lookup: Option<&CanonicalHgManifestLookup>,
     tree_path: &MPath,
     parents: &[Traced<ParentIndex, HgAugmentedManifestId>],
     subentries: ShardedMapV2Node<HgAugmentedManifestEntry>,
@@ -1809,17 +1591,6 @@ async fn finalize_envelope(
     if is_root {
         assert_root_acl_pointer_invariant(&dir_acl_id)?;
     }
-    let canonical_tree_manifest = match canonical_hg_manifest_lookup {
-        Some(lookup) => Some(
-            lookup
-                .manifest_for_path(ctx, blobstore, tree_path)
-                .await?
-                .with_context(|| {
-                    format!("canonical Hg manifest is missing expected tree entry at {tree_path}")
-                })?,
-        ),
-        None => None,
-    };
     // Select p1/p2 by original Bonsai parent index, not by position after
     // `derive_manifest` deduplication. For octopus parent trees `(X, X, Y)`,
     // the deduped list can be `[p1:X, p3:Y]`; positional indexing would
@@ -1828,15 +1599,12 @@ async fn finalize_envelope(
     let p1_hash = p1.map(HgAugmentedManifestId::into_nodehash);
     let p2_hash = p2.map(HgAugmentedManifestId::into_nodehash);
 
-    let own_parents = HgParents::new(p1_hash, p2_hash);
-    let hash_parents = canonical_tree_manifest
-        .as_ref()
-        .map_or(own_parents, |manifest| manifest.hg_parents());
+    let hash_parents = HgParents::new(p1_hash, p2_hash);
 
     // Mirror `create_hg_manifest` parent reuse: if merged contents match an
     // hg-relevant parent (and the parent's ACL pointer agrees), reuse that
-    // parent's envelope. With a canonical root, reuse only if it is exactly
-    // the historical tree envelope recorded at this path.
+    // parent's envelope. At the root, reuse is only valid when the returned
+    // envelope is itself content-derived.
     let computed_node_id = if parents.len() > 1 {
         let ParentEnvelopeReuse {
             reusable_parent,
@@ -1853,15 +1621,8 @@ async fn finalize_envelope(
         .await?;
 
         if let Some(reused) = reusable_parent {
-            let matches_canonical_tree = canonical_tree_manifest.as_ref().is_none_or(|expected| {
-                hg_manifest_matches_augmented_manifest(
-                    expected,
-                    &reused.envelope.augmented_manifest,
-                )
-            });
-            let root_reuse_allowed = !is_root
-                || root_envelope_can_be_returned_as_is(root_hg_node_id_override, &reused.envelope);
-            if matches_canonical_tree && root_reuse_allowed {
+            let root_reuse_allowed = !is_root || root_envelope_is_content_derived(&reused.envelope);
+            if root_reuse_allowed {
                 return Ok((
                     AugmentedDeriveContext::Directory {
                         augmented_manifest_id: reused.envelope.augmented_manifest_id,
@@ -1877,33 +1638,8 @@ async fn finalize_envelope(
         compute_hg_node_id(subentries.clone(), ctx, blobstore, &hash_parents).await?
     };
 
-    let (hg_node_id, p1_hash, p2_hash, computed_node_id) = match canonical_tree_manifest {
-        Some(manifest) => {
-            ensure!(
-                computed_node_id == manifest.computed_node_id(),
-                "canonical Hg manifest computed node id mismatch at {tree_path}: direct={} canonical={}",
-                computed_node_id,
-                manifest.computed_node_id(),
-            );
-            (
-                manifest.node_id(),
-                manifest.p1(),
-                manifest.p2(),
-                manifest.computed_node_id(),
-            )
-        }
-        None => {
-            let hg_node_id = if is_root {
-                root_hg_node_id_override.unwrap_or(computed_node_id)
-            } else {
-                computed_node_id
-            };
-            (hg_node_id, p1_hash, p2_hash, computed_node_id)
-        }
-    };
-
     let augmented_manifest = ShardedHgAugmentedManifest {
-        hg_node_id,
+        hg_node_id: computed_node_id,
         p1: p1_hash,
         p2: p2_hash,
         computed_node_id,
@@ -1963,8 +1699,6 @@ async fn finalize_envelope(
 async fn create_augmented_tree(
     ctx: CoreContext,
     blobstore: Arc<dyn KeyedBlobstore>,
-    root_hg_node_id_override: Option<HgNodeHash>,
-    canonical_hg_manifest_lookup: Option<CanonicalHgManifestLookup>,
     restricted_paths: ArcRestrictedPathsConfigBased,
     restricted_paths_enabled: bool,
     acl_map: Arc<HashMap<MPath, AclManifestId>>,
@@ -2048,8 +1782,6 @@ async fn create_augmented_tree(
     finalize_envelope(
         &ctx,
         &blobstore,
-        root_hg_node_id_override,
-        canonical_hg_manifest_lookup.as_ref(),
         &tree_info.path,
         &tree_info.parents,
         subentries,
@@ -2095,10 +1827,8 @@ fn dedup_root_parents_for_reemit(
 async fn reemit_root_envelope(
     ctx: &CoreContext,
     blobstore: &Arc<dyn KeyedBlobstore>,
-    root_hg_node_id_override: Option<HgNodeHash>,
     root_parents: Vec<Traced<ParentIndex, HgAugmentedManifestId>>,
     envelope: HgAugmentedManifestEnvelope,
-    canonical_hg_manifest_lookup: Option<&CanonicalHgManifestLookup>,
     root_acl_id: Option<AclManifestId>,
     restricted_paths: &ArcRestrictedPathsConfigBased,
     restricted_paths_enabled: bool,
@@ -2107,8 +1837,6 @@ async fn reemit_root_envelope(
     let (_, final_id) = finalize_envelope(
         ctx,
         blobstore,
-        root_hg_node_id_override,
-        canonical_hg_manifest_lookup,
         &MPath::ROOT,
         &parents,
         envelope.augmented_manifest.subentries,
@@ -2128,10 +1856,8 @@ pub async fn derive_augmented_manifest_from_bonsai_changeset<Store>(
     bonsai: &mononoke_types::BonsaiChangeset,
     parents: Vec<HgAugmentedManifestId>,
     source_aug_roots: &HashMap<ChangesetId, HgAugmentedManifestId>,
-    root_hg_node_id_override: Option<HgNodeHash>,
     restricted_paths: &ArcRestrictedPathsConfigBased,
     acl_root_overlay: Option<AclManifestId>,
-    full_acl_overlay_cache: &mut AclOverlayCache,
 ) -> Result<HgAugmentedManifestId>
 where
     Store: KeyedBlobstore + Clone + 'static,
@@ -2175,18 +1901,14 @@ where
         subtree_replacements,
         parent_bonsai_csids,
         &content_metadata,
-        root_hg_node_id_override,
         restricted_paths,
         acl_root_overlay,
-        full_acl_overlay_cache,
     )
     .await
 }
 
 /// Derive an augmented manifest directly from prepared Bonsai inputs and parent
-/// augmented manifests, bypassing HgManifest construction entirely. The caller
-/// supplies a cache for full ACL overlay maps; it is only used for merge commits,
-/// where derivation must materialise the full ACL tree.
+/// augmented manifests, bypassing HgManifest construction entirely.
 pub async fn derive_augmented_manifest_from_bonsai<Store>(
     ctx: &CoreContext,
     blobstore: &Store,
@@ -2195,15 +1917,8 @@ pub async fn derive_augmented_manifest_from_bonsai<Store>(
     subtree_replacements: AugmentedSubtreeReplacements,
     parent_bonsai_csids: (Option<ChangesetId>, Option<ChangesetId>),
     content_metadata_cache: &HashMap<ContentId, ContentMetadataV2>,
-    // Optional root node-id override. `Some(id)` is used for commits with an
-    // externally canonical/supplied Mercurial root id, including forced-hash
-    // roots. `None` means the final root must be content-derived; root-level
-    // short-circuit/reuse is accepted only when the returned envelope is itself
-    // content-derived.
-    root_hg_node_id_override: Option<HgNodeHash>,
     restricted_paths: &ArcRestrictedPathsConfigBased,
     acl_root_overlay: Option<AclManifestId>,
-    full_acl_overlay_cache: &mut AclOverlayCache,
 ) -> Result<HgAugmentedManifestId>
 where
     Store: KeyedBlobstore + Clone + 'static,
@@ -2214,19 +1929,16 @@ where
         Some("hg_augmented_manifest_write"),
     );
 
-    let acl_map = match acl_root_overlay {
-        None => Arc::new(HashMap::new()),
+    let (acl_map, merge_acl_root_overlay) = match acl_root_overlay {
+        None => (Arc::new(HashMap::new()), None),
         // A merge can rebuild a directory where its parents diverge even when no
         // file change touches that path: `derive_manifest_inner`'s bonsai
         // semantics recurse into and rebuild a tree when "all parents entries
         // are trees" with no change on the path. Such directories are not
-        // reachable from `file_changes`, so the targeted descent below would
-        // miss their ACL pointers. Use a full ACL-tree map for merges; batch
-        // callers share `full_acl_overlay_cache` so repeated merge commits with
-        // the same ACL root do not re-walk the tree.
-        Some(root_id) if parents.len() >= 2 => {
-            cached_acl_overlay_map(ctx, blobstore, Some(root_id), full_acl_overlay_cache).await?
-        }
+        // reachable from `file_changes`, so each merge tree callback loads the
+        // ACL pointer for the directory it actually rebuilds plus that
+        // directory's immediate child pointers.
+        Some(root_id) if parents.len() >= 2 => (Arc::new(HashMap::new()), Some(root_id)),
         // Single-parent and root commits rebuild exactly the directories on the
         // ancestor paths of `file_changes`, plus — for a subtree copy — the path
         // down to each replacement destination (its copied root is placed as a
@@ -2242,33 +1954,20 @@ where
                     target_dirs.insert(dir);
                 }
             }
-            Arc::new(targeted_acl_overlay_map(ctx, blobstore, root_id, &target_dirs).await?)
+            (
+                Arc::new(targeted_acl_overlay_map(ctx, blobstore, root_id, &target_dirs).await?),
+                None,
+            )
         }
     };
 
     let blobstore_arc: Arc<dyn KeyedBlobstore> = Arc::new(blobstore.clone());
-    let canonical_hg_manifest_lookup = CanonicalHgManifestLookup::from_root_hg_node_id_override(
-        ctx,
-        &blobstore_arc,
-        root_hg_node_id_override,
-    )
-    .await?;
-
-    let needs_copy_from_filenodes = canonical_hg_manifest_lookup.is_none()
-        || file_changes.iter().any(|(_, change)| {
-            change
-                .as_ref()
-                .is_some_and(|change| change.copy_from().is_some())
-        });
-    let copy_from_filenodes = if needs_copy_from_filenodes {
-        let copy_from_parents: [Option<(ChangesetId, HgAugmentedManifestId)>; 2] = [
-            parent_bonsai_csids.0.zip(parents.first().copied()),
-            parent_bonsai_csids.1.zip(parents.get(1).copied()),
-        ];
-        resolve_copy_from_filenodes(ctx, blobstore, &file_changes, &copy_from_parents).await?
-    } else {
-        HashMap::new()
-    };
+    let copy_from_parents: [Option<(ChangesetId, HgAugmentedManifestId)>; 2] = [
+        parent_bonsai_csids.0.zip(parents.first().copied()),
+        parent_bonsai_csids.1.zip(parents.get(1).copied()),
+    ];
+    let copy_from_filenodes =
+        resolve_copy_from_filenodes(ctx, blobstore, &file_changes, &copy_from_parents).await?;
 
     let content_metadata_arc = Arc::new(content_metadata_cache.clone());
     let copy_from_arc = Arc::new(copy_from_filenodes);
@@ -2297,7 +1996,7 @@ where
                 blobstore_arc,
                 restricted_paths_arc,
                 acl_map,
-                canonical_hg_manifest_lookup
+                merge_acl_root_overlay
             );
             move |tree_info| {
                 cloned!(
@@ -2305,44 +2004,44 @@ where
                     blobstore_arc,
                     restricted_paths_arc,
                     acl_map,
-                    canonical_hg_manifest_lookup
+                    merge_acl_root_overlay
                 );
-                create_augmented_tree(
-                    ctx,
-                    blobstore_arc,
-                    root_hg_node_id_override,
-                    canonical_hg_manifest_lookup,
-                    restricted_paths_arc,
-                    restricted_paths_enabled,
-                    acl_map,
-                    first_subtree_replacement_parent,
-                    tree_info,
-                )
+                async move {
+                    let acl_map = match merge_acl_root_overlay {
+                        Some(root_id) => Arc::new(
+                            rebuilt_tree_acl_overlay_map(
+                                &ctx,
+                                &blobstore_arc,
+                                root_id,
+                                &tree_info.path,
+                            )
+                            .await?,
+                        ),
+                        None => acl_map,
+                    };
+                    create_augmented_tree(
+                        ctx,
+                        blobstore_arc,
+                        restricted_paths_arc,
+                        restricted_paths_enabled,
+                        acl_map,
+                        first_subtree_replacement_parent,
+                        tree_info,
+                    )
+                    .await
+                }
             }
         },
         {
-            cloned!(
-                ctx,
-                blobstore_arc,
-                content_metadata_arc,
-                copy_from_arc,
-                canonical_hg_manifest_lookup
-            );
+            cloned!(ctx, blobstore_arc, content_metadata_arc, copy_from_arc);
             move |leaf_info| {
-                cloned!(
-                    ctx,
-                    blobstore_arc,
-                    content_metadata_arc,
-                    copy_from_arc,
-                    canonical_hg_manifest_lookup
-                );
+                cloned!(ctx, blobstore_arc, content_metadata_arc, copy_from_arc);
                 create_augmented_leaf(
                     ctx,
                     blobstore_arc,
                     content_metadata_arc,
                     copy_from_arc,
                     parent_bonsai_csids,
-                    canonical_hg_manifest_lookup,
                     leaf_info,
                 )
             }
@@ -2353,57 +2052,24 @@ where
     match root {
         Some(traced_root_id) => {
             let candidate_root_id = traced_root_id.into_untraced();
-
-            // `derive_manifest` can either call the root callback or short-circuit
-            // and return an existing root directly. Accept the returned root only
-            // if it already has the node id this call should return; otherwise
-            // re-emit the same contents under the correct node id.
-            match root_hg_node_id_override {
-                Some(expected) if candidate_root_id.into_nodehash() == expected => {
-                    Ok(candidate_root_id)
-                }
-                Some(_) => {
-                    // A root override was requested, but the candidate has a
-                    // different node id. Re-emit to store the same contents at
-                    // the supplied/canonical root id.
-                    let candidate_envelope = candidate_root_id.load(ctx, &blobstore_arc).await?;
-                    reemit_root_envelope(
-                        ctx,
-                        &blobstore_arc,
-                        root_hg_node_id_override,
-                        root_parents_traced,
-                        candidate_envelope,
-                        canonical_hg_manifest_lookup.as_ref(),
-                        acl_map.get(&MPath::ROOT).copied(),
-                        &restricted_paths_arc,
-                        restricted_paths_enabled,
-                    )
-                    .await
-                }
-                None => {
-                    let candidate_envelope = candidate_root_id.load(ctx, &blobstore_arc).await?;
-                    if root_envelope_can_be_returned_as_is(
-                        root_hg_node_id_override,
-                        &candidate_envelope,
-                    ) {
-                        Ok(candidate_root_id)
-                    } else {
-                        // No override was requested, so a supplied/canonical
-                        // parent root must be re-emitted as content-derived.
-                        reemit_root_envelope(
-                            ctx,
-                            &blobstore_arc,
-                            root_hg_node_id_override,
-                            root_parents_traced,
-                            candidate_envelope,
-                            canonical_hg_manifest_lookup.as_ref(),
-                            acl_map.get(&MPath::ROOT).copied(),
-                            &restricted_paths_arc,
-                            restricted_paths_enabled,
-                        )
-                        .await
-                    }
-                }
+            let candidate_envelope = candidate_root_id.load(ctx, &blobstore_arc).await?;
+            let root_acl_pointer_matches = candidate_envelope
+                .augmented_manifest
+                .acl_manifest_directory_id
+                == acl_root_overlay;
+            if root_envelope_is_content_derived(&candidate_envelope) && root_acl_pointer_matches {
+                Ok(candidate_root_id)
+            } else {
+                reemit_root_envelope(
+                    ctx,
+                    &blobstore_arc,
+                    root_parents_traced,
+                    candidate_envelope,
+                    acl_root_overlay,
+                    &restricted_paths_arc,
+                    restricted_paths_enabled,
+                )
+                .await
             }
         }
         None => {
@@ -2416,8 +2082,6 @@ where
             let (_, traced_id) = create_augmented_tree(
                 ctx.clone(),
                 blobstore_arc,
-                root_hg_node_id_override,
-                canonical_hg_manifest_lookup.clone(),
                 restricted_paths_arc,
                 restricted_paths_enabled,
                 acl_map,
@@ -2661,6 +2325,50 @@ fn changed_ancestor_dirs(
     dirs
 }
 
+async fn acl_manifest_id_at_path(
+    ctx: &CoreContext,
+    blobstore: &(impl KeyedBlobstore + 'static),
+    root_acl_id: AclManifestId,
+    path: &MPath,
+) -> Result<Option<AclManifestId>> {
+    let mut acl_id = root_acl_id;
+    for component in path.iter() {
+        let children = load_acl_child_directory_map(ctx, blobstore, &acl_id).await?;
+        let Some(child_id) = children.get(component).copied() else {
+            return Ok(None);
+        };
+        acl_id = child_id;
+    }
+    Ok(Some(acl_id))
+}
+
+/// Build the `MPath -> AclManifestId` overlay map for one rebuilt directory.
+///
+/// Merge derivation discovers rebuilt directories inside `derive_manifest`, so
+/// it cannot compute a complete target frontier up front from `file_changes`.
+/// The tree callback only needs the rebuilt directory's own ACL pointer plus
+/// immediate child directory pointers that will be stamped on freshly-built
+/// child entries.
+async fn rebuilt_tree_acl_overlay_map(
+    ctx: &CoreContext,
+    blobstore: &(impl KeyedBlobstore + 'static),
+    root_acl_id: AclManifestId,
+    tree_path: &MPath,
+) -> Result<HashMap<MPath, AclManifestId>> {
+    let Some(tree_acl_id) = acl_manifest_id_at_path(ctx, blobstore, root_acl_id, tree_path).await?
+    else {
+        return Ok(HashMap::new());
+    };
+
+    let children = load_acl_child_directory_map(ctx, blobstore, &tree_acl_id).await?;
+    let mut entries = HashMap::with_capacity(children.len() + 1);
+    entries.insert(tree_path.clone(), tree_acl_id);
+    for (name, child_id) in children {
+        entries.insert(tree_path.join_element(Some(&name)), child_id);
+    }
+    Ok(entries)
+}
+
 /// Build the `MPath -> AclManifestId` overlay map, scoped to the ACL directories
 /// on the paths `derive_manifest` will rebuild (`target_dirs`).
 ///
@@ -2746,11 +2454,8 @@ pub async fn cached_acl_overlay_map(
 /// `N * per-blob-latency`.
 ///
 /// This loads the entire ACL tree regardless of commit size, so it is used only
-/// where the rebuilt-directory set cannot be derived from the changed paths up
-/// front — i.e. merge commits (see `derive_augmented_manifest_from_bonsai`) and
-/// callers that need the complete map (via [`cached_acl_overlay_map`]).
-/// Single-parent and root commits use [`targeted_acl_overlay_map`], which costs
-/// O(commit size) instead.
+/// by callers that need the complete map (via [`cached_acl_overlay_map`]).
+/// Direct augmented-manifest derivation uses path-scoped overlay loading instead.
 pub(crate) async fn pre_walk_acl_tree(
     ctx: &CoreContext,
     blobstore: &(impl KeyedBlobstore + 'static),

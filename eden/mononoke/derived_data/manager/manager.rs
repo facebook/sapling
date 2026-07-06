@@ -157,6 +157,22 @@ impl DerivedDataManager {
         }
     }
 
+    // For dangerous-override: allow replacement of restricted paths
+    pub fn with_replaced_restricted_paths(
+        &self,
+        restricted_paths: ArcRestrictedPathsConfigBased,
+    ) -> Self {
+        Self {
+            inner: Arc::new(DerivedDataManagerInner {
+                derivation_context: self
+                    .inner
+                    .derivation_context
+                    .with_replaced_restricted_paths(restricted_paths),
+                ..self.inner.as_ref().clone()
+            }),
+        }
+    }
+
     // For dangerous-override: allow replacement of commit graph
     pub fn with_replaced_commit_graph(&self, commit_graph: Arc<CommitGraph>) -> Self {
         Self {

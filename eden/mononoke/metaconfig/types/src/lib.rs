@@ -478,6 +478,18 @@ impl DerivationPipelineConfig {
             bail!("Derivation pipeline config must have at least one derivable type");
         }
 
+        // TODO: remove this guard once augmented manifests v2 implements
+        // `PipelineDerivable`. Until then v2 is configurable but not
+        // pipeline-derivable, so accepting it here would defer the failure to
+        // runtime (and only for v2, while v1 succeeds). Reject it at config load.
+        if self.types.contains(&DerivableType::HgAugmentedManifestsV2) {
+            bail!(
+                "pipeline_config.types cannot contain hg_augmented_manifests_v2: \
+                 augmented manifests v2 does not support derivation pipelines; \
+                 use hg_augmented_manifests instead"
+            );
+        }
+
         for (stage_path, config) in &self.stages {
             for dep in &config.dependencies {
                 if !self.stages.contains_key(dep) {
@@ -2786,6 +2798,22 @@ mod tests {
             ..pipeline_config(vec![("", stage(vec![]))])
         };
         assert_rejects(config, "at least one derivable type");
+    }
+
+    #[mononoke::test]
+    fn test_pipeline_config_rejects_hg_augmented_manifests_v2() {
+        // Given an otherwise-valid pipeline config whose only deviation is that
+        // it enables augmented manifests v2 — a type that is configurable but
+        // does not implement `PipelineDerivable`, so it would otherwise fail at
+        // runtime in a pipeline while v1 succeeds.
+        let config = DerivationPipelineConfig {
+            types: BTreeSet::from([DerivableType::HgAugmentedManifestsV2]),
+            ..pipeline_config(vec![("", stage(vec![]))])
+        };
+
+        // When validating the pipeline config, then it is rejected at
+        // config-load time instead of deferring the failure to runtime.
+        assert_rejects(config, "hg_augmented_manifests_v2");
     }
 
     #[mononoke::test]

@@ -50,6 +50,7 @@ use inferred_copy_from::RootInferredCopyFromId;
 use itertools::Itertools;
 use mercurial_derivation::MappedHgChangesetId;
 use mercurial_derivation::RootHgAugmentedManifestId;
+use mercurial_derivation::RootHgAugmentedManifestV2Id;
 use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::DerivableUntopologicallyVariant;
@@ -435,6 +436,9 @@ fn manager_for_type(
         DerivableType::HgAugmentedManifests => {
             Arc::new(SingleTypeManager::<RootHgAugmentedManifestId>::new(manager))
         }
+        DerivableType::HgAugmentedManifestsV2 => Arc::new(SingleTypeManager::<
+            RootHgAugmentedManifestV2Id,
+        >::new(manager)),
         DerivableType::Fsnodes => Arc::new(SingleTypeManager::<RootFsnodeId>::new(manager)),
         DerivableType::Fastlog => Arc::new(SingleTypeManager::<RootFastlog>::new(manager)),
         DerivableType::DeletedManifests => {

@@ -6,6 +6,7 @@
  */
 
 mod acl_overlay_manifest;
+mod augmented_manifest_v2;
 mod augmented_pipeline;
 pub mod derive_hg_augmented_manifest;
 pub mod derive_hg_changeset;
@@ -13,6 +14,7 @@ pub mod derive_hg_manifest;
 mod mapping;
 pub mod pipeline;
 
+pub use augmented_manifest_v2::RootHgAugmentedManifestV2Id;
 pub use derive_hg_changeset::DeriveHgChangeset;
 pub use derive_hg_changeset::derive_hg_changeset;
 pub use derive_hg_changeset::get_manifest_entry_from_bonsai;

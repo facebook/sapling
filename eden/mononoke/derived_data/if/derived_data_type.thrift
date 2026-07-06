@@ -47,4 +47,5 @@ enum DerivedDataType {
   ACL_MANIFEST = 26,
   HISTORY_MANIFEST = 27,
   BLAME_V3 = 28,
+  HG_AUGMENTED_MANIFEST_V2 = 29,
 }

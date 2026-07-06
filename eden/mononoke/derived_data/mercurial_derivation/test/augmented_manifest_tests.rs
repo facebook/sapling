@@ -7,13 +7,20 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::fmt;
 use std::sync::Arc;
 
 use acl_manifest::RootAclManifestId;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
+use async_trait::async_trait;
+use blobstore::BlobstoreBytes;
+use blobstore::BlobstoreGetData;
+use blobstore::BlobstoreIsPresent;
 use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
+use blobstore::Storable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use cacheblob::MemWritesKeyedBlobstore;
 use context::CoreContext;
@@ -29,13 +36,12 @@ use manifest::ManifestOps;
 use mercurial_derivation::DeriveHgChangeset;
 use mercurial_derivation::MappedHgChangesetId;
 use mercurial_derivation::RootHgAugmentedManifestId;
+use mercurial_derivation::RootHgAugmentedManifestV2Id;
 use mercurial_derivation::derive_hg_augmented_manifest;
 use mercurial_types::HgAugmentedManifestEnvelope;
 use mercurial_types::HgAugmentedManifestId;
-use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::HgParents;
-use mercurial_types_mocks::nodehash::AS_HASH;
 use metaconfig_types::PathRestrictionMetadata;
 use metaconfig_types::RestrictedPathsConfig;
 use mononoke_macros::mononoke;
@@ -46,6 +52,7 @@ use mononoke_types::NonRootMPath;
 use mononoke_types::RepoPath;
 use mononoke_types::SubtreeChange;
 use mononoke_types::typed_hash::AclManifestId;
+use mononoke_types::typed_hash::BlobstoreKey;
 use permission_checker::MononokeIdentity;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
@@ -56,6 +63,68 @@ use tests_utils::CreateCommitContext;
 use tests_utils::drawdag::extend_from_dag_with_actions;
 
 use crate::Repo;
+
+#[derive(Clone, Debug)]
+struct DenyGetKeyedBlobstore<B> {
+    inner: B,
+    denied_key: String,
+}
+
+impl<B> DenyGetKeyedBlobstore<B> {
+    fn new(inner: B, denied_key: String) -> Self {
+        Self { inner, denied_key }
+    }
+}
+
+impl<B: fmt::Display> fmt::Display for DenyGetKeyedBlobstore<B> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "DenyGetKeyedBlobstore<{}>", self.inner)
+    }
+}
+
+#[async_trait]
+impl<B: KeyedBlobstore + Clone> KeyedBlobstore for DenyGetKeyedBlobstore<B> {
+    async fn get<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>> {
+        if key == self.denied_key {
+            return Err(anyhow!("unexpected load of denied blobstore key {key}"));
+        }
+        self.inner.get(ctx, key).await
+    }
+
+    async fn put<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<()> {
+        self.inner.put(ctx, key, value).await
+    }
+
+    async fn is_present<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<BlobstoreIsPresent> {
+        self.inner.is_present(ctx, key).await
+    }
+
+    async fn copy<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        old_key: &'a str,
+        new_key: String,
+    ) -> Result<()> {
+        self.inner.copy(ctx, old_key, new_key).await
+    }
+
+    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
+        self.inner.unlink(ctx, key).await
+    }
+}
 
 /// Invariant test: after augmented manifest derivation, all HgManifest
 /// blobs must be loadable via `Loadable`.
@@ -401,22 +470,10 @@ async fn test_augmented_manifest_derive_heads(fb: FacebookInit) -> Result<()> {
     // Given: do not manually prederive MappedHgChangesetId; derive_heads derives
     // declared dependencies before deriving RootHgAugmentedManifestId.
     //
-    // When: deriving with direct derivation disabled to keep old-path coverage.
-    with_just_knobs_async(
-        direct_derivation_knobs(false),
-        async {
-            manager
-                .derive_heads::<RootHgAugmentedManifestId>(
-                    ctx.clone(),
-                    vec![grandchild],
-                    None,
-                    None,
-                )
-                .await
-        }
-        .boxed(),
-    )
-    .await?;
+    // When: deriving v1 through derive_heads.
+    manager
+        .derive_heads::<RootHgAugmentedManifestId>(ctx.clone(), vec![grandchild], None, None)
+        .await?;
 
     // Then: all augmented manifests were derived correctly.
     for cs_id in [root, child, grandchild] {
@@ -441,18 +498,10 @@ async fn test_augmented_manifest_derive_heads(fb: FacebookInit) -> Result<()> {
 /// compatible when `hgmanifest_skip_writes=true`.
 #[mononoke::fbinit_test]
 async fn test_augmented_manifest_skip_writes(fb: FacebookInit) -> Result<()> {
-    override_just_knobs(JustKnobsInMemory::new(HashMap::from([
-        (
-            "scm/mononoke:hgmanifest_skip_writes".to_string(),
-            KnobVal::Bool(true),
-        ),
-        // Disable direct derivation so this remains old HgManifest-based
-        // coverage after the test JK default switches to direct derivation.
-        (
-            "scm/mononoke:augmented_manifest_direct_derivation".to_string(),
-            KnobVal::Bool(false),
-        ),
-    ])));
+    override_just_knobs(JustKnobsInMemory::new(HashMap::from([(
+        "scm/mononoke:hgmanifest_skip_writes".to_string(),
+        KnobVal::Bool(true),
+    )])));
 
     let ctx = CoreContext::test_mock(fb);
     let repo: Repo = test_repo_factory::build_empty(fb).await?;
@@ -1150,17 +1199,13 @@ async fn derive_augmented_manifest_via_existing_path(
     cs_id: ChangesetId,
     parents: Vec<HgAugmentedManifestId>,
     acl_root_overlay: Option<AclManifestId>,
-    root_override: Option<HgManifestId>,
 ) -> Result<(HgManifestId, HgAugmentedManifestId)> {
-    let hg_manifest_id = match root_override {
-        Some(id) => id,
-        None => repo
-            .derive_hg_changeset(ctx, cs_id)
-            .await?
-            .load(ctx, repo.repo_blobstore())
-            .await?
-            .manifestid(),
-    };
+    let hg_manifest_id = repo
+        .derive_hg_changeset(ctx, cs_id)
+        .await?
+        .load(ctx, repo.repo_blobstore())
+        .await?
+        .manifestid();
     let restricted_paths_config = repo.restricted_paths().config_based();
     let augmented_manifest_id = derive_hg_augmented_manifest::derive_from_hg_manifest_and_parents(
         ctx,
@@ -1183,8 +1228,7 @@ async fn assert_direct_derive_matches_existing_path(
     augmented_parents: &[HgAugmentedManifestId],
     bonsai_parents: (Option<ChangesetId>, Option<ChangesetId>),
 ) -> Result<HgAugmentedManifestId> {
-    assert_dual_derive_agree_at_root(ctx, repo, cs_id, augmented_parents, bonsai_parents, None)
-        .await
+    assert_dual_derive_agree(ctx, repo, cs_id, augmented_parents, bonsai_parents).await
 }
 
 /// Derive the augmented manifest via both paths and assert they agree.
@@ -1195,22 +1239,6 @@ async fn assert_dual_derive_agree(
     aug_parents: &[HgAugmentedManifestId],
     bonsai_parents: (Option<ChangesetId>, Option<ChangesetId>),
 ) -> Result<HgAugmentedManifestId> {
-    assert_dual_derive_agree_at_root(ctx, repo, cs_id, aug_parents, bonsai_parents, None).await
-}
-
-/// Like `assert_dual_derive_agree`, but feeds an explicit root `HgManifestId` to
-/// both paths instead of the canonical one from the derived `HgChangeset`.
-/// `CreateCommitContext` only mints `Generate` roots (canonical == computed), so
-/// a `Some(root)` override is the only way to exercise a forced/Supplied root
-/// (e.g. a hybrid-mode root) whose id differs from the computed content hash.
-async fn assert_dual_derive_agree_at_root(
-    ctx: &CoreContext,
-    repo: &Repo,
-    cs_id: ChangesetId,
-    aug_parents: &[HgAugmentedManifestId],
-    bonsai_parents: (Option<ChangesetId>, Option<ChangesetId>),
-    root_override: Option<HgManifestId>,
-) -> Result<HgAugmentedManifestId> {
     let acl_root_overlay = derive_acl_overlay(ctx, repo, cs_id).await?;
     let (hg_manifest_id, via_existing_path) = derive_augmented_manifest_via_existing_path(
         ctx,
@@ -1218,7 +1246,6 @@ async fn assert_dual_derive_agree_at_root(
         cs_id,
         aug_parents.to_vec(),
         acl_root_overlay,
-        root_override,
     )
     .await?;
     let file_changes = file_changes_from_bonsai(ctx, repo, cs_id).await?;
@@ -1232,10 +1259,8 @@ async fn assert_dual_derive_agree_at_root(
         vec![],
         bonsai_parents,
         &Default::default(),
-        Some(hg_manifest_id.into_nodehash()),
         restricted_paths_config,
         acl_root_overlay,
-        &mut HashMap::new(),
     )
     .await?;
 
@@ -1262,13 +1287,6 @@ async fn assert_dual_derive_agree_at_root(
     compare_manifests(ctx, repo, hg_manifest_id, via_direct_path).await?;
 
     Ok(via_direct_path)
-}
-
-fn direct_derivation_knobs(enabled: bool) -> JustKnobsInMemory {
-    JustKnobsInMemory::new(HashMap::from([(
-        "scm/mononoke:augmented_manifest_direct_derivation".to_string(),
-        KnobVal::Bool(enabled),
-    )]))
 }
 
 fn restricted_paths_access_logging_knobs(enabled: bool) -> JustKnobsInMemory {
@@ -1337,13 +1355,6 @@ async fn derive_augmented_manifest_directly_for_test(
     parents: Vec<HgAugmentedManifestId>,
     bonsai_parents: (Option<ChangesetId>, Option<ChangesetId>),
 ) -> Result<HgAugmentedManifestId> {
-    let expected_root = repo
-        .derive_hg_changeset(ctx, cs_id)
-        .await?
-        .load(ctx, repo.repo_blobstore())
-        .await?
-        .manifestid()
-        .into_nodehash();
     let file_changes = file_changes_from_bonsai(ctx, repo, cs_id).await?;
     let restricted_paths_config = repo.restricted_paths().config_based();
 
@@ -1355,12 +1366,28 @@ async fn derive_augmented_manifest_directly_for_test(
         vec![],
         bonsai_parents,
         &Default::default(),
-        Some(expected_root),
         restricted_paths_config,
         None,
-        &mut HashMap::new(),
     )
     .await
+}
+
+async fn store_augmented_manifest_with_supplied_root(
+    ctx: &CoreContext,
+    repo: &Repo,
+    source_id: HgAugmentedManifestId,
+    supplied: mercurial_types::HgNodeHash,
+) -> Result<HgAugmentedManifestId> {
+    let mut envelope = source_id.load(ctx, repo.repo_blobstore()).await?;
+    envelope.augmented_manifest.hg_node_id = supplied;
+    let (augmented_manifest_id, augmented_manifest_size) = envelope
+        .augmented_manifest
+        .clone()
+        .compute_content_addressed_digest(ctx, repo.repo_blobstore())
+        .await?;
+    envelope.augmented_manifest_id = augmented_manifest_id;
+    envelope.augmented_manifest_size = augmented_manifest_size;
+    envelope.store(ctx, repo.repo_blobstore()).await
 }
 
 async fn hg_augmented_restricted_path_entries(
@@ -1455,26 +1482,19 @@ async fn derive_parent_aug(
     cs_id: ChangesetId,
 ) -> Result<HgAugmentedManifestId> {
     let acl_root_overlay = derive_acl_overlay(ctx, repo, cs_id).await?;
-    Ok(derive_augmented_manifest_via_existing_path(
-        ctx,
-        repo,
-        cs_id,
-        vec![],
-        acl_root_overlay,
-        None,
+    Ok(
+        derive_augmented_manifest_via_existing_path(ctx, repo, cs_id, vec![], acl_root_overlay)
+            .await?
+            .1,
     )
-    .await?
-    .1)
 }
 
 /// Assert that a leaves-only conflict rejected by the existing HgManifest
 /// derivation is also rejected by direct augmented-manifest derivation.
 ///
 /// This helper intentionally does not use `assert_dual_derive_agree`: in the
-/// disagreement case the legacy path should fail before it can provide the
-/// canonical root `HgManifestId`. The supplied root hash below is therefore
-/// arbitrary; the direct path is expected to fail in the leaf callback before
-/// root finalization can use it.
+/// disagreement case the legacy path should fail. The direct path is expected
+/// to fail in the leaf callback before root finalization matters.
 async fn assert_legacy_and_direct_reject_leaf_conflict(
     ctx: &CoreContext,
     repo: &Repo,
@@ -1500,10 +1520,8 @@ async fn assert_legacy_and_direct_reject_leaf_conflict(
         vec![],
         bonsai_parents,
         &Default::default(),
-        Some(AS_HASH),
         restricted_paths_config,
         Default::default(),
-        &mut HashMap::new(),
     )
     .await;
     assert!(
@@ -2085,683 +2103,12 @@ async fn test_octopus_merge_bonsai_delete_cancels_step_parent_subdir(
     Ok(())
 }
 
-/// Forced-hash root parity: when the canonical Mercurial root id differs from
-/// the computed content hash, the direct path must store the envelope at the
-/// canonical key so client lookups by `HgChangeset.rootnode` succeed.
-///
-/// `CreateCommitContext` only produces generated roots where canonical and
-/// computed ids match, so the test uses a fabricated supplied id to cover this
-/// otherwise-unreachable path.
-#[mononoke::fbinit_test]
-async fn test_direct_derivation_root_uses_expected_hg_node_id(fb: FacebookInit) -> Result<()> {
-    use mercurial_types::HgNodeHash;
-    use mononoke_types::sha1_hash::Sha1 as NodeSha1;
-
-    // Given: a root commit and a supplied root id that differs from the natural
-    // computed manifest hash.
-    let ctx = CoreContext::test_mock(fb);
-    let repo: Repo = test_repo_factory::build_empty(fb).await?;
-    let cs_id = CreateCommitContext::new_root(&ctx, &repo)
-        .add_file("foo", "bar")
-        .add_file("baz/qux", "quux")
-        .commit()
-        .await?;
-    let supplied = HgNodeHash::new(NodeSha1::from_byte_array([0xAB; 20]));
-    let file_changes = file_changes_from_bonsai(&ctx, &repo, cs_id).await?;
-    let restricted_paths_config = repo.restricted_paths().config_based();
-
-    // When: deriving directly from Bonsai with the supplied root id.
-    let aug_id = derive_hg_augmented_manifest::derive_augmented_manifest_from_bonsai(
-        &ctx,
-        repo.repo_blobstore(),
-        vec![],
-        file_changes,
-        vec![],
-        (None, None),
-        &Default::default(),
-        Some(supplied),
-        restricted_paths_config,
-        None,
-        &mut HashMap::new(),
-    )
-    .await?;
-
-    // Then: the envelope is stored and identified by the supplied root id,
-    // while `computed_node_id` still records the natural content hash.
-    assert_eq!(
-        aug_id.into_nodehash(),
-        supplied,
-        "envelope must be stored at the supplied root key, not the computed key",
-    );
-    let env = aug_id.load(&ctx, repo.repo_blobstore()).await?;
-    assert_eq!(
-        env.augmented_manifest.hg_node_id, supplied,
-        "envelope.hg_node_id must equal the supplied root id",
-    );
-    let expected_computed_node_id = derive_hg_augmented_manifest::compute_hg_node_id(
-        env.augmented_manifest.subentries.clone(),
-        &ctx,
-        repo.repo_blobstore(),
-        &HgParents::new(None, None),
-    )
-    .await?;
-    assert_eq!(
-        env.augmented_manifest.computed_node_id, expected_computed_node_id,
-        "computed_node_id must reflect the actual content hash",
-    );
-    assert_ne!(
-        env.augmented_manifest.computed_node_id, supplied,
-        "computed_node_id must differ from the supplied root id in this fixture",
-    );
-
-    Ok(())
-}
-
-/// Regression guard: a supplied root id must survive root-level
-/// `MergeResult::Reuse`, which bypasses `finalize_envelope`.
-#[mononoke::fbinit_test]
-async fn test_direct_derivation_root_reuse_uses_expected_hg_node_id(
-    fb: FacebookInit,
-) -> Result<()> {
-    use blobstore::KeyedBlobstore;
-    use mercurial_types::HgNodeHash;
-    use mercurial_types::blobs::UploadHgNodeHash;
-    use mercurial_types::blobs::UploadHgTreeEntry;
-    use mercurial_types::blobs::fetch_manifest_envelope;
-    use mononoke_types::RepoPath;
-    use mononoke_types::sha1_hash::Sha1 as NodeSha1;
-
-    // Given: a no-op merge whose parents have identical root manifests, plus a
-    // supplied root id for the merge result.
-    let ctx = CoreContext::test_mock(fb);
-    let repo: Repo = test_repo_factory::build_empty(fb).await?;
-    let p1 = CreateCommitContext::new_root(&ctx, &repo)
-        .add_file("shared/file", "same_content")
-        .commit()
-        .await?;
-    let p2 = CreateCommitContext::new_root(&ctx, &repo)
-        .add_file("shared/file", "same_content")
-        .commit()
-        .await?;
-    let aug_p1 = derive_parent_aug(&ctx, &repo, p1).await?;
-    let aug_p2 = derive_parent_aug(&ctx, &repo, p2).await?;
-    assert_eq!(
-        aug_p1, aug_p2,
-        "fixture requires identical parent roots so derive_manifest reuses one",
-    );
-
-    let parent_root = repo
-        .derive_hg_changeset(&ctx, p1)
-        .await?
-        .load(&ctx, repo.repo_blobstore())
-        .await?
-        .manifestid();
-    let contents = fetch_manifest_envelope(&ctx, repo.repo_blobstore(), parent_root)
-        .await?
-        .into_mut()
-        .contents;
-    let forced_node_id = HgNodeHash::new(NodeSha1::from_byte_array([0xDC; 20]));
-    let blobstore_arc: Arc<dyn KeyedBlobstore> = Arc::new(repo.repo_blobstore().clone());
-    let (forced_root, upload_fut) = UploadHgTreeEntry {
-        upload_node_id: UploadHgNodeHash::Supplied(forced_node_id),
-        contents,
-        p1: Some(parent_root.into_nodehash()),
-        p2: None,
-        path: RepoPath::RootPath,
-        computed_node_id: None,
-    }
-    .upload(ctx.clone(), blobstore_arc)?;
-    upload_fut.await?;
-    assert_eq!(forced_root.into_nodehash(), forced_node_id);
-    assert_ne!(forced_root, parent_root);
-
-    let merge = CreateCommitContext::new(&ctx, &repo, vec![p1, p2])
-        .commit()
-        .await?;
-    let acl_root_overlay = derive_acl_overlay(&ctx, &repo, merge).await?;
-    let file_changes = file_changes_from_bonsai(&ctx, &repo, merge).await?;
-    let restricted_paths_config = repo.restricted_paths().config_based();
-
-    // When: deriving that merge through both the direct and HgManifest-based
-    // paths with the supplied root id.
-    let via_direct_path = derive_hg_augmented_manifest::derive_augmented_manifest_from_bonsai(
-        &ctx,
-        repo.repo_blobstore(),
-        vec![aug_p1, aug_p2],
-        file_changes,
-        vec![],
-        (Some(p1), Some(p2)),
-        &Default::default(),
-        Some(forced_root.into_nodehash()),
-        restricted_paths_config,
-        acl_root_overlay,
-        &mut HashMap::new(),
-    )
-    .await?;
-    let direct_env = via_direct_path.load(&ctx, repo.repo_blobstore()).await?;
-    let (_, via_existing_path) = derive_augmented_manifest_via_existing_path(
-        &ctx,
-        &repo,
-        merge,
-        vec![aug_p1, aug_p2],
-        acl_root_overlay,
-        Some(forced_root),
-    )
-    .await?;
-
-    // Then: the reused root is re-emitted at the supplied id and still matches
-    // the existing derivation path.
-    assert_eq!(via_direct_path, via_existing_path);
-    assert_eq!(via_direct_path.into_nodehash(), forced_node_id);
-    assert_eq!(direct_env.augmented_manifest.hg_node_id, forced_node_id);
-    assert_ne!(
-        direct_env.augmented_manifest.computed_node_id, forced_node_id,
-        "computed_node_id should preserve the content-derived hash",
-    );
-    compare_manifests(&ctx, &repo, forced_root, via_direct_path).await?;
-
-    Ok(())
-}
-
-async fn hg_manifest_root(
-    ctx: &CoreContext,
-    repo: &Repo,
-    cs_id: ChangesetId,
-) -> Result<HgManifestId> {
-    Ok(repo
-        .derive_hg_changeset(ctx, cs_id)
-        .await?
-        .load(ctx, repo.repo_blobstore())
-        .await?
-        .manifestid())
-}
-
-async fn hg_tree_entry(
-    ctx: &CoreContext,
-    repo: &Repo,
-    root: HgManifestId,
-    path: &str,
-) -> Result<HgManifestId> {
-    root.find_entry(
-        ctx.clone(),
-        repo.repo_blobstore().clone(),
-        MPath::new(path)?,
-    )
-    .await?
-    .and_then(Entry::into_tree)
-    .with_context(|| format!("root manifest must contain tree {path}"))
-}
-
-async fn hg_file_entry(
-    ctx: &CoreContext,
-    repo: &Repo,
-    root: HgManifestId,
-    path: &str,
-) -> Result<HgFileNodeId> {
-    root.find_entry(
-        ctx.clone(),
-        repo.repo_blobstore().clone(),
-        MPath::new(path)?,
-    )
-    .await?
-    .and_then(Entry::into_leaf)
-    .map(|(_, file)| file)
-    .with_context(|| format!("root manifest must contain file {path}"))
-}
-
-async fn upload_hg_tree(
-    ctx: &CoreContext,
-    repo: &Repo,
-    path: RepoPath,
-    contents: bytes::Bytes,
-    p1: Option<HgManifestId>,
-    p2: Option<HgManifestId>,
-) -> Result<HgManifestId> {
-    use mercurial_types::blobs::UploadHgNodeHash;
-    use mercurial_types::blobs::UploadHgTreeEntry;
-
-    let blobstore: Arc<dyn KeyedBlobstore> = Arc::new(repo.repo_blobstore().clone());
-    let (tree, upload) = UploadHgTreeEntry {
-        upload_node_id: UploadHgNodeHash::Generate,
-        contents,
-        p1: p1.map(HgManifestId::into_nodehash),
-        p2: p2.map(HgManifestId::into_nodehash),
-        path,
-        computed_node_id: None,
-    }
-    .upload(ctx.clone(), blobstore)?;
-    upload.await?;
-    Ok(tree)
-}
-
-/// Regression guard for merge-rebuilt trees that are not changed directly.
-#[mononoke::fbinit_test]
-async fn test_direct_augmented_manifest_uses_canonical_root_for_merge_rebuilt_unchanged_tree(
-    fb: FacebookInit,
-) -> Result<()> {
-    // Given: `dir/` differs between merge parents, but the merge changes only an
-    // unrelated path. `derive_manifest` must still rebuild `dir/` to merge the
-    // parent trees.
-    let ctx = CoreContext::test_mock(fb);
-    let repo: Repo = test_repo_factory::build_empty(fb).await?;
-    let p1 = CreateCommitContext::new_root(&ctx, &repo)
-        .add_file("dir/shared", "same")
-        .add_file("dir/p1_only", "from p1")
-        .commit()
-        .await?;
-    let p2 = CreateCommitContext::new_root(&ctx, &repo)
-        .add_file("dir/shared", "same")
-        .commit()
-        .await?;
-    let aug_p1 = derive_parent_aug(&ctx, &repo, p1).await?;
-    let aug_p2 = derive_parent_aug(&ctx, &repo, p2).await?;
-    let merge = CreateCommitContext::new(&ctx, &repo, vec![p1, p2])
-        .add_file("unrelated/touched", "merge change")
-        .commit()
-        .await?;
-
-    let p1_root = hg_manifest_root(&ctx, &repo, p1).await?;
-    let p2_root = hg_manifest_root(&ctx, &repo, p2).await?;
-    let merge_root = hg_manifest_root(&ctx, &repo, merge).await?;
-    let p1_dir = hg_tree_entry(&ctx, &repo, p1_root, "dir").await?;
-    let p2_dir = hg_tree_entry(&ctx, &repo, p2_root, "dir").await?;
-    assert_ne!(
-        p1_dir, p2_dir,
-        "fixture requires differing parent tree ids so direct derivation rebuilds dir/",
-    );
-    assert_eq!(
-        hg_tree_entry(&ctx, &repo, merge_root, "dir").await?,
-        p1_dir,
-        "fixture mirrors the prod failure shape: the canonical merge tree reuses p1's dir/",
-    );
-
-    // When/Then: direct derivation can consult the canonical Hg root for the
-    // merge-rebuilt `dir/` tree and match the HgManifest-based path.
-    assert_dual_derive_agree_at_root(
-        &ctx,
-        &repo,
-        merge,
-        &[aug_p1, aug_p2],
-        (Some(p1), Some(p2)),
-        Some(merge_root),
-    )
-    .await?;
-
-    Ok(())
-}
-
-/// Regression guard for historical Mercurial merges that re-emit a directory
-/// manifest even though the final directory contents match p1, including when
-/// the non-root tree parent order differs from Bonsai parent order.
-#[mononoke::fbinit_test]
-async fn test_direct_augmented_manifest_matches_reemitted_same_content_merge_tree_node(
-    fb: FacebookInit,
-) -> Result<()> {
-    use mercurial_types::blobs::fetch_manifest_envelope;
-
-    // Given: the merge keeps p1's file node, but the historical Hg manifest
-    // re-emits the containing `dir/` tree node with tree parents in the opposite
-    // order from the Bonsai parents.
-    let ctx = CoreContext::test_mock(fb);
-    let repo: Repo = test_repo_factory::build_empty(fb).await?;
-    let p1 = CreateCommitContext::new_root(&ctx, &repo)
-        .add_file("dir/file", "same")
-        .commit()
-        .await?;
-    let p2 = CreateCommitContext::new_root(&ctx, &repo)
-        .add_file("dir/file", "different")
-        .commit()
-        .await?;
-    let aug_p1 = derive_parent_aug(&ctx, &repo, p1).await?;
-    let aug_p2 = derive_parent_aug(&ctx, &repo, p2).await?;
-
-    let p1_root = hg_manifest_root(&ctx, &repo, p1).await?;
-    let p2_root = hg_manifest_root(&ctx, &repo, p2).await?;
-    let p1_dir = hg_tree_entry(&ctx, &repo, p1_root, "dir").await?;
-    let p2_dir = hg_tree_entry(&ctx, &repo, p2_root, "dir").await?;
-    let dir_contents = fetch_manifest_envelope(&ctx, repo.repo_blobstore(), p1_dir)
-        .await?
-        .into_mut()
-        .contents;
-
-    let merge_dir = upload_hg_tree(
-        &ctx,
-        &repo,
-        RepoPath::DirectoryPath(NonRootMPath::new("dir")?),
-        dir_contents,
-        Some(p2_dir),
-        Some(p1_dir),
-    )
-    .await?;
-    assert_ne!(merge_dir, p1_dir, "fixture must re-emit dir, not reuse p1");
-    let merge_dir_manifest = merge_dir.load(&ctx, repo.repo_blobstore()).await?;
-    assert_eq!(
-        (merge_dir_manifest.p1(), merge_dir_manifest.p2()),
-        (Some(p2_dir.into_nodehash()), Some(p1_dir.into_nodehash())),
-        "fixture must reverse canonical dir/ parents relative to Bonsai parent order",
-    );
-
-    let merge_root = upload_hg_tree(
-        &ctx,
-        &repo,
-        RepoPath::RootPath,
-        bytes::Bytes::from(format!("dir\0{}t\n", merge_dir.into_nodehash())),
-        Some(p1_root),
-        Some(p2_root),
-    )
-    .await?;
-    let merge = CreateCommitContext::new(&ctx, &repo, vec![p1, p2])
-        .add_file("dir/file", "same")
-        .commit()
-        .await?;
-
-    // When: deriving directly from Bonsai with the historical Hg root as the
-    // canonical guide.
-    let direct_root = assert_dual_derive_agree_at_root(
-        &ctx,
-        &repo,
-        merge,
-        &[aug_p1, aug_p2],
-        (Some(p1), Some(p2)),
-        Some(merge_root),
-    )
-    .await?;
-
-    // Then: direct derivation preserves the canonical non-root tree metadata,
-    // including parent order. The tree node hash alone is not enough because
-    // Mercurial hashes two parents order-insensitively.
-    let direct_dir = direct_root
-        .find_entry(
-            ctx.clone(),
-            repo.repo_blobstore().clone(),
-            MPath::new("dir")?,
-        )
-        .await?
-        .and_then(Entry::into_tree)
-        .context("direct augmented manifest must contain dir/")?;
-    let direct_dir_envelope = direct_dir.load(&ctx, repo.repo_blobstore()).await?;
-    assert_eq!(
-        (
-            direct_dir_envelope.augmented_manifest.hg_node_id,
-            direct_dir_envelope.augmented_manifest.p1,
-            direct_dir_envelope.augmented_manifest.p2,
-            direct_dir_envelope.augmented_manifest.computed_node_id,
-        ),
-        (
-            merge_dir_manifest.node_id(),
-            merge_dir_manifest.p1(),
-            merge_dir_manifest.p2(),
-            merge_dir_manifest.computed_node_id(),
-        ),
-        "direct derivation should preserve canonical dir/ Hg manifest metadata",
-    );
-
-    Ok(())
-}
-
-/// Regression guard for historical Mercurial merges that re-emit a file node
-/// even though the file bytes match p1.
-#[mononoke::fbinit_test]
-async fn test_direct_augmented_manifest_matches_reemitted_same_content_merge_file_node(
-    fb: FacebookInit,
-) -> Result<()> {
-    use mercurial_types::blobs::ContentBlobMeta;
-    use mercurial_types::blobs::UploadHgFileContents;
-    use mercurial_types::blobs::UploadHgFileEntry;
-    use mercurial_types::blobs::UploadHgNodeHash;
-
-    // Given: the merge bytes for `dir/file` match p1, but the historical Hg
-    // manifest points at a fresh merge filenode with p1/p2 file parents.
-    let ctx = CoreContext::test_mock(fb);
-    let repo: Repo = test_repo_factory::build_empty(fb).await?;
-    let p1 = CreateCommitContext::new_root(&ctx, &repo)
-        .add_file("dir/file", "same")
-        .commit()
-        .await?;
-    let p2 = CreateCommitContext::new_root(&ctx, &repo)
-        .add_file("dir/file", "different")
-        .commit()
-        .await?;
-    let aug_p1 = derive_parent_aug(&ctx, &repo, p1).await?;
-    let aug_p2 = derive_parent_aug(&ctx, &repo, p2).await?;
-
-    let p1_root = hg_manifest_root(&ctx, &repo, p1).await?;
-    let p2_root = hg_manifest_root(&ctx, &repo, p2).await?;
-    let p1_dir = hg_tree_entry(&ctx, &repo, p1_root, "dir").await?;
-    let p2_dir = hg_tree_entry(&ctx, &repo, p2_root, "dir").await?;
-    let p1_file = hg_file_entry(&ctx, &repo, p1_root, "dir/file").await?;
-    let p2_file = hg_file_entry(&ctx, &repo, p2_root, "dir/file").await?;
-
-    let p1_file_envelope = p1_file.load(&ctx, repo.repo_blobstore()).await?;
-    let merge_file_path = NonRootMPath::new("dir/file")?;
-    let blobstore: Arc<dyn KeyedBlobstore> = Arc::new(repo.repo_blobstore().clone());
-    let merge_file = UploadHgFileEntry {
-        upload_node_id: UploadHgNodeHash::Generate,
-        contents: UploadHgFileContents::ContentUploaded(ContentBlobMeta {
-            id: p1_file_envelope.content_id(),
-            size: p1_file_envelope.content_size(),
-            copy_from: None,
-        }),
-        p1: Some(p1_file),
-        p2: Some(p2_file),
-    }
-    .upload(ctx.clone(), blobstore, Some(&merge_file_path))
-    .await?;
-    assert_ne!(
-        merge_file, p1_file,
-        "fixture must re-emit the file node, not reuse p1"
-    );
-
-    let merge_dir = upload_hg_tree(
-        &ctx,
-        &repo,
-        RepoPath::DirectoryPath(NonRootMPath::new("dir")?),
-        bytes::Bytes::from(format!("file\0{}\n", merge_file.into_nodehash())),
-        Some(p1_dir),
-        Some(p2_dir),
-    )
-    .await?;
-    let merge_root = upload_hg_tree(
-        &ctx,
-        &repo,
-        RepoPath::RootPath,
-        bytes::Bytes::from(format!("dir\0{}t\n", merge_dir.into_nodehash())),
-        Some(p1_root),
-        Some(p2_root),
-    )
-    .await?;
-    let merge = CreateCommitContext::new(&ctx, &repo, vec![p1, p2])
-        .add_file("dir/file", "same")
-        .commit()
-        .await?;
-
-    // When/Then: direct derivation preserves the re-emitted file node and
-    // matches the HgManifest-based path.
-    assert_dual_derive_agree_at_root(
-        &ctx,
-        &repo,
-        merge,
-        &[aug_p1, aug_p2],
-        (Some(p1), Some(p2)),
-        Some(merge_root),
-    )
-    .await?;
-
-    Ok(())
-}
-
-/// Regression guard for mode-only changes that preserve a reused file node
-/// whose metadata records an earlier copy.
-#[mononoke::fbinit_test]
-async fn test_direct_augmented_manifest_matches_mode_only_change_reusing_copied_file_node(
-    fb: FacebookInit,
-) -> Result<()> {
-    use mononoke_types::FileType;
-    use mononoke_types::GitLfs;
-
-    // Given: `dst` was copied from `src` in the parent, then the child changes
-    // only the manifest file type from executable to regular. Historical Hg can
-    // represent that by reusing the copied file node and changing only the
-    // manifest flag, so the current Bonsai change has no copy metadata while the
-    // canonical file node still does.
-    let ctx = CoreContext::test_mock(fb);
-    let repo: Repo = test_repo_factory::build_empty(fb).await?;
-    let source = CreateCommitContext::new_root(&ctx, &repo)
-        .add_file("src", "content")
-        .commit()
-        .await?;
-    let source_aug = derive_parent_aug(&ctx, &repo, source).await?;
-    let parent = CreateCommitContext::new(&ctx, &repo, vec![source])
-        .add_file_with_copy_info_and_type(
-            "dst",
-            "content",
-            (source, "src"),
-            FileType::Executable,
-            GitLfs::FullContent,
-        )
-        .commit()
-        .await?;
-    let parent_acl_root = derive_acl_overlay(&ctx, &repo, parent).await?;
-    let (_, aug_parent) = derive_augmented_manifest_via_existing_path(
-        &ctx,
-        &repo,
-        parent,
-        vec![source_aug],
-        parent_acl_root,
-        None,
-    )
-    .await?;
-
-    let parent_root = hg_manifest_root(&ctx, &repo, parent).await?;
-    let dst_file = hg_file_entry(&ctx, &repo, parent_root, "dst").await?;
-    let src_file = hg_file_entry(&ctx, &repo, parent_root, "src").await?;
-    let child_root = upload_hg_tree(
-        &ctx,
-        &repo,
-        RepoPath::RootPath,
-        bytes::Bytes::from(format!(
-            "dst\0{}\nsrc\0{}\n",
-            dst_file.into_nodehash(),
-            src_file.into_nodehash(),
-        )),
-        Some(parent_root),
-        None,
-    )
-    .await?;
-
-    let child = CreateCommitContext::new(&ctx, &repo, vec![parent])
-        .add_file_with_type("dst", "content", FileType::Regular)
-        .commit()
-        .await?;
-
-    // When: direct derivation is compared against the HgManifest-based path.
-    let result = assert_dual_derive_agree_at_root(
-        &ctx,
-        &repo,
-        child,
-        &[aug_parent],
-        (Some(parent), None),
-        Some(child_root),
-    )
-    .await;
-
-    // Then: both paths agree even though the reused canonical file node has
-    // historical copy metadata.
-    result?;
-    Ok(())
-}
-
-#[mononoke::fbinit_test]
-async fn test_direct_augmented_manifest_rejects_canonical_copy_metadata_mismatch(
-    fb: FacebookInit,
-) -> Result<()> {
-    use mercurial_types::blobs::ContentBlobMeta;
-    use mercurial_types::blobs::UploadHgFileContents;
-    use mercurial_types::blobs::UploadHgFileEntry;
-    use mercurial_types::blobs::UploadHgNodeHash;
-
-    // Given: Bonsai records `copied_file` as a copy, but the supplied
-    // canonical Hg root points at a filenode with matching content and no copy
-    // metadata.
-    let ctx = CoreContext::test_mock(fb);
-    let repo: Repo = test_repo_factory::build_empty(fb).await?;
-    let root = CreateCommitContext::new_root(&ctx, &repo)
-        .add_file("original_file", "content")
-        .commit()
-        .await?;
-    let child = CreateCommitContext::new(&ctx, &repo, vec![root])
-        .add_file_with_copy_info("copied_file", "content", (root, "original_file"))
-        .commit()
-        .await?;
-
-    let aug_root = derive_parent_aug(&ctx, &repo, root).await?;
-    let root_hg_manifest = hg_manifest_root(&ctx, &repo, root).await?;
-    let original_file = hg_file_entry(&ctx, &repo, root_hg_manifest, "original_file").await?;
-    let original_file_envelope = original_file.load(&ctx, repo.repo_blobstore()).await?;
-    let copied_file_path = NonRootMPath::new("copied_file")?;
-    let blobstore: Arc<dyn KeyedBlobstore> = Arc::new(repo.repo_blobstore().clone());
-    let bad_copied_file = UploadHgFileEntry {
-        upload_node_id: UploadHgNodeHash::Generate,
-        contents: UploadHgFileContents::ContentUploaded(ContentBlobMeta {
-            id: original_file_envelope.content_id(),
-            size: original_file_envelope.content_size(),
-            copy_from: None,
-        }),
-        p1: None,
-        p2: None,
-    }
-    .upload(ctx.clone(), blobstore, Some(&copied_file_path))
-    .await?;
-    let bad_root = upload_hg_tree(
-        &ctx,
-        &repo,
-        RepoPath::RootPath,
-        bytes::Bytes::from(format!(
-            "copied_file\0{}\noriginal_file\0{}\n",
-            bad_copied_file.into_nodehash(),
-            original_file.into_nodehash(),
-        )),
-        Some(root_hg_manifest),
-        None,
-    )
-    .await?;
-
-    // When: direct derivation is asked to preserve that canonical root.
-    let file_changes = file_changes_from_bonsai(&ctx, &repo, child).await?;
-    let restricted_paths_config = repo.restricted_paths().config_based();
-    let result = derive_hg_augmented_manifest::derive_augmented_manifest_from_bonsai(
-        &ctx,
-        repo.repo_blobstore(),
-        vec![aug_root],
-        file_changes,
-        vec![],
-        (Some(root), None),
-        &Default::default(),
-        Some(bad_root.into_nodehash()),
-        restricted_paths_config,
-        None,
-        &mut HashMap::new(),
-    )
-    .await;
-
-    // Then: the mismatched canonical copy metadata is rejected instead of being
-    // silently inherited by the augmented leaf.
-    let err = result.expect_err("copy metadata mismatch must be rejected");
-    let msg = format!("{err:#}");
-    assert!(
-        msg.contains("canonical Hg manifest copy metadata mismatch at copied_file"),
-        "expected copy metadata mismatch error, got: {msg}"
-    );
-
-    Ok(())
-}
-
-/// When `root_hg_node_id_override` is `None`, the root envelope should use
-/// the directly computed node id rather than a canonical/supplied one. This
-/// is the future path for Bonsai-native commits that have no
-/// `MappedHgChangesetId` mapping.
+/// Direct Bonsai derivation should use the directly computed root node id
+/// rather than a supplied or otherwise non-content-derived one. This is the
+/// future path for Bonsai-native commits that have no `MappedHgChangesetId` mapping.
 #[mononoke::fbinit_test]
 async fn test_direct_derivation_computed_root_when_none(fb: FacebookInit) -> Result<()> {
+    // Given: a Bonsai-native root commit with no Hg mapping.
     let ctx = CoreContext::test_mock(fb);
     let repo: Repo = test_repo_factory::build_empty(fb).await?;
 
@@ -2781,44 +2128,8 @@ async fn test_direct_derivation_computed_root_when_none(fb: FacebookInit) -> Res
     let file_changes = file_changes_from_bonsai(&ctx, &repo, cs_id).await?;
     let restricted_paths_config = repo.restricted_paths().config_based();
 
+    // When: deriving directly from Bonsai.
     let aug_id_none = derive_hg_augmented_manifest::derive_augmented_manifest_from_bonsai(
-        &ctx,
-        repo.repo_blobstore(),
-        vec![],
-        file_changes.clone(),
-        vec![],
-        (None, None),
-        &Default::default(),
-        None,
-        restricted_paths_config,
-        None,
-        &mut HashMap::new(),
-    )
-    .await?;
-
-    let env = aug_id_none.load(&ctx, repo.repo_blobstore()).await?;
-    assert_eq!(
-        env.augmented_manifest.hg_node_id, env.augmented_manifest.computed_node_id,
-        "With None root override, hg_node_id should equal computed_node_id",
-    );
-    assert!(
-        repo.bonsai_hg_mapping()
-            .get_hg_from_bonsai(&ctx, cs_id)
-            .await?
-            .is_none(),
-        "direct derivation with None must not create an Hg mapping",
-    );
-
-    // Verify that passing Some(canonical) gives the same result as the
-    // HgChangeset-derived root (ensuring the canonical path still works).
-    let canonical_root = repo
-        .derive_hg_changeset(&ctx, cs_id)
-        .await?
-        .load(&ctx, repo.repo_blobstore())
-        .await?
-        .manifestid()
-        .into_nodehash();
-    let aug_id_some = derive_hg_augmented_manifest::derive_augmented_manifest_from_bonsai(
         &ctx,
         repo.repo_blobstore(),
         vec![],
@@ -2826,19 +2137,24 @@ async fn test_direct_derivation_computed_root_when_none(fb: FacebookInit) -> Res
         vec![],
         (None, None),
         &Default::default(),
-        Some(canonical_root),
         restricted_paths_config,
         None,
-        &mut HashMap::new(),
     )
     .await?;
 
-    // For a root commit with no forced hash, computed == canonical, so both
-    // should produce the same id.
+    // Then: the root is content-derived and direct derivation did not create an
+    // Hg mapping.
+    let env = aug_id_none.load(&ctx, repo.repo_blobstore()).await?;
     assert_eq!(
-        aug_id_none, aug_id_some,
-        "None and Some(canonical) should produce the same root for a \
-         non-forced-hash commit",
+        env.augmented_manifest.hg_node_id, env.augmented_manifest.computed_node_id,
+        "direct Bonsai root hg_node_id should equal computed_node_id",
+    );
+    assert!(
+        repo.bonsai_hg_mapping()
+            .get_hg_from_bonsai(&ctx, cs_id)
+            .await?
+            .is_none(),
+        "direct derivation with None must not create an Hg mapping",
     );
 
     Ok(())
@@ -2866,23 +2182,13 @@ async fn test_direct_derivation_none_rejects_supplied_parent_envelope_reuse(
         .await?;
     let supplied = HgNodeHash::new(NodeSha1::from_byte_array([0xCD; 20]));
     let restricted_paths_config = repo.restricted_paths().config_based();
-    let p1_forced = derive_hg_augmented_manifest::derive_augmented_manifest_from_bonsai(
-        &ctx,
-        repo.repo_blobstore(),
-        vec![],
-        file_changes_from_bonsai(&ctx, &repo, p1).await?,
-        vec![],
-        (None, None),
-        &Default::default(),
-        Some(supplied),
-        restricted_paths_config,
-        None,
-        &mut HashMap::new(),
-    )
-    .await?;
-    let p2_canonical = derive_parent_aug(&ctx, &repo, p2).await?;
+    let p1_content_derived = derive_parent_aug(&ctx, &repo, p1).await?;
+    let p1_forced =
+        store_augmented_manifest_with_supplied_root(&ctx, &repo, p1_content_derived, supplied)
+            .await?;
+    let p2_content_derived = derive_parent_aug(&ctx, &repo, p2).await?;
     assert_ne!(
-        p1_forced, p2_canonical,
+        p1_forced, p2_content_derived,
         "the supplied p1 root must differ from p2's content-derived root",
     );
     let merge = CreateCommitContext::new(&ctx, &repo, vec![p1, p2])
@@ -2890,33 +2196,31 @@ async fn test_direct_derivation_none_rejects_supplied_parent_envelope_reuse(
         .await?;
     let file_changes = file_changes_from_bonsai(&ctx, &repo, merge).await?;
 
-    // When: deriving the merge with no root override.
+    // When: deriving the merge directly from Bonsai.
     let aug_id = derive_hg_augmented_manifest::derive_augmented_manifest_from_bonsai(
         &ctx,
         repo.repo_blobstore(),
-        vec![p1_forced, p2_canonical],
+        vec![p1_forced, p2_content_derived],
         file_changes,
         vec![],
         (Some(p1), Some(p2)),
         &Default::default(),
-        None,
         restricted_paths_config,
         None,
-        &mut HashMap::new(),
     )
     .await?;
 
-    // Then: the no-override path creates a content-derived root instead of
+    // Then: the direct path creates a content-derived root instead of
     // reusing p1's supplied envelope.
     let env = aug_id.load(&ctx, repo.repo_blobstore()).await?;
     assert_ne!(aug_id, p1_forced, "must not reuse the supplied parent root");
     assert_eq!(
         env.augmented_manifest.hg_node_id, env.augmented_manifest.computed_node_id,
-        "None root override should produce a content-derived root",
+        "direct Bonsai derivation should produce a content-derived root",
     );
     assert_ne!(
         env.augmented_manifest.hg_node_id, supplied,
-        "the supplied parent root id must not leak into the None path",
+        "the supplied parent root id must not leak into the direct path",
     );
 
     Ok(())
@@ -2930,54 +2234,48 @@ async fn test_direct_derivation_none_reemits_supplied_short_circuit_root(
     use mononoke_types::sha1_hash::Sha1 as NodeSha1;
 
     // Given: a no-op merge whose parent augmented roots are the same supplied
-    // root id, so `derive_manifest` can short-circuit and return that parent
-    // root without calling `finalize_envelope`.
+    // root id and whose merge ACL root is non-empty, so `derive_manifest` can
+    // short-circuit and return that parent root without calling
+    // `finalize_envelope`.
     let ctx = CoreContext::test_mock(fb);
     let repo: Repo = test_repo_factory::build_empty(fb).await?;
     let p1 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file(
+            "restricted/.slacl",
+            "repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=restricted\"\n",
+        )
+        .add_file("restricted/file.rs", "fn restricted() {}")
         .add_file("shared/file", "same_content")
         .commit()
         .await?;
     let p2 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file(
+            "restricted/.slacl",
+            "repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=restricted\"\n",
+        )
+        .add_file("restricted/file.rs", "fn restricted() {}")
         .add_file("shared/file", "same_content")
         .commit()
         .await?;
     let supplied = HgNodeHash::new(NodeSha1::from_byte_array([0xEF; 20]));
     let restricted_paths_config = repo.restricted_paths().config_based();
-    let p1_forced = derive_hg_augmented_manifest::derive_augmented_manifest_from_bonsai(
-        &ctx,
-        repo.repo_blobstore(),
-        vec![],
-        file_changes_from_bonsai(&ctx, &repo, p1).await?,
-        vec![],
-        (None, None),
-        &Default::default(),
-        Some(supplied),
-        restricted_paths_config,
-        None,
-        &mut HashMap::new(),
-    )
-    .await?;
-    let p2_forced = derive_hg_augmented_manifest::derive_augmented_manifest_from_bonsai(
-        &ctx,
-        repo.repo_blobstore(),
-        vec![],
-        file_changes_from_bonsai(&ctx, &repo, p2).await?,
-        vec![],
-        (None, None),
-        &Default::default(),
-        Some(supplied),
-        restricted_paths_config,
-        None,
-        &mut HashMap::new(),
-    )
-    .await?;
+    let p1_content_derived = derive_parent_aug(&ctx, &repo, p1).await?;
+    let p2_content_derived = derive_parent_aug(&ctx, &repo, p2).await?;
+    let p1_forced =
+        store_augmented_manifest_with_supplied_root(&ctx, &repo, p1_content_derived, supplied)
+            .await?;
+    let p2_forced =
+        store_augmented_manifest_with_supplied_root(&ctx, &repo, p2_content_derived, supplied)
+            .await?;
     assert_eq!(p1_forced, p2_forced, "fixture should force root reuse");
     let merge = CreateCommitContext::new(&ctx, &repo, vec![p1, p2])
         .commit()
         .await?;
+    let acl_root_overlay = derive_acl_overlay(&ctx, &repo, merge)
+        .await?
+        .context("fixture must have a non-empty ACL overlay")?;
 
-    // When: deriving the merge with no root override.
+    // When: deriving the merge directly from Bonsai.
     let aug_id = derive_hg_augmented_manifest::derive_augmented_manifest_from_bonsai(
         &ctx,
         repo.repo_blobstore(),
@@ -2986,15 +2284,14 @@ async fn test_direct_derivation_none_reemits_supplied_short_circuit_root(
         vec![],
         (Some(p1), Some(p2)),
         &Default::default(),
-        None,
         restricted_paths_config,
-        None,
-        &mut HashMap::new(),
+        Some(acl_root_overlay),
     )
     .await?;
 
     // Then: the root short-circuit is re-emitted as content-derived instead of
-    // returning the supplied parent root verbatim.
+    // returning the supplied parent root verbatim, and it keeps the merge root
+    // ACL pointer.
     let env = aug_id.load(&ctx, repo.repo_blobstore()).await?;
     assert_ne!(
         aug_id, p1_forced,
@@ -3002,11 +2299,109 @@ async fn test_direct_derivation_none_reemits_supplied_short_circuit_root(
     );
     assert_eq!(
         env.augmented_manifest.hg_node_id, env.augmented_manifest.computed_node_id,
-        "None root override should produce a content-derived root",
+        "direct Bonsai derivation should produce a content-derived root",
     );
     assert_ne!(
         env.augmented_manifest.hg_node_id, supplied,
         "the supplied parent root id must not leak through root short-circuit reuse",
+    );
+    assert_eq!(
+        env.augmented_manifest.acl_manifest_directory_id,
+        Some(acl_root_overlay),
+        "direct Bonsai root re-emission should preserve the merge root ACL pointer",
+    );
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_direct_derivation_reemits_content_derived_short_circuit_root_when_root_acl_pointer_differs(
+    fb: FacebookInit,
+) -> Result<()> {
+    // Given: a no-op merge whose content-derived parent root is visible
+    // through an overlay with a stale missing root ACL pointer, while the
+    // current merge has a non-empty ACL overlay.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let p1 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file(
+            "restricted/.slacl",
+            "repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=restricted\"\n",
+        )
+        .add_file("restricted/file.rs", "fn restricted() {}")
+        .add_file("shared/file", "same_content")
+        .commit()
+        .await?;
+    let p2 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file(
+            "restricted/.slacl",
+            "repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=restricted\"\n",
+        )
+        .add_file("restricted/file.rs", "fn restricted() {}")
+        .add_file("shared/file", "same_content")
+        .commit()
+        .await?;
+    let p1_content_derived = derive_parent_aug(&ctx, &repo, p1).await?;
+    let p2_content_derived = derive_parent_aug(&ctx, &repo, p2).await?;
+    assert_eq!(
+        p1_content_derived, p2_content_derived,
+        "fixture should force derive_manifest to short-circuit to a parent root",
+    );
+
+    let stale_blobstore = MemWritesKeyedBlobstore::new(repo.repo_blobstore().clone());
+    let mut stale_parent_envelope = p1_content_derived.load(&ctx, repo.repo_blobstore()).await?;
+    stale_parent_envelope
+        .augmented_manifest
+        .acl_manifest_directory_id = None;
+    let (augmented_manifest_id, augmented_manifest_size) = stale_parent_envelope
+        .augmented_manifest
+        .clone()
+        .compute_content_addressed_digest(&ctx, &stale_blobstore)
+        .await?;
+    stale_parent_envelope.augmented_manifest_id = augmented_manifest_id;
+    stale_parent_envelope.augmented_manifest_size = augmented_manifest_size;
+    let stale_parent_root = stale_parent_envelope.store(&ctx, &stale_blobstore).await?;
+    assert_eq!(
+        stale_parent_root, p1_content_derived,
+        "fixture should shadow the same content-derived root key",
+    );
+
+    let merge = CreateCommitContext::new(&ctx, &repo, vec![p1, p2])
+        .commit()
+        .await?;
+    let acl_root_overlay = derive_acl_overlay(&ctx, &repo, merge)
+        .await?
+        .context("fixture must have a non-empty ACL overlay")?;
+
+    // When: deriving the merge directly from Bonsai.
+    let aug_id = derive_hg_augmented_manifest::derive_augmented_manifest_from_bonsai(
+        &ctx,
+        &stale_blobstore,
+        vec![stale_parent_root, p2_content_derived],
+        file_changes_from_bonsai(&ctx, &repo, merge).await?,
+        vec![],
+        (Some(p1), Some(p2)),
+        &Default::default(),
+        repo.restricted_paths().config_based(),
+        Some(acl_root_overlay),
+    )
+    .await?;
+
+    // Then: the local direct path re-emits the root with the current ACL
+    // overlay instead of accepting the stale content-derived envelope.
+    let env = aug_id.load(&ctx, &stale_blobstore).await?;
+    assert_eq!(
+        env.augmented_manifest.acl_manifest_directory_id,
+        Some(acl_root_overlay),
+        "direct Bonsai local derivation should preserve the current root ACL pointer",
+    );
+    assert_ne!(
+        aug_id, stale_parent_root,
+        "must not return the stale content-derived parent root verbatim",
+    );
+    assert_eq!(
+        env.augmented_manifest.hg_node_id, env.augmented_manifest.computed_node_id,
+        "direct Bonsai derivation should still produce a content-derived root",
     );
 
     Ok(())
@@ -3042,7 +2437,6 @@ async fn test_direct_derivation_tracks_restricted_paths_like_existing_path(
                 existing_parent,
                 vec![],
                 None,
-                None,
             )
             .await?;
             let (_, existing_child_augmented) = derive_augmented_manifest_via_existing_path(
@@ -3050,7 +2444,6 @@ async fn test_direct_derivation_tracks_restricted_paths_like_existing_path(
                 &existing_repo,
                 existing_child,
                 vec![existing_parent_augmented],
-                None,
                 None,
             )
             .await?;
@@ -3242,10 +2635,9 @@ async fn compare_augmented_manifests_acl_recursive(
     Ok(())
 }
 
-/// Derive `cs_id` via the new direct path into `overlay`. Pulls
-/// `root_hg_node_id_override` from the already-derived HgChangeset and
-/// `acl_root_overlay` from RootAclManifestId. Used by the ACL parity test
-/// alongside `derive_existing_into_overlay` to keep each path's envelope
+/// Derive `cs_id` via the direct Bonsai path into `overlay`. Uses the
+/// RootAclManifestId overlay. Used by the ACL parity test alongside
+/// `derive_existing_into_overlay` to keep each path's envelope
 /// writes in its own blobstore.
 async fn derive_into_overlay<B>(
     ctx: &CoreContext,
@@ -3284,13 +2676,6 @@ where
 {
     let acl_root_overlay = derive_acl_overlay(ctx, repo, cs_id).await?;
     let bonsai: mononoke_types::BonsaiChangeset = cs_id.load(ctx, repo.repo_blobstore()).await?;
-    let expected_root = repo
-        .derive_hg_changeset(ctx, cs_id)
-        .await?
-        .load(ctx, repo.repo_blobstore())
-        .await?
-        .manifestid()
-        .into_nodehash();
     let file_changes = file_changes_from_bonsai(ctx, repo, cs_id).await?;
     let subtree_replacements = derive_hg_augmented_manifest::build_augmented_subtree_replacements(
         ctx,
@@ -3307,10 +2692,8 @@ where
         subtree_replacements,
         bonsai_parents,
         &Default::default(),
-        Some(expected_root),
         repo.restricted_paths().config_based(),
         acl_root_overlay,
-        &mut HashMap::new(),
     )
     .await
 }
@@ -3751,7 +3134,8 @@ async fn test_direct_derivation_matches_existing_acl_pointers_for_clean_acl_merg
 }
 
 /// Merges can rebuild restricted directories that are not reachable from
-/// `file_changes`; this locks the full ACL-walk fallback for merges.
+/// `file_changes`; this locks ACL pointer parity for callback-local rebuilt
+/// directory lookup.
 #[mononoke::fbinit_test]
 async fn test_direct_derivation_matches_existing_acl_pointers_for_merge_divergent_dir(
     fb: FacebookInit,
@@ -3836,6 +3220,124 @@ async fn test_direct_derivation_matches_existing_acl_pointers_for_merge_divergen
         old_merge,
         new_merge,
         "merge rebuild of parent-divergent restricted dir",
+    )
+    .await
+}
+
+#[mononoke::fbinit_test]
+async fn test_direct_merge_acl_lookup_does_not_load_unrelated_acl_subtree(
+    fb: FacebookInit,
+) -> Result<()> {
+    // Given: a merge rebuilds `proj/`, while an unrelated ACL subtree exists
+    // elsewhere and is not rebuilt by the merge.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let old_blobstore = Arc::new(MemWritesKeyedBlobstore::new(repo.repo_blobstore().clone()));
+    let new_blobstore = MemWritesKeyedBlobstore::new(repo.repo_blobstore().clone());
+    let base = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file(
+            "proj/.slacl",
+            "repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=proj\"\n",
+        )
+        .add_file("proj/common.rs", "fn common() {}")
+        .add_file(
+            "unrelated/deep/.slacl",
+            "repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=unrelated\"\n",
+        )
+        .add_file("unrelated/deep/secret.rs", "fn secret() {}")
+        .commit()
+        .await?;
+    let branch_a = CreateCommitContext::new(&ctx, &repo, vec![base])
+        .add_file("proj/extra.rs", "fn extra() {}")
+        .commit()
+        .await?;
+    let branch_b = CreateCommitContext::new(&ctx, &repo, vec![base])
+        .add_file("other.rs", "fn other() {}")
+        .commit()
+        .await?;
+    let merge = CreateCommitContext::new(&ctx, &repo, vec![branch_a, branch_b])
+        .commit()
+        .await?;
+
+    let (old_base, new_base) = derive_acl_parity_pair(
+        &ctx,
+        &repo,
+        &*old_blobstore,
+        &new_blobstore,
+        base,
+        vec![],
+        vec![],
+        (None, None),
+    )
+    .await?;
+    let (old_a, new_a) = derive_acl_parity_pair(
+        &ctx,
+        &repo,
+        &*old_blobstore,
+        &new_blobstore,
+        branch_a,
+        vec![old_base],
+        vec![new_base],
+        (Some(base), None),
+    )
+    .await?;
+    let (old_b, new_b) = derive_acl_parity_pair(
+        &ctx,
+        &repo,
+        &*old_blobstore,
+        &new_blobstore,
+        branch_b,
+        vec![old_base],
+        vec![new_base],
+        (Some(base), None),
+    )
+    .await?;
+    let old_merge =
+        derive_existing_into_overlay(&ctx, &repo, &*old_blobstore, merge, vec![old_a, old_b])
+            .await?;
+
+    let acl_root_overlay = derive_acl_overlay(&ctx, &repo, merge)
+        .await?
+        .context("fixture must have a non-empty ACL overlay")?;
+    let root_only_acl_map = derive_hg_augmented_manifest::targeted_acl_overlay_map(
+        &ctx,
+        repo.repo_blobstore(),
+        acl_root_overlay,
+        &[MPath::ROOT].into_iter().collect(),
+    )
+    .await?;
+    let unrelated_path = MPath::from(NonRootMPath::new("unrelated")?);
+    let denied_key = root_only_acl_map
+        .get(&unrelated_path)
+        .copied()
+        .context("fixture must expose an unrelated ACL child pointer")?
+        .blobstore_key();
+    let denying_blobstore = DenyGetKeyedBlobstore::new(new_blobstore.clone(), denied_key.clone());
+
+    // When: deriving the merge through the direct path while denying loads of
+    // the unrelated ACL subtree.
+    let new_merge = derive_into_overlay(
+        &ctx,
+        &repo,
+        &denying_blobstore,
+        merge,
+        vec![new_a, new_b],
+        (Some(branch_a), Some(branch_b)),
+    )
+    .await
+    .with_context(|| {
+        format!("direct merge derivation should not load unrelated ACL key {denied_key}")
+    })?;
+
+    // Then: direct derivation succeeds and still matches the HgManifest-based
+    // augmented manifest, proving the unrelated ACL subtree was not needed.
+    assert_augmented_manifest_acl_parity(
+        &ctx,
+        &*old_blobstore,
+        &denying_blobstore,
+        old_merge,
+        new_merge,
+        "merge ACL lookup without unrelated subtree load",
     )
     .await
 }
@@ -4401,11 +3903,11 @@ async fn test_direct_derivation_subtree_copy_rebuilt_dest_tracks_nested_restrict
     .await
 }
 
-/// Direct manager derivation with a subtree copy whose source was already
-/// persisted must resolve that source from stored `RootHgAugmentedManifestId`
-/// data when the direct-derivation JustKnob is enabled.
+/// V2 manager derivation with a subtree copy whose source was already
+/// persisted must resolve that source from stored `RootHgAugmentedManifestV2Id`
+/// data.
 #[mononoke::fbinit_test]
-async fn test_direct_derivation_subtree_persisted_source_with_jk(fb: FacebookInit) -> Result<()> {
+async fn test_augmented_manifest_v2_subtree_persisted_source(fb: FacebookInit) -> Result<()> {
     // Given: a subtree-copy source whose augmented root is already persisted,
     // and a later child batch that does not include that source in its local `res` map.
     let ctx = CoreContext::test_mock(fb);
@@ -4435,24 +3937,17 @@ async fn test_direct_derivation_subtree_persisted_source_with_jk(fb: FacebookIni
         .derive_exactly_batch::<RootAclManifestId>(&ctx, vec![source, parent, child], None)
         .await?;
     manager
-        .derive_exactly_batch::<RootHgAugmentedManifestId>(&ctx, vec![source, parent], None)
+        .derive_exactly_batch::<RootHgAugmentedManifestV2Id>(&ctx, vec![source, parent], None)
         .await?;
 
-    // When: deriving only the copying child with direct derivation enabled.
-    with_just_knobs_async(
-        direct_derivation_knobs(true),
-        async {
-            manager
-                .derive_exactly_batch::<RootHgAugmentedManifestId>(&ctx, vec![child], None)
-                .await
-        }
-        .boxed(),
-    )
-    .await?;
+    // When: deriving only the copying child through v2.
+    manager
+        .derive_exactly_batch::<RootHgAugmentedManifestV2Id>(&ctx, vec![child], None)
+        .await?;
 
-    // Then: the direct manager result matches the Hg manifest for the subtree-copy commit.
+    // Then: the v2 manager result matches the Hg manifest for the subtree-copy changeset.
     let aug_id = manager
-        .fetch_derived::<RootHgAugmentedManifestId>(&ctx, child, None)
+        .fetch_derived::<RootHgAugmentedManifestV2Id>(&ctx, child, None)
         .await?
         .expect("derived above")
         .hg_augmented_manifest_id();
@@ -4465,12 +3960,12 @@ async fn test_direct_derivation_subtree_persisted_source_with_jk(fb: FacebookIni
     compare_manifests(&ctx, &repo, hg_manifest_id, aug_id).await
 }
 
-/// Direct manager batch derivation must use the batch-local augmented-root map
+/// V2 manager batch derivation must use the batch-local augmented-root map
 /// for subtree-copy sources that are derived earlier in the same batch but have
 /// not yet been persisted by the manager.
 #[mononoke::fbinit_test]
-async fn test_direct_derivation_subtree_batch_local_source_with_jk(fb: FacebookInit) -> Result<()> {
-    // Given: a single direct-derivation batch containing both a subtree-copy
+async fn test_augmented_manifest_v2_subtree_batch_local_source(fb: FacebookInit) -> Result<()> {
+    // Given: a single v2 derivation batch containing both a subtree-copy
     // source and the later changeset that copies from it.
     let ctx = CoreContext::test_mock(fb);
     let repo: Repo = test_repo_factory::build_empty(fb).await?;
@@ -4500,31 +3995,24 @@ async fn test_direct_derivation_subtree_batch_local_source_with_jk(fb: FacebookI
         .await?;
     assert!(
         manager
-            .fetch_derived::<RootHgAugmentedManifestId>(&ctx, source, None)
+            .fetch_derived::<RootHgAugmentedManifestV2Id>(&ctx, source, None)
             .await?
             .is_none(),
-        "source augmented root must not be persisted before the direct batch",
+        "source v2 augmented root must not be persisted before the batch",
     );
 
-    // When: deriving the source, parent, and subtree-copy child in one JK-on batch.
-    with_just_knobs_async(
-        direct_derivation_knobs(true),
-        async {
-            manager
-                .derive_exactly_batch::<RootHgAugmentedManifestId>(
-                    &ctx,
-                    vec![source, parent, child],
-                    None,
-                )
-                .await
-        }
-        .boxed(),
-    )
-    .await?;
+    // When: deriving the source, parent, and subtree-copy child in one v2 batch.
+    manager
+        .derive_exactly_batch::<RootHgAugmentedManifestV2Id>(
+            &ctx,
+            vec![source, parent, child],
+            None,
+        )
+        .await?;
 
     // Then: the child resolves its source from the batch-local map and matches the Hg manifest.
     let aug_id = manager
-        .fetch_derived::<RootHgAugmentedManifestId>(&ctx, child, None)
+        .fetch_derived::<RootHgAugmentedManifestV2Id>(&ctx, child, None)
         .await?
         .expect("derived above")
         .hg_augmented_manifest_id();
@@ -4538,10 +4026,10 @@ async fn test_direct_derivation_subtree_batch_local_source_with_jk(fb: FacebookI
 }
 
 #[mononoke::fbinit_test]
-async fn test_direct_derivation_batch_handles_repeated_merge_acl_root_with_jk(
+async fn test_augmented_manifest_v2_batch_handles_repeated_merge_acl_root(
     fb: FacebookInit,
 ) -> Result<()> {
-    // Given: one direct-derivation batch with two merge commits that share the
+    // Given: one v2 derivation batch with two merge commits that share the
     // same non-empty ACL overlay root.
     let ctx = CoreContext::test_mock(fb);
     let repo: Repo = test_repo_factory::build_empty(fb).await?;
@@ -4595,23 +4083,16 @@ async fn test_direct_derivation_batch_handles_repeated_merge_acl_root_with_jk(
     assert!(merge1_acl.is_some(), "fixture must have an ACL overlay");
     assert_eq!(merge1_acl, merge2_acl, "fixture must share one ACL root");
 
-    // When: deriving the batch through the direct manager path.
-    with_just_knobs_async(
-        direct_derivation_knobs(true),
-        async {
-            manager
-                .derive_exactly_batch::<RootHgAugmentedManifestId>(&ctx, csids, None)
-                .await
-        }
-        .boxed(),
-    )
-    .await?;
+    // When: deriving the batch through the v2 manager path.
+    manager
+        .derive_exactly_batch::<RootHgAugmentedManifestV2Id>(&ctx, csids, None)
+        .await?;
 
     // Then: both merge commits derived through the cached full-ACL-map path
     // still match the Hg manifests.
     for merge in [merge1, merge2] {
         let aug_id = manager
-            .fetch_derived::<RootHgAugmentedManifestId>(&ctx, merge, None)
+            .fetch_derived::<RootHgAugmentedManifestV2Id>(&ctx, merge, None)
             .await?
             .expect("derived above")
             .hg_augmented_manifest_id();
@@ -4754,9 +4235,7 @@ async fn test_cached_acl_overlay_map_none_does_not_mutate_cache(fb: FacebookInit
 }
 
 #[mononoke::fbinit_test]
-async fn test_direct_derivation_with_skip_writes_enabled_uses_mapped_roots(
-    fb: FacebookInit,
-) -> Result<()> {
+async fn test_augmented_manifest_skip_writes_uses_mapped_hg_roots(fb: FacebookInit) -> Result<()> {
     let repo: Repo = test_repo_factory::build_empty(fb).await?;
     let ctx = CoreContext::test_mock(fb);
 
@@ -4799,8 +4278,7 @@ async fn test_direct_derivation_with_skip_writes_enabled_uses_mapped_roots(
         expected_roots.insert(*cs_id, expected_root);
     }
 
-    // When: deriving augmented manifests with skip-writes enabled. The test
-    // JustKnobs JSON already enables direct derivation by default in this diff.
+    // When: deriving v1 augmented manifests with Hg manifest skip-writes enabled.
     with_just_knobs_async(
         JustKnobsInMemory::new(HashMap::from([(
             "scm/mononoke:hgmanifest_skip_writes".to_string(),
@@ -4815,8 +4293,8 @@ async fn test_direct_derivation_with_skip_writes_enabled_uses_mapped_roots(
     )
     .await?;
 
-    // Then: direct derivation uses the existing mapped Hg roots and keeps the
-    // manager dependency mapping intact.
+    // Then: the derived augmented manifests use the existing mapped Hg roots
+    // and keep the manager dependency mapping intact.
     for cs_id in &csids {
         let aug = manager
             .fetch_derived::<RootHgAugmentedManifestId>(&ctx, *cs_id, None)
@@ -4827,14 +4305,14 @@ async fn test_direct_derivation_with_skip_writes_enabled_uses_mapped_roots(
 
         assert_eq!(
             aug_envelope.augmented_manifest.hg_node_id, expected_roots[cs_id],
-            "direct derivation should use the mapped Hg root for {cs_id}",
+            "augmented manifest derivation should use the mapped Hg root for {cs_id}",
         );
         assert!(
             repo.bonsai_hg_mapping()
                 .get_hg_from_bonsai(&ctx, *cs_id)
                 .await?
                 .is_some(),
-            "manager-level direct derivation should preserve the mapped Hg dependency for {cs_id}",
+            "manager-level augmented manifest derivation should preserve the mapped Hg dependency for {cs_id}",
         );
     }
 
