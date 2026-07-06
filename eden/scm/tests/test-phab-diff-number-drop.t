@@ -16,6 +16,21 @@ Agent: amend -m dropping diff number should abort:
   (use `jf template` to modify commit message fields or use 'jf unlink' to remove the associated phabricator diff)
   [255]
 
+Agent: commit --amend -m dropping diff number should abort:
+
+  $ CODING_AGENT_METADATA=id=test_agent sl ci --amend -m "ci amend message without diff number"
+  abort: commit message drops phabricator diff number 'D12345'
+  (use `jf template` to modify commit message fields or use 'jf unlink' to remove the associated phabricator diff)
+  [255]
+
+Agent: commit --amend -l dropping diff number should abort:
+
+  $ printf 'commit amend logfile message without diff number\n' > commit-message.txt
+  $ CODING_AGENT_METADATA=id=test_agent sl commit --amend -l commit-message.txt
+  abort: commit message drops phabricator diff number 'D12345'
+  (use `jf template` to modify commit message fields or use 'jf unlink' to remove the associated phabricator diff)
+  [255]
+
 Agent: metaedit -m dropping diff number should abort:
 
   $ CODING_AGENT_METADATA=id=test_agent sl metaedit -m "another message without diff number"
