@@ -860,6 +860,7 @@ async fn test_try_reuse_parent_envelope_reuses_matching_parent(fb: FacebookInit)
         .await?;
     let mut manifests = derive_augmented_manifests(&ctx, &repo, vec![p1_cs]).await?;
     let (p1_aug_id, p1_env) = manifests.pop().expect("derived one augmented manifest");
+    let p1_only_parents = HgParents::new(Some(p1_aug_id.into_nodehash()), None);
 
     // When: probing parent-envelope reuse with the matching parent as p1.
     let reuse = derive_hg_augmented_manifest::try_reuse_parent_envelope(
@@ -869,20 +870,27 @@ async fn test_try_reuse_parent_envelope_reuses_matching_parent(fb: FacebookInit)
         None,
         Some(p1_aug_id),
         None,
+        p1_only_parents,
     )
     .await?;
 
-    // Then: p1 is reused.
+    // Then: p1 is reused and the fresh-envelope hash is still available.
+    let expected_fresh_node_id = derive_hg_augmented_manifest::compute_hg_node_id(
+        p1_env.augmented_manifest.subentries.clone(),
+        &ctx,
+        repo.repo_blobstore(),
+        &p1_only_parents,
+    )
+    .await?;
     assert_eq!(
-        reuse,
-        derive_hg_augmented_manifest::ParentEnvelopeReuse::Reuse(
-            derive_hg_augmented_manifest::ReusableParentEnvelope {
-                id: p1_aug_id,
-                envelope: p1_env,
-            }
-        ),
+        reuse.reusable_parent,
+        Some(derive_hg_augmented_manifest::ReusableParentEnvelope {
+            id: p1_aug_id,
+            envelope: p1_env,
+        }),
         "should reuse the matching parent"
     );
+    assert_eq!(reuse.fresh_computed_node_id, expected_fresh_node_id);
 
     Ok(())
 }
@@ -920,6 +928,7 @@ async fn test_try_reuse_parent_envelope_creates_fresh_for_different_content(
         None,
         Some(p1_aug_id),
         None,
+        p1_only_parents,
     )
     .await?;
 
@@ -932,12 +941,10 @@ async fn test_try_reuse_parent_envelope_creates_fresh_for_different_content(
     )
     .await?;
     assert_eq!(
-        reuse,
-        derive_hg_augmented_manifest::ParentEnvelopeReuse::CreateFresh {
-            computed_node_id: expected_fresh_node_id,
-        },
+        reuse.reusable_parent, None,
         "merged subentries differ from parent; expected fresh envelope"
     );
+    assert_eq!(reuse.fresh_computed_node_id, expected_fresh_node_id);
 
     Ok(())
 }
@@ -965,6 +972,10 @@ async fn test_try_reuse_parent_envelope_reuses_second_parent_when_first_does_not
         .into_iter();
     let (p1_aug_id, _p1_env) = manifests.next().expect("derived p1 augmented manifest");
     let (p2_aug_id, p2_env) = manifests.next().expect("derived p2 augmented manifest");
+    let merge_parents = HgParents::new(
+        Some(p1_aug_id.into_nodehash()),
+        Some(p2_aug_id.into_nodehash()),
+    );
 
     // When: probing reuse for subentries that match only p2.
     let reuse = derive_hg_augmented_manifest::try_reuse_parent_envelope(
@@ -974,26 +985,33 @@ async fn test_try_reuse_parent_envelope_reuses_second_parent_when_first_does_not
         None,
         Some(p1_aug_id),
         Some(p2_aug_id),
+        merge_parents,
     )
     .await?;
 
-    // Then: p2 is reused.
+    // Then: p2 is reused and the fresh-envelope hash is still available.
+    let expected_fresh_node_id = derive_hg_augmented_manifest::compute_hg_node_id(
+        p2_env.augmented_manifest.subentries.clone(),
+        &ctx,
+        repo.repo_blobstore(),
+        &merge_parents,
+    )
+    .await?;
     assert_eq!(
-        reuse,
-        derive_hg_augmented_manifest::ParentEnvelopeReuse::Reuse(
-            derive_hg_augmented_manifest::ReusableParentEnvelope {
-                id: p2_aug_id,
-                envelope: p2_env,
-            }
-        ),
+        reuse.reusable_parent,
+        Some(derive_hg_augmented_manifest::ReusableParentEnvelope {
+            id: p2_aug_id,
+            envelope: p2_env,
+        }),
         "should reuse the second parent that matches"
     );
+    assert_eq!(reuse.fresh_computed_node_id, expected_fresh_node_id);
 
     Ok(())
 }
 
 #[mononoke::fbinit_test]
-async fn test_try_reuse_parent_envelope_returns_none_when_acl_pointer_differs(
+async fn test_try_reuse_parent_envelope_creates_fresh_when_acl_pointer_differs(
     fb: FacebookInit,
 ) -> Result<()> {
     // Given: merged subentries match the parent content, but `dir_acl_id` differs
@@ -1037,6 +1055,7 @@ async fn test_try_reuse_parent_envelope_returns_none_when_acl_pointer_differs(
         Some(some_acl_id),
         Some(p1_aug_id),
         None,
+        p1_only_parents,
     )
     .await?;
 
@@ -1049,11 +1068,12 @@ async fn test_try_reuse_parent_envelope_returns_none_when_acl_pointer_differs(
     )
     .await?;
     assert_eq!(
-        no_reuse_acl_mismatch,
-        derive_hg_augmented_manifest::ParentEnvelopeReuse::CreateFresh {
-            computed_node_id: expected_fresh_node_id,
-        },
+        no_reuse_acl_mismatch.reusable_parent, None,
         "content matches but ACL pointer differs (Some vs parent's None); expected fresh envelope"
+    );
+    assert_eq!(
+        no_reuse_acl_mismatch.fresh_computed_node_id,
+        expected_fresh_node_id
     );
 
     Ok(())

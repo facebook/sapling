@@ -857,11 +857,11 @@ pub struct ReusableParentEnvelope {
     pub envelope: HgAugmentedManifestEnvelope,
 }
 
-/// Decision for a merged directory's augmented-manifest envelope.
+/// Result of probing a merged directory for reusable parent envelopes.
 #[derive(Debug, PartialEq, Eq)]
-pub enum ParentEnvelopeReuse {
-    Reuse(ReusableParentEnvelope),
-    CreateFresh { computed_node_id: HgNodeHash },
+pub struct ParentEnvelopeReuse {
+    pub reusable_parent: Option<ReusableParentEnvelope>,
+    pub fresh_computed_node_id: HgNodeHash,
 }
 
 /// Transient context propagated by `derive_manifest` from callbacks to their
@@ -1597,21 +1597,24 @@ async fn finalize_envelope(
     // parents)`. The guard uses the deduped parent count — a surviving p3
     // can make reuse necessary even when only p1 is hg-relevant. At root, only
     // reuse an envelope that can be returned without changing its node id.
-    let reuse = if parents.len() > 1 {
-        try_reuse_parent_envelope(ctx, blobstore, subentries.clone(), dir_acl_id, p1, p2).await?
-    } else {
-        ParentEnvelopeReuse::CreateFresh {
-            computed_node_id: compute_hg_node_id(subentries.clone(), ctx, blobstore, &own_parents)
-                .await?,
-        }
-    };
-    let computed_node_id = match reuse {
-        ParentEnvelopeReuse::Reuse(reused)
-            if !is_root
-                || root_envelope_can_be_returned_as_is(
-                    root_hg_node_id_override,
-                    &reused.envelope,
-                ) =>
+    let computed_node_id = if parents.len() > 1 {
+        let ParentEnvelopeReuse {
+            reusable_parent,
+            fresh_computed_node_id,
+        } = try_reuse_parent_envelope(
+            ctx,
+            blobstore,
+            subentries.clone(),
+            dir_acl_id,
+            p1,
+            p2,
+            own_parents,
+        )
+        .await?;
+
+        if let Some(reused) = reusable_parent
+            && (!is_root
+                || root_envelope_can_be_returned_as_is(root_hg_node_id_override, &reused.envelope))
         {
             return Ok((
                 AugmentedDeriveContext::Directory {
@@ -1621,10 +1624,10 @@ async fn finalize_envelope(
                 Traced::generate(reused.id),
             ));
         }
-        ParentEnvelopeReuse::Reuse(_) => {
-            compute_hg_node_id(subentries.clone(), ctx, blobstore, &own_parents).await?
-        }
-        ParentEnvelopeReuse::CreateFresh { computed_node_id } => computed_node_id,
+
+        fresh_computed_node_id
+    } else {
+        compute_hg_node_id(subentries.clone(), ctx, blobstore, &own_parents).await?
     };
 
     let hg_node_id = if is_root {
@@ -2060,7 +2063,8 @@ where
 /// parent's content and we can reuse the parent's envelope wholesale.
 ///
 /// Computes the fresh-envelope node id in the same stream pass as the reuse
-/// checks, so `CreateFresh` does not need a second sharded-map traversal.
+/// checks, so callers do not need a second sharded-map traversal when reuse is
+/// rejected.
 pub async fn try_reuse_parent_envelope(
     ctx: &CoreContext,
     blobstore: &impl KeyedBlobstore,
@@ -2068,11 +2072,8 @@ pub async fn try_reuse_parent_envelope(
     dir_acl_id: Option<AclManifestId>,
     p1: Option<HgAugmentedManifestId>,
     p2: Option<HgAugmentedManifestId>,
+    fresh_node_parents: HgParents,
 ) -> Result<ParentEnvelopeReuse> {
-    let fallback_node_parents = HgParents::new(
-        p1.map(HgAugmentedManifestId::into_nodehash),
-        p2.map(HgAugmentedManifestId::into_nodehash),
-    );
     let mut reuse_candidates = Vec::new();
     let mut hash_parent_sets = Vec::new();
 
@@ -2096,7 +2097,7 @@ pub async fn try_reuse_parent_envelope(
         ));
         reuse_candidates.push((parent_id, parent_env));
     }
-    hash_parent_sets.push(fallback_node_parents);
+    hash_parent_sets.push(fresh_node_parents);
 
     let lines =
         merged_subentries
@@ -2106,9 +2107,9 @@ pub async fn try_reuse_parent_envelope(
                 serialize_manifest_entry(&path, &entry)
             });
     let mut node_ids_by_parent_set = calculate_hg_node_ids_multi(lines, &hash_parent_sets).await?;
-    let fallback_computed_node_id = node_ids_by_parent_set
+    let fresh_computed_node_id = node_ids_by_parent_set
         .pop()
-        .context("missing fallback hg node-id hash")?;
+        .context("missing fresh hg node-id hash")?;
 
     let reusable_parent = reuse_candidates
         .into_iter()
@@ -2124,11 +2125,9 @@ pub async fn try_reuse_parent_envelope(
             }
         });
 
-    Ok(match reusable_parent {
-        Some(reusable_parent) => ParentEnvelopeReuse::Reuse(reusable_parent),
-        None => ParentEnvelopeReuse::CreateFresh {
-            computed_node_id: fallback_computed_node_id,
-        },
+    Ok(ParentEnvelopeReuse {
+        reusable_parent,
+        fresh_computed_node_id,
     })
 }
 
