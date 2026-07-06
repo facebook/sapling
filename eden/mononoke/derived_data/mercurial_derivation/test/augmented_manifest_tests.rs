@@ -370,10 +370,10 @@ async fn test_augmented_manifest_multi_batch(fb: FacebookInit) -> Result<()> {
 }
 
 /// Test that RootHgAugmentedManifestId derivation via derive_heads works
-/// correctly when MappedHgChangesetId is not a declared dependency.
-/// derive_heads calls derive_exactly_batch, which calls our derive_batch
-/// override that inline-derives HgChangesets and stores their mappings
-/// after flushing blobs.
+/// correctly on the old HgManifest-based path. `derive_heads` derives
+/// declared dependencies first; disabling direct derivation keeps this
+/// coverage on the old path after the test JK default switches to direct
+/// derivation.
 #[mononoke::fbinit_test]
 async fn test_augmented_manifest_derive_heads(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
@@ -398,13 +398,27 @@ async fn test_augmented_manifest_derive_heads(fb: FacebookInit) -> Result<()> {
 
     let manager = repo.repo_derived_data().manager();
 
-    // Do NOT pre-derive MappedHgChangesetId. derive_batch handles
-    // inline derivation and mapping persistence.
-    manager
-        .derive_heads::<RootHgAugmentedManifestId>(ctx.clone(), vec![grandchild], None, None)
-        .await?;
+    // Given: do not manually prederive MappedHgChangesetId; derive_heads derives
+    // declared dependencies before deriving RootHgAugmentedManifestId.
+    //
+    // When: deriving with direct derivation disabled to keep old-path coverage.
+    with_just_knobs_async(
+        direct_derivation_knobs(false),
+        async {
+            manager
+                .derive_heads::<RootHgAugmentedManifestId>(
+                    ctx.clone(),
+                    vec![grandchild],
+                    None,
+                    None,
+                )
+                .await
+        }
+        .boxed(),
+    )
+    .await?;
 
-    // Verify all augmented manifests were derived correctly.
+    // Then: all augmented manifests were derived correctly.
     for cs_id in [root, child, grandchild] {
         let aug = manager
             .fetch_derived::<RootHgAugmentedManifestId>(&ctx, cs_id, None)
@@ -423,15 +437,22 @@ async fn test_augmented_manifest_derive_heads(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-/// Test that augmented manifest derivation works correctly when
-/// hgmanifest_skip_writes=true, verifying that HgManifest blobs remain
-/// loadable and augmented manifests match.
+/// Test that the old HgManifest-based augmented-manifest path remains
+/// compatible when `hgmanifest_skip_writes=true`.
 #[mononoke::fbinit_test]
 async fn test_augmented_manifest_skip_writes(fb: FacebookInit) -> Result<()> {
-    override_just_knobs(JustKnobsInMemory::new(HashMap::from([(
-        "scm/mononoke:hgmanifest_skip_writes".to_string(),
-        KnobVal::Bool(true),
-    )])));
+    override_just_knobs(JustKnobsInMemory::new(HashMap::from([
+        (
+            "scm/mononoke:hgmanifest_skip_writes".to_string(),
+            KnobVal::Bool(true),
+        ),
+        // Disable direct derivation so this remains old HgManifest-based
+        // coverage after the test JK default switches to direct derivation.
+        (
+            "scm/mononoke:augmented_manifest_direct_derivation".to_string(),
+            KnobVal::Bool(false),
+        ),
+    ])));
 
     let ctx = CoreContext::test_mock(fb);
     let repo: Repo = test_repo_factory::build_empty(fb).await?;
@@ -456,7 +477,7 @@ async fn test_augmented_manifest_skip_writes(fb: FacebookInit) -> Result<()> {
 
     let manager = repo.repo_derived_data().manager();
 
-    // Pre-derive HgChangesets for the old HgManifest-based augmented path.
+    // Prederive the static manager dependency retained in this stack.
     manager
         .derive_exactly_batch::<MappedHgChangesetId>(&ctx, vec![root, child, grandchild], None)
         .await?;
@@ -4728,6 +4749,94 @@ async fn test_cached_acl_overlay_map_none_does_not_mutate_cache(fb: FacebookInit
     // Then: the helper returns an empty map without mutating the cache.
     assert!(m_empty.is_empty());
     assert_eq!(cache.len(), 1, "None must not add a cache entry.");
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_direct_derivation_with_skip_writes_enabled_uses_mapped_roots(
+    fb: FacebookInit,
+) -> Result<()> {
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let ctx = CoreContext::test_mock(fb);
+
+    // Given: a 3-changeset linear chain with the static manager dependencies
+    // retained by this stack already derived.
+    let root = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("a.txt", "initial")
+        .commit()
+        .await?;
+    let child = CreateCommitContext::new(&ctx, &repo, vec![root])
+        .add_file("a.txt", "modified")
+        .commit()
+        .await?;
+    let grandchild = CreateCommitContext::new(&ctx, &repo, vec![child])
+        .add_file("b.txt", "new file")
+        .commit()
+        .await?;
+
+    let csids = vec![root, child, grandchild];
+    let manager = repo.repo_derived_data().manager();
+    manager
+        .derive_exactly_batch::<MappedHgChangesetId>(&ctx, csids.clone(), None)
+        .await?;
+    manager
+        .derive_exactly_batch::<RootAclManifestId>(&ctx, csids.clone(), None)
+        .await?;
+
+    let mut expected_roots = HashMap::new();
+    for cs_id in &csids {
+        let hg_cs_id = repo
+            .bonsai_hg_mapping()
+            .get_hg_from_bonsai(&ctx, *cs_id)
+            .await?
+            .with_context(|| format!("Missing MappedHgChangesetId for {cs_id}"))?;
+        let expected_root = hg_cs_id
+            .load(&ctx, repo.repo_blobstore())
+            .await?
+            .manifestid()
+            .into_nodehash();
+        expected_roots.insert(*cs_id, expected_root);
+    }
+
+    // When: deriving augmented manifests with skip-writes enabled. The test
+    // JustKnobs JSON already enables direct derivation by default in this diff.
+    with_just_knobs_async(
+        JustKnobsInMemory::new(HashMap::from([(
+            "scm/mononoke:hgmanifest_skip_writes".to_string(),
+            KnobVal::Bool(true),
+        )])),
+        async {
+            manager
+                .derive_exactly_batch::<RootHgAugmentedManifestId>(&ctx, csids.clone(), None)
+                .await
+        }
+        .boxed(),
+    )
+    .await?;
+
+    // Then: direct derivation uses the existing mapped Hg roots and keeps the
+    // manager dependency mapping intact.
+    for cs_id in &csids {
+        let aug = manager
+            .fetch_derived::<RootHgAugmentedManifestId>(&ctx, *cs_id, None)
+            .await?
+            .with_context(|| format!("Missing RootHgAugmentedManifestId for {cs_id}"))?;
+        let aug_envelope: mercurial_types::HgAugmentedManifestEnvelope =
+            Loadable::load(&aug.hg_augmented_manifest_id(), &ctx, repo.repo_blobstore()).await?;
+
+        assert_eq!(
+            aug_envelope.augmented_manifest.hg_node_id, expected_roots[cs_id],
+            "direct derivation should use the mapped Hg root for {cs_id}",
+        );
+        assert!(
+            repo.bonsai_hg_mapping()
+                .get_hg_from_bonsai(&ctx, *cs_id)
+                .await?
+                .is_some(),
+            "manager-level direct derivation should preserve the mapped Hg dependency for {cs_id}",
+        );
+    }
 
     Ok(())
 }
