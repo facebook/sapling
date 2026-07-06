@@ -56,9 +56,6 @@ use repo_spec_writer::append_to_repo_index;
 use repo_spec_writer::make_repo_spec_config_path;
 use repo_spec_writer::make_repo_spec_file_path;
 use repo_spec_writer::tier_list_for_repo_spec;
-use repos::QuickRepoDefinition;
-use repos::QuickRepoDefinitionShardingConfig;
-use repos::QuickRepoDefinitionTShirtSize;
 use repos::RawCommitIdentityScheme;
 use repos::RawRepoConfig;
 use repos::RepoSpec;
@@ -72,9 +69,6 @@ use tracing::warn;
 use crate::source_control_impl::SourceControlServiceImpl;
 
 const DIFF_AUTHOR: &str = "scm_server_infra";
-const REPO_DEFINITIONS_BASE_PATH: &str = "source/scm/mononoke/repos/definitions";
-const REPO_DEFINITION_THRIFT_TYPE: &str = "QuickRepoDefinition";
-const REPO_DEFINITION_THRIFT_PATH: &str = "source/scm/mononoke/repos/repos.thrift";
 const REPO_SPEC_THRIFT_TYPE: &str = "RepoSpec";
 const REPO_SPEC_THRIFT_PATH: &str = "source/scm/mononoke/repos/repos.thrift";
 
@@ -575,47 +569,8 @@ async fn reserve_repos_ids(
     }
 }
 
-fn to_tshirt_size(
-    size_bucket: RepoSizeBucket,
-) -> Result<QuickRepoDefinitionTShirtSize, scs_errors::ServiceError> {
-    match size_bucket {
-        // < 100 MB
-        RepoSizeBucket::EXTRA_SMALL => Ok(QuickRepoDefinitionTShirtSize::SMALL),
-        // < 1 GB | < 10 GB
-        RepoSizeBucket::SMALL | RepoSizeBucket::MEDIUM => Ok(QuickRepoDefinitionTShirtSize::MEDIUM),
-        // < 100 GB
-        RepoSizeBucket::LARGE => Ok(QuickRepoDefinitionTShirtSize::LARGE),
-        // >= 100 GB
-        RepoSizeBucket::EXTRA_LARGE => Ok(QuickRepoDefinitionTShirtSize::HUGE),
-        _ => Err(scs_errors::internal_error(format!(
-            "Unsupported RepoSizeBucket: {size_bucket:?}"
-        ))
-        .into()),
-    }
-}
-
-/// Generates the file path for a repo definition file.
-/// Path format: source/scm/mononoke/repos/definitions/repo_{shard}/repo_{repoid}.cconf
-/// where shard is the first two digits of the repo_id.
-fn make_repo_definition_file_path(repo_id: &RepositoryId) -> String {
-    let repo_id_str = repo_id.id().to_string();
-    let shard = if repo_id_str.len() >= 2 {
-        &repo_id_str[..2]
-    } else {
-        // For repo IDs less than 10, use "0" as shard
-        "0"
-    };
-
-    format!(
-        "{}/repo_{}/repo_{}.cconf",
-        REPO_DEFINITIONS_BASE_PATH,
-        shard,
-        repo_id.id()
-    )
-}
-
 /// Returns the tier list for a new repo as owned `String`s
-/// (matches the type used by `QuickRepoDefinition::config_tiers`).
+/// (matches the `Vec<String>` type used by `RepoSpec::tiers`).
 /// See `repo_spec_writer::tier_list_for_repo_spec` for substring-based
 /// `aosp/` matching behavior.
 fn tier_list_for_repo(repo_name: &str) -> Vec<String> {
@@ -623,34 +578,6 @@ fn tier_list_for_repo(repo_name: &str) -> Vec<String> {
         .into_iter()
         .map(str::to_string)
         .collect()
-}
-
-fn make_quick_repo_definition(
-    (repo_id, request): &(RepositoryId, thrift::RepoCreationRequest),
-) -> Result<QuickRepoDefinition, scs_errors::ServiceError> {
-    Ok(QuickRepoDefinition {
-        repo_id: repo_id.id(),
-        repo_name: request.repo_name.clone(),
-        config_tiers: tier_list_for_repo(&request.repo_name),
-        enabled: true,
-        readonly: false,
-        default_commit_identity_scheme: RawCommitIdentityScheme::GIT,
-        custom_repo_config: None,
-        git_lfs_interpret_pointers: true,
-        use_upstream_lfs_server: true,
-        custom_storage_config: None,
-        t_shirt_size: to_tshirt_size(request.size_bucket)?,
-        sharding_config: QuickRepoDefinitionShardingConfig::BGM_ONLY_REGIONS,
-        custom_acl_name: Some(if request.custom_acl.is_some() {
-            make_full_acl_name_from_repo_name(&request.repo_name)
-        } else {
-            make_top_level_acl_name_from_repo_name(&request.repo_name)
-        }),
-        preloaded_commit_graph_blobstore_key: None,
-        git_concurrency: None,
-        enable_git_bundle_uri: None,
-        ..Default::default()
-    })
 }
 
 fn to_repo_spec_tshirt_size(
@@ -710,97 +637,77 @@ async fn prepare_repo_configs_mutation_nowait(
     );
     let mut txn = configo_client.managed_transaction();
 
-    let use_repo_spec = justknobs::eval("scm/mononoke:create_repos_use_repo_spec", None, None);
-
-    // Load default repo config template once before the loop
-    let default_repo_config = if use_repo_spec {
-        let config_store = configs.config_store().ok_or_else(|| {
-            scs_errors::internal_error("No config store available for loading default repo config")
-        })?;
-        let handle = configerator_repo_config_handle(
-            "scm/mononoke/repos/common/default_git_repo_config",
-            config_store,
-        )
-        .map_err(|e| {
-            scs_errors::internal_error(format!("Failed to load default git repo config: {e:#}"))
-        })?;
-        Some(handle.get())
-    } else {
-        None
-    };
+    // Load the default git repo config template once before the loop.
+    let config_store = configs.config_store().ok_or_else(|| {
+        scs_errors::internal_error("No config store available for loading default repo config")
+    })?;
+    let default_repo_config = configerator_repo_config_handle(
+        "scm/mononoke/repos/common/default_git_repo_config",
+        config_store,
+    )
+    .map_err(|e| {
+        scs_errors::internal_error(format!("Failed to load default git repo config: {e:#}"))
+    })?
+    .get();
 
     // Create individual repo config files
     for (repo_id, request) in &repos_ids_and_requests {
-        if use_repo_spec {
-            let repo_spec = make_repo_spec(
-                &(*repo_id, request.clone()),
-                default_repo_config.as_deref().cloned(),
-            )?;
-            let file_path = make_repo_spec_file_path(&request.repo_name);
-            txn.set_thrift_object(
-                repo_spec,
-                file_path,
-                REPO_SPEC_THRIFT_TYPE.to_string(),
-                REPO_SPEC_THRIFT_PATH.to_string(),
-                None,
-            );
-        } else {
-            let repo_definition = make_quick_repo_definition(&(*repo_id, request.clone()))?;
-            let file_path = make_repo_definition_file_path(repo_id);
-            txn.set_thrift_object(
-                repo_definition,
-                file_path,
-                REPO_DEFINITION_THRIFT_TYPE.to_string(),
-                REPO_DEFINITION_THRIFT_PATH.to_string(),
-                None,
-            );
-        }
+        let repo_spec = make_repo_spec(
+            &(*repo_id, request.clone()),
+            Some((*default_repo_config).clone()),
+        )?;
+        let file_path = make_repo_spec_file_path(&request.repo_name);
+        txn.set_thrift_object(
+            repo_spec,
+            file_path,
+            REPO_SPEC_THRIFT_TYPE.to_string(),
+            REPO_SPEC_THRIFT_PATH.to_string(),
+            None,
+        );
     }
 
-    // Update repo_index.cinc atomically in the same transaction
-    if use_repo_spec {
-        let index_path = "source/scm/mononoke/repos/repo_index.cinc".to_string();
+    // Update repo_index.cinc atomically in the same transaction.
+    let index_path = "source/scm/mononoke/repos/repo_index.cinc".to_string();
 
-        // Read current content — pins CAS version. Must drop handle before set_file.
-        let index_str = {
-            let handle = txn.get_file(index_path.clone()).await.map_err(|e| {
-                scs_errors::internal_error(format!("Failed to read repo_index.cinc: {e:#}"))
-            })?;
-            String::from_utf8(handle.clone()).map_err(|e| {
-                scs_errors::internal_error(format!("repo_index.cinc is not valid UTF-8: {e:#}"))
-            })?
-        }; // handle dropped — txn no longer borrowed
-
-        // Build entries for all new repos
-        let new_entries: Vec<_> = repos_ids_and_requests
-            .iter()
-            .map(|(repo_id, request)| {
-                let config_path = make_repo_spec_config_path(&request.repo_name);
-                let t_shirt_size = to_repo_spec_tshirt_size(request.size_bucket)?;
-                Ok((
-                    request.repo_name.clone(),
-                    RepoIndexEntry {
-                        config_path,
-                        repo_id: repo_id.id(),
-                        tiers: tier_list_for_repo_spec(&request.repo_name),
-                        is_deep_sharded: true,
-                        t_shirt_size,
-                        hipster_acl: if request.custom_acl.is_some() {
-                            make_full_acl_name_from_repo_name(&request.repo_name)
-                        } else {
-                            make_top_level_acl_name_from_repo_name(&request.repo_name)
-                        },
-                        enable_git_bundle_uri: None,
-                    },
-                ))
-            })
-            .collect::<Result<_, scs_errors::ServiceError>>()?;
-
-        let updated_index = append_to_repo_index(&index_str, &new_entries).map_err(|e| {
-            scs_errors::internal_error(format!("Failed to update repo_index.cinc: {e:#}"))
+    // Read current content — pins CAS version. Must drop handle before set_file.
+    let index_str = {
+        let handle = txn.get_file(index_path.clone()).await.map_err(|e| {
+            scs_errors::internal_error(format!("Failed to read repo_index.cinc: {e:#}"))
         })?;
-        txn.set_file(index_path, updated_index.into_bytes());
-    }
+        String::from_utf8(handle.clone()).map_err(|e| {
+            scs_errors::internal_error(format!("repo_index.cinc is not valid UTF-8: {e:#}"))
+        })?
+    }; // handle dropped — txn no longer borrowed
+
+    // Build entries for all new repos
+    let new_entries: Vec<_> = repos_ids_and_requests
+        .iter()
+        .map(|(repo_id, request)| {
+            let config_path = make_repo_spec_config_path(&request.repo_name);
+            let t_shirt_size = to_repo_spec_tshirt_size(request.size_bucket)?;
+            Ok((
+                request.repo_name.clone(),
+                RepoIndexEntry {
+                    config_path,
+                    repo_id: repo_id.id(),
+                    tiers: tier_list_for_repo_spec(&request.repo_name),
+                    is_deep_sharded: true,
+                    t_shirt_size,
+                    hipster_acl: if request.custom_acl.is_some() {
+                        make_full_acl_name_from_repo_name(&request.repo_name)
+                    } else {
+                        make_top_level_acl_name_from_repo_name(&request.repo_name)
+                    },
+                    enable_git_bundle_uri: None,
+                },
+            ))
+        })
+        .collect::<Result<_, scs_errors::ServiceError>>()?;
+
+    let updated_index = append_to_repo_index(&index_str, &new_entries).map_err(|e| {
+        scs_errors::internal_error(format!("Failed to update repo_index.cinc: {e:#}"))
+    })?;
+    txn.set_file(index_path, updated_index.into_bytes());
 
     let summary = repos_ids_and_requests
         .iter()
@@ -1295,39 +1202,6 @@ mod tests {
     use super::*;
 
     #[mononoke::test]
-    fn test_make_repo_definition_file_path_large_id() {
-        // Test with a large repo ID (5 digits)
-        let repo_id = RepositoryId::new(12345);
-        let path = make_repo_definition_file_path(&repo_id);
-        assert_eq!(
-            path,
-            "source/scm/mononoke/repos/definitions/repo_12/repo_12345.cconf"
-        );
-    }
-
-    #[mononoke::test]
-    fn test_make_repo_definition_file_path_three_digit_id() {
-        // Test with a three-digit repo ID
-        let repo_id = RepositoryId::new(456);
-        let path = make_repo_definition_file_path(&repo_id);
-        assert_eq!(
-            path,
-            "source/scm/mononoke/repos/definitions/repo_45/repo_456.cconf"
-        );
-    }
-
-    #[mononoke::test]
-    fn test_make_repo_definition_file_path_single_digit_id() {
-        // Test with a single-digit repo ID (should use "0" as shard)
-        let repo_id = RepositoryId::new(5);
-        let path = make_repo_definition_file_path(&repo_id);
-        assert_eq!(
-            path,
-            "source/scm/mononoke/repos/definitions/repo_0/repo_5.cconf"
-        );
-    }
-
-    #[mononoke::test]
     fn test_make_repo_spec_file_path_simple_name() {
         // Test asserts the git-only path. When adding HG support to create_repos, add a
         // parallel test for repos/hg/ paths.
@@ -1553,44 +1427,6 @@ mod tests {
     }
 
     #[mononoke::test]
-    fn test_make_quick_repo_definition_sets_top_level_custom_acl_for_namespaced_repo() {
-        let repo_id = RepositoryId::new(18279);
-        let request = thrift::RepoCreationRequest {
-            repo_name: "aosp/platform/vendor/meta/prebuilts/assets".to_string(),
-            size_bucket: RepoSizeBucket::SMALL,
-            ..Default::default()
-        };
-
-        let qrd = make_quick_repo_definition(&(repo_id, request))
-            .expect("make_quick_repo_definition should succeed");
-
-        assert_eq!(
-            qrd.custom_acl_name.as_deref(),
-            Some("repos/git/aosp"),
-            "QRD for AOSP repos must set custom_acl_name to the top-level `repos/git/aosp` ACL so the QRD processor doesn't fall through to the buggy default derivation"
-        );
-    }
-
-    #[mononoke::test]
-    fn test_make_quick_repo_definition_sets_full_name_custom_acl_for_simple_repo() {
-        let repo_id = RepositoryId::new(99999);
-        let request = thrift::RepoCreationRequest {
-            repo_name: "simple-repo".to_string(),
-            size_bucket: RepoSizeBucket::SMALL,
-            ..Default::default()
-        };
-
-        let qrd = make_quick_repo_definition(&(repo_id, request))
-            .expect("make_quick_repo_definition should succeed");
-
-        assert_eq!(
-            qrd.custom_acl_name.as_deref(),
-            Some("repos/git/simple-repo"),
-            "QRD for simple repos should set custom_acl_name to repos/git/<name>"
-        );
-    }
-
-    #[mononoke::test]
     fn test_tier_list_for_repo_spec_aosp_prefix_adds_multi_repo_land() {
         assert_eq!(
             tier_list_for_repo_spec("aosp/platform/vendor/foo"),
@@ -1692,49 +1528,6 @@ mod tests {
     }
 
     #[mononoke::test]
-    fn test_make_quick_repo_definition_aosp_repo_includes_multi_repo_land_tier() {
-        let repo_id = RepositoryId::new(18279);
-        let request = thrift::RepoCreationRequest {
-            repo_name: "aosp/platform/vendor/meta/prebuilts/assets".to_string(),
-            size_bucket: RepoSizeBucket::SMALL,
-            ..Default::default()
-        };
-
-        let qrd = make_quick_repo_definition(&(repo_id, request))
-            .expect("make_quick_repo_definition should succeed");
-
-        assert_eq!(
-            qrd.config_tiers,
-            vec![
-                "gitimport".to_string(),
-                "gitimport_content".to_string(),
-                "scs".to_string(),
-                "backfill_worker".to_string(),
-                "aosp_multi_repo_land".to_string(),
-            ],
-            "QRD for AOSP repos must include aosp_multi_repo_land tier"
-        );
-    }
-
-    #[mononoke::test]
-    fn test_make_quick_repo_definition_non_aosp_repo_does_not_include_multi_repo_land_tier() {
-        let repo_id = RepositoryId::new(99999);
-        let request = thrift::RepoCreationRequest {
-            repo_name: "org/my-repo".to_string(),
-            size_bucket: RepoSizeBucket::SMALL,
-            ..Default::default()
-        };
-
-        let qrd = make_quick_repo_definition(&(repo_id, request))
-            .expect("make_quick_repo_definition should succeed");
-
-        assert!(
-            !qrd.config_tiers.iter().any(|t| t == "aosp_multi_repo_land"),
-            "non-AOSP repos must NOT be added to aosp_multi_repo_land tier"
-        );
-    }
-
-    #[mononoke::test]
     fn test_make_repo_spec_uses_full_acl_when_custom_acl_set() {
         let repo_id = RepositoryId::new(55555);
         let request = thrift::RepoCreationRequest {
@@ -1753,29 +1546,6 @@ mod tests {
         assert_eq!(
             spec.hipster_acl, "repos/git/fairinternal/occhi",
             "Repos with custom_acl should use the full-path ACL"
-        );
-    }
-
-    #[mononoke::test]
-    fn test_make_quick_repo_definition_uses_full_acl_when_custom_acl_set() {
-        let repo_id = RepositoryId::new(55555);
-        let request = thrift::RepoCreationRequest {
-            repo_name: "fairinternal/occhi".to_string(),
-            size_bucket: RepoSizeBucket::SMALL,
-            custom_acl: Some(thrift::CustomAclParams {
-                hipster_group: "oncall_onevision".to_string(),
-                ..Default::default()
-            }),
-            ..Default::default()
-        };
-
-        let qrd = make_quick_repo_definition(&(repo_id, request))
-            .expect("make_quick_repo_definition should succeed");
-
-        assert_eq!(
-            qrd.custom_acl_name.as_deref(),
-            Some("repos/git/fairinternal/occhi"),
-            "QRD with custom_acl should use the full-path ACL"
         );
     }
 }
