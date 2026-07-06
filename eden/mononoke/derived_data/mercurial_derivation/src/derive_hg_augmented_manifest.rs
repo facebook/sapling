@@ -1537,6 +1537,23 @@ async fn resolve_copied_tree_placements(
     Ok(())
 }
 
+fn root_envelope_can_be_returned_as_is(
+    root_hg_node_id_override: Option<HgNodeHash>,
+    envelope: &HgAugmentedManifestEnvelope,
+) -> bool {
+    match root_hg_node_id_override {
+        Some(expected) => {
+            // With an override, the final root must use the supplied/canonical
+            // node id.
+            envelope.augmented_manifest.hg_node_id == expected
+        }
+        None => {
+            // Without an override, the final root must be content-derived.
+            envelope.augmented_manifest.hg_node_id == envelope.augmented_manifest.computed_node_id
+        }
+    }
+}
+
 /// Given the fully-merged subentries for one tree node, attempt parent reuse
 /// (mirroring `create_hg_manifest`) or otherwise compute a fresh `hg_node_id`
 /// and store the envelope. Records the envelope's id in the restricted-paths
@@ -1546,7 +1563,7 @@ async fn resolve_copied_tree_placements(
 async fn finalize_envelope(
     ctx: &CoreContext,
     blobstore: &Arc<dyn KeyedBlobstore>,
-    expected_root_hg_node_id: HgNodeHash,
+    root_hg_node_id_override: Option<HgNodeHash>,
     tree_path: &MPath,
     parents: &[Traced<ParentIndex, HgAugmentedManifestId>],
     subentries: ShardedMapV2Node<HgAugmentedManifestEntry>,
@@ -1575,9 +1592,8 @@ async fn finalize_envelope(
     // hg-relevant parent (and the parent's ACL pointer agrees), reuse that
     // parent's envelope instead of minting `hash(merged contents, current
     // parents)`. The guard uses the deduped parent count — a surviving p3
-    // can make reuse necessary even when only p1 is hg-relevant. At root,
-    // only reuse an envelope whose `hg_node_id` already matches the
-    // caller's canonical/supplied root id.
+    // can make reuse necessary even when only p1 is hg-relevant. At root, only
+    // reuse an envelope that can be returned without changing its node id.
     let reuse = if parents.len() > 1 {
         try_reuse_parent_envelope(ctx, blobstore, subentries.clone(), dir_acl_id, p1, p2).await?
     } else {
@@ -1589,7 +1605,10 @@ async fn finalize_envelope(
     let computed_node_id = match reuse {
         ParentEnvelopeReuse::Reuse(reused)
             if !is_root
-                || reused.envelope.augmented_manifest.hg_node_id == expected_root_hg_node_id =>
+                || root_envelope_can_be_returned_as_is(
+                    root_hg_node_id_override,
+                    &reused.envelope,
+                ) =>
         {
             return Ok((
                 AugmentedDeriveContext::Directory {
@@ -1605,10 +1624,8 @@ async fn finalize_envelope(
         ParentEnvelopeReuse::CreateFresh { computed_node_id } => computed_node_id,
     };
 
-    // Roots use the canonical id from `HgChangeset.manifestid()`; non-root
-    // trees use the freshly computed manifest hash.
     let hg_node_id = if is_root {
-        expected_root_hg_node_id
+        root_hg_node_id_override.unwrap_or(computed_node_id)
     } else {
         computed_node_id
     };
@@ -1674,7 +1691,7 @@ async fn finalize_envelope(
 async fn create_augmented_tree(
     ctx: CoreContext,
     blobstore: Arc<dyn KeyedBlobstore>,
-    expected_root_hg_node_id: HgNodeHash,
+    root_hg_node_id_override: Option<HgNodeHash>,
     restricted_paths: ArcRestrictedPathsConfigBased,
     restricted_paths_enabled: bool,
     acl_map: Arc<HashMap<MPath, AclManifestId>>,
@@ -1758,7 +1775,7 @@ async fn create_augmented_tree(
     finalize_envelope(
         &ctx,
         &blobstore,
-        expected_root_hg_node_id,
+        root_hg_node_id_override,
         &tree_info.path,
         &tree_info.parents,
         subentries,
@@ -1801,6 +1818,32 @@ fn dedup_root_parents_for_reemit(
     parents
 }
 
+async fn reemit_root_envelope(
+    ctx: &CoreContext,
+    blobstore: &Arc<dyn KeyedBlobstore>,
+    root_hg_node_id_override: Option<HgNodeHash>,
+    root_parents: Vec<Traced<ParentIndex, HgAugmentedManifestId>>,
+    envelope: HgAugmentedManifestEnvelope,
+    root_acl_id: Option<AclManifestId>,
+    restricted_paths: &ArcRestrictedPathsConfigBased,
+    restricted_paths_enabled: bool,
+) -> Result<HgAugmentedManifestId> {
+    let parents = dedup_root_parents_for_reemit(root_parents);
+    let (_, final_id) = finalize_envelope(
+        ctx,
+        blobstore,
+        root_hg_node_id_override,
+        &MPath::ROOT,
+        &parents,
+        envelope.augmented_manifest.subentries,
+        root_acl_id,
+        restricted_paths,
+        restricted_paths_enabled,
+    )
+    .await?;
+    Ok(final_id.into_untraced())
+}
+
 /// Derive an augmented manifest directly from a bonsai changeset and parent
 /// augmented manifests, bypassing HgManifest construction entirely.
 pub async fn derive_augmented_manifest_from_bonsai<Store>(
@@ -1811,10 +1854,12 @@ pub async fn derive_augmented_manifest_from_bonsai<Store>(
     subtree_replacements: AugmentedSubtreeReplacements,
     parent_bonsai_csids: (Option<ChangesetId>, Option<ChangesetId>),
     content_metadata_cache: &HashMap<ContentId, ContentMetadataV2>,
-    // Canonical root id from `HgChangeset.manifestid()`. Forced-hash roots
-    // (`UploadHgNodeHash::Supplied`) differ from the computed content hash;
-    // the envelope must land at this key for client lookups to succeed.
-    expected_root_hg_node_id: HgNodeHash,
+    // Optional root node-id override. `Some(id)` is used for commits with an
+    // externally canonical/supplied Mercurial root id, including forced-hash
+    // roots. `None` means the final root must be content-derived; root-level
+    // short-circuit/reuse is accepted only when the returned envelope is itself
+    // content-derived.
+    root_hg_node_id_override: Option<HgNodeHash>,
     restricted_paths: &ArcRestrictedPathsConfigBased,
     acl_root_overlay: Option<AclManifestId>,
 ) -> Result<HgAugmentedManifestId>
@@ -1894,7 +1939,7 @@ where
                 create_augmented_tree(
                     ctx,
                     blobstore_arc,
-                    expected_root_hg_node_id,
+                    root_hg_node_id_override,
                     restricted_paths_arc,
                     restricted_paths_enabled,
                     acl_map,
@@ -1921,29 +1966,58 @@ where
     .await?;
 
     match root {
-        Some(traced_id) => {
-            let reused = traced_id.into_untraced();
-            if reused.into_nodehash() == expected_root_hg_node_id {
-                return Ok(reused);
-            }
+        Some(traced_root_id) => {
+            let candidate_root_id = traced_root_id.into_untraced();
 
-            // The framework reused a parent's root verbatim, skipping
-            // finalize_envelope, so re-emit the root envelope under the supplied id.
-            let env = reused.load(ctx, &blobstore_arc).await?;
-            let parents = dedup_root_parents_for_reemit(root_parents_traced);
-            let (_, final_id) = finalize_envelope(
-                ctx,
-                &blobstore_arc,
-                expected_root_hg_node_id,
-                &MPath::ROOT,
-                &parents,
-                env.augmented_manifest.subentries,
-                acl_map.get(&MPath::ROOT).copied(),
-                &restricted_paths_arc,
-                restricted_paths_enabled,
-            )
-            .await?;
-            Ok(final_id.into_untraced())
+            // `derive_manifest` can either call the root callback or short-circuit
+            // and return an existing root directly. Accept the returned root only
+            // if it already has the node id this call should return; otherwise
+            // re-emit the same contents under the correct node id.
+            match root_hg_node_id_override {
+                Some(expected) if candidate_root_id.into_nodehash() == expected => {
+                    Ok(candidate_root_id)
+                }
+                Some(_) => {
+                    // A root override was requested, but the candidate has a
+                    // different node id. Re-emit to store the same contents at
+                    // the supplied/canonical root id.
+                    let candidate_envelope = candidate_root_id.load(ctx, &blobstore_arc).await?;
+                    reemit_root_envelope(
+                        ctx,
+                        &blobstore_arc,
+                        root_hg_node_id_override,
+                        root_parents_traced,
+                        candidate_envelope,
+                        acl_map.get(&MPath::ROOT).copied(),
+                        &restricted_paths_arc,
+                        restricted_paths_enabled,
+                    )
+                    .await
+                }
+                None => {
+                    let candidate_envelope = candidate_root_id.load(ctx, &blobstore_arc).await?;
+                    if root_envelope_can_be_returned_as_is(
+                        root_hg_node_id_override,
+                        &candidate_envelope,
+                    ) {
+                        Ok(candidate_root_id)
+                    } else {
+                        // No override was requested, so a supplied/canonical
+                        // parent root must be re-emitted as content-derived.
+                        reemit_root_envelope(
+                            ctx,
+                            &blobstore_arc,
+                            root_hg_node_id_override,
+                            root_parents_traced,
+                            candidate_envelope,
+                            acl_map.get(&MPath::ROOT).copied(),
+                            &restricted_paths_arc,
+                            restricted_paths_enabled,
+                        )
+                        .await
+                    }
+                }
+            }
         }
         None => {
             // Empty manifest — all files deleted. Create empty augmented manifest.
@@ -1955,7 +2029,7 @@ where
             let (_, traced_id) = create_augmented_tree(
                 ctx.clone(),
                 blobstore_arc,
-                expected_root_hg_node_id,
+                root_hg_node_id_override,
                 restricted_paths_arc,
                 restricted_paths_enabled,
                 acl_map,
