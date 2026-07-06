@@ -12,6 +12,5 @@ rust_library(
         "//common/rust/shed/cached_config:cached_config",
         "//common/rust/shed/fbinit:fbinit",
         "//eden/mononoke/common/mononoke_configs:mononoke_configs",
-        "//eden/mononoke/common/rust/justknobs_ext:justknobs",
     ],
 )

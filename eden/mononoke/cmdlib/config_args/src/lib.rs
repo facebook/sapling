@@ -116,12 +116,11 @@ impl ConfigArgs {
         )?))
     }
 
-    /// Derives the per-repo manifest path when split-loading is enabled.
-    /// Returns `None` when the JustKnob is off or when using non-configerator config.
+    /// Derives the per-repo manifest path. Returns `None` when no tier can be
+    /// derived (non-configerator config, e.g. a local path used by integration
+    /// tests). Split-loading is always on now that the per-repo migration is
+    /// complete, so there is no JustKnob gate.
     fn manifest_path(&self) -> Result<Option<String>> {
-        if !justknobs::eval("scm/mononoke:use_split_config_loading", None, None) {
-            return Ok(None);
-        }
         // Try --config_tier / --prod / --git_config first, then fall back to
         // extracting the tier name from --mononoke-config-path if it matches
         // the configerator prefix (e.g. "configerator://scm/mononoke/repos/tiers/scs" -> "scs").
