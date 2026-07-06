@@ -39,6 +39,7 @@ use manifest::List;
 pub use manifest::Manifest;
 use manifest::PersistOpts;
 use minibytes::Bytes;
+use pathmatcher::AlwaysMatcher;
 use pathmatcher::Matcher;
 pub use store::Flag;
 use storemodel::InsertOpts;
@@ -387,10 +388,10 @@ impl Manifest for TreeManifest {
         matcher: M,
     ) -> Result<Box<dyn Iterator<Item = Result<DiffEntry>> + 'a>> {
         match self.path_translator {
-            None => Ok(diff::diff(self, other, Arc::new(matcher))),
+            None => Ok(diff::diff([(self, other)], Arc::new(matcher))),
             Some(_) => {
                 let matcher = self.maybe_wrap_matcher(matcher);
-                let iter = diff::diff(self, other, matcher);
+                let iter = diff::diff([(self, other)], matcher);
                 Ok(Box::new(iter.map(move |result: Result<DiffEntry>| {
                     result.and_then(|entry| {
                         let path = self.maybe_decode_path(entry.path)?;
@@ -406,8 +407,17 @@ impl Manifest for TreeManifest {
         other: &'a Self,
         matcher: M,
     ) -> Result<Box<dyn Iterator<Item = Result<DirDiffEntry>> + 'a>> {
-        Ok(diff::diff(self, other, Arc::new(matcher)))
+        Ok(diff::diff([(self, other)], Arc::new(matcher)))
     }
+}
+
+pub fn prefetch_diff<'a>(
+    pairs: impl IntoIterator<Item = (&'a TreeManifest, &'a TreeManifest)>,
+) -> Result<()> {
+    for entry in diff::diff::<DiffEntry>(pairs, Arc::new(AlwaysMatcher::new())) {
+        entry?;
+    }
+    Ok(())
 }
 
 impl fmt::Debug for TreeManifest {

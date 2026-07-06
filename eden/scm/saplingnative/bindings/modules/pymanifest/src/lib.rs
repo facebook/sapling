@@ -76,6 +76,16 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
             )
         ),
     )?;
+    m.add(
+        py,
+        "prefetch_diff",
+        py_fn!(
+            py,
+            prefetch_diff(
+                pairs: &PyList
+            )
+        ),
+    )?;
     Ok(m)
 }
 
@@ -813,6 +823,38 @@ pub fn prefetch(
     Ok(PyNone)
 }
 
+pub fn prefetch_diff(py: Python, pairs: &PyList) -> PyResult<PyNone> {
+    let mut manifests = Vec::with_capacity(pairs.len(py));
+    for item in pairs.iter(py) {
+        let pair: PyTuple = item.extract(py)?;
+        if pair.len(py) != 2 {
+            return Err(PyErr::new::<exc::ValueError, _>(
+                py,
+                "prefetch_diff expects (left, right) manifest pairs",
+            ));
+        }
+
+        let left: treemanifest = pair.get_item(py, 0).extract(py)?;
+        let right: treemanifest = pair.get_item(py, 1).extract(py)?;
+        manifests.push((left.get_underlying(py), right.get_underlying(py)));
+    }
+
+    py.allow_threads(move || -> Result<()> {
+        let guards = manifests
+            .iter()
+            .map(|(left, right)| (left.read(), right.read()))
+            .collect::<Vec<_>>();
+        let pairs = guards
+            .iter()
+            .map(|(left, right)| (left.deref(), right.deref()))
+            .collect::<Vec<_>>();
+        manifest_tree::prefetch_diff(pairs)
+    })
+    .map_pyerr(py)?;
+
+    Ok(PyNone)
+}
+
 fn test_treemanifest(py: Python) -> PyResult<treemanifest> {
     let store = Arc::new(TestStore::new());
     let manifest = TreeManifest::ephemeral(store);
@@ -890,10 +932,7 @@ fn insert(
     let mut to_delete = HashSet::new();
     let insert_error = match tree.insert(path, file_metadata) {
         Ok(()) => return Ok(to_delete),
-        Err(error) => match error.downcast::<manifest_tree::InsertError>() {
-            Ok(insert_error) => insert_error,
-            Err(err) => return Err(err),
-        },
+        Err(error) => error.downcast::<manifest_tree::InsertError>()?,
     };
     let path = insert_error.path;
     match insert_error.source {

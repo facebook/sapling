@@ -161,22 +161,41 @@ const RESULT_QUEUE_SIZE: usize = BATCH_SIZE;
 ///
 /// The iteration is breadth first but in parallel, so different depths can be processed
 /// at the same time.
-pub(crate) fn diff<T>(
-    left: &TreeManifest,
-    right: &TreeManifest,
+pub(crate) fn diff<'a, T>(
+    pairs: impl IntoIterator<Item = (&'a TreeManifest, &'a TreeManifest)>,
     matcher: Arc<dyn Matcher + Send + Sync>,
 ) -> Box<dyn Iterator<Item = Result<T>>>
 where
     ResultSender: From<Sender<Result<T>>>,
     T: Send + 'static,
 {
-    let lroot = DirLink::from_root(&left.root).expect("tree root is not a directory");
-    let rroot = DirLink::from_root(&right.root).expect("tree root is not a directory");
+    let pairs: Vec<_> = pairs
+        .into_iter()
+        .filter_map(|(left, right)| {
+            let lroot = DirLink::from_root(&left.root).expect("tree root is not a directory");
+            let rroot = DirLink::from_root(&right.root).expect("tree root is not a directory");
 
-    // Don't even attempt to perform a diff if these trees are the same.
-    if lroot.hgid() == rroot.hgid() && lroot.hgid().is_some() {
+            // Don't even attempt to perform a diff if these trees are the same.
+            if lroot.hgid() == rroot.hgid() && lroot.hgid().is_some() {
+                None
+            } else {
+                Some([left, right])
+            }
+        })
+        .collect();
+
+    if pairs.is_empty() {
         return Box::new(std::iter::empty());
     }
+
+    let input: Vec<_> = pairs
+        .iter()
+        .map(|[left, right]| {
+            let lroot = DirLink::from_root(&left.root).expect("tree root is not a directory");
+            let rroot = DirLink::from_root(&right.root).expect("tree root is not a directory");
+            DiffWork::Changed(lroot, rroot)
+        })
+        .collect();
 
     let (result_send, result_recv) = bounded::<Result<T>>(RESULT_QUEUE_SIZE);
 
@@ -187,11 +206,11 @@ where
     let ctx = DiffContext {
         result_send: ResultSender::from(result_send),
         matcher,
-        store: left.store.clone(),
+        store: pairs[0][0].store.clone(),
         progress_bar: progress_bar.clone(),
     };
 
-    let input: Items<DiffWork, anyhow::Error> = Items::ready(vec![DiffWork::Changed(lroot, rroot)]);
+    let input: Items<DiffWork, anyhow::Error> = Items::ready(input);
     std::thread::spawn(move || {
         let result = Work::run(
             WorkOptions::new()
